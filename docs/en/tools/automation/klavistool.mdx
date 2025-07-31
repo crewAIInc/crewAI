@@ -1,0 +1,115 @@
+---
+title: Klavis MCP Server Tools
+description: "`KlavisMcpServerTools` enables CrewAI agents to interact with Tools from Klavis MCP servers, automating workflows and integrating with hundreds of applications."
+icon: "bolt"
+---
+
+# `KlavisMcpServerTools`
+
+Integrate [Klavis MCP Server](https://www.klavis.ai/mcp-servers) into your CrewAI workflows for complex automation.
+
+## Description
+
+Klavis AI is open source MCP integrations for AI Applications. Our API provides hosted, high quality and secure MCP servers, eliminating auth management and client-side code.
+
+It has Built-in support for enterprise-grade authentication.
+
+## Steps to get started
+
+<Steps>
+    <Step title="Install dependencies">
+        Install `crewai[tools]` and `klavis` using pip: `pip install 'crewai[tools]' klavis`.
+    </Step>
+    <Step title="Obtain a Klavis API key">
+        Sign up to [klavis.ai](https://klavis.ai/) and get your API key from the dashboard.
+    </Step>
+    <Step title="Configure environment">
+        Set your Klavis API key as the `KLAVIS_API_KEY` environment variable to enable the tool's functionality.
+    </Step>
+</Steps>
+
+## Usage example
+
+Use the `KlavisMcpServerTools` to create a Salesforce CRM management agent:
+
+```python
+from crewai_tools import KlavisMcpServerTools
+from crewai import Agent
+from klavis import Klavis
+from klavis.types import McpServerName
+
+klavis_client = Klavis(api_key="your-klavis-api-key")
+
+# Step 1: Create MCP server instance via Klavis
+mcp_server = klavis_client.mcp_server.create_server_instance(
+    server_name=McpServerName.SALESFORCE,
+    user_id="123", #<your-enterprise_user_id> 
+    platform_name="Klavis"  #<your-enterprise_platform>
+)
+
+# Step 2: Create tools from the MCP server
+tools = KlavisMcpServerTools(
+    klavis_api_key="your-klavis-api-key",
+    mcp_server_url=mcp_server.server_url
+)
+
+# Step 3: Use with CrewAI agent
+my_agent = Agent(
+    role="Salesforce CRM Manager",
+    tools=tools,
+    goal="manage leads, opportunities, and customer relationships in Salesforce",
+    backstory="You are an expert at managing customer relationships and sales pipelines using Salesforce CRM",
+    verbose=True,
+)
+
+# Step 4: Execute the agent
+result = my_agent.execute_task(
+    "Get all open opportunities for Q4 2024 and create a summary report"
+)
+```
+
+### Expected output
+
+The agent will retrieve open opportunities from Salesforce and generate a comprehensive summary report with deal values, stages, and key metrics.
+
+### Filtering Specific Tools
+
+If you only want to use specific tools from the MCP server:
+
+```python
+# Only include specific tools by name
+tools = KlavisMcpServerTools(
+    klavis_api_key="your-klavis-api-key",
+    mcp_server_url=mcp_server.server_url,
+    tool_list=["salesforce_get_opportunities", "salesforce_update_opportunity", "salesforce_get_accounts"]
+)
+```
+
+## Configuration
+
+The `KlavisMcpServerTools` requires these inputs to work:
+
+- **`klavis_api_key`** (Required)
+  Your Klavis API key for authentication. Can also be set via `KLAVIS_API_KEY` environment variable.
+
+- **`mcp_server_url`** (Required)
+  The URL of the Klavis MCP server instance you want to connect to. Can also be set via `KLAVIS_MCP_SERVER_URL` environment variable.
+
+- **`tool_list`** (Optional)
+  A list of specific tool names to include. If not provided, all available tools from the MCP server will be returned.
+
+## Available MCP Servers
+
+Klavis supports various enterprise MCP servers that provide different business capabilities:
+
+- **CRM**: Salesforce, Close, Attio, etc. for deal tracking, contact management, sales pipeline analysis
+- **GSuite**: Google Workspace integration (Gmail, Drive, Calendar, Sheets, Docs) - support OAuth
+- **Database**: SQL operations, data queries, business intelligence, reporting
+- **ERP Systems**: Enterprise resource planning, inventory management, financial reporting
+- **And many more**: Check the Klavis documentation for the full list of enterprise integrations
+
+## Resources
+
+- **[Klavis MCP Servers](https://www.klavis.ai/mcp-servers/)**: Explore the Klavis MCP platform.
+- **[Klavis Documentation](https://klavis.ai/docs)**: Complete documentation for Klavis MCP servers.
+- **[Model Context Protocol](https://modelcontextprotocol.io/)**: Learn more about the MCP standard. 

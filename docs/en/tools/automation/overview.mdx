@@ -17,6 +17,10 @@ These tools enable your agents to automate workflows, integrate with external pl
     Integrate with hundreds of apps and services through Composio.
   </Card>
 
+  <Card title="Klavis MCP Server Tools" icon="bolt" href="/en/tools/automation/klavistool">
+    Easiest way to connect your AI applications to enterprise-grade MCP Servers
+  </Card>
+
   <Card title="Multion Tool" icon="window-restore" href="/en/tools/automation/multiontool">
     Automate browser interactions and web-based workflows.
   </Card>
@@ -31,17 +35,18 @@ These tools enable your agents to automate workflows, integrate with external pl
 - **Third-party Services**: Leverage external tools and platforms
 
 ```python
-from crewai_tools import ApifyActorTool, ComposioTool, MultiOnTool
+from crewai_tools import ApifyActorTool, ComposioTool, KlavisMcpServerTools, MultiOnTool
 
 # Create automation tools
 apify_automation = ApifyActorTool()
 platform_integration = ComposioTool()
+klavis_mcp_server_integration = KlavisMcpServerTools()
 browser_automation = MultiOnTool()
 
 # Add to your agent
 agent = Agent(
     role="Automation Specialist",
-    tools=[apify_automation, platform_integration, browser_automation],
+    tools=[apify_automation, platform_integration, klavis_mcp_server_integration, browser_automation],
     goal="Automate workflows and integrate systems"
 )
 ```

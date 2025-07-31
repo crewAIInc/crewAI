@@ -207,6 +207,7 @@
                       "en/tools/automation/overview",
                       "en/tools/automation/apifyactorstool",
                       "en/tools/automation/composiotool",
+                      "en/tools/automation/klavistool",
                       "en/tools/automation/multiontool"
                     ]
                   }
@@ -544,6 +545,7 @@
                       "pt-BR/tools/automation/overview",
                       "pt-BR/tools/automation/apifyactorstool",
                       "pt-BR/tools/automation/composiotool",
+                      "pt-BR/tools/automation/klavistool",
                       "pt-BR/tools/automation/multiontool"
                     ]
                   }
