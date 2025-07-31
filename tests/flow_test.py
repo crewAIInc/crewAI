@@ -755,3 +755,15 @@ def test_multiple_routers_from_same_trigger():
     assert execution_order.index("anemia_analysis") > execution_order.index(
         "anemia_router"
     )
+
+
+def test_flow_name():
+    class MyFlow(Flow):
+        name = "MyFlow"
+
+        @start()
+        def start(self):
+            return "Hello, world!"
+
+    flow = MyFlow()
+    assert flow.name == "MyFlow"

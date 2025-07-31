@@ -436,6 +436,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
     _routers: Set[str] = set()
     _router_paths: Dict[str, List[str]] = {}
     initial_state: Union[Type[T], T, None] = None
+    name: Optional[str] = None
 
     def __class_getitem__(cls: Type["Flow"], item: Type[T]) -> Type["Flow"]:
         class _FlowGeneric(cls):  # type: ignore
@@ -473,7 +474,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
             self,
             FlowCreatedEvent(
                 type="flow_created",
-                flow_name=self.__class__.__name__,
+                flow_name=self.name or self.__class__.__name__,
             ),
         )
 
@@ -769,7 +770,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
             self,
             FlowStartedEvent(
                 type="flow_started",
-                flow_name=self.__class__.__name__,
+                flow_name=self.name or self.__class__.__name__,
                 inputs=inputs,
             ),
         )
@@ -792,7 +793,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
             self,
             FlowFinishedEvent(
                 type="flow_finished",
-                flow_name=self.__class__.__name__,
+                flow_name=self.name or self.__class__.__name__,
                 result=final_output,
             ),
         )
@@ -834,7 +835,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 MethodExecutionStartedEvent(
                     type="method_execution_started",
                     method_name=method_name,
-                    flow_name=self.__class__.__name__,
+                    flow_name=self.name or self.__class__.__name__,
                     params=dumped_params,
                     state=self._copy_state(),
                 ),
@@ -856,7 +857,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 MethodExecutionFinishedEvent(
                     type="method_execution_finished",
                     method_name=method_name,
-                    flow_name=self.__class__.__name__,
+                    flow_name=self.name or self.__class__.__name__,
                     state=self._copy_state(),
                     result=result,
                 ),
@@ -869,7 +870,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 MethodExecutionFailedEvent(
                     type="method_execution_failed",
                     method_name=method_name,
-                    flow_name=self.__class__.__name__,
+                    flow_name=self.name or self.__class__.__name__,
                     error=e,
                 ),
             )
@@ -1076,7 +1077,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
             self,
             FlowPlotEvent(
                 type="flow_plot",
-                flow_name=self.__class__.__name__,
+                flow_name=self.name or self.__class__.__name__,
             ),
         )
         plot_flow(self, filename)

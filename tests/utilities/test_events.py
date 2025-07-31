@@ -64,7 +64,8 @@ def base_agent():
         llm="gpt-4o-mini",
         goal="Just say hi",
         backstory="You are a helpful assistant that just says hi",
-)
+    )
+
 
 @pytest.fixture(scope="module")
 def base_task(base_agent):
@@ -73,6 +74,7 @@ def base_task(base_agent):
         expected_output="hi",
         agent=base_agent,
     )
+
 
 event_listener = EventListener()
 
@@ -448,6 +450,27 @@ def test_flow_emits_start_event():
     assert received_events[0].type == "flow_started"
 
 
+def test_flow_name_emitted_to_event_bus():
+    received_events = []
+
+    class MyFlowClass(Flow):
+        name = "PRODUCTION_FLOW"
+
+        @start()
+        def start(self):
+            return "Hello, world!"
+
+    @crewai_event_bus.on(FlowStartedEvent)
+    def handle_flow_start(source, event):
+        received_events.append(event)
+
+    flow = MyFlowClass()
+    flow.kickoff()
+
+    assert len(received_events) == 1
+    assert received_events[0].flow_name == "PRODUCTION_FLOW"
+
+
 def test_flow_emits_finish_event():
     received_events = []
 
@@ -756,6 +779,7 @@ def test_streaming_empty_response_handling():
     received_chunks = []
 
     with crewai_event_bus.scoped_handlers():
+
         @crewai_event_bus.on(LLMStreamChunkEvent)
         def handle_stream_chunk(source, event):
             received_chunks.append(event.chunk)
@@ -793,6 +817,7 @@ def test_streaming_empty_response_handling():
             # Restore the original method
             llm.call = original_call
 
+
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_stream_llm_emits_event_with_task_and_agent_info():
     completed_event = []
@@ -801,6 +826,7 @@ def test_stream_llm_emits_event_with_task_and_agent_info():
     stream_event = []
 
     with crewai_event_bus.scoped_handlers():
+
         @crewai_event_bus.on(LLMCallFailedEvent)
         def handle_llm_failed(source, event):
             failed_event.append(event)
@@ -827,7 +853,7 @@ def test_stream_llm_emits_event_with_task_and_agent_info():
             description="Just say hi",
             expected_output="hi",
             llm=LLM(model="gpt-4o-mini", stream=True),
-            agent=agent
+            agent=agent,
         )
 
         crew = Crew(agents=[agent], tasks=[task])
@@ -855,6 +881,7 @@ def test_stream_llm_emits_event_with_task_and_agent_info():
     assert set(all_task_id) == {task.id}
     assert set(all_task_name) == {task.name}
 
+
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_llm_emits_event_with_task_and_agent_info(base_agent, base_task):
     completed_event = []
@@ -863,6 +890,7 @@ def test_llm_emits_event_with_task_and_agent_info(base_agent, base_task):
     stream_event = []
 
     with crewai_event_bus.scoped_handlers():
+
         @crewai_event_bus.on(LLMCallFailedEvent)
         def handle_llm_failed(source, event):
             failed_event.append(event)
@@ -904,6 +932,7 @@ def test_llm_emits_event_with_task_and_agent_info(base_agent, base_task):
     assert set(all_task_id) == {base_task.id}
     assert set(all_task_name) == {base_task.name}
 
+
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_llm_emits_event_with_lite_agent():
     completed_event = []
@@ -912,6 +941,7 @@ def test_llm_emits_event_with_lite_agent():
     stream_event = []
 
     with crewai_event_bus.scoped_handlers():
+
         @crewai_event_bus.on(LLMCallFailedEvent)
         def handle_llm_failed(source, event):
             failed_event.append(event)
@@ -935,7 +965,6 @@ def test_llm_emits_event_with_lite_agent():
             backstory="You are a helpful assistant that just says hi",
         )
         agent.kickoff(messages=[{"role": "user", "content": "say hi!"}])
-
 
     assert len(completed_event) == 2
     assert len(failed_event) == 0
