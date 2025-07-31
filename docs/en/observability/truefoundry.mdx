@@ -3,7 +3,7 @@ title: TrueFoundry Integration
 icon: chart-line
 ---
 
-TrueFoundry provides an enterprise-ready [AI Gateway](https://www.truefoundry.com/ai-gateway) for agentic frameworks like CrewAI. TrueFoundry AI Gateway serves as a unified interface for LLM access, providing:
+TrueFoundry provides an enterprise-ready [AI Gateway](https://www.truefoundry.com/ai-gateway) that can be used for governance and observability for agentic frameworks like CrewAI. TrueFoundry AI Gateway serves as a unified interface for LLM access, providing:
 
 - **Unified API Access**: Connect to 250+ LLMs (OpenAI, Claude, Gemini, Groq, Mistral) through one API
 - **Low Latency**: Sub-3ms internal latency with intelligent routing and load balancing  
@@ -12,10 +12,6 @@ TrueFoundry provides an enterprise-ready [AI Gateway](https://www.truefoundry.co
 - **Observability**: Full request/response logging, metrics, and traces with customizable retention
 
 ## How TrueFoundry Integrates with CrewAI
-
-TrueFoundry provides comprehensive observability for CrewAI applications through multiple integration layers:
-
-
 
 
 ### Installation & Setup
@@ -28,8 +24,8 @@ pip install crewai
 </Step>
 
 <Step title="Get TrueFoundry Access Token">
-1. Sign up for a [TrueFoundry account](https://www.truefoundry.com/)
-2. Follow the steps [here](https://docs.truefoundry.com/gateway/quick-start) and generate a [Personal Access Token (PAT)](https://docs.truefoundry.com/docs/gateway/authentication)
+1. Sign up for a [TrueFoundry account](https://www.truefoundry.com/register)
+2. Follow the steps here in [Quick start](https://docs.truefoundry.com/gateway/quick-start) and generate a [Personal Access Token (PAT)](https://docs.truefoundry.com/docs/gateway/authentication)
 3. Note down your API endpoint URL
 </Step>
 
@@ -41,7 +37,7 @@ from crewai import LLM
 
 # Create an LLM instance with TrueFoundry AI Gateway
 truefoundry_llm = LLM(
-    model="openai-main/gpt-4o",  # Specify your desired model
+    model="openai-main/gpt-4o",  # Similarly you can call any model from any model provider
     base_url="https://your-truefoundry-endpoint/api/inference/v1",
     api_key="your_truefoundry_pat_token"
 )
@@ -59,30 +55,6 @@ def researcher(self) -> Agent:
 ```
 </Step>
 </Steps>
-
-### Available Models
-
-TrueFoundry AI Gateway provides access to 250+ LLMs through a unified interface:
-
-```python
-from crewai import LLM
-
-# OpenAI models
-openai_llm = LLM(
-    model="openai-main/gpt-4o",
-    base_url="base_url_from_code_snippet",
-    api_key="your_truefoundry_pat_token"
-)
-
-# Anthropic models  
-anthropic_llm = LLM(
-    model="anthropic/claude-3.5-sonnet",
-    base_url="base_url_from_code_snippet",
-    api_key="your_truefoundry_pat_token"
-)
-
-# Other supported providers: Mistral, Gemini, Groq, Cohere, etc.
-```
 
 ### Complete CrewAI Example
 
@@ -137,22 +109,21 @@ crew = Crew(
 result = crew.kickoff()
 ```
 
-### Observability
+### Observability and Governance
 
 Monitor your CrewAI agents through TrueFoundry's metrics tab:
 ![TrueFoundry metrics](/images/gateway-metrics.png)
 
-With the Metrics Dashboard, you can monitor and analyze:
+With Truefoundry's AI gateway, you can monitor and analyze:
 
 - **Performance Metrics**: Track key latency metrics like Request Latency, Time to First Token (TTFS), and Inter-Token Latency (ITL) with P99, P90, and P50 percentiles
 - **Cost and Token Usage**: Gain visibility into your application's costs with detailed breakdowns of input/output tokens and the associated expenses for each model
 - **Usage Patterns**: Understand how your application is being used with detailed analytics on user activity, model distribution, and team-based usage
-- **Error Analysis**: Quickly identify and diagnose issues with a view of error rates and error code information
-- **Configuration Impact**: Evaluate the effectiveness of your gateway configurations by monitoring how often rate limiting, load balancing, fallbacks, guardrails, and budget limits are triggered
+- **Rate limit and Load balancing**: You can set up rate limiting, load balancing and fallback for your models
 
-## Additional Tracing (Optional)
+## [Tracing](https://docs.truefoundry.com/docs/tracing/tracing-getting-started)
 
-For tracing, you can add the Traceloop SDK:
+For tracing, you can add the Traceloop SDK: 
 
 ```bash
 pip install traceloop-sdk
@@ -171,11 +142,11 @@ Traceloop.init(
 )
 ```
 
-This provides additional trace correlation across your entire CrewAI workflow. For more details see our [docs](https://docs.truefoundry.com/docs/tracing/overview)
+This provides additional trace correlation across your entire CrewAI workflow.
 ![TrueFoundry CrewAI Tracing](/images/tracing_crewai.png)
 
 ## Resources & Support
 
 - **Documentation**: [TrueFoundry Docs](https://docs.truefoundry.com/) | [AI Gateway](https://docs.truefoundry.com/docs/ai-gateway) | [Tracing Guide](https://docs.truefoundry.com/docs/tracing/tracing-in-crewai)
 - **Support**: For technical assistance, contact [support@truefoundry.com](mailto:support@truefoundry.com)
-- **Platform**: Sign up at [TrueFoundry.com](https://www.truefoundry.com/)
+- **Platform**: Sign up at [TrueFoundry.com](https://www.truefoundry.com/register)
