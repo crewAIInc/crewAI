@@ -798,7 +798,7 @@ requires-dist = [
     { name = "blinker", specifier = ">=1.9.0" },
     { name = "chromadb", specifier = ">=0.5.23" },
     { name = "click", specifier = ">=8.1.7" },
-    { name = "crewai-tools", marker = "extra == 'tools'", specifier = "~=0.58.0" },
+    { name = "crewai-tools", marker = "extra == 'tools'", specifier = "~=0.59.0" },
     { name = "docling", marker = "extra == 'docling'", specifier = ">=2.12.0" },
     { name = "instructor", specifier = ">=1.3.3" },
     { name = "json-repair", specifier = "==0.25.2" },
@@ -850,7 +850,7 @@ dev = [
 
 [[package]]
 name = "crewai-tools"
-version = "0.58.0"
+version = "0.59.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "chromadb" },
@@ -860,6 +860,7 @@ dependencies = [
     { name = "embedchain" },
     { name = "lancedb" },
     { name = "openai" },
+    { name = "portalocker" },
     { name = "pydantic" },
     { name = "pyright" },
     { name = "pytube" },
@@ -867,9 +868,9 @@ dependencies = [
     { name = "stagehand" },
     { name = "tiktoken" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/1f/bf/72c3a0cb5a8be1f635a4e3b07ee2ad81a6d427e63b7748c2727a33ade0d4/crewai_tools-0.58.0.tar.gz", hash = "sha256:ea82d5df8611ae22a8291934c4cd0b7ed5b77eca475f81014f018b7eca4d3350", size = 1026853, upload-time = "2025-07-23T17:45:53.228Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/10/cd/af005e7dca5a35ed6000db2d1594acad890997b92172d8af2c1d9a83784e/crewai_tools-0.59.0.tar.gz", hash = "sha256:030e4b65446f4c6eccdcba5380bbdc90896de74589cb1bdb3cabc2c22c83f326", size = 1032093, upload-time = "2025-07-30T21:15:54.182Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/34/bd/1de36fbf8fb717817d3bf72a94da38e27af6cc5b888d7c1203a3f0b0cc2f/crewai_tools-0.58.0-py3-none-any.whl", hash = "sha256:151688bf0fa8c90e27dcdbaa8619f3dee2a14e97f1b420a38187b12d88305175", size = 650113, upload-time = "2025-07-23T17:45:51.056Z" },
+    { url = "https://files.pythonhosted.org/packages/7e/b2/6b11d770fda6df99ddc49bdb26d3cb0b5efd026ff395a72ca5eeb704c335/crewai_tools-0.59.0-py3-none-any.whl", hash = "sha256:816297934eb352368ff0869a0eb11dd9febb4c40b6d0eda8e6eba8f3e426f446", size = 657025, upload-time = "2025-07-30T21:15:52.531Z" },
 ]
 
 [[package]]
