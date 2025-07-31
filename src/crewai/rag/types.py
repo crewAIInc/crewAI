@@ -3,7 +3,6 @@
 from collections.abc import Callable, Mapping
 from typing import TypeAlias, TypedDict, Any
 
-from pydantic import BaseModel, Field
 from typing_extensions import Required
 
 
@@ -28,45 +27,10 @@ class BaseRecord(TypedDict, total=False):
     )
 
 
-# Vector types
 DenseVector: TypeAlias = list[float]
 IntVector: TypeAlias = list[int]
 
-
-# TODO: move package specific types to their packages
-# ChromaDB embedding types
-# Excluding numpy array types for Pydantic compatibility
-ChromaDbSingleEmbedding: TypeAlias = DenseVector | IntVector
-ChromaDbEmbedding: TypeAlias = ChromaDbSingleEmbedding | list[DenseVector | IntVector]
-
-
-# Qdrant embedding types
-class QdrantSparseVector(BaseModel, extra="forbid"):
-    """
-    Sparse vector structure
-    """
-
-    indices: list[int] = Field(..., description="Indices must be unique")
-    values: list[float] = Field(
-        ..., description="Values and indices must be the same length"
-    )
-
-
-QdrantMultiVector: TypeAlias = list[DenseVector]
-QdrantNamedVectors: TypeAlias = dict[
-    str, DenseVector | QdrantSparseVector | QdrantMultiVector
-]
-QdrantEmbedding: TypeAlias = (
-    DenseVector | QdrantMultiVector | QdrantNamedVectors | QdrantSparseVector
-)
-
-# Combined embedding types
-Embedding: TypeAlias = ChromaDbEmbedding | QdrantEmbedding
 EmbeddingFunction: TypeAlias = Callable[..., Any]
-ChromaDbEmbeddingFunction: TypeAlias = Callable[
-    [list[BaseRecord]], list[ChromaDbEmbedding]
-]
-QdrantEmbeddingFunction: TypeAlias = Callable[[list[BaseRecord]], list[QdrantEmbedding]]
 
 
 class SearchResult(TypedDict):

@@ -12,24 +12,6 @@ from crewai.rag.types import (
 )
 
 
-class BaseClientParams(TypedDict):
-    """Parameters for initializing a BaseClient implementation.
-
-    Attributes:
-        client: Pre-configured client instance from the underlying vector database SDK.
-            This allows users to pass in an already initialized client with their
-            own custom configuration.
-        embedding_function: A callable that takes a list of text strings and returns
-            a list of embedding vectors. This function is used to generate embeddings
-            for documents before adding them to the vector store. Implementations
-            should always provide a default embedding function, but users can override
-            it by passing their own function here.
-    """
-
-    client: Any
-    embedding_function: EmbeddingFunction
-
-
 class BaseCollectionParams(TypedDict):
     """Base parameters for collection operations.
 
