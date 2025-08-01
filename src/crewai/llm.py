@@ -1065,21 +1065,15 @@ class LLM(BaseLLM):
         if "mistral" in self.model.lower():
             # Check if the last message has a role of 'assistant'
             if messages and messages[-1]["role"] == "assistant":
-                # Add a dummy user message to ensure the last message has a role of 'user'
-                messages = (
-                    messages.copy()
-                )  # Create a copy to avoid modifying the original
-                messages.append({"role": "user", "content": "Please continue."})
+                # Optimize: Use list concatenation instead of copy + append for better performance
+                return messages + [{"role": "user", "content": "Please continue."}]
             return messages
 
         # TODO: Remove this code after merging PR https://github.com/BerriAI/litellm/pull/10917
         # Ollama doesn't supports last message to be 'assistant'
         if "ollama" in self.model.lower() and messages and messages[-1]["role"] == "assistant":
-            messages = messages.copy()
-            messages.append(
-                {"role": "user", "content": ""}
-            )
-            return messages
+            # Optimize: Use list concatenation instead of copy + append for better performance
+            return messages + [{"role": "user", "content": ""}]
 
         # Handle Anthropic models
         if not self.is_anthropic:
