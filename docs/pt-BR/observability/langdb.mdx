@@ -1,0 +1,286 @@
+---
+title: Integração LangDB
+description: Governe, proteja e otimize seus fluxos de trabalho CrewAI com LangDB AI Gateway—acesse mais de 350 modelos, roteamento automático, otimização de custos e observabilidade completa.
+icon: database
+---
+
+# Introdução
+
+[LangDB AI Gateway](https://langdb.ai) fornece APIs compatíveis com OpenAI para conectar com múltiplos Modelos de Linguagem Grandes e serve como uma plataforma de observabilidade que torna effortless rastrear fluxos de trabalho CrewAI de ponta a ponta, proporcionando acesso a mais de 350 modelos de linguagem. Com uma única chamada `init()`, todas as interações de agentes, execuções de tarefas e chamadas LLM são capturadas, fornecendo observabilidade abrangente e infraestrutura de IA pronta para produção para suas aplicações.
+
+<Frame caption="Exemplo de Rastreamento CrewAI LangDB">
+  <img src="/images/langdb-1.png" alt="Exemplo de rastreamento CrewAI LangDB" />
+</Frame>
+
+**Confira:** [Ver o exemplo de trace ao vivo](https://app.langdb.ai/sharing/threads/3becbfed-a1be-ae84-ea3c-4942867a3e22)
+
+## Recursos
+
+### Capacidades do AI Gateway
+- **Acesso a mais de 350 LLMs**: Conecte-se a todos os principais modelos de linguagem através de uma única integração
+- **Modelos Virtuais**: Crie configurações de modelo personalizadas com parâmetros específicos e regras de roteamento
+- **MCP Virtual**: Habilite compatibilidade e integração com sistemas MCP (Model Context Protocol) para comunicação aprimorada de agentes
+- **Guardrails**: Implemente medidas de segurança e controles de conformidade para comportamento de agentes
+
+### Observabilidade e Rastreamento
+- **Rastreamento Automático**: Uma única chamada `init()` captura todas as interações CrewAI
+- **Visibilidade Ponta a Ponta**: Monitore fluxos de trabalho de agentes do início ao fim
+- **Rastreamento de Uso de Ferramentas**: Rastreie quais ferramentas os agentes usam e seus resultados
+- **Monitoramento de Chamadas de Modelo**: Insights detalhados sobre interações LLM
+- **Análise de Performance**: Monitore latência, uso de tokens e custos
+- **Suporte a Depuração**: Execução passo a passo para solução de problemas
+- **Monitoramento em Tempo Real**: Dashboard de traces e métricas ao vivo
+
+## Instruções de Configuração
+
+<Steps>
+  <Step title="Instalar LangDB">
+    Instale o cliente LangDB com flag de recurso CrewAI:
+    ```bash
+    pip install 'pylangdb[crewai]'
+    ```
+  </Step>
+  <Step title="Definir Variáveis de Ambiente">
+    Configure suas credenciais LangDB:
+    ```bash
+    export LANGDB_API_KEY="<sua_chave_api_langdb>"
+    export LANGDB_PROJECT_ID="<seu_id_projeto_langdb>"
+    export LANGDB_API_BASE_URL='https://api.us-east-1.langdb.ai'
+    ```
+  </Step>
+  <Step title="Inicializar Rastreamento">
+    Importe e inicialize LangDB antes de configurar seu código CrewAI:
+    ```python
+    from pylangdb.crewai import init
+    # Inicializar LangDB
+    init()
+    ```
+  </Step>
+  <Step title="Configurar CrewAI com LangDB">
+    Configure seu LLM com cabeçalhos LangDB:
+    ```python
+    from crewai import Agent, Task, Crew, LLM
+    import os
+
+    # Configurar LLM com cabeçalhos LangDB
+    llm = LLM(
+        model="openai/gpt-4o", # Substitua pelo modelo que você quer usar
+        api_key=os.getenv("LANGDB_API_KEY"),
+        base_url=os.getenv("LANGDB_API_BASE_URL"),
+        extra_headers={"x-project-id": os.getenv("LANGDB_PROJECT_ID")}
+    )
+    ```
+  </Step>
+</Steps>
+
+## Exemplo de Início Rápido
+
+Aqui está um exemplo simples para começar com LangDB e CrewAI:
+
+```python
+import os
+from pylangdb.crewai import init
+from crewai import Agent, Task, Crew, LLM
+
+# Inicializar LangDB antes de qualquer importação CrewAI
+init()
+
+def create_llm(model):
+    return LLM(
+        model=model,
+        api_key=os.environ.get("LANGDB_API_KEY"),
+        base_url=os.environ.get("LANGDB_API_BASE_URL"),
+        extra_headers={"x-project-id": os.environ.get("LANGDB_PROJECT_ID")}
+    )
+
+# Defina seu agente
+researcher = Agent(
+    role="Especialista em Pesquisa",
+    goal="Pesquisar tópicos minuciosamente",
+    backstory="Pesquisador especialista com habilidades em encontrar informações",
+    llm=create_llm("openai/gpt-4o"), # Substitua pelo modelo que você quer usar
+    verbose=True
+)
+
+# Criar uma tarefa
+task = Task(
+    description="Pesquise o tópico dado e forneça um resumo abrangente",
+    agent=researcher,
+    expected_output="Resumo de pesquisa detalhado com principais descobertas"
+)
+
+# Criar e executar a equipe
+crew = Crew(agents=[researcher], tasks=[task])
+result = crew.kickoff()
+print(result)
+```
+
+## Exemplo Completo: Agente de Pesquisa e Planejamento
+
+Este exemplo abrangente demonstra um fluxo de trabalho multi-agente com capacidades de pesquisa e planejamento.
+
+### Pré-requisitos
+
+```bash
+pip install crewai 'pylangdb[crewai]' crewai_tools setuptools python-dotenv
+```
+
+### Configuração do Ambiente
+
+```bash
+# Credenciais LangDB
+export LANGDB_API_KEY="<sua_chave_api_langdb>"
+export LANGDB_PROJECT_ID="<seu_id_projeto_langdb>"
+export LANGDB_API_BASE_URL='https://api.us-east-1.langdb.ai'
+
+# Chaves API adicionais (opcional)
+export SERPER_API_KEY="<sua_chave_api_serper>"  # Para capacidades de busca na web
+```
+
+### Implementação Completa
+
+```python
+#!/usr/bin/env python3
+
+import os
+import sys
+from pylangdb.crewai import init
+init()  # Inicializar LangDB antes de qualquer importação CrewAI
+from dotenv import load_dotenv
+from crewai import Agent, Task, Crew, Process, LLM
+from crewai_tools import SerperDevTool
+
+load_dotenv()
+
+def create_llm(model):
+    return LLM(
+        model=model,
+        api_key=os.environ.get("LANGDB_API_KEY"),
+        base_url=os.environ.get("LANGDB_API_BASE_URL"),
+        extra_headers={"x-project-id": os.environ.get("LANGDB_PROJECT_ID")}
+    )
+
+class ResearchPlanningCrew:
+    def researcher(self) -> Agent:
+        return Agent(
+            role="Especialista em Pesquisa",
+            goal="Pesquisar tópicos minuciosamente e compilar informações abrangentes",
+            backstory="Pesquisador especialista com habilidades em encontrar e analisar informações de várias fontes",
+            tools=[SerperDevTool()],
+            llm=create_llm("openai/gpt-4o"),
+            verbose=True
+        )
+    
+    def planner(self) -> Agent:
+        return Agent(
+            role="Planejador Estratégico",
+            goal="Criar planos acionáveis baseados em descobertas de pesquisa",
+            backstory="Planejador estratégico que divide desafios complexos em planos executáveis",
+            reasoning=True,
+            max_reasoning_attempts=3,
+            llm=create_llm("openai/anthropic/claude-3.7-sonnet"),
+            verbose=True
+        )
+    
+    def research_task(self) -> Task:
+        return Task(
+            description="Pesquise o tópico minuciosamente e compile informações abrangentes",
+            agent=self.researcher(),
+            expected_output="Relatório de pesquisa abrangente com principais descobertas e insights"
+        )
+    
+    def planning_task(self) -> Task:
+        return Task(
+            description="Crie um plano estratégico baseado nas descobertas da pesquisa",
+            agent=self.planner(),
+            expected_output="Plano de execução estratégica com fases, objetivos e etapas acionáveis",
+            context=[self.research_task()]
+        )
+    
+    def crew(self) -> Crew:
+        return Crew(
+            agents=[self.researcher(), self.planner()],
+            tasks=[self.research_task(), self.planning_task()],
+            verbose=True,
+            process=Process.sequential
+        )
+
+def main():
+        topic = sys.argv[1] if len(sys.argv) > 1 else "Inteligência Artificial na Saúde"
+        
+        crew_instance = ResearchPlanningCrew()
+        
+        # Atualizar descrições de tarefas com o tópico específico
+        crew_instance.research_task().description = f"Pesquise {topic} minuciosamente e compile informações abrangentes"
+    crew_instance.planning_task().description = f"Crie um plano estratégico para {topic} baseado nas descobertas da pesquisa"
+    
+    result = crew_instance.crew().kickoff()
+    print(result)
+
+if __name__ == "__main__":
+    main()
+```
+
+### Executando o Exemplo
+
+```bash
+python main.py "Soluções de Energia Sustentável"
+```
+
+## Visualizando Traces no LangDB
+
+Após executar sua aplicação CrewAI, você pode visualizar traces detalhados no dashboard LangDB:
+
+<Frame caption="Dashboard de Trace LangDB">
+  <img src="/images/langdb-2.png" alt="Dashboard de trace LangDB mostrando fluxo de trabalho CrewAI" />
+</Frame>
+
+### O Que Você Verá
+
+- **Interações de Agentes**: Fluxo completo de conversas de agentes e transferências de tarefas
+- **Uso de Ferramentas**: Quais ferramentas foram chamadas, suas entradas e saídas
+- **Chamadas de Modelo**: Interações LLM detalhadas com prompts e respostas
+- **Métricas de Performance**: Rastreamento de latência, uso de tokens e custos
+- **Linha do Tempo de Execução**: Visualização passo a passo de todo o fluxo de trabalho
+
+
+## Solução de Problemas
+
+### Problemas Comuns
+
+- **Nenhum trace aparecendo**: Certifique-se de que `init()` seja chamado antes de qualquer importação CrewAI
+- **Erros de autenticação**: Verifique sua chave API LangDB e ID do projeto
+
+
+## Recursos
+
+<CardGroup cols={3}>
+  <Card title="Documentação LangDB" icon="book" href="https://docs.langdb.ai">
+    Documentação oficial e guias LangDB
+  </Card>
+  <Card title="Guias LangDB" icon="graduation-cap" href="https://docs.langdb.ai/guides">
+    Tutoriais passo a passo para construir agentes de IA
+  </Card>
+  <Card title="Exemplos GitHub" icon="github" href="https://github.com/langdb/langdb-samples/tree/main/examples/crewai" >
+    Exemplos completos de integração CrewAI
+  </Card>
+  <Card title="Dashboard LangDB" icon="chart-line" href="https://app.langdb.ai">
+    Acesse seus traces e análises
+  </Card>
+  <Card title="Catálogo de Modelos" icon="list" href="https://app.langdb.ai/models">
+    Navegue por mais de 350 modelos de linguagem disponíveis
+  </Card>
+  <Card title="Recursos Enterprise" icon="building" href="https://docs.langdb.ai/enterprise">
+    Opções auto-hospedadas e capacidades empresariais
+  </Card>
+</CardGroup>
+
+## Próximos Passos
+
+Este guia cobriu o básico da integração do LangDB AI Gateway com CrewAI. Para aprimorar ainda mais seus fluxos de trabalho de IA, explore:
+
+- **Modelos Virtuais**: Crie configurações de modelo personalizadas com estratégias de roteamento
+- **Guardrails e Segurança**: Implemente filtragem de conteúdo e controles de conformidade
+- **Implantação em Produção**: Configure fallbacks, tentativas e balanceamento de carga
+
+Para recursos mais avançados e casos de uso, visite a [Documentação LangDB](https://docs.langdb.ai) ou explore o [Catálogo de Modelos](https://app.langdb.ai/models) para descobrir todos os modelos disponíveis.
