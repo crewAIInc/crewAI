@@ -400,7 +400,7 @@ def show_agent_logs(
     if not verbose:
         return
 
-    agent_role = agent_role.split("\n")[0]
+    agent_role = agent_role.partition("\n")[0]
 
     if formatted_answer is None:
         # Start logs

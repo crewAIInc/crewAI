@@ -1321,7 +1321,7 @@ class ConsoleFormatter:
         if not verbose:
             return
 
-        agent_role = agent_role.split("\n")[0]
+        agent_role = agent_role.partition("\n")[0]
 
         # Create panel content
         content = Text()
@@ -1356,7 +1356,7 @@ class ConsoleFormatter:
         import json
         import re
 
-        agent_role = agent_role.split("\n")[0]
+        agent_role = agent_role.partition("\n")[0]
 
         if isinstance(formatted_answer, AgentAction):
             thought = re.sub(r"\n+", "\n", formatted_answer.thought)
