@@ -14,13 +14,16 @@ class CrewType(Enum):
     FLOW = "flow"
 
 
-def run_crew() -> None:
+def run_crew(active: bool = False) -> None:
     """
     Run the crew or flow by running a command in the UV environment.
 
     Starting from version 0.103.0, this command can be used to run both
     standard crews and flows. For flows, it detects the type from pyproject.toml
     and automatically runs the appropriate command.
+    
+    Args:
+        active: If True, use the currently active environment instead of creating a virtual environment
     """
     crewai_version = get_crewai_version()
     min_required_version = "0.71.0"
@@ -44,17 +47,23 @@ def run_crew() -> None:
     click.echo(f"Running the {'Flow' if is_flow else 'Crew'}")
 
     # Execute the appropriate command
-    execute_command(crew_type)
+    execute_command(crew_type, active)
 
 
-def execute_command(crew_type: CrewType) -> None:
+def execute_command(crew_type: CrewType, active: bool = False) -> None:
     """
     Execute the appropriate command based on crew type.
 
     Args:
         crew_type: The type of crew to run
+        active: If True, use the currently active environment instead of creating a virtual environment
     """
-    command = ["uv", "run", "kickoff" if crew_type == CrewType.FLOW else "run_crew"]
+    command = ["uv", "run"]
+    
+    if active:
+        command.append("--no-sync")
+    
+    command.append("kickoff" if crew_type == CrewType.FLOW else "run_crew")
 
     try:
         subprocess.run(command, capture_output=False, text=True, check=True)

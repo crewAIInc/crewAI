@@ -214,9 +214,10 @@ def install(context):
 
 
 @crewai.command()
-def run():
+@click.option("--active", is_flag=True, help="Use the currently active environment instead of creating a virtual environment")
+def run(active):
     """Run the Crew."""
-    run_crew()
+    run_crew(active)
 
 
 @crewai.command()
