@@ -36,8 +36,18 @@ class InternalInstructor:
         return model.model_dump_json(indent=2)
 
     def to_pydantic(self):
+        """
+        Convert the instruction to a Pydantic model using the LLM.
+
+        Returns:
+            Pydantic model: The response model from the LLM.
+            
+        Raises:
+            ValueError: If no API key is provided or is invalid.
+            RuntimeError: If chat completion creation fails.
+        """
         messages = [{"role": "user", "content": self.content}]
         model = self._client.chat.completions.create(
-            model=self.llm.model, response_model=self.model, messages=messages
+            model=self.llm.model, response_model=self.model, messages=messages, api_key=self.llm.api_key
         )
         return model
