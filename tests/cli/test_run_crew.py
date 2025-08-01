@@ -5,7 +5,7 @@ import pytest
 from click.testing import CliRunner
 
 from crewai.cli.cli import run
-from crewai.cli.run_crew import run_crew, execute_command, CrewType
+from crewai.cli.run_crew import execute_command, CrewType
 
 
 @pytest.fixture
