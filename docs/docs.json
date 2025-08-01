@@ -227,7 +227,8 @@
                   "en/observability/opik",
                   "en/observability/patronus-evaluation",
                   "en/observability/portkey",
-                  "en/observability/weave"
+                  "en/observability/weave",
+                  "en/observability/truefoundry"
                 ]
               },
               {
@@ -563,7 +564,8 @@
                   "pt-BR/observability/opik",
                   "pt-BR/observability/patronus-evaluation",
                   "pt-BR/observability/portkey",
-                  "pt-BR/observability/weave"
+                  "pt-BR/observability/weave",
+                  "pt-BR/observability/truefoundry"
                 ]
               },
               {
