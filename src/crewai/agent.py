@@ -817,6 +817,8 @@ class Agent(BaseAgent):
             original_agent=self,
             guardrail=self.guardrail,
             guardrail_max_retries=self.guardrail_max_retries,
+            system_template=self.system_template,
+            prompt_template=self.prompt_template,
         )
 
         return lite_agent.kickoff(messages)
@@ -853,6 +855,8 @@ class Agent(BaseAgent):
             response_format=response_format,
             i18n=self.i18n,
             original_agent=self,
+            system_template=self.system_template,
+            prompt_template=self.prompt_template,
         )
 
         return await lite_agent.kickoff_async(messages)

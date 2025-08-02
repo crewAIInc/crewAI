@@ -174,6 +174,14 @@ class LiteAgent(FlowTrackable, BaseModel):
         default=[], description="Callbacks to be used for the agent"
     )
 
+    # Template Properties
+    system_template: Optional[str] = Field(
+        default=None, description="Custom system template for the agent"
+    )
+    prompt_template: Optional[str] = Field(
+        default=None, description="Custom prompt template for the agent"
+    )
+
     # Guardrail Properties
     guardrail: Optional[Union[Callable[[LiteAgentOutput], Tuple[bool, Any]], str]] = (
         Field(
@@ -446,6 +454,26 @@ class LiteAgent(FlowTrackable, BaseModel):
 
     def _get_default_system_prompt(self) -> str:
         """Get the default system prompt for the agent."""
+        if self.system_template and self.prompt_template:
+            system_components = ["role_playing"]
+            if self._parsed_tools:
+                system_components.append("tools")
+            else:
+                system_components.append("no_tools")
+            
+            system_parts = [self.i18n.slice(component) for component in system_components]
+            system_content = "".join(system_parts)
+            
+            system_prompt = self.system_template.replace("{{ .System }}", system_content)
+            
+            system_prompt = (
+                system_prompt.replace("{goal}", self.goal)
+                .replace("{role}", self.role)
+                .replace("{backstory}", self.backstory)
+            )
+            
+            return system_prompt
+        
         base_prompt = ""
         if self._parsed_tools:
             # Use the prompt template for agents with tools
