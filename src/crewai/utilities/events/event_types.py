@@ -35,6 +35,8 @@ from .llm_guardrail_events import (
     LLMGuardrailStartedEvent,
 )
 from .task_events import (
+    HumanInputCompletedEvent,
+    HumanInputRequiredEvent,
     TaskCompletedEvent,
     TaskFailedEvent,
     TaskStartedEvent,
@@ -85,6 +87,8 @@ EventTypes = Union[
     TaskStartedEvent,
     TaskCompletedEvent,
     TaskFailedEvent,
+    HumanInputRequiredEvent,
+    HumanInputCompletedEvent,
     FlowStartedEvent,
     FlowFinishedEvent,
     MethodExecutionStartedEvent,

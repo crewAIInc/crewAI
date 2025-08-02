@@ -69,6 +69,11 @@ docling = [
 aisuite = [
     "aisuite>=0.1.10",
 ]
+server = [
+    "fastapi>=0.104.0",
+    "uvicorn>=0.24.0",
+    "websockets>=12.0",
+]
 
 [tool.uv]
 dev-dependencies = [
@@ -86,6 +91,10 @@ dev-dependencies = [
     "pytest-timeout>=2.3.1",
     "pytest-xdist>=3.6.1",
     "pytest-split>=0.9.0",
+    "fastapi>=0.104.0",
+    "uvicorn>=0.24.0",
+    "websockets>=12.0",
+    "httpx>=0.25.0",
 ]
 
 [project.scripts]

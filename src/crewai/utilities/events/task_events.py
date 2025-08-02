@@ -82,3 +82,35 @@ class TaskEvaluationEvent(BaseEvent):
                 and self.task.fingerprint.metadata
             ):
                 self.fingerprint_metadata = self.task.fingerprint.metadata
+
+
+class HumanInputRequiredEvent(BaseEvent):
+    """Event emitted when human input is required during task execution"""
+
+    type: str = "human_input_required"
+    execution_id: Optional[str] = None
+    crew_id: Optional[str] = None
+    task_id: Optional[str] = None
+    agent_id: Optional[str] = None
+    prompt: Optional[str] = None
+    context: Optional[str] = None
+    reason_flags: Optional[dict] = None
+    event_id: Optional[str] = None
+
+    def __init__(self, **data):
+        super().__init__(**data)
+
+
+class HumanInputCompletedEvent(BaseEvent):
+    """Event emitted when human input is completed"""
+
+    type: str = "human_input_completed"
+    execution_id: Optional[str] = None
+    crew_id: Optional[str] = None
+    task_id: Optional[str] = None
+    agent_id: Optional[str] = None
+    event_id: Optional[str] = None
+    human_feedback: Optional[str] = None
+
+    def __init__(self, **data):
+        super().__init__(**data)
