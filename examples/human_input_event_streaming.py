@@ -18,7 +18,6 @@ try:
     import websockets
     import httpx
     from crewai.server.human_input_server import HumanInputServer
-    from crewai.server.event_stream_manager import event_stream_manager
     DEPENDENCIES_AVAILABLE = True
 except ImportError:
     DEPENDENCIES_AVAILABLE = False
