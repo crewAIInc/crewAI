@@ -8,6 +8,7 @@ from typing import (
     Dict,
     Generic,
     List,
+    Literal,
     Optional,
     Set,
     Type,
@@ -1072,7 +1073,28 @@ class Flow(Generic[T], metaclass=FlowMeta):
         elif level == "warning":
             logger.warning(message)
 
-    def plot(self, filename: str = "crewai_flow") -> None:
+    def plot(
+        self,
+        filename: str = "crewai_flow",
+        orientation: Literal["horizontal", "vertical"] = "horizontal",
+    ) -> None:
+        """
+        Method to create and save a flow visualization.
+
+        Parameters
+        ----------
+        filename : str, optional
+            Output filename without extension, by default "flow_plot".
+        orientation : Literal["horizontal", "vertical"], optional
+            Orientation of the plot.
+
+        Raises
+        ------
+        ValueError
+            If filename or orientation is invalid.
+        IOError
+            If file operations fail.
+        """
         crewai_event_bus.emit(
             self,
             FlowPlotEvent(
@@ -1080,4 +1102,4 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 flow_name=self.name or self.__class__.__name__,
             ),
         )
-        plot_flow(self, filename)
+        plot_flow(self, filename, orientation)
