@@ -1,10 +1,7 @@
-import pytest
-import asyncio
-import json
 from unittest.mock import MagicMock, patch
 
 from crewai.server.event_stream_manager import EventStreamManager
-from crewai.utilities.events.task_events import HumanInputRequiredEvent, HumanInputCompletedEvent
+from crewai.utilities.events.task_events import HumanInputRequiredEvent
 
 
 class TestEventStreamManager:

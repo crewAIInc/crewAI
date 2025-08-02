@@ -2,7 +2,6 @@ import asyncio
 import json
 import uuid
 from typing import Dict, List, Optional, Set
-from datetime import datetime, timezone
 
 from crewai.utilities.events.crewai_event_bus import crewai_event_bus
 from crewai.utilities.events.task_events import HumanInputRequiredEvent, HumanInputCompletedEvent

@@ -167,7 +167,7 @@ class TestHumanInputEventIntegration:
         with patch.object(crewai_event_bus, 'emit', side_effect=capture_event), \
              patch('builtins.input', return_value='test'):
             
-            result = self.executor._ask_human_input("Test result")
+            self.executor._ask_human_input("Test result")
             
             assert len(events_captured) == 2
             required_event = events_captured[0][1]
@@ -185,7 +185,7 @@ class TestHumanInputEventIntegration:
         with patch.object(crewai_event_bus, 'emit', side_effect=capture_event), \
              patch('builtins.input', return_value='test'):
             
-            result = self.executor._ask_human_input("Test result")
+            self.executor._ask_human_input("Test result")
             
             assert len(events_captured) == 2
             required_event = events_captured[0][1]
@@ -202,7 +202,7 @@ class TestHumanInputEventIntegration:
         with patch.object(crewai_event_bus, 'emit', side_effect=capture_event), \
              patch('builtins.input', return_value='test'):
             
-            result = self.executor._ask_human_input("Test result")
+            self.executor._ask_human_input("Test result")
             
             assert len(events_captured) == 2
             required_event = events_captured[0][1]
