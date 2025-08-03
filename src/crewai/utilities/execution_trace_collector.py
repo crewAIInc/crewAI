@@ -1,5 +1,4 @@
 from datetime import datetime
-from typing import Any, Dict, List, Optional
 from crewai.crews.execution_trace import ExecutionStep, ExecutionTrace
 from crewai.utilities.events.crewai_event_bus import crewai_event_bus
 from crewai.utilities.events.agent_events import (
@@ -22,31 +21,24 @@ class ExecutionTraceCollector:
     def __init__(self):
         self.trace = ExecutionTrace()
         self.is_collecting = False
-        self._event_handlers = []
     
     def start_collecting(self) -> None:
         """Start collecting execution events."""
         self.is_collecting = True
         self.trace = ExecutionTrace(start_time=datetime.now())
         
-        self._event_handlers = [
-            crewai_event_bus.register_handler(TaskStartedEvent, self._handle_task_started),
-            crewai_event_bus.register_handler(TaskCompletedEvent, self._handle_task_completed),
-            crewai_event_bus.register_handler(AgentExecutionStartedEvent, self._handle_agent_started),
-            crewai_event_bus.register_handler(AgentExecutionCompletedEvent, self._handle_agent_completed),
-            crewai_event_bus.register_handler(AgentLogsExecutionEvent, self._handle_agent_logs),
-            crewai_event_bus.register_handler(ToolUsageStartedEvent, self._handle_tool_started),
-            crewai_event_bus.register_handler(ToolUsageFinishedEvent, self._handle_tool_finished),
-        ]
+        crewai_event_bus.register_handler(TaskStartedEvent, self._handle_task_started)
+        crewai_event_bus.register_handler(TaskCompletedEvent, self._handle_task_completed)
+        crewai_event_bus.register_handler(AgentExecutionStartedEvent, self._handle_agent_started)
+        crewai_event_bus.register_handler(AgentExecutionCompletedEvent, self._handle_agent_completed)
+        crewai_event_bus.register_handler(AgentLogsExecutionEvent, self._handle_agent_logs)
+        crewai_event_bus.register_handler(ToolUsageStartedEvent, self._handle_tool_started)
+        crewai_event_bus.register_handler(ToolUsageFinishedEvent, self._handle_tool_finished)
     
     def stop_collecting(self) -> ExecutionTrace:
         """Stop collecting and return the execution trace."""
         self.is_collecting = False
         self.trace.end_time = datetime.now()
-        
-        for handler in self._event_handlers:
-            crewai_event_bus.unregister_handler(handler)
-        self._event_handlers.clear()
         
         return self.trace
     
