@@ -86,8 +86,10 @@ def test_environment_variable_file_not_found(monkeypatch):
     """Test proper error handling when environment variable points to non-existent file"""
     monkeypatch.setenv("CREWAI_I18N_FILE", "/nonexistent/file.json")
     
-    with pytest.raises(Exception, match="Prompt file '/nonexistent/file.json' not found"):
+    with pytest.raises(Exception) as exc_info:
         I18N()
+    
+    assert "Prompt file '/nonexistent/file.json' not found" in str(exc_info.value)
 
 
 def test_fallback_to_default_when_no_environment_variable(monkeypatch):
