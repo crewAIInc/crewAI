@@ -5,6 +5,7 @@ import urllib.request
 from crewai.agent import Agent
 from crewai.crew import Crew
 from crewai.crews.crew_output import CrewOutput
+from crewai.crews.execution_trace import ExecutionTrace, ExecutionStep
 from crewai.flow.flow import Flow
 from crewai.knowledge.knowledge import Knowledge
 from crewai.llm import LLM
@@ -59,6 +60,8 @@ __all__ = [
     "Agent",
     "Crew",
     "CrewOutput",
+    "ExecutionTrace", 
+    "ExecutionStep",
     "Process",
     "Task",
     "LLM",
