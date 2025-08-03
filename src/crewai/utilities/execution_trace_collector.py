@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Any
 from crewai.crews.execution_trace import ExecutionStep, ExecutionTrace
 from crewai.utilities.events.crewai_event_bus import crewai_event_bus
 from crewai.utilities.events.agent_events import (
@@ -43,7 +44,7 @@ class ExecutionTraceCollector:
         return self.trace
     
     
-    def _handle_agent_started(self, event: AgentExecutionStartedEvent) -> None:
+    def _handle_agent_started(self, source: Any, event: AgentExecutionStartedEvent) -> None:
         if not self.is_collecting:
             return
         
@@ -59,7 +60,7 @@ class ExecutionTraceCollector:
         )
         self.trace.add_step(step)
     
-    def _handle_agent_completed(self, event: AgentExecutionCompletedEvent) -> None:
+    def _handle_agent_completed(self, source: Any, event: AgentExecutionCompletedEvent) -> None:
         if not self.is_collecting:
             return
         
@@ -73,7 +74,7 @@ class ExecutionTraceCollector:
         )
         self.trace.add_step(step)
     
-    def _handle_agent_logs(self, event: AgentLogsExecutionEvent) -> None:
+    def _handle_agent_logs(self, source: Any, event: AgentLogsExecutionEvent) -> None:
         if not self.is_collecting:
             return
         
@@ -87,7 +88,7 @@ class ExecutionTraceCollector:
         )
         self.trace.add_step(step)
     
-    def _handle_tool_started(self, event: ToolUsageStartedEvent) -> None:
+    def _handle_tool_started(self, source: Any, event: ToolUsageStartedEvent) -> None:
         if not self.is_collecting:
             return
         
@@ -103,7 +104,7 @@ class ExecutionTraceCollector:
         )
         self.trace.add_step(step)
     
-    def _handle_tool_finished(self, event: ToolUsageFinishedEvent) -> None:
+    def _handle_tool_finished(self, source: Any, event: ToolUsageFinishedEvent) -> None:
         if not self.is_collecting:
             return
         
@@ -120,7 +121,7 @@ class ExecutionTraceCollector:
         )
         self.trace.add_step(step)
     
-    def _handle_task_started(self, event: TaskStartedEvent) -> None:
+    def _handle_task_started(self, source: Any, event: TaskStartedEvent) -> None:
         if not self.is_collecting:
             return
         
@@ -135,7 +136,7 @@ class ExecutionTraceCollector:
         )
         self.trace.add_step(step)
     
-    def _handle_task_completed(self, event: TaskCompletedEvent) -> None:
+    def _handle_task_completed(self, source: Any, event: TaskCompletedEvent) -> None:
         if not self.is_collecting:
             return
         
