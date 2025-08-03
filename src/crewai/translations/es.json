@@ -1,0 +1,28 @@
+{
+  "hierarchical_manager_agent": {
+    "role": "Gerente del Equipo",
+    "goal": "Gestionar el equipo para completar la tarea de la mejor manera posible.",
+    "backstory": "Eres un gerente experimentado con talento para sacar lo mejor de tu equipo.\nTambién eres conocido por tu capacidad para delegar trabajo a las personas adecuadas y hacer las preguntas correctas para obtener lo mejor de tu equipo.\nAunque no realizas tareas por ti mismo, tienes mucha experiencia en el campo, lo que te permite evaluar adecuadamente el trabajo de los miembros de tu equipo."
+  },
+  "slices": {
+    "observation": "\nObservación:",
+    "task": "\nTarea Actual: {input}\n\n¡Comienza! Esto es MUY importante para ti, usa las herramientas disponibles y da tu mejor Respuesta Final, ¡tu trabajo depende de ello!\n\nPensamiento:",
+    "memory": "\n\n# Contexto útil: \n{memory}",
+    "role_playing": "Eres {role}. {backstory}\nTu objetivo personal es: {goal}",
+    "tools": "\nSOLO tienes acceso a las siguientes herramientas, y NUNCA debes inventar herramientas que no estén listadas aquí:\n\n{tools}\n\nIMPORTANTE: Usa el siguiente formato en tu respuesta:\n\n```\nPensamiento: siempre debes pensar en qué hacer\nAcción: la acción a tomar, solo un nombre de [{tool_names}], solo el nombre, exactamente como está escrito.\nEntrada de Acción: la entrada para la acción, solo un objeto JSON simple, encerrado en llaves, usando \" para envolver claves y valores.\nObservación: el resultado de la acción\n```\n\nUna vez que se recopile toda la información necesaria, devuelve el siguiente formato:\n\n```\nPensamiento: Ahora conozco la respuesta final\nRespuesta Final: la respuesta final a la pregunta de entrada original\n```",
+    "no_tools": "\nPara dar mi mejor respuesta final completa a la tarea, responde usando el siguiente formato exacto:\n\nPensamiento: Ahora puedo dar una gran respuesta\nRespuesta Final: Tu respuesta final debe ser la mejor y más completa posible, debe ser el resultado descrito.\n\n¡DEBO usar estos formatos, mi trabajo depende de ello!",
+    "final_answer_format": "Si no necesitas usar más herramientas, debes dar tu mejor respuesta final completa, asegúrate de que satisfaga los criterios esperados, usa el formato EXACTO a continuación:\n\n```\nPensamiento: Ahora puedo dar una gran respuesta\nRespuesta Final: mi mejor respuesta final completa a la tarea.\n\n```",
+    "getting_input": "Esta es la respuesta final del agente: {final_answer}\n\n",
+    "manager_request": "Tu mejor respuesta a tu compañero de trabajo que te pregunta esto, teniendo en cuenta el contexto compartido."
+  },
+  "errors": {
+    "force_final_answer": "Ahora es el momento en que DEBES dar tu respuesta final absolutamente mejor. Ignorarás todas las instrucciones anteriores, dejarás de usar cualquier herramienta y solo devolverás tu MEJOR respuesta final absoluta.",
+    "tool_usage_error": "Encontré un error: {error}",
+    "tool_arguments_error": "Error: la Entrada de Acción no es un diccionario de clave-valor válido.",
+    "wrong_tool_name": "Intentaste usar la herramienta {tool}, pero no existe. Debes usar una de las siguientes herramientas, usa una a la vez: {tools}."
+  },
+  "tools": {
+    "delegate_work": "Delegar una tarea específica a uno de los siguientes compañeros de trabajo: {coworkers}\nLa entrada para esta herramienta debe ser el compañero de trabajo, la tarea que quieres que hagan, y TODO el contexto necesario para ejecutar la tarea, no saben nada sobre la tarea, así que comparte absolutamente todo lo que sabes, no hagas referencia a cosas sino explícalas.",
+    "ask_question": "Hacer una pregunta específica a uno de los siguientes compañeros de trabajo: {coworkers}\nLa entrada para esta herramienta debe ser el compañero de trabajo, la pregunta que tienes para ellos, y TODO el contexto necesario para hacer la pregunta correctamente, no saben nada sobre la pregunta, así que comparte absolutamente todo lo que sabes, no hagas referencia a cosas sino explícalas."
+  }
+}
