@@ -33,7 +33,7 @@ class ExternalMemory(Memory):
     def _configure_weaviate(crew: Any, config: Dict[str, Any]) -> "WeaviateStorage":
         from crewai.memory.storage.weaviate_storage import WeaviateStorage
 
-        return WeaviateStorage(type="external", crew=crew, config=config)
+        return WeaviateStorage(type="external", crew=crew, embedder_config=config)
 
     @staticmethod
     def external_supported_storages() -> Dict[str, Any]:

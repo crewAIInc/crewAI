@@ -172,7 +172,8 @@ class WeaviateStorage(BaseRAGStorage):
     def search(
         self,
         query: str,
-        limit: int = 3
+        limit: int = 3,
+        score_threshold: float = 0.35,
     ) -> List[Any]:
         """Search for relevant memories using Weaviate's hybrid search"""
         if not self.collection:
@@ -187,11 +188,12 @@ class WeaviateStorage(BaseRAGStorage):
             # Parse and format results
             results = []
             for item in response.objects:
-                results.append({
-                    "id": str(item.uuid),
-                    "metadata_json": item.properties["metadata_json"],
-                    "context": item.properties["content"]
-                })
+                if item["score"] >= score_threshold:
+                    results.append({
+                        "id": str(item.uuid),
+                        "metadata_json": item.properties["metadata_json"],
+                        "context": item.properties["content"]
+                    })
             
             return results
             
