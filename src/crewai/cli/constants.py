@@ -1,4 +1,5 @@
 DEFAULT_CREWAI_ENTERPRISE_URL = "https://app.crewai.com"
+DEFAULT_OAUTH2_PROVIDER = "workos"
 
 ENV_VARS = {
     "openai": [

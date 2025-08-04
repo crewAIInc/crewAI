@@ -4,7 +4,7 @@ from typing import Optional
 
 from pydantic import BaseModel, Field
 
-from crewai.cli.constants import DEFAULT_CREWAI_ENTERPRISE_URL
+from crewai.cli.constants import DEFAULT_CREWAI_ENTERPRISE_URL, DEFAULT_OAUTH2_PROVIDER
 
 DEFAULT_CONFIG_PATH = Path.home() / ".config" / "crewai" / "settings.json"
 
@@ -19,11 +19,16 @@ USER_SETTINGS_KEYS = [
 # Settings that are related to the CLI
 CLI_SETTINGS_KEYS = [
     "enterprise_base_url",
+    "oauth2_provider",
+    "oauth2_audience",
+    "oauth2_client_id",
+    "oauth2_domain",
 ]
 
 # Default values for CLI settings
 DEFAULT_CLI_SETTINGS = {
     "enterprise_base_url": DEFAULT_CREWAI_ENTERPRISE_URL,
+    "oauth2_provider": DEFAULT_OAUTH2_PROVIDER,
 }
 
 # Readonly settings - cannot be set by the user
@@ -58,6 +63,11 @@ class Settings(BaseModel):
         None, description="UUID of the currently active organization"
     )
     config_path: Path = Field(default=DEFAULT_CONFIG_PATH, frozen=True, exclude=True)
+
+    oauth2_provider: str = Field(description="Oauth provider", default=DEFAULT_OAUTH2_PROVIDER)
+    oauth2_audience: Optional[str] = Field(description="Oauth audience", default=None)
+    oauth2_client_id: Optional[str] = Field(description="Oauth client ID", default=None)
+    oauth2_domain: Optional[str] = Field(description="Oauth domain", default=None)
 
     def __init__(self, config_path: Path = DEFAULT_CONFIG_PATH, **data):
         """Load Settings from config path"""
