@@ -1,7 +1,7 @@
-from crewai.cli.authentication.constants import (
-    WORKOS_DOMAIN,
-    WORKOS_CLI_CONNECT_APP_ID,
-    WORKOS_ENVIRONMENT_ID,
+from crewai.cli.constants import (
+    CREWAI_ENTERPRISE_DEFAULT_OAUTH2_DOMAIN,
+    CREWAI_ENTERPRISE_DEFAULT_OAUTH2_CLIENT_ID,
+    CREWAI_ENTERPRISE_DEFAULT_OAUTH2_AUDIENCE,
 )
 from crewai.cli.authentication.providers.base_provider import BaseProvider
 
@@ -19,10 +19,10 @@ class WorkosProvider(BaseProvider):
         return f"https://{self._get_domain()}"
 
     def get_audience(self) -> str:
-        return self.settings.audience or WORKOS_ENVIRONMENT_ID
+        return self.settings.audience or CREWAI_ENTERPRISE_DEFAULT_OAUTH2_AUDIENCE
 
     def get_client_id(self) -> str:
-        return self.settings.client_id or WORKOS_CLI_CONNECT_APP_ID
+        return self.settings.client_id or CREWAI_ENTERPRISE_DEFAULT_OAUTH2_CLIENT_ID
 
     def _get_domain(self) -> str:
-        return self.settings.domain or WORKOS_DOMAIN
+        return self.settings.domain or CREWAI_ENTERPRISE_DEFAULT_OAUTH2_DOMAIN

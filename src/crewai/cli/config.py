@@ -4,7 +4,13 @@ from typing import Optional
 
 from pydantic import BaseModel, Field
 
-from crewai.cli.constants import DEFAULT_CREWAI_ENTERPRISE_URL, DEFAULT_OAUTH2_PROVIDER
+from crewai.cli.constants import (
+    DEFAULT_CREWAI_ENTERPRISE_URL,
+    CREWAI_ENTERPRISE_DEFAULT_OAUTH2_PROVIDER,
+    CREWAI_ENTERPRISE_DEFAULT_OAUTH2_AUDIENCE,
+    CREWAI_ENTERPRISE_DEFAULT_OAUTH2_CLIENT_ID,
+    CREWAI_ENTERPRISE_DEFAULT_OAUTH2_DOMAIN,
+)
 
 DEFAULT_CONFIG_PATH = Path.home() / ".config" / "crewai" / "settings.json"
 
@@ -28,7 +34,10 @@ CLI_SETTINGS_KEYS = [
 # Default values for CLI settings
 DEFAULT_CLI_SETTINGS = {
     "enterprise_base_url": DEFAULT_CREWAI_ENTERPRISE_URL,
-    "oauth2_provider": DEFAULT_OAUTH2_PROVIDER,
+    "oauth2_provider": CREWAI_ENTERPRISE_DEFAULT_OAUTH2_PROVIDER,
+    "oauth2_audience": CREWAI_ENTERPRISE_DEFAULT_OAUTH2_AUDIENCE,
+    "oauth2_client_id": CREWAI_ENTERPRISE_DEFAULT_OAUTH2_CLIENT_ID,
+    "oauth2_domain": CREWAI_ENTERPRISE_DEFAULT_OAUTH2_DOMAIN,
 }
 
 # Readonly settings - cannot be set by the user
@@ -47,7 +56,7 @@ HIDDEN_SETTINGS_KEYS = [
 
 class Settings(BaseModel):
     enterprise_base_url: Optional[str] = Field(
-        default=DEFAULT_CREWAI_ENTERPRISE_URL,
+        default=DEFAULT_CLI_SETTINGS["enterprise_base_url"],
         description="Base URL of the CrewAI Enterprise instance",
     )
     tool_repository_username: Optional[str] = Field(
@@ -64,10 +73,10 @@ class Settings(BaseModel):
     )
     config_path: Path = Field(default=DEFAULT_CONFIG_PATH, frozen=True, exclude=True)
 
-    oauth2_provider: str = Field(description="Oauth provider", default=DEFAULT_OAUTH2_PROVIDER)
-    oauth2_audience: Optional[str] = Field(description="Oauth audience", default=None)
-    oauth2_client_id: Optional[str] = Field(description="Oauth client ID", default=None)
-    oauth2_domain: Optional[str] = Field(description="Oauth domain", default=None)
+    oauth2_provider: str = Field(description="Oauth provider", default=DEFAULT_CLI_SETTINGS["oauth2_provider"])
+    oauth2_audience: Optional[str] = Field(description="Oauth audience", default=DEFAULT_CLI_SETTINGS["oauth2_audience"])
+    oauth2_client_id: Optional[str] = Field(description="Oauth client ID", default=DEFAULT_CLI_SETTINGS["oauth2_client_id"])
+    oauth2_domain: Optional[str] = Field(description="Oauth domain", default=DEFAULT_CLI_SETTINGS["oauth2_domain"])
 
     def __init__(self, config_path: Path = DEFAULT_CONFIG_PATH, **data):
         """Load Settings from config path"""

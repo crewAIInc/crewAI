@@ -6,10 +6,12 @@ from crewai.cli.authentication.main import AuthenticationCommand
 from crewai.cli.authentication.constants import (
     AUTH0_AUDIENCE,
     AUTH0_CLIENT_ID,
-    AUTH0_DOMAIN,
-    WORKOS_DOMAIN,
-    WORKOS_CLI_CONNECT_APP_ID,
-    WORKOS_ENVIRONMENT_ID,
+    AUTH0_DOMAIN
+)
+from crewai.cli.constants import (
+    CREWAI_ENTERPRISE_DEFAULT_OAUTH2_DOMAIN,
+    CREWAI_ENTERPRISE_DEFAULT_OAUTH2_CLIENT_ID,
+    CREWAI_ENTERPRISE_DEFAULT_OAUTH2_AUDIENCE,
 )
 
 
@@ -32,9 +34,9 @@ class TestAuthenticationCommand:
             (
                 "workos",
                 {
-                    "device_code_url": f"https://{WORKOS_DOMAIN}/oauth2/device_authorization",
-                    "token_url": f"https://{WORKOS_DOMAIN}/oauth2/token",
-                    "client_id": WORKOS_CLI_CONNECT_APP_ID,
+                    "device_code_url": f"https://{CREWAI_ENTERPRISE_DEFAULT_OAUTH2_DOMAIN}/oauth2/device_authorization",
+                    "token_url": f"https://{CREWAI_ENTERPRISE_DEFAULT_OAUTH2_DOMAIN}/oauth2/token",
+                    "client_id": CREWAI_ENTERPRISE_DEFAULT_OAUTH2_CLIENT_ID,
                 },
             ),
         ],
@@ -109,9 +111,9 @@ class TestAuthenticationCommand:
             (
                 "workos",
                 {
-                    "jwks_url": f"https://{WORKOS_DOMAIN}/oauth2/jwks",
-                    "issuer": f"https://{WORKOS_DOMAIN}",
-                    "audience": WORKOS_ENVIRONMENT_ID,
+                    "jwks_url": f"https://{CREWAI_ENTERPRISE_DEFAULT_OAUTH2_DOMAIN}/oauth2/jwks",
+                    "issuer": f"https://{CREWAI_ENTERPRISE_DEFAULT_OAUTH2_DOMAIN}",
+                    "audience": CREWAI_ENTERPRISE_DEFAULT_OAUTH2_AUDIENCE,
                 },
             ),
         ],

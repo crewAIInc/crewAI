@@ -1,10 +1,10 @@
 import pytest
 from crewai.cli.authentication.main import Oauth2Settings
 from crewai.cli.authentication.providers.workos import WorkosProvider
-from crewai.cli.authentication.constants import (
-    WORKOS_DOMAIN,
-    WORKOS_CLI_CONNECT_APP_ID,
-    WORKOS_ENVIRONMENT_ID,
+from crewai.cli.constants import (
+    CREWAI_ENTERPRISE_DEFAULT_OAUTH2_DOMAIN,
+    CREWAI_ENTERPRISE_DEFAULT_OAUTH2_CLIENT_ID,
+    CREWAI_ENTERPRISE_DEFAULT_OAUTH2_AUDIENCE,
 )
 
 
@@ -99,7 +99,7 @@ class TestWorkosProvider:
             audience=None
         )
         provider = WorkosProvider(settings)
-        assert provider.get_audience() == WORKOS_ENVIRONMENT_ID
+        assert provider.get_audience() == CREWAI_ENTERPRISE_DEFAULT_OAUTH2_AUDIENCE
 
     def test_get_client_id(self):
         assert self.provider.get_client_id() == "test-client-id"
@@ -112,7 +112,7 @@ class TestWorkosProvider:
             audience="test-audience"
         )
         provider = WorkosProvider(settings)
-        assert provider.get_client_id() == WORKOS_CLI_CONNECT_APP_ID
+        assert provider.get_client_id() == CREWAI_ENTERPRISE_DEFAULT_OAUTH2_CLIENT_ID
 
     def test_get_domain_fallback_to_default(self):
         settings = Oauth2Settings(
@@ -124,10 +124,10 @@ class TestWorkosProvider:
         provider = WorkosProvider(settings)
 
         # Should use default domain for all URLs
-        assert WORKOS_DOMAIN in provider.get_authorize_url()
-        assert WORKOS_DOMAIN in provider.get_token_url()
-        assert WORKOS_DOMAIN in provider.get_jwks_url()
-        assert WORKOS_DOMAIN in provider.get_issuer()
+        assert CREWAI_ENTERPRISE_DEFAULT_OAUTH2_DOMAIN in provider.get_authorize_url()
+        assert CREWAI_ENTERPRISE_DEFAULT_OAUTH2_DOMAIN in provider.get_token_url()
+        assert CREWAI_ENTERPRISE_DEFAULT_OAUTH2_DOMAIN in provider.get_jwks_url()
+        assert CREWAI_ENTERPRISE_DEFAULT_OAUTH2_DOMAIN in provider.get_issuer()
 
     def test_all_fallbacks_when_settings_none(self):
         settings = Oauth2Settings(
@@ -138,6 +138,6 @@ class TestWorkosProvider:
         )
         provider = WorkosProvider(settings)
 
-        assert provider.get_audience() == WORKOS_ENVIRONMENT_ID
-        assert provider.get_client_id() == WORKOS_CLI_CONNECT_APP_ID
-        assert WORKOS_DOMAIN in provider.get_authorize_url()
+        assert provider.get_audience() == CREWAI_ENTERPRISE_DEFAULT_OAUTH2_AUDIENCE
+        assert provider.get_client_id() == CREWAI_ENTERPRISE_DEFAULT_OAUTH2_CLIENT_ID
+        assert CREWAI_ENTERPRISE_DEFAULT_OAUTH2_DOMAIN in provider.get_authorize_url()
