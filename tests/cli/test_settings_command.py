@@ -81,11 +81,10 @@ class TestSettingsCommand(unittest.TestCase):
 
         self.settings_command.reset_all_settings()
 
-        print(USER_SETTINGS_KEYS)
         for key in USER_SETTINGS_KEYS:
             self.assertEqual(getattr(self.settings_command.settings, key), None)
 
         for key in CLI_SETTINGS_KEYS:
             self.assertEqual(
-                getattr(self.settings_command.settings, key), DEFAULT_CLI_SETTINGS[key]
+                getattr(self.settings_command.settings, key), DEFAULT_CLI_SETTINGS.get(key)
             )
