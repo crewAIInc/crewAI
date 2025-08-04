@@ -115,4 +115,4 @@ class Settings(BaseModel):
     def _reset_cli_settings(self) -> None:
         """Reset all CLI settings to default values"""
         for key in CLI_SETTINGS_KEYS:
-            setattr(self, key, DEFAULT_CLI_SETTINGS[key])
+            setattr(self, key, DEFAULT_CLI_SETTINGS.get(key))

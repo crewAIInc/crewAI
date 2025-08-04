@@ -70,18 +70,12 @@ class TestAuthenticationCommand:
             "Signing in to CrewAI Enterprise...\n", style="bold blue"
         )
         mock_determine_provider.assert_called_once()
-        mock_get_device.assert_called_once_with(
-            expected_urls["client_id"],
-            expected_urls["device_code_url"],
-            expected_urls.get("audience", None),
-        )
+        mock_get_device.assert_called_once()
         mock_display.assert_called_once_with(
             {"device_code": "test_code", "user_code": "123456"}
         )
         mock_poll.assert_called_once_with(
             {"device_code": "test_code", "user_code": "123456"},
-            expected_urls["client_id"],
-            expected_urls["token_url"],
         )
 
     @patch("crewai.cli.authentication.main.webbrowser")
@@ -133,7 +127,15 @@ class TestAuthenticationCommand:
         jwt_config,
         has_expiration,
     ):
-        self.auth_command.user_provider = user_provider
+        from crewai.cli.authentication.providers.auth0 import Auth0Provider
+        from crewai.cli.authentication.providers.workos import WorkosProvider
+        from crewai.cli.authentication.main import Oauth2Settings
+
+        if user_provider == "auth0":
+            self.auth_command.oauth2_provider = Auth0Provider(settings=Oauth2Settings(provider=user_provider))
+        elif user_provider == "workos":
+            self.auth_command.oauth2_provider = WorkosProvider(settings=Oauth2Settings(provider=user_provider))
+
         token_data = {"access_token": "test_access_token", "id_token": "test_id_token"}
 
         if has_expiration:
@@ -311,11 +313,12 @@ class TestAuthenticationCommand:
         }
         mock_post.return_value = mock_response
 
-        result = self.auth_command._get_device_code(
-            client_id="test_client",
-            device_code_url="https://example.com/device",
-            audience="test_audience",
-        )
+        self.auth_command.oauth2_provider = MagicMock()
+        self.auth_command.oauth2_provider.get_client_id.return_value = "test_client"
+        self.auth_command.oauth2_provider.get_authorize_url.return_value = "https://example.com/device"
+        self.auth_command.oauth2_provider.get_audience.return_value = "test_audience"
+
+        result = self.auth_command._get_device_code()
 
         mock_post.assert_called_once_with(
             url="https://example.com/device",
@@ -354,8 +357,12 @@ class TestAuthenticationCommand:
                 self.auth_command, "_login_to_tool_repository"
             ) as mock_tool_login,
         ):
+            self.auth_command.oauth2_provider = MagicMock()
+            self.auth_command.oauth2_provider.get_token_url.return_value = "https://example.com/token"
+            self.auth_command.oauth2_provider.get_client_id.return_value = "test_client"
+
             self.auth_command._poll_for_token(
-                device_code_data, "test_client", "https://example.com/token"
+                device_code_data
             )
 
             mock_post.assert_called_once_with(
@@ -392,7 +399,7 @@ class TestAuthenticationCommand:
         }
 
         self.auth_command._poll_for_token(
-            device_code_data, "test_client", "https://example.com/token"
+            device_code_data
         )
 
         mock_console_print.assert_any_call(
@@ -415,5 +422,5 @@ class TestAuthenticationCommand:
 
         with pytest.raises(requests.HTTPError):
             self.auth_command._poll_for_token(
-                device_code_data, "test_client", "https://example.com/token"
+                device_code_data
             )
