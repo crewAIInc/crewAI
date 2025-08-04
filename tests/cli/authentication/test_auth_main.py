@@ -134,9 +134,9 @@ class TestAuthenticationCommand:
         from crewai.cli.authentication.main import Oauth2Settings
 
         if user_provider == "auth0":
-            self.auth_command.oauth2_provider = Auth0Provider(settings=Oauth2Settings(provider=user_provider))
+            self.auth_command.oauth2_provider = Auth0Provider(settings=Oauth2Settings(provider=user_provider, client_id="test-client-id", domain=AUTH0_DOMAIN, audience=jwt_config["audience"]))
         elif user_provider == "workos":
-            self.auth_command.oauth2_provider = WorkosProvider(settings=Oauth2Settings(provider=user_provider))
+            self.auth_command.oauth2_provider = WorkosProvider(settings=Oauth2Settings(provider=user_provider, client_id="test-client-id", domain=CREWAI_ENTERPRISE_DEFAULT_OAUTH2_DOMAIN, audience=jwt_config["audience"]))
 
         token_data = {"access_token": "test_access_token", "id_token": "test_id_token"}
 

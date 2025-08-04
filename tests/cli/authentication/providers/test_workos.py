@@ -1,11 +1,6 @@
 import pytest
 from crewai.cli.authentication.main import Oauth2Settings
 from crewai.cli.authentication.providers.workos import WorkosProvider
-from crewai.cli.constants import (
-    CREWAI_ENTERPRISE_DEFAULT_OAUTH2_DOMAIN,
-    CREWAI_ENTERPRISE_DEFAULT_OAUTH2_CLIENT_ID,
-    CREWAI_ENTERPRISE_DEFAULT_OAUTH2_AUDIENCE,
-)
 
 
 class TestWorkosProvider:
@@ -99,45 +94,7 @@ class TestWorkosProvider:
             audience=None
         )
         provider = WorkosProvider(settings)
-        assert provider.get_audience() == CREWAI_ENTERPRISE_DEFAULT_OAUTH2_AUDIENCE
+        assert provider.get_audience() == ""
 
     def test_get_client_id(self):
         assert self.provider.get_client_id() == "test-client-id"
-
-    def test_get_client_id_fallback_to_default(self):
-        settings = Oauth2Settings(
-            provider="workos",
-            domain="login.company.com",
-            client_id=None,
-            audience="test-audience"
-        )
-        provider = WorkosProvider(settings)
-        assert provider.get_client_id() == CREWAI_ENTERPRISE_DEFAULT_OAUTH2_CLIENT_ID
-
-    def test_get_domain_fallback_to_default(self):
-        settings = Oauth2Settings(
-            provider="workos",
-            domain=None,
-            client_id="test-client",
-            audience="test-audience"
-        )
-        provider = WorkosProvider(settings)
-
-        # Should use default domain for all URLs
-        assert CREWAI_ENTERPRISE_DEFAULT_OAUTH2_DOMAIN in provider.get_authorize_url()
-        assert CREWAI_ENTERPRISE_DEFAULT_OAUTH2_DOMAIN in provider.get_token_url()
-        assert CREWAI_ENTERPRISE_DEFAULT_OAUTH2_DOMAIN in provider.get_jwks_url()
-        assert CREWAI_ENTERPRISE_DEFAULT_OAUTH2_DOMAIN in provider.get_issuer()
-
-    def test_all_fallbacks_when_settings_none(self):
-        settings = Oauth2Settings(
-            provider="workos",
-            domain=None,
-            client_id=None,
-            audience=None
-        )
-        provider = WorkosProvider(settings)
-
-        assert provider.get_audience() == CREWAI_ENTERPRISE_DEFAULT_OAUTH2_AUDIENCE
-        assert provider.get_client_id() == CREWAI_ENTERPRISE_DEFAULT_OAUTH2_CLIENT_ID
-        assert CREWAI_ENTERPRISE_DEFAULT_OAUTH2_DOMAIN in provider.get_authorize_url()

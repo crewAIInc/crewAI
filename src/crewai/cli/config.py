@@ -53,7 +53,6 @@ HIDDEN_SETTINGS_KEYS = [
     "tool_repository_password",
 ]
 
-
 class Settings(BaseModel):
     enterprise_base_url: Optional[str] = Field(
         default=DEFAULT_CLI_SETTINGS["enterprise_base_url"],
@@ -83,12 +82,12 @@ class Settings(BaseModel):
         default=DEFAULT_CLI_SETTINGS["oauth2_audience"]
     )
 
-    oauth2_client_id: Optional[str] = Field(
+    oauth2_client_id: str = Field(
+        default=DEFAULT_CLI_SETTINGS["oauth2_client_id"],
         description="OAuth2 client ID issued by the provider, used during authentication requests.",
-        default=DEFAULT_CLI_SETTINGS["oauth2_client_id"]
     )
 
-    oauth2_domain: Optional[str] = Field(
+    oauth2_domain: str = Field(
         description="OAuth2 provider's domain (e.g., your-org.auth0.com) used for issuing tokens.",
         default=DEFAULT_CLI_SETTINGS["oauth2_domain"]
     )
