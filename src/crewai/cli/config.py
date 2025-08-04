@@ -73,10 +73,25 @@ class Settings(BaseModel):
     )
     config_path: Path = Field(default=DEFAULT_CONFIG_PATH, frozen=True, exclude=True)
 
-    oauth2_provider: str = Field(description="Oauth provider", default=DEFAULT_CLI_SETTINGS["oauth2_provider"])
-    oauth2_audience: Optional[str] = Field(description="Oauth audience", default=DEFAULT_CLI_SETTINGS["oauth2_audience"])
-    oauth2_client_id: Optional[str] = Field(description="Oauth client ID", default=DEFAULT_CLI_SETTINGS["oauth2_client_id"])
-    oauth2_domain: Optional[str] = Field(description="Oauth domain", default=DEFAULT_CLI_SETTINGS["oauth2_domain"])
+    oauth2_provider: str = Field(
+        description="OAuth2 provider used for authentication (e.g., workos, okta, auth0).",
+        default=DEFAULT_CLI_SETTINGS["oauth2_provider"]
+    )
+
+    oauth2_audience: Optional[str] = Field(
+        description="OAuth2 audience value, typically used to identify the target API or resource.",
+        default=DEFAULT_CLI_SETTINGS["oauth2_audience"]
+    )
+
+    oauth2_client_id: Optional[str] = Field(
+        description="OAuth2 client ID issued by the provider, used during authentication requests.",
+        default=DEFAULT_CLI_SETTINGS["oauth2_client_id"]
+    )
+
+    oauth2_domain: Optional[str] = Field(
+        description="OAuth2 provider's domain (e.g., your-org.auth0.com) used for issuing tokens.",
+        default=DEFAULT_CLI_SETTINGS["oauth2_domain"]
+    )
 
     def __init__(self, config_path: Path = DEFAULT_CONFIG_PATH, **data):
         """Load Settings from config path"""
