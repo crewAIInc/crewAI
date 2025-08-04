@@ -28,7 +28,3 @@ class BaseProvider(ABC):
     @abstractmethod
     def get_client_id(self) -> str:
         ...
-
-    @abstractmethod
-    def _get_domain(self):
-        ...
