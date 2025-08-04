@@ -1,6 +1,6 @@
 import time
 import webbrowser
-from typing import Any, Dict, Optional, Literal
+from typing import Any, Dict, Optional
 
 import requests
 from rich.console import Console

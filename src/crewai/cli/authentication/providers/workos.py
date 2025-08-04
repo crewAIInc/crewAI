@@ -3,6 +3,7 @@ from crewai.cli.authentication.constants import (
     WORKOS_CLI_CONNECT_APP_ID,
     WORKOS_ENVIRONMENT_ID,
 )
+from crewai.cli.authentication.providers.base_provider import BaseProvider
 
 class WorkosProvider(BaseProvider):
     def get_authorize_url(self) -> str:

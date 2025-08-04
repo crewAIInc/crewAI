@@ -14,7 +14,9 @@ class OktaProvider(BaseProvider):
         return f"https://{self.settings.domain}/oauth2/default"
 
     def get_audience(self) -> str:
+        assert self.settings.audience is not None
         return self.settings.audience
 
     def get_client_id(self) -> str:
+        assert self.settings.client_id is not None
         return self.settings.client_id
