@@ -22,9 +22,8 @@ console = Console()
 
 class Oauth2Settings(BaseModel):
     provider: str = Field(description="OAuth2 provider used for authentication (e.g., workos, okta, auth0).")
-    # TODO: After migration to WorkOS is complete, we can remove the default values for client_id, domain.
-    client_id: Optional[str] = Field(description="OAuth2 client ID issued by the provider, used during authentication requests.", default=None)
-    domain: Optional[str] = Field(description="OAuth2 provider's domain (e.g., your-org.auth0.com) used for issuing tokens.", default=None)
+    client_id: str = Field(description="OAuth2 client ID issued by the provider, used during authentication requests.")
+    domain: str = Field(description="OAuth2 provider's domain (e.g., your-org.auth0.com) used for issuing tokens.")
     audience: Optional[str] = Field(description="OAuth2 audience value, typically used to identify the target API or resource.", default=None)
 
     @classmethod
