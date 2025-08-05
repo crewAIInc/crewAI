@@ -684,65 +684,19 @@ print(f"OpenAI: {openai_time:.2f}s")
 print(f"Ollama: {ollama_time:.2f}s")
 ```
 
-## 2. Memória de Usuário com Mem0 (Legado)
+## 2. Memória Externa (Nova Abordagem)
 
-<Warning>
-**Abordagem Legada**: Embora totalmente funcional, esta abordagem é considerada legada. Para novos projetos que exijam memória específica do usuário, considere usar Memória Externa.
-</Warning>
+A Memória Externa fornece um sistema de memória autônomo que opera independentemente da memória interna da crew. Isso é ideal para provedores de memória especializados ou compartilhamento de memória entre aplicações.
 
-A Memória de Usuário se integra com o [Mem0](https://mem0.ai/) para fornecer memória específica do usuário que persiste entre sessões e se integra ao sistema de memória contextual da crew.
-
-### Pré-requisitos
-```bash
-pip install mem0ai
-```
-
-### Configuração Mem0 na Nuvem
+### Memória Externa Básica com Mem0
 ```python
 import os
-from crewai import Crew, Process
+from crewai import Agent, Crew, Process, Task
+from crewai.memory.external.external_memory import ExternalMemory
 
-# Defina sua chave de API do Mem0
-os.environ["MEM0_API_KEY"] = "m0-your-api-key"
-
-crew = Crew(
-    agents=[...],
-    tasks=[...],
-    memory=True,  # Necessário para integração com a memória contextual
-    memory_config={
-        "provider": "mem0",
-        "config": {"user_id": "john"},
-    },
-    process=Process.sequential,
-    verbose=True
-)
-```
-
-### Configuração Avançada Mem0
-```python
-crew = Crew(
-    agents=[...],
-    tasks=[...],
-    memory=True,
-    memory_config={
-        "provider": "mem0",
-        "config": {
-            "user_id": "john",
-            "org_id": "my_org_id",        # Opcional
-            "project_id": "my_project_id", # Opcional
-            "api_key": "custom-api-key"    # Opcional - sobrescreve variável de ambiente
-        },
-    }
-)
-```
-
-### Configuração Mem0 Local
-```python
-crew = Crew(
-    agents=[...],
-    tasks=[...],
-    memory=True,
-    memory_config={
+# Create external memory instance with local Mem0 Configuration
+external_memory = ExternalMemory(
+    embedder_config={
         "provider": "mem0",
         "config": {
             "user_id": "john",
@@ -759,36 +713,60 @@ crew = Crew(
                     "provider": "openai",
                     "config": {"api_key": "your-api-key", "model": "text-embedding-3-small"}
                 }
-            }
+            },
+            "infer": True # Optional defaults to True
         },
-    }
-)
-```
-
-## 3. Memória Externa (Nova Abordagem)
-
-A Memória Externa fornece um sistema de memória autônomo que opera independentemente da memória interna da crew. Isso é ideal para provedores de memória especializados ou compartilhamento de memória entre aplicações.
-
-### Memória Externa Básica com Mem0
-```python
-import os
-from crewai import Agent, Crew, Process, Task
-from crewai.memory.external.external_memory import ExternalMemory
-
-os.environ["MEM0_API_KEY"] = "your-api-key"
-
-# Criar instância de memória externa
-external_memory = ExternalMemory(
-    embedder_config={
-        "provider": "mem0", 
-        "config": {"user_id": "U-123"}
     }
 )
 
 crew = Crew(
     agents=[...],
     tasks=[...],
-    external_memory=external_memory,  # Independente da memória básica
+    external_memory=external_memory,  # Separate from basic memory
+    process=Process.sequential,
+    verbose=True
+)
+```
+
+### Memória Externa Avançada com o Cliente Mem0
+Ao usar o Cliente Mem0, você pode personalizar ainda mais a configuração de memória usando parâmetros como "includes", "excludes", "custom_categories", "infer" e "run_id" (apenas para memória de curto prazo).
+Você pode encontrar mais detalhes na [documentação do Mem0](https://docs.mem0.ai/).
+
+```python
+import os
+from crewai import Agent, Crew, Process, Task
+from crewai.memory.external.external_memory import ExternalMemory
+
+new_categories = [
+    {"lifestyle_management_concerns": "Tracks daily routines, habits, hobbies and interests including cooking, time management and work-life balance"},
+    {"seeking_structure": "Documents goals around creating routines, schedules, and organized systems in various life areas"},
+    {"personal_information": "Basic information about the user including name, preferences, and personality traits"}
+]
+
+os.environ["MEM0_API_KEY"] = "your-api-key"
+
+# Create external memory instance with Mem0 Client
+external_memory = ExternalMemory(
+    embedder_config={
+        "provider": "mem0",
+        "config": {
+            "user_id": "john",
+            "org_id": "my_org_id",        # Optional
+            "project_id": "my_project_id", # Optional
+            "api_key": "custom-api-key"    # Optional - overrides env var
+            "run_id": "my_run_id",        # Optional - for short-term memory
+            "includes": "include1",       # Optional 
+            "excludes": "exclude1",       # Optional
+            "infer": True                 # Optional defaults to True
+            "custom_categories": new_categories  # Optional - custom categories for user memory
+        },
+    }
+)
+
+crew = Crew(
+    agents=[...],
+    tasks=[...],
+    external_memory=external_memory,  # Separate from basic memory
     process=Process.sequential,
     verbose=True
 )
