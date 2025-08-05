@@ -53,7 +53,6 @@ def mem0_storage_with_mocked_config(mock_mem0_memory):
             "custom_update_memory_prompt": "mock prompt 2",
         }
 
-        # Instantiate the class with memory_config
         # Parameters like run_id, includes, and excludes doesn't matter in Memory OSS
         crew = MockCrew()
 
