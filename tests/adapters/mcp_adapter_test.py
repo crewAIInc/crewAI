@@ -1,4 +1,5 @@
 from textwrap import dedent
+from unittest.mock import MagicMock, patch
 
 import pytest
 from mcp import StdioServerParameters
@@ -187,3 +188,43 @@ def test_filter_with_only_nonexistent_tools(echo_server_script):
         # Should return an empty tool collection
         assert isinstance(tools, ToolCollection)
         assert len(tools) == 0
+
+def test_connect_timeout_parameter(echo_server_script):
+    serverparams = StdioServerParameters(
+        command="uv", args=["run", "python", "-c", echo_server_script]
+    )
+    with MCPServerAdapter(serverparams, connect_timeout=60) as tools:
+        assert isinstance(tools, ToolCollection)
+        assert len(tools) == 2
+        assert tools[0].name == "echo_tool"
+        assert tools[1].name == "calc_tool"
+        assert tools[0].run(text="hello") == "Echo: hello"
+
+def test_connect_timeout_with_filtered_tools(echo_server_script):
+    serverparams = StdioServerParameters(
+        command="uv", args=["run", "python", "-c", echo_server_script]
+    )
+    with MCPServerAdapter(serverparams, "echo_tool", connect_timeout=45) as tools:
+        assert isinstance(tools, ToolCollection)
+        assert len(tools) == 1
+        assert tools[0].name == "echo_tool"
+        assert tools[0].run(text="timeout test") == "Echo: timeout test"
+
+@patch('crewai_tools.adapters.mcp_adapter.MCPAdapt')
+def test_connect_timeout_passed_to_mcpadapt(mock_mcpadapt):
+    mock_adapter_instance = MagicMock()
+    mock_mcpadapt.return_value = mock_adapter_instance
+
+    serverparams = StdioServerParameters(
+        command="uv", args=["run", "echo", "test"]
+    )
+
+    MCPServerAdapter(serverparams)
+    mock_mcpadapt.assert_called_once()
+    assert mock_mcpadapt.call_args[0][2] == 30
+
+    mock_mcpadapt.reset_mock()
+
+    MCPServerAdapter(serverparams, connect_timeout=5)
+    mock_mcpadapt.assert_called_once()
+    assert mock_mcpadapt.call_args[0][2] == 5

@@ -50,13 +50,17 @@ class MCPServerAdapter:
         with MCPServerAdapter(..., "tool1", "tool2") as filtered_tools:
             # only tool1 and tool2 are available
 
+        # context manager with custom connect timeout (60 seconds)
+        with MCPServerAdapter(..., connect_timeout=60) as tools:
+            # tools is now available with longer timeout
+
         # manually stop mcp server
         try:
             mcp_server = MCPServerAdapter(...)
             tools = mcp_server.tools  # all tools
 
-            # or with filtered tools
-            mcp_server = MCPServerAdapter(..., "tool1", "tool2")
+            # or with filtered tools and custom timeout
+            mcp_server = MCPServerAdapter(..., "tool1", "tool2", connect_timeout=45)
             filtered_tools = mcp_server.tools  # only tool1 and tool2
             ...
         finally:
@@ -70,6 +74,7 @@ class MCPServerAdapter:
         self,
         serverparams: StdioServerParameters | dict[str, Any],
         *tool_names: str,
+        connect_timeout: int = 30,
     ):
         """Initialize the MCP Server
 
@@ -78,6 +83,7 @@ class MCPServerAdapter:
                 `StdioServerParameters` or a `dict` respectively for STDIO and SSE.
             *tool_names: Optional names of tools to filter. If provided, only tools with
                 matching names will be available.
+            connect_timeout: Connection timeout in seconds to the MCP server (default is 30s).
 
         """
 
@@ -106,7 +112,7 @@ class MCPServerAdapter:
 
         try:
             self._serverparams = serverparams
-            self._adapter = MCPAdapt(self._serverparams, CrewAIAdapter())
+            self._adapter = MCPAdapt(self._serverparams, CrewAIAdapter(), connect_timeout)
             self.start()
 
         except Exception as e:
