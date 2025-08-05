@@ -222,7 +222,6 @@ class Agent(BaseAgent):
 
         memory_attributes = [
             "memory",
-            "memory_config",
             "_short_term_memory",
             "_long_term_memory",
             "_entity_memory",
@@ -315,7 +314,6 @@ class Agent(BaseAgent):
 
             start_time = time.time()
             contextual_memory = ContextualMemory(
-                self.crew.memory_config,
                 self.crew._short_term_memory,
                 self.crew._long_term_memory,
                 self.crew._entity_memory,

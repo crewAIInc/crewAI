@@ -157,6 +157,11 @@ class Mem0Storage(Storage):
                 del params["run_id"]
 
         results = self.memory.search(**params)
+
+        # This makes it compatible for Contextual Memory to retrieve
+        for result in results["results"]:
+            result["context"] = result["memory"]
+        
         return [r for r in results["results"]]
 
     def reset(self):

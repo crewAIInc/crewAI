@@ -9,8 +9,7 @@ from crewai.memory.storage.mem0_storage import Mem0Storage
 
 # Define the class (if not already defined)
 class MockCrew:
-    def __init__(self, memory_config):
-        self.memory_config = memory_config
+    def __init__(self):
         self.agents = [MagicMock(role="Test Agent")]
 
 
@@ -56,14 +55,11 @@ def mem0_storage_with_mocked_config(mock_mem0_memory):
 
         # Instantiate the class with memory_config
         # Parameters like run_id, includes, and excludes doesn't matter in Memory OSS
-        crew = MockCrew(
-            memory_config={
-                "provider": "mem0",
-                "config": {"user_id": "test_user", "local_mem0_config": config, "run_id": "my_run_id", "includes": "include1","excludes": "exclude1", "infer" : True},
-            }
-        )
+        crew = MockCrew()
 
-        mem0_storage = Mem0Storage(type="short_term", crew=crew)
+        embedder_config={"user_id": "test_user", "local_mem0_config": config, "run_id": "my_run_id", "includes": "include1","excludes": "exclude1", "infer" : True}
+
+        mem0_storage = Mem0Storage(type="short_term", crew=crew, config=embedder_config)
         return mem0_storage, mock_from_config, config
 
 
@@ -88,10 +84,9 @@ def mem0_storage_with_memory_client_using_config_from_crew(mock_mem0_memory_clie
 
     # We need to patch the MemoryClient before it's instantiated
     with patch.object(MemoryClient, "__new__", return_value=mock_mem0_memory_client):
-        crew = MockCrew(
-            memory_config={
-                "provider": "mem0",
-                "config": {
+        crew = MockCrew()
+
+        embedder_config={
                     "user_id": "test_user",
                     "api_key": "ABCDEFGH",
                     "org_id": "my_org_id",
@@ -100,11 +95,9 @@ def mem0_storage_with_memory_client_using_config_from_crew(mock_mem0_memory_clie
                     "includes": "include1",
                     "excludes": "exclude1",
                     "infer": True
-                },
-            }
-        )
+                }
 
-        mem0_storage = Mem0Storage(type="short_term", crew=crew)
+        mem0_storage = Mem0Storage(type="short_term", crew=crew, config=embedder_config)
         return mem0_storage
 
 
@@ -116,18 +109,7 @@ def mem0_storage_with_memory_client_using_explictly_config(mock_mem0_memory_clie
     with patch.object(MemoryClient, "__new__", return_value=mock_mem0_memory_client), \
          patch.object(Memory, "__new__", return_value=mock_mem0_memory):
 
-        crew = MockCrew(
-            memory_config={
-                "provider": "mem0",
-                "config": {
-                    "user_id": "test_user",
-                    "api_key": "ABCDEFGH",
-                    "org_id": "my_org_id",
-                    "project_id": "my_project_id",
-                },
-            }
-        )
-
+        crew = MockCrew()
         new_config = {"provider": "mem0", "config": {"api_key": "new-api-key"}}
 
         mem0_storage = Mem0Storage(type="short_term", crew=crew, config=new_config)
@@ -164,21 +146,18 @@ def test_mem0_storage_updates_project_with_custom_categories(mock_mem0_memory_cl
     {"lifestyle_management_concerns": "Tracks daily routines, habits, hobbies and interests including cooking, time management and work-life balance"},
     ]
 
-    crew = MockCrew(
-        memory_config={
-            "provider": "mem0",
-            "config": {
-                "user_id": "test_user",
-                "api_key": "ABCDEFGH",
-                "org_id": "my_org_id",
-                "project_id": "my_project_id",
-                "custom_categories": new_categories,
-            },
+    crew = MockCrew()
+
+    config={
+            "user_id": "test_user",
+            "api_key": "ABCDEFGH",
+            "org_id": "my_org_id",
+            "project_id": "my_project_id",
+            "custom_categories": new_categories
         }
-    )
 
     with patch.object(MemoryClient, "__new__", return_value=mock_mem0_memory_client):
-        _ = Mem0Storage(type="short_term", crew=crew)
+        _ = Mem0Storage(type="short_term", crew=crew, config=config)
 
     mock_mem0_memory_client.update_project.assert_called_once_with(
         custom_categories=new_categories
@@ -255,7 +234,7 @@ def test_save_method_with_memory_client(mem0_storage_with_memory_client_using_co
 def test_search_method_with_memory_oss(mem0_storage_with_mocked_config):
     """Test search method for different memory types"""
     mem0_storage, _, _ = mem0_storage_with_mocked_config
-    mock_results = {"results": [{"score": 0.9, "content": "Result 1"}, {"score": 0.4, "content": "Result 2"}]}
+    mock_results = {"results": [{"score": 0.9, "memory": "Result 1"}, {"score": 0.4, "memory": "Result 2"}]}
     mem0_storage.memory.search = MagicMock(return_value=mock_results)
 
     results = mem0_storage.search("test query", limit=5, score_threshold=0.5)
@@ -269,13 +248,13 @@ def test_search_method_with_memory_oss(mem0_storage_with_mocked_config):
     )
 
     assert len(results) == 2
-    assert results[0]["content"] == "Result 1"
+    assert results[0]["context"] == "Result 1"
 
 
 def test_search_method_with_memory_client(mem0_storage_with_memory_client_using_config_from_crew):
     """Test search method for different memory types"""
     mem0_storage = mem0_storage_with_memory_client_using_config_from_crew
-    mock_results = {"results": [{"score": 0.9, "content": "Result 1"}, {"score": 0.4, "content": "Result 2"}]}
+    mock_results = {"results": [{"score": 0.9, "memory": "Result 1"}, {"score": 0.4, "memory": "Result 2"}]}
     mem0_storage.memory.search = MagicMock(return_value=mock_results)
 
     results = mem0_storage.search("test query", limit=5, score_threshold=0.5)
@@ -293,23 +272,20 @@ def test_search_method_with_memory_client(mem0_storage_with_memory_client_using_
     )
 
     assert len(results) == 2
-    assert results[0]["content"] == "Result 1"
+    assert results[0]["context"] == "Result 1"
 
 
 def test_mem0_storage_default_infer_value(mock_mem0_memory_client):
     """Test that Mem0Storage sets infer=True by default for short_term memory."""
     with patch.object(MemoryClient, "__new__", return_value=mock_mem0_memory_client):
-        crew = MockCrew(
-            memory_config={
-                "provider": "mem0",
-                "config": {
-                    "user_id": "test_user",
-                    "api_key": "ABCDEFGH"
-                },
-            }
-        )
+        crew = MockCrew()
 
-        mem0_storage = Mem0Storage(type="short_term", crew=crew)
+        config={
+                "user_id": "test_user",
+                "api_key": "ABCDEFGH"
+            }
+
+        mem0_storage = Mem0Storage(type="short_term", crew=crew, config=config)
         assert mem0_storage.infer is True
 
 def test_save_memory_using_agent_entity(mock_mem0_memory_client):
@@ -329,37 +305,47 @@ def test_save_memory_using_agent_entity(mock_mem0_memory_client):
         )
 
 def test_search_method_with_agent_entity():
-    mem0_storage = Mem0Storage(type="external", config={"agent_id": "agent-123"})
-    mock_results = {"results": [{"score": 0.9, "content": "Result 1"}, {"score": 0.4, "content": "Result 2"}]}
-    mem0_storage.memory.search = MagicMock(return_value=mock_results)
+    config = {
+        "agent_id": "agent-123",
+    }
 
-    results = mem0_storage.search("test query", limit=5, score_threshold=0.5)
+    mock_memory = MagicMock(spec=Memory)
+    mock_results = {"results": [{"score": 0.9, "memory": "Result 1"}, {"score": 0.4, "memory": "Result 2"}]}
 
-    mem0_storage.memory.search.assert_called_once_with(
+    with patch.object(Memory, "__new__", return_value=mock_memory):
+        mem0_storage = Mem0Storage(type="external", config=config)
+
+        mem0_storage.memory.search = MagicMock(return_value=mock_results)
+        results = mem0_storage.search("test query", limit=5, score_threshold=0.5)
+
+        mem0_storage.memory.search.assert_called_once_with(
         query="test query",
         limit=5,
         filters={"AND": [{"agent_id": "agent-123"}]},
         threshold=0.5,
     )
 
-    assert len(results) == 2
-    assert results[0]["content"] == "Result 1"
+        assert len(results) == 2
+        assert results[0]["context"] == "Result 1"
 
 
 def test_search_method_with_agent_id_and_user_id():
-    mem0_storage = Mem0Storage(type="external", config={"agent_id": "agent-123", "user_id": "user-123"})
-    mock_results = {"results": [{"score": 0.9, "content": "Result 1"}, {"score": 0.4, "content": "Result 2"}]}
-    mem0_storage.memory.search = MagicMock(return_value=mock_results)
+    mock_memory = MagicMock(spec=Memory)
+    mock_results = {"results": [{"score": 0.9, "memory": "Result 1"}, {"score": 0.4, "memory": "Result 2"}]}
 
-    results = mem0_storage.search("test query", limit=5, score_threshold=0.5)
+    with patch.object(Memory, "__new__", return_value=mock_memory):
+        mem0_storage = Mem0Storage(type="external", config={"agent_id": "agent-123", "user_id": "user-123"})
 
-    mem0_storage.memory.search.assert_called_once_with(
-        query="test query",
-        limit=5,
-        user_id='user-123',
-        filters={"OR": [{"user_id": "user-123"}, {"agent_id": "agent-123"}]},
-        threshold=0.5,
-    )
+        mem0_storage.memory.search = MagicMock(return_value=mock_results)
+        results = mem0_storage.search("test query", limit=5, score_threshold=0.5)
 
-    assert len(results) == 2
-    assert results[0]["content"] == "Result 1"
+        mem0_storage.memory.search.assert_called_once_with(
+            query="test query",
+            limit=5,
+            user_id='user-123',
+            filters={"OR": [{"user_id": "user-123"}, {"agent_id": "agent-123"}]},
+            threshold=0.5,
+        )
+
+        assert len(results) == 2
+        assert results[0]["context"] == "Result 1"

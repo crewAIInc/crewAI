@@ -11,16 +11,11 @@ from crewai.memory import (
 class ContextualMemory:
     def __init__(
         self,
-        memory_config: Optional[Dict[str, Any]],
         stm: ShortTermMemory,
         ltm: LongTermMemory,
         em: EntityMemory,
         exm: ExternalMemory,
     ):
-        if memory_config is not None:
-            self.memory_provider = memory_config.get("provider")
-        else:
-            self.memory_provider = None
         self.stm = stm
         self.ltm = ltm
         self.em = em
@@ -55,7 +50,7 @@ class ContextualMemory:
         stm_results = self.stm.search(query)
         formatted_results = "\n".join(
             [
-                f"- {result['memory'] if self.memory_provider == 'mem0' else result['context']}"
+                f"- {result['context']}"
                 for result in stm_results
             ]
         )
@@ -95,7 +90,7 @@ class ContextualMemory:
         em_results = self.em.search(query)
         formatted_results = "\n".join(
             [
-                f"- {result['memory'] if self.memory_provider == 'mem0' else result['context']}"
+                f"- {result['context']}"
                 for result in em_results
             ]  # type: ignore #  Invalid index type "str" for "str"; expected type "SupportsIndex | slice"
         )
@@ -118,6 +113,6 @@ class ContextualMemory:
             return ""
 
         formatted_memories = "\n".join(
-            f"- {result['memory']}" for result in external_memories
+            f"- {result['context']}" for result in external_memories
         )
         return f"External memories:\n{formatted_memories}"
