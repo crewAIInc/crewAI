@@ -3,7 +3,7 @@ import urllib.error
 from unittest.mock import patch, MagicMock, mock_open
 from pathlib import Path
 import xml.etree.ElementTree as ET
-from crewai_tools.tools.arxiv_paper_tool import ArxivPaperTool
+from crewai_tools import ArxivPaperTool
 
 @pytest.fixture
 def tool():
@@ -97,7 +97,7 @@ def test_invalid_xml_response(mock_urlopen, tool):
 
     with pytest.raises(ET.ParseError):
         tool.fetch_arxiv_data("quantum", 1)
-        
+
 @patch.object(ArxivPaperTool, "fetch_arxiv_data")
 def test_run_with_max_results(mock_fetch, tool):
     mock_fetch.return_value = [{
