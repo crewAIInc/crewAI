@@ -29,6 +29,7 @@ class TestAuthenticationCommand:
                     "token_url": f"https://{AUTH0_DOMAIN}/oauth/token",
                     "client_id": AUTH0_CLIENT_ID,
                     "audience": AUTH0_AUDIENCE,
+                    "domain": AUTH0_DOMAIN,
                 },
             ),
             (
@@ -37,6 +38,8 @@ class TestAuthenticationCommand:
                     "device_code_url": f"https://{CREWAI_ENTERPRISE_DEFAULT_OAUTH2_DOMAIN}/oauth2/device_authorization",
                     "token_url": f"https://{CREWAI_ENTERPRISE_DEFAULT_OAUTH2_DOMAIN}/oauth2/token",
                     "client_id": CREWAI_ENTERPRISE_DEFAULT_OAUTH2_CLIENT_ID,
+                    "audience": CREWAI_ENTERPRISE_DEFAULT_OAUTH2_AUDIENCE,
+                    "domain": CREWAI_ENTERPRISE_DEFAULT_OAUTH2_DOMAIN,
                 },
             ),
         ],
@@ -79,6 +82,9 @@ class TestAuthenticationCommand:
         mock_poll.assert_called_once_with(
             {"device_code": "test_code", "user_code": "123456"},
         )
+        assert self.auth_command.oauth2_provider.get_client_id() == expected_urls["client_id"]
+        assert self.auth_command.oauth2_provider.get_audience() == expected_urls["audience"]
+        assert self.auth_command.oauth2_provider._get_domain() == expected_urls["domain"]
 
     @patch("crewai.cli.authentication.main.webbrowser")
     @patch("crewai.cli.authentication.main.console.print")
@@ -426,3 +432,12 @@ class TestAuthenticationCommand:
             self.auth_command._poll_for_token(
                 device_code_data
             )
+    # @patch(
+    #     "crewai.cli.authentication.main.AuthenticationCommand._determine_user_provider"
+    # )
+    # def test_login_with_auth0(self, mock_determine_provider):
+    #     from crewai.cli.authentication.providers.auth0 import Auth0Provider
+    #     from crewai.cli.authentication.main import Oauth2Settings
+
+    #     self.auth_command.oauth2_provider = Auth0Provider(settings=Oauth2Settings(provider="auth0", client_id=AUTH0_CLIENT_ID, domain=AUTH0_DOMAIN, audience=AUTH0_AUDIENCE))
+    #     self.auth_command.login()

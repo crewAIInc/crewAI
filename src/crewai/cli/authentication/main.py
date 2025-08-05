@@ -11,6 +11,11 @@ from .utils import TokenManager, validate_jwt_token
 from urllib.parse import quote
 from crewai.cli.plus_api import PlusAPI
 from crewai.cli.config import Settings
+from crewai.cli.authentication.constants import (
+    AUTH0_AUDIENCE,
+    AUTH0_CLIENT_ID,
+    AUTH0_DOMAIN,
+)
 
 console = Console()
 
@@ -36,8 +41,8 @@ class Oauth2Settings(BaseModel):
 
 class ProviderFactory:
     @classmethod
-    def from_settings(cls):
-        settings = Oauth2Settings.from_settings()
+    def from_settings(cls, settings: Optional[Oauth2Settings] = None):
+        settings = settings or Oauth2Settings.from_settings()
 
         import importlib
         module = importlib.import_module(f"crewai.cli.authentication.providers.{settings.provider.lower()}")
@@ -57,8 +62,13 @@ class AuthenticationCommand:
         # TODO: WORKOS - Next line and conditional are temporary until migration to WorkOS is complete.
         user_provider = self._determine_user_provider()
         if user_provider == "auth0":
-            from crewai.cli.authentication.providers.auth0 import Auth0Provider
-            self.oauth2_provider = Auth0Provider(settings=Oauth2Settings(provider="auth0"))
+            settings = Oauth2Settings(
+                provider="auth0",
+                client_id=AUTH0_CLIENT_ID,
+                domain=AUTH0_DOMAIN,
+                audience=AUTH0_AUDIENCE
+            )
+            self.oauth2_provider = ProviderFactory.from_settings(settings)
         # End of temporary code.
 
         device_code_data = self._get_device_code()

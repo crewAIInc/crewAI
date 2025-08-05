@@ -1,8 +1,3 @@
-from crewai.cli.authentication.constants import (
-    AUTH0_AUDIENCE,
-    AUTH0_CLIENT_ID,
-    AUTH0_DOMAIN,
-)
 from crewai.cli.authentication.providers.base_provider import BaseProvider
 
 class Auth0Provider(BaseProvider):
@@ -19,10 +14,13 @@ class Auth0Provider(BaseProvider):
         return f"https://{self._get_domain()}/"
 
     def get_audience(self) -> str:
-        return self.settings.audience or AUTH0_AUDIENCE
+        assert self.settings.audience is not None, "Audience is required"
+        return self.settings.audience
 
     def get_client_id(self) -> str:
-        return self.settings.client_id or AUTH0_CLIENT_ID
+        assert self.settings.client_id is not None, "Client ID is required"
+        return self.settings.client_id
 
     def _get_domain(self) -> str:
-        return self.settings.domain or AUTH0_DOMAIN
+        assert self.settings.domain is not None, "Domain is required"
+        return self.settings.domain

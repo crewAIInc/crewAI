@@ -1,11 +1,7 @@
 import pytest
 from crewai.cli.authentication.main import Oauth2Settings
 from crewai.cli.authentication.providers.auth0 import Auth0Provider
-from crewai.cli.authentication.constants import (
-    AUTH0_AUDIENCE,
-    AUTH0_CLIENT_ID,
-    AUTH0_DOMAIN,
-)
+
 
 
 class TestAuth0Provider:
@@ -91,40 +87,5 @@ class TestAuth0Provider:
     def test_get_audience(self):
         assert self.provider.get_audience() == "test-audience"
 
-    def test_get_audience_fallback_to_default(self):
-        settings = Oauth2Settings(
-            provider="auth0",
-            domain="test-domain.auth0.com",
-            client_id="test-client-id",
-            audience=None
-        )
-        provider = Auth0Provider(settings)
-        assert provider.get_audience() == AUTH0_AUDIENCE
-
     def test_get_client_id(self):
         assert self.provider.get_client_id() == "test-client-id"
-
-    def test_get_client_id_fallback_to_default(self):
-        settings = Oauth2Settings(
-            provider="auth0",
-            domain="test-domain.auth0.com",
-            client_id=None,
-            audience="test-audience"
-        )
-        provider = Auth0Provider(settings)
-        assert provider.get_client_id() == AUTH0_CLIENT_ID
-
-    def test_get_domain_fallback_to_default(self):
-        settings = Oauth2Settings(
-            provider="auth0",
-            domain=None,
-            client_id="test-client",
-            audience="test-audience"
-        )
-        provider = Auth0Provider(settings)
-
-        # Should use default domain for all URLs
-        assert AUTH0_DOMAIN in provider.get_authorize_url()
-        assert AUTH0_DOMAIN in provider.get_token_url()
-        assert AUTH0_DOMAIN in provider.get_jwks_url()
-        assert AUTH0_DOMAIN in provider.get_issuer()
