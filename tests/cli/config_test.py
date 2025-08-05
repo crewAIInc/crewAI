@@ -79,7 +79,7 @@ class TestSettings(unittest.TestCase):
         for key in user_settings.keys():
             self.assertEqual(getattr(settings, key), None)
         for key in cli_settings.keys():
-            self.assertEqual(getattr(settings, key), DEFAULT_CLI_SETTINGS[key])
+            self.assertEqual(getattr(settings, key), DEFAULT_CLI_SETTINGS.get(key))
 
     def test_dump_new_settings(self):
         settings = Settings(
