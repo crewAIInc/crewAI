@@ -27,7 +27,7 @@ class EntityMemory(Memory):
     _memory_provider: Optional[str] = PrivateAttr()
 
     def __init__(self, crew=None, embedder_config=None, storage=None, path=None):
-        memory_provider = embedder_config.get("provider")
+        memory_provider = embedder_config.get("provider") if embedder_config else None
         if memory_provider == "mem0":
             try:
                 from crewai.memory.storage.mem0_storage import Mem0Storage
