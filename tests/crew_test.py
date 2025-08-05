@@ -4742,3 +4742,13 @@ def test_reset_agent_knowledge_with_only_agent_knowledge(researcher, writer):
         mock_reset_agent_knowledge.assert_called_once_with(
             [mock_ks_research, mock_ks_writer]
         )
+
+def test_default_crew_name(researcher, writer):
+    crew = Crew(
+        agents=[researcher, writer],
+        tasks=[
+            Task(description="Task 1", expected_output="output", agent=researcher),
+            Task(description="Task 2", expected_output="output", agent=writer),
+        ],
+    )
+    assert crew.name == "crew"
