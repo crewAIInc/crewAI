@@ -94,7 +94,6 @@ class Crew(FlowTrackable, BaseModel):
         manager_llm: The language model that will run manager agent.
         manager_agent: Custom agent that will be used as manager.
         memory: Whether the crew should use memory to store memories of it's execution.
-        memory_config: Configuration for the memory to be used for the crew.
         cache: Whether the crew should use a cache to store the results of the tools execution.
         function_calling_llm: The language model that will run the tool calling for all the agents.
         process: The process flow that the crew will follow (e.g., sequential, hierarchical).
@@ -140,10 +139,6 @@ class Crew(FlowTrackable, BaseModel):
     memory: bool = Field(
         default=False,
         description="Whether the crew should use memory to store memories of it's execution",
-    )
-    memory_config: Optional[Dict[str, Any]] = Field(
-        default=None,
-        description="Configuration for the memory to be used for the crew.",
     )
     short_term_memory: Optional[InstanceOf[ShortTermMemory]] = Field(
         default=None,
