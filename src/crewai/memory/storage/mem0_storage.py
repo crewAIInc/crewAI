@@ -159,9 +159,10 @@ class Mem0Storage(Storage):
         params['threshold'] = score_threshold
 
         if isinstance(self.memory, Memory):
-            del params["metadata"], params["version"], params['output_format']
-            if params.get("run_id"):
-                del params["run_id"]
+            params.pop("metadata", None)
+            params.pop("version", None)
+            params.pop("output_format", None)
+            params.pop("run_id", None)
 
         results = self.memory.search(**params)
         return [r for r in results["results"]]

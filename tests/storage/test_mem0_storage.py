@@ -363,3 +363,55 @@ def test_search_method_with_agent_id_and_user_id():
 
     assert len(results) == 2
     assert results[0]["content"] == "Result 1"
+
+
+def test_search_method_with_memory_oss_missing_params():
+    """Test search method handles missing parameters gracefully when using Memory (OSS)"""
+    config = {
+        "user_id": "test_user",
+        "local_mem0_config": {
+            "vector_store": {"provider": "mock_vector_store"},
+            "llm": {"provider": "mock_llm"},
+        }
+    }
+    
+    mock_memory = MagicMock(spec=Memory)
+    mock_results = {"results": [{"score": 0.9, "content": "Result 1"}]}
+    mock_memory.search = MagicMock(return_value=mock_results)
+    
+    with patch("mem0.memory.main.Memory.from_config", return_value=mock_memory):
+        mem0_storage = Mem0Storage(type="external", config=config)
+        
+        results = mem0_storage.search("test query", limit=5, score_threshold=0.5)
+        
+        mock_memory.search.assert_called_once_with(
+            query="test query",
+            limit=5,
+            user_id="test_user",
+            filters={"AND": [{"user_id": "test_user"}]},
+            threshold=0.5
+        )
+        
+        assert len(results) == 1
+        assert results[0]["content"] == "Result 1"
+
+
+def test_search_method_with_memory_oss_no_optional_params():
+    """Test search method works when no optional parameters are present"""
+    mock_memory = MagicMock(spec=Memory)
+    mock_results = {"results": []}
+    mock_memory.search = MagicMock(return_value=mock_results)
+    
+    with patch("mem0.memory.main.Memory", return_value=mock_memory):
+        mem0_storage = Mem0Storage(type="external", config={})
+        
+        results = mem0_storage.search("test query")
+        
+        mock_memory.search.assert_called_once_with(
+            query="test query",
+            limit=3,
+            filters={},
+            threshold=0.35
+        )
+        
+        assert len(results) == 0
