@@ -4475,7 +4475,7 @@ def test_crew_copy_with_memory():
     )
     original_entity_id = id(crew._entity_memory) if crew._entity_memory else None
     original_external_id = id(crew._external_memory) if crew._external_memory else None
-    original_user_id = id(crew._user_memory) if crew._user_memory else None
+
 
     try:
         crew_copy = crew.copy()
@@ -4526,20 +4526,6 @@ def test_crew_copy_with_memory():
                 or crew_copy._external_memory is None
             ), "Copied _external_memory should be None if not originally present"
 
-        if original_user_id:
-            assert hasattr(
-                crew_copy, "_user_memory"
-            ), "Copied crew should have _user_memory"
-            assert (
-                crew_copy._user_memory is not None
-            ), "Copied _user_memory should not be None"
-            assert (
-                id(crew_copy._user_memory) != original_user_id
-            ), "Copied _user_memory should be a new object"
-        else:
-            assert (
-                not hasattr(crew_copy, "_user_memory") or crew_copy._user_memory is None
-            ), "Copied _user_memory should be None if not originally present"
 
     except pydantic_core.ValidationError as e:
         if "Input should be an instance of" in str(e) and ("Memory" in str(e)):
@@ -4756,3 +4742,13 @@ def test_reset_agent_knowledge_with_only_agent_knowledge(researcher, writer):
         mock_reset_agent_knowledge.assert_called_once_with(
             [mock_ks_research, mock_ks_writer]
         )
+
+def test_default_crew_name(researcher, writer):
+    crew = Crew(
+        agents=[researcher, writer],
+        tasks=[
+            Task(description="Task 1", expected_output="output", agent=researcher),
+            Task(description="Task 2", expected_output="output", agent=writer),
+        ],
+    )
+    assert crew.name == "crew"
