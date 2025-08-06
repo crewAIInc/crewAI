@@ -147,7 +147,7 @@ class LiteAgent(FlowTrackable, BaseModel):
         default=15, description="Maximum number of iterations for tool usage"
     )
     max_execution_time: Optional[int] = Field(
-        default=None, description="Maximum execution time in seconds"
+        default=None, description=". Maximum execution time in seconds"
     )
     respect_context_window: bool = Field(
         default=True,
