@@ -1,3 +1,4 @@
+import os
 import asyncio
 import json
 import re
@@ -278,8 +279,9 @@ class Crew(FlowTrackable, BaseModel):
 
         self._cache_handler = CacheHandler()
         event_listener = EventListener()
-        trace_listener = TraceCollectionListener()
-        trace_listener.setup_listeners(crewai_event_bus)
+        if os.getenv("CREWAI_TRACING_ENABLED", "false").lower() == "true":
+            trace_listener = TraceCollectionListener()
+            trace_listener.setup_listeners(crewai_event_bus)
         event_listener.verbose = self.verbose
         event_listener.formatter.verbose = self.verbose
         self._logger = Logger(verbose=self.verbose)
@@ -1238,7 +1240,6 @@ class Crew(FlowTrackable, BaseModel):
             copied_data["entity_memory"] = self.entity_memory.model_copy(deep=True)
         if self.external_memory:
             copied_data["external_memory"] = self.external_memory.model_copy(deep=True)
-
 
         copied_data.pop("agents", None)
         copied_data.pop("tasks", None)

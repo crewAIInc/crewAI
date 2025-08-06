@@ -51,17 +51,17 @@ interactions:
   response:
     body:
       string: !!binary |
-        H4sIAAAAAAAAAwAAAP//jFJNb9QwEL3nVww+b9B+ZJVtbgWEKCc49QBVNLUnicHxWLazpar2vyMn
-        200KReISKfPmPb83M08ZgNBKVCBkh1H2zuTvN6o4fIhcfhkIP18fH7/eyneHprux1vVilRh8/4Nk
-        fGa9ldw7Q1GznWDpCSMl1U25L/brYr/bjkDPikyitS7mBee9tjrfrrdFvi7zzeHM7lhLCqKCbxkA
-        wNP4TT6tol+igvXqudJTCNiSqC5NAMKzSRWBIegQ0UaxmkHJNpIdrd+A5QeQaKHVRwKENtkGtOGB
-        PMB3+1FbNHA9/lfwiYzhFdyyN+rNUtJTMwRMsexgzAJAazliGssY5u6MnC72DbfO8334gyoabXXo
-        ak8Y2CarIbITI3rKAO7GMQ0vkgvnuXexjvyTxuc2+3LSE/N2lugZjBzRLOrldvWKXq0oojZhMWgh
-        UXakZuq8FRyU5gWQLVL/7eY17Sm5tu3/yM+AlOQiqdp5Ulq+TDy3eUrH+6+2y5RHwyKQP2pJddTk
-        0yYUNTiY6aREeAyR+rrRtiXvvJ7uqnH1rsB9gXS1kyI7Zb8BAAD//wMADmKJ1mUDAAA=
+        H4sIAAAAAAAAAwAAAP//jFJdb9QwEHzPr1j8nKDkmvTavBUQnw8goQoJqKKts8kZHK9lOy1Q3X9H
+        Tq6XFIrES6Ts7IxndvcuARCqFTUIucMgB6uz5wWduvz8g3nx/tnny3d4MRabX6flW9O9qj6KNDL4
+        +hvJcM96KnmwmoJiM8PSEQaKqsW2Kqv8rCqrCRi4JR1pvQ1ZydmgjMo2+abM8m1WnB3YO1aSvKjh
+        SwIAcDd9o0/T0g9RQ57eVwbyHnsS9bEJQDjWsSLQe+UDmiDSBZRsApnJ+hswfAsSDfTqhgChj7YB
+        jb8lB/DVvFQGNVxM/zW8Jq05hU/sdPtkLemoGz3GWGbUegWgMRwwjmUKc3VA9kf7mnvr+Nr/QRWd
+        MsrvGkfo2USrPrAVE7pPAK6mMY0PkgvreLChCfydpueKajvriWU7a/QABg6oV/XtJn1Er2kpoNJ+
+        NWghUe6oXajLVnBsFa+AZJX6bzePac/Jlen/R34BpCQbqG2so1bJh4mXNkfxeP/VdpzyZFh4cjdK
+        UhMUubiJljoc9XxSwv/0gYamU6YnZ52a76qzzUmJVYl0fiJFsk9+AwAA//8DABLzfQllAwAA
     headers:
       CF-RAY:
-      - 96b08ef1ac75fb44-SJC
+      - 96b0f0e62d177ad9-SJC
       Connection:
       - keep-alive
       Content-Encoding:
@@ -69,14 +69,14 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Wed, 06 Aug 2025 18:22:13 GMT
+      - Wed, 06 Aug 2025 19:29:05 GMT
       Server:
       - cloudflare
       Set-Cookie:
-      - __cf_bm=C_B.oAFaiWyMAy6I2ELO2qf0Ae0AhmtMulxfRfbjC18-1754504533-1.0.1.1-yv2tU4o47EGhKDNwJtUrht9fcG4ky42ps5Tt5GnTN3VBQOMHsJnCEkQZ.pB3PlEQ6ctmYhT6hQn9ETAq1iGWZmeUOhyAbHUHIWxZkX.HCEs;
-        path=/; expires=Wed, 06-Aug-25 18:52:13 GMT; domain=.api.openai.com; HttpOnly;
+      - __cf_bm=ePO5hy0kEoADCuKcboFy1iS1qckCE5KCpifQaXnlomM-1754508545-1.0.1.1-ieWfjcdIxQIXGfaMizvmgTvZPRFehqDXliegaOT7EO.kt7KSSFGmNDcC35_D9hOhE.fJ5K302uX0snQF3nLaapds2dqgGbNcsyFPOKNvAdI;
+        path=/; expires=Wed, 06-Aug-25 19:59:05 GMT; domain=.api.openai.com; HttpOnly;
         Secure; SameSite=None
-      - _cfuvid=Mky3MXgYJw.tlqy2tMH7eDdUSVqkLf3Jf7YPIvOdgeA-1754504533511-0.0.1.1-604800000;
+      - _cfuvid=NaXWifUGChHp6Ap1mvfMrNzmO4HdzddrqXkSR9T.hYo-1754508545647-0.0.1.1-604800000;
         path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
       Strict-Transport-Security:
       - max-age=31536000; includeSubDomains; preload
@@ -93,13 +93,13 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '610'
+      - '526'
       openai-project:
       - proj_xitITlrFeen7zjNSzML82h9x
       openai-version:
       - '2020-10-01'
       x-envoy-upstream-service-time:
-      - '689'
+      - '568'
       x-ratelimit-limit-project-tokens:
       - '150000000'
       x-ratelimit-limit-requests:
@@ -119,16 +119,139 @@ interactions:
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_1a833d43768c44b3ad3445ca7b0a17ec
+      - req_0e70b38c85e144d289fbdf89082cf16e
     status:
       code: 200
       message: OK
 - request:
-    body: '{"trace_id": "f4433e6a-0917-4346-ae0f-71601f2f7eca", "execution_type":
+    body: '{"messages": [{"role": "system", "content": "You are Test Agent. Test backstory\nYour
+      personal goal is: Test goal\nTo give my best complete final answer to the task
+      respond using the exact following format:\n\nThought: I now can give a great
+      answer\nFinal Answer: Your final answer must be the great and the most complete
+      as possible, it must be outcome described.\n\nI MUST use these formats, my job
+      depends on it!"}, {"role": "user", "content": "\nCurrent Task: Say hello to
+      the world\n\nThis is the expected criteria for your final answer: hello world\nyou
+      MUST return the actual complete content as the final answer, not a summary.\n\nBegin!
+      This is VERY important to you, use the tools available and give your best Final
+      Answer, your job depends on it!\n\nThought:"}], "model": "gpt-4o-mini"}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate, zstd
+      connection:
+      - keep-alive
+      content-length:
+      - '797'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.93.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.93.0
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-read-timeout:
+      - '200.0'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.9
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAAwAAAP//jFJdj9MwEHzPr1j8nKC0TejRN4TE3YmTQIAEEpyiPWeTujheYztX0Kn/
+        HTnpNbkPJF4iZWdnPLO7dwmAULXYgJBbDLKzOnu7oFdu//nLr8v8Ij//1jdXq93Xjx8+7a7OzXuR
+        Rgbf7EiGe9ZLyZ3VFBSbEZaOMFBUXazLoszPyqIcgI5r0pHW2pAVnHXKqGyZL4ssX2eLsyN7y0qS
+        Fxv4ngAA3A3f6NPU9FtsIE/vKx15jy2JzakJQDjWsSLQe+UDmiDSCZRsApnB+iUY3oNEA626JUBo
+        o21A4/fkAH6Yd8qghjfD/wYuSGtOYc9O1y/mko6a3mOMZXqtZwAawwHjWIYw10fkcLKvubWOb/wj
+        qmiUUX5bOULPJlr1ga0Y0EMCcD2MqX+QXFjHnQ1V4J80PLco16OemLYzR49g4IB6Vl8v02f0qpoC
+        Ku1ngxYS5ZbqiTptBfta8QxIZqmfunlOe0yuTPs/8hMgJdlAdWUd1Uo+TDy1OYrH+6+205QHw8KT
+        u1WSqqDIxU3U1GCvx5MS/o8P1FWNMi0569R4V42tVgWWBdLrlRTJIfkLAAD//wMAE4F9LmUDAAA=
+    headers:
+      CF-RAY:
+      - 96b0f0eadf69eb2c-SJC
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Wed, 06 Aug 2025 19:29:06 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - __cf_bm=f59gEPi_nA3TTxtjbKaSQpvkTwezaAqOvqfxiGzRnVQ-1754508546-1.0.1.1-JrSaytxVIQSVE00I.vyGj7d4HJbbMV6R9fWPJbkDKu0Y8ueMRzTwTUnfz0YzP5nsZX5oxoE6WlmFxOuz0rRuq9YhZZsO_TbaFBOFk1jGK9U;
+        path=/; expires=Wed, 06-Aug-25 19:59:06 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=3D66v3.J_RcVoYy9dlF.jHwq1zTIm842xynZxzSy1Wc-1754508546352-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '504'
+      openai-project:
+      - proj_xitITlrFeen7zjNSzML82h9x
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '527'
+      x-ratelimit-limit-project-tokens:
+      - '150000000'
+      x-ratelimit-limit-requests:
+      - '30000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-project-tokens:
+      - '149999827'
+      x-ratelimit-remaining-requests:
+      - '29999'
+      x-ratelimit-remaining-tokens:
+      - '149999830'
+      x-ratelimit-reset-project-tokens:
+      - 0s
+      x-ratelimit-reset-requests:
+      - 2ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_32abf5c6f27e42579bc84b0bfcc9c4b4
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"trace_id": "e3677f76-4763-4f55-94b2-f38707f353c3", "execution_type":
       "crew", "execution_context": {"crew_fingerprint": null, "crew_name": "crew",
       "flow_name": "Unknown Flow", "crewai_version": "0.152.0", "privacy_level": "standard"},
       "execution_metadata": {"expected_duration_estimate": 300, "agent_count": 0,
-      "task_count": 0, "flow_method_count": 0, "execution_started_at": "2025-08-06T18:23:20.304602+00:00"}}'
+      "task_count": 0, "flow_method_count": 0, "execution_started_at": "2025-08-06T19:30:52.778875+00:00"}}'
     headers:
       Accept:
       - '*/*'
@@ -180,37 +303,37 @@ interactions:
       Content-Type:
       - text/html; charset=UTF-8
       Date:
-      - Wed, 06 Aug 2025 18:23:20 GMT
+      - Wed, 06 Aug 2025 19:30:52 GMT
       strict-transport-security:
       - max-age=63072000; includeSubDomains
       x-request-id:
-      - 27025646-7bf9-46af-9a4e-27d0f6d3f713
+      - 8c9c1556-d30f-4736-b62c-5a41150e859f
       x-runtime:
-      - '0.005376'
+      - '0.005329'
     status:
       code: 404
       message: Not Found
 - request:
-    body: '{"version": "0.152.0", "batch_id": "f4433e6a-0917-4346-ae0f-71601f2f7eca",
+    body: '{"version": "0.152.0", "batch_id": "e3677f76-4763-4f55-94b2-f38707f353c3",
       "user_context": {"user_id": "anonymous", "organization_id": "", "session_id":
-      "c5dd6224-71c4-441a-8665-e69d0a5e2699", "trace_id": "62ddb694-03d7-4a1f-9b33-9f0f8c4cc07e"},
-      "execution_metadata": {"crew_name": "crew", "execution_start": "2025-08-06T18:23:20.303797+00:00",
-      "crewai_version": "0.152.0"}, "events": [{"event_id": "cc84a814-d955-47c4-ac95-1c76c08fa262",
-      "timestamp": "2025-08-06T18:23:20.419110+00:00", "type": "crew_kickoff_started",
-      "event_data": {"timestamp": "2025-08-06T18:23:20.303797+00:00", "type": "crew_kickoff_started",
+      "eb96086e-c3b3-4757-a118-328be61c9aad", "trace_id": "90245ff6-bd46-4e0e-83da-b12edd241b0e"},
+      "execution_metadata": {"crew_name": "crew", "execution_start": "2025-08-06T19:30:52.777333+00:00",
+      "crewai_version": "0.152.0"}, "events": [{"event_id": "d5c81b9a-b8a9-4638-ab50-aa91792b95c8",
+      "timestamp": "2025-08-06T19:30:52.909777+00:00", "type": "crew_kickoff_started",
+      "event_data": {"timestamp": "2025-08-06T19:30:52.777333+00:00", "type": "crew_kickoff_started",
       "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
-      "crew_name": "crew", "crew": null, "inputs": null}}, {"event_id": "b104728c-9c0a-416b-b185-fed66bff420b",
-      "timestamp": "2025-08-06T18:23:20.421424+00:00", "type": "task_started", "event_data":
+      "crew_name": "crew", "crew": null, "inputs": null}}, {"event_id": "a5bd314d-f9eb-471f-b3c4-e176e6ec62f9",
+      "timestamp": "2025-08-06T19:30:52.911914+00:00", "type": "task_started", "event_data":
       {"task_description": "Say hello to the world", "task_name": null, "context":
-      "", "agent": "Test Agent"}}, {"event_id": "2168e509-8084-43af-a5a4-3669030285d4",
-      "timestamp": "2025-08-06T18:23:20.421895+00:00", "type": "agent_execution_started",
+      "", "agent": "Test Agent"}}, {"event_id": "ce0e41d9-90a9-4585-8dc3-c04ee02232bc",
+      "timestamp": "2025-08-06T19:30:52.912403+00:00", "type": "agent_execution_started",
       "event_data": {"serialization_error": "Circular reference detected (id repeated)",
-      "object_type": "AgentExecutionStartedEvent"}}, {"event_id": "fd93b65d-fa67-47e2-8a99-fc17520defb9",
-      "timestamp": "2025-08-06T18:23:20.422146+00:00", "type": "llm_call_started",
-      "event_data": {"timestamp": "2025-08-06T18:23:20.422115+00:00", "type": "llm_call_started",
+      "object_type": "AgentExecutionStartedEvent"}}, {"event_id": "d7c3546e-fe60-4c8a-9e4a-a510fa631a8b",
+      "timestamp": "2025-08-06T19:30:52.912693+00:00", "type": "llm_call_started",
+      "event_data": {"timestamp": "2025-08-06T19:30:52.912657+00:00", "type": "llm_call_started",
       "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
-      "task_name": null, "task_id": "53d04a0c-e6d8-4166-882e-2b8b7a82ff37", "agent_id":
-      "44d34aff-782f-49da-875f-557d34591fa1", "agent_role": "Test Agent", "model":
+      "task_name": null, "task_id": "e4abe414-b25d-44ea-8a0d-4998d7e55ed3", "agent_id":
+      "91a39492-d0c8-4994-b8b4-acdd256a2e96", "agent_role": "Test Agent", "model":
       "gpt-4o-mini", "messages": [{"role": "system", "content": "You are Test Agent.
       Test backstory\nYour personal goal is: Test goal\nTo give my best complete final
       answer to the task respond using the exact following format:\n\nThought: I now
@@ -218,12 +341,12 @@ interactions:
       Say hello to the world\n\nThis is the expected criteria for your final answer:
       hello world\nyou MUST return the actual complete content as the final answer,
       not a summary.\n\nBegin! This is ..."}], "tools": null, "callbacks": ["<crewai.utilities.token_counter_callback.TokenCalcHandler
-      object at 0x1451f22a0>"], "available_functions": null}}, {"event_id": "8e9d4feb-9008-43ab-bf64-b78c6f02d443",
-      "timestamp": "2025-08-06T18:23:20.425510+00:00", "type": "llm_call_completed",
-      "event_data": {"timestamp": "2025-08-06T18:23:20.425472+00:00", "type": "llm_call_completed",
+      object at 0x11c5b5e50>"], "available_functions": null}}, {"event_id": "6ed9e994-3e66-4653-97e0-a9e8e8c1d978",
+      "timestamp": "2025-08-06T19:30:52.919664+00:00", "type": "llm_call_completed",
+      "event_data": {"timestamp": "2025-08-06T19:30:52.919623+00:00", "type": "llm_call_completed",
       "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
-      "task_name": null, "task_id": "53d04a0c-e6d8-4166-882e-2b8b7a82ff37", "agent_id":
-      "44d34aff-782f-49da-875f-557d34591fa1", "agent_role": "Test Agent", "messages":
+      "task_name": null, "task_id": "e4abe414-b25d-44ea-8a0d-4998d7e55ed3", "agent_id":
+      "91a39492-d0c8-4994-b8b4-acdd256a2e96", "agent_role": "Test Agent", "messages":
       [{"role": "system", "content": "You are Test Agent. Test backstory\nYour personal
       goal is: Test goal\nTo give my best complete final answer to the task respond
       using the exact following format:\n\nThought: I now can give a great answer\n..."},
@@ -232,15 +355,15 @@ interactions:
       the actual complete content as the final answer, not a summary.\n\nBegin! This
       is ..."}], "response": "I now can give a great answer  \nFinal Answer: Hello,
       World!", "call_type": "<LLMCallType.LLM_CALL: ''llm_call''>", "response_cost":
-      3.255e-05, "model": "gpt-4o-mini"}}, {"event_id": "ecf2d71f-fc67-4c0f-9f72-dc36d793fcbf",
-      "timestamp": "2025-08-06T18:23:20.425662+00:00", "type": "agent_execution_completed",
+      3.255e-05, "model": "gpt-4o-mini"}}, {"event_id": "2f03d7fe-2faf-4d6b-a9e1-d3cb9e87ef10",
+      "timestamp": "2025-08-06T19:30:52.919798+00:00", "type": "agent_execution_completed",
       "event_data": {"serialization_error": "Circular reference detected (id repeated)",
-      "object_type": "AgentExecutionCompletedEvent"}}, {"event_id": "4a1ed485-6634-46f3-9551-a1251605795e",
-      "timestamp": "2025-08-06T18:23:20.425810+00:00", "type": "task_completed", "event_data":
+      "object_type": "AgentExecutionCompletedEvent"}}, {"event_id": "c2ed7fa8-0361-406f-8a0f-4cf0f580dbee",
+      "timestamp": "2025-08-06T19:30:52.919953+00:00", "type": "task_completed", "event_data":
       {"serialization_error": "Circular reference detected (id repeated)", "object_type":
-      "TaskCompletedEvent"}}, {"event_id": "b7d164f5-3b7b-419d-a589-90ed7b0e5256",
-      "timestamp": "2025-08-06T18:23:20.427562+00:00", "type": "crew_kickoff_completed",
-      "event_data": {"timestamp": "2025-08-06T18:23:20.427548+00:00", "type": "crew_kickoff_completed",
+      "TaskCompletedEvent"}}, {"event_id": "727d1ea2-4f7b-4d12-b491-42a27f3c3123",
+      "timestamp": "2025-08-06T19:30:52.921547+00:00", "type": "crew_kickoff_completed",
+      "event_data": {"timestamp": "2025-08-06T19:30:52.921522+00:00", "type": "crew_kickoff_completed",
       "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
       "crew_name": "crew", "crew": null, "output": {"description": "Say hello to the
       world", "name": null, "expected_output": "hello world", "summary": "Say hello
@@ -297,134 +420,14 @@ interactions:
       Content-Type:
       - text/html; charset=UTF-8
       Date:
-      - Wed, 06 Aug 2025 18:23:20 GMT
+      - Wed, 06 Aug 2025 19:30:53 GMT
       strict-transport-security:
       - max-age=63072000; includeSubDomains
       x-request-id:
-      - 9d7201e2-ea26-4636-b3e3-3c4363897bae
+      - 3b16d4bb-ba79-4a32-a776-26bbdf8d0a68
       x-runtime:
-      - '0.011791'
+      - '0.005566'
     status:
       code: 404
       message: Not Found
-- request:
-    body: '{"messages": [{"role": "system", "content": "You are Test Agent. Test backstory\nYour
-      personal goal is: Test goal\nTo give my best complete final answer to the task
-      respond using the exact following format:\n\nThought: I now can give a great
-      answer\nFinal Answer: Your final answer must be the great and the most complete
-      as possible, it must be outcome described.\n\nI MUST use these formats, my job
-      depends on it!"}, {"role": "user", "content": "\nCurrent Task: Say hello to
-      the world\n\nThis is the expected criteria for your final answer: hello world\nyou
-      MUST return the actual complete content as the final answer, not a summary.\n\nBegin!
-      This is VERY important to you, use the tools available and give your best Final
-      Answer, your job depends on it!\n\nThought:"}], "model": "gpt-4o-mini"}'
-    headers:
-      accept:
-      - application/json
-      accept-encoding:
-      - gzip, deflate, zstd
-      connection:
-      - keep-alive
-      content-length:
-      - '797'
-      content-type:
-      - application/json
-      cookie:
-      - __cf_bm=TO314jAndgmjYBG59b5Adg03K28E13Zc6uFX2d2pGqg-1754508143-1.0.1.1-l1SuhWPhg5FJU1Z4rF2TQd9gc7orEuFyWS0BvesusbZjdoafmmkovftbTmQnIPKQOhWT8rAZgev_H9.Uf7sCSQJjehae875RQrc_TNokQZE;
-        _cfuvid=WTxG3OfTXA16GzoqX7CaeRsYSYA.qMjEOwAzhDCLIVE-1754508143291-0.0.1.1-604800000
-      host:
-      - api.openai.com
-      user-agent:
-      - OpenAI/Python 1.93.0
-      x-stainless-arch:
-      - arm64
-      x-stainless-async:
-      - 'false'
-      x-stainless-lang:
-      - python
-      x-stainless-os:
-      - MacOS
-      x-stainless-package-version:
-      - 1.93.0
-      x-stainless-raw-response:
-      - 'true'
-      x-stainless-read-timeout:
-      - '200.0'
-      x-stainless-retry-count:
-      - '0'
-      x-stainless-runtime:
-      - CPython
-      x-stainless-runtime-version:
-      - 3.12.9
-    method: POST
-    uri: https://api.openai.com/v1/chat/completions
-  response:
-    body:
-      string: !!binary |
-        H4sIAAAAAAAAAwAAAP//jFLBjtMwEL3nK0Y+N6hpU7rktqy0ggtiQUhIsIpmnUlicDzGdtqiVf8d
-        Oek2KbDSXiJl3rzn92bmMQEQqhIFCNlikJ3V6U1Gy7vG3r790H86rL58tgf37uPu1/XN3dc2E4vI
-        4IcfJMMT65XkzmoKis0IS0cYKKpm202+WV5l+esB6LgiHWmNDWnOaaeMSlfLVZ4ut2l2dWK3rCR5
-        UcC3BADgcfhGn6aigyhguXiqdOQ9NiSKcxOAcKxjRaD3ygc0QSwmULIJZAbr78HwHiQaaNSOAKGJ
-        tgGN35MD+G5ulUEN18N/AS1pzbBnp6u5oKO69xhDmV7rGYDGcMA4lCHK/Qk5ns1rbqzjB/8XVdTK
-        KN+WjtCziUZ9YCsG9JgA3A9D6i9yC+u4s6EM/JOG57LNdtQT025m6PoEBg6oZ/XtabSXemVFAZX2
-        szELibKlaqJOO8G+UjwDklnqf938T3tMrkzzEvkJkJJsoKq0jiolLxNPbY7i6T7Xdp7yYFh4cjsl
-        qQyKXNxERTX2ejwo4X/7QF1ZK9OQs06NV1Xbcp3jJkd6s5YiOSZ/AAAA//8DAGNxBI1jAwAA
-    headers:
-      CF-RAY:
-      - 96b0e7294ea650a1-SJC
-      Connection:
-      - keep-alive
-      Content-Encoding:
-      - gzip
-      Content-Type:
-      - application/json
-      Date:
-      - Wed, 06 Aug 2025 19:22:27 GMT
-      Server:
-      - cloudflare
-      Strict-Transport-Security:
-      - max-age=31536000; includeSubDomains; preload
-      Transfer-Encoding:
-      - chunked
-      X-Content-Type-Options:
-      - nosniff
-      access-control-expose-headers:
-      - X-Request-ID
-      alt-svc:
-      - h3=":443"; ma=86400
-      cf-cache-status:
-      - DYNAMIC
-      openai-organization:
-      - crewai-iuxna1
-      openai-processing-ms:
-      - '1240'
-      openai-project:
-      - proj_xitITlrFeen7zjNSzML82h9x
-      openai-version:
-      - '2020-10-01'
-      x-envoy-upstream-service-time:
-      - '1265'
-      x-ratelimit-limit-project-tokens:
-      - '150000000'
-      x-ratelimit-limit-requests:
-      - '30000'
-      x-ratelimit-limit-tokens:
-      - '150000000'
-      x-ratelimit-remaining-project-tokens:
-      - '149999827'
-      x-ratelimit-remaining-requests:
-      - '29999'
-      x-ratelimit-remaining-tokens:
-      - '149999827'
-      x-ratelimit-reset-project-tokens:
-      - 0s
-      x-ratelimit-reset-requests:
-      - 2ms
-      x-ratelimit-reset-tokens:
-      - 0s
-      x-request-id:
-      - req_2adb2764f4ed4ed3936305f59417beb5
-    status:
-      code: 200
-      message: OK
 version: 1

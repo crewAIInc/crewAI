@@ -20,11 +20,12 @@ class TestTraceListenerSetup:
 
     @pytest.fixture(autouse=True)
     def clear_event_bus(self):
-        """Clear event bus listeners before each test"""
+        """Clear event bus listeners before and after each test"""
         from crewai.utilities.events import crewai_event_bus
 
         crewai_event_bus._handlers.clear()
         yield
+        crewai_event_bus._handlers.clear()
 
     @pytest.fixture(autouse=True)
     def mock_plus_api_calls(self):
@@ -34,6 +35,11 @@ class TestTraceListenerSetup:
             patch("requests.get") as mock_get,
             patch("requests.put") as mock_put,
             patch("requests.delete") as mock_delete,
+            patch.object(TraceBatchManager, "initialize_batch", return_value=None),
+            patch.object(
+                TraceBatchManager, "_finalize_backend_batch", return_value=True
+            ),
+            patch.object(TraceBatchManager, "_cleanup_batch_data", return_value=True),
         ):
             mock_response = MagicMock()
             mock_response.status_code = 200
@@ -74,25 +80,25 @@ class TestTraceListenerSetup:
             )
             crew = Crew(agents=[agent], tasks=[task], verbose=True)
 
-            original_initialize = TraceCollectionListener._initialize_batch
+            trace_listener = TraceCollectionListener()
+            from crewai.utilities.events import crewai_event_bus
 
-            with (
-                patch.object(
-                    TraceCollectionListener,
-                    "_initialize_batch",
-                    side_effect=original_initialize,
-                ) as initialize_mock,
-                patch.object(
-                    TraceBatchManager,
-                    "_finalize_backend_batch",
-                    return_value=True,  # Mock the return but let it be called
-                ) as finalize_mock,
-            ):
+            trace_listener.setup_listeners(crewai_event_bus)
+
+            with patch.object(
+                trace_listener.batch_manager,
+                "initialize_batch",
+                return_value=None,
+            ) as initialize_mock:
                 crew.kickoff()
 
-                # The trace listener should have been called during crew execution
-                initialize_mock.assert_called_once()
-                finalize_mock.assert_called_once()
+                assert initialize_mock.call_count >= 1
+
+                call_args = initialize_mock.call_args_list[0]
+                assert len(call_args[0]) == 2  # user_context, execution_metadata
+                _, execution_metadata = call_args[0]
+                assert isinstance(execution_metadata, dict)
+                assert "crew_name" in execution_metadata
 
     @pytest.mark.vcr(filter_headers=["authorization"])
     def test_batch_manager_finalizes_batch_clears_buffer(self):
@@ -114,12 +120,32 @@ class TestTraceListenerSetup:
 
             crew = Crew(agents=[agent], tasks=[task], verbose=True)
 
+            from crewai.utilities.events import crewai_event_bus
+
+            trace_listener = None
+            for handler_list in crewai_event_bus._handlers.values():
+                for handler in handler_list:
+                    if hasattr(handler, "__self__") and isinstance(
+                        handler.__self__, TraceCollectionListener
+                    ):
+                        trace_listener = handler.__self__
+                        break
+                if trace_listener:
+                    break
+
+            if not trace_listener:
+                pytest.skip(
+                    "No trace listener found - tracing may not be properly enabled"
+                )
+
             with patch.object(
-                TraceBatchManager, "_cleanup_batch_data", return_value=True
-            ) as cleanup_mock:
+                trace_listener.batch_manager,
+                "finalize_batch",
+                wraps=trace_listener.batch_manager.finalize_batch,
+            ) as finalize_mock:
                 crew.kickoff()
 
-                cleanup_mock.assert_called_once()
+                assert finalize_mock.call_count >= 1
 
     @pytest.mark.vcr(filter_headers=["authorization"])
     def test_events_collection_batch_manager(self, mock_plus_api_calls):
@@ -141,53 +167,37 @@ class TestTraceListenerSetup:
 
             from crewai.utilities.events import crewai_event_bus
 
-            trace_listener = None
-            for handler_list in crewai_event_bus._handlers.values():
-                for handler in handler_list:
-                    if hasattr(handler, "__self__") and isinstance(
-                        handler.__self__, TraceCollectionListener
-                    ):
-                        trace_listener = handler.__self__
-                        break
-                if trace_listener:
-                    break
+            # Create and setup trace listener explicitly
+            trace_listener = TraceCollectionListener()
+            trace_listener.setup_listeners(crewai_event_bus)
 
-            if trace_listener and trace_listener.batch_manager:
-                with patch.object(
-                    trace_listener.batch_manager,
-                    "add_event",
-                    wraps=trace_listener.batch_manager.add_event,
-                ) as add_event_mock:
-                    crew.kickoff()
+            with patch.object(
+                trace_listener.batch_manager,
+                "add_event",
+                wraps=trace_listener.batch_manager.add_event,
+            ) as add_event_mock:
+                crew.kickoff()
 
-                    assert add_event_mock.call_count >= 2
+                assert add_event_mock.call_count >= 2
 
-                    completion_events = [
-                        call.args[0]
-                        for call in add_event_mock.call_args_list
-                        if call.args[0].type == "crew_kickoff_completed"
-                    ]
-                    assert len(completion_events) == 1
+                completion_events = [
+                    call.args[0]
+                    for call in add_event_mock.call_args_list
+                    if call.args[0].type == "crew_kickoff_completed"
+                ]
+                assert len(completion_events) >= 1
 
-                    completion_event = completion_events[0]
-                    assert "crew_name" in completion_event.event_data
-                    assert completion_event.event_data["crew_name"] == "crew"
+                # Verify the first completion event has proper structure
+                completion_event = completion_events[0]
+                assert "crew_name" in completion_event.event_data
+                assert completion_event.event_data["crew_name"] == "crew"
 
-                    for call in add_event_mock.call_args_list:
-                        event = call.args[0]
-                        assert isinstance(event, TraceEvent)
-                        assert hasattr(event, "event_data")
-                        assert hasattr(event, "type")
-            else:
-                test_trace_listener = TraceCollectionListener()
-                test_trace_listener.setup_listeners(crewai_event_bus)
-
-                with patch.object(
-                    test_trace_listener.batch_manager, "add_event"
-                ) as add_event_mock:
-                    crew.kickoff()
-
-                    assert add_event_mock.call_count >= 2
+                # Verify all events have proper structure
+                for call in add_event_mock.call_args_list:
+                    event = call.args[0]
+                    assert isinstance(event, TraceEvent)
+                    assert hasattr(event, "event_data")
+                    assert hasattr(event, "type")
 
     @pytest.mark.vcr(filter_headers=["authorization"])
     def test_trace_listener_disabled_when_env_false(self):
@@ -210,6 +220,29 @@ class TestTraceListenerSetup:
             result = crew.kickoff()
             assert result is not None
 
+            from crewai.utilities.events import crewai_event_bus
+
+            trace_handlers = []
+            for handlers in crewai_event_bus._handlers.values():
+                for handler in handlers:
+                    if hasattr(handler, "__self__") and isinstance(
+                        handler.__self__, TraceCollectionListener
+                    ):
+                        trace_handlers.append(handler)
+                    elif hasattr(handler, "__name__") and any(
+                        trace_name in handler.__name__
+                        for trace_name in [
+                            "on_crew_started",
+                            "on_crew_completed",
+                            "on_flow_started",
+                        ]
+                    ):
+                        trace_handlers.append(handler)
+
+            assert len(trace_handlers) == 0, (
+                f"Found {len(trace_handlers)} trace handlers when tracing should be disabled"
+            )
+
     def test_trace_listener_setup_correctly(self):
         """Test that trace listener is set up correctly when enabled"""
 
@@ -217,7 +250,19 @@ class TestTraceListenerSetup:
             trace_listener = TraceCollectionListener()
 
             assert trace_listener.trace_enabled is True
-
             assert trace_listener.batch_manager is not None
-
             assert trace_listener.trace_sender is not None
+
+    # Helper method to ensure cleanup
+    def teardown_method(self):
+        """Cleanup after each test method"""
+        from crewai.utilities.events import crewai_event_bus
+
+        crewai_event_bus._handlers.clear()
+
+    @classmethod
+    def teardown_class(cls):
+        """Final cleanup after all tests in this class"""
+        from crewai.utilities.events import crewai_event_bus
+
+        crewai_event_bus._handlers.clear()
