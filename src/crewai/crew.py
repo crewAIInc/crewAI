@@ -81,6 +81,7 @@ from crewai.utilities.llm_utils import create_llm
 from crewai.utilities.planning_handler import CrewPlanner
 from crewai.utilities.task_output_storage_handler import TaskOutputStorageHandler
 from crewai.utilities.training_handler import CrewTrainingHandler
+from crewai.utilities.execution_trace_collector import ExecutionTraceCollector
 
 warnings.filterwarnings("ignore", category=SyntaxWarning, module="pysbd")
 
@@ -204,6 +205,9 @@ class Crew(FlowTrackable, BaseModel):
     after_kickoff_callbacks: List[Callable[[CrewOutput], CrewOutput]] = Field(
         default_factory=list,
         description="List of callbacks to be executed after crew kickoff. It may be used to adjust the output of the crew.",
+    )
+    trace_execution: bool = Field(
+        default=False, description="Whether to trace the execution steps of the crew"
     )
     max_rpm: Optional[int] = Field(
         default=None,
@@ -621,6 +625,11 @@ class Crew(FlowTrackable, BaseModel):
         self,
         inputs: Optional[Dict[str, Any]] = None,
     ) -> CrewOutput:
+        trace_collector = None
+        if self.trace_execution:
+            trace_collector = ExecutionTraceCollector()
+            trace_collector.start_collecting()
+        
         ctx = baggage.set_baggage(
             "crew_context", CrewContext(id=str(self.id), key=self.key)
         )
@@ -678,6 +687,10 @@ class Crew(FlowTrackable, BaseModel):
                 result = after_callback(result)
 
             self.usage_metrics = self.calculate_usage_metrics()
+            
+            if trace_collector:
+                execution_trace = trace_collector.stop_collecting()
+                result.execution_trace = execution_trace
 
             return result
         except Exception as e:
@@ -1086,6 +1099,7 @@ class Crew(FlowTrackable, BaseModel):
             json_dict=final_task_output.json_dict,
             tasks_output=task_outputs,
             token_usage=token_usage,
+            execution_trace=None,
         )
 
     def _process_async_tasks(
