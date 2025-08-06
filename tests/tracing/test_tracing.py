@@ -2,30 +2,45 @@ import os
 import pytest
 from unittest.mock import patch, MagicMock
 
-with patch(
-    "crewai.cli.authentication.token.get_auth_token", return_value="mock_token_12345"
-):
-    from crewai import Agent, Task, Crew
-    from crewai.utilities.events.listeners.tracing.trace_listener import (
-        TraceCollectionListener,
-    )
-    from crewai.utilities.events.listeners.tracing.trace_batch_manager import (
-        TraceBatchManager,
-    )
-    from crewai.utilities.events.listeners.tracing.types import TraceEvent
+# Remove the module-level patch
+from crewai import Agent, Task, Crew
+from crewai.utilities.events.listeners.tracing.trace_listener import (
+    TraceCollectionListener,
+)
+from crewai.utilities.events.listeners.tracing.trace_batch_manager import (
+    TraceBatchManager,
+)
+from crewai.utilities.events.listeners.tracing.types import TraceEvent
 
 
 class TestTraceListenerSetup:
     """Test TraceListener is properly setup and collecting events"""
 
     @pytest.fixture(autouse=True)
+    def mock_auth_token(self):
+        """Mock authentication token for all tests in this class"""
+        with patch(
+            "crewai.cli.authentication.token.get_auth_token",
+            return_value="mock_token_12345",
+        ):
+            yield
+
+    @pytest.fixture(autouse=True)
     def clear_event_bus(self):
         """Clear event bus listeners before and after each test"""
         from crewai.utilities.events import crewai_event_bus
 
+        # Store original handlers
+        original_handlers = crewai_event_bus._handlers.copy()
+
+        # Clear for test
         crewai_event_bus._handlers.clear()
+
         yield
+
+        # Restore original state
         crewai_event_bus._handlers.clear()
+        crewai_event_bus._handlers.update(original_handlers)
 
     @pytest.fixture(autouse=True)
     def mock_plus_api_calls(self):
