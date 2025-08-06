@@ -44,6 +44,19 @@ A classe `MCPServerAdapter` da `crewai-tools` é a principal forma de conectar-s
 
 O uso de um gerenciador de contexto Python (`with`) é a **abordagem recomendada** para o `MCPServerAdapter`. Ele lida automaticamente com a abertura e o fechamento da conexão com o servidor MCP.
 
+## Configuração de Conexão
+
+O `MCPServerAdapter` suporta várias opções de configuração para personalizar o comportamento da conexão:
+
+- **`connect_timeout`** (opcional): Tempo máximo em segundos para aguardar o estabelecimento de uma conexão com o servidor MCP. O padrão é 30 segundos se não especificado. Isso é particularmente útil para servidores remotos que podem ter tempos de resposta variáveis.
+
+```python
+# Exemplo com timeout personalizado para conexão
+with MCPServerAdapter(server_params, connect_timeout=60) as tools:
+    # A conexão terá timeout após 60 segundos se não estabelecida
+    pass
+```
+
 ```python
 from crewai import Agent
 from crewai_tools import MCPServerAdapter
@@ -70,7 +83,7 @@ server_params = {
 }
 
 # Exemplo de uso (descomente e adapte após definir server_params):
-with MCPServerAdapter(server_params) as mcp_tools:
+with MCPServerAdapter(server_params, connect_timeout=60) as mcp_tools:
     print(f"Available tools: {[tool.name for tool in mcp_tools]}")
 
     meu_agente = Agent(
@@ -88,7 +101,7 @@ Este padrão geral mostra como integrar ferramentas. Para exemplos específicos 
 ## Filtrando Ferramentas
 
 ```python
-with MCPServerAdapter(server_params) as mcp_tools:
+with MCPServerAdapter(server_params, connect_timeout=60) as mcp_tools:
     print(f"Available tools: {[tool.name for tool in mcp_tools]}")
 
     meu_agente = Agent(

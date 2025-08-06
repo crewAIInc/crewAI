@@ -4,7 +4,12 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from crewai.cli.config import Settings
+from crewai.cli.config import (
+    Settings,
+    USER_SETTINGS_KEYS,
+    CLI_SETTINGS_KEYS,
+    DEFAULT_CLI_SETTINGS,
+)
 
 
 class TestSettings(unittest.TestCase):
@@ -51,6 +56,30 @@ class TestSettings(unittest.TestCase):
         )
         self.assertEqual(settings.tool_repository_username, "new_user")
         self.assertEqual(settings.tool_repository_password, "file_pass")
+
+    def test_clear_user_settings(self):
+        user_settings = {key: f"value_for_{key}" for key in USER_SETTINGS_KEYS}
+
+        settings = Settings(config_path=self.config_path, **user_settings)
+        settings.clear_user_settings()
+
+        for key in user_settings.keys():
+            self.assertEqual(getattr(settings, key), None)
+
+    def test_reset_settings(self):
+        user_settings = {key: f"value_for_{key}" for key in USER_SETTINGS_KEYS}
+        cli_settings = {key: f"value_for_{key}" for key in CLI_SETTINGS_KEYS}
+
+        settings = Settings(
+            config_path=self.config_path, **user_settings, **cli_settings
+        )
+
+        settings.reset()
+
+        for key in user_settings.keys():
+            self.assertEqual(getattr(settings, key), None)
+        for key in cli_settings.keys():
+            self.assertEqual(getattr(settings, key), DEFAULT_CLI_SETTINGS.get(key))
 
     def test_dump_new_settings(self):
         settings = Settings(

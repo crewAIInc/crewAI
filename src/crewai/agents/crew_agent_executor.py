@@ -120,11 +120,8 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             raise
         except Exception as e:
             handle_unknown_error(self._printer, e)
-            if e.__class__.__module__.startswith("litellm"):
-                # Do not retry on litellm errors
-                raise e
-            else:
-                raise e
+            raise
+
 
         if self.ask_for_human_input:
             formatted_answer = self._handle_human_feedback(formatted_answer)
