@@ -13,6 +13,9 @@ from crewai.utilities.events.listeners.tracing.trace_batch_manager import (
 from crewai.utilities.events.listeners.tracing.types import TraceEvent
 
 
+@patch(
+    "crewai.cli.authentication.token.get_auth_token", return_value="mock_token_12345"
+)
 class TestTraceListenerSetup:
     """Test TraceListener is properly setup and collecting events"""
 
@@ -25,7 +28,7 @@ class TestTraceListenerSetup:
         yield
 
     @pytest.mark.vcr(filter_headers=["authorization"])
-    def test_trace_listener_collects_crew_events(self):
+    def test_trace_listener_collects_crew_events(self, mock_get_auth_token):
         """Test that trace listener properly collects events from crew execution"""
 
         with patch.dict(os.environ, {"CREWAI_TRACING_ENABLED": "true"}):
@@ -58,7 +61,7 @@ class TestTraceListenerSetup:
                 finalize_mock.assert_called_once()
 
     @pytest.mark.vcr(filter_headers=["authorization"])
-    def test_batch_manager_finalizes_batch_clears_buffer(self):
+    def test_batch_manager_finalizes_batch_clears_buffer(self, mock_get_auth_token):
         """Test that batch manager properly finalizes batch and clears buffer"""
 
         with patch.dict(os.environ, {"CREWAI_TRACING_ENABLED": "true"}):
@@ -85,7 +88,7 @@ class TestTraceListenerSetup:
                 cleanup_mock.assert_called_once()
 
     @pytest.mark.vcr(filter_headers=["authorization"])
-    def test_events_collection_batch_manager(self):
+    def test_events_collection_batch_manager(self, mock_get_auth_token):
         """Test that trace listener properly collects events from crew execution"""
 
         with patch.dict(os.environ, {"CREWAI_TRACING_ENABLED": "true"}):
