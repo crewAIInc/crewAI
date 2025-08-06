@@ -3,16 +3,18 @@ from datetime import datetime, timezone
 from typing import Dict, List, Any, Optional
 from dataclasses import dataclass, field
 
-from crewai.cli.authentication.constants import CREWAI_BASE_URL
+from crewai.utilities.constants import CREWAI_BASE_URL
 from crewai.cli.authentication.token import get_auth_token
 
 from crewai.cli.version import get_crewai_version
 from crewai.cli.plus_api import PlusAPI
 from rich.console import Console
 from rich.panel import Panel
-from pprint import pprint
 
 from crewai.utilities.events.listeners.tracing.types import TraceEvent
+from logging import getLogger
+
+logger = getLogger(__name__)
 
 
 @dataclass
@@ -69,8 +71,6 @@ class TraceBatchManager:
             return
 
         try:
-            print("lorenze made it here 1 before sending payload")
-            # Build payload according to plan_api.md structure
             payload = {
                 "trace_id": self.current_batch.batch_id,
                 "execution_type": execution_metadata.get("execution_type", "crew"),
@@ -99,9 +99,6 @@ class TraceBatchManager:
                 self.trace_batch_id = response_data[
                     "trace_id"
                 ]  # Backend-generated session ID
-                print(
-                    f"✅ Trace batch initialized with session ID: {self.trace_batch_id}"
-                )
                 console = Console()
                 panel = Panel(
                     f"✅ Trace batch initialized with session ID: {self.trace_batch_id}",
@@ -110,12 +107,12 @@ class TraceBatchManager:
                 )
                 console.print(panel)
             else:
-                print(
+                logger.error(
                     f"❌ Failed to initialize trace batch: {response.status_code} - {response.text}"
                 )
 
         except Exception as e:
-            print(f"❌ Error initializing trace batch: {str(e)}")
+            logger.error(f"❌ Error initializing trace batch: {str(e)}")
             # Continue without backend tracing if initialization fails
 
     def add_event(self, trace_event: TraceEvent):
@@ -136,49 +133,40 @@ class TraceBatchManager:
                     "is_final_batch": False,
                 },
             }
-            print("payload sending over")
-            pprint(payload)
+
             if not self.trace_batch_id:
                 raise Exception("❌ Trace batch ID not found")
 
             response = self.plus_api.send_trace_events(self.trace_batch_id, payload)
 
             if response.status_code == 200 or response.status_code == 201:
-                print(f"✅ Sent {len(self.event_buffer)} events to backend")
                 self.event_buffer.clear()
             else:
-                print(
+                logger.error(
                     f"❌ Failed to send events: {response.status_code} - {response.text}"
                 )
 
         except Exception as e:
-            print(f"❌ Error sending events to backend: {str(e)}")
+            logger.error(f"❌ Error sending events to backend: {str(e)}")
 
     def finalize_batch(self) -> Optional[TraceBatch]:
         """Finalize batch and return it for sending"""
         if not self.current_batch:
             return None
 
-        # Send any remaining events to backend first
         if self.event_buffer:
-            print(f"sending events to backend: {self.event_buffer}")
             self._send_events_to_backend()
 
-        # Send finalization to backend (but don't cleanup yet)
         self._finalize_backend_batch()
 
-        # Copy events to batch for local return (current_batch still exists)
         self.current_batch.events = self.event_buffer.copy()
 
-        # Prepare batch for return
         finalized_batch = self.current_batch
 
-        # Clear state for next batch
         self.current_batch = None
         self.event_buffer.clear()
         self.trace_batch_id = None
 
-        # Now do the cleanup after we're done using current_batch
         self._cleanup_batch_data()
 
         return finalized_batch
@@ -201,7 +189,6 @@ class TraceBatchManager:
             response = self.plus_api.finalize_trace_batch(self.trace_batch_id, payload)
 
             if response.status_code == 200:
-                print(f"✅ Trace batch finalized successfully")
                 console = Console()
                 panel = Panel(
                     f"✅ Trace batch finalized with session ID: {self.trace_batch_id}. View here: {CREWAI_BASE_URL}/crewai_plus/trace_batches/{self.trace_batch_id}",
@@ -211,14 +198,13 @@ class TraceBatchManager:
                 console.print(panel)
 
             else:
-                print(
+                logger.error(
                     f"❌ Failed to finalize trace batch: {response.status_code} - {response.text}"
                 )
 
         except Exception as e:
-            print(f"❌ Error finalizing trace batch: {str(e)}")
-            # send error to backend
-            # self.plus_api.send_error_to_backend(self.trace_batch_id, payload)
+            logger.error(f"❌ Error finalizing trace batch: {str(e)}")
+            # TODO: send error to app
 
     def _cleanup_batch_data(self):
         """Clean up batch data after successful finalization to free memory"""
@@ -234,10 +220,8 @@ class TraceBatchManager:
             if hasattr(self, "batch_sequence"):
                 self.batch_sequence = 0
 
-            print(f"🧹 Cleaned up trace batch data")
-
         except Exception as e:
-            print(f"⚠️ Warning: Error during cleanup: {str(e)}")
+            logger.error(f"Warning: Error during cleanup: {str(e)}")
 
     def has_events(self) -> bool:
         """Check if there are events in the buffer"""
@@ -264,7 +248,6 @@ class TraceBatchManager:
             )
             del self.execution_start_times[key]
             return duration_ms
-        print(f"⚠️ Warning: No start time recorded for key: {key}")
         return 0
 
     def get_trace_id(self) -> Optional[str]:
