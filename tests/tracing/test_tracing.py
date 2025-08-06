@@ -2,14 +2,17 @@ import os
 import pytest
 from unittest.mock import patch, MagicMock
 
-from crewai import Agent, Task, Crew
-from crewai.utilities.events.listeners.tracing.trace_listener import (
-    TraceCollectionListener,
-)
-from crewai.utilities.events.listeners.tracing.trace_batch_manager import (
-    TraceBatchManager,
-)
-from crewai.utilities.events.listeners.tracing.types import TraceEvent
+with patch(
+    "crewai.cli.authentication.token.get_auth_token", return_value="mock_token_12345"
+):
+    from crewai import Agent, Task, Crew
+    from crewai.utilities.events.listeners.tracing.trace_listener import (
+        TraceCollectionListener,
+    )
+    from crewai.utilities.events.listeners.tracing.trace_batch_manager import (
+        TraceBatchManager,
+    )
+    from crewai.utilities.events.listeners.tracing.types import TraceEvent
 
 
 class TestTraceListenerSetup:
@@ -25,12 +28,8 @@ class TestTraceListenerSetup:
 
     @pytest.fixture(autouse=True)
     def mock_plus_api_calls(self):
-        """Mock all PlusAPI HTTP calls to avoid authentication and network requests"""
+        """Mock all PlusAPI HTTP calls to avoid network requests"""
         with (
-            patch(
-                "crewai.cli.authentication.token.get_auth_token",
-                return_value="mock_token",
-            ),
             patch("requests.post") as mock_post,
             patch("requests.get") as mock_get,
             patch("requests.put") as mock_put,

@@ -3904,4 +3904,261 @@ interactions:
     status:
       code: 404
       message: Not Found
+- request:
+    body: '{"trace_id": "f7f755da-d614-4292-bad4-ea0611333fa8", "execution_type":
+      "crew", "execution_context": {"crew_fingerprint": null, "crew_name": "crew",
+      "flow_name": "Unknown Flow", "crewai_version": "0.152.0", "privacy_level": "standard"},
+      "execution_metadata": {"expected_duration_estimate": 300, "agent_count": 0,
+      "task_count": 0, "flow_method_count": 0, "execution_started_at": "2025-08-06T19:22:22.079321+00:00"}}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate, zstd
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '413'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - CrewAI-CLI/0.152.0
+      X-Crewai-Organization-Id:
+      - d3a3d10c-35db-423f-a7a4-c026030ba64d
+      X-Crewai-Version:
+      - 0.152.0
+    method: POST
+    uri: https://app.crewai.com/crewai_plus/api/v1/tracing/batches
+  response:
+    body:
+      string: "<!DOCTYPE html>\n<html>\n<head>\n  <title>The page you were looking
+        for doesn't exist (404)</title>\n  <meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">\n
+        \ <style>\n  .rails-default-error-page {\n    background-color: #EFEFEF;\n
+        \   color: #2E2F30;\n    text-align: center;\n    font-family: arial, sans-serif;\n
+        \   margin: 0;\n  }\n\n  .rails-default-error-page div.dialog {\n    width:
+        95%;\n    max-width: 33em;\n    margin: 4em auto 0;\n  }\n\n  .rails-default-error-page
+        div.dialog > div {\n    border: 1px solid #CCC;\n    border-right-color: #999;\n
+        \   border-left-color: #999;\n    border-bottom-color: #BBB;\n    border-top:
+        #B00100 solid 4px;\n    border-top-left-radius: 9px;\n    border-top-right-radius:
+        9px;\n    background-color: white;\n    padding: 7px 12% 0;\n    box-shadow:
+        0 3px 8px rgba(50, 50, 50, 0.17);\n  }\n\n  .rails-default-error-page h1 {\n
+        \   font-size: 100%;\n    color: #730E15;\n    line-height: 1.5em;\n  }\n\n
+        \ .rails-default-error-page div.dialog > p {\n    margin: 0 0 1em;\n    padding:
+        1em;\n    background-color: #F7F7F7;\n    border: 1px solid #CCC;\n    border-right-color:
+        #999;\n    border-left-color: #999;\n    border-bottom-color: #999;\n    border-bottom-left-radius:
+        4px;\n    border-bottom-right-radius: 4px;\n    border-top-color: #DADADA;\n
+        \   color: #666;\n    box-shadow: 0 3px 8px rgba(50, 50, 50, 0.17);\n  }\n
+        \ </style>\n</head>\n\n<body class=\"rails-default-error-page\">\n  <!-- This
+        file lives in public/404.html -->\n  <div class=\"dialog\">\n    <div>\n      <h1>The
+        page you were looking for doesn't exist.</h1>\n      <p>You may have mistyped
+        the address or the page may have moved.</p>\n    </div>\n    <p>If you are
+        the application owner check the logs for more information.</p>\n  </div>\n</body>\n</html>\n"
+    headers:
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '1722'
+      Content-Type:
+      - text/html; charset=UTF-8
+      Date:
+      - Wed, 06 Aug 2025 19:22:22 GMT
+      strict-transport-security:
+      - max-age=63072000; includeSubDomains
+      x-request-id:
+      - c25af135-2baf-4099-9a4a-39a2dcd2e5a1
+      x-runtime:
+      - '0.005977'
+    status:
+      code: 404
+      message: Not Found
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are Test Agent. Test backstory\nYour
+      personal goal is: Test goal\nTo give my best complete final answer to the task
+      respond using the exact following format:\n\nThought: I now can give a great
+      answer\nFinal Answer: Your final answer must be the great and the most complete
+      as possible, it must be outcome described.\n\nI MUST use these formats, my job
+      depends on it!"}, {"role": "user", "content": "\nCurrent Task: Say hello to
+      the world\n\nThis is the expected criteria for your final answer: hello world\nyou
+      MUST return the actual complete content as the final answer, not a summary.\n\nBegin!
+      This is VERY important to you, use the tools available and give your best Final
+      Answer, your job depends on it!\n\nThought:"}], "model": "gpt-4o-mini"}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate, zstd
+      connection:
+      - keep-alive
+      content-length:
+      - '797'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.93.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.93.0
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-read-timeout:
+      - '200.0'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.9
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAAwAAAP//jFLLbtswELzrKxY8W4Ufcu34FgQo2qI1ira3NhA25EpiQnEJkopTBP73
+        gpJjyX0AuQjQzs5wZnefMwChldiBkA1G2TqT3yxo/ll9fXLm6tt79ent4ct+v/1+/fBxf7/filli
+        8N09yfjCeiO5dYaiZjvA0hNGSqqLzbpYz7eLYtkDLSsyiVa7mBect9rqfDlfFvl8ky9O4rJhLSmI
+        HfzIAACe+2/yaRU9iR3MZy+VlkLAmsTu3AQgPJtUERiCDhFtFLMRlGwj2d76B7B8AIkWav1IgFAn
+        24A2HMgD/LTvtEUD1/3/DhoyhuHA3qipoKeqC5hC2c6YCYDWcsQ0lD7K7Qk5ns0brp3nu/AHVVTa
+        6tCUnjCwTUZDZCd69JgB3PZD6i5yC+e5dbGM/ED9c4v1ZtAT424m6OoERo5oJvXNabSXeqWiiNqE
+        yZiFRNmQGqnjTrBTmidANkn9t5t/aQ/Jta1fIz8CUpKLpErnSWl5mXhs85RO939t5yn3hkUg/6gl
+        lVGTT5tQVGFnhoMS4VeI1JaVtjV55/VwVZUrVwWuC6SrlRTZMfsNAAD//wMA1NQIRWMDAAA=
+    headers:
+      CF-RAY:
+      - 96b0e7144f8450a1-SJC
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Wed, 06 Aug 2025 19:22:23 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - __cf_bm=TO314jAndgmjYBG59b5Adg03K28E13Zc6uFX2d2pGqg-1754508143-1.0.1.1-l1SuhWPhg5FJU1Z4rF2TQd9gc7orEuFyWS0BvesusbZjdoafmmkovftbTmQnIPKQOhWT8rAZgev_H9.Uf7sCSQJjehae875RQrc_TNokQZE;
+        path=/; expires=Wed, 06-Aug-25 19:52:23 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=WTxG3OfTXA16GzoqX7CaeRsYSYA.qMjEOwAzhDCLIVE-1754508143291-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '458'
+      openai-project:
+      - proj_xitITlrFeen7zjNSzML82h9x
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '471'
+      x-ratelimit-limit-project-tokens:
+      - '150000000'
+      x-ratelimit-limit-requests:
+      - '30000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-project-tokens:
+      - '149999827'
+      x-ratelimit-remaining-requests:
+      - '29999'
+      x-ratelimit-remaining-tokens:
+      - '149999830'
+      x-ratelimit-reset-project-tokens:
+      - 0s
+      x-ratelimit-reset-requests:
+      - 2ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_ab07aa477b594072a469f74557801cd6
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"version": "0.152.0", "batch_id": "f7f755da-d614-4292-bad4-ea0611333fa8",
+      "user_context": {"user_id": "anonymous", "organization_id": "", "session_id":
+      "5890ecb6-8206-48f8-a992-810ec4d41b0a", "trace_id": "c008f27e-a9af-4107-a8c1-ccf7deae4679"},
+      "execution_metadata": {"crew_name": "crew", "execution_start": "2025-08-06T19:22:22.078530+00:00",
+      "crewai_version": "0.152.0"}, "events": []}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate, zstd
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '388'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - CrewAI-CLI/0.152.0
+      X-Crewai-Organization-Id:
+      - d3a3d10c-35db-423f-a7a4-c026030ba64d
+      X-Crewai-Version:
+      - 0.152.0
+    method: POST
+    uri: https://app.crewai.com/crewai_plus/api/v1/tracing
+  response:
+    body:
+      string: "<!DOCTYPE html>\n<html>\n<head>\n  <title>The page you were looking
+        for doesn't exist (404)</title>\n  <meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">\n
+        \ <style>\n  .rails-default-error-page {\n    background-color: #EFEFEF;\n
+        \   color: #2E2F30;\n    text-align: center;\n    font-family: arial, sans-serif;\n
+        \   margin: 0;\n  }\n\n  .rails-default-error-page div.dialog {\n    width:
+        95%;\n    max-width: 33em;\n    margin: 4em auto 0;\n  }\n\n  .rails-default-error-page
+        div.dialog > div {\n    border: 1px solid #CCC;\n    border-right-color: #999;\n
+        \   border-left-color: #999;\n    border-bottom-color: #BBB;\n    border-top:
+        #B00100 solid 4px;\n    border-top-left-radius: 9px;\n    border-top-right-radius:
+        9px;\n    background-color: white;\n    padding: 7px 12% 0;\n    box-shadow:
+        0 3px 8px rgba(50, 50, 50, 0.17);\n  }\n\n  .rails-default-error-page h1 {\n
+        \   font-size: 100%;\n    color: #730E15;\n    line-height: 1.5em;\n  }\n\n
+        \ .rails-default-error-page div.dialog > p {\n    margin: 0 0 1em;\n    padding:
+        1em;\n    background-color: #F7F7F7;\n    border: 1px solid #CCC;\n    border-right-color:
+        #999;\n    border-left-color: #999;\n    border-bottom-color: #999;\n    border-bottom-left-radius:
+        4px;\n    border-bottom-right-radius: 4px;\n    border-top-color: #DADADA;\n
+        \   color: #666;\n    box-shadow: 0 3px 8px rgba(50, 50, 50, 0.17);\n  }\n
+        \ </style>\n</head>\n\n<body class=\"rails-default-error-page\">\n  <!-- This
+        file lives in public/404.html -->\n  <div class=\"dialog\">\n    <div>\n      <h1>The
+        page you were looking for doesn't exist.</h1>\n      <p>You may have mistyped
+        the address or the page may have moved.</p>\n    </div>\n    <p>If you are
+        the application owner check the logs for more information.</p>\n  </div>\n</body>\n</html>\n"
+    headers:
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '1722'
+      Content-Type:
+      - text/html; charset=UTF-8
+      Date:
+      - Wed, 06 Aug 2025 19:22:23 GMT
+      strict-transport-security:
+      - max-age=63072000; includeSubDomains
+      x-request-id:
+      - e44a221b-97a1-49be-8f0a-0ceb4d56fd61
+      x-runtime:
+      - '0.005702'
+    status:
+      code: 404
+      message: Not Found
 version: 1
