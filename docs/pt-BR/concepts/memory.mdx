@@ -9,8 +9,7 @@ icon: database
 O framework CrewAI oferece um sistema de memória sofisticado projetado para aprimorar significativamente as capacidades dos agentes de IA. O CrewAI disponibiliza **três abordagens distintas de memória** que atendem a diferentes casos de uso:
 
 1. **Sistema Básico de Memória** - Memória de curto prazo, longo prazo e de entidades integradas
-2. **Memória de Usuário** - Memória específica do usuário com integração ao Mem0 (abordagem legada)
-3. **Memória Externa** - Provedores de memória externos autônomos (nova abordagem)
+2. **Memória Externa** - Provedores de memória externos autônomos
 
 ## Componentes do Sistema de Memória
 
@@ -19,7 +18,7 @@ O framework CrewAI oferece um sistema de memória sofisticado projetado para apr
 | **Memória de Curto Prazo** | Armazena temporariamente interações e resultados recentes usando `RAG`, permitindo que os agentes recordem e utilizem informações relevantes ao contexto atual durante as execuções. |
 | **Memória de Longo Prazo** | Preserva informações valiosas e aprendizados de execuções passadas, permitindo que os agentes construam e refinem seu conhecimento ao longo do tempo. |
 | **Memória de Entidades**    | Captura e organiza informações sobre entidades (pessoas, lugares, conceitos) encontradas durante tarefas, facilitando um entendimento mais profundo e o mapeamento de relacionamentos. Utiliza `RAG` para armazenar informações de entidades. |
-| **Memória Contextual**  | Mantém o contexto das interações combinando `ShortTermMemory`, `LongTermMemory` e `EntityMemory`, auxiliando na coerência e relevância das respostas dos agentes ao longo de uma sequência de tarefas ou conversas. |
+| **Memória Contextual**  | Mantém o contexto das interações combinando `ShortTermMemory`, `LongTermMemory` , `ExternalMemory` e `EntityMemory`, auxiliando na coerência e relevância das respostas dos agentes ao longo de uma sequência de tarefas ou conversas. |
 
 ## 1. Sistema Básico de Memória (Recomendado)
 
@@ -684,7 +683,7 @@ print(f"OpenAI: {openai_time:.2f}s")
 print(f"Ollama: {ollama_time:.2f}s")
 ```
 
-## 2. Memória Externa (Nova Abordagem)
+## 2. Memória Externa
 
 A Memória Externa fornece um sistema de memória autônomo que opera independentemente da memória interna da crew. Isso é ideal para provedores de memória especializados ou compartilhamento de memória entre aplicações.
 
@@ -805,17 +804,18 @@ crew = Crew(
 )
 ```
 
-## Comparação dos Sistemas de Memória
+## 🧠 Comparação dos Sistemas de Memória
 
-| Recurso | Memória Básica | Memória de Usuário (Legado) | Memória Externa |
-|---------|---------------|-----------------------------|----------------|
-| **Complexidade de Setup** | Simples | Média | Média |
-| **Integração**           | Contextual integrada         | Contextual + específica do usuário | Autônoma |
-| **Armazenamento**        | Arquivos locais              | Mem0 Cloud/Local     | Customizada/Mem0 |
-| **Multi-sessão**         | ✅                           | ✅                 | ✅ |
-| **Especificidade do Usuário** | ❌                     | ✅                 | ✅ |
-| **Provedores Customizados**   | Limitado               | Apenas Mem0         | Qualquer provedor |
-| **Recomendado para**     | Maioria dos casos           | Projetos legados     | Necessidades especializadas |
+| **Categoria**         | **Recurso**                    | **Memória Básica**            | **Memória Externa**              |
+|------------------------|-------------------------------|-------------------------------|----------------------------------|
+| **Facilidade de Uso**  | Complexidade de Setup         | Simples                       | Média                            |
+|                        | Integração                    | Contextual integrada          | Autônoma                         |
+| **Persistência**       | Armazenamento                 | Arquivos locais               | Customizada / Mem0               |
+|                        | Multi-sessão                  | ✅                             | ✅                               |
+| **Personalização**     | Especificidade do Usuário     | ❌                             | ✅                               |
+|                        | Provedores Customizados       | Limitado                      | Qualquer provedor                |
+| **Aplicação Recomendada** | Recomendado para           | Maioria dos casos             | Necessidades especializadas      |
+
 
 ## Provedores de Embedding Suportados
 
