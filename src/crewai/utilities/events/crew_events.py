@@ -47,6 +47,7 @@ class CrewKickoffCompletedEvent(CrewBaseEvent):
 
     output: Any
     type: str = "crew_kickoff_completed"
+    total_tokens: int = 0
 
 
 class CrewKickoffFailedEvent(CrewBaseEvent):

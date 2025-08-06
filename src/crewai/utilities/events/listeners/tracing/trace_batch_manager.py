@@ -3,13 +3,16 @@ from datetime import datetime, timezone
 from typing import Dict, List, Any, Optional
 from dataclasses import dataclass, field
 
+from crewai.cli.authentication.constants import CREWAI_BASE_URL
 from crewai.cli.authentication.token import get_auth_token
 
-from .trace_event_factory import TraceEvent
 from crewai.cli.version import get_crewai_version
 from crewai.cli.plus_api import PlusAPI
 from rich.console import Console
 from rich.panel import Panel
+from pprint import pprint
+
+from crewai.utilities.events.listeners.tracing.types import TraceEvent
 
 
 @dataclass
@@ -36,8 +39,6 @@ class TraceBatchManager:
     """Single responsibility: Manage batches and event buffering"""
 
     def __init__(self):
-        auth_token = get_auth_token()
-        print(f"auth_token: {auth_token}")
         self.plus_api = PlusAPI(api_key=get_auth_token())
         self.trace_batch_id: Optional[str] = None  # Backend ID
         self.current_batch: Optional[TraceBatch] = None
@@ -54,10 +55,8 @@ class TraceBatchManager:
         )
         self.event_buffer.clear()
 
-        # 2. Record execution start time for duration calculation
         self.record_start_time("execution")
 
-        # 3. Send to backend and get trace_batch_id
         self._initialize_backend_batch(user_context, execution_metadata)
 
         return self.current_batch
@@ -89,11 +88,9 @@ class TraceBatchManager:
                     "agent_count": execution_metadata.get("agent_count", 0),
                     "task_count": execution_metadata.get("task_count", 0),
                     "flow_method_count": execution_metadata.get("flow_method_count", 0),
-                    "execution_started_at": datetime.now(timezone.utc).isoformat()
-                    + "Z",
+                    "execution_started_at": datetime.now(timezone.utc).isoformat(),
                 },
             }
-            print("payload sent lorenze", payload)
 
             response = self.plus_api.initialize_trace_batch(payload)
 
@@ -125,10 +122,6 @@ class TraceBatchManager:
         """Add event to buffer"""
         self.event_buffer.append(trace_event)
 
-        # Send events to backend if buffer reaches threshold
-        if len(self.event_buffer) >= 20:  # Send every 20 events
-            self._send_events_to_backend()
-
     def _send_events_to_backend(self):
         """Send buffered events to backend"""
         if not self.plus_api or not self.trace_batch_id or not self.event_buffer:
@@ -139,10 +132,12 @@ class TraceBatchManager:
                 "events": [event.to_dict() for event in self.event_buffer],
                 "batch_metadata": {
                     "events_count": len(self.event_buffer),
-                    "batch_sequence": 1,  # Could track this if needed
+                    "batch_sequence": 1,
                     "is_final_batch": False,
                 },
             }
+            print("payload sending over")
+            pprint(payload)
             if not self.trace_batch_id:
                 raise Exception("❌ Trace batch ID not found")
 
@@ -166,6 +161,7 @@ class TraceBatchManager:
 
         # Send any remaining events to backend first
         if self.event_buffer:
+            print(f"sending events to backend: {self.event_buffer}")
             self._send_events_to_backend()
 
         # Send finalization to backend (but don't cleanup yet)
@@ -194,20 +190,11 @@ class TraceBatchManager:
 
         try:
             # Calculate metrics from current batch
-            total_events = (
-                len(self.current_batch.events)
-                if self.current_batch and self.current_batch.events
-                else len(self.event_buffer)
-            )
+            total_events = len(self.current_batch.events) if self.current_batch else 0
 
             payload = {
                 "status": "completed",
-                "completion_metadata": {
-                    "total_duration_ms": self.calculate_duration("execution"),
-                    # "total_tokens_used": self._calculate_total_tokens(),
-                    # "total_llm_calls": self._count_events_by_type("llm_"),
-                    # "total_tool_calls": self._count_events_by_type("tool_"),
-                },
+                "duration_ms": self.calculate_duration("execution"),
                 "final_event_count": total_events,
             }
 
@@ -215,6 +202,14 @@ class TraceBatchManager:
 
             if response.status_code == 200:
                 print(f"✅ Trace batch finalized successfully")
+                console = Console()
+                panel = Panel(
+                    f"✅ Trace batch finalized with session ID: {self.trace_batch_id}. View here: {CREWAI_BASE_URL}/crewai_plus/trace_batches/{self.trace_batch_id}",
+                    title="Trace Batch Finalization",
+                    border_style="green",
+                )
+                console.print(panel)
+
             else:
                 print(
                     f"❌ Failed to finalize trace batch: {response.status_code} - {response.text}"
@@ -228,17 +223,14 @@ class TraceBatchManager:
     def _cleanup_batch_data(self):
         """Clean up batch data after successful finalization to free memory"""
         try:
-            # Clear event buffers
             if hasattr(self, "event_buffer") and self.event_buffer:
                 self.event_buffer.clear()
 
-            # Clear current batch (might already be None from finalize_batch)
             if hasattr(self, "current_batch") and self.current_batch:
                 if hasattr(self.current_batch, "events") and self.current_batch.events:
                     self.current_batch.events.clear()
                 self.current_batch = None
 
-            # Reset batch sequence for next trace
             if hasattr(self, "batch_sequence"):
                 self.batch_sequence = 0
 
@@ -246,23 +238,6 @@ class TraceBatchManager:
 
         except Exception as e:
             print(f"⚠️ Warning: Error during cleanup: {str(e)}")
-            # Don't re-raise - cleanup errors shouldn't break the flow
-
-    def _calculate_total_tokens(self) -> int:
-        """Calculate total tokens from events"""
-        total = 0
-        for event in self.event_buffer:
-            if hasattr(event, "event_data") and "tokens_used" in event.event_data:
-                total += event.event_data.get("tokens_used", 0)
-        return total
-
-    def _count_events_by_type(self, type_prefix: str) -> int:
-        """Count events that start with given prefix"""
-        count = 0
-        for event in self.event_buffer:
-            if event.type.startswith(type_prefix):
-                count += 1
-        return count
 
     def has_events(self) -> bool:
         """Check if there are events in the buffer"""
@@ -287,9 +262,9 @@ class TraceBatchManager:
             duration_ms = int(
                 (datetime.now(timezone.utc) - start_time).total_seconds() * 1000
             )
-            # Clean up the recorded time
             del self.execution_start_times[key]
             return duration_ms
+        print(f"⚠️ Warning: No start time recorded for key: {key}")
         return 0
 
     def get_trace_id(self) -> Optional[str]:

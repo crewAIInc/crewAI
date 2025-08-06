@@ -1088,7 +1088,9 @@ class Crew(FlowTrackable, BaseModel):
         crewai_event_bus.emit(
             self,
             CrewKickoffCompletedEvent(
-                crew_name=self.name or "crew", output=final_task_output
+                crew_name=self.name or "crew",
+                output=final_task_output,
+                total_tokens=self.token_usage.total_tokens,
             ),
         )
         return CrewOutput(
