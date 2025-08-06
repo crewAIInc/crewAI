@@ -65,7 +65,7 @@ from crewai.utilities.events.memory_events import (
     MemorySaveCompletedEvent,
     MemorySaveFailedEvent,
 )
-from .interfaces import ITraceSender, ConsoleTraceSender
+from .interfaces import TraceSender
 from crewai.cli.authentication.token import get_auth_token
 from crewai.cli.version import get_crewai_version
 
@@ -81,12 +81,11 @@ class TraceCollectionListener(BaseEventListener):
     def __init__(
         self,
         batch_manager: Optional[TraceBatchManager] = None,
-        trace_sender: Optional[ITraceSender] = None,
+        trace_sender: Optional[TraceSender] = None,
     ):
         super().__init__()
         self.batch_manager = batch_manager or TraceBatchManager()
-        self.trace_sender = trace_sender or ConsoleTraceSender()
-
+        self.trace_sender = trace_sender or TraceSender()
         self.trace_enabled = self._check_trace_enabled()
 
     def _check_trace_enabled(self) -> bool:
@@ -94,6 +93,7 @@ class TraceCollectionListener(BaseEventListener):
         auth_token = get_auth_token()
         if not auth_token:
             return False
+
         return os.getenv("CREWAI_TRACING_ENABLED", "false").lower() == "true" or bool(
             os.getenv("CREWAI_USER_TOKEN")
         )
