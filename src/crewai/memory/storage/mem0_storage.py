@@ -19,7 +19,7 @@ class Mem0Storage(Storage):
         self._validate_type(type)
         self.memory_type = type
         self.crew = crew
-        self.config = config
+        self.config = config or {}
 
         self._extract_config_values()
         self._initialize_memory()
@@ -32,12 +32,11 @@ class Mem0Storage(Storage):
             )
 
     def _extract_config_values(self):
-        cfg = self.config
-        self.mem0_run_id = cfg.get("run_id")
-        self.includes = cfg.get("includes")
-        self.excludes = cfg.get("excludes")
-        self.custom_categories = cfg.get("custom_categories")
-        self.infer = cfg.get("infer", True)
+        self.mem0_run_id = self.config.get("run_id")
+        self.includes = self.config.get("includes")
+        self.excludes = self.config.get("excludes")
+        self.custom_categories = self.config.get("custom_categories")
+        self.infer = self.config.get("infer", True)
 
     def _initialize_memory(self):
         api_key = self.config.get("api_key") or os.getenv("MEM0_API_KEY")
