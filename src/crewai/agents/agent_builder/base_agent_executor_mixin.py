@@ -48,7 +48,7 @@ class CrewAgentExecutorMixin:
                 print(f"Failed to add to short term memory: {e}")
                 pass
 
-    def _create_external_memory(self, output) -> None:
+    def _create_external_memory(self, output, inputs) -> None:
         """Create and save a external-term memory item if conditions are met."""
         if (
             self.crew
@@ -58,6 +58,9 @@ class CrewAgentExecutorMixin:
             and self.crew._external_memory
         ):
             try:
+                print("HERE"*50)
+                print(inputs)
+                print("HERE2"*50)
                 self.crew._external_memory.save(
                     value=output.text,
                     metadata={
