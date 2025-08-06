@@ -78,15 +78,27 @@ class TraceCollectionListener(BaseEventListener):
     trace_enabled: bool = False
     complex_events = ["task_started", "llm_call_started", "llm_call_completed"]
 
+    _instance = None
+    _initialized = False
+
+    def __new__(cls, batch_manager=None, trace_sender=None):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
+
     def __init__(
         self,
         batch_manager: Optional[TraceBatchManager] = None,
         trace_sender: Optional[TraceSender] = None,
     ):
+        if self._initialized:
+            return
+
         super().__init__()
         self.batch_manager = batch_manager or TraceBatchManager()
         self.trace_sender = trace_sender or TraceSender()
         self.trace_enabled = self._check_trace_enabled()
+        self._initialized = True
 
     def _check_trace_enabled(self) -> bool:
         """Check if tracing should be enabled"""

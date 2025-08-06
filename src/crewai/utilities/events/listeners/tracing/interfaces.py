@@ -5,6 +5,9 @@ from crewai.cli.plus_api import PlusAPI
 from crewai.cli.authentication.token import get_auth_token
 from pydantic import BaseModel
 from .trace_batch_manager import TraceBatch
+from logging import getLogger
+
+logger = getLogger(__name__)
 
 
 class TraceSender(BaseModel):
@@ -26,5 +29,5 @@ class TraceSender(BaseModel):
             PlusAPI(api_key=get_auth_token()).send_trace_batch(serialized_payload)
             return True
         except Exception as e:
-            print(f"❌ Error sending trace batch: {e}")
+            logger.error(f"Error sending trace batch: {e}")
             return False

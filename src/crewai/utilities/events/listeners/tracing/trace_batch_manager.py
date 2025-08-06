@@ -51,7 +51,6 @@ class TraceBatchManager:
         self, user_context: Dict[str, str], execution_metadata: Dict[str, Any]
     ) -> TraceBatch:
         """Initialize a new trace batch"""
-        # 1. Create local batch
         self.current_batch = TraceBatch(
             user_context=user_context, execution_metadata=execution_metadata
         )
@@ -77,7 +76,7 @@ class TraceBatchManager:
                 "execution_context": {
                     "crew_fingerprint": execution_metadata.get("crew_fingerprint"),
                     "crew_name": execution_metadata.get("crew_name", "Unknown Crew"),
-                    "flow_name": execution_metadata.get("flow_name"),  # nullable
+                    "flow_name": execution_metadata.get("flow_name", "Unknown Flow"),
                     "crewai_version": self.current_batch.version,
                     "privacy_level": user_context.get("privacy_level", "standard"),
                 },
@@ -96,9 +95,7 @@ class TraceBatchManager:
 
             if response.status_code == 201 or response.status_code == 200:
                 response_data = response.json()
-                self.trace_batch_id = response_data[
-                    "trace_id"
-                ]  # Backend-generated session ID
+                self.trace_batch_id = response_data["trace_id"]
                 console = Console()
                 panel = Panel(
                     f"✅ Trace batch initialized with session ID: {self.trace_batch_id}",
@@ -113,7 +110,6 @@ class TraceBatchManager:
 
         except Exception as e:
             logger.error(f"❌ Error initializing trace batch: {str(e)}")
-            # Continue without backend tracing if initialization fails
 
     def add_event(self, trace_event: TraceEvent):
         """Add event to buffer"""
@@ -177,7 +173,6 @@ class TraceBatchManager:
             return
 
         try:
-            # Calculate metrics from current batch
             total_events = len(self.current_batch.events) if self.current_batch else 0
 
             payload = {
