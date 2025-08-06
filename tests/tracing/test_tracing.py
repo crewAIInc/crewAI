@@ -47,8 +47,3 @@ class TestTraceListenerSetup:
 
                 initialize_mock.assert_called_once()
                 finalize_mock.assert_called_once()
-
-
-if __name__ == "__main__":
-    test = TestTraceListenerSetup()
-    test.test_trace_listener_collects_crew_events()
