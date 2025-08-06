@@ -798,7 +798,7 @@ requires-dist = [
     { name = "blinker", specifier = ">=1.9.0" },
     { name = "chromadb", specifier = ">=0.5.23" },
     { name = "click", specifier = ">=8.1.7" },
-    { name = "crewai-tools", marker = "extra == 'tools'", specifier = "~=0.59.0" },
+    { name = "crewai-tools", marker = "extra == 'tools'", specifier = "~=0.60.0" },
     { name = "docling", marker = "extra == 'docling'", specifier = ">=2.12.0" },
     { name = "instructor", specifier = ">=1.3.3" },
     { name = "json-repair", specifier = "==0.25.2" },
@@ -850,7 +850,7 @@ dev = [
 
 [[package]]
 name = "crewai-tools"
-version = "0.59.0"
+version = "0.60.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "chromadb" },
@@ -868,9 +868,9 @@ dependencies = [
     { name = "stagehand" },
     { name = "tiktoken" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/10/cd/af005e7dca5a35ed6000db2d1594acad890997b92172d8af2c1d9a83784e/crewai_tools-0.59.0.tar.gz", hash = "sha256:030e4b65446f4c6eccdcba5380bbdc90896de74589cb1bdb3cabc2c22c83f326", size = 1032093, upload-time = "2025-07-30T21:15:54.182Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/bb/60/04fd70a8a15eaf4147ff648ada44f1d4afd453a528cf8facd618ef32e576/crewai_tools-0.60.0.tar.gz", hash = "sha256:9234f6912b65495afe5e1bfa330abca09a40725d47fe2c71a22387bf6eeb8e72", size = 1032373, upload-time = "2025-08-06T20:27:16.003Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/7e/b2/6b11d770fda6df99ddc49bdb26d3cb0b5efd026ff395a72ca5eeb704c335/crewai_tools-0.59.0-py3-none-any.whl", hash = "sha256:816297934eb352368ff0869a0eb11dd9febb4c40b6d0eda8e6eba8f3e426f446", size = 657025, upload-time = "2025-07-30T21:15:52.531Z" },
+    { url = "https://files.pythonhosted.org/packages/6d/55/984f3d2d5afbcfa87c380c7c17b728804e80617b768b3748f25220b2b32c/crewai_tools-0.60.0-py3-none-any.whl", hash = "sha256:a54277c973753de4a3269da17e5a7e4995d4c70fc331eb2872189b5f92cfdaaf", size = 657128, upload-time = "2025-08-06T20:27:14.295Z" },
 ]
 
 [[package]]
