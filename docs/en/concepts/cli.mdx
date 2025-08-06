@@ -88,7 +88,7 @@ crewai replay [OPTIONS]
 - `-t, --task_id TEXT`: Replay the crew from this task ID, including all subsequent tasks
 
 Example:
-```shell Terminal    
+```shell Terminal
 crewai replay -t task_123456
 ```
 
@@ -134,7 +134,7 @@ crewai test [OPTIONS]
 - `-m, --model TEXT`: LLM Model to run the tests on the Crew (default: "gpt-4o-mini")
 
 Example:
-```shell Terminal    
+```shell Terminal
 crewai test -n 5 -m gpt-3.5-turbo
 ```
 
@@ -151,7 +151,7 @@ Starting from version 0.103.0, the `crewai run` command can be used to run both 
 </Note>
 
 <Note>
-Make sure to run these commands from the directory where your CrewAI project is set up. 
+Make sure to run these commands from the directory where your CrewAI project is set up.
 Some commands may require additional configuration or setup within your project structure.
 </Note>
 
@@ -235,7 +235,7 @@ You must be authenticated to CrewAI Enterprise to use these organization managem
 - **Deploy the Crew**: Once you are authenticated, you can deploy your crew or flow to CrewAI Enterprise.
     ```shell Terminal
     crewai deploy push
-    ``` 
+    ```
     - Initiates the deployment process on the CrewAI Enterprise platform.
     - Upon successful initiation, it will output the Deployment created successfully! message along with the Deployment Name and a unique Deployment ID (UUID).
 
@@ -309,3 +309,82 @@ When you select a provider, the CLI will prompt you to enter the Key name and th
 See the following link for each provider's key name:
 
 * [LiteLLM Providers](https://docs.litellm.ai/docs/providers)
+
+### 12. Configuration Management
+
+Manage CLI configuration settings for CrewAI.
+
+```shell Terminal
+crewai config [COMMAND] [OPTIONS]
+```
+
+#### Commands:
+
+- `list`: Display all CLI configuration parameters
+```shell Terminal
+crewai config list
+```
+
+- `set`: Set a CLI configuration parameter
+```shell Terminal
+crewai config set <key> <value>
+```
+
+- `reset`: Reset all CLI configuration parameters to default values
+```shell Terminal
+crewai config reset
+```
+
+#### Available Configuration Parameters
+
+- `enterprise_base_url`: Base URL of the CrewAI Enterprise instance
+- `oauth2_provider`: OAuth2 provider used for authentication (e.g., workos, okta, auth0)
+- `oauth2_audience`: OAuth2 audience value, typically used to identify the target API or resource
+- `oauth2_client_id`: OAuth2 client ID issued by the provider, used during authentication requests
+- `oauth2_domain`: OAuth2 provider's domain (e.g., your-org.auth0.com) used for issuing tokens
+
+#### Examples
+
+Display current configuration:
+```shell Terminal
+crewai config list
+```
+
+Example output:
+```
+CrewAI CLI Configuration
+┏━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ Setting            ┃ Value                              ┃ Description                                                                                      ┃
+┡━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+│ enterprise_base_url│ https://app.crewai.com             │ Base URL of the CrewAI Enterprise instance                                                       │
+│ org_name           │ Not set                            │ Name of the currently active organization                                                        │
+│ org_uuid           │ Not set                            │ UUID of the currently active organization                                                        │
+│ oauth2_provider    │ workos                             │ OAuth2 provider used for authentication (e.g., workos, okta, auth0).                             │
+│ oauth2_audience    │ client_01YYY                       │ OAuth2 audience value, typically used to identify the target API or resource.                    │
+│ oauth2_client_id   │ client_01XXX                       │ OAuth2 client ID issued by the provider, used during authentication requests.                    │
+│ oauth2_domain      │ login.crewai.com                   │ OAuth2 provider's domain (e.g., your-org.auth0.com) used for issuing tokens.                     │
+```
+
+Set the enterprise base URL:
+```shell Terminal
+crewai config set enterprise_base_url https://my-enterprise.crewai.com
+```
+
+Set OAuth2 provider:
+```shell Terminal
+crewai config set oauth2_provider auth0
+```
+
+Set OAuth2 domain:
+```shell Terminal
+crewai config set oauth2_domain my-company.auth0.com
+```
+
+Reset all configuration to defaults:
+```shell Terminal
+crewai config reset
+```
+
+<Note>
+Configuration settings are stored in `~/.config/crewai/settings.json`. Some settings like organization name and UUID are read-only and managed through authentication and organization commands. Tool repository related settings are hidden and cannot be set directly by users.
+</Note>
