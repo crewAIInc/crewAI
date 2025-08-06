@@ -9,7 +9,7 @@ icon: database
 The CrewAI framework provides a sophisticated memory system designed to significantly enhance AI agent capabilities. CrewAI offers **three distinct memory approaches** that serve different use cases:
 
 1. **Basic Memory System** - Built-in short-term, long-term, and entity memory
-2. **External Memory** - Standalone external memory providers (new approach)
+2. **External Memory** - Standalone external memory providers
 
 ## Memory System Components
 
@@ -18,7 +18,7 @@ The CrewAI framework provides a sophisticated memory system designed to signific
 | **Short-Term Memory**| Temporarily stores recent interactions and outcomes using `RAG`, enabling agents to recall and utilize information relevant to their current context during the current executions.|
 | **Long-Term Memory** | Preserves valuable insights and learnings from past executions, allowing agents to build and refine their knowledge over time. |
 | **Entity Memory**    | Captures and organizes information about entities (people, places, concepts) encountered during tasks, facilitating deeper understanding and relationship mapping. Uses `RAG` for storing entity information. |
-| **Contextual Memory**| Maintains the context of interactions by combining `ShortTermMemory`, `LongTermMemory`, and `EntityMemory`, aiding in the coherence and relevance of agent responses over a sequence of tasks or a conversation. |
+| **Contextual Memory**| Maintains the context of interactions by combining `ShortTermMemory`, `LongTermMemory`, `ExternalMemory` and `EntityMemory`, aiding in the coherence and relevance of agent responses over a sequence of tasks or a conversation. |
 
 ## 1. Basic Memory System (Recommended)
 
@@ -803,17 +803,18 @@ crew = Crew(
 )
 ```
 
-## Memory System Comparison
+## 🧠 Memory System Comparison
 
-| Feature | Basic Memory | External Memory |
-|---------|-------------|----------------|
-| **Setup Complexity** | Simple | Medium |
-| **Integration** | Built-in contextual | Standalone |
-| **Storage** | Local files | Custom/Mem0 |
-| **Cross-session** | ✅| ✅ |
-| **User-specific** | ❌ | ✅ |
-| **Custom providers** | Limited | Any provider |
-| **Recommended for** | Most use cases | Specialized needs |
+| **Category**        | **Feature**            | **Basic Memory**            | **External Memory**         |
+|---------------------|------------------------|-----------------------------|------------------------------|
+| **Ease of Use**     | Setup Complexity       | Simple                      | Moderate                     |
+|                     | Integration            | Built-in (contextual)       | Standalone                   |
+| **Persistence**     | Storage                | Local files                 | Custom / Mem0                |
+|                     | Cross-session Support  | ✅                           | ✅                           |
+| **Personalization** | User-specific Memory   | ❌                          |  ✅                           |
+|                     | Custom Providers       | Limited                     | Any provider                 |
+| **Use Case Fit**    | Recommended For        | Most general use cases      | Specialized / custom needs   |
+
 
 ## Supported Embedding Providers
 
