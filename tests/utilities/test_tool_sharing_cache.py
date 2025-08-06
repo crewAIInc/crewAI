@@ -7,7 +7,6 @@ import pytest
 
 from crewai.utilities.tool_sharing_cache import (
     ToolSharingCache,
-    _get_agent_tool_signature,
     get_tool_sharing_cache,
     should_use_tool_sharing,
 )
@@ -231,24 +230,6 @@ def test_cache_clear(cache):
     assert cache.get_tools("agent1", "task1", tools) is None
 
 
-def test_cache_stats(cache):
-    """Test cache statistics reporting."""
-    stats = cache.get_cache_stats()
-
-    assert isinstance(stats, dict)
-    assert stats["cache_size"] == 0
-    assert stats["max_size"] == 128
-    assert stats["usage_order_length"] == 0
-
-    # Add some entries
-    tools = [Mock(name="tool1")]
-    cache.store_tools("agent1", "task1", tools, tools)
-
-    stats = cache.get_cache_stats()
-    assert stats["cache_size"] == 1
-    assert stats["usage_order_length"] == 1
-
-
 def test_empty_tools_list(cache):
     """Test caching with empty tools list."""
     empty_tools = []
@@ -370,35 +351,6 @@ def test_concurrent_read_write():
             future.result()
 
     assert len(errors) == 0
-
-
-def test_agent_tool_signature_caching():
-    """Test that agent tool signatures are cached."""
-    # Clear the cache first
-    _get_agent_tool_signature.cache_clear()
-
-    # First call should compute
-    sig1 = _get_agent_tool_signature("agent1", True, False, True)
-
-    # Second call with same params should use cache
-    sig2 = _get_agent_tool_signature("agent1", True, False, True)
-
-    assert sig1 == sig2
-
-    # Check cache info
-    cache_info = _get_agent_tool_signature.cache_info()
-    assert cache_info.hits >= 1
-
-
-def test_agent_tool_signature_uniqueness():
-    """Test that different parameters produce different signatures."""
-    sig1 = _get_agent_tool_signature("agent1", True, False, False)
-    sig2 = _get_agent_tool_signature("agent1", False, True, False)
-    sig3 = _get_agent_tool_signature("agent2", True, False, False)
-
-    assert sig1 != sig2
-    assert sig1 != sig3
-    assert sig2 != sig3
 
 
 def test_should_use_tool_sharing_empty():

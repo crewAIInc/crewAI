@@ -2,7 +2,6 @@
 
 import hashlib
 from typing import Dict, List, Optional, Any
-from functools import lru_cache
 
 
 class ToolSharingCache:
@@ -152,14 +151,6 @@ class ToolSharingCache:
             self._usage_order.remove(cache_key)
         self._usage_order.append(cache_key)
 
-    def get_cache_stats(self) -> Dict[str, int]:
-        """Get cache statistics for monitoring."""
-        return {
-            "cache_size": len(self._cache),
-            "max_size": self._max_size,
-            "usage_order_length": len(self._usage_order),
-        }
-
 
 # Global tool sharing cache instance
 _global_tool_cache: Optional[ToolSharingCache] = None
@@ -171,14 +162,6 @@ def get_tool_sharing_cache() -> ToolSharingCache:
     if _global_tool_cache is None:
         _global_tool_cache = ToolSharingCache()
     return _global_tool_cache
-
-
-@lru_cache(maxsize=64)
-def _get_agent_tool_signature(
-    agent_id: str, allow_delegation: bool, allow_code_execution: bool, multimodal: bool
-) -> str:
-    """Generate a signature for agent-specific tool configuration (cached for performance)."""
-    return f"{agent_id}|{allow_delegation}|{allow_code_execution}|{multimodal}"
 
 
 def should_use_tool_sharing(tools: List[Any]) -> bool:
