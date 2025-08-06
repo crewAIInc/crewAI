@@ -549,7 +549,6 @@ class LiteAgent(FlowTrackable, BaseModel):
                             response=answer,
                             call_type=LLMCallType.LLM_CALL,
                             from_agent=self,
-                            # response_cost=llm.completion_cost,
                             model=model,
                         ),
                     )

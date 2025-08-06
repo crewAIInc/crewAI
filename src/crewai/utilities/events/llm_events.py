@@ -64,7 +64,6 @@ class LLMCallCompletedEvent(LLMEventBase):
     messages: str | list[dict[str, Any]] | None = None
     response: Any
     call_type: LLMCallType
-    # response_cost: Optional[float]
     model: Optional[str] = None
 
 

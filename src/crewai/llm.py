@@ -39,9 +39,6 @@ from crewai.utilities.events.tool_usage_events import (
 with warnings.catch_warnings():
     warnings.simplefilter("ignore", UserWarning)
     import litellm
-
-    # from litellm import completion
-    # from litellm.cost_calculator import completion_cost
     from litellm import Choices
     from litellm.exceptions import ContextWindowExceededError
     from litellm.litellm_core_utils.get_supported_openai_params import (
@@ -1082,13 +1079,6 @@ class LLM(BaseLLM):
             messages: Optional messages object
         """
         assert hasattr(crewai_event_bus, "emit")
-        # if response and messages:
-        #     f_response = completion(
-        #         model=self.model,
-        #         messages=messages,
-        #         request_timeout=200,
-        #     )
-        # self.completion_cost = completion_cost(f_response)
         crewai_event_bus.emit(
             self,
             event=LLMCallCompletedEvent(
@@ -1097,7 +1087,6 @@ class LLM(BaseLLM):
                 call_type=call_type,
                 from_task=from_task,
                 from_agent=from_agent,
-                # response_cost=self.completion_cost or 0,
                 model=self.model,
             ),
         )
