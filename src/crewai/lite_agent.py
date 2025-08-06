@@ -28,7 +28,7 @@ from pydantic import (
     InstanceOf,
     PrivateAttr,
     model_validator,
-    field_validator
+    field_validator,
 )
 
 from crewai.agents.agent_builder.base_agent import BaseAgent
@@ -210,7 +210,9 @@ class LiteAgent(FlowTrackable, BaseModel):
         """Set up the LLM and other components after initialization."""
         self.llm = create_llm(self.llm)
         if not isinstance(self.llm, BaseLLM):
-            raise ValueError(f"Expected LLM instance of type BaseLLM, got {type(self.llm).__name__}")
+            raise ValueError(
+                f"Expected LLM instance of type BaseLLM, got {type(self.llm).__name__}"
+            )
 
         # Initialize callbacks
         token_callback = TokenCalcHandler(token_cost_process=self._token_process)
@@ -233,7 +235,9 @@ class LiteAgent(FlowTrackable, BaseModel):
             from crewai.tasks.llm_guardrail import LLMGuardrail
 
             if not isinstance(self.llm, BaseLLM):
-                raise TypeError(f"Guardrail requires LLM instance of type BaseLLM, got {type(self.llm).__name__}")
+                raise TypeError(
+                    f"Guardrail requires LLM instance of type BaseLLM, got {type(self.llm).__name__}"
+                )
 
             self._guardrail = LLMGuardrail(description=self.guardrail, llm=self.llm)
 
@@ -515,7 +519,8 @@ class LiteAgent(FlowTrackable, BaseModel):
 
                 enforce_rpm_limit(self.request_within_rpm_limit)
 
-                # Emit LLM call started event
+                llm = cast(LLM, self.llm)
+                model = llm.model if hasattr(llm, "model") else "unknown"
                 crewai_event_bus.emit(
                     self,
                     event=LLMCallStartedEvent(
@@ -523,6 +528,7 @@ class LiteAgent(FlowTrackable, BaseModel):
                         tools=None,
                         callbacks=self._callbacks,
                         from_agent=self,
+                        model=model,
                     ),
                 )
 
@@ -543,6 +549,7 @@ class LiteAgent(FlowTrackable, BaseModel):
                             response=answer,
                             call_type=LLMCallType.LLM_CALL,
                             from_agent=self,
+                            model=model,
                         ),
                     )
                 except Exception as e:
