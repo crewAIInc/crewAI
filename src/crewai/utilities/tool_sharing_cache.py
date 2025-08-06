@@ -42,11 +42,16 @@ class ToolSharingCache:
         Returns:
             A unique cache key for this tool configuration
         """
-        # Create a stable representation of the tool configuration
-        tool_names = sorted([getattr(tool, "name", str(tool)) for tool in tools])
-        config_str = f"{tool_names}|{allow_delegation}|{allow_code_execution}|{multimodal}|{process_type}"
+        tool_representations = []
+        for i, tool in enumerate(tools):
+            tool_name = getattr(tool, "name", None)
+            if tool_name is None:
+                tool_representations.append(f"tool_{i}_{id(tool)}")
+            else:
+                tool_representations.append(str(tool_name))
 
-        # Use SHA256 hash for collision resistance with reasonable performance
+        tool_names_str = "|".join(sorted(tool_representations))
+        config_str = f"{agent_id}|{task_id}|{tool_names_str}|{allow_delegation}|{allow_code_execution}|{multimodal}|{process_type}"
         return hashlib.sha256(config_str.encode("utf-8")).hexdigest()[:16]
 
     def get_tools(
@@ -84,10 +89,8 @@ class ToolSharingCache:
         )
 
         if cache_key in self._cache:
-            # Update usage order for LRU eviction
-            self._usage_order.remove(cache_key)
-            self._usage_order.append(cache_key)
-            return self._cache[cache_key].copy()  # Return a copy to avoid mutations
+            self._update_usage_order(cache_key)
+            return self._cache[cache_key].copy()
 
         return None
 
@@ -124,19 +127,15 @@ class ToolSharingCache:
             process_type,
         )
 
-        # Implement LRU eviction
         if len(self._cache) >= self._max_size and cache_key not in self._cache:
-            # Remove least recently used item
-            oldest_key = self._usage_order.pop(0)
-            del self._cache[oldest_key]
+            if self._max_size > 0 and len(self._usage_order) > 0:
+                oldest_key = self._usage_order.pop(0)
+                del self._cache[oldest_key]
+            elif self._max_size == 0:
+                return
 
-        # Store the tools (create a copy to avoid external mutations)
         self._cache[cache_key] = prepared_tools.copy()
-
-        # Update usage order
-        if cache_key in self._usage_order:
-            self._usage_order.remove(cache_key)
-        self._usage_order.append(cache_key)
+        self._update_usage_order(cache_key)
 
     def clear(self) -> None:
         """Clear all cached tools."""
@@ -146,6 +145,12 @@ class ToolSharingCache:
     def size(self) -> int:
         """Return the current cache size."""
         return len(self._cache)
+
+    def _update_usage_order(self, cache_key: str) -> None:
+        """Update the usage order for LRU tracking."""
+        if cache_key in self._usage_order:
+            self._usage_order.remove(cache_key)
+        self._usage_order.append(cache_key)
 
     def get_cache_stats(self) -> Dict[str, int]:
         """Get cache statistics for monitoring."""
@@ -185,6 +190,4 @@ def should_use_tool_sharing(tools: List[Any]) -> bool:
     Returns:
         True if tool sharing would be beneficial, False otherwise
     """
-    # Use tool sharing for non-empty tool lists
-    # Skip for very small tool lists where overhead isn't worth it
     return len(tools) >= 2
