@@ -39,6 +39,7 @@ from crewai.utilities.events.tool_usage_events import (
 with warnings.catch_warnings():
     warnings.simplefilter("ignore", UserWarning)
     import litellm
+    from litellm import completion
     from litellm.cost_calculator import completion_cost
     from litellm import Choices
     from litellm.exceptions import ContextWindowExceededError
@@ -289,6 +290,8 @@ class AccumulatedToolArgs(BaseModel):
 
 
 class LLM(BaseLLM):
+    completion_cost: Optional[float] = None
+
     def __init__(
         self,
         model: str,
@@ -810,7 +813,6 @@ class LLM(BaseLLM):
             # across the codebase. This allows CrewAgentExecutor to handle context
             # length issues appropriately.
             response = litellm.completion(**params)
-            self.completion_cost = completion_cost(response)
 
         except ContextWindowExceededError as e:
             # Convert litellm's context window error to our own exception type
@@ -1079,7 +1081,13 @@ class LLM(BaseLLM):
             messages: Optional messages object
         """
         assert hasattr(crewai_event_bus, "emit")
-
+        if response and messages:
+            f_response = completion(
+                model=self.model,
+                messages=messages,
+                request_timeout=200,
+            )
+            self.completion_cost = completion_cost(f_response)
         crewai_event_bus.emit(
             self,
             event=LLMCallCompletedEvent(
@@ -1088,7 +1096,7 @@ class LLM(BaseLLM):
                 call_type=call_type,
                 from_task=from_task,
                 from_agent=from_agent,
-                response_cost=self.completion_cost,
+                response_cost=self.completion_cost or 0,
                 model=self.model,
             ),
         )
