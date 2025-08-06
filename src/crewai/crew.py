@@ -47,7 +47,6 @@ from crewai.memory.entity.entity_memory import EntityMemory
 from crewai.memory.external.external_memory import ExternalMemory
 from crewai.memory.long_term.long_term_memory import LongTermMemory
 from crewai.memory.short_term.short_term_memory import ShortTermMemory
-from crewai.memory.user.user_memory import UserMemory
 from crewai.process import Process
 from crewai.security import Fingerprint, SecurityConfig
 from crewai.task import Task
@@ -100,7 +99,6 @@ class Crew(FlowTrackable, BaseModel):
         manager_llm: The language model that will run manager agent.
         manager_agent: Custom agent that will be used as manager.
         memory: Whether the crew should use memory to store memories of it's execution.
-        memory_config: Configuration for the memory to be used for the crew.
         cache: Whether the crew should use a cache to store the results of the tools execution.
         function_calling_llm: The language model that will run the tool calling for all the agents.
         process: The process flow that the crew will follow (e.g., sequential, hierarchical).
@@ -126,7 +124,6 @@ class Crew(FlowTrackable, BaseModel):
     _short_term_memory: Optional[InstanceOf[ShortTermMemory]] = PrivateAttr()
     _long_term_memory: Optional[InstanceOf[LongTermMemory]] = PrivateAttr()
     _entity_memory: Optional[InstanceOf[EntityMemory]] = PrivateAttr()
-    _user_memory: Optional[InstanceOf[UserMemory]] = PrivateAttr()
     _external_memory: Optional[InstanceOf[ExternalMemory]] = PrivateAttr()
     _train: Optional[bool] = PrivateAttr(default=False)
     _train_iteration: Optional[int] = PrivateAttr()
@@ -148,10 +145,6 @@ class Crew(FlowTrackable, BaseModel):
         default=False,
         description="Whether the crew should use memory to store memories of it's execution",
     )
-    memory_config: Optional[Dict[str, Any]] = Field(
-        default=None,
-        description="Configuration for the memory to be used for the crew.",
-    )
     short_term_memory: Optional[InstanceOf[ShortTermMemory]] = Field(
         default=None,
         description="An Instance of the ShortTermMemory to be used by the Crew",
@@ -163,10 +156,6 @@ class Crew(FlowTrackable, BaseModel):
     entity_memory: Optional[InstanceOf[EntityMemory]] = Field(
         default=None,
         description="An Instance of the EntityMemory to be used by the Crew",
-    )
-    user_memory: Optional[InstanceOf[UserMemory]] = Field(
-        default=None,
-        description="DEPRECATED: Will be removed in version 0.156.0 or on 2025-08-04, whichever comes first. Use external_memory instead.",
     )
     external_memory: Optional[InstanceOf[ExternalMemory]] = Field(
         default=None,
@@ -302,20 +291,6 @@ class Crew(FlowTrackable, BaseModel):
 
         return self
 
-    def _initialize_user_memory(self):
-        if (
-            self.memory_config
-            and "user_memory" in self.memory_config
-            and self.memory_config.get("provider") == "mem0"
-        ):  # Check for user_memory in config
-            user_memory_config = self.memory_config["user_memory"]
-            if isinstance(
-                user_memory_config, dict
-            ):  # Check if it's a configuration dict
-                self._user_memory = UserMemory(crew=self)
-            else:
-                raise TypeError("user_memory must be a configuration dictionary")
-
     def _initialize_default_memories(self):
         self._long_term_memory = self._long_term_memory or LongTermMemory()
         self._short_term_memory = self._short_term_memory or ShortTermMemory(
@@ -338,12 +313,8 @@ class Crew(FlowTrackable, BaseModel):
         self._short_term_memory = self.short_term_memory
         self._entity_memory = self.entity_memory
 
-        # UserMemory will be removed in version 0.156.0 or on 2025-08-04, whichever comes first
-        self._user_memory = None
-
         if self.memory:
             self._initialize_default_memories()
-            self._initialize_user_memory()
 
         return self
 
@@ -1267,9 +1238,7 @@ class Crew(FlowTrackable, BaseModel):
             copied_data["entity_memory"] = self.entity_memory.model_copy(deep=True)
         if self.external_memory:
             copied_data["external_memory"] = self.external_memory.model_copy(deep=True)
-        if self.user_memory:
-            # DEPRECATED: UserMemory will be removed in version 0.156.0 or on 2025-08-04
-            copied_data["user_memory"] = self.user_memory.model_copy(deep=True)
+
 
         copied_data.pop("agents", None)
         copied_data.pop("tasks", None)

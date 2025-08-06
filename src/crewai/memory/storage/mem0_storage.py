@@ -19,32 +19,24 @@ class Mem0Storage(Storage):
         self._validate_type(type)
         self.memory_type = type
         self.crew = crew
+        self.config = config or {}
 
-        # TODO: Memory config will be removed in the future the config will be passed as a parameter
-        self.config = config or getattr(crew, "memory_config", {}).get("config", {}) or {}
-
-        self._validate_user_id()
         self._extract_config_values()
         self._initialize_memory()
 
     def _validate_type(self, type):
-        supported_types = {"user", "short_term", "long_term", "entities", "external"}
+        supported_types = {"short_term", "long_term", "entities", "external"}
         if type not in supported_types:
             raise ValueError(
                 f"Invalid type '{type}' for Mem0Storage. Must be one of: {', '.join(supported_types)}"
             )
 
-    def _validate_user_id(self):
-        if self.memory_type == "user" and not self.config.get("user_id", ""):
-            raise ValueError("User ID is required for user memory type")
-
     def _extract_config_values(self):
-        cfg = self.config
-        self.mem0_run_id = cfg.get("run_id")
-        self.includes = cfg.get("includes")
-        self.excludes = cfg.get("excludes")
-        self.custom_categories = cfg.get("custom_categories")
-        self.infer = cfg.get("infer", True)
+        self.mem0_run_id = self.config.get("run_id")
+        self.includes = self.config.get("includes")
+        self.excludes = self.config.get("excludes")
+        self.custom_categories = self.config.get("custom_categories")
+        self.infer = self.config.get("infer", True)
 
     def _initialize_memory(self):
         api_key = self.config.get("api_key") or os.getenv("MEM0_API_KEY")
@@ -164,6 +156,11 @@ class Mem0Storage(Storage):
                 del params["run_id"]
 
         results = self.memory.search(**params)
+
+        # This makes it compatible for Contextual Memory to retrieve
+        for result in results["results"]:
+            result["context"] = result["memory"]
+        
         return [r for r in results["results"]]
 
     def reset(self):
