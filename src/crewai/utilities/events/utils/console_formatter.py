@@ -1387,6 +1387,7 @@ class ConsoleFormatter:
                 theme="monokai",
                 line_numbers=False,
                 background_color="default",
+                word_wrap=True,
             )
 
             content.append("\n")
