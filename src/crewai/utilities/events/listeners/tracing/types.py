@@ -10,7 +10,7 @@ class TraceEvent:
 
     event_id: str = field(default_factory=lambda: str(uuid.uuid4()))
     timestamp: str = field(
-        default_factory=lambda: datetime.now(timezone.utc).isoformat() + "Z"
+        default_factory=lambda: datetime.now(timezone.utc).isoformat()
     )
     type: str = ""
     event_data: Dict[str, Any] = field(default_factory=dict)

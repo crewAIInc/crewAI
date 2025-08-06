@@ -20,7 +20,7 @@ class TraceSender(BaseModel):
 
             def datetime_handler(obj):
                 if isinstance(obj, datetime):
-                    return obj.isoformat() + "Z" if obj.tzinfo else obj.isoformat()
+                    return obj.isoformat()
 
             serialized_payload = json.loads(
                 json.dumps(payload, default=datetime_handler)
