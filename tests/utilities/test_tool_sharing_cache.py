@@ -361,7 +361,7 @@ def test_should_use_tool_sharing_empty():
 def test_should_use_tool_sharing_single():
     """Test tool sharing decision with single tool."""
     tools = [Mock(name="single_tool")]
-    assert should_use_tool_sharing(tools) is False
+    assert should_use_tool_sharing(tools) is True
 
 
 def test_should_use_tool_sharing_multiple():
@@ -372,8 +372,8 @@ def test_should_use_tool_sharing_multiple():
 
 def test_should_use_tool_sharing_threshold():
     """Test tool sharing decision at threshold boundary."""
-    # Exactly 2 tools should use sharing
-    tools = [Mock(name="tool1"), Mock(name="tool2")]
+    # Even 1 tool should use sharing now
+    tools = [Mock(name="tool1")]
     assert should_use_tool_sharing(tools) is True
 
 
@@ -495,9 +495,9 @@ def test_lru_eviction_thread_safety():
     "tool_count,expected",
     [
         (0, False),  # Empty list
-        (1, False),  # Single tool
-        (2, True),  # Threshold boundary
-        (3, True),  # Above threshold
+        (1, True),  # Single tool now uses cache
+        (2, True),  # Multiple tools
+        (3, True),  # Above old threshold
         (10, True),  # Many tools
         (100, True),  # Very many tools
     ],

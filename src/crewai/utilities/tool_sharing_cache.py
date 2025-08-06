@@ -173,4 +173,4 @@ def should_use_tool_sharing(tools: List[Any]) -> bool:
     Returns:
         True if tool sharing would be beneficial, False otherwise
     """
-    return len(tools) >= 2
+    return len(tools) > 0
