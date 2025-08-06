@@ -1181,7 +1181,7 @@ class LLM(BaseLLM):
         - If there is no '/', defaults to "openai".
         """
         if "/" in self.model:
-            return self.model.split("/")[0]
+            return self.model.partition("/")[0]
         return None
 
     def _validate_call_params(self) -> None:
