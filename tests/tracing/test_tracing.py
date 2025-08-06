@@ -19,9 +19,24 @@ class TestTraceListenerSetup:
     @pytest.fixture(autouse=True)
     def mock_auth_token(self):
         """Mock authentication token for all tests in this class"""
-        with patch(
-            "crewai.cli.authentication.token.get_auth_token",
-            return_value="mock_token_12345",
+        # Need to patch all the places where get_auth_token is imported/used
+        with (
+            patch(
+                "crewai.cli.authentication.token.get_auth_token",
+                return_value="mock_token_12345",
+            ),
+            patch(
+                "crewai.utilities.events.listeners.tracing.trace_listener.get_auth_token",
+                return_value="mock_token_12345",
+            ),
+            patch(
+                "crewai.utilities.events.listeners.tracing.trace_batch_manager.get_auth_token",
+                return_value="mock_token_12345",
+            ),
+            patch(
+                "crewai.utilities.events.listeners.tracing.interfaces.get_auth_token",
+                return_value="mock_token_12345",
+            ),
         ):
             yield
 
@@ -41,6 +56,21 @@ class TestTraceListenerSetup:
         # Restore original state
         crewai_event_bus._handlers.clear()
         crewai_event_bus._handlers.update(original_handlers)
+
+    @pytest.fixture(autouse=True)
+    def reset_tracing_singletons(self):
+        """Reset tracing singleton instances between tests"""
+        # Reset TraceCollectionListener singleton
+        if hasattr(TraceCollectionListener, "_instance"):
+            TraceCollectionListener._instance = None
+            TraceCollectionListener._initialized = False
+
+        yield
+
+        # Clean up after test
+        if hasattr(TraceCollectionListener, "_instance"):
+            TraceCollectionListener._instance = None
+            TraceCollectionListener._initialized = False
 
     @pytest.fixture(autouse=True)
     def mock_plus_api_calls(self):
