@@ -65,7 +65,7 @@ from crewai.utilities.events.memory_events import (
     MemorySaveCompletedEvent,
     MemorySaveFailedEvent,
 )
-from .interfaces import TraceSender
+
 from crewai.cli.authentication.token import get_auth_token
 from crewai.cli.version import get_crewai_version
 
@@ -81,7 +81,7 @@ class TraceCollectionListener(BaseEventListener):
     _instance = None
     _initialized = False
 
-    def __new__(cls, batch_manager=None, trace_sender=None):
+    def __new__(cls, batch_manager=None, tracing=False):
         if cls._instance is None:
             cls._instance = super().__new__(cls)
         return cls._instance
@@ -89,26 +89,25 @@ class TraceCollectionListener(BaseEventListener):
     def __init__(
         self,
         batch_manager: Optional[TraceBatchManager] = None,
-        trace_sender: Optional[TraceSender] = None,
+        tracing: bool = False,
+        # trace_sender: Optional[TraceSender] = None,
     ):
         if self._initialized:
             return
 
         super().__init__()
         self.batch_manager = batch_manager or TraceBatchManager()
-        self.trace_sender = trace_sender or TraceSender()
-        self.trace_enabled = self._check_trace_enabled()
+        # self.trace_sender = trace_sender or TraceSender()
+        self.trace_enabled = self._check_trace_enabled(tracing)
         self._initialized = True
 
-    def _check_trace_enabled(self) -> bool:
+    def _check_trace_enabled(self, tracing: bool = False) -> bool:
         """Check if tracing should be enabled"""
         auth_token = get_auth_token()
         if not auth_token:
             return False
 
-        return os.getenv("CREWAI_TRACING_ENABLED", "false").lower() == "true" or bool(
-            os.getenv("CREWAI_USER_TOKEN")
-        )
+        return os.getenv("CREWAI_TRACING_ENABLED", "false").lower() == "true" or tracing
 
     def _get_user_context(self) -> Dict[str, str]:
         """Extract user context for tracing"""
@@ -336,9 +335,10 @@ class TraceCollectionListener(BaseEventListener):
         """Send finalized batch using the configured sender"""
         batch = self.batch_manager.finalize_batch()
         if batch:
-            success = self.trace_sender.send_batch(batch)
-            if not success:
-                print("⚠️  Failed to send trace batch")
+            print("successfully sent batch")
+            # success = self.trace_sender.send_batch(batch)
+            # if not success:
+            # print("⚠️  Failed to send trace batch")
 
     def _create_trace_event(
         self, event_type: str, source: Any, event: Any
@@ -360,6 +360,7 @@ class TraceCollectionListener(BaseEventListener):
         elif event_type == "task_started":
             return {
                 "task_description": event.task.description,
+                "expected_output": event.task.expected_output,
                 "task_name": event.task.name,
                 "context": event.context,
                 "agent": source.agent.role,
@@ -368,11 +369,13 @@ class TraceCollectionListener(BaseEventListener):
             return {
                 **self._safe_serialize_to_dict(event),
                 "messages": self._truncate_messages(event.messages),
+                # "messages": event.messages,
             }
         elif event_type == "llm_call_completed":
             return {
                 **self._safe_serialize_to_dict(event),
                 "messages": self._truncate_messages(event.messages),
+                # "messages": event.messages,
             }
         else:
             return {
@@ -396,7 +399,7 @@ class TraceCollectionListener(BaseEventListener):
             return {"serialization_error": str(e), "object_type": type(obj).__name__}
 
     # TODO: move to utils
-    def _truncate_messages(self, messages, max_content_length=200, max_messages=5):
+    def _truncate_messages(self, messages, max_content_length=500, max_messages=5):
         """Truncate message content and limit number of messages"""
         if not messages or not isinstance(messages, list):
             return messages

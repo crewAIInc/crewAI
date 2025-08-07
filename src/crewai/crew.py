@@ -248,6 +248,10 @@ class Crew(FlowTrackable, BaseModel):
         default=None,
         description="Metrics for the LLM usage during all tasks execution.",
     )
+    tracing: Optional[bool] = Field(
+        default=False,
+        description="Whether to enable tracing for the crew.",
+    )
 
     @field_validator("id", mode="before")
     @classmethod
@@ -279,8 +283,11 @@ class Crew(FlowTrackable, BaseModel):
 
         self._cache_handler = CacheHandler()
         event_listener = EventListener()
-        if os.getenv("CREWAI_TRACING_ENABLED", "false").lower() == "true":
-            trace_listener = TraceCollectionListener()
+        if (
+            os.getenv("CREWAI_TRACING_ENABLED", "false").lower() == "true"
+            or self.tracing
+        ):
+            trace_listener = TraceCollectionListener(tracing=self.tracing or False)
             trace_listener.setup_listeners(crewai_event_bus)
         event_listener.verbose = self.verbose
         event_listener.formatter.verbose = self.verbose

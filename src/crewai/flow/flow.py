@@ -441,6 +441,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
     _router_paths: Dict[str, List[str]] = {}
     initial_state: Union[Type[T], T, None] = None
     name: Optional[str] = None
+    tracing: Optional[bool] = False
 
     def __class_getitem__(cls: Type["Flow"], item: Type[T]) -> Type["Flow"]:
         class _FlowGeneric(cls):  # type: ignore
@@ -452,6 +453,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
     def __init__(
         self,
         persistence: Optional[FlowPersistence] = None,
+        tracing: Optional[bool] = False,
         **kwargs: Any,
     ) -> None:
         """Initialize a new Flow instance.
@@ -469,8 +471,10 @@ class Flow(Generic[T], metaclass=FlowMeta):
 
         # Initialize state with initial values
         self._state = self._create_initial_state()
-        if os.getenv("CREWAI_TRACING_ENABLED", "false").lower() == "true":
-            trace_listener = TraceCollectionListener()
+        print("tracing within flow", tracing)
+        self.tracing = tracing
+        if os.getenv("CREWAI_TRACING_ENABLED", "false").lower() == "true" or tracing:
+            trace_listener = TraceCollectionListener(tracing=self.tracing or False)
             trace_listener.setup_listeners(crewai_event_bus)
         # Apply any additional kwargs
         if kwargs:
