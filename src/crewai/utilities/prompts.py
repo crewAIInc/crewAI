@@ -26,17 +26,26 @@ class Prompts(BaseModel):
         system = self._build_prompt(slices)
         slices.append("task")
 
-        if (
-            not self.system_template
-            and not self.prompt_template
-            and self.use_system_prompt
-        ):
+        if self.use_system_prompt:
+            if self.system_template and self.prompt_template:
+                system_content = self._build_custom_system(slices[:-1]) # exclude task
+                user_content = self._build_custom_user(["task"])
+            else:
+                system_content = system
+                user_content = self._build_prompt(["task"])
+            
             return {
-                "system": system,
-                "user": self._build_prompt(["task"]),
-                "prompt": self._build_prompt(slices),
+                "system": system_content,
+                "user": user_content,
+                "prompt": self._build_prompt(
+                    slices,
+                    self.system_template,
+                    self.prompt_template,
+                    self.response_template,
+                )
             }
         else:
+            # When not using system prompt, return the merged format
             return {
                 "prompt": self._build_prompt(
                     slices,
@@ -76,9 +85,25 @@ class Prompts(BaseModel):
             else:
                 prompt = f"{system}\n{prompt}"
 
-        prompt = (
-            prompt.replace("{goal}", self.agent.goal)
-            .replace("{role}", self.agent.role)
-            .replace("{backstory}", self.agent.backstory)
+        return self._apply_agent_variables(prompt)
+
+    def _build_custom_system(self, components: list[str]) -> str:
+        if self.system_template:
+            prompt_parts = [self.i18n.slice(component) for component in components]
+            system = self.system_template.replace("{{ .System }}", "".join(prompt_parts))
+            return self._apply_agent_variables(system)
+        return self._build_prompt(components)
+
+    def _build_custom_user(self, components: list[str]) -> str:
+        if self.prompt_template:
+            task_content = "".join([self.i18n.slice(component) for component in components])
+            user = self.prompt_template.replace("{{ .Prompt }}", task_content)
+            return self._apply_agent_variables(user)
+        return self._build_prompt(components)
+
+    def _apply_agent_variables(self, text: str) -> str:
+        return (
+            text.replace("{goal}", self.agent.goal if self.agent else "")
+            .replace("{role}", self.agent.role if self.agent else "")
+            .replace("{backstory}", self.agent.backstory if self.agent else "")
         )
-        return prompt
