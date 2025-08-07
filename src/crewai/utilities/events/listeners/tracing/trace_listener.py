@@ -302,7 +302,7 @@ class TraceCollectionListener(BaseEventListener):
         """Initialize trace batch for Flow execution"""
         user_context = self._get_user_context()
         execution_metadata = {
-            "flow_name": getattr(source, "__class__.__name__", "Unknown Flow"),
+            "flow_name": getattr(event, "flow_name", "Unknown Flow"),
             "execution_start": event.timestamp if hasattr(event, "timestamp") else None,
             "crewai_version": get_crewai_version(),
             "execution_type": "flow",
