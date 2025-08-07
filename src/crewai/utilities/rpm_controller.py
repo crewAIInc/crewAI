@@ -51,19 +51,27 @@ class RPMController(BaseModel):
             return _check_and_increment()
 
     def stop_rpm_counter(self):
+        """Stop the RPM counter timer and mark for shutdown."""
+        self._shutdown_flag = True
         if self._timer:
             self._timer.cancel()
             self._timer = None
 
     def _wait_for_next_minute(self):
-        time.sleep(60)
+        """Wait until the start of the next minute."""
+        current_time = time.time()
+        seconds_until_next_minute = 60 - (current_time % 60)
+        time.sleep(seconds_until_next_minute)
         self._current_rpm = 0
 
     def _reset_request_count(self):
+        """Reset the request count and schedule the next reset."""
+
         def _reset():
             self._current_rpm = 0
             if not self._shutdown_flag:
                 self._timer = threading.Timer(60.0, self._reset_request_count)
+                self._timer.daemon = True  # Ensure thread doesn't prevent program exit
                 self._timer.start()
 
         if self._lock:
@@ -72,6 +80,10 @@ class RPMController(BaseModel):
         else:
             _reset()
 
-        if self._timer:
-            self._shutdown_flag = True
-            self._timer.cancel()
+    def __del__(self):
+        """Cleanup timer on object destruction."""
+        try:
+            if hasattr(self, "_timer") and self._timer:
+                self._timer.cancel()
+        except Exception:
+            pass  # Ignore errors during cleanup
