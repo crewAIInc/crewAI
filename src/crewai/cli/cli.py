@@ -14,6 +14,7 @@ from crewai.memory.storage.kickoff_task_outputs_storage import (
 
 from .authentication.main import AuthenticationCommand
 from .deploy.main import DeployCommand
+from .enterprise.main import EnterpriseCommand
 from .evaluate_crew import evaluate_crew
 from .install_crew import install_crew
 from .kickoff_flow import kickoff_flow
@@ -390,6 +391,20 @@ def current():
     """Show current organization when 'crewai org' is called without subcommands."""
     org_command = OrganizationCommand()
     org_command.current()
+
+
+@crewai.group()
+def enterprise():
+    """Enterprise Configuration commands."""
+    pass
+
+
+@enterprise.command("configure")
+@click.argument("enterprise_url")
+def enterprise_configure(enterprise_url: str):
+    """Configure CrewAI Enterprise OAuth2 settings from the provided Enterprise URL."""
+    enterprise_command = EnterpriseCommand()
+    enterprise_command.configure(enterprise_url)
 
 
 @crewai.group()
