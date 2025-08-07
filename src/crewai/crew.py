@@ -1,3 +1,4 @@
+import os
 import asyncio
 import json
 import re
@@ -72,6 +73,11 @@ from crewai.utilities.events.crew_events import (
 )
 from crewai.utilities.events.crewai_event_bus import crewai_event_bus
 from crewai.utilities.events.event_listener import EventListener
+from crewai.utilities.events.listeners.tracing.trace_listener import (
+    TraceCollectionListener,
+)
+
+
 from crewai.utilities.formatter import (
     aggregate_raw_outputs_from_task_outputs,
     aggregate_raw_outputs_from_tasks,
@@ -238,6 +244,10 @@ class Crew(FlowTrackable, BaseModel):
         default_factory=SecurityConfig,
         description="Security configuration for the crew, including fingerprinting.",
     )
+    token_usage: Optional[UsageMetrics] = Field(
+        default=None,
+        description="Metrics for the LLM usage during all tasks execution.",
+    )
 
     @field_validator("id", mode="before")
     @classmethod
@@ -269,6 +279,9 @@ class Crew(FlowTrackable, BaseModel):
 
         self._cache_handler = CacheHandler()
         event_listener = EventListener()
+        if os.getenv("CREWAI_TRACING_ENABLED", "false").lower() == "true":
+            trace_listener = TraceCollectionListener()
+            trace_listener.setup_listeners(crewai_event_bus)
         event_listener.verbose = self.verbose
         event_listener.formatter.verbose = self.verbose
         self._logger = Logger(verbose=self.verbose)
@@ -1044,11 +1057,13 @@ class Crew(FlowTrackable, BaseModel):
 
         final_string_output = final_task_output.raw
         self._finish_execution(final_string_output)
-        token_usage = self.calculate_usage_metrics()
+        self.token_usage = self.calculate_usage_metrics()
         crewai_event_bus.emit(
             self,
             CrewKickoffCompletedEvent(
-                crew_name=self.name, output=final_task_output
+                crew_name=self.name,
+                output=final_task_output,
+                total_tokens=self.token_usage.total_tokens,
             ),
         )
         return CrewOutput(
@@ -1056,7 +1071,7 @@ class Crew(FlowTrackable, BaseModel):
             pydantic=final_task_output.pydantic,
             json_dict=final_task_output.json_dict,
             tasks_output=task_outputs,
-            token_usage=token_usage,
+            token_usage=self.token_usage,
         )
 
     def _process_async_tasks(
@@ -1225,7 +1240,6 @@ class Crew(FlowTrackable, BaseModel):
             copied_data["entity_memory"] = self.entity_memory.model_copy(deep=True)
         if self.external_memory:
             copied_data["external_memory"] = self.external_memory.model_copy(deep=True)
-
 
         copied_data.pop("agents", None)
         copied_data.pop("tasks", None)
