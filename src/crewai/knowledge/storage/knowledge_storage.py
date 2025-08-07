@@ -70,19 +70,25 @@ class KnowledgeStorage(BaseKnowledgeStorage):
                     n_results=limit,
                     where=filter,
                 )
-                results = []
-                for i in range(len(fetched["ids"][0])):  # type: ignore
-                    result = {
-                        "id": fetched["ids"][0][i],  # type: ignore
-                        "metadata": fetched["metadatas"][0][i],  # type: ignore
-                        "context": fetched["documents"][0][i],  # type: ignore
-                        "score": fetched["distances"][0][i],  # type: ignore
+                # Use list comprehension with zip for better performance
+                results = [
+                    {
+                        "id": id_,
+                        "metadata": metadata,
+                        "context": document,
+                        "score": distance,
                     }
-                    if result["score"] >= score_threshold:
-                        results.append(result)
+                    for id_, metadata, document, distance in zip(
+                        fetched["ids"][0],  # type: ignore
+                        fetched["metadatas"][0],  # type: ignore
+                        fetched["documents"][0],  # type: ignore
+                        fetched["distances"][0],  # type: ignore
+                    )
+                    if distance >= score_threshold
+                ]
                 return results
             else:
-                raise Exception("Collection not initialized")
+                raise RuntimeError("Collection not initialized")
 
     def initialize_knowledge_storage(self):
         self.app = create_persistent_client(
@@ -102,9 +108,9 @@ class KnowledgeStorage(BaseKnowledgeStorage):
                     embedding_function=self.embedder,
                 )
             else:
-                raise Exception("Vector Database Client not initialized")
-        except Exception:
-            raise Exception("Failed to create or get collection")
+                raise RuntimeError("Vector Database Client not initialized")
+        except Exception as e:
+            raise RuntimeError(f"Failed to create or get collection: {str(e)}") from e
 
     def reset(self):
         base_path = os.path.join(db_storage_path(), KNOWLEDGE_DIRECTORY)
@@ -124,33 +130,33 @@ class KnowledgeStorage(BaseKnowledgeStorage):
         metadata: Optional[Union[Dict[str, Any], List[Dict[str, Any]]]] = None,
     ):
         if not self.collection:
-            raise Exception("Collection not initialized")
+            raise RuntimeError("Collection not initialized")
 
         try:
             # Create a dictionary to store unique documents
             unique_docs = {}
 
-            # Generate IDs and create a mapping of id -> (document, metadata)
-            for idx, doc in enumerate(documents):
+            # Prepare metadata list for easier access
+            metadata_list: List[Optional[Dict[str, Any]]]
+            if metadata is None:
+                metadata_list = [None] * len(documents)
+            elif isinstance(metadata, list):
+                metadata_list = list(
+                    metadata
+                )  # Create a copy to ensure type compatibility
+            else:
+                metadata_list = [metadata] * len(documents)
+
+            # Generate IDs and create a mapping of id -> (document, metadata) in one pass
+            for doc, doc_metadata in zip(documents, metadata_list):
                 doc_id = hashlib.sha256(doc.encode("utf-8")).hexdigest()
-                doc_metadata = None
-                if metadata is not None:
-                    if isinstance(metadata, list):
-                        doc_metadata = metadata[idx]
-                    else:
-                        doc_metadata = metadata
                 unique_docs[doc_id] = (doc, doc_metadata)
 
-            # Prepare filtered lists for ChromaDB
-            filtered_docs = []
-            filtered_metadata = []
-            filtered_ids = []
-
-            # Build the filtered lists
-            for doc_id, (doc, meta) in unique_docs.items():
-                filtered_docs.append(doc)
-                filtered_metadata.append(meta)
-                filtered_ids.append(doc_id)
+            # Build filtered lists directly from unique_docs
+            filtered_ids = list(unique_docs.keys())
+            filtered_data = list(unique_docs.values())
+            filtered_docs = [doc for doc, _ in filtered_data]
+            filtered_metadata = [meta for _, meta in filtered_data]
 
             # If we have no metadata at all, set it to None
             final_metadata: Optional[OneOrMany[chromadb.Metadata]] = (
