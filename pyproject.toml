@@ -11,7 +11,7 @@ dependencies = [
     # Core Dependencies
     "pydantic>=2.4.2",
     "openai>=1.13.3",
-    "litellm==1.74.3",
+    "litellm==1.74.9",
     "instructor>=1.3.3",
     # Text Processing
     "pdfplumber>=0.11.4",
@@ -48,7 +48,7 @@ Documentation = "https://docs.crewai.com"
 Repository = "https://github.com/crewAIInc/crewAI"
 
 [project.optional-dependencies]
-tools = ["crewai-tools~=0.59.0"]
+tools = ["crewai-tools~=0.60.0"]
 embeddings = [
     "tiktoken~=0.8.0"
 ]

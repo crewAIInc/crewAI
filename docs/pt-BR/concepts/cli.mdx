@@ -324,3 +324,82 @@ Ao escolher um provedor, o CLI solicitará que você informe o nome da chave e a
 Veja o seguinte link para o nome de chave de cada provedor:
 
 * [LiteLLM Providers](https://docs.litellm.ai/docs/providers)
+
+### 12. Gerenciamento de Configuração
+
+Gerencie as configurações do CLI para CrewAI.
+
+```shell Terminal
+crewai config [COMANDO] [OPÇÕES]
+```
+
+#### Comandos:
+
+- `list`: Exibir todos os parâmetros de configuração do CLI
+```shell Terminal
+crewai config list
+```
+
+- `set`: Definir um parâmetro de configuração do CLI
+```shell Terminal
+crewai config set <chave> <valor>
+```
+
+- `reset`: Redefinir todos os parâmetros de configuração do CLI para valores padrão
+```shell Terminal
+crewai config reset
+```
+
+#### Parâmetros de Configuração Disponíveis
+
+- `enterprise_base_url`: URL base da instância CrewAI Enterprise
+- `oauth2_provider`: Provedor OAuth2 usado para autenticação (ex: workos, okta, auth0)
+- `oauth2_audience`: Valor de audiência OAuth2, tipicamente usado para identificar a API ou recurso de destino
+- `oauth2_client_id`: ID do cliente OAuth2 emitido pelo provedor, usado durante solicitações de autenticação
+- `oauth2_domain`: Domínio do provedor OAuth2 (ex: sua-org.auth0.com) usado para emissão de tokens
+
+#### Exemplos
+
+Exibir configuração atual:
+```shell Terminal
+crewai config list
+```
+
+Exemplo de saída:
+```
+CrewAI CLI Configuration
+┏━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ Setting            ┃ Value                              ┃ Description                                                                                      ┃
+┡━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+│ enterprise_base_url│ https://app.crewai.com             │ Base URL of the CrewAI Enterprise instance                                                       │
+│ org_name           │ Not set                            │ Name of the currently active organization                                                        │
+│ org_uuid           │ Not set                            │ UUID of the currently active organization                                                        │
+│ oauth2_provider    │ workos                             │ OAuth2 provider used for authentication (e.g., workos, okta, auth0).                             │
+│ oauth2_audience    │ client_01YYY                       │ OAuth2 audience value, typically used to identify the target API or resource.                    │
+│ oauth2_client_id   │ client_01XXX                       │ OAuth2 client ID issued by the provider, used during authentication requests.                    │
+│ oauth2_domain      │ login.crewai.com                   │ OAuth2 provider's domain (e.g., your-org.auth0.com) used for issuing tokens.                     │
+```
+
+Definir a URL base do enterprise:
+```shell Terminal
+crewai config set enterprise_base_url https://minha-empresa.crewai.com
+```
+
+Definir provedor OAuth2:
+```shell Terminal
+crewai config set oauth2_provider auth0
+```
+
+Definir domínio OAuth2:
+```shell Terminal
+crewai config set oauth2_domain minha-empresa.auth0.com
+```
+
+Redefinir todas as configurações para padrões:
+```shell Terminal
+crewai config reset
+```
+
+<Note>
+As configurações são armazenadas em `~/.config/crewai/settings.json`. Algumas configurações como nome da organização e UUID são somente leitura e gerenciadas através de comandos de autenticação e organização. Configurações relacionadas ao repositório de ferramentas são ocultas e não podem ser definidas diretamente pelo usuário.
+</Note>

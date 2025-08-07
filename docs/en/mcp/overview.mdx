@@ -44,6 +44,19 @@ The `MCPServerAdapter` class from `crewai-tools` is the primary way to connect t
 
 Using a Python context manager (`with` statement) is the **recommended approach** for `MCPServerAdapter`. It automatically handles starting and stopping the connection to the MCP server.
 
+## Connection Configuration
+
+The `MCPServerAdapter` supports several configuration options to customize the connection behavior:
+
+- **`connect_timeout`** (optional): Maximum time in seconds to wait for establishing a connection to the MCP server. Defaults to 30 seconds if not specified. This is particularly useful for remote servers that may have variable response times.
+
+```python
+# Example with custom connection timeout
+with MCPServerAdapter(server_params, connect_timeout=60) as tools:
+    # Connection will timeout after 60 seconds if not established
+    pass
+```
+
 ```python
 from crewai import Agent
 from crewai_tools import MCPServerAdapter
@@ -70,7 +83,7 @@ server_params = {
 }
 
 # Example usage (uncomment and adapt once server_params is set):
-with MCPServerAdapter(server_params) as mcp_tools:
+with MCPServerAdapter(server_params, connect_timeout=60) as mcp_tools:
     print(f"Available tools: {[tool.name for tool in mcp_tools]}")
 
     my_agent = Agent(
@@ -95,7 +108,7 @@ There are two ways to filter tools:
 ### Accessing a specific tool using dictionary-style indexing.
 
 ```python
-with MCPServerAdapter(server_params) as mcp_tools:
+with MCPServerAdapter(server_params, connect_timeout=60) as mcp_tools:
     print(f"Available tools: {[tool.name for tool in mcp_tools]}")
 
     my_agent = Agent(
@@ -112,7 +125,7 @@ with MCPServerAdapter(server_params) as mcp_tools:
 ### Pass a list of tool names to the `MCPServerAdapter` constructor.
 
 ```python
-with MCPServerAdapter(server_params, "tool_name") as mcp_tools:
+with MCPServerAdapter(server_params, "tool_name", connect_timeout=60) as mcp_tools:
     print(f"Available tools: {[tool.name for tool in mcp_tools]}")
 
     my_agent = Agent(
