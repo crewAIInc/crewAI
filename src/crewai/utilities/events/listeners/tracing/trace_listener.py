@@ -155,7 +155,7 @@ class TraceCollectionListener(BaseEventListener):
         @event_bus.on(FlowFinishedEvent)
         def on_flow_finished(source, event):
             self._handle_trace_event("flow_finished", source, event)
-            self._send_batch()
+            self.batch_manager.finalize_batch()
 
         @event_bus.on(FlowPlotEvent)
         def on_flow_plot(source, event):
@@ -173,12 +173,12 @@ class TraceCollectionListener(BaseEventListener):
         @event_bus.on(CrewKickoffCompletedEvent)
         def on_crew_completed(source, event):
             self._handle_trace_event("crew_kickoff_completed", source, event)
-            self._send_batch()
+            self.batch_manager.finalize_batch()
 
         @event_bus.on(CrewKickoffFailedEvent)
         def on_crew_failed(source, event):
             self._handle_trace_event("crew_kickoff_failed", source, event)
-            self._send_batch()
+            self.batch_manager.finalize_batch()
 
         @event_bus.on(TaskStartedEvent)
         def on_task_started(source, event):
@@ -330,15 +330,6 @@ class TraceCollectionListener(BaseEventListener):
 
         trace_event = self._create_trace_event(event_type, source, event)
         self.batch_manager.add_event(trace_event)
-
-    def _send_batch(self):
-        """Send finalized batch using the configured sender"""
-        batch = self.batch_manager.finalize_batch()
-        if batch:
-            print("successfully sent batch")
-            # success = self.trace_sender.send_batch(batch)
-            # if not success:
-            # print("⚠️  Failed to send trace batch")
 
     def _create_trace_event(
         self, event_type: str, source: Any, event: Any
