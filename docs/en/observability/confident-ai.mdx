@@ -1,0 +1,170 @@
+---
+title: Confident AI Integration
+description: Monitor and evaluate your CrewAI agents with Confident AI's comprehensive observability platform.
+icon: shield-check
+---
+
+# Introduction
+
+Confident AI provides a comprehensive observability and evaluation platform for LLM applications, including CrewAI agents. It offers detailed tracing, monitoring, and evaluation capabilities to help you understand agent performance, identify issues, and ensure reliable operation in production environments.
+
+## Confident AI
+
+[Confident AI](https://confident-ai.com) is built on top of DeepEval, an open-source evaluation framework, and provides advanced monitoring, tracing, and evaluation features for AI applications.
+
+At a high level, Confident AI gives you the ability to monitor agent execution, evaluate output quality, track performance metrics, and gain insights into your CrewAI workflows. For more information, check out the [Confident AI Documentation](https://documentation.confident-ai.com).
+
+### Overview
+
+Confident AI provides end-to-end observability for CrewAI agents in both development and production environments. It offers detailed tracing of agent interactions, LLM calls, and task execution, along with comprehensive evaluation metrics and analytics dashboards.
+
+The platform enables you to monitor agent performance, identify bottlenecks, evaluate output quality, and optimize your CrewAI workflows for better results and cost efficiency.
+
+### Features
+
+- **End-to-End Tracing**: Complete visibility into agent execution flows and LLM interactions
+- **Performance Monitoring**: Track execution times, token usage, and resource consumption
+- **Quality Evaluation**: Automated evaluation of agent outputs using various metrics
+- **Cost Tracking**: Monitor LLM API usage and associated costs
+- **Real-time Analytics**: Live dashboards for monitoring agent performance
+- **Custom Metrics**: Define and track domain-specific evaluation criteria
+- **Anomaly Detection**: Identify unusual patterns in agent behavior
+- **Compliance Monitoring**: Ensure outputs meet safety and quality standards
+- **A/B Testing**: Compare different agent configurations and prompts
+- **Historical Analysis**: Track performance trends over time
+
+### Using Confident AI
+
+<Steps>
+   <Step title="Create an Account">
+      Sign up for a Confident AI account at: [Confident AI Platform](https://app.confident-ai.com)
+   </Step>
+   <Step title="Get Your API Key">
+      Obtain your API key from the Confident AI dashboard under Settings > API Keys
+   </Step>
+   <Step title="Configure Your Environment">
+      Add your API key to your environment variables:
+      ```bash
+      CONFIDENT_API_KEY=<YOUR_CONFIDENT_API_KEY>
+      ```
+   </Step>
+   <Step title="Install DeepEval">
+      Install DeepEval with Confident AI integration:
+      ```bash
+      pip install deepeval
+      ```
+   </Step>
+   <Step title="Initialize Confident AI Tracing">
+      Before using `Crew` in your script, include these lines:
+
+      ```python
+      from deepeval.integrations.crewai import instrument_crewai
+      
+      # Initialize Confident AI tracing for CrewAI
+      instrument_crewai(api_key="<your-confident-api-key>")
+      ```
+
+      This will automatically trace all CrewAI agent interactions and send the data to your Confident AI dashboard.
+   </Step>
+   <Step title="Run Your CrewAI Application">
+      Execute your CrewAI workflows as usual. All agent interactions, LLM calls, and task executions will be automatically traced and sent to Confident AI:
+
+      ```python
+      from crewai import Agent, Task, Crew
+      from deepeval.integrations.crewai import instrument_crewai
+
+      # Initialize tracing
+      instrument_crewai(api_key="<your-confident-api-key>")
+
+      # Define your agents and tasks
+      researcher = Agent(
+          role='Researcher',
+          goal='Research and analyze market trends',
+          backstory='You are an expert market researcher.',
+          verbose=True
+      )
+
+      task = Task(
+          description='Research the latest AI trends in 2024',
+          agent=researcher,
+          expected_output='A comprehensive report on AI trends'
+      )
+
+      crew = Crew(
+          agents=[researcher],
+          tasks=[task],
+          verbose=True
+      )
+
+      # Execute the crew - all interactions will be traced
+      result = crew.kickoff()
+      ```
+   </Step>
+</Steps>
+
+### Advanced Configuration
+
+You can customize the tracing behavior with additional configuration options:
+
+```python
+from deepeval.integrations.crewai import instrument_crewai
+
+# Advanced configuration
+instrument_crewai(
+    api_key="<your-confident-api-key>",
+    project_name="my-crewai-project",
+    environment="production",
+    custom_metadata={
+        "version": "1.0.0",
+        "team": "ai-research"
+    }
+)
+```
+
+### Evaluation and Monitoring
+
+Confident AI automatically evaluates your agent outputs using various metrics. You can also define custom evaluation criteria:
+
+```python
+from deepeval import evaluate
+from deepeval.metrics import AnswerRelevancyMetric, FaithfulnessMetric
+
+# Define evaluation metrics
+metrics = [
+    AnswerRelevancyMetric(threshold=0.8),
+    FaithfulnessMetric(threshold=0.7)
+]
+
+# Your CrewAI execution will be automatically evaluated
+# Results will appear in your Confident AI dashboard
+```
+
+### Key Benefits
+
+- **Comprehensive Visibility**: Complete tracing of agent workflows and interactions
+- **Quality Assurance**: Automated evaluation ensures consistent output quality
+- **Performance Optimization**: Identify bottlenecks and optimize agent performance
+- **Cost Management**: Track and optimize LLM usage costs
+- **Production Monitoring**: Real-time monitoring for production deployments
+- **Continuous Improvement**: Historical data enables iterative optimization
+
+### Further Information
+
+To get started with Confident AI:
+
+- [Sign up for Confident AI](https://app.confident-ai.com)
+- [Read the Documentation](https://documentation.confident-ai.com)
+- [Explore DeepEval](https://github.com/confident-ai/deepeval)
+- [CrewAI Integration Guide](https://documentation.confident-ai.com/docs/llm-tracing/integrations/crewai)
+
+For support or questions, reach out to the Confident AI team through their documentation or support channels.
+
+#### Extra links
+
+<a href="https://confident-ai.com">🌐 Confident AI Website</a>
+<span>&nbsp;&nbsp;•&nbsp;&nbsp;</span>
+<a href="https://app.confident-ai.com">📊 Confident AI Dashboard</a>
+<span>&nbsp;&nbsp;•&nbsp;&nbsp;</span>
+<a href="https://documentation.confident-ai.com">📙 Documentation</a>
+<span>&nbsp;&nbsp;•&nbsp;&nbsp;</span>
+<a href="https://github.com/confident-ai/deepeval">🔧 DeepEval GitHub</a>
