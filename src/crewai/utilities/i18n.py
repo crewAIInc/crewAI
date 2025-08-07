@@ -6,8 +6,10 @@ from pydantic import BaseModel, Field, PrivateAttr, model_validator
 
 """Internationalization support for CrewAI prompts and messages."""
 
+
 class I18N(BaseModel):
     """Handles loading and retrieving internationalized prompts."""
+
     _prompts: Dict[str, Dict[str, str]] = PrivateAttr()
     prompt_file: Optional[str] = Field(
         default=None,
@@ -27,10 +29,12 @@ class I18N(BaseModel):
 
                 with open(prompts_path, "r", encoding="utf-8") as f:
                     self._prompts = json.load(f)
-        except FileNotFoundError:
-            raise Exception(f"Prompt file '{self.prompt_file}' not found.")
-        except json.JSONDecodeError:
-            raise Exception("Error decoding JSON from the prompts file.")
+        except FileNotFoundError as e:
+            raise FileNotFoundError(
+                f"Prompt file '{self.prompt_file}' not found."
+            ) from e
+        except json.JSONDecodeError as e:
+            raise ValueError("Error decoding JSON from the prompts file.") from e
 
         if not self._prompts:
             self._prompts = {}
@@ -49,5 +53,5 @@ class I18N(BaseModel):
     def retrieve(self, kind, key) -> str:
         try:
             return self._prompts[kind][key]
-        except Exception as _:
-            raise Exception(f"Prompt for '{kind}':'{key}'  not found.")
+        except KeyError:
+            raise KeyError(f"Prompt for '{kind}':'{key}' not found.")
