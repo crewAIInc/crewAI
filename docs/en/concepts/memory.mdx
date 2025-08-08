@@ -9,8 +9,7 @@ icon: database
 The CrewAI framework provides a sophisticated memory system designed to significantly enhance AI agent capabilities. CrewAI offers **three distinct memory approaches** that serve different use cases:
 
 1. **Basic Memory System** - Built-in short-term, long-term, and entity memory
-2. **User Memory** - User-specific memory with Mem0 integration (legacy approach)
-3. **External Memory** - Standalone external memory providers (new approach)
+2. **External Memory** - Standalone external memory providers
 
 ## Memory System Components
 
@@ -19,7 +18,7 @@ The CrewAI framework provides a sophisticated memory system designed to signific
 | **Short-Term Memory**| Temporarily stores recent interactions and outcomes using `RAG`, enabling agents to recall and utilize information relevant to their current context during the current executions.|
 | **Long-Term Memory** | Preserves valuable insights and learnings from past executions, allowing agents to build and refine their knowledge over time. |
 | **Entity Memory**    | Captures and organizes information about entities (people, places, concepts) encountered during tasks, facilitating deeper understanding and relationship mapping. Uses `RAG` for storing entity information. |
-| **Contextual Memory**| Maintains the context of interactions by combining `ShortTermMemory`, `LongTermMemory`, and `EntityMemory`, aiding in the coherence and relevance of agent responses over a sequence of tasks or a conversation. |
+| **Contextual Memory**| Maintains the context of interactions by combining `ShortTermMemory`, `LongTermMemory`, `ExternalMemory` and `EntityMemory`, aiding in the coherence and relevance of agent responses over a sequence of tasks or a conversation. |
 
 ## 1. Basic Memory System (Recommended)
 
@@ -202,7 +201,7 @@ crew = Crew(
     tasks=[task],
     memory=True,
     embedder={
-        "provider": "anthropic",  # Match your LLM provider
+        "provider": "anthropic", # Match your LLM provider
         "config": {
             "api_key": "your-anthropic-key",
             "model": "text-embedding-3-small"
@@ -623,7 +622,7 @@ for provider in providers_to_test:
 **Model not found errors:**
 ```python
 # Verify model availability
-from crewai.utilities.embedding_configurator import EmbeddingConfigurator
+from crewai.rag.embeddings.configurator import EmbeddingConfigurator
 
 configurator = EmbeddingConfigurator()
 try:
@@ -684,67 +683,18 @@ print(f"OpenAI: {openai_time:.2f}s")
 print(f"Ollama: {ollama_time:.2f}s")
 ```
 
-## 2. User Memory with Mem0 (Legacy)
+## 2. External Memory 
+External Memory provides a standalone memory system that operates independently from the crew's built-in memory. This is ideal for specialized memory providers or cross-application memory sharing.
 
-<Warning>
-**Legacy Approach**: While fully functional, this approach is considered legacy. For new projects requiring user-specific memory, consider using External Memory instead.
-</Warning>
-
-User Memory integrates with [Mem0](https://mem0.ai/) to provide user-specific memory that persists across sessions and integrates with the crew's contextual memory system.
-
-### Prerequisites
-```bash
-pip install mem0ai
-```
-
-### Mem0 Cloud Configuration
+### Basic External Memory with Mem0
 ```python
 import os
-from crewai import Crew, Process
+from crewai import Agent, Crew, Process, Task
+from crewai.memory.external.external_memory import ExternalMemory
 
-# Set your Mem0 API key
-os.environ["MEM0_API_KEY"] = "m0-your-api-key"
-
-crew = Crew(
-    agents=[...],
-    tasks=[...],
-    memory=True,  # Required for contextual memory integration
-    memory_config={
-        "provider": "mem0",
-        "config": {"user_id": "john"},
-        "user_memory": {}  # Required - triggers user memory initialization
-    },
-    process=Process.sequential,
-    verbose=True
-)
-```
-
-### Advanced Mem0 Configuration
-```python
-crew = Crew(
-    agents=[...],
-    tasks=[...],
-    memory=True,
-    memory_config={
-        "provider": "mem0",
-        "config": {
-            "user_id": "john",
-            "org_id": "my_org_id",        # Optional
-            "project_id": "my_project_id", # Optional
-            "api_key": "custom-api-key"    # Optional - overrides env var
-        },
-        "user_memory": {}
-    }
-)
-```
-
-### Local Mem0 Configuration
-```python
-crew = Crew(
-    agents=[...],
-    tasks=[...],
-    memory=True,
-    memory_config={
+# Create external memory instance with local Mem0 Configuration
+external_memory = ExternalMemory(
+    embedder_config={
         "provider": "mem0",
         "config": {
             "user_id": "john",
@@ -761,37 +711,60 @@ crew = Crew(
                     "provider": "openai",
                     "config": {"api_key": "your-api-key", "model": "text-embedding-3-small"}
                 }
-            }
+            },
+            "infer": True # Optional defaults to True
         },
-        "user_memory": {}
-    }
-)
-```
-
-## 3. External Memory (New Approach)
-
-External Memory provides a standalone memory system that operates independently from the crew's built-in memory. This is ideal for specialized memory providers or cross-application memory sharing.
-
-### Basic External Memory with Mem0
-```python
-import os
-from crewai import Agent, Crew, Process, Task
-from crewai.memory.external.external_memory import ExternalMemory
-
-os.environ["MEM0_API_KEY"] = "your-api-key"
-
-# Create external memory instance
-external_memory = ExternalMemory(
-    embedder_config={
-        "provider": "mem0",
-        "config": {"user_id": "U-123"}
     }
 )
 
 crew = Crew(
     agents=[...],
     tasks=[...],
-    external_memory=external_memory,  # Separate from basic memory
+    external_memory=external_memory, # Separate from basic memory
+    process=Process.sequential,
+    verbose=True
+)
+```
+
+### Advanced External Memory with Mem0 Client
+When using Mem0 Client, you can customize the memory configuration further, by using parameters like 'includes', 'excludes', 'custom_categories', 'infer' and 'run_id' (this is only for short-term memory).
+You can find more details in the [Mem0 documentation](https://docs.mem0.ai/).
+
+```python
+import os
+from crewai import Agent, Crew, Process, Task
+from crewai.memory.external.external_memory import ExternalMemory
+
+new_categories = [
+    {"lifestyle_management_concerns": "Tracks daily routines, habits, hobbies and interests including cooking, time management and work-life balance"},
+    {"seeking_structure": "Documents goals around creating routines, schedules, and organized systems in various life areas"},
+    {"personal_information": "Basic information about the user including name, preferences, and personality traits"}
+]
+
+os.environ["MEM0_API_KEY"] = "your-api-key"
+
+# Create external memory instance with Mem0 Client
+external_memory = ExternalMemory(
+    embedder_config={
+        "provider": "mem0",
+        "config": {
+            "user_id": "john",
+            "org_id": "my_org_id",        # Optional
+            "project_id": "my_project_id", # Optional
+            "api_key": "custom-api-key"    # Optional - overrides env var
+            "run_id": "my_run_id",        # Optional - for short-term memory
+            "includes": "include1",       # Optional 
+            "excludes": "exclude1",       # Optional
+            "infer": True                 # Optional defaults to True
+            "custom_categories": new_categories  # Optional - custom categories for user memory
+        },
+    }
+)
+
+crew = Crew(
+    agents=[...],
+    tasks=[...],
+    external_memory=external_memory, # Separate from basic memory
     process=Process.sequential,
     verbose=True
 )
@@ -830,17 +803,18 @@ crew = Crew(
 )
 ```
 
-## Memory System Comparison
+## 🧠 Memory System Comparison
 
-| Feature | Basic Memory | User Memory (Legacy) | External Memory |
-|---------|-------------|---------------------|----------------|
-| **Setup Complexity** | Simple | Medium | Medium |
-| **Integration** | Built-in contextual | Contextual + User-specific | Standalone |
-| **Storage** | Local files | Mem0 Cloud/Local | Custom/Mem0 |
-| **Cross-session** | ✅ | ✅ | ✅ |
-| **User-specific** | ❌ | ✅ | ✅ |
-| **Custom providers** | Limited | Mem0 only | Any provider |
-| **Recommended for** | Most use cases | Legacy projects | Specialized needs |
+| **Category**        | **Feature**            | **Basic Memory**            | **External Memory**         |
+|---------------------|------------------------|-----------------------------|------------------------------|
+| **Ease of Use**     | Setup Complexity       | Simple                      | Moderate                     |
+|                     | Integration            | Built-in (contextual)       | Standalone                   |
+| **Persistence**     | Storage                | Local files                 | Custom / Mem0                |
+|                     | Cross-session Support  | ✅                           | ✅                           |
+| **Personalization** | User-specific Memory   | ❌                          |  ✅                           |
+|                     | Custom Providers       | Limited                     | Any provider                 |
+| **Use Case Fit**    | Recommended For        | Most general use cases      | Specialized / custom needs   |
+
 
 ## Supported Embedding Providers
 

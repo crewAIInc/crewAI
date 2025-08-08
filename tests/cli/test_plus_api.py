@@ -1,8 +1,8 @@
-import os
 import unittest
 from unittest.mock import MagicMock, patch, ANY
 
 from crewai.cli.plus_api import PlusAPI
+from crewai.cli.constants import DEFAULT_CREWAI_ENTERPRISE_URL
 
 
 class TestPlusAPI(unittest.TestCase):
@@ -30,29 +30,41 @@ class TestPlusAPI(unittest.TestCase):
         )
         self.assertEqual(response, mock_response)
 
-    def assert_request_with_org_id(self, mock_make_request, method: str, endpoint: str, **kwargs):
+    def assert_request_with_org_id(
+        self, mock_make_request, method: str, endpoint: str, **kwargs
+    ):
         mock_make_request.assert_called_once_with(
-            method, f"https://app.crewai.com{endpoint}", headers={'Authorization': ANY, 'Content-Type': ANY, 'User-Agent':  ANY, 'X-Crewai-Version': ANY, 'X-Crewai-Organization-Id': self.org_uuid}, **kwargs
+            method,
+            f"{DEFAULT_CREWAI_ENTERPRISE_URL}{endpoint}",
+            headers={
+                "Authorization": ANY,
+                "Content-Type": ANY,
+                "User-Agent": ANY,
+                "X-Crewai-Version": ANY,
+                "X-Crewai-Organization-Id": self.org_uuid,
+            },
+            **kwargs,
         )
 
     @patch("crewai.cli.plus_api.Settings")
     @patch("requests.Session.request")
-    def test_login_to_tool_repository_with_org_uuid(self, mock_make_request, mock_settings_class):
+    def test_login_to_tool_repository_with_org_uuid(
+        self, mock_make_request, mock_settings_class
+    ):
         mock_settings = MagicMock()
         mock_settings.org_uuid = self.org_uuid
+        mock_settings.enterprise_base_url = DEFAULT_CREWAI_ENTERPRISE_URL
         mock_settings_class.return_value = mock_settings
         # re-initialize Client
         self.api = PlusAPI(self.api_key)
-        
+
         mock_response = MagicMock()
         mock_make_request.return_value = mock_response
 
         response = self.api.login_to_tool_repository()
 
         self.assert_request_with_org_id(
-            mock_make_request,
-            'POST',
-            '/crewai_plus/api/v1/tools/login'
+            mock_make_request, "POST", "/crewai_plus/api/v1/tools/login"
         )
         self.assertEqual(response, mock_response)
 
@@ -66,28 +78,27 @@ class TestPlusAPI(unittest.TestCase):
             "GET", "/crewai_plus/api/v1/agents/test_agent_handle"
         )
         self.assertEqual(response, mock_response)
-        
+
     @patch("crewai.cli.plus_api.Settings")
     @patch("requests.Session.request")
     def test_get_agent_with_org_uuid(self, mock_make_request, mock_settings_class):
         mock_settings = MagicMock()
         mock_settings.org_uuid = self.org_uuid
+        mock_settings.enterprise_base_url = DEFAULT_CREWAI_ENTERPRISE_URL
         mock_settings_class.return_value = mock_settings
         # re-initialize Client
         self.api = PlusAPI(self.api_key)
-        
+
         mock_response = MagicMock()
         mock_make_request.return_value = mock_response
 
         response = self.api.get_agent("test_agent_handle")
 
         self.assert_request_with_org_id(
-            mock_make_request,
-            "GET",
-            "/crewai_plus/api/v1/agents/test_agent_handle"
+            mock_make_request, "GET", "/crewai_plus/api/v1/agents/test_agent_handle"
         )
         self.assertEqual(response, mock_response)
-    
+
     @patch("crewai.cli.plus_api.PlusAPI._make_request")
     def test_get_tool(self, mock_make_request):
         mock_response = MagicMock()
@@ -98,12 +109,13 @@ class TestPlusAPI(unittest.TestCase):
             "GET", "/crewai_plus/api/v1/tools/test_tool_handle"
         )
         self.assertEqual(response, mock_response)
-        
+
     @patch("crewai.cli.plus_api.Settings")
     @patch("requests.Session.request")
     def test_get_tool_with_org_uuid(self, mock_make_request, mock_settings_class):
         mock_settings = MagicMock()
         mock_settings.org_uuid = self.org_uuid
+        mock_settings.enterprise_base_url = DEFAULT_CREWAI_ENTERPRISE_URL
         mock_settings_class.return_value = mock_settings
         # re-initialize Client
         self.api = PlusAPI(self.api_key)
@@ -115,9 +127,7 @@ class TestPlusAPI(unittest.TestCase):
         response = self.api.get_tool("test_tool_handle")
 
         self.assert_request_with_org_id(
-            mock_make_request,
-            "GET",
-            "/crewai_plus/api/v1/tools/test_tool_handle"
+            mock_make_request, "GET", "/crewai_plus/api/v1/tools/test_tool_handle"
         )
         self.assertEqual(response, mock_response)
 
@@ -147,12 +157,13 @@ class TestPlusAPI(unittest.TestCase):
             "POST", "/crewai_plus/api/v1/tools", json=params
         )
         self.assertEqual(response, mock_response)
-        
+
     @patch("crewai.cli.plus_api.Settings")
     @patch("requests.Session.request")
     def test_publish_tool_with_org_uuid(self, mock_make_request, mock_settings_class):
         mock_settings = MagicMock()
         mock_settings.org_uuid = self.org_uuid
+        mock_settings.enterprise_base_url = DEFAULT_CREWAI_ENTERPRISE_URL
         mock_settings_class.return_value = mock_settings
         # re-initialize Client
         self.api = PlusAPI(self.api_key)
@@ -160,7 +171,7 @@ class TestPlusAPI(unittest.TestCase):
         # Set up mock response
         mock_response = MagicMock()
         mock_make_request.return_value = mock_response
-        
+
         handle = "test_tool_handle"
         public = True
         version = "1.0.0"
@@ -180,12 +191,9 @@ class TestPlusAPI(unittest.TestCase):
             "description": description,
             "available_exports": None,
         }
-        
+
         self.assert_request_with_org_id(
-            mock_make_request,
-            "POST",
-            "/crewai_plus/api/v1/tools",
-            json=expected_params
+            mock_make_request, "POST", "/crewai_plus/api/v1/tools", json=expected_params
         )
         self.assertEqual(response, mock_response)
 
@@ -311,8 +319,11 @@ class TestPlusAPI(unittest.TestCase):
             "POST", "/crewai_plus/api/v1/crews", json=payload
         )
 
-    @patch.dict(os.environ, {"CREWAI_BASE_URL": "https://custom-url.com/api"})
-    def test_custom_base_url(self):
+    @patch("crewai.cli.plus_api.Settings")
+    def test_custom_base_url(self, mock_settings_class):
+        mock_settings = MagicMock()
+        mock_settings.enterprise_base_url = "https://custom-url.com/api"
+        mock_settings_class.return_value = mock_settings
         custom_api = PlusAPI("test_key")
         self.assertEqual(
             custom_api.base_url,

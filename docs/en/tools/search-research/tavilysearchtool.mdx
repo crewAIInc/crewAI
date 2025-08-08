@@ -1,0 +1,122 @@
+---
+title: "Tavily Search Tool"
+description: "Perform comprehensive web searches using the Tavily Search API"
+icon: "magnifying-glass"
+---
+
+The `TavilySearchTool` provides an interface to the Tavily Search API, enabling CrewAI agents to perform comprehensive web searches. It allows for specifying search depth, topics, time ranges, included/excluded domains, and whether to include direct answers, raw content, or images in the results.
+
+## Installation
+
+To use the `TavilySearchTool`, you need to install the `tavily-python` library:
+
+```shell
+pip install 'crewai[tools]' tavily-python
+```
+
+## Environment Variables
+
+Ensure your Tavily API key is set as an environment variable:
+
+```bash
+export TAVILY_API_KEY='your_tavily_api_key'
+```
+
+## Example Usage
+
+Here's how to initialize and use the `TavilySearchTool` within a CrewAI agent:
+
+```python
+import os
+from crewai import Agent, Task, Crew
+from crewai_tools import TavilySearchTool
+
+# Ensure the TAVILY_API_KEY environment variable is set
+# os.environ["TAVILY_API_KEY"] = "YOUR_TAVILY_API_KEY"
+
+# Initialize the tool
+tavily_tool = TavilySearchTool()
+
+# Create an agent that uses the tool
+researcher = Agent(
+    role='Market Researcher',
+    goal='Find information about the latest AI trends',
+    backstory='An expert market researcher specializing in technology.',
+    tools=[tavily_tool],
+    verbose=True
+)
+
+# Create a task for the agent
+research_task = Task(
+    description='Search for the top 3 AI trends in 2024.',
+    expected_output='A JSON report summarizing the top 3 AI trends found.',
+    agent=researcher
+)
+
+# Form the crew and kick it off
+crew = Crew(
+    agents=[researcher],
+    tasks=[research_task],
+    verbose=2
+)
+
+result = crew.kickoff()
+print(result)
+```
+
+## Configuration Options
+
+The `TavilySearchTool` accepts the following arguments during initialization or when calling the `run` method:
+
+- `query` (str): **Required**. The search query string.
+- `search_depth` (Literal["basic", "advanced"], optional): The depth of the search. Defaults to `"basic"`.
+- `topic` (Literal["general", "news", "finance"], optional): The topic to focus the search on. Defaults to `"general"`.
+- `time_range` (Literal["day", "week", "month", "year"], optional): The time range for the search. Defaults to `None`.
+- `days` (int, optional): The number of days to search back. Relevant if `time_range` is not set. Defaults to `7`.
+- `max_results` (int, optional): The maximum number of search results to return. Defaults to `5`.
+- `include_domains` (Sequence[str], optional): A list of domains to prioritize in the search. Defaults to `None`.
+- `exclude_domains` (Sequence[str], optional): A list of domains to exclude from the search. Defaults to `None`.
+- `include_answer` (Union[bool, Literal["basic", "advanced"]], optional): Whether to include a direct answer synthesized from the search results. Defaults to `False`.
+- `include_raw_content` (bool, optional): Whether to include the raw HTML content of the searched pages. Defaults to `False`.
+- `include_images` (bool, optional): Whether to include image results. Defaults to `False`.
+- `timeout` (int, optional): The request timeout in seconds. Defaults to `60`.
+
+## Advanced Usage
+
+You can configure the tool with custom parameters:
+
+```python
+# Example: Initialize with specific parameters
+custom_tavily_tool = TavilySearchTool(
+    search_depth='advanced',
+    max_results=10,
+    include_answer=True
+)
+
+# The agent will use these defaults
+agent_with_custom_tool = Agent(
+    role="Advanced Researcher",
+    goal="Conduct detailed research with comprehensive results",
+    tools=[custom_tavily_tool]
+)
+```
+
+## Features
+
+- **Comprehensive Search**: Access to Tavily's powerful search index
+- **Configurable Depth**: Choose between basic and advanced search modes
+- **Topic Filtering**: Focus searches on general, news, or finance topics
+- **Time Range Control**: Limit results to specific time periods
+- **Domain Control**: Include or exclude specific domains
+- **Direct Answers**: Get synthesized answers from search results
+- **Content Filtering**: Prevent context window issues with automatic content truncation
+
+## Response Format
+
+The tool returns search results as a JSON string containing:
+- Search results with titles, URLs, and content snippets
+- Optional direct answers to queries
+- Optional image results
+- Optional raw HTML content (when enabled)
+
+Content for each result is automatically truncated to prevent context window issues while maintaining the most relevant information.

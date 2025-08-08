@@ -16,10 +16,14 @@ class ToolSelectionEvaluator(BaseEvaluator):
     def evaluate(
         self,
         agent: Agent,
-        task: Task,
         execution_trace: Dict[str, Any],
         final_output: str,
+        task: Task | None = None,
     ) -> EvaluationScore:
+        task_context = ""
+        if task is not None:
+            task_context = f"Task description: {task.description}"
+
         tool_uses = execution_trace.get("tool_uses", [])
         tool_count = len(tool_uses)
         unique_tool_types = set([tool.get("tool", "Unknown tool") for tool in tool_uses])
@@ -72,7 +76,7 @@ Return your evaluation as JSON with these fields:
 """},
             {"role": "user", "content": f"""
 Agent role: {agent.role}
-Task description: {task.description}
+{task_context}
 
 Available tools for this agent:
 {available_tools_info}
@@ -128,10 +132,13 @@ class ParameterExtractionEvaluator(BaseEvaluator):
     def evaluate(
         self,
         agent: Agent,
-        task: Task,
         execution_trace: Dict[str, Any],
         final_output: str,
+        task: Task | None = None,
     ) -> EvaluationScore:
+        task_context = ""
+        if task is not None:
+            task_context = f"Task description: {task.description}"
         tool_uses = execution_trace.get("tool_uses", [])
         tool_count = len(tool_uses)
 
@@ -212,7 +219,7 @@ Return your evaluation as JSON with these fields:
 """},
             {"role": "user", "content": f"""
 Agent role: {agent.role}
-Task description: {task.description}
+{task_context}
 
 Parameter extraction examples:
 {param_samples_text}
@@ -267,10 +274,13 @@ class ToolInvocationEvaluator(BaseEvaluator):
     def evaluate(
         self,
         agent: Agent,
-        task: Task,
         execution_trace: Dict[str, Any],
         final_output: str,
+        task: Task | None = None,
     ) -> EvaluationScore:
+        task_context = ""
+        if task is not None:
+            task_context = f"Task description: {task.description}"
         tool_uses = execution_trace.get("tool_uses", [])
         tool_errors = []
         tool_count = len(tool_uses)
@@ -352,7 +362,7 @@ Return your evaluation as JSON with these fields:
 """},
             {"role": "user", "content": f"""
 Agent role: {agent.role}
-Task description: {task.description}
+{task_context}
 
 Tool invocation examples:
 {invocation_samples_text}

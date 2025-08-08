@@ -36,10 +36,14 @@ class ReasoningEfficiencyEvaluator(BaseEvaluator):
     def evaluate(
         self,
         agent: Agent,
-        task: Task,
         execution_trace: Dict[str, Any],
-        final_output: TaskOutput,
+        final_output: TaskOutput | str,
+        task: Task | None = None,
     ) -> EvaluationScore:
+        task_context = ""
+        if task is not None:
+            task_context = f"Task description: {task.description}\nExpected output: {task.expected_output}\n"
+
         llm_calls = execution_trace.get("llm_calls", [])
 
         if not llm_calls or len(llm_calls) < 2:
@@ -83,6 +87,8 @@ class ReasoningEfficiencyEvaluator(BaseEvaluator):
 
         call_samples = self._get_call_samples(llm_calls)
 
+        final_output = final_output.raw if isinstance(final_output, TaskOutput) else final_output
+
         prompt = [
             {"role": "system", "content": """You are an expert evaluator assessing the reasoning efficiency of an AI agent's thought process.
 
@@ -117,7 +123,7 @@ Return your evaluation as JSON with the following structure:
 }"""},
             {"role": "user", "content": f"""
 Agent role: {agent.role}
-Task description: {task.description}
+{task_context}
 
 Reasoning efficiency metrics:
 - Total LLM calls: {efficiency_metrics["total_llm_calls"]}
@@ -130,7 +136,7 @@ Sample of agent reasoning flow (chronological sequence):
 {call_samples}
 
 Agent's final output:
-{final_output.raw[:500]}... (truncated)
+{final_output[:500]}... (truncated)
 
 Evaluate the reasoning efficiency of this agent based on these interaction patterns.
 Identify any inefficient reasoning patterns and provide specific suggestions for optimization.

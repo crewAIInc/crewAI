@@ -1,5 +1,5 @@
 import time
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Dict, List
 
 from crewai.memory.entity.entity_memory_item import EntityMemoryItem
 from crewai.memory.long_term.long_term_memory_item import LongTermMemoryItem
@@ -21,6 +21,7 @@ class CrewAgentExecutorMixin:
     task: "Task"
     iterations: int
     max_iter: int
+    messages: List[Dict[str, str]]
     _i18n: I18N
     _printer: Printer = Printer()
 
@@ -65,6 +66,7 @@ class CrewAgentExecutorMixin:
                     value=output.text,
                     metadata={
                         "description": self.task.description,
+                        "messages": self.messages,
                     },
                     agent=self.agent.role,
                 )
@@ -130,7 +132,6 @@ class CrewAgentExecutorMixin:
     def _ask_human_input(self, final_answer: str) -> str:
         """Prompt human input with mode-appropriate messaging."""
         event_listener.formatter.pause_live_updates()
-        
         try:
             self._printer.print(
                 content=f"\033[1m\033[95m ## Final Result:\033[00m \033[92m{final_answer}\033[00m"

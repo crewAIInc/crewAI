@@ -3,7 +3,7 @@ import inspect
 from typing_extensions import Any
 import warnings
 from crewai.experimental.evaluation.experiment import ExperimentResults, ExperimentRunner
-from crewai import Crew
+from crewai import Crew, Agent
 
 def assert_experiment_successfully(experiment_results: ExperimentResults, baseline_filepath: str | None = None) -> None:
     failed_tests = [result for result in experiment_results.results if not result.passed]
@@ -35,10 +35,10 @@ def assert_experiment_no_regression(comparison_result: dict[str, list[str]]) -> 
             UserWarning
         )
 
-def run_experiment(dataset: list[dict[str, Any]], crew: Crew, verbose: bool = False) -> ExperimentResults:
+def run_experiment(dataset: list[dict[str, Any]], crew: Crew | None = None, agents: list[Agent] | None = None, verbose: bool = False) -> ExperimentResults:
     runner = ExperimentRunner(dataset=dataset)
 
-    return runner.run(crew=crew, print_summary=verbose)
+    return runner.run(agents=agents, crew=crew, print_summary=verbose)
 
 def _get_baseline_filepath_fallback() -> str:
     test_func_name = "experiment_fallback"

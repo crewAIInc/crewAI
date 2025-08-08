@@ -1,10 +1,10 @@
 import os
 from typing import Any, Dict, List
-
+from collections import defaultdict
 from mem0 import Memory, MemoryClient
+from crewai.utilities.chromadb import sanitize_collection_name
 
 from crewai.memory.storage.interface import Storage
-from crewai.utilities.chromadb import sanitize_collection_name
 
 MAX_AGENT_ID_LENGTH_MEM0 = 255
 
@@ -13,122 +13,165 @@ class Mem0Storage(Storage):
     """
     Extends Storage to handle embedding and searching across entities using Mem0.
     """
-
     def __init__(self, type, crew=None, config=None):
         super().__init__()
-        supported_types = ["user", "short_term", "long_term", "entities", "external"]
-        if type not in supported_types:
-            raise ValueError(
-                f"Invalid type '{type}' for Mem0Storage. Must be one of: "
-                + ", ".join(supported_types)
-            )
 
+        self._validate_type(type)
         self.memory_type = type
         self.crew = crew
         self.config = config or {}
-        # TODO: Memory config will be removed in the future the config will be passed as a parameter
-        self.memory_config = self.config or getattr(crew, "memory_config", {}) or {}
 
-        # User ID is required for user memory type "user" since it's used as a unique identifier for the user.
-        user_id = self._get_user_id()
-        if type == "user" and not user_id:
-            raise ValueError("User ID is required for user memory type")
+        self._extract_config_values()
+        self._initialize_memory()
 
-        # API key in memory config overrides the environment variable
-        config = self._get_config()
-        mem0_api_key = config.get("api_key") or os.getenv("MEM0_API_KEY")
-        mem0_org_id = config.get("org_id")
-        mem0_project_id = config.get("project_id")
-        mem0_local_config = config.get("local_mem0_config")
+    def _validate_type(self, type):
+        supported_types = {"short_term", "long_term", "entities", "external"}
+        if type not in supported_types:
+            raise ValueError(
+                f"Invalid type '{type}' for Mem0Storage. Must be one of: {', '.join(supported_types)}"
+            )
 
-        # Initialize MemoryClient or Memory based on the presence of the mem0_api_key
-        if mem0_api_key:
-            if mem0_org_id and mem0_project_id:
-                self.memory = MemoryClient(
-                    api_key=mem0_api_key, org_id=mem0_org_id, project_id=mem0_project_id
-                )
-            else:
-                self.memory = MemoryClient(api_key=mem0_api_key)
+    def _extract_config_values(self):
+        self.mem0_run_id = self.config.get("run_id")
+        self.includes = self.config.get("includes")
+        self.excludes = self.config.get("excludes")
+        self.custom_categories = self.config.get("custom_categories")
+        self.infer = self.config.get("infer", True)
+
+    def _initialize_memory(self):
+        api_key = self.config.get("api_key") or os.getenv("MEM0_API_KEY")
+        org_id = self.config.get("org_id")
+        project_id = self.config.get("project_id")
+        local_config = self.config.get("local_mem0_config")
+
+        if api_key:
+            self.memory = (
+                MemoryClient(api_key=api_key, org_id=org_id, project_id=project_id)
+                if org_id and project_id
+                else MemoryClient(api_key=api_key)
+            )
+            if self.custom_categories:
+                self.memory.update_project(custom_categories=self.custom_categories)
         else:
-            if mem0_local_config and len(mem0_local_config):
-                self.memory = Memory.from_config(mem0_local_config)
-            else:
-                self.memory = Memory()
+            self.memory = (
+                Memory.from_config(local_config)
+                if local_config and len(local_config)
+                else Memory()
+            )
+
+    def _create_filter_for_search(self):
+        """
+        Returns:
+            dict: A filter dictionary containing AND conditions for querying data.
+                - Includes user_id and agent_id if both are present.
+                - Includes user_id if only user_id is present.
+                - Includes agent_id if only agent_id is present.
+                - Includes run_id if memory_type is 'short_term' and mem0_run_id is present.
+        """
+        filter = defaultdict(list)
+
+        if self.memory_type == "short_term" and self.mem0_run_id:
+            filter["AND"].append({"run_id": self.mem0_run_id})
+        else:
+            user_id = self.config.get("user_id", "")
+            agent_id = self.config.get("agent_id", "")
+
+            if user_id and agent_id:
+                filter["OR"].append({"user_id": user_id})
+                filter["OR"].append({"agent_id": agent_id})
+            elif user_id:
+                filter["AND"].append({"user_id": user_id})
+            elif agent_id:
+                filter["AND"].append({"agent_id": agent_id})
+
+        return filter
+
+    def save(self, value: Any, metadata: Dict[str, Any]) -> None:
+        user_id = self.config.get("user_id", "")
+        assistant_message = [{"role" : "assistant","content" : value}]
+
+        base_metadata = {
+            "short_term": "short_term",
+            "long_term": "long_term",
+            "entities": "entity",
+            "external": "external"
+        }
+
+        # Shared base params
+        params: dict[str, Any] = {
+            "metadata": {"type": base_metadata[self.memory_type], **metadata},
+            "infer": self.infer
+        }
+
+        # MemoryClient-specific overrides
+        if isinstance(self.memory, MemoryClient):
+            params["includes"] = self.includes
+            params["excludes"] = self.excludes
+            params["output_format"] = "v1.1"
+            params["version"] = "v2"
+
+        if self.memory_type == "short_term" and self.mem0_run_id:
+            params["run_id"] = self.mem0_run_id
+
+        if user_id:
+            params["user_id"] = user_id
+
+        if agent_id := self.config.get("agent_id", self._get_agent_name()):
+            params["agent_id"] = agent_id
+
+        self.memory.add(assistant_message, **params)
+
+    def search(self,query: str,limit: int = 3,score_threshold: float = 0.35) -> List[Any]:
+        params = {
+            "query": query,
+            "limit": limit,
+            "version": "v2",
+            "output_format": "v1.1"
+            }
+
+        if user_id := self.config.get("user_id", ""):
+            params["user_id"] = user_id
+
+        memory_type_map = {
+            "short_term": {"type": "short_term"},
+            "long_term": {"type": "long_term"},
+            "entities": {"type": "entity"},
+            "external": {"type": "external"},
+        }
+
+        if self.memory_type in memory_type_map:
+            params["metadata"] = memory_type_map[self.memory_type]
+            if self.memory_type == "short_term":
+                params["run_id"] = self.mem0_run_id
+
+        # Discard the filters for now since we create the filters
+        # automatically when the crew is created.
+
+        params["filters"] = self._create_filter_for_search()
+        params['threshold'] = score_threshold
+
+        if isinstance(self.memory, Memory):
+            del params["metadata"], params["version"], params['output_format']
+            if params.get("run_id"):
+                del params["run_id"]
+
+        results = self.memory.search(**params)
+
+        # This makes it compatible for Contextual Memory to retrieve
+        for result in results["results"]:
+            result["context"] = result["memory"]
+        
+        return [r for r in results["results"]]
+
+    def reset(self):
+        if self.memory:
+            self.memory.reset()
 
     def _sanitize_role(self, role: str) -> str:
         """
         Sanitizes agent roles to ensure valid directory names.
         """
         return role.replace("\n", "").replace(" ", "_").replace("/", "_")
-
-    def save(self, value: Any, metadata: Dict[str, Any]) -> None:
-        user_id = self._get_user_id()
-        agent_name = self._get_agent_name()
-        params = None
-        if self.memory_type == "short_term":
-            params = {
-                "agent_id": agent_name,
-                "infer": False,
-                "metadata": {"type": "short_term", **metadata},
-            }
-        elif self.memory_type == "long_term":
-            params = {
-                "agent_id": agent_name,
-                "infer": False,
-                "metadata": {"type": "long_term", **metadata},
-            }
-        elif self.memory_type == "entities":
-            params = {
-                "agent_id": agent_name,
-                "infer": False,
-                "metadata": {"type": "entity", **metadata},
-            }
-        elif self.memory_type == "external":
-            params = {
-                "user_id": user_id,
-                "agent_id": agent_name,
-                "metadata": {"type": "external", **metadata},
-            }
-
-        if params:
-            if isinstance(self.memory, MemoryClient):
-                params["output_format"] = "v1.1"
-            self.memory.add(value, **params)
-
-    def search(
-        self,
-        query: str,
-        limit: int = 3,
-        score_threshold: float = 0.35,
-    ) -> List[Any]:
-        params = {"query": query, "limit": limit, "output_format": "v1.1"}
-        if user_id := self._get_user_id():
-            params["user_id"] = user_id
-
-        agent_name = self._get_agent_name()
-        if self.memory_type == "short_term":
-            params["agent_id"] = agent_name
-            params["metadata"] = {"type": "short_term"}
-        elif self.memory_type == "long_term":
-            params["agent_id"] = agent_name
-            params["metadata"] = {"type": "long_term"}
-        elif self.memory_type == "entities":
-            params["agent_id"] = agent_name
-            params["metadata"] = {"type": "entity"}
-        elif self.memory_type == "external":
-            params["agent_id"] = agent_name
-            params["metadata"] = {"type": "external"}
-
-        # Discard the filters for now since we create the filters
-        # automatically when the crew is created.
-        if isinstance(self.memory, Memory):
-            del params["metadata"], params["output_format"]
-            
-        results = self.memory.search(**params)
-        return [r for r in results["results"] if r["score"] >= score_threshold]
-
-    def _get_user_id(self) -> str:
-        return self._get_config().get("user_id", "")
 
     def _get_agent_name(self) -> str:
         if not self.crew:
@@ -137,11 +180,4 @@ class Mem0Storage(Storage):
         agents = self.crew.agents
         agents = [self._sanitize_role(agent.role) for agent in agents]
         agents = "_".join(agents)
-        return sanitize_collection_name(name=agents,max_collection_length=MAX_AGENT_ID_LENGTH_MEM0)
-
-    def _get_config(self) -> Dict[str, Any]:
-        return self.config or getattr(self, "memory_config", {}).get("config", {}) or {}
-
-    def reset(self):
-        if self.memory:
-            self.memory.reset()
+        return sanitize_collection_name(name=agents, max_collection_length=MAX_AGENT_ID_LENGTH_MEM0)

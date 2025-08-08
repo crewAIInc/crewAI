@@ -3,6 +3,7 @@ from typing import Optional
 
 import click
 from crewai.cli.config import Settings
+from crewai.cli.settings.main import SettingsCommand
 from crewai.cli.add_crew_to_flow import add_crew_to_flow
 from crewai.cli.create_crew import create_crew
 from crewai.cli.create_flow import create_flow
@@ -13,6 +14,7 @@ from crewai.memory.storage.kickoff_task_outputs_storage import (
 
 from .authentication.main import AuthenticationCommand
 from .deploy.main import DeployCommand
+from .enterprise.main import EnterpriseConfigureCommand
 from .evaluate_crew import evaluate_crew
 from .install_crew import install_crew
 from .kickoff_flow import kickoff_flow
@@ -227,7 +229,7 @@ def update():
 @crewai.command()
 def login():
     """Sign Up/Login to CrewAI Enterprise."""
-    Settings().clear()
+    Settings().clear_user_settings()
     AuthenticationCommand().login()
 
 
@@ -369,8 +371,8 @@ def org():
     pass
 
 
-@org.command()
-def list():
+@org.command("list")
+def org_list():
     """List available organizations."""
     org_command = OrganizationCommand()
     org_command.list()
@@ -389,6 +391,49 @@ def current():
     """Show current organization when 'crewai org' is called without subcommands."""
     org_command = OrganizationCommand()
     org_command.current()
+
+
+@crewai.group()
+def enterprise():
+    """Enterprise Configuration commands."""
+    pass
+
+
+@enterprise.command("configure")
+@click.argument("enterprise_url")
+def enterprise_configure(enterprise_url: str):
+    """Configure CrewAI Enterprise OAuth2 settings from the provided Enterprise URL."""
+    enterprise_command = EnterpriseConfigureCommand()
+    enterprise_command.configure(enterprise_url)
+
+
+@crewai.group()
+def config():
+    """CLI Configuration commands."""
+    pass
+
+
+@config.command("list")
+def config_list():
+    """List all CLI configuration parameters."""
+    config_command = SettingsCommand()
+    config_command.list()
+
+
+@config.command("set")
+@click.argument("key")
+@click.argument("value")
+def config_set(key: str, value: str):
+    """Set a CLI configuration parameter."""
+    config_command = SettingsCommand()
+    config_command.set(key, value)
+
+
+@config.command("reset")
+def config_reset():
+    """Reset all CLI configuration parameters to default values."""
+    config_command = SettingsCommand()
+    config_command.reset_all_settings()
 
 
 if __name__ == "__main__":

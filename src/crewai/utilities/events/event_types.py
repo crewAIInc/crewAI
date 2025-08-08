@@ -4,6 +4,7 @@ from .agent_events import (
     AgentExecutionCompletedEvent,
     AgentExecutionErrorEvent,
     AgentExecutionStartedEvent,
+    LiteAgentExecutionCompletedEvent,
 )
 from .crew_events import (
     CrewKickoffCompletedEvent,
@@ -80,6 +81,7 @@ EventTypes = Union[
     CrewTrainFailedEvent,
     AgentExecutionStartedEvent,
     AgentExecutionCompletedEvent,
+    LiteAgentExecutionCompletedEvent,
     TaskStartedEvent,
     TaskCompletedEvent,
     TaskFailedEvent,
