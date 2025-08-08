@@ -1,4 +1,3 @@
-import os
 import asyncio
 import json
 import re
@@ -78,6 +77,7 @@ from crewai.utilities.events.listeners.tracing.trace_listener import (
 )
 
 
+from crewai.utilities.events.listeners.tracing.utils import is_tracing_enabled
 from crewai.utilities.formatter import (
     aggregate_raw_outputs_from_task_outputs,
     aggregate_raw_outputs_from_tasks,
@@ -248,6 +248,10 @@ class Crew(FlowTrackable, BaseModel):
         default=None,
         description="Metrics for the LLM usage during all tasks execution.",
     )
+    tracing: Optional[bool] = Field(
+        default=False,
+        description="Whether to enable tracing for the crew.",
+    )
 
     @field_validator("id", mode="before")
     @classmethod
@@ -279,8 +283,8 @@ class Crew(FlowTrackable, BaseModel):
 
         self._cache_handler = CacheHandler()
         event_listener = EventListener()
-        if os.getenv("CREWAI_TRACING_ENABLED", "false").lower() == "true":
-            trace_listener = TraceCollectionListener()
+        if is_tracing_enabled() or self.tracing:
+            trace_listener = TraceCollectionListener(tracing=self.tracing)
             trace_listener.setup_listeners(crewai_event_bus)
         event_listener.verbose = self.verbose
         event_listener.formatter.verbose = self.verbose

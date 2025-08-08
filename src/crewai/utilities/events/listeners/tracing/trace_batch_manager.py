@@ -66,6 +66,7 @@ class TraceBatchManager:
         self, user_context: Dict[str, str], execution_metadata: Dict[str, Any]
     ):
         """Send batch initialization to backend"""
+
         if not self.plus_api or not self.current_batch:
             return
 
@@ -75,8 +76,8 @@ class TraceBatchManager:
                 "execution_type": execution_metadata.get("execution_type", "crew"),
                 "execution_context": {
                     "crew_fingerprint": execution_metadata.get("crew_fingerprint"),
-                    "crew_name": execution_metadata.get("crew_name", "Unknown Crew"),
-                    "flow_name": execution_metadata.get("flow_name", "Unknown Flow"),
+                    "crew_name": execution_metadata.get("crew_name", None),
+                    "flow_name": execution_metadata.get("flow_name", None),
                     "crewai_version": self.current_batch.version,
                     "privacy_level": user_context.get("privacy_level", "standard"),
                 },
