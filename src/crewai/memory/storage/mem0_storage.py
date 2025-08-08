@@ -1,5 +1,5 @@
 import os
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 from collections import defaultdict
 from mem0 import Memory, MemoryClient
 from crewai.utilities.chromadb import sanitize_collection_name
@@ -121,7 +121,7 @@ class Mem0Storage(Storage):
 
         self.memory.add(assistant_message, **params)
 
-    def search(self,query: str,limit: int = 3,score_threshold: float = 0.35) -> List[Any]:
+    def search(self,query: str,limit: int = 3,score_threshold: float = 0.35, agent_role: Optional[str] = None) -> List[Any]:
         params = {
             "query": query,
             "limit": limit,

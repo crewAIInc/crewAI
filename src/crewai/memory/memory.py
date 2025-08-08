@@ -31,11 +31,12 @@ class Memory(BaseModel):
     def search(
         self,
         query: str,
-        limit: int = 3,
+        limit: int = 3, 
         score_threshold: float = 0.35,
+        agent_role: Optional[str] = None,
     ) -> List[Any]:
         return self.storage.search(
-            query=query, limit=limit, score_threshold=score_threshold
+            query=query, limit=limit, score_threshold=score_threshold, agent_role=agent_role
         )
 
     def set_crew(self, crew: Any) -> "Memory":
