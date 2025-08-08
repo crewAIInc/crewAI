@@ -33,7 +33,7 @@ class EnterpriseConfigureCommand(BaseCommand):
             raise SystemExit(1)
 
     def _fetch_oauth_config(self, enterprise_url: str) -> Dict[str, Any]:
-        oauth_endpoint = f"{enterprise_url}/oauth/parameters"
+        oauth_endpoint = f"{enterprise_url}/auth/parameters"
 
         try:
             console.print(f"🔄 Fetching OAuth2 configuration from {oauth_endpoint}...")
