@@ -90,14 +90,12 @@ class TraceCollectionListener(BaseEventListener):
         self,
         batch_manager: Optional[TraceBatchManager] = None,
         tracing: bool = False,
-        # trace_sender: Optional[TraceSender] = None,
     ):
         if self._initialized:
             return
 
         super().__init__()
         self.batch_manager = batch_manager or TraceBatchManager()
-        # self.trace_sender = trace_sender or TraceSender()
         self.trace_enabled = self._check_trace_enabled(tracing)
         self._initialized = True
 
@@ -357,17 +355,9 @@ class TraceCollectionListener(BaseEventListener):
                 "agent": source.agent.role,
             }
         elif event_type == "llm_call_started":
-            return {
-                **self._safe_serialize_to_dict(event),
-                "messages": self._truncate_messages(event.messages),
-                # "messages": event.messages,
-            }
+            return self._safe_serialize_to_dict(event)
         elif event_type == "llm_call_completed":
-            return {
-                **self._safe_serialize_to_dict(event),
-                "messages": self._truncate_messages(event.messages),
-                # "messages": event.messages,
-            }
+            return self._safe_serialize_to_dict(event)
         else:
             return {
                 "event_type": event_type,
