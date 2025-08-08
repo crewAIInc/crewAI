@@ -1,4 +1,5 @@
 import time
+import uuid
 from typing import TYPE_CHECKING
 
 from crewai.memory.entity.entity_memory_item import EntityMemoryItem
@@ -8,6 +9,8 @@ from crewai.utilities.converter import ConverterError
 from crewai.utilities.evaluators.task_evaluator import TaskEvaluator
 from crewai.utilities.printer import Printer
 from crewai.utilities.events.event_listener import event_listener
+from crewai.utilities.events.crewai_event_bus import crewai_event_bus
+from crewai.utilities.events.task_events import HumanInputRequiredEvent, HumanInputCompletedEvent
 
 if TYPE_CHECKING:
     from crewai.agents.agent_builder.base_agent import BaseAgent
@@ -126,6 +129,42 @@ class CrewAgentExecutorMixin:
 
     def _ask_human_input(self, final_answer: str) -> str:
         """Prompt human input with mode-appropriate messaging."""
+        event_id = str(uuid.uuid4())
+        
+        execution_id = getattr(self.crew, 'id', None) if self.crew else None
+        crew_id = str(execution_id) if execution_id else None
+        task_id = str(getattr(self.task, 'id', None)) if self.task else None
+        agent_id = str(getattr(self.agent, 'id', None)) if self.agent else None
+        
+        if self.crew and getattr(self.crew, "_train", False):
+            prompt_text = (
+                "## TRAINING MODE: Provide feedback to improve the agent's performance.\n"
+                "This will be used to train better versions of the agent.\n"
+                "Please provide detailed feedback about the result quality and reasoning process."
+            )
+        else:
+            prompt_text = (
+                "## HUMAN FEEDBACK: Provide feedback on the Final Result and Agent's actions.\n"
+                "Please follow these guidelines:\n"
+                " - If you are happy with the result, simply hit Enter without typing anything.\n"
+                " - Otherwise, provide specific improvement requests.\n"
+                " - You can provide multiple rounds of feedback until satisfied."
+            )
+        
+        crewai_event_bus.emit(
+            self,
+            HumanInputRequiredEvent(
+                execution_id=execution_id,
+                crew_id=crew_id,
+                task_id=task_id,
+                agent_id=agent_id,
+                prompt=prompt_text,
+                context=final_answer,
+                event_id=event_id,
+                reason_flags={"ambiguity": True, "missing_field": False}
+            )
+        )
+        
         event_listener.formatter.pause_live_updates()
         
         try:
@@ -133,7 +172,6 @@ class CrewAgentExecutorMixin:
                 content=f"\033[1m\033[95m ## Final Result:\033[00m \033[92m{final_answer}\033[00m"
             )
 
-            # Training mode prompt (single iteration)
             if self.crew and getattr(self.crew, "_train", False):
                 prompt = (
                     "\n\n=====\n"
@@ -142,7 +180,6 @@ class CrewAgentExecutorMixin:
                     "Please provide detailed feedback about the result quality and reasoning process.\n"
                     "=====\n"
                 )
-            # Regular human-in-the-loop prompt (multiple iterations)
             else:
                 prompt = (
                     "\n\n=====\n"
@@ -158,6 +195,19 @@ class CrewAgentExecutorMixin:
             response = input()
             if response.strip() != "":
                 self._printer.print(content="\nProcessing your feedback...", color="cyan")
+            
+            crewai_event_bus.emit(
+                self,
+                HumanInputCompletedEvent(
+                    execution_id=execution_id,
+                    crew_id=crew_id,
+                    task_id=task_id,
+                    agent_id=agent_id,
+                    event_id=event_id,
+                    human_feedback=response
+                )
+            )
+            
             return response
         finally:
             event_listener.formatter.resume_live_updates()
