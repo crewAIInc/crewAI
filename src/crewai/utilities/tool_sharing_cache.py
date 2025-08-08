@@ -1,26 +1,126 @@
 """Tool sharing cache for optimizing multi-agent tool preparation."""
 
 import hashlib
+from collections import OrderedDict
 from typing import Dict, List, Optional, Any
 
 
 class ToolSharingCache:
     """Cache for sharing prepared tools across agents to avoid redundant initialization."""
 
+    # No need for class-level constants anymore since we simplified
+
     def __init__(self, max_size: int = 128):
-        """Initialize the tool sharing cache.
+        """Initialize the tool sharing cache with OrderedDict for O(1) LRU operations.
 
         Args:
             max_size: Maximum number of cached tool sets to retain
         """
-        self._cache: Dict[str, List[Any]] = {}
+        if max_size < 0:
+            raise ValueError("max_size must be non-negative")
+        self._cache: OrderedDict[str, List[Any]] = OrderedDict()
         self._max_size = max_size
-        self._usage_order: List[str] = []
+        # Cache for tool identifiers to avoid recomputation
+        self._tool_id_cache: Dict[int, str] = {}
+
+    def _get_tool_identifier(self, tool: Any) -> str:
+        """Generate a unique identifier for a Tool/BaseTool instance with caching.
+
+        Uses all relevant Tool attributes to create a deterministic identifier:
+        - name, description, func, args_schema, and other configuration
+
+        Args:
+            tool: A Tool or BaseTool instance
+
+        Returns:
+            A unique string identifier for the tool
+        """
+        # Use object id for cache lookup
+        tool_obj_id = id(tool)
+
+        # Return cached identifier if available
+        if tool_obj_id in self._tool_id_cache:
+            return self._tool_id_cache[tool_obj_id]
+
+        # Build configuration efficiently
+        config_parts = []
+
+        # Get name once and reuse
+        tool_name = getattr(tool, "name", None) or f"tool_{id(tool)}"
+        if tool_name:
+            config_parts.append(f"n:{tool_name}")
+
+        # Add description hash if present (use hash to keep key small)
+        description = getattr(tool, "description", None)
+        if description:
+            desc_str = (
+                str(description) if not isinstance(description, str) else description
+            )
+            config_parts.append(
+                f"d:{hashlib.blake2s(desc_str.encode()).hexdigest()[:8]}"
+            )
+
+        # Add function identity for Tool instances
+        func = getattr(tool, "func", None)
+        if func and callable(func):
+            if hasattr(func, "__code__"):
+                # Use function's code location for identity
+                code = func.__code__
+                func_id = f"{code.co_filename}#{code.co_firstlineno}"
+                config_parts.append(
+                    f"f:{hashlib.blake2s(func_id.encode()).hexdigest()[:8]}"
+                )
+
+        # Extract configuration from args_schema efficiently
+        args_schema = getattr(tool, "args_schema", None)
+        if args_schema:
+            try:
+                if hasattr(args_schema, "model_fields"):
+                    defaults = []
+                    for field_name, field_info in args_schema.model_fields.items():
+                        if hasattr(field_info, "default"):
+                            default = field_info.default
+                            # Skip undefined markers efficiently
+                            if (
+                                default is not None
+                                and str(type(default).__name__) != "PydanticUndefined"
+                            ):
+                                defaults.append(f"{field_name}={default}")
+
+                    if defaults:
+                        defaults_str = "&".join(defaults)
+                        config_parts.append(
+                            f"as:{hashlib.blake2s(defaults_str.encode()).hexdigest()[:8]}"
+                        )
+            except (TypeError, AttributeError):
+                pass
+
+        # Add behavioral attributes that affect tool execution
+        result_as_answer = getattr(tool, "result_as_answer", False)
+        if result_as_answer:
+            config_parts.append("ra:1")
+
+        max_usage = getattr(tool, "max_usage_count", None)
+        if max_usage is not None:
+            config_parts.append(f"mu:{max_usage}")
+
+        # Generate final identifier
+        if config_parts:
+            # Use blake2s for better performance than md5/sha256
+            identifier = hashlib.blake2s("|".join(config_parts).encode()).hexdigest()[
+                :16
+            ]
+        else:
+            identifier = f"id_{tool_obj_id}"
+
+        result = f"{tool_name or 'tool'}:{identifier}"
+
+        # Cache the result
+        self._tool_id_cache[tool_obj_id] = result
+        return result
 
     def _generate_cache_key(
         self,
-        agent_id: str,
-        task_id: str,
         tools: List[Any],
         allow_delegation: bool = False,
         allow_code_execution: bool = False,
@@ -29,9 +129,9 @@ class ToolSharingCache:
     ) -> str:
         """Generate a unique cache key for tool configuration.
 
+        Note: Removed agent_id and task_id to improve cache reuse across agents.
+
         Args:
-            agent_id: Unique identifier for the agent
-            task_id: Unique identifier for the task
             tools: List of tools to be prepared
             allow_delegation: Whether delegation tools should be added
             allow_code_execution: Whether code execution tools should be added
@@ -41,22 +141,26 @@ class ToolSharingCache:
         Returns:
             A unique cache key for this tool configuration
         """
-        tool_representations = []
-        for i, tool in enumerate(tools):
-            tool_name = getattr(tool, "name", None)
-            if tool_name is None:
-                tool_representations.append(f"tool_{i}_{id(tool)}")
-            else:
-                tool_representations.append(str(tool_name))
+        # Generate unique identifiers for each tool
+        tool_identifiers = tuple(
+            sorted(self._get_tool_identifier(tool) for tool in tools)
+        )
 
-        tool_names_str = "|".join(sorted(tool_representations))
-        config_str = f"{agent_id}|{task_id}|{tool_names_str}|{allow_delegation}|{allow_code_execution}|{multimodal}|{process_type}"
-        return hashlib.sha256(config_str.encode("utf-8")).hexdigest()[:16]
+        # Combine with configuration flags
+        key_data = (
+            tool_identifiers,
+            allow_delegation,
+            allow_code_execution,
+            multimodal,
+            process_type,
+        )
+
+        # Use blake2s for better performance than sha256
+        key_str = str(key_data)
+        return hashlib.blake2s(key_str.encode()).hexdigest()[:24]
 
     def get_tools(
         self,
-        agent_id: str,
-        task_id: str,
         tools: List[Any],
         allow_delegation: bool = False,
         allow_code_execution: bool = False,
@@ -65,9 +169,9 @@ class ToolSharingCache:
     ) -> Optional[List[Any]]:
         """Retrieve cached tools if available.
 
+        Note: Removed agent_id and task_id to improve cache reuse.
+
         Args:
-            agent_id: Unique identifier for the agent
-            task_id: Unique identifier for the task
             tools: List of tools to be prepared
             allow_delegation: Whether delegation tools should be added
             allow_code_execution: Whether code execution tools should be added
@@ -78,8 +182,6 @@ class ToolSharingCache:
             Cached tools if found, None otherwise
         """
         cache_key = self._generate_cache_key(
-            agent_id,
-            task_id,
             tools,
             allow_delegation,
             allow_code_execution,
@@ -88,15 +190,14 @@ class ToolSharingCache:
         )
 
         if cache_key in self._cache:
-            self._update_usage_order(cache_key)
+            # Move to end for LRU (OrderedDict maintains order)
+            self._cache.move_to_end(cache_key)
             return self._cache[cache_key].copy()
 
         return None
 
     def store_tools(
         self,
-        agent_id: str,
-        task_id: str,
         tools: List[Any],
         prepared_tools: List[Any],
         allow_delegation: bool = False,
@@ -106,9 +207,9 @@ class ToolSharingCache:
     ) -> None:
         """Store prepared tools in the cache.
 
+        Note: Removed agent_id and task_id to improve cache reuse.
+
         Args:
-            agent_id: Unique identifier for the agent
-            task_id: Unique identifier for the task
             tools: Original list of tools before preparation
             prepared_tools: The prepared tools to cache
             allow_delegation: Whether delegation tools were added
@@ -116,9 +217,10 @@ class ToolSharingCache:
             multimodal: Whether multimodal tools were added
             process_type: The crew process type
         """
+        if self._max_size == 0:
+            return
+
         cache_key = self._generate_cache_key(
-            agent_id,
-            task_id,
             tools,
             allow_delegation,
             allow_code_execution,
@@ -126,30 +228,30 @@ class ToolSharingCache:
             process_type,
         )
 
-        if len(self._cache) >= self._max_size and cache_key not in self._cache:
-            if self._max_size > 0 and len(self._usage_order) > 0:
-                oldest_key = self._usage_order.pop(0)
-                del self._cache[oldest_key]
-            elif self._max_size == 0:
-                return
+        # Evict if needed - OrderedDict pops first (oldest) item
+        if cache_key not in self._cache and len(self._cache) >= self._max_size:
+            self._cache.popitem(last=False)
 
         self._cache[cache_key] = prepared_tools.copy()
-        self._update_usage_order(cache_key)
+        # Move to end to mark as recently used
+        self._cache.move_to_end(cache_key)
 
     def clear(self) -> None:
         """Clear all cached tools."""
         self._cache.clear()
-        self._usage_order.clear()
+        self._tool_id_cache.clear()
 
     def size(self) -> int:
         """Return the current cache size."""
         return len(self._cache)
 
-    def _update_usage_order(self, cache_key: str) -> None:
-        """Update the usage order for LRU tracking."""
-        if cache_key in self._usage_order:
-            self._usage_order.remove(cache_key)
-        self._usage_order.append(cache_key)
+    def stats(self) -> Dict[str, Any]:
+        """Return cache statistics."""
+        return {
+            "size": len(self._cache),
+            "max_size": self._max_size,
+            "tool_id_cache_size": len(self._tool_id_cache),
+        }
 
 
 # Global tool sharing cache instance

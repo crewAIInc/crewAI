@@ -928,12 +928,6 @@ class Crew(FlowTrackable, BaseModel):
             # Try to get tools from cache
             tool_cache = get_tool_sharing_cache()
             cached_tools = tool_cache.get_tools(
-                agent_id=str(agent.id)
-                if hasattr(agent, "id")
-                else str(hash(agent.role)),
-                task_id=str(task.id)
-                if hasattr(task, "id")
-                else str(hash(task.description)),
                 tools=tools,
                 allow_delegation=allow_delegation,
                 allow_code_execution=allow_code_execution,
@@ -943,6 +937,8 @@ class Crew(FlowTrackable, BaseModel):
 
             if cached_tools is not None:
                 return cached_tools
+        else:
+            tool_cache = None
 
         # Original tool preparation logic if not cached
         original_tools = tools
@@ -958,7 +954,6 @@ class Crew(FlowTrackable, BaseModel):
                     raise ValueError(
                         "Manager agent is required for hierarchical process."
                     )
-
             elif agent:
                 tools = self._add_delegation_tools(task, tools)
 
@@ -979,7 +974,8 @@ class Crew(FlowTrackable, BaseModel):
         prepared_tools = cast(List[BaseTool], tools)
 
         # Cache the prepared tools if tool sharing is beneficial
-        if should_use_tool_sharing(original_tools):
+        if tool_cache is not None:
+            # Re-extract capabilities for cache storage since they were defined in the if block
             allow_delegation = hasattr(agent, "allow_delegation") and getattr(
                 agent, "allow_delegation", False
             )
@@ -992,12 +988,6 @@ class Crew(FlowTrackable, BaseModel):
             process_type = str(self.process)
 
             tool_cache.store_tools(
-                agent_id=str(agent.id)
-                if hasattr(agent, "id")
-                else str(hash(agent.role)),
-                task_id=str(task.id)
-                if hasattr(task, "id")
-                else str(hash(task.description)),
                 tools=original_tools,
                 prepared_tools=prepared_tools,
                 allow_delegation=allow_delegation,
