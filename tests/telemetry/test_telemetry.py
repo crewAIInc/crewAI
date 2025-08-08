@@ -76,7 +76,6 @@ def test_telemetry_fails_due_connect_timeout(export_mock, logger_mock):
         crew.kickoff()
 
     trace.get_tracer_provider().force_flush()
-
     export_mock.assert_called_once()
     logger_mock.assert_called_once_with(error)
 
