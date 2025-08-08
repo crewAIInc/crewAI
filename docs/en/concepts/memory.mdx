@@ -539,16 +539,71 @@ crew = Crew(
 )
 ```
 
+### Mem0 Provider
+
+Short-Term Memory and Entity Memory both supports a tight integration with both Mem0 OSS and Mem0 Client as a provider. Here is how you can use Mem0 as a provider.
+
+```python
+from crewai.memory.short_term.short_term_memory import ShortTermMemory
+from crewai.memory.entity_entity_memory import EntityMemory
+
+mem0_oss_embedder_config = {
+        "provider": "mem0",
+        "config": {
+            "user_id": "john",
+            "local_mem0_config": {
+                "vector_store": {"provider": "qdrant","config": {"host": "localhost", "port": 6333}},
+                "llm": {"provider": "openai","config": {"api_key": "your-api-key", "model": "gpt-4"}},
+                "embedder": {"provider": "openai","config": {"api_key": "your-api-key", "model": "text-embedding-3-small"}}
+            },
+            "infer": True # Optional defaults to True
+        },
+    }
+
+
+mem0_client_embedder_config = {
+        "provider": "mem0",
+        "config": {
+            "user_id": "john",
+            "org_id": "my_org_id",        # Optional
+            "project_id": "my_project_id", # Optional
+            "api_key": "custom-api-key"    # Optional - overrides env var
+            "run_id": "my_run_id",        # Optional - for short-term memory
+            "includes": "include1",       # Optional 
+            "excludes": "exclude1",       # Optional
+            "infer": True                 # Optional defaults to True
+            "custom_categories": new_categories  # Optional - custom categories for user memory
+        },
+    }
+
+
+short_term_memory_mem0_oss = ShortTermMemory(embedder_config=mem0_oss_embedder_config) # Short Term Memory with Mem0 OSS
+short_term_memory_mem0_client = ShortTermMemory(embedder_config=mem0_client_embedder_config) # Short Term Memory with Mem0 Client
+entity_memory_mem0_oss = EntityMemory(embedder_config=mem0_oss_embedder_config) # Entity Memory with Mem0 OSS
+entity_memory_mem0_client = EntityMemory(embedder_config=mem0_client_embedder_config) # Short Term Memory with Mem0 Client
+
+crew = Crew(
+    memory=True,
+    short_term_memory=short_term_memory_mem0_oss # or short_term_memory_mem0_client
+    entity_memory=entity_memory_mem0_oss # or entity_memory_mem0_client
+)
+```
+
 ### Choosing the Right Embedding Provider
 
-| Provider | Best For | Pros | Cons |
-|:---------|:----------|:------|:------|
-| **OpenAI** | General use, reliability | High quality, well-tested | Cost, requires API key |
-| **Ollama** | Privacy, cost savings | Free, local, private | Requires local setup |
-| **Google AI** | Google ecosystem | Good performance | Requires Google account |
-| **Azure OpenAI** | Enterprise, compliance | Enterprise features | Complex setup |
-| **Cohere** | Multilingual content | Great language support | Specialized use case |
-| **VoyageAI** | Retrieval tasks | Optimized for search | Newer provider |
+When selecting an embedding provider, consider factors like performance, privacy, cost, and integration needs.  
+Below is a comparison to help you decide:
+
+| Provider       | Best For                       | Pros                              | Cons                      |
+| -------------- | ------------------------------ | --------------------------------- | ------------------------- |
+| **OpenAI**     | General use, high reliability  | High quality, widely tested       | Paid service, API key required |
+| **Ollama**     | Privacy-focused, cost savings  | Free, runs locally, fully private | Requires local installation/setup |
+| **Google AI**  | Integration in Google ecosystem| Strong performance, good support  | Google account required   |
+| **Azure OpenAI** | Enterprise & compliance needs| Enterprise-grade features, security | More complex setup process |
+| **Cohere**     | Multilingual content handling  | Excellent language support        | More niche use cases      |
+| **VoyageAI**   | Information retrieval & search | Optimized for retrieval tasks     | Relatively new provider   |
+| **Mem0**       | Per-user personalization       | Search-optimized embeddings       | Paid service, API key required |
+
 
 ### Environment Variable Configuration
 
