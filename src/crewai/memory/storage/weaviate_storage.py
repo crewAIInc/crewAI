@@ -7,7 +7,7 @@ import weaviate
 import weaviate.classes as wvc
 from weaviate.auth import AuthApiKey
 
-from crewai.memory.storage.base_rag_storage import BaseRAGStorage
+from crewai.rag.storage.base_rag_storage import BaseRAGStorage
 
 
 class WeaviateStorage(BaseRAGStorage):
@@ -23,14 +23,10 @@ class WeaviateStorage(BaseRAGStorage):
     ):
         super().__init__(type, allow_reset, embedder_config, crew)
         
-        # Process agent roles to create unique collection naming
-        agents = crew.agents if crew else []
-        agents = [self._sanitize_role(agent.role) for agent in agents]
-        agents = "_".join(agents)
-        self.agents = agents
+        # Roles
+        self.raw_roles: list[str] = self._get_agent_roles(crew)
+        self.sanitized_roles: list[str] = [self._sanitize_role(r) for r in self.raw_roles]
 
-        # Create collection name based on type and agents
-        self.collection_name = self._build_collection_name(type, agents)
         self.type = type
         self.allow_reset = allow_reset
 
@@ -60,30 +56,32 @@ class WeaviateStorage(BaseRAGStorage):
 
     def _initialize_collection(self):
         """Create collection if it doesn't exist, otherwise get existing"""
+        self.collection_name = "AgentMemories"
+        
         if not self.client.collections.exists(self.collection_name):
             self.collection = self.client.collections.create(
-                name=self.collection_name,
+                name=self.collection_name, # Should we let this be configurable?
                 vectorizer_config=self._get_vectorizer_config(),
+                multi_tenancy_config = wvc.config.Configure.multi_tenancy(
+                    enabled=True,
+                    auto_tenant_creation=True,
+                    auto_tenant_activation=True,
+                ),
                 properties=[
                     wvc.config.Property(
-                        name="content",
+                        name="output",
                         data_type=wvc.config.DataType.TEXT,
-                        description="The main content/text of the memory entry"
+                        description="The output sent from the agent."
                     ),
                     wvc.config.Property(
-                        name="metadata_json",
+                        name="messages",
                         data_type=wvc.config.DataType.TEXT,
-                        description="JSON string of metadata"
+                        description="The messages used as input for this agent inference."
                     ),
                     wvc.config.Property(
-                        name="agent_role",
+                        name="task_description",
                         data_type=wvc.config.DataType.TEXT,
-                        description="Role of the agent that created this memory"
-                    ),
-                    wvc.config.Property(
-                        name="memory_type",
-                        data_type=wvc.config.DataType.TEXT,
-                        description="Type of memory (short_term, long_term, entity)"
+                        description="The description of the task that the agent is working on."
                     ),
                     wvc.config.Property(
                         name="timestamp",
@@ -97,6 +95,16 @@ class WeaviateStorage(BaseRAGStorage):
             # Get existing collection
             self.collection = self.client.collections.get(self.collection_name)
             logging.info(f"Using existing Weaviate collection: {self.collection_name}")
+            
+        # Ensure tenants exist for each agent role
+        if self.sanitized_roles:
+            try:
+                self.collection.tenants.create(
+                    tenants=self.sanitized_roles
+                )
+                logging.info(f"Ensured tenants for roles: {self.sanitized_roles}")
+            except Exception as e:
+                logging.debug(f"Tenant creation note: {e}")
 
     def _get_vectorizer_config(self):
         """Get appropriate vectorizer config based on embedder settings"""
@@ -104,64 +112,51 @@ class WeaviateStorage(BaseRAGStorage):
         # You can extend this to support other vectorizers based on embedder_config
         return wvc.config.Configure.Vectorizer.text2vec_weaviate()
 
+    def _get_agent_roles(self, crew) -> list[str]:
+        """Return raw role strings in the same order the crew defines them."""
+        if not crew or not getattr(crew, "agents", None):
+            return []
+        roles = []
+        for agent in crew.agents:
+            role = getattr(agent, "role", None)
+            if isinstance(role, str) and role.strip():
+                roles.append(role.strip())
+        return roles
+
     def _sanitize_role(self, role: str) -> str:
-        """
-        Sanitizes agent roles to ensure valid collection names in Weaviate.
-        Weaviate collection names must start with a letter and contain only 
-        alphanumeric characters.
-        """
-        # Remove newlines and replace spaces/slashes with underscores
+        """Sanitize role to a valid tenant name."""
         sanitized = role.replace("\n", "").replace(" ", "_").replace("/", "_")
-        
-        # Remove any non-alphanumeric characters (except underscores)
         sanitized = ''.join(c for c in sanitized if c.isalnum() or c == '_')
-        
-        # Ensure it starts with a letter (prepend 'M' for Memory if needed)
         if sanitized and not sanitized[0].isalpha():
             sanitized = 'M' + sanitized
-            
         return sanitized
 
-    def _build_collection_name(self, type: str, agents_str: str) -> str:
-        """
-        Build a valid Weaviate collection name from type and agents.
-        Weaviate has specific naming requirements for collections.
-        """
-        # Sanitize type
-        type_sanitized = ''.join(c for c in type if c.isalnum() or c == '_')
-        
-        # Combine type and agents
-        full_name = f"{type_sanitized}_{agents_str}" if agents_str else type_sanitized
-        
-        max_collection_name_length = 200
-        if len(full_name) > max_collection_name_length:
-            logging.warning(
-                f"Trimming collection name from {len(full_name)} to {max_collection_name_length} characters."
-            )
-            full_name = full_name[:max_collection_name_length]
-        
-        # Ensure it starts with a capital letter (Weaviate convention)
-        return full_name[0].upper() + full_name[1:] if full_name else "Memory"
-
+    # update to select the tenant with `agent_role`
     def save(self, value: Any, metadata: Dict[str, Any]) -> None:
         """Save a memory entry to Weaviate"""
-        if not self.collection:
+        if self.collection is None:
             self._initialize_app()
+
+        # check if the role is already a tenant in the collection
         
         try:
             # Prepare data object
             import json
             import time
+
+            raw_role = metadata.get("agent", "unknown")
+            sanitized_role = self._sanitize_role(raw_role)
+
+            agent_tenant = self.collection.with_tenant(sanitized_role)
             
             data_object = {
-                "content": str(value),
-                "metadata_json": json.dumps(metadata or {}),
-                "agent_role": metadata.get("agent_role", "unknown"),
-                "memory_type": self.type,
+                "output": str(value),
+                "messages": json.dumps(metadata.get("messages", [])),
+                "task_description": metadata.get("description", ""),
                 "timestamp": time.time()
             }
             
-            self.collection.data.insert(
+            agent_tenant.data.insert(
                 properties=data_object,
                 uuid=str(uuid.uuid4())
             )
@@ -174,15 +169,17 @@ class WeaviateStorage(BaseRAGStorage):
         query: str,
         limit: int = 3,
         score_threshold: float = 0.35,
+        agent_role: Optional[str] = None,
     ) -> List[Any]:
         """Search for relevant memories using Weaviate's hybrid search"""
-        if not self.collection:
+        if self.collection is None:
             self._initialize_app()
-        
+
         try:
-            response = self.collection.query.hybrid(
-                    query=query,
-                    limit=limit,
+            agent_tenant = self.collection.with_tenant(agent_role)
+            response = agent_tenant.query.hybrid(
+                query=query,
+                limit=limit,
             )
             
             # Parse and format results

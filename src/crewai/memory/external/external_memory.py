@@ -107,6 +107,7 @@ class ExternalMemory(Memory):
         query: str,
         limit: int = 3,
         score_threshold: float = 0.35,
+        agent_role: Optional[str] = None,
     ):
         crewai_event_bus.emit(
             self,
@@ -121,7 +122,7 @@ class ExternalMemory(Memory):
         start_time = time.time()
         try:
             results = super().search(
-                query=query, limit=limit, score_threshold=score_threshold
+                query=query, limit=limit, score_threshold=score_threshold, agent_role=agent_role
             )
 
             crewai_event_bus.emit(

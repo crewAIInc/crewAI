@@ -59,9 +59,6 @@ class CrewAgentExecutorMixin:
             and self.crew._external_memory
         ):
             try:
-                print("HERE"*50)
-                print(inputs)
-                print("HERE2"*50)
                 self.crew._external_memory.save(
                     value=output.text,
                     metadata={
