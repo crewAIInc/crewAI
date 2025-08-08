@@ -50,7 +50,7 @@ class TestEnterpriseConfigureCommand(unittest.TestCase):
             "X-Crewai-Version": "1.0.0",
         }
         mock_requests_get.assert_called_once_with(
-            "https://enterprise.example.com/oauth/parameters",
+            "https://enterprise.example.com/auth/parameters",
             timeout=30,
             headers=expected_headers
         )
