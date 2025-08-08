@@ -331,7 +331,7 @@ class Crew(FlowTrackable, BaseModel):
                     self.knowledge = Knowledge(
                         sources=self.knowledge_sources,
                         embedder=self.embedder,
-                        collection_name="crew",
+                        collection_name=self.name,
                     )
                     self.knowledge.add_sources()
 
