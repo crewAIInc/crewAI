@@ -11,6 +11,7 @@ import pydantic_core
 import pytest
 
 from crewai.agent import Agent
+from crewai.utilities.tool_sharing_cache import get_tool_sharing_cache
 from crewai.agents import CacheHandler
 from crewai.crew import Crew
 from crewai.crews.crew_output import CrewOutput
@@ -51,6 +52,16 @@ from crewai.utilities.events.memory_events import (
     MemoryRetrievalStartedEvent,
     MemoryRetrievalCompletedEvent,
 )
+
+
+@pytest.fixture(autouse=True)
+def clear_tool_cache():
+    """Clear the tool sharing cache before each test to ensure test isolation."""
+    cache = get_tool_sharing_cache()
+    cache.clear()
+    yield
+    # Optionally clear after test as well
+    cache.clear()
 
 
 @pytest.fixture
@@ -4476,7 +4487,6 @@ def test_crew_copy_with_memory():
     original_entity_id = id(crew._entity_memory) if crew._entity_memory else None
     original_external_id = id(crew._external_memory) if crew._external_memory else None
 
-
     try:
         crew_copy = crew.copy()
 
@@ -4525,7 +4535,6 @@ def test_crew_copy_with_memory():
                 not hasattr(crew_copy, "_external_memory")
                 or crew_copy._external_memory is None
             ), "Copied _external_memory should be None if not originally present"
-
 
     except pydantic_core.ValidationError as e:
         if "Input should be an instance of" in str(e) and ("Memory" in str(e)):
@@ -4742,6 +4751,7 @@ def test_reset_agent_knowledge_with_only_agent_knowledge(researcher, writer):
         mock_reset_agent_knowledge.assert_called_once_with(
             [mock_ks_research, mock_ks_writer]
         )
+
 
 def test_default_crew_name(researcher, writer):
     crew = Crew(
