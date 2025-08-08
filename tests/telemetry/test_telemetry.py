@@ -69,7 +69,7 @@ def test_telemetry_fails_due_connect_timeout(export_mock, logger_mock):
         )
         task = Task(
             description="Just say hi",
-            expected_output="hii",
+            expected_output="hiii",
             agent=agent,
         )
 
