@@ -36,6 +36,7 @@ from crewai.utilities.events.flow_events import (
 from crewai.utilities.events.listeners.tracing.trace_listener import (
     TraceCollectionListener,
 )
+from crewai.utilities.events.listeners.tracing.utils import is_tracing_enabled
 from crewai.utilities.printer import Printer
 
 logger = logging.getLogger(__name__)
@@ -471,10 +472,9 @@ class Flow(Generic[T], metaclass=FlowMeta):
 
         # Initialize state with initial values
         self._state = self._create_initial_state()
-        print("tracing within flow", tracing)
         self.tracing = tracing
-        if os.getenv("CREWAI_TRACING_ENABLED", "false").lower() == "true" or tracing:
-            trace_listener = TraceCollectionListener(tracing=self.tracing or False)
+        if is_tracing_enabled() or tracing:
+            trace_listener = TraceCollectionListener(tracing=tracing)
             trace_listener.setup_listeners(crewai_event_bus)
         # Apply any additional kwargs
         if kwargs:

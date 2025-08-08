@@ -13,6 +13,7 @@ from crewai.utilities.events.agent_events import (
     AgentExecutionErrorEvent,
 )
 from crewai.utilities.events.listeners.tracing.types import TraceEvent
+from crewai.utilities.events.listeners.tracing.utils import is_tracing_enabled
 from crewai.utilities.events.reasoning_events import (
     AgentReasoningStartedEvent,
     AgentReasoningCompletedEvent,
@@ -75,13 +76,13 @@ class TraceCollectionListener(BaseEventListener):
     Trace collection listener that orchestrates trace collection
     """
 
-    trace_enabled: bool = False
+    trace_enabled: Optional[bool] = False
     complex_events = ["task_started", "llm_call_started", "llm_call_completed"]
 
     _instance = None
     _initialized = False
 
-    def __new__(cls, batch_manager=None, tracing=False):
+    def __new__(cls, batch_manager=None, tracing: Optional[bool] = False):
         if cls._instance is None:
             cls._instance = super().__new__(cls)
         return cls._instance
@@ -89,23 +90,24 @@ class TraceCollectionListener(BaseEventListener):
     def __init__(
         self,
         batch_manager: Optional[TraceBatchManager] = None,
-        tracing: bool = False,
+        tracing: Optional[bool] = False,
     ):
         if self._initialized:
             return
 
         super().__init__()
         self.batch_manager = batch_manager or TraceBatchManager()
-        self.trace_enabled = self._check_trace_enabled(tracing)
+        self.tracing = tracing or False
+        self.trace_enabled = self._check_trace_enabled()
         self._initialized = True
 
-    def _check_trace_enabled(self, tracing: bool = False) -> bool:
+    def _check_trace_enabled(self) -> bool:
         """Check if tracing should be enabled"""
         auth_token = get_auth_token()
         if not auth_token:
             return False
 
-        return os.getenv("CREWAI_TRACING_ENABLED", "false").lower() == "true" or tracing
+        return is_tracing_enabled() or self.tracing
 
     def _get_user_context(self) -> Dict[str, str]:
         """Extract user context for tracing"""
