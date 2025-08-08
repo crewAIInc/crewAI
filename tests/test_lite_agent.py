@@ -118,6 +118,8 @@ def test_lite_agent_created_with_correct_parameters(monkeypatch, verbose):
     assert created_lite_agent["max_iterations"] == max_iter
     assert created_lite_agent["max_execution_time"] == max_execution_time
     assert created_lite_agent["verbose"] == verbose
+    assert created_lite_agent["system_template"] is None
+    assert created_lite_agent["prompt_template"] is None
     assert created_lite_agent["response_format"] is None
 
     # Test with a response_format
@@ -493,3 +495,128 @@ def test_lite_agent_with_invalid_llm():
                 llm="invalid-model"
             )
         assert "Expected LLM instance of type BaseLLM" in str(exc_info.value)
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_agent_kickoff_with_custom_templates(monkeypatch):
+    """Test that Agent.kickoff() passes custom templates to LiteAgent and they are used correctly."""
+    custom_system_template = """<|start_header_id|>system<|end_header_id|>
+
+{{ .System }}<|eot_id|>"""
+    
+    custom_prompt_template = """<|start_header_id|>user<|end_header_id|>
+
+{{ .Prompt }}<|eot_id|>"""
+    
+    agent = Agent(
+        role="Test Agent",
+        goal="Test Goal", 
+        backstory="Test Backstory",
+        system_template=custom_system_template,
+        prompt_template=custom_prompt_template,
+        llm=LLM(model="gpt-4o-mini"),
+    )
+    
+    created_lite_agent = None
+    original_lite_agent = LiteAgent
+    
+    class MockLiteAgent(original_lite_agent):
+        def __init__(self, **kwargs):
+            nonlocal created_lite_agent
+            created_lite_agent = kwargs
+            super().__init__(**kwargs)
+            
+        def kickoff(self, messages):
+            return LiteAgentOutput(
+                raw="Test response",
+                agent_role=self.role
+            )
+    
+    monkeypatch.setattr("crewai.agent.LiteAgent", MockLiteAgent)
+    
+    result = agent.kickoff("Test query")
+    
+    assert created_lite_agent is not None
+    assert created_lite_agent["system_template"] == custom_system_template
+    assert created_lite_agent["prompt_template"] == custom_prompt_template
+    
+    assert isinstance(result, LiteAgentOutput)
+    assert result.raw == "Test response"
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])  
+def test_agent_kickoff_without_custom_templates(monkeypatch):
+    """Test that Agent.kickoff() works normally when no custom templates are provided."""
+    agent = Agent(
+        role="Test Agent",
+        goal="Test Goal",
+        backstory="Test Backstory", 
+        llm=LLM(model="gpt-4o-mini"),
+    )
+    
+    created_lite_agent = None
+    original_lite_agent = LiteAgent
+    
+    class MockLiteAgent(original_lite_agent):
+        def __init__(self, **kwargs):
+            nonlocal created_lite_agent
+            created_lite_agent = kwargs
+            super().__init__(**kwargs)
+            
+        def kickoff(self, messages):
+            return LiteAgentOutput(
+                raw="Test response",
+                agent_role=self.role
+            )
+    
+    monkeypatch.setattr("crewai.agent.LiteAgent", MockLiteAgent)
+    
+    result = agent.kickoff("Test query")
+    
+    assert created_lite_agent is not None
+    assert created_lite_agent["system_template"] is None
+    assert created_lite_agent["prompt_template"] is None
+    
+    assert isinstance(result, LiteAgentOutput)
+    assert result.raw == "Test response"
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_lite_agent_uses_custom_templates_in_system_prompt():
+    """Test that LiteAgent actually uses custom templates when building system prompts."""
+    custom_system_template = "CUSTOM SYSTEM: {{ .System }}"
+    custom_prompt_template = "CUSTOM PROMPT: {{ .Prompt }}"
+    
+    lite_agent = LiteAgent(
+        role="Research Assistant",
+        goal="Help users find accurate information",
+        backstory="You are a helpful research assistant",
+        system_template=custom_system_template,
+        prompt_template=custom_prompt_template,
+        llm=LLM(model="gpt-4o-mini"),
+    )
+    
+    system_prompt = lite_agent._get_default_system_prompt()
+    
+    assert "CUSTOM SYSTEM:" in system_prompt
+    assert "Research Assistant" in system_prompt
+    assert "Help users find accurate information" in system_prompt
+    assert "You are a helpful research assistant" in system_prompt
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_lite_agent_falls_back_to_default_without_templates():
+    """Test that LiteAgent falls back to default behavior when no custom templates are provided."""
+    lite_agent = LiteAgent(
+        role="Research Assistant",
+        goal="Help users find accurate information",
+        backstory="You are a helpful research assistant",
+        llm=LLM(model="gpt-4o-mini"),
+    )
+    
+    system_prompt = lite_agent._get_default_system_prompt()
+    
+    assert "CUSTOM SYSTEM:" not in system_prompt
+    assert "Research Assistant" in system_prompt
+    assert "Help users find accurate information" in system_prompt
+    assert "You are a helpful research assistant" in system_prompt
