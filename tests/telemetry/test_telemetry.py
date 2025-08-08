@@ -69,10 +69,10 @@ def test_telemetry_fails_due_connect_timeout(export_mock, logger_mock):
         )
         task = Task(
             description="Just say hi",
-            expected_output="hi",
+            expected_output="hii",
             agent=agent,
         )
-        
+
         crew = Crew(agents=[agent], tasks=[task], name="TestCrew",llm=llmgpt)
         crew.kickoff()
 
