@@ -10,7 +10,7 @@ from crewai.cli.version import get_crewai_version
 console = Console()
 
 
-class EnterpriseCommand(BaseCommand):
+class EnterpriseConfigureCommand(BaseCommand):
     def __init__(self):
         super().__init__()
         self.settings_command = SettingsCommand()

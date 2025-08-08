@@ -14,7 +14,7 @@ from crewai.memory.storage.kickoff_task_outputs_storage import (
 
 from .authentication.main import AuthenticationCommand
 from .deploy.main import DeployCommand
-from .enterprise.main import EnterpriseCommand
+from .enterprise.main import EnterpriseConfigureCommand
 from .evaluate_crew import evaluate_crew
 from .install_crew import install_crew
 from .kickoff_flow import kickoff_flow
@@ -403,7 +403,7 @@ def enterprise():
 @click.argument("enterprise_url")
 def enterprise_configure(enterprise_url: str):
     """Configure CrewAI Enterprise OAuth2 settings from the provided Enterprise URL."""
-    enterprise_command = EnterpriseCommand()
+    enterprise_command = EnterpriseConfigureCommand()
     enterprise_command.configure(enterprise_url)
 
 

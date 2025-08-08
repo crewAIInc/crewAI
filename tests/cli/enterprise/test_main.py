@@ -6,12 +6,12 @@ from unittest.mock import Mock, patch
 import requests
 from requests.exceptions import JSONDecodeError
 
-from crewai.cli.enterprise.main import EnterpriseCommand
+from crewai.cli.enterprise.main import EnterpriseConfigureCommand
 from crewai.cli.settings.main import SettingsCommand
 import shutil
 
 
-class TestEnterpriseCommand(unittest.TestCase):
+class TestEnterpriseConfigureCommand(unittest.TestCase):
     def setUp(self):
         self.test_dir = Path(tempfile.mkdtemp())
         self.config_path = self.test_dir / "settings.json"
@@ -20,7 +20,7 @@ class TestEnterpriseCommand(unittest.TestCase):
             self.mock_settings_command = Mock(spec=SettingsCommand)
             mock_settings_command_class.return_value = self.mock_settings_command
 
-            self.enterprise_command = EnterpriseCommand()
+            self.enterprise_command = EnterpriseConfigureCommand()
 
     def tearDown(self):
         shutil.rmtree(self.test_dir)
