@@ -3,7 +3,7 @@ from unittest.mock import patch
 
 import pytest
 
-from crewai import Agent, Crew, Task
+from crewai import Agent, Crew, Task, LLM
 from crewai.telemetry import Telemetry
 
 from opentelemetry import trace
@@ -56,18 +56,23 @@ def test_telemetry_fails_due_connect_timeout(export_mock, logger_mock):
 
     tracer = trace.get_tracer(__name__)
     with tracer.start_as_current_span("test-span"):
+        llmgpt = LLM(
+            model="openrouter/openai/gpt-4o-mini",
+            api_key=os.getenv('OPENROUTER_API_KEY')
+        )
+
         agent = Agent(
             role="agent",
-            llm="gpt-4o-mini",
             goal="Just say hi",
             backstory="You are a helpful assistant that just says hi",
+            llm=llmgpt
         )
         task = Task(
             description="Just say hi",
             expected_output="hi",
             agent=agent,
         )
-        crew = Crew(agents=[agent], tasks=[task], name="TestCrew")
+        crew = Crew(agents=[agent], tasks=[task], name="TestCrew",llm=llmgpt)
         crew.kickoff()
 
     trace.get_tracer_provider().force_flush()
