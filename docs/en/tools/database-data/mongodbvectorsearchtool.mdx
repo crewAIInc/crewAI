@@ -1,0 +1,168 @@
+---
+title: MongoDB Vector Search Tool
+description: The `MongoDBVectorSearchTool` performs vector search on MongoDB Atlas with optional indexing helpers.
+icon: "leaf"
+---
+
+# `MongoDBVectorSearchTool`
+
+## Description
+
+Perform vector similarity queries on MongoDB Atlas collections. Supports index creation helpers and bulk insert of embedded texts.
+
+MongoDB Atlas supports native vector search. Learn more:
+https://www.mongodb.com/docs/atlas/atlas-vector-search/vector-search-overview/
+
+## Installation
+
+Install with the MongoDB extra:
+
+```shell
+pip install crewai-tools[mongodb]
+```
+
+or
+
+```shell
+uv add crewai-tools --extra mongodb
+```
+
+## Parameters
+
+### Initialization
+
+- `connection_string` (str, required)
+- `database_name` (str, required)
+- `collection_name` (str, required)
+- `vector_index_name` (str, default `vector_index`)
+- `text_key` (str, default `text`)
+- `embedding_key` (str, default `embedding`)
+- `dimensions` (int, default `1536`)
+
+### Run Parameters
+
+- `query` (str, required): Natural language query to embed and search.
+
+## Quick start
+
+```python Code
+from crewai_tools import MongoDBVectorSearchTool
+
+tool = MongoDBVectorSearchTool(
+  connection_string="mongodb+srv://...",
+  database_name="mydb",
+  collection_name="docs",
+)
+
+print(tool.run(query="how to create vector index"))
+```
+
+## Index creation helpers
+
+Use `create_vector_search_index(...)` to provision an Atlas Vector Search index with the correct dimensions and similarity.
+
+## Common issues
+
+- Authentication failures: ensure your Atlas IP Access List allows your runner and the connection string includes credentials.
+- Index not found: create the vector index first; name must match `vector_index_name`.
+- Dimensions mismatch: align embedding model dimensions with `dimensions`.
+
+## More examples
+
+### Basic initialization
+
+```python Code
+from crewai_tools import MongoDBVectorSearchTool
+
+tool = MongoDBVectorSearchTool(
+    database_name="example_database",
+    collection_name="example_collection",
+    connection_string="<your_mongodb_connection_string>",
+)
+```
+
+### Custom query configuration
+
+```python Code
+from crewai_tools import MongoDBVectorSearchConfig, MongoDBVectorSearchTool
+
+query_config = MongoDBVectorSearchConfig(limit=10, oversampling_factor=2)
+tool = MongoDBVectorSearchTool(
+    database_name="example_database",
+    collection_name="example_collection",
+    connection_string="<your_mongodb_connection_string>",
+    query_config=query_config,
+    vector_index_name="my_vector_index",
+)
+
+rag_agent = Agent(
+    name="rag_agent",
+    role="You are a helpful assistant that can answer questions with the help of the MongoDBVectorSearchTool.",
+    goal="...",
+    backstory="...",
+    tools=[tool],
+)
+```
+
+### Preloading the database and creating the index
+
+```python Code
+import os
+from crewai_tools import MongoDBVectorSearchTool
+
+tool = MongoDBVectorSearchTool(
+    database_name="example_database",
+    collection_name="example_collection",
+    connection_string="<your_mongodb_connection_string>",
+)
+
+# Load text content from a local folder and add to MongoDB
+texts = []
+for fname in os.listdir("knowledge"):
+    path = os.path.join("knowledge", fname)
+    if os.path.isfile(path):
+        with open(path, "r", encoding="utf-8") as f:
+            texts.append(f.read())
+
+tool.add_texts(texts)
+
+# Create the Atlas Vector Search index (e.g., 3072 dims for text-embedding-3-large)
+tool.create_vector_search_index(dimensions=3072)
+```
+
+## Example
+
+```python Code
+from crewai import Agent, Task, Crew
+from crewai_tools import MongoDBVectorSearchTool
+
+tool = MongoDBVectorSearchTool(
+    connection_string="mongodb+srv://...",
+    database_name="mydb",
+    collection_name="docs",
+)
+
+agent = Agent(
+    role="RAG Agent",
+    goal="Answer using MongoDB vector search",
+    backstory="Knowledge retrieval specialist",
+    tools=[tool],
+    verbose=True,
+)
+
+task = Task(
+    description="Find relevant content for 'indexing guidance'",
+    expected_output="A concise answer citing the most relevant matches",
+    agent=agent,
+)
+
+crew = Crew(
+    agents=[agent], 
+    tasks=[task],
+    verbose=True,
+)
+
+result = crew.kickoff()
+```
+
+

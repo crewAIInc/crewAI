@@ -1,0 +1,112 @@
+---
+title: Arxiv Paper Tool
+description: The `ArxivPaperTool` searches arXiv for papers matching a query and optionally downloads PDFs.
+icon: box-archive
+---
+
+# `ArxivPaperTool`
+
+## Description
+
+The `ArxivPaperTool` queries the arXiv API for academic papers and returns compact, readable results. It can also optionally download PDFs to disk.
+
+## Installation
+
+This tool has no special installation beyond `crewai-tools`.
+
+```shell
+uv add crewai-tools
+```
+
+No API key is required. This tool uses the public arXiv Atom API.
+
+## Steps to Get Started
+
+1. Initialize the tool.
+2. Provide a `search_query` (e.g., "transformer neural network").
+3. Optionally set `max_results` (1–100) and enable PDF downloads in the constructor.
+
+## Example
+
+```python Code
+from crewai import Agent, Task, Crew
+from crewai_tools import ArxivPaperTool
+
+tool = ArxivPaperTool(
+    download_pdfs=False,
+    save_dir="./arxiv_pdfs",
+    use_title_as_filename=True,
+)
+
+agent = Agent(
+    role="Researcher",
+    goal="Find relevant arXiv papers",
+    backstory="Expert at literature discovery",
+    tools=[tool],
+    verbose=True,
+)
+
+task = Task(
+    description="Search arXiv for 'transformer neural network' and list top 5 results.",
+    expected_output="A concise list of 5 relevant papers with titles, links, and summaries.",
+    agent=agent,
+)
+
+crew = Crew(agents=[agent], tasks=[task])
+result = crew.kickoff()
+```
+
+### Direct usage (without Agent)
+
+```python Code
+from crewai_tools import ArxivPaperTool
+
+tool = ArxivPaperTool(
+    download_pdfs=True, 
+    save_dir="./arxiv_pdfs",
+)
+print(tool.run(search_query="mixture of experts", max_results=3))
+```
+
+## Parameters
+
+### Initialization Parameters
+
+- `download_pdfs` (bool, default `False`): Whether to download PDFs.
+- `save_dir` (str, default `./arxiv_pdfs`): Directory to save PDFs.
+- `use_title_as_filename` (bool, default `False`): Use paper titles for filenames.
+
+### Run Parameters
+
+- `search_query` (str, required): The arXiv search query.
+- `max_results` (int, default `5`, range 1–100): Number of results.
+
+## Output format
+
+The tool returns a human‑readable list of papers with:
+- Title
+- Link (abs page)
+- Snippet/summary (truncated)
+
+When `download_pdfs=True`, PDFs are saved to disk and the summary mentions saved files.
+
+## Usage Notes
+
+- The tool returns formatted text with key metadata and links.
+- When `download_pdfs=True`, PDFs will be stored in `save_dir`.
+
+## Troubleshooting
+
+- If you receive a network timeout, re‑try or reduce `max_results`.
+- Invalid XML errors indicate an arXiv response parse issue; try a simpler query.
+- File system errors (e.g., permission denied) may occur when saving PDFs; ensure `save_dir` is writable.
+
+## Related links
+
+- arXiv API docs: https://info.arxiv.org/help/api/index.html
+
+## Error Handling
+
+- Network issues, invalid XML, and OS errors are handled with informative messages.
+
+
