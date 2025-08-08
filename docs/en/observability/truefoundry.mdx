@@ -25,21 +25,20 @@ pip install crewai
 
 <Step title="Get TrueFoundry Access Token">
 1. Sign up for a [TrueFoundry account](https://www.truefoundry.com/register)
-2. Follow the steps here in [Quick start](https://docs.truefoundry.com/gateway/quick-start) and generate a [Personal Access Token (PAT)](https://docs.truefoundry.com/docs/gateway/authentication)
-3. Note down your API endpoint URL
+2. Follow the steps here in [Quick start](https://docs.truefoundry.com/gateway/quick-start)
 </Step>
 
 <Step title="Configure CrewAI with TrueFoundry">
-![TrueFoundry Code Configuration](/images/unified-code-tfy.png)
+![TrueFoundry Code Configuration](/images/new-code-snippet.png)
 
 ```python
 from crewai import LLM
 
 # Create an LLM instance with TrueFoundry AI Gateway
 truefoundry_llm = LLM(
-    model="openai-main/gpt-4o",  # Similarly you can call any model from any model provider
-    base_url="your_truefoundry_ai_gateway_base_url",
-    api_key="your_truefoundry_pat_token"
+    model="openai-main/gpt-4o",  # Similarly, you can call any model from any provider
+    base_url="your_truefoundry_gateway_base_url",
+    api_key="your_truefoundry_api_key"
 )
 
 # Use in your CrewAI agents
@@ -64,8 +63,8 @@ from crewai import Agent, Task, Crew, LLM
 # Configure LLM with TrueFoundry
 llm = LLM(
     model="openai-main/gpt-4o",
-    base_url="base_url_from_code_snippet", 
-    api_key="your_truefoundry_pat_token"
+    base_url="your_truefoundry_gateway_base_url", 
+    api_key="your_truefoundry_api_key"
 )
 
 # Create agents
@@ -123,7 +122,7 @@ With Truefoundry's AI gateway, you can monitor and analyze:
 
 ## Tracing
 
-For more details on tracing, please see our tracing [docs](https://docs.truefoundry.com/docs/tracing/tracing-getting-started) and [tracing in CrewAI](https://docs.truefoundry.com/docs/tracing/tracing-in-crewai).
+For a more detailed understanding on tracing, please see [getting-started-tracing](https://docs.truefoundry.com/docs/tracing/tracing-getting-started).For tracing, you can add the Traceloop SDK: 
 For tracing, you can add the Traceloop SDK: 
 
 ```bash
@@ -145,9 +144,3 @@ Traceloop.init(
 
 This provides additional trace correlation across your entire CrewAI workflow.
 ![TrueFoundry CrewAI Tracing](/images/tracing_crewai.png)
-
-## Resources & Support
-
-- **Documentation**: [TrueFoundry Docs](https://docs.truefoundry.com/) | [AI Gateway](https://docs.truefoundry.com/docs/ai-gateway) | [Tracing Guide](https://docs.truefoundry.com/docs/tracing/tracing-in-crewai)
-- **Support**: For technical assistance, contact [support@truefoundry.com](mailto:support@truefoundry.com)
-- **Platform**: Sign up at [TrueFoundry.com](https://www.truefoundry.com/register)
