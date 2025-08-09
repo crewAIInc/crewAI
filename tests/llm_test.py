@@ -354,6 +354,63 @@ def test_context_window_validation():
     assert "must be between 1024 and 2097152" in str(excinfo.value)
 
 
+@pytest.mark.vcr(filter_headers=["authorization"], filter_query_parameters=["key"])
+def test_gemini_thinking_budget():
+    llm = LLM(
+        model="gemini/gemini-2.0-flash-thinking-exp-01-21",
+        thinking_budget=1024,
+    )
+    result = llm.call("What is the capital of France?")
+    assert isinstance(result, str)
+    assert "Paris" in result
+
+
+def test_thinking_budget_validation():
+    # Test valid thinking_budget
+    llm = LLM(model="gemini/gemini-2.0-flash-thinking-exp-01-21", thinking_budget=1024)
+    assert llm.thinking_budget == 1024
+    
+    # Test invalid thinking_budget (negative)
+    with pytest.raises(ValueError, match="thinking_budget must be a positive integer"):
+        LLM(model="gemini/gemini-2.0-flash-thinking-exp-01-21", thinking_budget=-1)
+    
+    # Test invalid thinking_budget (zero)
+    with pytest.raises(ValueError, match="thinking_budget must be a positive integer"):
+        LLM(model="gemini/gemini-2.0-flash-thinking-exp-01-21", thinking_budget=0)
+    
+    # Test invalid thinking_budget (non-integer)
+    with pytest.raises(ValueError, match="thinking_budget must be a positive integer"):
+        LLM(model="gemini/gemini-2.0-flash-thinking-exp-01-21", thinking_budget=1024.5)
+
+
+def test_thinking_budget_parameter_passing():
+    llm = LLM(
+        model="gemini/gemini-2.0-flash-thinking-exp-01-21",
+        thinking_budget=2048,
+    )
+    
+    with patch("litellm.completion") as mocked_completion:
+        mock_message = MagicMock()
+        mock_message.content = "Test response"
+        mock_choice = MagicMock()
+        mock_choice.message = mock_message
+        mock_response = MagicMock()
+        mock_response.choices = [mock_choice]
+        mock_response.usage = {
+            "prompt_tokens": 5,
+            "completion_tokens": 5,
+            "total_tokens": 10,
+        }
+        mocked_completion.return_value = mock_response
+        
+        result = llm.call("Test message")
+        
+        _, kwargs = mocked_completion.call_args
+        assert "thinking" in kwargs
+        assert kwargs["thinking"]["budget_tokens"] == 2048
+        assert result == "Test response"
+
+
 @pytest.fixture
 def get_weather_tool_schema():
     return {
