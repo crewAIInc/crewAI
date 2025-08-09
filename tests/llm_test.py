@@ -360,9 +360,15 @@ def test_gemini_thinking_budget():
         model="gemini/gemini-2.0-flash-thinking-exp-01-21",
         thinking_budget=1024,
     )
-    result = llm.call("What is the capital of France?")
-    assert isinstance(result, str)
-    assert "Paris" in result
+    try:
+        result = llm.call("What is the capital of France?")
+        assert isinstance(result, str)
+        assert "Paris" in result
+    except Exception as e:
+        if "API key not valid" in str(e) or "AuthenticationError" in str(e):
+            pytest.skip("Skipping test due to missing API key")
+        else:
+            raise
 
 
 def test_thinking_budget_validation():
