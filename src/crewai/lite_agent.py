@@ -525,7 +525,16 @@ class LiteAgent(FlowTrackable, BaseModel):
                     self,
                     event=LLMCallStartedEvent(
                         messages=self._messages,
-                        tools=None,
+                        tools=[
+                            {
+                                "name": tool.name,
+                                "description": tool.description,
+                                "args": tool.args,
+                            }
+                            for tool in self._parsed_tools
+                        ]
+                        if self._parsed_tools
+                        else None,
                         callbacks=self._callbacks,
                         from_agent=self,
                         model=model,
