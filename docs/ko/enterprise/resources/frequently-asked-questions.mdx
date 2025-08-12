@@ -1,0 +1,151 @@
+---
+title: 자주 묻는 질문
+description: "CrewAI Enterprise에 대한 자주 묻는 질문"
+icon: "circle-question"
+---
+
+<AccordionGroup>
+    <Accordion title="계층적 프로세스에서 작업 실행은 어떻게 처리됩니까?">
+        계층적 프로세스에서는 매니저 에이전트가 자동으로 생성되어 워크플로우를 조정하고, 작업을 위임하며 결과를 검증하여 효율적이고 체계적으로 작업이 수행되도록 합니다. 매니저 에이전트는 하위 에이전트에게 작업을 위임하고 실행을 지원하기 위해 도구를 활용합니다. 매니저 LLM은 계층적 프로세스에서 매우 중요하며, 적절한 작동을 위해 반드시 올바르게 설정되어야 합니다.
+    </Accordion>
+
+    <Accordion title="가장 최신의 CrewAI 문서는 어디에서 확인할 수 있습니까?">
+        CrewAI에 대한 최신 문서는 공식 문서 사이트에서 확인하실 수 있습니다: https://docs.crewai.com/
+        <Card href="https://docs.crewai.com/" icon="books">CrewAI 문서</Card>
+    </Accordion>
+
+    <Accordion title="CrewAI의 계층적 프로세스와 순차적 프로세스의 주요 차이점은 무엇입니까?">
+        #### 계층적 프로세스:
+        - 명확한 지휘 체계에 따라 작업이 위임 및 실행됨
+        - 매니저 에이전트에 대해 manager language model(`manager_llm`)을 반드시 지정해야 함
+        - 매니저 에이전트가 작업 실행, 계획, 위임, 검증을 총괄함
+        - 작업이 사전에 지정되지 않으며, 매니저가 각 에이전트의 역량에 따라 작업을 할당함
+
+        #### 순차적 프로세스:
+        - 작업이 순서대로 하나씩 실행되어 작업들이 순차적으로 진행됨
+        - 이전 작업의 결과가 다음 작업의 맥락이 됨
+        - 작업 실행이 작업 리스트에 정의된 순서대로 진행됨
+
+        #### 복잡한 프로젝트에 더 적합한 프로세스는 무엇입니까?
+        계층적 프로세스는 다음과 같은 이유로 복잡한 프로젝트에 더 적합합니다:
+        - **동적 작업 할당과 위임**: 매니저 에이전트가 에이전트의 역량에 따라 작업을 할당할 수 있음
+        - **구조화된 검증과 감독**: 매니저 에이전트가 작업 결과를 검토하고 완료를 보장함
+        - **복잡한 작업 관리**: 에이전트 수준에서의 도구 사용 제어 등 세밀한 관리 가능
+    </Accordion>
+
+    <Accordion title="CrewAI 프레임워크에서 메모리를 사용할 때의 이점은 무엇입니까?">
+        - **적응적 학습**: crew는 시간이 지날수록 더 효율적으로 적응하며, 새로운 정보에 맞춰 작업 방식을 개선하게 됩니다.
+        - **개인화된 경험 강화**: 메모리를 통해 에이전트가 사용자 선호도나 과거 상호작용을 기억하여 더욱 개인화된 경험을 제공합니다.
+        - **문제 해결력 향상**: 풍부한 메모리 접근을 통해 과거의 학습이나 맥락적 인사이트를 적용하여 에이전트가 더 나은 결정을 내릴 수 있습니다.
+    </Accordion>
+
+    <Accordion title="에이전트의 최대 RPM 제한을 설정하는 목적은 무엇입니까?">
+        에이전트의 최대 RPM 제한을 설정하면 외부 서비스에 과도하게 요청을 보내지 않도록 하여, 제한에 걸리는 일을 예방하고 성능을 향상시킬 수 있습니다.
+    </Accordion>
+
+    <Accordion title="CrewAI crew 내에서 작업 실행 시 인간 입력은 어떤 역할을 하나요?">
+        인간 입력을 통해 에이전트는 필요할 때 추가 정보나 설명을 요청할 수 있습니다. 이 기능은 복잡한 의사결정 과정이나, 에이전트가 작업을 효과적으로 완료하는 데 더 많은 세부 정보가 필요할 때 매우 중요합니다.
+
+        에이전트 실행에 인간 입력을 통합하려면 작업 정의에서 `human_input` 플래그를 설정하세요. 활성화하면, 에이전트가 최종 답변을 제공하기 전에 사용자에게 입력을 요청합니다. 이 입력은 추가 맥락을 제공하거나, 애매함을 해소하거나, 에이전트의 출력을 검증해야 할 때 활용될 수 있습니다.
+
+        자세한 구현 방법은 [Human-in-the-Loop 가이드](/ko/how-to/human-in-the-loop)를 참고해 주세요.
+    </Accordion>
+
+    <Accordion title="CrewAI에서 에이전트의 행동과 역량을 맞춤화하고 향상시키기 위한 고급 커스터마이징 옵션에는 어떤 것이 있나요?">
+        CrewAI는 다양한 고급 커스터마이징 옵션을 제공합니다:
+
+        - **Language Model 커스터마이징**: 에이전트별로 특정 language model(`llm`) 및 function-calling language model(`function_calling_llm`)을 지정 가능
+        - **성능 및 디버깅 설정**: 에이전트의 성능을 조정하고 동작을 모니터링할 수 있음
+        - **Verbose 모드**: 에이전트의 작업 로그를 자세하게 기록하여 디버깅 및 최적화에 활용할 수 있음
+        - **RPM 제한**: 분당 최대 요청 수(`max_rpm`) 설정
+        - **최대 반복 횟수**: `max_iter` 속성으로 에이전트가 한 작업에서 허용되는 반복 횟수를 지정
+        - **위임 및 자율성 제어**: `allow_delegation` 속성(기본값: True)으로 에이전트의 위임 또는 질문 가능 여부 제어
+        - **인간 입력 통합**: 필요 시 추가 정보나 설명을 사용자에게 요청할 수 있음
+    </Accordion>
+
+    <Accordion title="에이전트 실행 시 어떤 상황에서 인간 입력이 특히 유용합니까?">
+        인간 입력이 특히 유용한 경우는 다음과 같습니다:
+        - **에이전트가 추가 정보나 설명이 필요할 때**: 에이전트가 애매하거나 불완전한 데이터를 만날 때
+        - **에이전트가 복잡하거나 민감한 결정을 내려야 할 때**: 윤리적이거나 미묘한 결정이 필요한 경우 인간 입력이 보조할 수 있음
+        - **에이전트 출력의 감독 및 검증이 필요할 때**: 결과 검증과 오류 방지에 도움
+        - **에이전트 행동을 커스터마이징 할 때**: 피드백을 통해 에이전트의 응답을 지속적으로 개선
+        - **오류 및 한계 식별 및 해결 시**: 에이전트의 한계점이나 오류를 인간 입력으로 해결 가능
+    </Accordion>
+
+    <Accordion title="crewAI에서 사용할 수 있는 메모리의 종류는 무엇입니까?">
+        CrewAI에서 제공되는 메모리의 종류는 다음과 같습니다:
+        - **단기 메모리**: 즉각적인 맥락을 위한 임시 저장소
+        - **장기 메모리**: 학습된 패턴 및 정보의 영구 저장소
+        - **엔티티 메모리**: 특정 엔티티와 그 속성에 집중하는 저장소
+        - **컨텍스추얼 메모리**: 상호작용 간 맥락을 유지하는 메모리
+
+        다른 메모리 유형에 대해 자세히 알아보려면:
+        <Card href="https://docs.crewai.com/concepts/memory" icon="brain">CrewAI 메모리</Card>
+    </Accordion>
+
+    <Accordion title="작업에서 Output Pydantic을 사용하는 방법은 무엇입니까?">
+        작업에서 Output Pydantic을 사용하려면, 해당 작업의 예상 결과를 Pydantic 모델로 정의해야 합니다. 빠른 예시는 다음과 같습니다:
+
+        <Steps>
+            <Step title="Pydantic 모델 정의하기">
+                ```python
+                from pydantic import BaseModel
+
+                class User(BaseModel):
+                    name: str
+                    age: int
+                ```
+            </Step>
+
+            <Step title="Output Pydantic으로 작업 생성하기">
+                ```python
+                from crewai import Task, Crew, Agent
+                from my_models import User
+
+                task = Task(
+                    description="Create a user with the provided name and age",
+                    expected_output=User,  # This is the Pydantic model
+                    agent=agent,
+                    tools=[tool1, tool2]
+                )
+                ```
+            </Step>
+
+            <Step title="에이전트에서 output_pydantic 속성 설정">
+                ```python
+                from crewai import Agent
+                from my_models import User
+
+                agent = Agent(
+                    role='User Creator',
+                    goal='Create users',
+                    backstory='I am skilled in creating user accounts',
+                    tools=[tool1, tool2],
+                    output_pydantic=User
+                )
+                ```
+            </Step>
+        </Steps>
+
+        에이전트가 항상 구조화된 출력을 내도록 만드는 방법 관련 튜토리얼은 아래 영상을 참고하세요:
+        <Frame>
+            <iframe
+            height="400"
+            width="100%"
+            src="https://www.youtube.com/embed/dNpKQk5uxHw"
+            title="YouTube video player" frameborder="0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowfullscreen></iframe>
+        </Frame>
+    </Accordion>
+
+    <Accordion title="CrewAI 에이전트를 위한 커스텀 도구는 어떻게 만들 수 있습니까?">
+        CrewAI에서 제공하는 `BaseTool` 클래스를 상속받아 커스텀 도구를 직접 만들거나, tool 데코레이터를 활용할 수 있습니다. 상속 방식은 `BaseTool`을 상속하는 새로운 클래스를 정의해 이름, 설명, 그리고 실제 논리를 처리하는 `_run` 메서드를 작성합니다. tool 데코레이터를 사용하면 필수 속성과 운영 로직만 정의해 바로 `Tool` 객체를 만들 수 있습니다.
+
+        <Card href="https://docs.crewai.com/how-to/create-custom-tools" icon="code">CrewAI 도구 가이드</Card>
+    </Accordion>
+
+    <Accordion title="전체 crew가 수행할 수 있는 분당 최대 요청 수는 어떻게 제한할 수 있나요?">
+        `max_rpm` 속성을 설정하면 crew 전체가 분당 보낼 수 있는 최대 요청 수를 제한할 수 있습니다. 이를 설정하면 개별 에이전트의 `max_rpm` 값보다 우선적으로 적용됩니다.
+    </Accordion>
+</AccordionGroup>

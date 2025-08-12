@@ -1,0 +1,166 @@
+---
+title: MongoDB 벡터 검색 도구
+description: MongoDBVectorSearchTool은(는) 선택적인 인덱싱 도우미와 함께 MongoDB Atlas에서 벡터 검색을 수행합니다.
+icon: "leaf"
+---
+
+# `MongoDBVectorSearchTool`
+
+## 설명
+
+MongoDB Atlas 컬렉션에서 벡터 유사성 쿼리를 수행합니다. 인덱스 생성 도우미 및 임베디드 텍스트의 일괄 삽입을 지원합니다.
+
+MongoDB Atlas는 네이티브 벡터 검색을 지원합니다. 자세히 알아보기:
+https://www.mongodb.com/docs/atlas/atlas-vector-search/vector-search-overview/
+
+## 설치
+
+MongoDB 추가 기능과 함께 설치하세요:
+
+```shell
+pip install crewai-tools[mongodb]
+```
+
+또는
+
+```shell
+uv add crewai-tools --extra mongodb
+```
+
+## 파라미터
+
+### 초기화
+
+- `connection_string` (str, 필수)
+- `database_name` (str, 필수)
+- `collection_name` (str, 필수)
+- `vector_index_name` (str, 기본값 `vector_index`)
+- `text_key` (str, 기본값 `text`)
+- `embedding_key` (str, 기본값 `embedding`)
+- `dimensions` (int, 기본값 `1536`)
+
+### 실행 매개변수
+
+- `query` (str, 필수): 임베드 및 검색할 자연어 쿼리.
+
+## 빠른 시작
+
+```python Code
+from crewai_tools import MongoDBVectorSearchTool
+
+tool = MongoDBVectorSearchTool(
+  connection_string="mongodb+srv://...",
+  database_name="mydb",
+  collection_name="docs",
+)
+
+print(tool.run(query="how to create vector index"))
+```
+
+## 인덱스 생성 도우미
+
+`create_vector_search_index(...)`를 사용하여 올바른 차원과 유사성을 가진 Atlas Vector Search 인덱스를 프로비저닝하세요.
+
+## 일반적인 문제
+
+- 인증 실패: Atlas IP 액세스 목록에 러너가 허용되어 있는지 확인하고, 연결 문자열에 자격 증명이 포함되어 있는지 확인하세요.
+- 인덱스를 찾을 수 없음: 벡터 인덱스를 먼저 생성하세요; 이름이 `vector_index_name`과 일치해야 합니다.
+- 차원 불일치: 임베딩 모델의 차원을 `dimensions`와 일치시켜야 합니다.
+
+## 추가 예시
+
+### 기본 초기화
+
+```python Code
+from crewai_tools import MongoDBVectorSearchTool
+
+tool = MongoDBVectorSearchTool(
+    database_name="example_database",
+    collection_name="example_collection",
+    connection_string="<your_mongodb_connection_string>",
+)
+```
+
+### 사용자 지정 쿼리 구성
+
+```python Code
+from crewai_tools import MongoDBVectorSearchConfig, MongoDBVectorSearchTool
+
+query_config = MongoDBVectorSearchConfig(limit=10, oversampling_factor=2)
+tool = MongoDBVectorSearchTool(
+    database_name="example_database",
+    collection_name="example_collection",
+    connection_string="<your_mongodb_connection_string>",
+    query_config=query_config,
+    vector_index_name="my_vector_index",
+)
+
+rag_agent = Agent(
+    name="rag_agent",
+    role="You are a helpful assistant that can answer questions with the help of the MongoDBVectorSearchTool.",
+    goal="...",
+    backstory="...",
+    tools=[tool],
+)
+```
+
+### 데이터베이스 미리 로드 및 인덱스 생성
+
+```python Code
+import os
+from crewai_tools import MongoDBVectorSearchTool
+
+tool = MongoDBVectorSearchTool(
+    database_name="example_database",
+    collection_name="example_collection",
+    connection_string="<your_mongodb_connection_string>",
+)
+
+# Load text content from a local folder and add to MongoDB
+texts = []
+for fname in os.listdir("knowledge"):
+    path = os.path.join("knowledge", fname)
+    if os.path.isfile(path):
+        with open(path, "r", encoding="utf-8") as f:
+            texts.append(f.read())
+
+tool.add_texts(texts)
+
+# Create the Atlas Vector Search index (e.g., 3072 dims for text-embedding-3-large)
+tool.create_vector_search_index(dimensions=3072)
+```
+
+## 예시
+
+```python Code
+from crewai import Agent, Task, Crew
+from crewai_tools import MongoDBVectorSearchTool
+
+tool = MongoDBVectorSearchTool(
+    connection_string="mongodb+srv://...",
+    database_name="mydb",
+    collection_name="docs",
+)
+
+agent = Agent(
+    role="RAG Agent",
+    goal="Answer using MongoDB vector search",
+    backstory="Knowledge retrieval specialist",
+    tools=[tool],
+    verbose=True,
+)
+
+task = Task(
+    description="Find relevant content for 'indexing guidance'",
+    expected_output="A concise answer citing the most relevant matches",
+    agent=agent,
+)
+
+crew = Crew(
+    agents=[agent],
+    tasks=[task],
+    verbose=True,
+)
+
+result = crew.kickoff()
+```

@@ -1,0 +1,82 @@
+---
+title: PG RAG 검색
+description: PGSearchTool은 PostgreSQL 데이터베이스를 검색하고 가장 관련성 높은 결과를 반환하도록 설계되었습니다.
+icon: elephant
+---
+
+생각: 이제 훌륭한 답변을 드릴 수 있습니다.
+최종 답변:
+## 개요
+
+<Note>
+    PGSearchTool은 현재 개발 중입니다. 이 문서에서는 의도된 기능과 인터페이스에 대해 설명합니다.
+    개발이 진행됨에 따라 일부 기능이 제공되지 않거나 변경될 수 있으니 참고하시기 바랍니다.
+</Note>
+
+## 설명
+
+PGSearchTool은 PostgreSQL 데이터베이스 테이블 내에서 시맨틱 검색을 용이하게 하는 강력한 도구로 구상되었습니다. 고급 Retrieve and Generate (RAG) 기술을 활용하여, 이 도구는 특히 PostgreSQL 데이터베이스에 최적화된 데이터베이스 테이블 콘텐츠 쿼리를 위한 효율적인 수단을 제공하는 것을 목표로 합니다.
+이 도구의 목표는 시맨틱 검색 쿼리를 통해 관련 데이터를 찾는 과정을 단순화하여, PostgreSQL 환경에서 방대한 데이터셋에 대한 고급 쿼리가 필요한 사용자에게 유용한 리소스를 제공하는 것입니다.
+
+## 설치
+
+`crewai_tools` 패키지는 출시 시 PGSearchTool을 포함하게 되며, 다음 명령어를 사용하여 설치할 수 있습니다:
+
+```shell
+pip install 'crewai[tools]'
+```
+
+<Note>
+    PGSearchTool은 현재 버전의 `crewai_tools` 패키지에는 아직 포함되어 있지 않습니다. 이 설치 명령어는 도구가 출시되는 즉시 업데이트될 예정입니다.
+</Note>
+
+## 예시 사용법
+
+아래는 PostgreSQL 데이터베이스 내의 테이블에서 의미론적 검색을 수행하기 위해 PGSearchTool을 사용하는 방법을 보여주는 예시입니다:
+
+```python Code
+from crewai_tools import PGSearchTool
+
+# Initialize the tool with the database URI and the target table name
+tool = PGSearchTool(
+    db_uri='postgresql://user:password@localhost:5432/mydatabase',
+    table_name='employees'
+)
+```
+
+## 인자(Arguments)
+
+PGSearchTool은 작동을 위해 다음과 같은 인자를 요구합니다:
+
+| 인자            | 타입      | 설명                                                                                                                                |
+|:---------------|:---------|:-------------------------------------------------------------------------------------------------------------------------------------|
+| **db_uri**     | `string` | **필수**. 쿼리할 PostgreSQL 데이터베이스의 URI를 나타내는 문자열입니다. 이 인자는 필수이며, 필요한 인증 정보와 데이터베이스의 위치를 포함해야 합니다. |
+| **table_name** | `string` | **필수**. 데이터베이스 내에서 시맨틱 검색이 수행될 테이블의 이름을 지정하는 문자열입니다. 이 인자 또한 필수입니다. |
+
+## 커스텀 모델 및 임베딩
+
+이 툴은 기본적으로 임베딩과 요약을 위해 OpenAI를 사용하도록 설계되었습니다. 사용자는 아래와 같이 config 딕셔너리를 통해 모델을 커스터마이즈할 수 있는 옵션을 제공합니다.
+
+```python Code
+tool = PGSearchTool(
+    config=dict(
+        llm=dict(
+            provider="ollama", # 혹은 google, openai, anthropic, llama2, ...
+            config=dict(
+                model="llama2",
+                # temperature=0.5,
+                # top_p=1,
+                # stream=true,
+            ),
+        ),
+        embedder=dict(
+            provider="google", # 혹은 openai, ollama, ...
+            config=dict(
+                model="models/embedding-001",
+                task_type="retrieval_document",
+                # title="Embeddings",
+            ),
+        ),
+    )
+)
+```

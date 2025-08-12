@@ -1,0 +1,268 @@
+---
+title: Box 통합
+description: "CrewAI용 Box 통합을 통한 파일 저장 및 문서 관리."
+icon: "box"
+---
+
+## 개요
+
+에이전트가 Box를 통해 파일, 폴더, 문서를 관리할 수 있도록 지원하세요. 파일을 업로드하고, 폴더 구조를 조직하며, 콘텐츠를 검색하고, AI 기반 자동화를 통해 팀의 문서 관리를 효율적으로 진행할 수 있습니다.
+
+## 사전 준비 사항
+
+Box 통합을 사용하기 전에 다음을 확인하세요:
+
+- 활성 구독이 있는 [CrewAI Enterprise](https://app.crewai.com) 계정
+- 적절한 권한이 있는 Box 계정
+- [통합 페이지](https://app.crewai.com/crewai_plus/connectors)를 통해 Box 계정 연결
+
+## Box 통합 설정
+
+### 1. Box 계정 연결하기
+
+1. [CrewAI Enterprise Integrations](https://app.crewai.com/crewai_plus/connectors)로 이동합니다.
+2. 인증 통합 섹션에서 **Box**를 찾습니다.
+3. **Connect**를 클릭하고 OAuth 흐름을 완료합니다.
+4. 파일 및 폴더 관리를 위한 필요한 권한을 부여합니다.
+5. [Account Settings](https://app.crewai.com/crewai_plus/settings/account)에서 Enterprise Token을 복사합니다.
+
+### 2. 필수 패키지 설치
+
+```bash
+uv add crewai-tools
+```
+
+## 사용 가능한 액션
+
+<AccordionGroup>
+  <Accordion title="BOX_SAVE_FILE">
+    **설명:** Box에서 URL로부터 파일을 저장합니다.
+
+    **파라미터:**
+    - `fileAttributes` (object, 필수): 속성 - 이름, 상위 폴더, 타임스탬프 등 파일 메타데이터.
+      ```json
+      {
+        "content_created_at": "2012-12-12T10:53:43-08:00",
+        "content_modified_at": "2012-12-12T10:53:43-08:00",
+        "name": "qwerty.png",
+        "parent": { "id": "1234567" }
+      }
+      ```
+    - `file` (string, 필수): 파일 URL - 파일 크기는 50MB 미만이어야 합니다. (예시: "https://picsum.photos/200/300").
+  </Accordion>
+
+  <Accordion title="BOX_SAVE_FILE_FROM_OBJECT">
+    **설명:** Box에 파일을 저장합니다.
+
+    **파라미터:**
+    - `file` (string, 필수): 파일 - 파일 데이터를 포함하는 파일 객체를 허용합니다. 파일 크기는 50MB 미만이어야 합니다.
+    - `fileName` (string, 필수): 파일명 (예시: "qwerty.png").
+    - `folder` (string, 선택): 폴더 - Connect Portal Workflow Settings를 사용하여 사용자가 파일의 폴더 목적지를 선택할 수 있도록 합니다. 비워두면 기본적으로 사용자의 루트 폴더에 저장됩니다.
+  </Accordion>
+
+  <Accordion title="BOX_GET_FILE_BY_ID">
+    **설명:** Box에서 ID로 파일을 가져옵니다.
+
+    **파라미터:**
+    - `fileId` (string, 필수): 파일 ID - 파일을 나타내는 고유 식별자. (예시: "12345").
+  </Accordion>
+
+  <Accordion title="BOX_LIST_FILES">
+    **설명:** Box에서 파일 목록을 조회합니다.
+
+    **파라미터:**
+    - `folderId` (string, 필수): 폴더 ID - 폴더를 나타내는 고유 식별자. (예시: "0").
+    - `filterFormula` (object, 선택): 쿼리 normal form (DNF)의 필터 - 단일 조건의 AND 그룹의 OR.
+      ```json
+      {
+        "operator": "OR",
+        "conditions": [
+          {
+            "operator": "AND",
+            "conditions": [
+              {
+                "field": "direction",
+                "operator": "$stringExactlyMatches",
+                "value": "ASC"
+              }
+            ]
+          }
+        ]
+      }
+      ```
+  </Accordion>
+
+  <Accordion title="BOX_CREATE_FOLDER">
+    **설명:** Box에 폴더를 생성합니다.
+
+    **파라미터:**
+    - `folderName` (string, 필수): 이름 - 새 폴더의 이름. (예시: "New Folder").
+    - `folderParent` (object, 필수): 상위 폴더 - 새 폴더가 생성될 상위 폴더.
+      ```json
+      {
+        "id": "123456"
+      }
+      ```
+  </Accordion>
+
+  <Accordion title="BOX_MOVE_FOLDER">
+    **설명:** Box에서 폴더를 이동합니다.
+
+    **파라미터:**
+    - `folderId` (string, 필수): 폴더 ID - 폴더를 나타내는 고유 식별자. (예시: "0").
+    - `folderName` (string, 필수): 이름 - 폴더의 이름. (예시: "New Folder").
+    - `folderParent` (object, 필수): 상위 폴더 - 새 상위 폴더 목적지.
+      ```json
+      {
+        "id": "123456"
+      }
+      ```
+  </Accordion>
+
+  <Accordion title="BOX_GET_FOLDER_BY_ID">
+    **설명:** Box에서 ID로 폴더를 가져옵니다.
+
+    **파라미터:**
+    - `folderId` (string, 필수): 폴더 ID - 폴더를 나타내는 고유 식별자. (예시: "0").
+  </Accordion>
+
+  <Accordion title="BOX_SEARCH_FOLDERS">
+    **설명:** Box에서 폴더를 검색합니다.
+
+    **파라미터:**
+    - `folderId` (string, 필수): 폴더 ID - 검색할 폴더.
+    - `filterFormula` (object, 선택): 쿼리 normal form (DNF)의 필터 - 단일 조건의 AND 그룹의 OR.
+      ```json
+      {
+        "operator": "OR",
+        "conditions": [
+          {
+            "operator": "AND",
+            "conditions": [
+              {
+                "field": "sort",
+                "operator": "$stringExactlyMatches",
+                "value": "name"
+              }
+            ]
+          }
+        ]
+      }
+      ```
+  </Accordion>
+
+  <Accordion title="BOX_DELETE_FOLDER">
+    **설명:** Box에서 폴더를 삭제합니다.
+
+    **파라미터:**
+    - `folderId` (string, 필수): 폴더 ID - 폴더를 나타내는 고유 식별자. (예시: "0").
+    - `recursive` (boolean, 선택): 재귀적 삭제 - 폴더가 비어 있지 않을 경우, 폴더와 그 모든 내용을 재귀적으로 삭제합니다.
+  </Accordion>
+</AccordionGroup>
+
+## 사용 예시
+
+### 기본 Box Agent 설정
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import CrewaiEnterpriseTools
+
+# Get enterprise tools (Box tools will be included)
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token"
+)
+
+# Create an agent with Box capabilities
+box_agent = Agent(
+    role="Document Manager",
+    goal="Manage files and folders in Box efficiently",
+    backstory="An AI assistant specialized in document management and file organization.",
+    tools=[enterprise_tools]
+)
+
+# Task to create a folder structure
+create_structure_task = Task(
+    description="Create a folder called 'Project Files' in the root directory and upload a document from URL",
+    agent=box_agent,
+    expected_output="Folder created and file uploaded successfully"
+)
+
+# Run the task
+crew = Crew(
+    agents=[box_agent],
+    tasks=[create_structure_task]
+)
+
+crew.kickoff()
+```
+
+### 특정 Box 도구 필터링
+
+```python
+from crewai_tools import CrewaiEnterpriseTools
+
+# Get only specific Box tools
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token",
+    actions_list=["box_create_folder", "box_save_file", "box_list_files"]
+)
+
+file_organizer_agent = Agent(
+    role="File Organizer",
+    goal="Organize and manage file storage efficiently",
+    backstory="An AI assistant that focuses on file organization and storage management.",
+    tools=enterprise_tools
+)
+
+# Task to organize files
+organization_task = Task(
+    description="Create a folder structure for the marketing team and organize existing files",
+    agent=file_organizer_agent,
+    expected_output="Folder structure created and files organized"
+)
+
+crew = Crew(
+    agents=[file_organizer_agent],
+    tasks=[organization_task]
+)
+
+crew.kickoff()
+```
+
+### 고급 파일 관리
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import CrewaiEnterpriseTools
+
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token"
+)
+
+file_manager = Agent(
+    role="File Manager",
+    goal="Maintain organized file structure and manage document lifecycle",
+    backstory="An experienced file manager who ensures documents are properly organized and accessible.",
+    tools=[enterprise_tools]
+)
+
+# Complex task involving multiple Box operations
+management_task = Task(
+    description="""
+    1. List all files in the root folder
+    2. Create monthly archive folders for the current year
+    3. Move old files to appropriate archive folders
+    4. Generate a summary report of the file organization
+    """,
+    agent=file_manager,
+    expected_output="Files organized into archive structure with summary report"
+)
+
+crew = Crew(
+    agents=[file_manager],
+    tasks=[management_task]
+)
+
+crew.kickoff()
+```

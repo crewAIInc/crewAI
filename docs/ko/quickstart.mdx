@@ -1,0 +1,372 @@
+---
+title: 퀵스타트
+description: 5분 이내에 CrewAI로 첫 번째 AI 에이전트를 구축해보세요.
+icon: rocket
+---
+
+## 첫 번째 CrewAI Agent 만들기
+
+이제 주어진 주제나 항목에 대해 `최신 AI 개발 동향`을 `연구`하고 `보고`하는 간단한 crew를 만들어보겠습니다.
+
+진행하기 전에 CrewAI 설치를 완료했는지 확인하세요.
+아직 설치하지 않았다면, [설치 가이드](/ko/installation)를 참고해 설치할 수 있습니다.
+
+아래 단계를 따라 Crewing을 시작하세요! 🚣‍♂️
+
+<Steps>
+  <Step title="crew 생성하기">
+  터미널에서 아래 명령어를 실행하여 새로운 crew 프로젝트를 만드세요.
+  이 작업은 `latest-ai-development`라는 새 디렉터리와 기본 구조를 생성합니다.
+    <CodeGroup>
+      ```shell Terminal
+      crewai create crew latest-ai-development
+      ```
+    </CodeGroup>
+  </Step>
+  <Step title="새로운 crew 프로젝트로 이동하기">
+    <CodeGroup>
+      ```shell Terminal
+      cd latest-ai-development
+      ```
+    </CodeGroup>
+  </Step>
+  <Step title="`agents.yaml` 파일 수정하기">
+  <Tip>
+  프로젝트에 맞게 agent를 수정하거나 복사/붙여넣기를 할 수 있습니다.
+  `agents.yaml` 및 `tasks.yaml` 파일에서 `{topic}`과 같은 변수를 사용하면, 이는 `main.py` 파일의 변수 값으로 대체됩니다.
+  </Tip>
+    ```yaml agents.yaml
+    # src/latest_ai_development/config/agents.yaml
+    researcher:
+      role: >
+        {topic} Senior Data Researcher
+      goal: >
+        Uncover cutting-edge developments in {topic}
+      backstory: >
+        You're a seasoned researcher with a knack for uncovering the latest
+        developments in {topic}. Known for your ability to find the most relevant
+        information and present it in a clear and concise manner.
+
+    reporting_analyst:
+      role: >
+        {topic} Reporting Analyst
+      goal: >
+        Create detailed reports based on {topic} data analysis and research findings
+      backstory: >
+        You're a meticulous analyst with a keen eye for detail. You're known for
+        your ability to turn complex data into clear and concise reports, making
+        it easy for others to understand and act on the information you provide.
+    ```
+  </Step>
+  <Step title="`tasks.yaml` 파일 수정하기">
+    ```yaml tasks.yaml
+    # src/latest_ai_development/config/tasks.yaml
+    research_task:
+      description: >
+        Conduct a thorough research about {topic}
+        Make sure you find any interesting and relevant information given
+        the current year is 2025.
+      expected_output: >
+        A list with 10 bullet points of the most relevant information about {topic}
+      agent: researcher
+
+    reporting_task:
+      description: >
+        Review the context you got and expand each topic into a full section for a report.
+        Make sure the report is detailed and contains any and all relevant information.
+      expected_output: >
+        A fully fledge reports with the mains topics, each with a full section of information.
+        Formatted as markdown without '```'
+      agent: reporting_analyst
+      output_file: report.md
+    ```
+  </Step>
+  <Step title="`crew.py` 파일 수정하기">
+    ```python crew.py
+    # src/latest_ai_development/crew.py
+    from crewai import Agent, Crew, Process, Task
+    from crewai.project import CrewBase, agent, crew, task
+    from crewai_tools import SerperDevTool
+    from crewai.agents.agent_builder.base_agent import BaseAgent
+    from typing import List
+
+    @CrewBase
+    class LatestAiDevelopmentCrew():
+      """LatestAiDevelopment crew"""
+
+      agents: List[BaseAgent]
+      tasks: List[Task]
+
+      @agent
+      def researcher(self) -> Agent:
+        return Agent(
+          config=self.agents_config['researcher'], # type: ignore[index]
+          verbose=True,
+          tools=[SerperDevTool()]
+        )
+
+      @agent
+      def reporting_analyst(self) -> Agent:
+        return Agent(
+          config=self.agents_config['reporting_analyst'], # type: ignore[index]
+          verbose=True
+        )
+
+      @task
+      def research_task(self) -> Task:
+        return Task(
+          config=self.tasks_config['research_task'], # type: ignore[index]
+        )
+
+      @task
+      def reporting_task(self) -> Task:
+        return Task(
+          config=self.tasks_config['reporting_task'], # type: ignore[index]
+          output_file='output/report.md' # This is the file that will be contain the final report.
+        )
+
+      @crew
+      def crew(self) -> Crew:
+        """Creates the LatestAiDevelopment crew"""
+        return Crew(
+          agents=self.agents, # Automatically created by the @agent decorator
+          tasks=self.tasks, # Automatically created by the @task decorator
+          process=Process.sequential,
+          verbose=True,
+        )
+    ```
+  </Step>
+  <Step title="[선택 사항] crew 실행 전/후 함수 추가">
+    ```python crew.py
+    # src/latest_ai_development/crew.py
+    from crewai import Agent, Crew, Process, Task
+    from crewai.project import CrewBase, agent, crew, task, before_kickoff, after_kickoff
+    from crewai_tools import SerperDevTool
+
+    @CrewBase
+    class LatestAiDevelopmentCrew():
+      """LatestAiDevelopment crew"""
+
+      @before_kickoff
+      def before_kickoff_function(self, inputs):
+        print(f"Before kickoff function with inputs: {inputs}")
+        return inputs # You can return the inputs or modify them as needed
+
+      @after_kickoff
+      def after_kickoff_function(self, result):
+        print(f"After kickoff function with result: {result}")
+        return result # You can return the result or modify it as needed
+
+      # ... remaining code
+    ```
+  </Step>
+  <Step title="crew에 커스텀 입력값 전달하기">
+  예를 들어, crew에 `topic` 입력값을 넘겨 연구 및 보고서 출력을 맞춤화할 수 있습니다.
+    ```python main.py
+    #!/usr/bin/env python
+    # src/latest_ai_development/main.py
+    import sys
+    from latest_ai_development.crew import LatestAiDevelopmentCrew
+
+    def run():
+      """
+      Run the crew.
+      """
+      inputs = {
+        'topic': 'AI Agents'
+      }
+      LatestAiDevelopmentCrew().crew().kickoff(inputs=inputs)
+    ```
+  </Step>
+  <Step title="환경 변수 설정">
+  crew를 실행하기 전에 `.env` 파일에 아래 키가 환경 변수로 설정되어 있는지 확인하세요:
+    - [Serper.dev](https://serper.dev/) API 키: `SERPER_API_KEY=YOUR_KEY_HERE`
+    - 사용하려는 모델의 설정, 예: API 키. 다양한 공급자의 모델 설정은
+        [LLM 설정 가이드](/ko/concepts/llms#setting-up-your-llm)를 참고하세요.
+  </Step>
+  <Step title="의존성 잠그고 설치하기">
+    - CLI 명령어로 의존성을 잠그고 설치하세요:
+      <CodeGroup>
+        ```shell Terminal
+        crewai install
+        ```
+      </CodeGroup>
+    - 추가 설치가 필요한 패키지가 있다면, 아래와 같이 실행하면 됩니다:
+      <CodeGroup>
+        ```shell Terminal
+        uv add <package-name>
+        ```
+      </CodeGroup>
+  </Step>
+  <Step title="crew 실행하기">
+    - 프로젝트 루트에서 다음 명령어로 crew를 실행하세요:
+      <CodeGroup>
+        ```bash Terminal
+        crewai run
+        ```
+      </CodeGroup>
+  </Step>
+
+  <Step title="엔터프라이즈 대안: Crew Studio에서 생성">
+  CrewAI Enterprise 사용자는 코드를 작성하지 않고도 동일한 crew를 생성할 수 있습니다:
+
+  1. CrewAI Enterprise 계정에 로그인하세요([app.crewai.com](https://app.crewai.com)에서 무료 계정 만들기)
+  2. Crew Studio 열기
+  3. 구현하려는 자동화 내용을 입력하세요
+  4. 미션을 시각적으로 생성하고 순차적으로 연결하세요
+  5. 입력값을 구성하고 "Download Code" 또는 "Deploy"를 클릭하세요
+
+  ![Crew Studio Quickstart](/images/enterprise/crew-studio-interface.png)
+
+  <Card title="CrewAI Enterprise 체험하기" icon="rocket" href="https://app.crewai.com">
+    CrewAI Enterprise에서 무료 계정을 시작하세요
+  </Card>
+  </Step>
+  <Step title="최종 보고서 확인하기">
+  콘솔에서 출력 결과를 확인할 수 있으며 프로젝트 루트에 `report.md` 파일로 최종 보고서가 생성됩니다.
+
+  보고서 예시는 다음과 같습니다:
+
+  <CodeGroup>
+    ```markdown output/report.md
+    # Comprehensive Report on the Rise and Impact of AI Agents in 2025
+
+    ## 1. Introduction to AI Agents
+    In 2025, Artificial Intelligence (AI) agents are at the forefront of innovation across various industries. As intelligent systems that can perform tasks typically requiring human cognition, AI agents are paving the way for significant advancements in operational efficiency, decision-making, and overall productivity within sectors like Human Resources (HR) and Finance. This report aims to detail the rise of AI agents, their frameworks, applications, and potential implications on the workforce.
+
+    ## 2. Benefits of AI Agents
+    AI agents bring numerous advantages that are transforming traditional work environments. Key benefits include:
+
+    - **Task Automation**: AI agents can carry out repetitive tasks such as data entry, scheduling, and payroll processing without human intervention, greatly reducing the time and resources spent on these activities.
+    - **Improved Efficiency**: By quickly processing large datasets and performing analyses that would take humans significantly longer, AI agents enhance operational efficiency. This allows teams to focus on strategic tasks that require higher-level thinking.
+    - **Enhanced Decision-Making**: AI agents can analyze trends and patterns in data, provide insights, and even suggest actions, helping stakeholders make informed decisions based on factual data rather than intuition alone.
+
+    ## 3. Popular AI Agent Frameworks
+    Several frameworks have emerged to facilitate the development of AI agents, each with its own unique features and capabilities. Some of the most popular frameworks include:
+
+    - **Autogen**: A framework designed to streamline the development of AI agents through automation of code generation.
+    - **Semantic Kernel**: Focuses on natural language processing and understanding, enabling agents to comprehend user intentions better.
+    - **Promptflow**: Provides tools for developers to create conversational agents that can navigate complex interactions seamlessly.
+    - **Langchain**: Specializes in leveraging various APIs to ensure agents can access and utilize external data effectively.
+    - **CrewAI**: Aimed at collaborative environments, CrewAI strengthens teamwork by facilitating communication through AI-driven insights.
+    - **MemGPT**: Combines memory-optimized architectures with generative capabilities, allowing for more personalized interactions with users.
+
+    These frameworks empower developers to build versatile and intelligent agents that can engage users, perform advanced analytics, and execute various tasks aligned with organizational goals.
+
+    ## 4. AI Agents in Human Resources
+    AI agents are revolutionizing HR practices by automating and optimizing key functions:
+
+    - **Recruiting**: AI agents can screen resumes, schedule interviews, and even conduct initial assessments, thus accelerating the hiring process while minimizing biases.
+    - **Succession Planning**: AI systems analyze employee performance data and potential, helping organizations identify future leaders and plan appropriate training.
+    - **Employee Engagement**: Chatbots powered by AI can facilitate feedback loops between employees and management, promoting an open culture and addressing concerns promptly.
+
+    As AI continues to evolve, HR departments leveraging these agents can realize substantial improvements in both efficiency and employee satisfaction.
+
+    ## 5. AI Agents in Finance
+    The finance sector is seeing extensive integration of AI agents that enhance financial practices:
+
+    - **Expense Tracking**: Automated systems manage and monitor expenses, flagging anomalies and offering recommendations based on spending patterns.
+    - **Risk Assessment**: AI models assess credit risk and uncover potential fraud by analyzing transaction data and behavioral patterns.
+    - **Investment Decisions**: AI agents provide stock predictions and analytics based on historical data and current market conditions, empowering investors with informative insights.
+
+    The incorporation of AI agents into finance is fostering a more responsive and risk-aware financial landscape.
+
+    ## 6. Market Trends and Investments
+    The growth of AI agents has attracted significant investment, especially amidst the rising popularity of chatbots and generative AI technologies. Companies and entrepreneurs are eager to explore the potential of these systems, recognizing their ability to streamline operations and improve customer engagement.
+
+    Conversely, corporations like Microsoft are taking strides to integrate AI agents into their product offerings, with enhancements to their Copilot 365 applications. This strategic move emphasizes the importance of AI literacy in the modern workplace and indicates the stabilizing of AI agents as essential business tools.
+
+    ## 7. Future Predictions and Implications
+    Experts predict that AI agents will transform essential aspects of work life. As we look toward the future, several anticipated changes include:
+
+    - Enhanced integration of AI agents across all business functions, creating interconnected systems that leverage data from various departmental silos for comprehensive decision-making.
+    - Continued advancement of AI technologies, resulting in smarter, more adaptable agents capable of learning and evolving from user interactions.
+    - Increased regulatory scrutiny to ensure ethical use, especially concerning data privacy and employee surveillance as AI agents become more prevalent.
+
+    To stay competitive and harness the full potential of AI agents, organizations must remain vigilant about latest developments in AI technology and consider continuous learning and adaptation in their strategic planning.
+
+    ## 8. Conclusion
+    The emergence of AI agents is undeniably reshaping the workplace landscape in 5. With their ability to automate tasks, enhance efficiency, and improve decision-making, AI agents are critical in driving operational success. Organizations must embrace and adapt to AI developments to thrive in an increasingly digital business environment.
+    ```
+  </CodeGroup>
+  </Step>
+</Steps>
+
+<Check>
+축하합니다!
+
+crew 프로젝트 설정이 완료되었으며, 이제 자신만의 agentic workflow 구축을 바로 시작하실 수 있습니다!
+</Check>
+
+### 명명 일관성에 대한 참고
+
+YAML 파일(`agents.yaml` 및 `tasks.yaml`)에서 사용하는 이름은 Python 코드의 메서드 이름과 일치해야 합니다.
+예를 들어, 특정 task에 대한 agent를 `tasks.yaml` 파일에서 참조할 수 있습니다.
+이러한 명명 일관성을 지키면 CrewAI가 설정과 코드를 자동으로 연결할 수 있습니다. 그렇지 않으면 task가 참조를 제대로 인식하지 못할 수 있습니다.
+
+#### 예시 참조
+
+<Tip>
+  `agents.yaml` (`email_summarizer`) 파일에서 에이전트 이름과 `crew.py` (`email_summarizer`) 파일에서 메서드 이름이 동일하게 사용되는 점에 주목하세요.
+</Tip>
+
+```yaml agents.yaml
+email_summarizer:
+    role: >
+      Email Summarizer
+    goal: >
+      Summarize emails into a concise and clear summary
+    backstory: >
+      You will create a 5 bullet point summary of the report
+    llm: provider/model-id  # Add your choice of model here
+```
+
+<Tip>
+  `tasks.yaml` (`email_summarizer_task`) 파일에서 태스크 이름과 `crew.py` (`email_summarizer_task`) 파일에서 메서드 이름이 동일하게 사용되는 점에 주목하세요.
+</Tip>
+
+```yaml tasks.yaml
+email_summarizer_task:
+    description: >
+      Summarize the email into a 5 bullet point summary
+    expected_output: >
+      A 5 bullet point summary of the email
+    agent: email_summarizer
+    context:
+      - reporting_task
+      - research_task
+```
+
+## Crew 배포하기
+
+production 환경에 crew를 배포하는 가장 쉬운 방법은 [CrewAI Enterprise](http://app.crewai.com)를 통해서입니다.
+
+CLI를 사용하여 [CrewAI Enterprise](http://app.crewai.com)에 crew를 배포하는 단계별 시연은 이 영상 튜토리얼을 참고하세요.
+
+<iframe
+  width="100%"
+  height="400"
+  src="https://www.youtube.com/embed/3EqSV-CYDZA"
+  title="CrewAI Deployment Guide"
+  frameborder="0"
+  style={{ borderRadius: '10px' }}
+  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+  allowfullscreen
+></iframe>
+
+<CardGroup cols={2}>
+  <Card
+    title="Enterprise에 배포"
+    icon="rocket"
+    href="http://app.crewai.com"
+  >
+    CrewAI Enterprise로 시작하여 몇 번의 클릭만으로 production 환경에 crew를 배포하세요.
+  </Card>
+  <Card
+    title="커뮤니티 참여하기"
+    icon="comments"
+    href="https://community.crewai.com"
+  >
+    오픈 소스 커뮤니티에 참여하여 아이디어를 나누고, 프로젝트를 공유하며, 다른 CrewAI 개발자들과 소통하세요.
+  </Card>
+</CardGroup>

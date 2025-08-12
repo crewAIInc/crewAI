@@ -1,0 +1,73 @@
+---
+title: "DALL-E를 활용한 이미지 생성"
+description: "CrewAI 프로젝트에서 AI 기반 이미지 생성을 위해 DALL-E를 활용하는 방법을 알아보세요"
+icon: "image"
+---
+
+CrewAI는 OpenAI의 DALL-E와의 통합을 지원하여, AI 에이전트가 작업의 일환으로 이미지를 생성할 수 있습니다. 이 가이드에서는 CrewAI 프로젝트에서 DALL-E 도구를 설정하고 사용하는 방법을 단계별로 안내합니다.
+
+## 사전 요구 사항
+
+- crewAI가 설치되어 있음 (최신 버전)
+- DALL-E에 접근 가능한 OpenAI API 키
+
+## DALL-E 도구 설정하기
+
+<Steps>
+    <Step title="DALL-E 도구 임포트하기">
+        ```python
+        from crewai_tools import DallETool
+        ```
+    </Step>
+
+    <Step title="DALL-E 도구를 에이전트 구성에 추가하기">
+        ```python
+        @agent
+        def researcher(self) -> Agent:
+            return Agent(
+                config=self.agents_config['researcher'],
+                tools=[SerperDevTool(), DallETool()],  # Add DallETool to the list of tools
+                allow_delegation=False,
+                verbose=True
+            )
+        ```
+    </Step>
+</Steps>
+
+## DALL-E 도구 사용하기
+
+DALL-E 도구를 에이전트에 추가하면 텍스트 프롬프트를 기반으로 이미지를 생성할 수 있습니다. 도구는 생성된 이미지의 URL을 반환하며, 이 URL은 에이전트의 출력에 사용하거나 다른 에이전트에게 전달하여 추가 처리를 할 수 있습니다.
+
+### 예시 에이전트 구성
+
+```yaml
+role: >
+    LinkedIn 프로필 시니어 데이터 연구원
+goal: >
+    제공된 이름 {name}과 도메인 {domain}을 기반으로 자세한 LinkedIn 프로필을 찾아냅니다
+    도메인 {domain}을 기반으로 Dall-e 이미지를 생성합니다
+backstory: >
+    당신은 관련성이 높은 LinkedIn 프로필을 찾아내는 데 능숙한 숙련된 연구원입니다.
+    LinkedIn을 효율적으로 탐색하는 능력으로 잘 알려져 있으며, 전문적인 정보를
+    명확하고 간결하게 수집하고 제시하는 데 뛰어납니다.
+```
+
+### 예상 결과
+
+DALL-E 도구를 사용하는 agent는 이미지를 생성하고 응답에 URL을 제공할 수 있습니다. 그런 다음 이미지를 다운로드할 수 있습니다.
+
+<Frame>
+    <img src="/images/enterprise/dall-e-image.png" alt="DALL-E Image" />
+</Frame>
+
+## 모범 사례
+
+1. **이미지 생성 프롬프트를 구체적으로 작성하세요**. 그래야 최상의 결과를 얻을 수 있습니다.
+2. **생성 시간을 고려하세요** - 이미지 생성에는 시간이 걸릴 수 있으므로 작업 계획에 이를 반영하세요.
+3. **사용 정책을 준수하세요** - 이미지를 생성할 때 항상 OpenAI의 사용 정책을 준수해야 합니다.
+
+## 문제 해결
+
+1. **API 접근 확인** - OpenAI API 키가 DALL-E에 접근 권한이 있는지 확인하세요.
+2. **버전 호환성** - 최신 버전의 crewAI와 crewai-tools를 사용하고 있는지 확인하세요.
+3. **도구 구성** - DALL-E 도구가 agent의 도구 목록에 올바르게 추가되어 있는지 확인하세요.

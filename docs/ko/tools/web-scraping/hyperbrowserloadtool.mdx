@@ -1,0 +1,86 @@
+---
+title: Hyperbrowser 로드 도구
+description: HyperbrowserLoadTool은 Hyperbrowser를 사용하여 웹 스크래핑과 크롤링을 가능하게 합니다.
+icon: globe
+---
+
+# `HyperbrowserLoadTool`
+
+## 설명
+
+`HyperbrowserLoadTool`은 [Hyperbrowser](https://hyperbrowser.ai)를 이용한 웹 스크래핑과 크롤링을 가능하게 해주는 도구입니다. Hyperbrowser는 헤드리스 브라우저를 실행하고 확장할 수 있는 플랫폼입니다. 이 도구를 통해 단일 페이지를 스크랩하거나 전체 사이트를 크롤링할 수 있으며, 적절하게 포맷된 마크다운 또는 HTML로 콘텐츠를 반환합니다.
+
+주요 특징:
+- 즉각적인 확장성 – 인프라 고민 없이 수백 개의 브라우저 세션을 몇 초 만에 실행
+- 간편한 통합 – Puppeteer, Playwright 등 인기 툴과 완벽하게 연동
+- 강력한 API – 어떤 사이트든 쉽게 스크래핑/크롤링할 수 있는 API 제공
+- 안티-봇 우회 – 내장 스텔스 모드, 광고 차단, 자동 CAPTCHA 해결, 프록시 자동 회전
+
+## 설치
+
+이 도구를 사용하려면 Hyperbrowser SDK를 설치해야 합니다:
+
+```shell
+uv add hyperbrowser
+```
+
+## 시작 단계
+
+`HyperbrowserLoadTool`을 효과적으로 사용하려면 다음 단계를 따르세요:
+
+1. **회원가입**: [Hyperbrowser](https://app.hyperbrowser.ai/)에 방문하여 회원가입을 하고 API 키를 생성하세요.
+2. **API 키**: `HYPERBROWSER_API_KEY` 환경 변수를 설정하거나 도구 생성자에 직접 전달하세요.
+3. **SDK 설치**: 위 명령어를 사용하여 Hyperbrowser SDK를 설치하세요.
+
+## 예시
+
+다음 예시는 도구를 초기화하고 웹사이트를 스크래핑하는 방법을 보여줍니다:
+
+```python Code
+from crewai_tools import HyperbrowserLoadTool
+from crewai import Agent
+
+# Initialize the tool with your API key
+tool = HyperbrowserLoadTool(api_key="your_api_key")  # Or use environment variable
+
+# Define an agent that uses the tool
+@agent
+def web_researcher(self) -> Agent:
+    '''
+    This agent uses the HyperbrowserLoadTool to scrape websites
+    and extract information.
+    '''
+    return Agent(
+        config=self.agents_config["web_researcher"],
+        tools=[tool]
+    )
+```
+
+## 매개변수
+
+`HyperbrowserLoadTool`은(는) 다음과 같은 매개변수를 허용합니다:
+
+### 생성자 매개변수
+- **api_key**: 선택 사항입니다. Hyperbrowser API 키입니다. 제공하지 않으면 `HYPERBROWSER_API_KEY` 환경 변수에서 읽어옵니다.
+
+### 실행 매개변수
+- **url**: 필수입니다. 스크랩 또는 크롤링할 웹사이트의 URL입니다.
+- **operation**: 선택 사항입니다. 웹사이트에서 수행할 작업입니다. 'scrape' 또는 'crawl' 중 하나입니다. 기본값은 'scrape'입니다.
+- **params**: 선택 사항입니다. 스크랩 또는 크롤 작업을 위한 추가 매개변수입니다.
+
+## 지원되는 파라미터
+
+지원되는 모든 파라미터에 대한 자세한 정보는 다음을 방문하세요:
+- [스크래핑 파라미터](https://docs.hyperbrowser.ai/reference/sdks/python/scrape#start-scrape-job-and-wait)
+- [크롤링 파라미터](https://docs.hyperbrowser.ai/reference/sdks/python/crawl#start-crawl-job-and-wait)
+
+## 반환 형식
+
+도구는 다음과 같은 형식으로 콘텐츠를 반환합니다:
+
+- **스크래핑** 작업의 경우: 페이지의 내용을 마크다운 또는 HTML 형식으로 반환합니다.
+- **크롤링** 작업의 경우: 각 페이지의 콘텐츠를 구분선으로 구분하여 반환하며, 각 페이지의 URL도 포함됩니다.
+
+## 결론
+
+`HyperbrowserLoadTool`은 웹사이트를 스크랩하고 크롤링할 수 있는 강력한 방식을 제공하며, 봇 방지 기술, CAPTCHA 등과 같은 복잡한 상황도 처리할 수 있습니다. Hyperbrowser의 플랫폼을 활용하여 이 도구는 에이전트가 웹 콘텐츠에 효율적으로 접근하고 추출할 수 있도록 지원합니다.

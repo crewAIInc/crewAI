@@ -1,0 +1,391 @@
+---
+title: Google 캘린더 연동
+description: "CrewAI를 위한 Google 캘린더 연동을 통한 이벤트 및 일정 관리."
+icon: "calendar"
+---
+
+## 개요
+
+에이전트가 Google Calendar를 통해 캘린더 이벤트, 일정, 가용 시간을 관리할 수 있도록 지원합니다. 이벤트를 생성 및 업데이트하고 참석자를 관리하며, 가용성을 확인하고 AI 기반 자동화로 일정 관리 워크플로우를 효율적으로 운영하세요.
+
+## 필수 조건
+
+Google Calendar 통합을 사용하기 전에 다음을 준비해야 합니다:
+
+- 활성 구독이 있는 [CrewAI Enterprise](https://app.crewai.com) 계정
+- Google Calendar에 접근 가능한 Google 계정
+- [통합 페이지](https://app.crewai.com/crewai_plus/connectors)를 통해 Google 계정을 연결 완료
+
+## Google Calendar 연동 설정
+
+### 1. Google 계정 연결하기
+
+1. [CrewAI Enterprise Integrations](https://app.crewai.com/crewai_plus/connectors)로 이동합니다.
+2. 인증 통합 섹션에서 **Google Calendar**를 찾습니다.
+3. **Connect**를 클릭하고 OAuth 과정을 완료합니다.
+4. 캘린더 및 연락처 접근 권한을 허용합니다.
+5. [Account Settings](https://app.crewai.com/crewai_plus/settings/account)에서 Enterprise Token을 복사합니다.
+
+### 2. 필수 패키지 설치
+
+```bash
+uv add crewai-tools
+```
+
+## 사용 가능한 작업
+
+<AccordionGroup>
+  <Accordion title="GOOGLE_CALENDAR_CREATE_EVENT">
+    **설명:** Google 캘린더에 이벤트를 생성합니다.
+
+    **파라미터:**
+    - `eventName` (string, 필수): 이벤트 이름.
+    - `startTime` (string, 필수): 시작 시간 - Unix 타임스탬프 또는 ISO8601 날짜 형식 허용.
+    - `endTime` (string, 선택): 종료 시간 - 비워두면 시작 시간 기준 1시간 후로 기본 설정됩니다.
+    - `calendar` (string, 선택): 캘린더 - Connect Portal Workflow Settings를 사용하여 사용자가 이벤트를 추가할 캘린더를 선택할 수 있도록 합니다. 비워두면 사용자의 기본 캘린더로 기본 설정됩니다.
+    - `attendees` (string, 선택): 참석자 - 이메일 주소 배열 또는 쉼표로 구분된 이메일 주소 허용.
+    - `eventLocation` (string, 선택): 이벤트 위치.
+    - `eventDescription` (string, 선택): 이벤트 설명.
+    - `eventId` (string, 선택): 이벤트 ID - 이 이벤트와 연결할 애플리케이션의 ID입니다. 이후 이 ID를 사용하여 이벤트를 동기화할 수 있습니다.
+    - `includeMeetLink` (boolean, 선택): Google Meet 링크 포함 여부? - 이 이벤트에 대해 Google Meet 컨퍼런스 링크를 자동으로 생성합니다.
+  </Accordion>
+
+  <Accordion title="GOOGLE_CALENDAR_UPDATE_EVENT">
+    **설명:** Google 캘린더에서 기존 이벤트를 업데이트합니다.
+
+    **파라미터:**
+    - `eventId` (string, 필수): 이벤트 ID - 업데이트할 이벤트의 ID입니다.
+    - `eventName` (string, 선택): 이벤트 이름.
+    - `startTime` (string, 선택): 시작 시간 - Unix 타임스탬프 또는 ISO8601 날짜 형식 허용.
+    - `endTime` (string, 선택): 종료 시간 - 비워두면 시작 시간 기준 1시간 후로 기본 설정됩니다.
+    - `calendar` (string, 선택): 캘린더 - Connect Portal Workflow Settings를 사용하여 사용자가 이벤트를 추가할 캘린더를 선택할 수 있도록 합니다. 비워두면 사용자의 기본 캘린더로 기본 설정됩니다.
+    - `attendees` (string, 선택): 참석자 - 이메일 주소 배열 또는 쉼표로 구분된 이메일 주소 허용.
+    - `eventLocation` (string, 선택): 이벤트 위치.
+    - `eventDescription` (string, 선택): 이벤트 설명.
+  </Accordion>
+
+  <Accordion title="GOOGLE_CALENDAR_LIST_EVENTS">
+    **설명:** Google 캘린더에서 이벤트 목록을 가져옵니다.
+
+    **파라미터:**
+    - `calendar` (string, 선택): 캘린더 - Connect Portal Workflow Settings를 사용하여 사용자가 이벤트를 추가할 캘린더를 선택할 수 있도록 합니다. 비워두면 사용자의 기본 캘린더로 기본 설정됩니다.
+    - `after` (string, 선택): 이후 - 제공된 날짜 이후에 시작하는 이벤트를 필터링합니다 (밀리초 단위의 Unix 또는 ISO 타임스탬프). (예시: "2025-04-12T10:00:00Z 또는 1712908800000").
+    - `before` (string, 선택): 이전 - 제공된 날짜 이전에 종료되는 이벤트를 필터링합니다 (밀리초 단위의 Unix 또는 ISO 타임스탬프). (예시: "2025-04-12T10:00:00Z 또는 1712908800000").
+  </Accordion>
+
+  <Accordion title="GOOGLE_CALENDAR_GET_EVENT_BY_ID">
+    **설명:** Google 캘린더에서 ID로 특정 이벤트를 가져옵니다.
+
+    **파라미터:**
+    - `eventId` (string, 필수): 이벤트 ID.
+    - `calendar` (string, 선택): 캘린더 - Connect Portal Workflow Settings를 사용하여 사용자가 이벤트를 추가할 캘린더를 선택할 수 있도록 합니다. 비워두면 사용자의 기본 캘린더로 기본 설정됩니다.
+  </Accordion>
+
+  <Accordion title="GOOGLE_CALENDAR_DELETE_EVENT">
+    **설명:** Google 캘린더에서 이벤트를 삭제합니다.
+
+    **파라미터:**
+    - `eventId` (string, 필수): 이벤트 ID - 삭제할 캘린더 이벤트의 ID입니다.
+    - `calendar` (string, 선택): 캘린더 - Connect Portal Workflow Settings를 사용하여 사용자가 이벤트를 추가할 캘린더를 선택할 수 있도록 합니다. 비워두면 사용자의 기본 캘린더로 기본 설정됩니다.
+  </Accordion>
+
+  <Accordion title="GOOGLE_CALENDAR_GET_CONTACTS">
+    **설명:** Google 캘린더에서 연락처를 가져옵니다.
+
+    **파라미터:**
+    - `paginationParameters` (object, 선택): 페이지네이션 파라미터.
+      ```json
+      {
+        "pageCursor": "page_cursor_string"
+      }
+      ```
+  </Accordion>
+
+  <Accordion title="GOOGLE_CALENDAR_SEARCH_CONTACTS">
+    **설명:** Google 캘린더에서 연락처를 검색합니다.
+
+    **파라미터:**
+    - `query` (string, 선택): 연락처를 검색할 검색 쿼리.
+  </Accordion>
+
+  <Accordion title="GOOGLE_CALENDAR_LIST_DIRECTORY_PEOPLE">
+    **설명:** 디렉토리 구성원 목록을 가져옵니다.
+
+    **파라미터:**
+    - `paginationParameters` (object, 선택): 페이지네이션 파라미터.
+      ```json
+      {
+        "pageCursor": "page_cursor_string"
+      }
+      ```
+  </Accordion>
+
+  <Accordion title="GOOGLE_CALENDAR_SEARCH_DIRECTORY_PEOPLE">
+    **설명:** 디렉토리 구성원을 검색합니다.
+
+    **파라미터:**
+    - `query` (string, 필수): 연락처를 검색할 검색 쿼리.
+    - `paginationParameters` (object, 선택): 페이지네이션 파라미터.
+      ```json
+      {
+        "pageCursor": "page_cursor_string"
+      }
+      ```
+  </Accordion>
+
+  <Accordion title="GOOGLE_CALENDAR_LIST_OTHER_CONTACTS">
+    **설명:** 기타 연락처 목록을 가져옵니다.
+
+    **파라미터:**
+    - `paginationParameters` (object, 선택): 페이지네이션 파라미터.
+      ```json
+      {
+        "pageCursor": "page_cursor_string"
+      }
+      ```
+  </Accordion>
+
+  <Accordion title="GOOGLE_CALENDAR_SEARCH_OTHER_CONTACTS">
+    **설명:** 기타 연락처를 검색합니다.
+
+    **파라미터:**
+    - `query` (string, 선택): 연락처를 검색할 검색 쿼리.
+  </Accordion>
+
+  <Accordion title="GOOGLE_CALENDAR_GET_AVAILABILITY">
+    **설명:** 캘린더의 가용성 정보를 가져옵니다.
+
+    **파라미터:**
+    - `timeMin` (string, 필수): 기간의 시작. ISO 형식.
+    - `timeMax` (string, 필수): 기간의 끝. ISO 형식.
+    - `timeZone` (string, 선택): 응답에 사용되는 시간대. 선택 사항입니다. 기본값은 UTC입니다.
+    - `items` (array, 선택): 조회할 캘린더 및/또는 그룹 목록. 비워두면 사용자 기본 캘린더가 기본값입니다.
+      ```json
+      [
+        {
+          "id": "calendar_id_1"
+        },
+        {
+          "id": "calendar_id_2"
+        }
+      ]
+      ```
+  </Accordion>
+</AccordionGroup>
+
+## 사용 예시
+
+### 기본 캘린더 에이전트 설정
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import CrewaiEnterpriseTools
+
+# Get enterprise tools (Google Calendar tools will be included)
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token"
+)
+
+# Create an agent with Google Calendar capabilities
+calendar_agent = Agent(
+    role="Schedule Manager",
+    goal="Manage calendar events and scheduling efficiently",
+    backstory="An AI assistant specialized in calendar management and scheduling coordination.",
+    tools=[enterprise_tools]
+)
+
+# Task to create a meeting
+create_meeting_task = Task(
+    description="Create a team standup meeting for tomorrow at 9 AM with the development team",
+    agent=calendar_agent,
+    expected_output="Meeting created successfully with Google Meet link"
+)
+
+# Run the task
+crew = Crew(
+    agents=[calendar_agent],
+    tasks=[create_meeting_task]
+)
+
+crew.kickoff()
+```
+
+### 특정 캘린더 도구 필터링
+
+```python
+from crewai_tools import CrewaiEnterpriseTools
+
+# Get only specific Google Calendar tools
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token",
+    actions_list=["google_calendar_create_event", "google_calendar_list_events", "google_calendar_get_availability"]
+)
+
+meeting_coordinator = Agent(
+    role="Meeting Coordinator",
+    goal="Coordinate meetings and check availability",
+    backstory="An AI assistant that focuses on meeting scheduling and availability management.",
+    tools=enterprise_tools
+)
+
+# Task to schedule a meeting with availability check
+schedule_meeting = Task(
+    description="Check availability for next week and schedule a project review meeting with stakeholders",
+    agent=meeting_coordinator,
+    expected_output="Meeting scheduled after checking availability of all participants"
+)
+
+crew = Crew(
+    agents=[meeting_coordinator],
+    tasks=[schedule_meeting]
+)
+
+crew.kickoff()
+```
+
+### 이벤트 관리 및 업데이트
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import CrewaiEnterpriseTools
+
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token"
+)
+
+event_manager = Agent(
+    role="Event Manager",
+    goal="Manage and update calendar events efficiently",
+    backstory="An experienced event manager who handles event logistics and updates.",
+    tools=[enterprise_tools]
+)
+
+# Task to manage event updates
+event_management = Task(
+    description="""
+    1. List all events for this week
+    2. Update any events that need location changes to include video conference links
+    3. Send calendar invitations to new team members for recurring meetings
+    """,
+    agent=event_manager,
+    expected_output="Weekly events updated with proper locations and new attendees added"
+)
+
+crew = Crew(
+    agents=[event_manager],
+    tasks=[event_management]
+)
+
+crew.kickoff()
+```
+
+### 연락처 및 가용성 관리
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import CrewaiEnterpriseTools
+
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token"
+)
+
+availability_coordinator = Agent(
+    role="Availability Coordinator",
+    goal="Coordinate availability and manage contacts for scheduling",
+    backstory="An AI assistant that specializes in availability management and contact coordination.",
+    tools=[enterprise_tools]
+)
+
+# Task to coordinate availability
+availability_task = Task(
+    description="""
+    1. 엔지니어링 부서의 연락처를 검색합니다.
+    2. 다음 주 금요일 오후에 모든 엔지니어의 가용성을 확인합니다.
+    3. 가장 먼저 가능한 2시간 슬롯에 팀 미팅을 만듭니다.
+    4. Google Meet 링크를 포함하고 초대장을 발송합니다.
+    """,
+    agent=availability_coordinator,
+    expected_output="가용성에 따라 팀 미팅이 일정 예약되고 모든 엔지니어가 초대됨"
+)
+
+crew = Crew(
+    agents=[availability_coordinator],
+    tasks=[availability_task]
+)
+
+crew.kickoff()
+```
+
+### 자동화된 일정 관리 워크플로우
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import CrewaiEnterpriseTools
+
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token"
+)
+
+scheduling_automator = Agent(
+    role="Scheduling Automator",
+    goal="Automate scheduling workflows and calendar management",
+    backstory="An AI assistant that automates complex scheduling scenarios and calendar workflows.",
+    tools=[enterprise_tools]
+)
+
+# Complex scheduling automation task
+automation_task = Task(
+    description="""
+    1. 앞으로 2주간 예정된 모든 이벤트를 나열합니다.
+    2. 일정 충돌 또는 연이어 배정된 미팅을 식별합니다.
+    3. 가용 시간을 확인하여 최적의 미팅 시간을 제안합니다.
+    4. 필요한 경우 미팅 사이에 버퍼 시간을 생성합니다.
+    5. 아젠다 항목 및 미팅 링크가 포함된 이벤트 설명을 업데이트합니다.
+    """,
+    agent=scheduling_automator,
+    expected_output="일정 충돌이 해결되고 버퍼 타임 및 미팅 세부 정보가 업데이트된 최적화된 캘린더"
+)
+
+crew = Crew(
+    agents=[scheduling_automator],
+    tasks=[automation_task]
+)
+
+crew.kickoff()
+```
+
+## 문제 해결
+
+### 일반적인 문제
+
+**인증 오류**
+- Google 계정에 캘린더 접근에 필요한 권한이 있는지 확인하세요
+- OAuth 연결에 Google Calendar API에 필요한 모든 범위가 포함되어 있는지 확인하세요
+- 캘린더 공유 설정이 필요한 접근 수준을 허용하는지 확인하세요
+
+**이벤트 생성 문제**
+- 시간 형식이 올바른지(ISO8601 또는 Unix 타임스탬프) 확인하세요
+- 참석자 이메일 주소가 올바르게 형식화되어 있는지 확인하세요
+- 대상 캘린더가 존재하며 접근 가능한지 확인하세요
+- 올바른 시간대가 지정되어 있는지 확인하세요
+
+**가용성 및 시간 충돌**
+- 가용성 확인 시 시간 범위에 올바른 ISO 형식을 사용하세요
+- 모든 작업에서 시간대가 일관성 있는지 확인하세요
+- 여러 캘린더를 확인할 때 캘린더 ID가 올바른지 확인하세요
+
+**연락처 및 사용자 검색**
+- 검색 쿼리가 올바르게 형식화되어 있는지 확인하세요
+- 디렉터리 접근 권한이 부여되었는지 확인하세요
+- 연락처 정보가 최신이며 접근 가능한지 확인하세요
+
+**이벤트 업데이트 및 삭제**
+- 이벤트 ID가 올바르며 이벤트가 존재하는지 확인하세요
+- 이벤트를 편집할 수 있는 권한이 있는지 확인하세요
+- 캘린더 소유권이 수정 작업을 허용하는지 확인하세요
+
+### 도움 받기
+
+<Card title="도움이 필요하신가요?" icon="headset" href="mailto:support@crewai.com">
+  Google Calendar 연동 설정 또는 문제 해결에 대한 지원이 필요하면 저희 지원팀에 문의하세요.
+</Card>

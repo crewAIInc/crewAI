@@ -1,0 +1,180 @@
+---
+title: OpenLIT 통합
+description: OpenTelemetry와 함께 단 한 줄의 코드로 에이전트를 신속하게 모니터링을 시작하세요.
+icon: magnifying-glass-chart
+---
+
+# OpenLIT 개요
+
+[OpenLIT](https://github.com/openlit/openlit?src=crewai-docs)은 오픈 소스 도구로, 단 **한** 줄의 코드만으로 AI 에이전트, LLM, VectorDB, GPU의 성능을 간편하게 모니터링할 수 있습니다.
+
+OpenTelemetry-기반의 트레이싱 및 메트릭을 제공하여 비용, 지연 시간, 상호작용, 작업 시퀀스와 같은 주요 파라미터를 추적할 수 있습니다.  
+이 설정을 통해 하이퍼파라미터를 추적하고 성능 문제를 모니터링하며, 시간이 지남에 따라 에이전트를 개선하고 미세 조정할 방법을 찾을 수 있습니다.
+
+<Frame caption="OpenLIT 대시보드">
+  <img src="/images/openlit1.png" alt="비용 및 토큰을 포함한 에이전트 사용 개요" />
+  <img src="/images/openlit2.png" alt="에이전트 otel 트레이스 및 메트릭 개요" />
+  <img src="/images/openlit3.png" alt="에이전트 트레이스 상세 개요" />
+</Frame>
+
+### 기능
+
+- **분석 대시보드**: 에이전트의 상태와 성능을 모니터링할 수 있는 대시보드를 통해 지표, 비용, 사용자 상호작용을 자세히 추적할 수 있습니다.
+- **OpenTelemetry-네이티브 가시성 SDK**: Grafana, DataDog 등 기존 가시성 도구로 추적 및 지표를 전송할 수 있는 벤더 중립적 SDK를 제공합니다.
+- **커스텀 및 파인튜닝 모델 비용 추적**: 정확한 예산 책정을 위해 커스텀 가격 파일을 사용하여 특정 모델의 비용 추정치를 맞춤화할 수 있습니다.
+- **예외 모니터링 대시보드**: 모니터링 대시보드를 통해 일반적인 예외 및 오류를 추적하여 문제를 신속하게 찾아내고 해결할 수 있습니다.
+- **컴플라이언스 및 보안**: 욕설 및 PII 유출과 같은 잠재적인 위협을 탐지합니다.
+- **프롬프트 인젝션 탐지**: 잠재적인 코드 인젝션 및 비밀 유출을 식별합니다.
+- **API 키 및 비밀 관리**: LLM API 키와 비밀을 중앙에서 안전하게 관리하여 안전하지 않은 관행을 방지합니다.
+- **프롬프트 관리**: PromptHub을 사용하여 에이전트 프롬프트를 관리 및 버전 관리하고, 모든 에이전트에서 일관되고 쉽게 접근할 수 있습니다.
+- **모델 플레이그라운드**: 배포 전에 CrewAI 에이전트에 사용할 다양한 모델을 테스트하고 비교할 수 있습니다.
+
+## 설치 안내
+
+<Steps>
+    <Step title="OpenLIT 배포">
+      <Steps>
+        <Step title="OpenLIT 저장소 Git Clone">
+          ```shell
+          git clone git@github.com:openlit/openlit.git
+          ```
+        </Step>
+        <Step title="Docker Compose 시작">
+          [OpenLIT 저장소](https://github.com/openlit/openlit)의 루트 디렉토리에서 아래 명령어를 실행하세요:
+          ```shell
+          docker compose up -d
+          ```
+        </Step>
+      </Steps>
+    </Step>
+    <Step title="OpenLIT SDK 설치">
+      ```shell
+      pip install openlit
+      ```
+    </Step>
+    <Step title="애플리케이션에서 OpenLIT 초기화">
+      아래 두 줄을 애플리케이션 코드에 추가하세요:
+      <Tabs>
+        <Tab title="함수 인자 사용 설정">
+          ```python
+          import openlit
+          openlit.init(otlp_endpoint="http://127.0.0.1:4318")
+          ```
+          
+          CrewAI Agent 모니터링 예제:
+
+          ```python
+          from crewai import Agent, Task, Crew, Process
+          import openlit
+
+          openlit.init(disable_metrics=True)
+          # 에이전트 정의
+          researcher = Agent(
+              role="Researcher",
+              goal="Conduct thorough research and analysis on AI and AI agents",
+              backstory="You're an expert researcher, specialized in technology, software engineering, AI, and startups. You work as a freelancer and are currently researching for a new client.",
+              allow_delegation=False,
+              llm='command-r'
+          )
+
+
+          # 작업 정의
+          task = Task(
+              description="Generate a list of 5 interesting ideas for an article, then write one captivating paragraph for each idea that showcases the potential of a full article on this topic. Return the list of ideas with their paragraphs and your notes.",
+              expected_output="5 bullet points, each with a paragraph and accompanying notes.",
+          )
+
+          # 매니저 에이전트 정의
+          manager = Agent(
+              role="Project Manager",
+              goal="Efficiently manage the crew and ensure high-quality task completion",
+              backstory="You're an experienced project manager, skilled in overseeing complex projects and guiding teams to success. Your role is to coordinate the efforts of the crew members, ensuring that each task is completed on time and to the highest standard.",
+              allow_delegation=True,
+              llm='command-r'
+          )
+
+          # 커스텀 매니저로 crew 인스턴스화
+          crew = Crew(
+              agents=[researcher],
+              tasks=[task],
+              manager_agent=manager,
+              process=Process.hierarchical,
+          )
+
+          # crew 작업 시작
+          result = crew.kickoff()
+
+          print(result)
+          ```
+        </Tab>
+        <Tab title="환경 변수 사용 설정">
+
+          아래 두 줄을 애플리케이션 코드에 추가하세요:
+          ```python
+          import openlit
+
+          openlit.init()
+          ```
+
+          OTEL export endpoint를 설정하려면 다음 명령어를 실행하세요:
+          ```shell
+          export OTEL_EXPORTER_OTLP_ENDPOINT = "http://127.0.0.1:4318"
+          ```
+
+          CrewAI Async Agent 모니터링 예제:
+
+          ```python
+          import asyncio
+          from crewai import Crew, Agent, Task
+          import openlit
+
+          openlit.init(otlp_endpoint="http://127.0.0.1:4318")
+
+          # 코드 실행이 활성화된 에이전트 생성
+          coding_agent = Agent(
+            role="Python Data Analyst",
+            goal="Analyze data and provide insights using Python",
+            backstory="You are an experienced data analyst with strong Python skills.",
+            allow_code_execution=True,
+            llm="command-r"
+          )
+
+          # 코드 실행이 필요한 작업 생성
+          data_analysis_task = Task(
+            description="Analyze the given dataset and calculate the average age of participants. Ages: {ages}",
+            agent=coding_agent,
+            expected_output="5 bullet points, each with a paragraph and accompanying notes.",
+          )
+
+          # crew 생성 후 작업 추가
+          analysis_crew = Crew(
+            agents=[coding_agent],
+            tasks=[data_analysis_task]
+          )
+
+          # crew를 비동기적으로 kickoff 하는 함수
+          async def async_crew_execution():
+              result = await analysis_crew.kickoff_async(inputs={"ages": [25, 30, 35, 40, 45]})
+              print("Crew Result:", result)
+
+          # 비동기 함수 실행
+          asyncio.run(async_crew_execution())
+          ```
+        </Tab>
+      </Tabs>
+      더 고급 설정 및 사용 사례는 OpenLIT [Python SDK 저장소](https://github.com/openlit/openlit/tree/main/sdk/python)를 참고하세요.
+    </Step>
+    <Step title="시각화 및 분석">
+      이제 에이전트 관찰 데이터가 수집되어 OpenLIT으로 전송되고 있으므로, 다음 단계는 이 데이터를 시각화하고 분석하여 에이전트의 성능, 행동 및 개선이 필요한 영역에 대한 인사이트를 얻는 것입니다.
+
+      브라우저에서 `127.0.0.1:3000`으로 접속하여 바로 시작할 수 있습니다. 기본 자격 증명으로 로그인 가능합니다
+      - **이메일**: `user@openlit.io`
+      - **비밀번호**: `openlituser`
+      
+      <Frame caption="OpenLIT 대시보드">
+        <img src="/images/openlit1.png" alt="비용 및 토큰을 포함한 에이전트 사용 개요" />
+        <img src="/images/openlit2.png" alt="에이전트 otel trace 및 메트릭 개요" />
+      </Frame>
+
+    </Step>
+</Steps>

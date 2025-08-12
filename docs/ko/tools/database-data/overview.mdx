@@ -1,0 +1,66 @@
+---
+title: "개요"
+description: "포괄적인 데이터 액세스를 위해 데이터베이스, 벡터 스토어, 데이터 웨어하우스에 연결하세요"
+icon: "face-smile"
+---
+
+이러한 툴을 통해 에이전트는 전통적인 SQL 데이터베이스부터 최신 벡터 저장소 및 데이터 웨어하우스에 이르기까지 다양한 데이터베이스 시스템과 상호 작용할 수 있습니다.
+
+## **사용 가능한 도구**
+
+<CardGroup cols={2}>
+  <Card title="MySQL 도구" icon="database" href="/ko/tools/database-data/mysqltool">
+    SQL 연산을 사용하여 MySQL 데이터베이스에 연결하고 쿼리할 수 있습니다.
+  </Card>
+
+  <Card title="PostgreSQL 검색" icon="elephant" href="/ko/tools/database-data/pgsearchtool">
+    PostgreSQL 데이터베이스를 효율적으로 검색하고 쿼리할 수 있습니다.
+  </Card>
+
+  <Card title="Snowflake 검색" icon="snowflake" href="/ko/tools/database-data/snowflakesearchtool">
+    분석 및 리포팅을 위해 Snowflake 데이터 웨어하우스에 접근합니다.
+  </Card>
+
+  <Card title="NL2SQL 도구" icon="language" href="/ko/tools/database-data/nl2sqltool">
+    자연어 쿼리를 자동으로 SQL 구문으로 변환합니다.
+  </Card>
+
+  <Card title="Qdrant 벡터 검색" icon="vector-square" href="/ko/tools/database-data/qdrantvectorsearchtool">
+    Qdrant 벡터 데이터베이스를 사용하여 벡터 임베딩을 검색합니다.
+  </Card>
+
+  <Card title="Weaviate 벡터 검색" icon="network-wired" href="/ko/tools/database-data/weaviatevectorsearchtool">
+    Weaviate 벡터 데이터베이스로 의미론적 검색을 수행합니다.
+  </Card>
+
+  <Card title="MongoDB 벡터 검색" icon="leaf" href="/ko/tools/database-data/mongodbvectorsearchtool">
+    인덱싱 도우미를 사용하여 MongoDB Atlas에서 벡터 유사도 검색을 실행합니다.
+  </Card>
+
+  <Card title="SingleStore 검색" icon="database" href="/ko/tools/database-data/singlestoresearchtool">
+    풀링과 검증을 통해 SingleStore에서 안전한 SELECT/SHOW 쿼리를 실행할 수 있습니다.
+  </Card>
+</CardGroup>
+
+## **일반적인 사용 사례**
+
+- **데이터 분석**: 비즈니스 인텔리전스와 보고를 위해 데이터베이스 쿼리
+- **벡터 검색**: 시맨틱 임베딩을 사용하여 유사한 콘텐츠 찾기
+- **ETL 작업**: 시스템 간 데이터 추출, 변환 및 적재
+- **실시간 분석**: 의사 결정에 필요한 실시간 데이터 접근
+
+```python
+from crewai_tools import MySQLTool, QdrantVectorSearchTool, NL2SQLTool
+
+# Create database tools
+mysql_db = MySQLTool()
+vector_search = QdrantVectorSearchTool()
+nl_to_sql = NL2SQLTool()
+
+# Add to your agent
+agent = Agent(
+    role="Data Analyst",
+    tools=[mysql_db, vector_search, nl_to_sql],
+    goal="Extract insights from various data sources"
+)
+```

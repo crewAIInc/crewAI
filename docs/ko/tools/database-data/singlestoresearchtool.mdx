@@ -1,0 +1,59 @@
+---
+title: SingleStore 검색 도구
+description: SingleStoreSearchTool은 풀링과 함께 SingleStore에서 SELECT/SHOW 쿼리를 안전하게 실행합니다.
+icon: circle
+---
+
+# `SingleStoreSearchTool`
+
+## 설명
+
+SingleStore에 대해 연결 풀링과 입력 유효성 검사를 사용하여 읽기 전용 쿼리(`SELECT`/`SHOW`)를 실행합니다.
+
+## 설치
+
+```shell
+uv add crewai-tools[singlestore]
+```
+
+## 환경 변수
+
+`SINGLESTOREDB_HOST`, `SINGLESTOREDB_USER`, `SINGLESTOREDB_PASSWORD` 등과 같은 변수를 사용할 수 있으며, 또는 `SINGLESTOREDB_URL`을 단일 DSN으로 사용할 수 있습니다.
+
+SingleStore 대시보드에서 API 키를 생성하세요. [문서はこちら](https://docs.singlestore.com/cloud/reference/management-api/#generate-an-api-key).
+
+## 예시
+
+```python Code
+from crewai import Agent, Task, Crew
+from crewai_tools import SingleStoreSearchTool
+
+tool = SingleStoreSearchTool(
+    tables=["products"],
+    host="host",
+    user="user",
+    password="pass",
+    database="db",
+)
+
+agent = Agent(
+    role="Analyst",
+    goal="Query SingleStore",
+    tools=[tool],
+    verbose=True,
+)
+
+task = Task(
+    description="List 5 products",
+    expected_output="5 rows as JSON/text",
+    agent=agent,
+)
+
+crew = Crew(
+    agents=[agent],
+    tasks=[task],
+    verbose=True,
+)
+
+result = crew.kickoff()
+```

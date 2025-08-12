@@ -1,0 +1,134 @@
+---
+title: Stdio 전송
+description: Stdio(표준 입력/출력) 전송 메커니즘을 사용하여 CrewAI를 로컬 MCP 서버에 연결하는 방법을 알아보세요.
+icon: server
+---
+
+## 개요
+
+Stdio(표준 입력/출력) 트랜스포트는 `MCPServerAdapter`를 로컬 MCP 서버에 연결하기 위해 설계되었습니다. 이 MCP 서버는 표준 입력 및 출력 스트림을 통해 통신합니다. 이는 일반적으로 MCP 서버가 CrewAI 애플리케이션과 동일한 머신에서 실행되는 스크립트나 실행 파일일 때 사용됩니다.
+
+## 주요 개념
+
+- **로컬 실행**: Stdio 전송은 MCP 서버를 위한 로컬에서 실행 중인 프로세스를 관리합니다.
+- **`StdioServerParameters`**: `mcp` 라이브러리의 이 클래스는 Stdio 서버를 실행하기 위한 명령어, 인수, 환경 변수를 구성하는 데 사용됩니다.
+
+## Stdio를 통한 연결
+
+연결 수명 주기를 관리하기 위한 두 가지 주요 접근 방식으로 Stdio 기반 MCP 서버에 연결할 수 있습니다.
+
+### 1. 완전 관리형 연결(권장)
+
+Python 컨텍스트 관리자(`with` 문)를 사용하는 것이 권장되는 방법입니다. 이 방식은 MCP 서버 프로세스의 시작과 컨텍스트 종료 시 자동 종료를 처리합니다.
+
+```python
+from crewai import Agent, Task, Crew, Process
+from crewai_tools import MCPServerAdapter
+from mcp import StdioServerParameters
+import os
+
+# Create a StdioServerParameters object
+server_params=StdioServerParameters(
+    command="python3", 
+    args=["servers/your_stdio_server.py"],
+    env={"UV_PYTHON": "3.12", **os.environ},
+)
+
+with MCPServerAdapter(server_params) as tools:
+    print(f"Available tools from Stdio MCP server: {[tool.name for tool in tools]}")
+
+    # Example: Using the tools from the Stdio MCP server in a CrewAI Agent
+    research_agent = Agent(
+        role="Local Data Processor",
+        goal="Process data using a local Stdio-based tool.",
+        backstory="An AI that leverages local scripts via MCP for specialized tasks.",
+        tools=tools,
+        reasoning=True,
+        verbose=True,
+    )
+    
+    processing_task = Task(
+        description="Process the input data file 'data.txt' and summarize its contents.",
+        expected_output="A summary of the processed data.",
+        agent=research_agent,
+        markdown=True
+    )
+    
+    data_crew = Crew(
+        agents=[research_agent],
+        tasks=[processing_task],
+        verbose=True,
+        process=Process.sequential 
+    )
+   
+    result = data_crew.kickoff()
+    print("\nCrew Task Result (Stdio - Managed):\n", result)
+
+```
+
+### 2. 수동 연결 라이프사이클
+
+Stdio MCP 서버 프로세스가 시작되고 중지되는 시점을 더 세밀하게 제어해야 하는 경우, `MCPServerAdapter`의 라이프사이클을 수동으로 관리할 수 있습니다.
+
+<Info>
+서버 프로세스가 종료되고 자원이 해제되도록 **반드시** `mcp_server_adapter.stop()`을 호출해야 합니다. `try...finally` 블록을 사용하는 것을 강력히 추천합니다.
+</Info>
+
+```python
+from crewai import Agent, Task, Crew, Process
+from crewai_tools import MCPServerAdapter
+from mcp import StdioServerParameters
+import os
+
+# Create a StdioServerParameters object
+stdio_params=StdioServerParameters(
+    command="python3", 
+    args=["servers/your_stdio_server.py"],
+    env={"UV_PYTHON": "3.12", **os.environ},
+)
+
+mcp_server_adapter = MCPServerAdapter(server_params=stdio_params)
+try:
+    mcp_server_adapter.start()  # Manually start the connection and server process
+    tools = mcp_server_adapter.tools
+    print(f"Available tools (manual Stdio): {[tool.name for tool in tools]}")
+
+    # Example: Using the tools with your Agent, Task, Crew setup
+    manual_agent = Agent(
+        role="Local Task Executor",
+        goal="Execute a specific local task using a manually managed Stdio tool.",
+        backstory="An AI proficient in controlling local processes via MCP.",
+        tools=tools,
+        verbose=True
+    )
+    
+    manual_task = Task(
+        description="Execute the 'perform_analysis' command via the Stdio tool.",
+        expected_output="Results of the analysis.",
+        agent=manual_agent
+    )
+    
+    manual_crew = Crew(
+        agents=[manual_agent],
+        tasks=[manual_task],
+        verbose=True,
+        process=Process.sequential
+    )
+        
+       
+    result = manual_crew.kickoff() # Actual inputs depend on your tool
+    print("\nCrew Task Result (Stdio - Manual):\n", result)
+            
+except Exception as e:
+    print(f"An error occurred during manual Stdio MCP integration: {e}")
+finally:
+    if mcp_server_adapter and mcp_server_adapter.is_connected: # Check if connected before stopping
+        print("Stopping Stdio MCP server connection (manual)...")
+        mcp_server_adapter.stop()  # **Crucial: Ensure stop is called**
+    elif mcp_server_adapter: # If adapter exists but not connected (e.g. start failed)
+        print("Stdio MCP server adapter was not connected. No stop needed or start failed.")
+
+```
+
+플레이스홀더 경로 및 명령어를 실제 Stdio 서버 정보로 교체해야 합니다. `StdioServerParameters`의 `env` 파라미터는 
+서버 프로세스용 환경 변수를 설정할 때 사용할 수 있습니다. 이는 서버의 동작을 구성하거나 필요한 경로(예: `PYTHONPATH`)를 제공하는 데 유용할 수 있습니다.

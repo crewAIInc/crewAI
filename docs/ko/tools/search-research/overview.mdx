@@ -1,0 +1,93 @@
+---
+title: "개요"
+description: "웹 검색을 수행하고, 저장소를 찾으며, 인터넷 전반에 걸쳐 정보를 조사합니다"
+icon: "face-smile"
+---
+
+이러한 도구들은 에이전트가 웹을 검색하고, 다양한 주제를 조사하며, 검색 엔진, GitHub, YouTube 등 다양한 플랫폼에서 정보를 찾을 수 있도록 지원합니다.
+
+## **사용 가능한 도구**
+
+<CardGroup cols={2}>
+  <Card title="Serper Dev Tool" icon="google" href="/ko/tools/search-research/serperdevtool">
+    종합적인 웹 검색 기능을 위한 Google 검색 API 통합.
+  </Card>
+
+  <Card title="Brave Search Tool" icon="shield" href="/ko/tools/search-research/bravesearchtool">
+    Brave의 독립적인 검색 인덱스를 활용한 프라이버시 중심의 검색.
+  </Card>
+
+  <Card title="Exa Search Tool" icon="magnifying-glass" href="/ko/tools/search-research/exasearchtool">
+    특정하고 관련성 높은 콘텐츠를 찾기 위한 AI 기반 검색.
+  </Card>
+
+  <Card title="LinkUp Search Tool" icon="link" href="/ko/tools/search-research/linkupsearchtool">
+    최신 콘텐츠 인덱싱을 통한 실시간 웹 검색.
+  </Card>
+
+  <Card title="GitHub Search Tool" icon="github" href="/ko/tools/search-research/githubsearchtool">
+    GitHub 저장소, 코드, 이슈, 문서를 검색합니다.
+  </Card>
+
+  <Card title="Website Search Tool" icon="globe" href="/ko/tools/search-research/websitesearchtool">
+    특정 웹사이트 및 도메인 내에서 검색합니다.
+  </Card>
+
+  <Card title="Code Docs Search Tool" icon="code" href="/ko/tools/search-research/codedocssearchtool">
+    코드 문서와 기술 자료를 검색합니다.
+  </Card>
+
+  <Card title="YouTube Channel Search" icon="youtube" href="/ko/tools/search-research/youtubechannelsearchtool">
+    특정 콘텐츠 및 크리에이터를 찾기 위한 YouTube 채널 검색.
+  </Card>
+
+  <Card title="YouTube Video Search" icon="play" href="/ko/tools/search-research/youtubevideosearchtool">
+    주제, 키워드 또는 조건별로 YouTube 동영상을 찾고 분석합니다.
+  </Card>
+
+  <Card title="Tavily Search Tool" icon="magnifying-glass" href="/ko/tools/search-research/tavilysearchtool">
+    Tavily의 AI 기반 검색 API를 활용한 종합 웹 검색.
+  </Card>
+
+  <Card title="Tavily Extractor Tool" icon="file-text" href="/ko/tools/search-research/tavilyextractortool">
+    Tavily API를 사용하여 웹 페이지에서 구조화된 콘텐츠를 추출합니다.
+  </Card>
+
+  <Card title="Arxiv Paper Tool" icon="box-archive" href="/ko/tools/search-research/arxivpapertool">
+    arXiv에서 논문을 검색하고 선택적으로 PDF를 다운로드합니다.
+  </Card>
+
+  <Card title="SerpApi Google Search" icon="search" href="/ko/tools/search-research/serpapi-googlesearchtool">
+    구조화된 결과를 제공하는 SerpApi를 통한 Google 검색.
+  </Card>
+
+  <Card title="SerpApi Google Shopping" icon="cart-shopping" href="/ko/tools/search-research/serpapi-googleshoppingtool">
+    SerpApi를 통한 Google 쇼핑 쿼리.
+  </Card>
+</CardGroup>
+
+## **일반적인 사용 사례**
+
+- **시장 조사**: 산업 트렌드와 경쟁사 분석 검색
+- **콘텐츠 발견**: 관련 기사, 영상 및 자료 찾기
+- **코드 연구**: 저장소 및 문서에서 솔루션 검색
+- **리드 생성**: 기업 및 개인 조사
+- **학술 연구**: 학술 기사 및 기술 논문 찾기
+
+```python
+from crewai_tools import SerperDevTool, GitHubSearchTool, YoutubeVideoSearchTool, TavilySearchTool, TavilyExtractorTool
+
+# Create research tools
+web_search = SerperDevTool()
+code_search = GitHubSearchTool()
+video_research = YoutubeVideoSearchTool()
+tavily_search = TavilySearchTool()
+content_extractor = TavilyExtractorTool()
+
+# Add to your agent
+agent = Agent(
+    role="Research Analyst",
+    tools=[web_search, code_search, video_research, tavily_search, content_extractor],
+    goal="Gather comprehensive information on any topic"
+)
+```

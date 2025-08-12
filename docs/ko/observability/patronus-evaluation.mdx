@@ -1,0 +1,205 @@
+---
+title: Patronus AI 평가
+description: Patronus AI의 종합 평가 플랫폼을 사용하여 CrewAI 에이전트의 성능과 LLM 출력 및 에이전트 행동을 모니터링하고 평가합니다.
+icon: shield-check
+---
+
+# Patronus AI 평가
+
+## 개요
+
+[Patronus AI](https://patronus.ai)는 CrewAI 에이전트를 위한 종합적인 평가 및 모니터링 기능을 제공하여, 모델 출력, 에이전트 동작, 전체 시스템 성능을 평가할 수 있게 해줍니다. 이 통합을 통해 품질과 신뢰성을 유지하기 위한 지속적인 평가 워크플로우를 프로덕션 환경에 구현할 수 있습니다.
+
+## 주요 기능
+
+- **자동 평가**: 에이전트 출력 및 행동의 실시간 평가
+- **맞춤 기준**: 사용 사례에 맞게 특정 평가 기준 정의  
+- **성능 모니터링**: 에이전트 성능 지표를 시간에 따라 추적
+- **품질 보증**: 다양한 시나리오에서 일관된 출력 품질 보장
+- **안전성 및 준수**: 잠재적인 문제 및 정책 위반 모니터링
+
+## 평가 도구
+
+Patronus는 다양한 사용 사례를 위한 세 가지 주요 평가 도구를 제공합니다:
+
+1. **PatronusEvalTool**: 에이전트가 평가 작업에 가장 적합한 평가자와 기준을 선택할 수 있도록 합니다.
+2. **PatronusPredefinedCriteriaEvalTool**: 사용자가 지정한 미리 정의된 평가자와 기준을 사용합니다.
+3. **PatronusLocalEvaluatorTool**: 사용자가 정의한 커스텀 함수 평가자를 사용합니다.
+
+## 설치
+
+이 도구들을 사용하려면 Patronus 패키지를 설치해야 합니다:
+
+```shell
+uv add patronus
+```
+
+또한 Patronus API 키를 환경 변수로 설정해야 합니다:
+
+```shell
+export PATRONUS_API_KEY="your_patronus_api_key"
+```
+
+## 시작 단계
+
+Patronus 평가 도구를 효과적으로 사용하려면 다음 단계를 따르세요:
+
+1. **Patronus 설치**: 위의 명령어를 사용하여 Patronus 패키지를 설치합니다.
+2. **API 키 설정**: Patronus API 키를 환경 변수로 설정합니다.
+3. **적합한 도구 선택**: 필요에 따라 적절한 Patronus 평가 도구를 선택합니다.
+4. **도구 구성**: 필요한 파라미터로 도구를 구성합니다.
+
+## 예시
+
+### PatronusEvalTool 사용하기
+
+다음 예제는 에이전트가 가장 적합한 평가자와 평가 기준을 선택할 수 있도록 해주는 `PatronusEvalTool`의 사용 방법을 보여줍니다:
+
+```python Code
+from crewai import Agent, Task, Crew
+from crewai_tools import PatronusEvalTool
+
+# Initialize the tool
+patronus_eval_tool = PatronusEvalTool()
+
+# Define an agent that uses the tool
+coding_agent = Agent(
+    role="Coding Agent",
+    goal="Generate high quality code and verify that the output is code",
+    backstory="An experienced coder who can generate high quality python code.",
+    tools=[patronus_eval_tool],
+    verbose=True,
+)
+
+# Example task to generate and evaluate code
+generate_code_task = Task(
+    description="Create a simple program to generate the first N numbers in the Fibonacci sequence. Select the most appropriate evaluator and criteria for evaluating your output.",
+    expected_output="Program that generates the first N numbers in the Fibonacci sequence.",
+    agent=coding_agent,
+)
+
+# Create and run the crew
+crew = Crew(agents=[coding_agent], tasks=[generate_code_task])
+result = crew.kickoff()
+```
+
+### PatronusPredefinedCriteriaEvalTool 사용하기
+
+다음 예제는 미리 정의된 evaluator와 criteria를 사용하는 `PatronusPredefinedCriteriaEvalTool`의 사용 방법을 보여줍니다:
+
+```python Code
+from crewai import Agent, Task, Crew
+from crewai_tools import PatronusPredefinedCriteriaEvalTool
+
+# Initialize the tool with predefined criteria
+patronus_eval_tool = PatronusPredefinedCriteriaEvalTool(
+    evaluators=[{"evaluator": "judge", "criteria": "contains-code"}]
+)
+
+# Define an agent that uses the tool
+coding_agent = Agent(
+    role="Coding Agent",
+    goal="Generate high quality code",
+    backstory="An experienced coder who can generate high quality python code.",
+    tools=[patronus_eval_tool],
+    verbose=True,
+)
+
+# Example task to generate code
+generate_code_task = Task(
+    description="Create a simple program to generate the first N numbers in the Fibonacci sequence.",
+    expected_output="Program that generates the first N numbers in the Fibonacci sequence.",
+    agent=coding_agent,
+)
+
+# Create and run the crew
+crew = Crew(agents=[coding_agent], tasks=[generate_code_task])
+result = crew.kickoff()
+```
+
+### PatronusLocalEvaluatorTool 사용하기
+
+다음 예시는 커스텀 함수 평가자를 사용하는 `PatronusLocalEvaluatorTool`의 사용 방법을 보여줍니다:
+
+```python Code
+from crewai import Agent, Task, Crew
+from crewai_tools import PatronusLocalEvaluatorTool
+from patronus import Client, EvaluationResult
+import random
+
+# Initialize the Patronus client
+client = Client()
+
+# Register a custom evaluator
+@client.register_local_evaluator("random_evaluator")
+def random_evaluator(**kwargs):
+    score = random.random()
+    return EvaluationResult(
+        score_raw=score,
+        pass_=score >= 0.5,
+        explanation="example explanation",
+    )
+
+# Initialize the tool with the custom evaluator
+patronus_eval_tool = PatronusLocalEvaluatorTool(
+    patronus_client=client,
+    evaluator="random_evaluator",
+    evaluated_model_gold_answer="example label",
+)
+
+# Define an agent that uses the tool
+coding_agent = Agent(
+    role="Coding Agent",
+    goal="Generate high quality code",
+    backstory="An experienced coder who can generate high quality python code.",
+    tools=[patronus_eval_tool],
+    verbose=True,
+)
+
+# Example task to generate code
+generate_code_task = Task(
+    description="Create a simple program to generate the first N numbers in the Fibonacci sequence.",
+    expected_output="Program that generates the first N numbers in the Fibonacci sequence.",
+    agent=coding_agent,
+)
+
+# Create and run the crew
+crew = Crew(agents=[coding_agent], tasks=[generate_code_task])
+result = crew.kickoff()
+```
+
+## 파라미터
+
+### PatronusEvalTool
+
+`PatronusEvalTool`은(는) 초기화 시에 어떠한 매개변수도 필요로 하지 않습니다. Patronus API에서 사용 가능한 평가자와 기준을 자동으로 가져옵니다.
+
+### PatronusPredefinedCriteriaEvalTool
+
+`PatronusPredefinedCriteriaEvalTool`은(는) 초기화 시 다음과 같은 파라미터를 받습니다:
+
+- **evaluators**: 필수. 사용할 evaluator와 criteria가 포함된 딕셔너리의 리스트입니다. 예시: `[{"evaluator": "judge", "criteria": "contains-code"}]`.
+
+### PatronusLocalEvaluatorTool
+
+`PatronusLocalEvaluatorTool`은(는) 초기화 시 다음과 같은 파라미터를 허용합니다:
+
+- **patronus_client**: 필수. Patronus 클라이언트 인스턴스입니다.
+- **evaluator**: 선택 사항. 사용할 등록된 로컬 evaluator의 이름입니다. 기본값은 빈 문자열입니다.
+- **evaluated_model_gold_answer**: 선택 사항. 평가에 사용할 gold answer입니다. 기본값은 빈 문자열입니다.
+
+## 사용법
+
+Patronus 평가 도구를 사용할 때, 모델 입력, 출력 및 컨텍스트를 제공하면 도구가 Patronus API로부터 평가 결과를 반환합니다.
+
+`PatronusEvalTool` 및 `PatronusPredefinedCriteriaEvalTool`을 호출할 때는 다음과 같은 매개변수가 필요합니다:
+
+- **evaluated_model_input**: 에이전트의 작업 설명(간단한 텍스트).
+- **evaluated_model_output**: 에이전트의 작업 결과.
+- **evaluated_model_retrieved_context**: 에이전트의 컨텍스트.
+
+`PatronusLocalEvaluatorTool`의 경우에도 동일한 매개변수가 필요하지만, 평가자와 정답은 초기화 시에 지정합니다.
+
+## 결론
+
+Patronus 평가 도구는 Patronus AI 플랫폼을 사용하여 모델 입력 및 출력을 평가하고 점수를 매길 수 있는 강력한 방법을 제공합니다. 에이전트가 자신의 출력 또는 다른 에이전트의 출력을 평가할 수 있도록 함으로써, 이러한 도구는 CrewAI 워크플로의 품질과 신뢰성을 향상시키는 데 도움을 줄 수 있습니다.

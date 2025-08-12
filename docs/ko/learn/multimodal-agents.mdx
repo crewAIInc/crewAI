@@ -1,0 +1,140 @@
+---
+title: 멀티모달 에이전트 사용하기
+description: CrewAI 프레임워크 내에서 이미지 및 기타 비텍스트 콘텐츠를 처리하기 위해 에이전트에서 멀티모달 기능을 활성화하고 사용하는 방법을 알아보세요.
+icon: video
+---
+
+## 멀티모달 에이전트 사용하기
+
+CrewAI는 텍스트뿐만 아니라 이미지와 같은 비텍스트 콘텐츠도 처리할 수 있는 멀티모달 에이전트를 지원합니다. 이 가이드에서는 에이전트에서 멀티모달 기능을 활성화하고 사용하는 방법을 안내합니다.
+
+### 멀티모달 기능 활성화
+
+멀티모달 에이전트를 생성하려면, 에이전트를 초기화할 때 `multimodal` 파라미터를 `True`로 설정하면 됩니다:
+
+```python
+from crewai import Agent
+
+agent = Agent(
+    role="Image Analyst",
+    goal="Analyze and extract insights from images",
+    backstory="An expert in visual content interpretation with years of experience in image analysis",
+    multimodal=True  # This enables multimodal capabilities
+)
+```
+
+`multimodal=True`로 설정하면, 에이전트는 자동으로 비텍스트 콘텐츠를 처리하는 데 필요한 도구들(예: `AddImageTool`)과 함께 구성됩니다.
+
+### 이미지 작업하기
+
+멀티모달 에이전트는 이미지를 처리할 수 있는 `AddImageTool`이 사전 구성되어 포함되어 있습니다. 이 도구를 수동으로 추가할 필요가 없으며, 멀티모달 기능을 활성화하면 자동으로 포함됩니다.
+
+아래는 멀티모달 에이전트를 사용하여 이미지를 분석하는 방법을 보여주는 전체 예제입니다:
+
+```python
+from crewai import Agent, Task, Crew
+
+# Create a multimodal agent
+image_analyst = Agent(
+    role="Product Analyst",
+    goal="Analyze product images and provide detailed descriptions",
+    backstory="Expert in visual product analysis with deep knowledge of design and features",
+    multimodal=True
+)
+
+# Create a task for image analysis
+task = Task(
+    description="Analyze the product image at https://example.com/product.jpg and provide a detailed description",
+    expected_output="A detailed description of the product image",
+    agent=image_analyst
+)
+
+# Create and run the crew
+crew = Crew(
+    agents=[image_analyst],
+    tasks=[task]
+)
+
+result = crew.kickoff()
+```
+
+### 컨텍스트를 활용한 고급 사용법
+
+멀티모달 agent를 위한 task를 생성할 때 추가적인 컨텍스트나 이미지에 대한 구체적인 질문을 제공할 수 있습니다. task 설명에는 agent가 집중해야 할 특정 측면을 포함할 수 있습니다.
+
+```python
+from crewai import Agent, Task, Crew
+
+# Create a multimodal agent for detailed analysis
+expert_analyst = Agent(
+    role="Visual Quality Inspector",
+    goal="Perform detailed quality analysis of product images",
+    backstory="Senior quality control expert with expertise in visual inspection",
+    multimodal=True  # AddImageTool is automatically included
+)
+
+# Create a task with specific analysis requirements
+inspection_task = Task(
+    description="""
+    Analyze the product image at https://example.com/product.jpg with focus on:
+    1. Quality of materials
+    2. Manufacturing defects
+    3. Compliance with standards
+    Provide a detailed report highlighting any issues found.
+    """,
+    expected_output="A detailed report highlighting any issues found",
+    agent=expert_analyst
+)
+
+# Create and run the crew
+crew = Crew(
+    agents=[expert_analyst],
+    tasks=[inspection_task]
+)
+
+result = crew.kickoff()
+```
+
+### 도구 세부 정보
+
+멀티모달 에이전트를 사용할 때, `AddImageTool`은 다음 스키마로 자동 구성됩니다:
+
+```python
+class AddImageToolSchema:
+    image_url: str  # Required: The URL or path of the image to process
+    action: Optional[str] = None  # Optional: Additional context or specific questions about the image
+```
+
+멀티모달 에이전트는 내장 도구를 통해 자동으로 이미지 처리를 수행하므로 다음과 같은 작업이 가능합니다:
+- URL 또는 로컬 파일 경로를 통해 이미지 접근
+- 선택적 컨텍스트나 구체적인 질문을 포함하여 이미지 내용 처리
+- 시각적 정보와 작업 요구사항에 따른 분석 및 인사이트 제공
+
+### 모범 사례
+
+멀티모달 에이전트를 사용할 때 다음의 모범 사례를 염두에 두세요:
+
+1. **이미지 접근성**
+   - 에이전트가 접근할 수 있는 URL을 통해 이미지를 제공해야 합니다.
+   - 로컬 이미지는 임시로 호스팅하거나 절대 파일 경로를 사용하는 것을 고려하세요.
+   - 작업을 실행하기 전에 이미지 URL이 유효하고 접근 가능한지 확인하세요.
+
+2. **작업 설명**
+   - 에이전트가 이미지의 어떤 부분을 분석하기를 원하는지 구체적으로 명시하세요.
+   - 작업 설명에 명확한 질문이나 요구사항을 포함하세요.
+   - 집중된 분석이 필요한 경우 선택적인 `action` 파라미터 사용을 고려하세요.
+
+3. **리소스 관리**
+   - 이미지 처리는 텍스트 전용 작업보다 더 많은 컴퓨팅 자원을 필요로 할 수 있습니다.
+   - 일부 언어 모델은 이미지 데이터를 base64로 인코딩해야 할 수 있습니다.
+   - 성능 최적화를 위해 여러 이미지를 일괄 처리하는 방법을 고려하세요.
+
+4. **환경 설정**
+   - 이미지 처리를 위한 필수 의존성이 환경에 설치되어 있는지 확인하세요.
+   - 사용하는 언어 모델이 멀티모달 기능을 지원하는지 확인하세요.
+   - 설정을 검증하기 위해 작은 이미지를 먼저 테스트하세요.
+
+5. **오류 처리**
+   - 이미지 로딩 실패에 대한 적절한 오류 처리를 구현하세요.
+   - 이미지 처리 실패 시를 대비한 예비 전략을 마련하세요.
+   - 디버깅을 위해 이미지 처리 작업을 모니터링하고 로그를 남기세요.
