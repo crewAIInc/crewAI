@@ -1,0 +1,150 @@
+---
+title: S3 Writer Tool
+description: S3WriterTool은 CrewAI 에이전트가 Amazon S3 버킷의 파일에 콘텐츠를 쓸 수 있도록 해줍니다.
+icon: aws
+---
+
+# `S3WriterTool`
+
+## 설명
+
+`S3WriterTool`은 Amazon S3 버킷의 파일에 콘텐츠를 기록하도록 설계되었습니다. 이 도구를 사용하면 CrewAI 에이전트가 S3에서 파일을 생성하거나 업데이트할 수 있어, 데이터를 저장하거나 구성 파일을 저장하거나 기타 콘텐츠를 AWS S3 스토리지에 영구적으로 보관해야 하는 워크플로우에 이상적입니다.
+
+## 설치
+
+이 도구를 사용하려면 필요한 종속성을 설치해야 합니다:
+
+```shell
+uv add boto3
+```
+
+## 시작 단계
+
+`S3WriterTool`을 효과적으로 사용하려면 다음 단계를 따르세요:
+
+1. **필수 패키지 설치**: 위 명령어를 사용하여 필요한 패키지를 설치합니다.
+2. **AWS 자격 증명 구성**: 환경 변수로 AWS 자격 증명을 설정합니다.
+3. **도구 초기화**: 도구의 인스턴스를 생성합니다.
+4. **S3 경로 및 내용 지정**: 파일을 작성할 S3 경로와 작성할 내용을 제공합니다.
+
+## 예시
+
+다음 예시는 `S3WriterTool`을 사용하여 S3 버킷의 파일에 콘텐츠를 쓰는 방법을 보여줍니다:
+
+```python Code
+from crewai import Agent, Task, Crew
+from crewai_tools.aws.s3 import S3WriterTool
+
+# Initialize the tool
+s3_writer_tool = S3WriterTool()
+
+# Define an agent that uses the tool
+file_writer_agent = Agent(
+    role="File Writer",
+    goal="Write content to files in S3 buckets",
+    backstory="An expert in storing and managing files in cloud storage.",
+    tools=[s3_writer_tool],
+    verbose=True,
+)
+
+# Example task to write a report
+write_task = Task(
+    description="Generate a summary report of the quarterly sales data and save it to {my_bucket}.",
+    expected_output="Confirmation that the report was successfully saved to S3.",
+    agent=file_writer_agent,
+)
+
+# Create and run the crew
+crew = Crew(agents=[file_writer_agent], tasks=[write_task])
+result = crew.kickoff(inputs={"my_bucket": "s3://my-bucket/reports/quarterly-summary.txt"})
+```
+
+## 파라미터
+
+`S3WriterTool`은 에이전트가 사용할 때 다음 파라미터를 허용합니다:
+
+- **file_path**: 필수. `s3://bucket-name/file-name` 형식의 S3 파일 경로입니다.
+- **content**: 필수. 파일에 쓸 내용입니다.
+
+## AWS 자격 증명
+
+이 도구는 S3 버킷에 접근하기 위해 AWS 자격 증명이 필요합니다. 다음과 같이 환경 변수로 자격 증명을 설정할 수 있습니다:
+
+- **CREW_AWS_REGION**: S3 버킷이 위치한 AWS 리전. 기본값은 `us-east-1`입니다.
+- **CREW_AWS_ACCESS_KEY_ID**: AWS 액세스 키 ID.
+- **CREW_AWS_SEC_ACCESS_KEY**: AWS 시크릿 액세스 키.
+
+## 사용법
+
+`S3WriterTool`을 agent와 함께 사용할 때, agent는 S3 파일 경로와 작성할 내용을 모두 제공해야 합니다:
+
+```python Code
+# Example of using the tool with an agent
+file_writer_agent = Agent(
+    role="File Writer",
+    goal="Write content to files in S3 buckets",
+    backstory="An expert in storing and managing files in cloud storage.",
+    tools=[s3_writer_tool],
+    verbose=True,
+)
+
+# Create a task for the agent to write a specific file
+write_config_task = Task(
+    description="""
+    Create a configuration file with the following database settings:
+    - host: db.example.com
+    - port: 5432
+    - username: app_user
+    - password: secure_password
+
+    Save this configuration as JSON to {my_bucket}.
+    """,
+    expected_output="Confirmation that the configuration file was successfully saved to S3.",
+    agent=file_writer_agent,
+)
+
+# Run the task
+crew = Crew(agents=[file_writer_agent], tasks=[write_config_task])
+result = crew.kickoff(inputs={"my_bucket": "s3://my-bucket/config/db-config.json"})
+```
+
+## 오류 처리
+
+`S3WriterTool`은 일반적인 S3 문제에 대한 오류 처리를 포함합니다:
+
+- 잘못된 S3 경로 형식
+- 권한 문제(예: 버킷에 대한 쓰기 권한 없음)
+- AWS 자격 증명 문제
+- 버킷이 존재하지 않음
+
+오류가 발생하면 도구는 문제에 대한 세부 정보가 포함된 오류 메시지를 반환합니다.
+
+## 구현 세부 정보
+
+`S3WriterTool`은 S3와 상호 작용하기 위해 AWS SDK for Python(boto3)를 사용합니다:
+
+```python Code
+class S3WriterTool(BaseTool):
+    name: str = "S3 Writer Tool"
+    description: str = "Writes content to a file in Amazon S3 given an S3 file path"
+
+    def _run(self, file_path: str, content: str) -> str:
+        try:
+            bucket_name, object_key = self._parse_s3_path(file_path)
+
+            s3 = boto3.client(
+                's3',
+                region_name=os.getenv('CREW_AWS_REGION', 'us-east-1'),
+                aws_access_key_id=os.getenv('CREW_AWS_ACCESS_KEY_ID'),
+                aws_secret_access_key=os.getenv('CREW_AWS_SEC_ACCESS_KEY')
+            )
+
+            s3.put_object(Bucket=bucket_name, Key=object_key, Body=content.encode('utf-8'))
+            return f"Successfully wrote content to {file_path}"
+        except ClientError as e:
+            return f"Error writing file to S3: {str(e)}"
+```
+
+## 결론
+
+`S3WriterTool`은 Amazon S3 버킷의 파일에 콘텐츠를 간편하게 작성할 수 있는 방법을 제공합니다. 이 도구를 통해 에이전트가 S3에서 파일을 생성하고 업데이트할 수 있어 클라우드 기반 파일 저장소가 필요한 워크플로우를 지원합니다. 이 도구는 데이터 영속성, 구성 관리, 보고서 생성 및 AWS S3 저장소에 정보를 저장해야 하는 작업에 특히 유용합니다.

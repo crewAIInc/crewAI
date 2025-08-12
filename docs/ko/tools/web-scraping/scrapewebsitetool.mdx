@@ -1,0 +1,47 @@
+---
+title: 웹사이트 스크랩
+description: ScrapeWebsiteTool은 지정된 웹사이트의 내용을 추출하고 읽도록 설계되었습니다.
+icon: magnifying-glass-location
+---
+
+# `ScrapeWebsiteTool`
+
+<Note>
+    저희는 여전히 도구를 개선하고 있으므로, 예기치 않은 동작이나 변경 사항이 발생할 수 있습니다.
+</Note>
+
+## 설명
+
+지정된 웹사이트의 내용을 추출하고 읽을 수 있도록 설계된 도구입니다. 이 도구는 HTTP 요청을 보내고 수신된 HTML 콘텐츠를 파싱함으로써 다양한 유형의 웹 페이지를 처리할 수 있습니다.
+이 도구는 웹 스크래핑 작업, 데이터 수집 또는 웹사이트에서 특정 정보를 추출하는 데 특히 유용할 수 있습니다.
+
+## 설치
+
+crewai_tools 패키지를 설치하세요
+
+```shell
+pip install 'crewai[tools]'
+```
+
+## 예시
+
+```python
+from crewai_tools import ScrapeWebsiteTool
+
+# 실행 중에 찾은 모든 웹사이트를 스크랩할 수 있도록 활성화
+tool = ScrapeWebsiteTool()
+
+# 웹사이트 URL로 도구를 초기화하여,
+# 에이전트가 지정된 웹사이트의 콘텐츠만 스크랩할 수 있도록 합니다
+tool = ScrapeWebsiteTool(website_url='https://www.example.com')
+
+# 사이트에서 텍스트 추출
+text = tool.run()
+print(text)
+```
+
+## 인자
+
+| 인자            | 타입     | 설명                                                                                                                            |
+|:---------------|:---------|:--------------------------------------------------------------------------------------------------------------------------------|
+| **website_url**  | `string`   | **필수** 웹사이트 URL로, 파일을 읽기 위한 주소입니다. 이 값은 도구의 주요 입력값으로, 어떤 웹사이트의 콘텐츠를 수집하고 읽을지 지정합니다.                                     |

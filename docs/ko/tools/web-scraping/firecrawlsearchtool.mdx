@@ -1,0 +1,41 @@
+---
+title: Firecrawl 검색
+description: FirecrawlSearchTool은 웹사이트를 검색하고 이를 깔끔한 마크다운 또는 구조화된 데이터로 변환하도록 설계되었습니다.
+icon: fire-flame
+---
+
+# `FirecrawlSearchTool`
+
+## 설명
+
+[Firecrawl](https://firecrawl.dev)은(는) 어떤 웹사이트도 크롤링하여 깔끔한 마크다운 또는 구조화된 데이터로 변환할 수 있는 플랫폼입니다.
+
+## 설치
+
+- [firecrawl.dev](https://firecrawl.dev)에서 API 키를 발급받아 환경 변수(`FIRECRAWL_API_KEY`)에 설정하세요.
+- [Firecrawl SDK](https://github.com/mendableai/firecrawl)와 함께 `crewai[tools]` 패키지를 설치하세요:
+
+```shell
+pip install firecrawl-py 'crewai[tools]'
+```
+
+## 예시
+
+에이전트가 웹사이트를 로드할 수 있도록 FirecrawlSearchTool을 다음과 같이 활용합니다:
+
+```python Code
+from crewai_tools import FirecrawlSearchTool
+
+tool = FirecrawlSearchTool(query='what is firecrawl?')
+```
+
+## 인자
+
+- `api_key`: 선택 사항입니다. Firecrawl API 키를 지정합니다. 기본값은 `FIRECRAWL_API_KEY` 환경 변수입니다.
+- `query`: 검색에 사용될 검색 쿼리 문자열입니다.
+- `page_options`: 선택 사항입니다. 결과 형식 지정 옵션입니다.
+  - `onlyMainContent`: 선택 사항입니다. 헤더, 내브, 푸터 등을 제외한 페이지의 주요 내용만 반환합니다.
+  - `includeHtml`: 선택 사항입니다. 페이지의 원시 HTML 콘텐츠를 포함합니다. 응답에 html 키가 출력됩니다.
+  - `fetchPageContent`: 선택 사항입니다. 페이지의 전체 콘텐츠를 가져옵니다.
+- `search_options`: 선택 사항입니다. 크롤링 동작 제어 옵션입니다.
+  - `limit`: 선택 사항입니다. 크롤링할 페이지의 최대 개수입니다.

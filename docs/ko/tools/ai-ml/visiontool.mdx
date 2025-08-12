@@ -1,0 +1,49 @@
+---
+title: 비전 도구
+description: VisionTool은 이미지에서 텍스트를 추출하도록 설계되었습니다.
+icon: eye
+---
+
+# `VisionTool`
+
+## 설명
+
+이 도구는 이미지에서 텍스트를 추출하는 데 사용됩니다. 에이전트에 전달되면 이미지에서 텍스트를 추출한 후 이를 사용하여 응답, 보고서 또는 기타 출력을 생성합니다.
+이미지의 URL 또는 경로(PATH)를 에이전트에 전달해야 합니다.
+
+## 설치
+
+crewai_tools 패키지를 설치하세요
+
+```shell
+pip install 'crewai[tools]'
+```
+
+## 사용법
+
+VisionTool을 사용하려면 OpenAI API 키를 환경 변수 `OPENAI_API_KEY`에 설정해야 합니다.
+
+```python Code
+from crewai_tools import VisionTool
+
+vision_tool = VisionTool()
+
+@agent
+def researcher(self) -> Agent:
+    '''
+    이 agent는 VisionTool을 사용하여 이미지에서 텍스트를 추출합니다.
+    '''
+    return Agent(
+        config=self.agents_config["researcher"],
+        allow_delegation=False,
+        tools=[vision_tool]
+    )
+```
+
+## 인수
+
+VisionTool은 다음과 같은 인수가 필요합니다:
+
+| 인수                | 타입     | 설명                                                                              |
+| :------------------ | :------- | :-------------------------------------------------------------------------------- |
+| **image_path_url**  | `string` | **필수**. 텍스트를 추출해야 하는 이미지 파일의 경로입니다.                         |

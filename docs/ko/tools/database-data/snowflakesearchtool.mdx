@@ -1,0 +1,202 @@
+---
+title: Snowflake 검색 도구
+description: SnowflakeSearchTool은 CrewAI 에이전트가 Snowflake 데이터 웨어하우스에서 SQL 쿼리를 실행하고 시맨틱 검색을 수행할 수 있도록 합니다.
+icon: snowflake
+---
+
+# `SnowflakeSearchTool`
+
+## 설명
+
+`SnowflakeSearchTool`은 Snowflake 데이터 웨어하우스에 연결하고, 연결 풀링, 재시도 로직, 비동기 실행과 같은 고급 기능으로 SQL 쿼리를 실행하도록 설계되었습니다. 이 도구를 통해 CrewAI 에이전트는 Snowflake 데이터베이스와 상호작용할 수 있으므로, Snowflake에 저장된 엔터프라이즈 데이터에 접근이 필요한 데이터 분석, 리포팅, 비즈니스 인텔리전스 작업에 이상적입니다.
+
+## 설치
+
+이 도구를 사용하려면 필요한 종속 항목을 설치해야 합니다:
+
+```shell
+uv add cryptography snowflake-connector-python snowflake-sqlalchemy
+```
+
+또는 다음과 같이 할 수도 있습니다:
+
+```shell
+uv sync --extra snowflake
+```
+
+## 시작 단계
+
+`SnowflakeSearchTool`을(를) 효과적으로 사용하려면 다음 단계를 따르세요:
+
+1. **필수 패키지 설치**: 위의 명령어 중 하나를 사용하여 필요한 패키지들을 설치하세요.
+2. **Snowflake 연결 구성**: Snowflake 자격 증명을 사용하여 `SnowflakeConfig` 객체를 생성하세요.
+3. **도구 초기화**: 필요한 구성을 포함하여 도구의 인스턴스를 생성하세요.
+4. **쿼리 실행**: 도구를 사용하여 Snowflake 데이터베이스에서 SQL 쿼리를 실행하세요.
+
+## 예시
+
+다음 예시는 `SnowflakeSearchTool`을 사용하여 Snowflake 데이터베이스에서 데이터를 쿼리하는 방법을 보여줍니다:
+
+```python Code
+from crewai import Agent, Task, Crew
+from crewai_tools import SnowflakeSearchTool, SnowflakeConfig
+
+# Create Snowflake configuration
+config = SnowflakeConfig(
+    account="your_account",
+    user="your_username",
+    password="your_password",
+    warehouse="COMPUTE_WH",
+    database="your_database",
+    snowflake_schema="your_schema"
+)
+
+# Initialize the tool
+snowflake_tool = SnowflakeSearchTool(config=config)
+
+# Define an agent that uses the tool
+data_analyst_agent = Agent(
+    role="Data Analyst",
+    goal="Analyze data from Snowflake database",
+    backstory="An expert data analyst who can extract insights from enterprise data.",
+    tools=[snowflake_tool],
+    verbose=True,
+)
+
+# Example task to query sales data
+query_task = Task(
+    description="Query the sales data for the last quarter and summarize the top 5 products by revenue.",
+    expected_output="A summary of the top 5 products by revenue for the last quarter.",
+    agent=data_analyst_agent,
+)
+
+# Create and run the crew
+crew = Crew(agents=[data_analyst_agent],
+            tasks=[query_task])
+result = crew.kickoff()
+```
+
+추가 매개변수를 사용하여 툴을 맞춤 설정할 수도 있습니다:
+
+```python Code
+# Initialize the tool with custom parameters
+snowflake_tool = SnowflakeSearchTool(
+    config=config,
+    pool_size=10,
+    max_retries=5,
+    retry_delay=2.0,
+    enable_caching=True
+)
+```
+
+## 매개변수
+
+### SnowflakeConfig 매개변수
+
+`SnowflakeConfig` 클래스는 다음과 같은 매개변수를 받습니다:
+
+- **account**: 필수. Snowflake 계정 식별자.
+- **user**: 필수. Snowflake 사용자명.
+- **password**: 선택 사항*. Snowflake 비밀번호.
+- **private_key_path**: 선택 사항*. 비공개 키 파일 경로(비밀번호의 대안).
+- **warehouse**: 필수. Snowflake 웨어하우스 이름.
+- **database**: 필수. 기본 데이터베이스.
+- **snowflake_schema**: 필수. 기본 스키마.
+- **role**: 선택 사항. Snowflake 역할.
+- **session_parameters**: 선택 사항. 딕셔너리 형태의 사용자 지정 세션 파라미터.
+
+*`password` 또는 `private_key_path` 중 하나는 반드시 제공되어야 합니다.
+
+### SnowflakeSearchTool 매개변수
+
+`SnowflakeSearchTool`은(는) 초기화 시 다음과 같은 매개변수를 받습니다:
+
+- **config**: 필수. 연결 세부 정보를 포함하는 `SnowflakeConfig` 객체입니다.
+- **pool_size**: 선택 사항. 풀 내의 연결 수입니다. 기본값은 5입니다.
+- **max_retries**: 선택 사항. 실패한 쿼리에 대한 최대 재시도 횟수입니다. 기본값은 3입니다.
+- **retry_delay**: 선택 사항. 재시도 간의 지연 시간(초)입니다. 기본값은 1.0입니다.
+- **enable_caching**: 선택 사항. 쿼리 결과 캐싱 활성화 여부입니다. 기본값은 True입니다.
+
+## 사용법
+
+`SnowflakeSearchTool`을 사용할 때는 다음과 같은 매개변수를 제공해야 합니다:
+
+- **query**: 필수. 실행할 SQL 쿼리입니다.
+- **database**: 선택 사항. config에 지정된 기본 데이터베이스를 재정의합니다.
+- **snowflake_schema**: 선택 사항. config에 지정된 기본 스키마를 재정의합니다.
+- **timeout**: 선택 사항. 쿼리 타임아웃(초)입니다. 기본값은 300입니다.
+
+이 도구는 각 행을 컬럼 이름을 키로 갖는 딕셔너리로 표현하여, 결과를 딕셔너리 리스트 형태로 반환합니다.
+
+```python Code
+# Example of using the tool with an agent
+data_analyst = Agent(
+    role="Data Analyst",
+    goal="Analyze sales data from Snowflake",
+    backstory="An expert data analyst with experience in SQL and data visualization.",
+    tools=[snowflake_tool],
+    verbose=True
+)
+
+# The agent will use the tool with parameters like:
+# query="SELECT product_name, SUM(revenue) as total_revenue FROM sales GROUP BY product_name ORDER BY total_revenue DESC LIMIT 5"
+# timeout=600
+
+# Create a task for the agent
+analysis_task = Task(
+    description="Query the sales database and identify the top 5 products by revenue for the last quarter.",
+    expected_output="A detailed analysis of the top 5 products by revenue.",
+    agent=data_analyst
+)
+
+# Run the task
+crew = Crew(
+    agents=[data_analyst],
+    tasks=[analysis_task]
+)
+result = crew.kickoff()
+```
+
+## 고급 기능
+
+### 커넥션 풀링
+
+`SnowflakeSearchTool`은 데이터베이스 커넥션을 재사용하여 성능을 향상시키기 위해 커넥션 풀링을 구현합니다. `pool_size` 매개변수를 통해 풀의 크기를 조절할 수 있습니다.
+
+### 자동 재시도
+
+이 도구는 실패한 쿼리를 자동으로 지수적 백오프(Exponential Backoff) 방식으로 재시도합니다. `max_retries` 및 `retry_delay` 매개변수로 재시도 동작을 설정할 수 있습니다.
+
+### 쿼리 결과 캐싱
+
+반복 쿼리의 성능을 향상시키기 위해, 이 도구는 쿼리 결과를 캐싱할 수 있습니다. 이 기능은 기본적으로 활성화되어 있지만 `enable_caching=False`로 설정하면 비활성화할 수 있습니다.
+
+### 키-페어 인증
+
+비밀번호 인증 외에도 도구는 보안 강화를 위해 키-페어 인증을 지원합니다:
+
+```python Code
+config = SnowflakeConfig(
+    account="your_account",
+    user="your_username",
+    private_key_path="/path/to/your/private/key.p8",
+    warehouse="COMPUTE_WH",
+    database="your_database",
+    snowflake_schema="your_schema"
+)
+```
+
+## 오류 처리
+
+`SnowflakeSearchTool`은 일반적인 Snowflake 문제에 대한 포괄적인 오류 처리를 포함하고 있습니다:
+
+- 연결 실패
+- 쿼리 시간 초과
+- 인증 오류
+- 데이터베이스 및 스키마 오류
+
+오류가 발생하면, 도구는 (설정된 경우) 작업을 재시도하고 자세한 오류 정보를 제공합니다.
+
+## 결론
+
+`SnowflakeSearchTool`은 Snowflake 데이터 웨어하우스를 CrewAI 에이전트와 통합할 수 있는 강력한 방법을 제공합니다. 커넥션 풀링, 자동 재시도, 쿼리 캐싱과 같은 기능을 통해 엔터프라이즈 데이터에 효율적이고 신뢰성 있게 접근할 수 있습니다. 이 도구는 특히 Snowflake에 저장된 구조화된 데이터에 접근해야 하는 데이터 분석, 리포팅, 비즈니스 인텔리전스 작업에 유용합니다.

@@ -1,0 +1,146 @@
+---
+title: LlamaIndex 도구
+description: LlamaIndexTool은 LlamaIndex 도구와 쿼리 엔진의 래퍼입니다.
+icon: address-book
+---
+
+# `LlamaIndexTool`
+
+## 설명
+
+`LlamaIndexTool`은 LlamaIndex 도구 및 쿼리 엔진에 대한 일반적인 래퍼로 설계되어, LlamaIndex 리소스를 RAG/agentic 파이프라인의 도구로 활용하여 CrewAI 에이전트에 연동할 수 있도록 합니다. 이 도구를 통해 LlamaIndex의 강력한 데이터 처리 및 검색 기능을 CrewAI 워크플로우에 원활하게 통합할 수 있습니다.
+
+## 설치
+
+이 도구를 사용하려면 LlamaIndex를 설치해야 합니다:
+
+```shell
+uv add llama-index
+```
+
+## 시작하는 단계
+
+`LlamaIndexTool`을 효과적으로 사용하려면 다음 단계를 따르세요:
+
+1. **LlamaIndex 설치**: 위의 명령어를 사용하여 LlamaIndex 패키지를 설치하세요.
+2. **LlamaIndex 설정**: [LlamaIndex 문서](https://docs.llamaindex.ai/)를 참고하여 RAG/에이전트 파이프라인을 설정하세요.
+3. **도구 또는 쿼리 엔진 생성**: CrewAI와 함께 사용할 LlamaIndex 도구 또는 쿼리 엔진을 생성하세요.
+
+## 예시
+
+다음 예시들은 다양한 LlamaIndex 컴포넌트에서 도구를 초기화하는 방법을 보여줍니다:
+
+### LlamaIndex Tool에서
+
+```python Code
+from crewai_tools import LlamaIndexTool
+from crewai import Agent
+from llama_index.core.tools import FunctionTool
+
+# Example 1: Initialize from FunctionTool
+def search_data(query: str) -> str:
+    """Search for information in the data."""
+    # Your implementation here
+    return f"Results for: {query}"
+
+# Create a LlamaIndex FunctionTool
+og_tool = FunctionTool.from_defaults(
+    search_data,
+    name="DataSearchTool",
+    description="Search for information in the data"
+)
+
+# Wrap it with LlamaIndexTool
+tool = LlamaIndexTool.from_tool(og_tool)
+
+# Define an agent that uses the tool
+@agent
+def researcher(self) -> Agent:
+    '''
+    This agent uses the LlamaIndexTool to search for information.
+    '''
+    return Agent(
+        config=self.agents_config["researcher"],
+        tools=[tool]
+    )
+```
+
+### LlamaHub 도구에서
+
+```python Code
+from crewai_tools import LlamaIndexTool
+from llama_index.tools.wolfram_alpha import WolframAlphaToolSpec
+
+# Initialize from LlamaHub Tools
+wolfram_spec = WolframAlphaToolSpec(app_id="your_app_id")
+wolfram_tools = wolfram_spec.to_tool_list()
+tools = [LlamaIndexTool.from_tool(t) for t in wolfram_tools]
+```
+
+### LlamaIndex 쿼리 엔진에서
+
+```python Code
+from crewai_tools import LlamaIndexTool
+from llama_index.core import VectorStoreIndex
+from llama_index.core.readers import SimpleDirectoryReader
+
+# Load documents
+documents = SimpleDirectoryReader("./data").load_data()
+
+# Create an index
+index = VectorStoreIndex.from_documents(documents)
+
+# Create a query engine
+query_engine = index.as_query_engine()
+
+# Create a LlamaIndexTool from the query engine
+query_tool = LlamaIndexTool.from_query_engine(
+    query_engine,
+    name="Company Data Query Tool",
+    description="Use this tool to lookup information in company documents"
+)
+```
+
+## 클래스 메서드
+
+`LlamaIndexTool`은 인스턴스를 생성하기 위한 두 가지 주요 클래스 메서드를 제공합니다:
+
+### from_tool
+
+LlamaIndex tool에서 `LlamaIndexTool`을 생성합니다.
+
+```python Code
+@classmethod
+def from_tool(cls, tool: Any, **kwargs: Any) -> "LlamaIndexTool":
+    # Implementation details
+```
+
+### from_query_engine
+
+LlamaIndex query engine에서 `LlamaIndexTool`을 생성합니다.
+
+```python Code
+@classmethod
+def from_query_engine(
+    cls,
+    query_engine: Any,
+    name: Optional[str] = None,
+    description: Optional[str] = None,
+    return_direct: bool = False,
+    **kwargs: Any,
+) -> "LlamaIndexTool":
+    # Implementation details
+```
+
+## 파라미터
+
+`from_query_engine` 메서드는 다음과 같은 파라미터를 받습니다:
+
+- **query_engine**: 필수. 래핑할 LlamaIndex 쿼리 엔진입니다.
+- **name**: 선택 사항. 도구의 이름입니다.
+- **description**: 선택 사항. 도구의 설명입니다.
+- **return_direct**: 선택 사항. 응답을 직접 반환할지 여부입니다. 기본값은 `False`입니다.
+
+## 결론
+
+`LlamaIndexTool`은 LlamaIndex의 기능을 CrewAI 에이전트에 통합할 수 있는 강력한 방법을 제공합니다. LlamaIndex 도구와 쿼리 엔진을 래핑함으로써, 에이전트가 정교한 데이터 검색 및 처리 기능을 활용할 수 있게 하여, 복잡한 정보 소스를 다루는 능력을 강화합니다.

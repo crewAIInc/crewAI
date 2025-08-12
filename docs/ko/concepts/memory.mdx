@@ -1,0 +1,1159 @@
+---
+title: 메모리
+description: CrewAI 프레임워크에서 메모리 시스템을 활용하여 에이전트의 역량을 강화합니다.
+icon: database
+---
+
+## 개요
+
+CrewAI 프레임워크는 AI 에이전트의 역량을 크게 향상시키기 위해 설계된 정교한 메모리 시스템을 제공합니다. CrewAI는 서로 다른 용도에 맞는 **세 가지 구별되는 메모리 접근 방식**을 제공합니다:
+
+1. **기본 메모리 시스템** - 내장 단기, 장기, 엔터티 메모리
+2. **외부 메모리** - 독립적인 외부 메모리 제공자
+
+## 메모리 시스템 구성 요소
+
+| 구성 요소                | 설명                                                                                                                     |
+| :------------------- | :---------------------------------------------------------------------------------------------------------------------- |
+| **Short-Term Memory**| 최근 상호작용과 결과를 `RAG`를 사용하여 임시로 저장하며, 에이전트가 현재 실행 중인 컨텍스트와 관련된 정보를 기억하고 활용할 수 있도록 합니다. |
+| **Long-Term Memory** | 과거 실행에서 얻은 귀중한 인사이트와 학습 내용을 보존하여 에이전트가 시간이 지남에 따라 지식을 구축하고 개선할 수 있게 합니다.             |
+| **Entity Memory**    | 작업 중에 접한 엔터티(사람, 장소, 개념)에 대한 정보를 포착하고 조직하여 더 깊은 이해와 관계 매핑을 지원합니다. 엔터티 정보 저장을 위해 `RAG`를 사용합니다. |
+| **Contextual Memory**| `ShortTermMemory`, `LongTermMemory`, `ExternalMemory`, `EntityMemory`를 결합하여 상호작용의 컨텍스트를 유지해줌으로써, 일련의 작업 또는 대화 전반에 걸쳐 에이전트의 응답 일관성과 관련성을 높입니다. |
+
+## 1. 기본 메모리 시스템 (권장)
+
+가장 단순하고 일반적으로 사용되는 방법입니다. 한 가지 파라미터로 crew의 memory를 활성화할 수 있습니다:
+
+### 빠른 시작
+```python
+from crewai import Crew, Agent, Task, Process
+
+# Enable basic memory system
+crew = Crew(
+    agents=[...],
+    tasks=[...],
+    process=Process.sequential,
+    memory=True,  # Enables short-term, long-term, and entity memory
+    verbose=True
+)
+```
+
+### 작동 방식
+- **단기 메모리**: 현재 컨텍스트를 위해 ChromaDB와 RAG 사용
+- **장기 메모리**: 세션 간의 작업 결과를 저장하기 위해 SQLite3 사용
+- **엔티티 메모리**: 엔티티(사람, 장소, 개념)를 추적하기 위해 RAG 사용
+- **저장 위치**: `appdirs` 패키지를 통한 플랫폼별 위치
+- **사용자 지정 저장 디렉터리**: `CREWAI_STORAGE_DIR` 환경 변수 설정
+
+## 저장 위치 투명성
+
+<Info>
+**저장 위치 이해하기**: CrewAI는 운영 체제의 관례에 따라 메모리와 knowledge 파일을 저장하기 위해 플랫폼별 디렉토리를 사용합니다. 이러한 위치를 이해하면 프로덕션 배포, 백업, 디버깅에 도움이 됩니다.
+</Info>
+
+### CrewAI가 파일을 저장하는 위치
+
+기본적으로 CrewAI는 플랫폼 규칙을 따르기 위해 `appdirs` 라이브러리를 사용하여 저장 위치를 결정합니다. 파일이 실제로 저장되는 위치는 다음과 같습니다:
+
+#### 플랫폼별 기본 저장 위치
+
+**macOS:**
+```
+~/Library/Application Support/CrewAI/{project_name}/
+├── knowledge/           # Knowledge base ChromaDB files
+├── short_term_memory/   # Short-term memory ChromaDB files
+├── long_term_memory/    # Long-term memory ChromaDB files
+├── entities/            # Entity memory ChromaDB files
+└── long_term_memory_storage.db  # SQLite database
+```
+
+**Linux:**
+```
+~/.local/share/CrewAI/{project_name}/
+├── knowledge/
+├── short_term_memory/
+├── long_term_memory/
+├── entities/
+└── long_term_memory_storage.db
+```
+
+**Windows:**
+```
+C:\Users\{username}\AppData\Local\CrewAI\{project_name}\
+├── knowledge\
+├── short_term_memory\
+├── long_term_memory\
+├── entities\
+└── long_term_memory_storage.db
+```
+
+### 저장 위치 찾기
+
+CrewAI가 시스템에 파일을 저장하는 위치를 정확히 확인하려면:
+
+```python
+from crewai.utilities.paths import db_storage_path
+import os
+
+# Get the base storage path
+storage_path = db_storage_path()
+print(f"CrewAI storage location: {storage_path}")
+
+# List all CrewAI storage directories
+if os.path.exists(storage_path):
+    print("\nStored files and directories:")
+    for item in os.listdir(storage_path):
+        item_path = os.path.join(storage_path, item)
+        if os.path.isdir(item_path):
+            print(f"📁 {item}/")
+            # Show ChromaDB collections
+            if os.path.exists(item_path):
+                for subitem in os.listdir(item_path):
+                    print(f"   └── {subitem}")
+        else:
+            print(f"📄 {item}")
+else:
+    print("No CrewAI storage directory found yet.")
+```
+
+### 저장 위치 제어
+
+#### 옵션 1: 환경 변수 (권장)
+```python
+import os
+from crewai import Crew
+
+# Set custom storage location
+os.environ["CREWAI_STORAGE_DIR"] = "./my_project_storage"
+
+# All memory and knowledge will now be stored in ./my_project_storage/
+crew = Crew(
+    agents=[...],
+    tasks=[...],
+    memory=True
+)
+```
+
+#### 옵션 2: 사용자 지정 저장 경로
+```python
+import os
+from crewai import Crew
+from crewai.memory import LongTermMemory
+from crewai.memory.storage.ltm_sqlite_storage import LTMSQLiteStorage
+
+# Configure custom storage location
+custom_storage_path = "./storage"
+os.makedirs(custom_storage_path, exist_ok=True)
+
+crew = Crew(
+    memory=True,
+    long_term_memory=LongTermMemory(
+        storage=LTMSQLiteStorage(
+            db_path=f"{custom_storage_path}/memory.db"
+        )
+    )
+)
+```
+
+#### 옵션 3: 프로젝트별 스토리지
+```python
+import os
+from pathlib import Path
+
+# Store in project directory
+project_root = Path(__file__).parent
+storage_dir = project_root / "crewai_storage"
+
+os.environ["CREWAI_STORAGE_DIR"] = str(storage_dir)
+
+# Now all storage will be in your project directory
+```
+
+### 임베딩 제공자 기본값
+
+<Info>
+**기본 임베딩 제공자**: CrewAI는 일관성과 신뢰성을 위해 기본적으로 OpenAI 임베딩을 사용합니다. 이를 쉽게 사용자 맞춤화하여 LLM 제공자에 맞추거나 로컬 임베딩을 사용할 수 있습니다.
+</Info>
+
+#### 기본 동작 이해하기
+```python
+# When using Claude as your LLM...
+from crewai import Agent, LLM
+
+agent = Agent(
+    role="Analyst",
+    goal="Analyze data",
+    backstory="Expert analyst",
+    llm=LLM(provider="anthropic", model="claude-3-sonnet")  # Using Claude
+)
+
+# CrewAI will use OpenAI embeddings by default for consistency
+# You can easily customize this to match your preferred provider
+```
+
+#### 임베딩 공급자 사용자 지정
+```python
+from crewai import Crew
+
+# Option 1: Match your LLM provider
+crew = Crew(
+    agents=[agent],
+    tasks=[task],
+    memory=True,
+    embedder={
+        "provider": "anthropic", # Match your LLM provider
+        "config": {
+            "api_key": "your-anthropic-key",
+            "model": "text-embedding-3-small"
+        }
+    }
+)
+
+# Option 2: Use local embeddings (no external API calls)
+crew = Crew(
+    agents=[agent],
+    tasks=[task],
+    memory=True,
+    embedder={
+        "provider": "ollama",
+        "config": {"model": "mxbai-embed-large"}
+    }
+)
+```
+
+### 스토리지 문제 디버깅
+
+#### 스토리지 권한 확인
+```python
+import os
+from crewai.utilities.paths import db_storage_path
+
+storage_path = db_storage_path()
+print(f"Storage path: {storage_path}")
+print(f"Path exists: {os.path.exists(storage_path)}")
+print(f"Is writable: {os.access(storage_path, os.W_OK) if os.path.exists(storage_path) else 'Path does not exist'}")
+
+# Create with proper permissions
+if not os.path.exists(storage_path):
+    os.makedirs(storage_path, mode=0o755, exist_ok=True)
+    print(f"Created storage directory: {storage_path}")
+```
+
+#### ChromaDB 컬렉션 검사하기
+```python
+import chromadb
+from crewai.utilities.paths import db_storage_path
+
+# Connect to CrewAI's ChromaDB
+storage_path = db_storage_path()
+chroma_path = os.path.join(storage_path, "knowledge")
+
+if os.path.exists(chroma_path):
+    client = chromadb.PersistentClient(path=chroma_path)
+    collections = client.list_collections()
+
+    print("ChromaDB Collections:")
+    for collection in collections:
+        print(f"  - {collection.name}: {collection.count()} documents")
+else:
+    print("No ChromaDB storage found")
+```
+
+#### 스토리지 리셋 (디버깅)
+```python
+from crewai import Crew
+
+# Reset all memory storage
+crew = Crew(agents=[...], tasks=[...], memory=True)
+
+# Reset specific memory types
+crew.reset_memories(command_type='short')     # 단기 메모리
+crew.reset_memories(command_type='long')      # 장기 메모리
+crew.reset_memories(command_type='entity')    # 엔티티 메모리
+crew.reset_memories(command_type='knowledge') # 지식 스토리지
+```
+
+### 프로덕션 모범 사례
+
+1. **`CREWAI_STORAGE_DIR`**를 프로덕션 환경에서 제어가 쉬운 경로로 설정하세요.
+2. **명시적인 임베딩 공급자**를 선택하여 LLM 설정과 일치시키세요.
+3. **스토리지 디렉토리 크기를 모니터링**하여 대규모 배포에 대비하세요.
+4. **스토리지 디렉토리**를 백업 전략에 포함하세요.
+5. **적절한 파일 권한**을 설정하세요 (디렉토리는 0o755, 파일은 0o644).
+6. **컨테이너화된 배포**를 위해 프로젝트 상대 경로를 사용하세요.
+
+### 일반적인 스토리지 문제
+
+**"ChromaDB permission denied" 오류:**
+```bash
+# Fix permissions
+chmod -R 755 ~/.local/share/CrewAI/
+```
+
+**"Database is locked" 오류:**
+```python
+# Ensure only one CrewAI instance accesses storage
+import fcntl
+import os
+
+storage_path = db_storage_path()
+lock_file = os.path.join(storage_path, ".crewai.lock")
+
+with open(lock_file, 'w') as f:
+    fcntl.flock(f.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+    # Your CrewAI code here
+```
+
+**실행 간 스토리지가 유지되지 않는 문제:**
+```python
+# Verify storage location is consistent
+import os
+print("CREWAI_STORAGE_DIR:", os.getenv("CREWAI_STORAGE_DIR"))
+print("Current working directory:", os.getcwd())
+print("Computed storage path:", db_storage_path())
+```
+
+## 커스텀 임베더 설정
+
+CrewAI는 다양한 임베딩 공급자를 지원하여 사용 사례에 가장 적합한 옵션을 선택할 수 있는 유연성을 제공합니다. 메모리 시스템에 사용할 수 있는 다양한 임베딩 공급자를 설정하는 방법에 대한 종합적인 가이드를 아래에 제공합니다.
+
+### 왜 서로 다른 임베딩 제공업체를 선택해야 할까요?
+
+- **비용 최적화**: 로컬 임베딩(Ollama)은 초기 설정 후 무료입니다
+- **프라이버시**: Ollama를 사용하여 데이터를 로컬에 보관하거나 선호하는 클라우드 제공업체를 사용할 수 있습니다
+- **성능**: 일부 모델은 특정 도메인이나 언어에 더 잘 작동합니다
+- **일관성**: 임베딩 제공업체와 LLM 제공업체를 맞출 수 있습니다
+- **컴플라이언스**: 특정 규제 또는 조직 요구사항을 충족할 수 있습니다
+
+### OpenAI 임베딩 (기본값)
+
+OpenAI는 대부분의 사용 사례에 잘 작동하는 신뢰할 수 있고 고품질의 임베딩을 제공합니다.
+
+```python
+from crewai import Crew
+
+# Basic OpenAI configuration (uses environment OPENAI_API_KEY)
+crew = Crew(
+    agents=[...],
+    tasks=[...],
+    memory=True,
+    embedder={
+        "provider": "openai",
+        "config": {
+            "model": "text-embedding-3-small"  # or "text-embedding-3-large"
+        }
+    }
+)
+
+# Advanced OpenAI configuration
+crew = Crew(
+    memory=True,
+    embedder={
+        "provider": "openai",
+        "config": {
+            "api_key": "your-openai-api-key",  # Optional: override env var
+            "model": "text-embedding-3-large",
+            "dimensions": 1536,  # Optional: reduce dimensions for smaller storage
+            "organization_id": "your-org-id"  # Optional: for organization accounts
+        }
+    }
+)
+```
+
+### Azure OpenAI 임베딩
+
+Azure OpenAI 배포를 사용하는 엔터프라이즈 사용자용. 
+
+```python
+crew = Crew(
+    memory=True,
+    embedder={
+        "provider": "openai",  # Use openai provider for Azure
+        "config": {
+            "api_key": "your-azure-api-key",
+            "api_base": "https://your-resource.openai.azure.com/",
+            "api_type": "azure",
+            "api_version": "2023-05-15",
+            "model": "text-embedding-3-small",
+            "deployment_id": "your-deployment-name"  # Azure deployment name
+        }
+    }
+)
+```
+
+### Google AI 임베딩
+
+Google의 텍스트 임베딩 모델을 사용하여 Google Cloud 서비스와 연동할 수 있습니다.
+
+```python
+crew = Crew(
+    memory=True,
+    embedder={
+        "provider": "google",
+        "config": {
+            "api_key": "your-google-api-key",
+            "model": "text-embedding-004"  # or "text-embedding-preview-0409"
+        }
+    }
+)
+```
+
+### Vertex AI 임베딩
+
+Vertex AI 액세스 권한이 있는 Google Cloud 사용자용.
+
+```python
+crew = Crew(
+    memory=True,
+    embedder={
+        "provider": "vertexai",
+        "config": {
+            "project_id": "your-gcp-project-id",
+            "region": "us-central1",  # 또는 원하는 리전
+            "api_key": "your-service-account-key",
+            "model_name": "textembedding-gecko"
+        }
+    }
+)
+```
+
+### Ollama 임베딩 (로컬)
+
+개인 정보 보호 및 비용 절감을 위해 임베딩을 로컬에서 실행하세요.
+
+```python
+# 먼저 Ollama를 로컬에 설치하고 실행한 다음, 임베딩 모델을 pull 합니다:
+# ollama pull mxbai-embed-large
+
+crew = Crew(
+    memory=True,
+    embedder={
+        "provider": "ollama",
+        "config": {
+            "model": "mxbai-embed-large",  # 또는 "nomic-embed-text"
+            "url": "http://localhost:11434/api/embeddings"  # 기본 Ollama URL
+        }
+    }
+)
+
+# 사용자 지정 Ollama 설치의 경우
+crew = Crew(
+    memory=True,
+    embedder={
+        "provider": "ollama",
+        "config": {
+            "model": "mxbai-embed-large",
+            "url": "http://your-ollama-server:11434/api/embeddings"
+        }
+    }
+)
+```
+
+### Cohere 임베딩
+
+Cohere의 임베딩 모델을 사용하여 다국어 지원을 제공합니다.
+
+```python
+crew = Crew(
+    memory=True,
+    embedder={
+        "provider": "cohere",
+        "config": {
+            "api_key": "your-cohere-api-key",
+            "model": "embed-english-v3.0"  # or "embed-multilingual-v3.0"
+        }
+    }
+)
+```
+
+### VoyageAI 임베딩
+
+검색 작업에 최적화된 고성능 임베딩입니다.
+
+```python
+crew = Crew(
+    memory=True,
+    embedder={
+        "provider": "voyageai",
+        "config": {
+            "api_key": "your-voyage-api-key",
+            "model": "voyage-large-2",  # or "voyage-code-2" for code
+            "input_type": "document"  # or "query"
+        }
+    }
+)
+```
+
+### AWS Bedrock 임베딩
+
+Bedrock 액세스 권한이 있는 AWS 사용자용.
+
+```python
+crew = Crew(
+    memory=True,
+    embedder={
+        "provider": "bedrock",
+        "config": {
+            "aws_access_key_id": "your-access-key",
+            "aws_secret_access_key": "your-secret-key",
+            "region_name": "us-east-1",
+            "model": "amazon.titan-embed-text-v1"
+        }
+    }
+)
+```
+
+### Hugging Face 임베딩
+
+Hugging Face의 오픈 소스 모델을 사용합니다.
+
+```python
+crew = Crew(
+    memory=True,
+    embedder={
+        "provider": "huggingface",
+        "config": {
+            "api_key": "your-hf-token",  # Optional for public models
+            "model": "sentence-transformers/all-MiniLM-L6-v2",
+            "api_url": "https://api-inference.huggingface.co"  # or your custom endpoint
+        }
+    }
+)
+```
+
+### IBM Watson 임베딩
+
+IBM Cloud 사용자를 위한 안내입니다.
+
+```python
+crew = Crew(
+    memory=True,
+    embedder={
+        "provider": "watson",
+        "config": {
+            "api_key": "your-watson-api-key",
+            "url": "your-watson-instance-url",
+            "model": "ibm/slate-125m-english-rtrvr"
+        }
+    }
+)
+```
+
+### 적합한 임베딩 제공업체 선택하기
+
+| 제공업체 | 최적 용도 | 장점 | 단점 |
+|:---------|:----------|:------|:------|
+| **OpenAI** | 일반적인 사용, 신뢰성 | 높은 품질, 잘 검증됨 | 비용, API 키 필요 |
+| **Ollama** | 프라이버시, 비용 절감 | 무료, 로컬, 프라이빗 | 로컬 설정 필요 |
+| **Google AI** | Google 생태계 | 좋은 성능 | Google 계정 필요 |
+| **Azure OpenAI** | 엔터프라이즈, 컴플라이언스 | 엔터프라이즈 기능 | 복잡한 설정 |
+| **Cohere** | 다국어 콘텐츠 | 뛰어난 언어 지원 | 특수한 사용 사례 |
+| **VoyageAI** | 검색 작업 | 검색에 최적화됨 | 신규 제공업체 |
+
+### 환경 변수 설정
+
+보안을 위해 API 키를 환경 변수에 저장하세요:
+
+```python
+import os
+
+# Set environment variables
+os.environ["OPENAI_API_KEY"] = "your-openai-key"
+os.environ["GOOGLE_API_KEY"] = "your-google-key"
+os.environ["COHERE_API_KEY"] = "your-cohere-key"
+
+# Use without exposing keys in code
+crew = Crew(
+    memory=True,
+    embedder={
+        "provider": "openai",
+        "config": {
+            "model": "text-embedding-3-small"
+            # API key automatically loaded from environment
+        }
+    }
+)
+```
+
+### 다양한 임베딩 제공자 테스트하기
+
+특정 사용 사례에 맞게 임베딩 제공자를 비교하세요:
+
+```python
+from crewai import Crew
+from crewai.utilities.paths import db_storage_path
+
+# Test different providers with the same data
+providers_to_test = [
+    {
+        "name": "OpenAI",
+        "config": {
+            "provider": "openai",
+            "config": {"model": "text-embedding-3-small"}
+        }
+    },
+    {
+        "name": "Ollama",
+        "config": {
+            "provider": "ollama",
+            "config": {"model": "mxbai-embed-large"}
+        }
+    }
+]
+
+for provider in providers_to_test:
+    print(f"\nTesting {provider['name']} embeddings...")
+
+    # Create crew with specific embedder
+    crew = Crew(
+        agents=[...],
+        tasks=[...],
+        memory=True,
+        embedder=provider['config']
+    )
+
+    # Run your test and measure performance
+    result = crew.kickoff()
+    print(f"{provider['name']} completed successfully")
+```
+
+### 임베딩 문제 해결
+
+**모델을 찾을 수 없음 오류:**
+```python
+# Verify model availability
+from crewai.rag.embeddings.configurator import EmbeddingConfigurator
+
+configurator = EmbeddingConfigurator()
+try:
+    embedder = configurator.configure_embedder({
+        "provider": "ollama",
+        "config": {"model": "mxbai-embed-large"}
+    })
+    print("Embedder configured successfully")
+except Exception as e:
+    print(f"Configuration error: {e}")
+```
+
+**API 키 문제:**
+```python
+import os
+
+# Check if API keys are set
+required_keys = ["OPENAI_API_KEY", "GOOGLE_API_KEY", "COHERE_API_KEY"]
+for key in required_keys:
+    if os.getenv(key):
+        print(f"✅ {key} is set")
+    else:
+        print(f"❌ {key} is not set")
+```
+
+**성능 비교:**
+```python
+import time
+
+def test_embedding_performance(embedder_config, test_text="This is a test document"):
+    start_time = time.time()
+
+    crew = Crew(
+        agents=[...],
+        tasks=[...],
+        memory=True,
+        embedder=embedder_config
+    )
+
+    # Simulate memory operation
+    crew.kickoff()
+
+    end_time = time.time()
+    return end_time - start_time
+
+# Compare performance
+openai_time = test_embedding_performance({
+    "provider": "openai",
+    "config": {"model": "text-embedding-3-small"}
+})
+
+ollama_time = test_embedding_performance({
+    "provider": "ollama",
+    "config": {"model": "mxbai-embed-large"}
+})
+
+print(f"OpenAI: {openai_time:.2f}s")
+print(f"Ollama: {ollama_time:.2f}s")
+```
+
+## 2. 외부 메모리
+외부 메모리는 crew의 내장 메모리와 독립적으로 작동하는 독립형 메모리 시스템을 제공합니다. 이는 특화된 메모리 공급자나 응용 프로그램 간 메모리 공유에 이상적입니다.
+
+### Mem0를 사용한 기본 외부 메모리
+```python
+import os
+from crewai import Agent, Crew, Process, Task
+from crewai.memory.external.external_memory import ExternalMemory
+
+# 로컬 Mem0 구성으로 외부 메모리 인스턴스 생성
+external_memory = ExternalMemory(
+    embedder_config={
+        "provider": "mem0",
+        "config": {
+            "user_id": "john",
+            "local_mem0_config": {
+                "vector_store": {
+                    "provider": "qdrant",
+                    "config": {"host": "localhost", "port": 6333}
+                },
+                "llm": {
+                    "provider": "openai",
+                    "config": {"api_key": "your-api-key", "model": "gpt-4"}
+                },
+                "embedder": {
+                    "provider": "openai",
+                    "config": {"api_key": "your-api-key", "model": "text-embedding-3-small"}
+                }
+            },
+            "infer": True # Optional defaults to True
+        },
+    }
+)
+
+crew = Crew(
+    agents=[...],
+    tasks=[...],
+    external_memory=external_memory, # 기본 메모리와 분리됨
+    process=Process.sequential,
+    verbose=True
+)
+```
+
+### Mem0 클라이언트를 활용한 고급 외부 메모리
+Mem0 클라이언트를 사용할 때, 'includes', 'excludes', 'custom_categories', 'infer', 'run_id'(이것은 단기 메모리에만 해당)와 같은 파라미터를 사용하여 메모리 구성을 더욱 세밀하게 커스터마이즈할 수 있습니다.  
+더 자세한 내용은 [Mem0 문서](https://docs.mem0.ai/)에서 확인할 수 있습니다.
+
+```python
+import os
+from crewai import Agent, Crew, Process, Task
+from crewai.memory.external.external_memory import ExternalMemory
+
+new_categories = [
+    {"lifestyle_management_concerns": "Tracks daily routines, habits, hobbies and interests including cooking, time management and work-life balance"},
+    {"seeking_structure": "Documents goals around creating routines, schedules, and organized systems in various life areas"},
+    {"personal_information": "Basic information about the user including name, preferences, and personality traits"}
+]
+
+os.environ["MEM0_API_KEY"] = "your-api-key"
+
+# Create external memory instance with Mem0 Client
+external_memory = ExternalMemory(
+    embedder_config={
+        "provider": "mem0",
+        "config": {
+            "user_id": "john",
+            "org_id": "my_org_id",        # Optional
+            "project_id": "my_project_id", # Optional
+            "api_key": "custom-api-key"    # Optional - overrides env var
+            "run_id": "my_run_id",        # Optional - for short-term memory
+            "includes": "include1",       # Optional 
+            "excludes": "exclude1",       # Optional
+            "infer": True                 # Optional defaults to True
+            "custom_categories": new_categories  # Optional - custom categories for user memory
+        },
+    }
+)
+
+crew = Crew(
+    agents=[...],
+    tasks=[...],
+    external_memory=external_memory, # Separate from basic memory
+    process=Process.sequential,
+    verbose=True
+)
+```
+
+### 커스텀 스토리지 구현
+```python
+from crewai.memory.external.external_memory import ExternalMemory
+from crewai.memory.storage.interface import Storage
+
+class CustomStorage(Storage):
+    def __init__(self):
+        self.memories = []
+
+    def save(self, value, metadata=None, agent=None):
+        self.memories.append({
+            "value": value,
+            "metadata": metadata,
+            "agent": agent
+        })
+
+    def search(self, query, limit=10, score_threshold=0.5):
+        # Implement your search logic here
+        return [m for m in self.memories if query.lower() in str(m["value"]).lower()]
+
+    def reset(self):
+        self.memories = []
+
+# Use custom storage
+external_memory = ExternalMemory(storage=CustomStorage())
+
+crew = Crew(
+    agents=[...],
+    tasks=[...],
+    external_memory=external_memory
+)
+```
+
+## 🧠 메모리 시스템 비교
+
+| **카테고리**        | **기능**                  | **기본 메모리**                 | **외부 메모리**                  |
+|---------------------|--------------------------|-------------------------------|-------------------------------|
+| **사용 용이성**     | 설정 복잡성                 | 간단함                          | 보통                            |
+|                     | 통합성                      | 내장형(컨텍스추얼)                | 독립형                            |
+| **지속성**          | 저장소                       | 로컬 파일                         | 커스텀 / Mem0                     |
+|                     | 세션 간 지원                  | ✅                               | ✅                               |
+| **개인화**          | 사용자별 메모리                 | ❌                              | ✅                               |
+|                     | 커스텀 공급자                  | 제한적                            | 모든 공급자                        |
+| **사용 사례 적합성**| 추천 대상                       | 대부분의 일반적 사용 사례           | 특화/커스텀 필요                     |
+
+## 지원되는 임베딩 제공업체
+
+### OpenAI (기본값)
+```python
+crew = Crew(
+    memory=True,
+    embedder={
+        "provider": "openai",
+        "config": {"model": "text-embedding-3-small"}
+    }
+)
+```
+
+### Ollama
+```python
+crew = Crew(
+    memory=True,
+    embedder={
+        "provider": "ollama",
+        "config": {"model": "mxbai-embed-large"}
+    }
+)
+```
+
+### Google AI
+```python
+crew = Crew(
+    memory=True,
+    embedder={
+        "provider": "google",
+        "config": {
+            "api_key": "your-api-key",
+            "model": "text-embedding-004"
+        }
+    }
+)
+```
+
+### Azure OpenAI
+```python
+crew = Crew(
+    memory=True,
+    embedder={
+        "provider": "openai",
+        "config": {
+            "api_key": "your-api-key",
+            "api_base": "https://your-resource.openai.azure.com/",
+            "api_version": "2023-05-15",
+            "model_name": "text-embedding-3-small"
+        }
+    }
+)
+```
+
+### Vertex AI
+```python
+crew = Crew(
+    memory=True,
+    embedder={
+        "provider": "vertexai",
+        "config": {
+            "project_id": "your-project-id",
+            "region": "your-region",
+            "api_key": "your-api-key",
+            "model_name": "textembedding-gecko"
+        }
+    }
+)
+```
+
+## 보안 모범 사례
+
+### 환경 변수
+```python
+import os
+from crewai import Crew
+
+# Store sensitive data in environment variables
+crew = Crew(
+    memory=True,
+    embedder={
+        "provider": "openai",
+        "config": {
+            "api_key": os.getenv("OPENAI_API_KEY"),
+            "model": "text-embedding-3-small"
+        }
+    }
+)
+```
+
+### 스토리지 보안
+```python
+import os
+from crewai import Crew
+from crewai.memory import LongTermMemory
+from crewai.memory.storage.ltm_sqlite_storage import LTMSQLiteStorage
+
+# Use secure storage paths
+storage_path = os.getenv("CREWAI_STORAGE_DIR", "./storage")
+os.makedirs(storage_path, mode=0o700, exist_ok=True)  # Restricted permissions
+
+crew = Crew(
+    memory=True,
+    long_term_memory=LongTermMemory(
+        storage=LTMSQLiteStorage(
+            db_path=f"{storage_path}/memory.db"
+        )
+    )
+)
+```
+
+## 문제 해결
+
+### 일반적인 문제
+
+**세션 간에 메모리가 유지되지 않나요?**
+- `CREWAI_STORAGE_DIR` 환경 변수를 확인하세요
+- 저장소 디렉터리에 대한 쓰기 권한을 확인하세요
+- `memory=True`로 메모리가 활성화되어 있는지 확인하세요
+
+**Mem0 인증 오류가 발생하나요?**
+- `MEM0_API_KEY` 환경 변수가 설정되어 있는지 확인하세요
+- Mem0 대시보드에서 API 키 권한을 확인하세요
+- `mem0ai` 패키지가 설치되어 있는지 확인하세요
+
+**대용량 데이터셋에서 메모리 사용량이 높은가요?**
+- 커스텀 저장소와 함께 외부 메모리 사용을 고려하세요
+- 커스텀 저장소 검색 방법에 페이지네이션을 구현하세요
+- 메모리 사용량을 줄이기 위해 더 작은 임베딩 모델을 사용하세요
+
+### 성능 팁
+
+- 대부분의 사용 사례에서는 `memory=True`를 사용하세요 (가장 간단하고 빠릅니다)
+- 사용자별 지속성이 필요한 경우에만 User Memory를 사용하세요
+- 대규모 또는 특수 요구 사항에는 External Memory를 고려하세요
+- 더 빠른 처리를 위해 더 작은 embedding 모델을 선택하세요
+- 메모리 검색 크기를 제어하기 위해 적절한 검색 한도를 설정하세요
+
+## CrewAI의 메모리 시스템 사용의 이점
+
+- 🦾 **적응형 학습:** 크루는 시간이 지남에 따라 더욱 효율적으로 변하며, 새로운 정보에 적응하고 작업 접근 방식을 정제합니다.
+- 🫡 **향상된 개인화:** 메모리를 통해 에이전트는 사용자 선호도와 과거 상호작용을 기억하여, 맞춤형 경험을 제공합니다.
+- 🧠 **향상된 문제 해결:** 풍부한 메모리 저장소에 접근함으로써 에이전트는 과거의 학습과 맥락적 통찰을 활용하여 더 나은 의사 결정을 내릴 수 있습니다.
+
+## 메모리 이벤트
+
+CrewAI의 이벤트 시스템은 메모리 작업에 대한 강력한 인사이트를 제공합니다. 메모리 이벤트를 활용하면 메모리 시스템의 성능과 동작을 모니터링하고, 디버깅하며, 최적화할 수 있습니다.
+
+### 사용 가능한 메모리 이벤트
+
+CrewAI는 다음과 같은 메모리 관련 이벤트를 발생시킵니다:
+
+| 이벤트 | 설명 | 주요 속성 |
+| :---- | :---------- | :------------- |
+| **MemoryQueryStartedEvent** | 메모리 쿼리가 시작될 때 발생 | `query`, `limit`, `score_threshold` |
+| **MemoryQueryCompletedEvent** | 메모리 쿼리가 성공적으로 완료될 때 발생 | `query`, `results`, `limit`, `score_threshold`, `query_time_ms` |
+| **MemoryQueryFailedEvent** | 메모리 쿼리가 실패할 때 발생 | `query`, `limit`, `score_threshold`, `error` |
+| **MemorySaveStartedEvent** | 메모리 저장 작업이 시작될 때 발생 | `value`, `metadata`, `agent_role` |
+| **MemorySaveCompletedEvent** | 메모리 저장 작업이 성공적으로 완료될 때 발생 | `value`, `metadata`, `agent_role`, `save_time_ms` |
+| **MemorySaveFailedEvent** | 메모리 저장 작업이 실패할 때 발생 | `value`, `metadata`, `agent_role`, `error` |
+| **MemoryRetrievalStartedEvent** | 태스크 프롬프트에 대한 메모리 검색이 시작될 때 발생 | `task_id` |
+| **MemoryRetrievalCompletedEvent** | 메모리 검색이 성공적으로 완료될 때 발생 | `task_id`, `memory_content`, `retrieval_time_ms` |
+
+### 실용적인 응용 사례
+
+#### 1. 메모리 성능 모니터링
+
+애플리케이션을 최적화하기 위해 메모리 작업 타이밍을 추적하세요:
+
+```python
+from crewai.utilities.events.base_event_listener import BaseEventListener
+from crewai.utilities.events import (
+    MemoryQueryCompletedEvent,
+    MemorySaveCompletedEvent
+)
+import time
+
+class MemoryPerformanceMonitor(BaseEventListener):
+    def __init__(self):
+        super().__init__()
+        self.query_times = []
+        self.save_times = []
+
+    def setup_listeners(self, crewai_event_bus):
+        @crewai_event_bus.on(MemoryQueryCompletedEvent)
+        def on_memory_query_completed(source, event: MemoryQueryCompletedEvent):
+            self.query_times.append(event.query_time_ms)
+            print(f"Memory query completed in {event.query_time_ms:.2f}ms. Query: '{event.query}'")
+            print(f"Average query time: {sum(self.query_times)/len(self.query_times):.2f}ms")
+
+        @crewai_event_bus.on(MemorySaveCompletedEvent)
+        def on_memory_save_completed(source, event: MemorySaveCompletedEvent):
+            self.save_times.append(event.save_time_ms)
+            print(f"Memory save completed in {event.save_time_ms:.2f}ms")
+            print(f"Average save time: {sum(self.save_times)/len(self.save_times):.2f}ms")
+
+# Create an instance of your listener
+memory_monitor = MemoryPerformanceMonitor()
+```
+
+#### 2. 메모리 내용 로깅
+
+디버깅 및 인사이트를 위해 메모리 작업을 로깅합니다:
+
+```python
+from crewai.utilities.events.base_event_listener import BaseEventListener
+from crewai.utilities.events import (
+    MemorySaveStartedEvent,
+    MemoryQueryStartedEvent,
+    MemoryRetrievalCompletedEvent
+)
+import logging
+
+# Configure logging
+logger = logging.getLogger('memory_events')
+
+class MemoryLogger(BaseEventListener):
+    def setup_listeners(self, crewai_event_bus):
+        @crewai_event_bus.on(MemorySaveStartedEvent)
+        def on_memory_save_started(source, event: MemorySaveStartedEvent):
+            if event.agent_role:
+                logger.info(f"Agent '{event.agent_role}' saving memory: {event.value[:50]}...")
+            else:
+                logger.info(f"Saving memory: {event.value[:50]}...")
+
+        @crewai_event_bus.on(MemoryQueryStartedEvent)
+        def on_memory_query_started(source, event: MemoryQueryStartedEvent):
+            logger.info(f"Memory query started: '{event.query}' (limit: {event.limit})")
+
+        @crewai_event_bus.on(MemoryRetrievalCompletedEvent)
+        def on_memory_retrieval_completed(source, event: MemoryRetrievalCompletedEvent):
+            if event.task_id:
+                logger.info(f"Memory retrieved for task {event.task_id} in {event.retrieval_time_ms:.2f}ms")
+            else:
+                logger.info(f"Memory retrieved in {event.retrieval_time_ms:.2f}ms")
+            logger.debug(f"Memory content: {event.memory_content}")
+
+# Create an instance of your listener
+memory_logger = MemoryLogger()
+```
+
+#### 3. 오류 추적 및 알림
+
+메모리 오류를 캡처하고 대응합니다:
+
+```python
+from crewai.utilities.events.base_event_listener import BaseEventListener
+from crewai.utilities.events import (
+    MemorySaveFailedEvent,
+    MemoryQueryFailedEvent
+)
+import logging
+from typing import Optional
+
+# Configure logging
+logger = logging.getLogger('memory_errors')
+
+class MemoryErrorTracker(BaseEventListener):
+    def __init__(self, notify_email: Optional[str] = None):
+        super().__init__()
+        self.notify_email = notify_email
+        self.error_count = 0
+
+    def setup_listeners(self, crewai_event_bus):
+        @crewai_event_bus.on(MemorySaveFailedEvent)
+        def on_memory_save_failed(source, event: MemorySaveFailedEvent):
+            self.error_count += 1
+            agent_info = f"Agent '{event.agent_role}'" if event.agent_role else "Unknown agent"
+            error_message = f"Memory save failed: {event.error}. {agent_info}"
+            logger.error(error_message)
+
+            if self.notify_email and self.error_count % 5 == 0:
+                self._send_notification(error_message)
+
+        @crewai_event_bus.on(MemoryQueryFailedEvent)
+        def on_memory_query_failed(source, event: MemoryQueryFailedEvent):
+            self.error_count += 1
+            error_message = f"Memory query failed: {event.error}. Query: '{event.query}'"
+            logger.error(error_message)
+
+            if self.notify_email and self.error_count % 5 == 0:
+                self._send_notification(error_message)
+
+    def _send_notification(self, message):
+        # Implement your notification system (email, Slack, etc.)
+        print(f"[NOTIFICATION] Would send to {self.notify_email}: {message}")
+
+# Create an instance of your listener
+error_tracker = MemoryErrorTracker(notify_email="admin@example.com")
+```
+
+### 분석 플랫폼과의 통합
+
+메모리 이벤트는 분석 및 모니터링 플랫폼으로 전달되어 성능 지표를 추적하고, 이상 징후를 감지하며, 메모리 사용 패턴을 시각화할 수 있습니다:
+
+```python
+from crewai.utilities.events.base_event_listener import BaseEventListener
+from crewai.utilities.events import (
+    MemoryQueryCompletedEvent,
+    MemorySaveCompletedEvent
+)
+
+class MemoryAnalyticsForwarder(BaseEventListener):
+    def __init__(self, analytics_client):
+        super().__init__()
+        self.client = analytics_client
+
+    def setup_listeners(self, crewai_event_bus):
+        @crewai_event_bus.on(MemoryQueryCompletedEvent)
+        def on_memory_query_completed(source, event: MemoryQueryCompletedEvent):
+            # Forward query metrics to analytics platform
+            self.client.track_metric({
+                "event_type": "memory_query",
+                "query": event.query,
+                "duration_ms": event.query_time_ms,
+                "result_count": len(event.results) if hasattr(event.results, "__len__") else 0,
+                "timestamp": event.timestamp
+            })
+
+        @crewai_event_bus.on(MemorySaveCompletedEvent)
+        def on_memory_save_completed(source, event: MemorySaveCompletedEvent):
+            # Forward save metrics to analytics platform
+            self.client.track_metric({
+                "event_type": "memory_save",
+                "agent_role": event.agent_role,
+                "duration_ms": event.save_time_ms,
+                "timestamp": event.timestamp
+            })
+```
+
+### 메모리 이벤트 리스너를 위한 모범 사례
+
+1. **핸들러를 가볍게 유지하세요**: 이벤트 핸들러에서 복잡한 처리를 피하여 성능 저하를 방지하세요.
+2. **적절한 로깅 레벨을 사용하세요**: 일반적인 동작에는 INFO, 상세 정보에는 DEBUG, 문제 발생 시에는 ERROR를 사용하세요.
+3. **가능하면 메트릭을 배치 처리하세요**: 외부 시스템에 전송하기 전에 메트릭을 누적하세요.
+4. **예외를 우아하게 처리하세요**: 예기치 않은 데이터로 인해 이벤트 핸들러가 중단되지 않도록 하세요.
+5. **메모리 사용량을 고려하세요**: 대량의 이벤트 데이터를 저장할 때 유의하세요.
+
+## 결론
+
+CrewAI의 memory 시스템을 프로젝트에 통합하는 것은 간단합니다. 제공되는 memory 컴포넌트와 설정을 활용하여,
+여러분의 에이전트에 상호작용을 기억하고, reasoning하며, 학습할 수 있는 능력을 신속하게 부여할 수 있습니다. 이를 통해 더욱 향상된 인텔리전스와 역량을 발휘할 수 있습니다.

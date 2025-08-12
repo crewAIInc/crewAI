@@ -1,0 +1,241 @@
+---
+title: Stagehand 도구
+description: Stagehand를 CrewAI와 통합하여 브라우저 상호작용 및 자동화를 수행하는 웹 자동화 도구
+icon: hand
+---
+
+# 개요
+
+`StagehandTool`은 [Stagehand](https://docs.stagehand.dev/get_started/introduction) 프레임워크를 CrewAI와 통합하여 에이전트가 자연어 지시를 사용해 웹사이트와 상호작용하고 브라우저 작업을 자동화할 수 있도록 합니다.
+
+## 개요
+
+Stagehand는 Browserbase에서 개발한 강력한 브라우저 자동화 프레임워크로, AI 에이전트가 다음과 같은 작업을 수행할 수 있도록 합니다:
+
+- 웹사이트 탐색
+- 버튼, 링크, 기타 요소 클릭
+- 폼 작성
+- 웹 페이지에서 데이터 추출
+- 요소 관찰 및 식별
+- 복잡한 워크플로우 수행
+
+StagehandTool은 Stagehand Python SDK를 감싸 CrewAI 에이전트에게 세 가지 핵심 원시 기능을 통해 브라우저 제어 능력을 제공합니다:
+
+1. **Act**: 클릭, 입력, 탐색과 같은 액션 수행
+2. **Extract**: 웹 페이지에서 구조화된 데이터 추출
+3. **Observe**: 페이지의 요소 식별 및 분석
+
+## 사전 준비 사항
+
+이 도구를 사용하기 전에 다음을 확인하세요:
+
+1. API 키와 프로젝트 ID가 있는 [Browserbase](https://www.browserbase.com/) 계정
+2. LLM(OpenAI 또는 Anthropic Claude)용 API 키
+3. Stagehand Python SDK 설치
+
+필수 종속성을 설치하세요:
+
+```bash
+pip install stagehand-py
+```
+
+## 사용법
+
+### 기본 구현
+
+StagehandTool은 두 가지 방법으로 구현할 수 있습니다:
+
+#### 1. 컨텍스트 매니저 사용하기 (권장)
+<Tip>
+  컨텍스트 매니저 방식은 예외가 발생하더라도 리소스가 적절하게 정리되므로 권장됩니다.
+</Tip>
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import StagehandTool
+from stagehand.schemas import AvailableModel
+
+# Initialize the tool with your API keys using a context manager
+with StagehandTool(
+    api_key="your-browserbase-api-key",
+    project_id="your-browserbase-project-id",
+    model_api_key="your-llm-api-key",  # OpenAI 또는 Anthropic API 키
+    model_name=AvailableModel.CLAUDE_3_7_SONNET_LATEST,  # 선택 사항: 사용할 모델 지정
+) as stagehand_tool:
+    # Create an agent with the tool
+    researcher = Agent(
+        role="Web Researcher",
+        goal="Find and summarize information from websites",
+        backstory="I'm an expert at finding information online.",
+        verbose=True,
+        tools=[stagehand_tool],
+    )
+
+    # Create a task that uses the tool
+    research_task = Task(
+        description="Go to https://www.example.com and tell me what you see on the homepage.",
+        agent=researcher,
+    )
+
+    # Run the crew
+    crew = Crew(
+        agents=[researcher],
+        tasks=[research_task],
+        verbose=True,
+    )
+
+    result = crew.kickoff()
+    print(result)
+```
+
+#### 2. 수동 리소스 관리
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import StagehandTool
+from stagehand.schemas import AvailableModel
+
+# Initialize the tool with your API keys
+stagehand_tool = StagehandTool(
+    api_key="your-browserbase-api-key",
+    project_id="your-browserbase-project-id",
+    model_api_key="your-llm-api-key",
+    model_name=AvailableModel.CLAUDE_3_7_SONNET_LATEST,
+)
+
+try:
+    # Create an agent with the tool
+    researcher = Agent(
+        role="Web Researcher",
+        goal="Find and summarize information from websites",
+        backstory="I'm an expert at finding information online.",
+        verbose=True,
+        tools=[stagehand_tool],
+    )
+
+    # Create a task that uses the tool
+    research_task = Task(
+        description="Go to https://www.example.com and tell me what you see on the homepage.",
+        agent=researcher,
+    )
+
+    # Run the crew
+    crew = Crew(
+        agents=[researcher],
+        tasks=[research_task],
+        verbose=True,
+    )
+
+    result = crew.kickoff()
+    print(result)
+finally:
+    # Explicitly clean up resources
+    stagehand_tool.close()
+```
+
+## 명령 유형
+
+StagehandTool은 특정 웹 자동화 작업을 위한 세 가지 명령 유형을 지원합니다.
+
+### 1. Act 명령어
+
+`act` 명령어 유형(기본값)은 버튼 클릭, 양식 작성, 내비게이션과 같은 웹페이지 상호작용을 활성화합니다.
+
+```python
+# Perform an action (default behavior)
+result = stagehand_tool.run(
+    instruction="Click the login button", 
+    url="https://example.com",
+    command_type="act"  # Default, so can be omitted
+)
+
+# Fill out a form
+result = stagehand_tool.run(
+    instruction="Fill the contact form with name 'John Doe', email 'john@example.com', and message 'Hello world'", 
+    url="https://example.com/contact"
+)
+```
+
+### 2. 추출(Extract) 명령
+
+`extract` 명령 유형은 웹페이지에서 구조화된 데이터를 가져옵니다.
+
+```python
+# 모든 상품 정보 추출
+result = stagehand_tool.run(
+    instruction="Extract all product names, prices, and descriptions", 
+    url="https://example.com/products",
+    command_type="extract"
+)
+
+# 선택자를 사용하여 특정 정보 추출
+result = stagehand_tool.run(
+    instruction="Extract the main article title and content", 
+    url="https://example.com/blog/article",
+    command_type="extract",
+    selector=".article-container"  # 선택적 CSS 선택자
+)
+```
+
+### 3. Observe 명령어
+
+`observe` 명령어 유형은 웹페이지 요소를 식별하고 분석합니다.
+
+```python
+# 인터랙티브 요소 찾기
+result = stagehand_tool.run(
+    instruction="Find all interactive elements in the navigation menu", 
+    url="https://example.com",
+    command_type="observe"
+)
+
+# 폼 필드 식별
+result = stagehand_tool.run(
+    instruction="Identify all the input fields in the registration form", 
+    url="https://example.com/register",
+    command_type="observe",
+    selector="#registration-form"
+)
+```
+
+## 구성 옵션
+
+다음 매개변수로 StagehandTool의 동작을 사용자 지정할 수 있습니다:
+
+```python
+stagehand_tool = StagehandTool(
+    api_key="your-browserbase-api-key",
+    project_id="your-browserbase-project-id",
+    model_api_key="your-llm-api-key",
+    model_name=AvailableModel.CLAUDE_3_7_SONNET_LATEST,
+    dom_settle_timeout_ms=5000,  # DOM이 안정될 때까지 더 오래 대기
+    headless=True,  # 브라우저를 헤드리스 모드로 실행
+    self_heal=True,  # 오류에서 복구를 시도
+    wait_for_captcha_solves=True,  # CAPTCHA 해결을 기다림
+    verbose=1,  # 로깅 상세 수준 제어 (0-3)
+)
+```
+
+## 모범 사례
+
+1. **구체적으로 작성하기**: 더 나은 결과를 위해 상세한 지침을 제공하세요
+2. **적절한 명령 유형 선택**: 작업에 맞는 올바른 명령 유형을 선택하세요
+3. **셀렉터 사용하기**: CSS 셀렉터를 활용하여 정확성을 높이세요
+4. **복잡한 작업 분할**: 복잡한 작업 흐름을 여러 번의 도구 호출로 분할하세요
+5. **오류 처리 구현**: 잠재적인 문제를 대비하여 오류 처리를 추가하세요
+
+## 문제 해결
+
+일반적인 문제 및 해결 방법:
+
+- **세션 문제**: Browserbase와 LLM 공급자 모두의 API 키를 확인하세요.
+- **요소를 찾을 수 없음**: 느린 페이지의 경우 `dom_settle_timeout_ms`를 늘리세요.
+- **동작 실패**: 먼저 `observe`를 사용하여 올바른 요소를 식별하세요.
+- **불완전한 데이터**: 지시사항을 개선하거나 구체적인 셀렉터를 제공하세요.
+
+## 추가 자료
+
+CrewAI 통합에 대한 질문이 있으신가요?
+- Stagehand의 [Slack 커뮤니티](https://stagehand.dev/slack)에 참여하세요
+- [Stagehand 저장소](https://github.com/browserbase/stagehand)에 이슈를 등록하세요
+- [Stagehand 문서](https://docs.stagehand.dev/)를 방문하세요

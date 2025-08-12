@@ -1,0 +1,43 @@
+---
+title: Firecrawl 웹사이트 스크랩
+description: FirecrawlScrapeWebsiteTool은 웹사이트를 스크랩하여 깔끔한 마크다운이나 구조화된 데이터로 변환하도록 설계되었습니다.
+icon: fire-flame
+---
+
+# `FirecrawlScrapeWebsiteTool`
+
+## 설명
+
+[Firecrawl](https://firecrawl.dev)은(는) 모든 웹사이트를 크롤링하고, 이를 깨끗한 마크다운이나 구조화된 데이터로 변환해주는 플랫폼입니다.
+
+## 설치
+
+- [firecrawl.dev](https://firecrawl.dev)에서 API 키를 받아 환경 변수(`FIRECRAWL_API_KEY`)에 설정합니다.
+- [Firecrawl SDK](https://github.com/mendableai/firecrawl)와 `crewai[tools]` 패키지를 설치합니다:
+
+```shell
+pip install firecrawl-py 'crewai[tools]'
+```
+
+## 예시
+
+FirecrawlScrapeWebsiteTool을 다음과 같이 활용하여 에이전트가 웹사이트를 불러올 수 있도록 합니다:
+
+```python Code
+from crewai_tools import FirecrawlScrapeWebsiteTool
+
+tool = FirecrawlScrapeWebsiteTool(url='firecrawl.dev')
+```
+
+## 인자
+
+- `api_key`: 선택 사항입니다. Firecrawl API 키를 지정합니다. 기본값은 `FIRECRAWL_API_KEY` 환경 변수입니다.
+- `url`: 스크래핑할 URL입니다.
+- `page_options`: 선택 사항입니다.
+  - `onlyMainContent`: 선택 사항입니다. 헤더, 내브, 푸터 등을 제외한 페이지의 주요 콘텐츠만 반환합니다.
+  - `includeHtml`: 선택 사항입니다. 페이지의 원시 HTML 콘텐츠를 포함합니다. 응답에 html 키가 추가됩니다.
+- `extractor_options`: 선택 사항입니다. 페이지 콘텐츠에서 구조화된 정보를 LLM 기반으로 추출하기 위한 옵션입니다.
+  - `mode`: 사용할 추출 모드로, 현재는 'llm-extraction'을 지원합니다.
+  - `extractionPrompt`: 선택 사항입니다. 페이지에서 어떤 정보를 추출할지 설명하는 프롬프트입니다.
+  - `extractionSchema`: 선택 사항입니다. 추출할 데이터의 스키마입니다.
+- `timeout`: 선택 사항입니다. 요청에 대한 타임아웃(ms)입니다.

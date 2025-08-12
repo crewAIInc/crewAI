@@ -1,0 +1,80 @@
+---
+title: TXT RAG 검색
+description: TXTSearchTool은 텍스트 파일의 내용 내에서 RAG(Retrieval-Augmented Generation) 검색을 수행하도록 설계되었습니다.
+icon: file-lines
+---
+
+## 개요
+
+<Note>
+    저희는 도구를 계속 개선하고 있으므로, 추후에 예기치 않은 동작이나 변경이 발생할 수 있습니다.
+</Note>
+
+이 도구는 텍스트 파일의 콘텐츠 내에서 RAG(Retrieval-Augmented Generation) 검색을 수행하는 데 사용됩니다.
+지정된 텍스트 파일의 콘텐츠에서 쿼리를 의미적으로 검색할 수 있어,
+제공된 쿼리를 기반으로 정보를 신속하게 추출하거나 특정 텍스트 섹션을 찾는 데 매우 유용한 리소스입니다.
+
+## 설치
+
+`TXTSearchTool`을 사용하려면 먼저 `crewai_tools` 패키지를 설치해야 합니다.
+이 작업은 Python용 패키지 관리자 pip를 사용하여 수행할 수 있습니다.
+터미널 또는 명령 프롬프트를 열고 다음 명령어를 입력하세요:
+
+```shell
+pip install 'crewai[tools]'
+```
+
+이 명령어는 TXTSearchTool과 필요한 모든 종속성을 다운로드하고 설치합니다.
+
+## 예시
+
+다음 예시는 TXTSearchTool을 사용하여 텍스트 파일 내에서 검색하는 방법을 보여줍니다.
+이 예시는 특정 텍스트 파일로 도구를 초기화하는 방법과, 해당 파일의 내용에서 검색을 수행하는 방법을 모두 포함하고 있습니다.
+
+```python Code
+from crewai_tools import TXTSearchTool
+
+# Initialize the tool to search within any text file's content
+# the agent learns about during its execution
+tool = TXTSearchTool()
+
+# OR
+
+# Initialize the tool with a specific text file,
+# so the agent can search within the given text file's content
+tool = TXTSearchTool(txt='path/to/text/file.txt')
+```
+
+## 인자
+- `txt` (str): **선택 사항**입니다. 검색하려는 텍스트 파일의 경로입니다.
+이 인자는 도구가 특정 텍스트 파일로 초기화되지 않은 경우에만 필요합니다;
+그렇지 않은 경우 검색은 처음에 제공된 텍스트 파일 내에서 수행됩니다.
+
+## 커스텀 모델 및 임베딩
+
+기본적으로 이 도구는 임베딩과 요약을 위해 OpenAI를 사용합니다.
+모델을 커스터마이징하려면 다음과 같이 config 딕셔너리를 사용할 수 있습니다:
+
+```python Code
+tool = TXTSearchTool(
+    config=dict(
+        llm=dict(
+            provider="ollama", # or google, openai, anthropic, llama2, ...
+            config=dict(
+                model="llama2",
+                # temperature=0.5,
+                # top_p=1,
+                # stream=true,
+            ),
+        ),
+        embedder=dict(
+            provider="google", # or openai, ollama, ...
+            config=dict(
+                model="models/embedding-001",
+                task_type="retrieval_document",
+                # title="Embeddings",
+            ),
+        ),
+    )
+)
+```

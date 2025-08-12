@@ -1,0 +1,77 @@
+---
+title: NL2SQL 도구
+description: NL2SQLTool은 자연어를 SQL 쿼리로 변환하도록 설계되었습니다.
+icon: language
+---
+
+## 개요
+
+이 도구는 자연어를 SQL 쿼리로 변환하는 데 사용됩니다. 에이전트에 전달되면 쿼리를 생성하고 이를 사용하여 데이터베이스와 상호작용합니다.
+
+이를 통해 에이전트가 데이터베이스에 접근하여 목표에 따라 정보를 가져오고, 해당 정보를 사용해 응답, 보고서 또는 기타 출력물을 생성하는 다양한 워크플로우가 가능해집니다. 또한 에이전트가 자신의 목표에 맞춰 데이터베이스를 업데이트할 수 있는 기능도 제공합니다.
+
+**주의**: 에이전트가 Read-Replica에 접근할 수 있거나, 에이전트가 데이터베이스에 insert/update 쿼리를 실행해도 괜찮은지 반드시 확인하십시오.
+
+## 요구 사항
+
+- SqlAlchemy
+- 모든 DB 호환 라이브러리(예: psycopg2, mysql-connector-python)
+
+## 설치
+
+crewai_tools 패키지 설치
+
+```shell
+pip install 'crewai[tools]'
+```
+
+## 사용법
+
+NL2SQLTool을 사용하려면 데이터베이스 URI를 도구에 전달해야 합니다. URI는 `dialect+driver://username:password@host:port/database` 형식이어야 합니다.
+
+
+```python Code
+from crewai_tools import NL2SQLTool
+
+# psycopg2 was installed to run this example with PostgreSQL
+nl2sql = NL2SQLTool(db_uri="postgresql://example@localhost:5432/test_db")
+
+@agent
+def researcher(self) -> Agent:
+    return Agent(
+        config=self.agents_config["researcher"],
+        allow_delegation=False,
+        tools=[nl2sql]
+    )
+```
+
+## 예시
+
+주요 작업 목표는 다음과 같았습니다:
+
+"각 도시에 대해 월별 평균, 최대, 최소 매출을 조회하되, 사용자 수가 1명 초과인 도시만 포함하세요. 또한 각 도시의 사용자 수를 세고, 평균 월 매출을 기준으로 내림차순 정렬하십시오."
+
+그래서 에이전트는 DB에서 정보를 얻으려고 시도했고, 처음 시도는 잘못되었으므로 에이전트가 다시 시도하여 올바른 정보를 얻은 후 다음 에이전트로 전달합니다.
+
+![alt text](https://github.com/crewAIInc/crewAI-tools/blob/main/crewai_tools/tools/nl2sql/images/image-2.png?raw=true)
+![alt text](https://github.com/crewAIInc/crewAI-tools/raw/main/crewai_tools/tools/nl2sql/images/image-3.png)
+
+두 번째 작업 목표는 다음과 같았습니다:
+
+"데이터를 검토하고 상세한 보고서를 작성한 다음, 제공된 데이터를 기반으로 필드를 갖는 테이블을 데이터베이스에 생성하세요. 각 도시에 대해 월별 평균, 최대, 최소 매출 정보를 포함하되, 사용자 수가 1명 초과인 도시만 포함시키세요. 또한 각 도시의 사용자 수를 세고, 평균 월 매출을 기준으로 내림차순 정렬하십시오."
+
+이제 상황이 흥미로워집니다. 에이전트는 테이블을 생성할 SQL 쿼리뿐만 아니라 데이터를 테이블에 삽입하는 쿼리도 생성합니다. 그리고 마지막에는 데이터베이스에 있던 것과 정확히 일치하는 최종 보고서도 반환합니다.
+
+![alt text](https://github.com/crewAIInc/crewAI-tools/raw/main/crewai_tools/tools/nl2sql/images/image-4.png)
+![alt text](https://github.com/crewAIInc/crewAI-tools/raw/main/crewai_tools/tools/nl2sql/images/image-5.png)
+
+![alt text](https://github.com/crewAIInc/crewAI-tools/raw/main/crewai_tools/tools/nl2sql/images/image-9.png)
+![alt text](https://github.com/crewAIInc/crewAI-tools/raw/main/crewai_tools/tools/nl2sql/images/image-7.png)
+
+이것은 NL2SQLTool이 데이터베이스와 상호작용하고, 데이터베이스의 데이터를 기반으로 보고서를 생성하는 데 어떻게 사용될 수 있는지에 대한 간단한 예시입니다.
+
+이 도구는 에이전트의 논리와 데이터베이스와 상호작용하는 방식에 대해 무한한 가능성을 제공합니다.
+
+```md
+ DB -> Agent -> ... -> Agent -> DB
+```

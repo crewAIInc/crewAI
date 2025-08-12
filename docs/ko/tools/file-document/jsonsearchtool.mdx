@@ -1,0 +1,72 @@
+---
+title: JSON RAG 검색
+description: JSONSearchTool은 JSON 파일을 검색하여 가장 관련성 높은 결과를 반환하도록 설계되었습니다.
+icon: file-code
+---
+
+# `JSONSearchTool`
+
+<Note>
+  JSONSearchTool은 현재 실험 단계에 있습니다. 이 도구는 활발히 개발 중이므로, 사용자들이 예기치 못한 동작이나 변경 사항을 경험할 수 있습니다. 문제점이나 개선 제안이 있으시다면 적극적으로 피드백을 제공해 주시기 바랍니다.
+</Note>
+
+## 설명
+
+JSONSearchTool은 JSON 파일 내용 내에서 효율적이고 정확한 검색을 지원하도록 설계되었습니다. 이 도구는 RAG(Retrieve and Generate) 검색 메커니즘을 활용하여 사용자가 특정 JSON 파일 내에서 타겟팅된 검색을 위해 JSON 경로를 지정할 수 있습니다. 이 기능은 검색 결과의 정확성과 관련성을 크게 향상시킵니다.
+
+## 설치
+
+JSONSearchTool을 설치하려면 다음 pip 명령어를 사용하세요:
+
+```shell
+pip install 'crewai[tools]'
+```
+
+## 사용 예시
+
+여기 JSONSearchTool을 효과적으로 활용하여 JSON 파일 내에서 검색하는 방법에 대한 업데이트된 예시가 있습니다. 이 예시들은 코드베이스에서 확인된 현재 구현 및 사용 패턴을 반영합니다.
+
+```python Code
+from crewai_tools import JSONSearchTool
+
+# 일반적인 JSON 내용 검색
+# 이 방법은 JSON 경로를 사전에 알고 있거나 동적으로 식별할 수 있을 때 적합합니다.
+tool = JSONSearchTool()
+
+# 특정 JSON 파일로 검색 범위 제한
+# 검색 범위를 특정 JSON 파일로 제한하고 싶을 때 이 초기화 방법을 사용하세요.
+tool = JSONSearchTool(json_path='./path/to/your/file.json')
+```
+
+## 인자
+
+- `json_path` (str, 선택적): 검색할 JSON 파일의 경로를 지정합니다. 이 인자는 도구가 일반 검색을 위해 초기화된 경우 필수가 아닙니다. 제공될 경우, 지정된 JSON 파일로 검색이 제한됩니다.
+
+## 구성 옵션
+
+JSONSearchTool은 구성 딕셔너리를 통해 광범위한 커스터마이징을 지원합니다. 이를 통해 사용자는 임베딩 및 요약을 위한 다양한 모델을 요구 사항에 따라 선택할 수 있습니다.
+
+```python Code
+tool = JSONSearchTool(
+    config={
+        "llm": {
+            "provider": "ollama",  # Other options include google, openai, anthropic, llama2, etc.
+            "config": {
+                "model": "llama2",
+                # Additional optional configurations can be specified here.
+                # temperature=0.5,
+                # top_p=1,
+                # stream=true,
+            },
+        },
+        "embedding_model": {
+            "provider": "google", # or openai, ollama, ...
+            "config": {
+                "model": "models/embedding-001",
+                "task_type": "retrieval_document",
+                # Further customization options can be added here.
+            },
+        },
+    }
+)
+```
