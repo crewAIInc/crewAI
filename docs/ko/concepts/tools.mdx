@@ -1,0 +1,282 @@
+---
+title: 도구
+description: CrewAI 프레임워크 내에서 에이전트 협업과 작업 실행을 위해 도구를 이해하고 활용하기.
+icon: screwdriver-wrench
+---
+
+## 개요
+
+CrewAI 도구는 에이전트에게 웹 검색, 데이터 분석부터 동료 간 협업 및 작업 위임에 이르기까지 다양한 기능을 제공합니다.  
+이 문서에서는 CrewAI 프레임워크 내에서 이러한 도구를 생성, 통합 및 활용하는 방법과, 협업 도구에 초점을 맞춘 새로운 기능에 대해 설명합니다.
+
+## Tool이란 무엇인가?
+
+CrewAI에서 tool은 에이전트가 다양한 작업을 수행하기 위해 활용할 수 있는 기술 또는 기능입니다.
+이에는 [CrewAI Toolkit](https://github.com/joaomdmoura/crewai-tools) 및 [LangChain Tools](https://python.langchain.com/docs/integrations/tools)의 tool이 포함되어,
+간단한 검색부터 복잡한 상호작용, 그리고 에이전트 간의 효과적인 협업까지 모두 가능하게 합니다.
+
+<Note type="info" title="엔터프라이즈 확장: Tools Repository">
+CrewAI 엔터프라이즈는 주요 비즈니스 시스템 및 API와의 사전 구축된 통합을 제공하는 종합적인 Tools Repository를 제공합니다. 며칠이 걸리던 엔터프라이즈 tool로 에이전트를 몇 분 만에 배포할 수 있습니다.
+
+엔터프라이즈 Tools Repository에는 다음이 포함됩니다:
+- 인기 엔터프라이즈 시스템용 사전 구축 커넥터
+- 커스텀 tool 생성 인터페이스
+- 버전 관리 및 공유 기능
+- 보안 및 규정 준수 기능
+</Note>
+
+## 도구의 주요 특징
+
+- **유틸리티**: 웹 검색, 데이터 분석, 콘텐츠 생성, 에이전트 협업과 같은 작업을 위해 제작됨.
+- **통합성**: 도구를 워크플로우에 원활하게 통합하여 에이전트의 역량을 강화함.
+- **맞춤화 가능성**: 맞춤형 도구를 개발하거나 기존 도구를 활용할 수 있는 유연성을 제공하여 에이전트의 특정 요구 사항에 대응함.
+- **오류 처리**: 원활한 작동을 보장하기 위해 강력한 오류 처리 메커니즘을 포함함.
+- **캐싱 메커니즘**: 성능 최적화와 중복 작업 감소를 위한 지능형 캐싱 기능을 갖춤.
+- **비동기 지원**: 동기 및 비동기 도구를 모두 처리하여 논블로킹(Non-blocking) 작업을 가능하게 함.
+
+## CrewAI 도구 사용하기
+
+crewAI 도구로 에이전트의 기능을 확장하려면, 우선 추가 도구 패키지를 설치하세요:
+
+```bash
+pip install 'crewai[tools]'
+```
+
+아래는 도구 사용 예시입니다:
+
+```python Code
+import os
+from crewai import Agent, Task, Crew
+# crewAI 도구 임포트
+from crewai_tools import (
+    DirectoryReadTool,
+    FileReadTool,
+    SerperDevTool,
+    WebsiteSearchTool
+)
+
+# API 키 설정
+os.environ["SERPER_API_KEY"] = "Your Key" # serper.dev API 키
+os.environ["OPENAI_API_KEY"] = "Your Key"
+
+# 도구 인스턴스화
+docs_tool = DirectoryReadTool(directory='./blog-posts')
+file_tool = FileReadTool()
+search_tool = SerperDevTool()
+web_rag_tool = WebsiteSearchTool()
+
+# 에이전트 생성
+researcher = Agent(
+    role='Market Research Analyst',
+    goal='Provide up-to-date market analysis of the AI industry',
+    backstory='An expert analyst with a keen eye for market trends.',
+    tools=[search_tool, web_rag_tool],
+    verbose=True
+)
+
+writer = Agent(
+    role='Content Writer',
+    goal='Craft engaging blog posts about the AI industry',
+    backstory='A skilled writer with a passion for technology.',
+    tools=[docs_tool, file_tool],
+    verbose=True
+)
+
+# 작업 정의
+research = Task(
+    description='Research the latest trends in the AI industry and provide a summary.',
+    expected_output='A summary of the top 3 trending developments in the AI industry with a unique perspective on their significance.',
+    agent=researcher
+)
+
+write = Task(
+    description='Write an engaging blog post about the AI industry, based on the research analyst's summary. Draw inspiration from the latest blog posts in the directory.',
+    expected_output='A 4-paragraph blog post formatted in markdown with engaging, informative, and accessible content, avoiding complex jargon.',
+    agent=writer,
+    output_file='blog-posts/new_post.md'  # 최종 블로그 글이 여기에 저장됩니다
+)
+
+# 계획 기능을 활성화하여 crew 구성
+crew = Crew(
+    agents=[researcher, writer],
+    tasks=[research, write],
+    verbose=True,
+    planning=True,  # 계획 기능 활성화
+)
+
+# 작업 실행
+crew.kickoff()
+```
+
+## 사용 가능한 CrewAI 도구
+
+- **에러 처리**: 모든 도구는 에러 처리 기능이 내장되어 있어, 에이전트가 예외 상황을 우아하게 관리하며 작업을 계속할 수 있습니다.
+- **캐싱 메커니즘**: 모든 도구는 캐싱을 지원하여, 에이전트가 이전에 얻은 결과를 효율적으로 재사용할 수 있고 외부 자원에 대한 부하를 줄이며 실행 시간을 단축할 수 있습니다. 또한 도구의 `cache_function` 속성을 사용하여 캐싱 메커니즘을 세밀하게 제어할 수 있습니다.
+
+사용 가능한 도구 목록과 그 설명은 다음과 같습니다:
+
+| 도구                              | 설명                                                                                                  |
+| :-------------------------------- | :---------------------------------------------------------------------------------------------------- |
+| **ApifyActorsTool**               | 웹 스크래핑 및 자동화 작업을 위해 Apify Actors를 워크플로우에 통합하는 도구입니다.                   |
+| **BrowserbaseLoadTool**           | 웹 브라우저와 상호작용하고 데이터를 추출하는 도구입니다.                                               |
+| **CodeDocsSearchTool**            | 코드 문서 및 관련 기술 문서를 검색하는 데 최적화된 RAG 도구입니다.                                     |
+| **CodeInterpreterTool**           | 파이썬 코드를 해석하는 도구입니다.                                                                    |
+| **ComposioTool**                  | Composio 도구의 사용을 가능하게 합니다.                                                              |
+| **CSVSearchTool**                 | CSV 파일 내에서 검색하도록 설계된 RAG 도구이며, 구조화된 데이터를 처리하도록 맞춤화되어 있습니다.      |
+| **DALL-E Tool**                   | DALL-E API를 사용해 이미지를 생성하는 도구입니다.                                                     |
+| **DirectorySearchTool**           | 디렉터리 내에서 검색하는 RAG 도구로, 파일 시스템을 탐색할 때 유용합니다.                              |
+| **DOCXSearchTool**                | DOCX 문서 내에서 검색하는 데 특화된 RAG 도구로, Word 파일을 처리할 때 이상적입니다.                   |
+| **DirectoryReadTool**             | 디렉터리 구조와 그 내용을 읽고 처리하도록 지원하는 도구입니다.                                        |
+| **EXASearchTool**                 | 다양한 데이터 소스를 폭넓게 검색하기 위해 설계된 도구입니다.                                          |
+| **FileReadTool**                  | 다양한 파일 형식을 지원하며 파일에서 데이터를 읽고 추출할 수 있는 도구입니다.                         |
+| **FirecrawlSearchTool**           | Firecrawl을 이용해 웹페이지를 검색하고 결과를 반환하는 도구입니다.                                    |
+| **FirecrawlCrawlWebsiteTool**     | Firecrawl을 사용해 웹페이지를 크롤링하는 도구입니다.                                                  |
+| **FirecrawlScrapeWebsiteTool**    | Firecrawl을 통해 웹페이지의 URL을 스크래핑하고 그 내용을 반환하는 도구입니다.                         |
+| **GithubSearchTool**              | GitHub 저장소 내에서 검색하는 RAG 도구로, 코드 및 문서 검색에 유용합니다.                             |
+| **SerperDevTool**                 | 개발 용도로 특화된 도구로, 특정 기능이 개발 중입니다.                                                 |
+| **TXTSearchTool**                 | 텍스트(.txt) 파일 내에서 검색하는 데 중점을 둔 RAG 도구로, 비구조적 데이터에 적합합니다.             |
+| **JSONSearchTool**                | JSON 파일 내에서 검색하도록 설계된 RAG 도구로, 구조화된 데이터 처리에 적합합니다.                      |
+| **LlamaIndexTool**                | LlamaIndex 도구의 사용을 가능하게 합니다.                                                            |
+| **MDXSearchTool**                 | 마크다운(MDX) 파일 내에서 검색하도록 맞춤화된 RAG 도구로, 문서화에 유용합니다.                        |
+| **PDFSearchTool**                 | PDF 문서 내에서 검색하는 RAG 도구로, 스캔된 문서를 처리하기에 이상적입니다.                           |
+| **PGSearchTool**                  | PostgreSQL 데이터베이스 내에서 검색하는 데 최적화된 RAG 도구로, 데이터베이스 쿼리에 적합합니다.       |
+| **Vision Tool**                   | DALL-E API를 사용해 이미지를 생성하는 도구입니다.                                                     |
+| **RagTool**                       | 다양한 데이터 소스 및 형식을 처리할 수 있는 범용 RAG 도구입니다.                                      |
+| **ScrapeElementFromWebsiteTool**  | 웹사이트에서 특정 요소만 스크래핑할 수 있는 도구로, 목표 데이터 추출에 유용합니다.                    |
+| **ScrapeWebsiteTool**             | 전체 웹사이트를 스크래핑할 수 있도록 도와주는 도구로, 포괄적인 데이터 수집에 이상적입니다.            |
+| **WebsiteSearchTool**             | 웹사이트 콘텐츠를 검색하는 RAG 도구로, 웹 데이터 추출에 최적화되어 있습니다.                          |
+| **XMLSearchTool**                 | XML 파일 내에서 검색하도록 설계된 RAG 도구로, 구조화된 데이터 형식에 적합합니다.                      |
+| **YoutubeChannelSearchTool**      | 유튜브 채널 내에서 검색하는 RAG 도구로, 동영상 콘텐츠 분석에 유용합니다.                              |
+| **YoutubeVideoSearchTool**        | 유튜브 동영상 내에서 검색하는 RAG 도구로, 동영상 데이터 추출에 이상적입니다.                          |
+
+## 자체 도구 만들기
+
+<Tip>
+  개발자는 에이전트의 요구에 맞는 `custom tools`를 직접 제작하거나,
+  미리 구축된 옵션을 활용할 수 있습니다.
+</Tip>
+
+CrewAI 도구를 만드는 방법에는 두 가지 주요 방법이 있습니다:
+
+### `BaseTool` 서브클래싱
+
+```python Code
+from crewai.tools import BaseTool
+from pydantic import BaseModel, Field
+
+class MyToolInput(BaseModel):
+    """Input schema for MyCustomTool."""
+    argument: str = Field(..., description="Description of the argument.")
+
+class MyCustomTool(BaseTool):
+    name: str = "Name of my tool"
+    description: str = "What this tool does. It's vital for effective utilization."
+    args_schema: Type[BaseModel] = MyToolInput
+
+    def _run(self, argument: str) -> str:
+        # Your tool's logic here
+        return "Tool's result"
+```
+
+## 비동기 도구 지원
+
+CrewAI는 비동기 도구를 지원하여, 네트워크 요청, 파일 I/O 또는 기타 비동기 작업과 같이 메인 실행 스레드를 차단하지 않고 비차단 연산을 수행하는 도구를 구현할 수 있습니다.
+
+### 비동기 툴 만들기
+
+비동기 툴을 만드는 방법에는 두 가지가 있습니다:
+
+#### 1. `tool` 데코레이터를 비동기 함수와 함께 사용하기
+
+```python Code
+from crewai.tools import tool
+
+@tool("fetch_data_async")
+async def fetch_data_async(query: str) -> str:
+    """Asynchronously fetch data based on the query."""
+    # Simulate async operation
+    await asyncio.sleep(1)
+    return f"Data retrieved for {query}"
+```
+
+#### 2. 사용자 지정 Tool 클래스에서 비동기 메서드 구현
+
+```python Code
+from crewai.tools import BaseTool
+
+class AsyncCustomTool(BaseTool):
+    name: str = "async_custom_tool"
+    description: str = "An asynchronous custom tool"
+    
+    async def _run(self, query: str = "") -> str:
+        """Asynchronously run the tool"""
+        # Your async implementation here
+        await asyncio.sleep(1)
+        return f"Processed {query} asynchronously"
+```
+
+### 비동기 도구 사용하기
+
+비동기 도구는 표준 Crew 워크플로우와 Flow 기반 워크플로우 모두에서 원활하게 작동합니다:
+
+```python Code
+# In standard Crew
+agent = Agent(role="researcher", tools=[async_custom_tool])
+
+# In Flow
+class MyFlow(Flow):
+    @start()
+    async def begin(self):
+        crew = Crew(agents=[agent])
+        result = await crew.kickoff_async()
+        return result
+```
+
+CrewAI 프레임워크는 동기 및 비동기 도구의 실행을 자동으로 처리하므로, 별도로 호출 방법을 신경 쓸 필요가 없습니다.
+
+### `tool` 데코레이터 활용하기
+
+```python Code
+from crewai.tools import tool
+@tool("Name of my tool")
+def my_tool(question: str) -> str:
+    """Clear description for what this tool is useful for, your agent will need this information to use it."""
+    # Function logic here
+    return "Result from your custom tool"
+```
+
+### 커스텀 캐싱 메커니즘
+
+<Tip>
+  도구는 선택적으로 `cache_function`을 구현하여 캐싱 동작을 세밀하게 조정할 수 있습니다.
+  이 함수는 특정 조건에 따라 결과를 언제 캐싱할지 결정하여 캐싱 로직을 정교하게 제어할 수 있도록 합니다.
+</Tip>
+
+```python Code
+from crewai.tools import tool
+
+@tool
+def multiplication_tool(first_number: int, second_number: int) -> str:
+    """Useful for when you need to multiply two numbers together."""
+    return first_number * second_number
+
+def cache_func(args, result):
+    # In this case, we only cache the result if it's a multiple of 2
+    cache = result % 2 == 0
+    return cache
+
+multiplication_tool.cache_function = cache_func
+
+writer1 = Agent(
+        role="Writer",
+        goal="You write lessons of math for kids.",
+        backstory="You're an expert in writing and you love to teach kids but you know nothing of math.",
+        tools=[multiplication_tool],
+        allow_delegation=False,
+    )
+    #...
+```
+
+## 결론
+
+도구는 CrewAI 에이전트의 역량을 확장하는 데 중요한 역할을 하며, 이를 통해 에이전트가 폭넓은 작업을 수행하고 효과적으로 협업할 수 있습니다. CrewAI로 솔루션을 구축할 때는, 맞춤형 또는 기존의 도구를 모두 활용하여 에이전트를 강화하고 AI 생태계를 향상시키세요. 에이전트의 성능과 기능을 최적화하기 위해 오류 처리, 캐싱 메커니즘, 그리고 도구 인자의 유연성도 고려해보시기 바랍니다.

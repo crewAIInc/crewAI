@@ -1,0 +1,822 @@
+---
+title: Portkey 통합
+description: CrewAI에서 Portkey를 사용하는 방법
+icon: key
+---
+
+<img src="https://raw.githubusercontent.com/siddharthsambharia-portkey/Portkey-Product-Images/main/Portkey-CrewAI.png" alt="Portkey CrewAI 헤더 이미지" width="70%" />
+
+## 소개
+
+Portkey는 CrewAI에 프로덕션 적합성을 위한 기능을 추가하여 실험적인 agent crew를 다음과 같이 견고한 시스템으로 전환합니다.
+
+- **모든 agent 단계, 도구 사용, 상호작용에 대한 완전한 관찰 가능성**
+- **내장된 신뢰성**: 폴백, 재시도, 로드 밸런싱 기능 제공
+- **AI 비용 관리**를 위한 비용 추적 및 최적화
+- **단일 통합을 통한 200개 이상의 LLM 접근**
+- **agent의 행동을 안전하고 규정 준수로 유지하는 가드레일**
+- **일관된 agent 성능을 위한 버전 관리되는 prompt**
+
+### 설치 및 설정
+
+<Steps>
+<Step title="필요한 패키지 설치하기">
+```bash
+pip install -U crewai portkey-ai
+```
+</Step>
+
+<Step title="API 키 생성" icon="lock">
+[Portkey 대시보드](https://app.portkey.ai/)에서 예산/속도 제한을 선택적으로 설정하여 Portkey API 키를 생성하세요. 이 키에는 신뢰성, 캐싱 등 여러 가지 구성을 추가로 적용할 수 있습니다. 자세한 내용은 추후 설명합니다.
+</Step>
+
+<Step title="Portkey로 CrewAI 구성하기">
+통합은 매우 간단합니다. CrewAI 설정의 LLM 구성을 다음과 같이 업데이트하기만 하면 됩니다:
+
+```python
+from crewai import LLM
+from portkey_ai import createHeaders, PORTKEY_GATEWAY_URL
+
+# Portkey 통합으로 LLM 인스턴스 생성
+gpt_llm = LLM(
+    model="gpt-4o",
+    base_url=PORTKEY_GATEWAY_URL,
+    api_key="dummy",  # Virtual key를 사용하므로 이 값은 단순한 placeholder입니다.
+    extra_headers=createHeaders(
+        api_key="YOUR_PORTKEY_API_KEY",
+        virtual_key="YOUR_LLM_VIRTUAL_KEY",
+        trace_id="unique-trace-id",               # 요청 추적을 위한 선택 사항
+    )
+)
+
+#Crew Agents에서 다음처럼 사용하세요:
+
+	@agent
+	def lead_market_analyst(self) -> Agent:
+		return Agent(
+			config=self.agents_config['lead_market_analyst'],
+			verbose=True,
+			memory=False,
+			llm=gpt_llm
+		)
+
+```
+
+<Info>
+**Virtual Key란?** Portkey의 Virtual Key는 LLM 제공업체의 API 키(OpenAI, Anthropic 등)를 암호화된 금고에 안전하게 저장합니다. 이를 통해 키 교체 및 예산 관리를 더 쉽게 할 수 있습니다. [Virtual Key에 대해 자세히 알아보기](https://portkey.ai/docs/product/ai-gateway/virtual-keys).
+</Info>
+</Step>
+</Steps>
+
+## 프로덕션 기능
+
+### 1. 향상된 가시성
+
+Portkey는 CrewAI agent에 대한 종합적인 가시성을 제공하여 각 실행 중에 어떤 일이 일어나고 있는지 정확히 이해할 수 있게 도와줍니다.
+
+<Tabs>
+  <Tab title="Traces">
+<Frame>
+    <img src="https://raw.githubusercontent.com/siddharthsambharia-portkey/Portkey-Product-Images/refs/heads/main/CrewAI%20Product%2011.1.webp"/>
+</Frame>
+
+Traces는 crew의 실행을 계층적으로 보여주며, LLM 호출, 도구 호출, 상태 전환의 순서를 확인할 수 있습니다.
+
+```python
+# Portkey에서 계층적 추적을 활성화하려면 trace_id를 추가하세요
+portkey_llm = LLM(
+    model="gpt-4o",
+    base_url=PORTKEY_GATEWAY_URL,
+    api_key="dummy",
+    extra_headers=createHeaders(
+        api_key="YOUR_PORTKEY_API_KEY",
+        virtual_key="YOUR_OPENAI_VIRTUAL_KEY",
+        trace_id="unique-session-id"  # 고유한 trace ID 추가
+    )
+)
+```
+  </Tab>
+
+  <Tab title="Logs">
+<Frame>
+    <img src="https://raw.githubusercontent.com/siddharthsambharia-portkey/Portkey-Product-Images/refs/heads/main/CrewAI%20Portkey%20Docs%20Metadata.png"/>
+</Frame>
+
+Portkey는 LLM과의 모든 상호작용을 로그로 남깁니다. 여기에는 다음이 포함됩니다:
+
+- 전체 요청 및 응답 페이로드
+- 지연 시간 및 토큰 사용량 지표
+- 비용 계산
+- 도구 호출 및 함수 실행
+
+모든 로그는 메타데이터, trace ID, 모델 등으로 필터링할 수 있어 특정 crew 실행을 쉽게 디버깅할 수 있습니다.
+  </Tab>
+
+  <Tab title="Metrics & Dashboards">
+<Frame>
+    <img src="https://raw.githubusercontent.com/siddharthsambharia-portkey/Portkey-Product-Images/refs/heads/main/CrewAI%20Dashboard.png"/>
+</Frame>
+
+Portkey는 사용자가 다음을 할 수 있도록 지원하는 내장 대시보드를 제공합니다:
+
+- 모든 crew 실행에서 비용 및 토큰 사용량 추적
+- 지연 시간, 성공률과 같은 성능 지표 분석
+- agent workflow의 병목 지점 식별
+- 서로 다른 crew 구성 및 LLM 비교
+
+사용자는 모든 지표를 사용자 정의 메타데이터별로 필터링 및 세분화하여 특정 crew 유형, 사용자 그룹 또는 사용 사례를 분석할 수 있습니다.
+  </Tab>
+
+  <Tab title="Metadata Filtering">
+<Frame>
+  <img src="https://raw.githubusercontent.com/siddharthsambharia-portkey/Portkey-Product-Images/refs/heads/main/Metadata%20Filters%20from%20CrewAI.png" alt="Analytics with metadata filters" />
+</Frame>
+
+CrewAI LLM 구성에 사용자 정의 메타데이터를 추가하여 강력한 필터링 및 세분화를 활성화할 수 있습니다:
+
+```python
+portkey_llm = LLM(
+    model="gpt-4o",
+    base_url=PORTKEY_GATEWAY_URL,
+    api_key="dummy",
+    extra_headers=createHeaders(
+        api_key="YOUR_PORTKEY_API_KEY",
+        virtual_key="YOUR_OPENAI_VIRTUAL_KEY",
+        metadata={
+            "crew_type": "research_crew",
+            "environment": "production",
+            "_user": "user_123",   # 사용자 분석을 위한 특수 _user 필드
+            "request_source": "mobile_app"
+        }
+    )
+)
+```
+
+이 메타데이터는 Portkey 대시보드에서 로그, trace, 지표를 필터링하는 데 사용될 수 있으며, 특정 crew 실행, 사용자 또는 환경을 분석할 수 있습니다.
+  </Tab>
+</Tabs>
+
+### 2. 신뢰성 - Crew를 원활하게 운영하세요
+
+프로덕션에서 crew를 운영할 때, API 속도 제한, 네트워크 이슈 또는 공급자 장애와 같이 문제가 발생할 수 있습니다. Portkey의 신뢰성 기능은 문제가 발생해도 에이전트가 원활하게 동작하도록 보장합니다.
+
+Portkey Config를 사용하여 CrewAI 설정에서 페일오버를 간단하게 활성화할 수 있습니다:
+
+```python
+from crewai import LLM
+from portkey_ai import createHeaders, PORTKEY_GATEWAY_URL
+
+# Create LLM with fallback configuration
+portkey_llm = LLM(
+    model="gpt-4o",
+    max_tokens=1000,
+    base_url=PORTKEY_GATEWAY_URL,
+    api_key="dummy",
+    extra_headers=createHeaders(
+        api_key="YOUR_PORTKEY_API_KEY",
+        config={
+            "strategy": {
+                "mode": "fallback"
+            },
+            "targets": [
+                {
+                    "provider": "openai",
+                    "api_key": "YOUR_OPENAI_API_KEY",
+                    "override_params": {"model": "gpt-4o"}
+                },
+                {
+                    "provider": "anthropic",
+                    "api_key": "YOUR_ANTHROPIC_API_KEY",
+                    "override_params": {"model": "claude-3-opus-20240229"}
+                }
+            ]
+        }
+    )
+)
+
+# Use this LLM configuration with your agents
+```
+
+이 설정은 GPT-4o 요청이 실패할 경우 자동으로 Claude를 시도하여 crew가 계속 운영될 수 있도록 보장합니다.
+
+<CardGroup cols="2">
+  <Card title="자동 재시도" icon="rotate" href="https://portkey.ai/docs/ko/product/ai-gateway/automatic-retries">
+    일시적인 실패를 자동으로 처리합니다. LLM 호출에 실패하면 Portkey가 지정된 횟수만큼 동일한 요청을 재시도합니다. 속도 제한이나 네트워크 장애에서 완벽하게 사용할 수 있습니다.
+  </Card>
+  <Card title="요청 타임아웃" icon="clock" href="https://portkey.ai/docs/ko/product/ai-gateway/request-timeouts">
+    에이전트가 멈추는 것을 방지합니다. 타임아웃을 설정하여 요구되는 시간 내에 응답을 받거나(혹은 우아하게 실패할 수 있도록) 합니다.
+  </Card>
+  <Card title="조건부 라우팅" icon="route" href="https://portkey.ai/docs/ko/product/ai-gateway/conditional-routing">
+    다양한 요청을 다양한 공급자에게 보낼 수 있습니다. 복잡한 reasoning은 GPT-4로, 창의적인 작업은 Claude로, 빠른 응답은 Gemini로 필요에 따라 라우팅하세요.
+  </Card>
+  <Card title="페일오버" icon="shield" href="https://portkey.ai/docs/ko/product/ai-gateway/fallbacks">
+    기본 공급자가 실패해도 계속 운영됩니다. 백업 공급자로 자동으로 전환되어 가용성을 유지합니다.
+  </Card>
+  <Card title="로드 밸런싱" icon="scale-balanced" href="https://portkey.ai/docs/ko/product/ai-gateway/load-balancing">
+    여러 API 키 또는 공급자에 요청을 분산시킵니다. 대량 crew 운영 및 속도 제한 내에서 작업할 때 유용합니다.
+  </Card>
+</CardGroup>
+
+### 3. CrewAI에서의 프롬프트 사용
+
+Portkey의 Prompt Engineering Studio는 CrewAI 에이전트에서 사용하는 프롬프트를 생성, 관리, 최적화하도록 도와줍니다. 프롬프트나 지시문을 하드코딩하는 대신 Portkey의 프롬프트 렌더링 API를 사용하여 버전 관리된 프롬프트를 동적으로 가져와 적용할 수 있습니다.
+
+<Frame caption="Portkey의 프롬프트 라이브러리에서 프롬프트 관리하기">
+![Prompt Playground Interface](https://raw.githubusercontent.com/siddharthsambharia-portkey/Portkey-Product-Images/refs/heads/main/CrewAI%20Portkey%20Docs.webp)
+</Frame>
+
+<Tabs>
+  <Tab title="Prompt Playground">
+Prompt Playground는 여러분의 AI 애플리케이션을 위해 완벽한 프롬프트를 비교, 테스트, 배포할 수 있는 공간입니다. 이곳은 다양한 모델을 실험하고, 변수들을 테스트하며, 출력값을 비교하고, 배포 전에 프롬프트 엔지니어링 전략을 다듬을 수 있는 곳입니다. 이를 통해 다음과 같은 작업이 가능합니다:
+
+1. 에이전트에서 사용하기 전에 프롬프트를 반복적으로 개발
+2. 다양한 변수와 모델로 프롬프트 테스트
+3. 서로 다른 프롬프트 버전의 출력값 비교
+4. 팀원들과 프롬프트 개발 협업
+
+이 시각적 환경을 통해 CrewAI 에이전트 워크플로우의 각 단계에 효과적인 프롬프트를 쉽게 작성할 수 있습니다.
+  </Tab>
+
+  <Tab title="프롬프트 템플릿 사용하기">
+Prompt Render API를 통해 모든 파라미터가 구성된 프롬프트 템플릿을 가져올 수 있습니다:
+
+```python
+from crewai import Agent, LLM
+from portkey_ai import createHeaders, PORTKEY_GATEWAY_URL, Portkey
+
+# Initialize Portkey admin client
+portkey_admin = Portkey(api_key="YOUR_PORTKEY_API_KEY")
+
+# Retrieve prompt using the render API
+prompt_data = portkey_client.prompts.render(
+    prompt_id="YOUR_PROMPT_ID",
+    variables={
+        "agent_role": "Senior Research Scientist",
+    }
+)
+
+backstory_agent_prompt=prompt_data.data.messages[0]["content"]
+
+
+# Set up LLM with Portkey integration
+portkey_llm = LLM(
+    model="gpt-4o",
+    base_url=PORTKEY_GATEWAY_URL,
+    api_key="dummy",
+    extra_headers=createHeaders(
+        api_key="YOUR_PORTKEY_API_KEY",
+        virtual_key="YOUR_OPENAI_VIRTUAL_KEY"
+    )
+)
+
+# Create agent using the rendered prompt
+researcher = Agent(
+    role="Senior Research Scientist",
+    goal="Discover groundbreaking insights about the assigned topic",
+    backstory=backstory_agent,  # Use the rendered prompt
+    verbose=True,
+    llm=portkey_llm
+)
+```
+  </Tab>
+
+  <Tab title="프롬프트 버전 관리">
+다음과 같은 작업을 수행할 수 있습니다:
+- 동일한 프롬프트의 여러 버전을 생성
+- 버전 간의 성능 비교
+- 필요시 이전 버전으로 롤백
+- 코드에서 사용할 버전을 지정:
+
+```python
+# Use a specific prompt version
+prompt_data = portkey_admin.prompts.render(
+    prompt_id="YOUR_PROMPT_ID@version_number",
+    variables={
+        "agent_role": "Senior Research Scientist",
+        "agent_goal": "Discover groundbreaking insights"
+    }
+)
+```
+  </Tab>
+
+  <Tab title="변수용 머스태시 템플릿">
+Portkey 프롬프트는 손쉬운 변수 치환을 위해 머스태시(Mustache) 스타일의 템플릿을 사용합니다:
+
+```
+You are a {{agent_role}} with expertise in {{domain}}.
+
+Your mission is to {{agent_goal}} by leveraging your knowledge
+and experience in the field.
+
+Always maintain a {{tone}} tone and focus on providing {{focus_area}}.
+```
+
+렌더링할 때는 변수를 간단하게 전달하면 됩니다:
+
+```python
+prompt_data = portkey_admin.prompts.render(
+    prompt_id="YOUR_PROMPT_ID",
+    variables={
+        "agent_role": "Senior Research Scientist",
+        "domain": "artificial intelligence",
+        "agent_goal": "discover groundbreaking insights",
+        "tone": "professional",
+        "focus_area": "practical applications"
+    }
+)
+```
+  </Tab>
+</Tabs>
+
+<Card title="Prompt Engineering Studio" icon="wand-magic-sparkles" href="https://portkey.ai/docs/product/prompt-library">
+  Portkey의 프롬프트 관리 기능에 대해 더 알아보기
+</Card>
+
+### 4. 안전한 Crew를 위한 가드레일
+
+가드레일은 CrewAI agent가 모든 상황에서 안전하게 작동하고 적절하게 응답하도록 보장합니다.
+
+**가드레일을 사용하는 이유는 무엇인가요?**
+
+CrewAI agent는 다양한 실패 모드를 경험할 수 있습니다:
+- 유해하거나 부적절한 콘텐츠 생성
+- PII와 같은 민감 정보 유출
+- 잘못된 정보의 환각
+- 잘못된 형식의 출력 생성
+
+Portkey의 가드레일은 입력과 출력 모두에 대한 보호를 추가합니다.
+
+**가드레일 구현하기**
+
+```python
+from crewai import Agent, LLM
+from portkey_ai import createHeaders, PORTKEY_GATEWAY_URL
+
+# Create LLM with guardrails
+portkey_llm = LLM(
+    model="gpt-4o",
+    base_url=PORTKEY_GATEWAY_URL,
+    api_key="dummy",
+    extra_headers=createHeaders(
+        api_key="YOUR_PORTKEY_API_KEY",
+        virtual_key="YOUR_OPENAI_VIRTUAL_KEY",
+        config={
+            "input_guardrails": ["guardrails-id-xxx", "guardrails-id-yyy"],
+            "output_guardrails": ["guardrails-id-zzz"]
+        }
+    )
+)
+
+# Create agent with guardrailed LLM
+researcher = Agent(
+    role="Senior Research Scientist",
+    goal="Discover groundbreaking insights about the assigned topic",
+    backstory="You are an expert researcher with deep domain knowledge.",
+    verbose=True,
+    llm=portkey_llm
+)
+```
+
+Portkey의 가드레일은 다음을 수행할 수 있습니다:
+- 입력 및 출력의 PII 감지 및 마스킹
+- 유해하거나 부적절한 콘텐츠 필터링
+- 응답 형식을 스키마에 따라 검증
+- 근거 자료와 비교하여 환각 여부 확인
+- 맞춤형 비즈니스 로직 및 규칙 적용
+
+<Card title="가드레일에 대해 더 알아보기" icon="shield-check" href="https://portkey.ai/docs/product/guardrails">
+  Portkey의 가드레일 기능을 탐색하여 agent의 안전성을 높여보세요
+</Card>
+
+### 5. 메타데이터로 사용자 추적
+
+Portkey의 메타데이터 시스템을 사용하여 CrewAI 에이전트를 통해 개별 사용자를 추적할 수 있습니다.
+
+**Portkey에서의 메타데이터란?**
+
+메타데이터를 사용하면 각 요청에 사용자 지정 데이터를 연결할 수 있어 필터링, 세분화, 분석이 가능합니다. 특별한 `_user` 필드는 사용자 추적을 위해 특별히 설계되었습니다.
+
+```python
+from crewai import Agent, LLM
+from portkey_ai import createHeaders, PORTKEY_GATEWAY_URL
+
+# 사용자 추적이 설정된 LLM 구성
+portkey_llm = LLM(
+    model="gpt-4o",
+    base_url=PORTKEY_GATEWAY_URL,
+    api_key="dummy",
+    extra_headers=createHeaders(
+        api_key="YOUR_PORTKEY_API_KEY",
+        virtual_key="YOUR_OPENAI_VIRTUAL_KEY",
+        metadata={
+            "_user": "user_123",  # 사용자 분석을 위한 특별 _user 필드
+            "user_tier": "premium",
+            "user_company": "Acme Corp",
+            "session_id": "abc-123"
+        }
+    )
+)
+
+# 추적된 LLM으로 에이전트 생성
+researcher = Agent(
+    role="Senior Research Scientist",
+    goal="Discover groundbreaking insights about the assigned topic",
+    backstory="You are an expert researcher with deep domain knowledge.",
+    verbose=True,
+    llm=portkey_llm
+)
+```
+
+**사용자별로 분석 필터링**
+
+메타데이터가 설정되어 있으면, 사용자별로 분석을 필터링하고 사용자 단위의 성능 지표를 분석할 수 있습니다:
+
+<Frame caption="사용자별로 분석 필터링">
+  <img src="https://raw.githubusercontent.com/siddharthsambharia-portkey/Portkey-Product-Images/refs/heads/main/Metadata%20Filters%20from%20CrewAI.png"/>
+</Frame>
+
+이를 통해 다음이 가능합니다:
+- 사용자별 비용 추적 및 예산 관리
+- 개인화된 사용자 분석
+- 팀 또는 조직 단위의 지표
+- 환경별 모니터링(스테이징 vs. 프로덕션)
+
+<Card title="메타데이터에 대해 더 알아보기" icon="tags" href="https://portkey.ai/docs/product/observability/metadata">
+  맞춤형 메타데이터를 활용하여 분석 기능을 향상시키는 방법을 살펴보세요
+</Card>
+
+### 6. 효율적인 Crews를 위한 캐싱
+
+캐싱을 구현하여 CrewAI agent를 보다 효율적이고 비용 효율적으로 만드세요:
+
+<Tabs>
+  <Tab title="Simple Caching">
+```python
+from crewai import Agent, LLM
+from portkey_ai import createHeaders, PORTKEY_GATEWAY_URL
+
+# Configure LLM with simple caching
+portkey_llm = LLM(
+    model="gpt-4o",
+    base_url=PORTKEY_GATEWAY_URL,
+    api_key="dummy",
+    extra_headers=createHeaders(
+        api_key="YOUR_PORTKEY_API_KEY",
+        virtual_key="YOUR_OPENAI_VIRTUAL_KEY",
+        config={
+            "cache": {
+                "mode": "simple"
+            }
+        }
+    )
+)
+
+# Create agent with cached LLM
+researcher = Agent(
+    role="Senior Research Scientist",
+    goal="Discover groundbreaking insights about the assigned topic",
+    backstory="You are an expert researcher with deep domain knowledge.",
+    verbose=True,
+    llm=portkey_llm
+)
+```
+
+Simple 캐싱은 입력 프롬프트에 대한 정확한 일치 항목을 수행하며, 동일한 요청을 캐시에 저장하여 중복된 모델 실행을 방지합니다.
+  </Tab>
+
+  <Tab title="Semantic Caching">
+```python
+from crewai import Agent, LLM
+from portkey_ai import createHeaders, PORTKEY_GATEWAY_URL
+
+# Configure LLM with semantic caching
+portkey_llm = LLM(
+    model="gpt-4o",
+    base_url=PORTKEY_GATEWAY_URL,
+    api_key="dummy",
+    extra_headers=createHeaders(
+        api_key="YOUR_PORTKEY_API_KEY",
+        virtual_key="YOUR_OPENAI_VIRTUAL_KEY",
+        config={
+            "cache": {
+                "mode": "semantic"
+            }
+        }
+    )
+)
+
+# Create agent with semantically cached LLM
+researcher = Agent(
+    role="Senior Research Scientist",
+    goal="Discover groundbreaking insights about the assigned topic",
+    backstory="You are an expert researcher with deep domain knowledge.",
+    verbose=True,
+    llm=portkey_llm
+)
+```
+
+Semantic 캐싱은 입력 요청 간의 맥락적 유사성을 고려하여, 의미적으로 유사한 입력에 대한 응답을 캐시에 저장합니다.
+  </Tab>
+</Tabs>
+
+### 7. 모델 상호 운용성
+
+CrewAI는 여러 LLM 제공업체를 지원하며, Portkey는 통합 인터페이스를 통해 200개 이상의 LLM에 대한 액세스를 제공함으로써 이 기능을 확장합니다. 코어 에이전트 로직을 변경하지 않고도 다양한 모델 간에 쉽게 전환할 수 있습니다:
+
+```python
+from crewai import Agent, LLM
+from portkey_ai import createHeaders, PORTKEY_GATEWAY_URL
+
+# Set up LLMs with different providers
+openai_llm = LLM(
+    model="gpt-4o",
+    base_url=PORTKEY_GATEWAY_URL,
+    api_key="dummy",
+    extra_headers=createHeaders(
+        api_key="YOUR_PORTKEY_API_KEY",
+        virtual_key="YOUR_OPENAI_VIRTUAL_KEY"
+    )
+)
+
+anthropic_llm = LLM(
+    model="claude-3-5-sonnet-latest",
+    max_tokens=1000,
+    base_url=PORTKEY_GATEWAY_URL,
+    api_key="dummy",
+    extra_headers=createHeaders(
+        api_key="YOUR_PORTKEY_API_KEY",
+        virtual_key="YOUR_ANTHROPIC_VIRTUAL_KEY"
+    )
+)
+
+# Choose which LLM to use for each agent based on your needs
+researcher = Agent(
+    role="Senior Research Scientist",
+    goal="Discover groundbreaking insights about the assigned topic",
+    backstory="You are an expert researcher with deep domain knowledge.",
+    verbose=True,
+    llm=openai_llm  # Use anthropic_llm for Anthropic
+)
+```
+
+Portkey는 다음을 포함한 제공업체의 LLM에 액세스를 제공합니다:
+
+- OpenAI (GPT-4o, GPT-4 Turbo 등)
+- Anthropic (Claude 3.5 Sonnet, Claude 3 Opus 등)
+- Mistral AI (Mistral Large, Mistral Medium 등)
+- Google Vertex AI (Gemini 1.5 Pro 등)
+- Cohere (Command, Command-R 등)
+- AWS Bedrock (Claude, Titan 등)
+- 로컬/프라이빗 모델
+
+<Card title="지원되는 제공업체" icon="server" href="https://portkey.ai/docs/integrations/llms">
+  Portkey에서 지원하는 전체 LLM 제공업체 목록 보기
+</Card>
+
+## CrewAI를 위한 엔터프라이즈 거버넌스 설정
+
+**엔터프라이즈 거버넌스가 필요한 이유**
+조직 내에서 CrewAI를 사용하는 경우, 여러 거버넌스 측면을 고려해야 합니다:
+- **비용 관리**: 팀별 AI 사용 비용 통제 및 추적
+- **접근 제어**: 특정 팀이 특정 모델을 사용할 수 있도록 관리
+- **사용 분석**: 조직 전반에서 AI 사용 현황 파악
+- **보안 및 컴플라이언스**: 엔터프라이즈 수준의 보안 기준 유지
+- **신뢰성**: 모든 사용자에게 일관된 서비스 제공 보장
+
+Portkey는 이러한 엔터프라이즈 요구를 해결하는 종합적인 거버넌스 계층을 추가합니다. 이제 이러한 컨트롤을 단계별로 구현해보겠습니다.
+
+<Steps>
+<Step title="Virtual Key 생성">
+Virtual Key는 Portkey의 안전한 LLM 공급자 API 키 관리 방식입니다. 주요 제어 기능을 제공합니다:
+- API 사용에 대한 예산 제한
+- 속도 제한(Rate limiting) 기능
+- 안전한 API 키 저장
+
+Virtual Key를 생성하려면:
+Portkey 앱에서 [Virtual Keys](https://app.portkey.ai/virtual-keys)로 이동하세요. Virtual Key ID를 저장하고 복사하세요.
+
+<Frame>
+<img src="https://raw.githubusercontent.com/siddharthsambharia-portkey/Portkey-Product-Images/refs/heads/main/Virtual%20Key%20from%20Portkey%20Docs.png" width="500"/>
+</Frame>
+
+<Note>
+Virtual Key ID를 저장하세요. 다음 단계에서 필요합니다.
+</Note>
+</Step>
+
+<Step title="기본 Config 생성">
+Portkey에서 Config는 요청 라우팅 방식을 정의하며, 고급 라우팅·폴백·재시도 등 기능을 제공합니다.
+
+Config를 생성하려면:
+1. Portkey 대시보드의 [Configs](https://app.portkey.ai/configs)로 이동
+2. 아래와 같은 새 config 생성:
+    ```json
+    {
+        "virtual_key": "YOUR_VIRTUAL_KEY_FROM_STEP1",
+       	"override_params": {
+          "model": "gpt-4o" // 선호하는 모델명
+        }
+    }
+    ```
+3. Config 이름을 저장하고 다음 단계에 사용하세요.
+
+<Frame>
+<img src="https://raw.githubusercontent.com/siddharthsambharia-portkey/Portkey-Product-Images/refs/heads/main/CrewAI%20Portkey%20Docs%20Config.png" width="500"/>
+</Frame>
+</Step>
+
+<Step title="Portkey API Key 설정">
+이제 Portkey API 키를 생성하고, 2단계에서 만든 config에 연결하세요:
+
+1. Portkey의 [API Keys](https://app.portkey.ai/api-keys)로 이동해 새 API 키 생성
+2. `2단계`에서 만든 config 선택
+3. API 키를 생성 및 저장
+
+<Frame>
+<img src="https://raw.githubusercontent.com/siddharthsambharia-portkey/Portkey-Product-Images/refs/heads/main/CrewAI%20API%20Key.png" width="500"/>
+</Frame>
+</Step>
+
+<Step title="CrewAI에 연결">
+Portkey API 키와 config를 설정한 후, 이를 CrewAI agent에 연결하세요:
+
+```python
+from crewai import Agent, LLM
+from portkey_ai import PORTKEY_GATEWAY_URL
+
+# API 키로 LLM 구성
+portkey_llm = LLM(
+    model="gpt-4o",
+    base_url=PORTKEY_GATEWAY_URL,
+    api_key="YOUR_PORTKEY_API_KEY"
+)
+
+# Portkey가 적용된 LLM으로 agent 생성
+researcher = Agent(
+    role="Senior Research Scientist",
+    goal="Discover groundbreaking insights about the assigned topic",
+    backstory="You are an expert researcher with deep domain knowledge.",
+    verbose=True,
+    llm=portkey_llm
+)
+```
+</Step>
+</Steps>
+
+<AccordionGroup>
+  <Accordion title="1단계: 예산 제어 및 속도 제한 구현">
+
+### 1단계: 예산 통제 및 속도 제한 구현
+
+Virtual Keys를 사용하면 팀/부서 수준에서 LLM 접근을 세밀하게 제어할 수 있습니다. 이를 통해 다음과 같은 이점이 있습니다:
+- [예산 한도](https://portkey.ai/docs/product/ai-gateway/virtual-keys/budget-limits) 설정
+- 속도 제한을 통해 예기치 않은 사용량 급증 방지
+- 부서별 지출 추적
+
+#### 부서별 제어 설정하기:
+1. Portkey 대시보드에서 [Virtual Keys](https://app.portkey.ai/virtual-keys)로 이동하세요.
+2. 각 부서마다 예산 한도와 속도 제한이 포함된 새로운 Virtual Key를 생성하세요.
+3. 부서별 한도를 구성하세요.
+
+<Frame>
+<img src="https://raw.githubusercontent.com/siddharthsambharia-portkey/Portkey-Product-Images/refs/heads/main/Virtual%20Key%20from%20Portkey%20Docs.png" width="500"/>
+</Frame>
+</Accordion>
+
+<Accordion title="2단계: 모델 접근 규칙 정의">
+
+### 단계 2: 모델 접근 규칙 정의
+
+AI 사용이 확장됨에 따라, 각 팀이 특정 모델에 접근할 수 있도록 제어하는 것이 중요해집니다. Portkey Configs는 다음과 같은 기능을 제공하여 이러한 제어 계층을 지원합니다:
+
+#### 접근 제어 기능:
+- **모델 제한**: 특정 모델에 대한 액세스 제한
+- **데이터 보호**: 민감한 데이터에 대한 가드레일 구현
+- **신뢰성 제어**: 폴백 및 재시도 로직 추가
+
+#### 예시 구성:
+다음은 OpenAI, 특히 GPT-4o로 요청을 라우팅하는 기본 구성입니다:
+
+```json
+{
+	"strategy": {
+		"mode": "single"
+	},
+	"targets": [
+		{
+			"virtual_key": "YOUR_OPENAI_VIRTUAL_KEY",
+			"override_params": {
+				"model": "gpt-4o"
+			}
+		}
+	]
+}
+```
+
+Portkey 대시보드에서 [구성 페이지](https://app.portkey.ai/configs)에서 자신의 구성을 생성하세요.
+
+<Note>
+구성은 언제든지 업데이트하여 실행 중인 애플리케이션에 영향을 주지 않고 제어를 조정할 수 있습니다.
+</Note>
+</Accordion>
+
+<Accordion title="3단계: 액세스 제어 구현">
+### 3단계: 액세스 제어 구현
+
+사용자별 API 키를 생성하면 자동으로 다음을 수행합니다:
+- 가상 키를 활용하여 사용자/팀별 사용량 추적
+- 요청 라우팅을 위한 적절한 구성 적용
+- 로그를 필터링하기 위한 관련 메타데이터 수집
+- 액세스 권한 적용
+
+API 키 생성 방법:
+- [Portkey App](https://app.portkey.ai/)
+- [API Key Management API](/ko/api-reference/admin-api/control-plane/api-keys/create-api-key)
+
+Python SDK를 사용한 예시:
+```python
+from portkey_ai import Portkey
+
+portkey = Portkey(api_key="YOUR_ADMIN_API_KEY")
+
+api_key = portkey.api_keys.create(
+    name="engineering-team",
+    type="organisation",
+    workspace_id="YOUR_WORKSPACE_ID",
+    defaults={
+        "config_id": "your-config-id",
+        "metadata": {
+            "environment": "production",
+            "department": "engineering"
+        }
+    },
+    scopes=["logs.view", "configs.read"]
+)
+```
+
+자세한 키 관리 방법은 [API 키 문서](/ko/api-reference/admin-api/control-plane/api-keys/create-api-key)를 참조하세요.
+</Accordion>
+
+<Accordion title="4단계: 배포 및 모니터링">
+### 4단계: 배포 및 모니터링
+팀원들에게 API 키를 배포한 후, 엔터프라이즈 준비가 완료된 CrewAI 설정이 준비됩니다. 이제 각 팀원은 지정된 API 키로 적절한 액세스 수준 및 예산 제어와 함께 사용할 수 있습니다.
+
+Portkey 대시보드에서 사용량 모니터링:
+- 부서별 비용 추적
+- 모델 사용 패턴
+- 요청량
+- 오류율
+</Accordion>
+
+</AccordionGroup>
+
+<Note>
+
+### 엔터프라이즈 기능이 이제 사용 가능합니다
+**귀하의 CrewAI 통합에는 이제 다음과 같은 기능이 포함됩니다:**
+- 부서별 예산 관리
+- 모델 접근 거버넌스
+- 사용량 추적 및 귀속
+- 보안 가드레일
+- 신뢰성 기능
+</Note>
+
+## 자주 묻는 질문
+
+<AccordionGroup>
+  <Accordion title="Portkey는 CrewAI를 어떻게 향상시키나요?">
+    Portkey는 종합적인 가시성(트레이스, 로그, 메트릭), 신뢰성 기능(폴백, 재시도, 캐싱) 및 통합 인터페이스를 통한 200개 이상의 LLM 접속을 통해 CrewAI에 프로덕션 환경에 적합한 기능을 추가합니다. 이를 통해 에이전트 애플리케이션을 더 쉽게 디버깅, 최적화, 확장할 수 있습니다.
+  </Accordion>
+
+  <Accordion title="Portkey를 기존 CrewAI 애플리케이션과 함께 사용할 수 있나요?">
+    네! Portkey는 기존 CrewAI 애플리케이션과 매끄럽게 통합됩니다. LLM 구성 코드를 Portkey가 적용된 버전으로 업데이트하기만 하면 됩니다. 나머지 에이전트 및 crew 코드는 변경하지 않아도 됩니다.
+  </Accordion>
+
+  <Accordion title="Portkey는 모든 CrewAI 기능과 호환되나요?">
+    Portkey는 에이전트, 도구, human-in-the-loop 워크플로우, 모든 태스크 프로세스 유형(순차적, 계층적 등)을 포함하여 모든 CrewAI 기능을 지원합니다. 프레임워크의 기능에 제한을 두지 않으면서 가시성과 신뢰성을 추가합니다.
+  </Accordion>
+
+  <Accordion title="Crew 내 여러 에이전트의 사용 내역을 추적할 수 있나요?">
+    네, Portkey를 사용하면 crew 내 여러 에이전트에 일관된 `trace_id`를 적용하여 전체 워크플로우를 추적할 수 있습니다. 특히 여러 에이전트가 포함된 복잡한 crew에서 전체 실행 경로를 파악할 때 유용합니다.
+  </Accordion>
+
+  <Accordion title="특정 crew 실행에 대한 로그와 트레이스를 어떻게 필터링하나요?">
+    Portkey를 통해 LLM 구성에 사용자 지정 메타데이터를 추가할 수 있으며, 이를 필터링에 활용할 수 있습니다. `crew_name`, `crew_type`, `session_id`와 같은 필드를 추가해 손쉽게 특정 crew 실행을 찾아 분석할 수 있습니다.
+  </Accordion>
+
+  <Accordion title="내 API 키를 Portkey에서 사용할 수 있나요?">
+    네! Portkey는 다양한 LLM 제공업체에 대해 사용자의 API 키를 사용합니다. API 키를 가상 키로 안전하게 저장하여, 코드 변경 없이 쉽게 키를 관리하고 교체할 수 있습니다.
+  </Accordion>
+
+</AccordionGroup>
+
+## 자료
+
+<CardGroup cols="3">
+  <Card title="CrewAI Docs" icon="book" href="https://docs.crewai.com/">
+    <p>공식 CrewAI 문서</p>
+  </Card>
+  <Card title="Book a Demo" icon="calendar" href="https://calendly.com/portkey-ai">
+    <p>이 통합 구현에 대한 맞춤형 안내를 받아보세요</p>
+  </Card>
+</CardGroup>

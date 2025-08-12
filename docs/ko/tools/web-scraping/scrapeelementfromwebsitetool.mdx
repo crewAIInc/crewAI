@@ -1,0 +1,139 @@
+---
+title: 웹사이트 요소 스크랩 도구
+description: ScrapeElementFromWebsiteTool은 CrewAI 에이전트가 CSS 셀렉터를 사용하여 웹사이트에서 특정 요소를 추출할 수 있도록 합니다.
+icon: code
+---
+
+# `ScrapeElementFromWebsiteTool`
+
+## 설명
+
+`ScrapeElementFromWebsiteTool`은 CSS 선택자를 사용하여 웹사이트에서 특정 요소를 추출하도록 설계되었습니다. 이 도구는 CrewAI 에이전트가 웹 페이지에서 타겟이 되는 콘텐츠를 스크래핑할 수 있게 하여, 웹페이지의 특정 부분만이 필요한 데이터 추출 작업에 유용합니다.
+
+## 설치
+
+이 도구를 사용하려면 필요한 종속성을 설치해야 합니다:
+
+```shell
+uv add requests beautifulsoup4
+```
+
+## 시작 단계
+
+`ScrapeElementFromWebsiteTool`을 효과적으로 사용하려면 다음 단계를 따르십시오:
+
+1. **필수 종속성 설치**: 위의 명령어를 사용하여 필요한 패키지를 설치합니다.
+2. **CSS 선택자 식별**: 웹사이트에서 추출하려는 요소의 CSS 선택자를 결정합니다.
+3. **도구 초기화**: 필요한 매개변수로 도구 인스턴스를 생성합니다.
+
+## 예시
+
+다음 예시는 `ScrapeElementFromWebsiteTool`을 사용하여 웹사이트에서 특정 요소를 추출하는 방법을 보여줍니다:
+
+```python Code
+from crewai import Agent, Task, Crew
+from crewai_tools import ScrapeElementFromWebsiteTool
+
+# Initialize the tool
+scrape_tool = ScrapeElementFromWebsiteTool()
+
+# Define an agent that uses the tool
+web_scraper_agent = Agent(
+    role="Web Scraper",
+    goal="Extract specific information from websites",
+    backstory="An expert in web scraping who can extract targeted content from web pages.",
+    tools=[scrape_tool],
+    verbose=True,
+)
+
+# Example task to extract headlines from a news website
+scrape_task = Task(
+    description="Extract the main headlines from the CNN homepage. Use the CSS selector '.headline' to target the headline elements.",
+    expected_output="A list of the main headlines from CNN.",
+    agent=web_scraper_agent,
+)
+
+# Create and run the crew
+crew = Crew(agents=[web_scraper_agent], tasks=[scrape_task])
+result = crew.kickoff()
+```
+
+도구를 미리 정의된 매개변수와 함께 초기화할 수도 있습니다:
+
+```python Code
+# Initialize the tool with predefined parameters
+scrape_tool = ScrapeElementFromWebsiteTool(
+    website_url="https://www.example.com",
+    css_element=".main-content"
+)
+```
+
+## 매개변수
+
+`ScrapeElementFromWebsiteTool`은(는) 초기화 시 다음과 같은 매개변수를 허용합니다:
+
+- **website_url**: 선택 사항. 스크래핑할 웹사이트의 URL입니다. 초기화 시 제공되면, 도구를 사용할 때 에이전트가 이를 지정할 필요가 없습니다.
+- **css_element**: 선택 사항. 추출할 요소들의 CSS 선택자입니다. 초기화 시 제공되면, 도구를 사용할 때 에이전트가 이를 지정할 필요가 없습니다.
+- **cookies**: 선택 사항. 요청과 함께 전송할 쿠키가 담긴 딕셔너리입니다. 인증이 필요한 웹사이트의 경우 유용하게 사용할 수 있습니다.
+
+## 사용법
+
+`ScrapeElementFromWebsiteTool`을 에이전트와 함께 사용할 때, 초기화 시 지정되지 않은 경우 에이전트는 다음 매개변수를 제공해야 합니다:
+
+- **website_url**: 스크레이핑할 웹사이트의 URL
+- **css_element**: 추출할 요소의 CSS 선택자
+
+이 도구는 CSS 선택자와 일치하는 모든 요소의 텍스트 콘텐츠를 줄바꿈으로 연결하여 반환합니다.
+
+```python Code
+# Example of using the tool with an agent
+web_scraper_agent = Agent(
+    role="Web Scraper",
+    goal="Extract specific elements from websites",
+    backstory="An expert in web scraping who can extract targeted content using CSS selectors.",
+    tools=[scrape_tool],
+    verbose=True,
+)
+
+# Create a task for the agent to extract specific elements
+extract_task = Task(
+    description="""
+    Extract all product titles from the featured products section on example.com.
+    Use the CSS selector '.product-title' to target the title elements.
+    """,
+    expected_output="A list of product titles from the website",
+    agent=web_scraper_agent,
+)
+
+# Run the task through a crew
+crew = Crew(agents=[web_scraper_agent], tasks=[extract_task])
+result = crew.kickoff()
+```
+
+## 구현 세부사항
+
+`ScrapeElementFromWebsiteTool`은 웹 페이지를 가져오기 위해 `requests` 라이브러리를 사용하고, HTML을 파싱하고 지정된 요소를 추출하기 위해 `BeautifulSoup`을 사용합니다:
+
+```python Code
+class ScrapeElementFromWebsiteTool(BaseTool):
+    name: str = "Read a website content"
+    description: str = "A tool that can be used to read a website content."
+
+    # Implementation details...
+
+    def _run(self, **kwargs: Any) -> Any:
+        website_url = kwargs.get("website_url", self.website_url)
+        css_element = kwargs.get("css_element", self.css_element)
+        page = requests.get(
+            website_url,
+            headers=self.headers,
+            cookies=self.cookies if self.cookies else {},
+        )
+        parsed = BeautifulSoup(page.content, "html.parser")
+        elements = parsed.select(css_element)
+        return "\n".join([element.get_text() for element in elements])
+```
+
+## 결론
+
+`ScrapeElementFromWebsiteTool`은 CSS 셀렉터를 사용하여 웹사이트에서 특정 요소를 추출할 수 있는 강력한 방법을 제공합니다. 이 도구를 통해 에이전트는 필요한 콘텐츠만 선택적으로 수집할 수 있어 웹 스크래핑 작업을 더욱 효율적이고 집중적으로 수행할 수 있습니다. 이 도구는 데이터 추출, 콘텐츠 모니터링, 연구 등 웹 페이지에서 특정 정보를 추출해야 하는 작업에 특히 유용합니다.

@@ -1,0 +1,84 @@
+---
+title: 코드 문서 RAG 검색
+description: CodeDocsSearchTool은(는) 코드 문서 내에서 의미론적 검색을 위해 설계된 강력한 RAG(Retrieval-Augmented Generation) 도구입니다.
+icon: code
+---
+
+# `CodeDocsSearchTool`
+
+<Note>
+    **실험적**: 저희는 도구를 계속 개선하고 있으므로, 향후 예기치 않은 동작이나 변경 사항이 발생할 수 있습니다.
+</Note>
+
+## 설명
+
+CodeDocsSearchTool은 코드 문서 내에서 의미론적 검색을 할 수 있도록 설계된 강력한 RAG(Retrieval-Augmented Generation) 도구입니다.
+이 도구를 사용하면 사용자는 코드 문서 내에서 특정 정보나 주제를 효율적으로 찾을 수 있습니다. 초기화 시 `docs_url`을 제공하면,
+검색 범위를 해당 문서 사이트로 한정할 수 있습니다. 또는 특정 `docs_url`이 없는 경우,
+실행 중에 알려지거나 발견된 다양한 코드 문서 전체를 대상으로 검색하므로, 다양한 문서 검색에 유연하게 활용할 수 있습니다.
+
+## 설치
+
+CodeDocsSearchTool을 사용하려면 먼저 pip를 통해 crewai_tools 패키지를 설치하세요:
+
+```shell
+pip install 'crewai[tools]'
+```
+
+## 예시
+
+CodeDocsSearchTool을 다음과 같이 활용하여 코드 문서 내에서 검색을 수행할 수 있습니다:
+
+```python Code
+from crewai_tools import CodeDocsSearchTool
+
+# URL이 알려졌거나 실행 중에 발견된 경우
+# 모든 코드 문서 내용을 검색하려면:
+tool = CodeDocsSearchTool()
+
+# 또는
+
+# 특정 문서 사이트 내에서 검색을 집중적으로 수행하려면
+# 해당 사이트의 URL을 제공하세요:
+tool = CodeDocsSearchTool(docs_url='https://docs.example.com/reference')
+```
+<Note>
+    'https://docs.example.com/reference'를 원하는 문서 URL로,
+    'How to use search tool'을 필요에 맞는 검색 쿼리로 대체하세요.
+</Note>
+
+## 인수
+
+다음 매개변수들은 `CodeDocsSearchTool`의 동작을 사용자 지정하는 데 사용할 수 있습니다:
+
+| 인수             | 타입      | 설명                                                                                                  |
+|:------------------|:----------|:-----------------------------------------------------------------------------------------------------|
+| **docs_url**       | `string`  | _선택 사항_. 검색할 코드 도큐멘테이션의 URL을 지정합니다.                                 |
+
+## 커스텀 모델 및 임베딩
+
+기본적으로 이 도구는 임베딩과 요약 모두에 OpenAI를 사용합니다. 모델을 커스터마이즈하려면 아래와 같이 config 딕셔너리를 사용할 수 있습니다.
+
+```python Code
+tool = CodeDocsSearchTool(
+    config=dict(
+        llm=dict(
+            provider="ollama", # or google, openai, anthropic, llama2, ...
+            config=dict(
+                model="llama2",
+                # temperature=0.5,
+                # top_p=1,
+                # stream=true,
+            ),
+        ),
+        embedder=dict(
+            provider="google", # or openai, ollama, ...
+            config=dict(
+                model="models/embedding-001",
+                task_type="retrieval_document",
+                # title="Embeddings",
+            ),
+        ),
+    )
+)
+```

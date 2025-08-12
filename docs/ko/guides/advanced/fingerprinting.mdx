@@ -1,0 +1,133 @@
+---
+title: 지문 인식
+description: CrewAI의 지문 인식 시스템을 사용하여 컴포넌트를 전체 라이프사이클 동안 고유하게 식별하고 추적하는 방법을 알아보세요.
+icon: fingerprint
+---
+
+## 개요
+
+CrewAI의 Fingerprints는 컴포넌트를 고유하게 식별하고 그 생애주기를 추적할 수 있는 방법을 제공합니다. 각 `Agent`, `Crew`, `Task`는 생성 시 자동으로 고유한 fingerprint를 부여받으며, 이는 수동으로 변경할 수 없습니다.
+
+이러한 fingerprints는 다음과 같은 용도로 사용할 수 있습니다:
+- 컴포넌트 사용 감사 및 추적
+- 컴포넌트 식별 무결성 보장
+- 컴포넌트에 메타데이터 첨부
+- 추적 가능한 작업 체인 생성
+
+## 지문(Fingerprints)의 작동 방식
+
+지문(fingerprint)은 `crewai.security` 모듈의 `Fingerprint` 클래스의 인스턴스입니다. 각 지문에는 다음과 같은 정보가 포함되어 있습니다:
+
+- UUID 문자열: 컴포넌트의 고유 식별자로, 자동으로 생성되며 수동으로 설정할 수 없습니다.
+- 생성 타임스탬프: 지문이 생성된 시점을 나타내며, 자동으로 설정되고 수동으로 수정할 수 없습니다.
+- 메타데이터: 추가 정보를 담은 사전(dictionary)으로, 사용자 정의가 가능합니다.
+
+지문은 컴포넌트가 생성될 때 자동으로 생성되어 할당됩니다. 각 컴포넌트는 읽기 전용 속성을 통해 자신의 지문을 제공합니다.
+
+## 기본 사용법
+
+### 지문 접근하기
+
+```python
+from crewai import Agent, Crew, Task
+
+# Create components - fingerprints are automatically generated
+agent = Agent(
+    role="Data Scientist",
+    goal="Analyze data",
+    backstory="Expert in data analysis"
+)
+
+crew = Crew(
+    agents=[agent],
+    tasks=[]
+)
+
+task = Task(
+    description="Analyze customer data",
+    expected_output="Insights from data analysis",
+    agent=agent
+)
+
+# Access the fingerprints
+agent_fingerprint = agent.fingerprint
+crew_fingerprint = crew.fingerprint
+task_fingerprint = task.fingerprint
+
+# Print the UUID strings
+print(f"Agent fingerprint: {agent_fingerprint.uuid_str}")
+print(f"Crew fingerprint: {crew_fingerprint.uuid_str}")
+print(f"Task fingerprint: {task_fingerprint.uuid_str}")
+```
+
+### 지문 메타데이터 작업
+
+지문에 추가적인 맥락 정보를 제공하기 위해 메타데이터를 추가할 수 있습니다:
+
+```python
+# Add metadata to the agent's fingerprint
+agent.security_config.fingerprint.metadata = {
+    "version": "1.0",
+    "department": "Data Science",
+    "project": "Customer Analysis"
+}
+
+# Access the metadata
+print(f"Agent metadata: {agent.fingerprint.metadata}")
+```
+
+## 지문(Fingerprint) 지속성
+
+지문은 컴포넌트의 생애 주기 전체에 걸쳐 지속되고 변하지 않도록 설계되었습니다. 컴포넌트를 수정하더라도 지문은 동일하게 유지됩니다:
+
+```python
+original_fingerprint = agent.fingerprint.uuid_str
+
+# Modify the agent
+agent.goal = "New goal for analysis"
+
+# The fingerprint remains unchanged
+assert agent.fingerprint.uuid_str == original_fingerprint
+```
+
+## 결정론적 지문
+
+UUID와 생성 타임스탬프를 직접 설정할 수는 없지만, `generate` 메서드와 시드(seed)를 사용하여 결정론적 지문을 만들 수 있습니다:
+
+```python
+from crewai.security import Fingerprint
+
+# 시드 문자열을 사용하여 결정론적 지문 생성
+deterministic_fingerprint = Fingerprint.generate(seed="my-agent-id")
+
+# 동일한 시드로 항상 동일한 지문이 생성됨
+same_fingerprint = Fingerprint.generate(seed="my-agent-id")
+assert deterministic_fingerprint.uuid_str == same_fingerprint.uuid_str
+
+# 메타데이터도 설정할 수 있음
+custom_fingerprint = Fingerprint.generate(
+    seed="my-agent-id",
+    metadata={"version": "1.0"}
+)
+```
+
+## 고급 사용
+
+### Fingerprint 구조
+
+각 fingerprint는 다음과 같은 구조를 가지고 있습니다:
+
+```python
+from crewai.security import Fingerprint
+
+fingerprint = agent.fingerprint
+
+# UUID 문자열 - 고유 식별자 (자동 생성)
+uuid_str = fingerprint.uuid_str  # e.g., "123e4567-e89b-12d3-a456-426614174000"
+
+# 생성 타임스탬프 (자동 생성)
+created_at = fingerprint.created_at  # datetime 객체
+
+# 메타데이터 - 추가 정보용 (사용자 지정 가능)
+metadata = fingerprint.metadata  # 딕셔너리, 기본값은 {}
+```

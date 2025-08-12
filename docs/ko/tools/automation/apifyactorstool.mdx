@@ -1,0 +1,99 @@
+---
+title: Apify 액터
+description: "`ApifyActorsTool`을(를) 사용하면 Apify 액터를 호출하여 CrewAI 워크플로우에 웹 스크래핑, 크롤링, 데이터 추출 및 웹 자동화 기능을 제공할 수 있습니다."
+# hack to use custom Apify icon
+icon: "); -webkit-mask-image: url('https://upload.wikimedia.org/wikipedia/commons/a/ae/Apify.svg');/*"
+---
+
+# `ApifyActorsTool`
+
+[Apify Actors](https://apify.com/actors)를 CrewAI 워크플로우에 통합합니다.
+
+## 설명
+
+`ApifyActorsTool`은 [Apify Actors](https://apify.com/actors)와 CrewAI 워크플로우를 연결합니다. Apify Actors는 웹 스크래핑 및 자동화를 위한 클라우드 기반 프로그램입니다.
+[Apify Store](https://apify.com/store)에 있는 4,000개 이상의 Actor를 활용하여 소셜 미디어, 검색 엔진, 온라인 지도, 이커머스 사이트, 여행 포털 또는 일반 웹사이트에서 데이터를 추출하는 등 다양한 용도로 사용할 수 있습니다.
+
+자세한 내용은 Apify 문서의 [Apify CrewAI 통합](https://docs.apify.com/platform/integrations/crewai)을 참조하세요.
+
+## 시작 단계
+
+<Steps>
+    <Step title="의존성 설치">
+        `crewai[tools]`와 `langchain-apify`를 pip으로 설치하세요: `pip install 'crewai[tools]' langchain-apify`.
+    </Step>
+    <Step title="Apify API 토큰 받기">
+        [Apify Console](https://console.apify.com/)에 회원가입하고 [Apify API 토큰](https://console.apify.com/settings/integrations)을 받아주세요.
+    </Step>
+    <Step title="환경 구성">
+        Apify API 토큰을 `APIFY_API_TOKEN` 환경 변수로 설정해 도구의 기능을 활성화하세요.
+    </Step>
+</Steps>
+
+## 사용 예시
+
+`ApifyActorsTool`을 수동으로 사용하여 [RAG Web Browser Actor](https://apify.com/apify/rag-web-browser)를 실행하고 웹 검색을 수행할 수 있습니다:
+
+```python
+from crewai_tools import ApifyActorsTool
+
+# Initialize the tool with an Apify Actor
+tool = ApifyActorsTool(actor_name="apify/rag-web-browser")
+
+# Run the tool with input parameters
+results = tool.run(run_input={"query": "What is CrewAI?", "maxResults": 5})
+
+# Process the results
+for result in results:
+    print(f"URL: {result['metadata']['url']}")
+    print(f"Content: {result.get('markdown', 'N/A')[:100]}...")
+```
+
+### 예상 출력
+
+위의 코드를 실행했을 때의 출력은 다음과 같습니다:
+
+```text
+URL: https://www.example.com/crewai-intro
+Content: CrewAI is a framework for building AI-powered workflows...
+URL: https://docs.crewai.com/
+Content: Official documentation for CrewAI...
+```
+
+`ApifyActorsTool`은 제공된 `actor_name`을 사용하여 Apify에서 Actor 정의와 입력 스키마를 자동으로 가져오고, 그 후 도구 설명과 인자 스키마를 생성합니다. 이는 유효한 `actor_name`만 지정하면 도구가 에이전트와 함께 사용할 때 나머지 과정을 처리하므로, 별도로 `run_input`을 지정할 필요가 없다는 의미입니다. 작동 방식은 다음과 같습니다:
+
+```python
+from crewai import Agent
+from crewai_tools import ApifyActorsTool
+
+rag_browser = ApifyActorsTool(actor_name="apify/rag-web-browser")
+
+agent = Agent(
+    role="Research Analyst",
+    goal="Find and summarize information about specific topics",
+    backstory="You are an experienced researcher with attention to detail",
+    tools=[rag_browser],
+)
+```
+
+[Apify Store](https://apify.com/store)에 있는 다른 Actor도 `actor_name`만 변경하고, 수동으로 사용할 경우 Actor 입력 스키마에 따라 `run_input`을 조정하여 간단히 실행할 수 있습니다.
+
+에이전트와 함께 사용하는 예시는 [CrewAI Actor 템플릿](https://apify.com/templates/python-crewai)을 참고하세요.
+
+## 구성
+
+`ApifyActorsTool`을 사용하려면 다음 입력값이 필요합니다:
+
+- **`actor_name`**
+  실행할 Apify Actor의 ID입니다. 예: `"apify/rag-web-browser"`. 모든 Actor는 [Apify Store](https://apify.com/store)에서 확인할 수 있습니다.
+- **`run_input`**
+  도구를 수동으로 실행할 때 Actor에 전달할 입력 파라미터의 딕셔너리입니다.
+  - 예를 들어, `apify/rag-web-browser` Actor의 경우: `{"query": "search term", "maxResults": 5}`
+  - 입력 파라미터 목록은 Actor의 [input schema](https://apify.com/apify/rag-web-browser/input-schema)에서 확인할 수 있습니다.
+
+## 리소스
+
+- **[Apify](https://apify.com/)**: Apify 플랫폼을 살펴보세요.
+- **[Apify에서 AI 에이전트 구축하기](https://blog.apify.com/how-to-build-an-ai-agent/)** - Apify 플랫폼에서 AI 에이전트를 생성, 게시 및 수익화하는 단계별 완전 가이드입니다.
+- **[RAG Web Browser Actor](https://apify.com/apify/rag-web-browser)**: LLM을 위한 웹 검색에 많이 사용되는 Actor입니다.
+- **[CrewAI 통합 가이드](https://docs.apify.com/platform/integrations/crewai)**: Apify와 CrewAI를 통합하는 공식 가이드를 따라보세요.

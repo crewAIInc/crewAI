@@ -1,0 +1,74 @@
+---
+title: PDF 텍스트 작성 도구
+description: PDFTextWritingTool은 PDF의 특정 위치에 텍스트를 작성하며, 커스텀 폰트를 지원합니다.
+icon: file-pdf
+---
+
+# `PDFTextWritingTool`
+
+## 설명
+
+PDF 페이지의 정확한 좌표에 텍스트를 작성하고, 필요에 따라 커스텀 TrueType 폰트를 임베드할 수 있습니다.
+
+## 파라미터
+
+### 실행 매개변수
+
+- `pdf_path` (str, 필수): 입력 PDF의 경로.
+- `text` (str, 필수): 추가할 텍스트.
+- `position` (tuple[int, int], 필수): `(x, y)` 좌표.
+- `font_size` (int, 기본값 `12`)
+- `font_color` (str, 기본값 `"0 0 0 rg"`)
+- `font_name` (str, 기본값 `"F1"`)
+- `font_file` (str, 선택): `.ttf` 파일의 경로.
+- `page_number` (int, 기본값 `0`)
+
+## 예시
+
+```python Code
+from crewai import Agent, Task, Crew
+from crewai_tools import PDFTextWritingTool
+
+tool = PDFTextWritingTool()
+
+agent = Agent(
+    role="PDF Editor",
+    goal="Annotate PDFs",
+    backstory="Documentation specialist",
+    tools=[tool],
+    verbose=True,
+)
+
+task = Task(
+    description="Write 'CONFIDENTIAL' at (72, 720) on page 1 of ./sample.pdf",
+    expected_output="Confirmation message",
+    agent=agent,
+)
+
+crew = Crew(
+    agents=[agent],
+    tasks=[task],
+    verbose=True,
+)
+
+result = crew.kickoff()
+```
+
+### 직접 사용
+
+```python Code
+from crewai_tools import PDFTextWritingTool
+
+PDFTextWritingTool().run(
+  pdf_path="./input.pdf",
+  text="CONFIDENTIAL",
+  position=(72, 720),
+  font_size=18,
+  page_number=0,
+)
+```
+
+## 팁
+
+- 좌표 원점은 왼쪽 하단 모서리입니다.
+- 커스텀 폰트(`font_file`)를 사용할 경우, 유효한 `.ttf` 파일인지 확인하세요.

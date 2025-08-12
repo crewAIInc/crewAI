@@ -1,0 +1,196 @@
+---
+title: Scrapegraph 스크레이프 도구
+description: ScrapegraphScrapeTool은 Scrapegraph AI의 SmartScraper API를 활용하여 웹사이트에서 콘텐츠를 지능적으로 추출합니다.
+icon: chart-area
+---
+
+# `ScrapegraphScrapeTool`
+
+## 설명
+
+`ScrapegraphScrapeTool`은 Scrapegraph AI의 SmartScraper API를 활용하여 웹사이트에서 콘텐츠를 지능적으로 추출하도록 설계되었습니다. 이 도구는 AI 기반 콘텐츠 추출을 통한 고급 웹 스크래핑 기능을 제공하여, 타깃 데이터 수집 및 콘텐츠 분석 작업에 이상적입니다. 기존의 웹 스크래퍼와 달리, 자연어 프롬프트를 기반으로 웹 페이지의 맥락과 구조를 이해하여 가장 관련성 높은 정보를 추출할 수 있습니다.
+
+## 설치
+
+이 도구를 사용하려면 Scrapegraph Python 클라이언트를 설치해야 합니다:
+
+```shell
+uv add scrapegraph-py
+```
+
+또한 Scrapegraph API 키를 환경 변수로 설정해야 합니다:
+
+```shell
+export SCRAPEGRAPH_API_KEY="your_api_key"
+```
+
+API 키는 [Scrapegraph AI](https://scrapegraphai.com)에서 발급받을 수 있습니다.
+
+## 시작하는 단계
+
+`ScrapegraphScrapeTool`을 효과적으로 사용하려면 다음 단계를 따라주세요:
+
+1. **의존성 설치**: 위 명령어를 사용하여 필요한 패키지를 설치합니다.
+2. **API 키 설정**: Scrapegraph API 키를 환경 변수로 설정하거나 초기화 시에 제공합니다.
+3. **도구 초기화**: 필요한 매개변수로 도구의 인스턴스를 생성합니다.
+4. **추출 프롬프트 정의**: 특정 콘텐츠 추출을 안내할 자연어 프롬프트를 작성합니다.
+
+## 예시
+
+다음 예시는 `ScrapegraphScrapeTool`을 사용하여 웹사이트에서 콘텐츠를 추출하는 방법을 보여줍니다:
+
+```python Code
+from crewai import Agent, Task, Crew
+from crewai_tools import ScrapegraphScrapeTool
+
+# Initialize the tool
+scrape_tool = ScrapegraphScrapeTool(api_key="your_api_key")
+
+# Define an agent that uses the tool
+web_scraper_agent = Agent(
+    role="Web Scraper",
+    goal="Extract specific information from websites",
+    backstory="An expert in web scraping who can extract targeted content from web pages.",
+    tools=[scrape_tool],
+    verbose=True,
+)
+
+# Example task to extract product information from an e-commerce site
+scrape_task = Task(
+    description="Extract product names, prices, and descriptions from the featured products section of example.com.",
+    expected_output="A structured list of product information including names, prices, and descriptions.",
+    agent=web_scraper_agent,
+)
+
+# Create and run the crew
+crew = Crew(agents=[web_scraper_agent], tasks=[scrape_task])
+result = crew.kickoff()
+```
+
+도구를 미리 정의된 파라미터로 초기화할 수도 있습니다:
+
+```python Code
+# Initialize the tool with predefined parameters
+scrape_tool = ScrapegraphScrapeTool(
+    website_url="https://www.example.com",
+    user_prompt="Extract all product prices and descriptions",
+    api_key="your_api_key"
+)
+```
+
+## 매개변수
+
+`ScrapegraphScrapeTool`은 초기화 시 다음 매개변수를 허용합니다:
+
+- **api_key**: 선택 사항. 귀하의 Scrapegraph API 키입니다. 제공하지 않으면 `SCRAPEGRAPH_API_KEY` 환경 변수를 찾습니다.
+- **website_url**: 선택 사항. 스크랩할 웹사이트의 URL입니다. 초기화 시 제공하면 에이전트가 도구를 사용할 때 별도로 지정할 필요가 없습니다.
+- **user_prompt**: 선택 사항. 콘텐츠 추출을 위한 맞춤 지침입니다. 초기화 시 제공하면 에이전트가 도구를 사용할 때 별도로 지정할 필요가 없습니다.
+- **enable_logging**: 선택 사항. Scrapegraph 클라이언트에 대한 로깅 활성화여부입니다. 기본값은 `False`입니다.
+
+## 사용법
+
+`ScrapegraphScrapeTool`을 agent와 함께 사용할 때, agent는 다음 파라미터들을 제공해야 합니다(초기화 시 지정하지 않았다면):
+
+- **website_url**: 스크래핑할 웹사이트의 URL.
+- **user_prompt**: 선택 사항. 콘텐츠 추출을 위한 사용자 정의 지침. 기본값은 "웹페이지의 주요 콘텐츠를 추출하세요"입니다.
+
+툴은 제공된 prompt에 따라 추출된 콘텐츠를 반환합니다.
+
+```python Code
+# Example of using the tool with an agent
+web_scraper_agent = Agent(
+    role="Web Scraper",
+    goal="Extract specific information from websites",
+    backstory="An expert in web scraping who can extract targeted content from web pages.",
+    tools=[scrape_tool],
+    verbose=True,
+)
+
+# Create a task for the agent to extract specific content
+extract_task = Task(
+    description="Extract the main heading and summary from example.com",
+    expected_output="The main heading and summary from the website",
+    agent=web_scraper_agent,
+)
+
+# Run the task
+crew = Crew(agents=[web_scraper_agent], tasks=[extract_task])
+result = crew.kickoff()
+```
+
+## 오류 처리
+
+`ScrapegraphScrapeTool`은 다음과 같은 예외를 발생시킬 수 있습니다:
+
+- **ValueError**: API 키가 누락되었거나 URL 형식이 잘못된 경우 발생합니다.
+- **RateLimitError**: API 사용 제한이 초과된 경우 발생합니다.
+- **RuntimeError**: 스크래핑 작업이 실패했을 때(네트워크 문제, API 오류 등) 발생합니다.
+
+에이전트에게 잠재적인 오류를 우아하게 처리하도록 권장합니다:
+
+```python Code
+# Create a task that includes error handling instructions
+robust_extract_task = Task(
+    description="""
+    Extract the main heading from example.com.
+    Be aware that you might encounter errors such as:
+    - Invalid URL format
+    - Missing API key
+    - Rate limit exceeded
+    - Network or API errors
+
+    If you encounter any errors, provide a clear explanation of what went wrong
+    and suggest possible solutions.
+    """,
+    expected_output="Either the extracted heading or a clear error explanation",
+    agent=web_scraper_agent,
+)
+```
+
+## 요청 제한
+
+Scrapegraph API는 구독 플랜에 따라 다양한 요청 제한이 있습니다. 다음 모범 사례를 참고하세요:
+
+- 여러 URL을 처리할 때 요청 간에 적절한 지연 시간을 구현하세요.
+- 애플리케이션에서 요청 제한 오류를 원활하게 처리하세요.
+- Scrapegraph 대시보드에서 자신의 API 플랜 제한을 확인하세요.
+
+## 구현 세부 정보
+
+`ScrapegraphScrapeTool`은 Scrapegraph Python 클라이언트를 사용하여 SmartScraper API와 상호 작용합니다:
+
+```python Code
+class ScrapegraphScrapeTool(BaseTool):
+    """
+    A tool that uses Scrapegraph AI to intelligently scrape website content.
+    """
+
+    # Implementation details...
+
+    def _run(self, **kwargs: Any) -> Any:
+        website_url = kwargs.get("website_url", self.website_url)
+        user_prompt = (
+            kwargs.get("user_prompt", self.user_prompt)
+            or "Extract the main content of the webpage"
+        )
+
+        if not website_url:
+            raise ValueError("website_url is required")
+
+        # Validate URL format
+        self._validate_url(website_url)
+
+        try:
+            # Make the SmartScraper request
+            response = self._client.smartscraper(
+                website_url=website_url,
+                user_prompt=user_prompt,
+            )
+
+            return response
+        # Error handling...
+```
+
+## 결론
+
+`ScrapegraphScrapeTool`은 AI 기반의 웹 페이지 구조 이해를 활용하여 웹사이트에서 콘텐츠를 추출할 수 있는 강력한 방법을 제공합니다. 에이전트가 자연어 프롬프트를 사용하여 특정 정보를 타겟팅할 수 있도록 함으로써, 웹 스크래핑 작업을 더욱 효율적이고 집중적으로 수행할 수 있게 해줍니다. 이 도구는 데이터 추출, 콘텐츠 모니터링, 그리고 웹 페이지에서 특정 정보를 추출해야 하는 연구 과제에 특히 유용합니다.
