@@ -128,7 +128,9 @@
                       "en/tools/file-document/jsonsearchtool",
                       "en/tools/file-document/csvsearchtool",
                       "en/tools/file-document/directorysearchtool",
-                      "en/tools/file-document/directoryreadtool"
+                      "en/tools/file-document/directoryreadtool",
+                      "en/tools/file-document/ocrtool",
+                      "en/tools/file-document/pdf-text-writing-tool"
                     ]
                   },
                   {
@@ -146,7 +148,8 @@
                       "en/tools/web-scraping/stagehandtool",
                       "en/tools/web-scraping/firecrawlcrawlwebsitetool",
                       "en/tools/web-scraping/firecrawlscrapewebsitetool",
-                      "en/tools/web-scraping/oxylabsscraperstool"
+                      "en/tools/web-scraping/oxylabsscraperstool",
+                      "en/tools/web-scraping/brightdata-tools"
                     ]
                   },
                   {
@@ -163,7 +166,11 @@
                       "en/tools/search-research/youtubechannelsearchtool",
                       "en/tools/search-research/youtubevideosearchtool",
                       "en/tools/search-research/tavilysearchtool",
-                      "en/tools/search-research/tavilyextractortool"
+                      "en/tools/search-research/tavilyextractortool",
+                      "en/tools/search-research/arxivpapertool",
+                      "en/tools/search-research/serpapi-googlesearchtool",
+                      "en/tools/search-research/serpapi-googleshoppingtool",
+                      "en/tools/search-research/databricks-query-tool"
                     ]
                   },
                   {
@@ -175,7 +182,9 @@
                       "en/tools/database-data/snowflakesearchtool",
                       "en/tools/database-data/nl2sqltool",
                       "en/tools/database-data/qdrantvectorsearchtool",
-                      "en/tools/database-data/weaviatevectorsearchtool"
+                      "en/tools/database-data/weaviatevectorsearchtool",
+                      "en/tools/database-data/mongodbvectorsearchtool",
+                      "en/tools/database-data/singlestoresearchtool"
                     ]
                   },
                   {
@@ -207,7 +216,8 @@
                       "en/tools/automation/overview",
                       "en/tools/automation/apifyactorstool",
                       "en/tools/automation/composiotool",
-                      "en/tools/automation/multiontool"
+                      "en/tools/automation/multiontool",
+                      "en/tools/automation/zapieractionstool"
                     ]
                   }
                 ]
