@@ -1,7 +1,6 @@
 """MLFlow integration utilities for CrewAI."""
 
 import logging
-from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -9,7 +8,7 @@ logger = logging.getLogger(__name__)
 def is_mlflow_available() -> bool:
     """Check if MLFlow is available."""
     try:
-        import mlflow
+        import mlflow  # noqa: F401
         return True
     except ImportError:
         return False
