@@ -282,6 +282,7 @@
               {
                 "group": "Features",
                 "pages": [
+                  "en/enterprise/features/rbac",
                   "en/enterprise/features/tool-repository",
                   "en/enterprise/features/webhook-streaming",
                   "en/enterprise/features/traces",
@@ -345,7 +346,7 @@
               },
               {
                 "group": "Endpoints",
-                "openapi": "enterprise-api.yaml"
+                "openapi": "enterprise-api.en.yaml"
               }
             ]
           },
@@ -354,7 +355,7 @@
             "groups": [
               {
                 "group": "Examples",
-                "pages": ["en/examples/example"]
+                "pages": ["en/examples/example", "en/examples/cookbooks"]
               }
             ]
           }
@@ -684,7 +685,7 @@
               },
               {
                 "group": "Endpoints",
-                "openapi": "enterprise-api.yaml"
+                "openapi": "enterprise-api.pt-BR.yaml"
               }
             ]
           },
@@ -1030,7 +1031,7 @@
               },
               {
                 "group": "Endpoints",
-                "openapi": "enterprise-api.yaml"
+                "openapi": "enterprise-api.ko.yaml"
               }
             ]
           },
