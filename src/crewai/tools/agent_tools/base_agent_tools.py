@@ -1,5 +1,5 @@
 import logging
-from typing import Optional
+from typing import Optional, Union, Dict, Any
 
 from pydantic import Field
 
@@ -7,17 +7,133 @@ from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.task import Task
 from crewai.tools.base_tool import BaseTool
 from crewai.utilities import I18N
+from crewai.security import AgentCommunicationEncryption, EncryptedMessage
 
 logger = logging.getLogger(__name__)
 
 
 class BaseAgentTool(BaseTool):
-    """Base class for agent-related tools"""
+    """Base class for agent-related tools with optional encrypted communication support"""
 
     agents: list[BaseAgent] = Field(description="List of available agents")
     i18n: I18N = Field(
         default_factory=I18N, description="Internationalization settings"
     )
+
+    def __init__(self, **data):
+        """Initialize BaseAgentTool with optional encryption support."""
+        super().__init__(**data)
+        self._encryption_handler: Optional[AgentCommunicationEncryption] = None
+    
+    @property
+    def encryption_enabled(self) -> bool:
+        """Check if encryption is enabled for agent communication."""
+        # Check if any agent has encryption enabled
+        return any(
+            hasattr(agent, 'security_config') and 
+            agent.security_config and
+            getattr(agent.security_config, 'encrypted_communication', False)
+            for agent in self.agents
+        )
+    
+    def _get_encryption_handler(self, sender_agent: BaseAgent) -> Optional[AgentCommunicationEncryption]:
+        """Get encryption handler for a specific agent."""
+        if not hasattr(sender_agent, 'security_config') or not sender_agent.security_config:
+            return None
+            
+        if not getattr(sender_agent.security_config, 'encrypted_communication', False):
+            return None
+            
+        # Create encryption handler if it doesn't exist
+        if self._encryption_handler is None:
+            self._encryption_handler = AgentCommunicationEncryption(
+                sender_agent.security_config.fingerprint
+            )
+        
+        return self._encryption_handler
+    
+    def _prepare_communication_payload(
+        self, 
+        sender_agent: BaseAgent,
+        recipient_agent: BaseAgent, 
+        task: str, 
+        context: Optional[str] = None
+    ) -> Union[Dict[str, Any], EncryptedMessage]:
+        """
+        Prepare communication payload, with optional encryption.
+        
+        Args:
+            sender_agent: The agent sending the communication
+            recipient_agent: The agent receiving the communication
+            task: The task or question to communicate
+            context: Optional context for the communication
+            
+        Returns:
+            Union[Dict[str, Any], EncryptedMessage]: Plain or encrypted message
+        """
+        # Prepare the base message
+        message_payload = {
+            "task": task,
+            "context": context or "",
+            "sender_role": getattr(sender_agent, 'role', 'unknown'),
+            "message_type": "agent_communication"
+        }
+        
+        # Check if encryption should be used
+        encryption_handler = self._get_encryption_handler(sender_agent)
+        if encryption_handler and hasattr(recipient_agent, 'security_config') and recipient_agent.security_config:
+            try:
+                # Encrypt the message for the recipient
+                encrypted_msg = encryption_handler.encrypt_message(
+                    message_payload,
+                    recipient_agent.security_config.fingerprint,
+                    message_type="agent_communication"
+                )
+                logger.debug(f"Encrypted communication from {sender_agent.role} to {recipient_agent.role}")
+                return encrypted_msg
+            except Exception as e:
+                logger.warning(f"Encryption failed, falling back to plain communication: {e}")
+        
+        return message_payload
+    
+    def _process_received_communication(
+        self, 
+        recipient_agent: BaseAgent, 
+        message: Union[str, Dict[str, Any], EncryptedMessage]
+    ) -> Union[str, Dict[str, Any]]:
+        """
+        Process received communication, with optional decryption.
+        
+        Args:
+            recipient_agent: The agent receiving the communication
+            message: The message to process (may be encrypted)
+            
+        Returns:
+            Union[str, Dict[str, Any]]: Processed message content
+        """
+        # Handle encrypted messages
+        if isinstance(message, EncryptedMessage) or (
+            isinstance(message, dict) and 'encrypted_payload' in message
+        ):
+            encryption_handler = self._get_encryption_handler(recipient_agent)
+            if encryption_handler:
+                try:
+                    # Convert dict to EncryptedMessage if needed
+                    if isinstance(message, dict):
+                        message = EncryptedMessage(**message)
+                    
+                    decrypted = encryption_handler.decrypt_message(message)
+                    logger.debug(f"Decrypted communication for {recipient_agent.role}")
+                    return decrypted
+                except Exception as e:
+                    logger.error(f"Decryption failed for {recipient_agent.role}: {e}")
+                    raise ValueError(f"Failed to decrypt communication: {e}")
+            else:
+                logger.warning(f"Received encrypted message but {recipient_agent.role} has no decryption capability")
+                raise ValueError("Received encrypted message but agent cannot decrypt it")
+        
+        # Return message as-is for plain communication
+        return message
 
     def sanitize_agent_name(self, name: str) -> str:
         """
@@ -54,6 +170,7 @@ class BaseAgentTool(BaseTool):
     ) -> str:
         """
         Execute delegation to an agent with case-insensitive and whitespace-tolerant matching.
+        Supports both encrypted and non-encrypted communication based on agent configuration.
 
         Args:
             agent_name: Name/role of the agent to delegate to (case-insensitive)
@@ -106,19 +223,53 @@ class BaseAgentTool(BaseTool):
                 error=f"No agent found with role '{sanitized_name}'"
             )
 
-        agent = agent[0]
+        target_agent = agent[0]
+        
+        # Determine sender agent (first agent with security config, or first agent as fallback)
+        sender_agent = None
+        for a in self.agents:
+            if hasattr(a, 'security_config') and a.security_config:
+                sender_agent = a
+                break
+        if not sender_agent:
+            sender_agent = self.agents[0] if self.agents else target_agent
+
         try:
+            # Prepare communication with optional encryption
+            communication_payload = self._prepare_communication_payload(
+                sender_agent=sender_agent,
+                recipient_agent=target_agent,
+                task=task,
+                context=context
+            )
+            
+            # Create task for execution
             task_with_assigned_agent = Task(
                 description=task,
-                agent=agent,
-                expected_output=agent.i18n.slice("manager_request"),
-                i18n=agent.i18n,
+                agent=target_agent,
+                expected_output=target_agent.i18n.slice("manager_request"),
+                i18n=target_agent.i18n,
             )
-            logger.debug(f"Created task for agent '{self.sanitize_agent_name(agent.role)}': {task}")
-            return agent.execute_task(task_with_assigned_agent, context)
+            
+            # Execute with processed communication context
+            if isinstance(communication_payload, EncryptedMessage):
+                logger.debug(f"Executing encrypted communication task for agent '{self.sanitize_agent_name(target_agent.role)}'")
+                # For encrypted messages, pass the encrypted payload as additional context
+                # The target agent will need to handle decryption during execution
+                enhanced_context = f"ENCRYPTED_COMMUNICATION: {communication_payload.model_dump_json()}"
+                if context:
+                    enhanced_context += f"\nADDITIONAL_CONTEXT: {context}"
+                result = target_agent.execute_task(task_with_assigned_agent, enhanced_context)
+            else:
+                logger.debug(f"Executing plain communication task for agent '{self.sanitize_agent_name(target_agent.role)}'")
+                result = target_agent.execute_task(task_with_assigned_agent, context)
+            
+            return result
+            
         except Exception as e:
             # Handle task creation or execution errors
+            logger.error(f"Task execution failed for agent '{self.sanitize_agent_name(target_agent.role)}': {e}")
             return self.i18n.errors("agent_tool_execution_error").format(
-                agent_role=self.sanitize_agent_name(agent.role),
+                agent_role=self.sanitize_agent_name(target_agent.role),
                 error=str(e)
             )
