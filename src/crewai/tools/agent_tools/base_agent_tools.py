@@ -83,12 +83,14 @@ class BaseAgentTool(BaseTool):
         encryption_handler = self._get_encryption_handler(sender_agent)
         if encryption_handler and hasattr(recipient_agent, 'security_config') and recipient_agent.security_config:
             try:
+                logger.info(f"Starting encrypted communication from '{sender_agent.role}' to '{recipient_agent.role}'")
                 # Encrypt the message for the recipient
                 encrypted_msg = encryption_handler.encrypt_message(
                     message_payload,
                     recipient_agent.security_config.fingerprint,
                     message_type="agent_communication"
                 )
+                logger.info(f"Encrypted communication established between '{sender_agent.role}' and '{recipient_agent.role}'")
                 logger.debug(f"Encrypted communication from {sender_agent.role} to {recipient_agent.role}")
                 return encrypted_msg
             except Exception as e:
@@ -118,11 +120,13 @@ class BaseAgentTool(BaseTool):
             encryption_handler = self._get_encryption_handler(recipient_agent)
             if encryption_handler:
                 try:
+                    logger.info(f"Starting decryption of received communication for '{recipient_agent.role}'")
                     # Convert dict to EncryptedMessage if needed
                     if isinstance(message, dict):
                         message = EncryptedMessage(**message)
                     
                     decrypted = encryption_handler.decrypt_message(message)
+                    logger.info(f"Successfully decrypted communication for '{recipient_agent.role}'")
                     logger.debug(f"Decrypted communication for {recipient_agent.role}")
                     return decrypted
                 except Exception as e:
@@ -253,6 +257,7 @@ class BaseAgentTool(BaseTool):
             
             # Execute with processed communication context
             if isinstance(communication_payload, EncryptedMessage):
+                logger.info(f"Executing encrypted communication task for agent '{self.sanitize_agent_name(target_agent.role)}'")
                 logger.debug(f"Executing encrypted communication task for agent '{self.sanitize_agent_name(target_agent.role)}'")
                 # For encrypted messages, pass the encrypted payload as additional context
                 # The target agent will need to handle decryption during execution
@@ -261,6 +266,7 @@ class BaseAgentTool(BaseTool):
                     enhanced_context += f"\nADDITIONAL_CONTEXT: {context}"
                 result = target_agent.execute_task(task_with_assigned_agent, enhanced_context)
             else:
+                logger.info(f"Executing plain communication task for agent '{self.sanitize_agent_name(target_agent.role)}'")
                 logger.debug(f"Executing plain communication task for agent '{self.sanitize_agent_name(target_agent.role)}'")
                 result = target_agent.execute_task(task_with_assigned_agent, context)
             

@@ -119,6 +119,8 @@ class AgentCommunicationEncryption:
             ValueError: If encryption fails
         """
         try:
+            logger.info(f"Starting encryption for {message_type} message to recipient {recipient_fingerprint.uuid_str[:8]}...")
+            
             # Convert message to JSON string if it's a dict
             if isinstance(message, dict):
                 message_str = json.dumps(message)
@@ -135,6 +137,7 @@ class AgentCommunicationEncryption:
             encrypted_bytes = fernet.encrypt(message_str.encode('utf-8'))
             encrypted_payload = encrypted_bytes.decode('utf-8')
             
+            logger.info(f"Successfully encrypted {message_type} message from {self.agent_fingerprint.uuid_str[:8]}... to {recipient_fingerprint.uuid_str[:8]}...")
             logger.debug(f"Encrypted message from {self.agent_fingerprint.uuid_str[:8]}... to {recipient_fingerprint.uuid_str[:8]}...")
             
             return EncryptedMessage(
@@ -162,6 +165,8 @@ class AgentCommunicationEncryption:
             ValueError: If decryption fails or message is not for this agent
         """
         try:
+            logger.info(f"Starting decryption of {encrypted_message.message_type} message from sender {encrypted_message.sender_fingerprint[:8]}...")
+            
             # Verify this message is intended for this agent
             if encrypted_message.recipient_fingerprint != self.agent_fingerprint.uuid_str:
                 raise ValueError(f"Message not intended for this agent. Expected {self.agent_fingerprint.uuid_str[:8]}..., got {encrypted_message.recipient_fingerprint[:8]}...")
@@ -178,9 +183,13 @@ class AgentCommunicationEncryption:
             
             # Try to parse as JSON, fallback to string
             try:
-                return json.loads(decrypted_str)
+                decrypted_content = json.loads(decrypted_str)
             except json.JSONDecodeError:
-                return decrypted_str
+                decrypted_content = decrypted_str
+                
+            logger.info(f"Successfully decrypted {encrypted_message.message_type} message from {encrypted_message.sender_fingerprint[:8]}... to {encrypted_message.recipient_fingerprint[:8]}...")
+            
+            return decrypted_content
                 
         except Exception as e:
             logger.error(f"Failed to decrypt message: {e}")
