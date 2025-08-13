@@ -4,7 +4,6 @@ Reproduction script for issue #3317
 CrewAI injects stop sequences causing Bedrock GPT-OSS 400 errors
 """
 
-import os
 from crewai import Agent, Task, Crew
 from crewai.llm import LLM
 

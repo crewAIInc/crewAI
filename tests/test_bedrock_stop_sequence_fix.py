@@ -1,4 +1,3 @@
-import pytest
 from unittest.mock import Mock, patch
 from crewai.agents.crew_agent_executor import CrewAgentExecutor
 from crewai.llm import LLM
