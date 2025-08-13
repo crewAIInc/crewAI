@@ -45,6 +45,7 @@ class BaseRAGStorage(ABC):
         query: str,
         limit: int = 3,
         filter: Optional[dict] = None,
+        agent_role: Optional[str] = None,
         score_threshold: float = 0.35,
     ) -> List[Any]:
         """Search for entries in the storage."""

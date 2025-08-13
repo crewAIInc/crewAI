@@ -15,11 +15,13 @@ class ContextualMemory:
         ltm: LongTermMemory,
         em: EntityMemory,
         exm: ExternalMemory,
+        role: Optional[str] = None,
     ):
         self.stm = stm
         self.ltm = ltm
         self.em = em
         self.exm = exm
+        self.role = role
 
     def build_context_for_task(self, task, context) -> str:
         """
@@ -35,7 +37,7 @@ class ContextualMemory:
         context.append(self._fetch_ltm_context(task.description))
         context.append(self._fetch_stm_context(query))
         context.append(self._fetch_entity_context(query))
-        context.append(self._fetch_external_context(query))
+        context.append(self._fetch_external_context(query, self.role))
         return "\n".join(filter(None, context))
 
     def _fetch_stm_context(self, query) -> str:
@@ -96,7 +98,7 @@ class ContextualMemory:
         )
         return f"Entities:\n{formatted_results}" if em_results else ""
 
-    def _fetch_external_context(self, query: str) -> str:
+    def _fetch_external_context(self, query: str, role: Optional[str] = None) -> str:
         """
         Fetches and formats relevant information from External Memory.
         Args:
@@ -107,7 +109,7 @@ class ContextualMemory:
         if self.exm is None:
             return ""
 
-        external_memories = self.exm.search(query)
+        external_memories = self.exm.search(query, agent_role=role)
 
         if not external_memories:
             return ""
