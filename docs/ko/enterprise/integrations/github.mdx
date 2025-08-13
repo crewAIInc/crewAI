@@ -1,0 +1,323 @@
+---
+title: GitHub 통합
+description: "CrewAI를 위한 GitHub 통합을 통한 리포지토리 및 이슈 관리."
+icon: "github"
+---
+
+## 개요
+
+에이전트가 GitHub를 통해 리포지토리, 이슈, 릴리스를 관리할 수 있도록 지원합니다. 이슈를 생성 및 업데이트하고, 릴리스를 관리하고, 프로젝트 개발을 추적하며, AI 기반 자동화를 통해 소프트웨어 개발 워크플로우를 효율화하세요.
+
+## 사전 요구 사항
+
+GitHub 통합을 사용하기 전에 다음을 확인하세요:
+
+- 활성 구독이 있는 [CrewAI Enterprise](https://app.crewai.com) 계정
+- 해당 리포지토리에 대한 적절한 권한이 있는 GitHub 계정
+- [통합 페이지](https://app.crewai.com/crewai_plus/connectors)를 통해 GitHub 계정 연결 완료
+
+## GitHub 연동 설정
+
+### 1. GitHub 계정 연결하기
+
+1. [CrewAI Enterprise Integrations](https://app.crewai.com/crewai_plus/connectors)로 이동합니다.
+2. 인증 통합 섹션에서 **GitHub**을 찾습니다.
+3. **Connect**를 클릭하고 OAuth 흐름을 완료합니다.
+4. 리포지토리 및 이슈 관리를 위한 필수 권한을 부여합니다.
+5. [계정 설정](https://app.crewai.com/crewai_plus/settings/account)에서 Enterprise Token을 복사합니다.
+
+### 2. 필수 패키지 설치
+
+```bash
+uv add crewai-tools
+```
+
+## 사용 가능한 작업
+
+<AccordionGroup>
+  <Accordion title="GITHUB_CREATE_ISSUE">
+    **설명:** GitHub에 이슈를 생성합니다.
+
+    **파라미터:**
+    - `owner` (string, 필수): 소유자 - 이 이슈와 연관된 저장소의 계정 소유자 이름을 지정합니다. (예시: "abc").
+    - `repo` (string, 필수): 저장소 - 이 이슈와 연관된 저장소 이름을 지정합니다.
+    - `title` (string, 필수): 이슈 제목 - 생성할 이슈의 제목을 지정합니다.
+    - `body` (string, 선택): 이슈 본문 - 생성할 이슈의 본문 내용을 지정합니다.
+    - `assignees` (string, 선택): 담당자 - 이 이슈의 담당자 GitHub 로그인을 문자열 배열로 지정합니다. (예시: `["octocat"]`).
+  </Accordion>
+
+  <Accordion title="GITHUB_UPDATE_ISSUE">
+    **설명:** GitHub에서 이슈를 업데이트합니다.
+
+    **파라미터:**
+    - `owner` (string, 필수): 소유자 - 이 이슈와 연관된 저장소의 계정 소유자 이름을 지정합니다. (예시: "abc").
+    - `repo` (string, 필수): 저장소 - 이 이슈와 연관된 저장소 이름을 지정합니다.
+    - `issue_number` (string, 필수): 이슈 번호 - 업데이트할 이슈의 번호를 지정합니다.
+    - `title` (string, 필수): 이슈 제목 - 업데이트할 이슈의 제목을 지정합니다.
+    - `body` (string, 선택): 이슈 본문 - 업데이트할 이슈의 본문 내용을 지정합니다.
+    - `assignees` (string, 선택): 담당자 - 이 이슈의 담당자 GitHub 로그인을 문자열 배열로 지정합니다. (예시: `["octocat"]`).
+    - `state` (string, 선택): 상태 - 이슈의 변경된 상태를 지정합니다.
+      - 옵션: `open`, `closed`
+  </Accordion>
+
+  <Accordion title="GITHUB_GET_ISSUE_BY_NUMBER">
+    **설명:** GitHub에서 번호로 이슈를 조회합니다.
+
+    **파라미터:**
+    - `owner` (string, 필수): 소유자 - 이 이슈와 연관된 저장소의 계정 소유자 이름을 지정합니다. (예시: "abc").
+    - `repo` (string, 필수): 저장소 - 이 이슈와 연관된 저장소 이름을 지정합니다.
+    - `issue_number` (string, 필수): 이슈 번호 - 가져올 이슈의 번호를 지정합니다.
+  </Accordion>
+
+  <Accordion title="GITHUB_LOCK_ISSUE">
+    **설명:** GitHub에서 이슈를 잠급니다.
+
+    **파라미터:**
+    - `owner` (string, 필수): 소유자 - 이 이슈와 연관된 저장소의 계정 소유자 이름을 지정합니다. (예시: "abc").
+    - `repo` (string, 필수): 저장소 - 이 이슈와 연관된 저장소 이름을 지정합니다.
+    - `issue_number` (string, 필수): 이슈 번호 - 잠글 이슈의 번호를 지정합니다.
+    - `lock_reason` (string, 필수): 잠금 사유 - 이슈 또는 풀 리퀘스트 대화에 대한 잠금 이유를 지정합니다.
+      - 옵션: `off-topic`, `too heated`, `resolved`, `spam`
+  </Accordion>
+
+  <Accordion title="GITHUB_SEARCH_ISSUE">
+    **설명:** GitHub에서 이슈를 검색합니다.
+
+    **파라미터:**
+    - `owner` (string, 필수): 소유자 - 이 이슈와 연관된 저장소의 계정 소유자 이름을 지정합니다. (예시: "abc").
+    - `repo` (string, 필수): 저장소 - 이 이슈와 연관된 저장소 이름을 지정합니다.
+    - `filter` (object, 필수): 불리언 표준형의 필터 - 단일 조건의 AND 그룹의 OR 조합.
+      ```json
+      {
+        "operator": "OR",
+        "conditions": [
+          {
+            "operator": "AND",
+            "conditions": [
+              {
+                "field": "assignee",
+                "operator": "$stringExactlyMatches",
+                "value": "octocat"
+              }
+            ]
+          }
+        ]
+      }
+      ```
+      사용 가능한 필드: `assignee`, `creator`, `mentioned`, `labels`
+  </Accordion>
+
+  <Accordion title="GITHUB_CREATE_RELEASE">
+    **설명:** GitHub에 릴리스를 생성합니다.
+
+    **파라미터:**
+    - `owner` (string, 필수): 소유자 - 이 릴리스와 연관된 저장소의 계정 소유자 이름을 지정합니다. (예시: "abc").
+    - `repo` (string, 필수): 저장소 - 이 릴리스와 연관된 저장소 이름을 지정합니다.
+    - `tag_name` (string, 필수): 이름 - 생성할 릴리스 태그의 이름을 지정합니다. (예시: "v1.0.0").
+    - `target_commitish` (string, 선택): 대상 - 릴리스의 대상을 지정합니다. 브랜치 이름이나 커밋 SHA가 될 수 있으며, 기본값은 메인 브랜치입니다. (예시: "master").
+    - `body` (string, 선택): 본문 - 이 릴리스에 대한 설명을 지정합니다.
+    - `draft` (string, 선택): 초안 - 생성할 릴리스를 초안(비공개) 릴리스로 지정할지 여부를 지정합니다.
+      - 옵션: `true`, `false`
+    - `prerelease` (string, 선택): 프리릴리스 - 생성할 릴리스를 프리릴리스로 지정할지 여부를 지정합니다.
+      - 옵션: `true`, `false`
+    - `discussion_category_name` (string, 선택): 토론 카테고리 이름 - 지정 시, 해당 카테고리의 토론이 생성되어 릴리스와 연결됩니다. 값은 저장소에 이미 존재하는 카테고리여야 합니다.
+    - `generate_release_notes` (string, 선택): 릴리스 노트 - 지정한 이름과 본문을 사용하여 릴리스 노트를 자동으로 생성할지 여부를 지정합니다.
+      - 옵션: `true`, `false`
+  </Accordion>
+
+  <Accordion title="GITHUB_UPDATE_RELEASE">
+    **설명:** GitHub에서 릴리스를 업데이트합니다.
+
+    **파라미터:**
+    - `owner` (string, 필수): 소유자 - 이 릴리스와 연관된 저장소의 계정 소유자 이름을 지정합니다. (예시: "abc").
+    - `repo` (string, 필수): 저장소 - 이 릴리스와 연관된 저장소 이름을 지정합니다.
+    - `id` (string, 필수): 릴리스 ID - 업데이트할 릴리스의 ID를 지정합니다.
+    - `tag_name` (string, 선택): 이름 - 업데이트할 릴리스 태그의 이름을 지정합니다. (예시: "v1.0.0").
+    - `target_commitish` (string, 선택): 대상 - 릴리스의 대상을 지정합니다. 브랜치 이름이나 커밋 SHA가 될 수 있으며, 기본값은 메인 브랜치입니다. (예시: "master").
+    - `body` (string, 선택): 본문 - 이 릴리스에 대한 설명을 지정합니다.
+    - `draft` (string, 선택): 초안 - 생성할 릴리스를 초안(비공개) 릴리스로 지정할지 여부를 지정합니다.
+      - 옵션: `true`, `false`
+    - `prerelease` (string, 선택): 프리릴리스 - 생성할 릴리스를 프리릴리스로 지정할지 여부를 지정합니다.
+      - 옵션: `true`, `false`
+    - `discussion_category_name` (string, 선택): 토론 카테고리 이름 - 지정 시, 해당 카테고리의 토론이 생성되어 릴리스와 연결됩니다. 값은 저장소에 이미 존재하는 카테고리여야 합니다.
+    - `generate_release_notes` (string, 선택): 릴리스 노트 - 지정한 이름과 본문을 사용하여 릴리스 노트를 자동으로 생성할지 여부를 지정합니다.
+      - 옵션: `true`, `false`
+  </Accordion>
+
+  <Accordion title="GITHUB_GET_RELEASE_BY_ID">
+    **설명:** GitHub에서 ID로 릴리스를 조회합니다.
+
+    **파라미터:**
+    - `owner` (string, 필수): 소유자 - 이 릴리스와 연관된 저장소의 계정 소유자 이름을 지정합니다. (예시: "abc").
+    - `repo` (string, 필수): 저장소 - 이 릴리스와 연관된 저장소 이름을 지정합니다.
+    - `id` (string, 필수): 릴리스 ID - 조회할 릴리스의 ID를 지정합니다.
+  </Accordion>
+
+  <Accordion title="GITHUB_GET_RELEASE_BY_TAG_NAME">
+    **설명:** GitHub에서 태그 이름으로 릴리스를 조회합니다.
+
+    **파라미터:**
+    - `owner` (string, 필수): 소유자 - 이 릴리스와 연관된 저장소의 계정 소유자 이름을 지정합니다. (예시: "abc").
+    - `repo` (string, 필수): 저장소 - 이 릴리스와 연관된 저장소 이름을 지정합니다.
+    - `tag_name` (string, 필수): 이름 - 가져올 릴리스의 태그를 지정합니다. (예시: "v1.0.0").
+  </Accordion>
+
+  <Accordion title="GITHUB_DELETE_RELEASE">
+    **설명:** GitHub에서 릴리스를 삭제합니다.
+
+    **파라미터:**
+    - `owner` (string, 필수): 소유자 - 이 릴리스와 연관된 저장소의 계정 소유자 이름을 지정합니다. (예시: "abc").
+    - `repo` (string, 필수): 저장소 - 이 릴리스와 연관된 저장소 이름을 지정합니다.
+    - `id` (string, 필수): 릴리스 ID - 삭제할 릴리스의 ID를 지정합니다.
+  </Accordion>
+</AccordionGroup>
+
+## 사용 예시
+
+### 기본 GitHub 에이전트 설정
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import CrewaiEnterpriseTools
+
+# Get enterprise tools (GitHub tools will be included)
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token"
+)
+
+# Create an agent with GitHub capabilities
+github_agent = Agent(
+    role="Repository Manager",
+    goal="Manage GitHub repositories, issues, and releases efficiently",
+    backstory="An AI assistant specialized in repository management and issue tracking.",
+    tools=[enterprise_tools]
+)
+
+# Task to create a new issue
+create_issue_task = Task(
+    description="Create a bug report issue for the login functionality in the main repository",
+    agent=github_agent,
+    expected_output="Issue created successfully with issue number"
+)
+
+# Run the task
+crew = Crew(
+    agents=[github_agent],
+    tasks=[create_issue_task]
+)
+
+crew.kickoff()
+```
+
+### 특정 GitHub 도구 필터링
+
+```python
+from crewai_tools import CrewaiEnterpriseTools
+
+# Get only specific GitHub tools
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token",
+    actions_list=["github_create_issue", "github_update_issue", "github_search_issue"]
+)
+
+issue_manager = Agent(
+    role="Issue Manager",
+    goal="Create and manage GitHub issues efficiently",
+    backstory="An AI assistant that focuses on issue tracking and management.",
+    tools=enterprise_tools
+)
+
+# Task to manage issue workflow
+issue_workflow = Task(
+    description="Create a feature request issue and assign it to the development team",
+    agent=issue_manager,
+    expected_output="Feature request issue created and assigned successfully"
+)
+
+crew = Crew(
+    agents=[issue_manager],
+    tasks=[issue_workflow]
+)
+
+crew.kickoff()
+```
+
+### 릴리즈 관리
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import CrewaiEnterpriseTools
+
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token"
+)
+
+release_manager = Agent(
+    role="Release Manager",
+    goal="Manage software releases and versioning",
+    backstory="An experienced release manager who handles version control and release processes.",
+    tools=[enterprise_tools]
+)
+
+# Task to create a new release
+release_task = Task(
+    description="""
+    Create a new release v2.1.0 for the project with:
+    - Auto-generated release notes
+    - Target the main branch
+    - Include a description of new features and bug fixes
+    """,
+    agent=release_manager,
+    expected_output="Release v2.1.0 created successfully with release notes"
+)
+
+crew = Crew(
+    agents=[release_manager],
+    tasks=[release_task]
+)
+
+crew.kickoff()
+```
+
+### 이슈 추적 및 관리
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import CrewaiEnterpriseTools
+
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token"
+)
+
+project_coordinator = Agent(
+    role="Project Coordinator",
+    goal="Track and coordinate project issues and development progress",
+    backstory="An AI assistant that helps coordinate development work and track project progress.",
+    tools=[enterprise_tools]
+)
+
+# Complex task involving multiple GitHub operations
+coordination_task = Task(
+    description="""
+    1. Search for all open issues assigned to the current milestone
+    2. Identify overdue issues and update their priority labels
+    3. Create a weekly progress report issue
+    4. Lock resolved issues that have been inactive for 30 days
+    """,
+    agent=project_coordinator,
+    expected_output="Project coordination completed with progress report and issue management"
+)
+
+crew = Crew(
+    agents=[project_coordinator],
+    tasks=[coordination_task]
+)
+
+crew.kickoff()
+```
+
+### 도움 받기
+
+<Card title="도움이 필요하신가요?" icon="headset" href="mailto:support@crewai.com">
+  GitHub 통합 설정 또는 문제 해결에 대해 지원팀에 문의하세요.
+</Card>

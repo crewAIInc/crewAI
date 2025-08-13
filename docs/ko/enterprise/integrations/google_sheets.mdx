@@ -1,0 +1,321 @@
+---
+title: Google Sheets 연동
+description: "CrewAI를 위한 Google Sheets 연동을 통해 스프레드시트 데이터 동기화."
+icon: "google"
+---
+
+## 개요
+
+에이전트가 Google Sheets를 통해 스프레드시트 데이터를 관리할 수 있도록 합니다. 행을 읽고, 새 항목을 생성하며, 기존 데이터를 업데이트하고, AI 기반 자동화를 통해 데이터 관리 워크플로우를 간소화하세요. 데이터 추적, 보고, 협업 데이터 관리에 최적화되어 있습니다.
+
+## 사전 준비 사항
+
+Google Sheets 통합을 사용하기 전에 다음을 확인하세요:
+
+- 활성 구독이 되어 있는 [CrewAI Enterprise](https://app.crewai.com) 계정
+- Google Sheets에 액세스할 수 있는 Google 계정
+- [통합 페이지](https://app.crewai.com/crewai_plus/connectors)를 통해 Google 계정 연결
+- 데이터 작업을 위한 올바른 열 헤더가 있는 스프레드시트
+
+## Google Sheets 통합 설정
+
+### 1. Google 계정 연결하기
+
+1. [CrewAI Enterprise Integrations](https://app.crewai.com/crewai_plus/connectors)로 이동합니다.
+2. 인증 통합 섹션에서 **Google Sheets**를 찾습니다.
+3. **Connect**를 클릭하고 OAuth 흐름을 완료합니다.
+4. 스프레드시트 접근에 필요한 권한을 허용합니다.
+5. [Account Settings](https://app.crewai.com/crewai_plus/settings/account)에서 Enterprise Token을 복사합니다.
+
+### 2. 필수 패키지 설치
+
+```bash
+uv add crewai-tools
+```
+
+## 사용 가능한 작업
+
+<AccordionGroup>
+  <Accordion title="GOOGLE_SHEETS_GET_ROW">
+    **설명:** Google Sheets 스프레드시트에서 행을 가져옵니다.
+
+    **매개변수:**
+    - `spreadsheetId` (string, 필수): 스프레드시트 - Connect Portal Workflow Settings를 사용하여 사용자가 스프레드시트를 선택할 수 있도록 합니다. 선택한 스프레드시트의 첫 번째 워크시트를 기본값으로 사용합니다.
+    - `limit` (string, 선택): 행 제한 - 반환할 최대 행 수를 제한합니다.
+  </Accordion>
+
+  <Accordion title="GOOGLE_SHEETS_CREATE_ROW">
+    **설명:** Google Sheets 스프레드시트에 새로운 행을 만듭니다.
+
+    **매개변수:**
+    - `spreadsheetId` (string, 필수): 스프레드시트 - Connect Portal Workflow Settings를 사용하여 사용자가 스프레드시트를 선택할 수 있도록 합니다. 선택한 스프레드시트의 첫 번째 워크시트를 기본값으로 사용합니다.
+    - `worksheet` (string, 필수): 워크시트 - 워크시트에는 반드시 열 헤더가 있어야 합니다.
+    - `additionalFields` (object, 필수): 필드 - 추가할 행의 필드를 열 이름을 key로 하는 객체로 포함합니다. Connect Portal Workflow Settings를 사용하여 사용자가 열 매핑을 선택할 수 있도록 합니다.
+      ```json
+      {
+        "columnName1": "columnValue1",
+        "columnName2": "columnValue2",
+        "columnName3": "columnValue3",
+        "columnName4": "columnValue4"
+      }
+      ```
+  </Accordion>
+
+  <Accordion title="GOOGLE_SHEETS_UPDATE_ROW">
+    **설명:** Google Sheets 스프레드시트의 기존 행을 업데이트합니다.
+
+    **매개변수:**
+    - `spreadsheetId` (string, 필수): 스프레드시트 - Connect Portal Workflow Settings를 사용하여 사용자가 스프레드시트를 선택할 수 있도록 합니다. 선택한 스프레드시트의 첫 번째 워크시트를 기본값으로 사용합니다.
+    - `worksheet` (string, 필수): 워크시트 - 워크시트에는 반드시 열 헤더가 있어야 합니다.
+    - `filterFormula` (object, 선택): 필터 - 업데이트할 행을 식별하기 위한 단일 조건의 AND 그룹으로 이루어진 OR의 형태(분리 정규형)로 작성합니다.
+      ```json
+      {
+        "operator": "OR",
+        "conditions": [
+          {
+            "operator": "AND",
+            "conditions": [
+              {
+                "field": "status",
+                "operator": "$stringExactlyMatches",
+                "value": "pending"
+              }
+            ]
+          }
+        ]
+      }
+      ```
+      사용 가능한 연산자: `$stringContains`, `$stringDoesNotContain`, `$stringExactlyMatches`, `$stringDoesNotExactlyMatch`, `$stringStartsWith`, `$stringDoesNotStartWith`, `$stringEndsWith`, `$stringDoesNotEndWith`, `$numberGreaterThan`, `$numberLessThan`, `$numberEquals`, `$numberDoesNotEqual`, `$dateTimeAfter`, `$dateTimeBefore`, `$dateTimeEquals`, `$booleanTrue`, `$booleanFalse`, `$exists`, `$doesNotExist`
+    - `additionalFields` (object, 필수): 필드 - 업데이트할 필드를 열 이름을 key로 하는 객체로 포함합니다. Connect Portal Workflow Settings를 사용하여 사용자가 열 매핑을 선택할 수 있도록 합니다.
+      ```json
+      {
+        "columnName1": "newValue1",
+        "columnName2": "newValue2",
+        "columnName3": "newValue3",
+        "columnName4": "newValue4"
+      }
+      ```
+  </Accordion>
+</AccordionGroup>
+
+## 사용 예시
+
+### 기본 Google Sheets 에이전트 설정
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import CrewaiEnterpriseTools
+
+# Get enterprise tools (Google Sheets tools will be included)
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token"
+)
+
+# Create an agent with Google Sheets capabilities
+sheets_agent = Agent(
+    role="Data Manager",
+    goal="Manage spreadsheet data and track information efficiently",
+    backstory="An AI assistant specialized in data management and spreadsheet operations.",
+    tools=[enterprise_tools]
+)
+
+# Task to add new data to a spreadsheet
+data_entry_task = Task(
+    description="Add a new customer record to the customer database spreadsheet with name, email, and signup date",
+    agent=sheets_agent,
+    expected_output="New customer record added successfully to the spreadsheet"
+)
+
+# Run the task
+crew = Crew(
+    agents=[sheets_agent],
+    tasks=[data_entry_task]
+)
+
+crew.kickoff()
+```
+
+### 특정 Google Sheets 도구 필터링
+
+```python
+from crewai_tools import CrewaiEnterpriseTools
+
+# Get only specific Google Sheets tools
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token",
+    actions_list=["google_sheets_get_row", "google_sheets_create_row"]
+)
+
+data_collector = Agent(
+    role="Data Collector",
+    goal="Collect and organize data in spreadsheets",
+    backstory="An AI assistant that focuses on data collection and organization.",
+    tools=enterprise_tools
+)
+
+# Task to collect and organize data
+data_collection = Task(
+    description="Retrieve current inventory data and add new product entries to the inventory spreadsheet",
+    agent=data_collector,
+    expected_output="Inventory data retrieved and new products added successfully"
+)
+
+crew = Crew(
+    agents=[data_collector],
+    tasks=[data_collection]
+)
+
+crew.kickoff()
+```
+
+### 데이터 분석 및 보고
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import CrewaiEnterpriseTools
+
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token"
+)
+
+data_analyst = Agent(
+    role="Data Analyst",
+    goal="Analyze spreadsheet data and generate insights",
+    backstory="An experienced data analyst who extracts insights from spreadsheet data.",
+    tools=[enterprise_tools]
+)
+
+# Task to analyze data and create reports
+analysis_task = Task(
+    description="""
+    1. Retrieve all sales data from the current month's spreadsheet
+    2. Analyze the data for trends and patterns
+    3. Create a summary report in a new row with key metrics
+    """,
+    agent=data_analyst,
+    expected_output="Sales data analyzed and summary report created with key insights"
+)
+
+crew = Crew(
+    agents=[data_analyst],
+    tasks=[analysis_task]
+)
+
+crew.kickoff()
+```
+
+### 자동화된 데이터 업데이트
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import CrewaiEnterpriseTools
+
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token"
+)
+
+data_updater = Agent(
+    role="Data Updater",
+    goal="Automatically update and maintain spreadsheet data",
+    backstory="An AI assistant that maintains data accuracy and updates records automatically.",
+    tools=[enterprise_tools]
+)
+
+# Task to update data based on conditions
+update_task = Task(
+    description="""
+    1. 주문 스프레드시트에서 모든 보류 중인 주문을 찾으세요
+    2. 해당 주문의 상태를 'processing'으로 업데이트하세요
+    3. 상태가 업데이트된 시점의 타임스탬프를 추가하세요
+    4. 변경 사항을 별도의 추적 시트에 기록하세요
+    """,
+    agent=data_updater,
+    expected_output="모든 보류 중인 주문이 processing 상태로 업데이트되고, 타임스탬프가 기록됨"
+)
+
+crew = Crew(
+    agents=[data_updater],
+    tasks=[update_task]
+)
+
+crew.kickoff()
+```
+
+### 복잡한 데이터 관리 워크플로우
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import CrewaiEnterpriseTools
+
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token"
+)
+
+workflow_manager = Agent(
+    role="Data Workflow Manager",
+    goal="Manage complex data workflows across multiple spreadsheets",
+    backstory="An AI assistant that orchestrates complex data operations across multiple spreadsheets.",
+    tools=[enterprise_tools]
+)
+
+# Complex workflow task
+workflow_task = Task(
+    description="""
+    1. 메인 고객 스프레드시트에서 모든 고객 데이터를 가져옵니다
+    2. 활성 고객에 대한 월별 요약 항목을 생성합니다
+    3. 최근 30일간의 활동을 기반으로 고객 상태를 업데이트합니다
+    4. 고객 지표가 포함된 월간 보고서를 생성합니다
+    5. 비활성 고객 기록을 별도의 시트로 보관합니다
+    """,
+    agent=workflow_manager,
+    expected_output="월간 고객 워크플로우가 완료되어 상태가 업데이트되고 보고서가 생성됨"
+)
+
+crew = Crew(
+    agents=[workflow_manager],
+    tasks=[workflow_task]
+)
+
+crew.kickoff()
+```
+
+## 문제 해결
+
+### 일반적인 문제
+
+**권한 오류**
+- Google 계정이 대상 스프레드시트에 대해 편집 권한이 있는지 확인하세요
+- OAuth 연결에 Google Sheets API에 필요한 scope가 포함되어 있는지 검증하세요
+- 스프레드시트가 인증된 계정과 공유되어 있는지 확인하세요
+
+**스프레드시트 구조 문제**
+- 행을 생성하거나 업데이트하기 전에 워크시트에 올바른 열 헤더가 있는지 확인하세요
+- `additionalFields`의 열 이름이 실제 열 헤더와 일치하는지 검증하세요
+- 지정된 워크시트가 스프레드시트에 존재하는지 확인하세요
+
+**데이터 유형 및 형식 문제**
+- 데이터 값이 각 열에 대해 예상되는 형식과 일치하는지 확인하세요
+- 날짜 열에는 올바른 날짜 형식(ISO 형식 권장)을 사용하세요
+- 숫자 열에 입력되는 값이 적절한 형식인지 검증하세요
+
+**필터 수식 문제**
+- 필터 수식이 부정 정규형(disjunctive normal form)의 올바른 JSON 구조를 따르는지 확인하세요
+- 실제 열 헤더와 일치하는 유효한 필드명을 사용하세요
+- 복잡한 다중 조건 쿼리를 작성하기 전에 간단한 필터로 테스트하세요
+- 연산자 유형이 열의 데이터 유형과 일치하는지 검증하세요
+
+**행 제한 및 성능**
+- `GOOGLE_SHEETS_GET_ROW`를 사용할 때 행 제한에 유의하세요
+- 대용량 데이터셋의 경우 페이지네이션을 고려하세요
+- 처리되는 데이터의 양을 줄이기 위해 구체적인 필터를 사용하세요
+
+**업데이트 작업**
+- 필터 조건이 업데이트하려는 행을 정확하게 식별하는지 확인하세요
+- 대규모 업데이트 전에 작은 데이터셋으로 필터 조건을 테스트하세요
+- 모든 필수 필드가 업데이트 작업에 포함되어 있는지 검증하세요
+
+### 도움 받기
+
+<Card title="도움이 필요하신가요?" icon="headset" href="mailto:support@crewai.com">
+  Google Sheets 통합 설정 또는 문제 해결에 대한 지원이 필요하시면 저희 지원팀으로 문의해 주세요.
+</Card>

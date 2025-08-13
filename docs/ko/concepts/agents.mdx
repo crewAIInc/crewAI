@@ -1,0 +1,690 @@
+---
+title: 에이전트
+description: CrewAI 프레임워크 내에서 에이전트를 생성하고 관리하는 자세한 가이드입니다.
+icon: robot
+---
+
+## 에이전트 개요
+
+CrewAI 프레임워크에서 `Agent`는 다음과 같은 역할을 수행하는 자율적 단위입니다:
+- 특정 작업 수행
+- 자신의 역할과 목표에 기반한 의사결정
+- 도구를 활용하여 목표 달성
+- 다른 에이전트와의 소통 및 협업
+- 상호작용에 대한 기억 유지
+- 허용될 경우 작업 위임
+
+<Tip>
+에이전트는 특정한 기술, 전문성, 책임을 가진 전문 팀원이라고 생각하시면 됩니다. 예를 들어, `Researcher` 에이전트는 정보 수집 및 분석에 뛰어날 수 있고, `Writer` 에이전트는 콘텐츠 작성에 더 강점을 가질 수 있습니다.
+</Tip>
+
+<Note type="info" title="엔터프라이즈 확장: 시각적 에이전트 빌더">
+CrewAI Enterprise에는 코드를 작성하지 않고도 에이전트 생성 및 구성을 간편하게 할 수 있는 시각적 에이전트 빌더가 포함되어 있습니다. 에이전트를 시각적으로 설계하고 실시간으로 테스트하세요.
+
+![Visual Agent Builder Screenshot](/images/enterprise/crew-studio-interface.png)
+
+시각적 에이전트 빌더를 통해 다음과 같은 기능을 사용할 수 있습니다:
+- 폼 기반 인터페이스를 통한 직관적 에이전트 구성
+- 실시간 테스트 및 검증
+- 사전 구성된 에이전트 유형 템플릿 라이브러리
+- 에이전트 속성 및 행동의 손쉬운 커스터마이즈
+</Note>
+
+## 에이전트 속성
+
+| 속성                                     | 파라미터                   | 타입                            | 설명                                                                                                                |
+| :-------------------------------------- | :----------------------- | :---------------------------- | :----------------------------------------------------------------------------------------------------------------- |
+| **역할**                                | `role`                   | `str`                         | 에이전트의 기능과 전문 분야를 정의합니다.                                                                              |
+| **목표**                                | `goal`                   | `str`                         | 에이전트의 의사결정을 이끄는 개별 목표입니다.                                                                          |
+| **배경 이야기**                         | `backstory`              | `str`                         | 에이전트에게 맥락과 개성을 부여하여 상호작용을 풍부하게 합니다.                                                        |
+| **LLM** _(옵션)_                        | `llm`                    | `Union[str, LLM, Any]`        | 에이전트를 구동하는 언어 모델입니다. `OPENAI_MODEL_NAME`에 지정된 모델 또는 "gpt-4"가 기본값입니다.                    |
+| **도구** _(옵션)_                       | `tools`                  | `List[BaseTool]`              | 에이전트가 사용할 수 있는 기능 혹은 역량입니다. 기본값은 빈 리스트입니다.                                               |
+| **Function Calling LLM** _(옵션)_       | `function_calling_llm`   | `Optional[Any]`               | 도구 호출을 위한 언어 모델로, 지정 시 crew의 LLM을 재정의합니다.                                                       |
+| **최대 반복 횟수** _(옵션)_             | `max_iter`               | `int`                         | 에이전트가 최선의 답변을 제공하기 전 최대 반복 수입니다. 기본값은 20입니다.                                             |
+| **최대 RPM** _(옵션)_                   | `max_rpm`                | `Optional[int]`               | 레이트 리밋 회피를 위한 분당 최대 요청 수입니다.                                                                      |
+| **최대 실행 시간** _(옵션)_             | `max_execution_time`     | `Optional[int]`               | 작업 실행의 최대 시간(초)입니다.                                                                                      |
+| **상세 로그** _(옵션)_                  | `verbose`                | `bool`                        | 디버깅을 위한 상세 실행 로그를 활성화합니다. 기본값은 False입니다.                                                      |
+| **위임 허용** _(옵션)_                  | `allow_delegation`       | `bool`                        | 에이전트가 다른 에이전트에게 작업을 위임할 수 있도록 허용합니다. 기본값은 False입니다.                                 |
+| **Step Callback** _(옵션)_               | `step_callback`          | `Optional[Any]`               | 각 에이전트 단계 후 호출되는 함수로, crew 콜백을 재정의합니다.                                                          |
+| **캐시** _(옵션)_                        | `cache`                  | `bool`                        | 도구 사용에 대해 캐싱을 활성화합니다. 기본값은 True입니다.                                                            |
+| **시스템 템플릿** _(옵션)_               | `system_template`        | `Optional[str]`               | 에이전트 맞춤형 시스템 프롬프트 템플릿입니다.                                                                         |
+| **프롬프트 템플릿** _(옵션)_             | `prompt_template`        | `Optional[str]`               | 에이전트 맞춤형 프롬프트 템플릿입니다.                                                                                |
+| **응답 템플릿** _(옵션)_                 | `response_template`      | `Optional[str]`               | 에이전트 맞춤형 응답 템플릿입니다.                                                                                    |
+| **코드 실행 허용** _(옵션)_              | `allow_code_execution`   | `Optional[bool]`              | 에이전트의 코드 실행 활성화 여부입니다. 기본값은 False입니다.                                                          |
+| **최대 재시도 횟수** _(옵션)_            | `max_retry_limit`        | `int`                         | 오류 발생 시 최대 재시도 횟수입니다. 기본값은 2입니다.                                                                 |
+| **컨텍스트 윈도우 준수** _(옵션)_         | `respect_context_window` | `bool`                        | 메시지를 컨텍스트 윈도우 크기 내로 유지하기 위하여 요약 기능을 사용합니다. 기본값은 True입니다.                         |
+| **코드 실행 모드** _(옵션)_              | `code_execution_mode`    | `Literal["safe", "unsafe"]`   | 코드 실행 모드: 'safe'(Docker 사용) 또는 'unsafe'(직접 실행). 기본값은 'safe'입니다.                                   |
+| **멀티모달** _(옵션)_                    | `multimodal`             | `bool`                        | 에이전트가 멀티모달 기능을 지원하는지 여부입니다. 기본값은 False입니다.                                                |
+| **날짜 자동 삽입** _(옵션)_              | `inject_date`            | `bool`                        | 작업에 현재 날짜를 자동으로 삽입할지 여부입니다. 기본값은 False입니다.                                                 |
+| **날짜 형식** _(옵션)_                   | `date_format`            | `str`                         | inject_date 활성화 시 날짜 표시 형식 문자열입니다. 기본값은 "%Y-%m-%d"(ISO 포맷)입니다.                                 |
+| **추론** _(옵션)_                        | `reasoning`              | `bool`                        | 에이전트가 작업을 실행하기 전에 반영 및 플랜을 생성할지 여부입니다. 기본값은 False입니다.                              |
+| **최대 추론 시도 수** _(옵션)_           | `max_reasoning_attempts` | `Optional[int]`               | 작업 실행 전 최대 추론 시도 횟수입니다. 설정하지 않으면 준비될 때까지 시도합니다.                                        |
+| **임베더** _(옵션)_                      | `embedder`               | `Optional[Dict[str, Any]]`    | 에이전트가 사용하는 임베더 설정입니다.                                                                                |
+| **지식 소스** _(옵션)_                   | `knowledge_sources`      | `Optional[List[BaseKnowledgeSource]]` | 에이전트가 사용할 수 있는 지식 소스입니다.                                                                |
+| **시스템 프롬프트 사용** _(옵션)_         | `use_system_prompt`      | `Optional[bool]`              | 시스템 프롬프트 사용 여부(o1 모델 지원용). 기본값은 True입니다.                                                        |
+
+## 에이전트 생성
+
+CrewAI에서 에이전트를 생성하는 방법에는 **YAML 구성(권장)**을 사용하는 방법과 **코드에서 직접 정의**하는 두 가지가 있습니다.
+
+### YAML 구성 (권장)
+
+YAML 구성을 사용하면 에이전트를 보다 깔끔하고 유지 관리하기 쉽도록 정의할 수 있습니다. CrewAI 프로젝트에서 이 방식을 사용하는 것을 강력히 권장합니다.
+
+[설치](/ko/installation) 섹션에 설명된 대로 CrewAI 프로젝트를 생성한 후, `src/latest_ai_development/config/agents.yaml` 파일로 이동하여 템플릿을 여러분의 요구 사항에 맞게 수정하세요.
+
+<Note>
+YAML 파일의 변수(예: `{topic}`)는 crew를 실행할 때 입력값에서 가져온 값으로 대체됩니다:
+```python Code
+crew.kickoff(inputs={'topic': 'AI Agents'})
+```
+</Note>
+
+아래는 YAML을 사용하여 에이전트를 구성하는 예시입니다:
+
+```yaml agents.yaml
+# src/latest_ai_development/config/agents.yaml
+researcher:
+  role: >
+    {topic} Senior Data Researcher
+  goal: >
+    Uncover cutting-edge developments in {topic}
+  backstory: >
+    You're a seasoned researcher with a knack for uncovering the latest
+    developments in {topic}. Known for your ability to find the most relevant
+    information and present it in a clear and concise manner.
+
+reporting_analyst:
+  role: >
+    {topic} Reporting Analyst
+  goal: >
+    Create detailed reports based on {topic} data analysis and research findings
+  backstory: >
+    You're a meticulous analyst with a keen eye for detail. You're known for
+    your ability to turn complex data into clear and concise reports, making
+    it easy for others to understand and act on the information you provide.
+```
+
+이 YAML 구성을 코드에서 사용하려면, `CrewBase`를 상속하는 crew 클래스를 생성하세요:
+
+```python Code
+# src/latest_ai_development/crew.py
+from crewai import Agent, Crew, Process
+from crewai.project import CrewBase, agent, crew
+from crewai_tools import SerperDevTool
+
+@CrewBase
+class LatestAiDevelopmentCrew():
+  """LatestAiDevelopment crew"""
+
+  agents_config = "config/agents.yaml"
+
+  @agent
+  def researcher(self) -> Agent:
+    return Agent(
+      config=self.agents_config['researcher'], # type: ignore[index]
+      verbose=True,
+      tools=[SerperDevTool()]
+    )
+
+  @agent
+  def reporting_analyst(self) -> Agent:
+    return Agent(
+      config=self.agents_config['reporting_analyst'], # type: ignore[index]
+      verbose=True
+    )
+```
+
+<Note>
+YAML 파일(`agents.yaml`)에서 사용하는 이름은 파이썬 코드의 메서드 이름과 일치해야 합니다.
+</Note>
+
+### 직접 코드 정의
+
+`Agent` 클래스를 인스턴스화하여 코드에서 직접 agent를 생성할 수 있습니다. 아래는 사용 가능한 모든 파라미터를 보여주는 종합적인 예제입니다:
+
+```python Code
+from crewai import Agent
+from crewai_tools import SerperDevTool
+
+# 사용 가능한 모든 파라미터로 agent 생성
+agent = Agent(
+    role="Senior Data Scientist",
+    goal="Analyze and interpret complex datasets to provide actionable insights",
+    backstory="With over 10 years of experience in data science and machine learning, "
+              "you excel at finding patterns in complex datasets.",
+    llm="gpt-4",  # 기본값: OPENAI_MODEL_NAME 또는 "gpt-4"
+    function_calling_llm=None,  # 옵션: 도구 호출을 위한 별도의 LLM
+    verbose=False,  # 기본값: False
+    allow_delegation=False,  # 기본값: False
+    max_iter=20,  # 기본값: 20번 반복
+    max_rpm=None,  # 옵션: API 호출에 대한 속도 제한
+    max_execution_time=None,  # 옵션: 최대 실행 시간(초 단위)
+    max_retry_limit=2,  # 기본값: 오류 시 2번 재시도
+    allow_code_execution=False,  # 기본값: False
+    code_execution_mode="safe",  # 기본값: "safe" (옵션: "safe", "unsafe")
+    respect_context_window=True,  # 기본값: True
+    use_system_prompt=True,  # 기본값: True
+    multimodal=False,  # 기본값: False
+    inject_date=False,  # 기본값: False
+    date_format="%Y-%m-%d",  # 기본값: ISO 형식
+    reasoning=False,  # 기본값: False
+    max_reasoning_attempts=None,  # 기본값: None
+    tools=[SerperDevTool()],  # 옵션: 도구 리스트
+    knowledge_sources=None,  # 옵션: 지식 소스 리스트
+    embedder=None,  # 옵션: 커스텀 임베더 구성
+    system_template=None,  # 옵션: 커스텀 시스템 프롬프트 템플릿
+    prompt_template=None,  # 옵션: 커스텀 프롬프트 템플릿
+    response_template=None,  # 옵션: 커스텀 응답 템플릿
+    step_callback=None,  # 옵션: 모니터링용 콜백 함수
+)
+```
+
+일반적인 사용 사례를 위한 주요 파라미터 조합을 살펴보겠습니다:
+
+#### 기본 연구 에이전트
+```python Code
+research_agent = Agent(
+    role="Research Analyst",
+    goal="Find and summarize information about specific topics",
+    backstory="You are an experienced researcher with attention to detail",
+    tools=[SerperDevTool()],
+    verbose=True  # Enable logging for debugging
+)
+```
+
+#### 코드 개발 에이전트
+```python Code
+dev_agent = Agent(
+    role="Senior Python Developer",
+    goal="Write and debug Python code",
+    backstory="Expert Python developer with 10 years of experience",
+    allow_code_execution=True,
+    code_execution_mode="safe",  # Uses Docker for safety
+    max_execution_time=300,  # 5-minute timeout
+    max_retry_limit=3  # More retries for complex code tasks
+)
+```
+
+#### 장기 실행 분석 에이전트
+```python Code
+analysis_agent = Agent(
+    role="Data Analyst",
+    goal="Perform deep analysis of large datasets",
+    backstory="Specialized in big data analysis and pattern recognition",
+    memory=True,
+    respect_context_window=True,
+    max_rpm=10,  # Limit API calls
+    function_calling_llm="gpt-4o-mini"  # Cheaper model for tool calls
+)
+```
+
+#### 커스텀 템플릿 에이전트
+```python Code
+custom_agent = Agent(
+    role="Customer Service Representative",
+    goal="Assist customers with their inquiries",
+    backstory="Experienced in customer support with a focus on satisfaction",
+    system_template="""<|start_header_id|>system<|end_header_id|>
+                        {{ .System }}<|eot_id|>""",
+    prompt_template="""<|start_header_id|>user<|end_header_id|>
+                        {{ .Prompt }}<|eot_id|>""",
+    response_template="""<|start_header_id|>assistant<|end_header_id|>
+                        {{ .Response }}<|eot_id|>""",
+)
+```
+
+#### 날짜 인식이 가능한 Reasoning Agent
+```python Code
+strategic_agent = Agent(
+    role="Market Analyst",
+    goal="Track market movements with precise date references and strategic planning",
+    backstory="Expert in time-sensitive financial analysis and strategic reporting",
+    inject_date=True,  # Automatically inject current date into tasks
+    date_format="%B %d, %Y",  # Format as "May 21, 2025"
+    reasoning=True,  # Enable strategic planning
+    max_reasoning_attempts=2,  # Limit planning iterations
+    verbose=True
+)
+```
+
+#### Reasoning Agent
+```python Code
+reasoning_agent = Agent(
+    role="Strategic Planner",
+    goal="Analyze complex problems and create detailed execution plans",
+    backstory="Expert strategic planner who methodically breaks down complex challenges",
+    reasoning=True,  # Enable reasoning and planning
+    max_reasoning_attempts=3,  # Limit reasoning attempts
+    max_iter=30,  # Allow more iterations for complex planning
+    verbose=True
+)
+```
+
+#### 멀티모달 에이전트
+```python Code
+multimodal_agent = Agent(
+    role="Visual Content Analyst",
+    goal="Analyze and process both text and visual content",
+    backstory="Specialized in multimodal analysis combining text and image understanding",
+    multimodal=True,  # Enable multimodal capabilities
+    verbose=True
+)
+```
+
+### 매개변수 세부 정보
+
+#### 중요 파라미터
+- `role`, `goal`, 그리고 `backstory`는 필수이며 에이전트의 행동을 결정합니다
+- `llm`은 사용되는 언어 모델을 결정합니다 (기본값: OpenAI의 GPT-4)
+
+#### 메모리 및 컨텍스트
+- `memory`: 대화 이력을 유지하도록 활성화합니다
+- `respect_context_window`: 토큰 제한 문제를 방지합니다
+- `knowledge_sources`: 도메인별 지식 기반을 추가합니다
+
+#### 실행 제어
+- `max_iter`: 최적의 답변을 제공하기 전의 최대 시도 횟수
+- `max_execution_time`: 제한 시간(초 단위)
+- `max_rpm`: API 호출 속도 제한
+- `max_retry_limit`: 오류 발생 시 재시도 횟수
+
+#### 코드 실행
+- `allow_code_execution`: 코드를 실행하려면 True여야 합니다
+- `code_execution_mode`:
+  - `"safe"`: Docker를 사용합니다 (프로덕션에 권장)
+  - `"unsafe"`: 직접 실행 (신뢰할 수 있는 환경에서만 사용)
+
+<Note>
+  이 옵션은 기본 Docker 이미지를 실행합니다. Docker 이미지를 구성하려면 도구 섹션에 있는 Code Interpreter Tool을 확인하십시오.
+  Code Interpreter Tool을 에이전트의 도구 파라미터로 추가하십시오.
+</Note>
+
+#### 고급 기능
+- `multimodal`: 텍스트와 시각적 콘텐츠 처리를 위한 멀티모달 기능 활성화
+- `reasoning`: 에이전트가 작업을 수행하기 전에 반영하고 계획을 작성할 수 있도록 활성화
+- `inject_date`: 현재 날짜를 작업 설명에 자동으로 삽입
+
+#### 템플릿
+- `system_template`: 에이전트의 핵심 동작을 정의합니다
+- `prompt_template`: 입력 형식을 구성합니다
+- `response_template`: 에이전트 응답을 포맷합니다
+
+<Note>
+커스텀 템플릿을 사용할 때는 `system_template`과 `prompt_template`가 모두 정의되어 있는지 확인하십시오. `response_template`은 선택 사항이지만 일관된 출력 포맷을 위해 권장됩니다.
+</Note>
+
+<Note>
+커스텀 템플릿을 사용할 때는 템플릿에서 `{role}`, `{goal}`, `{backstory}`와 같은 변수를 사용할 수 있습니다. 이 변수들은 실행 중에 자동으로 채워집니다.
+</Note>
+
+## 에이전트 도구
+
+에이전트는 다양한 도구를 장착하여 그 능력을 향상시킬 수 있습니다. CrewAI는 다음의 도구들을 지원합니다:
+- [CrewAI Toolkit](https://github.com/joaomdmoura/crewai-tools)
+- [LangChain Tools](https://python.langchain.com/docs/integrations/tools)
+
+에이전트에 도구를 추가하는 방법은 다음과 같습니다:
+
+```python Code
+from crewai import Agent
+from crewai_tools import SerperDevTool, WikipediaTools
+
+# 도구 생성
+search_tool = SerperDevTool()
+wiki_tool = WikipediaTools()
+
+# 에이전트에 도구 추가
+researcher = Agent(
+    role="AI Technology Researcher",
+    goal="Research the latest AI developments",
+    tools=[search_tool, wiki_tool],
+    verbose=True
+)
+```
+
+## 에이전트 메모리와 컨텍스트
+
+에이전트는 상호작용의 메모리를 유지하고 이전 작업의 컨텍스트를 사용할 수 있습니다. 이는 여러 작업에 걸쳐 정보를 유지해야 하는 복잡한 워크플로우에서 특히 유용합니다.
+
+```python Code
+from crewai import Agent
+
+analyst = Agent(
+    role="Data Analyst",
+    goal="Analyze and remember complex data patterns",
+    memory=True,  # Enable memory
+    verbose=True
+)
+```
+
+<Note>
+`memory`가 활성화되면 에이전트는 여러 상호작용에 걸쳐 컨텍스트를 유지하게 되어, 복잡하고 여러 단계로 이루어진 작업을 처리하는 능력이 향상됩니다.
+</Note>
+
+## 컨텍스트 윈도우 관리
+
+CrewAI는 대화가 언어 모델의 토큰 한도를 초과하는 상황을 처리하기 위해 정교한 자동 컨텍스트 윈도우 관리 기능을 포함하고 있습니다. 이 강력한 기능은 `respect_context_window` 매개변수로 제어됩니다.
+
+### 컨텍스트 윈도우 관리 방식
+
+에이전트의 대화 기록이 LLM의 컨텍스트 윈도우 크기를 초과할 경우, CrewAI는 이 상황을 자동으로 감지하고 다음 중 하나를 수행할 수 있습니다:
+
+1. **자동으로 내용을 요약** ( `respect_context_window=True` 인 경우)
+2. **오류와 함께 실행 중지** ( `respect_context_window=False` 인 경우)
+
+### 자동 컨텍스트 처리 (`respect_context_window=True`)
+
+이 설정은 대부분의 사용 사례에서 **기본값이자 권장 옵션**입니다. 활성화되면 CrewAI는 다음과 같이 동작합니다:
+
+```python Code
+# Agent with automatic context management (default)
+smart_agent = Agent(
+    role="Research Analyst",
+    goal="Analyze large documents and datasets",
+    backstory="Expert at processing extensive information",
+    respect_context_window=True,  # 🔑 Default: auto-handle context limits
+    verbose=True
+)
+```
+
+**컨텍스트 한도를 초과할 경우 발생하는 일:**
+- ⚠️ **경고 메시지**: `"Context length exceeded. Summarizing content to fit the model context window."`
+- 🔄 **자동 요약**: CrewAI가 대화 기록을 지능적으로 요약함
+- ✅ **작업 지속**: 요약된 컨텍스트로 작업이 원활하게 계속됨
+- 📝 **정보 보존**: 토큰 수를 줄이면서도 주요 정보는 유지됨
+
+### 엄격한 컨텍스트 제한(`respect_context_window=False`)
+
+정확한 제어가 필요하며, 정보를 잃지 않으려면 실행이 중지되도록 할 때:
+
+```python Code
+# Agent with strict context limits
+strict_agent = Agent(
+    role="Legal Document Reviewer",
+    goal="Provide precise legal analysis without information loss",
+    backstory="Legal expert requiring complete context for accurate analysis",
+    respect_context_window=False,  # ❌ Stop execution on context limit
+    verbose=True
+)
+```
+
+**컨텍스트 한도를 초과하면 발생하는 일:**
+- ❌ **오류 메시지**: `"Context length exceeded. Consider using smaller text or RAG tools from crewai_tools."`
+- 🛑 **실행 중지**: 작업 실행이 즉시 중단됨
+- 🔧 **수동 개입 필요**: 접근 방식을 직접 수정해야 함
+
+### 올바른 설정 선택
+
+#### 다음과 같은 경우 `respect_context_window=True` (기본값)을 사용하세요:
+- **문서가 클 경우** 컨텍스트 제한을 초과할 수 있습니다
+- **오래 지속되는 대화**에서 일부 요약이 허용되는 경우
+- **연구 과제**에서 정확한 세부사항보다는 전체적인 컨텍스트가 더 중요한 경우
+- **프로토타이핑 및 개발**에서 견고한 실행을 원하는 경우
+
+```python Code
+# Perfect for document processing
+document_processor = Agent(
+    role="Document Analyst",
+    goal="Extract insights from large research papers",
+    backstory="Expert at analyzing extensive documentation",
+    respect_context_window=True,  # Handle large documents gracefully
+    max_iter=50,  # Allow more iterations for complex analysis
+    verbose=True
+)
+```
+
+#### `respect_context_window=False`를 사용할 때:
+- **정확성이 매우 중요**하고 정보 손실이 허용되지 않을 때
+- **법률 또는 의료 업무**에서 전체 맥락이 필요한 경우
+- **코드 리뷰**에서 누락된 세부 정보가 버그를 유발할 수 있는 경우
+- **금융 분석**에서 정확도가 최우선인 경우
+
+```python Code
+# Perfect for precision tasks
+precision_agent = Agent(
+    role="Code Security Auditor",
+    goal="Identify security vulnerabilities in code",
+    backstory="Security expert requiring complete code context",
+    respect_context_window=False,  # Prefer failure over incomplete analysis
+    max_retry_limit=1,  # Fail fast on context issues
+    verbose=True
+)
+```
+
+### 대용량 데이터에 대한 대체 접근 방식
+
+매우 큰 데이터셋을 다룰 때는 다음과 같은 전략을 고려하세요:
+
+#### 1. RAG 도구 사용하기
+```python Code
+from crewai_tools import RagTool
+
+# Create RAG tool for large document processing
+rag_tool = RagTool()
+
+rag_agent = Agent(
+    role="Research Assistant",
+    goal="Query large knowledge bases efficiently",
+    backstory="Expert at using RAG tools for information retrieval",
+    tools=[rag_tool],  # Use RAG instead of large context windows
+    respect_context_window=True,
+    verbose=True
+)
+```
+
+#### 2. 지식 소스 사용
+```python Code
+# Use knowledge sources instead of large prompts
+knowledge_agent = Agent(
+    role="Knowledge Expert",
+    goal="Answer questions using curated knowledge",
+    backstory="Expert at leveraging structured knowledge sources",
+    knowledge_sources=[your_knowledge_sources],  # Pre-processed knowledge
+    respect_context_window=True,
+    verbose=True
+)
+```
+
+### 컨텍스트 윈도우 모범 사례
+
+1. **컨텍스트 사용 모니터링**: `verbose=True`를 활성화하여 컨텍스트 관리 과정을 확인하세요
+2. **효율성 설계**: 작업 구조를 효과적으로 설계하여 컨텍스트 누적을 최소화하세요
+3. **적절한 모델 사용**: 작업에 적합한 컨텍스트 윈도우를 가진 LLM을 선택하세요
+4. **두 가지 설정 모두 테스트**: `True`와 `False` 모두 시도하여 어떤 것이 더 효과적인지 확인하세요
+5. **RAG와 조합 사용**: 매우 큰 데이터셋의 경우 컨텍스트 윈도우에만 의존하지 말고 RAG 도구도 함께 사용하세요
+
+### 컨텍스트 문제 해결
+
+**컨텍스트 제한 오류가 발생하는 경우:**
+```python Code
+# 빠른 해결책: 자동 처리 활성화
+agent.respect_context_window = True
+
+# 더 나은 솔루션: 대용량 데이터에는 RAG 도구 사용
+from crewai_tools import RagTool
+agent.tools = [RagTool()]
+
+# 대안: 작업을 더 작은 단위로 나누기
+# 또는 대용량 프롬프트 대신 knowledge 소스 사용
+```
+
+**자동 요약 기능이 중요한 정보를 놓치는 경우:**
+```python Code
+# 자동 요약 비활성화 후 RAG 사용
+agent = Agent(
+    role="Detailed Analyst",
+    goal="Maintain complete information accuracy",
+    backstory="Expert requiring full context",
+    respect_context_window=False,  # 요약 안 함
+    tools=[RagTool()],  # 대용량 데이터에는 RAG 사용
+    verbose=True
+)
+```
+
+<Note>
+컨텍스트 윈도우 관리 기능은 백그라운드에서 자동으로 작동합니다. 특별한 함수를 호출할 필요가 없으며, 원하는 동작에 맞게 `respect_context_window`만 설정하면 CrewAI가 나머지를 처리합니다!
+</Note>
+
+## `kickoff()`을 사용한 에이전트 직접 상호작용
+
+에이전트는 `kickoff()` 메서드를 사용하여 작업(task)이나 crew 워크플로우를 거치지 않고 직접 사용할 수 있습니다. 이는 전체 crew 오케스트레이션 기능이 필요하지 않을 때 에이전트와 상호작용하는 더 간단한 방법을 제공합니다.
+
+### `kickoff()` 작동 방식
+
+`kickoff()` 메서드는 메시지를 에이전트에게 직접 보내고 응답을 받을 수 있게 해줍니다. 이는 LLM과 상호 작용하는 것과 유사하지만, 에이전트의 모든 기능(도구, 추론 등)을 활용할 수 있다는 점이 다릅니다.
+
+```python Code
+from crewai import Agent
+from crewai_tools import SerperDevTool
+
+# Create an agent
+researcher = Agent(
+    role="AI Technology Researcher",
+    goal="Research the latest AI developments",
+    tools=[SerperDevTool()],
+    verbose=True
+)
+
+# Use kickoff() to interact directly with the agent
+result = researcher.kickoff("What are the latest developments in language models?")
+
+# Access the raw response
+print(result.raw)
+```
+
+### 매개변수 및 반환 값
+
+| 매개변수           | 타입                                 | 설명                                                                      |
+| :---------------- | :---------------------------------- | :------------------------------------------------------------------------ |
+| `messages`        | `Union[str, List[Dict[str, str]]]`  | 문자열 쿼리 또는 역할/내용이 포함된 메시지 딕셔너리의 리스트                |
+| `response_format` | `Optional[Type[Any]]`               | 구조화된 출력을 위한 선택적 Pydantic 모델                                   |
+
+이 메서드는 다음과 같은 속성을 가진 `LiteAgentOutput` 객체를 반환합니다:
+
+- `raw`: 원시 출력 텍스트를 포함하는 문자열
+- `pydantic`: 파싱된 Pydantic 모델 (`response_format`이 제공된 경우)
+- `agent_role`: 출력을 생성한 agent의 역할
+- `usage_metrics`: 실행에 대한 토큰 사용 지표
+
+### 구조화된 출력
+
+`response_format`으로 Pydantic 모델을 제공하여 구조화된 출력을 받을 수 있습니다:
+
+```python Code
+from pydantic import BaseModel
+from typing import List
+
+class ResearchFindings(BaseModel):
+    main_points: List[str]
+    key_technologies: List[str]
+    future_predictions: str
+
+# Get structured output
+result = researcher.kickoff(
+    "Summarize the latest developments in AI for 2025",
+    response_format=ResearchFindings
+)
+
+# Access structured data
+print(result.pydantic.main_points)
+print(result.pydantic.future_predictions)
+```
+
+### 여러 개의 메시지
+
+대화 기록을 메시지 딕셔너리의 목록으로 제공할 수도 있습니다:
+
+```python Code
+messages = [
+    {"role": "user", "content": "I need information about large language models"},
+    {"role": "assistant", "content": "I'd be happy to help with that! What specifically would you like to know?"},
+    {"role": "user", "content": "What are the latest developments in 2025?"}
+]
+
+result = researcher.kickoff(messages)
+```
+
+### 비동기 지원
+
+동일한 매개변수를 사용하는 비동기 버전은 `kickoff_async()`를 통해 사용할 수 있습니다:
+
+```python Code
+import asyncio
+
+async def main():
+    result = await researcher.kickoff_async("What are the latest developments in AI?")
+    print(result.raw)
+
+asyncio.run(main())
+```
+
+<Note>
+`kickoff()` 메서드는 내부적으로 `LiteAgent`를 사용하며, 모든 agent 설정(역할, 목표, 백스토리, 도구 등)을 유지하면서도 더 간단한 실행 흐름을 제공합니다.
+</Note>
+
+## 중요한 고려사항 및 모범 사례
+
+### 보안 및 코드 실행
+- `allow_code_execution`을 사용할 때는 사용자 입력에 주의하고 항상 입력 값을 검증하세요
+- 운영 환경에서는 `code_execution_mode: "safe"`(Docker)를 사용하세요
+- 무한 루프를 방지하기 위해 적절한 `max_execution_time` 제한을 설정하는 것을 고려하세요
+
+### 성능 최적화
+- `respect_context_window: true`를 사용하여 토큰 제한 문제를 방지하세요.
+- 적절한 `max_rpm`을 설정하여 속도 제한을 피하세요.
+- 반복적인 작업의 성능 향상을 위해 `cache: true`를 활성화하세요.
+- 작업의 복잡도에 따라 `max_iter`와 `max_retry_limit`을 조정하세요.
+
+### 메모리 및 컨텍스트 관리
+- 도메인별 정보를 위해 `knowledge_sources`를 활용하세요
+- 커스텀 임베딩 모델을 사용할 때는 `embedder`를 구성하세요
+- 에이전트 행동을 세밀하게 제어하려면 커스텀 템플릿(`system_template`, `prompt_template`, `response_template`)을 사용하세요
+
+### 고급 기능
+- 복잡한 작업을 실행하기 전에 계획을 세우고 반성해야 하는 에이전트의 경우 `reasoning: true`를 활성화하세요.
+- 계획 반복 횟수를 제어하려면 적절한 `max_reasoning_attempts` 값을 설정하세요 (무제한 시 None 사용).
+- 시간에 민감한 작업을 위해 에이전트가 현재 날짜를 인식할 수 있도록 `inject_date: true`를 사용하세요.
+- 표준 Python datetime 형식 코드를 사용하여 `date_format`으로 날짜 형식을 맞춤 설정할 수 있습니다.
+- 텍스트와 시각적 콘텐츠를 모두 처리해야 하는 에이전트의 경우 `multimodal: true`를 활성화하세요.
+
+### 에이전트 협업
+- 에이전트들이 함께 작업해야 할 때 `allow_delegation: true`를 활성화하세요
+- 에이전트 상호작용을 모니터링하고 기록하려면 `step_callback`을 사용하세요
+- 다양한 목적에 따라 서로 다른 LLM을 사용하는 것을 고려하세요:
+  - 복잡한 추론에는 메인 `llm`
+  - 효율적인 도구 사용에는 `function_calling_llm`
+
+### 날짜 인식 및 추론
+- 시간에 민감한 작업을 위해 `inject_date: true`를 사용하여 에이전트에게 현재 날짜 인식 기능을 제공합니다.
+- 표준 Python datetime 형식 코드를 사용하는 `date_format`으로 날짜 형식을 사용자 정의할 수 있습니다.
+- 유효한 형식 코드는 다음과 같습니다: %Y (연도), %m (월), %d (일), %B (전체 월 이름) 등.
+- 잘못된 날짜 형식은 경고로 기록되며, 작업 설명을 수정하지 않습니다.
+- 사전 계획 및 성찰이 필요한 복잡한 작업의 경우 `reasoning: true`를 활성화하세요.
+
+### 모델 호환성
+- 시스템 메시지를 지원하지 않는 이전 모델의 경우 `use_system_prompt: false`로 설정하세요
+- 선택한 `llm`이(가) 필요한 기능(예: 함수 호출)을 지원하는지 확인하세요
+
+## 일반적인 문제 해결
+
+1. **Rate Limiting(속도 제한)**: API 속도 제한에 도달하는 경우:
+   - 적절한 `max_rpm` 구현
+   - 반복적인 작업에 캐싱 사용
+   - 요청을 일괄 처리(batch)하는 것 고려
+
+2. **Context Window Errors(컨텍스트 윈도우 오류)**: 컨텍스트 한계를 초과하는 경우:
+   - `respect_context_window` 활성화
+   - 더 효율적인 프롬프트 사용
+   - 주기적으로 에이전트 메모리 정리
+
+3. **Code Execution Issues(코드 실행 문제)**: 코드 실행이 실패하는 경우:
+   - 안전 모드를 위해 Docker 설치 여부 확인
+   - 실행 권한 확인
+   - 코드 샌드박스 설정 검토
+
+4. **Memory Issues(메모리 문제)**: 에이전트 응답이 일관되지 않은 경우:
+   - knowledge 소스 구성 확인
+   - 대화 기록 관리 검토
+
+에이전트는 특정 사용 사례에 맞게 구성될 때 가장 효과적입니다. 자신의 요구 사항을 이해하고 이에 맞게 이러한 매개변수를 조정하는 데 시간을 투자하세요.

@@ -1,0 +1,187 @@
+---
+title: YouTube 동영상 RAG 검색
+description: YoutubeVideoSearchTool은 YouTube 동영상의 콘텐츠 내에서 RAG(Retrieval-Augmented Generation) 검색을 수행하도록 설계되었습니다.
+icon: youtube
+---
+
+# `YoutubeVideoSearchTool`
+
+<Note>
+    우리는 도구를 계속 개선하고 있으므로, 향후 예기치 않은 동작이나 변경이 있을 수 있습니다.
+</Note>
+
+## 설명
+
+이 도구는 `crewai_tools` 패키지의 일부로, Youtube 동영상 콘텐츠 내에서 의미 기반 검색을 수행하도록 설계되었으며 Retrieval-Augmented Generation (RAG) 기술을 활용합니다.
+이 도구는 패키지 내 여러 "검색" 도구 중 하나로, 다양한 소스에 대해 RAG를 활용합니다.
+YoutubeVideoSearchTool은 검색에 유연성을 제공합니다. 사용자는 특정 동영상 URL을 지정하지 않고도 Youtube 동영상 콘텐츠 전반에 걸쳐 검색할 수 있으며,
+URL을 제공하여 특정 Youtube 동영상에 대해 검색을 제한할 수도 있습니다.
+
+## 설치
+
+`YoutubeVideoSearchTool`을 사용하려면 먼저 `crewai_tools` 패키지를 설치해야 합니다.
+이 패키지에는 데이터 분석 및 처리 작업을 향상시키기 위해 설계된 다양한 유틸리티와 함께 `YoutubeVideoSearchTool`이 포함되어 있습니다.
+터미널에서 다음 명령어를 실행하여 패키지를 설치하세요:
+
+```shell
+pip install 'crewai[tools]'
+```
+
+## 예시
+
+다음 예시는 `YoutubeVideoSearchTool`을 CrewAI agent와 함께 사용하는 방법을 보여줍니다.
+
+```python Code
+from crewai import Agent, Task, Crew
+from crewai_tools import YoutubeVideoSearchTool
+
+# Initialize the tool for general YouTube video searches
+youtube_search_tool = YoutubeVideoSearchTool()
+
+# Define an agent that uses the tool
+video_researcher = Agent(
+    role="Video Researcher",
+    goal="Extract relevant information from YouTube videos",
+    backstory="An expert researcher who specializes in analyzing video content.",
+    tools=[youtube_search_tool],
+    verbose=True,
+)
+
+# Example task to search for information in a specific video
+research_task = Task(
+    description="Search for information about machine learning frameworks in the YouTube video at {youtube_video_url}",
+    expected_output="A summary of the key machine learning frameworks mentioned in the video.",
+    agent=video_researcher,
+)
+
+# Create and run the crew
+crew = Crew(agents=[video_researcher], tasks=[research_task])
+result = crew.kickoff(inputs={"youtube_video_url": "https://youtube.com/watch?v=example"})
+```
+
+도구를 특정 YouTube 동영상 URL로 초기화할 수도 있습니다:
+
+```python Code
+# Initialize the tool with a specific YouTube video URL
+youtube_search_tool = YoutubeVideoSearchTool(
+    youtube_video_url='https://youtube.com/watch?v=example'
+)
+
+# Define an agent that uses the tool
+video_researcher = Agent(
+    role="Video Researcher",
+    goal="Extract relevant information from a specific YouTube video",
+    backstory="An expert researcher who specializes in analyzing video content.",
+    tools=[youtube_search_tool],
+    verbose=True,
+)
+```
+
+## 매개변수
+
+`YoutubeVideoSearchTool`은(는) 다음과 같은 매개변수를 허용합니다:
+
+- **youtube_video_url**: 선택 사항. 검색할 YouTube 비디오의 URL입니다. 초기화 시 제공되면, 에이전트가 도구를 사용할 때 해당 URL을 지정할 필요가 없습니다.
+- **config**: 선택 사항. LLM 및 임베더 설정을 포함한 기본 RAG 시스템의 구성입니다.
+- **summarize**: 선택 사항. 검색된 콘텐츠를 요약할지 여부입니다. 기본값은 `False`입니다.
+
+에이전트와 함께 도구를 사용할 때 에이전트가 제공해야 하는 항목:
+
+- **search_query**: 필수. 비디오 콘텐츠에서 관련 정보를 찾기 위한 검색 질의입니다.
+- **youtube_video_url**: 초기화 시 제공되지 않은 경우에만 필수. 검색할 YouTube 비디오의 URL입니다.
+
+## 사용자 지정 모델 및 임베딩
+
+기본적으로 이 도구는 임베딩과 요약 모두에 OpenAI를 사용합니다. 모델을 사용자 지정하려면 다음과 같이 config 딕셔너리를 사용할 수 있습니다:
+
+```python Code
+youtube_search_tool = YoutubeVideoSearchTool(
+    config=dict(
+        llm=dict(
+            provider="ollama", # or google, openai, anthropic, llama2, ...
+            config=dict(
+                model="llama2",
+                # temperature=0.5,
+                # top_p=1,
+                # stream=true,
+            ),
+        ),
+        embedder=dict(
+            provider="google", # or openai, ollama, ...
+            config=dict(
+                model="models/embedding-001",
+                task_type="retrieval_document",
+                # title="Embeddings",
+            ),
+        ),
+    )
+)
+```
+
+## 에이전트 통합 예시
+
+아래는 `YoutubeVideoSearchTool`을 CrewAI 에이전트와 통합하는 방법에 대한 보다 자세한 예제입니다.
+
+```python Code
+from crewai import Agent, Task, Crew
+from crewai_tools import YoutubeVideoSearchTool
+
+# Initialize the tool
+youtube_search_tool = YoutubeVideoSearchTool()
+
+# Define an agent that uses the tool
+video_researcher = Agent(
+    role="Video Researcher",
+    goal="Extract and analyze information from YouTube videos",
+    backstory="""You are an expert video researcher who specializes in extracting
+    and analyzing information from YouTube videos. You have a keen eye for detail
+    and can quickly identify key points and insights from video content.""",
+    tools=[youtube_search_tool],
+    verbose=True,
+)
+
+# Create a task for the agent
+research_task = Task(
+    description="""
+    Search for information about recent advancements in artificial intelligence
+    in the YouTube video at {youtube_video_url}.
+
+    Focus on:
+    1. Key AI technologies mentioned
+    2. Real-world applications discussed
+    3. Future predictions made by the speaker
+
+    Provide a comprehensive summary of these points.
+    """,
+    expected_output="A detailed summary of AI advancements, applications, and future predictions from the video.",
+    agent=video_researcher,
+)
+
+# Run the task
+crew = Crew(agents=[video_researcher], tasks=[research_task])
+result = crew.kickoff(inputs={"youtube_video_url": "https://youtube.com/watch?v=example"})
+```
+
+## 구현 세부사항
+
+`YoutubeVideoSearchTool`은 Retrieval-Augmented Generation의 기본 기능을 제공하는 `RagTool`의 하위 클래스로 구현됩니다.
+
+```python Code
+class YoutubeVideoSearchTool(RagTool):
+    name: str = "Search a Youtube Video content"
+    description: str = "A tool that can be used to semantic search a query from a Youtube Video content."
+    args_schema: Type[BaseModel] = YoutubeVideoSearchToolSchema
+
+    def __init__(self, youtube_video_url: Optional[str] = None, **kwargs):
+        super().__init__(**kwargs)
+        if youtube_video_url is not None:
+            kwargs["data_type"] = DataType.YOUTUBE_VIDEO
+            self.add(youtube_video_url)
+            self.description = f"A tool that can be used to semantic search a query the {youtube_video_url} Youtube Video content."
+            self.args_schema = FixedYoutubeVideoSearchToolSchema
+            self._generate_description()
+```
+
+## 결론
+
+`YoutubeVideoSearchTool`은 RAG 기술을 사용하여 YouTube 비디오 콘텐츠에서 정보를 검색하고 추출할 수 있는 강력한 방법을 제공합니다. 이 도구를 통해 에이전트는 비디오 콘텐츠 내에서 검색을 수행할 수 있으므로, 그렇지 않으면 수행하기 어려운 정보 추출 및 분석 작업을 용이하게 할 수 있습니다. 이 도구는 특히 연구, 콘텐츠 분석, 그리고 비디오 소스에서 지식 추출을 위해 매우 유용합니다.

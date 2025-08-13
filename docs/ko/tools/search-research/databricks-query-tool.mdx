@@ -1,0 +1,78 @@
+---
+title: Databricks SQL 쿼리 도구
+description: DatabricksQueryTool은 Databricks 워크스페이스 테이블에 대해 SQL 쿼리를 실행합니다.
+icon: trowel-bricks
+---
+
+# `DatabricksQueryTool`
+
+## 설명
+
+CLI 프로필 또는 직접 호스트/토큰 인증을 사용하여 Databricks 워크스페이스 테이블에 대해 SQL을 실행합니다.
+
+## 설치
+
+```shell
+uv add crewai-tools[databricks-sdk]
+```
+
+## 환경 변수
+
+- `DATABRICKS_CONFIG_PROFILE` 또는 (`DATABRICKS_HOST` + `DATABRICKS_TOKEN`)
+
+개인 액세스 토큰을 생성하고 Databricks 작업 공간의 사용자 설정 → 개발자 메뉴에서 호스트 정보를 확인하세요.
+문서: https://docs.databricks.com/ko/dev-tools/auth/pat.html
+
+## 예시
+
+```python Code
+from crewai import Agent, Task, Crew
+from crewai_tools import DatabricksQueryTool
+
+tool = DatabricksQueryTool(
+    default_catalog="main",
+    default_schema="default",
+)
+
+agent = Agent(
+    role="Data Analyst",
+    goal="Query Databricks",
+    tools=[tool],
+    verbose=True,
+)
+
+task = Task(
+    description="SELECT * FROM my_table LIMIT 10",
+    expected_output="10 rows",
+    agent=agent,
+)
+
+crew = Crew(
+    agents=[agent],
+    tasks=[task],
+    verbose=True,
+)
+result = crew.kickoff()
+
+print(result)
+```
+
+## 매개변수
+
+- `query` (필수): 실행할 SQL 쿼리
+- `catalog` (선택): 기본 카탈로그 재정의
+- `db_schema` (선택): 기본 스키마 재정의
+- `warehouse_id` (선택): 기본 SQL 웨어하우스 재정의
+- `row_limit` (선택): 반환할 최대 행 수 (기본값: 1000)
+
+## 초기화 시 기본값
+
+- `default_catalog`
+- `default_schema`
+- `default_warehouse_id`
+
+### 오류 처리 및 팁
+
+- 인증 오류: `DATABRICKS_HOST`가 `https://`로 시작하는지와 토큰이 유효한지 확인하세요.
+- 권한: SQL 웨어하우스와 스키마에 토큰으로 접근할 수 있는지 확인하세요.
+- 한계: 장시간 실행되는 쿼리는 에이전트 루프에서 피해야 하며, 필터나 제한을 추가하세요.

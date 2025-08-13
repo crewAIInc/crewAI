@@ -1,0 +1,63 @@
+---
+title: SerpApi 구글 검색 도구
+description: SerpApiGoogleSearchTool은 SerpApi 서비스를 사용하여 구글 검색을 수행합니다.
+icon: google
+---
+
+# `SerpApiGoogleSearchTool`
+
+## 설명
+
+`SerpApiGoogleSearchTool`을 사용하여 SerpApi로 Google 검색을 실행하고 구조화된 결과를 가져올 수 있습니다. SerpApi API 키가 필요합니다.
+
+## 설치
+
+```shell
+uv add crewai-tools[serpapi]
+```
+
+## 환경 변수
+
+- `SERPAPI_API_KEY` (필수): SerpApi용 API 키입니다. https://serpapi.com/에서 생성할 수 있습니다(무료 요금제 제공).
+
+## 예시
+
+```python Code
+from crewai import Agent, Task, Crew
+from crewai_tools import SerpApiGoogleSearchTool
+
+tool = SerpApiGoogleSearchTool()
+
+agent = Agent(
+    role="Researcher",
+    goal="Answer questions using Google search",
+    backstory="Search specialist",
+    tools=[tool],
+    verbose=True,
+)
+
+task = Task(
+    description="Search for the latest CrewAI releases",
+    expected_output="A concise list of relevant results with titles and links",
+    agent=agent,
+)
+
+crew = Crew(agents=[agent], tasks=[task])
+result = crew.kickoff()
+```
+
+## 참고 사항
+
+- 환경 변수에 `SERPAPI_API_KEY`를 설정하세요. https://serpapi.com/ 에서 키를 생성할 수 있습니다.
+- SerpApi를 통한 Google Shopping도 참조하세요: `/ko/tools/search-research/serpapi-googleshoppingtool`
+
+## 파라미터
+
+### 실행 파라미터
+
+- `search_query` (str, 필수): Google 쿼리.
+- `location` (str, 선택): 지리적 위치 파라미터.
+
+## 참고 사항
+
+- 이 도구는 SerpApi를 래핑하고 구조화된 검색 결과를 반환합니다.

@@ -1,0 +1,96 @@
+---
+title: "개요"
+description: "CrewAI의 문서 처리 도구를 사용하여 다양한 파일 형식을 읽고, 쓰고, 검색하세요"
+icon: "face-smile"
+---
+
+이러한 도구들은 에이전트가 다양한 파일 형식과 문서 유형을 다룰 수 있도록 해줍니다. PDF를 읽는 것부터 JSON 데이터를 처리하는 것까지, 이 도구들은 모든 문서 처리 요구를 충족합니다.
+
+## **사용 가능한 도구**
+
+<CardGroup cols={2}>
+  <Card title="파일 읽기 도구" icon="folders" href="/ko/tools/file-document/filereadtool">
+    텍스트, 마크다운 등 다양한 파일 유형에서 내용을 읽어옵니다.
+  </Card>
+
+  <Card title="파일 쓰기 도구" icon="file-pen" href="/ko/tools/file-document/filewritetool">
+    파일에 내용을 쓰고, 새로운 문서를 생성하거나 처리된 데이터를 저장합니다.
+  </Card>
+
+  <Card title="PDF 검색 도구" icon="file-pdf" href="/ko/tools/file-document/pdfsearchtool">
+    PDF 문서에서 텍스트를 효율적으로 검색하고 추출합니다.
+  </Card>
+
+  <Card title="DOCX 검색 도구" icon="file-word" href="/ko/tools/file-document/docxsearchtool">
+    Microsoft Word 문서를 검색하고 관련된 내용을 추출합니다.
+  </Card>
+
+  <Card title="JSON 검색 도구" icon="brackets-curly" href="/ko/tools/file-document/jsonsearchtool">
+    JSON 파일을 파싱하고 고급 쿼리 기능으로 검색합니다.
+  </Card>
+
+  <Card title="CSV 검색 도구" icon="table" href="/ko/tools/file-document/csvsearchtool">
+    CSV 파일을 처리하고, 특정 행과 열을 추출하여 검색합니다.
+  </Card>
+
+  <Card title="XML 검색 도구" icon="code" href="/ko/tools/file-document/xmlsearchtool">
+    XML 파일을 파싱하고 특정 요소 및 속성을 검색합니다.
+  </Card>
+
+  <Card title="MDX 검색 도구" icon="markdown" href="/ko/tools/file-document/mdxsearchtool">
+    MDX 파일을 검색하여 문서의 내용을 추출합니다.
+  </Card>
+
+  <Card title="TXT 검색 도구" icon="file-lines" href="/ko/tools/file-document/txtsearchtool">
+    일반 텍스트 파일을 패턴 매칭 기능으로 검색합니다.
+  </Card>
+
+  <Card title="디렉터리 검색 도구" icon="folder-open" href="/ko/tools/file-document/directorysearchtool">
+    디렉터리 구조 내의 파일 및 폴더를 검색합니다.
+  </Card>
+
+  <Card title="디렉터리 읽기 도구" icon="folder" href="/ko/tools/file-document/directoryreadtool">
+    디렉터리의 내용, 파일 구조 및 메타데이터를 읽고 나열합니다.
+  </Card>
+
+  <Card title="OCR 도구" icon="image" href="/ko/tools/file-document/ocrtool">
+    비전 기능이 있는 LLM을 사용하여 이미지(로컬 파일 또는 URL)에서 텍스트를 추출합니다.
+  </Card>
+
+  <Card title="PDF 텍스트 쓰기 도구" icon="file-pdf" href="/ko/tools/file-document/pdf-text-writing-tool">
+    PDF에서 특정 좌표에 텍스트를 작성하고, 옵션으로 커스텀 폰트도 지원합니다.
+  </Card>
+</CardGroup>
+
+## **공통 사용 사례**
+
+- **문서 처리**: 다양한 파일 형식에서 콘텐츠를 추출하고 분석
+- **데이터 가져오기**: CSV, JSON, XML 파일에서 구조화된 데이터 읽기
+- **콘텐츠 검색**: 대용량 문서 컬렉션 내에서 특정 정보 찾기
+- **파일 관리**: 파일 및 디렉터리 구성 및 조작
+- **데이터 내보내기**: 처리된 결과를 다양한 파일 형식으로 저장
+
+## **빠른 시작 예시**
+
+```python
+from crewai_tools import FileReadTool, PDFSearchTool, JSONSearchTool
+
+# Create tools
+file_reader = FileReadTool()
+pdf_searcher = PDFSearchTool()
+json_processor = JSONSearchTool()
+
+# Add to your agent
+agent = Agent(
+    role="Document Analyst",
+    tools=[file_reader, pdf_searcher, json_processor],
+    goal="Process and analyze various document types"
+)
+```
+
+## **문서 처리 팁**
+
+- **파일 권한**: 에이전트가 적절한 읽기/쓰기 권한을 가지고 있는지 확인하세요
+- **대용량 파일**: 매우 큰 문서의 경우 청킹(chunking)을 고려하세요
+- **형식 지원**: 도구 문서에서 지원되는 파일 형식을 확인하세요
+- **오류 처리**: 손상되었거나 접근이 불가능한 파일에 대해 적절한 오류 처리를 구현하세요

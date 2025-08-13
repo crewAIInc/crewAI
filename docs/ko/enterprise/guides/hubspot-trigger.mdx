@@ -1,0 +1,53 @@
+---
+title: "HubSpot 트리거"
+description: "HubSpot 워크플로우에서 CrewAI 크루를 직접 트리거하세요"
+icon: "hubspot"
+---
+
+이 가이드는 HubSpot Workflows에서 직접 crew를 시작할 수 있도록 CrewAI Enterprise용 HubSpot 트리거를 설정하는 단계별 과정을 제공합니다.
+
+## 사전 준비 사항
+
+- CrewAI Enterprise 계정
+- [HubSpot Workflows](https://knowledge.hubspot.com/workflows/create-workflows) 기능이 활성화된 HubSpot 계정
+
+## 설정 단계
+
+<Steps>
+    <Step title="HubSpot 계정을 CrewAI Enterprise와 연결하기">
+        - `CrewAI Enterprise 계정 > 트리거`에 로그인합니다.
+        - 사용 가능한 트리거 목록에서 `HubSpot`을 선택합니다.
+        - CrewAI Enterprise와 연결하고자 하는 HubSpot 계정을 선택합니다.
+        - 화면에 나타나는 안내에 따라 CrewAI Enterprise가 HubSpot 계정에 접근하도록 승인합니다.
+        - HubSpot이 CrewAI Enterprise와 성공적으로 연결되면 확인 메시지가 표시됩니다.
+    </Step>
+    <Step title="HubSpot 워크플로우 생성하기">
+        - `HubSpot 계정 > 자동화 > 워크플로우 > 새 워크플로우`에 로그인합니다.
+        - 필요에 맞는 워크플로우 유형을 선택합니다 (예: 처음부터 시작).
+        - 워크플로우 빌더에서 더하기(+) 아이콘을 클릭하여 새로운 작업을 추가합니다.
+        - `통합 앱 > CrewAI > Crew 시작하기`를 선택합니다.
+        - 시작할 Crew를 선택합니다.
+        - `저장`을 클릭하여 워크플로우에 작업을 추가합니다.
+        <Frame>
+            <img src="/images/enterprise/hubspot-workflow-1.png" alt="HubSpot Workflow 1" />
+        </Frame>
+    </Step>
+    <Step title="Crew 결과를 다른 작업과 함께 사용하기">
+        - Crew 시작 단계 이후, 더하기(+) 아이콘을 클릭하여 새로운 작업을 추가합니다.
+        - 예를 들어, 내부 이메일 알림을 전송하려면 `커뮤니케이션 > 내부 이메일 알림 전송`을 선택합니다.
+        - 본문 필드에서 `데이터 삽입`을 클릭하고, `다음에서 속성 또는 작업 결과 보기 > 작업 결과 > Crew 결과`를 선택하여 이메일에 Crew 데이터를 포함합니다.
+            <Frame>
+                <img src="/images/enterprise/hubspot-workflow-2.png" alt="HubSpot Workflow 2" />
+            </Frame>
+        - 필요에 따라 추가 작업을 구성합니다.
+        - 모든 워크플로우 단계를 검토하여 올바르게 설정되었는지 확인합니다.
+        - 워크플로우를 활성화합니다.
+            <Frame>
+                <img src="/images/enterprise/hubspot-workflow-3.png" alt="HubSpot Workflow 3" />
+            </Frame>
+    </Step>
+</Steps>
+
+## 추가 자료
+
+사용 가능한 작업과 사용자 지정 옵션에 대한 자세한 정보는 [HubSpot 워크플로우 문서](https://knowledge.hubspot.com/workflows/create-workflows)를 참고하세요.

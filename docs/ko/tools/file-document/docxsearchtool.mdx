@@ -1,0 +1,79 @@
+---
+title: DOCX RAG 검색
+description: DOCXSearchTool은 DOCX 문서 내에서 의미 기반 검색을 수행하도록 설계된 RAG 도구입니다.
+icon: file-word
+---
+
+# `DOCXSearchTool`
+
+<Note>
+    저희는 아직 도구를 개선하는 중이므로, 예기치 않은 동작이나 변경 사항이 발생할 수 있습니다.
+</Note>
+
+## 설명
+
+`DOCXSearchTool`은 DOCX 문서 내에서 의미 기반 검색을 수행하기 위해 설계된 RAG 도구입니다.
+사용자는 쿼리 기반 검색을 통해 DOCX 파일에서 관련 정보를 효과적으로 검색하고 추출할 수 있습니다.
+이 도구는 데이터 분석, 정보 관리, 연구 작업에 매우 유용하며,
+대규모 문서 컬렉션에서 특정 정보를 찾는 과정을 간소화해 줍니다.
+
+## 설치
+
+터미널에서 다음 명령어를 실행하여 crewai_tools 패키지를 설치하세요:
+
+```shell
+uv pip install docx2txt 'crewai[tools]'
+```
+
+## 예시
+
+다음 예시는 DOCXSearchTool을 초기화하여 모든 DOCX 파일의 내용에서 검색하거나 특정 DOCX 파일 경로로 검색하는 방법을 보여줍니다.
+
+```python Code
+from crewai_tools import DOCXSearchTool
+
+# Initialize the tool to search within any DOCX file's content
+tool = DOCXSearchTool()
+
+# OR
+
+# Initialize the tool with a specific DOCX file,
+# so the agent can only search the content of the specified DOCX file
+tool = DOCXSearchTool(docx='path/to/your/document.docx')
+```
+
+## 인자
+
+다음 매개변수를 사용하여 `DOCXSearchTool`의 동작을 사용자 정의할 수 있습니다:
+
+| 인자           | 타입       | 설명                                                                                                                               |
+|:---------------|:---------|:-------------------------------------------------------------------------------------------------------------------------------------|
+| **docx**        | `string` | _선택 사항_. 검색하려는 DOCX 파일의 경로를 지정하는 인자입니다. 초기화 시 제공하지 않은 경우, 도구는 이후에 검색을 위한 DOCX 파일의 내용 경로를 지정할 수 있도록 허용합니다. |
+
+## 커스텀 모델과 임베딩
+
+기본적으로 이 도구는 임베딩과 요약 모두에 OpenAI를 사용합니다. 모델을 커스터마이즈하려면 다음과 같이 config 딕셔너리를 사용할 수 있습니다:
+
+```python Code
+tool = DOCXSearchTool(
+    config=dict(
+        llm=dict(
+            provider="ollama", # or google, openai, anthropic, llama2, ...
+            config=dict(
+                model="llama2",
+                # temperature=0.5,
+                # top_p=1,
+                # stream=true,
+            ),
+        ),
+        embedder=dict(
+            provider="google", # or openai, ollama, ...
+            config=dict(
+                model="models/embedding-001",
+                task_type="retrieval_document",
+                # title="Embeddings",
+            ),
+        ),
+    )
+)
+```

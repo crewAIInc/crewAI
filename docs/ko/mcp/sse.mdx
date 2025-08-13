@@ -1,0 +1,150 @@
+---
+title: SSE 트랜스포트
+description: 서버 전송 이벤트(SSE)를 사용하여 CrewAI를 원격 MCP 서버에 연결하여 실시간 통신을 구현하는 방법을 알아보세요.
+icon: wifi
+---
+
+## 개요
+
+Server-Sent Events(SSE)는 웹 서버가 하나의 장기 실행 HTTP 연결을 통해 클라이언트에 업데이트를 전송할 수 있는 표준 방식을 제공합니다. MCP의 맥락에서 SSE는 원격 서버가 데이터(예: tool 응답)를 실시간으로 CrewAI 애플리케이션에 스트리밍하는 데 사용됩니다.
+
+## 주요 개념
+
+- **원격 서버**: SSE는 원격에 호스팅된 MCP 서버에 적합합니다.
+- **단방향 스트림**: 일반적으로 SSE는 서버에서 클라이언트로의 단방향 통신 채널입니다.
+- **`MCPServerAdapter` 구성**: SSE의 경우, 서버의 URL을 제공하고 전송 유형을 지정해야 합니다.
+
+## SSE를 통한 연결
+
+SSE 기반 MCP 서버에 연결하려면 연결 수명 주기를 관리하는 두 가지 주요 접근 방식을 사용할 수 있습니다.
+
+### 1. 완전 관리형 연결(권장)
+
+Python 컨텍스트 매니저(`with` 문)를 사용하는 것이 권장되는 접근 방식입니다. 이 방법은 SSE MCP 서버에 대한 연결의 생성과 종료를 자동으로 처리합니다.
+
+```python
+from crewai import Agent, Task, Crew, Process
+from crewai_tools import MCPServerAdapter
+
+server_params = {
+    "url": "http://localhost:8000/sse", # Replace with your actual SSE server URL
+    "transport": "sse" 
+}
+
+# Using MCPServerAdapter with a context manager
+try:
+    with MCPServerAdapter(server_params) as tools:
+        print(f"Available tools from SSE MCP server: {[tool.name for tool in tools]}")
+
+        # Example: Using a tool from the SSE MCP server
+        sse_agent = Agent(
+            role="Remote Service User",
+            goal="Utilize a tool provided by a remote SSE MCP server.",
+            backstory="An AI agent that connects to external services via SSE.",
+            tools=tools,
+            reasoning=True,
+            verbose=True,
+        )
+
+        sse_task = Task(
+            description="Fetch real-time stock updates for 'AAPL' using an SSE tool.",
+            expected_output="The latest stock price for AAPL.",
+            agent=sse_agent,
+            markdown=True
+        )
+
+        sse_crew = Crew(
+            agents=[sse_agent],
+            tasks=[sse_task],
+            verbose=True,
+            process=Process.sequential
+        )
+        
+        if tools: # Only kickoff if tools were loaded
+            result = sse_crew.kickoff() # Add inputs={'stock_symbol': 'AAPL'} if tool requires it
+            print("\nCrew Task Result (SSE - Managed):\n", result)
+        else:
+            print("Skipping crew kickoff as tools were not loaded (check server connection).")
+
+except Exception as e:
+    print(f"Error connecting to or using SSE MCP server (Managed): {e}")
+    print("Ensure the SSE MCP server is running and accessible at the specified URL.")
+
+```
+
+<Note>
+`"http://localhost:8000/sse"`를 실제 SSE MCP 서버의 URL로 교체하십시오.
+</Note>
+
+### 2. 수동 연결 라이프사이클
+
+더 세밀한 제어가 필요한 경우, `MCPServerAdapter`의 연결 라이프사이클을 수동으로 관리할 수 있습니다.
+
+<Info>
+연결이 종료되고 리소스가 해제되도록 반드시 `mcp_server_adapter.stop()`을 호출해야 합니다. `try...finally` 블록을 사용하는 것을 강력히 권장합니다.
+</Info>
+
+```python
+from crewai import Agent, Task, Crew, Process
+from crewai_tools import MCPServerAdapter
+
+server_params = {
+    "url": "http://localhost:8000/sse", # Replace with your actual SSE server URL
+    "transport": "sse"
+}
+
+mcp_server_adapter = None 
+try:
+    mcp_server_adapter = MCPServerAdapter(server_params)
+    mcp_server_adapter.start()
+    tools = mcp_server_adapter.tools
+    print(f"Available tools (manual SSE): {[tool.name for tool in tools]}")
+
+    manual_sse_agent = Agent(
+        role="Remote Data Analyst",
+        goal="Analyze data fetched from a remote SSE MCP server using manual connection management.",
+        backstory="An AI skilled in handling SSE connections explicitly.",
+        tools=tools,
+        verbose=True
+    )
+    
+    analysis_task = Task(
+        description="Fetch and analyze the latest user activity trends from the SSE server.",
+        expected_output="A summary report of user activity trends.",
+        agent=manual_sse_agent
+    )
+    
+    analysis_crew = Crew(
+        agents=[manual_sse_agent],
+        tasks=[analysis_task],
+        verbose=True,
+        process=Process.sequential
+    )
+    
+    result = analysis_crew.kickoff()
+    print("\nCrew Task Result (SSE - Manual):\n", result)
+
+except Exception as e:
+    print(f"An error occurred during manual SSE MCP integration: {e}")
+    print("Ensure the SSE MCP server is running and accessible.")
+finally:
+    if mcp_server_adapter and mcp_server_adapter.is_connected:
+        print("Stopping SSE MCP server connection (manual)...")
+        mcp_server_adapter.stop()  # **Crucial: Ensure stop is called**
+    elif mcp_server_adapter:
+        print("SSE MCP server adapter was not connected. No stop needed or start failed.")
+
+```
+
+## SSE를 위한 보안 고려사항
+
+<Warning>
+**DNS 리바인딩 공격**: SSE 전송 방식은 MCP 서버가 적절하게 보안 조치되지 않은 경우 DNS 리바인딩 공격에 취약할 수 있습니다. 이로 인해 악의적인 웹사이트가 로컬 또는 인트라넷 기반 MCP 서버와 상호 작용할 수 있습니다.
+</Warning>
+
+이 위험을 완화하려면:
+- MCP 서버 구현에서는 들어오는 SSE 연결의 **`Origin` 헤더를 검증**해야 합니다.
+- 개발 환경에서 로컬 SSE MCP 서버를 실행할 때에는 모든 네트워크 인터페이스(`0.0.0.0`)가 아닌, **`localhost`(`127.0.0.1`)에만 바인딩**해야 합니다.
+- 민감한 도구나 데이터를 노출하는 SSE 연결에는 **적절한 인증**을 구현해야 합니다.
+
+보안 모범 사례에 대한 포괄적인 개요는 [보안 고려사항](./security.mdx) 페이지와 공식 [MCP 전송 보안 문서](https://modelcontextprotocol.io/docs/concepts/transports#security-considerations)를 참고하시기 바랍니다.

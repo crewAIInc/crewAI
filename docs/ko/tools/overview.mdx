@@ -1,0 +1,120 @@
+---
+title: "도구 개요"
+description: "CrewAI의 AI 에이전트를 강화하는 40개 이상의 방대한 도구 라이브러리를 확인해보세요"
+icon: "toolbox"
+---
+
+CrewAI는 에이전트의 기능을 향상시키기 위한 다양한 사전 구축 도구 라이브러리를 제공합니다. 파일 처리부터 웹 스크래핑, 데이터베이스 쿼리, AI 서비스에 이르기까지 모두 지원합니다.
+
+## **도구 카테고리**
+
+<CardGroup cols={2}>
+  <Card
+    title="파일 & 문서"
+    icon="file-check"
+    href="/ko/tools/file-document/overview"
+    color="#3B82F6"
+  >
+    PDF, DOCX, JSON, CSV 등 다양한 파일 형식을 읽고, 작성하고, 검색할 수 있습니다. 문서 처리 워크플로우에 적합합니다.
+  </Card>
+
+  <Card
+    title="웹 스크래핑 & 브라우징"
+    icon="globe"
+    href="/ko/tools/web-scraping/overview"
+    color="#10B981"
+  >
+    웹사이트에서 데이터를 추출하고, 브라우저 상호작용을 자동화하며, Firecrawl, Selenium 등과 같은 도구로 대규모로 콘텐츠를 스크래핑할 수 있습니다.
+  </Card>
+
+  <Card
+    title="검색 & 리서치"
+    icon="magnifying-glass"
+    href="/ko/tools/search-research/overview"
+    color="#F59E0B"
+  >
+    웹 검색을 수행하고, 코드 저장소를 찾으며, YouTube 콘텐츠를 리서치하고, 인터넷 전반에 걸쳐 정보를 탐색할 수 있습니다.
+  </Card>
+
+  <Card
+    title="데이터베이스 & 데이터"
+    icon="database"
+    href="/ko/tools/database-data/overview"
+    color="#8B5CF6"
+  >
+    SQL 데이터베이스, 벡터 스토어, 데이터 웨어하우스에 연결합니다. MySQL, PostgreSQL, Snowflake, Qdrant, Weaviate를 쿼리할 수 있습니다.
+  </Card>
+
+  <Card
+    title="AI & 머신러닝"
+    icon="brain"
+    href="/ko/tools/ai-ml/overview"
+    color="#EF4444"
+  >
+    DALL-E로 이미지 생성, 비전 태스크 처리, LangChain과의 통합, RAG 시스템 구축, 코드 인터프리터 활용 등이 가능합니다.
+  </Card>
+
+  <Card
+    title="클라우드 & 스토리지"
+    icon="cloud"
+    href="/ko/tools/cloud-storage/overview"
+    color="#06B6D4"
+  >
+    AWS S3, Amazon Bedrock 및 기타 클라우드 스토리지 및 AI 서비스 등 클라우드 서비스와 상호작용할 수 있습니다.
+  </Card>
+
+  <Card
+    title="자동화 & 통합"
+    icon="bolt"
+    href="/ko/tools/automation/overview"
+    color="#84CC16"
+  >
+    Apify, Composio 및 기타 통합 플랫폼으로 워크플로우를 자동화하고, 에이전트를 외부 서비스와 연결할 수 있습니다.
+  </Card>
+</CardGroup>
+
+## **빠른 접근**
+
+특정 도구가 필요하신가요? 인기 있는 옵션들을 소개합니다:
+
+<CardGroup cols={3}>
+  <Card title="RAG Tool" icon="image" href="/ko/tools/ai-ml/ragtool">
+    검색 기반 생성(Retrieval-Augmented Generation) 구현
+  </Card>
+  <Card title="Serper Dev" icon="book-atlas" href="/ko/tools/search-research/serperdevtool">
+    구글 검색 API
+  </Card>
+  <Card title="File Read" icon="file" href="/ko/tools/file-document/filereadtool">
+    모든 파일 유형 읽기
+  </Card>
+  <Card title="Scrape Website" icon="globe" href="/ko/tools/web-scraping/scrapewebsitetool">
+    웹 콘텐츠 추출
+  </Card>
+  <Card title="Code Interpreter" icon="code" href="/ko/tools/ai-ml/codeinterpretertool">
+    Python 코드 실행
+  </Card>
+  <Card title="S3 Reader" icon="cloud" href="/ko/tools/cloud-storage/s3readertool">
+    AWS S3 파일 액세스
+  </Card>
+</CardGroup>
+
+## **시작하기**
+
+CrewAI 프로젝트에서 어떤 도구를 사용하려면:
+
+1. **도구를 임포트**하여 crew 설정에 추가합니다.
+2. **에이전트의 tool 목록**에 추가합니다.
+3. 필요한 **API 키 또는 설정을 구성**합니다.
+
+```python
+from crewai_tools import FileReadTool, SerperDevTool
+
+# Add tools to your agent
+agent = Agent(
+    role="Research Analyst",
+    tools=[FileReadTool(), SerperDevTool()],
+    # ... other configuration
+)
+```
+
+탐험을 시작할 준비가 되셨나요? 위에서 카테고리를 선택하여 사용 사례에 맞는 도구를 찾아보세요!
