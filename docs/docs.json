@@ -346,7 +346,7 @@
               },
               {
                 "group": "Endpoints",
-                "openapi": "enterprise-api.en.yaml"
+                "openapi": "https://raw.githubusercontent.com/crewAIInc/crewAI/main/docs/enterprise-api.en.yaml"
               }
             ]
           },
@@ -621,6 +621,7 @@
               {
                 "group": "Funcionalidades",
                 "pages": [
+                  "pt-BR/enterprise/features/rbac",
                   "pt-BR/enterprise/features/tool-repository",
                   "pt-BR/enterprise/features/webhook-streaming",
                   "pt-BR/enterprise/features/traces",
@@ -685,7 +686,7 @@
               },
               {
                 "group": "Endpoints",
-                "openapi": "enterprise-api.pt-BR.yaml"
+                "openapi": "https://raw.githubusercontent.com/crewAIInc/crewAI/main/docs/enterprise-api.pt-BR.yaml"
               }
             ]
           },
@@ -694,7 +695,7 @@
             "groups": [
               {
                 "group": "Exemplos",
-                "pages": ["pt-BR/examples/example"]
+                "pages": ["pt-BR/examples/example", "pt-BR/examples/cookbooks"]
               }
             ]
           }
@@ -968,6 +969,7 @@
               {
                 "group": "특징",
                 "pages": [
+                  "ko/enterprise/features/rbac",
                   "ko/enterprise/features/tool-repository",
                   "ko/enterprise/features/webhook-streaming",
                   "ko/enterprise/features/traces",
@@ -1031,7 +1033,7 @@
               },
               {
                 "group": "Endpoints",
-                "openapi": "enterprise-api.ko.yaml"
+                "openapi": "https://raw.githubusercontent.com/crewAIInc/crewAI/main/docs/enterprise-api.ko.yaml"
               }
             ]
           },
@@ -1040,7 +1042,7 @@
             "groups": [
               {
                 "group": "예시",
-                "pages": ["ko/examples/example"]
+                "pages": ["ko/examples/example", "ko/examples/cookbooks"]
               }
             ]
           }
