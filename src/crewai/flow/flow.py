@@ -1121,9 +1121,10 @@ class Flow(Generic[T], metaclass=FlowMeta):
         Catches and logs any exceptions during execution, preventing
         individual listener failures from breaking the entire flow.
         """
-        if listener_name in self._completed_methods:
-            await self._execute_listeners(listener_name, None)
-            return
+        # TODO: greyson fix
+        # if listener_name in self._completed_methods:
+        #     await self._execute_listeners(listener_name, None)
+        #     return
 
         try:
             method = self._methods[listener_name]
