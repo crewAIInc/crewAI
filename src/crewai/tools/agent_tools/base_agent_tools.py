@@ -8,6 +8,12 @@ from crewai.task import Task
 from crewai.tools.base_tool import BaseTool
 from crewai.utilities import I18N
 from crewai.security import AgentCommunicationEncryption, EncryptedMessage
+from crewai.utilities.events.crewai_event_bus import crewai_event_bus
+from crewai.utilities.events.encryption_events import (
+    EncryptedCommunicationStartedEvent,
+    EncryptedCommunicationEstablishedEvent,
+    EncryptedTaskExecutionEvent,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -44,10 +50,11 @@ class BaseAgentTool(BaseTool):
         if not getattr(sender_agent.security_config, 'encrypted_communication', False):
             return None
             
-        # Create encryption handler if it doesn't exist
+        # Create encryption handler if it doesn't exist, passing the agent instance
         if self._encryption_handler is None:
             self._encryption_handler = AgentCommunicationEncryption(
-                sender_agent.security_config.fingerprint
+                sender_agent.security_config.fingerprint,
+                agent=sender_agent
             )
         
         return self._encryption_handler
@@ -83,13 +90,33 @@ class BaseAgentTool(BaseTool):
         encryption_handler = self._get_encryption_handler(sender_agent)
         if encryption_handler and hasattr(recipient_agent, 'security_config') and recipient_agent.security_config:
             try:
+                # Emit communication started event
+                crewai_event_bus.emit(
+                    sender_agent,
+                    EncryptedCommunicationStartedEvent(
+                        sender_agent=sender_agent,
+                        recipient_agent=recipient_agent
+                    )
+                )
+                
                 logger.info(f"Starting encrypted communication from '{sender_agent.role}' to '{recipient_agent.role}'")
                 # Encrypt the message for the recipient
                 encrypted_msg = encryption_handler.encrypt_message(
                     message_payload,
                     recipient_agent.security_config.fingerprint,
-                    message_type="agent_communication"
+                    message_type="agent_communication",
+                    recipient_agent=recipient_agent
                 )
+                
+                # Emit communication established event
+                crewai_event_bus.emit(
+                    sender_agent,
+                    EncryptedCommunicationEstablishedEvent(
+                        sender_agent=sender_agent,
+                        recipient_agent=recipient_agent
+                    )
+                )
+                
                 logger.info(f"Encrypted communication established between '{sender_agent.role}' and '{recipient_agent.role}'")
                 logger.debug(f"Encrypted communication from {sender_agent.role} to {recipient_agent.role}")
                 return encrypted_msg
@@ -117,15 +144,23 @@ class BaseAgentTool(BaseTool):
         if isinstance(message, EncryptedMessage) or (
             isinstance(message, dict) and 'encrypted_payload' in message
         ):
-            encryption_handler = self._get_encryption_handler(recipient_agent)
-            if encryption_handler:
+            # We need an encryption handler for the recipient agent
+            recipient_encryption_handler = None
+            if hasattr(recipient_agent, 'security_config') and recipient_agent.security_config:
+                if getattr(recipient_agent.security_config, 'encrypted_communication', False):
+                    recipient_encryption_handler = AgentCommunicationEncryption(
+                        recipient_agent.security_config.fingerprint,
+                        agent=recipient_agent
+                    )
+            
+            if recipient_encryption_handler:
                 try:
                     logger.info(f"Starting decryption of received communication for '{recipient_agent.role}'")
                     # Convert dict to EncryptedMessage if needed
                     if isinstance(message, dict):
                         message = EncryptedMessage(**message)
                     
-                    decrypted = encryption_handler.decrypt_message(message)
+                    decrypted = recipient_encryption_handler.decrypt_message(message)
                     logger.info(f"Successfully decrypted communication for '{recipient_agent.role}'")
                     logger.debug(f"Decrypted communication for {recipient_agent.role}")
                     return decrypted
@@ -257,6 +292,14 @@ class BaseAgentTool(BaseTool):
             
             # Execute with processed communication context
             if isinstance(communication_payload, EncryptedMessage):
+                # Emit encrypted task execution event
+                crewai_event_bus.emit(
+                    target_agent,
+                    EncryptedTaskExecutionEvent(
+                        agent=target_agent
+                    )
+                )
+                
                 logger.info(f"Executing encrypted communication task for agent '{self.sanitize_agent_name(target_agent.role)}'")
                 logger.debug(f"Executing encrypted communication task for agent '{self.sanitize_agent_name(target_agent.role)}'")
                 # For encrypted messages, pass the encrypted payload as additional context

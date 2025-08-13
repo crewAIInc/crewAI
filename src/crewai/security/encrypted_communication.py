@@ -14,6 +14,13 @@ from cryptography.fernet import Fernet
 from pydantic import BaseModel, Field
 
 from crewai.security.fingerprint import Fingerprint
+from crewai.utilities.events.crewai_event_bus import crewai_event_bus
+from crewai.utilities.events.encryption_events import (
+    EncryptionStartedEvent,
+    EncryptionCompletedEvent,
+    DecryptionStartedEvent,
+    DecryptionCompletedEvent,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -42,14 +49,16 @@ class AgentCommunicationEncryption:
     Provides methods to encrypt and decrypt communication payloads.
     """
     
-    def __init__(self, agent_fingerprint: Fingerprint):
+    def __init__(self, agent_fingerprint: Fingerprint, agent=None):
         """
         Initialize encryption handler for an agent.
         
         Args:
             agent_fingerprint (Fingerprint): The agent's unique fingerprint
+            agent: The agent instance (optional, needed for events)
         """
         self.agent_fingerprint = agent_fingerprint
+        self.agent = agent
         self._encryption_keys: Dict[str, Fernet] = {}
         
     def _derive_communication_key(self, sender_fp: str, recipient_fp: str) -> bytes:
@@ -102,7 +111,8 @@ class AgentCommunicationEncryption:
         self, 
         message: Union[str, Dict[str, Any]], 
         recipient_fingerprint: Fingerprint,
-        message_type: str = "communication"
+        message_type: str = "communication",
+        recipient_agent=None
     ) -> EncryptedMessage:
         """
         Encrypt a message for a specific recipient agent.
@@ -111,6 +121,7 @@ class AgentCommunicationEncryption:
             message (Union[str, Dict[str, Any]]): The message to encrypt
             recipient_fingerprint (Fingerprint): The recipient agent's fingerprint
             message_type (str): Type of message being sent
+            recipient_agent: The recipient agent instance (optional, needed for events)
             
         Returns:
             EncryptedMessage: Encrypted message container
@@ -119,6 +130,17 @@ class AgentCommunicationEncryption:
             ValueError: If encryption fails
         """
         try:
+            # Emit encryption started event if both agents are available
+            if self.agent and recipient_agent:
+                crewai_event_bus.emit(
+                    self.agent,
+                    EncryptionStartedEvent(
+                        sender_agent=self.agent,
+                        recipient_agent=recipient_agent,
+                        message_type=message_type
+                    )
+                )
+            
             logger.info(f"Starting encryption for {message_type} message to recipient {recipient_fingerprint.uuid_str[:8]}...")
             
             # Convert message to JSON string if it's a dict
@@ -136,6 +158,17 @@ class AgentCommunicationEncryption:
             # Encrypt the message
             encrypted_bytes = fernet.encrypt(message_str.encode('utf-8'))
             encrypted_payload = encrypted_bytes.decode('utf-8')
+            
+            # Emit encryption completed event if both agents are available
+            if self.agent and recipient_agent:
+                crewai_event_bus.emit(
+                    self.agent,
+                    EncryptionCompletedEvent(
+                        sender_agent=self.agent,
+                        recipient_agent=recipient_agent,
+                        message_type=message_type
+                    )
+                )
             
             logger.info(f"Successfully encrypted {message_type} message from {self.agent_fingerprint.uuid_str[:8]}... to {recipient_fingerprint.uuid_str[:8]}...")
             logger.debug(f"Encrypted message from {self.agent_fingerprint.uuid_str[:8]}... to {recipient_fingerprint.uuid_str[:8]}...")
@@ -165,6 +198,17 @@ class AgentCommunicationEncryption:
             ValueError: If decryption fails or message is not for this agent
         """
         try:
+            # Emit decryption started event if agent is available
+            if self.agent:
+                crewai_event_bus.emit(
+                    self.agent,
+                    DecryptionStartedEvent(
+                        recipient_agent=self.agent,
+                        sender_fingerprint=encrypted_message.sender_fingerprint,
+                        message_type=encrypted_message.message_type
+                    )
+                )
+            
             logger.info(f"Starting decryption of {encrypted_message.message_type} message from sender {encrypted_message.sender_fingerprint[:8]}...")
             
             # Verify this message is intended for this agent
@@ -186,6 +230,17 @@ class AgentCommunicationEncryption:
                 decrypted_content = json.loads(decrypted_str)
             except json.JSONDecodeError:
                 decrypted_content = decrypted_str
+            
+            # Emit decryption completed event if agent is available
+            if self.agent:
+                crewai_event_bus.emit(
+                    self.agent,
+                    DecryptionCompletedEvent(
+                        recipient_agent=self.agent,
+                        sender_fingerprint=encrypted_message.sender_fingerprint,
+                        message_type=encrypted_message.message_type
+                    )
+                )
                 
             logger.info(f"Successfully decrypted {encrypted_message.message_type} message from {encrypted_message.sender_fingerprint[:8]}... to {encrypted_message.recipient_fingerprint[:8]}...")
             
