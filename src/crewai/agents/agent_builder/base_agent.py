@@ -1,3 +1,4 @@
+import logging
 import uuid
 from abc import ABC, abstractmethod
 from copy import copy as shallow_copy
@@ -29,6 +30,8 @@ from crewai.utilities.converter import Converter
 from crewai.utilities.string_utils import interpolate_only
 
 T = TypeVar("T", bound="BaseAgent")
+
+logger = logging.getLogger(__name__)
 
 
 class BaseAgent(ABC, BaseModel):
@@ -216,6 +219,12 @@ class BaseAgent(ABC, BaseModel):
         # Initialize security_config if not provided
         if self.security_config is None:
             self.security_config = SecurityConfig()
+
+        # Log encryption status for agent initialization
+        if hasattr(self.security_config, 'encrypted_communication') and self.security_config.encrypted_communication:
+            logger.info(f"Agent '{self.role}' initialized with encrypted communication enabled (fingerprint: {self.security_config.fingerprint.uuid_str[:8]}...)")
+        else:
+            logger.debug(f"Agent '{self.role}' initialized with encrypted communication disabled")
 
         return self
 

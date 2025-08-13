@@ -1,5 +1,6 @@
 import asyncio
 import json
+import logging
 import re
 import uuid
 import warnings
@@ -88,6 +89,8 @@ from crewai.utilities.task_output_storage_handler import TaskOutputStorageHandle
 from crewai.utilities.training_handler import CrewTrainingHandler
 
 warnings.filterwarnings("ignore", category=SyntaxWarning, module="pysbd")
+
+logger = logging.getLogger(__name__)
 
 
 class Crew(FlowTrackable, BaseModel):
@@ -381,6 +384,20 @@ class Crew(FlowTrackable, BaseModel):
             self._setup_from_config()
 
         if self.agents:
+            # Count agents with encryption enabled
+            encryption_enabled_agents = [
+                agent for agent in self.agents 
+                if hasattr(agent, 'security_config') 
+                and agent.security_config 
+                and getattr(agent.security_config, 'encrypted_communication', False)
+            ]
+            
+            if encryption_enabled_agents:
+                logger.info(f"Crew initialized with {len(encryption_enabled_agents)} agent(s) having encrypted communication enabled: {[agent.role for agent in encryption_enabled_agents]}")
+                logger.info("Agent-to-agent communication will be automatically encrypted when using delegation tools")
+            else:
+                logger.debug(f"Crew initialized with {len(self.agents)} agent(s) - encrypted communication disabled for all agents")
+            
             for agent in self.agents:
                 if self.cache:
                     agent.set_cache_handler(self._cache_handler)
