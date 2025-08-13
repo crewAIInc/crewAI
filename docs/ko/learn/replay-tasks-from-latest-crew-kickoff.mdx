@@ -1,0 +1,78 @@
+---
+title: 최신 Crew Kickoff에서 작업 다시 실행하기
+description: 최신 crew.kickoff(...)에서 작업을 다시 실행합니다.
+icon: arrow-right
+---
+
+## 소개
+
+CrewAI는 최신 crew 킥오프에서 지정된 태스크를 다시 실행할 수 있는 기능을 제공합니다. 이 기능은 킥오프를 완료한 후 특정 태스크를 다시 시도하고 싶거나 데이터를 다시 가져올 필요 없이 이미 에이전트들이 킥오프 실행에서 컨텍스트를 저장한 경우, 원하는 태스크만 다시 실행(Replay)하면 될 때 특히 유용합니다.
+
+<Note>
+    태스크를 다시 실행하기 전에 반드시 `crew.kickoff()`을 실행해야 합니다.
+    현재는 최신 킥오프만 지원되므로, `kickoff_for_each`를 사용하는 경우에도 가장 최근의 crew 실행만 다시 실행할 수 있습니다.
+</Note>
+
+다음은 태스크에서 다시 실행하는 방법의 예시입니다:
+
+### CLI를 사용하여 특정 Task에서 재실행하기
+
+재실행 기능을 사용하려면 다음 단계를 따르세요:
+
+<Steps>
+   <Step title="터미널 또는 명령 프롬프트를 엽니다."></Step>
+   <Step title="CrewAI 프로젝트가 위치한 디렉터리로 이동합니다."></Step>
+   <Step title="다음 명령어를 실행합니다:">
+      최신 kickoff task_id를 확인하려면 아래를 사용하세요:
+
+      ```shell
+      crewai log-tasks-outputs
+      ```
+
+      재실행할 `task_id`를 확인했다면, 아래를 사용하세요:
+
+      ```shell
+      crewai replay -t <task_id>
+      ```
+   </Step>
+</Steps>
+
+<Note>
+    개발 환경에 `crewai`가 정상적으로 설치 및 구성되어 있는지 확인하세요.
+</Note>
+
+### 작업에서 프로그래밍 방식으로 리플레이하기
+
+작업에서 프로그래밍 방식으로 리플레이하려면 다음 단계를 따르세요:
+
+<Steps>
+   <Step title="리플레이 프로세스를 위한 `task_id`와 입력 파라미터를 지정합니다.">
+      리플레이 프로세스를 위한 `task_id`와 입력 파라미터를 지정합니다.
+   </Step>
+   <Step title="잠재적인 오류를 처리하기 위해 try-except 블록 내에서 리플레이 명령을 실행합니다.">
+      잠재적인 오류를 처리하기 위해 try-except 블록 내에서 리플레이 명령을 실행합니다.
+      <CodeGroup>
+          ```python Code
+            def replay():
+            """
+            Replay the crew execution from a specific task.
+            """
+            task_id = '<task_id>'
+            inputs = {"topic": "CrewAI Training"}  # This is optional; you can pass in the inputs you want to replay; otherwise, it uses the previous kickoff's inputs.
+            try:
+                YourCrewName_Crew().crew().replay(task_id=task_id, inputs=inputs)
+
+            except subprocess.CalledProcessError as e:
+                raise Exception(f"An error occurred while replaying the crew: {e}")
+
+            except Exception as e:
+                raise Exception(f"An unexpected error occurred: {e}")
+            ```
+      </CodeGroup>
+   </Step>
+</Steps>
+
+## 결론
+
+위의 개선 사항과 세부적인 기능으로 CrewAI에서 특정 작업을 재실행하는 것이 더욱 효율적이고 견고해졌습니다.  
+이러한 기능을 최대한 활용하려면 명령어와 단계를 정확하게 따라주시기 바랍니다.

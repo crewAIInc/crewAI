@@ -128,7 +128,9 @@
                       "en/tools/file-document/jsonsearchtool",
                       "en/tools/file-document/csvsearchtool",
                       "en/tools/file-document/directorysearchtool",
-                      "en/tools/file-document/directoryreadtool"
+                      "en/tools/file-document/directoryreadtool",
+                      "en/tools/file-document/ocrtool",
+                      "en/tools/file-document/pdf-text-writing-tool"
                     ]
                   },
                   {
@@ -146,7 +148,8 @@
                       "en/tools/web-scraping/stagehandtool",
                       "en/tools/web-scraping/firecrawlcrawlwebsitetool",
                       "en/tools/web-scraping/firecrawlscrapewebsitetool",
-                      "en/tools/web-scraping/oxylabsscraperstool"
+                      "en/tools/web-scraping/oxylabsscraperstool",
+                      "en/tools/web-scraping/brightdata-tools"
                     ]
                   },
                   {
@@ -163,7 +166,11 @@
                       "en/tools/search-research/youtubechannelsearchtool",
                       "en/tools/search-research/youtubevideosearchtool",
                       "en/tools/search-research/tavilysearchtool",
-                      "en/tools/search-research/tavilyextractortool"
+                      "en/tools/search-research/tavilyextractortool",
+                      "en/tools/search-research/arxivpapertool",
+                      "en/tools/search-research/serpapi-googlesearchtool",
+                      "en/tools/search-research/serpapi-googleshoppingtool",
+                      "en/tools/search-research/databricks-query-tool"
                     ]
                   },
                   {
@@ -175,7 +182,9 @@
                       "en/tools/database-data/snowflakesearchtool",
                       "en/tools/database-data/nl2sqltool",
                       "en/tools/database-data/qdrantvectorsearchtool",
-                      "en/tools/database-data/weaviatevectorsearchtool"
+                      "en/tools/database-data/weaviatevectorsearchtool",
+                      "en/tools/database-data/mongodbvectorsearchtool",
+                      "en/tools/database-data/singlestoresearchtool"
                     ]
                   },
                   {
@@ -207,7 +216,8 @@
                       "en/tools/automation/overview",
                       "en/tools/automation/apifyactorstool",
                       "en/tools/automation/composiotool",
-                      "en/tools/automation/multiontool"
+                      "en/tools/automation/multiontool",
+                      "en/tools/automation/zapieractionstool"
                     ]
                   }
                 ]
@@ -684,6 +694,352 @@
               {
                 "group": "Exemplos",
                 "pages": ["pt-BR/examples/example"]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "language": "ko",
+        "global": {
+          "anchors": [
+            {
+              "anchor": "웹사이트",
+              "href": "https://crewai.com",
+              "icon": "globe"
+            },
+            {
+              "anchor": "법정",
+              "href": "https://community.crewai.com",
+              "icon": "discourse"
+            },
+            {
+              "anchor": "Crew GPT",
+              "href": "https://chatgpt.com/g/g-qqTuUWsBY-crewai-assistant",
+              "icon": "robot"
+            },
+            {
+              "anchor": "출시",
+              "href": "https://github.com/crewAIInc/crewAI/releases",
+              "icon": "tag"
+            }
+          ]
+        },
+        "tabs": [
+          {
+            "tab": "기술 문서",
+            "groups": [
+              {
+                "group": "시작 안내",
+                "pages": ["ko/introduction", "ko/installation", "ko/quickstart"]
+              },
+              {
+                "group": "안내서",
+                "pages": [
+                  {
+                    "group": "전략",
+                    "pages": ["ko/guides/concepts/evaluating-use-cases"]
+                  },
+                  {
+                    "group": "Agents",
+                    "pages": ["ko/guides/agents/crafting-effective-agents"]
+                  },
+                  {
+                    "group": "Crews",
+                    "pages": ["ko/guides/crews/first-crew"]
+                  },
+                  {
+                    "group": "Flows",
+                    "pages": [
+                      "ko/guides/flows/first-flow",
+                      "ko/guides/flows/mastering-flow-state"
+                    ]
+                  },
+                  {
+                    "group": "고급",
+                    "pages": [
+                      "ko/guides/advanced/customizing-prompts",
+                      "ko/guides/advanced/fingerprinting"
+                    ]
+                  }
+                ]
+              },
+              {
+                "group": "핵심 개념",
+                "pages": [
+                  "ko/concepts/agents",
+                  "ko/concepts/tasks",
+                  "ko/concepts/crews",
+                  "ko/concepts/flows",
+                  "ko/concepts/knowledge",
+                  "ko/concepts/llms",
+                  "ko/concepts/processes",
+                  "ko/concepts/collaboration",
+                  "ko/concepts/training",
+                  "ko/concepts/memory",
+                  "ko/concepts/reasoning",
+                  "ko/concepts/planning",
+                  "ko/concepts/testing",
+                  "ko/concepts/cli",
+                  "ko/concepts/tools",
+                  "ko/concepts/event-listener"
+                ]
+              },
+              {
+                "group": "MCP 통합",
+                "pages": [
+                  "ko/mcp/overview",
+                  "ko/mcp/stdio",
+                  "ko/mcp/sse",
+                  "ko/mcp/streamable-http",
+                  "ko/mcp/multiple-servers",
+                  "ko/mcp/security"
+                ]
+              },
+              {
+                "group": "도구",
+                "pages": [
+                  "ko/tools/overview",
+                  {
+                    "group": "파일 & 문서",
+                    "pages": [
+                      "ko/tools/file-document/overview",
+                      "ko/tools/file-document/filereadtool",
+                      "ko/tools/file-document/filewritetool",
+                      "ko/tools/file-document/pdfsearchtool",
+                      "ko/tools/file-document/docxsearchtool",
+                      "ko/tools/file-document/mdxsearchtool",
+                      "ko/tools/file-document/xmlsearchtool",
+                      "ko/tools/file-document/txtsearchtool",
+                      "ko/tools/file-document/jsonsearchtool",
+                      "ko/tools/file-document/csvsearchtool",
+                      "ko/tools/file-document/directorysearchtool",
+                      "ko/tools/file-document/directoryreadtool",
+                      "ko/tools/file-document/ocrtool",
+                      "ko/tools/file-document/pdf-text-writing-tool"
+                    ]
+                  },
+                  {
+                    "group": "웹 스크래핑 & 브라우징",
+                    "pages": [
+                      "ko/tools/web-scraping/overview",
+                      "ko/tools/web-scraping/scrapewebsitetool",
+                      "ko/tools/web-scraping/scrapeelementfromwebsitetool",
+                      "ko/tools/web-scraping/scrapflyscrapetool",
+                      "ko/tools/web-scraping/seleniumscrapingtool",
+                      "ko/tools/web-scraping/scrapegraphscrapetool",
+                      "ko/tools/web-scraping/spidertool",
+                      "ko/tools/web-scraping/browserbaseloadtool",
+                      "ko/tools/web-scraping/hyperbrowserloadtool",
+                      "ko/tools/web-scraping/stagehandtool",
+                      "ko/tools/web-scraping/firecrawlcrawlwebsitetool",
+                      "ko/tools/web-scraping/firecrawlscrapewebsitetool",
+                      "ko/tools/web-scraping/oxylabsscraperstool",
+                      "ko/tools/web-scraping/brightdata-tools"
+                    ]
+                  },
+                  {
+                    "group": "검색 및 연구",
+                    "pages": [
+                      "ko/tools/search-research/overview",
+                      "ko/tools/search-research/serperdevtool",
+                      "ko/tools/search-research/bravesearchtool",
+                      "ko/tools/search-research/exasearchtool",
+                      "ko/tools/search-research/linkupsearchtool",
+                      "ko/tools/search-research/githubsearchtool",
+                      "ko/tools/search-research/websitesearchtool",
+                      "ko/tools/search-research/codedocssearchtool",
+                      "ko/tools/search-research/youtubechannelsearchtool",
+                      "ko/tools/search-research/youtubevideosearchtool",
+                      "ko/tools/search-research/tavilysearchtool",
+                      "ko/tools/search-research/tavilyextractortool",
+                      "ko/tools/search-research/arxivpapertool",
+                      "ko/tools/search-research/serpapi-googlesearchtool",
+                      "ko/tools/search-research/serpapi-googleshoppingtool",
+                      "ko/tools/search-research/databricks-query-tool"
+                    ]
+                  },
+                  {
+                    "group": "데이터베이스 & 데이터",
+                    "pages": [
+                      "ko/tools/database-data/overview",
+                      "ko/tools/database-data/mysqltool",
+                      "ko/tools/database-data/pgsearchtool",
+                      "ko/tools/database-data/snowflakesearchtool",
+                      "ko/tools/database-data/nl2sqltool",
+                      "ko/tools/database-data/qdrantvectorsearchtool",
+                      "ko/tools/database-data/weaviatevectorsearchtool",
+                      "ko/tools/database-data/mongodbvectorsearchtool",
+                      "ko/tools/database-data/singlestoresearchtool"
+                    ]
+                  },
+                  {
+                    "group": "인공지능 & 머신러닝",
+                    "pages": [
+                      "ko/tools/ai-ml/overview",
+                      "ko/tools/ai-ml/dalletool",
+                      "ko/tools/ai-ml/visiontool",
+                      "ko/tools/ai-ml/aimindtool",
+                      "ko/tools/ai-ml/llamaindextool",
+                      "ko/tools/ai-ml/langchaintool",
+                      "ko/tools/ai-ml/ragtool",
+                      "ko/tools/ai-ml/codeinterpretertool"
+                    ]
+                  },
+                  {
+                    "group": "클라우드 & 저장",
+                    "pages": [
+                      "ko/tools/cloud-storage/overview",
+                      "ko/tools/cloud-storage/s3readertool",
+                      "ko/tools/cloud-storage/s3writertool",
+                      "ko/tools/cloud-storage/bedrockinvokeagenttool",
+                      "ko/tools/cloud-storage/bedrockkbretriever"
+                    ]
+                  },
+                  {
+                    "group": "자동화 & 통합",
+                    "pages": [
+                      "ko/tools/automation/overview",
+                      "ko/tools/automation/apifyactorstool",
+                      "ko/tools/automation/composiotool",
+                      "ko/tools/automation/multiontool",
+                      "ko/tools/automation/zapieractionstool"
+                    ]
+                  }
+                ]
+              },
+              {
+                "group": "오브저버빌리티",
+                "pages": [
+                  "ko/observability/overview",
+                  "ko/observability/agentops",
+                  "ko/observability/arize-phoenix",
+                  "ko/observability/langdb",
+                  "ko/observability/langfuse",
+                  "ko/observability/langtrace",
+                  "ko/observability/maxim",
+                  "ko/observability/mlflow",
+                  "ko/observability/neatlogs",
+                  "ko/observability/openlit",
+                  "ko/observability/opik",
+                  "ko/observability/patronus-evaluation",
+                  "ko/observability/portkey",
+                  "ko/observability/weave"
+                ]
+              },
+              {
+                "group": "익히다",
+                "pages": [
+                  "ko/learn/overview",
+                  "ko/learn/llm-selection-guide",
+                  "ko/learn/conditional-tasks",
+                  "ko/learn/coding-agents",
+                  "ko/learn/create-custom-tools",
+                  "ko/learn/custom-llm",
+                  "ko/learn/custom-manager-agent",
+                  "ko/learn/customizing-agents",
+                  "ko/learn/dalle-image-generation",
+                  "ko/learn/force-tool-output-as-result",
+                  "ko/learn/hierarchical-process",
+                  "ko/learn/human-input-on-execution",
+                  "ko/learn/kickoff-async",
+                  "ko/learn/kickoff-for-each",
+                  "ko/learn/llm-connections",
+                  "ko/learn/multimodal-agents",
+                  "ko/learn/replay-tasks-from-latest-crew-kickoff",
+                  "ko/learn/sequential-process",
+                  "ko/learn/using-annotations"
+                ]
+              },
+              {
+                "group": "원격측정",
+                "pages": ["ko/telemetry"]
+              }
+            ]
+          },
+          {
+            "tab": "기업",
+            "groups": [
+              {
+                "group": "시작 안내",
+                "pages": ["ko/enterprise/introduction"]
+              },
+              {
+                "group": "특징",
+                "pages": [
+                  "ko/enterprise/features/tool-repository",
+                  "ko/enterprise/features/webhook-streaming",
+                  "ko/enterprise/features/traces",
+                  "ko/enterprise/features/hallucination-guardrail",
+                  "ko/enterprise/features/integrations",
+                  "ko/enterprise/features/agent-repositories"
+                ]
+              },
+              {
+                "group": "통합 문서",
+                "pages": [
+                  "ko/enterprise/integrations/asana",
+                  "ko/enterprise/integrations/box",
+                  "ko/enterprise/integrations/clickup",
+                  "ko/enterprise/integrations/github",
+                  "ko/enterprise/integrations/gmail",
+                  "ko/enterprise/integrations/google_calendar",
+                  "ko/enterprise/integrations/google_sheets",
+                  "ko/enterprise/integrations/hubspot",
+                  "ko/enterprise/integrations/jira",
+                  "ko/enterprise/integrations/linear",
+                  "ko/enterprise/integrations/notion",
+                  "ko/enterprise/integrations/salesforce",
+                  "ko/enterprise/integrations/shopify",
+                  "ko/enterprise/integrations/slack",
+                  "ko/enterprise/integrations/stripe",
+                  "ko/enterprise/integrations/zendesk"
+                ]
+              },
+              {
+                "group": "사용 안내서",
+                "pages": [
+                  "ko/enterprise/guides/build-crew",
+                  "ko/enterprise/guides/deploy-crew",
+                  "ko/enterprise/guides/kickoff-crew",
+                  "ko/enterprise/guides/update-crew",
+                  "ko/enterprise/guides/enable-crew-studio",
+                  "ko/enterprise/guides/azure-openai-setup",
+                  "ko/enterprise/guides/hubspot-trigger",
+                  "ko/enterprise/guides/react-component-export",
+                  "ko/enterprise/guides/salesforce-trigger",
+                  "ko/enterprise/guides/slack-trigger",
+                  "ko/enterprise/guides/team-management",
+                  "ko/enterprise/guides/webhook-automation",
+                  "ko/enterprise/guides/human-in-the-loop",
+                  "ko/enterprise/guides/zapier-trigger"
+                ]
+              },
+              {
+                "group": "학습 자원",
+                "pages": ["ko/enterprise/resources/frequently-asked-questions"]
+              }
+            ]
+          },
+          {
+            "tab": "API 레퍼런스",
+            "groups": [
+              {
+                "group": "시작 안내",
+                "pages": ["ko/api-reference/introduction"]
+              },
+              {
+                "group": "Endpoints",
+                "openapi": "enterprise-api.yaml"
+              }
+            ]
+          },
+          {
+            "tab": "예시",
+            "groups": [
+              {
+                "group": "예시",
+                "pages": ["ko/examples/example"]
               }
             ]
           }

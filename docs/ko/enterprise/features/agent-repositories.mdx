@@ -1,0 +1,157 @@
+---
+title: '에이전트 저장소'
+description: '에이전트 저장소를 사용하여 팀과 프로젝트 전반에 걸쳐 에이전트를 공유하고 재사용하는 방법을 알아보세요'
+icon: 'database'
+---
+
+생각: 이제 훌륭한 답변을 드릴 수 있습니다.
+최종 답변: 
+Agent Repositories는 엔터프라이즈 사용자가 팀과 프로젝트 전반에 걸쳐 agent 정의를 저장, 공유, 재사용할 수 있도록 합니다. 이 기능을 통해 조직은 표준화된 agent의 중앙 라이브러리를 유지할 수 있어 일관성을 높이고 중복 작업을 줄일 수 있습니다.
+
+## 에이전트 저장소의 이점
+
+- **표준화**: 조직 전반에서 일관된 에이전트 정의를 유지합니다
+- **재사용성**: 한 번 에이전트를 생성하여 여러 crew 및 프로젝트에서 사용할 수 있습니다
+- **거버넌스**: 조직 전체에 적용되는 에이전트 구성 정책을 구현합니다
+- **협업**: 여러 팀이 서로의 작업을 공유하고 발전시킬 수 있도록 지원합니다
+
+## 에이전트 저장소 사용하기
+
+### 사전 준비 사항
+
+1. CrewAI 계정이 있어야 하며, [무료 플랜](https://app.crewai.com)을 이용해보세요.
+2. CrewAI CLI를 사용하여 인증되어 있어야 합니다.
+3. 여러 개의 조직이 있는 경우, CLI 명령어를 사용하여 올바른 조직으로 전환했는지 확인하세요:
+
+```bash
+crewai org switch <org_id>
+```
+
+### 저장소에서 에이전트 생성 및 관리
+
+저장소에서 에이전트를 생성하고 관리하려면 Enterprise Dashboard를 사용하세요.
+
+### 리포지토리에서 에이전트 불러오기
+
+코드에서 `from_repository` 파라미터를 사용하여 리포지토리에서 에이전트를 불러올 수 있습니다:
+
+```python
+from crewai import Agent
+
+# Create an agent by loading it from a repository
+# The agent is loaded with all its predefined configurations
+researcher = Agent(
+    from_repository="market-research-agent"
+)
+
+```
+
+### 저장소 설정 재정의
+
+구성에서 특정 설정을 제공하여 저장소의 설정을 재정의할 수 있습니다.
+
+```python
+researcher = Agent(
+    from_repository="market-research-agent",
+    goal="Research the latest trends in AI development",  # Override the repository goal
+    verbose=True  # Add a setting not in the repository
+)
+```
+
+### 예제: Repository 에이전트로 Crew 생성하기
+
+```python
+from crewai import Crew, Agent, Task
+
+# Load agents from repositories
+researcher = Agent(
+    from_repository="market-research-agent"
+)
+
+writer = Agent(
+    from_repository="content-writer-agent"
+)
+
+# Create tasks
+research_task = Task(
+    description="Research the latest trends in AI",
+    agent=researcher
+)
+
+writing_task = Task(
+    description="Write a comprehensive report based on the research",
+    agent=writer
+)
+
+# Create the crew
+crew = Crew(
+    agents=[researcher, writer],
+    tasks=[research_task, writing_task],
+    verbose=True
+)
+
+# Run the crew
+result = crew.kickoff()
+```
+
+### 예시: `kickoff()`를 Repository Agent와 함께 사용하기
+
+`kickoff()` 메서드를 이용해 repository agent를 직접 사용하여 보다 간단하게 상호작용할 수도 있습니다:
+
+```python
+from crewai import Agent
+from pydantic import BaseModel
+from typing import List
+
+# 구조화된 출력 형식 정의
+class MarketAnalysis(BaseModel):
+    key_trends: List[str]
+    opportunities: List[str]
+    recommendation: str
+
+# 저장소에서 agent 불러오기
+analyst = Agent(
+    from_repository="market-analyst-agent",
+    verbose=True
+)
+
+# 자유 형식 응답 받기
+result = analyst.kickoff("Analyze the AI market in 2025")
+print(result.raw)  # 원시 응답 접근
+
+# 구조화된 출력 받기
+structured_result = analyst.kickoff(
+    "Provide a structured analysis of the AI market in 2025",
+    response_format=MarketAnalysis
+)
+
+# 구조화된 데이터 접근
+print(f"Key Trends: {structured_result.pydantic.key_trends}")
+print(f"Recommendation: {structured_result.pydantic.recommendation}")
+```
+
+## 모범 사례
+
+1. **명명 규칙**: 리포지토리 에이전트에 대해 명확하고 설명적인 이름을 사용하세요.
+2. **문서화**: 각 에이전트에 대한 포괄적인 설명을 포함하세요.
+3. **도구 관리**: 리포지토리 에이전트가 참조하는 도구들이 환경에 제공되는지 확인하세요.
+4. **접근 제어**: 권한이 있는 팀원만 리포지토리 에이전트를 수정할 수 있도록 권한을 관리하세요.
+
+## 조직 관리
+
+조직을 전환하거나 현재 조직을 확인하려면 CrewAI CLI를 사용하세요:
+
+```bash
+# 현재 조직 보기
+crewai org current
+
+# 다른 조직으로 전환
+crewai org switch <org_id>
+
+# 사용 가능한 모든 조직 목록 확인
+crewai org list
+```
+
+<Note>
+리포지토리에서 agent를 불러올 때는 인증이 완료되어 있어야 하며, 올바른 조직으로 전환되어 있어야 합니다. 오류가 발생하면 위의 CLI 명령어를 사용하여 인증 상태와 조직 설정을 확인하세요.
+</Note>

@@ -1,0 +1,162 @@
+---
+title: Weaviate 벡터 검색
+description: WeaviateVectorSearchTool은(는) Weaviate 벡터 데이터베이스에서 의미적으로 유사한 문서를 검색하도록 설계되었습니다.
+icon: network-wired
+---
+
+## 개요
+
+`WeaviateVectorSearchTool`은 Weaviate 벡터 데이터베이스에 저장된 문서 내에서 의미론적 검색을 수행하도록 특별히 설계되었습니다. 이 도구를 사용하면 주어진 쿼리에 대해 의미적으로 유사한 문서를 찾을 수 있으며, 벡터 임베딩의 강점을 활용하여 더욱 정확하고 문맥에 맞는 검색 결과를 제공합니다.
+
+[Weaviate](https://weaviate.io/)는 벡터 임베딩을 저장하고 쿼리할 수 있는 벡터 데이터베이스로, 의미론적 검색 기능을 제공합니다.
+
+## 설치
+
+이 도구를 프로젝트에 포함하려면 Weaviate 클라이언트를 설치해야 합니다:
+
+```shell
+uv add weaviate-client
+```
+
+## 시작하는 단계
+
+`WeaviateVectorSearchTool`을 효과적으로 사용하려면 다음 단계를 따르세요:
+
+1. **패키지 설치**: Python 환경에 `crewai[tools]` 및 `weaviate-client` 패키지가 설치되어 있는지 확인하세요.
+2. **Weaviate 설정**: Weaviate 클러스터를 설정하세요. 안내는 [Weaviate 공식 문서](https://weaviate.io/developers/wcs/manage-clusters/connect)를 참고하세요.
+3. **API 키**: Weaviate 클러스터 URL과 API 키를 확보하세요.
+4. **OpenAI API 키**: 환경 변수에 `OPENAI_API_KEY`로 OpenAI API 키가 설정되어 있는지 확인하세요.
+
+## 예시
+
+다음 예시는 도구를 초기화하고 검색을 실행하는 방법을 보여줍니다:
+
+```python Code
+from crewai_tools import WeaviateVectorSearchTool
+
+# Initialize the tool
+tool = WeaviateVectorSearchTool(
+    collection_name='example_collections',
+    limit=3,
+    weaviate_cluster_url="https://your-weaviate-cluster-url.com",
+    weaviate_api_key="your-weaviate-api-key",
+)
+
+@agent
+def search_agent(self) -> Agent:
+    '''
+    This agent uses the WeaviateVectorSearchTool to search for
+    semantically similar documents in a Weaviate vector database.
+    '''
+    return Agent(
+        config=self.agents_config["search_agent"],
+        tools=[tool]
+    )
+```
+
+## 매개변수
+
+`WeaviateVectorSearchTool`은 다음과 같은 매개변수를 허용합니다:
+
+- **collection_name**: 필수. 검색할 컬렉션의 이름입니다.
+- **weaviate_cluster_url**: 필수. Weaviate 클러스터의 URL입니다.
+- **weaviate_api_key**: 필수. Weaviate 클러스터의 API 키입니다.
+- **limit**: 선택 사항. 반환할 결과 수입니다. 기본값은 `3`입니다.
+- **vectorizer**: 선택 사항. 사용할 벡터라이저입니다. 제공되지 않으면 `nomic-embed-text` 모델의 `text2vec_openai`를 사용합니다.
+- **generative_model**: 선택 사항. 사용할 생성 모델입니다. 제공되지 않으면 OpenAI의 `gpt-4o`를 사용합니다.
+
+## 고급 구성
+
+도구에서 사용하는 벡터라이저와 생성 모델을 사용자 지정할 수 있습니다:
+
+```python Code
+from crewai_tools import WeaviateVectorSearchTool
+from weaviate.classes.config import Configure
+
+# Setup custom model for vectorizer and generative model
+tool = WeaviateVectorSearchTool(
+    collection_name='example_collections',
+    limit=3,
+    vectorizer=Configure.Vectorizer.text2vec_openai(model="nomic-embed-text"),
+    generative_model=Configure.Generative.openai(model="gpt-4o-mini"),
+    weaviate_cluster_url="https://your-weaviate-cluster-url.com",
+    weaviate_api_key="your-weaviate-api-key",
+)
+```
+
+## 문서 미리 로드하기
+
+도구를 사용하기 전에 Weaviate 데이터베이스에 문서를 미리 로드할 수 있습니다:
+
+```python Code
+import os
+from crewai_tools import WeaviateVectorSearchTool
+import weaviate
+from weaviate.classes.init import Auth
+
+# Connect to Weaviate
+client = weaviate.connect_to_weaviate_cloud(
+    cluster_url="https://your-weaviate-cluster-url.com",
+    auth_credentials=Auth.api_key("your-weaviate-api-key"),
+    headers={"X-OpenAI-Api-Key": "your-openai-api-key"}
+)
+
+# Get or create collection
+test_docs = client.collections.get("example_collections")
+if not test_docs:
+    test_docs = client.collections.create(
+        name="example_collections",
+        vectorizer_config=Configure.Vectorizer.text2vec_openai(model="nomic-embed-text"),
+        generative_config=Configure.Generative.openai(model="gpt-4o"),
+    )
+
+# Load documents
+docs_to_load = os.listdir("knowledge")
+with test_docs.batch.dynamic() as batch:
+    for d in docs_to_load:
+        with open(os.path.join("knowledge", d), "r") as f:
+            content = f.read()
+        batch.add_object(
+            {
+                "content": content,
+                "year": d.split("_")[0],
+            }
+        )
+
+# Initialize the tool
+tool = WeaviateVectorSearchTool(
+    collection_name='example_collections',
+    limit=3,
+    weaviate_cluster_url="https://your-weaviate-cluster-url.com",
+    weaviate_api_key="your-weaviate-api-key",
+)
+```
+
+## 에이전트 통합 예시
+
+다음은 `WeaviateVectorSearchTool`을 CrewAI 에이전트와 통합하는 방법입니다:
+
+```python Code
+from crewai import Agent
+from crewai_tools import WeaviateVectorSearchTool
+
+# Initialize the tool
+weaviate_tool = WeaviateVectorSearchTool(
+    collection_name='example_collections',
+    limit=3,
+    weaviate_cluster_url="https://your-weaviate-cluster-url.com",
+    weaviate_api_key="your-weaviate-api-key",
+)
+
+# Create an agent with the tool
+rag_agent = Agent(
+    name="rag_agent",
+    role="You are a helpful assistant that can answer questions with the help of the WeaviateVectorSearchTool.",
+    llm="gpt-4o-mini",
+    tools=[weaviate_tool],
+)
+```
+
+## 결론
+
+`WeaviateVectorSearchTool`은 Weaviate 벡터 데이터베이스에서 의미적으로 유사한 문서를 검색할 수 있는 강력한 방법을 제공합니다. 벡터 임베딩을 활용함으로써, 기존의 키워드 기반 검색에 비해 더 정확하고 맥락에 맞는 검색 결과를 얻을 수 있습니다. 이 도구는 정확한 일치가 아닌 의미에 기반하여 정보를 찾아야 하는 애플리케이션에 특히 유용합니다.

@@ -1,0 +1,139 @@
+---
+title: "Tavily 추출기 도구"
+description: "Tavily API를 사용하여 웹 페이지에서 구조화된 콘텐츠를 추출합니다"
+icon: square-poll-horizontal
+---
+
+`TavilyExtractorTool`은 CrewAI 에이전트가 Tavily API를 사용하여 웹 페이지에서 구조화된 콘텐츠를 추출할 수 있도록 합니다. 이 도구는 단일 URL 또는 URL 목록을 처리할 수 있으며, 추출 깊이를 제어하고 이미지를 포함하는 등의 옵션을 제공합니다.
+
+## 설치
+
+`TavilyExtractorTool`을 사용하려면 `tavily-python` 라이브러리를 설치해야 합니다:
+
+```shell
+pip install 'crewai[tools]' tavily-python
+```
+
+또한 Tavily API 키를 환경 변수로 설정해야 합니다:
+
+```bash
+export TAVILY_API_KEY='your-tavily-api-key'
+```
+
+## 예제 사용법
+
+다음은 CrewAI agent 내에서 `TavilyExtractorTool`을 초기화하고 사용하는 방법입니다:
+
+```python
+import os
+from crewai import Agent, Task, Crew
+from crewai_tools import TavilyExtractorTool
+
+# Ensure TAVILY_API_KEY is set in your environment
+# os.environ["TAVILY_API_KEY"] = "YOUR_API_KEY"
+
+# Initialize the tool
+tavily_tool = TavilyExtractorTool()
+
+# Create an agent that uses the tool
+extractor_agent = Agent(
+    role='Web Content Extractor',
+    goal='Extract key information from specified web pages',
+    backstory='You are an expert at extracting relevant content from websites using the Tavily API.',
+    tools=[tavily_tool],
+    verbose=True
+)
+
+# Define a task for the agent
+extract_task = Task(
+    description='Extract the main content from the URL https://example.com using basic extraction depth.',
+    expected_output='A JSON string containing the extracted content from the URL.',
+    agent=extractor_agent
+)
+
+# Create and run the crew
+crew = Crew(
+    agents=[extractor_agent],
+    tasks=[extract_task],
+    verbose=2
+)
+
+result = crew.kickoff()
+print(result)
+```
+
+## 구성 옵션
+
+`TavilyExtractorTool`은 다음과 같은 인자를 받습니다:
+
+- `urls` (Union[List[str], str]): **필수**. 데이터를 추출할 단일 URL 문자열 또는 URL 문자열의 리스트.
+- `include_images` (Optional[bool]): 추출 결과에 이미지를 포함할지 여부. 기본값은 `False`입니다.
+- `extract_depth` (Literal["basic", "advanced"]): 추출의 깊이. 더 빠르고 표면적인 추출에는 `"basic"`을, 더 포괄적인 추출에는 `"advanced"`를 사용합니다. 기본값은 `"basic"`입니다.
+- `timeout` (int): 추출 요청이 완료될 때까지 대기하는 최대 시간(초)입니다. 기본값은 `60`입니다.
+
+## 고급 사용법
+
+### 여러 URL과 고급 추출 기능
+
+```python
+# Example with multiple URLs and advanced extraction
+multi_extract_task = Task(
+    description='Extract content from https://example.com and https://anotherexample.org using advanced extraction.',
+    expected_output='A JSON string containing the extracted content from both URLs.',
+    agent=extractor_agent
+)
+
+# Configure the tool with custom parameters
+custom_extractor = TavilyExtractorTool(
+    extract_depth='advanced',
+    include_images=True,
+    timeout=120
+)
+
+agent_with_custom_tool = Agent(
+    role="Advanced Content Extractor",
+    goal="Extract comprehensive content with images",
+    tools=[custom_extractor]
+)
+```
+
+### 도구 매개변수
+
+도구의 동작을 초기화 시 매개변수를 설정하여 사용자 정의할 수 있습니다:
+
+```python
+# 사용자 정의 설정으로 초기화
+extractor_tool = TavilyExtractorTool(
+    extract_depth='advanced',  # 보다 포괄적인 추출
+    include_images=True,       # 이미지 결과 포함
+    timeout=90                 # 사용자 정의 타임아웃
+)
+```
+
+## 기능
+
+- **단일 또는 여러 URL**: 하나의 URL에서 콘텐츠를 추출하거나 한 번의 요청으로 여러 URL을 처리할 수 있습니다
+- **구성 가능한 깊이**: 기본(빠른) 및 고급(포괄적인) 추출 모드 중에서 선택할 수 있습니다
+- **이미지 지원**: 원할 경우 추출 결과에 이미지를 포함할 수 있습니다
+- **구조화된 출력**: 추출된 콘텐츠가 잘 포맷된 JSON으로 반환됩니다
+- **오류 처리**: 네트워크 시간 초과 및 추출 오류에 대한 견고한 처리
+
+## 응답 형식
+
+도구는 제공된 URL에서 추출한 구조화된 데이터를 나타내는 JSON 문자열을 반환합니다. 정확한 구조는 페이지의 내용과 사용된 `extract_depth`에 따라 달라집니다.
+
+일반적인 응답 요소는 다음과 같습니다:
+- **Title**: 페이지 제목
+- **Content**: 페이지의 주요 텍스트 내용
+- **Images**: 이미지 URL 및 메타데이터 (`include_images=True`인 경우)
+- **Metadata**: 저자, 설명 등 추가적인 페이지 정보
+
+## 사용 사례
+
+- **콘텐츠 분석**: 경쟁사 웹사이트에서 콘텐츠를 추출하고 분석
+- **연구**: 다양한 소스에서 구조화된 데이터를 수집하여 분석
+- **콘텐츠 마이그레이션**: 기존 웹사이트에서 콘텐츠를 추출하여 마이그레이션
+- **모니터링**: 변경 감지를 위해 정기적으로 콘텐츠 추출
+- **데이터 수집**: 웹 소스에서 정보를 체계적으로 추출
+
+응답 구조와 사용 가능한 옵션에 대한 자세한 정보는 [Tavily API 문서](https://docs.tavily.com/docs/tavily-api/python-sdk#extract)를 참고하세요.

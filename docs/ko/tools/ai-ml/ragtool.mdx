@@ -1,0 +1,172 @@
+---
+title: RAG 도구
+description: RagTool은 Retrieval-Augmented Generation을 사용하여 질문에 답변하는 동적 지식 기반 도구입니다.
+icon: vector-square
+---
+
+# `RagTool`
+
+## 설명
+
+`RagTool`은 EmbedChain을 통한 RAG(Retrieval-Augmented Generation)의 강력함을 활용하여 질문에 답하도록 설계되었습니다.
+이는 다양한 데이터 소스에서 관련 정보를 검색할 수 있는 동적 지식 기반을 제공합니다.
+이 도구는 방대한 정보에 접근해야 하고 맥락에 맞는 답변을 제공해야 하는 애플리케이션에 특히 유용합니다.
+
+## 예시
+
+다음 예시는 도구를 초기화하고 다양한 데이터 소스와 함께 사용하는 방법을 보여줍니다:
+
+```python Code
+from crewai_tools import RagTool
+
+# Create a RAG tool with default settings
+rag_tool = RagTool()
+
+# Add content from a file
+rag_tool.add(data_type="file", path="path/to/your/document.pdf")
+
+# Add content from a web page
+rag_tool.add(data_type="web_page", url="https://example.com")
+
+# Define an agent with the RagTool
+@agent
+def knowledge_expert(self) -> Agent:
+    '''
+    This agent uses the RagTool to answer questions about the knowledge base.
+    '''
+    return Agent(
+        config=self.agents_config["knowledge_expert"],
+        allow_delegation=False,
+        tools=[rag_tool]
+    )
+```
+
+## 지원되는 데이터 소스
+
+`RagTool`은 다양한 데이터 소스와 함께 사용할 수 있습니다. 예를 들어:
+
+- 📰 PDF 파일
+- 📊 CSV 파일
+- 📃 JSON 파일
+- 📝 텍스트
+- 📁 디렉터리/폴더
+- 🌐 HTML 웹 페이지
+- 📽️ YouTube 채널
+- 📺 YouTube 동영상
+- 📚 문서화 웹사이트
+- 📝 MDX 파일
+- 📄 DOCX 파일
+- 🧾 XML 파일
+- 📬 Gmail
+- 📝 GitHub 저장소
+- 🐘 PostgreSQL 데이터베이스
+- 🐬 MySQL 데이터베이스
+- 🤖 Slack 대화
+- 💬 Discord 메시지
+- 🗨️ Discourse 포럼
+- 📝 Substack 뉴스레터
+- 🐝 Beehiiv 콘텐츠
+- 💾 Dropbox 파일
+- 🖼️ 이미지
+- ⚙️ 사용자 정의 데이터 소스
+
+## 매개변수
+
+`RagTool`은 다음과 같은 매개변수를 허용합니다:
+
+- **summarize**: 선택 사항. 검색된 콘텐츠를 요약할지 여부입니다. 기본값은 `False`입니다.
+- **adapter**: 선택 사항. 지식 베이스에 대한 사용자 지정 어댑터입니다. 제공되지 않은 경우 EmbedchainAdapter가 사용됩니다.
+- **config**: 선택 사항. 내부 EmbedChain App의 구성입니다.
+
+## 콘텐츠 추가
+
+`add` 메서드를 사용하여 지식 베이스에 콘텐츠를 추가할 수 있습니다:
+
+```python Code
+# PDF 파일 추가
+rag_tool.add(data_type="file", path="path/to/your/document.pdf")
+
+# 웹 페이지 추가
+rag_tool.add(data_type="web_page", url="https://example.com")
+
+# YouTube 비디오 추가
+rag_tool.add(data_type="youtube_video", url="https://www.youtube.com/watch?v=VIDEO_ID")
+
+# 파일이 있는 디렉터리 추가
+rag_tool.add(data_type="directory", path="path/to/your/directory")
+```
+
+## 에이전트 통합 예시
+
+아래는 `RagTool`을 CrewAI 에이전트와 통합하는 방법입니다:
+
+```python Code
+from crewai import Agent
+from crewai.project import agent
+from crewai_tools import RagTool
+
+# Initialize the tool and add content
+rag_tool = RagTool()
+rag_tool.add(data_type="web_page", url="https://docs.crewai.com")
+rag_tool.add(data_type="file", path="company_data.pdf")
+
+# Define an agent with the RagTool
+@agent
+def knowledge_expert(self) -> Agent:
+    return Agent(
+        config=self.agents_config["knowledge_expert"],
+        allow_delegation=False,
+        tools=[rag_tool]
+    )
+```
+
+## 고급 구성
+
+`RagTool`의 동작을 구성 사전을 제공하여 사용자 지정할 수 있습니다.
+
+```python Code
+from crewai_tools import RagTool
+
+# 사용자 지정 구성으로 RAG 도구 생성
+config = {
+    "app": {
+        "name": "custom_app",
+    },
+    "llm": {
+        "provider": "openai",
+        "config": {
+            "model": "gpt-4",
+        }
+    },
+    "embedding_model": {
+        "provider": "openai",
+        "config": {
+            "model": "text-embedding-ada-002"
+        }
+    },
+    "vectordb": {
+        "provider": "elasticsearch",
+        "config": {
+            "collection_name": "my-collection",
+            "cloud_id": "deployment-name:xxxx",
+            "api_key": "your-key",
+            "verify_certs": False
+        }
+    },
+    "chunker": {
+        "chunk_size": 400,
+        "chunk_overlap": 100,
+        "length_function": "len",
+        "min_chunk_size": 0
+    }
+}
+
+rag_tool = RagTool(config=config, summarize=True)
+```
+
+내부 RAG 도구는 Embedchain 어댑터를 사용하므로 Embedchain에서 지원하는 모든 구성 옵션을 전달할 수 있습니다.
+자세한 내용은 [Embedchain 문서](https://docs.embedchain.ai/components/introduction)를 참조하세요.
+.yaml 파일에서 제공되는 구성 옵션을 반드시 검토하시기 바랍니다.
+
+## 결론
+`RagTool`은 다양한 데이터 소스에서 지식 베이스를 생성하고 질의할 수 있는 강력한 방법을 제공합니다. Retrieval-Augmented Generation을 활용하여, 에이전트가 관련 정보를 효율적으로 접근하고 검색할 수 있게 하여, 보다 정확하고 상황에 맞는 응답을 제공하는 능력을 향상시킵니다.

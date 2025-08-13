@@ -1,0 +1,119 @@
+---
+title: "소개"
+description: "CrewAI Enterprise REST API에 대한 완벽한 참고 자료"
+icon: "code"
+---
+
+# CrewAI 엔터프라이즈 API
+
+CrewAI 엔터프라이즈 API 참고 자료에 오신 것을 환영합니다. 이 API를 사용하면 배포된 crew와 프로그래밍 방식으로 상호작용할 수 있어, 애플리케이션, 워크플로우 및 서비스와의 통합이 가능합니다.
+
+## 빠른 시작
+
+<Steps>
+  <Step title="API 자격 증명 받기">
+    CrewAI Enterprise 대시보드에서 자신의 crew 상세 페이지로 이동하여 Status 탭에서 Bearer Token을 복사하세요.
+  </Step>
+  
+  <Step title="필수 입력값 확인하기">
+    `GET /inputs` 엔드포인트를 사용하여 crew가 기대하는 파라미터를 확인하세요.
+  </Step>
+  
+  <Step title="Crew 실행 시작하기">
+    입력값과 함께 `POST /kickoff`를 호출하여 crew 실행을 시작하고 `kickoff_id`를 받으세요.
+  </Step>
+  
+  <Step title="진행 상황 모니터링">
+    `GET /status/{kickoff_id}`를 사용하여 실행 상태를 확인하고 결과를 조회하세요.
+  </Step>
+</Steps>
+
+## 인증
+
+모든 API 요청은 Bearer 토큰을 사용한 인증이 필요합니다. `Authorization` 헤더에 토큰을 포함하세요:
+
+```bash
+curl -H "Authorization: Bearer YOUR_CREW_TOKEN" \
+  https://your-crew-url.crewai.com/inputs
+```
+
+### 토큰 유형
+
+| 토큰 유형 | 범위 | 사용 사례 |
+|:-----------|:--------|:----------|
+| **Bearer Token** | 조직 단위 접근 | 전체 crew 운영, 서버 간 통합에 이상적 |
+| **User Bearer Token** | 사용자 범위 접근 | 제한된 권한, 사용자별 작업에 적합 |
+
+<Tip>
+두 토큰 유형 모두 CrewAI Enterprise 대시보드의 crew 상세 페이지 Status 탭에서 확인할 수 있습니다.
+</Tip>
+
+## 기본 URL
+
+각 배포된 crew마다 고유한 API 엔드포인트가 있습니다:
+
+```
+https://your-crew-name.crewai.com
+```
+
+`your-crew-name`을(를) 대시보드에서 확인할 수 있는 실제 crew의 URL로 교체하세요.
+
+## 일반적인 워크플로우
+
+1. **탐색**: `GET /inputs`를 호출하여 crew가 필요한 것을 파악합니다.
+2. **실행**: `POST /kickoff`를 통해 입력값을 제출하여 처리를 시작합니다.  
+3. **모니터링**: 완료될 때까지 `GET /status/{kickoff_id}`를 주기적으로 조회합니다.
+4. **결과**: 완료된 응답에서 최종 출력을 추출합니다.
+
+## 오류 처리
+
+API는 표준 HTTP 상태 코드를 사용합니다:
+
+| 코드 | 의미 |
+|------|:--------|
+| `200` | 성공 |
+| `400` | 잘못된 요청 - 잘못된 입력 형식 |
+| `401` | 인증 실패 - 잘못된 베어러 토큰 |
+| `404` | 찾을 수 없음 - 리소스가 존재하지 않음 |
+| `422` | 유효성 검사 오류 - 필수 입력 누락 |
+| `500` | 서버 오류 - 지원팀에 문의하십시오 |
+
+## 인터랙티브 테스트
+
+<Info>
+**왜 "전송" 버튼이 없나요?** 각 CrewAI Enterprise 사용자는 고유한 crew URL을 가지므로, 혼동을 피하기 위해 인터랙티브 플레이그라운드 대신 **참조 모드**를 사용합니다. 이를 통해 비작동 전송 버튼 없이 요청이 어떻게 생겼는지 정확히 보여줍니다.
+</Info>
+
+각 엔드포인트 페이지에서는 다음을 확인할 수 있습니다:
+- ✅ 모든 파라미터가 포함된 **정확한 요청 형식**
+- ✅ 성공 및 오류 사례에 대한 **응답 예시**
+- ✅ 여러 언어(cURL, Python, JavaScript 등)로 제공되는 **코드 샘플**
+- ✅ 올바른 Bearer 토큰 형식의 **인증 예시**
+
+### **실제 API를 테스트하려면:**
+
+<CardGroup cols={2}>
+  <Card title="cURL 예제 복사" icon="terminal">
+    cURL 예제를 복사한 후, URL과 토큰을 실제 값으로 교체하세요
+  </Card>
+  <Card title="Postman/Insomnia 사용" icon="play">
+    예제를 원하는 API 테스트 도구에 가져오세요
+  </Card>
+</CardGroup>
+
+**예시 작업 흐름:**
+1. **cURL 예제를 복사**합니다 (엔드포인트 페이지에서)
+2. **`your-actual-crew-name.crewai.com`**을(를) 실제 crew URL로 교체합니다  
+3. **Bearer 토큰을** 대시보드에서 복사한 실제 토큰으로 교체합니다
+4. **요청을 실행**합니다 (터미널이나 API 클라이언트에서)
+
+## 도움이 필요하신가요?
+
+<CardGroup cols={2}>
+  <Card title="Enterprise Support" icon="headset" href="mailto:support@crewai.com">
+    API 통합 및 문제 해결에 대한 지원을 받으세요
+  </Card>
+  <Card title="Enterprise Dashboard" icon="chart-line" href="https://app.crewai.com">
+    crew를 관리하고 실행 로그를 확인하세요
+  </Card>
+</CardGroup>

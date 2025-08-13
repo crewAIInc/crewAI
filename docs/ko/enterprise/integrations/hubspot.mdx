@@ -1,0 +1,579 @@
+---
+title: "HubSpot 연동"
+description: "CrewAI로 HubSpot에서 회사 및 연락처를 관리하세요."
+icon: "briefcase"
+---
+
+## 개요
+
+에이전트가 HubSpot 내에서 회사 및 연락처를 관리할 수 있도록 지원합니다. 새로운 레코드를 생성하고 AI 기반 자동화로 CRM 프로세스를 효율화하세요.
+
+## 사전 준비 사항
+
+HubSpot 통합을 사용하기 전에 다음을 확인하세요.
+
+- 활성 구독이 있는 [CrewAI Enterprise](https://app.crewai.com) 계정
+- 적절한 권한이 있는 HubSpot 계정
+- [통합 페이지](https://app.crewai.com/crewai_plus/connectors)를 통해 HubSpot 계정이 연결되어 있음
+
+## HubSpot 통합 설정
+
+### 1. HubSpot 계정 연결하기
+
+1. [CrewAI Enterprise Integrations](https://app.crewai.com/crewai_plus/connectors)로 이동합니다.
+2. 인증 통합 섹션에서 **HubSpot**을 찾습니다.
+3. **Connect**를 클릭하고 OAuth 플로우를 완료합니다.
+4. 회사 및 연락처 관리를 위한 필요한 권한을 부여합니다.
+5. [계정 설정](https://app.crewai.com/crewai_plus/settings/account)에서 Enterprise Token을 복사합니다.
+
+### 2. 필수 패키지 설치
+
+```bash
+uv add crewai-tools
+```
+
+## 사용 가능한 액션
+
+<AccordionGroup>
+  <Accordion title="HUBSPOT_CREATE_RECORD_COMPANIES">
+    **설명:** HubSpot에서 새로운 회사 레코드를 생성합니다.
+
+    **파라미터:**
+    - `name` (string, 필수): 회사명.
+    - `domain` (string, 선택): 회사 도메인명.
+    - `industry` (string, 선택): 산업군. HubSpot에서 미리 정의된 값 중 하나여야 합니다.
+    - `phone` (string, 선택): 전화번호.
+    - `hubspot_owner_id` (string, 선택): 회사 소유자 ID.
+    - `type` (string, 선택): 회사 유형. 사용 가능한 값: `PROSPECT`, `PARTNER`, `RESELLER`, `VENDOR`, `OTHER`.
+    - `city` (string, 선택): 도시.
+    - `state` (string, 선택): 주/지역.
+    - `zip` (string, 선택): 우편번호.
+    - `numberofemployees` (number, 선택): 직원 수.
+    - `annualrevenue` (number, 선택): 연간 매출.
+    - `timezone` (string, 선택): 시간대.
+    - `description` (string, 선택): 설명.
+    - `linkedin_company_page` (string, 선택): LinkedIn 회사 페이지 URL.
+    - `company_email` (string, 선택): 회사 이메일.
+    - `first_name` (string, 선택): 회사 연락처의 이름.
+    - `last_name` (string, 선택): 회사 연락처의 성.
+    - `about_us` (string, 선택): 회사 소개.
+    - `hs_csm_sentiment` (string, 선택): CSM 만족도. 사용 가능한 값: `at_risk`, `neutral`, `healthy`.
+    - `closedate` (string, 선택): 마감일.
+    - `hs_keywords` (string, 선택): 회사 키워드. 미리 정의된 값 중 하나여야 합니다.
+    - `country` (string, 선택): 국가/지역.
+    - `hs_country_code` (string, 선택): 국가/지역 코드.
+    - `hs_employee_range` (string, 선택): 직원 범위.
+    - `facebook_company_page` (string, 선택): Facebook 회사 페이지 URL.
+    - `facebookfans` (number, 선택): Facebook 팬 수.
+    - `hs_gps_coordinates` (string, 선택): GPS 좌표.
+    - `hs_gps_error` (string, 선택): GPS 오류.
+    - `googleplus_page` (string, 선택): Google Plus 페이지 URL.
+    - `owneremail` (string, 선택): HubSpot 소유자 이메일.
+    - `ownername` (string, 선택): HubSpot 소유자 이름.
+    - `hs_ideal_customer_profile` (string, 선택): 이상적인 고객 프로필 티어. 사용 가능한 값: `tier_1`, `tier_2`, `tier_3`.
+    - `hs_industry_group` (string, 선택): 산업 그룹.
+    - `is_public` (boolean, 선택): 공개 여부.
+    - `hs_last_metered_enrichment_timestamp` (string, 선택): 마지막 enrichment 타임스탬프.
+    - `hs_lead_status` (string, 선택): 리드 상태. 사용 가능한 값: `NEW`, `OPEN`, `IN_PROGRESS`, `OPEN_DEAL`, `UNQUALIFIED`, `ATTEMPTED_TO_CONTACT`, `CONNECTED`, `BAD_TIMING`.
+    - `lifecyclestage` (string, 선택): 라이프사이클 단계. 사용 가능한 값: `subscriber`, `lead`, `marketingqualifiedlead`, `salesqualifiedlead`, `opportunity`, `customer`, `evangelist`, `other`.
+    - `linkedinbio` (string, 선택): LinkedIn 바이오.
+    - `hs_linkedin_handle` (string, 선택): LinkedIn 핸들.
+    - `hs_live_enrichment_deadline` (string, 선택): 라이브 enrichment 기한.
+    - `hs_logo_url` (string, 선택): 로고 URL.
+    - `hs_analytics_source` (string, 선택): 원래 유입 경로.
+    - `hs_pinned_engagement_id` (number, 선택): 고정된 참여 ID.
+    - `hs_quick_context` (string, 선택): 간략한 컨텍스트.
+    - `hs_revenue_range` (string, 선택): 매출 범위.
+    - `hs_state_code` (string, 선택): 주/지역 코드.
+    - `address` (string, 선택): 거리 주소.
+    - `address2` (string, 선택): 거리 주소 2.
+    - `hs_is_target_account` (boolean, 선택): 타깃 계정 여부.
+    - `hs_target_account` (string, 선택): 타깃 계정 티어. 사용 가능한 값: `tier_1`, `tier_2`, `tier_3`.
+    - `hs_target_account_recommendation_snooze_time` (string, 선택): 타깃 계정 추천 일시중지 시간.
+    - `hs_target_account_recommendation_state` (string, 선택): 타깃 계정 추천 상태. 사용 가능한 값: `DISMISSED`, `NONE`, `SNOOZED`.
+    - `total_money_raised` (string, 선택): 총 조달 금액.
+    - `twitterbio` (string, 선택): 트위터 바이오.
+    - `twitterfollowers` (number, 선택): 트위터 팔로워 수.
+    - `twitterhandle` (string, 선택): 트위터 핸들.
+    - `web_technologies` (string, 선택): 사용한 웹 기술. 미리 정의된 값 중 하나여야 합니다.
+    - `website` (string, 선택): 웹사이트 URL.
+    - `founded_year` (string, 선택): 설립 연도.
+  </Accordion>
+
+  <Accordion title="HUBSPOT_CREATE_RECORD_CONTACTS">
+    **설명:** HubSpot에서 새로운 연락처 레코드를 생성합니다.
+
+    **파라미터:**
+    - `email` (string, 필수): 연락처 이메일 주소.
+    - `firstname` (string, 선택): 이름.
+    - `lastname` (string, 선택): 성.
+    - `phone` (string, 선택): 전화번호.
+    - `hubspot_owner_id` (string, 선택): 연락처 소유자.
+    - `lifecyclestage` (string, 선택): 라이프사이클 단계. 사용 가능한 값: `subscriber`, `lead`, `marketingqualifiedlead`, `salesqualifiedlead`, `opportunity`, `customer`, `evangelist`, `other`.
+    - `hs_lead_status` (string, 선택): 리드 상태. 사용 가능한 값: `NEW`, `OPEN`, `IN_PROGRESS`, `OPEN_DEAL`, `UNQUALIFIED`, `ATTEMPTED_TO_CONTACT`, `CONNECTED`, `BAD_TIMING`.
+    - `annualrevenue` (string, 선택): 연간 매출.
+    - `hs_buying_role` (string, 선택): 구매 역할.
+    - `cc_emails` (string, 선택): 참조(CC) 이메일.
+    - `ch_customer_id` (string, 선택): Chargify 고객 ID.
+    - `ch_customer_reference` (string, 선택): Chargify 고객 참조.
+    - `chargify_sites` (string, 선택): Chargify 사이트(들).
+    - `city` (string, 선택): 도시.
+    - `hs_facebook_ad_clicked` (boolean, 선택): Facebook 광고 클릭 여부.
+    - `hs_linkedin_ad_clicked` (string, 선택): LinkedIn 광고 클릭 여부.
+    - `hs_clicked_linkedin_ad` (string, 선택): LinkedIn 광고 클릭 여부.
+    - `closedate` (string, 선택): 마감일.
+    - `company` (string, 선택): 회사명.
+    - `company_size` (string, 선택): 회사 규모.
+    - `country` (string, 선택): 국가/지역.
+    - `hs_country_region_code` (string, 선택): 국가/지역 코드.
+    - `date_of_birth` (string, 선택): 생년월일.
+    - `degree` (string, 선택): 학위.
+    - `hs_email_customer_quarantined_reason` (string, 선택): 이메일 주소 격리 사유.
+    - `hs_role` (string, 선택): 고용 역할. 미리 정의된 값 중 하나여야 합니다.
+    - `hs_seniority` (string, 선택): 고용 직급. 미리 정의된 값 중 하나여야 합니다.
+    - `hs_sub_role` (string, 선택): 고용 하위 역할. 미리 정의된 값 중 하나여야 합니다.
+    - `hs_employment_change_detected_date` (string, 선택): 고용 변경 감지 날짜.
+    - `hs_enriched_email_bounce_detected` (boolean, 선택): 향상된 이메일 바운스 감지됨.
+    - `hs_facebookid` (string, 선택): Facebook ID.
+    - `hs_facebook_click_id` (string, 선택): Facebook 클릭 ID.
+    - `fax` (string, 선택): 팩스번호.
+    - `field_of_study` (string, 선택): 전공.
+    - `followercount` (number, 선택): 팔로워 수.
+    - `gender` (string, 선택): 성별.
+    - `hs_google_click_id` (string, 선택): Google 광고 클릭 ID.
+    - `graduation_date` (string, 선택): 졸업 날짜.
+    - `owneremail` (string, 선택): HubSpot 소유자 이메일(레거시).
+    - `ownername` (string, 선택): HubSpot 소유자 이름(레거시).
+    - `industry` (string, 선택): 산업군.
+    - `hs_inferred_language_codes` (string, 선택): 추정 언어 코드. 미리 정의된 값 중 하나여야 합니다.
+    - `jobtitle` (string, 선택): 직책.
+    - `hs_job_change_detected_date` (string, 선택): 직장 변경 감지 날짜.
+    - `job_function` (string, 선택): 직무.
+    - `hs_journey_stage` (string, 선택): 여정 단계. 미리 정의된 값 중 하나여야 합니다.
+    - `kloutscoregeneral` (number, 선택): Klout 점수.
+    - `hs_last_metered_enrichment_timestamp` (string, 선택): 마지막 enrichment 타임스탬프.
+    - `hs_latest_source` (string, 선택): 최신 유입 경로.
+    - `hs_latest_source_timestamp` (string, 선택): 최신 유입 경로 날짜.
+    - `hs_legal_basis` (string, 선택): 연락처 데이터 처리를 위한 법적 근거.
+    - `linkedinbio` (string, 선택): LinkedIn 바이오.
+    - `linkedinconnections` (number, 선택): LinkedIn 연결 수.
+    - `hs_linkedin_url` (string, 선택): LinkedIn URL.
+    - `hs_linkedinid` (string, 선택): LinkedIn ID.
+    - `hs_live_enrichment_deadline` (string, 선택): 라이브 enrichment 기한.
+    - `marital_status` (string, 선택): 결혼 상태.
+    - `hs_content_membership_email` (string, 선택): 멤버 이메일.
+    - `hs_content_membership_notes` (string, 선택): 멤버십 노트.
+    - `message` (string, 선택): 메시지.
+    - `military_status` (string, 선택): 군복무 상태.
+    - `mobilephone` (string, 선택): 휴대전화 번호.
+    - `numemployees` (string, 선택): 직원 수.
+    - `hs_analytics_source` (string, 선택): 원래 유입 경로.
+    - `photo` (string, 선택): 사진.
+    - `hs_pinned_engagement_id` (number, 선택): 고정된 참여 ID.
+    - `zip` (string, 선택): 우편번호.
+    - `hs_language` (string, 선택): 선호 언어. 미리 정의된 값 중 하나여야 합니다.
+    - `associatedcompanyid` (number, 선택): 기본 연결된 회사 ID.
+    - `hs_email_optout_survey_reason` (string, 선택): 이메일 수신 거부 사유.
+    - `relationship_status` (string, 선택): 관계 상태.
+    - `hs_returning_to_office_detected_date` (string, 선택): 사무실 복귀 감지 날짜.
+    - `salutation` (string, 선택): 호칭.
+    - `school` (string, 선택): 학교.
+    - `seniority` (string, 선택): 직급.
+    - `hs_feedback_show_nps_web_survey` (boolean, 선택): NPS 웹 설문조사를 표시할지 여부.
+    - `start_date` (string, 선택): 시작일.
+    - `state` (string, 선택): 주/지역.
+    - `hs_state_code` (string, 선택): 주/지역 코드.
+    - `hs_content_membership_status` (string, 선택): 상태.
+    - `address` (string, 선택): 거리 주소.
+    - `tax_exempt` (string, 선택): 세금 면제.
+    - `hs_timezone` (string, 선택): 시간대. 미리 정의된 값 중 하나여야 합니다.
+    - `twitterbio` (string, 선택): 트위터 바이오.
+    - `hs_twitterid` (string, 선택): 트위터 ID.
+    - `twitterprofilephoto` (string, 선택): 트위터 프로필 사진.
+    - `twitterhandle` (string, 선택): 트위터 사용자명.
+    - `vat_number` (string, 선택): 부가가치세 번호.
+    - `ch_verified` (string, 선택): ACH/eCheck 결제 인증됨.
+    - `website` (string, 선택): 웹사이트 URL.
+    - `hs_whatsapp_phone_number` (string, 선택): WhatsApp 전화번호.
+    - `work_email` (string, 선택): 업무용 이메일.
+    - `hs_googleplusid` (string, 선택): googleplus ID.
+  </Accordion>
+
+  <Accordion title="HUBSPOT_CREATE_RECORD_DEALS">
+    **설명:** HubSpot에서 새로운 거래(deal) 레코드를 생성합니다.
+
+    **파라미터:**
+    - `dealname` (string, 필수): 거래 이름.
+    - `amount` (number, 선택): 거래 금액.
+    - `dealstage` (string, 선택): 거래의 파이프라인 단계.
+    - `pipeline` (string, 선택): 거래가 속한 파이프라인.
+    - `closedate` (string, 선택): 예상 마감일.
+    - `hubspot_owner_id` (string, 선택): 거래 소유자.
+    - `dealtype` (string, 선택): 거래 유형. 사용 가능한 값: `newbusiness`, `existingbusiness`.
+    - `description` (string, 선택): 거래 설명.
+    - `hs_priority` (string, 선택): 거래 우선순위. 사용 가능한 값: `low`, `medium`, `high`.
+  </Accordion>
+
+  <Accordion title="HUBSPOT_CREATE_RECORD_ENGAGEMENTS">
+    **설명:** HubSpot에서 새로운 참여(예: 노트, 이메일, 통화, 미팅, 작업)를 생성합니다.
+
+    **파라미터:**
+    - `engagementType` (string, 필수): 참여 유형. 사용 가능한 값: `NOTE`, `EMAIL`, `CALL`, `MEETING`, `TASK`.
+    - `hubspot_owner_id` (string, 선택): 이 활동이 할당된 사용자.
+    - `hs_timestamp` (string, 선택): 활동 날짜 및 시간.
+    - `hs_note_body` (string, 선택): 노트 본문. (`NOTE`에서 사용)
+    - `hs_task_subject` (string, 선택): 작업 제목. (`TASK`에서 사용)
+    - `hs_task_body` (string, 선택): 작업 노트. (`TASK`에서 사용)
+    - `hs_task_status` (string, 선택): 작업 상태. (`TASK`에서 사용)
+    - `hs_meeting_title` (string, 선택): 미팅 제목. (`MEETING`에서 사용)
+    - `hs_meeting_body` (string, 선택): 미팅 설명. (`MEETING`에서 사용)
+    - `hs_meeting_start_time` (string, 선택): 미팅 시작 시간. (`MEETING`에서 사용)
+    - `hs_meeting_end_time` (string, 선택): 미팅 종료 시간. (`MEETING`에서 사용)
+  </Accordion>
+
+  <Accordion title="HUBSPOT_UPDATE_RECORD_COMPANIES">
+    **설명:** HubSpot에서 기존 회사 레코드를 업데이트합니다.
+
+    **파라미터:**
+    - `recordId` (string, 필수): 업데이트할 회사의 ID.
+    - `name` (string, 선택): 회사명.
+    - `domain` (string, 선택): 회사 도메인명.
+    - `industry` (string, 선택): 산업군.
+    - `phone` (string, 선택): 전화번호.
+    - `city` (string, 선택): 도시.
+    - `state` (string, 선택): 주/지역.
+    - `zip` (string, 선택): 우편번호.
+    - `numberofemployees` (number, 선택): 직원 수.
+    - `annualrevenue` (number, 선택): 연간 매출.
+    - `description` (string, 선택): 설명.
+  </Accordion>
+
+  <Accordion title="HUBSPOT_CREATE_RECORD_ANY">
+    **설명:** HubSpot에서 지정된 오브젝트 타입의 레코드를 생성합니다.
+
+    **파라미터:**
+    - `recordType` (string, 필수): 커스텀 오브젝트의 오브젝트 타입 ID.
+    - 추가 파라미터는 커스텀 오브젝트의 스키마에 따라 다릅니다.
+  </Accordion>
+
+  <Accordion title="HUBSPOT_UPDATE_RECORD_CONTACTS">
+    **설명:** HubSpot에서 기존 연락처 레코드를 업데이트합니다.
+
+    **파라미터:**
+    - `recordId` (string, 필수): 업데이트할 연락처의 ID.
+    - `firstname` (string, 선택): 이름.
+    - `lastname` (string, 선택): 성.
+    - `email` (string, 선택): 이메일 주소.
+    - `phone` (string, 선택): 전화번호.
+    - `company` (string, 선택): 회사명.
+    - `jobtitle` (string, 선택): 직책.
+    - `lifecyclestage` (string, 선택): 라이프사이클 단계.
+  </Accordion>
+
+  <Accordion title="HUBSPOT_UPDATE_RECORD_DEALS">
+    **설명:** HubSpot에서 기존 거래 레코드를 업데이트합니다.
+
+    **파라미터:**
+    - `recordId` (string, 필수): 업데이트할 거래의 ID.
+    - `dealname` (string, 선택): 거래 이름.
+    - `amount` (number, 선택): 거래 금액.
+    - `dealstage` (string, 선택): 거래의 파이프라인 단계.
+    - `pipeline` (string, 선택): 거래가 속한 파이프라인.
+    - `closedate` (string, 선택): 예상 마감일.
+    - `dealtype` (string, 선택): 거래 유형.
+  </Accordion>
+
+  <Accordion title="HUBSPOT_UPDATE_RECORD_ENGAGEMENTS">
+    **설명:** HubSpot에서 기존 참여(engagement)를 업데이트합니다.
+
+    **파라미터:**
+    - `recordId` (string, 필수): 업데이트할 참여의 ID.
+    - `hs_note_body` (string, 선택): 노트 본문.
+    - `hs_task_subject` (string, 선택): 작업 제목.
+    - `hs_task_body` (string, 선택): 작업 노트.
+    - `hs_task_status` (string, 선택): 작업 상태.
+  </Accordion>
+
+  <Accordion title="HUBSPOT_UPDATE_RECORD_ANY">
+    **설명:** HubSpot에서 지정된 오브젝트 타입의 레코드를 업데이트합니다.
+
+    **파라미터:**
+    - `recordId` (string, 필수): 업데이트할 레코드의 ID.
+    - `recordType` (string, 필수): 커스텀 오브젝트의 오브젝트 타입 ID.
+    - 추가 파라미터는 커스텀 오브젝트의 스키마에 따라 다릅니다.
+  </Accordion>
+
+  <Accordion title="HUBSPOT_GET_RECORDS_COMPANIES">
+    **설명:** HubSpot에서 회사 레코드 목록을 가져옵니다.
+
+    **파라미터:**
+    - `paginationParameters` (object, 선택): 다음 페이지를 가져오려면 `pageCursor`를 사용하세요.
+  </Accordion>
+
+  <Accordion title="HUBSPOT_GET_RECORDS_CONTACTS">
+    **설명:** HubSpot에서 연락처 레코드 목록을 가져옵니다.
+
+    **파라미터:**
+    - `paginationParameters` (object, 선택): 다음 페이지를 가져오려면 `pageCursor`를 사용하세요.
+  </Accordion>
+
+  <Accordion title="HUBSPOT_GET_RECORDS_DEALS">
+    **설명:** HubSpot에서 거래 레코드 목록을 가져옵니다.
+
+    **파라미터:**
+    - `paginationParameters` (object, 선택): 다음 페이지를 가져오려면 `pageCursor`를 사용하세요.
+  </Accordion>
+
+  <Accordion title="HUBSPOT_GET_RECORDS_ENGAGEMENTS">
+    **설명:** HubSpot에서 참여(engagement) 레코드 목록을 가져옵니다.
+
+    **파라미터:**
+    - `objectName` (string, 필수): 가져올 참여 유형(예: "notes").
+    - `paginationParameters` (object, 선택): 다음 페이지를 가져오려면 `pageCursor`를 사용하세요.
+  </Accordion>
+
+  <Accordion title="HUBSPOT_GET_RECORDS_ANY">
+    **설명:** HubSpot에서 지정된 오브젝트 타입의 레코드 목록을 가져옵니다.
+
+    **파라미터:**
+    - `recordType` (string, 필수): 커스텀 오브젝트의 오브젝트 타입 ID.
+    - `paginationParameters` (object, 선택): 다음 페이지를 가져오려면 `pageCursor`를 사용하세요.
+  </Accordion>
+
+  <Accordion title="HUBSPOT_GET_RECORD_BY_ID_COMPANIES">
+    **설명:** ID로 단일 회사 레코드를 가져옵니다.
+
+    **파라미터:**
+    - `recordId` (string, 필수): 가져올 회사의 ID.
+  </Accordion>
+
+  <Accordion title="HUBSPOT_GET_RECORD_BY_ID_CONTACTS">
+    **설명:** ID로 단일 연락처 레코드를 가져옵니다.
+
+    **파라미터:**
+    - `recordId` (string, 필수): 가져올 연락처의 ID.
+  </Accordion>
+
+  <Accordion title="HUBSPOT_GET_RECORD_BY_ID_DEALS">
+    **설명:** ID로 단일 거래 레코드를 가져옵니다.
+
+    **파라미터:**
+    - `recordId` (string, 필수): 가져올 거래의 ID.
+  </Accordion>
+
+  <Accordion title="HUBSPOT_GET_RECORD_BY_ID_ENGAGEMENTS">
+    **설명:** ID로 단일 참여(engagement) 레코드를 가져옵니다.
+
+    **파라미터:**
+    - `recordId` (string, 필수): 가져올 참여의 ID.
+  </Accordion>
+
+  <Accordion title="HUBSPOT_GET_RECORD_BY_ID_ANY">
+    **설명:** 지정된 오브젝트 타입의 단일 레코드를 ID로 가져옵니다.
+
+    **파라미터:**
+    - `recordType` (string, 필수): 커스텀 오브젝트의 오브젝트 타입 ID.
+    - `recordId` (string, 필수): 가져올 레코드의 ID.
+  </Accordion>
+
+  <Accordion title="HUBSPOT_SEARCH_RECORDS_COMPANIES">
+    **설명:** 필터 수식을 사용해 HubSpot에서 회사 레코드를 검색합니다.
+
+    **파라미터:**
+    - `filterFormula` (object, 선택): 분리 정규형(OR of ANDs) 필터.
+    - `paginationParameters` (object, 선택): 다음 페이지를 가져오려면 `pageCursor`를 사용하세요.
+  </Accordion>
+
+  <Accordion title="HUBSPOT_SEARCH_RECORDS_CONTACTS">
+    **설명:** 필터 수식을 사용해 HubSpot에서 연락처 레코드를 검색합니다.
+
+    **파라미터:**
+    - `filterFormula` (object, 선택): 분리 정규형(OR of ANDs) 필터.
+    - `paginationParameters` (object, 선택): 다음 페이지를 가져오려면 `pageCursor`를 사용하세요.
+  </Accordion>
+
+  <Accordion title="HUBSPOT_SEARCH_RECORDS_DEALS">
+    **설명:** 필터 수식을 사용해 HubSpot에서 거래 레코드를 검색합니다.
+
+    **파라미터:**
+    - `filterFormula` (object, 선택): 분리 정규형(OR of ANDs) 필터.
+    - `paginationParameters` (object, 선택): 다음 페이지를 가져오려면 `pageCursor`를 사용하세요.
+  </Accordion>
+
+  <Accordion title="HUBSPOT_SEARCH_RECORDS_ENGAGEMENTS">
+    **설명:** 필터 수식을 사용해 HubSpot에서 참여(engagement) 레코드를 검색합니다.
+
+    **파라미터:**
+    - `engagementFilterFormula` (object, 선택): 참여 필터.
+    - `paginationParameters` (object, 선택): 다음 페이지를 가져오려면 `pageCursor`를 사용하세요.
+  </Accordion>
+
+  <Accordion title="HUBSPOT_SEARCH_RECORDS_ANY">
+    **설명:** HubSpot에서 지정된 오브젝트 타입의 레코드를 검색합니다.
+
+    **파라미터:**
+    - `recordType` (string, 필수): 검색할 오브젝트 타입 ID.
+    - `filterFormula` (string, 선택): 적용할 필터 수식.
+    - `paginationParameters` (object, 선택): 다음 페이지를 가져오려면 `pageCursor`를 사용하세요.
+  </Accordion>
+
+  <Accordion title="HUBSPOT_DELETE_RECORD_COMPANIES">
+    **설명:** ID로 회사 레코드를 삭제합니다.
+
+    **파라미터:**
+    - `recordId` (string, 필수): 삭제할 회사의 ID.
+  </Accordion>
+
+  <Accordion title="HUBSPOT_DELETE_RECORD_CONTACTS">
+    **설명:** ID로 연락처 레코드를 삭제합니다.
+
+    **파라미터:**
+    - `recordId` (string, 필수): 삭제할 연락처의 ID.
+  </Accordion>
+
+  <Accordion title="HUBSPOT_DELETE_RECORD_DEALS">
+    **설명:** ID로 거래 레코드를 삭제합니다.
+
+    **파라미터:**
+    - `recordId` (string, 필수): 삭제할 거래의 ID.
+  </Accordion>
+
+  <Accordion title="HUBSPOT_DELETE_RECORD_ENGAGEMENTS">
+    **설명:** ID로 참여(engagement) 레코드를 삭제합니다.
+
+    **파라미터:**
+    - `recordId` (string, 필수): 삭제할 참여의 ID.
+  </Accordion>
+
+  <Accordion title="HUBSPOT_DELETE_RECORD_ANY">
+    **설명:** 지정된 오브젝트 타입의 레코드를 ID로 삭제합니다.
+
+    **파라미터:**
+    - `recordType` (string, 필수): 커스텀 오브젝트의 오브젝트 타입 ID.
+    - `recordId` (string, 필수): 삭제할 레코드의 ID.
+  </Accordion>
+
+  <Accordion title="HUBSPOT_GET_CONTACTS_BY_LIST_ID">
+    **설명:** 지정된 리스트 ID로부터 연락처 목록을 가져옵니다.
+
+    **파라미터:**
+    - `listId` (string, 필수): 연락처를 가져올 리스트의 ID.
+    - `paginationParameters` (object, 선택): 이후 페이지를 위해 `pageCursor` 사용.
+  </Accordion>
+
+  <Accordion title="HUBSPOT_DESCRIBE_ACTION_SCHEMA">
+    **설명:** 특정 오브젝트 타입 및 작업에 대한 예상 스키마를 가져옵니다.
+
+    **파라미터:**
+    - `recordType` (string, 필수): 오브젝트 타입 ID(예: 'companies').
+    - `operation` (string, 필수): 작업 유형(예: 'CREATE_RECORD').
+  </Accordion>
+</AccordionGroup>
+
+## 사용 예시
+
+### 기본 HubSpot 에이전트 설정
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import CrewaiEnterpriseTools
+
+# Get enterprise tools (HubSpot tools will be included)
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token"
+)
+
+# Create an agent with HubSpot capabilities
+hubspot_agent = Agent(
+    role="CRM Manager",
+    goal="Manage company and contact records in HubSpot",
+    backstory="An AI assistant specialized in CRM management.",
+    tools=[enterprise_tools]
+)
+
+# Task to create a new company
+create_company_task = Task(
+    description="Create a new company in HubSpot with name 'Innovate Corp' and domain 'innovatecorp.com'.",
+    agent=hubspot_agent,
+    expected_output="Company created successfully with confirmation"
+)
+
+# Run the task
+crew = Crew(
+    agents=[hubspot_agent],
+    tasks=[create_company_task]
+)
+
+crew.kickoff()
+```
+
+### 특정 HubSpot 도구 필터링
+
+```python
+from crewai_tools import CrewaiEnterpriseTools
+
+# Get only the tool to create contacts
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token",
+    actions_list=["hubspot_create_record_contacts"]
+)
+
+contact_creator = Agent(
+    role="Contact Creator",
+    goal="Create new contacts in HubSpot",
+    backstory="An AI assistant that focuses on creating new contact entries in the CRM.",
+    tools=[enterprise_tools]
+)
+
+# Task to create a contact
+create_contact = Task(
+    description="Create a new contact for 'John Doe' with email 'john.doe@example.com'.",
+    agent=contact_creator,
+    expected_output="Contact created successfully in HubSpot."
+)
+
+crew = Crew(
+    agents=[contact_creator],
+    tasks=[create_contact]
+)
+
+crew.kickoff()
+```
+
+### 연락처 관리
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import CrewaiEnterpriseTools
+
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token"
+)
+
+crm_manager = Agent(
+    role="CRM Manager",
+    goal="Manage and organize HubSpot contacts efficiently.",
+    backstory="An experienced CRM manager who maintains an organized contact database.",
+    tools=[enterprise_tools]
+)
+
+# Task to manage contacts
+contact_task = Task(
+    description="Create a new contact for 'Jane Smith' at 'Global Tech Inc.' with email 'jane.smith@globaltech.com'.",
+    agent=crm_manager,
+    expected_output="Contact database updated with the new contact."
+)
+
+crew = Crew(
+    agents=[crm_manager],
+    tasks=[contact_task]
+)
+
+crew.kickoff()
+```
+
+### 도움 받기
+
+<Card title="도움이 필요하신가요?" icon="headset" href="mailto:support@crewai.com">
+  HubSpot 연동 설정 또는 문제 해결에 도움이 필요하시면 지원팀에 문의해 주세요.
+</Card>

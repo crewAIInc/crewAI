@@ -1,0 +1,961 @@
+---
+title: Knowledge
+description: CrewAI에서 knowledge란 무엇이며 어떻게 사용하는지 알아봅니다.
+icon: book
+---
+
+## 개요
+
+Knowledge in CrewAI는 AI 에이전트가 작업 중에 외부 정보 소스에 접근하고 이를 활용할 수 있게 해주는 강력한 시스템입니다.
+이는 에이전트에게 작업할 때 참고할 수 있는 참조 도서관을 제공하는 것과 같습니다.
+
+<Info>
+  Knowledge를 사용함으로써 얻는 주요 이점:
+  - 에이전트에게 도메인 특화 정보를 제공
+  - 실제 데이터를 통한 의사 결정 지원
+  - 대화 전체의 맥락 유지
+  - 응답을 사실 기반 정보에 근거
+</Info>
+
+## 빠른 시작 예제
+
+<Tip>
+파일 기반 Knowledge Sources의 경우, 프로젝트의 루트에 `knowledge` 디렉토리를 생성하고 그 안에 파일을 배치해야 합니다.  
+또한, 소스를 생성할 때는 `knowledge` 디렉토리로부터의 상대 경로를 사용하세요.
+</Tip>
+
+### 기본 문자열 지식 예제
+
+```python Code
+from crewai import Agent, Task, Crew, Process, LLM
+from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
+
+# Create a knowledge source
+content = "Users name is John. He is 30 years old and lives in San Francisco."
+string_source = StringKnowledgeSource(content=content)
+
+# Create an LLM with a temperature of 0 to ensure deterministic outputs
+llm = LLM(model="gpt-4o-mini", temperature=0)
+
+# Create an agent with the knowledge store
+agent = Agent(
+    role="About User",
+    goal="You know everything about the user.",
+    backstory="You are a master at understanding people and their preferences.",
+    verbose=True,
+    allow_delegation=False,
+    llm=llm,
+)
+
+task = Task(
+    description="Answer the following questions about the user: {question}",
+    expected_output="An answer to the question.",
+    agent=agent,
+)
+
+crew = Crew(
+    agents=[agent],
+    tasks=[task],
+    verbose=True,
+    process=Process.sequential,
+    knowledge_sources=[string_source], # Enable knowledge by adding the sources here
+)
+
+result = crew.kickoff(inputs={"question": "What city does John live in and how old is he?"})
+```
+
+### 웹 콘텐츠 지식 예시
+
+<Note>
+  다음 예시가 작동하려면 `docling`을 설치해야 합니다: `uv add docling`
+</Note>
+
+```python Code
+from crewai import LLM, Agent, Crew, Process, Task
+from crewai.knowledge.source.crew_docling_source import CrewDoclingSource
+
+# Create a knowledge source from web content
+content_source = CrewDoclingSource(
+    file_paths=[
+        "https://lilianweng.github.io/posts/2024-11-28-reward-hacking",
+        "https://lilianweng.github.io/posts/2024-07-07-hallucination",
+    ],
+)
+
+# Create an LLM with a temperature of 0 to ensure deterministic outputs
+llm = LLM(model="gpt-4o-mini", temperature=0)
+
+# Create an agent with the knowledge store
+agent = Agent(
+    role="About papers",
+    goal="You know everything about the papers.",
+    backstory="You are a master at understanding papers and their content.",
+    verbose=True,
+    allow_delegation=False,
+    llm=llm,
+)
+
+task = Task(
+    description="Answer the following questions about the papers: {question}",
+    expected_output="An answer to the question.",
+    agent=agent,
+)
+
+crew = Crew(
+    agents=[agent],
+    tasks=[task],
+    verbose=True,
+    process=Process.sequential,
+    knowledge_sources=[content_source],
+)
+
+result = crew.kickoff(
+    inputs={"question": "What is the reward hacking paper about? Be sure to provide sources."}
+)
+```
+
+## 지원되는 Knowledge Sources
+
+CrewAI는 다양한 유형의 knowledge source를 기본적으로 지원합니다:
+
+<CardGroup cols={2}>
+  <Card title="텍스트 소스" icon="text">
+    - 원시 문자열
+    - 텍스트 파일 (.txt)
+    - PDF 문서
+  </Card>
+  <Card title="구조화된 데이터" icon="table">
+    - CSV 파일
+    - 엑셀 스프레드시트
+    - JSON 문서
+  </Card>
+</CardGroup>
+
+### 텍스트 파일 지식 소스
+```python
+from crewai.knowledge.source.text_file_knowledge_source import TextFileKnowledgeSource
+
+text_source = TextFileKnowledgeSource(
+    file_paths=["document.txt", "another.txt"]
+)
+```
+
+### PDF 지식 소스
+```python
+from crewai.knowledge.source.pdf_knowledge_source import PDFKnowledgeSource
+
+pdf_source = PDFKnowledgeSource(
+    file_paths=["document.pdf", "another.pdf"]
+)
+```
+
+### CSV 지식 소스
+```python
+from crewai.knowledge.source.csv_knowledge_source import CSVKnowledgeSource
+
+csv_source = CSVKnowledgeSource(
+    file_paths=["data.csv"]
+)
+```
+
+### Excel 지식 소스
+```python
+from crewai.knowledge.source.excel_knowledge_source import ExcelKnowledgeSource
+
+excel_source = ExcelKnowledgeSource(
+    file_paths=["spreadsheet.xlsx"]
+)
+```
+
+### JSON 지식 소스
+```python
+from crewai.knowledge.source.json_knowledge_source import JSONKnowledgeSource
+
+json_source = JSONKnowledgeSource(
+    file_paths=["data.json"]
+)
+```
+
+<Note>
+  반드시 ./knowledge 폴더를 생성해 주세요. 모든 소스 파일(예: .txt, .pdf, .xlsx, .json)은 중앙 집중식 관리를 위해 이 폴더에 보관해야 합니다.
+</Note>
+
+## Agent vs Crew Knowledge: 완벽 가이드
+
+<Info>
+**Knowledge 레벨 이해하기**: CrewAI는 agent와 crew 두 가지 레벨의 knowledge를 지원합니다. 이 섹션에서는 각각이 어떻게 동작하는지, 언제 초기화되는지, 그리고 dependency에 대한 일반적인 오해를 명확히 설명합니다.
+</Info>
+
+### 지식 초기화가 실제로 작동하는 방식
+
+다음은 지식을 사용할 때 실제로 발생하는 일입니다:
+
+#### 에이전트 수준 지식 (독립적)
+
+```python
+from crewai import Agent, Task, Crew
+from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
+
+# Agent with its own knowledge - NO crew knowledge needed
+specialist_knowledge = StringKnowledgeSource(
+    content="Specialized technical information for this agent only"
+)
+
+specialist_agent = Agent(
+    role="Technical Specialist",
+    goal="Provide technical expertise",
+    backstory="Expert in specialized technical domains",
+    knowledge_sources=[specialist_knowledge]  # Agent-specific knowledge
+)
+
+task = Task(
+    description="Answer technical questions",
+    agent=specialist_agent,
+    expected_output="Technical answer"
+)
+
+# No crew-level knowledge required
+crew = Crew(
+    agents=[specialist_agent],
+    tasks=[task]
+)
+
+result = crew.kickoff()  # Agent knowledge works independently
+```
+
+#### `crew.kickoff()` 중에 일어나는 일
+
+`crew.kickoff()`를 호출하면 다음과 같은 순서로 동작합니다:
+
+```python
+# During kickoff
+for agent in self.agents:
+    agent.crew = self  # Agent gets reference to crew
+    agent.set_knowledge(crew_embedder=self.embedder)  # Agent knowledge initialized
+    agent.create_agent_executor()
+```
+
+#### 스토리지 독립성
+
+각 knowledge 수준은 독립적인 스토리지 컬렉션을 사용합니다:
+
+```python
+# Agent knowledge storage
+agent_collection_name = agent.role  # e.g., "Technical Specialist"
+
+# Crew knowledge storage  
+crew_collection_name = "crew"
+
+# Both stored in same ChromaDB instance but different collections
+# Path: ~/.local/share/CrewAI/{project}/knowledge/
+#   ├── crew/                    # Crew knowledge collection
+#   ├── Technical Specialist/    # Agent knowledge collection
+#   └── Another Agent Role/      # Another agent's collection
+```
+
+### 전체 작동 예제
+
+#### 예시 1: Agent-Only Knowledge
+```python
+from crewai import Agent, Task, Crew
+from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
+
+# Agent-specific knowledge
+agent_knowledge = StringKnowledgeSource(
+    content="Agent-specific information that only this agent needs"
+)
+
+agent = Agent(
+    role="Specialist",
+    goal="Use specialized knowledge",
+    backstory="Expert with specific knowledge",
+    knowledge_sources=[agent_knowledge],
+    embedder={  # Agent can have its own embedder
+        "provider": "openai",
+        "config": {"model": "text-embedding-3-small"}
+    }
+)
+
+task = Task(
+    description="Answer using your specialized knowledge",
+    agent=agent,
+    expected_output="Answer based on agent knowledge"
+)
+
+# No crew knowledge needed
+crew = Crew(agents=[agent], tasks=[task])
+result = crew.kickoff()  # Works perfectly
+```
+
+#### 예시 2: 에이전트 및 크루 지식 모두
+
+```python
+# Crew-wide knowledge (shared by all agents)
+crew_knowledge = StringKnowledgeSource(
+    content="Company policies and general information for all agents"
+)
+
+# Agent-specific knowledge
+specialist_knowledge = StringKnowledgeSource(
+    content="Technical specifications only the specialist needs"
+)
+
+specialist = Agent(
+    role="Technical Specialist",
+    goal="Provide technical expertise",
+    backstory="Technical expert",
+    knowledge_sources=[specialist_knowledge]  # Agent-specific
+)
+
+generalist = Agent(
+    role="General Assistant", 
+    goal="Provide general assistance",
+    backstory="General helper"
+    # No agent-specific knowledge
+)
+
+crew = Crew(
+    agents=[specialist, generalist],
+    tasks=[...],
+    knowledge_sources=[crew_knowledge]  # Crew-wide knowledge
+)
+
+# Result:
+# - specialist gets: crew_knowledge + specialist_knowledge
+# - generalist gets: crew_knowledge only
+```
+
+#### 예제 3: 서로 다른 지식을 가진 다중 에이전트
+```python
+# Different knowledge for different agents
+sales_knowledge = StringKnowledgeSource(content="Sales procedures and pricing")
+tech_knowledge = StringKnowledgeSource(content="Technical documentation")
+support_knowledge = StringKnowledgeSource(content="Support procedures")
+
+sales_agent = Agent(
+    role="Sales Representative",
+    knowledge_sources=[sales_knowledge],
+    embedder={"provider": "openai", "config": {"model": "text-embedding-3-small"}}
+)
+
+tech_agent = Agent(
+    role="Technical Expert", 
+    knowledge_sources=[tech_knowledge],
+    embedder={"provider": "ollama", "config": {"model": "mxbai-embed-large"}}
+)
+
+support_agent = Agent(
+    role="Support Specialist",
+    knowledge_sources=[support_knowledge]
+    # Will use crew embedder as fallback
+)
+
+crew = Crew(
+    agents=[sales_agent, tech_agent, support_agent],
+    tasks=[...],
+    embedder={  # Fallback embedder for agents without their own
+        "provider": "google",
+        "config": {"model": "text-embedding-004"}
+    }
+)
+
+# Each agent gets only their specific knowledge
+# Each can use different embedding providers
+```
+
+<Tip>
+벡터 데이터베이스에서 도구를 사용한 검색과 달리, 사전에 지식이 탑재된 에이전트는 검색 퍼소나나 태스크가 필요하지 않습니다.  
+에이전트나 crew가 동작하는 데 필요한 관련 지식 소스만 추가하면 됩니다.
+
+지식 소스는 에이전트 또는 crew 레벨에 추가할 수 있습니다.  
+crew 레벨 지식 소스는 **crew 내 모든 에이전트**가 사용하게 됩니다.  
+에이전트 레벨 지식 소스는 해당 지식이 사전 탑재된 **특정 에이전트**만 사용하게 됩니다.
+</Tip>
+
+## Knowledge 구성
+
+crew 또는 agent에 대해 knowledge 구성을 할 수 있습니다.
+
+```python Code
+from crewai.knowledge.knowledge_config import KnowledgeConfig
+
+knowledge_config = KnowledgeConfig(results_limit=10, score_threshold=0.5)
+
+agent = Agent(
+    ...
+    knowledge_config=knowledge_config
+)
+```
+
+<Tip>
+  `results_limit`: 반환할 관련 문서의 개수입니다. 기본값은 3입니다.
+  `score_threshold`: 문서가 관련성이 있다고 간주되기 위한 최소 점수입니다. 기본값은 0.35입니다.
+</Tip>
+
+## 지원되는 Knowledge 매개변수
+
+<ParamField body="sources" type="List[BaseKnowledgeSource]" required="Yes"> 
+    저장 및 쿼리할 콘텐츠를 제공하는 knowledge source들의 리스트입니다. PDF, CSV, Excel, JSON, 텍스트 파일 또는 문자열 콘텐츠를 포함할 수 있습니다.
+</ParamField>
+<ParamField body="collection_name" type="str"> 
+    knowledge가 저장될 컬렉션의 이름입니다. 서로 다른 knowledge 세트를 식별하는 데 사용됩니다. 제공하지 않을 경우 기본값은 "knowledge"입니다.
+</ParamField>
+<ParamField body="storage" type="Optional[KnowledgeStorage]"> 
+knowledge가 저장되고 검색되는 방식을 관리하기 위한 커스텀 저장소 구성입니다. 별도로 제공하지 않는 경우 기본 storage가 생성됩니다.
+</ParamField>
+
+## 지식 저장 투명성
+
+<Info>
+**지식 저장 이해하기**: CrewAI는 ChromaDB를 사용하여 벡터 저장소에 지식 소스를 플랫폼별 디렉토리에 자동으로 저장합니다. 이러한 위치와 기본값을 이해하면 프로덕션 배포, 디버깅, 저장소 관리에 도움이 됩니다.
+</Info>
+
+### CrewAI가 Knowledge 파일을 저장하는 위치
+
+기본적으로 CrewAI는 memory와 동일한 저장 시스템을 사용하여, knowledge를 플랫폼별 디렉터리에 저장합니다.
+
+#### 플랫폼별 기본 저장 위치
+
+**macOS:**
+```
+~/Library/Application Support/CrewAI/{project_name}/
+└── knowledge/                    # Knowledge ChromaDB files
+    ├── chroma.sqlite3           # ChromaDB metadata
+    ├── {collection_id}/         # Vector embeddings
+    └── knowledge_{collection}/  # Named collections
+```
+
+**Linux:**
+```
+~/.local/share/CrewAI/{project_name}/
+└── knowledge/
+    ├── chroma.sqlite3
+    ├── {collection_id}/
+    └── knowledge_{collection}/
+```
+
+**Windows:**
+```
+C:\Users\{username}\AppData\Local\CrewAI\{project_name}\
+└── knowledge\
+    ├── chroma.sqlite3
+    ├── {collection_id}\
+    └── knowledge_{collection}\
+```
+
+### 지식 저장 위치 찾기
+
+CrewAI가 지식 파일을 저장하는 위치를 정확히 확인하려면:
+
+```python
+from crewai.utilities.paths import db_storage_path
+import os
+
+# Get the knowledge storage path
+knowledge_path = os.path.join(db_storage_path(), "knowledge")
+print(f"Knowledge storage location: {knowledge_path}")
+
+# List knowledge collections and files
+if os.path.exists(knowledge_path):
+    print("\nKnowledge storage contents:")
+    for item in os.listdir(knowledge_path):
+        item_path = os.path.join(knowledge_path, item)
+        if os.path.isdir(item_path):
+            print(f"📁 Collection: {item}/")
+            # Show collection contents
+            try:
+                for subitem in os.listdir(item_path):
+                    print(f"   └── {subitem}")
+            except PermissionError:
+                print(f"   └── (permission denied)")
+        else:
+            print(f"📄 {item}")
+else:
+    print("No knowledge storage found yet.")
+```
+
+### 지식 저장 위치 제어
+
+#### 옵션 1: 환경 변수 (권장)
+```python
+import os
+from crewai import Crew
+
+# Set custom storage location for all CrewAI data
+os.environ["CREWAI_STORAGE_DIR"] = "./my_project_storage"
+
+# All knowledge will now be stored in ./my_project_storage/knowledge/
+crew = Crew(
+    agents=[...],
+    tasks=[...],
+    knowledge_sources=[...]
+)
+```
+
+#### 옵션 2: 사용자 지정 Knowledge 저장소
+```python
+from crewai.knowledge.storage.knowledge_storage import KnowledgeStorage
+from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
+
+# Create custom storage with specific embedder
+custom_storage = KnowledgeStorage(
+    embedder={
+        "provider": "ollama",
+        "config": {"model": "mxbai-embed-large"}
+    },
+    collection_name="my_custom_knowledge"
+)
+
+# Use with knowledge sources
+knowledge_source = StringKnowledgeSource(
+    content="Your knowledge content here"
+)
+knowledge_source.storage = custom_storage
+```
+
+#### 옵션 3: 프로젝트별 Knowledge 저장소
+```python
+import os
+from pathlib import Path
+
+# Store knowledge in project directory
+project_root = Path(__file__).parent
+knowledge_dir = project_root / "knowledge_storage"
+
+os.environ["CREWAI_STORAGE_DIR"] = str(knowledge_dir)
+
+# Now all knowledge will be stored in your project directory
+```
+
+### 기본 임베딩 제공자 동작
+
+<Info>
+**기본 임베딩 제공자**: CrewAI는 다른 LLM 제공자를 사용할 때도 지식 저장을 위해 기본적으로 OpenAI 임베딩(`text-embedding-3-small`)을 사용합니다. 설정에 맞게 쉽게 이 옵션을 커스터마이즈할 수 있습니다.
+</Info>
+
+#### 기본 동작 이해하기
+```python
+from crewai import Agent, Crew, LLM
+from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
+
+# When using Claude as your LLM...
+agent = Agent(
+    role="Researcher",
+    goal="Research topics",
+    backstory="Expert researcher",
+    llm=LLM(provider="anthropic", model="claude-3-sonnet")  # Using Claude
+)
+
+# CrewAI will still use OpenAI embeddings by default for knowledge
+# This ensures consistency but may not match your LLM provider preference
+knowledge_source = StringKnowledgeSource(content="Research data...")
+
+crew = Crew(
+    agents=[agent],
+    tasks=[...],
+    knowledge_sources=[knowledge_source]
+    # Default: Uses OpenAI embeddings even with Claude LLM
+)
+```
+
+#### 지식 임베딩 공급자 사용자 정의
+```python
+# Option 1: Voyage AI 사용 (Claude 사용자에게 Anthropic이 권장)
+crew = Crew(
+    agents=[agent],
+    tasks=[...],
+    knowledge_sources=[knowledge_source],
+    embedder={
+        "provider": "voyageai",  # Claude 사용자에게 권장
+        "config": {
+            "api_key": "your-voyage-api-key",
+            "model": "voyage-3"  # 최고 품질을 원하면 "voyage-3-large" 사용
+        }
+    }
+)
+
+# Option 2: 로컬 임베딩 사용 (외부 API 호출 없음)
+crew = Crew(
+    agents=[agent],
+    tasks=[...],
+    knowledge_sources=[knowledge_source],
+    embedder={
+        "provider": "ollama",
+        "config": {
+            "model": "mxbai-embed-large",
+            "url": "http://localhost:11434/api/embeddings"
+        }
+    }
+)
+
+# Option 3: 에이전트 수준의 임베딩 사용자 정의
+agent = Agent(
+    role="Researcher",
+    goal="Research topics",
+    backstory="Expert researcher",
+    knowledge_sources=[knowledge_source],
+    embedder={
+        "provider": "google",
+        "config": {
+            "model": "models/text-embedding-004",
+            "api_key": "your-google-key"
+        }
+    }
+)
+```
+
+#### Azure OpenAI 임베딩 구성
+
+Azure OpenAI 임베딩을 사용할 때:
+1. 먼저 Azure 플랫폼에 임베딩 모델을 배포했는지 확인하세요.
+2. 그런 다음 다음과 같은 구성을 사용해야 합니다:
+
+```python
+agent = Agent(
+    role="Researcher",
+    goal="Research topics",
+    backstory="Expert researcher",
+    knowledge_sources=[knowledge_source],
+    embedder={
+        "provider": "azure",
+        "config": {
+            "api_key": "your-azure-api-key",
+            "model": "text-embedding-ada-002", # change to the model you are using and is deployed in Azure
+            "api_base": "https://your-azure-endpoint.openai.azure.com/",
+            "api_version": "2024-02-01"
+        }
+    }
+)
+```
+
+## 고급 기능
+
+### 쿼리 리라이팅
+
+CrewAI는 지식 검색을 최적화하기 위해 지능형 쿼리 리라이팅 메커니즘을 구현합니다. 에이전트가 지식 소스를 검색해야 할 때, 원시 태스크 프롬프트는 자동으로 더 효과적인 검색 쿼리로 변환됩니다.
+
+#### 쿼리 재작성 방식
+
+1. 에이전트가 knowledge 소스를 사용할 수 있을 때 작업을 실행하면 `_get_knowledge_search_query` 메서드가 트리거됩니다.
+2. 에이전트의 LLM을 사용하여 원래 작업 프롬프트를 최적화된 검색 쿼리로 변환합니다.
+3. 이 최적화된 쿼리는 knowledge 소스에서 관련 정보를 검색하는 데 사용됩니다.
+
+#### 쿼리 리라이트(Query Rewriting)의 이점
+
+<CardGroup cols={2}>
+  <Card title="향상된 검색 정확도" icon="bullseye-arrow">
+    주요 개념에 집중하고 불필요한 내용을 제거함으로써, 쿼리 리라이트는 보다 관련성 높은 정보를 검색할 수 있게 도와줍니다.
+  </Card>
+  <Card title="컨텍스트 인식" icon="brain">
+    리라이트된 쿼리는 벡터 데이터베이스 검색을 위해 더욱 구체적이고 컨텍스트를 인식할 수 있도록 설계되어 있습니다.
+  </Card>
+</CardGroup>
+
+#### 예시
+
+```python
+# Original task prompt
+task_prompt = "Answer the following questions about the user's favorite movies: What movie did John watch last week? Format your answer in JSON."
+
+# Behind the scenes, this might be rewritten as:
+rewritten_query = "What movies did John watch last week?"
+```
+
+재작성된 쿼리는 핵심 정보 요구에 더 집중하며, 출력 형식에 대한 불필요한 지시사항을 제거합니다.
+
+<Tip>
+  이 메커니즘은 완전히 자동으로 동작하며 사용자가 별도의 설정을 할 필요가 없습니다. agent의 LLM을 사용하여 쿼리 재작성을 수행하므로, 더 강력한 LLM을 사용할 경우 재작성된 쿼리의 품질이 향상될 수 있습니다.
+</Tip>
+
+### Knowledge 이벤트
+
+CrewAI는 knowledge 검색 과정에서 이벤트를 발생시키며, 이벤트 시스템을 사용하여 이를 감지할 수 있습니다. 이러한 이벤트를 통해 에이전트가 knowledge를 어떻게 검색하고 사용하는지 모니터링, 디버깅, 분석할 수 있습니다.
+
+#### 사용 가능한 Knowledge 이벤트
+
+- **KnowledgeRetrievalStartedEvent**: 에이전트가 소스에서 knowledge를 검색하기 시작할 때 발생
+- **KnowledgeRetrievalCompletedEvent**: knowledge 검색이 완료되었을 때 발생하며, 사용된 쿼리와 검색된 콘텐츠를 포함
+- **KnowledgeQueryStartedEvent**: knowledge 소스에 쿼리를 시작할 때 발생
+- **KnowledgeQueryCompletedEvent**: 쿼리가 성공적으로 완료되었을 때 발생
+- **KnowledgeQueryFailedEvent**: knowledge 소스에 대한 쿼리가 실패했을 때 발생
+- **KnowledgeSearchQueryFailedEvent**: 검색 쿼리가 실패했을 때 발생
+
+#### 예시: Knowledge Retrieval 모니터링
+
+```python
+from crewai.utilities.events import (
+    KnowledgeRetrievalStartedEvent,
+    KnowledgeRetrievalCompletedEvent,
+)
+from crewai.utilities.events.base_event_listener import BaseEventListener
+
+class KnowledgeMonitorListener(BaseEventListener):
+    def setup_listeners(self, crewai_event_bus):
+        @crewai_event_bus.on(KnowledgeRetrievalStartedEvent)
+        def on_knowledge_retrieval_started(source, event):
+            print(f"Agent '{event.agent.role}' started retrieving knowledge")
+            
+        @crewai_event_bus.on(KnowledgeRetrievalCompletedEvent)
+        def on_knowledge_retrieval_completed(source, event):
+            print(f"Agent '{event.agent.role}' completed knowledge retrieval")
+            print(f"Query: {event.query}")
+            print(f"Retrieved {len(event.retrieved_knowledge)} knowledge chunks")
+
+# Create an instance of your listener
+knowledge_monitor = KnowledgeMonitorListener()
+```
+
+이벤트 사용에 대한 자세한 내용은 [이벤트 리스너](https://docs.crewai.com/concepts/event-listener) 문서를 참고하세요.
+
+### 맞춤형 지식 소스
+
+CrewAI를 사용하면 `BaseKnowledgeSource` 클래스를 확장하여 모든 유형의 데이터에 대한 맞춤형 지식 소스를 만들 수 있습니다. 이제 우주 뉴스 기사를 가져오고 처리하는 실용적인 예제를 만들어보겠습니다.
+
+최근 우주 탐사 동향은 다음과 같습니다. 최신 우주 뉴스 기사들을 기반으로 정리하였습니다:
+
+1. SpaceX가 2023년 11월 17일 오전에 예정된, 두 번째 Starship/Super Heavy 통합 발사를 위한 최종 규제 승인을 받았습니다. 이는 SpaceX의 우주 탐사 및 우주 식민화에 대한 야심찬 계획에서 중요한 단계입니다. [출처: SpaceNews](https://spacenews.com/starship-cleared-for-nov-17-launch/)
+
+2. SpaceX는 미국 연방통신위원회(FCC)에 1세대 차세대 Starlink Gen2 위성의 첫 발사를 시작할 계획임을 알렸습니다. 이는 전 세계에 고속 인터넷을 제공하는 Starlink 위성 인터넷 서비스의 주요 업그레이드입니다. [출처: Teslarati](https://www.teslarati.com/spacex-first-starlink-gen2-satellite-launch-2022/)
+
+3. AI 스타트업 Synthetaic이 시리즈 B 펀딩에서 1,500만 달러를 유치했습니다. 이 회사는 인공 지능을 사용하여 우주 및 공중 센서에서 데이터를 분석하며, 이는 우주 탐사와 위성 기술에 큰 응용 가능성이 있습니다. [출처: SpaceNews](https://spacenews.com/ai-startup-synthetaic-raises-15-million-in-series-b-funding/)
+
+4. 미 우주군(Space Force)은 미국 인도-태평양 사령부(Indo-Pacific Command) 내에 부대를 공식적으로 창설하여 인도-태평양 지역에 항구적인 존재감을 확보하였습니다. 이는 우주 안보 및 지정학에 중대한 영향을 미칠 수 있습니다. [출처: SpaceNews](https://spacenews.com/space-force-establishes-permanent-presence-in-indo-pacific-region/)
+
+5. 우주 추적 및 데이터 분석 기업 Slingshot Aerospace는 저지구 궤도(LEO) 커버리지를 확대하기 위해 지상 광학 망원경 네트워크를 확장하고 있습니다. 이는 저지구 궤도의 위성 및 우주 잔해 추적과 분석 능력을 향상시킬 수 있습니다. [출처: SpaceNews](https://spacenews.com/slingshots-space-tracking-network-to-extend-coverage-of-low-earth-orbit/)
+
+6. 중국 국가자연과학기금위원회는 연구자들이 초대형 우주선 조립을 연구하기 위한 5개년 프로젝트를 발표했습니다. 이는 우주선 기술과 우주 탐사 역량의 비약적인 발전을 가져올 수 있습니다. [출처: SpaceNews](https://spacenews.com/china-researching-challenges-of-kilometer-scale-ultra-large-spacecraft/)
+
+7. 스탠포드 대학교의 AEroSpace Autonomy Research 센터(CAESAR)는 우주선 자율성에 초점을 맞추고 있습니다. 센터는 2024년 5월 22일에 업계, 학계, 정부 간 협력을 촉진하기 위한 시작 행사를 개최하였습니다. 이는 자율 우주선 기술의 발전에 중대한 기여를 할 수 있습니다. [출처: SpaceNews](https://spacenews.com/stanford-center-focuses-on-spacecraft-autonomy/)
+```
+
+</CodeGroup>
+
+## 디버깅 및 문제 해결
+
+### 지식 문제 디버깅
+
+#### 에이전트 지식 초기화 확인
+```python
+from crewai import Agent, Crew, Task
+from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
+
+knowledge_source = StringKnowledgeSource(content="Test knowledge")
+
+agent = Agent(
+    role="Test Agent",
+    goal="Test knowledge",
+    backstory="Testing",
+    knowledge_sources=[knowledge_source]
+)
+
+crew = Crew(agents=[agent], tasks=[Task(...)])
+
+# Before kickoff - knowledge not initialized
+print(f"Before kickoff - Agent knowledge: {getattr(agent, 'knowledge', None)}")
+
+crew.kickoff()
+
+# After kickoff - knowledge initialized
+print(f"After kickoff - Agent knowledge: {agent.knowledge}")
+print(f"Agent knowledge collection: {agent.knowledge.storage.collection_name}")
+print(f"Number of sources: {len(agent.knowledge.sources)}")
+```
+
+#### Knowledge 저장 위치 확인
+
+```python
+import os
+from crewai.utilities.paths import db_storage_path
+
+# Check storage structure
+storage_path = db_storage_path()
+knowledge_path = os.path.join(storage_path, "knowledge")
+
+if os.path.exists(knowledge_path):
+    print("Knowledge collections found:")
+    for collection in os.listdir(knowledge_path):
+        collection_path = os.path.join(knowledge_path, collection)
+        if os.path.isdir(collection_path):
+            print(f"  - {collection}/")
+            # Show collection contents
+            for item in os.listdir(collection_path):
+                print(f"    └── {item}")
+```
+
+#### 테스트 지식 검색
+```python
+# Test agent knowledge retrieval
+if hasattr(agent, 'knowledge') and agent.knowledge:
+    test_query = ["test query"]
+    results = agent.knowledge.query(test_query)
+    print(f"Agent knowledge results: {len(results)} documents found")
+    
+    # Test crew knowledge retrieval (if exists)
+    if hasattr(crew, 'knowledge') and crew.knowledge:
+        crew_results = crew.query_knowledge(test_query)
+        print(f"Crew knowledge results: {len(crew_results)} documents found")
+```
+
+#### 지식 컬렉션 검사하기
+```python
+import chromadb
+from crewai.utilities.paths import db_storage_path
+import os
+
+# Connect to CrewAI's knowledge ChromaDB
+knowledge_path = os.path.join(db_storage_path(), "knowledge")
+
+if os.path.exists(knowledge_path):
+    client = chromadb.PersistentClient(path=knowledge_path)
+    collections = client.list_collections()
+    
+    print("Knowledge Collections:")
+    for collection in collections:
+        print(f"  - {collection.name}: {collection.count()} documents")
+        
+        # Sample a few documents to verify content
+        if collection.count() > 0:
+            sample = collection.peek(limit=2)
+            print(f"    Sample content: {sample['documents'][0][:100]}...")
+else:
+    print("No knowledge storage found")
+```
+
+#### 지식 처리 확인
+```python
+from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
+
+# Create a test knowledge source
+test_source = StringKnowledgeSource(
+    content="Test knowledge content for debugging",
+    chunk_size=100,  # Small chunks for testing
+    chunk_overlap=20
+)
+
+# Check chunking behavior
+print(f"Original content length: {len(test_source.content)}")
+print(f"Chunk size: {test_source.chunk_size}")
+print(f"Chunk overlap: {test_source.chunk_overlap}")
+
+# Process and inspect chunks
+test_source.add()
+print(f"Number of chunks created: {len(test_source.chunks)}")
+for i, chunk in enumerate(test_source.chunks[:3]):  # Show first 3 chunks
+    print(f"Chunk {i+1}: {chunk[:50]}...")
+```
+
+### 일반적인 Knowledge Storage 문제
+
+**"파일을 찾을 수 없음" 오류:**
+```python
+# Ensure files are in the correct location
+from crewai.utilities.constants import KNOWLEDGE_DIRECTORY
+import os
+
+knowledge_dir = KNOWLEDGE_DIRECTORY  # Usually "knowledge"
+file_path = os.path.join(knowledge_dir, "your_file.pdf")
+
+if not os.path.exists(file_path):
+    print(f"File not found: {file_path}")
+    print(f"Current working directory: {os.getcwd()}")
+    print(f"Expected knowledge directory: {os.path.abspath(knowledge_dir)}")
+```
+
+**"Embedding dimension mismatch" 오류:**
+```python
+# This happens when switching embedding providers
+# Reset knowledge storage to clear old embeddings
+crew.reset_memories(command_type='knowledge')
+
+# Or use consistent embedding providers
+crew = Crew(
+    agents=[...],
+    tasks=[...],
+    knowledge_sources=[...],
+    embedder={"provider": "openai", "config": {"model": "text-embedding-3-small"}}
+)
+```
+
+**"ChromaDB permission denied" 오류:**
+```bash
+# Fix storage permissions
+chmod -R 755 ~/.local/share/CrewAI/
+```
+
+**Knowledge가 여러 번 실행 시 유지되지 않음:**
+```python
+# Verify storage location consistency
+import os
+from crewai.utilities.paths import db_storage_path
+
+print("CREWAI_STORAGE_DIR:", os.getenv("CREWAI_STORAGE_DIR"))
+print("Computed storage path:", db_storage_path())
+print("Knowledge path:", os.path.join(db_storage_path(), "knowledge"))
+```
+
+### 지식 초기화 명령어
+
+```python
+# Reset only agent-specific knowledge
+crew.reset_memories(command_type='agent_knowledge')
+
+# Reset both crew and agent knowledge  
+crew.reset_memories(command_type='knowledge')
+
+# CLI commands
+# crewai reset-memories --agent-knowledge  # Agent knowledge only
+# crewai reset-memories --knowledge        # All knowledge
+```
+
+### 지식 초기화
+
+CrewAI에 저장된 지식을 초기화해야 하는 경우, `crewai reset-memories` 명령어를 `--knowledge` 옵션과 함께 사용할 수 있습니다.
+
+```bash Command
+crewai reset-memories --knowledge
+```
+
+이 기능은 지식 소스를 업데이트했고, 에이전트들이 최신 정보를 사용하도록 보장하고 싶을 때 유용합니다.
+
+## 베스트 프랙티스
+
+<AccordionGroup>
+  <Accordion title="콘텐츠 구성">
+    - 콘텐츠 유형에 맞는 적절한 청크 크기를 유지하세요
+    - 컨텍스트 보존을 위해 콘텐츠 중복을 고려하세요
+    - 관련 정보를 별도의 지식 소스로 체계화하세요
+  </Accordion>
+
+  <Accordion title="성능 팁">
+    - 콘텐츠의 복잡성에 따라 청크 크기를 조정하세요
+    - 적절한 임베딩 모델을 설정하세요
+    - 더 빠른 처리를 위해 로컬 임베딩 프로바이더 사용을 고려하세요
+  </Accordion>
+
+  <Accordion title="원타임 지식">
+    - CrewAI에서 제공하는 일반적인 파일 구조에서는 kickoff가 트리거될 때마다 knowledge 소스가 임베딩됩니다.
+    - knowledge 소스가 크면, 매번 동일한 데이터가 임베딩되어 비효율성과 지연이 발생합니다.
+    - 이를 해결하려면 knowledge_sources 파라미터 대신 knowledge 파라미터를 직접 초기화하세요.
+    - 전체 아이디어를 얻으려면 이 이슈를 참고하세요 [Github Issue](https://github.com/crewAIInc/crewAI/issues/2755)
+  </Accordion>
+
+  <Accordion title="지식 관리">
+    - 역할별 정보에는 agent 레벨의 knowledge를 사용하세요
+    - 모든 agent가 필요로 하는 공유 정보에는 crew 레벨의 knowledge를 사용하세요
+    - 서로 다른 임베딩 전략이 필요하다면 agent 레벨에서 embedder를 설정하세요
+    - agent 역할을 설명적으로 유지하여 일관된 콜렉션 이름을 사용하세요
+    - kickoff 후 agent.knowledge를 확인하여 knowledge 초기화를 테스트하세요
+    - 지식이 저장되는 위치를 모니터링하여 storage 위치를 파악하세요
+    - 올바른 명령 유형을 사용하여 적절하게 knowledge를 초기화(리셋)하세요
+  </Accordion>
+
+  <Accordion title="프로덕션 환경 베스트 프랙티스">
+    - 프로덕션에서는 `CREWAI_STORAGE_DIR`를 지정된 위치로 설정하세요
+    - LLM 구성과 맞도록 임베딩 프로바이더를 명확히 선택하고, API 키 충돌을 방지하세요
+    - 문서가 추가될수록 knowledge storage 용량을 모니터링하세요
+    - 도메인 또는 목적에 따라 knowledge 소스를 콜렉션 이름으로 체계화하세요
+    - 지식 디렉터리를 백업 및 배포 전략에 포함시키세요
+    - knowledge 파일과 storage 디렉터리에 적절한 파일 권한을 부여하세요
+    - API 키와 민감한 설정에는 환경 변수를 사용하세요
+  </Accordion>
+</AccordionGroup>
