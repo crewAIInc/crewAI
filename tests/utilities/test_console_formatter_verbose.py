@@ -1,4 +1,3 @@
-import pytest
 from unittest.mock import Mock, patch
 from crewai.utilities.events.utils.console_formatter import ConsoleFormatter
 
