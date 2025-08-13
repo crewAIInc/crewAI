@@ -1,0 +1,103 @@
+---
+title: "Controle de Acesso Baseado em Funções (RBAC)"
+description: "Controle o acesso a crews, ferramentas e dados com funções e visibilidade por automação."
+icon: "shield"
+---
+
+## Visão Geral
+
+O RBAC no CrewAI Enterprise permite gerenciar acesso de forma segura e escalável combinando **funções em nível de organização** com **controles de visibilidade em nível de automação**.
+
+<Frame>
+  <img src="/images/enterprise/users_and_roles.png" alt="Visão geral de RBAC no CrewAI Enterprise" />
+  
+</Frame>
+
+## Usuários e Funções
+
+Cada membro da sua workspace possui uma função, que determina o acesso aos recursos.
+
+Você pode:
+
+- Usar funções pré-definidas (Owner, Member)
+- Criar funções personalizadas com permissões específicas
+- Atribuir funções a qualquer momento no painel de configurações
+
+A configuração de usuários e funções é feita em Settings → Roles.
+
+<Steps>
+  <Step title="Abrir Roles">
+    Vá em <b>Settings → Roles</b> no CrewAI Enterprise.
+  </Step>
+  <Step title="Escolher a função">
+    Use <b>Owner</b> ou <b>Member</b>, ou clique em <b>Create role</b> para criar uma função personalizada.
+  </Step>
+  <Step title="Atribuir aos membros">
+    Selecione os usuários e atribua a função. Você pode alterar depois.
+  </Step>
+</Steps>
+
+### Resumo de configuração
+
+| Área | Onde configurar | Opções |
+|:---|:---|:---|
+| Usuários & Funções | Settings → Roles | Pré-definidas: Owner, Member; Funções personalizadas |
+| Visibilidade da automação | Automation → Settings → Visibility | Private; Lista de usuários/funções |
+
+## Controle de Acesso em Nível de Automação
+
+Além das funções na organização, as **Automations** suportam visibilidade refinada para restringir acesso por usuário ou função.
+
+Útil para:
+
+- Manter automações sensíveis/experimentais privadas
+- Gerenciar visibilidade em equipes grandes ou colaboradores externos
+- Testar automações em contexto isolado
+
+Em modo privado, somente usuários/funções na whitelist poderão:
+
+- Ver a automação
+- Executar/usar a API
+- Acessar logs, métricas e configurações
+
+O owner da organização sempre tem acesso, independente da visibilidade.
+
+Configure em Automation → Settings → Visibility.
+
+<Steps>
+  <Step title="Abrir a aba Visibility">
+    Acesse <b>Automation → Settings → Visibility</b>.
+  </Step>
+  <Step title="Definir visibilidade">
+    Selecione <b>Private</b> para restringir o acesso. O owner mantém acesso.
+  </Step>
+  <Step title="Permitir acesso">
+    Adicione usuários e funções que poderão ver/executar e acessar logs/métricas/configurações.
+  </Step>
+  <Step title="Salvar e verificar">
+    Salve e confirme que não listados não conseguem ver ou executar a automação.
+  </Step>
+</Steps>
+
+### Resultado de acesso no modo Private
+
+| Ação | Owner | Usuário/função na whitelist | Não listado |
+|:---|:---|:---|:---|
+| Ver automação | ✓ | ✓ | ✗ |
+| Executar/API | ✓ | ✓ | ✗ |
+| Logs/métricas/configurações | ✓ | ✓ | ✗ |
+
+<Tip>
+O owner sempre possui acesso. Em modo privado, somente usuários/funções na whitelist têm permissão.
+</Tip>
+
+<Frame>
+  <img src="/images/enterprise/visibility.png" alt="Configuração de visibilidade no CrewAI Enterprise" />
+  
+</Frame>
+
+<Card title="Precisa de Ajuda?" icon="headset" href="mailto:support@crewai.com">
+  Fale com o nosso time para suporte em configuração e auditoria de RBAC.
+</Card>
+
+

@@ -621,6 +621,7 @@
               {
                 "group": "Funcionalidades",
                 "pages": [
+                  "pt-BR/enterprise/features/rbac",
                   "pt-BR/enterprise/features/tool-repository",
                   "pt-BR/enterprise/features/webhook-streaming",
                   "pt-BR/enterprise/features/traces",
@@ -968,6 +969,7 @@
               {
                 "group": "특징",
                 "pages": [
+                  "ko/enterprise/features/rbac",
                   "ko/enterprise/features/tool-repository",
                   "ko/enterprise/features/webhook-streaming",
                   "ko/enterprise/features/traces",
