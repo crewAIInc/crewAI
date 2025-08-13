@@ -33,7 +33,7 @@ def test_verbose_output():
     print("Expected: Should show task name 'Market Research Analysis' instead of UUID")
     
     try:
-        result = crew.kickoff()
+        crew.kickoff()
         print("\nCrew execution completed successfully!")
         return True
     except Exception as e:
