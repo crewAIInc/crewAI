@@ -1,0 +1,105 @@
+---
+title: Google Serper 검색
+description: SerperDevTool은(는) 인터넷을 검색하여 가장 관련성 높은 결과를 반환하도록 설계되었습니다.
+icon: google
+---
+
+# `SerperDevTool`
+
+## 설명
+
+이 도구는 인터넷 전체의 텍스트 내용에서 지정된 쿼리에 대한 시맨틱 검색을 수행하도록 설계되었습니다. 사용자가 제공한 쿼리를 기반으로 가장 관련성 높은 검색 결과를 가져와 표시하기 위해 [serper.dev](https://serper.dev) API를 활용합니다.
+
+## 설치
+
+`SerperDevTool`을 효과적으로 사용하려면 다음 단계를 따르십시오:
+
+1. **패키지 설치**: Python 환경에 `crewai[tools]` 패키지가 설치되어 있는지 확인하세요.
+2. **API 키 획득**: https://serper.dev/ (무료 플랜 제공)에서 `serper.dev` API 키를 획득하세요.
+3. **환경 변수 설정**: 획득한 API 키를 `SERPER_API_KEY`라는 환경 변수에 저장하여 도구에서 사용할 수 있게 하세요.
+
+이 도구를 프로젝트에 통합하려면 아래의 설치 지침을 따르십시오:
+
+```shell
+pip install 'crewai[tools]'
+```
+
+## 예제
+
+다음 예제는 도구를 초기화하고 주어진 쿼리로 검색을 실행하는 방법을 보여줍니다:
+
+```python Code
+from crewai_tools import SerperDevTool
+
+# Initialize the tool for internet searching capabilities
+tool = SerperDevTool()
+```
+
+## 매개변수
+
+`SerperDevTool`은 API에 전달될 여러 매개변수를 제공합니다:
+
+- **search_url**: 검색 API의 URL 엔드포인트입니다. (기본값은 `https://google.serper.dev/search`)
+
+- **country**: 선택 사항. 검색 결과에 사용할 국가를 지정합니다.
+- **location**: 선택 사항. 검색 결과에 사용할 위치를 지정합니다.
+- **locale**: 선택 사항. 검색 결과에 사용할 로케일을 지정합니다.
+- **n_results**: 반환할 검색 결과의 개수입니다. 기본값은 `10`입니다.
+
+`country`, `location`, `locale`, `search_url`의 값은 [Serper Playground](https://serper.dev/playground)에서 확인할 수 있습니다.
+
+## 매개변수를 활용한 예시
+
+다음은 추가 매개변수를 사용하여 도구를 활용하는 방법을 보여주는 예시입니다:
+
+```python Code
+from crewai_tools import SerperDevTool
+
+tool = SerperDevTool(
+    search_url="https://google.serper.dev/scholar",
+    n_results=2,
+)
+
+print(tool.run(search_query="ChatGPT"))
+
+# Using Tool: Search the internet
+
+# Search results: Title: Role of chat gpt in public health
+# Link: https://link.springer.com/article/10.1007/s10439-023-03172-7
+# Snippet: … ChatGPT in public health. In this overview, we will examine the potential uses of ChatGPT in
+# ---
+# Title: Potential use of chat gpt in global warming
+# Link: https://link.springer.com/article/10.1007/s10439-023-03171-8
+# Snippet: … as ChatGPT, have the potential to play a critical role in advancing our understanding of climate
+# ---
+
+```
+
+```python Code
+from crewai_tools import SerperDevTool
+
+tool = SerperDevTool(
+    country="fr",
+    locale="fr",
+    location="Paris, Paris, Ile-de-France, France",
+    n_results=2,
+)
+
+print(tool.run(search_query="Jeux Olympiques"))
+
+# Using Tool: Search the internet
+
+# Search results: Title: Jeux Olympiques de Paris 2024 - Actualités, calendriers, résultats
+# Link: https://olympics.com/fr/paris-2024
+# Snippet: Quels sont les sports présents aux Jeux Olympiques de Paris 2024 ? · Athlétisme · Aviron · Badminton · Basketball · Basketball 3x3 · Boxe · Breaking · Canoë ...
+# ---
+# Title: Billetterie Officielle de Paris 2024 - Jeux Olympiques et Paralympiques
+# Link: https://tickets.paris2024.org/
+# Snippet: Achetez vos billets exclusivement sur le site officiel de la billetterie de Paris 2024 pour participer au plus grand événement sportif au monde.
+# ---
+```
+
+## 결론
+
+`SerperDevTool`을 Python 프로젝트에 통합함으로써, 사용자는 애플리케이션에서 직접 인터넷 전반에 걸친 실시간 및 관련성 높은 검색을 수행할 수 있는 능력을 갖게 됩니다.
+업데이트된 매개변수들은 보다 맞춤화되고 지역화된 검색 결과를 제공합니다. 제공된 설정 및 사용 지침을 준수함으로써, 이 도구를 프로젝트에 통합하는 과정이 간소화되고 직관적으로 이루어집니다.

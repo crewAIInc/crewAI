@@ -1,0 +1,123 @@
+---
+title: Crew 비동기 시작
+description: Crew를 비동기로 시작하기
+icon: rocket-launch
+---
+
+## 소개
+
+CrewAI는 crew를 비동기적으로 시작할 수 있는 기능을 제공합니다. 이를 통해 crew 실행을 블로킹(blocking) 없이 시작할 수 있습니다.  
+이 기능은 여러 개의 crew를 동시에 실행하거나 crew가 실행되는 동안 다른 작업을 수행해야 할 때 특히 유용합니다.
+
+## 비동기 Crew 실행
+
+Crew를 비동기적으로 시작하려면 `kickoff_async()` 메서드를 사용하세요. 이 메서드는 별도의 스레드에서 crew 실행을 시작하여, 메인 스레드가 다른 작업을 계속 실행할 수 있도록 합니다.
+
+### 메서드 시그니처
+
+```python Code
+def kickoff_async(self, inputs: dict) -> CrewOutput:
+```
+
+### 매개변수
+
+- `inputs` (dict): 작업에 필요한 입력 데이터를 포함하는 딕셔너리입니다.
+
+### 반환
+
+- `CrewOutput`: crew 실행 결과를 나타내는 객체입니다.
+
+## 잠재적 사용 사례
+
+- **병렬 콘텐츠 생성**: 여러 개의 독립적인 crew를 비동기적으로 시작하여, 각 crew가 다른 주제에 대한 콘텐츠 생성을 담당합니다. 예를 들어, 한 crew는 AI 트렌드에 대한 기사 조사 및 초안을 작성하는 반면, 또 다른 crew는 신제품 출시와 관련된 소셜 미디어 게시물을 생성할 수 있습니다. 각 crew는 독립적으로 운영되므로 콘텐츠 생산을 효율적으로 확장할 수 있습니다.
+
+- **동시 시장 조사 작업**: 여러 crew를 비동기적으로 시작하여 시장 조사를 병렬로 수행합니다. 한 crew는 업계 동향을 분석하고, 또 다른 crew는 경쟁사 전략을 조사하며, 또 다른 crew는 소비자 감정을 평가할 수 있습니다. 각 crew는 독립적으로 자신의 작업을 완료하므로 더 빠르고 포괄적인 인사이트를 얻을 수 있습니다.
+
+- **독립적인 여행 계획 모듈**: 각각 독립적으로 여행의 다양한 측면을 계획하도록 crew를 따로 실행합니다. 한 crew는 항공편 옵션을, 다른 crew는 숙박을, 세 번째 crew는 활동 계획을 담당할 수 있습니다. 각 crew는 비동기적으로 작업하므로 여행의 다양한 요소를 동시에 그리고 독립적으로 더 빠르게 계획할 수 있습니다.
+
+## 예시: 단일 비동기 crew 실행
+
+다음은 asyncio를 사용하여 crew를 비동기적으로 시작하고 결과를 await하는 방법의 예시입니다:
+
+```python Code
+import asyncio
+from crewai import Crew, Agent, Task
+
+# Create an agent with code execution enabled
+coding_agent = Agent(
+    role="Python Data Analyst",
+    goal="Analyze data and provide insights using Python",
+    backstory="You are an experienced data analyst with strong Python skills.",
+    allow_code_execution=True
+)
+
+# Create a task that requires code execution
+data_analysis_task = Task(
+    description="Analyze the given dataset and calculate the average age of participants. Ages: {ages}",
+    agent=coding_agent,
+    expected_output="The average age of the participants."
+)
+
+# Create a crew and add the task
+analysis_crew = Crew(
+    agents=[coding_agent],
+    tasks=[data_analysis_task]
+)
+
+# Async function to kickoff the crew asynchronously
+async def async_crew_execution():
+    result = await analysis_crew.kickoff_async(inputs={"ages": [25, 30, 35, 40, 45]})
+    print("Crew Result:", result)
+
+# Run the async function
+asyncio.run(async_crew_execution())
+```
+
+## 예제: 다중 비동기 Crew 실행
+
+이 예제에서는 여러 Crew를 비동기적으로 시작하고 `asyncio.gather()`를 사용하여 모두 완료될 때까지 기다리는 방법을 보여줍니다:
+
+```python Code
+import asyncio
+from crewai import Crew, Agent, Task
+
+# Create an agent with code execution enabled
+coding_agent = Agent(
+    role="Python Data Analyst",
+    goal="Analyze data and provide insights using Python",
+    backstory="You are an experienced data analyst with strong Python skills.",
+    allow_code_execution=True
+)
+
+# Create tasks that require code execution
+task_1 = Task(
+    description="Analyze the first dataset and calculate the average age of participants. Ages: {ages}",
+    agent=coding_agent,
+    expected_output="The average age of the participants."
+)
+
+task_2 = Task(
+    description="Analyze the second dataset and calculate the average age of participants. Ages: {ages}",
+    agent=coding_agent,
+    expected_output="The average age of the participants."
+)
+
+# Create two crews and add tasks
+crew_1 = Crew(agents=[coding_agent], tasks=[task_1])
+crew_2 = Crew(agents=[coding_agent], tasks=[task_2])
+
+# Async function to kickoff multiple crews asynchronously and wait for all to finish
+async def async_multiple_crews():
+    # Create coroutines for concurrent execution
+    result_1 = crew_1.kickoff_async(inputs={"ages": [25, 30, 35, 40, 45]})
+    result_2 = crew_2.kickoff_async(inputs={"ages": [20, 22, 24, 28, 30]})
+
+    # Wait for both crews to finish
+    results = await asyncio.gather(result_1, result_2)
+
+    for i, result in enumerate(results, 1):
+        print(f"Crew {i} Result:", result)
+
+# Run the async function
+asyncio.run(async_multiple_crews())
+```

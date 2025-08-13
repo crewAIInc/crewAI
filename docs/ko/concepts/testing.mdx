@@ -1,0 +1,48 @@
+---
+title: 테스트
+description: CrewAI Crew를 테스트하고 그 성능을 평가하는 방법을 알아보세요.
+icon: vial
+---
+
+## 개요
+
+테스트는 개발 프로세스에서 매우 중요한 부분이며, crew가 예상대로 동작하는지 확인하는 것이 필수적입니다. crewAI를 사용하면 내장된 테스트 기능을 통해 crew를 쉽게 테스트하고 성능을 평가할 수 있습니다.
+
+### 테스트 기능 사용하기
+
+CLI 명령어 `crewai test`를 추가하여 crew 테스트를 쉽게 할 수 있습니다. 이 명령어는 지정한 반복 횟수만큼 crew를 실행하고, 자세한 성능 지표를 제공합니다. 매개변수로는 `n_iterations`와 `model`이 있으며, 이들은 선택 사항이고 각각 기본값은 2와 `gpt-4o-mini`입니다. 현재는 OpenAI만 지원됩니다.
+
+```bash
+crewai test
+```
+
+더 많은 반복 횟수로 실행하거나 다른 모델을 사용하려면 다음과 같이 매개변수를 지정할 수 있습니다:
+
+```bash
+crewai test --n_iterations 5 --model gpt-4o
+```
+
+또는 축약형을 사용할 수 있습니다:
+
+```bash
+crewai test -n 5 -m gpt-4o
+```
+
+`crewai test` 명령어를 실행하면 crew가 지정한 횟수만큼 실행되고, 수행이 끝나면 성능 지표가 표시됩니다.
+
+실행 마지막에 표시되는 점수 표는 다음과 같은 지표로 crew의 성능을 보여줍니다:
+
+<center>**작업 점수 (1-10 높을수록 좋음)**</center>
+
+| Tasks/Crew/Agents  | Run 1 | Run 2 | Avg. Total | Agents                         | Additional Info                  |
+|:------------------|:-----:|:-----:|:----------:|:------------------------------:|:---------------------------------|
+| Task 1        |  9.0  |  9.5  |    **9.2**     | Professional Insights          |                                  |
+|                    |       |       |            | Researcher                     |                                  |
+| Task 2        |  9.0  | 10.0  |    **9.5**     | Company Profile Investigator   |                                  |
+| Task 3        |  9.0  |  9.0  |    **9.0**     | Automation Insights            |                                  |
+|                    |       |       |            | Specialist                     |                                  |
+| Task 4        |  9.0  |  9.0  |    **9.0**     | Final Report Compiler          | Automation Insights Specialist   |
+| Crew         | 9.00  | 9.38  |    **9.2**     |                                |                                  |
+| Execution Time (s) |  126  |  145  |    **135**     |                                |                                  |
+
+위 예시는 두 번 실행한 crew의 테스트 결과를 보여주며, 각 작업과 crew 전체의 평균 총점이 포함되어 있습니다.

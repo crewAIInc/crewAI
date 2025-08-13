@@ -1,0 +1,144 @@
+---
+title: S3 리더 도구
+description: S3ReaderTool은 CrewAI 에이전트가 Amazon S3 버킷에서 파일을 읽을 수 있도록 합니다.
+icon: aws
+---
+
+# `S3ReaderTool`
+
+## 설명
+
+`S3ReaderTool`은 Amazon S3 버킷에서 파일을 읽기 위해 설계되었습니다. 이 도구를 사용하면 CrewAI 에이전트가 S3에 저장된 콘텐츠에 접근하고 가져올 수 있어, 데이터를 읽거나 설정 파일 또는 AWS S3 스토리지에 저장된 기타 콘텐츠를 필요로 하는 워크플로우에 이상적입니다.
+
+## 설치
+
+이 도구를 사용하려면 필요한 종속성을 설치해야 합니다:
+
+```shell
+uv add boto3
+```
+
+## 시작 단계
+
+`S3ReaderTool`을 효과적으로 사용하려면 다음 단계를 따르세요:
+
+1. **의존성 설치**: 위 명령어를 사용하여 필요한 패키지를 설치합니다.
+2. **AWS 자격 증명 구성**: 환경 변수로 AWS 자격 증명을 설정합니다.
+3. **도구 초기화**: 도구의 인스턴스를 생성합니다.
+4. **S3 경로 지정**: 읽고자 하는 파일의 S3 경로를 제공합니다.
+
+## 예시
+
+다음 예시는 `S3ReaderTool`을 사용하여 S3 버킷에서 파일을 읽는 방법을 보여줍니다:
+
+```python Code
+from crewai import Agent, Task, Crew
+from crewai_tools.aws.s3 import S3ReaderTool
+
+# Initialize the tool
+s3_reader_tool = S3ReaderTool()
+
+# Define an agent that uses the tool
+file_reader_agent = Agent(
+    role="File Reader",
+    goal="Read files from S3 buckets",
+    backstory="An expert in retrieving and processing files from cloud storage.",
+    tools=[s3_reader_tool],
+    verbose=True,
+)
+
+# Example task to read a configuration file
+read_task = Task(
+    description="Read the configuration file from {my_bucket} and summarize its contents.",
+    expected_output="A summary of the configuration file contents.",
+    agent=file_reader_agent,
+)
+
+# Create and run the crew
+crew = Crew(agents=[file_reader_agent], tasks=[read_task])
+result = crew.kickoff(inputs={"my_bucket": "s3://my-bucket/config/app-config.json"})
+```
+
+## 매개변수
+
+`S3ReaderTool`은 에이전트에 의해 사용될 때 다음과 같은 매개변수를 허용합니다:
+
+- **file_path**: 필수입니다. `s3://bucket-name/file-name` 형식의 S3 파일 경로입니다.
+
+## AWS 자격 증명
+
+이 도구는 S3 버킷에 접근하기 위해 AWS 자격 증명이 필요합니다. 환경 변수를 사용하여 이러한 자격 증명을 구성할 수 있습니다:
+
+- **CREW_AWS_REGION**: S3 버킷이 위치한 AWS 리전입니다. 기본값은 `us-east-1`입니다.
+- **CREW_AWS_ACCESS_KEY_ID**: AWS 액세스 키 ID입니다.
+- **CREW_AWS_SEC_ACCESS_KEY**: AWS 시크릿 액세스 키입니다.
+
+## 사용법
+
+`S3ReaderTool`을 agent와 함께 사용할 때, agent는 S3 파일 경로를 제공해야 합니다:
+
+```python Code
+# Example of using the tool with an agent
+file_reader_agent = Agent(
+    role="File Reader",
+    goal="Read files from S3 buckets",
+    backstory="An expert in retrieving and processing files from cloud storage.",
+    tools=[s3_reader_tool],
+    verbose=True,
+)
+
+# Create a task for the agent to read a specific file
+read_config_task = Task(
+    description="Read the application configuration file from {my_bucket} and extract the database connection settings.",
+    expected_output="The database connection settings from the configuration file.",
+    agent=file_reader_agent,
+)
+
+# Run the task
+crew = Crew(agents=[file_reader_agent], tasks=[read_config_task])
+result = crew.kickoff(inputs={"my_bucket": "s3://my-bucket/config/app-config.json"})
+```
+
+## 오류 처리
+
+`S3ReaderTool`은 일반적인 S3 문제에 대한 오류 처리를 포함하고 있습니다:
+
+- 잘못된 S3 경로 형식
+- 누락되었거나 접근할 수 없는 파일
+- 권한 문제
+- AWS 자격 증명 문제
+
+오류가 발생하면, 도구는 문제에 대한 세부 정보가 포함된 오류 메시지를 반환합니다.
+
+## 구현 세부사항
+
+`S3ReaderTool`은 AWS SDK for Python(boto3)을 사용하여 S3와 상호작용합니다:
+
+```python Code
+class S3ReaderTool(BaseTool):
+    name: str = "S3 Reader Tool"
+    description: str = "Reads a file from Amazon S3 given an S3 file path"
+
+    def _run(self, file_path: str) -> str:
+        try:
+            bucket_name, object_key = self._parse_s3_path(file_path)
+
+            s3 = boto3.client(
+                's3',
+                region_name=os.getenv('CREW_AWS_REGION', 'us-east-1'),
+                aws_access_key_id=os.getenv('CREW_AWS_ACCESS_KEY_ID'),
+                aws_secret_access_key=os.getenv('CREW_AWS_SEC_ACCESS_KEY')
+            )
+
+            # Read file content from S3
+            response = s3.get_object(Bucket=bucket_name, Key=object_key)
+            file_content = response['Body'].read().decode('utf-8')
+
+            return file_content
+        except ClientError as e:
+            return f"Error reading file from S3: {str(e)}"
+```
+
+## 결론
+
+`S3ReaderTool`은 Amazon S3 버킷에서 파일을 읽을 수 있는 간단한 방법을 제공합니다. 에이전트가 S3에 저장된 콘텐츠에 액세스할 수 있도록 하여, 클라우드 기반 파일 액세스가 필요한 워크플로우를 지원합니다. 이 도구는 데이터 처리, 구성 관리, 그리고 AWS S3 스토리지에서 정보를 검색하는 모든 작업에 특히 유용합니다.

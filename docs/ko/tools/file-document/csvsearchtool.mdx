@@ -1,0 +1,77 @@
+---
+title: CSV RAG 검색
+description: CSVSearchTool은 CSV 파일의 콘텐츠 내에서 의미론적 검색을 수행하기 위해 설계된 강력한 RAG(Retrieval-Augmented Generation) 도구입니다.
+icon: file-csv
+---
+
+# `CSVSearchTool`
+
+<Note>
+    **실험적 기능**: 우리는 여전히 도구를 개선하고 있으므로, 예기치 않은 동작이나 변경이 발생할 수 있습니다.
+</Note>
+
+## 설명
+
+이 도구는 CSV 파일의 내용 내에서 RAG(검색 기반 생성) 검색을 수행하는 데 사용됩니다. 사용자는 지정된 CSV 파일의 콘텐츠에서 쿼리를 의미적으로 검색할 수 있습니다.
+이 기능은 기존의 검색 방법이 비효율적일 수 있는 대용량 CSV 데이터셋에서 정보를 추출할 때 특히 유용합니다. "Search"라는 이름이 포함된 모든 도구, 예를 들어 CSVSearchTool을 포함하여,
+다양한 데이터 소스를 검색하도록 설계된 RAG 도구입니다.
+
+## 설치
+
+crewai_tools 패키지 설치
+
+```shell
+pip install 'crewai[tools]'
+```
+
+## 예시
+
+```python Code
+from crewai_tools import CSVSearchTool
+
+# Initialize the tool with a specific CSV file.
+# This setup allows the agent to only search the given CSV file.
+tool = CSVSearchTool(csv='path/to/your/csvfile.csv')
+
+# OR
+
+# Initialize the tool without a specific CSV file.
+# Agent will need to provide the CSV path at runtime.
+tool = CSVSearchTool()
+```
+
+## 인자
+
+다음 매개변수들은 `CSVSearchTool`의 동작을 사용자 정의하는 데 사용할 수 있습니다:
+
+| 인자             | 타입        | 설명                                                                                                                             |
+|:------------------|:-----------|:---------------------------------------------------------------------------------------------------------------------------------|
+| **csv**           | `string`   | _선택 사항_. 검색하려는 CSV 파일의 경로입니다. 이 인자는 도구가 특정 CSV 파일 없이 초기화된 경우 필수이며, 그렇지 않은 경우 선택 사항입니다.                                                                                      |
+
+## 커스텀 모델 및 임베딩
+
+기본적으로 이 도구는 임베딩과 요약 모두에 OpenAI를 사용합니다. 모델을 사용자 지정하려면 다음과 같이 config 딕셔너리를 사용할 수 있습니다:
+
+```python Code
+tool = CSVSearchTool(
+    config=dict(
+        llm=dict(
+            provider="ollama", # or google, openai, anthropic, llama2, ...
+            config=dict(
+                model="llama2",
+                # temperature=0.5,
+                # top_p=1,
+                # stream=true,
+            ),
+        ),
+        embedder=dict(
+            provider="google", # or openai, ollama, ...
+            config=dict(
+                model="models/embedding-001",
+                task_type="retrieval_document",
+                # title="Embeddings",
+            ),
+        ),
+    )
+)
+```
