@@ -162,7 +162,7 @@ class EventListener(BaseEventListener):
             span = self._telemetry.task_started(crew=source.agent.crew, task=source)
             self.execution_spans[source] = span
             self.formatter.create_task_branch(
-                self.formatter.current_crew_tree, source.id
+                self.formatter.current_crew_tree, source
             )
 
         @crewai_event_bus.on(TaskCompletedEvent)
@@ -175,7 +175,7 @@ class EventListener(BaseEventListener):
 
             self.formatter.update_task_status(
                 self.formatter.current_crew_tree,
-                source.id,
+                source,
                 source.agent.role,
                 "completed",
             )
@@ -190,7 +190,7 @@ class EventListener(BaseEventListener):
 
             self.formatter.update_task_status(
                 self.formatter.current_crew_tree,
-                source.id,
+                source,
                 source.agent.role,
                 "failed",
             )

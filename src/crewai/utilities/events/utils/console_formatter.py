@@ -220,14 +220,16 @@ class ConsoleFormatter:
         return tree
 
     def create_task_branch(
-        self, crew_tree: Optional[Tree], task_id: str
+        self, crew_tree: Optional[Tree], task: Any
     ) -> Optional[Tree]:
         """Create and initialize a task branch."""
         if not self.verbose:
             return None
 
+        task_display = self._get_task_display_name(task)
+
         task_content = Text()
-        task_content.append(f"📋 Task: {task_id}", style="yellow bold")
+        task_content.append(f"📋 Task: {task_display}", style="yellow bold")
         task_content.append("\nStatus: ", style="white")
         task_content.append("Executing Task...", style="yellow dim")
 
@@ -248,13 +250,16 @@ class ConsoleFormatter:
     def update_task_status(
         self,
         crew_tree: Optional[Tree],
-        task_id: str,
+        task: Any,
         agent_role: str,
         status: str = "completed",
     ) -> None:
         """Update task status in the tree."""
         if not self.verbose or crew_tree is None:
             return
+
+        task_display = self._get_task_display_name(task)
+        task_id = str(task.id)
 
         if status == "completed":
             style = "green"
@@ -267,11 +272,11 @@ class ConsoleFormatter:
 
         # Update tree label
         for branch in crew_tree.children:
-            if str(task_id) in str(branch.label):
+            if task_id in str(branch.label):
                 # Build label without introducing stray blank lines
                 task_content = Text()
-                # First line: Task ID
-                task_content.append(f"📋 Task: {task_id}", style=f"{style} bold")
+                # First line: Task name/description
+                task_content.append(f"📋 Task: {task_display}", style=f"{style} bold")
 
                 # Second line: Assigned to
                 task_content.append("\nAssigned to: ", style="white")
@@ -286,7 +291,7 @@ class ConsoleFormatter:
 
         # Show status panel
         content = self.create_status_content(
-            f"Task {status.title()}", str(task_id), style, Agent=agent_role
+            f"Task {status.title()}", task_display, style, Agent=agent_role
         )
         self.print_panel(content, panel_title, style)
 
@@ -1754,3 +1759,13 @@ class ConsoleFormatter:
                 Attempts=f"{retry_count + 1}",
             )
             self.print_panel(content, "🛡️ Guardrail Failed", "red")
+
+    def _get_task_display_name(self, task: Any) -> str:
+        """Get display name for a task, with fallback logic."""
+        if hasattr(task, 'name') and task.name:
+            return f"{task.name} (ID: {str(task.id)[:8]}...)"
+        elif hasattr(task, 'description') and task.description:
+            desc = task.description[:50] + "..." if len(task.description) > 50 else task.description
+            return f"{desc} (ID: {str(task.id)[:8]}...)"
+        else:
+            return str(task.id)
