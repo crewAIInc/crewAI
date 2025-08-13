@@ -1,5 +1,6 @@
 from io import StringIO
-from typing import Any, Dict
+from typing import Any, Dict, Optional
+import logging
 
 from pydantic import Field, PrivateAttr
 from crewai.llm import LLM
@@ -73,7 +74,7 @@ from .listeners.memory_listener import MemoryListener
 
 
 class EventListener(BaseEventListener):
-    _instance = None
+    _instance: Optional["EventListener"] = None
     _telemetry: Telemetry = PrivateAttr(default_factory=lambda: Telemetry())
     logger = Logger(verbose=True, default_color=EMITTER_COLOR)
     execution_spans: Dict[Task, Any] = Field(default_factory=dict)
@@ -98,6 +99,23 @@ class EventListener(BaseEventListener):
             self.formatter = ConsoleFormatter(verbose=True)
 
             MemoryListener(formatter=self.formatter)
+            
+    def _clean_up_live_session(self):
+        """
+        Internal method to stop and clean up the Rich Live session if it's active.
+        This prevents subsequent logging issues after CrewAI execution.
+        """
+        if self.formatter and hasattr(self.formatter, "_live"):
+            live_session = self.formatter._live
+            if live_session and live_session.is_started:
+                try:
+                    live_session.stop()
+                    # CRUCIAL: Set to None to explicitly release the session
+                    self.formatter._live = None
+                    logging.getLogger("crewai").debug("Rich Live session cleaned up successfully.")
+                except Exception as e:
+                    # Log the error, but don't re-raise, as this is a cleanup
+                    logging.getLogger("crewai").error(f"Error cleaning up Rich Live session: {e}")
 
     # ----------- CREW EVENTS -----------
 
