@@ -1,0 +1,145 @@
+---
+title: Integração com a TrueFoundry
+icon: chart-line
+---
+
+A TrueFoundry fornece um [AI Gateway](https://www.truefoundry.com/ai-gateway) pronto para uso empresarial, que pode ser usado para governança e observabilidade em frameworks agentivos como o CrewAI. O AI Gateway da TrueFoundry funciona como uma interface unificada para acesso a LLMs, oferecendo:
+
+- **Acesso unificado à API**: Conecte-se a 250+ LLMs (OpenAI, Claude, Gemini, Groq, Mistral) por meio de uma única API
+- **Baixa latência**: Latência interna abaixo de 3 ms com roteamento inteligente e balanceamento de carga  
+- **Segurança corporativa**: Conformidade com SOC 2, HIPAA e GDPR, com RBAC e auditoria de logs
+- **Gestão de cotas e custos**: Cotas baseadas em tokens, rate limiting e rastreamento abrangente de uso
+- **Observabilidade**: Registro completo de requisições/respostas, métricas e traces com retenção personalizável
+
+## Como a TrueFoundry se integra ao CrewAI
+
+
+### Instalação e configuração
+
+<Steps>
+<Step title="Instalar o CrewAI">
+```bash
+pip install crewai
+```
+</Step>
+
+<Step title="Obter o token de acesso da TrueFoundry">
+1. Crie uma conta na [TrueFoundry](https://www.truefoundry.com/register)
+2. Siga os passos do [Início rápido](https://docs.truefoundry.com/gateway/quick-start)
+</Step>
+
+<Step title="Configurar o CrewAI com a TrueFoundry">
+![Configuração de código da TrueFoundry](/images/new-code-snippet.png)
+
+```python
+from crewai import LLM
+
+# Criar uma instância de LLM com o AI Gateway da TrueFoundry
+truefoundry_llm = LLM(
+    model="openai-main/gpt-4o",  # Da mesma forma, você pode chamar qualquer modelo de qualquer provedor
+    base_url="your_truefoundry_gateway_base_url",
+    api_key="your_truefoundry_api_key"
+)
+
+# Usar nos seus agentes do CrewAI
+from crewai import Agent
+
+@agent
+def researcher(self) -> Agent:
+    return Agent(
+        config=self.agents_config['researcher'],
+        llm=truefoundry_llm,
+        verbose=True
+    )
+```
+</Step>
+</Steps>
+
+### Exemplo completo do CrewAI
+
+```python
+from crewai import Agent, Task, Crew, LLM
+
+# Configurar o LLM com a TrueFoundry
+llm = LLM(
+    model="openai-main/gpt-4o",
+    base_url="your_truefoundry_gateway_base_url", 
+    api_key="your_truefoundry_api_key"
+)
+
+# Criar agentes
+researcher = Agent(
+    role='Analista de Pesquisa',
+    goal='Conduzir pesquisa de mercado detalhada',
+    backstory='Analista de mercado especialista com atenção aos detalhes',
+    llm=llm,
+    verbose=True
+)
+
+writer = Agent(
+    role='Redator de Conteúdo', 
+    goal='Criar relatórios abrangentes',
+    backstory='Redator técnico experiente',
+    llm=llm,
+    verbose=True
+)
+
+# Criar tarefas
+research_task = Task(
+    description='Pesquisar tendências do mercado de IA para 2024',
+    agent=researcher,
+    expected_output='Resumo de pesquisa abrangente'
+)
+
+writing_task = Task(
+    description='Criar um relatório de pesquisa de mercado',
+    agent=writer,
+    expected_output='Relatório bem estruturado com insights',
+    context=[research_task]
+)
+
+# Criar e executar a crew
+crew = Crew(
+    agents=[researcher, writer],
+    tasks=[research_task, writing_task],
+    verbose=True
+)
+
+result = crew.kickoff()
+```
+
+### Observabilidade e governança
+
+Monitore seus agentes do CrewAI pela aba de métricas da TrueFoundry:
+![Métricas da TrueFoundry](/images/gateway-metrics.png)
+
+Com o AI Gateway da TrueFoundry, você pode monitorar e analisar:
+
+- **Métricas de desempenho**: Acompanhe métricas-chave de latência como Latência da Requisição, Tempo até o Primeiro Token (TTFS) e Latência entre Tokens (ITL), com percentis P99, P90 e P50
+- **Custos e uso de tokens**: Tenha visibilidade dos custos da sua aplicação com detalhamento de tokens de entrada/saída e das despesas associadas a cada modelo
+- **Padrões de uso**: Entenda como sua aplicação está sendo utilizada com análises detalhadas sobre atividade de usuários, distribuição de modelos e uso por equipe
+- **Limite de taxa e balanceamento de carga**: Você pode configurar rate limiting, balanceamento de carga e fallback para seus modelos
+
+## Rastreamento
+
+Para uma compreensão mais detalhada sobre rastreamento, consulte [getting-started-tracing](https://docs.truefoundry.com/docs/tracing/tracing-getting-started). Para rastreamento, você pode adicionar o SDK do Traceloop: 
+
+```bash
+pip install traceloop-sdk
+```
+
+```python
+from traceloop.sdk import Traceloop
+
+# Inicializar rastreamento avançado
+Traceloop.init(
+    api_endpoint="https://your-truefoundry-endpoint/api/tracing",
+    headers={
+        "Authorization": f"Bearer {your_truefoundry_pat_token}",
+        "TFY-Tracing-Project": "your_project_name",
+    },
+)
+```
+
+Isso oferece correlação adicional de rastreamentos em todo o seu fluxo de trabalho com o CrewAI.
+![Rastreamento do CrewAI na TrueFoundry](/images/tracing_crewai.png)
