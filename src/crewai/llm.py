@@ -313,6 +313,7 @@ class LLM(BaseLLM):
         api_key: Optional[str] = None,
         callbacks: List[Any] = [],
         reasoning_effort: Optional[Literal["none", "low", "medium", "high"]] = None,
+        thinking_budget: Optional[int] = None,
         stream: bool = False,
         **kwargs,
     ):
@@ -337,9 +338,13 @@ class LLM(BaseLLM):
         self.callbacks = callbacks
         self.context_window_size = 0
         self.reasoning_effort = reasoning_effort
+        self.thinking_budget = thinking_budget
         self.additional_params = kwargs
         self.is_anthropic = self._is_anthropic_model(model)
         self.stream = stream
+
+        if self.thinking_budget is not None and (not isinstance(self.thinking_budget, int) or self.thinking_budget <= 0):
+            raise ValueError("thinking_budget must be a positive integer")
 
         litellm.drop_params = True
 
@@ -413,6 +418,9 @@ class LLM(BaseLLM):
             "reasoning_effort": self.reasoning_effort,
             **self.additional_params,
         }
+
+        if self.thinking_budget is not None:
+            params["thinking"] = {"budget_tokens": self.thinking_budget}
 
         # Remove None values from params
         return {k: v for k, v in params.items() if v is not None}
