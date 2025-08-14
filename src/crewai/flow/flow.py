@@ -472,6 +472,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
         self._method_outputs: List[Any] = []  # List to store all method outputs
         self._completed_methods: Set[str] = set()  # Track completed methods for reload
         self._persistence: Optional[FlowPersistence] = persistence
+        self._is_execution_resuming: bool = False
 
         # Initialize state with initial values
         self._state = self._create_initial_state()
@@ -827,6 +828,9 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 # Clear completed methods and outputs for a fresh start
                 self._completed_methods.clear()
                 self._method_outputs.clear()
+            else:
+                # We're restoring from persistence, set the flag
+                self._is_execution_resuming = True
 
             if inputs:
                 # Override the id in the state if it exists in inputs
@@ -878,6 +882,9 @@ class Flow(Generic[T], metaclass=FlowMeta):
             ]
             await asyncio.gather(*tasks)
 
+            # Clear the resumption flag after initial execution completes
+            self._is_execution_resuming = False
+
             final_output = self._method_outputs[-1] if self._method_outputs else None
 
             crewai_event_bus.emit(
@@ -913,9 +920,13 @@ class Flow(Generic[T], metaclass=FlowMeta):
         - Skips execution if method was already completed (e.g., after reload)
         """
         if start_method_name in self._completed_methods:
-            last_output = self._method_outputs[-1] if self._method_outputs else None
-            await self._execute_listeners(start_method_name, last_output)
-            return
+            if self._is_execution_resuming:
+                # During resumption, skip execution but continue listeners
+                last_output = self._method_outputs[-1] if self._method_outputs else None
+                await self._execute_listeners(start_method_name, last_output)
+                return
+            # For cyclic flows, clear from completed to allow re-execution
+            self._completed_methods.discard(start_method_name)
 
         result = await self._execute_method(
             start_method_name, self._methods[start_method_name]
@@ -1121,10 +1132,13 @@ class Flow(Generic[T], metaclass=FlowMeta):
         Catches and logs any exceptions during execution, preventing
         individual listener failures from breaking the entire flow.
         """
-        # TODO: greyson fix
-        # if listener_name in self._completed_methods:
-        #     await self._execute_listeners(listener_name, None)
-        #     return
+        if listener_name in self._completed_methods:
+            if self._is_execution_resuming:
+                # During resumption, skip execution but continue listeners
+                await self._execute_listeners(listener_name, None)
+                return
+            # For cyclic flows, clear from completed to allow re-execution
+            self._completed_methods.discard(listener_name)
 
         try:
             method = self._methods[listener_name]
