@@ -28,3 +28,4 @@ plan.md
 conceptual_plan.md
 build_image
 chromadb-*.lock
+crewai_pr_workspace/
