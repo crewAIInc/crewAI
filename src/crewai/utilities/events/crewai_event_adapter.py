@@ -3,7 +3,7 @@ from crewai.utilities.events.crew_events import CrewKickoffStartedEvent, CrewKic
 from crewai.utilities.events.task_events import TaskStartedEvent, TaskCompletedEvent
 from crewai.utilities.events.agent_events import AgentExecutionStartedEvent, AgentExecutionCompletedEvent
 from crewai.utilities.events.llm_events import LLMCallStartedEvent, LLMCallCompletedEvent
-from crewai.utilities.events.tool_events import ToolUsageEvent
+from crewai.utilities.events.tool_usage_events import ToolUsageEvent
 
 from crewai.utilities.events.generic_workflow_events import (
     WorkflowStartedEvent,

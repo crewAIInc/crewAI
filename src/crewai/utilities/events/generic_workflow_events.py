@@ -12,47 +12,47 @@ class GenericWorkflowEvent:
 @dataclass
 class WorkflowStartedEvent(GenericWorkflowEvent):
     """Event indicating the start of a workflow."""
-    workflow_id: str
-    workflow_name: str
+    workflow_id: str = ""
+    workflow_name: str = ""
     event_type: str = "workflow_started"
 
 @dataclass
 class WorkflowCompletedEvent(GenericWorkflowEvent):
     """Event indicating the completion of a workflow."""
-    workflow_id: str
-    workflow_name: str
-    success: bool
+    workflow_id: str = ""
+    workflow_name: str = ""
+    success: bool = True
     event_type: str = "workflow_completed"
 
 @dataclass
 class TaskStartedEvent(GenericWorkflowEvent):
     """Event indicating the start of a task within a workflow."""
-    workflow_id: str
-    task_id: str
-    task_description: str
-    assigned_agent_id: str
-    assigned_agent_role: str
+    workflow_id: str = ""
+    task_id: str = ""
+    task_description: str = ""
+    assigned_agent_id: str = ""
+    assigned_agent_role: str = ""
     event_type: str = "task_started"
 
 @dataclass
 class TaskCompletedEvent(GenericWorkflowEvent):
     """Event indicating the completion of a task within a workflow."""
-    workflow_id: str
-    task_id: str
-    task_description: str
-    assigned_agent_id: str
-    assigned_agent_role: str
-    output: Any
-    success: bool
+    workflow_id: str = ""
+    task_id: str = ""
+    task_description: str = ""
+    assigned_agent_id: str = ""
+    assigned_agent_role: str = ""
+    output: Any = None
+    success: bool = True
     event_type: str = "task_completed"
 
 @dataclass
 class AgentActionOccurredEvent(GenericWorkflowEvent):
     """Event indicating an agent performed an action (e.g., tool usage, LLM call)."""
-    workflow_id: str
-    agent_id: str
-    action_type: str # e.g., "tool_usage", "llm_call", "thought_process"
-    action_details: Dict[str, Any]
+    workflow_id: str = ""
+    agent_id: str = ""
+    action_type: str = "" # e.g., "tool_usage", "llm_call", "thought_process"
+    action_details: Dict[str, Any] = field(default_factory=dict)
     event_type: str = "agent_action_occurred"
 
 # You might also consider events for:
