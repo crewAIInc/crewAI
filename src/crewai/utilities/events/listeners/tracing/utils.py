@@ -7,6 +7,7 @@ import getpass
 from pathlib import Path
 from datetime import datetime
 import re
+import json
 
 import click
 
@@ -68,7 +69,7 @@ def _get_machine_id() -> str:
                 text=True,
                 timeout=2,
             )
-            lines = [l.strip() for l in res.stdout.splitlines() if l.strip()]
+            lines = [line.strip() for line in res.stdout.splitlines() if line.strip()]
             if len(lines) >= 2:
                 parts.append(lines[1])
     except Exception:
@@ -77,39 +78,36 @@ def _get_machine_id() -> str:
     return hashlib.sha256("".join(parts).encode()).hexdigest()
 
 
-def _user_id_file() -> Path:
-    base = Path(db_storage_path()) / "state"
+def _user_data_file() -> Path:
+    base = Path(db_storage_path())
     base.mkdir(parents=True, exist_ok=True)
-    return base / "user_id.txt"
+    return base / ".crewai_user.json"
 
 
-def _load_cached_user_id() -> str | None:
-    p = _user_id_file()
+def _load_user_data() -> dict:
+    p = _user_data_file()
     if p.exists():
         try:
-            val = p.read_text().strip()
-            if val:
-                return val
+            return json.loads(p.read_text())
         except Exception:
             pass
-    return None
+    return {}
 
 
-def _cache_user_id(uid: str) -> None:
+def _save_user_data(data: dict) -> None:
     try:
-        p = _user_id_file()
-        if not p.exists():
-            p.write_text(uid + "\n")
+        p = _user_data_file()
+        p.write_text(json.dumps(data, indent=2))
     except Exception:
         pass
 
 
 def get_user_id() -> str:
-    """Stable, anonymized user identifier with caching and env override."""
+    """Stable, anonymized user identifier with caching."""
+    data = _load_user_data()
 
-    cached = _load_cached_user_id()
-    if cached:
-        return cached
+    if "user_id" in data:
+        return data["user_id"]
 
     try:
         username = getpass.getuser()
@@ -118,30 +116,30 @@ def get_user_id() -> str:
 
     seed = f"{username}|{_get_machine_id()}"
     uid = hashlib.sha256(seed.encode()).hexdigest()
-    _cache_user_id(uid)
+
+    data["user_id"] = uid
+    _save_user_data(data)
     return uid
 
 
-def _first_kickoff_marker_path() -> Path:
-    base = Path(db_storage_path()) / "state"
-    base.mkdir(parents=True, exist_ok=True)
-    return base / f"first_kickoff_{get_user_id()}.marker"
-
-
 def is_first_execution() -> bool:
-    return not _first_kickoff_marker_path().exists()
+    """True if this is the first execution for this user."""
+    data = _load_user_data()
+    return not data.get("first_execution_done", False)
 
 
 def mark_first_execution_done() -> None:
-    marker = _first_kickoff_marker_path()
-    if marker.exists():
+    """Mark that the first execution has been completed."""
+    data = _load_user_data()
+    if data.get("first_execution_done", False):
         return
-    flags = os.O_CREAT | os.O_EXCL | os.O_WRONLY
-    fd = os.open(str(marker), flags, 0o644)
-    try:
-        with os.fdopen(fd, "w") as f:
-            f.write(f"created_at={datetime.now().timestamp()}\n")
-            f.write(f"user_id={get_user_id()}\n")
-            f.write(f"machine_id={_get_machine_id()}\n")
-    except Exception:
-        pass
+
+    data.update(
+        {
+            "first_execution_done": True,
+            "first_execution_at": datetime.now().timestamp(),
+            "user_id": get_user_id(),
+            "machine_id": _get_machine_id(),
+        }
+    )
+    _save_user_data(data)
