@@ -286,7 +286,7 @@ reporting_task:
     Review the context you got and expand each topic into a full section for a report.
     Make sure the report is detailed and contains any and all relevant information.
   expected_output: >
-    A fully fledge reports with the mains topics, each with a full section of information.
+    A fully fledged report with the main topics, each with a full section of information.
     Formatted as markdown without '```'
   agent: reporting_analyst
   output_file: report.md
