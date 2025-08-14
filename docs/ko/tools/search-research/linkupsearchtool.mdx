@@ -1,0 +1,112 @@
+---
+title: Linkup 검색 도구
+description: LinkupSearchTool은 Linkup API를 통해 컨텍스트 정보를 질의할 수 있도록 합니다.
+icon: link
+---
+
+# `LinkupSearchTool`
+
+## 설명
+
+`LinkupSearchTool`은 Linkup API에 쿼리하여 컨텍스트 정보와 구조화된 결과를 가져올 수 있는 기능을 제공합니다. 이 도구는 Linkup으로부터 최신의 신뢰할 수 있는 정보를 워크플로우에 추가하는 데 이상적이며, 에이전트가 작업 중에 관련 데이터를 접근할 수 있도록 해줍니다.
+
+## 설치
+
+이 도구를 사용하려면 Linkup SDK를 설치해야 합니다:
+
+```shell
+uv add linkup-sdk
+```
+
+## 시작 단계
+
+`LinkupSearchTool`을 효과적으로 사용하려면 다음 단계를 따라주세요:
+
+1. **API 키**: Linkup API 키를 발급받으세요.
+2. **환경 설정**: API 키로 환경을 설정하세요.
+3. **SDK 설치**: 위의 명령어를 사용하여 Linkup SDK를 설치하세요.
+
+## 예시
+
+다음 예시는 도구를 초기화하고 에이전트에서 사용하는 방법을 보여줍니다:
+
+```python Code
+from crewai_tools import LinkupSearchTool
+from crewai import Agent
+import os
+
+# Initialize the tool with your API key
+linkup_tool = LinkupSearchTool(api_key=os.getenv("LINKUP_API_KEY"))
+
+# Define an agent that uses the tool
+@agent
+def researcher(self) -> Agent:
+    '''
+    이 에이전트는 LinkupSearchTool을 사용하여 Linkup API에서
+    컨텍스트 정보를 가져옵니다.
+    '''
+    return Agent(
+        config=self.agents_config["researcher"],
+        tools=[linkup_tool]
+    )
+```
+
+## 매개변수
+
+`LinkupSearchTool`은 다음과 같은 매개변수를 사용합니다:
+
+### 생성자 매개변수
+- **api_key**: 필수. 사용자의 Linkup API 키입니다.
+
+### 실행 매개변수
+- **query**: 필수입니다. 검색어 또는 구문입니다.
+- **depth**: 선택 사항입니다. 검색 깊이입니다. 기본값은 "standard"입니다.
+- **output_type**: 선택 사항입니다. 출력 유형입니다. 기본값은 "searchResults"입니다.
+
+## 고급 사용법
+
+더 구체적인 결과를 얻기 위해 검색 매개변수를 사용자 지정할 수 있습니다.
+
+```python Code
+# Perform a search with custom parameters
+results = linkup_tool.run(
+    query="Women Nobel Prize Physics",
+    depth="deep",
+    output_type="searchResults"
+)
+```
+
+## 반환 형식
+
+도구는 다음과 같은 형식으로 결과를 반환합니다:
+
+```json
+{
+  "success": true,
+  "results": [
+    {
+      "name": "Result Title",
+      "url": "https://example.com/result",
+      "content": "Content of the result..."
+    },
+    // Additional results...
+  ]
+}
+```
+
+오류가 발생한 경우 응답은 다음과 같습니다:
+
+```json
+{
+  "success": false,
+  "error": "Error message"
+}
+```
+
+## 오류 처리
+
+이 도구는 API 오류를 우아하게 처리하고 구조화된 피드백을 제공합니다. API 요청이 실패할 경우, 도구는 `success: false`와 오류 메시지가 포함된 딕셔너리를 반환합니다.
+
+## 결론
+
+`LinkupSearchTool`은 Linkup의 컨텍스트 기반 정보 검색 기능을 CrewAI agent에 원활하게 통합할 수 있는 방법을 제공합니다. 이 도구를 활용하여 agent는 의사 결정 및 작업 수행을 향상시키기 위해 관련성 높고 최신의 정보에 접근할 수 있습니다.

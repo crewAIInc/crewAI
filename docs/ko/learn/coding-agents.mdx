@@ -1,0 +1,95 @@
+---
+title: 코딩 에이전트
+description: CrewAI 에이전트가 코드를 작성하고 실행할 수 있도록 하는 방법과, 향상된 기능을 위한 고급 기능을 알아보세요.
+icon: rectangle-code
+---
+
+## 소개
+
+CrewAI 에이전트는 이제 코드를 작성하고 실행할 수 있는 강력한 기능을 갖추게 되어 문제 해결 능력이 크게 향상되었습니다. 이 기능은 계산적 또는 프로그래밍적 해결책이 필요한 작업에 특히 유용합니다.
+
+## 코드 실행 활성화
+
+에이전트에서 코드 실행을 활성화하려면, 에이전트를 생성할 때 `allow_code_execution` 매개변수를 `True`로 설정하면 됩니다.
+
+예시는 다음과 같습니다:
+
+```python Code
+from crewai import Agent
+
+coding_agent = Agent(
+    role="Senior Python Developer",
+    goal="Craft well-designed and thought-out code",
+    backstory="You are a senior Python developer with extensive experience in software architecture and best practices.",
+    allow_code_execution=True
+)
+```
+
+<Note>
+`allow_code_execution` 매개변수의 기본값은 `False`임을 참고하세요.
+</Note>
+
+## 중요한 고려 사항
+
+1. **모델 선택**: 코드 실행을 활성화할 때 Claude 3.5 Sonnet 및 GPT-4와 같은 더 강력한 모델을 사용하는 것이 강력히 권장됩니다.  
+이러한 모델은 프로그래밍 개념에 대해 더 잘 이해하고 있으며, 올바르고 효율적인 코드를 생성할 가능성이 높습니다.
+
+2. **오류 처리**: 코드 실행 기능에는 오류 처리가 포함되어 있습니다. 실행된 코드에서 예외가 발생하면, 에이전트는 오류 메시지를 받아보고 코드를 수정하거나  
+대체 솔루션을 제공할 수 있습니다. 기본값이 2인 `max_retry_limit` 파라미터는 작업에 대한 최대 재시도 횟수를 제어합니다.
+
+3. **종속성**: 코드 실행 기능을 사용하려면 `crewai_tools` 패키지를 설치해야 합니다. 설치되지 않은 경우, 에이전트는 다음과 같은 정보 메시지를 기록합니다:  
+"Coding tools not available. Install crewai_tools."
+
+## 코드 실행 프로세스
+
+코드 실행이 활성화된 agent가 프로그래밍이 요구되는 작업을 만났을 때:
+
+<Steps>
+    <Step title="작업 분석">
+    agent는 작업을 분석하고 코드 실행이 필요하다는 것을 판단합니다.
+    </Step>
+    <Step title="코드 작성">
+    문제를 해결하는 데 필요한 Python 코드를 작성합니다.
+    </Step>
+    <Step title="코드 실행">
+    해당 코드는 내부 코드 실행 도구(`CodeInterpreterTool`)로 전송됩니다.
+    </Step>
+    <Step title="결과 해석">
+    agent는 결과를 해석하여 응답에 반영하거나 추가 문제 해결에 활용합니다.
+    </Step>
+</Steps>
+
+## 예제 사용법
+
+여기 코드 실행 기능이 있는 agent를 생성하고 이를 task에서 사용하는 자세한 예제가 있습니다:
+
+```python Code
+from crewai import Agent, Task, Crew
+
+# Create an agent with code execution enabled
+coding_agent = Agent(
+    role="Python Data Analyst",
+    goal="Analyze data and provide insights using Python",
+    backstory="You are an experienced data analyst with strong Python skills.",
+    allow_code_execution=True
+)
+
+# Create a task that requires code execution
+data_analysis_task = Task(
+    description="Analyze the given dataset and calculate the average age of participants.",
+    agent=coding_agent
+)
+
+# Create a crew and add the task
+analysis_crew = Crew(
+    agents=[coding_agent],
+    tasks=[data_analysis_task]
+)
+
+# Execute the crew
+result = analysis_crew.kickoff()
+
+print(result)
+```
+
+이 예제에서 `coding_agent`는 데이터 분석 작업을 수행하기 위해 Python 코드를 작성하고 실행할 수 있습니다.

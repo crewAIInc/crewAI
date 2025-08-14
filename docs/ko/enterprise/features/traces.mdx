@@ -1,0 +1,145 @@
+---
+title: 트레이스
+description: "Traces를 사용하여 내 크루 모니터링하기"
+icon: "timeline"
+---
+
+## 개요
+
+Trace는 crew 실행에 대한 포괄적인 가시성을 제공하여 성능 모니터링, 문제 디버깅, AI agent workflow 최적화에 도움을 줍니다.
+
+## Traces란 무엇인가요?
+
+CrewAI Enterprise의 Traces는 crew의 작동 과정을 처음 입력에서 최종 출력까지 모든 측면에서 포착하는 상세 실행 기록입니다. Traces에는 다음 내용이 기록됩니다:
+
+- Agent의 생각 및 추론
+- 작업 실행 세부 정보
+- 도구 사용 및 출력
+- 토큰 소모 메트릭
+- 실행 시간
+- 비용 추정치
+
+<Frame>
+  ![Traces Overview](/images/enterprise/traces-overview.png)
+</Frame>
+
+## 트레이스(Traces) 접근하기
+
+<Steps>
+  <Step title="트레이스 탭으로 이동">
+    CrewAI Enterprise 대시보드에 들어가면, **트레이스**를 클릭하여 모든 실행 기록을 볼 수 있습니다.
+  </Step>
+  
+  <Step title="실행 선택하기">
+    모든 crew 실행 목록이 날짜별로 정렬되어 표시됩니다. 상세 트레이스를 보려면 원하는 실행을 클릭하세요.
+  </Step>
+</Steps>
+
+## 트레이스 인터페이스 이해하기
+
+트레이스 인터페이스는 여러 섹션으로 나뉘어 있으며, 각 섹션은 crew의 실행에 대한 다양한 인사이트를 제공합니다.
+
+### 1. 실행 요약
+
+상단 섹션에서는 실행에 대한 고수준 메트릭을 표시합니다:
+
+- **총 토큰**: 모든 작업에서 소모된 토큰 수
+- **프롬프트 토큰**: LLM에 프롬프트로 사용된 토큰
+- **컴플리션 토큰**: LLM 응답에서 생성된 토큰
+- **요청 수**: 수행된 API 호출 수
+- **실행 시간**: crew 런의 전체 소요 시간
+- **예상 비용**: 토큰 사용량을 기반으로 한 대략적인 비용
+
+<Frame>
+  ![Execution Summary](/images/enterprise/trace-summary.png)
+</Frame>
+
+### 2. Tasks & Agents
+
+이 섹션에서는 crew 실행에 포함된 모든 task와 agent를 보여줍니다:
+
+- task 이름 및 agent 할당
+- 각 task에 사용된 agent 및 LLM
+- 상태 (완료/실패)
+- task의 개별 실행 시간
+
+<Frame>
+  ![Task List](/images/enterprise/trace-tasks.png)
+</Frame>
+
+### 3. 최종 결과
+
+모든 작업이 완료된 후 crew가 생성한 최종 결과를 표시합니다.
+
+<Frame>
+  ![최종 결과](/images/enterprise/final-output.png)
+</Frame>
+
+### 4. 실행 타임라인
+
+각 작업이 시작되고 종료된 시점을 시각적으로 표현하여 병목 현상이나 병렬 실행 패턴을 파악하는 데 도움이 됩니다.
+
+<Frame>
+  ![실행 타임라인](/images/enterprise/trace-timeline.png)
+</Frame>
+
+### 5. 상세 작업 보기
+
+타임라인이나 작업 목록에서 특정 작업을 클릭하면 다음을 볼 수 있습니다:
+
+<Frame>
+  ![상세 작업 보기](/images/enterprise/trace-detailed-task.png)
+</Frame>
+
+- **작업 키**: 작업의 고유 식별자
+- **작업 ID**: 시스템 내의 기술적 식별자
+- **상태**: 현재 상태 (완료/진행 중/실패)
+- **에이전트**: 해당 작업을 수행한 에이전트
+- **LLM**: 이 작업에 사용된 언어 모델
+- **시작/종료 시간**: 작업이 시작되고 완료된 시간
+- **실행 시간**: 이 특정 작업의 소요 시간
+- **작업 설명**: 에이전트에게 지시된 작업 내용
+- **예상 출력**: 요청된 출력 형식
+- **입력**: 이전 작업에서 이 작업에 제공된 입력값
+- **출력**: 에이전트가 실제로 생성한 결과
+
+## 디버깅을 위한 트레이스 사용
+
+트레이스는 crew 문제 해결에 매우 유용합니다:
+
+<Steps>
+  <Step title="실패 지점 식별">
+    crew 실행이 예상한 결과를 내지 못할 때, 트레이스를 확인하여 어디에서 문제가 발생했는지 찾으세요. 다음을 확인하세요:
+    
+    - 실패한 작업
+    - 에이전트의 예상 밖 결정
+    - 도구 사용 오류
+    - 잘못 해석된 지침
+
+    <Frame>
+      ![Failure Points](/images/enterprise/failure.png)
+    </Frame>
+  </Step>
+  
+  <Step title="성능 최적화">
+    실행 메트릭을 사용하여 성능 병목 현상을 파악하세요:
+    
+    - 예상보다 오래 걸린 작업
+    - 과도한 토큰 사용
+    - 중복된 도구 작업
+    - 불필요한 API 호출
+  </Step>
+  
+  <Step title="비용 효율성 향상">
+    토큰 사용량 및 비용 추정치를 분석해 crew의 효율성을 최적화하세요:
+    
+    - 더 간단한 작업에는 더 작은 모델을 사용 고려
+    - 프롬프트를 더 간결하게 다듬기
+    - 자주 액세스하는 정보 캐싱
+    - 중복 작업을 최소화하도록 작업 구조화하기
+  </Step>
+</Steps>
+
+<Card title="도움이 필요하신가요?" icon="headset" href="mailto:support@crewai.com">
+  트레이스 분석이나 기타 CrewAI 엔터프라이즈 기능에 대한 지원이 필요하시면 저희 지원팀에 문의하세요.
+</Card>

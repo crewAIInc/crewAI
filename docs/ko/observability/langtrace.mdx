@@ -1,0 +1,72 @@
+---
+title: Langtrace 연동
+description: 외부 가시성 도구인 Langtrace를 사용하여 CrewAI 에이전트의 비용, 지연 시간 및 성능을 모니터링하는 방법.
+icon: chart-line
+---
+
+# Langtrace 개요
+
+Langtrace는 대형 언어 모델(LLM), LLM 프레임워크, 벡터 데이터베이스에 대한 관측 가능성과 평가를 설정할 수 있도록 도와주는 오픈소스 외부 도구입니다.  
+Langtrace는 CrewAI에 직접 내장되어 있지는 않지만, CrewAI와 함께 사용하여 CrewAI 에이전트의 비용, 지연 시간, 성능에 대해 깊이 있는 가시성을 확보할 수 있습니다.  
+이 통합을 통해 하이퍼파라미터를 기록하고, 성능 회귀를 모니터링하며, 에이전트의 지속적인 개선을 위한 프로세스를 수립할 수 있습니다.
+
+![에이전트 세션 실행 시리즈 개요](/images/langtrace1.png)
+![에이전트 트레이스 개요](/images/langtrace2.png)
+![상세한 llm 트레이스 개요](/images/langtrace3.png)
+
+## 설정 지침
+
+<Steps>
+   <Step title="Langtrace에 가입하기">
+      [https://langtrace.ai/signup](https://langtrace.ai/signup)에서 가입하세요.
+   </Step>
+   <Step title="프로젝트 생성">
+      프로젝트 유형을 `CrewAI`로 설정하고 API 키를 생성하세요.
+   </Step>
+   <Step title="CrewAI 프로젝트에 Langtrace 설치하기">
+      다음 명령어를 사용하세요:
+
+    ```bash
+    pip install langtrace-python-sdk
+    ```
+   </Step>
+   <Step title="Langtrace 임포트하기">
+      스크립트의 시작 부분, CrewAI를 임포트하기 전에 Langtrace를 임포트하고 초기화하세요:
+
+    ```python
+    from langtrace_python_sdk import langtrace
+    langtrace.init(api_key='<LANGTRACE_API_KEY>')
+
+    # 이제 CrewAI 모듈을 임포트하세요
+    from crewai import Agent, Task, Crew
+    ```
+   </Step>
+</Steps>
+
+### 기능 및 CrewAI에의 적용
+
+1. **LLM 토큰 및 비용 추적**
+
+   - 각 CrewAI 에이전트 상호작용에 대한 토큰 사용량과 관련 비용을 모니터링합니다.
+
+2. **실행 단계에 대한 추적 그래프**
+
+   - CrewAI 작업의 실행 흐름을 시각화하며, 지연 시간과 로그를 포함합니다.
+   - 에이전트 워크플로우의 병목 지점을 파악하는 데 유용합니다.
+
+3. **수동 주석을 통한 데이터셋 큐레이션**
+
+   - 미래의 학습 또는 평가를 위해 CrewAI 작업 출력으로부터 데이터셋을 생성합니다.
+
+4. **프롬프트 버전 관리 및 관리**
+
+   - CrewAI 에이전트에서 사용된 다양한 프롬프트 버전을 추적합니다.
+   - A/B 테스트 및 에이전트 성능 최적화에 유용합니다.
+
+5. **프롬프트 플레이그라운드 및 모델 비교**
+
+   - 배포 전에 CrewAI 에이전트에 사용할 다양한 프롬프트와 모델을 테스트 및 비교합니다.
+
+6. **테스트 및 평가**
+
+   - CrewAI 에이전트 및 작업에 대한 자동화된 테스트를 설정합니다.

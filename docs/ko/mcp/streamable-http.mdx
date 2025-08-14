@@ -1,0 +1,135 @@
+---
+title: 스트리머블 HTTP 전송
+description: 유연한 스트리머블 HTTP 전송을 사용하여 CrewAI를 원격 MCP 서버에 연결하는 방법을 알아보세요.
+icon: globe
+---
+
+## 개요
+
+Streamable HTTP 전송은 원격 MCP 서버에 연결할 수 있는 유연한 방법을 제공합니다. 이는 종종 HTTP를 기반으로 구축되며, 요청-응답 및 스트리밍을 포함한 다양한 통신 패턴을 지원할 수 있습니다. 때때로 더 넓은 HTTP 상호작용 내에서 서버-클라이언트 스트림을 위해 Server-Sent Events(SSE)를 활용하기도 합니다.
+
+## 주요 개념
+
+- **원격 서버**: 원격에 호스팅된 MCP 서버용으로 설계되었습니다.
+- **유연성**: 단순 SSE보다 더 복잡한 상호작용 패턴을 지원할 수 있으며, 서버가 구현한 경우 양방향 통신도 가능할 수 있습니다.
+- **`MCPServerAdapter` 구성**: MCP 통신을 위한 서버의 기본 URL을 제공하고, 전송 유형으로 `"streamable-http"`를 지정해야 합니다.
+
+## 스트리머블 HTTP를 통한 연결
+
+Streamable HTTP MCP 서버와의 연결 라이프사이클을 관리하는 주요 방법에는 두 가지가 있습니다:
+
+### 1. 완전히 관리되는 연결(추천)
+
+추천되는 방법은 Python 컨텍스트 매니저(`with` 문)을 사용하는 것으로, 연결의 설정과 해제를 자동으로 처리합니다.
+
+```python
+from crewai import Agent, Task, Crew, Process
+from crewai_tools import MCPServerAdapter
+
+server_params = {
+    "url": "http://localhost:8001/mcp", # 실제 Streamable HTTP 서버 URL로 교체하세요
+    "transport": "streamable-http"
+}
+
+try:
+    with MCPServerAdapter(server_params) as tools:
+        print(f"Available tools from Streamable HTTP MCP server: {[tool.name for tool in tools]}")
+
+        http_agent = Agent(
+            role="HTTP Service Integrator",
+            goal="Utilize tools from a remote MCP server via Streamable HTTP.",
+            backstory="An AI agent adept at interacting with complex web services.",
+            tools=tools,
+            verbose=True,
+        )
+
+        http_task = Task(
+            description="Perform a complex data query using a tool from the Streamable HTTP server.",
+            expected_output="The result of the complex data query.",
+            agent=http_agent,
+        )
+
+        http_crew = Crew(
+            agents=[http_agent],
+            tasks=[http_task],
+            verbose=True,
+            process=Process.sequential
+        )
+        
+        result = http_crew.kickoff() 
+        print("\nCrew Task Result (Streamable HTTP - Managed):\n", result)
+
+except Exception as e:
+    print(f"Error connecting to or using Streamable HTTP MCP server (Managed): {e}")
+    print("Ensure the Streamable HTTP MCP server is running and accessible at the specified URL.")
+
+```
+**참고:** `"http://localhost:8001/mcp"`은 실제 사용 중인 Streamable HTTP MCP 서버의 URL로 교체해야 합니다.
+
+### 2. 수동 연결 라이프사이클
+
+보다 명시적인 제어가 필요한 시나리오에서는 `MCPServerAdapter` 연결을 직접 관리할 수 있습니다.
+
+<Info>
+연결을 종료하고 리소스를 해제하려면 작업이 끝난 후 반드시 `mcp_server_adapter.stop()`을 호출하는 것이 **매우 중요**합니다. 이를 보장하는 가장 안전한 방법은 `try...finally` 블록을 사용하는 것입니다.
+</Info>
+
+```python
+from crewai import Agent, Task, Crew, Process
+from crewai_tools import MCPServerAdapter
+
+server_params = {
+    "url": "http://localhost:8001/mcp", # Replace with your actual Streamable HTTP server URL
+    "transport": "streamable-http"
+}
+
+mcp_server_adapter = None 
+try:
+    mcp_server_adapter = MCPServerAdapter(server_params)
+    mcp_server_adapter.start()
+    tools = mcp_server_adapter.tools
+    print(f"Available tools (manual Streamable HTTP): {[tool.name for tool in tools]}")
+
+    manual_http_agent = Agent(
+        role="Advanced Web Service User",
+        goal="Interact with an MCP server using manually managed Streamable HTTP connections.",
+        backstory="An AI specialist in fine-tuning HTTP-based service integrations.",
+        tools=tools,
+        verbose=True
+    )
+    
+    data_processing_task = Task(
+        description="Submit data for processing and retrieve results via Streamable HTTP.",
+        expected_output="Processed data or confirmation.",
+        agent=manual_http_agent
+    )
+    
+    data_crew = Crew(
+        agents=[manual_http_agent],
+        tasks=[data_processing_task],
+        verbose=True,
+        process=Process.sequential
+    )
+    
+    result = data_crew.kickoff()
+    print("\nCrew Task Result (Streamable HTTP - Manual):\n", result)
+
+except Exception as e:
+    print(f"An error occurred during manual Streamable HTTP MCP integration: {e}")
+    print("Ensure the Streamable HTTP MCP server is running and accessible.")
+finally:
+    if mcp_server_adapter and mcp_server_adapter.is_connected:
+        print("Stopping Streamable HTTP MCP server connection (manual)...")
+        mcp_server_adapter.stop()  # **Crucial: Ensure stop is called**
+    elif mcp_server_adapter:
+        print("Streamable HTTP MCP server adapter was not connected. No stop needed or start failed.")
+```
+
+## 보안 고려사항
+
+Streamable HTTP 전송을 사용할 때는 일반적인 웹 보안 모범 사례가 매우 중요합니다:
+- **HTTPS 사용**: 데이터 전송을 암호화하기 위해 항상 MCP 서버 URL에 HTTPS(HTTP Secure)를 사용하는 것이 좋습니다.
+- **인증**: MCP 서버가 민감한 도구나 데이터를 노출하는 경우 강력한 인증 메커니즘을 구현하세요.
+- **입력 검증**: MCP 서버가 모든 수신 요청과 매개변수를 반드시 검증하도록 하십시오.
+
+MCP 통합 보안에 대한 종합적인 안내는 [보안 고려사항](./security.mdx) 페이지와 공식 [MCP 전송 보안 문서](https://modelcontextprotocol.io/docs/concepts/transports#security-considerations)를 참고하시기 바랍니다.

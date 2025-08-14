@@ -1,0 +1,382 @@
+---
+title: Shopify 연동
+description: "CrewAI를 위한 Shopify 연동을 통한 전자상거래 및 온라인 스토어 관리."
+icon: "shopify"
+---
+
+## 개요
+
+에이전트가 Shopify를 통해 전자상거래 운영을 관리할 수 있게 하세요. 고객, 주문, 제품, 재고 및 스토어 분석을 처리하여 AI 기반 자동화를 통해 온라인 비즈니스를 간소화할 수 있습니다.
+
+## 사전 요구 사항
+
+Shopify 연동을 사용하기 전에 다음을 확인하세요:
+
+- 활성 구독이 있는 [CrewAI Enterprise](https://app.crewai.com) 계정
+- 적절한 관리자 권한이 있는 Shopify 스토어
+- [통합 페이지](https://app.crewai.com/integrations)를 통해 Shopify 스토어 연결
+
+## 사용 가능한 도구
+
+### **고객 관리**
+
+<AccordionGroup>
+  <Accordion title="SHOPIFY_GET_CUSTOMERS">
+    **설명:** Shopify 스토어에서 고객 목록을 조회합니다.
+
+    **파라미터:**
+    - `customerIds` (string, 선택): 필터링할 고객 ID의 쉼표로 구분된 목록 (예: "207119551, 207119552")
+    - `createdAtMin` (string, 선택): 이 날짜 이후에 생성된 고객만 반환 (ISO 또는 Unix 타임스탬프)
+    - `createdAtMax` (string, 선택): 이 날짜 이전에 생성된 고객만 반환 (ISO 또는 Unix 타임스탬프)
+    - `updatedAtMin` (string, 선택): 이 날짜 이후에 업데이트된 고객만 반환 (ISO 또는 Unix 타임스탬프)
+    - `updatedAtMax` (string, 선택): 이 날짜 이전에 업데이트된 고객만 반환 (ISO 또는 Unix 타임스탬프)
+    - `limit` (string, 선택): 반환할 최대 고객 수 (기본값 250)
+  </Accordion>
+
+  <Accordion title="SHOPIFY_SEARCH_CUSTOMERS">
+    **설명:** 고급 필터링 기준을 사용하여 고객을 검색합니다.
+
+    **파라미터:**
+    - `filterFormula` (object, 선택): 필드별 연산자가 포함된 불리언 합정규형의 고급 필터
+    - `limit` (string, 선택): 반환할 최대 고객 수 (기본값 250)
+  </Accordion>
+
+  <Accordion title="SHOPIFY_CREATE_CUSTOMER">
+    **설명:** Shopify 스토어에 새로운 고객을 생성합니다.
+
+    **파라미터:**
+    - `firstName` (string, 필수): 고객의 이름
+    - `lastName` (string, 필수): 고객의 성
+    - `email` (string, 필수): 고객의 이메일 주소
+    - `company` (string, 선택): 회사명
+    - `streetAddressLine1` (string, 선택): 거리 주소
+    - `streetAddressLine2` (string, 선택): 거리 주소 2
+    - `city` (string, 선택): 도시
+    - `state` (string, 선택): 주 또는 도 코드
+    - `country` (string, 선택): 국가
+    - `zipCode` (string, 선택): 우편번호
+    - `phone` (string, 선택): 전화번호
+    - `tags` (string, 선택): 배열 또는 쉼표로 구분된 태그 목록
+    - `note` (string, 선택): 고객 메모
+    - `sendEmailInvite` (boolean, 선택): 이메일 초대장 전송 여부
+    - `metafields` (object, 선택): 추가 메타필드(JSON 형식)
+  </Accordion>
+
+  <Accordion title="SHOPIFY_UPDATE_CUSTOMER">
+    **설명:** Shopify 스토어에 기존 고객을 업데이트합니다.
+
+    **파라미터:**
+    - `customerId` (string, 필수): 업데이트할 고객의 ID
+    - `firstName` (string, 선택): 고객의 이름
+    - `lastName` (string, 선택): 고객의 성
+    - `email` (string, 선택): 고객의 이메일 주소
+    - `company` (string, 선택): 회사명
+    - `streetAddressLine1` (string, 선택): 거리 주소
+    - `streetAddressLine2` (string, 선택): 거리 주소 2
+    - `city` (string, 선택): 도시
+    - `state` (string, 선택): 주 또는 도 코드
+    - `country` (string, 선택): 국가
+    - `zipCode` (string, 선택): 우편번호
+    - `phone` (string, 선택): 전화번호
+    - `tags` (string, 선택): 배열 또는 쉼표로 구분된 태그 목록
+    - `note` (string, 선택): 고객 메모
+    - `sendEmailInvite` (boolean, 선택): 이메일 초대장 전송 여부
+    - `metafields` (object, 선택): 추가 메타필드(JSON 형식)
+  </Accordion>
+</AccordionGroup>
+
+### **주문 관리**
+
+<AccordionGroup>
+  <Accordion title="SHOPIFY_GET_ORDERS">
+    **설명:** Shopify 스토어에서 주문 목록을 조회합니다.
+
+    **파라미터:**
+    - `orderIds` (string, optional): 필터링할 주문 ID의 콤마로 구분된 목록 (예: "450789469, 450789470")
+    - `createdAtMin` (string, optional): 이 날짜 이후에 생성된 주문만 반환 (ISO 또는 Unix 타임스탬프)
+    - `createdAtMax` (string, optional): 이 날짜 이전에 생성된 주문만 반환 (ISO 또는 Unix 타임스탬프)
+    - `updatedAtMin` (string, optional): 이 날짜 이후에 업데이트된 주문만 반환 (ISO 또는 Unix 타임스탬프)
+    - `updatedAtMax` (string, optional): 이 날짜 이전에 업데이트된 주문만 반환 (ISO 또는 Unix 타임스탬프)
+    - `limit` (string, optional): 반환할 주문의 최대 개수 (기본값: 250)
+  </Accordion>
+
+  <Accordion title="SHOPIFY_CREATE_ORDER">
+    **설명:** Shopify 스토어에 새 주문을 생성합니다.
+
+    **파라미터:**
+    - `email` (string, required): 고객 이메일 주소
+    - `lineItems` (object, required): title, price, quantity, variant_id가 포함된 JSON 형식의 주문 아이템
+    - `sendReceipt` (boolean, optional): 주문 영수증을 발송할지 여부
+    - `fulfillmentStatus` (string, optional): 주문 이행 상태 - 옵션: fulfilled, null, partial, restocked
+    - `financialStatus` (string, optional): 결제 상태 - 옵션: pending, authorized, partially_paid, paid, partially_refunded, refunded, voided
+    - `inventoryBehaviour` (string, optional): 인벤토리 동작 - 옵션: bypass, decrement_ignoring_policy, decrement_obeying_policy
+    - `note` (string, optional): 주문 메모
+  </Accordion>
+
+  <Accordion title="SHOPIFY_UPDATE_ORDER">
+    **설명:** Shopify 스토어에서 기존 주문을 업데이트합니다.
+
+    **파라미터:**
+    - `orderId` (string, required): 업데이트할 주문의 ID
+    - `email` (string, optional): 고객 이메일 주소
+    - `lineItems` (object, optional): JSON 형식의 업데이트된 주문 아이템
+    - `sendReceipt` (boolean, optional): 주문 영수증을 발송할지 여부
+    - `fulfillmentStatus` (string, optional): 주문 이행 상태 - 옵션: fulfilled, null, partial, restocked
+    - `financialStatus` (string, optional): 결제 상태 - 옵션: pending, authorized, partially_paid, paid, partially_refunded, refunded, voided
+    - `inventoryBehaviour` (string, optional): 인벤토리 동작 - 옵션: bypass, decrement_ignoring_policy, decrement_obeying_policy
+    - `note` (string, optional): 주문 메모
+  </Accordion>
+
+  <Accordion title="SHOPIFY_GET_ABANDONED_CARTS">
+    **설명:** Shopify 스토어에서 방치된 장바구니를 조회합니다.
+
+    **파라미터:**
+    - `createdWithInLast` (string, optional): 지정된 기간 내에 생성된 체크아웃 결과만 제한
+    - `createdAfterId` (string, optional): 지정된 ID 이후 결과로 제한
+    - `status` (string, optional): 주어진 상태의 체크아웃만 표시 - 옵션: open, closed (기본값: open)
+    - `createdAtMin` (string, optional): 이 날짜 이후에 생성된 장바구니만 반환 (ISO 또는 Unix 타임스탬프)
+    - `createdAtMax` (string, optional): 이 날짜 이전에 생성된 장바구니만 반환 (ISO 또는 Unix 타임스탬프)
+    - `limit` (string, optional): 반환할 장바구니의 최대 개수 (기본값: 250)
+  </Accordion>
+</AccordionGroup>
+
+### **제품 관리 (REST API)**
+
+<AccordionGroup>
+  <Accordion title="SHOPIFY_GET_PRODUCTS">
+    **설명:** REST API를 사용하여 Shopify 스토어에서 제품 목록을 조회합니다.
+
+    **파라미터:**
+    - `productIds` (string, optional): 필터링할 제품 ID의 콤마(,)로 구분된 목록 (예: "632910392, 632910393")
+    - `title` (string, optional): 제품 제목으로 필터링
+    - `productType` (string, optional): 제품 유형으로 필터링
+    - `vendor` (string, optional): 공급업체로 필터링
+    - `status` (string, optional): 상태별 필터링 - 옵션: active, archived, draft
+    - `createdAtMin` (string, optional): 해당 날짜(ISO 혹은 Unix 타임스탬프) 이후에 생성된 제품만 반환
+    - `createdAtMax` (string, optional): 해당 날짜(ISO 혹은 Unix 타임스탬프) 이전에 생성된 제품만 반환
+    - `updatedAtMin` (string, optional): 해당 날짜(ISO 혹은 Unix 타임스탬프) 이후에 수정된 제품만 반환
+    - `updatedAtMax` (string, optional): 해당 날짜(ISO 혹은 Unix 타임스탬프) 이전에 수정된 제품만 반환
+    - `limit` (string, optional): 반환할 최대 제품 수 (기본값: 250)
+  </Accordion>
+
+  <Accordion title="SHOPIFY_CREATE_PRODUCT">
+    **설명:** REST API를 사용하여 Shopify 스토어에 새로운 제품을 생성합니다.
+
+    **파라미터:**
+    - `title` (string, required): 제품 제목
+    - `productType` (string, required): 제품 유형/카테고리
+    - `vendor` (string, required): 제품 공급업체
+    - `productDescription` (string, optional): 제품 설명 (일반 텍스트 또는 HTML 가능)
+    - `tags` (string, optional): 배열 또는 콤마(,)로 구분된 태그 목록
+    - `price` (string, optional): 제품 가격
+    - `inventoryPolicy` (string, optional): 재고 정책 - 옵션: deny, continue
+    - `imageUrl` (string, optional): 제품 이미지 URL
+    - `isPublished` (boolean, optional): 제품 공개 여부
+    - `publishToPointToSale` (boolean, optional): 포인트 오브 세일(Point of Sale)에 공개 여부
+  </Accordion>
+
+  <Accordion title="SHOPIFY_UPDATE_PRODUCT">
+    **설명:** REST API를 사용하여 Shopify 스토어의 기존 제품을 업데이트합니다.
+
+    **파라미터:**
+    - `productId` (string, required): 업데이트할 제품 ID
+    - `title` (string, optional): 제품 제목
+    - `productType` (string, optional): 제품 유형/카테고리
+    - `vendor` (string, optional): 제품 공급업체
+    - `productDescription` (string, optional): 제품 설명 (일반 텍스트 또는 HTML 가능)
+    - `tags` (string, optional): 배열 또는 콤마(,)로 구분된 태그 목록
+    - `price` (string, optional): 제품 가격
+    - `inventoryPolicy` (string, optional): 재고 정책 - 옵션: deny, continue
+    - `imageUrl` (string, optional): 제품 이미지 URL
+    - `isPublished` (boolean, optional): 제품 공개 여부
+    - `publishToPointToSale` (boolean, optional): 포인트 오브 세일(Point of Sale)에 공개 여부
+  </Accordion>
+</AccordionGroup>
+
+### **제품 관리 (GraphQL)**
+
+<AccordionGroup>
+  <Accordion title="SHOPIFY_GET_PRODUCTS_GRAPHQL">
+    **설명:** 고급 GraphQL 필터링 기능을 사용하여 제품을 조회합니다.
+
+    **파라미터:**
+    - `productFilterFormula` (object, 선택): id, title, vendor, status, handle, tag, created_at, updated_at, published_at와 같은 필드를 지원하는 불리언 정규합형(DNF) 기반의 고급 필터
+  </Accordion>
+
+  <Accordion title="SHOPIFY_CREATE_PRODUCT_GRAPHQL">
+    **설명:** 미디어 지원이 강화된 GraphQL API를 사용하여 새 제품을 생성합니다.
+
+    **파라미터:**
+    - `title` (string, 필수): 제품 제목
+    - `productType` (string, 필수): 제품 유형/카테고리
+    - `vendor` (string, 필수): 제품 공급업체
+    - `productDescription` (string, 선택): 제품 설명 (일반 텍스트 또는 HTML 허용)
+    - `tags` (string, 선택): 배열 또는 쉼표로 구분된 리스트 형태의 제품 태그
+    - `media` (object, 선택): 대체 텍스트, 콘텐츠 유형 및 소스 URL을 가진 미디어 객체
+    - `additionalFields` (object, 선택): status, requiresSellingPlan, giftCard와 같은 추가 제품 필드
+  </Accordion>
+
+  <Accordion title="SHOPIFY_UPDATE_PRODUCT_GRAPHQL">
+    **설명:** 미디어 지원이 강화된 GraphQL API를 사용하여 기존 제품을 업데이트합니다.
+
+    **파라미터:**
+    - `productId` (string, 필수): 업데이트할 제품의 GraphQL ID (예: "gid://shopify/Product/913144112")
+    - `title` (string, 선택): 제품 제목
+    - `productType` (string, 선택): 제품 유형/카테고리
+    - `vendor` (string, 선택): 제품 공급업체
+    - `productDescription` (string, 선택): 제품 설명 (일반 텍스트 또는 HTML 허용)
+    - `tags` (string, 선택): 배열 또는 쉼표로 구분된 리스트 형태의 제품 태그
+    - `media` (object, 선택): 대체 텍스트, 콘텐츠 유형 및 소스 URL을 포함한 업데이트된 미디어 객체
+    - `additionalFields` (object, 선택): status, requiresSellingPlan, giftCard와 같은 추가 제품 필드
+  </Accordion>
+</AccordionGroup>
+
+## 사용 예시
+
+### 기본 Shopify 에이전트 설정
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import CrewaiEnterpriseTools
+
+# Get enterprise tools (Shopify tools will be included)
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token"
+)
+
+# Create an agent with Shopify capabilities
+shopify_agent = Agent(
+    role="E-commerce Manager",
+    goal="Manage online store operations and customer relationships efficiently",
+    backstory="An AI assistant specialized in e-commerce operations and online store management.",
+    tools=[enterprise_tools]
+)
+
+# Task to create a new customer
+create_customer_task = Task(
+    description="Create a new VIP customer Jane Smith with email jane.smith@example.com and phone +1-555-0123",
+    agent=shopify_agent,
+    expected_output="Customer created successfully with customer ID"
+)
+
+# Run the task
+crew = Crew(
+    agents=[shopify_agent],
+    tasks=[create_customer_task]
+)
+
+crew.kickoff()
+```
+
+### 특정 Shopify 도구 필터링
+
+```python
+from crewai_tools import CrewaiEnterpriseTools
+
+# Get only specific Shopify tools
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token",
+    actions_list=["shopify_create_customer", "shopify_create_order", "shopify_get_products"]
+)
+
+store_manager = Agent(
+    role="Store Manager",
+    goal="Manage customer orders and product catalog",
+    backstory="An experienced store manager who handles customer relationships and inventory management.",
+    tools=enterprise_tools
+)
+
+# Task to manage store operations
+store_task = Task(
+    description="Create a new customer and process their order for 2 Premium Coffee Mugs",
+    agent=store_manager,
+    expected_output="Customer created and order processed successfully"
+)
+
+crew = Crew(
+    agents=[store_manager],
+    tasks=[store_task]
+)
+
+crew.kickoff()
+```
+
+### GraphQL을 활용한 제품 관리
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import CrewaiEnterpriseTools
+
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token"
+)
+
+product_manager = Agent(
+    role="Product Manager",
+    goal="Manage product catalog and inventory with advanced GraphQL capabilities",
+    backstory="An AI assistant that specializes in product management and catalog optimization.",
+    tools=[enterprise_tools]
+)
+
+# Task to manage product catalog
+catalog_task = Task(
+    description="""
+    1. Coffee Co 공급업체의 신규 제품 "Premium Coffee Mug"을(를) 생성하세요.
+    2. 고품질 제품 이미지와 설명을 추가하세요.
+    3. 동일한 공급업체의 유사 제품을 검색하세요.
+    4. 제품 태그와 가격 전략을 업데이트하세요.
+    """,
+    agent=product_manager,
+    expected_output="Product created and catalog optimized successfully"
+)
+
+crew = Crew(
+    agents=[product_manager],
+    tasks=[catalog_task]
+)
+
+crew.kickoff()
+```
+
+### 주문 및 고객 분석
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import CrewaiEnterpriseTools
+
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token"
+)
+
+analytics_agent = Agent(
+    role="E-commerce Analyst",
+    goal="Analyze customer behavior and order patterns to optimize store performance",
+    backstory="An analytical AI that excels at extracting insights from e-commerce data.",
+    tools=[enterprise_tools]
+)
+
+# Complex task involving multiple operations
+analytics_task = Task(
+    description="""
+    1. 최근 고객 데이터 및 주문 내역 조회
+    2. 최근 7일간의 장바구니 이탈 식별
+    3. 상품 성과 및 재고 수준 분석
+    4. 고객 유지를 위한 추천 사항 생성
+    """,
+    agent=analytics_agent,
+    expected_output="실행 가능한 인사이트를 제공하는 종합 이커머스 분석 보고서"
+)
+
+crew = Crew(
+    agents=[analytics_agent],
+    tasks=[analytics_task]
+)
+
+crew.kickoff()
+```
+
+### 도움 받기
+
+<Card title="도움이 필요하신가요?" icon="headset" href="mailto:support@crewai.com">
+  Shopify 연동 설정 또는 문제 해결에 관한 지원이 필요하시면 고객 지원팀에 문의해 주세요.
+</Card>

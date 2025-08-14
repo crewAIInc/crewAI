@@ -1,0 +1,343 @@
+---
+title: Zendesk 통합
+description: "CrewAI를 위한 Zendesk 통합으로 고객 지원 및 헬프데스크 관리."
+icon: "headset"
+---
+
+## 개요
+
+에이전트가 Zendesk를 통해 고객 지원 운영을 관리할 수 있도록 지원합니다. 티켓 생성 및 업데이트, 사용자 관리, 지원 지표 추적, 그리고 AI 기반 자동화를 통해 고객 서비스 워크플로우를 간소화할 수 있습니다.
+
+## 사전 준비 사항
+
+Zendesk 통합을 사용하기 전에 다음을 확인하세요.
+
+- 활성 구독이 있는 [CrewAI Enterprise](https://app.crewai.com) 계정
+- 적절한 API 권한이 있는 Zendesk 계정
+- [통합 페이지](https://app.crewai.com/integrations)를 통해 Zendesk 계정 연결
+
+## 사용 가능한 도구
+
+### **티켓 관리**
+
+<AccordionGroup>
+  <Accordion title="ZENDESK_CREATE_TICKET">
+    **설명:** Zendesk에 새로운 지원 티켓을 생성합니다.
+
+    **매개변수:**
+    - `ticketSubject` (string, 필수): 티켓 제목 줄 (예: "도와주세요, 프린터에 불이 났어요!")
+    - `ticketDescription` (string, 필수): 티켓에 표시될 첫 번째 댓글 (예: "연기가 정말 화려하네요.")
+    - `requesterName` (string, 필수): 지원 요청자의 이름 (예: "Jane Customer")
+    - `requesterEmail` (string, 필수): 지원 요청자의 이메일 (예: "jane@example.com")
+    - `assigneeId` (string, 선택): 이 티켓에 할당된 Zendesk 에이전트 ID - 사용자가 담당자를 선택할 수 있도록 Connect Portal Workflow Settings 를 사용하세요
+    - `ticketType` (string, 선택): 티켓 유형 - 옵션: problem, incident, question, task
+    - `ticketPriority` (string, 선택): 우선순위 수준 - 옵션: urgent, high, normal, low
+    - `ticketStatus` (string, 선택): 티켓 상태 - 옵션: new, open, pending, hold, solved, closed
+    - `ticketDueAt` (string, 선택): task 유형 티켓의 마감일 (ISO 8601 타임스탬프)
+    - `ticketTags` (string, 선택): 적용할 태그 배열 (예: `["enterprise", "other_tag"]`)
+    - `ticketExternalId` (string, 선택): 티켓을 로컬 레코드와 연결할 외부 ID
+    - `ticketCustomFields` (object, 선택): JSON 형식의 사용자 정의 필드 값
+  </Accordion>
+
+  <Accordion title="ZENDESK_UPDATE_TICKET">
+    **설명:** Zendesk의 기존 지원 티켓을 업데이트합니다.
+
+    **매개변수:**
+    - `ticketId` (string, 필수): 업데이트할 티켓의 ID (예: "35436")
+    - `ticketSubject` (string, 선택): 업데이트된 티켓 제목
+    - `requesterName` (string, 필수): 이 티켓을 요청한 사용자의 이름
+    - `requesterEmail` (string, 필수): 이 티켓을 요청한 사용자의 이메일
+    - `assigneeId` (string, 선택): 업데이트된 담당자 ID - Connect Portal Workflow Settings 를 사용하세요
+    - `ticketType` (string, 선택): 업데이트된 티켓 유형 - 옵션: problem, incident, question, task
+    - `ticketPriority` (string, 선택): 업데이트된 우선순위 - 옵션: urgent, high, normal, low
+    - `ticketStatus` (string, 선택): 업데이트된 상태 - 옵션: new, open, pending, hold, solved, closed
+    - `ticketDueAt` (string, 선택): 업데이트된 마감일 (ISO 8601 타임스탬프)
+    - `ticketTags` (string, 선택): 업데이트된 태그 배열
+    - `ticketExternalId` (string, 선택): 업데이트된 외부 ID
+    - `ticketCustomFields` (object, 선택): 업데이트된 사용자 정의 필드 값
+  </Accordion>
+
+  <Accordion title="ZENDESK_GET_TICKET_BY_ID">
+    **설명:** ID로 특정 티켓을 조회합니다.
+
+    **매개변수:**
+    - `ticketId` (string, 필수): 조회할 티켓의 ID (예: "35436")
+  </Accordion>
+
+  <Accordion title="ZENDESK_ADD_COMMENT_TO_TICKET">
+    **설명:** 기존 티켓에 댓글이나 내부 노트를 추가합니다.
+
+    **매개변수:**
+    - `ticketId` (string, 필수): 댓글을 추가할 티켓의 ID (예: "35436")
+    - `commentBody` (string, 필수): 댓글 메시지 (일반 텍스트 또는 HTML 지원, 예: "도움을 주셔서 감사합니다!")
+    - `isInternalNote` (boolean, 선택): 공개 답글 대신 내부 노트로 설정하려면 true (기본값: false)
+    - `isPublic` (boolean, 선택): 공개 댓글이면 true, 내부 노트이면 false
+  </Accordion>
+
+  <Accordion title="ZENDESK_SEARCH_TICKETS">
+    **설명:** 다양한 필터 및 조건을 사용하여 티켓을 검색합니다.
+
+    **매개변수:**
+    - `ticketSubject` (string, 선택): 티켓 제목 내 텍스트로 필터링
+    - `ticketDescription` (string, 선택): 티켓 설명 및 댓글 내 텍스트로 필터링
+    - `ticketStatus` (string, 선택): 상태로 필터링 - 옵션: new, open, pending, hold, solved, closed
+    - `ticketType` (string, 선택): 유형으로 필터링 - 옵션: problem, incident, question, task, no_type
+    - `ticketPriority` (string, 선택): 우선순위로 필터링 - 옵션: urgent, high, normal, low, no_priority
+    - `requesterId` (string, 선택): 요청자 사용자 ID로 필터링
+    - `assigneeId` (string, 선택): 담당 에이전트 ID로 필터링
+    - `recipientEmail` (string, 선택): 원래 수신자 이메일 주소로 필터링
+    - `ticketTags` (string, 선택): 티켓 태그로 필터링
+    - `ticketExternalId` (string, 선택): 외부 ID로 필터링
+    - `createdDate` (object, 선택): 생성일로 필터링 (연산자: EQUALS, LESS_THAN_EQUALS, GREATER_THAN_EQUALS, 값)
+    - `updatedDate` (object, 선택): 업데이트 날짜로 필터링 (연산자와 값)
+    - `dueDate` (object, 선택): 마감일로 필터링 (연산자와 값)
+    - `sort_by` (string, 선택): 정렬 필드 - 옵션: created_at, updated_at, priority, status, ticket_type
+    - `sort_order` (string, 선택): 정렬 방향 - 옵션: asc, desc
+  </Accordion>
+</AccordionGroup>
+
+### **사용자 관리**
+
+<AccordionGroup>
+  <Accordion title="ZENDESK_CREATE_USER">
+    **설명:** Zendesk에서 새로운 사용자를 생성합니다.
+
+    **매개변수:**
+    - `name` (string, 필수): 사용자의 전체 이름
+    - `email` (string, 선택): 사용자의 이메일 주소 (예: "jane@example.com")
+    - `phone` (string, 선택): 사용자의 전화번호
+    - `role` (string, 선택): 사용자 역할 - 옵션: admin, agent, end-user
+    - `externalId` (string, 선택): 다른 시스템의 고유 식별자
+    - `details` (string, 선택): 추가 사용자 정보
+    - `notes` (string, 선택): 사용자에 대한 내부 메모
+  </Accordion>
+
+  <Accordion title="ZENDESK_UPDATE_USER">
+    **설명:** 기존 사용자의 정보를 업데이트합니다.
+
+    **매개변수:**
+    - `userId` (string, 필수): 업데이트할 사용자의 ID
+    - `name` (string, 선택): 업데이트할 사용자 이름
+    - `email` (string, 선택): 업데이트할 이메일 (업데이트 시 보조 이메일로 추가됨)
+    - `phone` (string, 선택): 업데이트할 전화번호
+    - `role` (string, 선택): 업데이트할 역할 - 옵션: admin, agent, end-user
+    - `externalId` (string, 선택): 업데이트된 외부 ID
+    - `details` (string, 선택): 업데이트된 사용자 상세 정보
+    - `notes` (string, 선택): 업데이트된 내부 메모
+  </Accordion>
+
+  <Accordion title="ZENDESK_GET_USER_BY_ID">
+    **설명:** ID로 특정 사용자를 조회합니다.
+
+    **매개변수:**
+    - `userId` (string, 필수): 조회할 사용자 ID
+  </Accordion>
+
+  <Accordion title="ZENDESK_SEARCH_USERS">
+    **설명:** 다양한 기준으로 사용자를 검색합니다.
+
+    **매개변수:**
+    - `name` (string, 선택): 사용자 이름으로 필터링
+    - `email` (string, 선택): 사용자 이메일로 필터링 (예: "jane@example.com")
+    - `role` (string, 선택): 역할로 필터링 - 옵션: admin, agent, end-user
+    - `externalId` (string, 선택): 외부 ID로 필터링
+    - `sort_by` (string, 선택): 정렬 필드 - 옵션: created_at, updated_at
+    - `sort_order` (string, 선택): 정렬 방향 - 옵션: asc, desc
+  </Accordion>
+</AccordionGroup>
+
+### **관리 도구**
+
+<AccordionGroup>
+  <Accordion title="ZENDESK_GET_TICKET_FIELDS">
+    **설명:** 티켓에 사용할 수 있는 모든 표준 및 맞춤 필드를 검색합니다.
+
+    **파라미터:**
+    - `paginationParameters` (object, 선택 사항): 페이지네이션 설정
+      - `pageCursor` (string, 선택 사항): 페이지네이션을 위한 페이지 커서
+  </Accordion>
+
+  <Accordion title="ZENDESK_GET_TICKET_AUDITS">
+    **설명:** 티켓의 감사 기록(읽기 전용 이력)을 가져옵니다.
+
+    **파라미터:**
+    - `ticketId` (string, 선택 사항): 특정 티켓의 감사를 조회합니다(비워두면 모든 비보관된 티켓의 감사를 조회, 예: "1234")
+    - `paginationParameters` (object, 선택 사항): 페이지네이션 설정
+      - `pageCursor` (string, 선택 사항): 페이지네이션을 위한 페이지 커서
+  </Accordion>
+</AccordionGroup>
+
+## 커스텀 필드
+
+커스텀 필드를 사용하면 조직에 특화된 추가 정보를 저장할 수 있습니다:
+
+```json
+[
+  { "id": 27642, "value": "745" },
+  { "id": 27648, "value": "yes" }
+]
+```
+
+## 티켓 우선순위 레벨
+
+우선순위 레벨 이해하기:
+
+- **긴급** - 즉각적인 조치가 필요한 치명적 이슈
+- **높음** - 신속하게 해결해야 하는 중요한 이슈
+- **보통** - 대부분의 티켓에 해당하는 표준 우선순위
+- **낮음** - 여유가 있을 때 처리해도 되는 사소한 이슈
+
+## 티켓 상태 워크플로우
+
+표준 티켓 상태 진행:
+
+- **new** - 최근에 생성됨, 아직 할당되지 않음
+- **open** - 현재 작업 중
+- **pending** - 고객 응답 또는 외부 조치 대기 중
+- **hold** - 일시 중지됨
+- **solved** - 문제가 해결되어 고객 확인 대기 중
+- **closed** - 티켓이 완료되어 종료됨
+
+## 사용 예시
+
+### 기본 Zendesk 에이전트 설정
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import CrewaiEnterpriseTools
+
+# Get enterprise tools (Zendesk tools will be included)
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token"
+)
+
+# Create an agent with Zendesk capabilities
+zendesk_agent = Agent(
+    role="Support Manager",
+    goal="Manage customer support tickets and provide excellent customer service",
+    backstory="An AI assistant specialized in customer support operations and ticket management.",
+    tools=[enterprise_tools]
+)
+
+# Task to create a new support ticket
+create_ticket_task = Task(
+    description="Create a high-priority support ticket for John Smith who is unable to access his account after password reset",
+    agent=zendesk_agent,
+    expected_output="Support ticket created successfully with ticket ID"
+)
+
+# Run the task
+crew = Crew(
+    agents=[zendesk_agent],
+    tasks=[create_ticket_task]
+)
+
+crew.kickoff()
+```
+
+### 특정 Zendesk 도구 필터링
+
+```python
+from crewai_tools import CrewaiEnterpriseTools
+
+# Get only specific Zendesk tools
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token",
+    actions_list=["zendesk_create_ticket", "zendesk_update_ticket", "zendesk_add_comment_to_ticket"]
+)
+
+support_agent = Agent(
+    role="Customer Support Agent",
+    goal="Handle customer inquiries and resolve support issues efficiently",
+    backstory="An experienced support agent who specializes in ticket resolution and customer communication.",
+    tools=enterprise_tools
+)
+
+# Task to manage support workflow
+support_task = Task(
+    description="Create a ticket for login issues, add troubleshooting comments, and update status to resolved",
+    agent=support_agent,
+    expected_output="Support ticket managed through complete resolution workflow"
+)
+
+crew = Crew(
+    agents=[support_agent],
+    tasks=[support_task]
+)
+
+crew.kickoff()
+```
+
+### 고급 티켓 관리
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import CrewaiEnterpriseTools
+
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token"
+)
+
+ticket_manager = Agent(
+    role="Ticket Manager",
+    goal="Manage support ticket workflows and ensure timely resolution",
+    backstory="An AI assistant that specializes in support ticket triage and workflow optimization.",
+    tools=[enterprise_tools]
+)
+
+# Task to manage ticket lifecycle
+ticket_workflow = Task(
+    description="""
+    1. 계정 접근 문제에 대한 새로운 지원 티켓을 생성합니다.
+    2. 문제 해결 단계를 내부 노트에 추가합니다.
+    3. 고객 등급에 따라 티켓 우선순위를 업데이트합니다.
+    4. 해결 코멘트를 추가하고 티켓을 종료합니다.
+    """,
+    agent=ticket_manager,
+    expected_output="티켓 생성부터 해결까지 전체 생명주기 관리"
+)
+
+crew = Crew(
+    agents=[ticket_manager],
+    tasks=[ticket_workflow]
+)
+
+crew.kickoff()
+```
+
+### 지원 분석 및 보고
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import CrewaiEnterpriseTools
+
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token"
+)
+
+support_analyst = Agent(
+    role="Support Analyst",
+    goal="Analyze support metrics and generate insights for team performance",
+    backstory="An analytical AI that excels at extracting insights from support data and ticket patterns.",
+    tools=[enterprise_tools]
+)
+
+# Complex task involving analytics and reporting
+analytics_task = Task(
+    description="""
+    1. Search for all open tickets from the last 30 days
+    2. Analyze ticket resolution times and customer satisfaction
+    3. Identify common issues and support patterns
+    4. Generate weekly support performance report
+    """,
+    agent=support_analyst,
+    expected_output="Comprehensive support analytics report with performance insights and recommendations"
+)
+
+crew = Crew(
+    agents=[support_analyst],
+    tasks=[analytics_task]
+)
+
+crew.kickoff()
+```

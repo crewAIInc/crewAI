@@ -1,0 +1,103 @@
+---
+title: "React 컴포넌트 내보내기"
+description: "CrewAI Enterprise React 컴포넌트를 애플리케이션에 내보내고 통합하는 방법을 알아보세요"
+icon: "react"
+---
+
+이 가이드는 CrewAI Enterprise crew를 React 컴포넌트로 내보내고 이를 여러분의 애플리케이션에 통합하는 방법을 설명합니다.
+
+## React 컴포넌트 내보내기
+
+<Steps>
+    <Step title="컴포넌트 내보내기">
+        배포된 crew 오른쪽에 있는 줄임표(세 개의 점)를 클릭한 다음 내보내기 옵션을 선택하고 파일을 로컬에 저장하세요. 본 예시에서는 `CrewLead.jsx`를 사용합니다.
+
+        <Frame>
+            <img src="/images/enterprise/export-react-component.png" alt="React 컴포넌트 내보내기" />
+        </Frame>
+    </Step>
+</Steps>
+
+## 리액트 환경 설정
+
+이 리액트 컴포넌트를 로컬에서 실행하려면 리액트 개발 환경을 설정하고 이 컴포넌트를 리액트 프로젝트에 통합해야 합니다.
+
+<Steps>
+    <Step title="Node.js 설치">
+        - 공식 웹사이트(https://nodejs.org/)에서 Node.js를 다운로드하고 설치하세요.
+        - 안정성을 위해 LTS(장기 지원) 버전을 선택하세요.
+    </Step>
+
+    <Step title="새 리액트 프로젝트 생성">
+        - 명령 프롬프트 또는 PowerShell을 엽니다.
+        - 프로젝트를 생성하고자 하는 디렉터리로 이동하세요.
+        - 다음 명령어를 실행하여 새로운 리액트 프로젝트를 생성합니다:
+
+            ```bash
+            npx create-react-app my-crew-app
+            ```
+        - 프로젝트 디렉터리로 이동합니다:
+        
+            ```bash
+            cd my-crew-app
+            ```
+    </Step>
+
+    <Step title="필요한 의존성 설치">
+        ```bash
+        npm install react-dom
+        ```
+    </Step>
+
+    <Step title="CrewLead 컴포넌트 생성">
+        - 다운로드한 파일 `CrewLead.jsx`를 프로젝트의 `src` 폴더로 이동하세요.
+    </Step>
+
+    <Step title="App.js를 수정하여 CrewLead 컴포넌트 사용">
+        - `src/App.js`를 엽니다.
+        - 내용물을 아래와 같이 교체하세요:
+
+        ```jsx
+        import React from 'react';
+        import CrewLead from './CrewLead';
+
+        function App() {
+            return (
+                <div className="App">
+                    <CrewLead baseUrl="YOUR_API_BASE_URL" bearerToken="YOUR_BEARER_TOKEN" />
+                </div>
+            );
+        }
+
+        export default App;
+        ```
+        - `YOUR_API_BASE_URL` 및 `YOUR_BEARER_TOKEN` 부분을 실제 API 값으로 바꿔주세요.
+    </Step>
+
+    <Step title="개발 서버 시작">
+        - 프로젝트 디렉터리에서 다음 명령어를 실행하세요:
+        
+            ```bash
+            npm start
+            ```
+        - 개발 서버가 시작되며, 기본 웹 브라우저가 자동으로 http://localhost:3000 을 열고 리액트 앱이 실행되는 것을 확인할 수 있습니다.
+    </Step>
+</Steps>
+
+## 커스터마이징
+
+그런 다음 `CrewLead.jsx`를 커스터마이즈하여 색상, 제목 등을 추가할 수 있습니다.
+
+<Frame>
+    <img src="/images/enterprise/customise-react-component.png" alt="React 컴포넌트 커스터마이즈" />
+</Frame>
+<Frame>
+    <img src="/images/enterprise/customise-react-component-2.png" alt="React 컴포넌트 커스터마이즈" />
+</Frame>
+
+## 다음 단계
+
+- 구성 요소 스타일을 애플리케이션 디자인에 맞게 맞춤화하세요
+- 추가 구성을 위한 props를 추가하세요
+- 애플리케이션의 상태 관리와 통합하세요
+- 오류 처리 및 로딩 상태를 추가하세요

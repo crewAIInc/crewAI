@@ -1,0 +1,124 @@
+---
+title: "Tavily 검색 도구"
+description: "Tavily Search API를 사용하여 종합적인 웹 검색 수행"
+icon: "magnifying-glass"
+---
+
+`TavilySearchTool`은 Tavily Search API에 대한 인터페이스를 제공하여 CrewAI 에이전트가 포괄적인 웹 검색을 수행할 수 있도록 합니다. 이 도구는 검색 깊이, 주제, 시간 범위, 포함/제외 도메인, 그리고 결과에 직접 답변, 원시 콘텐츠, 이미지 포함 여부 등을 지정할 수 있게 해줍니다.
+
+## 설치
+
+`TavilySearchTool`을 사용하려면 `tavily-python` 라이브러리를 설치해야 합니다:
+
+```shell
+pip install 'crewai[tools]' tavily-python
+```
+
+## 환경 변수
+
+Tavily API 키가 환경 변수로 설정되어 있는지 확인하세요:
+
+```bash
+export TAVILY_API_KEY='your_tavily_api_key'
+```
+
+https://app.tavily.com/에서 API 키를 발급받으세요(회원가입 후 키를 생성하면 됩니다).
+
+## 예제 사용법
+
+다음은 CrewAI agent 내에서 `TavilySearchTool`을 초기화하고 사용하는 방법입니다:
+
+```python
+import os
+from crewai import Agent, Task, Crew
+from crewai_tools import TavilySearchTool
+
+# Ensure the TAVILY_API_KEY environment variable is set
+# os.environ["TAVILY_API_KEY"] = "YOUR_TAVILY_API_KEY"
+
+# Initialize the tool
+tavily_tool = TavilySearchTool()
+
+# Create an agent that uses the tool
+researcher = Agent(
+    role='Market Researcher',
+    goal='Find information about the latest AI trends',
+    backstory='An expert market researcher specializing in technology.',
+    tools=[tavily_tool],
+    verbose=True
+)
+
+# Create a task for the agent
+research_task = Task(
+    description='Search for the top 3 AI trends in 2024.',
+    expected_output='A JSON report summarizing the top 3 AI trends found.',
+    agent=researcher
+)
+
+# Form the crew and kick it off
+crew = Crew(
+    agents=[researcher],
+    tasks=[research_task],
+    verbose=2
+)
+
+result = crew.kickoff()
+print(result)
+```
+
+## 구성 옵션
+
+`TavilySearchTool`은 초기화 시 또는 `run` 메서드를 호출할 때 다음과 같은 인자를 받습니다:
+
+- `query` (str): **필수**. 검색 쿼리 문자열입니다.
+- `search_depth` (Literal["basic", "advanced"], 선택): 검색의 심도입니다. 기본값은 `"basic"`입니다.
+- `topic` (Literal["general", "news", "finance"], 선택): 검색을 집중할 주제입니다. 기본값은 `"general"`입니다.
+- `time_range` (Literal["day", "week", "month", "year"], 선택): 검색을 위한 시간 범위입니다. 기본값은 `None`입니다.
+- `days` (int, 선택): 과거 며칠까지 검색할지 지정합니다. `time_range`가 설정되지 않은 경우에 해당합니다. 기본값은 `7`입니다.
+- `max_results` (int, 선택): 반환할 최대 검색 결과 수입니다. 기본값은 `5`입니다.
+- `include_domains` (Sequence[str], 선택): 검색 시 우선순위를 둘 도메인 목록입니다. 기본값은 `None`입니다.
+- `exclude_domains` (Sequence[str], 선택): 검색에서 제외할 도메인 목록입니다. 기본값은 `None`입니다.
+- `include_answer` (Union[bool, Literal["basic", "advanced"]], 선택): 검색 결과로부터 직접적으로 생성된 답변을 포함할지 여부입니다. 기본값은 `False`입니다.
+- `include_raw_content` (bool, 선택): 검색된 페이지의 원시 HTML 콘텐츠를 포함할지 여부입니다. 기본값은 `False`입니다.
+- `include_images` (bool, 선택): 이미지 결과를 포함할지 여부입니다. 기본값은 `False`입니다.
+- `timeout` (int, 선택): 요청의 타임아웃(초)입니다. 기본값은 `60`입니다.
+
+## 고급 사용법
+
+도구를 사용자 지정 매개변수로 구성할 수 있습니다:
+
+```python
+# Example: Initialize with specific parameters
+custom_tavily_tool = TavilySearchTool(
+    search_depth='advanced',
+    max_results=10,
+    include_answer=True
+)
+
+# The agent will use these defaults
+agent_with_custom_tool = Agent(
+    role="Advanced Researcher",
+    goal="Conduct detailed research with comprehensive results",
+    tools=[custom_tavily_tool]
+)
+```
+
+## 기능
+
+- **포괄적 검색**: Tavily의 강력한 검색 인덱스에 접근
+- **설정 가능한 깊이**: 기본 및 고급 검색 모드 선택 가능
+- **주제 필터링**: 일반, 뉴스, 금융 주제에 집중하여 검색
+- **시간 범위 제어**: 결과를 특정 기간으로 제한
+- **도메인 제어**: 특정 도메인을 포함하거나 제외 가능
+- **직접 답변**: 검색 결과에서 통합된 답변 제공
+- **콘텐츠 필터링**: 자동 콘텐츠 잘라내기를 통해 컨텍스트 윈도우 문제 방지
+
+## 응답 형식
+
+이 도구는 다음을 포함하는 JSON 문자열로 검색 결과를 반환합니다:
+- 제목, URL, 본문 요약이 포함된 검색 결과
+- 선택적으로 쿼리에 대한 직접 답변
+- 선택적으로 이미지 결과
+- 선택적으로 원시 HTML 콘텐츠(활성화된 경우)
+
+각 결과의 콘텐츠는 컨텍스트 윈도우 문제를 방지하면서 가장 관련성 높은 정보를 유지하도록 자동으로 잘립니다.

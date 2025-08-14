@@ -1,0 +1,63 @@
+---
+title: "개요"
+description: "AI 서비스를 활용하고, 이미지를 생성하며, 비전 처리를 수행하고, 지능형 시스템을 구축합니다"
+icon: "face-smile"
+---
+
+이러한 도구들은 AI 및 머신러닝 서비스와 통합되어 이미지 생성, 비전 처리, 지능형 코드 실행과 같은 고급 기능으로 에이전트를 강화합니다.
+
+## **사용 가능한 도구**
+
+<CardGroup cols={2}>
+  <Card title="DALL-E 도구" icon="image" href="/ko/tools/ai-ml/dalletool">
+    OpenAI의 DALL-E 모델을 사용하여 AI 이미지를 생성합니다.
+  </Card>
+
+  <Card title="Vision 도구" icon="eye" href="/ko/tools/ai-ml/visiontool">
+    컴퓨터 비전 기능으로 이미지를 처리하고 분석합니다.
+  </Card>
+
+  <Card title="AI Mind 도구" icon="brain" href="/ko/tools/ai-ml/aimindtool">
+    고급 AI 추론 및 의사결정 기능을 제공합니다.
+  </Card>
+
+  <Card title="LlamaIndex 도구" icon="llama" href="/ko/tools/ai-ml/llamaindextool">
+    LlamaIndex로 지식 베이스 및 검색 시스템을 구축합니다.
+  </Card>
+
+  <Card title="LangChain 도구" icon="link" href="/ko/tools/ai-ml/langchaintool">
+    LangChain과 통합하여 복잡한 AI 워크플로우를 구현합니다.
+  </Card>
+
+  <Card title="RAG 도구" icon="database" href="/ko/tools/ai-ml/ragtool">
+    Retrieval-Augmented Generation 시스템을 구현합니다.
+  </Card>
+
+  <Card title="Code Interpreter 도구" icon="code" href="/ko/tools/ai-ml/codeinterpretertool">
+    Python 코드를 실행하고 데이터 분석을 수행합니다.
+  </Card>
+</CardGroup>
+
+## **일반적인 사용 사례**
+
+- **콘텐츠 생성**: 이미지, 텍스트, 멀티미디어 콘텐츠 생성
+- **데이터 분석**: 코드 실행 및 복잡한 데이터셋 분석
+- **지식 시스템**: RAG 시스템 및 지능형 데이터베이스 구축
+- **컴퓨터 비전**: 시각적 콘텐츠 처리 및 이해
+- **AI 안전성**: 콘텐츠 모더레이션 및 안전성 점검 구현
+
+```python
+from crewai_tools import DallETool, VisionTool, CodeInterpreterTool
+
+# Create AI tools
+image_generator = DallETool()
+vision_processor = VisionTool()
+code_executor = CodeInterpreterTool()
+
+# Add to your agent
+agent = Agent(
+    role="AI Specialist",
+    tools=[image_generator, vision_processor, code_executor],
+    goal="Create and analyze content using AI capabilities"
+)
+```

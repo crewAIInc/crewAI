@@ -1,0 +1,109 @@
+---
+title: 계층적 프로세스
+description: 최신 코딩 관행 및 기능을 반영하여 CrewAI 프로젝트 내에서 계층적 프로세스를 이해하고 적용하는 종합 가이드입니다.
+icon: sitemap
+---
+
+## 소개
+
+CrewAI의 계층적 프로세스는 효율적인 작업 위임 및 실행을 위해 전통적인 조직의 계층 구조를 모방하는 구조화된 작업 관리 방식을 도입합니다.
+이러한 체계적인 워크플로우는 작업이 최적의 효율성과 정확성으로 처리될 수 있도록 하여 프로젝트 성과를 향상시킵니다.
+
+<Tip>
+    계층적 프로세스는 GPT-4와 같은 고급 모델을 활용하도록 설계되었으며, 복잡한 작업을 보다 효율적으로 처리하는 동시에 토큰 사용을 최적화합니다.
+</Tip>
+
+## 계층적 프로세스 개요
+
+기본적으로 CrewAI에서 task는 순차적인 프로세스를 통해 관리됩니다. 그러나 계층적 접근 방식을 채택하면 명확한 계층 구조의 task 관리를 할 수 있습니다.  
+이 방식에서는 'manager' agent가 workflow를 조정하고, task를 위임하며, 결과를 검증하여 효율적이고 원활한 실행을 가능하게 합니다. 이 manager agent는 이제 CrewAI에서 자동으로 생성되거나 사용자가 명시적으로 설정할 수 있습니다.
+
+### 주요 기능
+
+- **작업 위임**: 매니저 에이전트가 역할과 역량에 따라 crew 멤버에게 작업을 할당합니다.
+- **결과 검증**: 매니저가 결과물을 평가하여 요구되는 기준을 충족하는지 확인합니다.
+- **효율적인 워크플로우**: 기업 구조를 모방하여 체계적인 작업 관리 방식을 제공합니다.
+- **시스템 프롬프트 처리**: 시스템이 사전 정의된 prompt를 사용할지 옵션으로 지정할 수 있습니다.
+- **불용어 제어**: 불용어 사용 여부를 옵션으로 지정할 수 있으며, o1 모델 등 다양한 모델을 지원합니다.
+- **컨텍스트 윈도우 존중**: 중요한 컨텍스트를 우선시하며, 컨텍스트 윈도우를 존중하는 것이 기본 동작입니다.
+- **위임 제어**: 사용자에게 명확한 제어권을 주기 위해 기본적으로 위임이 비활성화되어 있습니다.
+- **분당 최대 요청 수**: 분당 최대 요청 수를 설정할 수 있는 구성 옵션입니다.
+- **최대 반복 횟수**: 최종 답변을 얻기 위한 최대 반복 횟수를 제한합니다.
+
+## 계층적 프로세스 구현하기
+
+계층적 프로세스를 활용하려면, 프로세스 속성을 반드시 `Process.hierarchical`로 명시적으로 설정해야 합니다. 기본 동작은 `Process.sequential`입니다.
+매니저가 지정된 crew를 정의하고, 명확한 명령 체계를 구축하세요.
+
+<Tip>
+    도구는 agent 수준에서 할당하여, 매니저의 지시에 따라 지정된 agent가 작업 위임 및 실행을 원활히 수행할 수 있도록 하십시오.
+    도구는 작업 수준에서도 지정할 수 있어, 작업 수행 시 도구 가용성을 정밀하게 제어할 수 있습니다.
+</Tip>
+
+<Tip>
+    계층적 프로세스에서는 `manager_llm` 파라미터 설정이 매우 중요합니다.
+    시스템이 올바르게 작동하려면 매니저 LLM이 반드시 설정되어야 하며, 이를 통해 맞춤형 의사결정이 가능합니다.
+</Tip>
+
+```python Code
+from crewai import Crew, Process, Agent
+
+# Agents are defined with attributes for backstory, cache, and verbose mode
+researcher = Agent(
+    role='Researcher',
+    goal='Conduct in-depth analysis',
+    backstory='Experienced data analyst with a knack for uncovering hidden trends.',
+)
+writer = Agent(
+    role='Writer',
+    goal='Create engaging content',
+    backstory='Creative writer passionate about storytelling in technical domains.',
+)
+
+# Establishing the crew with a hierarchical process and additional configurations
+project_crew = Crew(
+    tasks=[...],  # Tasks to be delegated and executed under the manager's supervision
+    agents=[researcher, writer],
+    manager_llm="gpt-4o",  # Specify which LLM the manager should use
+    process=Process.hierarchical,  
+    planning=True, 
+)
+```
+
+### 커스텀 매니저 에이전트 사용하기
+
+또 다른 방법으로, 프로젝트의 관리 요구 사항에 맞게 맞춤형 속성을 가진 커스텀 매니저 에이전트를 생성할 수 있습니다. 이를 통해 매니저의 동작 및 기능을 보다 세밀하게 제어할 수 있습니다.
+
+```python
+# Define a custom manager agent
+manager = Agent(
+    role="Project Manager",
+    goal="Efficiently manage the crew and ensure high-quality task completion",
+    backstory="You're an experienced project manager, skilled in overseeing complex projects and guiding teams to success.",
+    allow_delegation=True,
+)
+
+# Use the custom manager in your crew
+project_crew = Crew(
+    tasks=[...],
+    agents=[researcher, writer],
+    manager_agent=manager,  # Use your custom manager agent
+    process=Process.hierarchical,
+    planning=True,
+)
+```
+
+<Tip>
+    매니저 에이전트 생성 및 맞춤화에 대한 자세한 내용은 [커스텀 매니저 에이전트 문서](https://docs.crewai.com/how-to/custom-manager-agent#custom-manager-agent)를 참고하세요.
+</Tip>
+
+### 워크플로우 실행
+
+1. **작업 할당**: 매니저는 각 에이전트의 역량과 사용 가능한 도구를 고려하여 전략적으로 작업을 할당합니다.
+2. **실행 및 검토**: 에이전트는 비동기 실행 옵션과 콜백 함수로 작업을 완료하여 워크플로우를 효율적으로 진행할 수 있습니다.
+3. **순차적 작업 진행**: 계층적 프로세스임에도 불구하고, 매니저의 감독 하에 작업은 원활한 진행을 위해 논리적인 순서를 따릅니다.
+
+## 결론
+
+CrewAI에서 계층적 프로세스를 올바른 구성과 시스템 기능에 대한 이해와 함께 도입하면, 조직적이고 효율적인 프로젝트 관리가 가능합니다.
+고급 기능과 커스터마이징을 활용하여 워크플로우를 특정 요구에 맞게 맞춤화함으로써, 최적의 작업 실행과 프로젝트 성공을 보장할 수 있습니다.

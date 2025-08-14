@@ -1,0 +1,44 @@
+---
+title: 파일 읽기
+description: FileReadTool은 로컬 파일 시스템에서 파일을 읽도록 설계되었습니다.
+icon: folders
+---
+
+## 개요
+
+<Note>
+    우리는 도구를 계속 개선하고 있으므로, 향후 예기치 않은 동작이나 변경 사항이 발생할 수 있습니다.
+</Note>
+
+FileReadTool은 crewai_tools 패키지 내에서 파일 읽기와 콘텐츠 검색을 용이하게 하는 기능 모음입니다.
+이 모음에는 배치 텍스트 파일 처리, 런타임 구성 파일 읽기, 분석을 위한 데이터 가져오기 등 다양한 도구가 포함되어 있습니다.
+`.txt`, `.csv`, `.json` 등 다양한 텍스트 기반 파일 형식을 지원합니다. 파일 유형에 따라 이 모음은
+JSON 콘텐츠를 Python 딕셔너리로 변환하여 사용을 쉽게 하는 등 특화된 기능을 제공합니다.
+
+## 설치
+
+이전에 FileReadTool에 할당된 기능을 사용하려면 crewai_tools 패키지를 설치하세요:
+
+```shell
+pip install 'crewai[tools]'
+```
+
+## 사용 예시
+
+FileReadTool을 시작하려면:
+
+```python Code
+from crewai_tools import FileReadTool
+
+# 에이전트가 알고 있거나 경로를 학습한 파일을 읽기 위해 도구를 초기화합니다.
+file_read_tool = FileReadTool()
+
+# 또는
+
+# 특정 파일 경로로 도구를 초기화하여 에이전트가 지정된 파일의 내용만 읽을 수 있도록 합니다.
+file_read_tool = FileReadTool(file_path='path/to/your/file.txt')
+```
+
+## 인수
+
+- `file_path`: 읽고자 하는 파일의 경로입니다. 절대 경로와 상대 경로 모두 허용됩니다. 파일이 존재하는지와 필요한 접근 권한이 있는지 반드시 확인하세요.

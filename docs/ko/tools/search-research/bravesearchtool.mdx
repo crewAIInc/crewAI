@@ -1,0 +1,96 @@
+---
+title: Brave Search
+description: BraveSearchTool은 Brave Search API를 사용하여 인터넷을 검색하도록 설계되었습니다.
+icon: searchengin
+---
+
+# `BraveSearchTool`
+
+## 설명
+
+이 도구는 Brave Search API를 사용하여 웹 검색을 수행하도록 설계되었습니다. 지정한 쿼리를 사용하여 인터넷을 검색하고 관련 결과를 가져올 수 있습니다. 이 도구는 결과 개수와 국가별 검색을 사용자 지정할 수 있는 기능을 지원합니다.
+
+## 설치
+
+이 도구를 프로젝트에 통합하려면 아래의 설치 지침을 따르세요:
+
+```shell
+pip install 'crewai[tools]'
+```
+
+## 시작 단계
+
+`BraveSearchTool`을(를) 효과적으로 사용하려면 다음 단계를 따르세요:
+
+1. **패키지 설치**: Python 환경에 `crewai[tools]` 패키지가 설치되어 있는지 확인합니다.
+2. **API 키 획득**: https://api.search.brave.com/app/keys 에서 Brave Search API 키를 획득합니다(로그인하여 키를 생성).
+3. **환경 설정**: 획득한 API 키를 `BRAVE_API_KEY`라는 환경 변수에 저장하여 도구에서 사용할 수 있도록 합니다.
+
+## 예시
+
+다음 예시는 도구를 초기화하고 주어진 쿼리로 검색을 실행하는 방법을 보여줍니다:
+
+```python Code
+from crewai_tools import BraveSearchTool
+
+# 인터넷 검색 기능을 위한 도구 초기화
+tool = BraveSearchTool()
+
+# 검색 실행
+results = tool.run(search_query="CrewAI agent framework")
+print(results)
+```
+
+## 매개변수
+
+`BraveSearchTool`은 다음과 같은 매개변수를 받습니다:
+
+- **search_query**: 필수. 인터넷 검색에 사용할 검색 쿼리입니다.
+- **country**: 선택. 검색 결과의 국가를 지정합니다. 기본값은 빈 문자열입니다.
+- **n_results**: 선택. 반환할 검색 결과의 개수입니다. 기본값은 `10`입니다.
+- **save_file**: 선택. 검색 결과를 파일로 저장할지 여부입니다. 기본값은 `False`입니다.
+
+## 매개변수와 함께 사용하는 예시
+
+다음은 추가 매개변수를 사용하여 도구를 활용하는 방법을 보여주는 예시입니다:
+
+```python Code
+from crewai_tools import BraveSearchTool
+
+# Initialize the tool with custom parameters
+tool = BraveSearchTool(
+    country="US",
+    n_results=5,
+    save_file=True
+)
+
+# Execute a search
+results = tool.run(search_query="Latest AI developments")
+print(results)
+```
+
+## 에이전트 통합 예시
+
+다음은 `BraveSearchTool`을 CrewAI 에이전트와 통합하는 방법입니다:
+
+```python Code
+from crewai import Agent
+from crewai.project import agent
+from crewai_tools import BraveSearchTool
+
+# Initialize the tool
+brave_search_tool = BraveSearchTool()
+
+# Define an agent with the BraveSearchTool
+@agent
+def researcher(self) -> Agent:
+    return Agent(
+        config=self.agents_config["researcher"],
+        allow_delegation=False,
+        tools=[brave_search_tool]
+    )
+```
+
+## 결론
+
+`BraveSearchTool`을 Python 프로젝트에 통합함으로써, 사용자는 애플리케이션 내에서 직접 실시간으로 관련성 높은 인터넷 검색을 수행할 수 있습니다. 이 도구는 강력한 Brave Search API에 대한 간단한 인터페이스를 제공하여, 검색 결과를 프로그래밍적으로 손쉽게 가져오고 처리할 수 있게 해줍니다. 제공된 설정 및 사용 지침을 따르면, 이 도구를 프로젝트에 통합하는 과정이 간편하고 직관적입니다.

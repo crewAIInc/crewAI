@@ -1,0 +1,67 @@
+---
+title: 디렉터리 RAG 검색
+description: DirectorySearchTool은 디렉터리의 콘텐츠 내에서 의미 기반 검색을 수행하도록 설계된 강력한 RAG(Retrieval-Augmented Generation) 도구입니다.
+icon: address-book
+---
+
+# `DirectorySearchTool`
+
+<Note>
+    **실험적 기능**: DirectorySearchTool은 지속적으로 개발되고 있습니다. 기능과 특성이 변경될 수 있으며, 도구를 개선하는 과정에서 예기치 않은 동작이 발생할 수 있습니다.
+</Note>
+
+## 설명
+
+DirectorySearchTool은 지정된 디렉터리의 콘텐츠 내에서 시맨틱 검색을 가능하게 하며, 파일 탐색의 효율성을 높이기 위해 Retrieval-Augmented Generation(RAG) 방법론을 활용합니다. 유연성을 고려하여 설계되어, 사용자는 런타임 중 검색 디렉터리를 동적으로 지정하거나 초기 설정 시 고정 디렉터리를 지정할 수 있습니다.
+
+## 설치
+
+DirectorySearchTool을 사용하려면 먼저 crewai_tools 패키지를 설치해야 합니다. 터미널에서 다음 명령어를 실행하세요:
+
+```shell
+pip install 'crewai[tools]'
+```
+
+## 초기화 및 사용법
+
+`crewai_tools` 패키지에서 DirectorySearchTool을 임포트하여 시작하세요. 디렉토리를 지정하지 않고 도구를 초기화할 수 있으며, 이를 통해 런타임 시 검색 디렉토리를 설정할 수 있습니다. 또는 미리 정의된 디렉토리로 도구를 초기화할 수도 있습니다.
+
+```python Code
+from crewai_tools import DirectorySearchTool
+
+# 런타임에 동적으로 디렉토리를 지정할 때
+tool = DirectorySearchTool()
+
+# 고정된 디렉토리에서 검색할 때
+tool = DirectorySearchTool(directory='/path/to/directory')
+```
+
+## 인수
+
+- `directory`: 검색 디렉토리를 지정하는 문자열 인수입니다. 이 인수는 초기화 시 선택 사항이지만, 처음에 설정되지 않은 경우 검색 시 필수입니다.
+
+## 커스텀 모델과 임베딩
+
+DirectorySearchTool은 기본적으로 OpenAI를 사용하여 임베딩 및 요약을 수행합니다. 이 설정의 커스터마이즈 옵션에는 모델 공급자 및 구성을 변경하는 것이 포함되어 있어, 고급 사용자를 위한 유연성을 향상시킵니다.
+
+```python Code
+tool = DirectorySearchTool(
+    config=dict(
+        llm=dict(
+            provider="ollama", # Options include ollama, google, anthropic, llama2, and more
+            config=dict(
+                model="llama2",
+                # Additional configurations here
+            ),
+        ),
+        embedder=dict(
+            provider="google", # or openai, ollama, ...
+            config=dict(
+                model="models/embedding-001",
+                task_type="retrieval_document",
+                # title="Embeddings",
+            ),
+        ),
+    )
+)
+```

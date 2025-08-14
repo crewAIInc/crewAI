@@ -1,0 +1,253 @@
+---
+title: Asana 연동
+description: "CrewAI를 위한 Asana 연동으로 팀 작업 및 프로젝트 조정."
+icon: "circle"
+---
+
+## 개요
+
+에이전트가 Asana를 통해 업무, 프로젝트, 팀 협업을 관리할 수 있도록 지원하세요. 작업 생성, 프로젝트 상태 업데이트, 담당 할당 관리, AI 기반 자동화를 통한 팀의 워크플로우 최적화를 손쉽게 할 수 있습니다.
+
+## 사전 준비 사항
+
+Asana 연동을 사용하기 전에 다음을 확인하세요:
+
+- 활성 구독이 있는 [CrewAI Enterprise](https://app.crewai.com) 계정
+- 적절한 권한이 있는 Asana 계정
+- [통합 페이지](https://app.crewai.com/crewai_plus/connectors)를 통해 Asana 계정 연결
+
+## 아사나(Asana) 연동 설정
+
+### 1. Asana 계정 연결하기
+
+1. [CrewAI Enterprise Integrations](https://app.crewai.com/crewai_plus/connectors)로 이동합니다.
+2. 인증 통합 섹션에서 **Asana**를 찾습니다.
+3. **Connect**를 클릭하고 OAuth 플로우를 완료합니다.
+4. 작업 및 프로젝트 관리를 위한 필요한 권한을 부여합니다.
+5. [계정 설정](https://app.crewai.com/crewai_plus/settings/account)에서 Enterprise Token을 복사합니다.
+
+### 2. 필수 패키지 설치
+
+```bash
+uv add crewai-tools
+```
+
+## 사용 가능한 작업
+
+<AccordionGroup>
+  <Accordion title="ASANA_CREATE_COMMENT">
+    **설명:** Asana에 댓글을 생성합니다.
+
+    **매개변수:**
+    - `task` (string, 필수): 작업 ID - 댓글이 추가될 작업의 ID입니다. 댓글 작성자는 현재 인증된 사용자입니다.
+    - `text` (string, 필수): 텍스트 (예: "This is a comment.").
+  </Accordion>
+
+  <Accordion title="ASANA_CREATE_PROJECT">
+    **설명:** Asana에 프로젝트를 생성합니다.
+
+    **매개변수:**
+    - `name` (string, 필수): 이름 (예: "Stuff to buy").
+    - `workspace` (string, 필수): 워크스페이스 - Connect Portal Workflow 설정을 사용해 사용자가 프로젝트를 생성할 워크스페이스를 선택할 수 있도록 합니다. 공란인 경우 기본적으로 사용자의 첫 번째 워크스페이스가 선택됩니다.
+    - `team` (string, 선택): 팀 - Connect Portal Workflow 설정을 사용해 사용자가 이 프로젝트를 공유할 팀을 선택할 수 있도록 합니다. 공란인 경우 기본적으로 사용자의 첫 번째 팀이 선택됩니다.
+    - `notes` (string, 선택): 노트 (예: "These are things we need to purchase.").
+  </Accordion>
+
+  <Accordion title="ASANA_GET_PROJECTS">
+    **설명:** Asana의 프로젝트 목록을 가져옵니다.
+
+    **매개변수:**
+    - `archived` (string, 선택): 보관됨 - 보관된 프로젝트를 보려면 "true", 활성 프로젝트만 보려면 "false", 보관됨과 활성 모두 보려면 "default"를 선택합니다.
+      - 옵션: `default`, `true`, `false`
+  </Accordion>
+
+  <Accordion title="ASANA_GET_PROJECT_BY_ID">
+    **설명:** Asana에서 ID로 프로젝트를 가져옵니다.
+
+    **매개변수:**
+    - `projectFilterId` (string, 필수): 프로젝트 ID.
+  </Accordion>
+
+  <Accordion title="ASANA_CREATE_TASK">
+    **설명:** Asana에 작업을 생성합니다.
+
+    **매개변수:**
+    - `name` (string, 필수): 이름 (예: "Task Name").
+    - `workspace` (string, 선택): 워크스페이스 - Connect Portal Workflow 설정을 사용해 사용자가 작업을 생성할 워크스페이스를 선택할 수 있도록 합니다. 공란인 경우 기본적으로 사용자의 첫 번째 워크스페이스가 선택됩니다.
+    - `project` (string, 선택): 프로젝트 - Connect Portal Workflow 설정을 사용해 사용자가 이 작업을 생성할 프로젝트를 선택할 수 있도록 합니다.
+    - `notes` (string, 선택): 노트.
+    - `dueOnDate` (string, 선택): 마감일 - 이 작업이 완료되어야 하는 날짜입니다. Due At과 함께 사용할 수 없습니다. (예: "YYYY-MM-DD").
+    - `dueAtDate` (string, 선택): 마감 시각 - 이 작업이 완료되어야 하는 날짜와 시간 (ISO 타임스탬프) 입니다. Due On과 함께 사용할 수 없습니다. (예: "2019-09-15T02:06:58.147Z").
+    - `assignee` (string, 선택): 담당자 - 이 작업이 할당될 Asana 사용자의 ID입니다. Connect Portal Workflow 설정을 사용해 사용자가 담당자를 선택할 수 있도록 합니다.
+    - `gid` (string, 선택): 외부 ID - 이 작업과 연결할 애플리케이션의 ID입니다. 이 ID를 사용하여 이후 작업 업데이트를 동기화할 수 있습니다.
+  </Accordion>
+
+  <Accordion title="ASANA_UPDATE_TASK">
+    **설명:** Asana의 작업을 업데이트합니다.
+
+    **매개변수:**
+    - `taskId` (string, 필수): 작업 ID - 업데이트할 작업의 ID입니다.
+    - `completeStatus` (string, 선택): 완료 상태.
+      - 옵션: `true`, `false`
+    - `name` (string, 선택): 이름 (예: "Task Name").
+    - `notes` (string, 선택): 노트.
+    - `dueOnDate` (string, 선택): 마감일 - 이 작업이 완료되어야 하는 날짜입니다. Due At과 함께 사용할 수 없습니다. (예: "YYYY-MM-DD").
+    - `dueAtDate` (string, 선택): 마감 시각 - 이 작업이 완료되어야 하는 날짜와 시간 (ISO 타임스탬프) 입니다. Due On과 함께 사용할 수 없습니다. (예: "2019-09-15T02:06:58.147Z").
+    - `assignee` (string, 선택): 담당자 - 이 작업이 할당될 Asana 사용자의 ID입니다. Connect Portal Workflow 설정을 사용해 사용자가 담당자를 선택할 수 있도록 합니다.
+    - `gid` (string, 선택): 외부 ID - 이 작업과 연결할 애플리케이션의 ID입니다. 이 ID를 사용하여 이후 작업 업데이트를 동기화할 수 있습니다.
+  </Accordion>
+
+  <Accordion title="ASANA_GET_TASKS">
+    **설명:** Asana의 작업 목록을 가져옵니다.
+
+    **매개변수:**
+    - `workspace` (string, 선택): 워크스페이스 - 작업을 필터링할 워크스페이스의 ID입니다. Connect Portal Workflow 설정을 사용해 사용자가 워크스페이스를 선택할 수 있도록 합니다.
+    - `project` (string, 선택): 프로젝트 - 작업을 필터링할 프로젝트의 ID입니다. Connect Portal Workflow 설정을 사용해 사용자가 프로젝트를 선택할 수 있도록 합니다.
+    - `assignee` (string, 선택): 담당자 - 작업을 필터링할 담당자의 ID입니다. Connect Portal Workflow 설정을 사용해 사용자가 담당자를 선택할 수 있도록 합니다.
+    - `completedSince` (string, 선택): 이후 완료됨 - 미완료이거나 해당 시간(ISO 또는 Unix 타임스탬프) 이후에 완료된 작업만 반환합니다. (예: "2014-04-25T16:15:47-04:00").
+  </Accordion>
+
+  <Accordion title="ASANA_GET_TASKS_BY_ID">
+    **설명:** Asana에서 ID로 작업 목록을 가져옵니다.
+
+    **매개변수:**
+    - `taskId` (string, 필수): 작업 ID.
+  </Accordion>
+
+  <Accordion title="ASANA_GET_TASK_BY_EXTERNAL_ID">
+    **설명:** Asana에서 외부 ID로 작업을 가져옵니다.
+
+    **매개변수:**
+    - `gid` (string, 필수): 외부 ID - 이 작업이 애플리케이션과 연동(또는 동기화)된 ID입니다.
+  </Accordion>
+
+  <Accordion title="ASANA_ADD_TASK_TO_SECTION">
+    **설명:** Asana에서 섹션에 작업을 추가합니다.
+
+    **매개변수:**
+    - `sectionId` (string, 필수): 섹션 ID - 작업을 추가할 섹션의 ID입니다.
+    - `taskId` (string, 필수): 작업 ID - 작업의 ID입니다. (예: "1204619611402340").
+    - `beforeTaskId` (string, 선택): 이전 작업 ID - 이 작업이 삽입될 섹션 내의 작업 ID입니다. 이후 작업 ID와 함께 사용할 수 없습니다. (예: "1204619611402340").
+    - `afterTaskId` (string, 선택): 이후 작업 ID - 이 작업이 삽입될 섹션 내의 작업 ID입니다. 이전 작업 ID와 함께 사용할 수 없습니다. (예: "1204619611402340").
+  </Accordion>
+
+  <Accordion title="ASANA_GET_TEAMS">
+    **설명:** Asana에서 팀 목록을 가져옵니다.
+
+    **매개변수:**
+    - `workspace` (string, 필수): 워크스페이스 - 인증된 사용자가 볼 수 있는 이 워크스페이스 내의 팀을 반환합니다.
+  </Accordion>
+
+  <Accordion title="ASANA_GET_WORKSPACES">
+    **설명:** Asana에서 워크스페이스 목록을 가져옵니다.
+
+    **매개변수:** 필요 없음.
+  </Accordion>
+</AccordionGroup>
+
+## 사용 예시
+
+### 기본 Asana 에이전트 설정
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import CrewaiEnterpriseTools
+
+# Get enterprise tools (Asana tools will be included)
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token"
+)
+
+# Create an agent with Asana capabilities
+asana_agent = Agent(
+    role="Project Manager",
+    goal="Manage tasks and projects in Asana efficiently",
+    backstory="An AI assistant specialized in project management and task coordination.",
+    tools=[enterprise_tools]
+)
+
+# Task to create a new project
+create_project_task = Task(
+    description="Create a new project called 'Q1 Marketing Campaign' in the Marketing workspace",
+    agent=asana_agent,
+    expected_output="Confirmation that the project was created successfully with project ID"
+)
+
+# Run the task
+crew = Crew(
+    agents=[asana_agent],
+    tasks=[create_project_task]
+)
+
+crew.kickoff()
+```
+
+### 특정 Asana 도구 필터링
+
+```python
+from crewai_tools import CrewaiEnterpriseTools
+
+# Get only specific Asana tools
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token",
+    actions_list=["asana_create_task", "asana_update_task", "asana_get_tasks"]
+)
+
+task_manager_agent = Agent(
+    role="Task Manager",
+    goal="Create and manage tasks efficiently",
+    backstory="An AI assistant that focuses on task creation and management.",
+    tools=enterprise_tools
+)
+
+# Task to create and assign a task
+task_management = Task(
+    description="Create a task called 'Review quarterly reports' and assign it to the appropriate team member",
+    agent=task_manager_agent,
+    expected_output="Task created and assigned successfully"
+)
+
+crew = Crew(
+    agents=[task_manager_agent],
+    tasks=[task_management]
+)
+
+crew.kickoff()
+```
+
+### 고급 프로젝트 관리
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import CrewaiEnterpriseTools
+
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token"
+)
+
+project_coordinator = Agent(
+    role="Project Coordinator",
+    goal="Coordinate project activities and track progress",
+    backstory="An experienced project coordinator who ensures projects run smoothly.",
+    tools=[enterprise_tools]
+)
+
+# Complex task involving multiple Asana operations
+coordination_task = Task(
+    description="""
+    1. Get all active projects in the workspace
+    2. For each project, get the list of incomplete tasks
+    3. Create a summary report task in the 'Management Reports' project
+    4. Add comments to overdue tasks to request status updates
+    """,
+    agent=project_coordinator,
+    expected_output="Summary report created and status update requests sent for overdue tasks"
+)
+
+crew = Crew(
+    agents=[project_coordinator],
+    tasks=[coordination_task]
+)
+
+crew.kickoff()
+```
