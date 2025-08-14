@@ -64,6 +64,13 @@ from .memory_events import (
     MemoryRetrievalStartedEvent,
     MemoryRetrievalCompletedEvent,
 )
+from .crypto_events import (
+    CryptographicCommitmentCreatedEvent,
+    CryptographicValidationCompletedEvent,
+    CryptographicWorkflowAuditEvent,
+    CryptographicEscrowTransactionEvent,
+)
+from .listeners.crypto_listener import CrewAICryptographicTraceListener
 
 # events
 from .event_listener import EventListener
@@ -124,4 +131,9 @@ __all__ = [
     "ToolSelectionErrorEvent",
     "ToolUsageEvent",
     "ToolValidateInputErrorEvent",
+    "CryptographicCommitmentCreatedEvent",
+    "CryptographicValidationCompletedEvent",
+    "CryptographicWorkflowAuditEvent",
+    "CryptographicEscrowTransactionEvent",
+    "CrewAICryptographicTraceListener",
 ]

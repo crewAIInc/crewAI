@@ -69,6 +69,10 @@ docling = [
 aisuite = [
     "aisuite>=0.1.10",
 ]
+crypto = [
+    "redis>=4.0.0",
+    "cryptography>=3.4.0",
+]
 
 [tool.uv]
 dev-dependencies = [
