@@ -1,7 +1,18 @@
 import shutil
 import subprocess
 import time
-from typing import Any, Callable, Dict, List, Literal, Optional, Sequence, Tuple, Type, Union
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    List,
+    Literal,
+    Optional,
+    Sequence,
+    Tuple,
+    Type,
+    Union,
+)
 
 from pydantic import Field, InstanceOf, PrivateAttr, model_validator
 
@@ -162,7 +173,7 @@ class Agent(BaseAgent):
     )
     guardrail: Optional[Union[Callable[[Any], Tuple[bool, Any]], str]] = Field(
         default=None,
-        description="Function or string description of a guardrail to validate agent output"
+        description="Function or string description of a guardrail to validate agent output",
     )
     guardrail_max_retries: int = Field(
         default=3, description="Maximum number of retries when guardrail fails"
@@ -276,7 +287,7 @@ class Agent(BaseAgent):
         self._inject_date_to_task(task)
 
         if self.tools_handler:
-            self.tools_handler.last_used_tool = {}  # type: ignore # Incompatible types in assignment (expression has type "dict[Never, Never]", variable has type "ToolCalling")
+            self.tools_handler.last_used_tool = None
 
         task_prompt = task.prompt()
 
@@ -335,7 +346,6 @@ class Agent(BaseAgent):
         knowledge_config = (
             self.knowledge_config.model_dump() if self.knowledge_config else {}
         )
-
 
         if self.knowledge or (self.crew and self.crew.knowledge):
             crewai_event_bus.emit(
