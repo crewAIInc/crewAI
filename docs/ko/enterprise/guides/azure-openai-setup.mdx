@@ -1,0 +1,51 @@
+---
+title: "Azure OpenAI 설정"
+description: "엔터프라이즈 LLM 연결을 위해 Crew Studio와 함께 Azure OpenAI를 구성합니다"
+icon: "microsoft"
+---
+
+이 가이드는 Azure OpenAI와 Crew Studio를 연동하여 원활한 엔터프라이즈 AI 운영을 수행하는 방법을 안내합니다.
+
+## 설정 프로세스
+
+<Steps>
+    <Step title="Azure OpenAI Studio 접속">
+        1. Azure에서 `Azure AI Services > 배포 선택 > Azure OpenAI Studio 열기`로 이동합니다.
+        2. 왼쪽 메뉴에서 `Deployments`를 클릭합니다. 배포가 없다면 원하는 모델로 새 배포를 생성하세요.
+        3. 생성이 완료되면 해당 배포를 선택하고, 페이지 오른쪽에서 `Target URI`와 `Key`를 찾습니다. 이 정보가 필요하니 페이지를 열어둔 상태로 두세요.
+            <Frame>
+                <img src="/images/enterprise/azure-openai-studio.png" alt="Azure OpenAI Studio" />
+            </Frame>
+    </Step>
+
+    <Step title="CrewAI Enterprise 연결 구성">
+        4. 다른 탭에서 `CrewAI Enterprise > LLM Connections`를 엽니다. LLM Connection에 이름을 지정하고, 공급자로 Azure를 선택한 다음, Azure에서 선택한 것과 동일한 모델을 선택하세요.
+        5. 같은 페이지에서 3단계에서 가져온 환경 변수를 추가하세요:
+            - 하나는 `AZURE_DEPLOYMENT_TARGET_URL` (Target URI 사용)로 명명합니다. URL은 다음과 같이 표시됩니다: https://your-deployment.openai.azure.com/openai/deployments/gpt-4o/chat/completions?api-version=2024-08-01-preview
+            - 다른 하나는 `AZURE_API_KEY` (Key 사용)로 명명합니다.
+        6. `Add Connection`을 클릭하여 LLM Connection을 저장합니다.
+    </Step>
+
+    <Step title="기본 구성 설정">
+        7. `CrewAI Enterprise > Settings > Defaults > Crew Studio LLM Settings`에서 새 LLM Connection과 모델을 기본값으로 설정합니다.
+    </Step>
+
+    <Step title="네트워크 액세스 구성">
+        8. 네트워크 액세스 설정을 확인하세요:
+            - Azure에서 `Azure OpenAI > 배포 선택`으로 이동합니다.
+            - `Resource Management > Networking`으로 이동합니다.
+            - `Allow access from all networks`가 활성화되어 있는지 확인하세요. 이 설정이 제한되어 있으면 CrewAI가 Azure OpenAI 엔드포인트에 접근하지 못할 수 있습니다.
+    </Step>
+</Steps>
+
+## 확인
+
+모두 준비되었습니다! 이제 Crew Studio는 Azure OpenAI 연결을 사용합니다. 모든 기능이 제대로 작동하는지 확인하려면 간단한 crew 또는 task를 만들어 연결을 테스트해 보세요.
+
+## 문제 해결
+
+문제가 발생한 경우:
+- Target URI 형식이 예상 패턴과 일치하는지 확인하세요
+- API 키가 올바르고 적절한 권한을 가지고 있는지 확인하세요
+- 네트워크 액세스가 CrewAI 연결을 허용하도록 구성되어 있는지 확인하세요
+- 배포 모델이 CrewAI에서 구성한 것과 일치하는지 확인하세요

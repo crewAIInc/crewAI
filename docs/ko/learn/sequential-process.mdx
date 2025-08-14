@@ -1,0 +1,127 @@
+---
+title: 순차 프로세스
+description: CrewAI 프로젝트에서 작업 실행을 위한 순차 프로세스를 활용하는 방법에 대한 종합 가이드입니다.
+icon: forward
+---
+
+## 소개
+
+CrewAI는 순차적 및 계층적 프로세스를 모두 지원하는 구조화된 방식으로 작업을 실행할 수 있는 유연한 프레임워크를 제공합니다.  
+이 가이드에서는 효율적인 작업 실행과 프로젝트 완수를 보장하기 위해 이러한 프로세스를 효과적으로 구현하는 방법을 설명합니다.
+
+## 순차적 프로세스 개요
+
+순차적 프로세스는 작업이 선형적인 진행 방식으로 하나씩 차례로 실행되도록 보장합니다.  
+이 접근 방식은 특정 순서로 작업이 완료되어야 하는 프로젝트에 이상적입니다.
+
+### 주요 기능
+
+- **선형 작업 흐름**: 미리 정해진 순서대로 작업을 처리하여 체계적인 진행을 보장합니다.
+- **단순성**: 명확하고 단계별 작업이 있는 프로젝트에 가장 적합합니다.
+- **쉬운 모니터링**: 작업 완료 및 프로젝트 진행 상황을 쉽게 추적할 수 있습니다.
+
+## 순차적 프로세스 구현하기
+
+순차적 프로세스를 사용하려면 crew를 구성하고 수행되어야 하는 순서대로 작업을 정의하세요.
+
+```python Code
+from crewai import Crew, Process, Agent, Task, TaskOutput, CrewOutput
+
+# Define your agents
+researcher = Agent(
+  role='Researcher',
+  goal='Conduct foundational research',
+  backstory='An experienced researcher with a passion for uncovering insights'
+)
+analyst = Agent(
+  role='Data Analyst',
+  goal='Analyze research findings',
+  backstory='A meticulous analyst with a knack for uncovering patterns'
+)
+writer = Agent(
+  role='Writer',
+  goal='Draft the final report',
+  backstory='A skilled writer with a talent for crafting compelling narratives'
+)
+
+# Define your tasks
+research_task = Task(
+  description='Gather relevant data...', 
+  agent=researcher, 
+  expected_output='Raw Data'
+)
+analysis_task = Task(
+  description='Analyze the data...', 
+  agent=analyst, 
+  expected_output='Data Insights'
+)
+writing_task = Task(
+  description='Compose the report...', 
+  agent=writer, 
+  expected_output='Final Report'
+)
+
+# Form the crew with a sequential process
+report_crew = Crew(
+  agents=[researcher, analyst, writer],
+  tasks=[research_task, analysis_task, writing_task],
+  process=Process.sequential
+)
+
+# Execute the crew
+result = report_crew.kickoff()
+
+# Accessing the type-safe output
+task_output: TaskOutput = result.tasks[0].output
+crew_output: CrewOutput = result.output
+```
+
+### 참고:
+
+순차적 프로세스의 각 작업에는 **반드시** 에이전트가 할당되어야 합니다. 모든 `Task`에 `agent` 파라미터가 포함되어 있는지 확인하세요.
+
+### 워크플로우 실행
+
+1. **초기 작업**: 순차적인 프로세스에서 첫 번째 agent가 자신의 작업을 완료하고 완료 신호를 보냅니다.
+2. **이후 작업들**: agent들은 프로세스 유형에 따라 작업을 수행하며, 이전 작업의 결과나 지침이 실행을 안내합니다.
+3. **완료**: 최종 작업이 실행되면 프로세스가 종료되어 프로젝트가 완료됩니다.
+
+## 고급 기능
+
+### 작업 위임
+
+순차적 프로세스에서, 에이전트가 `allow_delegation`이 `True`로 설정되어 있으면 해당 에이전트는 crew 내의 다른 에이전트에게 작업을 위임할 수 있습니다.  
+이 기능은 crew에 여러 에이전트가 있을 때 자동으로 설정됩니다.
+
+### 비동기 실행
+
+작업은 비동기로 실행될 수 있어, 적절할 때 병렬 처리가 가능합니다.  
+비동기 작업을 생성하려면 작업을 정의할 때 `async_execution=True`로 설정하세요.
+
+### 메모리 및 캐싱
+
+CrewAI는 메모리와 캐싱 기능을 모두 지원합니다:
+
+- **메모리**: Crew를 생성할 때 `memory=True`로 설정하면 활성화됩니다. 이를 통해 에이전트가 작업 간 정보를 유지할 수 있습니다.
+- **캐싱**: 기본적으로 캐싱이 활성화되어 있습니다. 비활성화하려면 `cache=False`로 설정하세요.
+
+### 콜백
+
+콜백은 작업(task) 수준과 단계(step) 수준 모두에서 설정할 수 있습니다:
+
+- `task_callback`: 각 작업이 완료된 후 실행됩니다.
+- `step_callback`: 에이전트의 각 단계 실행 후에 실행됩니다.
+
+### 사용량 메트릭
+
+CrewAI는 모든 task와 agent 전반에 걸쳐 토큰 사용량을 추적합니다. 이 메트릭은 실행 후에 확인할 수 있습니다.
+
+## 순차적 프로세스를 위한 모범 사례
+
+1. **순서가 중요함**: 각 작업이 이전 작업을 기반으로 쌓일 수 있도록 논리적인 순서로 작업을 배열하세요.
+2. **명확한 작업 설명**: 각 작업에 대해 에이전트를 효과적으로 안내할 수 있도록 상세한 설명을 제공하세요.
+3. **적절한 에이전트 선정**: 각 작업의 요구사항에 맞게 에이전트의 역량과 역할을 매칭하세요.
+4. **컨텍스트 활용**: 이전 작업에서 얻은 컨텍스트를 다음 작업에 활용하세요.
+
+이 업데이트된 문서는 코드베이스의 최신 변경 사항을 정확하게 반영하고, 새로운 기능 및 설정을 어떻게 활용할 수 있는지 명확하게 설명합니다.
+내용이 간단하고 명확하여 쉽게 이해할 수 있도록 구성되었습니다.

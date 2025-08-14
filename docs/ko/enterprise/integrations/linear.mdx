@@ -1,0 +1,453 @@
+---
+title: Linear 연동
+description: "CrewAI를 위한 Linear 연동을 통한 소프트웨어 프로젝트 및 버그 추적."
+icon: "list-check"
+---
+
+## 개요
+
+에이전트가 Linear를 통해 이슈, 프로젝트, 개발 워크플로우를 관리할 수 있도록 지원합니다. 이슈를 생성 및 업데이트하고, 프로젝트 타임라인을 관리하며, 팀을 조직하고, AI 기반 자동화로 소프트웨어 개발 프로세스를 간소화할 수 있습니다.
+
+## 필수 조건
+
+Linear 통합을 사용하기 전에 다음을 확인하세요:
+
+- 활성 구독이 있는 [CrewAI Enterprise](https://app.crewai.com) 계정
+- 적절한 워크스페이스 권한이 있는 Linear 계정
+- [통합 페이지](https://app.crewai.com/crewai_plus/connectors)에서 Linear 계정 연결
+
+## 리니어 통합 설정
+
+### 1. Linear 계정 연결하기
+
+1. [CrewAI Enterprise Integrations](https://app.crewai.com/crewai_plus/connectors)로 이동합니다.
+2. 인증 통합( Authentication Integrations ) 섹션에서 **Linear**를 찾습니다.
+3. **Connect**를 클릭하고 OAuth 절차를 완료합니다.
+4. 이슈 및 프로젝트 관리를 위한 필수 권한을 부여합니다.
+5. [계정 설정](https://app.crewai.com/crewai_plus/settings/account)에서 Enterprise Token을 복사합니다.
+
+### 2. 필수 패키지 설치
+
+```bash
+uv add crewai-tools
+```
+
+## 사용 가능한 작업
+
+<AccordionGroup>
+  <Accordion title="LINEAR_CREATE_ISSUE">
+    **설명:** Linear에서 새로운 이슈를 생성합니다.
+
+    **파라미터:**
+    - `teamId` (string, 필수): 팀 ID - 이 새로운 이슈의 상위 팀 ID를 지정합니다. Connect Portal Workflow Settings를 사용하여 사용자가 팀 ID를 선택할 수 있도록 하세요. (예: "a70bdf0f-530a-4887-857d-46151b52b47c").
+    - `title` (string, 필수): 제목 - 이 이슈의 제목을 지정합니다.
+    - `description` (string, 선택): 설명 - 이 이슈의 설명을 지정합니다.
+    - `statusId` (string, 선택): 상태 - 이 이슈의 상태를 지정합니다.
+    - `priority` (string, 선택): 우선순위 - 이 이슈의 우선순위를 정수로 지정합니다.
+    - `dueDate` (string, 선택): 마감일 - 이 이슈의 마감일을 ISO 8601 형식으로 지정합니다.
+    - `cycleId` (string, 선택): 사이클 ID - 이 이슈가 속한 사이클을 지정합니다.
+    - `additionalFields` (object, 선택): 추가 필드.
+      ```json
+      {
+        "assigneeId": "a70bdf0f-530a-4887-857d-46151b52b47c",
+        "labelIds": ["a70bdf0f-530a-4887-857d-46151b52b47c"]
+      }
+      ```
+  </Accordion>
+
+  <Accordion title="LINEAR_UPDATE_ISSUE">
+    **설명:** Linear에서 이슈를 업데이트합니다.
+
+    **파라미터:**
+    - `issueId` (string, 필수): 이슈 ID - 업데이트할 이슈의 ID를 지정합니다. (예: "90fbc706-18cd-42c9-ae66-6bd344cc8977").
+    - `title` (string, 선택): 제목 - 이 이슈의 제목을 지정합니다.
+    - `description` (string, 선택): 설명 - 이 이슈의 설명을 지정합니다.
+    - `statusId` (string, 선택): 상태 - 이 이슈의 상태를 지정합니다.
+    - `priority` (string, 선택): 우선순위 - 이 이슈의 우선순위를 정수로 지정합니다.
+    - `dueDate` (string, 선택): 마감일 - 이 이슈의 마감일을 ISO 8601 형식으로 지정합니다.
+    - `cycleId` (string, 선택): 사이클 ID - 이 이슈가 속한 사이클을 지정합니다.
+    - `additionalFields` (object, 선택): 추가 필드.
+      ```json
+      {
+        "assigneeId": "a70bdf0f-530a-4887-857d-46151b52b47c",
+        "labelIds": ["a70bdf0f-530a-4887-857d-46151b52b47c"]
+      }
+      ```
+  </Accordion>
+
+  <Accordion title="LINEAR_GET_ISSUE_BY_ID">
+    **설명:** Linear에서 ID로 이슈를 가져옵니다.
+
+    **파라미터:**
+    - `issueId` (string, 필수): 이슈 ID - 가져올 이슈의 레코드 ID를 지정합니다. (예: "90fbc706-18cd-42c9-ae66-6bd344cc8977").
+  </Accordion>
+
+  <Accordion title="LINEAR_GET_ISSUE_BY_ISSUE_IDENTIFIER">
+    **설명:** Linear에서 이슈 식별자로 이슈를 가져옵니다.
+
+    **파라미터:**
+    - `externalId` (string, 필수): 외부 ID - 가져올 이슈의 사람이 읽을 수 있는 이슈 식별자를 지정합니다. (예: "ABC-1").
+  </Accordion>
+
+  <Accordion title="LINEAR_SEARCH_ISSUE">
+    **설명:** Linear에서 이슈를 검색합니다.
+
+    **파라미터:**
+    - `queryTerm` (string, 필수): 검색어 - 찾을 검색어입니다.
+    - `issueFilterFormula` (object, 선택): 부정합적 정규형(DNF)의 필터 - 단일 조건의 AND 그룹들에 대한 OR.
+      ```json
+      {
+        "operator": "OR",
+        "conditions": [
+          {
+            "operator": "AND",
+            "conditions": [
+              {
+                "field": "title",
+                "operator": "$stringContains",
+                "value": "bug"
+              }
+            ]
+          }
+        ]
+      }
+      ```
+      사용 가능한 필드: `title`, `number`, `project`, `createdAt`
+      사용 가능한 연산자: `$stringExactlyMatches`, `$stringDoesNotExactlyMatch`, `$stringIsIn`, `$stringIsNotIn`, `$stringStartsWith`, `$stringDoesNotStartWith`, `$stringEndsWith`, `$stringDoesNotEndWith`, `$stringContains`, `$stringDoesNotContain`, `$stringGreaterThan`, `$stringLessThan`, `$numberGreaterThanOrEqualTo`, `$numberLessThanOrEqualTo`, `$numberGreaterThan`, `$numberLessThan`, `$dateTimeAfter`, `$dateTimeBefore`
+  </Accordion>
+
+  <Accordion title="LINEAR_DELETE_ISSUE">
+    **설명:** Linear에서 이슈를 삭제합니다.
+
+    **파라미터:**
+    - `issueId` (string, 필수): 이슈 ID - 삭제할 이슈의 레코드 ID를 지정합니다. (예: "90fbc706-18cd-42c9-ae66-6bd344cc8977").
+  </Accordion>
+
+  <Accordion title="LINEAR_ARCHIVE_ISSUE">
+    **설명:** Linear에서 이슈를 아카이브합니다.
+
+    **파라미터:**
+    - `issueId` (string, 필수): 이슈 ID - 아카이브할 이슈의 레코드 ID를 지정합니다. (예: "90fbc706-18cd-42c9-ae66-6bd344cc8977").
+  </Accordion>
+
+  <Accordion title="LINEAR_CREATE_SUB_ISSUE">
+    **설명:** Linear에서 하위 이슈를 생성합니다.
+
+    **파라미터:**
+    - `parentId` (string, 필수): 상위 ID - 이 새로운 이슈의 상위 이슈 ID를 지정합니다.
+    - `teamId` (string, 필수): 팀 ID - 이 새로운 하위 이슈의 상위 팀 ID를 지정합니다. Connect Portal Workflow Settings를 사용하여 사용자가 팀 ID를 선택할 수 있도록 하세요. (예: "a70bdf0f-530a-4887-857d-46151b52b47c").
+    - `title` (string, 필수): 제목 - 이 이슈의 제목을 지정합니다.
+    - `description` (string, 선택): 설명 - 이 이슈의 설명을 지정합니다.
+    - `additionalFields` (object, 선택): 추가 필드.
+      ```json
+      {
+        "lead": "linear_user_id"
+      }
+      ```
+  </Accordion>
+
+  <Accordion title="LINEAR_CREATE_PROJECT">
+    **설명:** Linear에서 새로운 프로젝트를 생성합니다.
+
+    **파라미터:**
+    - `teamIds` (object, 필수): 팀 ID - 이 프로젝트와 연관된 팀 ID 혹은 팀 ID의 JSON 배열을 문자열로 지정합니다. Connect Portal User Settings를 사용하여 사용자가 팀 ID를 선택할 수 있도록 하세요.
+      ```json
+      [
+        "a70bdf0f-530a-4887-857d-46151b52b47c",
+        "4ac7..."
+      ]
+      ```
+    - `projectName` (string, 필수): 프로젝트 이름 - 프로젝트의 이름을 지정합니다. (예: "My Linear Project").
+    - `description` (string, 선택): 프로젝트 설명 - 프로젝트에 대한 설명을 지정합니다.
+    - `additionalFields` (object, 선택): 추가 필드.
+      ```json
+      {
+        "state": "planned",
+        "description": ""
+      }
+      ```
+  </Accordion>
+
+  <Accordion title="LINEAR_UPDATE_PROJECT">
+    **설명:** Linear에서 프로젝트를 업데이트합니다.
+
+    **파라미터:**
+    - `projectId` (string, 필수): 프로젝트 ID - 업데이트할 프로젝트의 ID를 지정합니다. (예: "a6634484-6061-4ac7-9739-7dc5e52c796b").
+    - `projectName` (string, 선택): 프로젝트 이름 - 업데이트할 프로젝트의 이름을 지정합니다. (예: "My Linear Project").
+    - `description` (string, 선택): 프로젝트 설명 - 프로젝트에 대한 설명을 지정합니다.
+    - `additionalFields` (object, 선택): 추가 필드.
+      ```json
+      {
+        "state": "planned",
+        "description": ""
+      }
+      ```
+  </Accordion>
+
+  <Accordion title="LINEAR_GET_PROJECT_BY_ID">
+    **설명:** Linear에서 ID로 프로젝트를 가져옵니다.
+
+    **파라미터:**
+    - `projectId` (string, 필수): 프로젝트 ID - 가져올 프로젝트의 프로젝트 ID를 지정합니다. (예: "a6634484-6061-4ac7-9739-7dc5e52c796b").
+  </Accordion>
+
+  <Accordion title="LINEAR_DELETE_PROJECT">
+    **설명:** Linear에서 프로젝트를 삭제합니다.
+
+    **파라미터:**
+    - `projectId` (string, 필수): 프로젝트 ID - 삭제할 프로젝트의 프로젝트 ID를 지정합니다. (예: "a6634484-6061-4ac7-9739-7dc5e52c796b").
+  </Accordion>
+
+  <Accordion title="LINEAR_SEARCH_TEAMS">
+    **설명:** Linear에서 팀을 검색합니다.
+
+    **파라미터:**
+    - `teamFilterFormula` (object, 선택): 부정합적 정규형(DNF)의 필터 - 단일 조건의 AND 그룹들에 대한 OR.
+      ```json
+      {
+        "operator": "OR",
+        "conditions": [
+          {
+            "operator": "AND",
+            "conditions": [
+              {
+                "field": "name",
+                "operator": "$stringContains",
+                "value": "Engineering"
+              }
+            ]
+          }
+        ]
+      }
+      ```
+      사용 가능한 필드: `id`, `name`
+  </Accordion>
+</AccordionGroup>
+
+## 사용 예시
+
+### 기본 Linear 에이전트 설정
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import CrewaiEnterpriseTools
+
+# Get enterprise tools (Linear tools will be included)
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token"
+)
+
+# Create an agent with Linear capabilities
+linear_agent = Agent(
+    role="Development Manager",
+    goal="Manage Linear issues and track development progress efficiently",
+    backstory="An AI assistant specialized in software development project management.",
+    tools=[enterprise_tools]
+)
+
+# Task to create a bug report
+create_bug_task = Task(
+    description="Create a high-priority bug report for the authentication system and assign it to the backend team",
+    agent=linear_agent,
+    expected_output="Bug report created successfully with issue ID"
+)
+
+# Run the task
+crew = Crew(
+    agents=[linear_agent],
+    tasks=[create_bug_task]
+)
+
+crew.kickoff()
+```
+
+### 특정 Linear 도구 필터링
+
+```python
+from crewai_tools import CrewaiEnterpriseTools
+
+# Get only specific Linear tools
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token",
+    actions_list=["linear_create_issue", "linear_update_issue", "linear_search_issue"]
+)
+
+issue_manager = Agent(
+    role="Issue Manager",
+    goal="Create and manage Linear issues efficiently",
+    backstory="An AI assistant that focuses on issue creation and lifecycle management.",
+    tools=enterprise_tools
+)
+
+# Task to manage issue workflow
+issue_workflow = Task(
+    description="Create a feature request issue and update the status of related issues to reflect current progress",
+    agent=issue_manager,
+    expected_output="Feature request created and related issues updated"
+)
+
+crew = Crew(
+    agents=[issue_manager],
+    tasks=[issue_workflow]
+)
+
+crew.kickoff()
+```
+
+### 프로젝트 및 팀 관리
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import CrewaiEnterpriseTools
+
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token"
+)
+
+project_coordinator = Agent(
+    role="Project Coordinator",
+    goal="Coordinate projects and teams in Linear efficiently",
+    backstory="An experienced project coordinator who manages development cycles and team workflows.",
+    tools=[enterprise_tools]
+)
+
+# Task to coordinate project setup
+project_coordination = Task(
+    description="""
+    1. Search for engineering teams in Linear
+    2. Create a new project for Q2 feature development
+    3. Associate the project with relevant teams
+    4. Create initial project milestones as issues
+    """,
+    agent=project_coordinator,
+    expected_output="Q2 project created with teams assigned and initial milestones established"
+)
+
+crew = Crew(
+    agents=[project_coordinator],
+    tasks=[project_coordination]
+)
+
+crew.kickoff()
+```
+
+### 이슈 계층 구조 및 하위 작업 관리
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import CrewaiEnterpriseTools
+
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token"
+)
+
+task_organizer = Agent(
+    role="Task Organizer",
+    goal="Organize complex issues into manageable sub-tasks",
+    backstory="An AI assistant that breaks down complex development work into organized sub-tasks.",
+    tools=[enterprise_tools]
+)
+
+# Task to create issue hierarchy
+hierarchy_task = Task(
+    description="""
+    1. 세분화가 필요한 대형 기능 이슈를 검색합니다
+    2. 각 복잡한 이슈에 대해 다양한 컴포넌트별로 하위 이슈를 생성합니다
+    3. 부모 이슈를 적절한 설명과 하위 이슈에 대한 링크로 업데이트합니다
+    4. 전문성에 따라 적합한 팀원에게 하위 이슈를 할당합니다
+    """,
+    agent=task_organizer,
+    expected_output="복잡한 이슈가 적절히 할당된 관리 가능한 하위 작업 단위로 분해됨"
+)
+
+crew = Crew(
+    agents=[task_organizer],
+    tasks=[hierarchy_task]
+)
+
+crew.kickoff()
+```
+
+### 자동화된 개발 워크플로우
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import CrewaiEnterpriseTools
+
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token"
+)
+
+workflow_automator = Agent(
+    role="Workflow Automator",
+    goal="Automate development workflow processes in Linear",
+    backstory="An AI assistant that automates repetitive development workflow tasks.",
+    tools=[enterprise_tools]
+)
+
+# Complex workflow automation task
+automation_task = Task(
+    description="""
+    1. 7일 이상 진행 중인 이슈를 검색합니다
+    2. 마감일과 프로젝트 중요도에 따라 우선순위를 업데이트합니다
+    3. 각 팀을 위한 주간 스프린트 계획 이슈를 생성합니다
+    4. 이전 사이클에서 완료된 이슈를 보관합니다
+    5. 프로젝트 상태 보고서를 새로운 이슈로 생성합니다
+    """,
+    agent=workflow_automator,
+    expected_output="우선순위, 스프린트 계획, 상태 보고서가 업데이트된 자동화된 개발 워크플로우"
+)
+
+crew = Crew(
+    agents=[workflow_automator],
+    tasks=[automation_task]
+)
+
+crew.kickoff()
+```
+
+## 문제 해결
+
+### 일반적인 문제
+
+**권한 오류**
+- Linear 계정이 대상 워크스페이스에 필요한 권한을 가지고 있는지 확인하세요
+- OAuth 연결에 Linear API에 필요한 스코프가 포함되어 있는지 확인하세요
+- 워크스페이스에서 이슈 및 프로젝트를 생성/편집할 권한이 있는지 확인하세요
+
+**잘못된 ID 및 참조**
+- 팀 ID, 이슈 ID, 프로젝트 ID가 올바른 UUID 형식인지 다시 한번 확인하세요
+- 참조된 엔티티(팀, 프로젝트, 사이클)가 존재하며 접근 가능한지 확인하세요
+- 이슈 식별자가 올바른 형식(예: "ABC-1")을 따르는지 검증하세요
+
+**팀 및 프로젝트 연관 문제**
+- 이슈나 프로젝트를 생성하기 전에 LINEAR_SEARCH_TEAMS를 사용하여 유효한 팀 ID를 조회하세요
+- 워크스페이스 내에 팀이 존재하고 활성화되어 있는지 확인하세요
+- 팀 ID가 올바르게 UUID 형식으로 구성되어 있는지 검증하세요
+
+**이슈 상태 및 우선순위 문제**
+- 상태 ID가 팀의 유효한 워크플로우 상태를 참조하는지 확인하세요
+- 우선순위 값이 Linear 구성에서 허용된 범위 내에 있는지 확인하세요
+- 참조하기 전에 사용자 지정 필드와 라벨이 존재하는지 검증하세요
+
+**날짜 및 시간 형식 문제**
+- 마감일 및 타임스탬프에 ISO 8601 형식을 사용하세요
+- 마감일 계산 시 타임존을 올바로 처리하는지 확인하세요
+- 마감일의 날짜 값이 유효하며 미래인지 검증하세요
+
+**검색 및 필터 문제**
+- 검색 쿼리가 올바르게 형식화되어 있으며 비어 있지 않은지 확인하세요
+- 필터 공식에서 유효한 필드 이름을 사용하세요: `title`, `number`, `project`, `createdAt`
+- 복잡한 다중 조건 쿼리를 만들기 전에 단순한 필터를 먼저 테스트해 보세요
+- 연산자 타입이 필터링 대상 필드의 데이터 타입과 일치하는지 확인하세요
+
+**서브이슈 생성 문제**
+- 상위 이슈 ID가 유효하고 접근 가능한지 확인하세요
+- 서브이슈의 팀 ID가 상위 이슈 팀과 일치하거나 호환되는지 검증하세요
+- 상위 이슈가 이미 보관/삭제되지 않았는지 확인하세요
+
+### 도움 받기
+
+<Card title="도움이 필요하신가요?" icon="headset" href="mailto:support@crewai.com">
+  Linear 연동 설정 또는 문제 해결에 대해 지원팀에 문의하세요.
+</Card>

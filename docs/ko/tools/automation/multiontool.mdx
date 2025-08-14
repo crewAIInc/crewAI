@@ -1,0 +1,126 @@
+---
+title: MultiOn Tool
+description: MultiOnTool은 CrewAI agent가 자연어 지시를 통해 웹을 탐색하고 상호작용할 수 있는 기능을 제공합니다.
+icon: globe
+---
+
+## 개요
+
+`MultiOnTool`은 [MultiOn](https://docs.multion.ai/welcome)의 웹 브라우징 기능을 래핑하도록 설계되어, CrewAI 에이전트가 자연어 명령을 사용하여 웹 브라우저를 제어할 수 있게 해줍니다. 이 도구는 원활한 웹 브라우징을 지원하여, 동적인 웹 데이터 상호작용 및 웹 기반 작업의 자동화가 필요한 프로젝트에 필수적인 자산이 됩니다.
+
+## 설치
+
+이 도구를 사용하려면 MultiOn 패키지를 설치해야 합니다:
+
+```shell
+uv add multion
+```
+
+또한 MultiOn 브라우저 확장 프로그램을 설치하고 API 사용을 활성화해야 합니다.
+
+## 시작하는 단계
+
+`MultiOnTool`을 효과적으로 사용하려면 다음 단계를 따르세요:
+
+1. **CrewAI 설치**: Python 환경에 `crewai[tools]` 패키지가 설치되어 있는지 확인하세요.
+2. **MultiOn 설치 및 사용**: [MultiOn 문서](https://docs.multion.ai/learn/browser-extension)를 참고하여 MultiOn 브라우저 확장 프로그램을 설치하세요.
+3. **API 사용 활성화**: 브라우저의 확장 프로그램 폴더에서 MultiOn 확장 프로그램을 클릭하여(웹 페이지에 떠 있는 MultiOn 아이콘이 아님) 확장 프로그램 설정을 엽니다. API 활성화 토글을 클릭하여 API를 활성화하세요.
+
+## 예시
+
+다음 예시는 도구를 초기화하고 웹 브라우징 작업을 실행하는 방법을 보여줍니다:
+
+```python Code
+from crewai import Agent, Task, Crew
+from crewai_tools import MultiOnTool
+
+# Initialize the tool
+multion_tool = MultiOnTool(api_key="YOUR_MULTION_API_KEY", local=False)
+
+# Define an agent that uses the tool
+browser_agent = Agent(
+    role="Browser Agent",
+    goal="Control web browsers using natural language",
+    backstory="An expert browsing agent.",
+    tools=[multion_tool],
+    verbose=True,
+)
+
+# Example task to search and summarize news
+browse_task = Task(
+    description="Summarize the top 3 trending AI News headlines",
+    expected_output="A summary of the top 3 trending AI News headlines",
+    agent=browser_agent,
+)
+
+# Create and run the crew
+crew = Crew(agents=[browser_agent], tasks=[browse_task])
+result = crew.kickoff()
+```
+
+## 매개변수
+
+`MultiOnTool`은(는) 초기화 시 다음과 같은 매개변수를 허용합니다:
+
+- **api_key**: 선택 사항. MultiOn API 키를 지정합니다. 제공되지 않은 경우, `MULTION_API_KEY` 환경 변수를 찾습니다.
+- **local**: 선택 사항. 에이전트를 로컬 브라우저에서 실행하려면 `True`로 설정합니다. MultiOn 브라우저 확장 프로그램이 설치되어 있고 API 사용이 체크되어 있는지 확인하세요. 기본값은 `False`입니다.
+- **max_steps**: 선택 사항. MultiOn 에이전트가 명령에 대해 수행할 수 있는 최대 단계 수를 설정합니다. 기본값은 `3`입니다.
+
+## 사용법
+
+`MultiOnTool`을 사용할 때, 에이전트는 도구가 웹 브라우징 동작으로 변환하는 자연어 지시를 제공합니다. 도구는 브라우징 세션 결과와 상태를 함께 반환합니다.
+
+```python Code
+# Example of using the tool with an agent
+browser_agent = Agent(
+    role="Web Browser Agent",
+    goal="Search for and summarize information from the web",
+    backstory="An expert at finding and extracting information from websites.",
+    tools=[multion_tool],
+    verbose=True,
+)
+
+# Create a task for the agent
+search_task = Task(
+    description="Search for the latest AI news on TechCrunch and summarize the top 3 headlines",
+    expected_output="A summary of the top 3 AI news headlines from TechCrunch",
+    agent=browser_agent,
+)
+
+# Run the task
+crew = Crew(agents=[browser_agent], tasks=[search_task])
+result = crew.kickoff()
+```
+
+반환된 상태가 `CONTINUE`인 경우, 에이전트가 실행을 계속하기 위해 동일한 지시를 다시 내리도록 해야 합니다.
+
+## 구현 세부사항
+
+`MultiOnTool`은 CrewAI의 `BaseTool`의 하위 클래스로 구현됩니다. 이는 MultiOn 클라이언트를 래핑하여 웹 브라우징 기능을 제공합니다:
+
+```python Code
+class MultiOnTool(BaseTool):
+    """Tool to wrap MultiOn Browse Capabilities."""
+
+    name: str = "Multion Browse Tool"
+    description: str = """Multion gives the ability for LLMs to control web browsers using natural language instructions.
+            If the status is 'CONTINUE', reissue the same instruction to continue execution
+        """
+
+    # Implementation details...
+
+    def _run(self, cmd: str, *args: Any, **kwargs: Any) -> str:
+        """
+        Run the Multion client with the given command.
+
+        Args:
+            cmd (str): The detailed and specific natural language instruction for web browsing
+            *args (Any): Additional arguments to pass to the Multion client
+            **kwargs (Any): Additional keyword arguments to pass to the Multion client
+        """
+        # Implementation details...
+```
+
+## 결론
+
+`MultiOnTool`은 CrewAI 에이전트에 웹 브라우징 기능을 통합할 수 있는 강력한 방법을 제공합니다. 에이전트가 자연어 지시를 통해 웹사이트와 상호작용할 수 있게 함으로써, 데이터 수집 및 연구에서 웹 서비스와의 자동화된 상호작용에 이르기까지 웹 기반 작업의 다양한 가능성을 열어줍니다.

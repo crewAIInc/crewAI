@@ -1,0 +1,103 @@
+---
+title: "Zapier 트리거"
+description: "Zapier 워크플로우에서 CrewAI crew를 트리거하여 앱 간 워크플로우를 자동화합니다"
+icon: "bolt"
+---
+
+이 가이드는 CrewAI Enterprise용 Zapier 트리거를 설정하는 과정을 안내합니다. 이를 통해 CrewAI Enterprise와 기타 애플리케이션 간의 워크플로우를 자동화할 수 있습니다.
+
+## 사전 요구 사항
+
+- CrewAI Enterprise 계정
+- Zapier 계정
+- Slack 계정 (이 특정 예시에 해당)
+
+## 단계별 설정
+
+<Steps>
+    <Step title="Slack 트리거 설정">
+        - Zapier에서 새 Zap을 만듭니다.
+
+        <Frame>
+            <img src="/images/enterprise/zapier-1.png" alt="Zapier 1" />
+        </Frame>
+    </Step>
+
+    <Step title="트리거 앱으로 Slack 선택">
+        <Frame>
+            <img src="/images/enterprise/zapier-2.png" alt="Zapier 2" />
+        </Frame>
+        - 트리거 이벤트로 `New Pushed Message`를 선택합니다.
+        - 아직 Slack 계정을 연결하지 않았다면 연결하세요.
+    </Step>
+
+    <Step title="CrewAI Enterprise 액션 구성">
+        - Zap에 새 액션 단계를 추가합니다.
+        - CrewAI+를 액션 앱으로, Kickoff를 액션 이벤트로 선택합니다.
+
+        <Frame>
+            <img src="/images/enterprise/zapier-3.png" alt="Zapier 5" />
+        </Frame>
+    </Step>
+
+    <Step title="CrewAI Enterprise 계정 연결">
+        - CrewAI Enterprise 계정을 연결하세요.
+        - 워크플로에 적합한 Crew를 선택하세요.
+
+        <Frame>
+            <img src="/images/enterprise/zapier-4.png" alt="Zapier 6" />
+        </Frame>
+        - Slack 메시지의 데이터를 사용하여 Crew의 입력값을 구성하세요.
+    </Step>
+
+    <Step title="CrewAI Enterprise 출력 포맷팅">
+        - CrewAI Enterprise에서 출력된 텍스트를 포맷팅하기 위해 추가 액션 단계를 추가합니다.
+        - Zapier의 포매팅 도구를 사용하여 Markdown 출력을 HTML로 변환합니다.
+
+        <Frame>
+            <img src="/images/enterprise/zapier-5.png" alt="Zapier 8" />
+        </Frame>
+        <Frame>
+            <img src="/images/enterprise/zapier-6.png" alt="Zapier 9" />
+        </Frame>
+    </Step>
+
+    <Step title="출력 이메일로 전송">
+        - 포맷팅된 출력을 이메일로 전송하는 마지막 액션 단계를 추가합니다.
+        - 원하는 이메일 서비스를 선택하세요 (예: Gmail, Outlook).
+        - 수신자, 제목, 본문 등 이메일 상세 정보를 구성하세요.
+        - 포맷팅된 CrewAI Enterprise 출력을 이메일 본문에 삽입합니다.
+
+        <Frame>
+            <img src="/images/enterprise/zapier-7.png" alt="Zapier 7" />
+        </Frame>
+    </Step>
+
+    <Step title="Slack에서 crew 실행">
+        - Slack 채널에 텍스트를 입력하세요.
+
+        <Frame>
+            <img src="/images/enterprise/zapier-7b.png" alt="Zapier 10" />
+        </Frame>
+
+        - 3점 버튼을 선택한 후 'Push to Zapier'를 선택하세요.
+
+        <Frame>
+            <img src="/images/enterprise/zapier-8.png" alt="Zapier 11" />
+        </Frame>
+    </Step>
+
+    <Step title="crew 선택 후 Kick Off로 Push">
+        <Frame>
+            <img src="/images/enterprise/zapier-9.png" alt="Zapier 12" />
+        </Frame>
+    </Step>
+</Steps>
+
+## 성공을 위한 팁
+
+- CrewAI Enterprise 입력값이 Slack 메시지에서 올바르게 매핑되었는지 확인하세요.
+- Zap을 활성화하기 전에 철저히 테스트하여 잠재적인 문제를 미리 파악하세요.
+- 워크플로우 내에서 발생할 수 있는 실패 상황을 관리하기 위해 오류 처리 단계를 추가하는 것을 고려하세요.
+
+이 단계를 따르면 Slack 메시지로 트리거되는 자동화된 워크플로우와 CrewAI Enterprise 출력이 포함된 이메일 알림을 설정할 수 있습니다.

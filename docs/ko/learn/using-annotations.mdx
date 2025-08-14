@@ -1,0 +1,141 @@
+---
+title: "crew.py에서 어노테이션 사용하기"
+description: "CrewAI에서 에이전트, 태스크, 컴포넌트를 올바르게 구조화하기 위해 어노테이션을 사용하는 방법을 알아보세요."
+icon: "at"
+---
+
+이 가이드는 `crew.py` 파일에서 **agent**, **task**, 및 기타 구성 요소를 올바르게 참조하기 위해 주석을 사용하는 방법을 설명합니다.
+
+## 소개
+
+CrewAI 프레임워크에서 어노테이션은 클래스와 메소드를 데코레이트하는 데 사용되며, crew의 다양한 컴포넌트에 메타데이터와 기능을 제공합니다. 이러한 어노테이션은 코드의 구성과 구조화를 돕고, 코드의 가독성과 유지 관리를 용이하게 만듭니다.
+
+## 사용 가능한 어노테이션
+
+CrewAI 프레임워크는 다음과 같은 어노테이션을 제공합니다:
+
+- `@CrewBase`: 메인 crew 클래스를 데코레이트할 때 사용합니다.
+- `@agent`: Agent 객체를 정의하고 반환하는 메서드를 데코레이트합니다.
+- `@task`: Task 객체를 정의하고 반환하는 메서드를 데코레이트합니다.
+- `@crew`: Crew 객체를 생성하고 반환하는 메서드를 데코레이트합니다.
+- `@llm`: Language Model 객체를 초기화하고 반환하는 메서드를 데코레이트합니다.
+- `@tool`: Tool 객체를 초기화하고 반환하는 메서드를 데코레이트합니다.
+- `@callback`: 콜백 메서드를 정의할 때 사용합니다.
+- `@output_json`: JSON 데이터를 출력하는 메서드에 사용합니다.
+- `@output_pydantic`: Pydantic 모델을 출력하는 메서드에 사용합니다.
+- `@cache_handler`: 캐시 처리 메서드를 정의할 때 사용합니다.
+
+## 사용 예시
+
+이러한 주석을 어떻게 사용하는지 예제를 통해 살펴보겠습니다:
+
+### 1. Crew Base 클래스
+
+```python
+@CrewBase
+class LinkedinProfileCrew():
+    """LinkedinProfile crew"""
+    agents_config = 'config/agents.yaml'
+    tasks_config = 'config/tasks.yaml'
+```
+
+`@CrewBase` 어노테이션은 메인 crew 클래스를 데코레이트하는 데 사용됩니다. 이 클래스는 일반적으로 agent, task, 그리고 crew 자체를 생성하기 위한 구성과 메서드를 포함합니다.
+
+### 2. 도구 정의
+
+```python
+@tool
+def myLinkedInProfileTool(self):
+    return LinkedInProfileTool()
+```
+
+`@tool` 애너테이션은 도구 객체를 반환하는 메서드를 데코레이터할 때 사용됩니다. 이러한 도구들은 에이전트가 특정 작업을 수행할 때 사용할 수 있습니다.
+
+### 3. LLM 정의
+
+```python
+@llm
+def groq_llm(self):
+    api_key = os.getenv('api_key')
+    return ChatGroq(api_key=api_key, temperature=0, model_name="mixtral-8x7b-32768")
+```
+
+`@llm` 애노테이션은 Language Model 객체를 초기화하고 반환하는 메서드를 데코레이팅하는 데 사용됩니다. 이러한 LLM은 에이전트가 자연어 처리 작업을 수행할 때 사용됩니다.
+
+### 4. 에이전트 정의
+
+```python
+@agent
+def researcher(self) -> Agent:
+    return Agent(
+        config=self.agents_config['researcher']
+    )
+```
+
+`@agent` 어노테이션은 에이전트 객체를 정의하고 반환하는 메서드를 데코레이트할 때 사용됩니다.
+
+### 5. Task 정의
+
+```python
+@task
+def research_task(self) -> Task:
+    return Task(
+        config=self.tasks_config['research_linkedin_task'],
+        agent=self.researcher()
+    )
+```
+
+`@task` 어노테이션은 Task 객체를 정의하고 반환하는 메서드를 데코레이트하는 데 사용됩니다. 이러한 메서드는 task 구성과 해당 task를 담당하는 agent를 지정합니다.
+
+### 6. Crew 생성
+
+```python
+@crew
+def crew(self) -> Crew:
+    """Creates the LinkedinProfile crew"""
+    return Crew(
+        agents=self.agents,
+        tasks=self.tasks,
+        process=Process.sequential,
+        verbose=True
+    )
+``` 
+
+`@crew` 어노테이션은 `Crew` 객체를 생성하고 반환하는 메서드를 데코레이션하는 데 사용됩니다. 이 메서드는 모든 구성 요소(agents와 tasks)를 기능적인 crew로 조합합니다.
+
+## YAML 구성
+
+에이전트 구성은 일반적으로 YAML 파일에 저장됩니다. 아래는 연구원 에이전트에 대한 `agents.yaml` 파일 예시입니다.
+
+```yaml
+researcher:
+    role: >
+        LinkedIn Profile Senior Data Researcher
+    goal: >
+        Uncover detailed LinkedIn profiles based on provided name {name} and domain {domain}
+        Generate a Dall-E image based on domain {domain}
+    backstory: >
+        You're a seasoned researcher with a knack for uncovering the most relevant LinkedIn profiles.
+        Known for your ability to navigate LinkedIn efficiently, you excel at gathering and presenting
+        professional information clearly and concisely.
+    allow_delegation: False
+    verbose: True
+    llm: groq_llm
+    tools:
+        - myLinkedInProfileTool
+        - mySerperDevTool
+        - myDallETool
+```
+
+이 YAML 구성은 `LinkedinProfileCrew` 클래스에 정의된 연구원 에이전트에 해당합니다. 구성에는 에이전트의 역할, 목표, 배경 이야기와 사용하는 LLM 및 도구와 같은 기타 속성이 명시되어 있습니다.
+
+YAML 파일의 `llm`과 `tools`가 Python 클래스에서 `@llm` 및 `@tool`로 데코레이션된 메서드와 어떻게 대응되는지 주목하세요.
+
+## 모범 사례
+
+- **일관성 있는 명명**: 메서드에 대해 명확하고 일관성 있는 명명 규칙을 사용하세요. 예를 들어, agent 메서드는 역할에 따라 이름을 지정할 수 있습니다(예: researcher, reporting_analyst).
+- **환경 변수**: API 키와 같은 민감한 정보를 위해 환경 변수를 사용하세요.
+- **유연성**: agent와 task를 쉽게 추가 및 제거할 수 있도록 crew를 유연하게 설계하세요.
+- **YAML-코드 일치**: YAML 파일의 이름과 구조가 Python 코드의 데코레이터가 적용된 메서드와 정확히 일치하는지 확인하세요.
+
+이 지침을 따르고 주석을 올바르게 사용하면 CrewAI 프레임워크를 이용해 구조적이고 유지보수가 쉬운 crew를 만들 수 있습니다.

@@ -1,0 +1,91 @@
+---
+title: Spider 스크레이퍼
+description: SpiderTool은 Spider를 사용하여 지정된 웹사이트의 콘텐츠를 추출하고 읽도록 설계되었습니다.
+icon: spider-web
+---
+
+# `SpiderTool`
+
+## 설명
+
+[Spider](https://spider.cloud/?ref=crewai)는 [가장 빠른](https://github.com/spider-rs/spider/blob/main/benches/BENCHMARKS.md#benchmark-results) 오픈 소스 스크래퍼이자 크롤러로, LLM에 바로 사용할 수 있는 데이터를 제공합니다.
+어떤 웹사이트든 순수 HTML, 마크다운, 메타데이터 또는 텍스트로 변환하며, AI를 활용해 사용자 정의 작업을 수행하며 크롤링할 수 있습니다.
+
+## 설치
+
+`SpiderTool`을 사용하려면 [Spider SDK](https://pypi.org/project/spider-client/)와 `crewai[tools]` SDK도 다운로드해야 합니다:
+
+```shell
+pip install spider-client 'crewai[tools]'
+```
+
+## 예제
+
+이 예제는 에이전트가 `SpiderTool`을 사용하여 웹사이트를 스크래핑하고 크롤링할 수 있는 방법을 보여줍니다.
+Spider API로부터 반환되는 데이터는 이미 LLM-적합 포맷이므로, 추가로 정제할 필요가 없습니다.
+
+```python Code
+from crewai_tools import SpiderTool
+
+def main():
+    spider_tool = SpiderTool()
+
+    searcher = Agent(
+        role="Web Research Expert",
+        goal="Find related information from specific URL's",
+        backstory="An expert web researcher that uses the web extremely well",
+        tools=[spider_tool],
+        verbose=True,
+    )
+
+    return_metadata = Task(
+        description="Scrape https://spider.cloud with a limit of 1 and enable metadata",
+        expected_output="Metadata and 10 word summary of spider.cloud",
+        agent=searcher
+    )
+
+    crew = Crew(
+        agents=[searcher],
+        tasks=[
+            return_metadata,
+        ],
+        verbose=2
+    )
+
+    crew.kickoff()
+
+if __name__ == "__main__":
+    main()
+```
+
+## 인수
+
+| 인수                 | 타입      | 설명                                                                                                                                                  |
+|:---------------------|:----------|:------------------------------------------------------------------------------------------------------------------------------------------------------|
+| **api_key**          | `string`  | Spider API 키를 지정합니다. 지정하지 않으면 환경 변수에서 `SPIDER_API_KEY`를 찾습니다.                                                                  |
+| **params**           | `object`  | 요청에 대한 선택적 매개변수입니다. 기본값은 `{"return_format": "markdown"}`로, LLM에 최적화되어 있습니다.                                               |
+| **request**          | `string`  | 수행할 요청 유형 (`http`, `chrome`, `smart`). `smart`는 기본적으로 HTTP를 사용하며, 필요시 JavaScript 렌더링으로 전환합니다.                              |
+| **limit**            | `int`     | 웹사이트별로 크롤링할 최대 페이지 수입니다. `0` 또는 생략 시 무제한입니다.                                                                              |
+| **depth**            | `int`     | 최대 크롤링 깊이입니다. `0`으로 설정하면 제한이 없습니다.                                                                                                |
+| **cache**            | `bool`    | 반복 실행 속도를 높이기 위한 HTTP 캐싱을 활성화합니다. 기본값은 `true`입니다.                                                                            |
+| **budget**           | `object`  | 크롤된 페이지의 경로 기반 제한을 설정합니다. 예: `{"*":1}` (루트 페이지만 크롤).                                                                        |
+| **locale**           | `string`  | 요청에 사용할 로케일입니다 (예: `en-US`).                                                                                                               |
+| **cookies**          | `string`  | 요청에 사용할 HTTP 쿠키입니다.                                                                                                                          |
+| **stealth**          | `bool`    | Chrome 요청 시 감지 우회를 위한 스텔스 모드를 활성화합니다. 기본값은 `true`입니다.                                                                       |
+| **headers**          | `object`  | 모든 요청에 적용할 key-value 쌍의 HTTP 헤더입니다.                                                                                                      |
+| **metadata**         | `bool`    | 페이지 및 콘텐츠에 대한 메타데이터를 저장하여 AI 상호운용성을 지원합니다. 기본값은 `false`입니다.                                                        |
+| **viewport**         | `object`  | Chrome 뷰포트 크기를 설정합니다. 기본값은 `800x600`입니다.                                                                                              |
+| **encoding**         | `string`  | 인코딩 타입을 지정합니다. 예: `UTF-8`, `SHIFT_JIS`.                                                                                                    |
+| **subdomains**       | `bool`    | 크롤 시 서브도메인을 포함합니다. 기본값은 `false`입니다.                                                                                                |
+| **user_agent**       | `string`  | 사용자 정의 HTTP user agent입니다. 기본값은 랜덤 agent입니다.                                                                                           |
+| **store_data**       | `bool`    | 요청에 대한 데이터 저장을 활성화합니다. 설정 시 `storageless`를 무시합니다. 기본값은 `false`입니다.                                                      |
+| **gpt_config**       | `object`  | AI가 크롤 액션을 생성할 수 있도록 하며, `"prompt"`에서 배열을 통한 단계적 체이닝도 지원합니다.                                                          |
+| **fingerprint**      | `bool`    | Chrome을 위한 고급 지문 인식 기능을 활성화합니다.                                                                                                       |
+| **storageless**      | `bool`    | 모든 데이터 저장(예: AI 임베딩 포함)을 방지합니다. 기본값은 `false`입니다.                                                                              |
+| **readability**      | `bool`    | [Mozilla’s readability](https://github.com/mozilla/readability)를 통해 읽기 전용으로 콘텐츠를 전처리합니다. LLM에 알맞게 콘텐츠를 개선합니다.            |
+| **return_format**    | `string`  | 반환 데이터 포맷: `markdown`, `raw`, `text`, `html2text`. 페이지의 기본 형식을 원할 경우 `raw` 사용.                                                   |
+| **proxy_enabled**    | `bool`    | 네트워크 레벨 차단을 피하기 위해 고성능 프록시를 활성화합니다.                                                                                          |
+| **query_selector**   | `string`  | 마크업에서 콘텐츠 추출을 위한 CSS 쿼리 셀렉터입니다.                                                                                                   |
+| **full_resources**   | `bool`    | 웹사이트에 연결된 모든 자원을 다운로드합니다.                                                                                                           |
+| **request_timeout**  | `int`     | 요청의 타임아웃(초 단위, 5-60). 기본값은 `30`입니다.                                                                                                    |
+| **run_in_background** | `bool`   | 요청을 백그라운드에서 실행하며, 데이터 저장 및 대시보드 크롤 트리거에 유용합니다. `storageless`가 설정된 경우 동작하지 않습니다.                         |

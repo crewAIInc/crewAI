@@ -1,0 +1,50 @@
+---
+title: 도구 출력 결과로 강제 지정하기
+description: CrewAI에서 에이전트의 작업에서 도구 출력을 결과로 강제 지정하는 방법을 알아봅니다.
+icon: wrench-simple
+---
+
+## 소개
+
+CrewAI에서는 도구의 출력을 에이전트 작업의 결과로 강제로 사용할 수 있습니다.  
+이 기능은 작업 실행 중에 에이전트가 출력을 수정하지 못하도록 하고, 도구의 출력이 반드시 캡처되어 작업 결과로 반환되도록 보장하고 싶을 때 유용합니다.
+
+## 도구 출력을 결과로 강제 지정하기
+
+도구의 출력을 에이전트 작업의 결과로 강제 지정하려면, 에이전트에 도구를 추가할 때 `result_as_answer` 매개변수를 `True`로 설정해야 합니다.  
+이 매개변수는 도구의 출력이 에이전트에 의해 수정되지 않고 작업 결과로 캡처되어 반환되도록 보장합니다.
+
+다음은 에이전트 작업의 결과로 도구 출력을 강제 지정하는 방법의 예시입니다:
+
+```python Code
+from crewai.agent import Agent
+from my_tool import MyCustomTool
+
+# Create a coding agent with the custom tool
+coding_agent = Agent(
+        role="Data Scientist",
+        goal="Produce amazing reports on AI",
+        backstory="You work with data and AI",
+        tools=[MyCustomTool(result_as_answer=True)],
+    )
+
+# Assuming the tool's execution and result population occurs within the system
+task_result = coding_agent.execute_task(task)
+```
+
+## 워크플로우 실행
+
+<Steps>
+   <Step title="작업 실행">
+      에이전트는 제공된 도구를 사용하여 작업을 수행합니다.
+   </Step>
+   <Step title="도구 출력">
+      도구가 출력을 생성하며, 이는 작업 결과로 캡처됩니다.
+   </Step>
+   <Step title="에이전트 상호작용">
+      에이전트는 도구에서 학습하고 반영할 수 있지만, 출력은 수정되지 않습니다.
+   </Step>
+   <Step title="결과 반환">
+      도구 출력은 어떠한 수정 없이 작업 결과로 반환됩니다.
+   </Step>
+</Steps>

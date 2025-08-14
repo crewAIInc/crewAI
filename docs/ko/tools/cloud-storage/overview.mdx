@@ -1,0 +1,51 @@
+---
+title: "개요"
+description: "클라우드 서비스, 스토리지 시스템, 클라우드 기반 AI 플랫폼과 상호작용합니다"
+icon: "face-smile"
+---
+
+이러한 도구를 통해 에이전트는 클라우드 서비스와 상호 작용하고, 클라우드 스토리지에 접근하며, 대규모 운영을 위해 클라우드 기반 AI 플랫폼을 활용할 수 있습니다.
+
+## **사용 가능한 도구**
+
+<CardGroup cols={2}>
+  <Card title="S3 리더 도구" icon="cloud" href="/ko/tools/cloud-storage/s3readertool">
+    Amazon S3 버킷에서 파일과 데이터를 읽습니다.
+  </Card>
+
+  <Card title="S3 라이터 도구" icon="cloud-arrow-up" href="/ko/tools/cloud-storage/s3writertool">
+    파일을 Amazon S3 스토리지에 작성하고 업로드합니다.
+  </Card>
+
+  <Card title="Bedrock Invoke Agent" icon="aws" href="/ko/tools/cloud-storage/bedrockinvokeagenttool">
+    AI 기반 작업을 위해 Amazon Bedrock 에이전트를 호출합니다.
+  </Card>
+
+  <Card title="Bedrock KB Retriever" icon="database" href="/ko/tools/cloud-storage/bedrockkbretriever">
+    Amazon Bedrock 지식 베이스에서 정보를 검색합니다.
+  </Card>
+</CardGroup>
+
+## **일반적인 사용 사례**
+
+- **파일 저장**: 클라우드 스토리지 시스템에 파일을 저장하고 가져오기
+- **데이터 백업**: 중요한 데이터를 클라우드 스토리지에 백업하기
+- **AI 서비스**: 클라우드 기반의 AI 모델 및 서비스에 접근하기
+- **지식 검색**: 클라우드에 호스팅된 지식 베이스를 질의하기
+- **확장 가능한 운영**: 처리 작업을 위해 클라우드 인프라 활용하기
+
+```python
+from crewai_tools import S3ReaderTool, S3WriterTool, BedrockInvokeAgentTool
+
+# Create cloud tools
+s3_reader = S3ReaderTool()
+s3_writer = S3WriterTool()
+bedrock_agent = BedrockInvokeAgentTool()
+
+# Add to your agent
+agent = Agent(
+    role="Cloud Operations Specialist",
+    tools=[s3_reader, s3_writer, bedrock_agent],
+    goal="Manage cloud resources and AI services"
+)
+```
