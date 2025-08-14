@@ -13,9 +13,6 @@ from crewai.utilities.events.agent_events import (
     AgentExecutionErrorEvent,
 )
 from crewai.utilities.events.listeners.tracing.types import TraceEvent
-from crewai.utilities.events.listeners.tracing.utils import (
-    is_tracing_enabled,
-)
 from crewai.utilities.events.reasoning_events import (
     AgentReasoningStartedEvent,
     AgentReasoningCompletedEvent,
@@ -120,8 +117,6 @@ class TraceCollectionListener(BaseEventListener):
 
     def setup_listeners(self, crewai_event_bus):
         """Setup event listeners - delegates to specific handlers"""
-        if not is_tracing_enabled():
-            return
 
         self._register_flow_event_handlers(crewai_event_bus)
         self._register_context_event_handlers(crewai_event_bus)
@@ -314,7 +309,7 @@ class TraceCollectionListener(BaseEventListener):
         self, user_context: Dict[str, str], execution_metadata: Dict[str, Any]
     ):
         """Initialize trace batch if ephemeral"""
-        if not self.authenticated:
+        if not self._check_authenticated():
             self.batch_manager.initialize_batch(
                 user_context, execution_metadata, use_ephemeral=True
             )
