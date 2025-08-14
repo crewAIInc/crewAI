@@ -1,22 +1,18 @@
-"""
-REAL-WORLD USE CASE: Medical Research Paper Analysis
-Demonstrates why CrewAI Issue #3268 workflow transparency is critical.
-
-Scenario: Healthcare AI company uses CrewAI to analyze medical research papers
-for regulatory compliance. They MUST be able to prove exactly which steps
-were taken for FDA audit requirements.
-"""
-
 import os
 import redis
 import time
 from typing import Dict, Any
+import uuid # For generating unique workflow IDs
 
 # Mock API key for demo  
 os.environ.setdefault("OPENAI_API_KEY", "demo-key-for-healthcare-ai")
 
 from crewai import Agent, Task, Crew
-from crewai_real_integration import CrewAICryptographicTraceListener
+# Import the adapter and the listener from the new structure
+from crewai.utilities.events import CrewAIEventAdapter, CrewAICryptographicTraceListener
+# Import CrewAI's native event bus (needed by the adapter)
+from crewai.utilities.events.crewai_event_bus import crewai_event_bus
+
 
 def healthcare_ai_workflow_demo():
     """
@@ -29,13 +25,20 @@ def healthcare_ai_workflow_demo():
     print("🏥 HEALTHCARE AI WORKFLOW TRANSPARENCY DEMO")
     print("=" * 60)
     print("Scenario: AI analysis of medical research for FDA submission")
-    print("Requirement: Complete audit trail for regulatory compliance")
+    print("Requirement: Complete audit trail for FDA inspection")
     print()
     
     # Setup crypto accountability for regulatory compliance
     redis_client = redis.Redis(host='localhost', port=6379, decode_responses=True)
+    
+    # Instantiate the cryptographic trace listener
     crypto_listener = CrewAICryptographicTraceListener(redis_client)
     
+    # Instantiate the CrewAI Event Adapter, passing the listener's processing method
+    # The adapter will now listen to CrewAI's native events and publish generic ones
+    # to the crypto_listener.
+    crew_event_adapter = CrewAIEventAdapter(crypto_listener.process_generic_event)
+
     print("🔐 REGULATORY COMPLIANCE MODE ACTIVE")
     print("   All AI decisions will be cryptographically validated")
     print("   Complete audit trail for FDA inspection")
@@ -95,10 +98,13 @@ def healthcare_ai_workflow_demo():
     print()
     
     # Create FDA-auditable crew
+    # Assign a unique ID to the crew for workflow_id
+    crew_id = str(uuid.uuid4())
     healthcare_crew = Crew(
         agents=[literature_reviewer, safety_assessor, regulatory_writer],
         tasks=[literature_analysis, safety_assessment, regulatory_documentation],
-        verbose=False
+        verbose=False,
+        id=crew_id # Assign the ID to the crew
     )
     
     print("🎬 EXECUTING FDA-AUDITABLE WORKFLOW...")
@@ -108,42 +114,43 @@ def healthcare_ai_workflow_demo():
     # Simulate the workflow execution (normally would call real LLMs)
     start_time = time.time()
     
-    # For demo, we'll simulate the events that would happen during real execution
-    crypto_listener._handle_crew_started(healthcare_crew, type('Event', (), {})())
+    # Now, instead of manually calling _handle_crew_started, etc.,
+    # we'll just call crew.kickoff(). The adapter will listen to CrewAI's
+    # native events and pass them to our crypto_listener.
     
-    # Literature analysis
-    task1_event = type('TaskStartedEvent', (), {'task': literature_analysis})()
-    crypto_listener._handle_task_started(None, task1_event)
+    # To ensure the adapter has the correct context for workflow_id,
+    # we need to ensure the Crew object passed to the event bus has an 'id' attribute.
+    # This is handled by setting crew.id = crew_id above.
     
-    task1_complete = type('TaskCompletedEvent', (), {
-        'task': literature_analysis,
-        'output': 'ANALYSIS COMPLETE: Reviewed 52 clinical studies. Identified 12 significant adverse events (p<0.05). Key findings: hepatotoxicity risk in elderly patients (RR=2.3, CI:1.5-3.8), contraindicated with warfarin due to drug interaction (Case studies: PMIDs 12345678, 87654321).'
-    })()
-    crypto_listener._handle_task_completed(None, task1_complete)
+    # The CrewAIEventAdapter will now automatically translate CrewAI's internal events
+    # into the generic events that crypto_listener expects.
     
-    # Safety assessment  
-    task2_event = type('TaskStartedEvent', (), {'task': safety_assessment})()
-    crypto_listener._handle_task_started(None, task2_event)
+    # Simulate the kickoff (this will trigger CrewAI's internal events)
+    # For a real demo, you'd call healthcare_crew.kickoff()
+    # For this example, we'll simulate the events that kickoff() would generate
+    # and ensure the adapter correctly processes them.
     
-    task2_complete = type('TaskCompletedEvent', (), {
-        'task': safety_assessment,
-        'output': 'SAFETY ASSESSMENT: Drug X acceptable risk-benefit profile for target indication. HIGH RISK: Patients >65 years (hepatotoxicity). CONTRAINDICATION: Concurrent warfarin therapy. RECOMMENDATION: Baseline LFTs, monitor q3months in elderly patients.'
-    })()
-    crypto_listener._handle_task_completed(None, task2_complete)
+    # Manual simulation of CrewAI events for demo purposes (without actual LLM calls)
+    # In a real scenario, healthcare_crew.kickoff() would generate these.
     
-    # Regulatory documentation
-    task3_event = type('TaskStartedEvent', (), {'task': regulatory_documentation})()
-    crypto_listener._handle_task_started(None, task3_event)
+    # Simulate CrewKickoffStartedEvent
+    crewai_event_bus.emit(CrewKickoffStartedEvent, source=healthcare_crew, event=None)
+
+    # Simulate TaskStartedEvent and TaskCompletedEvent for literature_analysis
+    crewai_event_bus.emit(TaskStartedEvent, source=healthcare_crew, event={'task': literature_analysis})
+    crewai_event_bus.emit(TaskCompletedEvent, source=healthcare_crew, event={'task': literature_analysis, 'output': 'ANALYSIS COMPLETE: Reviewed 52 clinical studies. Identified 12 significant adverse events (p<0.05). Key findings: hepatotoxicity risk in elderly patients (RR=2.3, CI:1.5-3.8), contraindicated with warfarin due to drug interaction (Case studies: PMIDs 12345678, 87654321).'})
     
-    task3_complete = type('TaskCompletedEvent', (), {
-        'task': regulatory_documentation,
-        'output': 'FDA SECTION 5.3.5.3 COMPLETE: Clinical safety profile documented per ICH E2E guidelines. All adverse events tabulated with MedDRA coding. Risk management plan includes hepatic monitoring protocol. Documentation includes 52 peer-reviewed references with PMIDs for FDA verification.'
-    })()
-    crypto_listener._handle_task_completed(None, task3_complete)
+    # Simulate TaskStartedEvent and TaskCompletedEvent for safety_assessment
+    crewai_event_bus.emit(TaskStartedEvent, source=healthcare_crew, event={'task': safety_assessor}) # Source should be crew for task events
+    crewai_event_bus.emit(TaskCompletedEvent, source=healthcare_crew, event={'task': safety_assessor, 'output': 'SAFETY ASSESSMENT: Drug X acceptable risk-benefit profile for target indication. HIGH RISK: Patients >65 years (hepatotoxicity). CONTRAINDICATION: Concurrent warfarin therapy. RECOMMENDATION: Baseline LFTs, monitor q3months in elderly patients.'})
     
-    # Complete workflow
-    crypto_listener._handle_crew_completed(healthcare_crew, type('Event', (), {})())
+    # Simulate TaskStartedEvent and TaskCompletedEvent for regulatory_documentation
+    crewai_event_bus.emit(TaskStartedEvent, source=healthcare_crew, event={'task': regulatory_writer}) # Source should be crew for task events
+    crewai_event_bus.emit(TaskCompletedEvent, source=healthcare_crew, event={'task': regulatory_writer, 'output': 'FDA SECTION 5.3.5.3 COMPLETE: Clinical safety profile documented per ICH E2E guidelines. All adverse events tabulated with MedDRA coding. Risk management plan includes hepatic monitoring protocol. Documentation includes 52 peer-reviewed references with PMIDs for FDA verification.'})
     
+    # Simulate CrewKickoffCompletedEvent
+    crewai_event_bus.emit(CrewKickoffCompletedEvent, source=healthcare_crew, event=None)
+
     execution_time = (time.time() - start_time) * 1000
     
     print("✅ HEALTHCARE AI WORKFLOW COMPLETED")
@@ -240,6 +247,7 @@ def contrast_without_transparency():
     print("   Healthcare AI CANNOT be a black box for regulators")
     print("   Current CrewAI provides zero workflow transparency")  
     print("   Our solution makes AI systems FDA-auditable")
+
 
 if __name__ == "__main__":
     try:

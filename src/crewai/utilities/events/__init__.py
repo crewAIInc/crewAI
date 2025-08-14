@@ -1,133 +1,66 @@
-from .crew_events import (
-    CrewKickoffStartedEvent,
-    CrewKickoffCompletedEvent,
-    CrewKickoffFailedEvent,
-    CrewTrainStartedEvent,
-    CrewTrainCompletedEvent,
-    CrewTrainFailedEvent,
-    CrewTestStartedEvent,
-    CrewTestCompletedEvent,
-    CrewTestFailedEvent,
-)
-from .llm_guardrail_events import (
-    LLMGuardrailCompletedEvent,
-    LLMGuardrailStartedEvent,
-)
+# Existing imports (keep these as they are used by other parts of CrewAI)
 from .agent_events import (
-    AgentExecutionStartedEvent,
     AgentExecutionCompletedEvent,
-    AgentExecutionErrorEvent,
-    AgentEvaluationStartedEvent,
-    AgentEvaluationCompletedEvent,
-    AgentEvaluationFailedEvent,
+    AgentExecutionStartedEvent,
+    AgentThoughtEvent,
 )
-from .task_events import (
-    TaskStartedEvent,
-    TaskCompletedEvent,
-    TaskFailedEvent,
-    TaskEvaluationEvent,
-)
-from .flow_events import (
-    FlowCreatedEvent,
-    FlowStartedEvent,
-    FlowFinishedEvent,
-    FlowPlotEvent,
-    MethodExecutionStartedEvent,
-    MethodExecutionFinishedEvent,
-    MethodExecutionFailedEvent,
-)
-from .crewai_event_bus import CrewAIEventsBus, crewai_event_bus
-from .tool_usage_events import (
-    ToolUsageFinishedEvent,
-    ToolUsageErrorEvent,
-    ToolUsageStartedEvent,
-    ToolExecutionErrorEvent,
+from .base_events import BaseEvent
+from .crew_events import CrewKickoffCompletedEvent, CrewKickoffStartedEvent
+from .llm_events import LLMCallCompletedEvent, LLMCallStartedEvent
+from .memory_events import MemoryRetrievalCompletedEvent, MemoryRetrievalStartedEvent
+from .task_events import TaskCompletedEvent, TaskStartedEvent
+from .tool_events import (
+    ToolExecutionCompletedEvent,
+    ToolExecutionStartedEvent,
     ToolSelectionErrorEvent,
     ToolUsageEvent,
     ToolValidateInputErrorEvent,
 )
-from .llm_events import (
-    LLMCallCompletedEvent,
-    LLMCallFailedEvent,
-    LLMCallStartedEvent,
-    LLMCallType,
-    LLMStreamChunkEvent,
-)
 
-from .memory_events import (
-    MemorySaveStartedEvent,
-    MemorySaveCompletedEvent,
-    MemorySaveFailedEvent,
-    MemoryQueryStartedEvent,
-    MemoryQueryCompletedEvent,
-    MemoryQueryFailedEvent,
-    MemoryRetrievalStartedEvent,
-    MemoryRetrievalCompletedEvent,
-)
+# Our crypto events (keep these)
 from .crypto_events import (
     CryptographicCommitmentCreatedEvent,
     CryptographicValidationCompletedEvent,
     CryptographicWorkflowAuditEvent,
     CryptographicEscrowTransactionEvent,
 )
+
+# Our crypto listener (keep this)
 from .listeners.crypto_listener import CrewAICryptographicTraceListener
 
-# events
-from .event_listener import EventListener
-from .third_party.agentops_listener import agentops_listener
+# NEW: Import the CrewAI Event Adapter
+from .crewai_event_adapter import CrewAIEventAdapter
 
+# NEW: Import generic workflow events
+from .generic_workflow_events import (
+    GenericWorkflowEvent,
+    WorkflowStartedEvent,
+    WorkflowCompletedEvent,
+    TaskStartedEvent as GenericTaskStartedEvent, # Alias to avoid name collision with CrewAI's TaskStartedEvent
+    TaskCompletedEvent as GenericTaskCompletedEvent, # Alias to avoid name collision with CrewAI's TaskCompletedEvent
+    AgentActionOccurredEvent,
+)
+
+# events (keep this)
+from .event_listener import EventListener
+from .crewai_event_bus import crewai_event_bus
+
+# __all__ (adjust this)
 __all__ = [
-    "EventListener",
-    "agentops_listener",
-    "CrewAIEventsBus",
-    "crewai_event_bus",
-    "AgentExecutionStartedEvent",
+    "BaseEvent",
     "AgentExecutionCompletedEvent",
-    "AgentExecutionErrorEvent",
-    "AgentEvaluationStartedEvent",
-    "AgentEvaluationCompletedEvent",
-    "AgentEvaluationFailedEvent",
-    "TaskStartedEvent",
-    "TaskCompletedEvent",
-    "TaskFailedEvent",
-    "TaskEvaluationEvent",
-    "FlowCreatedEvent",
-    "FlowStartedEvent",
-    "FlowFinishedEvent",
-    "FlowPlotEvent",
-    "MethodExecutionStartedEvent",
-    "MethodExecutionFinishedEvent",
-    "MethodExecutionFailedEvent",
-    "LLMCallCompletedEvent",
-    "LLMCallFailedEvent",
-    "LLMCallStartedEvent",
-    "LLMCallType",
-    "LLMStreamChunkEvent",
-    "MemorySaveStartedEvent",
-    "MemorySaveCompletedEvent",
-    "MemorySaveFailedEvent",
-    "MemoryQueryStartedEvent",
-    "MemoryQueryCompletedEvent",
-    "MemoryQueryFailedEvent",
-    "MemoryRetrievalStartedEvent",
-    "MemoryRetrievalCompletedEvent",
-    "EventListener",
-    "agentops_listener",
-    "CrewKickoffStartedEvent",
+    "AgentExecutionStartedEvent",
+    "AgentThoughtEvent",
     "CrewKickoffCompletedEvent",
-    "CrewKickoffFailedEvent",
-    "CrewTrainStartedEvent",
-    "CrewTrainCompletedEvent",
-    "CrewTrainFailedEvent",
-    "CrewTestStartedEvent",
-    "CrewTestCompletedEvent",
-    "CrewTestFailedEvent",
-    "LLMGuardrailCompletedEvent",
-    "LLMGuardrailStartedEvent",
-    "ToolUsageFinishedEvent",
-    "ToolUsageErrorEvent",
-    "ToolUsageStartedEvent",
-    "ToolExecutionErrorEvent",
+    "CrewKickoffStartedEvent",
+    "LLMCallCompletedEvent",
+    "LLMCallStartedEvent",
+    "MemoryRetrievalCompletedEvent",
+    "MemoryRetrievalStartedEvent",
+    "TaskCompletedEvent",
+    "TaskStartedEvent",
+    "ToolExecutionCompletedEvent",
+    "ToolExecutionStartedEvent",
     "ToolSelectionErrorEvent",
     "ToolUsageEvent",
     "ToolValidateInputErrorEvent",
@@ -136,4 +69,14 @@ __all__ = [
     "CryptographicWorkflowAuditEvent",
     "CryptographicEscrowTransactionEvent",
     "CrewAICryptographicTraceListener",
+    "EventListener",
+    "crewai_event_bus",
+    # NEW: Add the adapter and generic events
+    "CrewAIEventAdapter",
+    "GenericWorkflowEvent",
+    "WorkflowStartedEvent",
+    "WorkflowCompletedEvent",
+    "GenericTaskStartedEvent", # Exported with alias
+    "GenericTaskCompletedEvent", # Exported with alias
+    "AgentActionOccurredEvent",
 ]
