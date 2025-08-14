@@ -1,7 +1,8 @@
-from typing import Any, Optional, Type, List
-from pydantic import BaseModel, Field
-from crewai.tools import BaseTool, EnvVar
 import os
+from typing import Any, List, Optional, Type
+
+from crewai.tools import BaseTool, EnvVar
+from pydantic import BaseModel, Field
 
 try:
     from exa_py import Exa
@@ -38,10 +39,14 @@ class EXASearchTool(BaseTool):
     type: Optional[str] = "auto"
     package_dependencies: List[str] = ["exa_py"]
     api_key: Optional[str] = Field(
-        default_factory=lambda: os.getenv("EXA_API_KEY"), description="API key for Exa services", required=False
+        default_factory=lambda: os.getenv("EXA_API_KEY"),
+        description="API key for Exa services",
+        json_schema_extra={"required": False},
     )
     env_vars: List[EnvVar] = [
-        EnvVar(name="EXA_API_KEY", description="API key for Exa services", required=False),
+        EnvVar(
+            name="EXA_API_KEY", description="API key for Exa services", required=False
+        ),
     ]
 
     def __init__(
