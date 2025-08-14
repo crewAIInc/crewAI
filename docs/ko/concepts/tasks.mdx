@@ -1,0 +1,902 @@
+---
+title: 작업
+description: CrewAI 프레임워크 내에서 작업을 관리하고 생성하는 방법에 대한 자세한 안내서입니다.
+icon: list-check
+---
+
+## 개요
+
+CrewAI 프레임워크에서 `Task`는 `Agent`가 완료하는 구체적인 과제입니다.
+
+Task는 실행을 위한 모든 세부 정보를 제공합니다. 여기에는 설명, 책임 Agent, 필요한 도구 등이 포함되어 다양한 작업 복잡성을 지원합니다.
+
+CrewAI 내의 Task는 협업이 가능하며, 여러 Agent가 함께 작업해야 할 수도 있습니다. 이는 Task 속성을 통해 관리되며, Crew의 프로세스를 통해 조율되어 팀워크와 효율성을 향상시킵니다.
+
+<Note type="info" title="엔터프라이즈 기능: 비주얼 Task 빌더">
+CrewAI 엔터프라이즈에는 복잡한 Task 생성과 연결을 단순화하는 Crew Studio의 비주얼 Task 빌더가 포함되어 있습니다. Task 흐름을 시각적으로 설계하고, 코드를 작성하지 않고도 실시간으로 테스트해 볼 수 있습니다.
+
+![Task Builder Screenshot](/images/enterprise/crew-studio-interface.png)
+
+비주얼 Task 빌더의 주요 기능:
+- 드래그 앤 드롭 방식의 Task 생성
+- 시각적 Task 종속성과 흐름 관리
+- 실시간 테스트 및 검증
+- 손쉬운 공유 및 협업
+</Note>
+
+### 작업 실행 흐름
+
+작업은 두 가지 방법으로 실행될 수 있습니다:
+- **순차적**: 작업이 정의된 순서대로 실행됩니다
+- **계층적**: 작업이 역할과 전문성에 따라 에이전트에게 할당됩니다
+
+실행 흐름은 crew를 생성할 때 정의됩니다:
+```python Code
+crew = Crew(
+    agents=[agent1, agent2],
+    tasks=[task1, task2],
+    process=Process.sequential  # or Process.hierarchical
+)
+```
+
+## 태스크 속성
+
+| 속성                              | 매개변수               | 타입                             | 설명                                                                                                          |
+| :------------------------------- | :-------------------- | :------------------------------- | :------------------------------------------------------------------------------------------------------------ |
+| **설명**                         | `description`         | `str`                            | 태스크가 다루는 내용을 명확하고 간결하게 설명합니다.                                                           |
+| **예상 출력**                     | `expected_output`     | `str`                            | 태스크가 완료된 모습에 대한 구체적인 설명입니다.                                                               |
+| **이름** _(선택 사항)_           | `name`                | `Optional[str]`                  | 태스크의 이름 식별자입니다.                                                                                    |
+| **에이전트** _(선택 사항)_        | `agent`               | `Optional[BaseAgent]`            | 태스크 실행을 담당하는 에이전트입니다.                                                                         |
+| **도구** _(선택 사항)_           | `tools`               | `List[BaseTool]`                 | 이 태스크를 위해 에이전트가 사용할 수 있는 도구/리소스 목록입니다.                                              |
+| **컨텍스트** _(선택 사항)_        | `context`             | `Optional[List["Task"]]`         | 이 태스크의 컨텍스트로 사용될 다른 태스크의 출력입니다.                                                        |
+| **비동기 실행** _(선택 사항)_     | `async_execution`     | `Optional[bool]`                 | 태스크를 비동기적으로 실행할지 여부입니다. 기본값은 False입니다.                                                |
+| **사용자 입력** _(선택 사항)_     | `human_input`         | `Optional[bool]`                 | 태스크의 최종 답안을 에이전트가 제출한 뒤 사람이 검토할지 여부입니다. 기본값은 False입니다.                    |
+| **마크다운** _(선택 사항)_        | `markdown`            | `Optional[bool]`                 | 태스크가 에이전트에게 최종 답안을 마크다운으로 포매팅해서 반환하도록 지시할지 여부입니다. 기본값은 False입니다. |
+| **설정** _(선택 사항)_            | `config`              | `Optional[Dict[str, Any]]`       | 태스크별 설정 파라미터입니다.                                                                                  |
+| **출력 파일** _(선택 사항)_       | `output_file`         | `Optional[str]`                  | 태스크 결과를 저장할 파일 경로입니다.                                                                           |
+| **디렉터리 생성** _(선택 사항)_   | `create_directory`    | `Optional[bool]`                 | output_file의 디렉터리가 존재하지 않을 경우 생성할지 여부입니다. 기본값은 True입니다.                          |
+| **출력 JSON** _(선택 사항)_       | `output_json`         | `Optional[Type[BaseModel]]`       | JSON 출력을 구조화하기 위한 Pydantic 모델입니다.                                                               |
+| **Pydantic 출력** _(선택 사항)_   | `output_pydantic`     | `Optional[Type[BaseModel]]`       | 태스크 출력용 Pydantic 모델입니다.                                                                             |
+| **콜백** _(선택 사항)_            | `callback`            | `Optional[Any]`                  | 태스크 완료 후 실행할 함수/객체입니다.                                                                         |
+| **가드레일** _(선택 사항)_        | `guardrail`           | `Optional[Callable]`                | 다음 태스크로 진행하기 전에 태스크 출력을 검증하는 함수입니다.                                               |
+
+## 작업 생성하기
+
+CrewAI에서 작업을 생성하는 방법에는 **YAML 구성(권장)** 을 사용하는 방법과 **코드에서 직접 정의하는 방법** 두 가지가 있습니다.
+
+### YAML 구성 (권장)
+
+YAML 구성을 사용하면 작업을 정의할 때 더 깔끔하고 유지 관리가 용이한 방법을 제공합니다. CrewAI 프로젝트에서 작업을 정의할 때 이 방식을 사용하는 것을 강력히 권장합니다.
+
+[설치](/ko/installation) 섹션에 따라 CrewAI 프로젝트를 생성한 후, `src/latest_ai_development/config/tasks.yaml` 파일로 이동하여 템플릿을 귀하의 특정 작업 요구 사항에 맞게 수정하세요.
+
+<Note>
+YAML 파일 내 변수(예: `{topic}`)는 크루를 실행할 때 입력값에서 가져온 값으로 대체됩니다:
+```python Code
+crew.kickoff(inputs={'topic': 'AI Agents'})
+```
+</Note>
+
+아래는 YAML을 사용하여 작업을 구성하는 방법의 예시입니다:
+
+```yaml tasks.yaml
+research_task:
+  description: >
+    Conduct a thorough research about {topic}
+    Make sure you find any interesting and relevant information given
+    the current year is 2025.
+  expected_output: >
+    A list with 10 bullet points of the most relevant information about {topic}
+  agent: researcher
+
+reporting_task:
+  description: >
+    Review the context you got and expand each topic into a full section for a report.
+    Make sure the report is detailed and contains any and all relevant information.
+  expected_output: >
+    A fully fledge reports with the mains topics, each with a full section of information.
+    Formatted as markdown without '```'
+  agent: reporting_analyst
+  markdown: true
+  output_file: report.md
+```
+
+이 YAML 구성을 코드에서 사용하려면 `CrewBase`를 상속받는 크루 클래스를 생성하세요:
+
+```python crew.py
+# src/latest_ai_development/crew.py
+
+from crewai import Agent, Crew, Process, Task
+from crewai.project import CrewBase, agent, crew, task
+from crewai_tools import SerperDevTool
+
+@CrewBase
+class LatestAiDevelopmentCrew():
+  """LatestAiDevelopment crew"""
+
+  @agent
+  def researcher(self) -> Agent:
+    return Agent(
+      config=self.agents_config['researcher'], # type: ignore[index]
+      verbose=True,
+      tools=[SerperDevTool()]
+    )
+
+  @agent
+  def reporting_analyst(self) -> Agent:
+    return Agent(
+      config=self.agents_config['reporting_analyst'], # type: ignore[index]
+      verbose=True
+    )
+
+  @task
+  def research_task(self) -> Task:
+    return Task(
+      config=self.tasks_config['research_task'] # type: ignore[index]
+    )
+
+  @task
+  def reporting_task(self) -> Task:
+    return Task(
+      config=self.tasks_config['reporting_task'] # type: ignore[index]
+    )
+
+  @crew
+  def crew(self) -> Crew:
+    return Crew(
+      agents=[
+        self.researcher(),
+        self.reporting_analyst()
+      ],
+      tasks=[
+        self.research_task(),
+        self.reporting_task()
+      ],
+      process=Process.sequential
+    )
+```
+
+<Note>
+YAML 파일(`agents.yaml` 및 `tasks.yaml`)에서 사용하는 이름은 Python 코드의 메서드 이름과 일치해야 합니다.
+</Note>
+
+### 코드에서 직접 태스크 정의 (대안)
+
+또는 YAML 구성 없이 코드에서 직접 태스크를 정의할 수 있습니다:
+
+```python task.py
+from crewai import Task
+
+research_task = Task(
+    description="""
+        Conduct a thorough research about AI Agents.
+        Make sure you find any interesting and relevant information given
+        the current year is 2025.
+    """,
+    expected_output="""
+        A list with 10 bullet points of the most relevant information about AI Agents
+    """,
+    agent=researcher
+)
+
+reporting_task = Task(
+    description="""
+        Review the context you got and expand each topic into a full section for a report.
+        Make sure the report is detailed and contains any and all relevant information.
+    """,
+    expected_output="""
+        A fully fledge reports with the mains topics, each with a full section of information.
+    """,
+    agent=reporting_analyst,
+    markdown=True,  # Enable markdown formatting for the final output
+    output_file="report.md"
+)
+```
+
+<Tip>
+  `agent`를 직접 지정하여 할당하거나, 역할·가용성 등에 따라 `hierarchical` CrewAI 프로세스가 자동으로 결정하도록 둘 수 있습니다.
+</Tip>
+
+## 작업 결과
+
+작업 결과를 이해하는 것은 효과적인 AI 워크플로우를 구축하는 데 매우 중요합니다. CrewAI는 여러 출력 형식을 지원하는 `TaskOutput` 클래스를 통해 작업 결과를 구조적으로 처리할 수 있는 방식을 제공합니다. 이 클래스는 작업 간에 출력값을 쉽게 전달할 수 있도록 지원합니다.
+
+CrewAI 프레임워크에서 작업의 출력은 `TaskOutput` 클래스에 캡슐화되어 있습니다. 이 클래스는 작업의 결과를 구조적으로 접근할 수 있도록 해주며, raw 출력, JSON, Pydantic 모델 등 다양한 형식을 지원합니다.
+
+기본적으로 `TaskOutput`에는 `raw` 출력만 포함됩니다. 원래의 `Task` 객체가 각각 `output_pydantic` 또는 `output_json`으로 구성된 경우에만 `TaskOutput`에 `pydantic` 또는 `json_dict` 출력이 포함됩니다.
+
+### 작업 출력 속성
+
+| 속성              | 파라미터           | 타입                       | 설명                                                                                                  |
+| :---------------- | :----------------- | :------------------------- | :---------------------------------------------------------------------------------------------------- |
+| **설명**          | `description`      | `str`                      | 작업에 대한 설명입니다.                                                                                |
+| **요약**          | `summary`          | `Optional[str]`            | 설명의 처음 10단어에서 자동 생성된 작업의 요약입니다.                                                 |
+| **Raw**           | `raw`              | `str`                      | 작업의 원시 출력값입니다. 출력의 기본 형식입니다.                                                     |
+| **Pydantic**      | `pydantic`         | `Optional[BaseModel]`      | 작업의 구조화된 출력을 나타내는 Pydantic 모델 객체입니다.                                              |
+| **JSON Dict**     | `json_dict`        | `Optional[Dict[str, Any]]` | 작업의 JSON 출력을 나타내는 딕셔너리입니다.                                                           |
+| **Agent**         | `agent`            | `str`                      | 작업을 실행한 agent입니다.                                                                            |
+| **Output Format** | `output_format`    | `OutputFormat`             | 작업 출력의 형식입니다. RAW, JSON, Pydantic 옵션이 있으며, 기본값은 RAW입니다.                        |
+
+### 태스크 메서드 및 프로퍼티
+
+| Method/Property | 설명                                                                                                |
+| :-------------- | :------------------------------------------------------------------------------------------------- |
+| **json**        | 출력 포맷이 JSON일 경우 태스크 출력의 JSON 문자열 표현을 반환합니다.                                 |
+| **to_dict**     | JSON 및 Pydantic 출력을 딕셔너리로 변환합니다.                                                      |
+| **str**         | 태스크 출력의 문자열 표현을 반환하며, Pydantic을 우선으로 하고 그 다음은 JSON, 그 다음은 raw를 사용합니다. |
+
+### 작업 출력 액세스
+
+작업이 실행된 후에는 `Task` 객체의 `output` 속성을 통해 그 출력을 액세스할 수 있습니다. `TaskOutput` 클래스는 이 출력을 다양한 방식으로 상호작용하고 표시할 수 있는 기능을 제공합니다.
+
+#### 예시
+
+```python Code
+# Example task
+task = Task(
+    description='Find and summarize the latest AI news',
+    expected_output='A bullet list summary of the top 5 most important AI news',
+    agent=research_agent,
+    tools=[search_tool]
+)
+
+# Execute the crew
+crew = Crew(
+    agents=[research_agent],
+    tasks=[task],
+    verbose=True
+)
+
+result = crew.kickoff()
+
+# Accessing the task output
+task_output = task.output
+
+print(f"Task Description: {task_output.description}")
+print(f"Task Summary: {task_output.summary}")
+print(f"Raw Output: {task_output.raw}")
+if task_output.json_dict:
+    print(f"JSON Output: {json.dumps(task_output.json_dict, indent=2)}")
+if task_output.pydantic:
+    print(f"Pydantic Output: {task_output.pydantic}")
+```
+
+## 마크다운 출력 포매팅
+
+`markdown` 매개변수는 작업 출력에 대해 자동 마크다운 포매팅을 활성화합니다. 이 값을 `True`로 설정하면, 작업은 에이전트에게 최종 답변을 올바른 마크다운 문법으로 포매팅하도록 지시합니다.
+
+### 마크다운(Markdown) 포매팅 사용하기
+
+```python Code
+# Example task with markdown formatting enabled
+formatted_task = Task(
+    description="Create a comprehensive report on AI trends",
+    expected_output="A well-structured report with headers, sections, and bullet points",
+    agent=reporter_agent,
+    markdown=True  # Enable automatic markdown formatting
+)
+```
+
+`markdown=True`일 때, 에이전트는 다음과 같이 출력을 포매팅하라는 추가 지시를 받게 됩니다:
+- 헤더에는 `#` 사용
+- 볼드체는 `**텍스트**` 사용
+- 이탤릭체는 `*텍스트*` 사용
+- 불릿 포인트에는 `-` 또는 `*` 사용
+- 인라인 코드는 `` `코드` `` 사용
+- 코드 블록은 ``` ```언어 ``` 사용
+
+### 마크다운을 활용한 YAML 구성
+
+```yaml tasks.yaml
+analysis_task:
+  description: >
+    Analyze the market data and create a detailed report
+  expected_output: >
+    A comprehensive analysis with charts and key findings
+  agent: analyst
+  markdown: true  # Enable markdown formatting
+  output_file: analysis.md
+```
+
+### 마크다운 출력의 이점
+
+- **일관된 포맷팅**: 모든 출력이 올바른 마크다운 규칙을 따르도록 보장합니다
+- **향상된 가독성**: 헤더, 목록, 강조 등으로 구조화된 콘텐츠
+- **문서화에 적합**: 출력을 문서 시스템에서 바로 사용할 수 있습니다
+- **크로스 플랫폼 호환성**: 마크다운은 보편적으로 지원됩니다
+
+<Note>
+마크다운 포맷팅 지침은 `markdown=True`일 때 작업 프롬프트에 자동으로 추가되므로, 작업 설명에 포맷팅 요구사항을 따로 명시할 필요가 없습니다.
+</Note>
+
+## 작업 종속성 및 컨텍스트
+
+작업은 `context` 속성을 사용하여 다른 작업의 출력에 의존할 수 있습니다. 예를 들어:
+
+```python Code
+research_task = Task(
+    description="Research the latest developments in AI",
+    expected_output="A list of recent AI developments",
+    agent=researcher
+)
+
+analysis_task = Task(
+    description="Analyze the research findings and identify key trends",
+    expected_output="Analysis report of AI trends",
+    agent=analyst,
+    context=[research_task]  # This task will wait for research_task to complete
+)
+```
+
+## 작업 가드레일
+
+작업 가드레일은 작업 출력물을 다음 작업에 전달하기 전에 유효성을 검사하고 변환할 수 있는 방식을 제공합니다. 이 기능은 데이터 품질을 보장하고 에이전트의 출력이 특정 기준을 충족하지 않을 때 피드백을 제공하는 데 도움이 됩니다.
+
+가드레일은 사용자 지정 유효성 검사 로직을 포함하는 Python 함수로 구현되며, 유효성 검사 프로세스를 완전히 제어할 수 있어 신뢰할 수 있고 결정적인 결과를 보장합니다.
+
+### 함수 기반 가드레일
+
+함수 기반 가드레일을 태스크에 추가하려면 `guardrail` 파라미터를 통해 검증 함수를 제공하세요:
+
+```python Code
+from typing import Tuple, Union, Dict, Any
+from crewai import TaskOutput
+
+def validate_blog_content(result: TaskOutput) -> Tuple[bool, Any]:
+    """Validate blog content meets requirements."""
+    try:
+        # Check word count
+        word_count = len(result.split())
+        if word_count > 200:
+            return (False, "Blog content exceeds 200 words")
+
+        # Additional validation logic here
+        return (True, result.strip())
+    except Exception as e:
+        return (False, "Unexpected error during validation")
+
+blog_task = Task(
+    description="Write a blog post about AI",
+    expected_output="A blog post under 200 words",
+    agent=blog_agent,
+    guardrail=validate_blog_content  # Add the guardrail function
+)
+```
+
+### Guardrail 함수 요구사항
+
+1. **함수 시그니처**:
+   - 정확히 하나의 매개변수(태스크 출력)를 받아야 함
+   - `(bool, Any)` 형태의 튜플을 반환해야 함
+   - 타입 힌트는 권장하지만 필수는 아님
+
+2. **반환 값**:
+   - 성공 시: `(bool, Any)` 형태의 튜플을 반환. 예: `(True, validated_result)`
+   - 실패 시: `(bool, str)` 형태의 튜플을 반환. 예: `(False, "Error message explain the failure")`
+
+### 오류 처리 모범 사례
+
+1. **구조화된 오류 응답**:
+```python Code
+from crewai import TaskOutput, LLMGuardrail
+
+def validate_with_context(result: TaskOutput) -> Tuple[bool, Any]:
+    try:
+        # Main validation logic
+        validated_data = perform_validation(result)
+        return (True, validated_data)
+    except ValidationError as e:
+        return (False, f"VALIDATION_ERROR: {str(e)}")
+    except Exception as e:
+        return (False, str(e))
+```
+
+2. **오류 범주**:
+   - 구체적인 오류 코드 사용
+   - 관련 컨텍스트 포함
+   - 실행 가능한 피드백 제공
+
+3. **검증 체인**:
+```python Code
+from typing import Any, Dict, List, Tuple, Union
+from crewai import TaskOutput
+
+def complex_validation(result: TaskOutput) -> Tuple[bool, Any]:
+    """Chain multiple validation steps."""
+    # Step 1: Basic validation
+    if not result:
+        return (False, "Empty result")
+
+    # Step 2: Content validation
+    try:
+        validated = validate_content(result)
+        if not validated:
+            return (False, "Invalid content")
+
+        # Step 3: Format validation
+        formatted = format_output(validated)
+        return (True, formatted)
+    except Exception as e:
+        return (False, str(e))
+```
+
+### 가드레일 결과 처리
+
+가드레일이 `(False, error)`를 반환할 때:
+1. 에러가 에이전트에게 다시 전달됩니다
+2. 에이전트가 문제를 수정하려고 시도합니다
+3. 다음 중 하나가 될 때까지 이 과정이 반복됩니다:
+   - 가드레일이 `(True, result)`를 반환함
+   - 최대 재시도 횟수에 도달함
+
+재시도 처리가 포함된 예시:
+```python Code
+from typing import Optional, Tuple, Union
+from crewai import TaskOutput, Task
+
+def validate_json_output(result: TaskOutput) -> Tuple[bool, Any]:
+    """Validate and parse JSON output."""
+    try:
+        # Try to parse as JSON
+        data = json.loads(result)
+        return (True, data)
+    except json.JSONDecodeError as e:
+        return (False, "Invalid JSON format")
+
+task = Task(
+    description="Generate a JSON report",
+    expected_output="A valid JSON object",
+    agent=analyst,
+    guardrail=validate_json_output,
+    max_retries=3  # Limit retry attempts
+)
+```
+
+## 작업에서 구조화된 일관된 출력 얻기
+
+<Note>
+또한 crew의 마지막 작업의 출력이 실제 crew 자체의 최종 출력이 된다는 점도 중요합니다.
+</Note>
+
+### `output_pydantic` 사용하기
+`output_pydantic` 속성을 사용하면 작업 출력이 준수해야 할 Pydantic 모델을 정의할 수 있습니다. 이를 통해 출력이 구조화될 뿐만 아니라 Pydantic 모델에 따라 유효성 검증도 보장할 수 있습니다.
+
+다음은 output_pydantic을 사용하는 방법을 보여주는 예제입니다.
+
+```python Code
+import json
+
+from crewai import Agent, Crew, Process, Task
+from pydantic import BaseModel
+
+
+class Blog(BaseModel):
+    title: str
+    content: str
+
+
+blog_agent = Agent(
+    role="Blog Content Generator Agent",
+    goal="Generate a blog title and content",
+    backstory="""You are an expert content creator, skilled in crafting engaging and informative blog posts.""",
+    verbose=False,
+    allow_delegation=False,
+    llm="gpt-4o",
+)
+
+task1 = Task(
+    description="""Create a blog title and content on a given topic. Make sure the content is under 200 words.""",
+    expected_output="A compelling blog title and well-written content.",
+    agent=blog_agent,
+    output_pydantic=Blog,
+)
+
+# Instantiate your crew with a sequential process
+crew = Crew(
+    agents=[blog_agent],
+    tasks=[task1],
+    verbose=True,
+    process=Process.sequential,
+)
+
+result = crew.kickoff()
+
+# Option 1: Accessing Properties Using Dictionary-Style Indexing
+print("Accessing Properties - Option 1")
+title = result["title"]
+content = result["content"]
+print("Title:", title)
+print("Content:", content)
+
+# Option 2: Accessing Properties Directly from the Pydantic Model
+print("Accessing Properties - Option 2")
+title = result.pydantic.title
+content = result.pydantic.content
+print("Title:", title)
+print("Content:", content)
+
+# Option 3: Accessing Properties Using the to_dict() Method
+print("Accessing Properties - Option 3")
+output_dict = result.to_dict()
+title = output_dict["title"]
+content = output_dict["content"]
+print("Title:", title)
+print("Content:", content)
+
+# Option 4: Printing the Entire Blog Object
+print("Accessing Properties - Option 5")
+print("Blog:", result)
+
+```
+이 예제에서:
+* title과 content 필드를 가진 Pydantic 모델 Blog가 정의되어 있습니다.
+* 작업 task1은 output_pydantic 속성을 사용하여 출력이 Blog 모델을 준수해야 함을 명시합니다.
+* crew를 실행한 후, 위와 같이 다양한 방법으로 구조화된 출력을 확인할 수 있습니다.
+
+#### 출력 접근 방법 설명
+1. 딕셔너리 스타일 인덱싱: `result["field_name"]`을 사용하여 필드를 직접 접근할 수 있습니다. 이는 CrewOutput 클래스가 `__getitem__` 메서드를 구현하고 있기 때문에 가능합니다.
+2. Pydantic 모델에서 직접 접근: `result.pydantic` 객체에서 속성에 직접 접근할 수 있습니다.
+3. to_dict() 메서드 사용: 출력을 딕셔너리로 변환한 후 필드에 접근합니다.
+4. 전체 객체 출력: 단순히 result 객체를 출력하여 구조화된 출력을 확인할 수 있습니다.
+
+### `output_json` 사용하기
+`output_json` 속성을 사용하면 예상되는 출력을 JSON 형식으로 정의할 수 있습니다. 이를 통해 태스크의 출력이 쉽게 파싱되고, 애플리케이션에서 사용할 수 있는 유효한 JSON 구조임을 보장합니다.
+
+다음은 `output_json` 사용 방법을 보여주는 예시입니다:
+
+```python Code
+import json
+
+from crewai import Agent, Crew, Process, Task
+from pydantic import BaseModel
+
+
+# Define the Pydantic model for the blog
+class Blog(BaseModel):
+    title: str
+    content: str
+
+
+# Define the agent
+blog_agent = Agent(
+    role="Blog Content Generator Agent",
+    goal="Generate a blog title and content",
+    backstory="""You are an expert content creator, skilled in crafting engaging and informative blog posts.""",
+    verbose=False,
+    allow_delegation=False,
+    llm="gpt-4o",
+)
+
+# Define the task with output_json set to the Blog model
+task1 = Task(
+    description="""Create a blog title and content on a given topic. Make sure the content is under 200 words.""",
+    expected_output="A JSON object with 'title' and 'content' fields.",
+    agent=blog_agent,
+    output_json=Blog,
+)
+
+# Instantiate the crew with a sequential process
+crew = Crew(
+    agents=[blog_agent],
+    tasks=[task1],
+    verbose=True,
+    process=Process.sequential,
+)
+
+# Kickoff the crew to execute the task
+result = crew.kickoff()
+
+# Option 1: Accessing Properties Using Dictionary-Style Indexing
+print("Accessing Properties - Option 1")
+title = result["title"]
+content = result["content"]
+print("Title:", title)
+print("Content:", content)
+
+# Option 2: Printing the Entire Blog Object
+print("Accessing Properties - Option 2")
+print("Blog:", result)
+```
+
+이 예시에서:
+* Pydantic 모델인 Blog가 title과 content 필드로 정의되어 있으며, 이는 JSON 출력의 구조를 명시하는 데 사용됩니다.
+* 태스크 task1은 output_json 속성을 사용하여 Blog 모델에 부합하는 JSON 출력을 기대함을 나타냅니다.
+* crew를 실행한 후, 두 가지 방식으로 구조화된 JSON 출력을 접근할 수 있습니다.
+
+#### 출력 접근 방법 설명
+
+1. 딕셔너리 스타일 인덱싱을 사용하여 속성 접근하기: result["field_name"]과 같이 필드를 직접 접근할 수 있습니다. 이는 CrewOutput 클래스가 __getitem__ 메서드를 구현하고 있어 출력을 딕셔너리처럼 사용할 수 있기 때문입니다. 이 방법에서는 result에서 title과 content를 가져옵니다.
+2. 전체 블로그 객체 출력하기: result를 출력하면 CrewOutput 객체의 문자열 표현을 얻을 수 있습니다. __str__ 메서드가 JSON 출력을 반환하도록 구현되어 있기 때문에, 전체 출력을 Blog 객체를 나타내는 형식이 잘 갖추어진 문자열로 볼 수 있습니다.
+
+---
+
+output_pydantic 또는 output_json을 사용하면, 작업의 출력이 일관되고 구조화된 형식으로 생성되므로 애플리케이션 내 또는 여러 작업 간에 데이터를 더 쉽게 처리하고 활용할 수 있습니다.
+
+## 도구와 작업 통합
+
+향상된 작업 성능과 에이전트 상호작용을 위해 [CrewAI Toolkit](https://github.com/joaomdmoura/crewai-tools) 및 [LangChain Tools](https://python.langchain.com/docs/integrations/tools)의 도구를 활용하세요.
+
+## 도구와 함께 Task 생성하기
+
+```python Code
+import os
+os.environ["OPENAI_API_KEY"] = "Your Key"
+os.environ["SERPER_API_KEY"] = "Your Key" # serper.dev API key
+
+from crewai import Agent, Task, Crew
+from crewai_tools import SerperDevTool
+
+research_agent = Agent(
+  role='Researcher',
+  goal='Find and summarize the latest AI news',
+  backstory="""You're a researcher at a large company.
+  You're responsible for analyzing data and providing insights
+  to the business.""",
+  verbose=True
+)
+
+# to perform a semantic search for a specified query from a text's content across the internet
+search_tool = SerperDevTool()
+
+task = Task(
+  description='Find and summarize the latest AI news',
+  expected_output='A bullet list summary of the top 5 most important AI news',
+  agent=research_agent,
+  tools=[search_tool]
+)
+
+crew = Crew(
+    agents=[research_agent],
+    tasks=[task],
+    verbose=True
+)
+
+result = crew.kickoff()
+print(result)
+```
+
+이 예시는 특정 도구와 함께 사용되는 task가 맞춤형 task 실행을 위해 에이전트의 기본 도구 세트를 어떻게 재정의할 수 있는지 보여줍니다.
+
+## 다른 작업 참조하기
+
+CrewAI에서는 한 작업의 출력이 자동으로 다음 작업으로 전달되지만, 특정 작업(여러 개 포함)의 출력을 다른 작업의 컨텍스트로 명확하게 지정할 수도 있습니다.
+
+이는 한 작업이 바로 뒤에 수행되지 않는 다른 작업의 출력에 의존해야 할 때 유용합니다. 이는 작업의 `context` 속성을 통해 수행됩니다:
+
+```python Code
+# ...
+
+research_ai_task = Task(
+    description="Research the latest developments in AI",
+    expected_output="A list of recent AI developments",
+    async_execution=True,
+    agent=research_agent,
+    tools=[search_tool]
+)
+
+research_ops_task = Task(
+    description="Research the latest developments in AI Ops",
+    expected_output="A list of recent AI Ops developments",
+    async_execution=True,
+    agent=research_agent,
+    tools=[search_tool]
+)
+
+write_blog_task = Task(
+    description="Write a full blog post about the importance of AI and its latest news",
+    expected_output="Full blog post that is 4 paragraphs long",
+    agent=writer_agent,
+    context=[research_ai_task, research_ops_task]
+)
+
+#...
+```
+
+## 비동기 실행
+
+작업을 비동기로 실행되도록 정의할 수 있습니다. 이는 crew가 해당 작업이 완료될 때까지 기다리지 않고 다음 작업을 계속 진행한다는 것을 의미합니다. 시간이 오래 걸리는 작업이거나, 이후 작업 수행에 필수적이지 않은 작업에 유용합니다.
+
+이후 작업에서 비동기 작업의 출력이 완료될 때까지 기다리도록 하려면, `context` 속성을 사용할 수 있습니다.
+
+```python Code
+#...
+
+list_ideas = Task(
+    description="List of 5 interesting ideas to explore for an article about AI.",
+    expected_output="Bullet point list of 5 ideas for an article.",
+    agent=researcher,
+    async_execution=True # Will be executed asynchronously
+)
+
+list_important_history = Task(
+    description="Research the history of AI and give me the 5 most important events.",
+    expected_output="Bullet point list of 5 important events.",
+    agent=researcher,
+    async_execution=True # Will be executed asynchronously
+)
+
+write_article = Task(
+    description="Write an article about AI, its history, and interesting ideas.",
+    expected_output="A 4 paragraph article about AI.",
+    agent=writer,
+    context=[list_ideas, list_important_history] # Will wait for the output of the two tasks to be completed
+)
+
+#...
+```
+
+## 콜백 메커니즘
+
+콜백 함수는 작업이 완료된 후 실행되며, 작업 결과에 따라 동작 또는 알림을 트리거할 수 있습니다.
+
+```python Code
+# ...
+
+def callback_function(output: TaskOutput):
+    # Do something after the task is completed
+    # Example: Send an email to the manager
+    print(f"""
+        Task completed!
+        Task: {output.description}
+        Output: {output.raw}
+    """)
+
+research_task = Task(
+    description='Find and summarize the latest AI news',
+    expected_output='A bullet list summary of the top 5 most important AI news',
+    agent=research_agent,
+    tools=[search_tool],
+    callback=callback_function
+)
+
+#...
+```
+
+## 특정 Task Output 접근하기
+
+crew가 실행을 마치면, 해당 task 객체의 `output` 속성을 사용하여 특정 task의 output에 접근할 수 있습니다:
+
+```python Code
+# ...
+task1 = Task(
+    description='Find and summarize the latest AI news',
+    expected_output='A bullet list summary of the top 5 most important AI news',
+    agent=research_agent,
+    tools=[search_tool]
+)
+
+#...
+
+crew = Crew(
+    agents=[research_agent],
+    tasks=[task1, task2, task3],
+    verbose=True
+)
+
+result = crew.kickoff()
+
+# Returns a TaskOutput object with the description and results of the task
+print(f"""
+    Task completed!
+    Task: {task1.output.description}
+    Output: {task1.output.raw}
+""")
+```
+
+## 도구 재정의 메커니즘
+
+작업에서 도구를 지정하면 에이전트의 기능을 동적으로 조정할 수 있어 CrewAI의 유연성이 강조됩니다.
+
+## 오류 처리 및 검증 메커니즘
+
+작업을 생성하고 실행하는 동안, 작업 속성의 견고성과 신뢰성을 보장하기 위해 특정 검증 메커니즘이 마련되어 있습니다. 이는 다음에 국한되지 않습니다:
+
+- 작업마다 한 가지 출력 유형만 설정하여 명확한 출력 기대치를 유지함
+- 고유 식별자 시스템의 무결성을 유지하기 위해 `id` 속성의 수동 할당을 방지함
+
+이러한 검증 절차는 crewAI 프레임워크 내에서 작업 실행의 일관성과 신뢰성을 유지하는 데 도움이 됩니다.
+
+## 파일 저장 시 디렉토리 생성
+
+`create_directory` 매개변수는 CrewAI가 작업 결과를 파일로 저장할 때 디렉토리를 자동으로 생성할지 여부를 제어합니다. 이 기능은 출력물을 체계적으로 정리하고, 특히 복잡한 프로젝트 계층 구조에서 파일 경로가 올바르게 구조화되도록 보장하는 데 매우 유용합니다.
+
+### 기본 동작
+
+기본적으로 `create_directory=True`로 설정되어 있으며, 이는 CrewAI가 출력 파일 경로에 누락된 디렉토리를 자동으로 생성함을 의미합니다:
+
+```python Code
+# 기본 동작 - 디렉토리가 자동으로 생성됩니다
+report_task = Task(
+    description='Generate a comprehensive market analysis report',
+    expected_output='A detailed market analysis with charts and insights',
+    agent=analyst_agent,
+    output_file='reports/2025/market_analysis.md',  # 'reports/2025/'가 없으면 생성됩니다
+    markdown=True
+)
+```
+
+### 디렉터리 생성 비활성화
+
+자동 디렉터리 생성을 방지하고 디렉터리가 이미 존재함을 보장하려면 `create_directory=False`로 설정하세요:
+
+```python Code
+# Strict mode - directory must already exist
+strict_output_task = Task(
+    description='Save critical data that requires existing infrastructure',
+    expected_output='Data saved to pre-configured location',
+    agent=data_agent,
+    output_file='secure/vault/critical_data.json',
+    create_directory=False  # Will raise RuntimeError if 'secure/vault/' doesn't exist
+)
+```
+
+### YAML 구성
+
+이 동작은 YAML 태스크 정의에서도 구성할 수 있습니다:
+
+```yaml tasks.yaml
+analysis_task:
+  description: >
+    분기별 재무 분석 생성
+  expected_output: >
+    분기별 인사이트가 포함된 종합 재무 보고서
+  agent: financial_analyst
+  output_file: reports/quarterly/q4_2024_analysis.pdf
+  create_directory: true  # 'reports/quarterly/' 디렉토리를 자동으로 생성
+
+audit_task:
+  description: >
+    컴플라이언스 감사 수행 및 기존 감사 디렉토리에 저장
+  expected_output: >
+    컴플라이언스 감사 보고서
+  agent: auditor
+  output_file: audit/compliance_report.md
+  create_directory: false  # 디렉토리가 이미 존재해야 함
+```
+
+### 사용 사례
+
+**자동 디렉토리 생성 (`create_directory=True`):**
+- 개발 및 프로토타이핑 환경
+- 날짜 기반 폴더로 동적 보고서 생성
+- 디렉토리 구조가 달라질 수 있는 자동화된 워크플로우
+- 사용자별 폴더가 필요한 멀티 테넌트 애플리케이션
+
+**수동 디렉토리 관리 (`create_directory=False`):**
+- 엄격한 파일 시스템 제어가 필요한 운영 환경
+- 디렉토리가 사전 구성되어야 하는 보안 민감 애플리케이션
+- 특정 권한 요구 사항이 있는 시스템
+- 디렉토리 생성이 감사되는 규정 준수 환경
+
+### 오류 처리
+
+`create_directory=False`이고 디렉토리가 존재하지 않는 경우, CrewAI는 `RuntimeError`를 발생시킵니다:
+
+```python Code
+try:
+    result = crew.kickoff()
+except RuntimeError as e:
+    # Handle missing directory error
+    print(f"Directory creation failed: {e}")
+    # Create directory manually or use fallback location
+```
+
+아래 영상을 통해 CrewAI에서 구조화된 출력을 사용하는 방법을 확인하세요:
+
+<iframe
+  width="560"
+  height="315"
+  src="https://www.youtube.com/embed/dNpKQk5uxHw"
+  title="YouTube video player"
+  frameborder="0"
+  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+  referrerpolicy="strict-origin-when-cross-origin"
+  allowfullscreen
+></iframe>
+
+## 결론
+
+작업(task)은 CrewAI 에이전트의 행동을 이끄는 원동력입니다.
+작업과 그 결과를 적절하게 정의함으로써, 에이전트가 독립적으로 또는 협업 단위로 효과적으로 작동할 수 있는 기반을 마련할 수 있습니다.
+작업에 적합한 도구를 장착하고, 실행 과정을 이해하며, 견고한 검증 절차를 따르는 것은 CrewAI의 잠재력을 극대화하는 데 필수적입니다.
+이를 통해 에이전트가 할당된 작업에 효과적으로 준비되고, 작업이 의도대로 수행될 수 있습니다.

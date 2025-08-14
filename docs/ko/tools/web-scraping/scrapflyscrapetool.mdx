@@ -1,0 +1,220 @@
+---
+title: Scrapfly 웹사이트 스크레이핑 도구
+description: ScrapflyScrapeWebsiteTool은 Scrapfly의 웹 스크레이핑 API를 활용하여 다양한 형식으로 웹사이트의 콘텐츠를 추출합니다.
+icon: spider
+---
+
+# `ScrapflyScrapeWebsiteTool`
+
+## 설명
+
+`ScrapflyScrapeWebsiteTool`은 [Scrapfly](https://scrapfly.io/)의 웹 스크래핑 API를 활용하여 웹사이트에서 콘텐츠를 추출하도록 설계되었습니다. 이 도구는 헤드리스 브라우저 지원, 프록시, 안티-봇 우회 기능 등 고급 웹 스크래핑 기능을 제공합니다. 원시 HTML, 마크다운, 일반 텍스트 등 다양한 형식으로 웹 페이지 데이터를 추출할 수 있어, 광범위한 웹 스크래핑 작업에 이상적입니다.
+
+## 설치
+
+이 도구를 사용하려면 Scrapfly SDK를 설치해야 합니다:
+
+```shell
+uv add scrapfly-sdk
+```
+
+또한 [scrapfly.io/register](https://www.scrapfly.io/register/)에서 회원가입하여 Scrapfly API 키를 발급받아야 합니다.
+
+## 시작 단계
+
+`ScrapflyScrapeWebsiteTool`을(를) 효과적으로 사용하려면 다음 단계를 따르세요:
+
+1. **의존성 설치**: 위의 명령어를 사용하여 Scrapfly SDK를 설치하세요.
+2. **API 키 받기**: Scrapfly에 등록하여 API 키를 받으세요.
+3. **도구 초기화**: API 키로 도구 인스턴스를 생성하세요.
+4. **스크래핑 매개변수 구성**: 필요에 따라 스크래핑 매개변수를 맞춤 설정하세요.
+
+## 예제
+
+다음 예제는 `ScrapflyScrapeWebsiteTool`을 사용하여 웹사이트에서 콘텐츠를 추출하는 방법을 보여줍니다:
+
+```python Code
+from crewai import Agent, Task, Crew
+from crewai_tools import ScrapflyScrapeWebsiteTool
+
+# Initialize the tool
+scrape_tool = ScrapflyScrapeWebsiteTool(api_key="your_scrapfly_api_key")
+
+# Define an agent that uses the tool
+web_scraper_agent = Agent(
+    role="Web Scraper",
+    goal="Extract information from websites",
+    backstory="An expert in web scraping who can extract content from any website.",
+    tools=[scrape_tool],
+    verbose=True,
+)
+
+# Example task to extract content from a website
+scrape_task = Task(
+    description="Extract the main content from the product page at https://web-scraping.dev/products and summarize the available products.",
+    expected_output="A summary of the products available on the website.",
+    agent=web_scraper_agent,
+)
+
+# Create and run the crew
+crew = Crew(agents=[web_scraper_agent], tasks=[scrape_task])
+result = crew.kickoff()
+```
+
+스크래핑 파라미터를 사용자 정의할 수도 있습니다:
+
+```python Code
+# Example with custom scraping parameters
+web_scraper_agent = Agent(
+    role="Web Scraper",
+    goal="Extract information from websites with custom parameters",
+    backstory="An expert in web scraping who can extract content from any website.",
+    tools=[scrape_tool],
+    verbose=True,
+)
+
+# The agent will use the tool with parameters like:
+# url="https://web-scraping.dev/products"
+# scrape_format="markdown"
+# ignore_scrape_failures=True
+# scrape_config={
+#     "asp": True,  # Bypass scraping blocking solutions, like Cloudflare
+#     "render_js": True,  # Enable JavaScript rendering with a cloud headless browser
+#     "proxy_pool": "public_residential_pool",  # Select a proxy pool
+#     "country": "us",  # Select a proxy location
+#     "auto_scroll": True,  # Auto scroll the page
+# }
+
+scrape_task = Task(
+    description="Extract the main content from the product page at https://web-scraping.dev/products using advanced scraping options including JavaScript rendering and proxy settings.",
+    expected_output="A detailed summary of the products with all available information.",
+    agent=web_scraper_agent,
+)
+```
+
+## 매개변수
+
+`ScrapflyScrapeWebsiteTool`은(는) 다음과 같은 매개변수를 받습니다:
+
+### 초기화 매개변수
+
+- **api_key**: 필수. 귀하의 Scrapfly API 키입니다.
+
+### 실행 매개변수
+
+- **url**: 필수. 스크랩할 웹사이트의 URL입니다.
+- **scrape_format**: 선택 사항. 웹 페이지 콘텐츠를 추출할 형식입니다. 옵션으로는 "raw"(HTML), "markdown", "text"가 있습니다. 기본값은 "markdown"입니다.
+- **scrape_config**: 선택 사항. 추가 Scrapfly 스크래핑 구성 옵션이 포함된 딕셔너리입니다.
+- **ignore_scrape_failures**: 선택 사항. 스크래핑 실패 시 실패를 무시할지 여부입니다. `True`로 설정하면, 스크래핑에 실패했을 때 예외를 발생시키는 대신에 도구가 `None`을 반환합니다.
+
+## Scrapfly 구성 옵션
+
+`scrape_config` 매개변수를 사용하면 다음과 같은 옵션으로 스크래핑 동작을 사용자 지정할 수 있습니다:
+
+- **asp**: 안티 스크래핑 보호 우회 활성화.
+- **render_js**: 클라우드 헤드리스 브라우저로 JavaScript 렌더링 활성화.
+- **proxy_pool**: 프록시 풀 선택 (예: "public_residential_pool", "datacenter").
+- **country**: 프록시 위치 선택 (예: "us", "uk").
+- **auto_scroll**: 페이지를 자동으로 스크롤하여 지연 로딩된 콘텐츠를 불러옵니다.
+- **js**: 헤드리스 브라우저에서 커스텀 JavaScript 코드 실행.
+
+전체 구성 옵션 목록은 [Scrapfly API 문서](https://scrapfly.io/docs/scrape-api/getting-started)를 참조하세요.
+
+## 사용법
+
+`ScrapflyScrapeWebsiteTool`을 에이전트와 함께 사용할 때, 에이전트는 크롤링할 웹사이트의 URL을 제공해야 하며, 선택적으로 포맷과 추가 구성 옵션을 지정할 수 있습니다.
+
+```python Code
+# Example of using the tool with an agent
+web_scraper_agent = Agent(
+    role="Web Scraper",
+    goal="Extract information from websites",
+    backstory="An expert in web scraping who can extract content from any website.",
+    tools=[scrape_tool],
+    verbose=True,
+)
+
+# Create a task for the agent
+scrape_task = Task(
+    description="Extract the main content from example.com in markdown format.",
+    expected_output="The main content of example.com in markdown format.",
+    agent=web_scraper_agent,
+)
+
+# Run the task
+crew = Crew(agents=[web_scraper_agent], tasks=[scrape_task])
+result = crew.kickoff()
+```
+
+더 고급 사용자 지정 구성을 위한 사용법:
+
+```python Code
+# Create a task with more specific instructions
+advanced_scrape_task = Task(
+    description="""
+    Extract content from example.com with the following requirements:
+    - Convert the content to plain text format
+    - Enable JavaScript rendering
+    - Use a US-based proxy
+    - Handle any scraping failures gracefully
+    """,
+    expected_output="The extracted content from example.com",
+    agent=web_scraper_agent,
+)
+```
+
+## 오류 처리
+
+기본적으로 `ScrapflyScrapeWebsiteTool`은 스크래핑에 실패하면 예외를 발생시킵니다. 에이전트는 `ignore_scrape_failures` 매개변수를 지정하여 실패를 우아하게 처리하도록 지시할 수 있습니다.
+
+```python Code
+# Create a task that instructs the agent to handle errors
+error_handling_task = Task(
+    description="""
+    Extract content from a potentially problematic website and make sure to handle any
+    scraping failures gracefully by setting ignore_scrape_failures to True.
+    """,
+    expected_output="Either the extracted content or a graceful error message",
+    agent=web_scraper_agent,
+)
+```
+
+## 구현 세부사항
+
+`ScrapflyScrapeWebsiteTool`은 Scrapfly SDK를 사용하여 Scrapfly API와 상호작용합니다:
+
+```python Code
+class ScrapflyScrapeWebsiteTool(BaseTool):
+    name: str = "Scrapfly web scraping API tool"
+    description: str = (
+        "Scrape a webpage url using Scrapfly and return its content as markdown or text"
+    )
+
+    # Implementation details...
+
+    def _run(
+        self,
+        url: str,
+        scrape_format: str = "markdown",
+        scrape_config: Optional[Dict[str, Any]] = None,
+        ignore_scrape_failures: Optional[bool] = None,
+    ):
+        from scrapfly import ScrapeApiResponse, ScrapeConfig
+
+        scrape_config = scrape_config if scrape_config is not None else {}
+        try:
+            response: ScrapeApiResponse = self.scrapfly.scrape(
+                ScrapeConfig(url, format=scrape_format, **scrape_config)
+            )
+            return response.scrape_result["content"]
+        except Exception as e:
+            if ignore_scrape_failures:
+                logger.error(f"Error fetching data from {url}, exception: {e}")
+                return None
+            else:
+                raise e
+```
+
+## 결론
+
+`ScrapflyScrapeWebsiteTool`은 Scrapfly의 고급 웹 스크래핑 기능을 활용하여 웹사이트에서 콘텐츠를 추출할 수 있는 강력한 방법을 제공합니다. 헤드리스 브라우저 지원, 프록시, 안티-봇 우회와 같은 기능을 통해 복잡한 웹사이트도 처리할 수 있으며, 다양한 형식의 콘텐츠를 추출할 수 있습니다. 이 도구는 신뢰할 수 있는 웹 스크래핑이 필요한 데이터 추출, 콘텐츠 모니터링, 연구 작업에 특히 유용합니다.

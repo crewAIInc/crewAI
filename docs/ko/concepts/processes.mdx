@@ -1,0 +1,66 @@
+---
+title: 프로세스
+description: CrewAI에서 프로세스를 통한 워크플로우 관리에 대한 상세 가이드와 최신 구현 세부 사항.
+icon: bars-staggered
+---
+
+## 개요
+
+<Tip>
+  프로세스는 에이전트에 의해 작업이 실행되도록 조정하며, 이는 인간 팀에서의 프로젝트 관리와 유사합니다.  
+  이러한 프로세스는 작업이 미리 정의된 전략에 따라 효율적으로 분배되고 실행되도록 보장합니다.
+</Tip>
+
+## 프로세스 구현
+
+- **순차적(Sequential)**: 작업을 순차적으로 실행하여 작업이 질서 있게 진행되도록 보장합니다.
+- **계층적(Hierarchical)**: 작업을 관리 계층 구조로 조직하며, 작업은 체계적인 명령 체계를 기반으로 위임 및 실행됩니다. 계층적 프로세스를 활성화하려면 매니저 언어 모델(`manager_llm`) 또는 커스텀 매니저 에이전트(`manager_agent`)를 crew에서 지정해야 하며, 이를 통해 매니저가 작업을 생성하고 관리할 수 있도록 지원합니다.
+- **합의 프로세스(Consensual Process, 계획됨)**: 에이전트들 간에 작업 실행에 대한 협력적 의사결정을 목표로 하며, 이 프로세스 유형은 CrewAI 내에서 작업 관리를 민주적으로 접근하도록 도입됩니다. 앞으로 개발될 예정이며, 현재 코드베이스에는 구현되어 있지 않습니다.
+
+## 팀워크에서 프로세스의 역할
+프로세스는 개별 에이전트가 통합된 단위로 작동할 수 있도록 하여, 공통된 목표를 효율적이고 일관성 있게 달성하도록 노력하는 과정을 간소화합니다.
+
+## 프로세스를 Crew에 할당하기
+프로세스를 crew에 할당하려면, crew 생성 시 프로세스 유형을 지정하여 실행 전략을 설정합니다. 계층적 프로세스의 경우, 매니저 에이전트에 대해 `manager_llm` 또는 `manager_agent`를 반드시 정의해야 합니다.
+
+```python
+from crewai import Crew, Process
+
+# Example: Creating a crew with a sequential process
+crew = Crew(
+    agents=my_agents,
+    tasks=my_tasks,
+    process=Process.sequential
+)
+
+# Example: Creating a crew with a hierarchical process
+# Ensure to provide a manager_llm or manager_agent
+crew = Crew(
+    agents=my_agents,
+    tasks=my_tasks,
+    process=Process.hierarchical,
+    manager_llm="gpt-4o"
+    # or
+    # manager_agent=my_manager_agent
+)
+```
+**참고:** `Crew` 객체를 생성하기 전에 반드시 `my_agents`와 `my_tasks`가 정의되어 있어야 하며, 계층적 프로세스의 경우 `manager_llm` 또는 `manager_agent` 중 하나도 필요합니다.
+
+## 순차적 프로세스
+
+이 방법은 동적인 팀 워크플로우를 반영하며, 작업을 신중하고 체계적으로 진행합니다. 작업 수행은 작업 목록에 정의된 순서를 따르며, 한 작업의 출력이 다음 작업의 컨텍스트로 사용됩니다.
+
+작업 컨텍스트를 사용자 지정하려면, `Task` 클래스의 `context` 매개변수를 사용하여 이후 작업에 컨텍스트로 사용될 출력을 지정하세요.
+
+## 계층적 프로세스
+
+기업의 계층 구조를 모방하는 CrewAI는 사용자 지정 관리자 에이전트를 지정하거나 자동으로 생성할 수 있으며, 이때 관리자 언어 모델(`manager_llm`)의 지정을 요구합니다. 이 에이전트는 계획 수립, 위임, 검증 등 작업 실행을 감독합니다. 작업은 미리 할당되지 않으며, 관리자가 에이전트의 역량에 따라 작업을 분배하고, 산출물을 검토하며, 작업 완료 여부를 평가합니다.
+
+## Process 클래스: 상세 개요
+
+`Process` 클래스는 열거형(`Enum`)으로 구현되어 타입 안전성을 보장하며, 프로세스 값을 정의된 타입(`sequential`, `hierarchical`)으로 제한합니다. 합의 기반(consensual) 프로세스는 향후 추가될 예정이며, 이는 지속적인 개발과 혁신에 대한 우리의 의지를 강조합니다.
+
+## 결론
+
+CrewAI 내의 프로세스를 통해 촉진되는 구조화된 협업은 에이전트 간 체계적인 팀워크를 가능하게 하는 데 매우 중요합니다.  
+이 문서는 최신 기능, 향상 사항, 그리고 예정된 Consensual Process 통합을 반영하도록 업데이트되었으며, 사용자가 가장 최신이고 포괄적인 정보를 이용할 수 있도록 보장합니다.

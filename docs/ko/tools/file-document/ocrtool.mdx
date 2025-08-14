@@ -1,0 +1,87 @@
+---
+title: OCR 도구
+description: OCRTool은 비전 기능을 가진 LLM을 사용하여 로컬 이미지나 이미지 URL에서 텍스트를 추출합니다.
+icon: image
+---
+
+# `OCRTool`
+
+## 설명
+
+이미지(로컬 경로 또는 URL)에서 텍스트를 추출합니다. CrewAI의 LLM 인터페이스를 통해 비전 기능이 있는 LLM을 사용합니다.
+
+## 설치
+
+`crewai-tools` 외에 추가 설치는 필요하지 않습니다. 선택한 LLM이 비전 기능을 지원하는지 확인하세요.
+
+## 파라미터
+
+### 실행 매개변수
+
+- `image_path_url` (str, 필수): 로컬 이미지 경로 또는 HTTP(S) URL.
+
+## 예시
+
+### 직접 사용
+
+```python Code
+from crewai_tools import OCRTool
+
+print(OCRTool().run(image_path_url="/tmp/receipt.png"))
+```
+
+### 에이전트와 함께
+
+```python Code
+from crewai import Agent, Task, Crew
+from crewai_tools import OCRTool
+
+ocr = OCRTool()
+
+agent = Agent(
+    role="OCR",
+    goal="Extract text",
+    tools=[ocr],
+)
+
+task = Task(
+    description="Extract text from https://example.com/invoice.jpg",
+    expected_output="All detected text in plain text",
+    agent=agent,
+)
+
+crew = Crew(agents=[agent], tasks=[task])
+result = crew.kickoff()
+```
+
+## 참고 사항
+
+- 선택한 LLM이 이미지 입력을 지원하는지 확인하세요.
+- 큰 이미지는 토큰 사용량을 줄이기 위해 다운스케일링을 고려하세요.
+ - 필요하다면 README 지침에 맞게 특정 LLM 인스턴스(예: `LLM(model="gpt-4o")`)를 도구에 전달할 수 있습니다.
+
+## 예시
+
+```python Code
+from crewai import Agent, Task, Crew
+from crewai_tools import OCRTool
+
+tool = OCRTool()
+
+agent = Agent(
+    role="OCR Specialist",
+    goal="Extract text from images",
+    backstory="Vision‑enabled analyst",
+    tools=[tool],
+    verbose=True,
+)
+
+task = Task(
+    description="Extract text from https://example.com/receipt.png",
+    expected_output="All detected text in plain text",
+    agent=agent,
+)
+
+crew = Crew(agents=[agent], tasks=[task])
+result = crew.kickoff()
+```

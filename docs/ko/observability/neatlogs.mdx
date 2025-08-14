@@ -1,0 +1,129 @@
+---
+title: Neatlogs 통합
+description: CrewAI agent 실행을 이해하고, 디버그하며, 공유하기
+icon: magnifying-glass-chart
+---
+
+# 소개
+
+Neatlogs는 **에이전트가 무엇을 했는지**, **이유는 무엇인지**, 그리고 **공유하는 방법**을 확인할 수 있도록 도와줍니다.
+
+모든 단계를 캡처합니다: 생각, 도구 호출, 응답, 평가 등. 원시 로그는 없습니다. 명확하고 구조화된 추적만 제공합니다. 디버깅과 협업에 탁월합니다.
+
+## 왜 Neatlogs를 사용해야 하나요?
+
+CrewAI 에이전트는 여러 도구와 추론 단계를 사용합니다. 문제가 발생했을 때, 단순한 오류만으로는 충분하지 않습니다 — 맥락이 필요합니다.
+
+Neatlogs를 사용하면 다음과 같은 이점이 있습니다:
+
+- 전체 의사 결정 경로를 따라갈 수 있습니다
+- 단계마다 직접 피드백을 남길 수 있습니다
+- AI 어시스턴트와 함께 트레이스에 대해 채팅할 수 있습니다
+- 실행 결과를 공개적으로 공유해 피드백을 받을 수 있습니다
+- 인사이트를 업무로 전환할 수 있습니다
+
+모두 한 곳에서 가능합니다.
+
+트레이스를 손쉽게 관리하세요
+
+![Traces](/images/neatlogs-1.png)
+![Trace Response](/images/neatlogs-2.png)
+
+CrewAI 트레이스를 보기 위한 최고의 UX. 원하는 곳 어디든 댓글을 남기세요. AI를 활용해 디버깅할 수 있습니다.
+
+![Trace Details](/images/neatlogs-3.png)
+![Ai Chat Bot With A Trace](/images/neatlogs-4.png)
+![Comments Drawer](/images/neatlogs-5.png)
+
+## 핵심 기능
+
+- **Trace Viewer**: 사고, 도구, 결정을 순서대로 추적
+- **인라인 댓글**: 모든 trace 단계에서 팀원을 태그
+- **피드백 및 평가**: 출력물을 올바름 또는 틀림으로 표시
+- **오류 하이라이팅**: API/도구 실패 자동 감지
+- **작업 전환**: 댓글을 할당된 작업으로 변환
+- **Ask the Trace (AI)**: Neatlogs AI 봇과 trace에서 채팅
+- **공개 공유**: trace 링크를 커뮤니티에 게시
+
+## CrewAI로 빠른 설정하기
+
+<Steps>
+  <Step title="회원가입 및 API 키 발급">
+    [neatlogs.com](https://neatlogs.com/?utm_source=crewAI-docs)에 방문하여 프로젝트를 생성하고, API 키를 복사하세요.
+  </Step>
+  <Step title="SDK 설치">
+    ```bash
+    pip install neatlogs
+    ```
+    (최신 버전 0.8.0, Python 3.8+; MIT 라이선스)
+  </Step>
+  <Step title="Neatlogs 초기화">
+    Crew 에이전트를 시작하기 전에 다음을 추가하세요:
+
+    ```python
+    import neatlogs
+    neatlogs.init("YOUR_PROJECT_API_KEY")
+    ```
+
+    에이전트는 평소와 같이 실행됩니다. Neatlogs가 모든 것을 자동으로 캡처합니다.
+
+  </Step>
+</Steps>
+
+## 내부 구조
+
+GitHub에 따르면, Neatlogs는:
+
+- 생각, 도구 호출, 응답, 오류, 그리고 토큰 통계를 캡처합니다
+- AI 기반 작업 생성과 견고한 평가 워크플로우를 지원합니다
+
+이 모든 것이 단 두 줄의 코드로 가능합니다.
+
+## 작동하는 모습을 살펴보기
+
+### 🔍 전체 데모 (4 분)
+
+<iframe
+  width="100%"
+  height="315"
+  src="https://www.youtube.com/embed/8KDme9T2I7Q?si=b8oHteaBwFNs_Duk"
+  title="YouTube video player"
+  frameBorder="0"
+  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+  allowFullScreen
+></iframe>
+
+### ⚙️ CrewAI 통합 (30초)
+
+<iframe
+  className="w-full aspect-video rounded-xl"
+  src="https://www.loom.com/embed/9c78b552af43452bb3e4783cb8d91230?sid=e9d7d370-a91a-49b0-809e-2f375d9e801d"
+  title="Loom video player"
+  frameBorder="0"
+  allowFullScreen
+></iframe>
+
+## 링크 & 지원
+
+- 📘 [Neatlogs 문서](https://docs.neatlogs.com/)
+- 🔐 [대시보드 & API 키](https://app.neatlogs.com/)
+- 🐦 [트위터 팔로우](https://twitter.com/neatlogs)
+- 📧 문의: hello@neatlogs.com
+- 🛠 [GitHub SDK](https://github.com/NeatLogs/neatlogs)
+
+## TL;DR
+
+아래와 같이:
+
+```bash
+pip install neatlogs
+
+import neatlogs
+neatlogs.init("YOUR_API_KEY")
+
+You can now capture, understand, share, and act on your CrewAI agent runs in seconds.
+No setup overhead. Full trace transparency. Full team collaboration.
+```
+
+이제 몇 초 만에 CrewAI agent 실행을 캡처, 이해, 공유하고 바로 조치할 수 있습니다.  
+별도의 설정이 필요하지 않습니다. 완전한 트레이스 투명성. 전체 팀 협업 지원.

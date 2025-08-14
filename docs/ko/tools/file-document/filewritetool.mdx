@@ -1,0 +1,50 @@
+---
+title: 파일 쓰기
+description: FileWriterTool은 파일에 내용을 쓰도록 설계되었습니다.
+icon: file-pen
+---
+
+# `FileWriterTool`
+
+## 설명
+
+`FileWriterTool`은 crewai_tools 패키지의 구성 요소로, 다양한 운영 체제(Windows, Linux, macOS)에서 파일에 내용을 작성하는 과정을 간소화하도록 설계되었습니다.
+이 도구는 보고서 생성, 로그 저장, 설정 파일 작성 등과 같은 시나리오에서 특히 유용합니다.
+운영 체제마다 다른 경로 처리를 지원하며, UTF-8 인코딩을 지원하고, 디렉토리가 존재하지 않으면 자동으로 생성하여, 다양한 플랫폼에서 출력 결과를 안정적으로 정리할 수 있도록 도와줍니다.
+
+## 설치
+
+프로젝트에서 `FileWriterTool`을 사용하려면 crewai_tools 패키지를 설치하세요:
+
+```shell
+pip install 'crewai[tools]'
+```
+
+## 예시
+
+`FileWriterTool`을(를) 시작하려면:
+
+```python Code
+from crewai_tools import FileWriterTool
+
+# Initialize the tool
+file_writer_tool = FileWriterTool()
+
+# Write content to a file in a specified directory
+result = file_writer_tool._run('example.txt', 'This is a test content.', 'test_directory')
+print(result)
+```
+
+## 인자
+
+- `filename`: 생성하거나 덮어쓸 파일의 이름입니다.
+- `content`: 파일에 쓸 내용입니다.
+- `directory` (선택 사항): 파일이 생성될 디렉터리의 경로입니다. 기본값은 현재 디렉터리(`.`)입니다. 디렉터리가 존재하지 않으면 생성됩니다.
+
+## 결론
+
+`FileWriterTool`을 crew에 통합함으로써, 에이전트는 다양한 운영 체제에서 파일에 내용을 안정적으로 쓸 수 있습니다.
+이 도구는 출력 데이터를 저장하거나, 구조화된 파일 시스템을 생성하거나, 크로스 플랫폼 파일 작업을 처리해야 하는 작업에 필수적입니다.
+특히 표준 Python 파일 작업에서 파일 쓰기 이슈가 발생할 수 있는 Windows 사용자에게 권장됩니다.
+
+제공된 설정 및 사용 가이드라인을 준수하면, 이 도구를 프로젝트에 통합하는 과정이 간단하며 모든 플랫폼에서 일관된 파일 쓰기 동작을 보장합니다.

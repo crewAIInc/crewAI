@@ -1,0 +1,179 @@
+---
+title: 통합
+description: "에이전트가 조치를 취할 수 있도록 연결된 애플리케이션입니다."
+icon: "plug"
+---
+
+## 개요
+
+에이전트가 OAuth를 지원하는 모든 공급자와 인증하고 작업을 수행할 수 있도록 지원합니다. Salesforce와 HubSpot부터 Google 및 GitHub까지, 16개 이상의 통합 서비스를 제공합니다.
+
+<Frame>
+  ![Integrations](/images/enterprise/crew_connectors.png)
+</Frame>
+
+## 지원되는 통합
+
+### **커뮤니케이션 & 협업**
+- **Gmail** - 이메일 및 임시 저장 관리
+- **Slack** - 워크스페이스 알림 및 경고
+- **Microsoft** - Office 365 및 Teams 통합
+
+### **프로젝트 관리**
+- **Jira** - 이슈 추적 및 프로젝트 관리
+- **ClickUp** - 작업 및 생산성 관리
+- **Asana** - 팀 작업 및 프로젝트 조정
+- **Notion** - 페이지 및 데이터베이스 관리
+- **Linear** - 소프트웨어 프로젝트 및 버그 추적
+- **GitHub** - 저장소 및 이슈 관리
+
+### **고객 관계 관리**
+- **Salesforce** - CRM 계정 및 기회 관리
+- **HubSpot** - 영업 파이프라인 및 연락처 관리
+- **Zendesk** - 고객 지원 티켓 관리
+
+### **비즈니스 & 금융**
+- **Stripe** - 결제 처리 및 고객 관리
+- **Shopify** - 전자상거래 스토어 및 상품 관리
+
+### **생산성 및 저장소**
+- **Google Sheets** - 스프레드시트 데이터 동기화
+- **Google Calendar** - 일정 및 스케줄 관리
+- **Box** - 파일 저장 및 문서 관리
+
+추가 기능도 곧 제공됩니다!
+
+## 사전 준비 사항
+
+Authentication Integrations를 사용하기 전에 다음이 준비되어 있는지 확인하세요:
+
+- [CrewAI Enterprise](https://app.crewai.com) 계정. 무료 체험으로 시작할 수 있습니다.
+
+## 통합 설정
+
+### 1. 계정 연결하기
+
+1. [CrewAI Enterprise](https://app.crewai.com)로 이동합니다.
+2. **Integrations** 탭으로 이동합니다 - https://app.crewai.com/crewai_plus/connectors
+3. Authentication Integrations 섹션에서 원하는 서비스의 **Connect** 버튼을 클릭합니다.
+4. OAuth 인증 과정을 완료합니다.
+5. 사용 사례에 필요한 권한을 부여합니다.
+6. [CrewAI Enterprise](https://app.crewai.com) 계정 페이지 - https://app.crewai.com/crewai_plus/settings/account 에서 Enterprise Token을 받습니다.
+
+<Frame>
+  ![Integrations](/images/enterprise/enterprise_action_auth_token.png)
+</Frame>
+
+### 2. 통합 도구 설치
+
+최신 버전의 `crewai-tools` 패키지만 있으면 됩니다.
+
+```bash
+uv add crewai-tools
+```
+
+## 사용 예시
+
+### 기본 사용법
+<Tip>
+  인증한 모든 서비스가 도구로 제공됩니다. 따라서 필요한 것은 `CrewaiEnterpriseTools`를 에이전트에 추가하는 것뿐이며, 바로 사용하실 수 있습니다.
+</Tip>
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import CrewaiEnterpriseTools
+
+# Get enterprise tools (Gmail tool will be included)
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token"
+)
+# print the tools
+print(enterprise_tools)
+
+# Create an agent with Gmail capabilities
+email_agent = Agent(
+    role="Email Manager",
+    goal="Manage and organize email communications",
+    backstory="An AI assistant specialized in email management and communication.",
+    tools=enterprise_tools
+)
+
+# Task to send an email
+email_task = Task(
+    description="Draft and send a follow-up email to john@example.com about the project update",
+    agent=email_agent,
+    expected_output="Confirmation that email was sent successfully"
+)
+
+# Run the task
+crew = Crew(
+    agents=[email_agent],
+    tasks=[email_task]
+)
+
+# Run the crew
+crew.kickoff()
+```
+
+### 필터링 도구
+
+```python
+from crewai_tools import CrewaiEnterpriseTools
+
+enterprise_tools = CrewaiEnterpriseTools(
+    actions_list=["gmail_find_email"] # only gmail_find_email tool will be available
+)
+gmail_tool = enterprise_tools["gmail_find_email"]
+
+gmail_agent = Agent(
+    role="Gmail Manager",
+    goal="Manage gmail communications and notifications",
+    backstory="An AI assistant that helps coordinate gmail communications.",
+    tools=[gmail_tool]
+)
+
+notification_task = Task(
+    description="Find the email from john@example.com",
+    agent=gmail_agent,
+    expected_output="Email found from john@example.com"
+)
+
+# Run the task
+crew = Crew(
+    agents=[slack_agent],
+    tasks=[notification_task]
+)
+```
+
+## 모범 사례
+
+### 보안
+- **최소 권한 원칙**: 에이전트의 작업에 필요한 최소한의 권한만 부여하세요
+- **정기적인 감사**: 연결된 통합 및 해당 권한을 주기적으로 검토하세요
+- **자격 증명 보안**: 자격 증명을 하드코딩하지 말고, CrewAI의 안전한 인증 플로우를 사용하세요
+
+### 필터링 도구
+배포된 crew에서 연결된 서비스의 설정 페이지에서 각 통합에 대해 사용할 수 있는 작업을 지정할 수 있습니다.
+
+<Frame>
+  ![Integrations](/images/enterprise/filtering_enterprise_action_tools.png)
+</Frame>
+
+### 다중 사용자 조직을 위한 Scoped Deployments
+crew를 배포하고 각 통합을 특정 사용자에게 범위 지정할 수 있습니다. 예를 들어, google에 연결하는 crew는 특정 사용자의 gmail 계정을 사용할 수 있습니다.
+
+<Tip>
+  이것은 통합을 특정 사용자에게 범위 지정하고자 하는 다중 사용자 조직에서 유용합니다.
+</Tip>
+
+`user_bearer_token`을 사용하여 통합을 특정 사용자에 범위 지정하면 crew가 시작될 때 사용자의 bearer token을 사용해 통합에 인증합니다. 사용자가 로그인하지 않은 경우, crew는 연결된 통합을 사용하지 않습니다. 기본 bearer token을 사용하여 crew와 함께 배포된 통합에 인증할 수 있습니다.
+
+<Frame>
+  ![Integrations](/images/enterprise/user_bearer_token.png)
+</Frame>
+
+### 도움 받기
+
+<Card title="도움이 필요하신가요?" icon="headset" href="mailto:support@crewai.com">
+  통합 설정이나 문제 해결에 대한 지원이 필요하시면 저희 지원팀에 문의하세요.
+</Card>

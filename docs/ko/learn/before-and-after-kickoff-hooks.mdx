@@ -1,0 +1,60 @@
+---
+title: 킥오프 전후 후크(Before and After Kickoff Hooks)
+description: CrewAI에서 킥오프 전후 후크를 사용하는 방법을 알아보세요
+---
+
+CrewAI는 crew의 kickoff 전후에 코드를 실행할 수 있는 hook을 제공합니다. 이러한 hook은 입력값을 사전 처리하거나 결과를 사후 처리하는 데 유용합니다.
+
+## 킥오프 이전 훅
+
+킥오프 이전 훅은 크루가 작업을 시작하기 전에 실행됩니다. 이 훅은 입력 딕셔너리를 받아 이를 수정한 후 크루에 전달할 수 있습니다. 이 훅을 사용하여 환경을 설정하거나, 필요한 데이터를 불러오거나, 입력값을 전처리할 수 있습니다. 입력 데이터가 크루에 의해 처리되기 전에 보완 또는 검증이 필요한 경우에 유용합니다.
+
+다음은 `crew.py`에서 킥오프 이전 함수를 정의하는 예시입니다:
+
+```python
+from crewai import CrewBase
+from crewai.project import before_kickoff
+
+@CrewBase
+class MyCrew:
+    @before_kickoff
+    def prepare_data(self, inputs):
+        # Preprocess or modify inputs
+        inputs['processed'] = True
+        return inputs
+
+#...
+```
+
+이 예시에서, prepare_data 함수는 입력값에 입력이 이미 처리되었음을 나타내는 새로운 키-값 쌍을 추가하여 입력값을 수정합니다.
+
+## 킥오프 후 훅
+
+킥오프 후 훅은 crew의 작업이 완료된 후에 실행됩니다. 이 훅은 crew 실행의 출력값을 담은 result 객체를 전달받습니다. 이 훅은 로깅, 데이터 변환 또는 추가 분석과 같이 결과를 후처리하는 데 이상적입니다.
+
+`crew.py`에서 킥오프 후 함수를 정의하는 방법은 다음과 같습니다.
+
+```python
+from crewai import CrewBase
+from crewai.project import after_kickoff
+
+@CrewBase
+class MyCrew:
+    @after_kickoff
+    def log_results(self, result):
+        # Log or modify the results
+        print("Crew execution completed with result:", result)
+        return result
+
+# ...
+```
+
+`log_results` 함수에서는 crew 실행 결과가 단순히 출력됩니다. 이를 확장하여 알림 전송이나 다른 서비스와의 연동과 같은 더 복잡한 작업을 수행할 수도 있습니다.
+
+## 두 후크 모두 활용하기
+
+두 가지 후크를 함께 사용하면 crew의 실행을 위한 포괄적인 설정과 해제 프로세스를 제공할 수 있습니다. 이들은 관심사의 분리를 통해 코드 아키텍처를 깔끔하게 유지하고, CrewAI 구현의 모듈성을 향상하는 데 특히 유용합니다.
+
+## 결론
+
+CrewAI의 kickoff 전후 훅은 crew 실행의 생명주기에 강력하게 개입할 수 있는 방법을 제공합니다. 이러한 훅을 이해하고 활용함으로써, AI agent의 견고성과 유연성을 크게 향상시킬 수 있습니다.

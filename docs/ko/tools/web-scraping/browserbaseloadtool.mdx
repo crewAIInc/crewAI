@@ -1,0 +1,50 @@
+---
+title: Browserbase 웹 로더
+description: Browserbase는 헤드리스 브라우저를 신뢰성 있게 실행, 관리 및 모니터링할 수 있는 개발자 플랫폼입니다.
+icon: browser 
+---
+
+# `BrowserbaseLoadTool`
+
+## 설명
+
+[Browserbase](https://browserbase.com)는 헤드리스 브라우저를 안정적으로 실행, 관리, 모니터링할 수 있는 개발자 플랫폼입니다.
+
+AI 데이터 수집을 다음과 같이 강화하세요:
+
+ - [서버리스 인프라스트럭처](https://docs.browserbase.com/under-the-hood)를 통해 복잡한 UI에서 데이터를 추출할 수 있는 신뢰할 수 있는 브라우저 제공
+ - [스텔스 모드](https://docs.browserbase.com/features/stealth-mode)에서는 지문 인식 회피 기법과 자동 캡차 솔루션이 포함되어 있습니다
+ - [세션 디버거](https://docs.browserbase.com/features/sessions)를 통해 네트워크 타임라인과 로그로 Browser Session을 점검
+ - [라이브 디버그](https://docs.browserbase.com/guides/session-debug-connection/browser-remote-control)로 자동화 작업을 신속하게 디버깅
+
+## 설치
+
+- [browserbase.com](https://browserbase.com)에서 API 키와 Project ID를 받아 환경 변수(`BROWSERBASE_API_KEY`, `BROWSERBASE_PROJECT_ID`)에 설정하세요.
+- [Browserbase SDK](http://github.com/browserbase/python-sdk)와 `crewai[tools]` 패키지를 설치하세요:
+
+```shell
+pip install browserbase 'crewai[tools]'
+```
+
+## 예시
+
+아래와 같이 BrowserbaseLoadTool을 활용하여 에이전트가 웹사이트를 로드할 수 있도록 합니다:
+
+```python Code
+from crewai_tools import BrowserbaseLoadTool
+
+# Initialize the tool with the Browserbase API key and Project ID
+tool = BrowserbaseLoadTool()
+```
+
+## 인수
+
+다음 매개변수를 사용하여 `BrowserbaseLoadTool`의 동작을 맞춤 설정할 수 있습니다:
+
+| 인수            | 타입       | 설명                                                                                                                             |
+|:----------------|:-----------|:---------------------------------------------------------------------------------------------------------------------------------|
+| **api_key**     | `string`   | _선택 사항_. Browserbase API 키. 기본값은 `BROWSERBASE_API_KEY` 환경 변수입니다.                                            |
+| **project_id**  | `string`   | _선택 사항_. Browserbase 프로젝트 ID. 기본값은 `BROWSERBASE_PROJECT_ID` 환경 변수입니다.                                          |
+| **text_content**| `bool`     | _선택 사항_. 텍스트 콘텐츠만 가져옵니다. 기본값은 `False`입니다.                                              |
+| **session_id**  | `string`   | _선택 사항_. 기존 세션 ID를 제공합니다.                                                  |
+| **proxy**       | `bool`     | _선택 사항_. 프록시 활성화/비활성화 옵션입니다. 기본값은 `False`입니다.                                 |

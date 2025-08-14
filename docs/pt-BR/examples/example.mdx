@@ -1,62 +1,85 @@
 ---
 title: Exemplos CrewAI
-description: Uma coleção de exemplos que mostram como usar o framework CrewAI para automatizar fluxos de trabalho.
+description: Explore exemplos organizados por Crews, Flows, Integrações e Notebooks.
 icon: rocket-launch
 ---
 
+## Crews
+
 <CardGroup cols={3}>
-  <Card
-  title="Estratégia de Marketing"
-  color="#F3A78B"
-  href="https://github.com/crewAIInc/crewAI-examples/tree/main/marketing_strategy"
-  icon="bullhorn"
-    iconType="solid"
-  >
-    Automatize a criação de estratégias de marketing com CrewAI.
+  <Card title="Estratégia de Marketing" icon="bullhorn" href="https://github.com/crewAIInc/crewAI-examples/tree/main/crews/marketing_strategy">
+    Planejamento de campanhas com múltiplos agentes.
   </Card>
-  <Card
-    title="Viagem Surpresa"
-    color="#F3A78B"
-    href="https://github.com/crewAIInc/crewAI-examples/tree/main/surprise_trip"
-    icon="plane"
-      iconType="duotone"
-    >
-      Crie um roteiro de viagem surpresa com CrewAI.
-    </Card>
-    <Card
-    title="Relacionar Perfil a Posições"
-    color="#F3A78B"
-    href="https://github.com/crewAIInc/crewAI-examples/tree/main/match_profile_to_positions"
-    icon="linkedin"
-      iconType="duotone"
-    >
-      Relacione um perfil a vagas de emprego com CrewAI.
-    </Card>
-    <Card
-    title="Criar Vaga"
-    color="#F3A78B"
-    href="https://github.com/crewAIInc/crewAI-examples/tree/main/job-posting"
-    icon="newspaper"
-      iconType="duotone"
-    >
-      Crie uma vaga de emprego com CrewAI.
-    </Card>
-    <Card
-    title="Gerador de Jogos"
-    color="#F3A78B"
-    href="https://github.com/crewAIInc/crewAI-examples/tree/main/game-builder-crew"
-    icon="gamepad"
-      iconType="duotone"
-    >
-      Crie um jogo com CrewAI.
-    </Card>
-    <Card
-    title="Encontrar Candidatos"
-    color="#F3A78B"
-    href="https://github.com/crewAIInc/crewAI-examples/tree/main/recruitment"
-    icon="user-group"
-      iconType="duotone"
-    >
-      Encontre candidatos a vagas com CrewAI.
-    </Card>
+  <Card title="Viagem Surpresa" icon="plane" href="https://github.com/crewAIInc/crewAI-examples/tree/main/crews/surprise_trip">
+    Planejamento de viagens personalizadas.
+  </Card>
+  <Card title="Relacionar Perfil a Posições" icon="id-card" href="https://github.com/crewAIInc/crewAI-examples/tree/main/crews/match_profile_to_positions">
+    Correspondência de CV para vagas com busca vetorial.
+  </Card>
+  <Card title="Criar Vaga" icon="newspaper" href="https://github.com/crewAIInc/crewAI-examples/tree/main/crews/job-posting">
+    Criação automatizada de descrições de vagas.
+  </Card>
+  <Card title="Crew Construtor de Jogos" icon="gamepad" href="https://github.com/crewAIInc/crewAI-examples/tree/main/crews/game-builder-crew">
+    Equipe multiagente que projeta e constrói jogos em Python.
+  </Card>
+  <Card title="Recrutamento" icon="user-group" href="https://github.com/crewAIInc/crewAI-examples/tree/main/crews/recruitment">
+    Prospecção e avaliação de candidatos.
+  </Card>
+  <Card title="Ver todos os Crews" icon="users" href="https://github.com/crewAIInc/crewAI-examples/tree/main/crews">
+    Lista completa de exemplos de crews.
+  </Card>
+</CardGroup>
+
+## Flows
+
+<CardGroup cols={3}>
+  <Card title="Content Creator Flow" icon="pen" href="https://github.com/crewAIInc/crewAI-examples/tree/main/flows/content_creator_flow">
+    Geração de conteúdo com roteamento.
+  </Card>
+  <Card title="Email Auto Responder" icon="envelope" href="https://github.com/crewAIInc/crewAI-examples/tree/main/flows/email_auto_responder_flow">
+    Monitoramento e respostas de e‑mail.
+  </Card>
+  <Card title="Lead Score Flow" icon="chart-line" href="https://github.com/crewAIInc/crewAI-examples/tree/main/flows/lead_score_flow">
+    Qualificação de leads com revisão humana.
+  </Card>
+  <Card title="Meeting Assistant Flow" icon="calendar" href="https://github.com/crewAIInc/crewAI-examples/tree/main/flows/meeting_assistant_flow">
+    Processamento de notas com integrações.
+  </Card>
+  <Card title="Self Evaluation Loop" icon="rotate" href="https://github.com/crewAIInc/crewAI-examples/tree/main/flows/self_evaluation_loop_flow">
+    Fluxos de autoaperfeiçoamento iterativo.
+  </Card>
+  <Card title="Escrever um Livro (Flows)" icon="book" href="https://github.com/crewAIInc/crewAI-examples/tree/main/flows/write_a_book_with_flows">
+    Geração paralela de capítulos.
+  </Card>
+  <Card title="Ver todos os Flows" icon="diagram-project" href="https://github.com/crewAIInc/crewAI-examples/tree/main/flows">
+    Lista completa de exemplos de flows.
+  </Card>
+</CardGroup>
+
+## Integrações
+
+<CardGroup cols={3}>
+  <Card title="CrewAI ↔ LangGraph" icon="link" href="https://github.com/crewAIInc/crewAI-examples/tree/main/integrations/crewai-langgraph">
+    Integração com o framework LangGraph.
+  </Card>
+  <Card title="Azure OpenAI" icon="cloud" href="https://github.com/crewAIInc/crewAI-examples/tree/main/integrations/azure_model">
+    Usando CrewAI com Azure OpenAI.
+  </Card>
+  <Card title="Modelos NVIDIA" icon="microchip" href="https://github.com/crewAIInc/crewAI-examples/tree/main/integrations/nvidia_models">
+    Integrações com o ecossistema NVIDIA.
+  </Card>
+  <Card title="Ver todas as Integrações" icon="puzzle-piece" href="https://github.com/crewAIInc/crewAI-examples/tree/main/integrations">
+    Todos os exemplos de integrações.
+  </Card>
+</CardGroup>
+
+## Notebooks
+
+<CardGroup cols={2}>
+  <Card title="Simple QA Crew + Flow" icon="book" href="https://github.com/crewAIInc/crewAI-examples/tree/main/Notebooks/Simple%20QA%20Crew%20%2B%20Flow">
+    Simple QA Crew + Flow.
+  </Card>
+  <Card title="Todos os Notebooks" icon="book" href="https://github.com/crewAIInc/crewAI-examples/tree/main/Notebooks">
+    Exemplos interativos para aprendizado e experimentação.
+  </Card>
 </CardGroup>

@@ -1,0 +1,205 @@
+---
+title: MLflow 통합
+description: MLflow를 사용하여 에이전트 모니터링을 빠르게 시작하세요.
+icon: bars-staggered
+---
+
+# MLflow 개요
+
+[MLflow](https://mlflow.org/)는 머신러닝 실무자와 팀이 머신러닝 프로세스의 복잡성을 관리할 수 있도록 돕는 오픈소스 플랫폼입니다.
+
+MLflow는 귀하의 생성형 AI 애플리케이션에서 서비스 실행에 대한 상세 정보를 캡처하여 LLM 가시성을 향상시키는 트레이싱 기능을 제공합니다.
+트레이싱은 요청의 각 중간 단계에 관련된 입력값, 출력값, 메타데이터를 기록하는 방법을 제공하여, 버그 및 예기치 않은 동작의 원인을 쉽게 찾아낼 수 있게 합니다.
+
+![MLflow crewAI 트레이싱 사용 개요](/images/mlflow-tracing.gif)
+
+### 기능
+
+- **트레이싱 대시보드**: crewAI 에이전트의 활동을 입력값, 출력값, 스팬의 메타데이터와 함께 자세한 대시보드로 모니터링할 수 있습니다.
+- **자동 트레이싱**: 완전 자동화된 crewAI 통합 기능으로, `mlflow.crewai.autolog()`를 실행하여 활성화할 수 있습니다.
+- **약간의 노력만으로 수동 추적 계측**: 데코레이터, 함수 래퍼, 컨텍스트 매니저 등 MLflow의 고수준 fluent API를 통해 추적 계측을 커스터마이즈할 수 있습니다.
+- **OpenTelemetry 호환성**: MLflow Tracing은 OpenTelemetry Collector로 트레이스를 내보내는 것을 지원하며, 이를 통해 Jaeger, Zipkin, AWS X-Ray 등 다양한 백엔드로 트레이스를 내보낼 수 있습니다.
+- **에이전트 패키징 및 배포**: crewAI 에이전트를 다양한 배포 대상으로 추론 서버에 패키징 및 배포할 수 있습니다.
+- **LLM을 안전하게 호스팅**: 여러 공급자의 LLM을 MFflow 게이트웨이를 통해 하나의 통합 엔드포인트에서 호스팅할 수 있습니다.
+- **평가**: 편리한 API `mlflow.evaluate()`를 사용하여 다양한 지표로 crewAI 에이전트를 평가할 수 있습니다.
+
+## 설치 안내
+
+<Steps>
+    <Step title="MLflow 패키지 설치">
+      ```shell
+      # crewAI 연동은 mlflow>=2.19.0 에서 사용할 수 있습니다.
+      pip install mlflow
+      ```
+    </Step>
+    <Step title="MLflow 추적 서버 시작">
+      ```shell
+      # 이 과정은 선택 사항이지만, MLflow 추적 서버를 사용하면 더 나은 시각화와 더 많은 기능을 사용할 수 있습니다.
+      mlflow server
+      ```
+    </Step>
+    <Step title="애플리케이션에서 MLflow 초기화">
+      다음 두 줄을 애플리케이션 코드에 추가하세요:
+
+      ```python
+      import mlflow
+
+      mlflow.crewai.autolog()
+
+      # 선택 사항: 추적 서버를 사용하는 경우 tracking URI와 experiment 이름을 설정할 수 있습니다.
+      mlflow.set_tracking_uri("http://localhost:5000")
+      mlflow.set_experiment("CrewAI")
+      ```
+
+      CrewAI Agents 추적 예시 사용법:
+
+      ```python
+      from crewai import Agent, Crew, Task
+      from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
+      from crewai_tools import SerperDevTool, WebsiteSearchTool
+
+      from textwrap import dedent
+
+      content = "Users name is John. He is 30 years old and lives in San Francisco."
+      string_source = StringKnowledgeSource(
+          content=content, metadata={"preference": "personal"}
+      )
+
+      search_tool = WebsiteSearchTool()
+
+
+      class TripAgents:
+          def city_selection_agent(self):
+              return Agent(
+                  role="City Selection Expert",
+                  goal="Select the best city based on weather, season, and prices",
+                  backstory="An expert in analyzing travel data to pick ideal destinations",
+                  tools=[
+                      search_tool,
+                  ],
+                  verbose=True,
+              )
+
+          def local_expert(self):
+              return Agent(
+                  role="Local Expert at this city",
+                  goal="Provide the BEST insights about the selected city",
+                  backstory="""A knowledgeable local guide with extensive information
+              about the city, it's attractions and customs""",
+                  tools=[search_tool],
+                  verbose=True,
+              )
+
+
+      class TripTasks:
+          def identify_task(self, agent, origin, cities, interests, range):
+              return Task(
+                  description=dedent(
+                      f"""
+                      Analyze and select the best city for the trip based
+                      on specific criteria such as weather patterns, seasonal
+                      events, and travel costs. This task involves comparing
+                      multiple cities, considering factors like current weather
+                      conditions, upcoming cultural or seasonal events, and
+                      overall travel expenses.
+                      Your final answer must be a detailed
+                      report on the chosen city, and everything you found out
+                      about it, including the actual flight costs, weather
+                      forecast and attractions.
+
+                      Traveling from: {origin}
+                      City Options: {cities}
+                      Trip Date: {range}
+                      Traveler Interests: {interests}
+                  """
+                  ),
+                  agent=agent,
+                  expected_output="Detailed report on the chosen city including flight costs, weather forecast, and attractions",
+              )
+
+          def gather_task(self, agent, origin, interests, range):
+              return Task(
+                  description=dedent(
+                      f"""
+                      As a local expert on this city you must compile an
+                      in-depth guide for someone traveling there and wanting
+                      to have THE BEST trip ever!
+                      Gather information about key attractions, local customs,
+                      special events, and daily activity recommendations.
+                      Find the best spots to go to, the kind of place only a
+                      local would know.
+                      This guide should provide a thorough overview of what
+                      the city has to offer, including hidden gems, cultural
+                      hotspots, must-visit landmarks, weather forecasts, and
+                      high level costs.
+                      The final answer must be a comprehensive city guide,
+                      rich in cultural insights and practical tips,
+                      tailored to enhance the travel experience.
+
+                      Trip Date: {range}
+                      Traveling from: {origin}
+                      Traveler Interests: {interests}
+                  """
+                  ),
+                  agent=agent,
+                  expected_output="Comprehensive city guide including hidden gems, cultural hotspots, and practical travel tips",
+              )
+
+
+      class TripCrew:
+          def __init__(self, origin, cities, date_range, interests):
+              self.cities = cities
+              self.origin = origin
+              self.interests = interests
+              self.date_range = date_range
+
+          def run(self):
+              agents = TripAgents()
+              tasks = TripTasks()
+
+              city_selector_agent = agents.city_selection_agent()
+              local_expert_agent = agents.local_expert()
+
+              identify_task = tasks.identify_task(
+                  city_selector_agent,
+                  self.origin,
+                  self.cities,
+                  self.interests,
+                  self.date_range,
+              )
+              gather_task = tasks.gather_task(
+                  local_expert_agent, self.origin, self.interests, self.date_range
+              )
+
+              crew = Crew(
+                  agents=[city_selector_agent, local_expert_agent],
+                  tasks=[identify_task, gather_task],
+                  verbose=True,
+                  memory=True,
+                  knowledge={
+                      "sources": [string_source],
+                      "metadata": {"preference": "personal"},
+                  },
+              )
+
+              result = crew.kickoff()
+              return result
+
+
+      trip_crew = TripCrew("California", "Tokyo", "Dec 12 - Dec 20", "sports")
+      result = trip_crew.run()
+
+      print(result)
+      ```
+      더 많은 설정 및 사용 예시는 [MLflow Tracing 문서](https://mlflow.org/docs/latest/llms/tracing/index.html)를 참고하세요.
+    </Step>
+    <Step title="에이전트 활동 시각화">
+      이제 crewAI agents의 추적 정보가 MLflow에서 캡처됩니다.
+      MLflow 추적 서버에 접속하여 추적 내역을 확인하고 에이전트의 인사이트를 얻으세요.
+
+      브라우저에서 `127.0.0.1:5000`을 열어 MLflow 추적 서버에 접속하세요.
+      <Frame caption="MLflow 추적 대시보드">
+        <img src="/images/mlflow1.png" alt="MLflow tracing example with crewai" />
+      </Frame>
+    </Step>
+</Steps>

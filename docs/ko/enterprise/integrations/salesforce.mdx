@@ -1,0 +1,632 @@
+---
+title: Salesforce 통합
+description: "CrewAI를 위한 Salesforce 통합을 통한 CRM 및 영업 자동화."
+icon: "salesforce"
+---
+
+## 개요
+
+에이전트가 Salesforce를 통해 고객 관계, 영업 프로세스 및 데이터를 관리할 수 있도록 합니다. 레코드를 생성 및 업데이트하고, 리드와 기회를 관리하며, SOQL 쿼리를 실행하고, AI 기반 자동화로 CRM 워크플로를 간소화하세요.
+
+## 사전 준비 사항
+
+Salesforce 통합을 사용하기 전에 다음을 확인하세요:
+
+- 활성 구독이 있는 [CrewAI Enterprise](https://app.crewai.com) 계정
+- 적절한 권한이 있는 Salesforce 계정
+- [통합 페이지](https://app.crewai.com/integrations)를 통해 Salesforce 계정 연결
+
+## 사용 가능한 도구
+
+### **레코드 관리**
+
+<AccordionGroup>
+  <Accordion title="SALESFORCE_CREATE_RECORD_CONTACT">
+    **설명:** Salesforce에서 새로운 Contact 레코드를 생성합니다.
+
+    **파라미터:**
+    - `FirstName` (string, 선택): 이름
+    - `LastName` (string, 필수): 성 - 이 필드는 필수입니다
+    - `accountId` (string, 선택): Account ID - 이 Contact가 소속된 Account
+    - `Email` (string, 선택): 이메일 주소
+    - `Title` (string, 선택): 담당자의 직함(예: CEO 또는 Vice President 등)
+    - `Description` (string, 선택): Contact에 대한 설명
+    - `additionalFields` (object, 선택): 사용자 정의 Contact 필드를 위한 JSON 형식의 추가 필드
+  </Accordion>
+
+  <Accordion title="SALESFORCE_CREATE_RECORD_LEAD">
+    **설명:** Salesforce에서 새로운 Lead 레코드를 생성합니다.
+
+    **파라미터:**
+    - `FirstName` (string, 선택): 이름
+    - `LastName` (string, 필수): 성 - 이 필드는 필수입니다
+    - `Company` (string, 필수): 회사명 - 이 필드는 필수입니다
+    - `Email` (string, 선택): 이메일 주소
+    - `Phone` (string, 선택): 전화번호
+    - `Website` (string, 선택): 웹사이트 URL
+    - `Title` (string, 선택): 담당자의 직함(예: CEO 또는 Vice President 등)
+    - `Status` (string, 선택): 리드 상태 - 리드 상태를 선택하려면 Connect Portal Workflow 설정을 사용하세요
+    - `Description` (string, 선택): Lead에 대한 설명
+    - `additionalFields` (object, 선택): 사용자 정의 Lead 필드를 위한 JSON 형식의 추가 필드
+  </Accordion>
+
+  <Accordion title="SALESFORCE_CREATE_RECORD_OPPORTUNITY">
+    **설명:** Salesforce에서 새로운 Opportunity 레코드를 생성합니다.
+
+    **파라미터:**
+    - `Name` (string, 필수): Opportunity 이름 - 이 필드는 필수입니다
+    - `StageName` (string, 선택): Opportunity 단계 - 단계를 선택하려면 Connect Portal Workflow 설정을 사용하세요
+    - `CloseDate` (string, 선택): 마감일(YYYY-MM-DD 형식) - 기본값은 현재 날짜로부터 30일 이후
+    - `AccountId` (string, 선택): 이 Opportunity가 소속된 Account
+    - `Amount` (string, 선택): 예상 전체 판매 금액
+    - `Description` (string, 선택): Opportunity에 대한 설명
+    - `OwnerId` (string, 선택): 이 Opportunity를 담당하는 Salesforce 사용자
+    - `NextStep` (string, 선택): Opportunity 마감을 위한 다음 작업의 설명
+    - `additionalFields` (object, 선택): 사용자 정의 Opportunity 필드를 위한 JSON 형식의 추가 필드
+  </Accordion>
+
+  <Accordion title="SALESFORCE_CREATE_RECORD_TASK">
+    **설명:** Salesforce에서 새로운 Task 레코드를 생성합니다.
+
+    **파라미터:**
+    - `whatId` (string, 선택): 관련 ID - 이 Task가 관련된 Account 또는 Opportunity의 ID
+    - `whoId` (string, 선택): 이름 ID - 이 Task가 관련된 Contact 또는 Lead의 ID
+    - `subject` (string, 필수): 작업 제목
+    - `activityDate` (string, 선택): 작업 날짜(YYYY-MM-DD 형식)
+    - `description` (string, 선택): Task에 대한 설명
+    - `taskSubtype` (string, 필수): Task 하위 유형 - 선택 항목: task, email, listEmail, call
+    - `Status` (string, 선택): 상태 - 선택 항목: Not Started, In Progress, Completed
+    - `ownerId` (string, 선택): 담당자 ID - 이 Task를 담당하는 Salesforce 사용자
+    - `callDurationInSeconds` (string, 선택): 통화 시간(초)
+    - `isReminderSet` (boolean, 선택): 알림 설정 여부
+    - `reminderDateTime` (string, 선택): 알림 날짜/시간(ISO 형식)
+    - `additionalFields` (object, 선택): 사용자 정의 Task 필드를 위한 JSON 형식의 추가 필드
+  </Accordion>
+
+  <Accordion title="SALESFORCE_CREATE_RECORD_ACCOUNT">
+    **설명:** Salesforce에서 새로운 Account 레코드를 생성합니다.
+
+    **파라미터:**
+    - `Name` (string, 필수): Account 이름 - 이 필드는 필수입니다
+    - `OwnerId` (string, 선택): 이 Account를 담당하는 Salesforce 사용자
+    - `Website` (string, 선택): 웹사이트 URL
+    - `Phone` (string, 선택): 전화번호
+    - `Description` (string, 선택): Account 설명
+    - `additionalFields` (object, 선택): 사용자 정의 Account 필드를 위한 JSON 형식의 추가 필드
+  </Accordion>
+
+  <Accordion title="SALESFORCE_CREATE_RECORD_ANY">
+    **설명:** Salesforce에서 모든 오브젝트 유형의 레코드를 생성합니다.
+
+    **참고:** 이 기능은 사용자 정의 또는 알려지지 않은 오브젝트 유형의 레코드를 생성할 때 유연하게 사용할 수 있습니다.
+  </Accordion>
+</AccordionGroup>
+
+### **레코드 업데이트**
+
+<AccordionGroup>
+  <Accordion title="SALESFORCE_UPDATE_RECORD_CONTACT">
+    **설명:** Salesforce에서 기존 연락처(Contact) 레코드를 업데이트합니다.
+
+    **파라미터:**
+    - `recordId` (string, 필수): 업데이트할 레코드의 ID
+    - `FirstName` (string, 선택): 이름
+    - `LastName` (string, 선택): 성
+    - `accountId` (string, 선택): 계정 ID - 연락처가 속한 계정
+    - `Email` (string, 선택): 이메일 주소
+    - `Title` (string, 선택): 연락처의 직함
+    - `Description` (string, 선택): 연락처에 대한 설명
+    - `additionalFields` (object, 선택): 커스텀 연락처 필드를 위한 JSON 형식의 추가 필드
+  </Accordion>
+
+  <Accordion title="SALESFORCE_UPDATE_RECORD_LEAD">
+    **설명:** Salesforce에서 기존 리드(Lead) 레코드를 업데이트합니다.
+
+    **파라미터:**
+    - `recordId` (string, 필수): 업데이트할 레코드의 ID
+    - `FirstName` (string, 선택): 이름
+    - `LastName` (string, 선택): 성
+    - `Company` (string, 선택): 회사명
+    - `Email` (string, 선택): 이메일 주소
+    - `Phone` (string, 선택): 전화번호
+    - `Website` (string, 선택): 웹사이트 URL
+    - `Title` (string, 선택): 연락처의 직함
+    - `Status` (string, 선택): 리드 상태
+    - `Description` (string, 선택): 리드에 대한 설명
+    - `additionalFields` (object, 선택): 커스텀 리드 필드를 위한 JSON 형식의 추가 필드
+  </Accordion>
+
+  <Accordion title="SALESFORCE_UPDATE_RECORD_OPPORTUNITY">
+    **설명:** Salesforce에서 기존 기회(Opportunity) 레코드를 업데이트합니다.
+
+    **파라미터:**
+    - `recordId` (string, 필수): 업데이트할 레코드의 ID
+    - `Name` (string, 선택): 기회명
+    - `StageName` (string, 선택): 기회 단계
+    - `CloseDate` (string, 선택): 마감 날짜 (YYYY-MM-DD 형식)
+    - `AccountId` (string, 선택): 기회가 속한 계정
+    - `Amount` (string, 선택): 예상 총 판매 금액
+    - `Description` (string, 선택): 기회에 대한 설명
+    - `OwnerId` (string, 선택): 이 기회를 담당하는 Salesforce 사용자
+    - `NextStep` (string, 선택): 기회 마감을 위한 다음 작업의 설명
+    - `additionalFields` (object, 선택): 커스텀 기회 필드를 위한 JSON 형식의 추가 필드
+  </Accordion>
+
+  <Accordion title="SALESFORCE_UPDATE_RECORD_TASK">
+    **설명:** Salesforce에서 기존 작업(Task) 레코드를 업데이트합니다.
+
+    **파라미터:**
+    - `recordId` (string, 필수): 업데이트할 레코드의 ID
+    - `whatId` (string, 선택): 관련 ID - 이 작업이 연결된 계정 또는 기회의 ID
+    - `whoId` (string, 선택): 이름 ID - 이 작업이 연결된 연락처 또는 리드의 ID
+    - `subject` (string, 선택): 작업의 주제
+    - `activityDate` (string, 선택): 활동 날짜 (YYYY-MM-DD 형식)
+    - `description` (string, 선택): 작업에 대한 설명
+    - `Status` (string, 선택): 상태 - 옵션: Not Started, In Progress, Completed
+    - `ownerId` (string, 선택): 담당자 ID - 이 작업을 할당받은 Salesforce 사용자
+    - `callDurationInSeconds` (string, 선택): 통화 시간(초)
+    - `isReminderSet` (boolean, 선택): 알림 설정 여부
+    - `reminderDateTime` (string, 선택): 알림 날짜/시간 (ISO 형식)
+    - `additionalFields` (object, 선택): 커스텀 작업 필드를 위한 JSON 형식의 추가 필드
+  </Accordion>
+
+  <Accordion title="SALESFORCE_UPDATE_RECORD_ACCOUNT">
+    **설명:** Salesforce에서 기존 계정(Account) 레코드를 업데이트합니다.
+
+    **파라미터:**
+    - `recordId` (string, 필수): 업데이트할 레코드의 ID
+    - `Name` (string, 선택): 계정 이름
+    - `OwnerId` (string, 선택): 이 계정에 할당된 Salesforce 사용자
+    - `Website` (string, 선택): 웹사이트 URL
+    - `Phone` (string, 선택): 전화번호
+    - `Description` (string, 선택): 계정 설명
+    - `additionalFields` (object, 선택): 커스텀 계정 필드를 위한 JSON 형식의 추가 필드
+  </Accordion>
+
+  <Accordion title="SALESFORCE_UPDATE_RECORD_ANY">
+    **설명:** Salesforce에서 어떤 객체 유형이든 레코드를 업데이트합니다.
+
+    **참고:** 이는 커스텀 또는 미확인 객체 유형의 레코드 업데이트를 위한 유연한 도구입니다.
+  </Accordion>
+</AccordionGroup>
+
+### **레코드 조회**
+
+<AccordionGroup>
+  <Accordion title="SALESFORCE_GET_RECORD_BY_ID_CONTACT">
+    **설명:** ID로 Contact 레코드를 조회합니다.
+
+    **파라미터:**
+    - `recordId` (string, 필수): Contact의 레코드 ID
+  </Accordion>
+
+  <Accordion title="SALESFORCE_GET_RECORD_BY_ID_LEAD">
+    **설명:** ID로 Lead 레코드를 조회합니다.
+
+    **파라미터:**
+    - `recordId` (string, 필수): Lead의 레코드 ID
+  </Accordion>
+
+  <Accordion title="SALESFORCE_GET_RECORD_BY_ID_OPPORTUNITY">
+    **설명:** ID로 Opportunity 레코드를 조회합니다.
+
+    **파라미터:**
+    - `recordId` (string, 필수): Opportunity의 레코드 ID
+  </Accordion>
+
+  <Accordion title="SALESFORCE_GET_RECORD_BY_ID_TASK">
+    **설명:** ID로 Task 레코드를 조회합니다.
+
+    **파라미터:**
+    - `recordId` (string, 필수): Task의 레코드 ID
+  </Accordion>
+
+  <Accordion title="SALESFORCE_GET_RECORD_BY_ID_ACCOUNT">
+    **설명:** ID로 Account 레코드를 조회합니다.
+
+    **파라미터:**
+    - `recordId` (string, 필수): Account의 레코드 ID
+  </Accordion>
+
+  <Accordion title="SALESFORCE_GET_RECORD_BY_ID_ANY">
+    **설명:** ID로 임의 객체 유형의 레코드를 조회합니다.
+
+    **파라미터:**
+    - `recordType` (string, 필수): 레코드 유형 (예: "CustomObject__c")
+    - `recordId` (string, 필수): 레코드 ID
+  </Accordion>
+</AccordionGroup>
+
+### **레코드 검색**
+
+<AccordionGroup>
+  <Accordion title="SALESFORCE_SEARCH_RECORDS_CONTACT">
+    **설명:** 고급 필터링으로 연락처(Contact) 레코드를 검색합니다.
+
+    **파라미터:**
+    - `filterFormula` (object, 선택): 필드별 연산자가 지정된 분리적 정규형(Disjunctive Normal Form)의 고급 필터
+    - `sortBy` (string, 선택): 정렬 기준 필드 (예: "CreatedDate")
+    - `sortDirection` (string, 선택): 정렬 방향 - 옵션: ASC, DESC
+    - `includeAllFields` (boolean, 선택): 결과에 모든 필드를 포함
+    - `paginationParameters` (object, 선택): pageCursor를 포함한 페이지네이션 설정
+  </Accordion>
+
+  <Accordion title="SALESFORCE_SEARCH_RECORDS_LEAD">
+    **설명:** 고급 필터링으로 리드(Lead) 레코드를 검색합니다.
+
+    **파라미터:**
+    - `filterFormula` (object, 선택): 필드별 연산자가 지정된 분리적 정규형의 고급 필터
+    - `sortBy` (string, 선택): 정렬 기준 필드 (예: "CreatedDate")
+    - `sortDirection` (string, 선택): 정렬 방향 - 옵션: ASC, DESC
+    - `includeAllFields` (boolean, 선택): 결과에 모든 필드를 포함
+    - `paginationParameters` (object, 선택): pageCursor를 포함한 페이지네이션 설정
+  </Accordion>
+
+  <Accordion title="SALESFORCE_SEARCH_RECORDS_OPPORTUNITY">
+    **설명:** 고급 필터링으로 기회(Opportunity) 레코드를 검색합니다.
+
+    **파라미터:**
+    - `filterFormula` (object, 선택): 필드별 연산자가 지정된 분리적 정규형의 고급 필터
+    - `sortBy` (string, 선택): 정렬 기준 필드 (예: "CreatedDate")
+    - `sortDirection` (string, 선택): 정렬 방향 - 옵션: ASC, DESC
+    - `includeAllFields` (boolean, 선택): 결과에 모든 필드를 포함
+    - `paginationParameters` (object, 선택): pageCursor를 포함한 페이지네이션 설정
+  </Accordion>
+
+  <Accordion title="SALESFORCE_SEARCH_RECORDS_TASK">
+    **설명:** 고급 필터링으로 작업(Task) 레코드를 검색합니다.
+
+    **파라미터:**
+    - `filterFormula` (object, 선택): 필드별 연산자가 지정된 분리적 정규형의 고급 필터
+    - `sortBy` (string, 선택): 정렬 기준 필드 (예: "CreatedDate")
+    - `sortDirection` (string, 선택): 정렬 방향 - 옵션: ASC, DESC
+    - `includeAllFields` (boolean, 선택): 결과에 모든 필드를 포함
+    - `paginationParameters` (object, 선택): pageCursor를 포함한 페이지네이션 설정
+  </Accordion>
+
+  <Accordion title="SALESFORCE_SEARCH_RECORDS_ACCOUNT">
+    **설명:** 고급 필터링으로 계정(Account) 레코드를 검색합니다.
+
+    **파라미터:**
+    - `filterFormula` (object, 선택): 필드별 연산자가 지정된 분리적 정규형의 고급 필터
+    - `sortBy` (string, 선택): 정렬 기준 필드 (예: "CreatedDate")
+    - `sortDirection` (string, 선택): 정렬 방향 - 옵션: ASC, DESC
+    - `includeAllFields` (boolean, 선택): 결과에 모든 필드를 포함
+    - `paginationParameters` (object, 선택): pageCursor를 포함한 페이지네이션 설정
+  </Accordion>
+
+  <Accordion title="SALESFORCE_SEARCH_RECORDS_ANY">
+    **설명:** 모든 오브젝트 유형의 레코드를 검색합니다.
+
+    **파라미터:**
+    - `recordType` (string, 필수): 검색할 레코드 유형
+    - `filterFormula` (string, 선택): 필터 검색 조건
+    - `includeAllFields` (boolean, 선택): 결과에 모든 필드를 포함
+    - `paginationParameters` (object, 선택): pageCursor를 포함한 페이지네이션 설정
+  </Accordion>
+</AccordionGroup>
+
+### **리스트 뷰 조회**
+
+<AccordionGroup>
+  <Accordion title="SALESFORCE_GET_RECORD_BY_VIEW_ID_CONTACT">
+    **설명:** 특정 리스트 뷰에서 Contact 레코드를 가져옵니다.
+
+    **파라미터:**
+    - `listViewId` (string, 필수): 리스트 뷰 ID
+    - `paginationParameters` (object, 선택): pageCursor와 함께 사용하는 페이지네이션 설정
+  </Accordion>
+
+  <Accordion title="SALESFORCE_GET_RECORD_BY_VIEW_ID_LEAD">
+    **설명:** 특정 리스트 뷰에서 Lead 레코드를 가져옵니다.
+
+    **파라미터:**
+    - `listViewId` (string, 필수): 리스트 뷰 ID
+    - `paginationParameters` (object, 선택): pageCursor와 함께 사용하는 페이지네이션 설정
+  </Accordion>
+
+  <Accordion title="SALESFORCE_GET_RECORD_BY_VIEW_ID_OPPORTUNITY">
+    **설명:** 특정 리스트 뷰에서 Opportunity 레코드를 가져옵니다.
+
+    **파라미터:**
+    - `listViewId` (string, 필수): 리스트 뷰 ID
+    - `paginationParameters` (object, 선택): pageCursor와 함께 사용하는 페이지네이션 설정
+  </Accordion>
+
+  <Accordion title="SALESFORCE_GET_RECORD_BY_VIEW_ID_TASK">
+    **설명:** 특정 리스트 뷰에서 Task 레코드를 가져옵니다.
+
+    **파라미터:**
+    - `listViewId` (string, 필수): 리스트 뷰 ID
+    - `paginationParameters` (object, 선택): pageCursor와 함께 사용하는 페이지네이션 설정
+  </Accordion>
+
+  <Accordion title="SALESFORCE_GET_RECORD_BY_VIEW_ID_ACCOUNT">
+    **설명:** 특정 리스트 뷰에서 Account 레코드를 가져옵니다.
+
+    **파라미터:**
+    - `listViewId` (string, 필수): 리스트 뷰 ID
+    - `paginationParameters` (object, 선택): pageCursor와 함께 사용하는 페이지네이션 설정
+  </Accordion>
+
+  <Accordion title="SALESFORCE_GET_RECORD_BY_VIEW_ID_ANY">
+    **설명:** 특정 리스트 뷰에서 임의의 객체 유형의 레코드를 가져옵니다.
+
+    **파라미터:**
+    - `recordType` (string, 필수): 레코드 유형
+    - `listViewId` (string, 필수): 리스트 뷰 ID
+    - `paginationParameters` (object, 선택): pageCursor와 함께 사용하는 페이지네이션 설정
+  </Accordion>
+</AccordionGroup>
+
+### **커스텀 필드**
+
+<AccordionGroup>
+  <Accordion title="SALESFORCE_CREATE_CUSTOM_FIELD_CONTACT">
+    **설명:** Contact 오브젝트에 대한 커스텀 필드를 배포합니다.
+
+    **파라미터:**
+    - `label` (string, 필수): 표시 및 내부 참조를 위한 필드 라벨
+    - `type` (string, 필수): 필드 유형 - 옵션: Checkbox, Currency, Date, Email, Number, Percent, Phone, Picklist, MultiselectPicklist, Text, TextArea, LongTextArea, Html, Time, Url
+    - `defaultCheckboxValue` (boolean, 선택): 체크박스 필드의 기본값
+    - `length` (string, 필수): 숫자/텍스트 필드의 길이
+    - `decimalPlace` (string, 필수): 숫자 필드의 소수 자릿수
+    - `pickListValues` (string, 필수): 피클리스트 필드의 값(줄바꿈으로 구분)
+    - `visibleLines` (string, 필수): 멀티셀렉트/텍스트 영역 필드의 표시 줄 수
+    - `description` (string, 선택): 필드 설명
+    - `helperText` (string, 선택): 마우스를 올렸을 때 표시되는 도움말 텍스트
+    - `defaultFieldValue` (string, 선택): 필드의 기본값
+  </Accordion>
+
+  <Accordion title="SALESFORCE_CREATE_CUSTOM_FIELD_LEAD">
+    **설명:** Lead 오브젝트에 대한 커스텀 필드를 배포합니다.
+
+    **파라미터:**
+    - `label` (string, 필수): 표시 및 내부 참조를 위한 필드 라벨
+    - `type` (string, 필수): 필드 유형 - 옵션: Checkbox, Currency, Date, Email, Number, Percent, Phone, Picklist, MultiselectPicklist, Text, TextArea, LongTextArea, Html, Time, Url
+    - `defaultCheckboxValue` (boolean, 선택): 체크박스 필드의 기본값
+    - `length` (string, 필수): 숫자/텍스트 필드의 길이
+    - `decimalPlace` (string, 필수): 숫자 필드의 소수 자릿수
+    - `pickListValues` (string, 필수): 피클리스트 필드의 값(줄바꿈으로 구분)
+    - `visibleLines` (string, 필수): 멀티셀렉트/텍스트 영역 필드의 표시 줄 수
+    - `description` (string, 선택): 필드 설명
+    - `helperText` (string, 선택): 마우스를 올렸을 때 표시되는 도움말 텍스트
+    - `defaultFieldValue` (string, 선택): 필드의 기본값
+  </Accordion>
+
+  <Accordion title="SALESFORCE_CREATE_CUSTOM_FIELD_OPPORTUNITY">
+    **설명:** Opportunity 오브젝트에 대한 커스텀 필드를 배포합니다.
+
+    **파라미터:**
+    - `label` (string, 필수): 표시 및 내부 참조를 위한 필드 라벨
+    - `type` (string, 필수): 필드 유형 - 옵션: Checkbox, Currency, Date, Email, Number, Percent, Phone, Picklist, MultiselectPicklist, Text, TextArea, LongTextArea, Html, Time, Url
+    - `defaultCheckboxValue` (boolean, 선택): 체크박스 필드의 기본값
+    - `length` (string, 필수): 숫자/텍스트 필드의 길이
+    - `decimalPlace` (string, 필수): 숫자 필드의 소수 자릿수
+    - `pickListValues` (string, 필수): 피클리스트 필드의 값(줄바꿈으로 구분)
+    - `visibleLines` (string, 필수): 멀티셀렉트/텍스트 영역 필드의 표시 줄 수
+    - `description` (string, 선택): 필드 설명
+    - `helperText` (string, 선택): 마우스를 올렸을 때 표시되는 도움말 텍스트
+    - `defaultFieldValue` (string, 선택): 필드의 기본값
+  </Accordion>
+
+  <Accordion title="SALESFORCE_CREATE_CUSTOM_FIELD_TASK">
+    **설명:** Task 오브젝트에 대한 커스텀 필드를 배포합니다.
+
+    **파라미터:**
+    - `label` (string, 필수): 표시 및 내부 참조를 위한 필드 라벨
+    - `type` (string, 필수): 필드 유형 - 옵션: Checkbox, Currency, Date, Email, Number, Percent, Phone, Picklist, MultiselectPicklist, Text, TextArea, Time, Url
+    - `defaultCheckboxValue` (boolean, 선택): 체크박스 필드의 기본값
+    - `length` (string, 필수): 숫자/텍스트 필드의 길이
+    - `decimalPlace` (string, 필수): 숫자 필드의 소수 자릿수
+    - `pickListValues` (string, 필수): 피클리스트 필드의 값(줄바꿈으로 구분)
+    - `visibleLines` (string, 필수): 멀티셀렉트 필드의 표시 줄 수
+    - `description` (string, 선택): 필드 설명
+    - `helperText` (string, 선택): 마우스를 올렸을 때 표시되는 도움말 텍스트
+    - `defaultFieldValue` (string, 선택): 필드의 기본값
+  </Accordion>
+
+  <Accordion title="SALESFORCE_CREATE_CUSTOM_FIELD_ACCOUNT">
+    **설명:** Account 오브젝트에 대한 커스텀 필드를 배포합니다.
+
+    **파라미터:**
+    - `label` (string, 필수): 표시 및 내부 참조를 위한 필드 라벨
+    - `type` (string, 필수): 필드 유형 - 옵션: Checkbox, Currency, Date, Email, Number, Percent, Phone, Picklist, MultiselectPicklist, Text, TextArea, LongTextArea, Html, Time, Url
+    - `defaultCheckboxValue` (boolean, 선택): 체크박스 필드의 기본값
+    - `length` (string, 필수): 숫자/텍스트 필드의 길이
+    - `decimalPlace` (string, 필수): 숫자 필드의 소수 자릿수
+    - `pickListValues` (string, 필수): 피클리스트 필드의 값(줄바꿈으로 구분)
+    - `visibleLines` (string, 필수): 멀티셀렉트/텍스트 영역 필드의 표시 줄 수
+    - `description` (string, 선택): 필드 설명
+    - `helperText` (string, 선택): 마우스를 올렸을 때 표시되는 도움말 텍스트
+    - `defaultFieldValue` (string, 선택): 필드의 기본값
+  </Accordion>
+
+  <Accordion title="SALESFORCE_CREATE_CUSTOM_FIELD_ANY">
+    **설명:** 모든 오브젝트 타입에 대한 커스텀 필드를 배포합니다.
+
+    **참고:** 커스텀 또는 미지의 오브젝트 타입에 커스텀 필드를 생성할 수 있는 유연한 도구입니다.
+  </Accordion>
+</AccordionGroup>
+
+### **고급 작업**
+
+<AccordionGroup>
+  <Accordion title="SALESFORCE_WRITE_SOQL_QUERY">
+    **설명:** Salesforce 데이터에 대해 커스텀 SOQL 쿼리를 실행합니다.
+
+    **파라미터:**
+    - `query` (string, 필수): SOQL 쿼리 (예: "SELECT Id, Name FROM Account WHERE Name = 'Example'")
+  </Accordion>
+
+  <Accordion title="SALESFORCE_CREATE_CUSTOM_OBJECT">
+    **설명:** Salesforce에 새로운 커스텀 오브젝트를 배포합니다.
+
+    **파라미터:**
+    - `label` (string, 필수): 탭, 페이지 레이아웃, 리포트에 사용되는 오브젝트 라벨
+    - `pluralLabel` (string, 필수): 복수형 라벨 (예: "Accounts")
+    - `description` (string, 선택): 커스텀 오브젝트에 대한 설명
+    - `recordName` (string, 필수): 레이아웃과 검색에 표시되는 레코드 이름 (예: "Account Name")
+  </Accordion>
+
+  <Accordion title="SALESFORCE_DESCRIBE_ACTION_SCHEMA">
+    **설명:** 특정 오브젝트 타입에 대한 작업의 예상 스키마를 가져옵니다.
+
+    **파라미터:**
+    - `recordType` (string, 필수): 설명할 레코드 타입
+    - `operation` (string, 필수): 작업 타입 (예: "CREATE_RECORD" 또는 "UPDATE_RECORD")
+
+    **참고:** 커스텀 오브젝트 작업 시, 해당 스키마를 이해하기 위해 제일 먼저 이 기능을 사용하세요.
+  </Accordion>
+</AccordionGroup>
+
+## 사용 예시
+
+### 기본 Salesforce 에이전트 설정
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import CrewaiEnterpriseTools
+
+# Get enterprise tools (Salesforce tools will be included)
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token"
+)
+
+# Create an agent with Salesforce capabilities
+salesforce_agent = Agent(
+    role="CRM Manager",
+    goal="Manage customer relationships and sales processes efficiently",
+    backstory="An AI assistant specialized in CRM operations and sales automation.",
+    tools=[enterprise_tools]
+)
+
+# Task to create a new lead
+create_lead_task = Task(
+    description="Create a new lead for John Doe from Example Corp with email john.doe@example.com",
+    agent=salesforce_agent,
+    expected_output="Lead created successfully with lead ID"
+)
+
+# Run the task
+crew = Crew(
+    agents=[salesforce_agent],
+    tasks=[create_lead_task]
+)
+
+crew.kickoff()
+```
+
+### 특정 Salesforce 도구 필터링
+
+```python
+from crewai_tools import CrewaiEnterpriseTools
+
+# Get only specific Salesforce tools
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token",
+    actions_list=["salesforce_create_record_lead", "salesforce_update_record_opportunity", "salesforce_search_records_contact"]
+)
+
+sales_manager = Agent(
+    role="Sales Manager",
+    goal="Manage leads and opportunities in the sales pipeline",
+    backstory="An experienced sales manager who handles lead qualification and opportunity management.",
+    tools=enterprise_tools
+)
+
+# Task to manage sales pipeline
+pipeline_task = Task(
+    description="Create a qualified lead and convert it to an opportunity with $50,000 value",
+    agent=sales_manager,
+    expected_output="Lead created and opportunity established successfully"
+)
+
+crew = Crew(
+    agents=[sales_manager],
+    tasks=[pipeline_task]
+)
+
+crew.kickoff()
+```
+
+### 연락처 및 계정 관리
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import CrewaiEnterpriseTools
+
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token"
+)
+
+account_manager = Agent(
+    role="Account Manager",
+    goal="Manage customer accounts and maintain strong relationships",
+    backstory="An AI assistant that specializes in account management and customer relationship building.",
+    tools=[enterprise_tools]
+)
+
+# Task to manage customer accounts
+account_task = Task(
+    description="""
+    1. Create a new account for TechCorp Inc.
+    2. Add John Doe as the primary contact for this account
+    3. Create a follow-up task for next week to check on their project status
+    """,
+    agent=account_manager,
+    expected_output="Account, contact, and follow-up task created successfully"
+)
+
+crew = Crew(
+    agents=[account_manager],
+    tasks=[account_task]
+)
+
+crew.kickoff()
+```
+
+### 고급 SOQL 쿼리 및 리포팅
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import CrewaiEnterpriseTools
+
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token"
+)
+
+data_analyst = Agent(
+    role="Sales Data Analyst",
+    goal="Generate insights from Salesforce data using SOQL queries",
+    backstory="An analytical AI that excels at extracting meaningful insights from CRM data.",
+    tools=[enterprise_tools]
+)
+
+# Complex task involving SOQL queries and data analysis
+analysis_task = Task(
+    description="""
+    1. Execute a SOQL query to find all opportunities closing this quarter
+    2. Search for contacts at companies with opportunities over $100K
+    3. Create a summary report of the sales pipeline status
+    4. Update high-value opportunities with next steps
+    """,
+    agent=data_analyst,
+    expected_output="Comprehensive sales pipeline analysis with actionable insights"
+)
+
+crew = Crew(
+    agents=[data_analyst],
+    tasks=[analysis_task]
+)
+
+crew.kickoff()
+```
+
+이 포괄적인 문서는 모든 Salesforce 도구를 기능별로 정리하여, 사용자가 CRM 자동화 작업에 필요한 특정 작업을 쉽게 찾을 수 있도록 도와줍니다.
+
+### 도움 받기
+
+<Card title="도움이 필요하신가요?" icon="headset" href="mailto:support@crewai.com">
+  Salesforce 통합 설정 또는 문제 해결에 대해 지원팀에 문의하세요.
+</Card>
