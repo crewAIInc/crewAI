@@ -71,6 +71,7 @@ from .crypto_events import (
     CryptographicEscrowTransactionEvent,
 )
 from .listeners.crypto_listener import CrewAICryptographicTraceListener
+from .listeners.code_accountability import CodeAccountabilityTraceListener
 
 # events
 from .event_listener import EventListener
@@ -136,4 +137,5 @@ __all__ = [
     "CryptographicWorkflowAuditEvent",
     "CryptographicEscrowTransactionEvent",
     "CrewAICryptographicTraceListener",
+    "CodeAccountabilityTraceListener",
 ]
