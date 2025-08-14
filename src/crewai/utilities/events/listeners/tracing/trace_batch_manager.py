@@ -60,7 +60,6 @@ class TraceBatchManager:
         self.event_buffer.clear()
 
         self.record_start_time("execution")
-
         self._initialize_backend_batch(user_context, execution_metadata, use_ephemeral)
 
         return self.current_batch
@@ -69,7 +68,7 @@ class TraceBatchManager:
         self,
         user_context: Dict[str, str],
         execution_metadata: Dict[str, Any],
-        use_ephemeral: bool = True,
+        use_ephemeral: bool = False,
     ):
         """Send batch initialization to backend"""
 
