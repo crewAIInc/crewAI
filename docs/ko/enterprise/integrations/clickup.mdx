@@ -1,0 +1,293 @@
+---
+title: ClickUp 연동
+description: "CrewAI를 위한 ClickUp 연동을 통한 작업 및 생산성 관리."
+icon: "list-check"
+---
+
+## 개요
+
+에이전트가 ClickUp을 통해 작업, 프로젝트 및 생산성 워크플로우를 관리할 수 있도록 지원하세요. 작업을 생성 및 업데이트하고, 프로젝트를 구성하며, 팀 할당을 관리하고, AI 기반 자동화를 통해 생산성 관리를 간소화할 수 있습니다.
+
+## 사전 준비사항
+
+ClickUp 통합을 사용하기 전에 다음을 준비해야 합니다:
+
+- 활성 구독이 있는 [CrewAI Enterprise](https://app.crewai.com) 계정
+- 적절한 권한이 있는 ClickUp 계정
+- [통합 페이지](https://app.crewai.com/crewai_plus/connectors)를 통해 ClickUp 계정 연결
+
+## ClickUp 통합 설정
+
+### 1. ClickUp 계정 연결하기
+
+1. [CrewAI Enterprise Integrations](https://app.crewai.com/crewai_plus/connectors)로 이동합니다.
+2. 인증 통합 섹션에서 **ClickUp**을 찾습니다.
+3. **Connect**를 클릭하고 OAuth 과정을 완료합니다.
+4. 작업 및 프로젝트 관리에 필요한 권한을 부여합니다.
+5. [계정 설정](https://app.crewai.com/crewai_plus/settings/account)에서 Enterprise Token을 복사합니다.
+
+### 2. 필수 패키지 설치
+
+```bash
+uv add crewai-tools
+```
+
+## 사용 가능한 동작
+
+<AccordionGroup>
+  <Accordion title="CLICKUP_SEARCH_TASKS">
+    **설명:** 고급 필터를 사용하여 ClickUp에서 작업을 검색합니다.
+
+    **파라미터:**
+    - `taskFilterFormula` (object, 선택): 이항 표준형(DNF)의 필터 - 단일 조건의 AND 그룹들의 OR.
+      ```json
+      {
+        "operator": "OR",
+        "conditions": [
+          {
+            "operator": "AND",
+            "conditions": [
+              {
+                "field": "statuses%5B%5D",
+                "operator": "$stringExactlyMatches",
+                "value": "open"
+              }
+            ]
+          }
+        ]
+      }
+      ```
+      사용 가능한 필드: `space_ids%5B%5D`, `project_ids%5B%5D`, `list_ids%5B%5D`, `statuses%5B%5D`, `include_closed`, `assignees%5B%5D`, `tags%5B%5D`, `due_date_gt`, `due_date_lt`, `date_created_gt`, `date_created_lt`, `date_updated_gt`, `date_updated_lt`
+  </Accordion>
+
+  <Accordion title="CLICKUP_GET_TASK_IN_LIST">
+    **설명:** ClickUp의 특정 목록에서 작업을 가져옵니다.
+
+    **파라미터:**
+    - `listId` (string, 필수): 목록 - 작업을 가져올 목록을 선택합니다. 사용자가 ClickUp 목록을 선택할 수 있도록 Connect Portal 사용자 설정을 사용하세요.
+    - `taskFilterFormula` (string, 선택): 지정된 필터와 일치하는 작업을 검색합니다. 예: name=task1.
+  </Accordion>
+
+  <Accordion title="CLICKUP_CREATE_TASK">
+    **설명:** ClickUp에 작업을 생성합니다.
+
+    **파라미터:**
+    - `listId` (string, 필수): 목록 - 이 작업을 생성할 목록을 선택합니다. 사용자가 ClickUp 목록을 선택할 수 있도록 Connect Portal 사용자 설정을 사용하세요.
+    - `name` (string, 필수): 이름 - 작업 이름.
+    - `description` (string, 선택): 설명 - 작업 설명.
+    - `status` (string, 선택): 상태 - 이 작업에 대한 상태를 선택합니다. 사용자가 ClickUp 상태를 선택할 수 있도록 Connect Portal 사용자 설정을 사용하세요.
+    - `assignees` (string, 선택): 담당자 - 이 작업에 할당할 멤버(또는 멤버 ID 배열)를 선택합니다. 사용자가 ClickUp 멤버를 선택할 수 있도록 Connect Portal 사용자 설정을 사용하세요.
+    - `dueDate` (string, 선택): 마감일 - 이 작업의 마감일을 지정합니다.
+    - `additionalFields` (string, 선택): 추가 필드 - 이 작업에 포함할 추가 필드를 JSON으로 지정합니다.
+  </Accordion>
+
+  <Accordion title="CLICKUP_UPDATE_TASK">
+    **설명:** ClickUp의 작업을 업데이트합니다.
+
+    **파라미터:**
+    - `taskId` (string, 필수): 작업 ID - 업데이트할 작업의 ID입니다.
+    - `listId` (string, 필수): 목록 - 이 작업을 생성할 목록을 선택합니다. 사용자가 ClickUp 목록을 선택할 수 있도록 Connect Portal 사용자 설정을 사용하세요.
+    - `name` (string, 선택): 이름 - 작업 이름.
+    - `description` (string, 선택): 설명 - 작업 설명.
+    - `status` (string, 선택): 상태 - 이 작업에 대한 상태를 선택합니다. 사용자가 ClickUp 상태를 선택할 수 있도록 Connect Portal 사용자 설정을 사용하세요.
+    - `assignees` (string, 선택): 담당자 - 이 작업에 할당할 멤버(또는 멤버 ID 배열)를 선택합니다. 사용자가 ClickUp 멤버를 선택할 수 있도록 Connect Portal 사용자 설정을 사용하세요.
+    - `dueDate` (string, 선택): 마감일 - 이 작업의 마감일을 지정합니다.
+    - `additionalFields` (string, 선택): 추가 필드 - 이 작업에 포함할 추가 필드를 JSON으로 지정합니다.
+  </Accordion>
+
+  <Accordion title="CLICKUP_DELETE_TASK">
+    **설명:** ClickUp에서 작업을 삭제합니다.
+
+    **파라미터:**
+    - `taskId` (string, 필수): 작업 ID - 삭제할 작업의 ID입니다.
+  </Accordion>
+
+  <Accordion title="CLICKUP_GET_LIST">
+    **설명:** ClickUp에서 목록 정보를 가져옵니다.
+
+    **파라미터:**
+    - `spaceId` (string, 필수): 스페이스 ID - 목록이 포함된 스페이스의 ID입니다.
+  </Accordion>
+
+  <Accordion title="CLICKUP_GET_CUSTOM_FIELDS_IN_LIST">
+    **설명:** ClickUp에서 목록의 사용자 정의 필드를 가져옵니다.
+
+    **파라미터:**
+    - `listId` (string, 필수): 목록 ID - 사용자 정의 필드를 가져올 목록의 ID입니다.
+  </Accordion>
+
+  <Accordion title="CLICKUP_GET_ALL_FIELDS_IN_LIST">
+    **설명:** ClickUp에서 목록의 모든 필드를 가져옵니다.
+
+    **파라미터:**
+    - `listId` (string, 필수): 목록 ID - 모든 필드를 가져올 목록의 ID입니다.
+  </Accordion>
+
+  <Accordion title="CLICKUP_GET_SPACE">
+    **설명:** ClickUp에서 스페이스 정보를 가져옵니다.
+
+    **파라미터:**
+    - `spaceId` (string, 선택): 스페이스 ID - 조회할 스페이스의 ID입니다.
+  </Accordion>
+
+  <Accordion title="CLICKUP_GET_FOLDERS">
+    **설명:** ClickUp에서 폴더를 가져옵니다.
+
+    **파라미터:**
+    - `spaceId` (string, 필수): 스페이스 ID - 폴더가 포함된 스페이스의 ID입니다.
+  </Accordion>
+
+  <Accordion title="CLICKUP_GET_MEMBER">
+    **설명:** ClickUp에서 멤버 정보를 가져옵니다.
+
+    **파라미터:** 필요 없음.
+  </Accordion>
+</AccordionGroup>
+
+## 사용 예시
+
+### 기본 ClickUp 에이전트 설정
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import CrewaiEnterpriseTools
+
+# Get enterprise tools (ClickUp tools will be included)
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token"
+)
+
+# Create an agent with ClickUp capabilities
+clickup_agent = Agent(
+    role="Task Manager",
+    goal="Manage tasks and projects in ClickUp efficiently",
+    backstory="An AI assistant specialized in task management and productivity coordination.",
+    tools=[enterprise_tools]
+)
+
+# Task to create a new task
+create_task = Task(
+    description="Create a task called 'Review Q1 Reports' in the Marketing list with high priority",
+    agent=clickup_agent,
+    expected_output="Task created successfully with task ID"
+)
+
+# Run the task
+crew = Crew(
+    agents=[clickup_agent],
+    tasks=[create_task]
+)
+
+crew.kickoff()
+```
+
+### 특정 ClickUp 도구 필터링
+
+```python
+from crewai_tools import CrewaiEnterpriseTools
+
+# Get only specific ClickUp tools
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token",
+    actions_list=["clickup_create_task", "clickup_update_task", "clickup_search_tasks"]
+)
+
+task_coordinator = Agent(
+    role="Task Coordinator",
+    goal="Create and manage tasks efficiently",
+    backstory="An AI assistant that focuses on task creation and status management.",
+    tools=enterprise_tools
+)
+
+# Task to manage task workflow
+task_workflow = Task(
+    description="Create a task for project planning and assign it to the development team",
+    agent=task_coordinator,
+    expected_output="Task created and assigned successfully"
+)
+
+crew = Crew(
+    agents=[task_coordinator],
+    tasks=[task_workflow]
+)
+
+crew.kickoff()
+```
+
+### 고급 프로젝트 관리
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import CrewaiEnterpriseTools
+
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token"
+)
+
+project_manager = Agent(
+    role="Project Manager",
+    goal="Coordinate project activities and track team productivity",
+    backstory="An experienced project manager who ensures projects are delivered on time.",
+    tools=[enterprise_tools]
+)
+
+# Complex task involving multiple ClickUp operations
+project_coordination = Task(
+    description="""
+    1. Get all open tasks in the current space
+    2. Identify overdue tasks and update their status
+    3. Create a weekly report task summarizing project progress
+    4. Assign the report task to the team lead
+    """,
+    agent=project_manager,
+    expected_output="Project status updated and weekly report task created and assigned"
+)
+
+crew = Crew(
+    agents=[project_manager],
+    tasks=[project_coordination]
+)
+
+crew.kickoff()
+```
+
+### 작업 검색 및 관리
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import CrewaiEnterpriseTools
+
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token"
+)
+
+task_analyst = Agent(
+    role="Task Analyst",
+    goal="Analyze task patterns and optimize team productivity",
+    backstory="An AI assistant that analyzes task data to improve team efficiency.",
+    tools=[enterprise_tools]
+)
+
+# Task to analyze and optimize task distribution
+task_analysis = Task(
+    description="""
+    Search for all tasks assigned to team members in the last 30 days,
+    analyze completion patterns, and create optimization recommendations
+    """,
+    agent=task_analyst,
+    expected_output="Task analysis report with optimization recommendations"
+)
+
+crew = Crew(
+    agents=[task_analyst],
+    tasks=[task_analysis]
+)
+
+crew.kickoff()
+```
+
+### 도움 받기
+
+<Card title="도움이 필요하신가요?" icon="headset" href="mailto:support@crewai.com">
+  ClickUp 연동 설정 또는 문제 해결에 대한 지원이 필요하신 경우 저희 지원팀에 문의하세요.
+</Card>

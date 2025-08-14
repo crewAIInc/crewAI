@@ -1,0 +1,290 @@
+---
+title: "Crew 배포"
+description: "CrewAI 엔터프라이즈에서 Crew 배포하기"
+icon: "rocket"
+---
+
+<Note>
+로컬에서 또는 Crew Studio를 통해 crew를 생성한 후, 다음 단계는 이를 CrewAI Enterprise 플랫폼에 배포하는 것입니다. 본 가이드에서는 다양한 배포 방법을 다루며, 여러분의 워크플로우에 가장 적합한 방식을 선택할 수 있도록 안내합니다.
+</Note>
+
+## 사전 준비 사항
+
+<CardGroup cols={2}>
+  <Card title="배포 준비가 된 Crew" icon="users">
+    작동 중인 crew가 로컬에서 빌드되었거나 Crew Studio를 통해 생성되어 있어야 합니다.
+  </Card>
+  <Card title="GitHub 저장소" icon="github">
+    crew 코드가 GitHub 저장소에 있어야 합니다(GitHub 연동 방식의 경우).
+  </Card>
+</CardGroup>
+
+## 옵션 1: CrewAI CLI를 사용한 배포
+
+CLI는 로컬에서 개발된 crew를 Enterprise 플랫폼에 가장 빠르게 배포할 수 있는 방법을 제공합니다.
+
+<Steps>
+  <Step title="CrewAI CLI 설치">
+    아직 설치하지 않았다면 CrewAI CLI를 설치하세요:
+
+    ```bash
+    pip install crewai[tools]
+    ```
+
+    <Tip>
+    CLI는 기본 CrewAI 패키지에 포함되어 있지만, `[tools]` 추가 옵션을 사용하면 모든 배포 종속성을 함께 설치할 수 있습니다.
+    </Tip>
+
+  </Step>
+
+  <Step title="Enterprise 플랫폼에 인증">
+    먼저, CrewAI Enterprise 플랫폼에 CLI를 인증해야 합니다:
+
+    ```bash
+    # 이미 CrewAI Enterprise 계정이 있거나 새로 생성하고 싶을 때:
+    crewai login
+    ```
+
+    위 명령어를 실행하면 CLI가 다음을 진행합니다:
+    1. URL과 고유 기기 코드를 표시합니다
+    2. 브라우저를 열어 인증 페이지로 이동합니다
+    3. 기기 확인을 요청합니다
+    4. 인증 과정을 완료합니다
+
+    인증이 성공적으로 완료되면 터미널에 확인 메시지가 표시됩니다!
+
+  </Step>
+
+  <Step title="배포 생성">
+
+    프로젝트 디렉터리에서 다음 명령어를 실행하세요:
+
+    ```bash
+    crewai deploy create
+    ```
+
+    이 명령어는 다음을 수행합니다:
+    1. GitHub 저장소 정보를 감지합니다
+    2. 로컬 `.env` 파일의 환경 변수를 식별합니다
+    3. 이러한 변수를 Enterprise 플랫폼으로 안전하게 전송합니다
+    4. 고유 식별자가 부여된 새 배포를 만듭니다
+
+    성공적으로 생성되면 다음과 같은 메시지가 표시됩니다:
+    ```shell
+    Deployment created successfully!
+    Name: your_project_name
+    Deployment ID: 01234567-89ab-cdef-0123-456789abcdef
+    Current Status: Deploy Enqueued
+    ```
+
+  </Step>
+
+  <Step title="배포 진행 상황 모니터링">
+
+    다음 명령어로 배포 상태를 추적할 수 있습니다:
+
+    ```bash
+    crewai deploy status
+    ```
+
+    빌드 과정의 상세 로그가 필요하다면:
+
+    ```bash
+    crewai deploy logs
+    ```
+
+    <Tip>
+    첫 배포는 컨테이너 이미지를 빌드하므로 일반적으로 10~15분 정도 소요됩니다. 이후 배포는 훨씬 빠릅니다.
+    </Tip>
+
+  </Step>
+</Steps>
+
+## 추가 CLI 명령어
+
+CrewAI CLI는 배포를 관리하기 위한 여러 명령어를 제공합니다:
+
+```bash
+# 모든 배포 목록 확인
+crewai deploy list
+
+# 배포 상태 확인
+crewai deploy status
+
+# 배포 로그 보기
+crewai deploy logs
+
+# 코드 변경 후 업데이트 푸시
+crewai deploy push
+
+# 배포 삭제
+crewai deploy remove <deployment_id>
+```
+
+## 옵션 2: 웹 인터페이스를 통한 직접 배포
+
+GitHub 계정을 연결하여 CrewAI Enterprise 웹 인터페이스를 통해 crews를 직접 배포할 수도 있습니다. 이 방법은 로컬 머신에서 CLI를 사용할 필요가 없습니다.
+
+<Steps>
+
+  <Step title="GitHub로 푸시하기">
+
+  crew를 GitHub 저장소에 푸시해야 합니다. 아직 crew를 만들지 않았다면, [이 튜토리얼](/ko/quickstart)을 따라할 수 있습니다.
+
+  </Step>
+
+  <Step title="GitHub를 CrewAI Enterprise에 연결하기">
+
+    1. [CrewAI Enterprise](https://app.crewai.com)에 로그인합니다.
+    2. "Connect GitHub" 버튼을 클릭합니다.
+
+    <Frame>
+      ![Connect GitHub Button](/images/enterprise/connect-github.png)
+    </Frame>
+
+  </Step>
+
+  <Step title="저장소 선택하기">
+
+    GitHub 계정을 연결한 후 배포할 저장소를 선택할 수 있습니다:
+
+    <Frame>
+      ![Select Repository](/images/enterprise/select-repo.png)
+    </Frame>
+
+  </Step>
+
+  <Step title="환경 변수 설정하기">
+
+    배포 전에, LLM 제공업체 또는 기타 서비스에 연결할 환경 변수를 설정해야 합니다:
+
+    1. 변수를 개별적으로 또는 일괄적으로 추가할 수 있습니다.
+    2. 환경 변수는 `KEY=VALUE` 형식(한 줄에 하나씩)으로 입력합니다.
+
+    <Frame>
+      ![Set Environment Variables](/images/enterprise/set-env-variables.png)
+    </Frame>
+
+  </Step>
+
+  <Step title="Crew 배포하기">
+
+    1. "Deploy" 버튼을 클릭하여 배포 프로세스를 시작합니다.
+    2. 진행 바를 통해 진행 상황을 모니터링할 수 있습니다.
+    3. 첫 번째 배포에는 일반적으로 약 10-15분 정도 소요되며, 이후 배포는 더 빠릅니다.
+
+    <Frame>
+      ![Deploy Progress](/images/enterprise/deploy-progress.png)
+    </Frame>
+
+    배포가 완료되면 다음을 확인할 수 있습니다:
+    - crew의 고유 URL
+    - crew API를 보호할 Bearer 토큰
+    - 배포를 삭제해야 하는 경우 "Delete" 버튼
+
+  </Step>
+
+</Steps>
+
+## ⚠️ 환경 변수 보안 요구사항
+
+<Warning>
+**중요**: CrewAI Enterprise는 환경 변수 이름에 대한 보안 제한이 있으며, 이를 따르지 않을 경우 배포가 실패할 수 있습니다.
+</Warning>
+
+### 차단된 환경 변수 패턴
+
+보안상의 이유로, 다음과 같은 환경 변수 명명 패턴은 **자동으로 필터링**되며 배포에 문제가 발생할 수 있습니다:
+
+**차단된 패턴:**
+- `_TOKEN`으로 끝나는 변수 (예: `MY_API_TOKEN`)
+- `_PASSWORD`로 끝나는 변수 (예: `DB_PASSWORD`)
+- `_SECRET`로 끝나는 변수 (예: `API_SECRET`)
+- 특정 상황에서 `_KEY`로 끝나는 변수
+
+**특정 차단 변수:**
+- `GITHUB_USER`, `GITHUB_TOKEN`
+- `AWS_REGION`, `AWS_DEFAULT_REGION`
+- 다양한 내부 CrewAI 시스템 변수
+
+### 허용된 예외
+
+일부 변수는 차단된 패턴과 일치하더라도 명시적으로 허용됩니다:
+- `AZURE_AD_TOKEN`
+- `AZURE_OPENAI_AD_TOKEN`
+- `ENTERPRISE_ACTION_TOKEN`
+- `CREWAI_ENTEPRISE_TOOLS_TOKEN`
+
+### 네이밍 문제 해결 방법
+
+환경 변수 제한으로 인해 배포가 실패하는 경우:
+
+```bash
+# ❌ 이러한 이름은 배포 실패를 초래합니다
+OPENAI_TOKEN=sk-...
+DATABASE_PASSWORD=mypassword
+API_SECRET=secret123
+
+# ✅ 대신 다음과 같은 네이밍 패턴을 사용하세요
+OPENAI_API_KEY=sk-...
+DATABASE_CREDENTIALS=mypassword
+API_CONFIG=secret123
+```
+
+### 모범 사례
+
+1. **표준 명명 규칙 사용**: `PROVIDER_TOKEN` 대신 `PROVIDER_API_KEY` 사용
+2. **먼저 로컬에서 테스트**: crew가 이름이 변경된 변수로 제대로 동작하는지 확인
+3. **코드 업데이트**: 이전 변수 이름을 참조하는 부분을 모두 변경
+4. **변경 내용 문서화**: 팀을 위해 이름이 변경된 변수를 기록
+
+<Tip>
+배포 실패 시, 환경 변수 에러 메시지가 난해하다면 먼저 변수 이름이 이 패턴을 따르는지 확인하세요.
+</Tip>
+
+### 배포된 Crew와 상호작용하기
+
+배포가 완료되면 다음을 통해 crew에 접근할 수 있습니다:
+
+1. **REST API**: 플랫폼에서 아래의 주요 경로가 포함된 고유한 HTTPS 엔드포인트를 생성합니다:
+   - `/inputs`: 필요한 입력 파라미터 목록
+   - `/kickoff`: 제공된 입력값으로 실행 시작
+   - `/status/{kickoff_id}`: 실행 상태 확인
+
+2. **웹 인터페이스**: [app.crewai.com](https://app.crewai.com)에 방문하여 다음을 확인할 수 있습니다:
+   - **Status 탭**: 배포 정보, API 엔드포인트 세부 정보 및 인증 토큰 확인
+   - **Run 탭**: crew 구조의 시각적 표현
+   - **Executions 탭**: 모든 실행 내역
+   - **Metrics 탭**: 성능 분석
+   - **Traces 탭**: 상세 실행 인사이트
+
+### 실행 트리거하기
+
+Enterprise 대시보드에서 다음 작업을 수행할 수 있습니다:
+
+1. crew 이름을 클릭하여 상세 정보를 엽니다
+2. 관리 인터페이스에서 "Trigger Crew"를 선택합니다
+3. 나타나는 모달에 필요한 입력값을 입력합니다
+4. 파이프라인을 따라 실행의 진행 상황을 모니터링합니다
+
+### 모니터링 및 분석
+
+Enterprise 플랫폼은 포괄적인 가시성 기능을 제공합니다:
+
+- **실행 관리**: 활성 및 완료된 실행 추적
+- **트레이스**: 각 실행의 상세 분해
+- **메트릭**: 토큰 사용량, 실행 시간, 비용
+- **타임라인 보기**: 작업 시퀀스의 시각적 표현
+
+### 고급 기능
+
+Enterprise 플랫폼은 또한 다음을 제공합니다:
+
+- **환경 변수 관리**: API 키를 안전하게 저장 및 관리
+- **LLM 연결**: 다양한 LLM 공급자와의 통합 구성
+- **Custom Tools Repository**: 도구 생성, 공유 및 설치
+- **Crew Studio**: 코드를 작성하지 않고 채팅 인터페이스를 통해 crew 빌드
+
+<Card title="도움이 필요하신가요?" icon="headset" href="mailto:support@crewai.com">
+  Enterprise 플랫폼의 배포 문제 또는 문의 사항이 있으시면 지원팀에 연락해 주십시오.
+</Card>

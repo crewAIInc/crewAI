@@ -33,10 +33,6 @@ class TestTraceListenerSetup:
                 "crewai.utilities.events.listeners.tracing.trace_batch_manager.get_auth_token",
                 return_value="mock_token_12345",
             ),
-            patch(
-                "crewai.utilities.events.listeners.tracing.interfaces.get_auth_token",
-                return_value="mock_token_12345",
-            ),
         ):
             yield
 
@@ -296,7 +292,21 @@ class TestTraceListenerSetup:
 
             assert trace_listener.trace_enabled is True
             assert trace_listener.batch_manager is not None
-            assert trace_listener.trace_sender is not None
+
+    @pytest.mark.vcr(filter_headers=["authorization"])
+    def test_trace_listener_setup_correctly_with_tracing_flag(self):
+        """Test that trace listener is set up correctly when enabled"""
+        agent = Agent(role="Test Agent", goal="Test goal", backstory="Test backstory")
+        task = Task(
+            description="Say hello to the world",
+            expected_output="hello world",
+            agent=agent,
+        )
+        crew = Crew(agents=[agent], tasks=[task], verbose=True, tracing=True)
+        crew.kickoff()
+        trace_listener = TraceCollectionListener(tracing=True)
+        assert trace_listener.trace_enabled is True
+        assert trace_listener.batch_manager is not None
 
     # Helper method to ensure cleanup
     def teardown_method(self):

@@ -1,0 +1,194 @@
+---
+title: YouTube 채널 RAG 검색
+description: YoutubeChannelSearchTool은 YouTube 채널의 콘텐츠 내에서 RAG(검색 증강 생성) 검색을 수행하도록 설계되었습니다.
+icon: youtube
+---
+
+# `YoutubeChannelSearchTool`
+
+<Note>
+    저희는 여전히 도구를 개선하고 있으므로, 향후 예기치 않은 동작이나 변경 사항이 발생할 수 있습니다.
+</Note>
+
+## 설명
+
+이 도구는 특정 Youtube 채널의 콘텐츠 내에서 시맨틱 검색을 수행하도록 설계되었습니다.
+RAG(Retrieval-Augmented Generation) 방법론을 활용하여 관련성 높은 검색 결과를 제공하며,
+영상을 일일이 찾아보지 않고도 정보를 추출하거나 특정 콘텐츠를 찾는 데 매우 유용합니다.
+이 도구는 Youtube 채널 내에서의 검색 과정을 간소화하여, 연구자, 콘텐츠 제작자, 그리고 특정 정보나 주제를 찾는 시청자들에게 적합합니다.
+
+## 설치
+
+YoutubeChannelSearchTool을 사용하려면 `crewai_tools` 패키지를 설치해야 합니다. 설치하려면 셸에서 다음 명령어를 실행하세요:
+
+```shell
+pip install 'crewai[tools]'
+```
+
+## 예제
+
+다음 예제는 CrewAI 에이전트와 함께 `YoutubeChannelSearchTool`을 사용하는 방법을 보여줍니다:
+
+```python Code
+from crewai import Agent, Task, Crew
+from crewai_tools import YoutubeChannelSearchTool
+
+# 전체 YouTube 채널 검색을 위한 도구를 초기화합니다
+youtube_channel_tool = YoutubeChannelSearchTool()
+
+# 도구를 사용하는 에이전트 정의
+channel_researcher = Agent(
+    role="Channel Researcher",
+    goal="YouTube 채널에서 관련 정보를 추출하기",
+    backstory="YouTube 채널 콘텐츠 분석을 전문으로 하는 전문가 연구원입니다.",
+    tools=[youtube_channel_tool],
+    verbose=True,
+)
+
+# 특정 채널에서 정보를 검색하기 위한 예시 작업
+research_task = Task(
+    description="YouTube 채널 {youtube_channel_handle}에서 머신러닝 튜토리얼에 대한 정보를 검색하세요.",
+    expected_output="채널에서 제공되는 주요 머신러닝 튜토리얼 요약.",
+    agent=channel_researcher,
+)
+
+# crew 생성 및 실행
+crew = Crew(agents=[channel_researcher], tasks=[research_task])
+result = crew.kickoff(inputs={"youtube_channel_handle": "@exampleChannel"})
+```
+
+특정 YouTube 채널 핸들로 도구를 초기화할 수도 있습니다:
+
+```python Code
+# 특정 YouTube 채널 핸들로 도구를 초기화합니다
+youtube_channel_tool = YoutubeChannelSearchTool(
+    youtube_channel_handle='@exampleChannel'
+)
+
+# 도구를 사용하는 에이전트 정의
+channel_researcher = Agent(
+    role="Channel Researcher",
+    goal="특정 YouTube 채널에서 관련 정보 추출",
+    backstory="YouTube 채널 콘텐츠 분석을 전문으로 하는 전문가 연구원입니다.",
+    tools=[youtube_channel_tool],
+    verbose=True,
+)
+```
+
+## 파라미터
+
+`YoutubeChannelSearchTool`은 다음 파라미터를 허용합니다:
+
+- **youtube_channel_handle**: 선택 사항. 검색할 YouTube 채널의 핸들입니다. 초기화 시 제공되면, 에이전트가 도구를 사용할 때 별도로 입력할 필요가 없습니다. 핸들이 '@'로 시작하지 않으면 자동으로 추가됩니다.
+- **config**: 선택 사항. LLM 및 임베더 설정을 포함한 기본 RAG 시스템의 구성입니다.
+- **summarize**: 선택 사항. 검색된 콘텐츠를 요약할지 여부입니다. 기본값은 `False`입니다.
+
+에이전트와 함께 도구를 사용할 때 에이전트가 제공해야 하는 값은 다음과 같습니다:
+
+- **search_query**: 필수. 채널 콘텐츠에서 관련 정보를 찾기 위한 검색어입니다.
+- **youtube_channel_handle**: 초기화 시 제공하지 않은 경우에만 필수. 검색할 YouTube 채널의 핸들입니다.
+
+## 커스텀 모델 및 임베딩
+
+기본적으로, 해당 도구는 임베딩과 요약 모두에 OpenAI를 사용합니다. 모델을 사용자 정의하려면 아래와 같이 config 딕셔너리를 사용할 수 있습니다:
+
+```python Code
+youtube_channel_tool = YoutubeChannelSearchTool(
+    config=dict(
+        llm=dict(
+            provider="ollama", # 또는 google, openai, anthropic, llama2, ...
+            config=dict(
+                model="llama2",
+                # temperature=0.5,
+                # top_p=1,
+                # stream=true,
+            ),
+        ),
+        embedder=dict(
+            provider="google", # 또는 openai, ollama, ...
+            config=dict(
+                model="models/embedding-001",
+                task_type="retrieval_document",
+                # title="Embeddings",
+            ),
+        ),
+    )
+)
+```
+
+## 에이전트 통합 예시
+
+다음은 `YoutubeChannelSearchTool`을 CrewAI 에이전트와 통합하는 방법에 대한 좀 더 자세한 예시입니다:
+
+```python Code
+from crewai import Agent, Task, Crew
+from crewai_tools import YoutubeChannelSearchTool
+
+# Initialize the tool
+youtube_channel_tool = YoutubeChannelSearchTool()
+
+# Define an agent that uses the tool
+channel_researcher = Agent(
+    role="Channel Researcher",
+    goal="Extract and analyze information from YouTube channels",
+    backstory="""You are an expert channel researcher who specializes in extracting
+    and analyzing information from YouTube channels. You have a keen eye for detail
+    and can quickly identify key points and insights from video content across an entire channel.""",
+    tools=[youtube_channel_tool],
+    verbose=True,
+)
+
+# Create a task for the agent
+research_task = Task(
+    description="""
+    Search for information about data science projects and tutorials
+    in the YouTube channel {youtube_channel_handle}.
+
+    Focus on:
+    1. Key data science techniques covered
+    2. Popular tutorial series
+    3. Most viewed or recommended videos
+
+    Provide a comprehensive summary of these points.
+    """,
+    expected_output="A detailed summary of data science content available on the channel.",
+    agent=channel_researcher,
+)
+
+# Run the task
+crew = Crew(agents=[channel_researcher], tasks=[research_task])
+result = crew.kickoff(inputs={"youtube_channel_handle": "@exampleDataScienceChannel"})
+```
+
+## 구현 세부사항
+
+`YoutubeChannelSearchTool`은 Retrieval-Augmented Generation의 기본 기능을 제공하는 `RagTool`의 하위 클래스로 구현되었습니다:
+
+```python Code
+class YoutubeChannelSearchTool(RagTool):
+    name: str = "Search a Youtube Channels content"
+    description: str = "A tool that can be used to semantic search a query from a Youtube Channels content."
+    args_schema: Type[BaseModel] = YoutubeChannelSearchToolSchema
+
+    def __init__(self, youtube_channel_handle: Optional[str] = None, **kwargs):
+        super().__init__(**kwargs)
+        if youtube_channel_handle is not None:
+            kwargs["data_type"] = DataType.YOUTUBE_CHANNEL
+            self.add(youtube_channel_handle)
+            self.description = f"A tool that can be used to semantic search a query the {youtube_channel_handle} Youtube Channels content."
+            self.args_schema = FixedYoutubeChannelSearchToolSchema
+            self._generate_description()
+
+    def add(
+        self,
+        youtube_channel_handle: str,
+        **kwargs: Any,
+    ) -> None:
+        if not youtube_channel_handle.startswith("@"):
+            youtube_channel_handle = f"@{youtube_channel_handle}"
+        super().add(youtube_channel_handle, **kwargs)
+```
+
+## 결론
+
+`YoutubeChannelSearchTool`은 RAG 기법을 활용하여 YouTube 채널 콘텐츠에서 정보를 검색하고 추출하는 강력한 방법을 제공합니다. 에이전트가 채널 전체의 영상을 대상으로 검색할 수 있도록 하여, 그렇지 않으면 수행하기 어려운 정보 추출 및 분석 작업을 용이하게 해줍니다. 이 도구는 특히 YouTube 채널에서의 연구, 콘텐츠 분석, 지식 추출에 유용합니다.

@@ -1,0 +1,110 @@
+---
+title: Arxiv 논문 도구
+description: ArxivPaperTool은 쿼리에 맞는 논문을 arXiv에서 검색하고, 선택적으로 PDF를 다운로드합니다.
+icon: box-archive
+---
+
+# `ArxivPaperTool`
+
+## 설명
+
+`ArxivPaperTool`은 arXiv API를 통해 학술 논문을 검색하고 간결하고 읽기 쉬운 결과를 반환합니다. 또한 선택적으로 PDF 파일을 디스크에 다운로드할 수도 있습니다.
+
+## 설치
+
+이 도구는 `crewai-tools` 외에 별도의 특별한 설치가 필요하지 않습니다.
+
+```shell
+uv add crewai-tools
+```
+
+API 키가 필요하지 않습니다. 이 도구는 공개 arXiv Atom API를 사용합니다.
+
+## 시작 단계
+
+1. 도구를 초기화합니다.
+2. `search_query`를 제공합니다 (예: "transformer neural network").
+3. 선택적으로 생성자에서 `max_results`(1–100)를 설정하고 PDF 다운로드를 활성화할 수 있습니다.
+
+## 예시
+
+```python Code
+from crewai import Agent, Task, Crew
+from crewai_tools import ArxivPaperTool
+
+tool = ArxivPaperTool(
+    download_pdfs=False,
+    save_dir="./arxiv_pdfs",
+    use_title_as_filename=True,
+)
+
+agent = Agent(
+    role="Researcher",
+    goal="Find relevant arXiv papers",
+    backstory="Expert at literature discovery",
+    tools=[tool],
+    verbose=True,
+)
+
+task = Task(
+    description="Search arXiv for 'transformer neural network' and list top 5 results.",
+    expected_output="A concise list of 5 relevant papers with titles, links, and summaries.",
+    agent=agent,
+)
+
+crew = Crew(agents=[agent], tasks=[task])
+result = crew.kickoff()
+```
+
+### 직접 사용 (Agent 없이)
+
+```python Code
+from crewai_tools import ArxivPaperTool
+
+tool = ArxivPaperTool(
+    download_pdfs=True,
+    save_dir="./arxiv_pdfs",
+)
+print(tool.run(search_query="mixture of experts", max_results=3))
+```
+
+## 매개변수
+
+### 초기화 매개변수
+
+- `download_pdfs` (bool, 기본값 `False`): PDF를 다운로드할지 여부입니다.
+- `save_dir` (str, 기본값 `./arxiv_pdfs`): PDF를 저장할 디렉터리입니다.
+- `use_title_as_filename` (bool, 기본값 `False`): 논문 제목을 파일명으로 사용할지 여부입니다.
+
+### 실행 매개변수
+
+- `search_query` (str, 필수): arXiv 검색 쿼리입니다.
+- `max_results` (int, 기본값 `5`, 범위 1–100): 결과 수.
+
+## 출력 형식
+
+이 도구는 다음과 같이 사람이 읽을 수 있는 논문 목록을 반환합니다:
+- 제목
+- 링크 (초록 페이지)
+- 요약/설명 (생략됨)
+
+`download_pdfs=True`로 설정하면, PDF 파일이 디스크에 저장되며 요약에 저장된 파일이 언급됩니다.
+
+## 사용 참고 사항
+
+- 이 도구는 주요 메타데이터와 링크가 포함된 서식을 갖춘 텍스트를 반환합니다.
+- `download_pdfs=True`인 경우, PDF는 `save_dir`에 저장됩니다.
+
+## 문제 해결
+
+- 네트워크 시간 초과가 발생하면 다시 시도하거나 `max_results` 값을 줄이십시오.
+- 잘못된 XML 오류는 arXiv 응답 파싱 문제를 나타냅니다. 더 간단한 쿼리를 시도해 보십시오.
+- 파일 시스템 오류(예: 권한 거부)는 PDF를 저장할 때 발생할 수 있습니다. `save_dir`가 쓰기 가능한지 확인하십시오.
+
+## 관련 링크
+
+- arXiv API 문서: https://info.arxiv.org/help/api/index.html
+
+## 오류 처리
+
+- 네트워크 문제, 잘못된 XML, 그리고 OS 오류는 안내 메시지로 처리됩니다.

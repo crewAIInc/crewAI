@@ -1,0 +1,956 @@
+---
+title: 'LLMs'
+description: 'CrewAI 프로젝트에서 대형 언어 모델(LLM)을 구성하고 사용하는 방법에 대한 종합 안내서'
+icon: 'microchip-ai'
+---
+
+## 개요
+
+CrewAI는 LiteLLM을 통해 다양한 LLM 제공업체와 통합되어, 특정 사용 사례에 맞는 올바른 모델을 선택할 수 있는 유연성을 제공합니다. 이 가이드는 CrewAI 프로젝트에서 다양한 LLM 제공업체를 구성하고 사용하는 방법을 이해하는 데 도움이 될 것입니다.
+
+## LLM이란 무엇인가요?
+
+Large Language Models(LLM)는 CrewAI 에이전트의 핵심 지능입니다. 에이전트가 문맥을 이해하고, 결정을 내리며, 인간과 유사한 응답을 생성할 수 있도록 합니다. 알아두어야 할 내용은 다음과 같습니다:
+
+<CardGroup cols={2}>
+  <Card title="LLM 기본" icon="brain">
+    Large Language Models는 방대한 양의 텍스트 데이터로 학습된 AI 시스템입니다. CrewAI 에이전트의 지능을 구동하여, 인간과 유사한 텍스트를 이해하고 생성할 수 있도록 합니다.
+  </Card>
+  <Card title="컨텍스트 윈도우" icon="window">
+    컨텍스트 윈도우는 LLM이 한 번에 처리할 수 있는 텍스트 양을 결정합니다. 더 큰 윈도우(예: 128K 토큰)는 더 많은 문맥을 다룰 수 있지만, 비용과 속도 면에서 더 부담이 될 수 있습니다.
+  </Card>
+  <Card title="Temperature" icon="temperature-three-quarters">
+    Temperature(0.0에서 1.0)는 응답의 무작위성을 조절합니다. 낮은 값(예: 0.2)은 더 집중적이고 결정적인 결과를, 높은 값(예: 0.8)은 창의성과 다양성을 높입니다.
+  </Card>
+  <Card title="제공자 선택" icon="server">
+    각 LLM 제공자(예: OpenAI, Anthropic, Google)는 다양한 기능, 가격, 특성을 가진 모델을 제공합니다. 정확성, 속도, 비용 등 요구 사항에 따라 선택하세요.
+  </Card>
+</CardGroup>
+
+## LLM 설정하기
+
+CrewAI 코드 내에는 사용할 모델을 지정할 수 있는 여러 위치가 있습니다. 모델을 지정한 후에는 사용하는 각 모델 제공자에 대한 설정(예: API 키)을 제공해야 합니다. 각 제공자에 맞는 [제공자 설정 예제](#provider-configuration-examples) 섹션을 참고하세요.
+
+<Tabs>
+  <Tab title="1. 환경 변수">
+    가장 간단하게 시작할 수 있는 방법입니다. `.env` 파일이나 앱 코드에서 환경 변수로 직접 모델을 설정할 수 있습니다. `crewai create`를 사용해 프로젝트를 부트스트랩했다면 이미 설정되어 있을 수 있습니다.
+
+    ```bash .env
+    MODEL=model-id  # e.g. gpt-4o, gemini-2.0-flash, claude-3-sonnet-...
+
+    # 반드시 여기에서 API 키도 설정하세요. 아래 제공자
+    # 섹션을 참고하세요.
+    ```
+
+    <Warning>
+      API 키를 절대 버전 관리 시스템에 커밋하지 마세요. 환경 파일(.env)이나 시스템의 비밀 관리 기능을 사용하세요.
+    </Warning>
+  </Tab>
+  <Tab title="2. YAML 구성">
+    에이전트 구성을 정의하는 YAML 파일을 만드세요. 이 방법은 버전 관리와 팀 협업에 적합합니다:
+
+    ```yaml agents.yaml {6}
+    researcher:
+        role: Research Specialist
+        goal: Conduct comprehensive research and analysis
+        backstory: A dedicated research professional with years of experience
+        verbose: true
+        llm: provider/model-id  # e.g. openai/gpt-4o, google/gemini-2.0-flash, anthropic/claude...
+        # (아래 제공자 구성 예제 참고)
+    ```
+
+    <Info>
+      YAML 구성의 장점:
+      - 에이전트 설정을 버전 관리할 수 있습니다.
+      - 다양한 모델 간 전환이 쉽습니다.
+      - 팀원들과 구성을 공유할 수 있습니다.
+      - 모델 선택과 목적을 문서화할 수 있습니다.
+    </Info>
+  </Tab>
+  <Tab title="3. 직접 코드 작성">
+    최대한 유연하게 LLM을 Python 코드에서 직접 구성할 수 있습니다:
+
+    ```python {4,8}
+    from crewai import LLM
+
+    # 기본 설정
+    llm = LLM(model="model-id-here")  # gpt-4o, gemini-2.0-flash, anthropic/claude...
+
+    # 자세한 파라미터로 고급 설정
+    llm = LLM(
+        model="model-id-here",  # gpt-4o, gemini-2.0-flash, anthropic/claude...
+        temperature=0.7,        # 더욱 창의적인 결과를 원할 때 높게 설정
+        timeout=120,            # 응답을 기다릴 최대 초
+        max_tokens=4000,        # 응답의 최대 길이
+        top_p=0.9,              # 누클리어스 샘플링 파라미터
+        frequency_penalty=0.1 , # 반복 줄이기
+        presence_penalty=0.1,   # 주제 다양성 높이기
+        response_format={"type": "json"},  # 구조화된 출력용
+        seed=42                 # 결과 재현성 확보용
+    )
+    ```
+
+    <Info>
+      파라미터 설명:
+      - `temperature`: 랜덤성 제어 (0.0-1.0)
+      - `timeout`: 응답 대기 최대 시간
+      - `max_tokens`: 응답 길이 제한
+      - `top_p`: 샘플링 시 temperature의 대체값
+      - `frequency_penalty`: 단어 반복 감소
+      - `presence_penalty`: 새로운 주제 생성 유도
+      - `response_format`: 출력 구조 지정
+      - `seed`: 일관된 출력 보장
+    </Info>
+  </Tab>
+</Tabs>
+
+## 공급자 구성 예시
+
+CrewAI는 고유한 기능, 인증 방법, 모델 역량을 제공하는 다양한 LLM 공급자를 지원합니다.  
+이 섹션에서는 프로젝트의 요구에 가장 적합한 LLM을 선택, 구성, 최적화하는 데 도움이 되는 자세한 예시를 제공합니다.
+
+<AccordionGroup>
+  <Accordion title="OpenAI">
+    `.env` 파일에 다음 환경 변수를 설정하십시오:
+
+    ```toml Code
+    # Required
+    OPENAI_API_KEY=sk-...
+
+    # Optional
+    OPENAI_API_BASE=<custom-base-url>
+    OPENAI_ORGANIZATION=<your-org-id>
+    ```
+
+    CrewAI 프로젝트에서의 예시 사용법:
+    ```python Code
+    from crewai import LLM
+
+    llm = LLM(
+        model="openai/gpt-4", # call model by provider/model_name
+        temperature=0.8,
+        max_tokens=150,
+        top_p=0.9,
+        frequency_penalty=0.1,
+        presence_penalty=0.1,
+        stop=["END"],
+        seed=42
+    )
+    ```
+
+    OpenAI는 다양한 모델과 기능을 제공하는 대표적인 LLM 공급자 중 하나입니다.
+
+    | 모델              | 컨텍스트 윈도우   | 최적 용도                                    |
+    |-------------------|-------------------|-----------------------------------------------|
+    | GPT-4             | 8,192 토큰        | 고정확도 작업, 복잡한 추론                   |
+    | GPT-4 Turbo       | 128,000 토큰      | 장문 콘텐츠, 문서 분석                       |
+    | GPT-4o & GPT-4o-mini  | 128,000 토큰  | 비용 효율적인 대용량 컨텍스트 처리           |
+    | o3-mini           | 200,000 토큰      | 빠른 추론, 복잡한 추론                       |
+    | o1-mini           | 128,000 토큰      | 빠른 추론, 복잡한 추론                       |
+    | o1-preview        | 128,000 토큰      | 빠른 추론, 복잡한 추론                       |
+    | o1                | 200,000 토큰      | 빠른 추론, 복잡한 추론                       |
+  </Accordion>
+
+  <Accordion title="Meta-Llama">
+    Meta의 Llama API는 Meta의 대형 언어 모델 패밀리 접근을 제공합니다.  
+    API는 [Meta Llama API](https://llama.developer.meta.com?utm_source=partner-crewai&utm_medium=website)에서 사용할 수 있습니다.  
+    `.env` 파일에 다음 환경 변수를 설정하십시오:
+
+    ```toml Code
+    # Meta Llama API Key Configuration
+    LLAMA_API_KEY=LLM|your_api_key_here
+    ```
+
+    CrewAI 프로젝트에서의 예시 사용법:
+    ```python Code
+    from crewai import LLM
+
+    # Meta Llama LLM 초기화
+    llm = LLM(
+        model="meta_llama/Llama-4-Scout-17B-16E-Instruct-FP8",
+        temperature=0.8,
+        stop=["END"],
+        seed=42
+    )
+    ```
+
+    https://llama.developer.meta.com/docs/models/ 에 기재된 모든 모델이 지원됩니다.
+
+    | 모델 ID | 입력 컨텍스트 길이 | 출력 컨텍스트 길이 | 입력 모달리티    | 출력 모달리티    |
+    | ------- | ------------------ | ------------------ | ---------------- | ---------------- |
+    | `meta_llama/Llama-4-Scout-17B-16E-Instruct-FP8` | 128k | 4028       | 텍스트, 이미지     | 텍스트           |
+    | `meta_llama/Llama-4-Maverick-17B-128E-Instruct-FP8` | 128k | 4028 | 텍스트, 이미지     | 텍스트           |
+    | `meta_llama/Llama-3.3-70B-Instruct`               | 128k | 4028       | 텍스트            | 텍스트           |
+    | `meta_llama/Llama-3.3-8B-Instruct`                | 128k | 4028       | 텍스트            | 텍스트           |
+  </Accordion>
+
+  <Accordion title="Anthropic">
+    ```toml Code
+    # Required
+    ANTHROPIC_API_KEY=sk-ant-...
+
+    # Optional
+    ANTHROPIC_API_BASE=<custom-base-url>
+    ```
+
+    CrewAI 프로젝트에서의 예시 사용법:
+    ```python Code
+    llm = LLM(
+        model="anthropic/claude-3-sonnet-20240229-v1:0",
+        temperature=0.7
+    )
+    ```
+  </Accordion>
+
+  <Accordion title="Google (Gemini API)">
+    `.env` 파일에 API 키를 설정하십시오. 키가 필요하거나 기존 키를 찾으려면 [AI Studio](https://aistudio.google.com/apikey)를 확인하세요.
+
+    ```toml .env
+    # https://ai.google.dev/gemini-api/docs/api-key
+    GEMINI_API_KEY=<your-api-key>
+    ```
+
+    CrewAI 프로젝트에서의 예시 사용법:
+    ```python Code
+    from crewai import LLM
+
+    llm = LLM(
+        model="gemini/gemini-2.0-flash",
+        temperature=0.7,
+    )
+    ```
+
+    ### Gemini 모델
+
+    Google은 다양한 용도에 최적화된 강력한 모델을 제공합니다.
+
+    | 모델                            | 컨텍스트 윈도우 | 최적 용도                                                               |
+    |----------------------------------|-----------------|------------------------------------------------------------------------|
+    | gemini-2.5-flash-preview-04-17   | 1M 토큰         | 적응형 사고, 비용 효율성                                                |
+    | gemini-2.5-pro-preview-05-06     | 1M 토큰         | 향상된 사고 및 추론, 멀티모달 이해, 고급 코딩 등                        |
+    | gemini-2.0-flash                 | 1M 토큰         | 차세대 기능, 속도, 사고, 실시간 스트리밍                                |
+    | gemini-2.0-flash-lite            | 1M 토큰         | 비용 효율성과 낮은 대기 시간                                            |
+    | gemini-1.5-flash                 | 1M 토큰         | 밸런스 잡힌 멀티모달 모델, 대부분의 작업에 적합                         |
+    | gemini-1.5-flash-8B              | 1M 토큰         | 가장 빠르고, 비용 효율적, 고빈도 작업에 적합                            |
+    | gemini-1.5-pro                   | 2M 토큰         | 최고의 성능, 논리적 추론, 코딩, 창의적 협업 등 다양한 추론 작업에 적합   |
+
+    전체 모델 목록은 [Gemini 모델 문서](https://ai.google.dev/gemini-api/docs/models)에서 확인할 수 있습니다.
+
+    ### Gemma
+
+    Gemini API를 통해 Google 인프라에서 호스팅되는 [Gemma 모델](https://ai.google.dev/gemma/docs)도 API 키를 이용해 사용할 수 있습니다.
+
+    | 모델           | 컨텍스트 윈도우 |
+    |----------------|----------------|
+    | gemma-3-1b-it  | 32k 토큰       |
+    | gemma-3-4b-it  | 32k 토큰       |
+    | gemma-3-12b-it | 32k 토큰       |
+    | gemma-3-27b-it | 128k 토큰      |
+
+  </Accordion>
+  <Accordion title="Google (Vertex AI)">
+    Google Cloud Console에서 자격증명을 받아 JSON 파일로 저장한 후, 다음 코드로 로드하세요:
+    ```python Code
+    import json
+
+    file_path = 'path/to/vertex_ai_service_account.json'
+
+    # Load the JSON file
+    with open(file_path, 'r') as file:
+        vertex_credentials = json.load(file)
+
+    # Convert the credentials to a JSON string
+    vertex_credentials_json = json.dumps(vertex_credentials)
+    ```
+
+    CrewAI 프로젝트에서의 예시 사용법:
+    ```python Code
+    from crewai import LLM
+
+    llm = LLM(
+        model="gemini-1.5-pro-latest", # or vertex_ai/gemini-1.5-pro-latest
+        temperature=0.7,
+        vertex_credentials=vertex_credentials_json
+    )
+    ```
+
+    Google은 다양한 용도에 최적화된 강력한 모델들을 제공합니다:
+
+    | 모델                            | 컨텍스트 윈도우 | 최적 용도                                                               |
+    |----------------------------------|-----------------|------------------------------------------------------------------------|
+    | gemini-2.5-flash-preview-04-17   | 1M 토큰         | 적응형 사고, 비용 효율성                                                |
+    | gemini-2.5-pro-preview-05-06     | 1M 토큰         | 향상된 사고 및 추론, 멀티모달 이해, 고급 코딩 등                        |
+    | gemini-2.0-flash                 | 1M 토큰         | 차세대 기능, 속도, 사고, 실시간 스트리밍                                |
+    | gemini-2.0-flash-lite            | 1M 토큰         | 비용 효율성과 낮은 대기 시간                                            |
+    | gemini-1.5-flash                 | 1M 토큰         | 밸런스 잡힌 멀티모달 모델, 대부분의 작업에 적합                         |
+    | gemini-1.5-flash-8B              | 1M 토큰         | 가장 빠르고, 비용 효율적, 고빈도 작업에 적합                            |
+    | gemini-1.5-pro                   | 2M 토큰         | 최고의 성능, 논리적 추론, 코딩, 창의적 협업 등 다양한 추론 작업에 적합   |
+  </Accordion>
+
+  <Accordion title="Azure">
+    ```toml Code
+    # Required
+    AZURE_API_KEY=<your-api-key>
+    AZURE_API_BASE=<your-resource-url>
+    AZURE_API_VERSION=<api-version>
+
+    # Optional
+    AZURE_AD_TOKEN=<your-azure-ad-token>
+    AZURE_API_TYPE=<your-azure-api-type>
+    ```
+
+    CrewAI 프로젝트에서의 예시 사용법:
+    ```python Code
+    llm = LLM(
+        model="azure/gpt-4",
+        api_version="2023-05-15"
+    )
+    ```
+  </Accordion>
+
+  <Accordion title="AWS Bedrock">
+    ```toml Code
+    AWS_ACCESS_KEY_ID=<your-access-key>
+    AWS_SECRET_ACCESS_KEY=<your-secret-key>
+    AWS_DEFAULT_REGION=<your-region>
+    ```
+
+    CrewAI 프로젝트에서의 예시 사용법:
+    ```python Code
+    llm = LLM(
+        model="bedrock/anthropic.claude-3-sonnet-20240229-v1:0"
+    )
+    ```
+
+    Amazon Bedrock을 사용하기 전에, 환경에 boto3가 설치되어 있는지 확인하십시오.
+
+    [Amazon Bedrock](https://docs.aws.amazon.com/bedrock/latest/userguide/models-regions.html)은 대표적인 AI 회사들의 여러 파운데이션 모델에 통합 API를 통해 접근할 수 있는 매니지드 서비스로, 안전하고 책임감 있는 AI 응용프로그램 개발을 가능하게 해줍니다.
+
+    | 모델                        | 컨텍스트 윈도우    | 최적 용도                                                               |
+    |-----------------------------|--------------------|------------------------------------------------------------------------|
+    | Amazon Nova Pro             | 최대 300k 토큰     | 다양한 작업에서 정확성, 속도, 비용을 균형 있게 제공하는 고성능 모델        |
+    | Amazon Nova Micro           | 최대 128k 토큰     | 텍스트 전용, 최소 레이턴시 응답에 최적화된 비용 효율적 고성능 모델         |
+    | Amazon Nova Lite            | 최대 300k 토큰     | 이미지, 비디오, 텍스트를 아우르는 실시간 멀티모달 처리                   |
+    | Claude 3.7 Sonnet           | 최대 128k 토큰     | 복잡한 추론, 코딩 및 AI 에이전트에 적합한 고성능 모델                     |
+    | Claude 3.5 Sonnet v2        | 최대 200k 토큰     | 소프트웨어 공학, 에이전트 기능, 컴퓨터 상호작용에 특화된 최신 모델         |
+    | Claude 3.5 Sonnet           | 최대 200k 토큰     | 다양한 작업에 탁월한 지능 및 추론 제공, 최적의 속도·비용 모델             |
+    | Claude 3.5 Haiku            | 최대 200k 토큰     | 빠르고 컴팩트한 멀티모달 모델, 신속하고 자연스러운 대화에 최적            |
+    | Claude 3 Sonnet             | 최대 200k 토큰     | 지능과 속도의 균형 잡힌 멀티모달 모델, 대규모 배포에 적합                |
+    | Claude 3 Haiku              | 최대 200k 토큰     | 컴팩트한 고속 멀티모달 모델, 신속한 응답과 자연스러운 대화형 상호작용      |
+    | Claude 3 Opus               | 최대 200k 토큰     | 인간 같은 추론과 우수한 문맥 이해로 복잡한 작업 수행                     |
+    | Claude 2.1                  | 최대 200k 토큰     | 확장된 컨텍스트, 신뢰도 개선, 로봇화 감소, 장문 및 RAG 적용에 적합         |
+    | Claude                      | 최대 100k 토큰     | 복잡한 대화, 창의적 콘텐츠 생성, 정교한 지시 수행에 탁월                  |
+    | Claude Instant              | 최대 100k 토큰     | 일상 대화, 분석, 요약, 문서 Q&A 등 빠르고 비용 효율적인 모델               |
+    | Llama 3.1 405B Instruct     | 최대 128k 토큰     | 챗봇, 코딩, 도메인 특화 작업을 위한 합성 데이터 생성 및 추론용 첨단 LLM    |
+    | Llama 3.1 70B Instruct      | 최대 128k 토큰     | 복잡한 대화, 우수한 문맥 및 추론, 텍스트 생성 능력 강화                   |
+    | Llama 3.1 8B Instruct       | 최대 128k 토큰     | 우수한 언어 이해, 추론, 텍스트 생성 기능의 최첨단 모델                     |
+    | Llama 3 70B Instruct        | 최대 8k 토큰       | 복잡한 대화, 우수한 문맥 및 추론, 텍스트 생성 기능 강화                   |
+    | Llama 3 8B Instruct         | 최대 8k 토큰       | 첨단 언어 이해력, 추론, 텍스트 생성이 가능한 최첨단 LLM                    |
+    | Titan Text G1 - Lite        | 최대 4k 토큰       | 영어 과제 및 요약, 콘텐츠 생성에 최적화된 경량 비용 효율적 모델            |
+    | Titan Text G1 - Express     | 최대 8k 토큰       | 일반 언어, 대화, RAG 지원, 영어 및 100여 개 언어 지원                      |
+    | Cohere Command              | 최대 4k 토큰       | 사용자의 명령 수행, 실질적 기업 솔루션 제공에 특화된 모델                  |
+    | Jurassic-2 Mid              | 최대 8,191 토큰    | 다양한 언어 과제(Q&A, 요약, 생성 등)에 적합한 품질-비용 균형 모델          |
+    | Jurassic-2 Ultra            | 최대 8,191 토큰    | 고급 텍스트 생성과 이해, 분석 및 콘텐츠 제작 등 복잡한 작업 수행            |
+    | Jamba-Instruct              | 최대 256k 토큰     | 비용 효율적인 대용량 문맥 창작, 요약, Q&A에 최적화된 모델                  |
+    | Mistral 7B Instruct         | 최대 32k 토큰      | 명령을 따르고, 요청을 완성하며, 창의적 텍스트를 생성하는 LLM               |
+    | Mistral 8x7B Instruct       | 최대 32k 토큰      | 명령 및 요청 완성, 창의적 텍스트 생성이 가능한 MOE LLM                     |
+
+  </Accordion>
+
+  <Accordion title="Amazon SageMaker">
+    ```toml Code
+    AWS_ACCESS_KEY_ID=<your-access-key>
+    AWS_SECRET_ACCESS_KEY=<your-secret-key>
+    AWS_DEFAULT_REGION=<your-region>
+    ```
+
+    CrewAI 프로젝트에서의 예시 사용법:
+    ```python Code
+    llm = LLM(
+        model="sagemaker/<my-endpoint>"
+    )
+    ```
+  </Accordion>
+
+  <Accordion title="Mistral">
+    `.env` 파일에 다음 환경 변수를 설정하십시오:
+    ```toml Code
+    MISTRAL_API_KEY=<your-api-key>
+    ```
+
+    CrewAI 프로젝트에서의 예시 사용법:
+    ```python Code
+    llm = LLM(
+        model="mistral/mistral-large-latest",
+        temperature=0.7
+    )
+    ```
+  </Accordion>
+
+  <Accordion title="Nvidia NIM">
+    `.env` 파일에 다음 환경 변수를 설정하십시오:
+    ```toml Code
+    NVIDIA_API_KEY=<your-api-key>
+    ```
+
+    CrewAI 프로젝트에서의 예시 사용법:
+    ```python Code
+    llm = LLM(
+        model="nvidia_nim/meta/llama3-70b-instruct",
+        temperature=0.7
+    )
+    ```
+
+    Nvidia NIM은 일반 목적 작업부터 특수 목적 응용까지 다양한 용도를 위한 모델 제품군을 제공합니다.
+
+    | 모델                                                                   | 컨텍스트 윈도우 | 최적 용도                                                           |
+    |------------------------------------------------------------------------|----------------|---------------------------------------------------------------------|
+    | nvidia/mistral-nemo-minitron-8b-8k-instruct                            | 8,192 토큰     | 챗봇, 가상 비서, 콘텐츠 생성을 위한 최신형 소형 언어 모델             |
+    | nvidia/nemotron-4-mini-hindi-4b-instruct                               | 4,096 토큰     | 힌디-영어 SLM, 힌디 언어 전용 온디바이스 추론                        |
+    | nvidia/llama-3.1-nemotron-70b-instruct                                 | 128k 토큰      | 더욱 도움이 되는 답변을 위해 커스터마이즈됨                           |
+    | nvidia/llama3-chatqa-1.5-8b                                            | 128k 토큰      | 챗봇, 검색엔진용 맥락 인식 응답 생성에 탁월한 고급 LLM                |
+    | nvidia/llama3-chatqa-1.5-70b                                           | 128k 토큰      | 챗봇, 검색엔진용 맥락 인식 응답 생성에 탁월한 고급 LLM                |
+    | nvidia/vila                                                            | 128k 토큰      | 텍스트/이미지/비디오 이해 및 정보성 응답 생성을 지원하는 멀티모달 모델 |
+    | nvidia/neva-22                                                         | 4,096 토큰     | 텍스트/이미지 이해 및 정보성 응답 생성을 지원하는 멀티모달 모델        |
+    | nvidia/nemotron-mini-4b-instruct                                       | 8,192 토큰     | 일반 목적 작업                                                       |
+    | nvidia/usdcode-llama3-70b-instruct                                     | 128k 토큰      | OpenUSD 지식 질의 응답, USD-Python 코드 생성이 가능한 최신 LLM         |
+    | nvidia/nemotron-4-340b-instruct                                        | 4,096 토큰     | 실제 데이터를 모사하는 다양한 합성 데이터 생성                        |
+    | meta/codellama-70b                                                     | 100k 토큰      | 자연어 → 코드 및 코드 → 자연어 전환 가능한 LLM                       |
+    | meta/llama2-70b                                                        | 4,096 토큰     | 텍스트, 코드 생성에 최적화된 최첨단 대형 언어 모델                    |
+    | meta/llama3-8b-instruct                                                | 8,192 토큰     | 최첨단 언어 이해 및 추론, 텍스트 생성 기능 모델                       |
+    | meta/llama3-70b-instruct                                               | 8,192 토큰     | 복잡한 대화, 우수한 문맥 및 추론, 텍스트 생성                         |
+    | meta/llama-3.1-8b-instruct                                             | 128k 토큰      | 최첨단 언어 이해 및 추론, 텍스트 생성 기능의 첨단 모델                 |
+    | meta/llama-3.1-70b-instruct                                            | 128k 토큰      | 복잡한 대화, 우수한 문맥 및 추론, 텍스트 생성                         |
+    | meta/llama-3.1-405b-instruct                                           | 128k 토큰      | 챗봇, 코딩, 도메인 특화 작업 합성 데이터 생성 및 추론                  |
+    | meta/llama-3.2-1b-instruct                                             | 128k 토큰      | 최첨단 소형 언어 이해, 추론, 텍스트 생성 모델                         |
+    | meta/llama-3.2-3b-instruct                                             | 128k 토큰      | 최첨단 소형 언어 이해, 추론, 텍스트 생성                               |
+    | meta/llama-3.2-11b-vision-instruct                                     | 128k 토큰      | 최첨단 소형 언어 이해, 추론, 텍스트 생성                               |
+    | meta/llama-3.2-90b-vision-instruct                                     | 128k 토큰      | 최첨단 소형 언어 이해, 추론, 텍스트 생성                               |
+    | google/gemma-7b                                                        | 8,192 토큰     | 문자열의 이해, 변환, 코드 생성을 지원하는 최첨단 텍스트 생성 모델      |
+    | google/gemma-2b                                                        | 8,192 토큰     | 문자열의 이해, 변환, 코드 생성을 지원하는 최첨단 텍스트 생성 모델      |
+    | google/codegemma-7b                                                    | 8,192 토큰     | 코드 생성 및 보완에 특화된 Google Gemma-7B 기반 모델                  |
+    | google/codegemma-1.1-7b                                                | 8,192 토큰     | 코드 생성, 보완, 추론, 명령 수행에 강점을 가진 고급 프로그래밍 모델   |
+    | google/recurrentgemma-2b                                               | 8,192 토큰     | 긴 시퀀스 생성 시 빠른 추론을 가능케 하는 순환 아키텍처 LLM           |
+    | google/gemma-2-9b-it                                                   | 8,192 토큰     | 문자열의 이해, 변환, 코드 생성을 지원하는 최첨단 텍스트 생성 모델      |
+    | google/gemma-2-27b-it                                                  | 8,192 토큰     | 문자열의 이해, 변환, 코드 생성을 지원하는 최첨단 텍스트 생성 모델      |
+    | google/gemma-2-2b-it                                                   | 8,192 토큰     | 문자열의 이해, 변환, 코드 생성을 지원하는 최첨단 텍스트 생성 모델      |
+    | google/deplot                                                          | 512 토큰       | 플롯 이미지를 표로 변환하는 원샷 비주얼 언어 이해 모델                |
+    | google/paligemma                                                       | 8,192 토큰     | 텍스트, 이미지 입력 이해 및 정보성 응답 생성에 능한 비전 언어 모델     |
+    | mistralai/mistral-7b-instruct-v0.2                                     | 32k 토큰       | 명령을 따르고, 요청을 완성하며, 창의적 텍스트 생성이 가능한 LLM        |
+    | mistralai/mixtral-8x7b-instruct-v0.1                                   | 8,192 토큰     | 명령 및 요청 완성, 창의 텍스트 생성이 가능한 MOE LLM                  |
+    | mistralai/mistral-large                                                | 4,096 토큰     | 실제 데이터 특성을 모방하는 다양한 합성 데이터 생성                    |
+    | mistralai/mixtral-8x22b-instruct-v0.1                                  | 8,192 토큰     | 실제 데이터 특성을 모방하는 다양한 합성 데이터 생성                    |
+    | mistralai/mistral-7b-instruct-v0.3                                     | 32k 토큰       | 명령을 따르고, 요청을 완성하며, 창의적 텍스트 생성이 가능한 LLM        |
+    | nv-mistralai/mistral-nemo-12b-instruct                                 | 128k 토큰      | 추론, 코드, 다국어 작업에 적합한 최첨단 언어 모델; 단일 GPU에서 구동    |
+    | mistralai/mamba-codestral-7b-v0.1                                      | 256k 토큰      | 광범위한 프로그래밍 언어 및 작업에서 코드 작성 및 상호작용 전용 모델     |
+    | microsoft/phi-3-mini-128k-instruct                                     | 128K 토큰      | 수학·논리 추론에 강한 경량 최신 공개 LLM                               |
+    | microsoft/phi-3-mini-4k-instruct                                       | 4,096 토큰     | 수학·논리 추론에 강한 경량 최신 공개 LLM                               |
+    | microsoft/phi-3-small-8k-instruct                                      | 8,192 토큰     | 수학·논리 추론에 강한 경량 최신 공개 LLM                               |
+    | microsoft/phi-3-small-128k-instruct                                    | 128K 토큰      | 수학·논리 추론에 강한 경량 최신 공개 LLM                               |
+    | microsoft/phi-3-medium-4k-instruct                                     | 4,096 토큰     | 수학·논리 추론에 강한 경량 최신 공개 LLM                               |
+    | microsoft/phi-3-medium-128k-instruct                                   | 128K 토큰      | 수학·논리 추론에 강한 경량 최신 공개 LLM                               |
+    | microsoft/phi-3.5-mini-instruct                                        | 128K 토큰      | 지연, 메모리/컴퓨트 한계 환경에서 AI 응용프로그램 구동 가능한 다국어 LLM |
+    | microsoft/phi-3.5-moe-instruct                                         | 128K 토큰      | 연산 효율적 콘텐츠 생성을 위한 Mixture of Experts 기반 첨단 LLM         |
+    | microsoft/kosmos-2                                                     | 1,024 토큰     | 이미지의 시각적 요소 이해 및 추론을 위한 획기적 멀티모달 모델           |
+    | microsoft/phi-3-vision-128k-instruct                                   | 128k 토큰      | 이미지에서 고품질 추론이 가능한 최첨단 공개 멀티모달 모델               |
+    | microsoft/phi-3.5-vision-instruct                                      | 128k 토큰      | 이미지에서 고품질 추론이 가능한 최첨단 공개 멀티모달 모델               |
+    | databricks/dbrx-instruct                                               | 12k 토큰       | 언어 이해, 코딩, RAG에 최신 성능을 제공하는 범용 LLM                    |
+    | snowflake/arctic                                                       | 1,024 토큰     | SQL 생성 및 코딩에 집중한 기업용 고효율 추론 모델                       |
+    | aisingapore/sea-lion-7b-instruct                                       | 4,096 토큰     | 동남아 언어 및 문화 다양성을 반영하는 LLM                               |
+    | ibm/granite-8b-code-instruct                                           | 4,096 토큰     | 소프트웨어 프로그래밍 LLM, 코드 생성, 완성, 설명, 멀티턴 전환            |
+    | ibm/granite-34b-code-instruct                                          | 8,192 토큰     | 소프트웨어 프로그래밍 LLM, 코드 생성, 완성, 설명, 멀티턴 전환            |
+    | ibm/granite-3.0-8b-instruct                                            | 4,096 토큰     | RAG, 요약, 분류, 코드, 에이전틱AI 지원 첨단 소형 언어 모델               |
+    | ibm/granite-3.0-3b-a800m-instruct                                      | 4,096 토큰     | RAG, 요약, 엔터티 추출, 분류에 최적화된 고효율 Mixture of Experts 모델   |
+    | mediatek/breeze-7b-instruct                                            | 4,096 토큰     | 실제 데이터 특성을 모방하는 다양한 합성 데이터 생성                     |
+    | upstage/solar-10.7b-instruct                                           | 4,096 토큰     | 지시 따르기, 추론, 수학 등에서 뛰어난 NLP 작업 수행                      |
+    | writer/palmyra-med-70b-32k                                             | 32k 토큰       | 의료 분야에서 정확하고 문맥에 맞는 응답 생성에 선도적인 LLM              |
+    | writer/palmyra-med-70b                                                 | 32k 토큰       | 의료 분야에서 정확하고 문맥에 맞는 응답 생성에 선도적인 LLM              |
+    | writer/palmyra-fin-70b-32k                                             | 32k 토큰       | 금융 분석, 보고, 데이터 처리에 특화된 LLM                                |
+    | 01-ai/yi-large                                                         | 32k 토큰       | 영어, 중국어로 훈련, 챗봇 및 창의적 글쓰기 등 다양한 작업에 사용         |
+    | deepseek-ai/deepseek-coder-6.7b-instruct                               | 2k 토큰        | 고급 코드 생성, 완성, 인필링 등의 기능을 제공하는 강력한 코딩 모델        |
+    | rakuten/rakutenai-7b-instruct                                          | 1,024 토큰     | 언어 이해, 추론, 텍스트 생성이 탁월한 최첨단 LLM                         |
+    | rakuten/rakutenai-7b-chat                                              | 1,024 토큰     | 언어 이해, 추론, 텍스트 생성이 탁월한 최첨단 LLM                         |
+    | baichuan-inc/baichuan2-13b-chat                                        | 4,096 토큰     | 중국어 및 영어 대화, 코딩, 수학, 지시 따르기, 퀴즈 풀이 지원             |
+  </Accordion>
+
+  <Accordion title="Local NVIDIA NIM Deployed using WSL2">
+
+    NVIDIA NIM을 이용하면 Windows 기기에서 WSL2(Windows Subsystem for Linux)를 통해 강력한 LLM을 로컬로 실행할 수 있습니다.  
+    이 방식은 Nvidia GPU를 활용하여 프라이빗하고, 안전하며, 비용 효율적인 AI 추론을 클라우드 서비스에 의존하지 않고 구현할 수 있습니다.
+    데이터 프라이버시, 오프라인 기능이 필요한 개발, 테스트, 또는 프로덕션 환경에 최적입니다.
+
+    로컬 NVIDIA NIM 모델 설치 단계별 가이드는 다음과 같습니다:
+
+    1. [NVIDIA 홈페이지](https://docs.nvidia.com/nim/wsl2/latest/getting-started.html)의 설치 안내를 따르세요.
+
+    2. 로컬 모델을 설치합니다. Llama 3.1-8b는 [여기](https://build.nvidia.com/meta/llama-3_1-8b-instruct/deploy) 안내를 참조하세요.
+
+    3. crewai 로컬 모델을 구성하세요:
+
+    ```python Code
+    from crewai.llm import LLM
+
+    local_nvidia_nim_llm = LLM(
+        model="openai/meta/llama-3.1-8b-instruct", # it's an openai-api compatible model
+        base_url="http://localhost:8000/v1",
+        api_key="<your_api_key|any text if you have not configured it>", # api_key is required, but you can use any text
+    )
+
+    # 그런 다음 crew에서 사용할 수 있습니다:
+
+    @CrewBase
+    class MyCrew():
+        # ...
+
+        @agent
+        def researcher(self) -> Agent:
+            return Agent(
+                config=self.agents_config['researcher'], # type: ignore[index]
+                llm=local_nvidia_nim_llm
+            )
+
+        # ...
+    ```
+  </Accordion>
+
+  <Accordion title="Groq">
+    `.env` 파일에 다음 환경 변수를 설정하십시오:
+
+    ```toml Code
+    GROQ_API_KEY=<your-api-key>
+    ```
+
+    CrewAI 프로젝트에서의 예시 사용법:
+    ```python Code
+    llm = LLM(
+        model="groq/llama-3.2-90b-text-preview",
+        temperature=0.7
+    )
+    ```
+    | 모델            | 컨텍스트 윈도우    | 최적 용도                        |
+    |-----------------|-------------------|----------------------------------|
+    | Llama 3.1 70B/8B| 131,072 토큰      | 고성능, 대용량 문맥 작업         |
+    | Llama 3.2 Series| 8,192 토큰        | 범용 작업                        |
+    | Mixtral 8x7B    | 32,768 토큰       | 성능과 문맥의 균형               |
+  </Accordion>
+
+  <Accordion title="IBM watsonx.ai">
+    `.env` 파일에 다음 환경 변수를 설정하십시오:
+    ```toml Code
+    # Required
+    WATSONX_URL=<your-url>
+    WATSONX_APIKEY=<your-apikey>
+    WATSONX_PROJECT_ID=<your-project-id>
+
+    # Optional
+    WATSONX_TOKEN=<your-token>
+    WATSONX_DEPLOYMENT_SPACE_ID=<your-space-id>
+    ```
+
+    CrewAI 프로젝트에서의 예시 사용법:
+    ```python Code
+    llm = LLM(
+        model="watsonx/meta-llama/llama-3-1-70b-instruct",
+        base_url="https://api.watsonx.ai/v1"
+    )
+    ```
+  </Accordion>
+
+  <Accordion title="Ollama (Local LLMs)">
+    1. Ollama 설치: [ollama.ai](https://ollama.ai/)
+    2. 모델 실행: `ollama run llama3`
+    3. 구성:
+
+    ```python Code
+    llm = LLM(
+        model="ollama/llama3:70b",
+        base_url="http://localhost:11434"
+    )
+    ```
+  </Accordion>
+
+  <Accordion title="Fireworks AI">
+    `.env` 파일에 다음 환경 변수를 설정하십시오:
+    ```toml Code
+    FIREWORKS_API_KEY=<your-api-key>
+    ```
+
+    CrewAI 프로젝트에서의 예시 사용법:
+    ```python Code
+    llm = LLM(
+        model="fireworks_ai/accounts/fireworks/models/llama-v3-70b-instruct",
+        temperature=0.7
+    )
+    ```
+  </Accordion>
+
+  <Accordion title="Perplexity AI">
+    `.env` 파일에 다음 환경 변수를 설정하십시오:
+    ```toml Code
+    PERPLEXITY_API_KEY=<your-api-key>
+    ```
+
+    CrewAI 프로젝트에서의 예시 사용법:
+    ```python Code
+    llm = LLM(
+        model="llama-3.1-sonar-large-128k-online",
+        base_url="https://api.perplexity.ai/"
+    )
+    ```
+  </Accordion>
+
+  <Accordion title="Hugging Face">
+    `.env` 파일에 다음 환경 변수를 설정하십시오:
+    ```toml Code
+    HF_TOKEN=<your-api-key>
+    ```
+
+    CrewAI 프로젝트에서의 예시 사용법:
+    ```python Code
+    llm = LLM(
+        model="huggingface/meta-llama/Meta-Llama-3.1-8B-Instruct"
+    )
+    ```
+  </Accordion>
+
+  <Accordion title="SambaNova">
+    `.env` 파일에 다음 환경 변수를 설정하십시오:
+
+    ```toml Code
+    SAMBANOVA_API_KEY=<your-api-key>
+    ```
+
+    CrewAI 프로젝트에서의 예시 사용법:
+    ```python Code
+    llm = LLM(
+        model="sambanova/Meta-Llama-3.1-8B-Instruct",
+        temperature=0.7
+    )
+    ```
+    | 모델            | 컨텍스트 윈도우      | 최적 용도                            |
+    |-----------------|---------------------|--------------------------------------|
+    | Llama 3.1 70B/8B| 최대 131,072 토큰   | 고성능, 대용량 문맥 작업             |
+    | Llama 3.1 405B  | 8,192 토큰         | 고성능, 높은 출력 품질               |
+    | Llama 3.2 Series| 8,192 토큰         | 범용, 멀티모달 작업                  |
+    | Llama 3.3 70B   | 최대 131,072 토큰   | 고성능, 높은 출력 품질               |
+    | Qwen2 familly   | 8,192 토큰         | 고성능, 높은 출력 품질               |
+  </Accordion>
+
+  <Accordion title="Cerebras">
+    `.env` 파일에 다음 환경 변수를 설정하십시오:
+    ```toml Code
+    # Required
+    CEREBRAS_API_KEY=<your-api-key>
+    ```
+
+    CrewAI 프로젝트에서의 예시 사용법:
+    ```python Code
+    llm = LLM(
+        model="cerebras/llama3.1-70b",
+        temperature=0.7,
+        max_tokens=8192
+    )
+    ```
+
+    <Info>
+      Cerebras 특징:
+      - 빠른 추론 속도
+      - 경쟁력 있는 가격
+      - 속도와 품질의 우수한 밸런스
+      - 긴 컨텍스트 윈도우 지원
+    </Info>
+  </Accordion>
+
+  <Accordion title="Open Router">
+    `.env` 파일에 다음 환경 변수를 설정하십시오:
+    ```toml Code
+    OPENROUTER_API_KEY=<your-api-key>
+    ```
+
+    CrewAI 프로젝트에서의 예시 사용법:
+    ```python Code
+    llm = LLM(
+        model="openrouter/deepseek/deepseek-r1",
+        base_url="https://openrouter.ai/api/v1",
+        api_key=OPENROUTER_API_KEY
+    )
+    ```
+
+    <Info>
+      Open Router 모델:
+      - openrouter/deepseek/deepseek-r1
+      - openrouter/deepseek/deepseek-chat
+    </Info>
+  </Accordion>
+
+  <Accordion title="Nebius AI Studio">
+    `.env` 파일에 다음 환경 변수를 설정하십시오:
+    ```toml Code
+    NEBIUS_API_KEY=<your-api-key>
+    ```
+
+    CrewAI 프로젝트에서의 예시 사용법:
+    ```python Code
+    llm = LLM(
+        model="nebius/Qwen/Qwen3-30B-A3B"
+    )
+    ```
+
+    <Info>
+      Nebius AI Studio 특징:
+      - 대규모 오픈소스 모델 보유
+      - 높은 속도 제한
+      - 경쟁력 있는 가격
+      - 속도와 품질의 우수한 밸런스
+    </Info>
+  </Accordion>
+</AccordionGroup>
+
+## 스트리밍 응답
+
+CrewAI는 LLM의 스트리밍 응답을 지원하여, 애플리케이션이 출력물을 생성되는 즉시 실시간으로 수신하고 처리할 수 있습니다.
+
+<Tabs>
+  <Tab title="기본 설정">
+    LLM을 초기화할 때 `stream` 파라미터를 `True`로 설정하여 스트리밍을 활성화합니다:
+
+    ```python
+    from crewai import LLM
+
+    # 스트리밍이 활성화된 LLM 생성
+    llm = LLM(
+        model="openai/gpt-4o",
+        stream=True  # 스트리밍 활성화
+    )
+    ```
+
+    스트리밍이 활성화되면, 응답이 생성되는 대로 청크 단위로 전달되어 보다 반응성 있는 사용자 경험을 만듭니다.
+  </Tab>
+
+  <Tab title="이벤트 처리">
+    CrewAI는 스트리밍 중 수신되는 각 청크에 대해 이벤트를 발생시킵니다:
+
+    ```python
+    from crewai.utilities.events import (
+      LLMStreamChunkEvent
+    )
+    from crewai.utilities.events.base_event_listener import BaseEventListener
+
+    class MyCustomListener(BaseEventListener):
+        def setup_listeners(self, crewai_event_bus):
+            @crewai_event_bus.on(LLMStreamChunkEvent)
+            def on_llm_stream_chunk(self, event: LLMStreamChunkEvent):
+              # 각 청크가 도착할 때마다 처리
+              print(f"Received chunk: {event.chunk}")
+
+    my_listener = MyCustomListener()
+    ```
+
+    <Tip>
+      [자세한 내용은 여기를 클릭하세요](https://docs.crewai.com/concepts/event-listener#event-listeners)
+    </Tip>
+  </Tab>
+
+  <Tab title="에이전트 & 태스크 추적">
+    CrewAI의 모든 LLM 이벤트에는 에이전트 및 태스크 정보가 포함되어 있어, 특정 에이전트나 태스크별로 LLM 상호작용을 추적하고 필터링할 수 있습니다:
+
+    ```python
+    from crewai import LLM, Agent, Task, Crew
+    from crewai.utilities.events import LLMStreamChunkEvent
+    from crewai.utilities.events.base_event_listener import BaseEventListener
+
+    class MyCustomListener(BaseEventListener):
+        def setup_listeners(self, crewai_event_bus):
+            @crewai_event_bus.on(LLMStreamChunkEvent)
+            def on_llm_stream_chunk(source, event):
+                if researcher.id == event.agent_id:
+                    print("\n==============\n Got event:", event, "\n==============\n")
+
+
+    my_listener = MyCustomListener()
+
+    llm = LLM(model="gpt-4o-mini", temperature=0, stream=True)
+
+    researcher = Agent(
+        role="About User",
+        goal="You know everything about the user.",
+        backstory="""You are a master at understanding people and their preferences.""",
+        llm=llm,
+    )
+
+    search = Task(
+        description="Answer the following questions about the user: {question}",
+        expected_output="An answer to the question.",
+        agent=researcher,
+    )
+
+    crew = Crew(agents=[researcher], tasks=[search])
+
+    result = crew.kickoff(
+        inputs={"question": "..."}
+    )
+    ```
+
+    <Info>
+      이 기능은 다음과 같은 경우에 특히 유용합니다:
+      - 특정 에이전트 동작을 디버깅할 때
+      - 태스크 유형별 LLM 사용 기록을 남길 때
+      - 어떤 에이전트가 어떤 유형의 LLM 호출을 하는지 감사할 때
+      - 특정 태스크의 성능을 모니터링할 때
+    </Info>
+  </Tab>
+</Tabs>
+
+## 구조화된 LLM 호출
+
+CrewAI는 Pydantic 모델을 사용하여 `response_format`을 정의함으로써 LLM 호출에서 구조화된 응답을 지원합니다. 이를 통해 프레임워크가 출력을 자동으로 파싱하고 검증할 수 있어, 수동 후처리 없이도 응답을 애플리케이션에 쉽게 통합할 수 있습니다.
+
+예를 들어, 예상되는 응답 구조를 나타내는 Pydantic 모델을 정의하고 LLM을 인스턴스화할 때 `response_format`으로 전달할 수 있습니다. 이 모델은 LLM 출력을 구조화된 Python 객체로 변환하는 데 사용됩니다.
+
+```python Code
+from crewai import LLM
+
+class Dog(BaseModel):
+    name: str
+    age: int
+    breed: str
+
+
+llm = LLM(model="gpt-4o", response_format=Dog)
+
+response = llm.call(
+    "Analyze the following messages and return the name, age, and breed. "
+    "Meet Kona! She is 3 years old and is a black german shepherd."
+)
+print(response)
+
+# Output:
+# Dog(name='Kona', age=3, breed='black german shepherd')
+```
+
+## 고급 기능 및 최적화
+
+LLM 설정을 최대한 활용하는 방법을 알아보세요:
+
+<AccordionGroup>
+  <Accordion title="컨텍스트 윈도우 관리">
+    CrewAI는 스마트한 컨텍스트 관리 기능을 제공합니다:
+
+    ```python
+    from crewai import LLM
+
+    # CrewAI는 자동으로 다음을 처리합니다:
+    # 1. 토큰 계산 및 추적
+    # 2. 필요시 콘텐츠 요약
+    # 3. 큰 컨텍스트에 대한 작업 분할
+
+    llm = LLM(
+        model="gpt-4",
+        max_tokens=4000,  # 응답 길이 제한
+    )
+    ```
+
+    <Info>
+      컨텍스트 관리 모범 사례:
+      1. 적절한 컨텍스트 윈도우를 가진 모델 선택
+      2. 가능하면 긴 입력값을 사전 처리
+      3. 큰 문서에는 청킹(chunking) 사용
+      4. 비용 최적화를 위해 토큰 사용량 모니터링
+    </Info>
+  </Accordion>
+
+  <Accordion title="성능 최적화">
+    <Steps>
+      <Step title="토큰 사용 최적화">
+        작업에 맞는 컨텍스트 윈도우를 선택하세요:
+        - 작은 작업 (최대 4K 토큰): 표준 모델
+        - 중간 작업 (4K~32K 사이): 확장 모델
+        - 큰 작업 (32K 이상): 대형 컨텍스트 모델
+
+        ```python
+        # 모델을 적절한 설정으로 구성
+        llm = LLM(
+            model="openai/gpt-4-turbo-preview",
+            temperature=0.7,    # 작업에 따라 조정
+            max_tokens=4096,    # 출력 요구 사항에 맞게 설정
+            timeout=300        # 복잡한 작업을 위한 더 긴 타임아웃
+        )
+        ```
+        <Tip>
+          - 사실 기반 응답에는 낮은 temperature(0.1~0.3)
+          - 창의적인 작업에는 높은 temperature(0.7~0.9)
+        </Tip>
+      </Step>
+
+      <Step title="모범 사례">
+        1. 토큰 사용량 모니터링
+        2. 속도 제한(rate limiting) 구현
+        3. 가능하면 캐싱 사용
+        4. 적절한 max_tokens 제한 설정
+      </Step>
+    </Steps>
+
+    <Info>
+      비용 및 성능을 최적화하기 위해 토큰 사용량을 정기적으로 모니터링하고 필요에 따라 설정을 조정하세요.
+    </Info>
+  </Accordion>
+
+  <Accordion title="추가 파라미터 드롭">
+    CrewAI는 내부적으로 LLM 호출에 Litellm을 사용하며, 이를 통해 특정 사용 사례에 필요하지 않은 추가 파라미터를 제거할 수 있습니다. 이를 통해 코드가 간소화되며 LLM 구성의 복잡성을 줄일 수 있습니다.
+    예를 들어, <code>stop</code> 파라미터를 보낼 필요가 없다면 LLM 호출에서 제외할 수 있습니다:
+
+    ```python
+    from crewai import LLM
+    import os
+
+    os.environ["OPENAI_API_KEY"] = "<api-key>"
+
+    o3_llm = LLM(
+        model="o3",
+        drop_params=True,
+        additional_drop_params=["stop"]
+    )
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## 일반적인 문제 및 해결 방법
+
+<Tabs>
+  <Tab title="인증">
+    <Warning>
+      대부분의 인증 문제는 API 키 형식과 환경 변수 이름을 확인하여 해결할 수 있습니다.
+    </Warning>
+
+    ```bash
+    # OpenAI
+    OPENAI_API_KEY=sk-...
+
+    # Anthropic
+    ANTHROPIC_API_KEY=sk-ant-...
+    ```
+  </Tab>
+  <Tab title="모델 이름">
+    <Check>
+      항상 모델 이름에 provider 접두사를 포함하세요.
+    </Check>
+
+    ```python
+    # 올바른 예시
+    llm = LLM(model="openai/gpt-4")
+
+    # 잘못된 예시
+    llm = LLM(model="gpt-4")
+    ```
+  </Tab>
+  <Tab title="컨텍스트 길이">
+    <Tip>
+      대규모 작업에는 더 큰 컨텍스트 모델을 사용하세요.
+    </Tip>
+
+    ```python
+    # 대용량 컨텍스트 모델
+    llm = LLM(model="openai/gpt-4o")  # 128K tokens
+    ```
+  </Tab>
+</Tabs>

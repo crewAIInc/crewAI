@@ -1,0 +1,100 @@
+---
+title: Serper 웹사이트 스크랩
+description: SerperScrapeWebsiteTool은 Serper의 스크래핑 API를 사용하여 웹사이트를 스크랩하고 깔끔하고 읽기 쉬운 콘텐츠를 추출하도록 설계되었습니다.
+icon: globe
+---
+
+# `SerperScrapeWebsiteTool`
+
+## 설명
+
+이 도구는 웹사이트의 콘텐츠를 스크랩하여 모든 웹사이트 URL에서 깔끔하고 읽기 쉬운 텍스트를 추출하도록 설계되었습니다. [serper.dev](https://serper.dev) 스크래핑 API를 활용하여 웹 페이지를 가져오고 처리하며, 선택적으로 더 나은 구조와 가독성을 위해 마크다운 형식을 포함할 수 있습니다.
+
+## 설치
+
+`SerperScrapeWebsiteTool`을 효과적으로 사용하려면 다음 단계를 따르세요:
+
+1. **패키지 설치**: Python 환경에 `crewai[tools]` 패키지가 설치되어 있는지 확인합니다.
+2. **API 키 획득**: `serper.dev`에 계정을 등록하여 `serper.dev` API 키를 획득합니다.
+3. **환경 구성**: 획득한 API 키를 `SERPER_API_KEY`라는 환경 변수에 저장하여 도구에서 사용할 수 있도록 합니다.
+
+이 도구를 프로젝트에 포함시키려면 아래 설치 안내를 따르세요:
+
+```shell
+pip install 'crewai[tools]'
+```
+
+## 예시
+
+다음 예시는 도구를 초기화하고 웹사이트를 스크랩하는 방법을 보여줍니다:
+
+```python Code
+from crewai_tools import SerperScrapeWebsiteTool
+
+# Initialize the tool for website scraping capabilities
+tool = SerperScrapeWebsiteTool()
+
+# Scrape a website with markdown formatting
+result = tool.run(url="https://example.com", include_markdown=True)
+```
+
+## 인수
+
+`SerperScrapeWebsiteTool`은 다음 인수를 허용합니다:
+
+- **url**: 필수. 스크랩할 웹사이트의 URL입니다.
+- **include_markdown**: 선택 사항. 스크랩된 콘텐츠에 마크다운 서식을 포함할지 여부입니다. 기본값은 `True`입니다.
+
+## 매개변수와 함께 사용하는 예시
+
+여기 다양한 매개변수와 함께 도구를 사용하는 방법을 보여주는 예시가 있습니다:
+
+```python Code
+from crewai_tools import SerperScrapeWebsiteTool
+
+tool = SerperScrapeWebsiteTool()
+
+# 마크다운 형식으로 스크레이프 (기본값)
+markdown_result = tool.run(
+    url="https://docs.crewai.com",
+    include_markdown=True
+)
+
+# 일반 텍스트용 마크다운 미포함 스크레이프
+plain_result = tool.run(
+    url="https://docs.crewai.com",
+    include_markdown=False
+)
+
+print("마크다운 형식의 콘텐츠:")
+print(markdown_result)
+
+print("\n일반 텍스트 콘텐츠:")
+print(plain_result)
+```
+
+## 사용 사례
+
+`SerperScrapeWebsiteTool`은 특히 다음과 같은 경우에 유용합니다:
+
+- **콘텐츠 분석**: 연구 목적을 위해 웹사이트 콘텐츠를 추출하고 분석할 때
+- **데이터 수집**: 웹 페이지에서 구조화된 정보를 수집할 때
+- **문서 처리**: 웹 기반 문서를 읽기 쉬운 형식으로 변환할 때
+- **경쟁사 분석**: 시장 조사를 위해 경쟁사 웹사이트를 스크래핑할 때
+- **콘텐츠 마이그레이션**: 기존 웹사이트의 콘텐츠를 마이그레이션 목적으로 추출할 때
+
+## 오류 처리
+
+이 도구는 다음에 대한 포괄적인 오류 처리를 포함합니다:
+
+- **네트워크 문제**: 연결 시간 초과 및 네트워크 오류를 원활하게 처리
+- **API 오류**: API 관련 문제에 대한 자세한 오류 메시지 제공
+- **잘못된 URL**: 잘못된 형식의 URL 문제를 검증 및 보고
+- **인증**: 누락되었거나 잘못된 API 키에 대해 명확한 오류 메시지 제공
+
+## 보안 고려사항
+
+- `SERPER_API_KEY`는 항상 환경 변수에 저장하고, 소스 코드에 하드코딩하지 마세요.
+- Serper API에서 부과하는 속도 제한을 유의하세요.
+- 콘텐츠를 스크래핑할 때 robots.txt와 웹사이트 서비스 약관을 준수하세요.
+- 대규모 스크래핑 작업 시 요청 간에 지연을 구현하는 것을 고려하세요.

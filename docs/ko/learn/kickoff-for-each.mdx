@@ -1,0 +1,53 @@
+---
+title: 각 항목에 대한 Kickoff Crew
+description: 목록의 각 항목에 대한 Kickoff Crew
+icon: at
+---
+
+## 소개
+
+CrewAI는 목록의 각 항목에 대해 crew를 시작할 수 있는 기능을 제공하여, 목록의 각 항목에 대해 crew를 실행할 수 있게 합니다.  
+이 기능은 여러 항목에 대해 동일한 작업 세트를 수행해야 할 때 특히 유용합니다.
+
+## 각 항목에 대해 크루 시작하기
+
+리스트의 각 항목에 대해 크루를 시작하려면 `kickoff_for_each()` 메서드를 사용하세요.  
+이 메서드는 리스트의 각 항목에 대해 크루를 실행하여 여러 항목을 효율적으로 처리할 수 있도록 합니다.
+
+아래는 리스트의 각 항목에 대해 크루를 시작하는 방법의 예시입니다:
+
+```python Code
+from crewai import Crew, Agent, Task
+
+# Create an agent with code execution enabled
+coding_agent = Agent(
+    role="Python Data Analyst",
+    goal="Analyze data and provide insights using Python",
+    backstory="You are an experienced data analyst with strong Python skills.",
+    allow_code_execution=True
+)
+
+# Create a task that requires code execution
+data_analysis_task = Task(
+    description="Analyze the given dataset and calculate the average age of participants. Ages: {ages}",
+    agent=coding_agent,
+    expected_output="The average age calculated from the dataset"
+)
+
+# Create a crew and add the task
+analysis_crew = Crew(
+    agents=[coding_agent],
+    tasks=[data_analysis_task],
+    verbose=True,
+    memory=False
+)
+
+datasets = [
+  { "ages": [25, 30, 35, 40, 45] },
+  { "ages": [20, 25, 30, 35, 40] },
+  { "ages": [30, 35, 40, 45, 50] }
+]
+
+# Execute the crew
+result = analysis_crew.kickoff_for_each(inputs=datasets)
+```

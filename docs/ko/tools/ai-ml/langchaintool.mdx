@@ -1,0 +1,56 @@
+---
+title: LangChain 도구
+description: LangChainTool은 LangChain 도구 및 쿼리 엔진을 위한 래퍼(wrapper)입니다.
+icon: link
+---
+
+## `LangChainTool`
+
+<Info>
+    CrewAI는 LangChain의 포괄적인 [도구 목록](https://python.langchain.com/docs/integrations/tools/)과 원활하게 통합되며, 이 모든 도구들은 CrewAI와 함께 사용할 수 있습니다.
+</Info>
+
+```python Code
+import os
+from dotenv import load_dotenv
+from crewai import Agent, Task, Crew
+from crewai.tools import BaseTool
+from pydantic import Field
+from langchain_community.utilities import GoogleSerperAPIWrapper
+
+# Set up your SERPER_API_KEY key in an .env file, eg:
+# SERPER_API_KEY=<your api key>
+load_dotenv()
+
+search = GoogleSerperAPIWrapper()
+
+class SearchTool(BaseTool):
+    name: str = "Search"
+    description: str = "Useful for search-based queries. Use this to find current information about markets, companies, and trends."
+    search: GoogleSerperAPIWrapper = Field(default_factory=GoogleSerperAPIWrapper)
+
+    def _run(self, query: str) -> str:
+        """Execute the search query and return results"""
+        try:
+            return self.search.run(query)
+        except Exception as e:
+            return f"Error performing search: {str(e)}"
+
+# Create Agents
+researcher = Agent(
+    role='Research Analyst',
+    goal='Gather current market data and trends',
+    backstory="""You are an expert research analyst with years of experience in
+    gathering market intelligence. You're known for your ability to find
+    relevant and up-to-date market information and present it in a clear,
+    actionable format.""",
+    tools=[SearchTool()],
+    verbose=True
+)
+
+# rest of the code ...
+```
+
+## 결론
+
+도구는 CrewAI agent의 역량을 확장하는 데 핵심적인 역할을 하며, 다양한 작업을 수행하고 효과적으로 협업할 수 있도록 합니다. CrewAI로 솔루션을 구축할 때는 맞춤형 도구와 기존 도구를 모두 활용하여 agent를 강화하고 AI 생태계를 향상시키세요. 에러 처리, 캐싱 메커니즘, 그리고 도구 인자(argument)의 유연성 등을 활용하여 agent의 성능과 역량을 최적화하는 것을 고려해야 합니다.

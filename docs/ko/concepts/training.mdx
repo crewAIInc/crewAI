@@ -1,0 +1,131 @@
+---
+title: 교육
+description: 피드백을 조기에 제공하여 CrewAI 에이전트를 학습시키고 일관된 결과를 얻는 방법을 알아보세요.
+icon: dumbbell
+---
+
+## 개요
+
+CrewAI의 학습 기능을 사용하면 커맨드라인 인터페이스(CLI)를 통해 AI 에이전트를 학습시킬 수 있습니다.  
+`crewai train -n <n_iterations>` 명령어를 실행하면 학습 프로세스의 반복 횟수를 지정할 수 있습니다.
+
+학습 과정에서 CrewAI는 에이전트의 성능을 최적화하기 위한 다양한 기법과 인간의 피드백을 활용합니다.  
+이를 통해 에이전트는 이해력, 의사결정 능력, 문제 해결 능력을 향상할 수 있습니다.
+
+### CLI를 사용하여 Crew 학습시키기
+
+학습 기능을 사용하려면 다음 단계를 따르십시오:
+
+1. 터미널 또는 명령 프롬프트를 엽니다.
+2. CrewAI 프로젝트가 위치한 디렉터리로 이동합니다.
+3. 다음 명령어를 실행합니다:
+
+```shell
+crewai train -n <n_iterations> <filename> (optional)
+```
+<Tip>
+  `<n_iterations>`를 원하는 학습 반복 횟수로, `<filename>`을 `.pkl`로 끝나는 적절한 파일 이름으로 바꿔 입력하세요.
+</Tip>
+
+### 크루를 프로그래밍 방식으로 훈련시키기
+
+크루를 프로그래밍 방식으로 훈련시키려면 다음 단계를 따르세요:
+
+1. 훈련을 위한 반복 횟수를 정의합니다.
+2. 훈련 프로세스에 사용할 입력 파라미터를 지정합니다.
+3. 잠재적인 오류를 처리하기 위해 try-except 블록 내에서 훈련 명령을 실행합니다.
+
+```python Code
+n_iterations = 2
+inputs = {"topic": "CrewAI Training"}
+filename = "your_model.pkl"
+
+try:
+    YourCrewName_Crew().crew().train(
+      n_iterations=n_iterations,
+      inputs=inputs,
+      filename=filename
+    )
+
+except Exception as e:
+    raise Exception(f"An error occurred while training the crew: {e}")
+```
+
+### 주요 참고 사항
+
+- **양의 정수 필수 조건:** 반복 횟수(`n_iterations`)가 양의 정수인지 확인하세요. 이 조건이 충족되지 않으면 코드에서 `ValueError`가 발생합니다.
+- **파일명 필수 조건:** 파일명이 `.pkl`로 끝나는지 확인하세요. 이 조건이 충족되지 않으면 코드에서 `ValueError`가 발생합니다.
+- **에러 처리:** 코드는 서브프로세스 오류 및 예기치 않은 예외를 처리하며, 사용자에게 에러 메시지를 제공합니다.
+
+에이전트의 복잡성에 따라 훈련 과정이 다소 시간이 소요될 수 있으며, 각 반복마다 사용자의 피드백이 필요함을 유의하세요.
+
+훈련이 완료되면, 에이전트는 향상된 능력과 지식을 갖추게 되어, 더욱 복잡한 작업을 해결하고 일관성 있고 가치 있는 인사이트를 제공할 수 있습니다.
+
+에이전트를 정기적으로 업데이트하고 재훈련하여 최신 정보와 업계 발전을 반영할 수 있도록 하세요.
+
+CrewAI와 함께 즐거운 훈련 되세요! 🚀
+
+## 소형 언어 모델 고려사항
+
+<Warning>
+  소형 언어 모델(≤7B 파라미터)을 학습 데이터 평가에 사용할 때, 구조화된 출력 생성 및 복잡한 지침 준수에 어려움을 겪을 수 있으니 주의하시기 바랍니다.
+</Warning>
+
+### 소형 모델의 학습 평가 한계
+
+<CardGroup cols={2}>
+  <Card title="JSON 출력 정확도" icon="triangle-exclamation">
+    소형 모델은 구조화된 학습 평가에 필요한 유효한 JSON 응답을 생성하는 데 종종 어려움을 겪으며, 이로 인해 파싱 오류와 불완전한 데이터가 발생할 수 있습니다.
+  </Card>
+  <Card title="평가 품질" icon="chart-line">
+    7B 파라미터 미만의 모델은 대형 모델에 비해 더 제한적이고 깊이 있는 추론이 부족한 평가 결과를 제공할 수 있습니다.
+  </Card>
+  <Card title="지침 준수" icon="list-check">
+    복잡한 학습 평가 기준을 소형 모델이 완전히 따르거나 고려하지 못할 수 있습니다.
+  </Card>
+  <Card title="일관성" icon="rotate">
+    소형 모델은 여러 학습 반복 과정에서 평가의 일관성이 부족할 수 있습니다.
+  </Card>
+</CardGroup>
+
+### 학습을 위한 권장 사항
+
+<Tabs>
+  <Tab title="Best Practice">
+    최적의 학습 품질과 신뢰할 수 있는 평가를 위해 최소 7B 파라미터 이상의 모델을 사용하는 것을 강력히 권장합니다:
+
+    ```python
+    from crewai import Agent, Crew, Task, LLM
+
+    # Recommended minimum for training evaluation
+    llm = LLM(model="mistral/open-mistral-7b")
+
+    # Better options for reliable training evaluation
+    llm = LLM(model="anthropic/claude-3-sonnet-20240229-v1:0")
+    llm = LLM(model="gpt-4o")
+
+    # Use this LLM with your agents
+    agent = Agent(
+        role="Training Evaluator",
+        goal="Provide accurate training feedback",
+        llm=llm
+    )
+    ```
+
+    <Tip>
+      더 강력한 모델일수록 더 우수한 피드백과 뛰어난 추론을 제공하므로, 더욱 효과적인 학습 반복이 가능합니다.
+    </Tip>
+  </Tab>
+  <Tab title="Small Model Usage">
+    학습 평가를 위해 반드시 소형 모델을 사용해야 한다면 다음과 같은 제약 사항에 유의하세요:
+
+    ```python
+    # Using a smaller model (expect some limitations)
+    llm = LLM(model="huggingface/microsoft/Phi-3-mini-4k-instruct")
+    ```
+
+    <Warning>
+      CrewAI는 소형 모델에 대한 최적화 기능을 포함하고 있지만, 더 많은 인간의 개입이 필요한 덜 신뢰할 수 있고 세밀하지 않은 평가 결과가 발생할 수 있습니다.
+    </Warning>
+  </Tab>
+</Tabs>
