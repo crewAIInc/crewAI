@@ -142,3 +142,8 @@ exclude = [
 "docs/**",
 "docs/",
 ]
+
+[tool.pytest.ini_options]
+markers = [
+    "vcr: marks tests that use VCR for recording HTTP interactions"
+]
