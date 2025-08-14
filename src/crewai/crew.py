@@ -290,7 +290,7 @@ class Crew(FlowTrackable, BaseModel):
             self.tracing = True
 
         if is_tracing_enabled() or self.tracing:
-            trace_listener = TraceCollectionListener(tracing=self.tracing)
+            trace_listener = TraceCollectionListener()
             trace_listener.setup_listeners(crewai_event_bus)
         event_listener.verbose = self.verbose
         event_listener.formatter.verbose = self.verbose

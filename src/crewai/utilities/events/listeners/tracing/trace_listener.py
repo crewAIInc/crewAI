@@ -78,14 +78,12 @@ class TraceCollectionListener(BaseEventListener):
     Trace collection listener that orchestrates trace collection
     """
 
-    trace_enabled: Optional[bool] = False
     complex_events = ["task_started", "llm_call_started", "llm_call_completed"]
 
     _instance = None
     _initialized = False
-    tracing: bool = False
 
-    def __new__(cls, batch_manager=None, tracing: Optional[bool] = False):
+    def __new__(cls, batch_manager=None):
         if cls._instance is None:
             cls._instance = super().__new__(cls)
         return cls._instance
@@ -93,15 +91,12 @@ class TraceCollectionListener(BaseEventListener):
     def __init__(
         self,
         batch_manager: Optional[TraceBatchManager] = None,
-        tracing: Optional[bool] = False,
     ):
         if self._initialized:
             return
 
         super().__init__()
         self.batch_manager = batch_manager or TraceBatchManager()
-        self.tracing = tracing or False
-        self.authenticated = self._check_authenticated()
         self._initialized = True
 
     def _check_authenticated(self) -> bool:
@@ -125,7 +120,7 @@ class TraceCollectionListener(BaseEventListener):
 
     def setup_listeners(self, crewai_event_bus):
         """Setup event listeners - delegates to specific handlers"""
-        if not is_tracing_enabled() and not self.tracing:
+        if not is_tracing_enabled():
             return
 
         self._register_flow_event_handlers(crewai_event_bus)

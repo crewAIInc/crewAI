@@ -484,7 +484,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
             or is_tracing_enabled()
             or self.tracing
         ):
-            trace_listener = TraceCollectionListener(tracing=self.tracing)
+            trace_listener = TraceCollectionListener()
             trace_listener.setup_listeners(crewai_event_bus)
         # Apply any additional kwargs
         if kwargs:

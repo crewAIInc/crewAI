@@ -19,6 +19,9 @@ def is_tracing_enabled() -> bool:
 
 
 def on_first_execution_tracing_confirmation() -> bool:
+    if _is_test_environment():
+        return False
+
     if is_first_execution():
         mark_first_execution_done()
         return click.confirm(
@@ -27,6 +30,11 @@ def on_first_execution_tracing_confirmation() -> bool:
             show_default=True,
         )
     return False
+
+
+def _is_test_environment() -> bool:
+    """Detect if we're running in a test environment."""
+    return os.environ.get("CREWAI_TESTING", "").lower() == "true"
 
 
 def _get_machine_id() -> str:
