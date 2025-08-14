@@ -1,0 +1,59 @@
+---
+title: SerpApi 구글 쇼핑 도구
+description: SerpApiGoogleShoppingTool은 SerpApi를 사용하여 구글 쇼핑 결과를 검색합니다.
+icon: cart-shopping
+---
+
+# `SerpApiGoogleShoppingTool`
+
+## 설명
+
+`SerpApiGoogleShoppingTool`을 활용하여 SerpApi를 통해 Google 쇼핑을 쿼리하고 제품 중심 결과를 받아올 수 있습니다.
+
+## 설치
+
+```shell
+uv add crewai-tools[serpapi]
+```
+
+## 환경 변수
+
+- `SERPAPI_API_KEY` (필수): SerpApi용 API 키입니다. https://serpapi.com/에서 생성할 수 있습니다(무료 티어 제공).
+
+## 예시
+
+```python Code
+from crewai import Agent, Task, Crew
+from crewai_tools import SerpApiGoogleShoppingTool
+
+tool = SerpApiGoogleShoppingTool()
+
+agent = Agent(
+    role="Shopping Researcher",
+    goal="Find relevant products",
+    backstory="Expert in product search",
+    tools=[tool],
+    verbose=True,
+)
+
+task = Task(
+    description="Search Google Shopping for 'wireless noise-canceling headphones'",
+    expected_output="Top relevant products with titles and links",
+    agent=agent,
+)
+
+crew = Crew(agents=[agent], tasks=[task])
+result = crew.kickoff()
+```
+
+## 참고 사항
+
+- 환경 변수에 `SERPAPI_API_KEY`를 설정하세요. https://serpapi.com/ 에서 키를 생성할 수 있습니다.
+- 또한 SerpApi를 통한 Google 웹 검색도 참고하세요: `/ko/tools/search-research/serpapi-googlesearchtool`
+
+## 매개변수
+
+### 실행 매개변수
+
+- `search_query` (str, 필수): 제품 검색 쿼리.
+- `location` (str, 선택): 지리적 위치 매개변수.

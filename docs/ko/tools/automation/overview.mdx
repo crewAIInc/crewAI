@@ -1,0 +1,59 @@
+---
+title: "개요"
+description: "워크플로우를 자동화하고 외부 플랫폼 및 서비스와 통합합니다"
+icon: "face-smile"
+---
+
+이러한 도구들은 에이전트가 워크플로를 자동화하고, 외부 플랫폼과 통합하며, 다양한 서드파티 서비스와 연동하여 기능을 향상시킬 수 있도록 합니다.
+
+## **사용 가능한 도구**
+
+<CardGroup cols={2}>
+  <Card title="Apify Actor Tool" icon="spider" href="/ko/tools/automation/apifyactorstool">
+    웹 스크래핑 및 자동화 작업을 위해 Apify actor를 실행합니다.
+  </Card>
+
+  <Card title="Composio Tool" icon="puzzle-piece" href="/ko/tools/automation/composiotool">
+    Composio를 통해 수백 개의 앱 및 서비스와 통합합니다.
+  </Card>
+
+  <Card title="Multion Tool" icon="window-restore" href="/ko/tools/automation/multiontool">
+    브라우저 상호작용과 웹 기반 워크플로우를 자동화합니다.
+  </Card>
+
+  <Card title="Zapier Actions Adapter" icon="bolt" href="/ko/tools/automation/zapieractionstool">
+    수천 개의 앱을 자동화할 수 있도록 Zapier Actions를 CrewAI 도구로 제공합니다.
+  </Card>
+</CardGroup>
+
+## **일반적인 사용 사례**
+
+- **워크플로 자동화**: 반복적인 작업과 프로세스 자동화
+- **API 통합**: 외부 API 및 서비스와 연동
+- **데이터 동기화**: 다양한 플랫폼 간 데이터 동기화
+- **프로세스 오케스트레이션**: 복잡한 다단계 워크플로의 조정
+- **서드파티 서비스**: 외부 도구 및 플랫폼 활용
+
+```python
+from crewai_tools import ApifyActorTool, ComposioTool, MultiOnTool
+
+# Create automation tools
+apify_automation = ApifyActorTool()
+platform_integration = ComposioTool()
+browser_automation = MultiOnTool()
+
+# Add to your agent
+agent = Agent(
+    role="Automation Specialist",
+    tools=[apify_automation, platform_integration, browser_automation],
+    goal="Automate workflows and integrate systems"
+)
+```
+
+## **통합 이점**
+
+- **효율성**: 자동화를 통해 수작업을 줄임
+- **확장성**: 증가하는 작업량을 자동으로 처리
+- **신뢰성**: 워크플로우의 일관된 실행
+- **연결성**: 다양한 시스템과 플랫폼을 연결
+- **생산성**: 자동화가 반복 작업을 처리하는 동안 고부가가치 업무에 집중

@@ -1,0 +1,198 @@
+---
+title: 설치
+description: CrewAI 시작하기 - 설치, 구성, 그리고 첫 번째 AI crew 구축하기
+icon: wrench
+---
+
+## 비디오 튜토리얼
+설치 과정을 단계별로 시연하는 비디오 튜토리얼을 시청하세요:
+
+<iframe
+  width="100%"
+  height="400"
+  src="https://www.youtube.com/embed/-kSOTtYzgEw"
+  title="CrewAI Installation Guide"
+  frameborder="0"
+  style={{ borderRadius: '10px' }}
+  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+  allowfullscreen
+></iframe>
+
+## 텍스트 튜토리얼
+<Note>
+  **Python 버전 요구 사항**
+
+  CrewAI는 `Python >=3.10 및 <3.14`가 필요합니다. 버전을 확인하는 방법은 다음과 같습니다:
+  ```bash
+  python3 --version
+  ```
+
+  Python을 업데이트해야 하는 경우, [python.org/downloads](https://python.org/downloads)를 방문하세요.
+</Note>
+
+CrewAI는 의존성 관리와 패키지 처리를 위해 `uv`를 사용합니다. 프로젝트 설정과 실행을 간소화하여 원활한 경험을 제공합니다.
+
+아직 `uv`를 설치하지 않았다면 **1단계**를 따라 빠르게 시스템에 설치할 수 있습니다. 이미 설치되어 있다면 **2단계**로 건너뛸 수 있습니다.
+
+<Steps>
+    <Step title="uv 설치하기">
+      - **macOS/Linux에서:**
+
+        `curl`을 이용해 스크립트를 다운로드하고 `sh`로 실행하세요:
+
+        ```shell
+        curl -LsSf https://astral.sh/uv/install.sh | sh
+        ```
+        시스템에 `curl`이 없다면, `wget`을 사용할 수 있습니다:
+
+        ```shell
+        wget -qO- https://astral.sh/uv/install.sh | sh
+        ```
+
+      - **Windows에서:**
+
+        `irm`으로 스크립트를 다운로드하고 `iex`로 실행하세요:
+
+        ```shell
+        powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+        ```
+        문제가 발생하면 [UV 설치 가이드](https://docs.astral.sh/uv/getting-started/installation/)를 참고하세요.
+    </Step>
+
+    <Step title="CrewAI 설치 🚀">
+      - 다음 명령어를 실행하여 `crewai` CLI를 설치하세요:
+        ```shell
+        uv tool install crewai
+        ```
+          <Warning>
+            `PATH` 경고가 발생하면 쉘을 업데이트하기 위해 아래 명령어를 실행하세요:
+            ```shell
+            uv tool update-shell
+            ```
+          </Warning>
+
+          <Warning>
+            Windows에서 `chroma-hnswlib==0.7.6` 빌드 오류(`fatal error C1083: Cannot open include file: 'float.h'`)가 발생하면, [Visual Studio Build Tools](https://visualstudio.microsoft.com/downloads/)에서 *C++를 사용한 데스크톱 개발*을 설치하세요.
+          </Warning>
+
+      - `crewai`가 정상적으로 설치되었는지 확인하려면 다음을 실행하세요:
+        ```shell
+        uv tool list
+        ```
+      - 다음과 같이 표시되어야 합니다:
+        ```shell
+        crewai v0.102.0
+        - crewai
+        ```
+      - `crewai`를 업데이트해야 하는 경우, 다음을 실행하세요:
+        ```shell
+        uv tool install crewai --upgrade
+        ```
+      <Check>설치가 완료되었습니다! 이제 첫 번째 crew를 만들 준비가 되었습니다! 🎉</Check>
+    </Step>
+</Steps>
+
+# CrewAI 프로젝트 생성하기
+
+에이전트 및 태스크를 정의할 때 구조적인 접근 방식을 위해 `YAML` 템플릿 스캐폴딩을 사용하는 것을 권장합니다. 다음은 시작 방법입니다:
+
+<Steps>
+  <Step title="프로젝트 스캐폴딩 생성">
+    - `crewai` CLI 명령어를 실행하세요:
+      ```shell
+      crewai create crew <your_project_name>
+      ```
+
+    - 이 명령어를 실행하면 다음과 같은 구조로 새로운 프로젝트가 생성됩니다:
+      ```
+      my_project/
+      ├── .gitignore
+      ├── knowledge/
+      ├── pyproject.toml
+      ├── README.md
+      ├── .env
+      └── src/
+          └── my_project/
+              ├── __init__.py
+              ├── main.py
+              ├── crew.py
+              ├── tools/
+              │   ├── custom_tool.py
+              │   └── __init__.py
+              └── config/
+                  ├── agents.yaml
+                  └── tasks.yaml
+      ```
+  </Step>
+
+  <Step title="프로젝트 커스터마이즈">
+    - 프로젝트에는 다음과 같은 주요 파일들이 포함되어 있습니다:
+      | 파일 | 용도 |
+      | --- | --- |
+      | `agents.yaml` | AI 에이전트 및 역할 정의 |
+      | `tasks.yaml` | 에이전트 태스크 및 워크플로우 설정 |
+      | `.env` | API 키 및 환경 변수 저장 |
+      | `main.py` | 프로젝트 진입점 및 실행 흐름 |
+      | `crew.py` | Crew 오케스트레이션 및 코디네이션 |
+      | `tools/` | 커스텀 에이전트 도구 디렉터리 |
+      | `knowledge/` | 지식 베이스 디렉터리 |
+
+    - `agents.yaml` 및 `tasks.yaml`을 편집하여 crew의 동작을 정의하는 것부터 시작하세요.
+    - API 키와 같은 민감한 정보는 `.env` 파일에 보관하세요.
+  </Step>
+
+  <Step title="Crew 실행하기">
+    - crew를 실행하기 전에 아래 명령을 먼저 실행하세요:
+      ```bash
+      crewai install
+      ```
+    - 추가 패키지를 설치해야 하는 경우 다음을 사용하세요:
+      ```shell
+      uv add <package-name>
+      ```
+    - crew를 실행하려면 프로젝트 루트에서 아래 명령을 실행하세요:
+      ```bash
+      crewai run
+      ```
+  </Step>
+</Steps>
+
+## 엔터프라이즈 설치 옵션
+
+<Note type="info">
+팀과 조직을 위해, CrewAI는 설치 복잡성을 없애는 엔터프라이즈 배포 옵션을 제공합니다:
+
+### CrewAI Enterprise (SaaS)
+- 설치가 전혀 필요하지 않습니다 - [app.crewai.com](https://app.crewai.com)에서 무료로 가입하세요
+- 자동 업데이트 및 유지 보수
+- 관리형 인프라 및 확장성 지원
+- 코딩 없이 Crew 생성
+
+### CrewAI Factory (자가 호스팅)
+- 귀하의 인프라를 위한 컨테이너화된 배포
+- 온프레미스 배포를 포함하여 모든 하이퍼스케일러 지원
+- 기존 보안 시스템과의 통합
+
+<Card title="엔터프라이즈 옵션 살펴보기" icon="building" href="https://crewai.com/enterprise">
+  CrewAI의 엔터프라이즈 서비스에 대해 알아보고 데모를 예약하세요
+</Card>
+</Note>
+
+## 다음 단계
+
+<CardGroup cols={2}>
+  <Card
+    title="첫 번째 Agent 만들기"
+    icon="code"
+    href="/ko/quickstart"
+  >
+    빠른 시작 가이드를 따라 CrewAI 에이전트를 처음 만들어보고 직접 경험해 보세요.
+  </Card>
+  <Card
+    title="커뮤니티 참여하기"
+    icon="comments"
+    href="https://community.crewai.com"
+  >
+    다른 개발자들과 소통하고, 도움을 받으며, CrewAI 경험을 공유하세요.
+  </Card>
+</CardGroup>

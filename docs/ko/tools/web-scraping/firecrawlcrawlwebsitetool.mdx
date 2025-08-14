@@ -1,0 +1,47 @@
+---
+title: Firecrawl 웹사이트 크롤링
+description: FirecrawlCrawlWebsiteTool은(는) 웹사이트를 크롤링하여 깔끔한 마크다운이나 구조화된 데이터로 변환하도록 설계되었습니다.
+icon: fire-flame
+---
+
+# `FirecrawlCrawlWebsiteTool`
+
+## 설명
+
+[Firecrawl](https://firecrawl.dev)은(는) 모든 웹사이트를 크롤링하여 깔끔한 마크다운이나 구조화된 데이터로 변환할 수 있는 플랫폼입니다.
+
+## 설치
+
+- [firecrawl.dev](https://firecrawl.dev)에서 API 키를 받아 환경 변수(`FIRECRAWL_API_KEY`)에 설정합니다.
+- [Firecrawl SDK](https://github.com/mendableai/firecrawl)와 `crewai[tools]` 패키지를 설치합니다:
+
+```shell
+pip install firecrawl-py 'crewai[tools]'
+```
+
+## 예시
+
+다음과 같이 FirecrawlScrapeFromWebsiteTool을 활용하여 에이전트가 웹사이트를 불러올 수 있습니다:
+
+```python Code
+from crewai_tools import FirecrawlCrawlWebsiteTool
+
+tool = FirecrawlCrawlWebsiteTool(url='firecrawl.dev')
+```
+
+## 인자
+
+- `api_key`: 선택 사항. Firecrawl API 키를 명시합니다. 기본값은 `FIRECRAWL_API_KEY` 환경 변수입니다.
+- `url`: 크롤링을 시작할 기본 URL입니다.
+- `page_options`: 선택 사항.
+  - `onlyMainContent`: 선택 사항. 헤더, 내비게이션, 푸터 등을 제외한 페이지의 주요 콘텐츠만 반환합니다.
+  - `includeHtml`: 선택 사항. 페이지의 원시 HTML 내용을 포함합니다. 응답에 html 키가 추가됩니다.
+- `crawler_options`: 선택 사항. 크롤링 동작을 제어하는 옵션입니다.
+  - `includes`: 선택 사항. 크롤링에 포함할 URL 패턴입니다.
+  - `exclude`: 선택 사항. 크롤링에서 제외할 URL 패턴입니다.
+  - `generateImgAltText`: 선택 사항. LLM을 사용하여 이미지의 대체 텍스트를 생성합니다(유료 플랜 필요).
+  - `returnOnlyUrls`: 선택 사항. true로 설정하면 크롤 상태에서 URL 목록만 반환합니다. 참고: 응답은 문서 목록이 아니라, data 내부의 URL 목록이 됩니다.
+  - `maxDepth`: 선택 사항. 크롤링할 최대 깊이입니다. 깊이 1은 기본 URL, 깊이 2는 기본 URL과 그 직접 자식까지 포함합니다.
+  - `mode`: 선택 사항. 사용할 크롤링 모드입니다. Fast 모드는 사이트맵이 없는 웹사이트에서 4배 빠르게 크롤링하지만 정확도가 떨어질 수 있으며, 자바스크립트로 렌더링이 많은 사이트에는 사용하지 않는 것이 좋습니다.
+  - `limit`: 선택 사항. 크롤링할 최대 페이지 수입니다.
+  - `timeout`: 선택 사항. 크롤링 작업의 타임아웃(밀리초 단위)입니다.

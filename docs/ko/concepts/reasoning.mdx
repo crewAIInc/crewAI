@@ -1,0 +1,147 @@
+---
+title: Reasoning
+description: "에이전트 reasoning을 활성화하고 사용하는 방법을 배워 작업 실행을 향상하세요."
+icon: brain
+---
+
+## 개요
+
+Agent reasoning은 에이전트가 작업을 수행하기 전에 해당 작업을 반성하고 계획을 수립할 수 있도록 해주는 기능입니다. 이를 통해 에이전트는 작업에 더 체계적으로 접근할 수 있으며, 할당된 업무를 수행할 준비가 되었는지 확인할 수 있습니다.
+
+## 사용 방법
+
+에이전트에 reasoning을 활성화하려면 에이전트를 생성할 때 `reasoning=True`로 설정하면 됩니다.
+
+```python
+from crewai import Agent
+
+agent = Agent(
+    role="Data Analyst",
+    goal="Analyze complex datasets and provide insights",
+    backstory="You are an experienced data analyst with expertise in finding patterns in complex data.",
+    reasoning=True,  # Enable reasoning
+    max_reasoning_attempts=3  # Optional: Set a maximum number of reasoning attempts
+)
+```
+
+## 작동 방식
+
+reasoning이 활성화되면, 작업을 실행하기 전에 에이전트는 다음을 수행합니다:
+
+1. 작업을 반영하고 상세한 계획을 수립합니다.
+2. 작업을 실행할 준비가 되었는지 평가합니다.
+3. 준비가 완료되거나 max_reasoning_attempts에 도달할 때까지 필요에 따라 계획을 다듬습니다.
+4. reasoning 계획을 실행 전에 작업 설명에 삽입합니다.
+
+이 프로세스는 에이전트가 복잡한 작업을 관리하기 쉬운 단계로 분해하고, 시작하기 전에 잠재적인 문제를 식별하는 데 도움을 줍니다.
+
+## 구성 옵션
+
+<ParamField body="reasoning" type="bool" default="False"> 
+    reasoning 활성화 또는 비활성화 
+</ParamField>
+
+<ParamField body="max_reasoning_attempts" type="int" default="None"> 
+    실행을 진행하기 전에 계획을 개선할 최대 시도 횟수입니다. None(기본값)인 경우, agent는 준비될 때까지 계속해서 개선을 시도합니다. 
+</ParamField>
+
+## 예제
+
+다음은 전체 예제입니다:
+
+```python
+from crewai import Agent, Task, Crew
+
+# Create an agent with reasoning enabled
+analyst = Agent(
+    role="Data Analyst",
+    goal="Analyze data and provide insights",
+    backstory="You are an expert data analyst.",
+    reasoning=True,
+    max_reasoning_attempts=3  # Optional: Set a limit on reasoning attempts
+)
+
+# Create a task
+analysis_task = Task(
+    description="Analyze the provided sales data and identify key trends.",
+    expected_output="A report highlighting the top 3 sales trends.",
+    agent=analyst
+)
+
+# Create a crew and run the task
+crew = Crew(agents=[analyst], tasks=[analysis_task])
+result = crew.kickoff()
+
+print(result)
+```
+
+## 오류 처리
+
+reasoning 프로세스는 견고하게 설계되어 있으며, 오류 처리가 내장되어 있습니다. reasoning 중에 오류가 발생하면, 에이전트는 reasoning 계획 없이 작업을 계속 실행합니다. 이는 reasoning 프로세스가 실패하더라도 작업이 계속 실행될 수 있도록 보장합니다.
+
+코드에서 발생할 수 있는 오류를 처리하는 방법은 다음과 같습니다:
+
+```python
+from crewai import Agent, Task
+import logging
+
+# reasoning 오류를 캡처하기 위해 로깅을 설정합니다
+logging.basicConfig(level=logging.INFO)
+
+# reasoning이 활성화된 에이전트를 생성합니다
+agent = Agent(
+    role="Data Analyst",
+    goal="Analyze data and provide insights",
+    reasoning=True,
+    max_reasoning_attempts=3
+)
+
+# 작업을 생성합니다
+task = Task(
+    description="Analyze the provided sales data and identify key trends.",
+    expected_output="A report highlighting the top 3 sales trends.",
+    agent=agent
+)
+
+# 작업 실행
+# reasoning 중 오류가 발생해도 로그에 기록되며 실행은 계속됩니다
+result = agent.execute_task(task)
+```
+
+## 예시 Reasoning 출력
+
+다음은 데이터 분석 작업을 위한 reasoning 계획의 예시입니다:
+
+```
+Task: Analyze the provided sales data and identify key trends.
+
+Reasoning Plan:
+I'll analyze the sales data to identify the top 3 trends.
+
+1. Understanding of the task:
+   I need to analyze sales data to identify key trends that would be valuable for business decision-making.
+
+2. Key steps I'll take:
+   - First, I'll examine the data structure to understand what fields are available
+   - Then I'll perform exploratory data analysis to identify patterns
+   - Next, I'll analyze sales by time periods to identify temporal trends
+   - I'll also analyze sales by product categories and customer segments
+   - Finally, I'll identify the top 3 most significant trends
+
+3. Approach to challenges:
+   - If the data has missing values, I'll decide whether to fill or filter them
+   - If the data has outliers, I'll investigate whether they're valid data points or errors
+   - If trends aren't immediately obvious, I'll apply statistical methods to uncover patterns
+
+4. Use of available tools:
+   - I'll use data analysis tools to explore and visualize the data
+   - I'll use statistical tools to identify significant patterns
+   - I'll use knowledge retrieval to access relevant information about sales analysis
+
+5. Expected outcome:
+   A concise report highlighting the top 3 sales trends with supporting evidence from the data.
+
+READY: I am ready to execute the task.
+```
+
+이 reasoning 계획은 agent가 작업에 접근하는 방식을 체계적으로 구성하고, 발생할 수 있는 잠재적 문제를 고려하며, 기대되는 결과를 제공하도록 돕습니다.

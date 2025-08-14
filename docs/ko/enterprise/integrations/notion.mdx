@@ -1,0 +1,509 @@
+---
+title: Notion 연동
+description: "CrewAI를 위한 Notion 연동을 통한 페이지 및 데이터베이스 관리."
+icon: "book"
+---
+
+## 개요
+
+에이전트가 Notion을 통해 페이지, 데이터베이스, 콘텐츠를 관리할 수 있도록 지원합니다. 페이지 생성 및 업데이트, 콘텐츠 블록 관리, 지식 베이스 구성, AI 기반 자동화를 통해 문서화 작업 흐름을 효율화할 수 있습니다.
+
+## 필수 조건
+
+Notion 통합을 사용하기 전에 다음을 확인하세요:
+
+- 활성 구독이 있는 [CrewAI Enterprise](https://app.crewai.com) 계정
+- 적절한 워크스페이스 권한이 있는 Notion 계정
+- [통합 페이지](https://app.crewai.com/crewai_plus/connectors)를 통해 Notion 계정을 연결함
+
+## Notion 연동 설정
+
+### 1. Notion 계정 연결하기
+
+1. [CrewAI Enterprise Integrations](https://app.crewai.com/crewai_plus/connectors)로 이동합니다.
+2. 인증 통합(Auhtentication Integrations) 섹션에서 **Notion**을(를) 찾습니다.
+3. **Connect**를 클릭하고 OAuth 플로우를 완료합니다.
+4. 페이지 및 데이터베이스 관리를 위한 필요한 권한을 부여합니다.
+5. [Account Settings](https://app.crewai.com/crewai_plus/settings/account)에서 Enterprise Token을 복사합니다.
+
+### 2. 필수 패키지 설치
+
+```bash
+uv add crewai-tools
+```
+
+## 사용 가능한 액션
+
+<AccordionGroup>
+  <Accordion title="NOTION_CREATE_PAGE">
+    **설명:** Notion에서 페이지를 생성합니다.
+
+    **파라미터:**
+    - `parent` (object, 필수): 상위 - 새 페이지가 삽입될 상위 페이지 또는 데이터베이스를 나타내는 JSON 객체로, page_id 또는 database_id 키를 포함합니다.
+      ```json
+      {
+        "database_id": "DATABASE_ID"
+      }
+      ```
+    - `properties` (object, 필수): 속성 - 페이지 속성의 값입니다. 상위가 데이터베이스인 경우, 스키마는 상위 데이터베이스의 속성과 일치해야 합니다.
+      ```json
+      {
+        "title": [
+          {
+            "text": {
+              "content": "My Page"
+            }
+          }
+        ]
+      }
+      ```
+    - `icon` (object, 필수): 아이콘 - 페이지 아이콘입니다.
+      ```json
+      {
+        "emoji": "🥬"
+      }
+      ```
+    - `children` (object, 선택): 자식 - 페이지에 추가할 콘텐츠 블록입니다.
+      ```json
+      [
+        {
+          "object": "block",
+          "type": "heading_2",
+          "heading_2": {
+            "rich_text": [
+              {
+                "type": "text",
+                "text": {
+                  "content": "Lacinato kale"
+                }
+              }
+            ]
+          }
+        }
+      ]
+      ```
+    - `cover` (object, 선택): 표지 - 페이지 표지 이미지입니다.
+      ```json
+      {
+        "external": {
+          "url": "https://upload.wikimedia.org/wikipedia/commons/6/62/Tuscankale.jpg"
+        }
+      }
+      ```
+  </Accordion>
+
+  <Accordion title="NOTION_UPDATE_PAGE">
+    **설명:** Notion에서 페이지를 업데이트합니다.
+
+    **파라미터:**
+    - `pageId` (string, 필수): 페이지 ID - 업데이트할 페이지의 ID를 지정합니다. (예: "59833787-2cf9-4fdf-8782-e53db20768a5").
+    - `icon` (object, 필수): 아이콘 - 페이지 아이콘입니다.
+      ```json
+      {
+        "emoji": "🥬"
+      }
+      ```
+    - `archived` (boolean, 선택): 보관됨 - 페이지가 보관(삭제)되었는지 여부입니다. true로 설정하면 페이지를 보관합니다. false로 설정하면 보관 해제(복원)합니다.
+    - `properties` (object, 선택): 속성 - 페이지에서 업데이트할 속성 값입니다.
+      ```json
+      {
+        "title": [
+          {
+            "text": {
+              "content": "My Updated Page"
+            }
+          }
+        ]
+      }
+      ```
+    - `cover` (object, 선택): 표지 - 페이지 표지 이미지입니다.
+      ```json
+      {
+        "external": {
+          "url": "https://upload.wikimedia.org/wikipedia/commons/6/62/Tuscankale.jpg"
+        }
+      }
+      ```
+  </Accordion>
+
+  <Accordion title="NOTION_GET_PAGE_BY_ID">
+    **설명:** Notion에서 ID로 페이지를 가져옵니다.
+
+    **파라미터:**
+    - `pageId` (string, 필수): 페이지 ID - 가져올 페이지의 ID를 지정합니다. (예: "59833787-2cf9-4fdf-8782-e53db20768a5").
+  </Accordion>
+
+  <Accordion title="NOTION_ARCHIVE_PAGE">
+    **설명:** Notion에서 페이지를 보관합니다.
+
+    **파라미터:**
+    - `pageId` (string, 필수): 페이지 ID - 보관할 페이지의 ID를 지정합니다. (예: "59833787-2cf9-4fdf-8782-e53db20768a5").
+  </Accordion>
+
+  <Accordion title="NOTION_SEARCH_PAGES">
+    **설명:** 필터를 사용하여 Notion에서 페이지를 검색합니다.
+
+    **파라미터:**
+    - `searchByTitleFilterSearch` (object, 선택): 불리언 정규형(OR 조건 그룹의 AND 그룹) 형태의 필터입니다.
+      ```json
+      {
+        "operator": "OR",
+        "conditions": [
+          {
+            "operator": "AND",
+            "conditions": [
+              {
+                "field": "query",
+                "operator": "$stringExactlyMatches",
+                "value": "meeting notes"
+              }
+            ]
+          }
+        ]
+      }
+      ```
+      사용 가능한 필드: `query`, `filter.value`, `direction`, `page_size`
+  </Accordion>
+
+  <Accordion title="NOTION_GET_PAGE_CONTENT">
+    **설명:** Notion에서 페이지 콘텐츠(블록)를 가져옵니다.
+
+    **파라미터:**
+    - `blockId` (string, 필수): 페이지 ID - 해당 블록이나 페이지의 모든 자식 블록을 순서대로 가져오기 위해 Block 또는 Page ID를 지정합니다. (예: "59833787-2cf9-4fdf-8782-e53db20768a5").
+  </Accordion>
+
+  <Accordion title="NOTION_UPDATE_BLOCK">
+    **설명:** Notion에서 블록을 업데이트합니다.
+
+    **파라미터:**
+    - `blockId` (string, 필수): 블록 ID - 업데이트할 블록의 ID를 지정합니다. (예: "9bc30ad4-9373-46a5-84ab-0a7845ee52e6").
+    - `archived` (boolean, 선택): 보관됨 - true로 설정하면 블록을 보관(삭제)합니다. false로 설정하면 보관 해제(복원)합니다.
+    - `paragraph` (object, 선택): 단락 콘텐츠.
+      ```json
+      {
+        "rich_text": [
+          {
+            "type": "text",
+            "text": {
+              "content": "Lacinato kale",
+              "link": null
+            }
+          }
+        ],
+        "color": "default"
+      }
+      ```
+    - `image` (object, 선택): 이미지 블록.
+      ```json
+      {
+        "type": "external",
+        "external": {
+          "url": "https://website.domain/images/image.png"
+        }
+      }
+      ```
+    - `bookmark` (object, 선택): 북마크 블록.
+      ```json
+      {
+        "caption": [],
+        "url": "https://companywebsite.com"
+      }
+      ```
+    - `code` (object, 선택): 코드 블록.
+      ```json
+      {
+        "rich_text": [
+          {
+            "type": "text",
+            "text": {
+              "content": "const a = 3"
+            }
+          }
+        ],
+        "language": "javascript"
+      }
+      ```
+    - `pdf` (object, 선택): PDF 블록.
+      ```json
+      {
+        "type": "external",
+        "external": {
+          "url": "https://website.domain/files/doc.pdf"
+        }
+      }
+      ```
+    - `table` (object, 선택): 테이블 블록.
+      ```json
+      {
+        "table_width": 2,
+        "has_column_header": false,
+        "has_row_header": false
+      }
+      ```
+    - `tableOfContent` (object, 선택): 목차 블록.
+      ```json
+      {
+        "color": "default"
+      }
+      ```
+    - `additionalFields` (object, 선택): 추가 블록 유형.
+      ```json
+      {
+        "child_page": {
+          "title": "Lacinato kale"
+        },
+        "child_database": {
+          "title": "My database"
+        }
+      }
+      ```
+  </Accordion>
+
+  <Accordion title="NOTION_GET_BLOCK_BY_ID">
+    **설명:** Notion에서 ID로 블록을 가져옵니다.
+
+    **파라미터:**
+    - `blockId` (string, 필수): 블록 ID - 가져올 블록의 ID를 지정합니다. (예: "9bc30ad4-9373-46a5-84ab-0a7845ee52e6").
+  </Accordion>
+
+  <Accordion title="NOTION_DELETE_BLOCK">
+    **설명:** Notion에서 블록을 삭제합니다.
+
+    **파라미터:**
+    - `blockId` (string, 필수): 블록 ID - 삭제할 블록의 ID를 지정합니다. (예: "9bc30ad4-9373-46a5-84ab-0a7845ee52e6").
+  </Accordion>
+</AccordionGroup>
+
+## 사용 예시
+
+### 기본 Notion Agent 설정
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import CrewaiEnterpriseTools
+
+# Get enterprise tools (Notion tools will be included)
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token"
+)
+
+# Create an agent with Notion capabilities
+notion_agent = Agent(
+    role="Documentation Manager",
+    goal="Manage documentation and knowledge base in Notion efficiently",
+    backstory="An AI assistant specialized in content management and documentation.",
+    tools=[enterprise_tools]
+)
+
+# Task to create a meeting notes page
+create_notes_task = Task(
+    description="Create a new meeting notes page in the team database with today's date and agenda items",
+    agent=notion_agent,
+    expected_output="Meeting notes page created successfully with structured content"
+)
+
+# Run the task
+crew = Crew(
+    agents=[notion_agent],
+    tasks=[create_notes_task]
+)
+
+crew.kickoff()
+```
+
+### 특정 Notion 도구 필터링
+
+```python
+from crewai_tools import CrewaiEnterpriseTools
+
+# Get only specific Notion tools
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token",
+    actions_list=["notion_create_page", "notion_update_block", "notion_search_pages"]
+)
+
+content_manager = Agent(
+    role="Content Manager",
+    goal="Create and manage content pages efficiently",
+    backstory="An AI assistant that focuses on content creation and management.",
+    tools=enterprise_tools
+)
+
+# Task to manage content workflow
+content_workflow = Task(
+    description="Create a new project documentation page and add structured content blocks for requirements and specifications",
+    agent=content_manager,
+    expected_output="Project documentation created with organized content sections"
+)
+
+crew = Crew(
+    agents=[content_manager],
+    tasks=[content_workflow]
+)
+
+crew.kickoff()
+```
+
+### 지식 베이스 관리
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import CrewaiEnterpriseTools
+
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token"
+)
+
+knowledge_curator = Agent(
+    role="Knowledge Curator",
+    goal="Curate and organize knowledge base content in Notion",
+    backstory="An experienced knowledge manager who organizes and maintains comprehensive documentation.",
+    tools=[enterprise_tools]
+)
+
+# Task to curate knowledge base
+curation_task = Task(
+    description="""
+    1. 새로운 제품 기능과 관련된 기존 문서 페이지를 검색합니다.
+    2. 적절한 구조로 포괄적인 기능 문서 페이지를 생성합니다.
+    3. 코드 예제, 이미지 및 관련 리소스에 대한 링크를 추가합니다.
+    4. 기존 페이지를 업데이트하여 새 문서에 대한 교차 참조를 추가합니다.
+    """,
+    agent=knowledge_curator,
+    expected_output="Feature documentation created and integrated with existing knowledge base"
+)
+
+crew = Crew(
+    agents=[knowledge_curator],
+    tasks=[curation_task]
+)
+
+crew.kickoff()
+```
+
+### 콘텐츠 구조 및 구성
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import CrewaiEnterpriseTools
+
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token"
+)
+
+content_organizer = Agent(
+    role="Content Organizer",
+    goal="Organize and structure content blocks for optimal readability",
+    backstory="An AI assistant that specializes in content structure and user experience.",
+    tools=[enterprise_tools]
+)
+
+# Task to organize content structure
+organization_task = Task(
+    description="""
+    1. Get content from existing project pages
+    2. Analyze the structure and identify improvement opportunities
+    3. Update content blocks to use proper headings, tables, and formatting
+    4. Add table of contents and improve navigation between related pages
+    5. Create templates for future documentation consistency
+    """,
+    agent=content_organizer,
+    expected_output="Content reorganized with improved structure and navigation"
+)
+
+crew = Crew(
+    agents=[content_organizer],
+    tasks=[organization_task]
+)
+
+crew.kickoff()
+```
+
+### 자동화된 문서화 워크플로우
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import CrewaiEnterpriseTools
+
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token"
+)
+
+doc_automator = Agent(
+    role="Documentation Automator",
+    goal="Automate documentation workflows and maintenance",
+    backstory="An AI assistant that automates repetitive documentation tasks.",
+    tools=[enterprise_tools]
+)
+
+# Complex documentation automation task
+automation_task = Task(
+    description="""
+    1. 최근 30일 이내에 업데이트되지 않은 페이지 검색
+    2. 오래된 콘텐츠 블록 검토 및 업데이트
+    3. 일관된 포맷으로 주간 팀 업데이트 페이지 생성
+    4. 프로젝트 페이지에 상태 표시기 및 진행 상황 추적 추가
+    5. 월간 문서 헬스 리포트 생성
+    6. 완료된 프로젝트 페이지를 아카이브 섹션에 정리 및 보관
+    """,
+    agent=doc_automator,
+    expected_output="업데이트된 콘텐츠, 주간 리포트, 정리된 아카이브로 문서화 자동화 완료"
+)
+
+crew = Crew(
+    agents=[doc_automator],
+    tasks=[automation_task]
+)
+
+crew.kickoff()
+```
+
+## 문제 해결
+
+### 일반적인 문제
+
+**권한 오류**
+- Notion 계정이 대상 워크스페이스에 대한 편집 권한이 있는지 확인하세요
+- OAuth 연결에 Notion API에 필요한 범위가 포함되어 있는지 확인하세요
+- 페이지와 데이터베이스가 인증된 통합에 공유되어 있는지 확인하세요
+
+**잘못된 페이지 및 블록 ID**
+- 페이지 ID 및 블록 ID가 올바른 UUID 형식인지 다시 확인하세요
+- 참조되는 페이지와 블록이 존재하고 접근 가능한지 확인하세요
+- 새 페이지를 생성할 때 상위 페이지 또는 데이터베이스 ID가 유효한지 검증하세요
+
+**속성 스키마 문제**
+- 데이터베이스에 페이지를 생성할 때 페이지 속성이 데이터베이스 스키마와 일치하는지 확인하세요
+- 대상 데이터베이스에 대해 속성 이름과 타입이 올바른지 확인하세요
+- 페이지를 생성하거나 업데이트할 때 필수 속성이 포함되어 있는지 확인하세요
+
+**콘텐츠 블록 구조**
+- 블록 콘텐츠가 Notion의 리치 텍스트 형식 사양을 따르는지 확인하세요
+- 중첩된 블록 구조가 올바르게 포맷되어 있는지 확인하세요
+- 미디어 URL이 접근 가능하며 올바른 형식인지 확인하세요
+
+**검색 및 필터 문제**
+- 검색 쿼리가 올바르게 포맷되어 있고 비어 있지 않은지 확인하세요
+- 필터 공식에서 유효한 필드명을 사용하세요: `query`, `filter.value`, `direction`, `page_size`
+- 복잡한 필터 조건을 만들기 전에 간단한 검색을 테스트하세요
+
+**상위-하위 관계**
+- 하위 페이지를 생성하기 전에 상위 페이지 또는 데이터베이스가 존재하는지 확인하세요
+- 상위 컨테이너에 대한 적절한 권한이 있는지 확인하세요
+- 데이터베이스 스키마가 설정하려는 속성을 허용하는지 확인하세요
+
+**리치 텍스트 및 미디어 콘텐츠**
+- 외부 이미지, PDF, 북마크의 URL이 접근 가능한지 확인하세요
+- 리치 텍스트 포매팅이 Notion의 API 사양을 따르는지 확인하세요
+- 코드 블록의 언어 타입이 Notion에서 지원되는지 확인하세요
+
+**아카이브 및 삭제 작업**
+- 아카이브(복구 가능)와 삭제(영구적)의 차이를 이해하세요
+- 대상 콘텐츠를 아카이브 또는 삭제할 수 있는 권한이 있는지 확인하세요
+- 여러 페이지 또는 블록에 영향을 줄 수 있는 대량 작업은 신중히 진행하세요
+
+### 도움 받기
+
+<Card title="도움이 필요하신가요?" icon="headset" href="mailto:support@crewai.com">
+  Notion 연동 설정 또는 문제 해결에 대해 지원팀에 문의해 주세요.
+</Card>

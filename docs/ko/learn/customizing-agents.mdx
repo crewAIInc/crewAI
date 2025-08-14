@@ -1,0 +1,110 @@
+---
+title: 에이전트 맞춤화
+description: CrewAI 프레임워크 내에서 특정 역할, 작업 및 고급 맞춤화를 위해 에이전트를 조정하는 종합 가이드입니다.
+icon: user-pen
+---
+
+## 사용자 지정 가능 속성
+
+효율적인 CrewAI 팀을 구성하려면 AI 에이전트를 프로젝트의 고유한 요구 사항에 맞게 동적으로 조정할 수 있어야 합니다. 이 섹션에서는 사용자 지정할 수 있는 기본 속성에 대해 다룹니다.
+
+### 커스터마이징을 위한 주요 속성
+
+| 속성                     | 설명                                                                                                                                                 |
+|:-----------------------|:------------------------------------------------------------------------------------------------------------------------------------------------------|
+| **Role**              | crew 내에서 에이전트의 직무를 지정합니다. 예: 'Analyst', 'Customer Service Rep' 등.                                                                   |
+| **Goal**              | 에이전트의 목표를 정의하며, 이는 해당 role 및 crew의 전체 미션과 조화됩니다.                                                                          |
+| **Backstory**         | 에이전트의 페르소나에 깊이를 더해, crew 내에서의 동기 부여와 참여도를 높입니다.                                                                       |
+| **Tools** *(선택 사항)*        | 에이전트가 작업을 수행할 때 사용하는 기능이나 방법을 나타냅니다. 단순한 함수부터 복잡한 통합까지 포함될 수 있습니다.                                     |
+| **Cache** *(선택 사항)*        | 에이전트가 tool 사용 시 캐시를 이용할지 여부를 결정합니다.                                                                                   |
+| **Max RPM**           | 분당 최대 요청 수(`max_rpm`)를 설정합니다. 외부 서비스에 제한 없는 요청을 원할 경우 `None`으로 설정할 수 있습니다.                                  |
+| **Verbose** *(선택 사항)*      | 디버깅 및 최적화를 위한 상세 로그를 활성화하며, 실행 과정에 대한 인사이트를 제공합니다.                                                     |
+| **Allow Delegation** *(선택 사항)* | 다른 에이전트로의 작업 위임을 제어합니다. 기본값은 `False`입니다.                                                                         |
+| **Max Iter** *(선택 사항)*      | 무한 루프를 방지하기 위해 작업의 최대 반복 횟수(`max_iter`)를 제한합니다. 기본값은 25입니다.                                                 |
+| **Max Execution Time** *(선택 사항)* | 에이전트가 작업을 완료하는 데 허용되는 최대 시간을 설정합니다.                                                                             |
+| **System Template** *(선택 사항)*   | 에이전트의 시스템 형식을 정의합니다.                                                                                                    |
+| **Prompt Template** *(선택 사항)*   | 에이전트의 프롬프트 형식을 정의합니다.                                                                                                  |
+| **Response Template** *(선택 사항)* | 에이전트의 응답 형식을 정의합니다.                                                                                                      |
+| **Use System Prompt** *(선택 사항)* | 작업 수행 중 에이전트가 system prompt를 사용할지 여부를 제어합니다.                                                                     |
+| **Respect Context Window**       | 기본적으로 슬라이딩 context 윈도우를 활성화하여(context size를 유지) 설정합니다.                                                          |
+| **Max Retry Limit**              | 오류 발생 시 에이전트의 최대 재시도 횟수(`max_retry_limit`)를 설정합니다.                                                                |
+
+## 고급 커스터마이징 옵션
+
+기본 속성 외에도, CrewAI는 에이전트의 행동과 능력을 크게 향상시킬 수 있는 더 깊은 커스터마이징을 허용합니다.
+
+### 언어 모델 커스터마이제이션
+
+에이전트는 특정 언어 모델(`llm`)과 함수 호출 언어 모델(`function_calling_llm`)로 커스터마이즈할 수 있어, 처리 및 의사결정 능력을 고급 수준으로 제어할 수 있습니다.  
+`function_calling_llm`을 설정하면 기본 crew 함수 호출 언어 모델을 오버라이드할 수 있으므로, 더 높은 수준의 커스터마이제이션이 가능합니다.
+
+## 성능 및 디버깅 설정
+
+에이전트의 성능을 조정하고 운영을 모니터링하는 것은 효율적인 작업 수행을 위해 매우 중요합니다.
+
+### 자세한 모드(Verbose Mode) 및 RPM 제한
+
+- **자세한 모드(Verbose Mode)**: 에이전트의 동작을 자세히 기록하는 로깅을 활성화하여 디버깅과 최적화에 유용합니다. 특히, 에이전트 실행 프로세스에 대한 인사이트를 제공하여 성능 최적화에 도움이 됩니다.
+- **RPM 제한**: 분당 최대 요청 수(`max_rpm`)를 설정합니다. 이 속성은 선택 사항이며, 제한이 필요 없을 경우 `None`으로 설정하면 외부 서비스에 무제한 쿼리를 허용할 수 있습니다.
+
+### 작업 실행을 위한 최대 반복 횟수
+
+`max_iter` 속성은 사용자가 하나의 작업에 대해 agent가 수행할 수 있는 최대 반복 횟수를 정의할 수 있게 하여, 무한 루프나 지나치게 긴 실행을 방지해줍니다.  
+기본값은 25로 설정되어 있어 철저함과 효율성 사이의 균형을 제공합니다. agent가 이 숫자에 가까워질 때, 최선의 답변을 제공하기 위해 노력하게 됩니다.
+
+## 에이전트 및 도구 커스터마이징
+
+에이전트는 초기화 시 속성과 도구를 정의하여 커스터마이징합니다. 도구는 에이전트의 기능에 매우 중요하며, 특정 작업을 수행할 수 있게 해줍니다.  
+`tools` 속성은 에이전트가 사용할 수 있는 도구의 배열이어야 하며, 기본값으로는 빈 리스트로 초기화됩니다. 도구는 새로운 요구 사항에 맞추어 에이전트 초기화 이후에도 추가하거나 수정할 수 있습니다.
+
+```shell
+pip install 'crewai[tools]'
+```
+
+### 예시: 에이전트에 도구 할당하기
+
+```python Code
+import os
+from crewai import Agent
+from crewai_tools import SerperDevTool
+
+# Set API keys for tool initialization
+os.environ["OPENAI_API_KEY"] = "Your Key"
+os.environ["SERPER_API_KEY"] = "Your Key"
+
+# Initialize a search tool
+search_tool = SerperDevTool()
+
+# Initialize the agent with advanced options
+agent = Agent(
+  role='Research Analyst',
+  goal='Provide up-to-date market analysis',
+  backstory='An expert analyst with a keen eye for market trends.',
+  tools=[search_tool],
+  memory=True, # Enable memory
+  verbose=True,
+  max_rpm=None, # No limit on requests per minute
+  max_iter=25, # Default value for maximum iterations
+)
+```
+
+## 위임 및 자율성
+
+에이전트가 작업을 위임하거나 질문을 할 수 있는 능력을 제어하는 것은 CrewAI 프레임워크 내에서 자율성과 협업 역학을 맞춤화하는 데 매우 중요합니다. 기본적으로  
+`allow_delegation` 속성은 이제 `False`로 설정되어 있어, 에이전트가 필요에 따라 도움을 요청하거나 작업을 위임하는 것이 비활성화됩니다. 이 기본 동작은 CrewAI 생태계 내에서 협동적 문제 해결과  
+효율성을 촉진하기 위해 변경될 수 있습니다. 필요할 경우, 특정 운영 요구 사항에 맞게 위임을 활성화할 수 있습니다.
+
+### 예시: 에이전트에 대한 위임 비활성화
+
+```python Code
+agent = Agent(
+  role='Content Writer',
+  goal='Write engaging content on market trends',
+  backstory='A seasoned writer with expertise in market analysis.',
+  allow_delegation=True # Enabling delegation
+)
+```
+
+## 결론
+
+CrewAI에서 에이전트의 역할, 목표, 배경 이야기, 도구를 설정하고, 언어 모델 커스터마이징, 메모리, 성능 설정, 위임 선호도와 같은 고급 옵션을 함께 활용하면 복잡한 과제에 대응할 준비가 된 세밀하고 유능한 AI 팀을 구성할 수 있습니다.

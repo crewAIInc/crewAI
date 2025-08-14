@@ -1,0 +1,109 @@
+---
+title: Bright Data 도구
+description: SERP 검색, Web Unlocker 스크래핑 및 Dataset API를 위한 Bright Data 통합.
+icon: spider
+---
+
+# Bright Data 도구
+
+이 도구 세트는 웹 추출을 위한 Bright Data 서비스를 통합합니다.
+
+## 설치
+
+```shell
+uv add crewai-tools requests aiohttp
+```
+
+## 환경 변수
+
+- `BRIGHT_DATA_API_KEY` (필수)
+- `BRIGHT_DATA_ZONE` (SERP/Web Unlocker용)
+
+https://brightdata.com/ 에서 자격 증명을 생성하세요 (회원가입 후 API 토큰과 zone을 만드세요).  
+문서는 여기를 참고하세요: https://developers.brightdata.com/
+
+## 포함된 도구
+
+- `BrightDataSearchTool`: 지역/언어/디바이스 옵션과 함께 SERP 검색(Google/Bing/Yandex).
+- `BrightDataWebUnlockerTool`: 안티봇 우회 및 렌더링을 통한 페이지 스크랩.
+- `BrightDataDatasetTool`: Dataset API 작업 실행 및 결과 가져오기.
+
+## 예시
+
+### SERP 검색
+
+```python Code
+from crewai_tools import BrightDataSearchTool
+
+tool = BrightDataSearchTool(
+    query="CrewAI", 
+    country="us",
+)
+
+print(tool.run())
+```
+
+### 웹 언로커
+
+```python Code
+from crewai_tools import BrightDataWebUnlockerTool
+
+tool = BrightDataWebUnlockerTool(
+    url="https://example.com", 
+    format="markdown",
+)
+
+print(tool.run(url="https://example.com"))
+```
+
+### 데이터셋 API
+
+```python Code
+from crewai_tools import BrightDataDatasetTool
+
+tool = BrightDataDatasetTool(
+    dataset_type="ecommerce", 
+    url="https://example.com/product",
+)
+
+print(tool.run())
+```
+
+## 문제 해결
+
+- 401/403: `BRIGHT_DATA_API_KEY`와 `BRIGHT_DATA_ZONE`을 확인하세요.
+- 빈 내용/차단된 콘텐츠: 렌더링을 활성화하거나 다른 존을 시도해 보세요.
+
+## 예시
+
+```python Code
+from crewai import Agent, Task, Crew
+from crewai_tools import BrightDataSearchTool
+
+tool = BrightDataSearchTool(
+    query="CrewAI", 
+    country="us",
+)
+
+agent = Agent(
+    role="Web Researcher",
+    goal="Search with Bright Data",
+    backstory="Finds reliable results",
+    tools=[tool],
+    verbose=True,
+)
+
+task = Task(
+    description="Search for CrewAI and summarize top results",
+    expected_output="Short summary with links",
+    agent=agent,
+)
+
+crew = Crew(
+    agents=[agent], 
+    tasks=[task],
+    verbose=True,
+)
+
+result = crew.kickoff()
+```
