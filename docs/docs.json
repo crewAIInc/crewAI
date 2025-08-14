@@ -238,7 +238,8 @@
                   "en/observability/opik",
                   "en/observability/patronus-evaluation",
                   "en/observability/portkey",
-                  "en/observability/weave"
+                  "en/observability/weave",
+                  "en/observability/truefoundry"
                 ]
               },
               {
@@ -281,6 +282,7 @@
               {
                 "group": "Features",
                 "pages": [
+                  "en/enterprise/features/rbac",
                   "en/enterprise/features/tool-repository",
                   "en/enterprise/features/webhook-streaming",
                   "en/enterprise/features/traces",
@@ -344,7 +346,7 @@
               },
               {
                 "group": "Endpoints",
-                "openapi": "enterprise-api.yaml"
+                "openapi": "https://raw.githubusercontent.com/crewAIInc/crewAI/main/docs/enterprise-api.en.yaml"
               }
             ]
           },
@@ -353,7 +355,7 @@
             "groups": [
               {
                 "group": "Examples",
-                "pages": ["en/examples/example"]
+                "pages": ["en/examples/example", "en/examples/cookbooks"]
               }
             ]
           }
@@ -575,7 +577,8 @@
                   "pt-BR/observability/opik",
                   "pt-BR/observability/patronus-evaluation",
                   "pt-BR/observability/portkey",
-                  "pt-BR/observability/weave"
+                  "pt-BR/observability/weave",
+                  "pt-BR/observability/truefoundry"
                 ]
               },
               {
@@ -618,6 +621,7 @@
               {
                 "group": "Funcionalidades",
                 "pages": [
+                  "pt-BR/enterprise/features/rbac",
                   "pt-BR/enterprise/features/tool-repository",
                   "pt-BR/enterprise/features/webhook-streaming",
                   "pt-BR/enterprise/features/traces",
@@ -682,7 +686,7 @@
               },
               {
                 "group": "Endpoints",
-                "openapi": "enterprise-api.yaml"
+                "openapi": "https://raw.githubusercontent.com/crewAIInc/crewAI/main/docs/enterprise-api.pt-BR.yaml"
               }
             ]
           },
@@ -691,7 +695,7 @@
             "groups": [
               {
                 "group": "Exemplos",
-                "pages": ["pt-BR/examples/example"]
+                "pages": ["pt-BR/examples/example", "pt-BR/examples/cookbooks"]
               }
             ]
           }
@@ -965,6 +969,7 @@
               {
                 "group": "특징",
                 "pages": [
+                  "ko/enterprise/features/rbac",
                   "ko/enterprise/features/tool-repository",
                   "ko/enterprise/features/webhook-streaming",
                   "ko/enterprise/features/traces",
@@ -1028,7 +1033,7 @@
               },
               {
                 "group": "Endpoints",
-                "openapi": "enterprise-api.yaml"
+                "openapi": "https://raw.githubusercontent.com/crewAIInc/crewAI/main/docs/enterprise-api.ko.yaml"
               }
             ]
           },
@@ -1037,7 +1042,7 @@
             "groups": [
               {
                 "group": "예시",
-                "pages": ["ko/examples/example"]
+                "pages": ["ko/examples/example", "ko/examples/cookbooks"]
               }
             ]
           }
