@@ -4,7 +4,7 @@ from typing import Dict, List, Any, Optional
 from dataclasses import dataclass, field
 
 from crewai.utilities.constants import CREWAI_BASE_URL
-from crewai.cli.authentication.token import get_auth_token
+from crewai.cli.authentication.token import AuthError, get_auth_token
 
 from crewai.cli.version import get_crewai_version
 from crewai.cli.plus_api import PlusAPI
@@ -41,7 +41,11 @@ class TraceBatchManager:
     """Single responsibility: Manage batches and event buffering"""
 
     def __init__(self):
-        self.plus_api = PlusAPI(api_key=get_auth_token())
+        try:
+            self.plus_api = PlusAPI(api_key=get_auth_token())
+        except AuthError:
+            self.plus_api = PlusAPI(api_key="")
+
         self.trace_batch_id: Optional[str] = None  # Backend ID
         self.current_batch: Optional[TraceBatch] = None
         self.event_buffer: List[TraceEvent] = []

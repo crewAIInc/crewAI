@@ -69,7 +69,7 @@ from crewai.utilities.events.memory_events import (
     MemorySaveFailedEvent,
 )
 
-from crewai.cli.authentication.token import get_auth_token
+from crewai.cli.authentication.token import AuthError, get_auth_token
 from crewai.cli.version import get_crewai_version
 
 
@@ -106,10 +106,13 @@ class TraceCollectionListener(BaseEventListener):
 
     def _check_authenticated(self) -> bool:
         """Check if tracing should be enabled"""
-        auth_token = get_auth_token()
-        if not auth_token:
+        try:
+            auth_token = get_auth_token()
+            if not auth_token:
+                return False
+            return True
+        except AuthError:
             return False
-        return True
 
     def _get_user_context(self) -> Dict[str, str]:
         """Extract user context for tracing"""
