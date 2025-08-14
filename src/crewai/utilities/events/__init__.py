@@ -2,16 +2,15 @@
 from .agent_events import (
     AgentExecutionCompletedEvent,
     AgentExecutionStartedEvent,
-    AgentThoughtEvent,
 )
 from .base_events import BaseEvent
 from .crew_events import CrewKickoffCompletedEvent, CrewKickoffStartedEvent
 from .llm_events import LLMCallCompletedEvent, LLMCallStartedEvent
 from .memory_events import MemoryRetrievalCompletedEvent, MemoryRetrievalStartedEvent
-from .task_events import TaskCompletedEvent, TaskStartedEvent
-from .tool_events import (
-    ToolExecutionCompletedEvent,
-    ToolExecutionStartedEvent,
+from .task_events import TaskCompletedEvent, TaskStartedEvent, TaskFailedEvent, TaskEvaluationEvent
+from .tool_usage_events import (
+    ToolUsageFinishedEvent,
+    ToolUsageStartedEvent,
     ToolSelectionErrorEvent,
     ToolUsageEvent,
     ToolValidateInputErrorEvent,
@@ -50,7 +49,6 @@ __all__ = [
     "BaseEvent",
     "AgentExecutionCompletedEvent",
     "AgentExecutionStartedEvent",
-    "AgentThoughtEvent",
     "CrewKickoffCompletedEvent",
     "CrewKickoffStartedEvent",
     "LLMCallCompletedEvent",
@@ -59,8 +57,10 @@ __all__ = [
     "MemoryRetrievalStartedEvent",
     "TaskCompletedEvent",
     "TaskStartedEvent",
-    "ToolExecutionCompletedEvent",
-    "ToolExecutionStartedEvent",
+    "TaskFailedEvent",
+    "TaskEvaluationEvent",
+    "ToolUsageFinishedEvent",
+    "ToolUsageStartedEvent",
     "ToolSelectionErrorEvent",
     "ToolUsageEvent",
     "ToolValidateInputErrorEvent",
