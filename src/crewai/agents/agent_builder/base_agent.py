@@ -23,7 +23,7 @@ from crewai.knowledge.knowledge_config import KnowledgeConfig
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
 from crewai.security.security_config import SecurityConfig
 from crewai.tools.base_tool import BaseTool, Tool
-from crewai.utilities import I18N, Logger, RPMController
+from crewai.utilities import I18N, Logger, RPMController, TPMController
 from crewai.utilities.config import process_config
 from crewai.utilities.converter import Converter
 from crewai.utilities.string_utils import interpolate_only
@@ -43,6 +43,7 @@ class BaseAgent(ABC, BaseModel):
         config (Optional[Dict[str, Any]]): Configuration for the agent.
         verbose (bool): Verbose mode for the Agent Execution.
         max_rpm (Optional[int]): Maximum number of requests per minute for the agent execution.
+        max_tpm (Optional[int]): Maximum number of tokens  to ne used per minute for the agent execution.
         allow_delegation (bool): Allow delegation of tasks to agents.
         tools (Optional[List[Any]]): Tools at the agent's disposal.
         max_iter (int): Maximum iterations for an agent to execute a task.
@@ -75,6 +76,8 @@ class BaseAgent(ABC, BaseModel):
             Create a copy of the agent.
         set_rpm_controller(rpm_controller: RPMController) -> None:
             Set the rpm controller for the agent.
+        set_tpm_controller(rpm_controller: RPMController) -> None:
+            Set the tpm controller for the agent.            
         set_private_attrs() -> "BaseAgent":
             Set private attributes.
     """
@@ -83,6 +86,8 @@ class BaseAgent(ABC, BaseModel):
     _logger: Logger = PrivateAttr(default_factory=lambda: Logger(verbose=False))
     _rpm_controller: Optional[RPMController] = PrivateAttr(default=None)
     _request_within_rpm_limit: Any = PrivateAttr(default=None)
+    _tpm_controller: Optional[TPMController] = PrivateAttr(default=None)
+    _request_within_tpm_limit: Any = PrivateAttr(default=None)    
     _original_role: Optional[str] = PrivateAttr(default=None)
     _original_goal: Optional[str] = PrivateAttr(default=None)
     _original_backstory: Optional[str] = PrivateAttr(default=None)
@@ -103,6 +108,10 @@ class BaseAgent(ABC, BaseModel):
     max_rpm: Optional[int] = Field(
         default=None,
         description="Maximum number of requests per minute for the agent execution to be respected.",
+    )
+    max_tpm: Optional[int] = Field(
+        default=None,
+        description="Maximum number of tokens per minute for the agent execution to be respected.",
     )
     allow_delegation: bool = Field(
         default=False,
@@ -213,6 +222,11 @@ class BaseAgent(ABC, BaseModel):
         if not self._token_process:
             self._token_process = TokenProcess()
 
+        if self.max_tpm and not self._tpm_controller:
+            self._tpm_controller = TPMController(
+                max_tpm=self.max_rpm, token_counter=self._token_process, logger=self._logger 
+            )                  
+
         # Initialize security_config if not provided
         if self.security_config is None:
             self.security_config = SecurityConfig()
@@ -237,6 +251,12 @@ class BaseAgent(ABC, BaseModel):
             )
         if not self._token_process:
             self._token_process = TokenProcess()
+
+        if self.max_tpm and not self._tpm_controller:
+            self._tpm_controller = TPMController(
+                max_tpm=self.max_rpm, token_counter=self._token_process, logger=self._logger 
+            )       
+
         return self
 
     @property
@@ -273,6 +293,8 @@ class BaseAgent(ABC, BaseModel):
             "_logger",
             "_rpm_controller",
             "_request_within_rpm_limit",
+            "_tpm_controller",
+            "_request_within_tpm_limit",             
             "_token_process",
             "agent_executor",
             "tools",
@@ -362,5 +384,14 @@ class BaseAgent(ABC, BaseModel):
             self._rpm_controller = rpm_controller
             self.create_agent_executor()
 
+    def set_tpm_controller(self, tpm_controller: TPMController) -> None:
+        """Set the tpm controller for the agent.
+
+        Args:
+            tpm_controller: An instance of the TPMController class.
+        """
+        if not self._tpm_controller:
+            self._tpm_controller = tpm_controller
+                
     def set_knowledge(self, crew_embedder: Optional[Dict[str, Any]] = None):
         pass
