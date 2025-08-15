@@ -88,7 +88,7 @@ class KnowledgeStorage(BaseKnowledgeStorage):
 
     def initialize_knowledge_storage(self):
         # Suppress deprecation warnings from chromadb, which are not relevant to us
-        # This is a temporary fix until we upgrade to chromadb to at least 1.0.8.
+        # TODO: Remove this once we upgrade chromadb to at least 1.0.8.
         warnings.filterwarnings(
             "ignore",
             category=PydanticDeprecatedSince211,
