@@ -1,7 +1,4 @@
 from .utils import TokenManager
-from logging import getLogger
-
-logger = getLogger(__name__)
 
 
 class AuthError(Exception):
