@@ -1024,7 +1024,9 @@ class Flow(Generic[T], metaclass=FlowMeta):
             for router_name in routers_triggered:
                 await self._execute_single_listener(router_name, result)
                 # After executing router, the router's result is the path
-                router_result = self._method_outputs[-1]
+                router_result = (
+                    self._method_outputs[-1] if self._method_outputs else None
+                )
                 if router_result:  # Only add non-None results
                     router_results.append(router_result)
                 current_trigger = (
@@ -1045,6 +1047,24 @@ class Flow(Generic[T], metaclass=FlowMeta):
                         for listener_name in listeners_triggered
                     ]
                     await asyncio.gather(*tasks)
+
+                if current_trigger in router_results:
+                    # Find start methods triggered by this router result
+                    for method_name in self._start_methods:
+                        # Check if this start method is triggered by the current trigger
+                        if method_name in self._listeners:
+                            condition_type, trigger_methods = self._listeners[
+                                method_name
+                            ]
+                            if current_trigger in trigger_methods:
+                                # Only execute if this is a cycle (method was already completed)
+                                if method_name in self._completed_methods:
+                                    # For router-triggered start methods in cycles, temporarily clear resumption flag
+                                    # to allow cyclic execution
+                                    was_resuming = self._is_execution_resuming
+                                    self._is_execution_resuming = False
+                                    await self._execute_start_method(method_name)
+                                    self._is_execution_resuming = was_resuming
 
     def _find_triggered_methods(
         self, trigger_method: str, router_only: bool
@@ -1081,6 +1101,9 @@ class Flow(Generic[T], metaclass=FlowMeta):
             is_router = listener_name in self._routers
 
             if router_only != is_router:
+                continue
+
+            if not router_only and listener_name in self._start_methods:
                 continue
 
             if condition_type == "OR":
