@@ -11,6 +11,8 @@ import chromadb.errors
 from chromadb.api import ClientAPI
 from chromadb.api.types import OneOrMany
 from chromadb.config import Settings
+from pydantic.warnings import PydanticDeprecatedSince211
+import warnings
 
 from crewai.knowledge.storage.base_knowledge_storage import BaseKnowledgeStorage
 from crewai.rag.embeddings.configurator import EmbeddingConfigurator
@@ -85,6 +87,15 @@ class KnowledgeStorage(BaseKnowledgeStorage):
                 raise Exception("Collection not initialized")
 
     def initialize_knowledge_storage(self):
+        # Suppress deprecation warnings from chromadb, which are not relevant to us
+        # This is a temporary fix until we upgrade to chromadb to at least 1.0.8.
+        warnings.filterwarnings(
+            "ignore",
+            category=PydanticDeprecatedSince211,
+            message=r".*'model_fields'.*is deprecated.*",
+            module=r"^chromadb(\.|$)",
+        )
+
         self.app = create_persistent_client(
             path=os.path.join(db_storage_path(), "knowledge"),
             settings=Settings(allow_reset=True),
