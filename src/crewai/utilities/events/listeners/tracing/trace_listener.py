@@ -308,7 +308,6 @@ class TraceCollectionListener(BaseEventListener):
     ):
         """Initialize trace batch if ephemeral"""
         if not self._check_authenticated():
-            print("not authenticated here and using ephemeral batch")
             self.batch_manager.initialize_batch(
                 user_context, execution_metadata, use_ephemeral=True
             )
