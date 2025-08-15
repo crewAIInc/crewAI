@@ -26,7 +26,7 @@ def on_first_execution_tracing_confirmation() -> bool:
         mark_first_execution_done()
         return click.confirm(
             "This is the first execution of CrewAI. Do you want to enable tracing?",
-            default=False,
+            default=True,
             show_default=True,
         )
     return False
