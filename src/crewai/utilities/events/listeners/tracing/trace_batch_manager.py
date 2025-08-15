@@ -219,7 +219,7 @@ class TraceBatchManager:
                 console = Console()
                 return_link = (
                     f"{CREWAI_BASE_URL}/crewai_plus/trace_batches/{self.trace_batch_id}"
-                    if not ephemeral
+                    if not ephemeral and access_code
                     else f"{CREWAI_BASE_URL}/crewai_plus/ephemeral_trace_batches/{self.trace_batch_id}?access_code={access_code}"
                 )
                 panel = Panel(

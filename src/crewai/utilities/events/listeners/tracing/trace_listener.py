@@ -99,10 +99,8 @@ class TraceCollectionListener(BaseEventListener):
     def _check_authenticated(self) -> bool:
         """Check if tracing should be enabled"""
         try:
-            auth_token = get_auth_token()
-            if not auth_token:
-                return False
-            return True
+            res = bool(get_auth_token())
+            return res
         except AuthError:
             return False
 
@@ -310,6 +308,7 @@ class TraceCollectionListener(BaseEventListener):
     ):
         """Initialize trace batch if ephemeral"""
         if not self._check_authenticated():
+            print("not authenticated here and using ephemeral batch")
             self.batch_manager.initialize_batch(
                 user_context, execution_metadata, use_ephemeral=True
             )

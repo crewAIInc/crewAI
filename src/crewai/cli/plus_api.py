@@ -18,7 +18,7 @@ class PlusAPI:
     CREWS_RESOURCE = "/crewai_plus/api/v1/crews"
     AGENTS_RESOURCE = "/crewai_plus/api/v1/agents"
     TRACING_RESOURCE = "/crewai_plus/api/v1/tracing"
-    TEMP_TRACING_RESOURCE = "/crewai_plus/api/v1/tracing/ephemeral"
+    EPHEMERAL_TRACING_RESOURCE = "/crewai_plus/api/v1/tracing/ephemeral"
 
     def __init__(self, api_key: str) -> None:
         self.api_key = api_key
@@ -127,7 +127,7 @@ class PlusAPI:
 
     def initialize_ephemeral_trace_batch(self, payload) -> requests.Response:
         return self._make_request(
-            "POST", f"{self.TEMP_TRACING_RESOURCE}/batches", json=payload
+            "POST", f"{self.EPHEMERAL_TRACING_RESOURCE}/batches", json=payload
         )
 
     def send_trace_events(self, trace_batch_id: str, payload) -> requests.Response:
@@ -142,7 +142,7 @@ class PlusAPI:
     ) -> requests.Response:
         return self._make_request(
             "POST",
-            f"{self.TEMP_TRACING_RESOURCE}/batches/{trace_batch_id}/events",
+            f"{self.EPHEMERAL_TRACING_RESOURCE}/batches/{trace_batch_id}/events",
             json=payload,
         )
 
@@ -158,6 +158,6 @@ class PlusAPI:
     ) -> requests.Response:
         return self._make_request(
             "PATCH",
-            f"{self.TEMP_TRACING_RESOURCE}/batches/{trace_batch_id}/finalize",
+            f"{self.EPHEMERAL_TRACING_RESOURCE}/batches/{trace_batch_id}/finalize",
             json=payload,
         )
