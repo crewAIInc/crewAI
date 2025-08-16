@@ -37,6 +37,15 @@ from .agent_events import (
     LiteAgentExecutionErrorEvent,
     LiteAgentExecutionStartedEvent,
 )
+from .encryption_events import (
+    EncryptionStartedEvent,
+    EncryptionCompletedEvent,
+    DecryptionStartedEvent,
+    DecryptionCompletedEvent,
+    EncryptedCommunicationStartedEvent,
+    EncryptedCommunicationEstablishedEvent,
+    EncryptedTaskExecutionEvent,
+)
 from .crew_events import (
     CrewKickoffCompletedEvent,
     CrewKickoffFailedEvent,
@@ -511,6 +520,71 @@ class EventListener(BaseEventListener):
                 event.agent_role,
                 event.formatted_answer,
                 event.verbose,
+            )
+
+        # Encryption event handlers
+        @crewai_event_bus.on(EncryptedCommunicationStartedEvent)
+        def on_encrypted_communication_started(source, event: EncryptedCommunicationStartedEvent):
+            self.formatter.handle_encryption_communication_started(
+                event.sender_agent.role,
+                event.recipient_agent.role
+            )
+
+        @crewai_event_bus.on(EncryptedCommunicationEstablishedEvent)
+        def on_encrypted_communication_established(source, event: EncryptedCommunicationEstablishedEvent):
+            self.formatter.handle_encryption_communication_established(
+                event.sender_agent.role,
+                event.recipient_agent.role
+            )
+
+        @crewai_event_bus.on(EncryptionStartedEvent)
+        def on_encryption_started(source, event: EncryptionStartedEvent):
+            recipient_fingerprint = ""
+            if hasattr(event.recipient_agent, "fingerprint") and event.recipient_agent.fingerprint:
+                recipient_fingerprint = event.recipient_agent.fingerprint.uuid_str[:8] + "..."
+            self.formatter.handle_encryption_started(
+                event.message_type,
+                recipient_fingerprint
+            )
+
+        @crewai_event_bus.on(EncryptionCompletedEvent)
+        def on_encryption_completed(source, event: EncryptionCompletedEvent):
+            sender_fingerprint = ""
+            recipient_fingerprint = ""
+            if hasattr(event.sender_agent, "fingerprint") and event.sender_agent.fingerprint:
+                sender_fingerprint = event.sender_agent.fingerprint.uuid_str[:8] + "..."
+            if hasattr(event.recipient_agent, "fingerprint") and event.recipient_agent.fingerprint:
+                recipient_fingerprint = event.recipient_agent.fingerprint.uuid_str[:8] + "..."
+            self.formatter.handle_encryption_completed(
+                event.message_type,
+                sender_fingerprint,
+                recipient_fingerprint
+            )
+
+        @crewai_event_bus.on(DecryptionStartedEvent)
+        def on_decryption_started(source, event: DecryptionStartedEvent):
+            sender_fingerprint = event.sender_fingerprint[:8] + "..." if event.sender_fingerprint else ""
+            self.formatter.handle_decryption_started(
+                event.message_type,
+                sender_fingerprint
+            )
+
+        @crewai_event_bus.on(DecryptionCompletedEvent)
+        def on_decryption_completed(source, event: DecryptionCompletedEvent):
+            sender_fingerprint = event.sender_fingerprint[:8] + "..." if event.sender_fingerprint else ""
+            recipient_fingerprint = ""
+            if hasattr(event.recipient_agent, "fingerprint") and event.recipient_agent.fingerprint:
+                recipient_fingerprint = event.recipient_agent.fingerprint.uuid_str[:8] + "..."
+            self.formatter.handle_decryption_completed(
+                event.message_type,
+                sender_fingerprint,
+                recipient_fingerprint
+            )
+
+        @crewai_event_bus.on(EncryptedTaskExecutionEvent)
+        def on_encrypted_task_execution(source, event: EncryptedTaskExecutionEvent):
+            self.formatter.handle_encrypted_task_execution(
+                event.agent.role
             )
 
 
