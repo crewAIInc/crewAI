@@ -22,6 +22,10 @@ from opentelemetry import baggage
 from opentelemetry.context import attach, detach
 
 from crewai.utilities.crew.models import CrewContext
+from crewai.utilities.tool_sharing_cache import (
+    get_tool_sharing_cache,
+    should_use_tool_sharing,
+)
 
 from pydantic import (
     UUID4,
@@ -917,6 +921,38 @@ class Crew(FlowTrackable, BaseModel):
     def _prepare_tools(
         self, agent: BaseAgent, task: Task, tools: Union[List[Tool], List[BaseTool]]
     ) -> List[BaseTool]:
+        # Check if tool sharing cache can be used
+        if should_use_tool_sharing(tools):
+            # Extract agent capabilities for cache key generation
+            allow_delegation = hasattr(agent, "allow_delegation") and getattr(
+                agent, "allow_delegation", False
+            )
+            allow_code_execution = hasattr(agent, "allow_code_execution") and getattr(
+                agent, "allow_code_execution", False
+            )
+            multimodal = hasattr(agent, "multimodal") and getattr(
+                agent, "multimodal", False
+            )
+            process_type = str(self.process)
+
+            # Try to get tools from cache
+            tool_cache = get_tool_sharing_cache()
+            cached_tools = tool_cache.get_tools(
+                tools=tools,
+                allow_delegation=allow_delegation,
+                allow_code_execution=allow_code_execution,
+                multimodal=multimodal,
+                process_type=process_type,
+            )
+
+            if cached_tools is not None:
+                return cached_tools
+        else:
+            tool_cache = None
+
+        # Original tool preparation logic if not cached
+        original_tools = tools
+
         # Add delegation tools if agent allows delegation
         if hasattr(agent, "allow_delegation") and getattr(
             agent, "allow_delegation", False
@@ -928,7 +964,6 @@ class Crew(FlowTrackable, BaseModel):
                     raise ValueError(
                         "Manager agent is required for hierarchical process."
                     )
-
             elif agent:
                 tools = self._add_delegation_tools(task, tools)
 
@@ -945,8 +980,33 @@ class Crew(FlowTrackable, BaseModel):
         ):
             tools = self._add_multimodal_tools(agent, tools)
 
-        # Return a List[BaseTool] which is compatible with both Task.execute_sync and Task.execute_async
-        return cast(List[BaseTool], tools)
+        # Cast to List[BaseTool] for compatibility
+        prepared_tools = cast(List[BaseTool], tools)
+
+        # Cache the prepared tools if tool sharing is beneficial
+        if tool_cache is not None:
+            # Re-extract capabilities for cache storage since they were defined in the if block
+            allow_delegation = hasattr(agent, "allow_delegation") and getattr(
+                agent, "allow_delegation", False
+            )
+            allow_code_execution = hasattr(agent, "allow_code_execution") and getattr(
+                agent, "allow_code_execution", False
+            )
+            multimodal = hasattr(agent, "multimodal") and getattr(
+                agent, "multimodal", False
+            )
+            process_type = str(self.process)
+
+            tool_cache.store_tools(
+                tools=original_tools,
+                prepared_tools=prepared_tools,
+                allow_delegation=allow_delegation,
+                allow_code_execution=allow_code_execution,
+                multimodal=multimodal,
+                process_type=process_type,
+            )
+
+        return prepared_tools
 
     def _get_agent_to_use(self, task: Task) -> Optional[BaseAgent]:
         if self.process == Process.hierarchical:
