@@ -88,13 +88,16 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             tool.name: tool for tool in self.tools
         }
         existing_stop = self.llm.stop or []
-        self.llm.stop = list(
-            set(
-                existing_stop + self.stop
-                if isinstance(existing_stop, list)
-                else self.stop
+        if self.use_stop_words:
+            self.llm.stop = list(
+                set(
+                    existing_stop + self.stop
+                    if isinstance(existing_stop, list)
+                    else self.stop
+                )
             )
-        )
+        else:
+            self.llm.stop = existing_stop if isinstance(existing_stop, list) else []
 
     def invoke(self, inputs: Dict[str, str]) -> Dict[str, Any]:
         if "system" in self.prompt:
