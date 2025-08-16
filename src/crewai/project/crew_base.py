@@ -1,7 +1,7 @@
 import inspect
 import logging
 from pathlib import Path
-from typing import Any, Callable, Dict, TypeVar, cast, List
+from typing import Any, Callable, Dict, TypeVar, cast, List, Optional
 from crewai.tools import BaseTool
 
 import yaml
@@ -86,7 +86,7 @@ def CrewBase(cls: T) -> T:
             import types
             return types.MethodType(_close_mcp_server, self)
 
-        def get_mcp_tools(self, *tool_names: list[str]) -> List[BaseTool]:
+        def get_mcp_tools(self, *tool_names: list[str], connect_timeout: Optional[int] = 30) -> List[BaseTool]:
             if not self.mcp_server_params:
                 return []
 
@@ -94,7 +94,7 @@ def CrewBase(cls: T) -> T:
 
             adapter = getattr(self, '_mcp_server_adapter', None)
             if not adapter:
-                self._mcp_server_adapter = MCPServerAdapter(self.mcp_server_params)
+                self._mcp_server_adapter = MCPServerAdapter(self.mcp_server_params, connect_timeout=connect_timeout)
 
             return self._mcp_server_adapter.tools.filter_by_names(tool_names or None)
 
