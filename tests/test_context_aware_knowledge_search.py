@@ -1,12 +1,10 @@
 """Test context-aware knowledge search functionality."""
 
 import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 from crewai import Agent, Task, Crew, LLM
 from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
-from crewai.knowledge.knowledge import Knowledge
-from crewai.knowledge.knowledge_config import KnowledgeConfig
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -48,7 +46,7 @@ def test_knowledge_search_with_context():
     
     with patch.object(writer, '_get_knowledge_search_query') as mock_search:
         mock_search.return_value = "mocked query"
-        result = crew.kickoff()
+        crew.kickoff()
         
         mock_search.assert_called_once()
         call_args = mock_search.call_args
@@ -81,7 +79,7 @@ def test_knowledge_search_without_context():
     
     with patch.object(agent, '_get_knowledge_search_query') as mock_search:
         mock_search.return_value = "mocked query"
-        result = crew.kickoff()
+        crew.kickoff()
         
         mock_search.assert_called_once()
         call_args = mock_search.call_args
@@ -153,7 +151,7 @@ def test_knowledge_search_query_template_with_context():
     with patch.object(agent.llm, 'call') as mock_call:
         mock_call.return_value = "mocked response"
         
-        result = agent._get_knowledge_search_query(task_prompt, context)
+        agent._get_knowledge_search_query(task_prompt, context)
         
         mock_call.assert_called_once()
         call_args = mock_call.call_args[0][0]
@@ -178,7 +176,7 @@ def test_knowledge_search_query_template_without_context():
     with patch.object(agent.llm, 'call') as mock_call:
         mock_call.return_value = "mocked response"
         
-        result = agent._get_knowledge_search_query(task_prompt)
+        agent._get_knowledge_search_query(task_prompt)
         
         mock_call.assert_called_once()
         call_args = mock_call.call_args[0][0]
@@ -213,7 +211,7 @@ def test_structured_context_integration():
     with patch.object(agent.llm, 'call') as mock_call:
         mock_call.return_value = "Check getUserStatus method and URS-01 error"
         
-        result = agent._get_knowledge_search_query(task_prompt, structured_context)
+        agent._get_knowledge_search_query(task_prompt, structured_context)
         
         mock_call.assert_called_once()
         call_args = mock_call.call_args[0][0]
