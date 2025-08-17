@@ -1,0 +1,122 @@
+---
+title: "개요"
+description: "포괄적인 관측 도구로 CrewAI agent를 모니터링, 평가 및 최적화하세요"
+icon: "face-smile"
+---
+
+## CrewAI를 위한 관측 가능성
+
+관측 가능성은 CrewAI 에이전트의 성능을 이해하고, 병목 현상을 식별하며, 프로덕션 환경에서 신뢰할 수 있는 운영을 보장하는 데 매우 중요합니다. 이 섹션에서는 에이전트 워크플로우에 대한 모니터링, 평가, 최적화 기능을 제공하는 다양한 도구와 플랫폼을 다룹니다.
+
+## 관측 가능성이 중요한 이유
+
+- **성능 모니터링**: 에이전트 실행 시간, 토큰 사용량, 자원 소비량 추적
+- **품질 보증**: 다양한 시나리오에서 출력 품질과 일관성 평가
+- **디버깅**: 에이전트 동작 및 태스크 실행에서의 문제 식별 및 해결
+- **비용 관리**: LLM API 사용량 및 관련 비용 모니터링
+- **지속적인 개선**: 시간 경과에 따른 에이전트 성능 최적화를 위한 인사이트 수집
+
+## 사용 가능한 Observability 도구
+
+### 모니터링 & 트레이싱 플랫폼
+
+<CardGroup cols={2}>
+  <Card title="AgentOps" icon="paperclip" href="/ko/observability/agentops">
+    에이전트 개발 및 운영을 위한 세션 리플레이, 메트릭, 모니터링 제공.
+  </Card>
+
+  <Card title="LangDB" icon="database" href="/ko/observability/langdb">
+    자동 에이전트 상호작용 캡처를 포함한 CrewAI 워크플로의 엔드-투-엔드 트레이싱.
+  </Card>
+
+  <Card title="OpenLIT" icon="magnifying-glass-chart" href="/ko/observability/openlit">
+    비용 추적 및 성능 분석 기능이 포함된 OpenTelemetry 네이티브 모니터링.
+  </Card>
+
+  <Card title="MLflow" icon="bars-staggered" href="/ko/observability/mlflow">
+    트레이싱 및 평가 기능을 갖춘 머신러닝 라이프사이클 관리.
+  </Card>
+
+  <Card title="Langfuse" icon="link" href="/ko/observability/langfuse">
+    상세한 트레이싱과 분석을 제공하는 LLM 엔지니어링 플랫폼.
+  </Card>
+
+  <Card title="Langtrace" icon="chart-line" href="/ko/observability/langtrace">
+    LLM 및 에이전트 프레임워크를 위한 오픈소스 관측성 지원.
+  </Card>
+
+  <Card title="Arize Phoenix" icon="meteor" href="/ko/observability/arize-phoenix">
+    모니터링 및 문제 해결을 위한 AI 관측성 플랫폼.
+  </Card>
+
+  <Card title="Portkey" icon="key" href="/ko/observability/portkey">
+    종합적인 모니터링 및 신뢰성 기능을 갖춘 AI 게이트웨이.
+  </Card>
+
+  <Card title="Opik" icon="meteor" href="/ko/observability/opik">
+    포괄적인 트레이싱을 통한 LLM 애플리케이션 디버깅, 평가, 모니터링.
+  </Card>
+
+  <Card title="Weave" icon="network-wired" href="/ko/observability/weave">
+    AI 애플리케이션의 추적 및 평가를 위한 Weights & Biases 플랫폼.
+  </Card>
+</CardGroup>
+
+### 평가 및 품질 보증
+
+<CardGroup cols={2}>
+  <Card title="Patronus AI" icon="shield-check" href="/ko/observability/patronus-evaluation">
+    LLM 출력 및 에이전트 행동에 대한 종합 평가 플랫폼입니다.
+  </Card>
+</CardGroup>
+
+## 주요 관측성 메트릭스
+
+### 성능 지표
+- **실행 시간**: 에이전트가 작업을 완료하는 데 걸리는 시간
+- **토큰 사용량**: LLM 호출 시 소비된 입력/출력 토큰
+- **API 지연 시간**: 외부 서비스의 응답 시간
+- **성공률**: 성공적으로 완료된 작업의 비율
+
+### 품질 지표
+- **출력 정확성**: 에이전트 응답의 정확성
+- **일관성**: 유사한 입력에 대한 신뢰성
+- **관련성**: 출력이 기대 결과와 얼마나 잘 일치하는지
+- **안전성**: 콘텐츠 정책 및 가이드라인 준수
+
+### 비용 지표
+- **API 비용**: LLM 제공자 사용에 따른 지출
+- **리소스 활용**: 컴퓨팅 및 메모리 사용량
+- **작업당 비용**: 에이전트 운영의 경제적 효율성
+- **예산 추적**: 지출 한도 대비 모니터링
+
+## 시작하기
+
+1. **도구 선택하기**: 필요에 맞는 Observability 플랫폼을 선택하세요
+2. **코드 계측하기**: CrewAI 애플리케이션에 모니터링을 추가하세요
+3. **대시보드 설정하기**: 주요 지표에 대한 시각화를 구성하세요
+4. **알림 정의하기**: 중요한 이벤트에 대한 알림을 생성하세요
+5. **기준선 설정하기**: 비교를 위한 초기 성능을 측정하세요
+6. **반복 및 개선**: 인사이트를 활용하여 에이전트를 최적화하세요
+
+## 모범 사례
+
+### 개발 단계
+- 에이전트 행동을 이해하기 위해 상세 트레이싱 사용
+- 개발 초기에 평가 지표 구현
+- 테스트 중 리소스 사용량 모니터링
+- 자동화된 품질 검사 설정
+
+### 운영 단계
+- 포괄적인 모니터링 및 알림 구현
+- 시간 경과에 따른 성능 추이 추적
+- 이상 현상 및 성능 저하 모니터링
+- 비용 가시성 및 통제 유지
+
+### 지속적인 개선
+- 정기적인 성과 리뷰 및 최적화
+- 다양한 에이전트 구성의 A/B 테스트
+- 품질 향상을 위한 피드백 루프
+- 교훈 문서화
+
+사용 사례, 인프라, 모니터링 요구 사항에 가장 적합한 observability 도구를 선택하여 CrewAI 에이전트가 신뢰성 있고 효율적으로 작동하도록 하세요.

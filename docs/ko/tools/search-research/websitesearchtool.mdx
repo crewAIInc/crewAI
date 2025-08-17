@@ -1,0 +1,77 @@
+---
+title: 웹사이트 RAG 검색
+description: WebsiteSearchTool은(는) 웹사이트의 콘텐츠 내에서 RAG(Retrieval-Augmented Generation) 검색을 수행하도록 설계되었습니다.
+icon: globe-stand
+---
+
+# `WebsiteSearchTool`
+
+<Note>
+    WebsiteSearchTool은 현재 실험 단계에 있습니다. 저희는 이 도구를 제품군에 통합하기 위해 적극적으로 작업 중이며, 이에 따라 문서를 업데이트할 예정입니다.
+</Note>
+
+## 설명
+
+WebsiteSearchTool은 웹사이트 내용 내에서 의미론적 검색을 수행하기 위한 개념으로 설계되었습니다.
+이 도구는 Retrieval-Augmented Generation(RAG)과 같은 첨단 머신러닝 모델을 활용하여 지정된 URL에서 정보를 효율적으로 탐색하고 추출하는 것을 목표로 합니다.
+사용자가 모든 웹사이트에서 검색을 수행하거나 관심 있는 특정 웹사이트에 집중할 수 있도록 유연성을 제공하는 것이 목적입니다.
+현재 WebsiteSearchTool의 구현 세부 사항은 개발 중에 있으며, 설명된 기능들이 아직 제공되지 않을 수 있으니 참고 바랍니다.
+
+## 설치
+
+WebsiteSearchTool이 출시될 때 환경을 미리 준비하려면, 기본 패키지를 다음과 같이 설치할 수 있습니다:
+
+```shell
+pip install 'crewai[tools]'
+```
+
+이 명령어는 도구가 완전히 통합된 이후 즉시 사용할 수 있도록 필요한 종속성들을 설치합니다.
+
+## 사용 예시
+
+아래는 다양한 시나리오에서 WebsiteSearchTool을 어떻게 활용할 수 있는지에 대한 예시입니다. 참고로, 이 예시는 설명을 위한 것이며 계획된 기능을 나타냅니다:
+
+```python Code
+from crewai_tools import WebsiteSearchTool
+
+# 에이전트가 사용할 수 있도록 도구를 초기화하는 예제
+# 발견된 모든 웹사이트에서 검색할 수 있음
+tool = WebsiteSearchTool()
+
+# 특정 웹사이트의 콘텐츠로 검색을 제한하는 예제
+# 이제 에이전트는 해당 웹사이트 내에서만 검색할 수 있음
+tool = WebsiteSearchTool(website='https://example.com')
+```
+
+## 인자
+
+- `website`: 선택적으로 웹사이트 URL을 지정하여 집중적인 검색을 수행할 수 있도록 하는 인자입니다. 이 인자는 필요에 따라 타겟팅된 검색을 가능하게 하여 도구의 유연성을 높이기 위해 설계되었습니다.
+
+## 커스터마이즈 옵션
+
+기본적으로 이 도구는 임베딩과 요약 모두에 OpenAI를 사용합니다. 모델을 커스터마이즈하려면 다음과 같이 config 딕셔너리를 사용할 수 있습니다:
+
+
+```python Code
+tool = WebsiteSearchTool(
+    config=dict(
+        llm=dict(
+            provider="ollama", # or google, openai, anthropic, llama2, ...
+            config=dict(
+                model="llama2",
+                # temperature=0.5,
+                # top_p=1,
+                # stream=true,
+            ),
+        ),
+        embedder=dict(
+            provider="google", # or openai, ollama, ...
+            config=dict(
+                model="models/embedding-001",
+                task_type="retrieval_document",
+                # title="Embeddings",
+            ),
+        ),
+    )
+)
+```

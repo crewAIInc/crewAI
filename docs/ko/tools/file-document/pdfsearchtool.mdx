@@ -1,0 +1,71 @@
+---
+title: PDF RAG 검색
+description: PDFSearchTool은 PDF 파일을 검색하고 가장 관련성 높은 결과를 반환하도록 설계되었습니다.
+icon: file-pdf
+---
+
+# `PDFSearchTool`
+
+<Note>
+    도구를 계속 개선하고 있으므로, 예기치 않은 동작이나 변경사항이 있을 수 있습니다.
+</Note>
+
+## 설명
+
+PDFSearchTool은 PDF 콘텐츠 내에서 의미론적 검색을 위해 설계된 RAG 도구입니다. 이 도구는 검색 쿼리와 PDF 문서를 입력받아 고급 검색 기법을 활용하여 관련 콘텐츠를 효율적으로 찾을 수 있습니다.
+이 기능을 통해 대용량 PDF 파일에서 특정 정보를 신속하게 추출할 수 있어 특히 유용합니다.
+
+## 설치
+
+PDFSearchTool을 시작하려면 먼저 crewai_tools 패키지가 다음 명령어로 설치되어 있는지 확인하세요:
+
+```shell
+pip install 'crewai[tools]'
+```
+
+## 예시
+다음은 PDFSearchTool을 사용하여 PDF 문서 내에서 검색하는 방법입니다:
+
+```python Code
+from crewai_tools import PDFSearchTool
+
+# 실행 시 경로가 제공되면 모든 PDF 콘텐츠 검색을 허용하도록 도구를 초기화합니다.
+tool = PDFSearchTool()
+
+# 또는
+
+# 특정 PDF 경로로 도구를 초기화하여 해당 문서 내에서만 검색합니다.
+tool = PDFSearchTool(pdf='path/to/your/document.pdf')
+```
+
+## 인수
+
+- `pdf`: **선택 사항** 검색할 PDF 경로입니다. 초기화 시 또는 `run` 메서드의 인수로 제공할 수 있습니다. 초기화 시 제공되면, 도구는 지정된 문서로 검색 범위를 제한합니다.
+
+## 커스텀 모델 및 임베딩
+
+기본적으로 이 도구는 임베딩과 요약 모두에 OpenAI를 사용합니다. 모델을 커스터마이즈하려면 다음과 같이 config 딕셔너리를 사용할 수 있습니다:
+
+```python Code
+tool = PDFSearchTool(
+    config=dict(
+        llm=dict(
+            provider="ollama", # or google, openai, anthropic, llama2, ...
+            config=dict(
+                model="llama2",
+                # temperature=0.5,
+                # top_p=1,
+                # stream=true,
+            ),
+        ),
+        embedder=dict(
+            provider="google", # or openai, ollama, ...
+            config=dict(
+                model="models/embedding-001",
+                task_type="retrieval_document",
+                # title="Embeddings",
+            ),
+        ),
+    )
+)
+```

@@ -1,0 +1,390 @@
+---
+title: CLI
+description: CrewAI CLI를 사용하여 CrewAI와 상호 작용하는 방법을 알아보세요.
+icon: terminal
+---
+
+<Warning>릴리즈 0.140.0부터 CrewAI Enterprise는 로그인 제공자 마이그레이션 프로세스를 시작했습니다. 이에 따라 CLI를 통한 인증 흐름이 업데이트되었습니다. Google을 통해 로그인하거나 2025년 7월 3일 이후에 계정을 생성한 사용자는 이전 버전의 `crewai` 라이브러리로는 로그인할 수 없습니다.</Warning>
+
+## 개요
+
+CrewAI CLI는 CrewAI와 상호작용할 수 있는 명령어 세트를 제공하여 crew 및 flow를 생성, 학습, 실행, 관리할 수 있습니다.
+
+## 설치
+
+CrewAI CLI를 사용하려면, CrewAI가 설치되어 있어야 합니다:
+
+```shell Terminal
+pip install crewai
+```
+
+## 기본 사용법
+
+CrewAI CLI 명령어의 기본 구조는 다음과 같습니다:
+
+```shell Terminal
+crewai [COMMAND] [OPTIONS] [ARGUMENTS]
+```
+
+## 사용 가능한 명령어
+
+### 1. 생성
+
+새로운 crew 또는 flow를 생성합니다.
+
+```shell Terminal
+crewai create [OPTIONS] TYPE NAME
+```
+
+- `TYPE`: "crew" 또는 "flow" 중에서 선택
+- `NAME`: crew 또는 flow의 이름
+
+예시:
+```shell Terminal
+crewai create crew my_new_crew
+crewai create flow my_new_flow
+```
+
+### 2. 버전
+
+설치된 CrewAI의 버전을 표시합니다.
+
+```shell Terminal
+crewai version [OPTIONS]
+```
+
+- `--tools`: (선택 사항) 설치된 CrewAI tools의 버전을 표시합니다.
+
+예시:
+```shell Terminal
+crewai version
+crewai version --tools
+```
+
+### 3. 훈련
+
+지정된 횟수만큼 crew를 훈련시킵니다.
+
+```shell Terminal
+crewai train [OPTIONS]
+```
+
+- `-n, --n_iterations INTEGER`: crew를 훈련할 반복 횟수 (기본값: 5)
+- `-f, --filename TEXT`: 훈련에 사용할 커스텀 파일의 경로 (기본값: "trained_agents_data.pkl")
+
+예시:
+```shell Terminal
+crewai train -n 10 -f my_training_data.pkl
+```
+
+### 4. 다시 실행
+
+특정 task에서 crew 실행을 다시 재생합니다.
+
+```shell Terminal
+crewai replay [OPTIONS]
+```
+
+- `-t, --task_id TEXT`: 이 task ID에서부터 crew를 다시 재생하며, 이후의 모든 task를 포함합니다.
+
+예시:
+```shell Terminal
+crewai replay -t task_123456
+```
+
+### 5. Log-tasks-outputs
+
+가장 최근의 crew.kickoff() 작업 결과를 조회합니다.
+
+```shell Terminal
+crewai log-tasks-outputs
+```
+
+### 6. Reset-memories
+
+크루의 메모리(롱, 쇼트, 엔티티, latest_crew_kickoff_outputs)를 초기화합니다.
+
+```shell Terminal
+crewai reset-memories [OPTIONS]
+```
+
+- `-l, --long`: LONG TERM 메모리 초기화
+- `-s, --short`: SHORT TERM 메모리 초기화
+- `-e, --entities`: ENTITIES 메모리 초기화
+- `-k, --kickoff-outputs`: LATEST KICKOFF TASK OUTPUTS 초기화
+- `-kn, --knowledge`: KNOWLEDGE 저장소 초기화
+- `-akn, --agent-knowledge`: AGENT KNOWLEDGE 저장소 초기화
+- `-a, --all`: 모든 메모리 초기화
+
+예시:
+```shell Terminal
+crewai reset-memories --long --short
+crewai reset-memories --all
+```
+
+### 7. 테스트
+
+crew를 테스트하고 결과를 평가합니다.
+
+```shell Terminal
+crewai test [OPTIONS]
+```
+
+- `-n, --n_iterations INTEGER`: crew를 테스트할 반복 횟수 (기본값: 3)
+- `-m, --model TEXT`: Crew에서 테스트를 실행할 LLM 모델 (기본값: "gpt-4o-mini")
+
+예시:
+```shell Terminal
+crewai test -n 5 -m gpt-3.5-turbo
+```
+
+### 8. 실행
+
+crew 또는 flow를 실행합니다.
+
+```shell Terminal
+crewai run
+```
+
+<Note>
+버전 0.103.0부터 `crewai run` 명령은 표준 crew와 flow 모두를 실행하는 데 사용할 수 있습니다. flow의 경우 pyproject.toml에서 유형을 자동으로 감지하여 적절한 명령을 실행합니다. 이제 crew와 flow 모두를 실행하는 권장 방법입니다.
+</Note>
+
+<Note>
+이 명령들은 CrewAI 프로젝트가 설정된 디렉터리에서 실행해야 합니다.
+일부 명령은 프로젝트 구조 내에서 추가 구성 또는 설정이 필요할 수 있습니다.
+</Note>
+
+### 9. Chat
+
+버전 `0.98.0`부터 `crewai chat` 명령어를 실행하면 크루와의 대화형 세션이 시작됩니다. AI 어시스턴트가 크루를 실행하는 데 필요한 입력값을 요청하며 안내합니다. 모든 입력값이 제공되면 크루가 작업을 실행합니다.
+
+결과를 받은 후에도 추가 지시나 질문을 위해 어시스턴트와 계속 상호작용할 수 있습니다.
+
+```shell Terminal
+crewai chat
+```
+<Note>
+이 명령어들은 CrewAI 프로젝트의 루트 디렉터리에서 실행해야 합니다.
+</Note>
+<Note>
+중요: 이 명령어를 사용하려면 `crew.py` 파일에서 `chat_llm` 속성을 설정해야 합니다.
+
+```python
+@crew
+def crew(self) -> Crew:
+    return Crew(
+        agents=self.agents,
+        tasks=self.tasks,
+        process=Process.sequential,
+        verbose=True,
+        chat_llm="gpt-4o",  # LLM for chat orchestration
+    )
+```
+</Note>
+
+### 10. 배포
+
+crew 또는 flow를 [CrewAI Enterprise](https://app.crewai.com)에 배포하세요.
+
+- **인증**: CrewAI Enterprise에 배포하려면 인증이 필요합니다.
+    아래 명령어로 로그인하거나 계정을 생성할 수 있습니다:
+    ```shell Terminal
+    crewai login
+    ```
+
+- **배포 생성**: 인증이 완료되면, 로컬 프로젝트의 루트에서 crew 또는 flow에 대한 배포를 생성할 수 있습니다.
+    ```shell Terminal
+    crewai deploy create
+    ```
+    - 로컬 프로젝트 구성을 읽어옵니다.
+    - 로컬에서 확인된 환경 변수(`OPENAI_API_KEY`, `SERPER_API_KEY` 등)를 확인하도록 안내합니다. 이 변수들은 Enterprise 플랫폼에 배포할 때 안전하게 저장됩니다. 실행 전에 중요한 키가 로컬(예: `.env` 파일)에 올바르게 구성되어 있는지 확인하세요.
+
+### 11. 조직 관리
+
+CrewAI Enterprise 조직을 관리합니다.
+
+```shell Terminal
+crewai org [COMMAND] [OPTIONS]
+```
+
+#### 명령어:
+
+- `list`: 사용자가 속한 모든 조직을 나열합니다.
+```shell Terminal
+crewai org list
+```
+
+- `current`: 현재 활성화된 조직을 표시합니다.
+```shell Terminal
+crewai org current
+```
+
+- `switch`: 특정 조직으로 전환합니다.
+```shell Terminal
+crewai org switch <organization_id>
+```
+
+<Note>
+이러한 조직 관리 명령어를 사용하려면 CrewAI Enterprise에 인증되어 있어야 합니다.
+</Note>
+
+- **배포 생성** (계속):
+    - 배포를 해당 원격 GitHub 저장소에 연결합니다 (일반적으로 자동으로 감지됩니다).
+
+- **Crew 배포**: 인증이 완료되면 crew 또는 flow를 CrewAI Enterprise에 배포할 수 있습니다.
+    ```shell Terminal
+    crewai deploy push
+    ```
+    - CrewAI Enterprise 플랫폼에서 배포 프로세스를 시작합니다.
+    - 성공적으로 시작되면, Deployment created successfully! 메시지와 함께 Deployment Name 및 고유한 Deployment ID(UUID)가 출력됩니다.
+
+- **배포 상태**: 배포 상태를 확인하려면 다음을 사용합니다:
+    ```shell Terminal
+    crewai deploy status
+    ```
+    이 명령은 가장 최근의 배포 시도에 대한 최신 배포 상태(예: `Building Images for Crew`, `Deploy Enqueued`, `Online`)를 가져옵니다.
+
+- **배포 로그**: 배포 로그를 확인하려면 다음을 사용합니다:
+    ```shell Terminal
+    crewai deploy logs
+    ```
+    이 명령은 배포 로그를 터미널로 스트리밍합니다.
+
+- **배포 목록**: 모든 배포를 나열하려면 다음을 사용합니다:
+    ```shell Terminal
+    crewai deploy list
+    ```
+    이 명령은 모든 배포를 나열합니다.
+
+- **배포 삭제**: 배포를 삭제하려면 다음을 사용합니다:
+    ```shell Terminal
+    crewai deploy remove
+    ```
+    이 명령은 CrewAI Enterprise 플랫폼에서 배포를 삭제합니다.
+
+- **도움말 명령어**: CLI에 대한 도움말을 보려면 다음을 사용합니다:
+    ```shell Terminal
+    crewai deploy --help
+    ```
+    이 명령은 CrewAI Deploy CLI에 대한 도움말 메시지를 표시합니다.
+
+CLI를 사용하여 [CrewAI Enterprise](http://app.crewai.com)에 crew를 배포하는 단계별 시연은 아래 비디오 튜토리얼을 참조하십시오.
+
+<iframe
+  width="100%"
+  height="400"
+  src="https://www.youtube.com/embed/3EqSV-CYDZA"
+  title="CrewAI Deployment Guide"
+  frameborder="0"
+  style={{ borderRadius: '10px' }}
+  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+  allowfullscreen
+></iframe>
+
+### 11. API 키
+
+```crewai create crew``` 명령어를 실행하면, CLI에서 선택할 수 있는 LLM 제공업체 목록이 표시되고, 그 다음으로 선택한 제공업체에 대한 모델 선택이 이어집니다.
+
+LLM 제공업체와 모델을 선택하면, API 키를 입력하라는 메시지가 표시됩니다.
+
+#### 사용 가능한 LLM 공급자
+
+다음은 CLI에서 제안하는 가장 인기 있는 LLM 공급자 목록입니다:
+
+* OpenAI
+* Groq
+* Anthropic
+* Google Gemini
+* SambaNova
+
+공급자를 선택하면, CLI가 해당 공급자에서 사용 가능한 모델을 보여주고 API 키 입력을 요청합니다.
+
+#### 기타 옵션
+
+"기타"를 선택하면 LiteLLM에서 지원하는 공급자 목록에서 선택할 수 있습니다.
+
+공급자를 선택하면 CLI에서 Key 이름과 API 키 입력을 요청합니다.
+
+각 공급자의 Key 이름은 다음 링크에서 확인할 수 있습니다:
+
+* [LiteLLM 공급자](https://docs.litellm.ai/docs/providers)
+
+### 12. 구성 관리
+
+CrewAI의 CLI 구성 설정을 관리합니다.
+
+```shell Terminal
+crewai config [COMMAND] [OPTIONS]
+```
+
+#### 명령어:
+
+- `list`: 모든 CLI 구성 매개변수 표시
+```shell Terminal
+crewai config list
+```
+
+- `set`: CLI 구성 매개변수 설정
+```shell Terminal
+crewai config set <key> <value>
+```
+
+- `reset`: 모든 CLI 구성 매개변수를 기본값으로 초기화
+```shell Terminal
+crewai config reset
+```
+
+#### 사용 가능한 구성 파라미터
+
+- `enterprise_base_url`: CrewAI Enterprise 인스턴스의 기본 URL
+- `oauth2_provider`: 인증에 사용되는 OAuth2 공급자 (예: workos, okta, auth0)
+- `oauth2_audience`: OAuth2 audience 값으로, 일반적으로 대상 API 또는 리소스를 식별하는 데 사용됨
+- `oauth2_client_id`: 인증 요청 시 사용되는 공급자가 발급한 OAuth2 클라이언트 ID
+- `oauth2_domain`: 토큰 발급에 사용되는 OAuth2 공급자의 도메인 (예: your-org.auth0.com)
+
+#### 예시
+
+현재 설정 표시:
+```shell Terminal
+crewai config list
+```
+
+예시 출력:
+```
+CrewAI CLI Configuration
+┏━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ Setting            ┃ Value                              ┃ Description                                                                                      ┃
+┡━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+│ enterprise_base_url│ https://app.crewai.com             │ CrewAI Enterprise 인스턴스의 기본 URL                                                           │
+│ org_name           │ Not set                            │ 현재 활성화된 조직의 이름                                                                         │
+│ org_uuid           │ Not set                            │ 현재 활성화된 조직의 UUID                                                                         │
+│ oauth2_provider    │ workos                             │ 인증에 사용되는 OAuth2 제공자 (예: workos, okta, auth0)                                            │
+│ oauth2_audience    │ client_01YYY                       │ 일반적으로 대상 API나 리소스를 식별하는 데 사용되는 OAuth2 audience 값                               │
+│ oauth2_client_id   │ client_01XXX                       │ 제공자로부터 발급된 OAuth2 client ID로, 인증 요청 시 사용됨                                       │
+│ oauth2_domain      │ login.crewai.com                   │ 토큰 발급에 사용되는 OAuth2 제공자의 도메인(예: your-org.auth0.com)                               │
+```
+
+엔터프라이즈 기본 URL 설정:
+```shell Terminal
+crewai config set enterprise_base_url https://my-enterprise.crewai.com
+```
+
+OAuth2 제공자 설정:
+```shell Terminal
+crewai config set oauth2_provider auth0
+```
+
+OAuth2 도메인 설정:
+```shell Terminal
+crewai config set oauth2_domain my-company.auth0.com
+```
+
+모든 설정을 기본값으로 재설정:
+```shell Terminal
+crewai config reset
+```
+
+<Note>
+설정 값은 `~/.config/crewai/settings.json`에 저장됩니다. 조직 이름과 UUID와 같은 일부 설정 값은 읽기 전용이며 인증 및 조직 명령을 통해 관리됩니다. 도구 저장소 관련 설정은 숨겨져 있으며 사용자가 직접 설정할 수 없습니다.
+</Note>

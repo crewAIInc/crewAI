@@ -1,0 +1,205 @@
+---
+title: 모든 LLM에 연결하기
+description: LiteLLM을 사용하여 CrewAI를 다양한 대형 언어 모델(LLM)과 통합하는 방법에 대한 종합적인 가이드로, 지원되는 제공자와 구성 옵션을 포함합니다.
+icon: brain-circuit
+---
+
+## CrewAI를 LLM에 연결하기
+
+CrewAI는 LiteLLM을 사용하여 다양한 언어 모델(LLM)에 연결합니다. 이 통합은 높은 다양성을 제공하여, 여러 공급자의 모델을 간단하고 통합된 인터페이스로 사용할 수 있게 해줍니다.
+
+<Note>
+    기본적으로 CrewAI는 `gpt-4o-mini` 모델을 사용합니다. 이는 `OPENAI_MODEL_NAME` 환경 변수에 의해 결정되며, 설정되지 않은 경우 기본값은 "gpt-4o-mini"입니다.
+    본 가이드에 설명된 대로 다른 모델이나 공급자를 사용하도록 에이전트를 쉽게 설정할 수 있습니다.
+</Note>
+
+## 지원되는 프로바이더
+
+LiteLLM은 다음을 포함하되 이에 국한되지 않는 다양한 프로바이더를 지원합니다:
+
+- OpenAI
+- Anthropic
+- Google (Vertex AI, Gemini)
+- Azure OpenAI
+- AWS (Bedrock, SageMaker)
+- Cohere
+- VoyageAI
+- Hugging Face
+- Ollama
+- Mistral AI
+- Replicate
+- Together AI
+- AI21
+- Cloudflare Workers AI
+- DeepInfra
+- Groq
+- SambaNova
+- Nebius AI Studio
+- [NVIDIA NIMs](https://docs.api.nvidia.com/nim/reference/models-1)
+- 그리고 더 많은 프로바이더!
+
+지원되는 프로바이더의 전체 및 최신 목록은 [LiteLLM 프로바이더 문서](https://docs.litellm.ai/docs/providers)를 참조하세요.
+
+## LLM 변경하기
+
+CrewAI agent에서 다른 LLM을 사용하려면 여러 가지 방법이 있습니다:
+
+<Tabs>
+    <Tab title="문자열 식별자 사용">
+    agent를 초기화할 때 모델 이름을 문자열로 전달하세요:
+        <CodeGroup>
+            ```python Code
+            from crewai import Agent
+
+            # OpenAI의 GPT-4 사용
+            openai_agent = Agent(
+                role='OpenAI Expert',
+                goal='Provide insights using GPT-4',
+                backstory="An AI assistant powered by OpenAI's latest model.",
+                llm='gpt-4'
+            )
+
+            # Anthropic의 Claude 사용
+            claude_agent = Agent(
+                role='Anthropic Expert',
+                goal='Analyze data using Claude',
+                backstory="An AI assistant leveraging Anthropic's language model.",
+                llm='claude-2'
+            )
+            ```
+        </CodeGroup>
+    </Tab>
+    <Tab title="LLM 클래스 사용">
+    더 자세한 설정을 위해 LLM 클래스를 사용하세요:
+        <CodeGroup>
+            ```python Code
+            from crewai import Agent, LLM
+
+            llm = LLM(
+                model="gpt-4",
+                temperature=0.7,
+                base_url="https://api.openai.com/v1",
+                api_key="your-api-key-here"
+            )
+
+            agent = Agent(
+                role='Customized LLM Expert',
+                goal='Provide tailored responses',
+                backstory="An AI assistant with custom LLM settings.",
+                llm=llm
+            )
+            ```
+        </CodeGroup>
+    </Tab>
+</Tabs>
+
+## 구성 옵션
+
+에이전트를 위해 LLM을 구성할 때 다양한 매개변수를 사용할 수 있습니다:
+
+| 매개변수 | 유형 | 설명 |
+|:----------|:-----:|:-------------|
+| **model** | `str` | 사용할 모델의 이름 (예: "gpt-4", "claude-2") |
+| **temperature** | `float` | 출력의 무작위성 제어 (0.0 ~ 1.0) |
+| **max_tokens** | `int` | 생성할 최대 토큰 수 |
+| **top_p** | `float` | 출력 다양성 제어 (0.0 ~ 1.0) |
+| **frequency_penalty** | `float` | 지금까지의 텍스트에서 빈도에 따라 새로운 토큰에 패널티 부여 |
+| **presence_penalty** | `float` | 지금까지의 텍스트에 이미 존재하는지에 따라 새로운 토큰에 패널티 부여 |
+| **stop** | `str`, `List[str]` | 생성을 중단할 시퀀스(들) |
+| **base_url** | `str` | API 엔드포인트의 기본 URL |
+| **api_key** | `str` | 인증용 API 키 |
+
+매개변수와 그 설명의 전체 목록은 LLM 클래스 문서를 참고하십시오.
+
+## OpenAI 호환 LLM에 연결하기
+
+OpenAI 호환 LLM에 연결하려면 환경 변수를 사용하거나 LLM 클래스에서 특정 속성을 설정할 수 있습니다:
+
+<Tabs>
+    <Tab title="환경 변수 사용하기">
+        <CodeGroup>
+        ```python Generic
+        import os
+
+        os.environ["OPENAI_API_KEY"] = "your-api-key"
+        os.environ["OPENAI_API_BASE"] = "https://api.your-provider.com/v1"
+        os.environ["OPENAI_MODEL_NAME"] = "your-model-name"
+        ```
+
+        ```python Google
+        import os
+
+        # Gemini의 OpenAI 호환 API 예시입니다.
+        os.environ["OPENAI_API_KEY"] = "your-gemini-key"  # AIza...로 시작해야 합니다.
+        os.environ["OPENAI_API_BASE"] = "https://generativelanguage.googleapis.com/v1beta/openai/"
+        os.environ["OPENAI_MODEL_NAME"] = "openai/gemini-2.0-flash"  # Gemini 모델을 여기에 추가하세요. openai/ 하위에 위치.
+        ```
+        </CodeGroup>
+    </Tab>
+    <Tab title="LLM 클래스 속성 사용하기">
+        <CodeGroup>
+            ```python Generic
+            llm = LLM(
+                model="custom-model-name",
+                api_key="your-api-key",
+                base_url="https://api.your-provider.com/v1"
+            )
+            agent = Agent(llm=llm, ...)
+            ```
+
+            ```python Google
+            # Gemini의 OpenAI 호환 API 예시
+            llm = LLM(
+                model="openai/gemini-2.0-flash",
+                base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
+                api_key="your-gemini-key",  # AIza...로 시작해야 합니다.
+            )
+            agent = Agent(llm=llm, ...)
+            ```
+        </CodeGroup>
+    </Tab>
+</Tabs>
+
+## Ollama와 함께 로컬 모델 사용하기
+
+Ollama에서 제공하는 로컬 모델의 경우:
+
+<Steps>
+    <Step title="Ollama 다운로드 및 설치">
+    [여기를 클릭하여 Ollama를 다운로드 및 설치하세요](https://ollama.com/download)
+    </Step>
+    <Step title="원하는 모델 가져오기">
+    예를 들어, `ollama pull llama3.2`를 실행하여 모델을 다운로드합니다.
+    </Step>
+    <Step title="에이전트 구성">
+        <CodeGroup>
+        ```python Code
+            agent = Agent(
+                role='Local AI Expert',
+                goal='Process information using a local model',
+                backstory="An AI assistant running on local hardware.",
+                llm=LLM(model="ollama/llama3.2", base_url="http://localhost:11434")
+            )
+            ```
+        </CodeGroup>
+    </Step>
+</Steps>
+
+## 기본 API URL 변경하기
+
+어떤 LLM provider든 `base_url` 파라미터를 설정하여 기본 API URL을 변경할 수 있습니다:
+
+```python Code
+llm = LLM(
+    model="custom-model-name",
+    base_url="https://api.your-provider.com/v1",
+    api_key="your-api-key"
+)
+agent = Agent(llm=llm, ...)
+```
+
+이 기능은 OpenAI 호환 API를 사용할 때나 선택한 provider에 대해 다른 endpoint를 지정해야 할 때 특히 유용합니다.
+
+## 결론
+
+LiteLLM을 활용함으로써 CrewAI는 다양한 LLM과의 원활한 통합을 제공합니다. 이러한 유연성 덕분에 성능, 비용 효율성 또는 로컬 배포 등 귀하의 특정 요구 사항에 가장 적합한 모델을 선택할 수 있습니다. 지원되는 모델과 구성 옵션에 대한 최신 정보는 반드시 [LiteLLM 문서](https://docs.litellm.ai/docs/)를 참고하시기 바랍니다.

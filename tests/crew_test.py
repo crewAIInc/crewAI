@@ -1,5 +1,4 @@
 """Test Agent creation and execution basic functionality."""
-
 import hashlib
 import json
 from concurrent.futures import Future
@@ -51,7 +50,7 @@ from crewai.utilities.events.memory_events import (
     MemoryRetrievalStartedEvent,
     MemoryRetrievalCompletedEvent,
 )
-
+from crewai.memory.external.external_memory import ExternalMemory
 
 @pytest.fixture
 def ceo():
@@ -312,7 +311,6 @@ def test_crew_creation(researcher, writer):
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_sync_task_execution(researcher, writer):
-    from unittest.mock import patch
 
     tasks = [
         Task(
@@ -961,7 +959,6 @@ def test_cache_hitting_between_agents(researcher, writer, ceo):
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_api_calls_throttling(capsys):
-    from unittest.mock import patch
 
     from crewai.tools import tool
 
@@ -1396,7 +1393,6 @@ def test_kickoff_for_each_invalid_input():
 
 def test_kickoff_for_each_error_handling():
     """Tests error handling in kickoff_for_each when kickoff raises an error."""
-    from unittest.mock import patch
 
     inputs = [
         {"topic": "dog"},
@@ -1433,7 +1429,6 @@ def test_kickoff_for_each_error_handling():
 @pytest.mark.asyncio
 async def test_kickoff_async_basic_functionality_and_output():
     """Tests the basic functionality and output of kickoff_async."""
-    from unittest.mock import patch
 
     inputs = {"topic": "dog"}
 
@@ -1540,7 +1535,6 @@ async def test_async_kickoff_for_each_async_empty_input():
 
 
 def test_set_agents_step_callback():
-    from unittest.mock import patch
 
     researcher_agent = Agent(
         role="Researcher",
@@ -1570,7 +1564,6 @@ def test_set_agents_step_callback():
 
 
 def test_dont_set_agents_step_callback_if_already_set():
-    from unittest.mock import patch
 
     def agent_callback(_):
         pass
@@ -2035,7 +2028,6 @@ def test_crew_inputs_interpolate_both_agents_and_tasks():
 
 
 def test_crew_inputs_interpolate_both_agents_and_tasks_diff():
-    from unittest.mock import patch
 
     agent = Agent(
         role="{topic} Researcher",
@@ -2068,7 +2060,6 @@ def test_crew_inputs_interpolate_both_agents_and_tasks_diff():
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_crew_does_not_interpolate_without_inputs():
-    from unittest.mock import patch
 
     agent = Agent(
         role="{topic} Researcher",
@@ -2203,7 +2194,6 @@ def test_task_same_callback_both_on_task_and_crew():
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_tools_with_custom_caching():
-    from unittest.mock import patch
 
     from crewai.tools import tool
 
@@ -2484,7 +2474,6 @@ def test_multiple_conditional_tasks(researcher, writer):
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_using_contextual_memory():
-    from unittest.mock import patch
 
     math_researcher = Agent(
         role="Researcher",
@@ -2583,7 +2572,6 @@ def test_memory_events_are_emitted():
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_using_contextual_memory_with_long_term_memory():
-    from unittest.mock import patch
 
     math_researcher = Agent(
         role="Researcher",
@@ -2614,7 +2602,6 @@ def test_using_contextual_memory_with_long_term_memory():
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_warning_long_term_memory_without_entity_memory():
-    from unittest.mock import patch
 
     math_researcher = Agent(
         role="Researcher",
@@ -2651,7 +2638,6 @@ def test_warning_long_term_memory_without_entity_memory():
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_long_term_memory_with_memory_flag():
-    from unittest.mock import patch
 
     math_researcher = Agent(
         role="Researcher",
@@ -2686,7 +2672,6 @@ def test_long_term_memory_with_memory_flag():
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_using_contextual_memory_with_short_term_memory():
-    from unittest.mock import patch
 
     math_researcher = Agent(
         role="Researcher",
@@ -2717,7 +2702,6 @@ def test_using_contextual_memory_with_short_term_memory():
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_disabled_memory_using_contextual_memory():
-    from unittest.mock import patch
 
     math_researcher = Agent(
         role="Researcher",
@@ -2845,7 +2829,6 @@ def test_crew_output_file_validation_failures():
 
 
 def test_manager_agent(researcher, writer):
-    from unittest.mock import patch
 
     task = Task(
         description="Come up with a list of 5 interesting ideas to explore for an article, then write one amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
@@ -4475,7 +4458,7 @@ def test_crew_copy_with_memory():
     )
     original_entity_id = id(crew._entity_memory) if crew._entity_memory else None
     original_external_id = id(crew._external_memory) if crew._external_memory else None
-    original_user_id = id(crew._user_memory) if crew._user_memory else None
+
 
     try:
         crew_copy = crew.copy()
@@ -4526,20 +4509,6 @@ def test_crew_copy_with_memory():
                 or crew_copy._external_memory is None
             ), "Copied _external_memory should be None if not originally present"
 
-        if original_user_id:
-            assert hasattr(
-                crew_copy, "_user_memory"
-            ), "Copied crew should have _user_memory"
-            assert (
-                crew_copy._user_memory is not None
-            ), "Copied _user_memory should not be None"
-            assert (
-                id(crew_copy._user_memory) != original_user_id
-            ), "Copied _user_memory should be a new object"
-        else:
-            assert (
-                not hasattr(crew_copy, "_user_memory") or crew_copy._user_memory is None
-            ), "Copied _user_memory should be None if not originally present"
 
     except pydantic_core.ValidationError as e:
         if "Input should be an instance of" in str(e) and ("Memory" in str(e)):
@@ -4756,3 +4725,53 @@ def test_reset_agent_knowledge_with_only_agent_knowledge(researcher, writer):
         mock_reset_agent_knowledge.assert_called_once_with(
             [mock_ks_research, mock_ks_writer]
         )
+
+def test_default_crew_name(researcher, writer):
+    crew = Crew(
+        agents=[researcher, writer],
+        tasks=[
+            Task(description="Task 1", expected_output="output", agent=researcher),
+            Task(description="Task 2", expected_output="output", agent=writer),
+        ],
+    )
+    assert crew.name == "crew"
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_ensure_exchanged_messages_are_propagated_to_external_memory():
+    external_memory = ExternalMemory(storage=MagicMock())
+
+    math_researcher = Agent(
+        role="Researcher",
+        goal="You research about math.",
+        backstory="You're an expert in research and you love to learn new things.",
+        allow_delegation=False,
+    )
+
+    task1 = Task(
+        description="Research a topic to teach a kid aged 6 about math.",
+        expected_output="A topic, explanation, angle, and examples.",
+        agent=math_researcher,
+    )
+
+    crew = Crew(
+        agents=[math_researcher],
+        tasks=[task1],
+        external_memory=external_memory,
+    )
+
+    with patch.object(
+        ExternalMemory, "save", return_value=None
+    ) as external_memory_save:
+        crew.kickoff()
+
+    expected_messages = [
+        {'role': 'system', 'content': "You are Researcher. You're an expert in research and you love to learn new things.\nYour personal goal is: You research about math.\nTo give my best complete final answer to the task respond using the exact following format:\n\nThought: I now can give a great answer\nFinal Answer: Your final answer must be the great and the most complete as possible, it must be outcome described.\n\nI MUST use these formats, my job depends on it!"},
+        {'role': 'user', 'content': '\nCurrent Task: Research a topic to teach a kid aged 6 about math.\n\nThis is the expected criteria for your final answer: A topic, explanation, angle, and examples.\nyou MUST return the actual complete content as the final answer, not a summary.\n\n# Useful context: \nExternal memories:\n\n\nBegin! This is VERY important to you, use the tools available and give your best Final Answer, your job depends on it!\n\nThought:'},
+        {'role': 'assistant', 'content': 'I now can give a great answer  \nFinal Answer: \n\n**Topic: Understanding Shapes (Geometry)**\n\n**Explanation:**  \nShapes are everywhere around us! They are the special forms that we can see in everyday objects. Teaching a 6-year-old about shapes is not only fun but also a way to help them think about the world around them and develop their spatial awareness. We will focus on basic shapes: circle, square, triangle, and rectangle. Understanding these shapes helps kids recognize and describe their environment.\n\n**Angle:**  \nLet’s make learning about shapes an adventure! We can turn it into a treasure hunt where the child has to find objects around the house or outside that match the shapes we learn. This hands-on approach helps make the learning stick!\n\n**Examples:**  \n1. **Circle:**  \n   - Explanation: A circle is round and has no corners. It looks like a wheel or a cookie!  \n   - Activity: Find objects that are circles, such as a clock, a dinner plate, or a ball. Draw a big circle on a paper and then try to draw smaller circles inside it.\n\n2. **Square:**  \n   - Explanation: A square has four equal sides and four corners. It looks like a box!  \n   - Activity: Look for squares in books, in windows, or in building blocks. Try to build a tall tower using square blocks!\n\n3. **Triangle:**  \n   - Explanation: A triangle has three sides and three corners. It looks like a slice of pizza or a roof!  \n   - Activity: Use crayons to draw a big triangle and then find things that are shaped like a triangle, like a slice of cheese or a traffic sign.\n\n4. **Rectangle:**  \n   - Explanation: A rectangle has four sides but only opposite sides are equal. It’s like a stretched square!  \n   - Activity: Search for rectangles, such as a book cover or a door. You can cut out rectangles from colored paper and create a collage!\n\nBy relating the shapes to fun activities and using real-world examples, we not only make learning more enjoyable but also help the child better remember and understand the concept of shapes in math. This foundation forms the basis of their future learning in geometry!'}
+    ]
+    external_memory_save.assert_called_once_with(
+        value=ANY,
+        metadata={"description": ANY, "messages": expected_messages},
+        agent=ANY,
+    )

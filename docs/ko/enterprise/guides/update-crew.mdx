@@ -1,0 +1,88 @@
+---
+title: "크루 업데이트"
+description: "CrewAI Enterprise에서 크루 업데이트하기"
+icon: "pencil"
+---
+
+<Note>
+CrewAI Enterprise에 crew를 배포한 후, 코드, 보안 설정 또는 구성을 업데이트해야 할 수 있습니다.  
+이 가이드는 이러한 일반적인 업데이트 작업을 수행하는 방법을 설명합니다.
+</Note>
+
+## 왜 Crew를 업데이트해야 하나요?
+
+CrewAI는 기본적으로 GitHub 업데이트를 자동으로 반영하지 않으므로, 배포 시 `Auto-update` 옵션을 선택하지 않았다면 수동으로 업데이트를 트리거해야 합니다.
+
+Crew 배포를 업데이트하고 싶은 이유는 여러 가지가 있을 수 있습니다:
+- GitHub에 푸시한 최신 커밋으로 코드를 업데이트하고 싶은 경우
+- 보안상의 이유로 bearer 토큰을 재설정하고 싶은 경우
+- 환경 변수를 업데이트하고 싶은 경우
+
+## 1. 최신 커밋으로 Crew 코드 업데이트하기
+
+GitHub 저장소에 새로운 커밋을 푸시한 후 배포를 업데이트하려면 다음 단계를 따르세요:
+
+1. CrewAI Enterprise 플랫폼에서 자신의 crew로 이동하세요.
+2. crew 상세 페이지에서 `Re-deploy` 버튼을 클릭하세요.
+
+<Frame>
+  ![Re-deploy Button](/images/enterprise/redeploy-button.png)
+</Frame>
+
+이 작업을 수행하면 진행률 표시줄을 통해 추적할 수 있는 업데이트가 트리거됩니다. 시스템은 저장소에서 최신 코드를 가져와서 배포를 다시 빌드합니다.
+
+## 2. 베어러 토큰 재설정
+
+현재 토큰이 유출되었을 가능성이 있다고 의심되는 경우 등, 새 베어러 토큰을 생성해야 한다면 다음 단계를 따르세요:
+
+1. CrewAI Enterprise 플랫폼에서 해당 crew로 이동하세요.
+2. `Bearer Token` 섹션을 찾으세요.
+3. 현재 토큰 옆에 있는 `Reset` 버튼을 클릭하세요.
+
+<Frame>
+  ![Reset Token](/images/enterprise/reset-token.png)
+</Frame>
+
+<Warning>
+베어러 토큰을 재설정하면 이전 토큰은 즉시 사용할 수 없게 됩니다. 이전 토큰을 사용하고 있는 모든 애플리케이션이나 스크립트에서 토큰을 반드시 업데이트하세요.
+</Warning>
+
+## 3. 환경 변수 업데이트하기
+
+crew의 환경 변수를 업데이트하려면 다음 단계를 따르세요:
+
+1. 먼저 crew 이름을 클릭하여 배포 페이지에 접속합니다.
+
+<Frame>
+  ![환경 변수 버튼](/images/enterprise/env-vars-button.png)
+</Frame>
+
+2. `Environment Variables` 섹션을 찾습니다 (`Settings` 아이콘을 클릭해야 접근할 수 있습니다)
+3. 제공된 필드에서 기존 변수를 수정하거나 새 변수를 추가합니다
+4. 수정한 각 변수 옆의 `Update` 버튼을 클릭합니다
+
+<Frame>
+  ![환경 변수 업데이트](/images/enterprise/update-env-vars.png)
+</Frame>
+
+5. 마지막으로, 변경 사항을 적용하려면 페이지 하단의 `Update Deployment` 버튼을 클릭합니다
+
+<Note>
+환경 변수를 업데이트하면 새로운 배포가 트리거되지만, 이는 환경 설정만 업데이트하며 코드 자체는 변경되지 않습니다.
+</Note>
+
+## 업데이트 후
+
+업데이트를 수행한 후:
+
+1. 시스템이 crew를 다시 빌드하고 배포합니다
+2. 실시간으로 배포 진행 상황을 모니터링할 수 있습니다
+3. 완료되면 변경 사항이 예상대로 작동하는지 crew를 테스트합니다
+
+<Tip>
+업데이트 후 문제가 발생하면 플랫폼에서 배포 로그를 확인하거나 지원팀에 문의하여 도움을 받을 수 있습니다.
+</Tip>
+
+<Card title="도움이 필요하신가요?" icon="headset" href="mailto:support@crewai.com">
+  crew 업데이트나 배포 문제 해결에 대해 지원이 필요하시면 지원팀에 문의해 주세요.
+</Card>

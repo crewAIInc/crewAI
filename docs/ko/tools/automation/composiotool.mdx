@@ -1,0 +1,118 @@
+---
+title: Composio 도구
+description: Composio는 유연한 인증 관리가 가능한 AI 에이전트를 위한 250개 이상의 프로덕션 준비 도구를 제공합니다.
+icon: gear-code
+---
+
+# `ComposioToolSet`
+
+## 설명
+Composio는 AI 에이전트를 250개 이상의 도구와 연결할 수 있는 통합 플랫폼입니다. 주요 기능은 다음과 같습니다:
+
+- **엔터프라이즈급 인증**: OAuth, API 키, JWT를 기본적으로 지원하며 자동 토큰 갱신 기능 제공
+- **완벽한 가시성**: 도구 사용 로그, 실행 타임스탬프 등 상세 정보 제공
+
+## 설치
+
+Composio 도구를 프로젝트에 통합하려면 아래 지침을 따르세요:
+
+```shell
+pip install composio-crewai
+pip install crewai
+```
+
+설치가 완료된 후, `composio login`을 실행하거나 Composio API 키를 `COMPOSIO_API_KEY`로 export하세요. Composio API 키는 [여기](https://app.composio.dev)에서 받을 수 있습니다.
+
+## 예시
+
+다음 예시는 도구를 초기화하고 github action을 실행하는 방법을 보여줍니다:
+
+1. Composio 도구 세트 초기화
+
+```python Code
+from composio_crewai import ComposioToolSet, App, Action
+from crewai import Agent, Task, Crew
+
+toolset = ComposioToolSet()
+```
+
+2. GitHub 계정 연결
+<CodeGroup>
+```shell CLI
+composio add github
+```
+```python Code
+request = toolset.initiate_connection(app=App.GITHUB)
+print(f"Open this URL to authenticate: {request.redirectUrl}")
+```
+</CodeGroup>
+
+3. 도구 가져오기
+
+- 앱에서 모든 도구를 가져오기 (프로덕션 환경에서는 권장하지 않음):
+```python Code
+tools = toolset.get_tools(apps=[App.GITHUB])
+```
+
+- 태그를 기반으로 도구 필터링:
+```python Code
+tag = "users"
+
+filtered_action_enums = toolset.find_actions_by_tags(
+    App.GITHUB,
+    tags=[tag], 
+)
+
+tools = toolset.get_tools(actions=filtered_action_enums)
+```
+
+- 사용 사례를 기반으로 도구 필터링:
+```python Code
+use_case = "Star a repository on GitHub"
+
+filtered_action_enums = toolset.find_actions_by_use_case(
+    App.GITHUB, use_case=use_case, advanced=False
+)
+
+tools = toolset.get_tools(actions=filtered_action_enums)
+```
+<Tip>`advanced`를 True로 설정하면 복잡한 사용 사례를 위한 액션을 가져올 수 있습니다</Tip>
+
+- 특정 도구 사용하기:
+
+이 데모에서는 GitHub 앱의 `GITHUB_STAR_A_REPOSITORY_FOR_THE_AUTHENTICATED_USER` 액션을 사용합니다.
+```python Code
+tools = toolset.get_tools(
+    actions=[Action.GITHUB_STAR_A_REPOSITORY_FOR_THE_AUTHENTICATED_USER]
+)
+```
+액션 필터링에 대해 더 자세한 내용을 보려면 [여기](https://docs.composio.dev/patterns/tools/use-tools/use-specific-actions)를 참고하세요.
+
+4. 에이전트 정의
+
+```python Code
+crewai_agent = Agent(
+    role="GitHub Agent",
+    goal="You take action on GitHub using GitHub APIs",
+    backstory="You are AI agent that is responsible for taking actions on GitHub on behalf of users using GitHub APIs",
+    verbose=True,
+    tools=tools,
+    llm= # pass an llm
+)
+```
+
+5. 작업 실행
+
+```python Code
+task = Task(
+    description="Star a repo composiohq/composio on GitHub",
+    agent=crewai_agent,
+    expected_output="Status of the operation",
+)
+
+crew = Crew(agents=[crewai_agent], tasks=[task])
+
+crew.kickoff()
+```
+
+* 더욱 자세한 도구 리스트는 [여기](https://app.composio.dev)에서 확인하실 수 있습니다.

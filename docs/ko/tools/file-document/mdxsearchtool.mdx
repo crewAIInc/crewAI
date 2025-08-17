@@ -1,0 +1,73 @@
+---
+title: MDX RAG 검색
+description: MDXSearchTool은 MDX 파일을 검색하고 가장 관련성 높은 결과를 반환하도록 설계되었습니다.
+icon: markdown
+---
+
+# `MDXSearchTool`
+
+<Note>
+    MDXSearchTool은 지속적으로 개발 중입니다. 기능이 추가되거나 제거될 수 있으며, 도구를 개선하는 과정에서 기능이 예측할 수 없이 변경될 수 있습니다.
+</Note>
+
+## 설명
+
+MDX Search Tool은 고급 markdown 언어 추출을 용이하게 하기 위해 설계된 `crewai_tools` 패키지의 구성 요소입니다. 이 도구는 사용자가 쿼리 기반 검색을 통해 MD 파일에서 관련 정보를 효과적으로 검색하고 추출할 수 있게 해줍니다. 데이터 분석, 정보 관리, 연구 작업에 매우 유용하며, 대규모 문서 컬렉션 내에서 특정 정보를 찾는 과정을 간소화합니다.
+
+## 설치
+
+MDX Search Tool을 사용하기 전에 `crewai_tools` 패키지가 설치되어 있는지 확인하세요. 설치되어 있지 않다면, 다음 명령어로 설치할 수 있습니다:
+
+```shell
+pip install 'crewai[tools]'
+```
+
+## 사용 예시
+
+MDX Search Tool을 사용하려면 먼저 필요한 환경 변수를 설정해야 합니다. 그런 다음 이 도구를 crewAI 프로젝트에 통합하여 시장 조사를 시작할 수 있습니다. 아래는 이를 수행하는 기본 예시입니다:
+
+```python Code
+from crewai_tools import MDXSearchTool
+
+# Initialize the tool to search any MDX content it learns about during execution
+tool = MDXSearchTool()
+
+# OR
+
+# Initialize the tool with a specific MDX file path for an exclusive search within that document
+tool = MDXSearchTool(mdx='path/to/your/document.mdx')
+```
+
+## 매개변수
+
+- mdx: **선택 사항**. 검색에 사용할 MDX 파일 경로를 지정합니다. 초기화 시 제공할 수 있습니다.
+
+## 모델 및 임베딩 커스터마이징
+
+이 도구는 기본적으로 임베딩과 요약을 위해 OpenAI를 사용합니다. 커스터마이징을 위해 아래와 같이 설정 딕셔너리를 사용할 수 있습니다.
+
+```python Code
+tool = MDXSearchTool(
+    config=dict(
+        llm=dict(
+            provider="ollama", # 옵션에는 google, openai, anthropic, llama2 등이 있습니다.
+            config=dict(
+                model="llama2",
+                # 선택적 파라미터를 여기에 포함할 수 있습니다.
+                # temperature=0.5,
+                # top_p=1,
+                # stream=true,
+            ),
+        ),
+        embedder=dict(
+            provider="google", # 또는 openai, ollama, ...
+            config=dict(
+                model="models/embedding-001",
+                task_type="retrieval_document",
+                # 임베딩에 대한 선택적 제목을 여기에 추가할 수 있습니다.
+                # title="Embeddings",
+            ),
+        ),
+    )
+)
+```

@@ -35,7 +35,7 @@ os.environ['OTEL_SDK_DISABLED'] = 'true'
 
 ### Data Explanation:
 | Defaulted | Data                                      | Reason and Specifics                                                                                                       |
-|-----------|-------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------|
+|:----------|:------------------------------------------|:----------------------------------------------------------------------------------------------------------------------------|
 | Yes       | CrewAI and Python Version                 | Tracks software versions. Example: CrewAI v1.2.3, Python 3.8.10. No personal data. |
 | Yes       | Crew Metadata | Includes: randomly generated key and ID, process type (e.g., 'sequential', 'parallel'), boolean flag for memory usage (true/false), count of tasks, count of agents. All non-personal. |
 | Yes       | Agent Data | Includes: randomly generated key and ID, role name (should not include personal info), boolean settings (verbose, delegation enabled, code execution allowed), max iterations, max RPM, max retry limit, LLM info (see LLM Attributes), list of tool names (should not include personal info). No personal data. |

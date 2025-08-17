@@ -1,0 +1,305 @@
+---
+title: Stripe 연동
+description: "CrewAI를 위한 Stripe 연동을 통한 결제 처리 및 구독 관리."
+icon: "stripe"
+---
+
+## 개요
+
+에이전트가 Stripe를 통해 결제, 구독 및 고객 청구 관리를 할 수 있도록 지원합니다. 고객 데이터 처리, 구독 관리, 상품 관리, 재무 거래 추적 등을 통해 AI 기반 자동화로 결제 워크플로를 효율화하세요.
+
+## 사전 준비 사항
+
+Stripe 통합을 사용하기 전에 다음 사항을 확인하세요:
+
+- 활성 구독이 있는 [CrewAI Enterprise](https://app.crewai.com) 계정
+- 적절한 API 권한이 있는 Stripe 계정
+- [통합 페이지](https://app.crewai.com/integrations)를 통해 Stripe 계정 연결
+
+## 사용 가능한 도구
+
+### **고객 관리**
+
+<AccordionGroup>
+  <Accordion title="STRIPE_CREATE_CUSTOMER">
+    **설명:** Stripe 계정에 새로운 고객을 생성합니다.
+
+    **파라미터:**
+    - `emailCreateCustomer` (string, 필수): 고객의 이메일 주소
+    - `name` (string, 선택): 고객의 전체 이름
+    - `description` (string, 선택): 내부 참조용 고객 설명
+    - `metadataCreateCustomer` (object, 선택): 추가 메타데이터를 key-value 쌍으로 입력 (예: `{"field1": 1, "field2": 2}`)
+  </Accordion>
+
+  <Accordion title="STRIPE_GET_CUSTOMER_BY_ID">
+    **설명:** Stripe 고객 ID로 특정 고객을 조회합니다.
+
+    **파라미터:**
+    - `idGetCustomer` (string, 필수): 조회할 Stripe 고객 ID
+  </Accordion>
+
+  <Accordion title="STRIPE_GET_CUSTOMERS">
+    **설명:** 필터링 옵션과 함께 고객 리스트를 조회합니다.
+
+    **파라미터:**
+    - `emailGetCustomers` (string, 선택): 이메일 주소로 고객 필터링
+    - `createdAfter` (string, 선택): 이 날짜 이후 생성된 고객 필터링 (유닉스 타임스탬프)
+    - `createdBefore` (string, 선택): 이 날짜 이전 생성된 고객 필터링 (유닉스 타임스탬프)
+    - `limitGetCustomers` (string, 선택): 반환할 최대 고객 수 (기본값 10)
+  </Accordion>
+
+  <Accordion title="STRIPE_UPDATE_CUSTOMER">
+    **설명:** 기존 고객의 정보를 업데이트합니다.
+
+    **파라미터:**
+    - `customerId` (string, 필수): 업데이트할 고객의 ID
+    - `emailUpdateCustomer` (string, 선택): 업데이트할 이메일 주소
+    - `name` (string, 선택): 업데이트할 고객 이름
+    - `description` (string, 선택): 업데이트할 고객 설명
+    - `metadataUpdateCustomer` (object, 선택): 업데이트할 메타데이터를 key-value 쌍으로 입력
+  </Accordion>
+</AccordionGroup>
+
+### **구독 관리**
+
+<AccordionGroup>
+  <Accordion title="STRIPE_CREATE_SUBSCRIPTION">
+    **설명:** 고객을 위한 새로운 구독을 생성합니다.
+
+    **파라미터:**
+    - `customerIdCreateSubscription` (string, 필수): 구독이 생성될 고객 ID
+    - `plan` (string, 필수): 구독을 위한 플랜 ID - 사용자가 플랜을 선택할 수 있도록 Connect Portal Workflow Settings를 사용하세요
+    - `metadataCreateSubscription` (object, 선택): 구독에 대한 추가 메타데이터
+  </Accordion>
+
+  <Accordion title="STRIPE_GET_SUBSCRIPTIONS">
+    **설명:** 선택적 필터링으로 구독을 조회합니다.
+
+    **파라미터:**
+    - `customerIdGetSubscriptions` (string, 선택): 고객 ID로 구독을 필터링
+    - `subscriptionStatus` (string, 선택): 구독 상태별 필터링 - 옵션: incomplete, incomplete_expired, trialing, active, past_due, canceled, unpaid
+    - `limitGetSubscriptions` (string, 선택): 반환할 구독의 최대 개수(기본값은 10)
+  </Accordion>
+</AccordionGroup>
+
+### **제품 관리**
+
+<AccordionGroup>
+  <Accordion title="STRIPE_CREATE_PRODUCT">
+    **설명:** Stripe 카탈로그에 새 제품을 생성합니다.
+
+    **파라미터:**
+    - `productName` (string, 필수): 제품 이름
+    - `description` (string, 선택): 제품 설명
+    - `metadataProduct` (object, 선택): 키-값 쌍으로 구성된 추가 제품 메타데이터
+  </Accordion>
+
+  <Accordion title="STRIPE_GET_PRODUCT_BY_ID">
+    **설명:** Stripe 제품 ID로 특정 제품을 조회합니다.
+
+    **파라미터:**
+    - `productId` (string, 필수): 조회할 Stripe 제품 ID
+  </Accordion>
+
+  <Accordion title="STRIPE_GET_PRODUCTS">
+    **설명:** 선택적 필터링을 통해 제품 목록을 조회합니다.
+
+    **파라미터:**
+    - `createdAfter` (string, 선택): 이 날짜 이후 생성된 제품만 필터링 (Unix 타임스탬프)
+    - `createdBefore` (string, 선택): 이 날짜 이전 생성된 제품만 필터링 (Unix 타임스탬프)
+    - `limitGetProducts` (string, 선택): 반환할 최대 제품 수 (기본값 10)
+  </Accordion>
+</AccordionGroup>
+
+### **금융 운영**
+
+<AccordionGroup>
+  <Accordion title="STRIPE_GET_BALANCE_TRANSACTIONS">
+    **설명:** Stripe 계정에서 잔액 거래를 조회합니다.
+
+    **매개변수:**
+    - `balanceTransactionType` (string, 선택 사항): 거래 유형별 필터 - 옵션: charge, refund, payment, payment_refund
+    - `paginationParameters` (object, 선택 사항): 페이지네이션 설정
+      - `pageCursor` (string, 선택 사항): 페이지네이션을 위한 페이지 커서
+  </Accordion>
+
+  <Accordion title="STRIPE_GET_PLANS">
+    **설명:** Stripe 계정에서 구독 플랜을 조회합니다.
+
+    **매개변수:**
+    - `isPlanActive` (boolean, 선택 사항): 플랜 상태별 필터 - true는 활성 플랜, false는 비활성 플랜
+    - `paginationParameters` (object, 선택 사항): 페이지네이션 설정
+      - `pageCursor` (string, 선택 사항): 페이지네이션을 위한 페이지 커서
+  </Accordion>
+</AccordionGroup>
+
+## 사용 예시
+
+### 기본 Stripe 에이전트 설정
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import CrewaiEnterpriseTools
+
+# Get enterprise tools (Stripe tools will be included)
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token"
+)
+
+# Create an agent with Stripe capabilities
+stripe_agent = Agent(
+    role="Payment Manager",
+    goal="Manage customer payments, subscriptions, and billing operations efficiently",
+    backstory="An AI assistant specialized in payment processing and subscription management.",
+    tools=[enterprise_tools]
+)
+
+# Task to create a new customer
+create_customer_task = Task(
+    description="Create a new premium customer John Doe with email john.doe@example.com",
+    agent=stripe_agent,
+    expected_output="Customer created successfully with customer ID"
+)
+
+# Run the task
+crew = Crew(
+    agents=[stripe_agent],
+    tasks=[create_customer_task]
+)
+
+crew.kickoff()
+```
+
+### 특정 Stripe 도구 필터링
+
+```python
+from crewai_tools import CrewaiEnterpriseTools
+
+# Get only specific Stripe tools
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token",
+    actions_list=["stripe_create_customer", "stripe_create_subscription", "stripe_get_balance_transactions"]
+)
+
+billing_manager = Agent(
+    role="Billing Manager",
+    goal="Handle customer billing, subscriptions, and payment processing",
+    backstory="An experienced billing manager who handles subscription lifecycle and payment operations.",
+    tools=enterprise_tools
+)
+
+# Task to manage billing operations
+billing_task = Task(
+    description="Create a new customer and set up their premium subscription plan",
+    agent=billing_manager,
+    expected_output="Customer created and subscription activated successfully"
+)
+
+crew = Crew(
+    agents=[billing_manager],
+    tasks=[billing_task]
+)
+
+crew.kickoff()
+```
+
+### 구독 관리
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import CrewaiEnterpriseTools
+
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token"
+)
+
+subscription_manager = Agent(
+    role="Subscription Manager",
+    goal="Manage customer subscriptions and optimize recurring revenue",
+    backstory="An AI assistant that specializes in subscription lifecycle management and customer retention.",
+    tools=[enterprise_tools]
+)
+
+# Task to manage subscription operations
+subscription_task = Task(
+    description="""
+    1. 고급 기능이 포함된 새로운 제품 "Premium Service Plan" 생성
+    2. 다양한 등급의 구독 플랜 설정
+    3. 고객을 생성하고 적절한 플랜에 할당
+    4. 구독 상태를 모니터링하고 결제 문제 처리
+    """,
+    agent=subscription_manager,
+    expected_output="고객과 활성 플랜이 구성된 구독 관리 시스템"
+)
+
+crew = Crew(
+    agents=[subscription_manager],
+    tasks=[subscription_task]
+)
+
+crew.kickoff()
+```
+
+### 금융 분석 및 보고
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import CrewaiEnterpriseTools
+
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token"
+)
+
+financial_analyst = Agent(
+    role="Financial Analyst",
+    goal="Analyze payment data and generate financial insights",
+    backstory="An analytical AI that excels at extracting insights from payment and subscription data.",
+    tools=[enterprise_tools]
+)
+
+# Complex task involving financial analysis
+analytics_task = Task(
+    description="""
+    1. Retrieve balance transactions for the current month
+    2. Analyze customer payment patterns and subscription trends
+    3. Identify high-value customers and subscription performance
+    4. Generate monthly financial performance report
+    """,
+    agent=financial_analyst,
+    expected_output="Comprehensive financial analysis with payment insights and recommendations"
+)
+
+crew = Crew(
+    agents=[financial_analyst],
+    tasks=[analytics_task]
+)
+
+crew.kickoff()
+```
+
+## 구독 상태 참조
+
+구독 상태 이해하기:
+
+- **incomplete** - 결제 수단 또는 결제 확인이 필요한 구독
+- **incomplete_expired** - 결제가 확인되기 전에 만료된 구독
+- **trialing** - 체험 기간 중인 구독
+- **active** - 활성화되어 현재 사용 중인 구독
+- **past_due** - 결제에 실패했지만 여전히 활성화된 구독
+- **canceled** - 취소된 구독
+- **unpaid** - 결제에 실패하여 더 이상 활성화되지 않은 구독
+
+## 메타데이터 사용
+
+메타데이터를 사용하면 고객, 구독, 제품에 대한 추가 정보를 저장할 수 있습니다:
+
+```json
+{
+  "customer_segment": "enterprise",
+  "acquisition_source": "google_ads",
+  "lifetime_value": "high",
+  "custom_field_1": "value1"
+}
+```
+
+이 통합을 통해 결제 및 구독 관리 자동화를 포괄적으로 구현할 수 있으며, AI 에이전트가 Stripe 생태계 내에서 청구 작업을 원활하게 처리할 수 있습니다.

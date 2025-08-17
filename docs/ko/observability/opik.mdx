@@ -1,0 +1,130 @@
+---
+title: Opik 통합
+description: Comet Opik을 사용하여 CrewAI 애플리케이션을 포괄적인 트레이싱, 자동 평가, 프로덕션 준비 대시보드로 디버그, 평가 및 모니터링하는 방법을 알아보세요.
+icon: meteor
+---
+
+# Opik 개요
+
+[Comet Opik](https://www.comet.com/docs/opik/)을(를) 사용하여, 포괄적인 트레이싱, 자동 평가, 프로덕션 준비가 된 대시보드를 통해 LLM 애플리케이션, RAG 시스템, 에이전트 워크플로우를 디버깅, 평가 및 모니터링할 수 있습니다.
+
+<Frame caption="Opik 에이전트 대시보드">
+  <img src="/images/opik-crewai-dashboard.png" alt="CrewAI와 함께하는 Opik 에이전트 모니터링 예시" />
+</Frame>
+
+Opik은 CrewAI 애플리케이션 개발의 모든 단계에서 포괄적인 지원을 제공합니다:
+
+- **로그 트레이스 및 스팬**: 개발 및 프로덕션 시스템에서 LLM 호출과 애플리케이션 로직을 자동으로 추적하여 디버깅 및 분석이 가능합니다. 프로젝트 간 응답을 수동 또는 프로그램적으로 주석 달고, 조회하고, 비교할 수 있습니다.
+- **LLM 애플리케이션 성능 평가**: 사용자 지정 테스트 세트로 평가하고, 내장된 평가 지표를 실행하거나 SDK 또는 UI에서 사용자만의 지표를 정의할 수 있습니다.
+- **CI/CD 파이프라인 내 테스트**: PyTest 기반의 Opik LLM 단위 테스트로 신뢰할 수 있는 성능 기준선을 설정하세요. 프로덕션에서 연속 모니터링을 위한 온라인 평가도 실행할 수 있습니다.
+- **프로덕션 데이터 모니터링 및 분석**: 프로덕션에서 보지 못한 데이터에 대한 모델의 성능을 이해하고, 새로운 개발 반복을 위한 데이터 세트를 생성할 수 있습니다.
+
+## 설치
+
+Comet은 호스팅된 Opik 플랫폼을 제공하거나, 로컬에서 플랫폼을 실행할 수도 있습니다.
+
+호스팅 버전을 사용하려면 [무료 Comet 계정 만들기](https://www.comet.com/signup?utm_medium=github&utm_source=crewai_docs) 후 API 키를 발급받으세요.
+
+Opik 플랫폼을 로컬에서 실행하려면, [설치 가이드](https://www.comet.com/docs/opik/self-host/overview/)에서 자세한 정보를 확인하세요.
+
+이 가이드에서는 CrewAI의 빠른 시작 예제를 사용합니다.
+
+<Steps>
+    <Step title="필수 패키지 설치">
+      ```shell
+      pip install crewai crewai-tools opik --upgrade
+      ```
+    </Step>
+    <Step title="Opik 구성">
+      ```python
+      import opik
+      opik.configure(use_local=False)
+      ```
+    </Step>
+    <Step title="환경 준비">
+      먼저, LLM 제공업체의 API 키를 환경 변수로 설정합니다:
+  
+      ```python
+      import os
+      import getpass
+
+      if "OPENAI_API_KEY" not in os.environ:
+      os.environ["OPENAI_API_KEY"] = getpass.getpass("Enter your OpenAI API key: ")
+      ```
+    </Step>
+    <Step title="CrewAI 사용하기">
+      첫 번째 단계는 프로젝트를 만드는 것입니다. CrewAI 문서의 예제를 사용하겠습니다:
+
+      ```python
+      from crewai import Agent, Crew, Task, Process
+
+
+      class YourCrewName:
+          def agent_one(self) -> Agent:
+              return Agent(
+                  role="Data Analyst",
+                  goal="Analyze data trends in the market",
+                  backstory="An experienced data analyst with a background in economics",
+                  verbose=True,
+              )
+
+          def agent_two(self) -> Agent:
+              return Agent(
+                  role="Market Researcher",
+                  goal="Gather information on market dynamics",
+                  backstory="A diligent researcher with a keen eye for detail",
+                  verbose=True,
+              )
+
+          def task_one(self) -> Task:
+              return Task(
+                  name="Collect Data Task",
+                  description="Collect recent market data and identify trends.",
+                  expected_output="A report summarizing key trends in the market.",
+                  agent=self.agent_one(),
+              )
+
+          def task_two(self) -> Task:
+              return Task(
+                  name="Market Research Task",
+                  description="Research factors affecting market dynamics.",
+                  expected_output="An analysis of factors influencing the market.",
+                  agent=self.agent_two(),
+              )
+
+          def crew(self) -> Crew:
+              return Crew(
+                  agents=[self.agent_one(), self.agent_two()],
+                  tasks=[self.task_one(), self.task_two()],
+                  process=Process.sequential,
+                  verbose=True,
+              )
+
+      ```
+
+      이제 Opik의 추적기를 임포트하고 crew를 실행할 수 있습니다:
+  
+      ```python
+      from opik.integrations.crewai import track_crewai
+
+      track_crewai(project_name="crewai-integration-demo")
+
+      my_crew = YourCrewName().crew()
+      result = my_crew.kickoff()
+
+      print(result)
+      ```
+      CrewAI 애플리케이션을 실행한 후에는 Opik 앱에서 다음을 확인할 수 있습니다:
+      - LLM 추적, span, 메타데이터
+      - 에이전트 상호작용 및 태스크 실행 흐름
+      - 지연 시간, 토큰 사용량 등의 성능 지표
+      - 평가 지표(내장형 또는 사용자 정의)
+    </Step>
+</Steps>
+
+## 리소스
+
+- [🦉 Opik 문서](https://www.comet.com/docs/opik/)
+- [👉 Opik + CrewAI Colab](https://colab.research.google.com/github/comet-ml/opik/blob/main/apps/opik-documentation/documentation/docs/cookbook/crewai.ipynb)
+- [🐦 X](https://x.com/cometml)
+- [💬 Slack](https://slack.comet.com/)
