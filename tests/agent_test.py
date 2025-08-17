@@ -1757,6 +1757,35 @@ def test_agent_with_knowledge_sources_with_query_limit_and_score_threshold():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
+def test_agent_knowledge_search_with_context_parameter():
+    """Test that agent knowledge search accepts context parameter."""
+    content = "Brandon's favorite color is red and he likes Mexican food."
+    string_source = StringKnowledgeSource(content=content)
+    
+    agent = Agent(
+        role="Information Agent",
+        goal="Provide information based on knowledge sources",
+        backstory="You have access to specific knowledge sources.",
+        llm=LLM(model="gpt-4o-mini"),
+        knowledge_sources=[string_source],
+    )
+    
+    task_prompt = "What is Brandon's favorite color?"
+    context = "Previous conversation mentioned Brandon's preferences."
+    
+    with patch.object(agent.llm, 'call') as mock_call:
+        mock_call.return_value = "Brandon likes red"
+        result = agent._get_knowledge_search_query(task_prompt, context)
+        
+        assert result == "Brandon likes red"
+        mock_call.assert_called_once()
+        
+        call_args = mock_call.call_args[0][0]
+        user_message = call_args[1]['content']
+        assert context in user_message
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
 def test_agent_with_knowledge_sources_with_query_limit_and_score_threshold_default():
     content = "Brandon's favorite color is red and he likes Mexican food."
     string_source = StringKnowledgeSource(content=content)
