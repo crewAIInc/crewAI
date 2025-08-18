@@ -2,7 +2,7 @@ import uuid
 from abc import ABC, abstractmethod
 from copy import copy as shallow_copy
 from hashlib import md5
-from typing import Any, Callable, Dict, List, Optional, TypeVar
+from typing import Any, Callable, Dict, List, Optional, TypeVar, Union
 
 from pydantic import (
     UUID4,
@@ -25,7 +25,6 @@ from crewai.security.security_config import SecurityConfig
 from crewai.tools.base_tool import BaseTool, Tool
 from crewai.utilities import I18N, Logger, RPMController
 from crewai.utilities.config import process_config
-from crewai.utilities.converter import Converter
 from crewai.utilities.string_utils import interpolate_only
 
 T = TypeVar("T", bound="BaseAgent")
@@ -108,7 +107,7 @@ class BaseAgent(ABC, BaseModel):
         default=False,
         description="Enable agent to delegate and ask questions among each other.",
     )
-    tools: Optional[List[BaseTool]] = Field(
+    tools: Optional[List[Union[BaseTool, dict]]] = Field(
         default_factory=list, description="Tools at agents' disposal"
     )
     max_iter: int = Field(
@@ -168,21 +167,26 @@ class BaseAgent(ABC, BaseModel):
 
     @field_validator("tools")
     @classmethod
-    def validate_tools(cls, tools: List[Any]) -> List[BaseTool]:
+    def validate_tools(cls, tools: List[Any]) -> List[Union[BaseTool, dict]]:
         """Validate and process the tools provided to the agent.
 
-        This method ensures that each tool is either an instance of BaseTool
-        or an object with 'name', 'func', and 'description' attributes. If the
-        tool meets these criteria, it is processed and added to the list of
-        tools. Otherwise, a ValueError is raised.
+        This method ensures that each tool is either an instance of BaseTool,
+        an object with 'name', 'func', and 'description' attributes, or a
+        raw tool definition (dict) for hosted/server-side tools.
         """
         if not tools:
             return []
 
-        processed_tools = []
+        processed_tools: List[Union[BaseTool, dict]] = []
         required_attrs = ["name", "func", "description"]
         for tool in tools:
             if isinstance(tool, BaseTool):
+                processed_tools.append(tool)
+            elif isinstance(tool, dict):
+                if "name" not in tool:
+                    raise ValueError(
+                        f"Raw tool definition must have a 'name' field: {tool}"
+                    )
                 processed_tools.append(tool)
             elif all(hasattr(tool, attr) for attr in required_attrs):
                 # Tool has the required attributes, create a Tool instance
@@ -190,7 +194,7 @@ class BaseAgent(ABC, BaseModel):
             else:
                 raise ValueError(
                     f"Invalid tool type: {type(tool)}. "
-                    "Tool must be an instance of BaseTool or "
+                    "Tool must be an instance of BaseTool, a dict for hosted tools, or "
                     "an object with 'name', 'func', and 'description' attributes."
                 )
         return processed_tools

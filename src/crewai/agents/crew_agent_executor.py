@@ -48,7 +48,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         agent: BaseAgent,
         prompt: dict[str, str],
         max_iter: int,
-        tools: List[CrewStructuredTool],
+        tools: List[Union[CrewStructuredTool, dict]],
         tools_names: str,
         stop_words: List[str],
         tools_description: str,
@@ -84,8 +84,8 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         self.messages: List[Dict[str, str]] = []
         self.iterations = 0
         self.log_error_after = 3
-        self.tool_name_to_tool_map: Dict[str, Union[CrewStructuredTool, BaseTool]] = {
-            tool.name: tool for tool in self.tools
+        self.tool_name_to_tool_map: Dict[str, Union[CrewStructuredTool, BaseTool, dict]] = {
+            tool.name if hasattr(tool, 'name') else tool.get('name', 'unknown'): tool for tool in self.tools
         }
         existing_stop = self.llm.stop or []
         self.llm.stop = list(

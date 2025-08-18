@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 from crewai.agents.parser import AgentAction
 from crewai.security import Fingerprint
@@ -10,7 +10,7 @@ from crewai.utilities.i18n import I18N
 
 def execute_tool_and_check_finality(
     agent_action: AgentAction,
-    tools: List[CrewStructuredTool],
+    tools: List[Union[CrewStructuredTool, dict]],
     i18n: I18N,
     agent_key: Optional[str] = None,
     agent_role: Optional[str] = None,
@@ -37,7 +37,8 @@ def execute_tool_and_check_finality(
         ToolResult containing the execution result and whether it should be treated as a final answer
     """
     try:
-        tool_name_to_tool_map = {tool.name: tool for tool in tools}
+        executable_tools = [tool for tool in tools if hasattr(tool, 'name') and hasattr(tool, 'result_as_answer')]
+        tool_name_to_tool_map = {tool.name: tool for tool in executable_tools}
 
         if agent_key and agent_role and agent:
             fingerprint_context = fingerprint_context or {}
@@ -52,10 +53,12 @@ def execute_tool_and_check_finality(
                         except Exception as e:
                             raise ValueError(f"Failed to set fingerprint: {e}")
 
-        # Create tool usage instance
+        # Create tool usage instance - filter to only CrewStructuredTool instances for ToolUsage
+        from typing import cast
+        crew_structured_tools = [tool for tool in tools if hasattr(tool, 'name') and hasattr(tool, 'result_as_answer') and not isinstance(tool, dict)]
         tool_usage = ToolUsage(
             tools_handler=tools_handler,
-            tools=tools,
+            tools=cast(List[CrewStructuredTool], crew_structured_tools),
             function_calling_llm=function_calling_llm,
             task=task,
             agent=agent,
@@ -82,7 +85,7 @@ def execute_tool_and_check_finality(
         # Handle invalid tool name
         tool_result = i18n.errors("wrong_tool_name").format(
             tool=tool_calling.tool_name,
-            tools=", ".join([tool.name.casefold() for tool in tools]),
+            tools=", ".join([tool.name.casefold() for tool in executable_tools]),
         )
         return ToolResult(tool_result, False)
 

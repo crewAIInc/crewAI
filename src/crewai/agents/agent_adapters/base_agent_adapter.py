@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 from pydantic import PrivateAttr
 
@@ -25,11 +25,11 @@ class BaseAgentAdapter(BaseAgent, ABC):
         self._agent_config = agent_config
 
     @abstractmethod
-    def configure_tools(self, tools: Optional[List[BaseTool]] = None) -> None:
+    def configure_tools(self, tools: Optional[List[Union[BaseTool, dict]]] = None) -> None:
         """Configure and adapt tools for the specific agent implementation.
 
         Args:
-            tools: Optional list of BaseTool instances to be configured
+            tools: Optional list of BaseTool instances and raw tool definitions to be configured
         """
         pass
 
