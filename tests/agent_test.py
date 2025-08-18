@@ -21,7 +21,7 @@ from crewai.utilities import RPMController
 from crewai.utilities.errors import AgentRepositoryError
 from crewai.utilities.events import crewai_event_bus
 from crewai.utilities.events.tool_usage_events import ToolUsageFinishedEvent
-
+from crewai.process import Process
 
 def test_agent_llm_creation_with_env_vars():
     # Store original environment variables
@@ -1207,6 +1207,181 @@ Thought:<|eot_id|>
 
         # Assert that the returned prompt matches the expected prompt
         assert mock_format_prompt.return_value == expected_prompt
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_task_allow_crewai_trigger_context():
+    from crewai import Crew
+
+    agent = Agent(
+        role="test role",
+        goal="test goal",
+        backstory="test backstory"
+    )
+
+    task = Task(
+        description="Analyze the data",
+        expected_output="Analysis report",
+        agent=agent,
+        allow_crewai_trigger_context=True
+    )
+    crew = Crew(agents=[agent], tasks=[task])
+    crew.kickoff({"crewai_trigger_payload": "Important context data"})
+
+    prompt = task.prompt()
+
+    assert "Analyze the data" in prompt
+    assert "Trigger Payload: Important context data" in prompt
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_task_without_allow_crewai_trigger_context():
+    from crewai import Crew
+
+    agent = Agent(
+        role="test role",
+        goal="test goal",
+        backstory="test backstory"
+    )
+
+    task = Task(
+        description="Analyze the data",
+        expected_output="Analysis report",
+        agent=agent,
+        allow_crewai_trigger_context=False
+    )
+
+    crew = Crew(agents=[agent], tasks=[task])
+    crew.kickoff({"crewai_trigger_payload": "Important context data"})
+
+    prompt = task.prompt()
+
+    assert "Analyze the data" in prompt
+    assert "Trigger Payload:" not in prompt
+    assert "Important context data" not in prompt
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_task_allow_crewai_trigger_context_no_payload():
+    from crewai import Crew
+
+    agent = Agent(
+        role="test role",
+        goal="test goal",
+        backstory="test backstory"
+    )
+
+    task = Task(
+        description="Analyze the data",
+        expected_output="Analysis report",
+        agent=agent,
+        allow_crewai_trigger_context=True
+    )
+
+    crew = Crew(agents=[agent], tasks=[task])
+    crew.kickoff({"other_input": "other data"})
+
+
+    prompt = task.prompt()
+
+    assert "Analyze the data" in prompt
+    assert "Trigger Payload:" not in prompt
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_do_not_allow_crewai_trigger_context_for_first_task_hierarchical():
+    from crewai import Crew
+
+    agent1 = Agent(role="First Agent", goal="First goal", backstory="First backstory")
+    agent2 = Agent(role="Second Agent", goal="Second goal", backstory="Second backstory")
+
+    first_task = Task(
+        description="Process initial data",
+        expected_output="Initial analysis",
+        agent=agent1,
+    )
+
+
+    crew = Crew(
+        agents=[agent1, agent2],
+        tasks=[first_task],
+        process=Process.hierarchical,
+        manager_llm="gpt-4o"
+    )
+
+    crew.kickoff({"crewai_trigger_payload": "Initial context data"})
+
+    first_prompt = first_task.prompt()
+    assert "Process initial data" in first_prompt
+    assert "Trigger Payload: Initial context data" not in first_prompt
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_first_task_auto_inject_trigger():
+    from crewai import Crew
+
+    agent1 = Agent(role="First Agent", goal="First goal", backstory="First backstory")
+    agent2 = Agent(role="Second Agent", goal="Second goal", backstory="Second backstory")
+
+    first_task = Task(
+        description="Process initial data",
+        expected_output="Initial analysis",
+        agent=agent1,
+    )
+
+    second_task = Task(
+        description="Process secondary data",
+        expected_output="Secondary analysis",
+        agent=agent2,
+    )
+
+    crew = Crew(
+        agents=[agent1, agent2],
+        tasks=[first_task, second_task]
+    )
+    crew.kickoff({"crewai_trigger_payload": "Initial context data"})
+
+    first_prompt = first_task.prompt()
+    assert "Process initial data" in first_prompt
+    assert "Trigger Payload: Initial context data" in first_prompt
+
+    second_prompt = second_task.prompt()
+    assert "Process secondary data" in second_prompt
+    assert "Trigger Payload:" not in second_prompt
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_ensure_first_task_allow_crewai_trigger_context_is_false_does_not_inject():
+    from crewai import Crew
+
+    agent1 = Agent(role="First Agent", goal="First goal", backstory="First backstory")
+    agent2 = Agent(role="Second Agent", goal="Second goal", backstory="Second backstory")
+
+    first_task = Task(
+        description="Process initial data",
+        expected_output="Initial analysis",
+        agent=agent1,
+        allow_crewai_trigger_context=False
+    )
+
+    second_task = Task(
+        description="Process secondary data",
+        expected_output="Secondary analysis",
+        agent=agent2,
+        allow_crewai_trigger_context=True
+    )
+
+    crew = Crew(
+        agents=[agent1, agent2],
+        tasks=[first_task, second_task]
+    )
+    crew.kickoff({"crewai_trigger_payload": "Context data"})
+
+    first_prompt = first_task.prompt()
+    assert "Trigger Payload: Context data" not in first_prompt
+
+    second_prompt = second_task.prompt()
+    assert "Trigger Payload: Context data" in second_prompt
+
 
 
 @patch("crewai.agent.CrewTrainingHandler")
