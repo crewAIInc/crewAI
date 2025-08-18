@@ -918,16 +918,44 @@ class Flow(Generic[T], metaclass=FlowMeta):
         - Triggers execution of any listeners waiting on this start method
         - Part of the flow's initialization sequence
         - Skips execution if method was already completed (e.g., after reload)
+        - Automatically injects crewai_trigger_payload if available in flow inputs
         """
         if start_method_name in self._completed_methods:
             last_output = self._method_outputs[-1] if self._method_outputs else None
             await self._execute_listeners(start_method_name, last_output)
             return
 
+        method = self._methods[start_method_name]
+        enhanced_method = self._inject_trigger_payload_for_start_method(method)
+
         result = await self._execute_method(
-            start_method_name, self._methods[start_method_name]
+            start_method_name, enhanced_method
         )
         await self._execute_listeners(start_method_name, result)
+
+    def _inject_trigger_payload_for_start_method(self, original_method: Callable) -> Callable:
+        def enhanced_method(*args, **kwargs):
+            inputs = baggage.get_baggage("flow_inputs") or {}
+            assert isinstance(inputs, dict)
+            trigger_payload = inputs.get("crewai_trigger_payload")
+
+            sig = inspect.signature(original_method)
+            accepts_trigger_payload = "crewai_trigger_payload" in sig.parameters
+
+            if trigger_payload is not None and accepts_trigger_payload:
+                kwargs["crewai_trigger_payload"] = trigger_payload
+            elif trigger_payload is not None and not accepts_trigger_payload:
+                self._log_flow_event(
+                    f"Trigger payload available but {original_method.__name__} doesn't accept crewai_trigger_payload parameter",
+                    color="yellow"
+                )
+
+            return original_method(*args, **kwargs)
+
+        enhanced_method.__name__ = original_method.__name__
+        enhanced_method.__doc__ = original_method.__doc__
+
+        return enhanced_method
 
     async def _execute_method(
         self, method_name: str, method: Callable, *args: Any, **kwargs: Any
