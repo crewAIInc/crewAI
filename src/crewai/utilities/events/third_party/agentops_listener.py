@@ -32,23 +32,27 @@ class AgentOpsListener(BaseEventListener):
         if self.agentops is None:
             return
 
-        crewai_event_bus.register_handler(
-            CrewKickoffStartedEvent, self._handle_crew_kickoff_started
-        )
-        crewai_event_bus.register_handler(
-            CrewKickoffCompletedEvent, self._handle_crew_kickoff_completed
-        )
-        crewai_event_bus.register_handler(
-            ToolUsageStartedEvent, self._handle_tool_usage_started
-        )
-        crewai_event_bus.register_handler(
-            ToolUsageErrorEvent, self._handle_tool_usage_error
-        )
-        crewai_event_bus.register_handler(
-            TaskEvaluationEvent, self._handle_task_evaluation
-        )
+        @crewai_event_bus.on(CrewKickoffStartedEvent)
+        def on_crew_kickoff_started(source, event):
+            self._handle_crew_kickoff_started(source, event)
 
-    def _handle_crew_kickoff_started(self, event: CrewKickoffStartedEvent):
+        @crewai_event_bus.on(CrewKickoffCompletedEvent)
+        def on_crew_kickoff_completed(source, event):
+            self._handle_crew_kickoff_completed(source, event)
+
+        @crewai_event_bus.on(ToolUsageStartedEvent)
+        def on_tool_usage_started(source, event):
+            self._handle_tool_usage_started(source, event)
+
+        @crewai_event_bus.on(ToolUsageErrorEvent)
+        def on_tool_usage_error(source, event):
+            self._handle_tool_usage_error(source, event)
+
+        @crewai_event_bus.on(TaskEvaluationEvent)
+        def on_task_evaluation(source, event):
+            self._handle_task_evaluation(source, event)
+
+    def _handle_crew_kickoff_started(self, source, event: CrewKickoffStartedEvent):
         if self.agentops is None:
             return
 
@@ -64,7 +68,7 @@ class AgentOpsListener(BaseEventListener):
         except Exception as e:
             logger.warning(f"Failed to start AgentOps session: {e}")
 
-    def _handle_crew_kickoff_completed(self, event: CrewKickoffCompletedEvent):
+    def _handle_crew_kickoff_completed(self, source, event: CrewKickoffCompletedEvent):
         if self.agentops is None:
             return
 
@@ -74,7 +78,7 @@ class AgentOpsListener(BaseEventListener):
         except Exception as e:
             logger.warning(f"Failed to end AgentOps session: {e}")
 
-    def _handle_tool_usage_started(self, event: ToolUsageStartedEvent):
+    def _handle_tool_usage_started(self, source, event: ToolUsageStartedEvent):
         if self.agentops is None:
             return
 
@@ -84,7 +88,7 @@ class AgentOpsListener(BaseEventListener):
                     action_type="tool_usage",
                     params={
                         "tool_name": event.tool_name,
-                        "arguments": event.arguments,
+                        "tool_args": event.tool_args,
                     },
                 )
             )
@@ -92,7 +96,7 @@ class AgentOpsListener(BaseEventListener):
         except Exception as e:
             logger.warning(f"Failed to record tool usage in AgentOps: {e}")
 
-    def _handle_tool_usage_error(self, event: ToolUsageErrorEvent):
+    def _handle_tool_usage_error(self, source, event: ToolUsageErrorEvent):
         if self.agentops is None:
             return
 
@@ -103,7 +107,7 @@ class AgentOpsListener(BaseEventListener):
                     error_type="ToolUsageError",
                     details={
                         "tool_name": event.tool_name,
-                        "arguments": event.arguments,
+                        "tool_args": event.tool_args,
                     },
                 )
             )
@@ -111,7 +115,7 @@ class AgentOpsListener(BaseEventListener):
         except Exception as e:
             logger.warning(f"Failed to record tool usage error in AgentOps: {e}")
 
-    def _handle_task_evaluation(self, event: TaskEvaluationEvent):
+    def _handle_task_evaluation(self, source, event: TaskEvaluationEvent):
         if self.agentops is None:
             return
 
@@ -120,13 +124,12 @@ class AgentOpsListener(BaseEventListener):
                 self.agentops.ActionEvent(
                     action_type="task_evaluation",
                     params={
-                        "task_id": str(event.task_id),
-                        "score": event.score,
-                        "feedback": event.feedback,
+                        "evaluation_type": event.evaluation_type,
+                        "task": str(event.task) if event.task else None,
                     },
                 )
             )
-            logger.debug(f"AgentOps recorded task evaluation: {event.task_id}")
+            logger.debug(f"AgentOps recorded task evaluation: {event.evaluation_type}")
         except Exception as e:
             logger.warning(f"Failed to record task evaluation in AgentOps: {e}")
 
