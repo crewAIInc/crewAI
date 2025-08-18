@@ -177,7 +177,14 @@ class MyCustomCrew:
     # Your crew implementation...
 ```
 
-This is how third-party event listeners are registered in the CrewAI codebase.
+This is exactly how CrewAI's built-in `agentops_listener` is registered. In the CrewAI codebase, you'll find:
+
+```python
+# src/crewai/utilities/events/third_party/__init__.py
+from .agentops_listener import agentops_listener
+```
+
+This ensures the `agentops_listener` is loaded when the `crewai.utilities.events` package is imported.
 
 ## Available Event Types
 
@@ -273,6 +280,77 @@ The structure of the event object depends on the event type, but all events inhe
 
 Additional fields vary by event type. For example, `CrewKickoffCompletedEvent` includes `crew_name` and `output` fields.
 
+## Real-World Example: Integration with AgentOps
+
+CrewAI includes an example of a third-party integration with [AgentOps](https://github.com/AgentOps-AI/agentops), a monitoring and observability platform for AI agents. Here's how it's implemented:
+
+```python
+from typing import Optional
+
+from crewai.utilities.events import (
+    CrewKickoffCompletedEvent,
+    ToolUsageErrorEvent,
+    ToolUsageStartedEvent,
+)
+from crewai.utilities.events.base_event_listener import BaseEventListener
+from crewai.utilities.events.crew_events import CrewKickoffStartedEvent
+from crewai.utilities.events.task_events import TaskEvaluationEvent
+
+try:
+    import agentops
+    AGENTOPS_INSTALLED = True
+except ImportError:
+    AGENTOPS_INSTALLED = False
+
+class AgentOpsListener(BaseEventListener):
+    tool_event: Optional["agentops.ToolEvent"] = None
+    session: Optional["agentops.Session"] = None
+
+    def __init__(self):
+        super().__init__()
+
+    def setup_listeners(self, crewai_event_bus):
+        if not AGENTOPS_INSTALLED:
+            return
+
+        @crewai_event_bus.on(CrewKickoffStartedEvent)
+        def on_crew_kickoff_started(source, event: CrewKickoffStartedEvent):
+            self.session = agentops.init()
+            for agent in source.agents:
+                if self.session:
+                    self.session.create_agent(
+                        name=agent.role,
+                        agent_id=str(agent.id),
+                    )
+
+        @crewai_event_bus.on(CrewKickoffCompletedEvent)
+        def on_crew_kickoff_completed(source, event: CrewKickoffCompletedEvent):
+            if self.session:
+                self.session.end_session(
+                    end_state="Success",
+                    end_state_reason="Finished Execution",
+                )
+
+        @crewai_event_bus.on(ToolUsageStartedEvent)
+        def on_tool_usage_started(source, event: ToolUsageStartedEvent):
+            self.tool_event = agentops.ToolEvent(name=event.tool_name)
+            if self.session:
+                self.session.record(self.tool_event)
+
+        @crewai_event_bus.on(ToolUsageErrorEvent)
+        def on_tool_usage_error(source, event: ToolUsageErrorEvent):
+            agentops.ErrorEvent(exception=event.error, trigger_event=self.tool_event)
+```
+
+This listener initializes an AgentOps session when a Crew starts, registers agents with AgentOps, tracks tool usage, and ends the session when the Crew completes.
+
+The AgentOps listener is registered in CrewAI's event system through the import in `src/crewai/utilities/events/third_party/__init__.py`:
+
+```python
+from .agentops_listener import agentops_listener
+```
+
+This ensures the `agentops_listener` is loaded when the `crewai.utilities.events` package is imported.
 
 ## Advanced Usage: Scoped Handlers
 
