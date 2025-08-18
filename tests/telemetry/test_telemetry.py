@@ -1,4 +1,5 @@
 import os
+import threading
 from unittest.mock import patch
 
 import pytest
@@ -11,10 +12,13 @@ from opentelemetry import trace
 
 @pytest.fixture(autouse=True)
 def cleanup_telemetry():
-    """Automatically clean up Telemetry singleton between tests."""
     Telemetry._instance = None
+    if hasattr(Telemetry, "_lock"):
+        Telemetry._lock = threading.Lock()
     yield
     Telemetry._instance = None
+    if hasattr(Telemetry, "_lock"):
+        Telemetry._lock = threading.Lock()
 
 
 @pytest.mark.telemetry

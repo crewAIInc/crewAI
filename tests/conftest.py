@@ -52,11 +52,23 @@ def pytest_configure(config):
 @pytest.fixture(autouse=True)
 def auto_mock_telemetry(request):
     if request.node.get_closest_marker("telemetry"):
-        yield
+        telemetry_env = {
+            key: value
+            for key, value in os.environ.items()
+            if key not in ["CREWAI_DISABLE_TELEMETRY", "OTEL_SDK_DISABLED"]
+        }
+        with patch.dict(os.environ, telemetry_env, clear=True):
+            yield
         return
 
     if "telemetry" in str(request.fspath):
-        yield
+        telemetry_env = {
+            key: value
+            for key, value in os.environ.items()
+            if key not in ["CREWAI_DISABLE_TELEMETRY", "OTEL_SDK_DISABLED"]
+        }
+        with patch.dict(os.environ, telemetry_env, clear=True):
+            yield
         return
 
     with patch.dict(
