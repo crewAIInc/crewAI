@@ -54,10 +54,11 @@ def execute_tool_and_check_finality(
                             raise ValueError(f"Failed to set fingerprint: {e}")
 
         # Create tool usage instance - filter to only CrewStructuredTool instances for ToolUsage
+        from typing import cast
         crew_structured_tools = [tool for tool in tools if hasattr(tool, 'name') and hasattr(tool, 'result_as_answer') and not isinstance(tool, dict)]
         tool_usage = ToolUsage(
             tools_handler=tools_handler,
-            tools=crew_structured_tools,
+            tools=cast(List[CrewStructuredTool], crew_structured_tools),
             function_calling_llm=function_calling_llm,
             task=task,
             agent=agent,

@@ -564,9 +564,10 @@ class LiteAgent(FlowTrackable, BaseModel):
 
                 if isinstance(formatted_answer, AgentAction):
                     try:
+                        from typing import cast
                         tool_result = execute_tool_and_check_finality(
                             agent_action=formatted_answer,
-                            tools=self._parsed_tools,  # type: ignore[arg-type]
+                            tools=cast(List[Union[CrewStructuredTool, dict]], self._parsed_tools),
                             i18n=self.i18n,
                             agent_key=self.key,
                             agent_role=self.role,
