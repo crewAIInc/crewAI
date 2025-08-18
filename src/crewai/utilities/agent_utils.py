@@ -25,26 +25,28 @@ from crewai.cli.config import Settings
 
 console = Console()
 
-def parse_tools(tools: List[BaseTool]) -> List[CrewStructuredTool]:
+def parse_tools(tools: List[Union[BaseTool, dict]]) -> List[Union[CrewStructuredTool, dict]]:
     """Parse tools to be used for the task."""
     tools_list = []
 
     for tool in tools:
-        if isinstance(tool, CrewAITool):
+        if isinstance(tool, dict):
+            tools_list.append(tool)
+        elif isinstance(tool, BaseTool):
             tools_list.append(tool.to_structured_tool())
         else:
-            raise ValueError("Tool is not a CrewStructuredTool or BaseTool")
+            raise ValueError(f"Tool is not a CrewStructuredTool, BaseTool, or raw tool definition (dict): {type(tool)}")
 
     return tools_list
 
 
-def get_tool_names(tools: Sequence[Union[CrewStructuredTool, BaseTool]]) -> str:
+def get_tool_names(tools: Sequence[Union[CrewStructuredTool, BaseTool, dict]]) -> str:
     """Get the names of the tools."""
-    return ", ".join([t.name for t in tools])
+    return ", ".join([t.name if hasattr(t, 'name') else t.get('name', 'unknown') for t in tools])
 
 
 def render_text_description_and_args(
-    tools: Sequence[Union[CrewStructuredTool, BaseTool]],
+    tools: Sequence[Union[CrewStructuredTool, BaseTool, dict]],
 ) -> str:
     """Render the tool name, description, and args in plain text.
 
@@ -54,7 +56,12 @@ def render_text_description_and_args(
     """
     tool_strings = []
     for tool in tools:
-        tool_strings.append(tool.description)
+        if hasattr(tool, 'description'):
+            tool_strings.append(tool.description)
+        elif isinstance(tool, dict) and 'description' in tool:
+            tool_strings.append(f"Tool name: {tool.get('name', 'unknown')}\nTool description:\n{tool['description']}")
+        else:
+            tool_strings.append(f"Tool name: {tool.get('name', 'unknown') if isinstance(tool, dict) else 'unknown'}")
 
     return "\n".join(tool_strings)
 

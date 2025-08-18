@@ -537,14 +537,14 @@ class Agent(BaseAgent):
         )["output"]
 
     def create_agent_executor(
-        self, tools: Optional[List[BaseTool]] = None, task=None
+        self, tools: Optional[List[Union[BaseTool, dict]]] = None, task=None
     ) -> None:
         """Create an agent executor for the agent.
 
         Returns:
             An instance of the CrewAgentExecutor class.
         """
-        raw_tools: List[BaseTool] = tools or self.tools or []
+        raw_tools: List[Union[BaseTool, dict]] = tools or self.tools or []
         parsed_tools = parse_tools(raw_tools)
 
         prompt = Prompts(
