@@ -4,8 +4,6 @@ from unittest.mock import patch, MagicMock
 
 
 from crewai import Agent, Task, Crew
-from crewai.cli.plus_api import PlusAPI
-from crewai.cli.authentication.token import AuthError
 from crewai.flow.flow import Flow, start
 from crewai.utilities.events.listeners.tracing.trace_listener import (
     TraceCollectionListener,
