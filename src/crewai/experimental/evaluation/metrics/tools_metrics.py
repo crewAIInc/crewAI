@@ -43,7 +43,9 @@ class ToolSelectionEvaluator(BaseEvaluator):
         available_tools_info = ""
         if agent.tools:
             for tool in agent.tools:
-                available_tools_info += f"- {tool.name}: {tool.description}\n"
+                tool_name = tool.name if hasattr(tool, 'name') else tool.get('name', 'unknown')
+                tool_desc = tool.description if hasattr(tool, 'description') else tool.get('description', 'No description')
+                available_tools_info += f"- {tool_name}: {tool_desc}\n"
         else:
             available_tools_info = "No tools available"
 

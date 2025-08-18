@@ -1,4 +1,4 @@
-from typing import Any, List, Optional
+from typing import Any, List, Optional, Union
 
 from pydantic import Field, PrivateAttr
 
@@ -152,10 +152,12 @@ class OpenAIAgentAdapter(BaseAgentAdapter):
 
         self.agent_executor = Runner
 
-    def configure_tools(self, tools: Optional[List[BaseTool]] = None) -> None:
+    def configure_tools(self, tools: Optional[List[Union[BaseTool, dict]]] = None) -> None:
         """Configure tools for the OpenAI Assistant"""
         if tools:
-            self._tool_adapter.configure_tools(tools)
+            base_tools = [tool for tool in tools if isinstance(tool, BaseTool)]
+            if base_tools:
+                self._tool_adapter.configure_tools(base_tools)
             if self._tool_adapter.converted_tools:
                 self._openai_agent.tools = self._tool_adapter.converted_tools
 

@@ -1,4 +1,4 @@
-from typing import Any, AsyncIterable, Dict, List, Optional
+from typing import Any, AsyncIterable, Dict, List, Optional, Union
 
 from pydantic import Field, PrivateAttr
 
@@ -202,11 +202,13 @@ class LangGraphAgentAdapter(BaseAgentAdapter):
         """Configure the LangGraph agent for execution."""
         self.configure_tools(tools)
 
-    def configure_tools(self, tools: Optional[List[BaseTool]] = None) -> None:
+    def configure_tools(self, tools: Optional[List[Union[BaseTool, dict]]] = None) -> None:
         """Configure tools for the LangGraph agent."""
         if tools:
-            all_tools = list(self.tools or []) + list(tools or [])
-            self._tool_adapter.configure_tools(all_tools)
+            base_tools = [tool for tool in tools if isinstance(tool, BaseTool)]
+            all_tools = list(self.tools or []) + list(base_tools or [])
+            if all_tools:
+                self._tool_adapter.configure_tools(all_tools)
             available_tools = self._tool_adapter.tools()
             self._graph.tools = available_tools
 
