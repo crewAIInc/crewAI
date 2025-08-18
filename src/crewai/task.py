@@ -72,6 +72,10 @@ class Task(BaseModel):
         output_pydantic: Pydantic model for task output.
         security_config: Security configuration including fingerprinting.
         tools: List of tools/resources limited for task execution.
+        inject_trigger_input: Optional flag to control crewai_trigger_payload injection.
+                              None (default): Auto-inject for first task only.
+                              True: Always inject trigger payload for this task.
+                              False: Never inject trigger payload, even for first task.
     """
 
     __hash__ = object.__hash__  # type: ignore
@@ -163,8 +167,8 @@ class Task(BaseModel):
     end_time: Optional[datetime.datetime] = Field(
         default=None, description="End time of the task execution"
     )
-    inject_trigger_input: bool = Field(
-        default=False,
+    inject_trigger_input: Optional[bool] = Field(
+        default=None,
         description="Whether this task should append 'Trigger Payload: {crewai_trigger_payload}' to the task description when crewai_trigger_payload exists in crew inputs.",
     )
     model_config = {"arbitrary_types_allowed": True}
@@ -554,7 +558,9 @@ class Task(BaseModel):
         """
         description = self.description
 
-        if self.inject_trigger_input and self.agent:
+        should_inject = self.inject_trigger_input
+
+        if should_inject and self.agent:
             crew = getattr(self.agent, 'crew', None)
             if crew and hasattr(crew, '_inputs') and crew._inputs:
                 trigger_payload = crew._inputs.get("crewai_trigger_payload")
