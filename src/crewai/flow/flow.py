@@ -1037,7 +1037,9 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 if router_result:  # Only add non-None results
                     router_results.append(router_result)
                 current_trigger = (
-                    router_result  # Update for next iteration of router chain
+                    str(router_result)
+                    if router_result is not None
+                    else ""  # Update for next iteration of router chain
                 )
 
         # Now execute normal listeners for all router results and the original trigger
