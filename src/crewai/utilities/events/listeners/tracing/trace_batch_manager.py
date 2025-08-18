@@ -40,6 +40,8 @@ class TraceBatch:
 class TraceBatchManager:
     """Single responsibility: Manage batches and event buffering"""
 
+    is_current_batch_ephemeral: bool = False
+
     def __init__(self):
         try:
             self.plus_api = PlusAPI(api_key=get_auth_token())
@@ -58,10 +60,12 @@ class TraceBatchManager:
         use_ephemeral: bool = False,
     ) -> TraceBatch:
         """Initialize a new trace batch"""
+        print("lorenze is here: Initializing batch", use_ephemeral)
         self.current_batch = TraceBatch(
             user_context=user_context, execution_metadata=execution_metadata
         )
         self.event_buffer.clear()
+        self.is_current_batch_ephemeral = use_ephemeral
 
         self.record_start_time("execution")
         self._initialize_backend_batch(user_context, execution_metadata, use_ephemeral)
@@ -136,7 +140,7 @@ class TraceBatchManager:
         """Add event to buffer"""
         self.event_buffer.append(trace_event)
 
-    def _send_events_to_backend(self, ephemeral: bool = True):
+    def _send_events_to_backend(self, ephemeral: bool = False):
         """Send buffered events to backend"""
         if not self.plus_api or not self.trace_batch_id or not self.event_buffer:
             return
@@ -170,15 +174,15 @@ class TraceBatchManager:
         except Exception as e:
             logger.error(f"❌ Error sending events to backend: {str(e)}")
 
-    def finalize_batch(self, ephemeral: bool = True) -> Optional[TraceBatch]:
+    def finalize_batch(self) -> Optional[TraceBatch]:
         """Finalize batch and return it for sending"""
         if not self.current_batch:
             return None
 
         if self.event_buffer:
-            self._send_events_to_backend(ephemeral)
+            self._send_events_to_backend(self.is_current_batch_ephemeral)
 
-        self._finalize_backend_batch(ephemeral)
+        self._finalize_backend_batch(self.is_current_batch_ephemeral)
 
         self.current_batch.events = self.event_buffer.copy()
 
@@ -187,12 +191,13 @@ class TraceBatchManager:
         self.current_batch = None
         self.event_buffer.clear()
         self.trace_batch_id = None
+        self.is_current_batch_ephemeral = False
 
         self._cleanup_batch_data()
 
         return finalized_batch
 
-    def _finalize_backend_batch(self, ephemeral: bool = True):
+    def _finalize_backend_batch(self, ephemeral: bool = False):
         """Send batch finalization to backend"""
         if not self.plus_api or not self.trace_batch_id:
             return

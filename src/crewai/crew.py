@@ -286,10 +286,12 @@ class Crew(FlowTrackable, BaseModel):
 
         self._cache_handler = CacheHandler()
         event_listener = EventListener()
-        if on_first_execution_tracing_confirmation():
-            self.tracing = True
 
-        if is_tracing_enabled() or self.tracing:
+        if (
+            on_first_execution_tracing_confirmation()
+            or is_tracing_enabled()
+            or self.tracing
+        ):
             trace_listener = TraceCollectionListener()
             trace_listener.setup_listeners(crewai_event_bus)
         event_listener.verbose = self.verbose
