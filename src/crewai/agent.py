@@ -1,7 +1,7 @@
 import shutil
 import subprocess
 import time
-from typing import Any, Callable, Dict, List, Literal, Optional, Sequence, Tuple, Type, Union
+from typing import Any, Callable, Dict, List, Literal, Optional, Sequence, Tuple, Type, Union, cast
 
 from pydantic import Field, InstanceOf, PrivateAttr, model_validator
 
@@ -399,8 +399,13 @@ class Agent(BaseAgent):
                     ),
                 )
 
-        tools = tools or self.tools or []
-        self.create_agent_executor(tools=tools, task=task)
+        if tools is not None:
+            agent_tools: List[Union[BaseTool, dict]] = cast(List[Union[BaseTool, dict]], tools)
+        elif self.tools is not None:
+            agent_tools = cast(List[Union[BaseTool, dict]], self.tools)
+        else:
+            agent_tools = []
+        self.create_agent_executor(tools=agent_tools, task=task)
 
         if self.crew and self.crew._train:
             task_prompt = self._training_handler(task_prompt=task_prompt)
@@ -803,7 +808,7 @@ class Agent(BaseAgent):
             goal=self.goal,
             backstory=self.backstory,
             llm=self.llm,
-            tools=self.tools or [],
+            tools=[tool for tool in (self.tools or []) if isinstance(tool, BaseTool)],
             max_iterations=self.max_iter,
             max_execution_time=self.max_execution_time,
             respect_context_window=self.respect_context_window,
@@ -841,7 +846,7 @@ class Agent(BaseAgent):
             goal=self.goal,
             backstory=self.backstory,
             llm=self.llm,
-            tools=self.tools or [],
+            tools=[tool for tool in (self.tools or []) if isinstance(tool, BaseTool)],
             max_iterations=self.max_iter,
             max_execution_time=self.max_execution_time,
             respect_context_window=self.respect_context_window,

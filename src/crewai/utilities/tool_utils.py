@@ -53,11 +53,11 @@ def execute_tool_and_check_finality(
                         except Exception as e:
                             raise ValueError(f"Failed to set fingerprint: {e}")
 
-        # Create tool usage instance - filter to only executable tools for ToolUsage
-        executable_tools_for_usage = [tool for tool in tools if hasattr(tool, 'name') and hasattr(tool, 'result_as_answer')]
+        # Create tool usage instance - filter to only CrewStructuredTool instances for ToolUsage
+        crew_structured_tools = [tool for tool in tools if hasattr(tool, 'name') and hasattr(tool, 'result_as_answer') and not isinstance(tool, dict)]
         tool_usage = ToolUsage(
             tools_handler=tools_handler,
-            tools=executable_tools_for_usage,
+            tools=crew_structured_tools,
             function_calling_llm=function_calling_llm,
             task=task,
             agent=agent,

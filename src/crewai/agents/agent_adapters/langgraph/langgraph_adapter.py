@@ -127,7 +127,8 @@ class LangGraphAgentAdapter(BaseAgentAdapter):
         tools: Optional[List[BaseTool]] = None,
     ) -> str:
         """Execute a task using the LangGraph workflow."""
-        self.create_agent_executor(tools)
+        mixed_tools: Optional[List[Union[BaseTool, dict]]] = tools  # type: ignore[assignment]
+        self.create_agent_executor(mixed_tools)
 
         self.configure_structured_output(task)
 
@@ -209,8 +210,8 @@ class LangGraphAgentAdapter(BaseAgentAdapter):
             all_tools = existing_base_tools + base_tools
             if all_tools:
                 self._tool_adapter.configure_tools(all_tools)
-            available_tools = self._tool_adapter.tools()
-            self._graph.tools = available_tools
+                available_tools = self._tool_adapter.tools()
+                self._graph.tools = available_tools
 
     def get_delegation_tools(self, agents: List[BaseAgent]) -> List[BaseTool]:
         """Implement delegation tools support for LangGraph."""
