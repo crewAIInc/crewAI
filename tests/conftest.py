@@ -34,11 +34,11 @@ def setup_test_environment():
                 f"Test storage directory {storage_dir} is not writable: {e}"
             )
 
-        # Set environment variable to point to the test storage directory
         os.environ["CREWAI_STORAGE_DIR"] = str(storage_dir)
-
+        os.environ["CREWAI_TESTING"] = "true"
         yield
 
+        os.environ.pop("CREWAI_TESTING", None)
         # Cleanup is handled automatically when tempfile context exits
 
 

@@ -52,7 +52,6 @@ tools = ["crewai-tools~=0.62.0"]
 embeddings = [
     "tiktoken~=0.8.0"
 ]
-agentops = ["agentops==0.3.18"]
 pdfplumber = [
     "pdfplumber>=0.11.4",
 ]

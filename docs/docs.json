@@ -226,7 +226,6 @@
                 "group": "Observability",
                 "pages": [
                   "en/observability/overview",
-                  "en/observability/agentops",
                   "en/observability/arize-phoenix",
                   "en/observability/langdb",
                   "en/observability/langfuse",
@@ -566,7 +565,6 @@
                 "group": "Observabilidade",
                 "pages": [
                   "pt-BR/observability/overview",
-                  "pt-BR/observability/agentops",
                   "pt-BR/observability/arize-phoenix",
                   "pt-BR/observability/langdb",
                   "pt-BR/observability/langfuse",
@@ -914,7 +912,6 @@
                 "group": "오브저버빌리티",
                 "pages": [
                   "ko/observability/overview",
-                  "ko/observability/agentops",
                   "ko/observability/arize-phoenix",
                   "ko/observability/langdb",
                   "ko/observability/langfuse",

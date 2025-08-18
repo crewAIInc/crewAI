@@ -77,7 +77,10 @@ from crewai.utilities.events.listeners.tracing.trace_listener import (
 )
 
 
-from crewai.utilities.events.listeners.tracing.utils import is_tracing_enabled
+from crewai.utilities.events.listeners.tracing.utils import (
+    is_tracing_enabled,
+    on_first_execution_tracing_confirmation,
+)
 from crewai.utilities.formatter import (
     aggregate_raw_outputs_from_task_outputs,
     aggregate_raw_outputs_from_tasks,
@@ -283,8 +286,11 @@ class Crew(FlowTrackable, BaseModel):
 
         self._cache_handler = CacheHandler()
         event_listener = EventListener()
+        if on_first_execution_tracing_confirmation():
+            self.tracing = True
+
         if is_tracing_enabled() or self.tracing:
-            trace_listener = TraceCollectionListener(tracing=self.tracing)
+            trace_listener = TraceCollectionListener()
             trace_listener.setup_listeners(crewai_event_bus)
         event_listener.verbose = self.verbose
         event_listener.formatter.verbose = self.verbose
