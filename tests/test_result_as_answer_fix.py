@@ -1,5 +1,4 @@
-import pytest
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 from crewai.agent import Agent
 from crewai.task import Task
 from crewai.tools.base_tool import BaseTool
