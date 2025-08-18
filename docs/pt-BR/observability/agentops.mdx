@@ -1,0 +1,131 @@
+---
+title: "Integração AgentOps"
+description: "Monitore e analise seus agentes CrewAI com a plataforma de observabilidade AgentOps"
+---
+
+# Integração AgentOps
+
+AgentOps é uma poderosa plataforma de observabilidade projetada especificamente para agentes de IA. Ela fornece capacidades abrangentes de monitoramento, análise e depuração para suas crews CrewAI.
+
+## Recursos
+
+- **Monitoramento em Tempo Real**: Acompanhe o desempenho e comportamento dos agentes em tempo real
+- **Replay de Sessão**: Revise sessões completas de agentes com rastreamentos detalhados de execução
+- **Análise de Desempenho**: Analise eficiência da crew, uso de ferramentas e taxas de conclusão de tarefas
+- **Rastreamento de Erros**: Identifique e depure problemas em fluxos de trabalho de agentes
+- **Rastreamento de Custos**: Monitore o uso de LLM e custos associados
+- **Colaboração em Equipe**: Compartilhe insights e colabore na otimização de agentes
+
+## Instalação
+
+Instale o AgentOps junto com o CrewAI:
+
+```bash
+pip install crewai[agentops]
+```
+
+Ou instale o AgentOps separadamente:
+
+```bash
+pip install agentops
+```
+
+## Configuração
+
+1. **Obtenha sua Chave API**: Cadastre-se no [AgentOps](https://agentops.ai) e obtenha sua chave API
+
+2. **Configure seu ambiente**: Defina sua chave API do AgentOps como uma variável de ambiente:
+
+```bash
+export AGENTOPS_API_KEY="sua-chave-api-aqui"
+```
+
+3. **Inicialize o AgentOps**: Adicione isso ao seu script CrewAI:
+
+```python
+import agentops
+from crewai import Agent, Task, Crew
+
+# Inicializar AgentOps
+agentops.init()
+
+# Seu código CrewAI aqui
+agent = Agent(
+    role="Analista de Dados",
+    goal="Analisar dados e fornecer insights",
+    backstory="Você é um analista de dados especialista...",
+)
+
+task = Task(
+    description="Analise os dados de vendas e forneça insights",
+    agent=agent,
+)
+
+crew = Crew(
+    agents=[agent],
+    tasks=[task],
+)
+
+# Execute sua crew
+result = crew.kickoff()
+
+# Finalize a sessão AgentOps
+agentops.end_session("Success")
+```
+
+## Integração Automática
+
+O CrewAI se integra automaticamente com o AgentOps quando a biblioteca está instalada. A integração captura:
+
+- **Eventos de Kickoff da Crew**: Início e conclusão de execuções da crew
+- **Uso de Ferramentas**: Todas as chamadas de ferramentas e seus resultados
+- **Avaliações de Tarefas**: Métricas de desempenho de tarefas e feedback
+- **Eventos de Erro**: Quaisquer erros que ocorram durante a execução
+
+## Opções de Configuração
+
+Você pode personalizar a integração do AgentOps:
+
+```python
+import agentops
+
+# Configure AgentOps com configurações personalizadas
+agentops.init(
+    api_key="sua-chave-api",
+    tags=["producao", "analise-dados"],
+    auto_start_session=True,
+    instrument_llm_calls=True,
+)
+```
+
+## Visualizando Seus Dados
+
+1. **Dashboard**: Visite o dashboard do AgentOps para ver suas sessões de agentes
+2. **Detalhes da Sessão**: Clique em qualquer sessão para ver rastreamentos detalhados de execução
+3. **Análises**: Use a aba de análises para identificar tendências de desempenho
+4. **Erros**: Monitore a aba de erros para informações de depuração
+
+## Melhores Práticas
+
+- **Marque Suas Sessões**: Use tags significativas para organizar suas execuções de agentes
+- **Monitore Custos**: Acompanhe o uso de LLM e custos associados
+- **Revise Erros**: Verifique e resolva regularmente quaisquer erros
+- **Otimize Desempenho**: Use análises para identificar gargalos e oportunidades de otimização
+
+## Solução de Problemas
+
+### AgentOps Não Está Gravando Dados
+
+1. Verifique se sua chave API está definida corretamente
+2. Verifique se o AgentOps está inicializado adequadamente
+3. Certifique-se de estar chamando `agentops.end_session()` no final do seu script
+
+### Eventos Ausentes
+
+Se alguns eventos não estão sendo capturados:
+
+1. Certifique-se de ter a versão mais recente do CrewAI e AgentOps
+2. Verifique se o listener do AgentOps está registrado adequadamente
+3. Revise os logs para quaisquer mensagens de erro
+
+Esta integração fornece observabilidade abrangente para seus agentes CrewAI, ajudando você a monitorar, depurar e otimizar seus fluxos de trabalho de IA.

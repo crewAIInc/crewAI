@@ -67,6 +67,7 @@ from .memory_events import (
 
 # events
 from .event_listener import EventListener
+from .third_party.agentops_listener import agentops_listener
 
 __all__ = [
     "EventListener",
@@ -121,4 +122,5 @@ __all__ = [
     "ToolSelectionErrorEvent",
     "ToolUsageEvent",
     "ToolValidateInputErrorEvent",
+    "agentops_listener",
 ]
