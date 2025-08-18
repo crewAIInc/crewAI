@@ -1,0 +1,61 @@
+---
+title: "Slack 트리거"
+description: "슬래시 명령어를 사용해 Slack에서 CrewAI crew를 직접 트리거합니다"
+icon: "slack"
+---
+
+이 가이드는 CrewAI 트리거를 사용하여 Slack에서 직접 crew를 시작하는 방법을 설명합니다.
+
+## 사전 요구 사항
+
+- CrewAI Slack 트리거가 설치되어 있고 Slack 워크스페이스에 연결되어 있음
+- CrewAI에서 하나 이상의 crew가 구성되어 있음
+
+## 설정 단계
+
+<Steps>
+    <Step title="CrewAI Slack 트리거가 설정되어 있는지 확인">
+        CrewAI 대시보드에서 **트리거** 섹션으로 이동합니다.
+
+        <Frame>
+            <img src="/images/enterprise/slack-integration.png" alt="CrewAI Slack Integration" />
+        </Frame>
+
+        Slack이 나열되어 있고 연결되어 있는지 확인합니다.
+    </Step>
+    <Step title="Slack 채널을 엽니다">
+        - crew를 시작하려는 채널로 이동합니다.
+        - 슬래시 명령어 "**/kickoff**"를 입력하여 crew 시작 프로세스를 시작합니다.
+        - 입력하는 동안 "**Kickoff crew**"가 나타나야 합니다:
+            <Frame>
+                <img src="/images/enterprise/kickoff-slack-crew.png" alt="Kickoff crew" />
+            </Frame>
+        - Enter를 누르거나 "**Kickoff crew**" 옵션을 선택합니다. "**Kickoff an AI Crew**"라는 제목의 대화상자가 나타납니다.
+    </Step>
+    <Step title="시작할 crew를 선택합니다">
+        - "**Select of the crews online:**"라는 드롭다운 메뉴에서 시작할 crew를 선택합니다.
+        - 아래 예시에서는 "**prep-for-meeting**"이 선택되어 있습니다:
+            <Frame>
+                <img src="/images/enterprise/kickoff-slack-crew-dropdown.png" alt="Kickoff crew dropdown" />
+            </Frame>
+        - crew에 입력값이 필요한 경우 "**Add Inputs**" 버튼을 클릭하여 입력값을 제공합니다.
+            <Note>
+                위 예시에서 "**Add Inputs**" 버튼이 보이지만 아직 클릭되지 않았습니다.
+            </Note>
+    </Step>
+    <Step title="Kickoff을 클릭하고 crew가 완료될 때까지 기다립니다">
+        - crew를 선택하고 필요한 입력값을 추가했다면, "**Kickoff**"를 클릭하여 crew를 시작합니다.
+            <Frame>
+                <img src="/images/enterprise/kickoff-slack-crew-kickoff.png" alt="Kickoff crew" />
+            </Frame>
+        - crew가 실행을 시작하면 Slack 채널에서 결과를 확인할 수 있습니다.
+            <Frame>
+                <img src="/images/enterprise/kickoff-slack-crew-results.png" alt="Kickoff crew results" />
+            </Frame>
+    </Step>
+</Steps>
+
+## 팁
+
+- Slack 워크스페이스에서 `/kickoff` 명령어를 사용할 수 있는 필요한 권한이 있는지 확인하세요.
+- 드롭다운에서 원하는 crew가 보이지 않는 경우, CrewAI에서 해당 crew가 올바르게 구성되어 있고 온라인 상태인지 확인하세요.

@@ -1,0 +1,356 @@
+---
+title: Gmail 연동
+description: "CrewAI를 위한 Gmail 연동을 통한 이메일 및 연락처 관리."
+icon: "envelope"
+---
+
+## 개요
+
+에이전트가 Gmail을 통해 이메일, 연락처, 임시 저장 메시지를 관리할 수 있도록 합니다. 이메일을 보내고, 메시지를 검색하며, 연락처를 관리하고, 임시 저장 메시지를 작성하며, AI 기반 자동화를 통해 이메일 커뮤니케이션을 효율화하세요.
+
+## 사전 준비 사항
+
+Gmail 통합을 사용하기 전에 다음을 확인하세요:
+
+- 활성 구독이 있는 [CrewAI Enterprise](https://app.crewai.com) 계정
+- 적절한 권한이 있는 Gmail 계정
+- [통합 페이지](https://app.crewai.com/crewai_plus/connectors)를 통해 Gmail 계정 연결
+
+## Gmail 연동 설정
+
+### 1. Gmail 계정 연결하기
+
+1. [CrewAI Enterprise Integrations](https://app.crewai.com/crewai_plus/connectors)로 이동합니다.
+2. 인증 통합 섹션에서 **Gmail**을 찾습니다.
+3. **Connect**를 클릭하고 OAuth 흐름을 완료합니다.
+4. 이메일 및 연락처 관리를 위한 필요한 권한을 부여합니다.
+5. [Account Settings](https://app.crewai.com/crewai_plus/settings/account)에서 Enterprise Token을 복사합니다.
+
+### 2. 필수 패키지 설치
+
+```bash
+uv add crewai-tools
+```
+
+## 사용 가능한 작업
+
+<AccordionGroup>
+  <Accordion title="GMAIL_SEND_EMAIL">
+    **설명:** Gmail에서 이메일을 보냅니다.
+
+    **파라미터:**
+    - `toRecipients` (array, 필수): 받는 사람 - 하나의 문자열 또는 JSON 배열로 받는 사람을 지정합니다.
+      ```json
+      [
+        "recipient1@domain.com",
+        "recipient2@domain.com"
+      ]
+      ```
+    - `from` (string, 필수): 보내는 사람 - 발신자의 이메일을 지정합니다.
+    - `subject` (string, 필수): 제목 - 메시지의 제목을 지정합니다.
+    - `messageContent` (string, 필수): 메시지 내용 - 이메일 메시지의 내용을 일반 텍스트 또는 HTML로 지정합니다.
+    - `attachments` (string, 선택): 첨부파일 - 단일 파일 객체 또는 파일 객체의 JSON 배열을 허용합니다.
+    - `additionalHeaders` (object, 선택): 추가 헤더 - 추가 헤더 필드를 지정할 수 있습니다.
+      ```json
+      {
+        "reply-to": "Sender Name <sender@domain.com>"
+      }
+      ```
+  </Accordion>
+
+  <Accordion title="GMAIL_GET_EMAIL_BY_ID">
+    **설명:** Gmail에서 ID로 이메일을 조회합니다.
+
+    **파라미터:**
+    - `userId` (string, 필수): 사용자 ID - 사용자의 이메일 주소를 지정합니다. (예: "user@domain.com").
+    - `messageId` (string, 필수): 메시지 ID - 조회할 메시지의 ID를 지정합니다.
+  </Accordion>
+
+  <Accordion title="GMAIL_SEARCH_FOR_EMAIL">
+    **설명:** 고급 필터를 사용하여 Gmail에서 이메일을 검색합니다.
+
+    **파라미터:**
+    - `emailFilterFormula` (object, 선택): 불리언 식(OR로 연결된 AND 그룹의 단일 조건)으로 된 필터.
+      ```json
+      {
+        "operator": "OR",
+        "conditions": [
+          {
+            "operator": "AND",
+            "conditions": [
+              {
+                "field": "from",
+                "operator": "$stringContains",
+                "value": "example@domain.com"
+              }
+            ]
+          }
+        ]
+      }
+      ```
+      사용 가능한 필드: `from`, `to`, `date`, `label`, `subject`, `cc`, `bcc`, `category`, `deliveredto:`, `size`, `filename`, `older_than`, `newer_than`, `list`, `is:important`, `is:unread`, `is:snoozed`, `is:starred`, `is:read`, `has:drive`, `has:document`, `has:spreadsheet`, `has:presentation`, `has:attachment`, `has:youtube`, `has:userlabels`
+    - `paginationParameters` (object, 선택): 페이지네이션 파라미터.
+      ```json
+      {
+        "pageCursor": "page_cursor_string"
+      }
+      ```
+  </Accordion>
+
+  <Accordion title="GMAIL_DELETE_EMAIL">
+    **설명:** Gmail에서 이메일을 삭제합니다.
+
+    **파라미터:**
+    - `userId` (string, 필수): 사용자 ID - 사용자의 이메일 주소를 지정합니다. (예: "user@domain.com").
+    - `messageId` (string, 필수): 메시지 ID - 휴지통으로 보낼 메시지의 ID를 지정합니다.
+  </Accordion>
+
+  <Accordion title="GMAIL_CREATE_A_CONTACT">
+    **설명:** Gmail에서 연락처를 생성합니다.
+
+    **파라미터:**
+    - `givenName` (string, 필수): 이름 - 생성할 연락처의 이름을 지정합니다. (예: "John").
+    - `familyName` (string, 필수): 성 - 생성할 연락처의 성을 지정합니다. (예: "Doe").
+    - `email` (string, 필수): 이메일 - 생성할 연락처의 이메일 주소를 지정합니다.
+    - `additionalFields` (object, 선택): 추가 필드 - 기타 연락처 정보를 입력할 수 있습니다.
+      ```json
+      {
+        "addresses": [
+          {
+            "streetAddress": "1000 North St.",
+            "city": "Los Angeles"
+          }
+        ]
+      }
+      ```
+  </Accordion>
+
+  <Accordion title="GMAIL_GET_CONTACT_BY_RESOURCE_NAME">
+    **설명:** Gmail에서 리소스 이름으로 연락처를 조회합니다.
+
+    **파라미터:**
+    - `resourceName` (string, 필수): 리소스 이름 - 조회할 연락처의 리소스 이름을 지정합니다.
+  </Accordion>
+
+  <Accordion title="GMAIL_SEARCH_FOR_CONTACT">
+    **설명:** Gmail에서 연락처를 검색합니다.
+
+    **파라미터:**
+    - `searchTerm` (string, 필수): 검색어 - 이름, 닉네임, 이메일 주소, 전화번호 또는 조직 연락처 속성에서 유사하거나 정확히 일치하는 항목을 검색할 검색어를 지정합니다.
+  </Accordion>
+
+  <Accordion title="GMAIL_DELETE_CONTACT">
+    **설명:** Gmail에서 연락처를 삭제합니다.
+
+    **파라미터:**
+    - `resourceName` (string, 필수): 리소스 이름 - 삭제할 연락처의 리소스 이름을 지정합니다.
+  </Accordion>
+
+  <Accordion title="GMAIL_CREATE_DRAFT">
+    **설명:** Gmail에서 임시 저장 메일을 만듭니다.
+
+    **파라미터:**
+    - `toRecipients` (array, 선택): 받는 사람 - 하나의 문자열 또는 JSON 배열로 받는 사람을 지정합니다.
+      ```json
+      [
+        "recipient1@domain.com",
+        "recipient2@domain.com"
+      ]
+      ```
+    - `from` (string, 선택): 보내는 사람 - 발신자의 이메일을 지정합니다.
+    - `subject` (string, 선택): 제목 - 메시지의 제목을 지정합니다.
+    - `messageContent` (string, 선택): 메시지 내용 - 이메일 메시지의 내용을 일반 텍스트 또는 HTML로 지정합니다.
+    - `attachments` (string, 선택): 첨부파일 - 단일 파일 객체 또는 파일 객체의 JSON 배열을 허용합니다.
+    - `additionalHeaders` (object, 선택): 추가 헤더 - 추가 헤더 필드를 지정할 수 있습니다.
+      ```json
+      {
+        "reply-to": "Sender Name <sender@domain.com>"
+      }
+      ```
+  </Accordion>
+</AccordionGroup>
+
+## 사용 예시
+
+### 기본 Gmail 에이전트 설정
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import CrewaiEnterpriseTools
+
+# Get enterprise tools (Gmail tools will be included)
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token"
+)
+
+# Create an agent with Gmail capabilities
+gmail_agent = Agent(
+    role="Email Manager",
+    goal="Manage email communications and contacts efficiently",
+    backstory="An AI assistant specialized in email management and communication.",
+    tools=[enterprise_tools]
+)
+
+# Task to send a follow-up email
+send_email_task = Task(
+    description="Send a follow-up email to john@example.com about the project update meeting",
+    agent=gmail_agent,
+    expected_output="Email sent successfully with confirmation"
+)
+
+# Run the task
+crew = Crew(
+    agents=[gmail_agent],
+    tasks=[send_email_task]
+)
+
+crew.kickoff()
+```
+
+### 특정 Gmail 도구 필터링
+
+```python
+from crewai_tools import CrewaiEnterpriseTools
+
+# Get only specific Gmail tools
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token",
+    actions_list=["gmail_send_email", "gmail_search_for_email", "gmail_create_draft"]
+)
+
+email_coordinator = Agent(
+    role="Email Coordinator",
+    goal="Coordinate email communications and manage drafts",
+    backstory="An AI assistant that focuses on email coordination and draft management.",
+    tools=enterprise_tools
+)
+
+# Task to prepare and send emails
+email_coordination = Task(
+    description="Search for emails from the marketing team, create a summary draft, and send it to stakeholders",
+    agent=email_coordinator,
+    expected_output="Summary email sent to stakeholders"
+)
+
+crew = Crew(
+    agents=[email_coordinator],
+    tasks=[email_coordination]
+)
+
+crew.kickoff()
+```
+
+### 연락처 관리
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import CrewaiEnterpriseTools
+
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token"
+)
+
+contact_manager = Agent(
+    role="Contact Manager",
+    goal="Manage and organize email contacts efficiently",
+    backstory="An experienced contact manager who maintains organized contact databases.",
+    tools=[enterprise_tools]
+)
+
+# Task to manage contacts
+contact_task = Task(
+    description="""
+    1. 'example.com' 도메인에서 연락처를 검색합니다.
+    2. 연락처 목록에 없는 최근 이메일 발신자에 대해 새 연락처를 생성합니다.
+    3. 최근 상호 작용 데이터를 반영하여 연락처 정보를 업데이트합니다.
+    """,
+    agent=contact_manager,
+    expected_output="새 연락처와 최근 상호 작용으로 연락처 데이터베이스가 업데이트됨"
+)
+
+crew = Crew(
+    agents=[contact_manager],
+    tasks=[contact_task]
+)
+
+crew.kickoff()
+```
+
+### 이메일 검색 및 분석
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import CrewaiEnterpriseTools
+
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token"
+)
+
+email_analyst = Agent(
+    role="Email Analyst",
+    goal="Analyze email patterns and provide insights",
+    backstory="An AI assistant that analyzes email data to provide actionable insights.",
+    tools=[enterprise_tools]
+)
+
+# Task to analyze email patterns
+analysis_task = Task(
+    description="""
+    Search for all unread emails from the last 7 days,
+    categorize them by sender domain,
+    and create a summary report of communication patterns
+    """,
+    agent=email_analyst,
+    expected_output="Email analysis report with communication patterns and recommendations"
+)
+
+crew = Crew(
+    agents=[email_analyst],
+    tasks=[analysis_task]
+)
+
+crew.kickoff()
+```
+
+### 자동화된 이메일 워크플로우
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import CrewaiEnterpriseTools
+
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token"
+)
+
+workflow_manager = Agent(
+    role="Email Workflow Manager",
+    goal="Automate email workflows and responses",
+    backstory="An AI assistant that manages automated email workflows and responses.",
+    tools=[enterprise_tools]
+)
+
+# Complex task involving multiple Gmail operations
+workflow_task = Task(
+    description="""
+    1. 지난 24시간 동안 제목에 'urgent'가 포함된 이메일 검색
+    2. 각 긴급 이메일에 대한 답장 초안 생성
+    3. 발신자에게 자동 확인 이메일 전송
+    4. 주의가 필요한 긴급 항목의 요약 보고서 작성
+    """,
+    agent=workflow_manager,
+    expected_output="긴급 이메일이 자동 응답 및 요약 보고서와 함께 처리됨"
+)
+
+crew = Crew(
+    agents=[workflow_manager],
+    tasks=[workflow_task]
+)
+
+crew.kickoff()
+```
+
+### 도움 받기
+
+<Card title="도움이 필요하신가요?" icon="headset" href="mailto:support@crewai.com">
+  Gmail 통합 설정 또는 문제 해결에 대한 지원이 필요하시다면 저희 지원팀에 문의해 주세요.
+</Card>

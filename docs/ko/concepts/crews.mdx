@@ -1,0 +1,368 @@
+---
+title: 크루
+description: crewAI 프레임워크에서 크루를 이해하고 다양한 속성과 기능을 활용하기.
+icon: people-group
+---
+
+## 개요
+
+crewAI에서 crew는 일련의 작업을 달성하기 위해 함께 협력하는 에이전트들의 그룹을 나타냅니다. 각 crew는 작업 실행, 에이전트 간 협업, 그리고 전체 워크플로우에 대한 전략을 정의합니다.
+
+## Crew 속성
+
+| 속성                                    | 파라미터                | 설명                                                                                                                                                                                                                                                      |
+| :-------------------------------------- | :---------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Tasks**                              | `tasks`                | crew에 할당된 작업들의 리스트.                                                                                                                                                                                                                           |
+| **Agents**                             | `agents`               | crew의 일원이 되는 에이전트들의 리스트.                                                                                                                                                                                                                  |
+| **Process** _(선택사항)_               | `process`              | crew가 따르는 프로세스 플로우(예: 순차, 계층적). 기본값은 `sequential`.                                                                                                                                                                                 |
+| **Verbose** _(선택사항)_               | `verbose`              | 실행 중 로그의 상세도 설정. 기본값은 `False`.                                                                                                                                                                     |
+| **Manager LLM** _(선택사항)_           | `manager_llm`          | 계층적 프로세스에서 매니저 에이전트가 사용하는 언어 모델. **계층적 프로세스를 사용할 때 필수.**                                                                                                                   |
+| **Function Calling LLM** _(선택사항)_  | `function_calling_llm` | 전달 시, crew 전체의 모든 agent에 대해 도구의 function calling에 이 LLM을 사용. 각 agent마다 개별 LLM을 가질 수 있으며, 이 경우 crew의 function calling LLM을 오버라이드 함.                                |
+| **Config** _(선택사항)_                | `config`               | crew용으로 선택적인 구성 설정. `Json` 또는 `Dict[str, Any]` 형식 사용.                                                                                                                                            |
+| **Max RPM** _(선택사항)_               | `max_rpm`              | 실행 중 crew가 준수하는 분당 최대 요청 수. 기본값은 `None`.                                                                                                                                                       |
+| **Memory** _(선택사항)_                | `memory`               | 실행 메모리(단기, 장기, 엔터티 메모리) 저장에 사용됨.                                                                                                                                         |
+| **Cache** _(선택사항)_                 | `cache`                | 도구 실행 결과를 캐시에 저장할지 여부. 기본값은 `True`.                                                                                                                                                           |
+| **Embedder** _(선택사항)_              | `embedder`             | crew에서 사용할 embedder 설정. 현재는 주로 메모리에서 사용. 기본값은 `{"provider": "openai"}`.                                                                                                                   |
+| **Step Callback** _(선택사항)_         | `step_callback`        | 각 agent의 단계가 끝난 후 호출되는 함수. agent의 작업 기록이나 기타 작업 수행에 사용 가능; agent별 `step_callback`을 오버라이드하지 않음.                                                                        |
+| **Task Callback** _(선택사항)_         | `task_callback`        | 각 작업 완료 후 호출되는 함수. 작업 실행 후 모니터링이나 추가 작업에 유용.                                                                                                                                         |
+| **Share Crew** _(선택사항)_            | `share_crew`           | 라이브러리 개선 및 모델 학습을 위해 crew 정보와 실행을 crewAI 팀에 공유할지 여부.                                                                                                                                |
+| **Output Log File** _(선택사항)_       | `output_log_file`      | `True`로 설정 시 로그를 현재 디렉터리에 logs.txt로 저장하거나 파일 경로 지정 가능. 파일명이 .json으로 끝나면 JSON 형식, 아니면 txt 형식으로 로그를 저장. 기본값은 `None`.                                         |
+| **Manager Agent** _(선택사항)_         | `manager_agent`        | 매니저로 사용할 커스텀 agent를 설정.                                                                                                                                                                             |
+| **Prompt File** _(선택사항)_           | `prompt_file`          | crew에서 사용할 prompt JSON 파일 경로.                                                                                                                                                                            |
+| **Planning** *(선택사항)*              | `planning`             | Crew에 계획 수립 기능을 추가. 활성화하면 각 Crew 반복 전에 모든 Crew 데이터를 AgentPlanner로 전송하여 작업계획을 세우고, 이 계획이 각 작업 설명에 추가됨.                                                     |
+| **Planning LLM** *(선택사항)*          | `planning_llm`         | 계획 과정에서 AgentPlanner가 사용하는 언어 모델.                                                                                                                                                                 |
+| **Knowledge Sources** _(선택사항)_     | `knowledge_sources`    | crew 수준에서 사용 가능한 지식 소스. 모든 agent가 접근 가능.                                                                                                                                                             |
+
+<Tip>
+**Crew Max RPM**: `max_rpm` 속성은 crew가 분당 처리할 수 있는 최대 요청 수를 설정하며, 개별 agent의 `max_rpm` 설정을 crew 단위로 지정할 경우 오버라이드합니다.
+</Tip>
+
+## 크루 생성하기
+
+CrewAI에서 크루를 생성하는 방법은 두 가지가 있습니다: **YAML 구성(권장)**을 사용하는 방법과 **코드에서 직접 정의**하는 방법입니다.
+
+### YAML 구성 (권장)
+
+YAML 구성을 사용하면 crew를 정의할 때 더 깔끔하고 유지 관리하기 쉬운 방법을 제공하며, CrewAI 프로젝트에서 agent 및 task를 정의하는 방식과 일관성을 유지할 수 있습니다.
+
+[설치](/ko/installation) 섹션에 설명된 대로 CrewAI 프로젝트를 생성한 후, `CrewBase`를 상속받는 클래스에서 데코레이터를 이용해 agent, task, 그리고 crew 자체를 정의할 수 있습니다.
+
+#### 데코레이터가 적용된 예시 Crew 클래스
+
+```python code
+from crewai import Agent, Crew, Task, Process
+from crewai.project import CrewBase, agent, task, crew, before_kickoff, after_kickoff
+from crewai.agents.agent_builder.base_agent import BaseAgent
+from typing import List
+
+@CrewBase
+class YourCrewName:
+    """Description of your crew"""
+
+    agents: List[BaseAgent]
+    tasks: List[Task]
+
+    # YAML 구성 파일 경로
+    # YAML로 정의된 에이전트와 태스크의 예시는 아래 링크를 참고하세요:
+    # - Task: https://docs.crewai.com/concepts/tasks#yaml-configuration-recommended
+    # - Agents: https://docs.crewai.com/concepts/agents#yaml-configuration-recommended
+    agents_config = 'config/agents.yaml'
+    tasks_config = 'config/tasks.yaml'
+
+    @before_kickoff
+    def prepare_inputs(self, inputs):
+        # crew 시작 전에 입력값을 수정합니다
+        inputs['additional_data'] = "Some extra information"
+        return inputs
+
+    @after_kickoff
+    def process_output(self, output):
+        # crew가 종료된 후 출력값을 수정합니다
+        output.raw += "\nProcessed after kickoff."
+        return output
+
+    @agent
+    def agent_one(self) -> Agent:
+        return Agent(
+            config=self.agents_config['agent_one'], # type: ignore[index]
+            verbose=True
+        )
+
+    @agent
+    def agent_two(self) -> Agent:
+        return Agent(
+            config=self.agents_config['agent_two'], # type: ignore[index]
+            verbose=True
+        )
+
+    @task
+    def task_one(self) -> Task:
+        return Task(
+            config=self.tasks_config['task_one'] # type: ignore[index]
+        )
+
+    @task
+    def task_two(self) -> Task:
+        return Task(
+            config=self.tasks_config['task_two'] # type: ignore[index]
+        )
+
+    @crew
+    def crew(self) -> Crew:
+        return Crew(
+            agents=self.agents,  # @agent 데코레이터로 자동 수집
+            tasks=self.tasks,    # @task 데코레이터로 자동 수집
+            process=Process.sequential,
+            verbose=True,
+        )
+```
+
+위 코드를 실행하는 방법:
+
+```python code
+YourCrewName().crew().kickoff(inputs={"any": "input here"})
+```
+
+<Note>
+태스크들은 정의된 순서대로 실행됩니다.
+</Note>
+
+`CrewBase` 클래스와 이 데코레이터들은 에이전트와 태스크의 수집을 자동화하여
+수동으로 관리할 필요를 줄여줍니다.
+
+#### `annotations.py`의 데코레이터 개요
+
+CrewAI는 `annotations.py` 파일에서 크루 클래스 내의 메서드를 특별히 처리하기 위해 사용하는 여러 데코레이터를 제공합니다:
+
+- `@CrewBase`: 클래스를 크루 기본 클래스로 표시합니다.
+- `@agent`: `Agent` 객체를 반환하는 메서드임을 나타냅니다.
+- `@task`: `Task` 객체를 반환하는 메서드임을 나타냅니다.
+- `@crew`: `Crew` 객체를 반환하는 메서드임을 나타냅니다.
+- `@before_kickoff`: (옵션) 크루가 시작되기 전에 실행될 메서드를 표시합니다.
+- `@after_kickoff`: (옵션) 크루가 종료된 후에 실행될 메서드를 표시합니다.
+
+이러한 데코레이터들은 크루의 구조를 구성하는 데 도움이 되며, 에이전트와 태스크를 수동으로 나열하지 않아도 자동으로 수집할 수 있도록 해줍니다.
+
+### 직접 코드 정의 (대안)
+
+또는 YAML 구성 파일을 사용하지 않고 코드에서 직접 crew를 정의할 수 있습니다.
+
+```python code
+from crewai import Agent, Crew, Task, Process
+from crewai_tools import YourCustomTool
+
+class YourCrewName:
+    def agent_one(self) -> Agent:
+        return Agent(
+            role="Data Analyst",
+            goal="Analyze data trends in the market",
+            backstory="An experienced data analyst with a background in economics",
+            verbose=True,
+            tools=[YourCustomTool()]
+        )
+
+    def agent_two(self) -> Agent:
+        return Agent(
+            role="Market Researcher",
+            goal="Gather information on market dynamics",
+            backstory="A diligent researcher with a keen eye for detail",
+            verbose=True
+        )
+
+    def task_one(self) -> Task:
+        return Task(
+            description="Collect recent market data and identify trends.",
+            expected_output="A report summarizing key trends in the market.",
+            agent=self.agent_one()
+        )
+
+    def task_two(self) -> Task:
+        return Task(
+            description="Research factors affecting market dynamics.",
+            expected_output="An analysis of factors influencing the market.",
+            agent=self.agent_two()
+        )
+
+    def crew(self) -> Crew:
+        return Crew(
+            agents=[self.agent_one(), self.agent_two()],
+            tasks=[self.task_one(), self.task_two()],
+            process=Process.sequential,
+            verbose=True
+        )
+```
+
+위 코드를 실행하는 방법:
+
+```python code
+YourCrewName().crew().kickoff(inputs={})
+```
+
+이 예시에서:
+
+- 에이전트와 태스크는 데코레이터 없이 클래스 내에서 직접 정의됩니다.
+- 에이전트와 태스크 목록을 수동으로 생성하고 관리합니다.
+- 이 방식은 더 많은 제어를 제공하지만, 대규모 프로젝트의 경우 유지보수가 어려울 수 있습니다.
+
+## Crew Output
+
+CrewAI 프레임워크에서 crew의 출력은 `CrewOutput` 클래스 내에 캡슐화되어 있습니다.  
+이 클래스는 crew 실행 결과를 구조화된 방식으로 접근할 수 있도록 하며, 원시 문자열, JSON, Pydantic 모델과 같은 다양한 형식을 포함합니다.  
+`CrewOutput`에는 최종 task 출력 결과, 토큰 사용량, 그리고 개별 task 출력 결과가 포함됩니다.
+
+### Crew 출력 속성
+
+| 속성             | 매개변수         | 타입                         | 설명                                                                                       |
+| :--------------- | :--------------- | :--------------------------- | :----------------------------------------------------------------------------------------- |
+| **Raw**          | `raw`            | `str`                        | crew의 원시 출력값입니다. 출력의 기본 형식입니다.                                           |
+| **Pydantic**     | `pydantic`       | `Optional[BaseModel]`        | crew의 구조화된 출력을 나타내는 Pydantic 모델 객체입니다.                                   |
+| **JSON Dict**    | `json_dict`      | `Optional[Dict[str, Any]]`   | crew의 JSON 출력을 나타내는 딕셔너리입니다.                                                |
+| **Tasks Output** | `tasks_output`   | `List[TaskOutput]`           | crew 내 각 작업의 출력을 나타내는 `TaskOutput` 객체의 리스트입니다.                        |
+| **Token Usage**  | `token_usage`    | `Dict[str, Any]`             | 실행 중 언어 모델의 성능에 대한 통찰을 제공하는 토큰 사용 요약 정보입니다.                 |
+
+### Crew 출력 메서드 및 속성
+
+| 메서드/속성      | 설명                                                                                               |
+| :-------------- | :------------------------------------------------------------------------------------------------ |
+| **json**        | 출력 형식이 JSON인 경우 crew 출력의 JSON 문자열 표현을 반환합니다.                                 |
+| **to_dict**     | JSON 및 Pydantic 출력을 사전으로 변환합니다.                                                      |
+| \***\*str\*\*** | crew 출력의 문자열 표현을 반환합니다. 우선순위는 Pydantic, 그 다음 JSON, 마지막으로 raw입니다.      |
+
+### Crew 출력 접근하기
+
+crew가 실행된 후에는 `Crew` 객체의 `output` 속성을 통해 출력값에 접근할 수 있습니다. `CrewOutput` 클래스는 이 출력값을 다루고 표시하는 다양한 방법을 제공합니다.
+
+#### 예시
+
+```python Code
+# Example crew execution
+crew = Crew(
+    agents=[research_agent, writer_agent],
+    tasks=[research_task, write_article_task],
+    verbose=True
+)
+
+crew_output = crew.kickoff()
+
+# Accessing the crew output
+print(f"Raw Output: {crew_output.raw}")
+if crew_output.json_dict:
+    print(f"JSON Output: {json.dumps(crew_output.json_dict, indent=2)}")
+if crew_output.pydantic:
+    print(f"Pydantic Output: {crew_output.pydantic}")
+print(f"Tasks Output: {crew_output.tasks_output}")
+print(f"Token Usage: {crew_output.token_usage}")
+```
+
+## 크루 로그 접근하기
+
+`output_log_file`을 `True(Boolean)` 또는 `file_name(str)`로 설정하면 크루 실행의 실시간 로그를 볼 수 있습니다. 이벤트 로그는 `file_name.txt`와 `file_name.json` 두 가지 형식 모두를 지원합니다.
+`True(Boolean)`로 설정할 경우에는 `logs.txt`로 저장됩니다.
+
+`output_log_file`이 `False(Boolean)` 또는 `None`으로 설정된 경우에는 로그가 저장되지 않습니다.
+
+```python Code
+# 크루 로그 저장하기
+crew = Crew(output_log_file = True)  # 로그는 logs.txt로 저장됩니다
+crew = Crew(output_log_file = file_name)  # 로그는 file_name.txt로 저장됩니다
+crew = Crew(output_log_file = file_name.txt)  # 로그는 file_name.txt로 저장됩니다
+crew = Crew(output_log_file = file_name.json)  # 로그는 file_name.json으로 저장됩니다
+```
+
+## 메모리 활용
+
+crew는 메모리(단기, 장기 및 엔티티 메모리)를 활용하여 시간이 지남에 따라 실행 및 학습을 향상시킬 수 있습니다. 이 기능을 통해 crew는 실행 메모리를 저장하고 회상할 수 있어, 의사결정 및 작업 실행 전략에 도움이 됩니다.
+
+## 캐시 활용
+
+캐시는 도구 실행 결과를 저장하는 데 사용될 수 있으며, 동일한 작업을 반복 실행할 필요를 줄여 프로세스의 효율성을 높입니다.
+
+## Crew 사용 메트릭
+
+crew 실행 후, `usage_metrics` 속성에 접근하여 crew가 실행한 모든 작업에 대한 언어 모델(LLM) 사용 메트릭을 확인할 수 있습니다. 이를 통해 운영 효율성과 개선이 필요한 영역에 대한 인사이트를 얻을 수 있습니다.
+
+```python Code
+# Access the crew's usage metrics
+crew = Crew(agents=[agent1, agent2], tasks=[task1, task2])
+crew.kickoff()
+print(crew.usage_metrics)
+```
+
+## Crew 실행 프로세스
+
+- **순차적 프로세스**: 작업이 하나씩 차례로 실행되어 linear flow의 작업 흐름을 제공합니다.
+- **계층적 프로세스**: 매니저 agent가 crew를 조정하여 작업을 위임하고 결과를 검증한 후 다음 단계로 이동합니다. **참고**: 이 프로세스에는 `manager_llm` 또는 `manager_agent`가 필요하며, 프로세스 flow 검증을 위해 필수적입니다.
+
+### 크루 시작하기
+
+크루가 구성되면, `kickoff()` 메서드를 사용하여 워크플로를 시작하세요. 이렇게 하면 정의된 프로세스 플로우에 따라 실행 과정이 시작됩니다.
+
+```python Code
+# Start the crew's task execution
+result = my_crew.kickoff()
+print(result)
+```
+
+### Crew를 시작하는 다양한 방법
+
+crew가 구성되면, 적절한 시작 방법으로 workflow를 시작하세요. CrewAI는 kickoff 프로세스를 더 잘 제어할 수 있도록 여러 방법을 제공합니다: `kickoff()`, `kickoff_for_each()`, `kickoff_async()`, 그리고 `kickoff_for_each_async()`.
+
+- `kickoff()`: 정의된 process flow에 따라 실행 프로세스를 시작합니다.
+- `kickoff_for_each()`: 입력 이벤트나 컬렉션 내 각 항목에 대해 순차적으로 task를 실행합니다.
+- `kickoff_async()`: 비동기적으로 workflow를 시작합니다.
+- `kickoff_for_each_async()`: 입력 이벤트나 각 항목에 대해 비동기 처리를 활용하여 task를 동시에 실행합니다.
+
+```python Code
+# Start the crew's task execution
+result = my_crew.kickoff()
+print(result)
+
+# Example of using kickoff_for_each
+inputs_array = [{'topic': 'AI in healthcare'}, {'topic': 'AI in finance'}]
+results = my_crew.kickoff_for_each(inputs=inputs_array)
+for result in results:
+    print(result)
+
+# Example of using kickoff_async
+inputs = {'topic': 'AI in healthcare'}
+async_result = await my_crew.kickoff_async(inputs=inputs)
+print(async_result)
+
+# Example of using kickoff_for_each_async
+inputs_array = [{'topic': 'AI in healthcare'}, {'topic': 'AI in finance'}]
+async_results = await my_crew.kickoff_for_each_async(inputs=inputs_array)
+for async_result in async_results:
+    print(async_result)
+```
+
+이러한 메서드는 crew 내에서 task를 관리하고 실행하는 데 유연성을 제공하며, 동기 및 비동기 workflow 모두 필요에 맞게 사용할 수 있도록 지원합니다.
+
+### 특정 Task에서 다시 실행하기
+
+이제 CLI 명령어 `replay`를 사용하여 특정 task에서 다시 실행할 수 있습니다.
+
+CrewAI의 replay 기능을 사용하면 커맨드라인 인터페이스(CLI)를 통해 특정 task에서 다시 실행할 수 있습니다. `crewai replay -t <task_id>` 명령어를 실행하면 replay 과정에서 사용할 `task_id`를 지정할 수 있습니다.
+
+Kickoff은 이제 최신 kickoff에서 반환된 task output을 로컬에 저장하므로, 해당 지점부터 다시 실행할 수 있습니다.
+
+### CLI를 사용하여 특정 작업에서 다시 실행하기
+
+replay 기능을 사용하려면 다음 단계를 따라주세요:
+
+1. 터미널 또는 명령 프롬프트를 엽니다.
+2. CrewAI 프로젝트가 위치한 디렉터리로 이동합니다.
+3. 아래 명령어를 실행합니다:
+
+최신 kickoff 작업 ID를 확인하려면 다음을 사용하세요:
+
+```shell
+crewai log-tasks-outputs
+```
+
+그런 다음, 특정 작업에서 다시 실행하려면 다음을 사용하세요:
+
+```shell
+crewai replay -t <task_id>
+```
+
+이 명령어들을 사용하면 이전에 실행된 작업의 컨텍스트를 유지하면서 최신 kickoff 작업부터 다시 실행할 수 있습니다.

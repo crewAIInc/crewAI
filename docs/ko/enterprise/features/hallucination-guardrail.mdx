@@ -1,0 +1,250 @@
+---
+title: 환각 방어책
+description: "CrewAI 작업에서 AI 환각을 방지하고 감지합니다"
+icon: "shield-check"
+---
+
+## 개요
+
+Hallucination Guardrail은 AI가 생성한 콘텐츠가 사실에 기반하고 환각이 포함되어 있지 않은지 검증하는 엔터프라이즈 기능입니다. 이 기능은 작업 출력물을 참조 컨텍스트와 비교 분석하여, 잠재적으로 환각이 감지되었을 때 상세한 피드백을 제공합니다.
+
+## 환각(Hallucinations)이란 무엇인가요?
+
+AI 환각은 언어 모델이 그럴듯해 보이지만 사실과 다르거나 제공된 맥락에 의해 뒷받침되지 않는 내용을 생성할 때 발생합니다. Hallucination Guardrail은 다음과 같은 방법으로 이러한 문제를 방지합니다:
+
+- 출력물을 참조 맥락과 비교
+- 원본 자료에 대한 충실도 평가
+- 문제 있는 콘텐츠에 대한 상세 피드백 제공
+- 검증 엄격성을 위한 사용자 정의 임계값 지원
+
+## 기본 사용법
+
+### 가드레일 설정하기
+
+```python
+from crewai.tasks.hallucination_guardrail import HallucinationGuardrail
+from crewai import LLM
+
+# Basic usage - will use task's expected_output as context
+guardrail = HallucinationGuardrail(
+    llm=LLM(model="gpt-4o-mini")
+)
+
+# With explicit reference context
+context_guardrail = HallucinationGuardrail(
+    context="AI helps with various tasks including analysis and generation.",
+    llm=LLM(model="gpt-4o-mini")
+)
+```
+
+### 작업에 추가하기
+
+```python
+from crewai import Task
+
+# Create your task with the guardrail
+task = Task(
+    description="Write a summary about AI capabilities",
+    expected_output="A factual summary based on the provided context",
+    agent=my_agent,
+    guardrail=guardrail  # Add the guardrail to validate output
+)
+```
+
+## 고급 구성
+
+### 사용자 지정 임계값 검증
+
+보다 엄격한 검증을 위해 사용자 지정 신뢰성 임계값(0-10 범위)를 설정할 수 있습니다:
+
+```python
+# Strict guardrail requiring high faithfulness score
+strict_guardrail = HallucinationGuardrail(
+    context="Quantum computing uses qubits that exist in superposition states.",
+    llm=LLM(model="gpt-4o-mini"),
+    threshold=8.0  # Requires score >= 8 to pass validation
+)
+```
+
+### 도구 응답 컨텍스트 포함하기
+
+작업에서 도구를 사용할 때 더 정확한 검증을 위해 도구 응답을 포함할 수 있습니다:
+
+```python
+# Guardrail with tool response context
+weather_guardrail = HallucinationGuardrail(
+    context="Current weather information for the requested location",
+    llm=LLM(model="gpt-4o-mini"),
+    tool_response="Weather API returned: Temperature 22°C, Humidity 65%, Clear skies"
+)
+```
+
+## 작동 원리
+
+### 검증 프로세스
+
+1. **컨텍스트 분석**: 가드레일은 작업 결과를 제공된 참조 컨텍스트와 비교합니다.
+2. **정확성 점수 부여**: 내부 평가자를 사용하여 정확성 점수(0-10)를 부여합니다.
+3. **판단 결정**: 콘텐츠가 정확한지 또는 환각이 포함되어 있는지 결정합니다.
+4. **임계값 확인**: 사용자 지정 임계값이 설정된 경우 해당 점수와 비교하여 검증합니다.
+5. **피드백 생성**: 검증에 실패할 때 상세한 사유를 제공합니다.
+
+### 검증 논리
+
+- **기본 모드**: 판정 기반 검증(FAITHFUL vs HALLUCINATED)을 사용함
+- **임계값 모드**: 신뢰성 점수가 지정된 임계값에 도달하거나 이를 초과해야 함
+- **오류 처리**: 평가 오류를 우아하게 처리하고 유익한 피드백을 제공함
+
+## 가드레일 결과
+
+가드레일은 검증 상태를 나타내는 구조화된 결과를 반환합니다:
+
+```python
+# Example of guardrail result structure
+{
+    "valid": False,
+    "feedback": "Content appears to be hallucinated (score: 4.2/10, verdict: HALLUCINATED). The output contains information not supported by the provided context."
+}
+```
+
+### 결과 속성
+
+- **valid**: 출력이 검증을 통과했는지 여부를 나타내는 불리언 값
+- **feedback**: 검증 실패 시 상세 설명. 다음을 포함:
+  - 신뢰도 점수
+  - 판정 분류
+  - 실패의 구체적인 이유
+
+## 작업 시스템과의 통합
+
+### 자동 검증
+
+가드레일이 태스크에 추가되면, 태스크가 완료로 표시되기 전에 출력값이 자동으로 검증됩니다:
+
+```python
+# Task output validation flow
+task_output = agent.execute_task(task)
+validation_result = guardrail(task_output)
+
+if validation_result.valid:
+    # Task completes successfully
+    return task_output
+else:
+    # Task fails with validation feedback
+    raise ValidationError(validation_result.feedback)
+```
+
+### 이벤트 추적
+
+guardrail은 CrewAI의 이벤트 시스템과 통합되어 가시성을 제공합니다:
+
+- **검증 시작됨**: guardrail 평가가 시작될 때
+- **검증 완료됨**: 평가가 결과와 함께 종료될 때
+- **검증 실패**: 평가 중 기술적 오류가 발생할 때
+
+## 모범 사례
+
+### 컨텍스트 가이드라인
+
+<Steps>
+  <Step title="포괄적인 컨텍스트 제공">
+    AI가 출력할 때 기반이 되어야 할 모든 관련 사실 정보를 포함하세요:
+
+    ```python
+    context = """
+    Company XYZ was founded in 2020 and specializes in renewable energy solutions.
+    They have 150 employees and generated $50M revenue in 2023.
+    Their main products include solar panels and wind turbines.
+    """
+    ```
+  </Step>
+
+  <Step title="관련 있는 컨텍스트만 유지하기">
+    혼란을 피하기 위해 작업과 직접적으로 관련된 정보만 포함하세요:
+
+    ```python
+    # Good: Focused context
+    context = "The current weather in New York is 18°C with light rain."
+
+    # Avoid: Unrelated information
+    context = "The weather is 18°C. The city has 8 million people. Traffic is heavy."
+    ```
+  </Step>
+
+  <Step title="컨텍스트를 정기적으로 업데이트하기">
+    참고하는 컨텍스트가 최신이고 정확한 정보를 반영하는지 확인하세요.
+  </Step>
+</Steps>
+
+### 임계값 선택
+
+<Steps>
+  <Step title="기본 검증으로 시작하기">
+    맞춤 임계값 없이 시작하여 기준 성능을 파악합니다.
+  </Step>
+
+  <Step title="요구사항에 따라 조정하기">
+    - **중요 콘텐츠**: 최대 정확도를 위해 임계값 8-10 사용
+    - **일반 콘텐츠**: 균형 잡힌 검증을 위해 임계값 6-7 사용
+    - **창의적 콘텐츠**: 임계값 4-5 또는 기본 판정 기반 검증 사용
+  </Step>
+
+  <Step title="모니터링 및 반복">
+    검증 결과를 추적하고, 오탐/미탐을 기반으로 임계값을 조정합니다.
+  </Step>
+</Steps>
+
+## 성능 고려사항
+
+### 실행 시간에 미치는 영향
+
+- **검증 오버헤드**: 각 가드레일마다 작업당 약 1~3초가 추가됩니다
+- **LLM 효율성**: 평가에는 효율적인 모델을 선택하세요 (예: gpt-4o-mini)
+
+### 비용 최적화
+
+- **모델 선택**: guardrail 평가에는 더 작고 효율적인 모델을 사용하세요
+- **컨텍스트 크기**: 참조 컨텍스트는 간결하면서도 포괄적으로 유지하세요
+- **캐싱**: 반복적인 콘텐츠의 검증 결과를 캐싱하는 것을 고려하세요
+
+## 문제 해결
+
+<Accordion title="검증이 항상 실패함">
+  **가능한 원인:**
+  - 컨텍스트가 너무 제한적이거나 작업 결과와 관련이 없음
+  - 임계값이 콘텐츠 유형에 비해 너무 높게 설정됨
+  - 참조 컨텍스트에 오래된 정보가 포함되어 있음
+
+  **해결 방법:**
+  - 작업 요구사항에 맞게 컨텍스트를 검토하고 업데이트하세요
+  - 임계값을 낮추거나 기본 판정 기반 검증을 사용하세요
+  - 컨텍스트가 최신이며 정확한지 확인하세요
+</Accordion>
+
+<Accordion title="오탐 (유효한 콘텐츠가 무효로 판정됨)">
+  **가능한 원인:**
+  - 창의적이거나 해석적인 작업에 임계값이 너무 높음
+  - 컨텍스트가 결과의 모든 유효한 측면을 포함하지 않음
+  - 평가 모델이 과도하게 보수적임
+
+  **해결 방법:**
+  - 임계값을 낮추거나 기본 검증을 사용하세요
+  - 폭넓은 허용 가능한 콘텐츠를 포함하도록 컨텍스트를 확장하세요
+  - 다른 평가 모델로 테스트하세요
+</Accordion>
+
+<Accordion title="평가 오류">
+  **가능한 원인:**
+  - 네트워크 연결 문제
+  - LLM 모델 사용 불가 또는 속도 제한
+  - 잘못된 형식의 작업 출력 또는 컨텍스트
+
+  **해결 방법:**
+  - 네트워크 연결 및 LLM 서비스 상태를 확인하세요
+  - 일시적 오류에 대해 재시도 로직을 구현하세요
+  - guardrail 평가 전에 작업 출력 형식을 검증하세요
+</Accordion>
+
+<Card title="도움이 필요하신가요?" icon="headset" href="mailto:support@crewai.com">
+  환각 guardrail 구성 또는 문제 해결에 도움이 필요하시면 지원팀에 문의하세요.
+</Card>

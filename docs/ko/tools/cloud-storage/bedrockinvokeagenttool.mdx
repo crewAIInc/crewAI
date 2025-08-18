@@ -1,0 +1,187 @@
+---
+title: Bedrock Invoke Agent 도구
+description: CrewAI 에이전트가 Amazon Bedrock 에이전트를 호출하고, 워크플로우 내에서 그 기능을 활용할 수 있도록 합니다
+icon: aws
+---
+
+# `BedrockInvokeAgentTool`
+
+`BedrockInvokeAgentTool`은 CrewAI agent가 Amazon Bedrock Agent를 호출하여 워크플로우 내에서 해당 기능을 활용할 수 있도록 해줍니다.
+
+## 설치
+
+```bash
+uv pip install 'crewai[tools]'
+```
+
+## 요구 사항
+
+- AWS 자격 증명이 구성되어 있어야 합니다(AWS CLI 또는 환경 변수 사용)
+- `boto3` 및 `python-dotenv` 패키지
+- Amazon Bedrock Agents에 대한 액세스 권한
+
+## 사용법
+
+CrewAI agent와 함께 이 도구를 사용하는 방법은 다음과 같습니다:
+
+```python {2, 4-8}
+from crewai import Agent, Task, Crew
+from crewai_tools.aws.bedrock.agents.invoke_agent_tool import BedrockInvokeAgentTool
+
+# Initialize the tool
+agent_tool = BedrockInvokeAgentTool(
+    agent_id="your-agent-id",
+    agent_alias_id="your-agent-alias-id"
+)
+
+# Create a CrewAI agent that uses the tool
+aws_expert = Agent(
+    role='AWS Service Expert',
+    goal='Help users understand AWS services and quotas',
+    backstory='I am an expert in AWS services and can provide detailed information about them.',
+    tools=[agent_tool],
+    verbose=True
+)
+
+# Create a task for the agent
+quota_task = Task(
+    description="Find out the current service quotas for EC2 in us-west-2 and explain any recent changes.",
+    agent=aws_expert
+)
+
+# Create a crew with the agent
+crew = Crew(
+    agents=[aws_expert],
+    tasks=[quota_task],
+    verbose=2
+)
+
+# Run the crew
+result = crew.kickoff()
+print(result)
+```
+
+## 도구 인수
+
+| 인수 | 타입 | 필수 여부 | 기본값 | 설명 |
+|:---------|:-----|:---------|:--------|:------------|
+| **agent_id** | `str` | 예 | 없음 | Bedrock agent의 고유 식별자 |
+| **agent_alias_id** | `str` | 예 | 없음 | agent alias의 고유 식별자 |
+| **session_id** | `str` | 아니오 | timestamp | 세션의 고유 식별자 |
+| **enable_trace** | `bool` | 아니오 | False | 디버깅을 위한 trace 활성화 여부 |
+| **end_session** | `bool` | 아니오 | False | 호출 후 세션 종료 여부 |
+| **description** | `str` | 아니오 | 없음 | 도구에 대한 사용자 지정 설명 |
+
+## 환경 변수
+
+```bash
+BEDROCK_AGENT_ID=your-agent-id           # Alternative to passing agent_id
+BEDROCK_AGENT_ALIAS_ID=your-agent-alias-id # Alternative to passing agent_alias_id
+AWS_REGION=your-aws-region               # Defaults to us-west-2
+AWS_ACCESS_KEY_ID=your-access-key        # Required for AWS authentication
+AWS_SECRET_ACCESS_KEY=your-secret-key    # Required for AWS authentication
+```
+
+## 고급 사용법
+
+### 세션 관리가 포함된 다중 에이전트 워크플로우
+
+```python {2, 4-22}
+from crewai import Agent, Task, Crew, Process
+from crewai_tools.aws.bedrock.agents.invoke_agent_tool import BedrockInvokeAgentTool
+
+# Initialize tools with session management
+initial_tool = BedrockInvokeAgentTool(
+    agent_id="your-agent-id",
+    agent_alias_id="your-agent-alias-id",
+    session_id="custom-session-id"
+)
+
+followup_tool = BedrockInvokeAgentTool(
+    agent_id="your-agent-id",
+    agent_alias_id="your-agent-alias-id",
+    session_id="custom-session-id"
+)
+
+final_tool = BedrockInvokeAgentTool(
+    agent_id="your-agent-id",
+    agent_alias_id="your-agent-alias-id",
+    session_id="custom-session-id",
+    end_session=True
+)
+
+# Create agents for different stages
+researcher = Agent(
+    role='AWS Service Researcher',
+    goal='Gather information about AWS services',
+    backstory='I am specialized in finding detailed AWS service information.',
+    tools=[initial_tool]
+)
+
+analyst = Agent(
+    role='Service Compatibility Analyst',
+    goal='Analyze service compatibility and requirements',
+    backstory='I analyze AWS services for compatibility and integration possibilities.',
+    tools=[followup_tool]
+)
+
+summarizer = Agent(
+    role='Technical Documentation Writer',
+    goal='Create clear technical summaries',
+    backstory='I specialize in creating clear, concise technical documentation.',
+    tools=[final_tool]
+)
+
+# Create tasks
+research_task = Task(
+    description="Find all available AWS services in us-west-2 region.",
+    agent=researcher
+)
+
+analysis_task = Task(
+    description="Analyze which services support IPv6 and their implementation requirements.",
+    agent=analyst
+)
+
+summary_task = Task(
+    description="Create a summary of IPv6-compatible services and their key features.",
+    agent=summarizer
+)
+
+# Create a crew with the agents and tasks
+crew = Crew(
+    agents=[researcher, analyst, summarizer],
+    tasks=[research_task, analysis_task, summary_task],
+    process=Process.sequential,
+    verbose=2
+)
+
+# Run the crew
+result = crew.kickoff()
+```
+
+## 사용 사례
+
+### 하이브리드 멀티 에이전트 협업
+- CrewAI 에이전트가 AWS에서 서비스로 실행되는 관리형 Bedrock 에이전트와 협력하는 워크플로우를 생성합니다.
+- 민감한 데이터 처리가 AWS 환경 내에서 이루어지면서, 다른 에이전트는 외부에서 작동하는 시나리오를 구현합니다.
+- 온프레미스 CrewAI 에이전트와 클라우드 기반 Bedrock 에이전트를 연결하여 분산 지능 워크플로우를 실현합니다.
+
+### 데이터 주권 및 준수
+- 데이터에 민감한 에이전틱 워크플로우를 AWS 환경 내에서 유지하면서, 외부 CrewAI 에이전트가 작업을 오케스트레이션할 수 있도록 허용합니다
+- 민감한 정보를 오직 귀하의 AWS 계정 내에서 처리함으로써 데이터 보관 위치 요건을 준수합니다
+- 일부 에이전트가 귀 조직의 비공개 데이터에 접근할 수 없는 안전한 다중 에이전트 협업을 가능하게 합니다
+
+### 원활한 AWS 서비스 통합
+- 복잡한 통합 코드를 작성하지 않고도 Amazon Bedrock Actions를 통해 모든 AWS 서비스에 액세스할 수 있습니다.
+- CrewAI 에이전트가 자연어 요청을 통해 AWS 서비스와 상호작용할 수 있습니다.
+- Bedrock Knowledge Bases, Lambda 등과 같은 AWS 서비스와 상호작용할 수 있도록 사전 구축된 Bedrock 에이전트 기능을 활용할 수 있습니다.
+
+### 확장 가능한 하이브리드 에이전트 아키텍처
+- 계산 집약적인 작업은 관리형 Bedrock 에이전트에 오프로드하고, 경량 작업은 CrewAI에서 실행
+- 로컬 CrewAI 에이전트와 클라우드 기반 Bedrock 에이전트 간에 워크로드를 분산하여 에이전트 처리를 확장
+
+### 조직 간 에이전트 협업
+- 귀 조직의 CrewAI 에이전트와 파트너 조직의 Bedrock 에이전트 간의 안전한 협업을 지원합니다
+- 민감한 데이터를 노출하지 않고도 Bedrock 에이전트의 외부 전문 지식을 워크플로우에 통합할 수 있습니다
+- 보안 및 데이터 통제를 유지하면서 조직 경계를 넘는 에이전트 생태계를 구축합니다

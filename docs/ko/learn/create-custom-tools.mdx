@@ -1,0 +1,66 @@
+---
+title: 커스텀 도구 생성
+description: CrewAI 프레임워크 내에서 커스텀 도구를 제작, 사용 및 관리하는 종합 가이드로, 신규 기능과 오류 처리를 포함합니다.
+icon: hammer
+---
+
+## CrewAI에서 툴 생성 및 활용
+
+이 가이드는 CrewAI 프레임워크를 위한 커스텀 툴을 생성하는 방법과 최신 기능(툴 위임, 오류 처리, 동적 툴 호출 등)을 통합하여 이러한 툴을 효율적으로 관리하고 활용하는 방법에 대해 자세히 안내합니다. 또한 협업 툴의 중요성을 강조하며, 에이전트가 다양한 작업을 수행할 수 있도록 지원합니다.
+
+### `BaseTool` 서브클래싱
+
+개인화된 툴을 생성하려면 `BaseTool`을 상속받고, 입력 검증을 위한 `args_schema`와 `_run` 메서드를 포함한 필요한 속성들을 정의해야 합니다.
+
+```python Code
+from typing import Type
+from crewai.tools import BaseTool
+from pydantic import BaseModel, Field
+
+class MyToolInput(BaseModel):
+    """Input schema for MyCustomTool."""
+    argument: str = Field(..., description="Description of the argument.")
+
+class MyCustomTool(BaseTool):
+    name: str = "Name of my tool"
+    description: str = "What this tool does. It's vital for effective utilization."
+    args_schema: Type[BaseModel] = MyToolInput
+
+    def _run(self, argument: str) -> str:
+        # Your tool's logic here
+        return "Tool's result"
+```
+
+### `tool` 데코레이터 사용하기
+
+또는 tool 데코레이터 `@tool`을 사용할 수 있습니다. 이 방법은 함수 내에서 도구의 속성과 기능을 직접 정의할 수 있도록 하며, 귀하의 필요에 맞춘 특화된 도구를 간결하고 효율적으로 생성할 수 있는 방법을 제공합니다.
+
+```python Code
+from crewai.tools import tool
+
+@tool("Tool Name")
+def my_simple_tool(question: str) -> str:
+    """Tool description for clarity."""
+    # Tool logic here
+    return "Tool output"
+```
+
+### 도구를 위한 캐시 함수 정의하기
+
+도구의 성능을 캐싱으로 최적화하려면, `cache_function` 속성을 사용하여 사용자 맞춤 캐싱 전략을 정의할 수 있습니다.
+
+```python Code
+@tool("Tool with Caching")
+def cached_tool(argument: str) -> str:
+    """Tool functionality description."""
+    return "Cacheable result"
+
+def my_cache_strategy(arguments: dict, result: str) -> bool:
+    # Define custom caching logic
+    return True if some_condition else False
+
+cached_tool.cache_function = my_cache_strategy
+```
+
+이 가이드라인을 준수하고 새로운 기능과 협업 도구를 도구 생성 및 관리 프로세스에 통합함으로써,
+CrewAI 프레임워크의 모든 기능을 활용할 수 있으며, AI agent의 개발 경험과 효율성을 모두 높일 수 있습니다.

@@ -67,11 +67,9 @@ from .memory_events import (
 
 # events
 from .event_listener import EventListener
-from .third_party.agentops_listener import agentops_listener
 
 __all__ = [
     "EventListener",
-    "agentops_listener",
     "CrewAIEventsBus",
     "crewai_event_bus",
     "AgentExecutionStartedEvent",
@@ -105,7 +103,6 @@ __all__ = [
     "MemoryRetrievalStartedEvent",
     "MemoryRetrievalCompletedEvent",
     "EventListener",
-    "agentops_listener",
     "CrewKickoffStartedEvent",
     "CrewKickoffCompletedEvent",
     "CrewKickoffFailedEvent",

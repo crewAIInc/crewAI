@@ -65,8 +65,8 @@ from crewai.utilities.events.memory_events import (
     MemorySaveCompletedEvent,
     MemorySaveFailedEvent,
 )
-from .interfaces import TraceSender
-from crewai.cli.authentication.token import get_auth_token
+
+from crewai.cli.authentication.token import AuthError, get_auth_token
 from crewai.cli.version import get_crewai_version
 
 
@@ -75,13 +75,12 @@ class TraceCollectionListener(BaseEventListener):
     Trace collection listener that orchestrates trace collection
     """
 
-    trace_enabled: bool = False
     complex_events = ["task_started", "llm_call_started", "llm_call_completed"]
 
     _instance = None
     _initialized = False
 
-    def __new__(cls, batch_manager=None, trace_sender=None):
+    def __new__(cls, batch_manager=None):
         if cls._instance is None:
             cls._instance = super().__new__(cls)
         return cls._instance
@@ -89,26 +88,21 @@ class TraceCollectionListener(BaseEventListener):
     def __init__(
         self,
         batch_manager: Optional[TraceBatchManager] = None,
-        trace_sender: Optional[TraceSender] = None,
     ):
         if self._initialized:
             return
 
         super().__init__()
         self.batch_manager = batch_manager or TraceBatchManager()
-        self.trace_sender = trace_sender or TraceSender()
-        self.trace_enabled = self._check_trace_enabled()
         self._initialized = True
 
-    def _check_trace_enabled(self) -> bool:
+    def _check_authenticated(self) -> bool:
         """Check if tracing should be enabled"""
-        auth_token = get_auth_token()
-        if not auth_token:
+        try:
+            res = bool(get_auth_token())
+            return res
+        except AuthError:
             return False
-
-        return os.getenv("CREWAI_TRACING_ENABLED", "false").lower() == "true" or bool(
-            os.getenv("CREWAI_USER_TOKEN")
-        )
 
     def _get_user_context(self) -> Dict[str, str]:
         """Extract user context for tracing"""
@@ -121,8 +115,6 @@ class TraceCollectionListener(BaseEventListener):
 
     def setup_listeners(self, crewai_event_bus):
         """Setup event listeners - delegates to specific handlers"""
-        if not self.trace_enabled:
-            return
 
         self._register_flow_event_handlers(crewai_event_bus)
         self._register_context_event_handlers(crewai_event_bus)
@@ -156,7 +148,7 @@ class TraceCollectionListener(BaseEventListener):
         @event_bus.on(FlowFinishedEvent)
         def on_flow_finished(source, event):
             self._handle_trace_event("flow_finished", source, event)
-            self._send_batch()
+            self.batch_manager.finalize_batch()
 
         @event_bus.on(FlowPlotEvent)
         def on_flow_plot(source, event):
@@ -168,18 +160,18 @@ class TraceCollectionListener(BaseEventListener):
         @event_bus.on(CrewKickoffStartedEvent)
         def on_crew_started(source, event):
             if not self.batch_manager.is_batch_initialized():
-                self._initialize_batch(source, event)
+                self._initialize_crew_batch(source, event)
             self._handle_trace_event("crew_kickoff_started", source, event)
 
         @event_bus.on(CrewKickoffCompletedEvent)
         def on_crew_completed(source, event):
             self._handle_trace_event("crew_kickoff_completed", source, event)
-            self._send_batch()
+            self.batch_manager.finalize_batch(ephemeral=True)
 
         @event_bus.on(CrewKickoffFailedEvent)
         def on_crew_failed(source, event):
             self._handle_trace_event("crew_kickoff_failed", source, event)
-            self._send_batch()
+            self.batch_manager.finalize_batch()
 
         @event_bus.on(TaskStartedEvent)
         def on_task_started(source, event):
@@ -288,7 +280,7 @@ class TraceCollectionListener(BaseEventListener):
         def on_agent_reasoning_failed(source, event):
             self._handle_action_event("agent_reasoning_failed", source, event)
 
-    def _initialize_batch(self, source: Any, event: Any):
+    def _initialize_crew_batch(self, source: Any, event: Any):
         """Initialize trace batch"""
         user_context = self._get_user_context()
         execution_metadata = {
@@ -297,19 +289,32 @@ class TraceCollectionListener(BaseEventListener):
             "crewai_version": get_crewai_version(),
         }
 
-        self.batch_manager.initialize_batch(user_context, execution_metadata)
+        self._initialize_batch(user_context, execution_metadata)
 
     def _initialize_flow_batch(self, source: Any, event: Any):
         """Initialize trace batch for Flow execution"""
         user_context = self._get_user_context()
         execution_metadata = {
-            "flow_name": getattr(source, "__class__.__name__", "Unknown Flow"),
+            "flow_name": getattr(event, "flow_name", "Unknown Flow"),
             "execution_start": event.timestamp if hasattr(event, "timestamp") else None,
             "crewai_version": get_crewai_version(),
             "execution_type": "flow",
         }
 
-        self.batch_manager.initialize_batch(user_context, execution_metadata)
+        self._initialize_batch(user_context, execution_metadata)
+
+    def _initialize_batch(
+        self, user_context: Dict[str, str], execution_metadata: Dict[str, Any]
+    ):
+        """Initialize trace batch if ephemeral"""
+        if not self._check_authenticated():
+            self.batch_manager.initialize_batch(
+                user_context, execution_metadata, use_ephemeral=True
+            )
+        else:
+            self.batch_manager.initialize_batch(
+                user_context, execution_metadata, use_ephemeral=False
+            )
 
     def _handle_trace_event(self, event_type: str, source: Any, event: Any):
         """Generic handler for context end events"""
@@ -332,14 +337,6 @@ class TraceCollectionListener(BaseEventListener):
         trace_event = self._create_trace_event(event_type, source, event)
         self.batch_manager.add_event(trace_event)
 
-    def _send_batch(self):
-        """Send finalized batch using the configured sender"""
-        batch = self.batch_manager.finalize_batch()
-        if batch:
-            success = self.trace_sender.send_batch(batch)
-            if not success:
-                print("⚠️  Failed to send trace batch")
-
     def _create_trace_event(
         self, event_type: str, source: Any, event: Any
     ) -> TraceEvent:
@@ -360,20 +357,15 @@ class TraceCollectionListener(BaseEventListener):
         elif event_type == "task_started":
             return {
                 "task_description": event.task.description,
+                "expected_output": event.task.expected_output,
                 "task_name": event.task.name,
                 "context": event.context,
                 "agent": source.agent.role,
             }
         elif event_type == "llm_call_started":
-            return {
-                **self._safe_serialize_to_dict(event),
-                "messages": self._truncate_messages(event.messages),
-            }
+            return self._safe_serialize_to_dict(event)
         elif event_type == "llm_call_completed":
-            return {
-                **self._safe_serialize_to_dict(event),
-                "messages": self._truncate_messages(event.messages),
-            }
+            return self._safe_serialize_to_dict(event)
         else:
             return {
                 "event_type": event_type,
@@ -396,7 +388,7 @@ class TraceCollectionListener(BaseEventListener):
             return {"serialization_error": str(e), "object_type": type(obj).__name__}
 
     # TODO: move to utils
-    def _truncate_messages(self, messages, max_content_length=200, max_messages=5):
+    def _truncate_messages(self, messages, max_content_length=500, max_messages=5):
         """Truncate message content and limit number of messages"""
         if not messages or not isinstance(messages, list):
             return messages

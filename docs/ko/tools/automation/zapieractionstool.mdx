@@ -1,0 +1,56 @@
+---
+title: Zapier 액션 도구
+description: ZapierActionsAdapter는 Zapier 액션을 CrewAI 도구로 노출하여 자동화를 지원합니다.
+icon: bolt
+---
+
+# `ZapierActionsAdapter`
+
+## 설명
+
+Zapier 어댑터를 사용하여 Zapier 작업을 CrewAI 도구로 나열하고 호출할 수 있습니다. 이를 통해 에이전트가 수천 개의 앱에서 자동화를 트리거할 수 있습니다.
+
+## 설치
+
+이 어댑터는 `crewai-tools`에 포함되어 있습니다. 별도의 설치가 필요하지 않습니다.
+
+## 환경 변수
+
+- `ZAPIER_API_KEY` (필수): Zapier API 키입니다. https://actions.zapier.com/의 Zapier Actions 대시보드에서 받을 수 있습니다(계정을 생성한 후 API 키를 생성). 어댑터를 생성할 때 `zapier_api_key`를 직접 전달할 수도 있습니다.
+
+## 예시
+
+```python Code
+from crewai import Agent, Task, Crew
+from crewai_tools.adapters.zapier_adapter import ZapierActionsAdapter
+
+adapter = ZapierActionsAdapter(api_key="your_zapier_api_key")
+tools = adapter.tools()
+
+agent = Agent(
+    role="Automator",
+    goal="Execute Zapier actions",
+    backstory="Automation specialist",
+    tools=tools,
+    verbose=True,
+)
+
+task = Task(
+    description="Create a new Google Sheet and add a row using Zapier actions",
+    expected_output="Confirmation with created resource IDs",
+    agent=agent,
+)
+
+crew = Crew(agents=[agent], tasks=[task])
+result = crew.kickoff()
+```
+
+## 참고 사항 및 제한 사항
+
+- 어댑터는 키에 사용할 수 있는 작업을 나열하고 `BaseTool` 래퍼를 동적으로 생성합니다.
+- 작업별 필수 필드는 작업 지침이나 도구 호출에서 처리하세요.
+- 속도 제한은 Zapier 요금제에 따라 다르며, 자세한 내용은 Zapier Actions 문서를 참조하세요.
+
+## 참고 사항
+
+- 어댑터는 사용 가능한 작업을 가져와 `BaseTool` 래퍼를 동적으로 생성합니다.

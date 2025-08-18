@@ -1,0 +1,263 @@
+---
+title: 'CrewAI에서 MCP 서버를 도구로 활용하기'
+description: '`crewai-tools` 라이브러리를 사용하여 MCP 서버를 CrewAI agent에 도구로 통합하는 방법을 알아봅니다.'
+icon: plug
+---
+
+## 개요
+
+[Model Context Protocol](https://modelcontextprotocol.io/introduction) (MCP)는 AI 에이전트가 MCP 서버로 알려진 외부 서비스와 통신함으로써 LLM에 컨텍스트를 제공할 수 있도록 표준화된 방식을 제공합니다.  
+`crewai-tools` 라이브러리는 CrewAI의 기능을 확장하여, 이러한 MCP 서버에서 제공하는 툴을 에이전트에 원활하게 통합할 수 있도록 해줍니다.  
+이를 통해 여러분의 crew는 방대한 기능 에코시스템에 접근할 수 있습니다.
+
+현재 다음과 같은 전송 메커니즘을 지원합니다:
+
+- **Stdio**: 로컬 서버용 (동일 머신 내 프로세스 간 표준 입력/출력을 통한 통신)
+- **Server-Sent Events (SSE)**: 원격 서버용 (서버에서 클라이언트로의 일방향, 실시간 데이터 스트리밍, HTTP 기반)
+- **Streamable HTTP**: 원격 서버용 (유연하며 잠재적으로 양방향 통신이 가능, 주로 SSE를 활용한 서버-클라이언트 스트림 제공, HTTP 기반)
+
+## 비디오 튜토리얼
+CrewAI와 MCP 통합에 대한 종합적인 안내를 위해 이 비디오 튜토리얼을 시청하세요:
+
+<iframe
+  width="100%"
+  height="400"
+  src="https://www.youtube.com/embed/TpQ45lAZh48"
+  title="CrewAI MCP Integration Guide"
+  frameborder="0"
+  style={{ borderRadius: '10px' }}
+  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+  allowfullscreen
+></iframe>
+
+## 설치
+
+`crewai-tools`와 함께 MCP를 사용하기 전에, 아래 명령어를 통해 `mcp` 추가 `crewai-tools` 종속성을 설치해야 합니다:
+
+```shell
+uv pip install 'crewai-tools[mcp]'
+```
+
+## 주요 개념 및 시작하기
+
+`crewai-tools`의 `MCPServerAdapter` 클래스는 MCP 서버에 연결하고 해당 도구들을 CrewAI 에이전트에서 사용할 수 있도록 하는 기본 방법입니다. 다양한 전송 메커니즘을 지원하며 연결 관리를 간소화합니다.
+
+파이썬 컨텍스트 매니저(`with` 문)를 사용하는 것이 `MCPServerAdapter`를 위한 **권장 방법**입니다. 이를 통해 MCP 서버와의 연결 시작 및 종료가 자동으로 처리됩니다.
+
+## 연결 구성
+
+`MCPServerAdapter`는 연결 동작을 맞춤화할 수 있는 여러 구성 옵션을 지원합니다:
+
+- **`connect_timeout`** (선택 사항): MCP 서버에 연결을 설정하기 위해 대기할 최대 시간(초 단위)입니다. 명시하지 않으면 기본값은 30초입니다. 응답 시간이 가변적인 원격 서버에 특히 유용합니다.
+
+```python
+# 사용자 지정 연결 타임아웃 예시
+with MCPServerAdapter(server_params, connect_timeout=60) as tools:
+    # 60초 이내에 연결이 설정되지 않으면 타임아웃 발생
+    pass
+```
+
+```python
+from crewai import Agent
+from crewai_tools import MCPServerAdapter
+from mcp import StdioServerParameters # Stdio 서버용
+
+# 예시 server_params (서버 유형에 따라 하나 선택):
+# 1. Stdio 서버:
+server_params=StdioServerParameters(
+    command="python3",
+    args=["servers/your_server.py"],
+    env={"UV_PYTHON": "3.12", **os.environ},
+)
+
+# 2. SSE 서버:
+server_params = {
+    "url": "http://localhost:8000/sse",
+    "transport": "sse"
+}
+
+# 3. 스트림 가능 HTTP 서버:
+server_params = {
+    "url": "http://localhost:8001/mcp",
+    "transport": "streamable-http"
+}
+
+# 예시 사용법 (server_params 설정 후 주석 해제 및 적용):
+with MCPServerAdapter(server_params, connect_timeout=60) as mcp_tools:
+    print(f"Available tools: {[tool.name for tool in mcp_tools]}")
+
+    my_agent = Agent(
+        role="MCP Tool User",
+        goal="MCP 서버의 도구를 활용합니다.",
+        backstory="나는 MCP 서버에 연결하여 해당 도구를 사용할 수 있습니다.",
+        tools=mcp_tools, # 불러온 도구를 Agent에 전달
+        reasoning=True,
+        verbose=True
+    )
+    # ... 나머지 crew 설정 ...
+```
+이 일반적인 패턴은 도구를 통합하는 방법을 보여줍니다. 각 transport에 맞춘 구체적인 예시는 아래의 상세 가이드를 참고하세요.
+
+## 필터링 도구
+
+도구를 필터링하는 방법에는 두 가지가 있습니다:
+
+1. 딕셔너리 스타일의 인덱싱을 사용하여 특정 도구에 접근하기.
+2. 도구 이름 목록을 `MCPServerAdapter` 생성자에 전달하기.
+
+### 딕셔너리 스타일 인덱싱을 사용하여 특정 도구에 접근하기
+
+```python
+with MCPServerAdapter(server_params, connect_timeout=60) as mcp_tools:
+    print(f"Available tools: {[tool.name for tool in mcp_tools]}")
+
+    my_agent = Agent(
+        role="MCP Tool User",
+        goal="Utilize tools from an MCP server.",
+        backstory="I can connect to MCP servers and use their tools.",
+        tools=[mcp_tools["tool_name"]], # Pass the loaded tools to your agent
+        reasoning=True,
+        verbose=True
+    )
+    # ... rest of your crew setup ...
+```
+
+### `MCPServerAdapter` 생성자에 도구 이름의 리스트를 전달하세요.
+
+```python
+with MCPServerAdapter(server_params, "tool_name", connect_timeout=60) as mcp_tools:
+    print(f"Available tools: {[tool.name for tool in mcp_tools]}")
+
+    my_agent = Agent(
+        role="MCP Tool User",
+        goal="Utilize tools from an MCP server.",
+        backstory="I can connect to MCP servers and use their tools.",
+        tools=mcp_tools, # Pass the loaded tools to your agent
+        reasoning=True,
+        verbose=True
+    )
+    # ... rest of your crew setup ...
+```
+
+## CrewBase와 함께 사용하기
+
+CrewBase 클래스 내에서 MCPServer 도구를 사용하려면 `mcp_tools` 메서드를 사용하세요. 서버 구성은 mcp_server_params 속성을 통해 제공되어야 합니다. 단일 구성 또는 여러 서버 구성을 리스트 형태로 전달할 수 있습니다.
+
+```python
+@CrewBase
+class CrewWithMCP:
+  # ... 에이전트 및 작업 구성 파일 정의 ...
+
+  mcp_server_params = [
+    # 스트리머블 HTTP 서버
+    {
+        "url": "http://localhost:8001/mcp",
+        "transport": "streamable-http"
+    },
+    # SSE 서버
+    {
+        "url": "http://localhost:8000/sse",
+        "transport": "sse"
+    },
+    # StdIO 서버
+    StdioServerParameters(
+        command="python3",
+        args=["servers/your_stdio_server.py"],
+        env={"UV_PYTHON": "3.12", **os.environ},
+    )
+  ]
+
+  @agent
+  def your_agent(self):
+      return Agent(config=self.agents_config["your_agent"], tools=self.get_mcp_tools()) # 모든 사용 가능한 도구 가져오기
+
+    # ... 나머지 crew 설정 ...
+```
+
+`get_mcp_tools` 메서드에 도구 이름의 리스트를 전달하여, 에이전트에 제공되는 도구를 필터링할 수 있습니다.
+
+```python
+@agent
+def another_agent(self):
+    return Agent(
+      config=self.agents_config["your_agent"],
+      tools=self.get_mcp_tools("tool_1", "tool_2") # 특정 도구만 가져오기
+    )
+```
+
+## MCP 통합 탐색
+
+<CardGroup cols={2}>
+  <Card
+    title="Stdio 전송"
+    icon="server"
+    href="/ko/mcp/stdio"
+    color="#3B82F6"
+  >
+    표준 입력/출력을 통해 로컬 MCP 서버에 연결합니다. 스크립트와 로컬 실행 파일에 이상적입니다.
+  </Card>
+  <Card
+    title="SSE 전송"
+    icon="wifi"
+    href="/ko/mcp/sse"
+    color="#10B981"
+  >
+    실시간 데이터 스트리밍을 위해 Server-Sent Events를 사용하여 원격 MCP 서버와 통합합니다.
+  </Card>
+  <Card
+    title="스트림 가능한 HTTP 전송"
+    icon="globe"
+    href="/ko/mcp/streamable-http"
+    color="#F59E0B"
+  >
+    유연한 스트림 가능한 HTTP를 활용하여 원격 MCP 서버와 안정적으로 통신할 수 있습니다.
+  </Card>
+  <Card
+    title="다중 서버 연결"
+    icon="layer-group"
+    href="/ko/mcp/multiple-servers"
+    color="#8B5CF6"
+  >
+    하나의 어댑터를 사용하여 여러 MCP 서버의 도구를 동시에 통합할 수 있습니다.
+  </Card>
+  <Card
+    title="보안 고려사항"
+    icon="lock"
+    href="/ko/mcp/security"
+    color="#EF4444"
+  >
+    에이전트를 안전하게 보호하기 위한 MCP 통합의 중요한 보안 모범 사례를 검토하세요.
+  </Card>
+</CardGroup>
+
+CrewAI와의 MCP 통합에 대한 전체 데모와 예제를 보려면 이 저장소를 확인하세요! 👇
+
+<Card
+title="GitHub 저장소"
+icon="github"
+href="https://github.com/tonykipkemboi/crewai-mcp-demo"
+target="_blank"
+>
+CrewAI MCP 데모
+</Card>
+
+## MCP와 함께 안전하게 사용하기
+<Warning>
+항상 MCP 서버를 사용하기 전에 해당 서버를 신뢰할 수 있는지 확인하세요.
+</Warning>
+
+#### 보안 경고: DNS 리바인딩 공격
+SSE 전송은 적절하게 보안되지 않은 경우 DNS 리바인딩 공격에 취약할 수 있습니다.
+이를 방지하려면 다음을 수행하세요:
+
+1. **항상 Origin 헤더를 검증**하여 들어오는 SSE 연결이 예상한 소스에서 오는지 확인합니다.
+2. **서버를 모든 네트워크 인터페이스**(0.0.0.0)에 바인딩하는 것을 피하고, 로컬에서 실행할 때는 localhost(127.0.0.1)에만 바인딩합니다.
+3. **모든 SSE 연결에 대해 적절한 인증을 구현**합니다.
+
+이러한 보호 조치가 없으면 공격자가 원격 웹사이트에서 로컬 MCP 서버와 상호작용하기 위해 DNS 리바인딩을 사용할 수 있습니다.
+
+자세한 내용은 [Anthropic의 MCP 전송 보안 문서](https://modelcontextprotocol.io/docs/concepts/transports#security-considerations)를 참고하세요.
+
+### 제한 사항
+*   **지원되는 프리미티브**: 현재 `MCPServerAdapter`는 주로 MCP `tools`를 어댑팅하는 기능을 지원합니다. 다른 MCP 프리미티브(예: `prompts` 또는 `resources`)는 현재 이 어댑터를 통해 CrewAI 컴포넌트로 직접 통합되어 있지 않습니다.
+*   **출력 처리**: 어댑터는 일반적으로 MCP tool의 주요 텍스트 출력(예: `.content[0].text`)을 처리합니다. 복잡하거나 멀티모달 출력의 경우 이 패턴에 맞지 않으면 별도의 커스텀 처리가 필요할 수 있습니다.

@@ -1,0 +1,64 @@
+---
+title: 여러 MCP 서버에 연결하기
+description: CrewAI에서 MCPServerAdapter를 사용하여 여러 MCP 서버에 동시에 연결하고 해당 도구를 집계하는 방법을 알아봅니다.
+icon: layer-group
+---
+
+## 개요
+
+`crewai-tools`의 `MCPServerAdapter`는 여러 MCP 서버에 동시에 연결할 수 있게 해줍니다. 이는 에이전트가 서로 다른 서비스나 환경에 분산된 도구에 접근해야 할 때 유용합니다. 어댑터는 지정된 모든 서버에서 도구를 집계하여 CrewAI 에이전트가 사용할 수 있게 합니다.
+
+## 구성
+
+여러 서버에 연결하려면 서버 파라미터 딕셔너리의 리스트를 `MCPServerAdapter`에 제공합니다. 리스트에 있는 각 딕셔너리는 하나의 MCP 서버에 대한 파라미터를 정의해야 합니다.
+
+각 서버에 대해 지원되는 transport 타입은 `stdio`, `sse`, 그리고 `streamable-http`입니다.
+
+```python
+from crewai import Agent, Task, Crew, Process
+from crewai_tools import MCPServerAdapter
+from mcp import StdioServerParameters # Needed for Stdio example
+
+# 여러 MCP 서버의 파라미터 정의
+server_params_list = [
+    # Streamable HTTP 서버
+    {
+        "url": "http://localhost:8001/mcp", 
+        "transport": "streamable-http"
+    },
+    # SSE 서버
+    {
+        "url": "http://localhost:8000/sse",
+        "transport": "sse"
+    },
+    # StdIO 서버
+    StdioServerParameters(
+        command="python3",
+        args=["servers/your_stdio_server.py"],
+        env={"UV_PYTHON": "3.12", **os.environ},
+    )
+]
+
+try:
+    with MCPServerAdapter(server_params_list) as aggregated_tools:
+        print(f"Available aggregated tools: {[tool.name for tool in aggregated_tools]}")
+
+        multi_server_agent = Agent(
+            role="Versatile Assistant",
+            goal="Utilize tools from local Stdio, remote SSE, and remote HTTP MCP servers.",
+            backstory="An AI agent capable of leveraging a diverse set of tools from multiple sources.",
+            tools=aggregated_tools, # All tools are available here
+            verbose=True,
+        )
+
+        ... # Your other agent, tasks, and crew code here
+
+except Exception as e:
+    print(f"Error connecting to or using multiple MCP servers (Managed): {e}")
+    print("Ensure all MCP servers are running and accessible with correct configurations.")
+
+```
+
+## 연결 관리
+
+컨텍스트 매니저(`with` 문)를 사용할 때, `MCPServerAdapter`는 구성된 MCP 서버와의 모든 연결의 라이프사이클(시작 및 종료)을 관리합니다. 이를 통해 리소스 관리를 단순화하고, 컨텍스트를 종료할 때 모든 연결이 적절하게 닫히도록 보장할 수 있습니다.

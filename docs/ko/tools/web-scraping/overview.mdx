@@ -1,0 +1,111 @@
+---
+title: "개요"
+description: "강력한 스크래핑 도구로 웹사이트에서 데이터를 추출하고 브라우저 상호작용을 자동화하세요"
+icon: "face-smile"
+---
+
+이러한 도구들은 에이전트가 웹과 상호작용하고, 웹사이트에서 데이터를 추출하며, 브라우저 기반 작업을 자동화할 수 있도록 해줍니다. 간단한 웹 스크래핑부터 복잡한 브라우저 자동화까지, 이러한 도구들은 모든 웹 상호작용 요구를 충족합니다.
+
+## **사용 가능한 도구**
+
+<CardGroup cols={2}>
+  <Card title="웹사이트 스크래핑 도구" icon="globe" href="/ko/tools/web-scraping/scrapewebsitetool">
+    모든 웹사이트의 콘텐츠를 추출할 수 있는 범용 웹 스크래핑 도구입니다.
+  </Card>
+
+  <Card title="요소 스크래핑 도구" icon="crosshairs" href="/ko/tools/web-scraping/scrapeelementfromwebsitetool">
+    웹 페이지의 특정 요소를 정밀하게 스크래핑할 수 있습니다.
+  </Card>
+
+  <Card title="Firecrawl 크롤 도구" icon="spider" href="/ko/tools/web-scraping/firecrawlcrawlwebsitetool">
+    Firecrawl의 강력한 엔진으로 전체 웹사이트를 체계적으로 크롤링합니다.
+  </Card>
+
+  <Card title="Firecrawl 스크래핑 도구" icon="fire" href="/ko/tools/web-scraping/firecrawlscrapewebsitetool">
+    Firecrawl의 고급 기능을 통한 고성능 웹 스크래핑을 제공합니다.
+  </Card>
+
+  <Card title="Firecrawl 검색 도구" icon="magnifying-glass" href="/ko/tools/web-scraping/firecrawlsearchtool">
+    Firecrawl의 검색 기능을 사용하여 특정 콘텐츠를 찾아 추출합니다.
+  </Card>
+
+  <Card title="Selenium 스크래핑 도구" icon="robot" href="/ko/tools/web-scraping/seleniumscrapingtool">
+    Selenium WebDriver의 기능으로 브라우저 자동화 및 스크래핑을 지원합니다.
+  </Card>
+
+  <Card title="ScrapFly 도구" icon="plane" href="/ko/tools/web-scraping/scrapflyscrapetool">
+    ScrapFly의 프리미엄 스크래핑 서비스를 활용한 전문 웹 스크래핑 도구입니다.
+  </Card>
+
+  <Card title="ScrapGraph 도구" icon="network-wired" href="/ko/tools/web-scraping/scrapegraphscrapetool">
+    복잡한 데이터 관계를 위한 그래프 기반 웹 스크래핑 도구입니다.
+  </Card>
+
+  <Card title="Spider 도구" icon="spider" href="/ko/tools/web-scraping/spidertool">
+    종합적인 웹 크롤링 및 데이터 추출 기능을 제공합니다.
+  </Card>
+
+  <Card title="BrowserBase 도구" icon="browser" href="/ko/tools/web-scraping/browserbaseloadtool">
+    BrowserBase 인프라를 활용한 클라우드 기반 브라우저 자동화 도구입니다.
+  </Card>
+
+  <Card title="HyperBrowser 도구" icon="window-maximize" href="/ko/tools/web-scraping/hyperbrowserloadtool">
+    HyperBrowser의 최적화된 엔진으로 빠른 브라우저 상호작용을 제공합니다.
+  </Card>
+
+  <Card title="Stagehand 도구" icon="hand" href="/ko/tools/web-scraping/stagehandtool">
+    자연어 명령어 기반의 지능형 브라우저 자동화 도구입니다.
+  </Card>
+
+  <Card title="Oxylabs 스크래퍼 도구" icon="globe" href="/ko/tools/web-scraping/oxylabsscraperstool">
+    대규모 웹 데이터에 Oxylabs를 통해 접근합니다.
+  </Card>
+
+  <Card title="Bright Data 도구" icon="spider" href="/ko/tools/web-scraping/brightdata-tools">
+    SERP 검색, 웹 언락커, 데이터셋 API 통합 기능을 지원합니다.
+  </Card>
+</CardGroup>
+
+## **일반적인 사용 사례**
+
+- **데이터 추출**: 제품 정보, 가격, 리뷰 스크래핑
+- **컨텐츠 모니터링**: 웹사이트 및 뉴스 소스의 변경 사항 추적
+- **리드 생성**: 연락처 정보 및 비즈니스 데이터 추출
+- **시장 조사**: 경쟁 정보 및 시장 데이터 수집
+- **테스트 & QA**: 브라우저 테스트 및 검증 워크플로우 자동화
+- **소셜 미디어**: 게시물, 댓글, 소셜 미디어 분석 데이터 추출
+
+## **빠른 시작 예제**
+
+```python
+from crewai_tools import ScrapeWebsiteTool, FirecrawlScrapeWebsiteTool, SeleniumScrapingTool
+
+# Create scraping tools
+simple_scraper = ScrapeWebsiteTool()
+advanced_scraper = FirecrawlScrapeWebsiteTool()
+browser_automation = SeleniumScrapingTool()
+
+# Add to your agent
+agent = Agent(
+    role="Web Research Specialist",
+    tools=[simple_scraper, advanced_scraper, browser_automation],
+    goal="Extract and analyze web data efficiently"
+)
+```
+
+## **스크래핑 모범 사례**
+
+- **robots.txt 준수**: 항상 웹사이트의 스크래핑 정책을 확인하고 따라야 합니다.
+- **요청 속도 제한**: 서버에 과부하를 주지 않도록 요청 간 지연을 구현하세요.
+- **User Agent**: 봇을 식별할 수 있도록 적절한 user agent 문자열을 사용하세요.
+- **법률 준수**: 스크래핑 활동이 서비스 약관을 준수하는지 확인하세요.
+- **오류 처리**: 네트워크 문제 및 차단된 요청에 대해 견고한 오류 처리를 구현하세요.
+- **데이터 품질**: 처리 전에 추출한 데이터를 검증하고 정제하세요.
+
+## **도구 선택 가이드**
+
+- **간단한 작업**: 기본 콘텐츠 추출에는 `ScrapeWebsiteTool`을 사용하세요
+- **JavaScript 기반 사이트**: 동적 콘텐츠에는 `SeleniumScrapingTool`을 사용하세요
+- **확장성 및 성능**: 대량 스크래핑에는 `FirecrawlScrapeWebsiteTool`을 사용하세요
+- **클라우드 인프라**: 확장 가능한 브라우저 자동화에는 `BrowserBaseLoadTool`을 사용하세요
+- **복잡한 워크플로우**: 지능형 브라우저 상호작용에는 `StagehandTool`을 사용하세요

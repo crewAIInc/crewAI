@@ -1,0 +1,312 @@
+---
+title: '이벤트 리스너'
+description: 'CrewAI 이벤트에 연결하여 맞춤형 통합 및 모니터링 구축'
+icon: spinner
+---
+
+## 개요
+
+CrewAI는 강력한 이벤트 시스템을 제공하여 crew 실행 중 발생하는 다양한 이벤트를 수신하고 이에 반응할 수 있도록 합니다. 이 기능을 통해 맞춤형 통합, 모니터링 솔루션, 로깅 시스템 또는 CrewAI의 내부 이벤트에 따라 트리거되어야 하는 기타 모든 기능을 구축할 수 있습니다.
+
+## 작동 방식
+
+CrewAI는 실행 수명 주기 전반에 걸쳐 이벤트를 발생시키는 이벤트 버스 아키텍처를 사용합니다. 이벤트 시스템은 다음과 같은 구성 요소로 구축되어 있습니다:
+
+1. **CrewAIEventsBus**: 이벤트 등록 및 발생을 관리하는 싱글톤 이벤트 버스
+2. **BaseEvent**: 시스템 내 모든 이벤트의 기본 클래스
+3. **BaseEventListener**: 커스텀 이벤트 리스너 생성을 위한 추상 기본 클래스
+
+CrewAI에서 특정 동작(예: Crew가 실행을 시작하거나 Agent가 task를 완료하거나 tool이 사용될 때)이 발생하면, 시스템은 해당 이벤트를 발생시킵니다. 이러한 이벤트에 대한 핸들러를 등록하여 해당 이벤트가 발생할 때 커스텀 코드를 실행할 수 있습니다.
+
+<Note type="info" title="Enterprise Enhancement: Prompt Tracing">
+CrewAI Enterprise는 event 시스템을 활용하여 모든 prompt, completion 및 관련 메타데이터를 추적, 저장 및 시각화하는 내장 Prompt Tracing 기능을 제공합니다. 이 기능을 통해 agent 운영에 대한 강력한 디버깅 기능과 투명성을 얻을 수 있습니다.
+
+![Prompt Tracing Dashboard](/images/enterprise/traces-overview.png)
+
+Prompt Tracing을 통해 다음과 같은 작업이 가능합니다:
+- LLM에 전송된 모든 prompt의 전체 기록 보기
+- token 사용량 및 비용 추적
+- agent reasoning 실패 디버깅
+- 팀 내에서 prompt 시퀀스 공유
+- 다양한 prompt 전략 비교
+- 컴플라이언스 및 감사를 위한 trace 내보내기
+</Note>
+
+## 커스텀 이벤트 리스너 생성하기
+
+커스텀 이벤트 리스너를 생성하려면 다음 단계를 따라야 합니다:
+
+1. `BaseEventListener`를 상속하는 클래스를 생성합니다.
+2. `setup_listeners` 메서드를 구현합니다.
+3. 원하는 이벤트에 대한 핸들러를 등록합니다.
+4. 해당 파일에서 리스너의 인스턴스를 생성합니다.
+
+아래는 커스텀 이벤트 리스너 클래스의 간단한 예시입니다:
+
+```python
+from crewai.utilities.events import (
+    CrewKickoffStartedEvent,
+    CrewKickoffCompletedEvent,
+    AgentExecutionCompletedEvent,
+)
+from crewai.utilities.events.base_event_listener import BaseEventListener
+
+class MyCustomListener(BaseEventListener):
+    def __init__(self):
+        super().__init__()
+
+    def setup_listeners(self, crewai_event_bus):
+        @crewai_event_bus.on(CrewKickoffStartedEvent)
+        def on_crew_started(source, event):
+            print(f"Crew '{event.crew_name}' has started execution!")
+
+        @crewai_event_bus.on(CrewKickoffCompletedEvent)
+        def on_crew_completed(source, event):
+            print(f"Crew '{event.crew_name}' has completed execution!")
+            print(f"Output: {event.output}")
+
+        @crewai_event_bus.on(AgentExecutionCompletedEvent)
+        def on_agent_execution_completed(source, event):
+            print(f"Agent '{event.agent.role}' completed task")
+            print(f"Output: {event.output}")
+```
+
+## 리스너를 올바르게 등록하기
+
+리스너 클래스를 정의하는 것만으로는 충분하지 않습니다. 해당 클래스의 인스턴스를 생성하고 애플리케이션에 임포트되었는지 확인해야 합니다. 이렇게 하면 다음과 같은 효과가 있습니다:
+
+1. 이벤트 핸들러가 이벤트 버스에 등록됩니다.
+2. 리스너 인스턴스가 메모리에 유지됩니다(가비지 컬렉션되지 않음).
+3. 이벤트가 발생할 때 리스너가 활성화됩니다.
+
+### 옵션 1: Crew 또는 Flow 구현에서 가져오기 및 인스턴스화
+
+가장 중요한 것은 Crew 또는 Flow가 정의되고 실행되는 파일에서 리스너의 인스턴스를 생성하는 것입니다.
+
+#### 크루 기반 애플리케이션의 경우
+
+크루 구현 파일 상단에 리스너를 생성하고 임포트하세요:
+
+```python
+# In your crew.py file
+from crewai import Agent, Crew, Task
+from my_listeners import MyCustomListener
+
+# Create an instance of your listener
+my_listener = MyCustomListener()
+
+class MyCustomCrew:
+    # Your crew implementation...
+
+    def crew(self):
+        return Crew(
+            agents=[...],
+            tasks=[...],
+            # ...
+        )
+```
+
+#### 플로우 기반 애플리케이션의 경우
+
+플로우 구현 파일 상단에 리스너를 생성하고 임포트하세요:
+
+```python
+# main.py 또는 flow.py 파일에서
+from crewai.flow import Flow, listen, start
+from my_listeners import MyCustomListener
+
+# 리스너 인스턴스 생성
+my_listener = MyCustomListener()
+
+class MyCustomFlow(Flow):
+    # 플로우 구현...
+
+    @start()
+    def first_step(self):
+        # ...
+```
+
+이렇게 하면 크루 또는 플로우가 실행될 때 리스너가 로드되고 활성화됩니다.
+
+### 옵션 2: 리스너를 위한 패키지 생성
+
+여러 개의 리스너가 있는 경우 등 보다 구조적인 접근 방식을 원한다면 다음과 같이 진행하세요:
+
+1. 리스너를 위한 패키지를 생성합니다:
+
+```
+my_project/
+  ├── listeners/
+  │   ├── __init__.py
+  │   ├── my_custom_listener.py
+  │   └── another_listener.py
+```
+
+2. `my_custom_listener.py`에서 리스너 클래스를 정의하고 인스턴스를 생성합니다:
+
+```python
+# my_custom_listener.py
+from crewai.utilities.events.base_event_listener import BaseEventListener
+# ... import events ...
+
+class MyCustomListener(BaseEventListener):
+    # ... implementation ...
+
+# 리스너 인스턴스 생성
+my_custom_listener = MyCustomListener()
+```
+
+3. `__init__.py`에서 리스너 인스턴스를 임포트하여 로드되도록 합니다:
+
+```python
+# __init__.py
+from .my_custom_listener import my_custom_listener
+from .another_listener import another_listener
+
+# 다른 곳에서 접근이 필요하다면 익스포트할 수도 있습니다
+__all__ = ['my_custom_listener', 'another_listener']
+```
+
+4. Crew나 Flow 파일에서 리스너 패키지를 임포트합니다:
+
+```python
+# crew.py 또는 flow.py 파일 내에서
+import my_project.listeners  # 모든 리스너가 로드됩니다
+
+class MyCustomCrew:
+    # Your crew implementation...
+```
+
+이것이 CrewAI 코드베이스에서 서드파티 이벤트 리스너가 등록되는 방식입니다.
+
+## 사용 가능한 이벤트 유형
+
+CrewAI는 여러분이 청취할 수 있는 다양한 이벤트를 제공합니다:
+
+### Crew 이벤트
+
+- **CrewKickoffStartedEvent**: Crew가 실행을 시작할 때 발생
+- **CrewKickoffCompletedEvent**: Crew가 실행을 완료할 때 발생
+- **CrewKickoffFailedEvent**: Crew가 실행을 완료하지 못할 때 발생
+- **CrewTestStartedEvent**: Crew가 테스트를 시작할 때 발생
+- **CrewTestCompletedEvent**: Crew가 테스트를 완료할 때 발생
+- **CrewTestFailedEvent**: Crew가 테스트를 완료하지 못할 때 발생
+- **CrewTrainStartedEvent**: Crew가 훈련을 시작할 때 발생
+- **CrewTrainCompletedEvent**: Crew가 훈련을 완료할 때 발생
+- **CrewTrainFailedEvent**: Crew가 훈련을 완료하지 못할 때 발생
+
+### 에이전트 이벤트
+
+- **AgentExecutionStartedEvent**: 에이전트가 작업 실행을 시작할 때 발생함
+- **AgentExecutionCompletedEvent**: 에이전트가 작업 실행을 완료할 때 발생함
+- **AgentExecutionErrorEvent**: 에이전트가 실행 도중 오류를 만날 때 발생함
+
+### 작업 이벤트
+
+- **TaskStartedEvent**: 작업이 실행을 시작할 때 발생
+- **TaskCompletedEvent**: 작업이 실행을 완료할 때 발생
+- **TaskFailedEvent**: 작업이 실행을 완료하지 못할 때 발생
+- **TaskEvaluationEvent**: 작업이 평가될 때 발생
+
+### 도구 사용 이벤트
+
+- **ToolUsageStartedEvent**: 도구 실행이 시작될 때 발생함
+- **ToolUsageFinishedEvent**: 도구 실행이 완료될 때 발생함
+- **ToolUsageErrorEvent**: 도구 실행 중 오류가 발생할 때 발생함
+- **ToolValidateInputErrorEvent**: 도구 입력 검증 중 오류가 발생할 때 발생함
+- **ToolExecutionErrorEvent**: 도구 실행 중 오류가 발생할 때 발생함
+- **ToolSelectionErrorEvent**: 도구 선택 시 오류가 발생할 때 발생함
+
+### 지식 이벤트
+
+- **KnowledgeRetrievalStartedEvent**: 지식 검색이 시작될 때 발생
+- **KnowledgeRetrievalCompletedEvent**: 지식 검색이 완료될 때 발생
+- **KnowledgeQueryStartedEvent**: 지식 쿼리가 시작될 때 발생
+- **KnowledgeQueryCompletedEvent**: 지식 쿼리가 완료될 때 발생
+- **KnowledgeQueryFailedEvent**: 지식 쿼리가 실패할 때 발생
+- **KnowledgeSearchQueryFailedEvent**: 지식 검색 쿼리가 실패할 때 발생
+
+### LLM 가드레일 이벤트
+
+- **LLMGuardrailStartedEvent**: 가드레일 검증이 시작될 때 발생합니다. 적용되는 가드레일에 대한 세부 정보와 재시도 횟수를 포함합니다.
+- **LLMGuardrailCompletedEvent**: 가드레일 검증이 완료될 때 발생합니다. 검증의 성공/실패, 결과 및 오류 메시지(있는 경우)에 대한 세부 정보를 포함합니다.
+
+### Flow 이벤트
+
+- **FlowCreatedEvent**: Flow가 생성될 때 발생
+- **FlowStartedEvent**: Flow가 실행을 시작할 때 발생
+- **FlowFinishedEvent**: Flow가 실행을 완료할 때 발생
+- **FlowPlotEvent**: Flow가 플롯될 때 발생
+- **MethodExecutionStartedEvent**: Flow 메서드가 실행을 시작할 때 발생
+- **MethodExecutionFinishedEvent**: Flow 메서드가 실행을 완료할 때 발생
+- **MethodExecutionFailedEvent**: Flow 메서드가 실행을 완료하지 못할 때 발생
+
+### LLM 이벤트
+
+- **LLMCallStartedEvent**: LLM 호출이 시작될 때 발생
+- **LLMCallCompletedEvent**: LLM 호출이 완료될 때 발생
+- **LLMCallFailedEvent**: LLM 호출이 실패할 때 발생
+- **LLMStreamChunkEvent**: 스트리밍 LLM 응답 중 각 청크를 받을 때마다 발생
+
+### 메모리 이벤트
+
+- **MemoryQueryStartedEvent**: 메모리 쿼리가 시작될 때 발생합니다. 쿼리, limit, 선택적 score threshold를 포함합니다.
+- **MemoryQueryCompletedEvent**: 메모리 쿼리가 성공적으로 완료될 때 발생합니다. 쿼리, 결과, limit, score threshold, 쿼리 실행 시간을 포함합니다.
+- **MemoryQueryFailedEvent**: 메모리 쿼리 실행에 실패할 때 발생합니다. 쿼리, limit, score threshold, 오류 메시지를 포함합니다.
+- **MemorySaveStartedEvent**: 메모리 저장 작업이 시작될 때 발생합니다. 저장할 값, 메타데이터, 선택적 agent 역할을 포함합니다.
+- **MemorySaveCompletedEvent**: 메모리 저장 작업이 성공적으로 완료될 때 발생합니다. 저장된 값, 메타데이터, agent 역할, 저장 실행 시간을 포함합니다.
+- **MemorySaveFailedEvent**: 메모리 저장 작업에 실패할 때 발생합니다. 값, 메타데이터, agent 역할, 오류 메시지를 포함합니다.
+- **MemoryRetrievalStartedEvent**: 태스크 프롬프트를 위한 메모리 검색이 시작될 때 발생합니다. 선택적 태스크 ID를 포함합니다.
+- **MemoryRetrievalCompletedEvent**: 태스크 프롬프트를 위한 메모리 검색이 성공적으로 완료될 때 발생합니다. 태스크 ID, 메모리 내용, 검색 실행 시간을 포함합니다.
+
+## 이벤트 핸들러 구조
+
+각 이벤트 핸들러는 두 개의 매개변수를 받습니다:
+
+1. **source**: 이벤트를 발생시킨 객체
+2. **event**: 이벤트별 데이터를 포함하는 이벤트 인스턴스
+
+이벤트 객체의 구조는 이벤트 타입에 따라 다르지만, 모든 이벤트는 `BaseEvent`를 상속하며 다음을 포함합니다:
+
+- **timestamp**: 이벤트가 발생한 시간
+- **type**: 이벤트 타입을 나타내는 문자열 식별자
+
+추가 필드는 이벤트 타입에 따라 다릅니다. 예를 들어, `CrewKickoffCompletedEvent`에는 `crew_name`과 `output` 필드가 포함됩니다.
+
+
+## 고급 사용법: Scoped Handlers
+
+임시 이벤트 처리가 필요한 경우(테스트 또는 특정 작업에 유용함), `scoped_handlers` 컨텍스트 관리자를 사용할 수 있습니다:
+
+```python
+from crewai.utilities.events import crewai_event_bus, CrewKickoffStartedEvent
+
+with crewai_event_bus.scoped_handlers():
+    @crewai_event_bus.on(CrewKickoffStartedEvent)
+    def temp_handler(source, event):
+        print("This handler only exists within this context")
+
+    # Do something that emits events
+
+# 컨텍스트 밖에서는 임시 핸들러가 제거됩니다
+```
+
+## 사용 사례
+
+이벤트 리스너는 다양한 목적으로 사용할 수 있습니다:
+
+1. **로깅 및 모니터링**: Crew의 실행을 추적하고 중요한 이벤트를 기록합니다
+2. **분석**: Crew의 성능과 동작에 대한 데이터를 수집합니다
+3. **디버깅**: 특정 문제를 디버깅하기 위해 임시 리스너를 설정합니다
+4. **통합**: CrewAI를 모니터링 플랫폼, 데이터베이스 또는 알림 서비스와 같은 외부 시스템과 연결합니다
+5. **사용자 정의 동작**: 특정 이벤트에 따라 사용자 정의 동작을 트리거합니다
+
+## 모범 사례
+
+1. **핸들러를 가볍게 유지하세요**: 이벤트 핸들러는 경량이어야 하며, 블로킹 작업을 피해야 합니다.
+2. **오류 처리**: 예외가 메인 실행에 영향을 주지 않도록 이벤트 핸들러에 적절한 오류 처리를 포함하세요.
+3. **정리**: 리스너가 자원을 할당한다면, 이를 적절하게 정리하는지 확인하세요.
+4. **선택적 리스닝**: 실제로 처리해야 하는 이벤트에만 리스닝하세요.
+5. **테스트**: 이벤트 리스너가 예상대로 동작하는지 독립적으로 테스트하세요.
+
+CrewAI의 이벤트 시스템을 활용하면 기능을 확장하고 기존 인프라와 원활하게 통합할 수 있습니다.

@@ -1,0 +1,208 @@
+---
+title: 코드 인터프리터
+description: CodeInterpreterTool은(는) 안전하고 격리된 환경 내에서 Python 3 코드를 실행하도록 설계된 강력한 도구입니다.
+icon: code-simple
+---
+
+# `CodeInterpreterTool`
+
+## 설명
+
+`CodeInterpreterTool`은 CrewAI 에이전트가 자율적으로 생성한 Python 3 코드를 실행할 수 있도록 합니다. 이 기능은 에이전트가 코드를 생성하고, 실행하며, 결과를 얻고, 그 정보를 활용하여 이후의 결정과 행동에 반영할 수 있다는 점에서 특히 유용합니다.
+
+이 도구를 사용하는 방법에는 여러 가지가 있습니다:
+
+### Docker 컨테이너(권장)
+
+이것이 기본 옵션입니다. 코드는 안전하고 격리된 Docker 컨테이너에서 실행되어, 그 내용과 상관없이 안전성을 보장합니다.
+시스템에 Docker가 설치되어 실행 중인지 확인하세요. 설치되어 있지 않다면, [여기](https://docs.docker.com/get-docker/)에서 설치할 수 있습니다.
+
+### 샌드박스 환경
+
+Docker를 사용할 수 없을 경우—설치되어 있지 않거나 어떤 이유로든 접근할 수 없는 경우—코드는 샌드박스라고 불리는 제한된 Python 환경에서 실행됩니다.
+이 환경은 매우 제한적이며, 많은 모듈과 내장 함수들에 대해 엄격한 제한이 있습니다.
+
+### 비안전 실행
+
+**프로덕션 환경에서는 권장하지 않음**
+이 모드는 `sys, os..` 및 유사한 모듈에 대한 위험한 호출을 포함하여 모든 Python 코드를 실행할 수 있게 합니다. [비안전 모드 활성화 방법](/ko/tools/ai-ml/codeinterpretertool#enabling-unsafe-mode)를 확인하세요
+
+## 로깅
+
+`CodeInterpreterTool`은 선택된 실행 전략을 STDOUT에 기록합니다.
+
+## 설치
+
+이 도구를 사용하려면 CrewAI tools 패키지를 설치해야 합니다:
+
+```shell
+pip install 'crewai[tools]'
+```
+
+## 예시
+
+다음 예시는 `CodeInterpreterTool`을 CrewAI agent와 함께 사용하는 방법을 보여줍니다:
+
+```python Code
+from crewai import Agent, Task, Crew, Process
+from crewai_tools import CodeInterpreterTool
+
+# Initialize the tool
+code_interpreter = CodeInterpreterTool()
+
+# Define an agent that uses the tool
+programmer_agent = Agent(
+    role="Python Programmer",
+    goal="Write and execute Python code to solve problems",
+    backstory="An expert Python programmer who can write efficient code to solve complex problems.",
+    tools=[code_interpreter],
+    verbose=True,
+)
+
+# Example task to generate and execute code
+coding_task = Task(
+    description="Write a Python function to calculate the Fibonacci sequence up to the 10th number and print the result.",
+    expected_output="The Fibonacci sequence up to the 10th number.",
+    agent=programmer_agent,
+)
+
+# Create and run the crew
+crew = Crew(
+    agents=[programmer_agent],
+    tasks=[coding_task],
+    verbose=True,
+    process=Process.sequential,
+)
+result = crew.kickoff()
+```
+
+agent를 생성할 때 코드 실행을 직접 활성화할 수도 있습니다:
+
+```python Code
+from crewai import Agent
+
+# Create an agent with code execution enabled
+programmer_agent = Agent(
+    role="Python Programmer",
+    goal="Write and execute Python code to solve problems",
+    backstory="An expert Python programmer who can write efficient code to solve complex problems.",
+    allow_code_execution=True,  # This automatically adds the CodeInterpreterTool
+    verbose=True,
+)
+```
+
+### `unsafe_mode` 활성화
+
+```python Code
+from crewai_tools import CodeInterpreterTool
+
+code = """
+import os
+os.system("ls -la")
+"""
+
+CodeInterpreterTool(unsafe_mode=True).run(code=code)
+```
+
+## 파라미터
+
+`CodeInterpreterTool`은(는) 초기화 시 다음과 같은 파라미터를 허용합니다:
+
+- **user_dockerfile_path**: 선택 사항. 코드 인터프리터 컨테이너에서 사용할 커스텀 Dockerfile의 경로입니다.
+- **user_docker_base_url**: 선택 사항. 컨테이너 실행에 사용할 Docker 데몬의 URL입니다.
+- **unsafe_mode**: 선택 사항. Docker 컨테이너나 샌드박스 대신 코드가 호스트 머신에서 직접 실행될지 여부입니다. 기본값은 `False`입니다. 주의해서 사용하세요!
+- **default_image_tag**: 선택 사항. 기본 Docker 이미지 태그입니다. 기본값은 `code-interpreter:latest`입니다.
+
+에이전트와 함께 이 도구를 사용할 때 에이전트는 다음을 제공해야 합니다:
+
+- **code**: 필수. 실행할 Python 3 코드입니다.
+- **libraries_used**: 선택 사항. 코드에서 사용하여 설치가 필요한 라이브러리들의 목록입니다. 기본값은 `[]`입니다.
+
+## 에이전트 통합 예제
+
+여기 `CodeInterpreterTool`을 CrewAI 에이전트와 통합하는 방법에 대한 좀 더 자세한 예제가 있습니다:
+
+```python Code
+from crewai import Agent, Task, Crew
+from crewai_tools import CodeInterpreterTool
+
+# Initialize the tool
+code_interpreter = CodeInterpreterTool()
+
+# Define an agent that uses the tool
+data_analyst = Agent(
+    role="Data Analyst",
+    goal="Analyze data using Python code",
+    backstory="""You are an expert data analyst who specializes in using Python
+    to analyze and visualize data. You can write efficient code to process
+    large datasets and extract meaningful insights.""",
+    tools=[code_interpreter],
+    verbose=True,
+)
+
+# Create a task for the agent
+analysis_task = Task(
+    description="""
+    Write Python code to:
+    1. Generate a random dataset of 100 points with x and y coordinates
+    2. Calculate the correlation coefficient between x and y
+    3. Create a scatter plot of the data
+    4. Print the correlation coefficient and save the plot as 'scatter.png'
+
+    Make sure to handle any necessary imports and print the results.
+    """,
+    expected_output="The correlation coefficient and confirmation that the scatter plot has been saved.",
+    agent=data_analyst,
+)
+
+# Run the task
+crew = Crew(
+    agents=[data_analyst],
+    tasks=[analysis_task],
+    verbose=True,
+    process=Process.sequential,
+)
+result = crew.kickoff()
+```
+
+## 구현 세부사항
+
+`CodeInterpreterTool`은 코드 실행을 위한 안전한 환경을 만들기 위해 Docker를 사용합니다:
+
+```python Code
+class CodeInterpreterTool(BaseTool):
+    name: str = "Code Interpreter"
+    description: str = "Interprets Python3 code strings with a final print statement."
+    args_schema: Type[BaseModel] = CodeInterpreterSchema
+    default_image_tag: str = "code-interpreter:latest"
+
+    def _run(self, **kwargs) -> str:
+        code = kwargs.get("code", self.code)
+        libraries_used = kwargs.get("libraries_used", [])
+
+        if self.unsafe_mode:
+            return self.run_code_unsafe(code, libraries_used)
+        else:
+            return self.run_code_safety(code, libraries_used)
+```
+
+이 도구는 다음과 같은 단계를 수행합니다:
+1. Docker 이미지가 존재하는지 확인하거나 필요 시 이미지를 빌드합니다
+2. 현재 작업 디렉토리가 마운트된 Docker 컨테이너를 생성합니다
+3. 에이전트가 지정한 필요한 라이브러리를 설치합니다
+4. 컨테이너 내에서 Python 코드를 실행합니다
+5. 코드 실행 결과를 반환합니다
+6. 컨테이너를 중지하고 제거하여 정리합니다
+
+## 보안 고려사항
+
+기본적으로 `CodeInterpreterTool`은 코드를 격리된 Docker 컨테이너에서 실행하며, 이는 하나의 보안 계층을 제공합니다. 그러나 다음과 같은 보안 사항들을 염두에 두어야 합니다:
+
+1. Docker 컨테이너는 현재 작업 디렉토리에 접근할 수 있으므로, 민감한 파일이 잠재적으로 접근될 수 있습니다.
+2. Docker 컨테이너를 사용할 수 없고 코드를 안전하게 실행해야 하는 경우, 샌드박스 환경에서 실행됩니다. 보안상의 이유로 임의의 라이브러리 설치는 허용되지 않습니다.
+3. `unsafe_mode` 매개변수를 사용하면 코드를 호스트 머신에서 직접 실행할 수 있으며, 이는 신뢰할 수 있는 환경에서만 사용해야 합니다.
+4. 에이전트가 임의의 라이브러리를 설치하도록 허용할 때는 주의해야 하며, 악성 코드가 포함될 가능성이 있습니다.
+
+## 결론
+
+`CodeInterpreterTool`은 CrewAI 에이전트가 비교적 안전한 환경에서 Python 코드를 실행할 수 있는 강력한 방법을 제공합니다. 에이전트가 코드를 작성하고 실행할 수 있도록 함으로써, 데이터 분석, 계산 또는 기타 계산 작업이 포함된 작업에서 특히 문제 해결 능력을 크게 확장합니다. 이 도구는 복잡한 연산을 자연어보다 코드로 표현하는 것이 더 효율적인 경우에 작업을 수행해야 하는 에이전트에게 특히 유용합니다.

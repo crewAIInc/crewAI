@@ -1,0 +1,158 @@
+---
+title: "개요"
+description: "포괄적인 가이드와 튜토리얼을 통해 CrewAI 애플리케이션을 빌드하고, 맞춤화하며, 최적화하는 방법을 알아보세요."
+icon: "face-smile"
+---
+
+## CrewAI 배우기
+
+이 섹션은 CrewAI를 마스터하는 데 도움이 되는 종합적인 가이드와 튜토리얼을 제공합니다. 기본 개념부터 고급 기술까지 다루며, 이제 막 시작하는 분이든 기존 구현을 최적화하려는 분이든, 이 자료들은 강력한 AI 에이전트 워크플로우를 구축하는 모든 측면을 안내해 드립니다.
+
+## 시작하기 안내
+
+### 핵심 개념
+<CardGroup cols={2}>
+  <Card title="순차적 프로세스" icon="list-ol" href="/ko/learn/sequential-process">
+    구조화된 워크플로우를 위해 작업을 순차적으로 실행하는 방법을 학습합니다.
+  </Card>
+
+  <Card title="계층적 프로세스" icon="sitemap" href="/ko/learn/hierarchical-process">
+    매니저 에이전트가 워크플로우를 감독하며 계층적으로 작업을 실행합니다.
+  </Card>
+
+  <Card title="조건부 작업" icon="code-branch" href="/ko/learn/conditional-tasks">
+    결과에 따라 조건부로 작업을 실행하여 동적인 워크플로우를 만듭니다.
+  </Card>
+
+  <Card title="비동기 시작" icon="bolt" href="/ko/learn/kickoff-async">
+    향상된 성능과 동시성을 위해 crew를 비동기로 실행합니다.
+  </Card>
+</CardGroup>
+
+### 에이전트 개발
+<CardGroup cols={2}>
+  <Card title="에이전트 커스터마이징" icon="user-gear" href="/ko/learn/customizing-agents">
+    에이전트의 동작 방식, 역할, 역량을 커스터마이즈하는 방법을 배워보세요.
+  </Card>
+
+  <Card title="에이전트 코딩" icon="code" href="/ko/learn/coding-agents">
+    코드 작성, 실행, 디버깅을 자동으로 수행할 수 있는 에이전트를 구축하세요.
+  </Card>
+
+  <Card title="멀티모달 에이전트" icon="images" href="/ko/learn/multimodal-agents">
+    텍스트, 이미지, 기타 미디어 유형을 처리할 수 있는 에이전트를 만들어보세요.
+  </Card>
+
+  <Card title="커스텀 매니저 에이전트" icon="user-tie" href="/ko/learn/custom-manager-agent">
+    복잡한 계층적 워크플로우를 위한 커스텀 매니저 에이전트를 구현하세요.
+  </Card>
+</CardGroup>
+
+## 고급 기능
+
+### 워크플로 제어
+<CardGroup cols={2}>
+  <Card title="Human in the Loop" icon="user-check" href="/ko/learn/human-in-the-loop">
+    에이전트 워크플로에 인간의 감독과 개입을 통합하세요.
+  </Card>
+
+  <Card title="Human Input on Execution" icon="hand-paper" href="/ko/learn/human-input-on-execution">
+    작업 실행 중에 인간의 입력을 허용하여 동적인 의사결정을 지원합니다.
+  </Card>
+
+  <Card title="Replay Tasks" icon="rotate-left" href="/ko/learn/replay-tasks-from-latest-crew-kickoff">
+    이전 crew 실행으로부터 작업을 다시 실행하고 재개하세요.
+  </Card>
+
+  <Card title="Kickoff for Each" icon="repeat" href="/ko/learn/kickoff-for-each">
+    서로 다른 입력으로 crew를 효율적으로 여러 번 실행하세요.
+  </Card>
+</CardGroup>
+
+### 맞춤화 및 통합
+<CardGroup cols={2}>
+  <Card title="커스텀 LLM" icon="brain" href="/ko/learn/custom-llm">
+    CrewAI와 커스텀 언어 모델 및 공급자를 통합하세요.
+  </Card>
+
+  <Card title="LLM 연결" icon="link" href="/ko/learn/llm-connections">
+    다양한 LLM 공급자에 대한 연결을 구성하고 관리하세요.
+  </Card>
+
+  <Card title="커스텀 도구 생성" icon="wrench" href="/ko/learn/create-custom-tools">
+    에이전트의 기능을 확장할 수 있는 커스텀 도구를 빌드하세요.
+  </Card>
+
+  <Card title="주석 사용하기" icon="at" href="/ko/learn/using-annotations">
+    더 깔끔하고 유지 관리하기 쉬운 코드를 위해 Python 주석을 사용하세요.
+  </Card>
+</CardGroup>
+
+## 특수화된 애플리케이션
+
+### 콘텐츠 & 미디어
+<CardGroup cols={2}>
+  <Card title="DALL-E 이미지 생성" icon="image" href="/ko/learn/dalle-image-generation">
+    에이전트와의 DALL-E 통합을 사용하여 이미지를 생성하세요.
+  </Card>
+
+  <Card title="내 에이전트 가져오기" icon="user-plus" href="/ko/learn/bring-your-own-agent">
+    기존 에이전트와 모델을 CrewAI 워크플로우에 통합하세요.
+  </Card>
+</CardGroup>
+
+### 도구 관리
+<CardGroup cols={2}>
+  <Card title="도구 출력을 결과로 강제" icon="hammer" href="/ko/learn/force-tool-output-as-result">
+    도구를 구성하여 출력값을 작업 결과로 직접 반환하도록 합니다.
+  </Card>
+</CardGroup>
+
+## 학습 경로 추천
+
+### 초보자를 위한 안내
+1. 기본 워크플로 실행을 이해하려면 **Sequential Process**로 시작하세요.
+2. 효과적인 에이전트 구성을 만들기 위해 **Customizing Agents**를 학습하세요.
+3. 기능 확장을 위해 **Create Custom Tools**을(를) 탐색하세요.
+4. 인터랙티브 워크플로를 위해 **Human in the Loop**을(를) 시도해 보세요.
+
+### 중급 사용자를 위한 안내
+1. 복잡한 다중 에이전트 시스템을 위해 **계층적 프로세스** 마스터하기
+2. 동적 워크플로우를 위해 **조건부 태스크** 구현하기
+3. 성능 최적화를 위해 **비동기 시작** 사용하기
+4. 특화된 모델을 위해 **커스텀 LLM** 통합하기
+
+### 고급 사용자용
+1. 복잡한 미디어 처리를 위한 **멀티모달 에이전트** 빌드
+2. 정교한 오케스트레이션을 위한 **커스텀 매니저 에이전트** 생성
+3. 하이브리드 시스템을 위한 **BYOA(Bring Your Own Agent)** 구현
+4. 견고한 오류 복구를 위한 **리플레이 태스크** 사용
+
+## 모범 사례
+
+### 개발
+- **간단하게 시작하세요**: 복잡성을 추가하기 전에 기본적인 순차 워크플로우부터 시작하세요
+- **점진적으로 테스트하세요**: 더 큰 시스템에 통합하기 전에 각 구성 요소를 테스트하세요
+- **애노테이션 사용**: 더 깔끔하고 유지보수가 쉬운 코드를 위해 Python 애노테이션을 활용하세요
+- **커스텀 도구**: 다양한 agent에서 공유할 수 있는 재사용 가능한 도구를 만드세요
+
+### 운영 환경
+- **오류 처리**: 강력한 오류 처리 및 복구 메커니즘 구현
+- **성능**: 비동기 실행을 사용하고 더 나은 성능을 위해 LLM 호출 최적화
+- **모니터링**: 에이전트 성능 추적을 위해 가시성 도구 통합
+- **인간 감독**: 중요한 의사결정을 위한 인간 점검 지점 포함
+
+### 최적화
+- **리소스 관리**: 토큰 사용량과 API 비용을 모니터링하고 최적화합니다.
+- **워크플로우 설계**: 불필요한 LLM 호출을 최소화하는 워크플로우를 설계합니다.
+- **도구 효율성**: 최소한의 오버헤드로 최대 가치를 제공하는 효율적인 도구를 만듭니다.
+- **반복적 개선**: 피드백과 메트릭을 활용하여 에이전트 성능을 지속적으로 개선합니다.
+
+## 도움 받기
+
+- **문서**: 각 가이드에는 자세한 예시와 설명이 포함되어 있습니다
+- **커뮤니티**: 토론과 지원을 위해 [CrewAI 포럼](https://community.crewai.com)에 참여하세요
+- **예제**: 완전한 작동 구현을 보려면 예제 섹션을 확인하세요
+- **지원**: 기술 지원이 필요하면 [support@crewai.com](mailto:support@crewai.com)으로 문의하세요
+
+현재 필요에 맞는 가이드부터 시작하고, 기본 사항에 익숙해지면 점차 더 고급 주제를 탐색해보세요.
