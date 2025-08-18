@@ -1896,7 +1896,7 @@ def test_agent_with_knowledge_sources_generate_search_query():
         assert "red" in result.raw.lower()
 
 
-@pytest.mark.vcr(record_mode='none', filter_headers=["authorization"])
+@pytest.mark.vcr(record_mode="none", filter_headers=["authorization"])
 def test_agent_with_knowledge_with_no_crewai_knowledge():
     mock_knowledge = MagicMock(spec=Knowledge)
 
@@ -1904,8 +1904,11 @@ def test_agent_with_knowledge_with_no_crewai_knowledge():
         role="Information Agent",
         goal="Provide information based on knowledge sources",
         backstory="You have access to specific knowledge sources.",
-        llm=LLM(model="openrouter/openai/gpt-4o-mini",api_key=os.getenv('OPENROUTER_API_KEY')),
-        knowledge=mock_knowledge
+        llm=LLM(
+            model="openrouter/openai/gpt-4o-mini",
+            api_key=os.getenv("OPENROUTER_API_KEY"),
+        ),
+        knowledge=mock_knowledge,
     )
 
     # Create a task that requires the agent to use the knowledge
@@ -1920,7 +1923,7 @@ def test_agent_with_knowledge_with_no_crewai_knowledge():
     mock_knowledge.query.assert_called_once()
 
 
-@pytest.mark.vcr(record_mode='none', filter_headers=["authorization"])
+@pytest.mark.vcr(record_mode="none", filter_headers=["authorization"])
 def test_agent_with_only_crewai_knowledge():
     mock_knowledge = MagicMock(spec=Knowledge)
 
@@ -1928,33 +1931,10 @@ def test_agent_with_only_crewai_knowledge():
         role="Information Agent",
         goal="Provide information based on knowledge sources",
         backstory="You have access to specific knowledge sources.",
-        llm=LLM(model="openrouter/openai/gpt-4o-mini",api_key=os.getenv('OPENROUTER_API_KEY'))
-    )
-
-    # Create a task that requires the agent to use the knowledge
-    task = Task(
-        description="What is Vidit's favorite color?",
-        expected_output="Vidit's favorclearite color.",
-        agent=agent
-    )
-
-    crew = Crew(agents=[agent], tasks=[task],knowledge=mock_knowledge)
-    crew.kickoff()
-    mock_knowledge.query.assert_called_once()
-
-
-@pytest.mark.vcr(record_mode='none', filter_headers=["authorization"])
-def test_agent_knowledege_with_crewai_knowledge():
-    crew_knowledge = MagicMock(spec=Knowledge)
-    agent_knowledge = MagicMock(spec=Knowledge)
-
-
-    agent = Agent(
-        role="Information Agent",
-        goal="Provide information based on knowledge sources",
-        backstory="You have access to specific knowledge sources.",
-        llm=LLM(model="openrouter/openai/gpt-4o-mini",api_key=os.getenv('OPENROUTER_API_KEY')),
-        knowledge=agent_knowledge
+        llm=LLM(
+            model="openrouter/openai/gpt-4o-mini",
+            api_key=os.getenv("OPENROUTER_API_KEY"),
+        ),
     )
 
     # Create a task that requires the agent to use the knowledge
@@ -1964,7 +1944,35 @@ def test_agent_knowledege_with_crewai_knowledge():
         agent=agent,
     )
 
-    crew = Crew(agents=[agent],tasks=[task],knowledge=crew_knowledge)
+    crew = Crew(agents=[agent], tasks=[task], knowledge=mock_knowledge)
+    crew.kickoff()
+    mock_knowledge.query.assert_called_once()
+
+
+@pytest.mark.vcr(record_mode="none", filter_headers=["authorization"])
+def test_agent_knowledege_with_crewai_knowledge():
+    crew_knowledge = MagicMock(spec=Knowledge)
+    agent_knowledge = MagicMock(spec=Knowledge)
+
+    agent = Agent(
+        role="Information Agent",
+        goal="Provide information based on knowledge sources",
+        backstory="You have access to specific knowledge sources.",
+        llm=LLM(
+            model="openrouter/openai/gpt-4o-mini",
+            api_key=os.getenv("OPENROUTER_API_KEY"),
+        ),
+        knowledge=agent_knowledge,
+    )
+
+    # Create a task that requires the agent to use the knowledge
+    task = Task(
+        description="What is Vidit's favorite color?",
+        expected_output="Vidit's favorclearite color.",
+        agent=agent,
+    )
+
+    crew = Crew(agents=[agent], tasks=[task], knowledge=crew_knowledge)
     crew.kickoff()
     agent_knowledge.query.assert_called_once()
     crew_knowledge.query.assert_called_once()
@@ -2164,7 +2172,12 @@ def mock_get_auth_token():
 
 @patch("crewai.cli.plus_api.PlusAPI.get_agent")
 def test_agent_from_repository(mock_get_agent, mock_get_auth_token):
-    from crewai_tools import SerperDevTool, XMLSearchTool, CSVSearchTool, EnterpriseActionTool
+    from crewai_tools import (
+        SerperDevTool,
+        XMLSearchTool,
+        CSVSearchTool,
+        EnterpriseActionTool,
+    )
 
     mock_get_response = MagicMock()
     mock_get_response.status_code = 200
@@ -2173,12 +2186,23 @@ def test_agent_from_repository(mock_get_agent, mock_get_auth_token):
         "goal": "test goal",
         "backstory": "test backstory",
         "tools": [
-            {"module": "crewai_tools", "name": "SerperDevTool", "init_params": {"n_results": 30}},
-            {"module": "crewai_tools", "name": "XMLSearchTool", "init_params": {"summarize": True}},
+            {
+                "module": "crewai_tools",
+                "name": "SerperDevTool",
+                "init_params": {"n_results": "30"},
+            },
+            {
+                "module": "crewai_tools",
+                "name": "XMLSearchTool",
+                "init_params": {"summarize": "true"},
+            },
             {"module": "crewai_tools", "name": "CSVSearchTool", "init_params": {}},
-
             # using a tools that returns a list of BaseTools
-            {"module": "crewai_tools", "name": "CrewaiEnterpriseTools", "init_params": {"actions_list": [], "enterprise_token": "test_key"}},
+            {
+                "module": "crewai_tools",
+                "name": "CrewaiEnterpriseTools",
+                "init_params": {"actions_list": [], "enterprise_token": "test_key"},
+            },
         ],
     }
     mock_get_agent.return_value = mock_get_response
@@ -2221,7 +2245,9 @@ def test_agent_from_repository_override_attributes(mock_get_agent, mock_get_auth
         "role": "test role",
         "goal": "test goal",
         "backstory": "test backstory",
-        "tools": [{"name": "SerperDevTool", "module": "crewai_tools", "init_params": {}}],
+        "tools": [
+            {"name": "SerperDevTool", "module": "crewai_tools", "init_params": {}}
+        ],
     }
     mock_get_agent.return_value = mock_get_response
     agent = Agent(from_repository="test_agent", role="Custom Role")

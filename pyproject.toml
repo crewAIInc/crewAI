@@ -52,7 +52,6 @@ tools = ["crewai-tools~=0.62.0"]
 embeddings = [
     "tiktoken~=0.8.0"
 ]
-agentops = ["agentops==0.3.18"]
 pdfplumber = [
     "pdfplumber>=0.11.4",
 ]
@@ -98,6 +97,11 @@ exclude = ["cli/templates"]
 
 [tool.bandit]
 exclude_dirs = ["src/crewai/cli/templates"]
+
+[tool.pytest.ini_options]
+markers = [
+    "telemetry: mark test as a telemetry test (don't mock telemetry)",
+]
 
 # PyTorch index configuration, since torch 2.5.0 is not compatible with python 3.13
 [[tool.uv.index]]
