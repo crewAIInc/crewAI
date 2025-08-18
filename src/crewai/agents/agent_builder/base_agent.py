@@ -25,7 +25,6 @@ from crewai.security.security_config import SecurityConfig
 from crewai.tools.base_tool import BaseTool, Tool
 from crewai.utilities import I18N, Logger, RPMController
 from crewai.utilities.config import process_config
-from crewai.utilities.converter import Converter
 from crewai.utilities.string_utils import interpolate_only
 
 T = TypeVar("T", bound="BaseAgent")
@@ -178,7 +177,7 @@ class BaseAgent(ABC, BaseModel):
         if not tools:
             return []
 
-        processed_tools = []
+        processed_tools: List[Union[BaseTool, dict]] = []
         required_attrs = ["name", "func", "description"]
         for tool in tools:
             if isinstance(tool, BaseTool):

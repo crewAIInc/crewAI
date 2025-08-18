@@ -1,8 +1,6 @@
 import pytest
-from unittest.mock import Mock, patch
-from crewai import Agent, Task, Crew
+from crewai import Agent
 from crewai.tools import BaseTool
-from crewai.llm import LLM
 
 
 class MockTool(BaseTool):

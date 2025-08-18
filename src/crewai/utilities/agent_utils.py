@@ -11,7 +11,6 @@ from crewai.agents.parser import (
 )
 from crewai.llm import LLM
 from crewai.llms.base_llm import BaseLLM
-from crewai.tools import BaseTool as CrewAITool
 from crewai.tools.base_tool import BaseTool
 from crewai.tools.structured_tool import CrewStructuredTool
 from crewai.tools.tool_types import ToolResult
@@ -27,7 +26,7 @@ console = Console()
 
 def parse_tools(tools: List[Union[BaseTool, dict]]) -> List[Union[CrewStructuredTool, dict]]:
     """Parse tools to be used for the task."""
-    tools_list = []
+    tools_list: List[Union[CrewStructuredTool, dict]] = []
 
     for tool in tools:
         if isinstance(tool, dict):
