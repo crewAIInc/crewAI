@@ -597,6 +597,31 @@ def test_flow_start_method_without_trigger_parameter():
     assert result == "finished"
 
 
+def test_async_flow_with_trigger_payload():
+    captured_payload = []
+
+    class AsyncTriggerFlow(Flow):
+        @start()
+        async def async_start_method(self, crewai_trigger_payload=None):
+            captured_payload.append(crewai_trigger_payload)
+            await asyncio.sleep(0.01)
+            return "async_started"
+
+        @listen(async_start_method)
+        async def async_second_method(self, result):
+            captured_payload.append(result)
+            await asyncio.sleep(0.01)
+            return "async_finished"
+
+    flow = AsyncTriggerFlow()
+
+    test_payload = "Async trigger data"
+    result = asyncio.run(flow.kickoff_async(inputs={"crewai_trigger_payload": test_payload}))
+
+    assert captured_payload == [test_payload, "async_started"]
+    assert result == "async_finished"
+
+
 def test_structured_flow_event_emission():
     """Test that the correct events are emitted during structured flow
     execution with all fields validated."""

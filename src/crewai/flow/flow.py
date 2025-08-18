@@ -934,9 +934,8 @@ class Flow(Generic[T], metaclass=FlowMeta):
         await self._execute_listeners(start_method_name, result)
 
     def _inject_trigger_payload_for_start_method(self, original_method: Callable) -> Callable:
-        def enhanced_method(*args, **kwargs):
+        def prepare_kwargs(*args, **kwargs):
             inputs = baggage.get_baggage("flow_inputs") or {}
-            assert isinstance(inputs, dict)
             trigger_payload = inputs.get("crewai_trigger_payload")
 
             sig = inspect.signature(original_method)
@@ -944,13 +943,21 @@ class Flow(Generic[T], metaclass=FlowMeta):
 
             if trigger_payload is not None and accepts_trigger_payload:
                 kwargs["crewai_trigger_payload"] = trigger_payload
-            elif trigger_payload is not None and not accepts_trigger_payload:
+            elif trigger_payload is not None:
                 self._log_flow_event(
                     f"Trigger payload available but {original_method.__name__} doesn't accept crewai_trigger_payload parameter",
                     color="yellow"
                 )
+            return args, kwargs
 
-            return original_method(*args, **kwargs)
+        if asyncio.iscoroutinefunction(original_method):
+            async def enhanced_method(*args, **kwargs):
+                args, kwargs = prepare_kwargs(*args, **kwargs)
+                return await original_method(*args, **kwargs)
+        else:
+            def enhanced_method(*args, **kwargs):
+                args, kwargs = prepare_kwargs(*args, **kwargs)
+                return original_method(*args, **kwargs)
 
         enhanced_method.__name__ = original_method.__name__
         enhanced_method.__doc__ = original_method.__doc__
