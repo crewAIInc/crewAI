@@ -2,8 +2,8 @@ import os
 import pytest
 from unittest.mock import patch, MagicMock
 
-# Remove the module-level patch
 from crewai import Agent, Task, Crew
+from crewai.flow.flow import Flow, start
 from crewai.utilities.events.listeners.tracing.trace_listener import (
     TraceCollectionListener,
 )
@@ -284,29 +284,42 @@ class TestTraceListenerSetup:
                 f"Found {len(trace_handlers)} trace handlers when tracing should be disabled"
             )
 
-    def test_trace_listener_setup_correctly(self):
+    def test_trace_listener_setup_correctly_for_crew(self):
         """Test that trace listener is set up correctly when enabled"""
 
         with patch.dict(os.environ, {"CREWAI_TRACING_ENABLED": "true"}):
-            trace_listener = TraceCollectionListener()
+            agent = Agent(
+                role="Test Agent",
+                goal="Test goal",
+                backstory="Test backstory",
+                llm="gpt-4o-mini",
+            )
+            task = Task(
+                description="Say hello to the world",
+                expected_output="hello world",
+                agent=agent,
+            )
+            with patch.object(
+                TraceCollectionListener, "setup_listeners"
+            ) as mock_listener_setup:
+                Crew(agents=[agent], tasks=[task], verbose=True)
+                assert mock_listener_setup.call_count >= 1
 
-            assert trace_listener.trace_enabled is True
-            assert trace_listener.batch_manager is not None
-
-    @pytest.mark.vcr(filter_headers=["authorization"])
-    def test_trace_listener_setup_correctly_with_tracing_flag(self):
+    def test_trace_listener_setup_correctly_for_flow(self):
         """Test that trace listener is set up correctly when enabled"""
-        agent = Agent(role="Test Agent", goal="Test goal", backstory="Test backstory")
-        task = Task(
-            description="Say hello to the world",
-            expected_output="hello world",
-            agent=agent,
-        )
-        crew = Crew(agents=[agent], tasks=[task], verbose=True, tracing=True)
-        crew.kickoff()
-        trace_listener = TraceCollectionListener(tracing=True)
-        assert trace_listener.trace_enabled is True
-        assert trace_listener.batch_manager is not None
+
+        with patch.dict(os.environ, {"CREWAI_TRACING_ENABLED": "true"}):
+
+            class FlowExample(Flow):
+                @start()
+                def start(self):
+                    pass
+
+            with patch.object(
+                TraceCollectionListener, "setup_listeners"
+            ) as mock_listener_setup:
+                FlowExample()
+                assert mock_listener_setup.call_count >= 1
 
     # Helper method to ensure cleanup
     def teardown_method(self):

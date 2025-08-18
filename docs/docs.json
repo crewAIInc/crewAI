@@ -226,7 +226,6 @@
                 "group": "Observability",
                 "pages": [
                   "en/observability/overview",
-                  "en/observability/agentops",
                   "en/observability/arize-phoenix",
                   "en/observability/langdb",
                   "en/observability/langfuse",
@@ -238,7 +237,8 @@
                   "en/observability/opik",
                   "en/observability/patronus-evaluation",
                   "en/observability/portkey",
-                  "en/observability/weave"
+                  "en/observability/weave",
+                  "en/observability/truefoundry"
                 ]
               },
               {
@@ -281,6 +281,7 @@
               {
                 "group": "Features",
                 "pages": [
+                  "en/enterprise/features/rbac",
                   "en/enterprise/features/tool-repository",
                   "en/enterprise/features/webhook-streaming",
                   "en/enterprise/features/traces",
@@ -344,7 +345,7 @@
               },
               {
                 "group": "Endpoints",
-                "openapi": "enterprise-api.yaml"
+                "openapi": "https://raw.githubusercontent.com/crewAIInc/crewAI/main/docs/enterprise-api.en.yaml"
               }
             ]
           },
@@ -353,7 +354,7 @@
             "groups": [
               {
                 "group": "Examples",
-                "pages": ["en/examples/example"]
+                "pages": ["en/examples/example", "en/examples/cookbooks"]
               }
             ]
           }
@@ -564,7 +565,6 @@
                 "group": "Observabilidade",
                 "pages": [
                   "pt-BR/observability/overview",
-                  "pt-BR/observability/agentops",
                   "pt-BR/observability/arize-phoenix",
                   "pt-BR/observability/langdb",
                   "pt-BR/observability/langfuse",
@@ -575,7 +575,8 @@
                   "pt-BR/observability/opik",
                   "pt-BR/observability/patronus-evaluation",
                   "pt-BR/observability/portkey",
-                  "pt-BR/observability/weave"
+                  "pt-BR/observability/weave",
+                  "pt-BR/observability/truefoundry"
                 ]
               },
               {
@@ -618,6 +619,7 @@
               {
                 "group": "Funcionalidades",
                 "pages": [
+                  "pt-BR/enterprise/features/rbac",
                   "pt-BR/enterprise/features/tool-repository",
                   "pt-BR/enterprise/features/webhook-streaming",
                   "pt-BR/enterprise/features/traces",
@@ -682,7 +684,7 @@
               },
               {
                 "group": "Endpoints",
-                "openapi": "enterprise-api.yaml"
+                "openapi": "https://raw.githubusercontent.com/crewAIInc/crewAI/main/docs/enterprise-api.pt-BR.yaml"
               }
             ]
           },
@@ -691,7 +693,7 @@
             "groups": [
               {
                 "group": "Exemplos",
-                "pages": ["pt-BR/examples/example"]
+                "pages": ["pt-BR/examples/example", "pt-BR/examples/cookbooks"]
               }
             ]
           }
@@ -707,7 +709,7 @@
               "icon": "globe"
             },
             {
-              "anchor": "법정",
+              "anchor": "포럼",
               "href": "https://community.crewai.com",
               "icon": "discourse"
             },
@@ -717,7 +719,7 @@
               "icon": "robot"
             },
             {
-              "anchor": "출시",
+              "anchor": "릴리스",
               "href": "https://github.com/crewAIInc/crewAI/releases",
               "icon": "tag"
             }
@@ -732,22 +734,22 @@
                 "pages": ["ko/introduction", "ko/installation", "ko/quickstart"]
               },
               {
-                "group": "안내서",
+                "group": "가이드",
                 "pages": [
                   {
                     "group": "전략",
                     "pages": ["ko/guides/concepts/evaluating-use-cases"]
                   },
                   {
-                    "group": "Agents",
+                    "group": "에이전트 (Agents)",
                     "pages": ["ko/guides/agents/crafting-effective-agents"]
                   },
                   {
-                    "group": "Crews",
+                    "group": "크루 (Crews)",
                     "pages": ["ko/guides/crews/first-crew"]
                   },
                   {
-                    "group": "Flows",
+                    "group": "플로우 (Flows)",
                     "pages": [
                       "ko/guides/flows/first-flow",
                       "ko/guides/flows/mastering-flow-state"
@@ -795,7 +797,7 @@
                 ]
               },
               {
-                "group": "도구",
+                "group": "도구 (Tools)",
                 "pages": [
                   "ko/tools/overview",
                   {
@@ -885,7 +887,7 @@
                     ]
                   },
                   {
-                    "group": "클라우드 & 저장",
+                    "group": "클라우드 & 스토리지",
                     "pages": [
                       "ko/tools/cloud-storage/overview",
                       "ko/tools/cloud-storage/s3readertool",
@@ -907,10 +909,9 @@
                 ]
               },
               {
-                "group": "오브저버빌리티",
+                "group": "Observability",
                 "pages": [
                   "ko/observability/overview",
-                  "ko/observability/agentops",
                   "ko/observability/arize-phoenix",
                   "ko/observability/langdb",
                   "ko/observability/langfuse",
@@ -926,7 +927,7 @@
                 ]
               },
               {
-                "group": "익히다",
+                "group": "학습",
                 "pages": [
                   "ko/learn/overview",
                   "ko/learn/llm-selection-guide",
@@ -950,13 +951,13 @@
                 ]
               },
               {
-                "group": "원격측정",
+                "group": "Telemetry",
                 "pages": ["ko/telemetry"]
               }
             ]
           },
           {
-            "tab": "기업",
+            "tab": "엔터프라이즈",
             "groups": [
               {
                 "group": "시작 안내",
@@ -965,6 +966,7 @@
               {
                 "group": "특징",
                 "pages": [
+                  "ko/enterprise/features/rbac",
                   "ko/enterprise/features/tool-repository",
                   "ko/enterprise/features/webhook-streaming",
                   "ko/enterprise/features/traces",
@@ -995,7 +997,7 @@
                 ]
               },
               {
-                "group": "사용 안내서",
+                "group": "How-To Guides",
                 "pages": [
                   "ko/enterprise/guides/build-crew",
                   "ko/enterprise/guides/deploy-crew",
@@ -1028,7 +1030,7 @@
               },
               {
                 "group": "Endpoints",
-                "openapi": "enterprise-api.yaml"
+                "openapi": "https://raw.githubusercontent.com/crewAIInc/crewAI/main/docs/enterprise-api.ko.yaml"
               }
             ]
           },
@@ -1037,7 +1039,7 @@
             "groups": [
               {
                 "group": "예시",
-                "pages": ["ko/examples/example"]
+                "pages": ["ko/examples/example", "ko/examples/cookbooks"]
               }
             ]
           }
