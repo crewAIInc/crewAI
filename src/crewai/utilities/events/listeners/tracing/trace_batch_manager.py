@@ -139,7 +139,7 @@ class TraceBatchManager:
         """Add event to buffer"""
         self.event_buffer.append(trace_event)
 
-    def _send_events_to_backend(self, ephemeral: bool = False):
+    def _send_events_to_backend(self):
         """Send buffered events to backend"""
         if not self.plus_api or not self.trace_batch_id or not self.event_buffer:
             return
@@ -159,7 +159,7 @@ class TraceBatchManager:
 
             response = (
                 self.plus_api.send_ephemeral_trace_events(self.trace_batch_id, payload)
-                if ephemeral
+                if self.is_current_batch_ephemeral
                 else self.plus_api.send_trace_events(self.trace_batch_id, payload)
             )
 
@@ -179,9 +179,8 @@ class TraceBatchManager:
             return None
 
         if self.event_buffer:
-            self._send_events_to_backend(self.is_current_batch_ephemeral)
-
-        self._finalize_backend_batch(self.is_current_batch_ephemeral)
+            self._send_events_to_backend()
+        self._finalize_backend_batch()
 
         self.current_batch.events = self.event_buffer.copy()
 
@@ -196,7 +195,7 @@ class TraceBatchManager:
 
         return finalized_batch
 
-    def _finalize_backend_batch(self, ephemeral: bool = False):
+    def _finalize_backend_batch(self):
         """Send batch finalization to backend"""
         if not self.plus_api or not self.trace_batch_id:
             return
@@ -214,7 +213,7 @@ class TraceBatchManager:
                 self.plus_api.finalize_ephemeral_trace_batch(
                     self.trace_batch_id, payload
                 )
-                if ephemeral
+                if self.is_current_batch_ephemeral
                 else self.plus_api.finalize_trace_batch(self.trace_batch_id, payload)
             )
 
@@ -223,7 +222,7 @@ class TraceBatchManager:
                 console = Console()
                 return_link = (
                     f"{CREWAI_BASE_URL}/crewai_plus/trace_batches/{self.trace_batch_id}"
-                    if not ephemeral and access_code
+                    if not self.is_current_batch_ephemeral and access_code is None
                     else f"{CREWAI_BASE_URL}/crewai_plus/ephemeral_trace_batches/{self.trace_batch_id}?access_code={access_code}"
                 )
                 panel = Panel(
