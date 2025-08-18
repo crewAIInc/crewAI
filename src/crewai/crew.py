@@ -286,10 +286,12 @@ class Crew(FlowTrackable, BaseModel):
 
         self._cache_handler = CacheHandler()
         event_listener = EventListener()
-        if on_first_execution_tracing_confirmation():
-            self.tracing = True
 
-        if is_tracing_enabled() or self.tracing:
+        if (
+            on_first_execution_tracing_confirmation()
+            or is_tracing_enabled()
+            or self.tracing
+        ):
             trace_listener = TraceCollectionListener()
             trace_listener.setup_listeners(crewai_event_bus)
         event_listener.verbose = self.verbose
@@ -640,7 +642,7 @@ class Crew(FlowTrackable, BaseModel):
                 self._inputs = inputs
                 self._interpolate_inputs(inputs)
             self._set_tasks_callbacks()
-            self._set_inject_trigger_input_for_first_task()
+            self._set_allow_crewai_trigger_context_for_first_task()
 
             i18n = I18N(prompt_file=self.prompt_file)
 
@@ -1511,9 +1513,9 @@ class Crew(FlowTrackable, BaseModel):
         for ks in knowledges:
             ks.reset()
 
-    def _set_inject_trigger_input_for_first_task(self):
+    def _set_allow_crewai_trigger_context_for_first_task(self):
         crewai_trigger_payload = self._inputs and self._inputs.get("crewai_trigger_payload")
-        able_to_inject = self.tasks and self.tasks[0].inject_trigger_input is None
+        able_to_inject = self.tasks and self.tasks[0].allow_crewai_trigger_context is None
 
         if self.process == Process.sequential and crewai_trigger_payload and able_to_inject:
-            self.tasks[0].inject_trigger_input = True
+            self.tasks[0].allow_crewai_trigger_context = True
