@@ -1210,7 +1210,7 @@ Thought:<|eot_id|>
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_task_inject_trigger_input():
+def test_task_allow_crewai_trigger_context():
     from crewai import Crew
 
     agent = Agent(
@@ -1223,7 +1223,7 @@ def test_task_inject_trigger_input():
         description="Analyze the data",
         expected_output="Analysis report",
         agent=agent,
-        inject_trigger_input=True
+        allow_crewai_trigger_context=True
     )
     crew = Crew(agents=[agent], tasks=[task])
     crew.kickoff({"crewai_trigger_payload": "Important context data"})
@@ -1235,7 +1235,7 @@ def test_task_inject_trigger_input():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_task_without_inject_trigger_input():
+def test_task_without_allow_crewai_trigger_context():
     from crewai import Crew
 
     agent = Agent(
@@ -1248,7 +1248,7 @@ def test_task_without_inject_trigger_input():
         description="Analyze the data",
         expected_output="Analysis report",
         agent=agent,
-        inject_trigger_input=False
+        allow_crewai_trigger_context=False
     )
 
     crew = Crew(agents=[agent], tasks=[task])
@@ -1262,7 +1262,7 @@ def test_task_without_inject_trigger_input():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_task_inject_trigger_input_no_payload():
+def test_task_allow_crewai_trigger_context_no_payload():
     from crewai import Crew
 
     agent = Agent(
@@ -1275,7 +1275,7 @@ def test_task_inject_trigger_input_no_payload():
         description="Analyze the data",
         expected_output="Analysis report",
         agent=agent,
-        inject_trigger_input=True
+        allow_crewai_trigger_context=True
     )
 
     crew = Crew(agents=[agent], tasks=[task])
@@ -1289,7 +1289,7 @@ def test_task_inject_trigger_input_no_payload():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_do_not_inject_trigger_input_for_first_task_hierarchical():
+def test_do_not_allow_crewai_trigger_context_for_first_task_hierarchical():
     from crewai import Crew
 
     agent1 = Agent(role="First Agent", goal="First goal", backstory="First backstory")
@@ -1350,7 +1350,7 @@ def test_first_task_auto_inject_trigger():
     assert "Trigger Payload:" not in second_prompt
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_ensure_first_task_inject_trigger_input_is_false_does_not_inject():
+def test_ensure_first_task_allow_crewai_trigger_context_is_false_does_not_inject():
     from crewai import Crew
 
     agent1 = Agent(role="First Agent", goal="First goal", backstory="First backstory")
@@ -1360,14 +1360,14 @@ def test_ensure_first_task_inject_trigger_input_is_false_does_not_inject():
         description="Process initial data",
         expected_output="Initial analysis",
         agent=agent1,
-        inject_trigger_input=False
+        allow_crewai_trigger_context=False
     )
 
     second_task = Task(
         description="Process secondary data",
         expected_output="Secondary analysis",
         agent=agent2,
-        inject_trigger_input=True
+        allow_crewai_trigger_context=True
     )
 
     crew = Crew(
