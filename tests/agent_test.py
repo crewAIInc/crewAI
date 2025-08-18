@@ -1209,6 +1209,85 @@ Thought:<|eot_id|>
         assert mock_format_prompt.return_value == expected_prompt
 
 
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_task_inject_trigger_input():
+    from crewai import Crew
+
+    agent = Agent(
+        role="test role",
+        goal="test goal",
+        backstory="test backstory"
+    )
+
+    task = Task(
+        description="Analyze the data",
+        expected_output="Analysis report",
+        agent=agent,
+        inject_trigger_input=True
+    )
+    crew = Crew(agents=[agent], tasks=[task])
+    crew.kickoff({"crewai_trigger_payload": "Important context data"})
+
+    prompt = task.prompt()
+
+    assert "Analyze the data" in prompt
+    assert "Trigger Payload: Important context data" in prompt
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_task_without_inject_trigger_input():
+    from crewai import Crew
+
+    agent = Agent(
+        role="test role",
+        goal="test goal",
+        backstory="test backstory"
+    )
+
+    task = Task(
+        description="Analyze the data",
+        expected_output="Analysis report",
+        agent=agent,
+        inject_trigger_input=False
+    )
+
+    crew = Crew(agents=[agent], tasks=[task])
+    crew.kickoff({"crewai_trigger_payload": "Important context data"})
+
+    prompt = task.prompt()
+
+    assert "Analyze the data" in prompt
+    assert "Trigger Payload:" not in prompt
+    assert "Important context data" not in prompt
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_task_inject_trigger_input_no_payload():
+    from crewai import Crew
+
+    agent = Agent(
+        role="test role",
+        goal="test goal",
+        backstory="test backstory"
+    )
+
+    task = Task(
+        description="Analyze the data",
+        expected_output="Analysis report",
+        agent=agent,
+        inject_trigger_input=True
+    )
+
+    crew = Crew(agents=[agent], tasks=[task])
+    crew.kickoff({"other_input": "other data"})
+
+
+    prompt = task.prompt()
+
+    assert "Analyze the data" in prompt
+    assert "Trigger Payload:" not in prompt
+
+
 @patch("crewai.agent.CrewTrainingHandler")
 def test_agent_training_handler(crew_training_handler):
     task_prompt = "What is 1 + 1?"

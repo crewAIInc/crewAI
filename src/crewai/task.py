@@ -163,6 +163,10 @@ class Task(BaseModel):
     end_time: Optional[datetime.datetime] = Field(
         default=None, description="End time of the task execution"
     )
+    inject_trigger_input: bool = Field(
+        default=False,
+        description="Whether this task should append 'Trigger Payload: {crewai_trigger_payload}' to the task description when crewai_trigger_payload exists in crew inputs.",
+    )
     model_config = {"arbitrary_types_allowed": True}
 
     @field_validator("guardrail")
@@ -548,12 +552,21 @@ class Task(BaseModel):
             str: The formatted prompt string containing the task description,
                  expected output, and optional markdown formatting instructions.
         """
-        tasks_slices = [self.description]
+        description = self.description
+
+        if self.inject_trigger_input and self.agent:
+            crew = getattr(self.agent, 'crew', None)
+            if crew and hasattr(crew, '_inputs') and crew._inputs:
+                trigger_payload = crew._inputs.get("crewai_trigger_payload")
+                if trigger_payload is not None:
+                    description += f"\n\nTrigger Payload: {trigger_payload}"
+
+        tasks_slices = [description]
 
         output = self.i18n.slice("expected_output").format(
             expected_output=self.expected_output
         )
-        tasks_slices = [self.description, output]
+        tasks_slices = [description, output]
 
         if self.markdown:
             markdown_instruction = """Your final answer MUST be formatted in Markdown syntax.
