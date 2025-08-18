@@ -10,7 +10,7 @@ authors = [
 dependencies = [
     # Core Dependencies
     "pydantic>=2.4.2",
-    "openai>=1.13.3",
+    "openai<1.100.0",  # TODO: Temporarily pin due to https://github.com/openai/openai-python/issues/2564. Can revert once the issue is fixed.
     "litellm==1.74.9",
     "instructor>=1.3.3",
     # Text Processing
@@ -52,7 +52,6 @@ tools = ["crewai-tools~=0.62.0"]
 embeddings = [
     "tiktoken~=0.8.0"
 ]
-agentops = ["agentops==0.3.18"]
 pdfplumber = [
     "pdfplumber>=0.11.4",
 ]
@@ -98,6 +97,11 @@ exclude = ["cli/templates"]
 
 [tool.bandit]
 exclude_dirs = ["src/crewai/cli/templates"]
+
+[tool.pytest.ini_options]
+markers = [
+    "telemetry: mark test as a telemetry test (don't mock telemetry)",
+]
 
 # PyTorch index configuration, since torch 2.5.0 is not compatible with python 3.13
 [[tool.uv.index]]

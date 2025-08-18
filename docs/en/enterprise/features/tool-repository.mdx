@@ -35,6 +35,22 @@ crewai tool install <tool-name>
 
 This installs the tool and adds it to `pyproject.toml`.
 
+You can use the tool by importing it and adding it to your agents:
+
+```python
+from your_tool.tool import YourTool
+
+custom_tool = YourTool()
+
+researcher = Agent(
+    role='Market Research Analyst',
+    goal='Provide up-to-date market analysis of the AI industry',
+    backstory='An expert analyst with a keen eye for market trends.',
+    tools=[custom_tool],
+    verbose=True
+)
+```
+
 ## Creating and Publishing Tools
 
 To create a new tool project:
