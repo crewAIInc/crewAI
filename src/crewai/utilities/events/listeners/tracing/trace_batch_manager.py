@@ -60,7 +60,6 @@ class TraceBatchManager:
         use_ephemeral: bool = False,
     ) -> TraceBatch:
         """Initialize a new trace batch"""
-        print("lorenze is here: Initializing batch", use_ephemeral)
         self.current_batch = TraceBatch(
             user_context=user_context, execution_metadata=execution_metadata
         )
