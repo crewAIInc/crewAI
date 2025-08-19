@@ -23,6 +23,7 @@ from crewai.utilities.events import crewai_event_bus
 from crewai.utilities.events.tool_usage_events import ToolUsageFinishedEvent
 from crewai.process import Process
 
+
 def test_agent_llm_creation_with_env_vars():
     # Store original environment variables
     original_api_key = os.environ.get("OPENAI_API_KEY")
@@ -1213,17 +1214,13 @@ Thought:<|eot_id|>
 def test_task_allow_crewai_trigger_context():
     from crewai import Crew
 
-    agent = Agent(
-        role="test role",
-        goal="test goal",
-        backstory="test backstory"
-    )
+    agent = Agent(role="test role", goal="test goal", backstory="test backstory")
 
     task = Task(
         description="Analyze the data",
         expected_output="Analysis report",
         agent=agent,
-        allow_crewai_trigger_context=True
+        allow_crewai_trigger_context=True,
     )
     crew = Crew(agents=[agent], tasks=[task])
     crew.kickoff({"crewai_trigger_payload": "Important context data"})
@@ -1238,17 +1235,13 @@ def test_task_allow_crewai_trigger_context():
 def test_task_without_allow_crewai_trigger_context():
     from crewai import Crew
 
-    agent = Agent(
-        role="test role",
-        goal="test goal",
-        backstory="test backstory"
-    )
+    agent = Agent(role="test role", goal="test goal", backstory="test backstory")
 
     task = Task(
         description="Analyze the data",
         expected_output="Analysis report",
         agent=agent,
-        allow_crewai_trigger_context=False
+        allow_crewai_trigger_context=False,
     )
 
     crew = Crew(agents=[agent], tasks=[task])
@@ -1265,22 +1258,17 @@ def test_task_without_allow_crewai_trigger_context():
 def test_task_allow_crewai_trigger_context_no_payload():
     from crewai import Crew
 
-    agent = Agent(
-        role="test role",
-        goal="test goal",
-        backstory="test backstory"
-    )
+    agent = Agent(role="test role", goal="test goal", backstory="test backstory")
 
     task = Task(
         description="Analyze the data",
         expected_output="Analysis report",
         agent=agent,
-        allow_crewai_trigger_context=True
+        allow_crewai_trigger_context=True,
     )
 
     crew = Crew(agents=[agent], tasks=[task])
     crew.kickoff({"other_input": "other data"})
-
 
     prompt = task.prompt()
 
@@ -1293,7 +1281,9 @@ def test_do_not_allow_crewai_trigger_context_for_first_task_hierarchical():
     from crewai import Crew
 
     agent1 = Agent(role="First Agent", goal="First goal", backstory="First backstory")
-    agent2 = Agent(role="Second Agent", goal="Second goal", backstory="Second backstory")
+    agent2 = Agent(
+        role="Second Agent", goal="Second goal", backstory="Second backstory"
+    )
 
     first_task = Task(
         description="Process initial data",
@@ -1301,12 +1291,11 @@ def test_do_not_allow_crewai_trigger_context_for_first_task_hierarchical():
         agent=agent1,
     )
 
-
     crew = Crew(
         agents=[agent1, agent2],
         tasks=[first_task],
         process=Process.hierarchical,
-        manager_llm="gpt-4o"
+        manager_llm="gpt-4o",
     )
 
     crew.kickoff({"crewai_trigger_payload": "Initial context data"})
@@ -1321,7 +1310,9 @@ def test_first_task_auto_inject_trigger():
     from crewai import Crew
 
     agent1 = Agent(role="First Agent", goal="First goal", backstory="First backstory")
-    agent2 = Agent(role="Second Agent", goal="Second goal", backstory="Second backstory")
+    agent2 = Agent(
+        role="Second Agent", goal="Second goal", backstory="Second backstory"
+    )
 
     first_task = Task(
         description="Process initial data",
@@ -1335,10 +1326,7 @@ def test_first_task_auto_inject_trigger():
         agent=agent2,
     )
 
-    crew = Crew(
-        agents=[agent1, agent2],
-        tasks=[first_task, second_task]
-    )
+    crew = Crew(agents=[agent1, agent2], tasks=[first_task, second_task])
     crew.kickoff({"crewai_trigger_payload": "Initial context data"})
 
     first_prompt = first_task.prompt()
@@ -1349,31 +1337,31 @@ def test_first_task_auto_inject_trigger():
     assert "Process secondary data" in second_prompt
     assert "Trigger Payload:" not in second_prompt
 
+
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_ensure_first_task_allow_crewai_trigger_context_is_false_does_not_inject():
     from crewai import Crew
 
     agent1 = Agent(role="First Agent", goal="First goal", backstory="First backstory")
-    agent2 = Agent(role="Second Agent", goal="Second goal", backstory="Second backstory")
+    agent2 = Agent(
+        role="Second Agent", goal="Second goal", backstory="Second backstory"
+    )
 
     first_task = Task(
         description="Process initial data",
         expected_output="Initial analysis",
         agent=agent1,
-        allow_crewai_trigger_context=False
+        allow_crewai_trigger_context=False,
     )
 
     second_task = Task(
         description="Process secondary data",
         expected_output="Secondary analysis",
         agent=agent2,
-        allow_crewai_trigger_context=True
+        allow_crewai_trigger_context=True,
     )
 
-    crew = Crew(
-        agents=[agent1, agent2],
-        tasks=[first_task, second_task]
-    )
+    crew = Crew(agents=[agent1, agent2], tasks=[first_task, second_task])
     crew.kickoff({"crewai_trigger_payload": "Context data"})
 
     first_prompt = first_task.prompt()
@@ -1381,7 +1369,6 @@ def test_ensure_first_task_allow_crewai_trigger_context_is_false_does_not_inject
 
     second_prompt = second_task.prompt()
     assert "Trigger Payload: Context data" in second_prompt
-
 
 
 @patch("crewai.agent.CrewTrainingHandler")
@@ -2347,51 +2334,65 @@ def mock_get_auth_token():
 
 @patch("crewai.cli.plus_api.PlusAPI.get_agent")
 def test_agent_from_repository(mock_get_agent, mock_get_auth_token):
-    from crewai_tools import (
-        SerperDevTool,
-        XMLSearchTool,
-        CSVSearchTool,
-        EnterpriseActionTool,
-    )
+    import os
+    from unittest.mock import patch
 
-    mock_get_response = MagicMock()
-    mock_get_response.status_code = 200
-    mock_get_response.json.return_value = {
-        "role": "test role",
-        "goal": "test goal",
-        "backstory": "test backstory",
-        "tools": [
-            {
-                "module": "crewai_tools",
-                "name": "SerperDevTool",
-                "init_params": {"n_results": "30"},
-            },
-            {
-                "module": "crewai_tools",
-                "name": "XMLSearchTool",
-                "init_params": {"summarize": "true"},
-            },
-            {"module": "crewai_tools", "name": "CSVSearchTool", "init_params": {}},
-            # using a tools that returns a list of BaseTools
-            {
-                "module": "crewai_tools",
-                "name": "CrewaiEnterpriseTools",
-                "init_params": {"actions_list": [], "enterprise_token": "test_key"},
-            },
-        ],
-    }
-    mock_get_agent.return_value = mock_get_response
+    # Temporarily set EMBEDCHAIN_DB_URI to avoid None value error
+    original_value = os.environ.get("EMBEDCHAIN_DB_URI")
+    os.environ["EMBEDCHAIN_DB_URI"] = "sqlite:///test_embedchain.db"
 
-    tool_action = EnterpriseActionTool(
-        name="test_name",
-        description="test_description",
-        enterprise_action_token="test_token",
-        action_name="test_action_name",
-        action_schema={"test": "test"},
-    )
+    try:
+        from crewai_tools import (
+            SerperDevTool,
+            XMLSearchTool,
+            CSVSearchTool,
+            EnterpriseActionTool,
+        )
 
-    with patch("crewai_tools.CrewaiEnterpriseTools", return_value=[tool_action]):
-        agent = Agent(from_repository="test_agent")
+        mock_get_response = MagicMock()
+        mock_get_response.status_code = 200
+        mock_get_response.json.return_value = {
+            "role": "test role",
+            "goal": "test goal",
+            "backstory": "test backstory",
+            "tools": [
+                {
+                    "module": "crewai_tools",
+                    "name": "SerperDevTool",
+                    "init_params": {"n_results": "30"},
+                },
+                {
+                    "module": "crewai_tools",
+                    "name": "XMLSearchTool",
+                    "init_params": {"summarize": "true"},
+                },
+                {"module": "crewai_tools", "name": "CSVSearchTool", "init_params": {}},
+                # using a tools that returns a list of BaseTools
+                {
+                    "module": "crewai_tools",
+                    "name": "CrewaiEnterpriseTools",
+                    "init_params": {"actions_list": [], "enterprise_token": "test_key"},
+                },
+            ],
+        }
+        mock_get_agent.return_value = mock_get_response
+
+        tool_action = EnterpriseActionTool(
+            name="test_name",
+            description="test_description",
+            enterprise_action_token="test_token",
+            action_name="test_action_name",
+            action_schema={"test": "test"},
+        )
+
+        with patch("crewai_tools.CrewaiEnterpriseTools", return_value=[tool_action]):
+            agent = Agent(from_repository="test_agent")
+    finally:
+        # Restore original value
+        if original_value is None:
+            os.environ.pop("EMBEDCHAIN_DB_URI", None)
+        else:
+            os.environ["EMBEDCHAIN_DB_URI"] = original_value
 
     assert agent.role == "test role"
     assert agent.goal == "test goal"
