@@ -209,12 +209,13 @@ def test_crew_emits_end_task_event(base_agent, base_task):
 
     mock_span = Mock()
     crew = Crew(agents=[base_agent], tasks=[base_task], name="TestCrew")
+
     with (
-        patch.object(
-            event_listener._telemetry, "task_started", return_value=mock_span
+        patch(
+            "crewai.telemetry.telemetry.Telemetry.task_started", return_value=mock_span
         ) as mock_task_started,
-        patch.object(
-            event_listener._telemetry, "task_ended", return_value=mock_span
+        patch(
+            "crewai.telemetry.telemetry.Telemetry.task_ended", return_value=mock_span
         ) as mock_task_ended,
     ):
         crew.kickoff()
