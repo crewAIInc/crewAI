@@ -79,7 +79,6 @@ from crewai.utilities.events.listeners.tracing.trace_listener import (
 
 from crewai.utilities.events.listeners.tracing.utils import (
     is_tracing_enabled,
-    on_first_execution_tracing_confirmation,
 )
 from crewai.utilities.formatter import (
     aggregate_raw_outputs_from_task_outputs,
@@ -287,11 +286,7 @@ class Crew(FlowTrackable, BaseModel):
         self._cache_handler = CacheHandler()
         event_listener = EventListener()
 
-        if (
-            on_first_execution_tracing_confirmation()
-            or is_tracing_enabled()
-            or self.tracing
-        ):
+        if is_tracing_enabled() or self.tracing:
             trace_listener = TraceCollectionListener()
             trace_listener.setup_listeners(crewai_event_bus)
         event_listener.verbose = self.verbose
@@ -504,7 +499,6 @@ class Crew(FlowTrackable, BaseModel):
                             f"Task '{task.description}' has a context dependency on a future task '{context_task.description}', which is not allowed."
                         )
         return self
-
 
     @property
     def key(self) -> str:
@@ -1514,8 +1508,16 @@ class Crew(FlowTrackable, BaseModel):
             ks.reset()
 
     def _set_allow_crewai_trigger_context_for_first_task(self):
-        crewai_trigger_payload = self._inputs and self._inputs.get("crewai_trigger_payload")
-        able_to_inject = self.tasks and self.tasks[0].allow_crewai_trigger_context is None
+        crewai_trigger_payload = self._inputs and self._inputs.get(
+            "crewai_trigger_payload"
+        )
+        able_to_inject = (
+            self.tasks and self.tasks[0].allow_crewai_trigger_context is None
+        )
 
-        if self.process == Process.sequential and crewai_trigger_payload and able_to_inject:
+        if (
+            self.process == Process.sequential
+            and crewai_trigger_payload
+            and able_to_inject
+        ):
             self.tasks[0].allow_crewai_trigger_context = True

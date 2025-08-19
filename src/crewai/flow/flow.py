@@ -40,7 +40,6 @@ from crewai.utilities.events.listeners.tracing.trace_listener import (
 )
 from crewai.utilities.events.listeners.tracing.utils import (
     is_tracing_enabled,
-    on_first_execution_tracing_confirmation,
 )
 from crewai.utilities.printer import Printer
 
@@ -480,11 +479,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
         # Initialize state with initial values
         self._state = self._create_initial_state()
         self.tracing = tracing
-        if (
-            on_first_execution_tracing_confirmation()
-            or is_tracing_enabled()
-            or self.tracing
-        ):
+        if is_tracing_enabled() or self.tracing:
             trace_listener = TraceCollectionListener()
             trace_listener.setup_listeners(crewai_event_bus)
         # Apply any additional kwargs
