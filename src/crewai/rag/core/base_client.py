@@ -163,7 +163,7 @@ class BaseClient(Protocol):
         ...
 
     @abstractmethod
-    def add(self, **kwargs: Unpack[BaseCollectionAddParams]) -> None:
+    def add_documents(self, **kwargs: Unpack[BaseCollectionAddParams]) -> None:
         """Add documents with their embeddings to a collection.
 
         This method performs an upsert operation - if a document with the same ID
@@ -201,7 +201,7 @@ class BaseClient(Protocol):
             ...         "metadata": {"source": "file4", "topic": "DL"}
             ...     }
             ... ]
-            >>> client.add(collection_name="my_docs", documents=records)
+            >>> client.add_documents(collection_name="my_docs", documents=records)
             >>>
             >>> records_with_id: list[BaseRecord] = [
             ...     {
@@ -210,12 +210,12 @@ class BaseClient(Protocol):
             ...         "metadata": {"source": "file5", "topic": "NLP"}
             ...     }
             ... ]
-            >>> client.add(collection_name="my_docs", documents=records_with_id)
+            >>> client.add_documents(collection_name="my_docs", documents=records_with_id)
         """
         ...
 
     @abstractmethod
-    async def aadd(self, **kwargs: Unpack[BaseCollectionAddParams]) -> None:
+    async def aadd_documents(self, **kwargs: Unpack[BaseCollectionAddParams]) -> None:
         """Add documents with their embeddings to a collection asynchronously.
 
         Implementations should handle embedding generation internally based on
@@ -249,7 +249,7 @@ class BaseClient(Protocol):
             ...             "metadata": {"source": "file2", "topic": "async"}
             ...         }
             ...     ]
-            ...     await client.aadd(collection_name="my_docs", documents=records)
+            ...     await client.aadd_documents(collection_name="my_docs", documents=records)
             ...
             >>> asyncio.run(add_documents())
         """
