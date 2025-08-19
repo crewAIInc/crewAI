@@ -31,7 +31,7 @@ class BaseTool(BaseModel, ABC):
     name: str
     """The unique name of the tool that clearly communicates its purpose."""
     description: str
-    """Used t # assert tool.current_usage_count == 5o tell the model how/when/why to use the tool."""
+    """Used to tell the model how/when/why to use the tool."""
     env_vars: List[EnvVar] = []
     """List of environment variables used by the tool."""
     args_schema: Type[PydanticBaseModel] = Field(
