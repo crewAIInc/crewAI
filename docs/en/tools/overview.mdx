@@ -117,4 +117,19 @@ agent = Agent(
 )
 ```
 
+## **Max Usage Count**
+
+You can set a maximum usage count for a tool to prevent it from being used more than a certain number of times.
+By default, the max usage count is unlimited.
+
+
+
+```python
+from crewai_tools import FileReadTool
+
+tool = FileReadTool(max_usage_count=5, ...)
+```
+
+
+
 Ready to explore? Pick a category above to discover tools that fit your use case!

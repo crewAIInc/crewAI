@@ -1,0 +1,123 @@
+interactions:
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are Test Agent. Test backstory\nYour
+      personal goal is: Test goal\nTo give my best complete final answer to the task
+      respond using the exact following format:\n\nThought: I now can give a great
+      answer\nFinal Answer: Your final answer must be the great and the most complete
+      as possible, it must be outcome described.\n\nI MUST use these formats, my job
+      depends on it!"}, {"role": "user", "content": "\nCurrent Task: Say hello to
+      the world\n\nThis is the expected criteria for your final answer: hello world\nyou
+      MUST return the actual complete content as the final answer, not a summary.\n\nBegin!
+      This is VERY important to you, use the tools available and give your best Final
+      Answer, your job depends on it!\n\nThought:"}], "model": "gpt-4o-mini", "stop":
+      ["\nObservation:"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate, zstd
+      connection:
+      - keep-alive
+      content-length:
+      - '825'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=oA9oTa3cE0ZaEUDRf0hCpnarSAQKzrVUhl6qDS4j09w-1755302115-1.0.1.1-gUUDl4ZqvBQkg7244DTwOmSiDUT2z_AiQu0P1xUaABjaufSpZuIlI5G0H7OSnW.ldypvpxjj45NGWesJ62M_2U7r20tHz_gMmDFw6D5ZiNc;
+        _cfuvid=ICenEGMmOE5jaOjwD30bAOwrF8.XRbSIKTBl1EyWs0o-1755302115700-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.93.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.93.0
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-read-timeout:
+      - '600.0'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.9
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAAwAAAP//jFLLbtswELzrKxY8W4VkW3ajW1GgQA7JJUGLog0EmlxJrCkuQ1J2g8D/
+        XlByLLkPoBcB2tkZzuzuawLAlGQlMNHyIDqr04/rl6/3z+6hu8vq/cOX5936cRPE3i8Px88rtogM
+        2v1AEd5Y7wR1VmNQZEZYOOQBo2q+LYpVtszzYgA6kqgjrbEhXVPaKaPSZbZcp9k2zd+f2S0pgZ6V
+        8C0BAHgdvtGnkfiTlZAt3iodes8bZOWlCYA50rHCuPfKB24CW0ygIBPQDNZvwdARBDfQqAMChyba
+        Bm78ER3Ad/NJGa7hw/BfQotaExzJaTkXdFj3nsdQptd6BnBjKPA4lCHK0xk5Xcxraqyjnf+Nympl
+        lG8rh9yTiUZ9IMsG9JQAPA1D6q9yM+uos6EKtMfhubzYjnps2s0MXZ3BQIHrWX17Hu21XiUxcKX9
+        bMxMcNGinKjTTngvFc2AZJb6Tzd/0x6TK9P8j/wECIE2oKysQ6nEdeKpzWE83X+1XaY8GGYe3UEJ
+        rIJCFzchsea9Hg+K+RcfsKtqZRp01qnxqmpbFZuM1xssihuWnJJfAAAA//8DAFSowWRjAwAA
+    headers:
+      CF-RAY:
+      - 96fc9f301bf7cf1f-SJC
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 15 Aug 2025 23:55:16 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '685'
+      openai-project:
+      - proj_xitITlrFeen7zjNSzML82h9x
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '711'
+      x-ratelimit-limit-project-tokens:
+      - '150000000'
+      x-ratelimit-limit-requests:
+      - '30000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-project-tokens:
+      - '149999827'
+      x-ratelimit-remaining-requests:
+      - '29999'
+      x-ratelimit-remaining-tokens:
+      - '149999827'
+      x-ratelimit-reset-project-tokens:
+      - 0s
+      x-ratelimit-reset-requests:
+      - 2ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_3f0ec42447374a76a22a4cdb9f336279
+    status:
+      code: 200
+      message: OK
+version: 1

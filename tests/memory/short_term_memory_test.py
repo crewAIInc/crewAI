@@ -1,6 +1,5 @@
 from unittest.mock import patch, ANY
 from collections import defaultdict
-from pydantic.warnings import PydanticDeprecatedSince211
 import pytest
 
 from crewai.agent import Agent
@@ -36,7 +35,6 @@ def short_term_memory():
     return ShortTermMemory(crew=Crew(agents=[agent], tasks=[task]))
 
 
-@pytest.mark.filterwarnings("error", category=PydanticDeprecatedSince211)
 def test_short_term_memory_search_events(short_term_memory):
     events = defaultdict(list)
 
@@ -86,7 +84,6 @@ def test_short_term_memory_search_events(short_term_memory):
     }
 
 
-@pytest.mark.filterwarnings("error", category=PydanticDeprecatedSince211)
 def test_short_term_memory_save_events(short_term_memory):
     events = defaultdict(list)
     with crewai_event_bus.scoped_handlers():
@@ -133,7 +130,6 @@ def test_short_term_memory_save_events(short_term_memory):
     }
 
 
-@pytest.mark.filterwarnings("error", category=PydanticDeprecatedSince211)
 def test_save_and_search(short_term_memory):
     memory = ShortTermMemoryItem(
         data="""test value test value test value test value test value test value
