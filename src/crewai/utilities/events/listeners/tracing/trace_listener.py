@@ -166,7 +166,7 @@ class TraceCollectionListener(BaseEventListener):
         @event_bus.on(CrewKickoffCompletedEvent)
         def on_crew_completed(source, event):
             self._handle_trace_event("crew_kickoff_completed", source, event)
-            self.batch_manager.finalize_batch(ephemeral=True)
+            self.batch_manager.finalize_batch()
 
         @event_bus.on(CrewKickoffFailedEvent)
         def on_crew_failed(source, event):

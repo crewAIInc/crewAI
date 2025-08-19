@@ -13,7 +13,6 @@ from crewai.utilities.chromadb import create_persistent_client
 from crewai.utilities.constants import MAX_FILE_NAME_LENGTH
 from crewai.utilities.paths import db_storage_path
 import warnings
-from pydantic.warnings import PydanticDeprecatedSince211
 
 
 @contextlib.contextmanager
@@ -68,7 +67,6 @@ class RAGStorage(BaseRAGStorage):
         # TODO: Remove this once we upgrade chromadb to at least 1.0.8.
         warnings.filterwarnings(
             "ignore",
-            category=PydanticDeprecatedSince211,
             message=r".*'model_fields'.*is deprecated.*",
             module=r"^chromadb(\.|$)",
         )

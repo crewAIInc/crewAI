@@ -2,6 +2,7 @@ import os
 import pytest
 from unittest.mock import patch, MagicMock
 
+
 from crewai import Agent, Task, Crew
 from crewai.flow.flow import Flow, start
 from crewai.utilities.events.listeners.tracing.trace_listener import (
@@ -320,6 +321,74 @@ class TestTraceListenerSetup:
             ) as mock_listener_setup:
                 FlowExample()
                 assert mock_listener_setup.call_count >= 1
+
+    @pytest.mark.vcr(filter_headers=["authorization"])
+    def test_trace_listener_ephemeral_batch(self):
+        """Test that trace listener properly handles ephemeral batches"""
+        with (
+            patch.dict(os.environ, {"CREWAI_TRACING_ENABLED": "true"}),
+            patch(
+                "crewai.utilities.events.listeners.tracing.trace_listener.TraceCollectionListener._check_authenticated",
+                return_value=False,
+            ),
+        ):
+            agent = Agent(
+                role="Test Agent",
+                goal="Test goal",
+                backstory="Test backstory",
+                llm="gpt-4o-mini",
+            )
+            task = Task(
+                description="Say hello to the world",
+                expected_output="hello world",
+                agent=agent,
+            )
+            crew = Crew(agents=[agent], tasks=[task], tracing=True)
+
+            with patch.object(TraceBatchManager, "initialize_batch") as mock_initialize:
+                crew.kickoff()
+
+                assert mock_initialize.call_count >= 1
+                assert mock_initialize.call_args_list[0][1]["use_ephemeral"] is True
+
+    @pytest.mark.vcr(filter_headers=["authorization"])
+    def test_trace_listener_with_authenticated_user(self):
+        """Test that trace listener properly handles authenticated batches"""
+        with (
+            patch.dict(os.environ, {"CREWAI_TRACING_ENABLED": "true"}),
+            patch(
+                "crewai.utilities.events.listeners.tracing.trace_batch_manager.PlusAPI"
+            ) as mock_plus_api_class,
+        ):
+            mock_plus_api_instance = MagicMock()
+            mock_plus_api_class.return_value = mock_plus_api_instance
+
+            agent = Agent(
+                role="Test Agent",
+                goal="Test goal",
+                backstory="Test backstory",
+                llm="gpt-4o-mini",
+            )
+            task = Task(
+                description="Say hello to the world",
+                expected_output="hello world",
+                agent=agent,
+            )
+
+            with (
+                patch.object(TraceBatchManager, "initialize_batch") as mock_initialize,
+                patch.object(
+                    TraceBatchManager, "finalize_batch"
+                ) as mock_finalize_backend_batch,
+            ):
+                crew = Crew(agents=[agent], tasks=[task], tracing=True)
+                crew.kickoff()
+
+                mock_plus_api_class.assert_called_with(api_key="mock_token_12345")
+
+                assert mock_initialize.call_count >= 1
+                mock_finalize_backend_batch.assert_called_with()
+                assert mock_finalize_backend_batch.call_count >= 1
 
     # Helper method to ensure cleanup
     def teardown_method(self):

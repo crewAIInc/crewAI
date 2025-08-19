@@ -79,7 +79,6 @@ from crewai.utilities.events.listeners.tracing.trace_listener import (
 
 from crewai.utilities.events.listeners.tracing.utils import (
     is_tracing_enabled,
-    on_first_execution_tracing_confirmation,
 )
 from crewai.utilities.formatter import (
     aggregate_raw_outputs_from_task_outputs,
@@ -286,8 +285,6 @@ class Crew(FlowTrackable, BaseModel):
 
         self._cache_handler = CacheHandler()
         event_listener = EventListener()
-        if on_first_execution_tracing_confirmation():
-            self.tracing = True
 
         if is_tracing_enabled() or self.tracing:
             trace_listener = TraceCollectionListener()
@@ -503,7 +500,6 @@ class Crew(FlowTrackable, BaseModel):
                         )
         return self
 
-
     @property
     def key(self) -> str:
         source: List[str] = [agent.key for agent in self.agents] + [
@@ -640,7 +636,7 @@ class Crew(FlowTrackable, BaseModel):
                 self._inputs = inputs
                 self._interpolate_inputs(inputs)
             self._set_tasks_callbacks()
-            self._set_inject_trigger_input_for_first_task()
+            self._set_allow_crewai_trigger_context_for_first_task()
 
             i18n = I18N(prompt_file=self.prompt_file)
 
@@ -1511,9 +1507,17 @@ class Crew(FlowTrackable, BaseModel):
         for ks in knowledges:
             ks.reset()
 
-    def _set_inject_trigger_input_for_first_task(self):
-        crewai_trigger_payload = self._inputs and self._inputs.get("crewai_trigger_payload")
-        able_to_inject = self.tasks and self.tasks[0].inject_trigger_input is None
+    def _set_allow_crewai_trigger_context_for_first_task(self):
+        crewai_trigger_payload = self._inputs and self._inputs.get(
+            "crewai_trigger_payload"
+        )
+        able_to_inject = (
+            self.tasks and self.tasks[0].allow_crewai_trigger_context is None
+        )
 
-        if self.process == Process.sequential and crewai_trigger_payload and able_to_inject:
-            self.tasks[0].inject_trigger_input = True
+        if (
+            self.process == Process.sequential
+            and crewai_trigger_payload
+            and able_to_inject
+        ):
+            self.tasks[0].allow_crewai_trigger_context = True
