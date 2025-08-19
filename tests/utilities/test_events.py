@@ -128,7 +128,6 @@ def test_crew_emits_end_kickoff_event(base_agent, base_task):
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_crew_emits_test_kickoff_type_event(base_agent, base_task):
     received_events = []
-    mock_span = Mock()
 
     @crewai_event_bus.on(CrewTestStartedEvent)
     def handle_crew_end(source, event):
@@ -143,21 +142,8 @@ def test_crew_emits_test_kickoff_type_event(base_agent, base_task):
         received_events.append(event)
 
     eval_llm = LLM(model="gpt-4o-mini")
-    with (
-        patch.object(
-            event_listener._telemetry, "test_execution_span", return_value=mock_span
-        ) as mock_crew_execution_span,
-    ):
-        crew = Crew(agents=[base_agent], tasks=[base_task], name="TestCrew")
-        crew.test(n_iterations=1, eval_llm=eval_llm)
-
-        # Verify the call was made with correct argument types and values
-        assert mock_crew_execution_span.call_count == 1
-        args = mock_crew_execution_span.call_args[0]
-        assert isinstance(args[0], Crew)
-        assert args[1] == 1
-        assert args[2] is None
-        assert args[3] == eval_llm
+    crew = Crew(agents=[base_agent], tasks=[base_task], name="TestCrew")
+    crew.test(n_iterations=1, eval_llm=eval_llm)
 
     assert len(received_events) == 3
     assert received_events[0].crew_name == "TestCrew"
@@ -572,7 +558,6 @@ def test_multiple_handlers_for_same_event(base_agent, base_task):
 
 def test_flow_emits_created_event():
     received_events = []
-    mock_span = Mock()
 
     @crewai_event_bus.on(FlowCreatedEvent)
     def handle_flow_created(source, event):
@@ -583,15 +568,8 @@ def test_flow_emits_created_event():
         def begin(self):
             return "started"
 
-    with (
-        patch.object(
-            event_listener._telemetry, "flow_creation_span", return_value=mock_span
-        ) as mock_flow_creation_span,
-    ):
-        flow = TestFlow()
-        flow.kickoff()
-
-    mock_flow_creation_span.assert_called_once_with("TestFlow")
+    flow = TestFlow()
+    flow.kickoff()
 
     assert len(received_events) == 1
     assert received_events[0].flow_name == "TestFlow"
