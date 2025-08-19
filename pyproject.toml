@@ -10,7 +10,7 @@ authors = [
 dependencies = [
     # Core Dependencies
     "pydantic>=2.4.2",
-    "openai>=1.13.3",
+    "openai<1.100.0",  # TODO: Temporarily pin due to https://github.com/openai/openai-python/issues/2564. Can revert once the issue is fixed.
     "litellm==1.74.9",
     "instructor>=1.3.3",
     # Text Processing
@@ -48,11 +48,10 @@ Documentation = "https://docs.crewai.com"
 Repository = "https://github.com/crewAIInc/crewAI"
 
 [project.optional-dependencies]
-tools = ["crewai-tools~=0.62.0"]
+tools = ["crewai-tools~=0.62.1"]
 embeddings = [
     "tiktoken~=0.8.0"
 ]
-agentops = ["agentops==0.3.18"]
 pdfplumber = [
     "pdfplumber>=0.11.4",
 ]

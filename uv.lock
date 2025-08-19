@@ -35,22 +35,6 @@ resolution-markers = [
 ]
 
 [[package]]
-name = "agentops"
-version = "0.3.18"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "packaging" },
-    { name = "psutil" },
-    { name = "pyyaml" },
-    { name = "requests" },
-    { name = "termcolor" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/c5/52/46bb2f29b9e5f2e1d8b124296b7794934a9048de635d9e7d6a95e791ad7b/agentops-0.3.18.tar.gz", hash = "sha256:4d509754df7be52579597cc9f53939c5218131a0379463e0ff6f6f40cde9fcc4", size = 55394, upload-time = "2024-11-19T19:06:21.306Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/97/8d/bd4cad95dad722dc2d3e4179feab1058ef846828c0e15e51e8bfaea373ee/agentops-0.3.18-py3-none-any.whl", hash = "sha256:8b48d8a1662f276653430fd541c77fa4f9a15a43e881b518ff88ea56925afcf7", size = 58032, upload-time = "2024-11-19T19:06:19.068Z" },
-]
-
-[[package]]
 name = "aiohappyeyeballs"
 version = "2.6.1"
 source = { registry = "https://pypi.org/simple" }
@@ -744,9 +728,6 @@ dependencies = [
 ]
 
 [package.optional-dependencies]
-agentops = [
-    { name = "agentops" },
-]
 aisuite = [
     { name = "aisuite" },
 ]
@@ -792,13 +773,12 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "agentops", marker = "extra == 'agentops'", specifier = "==0.3.18" },
     { name = "aisuite", marker = "extra == 'aisuite'", specifier = ">=0.1.10" },
     { name = "appdirs", specifier = ">=1.4.4" },
     { name = "blinker", specifier = ">=1.9.0" },
     { name = "chromadb", specifier = ">=0.5.23" },
     { name = "click", specifier = ">=8.1.7" },
-    { name = "crewai-tools", marker = "extra == 'tools'", specifier = "~=0.62.0" },
+    { name = "crewai-tools", marker = "extra == 'tools'", specifier = "~=0.62.1" },
     { name = "docling", marker = "extra == 'docling'", specifier = ">=2.12.0" },
     { name = "instructor", specifier = ">=1.3.3" },
     { name = "json-repair", specifier = "==0.25.2" },
@@ -807,7 +787,7 @@ requires-dist = [
     { name = "litellm", specifier = "==1.74.9" },
     { name = "mem0ai", marker = "extra == 'mem0'", specifier = ">=0.1.94" },
     { name = "onnxruntime", specifier = "==1.22.0" },
-    { name = "openai", specifier = ">=1.13.3" },
+    { name = "openai", specifier = "<1.100.0" },
     { name = "openpyxl", specifier = ">=3.1.5" },
     { name = "openpyxl", marker = "extra == 'openpyxl'", specifier = ">=3.1.5" },
     { name = "opentelemetry-api", specifier = ">=1.30.0" },
@@ -828,7 +808,7 @@ requires-dist = [
     { name = "tomli-w", specifier = ">=1.1.0" },
     { name = "uv", specifier = ">=0.4.25" },
 ]
-provides-extras = ["agentops", "aisuite", "docling", "embeddings", "mem0", "openpyxl", "pandas", "pdfplumber", "tools"]
+provides-extras = ["aisuite", "docling", "embeddings", "mem0", "openpyxl", "pandas", "pdfplumber", "tools"]
 
 [package.metadata.requires-dev]
 dev = [
@@ -850,7 +830,7 @@ dev = [
 
 [[package]]
 name = "crewai-tools"
-version = "0.62.0"
+version = "0.62.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "chromadb" },
@@ -868,9 +848,9 @@ dependencies = [
     { name = "stagehand" },
     { name = "tiktoken" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/e9/24/0287edbaa33c52b5541a564d92d3324d4839a76a4b023540c0fd5c7ee330/crewai_tools-0.62.0.tar.gz", hash = "sha256:71a24c173677f108516e1cde286e476e9aeb60da78d911bec0f15caa3c6af15a", size = 1059534, upload-time = "2025-08-13T21:13:49.879Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/e3/4b/23cd61a07105b54be8d1185e3b861b1bb2ac6050264acc060d91b22da171/crewai_tools-0.62.1.tar.gz", hash = "sha256:1819d09189e815a28f6744b6cffde703b9e9e438ef5f066c5b4dcdd75cc3c6ad", size = 1059792, upload-time = "2025-08-19T01:08:02.567Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/a9/16/cf26f4eaf1edc2f62d0c9cb1ec97f573f8d7401663da047c52b3ce4c4628/crewai_tools-0.62.0-py3-none-any.whl", hash = "sha256:b5e7035563cb00601431286b1c56933966acea1f220052cd33e1d4ee35590017", size = 677008, upload-time = "2025-08-13T21:13:46.903Z" },
+    { url = "https://files.pythonhosted.org/packages/34/87/a6e8d5dff4718795d806cd54bdb1cb94c637d93951d00e87c0b55d431870/crewai_tools-0.62.1-py3-none-any.whl", hash = "sha256:d8333315c8bf35bdb939b22e5b555acf9357ae676b992832f96f63de21670871", size = 677041, upload-time = "2025-08-19T01:08:00.891Z" },
 ]
 
 [[package]]
@@ -4014,20 +3994,6 @@ wheels = [
 ]
 
 [[package]]
-name = "psutil"
-version = "5.9.8"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/90/c7/6dc0a455d111f68ee43f27793971cf03fe29b6ef972042549db29eec39a2/psutil-5.9.8.tar.gz", hash = "sha256:6be126e3225486dff286a8fb9a06246a5253f4c7c53b475ea5f5ac934e64194c", size = 503247, upload-time = "2024-01-19T20:47:09.517Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/e7/e3/07ae864a636d70a8a6f58da27cb1179192f1140d5d1da10886ade9405797/psutil-5.9.8-cp36-abi3-macosx_10_9_x86_64.whl", hash = "sha256:aee678c8720623dc456fa20659af736241f575d79429a0e5e9cf88ae0605cc81", size = 248702, upload-time = "2024-01-19T20:47:36.303Z" },
-    { url = "https://files.pythonhosted.org/packages/b3/bd/28c5f553667116b2598b9cc55908ec435cb7f77a34f2bff3e3ca765b0f78/psutil-5.9.8-cp36-abi3-manylinux_2_12_i686.manylinux2010_i686.manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:8cb6403ce6d8e047495a701dc7c5bd788add903f8986d523e3e20b98b733e421", size = 285242, upload-time = "2024-01-19T20:47:39.65Z" },
-    { url = "https://files.pythonhosted.org/packages/c5/4f/0e22aaa246f96d6ac87fe5ebb9c5a693fbe8877f537a1022527c47ca43c5/psutil-5.9.8-cp36-abi3-manylinux_2_12_x86_64.manylinux2010_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:d06016f7f8625a1825ba3732081d77c94589dca78b7a3fc072194851e88461a4", size = 288191, upload-time = "2024-01-19T20:47:43.078Z" },
-    { url = "https://files.pythonhosted.org/packages/6e/f5/2aa3a4acdc1e5940b59d421742356f133185667dd190b166dbcfcf5d7b43/psutil-5.9.8-cp37-abi3-win32.whl", hash = "sha256:bc56c2a1b0d15aa3eaa5a60c9f3f8e3e565303b465dbf57a1b730e7a2b9844e0", size = 251252, upload-time = "2024-01-19T20:47:52.88Z" },
-    { url = "https://files.pythonhosted.org/packages/93/52/3e39d26feae7df0aa0fd510b14012c3678b36ed068f7d78b8d8784d61f0e/psutil-5.9.8-cp37-abi3-win_amd64.whl", hash = "sha256:8db4c1b57507eef143a15a6884ca10f7c73876cdf5d51e713151c1236a0e68cf", size = 255090, upload-time = "2024-01-19T20:47:56.019Z" },
-    { url = "https://files.pythonhosted.org/packages/05/33/2d74d588408caedd065c2497bdb5ef83ce6082db01289a1e1147f6639802/psutil-5.9.8-cp38-abi3-macosx_11_0_arm64.whl", hash = "sha256:d16bbddf0693323b8c6123dd804100241da461e41d6e332fb0ba6058f630f8c8", size = 249898, upload-time = "2024-01-19T20:47:59.238Z" },
-]
-
-[[package]]
 name = "ptyprocess"
 version = "0.7.0"
 source = { registry = "https://pypi.org/simple" }
@@ -5500,15 +5466,6 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/0a/d4/2b0cd0fe285e14b36db076e78c93766ff1d529d70408bd1d2a5a84f1d929/tenacity-9.1.2.tar.gz", hash = "sha256:1169d376c297e7de388d18b4481760d478b0e99a777cad3a9c86e556f4b697cb", size = 48036, upload-time = "2025-04-02T08:25:09.966Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/e5/30/643397144bfbfec6f6ef821f36f33e57d35946c44a2352d3c9f0ae847619/tenacity-9.1.2-py3-none-any.whl", hash = "sha256:f77bf36710d8b73a50b2dd155c97b870017ad21afe6ab300326b0371b3b05138", size = 28248, upload-time = "2025-04-02T08:25:07.678Z" },
-]
-
-[[package]]
-name = "termcolor"
-version = "2.4.0"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/10/56/d7d66a84f96d804155f6ff2873d065368b25a07222a6fd51c4f24ef6d764/termcolor-2.4.0.tar.gz", hash = "sha256:aab9e56047c8ac41ed798fa36d892a37aca6b3e9159f3e0c24bc64a9b3ac7b7a", size = 12664, upload-time = "2023-12-01T11:04:51.66Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/d9/5f/8c716e47b3a50cbd7c146f45881e11d9414def768b7cd9c5e6650ec2a80a/termcolor-2.4.0-py3-none-any.whl", hash = "sha256:9297c0df9c99445c2412e832e882a7884038a25617c60cea2ad69488d4040d63", size = 7719, upload-time = "2023-12-01T11:04:50.019Z" },
 ]
 
 [[package]]
