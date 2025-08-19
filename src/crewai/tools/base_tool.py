@@ -14,11 +14,13 @@ from pydantic import BaseModel as PydanticBaseModel
 
 from crewai.tools.structured_tool import CrewStructuredTool
 
+
 class EnvVar(BaseModel):
     name: str
     description: str
     required: bool = True
     default: Optional[str] = None
+
 
 class BaseTool(BaseModel, ABC):
     class _ArgsSchemaPlaceholder(PydanticBaseModel):
@@ -29,7 +31,7 @@ class BaseTool(BaseModel, ABC):
     name: str
     """The unique name of the tool that clearly communicates its purpose."""
     description: str
-    """Used to tell the model how/when/why to use the tool."""
+    """Used t # assert tool.current_usage_count == 5o tell the model how/when/why to use the tool."""
     env_vars: List[EnvVar] = []
     """List of environment variables used by the tool."""
     args_schema: Type[PydanticBaseModel] = Field(
@@ -108,7 +110,7 @@ class BaseTool(BaseModel, ABC):
     def to_structured_tool(self) -> CrewStructuredTool:
         """Convert this tool to a CrewStructuredTool instance."""
         self._set_args_schema()
-        return CrewStructuredTool(
+        structured_tool = CrewStructuredTool(
             name=self.name,
             description=self.description,
             args_schema=self.args_schema,
@@ -117,6 +119,8 @@ class BaseTool(BaseModel, ABC):
             max_usage_count=self.max_usage_count,
             current_usage_count=self.current_usage_count,
         )
+        structured_tool._original_tool = self
+        return structured_tool
 
     @classmethod
     def from_langchain(cls, tool: Any) -> "BaseTool":
@@ -276,7 +280,9 @@ def to_langchain(
     return [t.to_structured_tool() if isinstance(t, BaseTool) else t for t in tools]
 
 
-def tool(*args, result_as_answer: bool = False, max_usage_count: int | None = None) -> Callable:
+def tool(
+    *args, result_as_answer: bool = False, max_usage_count: int | None = None
+) -> Callable:
     """
     Decorator to create a tool from a function.
 
