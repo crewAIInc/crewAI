@@ -230,7 +230,7 @@ class ConsoleFormatter:
         
         # Display task name if available, otherwise just the ID
         if task_name:
-            task_content.append(f"📋 Task: ", style="yellow bold")
+            task_content.append("📋 Task: ", style="yellow bold")
             task_content.append(f"{task_name}", style="yellow bold")
             task_content.append(f" (ID: {task_id})", style="yellow dim")
         else:
@@ -281,7 +281,7 @@ class ConsoleFormatter:
                 task_content = Text()
                 # First line: Task ID/name
                 if task_name:
-                    task_content.append(f"📋 Task: ", style=f"{style} bold")
+                    task_content.append("📋 Task: ", style=f"{style} bold")
                     task_content.append(f"{task_name}", style=f"{style} bold")
                     task_content.append(f" (ID: {task_id})", style=f"{style} dim")
                 else:
