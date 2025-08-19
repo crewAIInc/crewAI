@@ -11,7 +11,6 @@ import chromadb.errors
 from chromadb.api import ClientAPI
 from chromadb.api.types import OneOrMany
 from chromadb.config import Settings
-from pydantic.warnings import PydanticDeprecatedSince211
 import warnings
 
 from crewai.knowledge.storage.base_knowledge_storage import BaseKnowledgeStorage
@@ -91,7 +90,6 @@ class KnowledgeStorage(BaseKnowledgeStorage):
         # TODO: Remove this once we upgrade chromadb to at least 1.0.8.
         warnings.filterwarnings(
             "ignore",
-            category=PydanticDeprecatedSince211,
             message=r".*'model_fields'.*is deprecated.*",
             module=r"^chromadb(\.|$)",
         )
