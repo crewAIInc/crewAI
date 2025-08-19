@@ -10,6 +10,11 @@ from pydantic import BaseModel, Field, create_model
 
 from crewai.utilities.logger import Logger
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from crewai.tools.base_tool import BaseTool
+
 
 class CrewStructuredTool:
     """A structured tool that can operate on any number of inputs.
@@ -17,6 +22,8 @@ class CrewStructuredTool:
     This tool intends to replace StructuredTool with a custom implementation
     that integrates better with CrewAI's ecosystem.
     """
+
+    _original_tool: BaseTool | None = None
 
     def __init__(
         self,
@@ -47,6 +54,7 @@ class CrewStructuredTool:
         self.result_as_answer = result_as_answer
         self.max_usage_count = max_usage_count
         self.current_usage_count = current_usage_count
+        self._original_tool = None
 
         # Validate the function signature matches the schema
         self._validate_function_signature()
@@ -219,6 +227,8 @@ class CrewStructuredTool:
         """
         parsed_args = self._parse_args(input)
 
+        self._increment_usage_count()
+
         if inspect.iscoroutinefunction(self.func):
             return await self.func(**parsed_args, **kwargs)
         else:
@@ -242,6 +252,8 @@ class CrewStructuredTool:
         """Main method for tool execution."""
         parsed_args = self._parse_args(input)
 
+        self._increment_usage_count()
+
         if inspect.iscoroutinefunction(self.func):
             result = asyncio.run(self.func(**parsed_args, **kwargs))
             return result
@@ -252,6 +264,12 @@ class CrewStructuredTool:
             return asyncio.run(result)
 
         return result
+
+    def _increment_usage_count(self) -> None:
+        """Increment the usage count."""
+        self.current_usage_count += 1
+        if self._original_tool is not None:
+            self._original_tool.current_usage_count = self.current_usage_count
 
     @property
     def args(self) -> dict:
