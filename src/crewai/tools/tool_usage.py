@@ -286,6 +286,12 @@ class ToolUsage:
             tool_name=tool.name,
             attempts=self._run_attempts,
         )
+        # Skip formatting if result_as_answer is True
+        if (
+            hasattr(available_tool, "result_as_answer")
+            and available_tool.result_as_answer
+        ):
+            return result
         result = self._format_result(result=result)  # type: ignore # "_format_result" of "ToolUsage" does not return a value (it only ever returns None)
         data = {
             "result": result,
