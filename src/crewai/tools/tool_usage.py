@@ -311,6 +311,7 @@ class ToolUsage:
             hasattr(available_tool, "result_as_answer")
             and available_tool.result_as_answer  # type: ignore # Item "None" of "Any | None" has no attribute "cache_function"
         ):
+            raise Exception("Did I hit this?")
             result_as_answer = available_tool.result_as_answer  # type: ignore # Item "None" of "Any | None" has no attribute "result_as_answer"
             data["result_as_answer"] = result_as_answer  # type: ignore
 
