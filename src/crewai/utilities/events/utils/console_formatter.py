@@ -1754,3 +1754,151 @@ class ConsoleFormatter:
                 Attempts=f"{retry_count + 1}",
             )
             self.print_panel(content, "🛡️ Guardrail Failed", "red")
+
+    # Encryption event handlers
+
+    def handle_encryption_communication_started(
+        self, sender_role: str, recipient_role: str
+    ) -> None:
+        """Handle encrypted communication started event."""
+        if not self.verbose:
+            return
+
+        content = Text()
+        content.append("Starting encrypted communication from '", style="white")
+        content.append(f"{sender_role}", style="bright_cyan bold")
+        content.append("' to '", style="white")
+        content.append(f"{recipient_role}", style="bright_cyan bold")
+        content.append("'", style="white")
+
+        panel = Panel(
+            content,
+            title="🔐 Encrypted Communication",
+            border_style="cyan",
+            padding=(0, 1),
+        )
+        self.print(panel)
+
+    def handle_encryption_communication_established(
+        self, sender_role: str, recipient_role: str
+    ) -> None:
+        """Handle encrypted communication established event."""
+        if not self.verbose:
+            return
+
+        content = Text()
+        content.append("Encrypted communication established between '", style="white")
+        content.append(f"{sender_role}", style="bright_green bold")
+        content.append("' and '", style="white") 
+        content.append(f"{recipient_role}", style="bright_green bold")
+        content.append("'", style="white")
+
+        panel = Panel(
+            content,
+            title="✅ Communication Secured",
+            border_style="green",
+            padding=(0, 1),
+        )
+        self.print(panel)
+
+    def handle_encryption_started(
+        self, message_type: str, recipient_fingerprint: str
+    ) -> None:
+        """Handle encryption started event."""
+        if not self.verbose:
+            return
+
+        content = Text()
+        content.append(f"Starting encryption for {message_type} message to recipient ", style="white")
+        content.append(f"{recipient_fingerprint}", style="bright_yellow")
+        content.append("...", style="white")
+
+        panel = Panel(
+            content,
+            title="🔒 Encrypting Message",
+            border_style="yellow",
+            padding=(0, 1),
+        )
+        self.print(panel)
+
+    def handle_encryption_completed(
+        self, message_type: str, sender_fingerprint: str, recipient_fingerprint: str
+    ) -> None:
+        """Handle encryption completed event."""
+        if not self.verbose:
+            return
+
+        content = Text()
+        content.append(f"Successfully encrypted {message_type} message from ", style="white")
+        content.append(f"{sender_fingerprint}", style="bright_green")
+        content.append(" to ", style="white")
+        content.append(f"{recipient_fingerprint}", style="bright_green")
+        content.append("...", style="white")
+
+        panel = Panel(
+            content,
+            title="✅ Message Encrypted",
+            border_style="green",
+            padding=(0, 1),
+        )
+        self.print(panel)
+
+    def handle_decryption_started(
+        self, message_type: str, sender_fingerprint: str
+    ) -> None:
+        """Handle decryption started event."""
+        if not self.verbose:
+            return
+
+        content = Text()
+        content.append(f"Starting decryption of {message_type} message from sender ", style="white")
+        content.append(f"{sender_fingerprint}", style="bright_yellow")
+        content.append("...", style="white")
+
+        panel = Panel(
+            content,
+            title="🔓 Decrypting Message",
+            border_style="yellow",
+            padding=(0, 1),
+        )
+        self.print(panel)
+
+    def handle_decryption_completed(
+        self, message_type: str, sender_fingerprint: str, recipient_fingerprint: str
+    ) -> None:
+        """Handle decryption completed event."""
+        if not self.verbose:
+            return
+
+        content = Text()
+        content.append(f"Successfully decrypted {message_type} message from ", style="white")
+        content.append(f"{sender_fingerprint}", style="bright_green")
+        content.append(" to ", style="white")
+        content.append(f"{recipient_fingerprint}", style="bright_green")
+        content.append("...", style="white")
+
+        panel = Panel(
+            content,
+            title="✅ Message Decrypted",
+            border_style="green",
+            padding=(0, 1),
+        )
+        self.print(panel)
+
+    def handle_encrypted_task_execution(self, agent_role: str) -> None:
+        """Handle encrypted task execution event.""" 
+        if not self.verbose:
+            return
+
+        content = Text()
+        content.append("Executing encrypted communication task for agent '", style="white")
+        content.append(f"{agent_role}", style="bright_blue bold")
+        content.append("'", style="white")
+
+        panel = Panel(
+            content,
+            title="🔐 Executing Encrypted Task",
+            border_style="blue",
+            padding=(0, 1),
+        )
+        self.print(panel)

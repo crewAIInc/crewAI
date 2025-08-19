@@ -24,12 +24,14 @@ class SecurityConfig(BaseModel):
     This class manages security settings for CrewAI agents, including:
     - Authentication credentials *TODO*
     - Identity information (agent fingerprints)
+    - Encrypted agent-to-agent communication
     - Scoping rules *TODO*
     - Impersonation/delegation tokens *TODO*
 
     Attributes:
         version (str): Version of the security configuration
         fingerprint (Fingerprint): The unique fingerprint automatically generated for the component
+        encrypted_communication (bool): Enable encrypted agent-to-agent communication
     """
 
     model_config = ConfigDict(
@@ -45,6 +47,11 @@ class SecurityConfig(BaseModel):
     fingerprint: Fingerprint = Field(
         default_factory=Fingerprint, 
         description="Unique identifier for the component"
+    )
+
+    encrypted_communication: bool = Field(
+        default=False,
+        description="Enable encrypted communication between agents"
     )
     
     def is_compatible(self, min_version: str) -> bool:
