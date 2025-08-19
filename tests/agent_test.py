@@ -21,7 +21,7 @@ from crewai.utilities import RPMController
 from crewai.utilities.errors import AgentRepositoryError
 from crewai.utilities.events import crewai_event_bus
 from crewai.utilities.events.tool_usage_events import ToolUsageFinishedEvent
-
+from crewai.process import Process
 
 def test_agent_llm_creation_with_env_vars():
     # Store original environment variables
@@ -1209,6 +1209,181 @@ Thought:<|eot_id|>
         assert mock_format_prompt.return_value == expected_prompt
 
 
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_task_allow_crewai_trigger_context():
+    from crewai import Crew
+
+    agent = Agent(
+        role="test role",
+        goal="test goal",
+        backstory="test backstory"
+    )
+
+    task = Task(
+        description="Analyze the data",
+        expected_output="Analysis report",
+        agent=agent,
+        allow_crewai_trigger_context=True
+    )
+    crew = Crew(agents=[agent], tasks=[task])
+    crew.kickoff({"crewai_trigger_payload": "Important context data"})
+
+    prompt = task.prompt()
+
+    assert "Analyze the data" in prompt
+    assert "Trigger Payload: Important context data" in prompt
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_task_without_allow_crewai_trigger_context():
+    from crewai import Crew
+
+    agent = Agent(
+        role="test role",
+        goal="test goal",
+        backstory="test backstory"
+    )
+
+    task = Task(
+        description="Analyze the data",
+        expected_output="Analysis report",
+        agent=agent,
+        allow_crewai_trigger_context=False
+    )
+
+    crew = Crew(agents=[agent], tasks=[task])
+    crew.kickoff({"crewai_trigger_payload": "Important context data"})
+
+    prompt = task.prompt()
+
+    assert "Analyze the data" in prompt
+    assert "Trigger Payload:" not in prompt
+    assert "Important context data" not in prompt
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_task_allow_crewai_trigger_context_no_payload():
+    from crewai import Crew
+
+    agent = Agent(
+        role="test role",
+        goal="test goal",
+        backstory="test backstory"
+    )
+
+    task = Task(
+        description="Analyze the data",
+        expected_output="Analysis report",
+        agent=agent,
+        allow_crewai_trigger_context=True
+    )
+
+    crew = Crew(agents=[agent], tasks=[task])
+    crew.kickoff({"other_input": "other data"})
+
+
+    prompt = task.prompt()
+
+    assert "Analyze the data" in prompt
+    assert "Trigger Payload:" not in prompt
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_do_not_allow_crewai_trigger_context_for_first_task_hierarchical():
+    from crewai import Crew
+
+    agent1 = Agent(role="First Agent", goal="First goal", backstory="First backstory")
+    agent2 = Agent(role="Second Agent", goal="Second goal", backstory="Second backstory")
+
+    first_task = Task(
+        description="Process initial data",
+        expected_output="Initial analysis",
+        agent=agent1,
+    )
+
+
+    crew = Crew(
+        agents=[agent1, agent2],
+        tasks=[first_task],
+        process=Process.hierarchical,
+        manager_llm="gpt-4o"
+    )
+
+    crew.kickoff({"crewai_trigger_payload": "Initial context data"})
+
+    first_prompt = first_task.prompt()
+    assert "Process initial data" in first_prompt
+    assert "Trigger Payload: Initial context data" not in first_prompt
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_first_task_auto_inject_trigger():
+    from crewai import Crew
+
+    agent1 = Agent(role="First Agent", goal="First goal", backstory="First backstory")
+    agent2 = Agent(role="Second Agent", goal="Second goal", backstory="Second backstory")
+
+    first_task = Task(
+        description="Process initial data",
+        expected_output="Initial analysis",
+        agent=agent1,
+    )
+
+    second_task = Task(
+        description="Process secondary data",
+        expected_output="Secondary analysis",
+        agent=agent2,
+    )
+
+    crew = Crew(
+        agents=[agent1, agent2],
+        tasks=[first_task, second_task]
+    )
+    crew.kickoff({"crewai_trigger_payload": "Initial context data"})
+
+    first_prompt = first_task.prompt()
+    assert "Process initial data" in first_prompt
+    assert "Trigger Payload: Initial context data" in first_prompt
+
+    second_prompt = second_task.prompt()
+    assert "Process secondary data" in second_prompt
+    assert "Trigger Payload:" not in second_prompt
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_ensure_first_task_allow_crewai_trigger_context_is_false_does_not_inject():
+    from crewai import Crew
+
+    agent1 = Agent(role="First Agent", goal="First goal", backstory="First backstory")
+    agent2 = Agent(role="Second Agent", goal="Second goal", backstory="Second backstory")
+
+    first_task = Task(
+        description="Process initial data",
+        expected_output="Initial analysis",
+        agent=agent1,
+        allow_crewai_trigger_context=False
+    )
+
+    second_task = Task(
+        description="Process secondary data",
+        expected_output="Secondary analysis",
+        agent=agent2,
+        allow_crewai_trigger_context=True
+    )
+
+    crew = Crew(
+        agents=[agent1, agent2],
+        tasks=[first_task, second_task]
+    )
+    crew.kickoff({"crewai_trigger_payload": "Context data"})
+
+    first_prompt = first_task.prompt()
+    assert "Trigger Payload: Context data" not in first_prompt
+
+    second_prompt = second_task.prompt()
+    assert "Trigger Payload: Context data" in second_prompt
+
+
+
 @patch("crewai.agent.CrewTrainingHandler")
 def test_agent_training_handler(crew_training_handler):
     task_prompt = "What is 1 + 1?"
@@ -1896,7 +2071,7 @@ def test_agent_with_knowledge_sources_generate_search_query():
         assert "red" in result.raw.lower()
 
 
-@pytest.mark.vcr(record_mode='none', filter_headers=["authorization"])
+@pytest.mark.vcr(record_mode="none", filter_headers=["authorization"])
 def test_agent_with_knowledge_with_no_crewai_knowledge():
     mock_knowledge = MagicMock(spec=Knowledge)
 
@@ -1904,8 +2079,11 @@ def test_agent_with_knowledge_with_no_crewai_knowledge():
         role="Information Agent",
         goal="Provide information based on knowledge sources",
         backstory="You have access to specific knowledge sources.",
-        llm=LLM(model="openrouter/openai/gpt-4o-mini",api_key=os.getenv('OPENROUTER_API_KEY')),
-        knowledge=mock_knowledge
+        llm=LLM(
+            model="openrouter/openai/gpt-4o-mini",
+            api_key=os.getenv("OPENROUTER_API_KEY"),
+        ),
+        knowledge=mock_knowledge,
     )
 
     # Create a task that requires the agent to use the knowledge
@@ -1920,7 +2098,7 @@ def test_agent_with_knowledge_with_no_crewai_knowledge():
     mock_knowledge.query.assert_called_once()
 
 
-@pytest.mark.vcr(record_mode='none', filter_headers=["authorization"])
+@pytest.mark.vcr(record_mode="none", filter_headers=["authorization"])
 def test_agent_with_only_crewai_knowledge():
     mock_knowledge = MagicMock(spec=Knowledge)
 
@@ -1928,33 +2106,10 @@ def test_agent_with_only_crewai_knowledge():
         role="Information Agent",
         goal="Provide information based on knowledge sources",
         backstory="You have access to specific knowledge sources.",
-        llm=LLM(model="openrouter/openai/gpt-4o-mini",api_key=os.getenv('OPENROUTER_API_KEY'))
-    )
-
-    # Create a task that requires the agent to use the knowledge
-    task = Task(
-        description="What is Vidit's favorite color?",
-        expected_output="Vidit's favorclearite color.",
-        agent=agent
-    )
-
-    crew = Crew(agents=[agent], tasks=[task],knowledge=mock_knowledge)
-    crew.kickoff()
-    mock_knowledge.query.assert_called_once()
-
-
-@pytest.mark.vcr(record_mode='none', filter_headers=["authorization"])
-def test_agent_knowledege_with_crewai_knowledge():
-    crew_knowledge = MagicMock(spec=Knowledge)
-    agent_knowledge = MagicMock(spec=Knowledge)
-
-
-    agent = Agent(
-        role="Information Agent",
-        goal="Provide information based on knowledge sources",
-        backstory="You have access to specific knowledge sources.",
-        llm=LLM(model="openrouter/openai/gpt-4o-mini",api_key=os.getenv('OPENROUTER_API_KEY')),
-        knowledge=agent_knowledge
+        llm=LLM(
+            model="openrouter/openai/gpt-4o-mini",
+            api_key=os.getenv("OPENROUTER_API_KEY"),
+        ),
     )
 
     # Create a task that requires the agent to use the knowledge
@@ -1964,7 +2119,35 @@ def test_agent_knowledege_with_crewai_knowledge():
         agent=agent,
     )
 
-    crew = Crew(agents=[agent],tasks=[task],knowledge=crew_knowledge)
+    crew = Crew(agents=[agent], tasks=[task], knowledge=mock_knowledge)
+    crew.kickoff()
+    mock_knowledge.query.assert_called_once()
+
+
+@pytest.mark.vcr(record_mode="none", filter_headers=["authorization"])
+def test_agent_knowledege_with_crewai_knowledge():
+    crew_knowledge = MagicMock(spec=Knowledge)
+    agent_knowledge = MagicMock(spec=Knowledge)
+
+    agent = Agent(
+        role="Information Agent",
+        goal="Provide information based on knowledge sources",
+        backstory="You have access to specific knowledge sources.",
+        llm=LLM(
+            model="openrouter/openai/gpt-4o-mini",
+            api_key=os.getenv("OPENROUTER_API_KEY"),
+        ),
+        knowledge=agent_knowledge,
+    )
+
+    # Create a task that requires the agent to use the knowledge
+    task = Task(
+        description="What is Vidit's favorite color?",
+        expected_output="Vidit's favorclearite color.",
+        agent=agent,
+    )
+
+    crew = Crew(agents=[agent], tasks=[task], knowledge=crew_knowledge)
     crew.kickoff()
     agent_knowledge.query.assert_called_once()
     crew_knowledge.query.assert_called_once()
@@ -2164,7 +2347,12 @@ def mock_get_auth_token():
 
 @patch("crewai.cli.plus_api.PlusAPI.get_agent")
 def test_agent_from_repository(mock_get_agent, mock_get_auth_token):
-    from crewai_tools import SerperDevTool, XMLSearchTool, CSVSearchTool, EnterpriseActionTool
+    from crewai_tools import (
+        SerperDevTool,
+        XMLSearchTool,
+        CSVSearchTool,
+        EnterpriseActionTool,
+    )
 
     mock_get_response = MagicMock()
     mock_get_response.status_code = 200
@@ -2173,12 +2361,23 @@ def test_agent_from_repository(mock_get_agent, mock_get_auth_token):
         "goal": "test goal",
         "backstory": "test backstory",
         "tools": [
-            {"module": "crewai_tools", "name": "SerperDevTool", "init_params": {"n_results": 30}},
-            {"module": "crewai_tools", "name": "XMLSearchTool", "init_params": {"summarize": True}},
+            {
+                "module": "crewai_tools",
+                "name": "SerperDevTool",
+                "init_params": {"n_results": "30"},
+            },
+            {
+                "module": "crewai_tools",
+                "name": "XMLSearchTool",
+                "init_params": {"summarize": "true"},
+            },
             {"module": "crewai_tools", "name": "CSVSearchTool", "init_params": {}},
-
             # using a tools that returns a list of BaseTools
-            {"module": "crewai_tools", "name": "CrewaiEnterpriseTools", "init_params": {"actions_list": [], "enterprise_token": "test_key"}},
+            {
+                "module": "crewai_tools",
+                "name": "CrewaiEnterpriseTools",
+                "init_params": {"actions_list": [], "enterprise_token": "test_key"},
+            },
         ],
     }
     mock_get_agent.return_value = mock_get_response
@@ -2221,7 +2420,9 @@ def test_agent_from_repository_override_attributes(mock_get_agent, mock_get_auth
         "role": "test role",
         "goal": "test goal",
         "backstory": "test backstory",
-        "tools": [{"name": "SerperDevTool", "module": "crewai_tools", "init_params": {}}],
+        "tools": [
+            {"name": "SerperDevTool", "module": "crewai_tools", "init_params": {}}
+        ],
     }
     mock_get_agent.return_value = mock_get_response
     agent = Agent(from_repository="test_agent", role="Custom Role")

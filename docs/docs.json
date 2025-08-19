@@ -226,7 +226,6 @@
                 "group": "Observability",
                 "pages": [
                   "en/observability/overview",
-                  "en/observability/agentops",
                   "en/observability/arize-phoenix",
                   "en/observability/langdb",
                   "en/observability/langfuse",
@@ -567,7 +566,6 @@
                 "group": "Observabilidade",
                 "pages": [
                   "pt-BR/observability/overview",
-                  "pt-BR/observability/agentops",
                   "pt-BR/observability/arize-phoenix",
                   "pt-BR/observability/langdb",
                   "pt-BR/observability/langfuse",
@@ -713,7 +711,7 @@
               "icon": "globe"
             },
             {
-              "anchor": "법정",
+              "anchor": "포럼",
               "href": "https://community.crewai.com",
               "icon": "discourse"
             },
@@ -723,7 +721,7 @@
               "icon": "robot"
             },
             {
-              "anchor": "출시",
+              "anchor": "릴리스",
               "href": "https://github.com/crewAIInc/crewAI/releases",
               "icon": "tag"
             }
@@ -738,22 +736,22 @@
                 "pages": ["ko/introduction", "ko/installation", "ko/quickstart"]
               },
               {
-                "group": "안내서",
+                "group": "가이드",
                 "pages": [
                   {
                     "group": "전략",
                     "pages": ["ko/guides/concepts/evaluating-use-cases"]
                   },
                   {
-                    "group": "Agents",
+                    "group": "에이전트 (Agents)",
                     "pages": ["ko/guides/agents/crafting-effective-agents"]
                   },
                   {
-                    "group": "Crews",
+                    "group": "크루 (Crews)",
                     "pages": ["ko/guides/crews/first-crew"]
                   },
                   {
-                    "group": "Flows",
+                    "group": "플로우 (Flows)",
                     "pages": [
                       "ko/guides/flows/first-flow",
                       "ko/guides/flows/mastering-flow-state"
@@ -801,7 +799,7 @@
                 ]
               },
               {
-                "group": "도구",
+                "group": "도구 (Tools)",
                 "pages": [
                   "ko/tools/overview",
                   {
@@ -891,7 +889,7 @@
                     ]
                   },
                   {
-                    "group": "클라우드 & 저장",
+                    "group": "클라우드 & 스토리지",
                     "pages": [
                       "ko/tools/cloud-storage/overview",
                       "ko/tools/cloud-storage/s3readertool",
@@ -913,10 +911,9 @@
                 ]
               },
               {
-                "group": "오브저버빌리티",
+                "group": "Observability",
                 "pages": [
                   "ko/observability/overview",
-                  "ko/observability/agentops",
                   "ko/observability/arize-phoenix",
                   "ko/observability/langdb",
                   "ko/observability/langfuse",
@@ -933,7 +930,7 @@
                 ]
               },
               {
-                "group": "익히다",
+                "group": "학습",
                 "pages": [
                   "ko/learn/overview",
                   "ko/learn/llm-selection-guide",
@@ -957,13 +954,13 @@
                 ]
               },
               {
-                "group": "원격측정",
+                "group": "Telemetry",
                 "pages": ["ko/telemetry"]
               }
             ]
           },
           {
-            "tab": "기업",
+            "tab": "엔터프라이즈",
             "groups": [
               {
                 "group": "시작 안내",
@@ -1003,7 +1000,7 @@
                 ]
               },
               {
-                "group": "사용 안내서",
+                "group": "How-To Guides",
                 "pages": [
                   "ko/enterprise/guides/build-crew",
                   "ko/enterprise/guides/deploy-crew",

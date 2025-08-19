@@ -13,7 +13,6 @@ from crewai.utilities.events.agent_events import (
     AgentExecutionErrorEvent,
 )
 from crewai.utilities.events.listeners.tracing.types import TraceEvent
-from crewai.utilities.events.listeners.tracing.utils import is_tracing_enabled
 from crewai.utilities.events.reasoning_events import (
     AgentReasoningStartedEvent,
     AgentReasoningCompletedEvent,
@@ -67,7 +66,7 @@ from crewai.utilities.events.memory_events import (
     MemorySaveFailedEvent,
 )
 
-from crewai.cli.authentication.token import get_auth_token
+from crewai.cli.authentication.token import AuthError, get_auth_token
 from crewai.cli.version import get_crewai_version
 
 
@@ -76,13 +75,12 @@ class TraceCollectionListener(BaseEventListener):
     Trace collection listener that orchestrates trace collection
     """
 
-    trace_enabled: Optional[bool] = False
     complex_events = ["task_started", "llm_call_started", "llm_call_completed"]
 
     _instance = None
     _initialized = False
 
-    def __new__(cls, batch_manager=None, tracing: Optional[bool] = False):
+    def __new__(cls, batch_manager=None):
         if cls._instance is None:
             cls._instance = super().__new__(cls)
         return cls._instance
@@ -90,24 +88,21 @@ class TraceCollectionListener(BaseEventListener):
     def __init__(
         self,
         batch_manager: Optional[TraceBatchManager] = None,
-        tracing: Optional[bool] = False,
     ):
         if self._initialized:
             return
 
         super().__init__()
         self.batch_manager = batch_manager or TraceBatchManager()
-        self.tracing = tracing or False
-        self.trace_enabled = self._check_trace_enabled()
         self._initialized = True
 
-    def _check_trace_enabled(self) -> bool:
+    def _check_authenticated(self) -> bool:
         """Check if tracing should be enabled"""
-        auth_token = get_auth_token()
-        if not auth_token:
+        try:
+            res = bool(get_auth_token())
+            return res
+        except AuthError:
             return False
-
-        return is_tracing_enabled() or self.tracing
 
     def _get_user_context(self) -> Dict[str, str]:
         """Extract user context for tracing"""
@@ -120,8 +115,6 @@ class TraceCollectionListener(BaseEventListener):
 
     def setup_listeners(self, crewai_event_bus):
         """Setup event listeners - delegates to specific handlers"""
-        if not self.trace_enabled:
-            return
 
         self._register_flow_event_handlers(crewai_event_bus)
         self._register_context_event_handlers(crewai_event_bus)
@@ -167,7 +160,7 @@ class TraceCollectionListener(BaseEventListener):
         @event_bus.on(CrewKickoffStartedEvent)
         def on_crew_started(source, event):
             if not self.batch_manager.is_batch_initialized():
-                self._initialize_batch(source, event)
+                self._initialize_crew_batch(source, event)
             self._handle_trace_event("crew_kickoff_started", source, event)
 
         @event_bus.on(CrewKickoffCompletedEvent)
@@ -287,7 +280,7 @@ class TraceCollectionListener(BaseEventListener):
         def on_agent_reasoning_failed(source, event):
             self._handle_action_event("agent_reasoning_failed", source, event)
 
-    def _initialize_batch(self, source: Any, event: Any):
+    def _initialize_crew_batch(self, source: Any, event: Any):
         """Initialize trace batch"""
         user_context = self._get_user_context()
         execution_metadata = {
@@ -296,7 +289,7 @@ class TraceCollectionListener(BaseEventListener):
             "crewai_version": get_crewai_version(),
         }
 
-        self.batch_manager.initialize_batch(user_context, execution_metadata)
+        self._initialize_batch(user_context, execution_metadata)
 
     def _initialize_flow_batch(self, source: Any, event: Any):
         """Initialize trace batch for Flow execution"""
@@ -308,7 +301,20 @@ class TraceCollectionListener(BaseEventListener):
             "execution_type": "flow",
         }
 
-        self.batch_manager.initialize_batch(user_context, execution_metadata)
+        self._initialize_batch(user_context, execution_metadata)
+
+    def _initialize_batch(
+        self, user_context: Dict[str, str], execution_metadata: Dict[str, Any]
+    ):
+        """Initialize trace batch if ephemeral"""
+        if not self._check_authenticated():
+            self.batch_manager.initialize_batch(
+                user_context, execution_metadata, use_ephemeral=True
+            )
+        else:
+            self.batch_manager.initialize_batch(
+                user_context, execution_metadata, use_ephemeral=False
+            )
 
     def _handle_trace_event(self, event_type: str, source: Any, event: Any):
         """Generic handler for context end events"""

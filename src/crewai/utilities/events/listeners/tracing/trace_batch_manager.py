@@ -4,7 +4,7 @@ from typing import Dict, List, Any, Optional
 from dataclasses import dataclass, field
 
 from crewai.utilities.constants import CREWAI_BASE_URL
-from crewai.cli.authentication.token import get_auth_token
+from crewai.cli.authentication.token import AuthError, get_auth_token
 
 from crewai.cli.version import get_crewai_version
 from crewai.cli.plus_api import PlusAPI
@@ -40,30 +40,42 @@ class TraceBatch:
 class TraceBatchManager:
     """Single responsibility: Manage batches and event buffering"""
 
+    is_current_batch_ephemeral: bool = False
+
     def __init__(self):
-        self.plus_api = PlusAPI(api_key=get_auth_token())
+        try:
+            self.plus_api = PlusAPI(api_key=get_auth_token())
+        except AuthError:
+            self.plus_api = PlusAPI(api_key="")
+
         self.trace_batch_id: Optional[str] = None  # Backend ID
         self.current_batch: Optional[TraceBatch] = None
         self.event_buffer: List[TraceEvent] = []
         self.execution_start_times: Dict[str, datetime] = {}
 
     def initialize_batch(
-        self, user_context: Dict[str, str], execution_metadata: Dict[str, Any]
+        self,
+        user_context: Dict[str, str],
+        execution_metadata: Dict[str, Any],
+        use_ephemeral: bool = False,
     ) -> TraceBatch:
         """Initialize a new trace batch"""
         self.current_batch = TraceBatch(
             user_context=user_context, execution_metadata=execution_metadata
         )
         self.event_buffer.clear()
+        self.is_current_batch_ephemeral = use_ephemeral
 
         self.record_start_time("execution")
-
-        self._initialize_backend_batch(user_context, execution_metadata)
+        self._initialize_backend_batch(user_context, execution_metadata, use_ephemeral)
 
         return self.current_batch
 
     def _initialize_backend_batch(
-        self, user_context: Dict[str, str], execution_metadata: Dict[str, Any]
+        self,
+        user_context: Dict[str, str],
+        execution_metadata: Dict[str, Any],
+        use_ephemeral: bool = False,
     ):
         """Send batch initialization to backend"""
 
@@ -74,6 +86,7 @@ class TraceBatchManager:
             payload = {
                 "trace_id": self.current_batch.batch_id,
                 "execution_type": execution_metadata.get("execution_type", "crew"),
+                "user_identifier": execution_metadata.get("user_context", None),
                 "execution_context": {
                     "crew_fingerprint": execution_metadata.get("crew_fingerprint"),
                     "crew_name": execution_metadata.get("crew_name", None),
@@ -91,12 +104,22 @@ class TraceBatchManager:
                     "execution_started_at": datetime.now(timezone.utc).isoformat(),
                 },
             }
+            if use_ephemeral:
+                payload["ephemeral_trace_id"] = self.current_batch.batch_id
 
-            response = self.plus_api.initialize_trace_batch(payload)
+            response = (
+                self.plus_api.initialize_ephemeral_trace_batch(payload)
+                if use_ephemeral
+                else self.plus_api.initialize_trace_batch(payload)
+            )
 
             if response.status_code == 201 or response.status_code == 200:
                 response_data = response.json()
-                self.trace_batch_id = response_data["trace_id"]
+                self.trace_batch_id = (
+                    response_data["trace_id"]
+                    if not use_ephemeral
+                    else response_data["ephemeral_trace_id"]
+                )
                 console = Console()
                 panel = Panel(
                     f"✅ Trace batch initialized with session ID: {self.trace_batch_id}",
@@ -134,7 +157,11 @@ class TraceBatchManager:
             if not self.trace_batch_id:
                 raise Exception("❌ Trace batch ID not found")
 
-            response = self.plus_api.send_trace_events(self.trace_batch_id, payload)
+            response = (
+                self.plus_api.send_ephemeral_trace_events(self.trace_batch_id, payload)
+                if self.is_current_batch_ephemeral
+                else self.plus_api.send_trace_events(self.trace_batch_id, payload)
+            )
 
             if response.status_code == 200 or response.status_code == 201:
                 self.event_buffer.clear()
@@ -153,7 +180,6 @@ class TraceBatchManager:
 
         if self.event_buffer:
             self._send_events_to_backend()
-
         self._finalize_backend_batch()
 
         self.current_batch.events = self.event_buffer.copy()
@@ -163,6 +189,7 @@ class TraceBatchManager:
         self.current_batch = None
         self.event_buffer.clear()
         self.trace_batch_id = None
+        self.is_current_batch_ephemeral = False
 
         self._cleanup_batch_data()
 
@@ -182,12 +209,24 @@ class TraceBatchManager:
                 "final_event_count": total_events,
             }
 
-            response = self.plus_api.finalize_trace_batch(self.trace_batch_id, payload)
+            response = (
+                self.plus_api.finalize_ephemeral_trace_batch(
+                    self.trace_batch_id, payload
+                )
+                if self.is_current_batch_ephemeral
+                else self.plus_api.finalize_trace_batch(self.trace_batch_id, payload)
+            )
 
             if response.status_code == 200:
+                access_code = response.json().get("access_code", None)
                 console = Console()
+                return_link = (
+                    f"{CREWAI_BASE_URL}/crewai_plus/trace_batches/{self.trace_batch_id}"
+                    if not self.is_current_batch_ephemeral and access_code is None
+                    else f"{CREWAI_BASE_URL}/crewai_plus/ephemeral_trace_batches/{self.trace_batch_id}?access_code={access_code}"
+                )
                 panel = Panel(
-                    f"✅ Trace batch finalized with session ID: {self.trace_batch_id}. View here: {CREWAI_BASE_URL}/crewai_plus/trace_batches/{self.trace_batch_id}",
+                    f"✅ Trace batch finalized with session ID: {self.trace_batch_id}. View here: {return_link} {f', Access Code: {access_code}' if access_code else ''}",
                     title="Trace Batch Finalization",
                     border_style="green",
                 )

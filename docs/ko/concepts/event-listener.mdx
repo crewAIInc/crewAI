@@ -177,14 +177,7 @@ class MyCustomCrew:
     # Your crew implementation...
 ```
 
-이것이 바로 CrewAI의 내장 `agentops_listener`가 등록되는 방식과 동일합니다. CrewAI 코드베이스에서는 다음과 같이 되어 있습니다:
-
-```python
-# src/crewai/utilities/events/third_party/__init__.py
-from .agentops_listener import agentops_listener
-```
-
-이렇게 하면 `crewai.utilities.events` 패키지가 임포트될 때 `agentops_listener`가 자동으로 로드됩니다.
+이것이 CrewAI 코드베이스에서 서드파티 이벤트 리스너가 등록되는 방식입니다.
 
 ## 사용 가능한 이벤트 유형
 
@@ -280,77 +273,6 @@ CrewAI는 여러분이 청취할 수 있는 다양한 이벤트를 제공합니�
 
 추가 필드는 이벤트 타입에 따라 다릅니다. 예를 들어, `CrewKickoffCompletedEvent`에는 `crew_name`과 `output` 필드가 포함됩니다.
 
-## 실제 예시: AgentOps와의 통합
-
-CrewAI는 AI 에이전트를 위한 모니터링 및 관찰 플랫폼인 [AgentOps](https://github.com/AgentOps-AI/agentops)와의 서드파티 통합 예시를 포함하고 있습니다. 구현 방식은 다음과 같습니다:
-
-```python
-from typing import Optional
-
-from crewai.utilities.events import (
-    CrewKickoffCompletedEvent,
-    ToolUsageErrorEvent,
-    ToolUsageStartedEvent,
-)
-from crewai.utilities.events.base_event_listener import BaseEventListener
-from crewai.utilities.events.crew_events import CrewKickoffStartedEvent
-from crewai.utilities.events.task_events import TaskEvaluationEvent
-
-try:
-    import agentops
-    AGENTOPS_INSTALLED = True
-except ImportError:
-    AGENTOPS_INSTALLED = False
-
-class AgentOpsListener(BaseEventListener):
-    tool_event: Optional["agentops.ToolEvent"] = None
-    session: Optional["agentops.Session"] = None
-
-    def __init__(self):
-        super().__init__()
-
-    def setup_listeners(self, crewai_event_bus):
-        if not AGENTOPS_INSTALLED:
-            return
-
-        @crewai_event_bus.on(CrewKickoffStartedEvent)
-        def on_crew_kickoff_started(source, event: CrewKickoffStartedEvent):
-            self.session = agentops.init()
-            for agent in source.agents:
-                if self.session:
-                    self.session.create_agent(
-                        name=agent.role,
-                        agent_id=str(agent.id),
-                    )
-
-        @crewai_event_bus.on(CrewKickoffCompletedEvent)
-        def on_crew_kickoff_completed(source, event: CrewKickoffCompletedEvent):
-            if self.session:
-                self.session.end_session(
-                    end_state="Success",
-                    end_state_reason="Finished Execution",
-                )
-
-        @crewai_event_bus.on(ToolUsageStartedEvent)
-        def on_tool_usage_started(source, event: ToolUsageStartedEvent):
-            self.tool_event = agentops.ToolEvent(name=event.tool_name)
-            if self.session:
-                self.session.record(self.tool_event)
-
-        @crewai_event_bus.on(ToolUsageErrorEvent)
-        def on_tool_usage_error(source, event: ToolUsageErrorEvent):
-            agentops.ErrorEvent(exception=event.error, trigger_event=self.tool_event)
-```
-
-이 listener는 crew가 시작될 때 AgentOps 세션을 초기화하고, agent를 AgentOps에 등록하며, 도구 사용을 추적하고, crew가 완료되면 세션을 종료합니다.
-
-AgentOps listener는 `src/crewai/utilities/events/third_party/__init__.py` 파일의 import를 통해 CrewAI 이벤트 시스템에 등록됩니다:
-
-```python
-from .agentops_listener import agentops_listener
-```
-
-이렇게 하면 `crewai.utilities.events` 패키지가 import될 때 `agentops_listener`가 로드되는 것이 보장됩니다.
 
 ## 고급 사용법: Scoped Handlers
 

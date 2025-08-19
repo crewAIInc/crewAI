@@ -72,6 +72,10 @@ class Task(BaseModel):
         output_pydantic: Pydantic model for task output.
         security_config: Security configuration including fingerprinting.
         tools: List of tools/resources limited for task execution.
+        allow_crewai_trigger_context: Optional flag to control crewai_trigger_payload injection.
+                              None (default): Auto-inject for first task only.
+                              True: Always inject trigger payload for this task.
+                              False: Never inject trigger payload, even for first task.
     """
 
     __hash__ = object.__hash__  # type: ignore
@@ -162,6 +166,10 @@ class Task(BaseModel):
     )
     end_time: Optional[datetime.datetime] = Field(
         default=None, description="End time of the task execution"
+    )
+    allow_crewai_trigger_context: Optional[bool] = Field(
+        default=None,
+        description="Whether this task should append 'Trigger Payload: {crewai_trigger_payload}' to the task description when crewai_trigger_payload exists in crew inputs.",
     )
     model_config = {"arbitrary_types_allowed": True}
 
@@ -548,12 +556,23 @@ class Task(BaseModel):
             str: The formatted prompt string containing the task description,
                  expected output, and optional markdown formatting instructions.
         """
-        tasks_slices = [self.description]
+        description = self.description
+
+        should_inject = self.allow_crewai_trigger_context
+
+        if should_inject and self.agent:
+            crew = getattr(self.agent, 'crew', None)
+            if crew and hasattr(crew, '_inputs') and crew._inputs:
+                trigger_payload = crew._inputs.get("crewai_trigger_payload")
+                if trigger_payload is not None:
+                    description += f"\n\nTrigger Payload: {trigger_payload}"
+
+        tasks_slices = [description]
 
         output = self.i18n.slice("expected_output").format(
             expected_output=self.expected_output
         )
-        tasks_slices = [self.description, output]
+        tasks_slices = [description, output]
 
         if self.markdown:
             markdown_instruction = """Your final answer MUST be formatted in Markdown syntax.
