@@ -17,6 +17,8 @@ AgentOps é um produto independente do CrewAI que fornece uma solução completa
 Em um alto nível, o AgentOps oferece a capacidade de monitorar custos, uso de tokens, latência, falhas do agente, estatísticas de sessão e muito mais. 
 Para mais informações, confira o [Repositório do AgentOps](https://github.com/AgentOps-AI/agentops).
 
+[![Tutorial de Integração com AgentOps](https://raw.githubusercontent.com/AgentOps-AI/agentops/refs/heads/main/docs/images/youtube-play-thumbnail.png)](https://youtu.be/t9YRRd2-wus)
+
 ### Visão Geral
 
 AgentOps fornece monitoramento para agentes em desenvolvimento e produção. 
@@ -25,8 +27,13 @@ Disponibiliza um dashboard para acompanhamento de performance dos agentes, repla
 Além disso, o AgentOps traz análises detalhadas das sessões para visualizar interações do agente Crew, chamadas LLM e uso de ferramentas em tempo real. 
 Esse recurso é útil para depuração e entendimento de como os agentes interagem com usuários e entre si.
 
+#### Métricas de Sessão
 ![Visão geral de uma série selecionada de execuções de sessões do agente](https://raw.githubusercontent.com/AgentOps-AI/agentops/refs/heads/main/docs/images/overview.png)
+
+#### Replays de Sessão
 ![Visão geral das análises detalhadas de sessões para examinar execuções de agentes](https://raw.githubusercontent.com/AgentOps-AI/agentops/refs/heads/main/docs/images/session-waterfall.png)
+
+#### Gráficos de Execução
 ![Visualizando um gráfico de execução passo a passo do replay do agente](https://raw.githubusercontent.com/AgentOps-AI/agentops/refs/heads/main/docs/images/session-graph.png)
 
 ### Funcionalidades
@@ -57,10 +64,6 @@ Esse recurso é útil para depuração e entendimento de como os agentes interag
    <Step title="Instale o AgentOps">
       Instale o AgentOps com:
       ```bash
-      pip install 'crewai[agentops]'
-      ```
-      ou
-      ```bash
       pip install agentops
       ```
    </Step>
@@ -69,11 +72,11 @@ Esse recurso é útil para depuração e entendimento de como os agentes interag
 
       ```python
       import agentops
-      agentops.init()
+      agentops.init(tags=["optional", "tags"])
       ```
 
       Isso irá iniciar uma sessão do AgentOps e também rastrear automaticamente os agentes Crew. Para mais detalhes sobre como adaptar sistemas de agentes mais complexos, 
-      confira a [documentação do AgentOps](https://docs.agentops.ai) ou participe do [Discord](https://discord.gg/j4f3KbeH).
+      confira a [documentação do AgentOps](https://docs.agentops.ai) ou participe do [Discord](https://discord.gg/FagdcwwXRR).
    </Step>
 </Steps>
 
@@ -83,7 +86,7 @@ Esse recurso é útil para depuração e entendimento de como os agentes interag
   <Card
   title="Vaga de Emprego"
   color="#F3A78B"
-  href="https://github.com/joaomdmoura/crewAI-examples/tree/main/job-posting"
+  href="https://github.com/AgentOps-AI/agentops/blob/main/examples/crewai/job_posting.py"
   icon="briefcase"
     iconType="solid"
   >
@@ -92,21 +95,12 @@ Esse recurso é útil para depuração e entendimento de como os agentes interag
   <Card
     title="Validador de Markdown"
     color="#F3A78B"
-    href="https://github.com/joaomdmoura/crewAI-examples/tree/main/markdown_validator"
+    href="https://github.com/AgentOps-AI/agentops/blob/main/examples/crewai/markdown_validator.py"
     icon="markdown"
       iconType="solid"
     >
          Exemplo de um agente Crew que valida arquivos Markdown.
     </Card>
-    <Card
-    title="Post no Instagram"
-    color="#F3A78B"
-    href="https://github.com/joaomdmoura/crewAI-examples/tree/main/instagram_post"
-    icon="square-instagram"
-      iconType="brands"
-    >
-      Exemplo de um agente Crew que gera posts para Instagram.
-  </Card>
 </CardGroup>
 
 ### Mais Informações
@@ -119,8 +113,8 @@ Para sugestões de funcionalidades ou relatos de bugs, entre em contato com o ti
 
 <a href="https://twitter.com/agentopsai/">🐦 Twitter</a>
 <span>&nbsp;&nbsp;•&nbsp;&nbsp;</span>
-<a href="https://discord.gg/JHPt4C7r">📢 Discord</a>
+<a href="https://discord.gg/FagdcwwXRR">📢 Discord</a>
 <span>&nbsp;&nbsp;•&nbsp;&nbsp;</span>
 <a href="https://app.agentops.ai/?=crew">🖇️ Dashboard AgentOps</a>
 <span>&nbsp;&nbsp;•&nbsp;&nbsp;</span>
-<a href="https://docs.agentops.ai/introduction">📙 Documentação</a>
+<a href="https://docs.agentops.ai">📙 Documentação</a>
