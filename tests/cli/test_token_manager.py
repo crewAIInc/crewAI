@@ -24,7 +24,7 @@ class TestTokenManager(unittest.TestCase):
 
         self.assertEqual(result, mock_key)
 
-    @patch("crewai.cli.authentication.utils.Fernet.generate_key")
+    @patch("crewai.cli.shared.token_manager.Fernet.generate_key")
     @patch("crewai.cli.shared.token_manager.TokenManager.read_secure_file")
     @patch("crewai.cli.shared.token_manager.TokenManager.save_secure_file")
     def test_get_or_create_key_new(self, mock_save, mock_read, mock_generate):
@@ -81,7 +81,7 @@ class TestTokenManager(unittest.TestCase):
 
     @patch("crewai.cli.shared.token_manager.TokenManager.get_secure_storage_path")
     @patch("builtins.open", new_callable=unittest.mock.mock_open)
-    @patch("crewai.cli.authentication.utils.os.chmod")
+    @patch("crewai.cli.shared.token_manager.os.chmod")
     def test_save_secure_file(self, mock_chmod, mock_open, mock_get_path):
         mock_path = MagicMock()
         mock_get_path.return_value = mock_path
