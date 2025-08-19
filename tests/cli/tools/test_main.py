@@ -10,7 +10,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from pytest import raises
 
-from crewai.cli.authentication.utils import TokenManager
+from crewai.cli.shared.token_manager import TokenManager
 from crewai.cli.tools.main import ToolCommand
 
 
