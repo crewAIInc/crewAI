@@ -597,24 +597,32 @@ def test_cache_key_collision_resistance(cache):
     # Create many different configurations
     keys = set()
 
-    for i in range(100):
-        # Each tool has a unique name, so each should generate a unique key
+    # Test with 30 unique tools and various flag combinations
+    # This ensures we get a predictable number of unique keys
+    for i in range(30):
+        # Each tool has a unique name
         tools = [Mock(name=f"tool_{i}")]
+
+        # Create different flag combinations
+        # Using different cycling patterns to create more variety
+        allow_delegation = i % 2 == 0
+        allow_code_execution = i % 3 == 0
+        multimodal = i % 5 == 0
+        # Use a different pattern for process_type to avoid correlation with allow_delegation
+        process_type = "sequential" if (i % 7) < 4 else "hierarchical"
+
         key = cache._generate_cache_key(
             tools,
-            i % 2 == 0,
-            i % 3 == 0,
-            i % 5 == 0,
-            "sequential" if i % 2 == 0 else "hierarchical",
+            allow_delegation,
+            allow_code_execution,
+            multimodal,
+            process_type,
         )
         keys.add(key)
 
-    # We should have unique keys for each unique tool set
-    # With 100 unique tools and various flag combinations,
-    # we expect a reasonable number of unique cache keys
-    assert len(keys) >= 25  # At least 25 unique combinations
-    # Note: The exact number depends on how flags and tool names interact
-    # in the cache key generation and the Mock object's attributes
+    # With 30 unique tools, we should get 30 unique keys
+    # since each tool has a different name
+    assert len(keys) == 30, f"Expected 30 unique keys, got {len(keys)}"
 
 
 def test_lru_eviction_thread_safety():
