@@ -345,6 +345,8 @@ def test_output_pydantic_hierarchical():
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_output_json_sequential():
+    import uuid
+
     class ScoreOutput(BaseModel):
         score: int
 
@@ -355,11 +357,12 @@ def test_output_json_sequential():
         allow_delegation=False,
     )
 
+    output_file = f"score_{uuid.uuid4()}.json"
     task = Task(
         description="Give me an integer score between 1-5 for the following title: 'The impact of AI in the future of work'",
         expected_output="The score of the title.",
         output_json=ScoreOutput,
-        output_file="score.json",
+        output_file=output_file,
         agent=scorer,
     )
 
@@ -367,6 +370,9 @@ def test_output_json_sequential():
     result = crew.kickoff()
     assert '{"score": 4}' == result.json
     assert result.to_dict() == {"score": 4}
+
+    if os.path.exists(output_file):
+        os.remove(output_file)
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -691,6 +697,8 @@ def test_save_task_json_output():
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_save_task_pydantic_output():
+    import uuid
+
     class ScoreOutput(BaseModel):
         score: int
 
@@ -701,10 +709,11 @@ def test_save_task_pydantic_output():
         allow_delegation=False,
     )
 
+    output_file = f"score_{uuid.uuid4()}.json"
     task = Task(
         description="Give me an integer score between 1-5 for the following title: 'The impact of AI in the future of work'",
         expected_output="The score of the title.",
-        output_file="score.json",
+        output_file=output_file,
         output_pydantic=ScoreOutput,
         agent=scorer,
     )
@@ -712,11 +721,11 @@ def test_save_task_pydantic_output():
     crew = Crew(agents=[scorer], tasks=[task])
     crew.kickoff()
 
-    output_file_exists = os.path.exists("score.json")
+    output_file_exists = os.path.exists(output_file)
     assert output_file_exists
-    assert {"score": 4} == json.loads(open("score.json").read())
+    assert {"score": 4} == json.loads(open(output_file).read())
     if output_file_exists:
-        os.remove("score.json")
+        os.remove(output_file)
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
