@@ -12,6 +12,7 @@ from crewai.rag.embeddings.configurator import EmbeddingConfigurator
 from crewai.utilities.chromadb import create_persistent_client
 from crewai.utilities.constants import MAX_FILE_NAME_LENGTH
 from crewai.utilities.paths import db_storage_path
+import warnings
 
 
 @contextlib.contextmanager
@@ -61,6 +62,14 @@ class RAGStorage(BaseRAGStorage):
 
     def _initialize_app(self):
         from chromadb.config import Settings
+
+        # Suppress deprecation warnings from chromadb, which are not relevant to us
+        # TODO: Remove this once we upgrade chromadb to at least 1.0.8.
+        warnings.filterwarnings(
+            "ignore",
+            message=r".*'model_fields'.*is deprecated.*",
+            module=r"^chromadb(\.|$)",
+        )
 
         self._set_embedder_config()
 
