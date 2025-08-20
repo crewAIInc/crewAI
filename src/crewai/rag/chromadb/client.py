@@ -11,7 +11,12 @@ from chromadb.api.types import (
     DataLoader,
     Embeddable,
     EmbeddingFunction as ChromaEmbeddingFunction,
+    Include,
+    IncludeEnum,
     Loadable,
+    QueryResult,
+    Where,
+    WhereDocument,
 )
 from typing_extensions import Unpack
 
@@ -52,6 +57,32 @@ def _is_async_client(client: ChromaDBClientType) -> TypeGuard[AsyncClientAPI]:
     return isinstance(client, AsyncClientAPI)
 
 
+class ChromaDBCollectionCreateParams(BaseCollectionParams, total=False):
+    """Parameters for creating a ChromaDB collection.
+
+    This class extends BaseCollectionParams to include any additional
+    parameters specific to ChromaDB collection creation.
+    """
+
+    configuration: CollectionConfigurationInterface
+    metadata: CollectionMetadata
+    embedding_function: ChromaEmbeddingFunction[Embeddable]
+    data_loader: DataLoader[Loadable]
+    get_or_create: bool
+
+
+class ChromaDBCollectionSearchParams(BaseCollectionSearchParams, total=False):
+    """Parameters for searching a ChromaDB collection.
+
+    This class extends BaseCollectionSearchParams to include ChromaDB-specific
+    search parameters like where clauses and include options.
+    """
+
+    where: Where
+    where_document: WhereDocument
+    include: Include
+
+
 def _prepare_documents_for_chromadb(
     documents: list[BaseRecord],
 ) -> tuple[list[str], list[str], list[Mapping[str, str | int | float | bool]]]:
@@ -78,10 +109,8 @@ def _prepare_documents_for_chromadb(
         metadata = doc.get("metadata")
         if metadata:
             if isinstance(metadata, list):
-                # ChromaDB accepts Mapping types for metadata
                 metadatas.append(metadata[0] if metadata else {})
             else:
-                # Metadata is already a Mapping
                 metadatas.append(metadata)
         else:
             metadatas.append({})
@@ -89,18 +118,101 @@ def _prepare_documents_for_chromadb(
     return ids, texts, metadatas
 
 
-class ChromaDBCollectionCreateParams(BaseCollectionParams, total=False):
-    """Parameters for creating a ChromaDB collection.
+def _extract_search_params(
+    kwargs: ChromaDBCollectionSearchParams,
+) -> tuple[
+    str,
+    str,
+    int,
+    dict[str, Any] | None,
+    float | None,
+    Where | None,
+    WhereDocument | None,
+    Include,
+]:
+    """Extract search parameters from kwargs.
 
-    This class extends BaseCollectionParams to include any additional
-    parameters specific to ChromaDB collection creation.
+    Args:
+        kwargs: Keyword arguments containing search parameters.
+
+    Returns:
+        Tuple of (collection_name, query, limit, metadata_filter, score_threshold, where, where_document, include).
     """
+    collection_name = kwargs["collection_name"]
+    query = kwargs["query"]
+    limit = kwargs.get("limit", 10)
+    metadata_filter = kwargs.get("metadata_filter")
+    score_threshold = kwargs.get("score_threshold")
+    where = kwargs.get("where")
+    where_document = kwargs.get("where_document")
+    include = kwargs.get(
+        "include", [IncludeEnum.metadatas, IncludeEnum.documents, IncludeEnum.distances]
+    )
 
-    configuration: CollectionConfigurationInterface
-    metadata: CollectionMetadata
-    embedding_function: ChromaEmbeddingFunction[Embeddable]
-    data_loader: DataLoader[Loadable]
-    get_or_create: bool
+    return (
+        collection_name,
+        query,
+        limit,
+        metadata_filter,
+        score_threshold,
+        where,
+        where_document,
+        include,
+    )
+
+
+def _convert_chromadb_results_to_search_results(
+    results: QueryResult,
+    include: Include,
+    score_threshold: float | None = None,
+) -> list[SearchResult]:
+    """Convert ChromaDB query results to SearchResult format.
+
+    Args:
+        results: ChromaDB query results.
+        include: List of fields that were included in the query.
+        score_threshold: Optional minimum similarity score (0-1) for results.
+
+    Returns:
+        List of SearchResult dicts containing id, content, metadata, and score.
+    """
+    search_results: list[SearchResult] = []
+
+    include_strings = [
+        item.value if isinstance(item, IncludeEnum) else item for item in include
+    ]
+
+    ids = results["ids"][0] if results.get("ids") else []
+
+    documents_list = results.get("documents")
+    documents = (
+        documents_list[0] if documents_list and "documents" in include_strings else []
+    )
+
+    metadatas_list = results.get("metadatas")
+    metadatas = (
+        metadatas_list[0] if metadatas_list and "metadatas" in include_strings else []
+    )
+
+    distances_list = results.get("distances")
+    distances = (
+        distances_list[0] if distances_list and "distances" in include_strings else []
+    )
+
+    for i, doc_id in enumerate(ids):
+        score = 1.0 - (distances[i] / 2.0) if distances and i < len(distances) else 0.0
+        if score_threshold and score < score_threshold:
+            continue
+
+        result: SearchResult = {
+            "id": doc_id,
+            "content": documents[i] if documents and i < len(documents) else "",
+            "metadata": dict(metadatas[i]) if metadatas and i < len(metadatas) else {},
+            "score": score,
+        }
+        search_results.append(result)
+
+    return search_results
 
 
 class ChromaDBClient(BaseClient):
@@ -394,16 +506,130 @@ class ChromaDBClient(BaseClient):
         )
 
     def search(
-        self, **kwargs: Unpack[BaseCollectionSearchParams]
+        self, **kwargs: Unpack[ChromaDBCollectionSearchParams]
     ) -> list[SearchResult]:
-        """Search for similar documents using a query."""
-        raise NotImplementedError
+        """Search for similar documents using a query.
+
+        Performs semantic search to find documents similar to the query text.
+        Uses the configured embedding function to generate query embeddings.
+
+        Keyword Args:
+            collection_name: Name of the collection to search in.
+            query: The text query to search for.
+            limit: Maximum number of results to return (default: 10).
+            metadata_filter: Optional filter for metadata fields.
+            score_threshold: Optional minimum similarity score (0-1) for results.
+            where: Optional ChromaDB where clause for metadata filtering.
+            where_document: Optional ChromaDB where clause for document content filtering.
+            include: Optional list of fields to include in results.
+
+        Returns:
+            List of SearchResult dicts containing id, content, metadata, and score.
+
+        Raises:
+            TypeError: If AsyncClientAPI is used instead of ClientAPI for sync operations.
+            ValueError: If collection doesn't exist.
+            ConnectionError: If unable to connect to ChromaDB server.
+        """
+        if not _is_sync_client(self.client):
+            raise TypeError(
+                "Synchronous method search() requires a ClientAPI. "
+                "Use asearch() for AsyncClientAPI."
+            )
+
+        (
+            collection_name,
+            query,
+            limit,
+            metadata_filter,
+            score_threshold,
+            where,
+            where_document,
+            include,
+        ) = _extract_search_params(kwargs)
+
+        collection = self.client.get_collection(
+            name=collection_name,
+            embedding_function=self.embedding_function,
+        )
+
+        if where is None and metadata_filter:
+            where = metadata_filter
+
+        results: QueryResult = collection.query(
+            query_texts=[query],
+            n_results=limit,
+            where=where,
+            where_document=where_document,
+            include=include,
+        )
+
+        return _convert_chromadb_results_to_search_results(
+            results, include, score_threshold
+        )
 
     async def asearch(
-        self, **kwargs: Unpack[BaseCollectionSearchParams]
+        self, **kwargs: Unpack[ChromaDBCollectionSearchParams]
     ) -> list[SearchResult]:
-        """Search for similar documents using a query asynchronously."""
-        raise NotImplementedError
+        """Search for similar documents using a query asynchronously.
+
+        Performs semantic search to find documents similar to the query text.
+        Uses the configured embedding function to generate query embeddings.
+
+        Keyword Args:
+            collection_name: Name of the collection to search in.
+            query: The text query to search for.
+            limit: Maximum number of results to return (default: 10).
+            metadata_filter: Optional filter for metadata fields.
+            score_threshold: Optional minimum similarity score (0-1) for results.
+            where: Optional ChromaDB where clause for metadata filtering.
+            where_document: Optional ChromaDB where clause for document content filtering.
+            include: Optional list of fields to include in results.
+
+        Returns:
+            List of SearchResult dicts containing id, content, metadata, and score.
+
+        Raises:
+            TypeError: If ClientAPI is used instead of AsyncClientAPI for async operations.
+            ValueError: If collection doesn't exist.
+            ConnectionError: If unable to connect to ChromaDB server.
+        """
+        if not _is_async_client(self.client):
+            raise TypeError(
+                "Asynchronous method asearch() requires an AsyncClientAPI. "
+                "Use search() for ClientAPI."
+            )
+
+        (
+            collection_name,
+            query,
+            limit,
+            metadata_filter,
+            score_threshold,
+            where,
+            where_document,
+            include,
+        ) = _extract_search_params(kwargs)
+
+        collection = await self.client.get_collection(
+            name=collection_name,
+            embedding_function=self.embedding_function,
+        )
+
+        if where is None and metadata_filter:
+            where = metadata_filter
+
+        results: QueryResult = await collection.query(
+            query_texts=[query],
+            n_results=limit,
+            where=where,
+            where_document=where_document,
+            include=include,
+        )
+
+        return _convert_chromadb_results_to_search_results(
+            results, include, score_threshold
+        )
 
     def delete_collection(self, **kwargs: Unpack[BaseCollectionParams]) -> None:
         """Delete a collection and all its data."""

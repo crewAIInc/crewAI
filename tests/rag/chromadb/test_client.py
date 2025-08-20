@@ -368,39 +368,147 @@ class TestChromaDBClient:
                 collection_name="test_collection", documents=[]
             )
 
-    def test_search(self, client):
-        """Test that search raises NotImplementedError."""
-        with pytest.raises(NotImplementedError):
-            client.search(collection_name="test_collection", query="test query")
+    def test_search(self, client, mock_chromadb_client):
+        """Test that search queries the collection correctly."""
+        mock_collection = Mock()
+        mock_chromadb_client.get_collection.return_value = mock_collection
+        mock_collection.query.return_value = {
+            "ids": [["doc1", "doc2"]],
+            "documents": [["Document 1", "Document 2"]],
+            "metadatas": [[{"source": "test1"}, {"source": "test2"}]],
+            "distances": [[0.1, 0.3]],
+        }
 
-    def test_search_with_optional_params(self, client):
-        """Test that search with optional parameters raises NotImplementedError."""
-        with pytest.raises(NotImplementedError):
-            client.search(
-                collection_name="test_collection",
-                query="test query",
-                limit=5,
-                metadata_filter={"source": "test"},
-                score_threshold=0.7,
-            )
+        results = client.search(collection_name="test_collection", query="test query")
+
+        mock_chromadb_client.get_collection.assert_called_once_with(
+            name="test_collection",
+            embedding_function=client.embedding_function,
+        )
+        mock_collection.query.assert_called_once_with(
+            query_texts=["test query"],
+            n_results=10,
+            where=None,
+            where_document=None,
+            include=["metadatas", "documents", "distances"],
+        )
+
+        assert len(results) == 2
+        assert results[0]["id"] == "doc1"
+        assert results[0]["content"] == "Document 1"
+        assert results[0]["metadata"] == {"source": "test1"}
+        assert 0.94 < results[0]["score"] < 0.96  # 1 - (0.1 / 2)
+
+    def test_search_with_optional_params(self, client, mock_chromadb_client):
+        """Test search with optional parameters."""
+        mock_collection = Mock()
+        mock_chromadb_client.get_collection.return_value = mock_collection
+        mock_collection.query.return_value = {
+            "ids": [["doc1", "doc2", "doc3"]],
+            "documents": [["Document 1", "Document 2", "Document 3"]],
+            "metadatas": [
+                [{"source": "test1"}, {"source": "test2"}, {"source": "test3"}]
+            ],
+            "distances": [[0.1, 0.3, 1.5]],  # Last one will be filtered by threshold
+        }
+
+        results = client.search(
+            collection_name="test_collection",
+            query="test query",
+            limit=5,
+            metadata_filter={"source": "test"},
+            score_threshold=0.7,
+        )
+
+        mock_collection.query.assert_called_once_with(
+            query_texts=["test query"],
+            n_results=5,
+            where={"source": "test"},
+            where_document=None,
+            include=["metadatas", "documents", "distances"],
+        )
+
+        # Only 2 results should pass the score threshold
+        assert len(results) == 2
 
     @pytest.mark.asyncio
-    async def test_asearch(self, client) -> None:
-        """Test that asearch raises NotImplementedError."""
-        with pytest.raises(NotImplementedError):
-            await client.asearch(collection_name="test_collection", query="test query")
+    async def test_asearch(self, async_client, mock_async_chromadb_client) -> None:
+        """Test that asearch queries the collection correctly."""
+        mock_collection = AsyncMock()
+        mock_async_chromadb_client.get_collection = AsyncMock(
+            return_value=mock_collection
+        )
+        mock_collection.query = AsyncMock(
+            return_value={
+                "ids": [["doc1", "doc2"]],
+                "documents": [["Document 1", "Document 2"]],
+                "metadatas": [[{"source": "test1"}, {"source": "test2"}]],
+                "distances": [[0.1, 0.3]],
+            }
+        )
+
+        results = await async_client.asearch(
+            collection_name="test_collection", query="test query"
+        )
+
+        mock_async_chromadb_client.get_collection.assert_called_once_with(
+            name="test_collection",
+            embedding_function=async_client.embedding_function,
+        )
+        mock_collection.query.assert_called_once_with(
+            query_texts=["test query"],
+            n_results=10,
+            where=None,
+            where_document=None,
+            include=["metadatas", "documents", "distances"],
+        )
+
+        assert len(results) == 2
+        assert results[0]["id"] == "doc1"
+        assert results[0]["content"] == "Document 1"
+        assert results[0]["metadata"] == {"source": "test1"}
+        assert 0.94 < results[0]["score"] < 0.96  # 1 - (0.1 / 2)
 
     @pytest.mark.asyncio
-    async def test_asearch_with_optional_params(self, client) -> None:
-        """Test that asearch with optional parameters raises NotImplementedError."""
-        with pytest.raises(NotImplementedError):
-            await client.asearch(
-                collection_name="test_collection",
-                query="test query",
-                limit=5,
-                metadata_filter={"source": "test"},
-                score_threshold=0.7,
-            )
+    async def test_asearch_with_optional_params(
+        self, async_client, mock_async_chromadb_client
+    ) -> None:
+        """Test asearch with optional parameters."""
+        mock_collection = AsyncMock()
+        mock_async_chromadb_client.get_collection = AsyncMock(
+            return_value=mock_collection
+        )
+        mock_collection.query = AsyncMock(
+            return_value={
+                "ids": [["doc1", "doc2", "doc3"]],
+                "documents": [["Document 1", "Document 2", "Document 3"]],
+                "metadatas": [
+                    [{"source": "test1"}, {"source": "test2"}, {"source": "test3"}]
+                ],
+                "distances": [
+                    [0.1, 0.3, 1.5]
+                ],  # Last one will be filtered by threshold
+            }
+        )
+
+        results = await async_client.asearch(
+            collection_name="test_collection",
+            query="test query",
+            limit=5,
+            metadata_filter={"source": "test"},
+            score_threshold=0.7,
+        )
+
+        mock_collection.query.assert_called_once_with(
+            query_texts=["test query"],
+            n_results=5,
+            where={"source": "test"},
+            where_document=None,
+            include=["metadatas", "documents", "distances"],
+        )
+
+        # Only 2 results should pass the score threshold
+        assert len(results) == 2
 
     def test_delete_collection(self, client):
         """Test that delete_collection raises NotImplementedError."""
