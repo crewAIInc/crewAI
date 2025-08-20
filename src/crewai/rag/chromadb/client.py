@@ -71,6 +71,30 @@ class PreparedDocuments(NamedTuple):
     metadatas: list[Mapping[str, str | int | float | bool]]
 
 
+class SearchParams(NamedTuple):
+    """Extracted search parameters for ChromaDB queries.
+
+    Attributes:
+        collection_name: Name of the collection to search
+        query: Search query text
+        limit: Maximum number of results
+        metadata_filter: Optional metadata filter
+        score_threshold: Optional minimum similarity score
+        where: Optional ChromaDB where clause
+        where_document: Optional ChromaDB document filter
+        include: Fields to include in results
+    """
+
+    collection_name: str
+    query: str
+    limit: int
+    metadata_filter: dict[str, Any] | None
+    score_threshold: float | None
+    where: Where | None
+    where_document: WhereDocument | None
+    include: Include
+
+
 class ChromaDBCollectionCreateParams(BaseCollectionParams, total=False):
     """Parameters for creating a ChromaDB collection.
 
@@ -134,44 +158,27 @@ def _prepare_documents_for_chromadb(
 
 def _extract_search_params(
     kwargs: ChromaDBCollectionSearchParams,
-) -> tuple[
-    str,
-    str,
-    int,
-    dict[str, Any] | None,
-    float | None,
-    Where | None,
-    WhereDocument | None,
-    Include,
-]:
+) -> SearchParams:
     """Extract search parameters from kwargs.
 
     Args:
         kwargs: Keyword arguments containing search parameters.
 
     Returns:
-        Tuple of (collection_name, query, limit, metadata_filter, score_threshold, where, where_document, include).
+        SearchParams with all extracted parameters.
     """
-    collection_name = kwargs["collection_name"]
-    query = kwargs["query"]
-    limit = kwargs.get("limit", 10)
-    metadata_filter = kwargs.get("metadata_filter")
-    score_threshold = kwargs.get("score_threshold")
-    where = kwargs.get("where")
-    where_document = kwargs.get("where_document")
-    include = kwargs.get(
-        "include", [IncludeEnum.metadatas, IncludeEnum.documents, IncludeEnum.distances]
-    )
-
-    return (
-        collection_name,
-        query,
-        limit,
-        metadata_filter,
-        score_threshold,
-        where,
-        where_document,
-        include,
+    return SearchParams(
+        collection_name=kwargs["collection_name"],
+        query=kwargs["query"],
+        limit=kwargs.get("limit", 10),
+        metadata_filter=kwargs.get("metadata_filter"),
+        score_threshold=kwargs.get("score_threshold"),
+        where=kwargs.get("where"),
+        where_document=kwargs.get("where_document"),
+        include=kwargs.get(
+            "include",
+            [IncludeEnum.metadatas, IncludeEnum.documents, IncludeEnum.distances],
+        ),
     )
 
 
@@ -551,35 +558,25 @@ class ChromaDBClient(BaseClient):
                 "Use asearch() for AsyncClientAPI."
             )
 
-        (
-            collection_name,
-            query,
-            limit,
-            metadata_filter,
-            score_threshold,
-            where,
-            where_document,
-            include,
-        ) = _extract_search_params(kwargs)
+        params = _extract_search_params(kwargs)
 
         collection = self.client.get_collection(
-            name=collection_name,
+            name=params.collection_name,
             embedding_function=self.embedding_function,
         )
 
-        if where is None and metadata_filter:
-            where = metadata_filter
+        where = params.where if params.where is not None else params.metadata_filter
 
         results: QueryResult = collection.query(
-            query_texts=[query],
-            n_results=limit,
+            query_texts=[params.query],
+            n_results=params.limit,
             where=where,
-            where_document=where_document,
-            include=include,
+            where_document=params.where_document,
+            include=params.include,
         )
 
         return _convert_chromadb_results_to_search_results(
-            results, include, score_threshold
+            results, params.include, params.score_threshold
         )
 
     async def asearch(
@@ -614,35 +611,25 @@ class ChromaDBClient(BaseClient):
                 "Use search() for ClientAPI."
             )
 
-        (
-            collection_name,
-            query,
-            limit,
-            metadata_filter,
-            score_threshold,
-            where,
-            where_document,
-            include,
-        ) = _extract_search_params(kwargs)
+        params = _extract_search_params(kwargs)
 
         collection = await self.client.get_collection(
-            name=collection_name,
+            name=params.collection_name,
             embedding_function=self.embedding_function,
         )
 
-        if where is None and metadata_filter:
-            where = metadata_filter
+        where = params.where if params.where is not None else params.metadata_filter
 
         results: QueryResult = await collection.query(
-            query_texts=[query],
-            n_results=limit,
+            query_texts=[params.query],
+            n_results=params.limit,
             where=where,
-            where_document=where_document,
-            include=include,
+            where_document=params.where_document,
+            include=params.include,
         )
 
         return _convert_chromadb_results_to_search_results(
-            results, include, score_threshold
+            results, params.include, params.score_threshold
         )
 
     def delete_collection(self, **kwargs: Unpack[BaseCollectionParams]) -> None:
