@@ -346,7 +346,7 @@ class Agent(BaseAgent):
             )
             try:
                 self.knowledge_search_query = self._get_knowledge_search_query(
-                    task_prompt
+                    task_prompt, context
                 )
                 if self.knowledge_search_query:
                     # Quering agent specific knowledge
@@ -722,8 +722,8 @@ class Agent(BaseAgent):
     def set_fingerprint(self, fingerprint: Fingerprint):
         self.security_config.fingerprint = fingerprint
 
-    def _get_knowledge_search_query(self, task_prompt: str) -> str | None:
-        """Generate a search query for the knowledge base based on the task description."""
+    def _get_knowledge_search_query(self, task_prompt: str, context: Optional[str] = None) -> str | None:
+        """Generate a search query for the knowledge base based on the task description and context."""
         crewai_event_bus.emit(
             self,
             event=KnowledgeQueryStartedEvent(
@@ -731,9 +731,16 @@ class Agent(BaseAgent):
                 agent=self,
             ),
         )
-        query = self.i18n.slice("knowledge_search_query").format(
-            task_prompt=task_prompt
-        )
+        
+        if context:
+            query = self.i18n.slice("knowledge_search_query_with_context").format(
+                task_prompt=task_prompt, context=context
+            )
+        else:
+            query = self.i18n.slice("knowledge_search_query").format(
+                task_prompt=task_prompt
+            )
+        
         rewriter_prompt = self.i18n.slice("knowledge_search_query_system_prompt")
         if not isinstance(self.llm, BaseLLM):
             self._logger.log(
