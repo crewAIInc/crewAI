@@ -286,12 +286,6 @@ class ToolUsage:
             tool_name=tool.name,
             attempts=self._run_attempts,
         )
-        # Skip formatting if result_as_answer is True
-        if (
-            hasattr(available_tool, "result_as_answer")
-            and available_tool.result_as_answer
-        ):
-            return result
         result = self._format_result(result=result)  # type: ignore # "_format_result" of "ToolUsage" does not return a value (it only ever returns None)
         data = {
             "result": result,
@@ -311,7 +305,6 @@ class ToolUsage:
             hasattr(available_tool, "result_as_answer")
             and available_tool.result_as_answer  # type: ignore # Item "None" of "Any | None" has no attribute "cache_function"
         ):
-            raise Exception("Did I hit this?")
             result_as_answer = available_tool.result_as_answer  # type: ignore # Item "None" of "Any | None" has no attribute "result_as_answer"
             data["result_as_answer"] = result_as_answer  # type: ignore
 
