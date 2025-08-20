@@ -62,16 +62,96 @@ As requests are sent over HTTP, the order of events can't be guaranteed. If you 
 
 CrewAI supports both system events and custom events in Enterprise Event Streaming. These events are sent to your configured webhook endpoint during crew and flow execution.
 
-- `crew_kickoff_started`
-- `crew_step_started`
-- `crew_step_completed`
-- `crew_execution_completed`
-- `llm_call_started`
-- `llm_call_completed`
-- `tool_usage_started`
-- `tool_usage_completed`
-- `crew_test_failed`
-- *...and others*
+### Flow Events:
+
+  - flow_created
+  - flow_started
+  - flow_finished
+  - flow_plot
+  - method_execution_started
+  - method_execution_finished
+  - method_execution_failed
+
+### Agent Events:
+
+  - agent_execution_started
+  - agent_execution_completed
+  - agent_execution_error
+  - lite_agent_execution_started
+  - lite_agent_execution_completed
+  - lite_agent_execution_error
+  - agent_logs_started
+  - agent_logs_execution
+  - agent_evaluation_started
+  - agent_evaluation_completed
+  - agent_evaluation_failed
+
+### Crew Events:
+
+  - crew_kickoff_started
+  - crew_kickoff_completed
+  - crew_kickoff_failed
+  - crew_train_started
+  - crew_train_completed
+  - crew_train_failed
+  - crew_test_started
+  - crew_test_completed
+  - crew_test_failed
+  - crew_test_result
+
+### Task Events:
+
+  - task_started
+  - task_completed
+  - task_failed
+  - task_evaluation
+
+### Tool Usage Events:
+
+  - tool_usage_started
+  - tool_usage_finished
+  - tool_usage_error
+  - tool_validate_input_error
+  - tool_selection_error
+  - tool_execution_error
+
+### LLM Events:
+
+  - llm_call_started
+  - llm_call_completed
+  - llm_call_failed
+  - llm_stream_chunk
+
+### LLM Guardrail Events:
+
+  - llm_guardrail_started
+  - llm_guardrail_completed
+
+### Memory Events:
+
+  - memory_query_started
+  - memory_query_completed
+  - memory_query_failed
+  - memory_save_started
+  - memory_save_completed
+  - memory_save_failed
+  - memory_retrieval_started
+  - memory_retrieval_completed
+
+### Knowledge Events:
+
+  - knowledge_search_query_started
+  - knowledge_search_query_completed
+  - knowledge_search_query_failed
+  - knowledge_query_started
+  - knowledge_query_completed
+  - knowledge_query_failed
+
+### Reasoning Events:
+
+  - agent_reasoning_started
+  - agent_reasoning_completed
+  - agent_reasoning_failed
 
 Event names match the internal event bus. See [GitHub source](https://github.com/crewAIInc/crewAI/tree/main/src/crewai/utilities/events) for the full list.
 
