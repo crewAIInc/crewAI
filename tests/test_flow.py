@@ -616,7 +616,9 @@ def test_async_flow_with_trigger_payload():
     flow = AsyncTriggerFlow()
 
     test_payload = "Async trigger data"
-    result = asyncio.run(flow.kickoff_async(inputs={"crewai_trigger_payload": test_payload}))
+    result = asyncio.run(
+        flow.kickoff_async(inputs={"crewai_trigger_payload": test_payload})
+    )
 
     assert captured_payload == [test_payload, "async_started"]
     assert result == "async_finished"

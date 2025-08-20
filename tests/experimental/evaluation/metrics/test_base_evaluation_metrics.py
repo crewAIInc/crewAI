@@ -3,6 +3,7 @@ from unittest.mock import MagicMock
 from crewai.agent import Agent
 from crewai.task import Task
 
+
 class BaseEvaluationMetricsTest:
     @pytest.fixture
     def mock_agent(self):
@@ -24,5 +25,5 @@ class BaseEvaluationMetricsTest:
     def execution_trace(self):
         return {
             "thinking": ["I need to analyze this data carefully"],
-            "actions": ["Gathered information", "Analyzed data"]
+            "actions": ["Gathered information", "Analyzed data"],
         }

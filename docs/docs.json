@@ -342,11 +342,12 @@
             "groups": [
               {
                 "group": "Getting Started",
-                "pages": ["en/api-reference/introduction"]
-              },
-              {
-                "group": "Endpoints",
-                "openapi": "https://raw.githubusercontent.com/crewAIInc/crewAI/main/docs/enterprise-api.en.yaml"
+                "pages": [
+                  "en/api-reference/introduction",
+                  "en/api-reference/inputs",
+                  "en/api-reference/kickoff",
+                  "en/api-reference/status"
+                ]
               }
             ]
           },
@@ -682,11 +683,12 @@
             "groups": [
               {
                 "group": "Começando",
-                "pages": ["pt-BR/api-reference/introduction"]
-              },
-              {
-                "group": "Endpoints",
-                "openapi": "https://raw.githubusercontent.com/crewAIInc/crewAI/main/docs/enterprise-api.pt-BR.yaml"
+                "pages": [
+                  "pt-BR/api-reference/introduction",
+                  "pt-BR/api-reference/inputs",
+                  "pt-BR/api-reference/kickoff",
+                  "pt-BR/api-reference/status"
+                ]
               }
             ]
           },
@@ -1029,11 +1031,12 @@
             "groups": [
               {
                 "group": "시작 안내",
-                "pages": ["ko/api-reference/introduction"]
-              },
-              {
-                "group": "Endpoints",
-                "openapi": "https://raw.githubusercontent.com/crewAIInc/crewAI/main/docs/enterprise-api.ko.yaml"
+                "pages": [
+                  "ko/api-reference/introduction",
+                  "ko/api-reference/inputs",
+                  "ko/api-reference/kickoff",
+                  "ko/api-reference/status"
+                ]
               }
             ]
           },
@@ -1085,6 +1088,10 @@
   },
   "redirects": [
     {
+      "source": "/api-reference",
+      "destination": "/en/api-reference/introduction"
+    },
+    {
       "source": "/introduction",
       "destination": "/en/introduction"
     },
@@ -1135,6 +1142,18 @@
     {
       "source": "/api-reference/:path*",
       "destination": "/en/api-reference/:path*"
+    },
+    {
+      "source": "/en/api-reference",
+      "destination": "/en/api-reference/introduction"
+    },
+    {
+      "source": "/pt-BR/api-reference",
+      "destination": "/pt-BR/api-reference/introduction"
+    },
+    {
+      "source": "/ko/api-reference",
+      "destination": "/ko/api-reference/introduction"
     },
     {
       "source": "/examples/:path*",
