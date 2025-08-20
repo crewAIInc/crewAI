@@ -1,6 +1,6 @@
 """Tests for ChromaDBClient implementation."""
 
-from unittest.mock import Mock
+from unittest.mock import AsyncMock, Mock
 
 import pytest
 
@@ -65,10 +65,52 @@ class TestChromaDBClient:
         )
 
     @pytest.mark.asyncio
-    async def test_acreate_collection(self, client) -> None:
-        """Test that acreate_collection raises NotImplementedError."""
-        with pytest.raises(NotImplementedError):
-            await client.acreate_collection(collection_name="test_collection")
+    async def test_acreate_collection(self, client, mock_chromadb_client) -> None:
+        """Test that acreate_collection calls the underlying client correctly."""
+        # Make the mock's create_collection an AsyncMock
+        mock_chromadb_client.create_collection = AsyncMock(return_value=None)
+
+        await client.acreate_collection(collection_name="test_collection")
+
+        mock_chromadb_client.create_collection.assert_called_once_with(
+            name="test_collection",
+            configuration=None,
+            metadata=None,
+            embedding_function=client.embedding_function,
+            data_loader=None,
+            get_or_create=False,
+        )
+
+    @pytest.mark.asyncio
+    async def test_acreate_collection_with_all_params(
+        self, client, mock_chromadb_client
+    ) -> None:
+        """Test acreate_collection with all optional parameters."""
+        # Make the mock's create_collection an AsyncMock
+        mock_chromadb_client.create_collection = AsyncMock(return_value=None)
+
+        mock_config = Mock()
+        mock_metadata = {"key": "value"}
+        mock_embedding_func = Mock()
+        mock_data_loader = Mock()
+
+        await client.acreate_collection(
+            collection_name="test_collection",
+            configuration=mock_config,
+            metadata=mock_metadata,
+            embedding_function=mock_embedding_func,
+            data_loader=mock_data_loader,
+            get_or_create=True,
+        )
+
+        mock_chromadb_client.create_collection.assert_called_once_with(
+            name="test_collection",
+            configuration=mock_config,
+            metadata=mock_metadata,
+            embedding_function=mock_embedding_func,
+            data_loader=mock_data_loader,
+            get_or_create=True,
+        )
 
     def test_get_or_create_collection(self, client):
         """Test that get_or_create_collection raises NotImplementedError."""

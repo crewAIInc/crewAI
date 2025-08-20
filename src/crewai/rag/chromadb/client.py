@@ -91,9 +91,51 @@ class ChromaDBClient(BaseClient):
             get_or_create=kwargs.get("get_or_create", False),
         )
 
-    async def acreate_collection(self, **kwargs: Unpack[BaseCollectionParams]) -> None:
-        """Create a new collection/index in the vector database asynchronously."""
-        raise NotImplementedError
+    async def acreate_collection(
+        self, **kwargs: Unpack[ChromaDBCollectionCreateParams]
+    ) -> None:
+        """Create a new collection in ChromaDB asynchronously.
+
+        Creates a new collection with the specified name and optional configuration.
+        If an embedding function is not provided, uses the client's default embedding function.
+
+        Keyword Args:
+            collection_name: Name of the collection to create. Must be unique.
+            configuration: Optional collection configuration specifying distance metrics,
+                HNSW parameters, or other backend-specific settings.
+            metadata: Optional metadata dictionary to attach to the collection.
+            embedding_function: Optional custom embedding function. If not provided,
+                uses the client's default embedding function.
+            data_loader: Optional data loader for batch loading data into the collection.
+            get_or_create: If True, returns existing collection if it already exists
+                instead of raising an error. Defaults to False.
+
+        Raises:
+            ValueError: If collection with the same name already exists and get_or_create
+                is False.
+            ConnectionError: If unable to connect to ChromaDB server.
+
+        Example:
+            >>> import asyncio
+            >>> async def main():
+            ...     client = ChromaDBClient()
+            ...     await client.acreate_collection(
+            ...         collection_name="documents",
+            ...         metadata={"description": "Product documentation"},
+            ...         get_or_create=True
+            ...     )
+            >>> asyncio.run(main())
+        """
+        await self.client.create_collection(
+            name=kwargs["collection_name"],
+            configuration=kwargs.get("configuration"),
+            metadata=kwargs.get("metadata"),
+            embedding_function=kwargs.get(
+                "embedding_function", self.embedding_function
+            ),
+            data_loader=kwargs.get("data_loader"),
+            get_or_create=kwargs.get("get_or_create", False),
+        )
 
     def get_or_create_collection(self, **kwargs: Unpack[BaseCollectionParams]) -> Any:
         """Get an existing collection or create it if it doesn't exist."""
