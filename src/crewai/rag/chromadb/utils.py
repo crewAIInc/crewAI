@@ -122,9 +122,7 @@ def _convert_chromadb_results_to_search_results(
     """
     search_results: list[SearchResult] = []
 
-    include_strings = [
-        item.value if isinstance(item, IncludeEnum) else item for item in include
-    ]
+    include_strings = [item.value for item in include]
 
     ids = results["ids"][0] if results.get("ids") else []
 
