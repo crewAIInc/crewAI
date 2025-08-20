@@ -347,10 +347,6 @@
                   "en/api-reference/kickoff",
                   "en/api-reference/status"
                 ]
-              },
-              {
-                "group": "Endpoints",
-                "openapi": { "source": "/enterprise-api.en.yaml", "directory": "api-reference" }
               }
             ]
           },
@@ -685,11 +681,12 @@
             "groups": [
               {
                 "group": "Começando",
-                "pages": ["pt-BR/api-reference/introduction"]
-              },
-              {
-                "group": "Endpoints",
-                "openapi": { "source": "/enterprise-api.pt-BR.yaml", "directory": "api-reference" }
+                "pages": [
+                  "pt-BR/api-reference/introduction",
+                  "pt-BR/api-reference/inputs",
+                  "pt-BR/api-reference/kickoff",
+                  "pt-BR/api-reference/status"
+                ]
               }
             ]
           },
@@ -1031,11 +1028,12 @@
             "groups": [
               {
                 "group": "시작 안내",
-                "pages": ["ko/api-reference/introduction"]
-              },
-              {
-                "group": "Endpoints",
-                "openapi": { "source": "/enterprise-api.ko.yaml", "directory": "api-reference" }
+                "pages": [
+                  "ko/api-reference/introduction",
+                  "ko/api-reference/inputs",
+                  "ko/api-reference/kickoff",
+                  "ko/api-reference/status"
+                ]
               }
             ]
           },
