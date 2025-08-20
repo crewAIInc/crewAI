@@ -3,6 +3,7 @@
 from typing import Any
 from typing_extensions import Unpack
 
+from crewai.rag.chromadb.types import ChromaDBClientType
 from crewai.rag.core.base_client import (
     BaseClient,
     BaseCollectionParams,
@@ -22,7 +23,7 @@ class ChromaDBClient(BaseClient):
     raising NotImplementedError. Full implementation coming soon.
     """
 
-    client: Any
+    client: ChromaDBClientType
     embedding_function: EmbeddingFunction
 
     def create_collection(self, **kwargs: Unpack[BaseCollectionParams]) -> None:
