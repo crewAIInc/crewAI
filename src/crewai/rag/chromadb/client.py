@@ -2,7 +2,7 @@
 
 import hashlib
 from collections.abc import Mapping
-from typing import Any, TypeGuard
+from typing import Any, NamedTuple, TypeGuard
 
 from chromadb.api import AsyncClientAPI, ClientAPI
 from chromadb.api.configuration import CollectionConfigurationInterface
@@ -57,6 +57,20 @@ def _is_async_client(client: ChromaDBClientType) -> TypeGuard[AsyncClientAPI]:
     return isinstance(client, AsyncClientAPI)
 
 
+class PreparedDocuments(NamedTuple):
+    """Prepared documents ready for ChromaDB insertion.
+
+    Attributes:
+        ids: List of document IDs
+        texts: List of document texts
+        metadatas: List of document metadata mappings
+    """
+
+    ids: list[str]
+    texts: list[str]
+    metadatas: list[Mapping[str, str | int | float | bool]]
+
+
 class ChromaDBCollectionCreateParams(BaseCollectionParams, total=False):
     """Parameters for creating a ChromaDB collection.
 
@@ -85,14 +99,14 @@ class ChromaDBCollectionSearchParams(BaseCollectionSearchParams, total=False):
 
 def _prepare_documents_for_chromadb(
     documents: list[BaseRecord],
-) -> tuple[list[str], list[str], list[Mapping[str, str | int | float | bool]]]:
+) -> PreparedDocuments:
     """Prepare documents for ChromaDB by extracting IDs, texts, and metadata.
 
     Args:
         documents: List of BaseRecord documents to prepare.
 
     Returns:
-        Tuple of (ids, texts, metadatas) ready for ChromaDB.
+        PreparedDocuments with ids, texts, and metadatas ready for ChromaDB.
     """
     ids: list[str] = []
     texts: list[str] = []
@@ -115,7 +129,7 @@ def _prepare_documents_for_chromadb(
         else:
             metadatas.append({})
 
-    return ids, texts, metadatas
+    return PreparedDocuments(ids, texts, metadatas)
 
 
 def _extract_search_params(
@@ -457,11 +471,11 @@ class ChromaDBClient(BaseClient):
             embedding_function=self.embedding_function,
         )
 
-        ids, texts, metadatas = _prepare_documents_for_chromadb(documents)
+        prepared = _prepare_documents_for_chromadb(documents)
         collection.add(
-            ids=ids,
-            documents=texts,
-            metadatas=metadatas,
+            ids=prepared.ids,
+            documents=prepared.texts,
+            metadatas=prepared.metadatas,
         )
 
     async def aadd_documents(self, **kwargs: Unpack[BaseCollectionAddParams]) -> None:
@@ -498,11 +512,11 @@ class ChromaDBClient(BaseClient):
             name=collection_name,
             embedding_function=self.embedding_function,
         )
-        ids, texts, metadatas = _prepare_documents_for_chromadb(documents)
+        prepared = _prepare_documents_for_chromadb(documents)
         await collection.add(
-            ids=ids,
-            documents=texts,
-            metadatas=metadatas,
+            ids=prepared.ids,
+            documents=prepared.texts,
+            metadatas=prepared.metadatas,
         )
 
     def search(
