@@ -437,7 +437,7 @@ def test_tools_emits_error_events():
     assert isinstance(received_events[0].timestamp, datetime)
 
 
-def test_flow_emits_start_event():
+def test_flow_emits_start_event(reset_event_listener_singleton):
     received_events = []
     mock_span = Mock()
 
@@ -450,17 +450,21 @@ def test_flow_emits_start_event():
         def begin(self):
             return "started"
 
-    from crewai.utilities.events.event_listener import (
-        event_listener as singleton_listener,
-    )
+    mock_telemetry = Mock()
+    mock_telemetry.flow_execution_span = Mock(return_value=mock_span)
+    mock_telemetry.flow_creation_span = Mock()
+    mock_telemetry.set_tracer = Mock()
 
-    with patch.object(
-        singleton_listener._telemetry, "flow_execution_span", return_value=mock_span
-    ) as mock_flow_execution_span:
+    with patch(
+        "crewai.utilities.events.event_listener.Telemetry", return_value=mock_telemetry
+    ):
+        # Force creation of EventListener singleton with mocked telemetry
+        _ = EventListener()
+
         flow = TestFlow()
         flow.kickoff()
 
-    mock_flow_execution_span.assert_called_once_with("TestFlow", ["begin"])
+    mock_telemetry.flow_execution_span.assert_called_once_with("TestFlow", ["begin"])
     assert len(received_events) == 1
     assert received_events[0].flow_name == "TestFlow"
     assert received_events[0].type == "flow_started"
