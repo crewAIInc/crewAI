@@ -236,7 +236,7 @@ def test_logging_tool_usage():
     )
 
     assert agent.llm.model == "gpt-4o-mini"
-    assert agent.tools_handler.last_used_tool == {}
+    assert agent.tools_handler.last_used_tool is None
     task = Task(
         description="What is 3 times 4?",
         agent=agent,
