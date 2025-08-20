@@ -345,7 +345,7 @@
               },
               {
                 "group": "Endpoints",
-                "openapi": "enterprise-api.en.yaml"
+                "openapi": { "source": "/enterprise-api.en.yaml", "directory": "api-reference" }
               }
             ]
           },
@@ -684,7 +684,7 @@
               },
               {
                 "group": "Endpoints",
-                "openapi": "enterprise-api.pt-BR.yaml"
+                "openapi": { "source": "/enterprise-api.pt-BR.yaml", "directory": "api-reference" }
               }
             ]
           },
@@ -1030,7 +1030,7 @@
               },
               {
                 "group": "Endpoints",
-                "openapi": "enterprise-api.ko.yaml"
+                "openapi": { "source": "/enterprise-api.ko.yaml", "directory": "api-reference" }
               }
             ]
           },
