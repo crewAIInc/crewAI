@@ -5,6 +5,7 @@ Separates task cloning business logic from Pydantic BaseModel concerns,
 allowing Task to remain a pure data model while providing rich cloning capabilities.
 """
 
+import copy
 from typing import TYPE_CHECKING, Dict, List
 
 if TYPE_CHECKING:
@@ -32,19 +33,18 @@ class TaskCloner:
         Args:
             task: Source task to clone
             agents: List of agents for the cloned task
-            task_mapping: Mapping of task IDs to task instances
+            task_mapping: Mapping of task keys (Task.key) to cloned Task instances
             
         Returns:
-            Deep copy of the task with updated references
+            Deep copy of the task with updated references and fresh ID
         """
-        # Create base copy using Pydantic's copy method
-        new_task = task.model_copy()
+        # Create new task instance with fresh ID to avoid shared state
+        # Extract all fields except those we need to handle specially
+        task_data = task.model_dump(exclude={'id', 'agent', 'context', 'tools'})
         
-        # Reset fields that need special handling
-        new_task.agent = None
-        new_task.context = None
-        if hasattr(new_task, 'tools'):
-            new_task.tools = []
+        # Import here to avoid circular imports
+        from crewai.task import Task
+        new_task = Task(**task_data)
         
         # Handle agent assignment
         if task.agent:
@@ -55,18 +55,24 @@ class TaskCloner:
             ]
             new_task.agent = matching_agents[0] if matching_agents else None
         
-        # Handle context task references
+        # Handle context task references with safe fallback
         if task.context:
             new_context = []
             for context_task in task.context:
-                if hasattr(context_task, 'key') and context_task.key in task_mapping:
-                    new_context.append(task_mapping[context_task.key])
+                if hasattr(context_task, 'key'):
+                    # Use .get() to safely handle missing keys
+                    mapped_task = task_mapping.get(context_task.key)
+                    if mapped_task:
+                        new_context.append(mapped_task)
+                    else:
+                        # Fallback to original context task if not in mapping
+                        new_context.append(context_task)
                 else:
                     new_context.append(context_task)
             new_task.context = new_context
         
-        # Clone tools if present
+        # Deep copy tools to prevent cross-run interference
         if hasattr(task, 'tools') and task.tools:
-            new_task.tools = [tool for tool in task.tools]
+            new_task.tools = copy.deepcopy(task.tools)
         
         return new_task
