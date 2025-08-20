@@ -272,8 +272,10 @@ def another_simple_tool():
 
 
 def test_internal_crew_with_mcp():
-    from crewai_tools import MCPServerAdapter
-    from crewai_tools.adapters.mcp_adapter import ToolCollection
+    # Mock embedchain initialization to prevent race conditions in parallel CI execution
+    with patch("embedchain.client.Client.setup"):
+        from crewai_tools import MCPServerAdapter
+        from crewai_tools.adapters.mcp_adapter import ToolCollection
 
     mock = Mock(spec=MCPServerAdapter)
     mock.tools = ToolCollection([simple_tool, another_simple_tool])

@@ -2309,11 +2309,13 @@ def mock_get_auth_token():
 
 @patch("crewai.cli.plus_api.PlusAPI.get_agent")
 def test_agent_from_repository(mock_get_agent, mock_get_auth_token):
-    from crewai_tools import (
-        SerperDevTool,
-        FileReadTool,
-        EnterpriseActionTool,
-    )
+    # Mock embedchain initialization to prevent race conditions in parallel CI execution
+    with patch("embedchain.client.Client.setup"):
+        from crewai_tools import (
+            SerperDevTool,
+            FileReadTool,
+            EnterpriseActionTool,
+        )
 
     mock_get_response = MagicMock()
     mock_get_response.status_code = 200
@@ -2369,7 +2371,9 @@ def test_agent_from_repository(mock_get_agent, mock_get_auth_token):
 
 @patch("crewai.cli.plus_api.PlusAPI.get_agent")
 def test_agent_from_repository_override_attributes(mock_get_agent, mock_get_auth_token):
-    from crewai_tools import SerperDevTool
+    # Mock embedchain initialization to prevent race conditions in parallel CI execution
+    with patch("embedchain.client.Client.setup"):
+        from crewai_tools import SerperDevTool
 
     mock_get_response = MagicMock()
     mock_get_response.status_code = 200
