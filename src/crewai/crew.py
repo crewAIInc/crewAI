@@ -32,7 +32,6 @@ from crewai.memory.user.user_memory import UserMemory
 from crewai.process import Process
 from crewai.task import Task
 from crewai.tasks.conditional_task import ConditionalTask
-from crewai.utilities.task_cloner import TaskCloner
 from crewai.tasks.task_output import TaskOutput
 from crewai.telemetry import Telemetry
 from crewai.tools.agent_tools.agent_tools import AgentTools
@@ -46,6 +45,7 @@ from crewai.utilities.formatter import (
     aggregate_raw_outputs_from_tasks,
 )
 from crewai.utilities.planning_handler import CrewPlanner
+from crewai.utilities.task_cloner import TaskCloner
 from crewai.utilities.task_output_storage_handler import TaskOutputStorageHandler
 from crewai.utilities.training_handler import CrewTrainingHandler
 

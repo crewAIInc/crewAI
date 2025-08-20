@@ -5,7 +5,7 @@ Separates task cloning business logic from Pydantic BaseModel concerns,
 allowing Task to remain a pure data model while providing rich cloning capabilities.
 """
 
-from typing import Dict, List, TYPE_CHECKING
+from typing import TYPE_CHECKING, Dict, List
 
 if TYPE_CHECKING:
     from crewai.agents.agent_builder.base_agent import BaseAgent
