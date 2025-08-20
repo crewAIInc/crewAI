@@ -341,7 +341,12 @@
             "groups": [
               {
                 "group": "Getting Started",
-                "pages": ["en/api-reference/introduction"]
+                "pages": [
+                  "en/api-reference/introduction",
+                  "en/api-reference/inputs",
+                  "en/api-reference/kickoff",
+                  "en/api-reference/status"
+                ]
               },
               {
                 "group": "Endpoints",
