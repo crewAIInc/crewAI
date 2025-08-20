@@ -17,6 +17,7 @@ from crewai.memory.external.external_memory_item import ExternalMemoryItem
 from crewai.memory.storage.interface import Storage
 from crewai.task import Task
 
+
 @pytest.fixture
 def mock_mem0_memory():
     mock_memory = MagicMock(spec=Memory)
@@ -212,6 +213,7 @@ def custom_storage():
     custom_storage = CustomStorage()
     return custom_storage
 
+
 def test_external_memory_custom_storage(custom_storage, crew_with_external_memory):
     external_memory = ExternalMemory(storage=custom_storage)
 
@@ -233,12 +235,14 @@ def test_external_memory_custom_storage(custom_storage, crew_with_external_memor
     assert len(results) == 0
 
 
-
-def test_external_memory_search_events(custom_storage, external_memory_with_mocked_config):
+def test_external_memory_search_events(
+    custom_storage, external_memory_with_mocked_config
+):
     events = defaultdict(list)
 
     external_memory_with_mocked_config.storage = custom_storage
     with crewai_event_bus.scoped_handlers():
+
         @crewai_event_bus.on(MemoryQueryStartedEvent)
         def on_search_started(source, event):
             events["MemoryQueryStartedEvent"].append(event)
@@ -258,37 +262,39 @@ def test_external_memory_search_events(custom_storage, external_memory_with_mock
     assert len(events["MemoryQueryFailedEvent"]) == 0
 
     assert dict(events["MemoryQueryStartedEvent"][0]) == {
-        'timestamp': ANY,
-        'type': 'memory_query_started',
-        'source_fingerprint': None,
-        'source_type': 'external_memory',
-        'fingerprint_metadata': None,
-        'query': 'test value',
-        'limit': 3,
-        'score_threshold': 0.35
+        "timestamp": ANY,
+        "type": "memory_query_started",
+        "source_fingerprint": None,
+        "source_type": "external_memory",
+        "fingerprint_metadata": None,
+        "query": "test value",
+        "limit": 3,
+        "score_threshold": 0.35,
     }
 
     assert dict(events["MemoryQueryCompletedEvent"][0]) == {
-        'timestamp': ANY,
-        'type': 'memory_query_completed',
-        'source_fingerprint': None,
-        'source_type': 'external_memory',
-        'fingerprint_metadata': None,
-        'query': 'test value',
-        'results': [],
-        'limit': 3,
-        'score_threshold': 0.35,
-        'query_time_ms': ANY
+        "timestamp": ANY,
+        "type": "memory_query_completed",
+        "source_fingerprint": None,
+        "source_type": "external_memory",
+        "fingerprint_metadata": None,
+        "query": "test value",
+        "results": [],
+        "limit": 3,
+        "score_threshold": 0.35,
+        "query_time_ms": ANY,
     }
 
 
-
-def test_external_memory_save_events(custom_storage, external_memory_with_mocked_config):
+def test_external_memory_save_events(
+    custom_storage, external_memory_with_mocked_config
+):
     events = defaultdict(list)
 
     external_memory_with_mocked_config.storage = custom_storage
 
     with crewai_event_bus.scoped_handlers():
+
         @crewai_event_bus.on(MemorySaveStartedEvent)
         def on_save_started(source, event):
             events["MemorySaveStartedEvent"].append(event)
@@ -308,24 +314,24 @@ def test_external_memory_save_events(custom_storage, external_memory_with_mocked
     assert len(events["MemorySaveFailedEvent"]) == 0
 
     assert dict(events["MemorySaveStartedEvent"][0]) == {
-        'timestamp': ANY,
-        'type': 'memory_save_started',
-        'source_fingerprint': None,
-        'source_type': 'external_memory',
-        'fingerprint_metadata': None,
-        'value': 'saving value',
-        'metadata': {'task': 'test_task'},
-        'agent_role': "test_agent"
+        "timestamp": ANY,
+        "type": "memory_save_started",
+        "source_fingerprint": None,
+        "source_type": "external_memory",
+        "fingerprint_metadata": None,
+        "value": "saving value",
+        "metadata": {"task": "test_task"},
+        "agent_role": "test_agent",
     }
 
     assert dict(events["MemorySaveCompletedEvent"][0]) == {
-        'timestamp': ANY,
-        'type': 'memory_save_completed',
-        'source_fingerprint': None,
-        'source_type': 'external_memory',
-        'fingerprint_metadata': None,
-        'value': 'saving value',
-        'metadata': {'task': 'test_task', 'agent': 'test_agent'},
-        'agent_role': "test_agent",
-        'save_time_ms': ANY
+        "timestamp": ANY,
+        "type": "memory_save_completed",
+        "source_fingerprint": None,
+        "source_type": "external_memory",
+        "fingerprint_metadata": None,
+        "value": "saving value",
+        "metadata": {"task": "test_task", "agent": "test_agent"},
+        "agent_role": "test_agent",
+        "save_time_ms": ANY,
     }

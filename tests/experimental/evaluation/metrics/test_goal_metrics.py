@@ -1,5 +1,7 @@
 from unittest.mock import patch, MagicMock
-from tests.experimental.evaluation.metrics.base_evaluation_metrics_test import BaseEvaluationMetricsTest
+from tests.experimental.evaluation.metrics.test_base_evaluation_metrics import (
+    BaseEvaluationMetricsTest,
+)
 
 from crewai.experimental.evaluation.base_evaluator import EvaluationScore
 from crewai.experimental.evaluation.metrics.goal_metrics import GoalAlignmentEvaluator
@@ -8,7 +10,9 @@ from crewai.utilities.llm_utils import LLM
 
 class TestGoalAlignmentEvaluator(BaseEvaluationMetricsTest):
     @patch("crewai.utilities.llm_utils.create_llm")
-    def test_evaluate_success(self, mock_create_llm, mock_agent, mock_task, execution_trace):
+    def test_evaluate_success(
+        self, mock_create_llm, mock_agent, mock_task, execution_trace
+    ):
         mock_llm = MagicMock(spec=LLM)
         mock_llm.call.return_value = """
         {
@@ -24,7 +28,7 @@ class TestGoalAlignmentEvaluator(BaseEvaluationMetricsTest):
             agent=mock_agent,
             task=mock_task,
             execution_trace=execution_trace,
-            final_output="This is the final output"
+            final_output="This is the final output",
         )
 
         assert isinstance(result, EvaluationScore)
@@ -40,7 +44,9 @@ class TestGoalAlignmentEvaluator(BaseEvaluationMetricsTest):
         assert mock_task.description in prompt[1]["content"]
 
     @patch("crewai.utilities.llm_utils.create_llm")
-    def test_evaluate_error_handling(self, mock_create_llm, mock_agent, mock_task, execution_trace):
+    def test_evaluate_error_handling(
+        self, mock_create_llm, mock_agent, mock_task, execution_trace
+    ):
         mock_llm = MagicMock(spec=LLM)
         mock_llm.call.return_value = "Invalid JSON response"
         mock_create_llm.return_value = mock_llm
@@ -51,7 +57,7 @@ class TestGoalAlignmentEvaluator(BaseEvaluationMetricsTest):
             agent=mock_agent,
             task=mock_task,
             execution_trace=execution_trace,
-            final_output="This is the final output"
+            final_output="This is the final output",
         )
 
         assert isinstance(result, EvaluationScore)

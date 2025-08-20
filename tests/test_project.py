@@ -18,6 +18,7 @@ from crewai.project import (
 from crewai.task import Task
 from crewai.tools import tool
 
+
 class SimpleCrew:
     @agent
     def simple_agent(self):
@@ -85,17 +86,24 @@ class InternalCrew:
     def crew(self):
         return Crew(agents=self.agents, tasks=self.tasks, verbose=True)
 
+
 @CrewBase
 class InternalCrewWithMCP(InternalCrew):
     mcp_server_params = {"host": "localhost", "port": 8000}
 
     @agent
     def reporting_analyst(self):
-        return Agent(config=self.agents_config["reporting_analyst"], tools=self.get_mcp_tools())  # type: ignore[index]
+        return Agent(
+            config=self.agents_config["reporting_analyst"], tools=self.get_mcp_tools()
+        )  # type: ignore[index]
 
     @agent
     def researcher(self):
-        return Agent(config=self.agents_config["researcher"], tools=self.get_mcp_tools("simple_tool"))  # type: ignore[index]
+        return Agent(
+            config=self.agents_config["researcher"],
+            tools=self.get_mcp_tools("simple_tool"),
+        )  # type: ignore[index]
+
 
 def test_agent_memoization():
     crew = SimpleCrew()
@@ -245,14 +253,17 @@ def test_multiple_before_after_kickoff():
     assert "processed first" in result.raw, "First after_kickoff not executed"
     assert "processed second" in result.raw, "Second after_kickoff not executed"
 
+
 def test_crew_name():
     crew = InternalCrew()
     assert crew._crew_name == "InternalCrew"
+
 
 @tool
 def simple_tool():
     """Return 'Hi!'"""
     return "Hi!"
+
 
 @tool
 def another_simple_tool():
@@ -263,6 +274,7 @@ def another_simple_tool():
 def test_internal_crew_with_mcp():
     from crewai_tools import MCPServerAdapter
     from crewai_tools.adapters.mcp_adapter import ToolCollection
+
     mock = Mock(spec=MCPServerAdapter)
     mock.tools = ToolCollection([simple_tool, another_simple_tool])
     with patch("crewai_tools.MCPServerAdapter", return_value=mock) as adapter_mock:
