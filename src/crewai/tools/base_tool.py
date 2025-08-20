@@ -6,6 +6,8 @@ from pydantic import BaseModel, ConfigDict, Field, create_model, validator
 from pydantic import BaseModel as PydanticBaseModel
 
 from crewai.tools.structured_tool import CrewStructuredTool
+from crewai.utilities.model_factory import create_tool_schema
+from crewai.utilities.tool_factory import ToolFactory
 
 
 class BaseTool(BaseModel, ABC):
@@ -105,19 +107,12 @@ class BaseTool(BaseModel, ABC):
                     )
                     args_fields[name] = (param_annotation, field_info)
             if args_fields:
-                args_schema = create_model(f"{tool.name}Input", **args_fields)
+                args_schema = create_tool_schema(f"{tool.name}Input", args_fields)
             else:
                 # Create a default schema with no fields if no parameters are found
-                args_schema = create_model(
-                    f"{tool.name}Input", __base__=PydanticBaseModel
-                )
+                args_schema = create_tool_schema(f"{tool.name}Input", {}, PydanticBaseModel)
 
-        return cls(
-            name=getattr(tool, "name", "Unnamed Tool"),
-            description=getattr(tool, "description", ""),
-            func=tool.func,
-            args_schema=args_schema,
-        )
+        return ToolFactory.create_compatible(cls, tool, args_schema)
 
     def _set_args_schema(self):
         if self.args_schema is None:
@@ -213,19 +208,12 @@ class Tool(BaseTool):
                     )
                     args_fields[name] = (param_annotation, field_info)
             if args_fields:
-                args_schema = create_model(f"{tool.name}Input", **args_fields)
+                args_schema = create_tool_schema(f"{tool.name}Input", args_fields)
             else:
                 # Create a default schema with no fields if no parameters are found
-                args_schema = create_model(
-                    f"{tool.name}Input", __base__=PydanticBaseModel
-                )
+                args_schema = create_tool_schema(f"{tool.name}Input", {}, PydanticBaseModel)
 
-        return cls(
-            name=getattr(tool, "name", "Unnamed Tool"),
-            description=getattr(tool, "description", ""),
-            func=tool.func,
-            args_schema=args_schema,
-        )
+        return ToolFactory.create_compatible(cls, tool, args_schema)
 
 
 def to_langchain(
