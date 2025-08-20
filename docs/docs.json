@@ -345,7 +345,7 @@
               },
               {
                 "group": "Endpoints",
-                "openapi": "https://raw.githubusercontent.com/crewAIInc/crewAI/main/docs/enterprise-api.en.yaml"
+                "openapi": "enterprise-api.en.yaml"
               }
             ]
           },
@@ -684,7 +684,7 @@
               },
               {
                 "group": "Endpoints",
-                "openapi": "https://raw.githubusercontent.com/crewAIInc/crewAI/main/docs/enterprise-api.pt-BR.yaml"
+                "openapi": "enterprise-api.pt-BR.yaml"
               }
             ]
           },
@@ -1030,7 +1030,7 @@
               },
               {
                 "group": "Endpoints",
-                "openapi": "https://raw.githubusercontent.com/crewAIInc/crewAI/main/docs/enterprise-api.ko.yaml"
+                "openapi": "enterprise-api.ko.yaml"
               }
             ]
           },
@@ -1082,6 +1082,10 @@
   },
   "redirects": [
     {
+      "source": "/api-reference",
+      "destination": "/en/api-reference/introduction"
+    },
+    {
       "source": "/introduction",
       "destination": "/en/introduction"
     },
@@ -1132,6 +1136,18 @@
     {
       "source": "/api-reference/:path*",
       "destination": "/en/api-reference/:path*"
+    },
+    {
+      "source": "/en/api-reference",
+      "destination": "/en/api-reference/introduction"
+    },
+    {
+      "source": "/pt-BR/api-reference",
+      "destination": "/pt-BR/api-reference/introduction"
+    },
+    {
+      "source": "/ko/api-reference",
+      "destination": "/ko/api-reference/introduction"
     },
     {
       "source": "/examples/:path*",
