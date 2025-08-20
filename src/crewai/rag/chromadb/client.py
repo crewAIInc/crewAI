@@ -632,12 +632,61 @@ class ChromaDBClient(BaseClient):
         )
 
     def delete_collection(self, **kwargs: Unpack[BaseCollectionParams]) -> None:
-        """Delete a collection and all its data."""
-        raise NotImplementedError
+        """Delete a collection and all its data.
+
+        Permanently removes a collection and all documents, embeddings, and metadata it contains.
+        This operation cannot be undone.
+
+        Keyword Args:
+            collection_name: Name of the collection to delete.
+
+        Raises:
+            TypeError: If AsyncClientAPI is used instead of ClientAPI for sync operations.
+            ValueError: If collection doesn't exist.
+            ConnectionError: If unable to connect to ChromaDB server.
+
+        Example:
+            >>> client = ChromaDBClient()
+            >>> client.delete_collection(collection_name="old_documents")
+        """
+        if not _is_sync_client(self.client):
+            raise TypeError(
+                "Synchronous method delete_collection() requires a ClientAPI. "
+                "Use adelete_collection() for AsyncClientAPI."
+            )
+
+        collection_name = kwargs["collection_name"]
+        self.client.delete_collection(name=collection_name)
 
     async def adelete_collection(self, **kwargs: Unpack[BaseCollectionParams]) -> None:
-        """Delete a collection and all its data asynchronously."""
-        raise NotImplementedError
+        """Delete a collection and all its data asynchronously.
+
+        Permanently removes a collection and all documents, embeddings, and metadata it contains.
+        This operation cannot be undone.
+
+        Keyword Args:
+            collection_name: Name of the collection to delete.
+
+        Raises:
+            TypeError: If ClientAPI is used instead of AsyncClientAPI for async operations.
+            ValueError: If collection doesn't exist.
+            ConnectionError: If unable to connect to ChromaDB server.
+
+        Example:
+            >>> import asyncio
+            >>> async def main():
+            ...     client = ChromaDBClient()
+            ...     await client.adelete_collection(collection_name="old_documents")
+            >>> asyncio.run(main())
+        """
+        if not _is_async_client(self.client):
+            raise TypeError(
+                "Asynchronous method adelete_collection() requires an AsyncClientAPI. "
+                "Use delete_collection() for ClientAPI."
+            )
+
+        collection_name = kwargs["collection_name"]
+        await self.client.delete_collection(name=collection_name)
 
     def reset(self) -> None:
         """Reset the vector database by deleting all collections and data."""

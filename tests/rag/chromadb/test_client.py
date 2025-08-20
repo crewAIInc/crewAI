@@ -510,16 +510,26 @@ class TestChromaDBClient:
         # Only 2 results should pass the score threshold
         assert len(results) == 2
 
-    def test_delete_collection(self, client):
-        """Test that delete_collection raises NotImplementedError."""
-        with pytest.raises(NotImplementedError):
-            client.delete_collection(collection_name="test_collection")
+    def test_delete_collection(self, client, mock_chromadb_client):
+        """Test that delete_collection calls the underlying client correctly."""
+        client.delete_collection(collection_name="test_collection")
+
+        mock_chromadb_client.delete_collection.assert_called_once_with(
+            name="test_collection"
+        )
 
     @pytest.mark.asyncio
-    async def test_adelete_collection(self, client) -> None:
-        """Test that adelete_collection raises NotImplementedError."""
-        with pytest.raises(NotImplementedError):
-            await client.adelete_collection(collection_name="test_collection")
+    async def test_adelete_collection(
+        self, async_client, mock_async_chromadb_client
+    ) -> None:
+        """Test that adelete_collection calls the underlying client correctly."""
+        mock_async_chromadb_client.delete_collection = AsyncMock(return_value=None)
+
+        await async_client.adelete_collection(collection_name="test_collection")
+
+        mock_async_chromadb_client.delete_collection.assert_called_once_with(
+            name="test_collection"
+        )
 
     def test_reset(self, client):
         """Test that reset raises NotImplementedError."""
