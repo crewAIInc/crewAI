@@ -202,6 +202,8 @@ class Task(BaseModel):
     @classmethod
     def output_file_validation(cls, value: str) -> str:
         """Validate the output file path by removing the / from the beginning of the path."""
+        if not value:
+            return value
         if value.startswith("/"):
             return value[1:]
         return value
