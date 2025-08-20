@@ -1,5 +1,6 @@
 import os
 import unittest
+import uuid
 
 import pytest
 
@@ -8,7 +9,9 @@ from crewai.utilities.file_handler import PickleHandler
 
 class TestPickleHandler(unittest.TestCase):
     def setUp(self):
-        self.file_name = "test_data.pkl"
+        # Use a unique file name for each test to avoid race conditions in parallel test execution
+        unique_id = str(uuid.uuid4())
+        self.file_name = f"test_data_{unique_id}.pkl"
         self.file_path = os.path.join(os.getcwd(), self.file_name)
         self.handler = PickleHandler(self.file_name)
 
@@ -37,6 +40,8 @@ class TestPickleHandler(unittest.TestCase):
     def test_load_corrupted_file(self):
         with open(self.file_path, "wb") as file:
             file.write(b"corrupted data")
+            file.flush()
+            os.fsync(file.fileno())  # Ensure data is written to disk
 
         with pytest.raises(Exception) as exc:
             self.handler.load()
