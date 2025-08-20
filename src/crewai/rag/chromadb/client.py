@@ -53,8 +53,7 @@ class ChromaDBClient(BaseClient):
     ) -> None:
         """Create a new collection in ChromaDB.
 
-        Creates a new collection with the specified name and optional configuration.
-        If an embedding function is not provided, uses the client's default embedding function.
+        Uses the client's default embedding function if none provided.
 
         Keyword Args:
             collection_name: Name of the collection to create. Must be unique.
@@ -137,15 +136,86 @@ class ChromaDBClient(BaseClient):
             get_or_create=kwargs.get("get_or_create", False),
         )
 
-    def get_or_create_collection(self, **kwargs: Unpack[BaseCollectionParams]) -> Any:
-        """Get an existing collection or create it if it doesn't exist."""
-        raise NotImplementedError
+    def get_or_create_collection(
+        self, **kwargs: Unpack[ChromaDBCollectionCreateParams]
+    ) -> Any:
+        """Get an existing collection or create it if it doesn't exist.
+
+        Returns existing collection if found, otherwise creates a new one.
+
+        Keyword Args:
+            collection_name: Name of the collection to get or create.
+            configuration: Optional collection configuration specifying distance metrics,
+                HNSW parameters, or other backend-specific settings.
+            metadata: Optional metadata dictionary to attach to the collection.
+            embedding_function: Optional custom embedding function. If not provided,
+                uses the client's default embedding function.
+            data_loader: Optional data loader for batch loading data into the collection.
+
+        Returns:
+            A ChromaDB Collection object.
+
+        Raises:
+            ConnectionError: If unable to connect to ChromaDB server.
+
+        Example:
+            >>> client = ChromaDBClient()
+            >>> collection = client.get_or_create_collection(
+            ...     collection_name="documents",
+            ...     metadata={"description": "Product documentation"}
+            ... )
+        """
+        return self.client.get_or_create_collection(
+            name=kwargs["collection_name"],
+            configuration=kwargs.get("configuration"),
+            metadata=kwargs.get("metadata"),
+            embedding_function=kwargs.get(
+                "embedding_function", self.embedding_function
+            ),
+            data_loader=kwargs.get("data_loader"),
+        )
 
     async def aget_or_create_collection(
-        self, **kwargs: Unpack[BaseCollectionParams]
+        self, **kwargs: Unpack[ChromaDBCollectionCreateParams]
     ) -> Any:
-        """Get an existing collection or create it if it doesn't exist asynchronously."""
-        raise NotImplementedError
+        """Get an existing collection or create it if it doesn't exist asynchronously.
+
+        Returns existing collection if found, otherwise creates a new one.
+
+        Keyword Args:
+            collection_name: Name of the collection to get or create.
+            configuration: Optional collection configuration specifying distance metrics,
+                HNSW parameters, or other backend-specific settings.
+            metadata: Optional metadata dictionary to attach to the collection.
+            embedding_function: Optional custom embedding function. If not provided,
+                uses the client's default embedding function.
+            data_loader: Optional data loader for batch loading data into the collection.
+
+        Returns:
+            A ChromaDB AsyncCollection object.
+
+        Raises:
+            ConnectionError: If unable to connect to ChromaDB server.
+
+        Example:
+            >>> import asyncio
+            >>> async def main():
+            ...     client = ChromaDBClient()
+            ...     collection = await client.aget_or_create_collection(
+            ...         collection_name="documents",
+            ...         metadata={"description": "Product documentation"}
+            ...     )
+            >>> asyncio.run(main())
+        """
+        return await self.client.get_or_create_collection(
+            name=kwargs["collection_name"],
+            configuration=kwargs.get("configuration"),
+            metadata=kwargs.get("metadata"),
+            embedding_function=kwargs.get(
+                "embedding_function", self.embedding_function
+            ),
+            data_loader=kwargs.get("data_loader"),
+        )
 
     def add_documents(self, **kwargs: Unpack[BaseCollectionAddParams]) -> None:
         """Add documents with their embeddings to a collection."""
