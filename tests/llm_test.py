@@ -712,3 +712,31 @@ def test_ollama_does_not_modify_when_last_is_user(ollama_llm):
     formatted = ollama_llm._format_messages_for_provider(original_messages)
 
     assert formatted == original_messages
+
+@pytest.fixture
+def nova_llm():
+    return LLM(model="bedrock/us.amazon.nova-pro-v1:0")
+
+def test_nova_model_detection(nova_llm):
+    assert nova_llm.is_nova
+    assert LLM(model="bedrock/amazon.nova-lite-v1:0").is_nova
+    assert not LLM(model="gpt-4").is_nova
+
+def test_nova_message_formatting(nova_llm):
+    # Should add user message at start if only system messages
+    messages = [
+        {"role": "system", "content": "System message"},
+        {"role": "assistant", "content": "Assistant message"}
+    ]
+    formatted = nova_llm._format_messages_for_provider(messages)
+    assert formatted[0]["role"] == "user"
+    assert len(formatted) == len(messages) + 1
+
+    # Should not modify if already has user message at start
+    messages = [
+        {"role": "user", "content": "User message"},
+        {"role": "system", "content": "System message"},
+        {"role": "assistant", "content": "Assistant message"}
+    ]
+    formatted = nova_llm._format_messages_for_provider(messages)
+    assert formatted == messages
