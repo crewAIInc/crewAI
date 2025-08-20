@@ -1,6 +1,15 @@
 """ChromaDB client implementation."""
 
 from typing import Any
+
+from chromadb.api.configuration import CollectionConfigurationInterface
+from chromadb.api.types import (
+    CollectionMetadata,
+    DataLoader,
+    Embeddable,
+    EmbeddingFunction as ChromaEmbeddingFunction,
+    Loadable,
+)
 from typing_extensions import Unpack
 
 from crewai.rag.chromadb.types import ChromaDBClientType
@@ -11,9 +20,22 @@ from crewai.rag.core.base_client import (
     BaseCollectionSearchParams,
 )
 from crewai.rag.types import (
-    EmbeddingFunction,
     SearchResult,
 )
+
+
+class ChromaDBCollectionCreateParams(BaseCollectionParams, total=False):
+    """Parameters for creating a ChromaDB collection.
+
+    This class extends BaseCollectionParams to include any additional
+    parameters specific to ChromaDB collection creation.
+    """
+
+    configuration: CollectionConfigurationInterface
+    metadata: CollectionMetadata
+    embedding_function: ChromaEmbeddingFunction[Embeddable]
+    data_loader: DataLoader[Loadable]
+    get_or_create: bool
 
 
 class ChromaDBClient(BaseClient):
@@ -24,11 +46,50 @@ class ChromaDBClient(BaseClient):
     """
 
     client: ChromaDBClientType
-    embedding_function: EmbeddingFunction
+    embedding_function: ChromaEmbeddingFunction[Embeddable]
 
-    def create_collection(self, **kwargs: Unpack[BaseCollectionParams]) -> None:
-        """Create a new collection/index in the vector database."""
-        raise NotImplementedError
+    def create_collection(
+        self, **kwargs: Unpack[ChromaDBCollectionCreateParams]
+    ) -> None:
+        """Create a new collection in ChromaDB.
+
+        Creates a new collection with the specified name and optional configuration.
+        If an embedding function is not provided, uses the client's default embedding function.
+
+        Keyword Args:
+            collection_name: Name of the collection to create. Must be unique.
+            configuration: Optional collection configuration specifying distance metrics,
+                HNSW parameters, or other backend-specific settings.
+            metadata: Optional metadata dictionary to attach to the collection.
+            embedding_function: Optional custom embedding function. If not provided,
+                uses the client's default embedding function.
+            data_loader: Optional data loader for batch loading data into the collection.
+            get_or_create: If True, returns existing collection if it already exists
+                instead of raising an error. Defaults to False.
+
+        Raises:
+            ValueError: If collection with the same name already exists and get_or_create
+                is False.
+            ConnectionError: If unable to connect to ChromaDB server.
+
+        Example:
+            >>> client = ChromaDBClient()
+            >>> client.create_collection(
+            ...     collection_name="documents",
+            ...     metadata={"description": "Product documentation"},
+            ...     get_or_create=True
+            ... )
+        """
+        self.client.create_collection(
+            name=kwargs["collection_name"],
+            configuration=kwargs.get("configuration"),
+            metadata=kwargs.get("metadata"),
+            embedding_function=kwargs.get(
+                "embedding_function", self.embedding_function
+            ),
+            data_loader=kwargs.get("data_loader"),
+            get_or_create=kwargs.get("get_or_create", False),
+        )
 
     async def acreate_collection(self, **kwargs: Unpack[BaseCollectionParams]) -> None:
         """Create a new collection/index in the vector database asynchronously."""

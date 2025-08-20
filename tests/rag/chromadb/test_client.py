@@ -1,5 +1,7 @@
 """Tests for ChromaDBClient implementation."""
 
+from unittest.mock import Mock
+
 import pytest
 
 from crewai.rag.chromadb.client import ChromaDBClient
@@ -7,18 +9,60 @@ from crewai.rag.types import BaseRecord
 
 
 @pytest.fixture
-def client() -> ChromaDBClient:
+def mock_chromadb_client():
+    """Create a mock ChromaDB client."""
+    return Mock()
+
+
+@pytest.fixture
+def client(mock_chromadb_client) -> ChromaDBClient:
     """Create a ChromaDBClient instance for testing."""
-    return ChromaDBClient()
+    client = ChromaDBClient()
+    client.client = mock_chromadb_client
+    client.embedding_function = Mock()
+    return client
 
 
 class TestChromaDBClient:
     """Test suite for ChromaDBClient."""
 
-    def test_create_collection(self, client):
-        """Test that create_collection raises NotImplementedError."""
-        with pytest.raises(NotImplementedError):
-            client.create_collection(collection_name="test_collection")
+    def test_create_collection(self, client, mock_chromadb_client):
+        """Test that create_collection calls the underlying client correctly."""
+        client.create_collection(collection_name="test_collection")
+
+        mock_chromadb_client.create_collection.assert_called_once_with(
+            name="test_collection",
+            configuration=None,
+            metadata=None,
+            embedding_function=client.embedding_function,
+            data_loader=None,
+            get_or_create=False,
+        )
+
+    def test_create_collection_with_all_params(self, client, mock_chromadb_client):
+        """Test create_collection with all optional parameters."""
+        mock_config = Mock()
+        mock_metadata = {"key": "value"}
+        mock_embedding_func = Mock()
+        mock_data_loader = Mock()
+
+        client.create_collection(
+            collection_name="test_collection",
+            configuration=mock_config,
+            metadata=mock_metadata,
+            embedding_function=mock_embedding_func,
+            data_loader=mock_data_loader,
+            get_or_create=True,
+        )
+
+        mock_chromadb_client.create_collection.assert_called_once_with(
+            name="test_collection",
+            configuration=mock_config,
+            metadata=mock_metadata,
+            embedding_function=mock_embedding_func,
+            data_loader=mock_data_loader,
+            get_or_create=True,
+        )
 
     @pytest.mark.asyncio
     async def test_acreate_collection(self, client) -> None:
