@@ -4,7 +4,19 @@ from collections.abc import Mapping
 from typing import Any, NamedTuple
 
 from chromadb.api import ClientAPI, AsyncClientAPI
-from chromadb.api.types import Include, Where, WhereDocument
+from chromadb.api.configuration import CollectionConfigurationInterface
+from chromadb.api.types import (
+    CollectionMetadata,
+    DataLoader,
+    Embeddable,
+    EmbeddingFunction as ChromaEmbeddingFunction,
+    Include,
+    Loadable,
+    Where,
+    WhereDocument,
+)
+
+from crewai.rag.core.base_client import BaseCollectionParams, BaseCollectionSearchParams
 
 ChromaDBClientType = ClientAPI | AsyncClientAPI
 
@@ -44,4 +56,30 @@ class ExtractedSearchParams(NamedTuple):
     score_threshold: float | None
     where: Where | None
     where_document: WhereDocument | None
+    include: Include
+
+
+class ChromaDBCollectionCreateParams(BaseCollectionParams, total=False):
+    """Parameters for creating a ChromaDB collection.
+
+    This class extends BaseCollectionParams to include any additional
+    parameters specific to ChromaDB collection creation.
+    """
+
+    configuration: CollectionConfigurationInterface
+    metadata: CollectionMetadata
+    embedding_function: ChromaEmbeddingFunction[Embeddable]
+    data_loader: DataLoader[Loadable]
+    get_or_create: bool
+
+
+class ChromaDBCollectionSearchParams(BaseCollectionSearchParams, total=False):
+    """Parameters for searching a ChromaDB collection.
+
+    This class extends BaseCollectionSearchParams to include ChromaDB-specific
+    search parameters like where clauses and include options.
+    """
+
+    where: Where
+    where_document: WhereDocument
     include: Include
