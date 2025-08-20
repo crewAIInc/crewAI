@@ -401,40 +401,6 @@ class Task(BaseModel):
             self.processed_by_agents.add(agent_name)
         self.delegations += 1
 
-    def copy(
-        self, agents: List["BaseAgent"], task_mapping: Dict[str, "Task"]
-    ) -> "Task":
-        """Create a deep copy of the Task."""
-        exclude = {
-            "id",
-            "agent",
-            "context",
-            "tools",
-        }
-
-        copied_data = self.model_dump(exclude=exclude)
-        copied_data = {k: v for k, v in copied_data.items() if v is not None}
-
-        cloned_context = (
-            [task_mapping[context_task.key] for context_task in self.context]
-            if self.context
-            else None
-        )
-
-        def get_agent_by_role(role: str) -> Union["BaseAgent", None]:
-            return next((agent for agent in agents if agent.role == role), None)
-
-        cloned_agent = get_agent_by_role(self.agent.role) if self.agent else None
-        cloned_tools = copy(self.tools) if self.tools else []
-
-        copied_task = Task(
-            **copied_data,
-            context=cloned_context,
-            agent=cloned_agent,
-            tools=cloned_tools,
-        )
-
-        return copied_task
 
     def _export_output(
         self, result: str

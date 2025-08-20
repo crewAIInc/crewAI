@@ -32,6 +32,7 @@ from crewai.memory.user.user_memory import UserMemory
 from crewai.process import Process
 from crewai.task import Task
 from crewai.tasks.conditional_task import ConditionalTask
+from crewai.utilities.task_cloner import TaskCloner
 from crewai.tasks.task_output import TaskOutput
 from crewai.telemetry import Telemetry
 from crewai.tools.agent_tools.agent_tools import AgentTools
@@ -981,7 +982,7 @@ class Crew(BaseModel):
 
         cloned_tasks = []
         for task in self.tasks:
-            cloned_task = task.copy(cloned_agents, task_mapping)
+            cloned_task = TaskCloner.deep_copy(task, cloned_agents, task_mapping)
             cloned_tasks.append(cloned_task)
             task_mapping[task.key] = cloned_task
 
