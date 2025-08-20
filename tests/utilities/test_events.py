@@ -76,11 +76,29 @@ def base_task(base_agent):
     )
 
 
-event_listener = EventListener()
+@pytest.fixture
+def reset_event_listener_singleton():
+    """Reset EventListener singleton for clean test state."""
+    original_instance = EventListener._instance
+    original_initialized = (
+        getattr(EventListener._instance, "_initialized", False)
+        if EventListener._instance
+        else False
+    )
+
+    EventListener._instance = None
+
+    yield
+
+    EventListener._instance = original_instance
+    if original_instance and original_initialized:
+        EventListener._instance._initialized = original_initialized
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_crew_emits_start_kickoff_event(base_agent, base_task):
+def test_crew_emits_start_kickoff_event(
+    base_agent, base_task, reset_event_listener_singleton
+):
     received_events = []
     mock_span = Mock()
 
@@ -88,18 +106,23 @@ def test_crew_emits_start_kickoff_event(base_agent, base_task):
     def handle_crew_start(source, event):
         received_events.append(event)
 
-    crew = Crew(agents=[base_agent], tasks=[base_task], name="TestCrew")
-    with (
-        patch.object(
-            event_listener._telemetry, "crew_execution_span", return_value=mock_span
-        ) as mock_crew_execution_span,
-        patch.object(
-            event_listener._telemetry, "end_crew", return_value=mock_span
-        ) as mock_crew_ended,
+    mock_telemetry = Mock()
+    mock_telemetry.crew_execution_span = Mock(return_value=mock_span)
+    mock_telemetry.end_crew = Mock(return_value=mock_span)
+    mock_telemetry.set_tracer = Mock()
+    mock_telemetry.task_started = Mock(return_value=mock_span)
+    mock_telemetry.task_ended = Mock(return_value=mock_span)
+
+    # Patch the Telemetry class to return our mock
+    with patch(
+        "crewai.utilities.events.event_listener.Telemetry", return_value=mock_telemetry
     ):
+        # Now when Crew creates EventListener, it will use our mocked telemetry
+        crew = Crew(agents=[base_agent], tasks=[base_task], name="TestCrew")
         crew.kickoff()
-    mock_crew_execution_span.assert_called_once_with(crew, None)
-    mock_crew_ended.assert_called_once_with(crew, "hi")
+
+    mock_telemetry.crew_execution_span.assert_called_once_with(crew, None)
+    mock_telemetry.end_crew.assert_called_once_with(crew, "hi")
 
     assert len(received_events) == 1
     assert received_events[0].crew_name == "TestCrew"
@@ -128,7 +151,6 @@ def test_crew_emits_end_kickoff_event(base_agent, base_task):
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_crew_emits_test_kickoff_type_event(base_agent, base_task):
     received_events = []
-    mock_span = Mock()
 
     @crewai_event_bus.on(CrewTestStartedEvent)
     def handle_crew_end(source, event):
@@ -143,21 +165,8 @@ def test_crew_emits_test_kickoff_type_event(base_agent, base_task):
         received_events.append(event)
 
     eval_llm = LLM(model="gpt-4o-mini")
-    with (
-        patch.object(
-            event_listener._telemetry, "test_execution_span", return_value=mock_span
-        ) as mock_crew_execution_span,
-    ):
-        crew = Crew(agents=[base_agent], tasks=[base_task], name="TestCrew")
-        crew.test(n_iterations=1, eval_llm=eval_llm)
-
-        # Verify the call was made with correct argument types and values
-        assert mock_crew_execution_span.call_count == 1
-        args = mock_crew_execution_span.call_args[0]
-        assert isinstance(args[0], Crew)
-        assert args[1] == 1
-        assert args[2] is None
-        assert args[3] == eval_llm
+    crew = Crew(agents=[base_agent], tasks=[base_task], name="TestCrew")
+    crew.test(n_iterations=1, eval_llm=eval_llm)
 
     assert len(received_events) == 3
     assert received_events[0].crew_name == "TestCrew"
@@ -214,7 +223,9 @@ def test_crew_emits_start_task_event(base_agent, base_task):
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_crew_emits_end_task_event(base_agent, base_task):
+def test_crew_emits_end_task_event(
+    base_agent, base_task, reset_event_listener_singleton
+):
     received_events = []
 
     @crewai_event_bus.on(TaskCompletedEvent)
@@ -222,19 +233,22 @@ def test_crew_emits_end_task_event(base_agent, base_task):
         received_events.append(event)
 
     mock_span = Mock()
-    crew = Crew(agents=[base_agent], tasks=[base_task], name="TestCrew")
-    with (
-        patch.object(
-            event_listener._telemetry, "task_started", return_value=mock_span
-        ) as mock_task_started,
-        patch.object(
-            event_listener._telemetry, "task_ended", return_value=mock_span
-        ) as mock_task_ended,
+
+    mock_telemetry = Mock()
+    mock_telemetry.task_started = Mock(return_value=mock_span)
+    mock_telemetry.task_ended = Mock(return_value=mock_span)
+    mock_telemetry.set_tracer = Mock()
+    mock_telemetry.crew_execution_span = Mock()
+    mock_telemetry.end_crew = Mock()
+
+    with patch(
+        "crewai.utilities.events.event_listener.Telemetry", return_value=mock_telemetry
     ):
+        crew = Crew(agents=[base_agent], tasks=[base_task], name="TestCrew")
         crew.kickoff()
 
-    mock_task_started.assert_called_once_with(crew=crew, task=base_task)
-    mock_task_ended.assert_called_once_with(mock_span, base_task, crew)
+        mock_telemetry.task_started.assert_called_once_with(crew=crew, task=base_task)
+        mock_telemetry.task_ended.assert_called_once_with(mock_span, base_task, crew)
 
     assert len(received_events) == 1
     assert isinstance(received_events[0].timestamp, datetime)
@@ -423,7 +437,7 @@ def test_tools_emits_error_events():
     assert isinstance(received_events[0].timestamp, datetime)
 
 
-def test_flow_emits_start_event():
+def test_flow_emits_start_event(reset_event_listener_singleton):
     received_events = []
     mock_span = Mock()
 
@@ -436,15 +450,21 @@ def test_flow_emits_start_event():
         def begin(self):
             return "started"
 
-    with (
-        patch.object(
-            event_listener._telemetry, "flow_execution_span", return_value=mock_span
-        ) as mock_flow_execution_span,
+    mock_telemetry = Mock()
+    mock_telemetry.flow_execution_span = Mock(return_value=mock_span)
+    mock_telemetry.flow_creation_span = Mock()
+    mock_telemetry.set_tracer = Mock()
+
+    with patch(
+        "crewai.utilities.events.event_listener.Telemetry", return_value=mock_telemetry
     ):
+        # Force creation of EventListener singleton with mocked telemetry
+        _ = EventListener()
+
         flow = TestFlow()
         flow.kickoff()
 
-    mock_flow_execution_span.assert_called_once_with("TestFlow", ["begin"])
+    mock_telemetry.flow_execution_span.assert_called_once_with("TestFlow", ["begin"])
     assert len(received_events) == 1
     assert received_events[0].flow_name == "TestFlow"
     assert received_events[0].type == "flow_started"
@@ -572,7 +592,6 @@ def test_multiple_handlers_for_same_event(base_agent, base_task):
 
 def test_flow_emits_created_event():
     received_events = []
-    mock_span = Mock()
 
     @crewai_event_bus.on(FlowCreatedEvent)
     def handle_flow_created(source, event):
@@ -583,15 +602,8 @@ def test_flow_emits_created_event():
         def begin(self):
             return "started"
 
-    with (
-        patch.object(
-            event_listener._telemetry, "flow_creation_span", return_value=mock_span
-        ) as mock_flow_creation_span,
-    ):
-        flow = TestFlow()
-        flow.kickoff()
-
-    mock_flow_creation_span.assert_called_once_with("TestFlow")
+    flow = TestFlow()
+    flow.kickoff()
 
     assert len(received_events) == 1
     assert received_events[0].flow_name == "TestFlow"

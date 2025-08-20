@@ -9,7 +9,9 @@ from crewai.cli.shared.token_manager import TokenManager
 
 
 class TestTokenManager(unittest.TestCase):
-    def setUp(self):
+    @patch("crewai.cli.shared.token_manager.TokenManager._get_or_create_key")
+    def setUp(self, mock_get_key):
+        mock_get_key.return_value = Fernet.generate_key()
         self.token_manager = TokenManager()
 
     @patch("crewai.cli.shared.token_manager.TokenManager.read_secure_file")
