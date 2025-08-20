@@ -531,13 +531,19 @@ class TestChromaDBClient:
             name="test_collection"
         )
 
-    def test_reset(self, client):
-        """Test that reset raises NotImplementedError."""
-        with pytest.raises(NotImplementedError):
-            client.reset()
+    def test_reset(self, client, mock_chromadb_client):
+        """Test that reset calls the underlying client correctly."""
+        mock_chromadb_client.reset.return_value = True
+
+        client.reset()
+
+        mock_chromadb_client.reset.assert_called_once_with()
 
     @pytest.mark.asyncio
-    async def test_areset(self, client) -> None:
-        """Test that areset raises NotImplementedError."""
-        with pytest.raises(NotImplementedError):
-            await client.areset()
+    async def test_areset(self, async_client, mock_async_chromadb_client) -> None:
+        """Test that areset calls the underlying client correctly."""
+        mock_async_chromadb_client.reset = AsyncMock(return_value=True)
+
+        await async_client.areset()
+
+        mock_async_chromadb_client.reset.assert_called_once_with()

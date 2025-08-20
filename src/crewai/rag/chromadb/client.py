@@ -689,9 +689,50 @@ class ChromaDBClient(BaseClient):
         await self.client.delete_collection(name=collection_name)
 
     def reset(self) -> None:
-        """Reset the vector database by deleting all collections and data."""
-        raise NotImplementedError
+        """Reset the vector database by deleting all collections and data.
+
+        Completely clears the ChromaDB instance, removing all collections,
+        documents, embeddings, and metadata. This operation cannot be undone.
+        Use with extreme caution in production environments.
+
+        Raises:
+            TypeError: If AsyncClientAPI is used instead of ClientAPI for sync operations.
+            ConnectionError: If unable to connect to ChromaDB server.
+
+        Example:
+            >>> client = ChromaDBClient()
+            >>> client.reset()  # Removes ALL data from ChromaDB
+        """
+        if not _is_sync_client(self.client):
+            raise TypeError(
+                "Synchronous method reset() requires a ClientAPI. "
+                "Use areset() for AsyncClientAPI."
+            )
+
+        self.client.reset()
 
     async def areset(self) -> None:
-        """Reset the vector database by deleting all collections and data asynchronously."""
-        raise NotImplementedError
+        """Reset the vector database by deleting all collections and data asynchronously.
+
+        Completely clears the ChromaDB instance, removing all collections,
+        documents, embeddings, and metadata. This operation cannot be undone.
+        Use with extreme caution in production environments.
+
+        Raises:
+            TypeError: If ClientAPI is used instead of AsyncClientAPI for async operations.
+            ConnectionError: If unable to connect to ChromaDB server.
+
+        Example:
+            >>> import asyncio
+            >>> async def main():
+            ...     client = ChromaDBClient()
+            ...     await client.areset()  # Removes ALL data from ChromaDB
+            >>> asyncio.run(main())
+        """
+        if not _is_async_client(self.client):
+            raise TypeError(
+                "Asynchronous method areset() requires an AsyncClientAPI. "
+                "Use reset() for ClientAPI."
+            )
+
+        await self.client.reset()
