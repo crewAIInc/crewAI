@@ -10,6 +10,7 @@ from crewai.rag.core.base_client import (
     BaseCollectionAddParams,
     BaseCollectionSearchParams,
 )
+from crewai.rag.qdrant.types import QdrantClientType
 from crewai.rag.types import SearchResult
 
 
@@ -24,7 +25,7 @@ class QdrantClient(BaseClient):
         embedding_function: Function to generate embeddings for documents.
     """
 
-    client: Any  # QdrantClientType
+    client: QdrantClientType
     embedding_function: Any  # EmbeddingFunction
 
     def create_collection(self, **kwargs: Unpack[BaseCollectionParams]) -> None:
