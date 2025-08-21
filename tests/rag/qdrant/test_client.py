@@ -407,18 +407,193 @@ class TestQdrantClient:
                 collection_name="test_collection", documents=documents
             )
 
-    def test_search_not_implemented(self, client):
-        """Test that search raises NotImplementedError."""
-        with pytest.raises(NotImplementedError):
+    def test_search(self, client, mock_qdrant_client):
+        """Test that search returns matching documents."""
+        mock_qdrant_client.collection_exists.return_value = True
+        client.embedding_function.return_value = [0.1, 0.2, 0.3]
+
+        mock_point = Mock()
+        mock_point.id = "doc-123"
+        mock_point.payload = {"content": "Test content", "source": "test"}
+        mock_point.score = 0.95
+
+        mock_response = Mock()
+        mock_response.points = [mock_point]
+        mock_qdrant_client.query_points.return_value = mock_response
+
+        results = client.search(collection_name="test_collection", query="test query")
+
+        mock_qdrant_client.collection_exists.assert_called_once_with("test_collection")
+        client.embedding_function.assert_called_once_with("test query")
+        mock_qdrant_client.query_points.assert_called_once()
+
+        call_args = mock_qdrant_client.query_points.call_args
+        assert call_args.kwargs["collection_name"] == "test_collection"
+        assert call_args.kwargs["query"] == [0.1, 0.2, 0.3]
+        assert call_args.kwargs["limit"] == 10
+        assert call_args.kwargs["with_payload"] is True
+        assert call_args.kwargs["with_vectors"] is False
+
+        assert len(results) == 1
+        assert results[0]["id"] == "doc-123"
+        assert results[0]["content"] == "Test content"
+        assert results[0]["metadata"] == {"source": "test"}
+        assert results[0]["score"] == 0.95
+
+    def test_search_with_filters(self, client, mock_qdrant_client):
+        """Test that search applies metadata filters correctly."""
+        mock_qdrant_client.collection_exists.return_value = True
+        client.embedding_function.return_value = [0.1, 0.2, 0.3]
+
+        mock_response = Mock()
+        mock_response.points = []
+        mock_qdrant_client.query_points.return_value = mock_response
+
+        client.search(
+            collection_name="test_collection",
+            query="test query",
+            metadata_filter={"category": "tech", "status": "published"},
+        )
+
+        call_args = mock_qdrant_client.query_points.call_args
+        query_filter = call_args.kwargs["query_filter"]
+        assert len(query_filter.must) == 2
+        assert any(
+            cond.key == "category" and cond.match.value == "tech"
+            for cond in query_filter.must
+        )
+        assert any(
+            cond.key == "status" and cond.match.value == "published"
+            for cond in query_filter.must
+        )
+
+    def test_search_with_options(self, client, mock_qdrant_client):
+        """Test that search applies limit and score_threshold correctly."""
+        mock_qdrant_client.collection_exists.return_value = True
+        client.embedding_function.return_value = [0.1, 0.2, 0.3]
+
+        mock_response = Mock()
+        mock_response.points = []
+        mock_qdrant_client.query_points.return_value = mock_response
+
+        client.search(
+            collection_name="test_collection",
+            query="test query",
+            limit=5,
+            score_threshold=0.8,
+        )
+
+        call_args = mock_qdrant_client.query_points.call_args
+        assert call_args.kwargs["limit"] == 5
+        assert call_args.kwargs["score_threshold"] == 0.8
+
+    def test_search_collection_not_exists(self, client, mock_qdrant_client):
+        """Test that search raises error if collection doesn't exist."""
+        mock_qdrant_client.collection_exists.return_value = False
+
+        with pytest.raises(
+            ValueError, match="Collection 'test_collection' does not exist"
+        ):
+            client.search(collection_name="test_collection", query="test query")
+
+    def test_search_wrong_client_type(self, mock_async_qdrant_client):
+        """Test that search raises TypeError for async client."""
+        client = QdrantClient()
+        client.client = mock_async_qdrant_client
+        client.embedding_function = Mock()
+
+        with pytest.raises(TypeError, match="Synchronous method search"):
             client.search(collection_name="test_collection", query="test query")
 
     @pytest.mark.asyncio
-    async def test_asearch_not_implemented(self, async_client):
-        """Test that asearch raises NotImplementedError."""
-        with pytest.raises(NotImplementedError):
+    async def test_asearch(self, async_client, mock_async_qdrant_client):
+        """Test that asearch returns matching documents asynchronously."""
+        mock_async_qdrant_client.collection_exists = AsyncMock(return_value=True)
+        async_client.embedding_function.return_value = [0.1, 0.2, 0.3]
+
+        mock_point = Mock()
+        mock_point.id = "doc-123"
+        mock_point.payload = {"content": "Test content", "source": "test"}
+        mock_point.score = 0.95
+
+        mock_response = Mock()
+        mock_response.points = [mock_point]
+        mock_async_qdrant_client.query_points = AsyncMock(return_value=mock_response)
+
+        results = await async_client.asearch(
+            collection_name="test_collection", query="test query"
+        )
+
+        mock_async_qdrant_client.collection_exists.assert_called_once_with(
+            "test_collection"
+        )
+        async_client.embedding_function.assert_called_once_with("test query")
+        mock_async_qdrant_client.query_points.assert_called_once()
+
+        call_args = mock_async_qdrant_client.query_points.call_args
+        assert call_args.kwargs["collection_name"] == "test_collection"
+        assert call_args.kwargs["query"] == [0.1, 0.2, 0.3]
+        assert call_args.kwargs["limit"] == 10
+        assert call_args.kwargs["with_payload"] is True
+        assert call_args.kwargs["with_vectors"] is False
+
+        assert len(results) == 1
+        assert results[0]["id"] == "doc-123"
+        assert results[0]["content"] == "Test content"
+        assert results[0]["metadata"] == {"source": "test"}
+        assert results[0]["score"] == 0.95
+
+    @pytest.mark.asyncio
+    async def test_asearch_with_filters(self, async_client, mock_async_qdrant_client):
+        """Test that asearch applies metadata filters correctly."""
+        mock_async_qdrant_client.collection_exists = AsyncMock(return_value=True)
+        async_client.embedding_function.return_value = [0.1, 0.2, 0.3]
+
+        mock_response = Mock()
+        mock_response.points = []
+        mock_async_qdrant_client.query_points = AsyncMock(return_value=mock_response)
+
+        await async_client.asearch(
+            collection_name="test_collection",
+            query="test query",
+            metadata_filter={"category": "tech", "status": "published"},
+        )
+
+        call_args = mock_async_qdrant_client.query_points.call_args
+        query_filter = call_args.kwargs["query_filter"]
+        assert len(query_filter.must) == 2
+        assert any(
+            cond.key == "category" and cond.match.value == "tech"
+            for cond in query_filter.must
+        )
+        assert any(
+            cond.key == "status" and cond.match.value == "published"
+            for cond in query_filter.must
+        )
+
+    @pytest.mark.asyncio
+    async def test_asearch_collection_not_exists(
+        self, async_client, mock_async_qdrant_client
+    ):
+        """Test that asearch raises error if collection doesn't exist."""
+        mock_async_qdrant_client.collection_exists = AsyncMock(return_value=False)
+
+        with pytest.raises(
+            ValueError, match="Collection 'test_collection' does not exist"
+        ):
             await async_client.asearch(
                 collection_name="test_collection", query="test query"
             )
+
+    @pytest.mark.asyncio
+    async def test_asearch_wrong_client_type(self, mock_qdrant_client):
+        """Test that asearch raises TypeError for sync client."""
+        client = QdrantClient()
+        client.client = mock_qdrant_client
+        client.embedding_function = Mock()
+
+        with pytest.raises(TypeError, match="Asynchronous method asearch"):
+            await client.asearch(collection_name="test_collection", query="test query")
 
     def test_delete_collection_not_implemented(self, client):
         """Test that delete_collection raises NotImplementedError."""

@@ -5,7 +5,14 @@ from typing import Any
 from uuid import uuid4
 
 from qdrant_client import AsyncQdrantClient, QdrantClient as SyncQdrantClient
-from qdrant_client.models import Distance, PointStruct, VectorParams
+from qdrant_client.models import (
+    Distance,
+    FieldCondition,
+    Filter,
+    MatchValue,
+    PointStruct,
+    VectorParams,
+)
 from typing_extensions import Unpack
 
 from crewai.rag.core.base_client import (
@@ -376,7 +383,58 @@ class QdrantClient(BaseClient):
             ValueError: If collection doesn't exist.
             ConnectionError: If unable to connect to Qdrant server.
         """
-        raise NotImplementedError
+        if not isinstance(self.client, SyncQdrantClient):
+            raise TypeError(
+                "Synchronous method search() requires a QdrantClient. "
+                "Use asearch() for AsyncQdrantClient."
+            )
+
+        collection_name = kwargs["collection_name"]
+        query = kwargs["query"]
+        limit = kwargs.get("limit", 10)
+        metadata_filter = kwargs.get("metadata_filter")
+        score_threshold = kwargs.get("score_threshold")
+
+        if not self.client.collection_exists(collection_name):
+            raise ValueError(f"Collection '{collection_name}' does not exist")
+
+        query_embedding = self.embedding_function(query)
+        if not isinstance(query_embedding, list):
+            query_embedding = query_embedding.tolist()
+
+        search_kwargs = {
+            "collection_name": collection_name,
+            "query": query_embedding,
+            "limit": limit,
+            "with_payload": True,
+            "with_vectors": False,
+        }
+
+        if score_threshold is not None:
+            search_kwargs["score_threshold"] = score_threshold
+
+        if metadata_filter:
+            filter_conditions = []
+            for key, value in metadata_filter.items():
+                filter_conditions.append(
+                    FieldCondition(key=key, match=MatchValue(value=value))
+                )
+
+            search_kwargs["query_filter"] = Filter(must=filter_conditions)
+
+        response = self.client.query_points(**search_kwargs)
+
+        results: list[SearchResult] = []
+        for point in response.points:
+            result: SearchResult = {
+                "id": str(point.id),
+                "content": point.payload.get("content", ""),
+                "metadata": {k: v for k, v in point.payload.items() if k != "content"},
+                "score": point.score if point.score is not None else 0.0,
+            }
+            results.append(result)
+
+        return results
 
     async def asearch(
         self, **kwargs: Unpack[BaseCollectionSearchParams]
@@ -397,7 +455,65 @@ class QdrantClient(BaseClient):
             ValueError: If collection doesn't exist.
             ConnectionError: If unable to connect to Qdrant server.
         """
-        raise NotImplementedError
+        if not isinstance(self.client, AsyncQdrantClient):
+            raise TypeError(
+                "Asynchronous method asearch() requires an AsyncQdrantClient. "
+                "Use search() for QdrantClient."
+            )
+
+        collection_name = kwargs["collection_name"]
+        query = kwargs["query"]
+        limit = kwargs.get("limit", 10)
+        metadata_filter = kwargs.get("metadata_filter")
+        score_threshold = kwargs.get("score_threshold")
+
+        if not await self.client.collection_exists(collection_name):
+            raise ValueError(f"Collection '{collection_name}' does not exist")
+
+        if hasattr(self.embedding_function, "__call__"):
+            if asyncio.iscoroutinefunction(self.embedding_function):
+                query_embedding = await self.embedding_function(query)
+            else:
+                query_embedding = self.embedding_function(query)
+        else:
+            query_embedding = self.embedding_function(query)
+
+        if not isinstance(query_embedding, list):
+            query_embedding = query_embedding.tolist()
+
+        search_kwargs = {
+            "collection_name": collection_name,
+            "query": query_embedding,
+            "limit": limit,
+            "with_payload": True,
+            "with_vectors": False,
+        }
+
+        if score_threshold is not None:
+            search_kwargs["score_threshold"] = score_threshold
+
+        if metadata_filter:
+            filter_conditions = []
+            for key, value in metadata_filter.items():
+                filter_conditions.append(
+                    FieldCondition(key=key, match=MatchValue(value=value))
+                )
+
+            search_kwargs["query_filter"] = Filter(must=filter_conditions)
+
+        response = await self.client.query_points(**search_kwargs)
+
+        results: list[SearchResult] = []
+        for point in response.points:
+            result: SearchResult = {
+                "id": str(point.id),
+                "content": point.payload.get("content", ""),
+                "metadata": {k: v for k, v in point.payload.items() if k != "content"},
+                "score": point.score if point.score is not None else 0.0,
+            }
+            results.append(result)
+
+        return results
 
     def delete_collection(self, **kwargs: Unpack[BaseCollectionParams]) -> None:
         """Delete a collection and all its data.
