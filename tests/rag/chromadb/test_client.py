@@ -52,7 +52,7 @@ class TestChromaDBClient:
         mock_chromadb_client.create_collection.assert_called_once_with(
             name="test_collection",
             configuration=None,
-            metadata=None,
+            metadata={"hnsw:space": "cosine"},
             embedding_function=client.embedding_function,
             data_loader=None,
             get_or_create=False,
@@ -96,7 +96,7 @@ class TestChromaDBClient:
         mock_async_chromadb_client.create_collection.assert_called_once_with(
             name="test_collection",
             configuration=None,
-            metadata=None,
+            metadata={"hnsw:space": "cosine"},
             embedding_function=async_client.embedding_function,
             data_loader=None,
             get_or_create=False,
@@ -143,7 +143,7 @@ class TestChromaDBClient:
         mock_chromadb_client.get_or_create_collection.assert_called_once_with(
             name="test_collection",
             configuration=None,
-            metadata=None,
+            metadata={"hnsw:space": "cosine"},
             embedding_function=client.embedding_function,
             data_loader=None,
         )
@@ -194,7 +194,7 @@ class TestChromaDBClient:
         mock_async_chromadb_client.get_or_create_collection.assert_called_once_with(
             name="test_collection",
             configuration=None,
-            metadata=None,
+            metadata={"hnsw:space": "cosine"},
             embedding_function=async_client.embedding_function,
             data_loader=None,
         )
@@ -234,7 +234,7 @@ class TestChromaDBClient:
     def test_add_documents(self, client, mock_chromadb_client) -> None:
         """Test that add_documents adds documents to collection."""
         mock_collection = Mock()
-        mock_chromadb_client.get_or_create_collection.return_value = mock_collection
+        mock_chromadb_client.get_collection.return_value = mock_collection
 
         documents: list[BaseRecord] = [
             {
@@ -245,8 +245,7 @@ class TestChromaDBClient:
 
         client.add_documents(collection_name="test_collection", documents=documents)
 
-        # Verify collection was retrieved/created
-        mock_chromadb_client.get_or_create_collection.assert_called_once_with(
+        mock_chromadb_client.get_collection.assert_called_once_with(
             name="test_collection",
             embedding_function=client.embedding_function,
         )
@@ -261,7 +260,7 @@ class TestChromaDBClient:
     def test_add_documents_with_custom_ids(self, client, mock_chromadb_client) -> None:
         """Test add_documents with custom document IDs."""
         mock_collection = Mock()
-        mock_chromadb_client.get_or_create_collection.return_value = mock_collection
+        mock_chromadb_client.get_collection.return_value = mock_collection
 
         documents: list[BaseRecord] = [
             {
@@ -297,7 +296,7 @@ class TestChromaDBClient:
     ) -> None:
         """Test that aadd_documents adds documents to collection asynchronously."""
         mock_collection = AsyncMock()
-        mock_async_chromadb_client.get_or_create_collection = AsyncMock(
+        mock_async_chromadb_client.get_collection = AsyncMock(
             return_value=mock_collection
         )
 
@@ -312,8 +311,7 @@ class TestChromaDBClient:
             collection_name="test_collection", documents=documents
         )
 
-        # Verify collection was retrieved/created
-        mock_async_chromadb_client.get_or_create_collection.assert_called_once_with(
+        mock_async_chromadb_client.get_collection.assert_called_once_with(
             name="test_collection",
             embedding_function=async_client.embedding_function,
         )
@@ -331,7 +329,7 @@ class TestChromaDBClient:
     ) -> None:
         """Test aadd_documents with custom document IDs."""
         mock_collection = AsyncMock()
-        mock_async_chromadb_client.get_or_create_collection = AsyncMock(
+        mock_async_chromadb_client.get_collection = AsyncMock(
             return_value=mock_collection
         )
 

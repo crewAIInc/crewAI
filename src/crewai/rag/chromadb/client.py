@@ -81,10 +81,14 @@ class ChromaDBClient(BaseClient):
                 "Use acreate_collection() for AsyncClientAPI."
             )
 
+        metadata = kwargs.get("metadata", {})
+        if "hnsw:space" not in metadata:
+            metadata["hnsw:space"] = "cosine"
+
         self.client.create_collection(
             name=kwargs["collection_name"],
             configuration=kwargs.get("configuration"),
-            metadata=kwargs.get("metadata"),
+            metadata=metadata,
             embedding_function=kwargs.get(
                 "embedding_function", self.embedding_function
             ),
@@ -134,10 +138,14 @@ class ChromaDBClient(BaseClient):
                 "Use create_collection() for ClientAPI."
             )
 
+        metadata = kwargs.get("metadata", {})
+        if "hnsw:space" not in metadata:
+            metadata["hnsw:space"] = "cosine"
+
         await self.client.create_collection(
             name=kwargs["collection_name"],
             configuration=kwargs.get("configuration"),
-            metadata=kwargs.get("metadata"),
+            metadata=metadata,
             embedding_function=kwargs.get(
                 "embedding_function", self.embedding_function
             ),
@@ -181,10 +189,14 @@ class ChromaDBClient(BaseClient):
                 "Use aget_or_create_collection() for AsyncClientAPI."
             )
 
+        metadata = kwargs.get("metadata", {})
+        if "hnsw:space" not in metadata:
+            metadata["hnsw:space"] = "cosine"
+
         return self.client.get_or_create_collection(
             name=kwargs["collection_name"],
             configuration=kwargs.get("configuration"),
-            metadata=kwargs.get("metadata"),
+            metadata=metadata,
             embedding_function=kwargs.get(
                 "embedding_function", self.embedding_function
             ),
@@ -230,10 +242,14 @@ class ChromaDBClient(BaseClient):
                 "Use get_or_create_collection() for ClientAPI."
             )
 
+        metadata = kwargs.get("metadata", {})
+        if "hnsw:space" not in metadata:
+            metadata["hnsw:space"] = "cosine"
+
         return await self.client.get_or_create_collection(
             name=kwargs["collection_name"],
             configuration=kwargs.get("configuration"),
-            metadata=kwargs.get("metadata"),
+            metadata=metadata,
             embedding_function=kwargs.get(
                 "embedding_function", self.embedding_function
             ),
@@ -270,7 +286,7 @@ class ChromaDBClient(BaseClient):
         if not documents:
             raise ValueError("Documents list cannot be empty")
 
-        collection = self.client.get_or_create_collection(
+        collection = self.client.get_collection(
             name=collection_name,
             embedding_function=self.embedding_function,
         )
@@ -312,7 +328,7 @@ class ChromaDBClient(BaseClient):
         if not documents:
             raise ValueError("Documents list cannot be empty")
 
-        collection = await self.client.get_or_create_collection(
+        collection = await self.client.get_collection(
             name=collection_name,
             embedding_function=self.embedding_function,
         )

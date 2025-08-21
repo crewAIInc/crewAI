@@ -209,11 +209,10 @@ def _process_query_results(
         List of SearchResult dicts containing id, content, metadata, and score.
     """
 
-    distance_metric: Literal["l2", "cosine", "ip"] = "l2"
-    if collection.metadata:
-        distance_metric = cast(
-            Literal["l2", "cosine", "ip"], collection.metadata.get("hnsw:space", "l2")
-        )
+    distance_metric = cast(
+        Literal["l2", "cosine", "ip"],
+        collection.metadata.get("hnsw:space", "l2") if collection.metadata else "l2",
+    )
 
     return _convert_chromadb_results_to_search_results(
         results=results,
