@@ -525,7 +525,18 @@ class QdrantClient(BaseClient):
             ValueError: If collection doesn't exist.
             ConnectionError: If unable to connect to Qdrant server.
         """
-        raise NotImplementedError
+        if not isinstance(self.client, SyncQdrantClient):
+            raise TypeError(
+                "Synchronous method delete_collection() requires a QdrantClient. "
+                "Use adelete_collection() for AsyncQdrantClient."
+            )
+
+        collection_name = kwargs["collection_name"]
+
+        if not self.client.collection_exists(collection_name):
+            raise ValueError(f"Collection '{collection_name}' does not exist")
+
+        self.client.delete_collection(collection_name=collection_name)
 
     async def adelete_collection(self, **kwargs: Unpack[BaseCollectionParams]) -> None:
         """Delete a collection and all its data asynchronously.
@@ -537,7 +548,18 @@ class QdrantClient(BaseClient):
             ValueError: If collection doesn't exist.
             ConnectionError: If unable to connect to Qdrant server.
         """
-        raise NotImplementedError
+        if not isinstance(self.client, AsyncQdrantClient):
+            raise TypeError(
+                "Asynchronous method adelete_collection() requires an AsyncQdrantClient. "
+                "Use delete_collection() for QdrantClient."
+            )
+
+        collection_name = kwargs["collection_name"]
+
+        if not await self.client.collection_exists(collection_name):
+            raise ValueError(f"Collection '{collection_name}' does not exist")
+
+        await self.client.delete_collection(collection_name=collection_name)
 
     def reset(self) -> None:
         """Reset the vector database by deleting all collections and data.

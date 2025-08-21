@@ -595,16 +595,79 @@ class TestQdrantClient:
         with pytest.raises(TypeError, match="Asynchronous method asearch"):
             await client.asearch(collection_name="test_collection", query="test query")
 
-    def test_delete_collection_not_implemented(self, client):
-        """Test that delete_collection raises NotImplementedError."""
-        with pytest.raises(NotImplementedError):
+    def test_delete_collection(self, client, mock_qdrant_client):
+        """Test that delete_collection deletes the collection."""
+        mock_qdrant_client.collection_exists.return_value = True
+
+        client.delete_collection(collection_name="test_collection")
+
+        mock_qdrant_client.collection_exists.assert_called_once_with("test_collection")
+        mock_qdrant_client.delete_collection.assert_called_once_with(
+            collection_name="test_collection"
+        )
+
+    def test_delete_collection_not_exists(self, client, mock_qdrant_client):
+        """Test that delete_collection raises error if collection doesn't exist."""
+        mock_qdrant_client.collection_exists.return_value = False
+
+        with pytest.raises(
+            ValueError, match="Collection 'test_collection' does not exist"
+        ):
+            client.delete_collection(collection_name="test_collection")
+
+        mock_qdrant_client.collection_exists.assert_called_once_with("test_collection")
+        mock_qdrant_client.delete_collection.assert_not_called()
+
+    def test_delete_collection_wrong_client_type(self, mock_async_qdrant_client):
+        """Test that delete_collection raises TypeError for async client."""
+        client = QdrantClient()
+        client.client = mock_async_qdrant_client
+        client.embedding_function = Mock()
+
+        with pytest.raises(TypeError, match="Synchronous method delete_collection"):
             client.delete_collection(collection_name="test_collection")
 
     @pytest.mark.asyncio
-    async def test_adelete_collection_not_implemented(self, async_client):
-        """Test that adelete_collection raises NotImplementedError."""
-        with pytest.raises(NotImplementedError):
+    async def test_adelete_collection(self, async_client, mock_async_qdrant_client):
+        """Test that adelete_collection deletes the collection asynchronously."""
+        mock_async_qdrant_client.collection_exists = AsyncMock(return_value=True)
+        mock_async_qdrant_client.delete_collection = AsyncMock()
+
+        await async_client.adelete_collection(collection_name="test_collection")
+
+        mock_async_qdrant_client.collection_exists.assert_called_once_with(
+            "test_collection"
+        )
+        mock_async_qdrant_client.delete_collection.assert_called_once_with(
+            collection_name="test_collection"
+        )
+
+    @pytest.mark.asyncio
+    async def test_adelete_collection_not_exists(
+        self, async_client, mock_async_qdrant_client
+    ):
+        """Test that adelete_collection raises error if collection doesn't exist."""
+        mock_async_qdrant_client.collection_exists = AsyncMock(return_value=False)
+
+        with pytest.raises(
+            ValueError, match="Collection 'test_collection' does not exist"
+        ):
             await async_client.adelete_collection(collection_name="test_collection")
+
+        mock_async_qdrant_client.collection_exists.assert_called_once_with(
+            "test_collection"
+        )
+        mock_async_qdrant_client.delete_collection.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_adelete_collection_wrong_client_type(self, mock_qdrant_client):
+        """Test that adelete_collection raises TypeError for sync client."""
+        client = QdrantClient()
+        client.client = mock_qdrant_client
+        client.embedding_function = Mock()
+
+        with pytest.raises(TypeError, match="Asynchronous method adelete_collection"):
+            await client.adelete_collection(collection_name="test_collection")
 
     def test_reset_not_implemented(self, client):
         """Test that reset raises NotImplementedError."""
