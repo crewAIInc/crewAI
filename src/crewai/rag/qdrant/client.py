@@ -5,14 +5,7 @@ from typing import Any
 from uuid import uuid4
 
 from qdrant_client import AsyncQdrantClient, QdrantClient as SyncQdrantClient
-from qdrant_client.models import (
-    Distance,
-    FieldCondition,
-    Filter,
-    MatchValue,
-    PointStruct,
-    VectorParams,
-)
+from qdrant_client.models import Distance, PointStruct, VectorParams
 from typing_extensions import Unpack
 
 from crewai.rag.core.base_client import (
@@ -22,6 +15,7 @@ from crewai.rag.core.base_client import (
     BaseCollectionSearchParams,
 )
 from crewai.rag.qdrant.types import QdrantClientType, QdrantCollectionCreateParams
+from crewai.rag.qdrant.utils import prepare_search_params
 from crewai.rag.types import SearchResult
 
 
@@ -399,28 +393,14 @@ class QdrantClient(BaseClient):
             raise ValueError(f"Collection '{collection_name}' does not exist")
 
         query_embedding = self.embedding_function(query)
-        if not isinstance(query_embedding, list):
-            query_embedding = query_embedding.tolist()
 
-        search_kwargs = {
-            "collection_name": collection_name,
-            "query": query_embedding,
-            "limit": limit,
-            "with_payload": True,
-            "with_vectors": False,
-        }
-
-        if score_threshold is not None:
-            search_kwargs["score_threshold"] = score_threshold
-
-        if metadata_filter:
-            filter_conditions = []
-            for key, value in metadata_filter.items():
-                filter_conditions.append(
-                    FieldCondition(key=key, match=MatchValue(value=value))
-                )
-
-            search_kwargs["query_filter"] = Filter(must=filter_conditions)
+        search_kwargs = prepare_search_params(
+            collection_name=collection_name,
+            query_embedding=query_embedding,
+            limit=limit,
+            score_threshold=score_threshold,
+            metadata_filter=metadata_filter,
+        )
 
         response = self.client.query_points(**search_kwargs)
 
@@ -478,28 +458,13 @@ class QdrantClient(BaseClient):
         else:
             query_embedding = self.embedding_function(query)
 
-        if not isinstance(query_embedding, list):
-            query_embedding = query_embedding.tolist()
-
-        search_kwargs = {
-            "collection_name": collection_name,
-            "query": query_embedding,
-            "limit": limit,
-            "with_payload": True,
-            "with_vectors": False,
-        }
-
-        if score_threshold is not None:
-            search_kwargs["score_threshold"] = score_threshold
-
-        if metadata_filter:
-            filter_conditions = []
-            for key, value in metadata_filter.items():
-                filter_conditions.append(
-                    FieldCondition(key=key, match=MatchValue(value=value))
-                )
-
-            search_kwargs["query_filter"] = Filter(must=filter_conditions)
+        search_kwargs = prepare_search_params(
+            collection_name=collection_name,
+            query_embedding=query_embedding,
+            limit=limit,
+            score_threshold=score_threshold,
+            metadata_filter=metadata_filter,
+        )
 
         response = await self.client.query_points(**search_kwargs)
 

@@ -1,0 +1,50 @@
+"""Utility functions for Qdrant operations."""
+
+from typing import Any
+
+from qdrant_client.models import FieldCondition, Filter, MatchValue
+
+
+def prepare_search_params(
+    collection_name: str,
+    query_embedding: Any,
+    limit: int,
+    score_threshold: float | None,
+    metadata_filter: dict[str, Any] | None,
+) -> dict[str, Any]:
+    """Prepare search parameters for Qdrant query_points.
+
+    Args:
+        collection_name: Name of the collection to search.
+        query_embedding: Embedding vector for the query.
+        limit: Maximum number of results.
+        score_threshold: Optional minimum similarity score.
+        metadata_filter: Optional metadata filters.
+
+    Returns:
+        Dictionary of parameters for query_points method.
+    """
+    if not isinstance(query_embedding, list):
+        query_embedding = query_embedding.tolist()
+
+    search_kwargs = {
+        "collection_name": collection_name,
+        "query": query_embedding,
+        "limit": limit,
+        "with_payload": True,
+        "with_vectors": False,
+    }
+
+    if score_threshold is not None:
+        search_kwargs["score_threshold"] = score_threshold
+
+    if metadata_filter:
+        filter_conditions = []
+        for key, value in metadata_filter.items():
+            filter_conditions.append(
+                FieldCondition(key=key, match=MatchValue(value=value))
+            )
+
+        search_kwargs["query_filter"] = Filter(must=filter_conditions)
+
+    return search_kwargs
