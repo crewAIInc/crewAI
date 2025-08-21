@@ -1,8 +1,9 @@
 """Tests for QdrantClient implementation."""
 
-from unittest.mock import Mock
+from unittest.mock import AsyncMock, Mock
 
 import pytest
+from qdrant_client import AsyncQdrantClient, QdrantClient as SyncQdrantClient
 
 from crewai.rag.qdrant.client import QdrantClient
 from crewai.rag.types import BaseRecord
@@ -11,13 +12,13 @@ from crewai.rag.types import BaseRecord
 @pytest.fixture
 def mock_qdrant_client():
     """Create a mock Qdrant client."""
-    return Mock()
+    return Mock(spec=SyncQdrantClient)
 
 
 @pytest.fixture
 def mock_async_qdrant_client():
     """Create a mock async Qdrant client."""
-    return Mock()
+    return Mock(spec=AsyncQdrantClient)
 
 
 @pytest.fixture
@@ -41,16 +42,73 @@ def async_client(mock_async_qdrant_client) -> QdrantClient:
 class TestQdrantClient:
     """Test suite for QdrantClient."""
 
-    def test_create_collection_not_implemented(self, client):
-        """Test that create_collection raises NotImplementedError."""
-        with pytest.raises(NotImplementedError):
+    def test_create_collection(self, client, mock_qdrant_client):
+        """Test that create_collection creates a new collection."""
+        mock_qdrant_client.collection_exists.return_value = False
+
+        client.create_collection(collection_name="test_collection")
+
+        mock_qdrant_client.collection_exists.assert_called_once_with("test_collection")
+        mock_qdrant_client.create_collection.assert_called_once()
+        call_args = mock_qdrant_client.create_collection.call_args
+        assert call_args.kwargs["collection_name"] == "test_collection"
+        assert call_args.kwargs["vectors_config"] is not None
+
+    def test_create_collection_already_exists(self, client, mock_qdrant_client):
+        """Test that create_collection raises error if collection exists."""
+        mock_qdrant_client.collection_exists.return_value = True
+
+        with pytest.raises(
+            ValueError, match="Collection 'test_collection' already exists"
+        ):
+            client.create_collection(collection_name="test_collection")
+
+    def test_create_collection_wrong_client_type(self, mock_async_qdrant_client):
+        """Test that create_collection raises TypeError for async client."""
+        client = QdrantClient()
+        client.client = mock_async_qdrant_client
+        client.embedding_function = Mock()
+
+        with pytest.raises(TypeError, match="Synchronous method create_collection"):
             client.create_collection(collection_name="test_collection")
 
     @pytest.mark.asyncio
-    async def test_acreate_collection_not_implemented(self, async_client):
-        """Test that acreate_collection raises NotImplementedError."""
-        with pytest.raises(NotImplementedError):
+    async def test_acreate_collection(self, async_client, mock_async_qdrant_client):
+        """Test that acreate_collection creates a new collection asynchronously."""
+        mock_async_qdrant_client.collection_exists = AsyncMock(return_value=False)
+        mock_async_qdrant_client.create_collection = AsyncMock()
+
+        await async_client.acreate_collection(collection_name="test_collection")
+
+        mock_async_qdrant_client.collection_exists.assert_called_once_with(
+            "test_collection"
+        )
+        mock_async_qdrant_client.create_collection.assert_called_once()
+        call_args = mock_async_qdrant_client.create_collection.call_args
+        assert call_args.kwargs["collection_name"] == "test_collection"
+        assert call_args.kwargs["vectors_config"] is not None
+
+    @pytest.mark.asyncio
+    async def test_acreate_collection_already_exists(
+        self, async_client, mock_async_qdrant_client
+    ):
+        """Test that acreate_collection raises error if collection exists."""
+        mock_async_qdrant_client.collection_exists = AsyncMock(return_value=True)
+
+        with pytest.raises(
+            ValueError, match="Collection 'test_collection' already exists"
+        ):
             await async_client.acreate_collection(collection_name="test_collection")
+
+    @pytest.mark.asyncio
+    async def test_acreate_collection_wrong_client_type(self, mock_qdrant_client):
+        """Test that acreate_collection raises TypeError for sync client."""
+        client = QdrantClient()
+        client.client = mock_qdrant_client
+        client.embedding_function = Mock()
+
+        with pytest.raises(TypeError, match="Asynchronous method acreate_collection"):
+            await client.acreate_collection(collection_name="test_collection")
 
     def test_get_or_create_collection_not_implemented(self, client):
         """Test that get_or_create_collection raises NotImplementedError."""
