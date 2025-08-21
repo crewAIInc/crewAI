@@ -30,6 +30,7 @@ dependencies = [
     "pdfplumber>=0.11.4",
     "openpyxl>=3.1.5",
     "blinker>=1.9.0",
+    "psutil>=5.9.8",
 ]
 
 [project.urls]

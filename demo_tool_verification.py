@@ -9,23 +9,23 @@ by verifying that tools actually execute rather than generating fake results.
 import os
 import tempfile
 from pathlib import Path
+
 from pydantic import BaseModel, Field
+
+from src.crewai.tools.base_tool import BaseTool, Tool
 
 # Import our verification system
 from src.crewai.utilities.tool_execution_verifier import (
-    get_tool_execution_verifier, 
-    enable_strict_verification,
-    verify_tool_execution,
     ExecutionAuthenticityLevel,
-    ToolExecutionFabricationError
+    ToolExecutionFabricationError,
+    enable_strict_verification,
+    get_tool_execution_verifier,
+    verify_tool_execution,
 )
-
 from src.crewai.utilities.tool_execution_wrapper import (
+    patch_crewai_tool_execution,
     wrap_tool_with_verification,
-    patch_crewai_tool_execution
 )
-
-from src.crewai.tools.base_tool import Tool, BaseTool
 
 
 class FileWriteInput(BaseModel):

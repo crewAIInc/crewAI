@@ -7,12 +7,13 @@ Prevents agents from fabricating tool results by requiring execution proof.
 """
 
 import functools
-from typing import Any, Dict, Union, Optional
+from typing import Any, Dict, Optional, Union
+
 from crewai.utilities.tool_execution_verifier import (
-    get_tool_execution_verifier, 
-    ToolExecutionCertificate,
     ExecutionAuthenticityLevel,
-    ToolExecutionFabricationError
+    ToolExecutionCertificate,
+    ToolExecutionFabricationError,
+    get_tool_execution_verifier,
 )
 
 
@@ -110,9 +111,9 @@ def patch_crewai_tool_execution():
     """Monkey patch CrewAI's tool execution to add verification"""
     
     # Import here to avoid circular imports
-    from crewai.tools.tool_usage import ToolUsage
-    from crewai.tools.structured_tool import CrewStructuredTool
     from crewai.tools.base_tool import BaseTool
+    from crewai.tools.structured_tool import CrewStructuredTool
+    from crewai.tools.tool_usage import ToolUsage
     
     # Store original methods
     original_tool_usage_use = ToolUsage._use
@@ -179,8 +180,9 @@ def unpatch_crewai_tool_execution():
 
 if __name__ == "__main__":
     # Test the wrapper system
-    from crewai.tools.base_tool import Tool
     from pydantic import BaseModel, Field
+
+    from crewai.tools.base_tool import Tool
     
     class TestToolInput(BaseModel):
         message: str = Field(description="Message to process")

@@ -9,14 +9,15 @@ Implements the 2024 research on tool execution authenticity and hallucination de
 import hashlib
 import json
 import os
-import psutil
 import subprocess
 import time
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set
-from dataclasses import dataclass, field
+
+import psutil
 
 import crewai.utilities.events as events
 from crewai.tools.tool_usage_events import ToolUsageFinished
@@ -62,7 +63,7 @@ class ToolExecutionMonitor:
     def __init__(self):
         self.active_monitoring: Dict[str, ExecutionEvidence] = {}
         self.execution_certificates: List[ToolExecutionCertificate] = []
-        self.baseline_filesystem_state: Optional[Set[str]] = None
+        self.baseline_filesystem_state: Set[str] = set()
         self.monitoring_temp_dir = Path("/tmp/crewai_tool_monitoring")
         self.monitoring_temp_dir.mkdir(exist_ok=True)
         
@@ -231,7 +232,7 @@ class ToolExecutionMonitor:
         # For now, just monitor a specific temp directory
         # In production, would need more sophisticated filesystem monitoring
         temp_files = list(self.monitoring_temp_dir.rglob("*"))
-        self.baseline_filesystem_state = set(str(f) for f in temp_files)
+        self.baseline_filesystem_state.update(str(f) for f in temp_files)
     
     def _detect_filesystem_changes(self, execution_id: str, evidence: ExecutionEvidence):
         """Detect filesystem changes that occurred during execution"""
@@ -326,7 +327,7 @@ class ToolExecutionVerifier:
         if total_executions == 0:
             return {"message": "No tool executions monitored yet"}
         
-        authenticity_counts = {}
+        authenticity_counts: Dict[str, int] = {}
         for cert in certificates:
             level = cert.authenticity_level.value
             authenticity_counts[level] = authenticity_counts.get(level, 0) + 1
