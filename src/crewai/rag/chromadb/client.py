@@ -32,8 +32,12 @@ from crewai.rag.types import SearchResult
 class ChromaDBClient(BaseClient):
     """ChromaDB implementation of the BaseClient protocol.
 
-    Note: This is currently a stub implementation with all methods
-    raising NotImplementedError. Full implementation coming soon.
+    Provides vector database operations for ChromaDB, supporting both
+    synchronous and asynchronous clients.
+
+    Attributes:
+        client: ChromaDB client instance (ClientAPI or AsyncClientAPI).
+        embedding_function: Function to generate embeddings for documents.
     """
 
     client: ChromaDBClientType
