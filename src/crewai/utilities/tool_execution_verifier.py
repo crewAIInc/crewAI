@@ -18,7 +18,6 @@ Research Foundation:
 """
 
 import os
-import psutil
 import time
 from dataclasses import dataclass, field
 from enum import Enum
@@ -26,6 +25,15 @@ from typing import Any, Callable, Dict, List, Optional, Set, Tuple
 import logging
 
 logger = logging.getLogger(__name__)
+
+# Make psutil optional
+try:
+    import psutil
+    PSUTIL_AVAILABLE = True
+except ImportError:
+    psutil = None
+    PSUTIL_AVAILABLE = False
+    logger.debug("psutil is not available - process monitoring will be disabled")
 
 
 class ExecutionAuthenticityLevel(Enum):
@@ -139,11 +147,15 @@ class ToolExecutionMonitor:
             logger.debug(f"Filesystem monitoring limited: {e}")
         
         # Capture baseline process state
-        try:
-            current_process = psutil.Process()
-            self.baseline_processes = {child.pid for child in current_process.children(recursive=True)}
-        except (psutil.NoSuchProcess, psutil.AccessDenied) as e:
-            logger.debug(f"Process monitoring limited: {e}")
+        if PSUTIL_AVAILABLE:
+            try:
+                current_process = psutil.Process()
+                self.baseline_processes = {child.pid for child in current_process.children(recursive=True)}
+            except (psutil.NoSuchProcess, psutil.AccessDenied) as e:
+                logger.debug(f"Process monitoring limited: {e}")
+        else:
+            logger.debug("Process monitoring disabled - psutil not available")
+            self.baseline_processes = set()
     
     def stop_monitoring_and_verify(self, tool_name: str, tool_result: Any, directory: str = ".") -> ToolExecutionCertificate:
         """Stop monitoring and verify execution authenticity."""
@@ -153,26 +165,29 @@ class ToolExecutionMonitor:
         evidence = ExecutionEvidence(execution_time_ms=execution_time)
         
         # Check for subprocess spawning
-        try:
-            current_process = psutil.Process()
-            current_children = {child.pid for child in current_process.children(recursive=True)}
-            new_processes = current_children - self.baseline_processes
-            
-            if new_processes:
-                evidence.subprocess_spawned = True
-                for pid in new_processes:
-                    try:
-                        proc = psutil.Process(pid)
-                        evidence.child_processes.append({
-                            'pid': pid,
-                            'name': proc.name(),
-                            'cmdline': ' '.join(proc.cmdline()) if proc.cmdline() else '',
-                            'create_time': proc.create_time()
-                        })
-                    except (psutil.NoSuchProcess, psutil.AccessDenied):
-                        pass
-        except (psutil.NoSuchProcess, psutil.AccessDenied) as e:
-            logger.debug(f"Process verification limited: {e}")
+        if PSUTIL_AVAILABLE:
+            try:
+                current_process = psutil.Process()
+                current_children = {child.pid for child in current_process.children(recursive=True)}
+                new_processes = current_children - self.baseline_processes
+                
+                if new_processes:
+                    evidence.subprocess_spawned = True
+                    for pid in new_processes:
+                        try:
+                            proc = psutil.Process(pid)
+                            evidence.child_processes.append({
+                                'pid': pid,
+                                'name': proc.name(),
+                                'cmdline': ' '.join(proc.cmdline()) if proc.cmdline() else '',
+                                'create_time': proc.create_time()
+                            })
+                        except (psutil.NoSuchProcess, psutil.AccessDenied):
+                            pass
+            except (psutil.NoSuchProcess, psutil.AccessDenied) as e:
+                logger.debug(f"Process verification limited: {e}")
+        else:
+            logger.debug("Skipping child process detection - psutil not available")
         
         # Check for filesystem changes
         try:
@@ -298,28 +313,33 @@ class ToolExecutionMonitor:
         return [pattern for pattern in self.fabrication_patterns if pattern in result_text]
 
 
-def verify_tool_execution(tool_name: str, tool_function: Callable, *args, **kwargs) -> Tuple[Any, ToolExecutionCertificate]:
+def verify_tool_execution(tool_name: str, tool_function: Callable, *args, monitor_directory: str = ".", **kwargs) -> Tuple[Any, ToolExecutionCertificate]:
     """
     Convenience function to verify a single tool execution.
     
     Args:
         tool_name: Name of the tool being executed
         tool_function: The tool function to execute
-        *args, **kwargs: Arguments to pass to the tool function
+        *args: Arguments to pass to the tool function
+        monitor_directory: Directory to monitor for filesystem changes (default: ".")
+        **kwargs: Keyword arguments to pass to the tool function
     
     Returns:
         Tuple of (tool_result, verification_certificate)
     """
     monitor = ToolExecutionMonitor()
-    monitor.start_monitoring()
+    monitor.start_monitoring(monitor_directory)
     
     try:
         result = tool_function(*args, **kwargs)
     except Exception as e:
         # Still verify even if execution failed
         result = f"Execution failed: {str(e)}"
+        certificate = monitor.stop_monitoring_and_verify(tool_name, result, monitor_directory)
+        # Attach certificate to raised exceptions for debugging
+        setattr(e, 'verification_certificate', certificate)
         raise
     finally:
-        certificate = monitor.stop_monitoring_and_verify(tool_name, result)
+        certificate = monitor.stop_monitoring_and_verify(tool_name, result, monitor_directory)
     
     return result, certificate

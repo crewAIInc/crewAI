@@ -72,7 +72,8 @@ def run_verification_demo():
             "RealFileWriter", 
             real_file_write_tool, 
             test_file, 
-            "Hello from real tool!"
+            "Hello from real tool!",
+            monitor_directory=temp_dir
         )
         
         print(f"📝 Tool Result: {result}")
@@ -103,7 +104,8 @@ def run_verification_demo():
             "FakeFileWriter", 
             fake_file_write_tool, 
             fake_file, 
-            "Hello from fake tool!"
+            "Hello from fake tool!",
+            monitor_directory=temp_dir
         )
         
         print(f"📝 Tool Result: {result}")
