@@ -1,0 +1,64 @@
+---
+title: DeepEval Integration
+description: Evaluate and monitor your CrewAI agent's LLM outputs based on metrics such as G-Eval, hallucination, answer relevancy, RAGAS, etc., which uses LLMs and various other NLP models that runs locally on your machine for evaluation.
+
+icon: vials
+---
+
+## Tracing Quickstart
+
+<Steps>
+
+<Step title="Install Dependencies">
+
+Run the following command to install the required packages:
+
+```bash
+pip install -U deepeval crewai
+```
+
+</Step>
+
+<Step title="Configure CrewAI">
+
+Instrument CrewAI with your Confident AI API key using `instrument_crewai`.
+
+```python main.py maxLines=100 {3,4}
+from crewai import Task, Crew, Agent
+
+from deepeval.integrations.crewai import instrument_crewai
+instrument_crewai()
+
+agent = Agent(
+    role="Consultant",
+    goal="Write clear, concise explanation.",
+    backstory="An expert consultant with a keen eye for software trends.",
+)
+
+task = Task(
+    description="Explain the given topic",
+    expected_output="A clear and concise explanation.",
+    agent=agent,
+)
+
+crew = Crew(agents=[agent], tasks=[task])
+
+result = crew.kickoff({"input": "What are the LLMs?"})
+print(result)
+```
+
+</Step>
+
+<Step title="Run CrewAI">
+
+Kickoff your crew by executing the script:
+
+```bash
+python main.py
+```
+
+</Step>
+
+You can directly view the traces on [Confident AI](https://app.confident.ai) by clicking on the link in the output printed in the console.
+
+</Steps>
