@@ -1,9 +1,10 @@
 ---
 title: DeepEval Integration
-description: Evaluate and monitor your CrewAI agent's LLM outputs based on metrics such as G-Eval, hallucination, answer relevancy, RAGAS, etc., which uses LLMs and various other NLP models that runs locally on your machine for evaluation.
-
+description: Evaluate and monitor various components of your crew with latest research based metrics.
 icon: vials
 ---
+
+>**What is DeepEval?** [DeepEval](https://github.com/confident-ai/deepeval) is a simple-to-use, open-source LLM evaluation framework, for evaluating and testing large-language model systems. It is similar to Pytest but specialized for unit testing LLM outputs. DeepEval incorporates the latest research to evaluate LLM outputs based on metrics such as G-Eval, hallucination, answer relevancy, RAGAS, etc., which uses LLMs and various other NLP models that runs locally on your machine for evaluation.
 
 ## Tracing Quickstart
 
@@ -62,3 +63,191 @@ python main.py
 You can directly view the traces on [Confident AI](https://app.confident.ai) by clicking on the link in the output printed in the console.
 
 </Steps>
+
+## Evals Usage
+
+### Online evals
+
+You can run [online evals](/docs/llm-tracing/evaluations) on your CrewAI agent, which will run evaluations on all incoming traces on Confident AI's servers. This approach is recommended if your agent is in production.
+
+<Steps>
+
+<Step title="Create metric collection">
+
+Create a metric collection on [Confident AI](https://app.confident.ai) with the metrics you wish to use to evaluate your CrewAI agent.
+
+<Frame caption="Create metric collection">
+  <video
+    src="https://confident-docs.s3.us-east-1.amazonaws.com/integrations%3Athird-party-integrations%3Acreate-metric-collection-4k.mp4"
+    controls
+    autoPlay
+  />
+</Frame>
+
+<Warning>
+  Your CrewAI metric collection cannot contain metrics that require
+  `retrieval_context`, `context`, or `expected_tools`.
+</Warning>
+
+</Step>
+
+<Step title="Run evals">
+
+Replace your CrewAI `Agent` with DeepEval’s, and provide a metric collection name as an argument to the `Agent`.
+
+```python main.py focus={3,12}
+from crewai import Task, Crew
+
+from deepeval.integrations.crewai import Agent
+from deepeval.integrations.crewai import instrument_crewai
+
+instrument_crewai()
+
+agent = Agent(
+    role="Consultant",
+    goal="Write clear, concise explanation.",
+    backstory="An expert consultant with a keen eye for software trends.",
+    metric_collection="<your-metric-collection-name>",
+)
+
+task = Task(description="Explain the given topic", expected_output="A clear and concise explanation.", agent=agent)
+crew = Crew(agents=[agent], tasks=[task])
+
+result = crew.kickoff({"input": "What are the LLMs?"})
+print(result)
+```
+
+<Success>
+  All incoming traces will now be evaluated using metrics from your metric
+  collection.
+</Success>
+
+</Step>
+</Steps>
+
+### End-to-end evals
+
+Running [end-to-end evals](/docs/llm-evaluation/single-turn/end-to-end) on your CrewAI agent evaluates the agent locally, and is the recommended approach if your agent is in a development or testing environment.
+
+<Steps>
+
+<Step title="Create metric">
+
+```python
+from deepeval.metrics import AnswerRelevancyMetric
+
+answer_relevancy = AnswerRelevancyMetric(
+    threshold=0.7,
+    model="gpt-4o-mini",
+    include_reason=True
+)
+```
+
+<Warning>
+  Similar to online evals, you can only run evals on CrewAI using metrics that require the `retrieval_context`, `context`, or `expected_tools`.
+</Warning>
+</Step>
+
+<Step title="Run evals">
+
+Replace your CrewAI Agent with DeepEval’s, and provide `metrics` to DeepEval's `Agent`. Then use the dataset's `evals_iterator` to invoke your agent for each golden.
+
+<Tabs>
+<Tab title="Synchronous">
+
+```python main.py maxLines=100 focus={3,14,20-30}
+from crewai import Task, Crew
+
+from deepeval.integrations.crewai import Agent
+from deepeval.integrations.crewai import instrument_crewai
+from deepeval.metrics import AnswerRelevancyMetric
+
+instrument_crewai()
+answer_relavancy_metric = AnswerRelevancyMetric(threshold=0.7, model="gpt-4o-mini", include_reason=True)
+
+agent = Agent(
+    role="Consultant",
+    goal="Write clear, concise explanation.",
+    backstory="An expert consultant with a keen eye for software trends.",
+    metrics=[answer_relavancy_metric],
+)
+
+task = Task(description="Explain the given topic", expected_output="A clear and concise explanation.", agent=agent)
+crew = Crew(agents=[agent], tasks=[task])
+
+from deepeval.dataset import EvaluationDataset, Golden
+
+dataset = EvaluationDataset(
+    goldens=[
+        Golden(input="What are Transformers in AI?"),
+        Golden(input="What is the biggest open source database?")
+    ]
+)
+
+for golden in dataset.evals_iterator():
+    result = crew.kickoff(inputs={"input": golden.input})
+```
+
+</Tab>
+<Tab title="Asynchronous">
+
+```python main.py maxLines=100 focus={1,4,16, 22-35}
+import asyncio
+from crewai import Task, Crew
+
+from deepeval.integrations.crewai import Agent
+from deepeval.integrations.crewai import instrument_crewai
+from deepeval.metrics import AnswerRelevancyMetric
+
+instrument_crewai()
+
+answer_relavancy_metric = AnswerRelevancyMetric(threshold=0.7, model="gpt-4o-mini", include_reason=True)
+
+agent = Agent(
+    role="Consultant",
+    goal="Write clear, concise explanation.",
+    backstory="An expert consultant with a keen eye for software trends.",
+    metrics=[answer_relavancy_metric],
+)
+
+task = Task(description="Explain the given topic", expected_output="A clear and concise explanation.", agent=agent)
+crew = Crew(agents=[agent], tasks=[task])
+
+from deepeval.dataset import EvaluationDataset, Golden
+
+dataset = EvaluationDataset(
+    goldens=[
+        Golden(input="What are Transformers in AI?"),
+        Golden(input="What is the biggest open source database?"),
+    ]
+)
+
+for golden in dataset.evals_iterator():
+    task = asyncio.create_task(
+        crew.kickoff_async(inputs={"input": golden.input})
+    )
+    dataset.evaluate(task)
+```
+
+</Tab>
+</Tabs>
+
+<Success>
+  This will automatically generate a test run with evaluated traces using inputs
+  from your dataset.
+</Success>
+
+</Step>
+</Steps>
+
+### View on Confident AI
+
+You can view the evals on [Confident AI](https://app.confident.ai) by clicking on the link in the output printed in the console.
+
+<Frame>
+<video
+  src="https://confident-docs.s3.us-east-1.amazonaws.com/end-to-end%3Acrewai-4k-no-zoom.mp4"
+  controls
+  autoPlay
+/>
+</Frame>
