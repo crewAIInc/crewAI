@@ -124,11 +124,10 @@ def _convert_distance_to_score(
     Returns:
         Similarity score in range [0, 1] where 1 is most similar.
     """
-    if distance_metric in ("cosine", "ip"):
+    if distance_metric == "cosine":
         score = 1.0 - 0.5 * distance
-    else:
-        score = 1.0 - 0.25 * distance
-    return max(0.0, min(1.0, score))
+        return max(0.0, min(1.0, score))
+    raise ValueError(f"Unsupported distance metric: {distance_metric}")
 
 
 def _convert_chromadb_results_to_search_results(
