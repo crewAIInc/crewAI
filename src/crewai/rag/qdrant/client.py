@@ -271,7 +271,45 @@ class QdrantClient(BaseClient):
             ValueError: If collection doesn't exist or documents list is empty.
             ConnectionError: If unable to connect to Qdrant server.
         """
-        raise NotImplementedError
+        if not isinstance(self.client, SyncQdrantClient):
+            raise TypeError(
+                "Synchronous method add_documents() requires a QdrantClient. "
+                "Use aadd_documents() for AsyncQdrantClient."
+            )
+
+        collection_name = kwargs["collection_name"]
+        documents = kwargs["documents"]
+
+        if not documents:
+            raise ValueError("Documents list cannot be empty")
+
+        if not self.client.collection_exists(collection_name):
+            raise ValueError(f"Collection '{collection_name}' does not exist")
+
+        # Import here to avoid circular dependency
+        from qdrant_client.models import PointStruct
+        from uuid import uuid4
+
+        points = []
+        for doc in documents:
+            # Generate ID if not provided
+            doc_id = doc.get("doc_id", str(uuid4()))
+
+            # Generate embedding for the content
+            embedding = self.embedding_function(doc["content"])
+            if not isinstance(embedding, list):
+                embedding = embedding.tolist()
+
+            # Create point with payload
+            point = PointStruct(
+                id=doc_id,
+                vector=embedding,
+                payload={"content": doc["content"], **(doc.get("metadata", {}))},
+            )
+            points.append(point)
+
+        # Upsert points to collection
+        self.client.upsert(collection_name=collection_name, points=points, wait=True)
 
     async def aadd_documents(self, **kwargs: Unpack[BaseCollectionAddParams]) -> None:
         """Add documents with their embeddings to a collection asynchronously.
@@ -284,7 +322,57 @@ class QdrantClient(BaseClient):
             ValueError: If collection doesn't exist or documents list is empty.
             ConnectionError: If unable to connect to Qdrant server.
         """
-        raise NotImplementedError
+        if not isinstance(self.client, AsyncQdrantClient):
+            raise TypeError(
+                "Asynchronous method aadd_documents() requires an AsyncQdrantClient. "
+                "Use add_documents() for QdrantClient."
+            )
+
+        collection_name = kwargs["collection_name"]
+        documents = kwargs["documents"]
+
+        if not documents:
+            raise ValueError("Documents list cannot be empty")
+
+        if not await self.client.collection_exists(collection_name):
+            raise ValueError(f"Collection '{collection_name}' does not exist")
+
+        # Import here to avoid circular dependency
+        from qdrant_client.models import PointStruct
+        from uuid import uuid4
+
+        points = []
+        for doc in documents:
+            # Generate ID if not provided
+            doc_id = doc.get("doc_id", str(uuid4()))
+
+            # Generate embedding for the content
+            # Check if embedding_function is async
+            if hasattr(self.embedding_function, "__call__"):
+                import asyncio
+
+                if asyncio.iscoroutinefunction(self.embedding_function):
+                    embedding = await self.embedding_function(doc["content"])
+                else:
+                    embedding = self.embedding_function(doc["content"])
+            else:
+                embedding = self.embedding_function(doc["content"])
+
+            if not isinstance(embedding, list):
+                embedding = embedding.tolist()
+
+            # Create point with payload
+            point = PointStruct(
+                id=doc_id,
+                vector=embedding,
+                payload={"content": doc["content"], **(doc.get("metadata", {}))},
+            )
+            points.append(point)
+
+        # Upsert points to collection
+        await self.client.upsert(
+            collection_name=collection_name, points=points, wait=True
+        )
 
     def search(
         self, **kwargs: Unpack[BaseCollectionSearchParams]
