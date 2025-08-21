@@ -124,11 +124,10 @@ def _convert_distance_to_score(
     Returns:
         Similarity score in range [0, 1] where 1 is most similar.
     """
-    if distance_metric == "l2":
-        score = 1.0 - 0.25 * distance
-    else:
-        # ("cosine", "ip")
+    if distance_metric in ("cosine", "ip"):
         score = 1.0 - 0.5 * distance
+    else:
+        score = 1.0 - 0.25 * distance
     return max(0.0, min(1.0, score))
 
 
