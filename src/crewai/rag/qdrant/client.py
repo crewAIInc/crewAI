@@ -140,35 +140,125 @@ class QdrantClient(BaseClient):
             timeout=kwargs.get("timeout"),
         )
 
-    def get_or_create_collection(self, **kwargs: Unpack[BaseCollectionParams]) -> Any:
+    def get_or_create_collection(
+        self, **kwargs: Unpack[QdrantCollectionCreateParams]
+    ) -> Any:
         """Get an existing collection or create it if it doesn't exist.
 
         Keyword Args:
             collection_name: Name of the collection to get or create.
+            vectors_config: Optional vector configuration. Defaults to 1536 dimensions with cosine distance.
+            sparse_vectors_config: Optional sparse vector configuration.
+            shard_number: Optional number of shards.
+            replication_factor: Optional replication factor.
+            write_consistency_factor: Optional write consistency factor.
+            on_disk_payload: Optional flag to store payload on disk.
+            hnsw_config: Optional HNSW index configuration.
+            optimizers_config: Optional optimizer configuration.
+            wal_config: Optional write-ahead log configuration.
+            quantization_config: Optional quantization configuration.
+            init_from: Optional collection to initialize from.
+            timeout: Optional timeout for the operation.
 
         Returns:
-            A collection reference or metadata.
+            Collection info dict with name and other metadata.
 
         Raises:
             ConnectionError: If unable to connect to Qdrant server.
         """
-        raise NotImplementedError
+        if not isinstance(self.client, SyncQdrantClient):
+            raise TypeError(
+                "Synchronous method get_or_create_collection() requires a QdrantClient. "
+                "Use aget_or_create_collection() for AsyncQdrantClient."
+            )
+
+        collection_name = kwargs["collection_name"]
+
+        if self.client.collection_exists(collection_name):
+            return self.client.get_collection(collection_name)
+
+        vectors_config = kwargs.get(
+            "vectors_config", VectorParams(size=1536, distance=Distance.COSINE)
+        )
+
+        self.client.create_collection(
+            collection_name=collection_name,
+            vectors_config=vectors_config,
+            sparse_vectors_config=kwargs.get("sparse_vectors_config"),
+            shard_number=kwargs.get("shard_number"),
+            sharding_method=kwargs.get("sharding_method"),
+            replication_factor=kwargs.get("replication_factor"),
+            write_consistency_factor=kwargs.get("write_consistency_factor"),
+            on_disk_payload=kwargs.get("on_disk_payload"),
+            hnsw_config=kwargs.get("hnsw_config"),
+            optimizers_config=kwargs.get("optimizers_config"),
+            wal_config=kwargs.get("wal_config"),
+            quantization_config=kwargs.get("quantization_config"),
+            init_from=kwargs.get("init_from"),
+            timeout=kwargs.get("timeout"),
+        )
+
+        return self.client.get_collection(collection_name)
 
     async def aget_or_create_collection(
-        self, **kwargs: Unpack[BaseCollectionParams]
+        self, **kwargs: Unpack[QdrantCollectionCreateParams]
     ) -> Any:
         """Get an existing collection or create it if it doesn't exist asynchronously.
 
         Keyword Args:
             collection_name: Name of the collection to get or create.
+            vectors_config: Optional vector configuration. Defaults to 1536 dimensions with cosine distance.
+            sparse_vectors_config: Optional sparse vector configuration.
+            shard_number: Optional number of shards.
+            replication_factor: Optional replication factor.
+            write_consistency_factor: Optional write consistency factor.
+            on_disk_payload: Optional flag to store payload on disk.
+            hnsw_config: Optional HNSW index configuration.
+            optimizers_config: Optional optimizer configuration.
+            wal_config: Optional write-ahead log configuration.
+            quantization_config: Optional quantization configuration.
+            init_from: Optional collection to initialize from.
+            timeout: Optional timeout for the operation.
 
         Returns:
-            A collection reference or metadata.
+            Collection info dict with name and other metadata.
 
         Raises:
             ConnectionError: If unable to connect to Qdrant server.
         """
-        raise NotImplementedError
+        if not isinstance(self.client, AsyncQdrantClient):
+            raise TypeError(
+                "Asynchronous method aget_or_create_collection() requires an AsyncQdrantClient. "
+                "Use get_or_create_collection() for QdrantClient."
+            )
+
+        collection_name = kwargs["collection_name"]
+
+        if await self.client.collection_exists(collection_name):
+            return await self.client.get_collection(collection_name)
+
+        vectors_config = kwargs.get(
+            "vectors_config", VectorParams(size=1536, distance=Distance.COSINE)
+        )
+
+        await self.client.create_collection(
+            collection_name=collection_name,
+            vectors_config=vectors_config,
+            sparse_vectors_config=kwargs.get("sparse_vectors_config"),
+            shard_number=kwargs.get("shard_number"),
+            sharding_method=kwargs.get("sharding_method"),
+            replication_factor=kwargs.get("replication_factor"),
+            write_consistency_factor=kwargs.get("write_consistency_factor"),
+            on_disk_payload=kwargs.get("on_disk_payload"),
+            hnsw_config=kwargs.get("hnsw_config"),
+            optimizers_config=kwargs.get("optimizers_config"),
+            wal_config=kwargs.get("wal_config"),
+            quantization_config=kwargs.get("quantization_config"),
+            init_from=kwargs.get("init_from"),
+            timeout=kwargs.get("timeout"),
+        )
+
+        return await self.client.get_collection(collection_name)
 
     def add_documents(self, **kwargs: Unpack[BaseCollectionAddParams]) -> None:
         """Add documents with their embeddings to a collection.
