@@ -1,0 +1,171 @@
+---
+title: "Automation Triggers"
+description: "Automatically execute your CrewAI workflows when specific events occur in connected integrations"
+icon: "bolt"
+---
+
+Automation triggers enable you to automatically run your CrewAI deployments when specific events occur in your connected integrations, creating powerful event-driven workflows that respond to real-time changes in your business systems.
+
+## Overview
+
+With automation triggers, you can:
+
+- **Respond to real-time events** - Automatically execute workflows when specific conditions are met
+- **Integrate with external systems** - Connect with platforms like Gmail, Outlook, OneDrive, JIRA, Slack, Stripe and more
+- **Scale your automation** - Handle high-volume events without manual intervention
+- **Maintain context** - Access trigger data within your crews and flows
+
+## Managing Automation Triggers
+
+### Viewing Available Triggers
+
+To access and manage your automation triggers:
+
+1. Navigate to your deployment in the CrewAI dashboard
+2. Click on the **Triggers** tab to view all available trigger integrations
+
+<Frame>
+  <img src="/images/enterprise/list-available-triggers.png" alt="List of available automation triggers" />
+</Frame>
+
+This view shows all the trigger integrations available for your deployment, along with their current connection status.
+
+### Enabling and Disabling Triggers
+
+Each trigger can be easily enabled or disabled using the toggle switch:
+
+<Frame>
+  <img src="/images/enterprise/trigger-selected.png" alt="Enable or disable triggers with toggle" />
+</Frame>
+
+- **Enabled (blue toggle)**: The trigger is active and will automatically execute your deployment when the specified events occur
+- **Disabled (gray toggle)**: The trigger is inactive and will not respond to events
+
+Simply click the toggle to change the trigger state. Changes take effect immediately.
+
+### Monitoring Trigger Executions
+
+Track the performance and history of your triggered executions:
+
+<Frame>
+  <img src="/images/enterprise/list-executions.png" alt="List of executions triggered by automation" />
+</Frame>
+
+## Building Automation
+
+Before building your automation, it's helpful to understand the structure of trigger payloads that your crews and flows will receive.
+
+### Payload Samples Repository
+
+We maintain a comprehensive repository with sample payloads from various trigger sources to help you build and test your automations:
+
+**🔗 [CrewAI Enterprise Trigger Payload Samples](https://github.com/crewAIInc/crewai-enterprise-trigger-payload-samples)**
+
+This repository contains:
+
+- **Real payload examples** from different trigger sources (Gmail, Google Drive, etc.)
+- **Payload structure documentation** showing the format and available fields
+
+### Triggers with Crew
+
+Your existing crew definitions work seamlessly with triggers, you just need to have a task to parse the received payload:
+
+```python
+@CrewBase
+class MyAutomatedCrew:
+    @agent
+    def researcher(self) -> Agent:
+        return Agent(
+            config=self.agents_config['researcher'],
+        )
+
+    @task
+    def parse_trigger_payload(self) -> Task:
+        return Task(
+            config=self.tasks_config['parse_trigger_payload'],
+            agent=self.researcher(),
+        )
+
+    @task
+    def analyze_trigger_content(self) -> Task:
+        return Task(
+            config=self.tasks_config['analyze_trigger_data'],
+            agent=self.researcher(),
+        )
+```
+
+The crew will automatically receive and can access the trigger payload through the standard CrewAI context mechanisms.
+
+### Integration with Flows
+
+For flows, you have more control over how trigger data is handled:
+
+#### Accessing Trigger Payload
+
+All `@start()` methods in your flows will accept an additional parameter called `crewai_trigger_payload`:
+
+```python
+from crewai.flow import Flow, start, listen
+
+class MyAutomatedFlow(Flow):
+    @start()
+    def handle_trigger(self, crewai_trigger_payload: dict = None):
+        """
+        This start method can receive trigger data
+        """
+        if crewai_trigger_payload:
+            # Process the trigger data
+            trigger_id = crewai_trigger_payload.get('id')
+            event_data = crewai_trigger_payload.get('payload', {})
+
+            # Store in flow state for use by other methods
+            self.state.trigger_id = trigger_id
+            self.state.trigger_type = event_data
+
+            return event_data
+
+        # Handle manual execution
+        return None
+
+    @listen(handle_trigger)
+    def process_data(self, trigger_data):
+        """
+        Process the data from the trigger
+        """
+        # ... process the trigger
+```
+
+#### Triggering Crews from Flows
+
+When kicking off a crew within a flow that was triggered, pass the trigger payload as it:
+
+```python
+@start()
+def delegate_to_crew(self, crewai_trigger_payload: dict = None):
+    """
+    Delegate processing to a specialized crew
+    """
+    crew = MySpecializedCrew()
+
+    # Pass the trigger payload to the crew
+    result = crew.crew().kickoff(
+        inputs={
+            'a_custom_parameter': "custom_value",
+            'crewai_trigger_payload': crewai_trigger_payload
+        },
+    )
+
+    return result
+```
+
+## Troubleshooting
+
+**Trigger not firing:**
+- Verify the trigger is enabled
+- Check integration connection status
+
+**Execution failures:**
+- Check the execution logs for error details
+- If you are developing, make sure the inputs include the `crewai_trigger_payload` parameter with the correct payload
+
+Automation triggers transform your CrewAI deployments into responsive, event-driven systems that can seamlessly integrate with your existing business processes and tools.
