@@ -369,7 +369,7 @@ class TestChromaDBClient:
     def test_search(self, client, mock_chromadb_client):
         """Test that search queries the collection correctly."""
         mock_collection = Mock()
-        mock_collection.metadata = None
+        mock_collection.metadata = {"hnsw:space": "cosine"}
         mock_chromadb_client.get_collection.return_value = mock_collection
         mock_collection.query.return_value = {
             "ids": [["doc1", "doc2"]],
@@ -396,12 +396,12 @@ class TestChromaDBClient:
         assert results[0]["id"] == "doc1"
         assert results[0]["content"] == "Document 1"
         assert results[0]["metadata"] == {"source": "test1"}
-        assert results[0]["score"] == 0.975
+        assert results[0]["score"] == 0.95
 
     def test_search_with_optional_params(self, client, mock_chromadb_client):
         """Test search with optional parameters."""
         mock_collection = Mock()
-        mock_collection.metadata = None
+        mock_collection.metadata = {"hnsw:space": "cosine"}
         mock_chromadb_client.get_collection.return_value = mock_collection
         mock_collection.query.return_value = {
             "ids": [["doc1", "doc2", "doc3"]],
@@ -434,7 +434,7 @@ class TestChromaDBClient:
     async def test_asearch(self, async_client, mock_async_chromadb_client) -> None:
         """Test that asearch queries the collection correctly."""
         mock_collection = AsyncMock()
-        mock_collection.metadata = None
+        mock_collection.metadata = {"hnsw:space": "cosine"}
         mock_async_chromadb_client.get_collection = AsyncMock(
             return_value=mock_collection
         )
@@ -467,7 +467,7 @@ class TestChromaDBClient:
         assert results[0]["id"] == "doc1"
         assert results[0]["content"] == "Document 1"
         assert results[0]["metadata"] == {"source": "test1"}
-        assert results[0]["score"] == 0.975
+        assert results[0]["score"] == 0.95
 
     @pytest.mark.asyncio
     async def test_asearch_with_optional_params(
@@ -475,7 +475,7 @@ class TestChromaDBClient:
     ) -> None:
         """Test asearch with optional parameters."""
         mock_collection = AsyncMock()
-        mock_collection.metadata = None
+        mock_collection.metadata = {"hnsw:space": "cosine"}
         mock_async_chromadb_client.get_collection = AsyncMock(
             return_value=mock_collection
         )
