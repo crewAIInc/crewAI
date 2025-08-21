@@ -1,9 +1,11 @@
 """Qdrant client implementation."""
 
+import asyncio
 from typing import Any
+from uuid import uuid4
 
 from qdrant_client import AsyncQdrantClient, QdrantClient as SyncQdrantClient
-from qdrant_client.models import Distance, VectorParams
+from qdrant_client.models import Distance, PointStruct, VectorParams
 from typing_extensions import Unpack
 
 from crewai.rag.core.base_client import (
@@ -28,7 +30,7 @@ class QdrantClient(BaseClient):
     """
 
     client: QdrantClientType
-    embedding_function: Any  # EmbeddingFunction
+    embedding_function: Any
 
     def create_collection(self, **kwargs: Unpack[QdrantCollectionCreateParams]) -> None:
         """Create a new collection in Qdrant.
@@ -286,21 +288,14 @@ class QdrantClient(BaseClient):
         if not self.client.collection_exists(collection_name):
             raise ValueError(f"Collection '{collection_name}' does not exist")
 
-        # Import here to avoid circular dependency
-        from qdrant_client.models import PointStruct
-        from uuid import uuid4
-
         points = []
         for doc in documents:
-            # Generate ID if not provided
             doc_id = doc.get("doc_id", str(uuid4()))
 
-            # Generate embedding for the content
             embedding = self.embedding_function(doc["content"])
             if not isinstance(embedding, list):
                 embedding = embedding.tolist()
 
-            # Create point with payload
             point = PointStruct(
                 id=doc_id,
                 vector=embedding,
@@ -308,7 +303,6 @@ class QdrantClient(BaseClient):
             )
             points.append(point)
 
-        # Upsert points to collection
         self.client.upsert(collection_name=collection_name, points=points, wait=True)
 
     async def aadd_documents(self, **kwargs: Unpack[BaseCollectionAddParams]) -> None:
@@ -337,20 +331,11 @@ class QdrantClient(BaseClient):
         if not await self.client.collection_exists(collection_name):
             raise ValueError(f"Collection '{collection_name}' does not exist")
 
-        # Import here to avoid circular dependency
-        from qdrant_client.models import PointStruct
-        from uuid import uuid4
-
         points = []
         for doc in documents:
-            # Generate ID if not provided
             doc_id = doc.get("doc_id", str(uuid4()))
 
-            # Generate embedding for the content
-            # Check if embedding_function is async
             if hasattr(self.embedding_function, "__call__"):
-                import asyncio
-
                 if asyncio.iscoroutinefunction(self.embedding_function):
                     embedding = await self.embedding_function(doc["content"])
                 else:
@@ -361,7 +346,6 @@ class QdrantClient(BaseClient):
             if not isinstance(embedding, list):
                 embedding = embedding.tolist()
 
-            # Create point with payload
             point = PointStruct(
                 id=doc_id,
                 vector=embedding,
@@ -369,7 +353,6 @@ class QdrantClient(BaseClient):
             )
             points.append(point)
 
-        # Upsert points to collection
         await self.client.upsert(
             collection_name=collection_name, points=points, wait=True
         )
