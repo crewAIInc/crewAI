@@ -2,7 +2,7 @@
 
 import hashlib
 from collections.abc import Mapping
-from typing import TypeGuard
+from typing import Literal, TypeGuard, cast
 
 from chromadb.api import AsyncClientAPI, ClientAPI
 from chromadb.api.types import (
@@ -10,6 +10,9 @@ from chromadb.api.types import (
     IncludeEnum,
     QueryResult,
 )
+
+from chromadb.api.models.AsyncCollection import AsyncCollection
+from chromadb.api.models.Collection import Collection
 
 from crewai.rag.chromadb.types import (
     ChromaDBClientType,
@@ -105,9 +108,34 @@ def _extract_search_params(
     )
 
 
+def _convert_distance_to_score(
+    distance: float,
+    distance_metric: Literal["l2", "cosine", "ip"],
+) -> float:
+    """Convert ChromaDB distance to similarity score.
+
+    Notes:
+        Assuming all embedding are unit-normalized for now, including custom embeddings.
+
+    Args:
+        distance: The distance value from ChromaDB.
+        distance_metric: The distance metric used ("l2", "cosine", or "ip").
+
+    Returns:
+        Similarity score in range [0, 1] where 1 is most similar.
+    """
+    if distance_metric == "l2":
+        score = 1.0 - 0.25 * distance
+    else:
+        # ("cosine", "ip")
+        score = 1.0 - 0.5 * distance
+    return max(0.0, min(1.0, score))
+
+
 def _convert_chromadb_results_to_search_results(
     results: QueryResult,
     include: Include,
+    distance_metric: Literal["l2", "cosine", "ip"],
     score_threshold: float | None = None,
 ) -> list[SearchResult]:
     """Convert ChromaDB query results to SearchResult format.
@@ -115,6 +143,7 @@ def _convert_chromadb_results_to_search_results(
     Args:
         results: ChromaDB query results.
         include: List of fields that were included in the query.
+        distance_metric: The distance metric used by the collection.
         score_threshold: Optional minimum similarity score (0-1) for results.
 
     Returns:
@@ -142,7 +171,14 @@ def _convert_chromadb_results_to_search_results(
     )
 
     for i, doc_id in enumerate(ids):
-        score = 1.0 - (distances[i] / 2.0) if distances and i < len(distances) else 0.0
+        if not distances or i >= len(distances):
+            continue
+
+        distance = distances[i]
+        score = _convert_distance_to_score(
+            distance=distance, distance_metric=distance_metric
+        )
+
         if score_threshold and score < score_threshold:
             continue
 
@@ -155,3 +191,33 @@ def _convert_chromadb_results_to_search_results(
         search_results.append(result)
 
     return search_results
+
+
+def _process_query_results(
+    collection: Collection | AsyncCollection,
+    results: QueryResult,
+    params: ExtractedSearchParams,
+) -> list[SearchResult]:
+    """Process ChromaDB query results and convert to SearchResult format.
+
+    Args:
+        collection: The ChromaDB collection (sync or async) that was queried.
+        results: Raw query results from ChromaDB.
+        params: The search parameters used for the query.
+
+    Returns:
+        List of SearchResult dicts containing id, content, metadata, and score.
+    """
+
+    distance_metric: Literal["l2", "cosine", "ip"] = "l2"
+    if collection.metadata:
+        distance_metric = cast(
+            Literal["l2", "cosine", "ip"], collection.metadata.get("hnsw:space", "l2")
+        )
+
+    return _convert_chromadb_results_to_search_results(
+        results=results,
+        include=params.include,
+        distance_metric=distance_metric,
+        score_threshold=params.score_threshold,
+    )

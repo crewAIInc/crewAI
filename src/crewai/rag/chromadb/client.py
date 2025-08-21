@@ -15,11 +15,11 @@ from crewai.rag.chromadb.types import (
     ChromaDBCollectionSearchParams,
 )
 from crewai.rag.chromadb.utils import (
-    _convert_chromadb_results_to_search_results,
     _extract_search_params,
     _is_async_client,
     _is_sync_client,
     _prepare_documents_for_chromadb,
+    _process_query_results,
 )
 from crewai.rag.core.base_client import (
     BaseClient,
@@ -372,8 +372,10 @@ class ChromaDBClient(BaseClient):
             include=params.include,
         )
 
-        return _convert_chromadb_results_to_search_results(
-            results, params.include, params.score_threshold
+        return _process_query_results(
+            collection=collection,
+            results=results,
+            params=params,
         )
 
     async def asearch(
@@ -425,8 +427,10 @@ class ChromaDBClient(BaseClient):
             include=params.include,
         )
 
-        return _convert_chromadb_results_to_search_results(
-            results, params.include, params.score_threshold
+        return _process_query_results(
+            collection=collection,
+            results=results,
+            params=params,
         )
 
     def delete_collection(self, **kwargs: Unpack[BaseCollectionParams]) -> None:
