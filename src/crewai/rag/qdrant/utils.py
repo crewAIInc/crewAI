@@ -4,6 +4,8 @@ from typing import Any
 
 from qdrant_client.models import FieldCondition, Filter, MatchValue
 
+from crewai.rag.types import SearchResult
+
 
 def prepare_search_params(
     collection_name: str,
@@ -48,3 +50,25 @@ def prepare_search_params(
         search_kwargs["query_filter"] = Filter(must=filter_conditions)
 
     return search_kwargs
+
+
+def process_search_results(response: Any) -> list[SearchResult]:
+    """Process Qdrant search response into SearchResult format.
+
+    Args:
+        response: Response from Qdrant query_points method.
+
+    Returns:
+        List of SearchResult dictionaries.
+    """
+    results: list[SearchResult] = []
+    for point in response.points:
+        result: SearchResult = {
+            "id": str(point.id),
+            "content": point.payload.get("content", ""),
+            "metadata": {k: v for k, v in point.payload.items() if k != "content"},
+            "score": point.score if point.score is not None else 0.0,
+        }
+        results.append(result)
+
+    return results

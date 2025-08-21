@@ -15,7 +15,7 @@ from crewai.rag.core.base_client import (
     BaseCollectionSearchParams,
 )
 from crewai.rag.qdrant.types import QdrantClientType, QdrantCollectionCreateParams
-from crewai.rag.qdrant.utils import prepare_search_params
+from crewai.rag.qdrant.utils import prepare_search_params, process_search_results
 from crewai.rag.types import SearchResult
 
 
@@ -403,18 +403,7 @@ class QdrantClient(BaseClient):
         )
 
         response = self.client.query_points(**search_kwargs)
-
-        results: list[SearchResult] = []
-        for point in response.points:
-            result: SearchResult = {
-                "id": str(point.id),
-                "content": point.payload.get("content", ""),
-                "metadata": {k: v for k, v in point.payload.items() if k != "content"},
-                "score": point.score if point.score is not None else 0.0,
-            }
-            results.append(result)
-
-        return results
+        return process_search_results(response)
 
     async def asearch(
         self, **kwargs: Unpack[BaseCollectionSearchParams]
@@ -467,18 +456,7 @@ class QdrantClient(BaseClient):
         )
 
         response = await self.client.query_points(**search_kwargs)
-
-        results: list[SearchResult] = []
-        for point in response.points:
-            result: SearchResult = {
-                "id": str(point.id),
-                "content": point.payload.get("content", ""),
-                "metadata": {k: v for k, v in point.payload.items() if k != "content"},
-                "score": point.score if point.score is not None else 0.0,
-            }
-            results.append(result)
-
-        return results
+        return process_search_results(response)
 
     def delete_collection(self, **kwargs: Unpack[BaseCollectionParams]) -> None:
         """Delete a collection and all its data.
