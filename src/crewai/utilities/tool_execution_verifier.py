@@ -33,7 +33,6 @@ try:
 except ImportError:
     psutil = None
     PSUTIL_AVAILABLE = False
-    logger.debug("psutil is not available - process monitoring will be disabled")
 
 
 class ExecutionAuthenticityLevel(Enum):
