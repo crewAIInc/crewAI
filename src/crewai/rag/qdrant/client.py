@@ -66,13 +66,11 @@ class QdrantClient(BaseClient):
         if self.client.collection_exists(collection_name):
             raise ValueError(f"Collection '{collection_name}' already exists")
 
-        vectors_config = kwargs.get(
-            "vectors_config", VectorParams(size=1536, distance=Distance.COSINE)
-        )
-
         self.client.create_collection(
             collection_name=collection_name,
-            vectors_config=vectors_config,
+            vectors_config=kwargs.get(
+                "vectors_config", VectorParams(size=1536, distance=Distance.COSINE)
+            ),
             sparse_vectors_config=kwargs.get("sparse_vectors_config"),
             shard_number=kwargs.get("shard_number"),
             sharding_method=kwargs.get("sharding_method"),
@@ -122,13 +120,11 @@ class QdrantClient(BaseClient):
         if await self.client.collection_exists(collection_name):
             raise ValueError(f"Collection '{collection_name}' already exists")
 
-        vectors_config = kwargs.get(
-            "vectors_config", VectorParams(size=1536, distance=Distance.COSINE)
-        )
-
         await self.client.create_collection(
             collection_name=collection_name,
-            vectors_config=vectors_config,
+            vectors_config=kwargs.get(
+                "vectors_config", VectorParams(size=1536, distance=Distance.COSINE)
+            ),
             sparse_vectors_config=kwargs.get("sparse_vectors_config"),
             shard_number=kwargs.get("shard_number"),
             sharding_method=kwargs.get("sharding_method"),
@@ -180,13 +176,11 @@ class QdrantClient(BaseClient):
         if self.client.collection_exists(collection_name):
             return self.client.get_collection(collection_name)
 
-        vectors_config = kwargs.get(
-            "vectors_config", VectorParams(size=1536, distance=Distance.COSINE)
-        )
-
         self.client.create_collection(
             collection_name=collection_name,
-            vectors_config=vectors_config,
+            vectors_config=kwargs.get(
+                "vectors_config", VectorParams(size=1536, distance=Distance.COSINE)
+            ),
             sparse_vectors_config=kwargs.get("sparse_vectors_config"),
             shard_number=kwargs.get("shard_number"),
             sharding_method=kwargs.get("sharding_method"),
@@ -240,13 +234,11 @@ class QdrantClient(BaseClient):
         if await self.client.collection_exists(collection_name):
             return await self.client.get_collection(collection_name)
 
-        vectors_config = kwargs.get(
-            "vectors_config", VectorParams(size=1536, distance=Distance.COSINE)
-        )
-
         await self.client.create_collection(
             collection_name=collection_name,
-            vectors_config=vectors_config,
+            vectors_config=kwargs.get(
+                "vectors_config", VectorParams(size=1536, distance=Distance.COSINE)
+            ),
             sparse_vectors_config=kwargs.get("sparse_vectors_config"),
             shard_number=kwargs.get("shard_number"),
             sharding_method=kwargs.get("sharding_method"),
