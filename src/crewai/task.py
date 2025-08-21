@@ -4,6 +4,7 @@ import json
 import logging
 import threading
 import uuid
+import warnings
 from concurrent.futures import Future
 from copy import copy
 from hashlib import md5
@@ -157,8 +158,13 @@ class Task(BaseModel):
         default=None,
         description="Function or string description of a guardrail to validate task output before proceeding to next task",
     )
-    max_retries: int = Field(
-        default=3, description="Maximum number of retries when guardrail fails"
+    max_retries: Optional[int] = Field(
+        default=None,
+        description="[DEPRECATED] Maximum number of retries when guardrail fails. Use guardrail_max_retries instead. Will be removed in v1.0.0"
+    )
+    guardrail_max_retries: int = Field(
+        default=3,
+        description="Maximum number of retries when guardrail fails"
     )
     retry_count: int = Field(default=0, description="Current number of retries")
     start_time: Optional[datetime.datetime] = Field(
@@ -354,6 +360,18 @@ class Task(BaseModel):
             )
         return self
 
+    @model_validator(mode="after")
+    def handle_max_retries_deprecation(self):
+        if self.max_retries is not None:
+            warnings.warn(
+                "The 'max_retries' parameter is deprecated and will be removed in CrewAI v1.0.0. "
+                "Please use 'guardrail_max_retries' instead.",
+                DeprecationWarning,
+                stacklevel=2
+            )
+            self.guardrail_max_retries = self.max_retries
+        return self
+
     def execute_sync(
         self,
         agent: Optional[BaseAgent] = None,
@@ -450,9 +468,9 @@ class Task(BaseModel):
                     retry_count=self.retry_count,
                 )
                 if not guardrail_result.success:
-                    if self.retry_count >= self.max_retries:
+                    if self.retry_count >= self.guardrail_max_retries:
                         raise Exception(
-                            f"Task failed guardrail validation after {self.max_retries} retries. "
+                            f"Task failed guardrail validation after {self.guardrail_max_retries} retries. "
                             f"Last error: {guardrail_result.error}"
                         )
 

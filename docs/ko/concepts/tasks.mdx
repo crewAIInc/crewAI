@@ -59,6 +59,7 @@ crew = Crew(
 | **Pydantic 출력** _(선택 사항)_   | `output_pydantic`     | `Optional[Type[BaseModel]]`       | 태스크 출력용 Pydantic 모델입니다.                                                                             |
 | **콜백** _(선택 사항)_            | `callback`            | `Optional[Any]`                  | 태스크 완료 후 실행할 함수/객체입니다.                                                                         |
 | **가드레일** _(선택 사항)_        | `guardrail`           | `Optional[Callable]`                | 다음 태스크로 진행하기 전에 태스크 출력을 검증하는 함수입니다.                                               |
+| **가드레일 최대 재시도** _(선택 사항)_ | `guardrail_max_retries` | `Optional[int]`          | 가드레일 검증 실패 시 최대 재시도 횟수입니다. 기본값은 3입니다.                                                |
 
 ## 작업 생성하기
 
@@ -448,7 +449,7 @@ task = Task(
     expected_output="A valid JSON object",
     agent=analyst,
     guardrail=validate_json_output,
-    max_retries=3  # Limit retry attempts
+    guardrail_max_retries=3  # 재시도 횟수 제한
 )
 ```
 
