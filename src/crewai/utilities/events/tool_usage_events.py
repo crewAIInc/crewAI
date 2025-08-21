@@ -15,11 +15,15 @@ class ToolUsageEvent(BaseEvent):
     run_attempts: int | None = None
     delegations: int | None = None
     agent: Optional[Any] = None
+    task_name: Optional[str] = None
+    task_id: Optional[str] = None
 
     model_config = {"arbitrary_types_allowed": True}
 
     def __init__(self, **data):
         super().__init__(**data)
+        self._set_agent_params(data)
+        self._set_task_params(data)
         # Set fingerprint data from the agent
         if self.agent and hasattr(self.agent, "fingerprint") and self.agent.fingerprint:
             self.source_fingerprint = self.agent.fingerprint.uuid_str
@@ -29,6 +33,21 @@ class ToolUsageEvent(BaseEvent):
                 and self.agent.fingerprint.metadata
             ):
                 self.fingerprint_metadata = self.agent.fingerprint.metadata
+
+    def _set_agent_params(self, data: Dict[str, Any]):
+        task = data.get("from_task", None)
+        agent = task.agent if task else data.get("from_agent", None)
+
+        if not agent:
+            return
+
+        self.agent_id = agent.id
+        self.agent_role = agent.role
+
+    def _set_task_params(self, data: Dict[str, Any]):
+        if "from_task" in data and (task := data["from_task"]):
+            self.task_id = task.id
+            self.task_name = task.name or task.description
 
 
 class ToolUsageStartedEvent(ToolUsageEvent):

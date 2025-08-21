@@ -178,11 +178,10 @@ class TraceBatchManager:
         if not self.current_batch:
             return None
 
+        self.current_batch.events = self.event_buffer.copy()
         if self.event_buffer:
             self._send_events_to_backend()
         self._finalize_backend_batch()
-
-        self.current_batch.events = self.event_buffer.copy()
 
         finalized_batch = self.current_batch
 

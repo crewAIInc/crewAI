@@ -178,9 +178,11 @@ class ToolUsage:
 
             if self.agent.fingerprint:
                 event_data.update(self.agent.fingerprint)
+            if self.task:
+                event_data["task_name"] = self.task.name or self.task.description
+                event_data["task_id"] = str(self.task.id)
+            crewai_event_bus.emit(self, ToolUsageStartedEvent(**event_data))
 
-            crewai_event_bus.emit(self,ToolUsageStartedEvent(**event_data))
-            
         started_at = time.time()
         from_cache = False
         result = None  # type: ignore
@@ -311,12 +313,15 @@ class ToolUsage:
         if self.agent and hasattr(self.agent, "tools_results"):
             self.agent.tools_results.append(data)
 
-        if available_tool and hasattr(available_tool, 'current_usage_count'):
+        if available_tool and hasattr(available_tool, "current_usage_count"):
             available_tool.current_usage_count += 1
-            if hasattr(available_tool, 'max_usage_count') and available_tool.max_usage_count is not None:
+            if (
+                hasattr(available_tool, "max_usage_count")
+                and available_tool.max_usage_count is not None
+            ):
                 self._printer.print(
                     content=f"Tool '{available_tool.name}' usage: {available_tool.current_usage_count}/{available_tool.max_usage_count}",
-                    color="blue"
+                    color="blue",
                 )
 
         return result
@@ -350,20 +355,20 @@ class ToolUsage:
                 calling.arguments == last_tool_usage.arguments
             )
         return False
-        
+
     def _check_usage_limit(self, tool: Any, tool_name: str) -> str | None:
         """Check if tool has reached its usage limit.
-        
+
         Args:
             tool: The tool to check
             tool_name: The name of the tool (used for error message)
-            
+
         Returns:
             Error message if limit reached, None otherwise
         """
         if (
-            hasattr(tool, 'max_usage_count') 
-            and tool.max_usage_count is not None 
+            hasattr(tool, "max_usage_count")
+            and tool.max_usage_count is not None
             and tool.current_usage_count >= tool.max_usage_count
         ):
             return f"Tool '{tool_name}' has reached its usage limit of {tool.max_usage_count} times and cannot be used anymore."
@@ -605,6 +610,10 @@ class ToolUsage:
                 "output": result,
             }
         )
+        if self.task:
+            event_data["task_id"] = str(self.task.id)
+            event_data["task_name"] = self.task.name or self.task.description
+
         crewai_event_bus.emit(self, ToolUsageFinishedEvent(**event_data))
 
     def _prepare_event_data(

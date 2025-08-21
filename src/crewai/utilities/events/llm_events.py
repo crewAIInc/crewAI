@@ -31,7 +31,7 @@ class LLMEventBase(BaseEvent):
     def _set_task_params(self, data: Dict[str, Any]):
         if "from_task" in data and (task := data["from_task"]):
             self.task_id = task.id
-            self.task_name = task.name
+            self.task_name = task.name or task.description
 
 
 class LLMCallType(Enum):
