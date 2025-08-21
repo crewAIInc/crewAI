@@ -567,7 +567,16 @@ class QdrantClient(BaseClient):
         Raises:
             ConnectionError: If unable to connect to Qdrant server.
         """
-        raise NotImplementedError
+        if not isinstance(self.client, SyncQdrantClient):
+            raise TypeError(
+                "Synchronous method reset() requires a QdrantClient. "
+                "Use areset() for AsyncQdrantClient."
+            )
+
+        collections_response = self.client.get_collections()
+
+        for collection in collections_response.collections:
+            self.client.delete_collection(collection_name=collection.name)
 
     async def areset(self) -> None:
         """Reset the vector database by deleting all collections and data asynchronously.
@@ -575,4 +584,13 @@ class QdrantClient(BaseClient):
         Raises:
             ConnectionError: If unable to connect to Qdrant server.
         """
-        raise NotImplementedError
+        if not isinstance(self.client, AsyncQdrantClient):
+            raise TypeError(
+                "Asynchronous method areset() requires an AsyncQdrantClient. "
+                "Use reset() for QdrantClient."
+            )
+
+        collections_response = await self.client.get_collections()
+
+        for collection in collections_response.collections:
+            await self.client.delete_collection(collection_name=collection.name)

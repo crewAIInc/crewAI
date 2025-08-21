@@ -669,13 +669,112 @@ class TestQdrantClient:
         with pytest.raises(TypeError, match="Asynchronous method adelete_collection"):
             await client.adelete_collection(collection_name="test_collection")
 
-    def test_reset_not_implemented(self, client):
-        """Test that reset raises NotImplementedError."""
-        with pytest.raises(NotImplementedError):
+    def test_reset(self, client, mock_qdrant_client):
+        """Test that reset deletes all collections."""
+        mock_collection1 = Mock()
+        mock_collection1.name = "collection1"
+        mock_collection2 = Mock()
+        mock_collection2.name = "collection2"
+        mock_collection3 = Mock()
+        mock_collection3.name = "collection3"
+
+        mock_collections_response = Mock()
+        mock_collections_response.collections = [
+            mock_collection1,
+            mock_collection2,
+            mock_collection3,
+        ]
+        mock_qdrant_client.get_collections.return_value = mock_collections_response
+
+        client.reset()
+
+        mock_qdrant_client.get_collections.assert_called_once()
+        assert mock_qdrant_client.delete_collection.call_count == 3
+        mock_qdrant_client.delete_collection.assert_any_call(
+            collection_name="collection1"
+        )
+        mock_qdrant_client.delete_collection.assert_any_call(
+            collection_name="collection2"
+        )
+        mock_qdrant_client.delete_collection.assert_any_call(
+            collection_name="collection3"
+        )
+
+    def test_reset_no_collections(self, client, mock_qdrant_client):
+        """Test that reset handles no collections gracefully."""
+        mock_collections_response = Mock()
+        mock_collections_response.collections = []
+        mock_qdrant_client.get_collections.return_value = mock_collections_response
+
+        client.reset()
+
+        mock_qdrant_client.get_collections.assert_called_once()
+        mock_qdrant_client.delete_collection.assert_not_called()
+
+    def test_reset_wrong_client_type(self, mock_async_qdrant_client):
+        """Test that reset raises TypeError for async client."""
+        client = QdrantClient()
+        client.client = mock_async_qdrant_client
+        client.embedding_function = Mock()
+
+        with pytest.raises(TypeError, match="Synchronous method reset"):
             client.reset()
 
     @pytest.mark.asyncio
-    async def test_areset_not_implemented(self, async_client):
-        """Test that areset raises NotImplementedError."""
-        with pytest.raises(NotImplementedError):
-            await async_client.areset()
+    async def test_areset(self, async_client, mock_async_qdrant_client):
+        """Test that areset deletes all collections asynchronously."""
+        mock_collection1 = Mock()
+        mock_collection1.name = "collection1"
+        mock_collection2 = Mock()
+        mock_collection2.name = "collection2"
+        mock_collection3 = Mock()
+        mock_collection3.name = "collection3"
+
+        mock_collections_response = Mock()
+        mock_collections_response.collections = [
+            mock_collection1,
+            mock_collection2,
+            mock_collection3,
+        ]
+        mock_async_qdrant_client.get_collections = AsyncMock(
+            return_value=mock_collections_response
+        )
+        mock_async_qdrant_client.delete_collection = AsyncMock()
+
+        await async_client.areset()
+
+        mock_async_qdrant_client.get_collections.assert_called_once()
+        assert mock_async_qdrant_client.delete_collection.call_count == 3
+        mock_async_qdrant_client.delete_collection.assert_any_call(
+            collection_name="collection1"
+        )
+        mock_async_qdrant_client.delete_collection.assert_any_call(
+            collection_name="collection2"
+        )
+        mock_async_qdrant_client.delete_collection.assert_any_call(
+            collection_name="collection3"
+        )
+
+    @pytest.mark.asyncio
+    async def test_areset_no_collections(self, async_client, mock_async_qdrant_client):
+        """Test that areset handles no collections gracefully."""
+        mock_collections_response = Mock()
+        mock_collections_response.collections = []
+        mock_async_qdrant_client.get_collections = AsyncMock(
+            return_value=mock_collections_response
+        )
+
+        await async_client.areset()
+
+        mock_async_qdrant_client.get_collections.assert_called_once()
+        mock_async_qdrant_client.delete_collection.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_areset_wrong_client_type(self, mock_qdrant_client):
+        """Test that areset raises TypeError for sync client."""
+        client = QdrantClient()
+        client.client = mock_qdrant_client
+        client.embedding_function = Mock()
+
+        with pytest.raises(TypeError, match="Asynchronous method areset"):
+            await client.areset()
