@@ -4,6 +4,7 @@ from typing import Any
 
 from qdrant_client.models import FieldCondition, Filter, MatchValue
 
+from crewai.rag.qdrant.types import PreparedSearchParams
 from crewai.rag.types import SearchResult
 
 
@@ -13,7 +14,7 @@ def prepare_search_params(
     limit: int,
     score_threshold: float | None,
     metadata_filter: dict[str, Any] | None,
-) -> dict[str, Any]:
+) -> PreparedSearchParams:
     """Prepare search parameters for Qdrant query_points.
 
     Args:
@@ -29,7 +30,7 @@ def prepare_search_params(
     if not isinstance(query_embedding, list):
         query_embedding = query_embedding.tolist()
 
-    search_kwargs = {
+    search_kwargs: PreparedSearchParams = {
         "collection_name": collection_name,
         "query": query_embedding,
         "limit": limit,

@@ -1,8 +1,10 @@
 """Type definitions specific to Qdrant implementation."""
 
-from typing import Any
+from typing import Any, TypedDict
 
 from qdrant_client import AsyncQdrantClient, QdrantClient as SyncQdrantClient
+from qdrant_client.models import Filter
+from typing_extensions import NotRequired
 
 from crewai.rag.core.base_client import BaseCollectionParams
 
@@ -29,3 +31,15 @@ class QdrantCollectionCreateParams(BaseCollectionParams, total=False):
     quantization_config: Any  # Quantization settings
     init_from: Any  # Initialize from another collection
     timeout: int  # Operation timeout
+
+
+class PreparedSearchParams(TypedDict):
+    """Type definition for prepared Qdrant search parameters."""
+
+    collection_name: str
+    query: list[float]
+    limit: int
+    with_payload: bool
+    with_vectors: bool
+    score_threshold: NotRequired[float]
+    query_filter: NotRequired[Filter]
