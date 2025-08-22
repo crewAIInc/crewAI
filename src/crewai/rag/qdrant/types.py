@@ -1,7 +1,7 @@
 """Type definitions specific to Qdrant implementation."""
 
 from collections.abc import Awaitable, Callable
-from typing import Annotated, Any, Protocol, TypedDict
+from typing import Annotated, Any, Protocol, TypeAlias, TypedDict
 from typing_extensions import NotRequired
 
 import numpy as np
@@ -30,7 +30,7 @@ from crewai.rag.core.base_client import BaseCollectionParams
 
 QdrantClientType = SyncQdrantClient | AsyncQdrantClient
 
-QueryEmbedding = list[float] | np.ndarray[Any, np.dtype[np.floating[Any]]]
+QueryEmbedding: TypeAlias = list[float] | np.ndarray[Any, np.dtype[np.floating[Any]]]
 
 BasicConditions = FieldCondition | IsEmptyCondition | IsNullCondition
 StructuralConditions = HasIdCondition | HasVectorCondition | NestedCondition
@@ -45,6 +45,21 @@ class EmbeddingFunction(Protocol):
 
     def __call__(self, text: str) -> QueryEmbedding:
         """Convert text to embedding vector.
+
+        Args:
+            text: Input text to embed.
+
+        Returns:
+            Embedding vector as list of floats or numpy array.
+        """
+        ...
+
+
+class AsyncEmbeddingFunction(Protocol):
+    """Protocol for async embedding functions that convert text to vectors."""
+
+    async def __call__(self, text: str) -> QueryEmbedding:
+        """Convert text to embedding vector asynchronously.
 
         Args:
             text: Input text to embed.

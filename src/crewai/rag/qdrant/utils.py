@@ -1,5 +1,6 @@
 """Utility functions for Qdrant operations."""
 
+import asyncio
 from typing import TypeGuard
 from uuid import uuid4
 
@@ -13,6 +14,8 @@ from qdrant_client.models import (
 )
 
 from crewai.rag.qdrant.types import (
+    AsyncEmbeddingFunction,
+    EmbeddingFunction,
     FilterCondition,
     MetadataFilter,
     PreparedSearchParams,
@@ -58,6 +61,20 @@ def _is_async_client(client: QdrantClientType) -> TypeGuard[AsyncQdrantClient]:
         True if the client is an AsyncQdrantClient, False otherwise.
     """
     return isinstance(client, AsyncQdrantClient)
+
+
+def _is_async_embedding_function(
+    func: EmbeddingFunction | AsyncEmbeddingFunction,
+) -> TypeGuard[AsyncEmbeddingFunction]:
+    """Type guard to check if the embedding function is async.
+
+    Args:
+        func: The embedding function to check.
+
+    Returns:
+        True if the function is async, False otherwise.
+    """
+    return asyncio.iscoroutinefunction(func)
 
 
 def _prepare_search_params(

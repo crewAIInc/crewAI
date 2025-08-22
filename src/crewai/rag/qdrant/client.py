@@ -1,6 +1,5 @@
 """Qdrant client implementation."""
 
-import asyncio
 from typing import Any, cast
 
 from fastembed import TextEmbedding
@@ -16,6 +15,7 @@ from crewai.rag.core.base_client import (
 )
 from crewai.rag.core.exceptions import ClientMethodMismatchError
 from crewai.rag.qdrant.types import (
+    AsyncEmbeddingFunction,
     EmbeddingFunction,
     QdrantClientParams,
     QdrantClientType,
@@ -23,6 +23,7 @@ from crewai.rag.qdrant.types import (
 )
 from crewai.rag.qdrant.utils import (
     _is_async_client,
+    _is_async_embedding_function,
     _is_sync_client,
     _create_point_from_document,
     _prepare_search_params,
@@ -43,12 +44,12 @@ class QdrantClient(BaseClient):
     """
 
     client: QdrantClientType
-    embedding_function: EmbeddingFunction
+    embedding_function: EmbeddingFunction | AsyncEmbeddingFunction
 
     def __init__(
         self,
         client: QdrantClientType | None = None,
-        embedding_function: EmbeddingFunction | None = None,
+        embedding_function: EmbeddingFunction | AsyncEmbeddingFunction | None = None,
         **kwargs: Unpack[QdrantClientParams],
     ) -> None:
         """Initialize QdrantClient with optional client and embedding function.
@@ -337,7 +338,13 @@ class QdrantClient(BaseClient):
 
         points = []
         for doc in documents:
-            embedding = self.embedding_function(doc["content"])
+            if _is_async_embedding_function(self.embedding_function):
+                raise TypeError(
+                    "Async embedding function cannot be used with sync add_documents. "
+                    "Use aadd_documents instead."
+                )
+            sync_fn = cast(EmbeddingFunction, self.embedding_function)
+            embedding = sync_fn(doc["content"])
             point = _create_point_from_document(doc, embedding)
             points.append(point)
 
@@ -373,14 +380,12 @@ class QdrantClient(BaseClient):
 
         points = []
         for doc in documents:
-            if hasattr(self.embedding_function, "__call__"):
-                if asyncio.iscoroutinefunction(self.embedding_function):
-                    embedding = await self.embedding_function(doc["content"])
-                else:
-                    embedding = self.embedding_function(doc["content"])
+            if _is_async_embedding_function(self.embedding_function):
+                async_fn = cast(AsyncEmbeddingFunction, self.embedding_function)
+                embedding = await async_fn(doc["content"])
             else:
-                embedding = self.embedding_function(doc["content"])
-
+                sync_fn = cast(EmbeddingFunction, self.embedding_function)
+                embedding = sync_fn(doc["content"])
             point = _create_point_from_document(doc, embedding)
             points.append(point)
 
@@ -424,7 +429,13 @@ class QdrantClient(BaseClient):
         if not self.client.collection_exists(collection_name):
             raise ValueError(f"Collection '{collection_name}' does not exist")
 
-        query_embedding = self.embedding_function(query)
+        if _is_async_embedding_function(self.embedding_function):
+            raise TypeError(
+                "Async embedding function cannot be used with sync search. "
+                "Use asearch instead."
+            )
+        sync_fn = cast(EmbeddingFunction, self.embedding_function)
+        query_embedding = sync_fn(query)
 
         search_kwargs = _prepare_search_params(
             collection_name=collection_name,
@@ -473,13 +484,12 @@ class QdrantClient(BaseClient):
         if not await self.client.collection_exists(collection_name):
             raise ValueError(f"Collection '{collection_name}' does not exist")
 
-        if hasattr(self.embedding_function, "__call__"):
-            if asyncio.iscoroutinefunction(self.embedding_function):
-                query_embedding = await self.embedding_function(query)
-            else:
-                query_embedding = self.embedding_function(query)
+        if _is_async_embedding_function(self.embedding_function):
+            async_fn = cast(AsyncEmbeddingFunction, self.embedding_function)
+            query_embedding = await async_fn(query)
         else:
-            query_embedding = self.embedding_function(query)
+            sync_fn = cast(EmbeddingFunction, self.embedding_function)
+            query_embedding = sync_fn(query)
 
         search_kwargs = _prepare_search_params(
             collection_name=collection_name,
