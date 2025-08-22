@@ -71,7 +71,7 @@ class TestQdrantClient:
         client.embedding_function = Mock()
 
         with pytest.raises(
-            ClientMethodMismatchError, match="Synchronous method create_collection"
+            ClientMethodMismatchError, match=r"Method create_collection\(\) requires"
         ):
             client.create_collection(collection_name="test_collection")
 
@@ -111,7 +111,7 @@ class TestQdrantClient:
         client.embedding_function = Mock()
 
         with pytest.raises(
-            ClientMethodMismatchError, match="Asynchronous method acreate_collection"
+            ClientMethodMismatchError, match=r"Method acreate_collection\(\) requires"
         ):
             await client.acreate_collection(collection_name="test_collection")
 
@@ -149,7 +149,7 @@ class TestQdrantClient:
 
         with pytest.raises(
             ClientMethodMismatchError,
-            match="Synchronous method get_or_create_collection",
+            match=r"Method get_or_create_collection\(\) requires",
         ):
             client.get_or_create_collection(collection_name="test_collection")
 
@@ -213,7 +213,7 @@ class TestQdrantClient:
 
         with pytest.raises(
             ClientMethodMismatchError,
-            match="Asynchronous method aget_or_create_collection",
+            match=r"Method aget_or_create_collection\(\) requires",
         ):
             await client.aget_or_create_collection(collection_name="test_collection")
 
@@ -301,7 +301,7 @@ class TestQdrantClient:
         ]
 
         with pytest.raises(
-            ClientMethodMismatchError, match="Synchronous method add_documents"
+            ClientMethodMismatchError, match=r"Method add_documents\(\) requires"
         ):
             client.add_documents(collection_name="test_collection", documents=documents)
 
@@ -412,7 +412,7 @@ class TestQdrantClient:
         ]
 
         with pytest.raises(
-            ClientMethodMismatchError, match="Asynchronous method aadd_documents"
+            ClientMethodMismatchError, match=r"Method aadd_documents\(\) requires"
         ):
             await client.aadd_documents(
                 collection_name="test_collection", documents=documents
@@ -514,7 +514,7 @@ class TestQdrantClient:
         client.embedding_function = Mock()
 
         with pytest.raises(
-            ClientMethodMismatchError, match="Synchronous method search"
+            ClientMethodMismatchError, match=r"Method search\(\) requires"
         ):
             client.search(collection_name="test_collection", query="test query")
 
@@ -606,7 +606,7 @@ class TestQdrantClient:
         client.embedding_function = Mock()
 
         with pytest.raises(
-            ClientMethodMismatchError, match="Asynchronous method asearch"
+            ClientMethodMismatchError, match=r"Method asearch\(\) requires"
         ):
             await client.asearch(collection_name="test_collection", query="test query")
 
@@ -640,7 +640,7 @@ class TestQdrantClient:
         client.embedding_function = Mock()
 
         with pytest.raises(
-            ClientMethodMismatchError, match="Synchronous method delete_collection"
+            ClientMethodMismatchError, match=r"Method delete_collection\(\) requires"
         ):
             client.delete_collection(collection_name="test_collection")
 
@@ -684,7 +684,7 @@ class TestQdrantClient:
         client.embedding_function = Mock()
 
         with pytest.raises(
-            ClientMethodMismatchError, match="Asynchronous method adelete_collection"
+            ClientMethodMismatchError, match=r"Method adelete_collection\(\) requires"
         ):
             await client.adelete_collection(collection_name="test_collection")
 
@@ -736,7 +736,9 @@ class TestQdrantClient:
         client.client = mock_async_qdrant_client
         client.embedding_function = Mock()
 
-        with pytest.raises(ClientMethodMismatchError, match="Synchronous method reset"):
+        with pytest.raises(
+            ClientMethodMismatchError, match=r"Method reset\(\) requires"
+        ):
             client.reset()
 
     @pytest.mark.asyncio
@@ -796,6 +798,6 @@ class TestQdrantClient:
         client.embedding_function = Mock()
 
         with pytest.raises(
-            ClientMethodMismatchError, match="Asynchronous method areset"
+            ClientMethodMismatchError, match=r"Method areset\(\) requires"
         ):
             await client.areset()
