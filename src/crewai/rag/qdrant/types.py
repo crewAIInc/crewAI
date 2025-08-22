@@ -11,6 +11,7 @@ from qdrant_client.models import (
     IsEmptyCondition,
     IsNullCondition,
     NestedCondition,
+    VectorParams,
 )
 from typing_extensions import NotRequired
 
@@ -30,7 +31,7 @@ class QdrantCollectionCreateParams(BaseCollectionParams, total=False):
     parameters specific to Qdrant collection creation.
     """
 
-    vectors_config: Any  # VectorParams or dict of VectorParams
+    vectors_config: VectorParams | dict[str, VectorParams]
     sparse_vectors_config: dict[str, Any]  # Sparse vector configuration
     shard_number: int  # Number of shards
     sharding_method: Any  # ShardingMethod

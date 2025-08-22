@@ -1,16 +1,17 @@
 """Utility functions for Qdrant operations."""
 
 from typing import Any, TypeGuard
+from uuid import uuid4
 
 from qdrant_client import AsyncQdrantClient, QdrantClient as SyncQdrantClient
-from qdrant_client.models import FieldCondition, Filter, MatchValue
+from qdrant_client.models import FieldCondition, Filter, MatchValue, PointStruct
 
 from crewai.rag.qdrant.types import (
     FilterCondition,
     PreparedSearchParams,
     QdrantClientType,
 )
-from crewai.rag.types import SearchResult
+from crewai.rag.types import SearchResult, BaseRecord
 
 
 def _is_sync_client(client: QdrantClientType) -> TypeGuard[SyncQdrantClient]:
@@ -102,3 +103,31 @@ def process_search_results(response: Any) -> list[SearchResult]:
         results.append(result)
 
     return results
+
+
+def create_point_from_document(doc: BaseRecord, embedding: Any) -> PointStruct:
+    """Create a PointStruct from a document and its embedding.
+
+    Args:
+        doc: Document dictionary containing content, metadata, and optional doc_id.
+        embedding: The embedding vector for the document content.
+
+    Returns:
+        PointStruct ready to be upserted to Qdrant.
+    """
+    doc_id = doc.get("doc_id", str(uuid4()))
+
+    if not isinstance(embedding, list):
+        embedding = embedding.tolist()
+
+    metadata = doc.get("metadata", {})
+    if isinstance(metadata, list):
+        metadata = metadata[0] if metadata else {}
+    elif not isinstance(metadata, dict):
+        metadata = dict(metadata) if metadata else {}
+
+    return PointStruct(
+        id=doc_id,
+        vector=embedding,
+        payload={"content": doc["content"], **metadata},
+    )

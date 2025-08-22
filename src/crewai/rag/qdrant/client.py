@@ -2,9 +2,8 @@
 
 import asyncio
 from typing import Any
-from uuid import uuid4
 
-from qdrant_client.models import Distance, PointStruct, VectorParams
+from qdrant_client.models import Distance, VectorParams
 from typing_extensions import Unpack
 
 from crewai.rag.core.base_client import (
@@ -17,6 +16,7 @@ from crewai.rag.qdrant.types import QdrantClientType, QdrantCollectionCreatePara
 from crewai.rag.qdrant.utils import (
     _is_async_client,
     _is_sync_client,
+    create_point_from_document,
     prepare_search_params,
     process_search_results,
 )
@@ -287,23 +287,8 @@ class QdrantClient(BaseClient):
 
         points = []
         for doc in documents:
-            doc_id = doc.get("doc_id", str(uuid4()))
-
             embedding = self.embedding_function(doc["content"])
-            if not isinstance(embedding, list):
-                embedding = embedding.tolist()
-
-            metadata = doc.get("metadata", {})
-            if isinstance(metadata, list):
-                metadata = metadata[0] if metadata else {}
-            elif not isinstance(metadata, dict):
-                metadata = dict(metadata) if metadata else {}
-
-            point = PointStruct(
-                id=doc_id,
-                vector=embedding,
-                payload={"content": doc["content"], **metadata},
-            )
+            point = create_point_from_document(doc, embedding)
             points.append(point)
 
         self.client.upsert(collection_name=collection_name, points=points, wait=True)
@@ -336,8 +321,6 @@ class QdrantClient(BaseClient):
 
         points = []
         for doc in documents:
-            doc_id = doc.get("doc_id", str(uuid4()))
-
             if hasattr(self.embedding_function, "__call__"):
                 if asyncio.iscoroutinefunction(self.embedding_function):
                     embedding = await self.embedding_function(doc["content"])
@@ -346,20 +329,7 @@ class QdrantClient(BaseClient):
             else:
                 embedding = self.embedding_function(doc["content"])
 
-            if not isinstance(embedding, list):
-                embedding = embedding.tolist()
-
-            metadata = doc.get("metadata", {})
-            if isinstance(metadata, list):
-                metadata = metadata[0] if metadata else {}
-            elif not isinstance(metadata, dict):
-                metadata = dict(metadata) if metadata else {}
-
-            point = PointStruct(
-                id=doc_id,
-                vector=embedding,
-                payload={"content": doc["content"], **metadata},
-            )
+            point = create_point_from_document(doc, embedding)
             points.append(point)
 
         await self.client.upsert(
