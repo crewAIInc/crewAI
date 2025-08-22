@@ -38,7 +38,7 @@ def _is_async_client(client: QdrantClientType) -> TypeGuard[AsyncQdrantClient]:
     return isinstance(client, AsyncQdrantClient)
 
 
-def prepare_search_params(
+def _prepare_search_params(
     collection_name: str,
     query_embedding: Any,
     limit: int,
@@ -83,7 +83,7 @@ def prepare_search_params(
     return search_kwargs
 
 
-def process_search_results(response: Any) -> list[SearchResult]:
+def _process_search_results(response: Any) -> list[SearchResult]:
     """Process Qdrant search response into SearchResult format.
 
     Args:
@@ -105,7 +105,7 @@ def process_search_results(response: Any) -> list[SearchResult]:
     return results
 
 
-def create_point_from_document(doc: BaseRecord, embedding: Any) -> PointStruct:
+def _create_point_from_document(doc: BaseRecord, embedding: Any) -> PointStruct:
     """Create a PointStruct from a document and its embedding.
 
     Args:

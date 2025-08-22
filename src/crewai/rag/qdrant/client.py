@@ -16,9 +16,9 @@ from crewai.rag.qdrant.types import QdrantClientType, QdrantCollectionCreatePara
 from crewai.rag.qdrant.utils import (
     _is_async_client,
     _is_sync_client,
-    create_point_from_document,
-    prepare_search_params,
-    process_search_results,
+    _create_point_from_document,
+    _prepare_search_params,
+    _process_search_results,
 )
 from crewai.rag.types import SearchResult
 
@@ -288,7 +288,7 @@ class QdrantClient(BaseClient):
         points = []
         for doc in documents:
             embedding = self.embedding_function(doc["content"])
-            point = create_point_from_document(doc, embedding)
+            point = _create_point_from_document(doc, embedding)
             points.append(point)
 
         self.client.upsert(collection_name=collection_name, points=points, wait=True)
@@ -329,7 +329,7 @@ class QdrantClient(BaseClient):
             else:
                 embedding = self.embedding_function(doc["content"])
 
-            point = create_point_from_document(doc, embedding)
+            point = _create_point_from_document(doc, embedding)
             points.append(point)
 
         await self.client.upsert(
@@ -372,7 +372,7 @@ class QdrantClient(BaseClient):
 
         query_embedding = self.embedding_function(query)
 
-        search_kwargs = prepare_search_params(
+        search_kwargs = _prepare_search_params(
             collection_name=collection_name,
             query_embedding=query_embedding,
             limit=limit,
@@ -381,7 +381,7 @@ class QdrantClient(BaseClient):
         )
 
         response = self.client.query_points(**search_kwargs)
-        return process_search_results(response)
+        return _process_search_results(response)
 
     async def asearch(
         self, **kwargs: Unpack[BaseCollectionSearchParams]
@@ -425,7 +425,7 @@ class QdrantClient(BaseClient):
         else:
             query_embedding = self.embedding_function(query)
 
-        search_kwargs = prepare_search_params(
+        search_kwargs = _prepare_search_params(
             collection_name=collection_name,
             query_embedding=query_embedding,
             limit=limit,
@@ -434,7 +434,7 @@ class QdrantClient(BaseClient):
         )
 
         response = await self.client.query_points(**search_kwargs)
-        return process_search_results(response)
+        return _process_search_results(response)
 
     def delete_collection(self, **kwargs: Unpack[BaseCollectionParams]) -> None:
         """Delete a collection and all its data.
