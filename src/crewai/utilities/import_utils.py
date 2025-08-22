@@ -1,27 +1,32 @@
 """Import utilities for optional dependencies."""
 
 import importlib
-from typing import Any
+from types import ModuleType
 
 
-def require(name: str, instantiate_class: str | None = None) -> Any:
-    """Import a module or class, raising a helpful error if it's not installed.
+class OptionalDependencyError(ImportError):
+    """Exception raised when an optional dependency is not installed."""
+
+    pass
+
+
+def require(name: str, *, purpose: str) -> ModuleType:
+    """Import a module, raising a helpful error if it's not installed.
 
     Args:
         name: The module name to import.
-        instantiate_class: Optional class name to instantiate from the module.
+        purpose: Description of what requires this dependency.
 
     Returns:
-        The imported module or instantiated class.
+        The imported module.
 
     Raises:
-        RuntimeError: If the module is not installed.
+        OptionalDependencyError: If the module is not installed.
     """
     try:
-        module = importlib.import_module(name)
-        if instantiate_class:
-            cls = getattr(module, instantiate_class)
-            return cls()
-        return module
-    except ModuleNotFoundError as e:
-        raise RuntimeError(f"{name} is required. `pip install {name}`") from e
+        return importlib.import_module(name)
+    except ImportError as exc:
+        raise OptionalDependencyError(
+            f"{purpose} requires the optional dependency '{name}'.\n"
+            f"Install it with: uv add {name}"
+        ) from exc
