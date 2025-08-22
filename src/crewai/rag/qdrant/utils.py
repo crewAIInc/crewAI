@@ -1,17 +1,39 @@
 """Utility functions for Qdrant operations."""
 
-from typing import Any, TypeGuard
+from typing import TypeGuard
 from uuid import uuid4
 
 from qdrant_client import AsyncQdrantClient, QdrantClient as SyncQdrantClient
-from qdrant_client.models import FieldCondition, Filter, MatchValue, PointStruct
+from qdrant_client.models import (
+    FieldCondition,
+    Filter,
+    MatchValue,
+    PointStruct,
+    QueryResponse,
+)
 
 from crewai.rag.qdrant.types import (
     FilterCondition,
+    MetadataFilter,
     PreparedSearchParams,
     QdrantClientType,
+    QueryEmbedding,
 )
 from crewai.rag.types import SearchResult, BaseRecord
+
+
+def _ensure_list_embedding(embedding: QueryEmbedding) -> list[float]:
+    """Convert embedding to list[float] format if needed.
+
+    Args:
+        embedding: Embedding vector as list or numpy array.
+
+    Returns:
+        Embedding as list[float].
+    """
+    if not isinstance(embedding, list):
+        return embedding.tolist()
+    return embedding
 
 
 def _is_sync_client(client: QdrantClientType) -> TypeGuard[SyncQdrantClient]:
@@ -40,10 +62,10 @@ def _is_async_client(client: QdrantClientType) -> TypeGuard[AsyncQdrantClient]:
 
 def _prepare_search_params(
     collection_name: str,
-    query_embedding: Any,
+    query_embedding: QueryEmbedding,
     limit: int,
     score_threshold: float | None,
-    metadata_filter: dict[str, Any] | None,
+    metadata_filter: MetadataFilter | None,
 ) -> PreparedSearchParams:
     """Prepare search parameters for Qdrant query_points.
 
@@ -57,12 +79,11 @@ def _prepare_search_params(
     Returns:
         Dictionary of parameters for query_points method.
     """
-    if not isinstance(query_embedding, list):
-        query_embedding = query_embedding.tolist()
+    query_vector = _ensure_list_embedding(query_embedding)
 
     search_kwargs: PreparedSearchParams = {
         "collection_name": collection_name,
-        "query": query_embedding,
+        "query": query_vector,
         "limit": limit,
         "with_payload": True,
         "with_vectors": False,
@@ -83,7 +104,7 @@ def _prepare_search_params(
     return search_kwargs
 
 
-def _process_search_results(response: Any) -> list[SearchResult]:
+def _process_search_results(response: QueryResponse) -> list[SearchResult]:
     """Process Qdrant search response into SearchResult format.
 
     Args:
@@ -94,10 +115,11 @@ def _process_search_results(response: Any) -> list[SearchResult]:
     """
     results: list[SearchResult] = []
     for point in response.points:
+        payload = point.payload or {}
         result: SearchResult = {
             "id": str(point.id),
-            "content": point.payload.get("content", ""),
-            "metadata": {k: v for k, v in point.payload.items() if k != "content"},
+            "content": payload.get("content", ""),
+            "metadata": {k: v for k, v in payload.items() if k != "content"},
             "score": point.score if point.score is not None else 0.0,
         }
         results.append(result)
@@ -105,7 +127,9 @@ def _process_search_results(response: Any) -> list[SearchResult]:
     return results
 
 
-def _create_point_from_document(doc: BaseRecord, embedding: Any) -> PointStruct:
+def _create_point_from_document(
+    doc: BaseRecord, embedding: QueryEmbedding
+) -> PointStruct:
     """Create a PointStruct from a document and its embedding.
 
     Args:
@@ -116,9 +140,7 @@ def _create_point_from_document(doc: BaseRecord, embedding: Any) -> PointStruct:
         PointStruct ready to be upserted to Qdrant.
     """
     doc_id = doc.get("doc_id", str(uuid4()))
-
-    if not isinstance(embedding, list):
-        embedding = embedding.tolist()
+    vector = _ensure_list_embedding(embedding)
 
     metadata = doc.get("metadata", {})
     if isinstance(metadata, list):
@@ -128,6 +150,6 @@ def _create_point_from_document(doc: BaseRecord, embedding: Any) -> PointStruct:
 
     return PointStruct(
         id=doc_id,
-        vector=embedding,
+        vector=vector,
         payload={"content": doc["content"], **metadata},
     )
