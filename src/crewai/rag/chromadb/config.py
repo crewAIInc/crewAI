@@ -1,18 +1,13 @@
 """ChromaDB configuration model."""
 
 import os
-import warnings
+from dataclasses import dataclass, field
+from typing import Literal
 from chromadb.config import Settings
-from pydantic import BaseModel, Field
+
 
 from crewai.utilities.paths import db_storage_path
-
-warnings.filterwarnings(
-    "ignore",
-    message="Mixing V1 models and V2 models",
-    category=UserWarning,
-    module="pydantic._internal._generate_schema",
-)
+from crewai.rag.config.base import BaseRagConfig
 
 
 def _default_settings() -> Settings:
@@ -28,11 +23,11 @@ def _default_settings() -> Settings:
     )
 
 
-class ChromaDBConfig(BaseModel):
+@dataclass
+class ChromaDBConfig(BaseRagConfig):
     """Configuration for ChromaDB client."""
 
-    tenant: str = Field(default="default_tenant", description="ChromaDB tenant")
-    database: str = Field(default="default_database", description="ChromaDB database")
-    settings: Settings = Field(
-        default_factory=_default_settings, description="ChromaDB Settings object"
-    )
+    provider: Literal["chromadb"] = "chromadb"
+    tenant: str = "default_tenant"
+    database: str = "default_database"
+    settings: Settings = field(default_factory=_default_settings)
