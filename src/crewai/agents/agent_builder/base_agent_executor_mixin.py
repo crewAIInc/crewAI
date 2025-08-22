@@ -64,7 +64,6 @@ class CrewAgentExecutorMixin:
                         "description": self.task.description,
                         "messages": self.messages,
                     },
-                    # agent=self.agent.role,
                 )
             except Exception as e:
                 print(f"Failed to add to external memory: {e}")
