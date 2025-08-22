@@ -104,6 +104,21 @@ def _prepare_search_params(
     return search_kwargs
 
 
+def _normalize_qdrant_score(score: float) -> float:
+    """Normalize Qdrant cosine similarity score to [0, 1] range.
+
+    Converts from Qdrant's [-1, 1] cosine similarity range to [0, 1] range for standardization across clients.
+
+    Args:
+        score: Raw cosine similarity score from Qdrant [-1, 1].
+
+    Returns:
+        Normalized score in [0, 1] range where 1 is most similar.
+    """
+    normalized = (score + 1.0) / 2.0
+    return max(0.0, min(1.0, normalized))
+
+
 def _process_search_results(response: QueryResponse) -> list[SearchResult]:
     """Process Qdrant search response into SearchResult format.
 
@@ -116,11 +131,12 @@ def _process_search_results(response: QueryResponse) -> list[SearchResult]:
     results: list[SearchResult] = []
     for point in response.points:
         payload = point.payload or {}
+        score = _normalize_qdrant_score(score=point.score)
         result: SearchResult = {
             "id": str(point.id),
             "content": payload.get("content", ""),
             "metadata": {k: v for k, v in payload.items() if k != "content"},
-            "score": point.score if point.score is not None else 0.0,
+            "score": score,
         }
         results.append(result)
 

@@ -449,7 +449,7 @@ class TestQdrantClient:
         assert results[0]["id"] == "doc-123"
         assert results[0]["content"] == "Test content"
         assert results[0]["metadata"] == {"source": "test"}
-        assert results[0]["score"] == 0.95
+        assert results[0]["score"] == 0.975
 
     def test_search_with_filters(self, client, mock_qdrant_client):
         """Test that search applies metadata filters correctly."""
@@ -554,7 +554,7 @@ class TestQdrantClient:
         assert results[0]["id"] == "doc-123"
         assert results[0]["content"] == "Test content"
         assert results[0]["metadata"] == {"source": "test"}
-        assert results[0]["score"] == 0.95
+        assert results[0]["score"] == 0.975
 
     @pytest.mark.asyncio
     async def test_asearch_with_filters(self, async_client, mock_async_qdrant_client):
