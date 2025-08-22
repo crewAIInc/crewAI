@@ -18,15 +18,9 @@ from crewai.rag.core.base_client import BaseCollectionParams
 
 QdrantClientType = SyncQdrantClient | AsyncQdrantClient
 
-FilterCondition = (
-    FieldCondition
-    | IsEmptyCondition
-    | IsNullCondition
-    | HasIdCondition
-    | HasVectorCondition
-    | NestedCondition
-    | Filter
-)
+BasicConditions = FieldCondition | IsEmptyCondition | IsNullCondition
+StructuralConditions = HasIdCondition | HasVectorCondition | NestedCondition
+FilterCondition = BasicConditions | StructuralConditions | Filter
 
 
 class QdrantCollectionCreateParams(BaseCollectionParams, total=False):
