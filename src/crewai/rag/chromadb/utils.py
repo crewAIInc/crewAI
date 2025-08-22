@@ -2,7 +2,7 @@
 
 import hashlib
 from collections.abc import Mapping
-from typing import Literal, TypeGuard, cast
+from typing import Literal, TypeGuard, cast, TYPE_CHECKING
 
 from chromadb import Client
 from chromadb.api import AsyncClientAPI, ClientAPI
@@ -24,7 +24,9 @@ from crewai.rag.chromadb.types import (
     PreparedDocuments,
 )
 from crewai.rag.types import BaseRecord, SearchResult
-from crewai.rag.chromadb.client import ChromaDBClient
+
+if TYPE_CHECKING:
+    from crewai.rag.chromadb.client import ChromaDBClient
 
 
 def _is_sync_client(client: ChromaDBClientType) -> TypeGuard[ClientAPI]:
@@ -224,7 +226,7 @@ def _process_query_results(
     )
 
 
-def create_chromadb_client_from_config(config: ChromaDBConfig) -> ChromaDBClient:
+def create_chromadb_client_from_config(config: ChromaDBConfig) -> "ChromaDBClient":
     """Create a ChromaDBClient from configuration.
 
     Args:
@@ -233,6 +235,8 @@ def create_chromadb_client_from_config(config: ChromaDBConfig) -> ChromaDBClient
     Returns:
         Configured ChromaDBClient instance.
     """
+    from crewai.rag.chromadb.client import ChromaDBClient
+
     chromadb_client = Client(
         settings=config.settings, tenant=config.tenant, database=config.database
     )
