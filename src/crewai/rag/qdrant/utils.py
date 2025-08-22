@@ -1,11 +1,40 @@
 """Utility functions for Qdrant operations."""
 
-from typing import Any
+from typing import Any, TypeGuard
 
+from qdrant_client import AsyncQdrantClient, QdrantClient as SyncQdrantClient
 from qdrant_client.models import FieldCondition, Filter, MatchValue
 
-from crewai.rag.qdrant.types import PreparedSearchParams
+from crewai.rag.qdrant.types import (
+    FilterCondition,
+    PreparedSearchParams,
+    QdrantClientType,
+)
 from crewai.rag.types import SearchResult
+
+
+def _is_sync_client(client: QdrantClientType) -> TypeGuard[SyncQdrantClient]:
+    """Type guard to check if the client is a synchronous QdrantClient.
+
+    Args:
+        client: The client to check.
+
+    Returns:
+        True if the client is a QdrantClient, False otherwise.
+    """
+    return isinstance(client, SyncQdrantClient)
+
+
+def _is_async_client(client: QdrantClientType) -> TypeGuard[AsyncQdrantClient]:
+    """Type guard to check if the client is an asynchronous AsyncQdrantClient.
+
+    Args:
+        client: The client to check.
+
+    Returns:
+        True if the client is an AsyncQdrantClient, False otherwise.
+    """
+    return isinstance(client, AsyncQdrantClient)
 
 
 def prepare_search_params(
@@ -42,7 +71,7 @@ def prepare_search_params(
         search_kwargs["score_threshold"] = score_threshold
 
     if metadata_filter:
-        filter_conditions = []
+        filter_conditions: list[FilterCondition] = []
         for key, value in metadata_filter.items():
             filter_conditions.append(
                 FieldCondition(key=key, match=MatchValue(value=value))

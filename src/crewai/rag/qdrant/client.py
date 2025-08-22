@@ -4,7 +4,6 @@ import asyncio
 from typing import Any
 from uuid import uuid4
 
-from qdrant_client import AsyncQdrantClient, QdrantClient as SyncQdrantClient
 from qdrant_client.models import Distance, PointStruct, VectorParams
 from typing_extensions import Unpack
 
@@ -15,7 +14,12 @@ from crewai.rag.core.base_client import (
     BaseCollectionSearchParams,
 )
 from crewai.rag.qdrant.types import QdrantClientType, QdrantCollectionCreateParams
-from crewai.rag.qdrant.utils import prepare_search_params, process_search_results
+from crewai.rag.qdrant.utils import (
+    _is_async_client,
+    _is_sync_client,
+    prepare_search_params,
+    process_search_results,
+)
 from crewai.rag.types import SearchResult
 
 
@@ -55,7 +59,7 @@ class QdrantClient(BaseClient):
             ValueError: If collection with the same name already exists.
             ConnectionError: If unable to connect to Qdrant server.
         """
-        if not isinstance(self.client, SyncQdrantClient):
+        if not _is_sync_client(self.client):
             raise TypeError(
                 "Synchronous method create_collection() requires a QdrantClient. "
                 "Use acreate_collection() for AsyncQdrantClient."
@@ -109,7 +113,7 @@ class QdrantClient(BaseClient):
             ValueError: If collection with the same name already exists.
             ConnectionError: If unable to connect to Qdrant server.
         """
-        if not isinstance(self.client, AsyncQdrantClient):
+        if not _is_async_client(self.client):
             raise TypeError(
                 "Asynchronous method acreate_collection() requires an AsyncQdrantClient. "
                 "Use create_collection() for QdrantClient."
@@ -165,7 +169,7 @@ class QdrantClient(BaseClient):
         Raises:
             ConnectionError: If unable to connect to Qdrant server.
         """
-        if not isinstance(self.client, SyncQdrantClient):
+        if not _is_sync_client(self.client):
             raise TypeError(
                 "Synchronous method get_or_create_collection() requires a QdrantClient. "
                 "Use aget_or_create_collection() for AsyncQdrantClient."
@@ -223,7 +227,7 @@ class QdrantClient(BaseClient):
         Raises:
             ConnectionError: If unable to connect to Qdrant server.
         """
-        if not isinstance(self.client, AsyncQdrantClient):
+        if not _is_async_client(self.client):
             raise TypeError(
                 "Asynchronous method aget_or_create_collection() requires an AsyncQdrantClient. "
                 "Use get_or_create_collection() for QdrantClient."
@@ -266,7 +270,7 @@ class QdrantClient(BaseClient):
             ValueError: If collection doesn't exist or documents list is empty.
             ConnectionError: If unable to connect to Qdrant server.
         """
-        if not isinstance(self.client, SyncQdrantClient):
+        if not _is_sync_client(self.client):
             raise TypeError(
                 "Synchronous method add_documents() requires a QdrantClient. "
                 "Use aadd_documents() for AsyncQdrantClient."
@@ -309,7 +313,7 @@ class QdrantClient(BaseClient):
             ValueError: If collection doesn't exist or documents list is empty.
             ConnectionError: If unable to connect to Qdrant server.
         """
-        if not isinstance(self.client, AsyncQdrantClient):
+        if not _is_async_client(self.client):
             raise TypeError(
                 "Asynchronous method aadd_documents() requires an AsyncQdrantClient. "
                 "Use add_documents() for QdrantClient."
@@ -369,7 +373,7 @@ class QdrantClient(BaseClient):
             ValueError: If collection doesn't exist.
             ConnectionError: If unable to connect to Qdrant server.
         """
-        if not isinstance(self.client, SyncQdrantClient):
+        if not _is_sync_client(self.client):
             raise TypeError(
                 "Synchronous method search() requires a QdrantClient. "
                 "Use asearch() for AsyncQdrantClient."
@@ -416,7 +420,7 @@ class QdrantClient(BaseClient):
             ValueError: If collection doesn't exist.
             ConnectionError: If unable to connect to Qdrant server.
         """
-        if not isinstance(self.client, AsyncQdrantClient):
+        if not _is_async_client(self.client):
             raise TypeError(
                 "Asynchronous method asearch() requires an AsyncQdrantClient. "
                 "Use search() for QdrantClient."
@@ -460,7 +464,7 @@ class QdrantClient(BaseClient):
             ValueError: If collection doesn't exist.
             ConnectionError: If unable to connect to Qdrant server.
         """
-        if not isinstance(self.client, SyncQdrantClient):
+        if not _is_sync_client(self.client):
             raise TypeError(
                 "Synchronous method delete_collection() requires a QdrantClient. "
                 "Use adelete_collection() for AsyncQdrantClient."
@@ -483,7 +487,7 @@ class QdrantClient(BaseClient):
             ValueError: If collection doesn't exist.
             ConnectionError: If unable to connect to Qdrant server.
         """
-        if not isinstance(self.client, AsyncQdrantClient):
+        if not _is_async_client(self.client):
             raise TypeError(
                 "Asynchronous method adelete_collection() requires an AsyncQdrantClient. "
                 "Use delete_collection() for QdrantClient."
@@ -502,7 +506,7 @@ class QdrantClient(BaseClient):
         Raises:
             ConnectionError: If unable to connect to Qdrant server.
         """
-        if not isinstance(self.client, SyncQdrantClient):
+        if not _is_sync_client(self.client):
             raise TypeError(
                 "Synchronous method reset() requires a QdrantClient. "
                 "Use areset() for AsyncQdrantClient."
@@ -519,7 +523,7 @@ class QdrantClient(BaseClient):
         Raises:
             ConnectionError: If unable to connect to Qdrant server.
         """
-        if not isinstance(self.client, AsyncQdrantClient):
+        if not _is_async_client(self.client):
             raise TypeError(
                 "Asynchronous method areset() requires an AsyncQdrantClient. "
                 "Use reset() for QdrantClient."

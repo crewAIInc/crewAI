@@ -3,12 +3,30 @@
 from typing import Any, TypedDict
 
 from qdrant_client import AsyncQdrantClient, QdrantClient as SyncQdrantClient
-from qdrant_client.models import Filter
+from qdrant_client.models import (
+    FieldCondition,
+    Filter,
+    HasIdCondition,
+    HasVectorCondition,
+    IsEmptyCondition,
+    IsNullCondition,
+    NestedCondition,
+)
 from typing_extensions import NotRequired
 
 from crewai.rag.core.base_client import BaseCollectionParams
 
 QdrantClientType = SyncQdrantClient | AsyncQdrantClient
+
+FilterCondition = (
+    FieldCondition
+    | IsEmptyCondition
+    | IsNullCondition
+    | HasIdCondition
+    | HasVectorCondition
+    | NestedCondition
+    | Filter
+)
 
 
 class QdrantCollectionCreateParams(BaseCollectionParams, total=False):
