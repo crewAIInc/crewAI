@@ -4,7 +4,6 @@ from typing import Any, cast
 
 from fastembed import TextEmbedding
 from qdrant_client import QdrantClient as SyncQdrantClientBase
-from qdrant_client.models import Distance, VectorParams
 from typing_extensions import Unpack
 
 from crewai.rag.core.base_client import (
@@ -26,6 +25,7 @@ from crewai.rag.qdrant.utils import (
     _is_async_embedding_function,
     _is_sync_client,
     _create_point_from_document,
+    _get_collection_params,
     _prepare_search_params,
     _process_search_results,
 )
@@ -113,24 +113,8 @@ class QdrantClient(BaseClient):
         if self.client.collection_exists(collection_name):
             raise ValueError(f"Collection '{collection_name}' already exists")
 
-        self.client.create_collection(
-            collection_name=collection_name,
-            vectors_config=kwargs.get(
-                "vectors_config", VectorParams(size=1536, distance=Distance.COSINE)
-            ),
-            sparse_vectors_config=kwargs.get("sparse_vectors_config"),
-            shard_number=kwargs.get("shard_number"),
-            sharding_method=kwargs.get("sharding_method"),
-            replication_factor=kwargs.get("replication_factor"),
-            write_consistency_factor=kwargs.get("write_consistency_factor"),
-            on_disk_payload=kwargs.get("on_disk_payload"),
-            hnsw_config=kwargs.get("hnsw_config"),
-            optimizers_config=kwargs.get("optimizers_config"),
-            wal_config=kwargs.get("wal_config"),
-            quantization_config=kwargs.get("quantization_config"),
-            init_from=kwargs.get("init_from"),
-            timeout=kwargs.get("timeout"),
-        )
+        params = _get_collection_params(kwargs)
+        self.client.create_collection(**params)
 
     async def acreate_collection(
         self, **kwargs: Unpack[QdrantCollectionCreateParams]
@@ -169,24 +153,8 @@ class QdrantClient(BaseClient):
         if await self.client.collection_exists(collection_name):
             raise ValueError(f"Collection '{collection_name}' already exists")
 
-        await self.client.create_collection(
-            collection_name=collection_name,
-            vectors_config=kwargs.get(
-                "vectors_config", VectorParams(size=1536, distance=Distance.COSINE)
-            ),
-            sparse_vectors_config=kwargs.get("sparse_vectors_config"),
-            shard_number=kwargs.get("shard_number"),
-            sharding_method=kwargs.get("sharding_method"),
-            replication_factor=kwargs.get("replication_factor"),
-            write_consistency_factor=kwargs.get("write_consistency_factor"),
-            on_disk_payload=kwargs.get("on_disk_payload"),
-            hnsw_config=kwargs.get("hnsw_config"),
-            optimizers_config=kwargs.get("optimizers_config"),
-            wal_config=kwargs.get("wal_config"),
-            quantization_config=kwargs.get("quantization_config"),
-            init_from=kwargs.get("init_from"),
-            timeout=kwargs.get("timeout"),
-        )
+        params = _get_collection_params(kwargs)
+        await self.client.create_collection(**params)
 
     def get_or_create_collection(
         self, **kwargs: Unpack[QdrantCollectionCreateParams]
@@ -227,24 +195,8 @@ class QdrantClient(BaseClient):
         if self.client.collection_exists(collection_name):
             return self.client.get_collection(collection_name)
 
-        self.client.create_collection(
-            collection_name=collection_name,
-            vectors_config=kwargs.get(
-                "vectors_config", VectorParams(size=1536, distance=Distance.COSINE)
-            ),
-            sparse_vectors_config=kwargs.get("sparse_vectors_config"),
-            shard_number=kwargs.get("shard_number"),
-            sharding_method=kwargs.get("sharding_method"),
-            replication_factor=kwargs.get("replication_factor"),
-            write_consistency_factor=kwargs.get("write_consistency_factor"),
-            on_disk_payload=kwargs.get("on_disk_payload"),
-            hnsw_config=kwargs.get("hnsw_config"),
-            optimizers_config=kwargs.get("optimizers_config"),
-            wal_config=kwargs.get("wal_config"),
-            quantization_config=kwargs.get("quantization_config"),
-            init_from=kwargs.get("init_from"),
-            timeout=kwargs.get("timeout"),
-        )
+        params = _get_collection_params(kwargs)
+        self.client.create_collection(**params)
 
         return self.client.get_collection(collection_name)
 
@@ -287,24 +239,8 @@ class QdrantClient(BaseClient):
         if await self.client.collection_exists(collection_name):
             return await self.client.get_collection(collection_name)
 
-        await self.client.create_collection(
-            collection_name=collection_name,
-            vectors_config=kwargs.get(
-                "vectors_config", VectorParams(size=1536, distance=Distance.COSINE)
-            ),
-            sparse_vectors_config=kwargs.get("sparse_vectors_config"),
-            shard_number=kwargs.get("shard_number"),
-            sharding_method=kwargs.get("sharding_method"),
-            replication_factor=kwargs.get("replication_factor"),
-            write_consistency_factor=kwargs.get("write_consistency_factor"),
-            on_disk_payload=kwargs.get("on_disk_payload"),
-            hnsw_config=kwargs.get("hnsw_config"),
-            optimizers_config=kwargs.get("optimizers_config"),
-            wal_config=kwargs.get("wal_config"),
-            quantization_config=kwargs.get("quantization_config"),
-            init_from=kwargs.get("init_from"),
-            timeout=kwargs.get("timeout"),
-        )
+        params = _get_collection_params(kwargs)
+        await self.client.create_collection(**params)
 
         return await self.client.get_collection(collection_name)
 

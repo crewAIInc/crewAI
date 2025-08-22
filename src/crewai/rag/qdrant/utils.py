@@ -13,13 +13,16 @@ from qdrant_client.models import (
     QueryResponse,
 )
 
+from crewai.rag.qdrant.constants import DEFAULT_VECTOR_PARAMS
 from crewai.rag.qdrant.types import (
     AsyncEmbeddingFunction,
+    CreateCollectionParams,
     EmbeddingFunction,
     FilterCondition,
     MetadataFilter,
     PreparedSearchParams,
     QdrantClientType,
+    QdrantCollectionCreateParams,
     QueryEmbedding,
 )
 from crewai.rag.types import SearchResult, BaseRecord
@@ -75,6 +78,43 @@ def _is_async_embedding_function(
         True if the function is async, False otherwise.
     """
     return asyncio.iscoroutinefunction(func)
+
+
+def _get_collection_params(
+    kwargs: QdrantCollectionCreateParams,
+) -> CreateCollectionParams:
+    """Extract collection creation parameters from kwargs."""
+    params: CreateCollectionParams = {
+        "collection_name": kwargs["collection_name"],
+        "vectors_config": kwargs.get("vectors_config", DEFAULT_VECTOR_PARAMS),
+    }
+
+    if "sparse_vectors_config" in kwargs:
+        params["sparse_vectors_config"] = kwargs["sparse_vectors_config"]
+    if "shard_number" in kwargs:
+        params["shard_number"] = kwargs["shard_number"]
+    if "sharding_method" in kwargs:
+        params["sharding_method"] = kwargs["sharding_method"]
+    if "replication_factor" in kwargs:
+        params["replication_factor"] = kwargs["replication_factor"]
+    if "write_consistency_factor" in kwargs:
+        params["write_consistency_factor"] = kwargs["write_consistency_factor"]
+    if "on_disk_payload" in kwargs:
+        params["on_disk_payload"] = kwargs["on_disk_payload"]
+    if "hnsw_config" in kwargs:
+        params["hnsw_config"] = kwargs["hnsw_config"]
+    if "optimizers_config" in kwargs:
+        params["optimizers_config"] = kwargs["optimizers_config"]
+    if "wal_config" in kwargs:
+        params["wal_config"] = kwargs["wal_config"]
+    if "quantization_config" in kwargs:
+        params["quantization_config"] = kwargs["quantization_config"]
+    if "init_from" in kwargs:
+        params["init_from"] = kwargs["init_from"]
+    if "timeout" in kwargs:
+        params["timeout"] = kwargs["timeout"]
+
+    return params
 
 
 def _prepare_search_params(

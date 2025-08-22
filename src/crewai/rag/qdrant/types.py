@@ -7,7 +7,6 @@ from typing_extensions import NotRequired
 import numpy as np
 from qdrant_client import AsyncQdrantClient, QdrantClient as SyncQdrantClient
 from qdrant_client.models import (
-    BinaryQuantization,
     FieldCondition,
     Filter,
     HasIdCondition,
@@ -18,11 +17,10 @@ from qdrant_client.models import (
     IsNullCondition,
     NestedCondition,
     OptimizersConfigDiff,
-    ProductQuantization,
-    ScalarQuantization,
+    QuantizationConfig,
     ShardingMethod,
-    SparseVectorParams,
-    VectorParams,
+    SparseVectorsConfig,
+    VectorsConfig,
     WalConfigDiff,
 )
 
@@ -70,28 +68,6 @@ class AsyncEmbeddingFunction(Protocol):
         ...
 
 
-class QdrantCollectionCreateParams(BaseCollectionParams, total=False):
-    """Parameters for creating a Qdrant collection.
-
-    This class extends BaseCollectionParams to include any additional
-    parameters specific to Qdrant collection creation.
-    """
-
-    vectors_config: VectorParams | dict[str, VectorParams]
-    sparse_vectors_config: dict[str, SparseVectorParams]
-    shard_number: Annotated[int, "Number of shards (default: 1)"]
-    sharding_method: ShardingMethod
-    replication_factor: Annotated[int, "Number of replicas per shard (default: 1)"]
-    write_consistency_factor: Annotated[int, "Await N replicas on write (default: 1)"]
-    on_disk_payload: Annotated[bool, "Store payload on disk instead of RAM"]
-    hnsw_config: HnswConfigDiff
-    optimizers_config: OptimizersConfigDiff
-    wal_config: WalConfigDiff
-    quantization_config: ScalarQuantization | ProductQuantization | BinaryQuantization
-    init_from: InitFrom | str
-    timeout: Annotated[int, "Operation timeout in seconds"]
-
-
 class QdrantClientParams(TypedDict, total=False):
     """Parameters for QdrantClient initialization."""
 
@@ -112,6 +88,38 @@ class QdrantClientParams(TypedDict, total=False):
     cloud_inference: bool
     local_inference_batch_size: int | None
     check_compatibility: bool
+
+
+class CommonCreateFields(TypedDict, total=False):
+    """Fields shared between high-level and direct create_collection params."""
+
+    vectors_config: VectorsConfig
+    sparse_vectors_config: SparseVectorsConfig
+    shard_number: Annotated[int, "Number of shards (default: 1)"]
+    sharding_method: ShardingMethod
+    replication_factor: Annotated[int, "Number of replicas per shard (default: 1)"]
+    write_consistency_factor: Annotated[int, "Await N replicas on write (default: 1)"]
+    on_disk_payload: Annotated[bool, "Store payload on disk instead of RAM"]
+    hnsw_config: HnswConfigDiff
+    optimizers_config: OptimizersConfigDiff
+    wal_config: WalConfigDiff
+    quantization_config: QuantizationConfig
+    init_from: InitFrom | str
+    timeout: Annotated[int, "Operation timeout in seconds"]
+
+
+class QdrantCollectionCreateParams(
+    BaseCollectionParams, CommonCreateFields, total=False
+):
+    """High-level parameters for creating a Qdrant collection."""
+
+    pass
+
+
+class CreateCollectionParams(CommonCreateFields, total=False):
+    """Parameters for qdrant_client.create_collection."""
+
+    collection_name: str
 
 
 class PreparedSearchParams(TypedDict):
