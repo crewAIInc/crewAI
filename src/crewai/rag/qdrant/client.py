@@ -293,10 +293,16 @@ class QdrantClient(BaseClient):
             if not isinstance(embedding, list):
                 embedding = embedding.tolist()
 
+            metadata = doc.get("metadata", {})
+            if isinstance(metadata, list):
+                metadata = metadata[0] if metadata else {}
+            elif not isinstance(metadata, dict):
+                metadata = dict(metadata) if metadata else {}
+
             point = PointStruct(
                 id=doc_id,
                 vector=embedding,
-                payload={"content": doc["content"], **(doc.get("metadata", {}))},
+                payload={"content": doc["content"], **metadata},
             )
             points.append(point)
 
@@ -343,10 +349,16 @@ class QdrantClient(BaseClient):
             if not isinstance(embedding, list):
                 embedding = embedding.tolist()
 
+            metadata = doc.get("metadata", {})
+            if isinstance(metadata, list):
+                metadata = metadata[0] if metadata else {}
+            elif not isinstance(metadata, dict):
+                metadata = dict(metadata) if metadata else {}
+
             point = PointStruct(
                 id=doc_id,
                 vector=embedding,
-                payload={"content": doc["content"], **(doc.get("metadata", {}))},
+                payload={"content": doc["content"], **metadata},
             )
             points.append(point)
 
