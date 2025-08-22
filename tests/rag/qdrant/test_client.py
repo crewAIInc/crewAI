@@ -5,6 +5,7 @@ from unittest.mock import AsyncMock, Mock
 import pytest
 from qdrant_client import AsyncQdrantClient, QdrantClient as SyncQdrantClient
 
+from crewai.rag.core.exceptions import ClientMethodMismatchError
 from crewai.rag.qdrant.client import QdrantClient
 from crewai.rag.types import BaseRecord
 
@@ -69,7 +70,9 @@ class TestQdrantClient:
         client.client = mock_async_qdrant_client
         client.embedding_function = Mock()
 
-        with pytest.raises(TypeError, match="Synchronous method create_collection"):
+        with pytest.raises(
+            ClientMethodMismatchError, match="Synchronous method create_collection"
+        ):
             client.create_collection(collection_name="test_collection")
 
     @pytest.mark.asyncio
@@ -107,7 +110,9 @@ class TestQdrantClient:
         client.client = mock_qdrant_client
         client.embedding_function = Mock()
 
-        with pytest.raises(TypeError, match="Asynchronous method acreate_collection"):
+        with pytest.raises(
+            ClientMethodMismatchError, match="Asynchronous method acreate_collection"
+        ):
             await client.acreate_collection(collection_name="test_collection")
 
     def test_get_or_create_collection_existing(self, client, mock_qdrant_client):
@@ -143,7 +148,8 @@ class TestQdrantClient:
         client.embedding_function = Mock()
 
         with pytest.raises(
-            TypeError, match="Synchronous method get_or_create_collection"
+            ClientMethodMismatchError,
+            match="Synchronous method get_or_create_collection",
         ):
             client.get_or_create_collection(collection_name="test_collection")
 
@@ -206,7 +212,8 @@ class TestQdrantClient:
         client.embedding_function = Mock()
 
         with pytest.raises(
-            TypeError, match="Asynchronous method aget_or_create_collection"
+            ClientMethodMismatchError,
+            match="Asynchronous method aget_or_create_collection",
         ):
             await client.aget_or_create_collection(collection_name="test_collection")
 
@@ -293,7 +300,9 @@ class TestQdrantClient:
             }
         ]
 
-        with pytest.raises(TypeError, match="Synchronous method add_documents"):
+        with pytest.raises(
+            ClientMethodMismatchError, match="Synchronous method add_documents"
+        ):
             client.add_documents(collection_name="test_collection", documents=documents)
 
     @pytest.mark.asyncio
@@ -402,7 +411,9 @@ class TestQdrantClient:
             }
         ]
 
-        with pytest.raises(TypeError, match="Asynchronous method aadd_documents"):
+        with pytest.raises(
+            ClientMethodMismatchError, match="Asynchronous method aadd_documents"
+        ):
             await client.aadd_documents(
                 collection_name="test_collection", documents=documents
             )
@@ -502,7 +513,9 @@ class TestQdrantClient:
         client.client = mock_async_qdrant_client
         client.embedding_function = Mock()
 
-        with pytest.raises(TypeError, match="Synchronous method search"):
+        with pytest.raises(
+            ClientMethodMismatchError, match="Synchronous method search"
+        ):
             client.search(collection_name="test_collection", query="test query")
 
     @pytest.mark.asyncio
@@ -592,7 +605,9 @@ class TestQdrantClient:
         client.client = mock_qdrant_client
         client.embedding_function = Mock()
 
-        with pytest.raises(TypeError, match="Asynchronous method asearch"):
+        with pytest.raises(
+            ClientMethodMismatchError, match="Asynchronous method asearch"
+        ):
             await client.asearch(collection_name="test_collection", query="test query")
 
     def test_delete_collection(self, client, mock_qdrant_client):
@@ -624,7 +639,9 @@ class TestQdrantClient:
         client.client = mock_async_qdrant_client
         client.embedding_function = Mock()
 
-        with pytest.raises(TypeError, match="Synchronous method delete_collection"):
+        with pytest.raises(
+            ClientMethodMismatchError, match="Synchronous method delete_collection"
+        ):
             client.delete_collection(collection_name="test_collection")
 
     @pytest.mark.asyncio
@@ -666,7 +683,9 @@ class TestQdrantClient:
         client.client = mock_qdrant_client
         client.embedding_function = Mock()
 
-        with pytest.raises(TypeError, match="Asynchronous method adelete_collection"):
+        with pytest.raises(
+            ClientMethodMismatchError, match="Asynchronous method adelete_collection"
+        ):
             await client.adelete_collection(collection_name="test_collection")
 
     def test_reset(self, client, mock_qdrant_client):
@@ -717,7 +736,7 @@ class TestQdrantClient:
         client.client = mock_async_qdrant_client
         client.embedding_function = Mock()
 
-        with pytest.raises(TypeError, match="Synchronous method reset"):
+        with pytest.raises(ClientMethodMismatchError, match="Synchronous method reset"):
             client.reset()
 
     @pytest.mark.asyncio
@@ -776,5 +795,7 @@ class TestQdrantClient:
         client.client = mock_qdrant_client
         client.embedding_function = Mock()
 
-        with pytest.raises(TypeError, match="Asynchronous method areset"):
+        with pytest.raises(
+            ClientMethodMismatchError, match="Asynchronous method areset"
+        ):
             await client.areset()

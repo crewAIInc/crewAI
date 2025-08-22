@@ -12,6 +12,7 @@ from crewai.rag.core.base_client import (
     BaseCollectionAddParams,
     BaseCollectionSearchParams,
 )
+from crewai.rag.core.exceptions import ClientMethodMismatchError
 from crewai.rag.qdrant.types import QdrantClientType, QdrantCollectionCreateParams
 from crewai.rag.qdrant.utils import (
     _is_async_client,
@@ -60,9 +61,11 @@ class QdrantClient(BaseClient):
             ConnectionError: If unable to connect to Qdrant server.
         """
         if not _is_sync_client(self.client):
-            raise TypeError(
-                "Synchronous method create_collection() requires a QdrantClient. "
-                "Use acreate_collection() for AsyncQdrantClient."
+            raise ClientMethodMismatchError(
+                method_name="create_collection",
+                expected_client="QdrantClient",
+                alt_method="acreate_collection",
+                alt_client="AsyncQdrantClient",
             )
 
         collection_name = kwargs["collection_name"]
@@ -114,9 +117,11 @@ class QdrantClient(BaseClient):
             ConnectionError: If unable to connect to Qdrant server.
         """
         if not _is_async_client(self.client):
-            raise TypeError(
-                "Asynchronous method acreate_collection() requires an AsyncQdrantClient. "
-                "Use create_collection() for QdrantClient."
+            raise ClientMethodMismatchError(
+                method_name="acreate_collection",
+                expected_client="AsyncQdrantClient",
+                alt_method="create_collection",
+                alt_client="QdrantClient",
             )
 
         collection_name = kwargs["collection_name"]
@@ -170,9 +175,11 @@ class QdrantClient(BaseClient):
             ConnectionError: If unable to connect to Qdrant server.
         """
         if not _is_sync_client(self.client):
-            raise TypeError(
-                "Synchronous method get_or_create_collection() requires a QdrantClient. "
-                "Use aget_or_create_collection() for AsyncQdrantClient."
+            raise ClientMethodMismatchError(
+                method_name="get_or_create_collection",
+                expected_client="QdrantClient",
+                alt_method="aget_or_create_collection",
+                alt_client="AsyncQdrantClient",
             )
 
         collection_name = kwargs["collection_name"]
@@ -228,9 +235,11 @@ class QdrantClient(BaseClient):
             ConnectionError: If unable to connect to Qdrant server.
         """
         if not _is_async_client(self.client):
-            raise TypeError(
-                "Asynchronous method aget_or_create_collection() requires an AsyncQdrantClient. "
-                "Use get_or_create_collection() for QdrantClient."
+            raise ClientMethodMismatchError(
+                method_name="aget_or_create_collection",
+                expected_client="AsyncQdrantClient",
+                alt_method="get_or_create_collection",
+                alt_client="QdrantClient",
             )
 
         collection_name = kwargs["collection_name"]
@@ -271,9 +280,11 @@ class QdrantClient(BaseClient):
             ConnectionError: If unable to connect to Qdrant server.
         """
         if not _is_sync_client(self.client):
-            raise TypeError(
-                "Synchronous method add_documents() requires a QdrantClient. "
-                "Use aadd_documents() for AsyncQdrantClient."
+            raise ClientMethodMismatchError(
+                method_name="add_documents",
+                expected_client="QdrantClient",
+                alt_method="aadd_documents",
+                alt_client="AsyncQdrantClient",
             )
 
         collection_name = kwargs["collection_name"]
@@ -305,9 +316,11 @@ class QdrantClient(BaseClient):
             ConnectionError: If unable to connect to Qdrant server.
         """
         if not _is_async_client(self.client):
-            raise TypeError(
-                "Asynchronous method aadd_documents() requires an AsyncQdrantClient. "
-                "Use add_documents() for QdrantClient."
+            raise ClientMethodMismatchError(
+                method_name="aadd_documents",
+                expected_client="AsyncQdrantClient",
+                alt_method="add_documents",
+                alt_client="QdrantClient",
             )
 
         collection_name = kwargs["collection_name"]
@@ -356,9 +369,11 @@ class QdrantClient(BaseClient):
             ConnectionError: If unable to connect to Qdrant server.
         """
         if not _is_sync_client(self.client):
-            raise TypeError(
-                "Synchronous method search() requires a QdrantClient. "
-                "Use asearch() for AsyncQdrantClient."
+            raise ClientMethodMismatchError(
+                method_name="search",
+                expected_client="QdrantClient",
+                alt_method="asearch",
+                alt_client="AsyncQdrantClient",
             )
 
         collection_name = kwargs["collection_name"]
@@ -403,9 +418,11 @@ class QdrantClient(BaseClient):
             ConnectionError: If unable to connect to Qdrant server.
         """
         if not _is_async_client(self.client):
-            raise TypeError(
-                "Asynchronous method asearch() requires an AsyncQdrantClient. "
-                "Use search() for QdrantClient."
+            raise ClientMethodMismatchError(
+                method_name="asearch",
+                expected_client="AsyncQdrantClient",
+                alt_method="search",
+                alt_client="QdrantClient",
             )
 
         collection_name = kwargs["collection_name"]
@@ -447,9 +464,11 @@ class QdrantClient(BaseClient):
             ConnectionError: If unable to connect to Qdrant server.
         """
         if not _is_sync_client(self.client):
-            raise TypeError(
-                "Synchronous method delete_collection() requires a QdrantClient. "
-                "Use adelete_collection() for AsyncQdrantClient."
+            raise ClientMethodMismatchError(
+                method_name="delete_collection",
+                expected_client="QdrantClient",
+                alt_method="adelete_collection",
+                alt_client="AsyncQdrantClient",
             )
 
         collection_name = kwargs["collection_name"]
@@ -470,9 +489,11 @@ class QdrantClient(BaseClient):
             ConnectionError: If unable to connect to Qdrant server.
         """
         if not _is_async_client(self.client):
-            raise TypeError(
-                "Asynchronous method adelete_collection() requires an AsyncQdrantClient. "
-                "Use delete_collection() for QdrantClient."
+            raise ClientMethodMismatchError(
+                method_name="adelete_collection",
+                expected_client="AsyncQdrantClient",
+                alt_method="delete_collection",
+                alt_client="QdrantClient",
             )
 
         collection_name = kwargs["collection_name"]
@@ -489,9 +510,11 @@ class QdrantClient(BaseClient):
             ConnectionError: If unable to connect to Qdrant server.
         """
         if not _is_sync_client(self.client):
-            raise TypeError(
-                "Synchronous method reset() requires a QdrantClient. "
-                "Use areset() for AsyncQdrantClient."
+            raise ClientMethodMismatchError(
+                method_name="reset",
+                expected_client="QdrantClient",
+                alt_method="areset",
+                alt_client="AsyncQdrantClient",
             )
 
         collections_response = self.client.get_collections()
@@ -506,9 +529,11 @@ class QdrantClient(BaseClient):
             ConnectionError: If unable to connect to Qdrant server.
         """
         if not _is_async_client(self.client):
-            raise TypeError(
-                "Asynchronous method areset() requires an AsyncQdrantClient. "
-                "Use reset() for QdrantClient."
+            raise ClientMethodMismatchError(
+                method_name="areset",
+                expected_client="AsyncQdrantClient",
+                alt_method="reset",
+                alt_client="QdrantClient",
             )
 
         collections_response = await self.client.get_collections()
