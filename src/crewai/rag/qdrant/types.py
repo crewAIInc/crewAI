@@ -1,6 +1,6 @@
 """Type definitions specific to Qdrant implementation."""
 
-from typing import Any, TypedDict
+from typing import Annotated, Any, TypedDict
 from typing_extensions import NotRequired
 
 import numpy as np
@@ -29,7 +29,10 @@ from crewai.rag.core.base_client import BaseCollectionParams
 
 QdrantClientType = SyncQdrantClient | AsyncQdrantClient
 
-QueryEmbedding = list[float] | np.ndarray[Any, np.dtype[np.floating[Any]]]
+QueryEmbedding = Annotated[
+    list[float] | np.ndarray[Any, np.dtype[np.floating[Any]]],
+    "Embedding vector as list of floats or numpy array",
+]
 
 BasicConditions = FieldCondition | IsEmptyCondition | IsNullCondition
 StructuralConditions = HasIdCondition | HasVectorCondition | NestedCondition
@@ -52,17 +55,17 @@ class QdrantCollectionCreateParams(BaseCollectionParams, total=False):
 
     vectors_config: VectorParams | dict[str, VectorParams]
     sparse_vectors_config: dict[str, SparseVectorParams]
-    shard_number: int  # Number of shards
+    shard_number: Annotated[int, "Number of shards (default: 1)"]
     sharding_method: ShardingMethod
-    replication_factor: int  # Number of replicas
-    write_consistency_factor: int  # Write consistency factor
-    on_disk_payload: bool  # Store payload on disk
+    replication_factor: Annotated[int, "Number of replicas per shard (default: 1)"]
+    write_consistency_factor: Annotated[int, "Await N replicas on write (default: 1)"]
+    on_disk_payload: Annotated[bool, "Store payload on disk instead of RAM"]
     hnsw_config: HnswConfigDiff
     optimizers_config: OptimizersConfigDiff
     wal_config: WalConfigDiff
     quantization_config: QuantizationConfig
     init_from: InitFromType
-    timeout: int
+    timeout: Annotated[int, "Operation timeout in seconds"]
 
 
 class PreparedSearchParams(TypedDict):
@@ -70,8 +73,8 @@ class PreparedSearchParams(TypedDict):
 
     collection_name: str
     query: list[float]
-    limit: int
-    with_payload: bool
-    with_vectors: bool
-    score_threshold: NotRequired[float]
+    limit: Annotated[int, "Max results to return"]
+    with_payload: Annotated[bool, "Include payload in results"]
+    with_vectors: Annotated[bool, "Include vectors in results"]
+    score_threshold: NotRequired[Annotated[float, "Min similarity score (0-1)"]]
     query_filter: NotRequired[Filter]
