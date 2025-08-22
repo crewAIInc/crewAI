@@ -316,6 +316,143 @@ class LLM(BaseLLM):
         stream: bool = False,
         **kwargs,
     ):
+        # Check for provider prefixes and route to native implementations
+        if "/" in model:
+            provider, actual_model = model.split("/", 1)
+
+            # Route to OpenAI native implementation
+            if provider.lower() == "openai":
+                try:
+                    from crewai.llms.openai import OpenAILLM
+
+                    # Create native OpenAI instance with all the same parameters
+                    native_llm = OpenAILLM(
+                        model=actual_model,
+                        timeout=timeout,
+                        temperature=temperature,
+                        top_p=top_p,
+                        n=n,
+                        stop=stop,
+                        max_completion_tokens=max_completion_tokens,
+                        max_tokens=max_tokens,
+                        presence_penalty=presence_penalty,
+                        frequency_penalty=frequency_penalty,
+                        logit_bias=logit_bias,
+                        response_format=response_format,
+                        seed=seed,
+                        logprobs=logprobs,
+                        top_logprobs=top_logprobs,
+                        base_url=base_url,
+                        api_base=api_base,
+                        api_version=api_version,
+                        api_key=api_key,
+                        callbacks=callbacks,
+                        reasoning_effort=reasoning_effort,
+                        stream=stream,
+                        **kwargs,
+                    )
+
+                    # Replace this LLM instance with the native one
+                    self.__class__ = native_llm.__class__
+                    self.__dict__.update(native_llm.__dict__)
+                    return
+
+                except ImportError:
+                    # Fall back to LiteLLM if native implementation unavailable
+                    print(
+                        f"Native OpenAI implementation not available, using LiteLLM for {model}"
+                    )
+                    model = actual_model  # Remove the prefix for LiteLLM
+
+            # Route to Claude native implementation
+            elif provider.lower() == "anthropic":
+                try:
+                    from crewai.llms.anthropic import ClaudeLLM
+
+                    # Create native Claude instance with all the same parameters
+                    native_llm = ClaudeLLM(
+                        model=actual_model,
+                        timeout=timeout,
+                        temperature=temperature,
+                        top_p=top_p,
+                        n=n,
+                        stop=stop,
+                        max_completion_tokens=max_completion_tokens,
+                        max_tokens=max_tokens,
+                        presence_penalty=presence_penalty,
+                        frequency_penalty=frequency_penalty,
+                        logit_bias=logit_bias,
+                        response_format=response_format,
+                        seed=seed,
+                        logprobs=logprobs,
+                        top_logprobs=top_logprobs,
+                        base_url=base_url,
+                        api_base=api_base,
+                        api_version=api_version,
+                        api_key=api_key,
+                        callbacks=callbacks,
+                        reasoning_effort=reasoning_effort,
+                        stream=stream,
+                        **kwargs,
+                    )
+
+                    # Replace this LLM instance with the native one
+                    self.__class__ = native_llm.__class__
+                    self.__dict__.update(native_llm.__dict__)
+                    return
+
+                except ImportError:
+                    # Fall back to LiteLLM if native implementation unavailable
+                    print(
+                        f"Native Claude implementation not available, using LiteLLM for {model}"
+                    )
+                    model = actual_model  # Remove the prefix for LiteLLM
+
+            # Route to Gemini native implementation
+            elif provider.lower() == "google":
+                try:
+                    from crewai.llms.google import GeminiLLM
+
+                    # Create native Gemini instance with all the same parameters
+                    native_llm = GeminiLLM(
+                        model=actual_model,
+                        timeout=timeout,
+                        temperature=temperature,
+                        top_p=top_p,
+                        n=n,
+                        stop=stop,
+                        max_completion_tokens=max_completion_tokens,
+                        max_tokens=max_tokens,
+                        presence_penalty=presence_penalty,
+                        frequency_penalty=frequency_penalty,
+                        logit_bias=logit_bias,
+                        response_format=response_format,
+                        seed=seed,
+                        logprobs=logprobs,
+                        top_logprobs=top_logprobs,
+                        base_url=base_url,
+                        api_base=api_base,
+                        api_version=api_version,
+                        api_key=api_key,
+                        callbacks=callbacks,
+                        reasoning_effort=reasoning_effort,
+                        stream=stream,
+                        **kwargs,
+                    )
+
+                    # Replace this LLM instance with the native one
+                    self.__class__ = native_llm.__class__
+                    self.__dict__.update(native_llm.__dict__)
+                    return
+
+                except ImportError:
+                    # Fall back to LiteLLM if native implementation unavailable
+                    print(
+                        f"Native Gemini implementation not available, using LiteLLM for {model}"
+                    )
+                    model = actual_model  # Remove the prefix for LiteLLM
+
+        # Continue with original LiteLLM initialization
         self.model = model
         self.timeout = timeout
         self.temperature = temperature
@@ -1139,7 +1276,11 @@ class LLM(BaseLLM):
 
         # TODO: Remove this code after merging PR https://github.com/BerriAI/litellm/pull/10917
         # Ollama doesn't supports last message to be 'assistant'
-        if "ollama" in self.model.lower() and messages and messages[-1]["role"] == "assistant":
+        if (
+            "ollama" in self.model.lower()
+            and messages
+            and messages[-1]["role"] == "assistant"
+        ):
             return messages + [{"role": "user", "content": ""}]
 
         # Handle Anthropic models

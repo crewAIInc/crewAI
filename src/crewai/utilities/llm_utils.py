@@ -7,39 +7,71 @@ from crewai.llm import LLM, BaseLLM
 
 def create_llm(
     llm_value: Union[str, LLM, Any, None] = None,
+    prefer_native: Optional[bool] = None,
 ) -> Optional[LLM | BaseLLM]:
     """
     Creates or returns an LLM instance based on the given llm_value.
+    Now supports provider prefixes like 'openai/gpt-4' for native implementations.
 
     Args:
         llm_value (str | BaseLLM | Any | None):
-            - str: The model name (e.g., "gpt-4").
+            - str: The model name (e.g., "gpt-4" or "openai/gpt-4").
             - BaseLLM: Already instantiated BaseLLM (including LLM), returned as-is.
             - Any: Attempt to extract known attributes like model_name, temperature, etc.
             - None: Use environment-based or fallback default model.
+        prefer_native (bool | None):
+            - True: Use native provider implementations when available
+            - False: Always use LiteLLM implementation
+            - None: Use environment variable CREWAI_PREFER_NATIVE_LLMS (default: True)
+            - Note: Provider prefixes (openai/, anthropic/) override this setting
 
     Returns:
         A BaseLLM instance if successful, or None if something fails.
+
+    Examples:
+        create_llm("gpt-4")           # Uses LiteLLM or native based on prefer_native
+        create_llm("openai/gpt-4")    # Always uses native OpenAI implementation
+        create_llm("anthropic/claude-3-sonnet")  # Future: native Anthropic
     """
 
     # 1) If llm_value is already a BaseLLM or LLM object, return it directly
     if isinstance(llm_value, LLM) or isinstance(llm_value, BaseLLM):
         return llm_value
 
-    # 2) If llm_value is a string (model name)
+    # 2) Determine if we should prefer native implementations (unless provider prefix is used)
+    if prefer_native is None:
+        prefer_native = os.getenv("CREWAI_PREFER_NATIVE_LLMS", "true").lower() in (
+            "true",
+            "1",
+            "yes",
+        )
+
+    # 3) If llm_value is a string (model name)
     if isinstance(llm_value, str):
         try:
+            # Provider prefix (openai/, anthropic/) always takes precedence
+            if "/" in llm_value:
+                created_llm = LLM(model=llm_value)  # LLM class handles routing
+                return created_llm
+
+            # Try native implementation first if preferred and no prefix
+            if prefer_native:
+                native_llm = _create_native_llm(llm_value)
+                if native_llm:
+                    return native_llm
+
+            # Fallback to LiteLLM
             created_llm = LLM(model=llm_value)
             return created_llm
         except Exception as e:
             print(f"Failed to instantiate LLM with model='{llm_value}': {e}")
             return None
 
-    # 3) If llm_value is None, parse environment variables or use default
+    # 4) If llm_value is None, parse environment variables or use default
     if llm_value is None:
-        return _llm_via_environment_or_fallback()
+        return _llm_via_environment_or_fallback(prefer_native)
 
-    # 4) Otherwise, attempt to extract relevant attributes from an unknown object
+    # 5) Otherwise, attempt to extract relevant attributes from an unknown object
     try:
         # Extract attributes with explicit types
         model = (
@@ -48,6 +80,8 @@ def create_llm(
             or getattr(llm_value, "deployment_name", None)
             or str(llm_value)
         )
+
+        # Extract other parameters
         temperature: Optional[float] = getattr(llm_value, "temperature", None)
         max_tokens: Optional[int] = getattr(llm_value, "max_tokens", None)
         logprobs: Optional[int] = getattr(llm_value, "logprobs", None)
@@ -56,6 +90,7 @@ def create_llm(
         base_url: Optional[str] = getattr(llm_value, "base_url", None)
         api_base: Optional[str] = getattr(llm_value, "api_base", None)
 
+        # Use LLM class constructor which handles routing
         created_llm = LLM(
             model=model,
             temperature=temperature,
@@ -72,9 +107,94 @@ def create_llm(
         return None
 
 
-def _llm_via_environment_or_fallback() -> Optional[LLM]:
+def _create_native_llm(model: str, **kwargs) -> Optional[BaseLLM]:
+    """
+    Create a native LLM implementation based on the model name.
+
+    Args:
+        model: The model name (e.g., 'gpt-4', 'claude-3-sonnet')
+        **kwargs: Additional parameters for the LLM
+
+    Returns:
+        Native LLM instance if supported, None otherwise
+    """
+    try:
+        # OpenAI models
+        if _is_openai_model(model):
+            from crewai.llms.openai import OpenAILLM
+
+            return OpenAILLM(model=model, **kwargs)
+
+        # Claude models
+        if _is_claude_model(model):
+            from crewai.llms.anthropic import ClaudeLLM
+
+            return ClaudeLLM(model=model, **kwargs)
+
+        # Gemini models
+        if _is_gemini_model(model):
+            from crewai.llms.google import GeminiLLM
+
+            return GeminiLLM(model=model, **kwargs)
+
+        # No native implementation found
+        return None
+
+    except Exception as e:
+        print(f"Failed to create native LLM for model '{model}': {e}")
+        return None
+
+
+def _is_openai_model(model: str) -> bool:
+    """Check if a model is from OpenAI."""
+    openai_prefixes = (
+        "gpt-",
+        "text-davinci",
+        "text-curie",
+        "text-babbage",
+        "text-ada",
+        "davinci",
+        "curie",
+        "babbage",
+        "ada",
+        "o1-",
+        "o3-",
+        "o4-",
+        "chatgpt-",
+    )
+
+    model_lower = model.lower()
+    return any(model_lower.startswith(prefix) for prefix in openai_prefixes)
+
+
+def _is_claude_model(model: str) -> bool:
+    """Check if a model is from Anthropic (Claude)."""
+    claude_prefixes = (
+        "claude-",
+        "claude",  # For cases like just "claude"
+    )
+
+    model_lower = model.lower()
+    return any(model_lower.startswith(prefix) for prefix in claude_prefixes)
+
+
+def _is_gemini_model(model: str) -> bool:
+    """Check if a model is from Google (Gemini)."""
+    gemini_prefixes = (
+        "gemini-",
+        "gemini",  # For cases like just "gemini"
+    )
+
+    model_lower = model.lower()
+    return any(model_lower.startswith(prefix) for prefix in gemini_prefixes)
+
+
+def _llm_via_environment_or_fallback(
+    prefer_native: bool = True,
+) -> Optional[LLM | BaseLLM]:
     """
     Helper function: if llm_value is None, we load environment variables or fallback default model.
+    Now with native provider support.
     """
     model_name = (
         os.environ.get("MODEL")
@@ -83,7 +203,13 @@ def _llm_via_environment_or_fallback() -> Optional[LLM]:
         or DEFAULT_LLM_MODEL
     )
 
-    # Initialize parameters with correct types
+    # Try native implementation first if preferred
+    if prefer_native:
+        native_llm = _create_native_llm(model_name)
+        if native_llm:
+            return native_llm
+
+    # Initialize parameters with correct types (original logic continues)
     model: str = model_name
     temperature: Optional[float] = None
     max_tokens: Optional[int] = None
