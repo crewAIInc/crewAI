@@ -41,10 +41,6 @@ FilterCondition = BasicConditions | StructuralConditions | Filter
 MetadataFilterValue = bool | int | str
 MetadataFilter = dict[str, MetadataFilterValue]
 
-QuantizationConfig = ScalarQuantization | ProductQuantization | BinaryQuantization
-
-InitFromType = InitFrom | str
-
 
 class QdrantCollectionCreateParams(BaseCollectionParams, total=False):
     """Parameters for creating a Qdrant collection.
@@ -63,8 +59,8 @@ class QdrantCollectionCreateParams(BaseCollectionParams, total=False):
     hnsw_config: HnswConfigDiff
     optimizers_config: OptimizersConfigDiff
     wal_config: WalConfigDiff
-    quantization_config: QuantizationConfig
-    init_from: InitFromType
+    quantization_config: ScalarQuantization | ProductQuantization | BinaryQuantization
+    init_from: InitFrom | str
     timeout: Annotated[int, "Operation timeout in seconds"]
 
 
