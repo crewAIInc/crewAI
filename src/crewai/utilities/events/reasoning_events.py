@@ -1,16 +1,37 @@
 from crewai.utilities.events.base_events import BaseEvent
+from typing import Any, Optional, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from crewai.task import Task
 
 
-class AgentReasoningStartedEvent(BaseEvent):
+class ReasoningEvent(BaseEvent):
+    """Base event for reasoning events."""
+
+    type: str
+    attempt: int = 1
+    agent_role: str
+    task_id: str
+    task_name: Optional[str] = None
+    from_task: Optional["Task"] = None
+    agent_id: Optional[str] = None
+    from_agent: Optional[Any] = None
+
+    def __init__(self, **data):
+        super().__init__(**data)
+        self._set_task_params(data)
+        self._set_agent_params(data)
+
+
+class AgentReasoningStartedEvent(ReasoningEvent):
     """Event emitted when an agent starts reasoning about a task."""
 
     type: str = "agent_reasoning_started"
     agent_role: str
     task_id: str
-    attempt: int = 1  # The current reasoning/refinement attempt
 
 
-class AgentReasoningCompletedEvent(BaseEvent):
+class AgentReasoningCompletedEvent(ReasoningEvent):
     """Event emitted when an agent finishes its reasoning process."""
 
     type: str = "agent_reasoning_completed"
@@ -18,14 +39,12 @@ class AgentReasoningCompletedEvent(BaseEvent):
     task_id: str
     plan: str
     ready: bool
-    attempt: int = 1
 
 
-class AgentReasoningFailedEvent(BaseEvent):
+class AgentReasoningFailedEvent(ReasoningEvent):
     """Event emitted when the reasoning process fails."""
 
     type: str = "agent_reasoning_failed"
     agent_role: str
     task_id: str
     error: str
-    attempt: int = 1

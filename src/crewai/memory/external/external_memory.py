@@ -53,7 +53,6 @@ class ExternalMemory(Memory):
         self,
         value: Any,
         metadata: Optional[Dict[str, Any]] = None,
-        agent: Optional[str] = None,
     ) -> None:
         """Saves a value into the external storage."""
         crewai_event_bus.emit(
@@ -61,14 +60,19 @@ class ExternalMemory(Memory):
             event=MemorySaveStartedEvent(
                 value=value,
                 metadata=metadata,
-                agent_role=agent,
                 source_type="external_memory",
+                from_agent=self.agent,
+                from_task=self.task,
             ),
         )
 
         start_time = time.time()
         try:
-            item = ExternalMemoryItem(value=value, metadata=metadata, agent=agent)
+            item = ExternalMemoryItem(
+                value=value,
+                metadata=metadata,
+                agent=self.agent.role if self.agent else None,
+            )
             super().save(value=item.value, metadata=item.metadata, agent=item.agent)
 
             crewai_event_bus.emit(
@@ -76,9 +80,10 @@ class ExternalMemory(Memory):
                 event=MemorySaveCompletedEvent(
                     value=value,
                     metadata=metadata,
-                    agent_role=agent,
                     save_time_ms=(time.time() - start_time) * 1000,
                     source_type="external_memory",
+                    from_agent=self.agent,
+                    from_task=self.task,
                 ),
             )
         except Exception as e:
@@ -87,9 +92,10 @@ class ExternalMemory(Memory):
                 event=MemorySaveFailedEvent(
                     value=value,
                     metadata=metadata,
-                    agent_role=agent,
                     error=str(e),
                     source_type="external_memory",
+                    from_agent=self.agent,
+                    from_task=self.task,
                 ),
             )
             raise
@@ -107,6 +113,8 @@ class ExternalMemory(Memory):
                 limit=limit,
                 score_threshold=score_threshold,
                 source_type="external_memory",
+                from_agent=self.agent,
+                from_task=self.task,
             ),
         )
 
@@ -125,6 +133,8 @@ class ExternalMemory(Memory):
                     score_threshold=score_threshold,
                     query_time_ms=(time.time() - start_time) * 1000,
                     source_type="external_memory",
+                    from_agent=self.agent,
+                    from_task=self.task,
                 ),
             )
 

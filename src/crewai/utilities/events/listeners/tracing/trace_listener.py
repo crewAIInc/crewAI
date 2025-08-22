@@ -373,6 +373,7 @@ class TraceCollectionListener(BaseEventListener):
                 "task_name": event.task.name or event.task.description,
                 "context": event.context,
                 "agent_role": source.agent.role,
+                "task_id": str(event.task.id),
             }
         elif event_type == "agent_execution_started":
             return {

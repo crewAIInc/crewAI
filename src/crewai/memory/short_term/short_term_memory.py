@@ -37,7 +37,7 @@ class ShortTermMemory(Memory):
                 raise ImportError(
                     "Mem0 is not installed. Please install it with `pip install mem0ai`."
                 )
-            config = embedder_config.get("config")
+            config = embedder_config.get("config") if embedder_config else None
             storage = Mem0Storage(type="short_term", crew=crew, config=config)
         else:
             storage = (
@@ -57,23 +57,29 @@ class ShortTermMemory(Memory):
         self,
         value: Any,
         metadata: Optional[Dict[str, Any]] = None,
-        agent: Optional[str] = None,
     ) -> None:
         crewai_event_bus.emit(
             self,
             event=MemorySaveStartedEvent(
                 value=value,
                 metadata=metadata,
-                agent_role=agent,
                 source_type="short_term_memory",
+                from_agent=self.agent,
+                from_task=self.task,
             ),
         )
 
         start_time = time.time()
         try:
-            item = ShortTermMemoryItem(data=value, metadata=metadata, agent=agent)
+            item = ShortTermMemoryItem(
+                data=value,
+                metadata=metadata,
+                agent=self.agent.role if self.agent else None,
+            )
             if self._memory_provider == "mem0":
-                item.data = f"Remember the following insights from Agent run: {item.data}"
+                item.data = (
+                    f"Remember the following insights from Agent run: {item.data}"
+                )
 
             super().save(value=item.data, metadata=item.metadata, agent=item.agent)
 
@@ -82,9 +88,11 @@ class ShortTermMemory(Memory):
                 event=MemorySaveCompletedEvent(
                     value=value,
                     metadata=metadata,
-                    agent_role=agent,
+                    # agent_role=agent,
                     save_time_ms=(time.time() - start_time) * 1000,
                     source_type="short_term_memory",
+                    from_agent=self.agent,
+                    from_task=self.task,
                 ),
             )
         except Exception as e:
@@ -93,9 +101,10 @@ class ShortTermMemory(Memory):
                 event=MemorySaveFailedEvent(
                     value=value,
                     metadata=metadata,
-                    agent_role=agent,
                     error=str(e),
                     source_type="short_term_memory",
+                    from_agent=self.agent,
+                    from_task=self.task,
                 ),
             )
             raise
@@ -113,6 +122,8 @@ class ShortTermMemory(Memory):
                 limit=limit,
                 score_threshold=score_threshold,
                 source_type="short_term_memory",
+                from_agent=self.agent,
+                from_task=self.task,
             ),
         )
 
@@ -131,6 +142,8 @@ class ShortTermMemory(Memory):
                     score_threshold=score_threshold,
                     query_time_ms=(time.time() - start_time) * 1000,
                     source_type="short_term_memory",
+                    from_agent=self.agent,
+                    from_task=self.task,
                 ),
             )
 

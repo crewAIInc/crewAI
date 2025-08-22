@@ -613,7 +613,6 @@ class ToolUsage:
         if self.task:
             event_data["task_id"] = str(self.task.id)
             event_data["task_name"] = self.task.name or self.task.description
-
         crewai_event_bus.emit(self, ToolUsageFinishedEvent(**event_data))
 
     def _prepare_event_data(

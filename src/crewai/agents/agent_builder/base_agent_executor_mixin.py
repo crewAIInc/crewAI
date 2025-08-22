@@ -43,7 +43,6 @@ class CrewAgentExecutorMixin:
                         metadata={
                             "observation": self.task.description,
                         },
-                        agent=self.agent.role,
                     )
             except Exception as e:
                 print(f"Failed to add to short term memory: {e}")
@@ -65,7 +64,7 @@ class CrewAgentExecutorMixin:
                         "description": self.task.description,
                         "messages": self.messages,
                     },
-                    agent=self.agent.role,
+                    # agent=self.agent.role,
                 )
             except Exception as e:
                 print(f"Failed to add to external memory: {e}")
@@ -158,7 +157,9 @@ class CrewAgentExecutorMixin:
             self._printer.print(content=prompt, color="bold_yellow")
             response = input()
             if response.strip() != "":
-                self._printer.print(content="\nProcessing your feedback...", color="cyan")
+                self._printer.print(
+                    content="\nProcessing your feedback...", color="cyan"
+                )
             return response
         finally:
             event_listener.formatter.resume_live_updates()

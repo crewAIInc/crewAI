@@ -1,9 +1,27 @@
+from re import S
 from typing import Any, Dict, Optional
 
 from crewai.utilities.events.base_events import BaseEvent
 
 
-class MemoryQueryStartedEvent(BaseEvent):
+class MemoryBaseEvent(BaseEvent):
+    """Base event for memory operations"""
+
+    type: str
+    task_id: Optional[str] = None
+    task_name: Optional[str] = None
+    from_task: Optional[Any] = None
+    from_agent: Optional[Any] = None
+    agent_role: Optional[str] = None
+    agent_id: Optional[str] = None
+
+    def __init__(self, **data):
+        super().__init__(**data)
+        self._set_agent_params(data)
+        self._set_task_params(data)
+
+
+class MemoryQueryStartedEvent(MemoryBaseEvent):
     """Event emitted when a memory query is started"""
 
     type: str = "memory_query_started"
@@ -12,7 +30,7 @@ class MemoryQueryStartedEvent(BaseEvent):
     score_threshold: Optional[float] = None
 
 
-class MemoryQueryCompletedEvent(BaseEvent):
+class MemoryQueryCompletedEvent(MemoryBaseEvent):
     """Event emitted when a memory query is completed successfully"""
 
     type: str = "memory_query_completed"
@@ -23,7 +41,7 @@ class MemoryQueryCompletedEvent(BaseEvent):
     query_time_ms: float
 
 
-class MemoryQueryFailedEvent(BaseEvent):
+class MemoryQueryFailedEvent(MemoryBaseEvent):
     """Event emitted when a memory query fails"""
 
     type: str = "memory_query_failed"
@@ -33,7 +51,7 @@ class MemoryQueryFailedEvent(BaseEvent):
     error: str
 
 
-class MemorySaveStartedEvent(BaseEvent):
+class MemorySaveStartedEvent(MemoryBaseEvent):
     """Event emitted when a memory save operation is started"""
 
     type: str = "memory_save_started"
@@ -42,7 +60,7 @@ class MemorySaveStartedEvent(BaseEvent):
     agent_role: Optional[str] = None
 
 
-class MemorySaveCompletedEvent(BaseEvent):
+class MemorySaveCompletedEvent(MemoryBaseEvent):
     """Event emitted when a memory save operation is completed successfully"""
 
     type: str = "memory_save_completed"
@@ -52,7 +70,7 @@ class MemorySaveCompletedEvent(BaseEvent):
     save_time_ms: float
 
 
-class MemorySaveFailedEvent(BaseEvent):
+class MemorySaveFailedEvent(MemoryBaseEvent):
     """Event emitted when a memory save operation fails"""
 
     type: str = "memory_save_failed"
@@ -62,14 +80,14 @@ class MemorySaveFailedEvent(BaseEvent):
     error: str
 
 
-class MemoryRetrievalStartedEvent(BaseEvent):
+class MemoryRetrievalStartedEvent(MemoryBaseEvent):
     """Event emitted when memory retrieval for a task prompt starts"""
 
     type: str = "memory_retrieval_started"
     task_id: Optional[str] = None
 
 
-class MemoryRetrievalCompletedEvent(BaseEvent):
+class MemoryRetrievalCompletedEvent(MemoryBaseEvent):
     """Event emitted when memory retrieval for a task prompt completes successfully"""
 
     type: str = "memory_retrieval_completed"

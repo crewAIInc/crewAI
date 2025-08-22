@@ -9,6 +9,7 @@ class ToolUsageEvent(BaseEvent):
 
     agent_key: Optional[str] = None
     agent_role: Optional[str] = None
+    agent_id: Optional[str] = None
     tool_name: str
     tool_args: Dict[str, Any] | str
     tool_class: Optional[str] = None
@@ -17,6 +18,8 @@ class ToolUsageEvent(BaseEvent):
     agent: Optional[Any] = None
     task_name: Optional[str] = None
     task_id: Optional[str] = None
+    from_task: Optional[Any] = None
+    from_agent: Optional[Any] = None
 
     model_config = {"arbitrary_types_allowed": True}
 
@@ -33,21 +36,6 @@ class ToolUsageEvent(BaseEvent):
                 and self.agent.fingerprint.metadata
             ):
                 self.fingerprint_metadata = self.agent.fingerprint.metadata
-
-    def _set_agent_params(self, data: Dict[str, Any]):
-        task = data.get("from_task", None)
-        agent = task.agent if task else data.get("from_agent", None)
-
-        if not agent:
-            return
-
-        self.agent_id = agent.id
-        self.agent_role = agent.role
-
-    def _set_task_params(self, data: Dict[str, Any]):
-        if "from_task" in data and (task := data["from_task"]):
-            self.task_id = task.id
-            self.task_name = task.name or task.description
 
 
 class ToolUsageStartedEvent(ToolUsageEvent):
