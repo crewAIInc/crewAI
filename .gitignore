@@ -8,6 +8,7 @@ assets/*
 .idea
 test/
 docs_crew/
+test_env/
 chroma.sqlite3
 old_en.json
 db/
