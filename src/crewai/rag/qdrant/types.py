@@ -29,10 +29,7 @@ from crewai.rag.core.base_client import BaseCollectionParams
 
 QdrantClientType = SyncQdrantClient | AsyncQdrantClient
 
-QueryEmbedding = Annotated[
-    list[float] | np.ndarray[Any, np.dtype[np.floating[Any]]],
-    "Embedding vector as list of floats or numpy array",
-]
+QueryEmbedding = list[float] | np.ndarray[Any, np.dtype[np.floating[Any]]]
 
 BasicConditions = FieldCondition | IsEmptyCondition | IsNullCondition
 StructuralConditions = HasIdCondition | HasVectorCondition | NestedCondition
