@@ -442,6 +442,7 @@ class LLM(BaseLLM):
         """
         # --- 1) Initialize response tracking
         full_response = ""
+        full_reason_response = ""
         last_chunk = None
         chunk_count = 0
         usage_info = None
@@ -463,6 +464,7 @@ class LLM(BaseLLM):
 
                 # Extract content from the chunk
                 chunk_content = None
+                reason_chunk_content = None
 
                 # Safely extract content from various chunk formats
                 try:
@@ -499,14 +501,21 @@ class LLM(BaseLLM):
                             if isinstance(delta, dict):
                                 if "content" in delta and delta["content"] is not None:
                                     chunk_content = delta["content"]
+                                if "reasoning_content" in delta and delta["reasoning_content"] is not None:
+                                    reason_chunk_content = delta["reasoning_content"]
                             # Handle object format
                             elif hasattr(delta, "content"):
                                 chunk_content = getattr(delta, "content")
+                                reason_chunk_content = getattr(delta, "reasoning_content")
+
 
                             # Handle case where content might be None or empty
                             if chunk_content is None and isinstance(delta, dict):
                                 # Some models might send empty content chunks
                                 chunk_content = ""
+
+                            if reason_chunk_content is None and isinstance(delta, dict):
+                                reason_chunk_content = ""
 
                             # Enable tool calls using streaming
                             if "tool_calls" in delta:
@@ -538,6 +547,22 @@ class LLM(BaseLLM):
                         self,
                         event=LLMStreamChunkEvent(
                             chunk=chunk_content,
+                            from_task=from_task,
+                            from_agent=from_agent,
+                        ),
+                    )
+
+                if (reason_chunk_content is not None) and reason_chunk_content!="":
+                    # Add the chunk content to the full response
+                    full_reason_response += reason_chunk_content
+
+                    # Emit the chunk event
+                    assert hasattr(crewai_event_bus, "emit")
+                    crewai_event_bus.emit(
+                        self,
+                        event=LLMStreamChunkEvent(
+                            chunk='',
+                            reason_chunk=reason_chunk_content,
                             from_task=from_task,
                             from_agent=from_agent,
                         ),
@@ -644,6 +669,8 @@ class LLM(BaseLLM):
                 # Emit completion event and return response
                 self._handle_emit_call_events(
                     response=full_response,
+                    reason_response=full_reason_response,
+
                     call_type=LLMCallType.LLM_CALL,
                     from_task=from_task,
                     from_agent=from_agent,
@@ -662,6 +689,7 @@ class LLM(BaseLLM):
             # --- 11) Emit completion event and return response
             self._handle_emit_call_events(
                 response=full_response,
+                reason_response=full_reason_response,
                 call_type=LLMCallType.LLM_CALL,
                 from_task=from_task,
                 from_agent=from_agent,
@@ -680,6 +708,7 @@ class LLM(BaseLLM):
                 logging.warning(f"Returning partial response despite error: {str(e)}")
                 self._handle_emit_call_events(
                     response=full_response,
+                    reason_response=full_reason_response,
                     call_type=LLMCallType.LLM_CALL,
                     from_task=from_task,
                     from_agent=from_agent,
@@ -821,6 +850,7 @@ class LLM(BaseLLM):
             0
         ].message
         text_response = response_message.content or ""
+        text_reasoning_response = getattr(response_message, "reasoning_content", "")
         # --- 3) Handle callbacks with usage info
         if callbacks and len(callbacks) > 0:
             for callback in callbacks:
@@ -840,6 +870,7 @@ class LLM(BaseLLM):
         if (not tool_calls or not available_functions) and text_response:
             self._handle_emit_call_events(
                 response=text_response,
+                reason_response=text_reasoning_response,
                 call_type=LLMCallType.LLM_CALL,
                 from_task=from_task,
                 from_agent=from_agent,
@@ -857,6 +888,7 @@ class LLM(BaseLLM):
         # --- 8) If tool call handling didn't return a result, emit completion event and return text response
         self._handle_emit_call_events(
             response=text_response,
+            reason_response=text_reasoning_response,
             call_type=LLMCallType.LLM_CALL,
             from_task=from_task,
             from_agent=from_agent,
@@ -1065,6 +1097,7 @@ class LLM(BaseLLM):
         self,
         response: Any,
         call_type: LLMCallType,
+        reason_response: Any=None,
         from_task: Optional[Any] = None,
         from_agent: Optional[Any] = None,
         messages: str | list[dict[str, Any]] | None = None,
@@ -1084,6 +1117,7 @@ class LLM(BaseLLM):
             event=LLMCallCompletedEvent(
                 messages=messages,
                 response=response,
+                reason_response=reason_response,
                 call_type=call_type,
                 from_task=from_task,
                 from_agent=from_agent,

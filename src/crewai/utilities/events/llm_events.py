@@ -1,4 +1,5 @@
 from enum import Enum
+from token import OP
 from typing import Any, Dict, List, Optional, Union
 
 from pydantic import BaseModel
@@ -63,6 +64,7 @@ class LLMCallCompletedEvent(LLMEventBase):
     type: str = "llm_call_completed"
     messages: str | list[dict[str, Any]] | None = None
     response: Any
+    reason_response: Optional[Any]
     call_type: LLMCallType
     model: Optional[str] = None
 
@@ -91,4 +93,5 @@ class LLMStreamChunkEvent(LLMEventBase):
 
     type: str = "llm_stream_chunk"
     chunk: str
+    reason_chunk: Optional[str]=""
     tool_call: Optional[ToolCall] = None
