@@ -4,16 +4,19 @@ import hashlib
 from collections.abc import Mapping
 from typing import Literal, TypeGuard, cast
 
+from chromadb import Client
 from chromadb.api import AsyncClientAPI, ClientAPI
 from chromadb.api.types import (
     Include,
     IncludeEnum,
     QueryResult,
 )
-
+from chromadb.utils.embedding_functions import DefaultEmbeddingFunction
+from chromadb.api.types import Embeddable, EmbeddingFunction as ChromaEmbeddingFunction
 from chromadb.api.models.AsyncCollection import AsyncCollection
 from chromadb.api.models.Collection import Collection
 
+from crewai.rag.chromadb.config import ChromaDBConfig
 from crewai.rag.chromadb.types import (
     ChromaDBClientType,
     ChromaDBCollectionSearchParams,
@@ -21,6 +24,7 @@ from crewai.rag.chromadb.types import (
     PreparedDocuments,
 )
 from crewai.rag.types import BaseRecord, SearchResult
+from crewai.rag.chromadb.client import ChromaDBClient
 
 
 def _is_sync_client(client: ChromaDBClientType) -> TypeGuard[ClientAPI]:
@@ -218,3 +222,25 @@ def _process_query_results(
         distance_metric=distance_metric,
         score_threshold=params.score_threshold,
     )
+
+
+def create_chromadb_client_from_config(config: ChromaDBConfig) -> ChromaDBClient:
+    """Create a ChromaDBClient from configuration.
+
+    Args:
+        config: ChromaDB configuration object.
+
+    Returns:
+        Configured ChromaDBClient instance.
+    """
+    chromadb_client = Client(
+        settings=config.settings, tenant=config.tenant, database=config.database
+    )
+
+    client = ChromaDBClient()
+    client.client = chromadb_client
+    client.embedding_function = cast(
+        ChromaEmbeddingFunction[Embeddable], DefaultEmbeddingFunction()
+    )
+
+    return client
