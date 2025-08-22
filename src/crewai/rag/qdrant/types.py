@@ -1,6 +1,7 @@
 """Type definitions specific to Qdrant implementation."""
 
-from typing import Annotated, Any, TypedDict
+from collections.abc import Awaitable, Callable
+from typing import Annotated, Any, Protocol, TypedDict
 from typing_extensions import NotRequired
 
 import numpy as np
@@ -39,6 +40,21 @@ MetadataFilterValue = bool | int | str
 MetadataFilter = dict[str, MetadataFilterValue]
 
 
+class EmbeddingFunction(Protocol):
+    """Protocol for embedding functions that convert text to vectors."""
+
+    def __call__(self, text: str) -> QueryEmbedding:
+        """Convert text to embedding vector.
+
+        Args:
+            text: Input text to embed.
+
+        Returns:
+            Embedding vector as list of floats or numpy array.
+        """
+        ...
+
+
 class QdrantCollectionCreateParams(BaseCollectionParams, total=False):
     """Parameters for creating a Qdrant collection.
 
@@ -59,6 +75,28 @@ class QdrantCollectionCreateParams(BaseCollectionParams, total=False):
     quantization_config: ScalarQuantization | ProductQuantization | BinaryQuantization
     init_from: InitFrom | str
     timeout: Annotated[int, "Operation timeout in seconds"]
+
+
+class QdrantClientParams(TypedDict, total=False):
+    """Parameters for QdrantClient initialization."""
+
+    location: str | None
+    url: str | None
+    port: int
+    grpc_port: int
+    prefer_grpc: bool
+    https: bool | None
+    api_key: str | None
+    prefix: str | None
+    timeout: int | None
+    host: str | None
+    path: str | None
+    force_disable_check_same_thread: bool
+    grpc_options: dict[str, Any] | None
+    auth_token_provider: Callable[[], str] | Callable[[], Awaitable[str]] | None
+    cloud_inference: bool
+    local_inference_batch_size: int | None
+    check_compatibility: bool
 
 
 class PreparedSearchParams(TypedDict):

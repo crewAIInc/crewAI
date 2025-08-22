@@ -1,8 +1,10 @@
 """Qdrant client implementation."""
 
 import asyncio
-from typing import Any
+from typing import Any, cast
 
+from fastembed import TextEmbedding
+from qdrant_client import QdrantClient as SyncQdrantClientBase
 from qdrant_client.models import Distance, VectorParams
 from typing_extensions import Unpack
 
@@ -13,7 +15,12 @@ from crewai.rag.core.base_client import (
     BaseCollectionSearchParams,
 )
 from crewai.rag.core.exceptions import ClientMethodMismatchError
-from crewai.rag.qdrant.types import QdrantClientType, QdrantCollectionCreateParams
+from crewai.rag.qdrant.types import (
+    EmbeddingFunction,
+    QdrantClientParams,
+    QdrantClientType,
+    QdrantCollectionCreateParams,
+)
 from crewai.rag.qdrant.utils import (
     _is_async_client,
     _is_sync_client,
@@ -36,7 +43,39 @@ class QdrantClient(BaseClient):
     """
 
     client: QdrantClientType
-    embedding_function: Any
+    embedding_function: EmbeddingFunction
+
+    def __init__(
+        self,
+        client: QdrantClientType | None = None,
+        embedding_function: EmbeddingFunction | None = None,
+        **kwargs: Unpack[QdrantClientParams],
+    ) -> None:
+        """Initialize QdrantClient with optional client and embedding function.
+
+        Args:
+            client: Optional pre-configured Qdrant client instance.
+            embedding_function: Optional embedding function. If not provided,
+                uses FastEmbed's BAAI/bge-small-en-v1.5 model.
+            **kwargs: Additional arguments for QdrantClient creation.
+        """
+        if client is not None:
+            self.client = client
+        else:
+            location = kwargs.get("location", ":memory:")
+            client_kwargs = {k: v for k, v in kwargs.items() if k != "location"}
+            self.client = SyncQdrantClientBase(location, **cast(Any, client_kwargs))
+
+        if embedding_function is not None:
+            self.embedding_function = embedding_function
+        else:
+            _embedder = TextEmbedding("BAAI/bge-small-en-v1.5")
+
+            def _embed_fn(text: str) -> list[float]:
+                embeddings = list(_embedder.embed([text]))
+                return [float(x) for x in embeddings[0]] if embeddings else []
+
+            self.embedding_function = _embed_fn
 
     def create_collection(self, **kwargs: Unpack[QdrantCollectionCreateParams]) -> None:
         """Create a new collection in Qdrant.

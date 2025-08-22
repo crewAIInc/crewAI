@@ -25,18 +25,20 @@ def mock_async_qdrant_client():
 @pytest.fixture
 def client(mock_qdrant_client) -> QdrantClient:
     """Create a QdrantClient instance for testing."""
-    client = QdrantClient()
-    client.client = mock_qdrant_client
-    client.embedding_function = Mock()
+    mock_embedding = Mock()
+    mock_embedding.return_value = [0.1, 0.2, 0.3]
+    client = QdrantClient(client=mock_qdrant_client, embedding_function=mock_embedding)
     return client
 
 
 @pytest.fixture
 def async_client(mock_async_qdrant_client) -> QdrantClient:
     """Create a QdrantClient instance with async client for testing."""
-    client = QdrantClient()
-    client.client = mock_async_qdrant_client
-    client.embedding_function = Mock()
+    mock_embedding = Mock()
+    mock_embedding.return_value = [0.1, 0.2, 0.3]
+    client = QdrantClient(
+        client=mock_async_qdrant_client, embedding_function=mock_embedding
+    )
     return client
 
 
@@ -66,9 +68,9 @@ class TestQdrantClient:
 
     def test_create_collection_wrong_client_type(self, mock_async_qdrant_client):
         """Test that create_collection raises TypeError for async client."""
-        client = QdrantClient()
-        client.client = mock_async_qdrant_client
-        client.embedding_function = Mock()
+        client = QdrantClient(
+            client=mock_async_qdrant_client, embedding_function=Mock()
+        )
 
         with pytest.raises(
             ClientMethodMismatchError, match=r"Method create_collection\(\) requires"
@@ -106,9 +108,7 @@ class TestQdrantClient:
     @pytest.mark.asyncio
     async def test_acreate_collection_wrong_client_type(self, mock_qdrant_client):
         """Test that acreate_collection raises TypeError for sync client."""
-        client = QdrantClient()
-        client.client = mock_qdrant_client
-        client.embedding_function = Mock()
+        client = QdrantClient(client=mock_qdrant_client, embedding_function=Mock())
 
         with pytest.raises(
             ClientMethodMismatchError, match=r"Method acreate_collection\(\) requires"
@@ -143,9 +143,9 @@ class TestQdrantClient:
 
     def test_get_or_create_collection_wrong_client_type(self, mock_async_qdrant_client):
         """Test get_or_create_collection raises TypeError for async client."""
-        client = QdrantClient()
-        client.client = mock_async_qdrant_client
-        client.embedding_function = Mock()
+        client = QdrantClient(
+            client=mock_async_qdrant_client, embedding_function=Mock()
+        )
 
         with pytest.raises(
             ClientMethodMismatchError,
@@ -207,9 +207,7 @@ class TestQdrantClient:
         self, mock_qdrant_client
     ):
         """Test aget_or_create_collection raises TypeError for sync client."""
-        client = QdrantClient()
-        client.client = mock_qdrant_client
-        client.embedding_function = Mock()
+        client = QdrantClient(client=mock_qdrant_client, embedding_function=Mock())
 
         with pytest.raises(
             ClientMethodMismatchError,
@@ -289,9 +287,9 @@ class TestQdrantClient:
 
     def test_add_documents_wrong_client_type(self, mock_async_qdrant_client):
         """Test that add_documents raises TypeError for async client."""
-        client = QdrantClient()
-        client.client = mock_async_qdrant_client
-        client.embedding_function = Mock()
+        client = QdrantClient(
+            client=mock_async_qdrant_client, embedding_function=Mock()
+        )
 
         documents: list[BaseRecord] = [
             {
@@ -400,9 +398,7 @@ class TestQdrantClient:
     @pytest.mark.asyncio
     async def test_aadd_documents_wrong_client_type(self, mock_qdrant_client):
         """Test that aadd_documents raises TypeError for sync client."""
-        client = QdrantClient()
-        client.client = mock_qdrant_client
-        client.embedding_function = Mock()
+        client = QdrantClient(client=mock_qdrant_client, embedding_function=Mock())
 
         documents: list[BaseRecord] = [
             {
@@ -509,9 +505,9 @@ class TestQdrantClient:
 
     def test_search_wrong_client_type(self, mock_async_qdrant_client):
         """Test that search raises TypeError for async client."""
-        client = QdrantClient()
-        client.client = mock_async_qdrant_client
-        client.embedding_function = Mock()
+        client = QdrantClient(
+            client=mock_async_qdrant_client, embedding_function=Mock()
+        )
 
         with pytest.raises(
             ClientMethodMismatchError, match=r"Method search\(\) requires"
@@ -601,9 +597,7 @@ class TestQdrantClient:
     @pytest.mark.asyncio
     async def test_asearch_wrong_client_type(self, mock_qdrant_client):
         """Test that asearch raises TypeError for sync client."""
-        client = QdrantClient()
-        client.client = mock_qdrant_client
-        client.embedding_function = Mock()
+        client = QdrantClient(client=mock_qdrant_client, embedding_function=Mock())
 
         with pytest.raises(
             ClientMethodMismatchError, match=r"Method asearch\(\) requires"
@@ -635,9 +629,9 @@ class TestQdrantClient:
 
     def test_delete_collection_wrong_client_type(self, mock_async_qdrant_client):
         """Test that delete_collection raises TypeError for async client."""
-        client = QdrantClient()
-        client.client = mock_async_qdrant_client
-        client.embedding_function = Mock()
+        client = QdrantClient(
+            client=mock_async_qdrant_client, embedding_function=Mock()
+        )
 
         with pytest.raises(
             ClientMethodMismatchError, match=r"Method delete_collection\(\) requires"
@@ -679,9 +673,7 @@ class TestQdrantClient:
     @pytest.mark.asyncio
     async def test_adelete_collection_wrong_client_type(self, mock_qdrant_client):
         """Test that adelete_collection raises TypeError for sync client."""
-        client = QdrantClient()
-        client.client = mock_qdrant_client
-        client.embedding_function = Mock()
+        client = QdrantClient(client=mock_qdrant_client, embedding_function=Mock())
 
         with pytest.raises(
             ClientMethodMismatchError, match=r"Method adelete_collection\(\) requires"
@@ -732,9 +724,9 @@ class TestQdrantClient:
 
     def test_reset_wrong_client_type(self, mock_async_qdrant_client):
         """Test that reset raises TypeError for async client."""
-        client = QdrantClient()
-        client.client = mock_async_qdrant_client
-        client.embedding_function = Mock()
+        client = QdrantClient(
+            client=mock_async_qdrant_client, embedding_function=Mock()
+        )
 
         with pytest.raises(
             ClientMethodMismatchError, match=r"Method reset\(\) requires"
@@ -793,9 +785,7 @@ class TestQdrantClient:
     @pytest.mark.asyncio
     async def test_areset_wrong_client_type(self, mock_qdrant_client):
         """Test that areset raises TypeError for sync client."""
-        client = QdrantClient()
-        client.client = mock_qdrant_client
-        client.embedding_function = Mock()
+        client = QdrantClient(client=mock_qdrant_client, embedding_function=Mock())
 
         with pytest.raises(
             ClientMethodMismatchError, match=r"Method areset\(\) requires"
