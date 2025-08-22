@@ -1,4 +1,3 @@
-from re import S
 from typing import Any, Dict, Optional
 
 from crewai.utilities.events.base_events import BaseEvent

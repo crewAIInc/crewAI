@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Optional, TYPE_CHECKING
+from typing import Any, Dict, List
 import time
 
 from crewai.memory.long_term.long_term_memory_item import LongTermMemoryItem
@@ -13,10 +13,6 @@ from crewai.utilities.events.memory_events import (
     MemorySaveFailedEvent,
 )
 from crewai.memory.storage.ltm_sqlite_storage import LTMSQLiteStorage
-
-if TYPE_CHECKING:
-    from crewai.agent import Agent
-    from crewai.task import Task
 
 
 class LongTermMemory(Memory):
