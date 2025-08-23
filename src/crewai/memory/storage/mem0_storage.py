@@ -94,12 +94,12 @@ class Mem0Storage(Storage):
             user_content = (
                 messages[1].get("content")
                 if len(messages) > 1 and messages[1].get("role") == "user"
-                else None
+                else ""
             )
             assistant_content = (
                 messages[2].get("content")
                 if len(messages) > 2 and messages[2].get("role") == "assistant"
-                else None
+                else ""
             )
 
             if user_msg := self._get_user_message(user_content):
