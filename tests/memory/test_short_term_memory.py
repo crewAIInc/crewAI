@@ -57,7 +57,6 @@ def test_short_term_memory_search_events(short_term_memory):
 
     assert len(events["MemoryQueryStartedEvent"]) == 1
     assert len(events["MemoryQueryCompletedEvent"]) == 1
-    assert len(events["MemoryQueryFailedEvent"]) == 0
 
     assert dict(events["MemoryQueryStartedEvent"][0]) == {
         "timestamp": ANY,
@@ -65,6 +64,12 @@ def test_short_term_memory_search_events(short_term_memory):
         "source_fingerprint": None,
         "source_type": "short_term_memory",
         "fingerprint_metadata": None,
+        "task_id": None,
+        "task_name": None,
+        "from_task": None,
+        "from_agent": None,
+        "agent_role": None,
+        "agent_id": None,
         "query": "test value",
         "limit": 3,
         "score_threshold": 0.35,
@@ -76,6 +81,12 @@ def test_short_term_memory_search_events(short_term_memory):
         "source_fingerprint": None,
         "source_type": "short_term_memory",
         "fingerprint_metadata": None,
+        "task_id": None,
+        "task_name": None,
+        "from_task": None,
+        "from_agent": None,
+        "agent_role": None,
+        "agent_id": None,
         "query": "test value",
         "results": [],
         "limit": 3,
@@ -99,12 +110,10 @@ def test_short_term_memory_save_events(short_term_memory):
         short_term_memory.save(
             value="test value",
             metadata={"task": "test_task"},
-            agent="test_agent",
         )
 
     assert len(events["MemorySaveStartedEvent"]) == 1
     assert len(events["MemorySaveCompletedEvent"]) == 1
-    assert len(events["MemorySaveFailedEvent"]) == 0
 
     assert dict(events["MemorySaveStartedEvent"][0]) == {
         "timestamp": ANY,
@@ -112,9 +121,14 @@ def test_short_term_memory_save_events(short_term_memory):
         "source_fingerprint": None,
         "source_type": "short_term_memory",
         "fingerprint_metadata": None,
+        "task_id": None,
+        "task_name": None,
+        "from_task": None,
+        "from_agent": None,
+        "agent_role": None,
+        "agent_id": None,
         "value": "test value",
         "metadata": {"task": "test_task"},
-        "agent_role": "test_agent",
     }
 
     assert dict(events["MemorySaveCompletedEvent"][0]) == {
@@ -123,9 +137,14 @@ def test_short_term_memory_save_events(short_term_memory):
         "source_fingerprint": None,
         "source_type": "short_term_memory",
         "fingerprint_metadata": None,
+        "task_id": None,
+        "task_name": None,
+        "from_task": None,
+        "from_agent": None,
+        "agent_role": None,
+        "agent_id": None,
         "value": "test value",
-        "metadata": {"task": "test_task", "agent": "test_agent"},
-        "agent_role": "test_agent",
+        "metadata": {"task": "test_task"},
         "save_time_ms": ANY,
     }
 
