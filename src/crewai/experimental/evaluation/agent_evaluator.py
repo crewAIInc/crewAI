@@ -15,6 +15,9 @@ from crewai.utilities.events.agent_events import LiteAgentExecutionCompletedEven
 from crewai.experimental.evaluation.base_evaluator import AgentAggregatedEvaluationResult, EvaluationScore, MetricCategory
 
 class ExecutionState:
+    current_agent_id: Optional[str] = None
+    current_task_id: Optional[str] = None
+
     def __init__(self):
         self.traces = {}
         self.current_agent_id: str | None = None

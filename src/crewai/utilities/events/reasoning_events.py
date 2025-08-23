@@ -1,8 +1,5 @@
 from crewai.utilities.events.base_events import BaseEvent
-from typing import Any, Optional, TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from crewai.task import Task
+from typing import Any, Optional
 
 
 class ReasoningEvent(BaseEvent):
@@ -13,7 +10,7 @@ class ReasoningEvent(BaseEvent):
     agent_role: str
     task_id: str
     task_name: Optional[str] = None
-    from_task: Optional["Task"] = None
+    from_task: Optional[Any] = None
     agent_id: Optional[str] = None
     from_agent: Optional[Any] = None
 
