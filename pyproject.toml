@@ -68,6 +68,9 @@ docling = [
 aisuite = [
     "aisuite>=0.1.10",
 ]
+mlflow = [
+    "mlflow>=2.19.0",
+]
 
 [tool.uv]
 dev-dependencies = [
