@@ -106,11 +106,13 @@ class Mem0Storage(Storage):
                 conversations.append({"role": "user", "content": user_msg})
             if assistant_msg := self._get_assistant_message(assistant_content):
                 conversations.append({"role": "assistant", "content": assistant_msg})
+
+            metadata.pop('messages') # Dropping messages from the metadata dictionary
         else:
             conversations.append({"role": "assistant", "content": value})
         
         user_id = self.config.get("user_id", "")
-        metadata.pop('messages') # Dropping messages from the metadata dictionary
+        
 
         base_metadata = {
             "short_term": "short_term",
