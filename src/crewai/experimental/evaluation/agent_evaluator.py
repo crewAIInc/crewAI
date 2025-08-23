@@ -1,5 +1,5 @@
 import threading
-from typing import Any
+from typing import Any, Optional
 
 from crewai.experimental.evaluation.base_evaluator import AgentEvaluationResult, AggregationStrategy
 from crewai.agent import Agent
@@ -20,8 +20,6 @@ class ExecutionState:
 
     def __init__(self):
         self.traces = {}
-        self.current_agent_id: str | None = None
-        self.current_task_id: str | None = None
         self.iteration = 1
         self.iterations_results = {}
         self.agent_evaluators = {}
