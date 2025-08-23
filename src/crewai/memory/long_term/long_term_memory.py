@@ -80,7 +80,7 @@ class LongTermMemory(Memory):
             )
             raise
 
-    def search(
+    def search(  # type: ignore # signature of "search" incompatible with supertype "Memory"
         self,
         task: str,
         latest_n: int = 3,
