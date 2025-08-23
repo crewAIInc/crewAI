@@ -3,6 +3,7 @@ import shutil
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch, MagicMock
 
 from crewai.cli.config import (
     Settings,
@@ -10,6 +11,8 @@ from crewai.cli.config import (
     CLI_SETTINGS_KEYS,
     DEFAULT_CLI_SETTINGS,
 )
+from crewai.cli.shared.token_manager import TokenManager
+from datetime import datetime, timedelta
 
 
 class TestSettings(unittest.TestCase):
@@ -66,12 +69,18 @@ class TestSettings(unittest.TestCase):
         for key in user_settings.keys():
             self.assertEqual(getattr(settings, key), None)
 
-    def test_reset_settings(self):
+    @patch("crewai.cli.config.TokenManager")
+    def test_reset_settings(self, mock_token_manager):
         user_settings = {key: f"value_for_{key}" for key in USER_SETTINGS_KEYS}
         cli_settings = {key: f"value_for_{key}" for key in CLI_SETTINGS_KEYS}
 
         settings = Settings(
             config_path=self.config_path, **user_settings, **cli_settings
+        )
+
+        mock_token_manager.return_value = MagicMock()
+        TokenManager().save_tokens(
+            "aaa.bbb.ccc", (datetime.now() + timedelta(seconds=36000)).timestamp()
         )
 
         settings.reset()
@@ -80,6 +89,8 @@ class TestSettings(unittest.TestCase):
             self.assertEqual(getattr(settings, key), None)
         for key in cli_settings.keys():
             self.assertEqual(getattr(settings, key), DEFAULT_CLI_SETTINGS.get(key))
+
+        mock_token_manager.return_value.clear_tokens.assert_called_once()
 
     def test_dump_new_settings(self):
         settings = Settings(

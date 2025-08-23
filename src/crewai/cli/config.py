@@ -11,6 +11,7 @@ from crewai.cli.constants import (
     CREWAI_ENTERPRISE_DEFAULT_OAUTH2_CLIENT_ID,
     CREWAI_ENTERPRISE_DEFAULT_OAUTH2_DOMAIN,
 )
+from crewai.cli.shared.token_manager import TokenManager
 
 DEFAULT_CONFIG_PATH = Path.home() / ".config" / "crewai" / "settings.json"
 
@@ -53,6 +54,7 @@ HIDDEN_SETTINGS_KEYS = [
     "tool_repository_password",
 ]
 
+
 class Settings(BaseModel):
     enterprise_base_url: Optional[str] = Field(
         default=DEFAULT_CLI_SETTINGS["enterprise_base_url"],
@@ -74,12 +76,12 @@ class Settings(BaseModel):
 
     oauth2_provider: str = Field(
         description="OAuth2 provider used for authentication (e.g., workos, okta, auth0).",
-        default=DEFAULT_CLI_SETTINGS["oauth2_provider"]
+        default=DEFAULT_CLI_SETTINGS["oauth2_provider"],
     )
 
     oauth2_audience: Optional[str] = Field(
         description="OAuth2 audience value, typically used to identify the target API or resource.",
-        default=DEFAULT_CLI_SETTINGS["oauth2_audience"]
+        default=DEFAULT_CLI_SETTINGS["oauth2_audience"],
     )
 
     oauth2_client_id: str = Field(
@@ -89,7 +91,7 @@ class Settings(BaseModel):
 
     oauth2_domain: str = Field(
         description="OAuth2 provider's domain (e.g., your-org.auth0.com) used for issuing tokens.",
-        default=DEFAULT_CLI_SETTINGS["oauth2_domain"]
+        default=DEFAULT_CLI_SETTINGS["oauth2_domain"],
     )
 
     def __init__(self, config_path: Path = DEFAULT_CONFIG_PATH, **data):
@@ -116,6 +118,7 @@ class Settings(BaseModel):
         """Reset all settings to default values"""
         self._reset_user_settings()
         self._reset_cli_settings()
+        self._clear_auth_tokens()
         self.dump()
 
     def dump(self) -> None:
@@ -139,3 +142,7 @@ class Settings(BaseModel):
         """Reset all CLI settings to default values"""
         for key in CLI_SETTINGS_KEYS:
             setattr(self, key, DEFAULT_CLI_SETTINGS.get(key))
+
+    def _clear_auth_tokens(self) -> None:
+        """Clear all authentication tokens"""
+        TokenManager().clear_tokens()
