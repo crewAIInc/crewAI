@@ -328,6 +328,84 @@ def test_search_method_with_agent_entity():
         assert results[0]["context"] == "Result 1"
 
 
+def test_metadata_truncation_with_large_messages():
+    """Test that large messages in metadata are truncated to stay under limit"""
+    mock_memory = MagicMock(spec=Memory)
+    
+    with patch.object(Memory, "__new__", return_value=mock_memory):
+        mem0_storage = Mem0Storage(type="external", config={})
+        
+        large_messages = [
+            {"role": "user", "content": "x" * 500},
+            {"role": "assistant", "content": "y" * 500},
+            {"role": "user", "content": "z" * 500},
+            {"role": "assistant", "content": "w" * 500},
+        ]
+        
+        large_metadata = {
+            "description": "Test task",
+            "messages": large_messages,
+        }
+        
+        mem0_storage.save("test memory", large_metadata)
+        
+        call_args = mem0_storage.memory.add.call_args
+        saved_metadata = call_args[1]["metadata"]
+        
+        import json
+        metadata_str = json.dumps(saved_metadata, default=str)
+        assert len(metadata_str) <= 2000
+        
+        assert saved_metadata["type"] == "external"
+        assert "description" in saved_metadata
+
+
+def test_metadata_truncation_removes_messages_when_necessary():
+    """Test that messages are completely removed if truncation isn't enough"""
+    mock_memory = MagicMock(spec=Memory)
+    
+    with patch.object(Memory, "__new__", return_value=mock_memory):
+        mem0_storage = Mem0Storage(type="external", config={})
+        
+        extremely_large_messages = [{"role": "user", "content": "x" * 2000}]
+        
+        large_metadata = {
+            "description": "Test task",
+            "messages": extremely_large_messages,
+        }
+        
+        mem0_storage.save("test memory", large_metadata)
+        
+        call_args = mem0_storage.memory.add.call_args
+        saved_metadata = call_args[1]["metadata"]
+        
+        assert "messages" not in saved_metadata
+        assert saved_metadata.get("_truncated") is True
+        assert saved_metadata["type"] == "external"
+
+
+def test_small_metadata_not_truncated():
+    """Test that small metadata is not modified"""
+    mock_memory = MagicMock(spec=Memory)
+    
+    with patch.object(Memory, "__new__", return_value=mock_memory):
+        mem0_storage = Mem0Storage(type="external", config={})
+        
+        small_metadata = {
+            "description": "Small task",
+            "messages": [{"role": "user", "content": "short message"}],
+        }
+        
+        mem0_storage.save("test memory", small_metadata)
+        
+        call_args = mem0_storage.memory.add.call_args
+        saved_metadata = call_args[1]["metadata"]
+        
+        assert "messages" in saved_metadata
+        assert saved_metadata["messages"] == small_metadata["messages"]
+        assert "_truncated" not in saved_metadata
+
+
 def test_search_method_with_agent_id_and_user_id():
     mock_memory = MagicMock(spec=Memory)
     mock_results = {"results": [{"score": 0.9, "memory": "Result 1"}, {"score": 0.4, "memory": "Result 2"}]}
