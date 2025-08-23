@@ -222,7 +222,6 @@ def test_external_memory_custom_storage(custom_storage, crew_with_external_memor
 
     test_value = "test value"
     test_metadata = {"source": "test"}
-    test_agent = "test_agent"
     external_memory.save(value=test_value, metadata=test_metadata)
 
     results = external_memory.search("test")
