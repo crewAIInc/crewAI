@@ -77,6 +77,7 @@ class TraceCollectionListener(BaseEventListener):
 
     complex_events = [
         "task_started",
+        "task_completed",
         "llm_call_started",
         "llm_call_completed",
         "agent_execution_started",
@@ -374,6 +375,19 @@ class TraceCollectionListener(BaseEventListener):
                 "context": event.context,
                 "agent_role": source.agent.role,
                 "task_id": str(event.task.id),
+            }
+        elif event_type == "task_completed":
+            return {
+                "task_description": event.task.description if event.task else None,
+                "task_name": event.task.name or event.task.description
+                if event.task
+                else None,
+                "task_id": str(event.task.id) if event.task else None,
+                "output_raw": event.output.raw if event.output else None,
+                "output_format": str(event.output.output_format)
+                if event.output
+                else None,
+                "agent_role": event.output.agent if event.output else None,
             }
         elif event_type == "agent_execution_started":
             return {
