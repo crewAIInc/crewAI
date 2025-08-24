@@ -1,0 +1,171 @@
+---
+title: "자동화 트리거"
+description: "연결된 통합에서 특정 이벤트가 발생할 때 CrewAI 워크플로우를 자동으로 실행합니다"
+icon: "bolt"
+---
+
+자동화 트리거를 사용하면 연결된 통합에서 특정 이벤트가 발생할 때 CrewAI 배포를 자동으로 실행할 수 있어, 비즈니스 시스템의 실시간 변화에 반응하는 강력한 이벤트 기반 워크플로우를 만들 수 있습니다.
+
+## 개요
+
+자동화 트리거를 사용하면 다음을 수행할 수 있습니다:
+
+- **실시간 이벤트에 응답** - 특정 조건이 충족될 때 워크플로우를 자동으로 실행
+- **외부 시스템과 통합** - Gmail, Outlook, OneDrive, JIRA, Slack, Stripe 등의 플랫폼과 연결
+- **자동화 확장** - 수동 개입 없이 대용량 이벤트 처리
+- **컨텍스트 유지** - crew와 flow 내에서 트리거 데이터에 액세스
+
+## 자동화 트리거 관리
+
+### 사용 가능한 트리거 보기
+
+자동화 트리거에 액세스하고 관리하려면:
+
+1. CrewAI 대시보드에서 배포로 이동
+2. **트리거** 탭을 클릭하여 사용 가능한 모든 트리거 통합 보기
+
+<Frame>
+  <img src="/images/enterprise/list-available-triggers.png" alt="사용 가능한 자동화 트리거 목록" />
+</Frame>
+
+이 보기는 배포에 사용 가능한 모든 트리거 통합과 현재 연결 상태를 보여줍니다.
+
+### 트리거 활성화 및 비활성화
+
+각 트리거는 토글 스위치를 사용하여 쉽게 활성화하거나 비활성화할 수 있습니다:
+
+<Frame>
+  <img src="/images/enterprise/trigger-selected.png" alt="토글로 트리거 활성화 또는 비활성화" />
+</Frame>
+
+- **활성화됨 (파란색 토글)**: 트리거가 활성 상태이며 지정된 이벤트가 발생할 때 배포를 자동으로 실행합니다
+- **비활성화됨 (회색 토글)**: 트리거가 비활성 상태이며 이벤트에 응답하지 않습니다
+
+토글을 클릭하기만 하면 트리거 상태를 변경할 수 있습니다. 변경 사항은 즉시 적용됩니다.
+
+### 트리거 실행 모니터링
+
+트리거된 실행의 성능과 기록을 추적합니다:
+
+<Frame>
+  <img src="/images/enterprise/list-executions.png" alt="자동화에 의해 트리거된 실행 목록" />
+</Frame>
+
+## 자동화 구축
+
+자동화를 구축하기 전에 crew와 flow가 받을 트리거 페이로드의 구조를 이해하는 것이 도움이 됩니다.
+
+### 페이로드 샘플 저장소
+
+자동화를 구축하고 테스트하는 데 도움이 되도록 다양한 트리거 소스의 샘플 페이로드가 포함된 포괄적인 저장소를 유지 관리하고 있습니다:
+
+**🔗 [CrewAI Enterprise 트리거 페이로드 샘플](https://github.com/crewAIInc/crewai-enterprise-trigger-payload-samples)**
+
+이 저장소에는 다음이 포함되어 있습니다:
+
+- **실제 페이로드 예제** - 다양한 트리거 소스(Gmail, Google Drive 등)에서 가져온 예제
+- **페이로드 구조 문서** - 형식과 사용 가능한 필드를 보여주는 문서
+
+### Crew와 트리거
+
+기존 crew 정의는 트리거와 완벽하게 작동하며, 받은 페이로드를 분석하는 작업만 있으면 됩니다:
+
+```python
+@CrewBase
+class MyAutomatedCrew:
+    @agent
+    def researcher(self) -> Agent:
+        return Agent(
+            config=self.agents_config['researcher'],
+        )
+
+    @task
+    def parse_trigger_payload(self) -> Task:
+        return Task(
+            config=self.tasks_config['parse_trigger_payload'],
+            agent=self.researcher(),
+        )
+
+    @task
+    def analyze_trigger_content(self) -> Task:
+        return Task(
+            config=self.tasks_config['analyze_trigger_data'],
+            agent=self.researcher(),
+        )
+```
+
+crew는 자동으로 트리거 페이로드를 받고 표준 CrewAI 컨텍스트 메커니즘을 통해 액세스할 수 있습니다.
+
+### Flow와의 통합
+
+flow의 경우 트리거 데이터 처리 방법을 더 세밀하게 제어할 수 있습니다:
+
+#### 트리거 페이로드 액세스
+
+flow의 모든 `@start()` 메서드는 `crewai_trigger_payload`라는 추가 매개변수를 허용합니다:
+
+```python
+from crewai.flow import Flow, start, listen
+
+class MyAutomatedFlow(Flow):
+    @start()
+    def handle_trigger(self, crewai_trigger_payload: dict = None):
+        """
+        이 start 메서드는 트리거 데이터를 받을 수 있습니다
+        """
+        if crewai_trigger_payload:
+            # 트리거 데이터 처리
+            trigger_id = crewai_trigger_payload.get('id')
+            event_data = crewai_trigger_payload.get('payload', {})
+
+            # 다른 메서드에서 사용할 수 있도록 flow 상태에 저장
+            self.state.trigger_id = trigger_id
+            self.state.trigger_type = event_data
+
+            return event_data
+
+        # 수동 실행 처리
+        return None
+
+    @listen(handle_trigger)
+    def process_data(self, trigger_data):
+        """
+        트리거 데이터 처리
+        """
+        # ... 트리거 처리
+```
+
+#### Flow에서 Crew 트리거하기
+
+트리거된 flow 내에서 crew를 시작할 때 트리거 페이로드를 전달합니다:
+
+```python
+@start()
+def delegate_to_crew(self, crewai_trigger_payload: dict = None):
+    """
+    전문 crew에 처리 위임
+    """
+    crew = MySpecializedCrew()
+
+    # crew에 트리거 페이로드 전달
+    result = crew.crew().kickoff(
+        inputs={
+            'a_custom_parameter': "custom_value",
+            'crewai_trigger_payload': crewai_trigger_payload
+        },
+    )
+
+    return result
+```
+
+## 문제 해결
+
+**트리거가 작동하지 않는 경우:**
+- 트리거가 활성화되어 있는지 확인
+- 통합 연결 상태 확인
+
+**실행 실패:**
+- 오류 세부 정보는 실행 로그 확인
+- 개발 중인 경우 입력에 올바른 페이로드가 포함된 `crewai_trigger_payload` 매개변수가 포함되어 있는지 확인
+
+자동화 트리거는 CrewAI 배포를 기존 비즈니스 프로세스 및 도구와 완벽하게 통합할 수 있는 반응형 이벤트 기반 시스템으로 변환합니다.

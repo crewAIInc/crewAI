@@ -1,0 +1,81 @@
+---
+title: 웹훅 스트리밍
+description: "웹훅 스트리밍을 사용하여 이벤트를 웹훅으로 스트리밍하기"
+icon: "webhook"
+---
+
+## 개요
+
+Enterprise Event Streaming을 사용하면 CrewAI Enterprise에 배포된 crew 및 flow에 대한 실시간 웹훅 업데이트(예: 모델 호출, 도구 사용, flow 단계)를 받을 수 있습니다.
+
+## 사용법
+
+Kickoff API를 사용할 때, 요청에 `webhooks` 객체를 포함시키세요. 예를 들면 아래와 같습니다:
+
+```json
+{
+  "inputs": {"foo": "bar"},
+  "webhooks": {
+    "events": ["crew_kickoff_started", "llm_call_started"],
+    "url": "https://your.endpoint/webhook",
+    "realtime": false,
+    "authentication": {
+      "strategy": "bearer",
+      "token": "my-secret-token"
+    }
+  }
+}
+```
+
+`realtime`이 `true`로 설정되면, 각 이벤트가 개별적으로 그리고 즉시 전달되지만 crew/flow 성능에 영향을 미칠 수 있습니다.
+
+## Webhook 형식
+
+각 webhook은 이벤트 목록을 전송합니다:
+
+```json
+{
+  "events": [
+    {
+      "id": "event-id",
+      "execution_id": "crew-run-id",
+      "timestamp": "2025-02-16T10:58:44.965Z",
+      "type": "llm_call_started",
+      "data": {
+        "model": "gpt-4",
+        "messages": [
+          {"role": "system", "content": "You are an assistant."},
+          {"role": "user", "content": "Summarize this article."}
+        ]
+      }
+    }
+  ]
+}
+```
+
+`data` 객체의 구조는 이벤트 타입에 따라 다릅니다. 자세한 내용은 GitHub의 [이벤트 목록](https://github.com/crewAIInc/crewAI/tree/main/src/crewai/utilities/events)을 참조하세요.
+
+요청이 HTTP를 통해 전송되므로, 이벤트의 순서가 보장되지 않습니다. 순서가 필요하다면 `timestamp` 필드를 사용하세요.
+
+## 지원되는 이벤트
+
+CrewAI는 Enterprise Event Streaming에서 시스템 이벤트와 사용자 지정 이벤트 둘 다를 지원합니다. 이러한 이벤트는 crew 및 flow 실행 중에 구성한 웹훅 엔드포인트로 전송됩니다.
+
+- `crew_kickoff_started`
+- `crew_step_started`
+- `crew_step_completed`
+- `crew_execution_completed`
+- `llm_call_started`
+- `llm_call_completed`
+- `tool_usage_started`
+- `tool_usage_completed`
+- `crew_test_failed`
+- *...그리고 기타 여러 가지*
+
+이벤트 이름은 내부 이벤트 버스와 일치합니다. 전체 목록은 [GitHub 소스](https://github.com/crewAIInc/crewAI/tree/main/src/crewai/utilities/events)에서 확인할 수 있습니다.
+
+사용자 지정 이벤트도 직접 발생시킬 수 있으며, 시스템 이벤트와 함께 웹훅 스트림을 통해 전달됩니다.
+
+<Card title="도움이 필요하신가요?" icon="headset" href="mailto:support@crewai.com">
+  웹훅 통합 또는 문제 해결에 대한 지원이 필요하다면 저희 지원팀에 문의해 주세요.
+</Card>

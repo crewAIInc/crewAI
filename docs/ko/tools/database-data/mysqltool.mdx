@@ -1,0 +1,69 @@
+---
+title: MySQL RAG 검색
+description: MySQLSearchTool은 MySQL 데이터베이스를 검색하고 가장 관련성 높은 결과를 반환하도록 설계되었습니다.
+icon: database
+---
+
+## 개요
+
+이 도구는 MySQL 데이터베이스 테이블 내에서 시맨틱 검색을 용이하게 하기 위해 설계되었습니다. RAG(Retrieve and Generate) 기술을 활용하여,
+MySQLSearchTool은 사용자가 MySQL 데이터베이스에 특화된 데이터베이스 테이블 콘텐츠를 효율적으로 쿼리할 수 있는 수단을 제공합니다.
+시맨틱 검색 쿼리를 통해 관련 데이터를 쉽게 찾을 수 있도록 하여, MySQL 데이터베이스 내의 방대한 데이터셋에 대해 고급 쿼리를 수행해야 하는 사용자를 위한
+소중한 리소스가 됩니다.
+
+## 설치
+
+`crewai_tools` 패키지를 설치하고 MySQLSearchTool을 사용하려면, 터미널에서 다음 명령어를 실행하세요:
+
+```shell
+pip install 'crewai[tools]'
+```
+
+## 예시
+
+아래는 MySQL 데이터베이스 내의 테이블에서 MySQLSearchTool을 사용하여 시맨틱 검색을 수행하는 방법을 보여주는 예시입니다:
+
+```python Code
+from crewai_tools import MySQLSearchTool
+
+# Initialize the tool with the database URI and the target table name
+tool = MySQLSearchTool(
+    db_uri='mysql://user:password@localhost:3306/mydatabase',
+    table_name='employees'
+)
+```
+
+## 인수
+
+MySQLSearchTool은 작동을 위해 다음 인수들이 필요합니다:
+
+- `db_uri`: 조회할 MySQL 데이터베이스의 URI를 나타내는 문자열입니다. 이 인수는 필수이며, 필요한 인증 정보와 데이터베이스 위치가 포함되어야 합니다.
+- `table_name`: 데이터베이스 내에서 시맨틱 검색이 수행될 테이블의 이름을 지정하는 문자열입니다. 이 인수는 필수입니다.
+
+## 커스텀 모델 및 임베딩
+
+기본적으로 이 도구는 임베딩과 요약 모두에 OpenAI를 사용합니다. 모델을 커스터마이즈하려면 다음과 같이 config 딕셔너리를 사용할 수 있습니다.
+
+```python Code
+tool = MySQLSearchTool(
+    config=dict(
+        llm=dict(
+            provider="ollama", # or google, openai, anthropic, llama2, ...
+            config=dict(
+                model="llama2",
+                # temperature=0.5,
+                # top_p=1,
+                # stream=true,
+            ),
+        ),
+        embedder=dict(
+            provider="google",
+            config=dict(
+                model="models/embedding-001",
+                task_type="retrieval_document",
+                # title="Embeddings",
+            ),
+        ),
+    )
+)
+```

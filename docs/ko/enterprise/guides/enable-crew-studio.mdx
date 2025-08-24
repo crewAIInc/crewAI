@@ -1,0 +1,165 @@
+---
+title: "Crew Studio 활성화"
+description: "CrewAI Enterprise에서 Crew Studio 활성화하기"
+icon: "comments"
+---
+
+<Tip>
+Crew Studio는 대화형 인터페이스를 통해 빠르게 Crew를 스캐폴딩하거나 구축할 수 있는 강력한 **노코드/로우코드** 도구입니다.
+</Tip>
+
+## Crew Studio란?
+
+Crew Studio는 코드를 작성하지 않고도 AI agent crew를 생성할 수 있는 혁신적인 방법입니다.
+
+<Frame>
+  ![Crew Studio Interface](/images/enterprise/crew-studio-interface.png)
+</Frame>
+
+Crew Studio를 사용하면 다음과 같은 작업이 가능합니다:
+
+- Crew Assistant와 채팅하여 문제를 설명
+- agent 및 task를 자동으로 생성
+- 적절한 tool 선택
+- 필요한 입력값 구성
+- 커스터마이징을 위한 다운로드 가능한 코드 생성
+- CrewAI Enterprise 플랫폼에 직접 배포
+
+## 구성 단계
+
+Crew Studio를 사용하기 전에 LLM 연결을 구성해야 합니다:
+
+<Steps>
+  <Step title="LLM 연결 설정">
+    CrewAI Enterprise 대시보드의 **LLM Connections** 탭으로 이동하여 새 LLM 연결을 만듭니다.
+
+    <Note>
+      CrewAI에서 지원하는 원하는 LLM 공급자를 자유롭게 사용하실 수 있습니다.
+    </Note>
+    
+    LLM 연결을 구성하세요:
+    
+    - `Connection Name`(예: `OpenAI`)을 입력하세요.
+    - 모델 공급자를 선택하세요: `openai` 또는 `azure`
+    - Studio에서 생성되는 Crews에 사용할 모델을 선택하세요.
+      - 최소한 `gpt-4o`, `o1-mini`, `gpt-4o-mini`를 권장합니다.
+    - API 키를 환경 변수로 추가하세요:
+      - OpenAI의 경우: `OPENAI_API_KEY`에 API 키를 추가
+      - Azure OpenAI의 경우: [이 글](https://blog.crewai.com/configuring-azure-openai-with-crewai-a-comprehensive-guide/)을 참고하여 구성
+    - `Add Connection`을 클릭하여 구성을 저장하세요.
+    
+    <Frame>
+      ![LLM 연결 구성](/images/enterprise/llm-connection-config.png)
+    </Frame>
+  </Step>
+  
+  <Step title="연결 추가 확인">
+    설정이 완료되면 새 연결이 사용 가능한 연결 목록에 추가된 것을 볼 수 있습니다.
+    
+    <Frame>
+      ![연결 추가됨](/images/enterprise/connection-added.png)
+    </Frame>
+  </Step>
+  
+  <Step title="LLM 기본값 구성">
+    메인 메뉴에서 **Settings → Defaults**로 이동하여 LLM 기본값을 구성하세요:
+    
+    - 에이전트 및 기타 구성 요소의 기본 모델을 선택하세요
+    - Crew Studio의 기본 구성을 설정하세요
+    
+    변경 사항을 적용하려면 `Save Settings`를 클릭하세요.
+    
+    <Frame>
+      ![LLM 기본값 구성](/images/enterprise/llm-defaults.png)
+    </Frame>
+  </Step>
+</Steps>
+
+## Crew Studio 사용하기
+
+LLM 연결과 기본 설정을 구성했다면 이제 Crew Studio 사용을 시작할 준비가 완료되었습니다!
+
+<Steps>
+  <Step title="Studio 접속">
+    CrewAI Enterprise 대시보드에서 **Studio** 섹션으로 이동하세요.
+  </Step>
+  
+  <Step title="대화 시작">
+    Crew Assistant와 대화를 시작하며 해결하고자 하는 문제를 설명하세요:
+    
+    ```md
+    I need a crew that can research the latest AI developments and create a summary report.
+    ```
+    
+    Crew Assistant는 귀하의 요구 사항을 더 잘 이해하기 위해 추가 질문을 할 것입니다.
+  </Step>
+  
+  <Step title="생성된 crew 검토">
+    생성된 crew 구성을 검토하세요. 구성에는 다음이 포함됩니다:
+    
+    - 에이전트 및 그들의 역할
+    - 수행할 작업
+    - 필요한 입력값
+    - 사용할 도구
+    
+    이 단계에서 구성 내용을 세부적으로 수정할 수 있습니다.
+  </Step>
+  
+  <Step title="배포 또는 다운로드">
+    구성에 만족하면 다음을 수행할 수 있습니다:
+    
+    - 생성된 코드를 다운로드하여 로컬에서 커스터마이징
+    - crew를 CrewAI Enterprise 플랫폼에 직접 배포
+    - 구성을 수정하고 crew를 재생성
+  </Step>
+  
+  <Step title="crew 테스트">
+    배포 후 샘플 입력으로 crew를 테스트하여 기대한 대로 동작하는지 확인하세요.
+  </Step>
+</Steps>
+
+<Tip>
+최상의 결과를 얻으려면 crew가 달성해야 할 목표를 명확하고 상세하게 설명하세요. 원하는 입력값과 예상 결과를 설명에 포함시키는 것이 좋습니다.
+</Tip>
+
+## 예시 워크플로우
+
+다음은 Crew Studio를 사용하여 crew를 생성하는 일반적인 워크플로우입니다:
+
+<Steps>
+  <Step title="문제 설명하기">
+    먼저 문제를 설명하세요:
+    
+    ```md
+    I need a crew that can analyze financial news and provide investment recommendations
+    ```
+  </Step>
+  
+  <Step title="질문에 답하기">
+    crew assistant가 요구 사항을 구체화할 수 있도록 하는 추가 질문에 답변하세요.
+  </Step>
+  
+  <Step title="계획 검토하기">
+    생성된 crew 계획을 검토하세요. 여기에는 다음과 같은 항목이 포함될 수 있습니다:
+    
+    - 금융 뉴스를 수집하는 Research Agent
+    - 데이터를 해석하는 Analysis Agent
+    - 투자 조언을 제공하는 Recommendations Agent
+  </Step>
+  
+  <Step title="승인 또는 수정">
+    계획을 승인하거나 필요하다면 변경을 요청하세요.
+  </Step>
+  
+  <Step title="다운로드 또는 배포">
+    사용자화를 위해 코드를 다운로드하거나 플랫폼에 직접 배포하세요.
+  </Step>
+  
+  <Step title="테스트 및 개선">
+    샘플 입력으로 crew를 테스트하고 필요에 따라 개선하세요.
+  </Step>
+</Steps>
+
+<Card title="도움이 필요하세요?" icon="headset" href="mailto:support@crewai.com">
+  Crew Studio 또는 기타 CrewAI Enterprise 기능 지원이 필요하다면 지원팀에 문의하세요.
+</Card>

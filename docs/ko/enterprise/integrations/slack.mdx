@@ -1,0 +1,293 @@
+---
+title: Slack 연동
+description: "CrewAI를 위한 Slack 연동으로 팀 커뮤니케이션 및 협업 지원."
+icon: "slack"
+---
+
+## 개요
+
+에이전트가 Slack을 통해 팀 커뮤니케이션을 관리할 수 있도록 지원합니다. 메시지를 보내고, 대화를 검색하며, 채널을 관리하고, AI 기반 자동화를 통해 팀 활동을 조율하여 협업 워크플로우를 효율적으로 최적화하세요.
+
+## 사전 준비 사항
+
+Slack 통합을 사용하기 전에 다음을 확인하십시오:
+
+- 활성 구독이 있는 [CrewAI Enterprise](https://app.crewai.com) 계정
+- 적절한 권한이 있는 Slack 워크스페이스
+- [통합 페이지](https://app.crewai.com/integrations)를 통해 Slack 워크스페이스를 연결함
+
+## 사용 가능한 도구
+
+### **사용자 관리**
+
+<AccordionGroup>
+  <Accordion title="SLACK_LIST_MEMBERS">
+    **설명:** Slack 채널의 모든 멤버를 나열합니다.
+
+    **파라미터:**
+    - 파라미터 없음 - 모든 채널 멤버를 조회합니다
+  </Accordion>
+
+  <Accordion title="SLACK_GET_USER_BY_EMAIL">
+    **설명:** 이메일 주소로 Slack 워크스페이스에서 사용자를 찾습니다.
+
+    **파라미터:**
+    - `email` (string, 필수): 워크스페이스 내 사용자의 이메일 주소
+  </Accordion>
+
+  <Accordion title="SLACK_GET_USERS_BY_NAME">
+    **설명:** 이름 또는 표시 이름으로 사용자를 검색합니다.
+
+    **파라미터:**
+    - `name` (string, 필수): 검색할 사용자의 실제 이름
+    - `displayName` (string, 필수): 검색할 사용자의 표시 이름
+    - `paginationParameters` (object, 선택): 페이지네이션 설정
+      - `pageCursor` (string, 선택): 페이지네이션을 위한 페이지 커서
+  </Accordion>
+</AccordionGroup>
+
+### **채널 관리**
+
+<AccordionGroup>
+  <Accordion title="SLACK_LIST_CHANNELS">
+    **설명:** Slack 워크스페이스의 모든 채널을 나열합니다.
+
+    **파라미터:**
+    - 파라미터가 필요하지 않습니다 - 접근 가능한 모든 채널을 조회합니다
+  </Accordion>
+</AccordionGroup>
+
+### **메시징**
+
+<AccordionGroup>
+  <Accordion title="SLACK_SEND_MESSAGE">
+    **설명:** Slack 채널에 메시지를 전송합니다.
+
+    **파라미터:**
+    - `channel` (string, 필수): 채널 이름 또는 ID - Connect Portal Workflow Settings를 사용하여 사용자가 채널을 선택하도록 하거나, 채널 이름을 입력하여 새 채널을 생성할 수 있습니다.
+    - `message` (string, 필수): 전송할 메시지 텍스트
+    - `botName` (string, 필수): 이 메시지를 전송하는 봇의 이름
+    - `botIcon` (string, 필수): 봇 아이콘 - 이미지 URL 또는 이모지(e.g., ":dog:") 모두 가능합니다.
+    - `blocks` (object, 선택): 첨부파일 및 인터랙티브 요소 등이 포함된 풍부한 메시지 포맷팅을 위한 Slack Block Kit JSON
+    - `authenticatedUser` (boolean, 선택): true이면 메시지가 애플리케이션이 아니라 인증된 Slack 사용자로부터 보낸 것처럼 표시됩니다(기본값은 false)
+  </Accordion>
+
+  <Accordion title="SLACK_SEND_DIRECT_MESSAGE">
+    **설명:** Slack에서 특정 사용자에게 다이렉트 메시지를 전송합니다.
+
+    **파라미터:**
+    - `memberId` (string, 필수): 수신자 사용자 ID - Connect Portal Workflow Settings를 사용하여 사용자가 워크스페이스 멤버를 선택하도록 합니다.
+    - `message` (string, 필수): 전송할 메시지 텍스트
+    - `botName` (string, 필수): 이 메시지를 전송하는 봇의 이름
+    - `botIcon` (string, 필수): 봇 아이콘 - 이미지 URL 또는 이모지(e.g., ":dog:") 모두 가능합니다.
+    - `blocks` (object, 선택): 첨부파일 및 인터랙티브 요소 등이 포함된 풍부한 메시지 포맷팅을 위한 Slack Block Kit JSON
+    - `authenticatedUser` (boolean, 선택): true이면 메시지가 애플리케이션이 아니라 인증된 Slack 사용자로부터 보낸 것처럼 표시됩니다(기본값은 false)
+  </Accordion>
+</AccordionGroup>
+
+### **검색 및 탐색**
+
+<AccordionGroup>
+  <Accordion title="SLACK_SEARCH_MESSAGES">
+    **설명:** Slack 워크스페이스 전체에서 메시지를 검색합니다.
+
+    **매개변수:**
+    - `query` (string, 필수): 지정된 기준과 일치하는 메시지를 찾기 위해 Slack 검색 구문을 사용한 검색 쿼리
+
+    **검색 쿼리 예시:**
+    - `"project update"` - "project update"가 포함된 메시지 검색
+    - `from:@john in:#general` - #general 채널에서 John이 보낸 메시지 검색
+    - `has:link after:2023-01-01` - 2023년 1월 1일 이후에 링크가 포함된 메시지 검색
+    - `in:@channel before:yesterday` - 특정 채널에서 어제 이전에 작성된 메시지 검색
+  </Accordion>
+</AccordionGroup>
+
+## Block Kit 통합
+
+Slack의 Block Kit을 사용하면 풍부하고 상호작용이 가능한 메시지를 생성할 수 있습니다. 다음은 `blocks` 매개변수를 사용하는 방법에 대한 몇 가지 예시입니다:
+
+### 첨부 파일이 있는 간단한 텍스트
+```json
+[
+  {
+    "text": "I am a test message",
+    "attachments": [
+      {
+        "text": "And here's an attachment!"
+      }
+    ]
+  }
+]
+```
+
+### 섹션을 활용한 리치 포매팅
+```json
+[
+  {
+    "type": "section",
+    "text": {
+      "type": "mrkdwn",
+      "text": "*프로젝트 업데이트*\n상태: ✅ 완료"
+    }
+  },
+  {
+    "type": "divider"
+  },
+  {
+    "type": "section",
+    "text": {
+      "type": "plain_text",
+      "text": "모든 작업이 성공적으로 완료되었습니다."
+    }
+  }
+]
+```
+
+## 사용 예시
+
+### 기본 Slack 에이전트 설정
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import CrewaiEnterpriseTools
+
+# Get enterprise tools (Slack tools will be included)
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token"
+)
+
+# Create an agent with Slack capabilities
+slack_agent = Agent(
+    role="Team Communication Manager",
+    goal="Facilitate team communication and coordinate collaboration efficiently",
+    backstory="An AI assistant specialized in team communication and workspace coordination.",
+    tools=[enterprise_tools]
+)
+
+# Task to send project updates
+update_task = Task(
+    description="Send a project status update to the #general channel with current progress",
+    agent=slack_agent,
+    expected_output="Project update message sent successfully to team channel"
+)
+
+# Run the task
+crew = Crew(
+    agents=[slack_agent],
+    tasks=[update_task]
+)
+
+crew.kickoff()
+```
+
+### 특정 Slack 도구 필터링
+
+```python
+from crewai_tools import CrewaiEnterpriseTools
+
+# Get only specific Slack tools
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token",
+    actions_list=["slack_send_message", "slack_send_direct_message", "slack_search_messages"]
+)
+
+communication_manager = Agent(
+    role="Communication Coordinator",
+    goal="Manage team communications and ensure important messages reach the right people",
+    backstory="An experienced communication coordinator who handles team messaging and notifications.",
+    tools=enterprise_tools
+)
+
+# Task to coordinate team communication
+coordination_task = Task(
+    description="Send task completion notifications to team members and update project channels",
+    agent=communication_manager,
+    expected_output="Team notifications sent and project channels updated successfully"
+)
+
+crew = Crew(
+    agents=[communication_manager],
+    tasks=[coordination_task]
+)
+
+crew.kickoff()
+```
+
+### Block Kit을 활용한 고급 메시징
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import CrewaiEnterpriseTools
+
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token"
+)
+
+notification_agent = Agent(
+    role="Notification Manager",
+    goal="Create rich, interactive notifications and manage workspace communication",
+    backstory="An AI assistant that specializes in creating engaging team notifications and updates.",
+    tools=[enterprise_tools]
+)
+
+# Task to send rich notifications
+notification_task = Task(
+    description="""
+    1. Send a formatted project completion message to #general with progress charts
+    2. Send direct messages to team leads with task summaries
+    3. Create interactive notification with action buttons for team feedback
+    """,
+    agent=notification_agent,
+    expected_output="Rich notifications sent with interactive elements and formatted content"
+)
+
+crew = Crew(
+    agents=[notification_agent],
+    tasks=[notification_task]
+)
+
+crew.kickoff()
+```
+
+### 메시지 검색 및 분석
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import CrewaiEnterpriseTools
+
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token"
+)
+
+analytics_agent = Agent(
+    role="Communication Analyst",
+    goal="Analyze team communication patterns and extract insights from conversations",
+    backstory="An analytical AI that excels at understanding team dynamics through communication data.",
+    tools=[enterprise_tools]
+)
+
+# Complex task involving search and analysis
+analysis_task = Task(
+    description="""
+    1. 모든 채널에서 최근 프로젝트 관련 메시지 검색
+    2. 이메일로 사용자를 찾아 팀 구성원 식별
+    3. 커뮤니케이션 패턴 및 응답 시간 분석
+    4. 주간 팀 커뮤니케이션 요약 생성
+    """,
+    agent=analytics_agent,
+    expected_output="팀 인사이트 및 권장사항이 포함된 종합적인 커뮤니케이션 분석"
+)
+
+crew = Crew(
+    agents=[analytics_agent],
+    tasks=[analysis_task]
+)
+
+crew.kickoff()
+```
+
+## 지원 문의
+
+<Card title="도움이 필요하신가요?" icon="headset" href="mailto:support@crewai.com">
+  Slack 연동 설정 또는 문제 해결에 대해 지원팀에 문의하세요.
+</Card>

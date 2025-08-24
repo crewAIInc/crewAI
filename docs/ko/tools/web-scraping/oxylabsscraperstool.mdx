@@ -1,0 +1,235 @@
+---
+title: Oxylabs 스크래퍼
+description: >
+  Oxylabs 스크래퍼를 사용하면 해당 소스에서 정보를 쉽게 접근할 수 있습니다. 아래에서 사용 가능한 소스 목록을 확인하세요:
+    - `Amazon Product`
+    - `Amazon Search`
+    - `Google Seach`
+    - `Universal`
+icon: globe
+---
+
+## 설치
+
+[여기](https://oxylabs.io)에서 Oxylabs 계정을 생성하여 자격 증명을 받으세요.
+```shell
+pip install 'crewai[tools]' oxylabs
+```
+API 매개변수에 대한 자세한 정보는 [Oxylabs 문서](https://developers.oxylabs.io/scraping-solutions/web-scraper-api/targets)를 참고하세요.
+
+# `OxylabsAmazonProductScraperTool`
+
+### 예시
+
+```python
+from crewai_tools import OxylabsAmazonProductScraperTool
+
+# make sure OXYLABS_USERNAME and OXYLABS_PASSWORD variables are set
+tool = OxylabsAmazonProductScraperTool()
+
+result = tool.run(query="AAAAABBBBCC")
+
+print(result)
+```
+
+### 매개변수
+
+- `query` - 10자리 ASIN 코드.
+- `domain` - Amazon의 도메인 로컬라이제이션.
+- `geo_location` - _배송지_ 위치.
+- `user_agent_type` - 디바이스 유형 및 브라우저.
+- `render` - `html`로 설정 시 JavaScript 렌더링을 활성화합니다.
+- `callback_url` - 콜백 엔드포인트의 URL.
+- `context` - 특수 요구 사항을 위한 추가 고급 설정 및 제어 옵션.
+- `parse` - true로 설정하면 파싱된 데이터를 반환합니다.
+- `parsing_instructions` - HTML 스크래핑 결과에 대해 실행할 자체 파싱 및 데이터 변환 로직을 정의합니다.
+
+### 고급 예제
+
+```python
+from crewai_tools import OxylabsAmazonProductScraperTool
+
+# make sure OXYLABS_USERNAME and OXYLABS_PASSWORD variables are set
+tool = OxylabsAmazonProductScraperTool(
+    config={
+        "domain": "com",
+        "parse": True,
+        "context": [
+            {
+                "key": "autoselect_variant",
+                "value": True
+            }
+        ]
+    }
+)
+
+result = tool.run(query="AAAAABBBBCC")
+
+print(result)
+```
+
+# `OxylabsAmazonSearchScraperTool`
+
+### 예시
+
+```python
+from crewai_tools import OxylabsAmazonSearchScraperTool
+
+# make sure OXYLABS_USERNAME and OXYLABS_PASSWORD variables are set
+tool = OxylabsAmazonSearchScraperTool()
+
+result = tool.run(query="headsets")
+
+print(result)
+```
+
+### 파라미터
+
+- `query` - Amazon 검색어.
+- `domain` - Bestbuy의 도메인 로컬라이제이션.
+- `start_page` - 시작 페이지 번호.
+- `pages` - 가져올 페이지 수.
+- `geo_location` - _배송지_ 위치.
+- `user_agent_type` - 디바이스 종류와 브라우저.
+- `render` - `html`로 설정 시 JavaScript 렌더링 활성화.
+- `callback_url` - 콜백 엔드포인트의 URL.
+- `context` - 고급 설정 및 특별한 요구사항을 위한 제어.
+- `parse` - true로 설정 시 파싱된 데이터 반환.
+- `parsing_instructions` - HTML 스크레이핑 결과에서 실행될 사용자 정의 파싱 및 데이터 변환 로직을 정의합니다.
+
+### 고급 예제
+
+```python
+from crewai_tools import OxylabsAmazonSearchScraperTool
+
+# make sure OXYLABS_USERNAME and OXYLABS_PASSWORD variables are set
+tool = OxylabsAmazonSearchScraperTool(
+    config={
+        "domain": 'nl',
+        "start_page": 2,
+        "pages": 2,
+        "parse": True,
+        "context": [
+            {'key': 'category_id', 'value': 16391693031}
+        ],
+    }
+)
+
+result = tool.run(query='nirvana tshirt')
+
+print(result)
+```
+
+# `OxylabsGoogleSearchScraperTool`
+
+### 예시
+
+```python
+from crewai_tools import OxylabsGoogleSearchScraperTool
+
+# make sure OXYLABS_USERNAME and OXYLABS_PASSWORD variables are set
+tool = OxylabsGoogleSearchScraperTool()
+
+result = tool.run(query="iPhone 16")
+
+print(result)
+```
+
+### 파라미터
+
+- `query` - 검색 키워드.
+- `domain` - Google의 도메인 현지화.
+- `start_page` - 시작 페이지 번호.
+- `pages` - 가져올 페이지 수.
+- `limit` - 각 페이지에서 가져올 결과 수.
+- `locale` - Google 검색 페이지 웹 인터페이스 언어를 변경하는 `Accept-Language` 헤더 값.
+- `geo_location` - 결과가 적응해야 하는 지리적 위치. 이 파라미터를 올바르게 사용하는 것이 올바른 데이터를 얻기 위해 매우 중요합니다.
+- `user_agent_type` - 디바이스 유형과 브라우저.
+- `render` - `html`로 설정 시 JavaScript 렌더링을 활성화합니다.
+- `callback_url` - 콜백 엔드포인트의 URL.
+- `context` - 특수 요구를 위한 추가 고급 설정 및 제어.
+- `parse` - true로 설정 시 파싱된 데이터를 반환합니다.
+- `parsing_instructions` - HTML 스크래핑 결과에 대해 실행될 사용자 지정 파싱 및 데이터 변환 로직을 정의합니다.
+
+### 고급 예시
+
+```python
+from crewai_tools import OxylabsGoogleSearchScraperTool
+
+# make sure OXYLABS_USERNAME and OXYLABS_PASSWORD variables are set
+tool = OxylabsGoogleSearchScraperTool(
+    config={
+        "parse": True,
+        "geo_location": "Paris, France",
+        "user_agent_type": "tablet",
+    }
+)
+
+result = tool.run(query="iPhone 16")
+
+print(result)
+```
+
+# `OxylabsUniversalScraperTool`
+
+### 예시
+
+```python
+from crewai_tools import OxylabsUniversalScraperTool
+
+# make sure OXYLABS_USERNAME and OXYLABS_PASSWORD variables are set
+tool = OxylabsUniversalScraperTool()
+
+result = tool.run(url="https://ip.oxylabs.io")
+
+print(result)
+```
+
+### 매개변수
+
+- `url` - 스크래핑할 웹사이트 URL입니다.
+- `user_agent_type` - 디바이스 유형 및 브라우저입니다.
+- `geo_location` - 데이터를 가져올 프록시의 지리적 위치를 설정합니다.
+- `render` - `html`로 설정할 경우 JavaScript 렌더링을 활성화합니다.
+- `callback_url` - 콜백 엔드포인트의 URL입니다.
+- `context` - 특수 요구 사항을 위한 추가 고급 설정 및 제어 옵션입니다.
+- `parse` - 제출된 URL의 페이지 유형에 대한 전용 파서가 존재할 경우 `true`로 설정하면 파싱된 데이터를 반환합니다.
+- `parsing_instructions` - HTML 스크래핑 결과에서 실행될 자체 파싱 및 데이터 변환 로직을 정의합니다.
+
+### 고급 예제
+
+```python
+from crewai_tools import OxylabsUniversalScraperTool
+
+# make sure OXYLABS_USERNAME and OXYLABS_PASSWORD variables are set
+tool = OxylabsUniversalScraperTool(
+    config={
+        "render": "html",
+        "user_agent_type": "mobile",
+        "context": [
+            {"key": "force_headers", "value": True},
+            {"key": "force_cookies", "value": True},
+            {
+                "key": "headers",
+                "value": {
+                    "Custom-Header-Name": "custom header content",
+                },
+            },
+            {
+                "key": "cookies",
+                "value": [
+                    {"key": "NID", "value": "1234567890"},
+                    {"key": "1P JAR", "value": "0987654321"},
+                ],
+            },
+            {"key": "http_method", "value": "get"},
+            {"key": "follow_redirects", "value": True},
+            {"key": "successful_status_codes", "value": [808, 909]},
+        ],
+    }
+)
+
+result = tool.run(url="https://ip.oxylabs.io")
+
+print(result)
+```

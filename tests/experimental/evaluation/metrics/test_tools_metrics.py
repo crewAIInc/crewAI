@@ -3,10 +3,13 @@ from unittest.mock import patch, MagicMock
 from crewai.experimental.evaluation.metrics.tools_metrics import (
     ToolSelectionEvaluator,
     ParameterExtractionEvaluator,
-    ToolInvocationEvaluator
+    ToolInvocationEvaluator,
 )
 from crewai.utilities.llm_utils import LLM
-from tests.experimental.evaluation.metrics.base_evaluation_metrics_test import BaseEvaluationMetricsTest
+from tests.experimental.evaluation.metrics.test_base_evaluation_metrics import (
+    BaseEvaluationMetricsTest,
+)
+
 
 class TestToolSelectionEvaluator(BaseEvaluationMetricsTest):
     def test_no_tools_available(self, mock_task, mock_agent):
@@ -20,7 +23,7 @@ class TestToolSelectionEvaluator(BaseEvaluationMetricsTest):
             agent=mock_agent,
             task=mock_task,
             execution_trace=execution_trace,
-            final_output="Final output"
+            final_output="Final output",
         )
 
         assert result.score is None
@@ -35,7 +38,7 @@ class TestToolSelectionEvaluator(BaseEvaluationMetricsTest):
             agent=mock_agent,
             task=mock_task,
             execution_trace=execution_trace,
-            final_output="Final output"
+            final_output="Final output",
         )
 
         assert result.score is None
@@ -56,8 +59,12 @@ class TestToolSelectionEvaluator(BaseEvaluationMetricsTest):
         # Setup execution trace with tool uses
         execution_trace = {
             "tool_uses": [
-                {"tool": "search_tool", "input": {"query": "test query"}, "output": "search results"},
-                {"tool": "calculator", "input": {"expression": "2+2"}, "output": "4"}
+                {
+                    "tool": "search_tool",
+                    "input": {"query": "test query"},
+                    "output": "search results",
+                },
+                {"tool": "calculator", "input": {"expression": "2+2"}, "output": "4"},
             ]
         }
 
@@ -66,7 +73,7 @@ class TestToolSelectionEvaluator(BaseEvaluationMetricsTest):
             agent=mock_agent,
             task=mock_task,
             execution_trace=execution_trace,
-            final_output="Final output"
+            final_output="Final output",
         )
 
         assert result.score == 8.5
@@ -90,7 +97,7 @@ class TestParameterExtractionEvaluator(BaseEvaluationMetricsTest):
             agent=mock_agent,
             task=mock_task,
             execution_trace=execution_trace,
-            final_output="Final output"
+            final_output="Final output",
         )
 
         assert result.score is None
@@ -117,14 +124,14 @@ class TestParameterExtractionEvaluator(BaseEvaluationMetricsTest):
                     "tool": "search_tool",
                     "input": {"query": "test query"},
                     "output": "search results",
-                    "error": None
+                    "error": None,
                 },
                 {
                     "tool": "calculator",
                     "input": {"expression": "2+2"},
                     "output": "4",
-                    "error": None
-                }
+                    "error": None,
+                },
             ]
         }
 
@@ -133,7 +140,7 @@ class TestParameterExtractionEvaluator(BaseEvaluationMetricsTest):
             agent=mock_agent,
             task=mock_task,
             execution_trace=execution_trace,
-            final_output="Final output"
+            final_output="Final output",
         )
 
         assert result.score == 9.0
@@ -149,7 +156,7 @@ class TestToolInvocationEvaluator(BaseEvaluationMetricsTest):
             agent=mock_agent,
             task=mock_task,
             execution_trace=execution_trace,
-            final_output="Final output"
+            final_output="Final output",
         )
 
         assert result.score is None
@@ -171,8 +178,12 @@ class TestToolInvocationEvaluator(BaseEvaluationMetricsTest):
         # Setup execution trace with tool uses
         execution_trace = {
             "tool_uses": [
-                {"tool": "search_tool", "input": {"query": "test query"}, "output": "search results"},
-                {"tool": "calculator", "input": {"expression": "2+2"}, "output": "4"}
+                {
+                    "tool": "search_tool",
+                    "input": {"query": "test query"},
+                    "output": "search results",
+                },
+                {"tool": "calculator", "input": {"expression": "2+2"}, "output": "4"},
             ]
         }
 
@@ -181,7 +192,7 @@ class TestToolInvocationEvaluator(BaseEvaluationMetricsTest):
             agent=mock_agent,
             task=mock_task,
             execution_trace=execution_trace,
-            final_output="Final output"
+            final_output="Final output",
         )
 
         assert result.score == 8.0
@@ -207,14 +218,14 @@ class TestToolInvocationEvaluator(BaseEvaluationMetricsTest):
                     "tool": "search_tool",
                     "input": {"query": "test query"},
                     "output": "search results",
-                    "error": None
+                    "error": None,
                 },
                 {
                     "tool": "calculator",
                     "input": {"expression": "2+"},
                     "output": None,
-                    "error": "Invalid expression"
-                }
+                    "error": "Invalid expression",
+                },
             ]
         }
 
@@ -223,7 +234,7 @@ class TestToolInvocationEvaluator(BaseEvaluationMetricsTest):
             agent=mock_agent,
             task=mock_task,
             execution_trace=execution_trace,
-            final_output="Final output"
+            final_output="Final output",
         )
 
         assert result.score == 5.5

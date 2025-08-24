@@ -1,0 +1,316 @@
+---
+title: 프롬프트 커스터마이징
+description: CrewAI를 위한 저수준 프롬프트 커스터마이징에 대해 자세히 알아보고, 다양한 모델과 언어에 대해 매우 맞춤화되고 복잡한 사용 사례를 구현할 수 있습니다.
+icon: message-pen
+---
+
+## 프롬프트를 커스터마이즈해야 하는 이유
+
+CrewAI의 기본 프롬프트는 많은 시나리오에서 잘 작동하지만, 저수준 커스터마이징은 훨씬 더 유연하고 강력한 에이전트 행동으로 이어집니다. 더 깊은 제어를 통해 얻을 수 있는 이점은 다음과 같습니다:
+
+1. **특정 LLM에 맞게 최적화** – GPT-4, Claude, Llama와 같은 다양한 모델은 각자의 고유한 아키텍처에 맞는 프롬프트 형식에서 최고의 성능을 발휘합니다.
+2. **언어 변경** – 영어를 넘어서는 언어로만 작동하는 에이전트를 구축하여 미묘한 뉘앙스도 정확하게 처리할 수 있습니다.
+3. **복잡한 도메인에 특화** – 헬스케어, 금융, 법률 등 매우 전문적인 산업군에 맞춰 프롬프트를 조정할 수 있습니다.
+4. **톤과 스타일 조정** – 에이전트의 톤과 스타일을 좀 더 형식적, 캐주얼, 창의적, 혹은 분석적으로 만들 수 있습니다.
+5. **초고도 커스텀 사례 지원** – 복잡하고 프로젝트에 특화된 요구사항을 충족하기 위해 고급 프롬프트 구조 및 포맷을 활용할 수 있습니다.
+
+이 가이드에서는 CrewAI의 프롬프트를 더 낮은 레벨에서 활용하여, 에이전트의 사고 및 상호작용 방식을 세밀하게 제어하는 방법을 다룹니다.
+
+## CrewAI의 Prompt 시스템 이해하기
+
+내부적으로 CrewAI는 광범위하게 커스터마이즈할 수 있는 모듈식 prompt 시스템을 사용합니다:
+
+- **Agent 템플릿** – 각 agent가 할당된 역할을 수행하는 방식을 결정합니다.
+- **Prompt 슬라이스** – 작업, 도구 사용, 출력 구조와 같은 특수한 동작을 제어합니다.
+- **오류 처리** – agent가 실패, 예외, 또는 타임아웃에 어떻게 반응할지 지정합니다.
+- **도구별 prompt** – 도구가 호출되거나 사용되는 방법에 대한 상세 지침을 정의합니다.
+
+이 요소들이 어떻게 구성되어 있는지 보려면 [CrewAI 저장소의 원본 prompt 템플릿](https://github.com/crewAIInc/crewAI/blob/main/src/crewai/translations/en.json)을 확인하세요. 여기서 필요에 따라 오버라이드하거나 수정하여 고급 동작을 구현할 수 있습니다.
+
+## 기본 시스템 지침 이해하기
+
+<Warning>
+**프로덕션 투명성 문제**: CrewAI는 여러분이 인지하지 못하는 사이에 기본 지침을 프롬프트에 자동으로 삽입합니다. 이 섹션에서는 내부적으로 어떤 일이 일어나고 있는지와 완전한 제어권을 얻는 방법을 설명합니다.
+</Warning>
+
+여러분이 `role`, `goal`, `backstory`로 에이전트를 정의할 때, CrewAI는 형식 및 동작을 제어하는 추가 시스템 지침을 자동으로 추가합니다. 이러한 기본 삽입을 이해하는 것은 완전한 프롬프트 투명성이 필요한 프로덕션 시스템에서 매우 중요합니다.
+
+### CrewAI가 자동으로 삽입하는 내용
+
+에이전트 구성에 따라 CrewAI는 다양한 기본 지침을 추가합니다:
+
+#### 도구가 없는 에이전트를 위한 안내
+```text
+"I MUST use these formats, my job depends on it!"
+```
+
+#### 도구가 있는 에이전트를 위한 안내
+```text
+"IMPORTANT: Use the following format in your response:
+
+Thought: you should always think about what to do
+Action: the action to take, only one name of [tool_names]
+Action Input: the input to the action, just a simple JSON object...
+```
+
+#### 구조화된 출력(JSON/Pydantic)의 경우
+```text
+"Ensure your final answer contains only the content in the following format: {output_format}
+Ensure the final output does not include any code block markers like ```json or ```python."
+```
+
+### 전체 시스템 프롬프트 보기
+
+LLM에 전달되는 프롬프트가 정확히 무엇인지 확인하려면, 생성된 프롬프트를 확인할 수 있습니다:
+
+```python
+from crewai import Agent, Crew, Task
+from crewai.utilities.prompts import Prompts
+
+# 에이전트 생성
+agent = Agent(
+    role="Data Analyst",
+    goal="Analyze data and provide insights",
+    backstory="You are an expert data analyst with 10 years of experience.",
+    verbose=True
+)
+
+# 샘플 태스크 생성
+task = Task(
+    description="Analyze the sales data and identify trends",
+    expected_output="A detailed analysis with key insights and trends",
+    agent=agent
+)
+
+# 프롬프트 생성기 생성
+prompt_generator = Prompts(
+    agent=agent,
+    has_tools=len(agent.tools) > 0,
+    use_system_prompt=agent.use_system_prompt
+)
+
+# 실제 프롬프트 생성 및 확인
+generated_prompt = prompt_generator.task_execution()
+
+# LLM에 전달될 전체 시스템 프롬프트 출력
+if "system" in generated_prompt:
+    print("=== SYSTEM PROMPT ===")
+    print(generated_prompt["system"])
+    print("\n=== USER PROMPT ===")
+    print(generated_prompt["user"])
+else:
+    print("=== COMPLETE PROMPT ===")
+    print(generated_prompt["prompt"])
+
+# 태스크 설명이 어떻게 포맷되는지도 확인할 수 있습니다
+print("\n=== TASK CONTEXT ===")
+print(f"Task Description: {task.description}")
+print(f"Expected Output: {task.expected_output}")
+```
+
+### 기본 지침 재정의
+
+프롬프트에 대한 완전한 제어를 얻기 위해 여러 가지 옵션이 있습니다:
+
+#### 옵션 1: 커스텀 템플릿 (권장)
+```python
+from crewai import Agent
+
+# Define your own system template without default instructions
+custom_system_template = """You are {role}. {backstory}
+Your goal is: {goal}
+
+Respond naturally and conversationally. Focus on providing helpful, accurate information."""
+
+custom_prompt_template = """Task: {input}
+
+Please complete this task thoughtfully."""
+
+agent = Agent(
+    role="Research Assistant",
+    goal="Help users find accurate information",
+    backstory="You are a helpful research assistant.",
+    system_template=custom_system_template,
+    prompt_template=custom_prompt_template,
+    use_system_prompt=True  # Use separate system/user messages
+)
+```
+
+#### 옵션 2: 사용자 지정 프롬프트 파일
+특정 프롬프트 슬라이스를 오버라이드하려면 `custom_prompts.json` 파일을 생성하세요:
+
+```json
+{
+  "slices": {
+    "no_tools": "\nProvide your best answer in a natural, conversational way.",
+    "tools": "\nYou have access to these tools: {tools}\n\nUse them when helpful, but respond naturally.",
+    "formatted_task_instructions": "Format your response as: {output_format}"
+  }
+}
+```
+
+그런 다음 crew에서 사용하세요:
+
+```python
+crew = Crew(
+    agents=[agent],
+    tasks=[task],
+    prompt_file="custom_prompts.json",
+    verbose=True
+)
+```
+
+#### 옵션 3: o1 모델에 대한 시스템 프롬프트 비활성화
+```python
+agent = Agent(
+    role="Analyst",
+    goal="Analyze data",
+    backstory="Expert analyst",
+    use_system_prompt=False  # Disables system prompt separation
+)
+```
+
+### 관측 도구를 활용한 디버깅
+
+프로덕션 투명성을 위해 관측 플랫폼과 통합하여 모든 prompt 및 LLM 상호작용을 모니터링하세요. 이를 통해 LLM에 어떤 prompt(기본 지침 포함)가 전송되고 있는지 정확히 확인할 수 있습니다.
+
+다양한 플랫폼(Langfuse, MLflow, Weights & Biases, 커스텀 로깅 솔루션 등)과의 통합에 대한 자세한 가이드는 [관측 문서](/ko/observability/overview)를 참고하세요.
+
+### 프로덕션을 위한 모범 사례
+
+1. **프로덕션에 배포하기 전에 반드시 생성된 prompt를 점검하세요**
+2. **prompt 내용을 완전히 제어해야 할 경우에는 커스텀 템플릿을 사용하세요**
+3. **지속적인 prompt 모니터링을 위해 관측 도구를 통합하세요** ([Observability 문서](/ko/observability/overview) 참고)
+4. **서로 다른 LLM으로 테스트하세요**. 기본 instruction은 모델마다 다르게 작동할 수 있습니다
+5. **팀 투명성을 위해 prompt 커스터마이징을 문서화하세요**
+
+<Tip>
+기본 instruction은 일관된 agent 동작을 보장하기 위해 존재하지만, 도메인 특화 요구사항과 충돌할 수 있습니다. 위의 커스터마이징 옵션을 사용하여 프로덕션 시스템에서 agent의 동작을 완전히 제어할 수 있습니다.
+</Tip>
+
+## 프롬프트 파일 관리 모범 사례
+
+저수준 프롬프트 커스터마이징을 수행할 때는 다음 지침을 따라 조직적이고 유지 관리가 용이하도록 하세요:
+
+1. **파일 분리** – 커스터마이징한 프롬프트는 메인 코드베이스 외부의 전용 JSON 파일에 저장하세요.
+2. **버전 관리** – 리포지토리 내에서 변경 사항을 추적하여 프롬프트 조정 내역이 명확히 문서화되도록 하세요.
+3. **모델 또는 언어별 정리** – `prompts_llama.json` 또는 `prompts_es.json`과 같이 네이밍 스킴을 사용해 특화된 구성을 빠르게 식별할 수 있도록 하세요.
+4. **변경 사항 문서화** – 주석을 추가하거나 README를 유지 관리하여 커스터마이징의 목적과 범위를 상세히 기술하세요.
+5. **수정 최소화** – 실제로 조정이 필요한 특정 부분만 오버라이드하고, 나머지 부분은 기본 기능을 유지하세요.
+
+## 프롬프트를 커스터마이즈하는 가장 간단한 방법
+
+가장 간단한 접근 방법 중 하나는 오버라이드하려는 프롬프트에 대한 JSON 파일을 생성한 다음, 해당 파일을 Crew에 지정하는 것입니다.
+
+1. 업데이트된 프롬프트 슬라이스로 JSON 파일을 만드세요.
+2. Crew의 `prompt_file` 파라미터를 통해 그 파일을 참조하세요.
+
+그러면 CrewAI가 기본값과 사용자가 지정한 내용을 병합하므로, 모든 프롬프트를 다시 정의할 필요가 없습니다. 방법은 다음과 같습니다:
+
+### 예시: 기본 프롬프트 커스터마이징
+
+수정하고 싶은 프롬프트를 포함하는 `custom_prompts.json` 파일을 생성하세요. 변경 사항만이 아니라 포함해야 하는 모든 최상위 프롬프트를 반드시 나열해야 합니다:
+
+```json
+{
+  "slices": {
+    "format": "When responding, follow this structure:\n\nTHOUGHTS: Your step-by-step thinking\nACTION: Any tool you're using\nRESULT: Your final answer or conclusion"
+  }
+}
+```
+
+그 다음 아래와 같이 통합하세요:
+
+```python
+from crewai import Agent, Crew, Task, Process
+
+# 평소와 같이 에이전트와 태스크를 생성
+researcher = Agent(
+    role="Research Specialist",
+    goal="Find information on quantum computing",
+    backstory="You are a quantum physics expert",
+    verbose=True
+)
+
+research_task = Task(
+    description="Research quantum computing applications",
+    expected_output="A summary of practical applications",
+    agent=researcher
+)
+
+# 커스텀 프롬프트 파일로 crew를 생성
+crew = Crew(
+    agents=[researcher],
+    tasks=[research_task],
+    prompt_file="path/to/custom_prompts.json",
+    verbose=True
+)
+
+# crew 실행
+result = crew.kickoff()
+```
+
+이 몇 가지 간단한 수정으로, agent가 소통하고 태스크를 해결하는 방식을 세밀하게 제어할 수 있습니다.
+
+## 특정 모델에 맞춘 최적화
+
+모델마다 잘 동작하는 프롬프트의 구조가 다릅니다. 프롬프트를 모델의 뉘앙스에 맞게 더욱 깊이 있게 조정하면 성능이 크게 향상될 수 있습니다.
+
+### 예시: Llama 3.3 프롬프트 템플릿
+
+예를 들어, Meta의 Llama 3.3과 작업할 때는 더 깊은 수준의 커스터마이징이 다음에 설명된 권장 구조를 반영할 수 있습니다:  
+https://www.llama.com/docs/model-cards-and-prompt-formats/llama3_1/#prompt-template
+
+다음은 Llama 3.3을 코드에서 활용하도록 Agent를 세밀하게 튜닝하는 방법을 보여주는 예시입니다:
+
+```python
+from crewai import Agent, Crew, Task, Process
+from crewai_tools import DirectoryReadTool, FileReadTool
+
+# Define templates for system, user (prompt), and assistant (response) messages
+system_template = """<|begin_of_text|><|start_header_id|>system<|end_header_id|>{{ .System }}<|eot_id|>"""
+prompt_template = """<|start_header_id|>user<|end_header_id|>{{ .Prompt }}<|eot_id|>"""
+response_template = """<|start_header_id|>assistant<|end_header_id|>{{ .Response }}<|eot_id|>"""
+
+# Create an Agent using Llama-specific layouts
+principal_engineer = Agent(
+    role="Principal Engineer",
+    goal="Oversee AI architecture and make high-level decisions",
+    backstory="You are the lead engineer responsible for critical AI systems",
+    verbose=True,
+    llm="groq/llama-3.3-70b-versatile",  # Using the Llama 3 model
+    system_template=system_template,
+    prompt_template=prompt_template,
+    response_template=response_template,
+    tools=[DirectoryReadTool(), FileReadTool()]
+)
+
+# Define a sample task
+engineering_task = Task(
+    description="Review AI implementation files for potential improvements",
+    expected_output="A summary of key findings and recommendations",
+    agent=principal_engineer
+)
+
+# Create a Crew for the task
+llama_crew = Crew(
+    agents=[principal_engineer],
+    tasks=[engineering_task],
+    process=Process.sequential,
+    verbose=True
+)
+
+# Execute the crew
+result = llama_crew.kickoff()
+print(result.raw)
+```
+
+이와 같이 더 심도 있는 설정을 통해 별도의 JSON 파일 없이도 Llama 기반 워크플로에 대해 포괄적이고 저수준의 제어를 할 수 있습니다.
+
+## 결론
+
+CrewAI에서의 저수준 prompt 커스터마이제이션은 매우 맞춤화되고 복잡한 사용 사례에 대한 문을 엽니다. 잘 구성된 prompt 파일(또는 직접 작성한 인라인 템플릿)을 구축함으로써 다양한 모델, 언어, 특화된 도메인을 수용할 수 있습니다. 이러한 수준의 유연성 덕분에 원하는 AI 동작을 정확하게 설계할 수 있으며, override하지 않을 경우에도 CrewAI가 신뢰할 수 있는 기본값을 제공한다는 점에서 안심할 수 있습니다.
+
+<Check>
+이제 CrewAI에서 고급 prompt 커스터마이징을 위한 기초를 갖추었습니다. 모델별 구조나 도메인별 제약에 맞춰 적용하든, 이러한 저수준 접근 방식은 agent 상호작용을 매우 전문적으로 조정할 수 있게 해줍니다.
+</Check>

@@ -1,76 +1,106 @@
 import time
 import webbrowser
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 import requests
 from rich.console import Console
+from pydantic import BaseModel, Field
 
-from .constants import (
-    AUTH0_AUDIENCE,
-    AUTH0_CLIENT_ID,
-    AUTH0_DOMAIN,
-    WORKOS_DOMAIN,
-    WORKOS_CLI_CONNECT_APP_ID,
-    WORKOS_ENVIRONMENT_ID,
-)
 
-from .utils import TokenManager, validate_jwt_token
+from .utils import validate_jwt_token
+from crewai.cli.shared.token_manager import TokenManager
 from urllib.parse import quote
 from crewai.cli.plus_api import PlusAPI
 from crewai.cli.config import Settings
+from crewai.cli.authentication.constants import (
+    AUTH0_AUDIENCE,
+    AUTH0_CLIENT_ID,
+    AUTH0_DOMAIN,
+)
 
 console = Console()
 
 
+class Oauth2Settings(BaseModel):
+    provider: str = Field(
+        description="OAuth2 provider used for authentication (e.g., workos, okta, auth0)."
+    )
+    client_id: str = Field(
+        description="OAuth2 client ID issued by the provider, used during authentication requests."
+    )
+    domain: str = Field(
+        description="OAuth2 provider's domain (e.g., your-org.auth0.com) used for issuing tokens."
+    )
+    audience: Optional[str] = Field(
+        description="OAuth2 audience value, typically used to identify the target API or resource.",
+        default=None,
+    )
+
+    @classmethod
+    def from_settings(cls):
+        settings = Settings()
+
+        return cls(
+            provider=settings.oauth2_provider,
+            domain=settings.oauth2_domain,
+            client_id=settings.oauth2_client_id,
+            audience=settings.oauth2_audience,
+        )
+
+
+class ProviderFactory:
+    @classmethod
+    def from_settings(cls, settings: Optional[Oauth2Settings] = None):
+        settings = settings or Oauth2Settings.from_settings()
+
+        import importlib
+
+        module = importlib.import_module(
+            f"crewai.cli.authentication.providers.{settings.provider.lower()}"
+        )
+        provider = getattr(module, f"{settings.provider.capitalize()}Provider")
+
+        return provider(settings)
+
+
 class AuthenticationCommand:
-    AUTH0_DEVICE_CODE_URL = f"https://{AUTH0_DOMAIN}/oauth/device/code"
-    AUTH0_TOKEN_URL = f"https://{AUTH0_DOMAIN}/oauth/token"
-
-    WORKOS_DEVICE_CODE_URL = f"https://{WORKOS_DOMAIN}/oauth2/device_authorization"
-    WORKOS_TOKEN_URL = f"https://{WORKOS_DOMAIN}/oauth2/token"
-
     def __init__(self):
         self.token_manager = TokenManager()
-        # TODO: WORKOS - This variable is temporary until migration to WorkOS is complete.
-        self.user_provider = "workos"
+        self.oauth2_provider = ProviderFactory.from_settings()
 
     def login(self) -> None:
         """Sign up to CrewAI+"""
-
-        device_code_url = self.WORKOS_DEVICE_CODE_URL
-        token_url = self.WORKOS_TOKEN_URL
-        client_id = WORKOS_CLI_CONNECT_APP_ID
-        audience = None
-
         console.print("Signing in to CrewAI Enterprise...\n", style="bold blue")
 
         # TODO: WORKOS - Next line and conditional are temporary until migration to WorkOS is complete.
         user_provider = self._determine_user_provider()
         if user_provider == "auth0":
-            device_code_url = self.AUTH0_DEVICE_CODE_URL
-            token_url = self.AUTH0_TOKEN_URL
-            client_id = AUTH0_CLIENT_ID
-            audience = AUTH0_AUDIENCE
-            self.user_provider = "auth0"
+            settings = Oauth2Settings(
+                provider="auth0",
+                client_id=AUTH0_CLIENT_ID,
+                domain=AUTH0_DOMAIN,
+                audience=AUTH0_AUDIENCE,
+            )
+            self.oauth2_provider = ProviderFactory.from_settings(settings)
         # End of temporary code.
 
-        device_code_data = self._get_device_code(client_id, device_code_url, audience)
+        device_code_data = self._get_device_code()
         self._display_auth_instructions(device_code_data)
 
-        return self._poll_for_token(device_code_data, client_id, token_url)
+        return self._poll_for_token(device_code_data)
 
-    def _get_device_code(
-        self, client_id: str, device_code_url: str, audience: str | None = None
-    ) -> Dict[str, Any]:
+    def _get_device_code(self) -> Dict[str, Any]:
         """Get the device code to authenticate the user."""
 
         device_code_payload = {
-            "client_id": client_id,
+            "client_id": self.oauth2_provider.get_client_id(),
             "scope": "openid",
-            "audience": audience,
+            "audience": self.oauth2_provider.get_audience(),
         }
         response = requests.post(
-            url=device_code_url, data=device_code_payload, timeout=20
+            url=self.oauth2_provider.get_authorize_url(),
+            data=device_code_payload,
+            timeout=20,
         )
         response.raise_for_status()
         return response.json()
@@ -81,22 +111,22 @@ class AuthenticationCommand:
         console.print("2. Enter the following code: ", device_code_data["user_code"])
         webbrowser.open(device_code_data["verification_uri_complete"])
 
-    def _poll_for_token(
-        self, device_code_data: Dict[str, Any], client_id: str, token_poll_url: str
-    ) -> None:
+    def _poll_for_token(self, device_code_data: Dict[str, Any]) -> None:
         """Polls the server for the token until it is received, or max attempts are reached."""
 
         token_payload = {
             "grant_type": "urn:ietf:params:oauth:grant-type:device_code",
             "device_code": device_code_data["device_code"],
-            "client_id": client_id,
+            "client_id": self.oauth2_provider.get_client_id(),
         }
 
         console.print("\nWaiting for authentication... ", style="bold blue", end="")
 
         attempts = 0
         while True and attempts < 10:
-            response = requests.post(token_poll_url, data=token_payload, timeout=30)
+            response = requests.post(
+                self.oauth2_provider.get_token_url(), data=token_payload, timeout=30
+            )
             token_data = response.json()
 
             if response.status_code == 200:
@@ -128,18 +158,13 @@ class AuthenticationCommand:
         """Validates the JWT token and saves the token to the token manager."""
 
         jwt_token = token_data["access_token"]
+        issuer = self.oauth2_provider.get_issuer()
         jwt_token_data = {
             "jwt_token": jwt_token,
-            "jwks_url": f"https://{WORKOS_DOMAIN}/oauth2/jwks",
-            "issuer": f"https://{WORKOS_DOMAIN}",
-            "audience": WORKOS_ENVIRONMENT_ID,
+            "jwks_url": self.oauth2_provider.get_jwks_url(),
+            "issuer": issuer,
+            "audience": self.oauth2_provider.get_audience(),
         }
-
-        # TODO: WORKOS - The following conditional is temporary until migration to WorkOS is complete.
-        if self.user_provider == "auth0":
-            jwt_token_data["jwks_url"] = f"https://{AUTH0_DOMAIN}/.well-known/jwks.json"
-            jwt_token_data["issuer"] = f"https://{AUTH0_DOMAIN}/"
-            jwt_token_data["audience"] = AUTH0_AUDIENCE
 
         decoded_token = validate_jwt_token(**jwt_token_data)
 

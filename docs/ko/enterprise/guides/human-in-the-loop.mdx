@@ -1,0 +1,78 @@
+---
+title: "HITL 워크플로우"
+description: "CrewAI에서 의사결정 향상을 위한 Human-In-The-Loop 워크플로우 구현 방법을 알아보세요"
+icon: "user-check"
+---
+
+인간-중심(Human-In-The-Loop, HITL)은 인공지능과 인간 전문 지식을 결합하여 의사결정을 강화하고 작업 결과를 향상시키는 강력한 접근 방식입니다. 이 가이드는 CrewAI 내에서 HITL을 구현하는 방법을 보여줍니다.
+
+## HITL 워크플로 설정
+
+<Steps>
+    <Step title="작업 구성">
+        사람 입력이 활성화된 상태로 작업을 설정하세요:
+        <Frame>
+            <img src="/images/enterprise/crew-human-input.png" alt="Crew Human Input" />
+        </Frame>
+    </Step>
+
+    <Step title="Webhook URL 제공">
+        crew를 시작할 때 인간 입력을 위한 webhook URL을 포함하세요:
+        <Frame>
+            <img src="/images/enterprise/crew-webhook-url.png" alt="Crew Webhook URL" />
+        </Frame>
+    </Step>
+
+    <Step title="Webhook 알림 받기">
+        crew가 사람 입력이 필요한 작업을 완료하면 다음 정보를 포함한 webhook 알림을 받게 됩니다:
+            - **Execution ID**
+            - **Task ID**
+            - **Task output**
+    </Step>
+
+    <Step title="작업 출력 검토">
+        시스템이 `Pending Human Input` 상태에서 일시 중지됩니다. 작업 출력을 신중하게 검토하세요.
+    </Step>
+
+    <Step title="사람 피드백 제출">
+        다음 정보를 포함하여 crew의 resume endpoint를 호출하세요:
+        <Frame>
+            <img src="/images/enterprise/crew-resume-endpoint.png" alt="Crew Resume Endpoint" />
+        </Frame>
+        <Warning>
+            **피드백이 작업 실행에 미치는 영향**:
+            피드백 전체 내용이 이후 작업 실행을 위한 추가 컨텍스트로 통합되므로 피드백 제공 시 신중함이 매우 중요합니다.
+        </Warning>
+        이는 다음을 의미합니다:
+        - 피드백에 입력한 모든 정보가 작업의 컨텍스트 일부가 됩니다.
+        - 관련 없는 상세 정보는 부정적인 영향을 줄 수 있습니다.
+        - 간결하고 관련성 높은 피드백이 작업의 집중도와 효율성을 유지하는 데 도움이 됩니다.
+        - 제출 전 항상 피드백을 신중히 검토하여 작업 실행을 긍정적으로 안내할 수 있는 관련 정보만 포함되어 있는지 확인하세요.
+    </Step>
+    <Step title="부정적 피드백 처리">
+        부정적인 피드백을 제공하는 경우:
+        - crew가 귀하의 피드백에서 추가된 컨텍스트와 함께 작업을 재시도합니다.
+        - 추가 확인을 위한 다른 webhook 알림을 받게 됩니다.
+        - 만족할 때까지 4-6단계를 반복하세요.
+    </Step>
+
+    <Step title="작업 실행 계속 진행">
+        긍정적인 피드백을 제출하면 실행이 다음 단계로 진행됩니다.
+    </Step>
+</Steps>
+
+## 모범 사례
+
+- **구체적으로 작성하세요**: 해당 작업에 직접적으로 관련된 명확하고 실행 가능한 피드백을 제공하세요
+- **관련성 유지**: 작업 수행 개선에 도움이 되는 정보만 포함하세요
+- **적시에 응답하세요**: 워크플로우 지연을 피하기 위해 HITL 프롬프트에 신속하게 응답하세요
+- **꼼꼼하게 검토하세요**: 제출 전에 피드백을 다시 확인하여 정확성을 보장하세요
+
+## 일반적인 사용 사례
+
+HITL 워크플로우는 특히 다음과 같은 경우에 유용합니다:
+- 품질 보증 및 검증
+- 복잡한 의사 결정 시나리오
+- 민감하거나 위험도가 높은 작업
+- 인간의 판단이 필요한 창의적 작업
+- 준수 및 규제 검토

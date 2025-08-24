@@ -1,0 +1,149 @@
+---
+title: Arize Phoenix
+description: OpenTelemetry 및 OpenInference가 포함된 CrewAI용 Arize Phoenix 통합
+icon: magnifying-glass-chart
+---
+
+# Arize Phoenix 통합
+
+이 가이드는 [OpenInference](https://github.com/openinference/openinference) SDK를 통해 OpenTelemetry를 사용하여 **Arize Phoenix**를 **CrewAI**와 통합하는 방법을 보여줍니다. 이 가이드를 완료하면 CrewAI agent를 추적하고 agent를 쉽게 디버그할 수 있습니다.
+
+> **Arize Phoenix란?** [Arize Phoenix](https://phoenix.arize.com)는 AI 애플리케이션을 위한 추적 및 평가 기능을 제공하는 LLM 가시성(observability) 플랫폼입니다.
+
+[![Phoenix와의 통합 영상 데모 보기](https://storage.googleapis.com/arize-assets/fixtures/setup_crewai.png)](https://www.youtube.com/watch?v=Yc5q3l6F7Ww)
+
+## 시작하기
+
+CrewAI를 사용하고 OpenInference를 통해 OpenTelemetry와 Arize Phoenix를 연동하는 간단한 예제를 단계별로 안내합니다.
+
+이 가이드는 [Google Colab](https://colab.research.google.com/github/Arize-ai/phoenix/blob/main/tutorials/tracing/crewai_tracing_tutorial.ipynb)에서도 확인하실 수 있습니다.
+
+### 1단계: 의존성 설치
+
+```bash
+pip install openinference-instrumentation-crewai crewai crewai-tools arize-phoenix-otel
+```
+
+### 2단계: 환경 변수 설정
+
+Phoenix Cloud API 키를 설정하고 OpenTelemetry를 구성하여 추적 정보를 Phoenix로 전송합니다. Phoenix Cloud는 Arize Phoenix의 호스팅 버전이지만, 이 통합을 사용하는 데 필수는 아닙니다.
+
+무료 Serper API 키는 [여기](https://serper.dev/)에서 받을 수 있습니다.
+
+```python
+import os
+from getpass import getpass
+
+# Get your Phoenix Cloud credentials
+PHOENIX_API_KEY = getpass("🔑 Enter your Phoenix Cloud API Key: ")
+
+# Get API keys for services
+OPENAI_API_KEY = getpass("🔑 Enter your OpenAI API key: ")
+SERPER_API_KEY = getpass("🔑 Enter your Serper API key: ")
+
+# Set environment variables
+os.environ["PHOENIX_CLIENT_HEADERS"] = f"api_key={PHOENIX_API_KEY}"
+os.environ["PHOENIX_COLLECTOR_ENDPOINT"] = "https://app.phoenix.arize.com" # Phoenix Cloud, change this to your own endpoint if you are using a self-hosted instance
+os.environ["OPENAI_API_KEY"] = OPENAI_API_KEY
+os.environ["SERPER_API_KEY"] = SERPER_API_KEY
+```
+
+### 3단계: Phoenix와 함께 OpenTelemetry 초기화하기
+
+OpenInference OpenTelemetry 계측 SDK를 초기화하여 트레이스를 수집하고 Phoenix로 전송합니다.
+
+```python
+from phoenix.otel import register
+
+tracer_provider = register(
+    project_name="crewai-tracing-demo",
+    auto_instrument=True,
+)
+```
+
+### 4단계: CrewAI 애플리케이션 생성하기
+
+두 명의 에이전트가 협력하여 AI 발전에 관한 블로그 글을 조사하고 작성하는 CrewAI 애플리케이션을 만들어 보겠습니다.
+
+```python
+from crewai import Agent, Crew, Process, Task
+from crewai_tools import SerperDevTool
+from openinference.instrumentation.crewai import CrewAIInstrumentor
+from phoenix.otel import register
+
+# crew에 대한 모니터링 설정
+tracer_provider = register(
+    endpoint="http://localhost:6006/v1/traces")
+CrewAIInstrumentor().instrument(skip_dep_check=True, tracer_provider=tracer_provider)
+search_tool = SerperDevTool()
+
+# 역할과 목표가 설정된 에이전트 정의
+researcher = Agent(
+    role="Senior Research Analyst",
+    goal="AI 및 데이터 과학의 최첨단 발전 사항 발견",
+    backstory="""당신은 최고 수준의 기술 싱크탱크에서 근무합니다.
+    새로운 트렌드를 식별하는 데 전문성이 있습니다.
+    복잡한 데이터를 분석하고 실행 가능한 인사이트로 제시하는 데 뛰어납니다.""",
+    verbose=True,
+    allow_delegation=False,
+    # 원하는 모델을 지정할 수 있는 optional llm 속성을 전달할 수 있습니다.
+    # llm=ChatOpenAI(model_name="gpt-3.5", temperature=0.7),
+    tools=[search_tool],
+)
+writer = Agent(
+    role="Tech Content Strategist",
+    goal="기술 발전에 대한 매력적인 콘텐츠 작성",
+    backstory="""당신은 통찰력 있고 흥미로운 기사로 유명한 콘텐츠 전략가입니다.
+    복잡한 개념을 매력적인 스토리로 전환합니다.""",
+    verbose=True,
+    allow_delegation=True,
+)
+
+# 에이전트를 위한 task 생성
+task1 = Task(
+    description="""2024년 AI 분야의 최신 발전 상황에 대한 포괄적인 분석을 수행하세요.
+    주요 트렌드, 획기적 기술, 산업에 미칠 잠재적 영향을 식별하세요.""",
+    expected_output="주요 내용을 불릿 포인트로 정리한 전체 분석 보고서",
+    agent=researcher,
+)
+
+task2 = Task(
+    description="""제공된 인사이트를 활용하여
+    가장 중요한 AI 발전 내용을 강조하는 흥미로운 블로그 글을 작성하세요.
+    글은 정보성 있고, 기술에 밝은 독자를 대상으로 하면서 읽기 쉽게 써야 합니다.
+    멋지게 들리도록 쓰되, 복잡한 단어는 피하여 AI처럼 들리지 않게 하세요.""",
+    expected_output="최소 4개의 단락으로 구성된 전체 블로그 글",
+    agent=writer,
+)
+
+# 순차 프로세스 방식으로 crew 인스턴스화
+crew = Crew(
+    agents=[researcher, writer], tasks=[task1, task2], verbose=1, process=Process.sequential
+)
+
+# crew에게 작업 시작 지시!
+result = crew.kickoff()
+
+print("######################")
+print(result)
+```
+
+### 5단계: Phoenix에서 트레이스 보기
+
+에이전트를 실행한 후, Phoenix에서 CrewAI 애플리케이션에 의해 생성된 트레이스를 볼 수 있습니다. 에이전트 상호작용과 LLM 호출의 상세한 단계가 표시되어 AI 에이전트를 디버깅하고 최적화하는 데 도움이 됩니다.
+
+Phoenix Cloud 계정에 로그인한 다음 `project_name` 파라미터에서 지정한 프로젝트로 이동하세요. 모든 에이전트 상호작용, 도구 사용 및 LLM 호출이 포함된 트레이스의 타임라인 보기를 확인할 수 있습니다.
+
+![Phoenix에서 에이전트 상호작용을 보여주는 예시 트레이스](https://storage.googleapis.com/arize-assets/fixtures/crewai_traces.png)
+
+### 버전 호환성 정보
+- Python 3.8+
+- CrewAI >= 0.86.0
+- Arize Phoenix >= 7.0.1
+- OpenTelemetry SDK >= 1.31.0
+
+### 참고 자료
+- [Phoenix 문서](https://docs.arize.com/phoenix/) - Phoenix 플랫폼 개요.
+- [CrewAI 문서](https://docs.crewai.com/) - CrewAI 프레임워크 개요.
+- [OpenTelemetry 문서](https://opentelemetry.io/docs/) - OpenTelemetry 가이드
+- [OpenInference GitHub](https://github.com/openinference/openinference) - OpenInference SDK 소스 코드.

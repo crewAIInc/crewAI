@@ -1,4 +1,5 @@
 import os
+import tempfile
 import unittest
 
 from crewai.utilities.training_handler import CrewTrainingHandler
@@ -6,10 +7,13 @@ from crewai.utilities.training_handler import CrewTrainingHandler
 
 class InternalCrewTrainingHandler(unittest.TestCase):
     def setUp(self):
-        self.handler = CrewTrainingHandler("trained_data.pkl")
+        self.temp_file = tempfile.NamedTemporaryFile(suffix=".pkl", delete=False)
+        self.temp_file.close()
+        self.handler = CrewTrainingHandler(self.temp_file.name)
 
     def tearDown(self):
-        os.remove("trained_data.pkl")
+        if os.path.exists(self.temp_file.name):
+            os.remove(self.temp_file.name)
         del self.handler
 
     def test_save_trained_data(self):
@@ -22,13 +26,22 @@ class InternalCrewTrainingHandler(unittest.TestCase):
         assert data[agent_id] == trained_data
 
     def test_append_existing_agent(self):
-        train_iteration = 1
         agent_id = "agent1"
+        initial_iteration = 0
+        initial_data = {"param1": 1, "param2": 2}
+
+        self.handler.append(initial_iteration, agent_id, initial_data)
+
+        train_iteration = 1
         new_data = {"param3": 3, "param4": 4}
         self.handler.append(train_iteration, agent_id, new_data)
 
         # Assert that the new data is appended correctly to the existing agent
         data = self.handler.load()
+        assert agent_id in data
+        assert initial_iteration in data[agent_id]
+        assert train_iteration in data[agent_id]
+        assert data[agent_id][initial_iteration] == initial_data
         assert data[agent_id][train_iteration] == new_data
 
     def test_append_new_agent(self):

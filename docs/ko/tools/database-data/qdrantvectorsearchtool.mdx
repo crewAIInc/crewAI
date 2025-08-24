@@ -1,0 +1,272 @@
+---
+title: 'Qdrant 벡터 검색 도구'
+description: 'Qdrant 벡터 데이터베이스를 활용한 CrewAI 에이전트의 시맨틱 검색 기능'
+icon: vector-square
+---
+
+## 개요
+
+Qdrant Vector Search Tool은 [Qdrant](https://qdrant.tech/) 벡터 유사성 검색 엔진을 활용하여 CrewAI 에이전트에 시맨틱 검색 기능을 제공합니다. 이 도구를 사용하면 에이전트가 Qdrant 컬렉션에 저장된 문서를 시맨틱 유사성을 기반으로 검색할 수 있습니다.
+
+## 설치
+
+필수 패키지를 설치하세요:
+
+```bash
+uv add qdrant-client
+```
+
+## 기본 사용법
+
+아래는 도구를 사용하는 최소한의 예시입니다:
+
+```python
+from crewai import Agent
+from crewai_tools import QdrantVectorSearchTool
+
+# Initialize the tool
+qdrant_tool = QdrantVectorSearchTool(
+    qdrant_url="your_qdrant_url",
+    qdrant_api_key="your_qdrant_api_key",
+    collection_name="your_collection"
+)
+
+# Create an agent that uses the tool
+agent = Agent(
+    role="Research Assistant",
+    goal="Find relevant information in documents",
+    tools=[qdrant_tool]
+)
+
+# The tool will automatically use OpenAI embeddings
+# and return the 3 most relevant results with scores > 0.35
+```
+
+## 완전한 작동 예시
+
+아래는 다음과 같은 방법을 보여주는 완전한 예시입니다:
+1. PDF에서 텍스트 추출
+2. OpenAI를 사용하여 임베딩 생성
+3. Qdrant에 저장
+4. CrewAI agentic RAG 워크플로우로 시맨틱 검색 생성
+
+```python
+import os
+import uuid
+import pdfplumber
+from openai import OpenAI
+from dotenv import load_dotenv
+from crewai import Agent, Task, Crew, Process, LLM
+from crewai_tools import QdrantVectorSearchTool
+from qdrant_client import QdrantClient
+from qdrant_client.models import PointStruct, Distance, VectorParams
+
+# Load environment variables
+load_dotenv()
+
+# Initialize OpenAI client
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
+# Extract text from PDF
+def extract_text_from_pdf(pdf_path):
+    text = []
+    with pdfplumber.open(pdf_path) as pdf:
+        for page in pdf.pages:
+            page_text = page.extract_text()
+            if page_text:
+                text.append(page_text.strip())
+    return text
+
+# Generate OpenAI embeddings
+def get_openai_embedding(text):
+    response = client.embeddings.create(
+        input=text,
+        model="text-embedding-3-small"
+    )
+    return response.data[0].embedding
+
+# Store text and embeddings in Qdrant
+def load_pdf_to_qdrant(pdf_path, qdrant, collection_name):
+    # Extract text from PDF
+    text_chunks = extract_text_from_pdf(pdf_path)
+    
+    # Create Qdrant collection
+    if qdrant.collection_exists(collection_name):
+        qdrant.delete_collection(collection_name)
+    qdrant.create_collection(
+        collection_name=collection_name,
+        vectors_config=VectorParams(size=1536, distance=Distance.COSINE)
+    )
+
+    # Store embeddings
+    points = []
+    for chunk in text_chunks:
+        embedding = get_openai_embedding(chunk)
+        points.append(PointStruct(
+            id=str(uuid.uuid4()),
+            vector=embedding,
+            payload={"text": chunk}
+        ))
+    qdrant.upsert(collection_name=collection_name, points=points)
+
+# Initialize Qdrant client and load data
+qdrant = QdrantClient(
+    url=os.getenv("QDRANT_URL"),
+    api_key=os.getenv("QDRANT_API_KEY")
+)
+collection_name = "example_collection"
+pdf_path = "path/to/your/document.pdf"
+load_pdf_to_qdrant(pdf_path, qdrant, collection_name)
+
+# Initialize Qdrant search tool
+qdrant_tool = QdrantVectorSearchTool(
+    qdrant_url=os.getenv("QDRANT_URL"),
+    qdrant_api_key=os.getenv("QDRANT_API_KEY"),
+    collection_name=collection_name,
+    limit=3,
+    score_threshold=0.35
+)
+
+# Create CrewAI agents
+search_agent = Agent(
+    role="Senior Semantic Search Agent",
+    goal="Find and analyze documents based on semantic search",
+    backstory="""You are an expert research assistant who can find relevant 
+    information using semantic search in a Qdrant database.""",
+    tools=[qdrant_tool],
+    verbose=True
+)
+
+answer_agent = Agent(
+    role="Senior Answer Assistant",
+    goal="Generate answers to questions based on the context provided",
+    backstory="""You are an expert answer assistant who can generate 
+    answers to questions based on the context provided.""",
+    tools=[qdrant_tool],
+    verbose=True
+)
+
+# Define tasks
+search_task = Task(
+    description="""Search for relevant documents about the {query}.
+    Your final answer should include:
+    - The relevant information found
+    - The similarity scores of the results
+    - The metadata of the relevant documents""",
+    agent=search_agent
+)
+
+answer_task = Task(
+    description="""Given the context and metadata of relevant documents,
+    generate a final answer based on the context.""",
+    agent=answer_agent
+)
+
+# Run CrewAI workflow
+crew = Crew(
+    agents=[search_agent, answer_agent],
+    tasks=[search_task, answer_task],
+    process=Process.sequential,
+    verbose=True
+)
+
+result = crew.kickoff(
+    inputs={"query": "What is the role of X in the document?"}
+)
+print(result)
+```
+
+## 도구 매개변수
+
+### 필수 파라미터
+- `qdrant_url` (str): Qdrant 서버의 URL
+- `qdrant_api_key` (str): Qdrant 인증을 위한 API 키
+- `collection_name` (str): 검색할 Qdrant 컬렉션의 이름
+
+### 선택적 매개변수
+- `limit` (int): 반환할 최대 결과 수 (기본값: 3)
+- `score_threshold` (float): 최소 유사도 점수 임계값 (기본값: 0.35)
+- `custom_embedding_fn` (Callable[[str], list[float]]): 텍스트 벡터화를 위한 사용자 지정 함수
+
+## 검색 매개변수
+
+이 도구는 스키마에서 다음과 같은 매개변수를 허용합니다:
+- `query` (str): 유사한 문서를 찾기 위한 검색 쿼리
+- `filter_by` (str, 선택 사항): 필터링할 메타데이터 필드
+- `filter_value` (str, 선택 사항): 필터 기준 값
+
+## 반환 형식
+
+이 도구는 결과를 JSON 형식으로 반환합니다:
+
+```json
+[
+  {
+    "metadata": {
+      // Any metadata stored with the document
+    },
+    "context": "The actual text content of the document",
+    "distance": 0.95  // Similarity score
+  }
+]
+```
+
+## 기본 임베딩
+
+기본적으로, 이 도구는 벡터화를 위해 OpenAI의 `text-embedding-3-small` 모델을 사용합니다. 이를 위해서는 다음이 필요합니다:
+- 환경변수에 설정된 OpenAI API 키: `OPENAI_API_KEY`
+
+## 커스텀 임베딩
+
+기본 임베딩 모델 대신 다음과 같은 경우에 사용자 정의 임베딩 함수를 사용하고 싶을 수 있습니다:
+
+1. 다른 임베딩 모델을 사용하고 싶은 경우 (예: Cohere, HuggingFace, Ollama 모델)
+2. 오픈소스 임베딩 모델을 사용하여 비용을 절감해야 하는 경우
+3. 벡터 차원 또는 임베딩 품질에 대한 특정 요구 사항이 있는 경우
+4. 도메인 특화 임베딩을 사용하고 싶은 경우 (예: 의료 또는 법률 텍스트)
+
+다음은 HuggingFace 모델을 사용하는 예시입니다:
+
+```python
+from transformers import AutoTokenizer, AutoModel
+import torch
+
+# Load model and tokenizer
+tokenizer = AutoTokenizer.from_pretrained('sentence-transformers/all-MiniLM-L6-v2')
+model = AutoModel.from_pretrained('sentence-transformers/all-MiniLM-L6-v2')
+
+def custom_embeddings(text: str) -> list[float]:
+    # Tokenize and get model outputs
+    inputs = tokenizer(text, return_tensors="pt", padding=True, truncation=True)
+    outputs = model(**inputs)
+    
+    # Use mean pooling to get text embedding
+    embeddings = outputs.last_hidden_state.mean(dim=1)
+    
+    # Convert to list of floats and return
+    return embeddings[0].tolist()
+
+# Use custom embeddings with the tool
+tool = QdrantVectorSearchTool(
+    qdrant_url="your_url",
+    qdrant_api_key="your_key",
+    collection_name="your_collection",
+    custom_embedding_fn=custom_embeddings  # Pass your custom function
+)
+```
+
+## 오류 처리
+
+이 도구는 다음과 같은 특정 오류를 처리합니다:
+- `qdrant-client`가 설치되어 있지 않으면 ImportError를 발생시킵니다 (자동 설치 옵션 제공)
+- `QDRANT_URL`이 설정되어 있지 않으면 ValueError를 발생시킵니다
+- 누락된 경우 `uv add qdrant-client`를 사용하여 `qdrant-client` 설치를 안내합니다
+
+## 환경 변수
+
+필수 환경 변수:
+```bash
+export QDRANT_URL="your_qdrant_url"  # If not provided in constructor
+export QDRANT_API_KEY="your_api_key"  # If not provided in constructor
+export OPENAI_API_KEY="your_openai_key"  # If using default embeddings
+```

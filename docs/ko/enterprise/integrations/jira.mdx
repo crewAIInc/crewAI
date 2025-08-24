@@ -1,0 +1,394 @@
+---
+title: Jira 연동
+description: "CrewAI를 위한 Jira 연동을 통한 이슈 추적 및 프로젝트 관리."
+icon: "bug"
+---
+
+## 개요
+
+에이전트가 Jira를 통해 이슈, 프로젝트, 워크플로우를 관리할 수 있도록 합니다. 이슈를 생성 및 업데이트하고, 프로젝트 진행 상황을 추적하며, 할당 작업을 관리하고, AI 기반 자동화로 프로젝트 관리를 효율화하세요.
+
+## 사전 준비 사항
+
+Jira 통합을 사용하기 전에 다음을 준비하세요:
+
+- 활성 구독이 있는 [CrewAI Enterprise](https://app.crewai.com) 계정
+- 적절한 프로젝트 권한이 있는 Jira 계정
+- [통합 페이지](https://app.crewai.com/crewai_plus/connectors)를 통해 Jira 계정 연결
+
+## Jira 연동 설정
+
+### 1. Jira 계정 연결하기
+
+1. [CrewAI Enterprise Integrations](https://app.crewai.com/crewai_plus/connectors)로 이동합니다.
+2. **Jira**를 인증 통합 섹션에서 찾습니다.
+3. **Connect**를 클릭하고 OAuth 절차를 완료합니다.
+4. 이슈 및 프로젝트 관리를 위한 필요한 권한을 부여합니다.
+5. [Account Settings](https://app.crewai.com/crewai_plus/settings/account)에서 Enterprise Token을 복사합니다.
+
+### 2. 필수 패키지 설치
+
+```bash
+uv add crewai-tools
+```
+
+## 사용 가능한 작업
+
+<AccordionGroup>
+  <Accordion title="JIRA_CREATE_ISSUE">
+    **설명:** Jira에서 이슈를 생성합니다.
+
+    **파라미터:**
+    - `summary` (string, 필수): 요약 - 이슈에 대한 간단한 한 줄 요약입니다. (예시: "프린터가 작동을 멈췄습니다").
+    - `project` (string, 선택): 프로젝트 - 이슈가 속한 프로젝트입니다. 제공되지 않으면 사용자의 첫 번째 프로젝트로 기본 설정됩니다. 사용자가 프로젝트를 선택할 수 있도록 Connect Portal Workflow Settings를 사용하세요.
+    - `issueType` (string, 선택): 이슈 유형 - 제공되지 않으면 기본값은 Task입니다.
+    - `jiraIssueStatus` (string, 선택): 상태 - 제공되지 않으면 프로젝트의 첫 번째 상태가 기본입니다.
+    - `assignee` (string, 선택): 담당자 - 제공되지 않으면 인증된 사용자로 기본 설정됩니다.
+    - `descriptionType` (string, 선택): 설명 유형 - 설명 유형을 선택하세요.
+      - 옵션: `description`, `descriptionJSON`
+    - `description` (string, 선택): 설명 - 이슈에 대한 자세한 설명입니다. 이 필드는 'descriptionType'이 'description'일 때만 나타납니다.
+    - `additionalFields` (string, 선택): 추가 필드 - 포함해야 하는 다른 필드를 JSON 형식으로 지정하세요. 사용자가 업데이트할 이슈 필드를 선택할 수 있도록 Connect Portal Workflow Settings를 사용하세요.
+      ```json
+      {
+        "customfield_10001": "value"
+      }
+      ```
+  </Accordion>
+
+  <Accordion title="JIRA_UPDATE_ISSUE">
+    **설명:** Jira에서 이슈를 업데이트합니다.
+
+    **파라미터:**
+    - `issueKey` (string, 필수): 이슈 키 (예시: "TEST-1234").
+    - `summary` (string, 선택): 요약 - 이슈에 대한 간단한 한 줄 요약입니다. (예시: "프린터가 작동을 멈췄습니다").
+    - `issueType` (string, 선택): 이슈 유형 - 사용자가 이슈 유형을 선택할 수 있도록 Connect Portal Workflow Settings를 사용하세요.
+    - `jiraIssueStatus` (string, 선택): 상태 - 사용자가 상태를 선택할 수 있도록 Connect Portal Workflow Settings를 사용하세요.
+    - `assignee` (string, 선택): 담당자 - 사용자가 담당자를 선택할 수 있도록 Connect Portal Workflow Settings를 사용하세요.
+    - `descriptionType` (string, 선택): 설명 유형 - 설명 유형을 선택하세요.
+      - 옵션: `description`, `descriptionJSON`
+    - `description` (string, 선택): 설명 - 이슈에 대한 자세한 설명입니다. 이 필드는 'descriptionType'이 'description'일 때만 나타납니다.
+    - `additionalFields` (string, 선택): 추가 필드 - 포함해야 하는 다른 필드를 JSON 형식으로 지정하세요.
+  </Accordion>
+
+  <Accordion title="JIRA_GET_ISSUE_BY_KEY">
+    **설명:** Jira에서 키로 이슈를 조회합니다.
+
+    **파라미터:**
+    - `issueKey` (string, 필수): 이슈 키 (예시: "TEST-1234").
+  </Accordion>
+
+  <Accordion title="JIRA_FILTER_ISSUES">
+    **설명:** 필터를 사용하여 Jira에서 이슈를 검색합니다.
+
+    **파라미터:**
+    - `jqlQuery` (object, 선택): 불리언 합정규형(OR의 AND 그룹)으로 구성된 필터.
+      ```json
+      {
+        "operator": "OR",
+        "conditions": [
+          {
+            "operator": "AND",
+            "conditions": [
+              {
+                "field": "status",
+                "operator": "$stringExactlyMatches",
+                "value": "Open"
+              }
+            ]
+          }
+        ]
+      }
+      ```
+      사용 가능한 연산자: `$stringExactlyMatches`, `$stringDoesNotExactlyMatch`, `$stringIsIn`, `$stringIsNotIn`, `$stringContains`, `$stringDoesNotContain`, `$stringGreaterThan`, `$stringLessThan`
+    - `limit` (string, 선택): 결과 제한 - 반환되는 최대 이슈 수를 제한합니다. 입력하지 않으면 기본값은 10입니다.
+  </Accordion>
+
+  <Accordion title="JIRA_SEARCH_BY_JQL">
+    **설명:** Jira에서 JQL로 이슈를 검색합니다.
+
+    **파라미터:**
+    - `jqlQuery` (string, 필수): JQL 쿼리 (예시: "project = PROJECT").
+    - `paginationParameters` (object, 선택): 페이지네이션 결과를 위한 파라미터.
+      ```json
+      {
+        "pageCursor": "cursor_string"
+      }
+      ```
+  </Accordion>
+
+  <Accordion title="JIRA_UPDATE_ISSUE_ANY">
+    **설명:** Jira에서 임의의 이슈를 업데이트합니다. 이 기능의 속성 스키마를 얻으려면 DESCRIBE_ACTION_SCHEMA를 사용하세요.
+
+    **파라미터:** 특정 파라미터 없음 - 예상 스키마를 먼저 확인하려면 JIRA_DESCRIBE_ACTION_SCHEMA를 사용하세요.
+  </Accordion>
+
+  <Accordion title="JIRA_DESCRIBE_ACTION_SCHEMA">
+    **설명:** 이슈 유형에 대한 예상 스키마를 가져옵니다. 사용하려는 이슈 유형과 일치하는 다른 기능이 없을 경우 먼저 이 기능을 사용하세요.
+
+    **파라미터:**
+    - `issueTypeId` (string, 필수): 이슈 유형 ID.
+    - `projectKey` (string, 필수): 프로젝트 키.
+    - `operation` (string, 필수): 작업 유형 값(예: CREATE_ISSUE 또는 UPDATE_ISSUE).
+  </Accordion>
+
+  <Accordion title="JIRA_GET_PROJECTS">
+    **설명:** Jira에서 프로젝트를 가져옵니다.
+
+    **파라미터:**
+    - `paginationParameters` (object, 선택): 페이지네이션 파라미터.
+      ```json
+      {
+        "pageCursor": "cursor_string"
+      }
+      ```
+  </Accordion>
+
+  <Accordion title="JIRA_GET_ISSUE_TYPES_BY_PROJECT">
+    **설명:** Jira에서 프로젝트별 이슈 유형을 조회합니다.
+
+    **파라미터:**
+    - `project` (string, 필수): 프로젝트 키.
+  </Accordion>
+
+  <Accordion title="JIRA_GET_ISSUE_TYPES">
+    **설명:** Jira에서 모든 이슈 유형을 조회합니다.
+
+    **파라미터:** 필요 없음.
+  </Accordion>
+
+  <Accordion title="JIRA_GET_ISSUE_STATUS_BY_PROJECT">
+    **설명:** 주어진 프로젝트의 이슈 상태를 조회합니다.
+
+    **파라미터:**
+    - `project` (string, 필수): 프로젝트 키.
+  </Accordion>
+
+  <Accordion title="JIRA_GET_ALL_ASSIGNEES_BY_PROJECT">
+    **설명:** 주어진 프로젝트의 담당자 목록을 조회합니다.
+
+    **파라미터:**
+    - `project` (string, 필수): 프로젝트 키.
+  </Accordion>
+</AccordionGroup>
+
+## 사용 예시
+
+### 기본 Jira 에이전트 설정
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import CrewaiEnterpriseTools
+
+# Get enterprise tools (Jira tools will be included)
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token"
+)
+
+# Create an agent with Jira capabilities
+jira_agent = Agent(
+    role="Issue Manager",
+    goal="Manage Jira issues and track project progress efficiently",
+    backstory="An AI assistant specialized in issue tracking and project management.",
+    tools=[enterprise_tools]
+)
+
+# Task to create a bug report
+create_bug_task = Task(
+    description="Create a bug report for the login functionality with high priority and assign it to the development team",
+    agent=jira_agent,
+    expected_output="Bug report created successfully with issue key"
+)
+
+# Run the task
+crew = Crew(
+    agents=[jira_agent],
+    tasks=[create_bug_task]
+)
+
+crew.kickoff()
+```
+
+### 특정 Jira 도구 필터링
+
+```python
+from crewai_tools import CrewaiEnterpriseTools
+
+# Get only specific Jira tools
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token",
+    actions_list=["jira_create_issue", "jira_update_issue", "jira_search_by_jql"]
+)
+
+issue_coordinator = Agent(
+    role="Issue Coordinator",
+    goal="Create and manage Jira issues efficiently",
+    backstory="An AI assistant that focuses on issue creation and management.",
+    tools=enterprise_tools
+)
+
+# Task to manage issue workflow
+issue_workflow = Task(
+    description="Create a feature request issue and update the status of related issues",
+    agent=issue_coordinator,
+    expected_output="Feature request created and related issues updated"
+)
+
+crew = Crew(
+    agents=[issue_coordinator],
+    tasks=[issue_workflow]
+)
+
+crew.kickoff()
+```
+
+### 프로젝트 분석 및 보고
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import CrewaiEnterpriseTools
+
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token"
+)
+
+project_analyst = Agent(
+    role="Project Analyst",
+    goal="Analyze project data and generate insights from Jira",
+    backstory="An experienced project analyst who extracts insights from project management data.",
+    tools=[enterprise_tools]
+)
+
+# Task to analyze project status
+analysis_task = Task(
+    description="""
+    1. Get all projects and their issue types
+    2. Search for all open issues across projects
+    3. Analyze issue distribution by status and assignee
+    4. Create a summary report issue with findings
+    """,
+    agent=project_analyst,
+    expected_output="Project analysis completed with summary report created"
+)
+
+crew = Crew(
+    agents=[project_analyst],
+    tasks=[analysis_task]
+)
+
+crew.kickoff()
+```
+
+### 자동화된 이슈 관리
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import CrewaiEnterpriseTools
+
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token"
+)
+
+automation_manager = Agent(
+    role="Automation Manager",
+    goal="Automate issue management and workflow processes",
+    backstory="An AI assistant that automates repetitive issue management tasks.",
+    tools=[enterprise_tools]
+)
+
+# Task to automate issue management
+automation_task = Task(
+    description="""
+    1. Search for all unassigned issues using JQL
+    2. Get available assignees for each project
+    3. Automatically assign issues based on workload and expertise
+    4. Update issue priorities based on age and type
+    5. Create weekly sprint planning issues
+    """,
+    agent=automation_manager,
+    expected_output="Issues automatically assigned and sprint planning issues created"
+)
+
+crew = Crew(
+    agents=[automation_manager],
+    tasks=[automation_task]
+)
+
+crew.kickoff()
+```
+
+### 고급 스키마 기반 작업
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import CrewaiEnterpriseTools
+
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token"
+)
+
+schema_specialist = Agent(
+    role="Schema Specialist",
+    goal="Handle complex Jira operations using dynamic schemas",
+    backstory="An AI assistant that can work with dynamic Jira schemas and custom issue types.",
+    tools=[enterprise_tools]
+)
+
+# Task using schema-based operations
+schema_task = Task(
+    description="""
+    1. 모든 프로젝트와 해당 커스텀 이슈 유형을 가져옵니다
+    2. 각 커스텀 이슈 유형에 대해, 액션 스키마를 설명합니다
+    3. 복잡한 커스텀 필드를 위한 동적 스키마를 사용해 이슈를 생성합니다
+    4. 비즈니스 규칙에 따라 커스텀 필드 값을 사용해 이슈를 업데이트합니다
+    """,
+    agent=schema_specialist,
+    expected_output="동적 스키마를 사용하여 커스텀 이슈가 생성되고 업데이트됨"
+)
+
+crew = Crew(
+    agents=[schema_specialist],
+    tasks=[schema_task]
+)
+
+crew.kickoff()
+```
+
+## 문제 해결
+
+### 일반적인 문제
+
+**권한 오류**
+- Jira 계정이 대상 프로젝트에 필요한 권한을 가지고 있는지 확인하세요
+- OAuth 연결에 Jira API에 필요한 범위가 포함되어 있는지 확인하세요
+- 지정된 프로젝트에서 이슈 생성/편집 권한이 있는지 확인하세요
+
+**잘못된 프로젝트 또는 이슈 키**
+- 프로젝트 키와 이슈 키가 올바른 형식(예: "PROJ-123")인지 다시 확인하세요
+- 프로젝트가 존재하며 계정으로 접근 가능한지 확인하세요
+- 이슈 키가 실제로 존재하는 이슈를 참조하는지 확인하세요
+
+**이슈 유형 및 상태 관련 문제**
+- 프로젝트에 대한 유효한 이슈 유형을 얻으려면 JIRA_GET_ISSUE_TYPES_BY_PROJECT를 사용하세요
+- 유효한 상태를 얻으려면 JIRA_GET_ISSUE_STATUS_BY_PROJECT를 사용하세요
+- 이슈 유형과 상태가 대상 프로젝트에 제공되는지 확인하세요
+
+**JQL 쿼리 문제**
+- API 호출에 사용하기 전에 Jira의 이슈 검색에서 JQL 쿼리를 테스트하세요
+- JQL에 사용된 필드명이 정확하게 철자되어 있고, Jira 인스턴스에 존재하는지 확인하세요
+- 복잡한 쿼리에는 올바른 JQL 문법을 사용하세요
+
+**커스텀 필드 및 스키마 문제**
+- 복잡한 이슈 유형에 대해 올바른 스키마를 얻으려면 JIRA_DESCRIBE_ACTION_SCHEMA를 사용하세요
+- 커스텀 필드 ID가 정확한지 확인하세요 (예: "customfield_10001")
+- 커스텀 필드가 대상 프로젝트와 이슈 유형에서 사용 가능한지 확인하세요
+
+**필터 공식 문제**
+- 필터 공식이 올바른 JSON 구조(불리언 합의 정규형)를 따르는지 확인하세요
+- Jira 구성에 존재하는 유효한 필드명을 사용하세요
+- 복잡한 다중 조건 쿼리를 만들기 전에 간단한 필터를 테스트하세요
+
+### 도움 받기
+
+<Card title="도움이 필요하신가요?" icon="headset" href="mailto:support@crewai.com">
+  Jira 연동 설정 또는 문제 해결에 대한 지원이 필요하시면 저희 지원팀에 문의하십시오.
+</Card>

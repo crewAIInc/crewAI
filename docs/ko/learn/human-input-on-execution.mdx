@@ -1,0 +1,98 @@
+---
+title: 실행 중 인간 입력
+description: 복잡한 의사결정 과정에서 실행 중 CrewAI와 인간 입력을 통합하고, 에이전트의 속성과 도구의 모든 기능을 활용하는 방법.
+icon: user-check
+---
+
+## 에이전트 실행에서의 인간 입력
+
+인간 입력은 여러 에이전트 실행 시나리오에서 매우 중요하며, 에이전트가 필요할 때 추가 정보나 설명을 요청할 수 있게 해줍니다.  
+이 기능은 특히 복잡한 의사결정 과정이나 에이전트가 작업을 효과적으로 완료하기 위해 더 많은 세부 정보가 필요할 때 유용하게 사용됩니다.
+
+## CrewAI에서 인간 입력 사용하기
+
+에이전트 실행에 인간 입력을 통합하려면, 태스크 정의에서 `human_input` 플래그를 설정하세요. 이 기능이 활성화되면 에이전트는 최종 답변을 제공하기 전에 사용자에게 입력을 요청합니다.
+이 입력은 추가적인 컨텍스트를 제공하거나, 모호성을 해소하거나, 에이전트의 출력을 검증하는 데 사용할 수 있습니다.
+
+### 예시:
+
+```shell
+pip install crewai
+```
+
+```python Code
+import os
+from crewai import Agent, Task, Crew
+from crewai_tools import SerperDevTool
+
+os.environ["SERPER_API_KEY"] = "Your Key"  # serper.dev API key
+os.environ["OPENAI_API_KEY"] = "Your Key"
+
+# Loading Tools
+search_tool = SerperDevTool()
+
+# Define your agents with roles, goals, tools, and additional attributes
+researcher = Agent(
+    role='Senior Research Analyst',
+    goal='Uncover cutting-edge developments in AI and data science',
+    backstory=(
+        "You are a Senior Research Analyst at a leading tech think tank. "
+        "Your expertise lies in identifying emerging trends and technologies in AI and data science. "
+        "You have a knack for dissecting complex data and presenting actionable insights."
+    ),
+    verbose=True,
+    allow_delegation=False,
+    tools=[search_tool]
+)
+writer = Agent(
+    role='Tech Content Strategist',
+    goal='Craft compelling content on tech advancements',
+    backstory=(
+        "You are a renowned Tech Content Strategist, known for your insightful and engaging articles on technology and innovation. "
+        "With a deep understanding of the tech industry, you transform complex concepts into compelling narratives."
+    ),
+    verbose=True,
+    allow_delegation=True,
+    tools=[search_tool],
+    cache=False,  # Disable cache for this agent
+)
+
+# Create tasks for your agents
+task1 = Task(
+    description=(
+        "Conduct a comprehensive analysis of the latest advancements in AI in 2025. "
+        "Identify key trends, breakthrough technologies, and potential industry impacts. "
+        "Compile your findings in a detailed report. "
+        "Make sure to check with a human if the draft is good before finalizing your answer."
+    ),
+    expected_output='A comprehensive full report on the latest AI advancements in 2025, leave nothing out',
+    agent=researcher,
+    human_input=True
+)
+
+task2 = Task(
+    description=(
+        "Using the insights from the researcher\'s report, develop an engaging blog post that highlights the most significant AI advancements. "
+        "Your post should be informative yet accessible, catering to a tech-savvy audience. "
+        "Aim for a narrative that captures the essence of these breakthroughs and their implications for the future."
+    ),
+    expected_output='A compelling 3 paragraphs blog post formatted as markdown about the latest AI advancements in 2025',
+    agent=writer,
+    human_input=True
+)
+
+# Instantiate your crew with a sequential process
+crew = Crew(
+    agents=[researcher, writer],
+    tasks=[task1, task2],
+    verbose=True,
+    memory=True,
+    planning=True  # Enable planning feature for the crew
+)
+
+# Get your crew to work!
+result = crew.kickoff()
+
+print("######################")
+print(result)
+```
