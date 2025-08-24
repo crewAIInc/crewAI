@@ -68,6 +68,7 @@ docling = [
 aisuite = [
     "aisuite>=0.1.10",
 ]
+agentops = ["agentops==0.3.18"]
 
 [tool.uv]
 dev-dependencies = [

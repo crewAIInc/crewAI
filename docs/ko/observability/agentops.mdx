@@ -1,0 +1,131 @@
+---
+title: "AgentOps 통합"
+description: "AgentOps 관찰 가능성 플랫폼으로 CrewAI 에이전트를 모니터링하고 분석하세요"
+---
+
+# AgentOps 통합
+
+AgentOps는 AI 에이전트를 위해 특별히 설계된 강력한 관찰 가능성 플랫폼입니다. CrewAI 크루를 위한 포괄적인 모니터링, 분석 및 디버깅 기능을 제공합니다.
+
+## 기능
+
+- **실시간 모니터링**: 에이전트 성능과 동작을 실시간으로 추적
+- **세션 재생**: 상세한 실행 추적과 함께 완전한 에이전트 세션 검토
+- **성능 분석**: 크루 효율성, 도구 사용량 및 작업 완료율 분석
+- **오류 추적**: 에이전트 워크플로우의 문제 식별 및 디버그
+- **비용 추적**: LLM 사용량 및 관련 비용 모니터링
+- **팀 협업**: 인사이트 공유 및 에이전트 최적화 협업
+
+## 설치
+
+CrewAI와 함께 AgentOps 설치:
+
+```bash
+pip install crewai[agentops]
+```
+
+또는 AgentOps를 별도로 설치:
+
+```bash
+pip install agentops
+```
+
+## 설정
+
+1. **API 키 받기**: [AgentOps](https://agentops.ai)에 가입하고 API 키를 받으세요
+
+2. **환경 구성**: AgentOps API 키를 환경 변수로 설정:
+
+```bash
+export AGENTOPS_API_KEY="여기에-api-키-입력"
+```
+
+3. **AgentOps 초기화**: CrewAI 스크립트에 다음을 추가:
+
+```python
+import agentops
+from crewai import Agent, Task, Crew
+
+# AgentOps 초기화
+agentops.init()
+
+# 여기에 CrewAI 코드
+agent = Agent(
+    role="데이터 분석가",
+    goal="데이터를 분석하고 인사이트 제공",
+    backstory="당신은 전문 데이터 분석가입니다...",
+)
+
+task = Task(
+    description="판매 데이터를 분석하고 인사이트를 제공하세요",
+    agent=agent,
+)
+
+crew = Crew(
+    agents=[agent],
+    tasks=[task],
+)
+
+# 크루 실행
+result = crew.kickoff()
+
+# AgentOps 세션 종료
+agentops.end_session("Success")
+```
+
+## 자동 통합
+
+CrewAI는 라이브러리가 설치되면 AgentOps와 자동으로 통합됩니다. 통합은 다음을 캡처합니다:
+
+- **크루 킥오프 이벤트**: 크루 실행의 시작과 완료
+- **도구 사용**: 모든 도구 호출과 결과
+- **작업 평가**: 작업 성능 메트릭과 피드백
+- **오류 이벤트**: 실행 중 발생하는 모든 오류
+
+## 구성 옵션
+
+AgentOps 통합을 사용자 정의할 수 있습니다:
+
+```python
+import agentops
+
+# 사용자 정의 설정으로 AgentOps 구성
+agentops.init(
+    api_key="당신의-api-키",
+    tags=["프로덕션", "데이터-분석"],
+    auto_start_session=True,
+    instrument_llm_calls=True,
+)
+```
+
+## 데이터 보기
+
+1. **대시보드**: AgentOps 대시보드를 방문하여 에이전트 세션 보기
+2. **세션 세부사항**: 세션을 클릭하여 상세한 실행 추적 보기
+3. **분석**: 분석 탭을 사용하여 성능 트렌드 식별
+4. **오류**: 디버깅 정보를 위해 오류 탭 모니터링
+
+## 모범 사례
+
+- **세션 태그 지정**: 의미 있는 태그를 사용하여 에이전트 실행 정리
+- **비용 모니터링**: LLM 사용량과 관련 비용 추적
+- **오류 검토**: 정기적으로 오류 확인 및 해결
+- **성능 최적화**: 분석을 사용하여 병목 현상과 최적화 기회 식별
+
+## 문제 해결
+
+### AgentOps가 데이터를 기록하지 않음
+
+1. API 키가 올바르게 설정되었는지 확인
+2. AgentOps가 제대로 초기화되었는지 확인
+3. 스크립트 끝에서 `agentops.end_session()`을 호출하는지 확인
+
+### 누락된 이벤트
+
+일부 이벤트가 캡처되지 않는 경우:
+
+1. CrewAI와 AgentOps의 최신 버전이 있는지 확인
+2. AgentOps 리스너가 제대로 등록되었는지 확인
+3. 오류 메시지에 대한 로그 검토
+
+이 통합은 CrewAI 에이전트에 대한 포괄적인 관찰 가능성을 제공하여 AI 워크플로우를 모니터링, 디버그 및 최적화하는 데 도움이 됩니다.

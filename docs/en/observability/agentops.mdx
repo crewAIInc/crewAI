@@ -1,0 +1,184 @@
+---
+title: "AgentOps Integration"
+description: "Monitor and analyze your CrewAI agents with AgentOps observability platform"
+---
+
+# AgentOps Integration
+
+AgentOps is a powerful observability platform designed specifically for AI agents. It provides comprehensive monitoring, analytics, and debugging capabilities for your CrewAI crews.
+
+## Features
+
+- **Real-time Monitoring**: Track agent performance and behavior in real-time
+- **Session Replay**: Review complete agent sessions with detailed execution traces
+- **Performance Analytics**: Analyze crew efficiency, tool usage, and task completion rates
+- **Error Tracking**: Identify and debug issues in agent workflows
+- **Cost Tracking**: Monitor LLM usage and associated costs
+- **Team Collaboration**: Share insights and collaborate on agent optimization
+
+## Installation
+
+Install AgentOps alongside CrewAI:
+
+```bash
+pip install crewai[agentops]
+```
+
+Or install AgentOps separately:
+
+```bash
+pip install agentops
+```
+
+## Setup
+
+1. **Get your API Key**: Sign up at [AgentOps](https://agentops.ai) and get your API key
+
+2. **Configure your environment**: Set your AgentOps API key as an environment variable:
+
+```bash
+export AGENTOPS_API_KEY="your-api-key-here"
+```
+
+3. **Initialize AgentOps**: Add this to your CrewAI script:
+
+```python
+import agentops
+from crewai import Agent, Task, Crew
+
+# Initialize AgentOps
+agentops.init()
+
+# Your CrewAI code here
+agent = Agent(
+    role="Data Analyst",
+    goal="Analyze data and provide insights",
+    backstory="You are an expert data analyst...",
+)
+
+task = Task(
+    description="Analyze the sales data and provide insights",
+    agent=agent,
+)
+
+crew = Crew(
+    agents=[agent],
+    tasks=[task],
+)
+
+# Run your crew
+result = crew.kickoff()
+
+# End the AgentOps session
+agentops.end_session("Success")
+```
+
+## Automatic Integration
+
+CrewAI automatically integrates with AgentOps when the library is installed. The integration captures:
+
+- **Crew Kickoff Events**: Start and completion of crew executions
+- **Tool Usage**: All tool calls and their results
+- **Task Evaluations**: Task performance metrics and feedback
+- **Error Events**: Any errors that occur during execution
+
+## Configuration Options
+
+You can customize the AgentOps integration:
+
+```python
+import agentops
+
+# Configure AgentOps with custom settings
+agentops.init(
+    api_key="your-api-key",
+    tags=["production", "data-analysis"],
+    auto_start_session=True,
+    instrument_llm_calls=True,
+)
+```
+
+## Viewing Your Data
+
+1. **Dashboard**: Visit the AgentOps dashboard to view your agent sessions
+2. **Session Details**: Click on any session to see detailed execution traces
+3. **Analytics**: Use the analytics tab to identify performance trends
+4. **Errors**: Monitor the errors tab for debugging information
+
+## Best Practices
+
+- **Tag Your Sessions**: Use meaningful tags to organize your agent runs
+- **Monitor Costs**: Keep track of LLM usage and associated costs
+- **Review Errors**: Regularly check for and address any errors
+- **Optimize Performance**: Use analytics to identify bottlenecks and optimization opportunities
+
+## Troubleshooting
+
+### AgentOps Not Recording Data
+
+1. Verify your API key is set correctly
+2. Check that AgentOps is properly initialized
+3. Ensure you're calling `agentops.end_session()` at the end of your script
+
+### Missing Events
+
+If some events aren't being captured:
+
+1. Make sure you have the latest version of both CrewAI and AgentOps
+2. Check that the AgentOps listener is properly registered
+3. Review the logs for any error messages
+
+## Example: Complete Integration
+
+```python
+import os
+import agentops
+from crewai import Agent, Task, Crew, Process
+
+# Initialize AgentOps
+agentops.init(
+    api_key=os.getenv("AGENTOPS_API_KEY"),
+    tags=["example", "tutorial"],
+)
+
+# Define your agents
+researcher = Agent(
+    role="Research Specialist",
+    goal="Conduct thorough research on given topics",
+    backstory="You are an expert researcher with access to various tools...",
+)
+
+writer = Agent(
+    role="Content Writer",
+    goal="Create engaging content based on research",
+    backstory="You are a skilled writer who can transform research into compelling content...",
+)
+
+# Define your tasks
+research_task = Task(
+    description="Research the latest trends in AI and machine learning",
+    agent=researcher,
+)
+
+writing_task = Task(
+    description="Write a blog post about AI trends based on the research",
+    agent=writer,
+)
+
+# Create and run your crew
+crew = Crew(
+    agents=[researcher, writer],
+    tasks=[research_task, writing_task],
+    process=Process.sequential,
+)
+
+try:
+    result = crew.kickoff()
+    print(result)
+    agentops.end_session("Success")
+except Exception as e:
+    print(f"Error: {e}")
+    agentops.end_session("Fail")
+```
+
+This integration provides comprehensive observability for your CrewAI agents, helping you monitor, debug, and optimize your AI workflows.

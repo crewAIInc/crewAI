@@ -27,3 +27,6 @@ plan.md
 conceptual_plan.md
 build_image
 chromadb-*.lock
+
+# AgentOps
+agentops.log
