@@ -7,6 +7,7 @@ from crewai.utilities.chromadb import sanitize_collection_name
 from crewai.memory.storage.interface import Storage
 
 MAX_AGENT_ID_LENGTH_MEM0 = 255
+MAX_METADATA_SIZE_MEM0 = 2000
 
 
 class Mem0Storage(Storage):
@@ -98,8 +99,11 @@ class Mem0Storage(Storage):
         }
 
         # Shared base params
+        raw_metadata = {"type": base_metadata[self.memory_type], **metadata}
+        truncated_metadata = self._truncate_metadata_if_needed(raw_metadata)
+        
         params: dict[str, Any] = {
-            "metadata": {"type": base_metadata[self.memory_type], **metadata},
+            "metadata": truncated_metadata,
             "infer": self.infer
         }
 
@@ -181,3 +185,30 @@ class Mem0Storage(Storage):
         agents = [self._sanitize_role(agent.role) for agent in agents]
         agents = "_".join(agents)
         return sanitize_collection_name(name=agents, max_collection_length=MAX_AGENT_ID_LENGTH_MEM0)
+
+    def _truncate_metadata_if_needed(self, metadata: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Truncate metadata to stay within Mem0's size limits.
+        Prioritizes essential fields and truncates messages if needed.
+        """
+        import json
+        
+        metadata_str = json.dumps(metadata, default=str)
+        
+        if len(metadata_str) <= MAX_METADATA_SIZE_MEM0:
+            return metadata
+        
+        truncated_metadata = metadata.copy()
+        
+        if "messages" in truncated_metadata:
+            messages = truncated_metadata["messages"]
+            if isinstance(messages, list) and len(messages) > 0:
+                while len(json.dumps(truncated_metadata, default=str)) > MAX_METADATA_SIZE_MEM0 and len(messages) > 1:
+                    messages = messages[-len(messages)//2:]  # Keep last half
+                    truncated_metadata["messages"] = messages
+                
+                if len(json.dumps(truncated_metadata, default=str)) > MAX_METADATA_SIZE_MEM0:
+                    truncated_metadata.pop("messages", None)
+                    truncated_metadata["_truncated"] = True
+        
+        return truncated_metadata
