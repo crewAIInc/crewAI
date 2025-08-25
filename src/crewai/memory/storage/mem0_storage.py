@@ -89,18 +89,17 @@ class Mem0Storage(Storage):
 
     def save(self, value: Any, metadata: Dict[str, Any]) -> None:
         conversations = []
-        if messages := metadata.get("messages"):
-            # For conversation memory, user is at index 1, assistant at 2
-            user_content = (
-                messages[1].get("content")
-                if len(messages) > 1 and messages[1].get("role") == "user"
-                else ""
-            )
-            assistant_content = (
-                messages[2].get("content")
-                if len(messages) > 2 and messages[2].get("role") == "assistant"
-                else ""
-            )
+
+        if messages := metadata.get("messages"):    
+            user_content = ""
+            assistant_content = ""
+
+            for message in messages:
+                if message.get("role") == "user": # Using the latest user content 
+                    user_content = message.get("content")
+
+                if message.get("role") == "assistant": # Using the latest assistant content
+                    assistant_content = message.get("content")
 
             if user_msg := self._get_user_message(user_content):
                 conversations.append({"role": "user", "content": user_msg})
@@ -113,7 +112,6 @@ class Mem0Storage(Storage):
         
         user_id = self.config.get("user_id", "")
         
-
         base_metadata = {
             "short_term": "short_term",
             "long_term": "long_term",
