@@ -681,7 +681,7 @@ class Crew(FlowTrackable, BaseModel):
         finally:
             detach(token)
 
-    def kickoff_for_each(self, inputs: List[Dict[str, Any]]) -> List[CrewOutput]:
+    def kickoff_for_each(self, inputs: List[Dict[str, Any]], fail_fast: bool = True) -> List[CrewOutput]:
         """Executes the Crew's workflow for each input in the list and aggregates results."""
         results: List[CrewOutput] = []
 
@@ -691,12 +691,18 @@ class Crew(FlowTrackable, BaseModel):
         for input_data in inputs:
             crew = self.copy()
 
-            output = crew.kickoff(inputs=input_data)
+            try:
+                output = crew.kickoff(inputs=input_data)
 
-            if crew.usage_metrics:
-                total_usage_metrics.add_usage_metrics(crew.usage_metrics)
+                if crew.usage_metrics:
+                    total_usage_metrics.add_usage_metrics(crew.usage_metrics)
 
-            results.append(output)
+                results.append(output)
+            except Exception as e:
+                if fail_fast:
+                    raise
+                # When fail_fast=False, log the error and continue
+                self._logger.log("error", f"Task execution failed: {str(e)}", color="red")
 
         self.usage_metrics = total_usage_metrics
         self._task_output_handler.reset()
@@ -706,7 +712,7 @@ class Crew(FlowTrackable, BaseModel):
         """Asynchronous kickoff method to start the crew execution."""
         return await asyncio.to_thread(self.kickoff, inputs)
 
-    async def kickoff_for_each_async(self, inputs: List[Dict]) -> List[CrewOutput]:
+    async def kickoff_for_each_async(self, inputs: List[Dict], fail_fast: bool = True) -> List[CrewOutput]:
         crew_copies = [self.copy() for _ in inputs]
 
         async def run_crew(crew, input_data):
@@ -717,7 +723,18 @@ class Crew(FlowTrackable, BaseModel):
             for i in range(len(inputs))
         ]
 
-        results = await asyncio.gather(*tasks)
+        if fail_fast:
+            results = await asyncio.gather(*tasks)
+        else:
+            results = await asyncio.gather(*tasks, return_exceptions=True)
+            # Filter out exceptions and log them
+            valid_results = []
+            for result in results:
+                if isinstance(result, Exception):
+                    self._logger.log("error", f"Task execution failed: {str(result)}", color="red")
+                else:
+                    valid_results.append(result)
+            results = valid_results
 
         total_usage_metrics = UsageMetrics()
         for crew in crew_copies:
