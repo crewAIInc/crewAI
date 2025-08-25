@@ -589,6 +589,9 @@ def test_tool_usage_finished_event_with_result():
     # Create mock task
     mock_task = MagicMock()
     mock_task.delegations = 0
+    mock_task.name = "Test Task"
+    mock_task.description = "A test task for tool usage"
+    mock_task.id = "test-task-id"
 
     # Create mock tool
     class TestTool(BaseTool):
@@ -665,6 +668,9 @@ def test_tool_usage_finished_event_with_cached_result():
     # Create mock task
     mock_task = MagicMock()
     mock_task.delegations = 0
+    mock_task.name = "Test Task"
+    mock_task.description = "A test task for tool usage"
+    mock_task.id = "test-task-id"
 
     # Create mock tool
     class TestTool(BaseTool):
