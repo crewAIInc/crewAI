@@ -1,15 +1,25 @@
 """ChromaDB configuration model."""
 
 import os
-from dataclasses import dataclass, field
+import warnings
+from dataclasses import field
 from typing import Literal, cast
+from pydantic.dataclasses import dataclass as pyd_dataclass
 from chromadb.config import Settings
-from chromadb.api.types import Embeddable, EmbeddingFunction as ChromaEmbeddingFunction
 from chromadb.utils.embedding_functions import DefaultEmbeddingFunction
 
+from crewai.rag.chromadb.types import ChromaEmbeddingFunctionWrapper
 from crewai.utilities.paths import db_storage_path
 from crewai.rag.config.base import BaseRagConfig
 from crewai.rag.chromadb.constants import DEFAULT_TENANT, DEFAULT_DATABASE
+
+# Suppress Pydantic v1/v2 mixing warning for ChromaDB Settings
+warnings.filterwarnings(
+    "ignore",
+    message=".*Mixing V1 models and V2 models.*",
+    category=UserWarning,
+    module="pydantic._internal._generate_schema",
+)
 
 
 def _default_settings() -> Settings:
@@ -25,16 +35,16 @@ def _default_settings() -> Settings:
     )
 
 
-def _default_embedding_function() -> ChromaEmbeddingFunction[Embeddable]:
+def _default_embedding_function() -> ChromaEmbeddingFunctionWrapper:
     """Create default ChromaDB embedding function.
 
     Returns:
         Default embedding function cast to proper type.
     """
-    return cast(ChromaEmbeddingFunction[Embeddable], DefaultEmbeddingFunction())
+    return cast(ChromaEmbeddingFunctionWrapper, DefaultEmbeddingFunction())
 
 
-@dataclass(frozen=True)
+@pyd_dataclass(frozen=True)
 class ChromaDBConfig(BaseRagConfig):
     """Configuration for ChromaDB client."""
 
@@ -42,6 +52,6 @@ class ChromaDBConfig(BaseRagConfig):
     tenant: str = DEFAULT_TENANT
     database: str = DEFAULT_DATABASE
     settings: Settings = field(default_factory=_default_settings)
-    embedding_function: ChromaEmbeddingFunction[Embeddable] = field(
+    embedding_function: ChromaEmbeddingFunctionWrapper | None = field(
         default_factory=_default_embedding_function
     )
