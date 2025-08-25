@@ -1,3 +1,5 @@
+"""Provider-specific missing configuration classes."""
+
 from typing import Literal
 from dataclasses import field
 from pydantic import ConfigDict

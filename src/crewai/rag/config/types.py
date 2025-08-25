@@ -1,3 +1,5 @@
+"""Type definitions for RAG configuration."""
+
 from typing import TYPE_CHECKING, Annotated, TypeAlias
 from pydantic import Field
 

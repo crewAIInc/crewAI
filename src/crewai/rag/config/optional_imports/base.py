@@ -1,3 +1,5 @@
+"""Base classes for missing provider configurations."""
+
 from typing import Literal
 from dataclasses import field
 

@@ -1,3 +1,5 @@
+"""Protocol definitions for RAG factory modules."""
+
 from typing import Protocol
 
 from crewai.rag.config.types import RagConfigType
