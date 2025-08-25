@@ -9,6 +9,7 @@ from chromadb.utils.embedding_functions import DefaultEmbeddingFunction
 
 from crewai.utilities.paths import db_storage_path
 from crewai.rag.config.base import BaseRagConfig
+from crewai.rag.chromadb.constants import DEFAULT_TENANT, DEFAULT_DATABASE
 
 
 def _default_settings() -> Settings:
@@ -33,13 +34,13 @@ def _default_embedding_function() -> ChromaEmbeddingFunction[Embeddable]:
     return cast(ChromaEmbeddingFunction[Embeddable], DefaultEmbeddingFunction())
 
 
-@dataclass
+@dataclass(frozen=True)
 class ChromaDBConfig(BaseRagConfig):
     """Configuration for ChromaDB client."""
 
-    provider: Literal["chromadb"] = "chromadb"
-    tenant: str = "default_tenant"
-    database: str = "default_database"
+    provider: Literal["chromadb"] = field(default="chromadb", init=False)
+    tenant: str = DEFAULT_TENANT
+    database: str = DEFAULT_DATABASE
     settings: Settings = field(default_factory=_default_settings)
     embedding_function: ChromaEmbeddingFunction[Embeddable] = field(
         default_factory=_default_embedding_function

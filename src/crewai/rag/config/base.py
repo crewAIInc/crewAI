@@ -10,7 +10,7 @@ from crewai.rag.config.schema_utils import create_dataclass_schema
 from crewai.rag.types import EmbeddingFunction
 
 
-@dataclass
+@dataclass(frozen=True)
 class BaseRagConfig:
     """Base class for RAG configuration with Pydantic serialization support."""
 
@@ -21,6 +21,11 @@ class BaseRagConfig:
         cls, _source_type: Any, handler: GetCoreSchemaHandler
     ) -> CoreSchema:
         """Generate Pydantic core schema for dataclass serialization.
+
+        Notes:
+            This custom schema handler enables proper serialization of
+            provider-specific settings (e.g., ChromaDB Settings) that aren't
+            natively supported by Pydantic.
 
         Args:
             _source_type: Source type, unused.
