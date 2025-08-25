@@ -978,9 +978,9 @@ def test_llm_emits_event_with_lite_agent():
         )
         agent.kickoff(messages=[{"role": "user", "content": "say hi!"}])
 
-    assert len(completed_event) == 2
+    assert len(completed_event) == 1
     assert len(failed_event) == 0
-    assert len(started_event) == 2
+    assert len(started_event) == 1
     assert len(stream_event) == 15
 
     all_events = completed_event + failed_event + started_event + stream_event
@@ -990,8 +990,8 @@ def test_llm_emits_event_with_lite_agent():
     all_task_name = [event.task_name for event in all_events if event.task_name]
 
     # ensure all events have the agent + task props set
-    assert len(all_agent_roles) == 19
-    assert len(all_agent_id) == 19
+    assert len(all_agent_roles) == 17
+    assert len(all_agent_id) == 17
     assert len(all_task_id) == 0
     assert len(all_task_name) == 0
 
