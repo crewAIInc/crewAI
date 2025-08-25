@@ -20,5 +20,7 @@ SupportedProvider = Annotated[
     "Supported RAG provider types, add providers here as they become available",
 ]
 
-Providers: TypeAlias = ChromaDBConfig
-RagConfigType: TypeAlias = Annotated[Providers, Field(discriminator=DISCRIMINATOR)]
+SupportedProviderConfig: TypeAlias = ChromaDBConfig
+RagConfigType: TypeAlias = Annotated[
+    SupportedProviderConfig, Field(discriminator=DISCRIMINATOR)
+]

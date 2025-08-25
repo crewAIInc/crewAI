@@ -7,6 +7,7 @@ from pydantic import GetCoreSchemaHandler
 from pydantic_core import CoreSchema
 
 from crewai.rag.config.schema_utils import create_dataclass_schema
+from crewai.rag.config.types import SupportedProvider
 from crewai.rag.types import EmbeddingFunction
 
 
@@ -14,6 +15,7 @@ from crewai.rag.types import EmbeddingFunction
 class BaseRagConfig:
     """Base class for RAG configuration with Pydantic serialization support."""
 
+    provider: SupportedProvider = field(init=False)
     embedding_function: EmbeddingFunction | None = field(default=None)
 
     @classmethod
