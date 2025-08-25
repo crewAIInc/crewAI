@@ -2,9 +2,10 @@
 
 import os
 from dataclasses import dataclass, field
-from typing import Literal
+from typing import Literal, cast
 from chromadb.config import Settings
-
+from chromadb.api.types import Embeddable, EmbeddingFunction as ChromaEmbeddingFunction
+from chromadb.utils.embedding_functions import DefaultEmbeddingFunction
 
 from crewai.utilities.paths import db_storage_path
 from crewai.rag.config.base import BaseRagConfig
@@ -23,6 +24,15 @@ def _default_settings() -> Settings:
     )
 
 
+def _default_embedding_function() -> ChromaEmbeddingFunction[Embeddable]:
+    """Create default ChromaDB embedding function.
+
+    Returns:
+        Default embedding function cast to proper type.
+    """
+    return cast(ChromaEmbeddingFunction[Embeddable], DefaultEmbeddingFunction())
+
+
 @dataclass
 class ChromaDBConfig(BaseRagConfig):
     """Configuration for ChromaDB client."""
@@ -31,3 +41,6 @@ class ChromaDBConfig(BaseRagConfig):
     tenant: str = "default_tenant"
     database: str = "default_database"
     settings: Settings = field(default_factory=_default_settings)
+    embedding_function: ChromaEmbeddingFunction[Embeddable] = field(
+        default_factory=_default_embedding_function
+    )

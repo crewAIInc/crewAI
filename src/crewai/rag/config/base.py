@@ -1,17 +1,20 @@
 """Base configuration class for RAG providers."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 from pydantic import GetCoreSchemaHandler
 from pydantic_core import CoreSchema
 
 from crewai.rag.config.schema_utils import create_dataclass_schema
+from crewai.rag.types import EmbeddingFunction
 
 
 @dataclass
 class BaseRagConfig:
     """Base class for RAG configuration with Pydantic serialization support."""
+
+    embedding_function: EmbeddingFunction | None = field(default=None)
 
     @classmethod
     def __get_pydantic_core_schema__(

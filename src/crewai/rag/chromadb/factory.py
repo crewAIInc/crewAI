@@ -1,10 +1,6 @@
 """Factory functions for creating ChromaDB clients."""
 
-from typing import cast
-
 from chromadb import Client
-from chromadb.api.types import Embeddable, EmbeddingFunction as ChromaEmbeddingFunction
-from chromadb.utils.embedding_functions import DefaultEmbeddingFunction
 
 from crewai.rag.chromadb.config import ChromaDBConfig
 from crewai.rag.chromadb.client import ChromaDBClient
@@ -25,8 +21,6 @@ def create_client(config: ChromaDBConfig) -> ChromaDBClient:
 
     client = ChromaDBClient()
     client.client = chromadb_client
-    client.embedding_function = cast(
-        ChromaEmbeddingFunction[Embeddable], DefaultEmbeddingFunction()
-    )
+    client.embedding_function = config.embedding_function
 
     return client
