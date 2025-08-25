@@ -17,15 +17,10 @@ from crewai.rag.config.factory import create_client
 class RagContext(BaseModel):
     """Context holding RAG configuration and client instance."""
 
-    config: RagConfigType = Field(discriminator="provider")
+    config: RagConfigType = Field(..., description="RAG provider configuration")
     client: BaseClient | None = Field(
         default=None, description="Instantiated RAG client"
     )
-
-    class Config:
-        """Pydantic configuration."""
-
-        arbitrary_types_allowed = True
 
 
 _rag_context: ContextVar[RagContext | None] = ContextVar("_rag_context", default=None)
