@@ -16,6 +16,12 @@ if TYPE_CHECKING:
     from crewai.tools.base_tool import BaseTool
 
 
+class ToolUsageLimitExceeded(Exception):
+    """Exception raised when a tool has reached its maximum usage limit."""
+
+    pass
+
+
 class CrewStructuredTool:
     """A structured tool that can operate on any number of inputs.
 
@@ -227,17 +233,25 @@ class CrewStructuredTool:
         """
         parsed_args = self._parse_args(input)
 
+        if self.has_reached_max_usage_count():
+            raise ToolUsageLimitExceeded(
+                f"Tool '{self.name}' has reached its maximum usage limit of {self.max_usage_count}. You should not use the {self.name} tool again."
+            )
+
         self._increment_usage_count()
 
-        if inspect.iscoroutinefunction(self.func):
-            return await self.func(**parsed_args, **kwargs)
-        else:
-            # Run sync functions in a thread pool
-            import asyncio
+        try:
+            if inspect.iscoroutinefunction(self.func):
+                return await self.func(**parsed_args, **kwargs)
+            else:
+                # Run sync functions in a thread pool
+                import asyncio
 
-            return await asyncio.get_event_loop().run_in_executor(
-                None, lambda: self.func(**parsed_args, **kwargs)
-            )
+                return await asyncio.get_event_loop().run_in_executor(
+                    None, lambda: self.func(**parsed_args, **kwargs)
+                )
+        except Exception:
+            raise
 
     def _run(self, *args, **kwargs) -> Any:
         """Legacy method for compatibility."""
@@ -252,11 +266,21 @@ class CrewStructuredTool:
         """Main method for tool execution."""
         parsed_args = self._parse_args(input)
 
+        if self.has_reached_max_usage_count():
+            raise ToolUsageLimitExceeded(
+                f"Tool '{self.name}' has reached its maximum usage limit of {self.max_usage_count}. You should not use the {self.name} tool again."
+            )
+
         self._increment_usage_count()
 
         if inspect.iscoroutinefunction(self.func):
             result = asyncio.run(self.func(**parsed_args, **kwargs))
             return result
+
+        try:
+            result = self.func(**parsed_args, **kwargs)
+        except Exception:
+            raise
 
         result = self.func(**parsed_args, **kwargs)
 
@@ -264,6 +288,13 @@ class CrewStructuredTool:
             return asyncio.run(result)
 
         return result
+
+    def has_reached_max_usage_count(self) -> bool:
+        """Check if the tool has reached its maximum usage count."""
+        return (
+            self.max_usage_count is not None
+            and self.current_usage_count >= self.max_usage_count
+        )
 
     def _increment_usage_count(self) -> None:
         """Increment the usage count."""

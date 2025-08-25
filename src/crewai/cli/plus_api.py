@@ -117,9 +117,6 @@ class PlusAPI:
     def get_organizations(self) -> requests.Response:
         return self._make_request("GET", self.ORGANIZATIONS_RESOURCE)
 
-    def send_trace_batch(self, payload) -> requests.Response:
-        return self._make_request("POST", self.TRACING_RESOURCE, json=payload)
-
     def initialize_trace_batch(self, payload) -> requests.Response:
         return self._make_request(
             "POST", f"{self.TRACING_RESOURCE}/batches", json=payload
@@ -135,6 +132,7 @@ class PlusAPI:
             "POST",
             f"{self.TRACING_RESOURCE}/batches/{trace_batch_id}/events",
             json=payload,
+            timeout=30,
         )
 
     def send_ephemeral_trace_events(
@@ -144,6 +142,7 @@ class PlusAPI:
             "POST",
             f"{self.EPHEMERAL_TRACING_RESOURCE}/batches/{trace_batch_id}/events",
             json=payload,
+            timeout=30,
         )
 
     def finalize_trace_batch(self, trace_batch_id: str, payload) -> requests.Response:

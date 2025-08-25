@@ -41,17 +41,16 @@ class TraceBatchManager:
     """Single responsibility: Manage batches and event buffering"""
 
     is_current_batch_ephemeral: bool = False
+    trace_batch_id: Optional[str] = None
+    current_batch: Optional[TraceBatch] = None
+    event_buffer: List[TraceEvent] = []
+    execution_start_times: Dict[str, datetime] = {}
 
     def __init__(self):
         try:
             self.plus_api = PlusAPI(api_key=get_auth_token())
         except AuthError:
             self.plus_api = PlusAPI(api_key="")
-
-        self.trace_batch_id: Optional[str] = None  # Backend ID
-        self.current_batch: Optional[TraceBatch] = None
-        self.event_buffer: List[TraceEvent] = []
-        self.execution_start_times: Dict[str, datetime] = {}
 
     def initialize_batch(
         self,
@@ -178,11 +177,10 @@ class TraceBatchManager:
         if not self.current_batch:
             return None
 
+        self.current_batch.events = self.event_buffer.copy()
         if self.event_buffer:
             self._send_events_to_backend()
         self._finalize_backend_batch()
-
-        self.current_batch.events = self.event_buffer.copy()
 
         finalized_batch = self.current_batch
 

@@ -433,7 +433,7 @@ class Task(BaseModel):
 
             pydantic_output, json_output = self._export_output(result)
             task_output = TaskOutput(
-                name=self.name,
+                name=self.name or self.description,
                 description=self.description,
                 expected_output=self.expected_output,
                 raw=result,
@@ -561,8 +561,8 @@ class Task(BaseModel):
         should_inject = self.allow_crewai_trigger_context
 
         if should_inject and self.agent:
-            crew = getattr(self.agent, 'crew', None)
-            if crew and hasattr(crew, '_inputs') and crew._inputs:
+            crew = getattr(self.agent, "crew", None)
+            if crew and hasattr(crew, "_inputs") and crew._inputs:
                 trigger_payload = crew._inputs.get("crewai_trigger_payload")
                 if trigger_payload is not None:
                     description += f"\n\nTrigger Payload: {trigger_payload}"
@@ -780,7 +780,9 @@ Follow these guidelines:
             if self.create_directory and not directory.exists():
                 directory.mkdir(parents=True, exist_ok=True)
             elif not self.create_directory and not directory.exists():
-                raise RuntimeError(f"Directory {directory} does not exist and create_directory is False")
+                raise RuntimeError(
+                    f"Directory {directory} does not exist and create_directory is False"
+                )
 
             with resolved_path.open("w", encoding="utf-8") as file:
                 if isinstance(result, dict):

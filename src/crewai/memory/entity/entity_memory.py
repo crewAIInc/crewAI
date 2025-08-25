@@ -35,7 +35,7 @@ class EntityMemory(Memory):
                 raise ImportError(
                     "Mem0 is not installed. Please install it with `pip install mem0ai`."
                 )
-            config = embedder_config.get("config")
+            config = embedder_config.get("config") if embedder_config else None
             storage = Mem0Storage(type="short_term", crew=crew, config=config)
         else:
             storage = (
@@ -60,6 +60,8 @@ class EntityMemory(Memory):
             event=MemorySaveStartedEvent(
                 metadata=item.metadata,
                 source_type="entity_memory",
+                from_agent=self.agent,
+                from_task=self.task,
             ),
         )
 
@@ -85,6 +87,8 @@ class EntityMemory(Memory):
                     metadata=item.metadata,
                     save_time_ms=(time.time() - start_time) * 1000,
                     source_type="entity_memory",
+                    from_agent=self.agent,
+                    from_task=self.task,
                 ),
             )
         except Exception as e:
@@ -94,6 +98,8 @@ class EntityMemory(Memory):
                     metadata=item.metadata,
                     error=str(e),
                     source_type="entity_memory",
+                    from_agent=self.agent,
+                    from_task=self.task,
                 ),
             )
             raise
@@ -111,6 +117,8 @@ class EntityMemory(Memory):
                 limit=limit,
                 score_threshold=score_threshold,
                 source_type="entity_memory",
+                from_agent=self.agent,
+                from_task=self.task,
             ),
         )
 
@@ -129,6 +137,8 @@ class EntityMemory(Memory):
                     score_threshold=score_threshold,
                     query_time_ms=(time.time() - start_time) * 1000,
                     source_type="entity_memory",
+                    from_agent=self.agent,
+                    from_task=self.task,
                 ),
             )
 
