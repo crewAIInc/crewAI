@@ -5,11 +5,18 @@ import importlib
 from types import ModuleType
 from typing import Any
 
+from crewai.rag.config.types import RagConfigType
 from crewai.rag.config.utils import set_rag_config
 
 
+_module_path = __path__
+_module_file = __file__
+
 class _RagModule(ModuleType):
     """Module wrapper to intercept attribute setting for config."""
+
+    __path__ = _module_path
+    __file__ = _module_file
 
     def __init__(self, module_name: str):
         """Initialize the module wrapper.
@@ -18,10 +25,8 @@ class _RagModule(ModuleType):
             module_name: Name of the module.
         """
         super().__init__(module_name)
-        self.__path__ = __path__
-        self.__file__ = __file__
 
-    def __setattr__(self, name: str, value: Any) -> None:
+    def __setattr__(self, name: str, value: RagConfigType) -> None:
         """Set module attributes.
 
         Args:
@@ -29,9 +34,8 @@ class _RagModule(ModuleType):
             value: Attribute value.
         """
         if name == "config":
-            set_rag_config(value)
-        else:
-            super().__setattr__(name, value)
+            return set_rag_config(value)
+        raise AttributeError(f"Setting attribute '{name}' is not allowed.")
 
     def __getattr__(self, name: str) -> Any:
         """Get module attributes.
