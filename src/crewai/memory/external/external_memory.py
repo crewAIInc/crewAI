@@ -73,7 +73,7 @@ class ExternalMemory(Memory):
                 metadata=metadata,
                 agent=self.agent.role if self.agent else None,
             )
-            super().save(value=item.value, metadata=item.metadata, agent=item.agent)
+            super().save(value=item.value, metadata=item.metadata)
 
             crewai_event_bus.emit(
                 self,
