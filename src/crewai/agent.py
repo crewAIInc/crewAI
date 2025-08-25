@@ -487,7 +487,9 @@ class Agent(BaseAgent):
         # result_as_answer set to True
         for tool_result in self.tools_results:  # type: ignore # Item "None" of "list[Any] | None" has no attribute "__iter__" (not iterable)
             if tool_result.get("result_as_answer", False):
-                result = tool_result["result"]
+                from crewai.tools.tool_types import ToolAnswerResult
+                result = ToolAnswerResult(tool_result["result"])  # type: ignore
+                # result = tool_result["result"]
         crewai_event_bus.emit(
             self,
             event=AgentExecutionCompletedEvent(agent=self, task=task, output=result),
