@@ -5,7 +5,7 @@ import importlib
 from types import ModuleType
 from typing import Any
 
-from crewai.rag.config.utils import set_rag_config, get_rag_config, get_rag_client
+from crewai.rag.config.utils import set_rag_config
 
 
 class _RagModule(ModuleType):
