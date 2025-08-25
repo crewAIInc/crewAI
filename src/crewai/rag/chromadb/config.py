@@ -13,7 +13,7 @@ from crewai.utilities.paths import db_storage_path
 from crewai.rag.config.base import BaseRagConfig
 from crewai.rag.chromadb.constants import DEFAULT_TENANT, DEFAULT_DATABASE
 
-# Suppress Pydantic v1/v2 mixing warning for ChromaDB Settings
+
 warnings.filterwarnings(
     "ignore",
     message=".*Mixing V1 models and V2 models.*",
