@@ -28,7 +28,7 @@ def serialize_pydantic_settings(settings: BaseSettings | None) -> dict[str, Any]
 
 
 def create_dataclass_schema(
-    cls: type[Any], handler: GetCoreSchemaHandler
+    cls: type[Any], _handler: GetCoreSchemaHandler
 ) -> CoreSchema:
     """Create a Pydantic core schema for a dataclass.
 
@@ -37,7 +37,7 @@ def create_dataclass_schema(
 
     Args:
         cls: Dataclass type to create schema for.
-        handler: Pydantic's schema handler (required by protocol, currently unused).
+        _handler: Pydantic's schema handler (required by protocol, currently unused).
 
     Returns:
         CoreSchema defining validation and serialization for the dataclass.

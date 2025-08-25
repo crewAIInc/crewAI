@@ -11,13 +11,13 @@ from crewai.rag.config.constants import (
     DEFAULT_RAG_CONFIG_PATH,
     DEFAULT_RAG_CONFIG_CLASS,
 )
-from crewai.rag.chromadb.config import ChromaDBConfig
+from crewai.rag.config.factory import create_client
 
 
 class RagContext(BaseModel):
     """Context holding RAG configuration and client instance."""
 
-    config: ChromaDBConfig = Field(discriminator="provider")
+    config: RagConfigType = Field(discriminator="provider")
     client: BaseClient | None = Field(
         default=None, description="Instantiated RAG client"
     )
@@ -37,8 +37,6 @@ def set_rag_config(config: RagConfigType) -> None:
     Args:
         config: The RAG client configuration (ChromaDBConfig).
     """
-    from crewai.rag.config.factory import create_client
-
     client = create_client(config)
     context = RagContext(config=config, client=client)
     _rag_context.set(context)
@@ -78,8 +76,6 @@ def get_rag_client() -> BaseClient:
         context = _rag_context.get()
 
     if context and context.client is None:
-        from crewai.rag.config.factory import create_client
-
         context.client = create_client(context.config)
 
     if context is None or context.client is None:

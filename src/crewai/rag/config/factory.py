@@ -1,7 +1,11 @@
 """Factory functions for creating RAG clients from configuration."""
 
+from typing import cast
+
+from crewai.rag.config.optional_imports.protocols import ChromaFactoryModule
 from crewai.rag.core.base_client import BaseClient
 from crewai.rag.config.types import RagConfigType
+from crewai.utilities.import_utils import require
 
 
 def create_client(config: RagConfigType) -> BaseClient:
@@ -16,9 +20,13 @@ def create_client(config: RagConfigType) -> BaseClient:
     Raises:
         ValueError: If the configuration provider is not supported.
     """
+
     if config.provider == "chromadb":
-        from crewai.rag.chromadb.factory import create_client as create_chromadb_client
-
-        return create_chromadb_client(config)
-
-    raise ValueError(f"Unsupported RAG provider: {config.provider}")
+        mod = cast(
+            ChromaFactoryModule,
+            require(
+                "crewai.rag.chromadb.factory",
+                purpose="The 'chromadb' provider",
+            ),
+        )
+        return mod.create_client(config)
