@@ -891,7 +891,7 @@ def test_stream_llm_emits_event_with_task_and_agent_info():
     assert set(all_agent_roles) == {agent.role}
     assert set(all_agent_id) == {agent.id}
     assert set(all_task_id) == {task.id}
-    assert set(all_task_name) == {task.name}
+    assert set(all_task_name) == {task.name or task.description}
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -942,7 +942,7 @@ def test_llm_emits_event_with_task_and_agent_info(base_agent, base_task):
     assert set(all_agent_roles) == {base_agent.role}
     assert set(all_agent_id) == {base_agent.id}
     assert set(all_task_id) == {base_task.id}
-    assert set(all_task_name) == {base_task.name}
+    assert set(all_task_name) == {base_task.name or base_task.description}
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
