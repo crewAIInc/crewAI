@@ -162,7 +162,7 @@ class CrewAgentParser:
 
         tool_input = tool_input.replace('"""', '"')
 
-        result = repair_json(tool_input)
+        result = repair_json(tool_input, ensure_ascii=False)
         if result in UNABLE_TO_REPAIR_JSON_RESULTS:
             return tool_input
 

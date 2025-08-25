@@ -528,7 +528,7 @@ class ToolUsage:
             if isinstance(arguments, dict):
                 return arguments
         except (ValueError, SyntaxError):
-            repaired_input = repair_json(tool_input)
+            repaired_input = repair_json(tool_input, ensure_ascii=False)
             pass  # Continue to the next parsing attempt
 
         # Attempt 3: Parse as JSON5
@@ -541,7 +541,7 @@ class ToolUsage:
 
         # Attempt 4: Repair JSON
         try:
-            repaired_input = str(repair_json(tool_input, skip_json_loads=True))
+            repaired_input = str(repair_json(tool_input, skip_json_loads=True, ensure_ascii=False))
             self._printer.print(
                 content=f"Repaired JSON: {repaired_input}", color="blue"
             )
