@@ -81,7 +81,7 @@ class ShortTermMemory(Memory):
                     f"Remember the following insights from Agent run: {item.data}"
                 )
 
-            super().save(value=item.data, metadata=item.metadata, agent=item.agent)
+            super().save(value=item.data, metadata=item.metadata)
 
             crewai_event_bus.emit(
                 self,
