@@ -59,6 +59,7 @@ crew = Crew(
 | **Output Pydantic** _(opcional)_ | `output_pydantic` | `Optional[Type[BaseModel]]`  | Um modelo Pydantic para a saída da tarefa.                                                                         |
 | **Callback** _(opcional)_        | `callback`        | `Optional[Any]`              | Função/objeto a ser executado após a conclusão da tarefa.                                                          |
 | **Guardrail** _(opcional)_       | `guardrail`       | `Optional[Callable]`             | Função para validar a saída da tarefa antes de prosseguir para a próxima tarefa.                                |
+| **Max Tentativas Guardrail** _(opcional)_ | `guardrail_max_retries` | `Optional[int]`    | Número máximo de tentativas quando a validação do guardrail falha. Padrão é 3.                                   |
 
 ## Criando Tarefas
 
@@ -450,7 +451,7 @@ task = Task(
     expected_output="Um objeto JSON válido",
     agent=analyst,
     guardrail=validate_json_output,
-    max_retries=3  # Limite de tentativas
+    guardrail_max_retries=3  # Limite de tentativas
 )
 ```
 
@@ -935,7 +936,7 @@ task = Task(
     description="Gerar dados",
     expected_output="Dados válidos",
     guardrail=validate_data,
-    max_retries=5  # Sobrescreve o limite padrão de tentativas
+    guardrail_max_retries=5  # Sobrescreve o limite padrão de tentativas
 )
 ```
 

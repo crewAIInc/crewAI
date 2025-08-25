@@ -4150,7 +4150,7 @@ def test_crew_with_failing_task_guardrails():
         expected_output="A properly formatted report",
         agent=researcher,
         guardrail=strict_format_guardrail,
-        max_retries=3,
+        guardrail_max_retries=3,
     )
 
     crew = Crew(
@@ -4196,7 +4196,7 @@ def test_crew_guardrail_feedback_in_context():
         expected_output="A response containing the keyword 'IMPORTANT'",
         agent=researcher,
         guardrail=format_guardrail,
-        max_retries=2,
+        guardrail_max_retries=2,
     )
 
     crew = Crew(agents=[researcher], tasks=[task])

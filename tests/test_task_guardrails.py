@@ -61,7 +61,7 @@ def test_task_with_failing_guardrail():
         description="Test task",
         expected_output="Output",
         guardrail=guardrail,
-        max_retries=1,
+        guardrail_max_retries=1,
     )
 
     # First execution fails guardrail, second succeeds
@@ -88,7 +88,7 @@ def test_task_with_guardrail_retries():
         description="Test task",
         expected_output="Output",
         guardrail=guardrail,
-        max_retries=2,
+        guardrail_max_retries=2,
     )
 
     with pytest.raises(Exception) as exc_info:
@@ -113,7 +113,7 @@ def test_guardrail_error_in_context():
         description="Test task",
         expected_output="Output",
         guardrail=guardrail,
-        max_retries=1,
+        guardrail_max_retries=1,
     )
 
     # Mock execute_task to succeed on second attempt
@@ -265,7 +265,7 @@ def test_guardrail_when_an_error_occurs(sample_agent, task_output):
             agent=sample_agent,
             expected_output="A list of available books on the First World War",
             guardrail="Ensure the authors are from Italy",
-            max_retries=0,
+            guardrail_max_retries=0,
         )
         task.execute_sync(agent=sample_agent)
 
