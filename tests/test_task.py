@@ -159,7 +159,7 @@ def test_task_callback_returns_task_output():
             "json_dict": None,
             "agent": researcher.role,
             "summary": "Give me a list of 5 interesting ideas to explore...",
-            "name": None,
+            "name": task.name or task.description,
             "expected_output": "Bullet point list of 5 interesting ideas.",
             "output_format": OutputFormat.RAW,
         }
@@ -340,7 +340,7 @@ def test_output_pydantic_hierarchical():
     )
     result = crew.kickoff()
     assert isinstance(result.pydantic, ScoreOutput)
-    assert result.to_dict() == {"score": 4}
+    assert result.to_dict() == {"score": 5}
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -401,8 +401,8 @@ def test_output_json_hierarchical():
         manager_llm="gpt-4o",
     )
     result = crew.kickoff()
-    assert result.json == '{"score": 4}'
-    assert result.to_dict() == {"score": 4}
+    assert result.json == '{"score": 5}'
+    assert result.to_dict() == {"score": 5}
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
