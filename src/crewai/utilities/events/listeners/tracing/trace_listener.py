@@ -161,7 +161,8 @@ class TraceCollectionListener(BaseEventListener):
         @event_bus.on(FlowFinishedEvent)
         def on_flow_finished(source, event):
             self._handle_trace_event("flow_finished", source, event)
-            self.batch_manager.finalize_batch()
+            if self.batch_manager.batch_owner_type == "flow":
+                self.batch_manager.finalize_batch()
 
         @event_bus.on(FlowPlotEvent)
         def on_flow_plot(source, event):
@@ -179,7 +180,8 @@ class TraceCollectionListener(BaseEventListener):
         @event_bus.on(CrewKickoffCompletedEvent)
         def on_crew_completed(source, event):
             self._handle_trace_event("crew_kickoff_completed", source, event)
-            self.batch_manager.finalize_batch()
+            if self.batch_manager.batch_owner_type == "crew":
+                self.batch_manager.finalize_batch()
 
         @event_bus.on(CrewKickoffFailedEvent)
         def on_crew_failed(source, event):
@@ -302,6 +304,9 @@ class TraceCollectionListener(BaseEventListener):
             "crewai_version": get_crewai_version(),
         }
 
+        self.batch_manager.batch_owner_type = "crew"
+        self.batch_manager.batch_owner_id = getattr(source, "id", str(uuid.uuid4()))
+
         self._initialize_batch(user_context, execution_metadata)
 
     def _initialize_flow_batch(self, source: Any, event: Any):
@@ -313,6 +318,9 @@ class TraceCollectionListener(BaseEventListener):
             "crewai_version": get_crewai_version(),
             "execution_type": "flow",
         }
+
+        self.batch_manager.batch_owner_type = "flow"
+        self.batch_manager.batch_owner_id = getattr(source, "id", str(uuid.uuid4()))
 
         self._initialize_batch(user_context, execution_metadata)
 

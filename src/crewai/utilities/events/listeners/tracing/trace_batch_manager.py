@@ -45,6 +45,8 @@ class TraceBatchManager:
     current_batch: Optional[TraceBatch] = None
     event_buffer: List[TraceEvent] = []
     execution_start_times: Dict[str, datetime] = {}
+    batch_owner_type: Optional[str] = None
+    batch_owner_id: Optional[str] = None
 
     def __init__(self):
         try:
@@ -183,6 +185,9 @@ class TraceBatchManager:
         self._finalize_backend_batch()
 
         finalized_batch = self.current_batch
+
+        self.batch_owner_type = None
+        self.batch_owner_id = None
 
         self.current_batch = None
         self.event_buffer.clear()
