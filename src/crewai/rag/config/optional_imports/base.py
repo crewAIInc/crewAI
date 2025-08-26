@@ -14,7 +14,9 @@ class _MissingProvider:
     Raises RuntimeError when instantiated to indicate missing dependencies.
     """
 
-    provider: Literal["chromadb", "__missing__"] = field(default="__missing__")
+    provider: Literal["chromadb", "qdrant", "__missing__"] = field(
+        default="__missing__"
+    )
 
     def __post_init__(self) -> None:
         """Raises error indicating the provider is not installed."""

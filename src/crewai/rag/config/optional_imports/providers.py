@@ -13,3 +13,10 @@ class MissingChromaDBConfig(_MissingProvider):
     """Placeholder for missing ChromaDB configuration."""
 
     provider: Literal["chromadb"] = field(default="chromadb")
+
+
+@pyd_dataclass(config=ConfigDict(extra="forbid"))
+class MissingQdrantConfig(_MissingProvider):
+    """Placeholder for missing Qdrant configuration."""
+
+    provider: Literal["qdrant"] = field(default="qdrant")

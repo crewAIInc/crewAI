@@ -5,6 +5,8 @@ from typing import Annotated, Any, Protocol, TypeAlias, TypedDict
 from typing_extensions import NotRequired
 
 import numpy as np
+from pydantic import GetCoreSchemaHandler
+from pydantic_core import CoreSchema, core_schema
 from qdrant_client import AsyncQdrantClient, QdrantClient as SyncQdrantClient
 from qdrant_client.models import (
     FieldCondition,
@@ -51,6 +53,21 @@ class EmbeddingFunction(Protocol):
             Embedding vector as list of floats or numpy array.
         """
         ...
+
+
+class QdrantEmbeddingFunctionWrapper:
+    """Wrapper for Qdrant embedding functions to work with Pydantic validation."""
+
+    @classmethod
+    def __get_pydantic_core_schema__(
+        cls, _source_type: Any, _handler: GetCoreSchemaHandler
+    ) -> CoreSchema:
+        """Generate Pydantic core schema for Qdrant EmbeddingFunction.
+
+        This allows Pydantic to handle the embedding function type
+        without requiring arbitrary_types_allowed=True.
+        """
+        return core_schema.any_schema()
 
 
 class AsyncEmbeddingFunction(Protocol):
