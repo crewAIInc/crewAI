@@ -3,6 +3,8 @@
 from collections.abc import Mapping
 from typing import Any, NamedTuple
 
+from pydantic import GetCoreSchemaHandler
+from pydantic_core import CoreSchema, core_schema
 from chromadb.api import ClientAPI, AsyncClientAPI
 from chromadb.api.configuration import CollectionConfigurationInterface
 from chromadb.api.types import (
@@ -19,6 +21,21 @@ from chromadb.api.types import (
 from crewai.rag.core.base_client import BaseCollectionParams, BaseCollectionSearchParams
 
 ChromaDBClientType = ClientAPI | AsyncClientAPI
+
+
+class ChromaEmbeddingFunctionWrapper(ChromaEmbeddingFunction[Embeddable]):
+    """Base class for ChromaDB EmbeddingFunction to work with Pydantic validation."""
+
+    @classmethod
+    def __get_pydantic_core_schema__(
+        cls, _source_type: Any, _handler: GetCoreSchemaHandler
+    ) -> CoreSchema:
+        """Generate Pydantic core schema for ChromaDB EmbeddingFunction.
+
+        This allows Pydantic to handle ChromaDB's EmbeddingFunction type
+        without requiring arbitrary_types_allowed=True.
+        """
+        return core_schema.any_schema()
 
 
 class PreparedDocuments(NamedTuple):
