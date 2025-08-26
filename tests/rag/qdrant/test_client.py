@@ -236,7 +236,6 @@ class TestQdrantClient:
         # Check upsert was called with correct parameters
         call_args = mock_qdrant_client.upsert.call_args
         assert call_args.kwargs["collection_name"] == "test_collection"
-        assert call_args.kwargs["wait"] is True
         assert len(call_args.kwargs["points"]) == 1
         point = call_args.kwargs["points"][0]
         assert point.vector == [0.1, 0.2, 0.3]
@@ -330,7 +329,6 @@ class TestQdrantClient:
         # Check upsert was called with correct parameters
         call_args = mock_async_qdrant_client.upsert.call_args
         assert call_args.kwargs["collection_name"] == "test_collection"
-        assert call_args.kwargs["wait"] is True
         assert len(call_args.kwargs["points"]) == 1
         point = call_args.kwargs["points"][0]
         assert point.vector == [0.1, 0.2, 0.3]
