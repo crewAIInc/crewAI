@@ -65,7 +65,8 @@ class ScrapeWebsiteTool(BaseTool):
         page.encoding = page.apparent_encoding
         parsed = BeautifulSoup(page.text, "html.parser")
 
-        text = parsed.get_text(" ")
+        text = "The following text is scraped website content:\n\n"
+        text += parsed.get_text(" ")
         text = re.sub("[ \t]+", " ", text)
         text = re.sub("\\s+\n\\s+", "\n", text)
         return text
