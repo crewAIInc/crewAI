@@ -1,6 +1,5 @@
 """ChromaDB configuration model."""
 
-import os
 import warnings
 from dataclasses import field
 from typing import Literal, cast
@@ -9,9 +8,12 @@ from chromadb.config import Settings
 from chromadb.utils.embedding_functions import DefaultEmbeddingFunction
 
 from crewai.rag.chromadb.types import ChromaEmbeddingFunctionWrapper
-from crewai.utilities.paths import db_storage_path
 from crewai.rag.config.base import BaseRagConfig
-from crewai.rag.chromadb.constants import DEFAULT_TENANT, DEFAULT_DATABASE
+from crewai.rag.chromadb.constants import (
+    DEFAULT_TENANT,
+    DEFAULT_DATABASE,
+    DEFAULT_STORAGE_PATH,
+)
 
 
 warnings.filterwarnings(
@@ -29,7 +31,7 @@ def _default_settings() -> Settings:
         Settings with persistent storage and reset enabled.
     """
     return Settings(
-        persist_directory=os.path.join(db_storage_path(), "chromadb"),
+        persist_directory=DEFAULT_STORAGE_PATH,
         allow_reset=True,
         is_persistent=True,
     )
@@ -39,7 +41,7 @@ def _default_embedding_function() -> ChromaEmbeddingFunctionWrapper:
     """Create default ChromaDB embedding function.
 
     Returns:
-        Default embedding function cast to proper type.
+        Default embedding function using all-MiniLM-L6-v2 via ONNX.
     """
     return cast(ChromaEmbeddingFunctionWrapper, DefaultEmbeddingFunction())
 
@@ -52,6 +54,6 @@ class ChromaDBConfig(BaseRagConfig):
     tenant: str = DEFAULT_TENANT
     database: str = DEFAULT_DATABASE
     settings: Settings = field(default_factory=_default_settings)
-    embedding_function: ChromaEmbeddingFunctionWrapper | None = field(
+    embedding_function: ChromaEmbeddingFunctionWrapper = field(
         default_factory=_default_embedding_function
     )

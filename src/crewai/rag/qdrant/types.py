@@ -55,8 +55,8 @@ class EmbeddingFunction(Protocol):
         ...
 
 
-class QdrantEmbeddingFunctionWrapper:
-    """Wrapper for Qdrant embedding functions to work with Pydantic validation."""
+class QdrantEmbeddingFunctionWrapper(EmbeddingFunction):
+    """Base class for Qdrant EmbeddingFunction to work with Pydantic validation."""
 
     @classmethod
     def __get_pydantic_core_schema__(
@@ -64,7 +64,7 @@ class QdrantEmbeddingFunctionWrapper:
     ) -> CoreSchema:
         """Generate Pydantic core schema for Qdrant EmbeddingFunction.
 
-        This allows Pydantic to handle the embedding function type
+        This allows Pydantic to handle Qdrant's EmbeddingFunction type
         without requiring arbitrary_types_allowed=True.
         """
         return core_schema.any_schema()
