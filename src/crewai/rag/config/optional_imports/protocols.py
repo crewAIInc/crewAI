@@ -1,14 +1,25 @@
 """Protocol definitions for RAG factory modules."""
 
-from typing import Protocol
+from typing import Protocol, TYPE_CHECKING
 
-from crewai.rag.config.types import RagConfigType
-from crewai.rag.core.base_client import BaseClient
+if TYPE_CHECKING:
+    from crewai.rag.chromadb.client import ChromaDBClient
+    from crewai.rag.chromadb.config import ChromaDBConfig
+    from crewai.rag.qdrant.client import QdrantClient
+    from crewai.rag.qdrant.config import QdrantConfig
 
 
 class ChromaFactoryModule(Protocol):
     """Protocol for ChromaDB factory module."""
 
-    def create_client(self, config: RagConfigType) -> BaseClient:
+    def create_client(self, config: ChromaDBConfig) -> ChromaDBClient:
         """Creates a ChromaDB client from configuration."""
+        ...
+
+
+class QdrantFactoryModule(Protocol):
+    """Protocol for Qdrant factory module."""
+
+    def create_client(self, config: QdrantConfig) -> QdrantClient:
+        """Creates a Qdrant client from configuration."""
         ...
