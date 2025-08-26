@@ -1,10 +1,12 @@
 """Type definitions specific to Qdrant implementation."""
 
 from collections.abc import Awaitable, Callable
-from typing import Annotated, Any, Protocol, TypeAlias, TypedDict
-from typing_extensions import NotRequired
+from typing import Annotated, Any, Protocol, TypeAlias
+from typing_extensions import NotRequired, TypedDict
 
 import numpy as np
+from pydantic import GetCoreSchemaHandler
+from pydantic_core import CoreSchema, core_schema
 from qdrant_client import AsyncQdrantClient, QdrantClient as SyncQdrantClient
 from qdrant_client.models import (
     FieldCondition,
@@ -53,6 +55,21 @@ class EmbeddingFunction(Protocol):
         ...
 
 
+class QdrantEmbeddingFunctionWrapper(EmbeddingFunction):
+    """Base class for Qdrant EmbeddingFunction to work with Pydantic validation."""
+
+    @classmethod
+    def __get_pydantic_core_schema__(
+        cls, _source_type: Any, _handler: GetCoreSchemaHandler
+    ) -> CoreSchema:
+        """Generate Pydantic core schema for Qdrant EmbeddingFunction.
+
+        This allows Pydantic to handle Qdrant's EmbeddingFunction type
+        without requiring arbitrary_types_allowed=True.
+        """
+        return core_schema.any_schema()
+
+
 class AsyncEmbeddingFunction(Protocol):
     """Protocol for async embedding functions that convert text to vectors."""
 
@@ -69,7 +86,11 @@ class AsyncEmbeddingFunction(Protocol):
 
 
 class QdrantClientParams(TypedDict, total=False):
-    """Parameters for QdrantClient initialization."""
+    """Parameters for QdrantClient initialization.
+
+    Notes:
+        Need to implement in factory or remove.
+    """
 
     location: str | None
     url: str | None
