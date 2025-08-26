@@ -86,7 +86,11 @@ class AsyncEmbeddingFunction(Protocol):
 
 
 class QdrantClientParams(TypedDict, total=False):
-    """Parameters for QdrantClient initialization."""
+    """Parameters for QdrantClient initialization.
+
+    Notes:
+        Need to implement in factory or remove.
+    """
 
     location: str | None
     url: str | None
