@@ -1,9 +1,9 @@
 """Type definitions for RAG (Retrieval-Augmented Generation) systems."""
 
 from collections.abc import Callable, Mapping
-from typing import TypeAlias, TypedDict, Any
+from typing import TypeAlias, Any
 
-from typing_extensions import Required
+from typing_extensions import Required, TypedDict
 
 
 class BaseRecord(TypedDict, total=False):
