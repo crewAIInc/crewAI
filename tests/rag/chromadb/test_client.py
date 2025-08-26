@@ -27,18 +27,20 @@ def mock_async_chromadb_client():
 @pytest.fixture
 def client(mock_chromadb_client) -> ChromaDBClient:
     """Create a ChromaDBClient instance for testing."""
-    client = ChromaDBClient()
-    client.client = mock_chromadb_client
-    client.embedding_function = Mock()
+    mock_embedding = Mock()
+    client = ChromaDBClient(
+        client=mock_chromadb_client, embedding_function=mock_embedding
+    )
     return client
 
 
 @pytest.fixture
 def async_client(mock_async_chromadb_client) -> ChromaDBClient:
     """Create a ChromaDBClient instance with async client for testing."""
-    client = ChromaDBClient()
-    client.client = mock_async_chromadb_client
-    client.embedding_function = Mock()
+    mock_embedding = Mock()
+    client = ChromaDBClient(
+        client=mock_async_chromadb_client, embedding_function=mock_embedding
+    )
     return client
 
 
