@@ -2,7 +2,10 @@
 
 from typing import cast
 
-from crewai.rag.config.optional_imports.protocols import ChromaFactoryModule
+from crewai.rag.config.optional_imports.protocols import (
+    ChromaFactoryModule,
+    QdrantFactoryModule,
+)
 from crewai.rag.core.base_client import BaseClient
 from crewai.rag.config.types import RagConfigType
 from crewai.utilities.import_utils import require
@@ -22,11 +25,21 @@ def create_client(config: RagConfigType) -> BaseClient:
     """
 
     if config.provider == "chromadb":
-        mod = cast(
+        chromadb_mod = cast(
             ChromaFactoryModule,
             require(
                 "crewai.rag.chromadb.factory",
                 purpose="The 'chromadb' provider",
             ),
         )
-        return mod.create_client(config)
+        return chromadb_mod.create_client(config)
+
+    if config.provider == "qdrant":
+        qdrant_mod = cast(
+            QdrantFactoryModule,
+            require(
+                "crewai.rag.qdrant.factory",
+                purpose="The 'qdrant' provider",
+            ),
+        )
+        return qdrant_mod.create_client(config)
