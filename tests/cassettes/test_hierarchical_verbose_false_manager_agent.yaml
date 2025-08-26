@@ -1384,4 +1384,351 @@ interactions:
       - req_7fdc097dc5895a4d2d953e8b1a2479d1
     http_version: HTTP/1.1
     status_code: 200
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are Crew Manager. You
+      are a seasoned manager with a knack for getting the best out of your team.\nYou
+      are also known for your ability to delegate work to the right people, and to
+      ask the right questions to get the best out of your team.\nEven though you don''t
+      perform tasks by yourself, you have a lot of experience in the field, which
+      allows you to properly evaluate the work of your team members.\nYour personal
+      goal is: Manage the team to complete the task in the best way possible.\nYou
+      ONLY have access to the following tools, and should NEVER make up tools that
+      are not listed here:\n\nTool Name: Delegate work to coworker\nTool Arguments:
+      {''task'': {''description'': ''The task to delegate'', ''type'': ''str''}, ''context'':
+      {''description'': ''The context for the task'', ''type'': ''str''}, ''coworker'':
+      {''description'': ''The role/name of the coworker to delegate to'', ''type'':
+      ''str''}}\nTool Description: Delegate a specific task to one of the following
+      coworkers: Researcher, Senior Writer\nThe input to this tool should be the coworker,
+      the task you want them to do, and ALL necessary context to execute the task,
+      they know nothing about the task, so share absolutely everything you know, don''t
+      reference things but instead explain them.\nTool Name: Ask question to coworker\nTool
+      Arguments: {''question'': {''description'': ''The question to ask'', ''type'':
+      ''str''}, ''context'': {''description'': ''The context for the question'', ''type'':
+      ''str''}, ''coworker'': {''description'': ''The role/name of the coworker to
+      ask'', ''type'': ''str''}}\nTool Description: Ask a specific question to one
+      of the following coworkers: Researcher, Senior Writer\nThe input to this tool
+      should be the coworker, the question you have for them, and ALL necessary context
+      to ask the question properly, they know nothing about the question, so share
+      absolutely everything you know, don''t reference things but instead explain
+      them.\n\nIMPORTANT: Use the following format in your response:\n\n```\nThought:
+      you should always think about what to do\nAction: the action to take, only one
+      name of [Delegate work to coworker, Ask question to coworker], just the name,
+      exactly as it''s written.\nAction Input: the input to the action, just a simple
+      JSON object, enclosed in curly braces, using \" to wrap keys and values.\nObservation:
+      the result of the action\n```\n\nOnce all necessary information is gathered,
+      return the following format:\n\n```\nThought: I now know the final answer\nFinal
+      Answer: the final answer to the original input question\n```"}, {"role": "user",
+      "content": "\nCurrent Task: Come up with a list of 5 interesting ideas to explore
+      for an article, then write one amazing paragraph highlight for each idea that
+      showcases how good an article about this topic could be. Return the list of
+      ideas with their paragraph and your notes.\n\nThis is the expected criteria
+      for your final answer: 5 bullet points with a paragraph for each idea.\nyou
+      MUST return the actual complete content as the final answer, not a summary.\n\nBegin!
+      This is VERY important to you, use the tools available and give your best Final
+      Answer, your job depends on it!\n\nThought:"}, {"role": "assistant", "content":
+      "Thought: The first step is to brainstorm and research interesting ideas for
+      the article. Since the task involves both research and writing, I will need
+      to delegate the brainstorming of ideas to the Researcher and the writing of
+      the paragraphs to the Senior Writer. \n\nAction: Delegate work to coworker\nAction
+      Input: {\"task\": \"Come up with a list of 5 interesting ideas to explore for
+      an article.\", \"context\": \"We need a list of 5 interesting ideas that would
+      make compelling articles. The topics should be relevant, timely, and engaging
+      for a broad audience.\", \"coworker\": \"Researcher\"}\nObservation: 1. **The
+      Rise of AI in Healthcare: Transforming Patient Care and Diagnostics**\n   \"Imagine
+      a world where routine check-ups and complex diagnostics are seamlessly conducted
+      by intelligent systems. AI in healthcare is rapidly transforming this vision
+      into reality, enhancing patient care through early and accurate disease detection,
+      personalized treatment plans, and continuous health monitoring. This revolution
+      is not just a futuristic concept; it''s already happening with AI-driven technologies
+      enabling doctors to make more informed decisions and offering patients a more
+      proactive approach to their health. The ethical and privacy concerns, however,
+      pose new challenges that the industry must navigate to ensure responsible advancement.\"\n\n2.
+      **AI Agents in the Workplace: Boosting Productivity and Shaping the Future of
+      Jobs**\n   \"The modern workplace is being redefined by the integration of AI
+      agents, intelligent systems designed to handle repetitive tasks, analyze vast
+      amounts of data, and assist in complex decision-making processes. These innovations
+      are boosting productivity, allowing employees to focus on creativity and strategic
+      thinking. The rise of AI in the workspace heralds a future where human and machine
+      collaboration leads to unparalleled efficiencies and novel job opportunities.
+      However, this shift also brings with it challenges related to job displacement
+      and the urgent need for reskilling the workforce to thrive in an AI-augmented
+      environment.\"\n\n3. **Ethical AI: Ensuring Fairness, Accountability, and Transparency**\n   \"As
+      AI technology becomes more pervasive, the quest for ethical AI has become critical.
+      Ensuring fairness, accountability, and transparency in AI systems is essential
+      to prevent biases and promote trust. This involves creating robust frameworks
+      and guidelines that govern AI development and deployment. Real-world case studies
+      highlight both the triumphs and the tribulations of tech companies as they navigate
+      the complex moral landscape that AI presents. As society grapples with these
+      challenges, the push for ethical AI continues to drive innovation and policy-making
+      in the tech industry.\"\n\n4. **AI-Powered Startups: Innovators Changing the
+      Tech Landscape**\n   \"In the bustling world of tech startups, AI-powered companies
+      are emerging as the vanguards of innovation, disrupting traditional business
+      models and reshaping entire industries. From revolutionizing financial services
+      to pioneering advances in healthcare and beyond, these startups are at the forefront
+      of technological progress. By leveraging machine learning and AI, they are solving
+      complex problems and bringing novel solutions to market at an unprecedented
+      pace. Investors are taking notice, pouring capital into these ventures, and
+      fueling a new wave of growth and competition in the AI ecosystem.\"\n\n5. **The
+      Future of AI in Entertainment: From Movies to Video Games**\n   \"The entertainment
+      industry is undergoing a seismic shift driven by AI technology. In movies, AI
+      is revolutionizing special effects, enabling filmmakers to create stunning,
+      hyper-realistic worlds. In video games, AI is enhancing player experiences by
+      creating adaptive, intelligent characters and dynamic storylines that respond
+      to player choices. This transformative power of AI promises to push the boundaries
+      of creativity, offering audiences more immersive and interactive entertainment
+      experiences. As the technology continues to evolve, the future of entertainment
+      looks set to be more exciting and unpredictable than ever before.\""}, {"role":
+      "assistant", "content": "Thought: I''ll proceed to delegate the writing of one
+      amazing paragraph highlight for each of the identified ideas to the Senior Writer,
+      ensuring each topic is adequately detailed to showcase its potential.\n\nAction:
+      Delegate work to coworker\nAction Input: {\"task\": \"Write one amazing paragraph
+      highlight for each of these 5 ideas that showcases how good an article about
+      these topics could be.\", \"context\": \"Here are the 5 ideas:\\n1. The Rise
+      of AI in Healthcare: Transforming Patient Care and Diagnostics - Explore how
+      AI is revolutionizing healthcare through enhanced diagnostic tools, personalized
+      treatment plans, and post-operative care. Discuss current achievements, potential
+      future applications, and ethical considerations.\\n2. AI Agents in the Workplace:
+      Boosting Productivity and Shaping the Future of Jobs - Examine the integration
+      of AI agents in various industries. Highlight how these intelligent agents are
+      improving efficiency, automating mundane tasks, and assisting in decision-making
+      processes. Address potential job displacement and the need for upskilling the
+      workforce.\\n3. Ethical AI: Ensuring Fairness, Accountability, and Transparency
+      - Delve into the ethical implications of AI deployment. Analyze the frameworks
+      and guidelines being proposed to ensure AI systems are fair, transparent, and
+      accountable. Include case studies of ethical dilemmas faced by companies using
+      AI.\\n4. AI-Powered Startups: Innovators Changing the Tech Landscape - Provide
+      an overview of how AI-driven startups are disrupting traditional business models
+      and industries. Profile some of the most innovative startups, their business
+      models, and the unique challenges they face. Discuss the role of venture capital
+      in fostering AI innovation.\\n5. The Future of AI in Entertainment: From Movies
+      to Video Games - Investigate how AI is transforming the entertainment industry,
+      from scriptwriting and special effects in movies to creating more immersive
+      and intelligent experiences in video games. Offer predictions about future trends
+      and possible impacts on content creation and consumption.\", \"coworker\": \"Senior
+      Writer\"}\nObservation:\nObservation: 1. **The Rise of AI in Healthcare: Transforming
+      Patient Care and Diagnostics**\n   AI is undeniably revolutionizing the healthcare
+      sector, introducing transformative changes in patient care and diagnostics.
+      With the advent of advanced diagnostic tools powered by AI, healthcare professionals
+      can now detect and monitor diseases with unprecedented accuracy and speed. Personalized
+      treatment plans, which were once a distant dream, are becoming a reality as
+      AI algorithms analyze vast amounts of patient data, tailoring treatments that
+      are specific to individual needs. Post-operative care has also seen significant
+      improvements, with AI-driven monitoring systems ensuring that patients receive
+      timely and effective care. Current achievements like IBM Watson''s oncology
+      platform or Google''s DeepMind in eye care are just the beginning, with future
+      applications promising to further enhance surgical robotics, predictive analytics,
+      and remote patient monitoring. However, alongside these advancements, ethical
+      considerations such as patient privacy, data security, and decision-making transparency
+      must be rigorously addressed to fully harness AI\u2019s potential in healthcare.\n\n2.
+      **AI Agents in the Workplace: Boosting Productivity and Shaping the Future of
+      Jobs**\n   The integration of AI agents in the workplace marks a pivotal shift
+      in how businesses operate and compete. These intelligent agents are revolutionizing
+      various industries by automating mundane tasks, optimizing workflows, and providing
+      actionable insights from data analysis. For instance, AI chatbots in customer
+      service can handle routine inquiries, freeing human agents to tackle more complex
+      issues. In manufacturing, AI systems predict equipment failures, reducing downtime
+      and maintaining peak productivity. By enhancing operational efficiency, AI agents
+      not only boost productivity but also reshape the future of jobs. While the risk
+      of job displacement is a valid concern, it concurrently heralds opportunities
+      for upskilling and creating new roles that harness human creativity and strategic
+      thinking. Preparing the workforce for these changes is crucial, fostering a
+      symbiotic relationship between AI and human labor to drive innovation and economic
+      growth.\n\n3. **Ethical AI: Ensuring Fairness, Accountability, and Transparency**\n   As
+      AI technologies become increasingly pervasive, ensuring their ethical deployment
+      is paramount. Ethical AI demands the formulation and implementation of robust
+      frameworks that enshrine fairness, accountability, and transparency. Such frameworks
+      are essential in mitigating biases embedded within AI systems, which can perpetuate
+      and even exacerbate inequality. Case studies, such as the controversy surrounding
+      facial recognition systems and their racial biases, highlight the pressing need
+      for ethical oversight. Transparency in how AI models make decisions, coupled
+      with accountability measures for their outcomes, establishes trust and integrity
+      in AI applications. Legislative frameworks from the EU\u2019s GDPR to the IEEE\u2019s
+      global initiatives for ethical AI provide the scaffolding for these principles.
+      Companies are now faced with the challenge of integrating these ethical considerations
+      into their development processes, ensuring that AI advancements benefit all
+      of society equitably.\n\n4. **AI-Powered Startups: Innovators Changing the Tech
+      Landscape**\n   AI-powered startups are at the forefront of a technological
+      renaissance, disrupting traditional business models and reshaping industries.
+      These startups leverage AI to offer innovative solutions, whether it''s automating
+      financial trading with precision algorithms or enhancing cybersecurity through
+      predictive analytics. High-profile examples like OpenAI and UiPath illustrate
+      the transformative potential of AI-driven innovation. These companies face unique
+      challenges, from securing sufficient funding to navigating the complexities
+      of large-scale implementation. Venture capital plays a critical role in this
+      ecosystem, providing the necessary resources and support to turn bold ideas
+      into impactful realities. The synergy between AI innovation and entrepreneurial
+      spirit is fostering a dynamic landscape where the boundaries of technology and
+      commerce are continually expanding.\n\n5. **The Future of AI in Entertainment:
+      From Movies to Video Games**\n   The entertainment industry is undergoing a
+      metamorphic change with the integration of AI technologies, paving the way for
+      more immersive and engaging experiences. In movies, AI streamlines the scriptwriting
+      process, enhances special effects, and even predicts box office success. Machine
+      learning models analyze vast datasets to create compelling narratives and optimize
+      marketing strategies. Video games have also been revolutionized by AI, with
+      non-player characters (NPCs) displaying more lifelike behaviors and adaptive
+      learning algorithms personalizing gaming experiences. Future trends indicate
+      a seamless blend of AI with augmented reality (AR) and virtual reality (VR),
+      creating interactive environments where the line between virtual and real worlds
+      blur. These advancements are not only transforming content creation but also
+      revolutionizing how audiences consume and interact with entertainment, predicting
+      a future where AI is an indispensable tool in the creative arsenal."}], "model":
+      "gpt-4o", "stop": ["\nObservation:"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate, zstd
+      connection:
+      - keep-alive
+      content-length:
+      - '14961'
+      content-type:
+      - application/json
+      cookie:
+      - _cfuvid=Dmt0PIbI1kDJNEjEUHh50Vv4Y9ZcWX6w2Uku_CIohuk-1751391377646-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.93.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.93.0
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-read-timeout:
+      - '600.0'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.9
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        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
+    headers:
+      CF-RAY:
+      - 974f08a7bda1239e-SJC
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Mon, 25 Aug 2025 23:58:18 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - __cf_bm=ivMv06nBtEBQA0RDYIILchv9UWNGtVY5W5EPjY_N5kM-1756166298-1.0.1.1-2Qisdm01V_T5uiCTx3ArSE5G4lPmSJXAC_FziI_DwOsWC_nN5OI4nlAAcT5w8A.DGB6SVkyNXoYzPqHQgSR2pUc8YECmxkJF6LXkXDhzC0A;
+        path=/; expires=Tue, 26-Aug-25 00:28:18 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=xP6HSAlowr0MDcDirVgpB.BcvTTqAlUD_fl6h1bu7io-1756166298177-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '29910'
+      openai-project:
+      - proj_xitITlrFeen7zjNSzML82h9x
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '29994'
+      x-ratelimit-limit-project-requests:
+      - '10000'
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '30000000'
+      x-ratelimit-remaining-project-requests:
+      - '9999'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '29996336'
+      x-ratelimit-reset-project-requests:
+      - 6ms
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 7ms
+      x-request-id:
+      - req_ae1d0ce3d5584bbba38ba76c69a0e541
+    status:
+      code: 200
+      message: OK
 version: 1
