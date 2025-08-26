@@ -11,7 +11,7 @@ from crewai.rag.config.constants import (
     DEFAULT_RAG_CONFIG_PATH,
     DEFAULT_RAG_CONFIG_CLASS,
 )
-from crewai.rag.config.factory import create_client
+from crewai.rag.factory import create_client
 
 
 class RagContext(BaseModel):

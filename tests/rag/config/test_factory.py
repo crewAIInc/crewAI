@@ -2,7 +2,7 @@
 
 from unittest.mock import Mock, patch
 
-from crewai.rag.config.factory import create_client
+from crewai.rag.factory import create_client
 
 
 def test_create_client_chromadb():
@@ -10,7 +10,7 @@ def test_create_client_chromadb():
     mock_config = Mock()
     mock_config.provider = "chromadb"
 
-    with patch("crewai.rag.config.factory.require") as mock_require:
+    with patch("crewai.rag.factory.require") as mock_require:
         mock_module = Mock()
         mock_client = Mock()
         mock_module.create_client.return_value = mock_client
