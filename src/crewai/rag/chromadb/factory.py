@@ -21,6 +21,7 @@ def create_client(config: ChromaDBConfig) -> ChromaDBClient:
 
     client = ChromaDBClient()
     client.client = chromadb_client
-    client.embedding_function = config.embedding_function
+    if config.embedding_function is not None:
+        client.embedding_function = config.embedding_function
 
     return client
