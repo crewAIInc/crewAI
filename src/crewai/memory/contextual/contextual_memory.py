@@ -29,13 +29,18 @@ class ContextualMemory:
         self.agent = agent
         self.task = task
 
-        self.stm.agent = self.agent
-        self.stm.task = self.task
-        self.ltm.agent = self.agent
-        self.ltm.task = self.task
-        self.em.agent = self.agent
-        self.em.task = self.task
-        # TODO: implement external memory
+        if self.stm is not None:
+            self.stm.agent = self.agent
+            self.stm.task = self.task
+        if self.ltm is not None:
+            self.ltm.agent = self.agent
+            self.ltm.task = self.task
+        if self.em is not None:
+            self.em.agent = self.agent
+            self.em.task = self.task
+        if self.exm is not None:
+            self.exm.agent = self.agent
+            self.exm.task = self.task
 
     def build_context_for_task(self, task, context) -> str:
         """
