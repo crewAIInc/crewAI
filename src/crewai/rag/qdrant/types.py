@@ -1,8 +1,8 @@
 """Type definitions specific to Qdrant implementation."""
 
 from collections.abc import Awaitable, Callable
-from typing import Annotated, Any, Protocol, TypeAlias, TypedDict
-from typing_extensions import NotRequired
+from typing import Annotated, Any, Protocol, TypeAlias
+from typing_extensions import NotRequired, TypedDict
 
 import numpy as np
 from pydantic import GetCoreSchemaHandler

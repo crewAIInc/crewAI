@@ -1,8 +1,8 @@
 """Protocol for vector database client implementations."""
 
 from abc import abstractmethod
-from typing import Any, Protocol, runtime_checkable, TypedDict, Annotated
-from typing_extensions import Unpack, Required
+from typing import Any, Protocol, runtime_checkable, Annotated
+from typing_extensions import Unpack, Required, TypedDict
 from pydantic import GetCoreSchemaHandler
 from pydantic_core import CoreSchema, core_schema
 
