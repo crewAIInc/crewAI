@@ -75,10 +75,18 @@ class TraceCollectionListener(BaseEventListener):
     Trace collection listener that orchestrates trace collection
     """
 
-    complex_events = ["task_started", "llm_call_started", "llm_call_completed"]
+    complex_events = [
+        "task_started",
+        "task_completed",
+        "llm_call_started",
+        "llm_call_completed",
+        "agent_execution_started",
+        "agent_execution_completed",
+    ]
 
     _instance = None
     _initialized = False
+    _listeners_setup = False
 
     def __new__(cls, batch_manager=None):
         if cls._instance is None:
@@ -116,9 +124,14 @@ class TraceCollectionListener(BaseEventListener):
     def setup_listeners(self, crewai_event_bus):
         """Setup event listeners - delegates to specific handlers"""
 
+        if self._listeners_setup:
+            return
+
         self._register_flow_event_handlers(crewai_event_bus)
         self._register_context_event_handlers(crewai_event_bus)
         self._register_action_event_handlers(crewai_event_bus)
+
+        self._listeners_setup = True
 
     def _register_flow_event_handlers(self, event_bus):
         """Register handlers for flow events"""
@@ -148,7 +161,8 @@ class TraceCollectionListener(BaseEventListener):
         @event_bus.on(FlowFinishedEvent)
         def on_flow_finished(source, event):
             self._handle_trace_event("flow_finished", source, event)
-            self.batch_manager.finalize_batch()
+            if self.batch_manager.batch_owner_type == "flow":
+                self.batch_manager.finalize_batch()
 
         @event_bus.on(FlowPlotEvent)
         def on_flow_plot(source, event):
@@ -166,7 +180,8 @@ class TraceCollectionListener(BaseEventListener):
         @event_bus.on(CrewKickoffCompletedEvent)
         def on_crew_completed(source, event):
             self._handle_trace_event("crew_kickoff_completed", source, event)
-            self.batch_manager.finalize_batch()
+            if self.batch_manager.batch_owner_type == "crew":
+                self.batch_manager.finalize_batch()
 
         @event_bus.on(CrewKickoffFailedEvent)
         def on_crew_failed(source, event):
@@ -218,7 +233,7 @@ class TraceCollectionListener(BaseEventListener):
             self._handle_trace_event("llm_guardrail_completed", source, event)
 
     def _register_action_event_handlers(self, event_bus):
-        """Register handlers for action events (LLM calls, tool usage, memory)"""
+        """Register handlers for action events (LLM calls, tool usage)"""
 
         @event_bus.on(LLMCallStartedEvent)
         def on_llm_call_started(source, event):
@@ -289,6 +304,9 @@ class TraceCollectionListener(BaseEventListener):
             "crewai_version": get_crewai_version(),
         }
 
+        self.batch_manager.batch_owner_type = "crew"
+        self.batch_manager.batch_owner_id = getattr(source, "id", str(uuid.uuid4()))
+
         self._initialize_batch(user_context, execution_metadata)
 
     def _initialize_flow_batch(self, source: Any, event: Any):
@@ -300,6 +318,9 @@ class TraceCollectionListener(BaseEventListener):
             "crewai_version": get_crewai_version(),
             "execution_type": "flow",
         }
+
+        self.batch_manager.batch_owner_type = "flow"
+        self.batch_manager.batch_owner_id = getattr(source, "id", str(uuid.uuid4()))
 
         self._initialize_batch(user_context, execution_metadata)
 
@@ -358,12 +379,44 @@ class TraceCollectionListener(BaseEventListener):
             return {
                 "task_description": event.task.description,
                 "expected_output": event.task.expected_output,
-                "task_name": event.task.name,
+                "task_name": event.task.name or event.task.description,
                 "context": event.context,
-                "agent": source.agent.role,
+                "agent_role": source.agent.role,
+                "task_id": str(event.task.id),
+            }
+        elif event_type == "task_completed":
+            return {
+                "task_description": event.task.description if event.task else None,
+                "task_name": event.task.name or event.task.description
+                if event.task
+                else None,
+                "task_id": str(event.task.id) if event.task else None,
+                "output_raw": event.output.raw if event.output else None,
+                "output_format": str(event.output.output_format)
+                if event.output
+                else None,
+                "agent_role": event.output.agent if event.output else None,
+            }
+        elif event_type == "agent_execution_started":
+            return {
+                "agent_role": event.agent.role,
+                "agent_goal": event.agent.goal,
+                "agent_backstory": event.agent.backstory,
+            }
+        elif event_type == "agent_execution_completed":
+            return {
+                "agent_role": event.agent.role,
+                "agent_goal": event.agent.goal,
+                "agent_backstory": event.agent.backstory,
             }
         elif event_type == "llm_call_started":
-            return self._safe_serialize_to_dict(event)
+            event_data = self._safe_serialize_to_dict(event)
+            event_data["task_name"] = (
+                event.task_name or event.task_description
+                if hasattr(event, "task_name") and event.task_name
+                else None
+            )
+            return event_data
         elif event_type == "llm_call_completed":
             return self._safe_serialize_to_dict(event)
         else:
