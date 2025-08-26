@@ -15,12 +15,10 @@ def create_client(config: ChromaDBConfig) -> ChromaDBClient:
     Returns:
         Configured ChromaDBClient instance.
     """
-    chromadb_client = Client(
-        settings=config.settings, tenant=config.tenant, database=config.database
+
+    return ChromaDBClient(
+        client=Client(
+            settings=config.settings, tenant=config.tenant, database=config.database
+        ),
+        embedding_function=config.embedding_function,
     )
-
-    client = ChromaDBClient()
-    client.client = chromadb_client
-    client.embedding_function = config.embedding_function
-
-    return client
