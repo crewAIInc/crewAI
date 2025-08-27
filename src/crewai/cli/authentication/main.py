@@ -9,14 +9,7 @@ from pydantic import BaseModel, Field
 
 from .utils import validate_jwt_token
 from crewai.cli.shared.token_manager import TokenManager
-from urllib.parse import quote
-from crewai.cli.plus_api import PlusAPI
 from crewai.cli.config import Settings
-from crewai.cli.authentication.constants import (
-    AUTH0_AUDIENCE,
-    AUTH0_CLIENT_ID,
-    AUTH0_DOMAIN,
-)
 
 console = Console()
 
@@ -71,18 +64,6 @@ class AuthenticationCommand:
     def login(self) -> None:
         """Sign up to CrewAI+"""
         console.print("Signing in to CrewAI Enterprise...\n", style="bold blue")
-
-        # TODO: WORKOS - Next line and conditional are temporary until migration to WorkOS is complete.
-        user_provider = self._determine_user_provider()
-        if user_provider == "auth0":
-            settings = Oauth2Settings(
-                provider="auth0",
-                client_id=AUTH0_CLIENT_ID,
-                domain=AUTH0_DOMAIN,
-                audience=AUTH0_AUDIENCE,
-            )
-            self.oauth2_provider = ProviderFactory.from_settings(settings)
-        # End of temporary code.
 
         device_code_data = self._get_device_code()
         self._display_auth_instructions(device_code_data)
@@ -206,30 +187,3 @@ class AuthenticationCommand:
                 "\nRun [bold]crewai login[/bold] to try logging in again.\n",
                 style="yellow",
             )
-
-    # TODO: WORKOS - This method is temporary until migration to WorkOS is complete.
-    def _determine_user_provider(self) -> str:
-        """Determine which provider to use for authentication."""
-
-        console.print(
-            "Enter your CrewAI Enterprise account email: ", style="bold blue", end=""
-        )
-        email = input()
-        email_encoded = quote(email)
-
-        # It's not correct to call this method directly, but it's temporary until migration is complete.
-        response = PlusAPI("")._make_request(
-            "GET", f"/crewai_plus/api/v1/me/provider?email={email_encoded}"
-        )
-
-        if response.status_code == 200:
-            if response.json().get("provider") == "auth0":
-                return "auth0"
-            else:
-                return "workos"
-        else:
-            console.print(
-                "Error: Failed to authenticate with crewai enterprise. Ensure that you are using the latest crewai version and please try again. If the problem persists, contact support@crewai.com.",
-                style="red",
-            )
-            raise SystemExit

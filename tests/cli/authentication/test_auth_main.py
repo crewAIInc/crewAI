@@ -6,7 +6,7 @@ from crewai.cli.authentication.main import AuthenticationCommand
 from crewai.cli.authentication.constants import (
     AUTH0_AUDIENCE,
     AUTH0_CLIENT_ID,
-    AUTH0_DOMAIN
+    AUTH0_DOMAIN,
 )
 from crewai.cli.constants import (
     CREWAI_ENTERPRISE_DEFAULT_OAUTH2_DOMAIN,
@@ -44,9 +44,6 @@ class TestAuthenticationCommand:
             ),
         ],
     )
-    @patch(
-        "crewai.cli.authentication.main.AuthenticationCommand._determine_user_provider"
-    )
     @patch("crewai.cli.authentication.main.AuthenticationCommand._get_device_code")
     @patch(
         "crewai.cli.authentication.main.AuthenticationCommand._display_auth_instructions"
@@ -59,11 +56,9 @@ class TestAuthenticationCommand:
         mock_poll,
         mock_display,
         mock_get_device,
-        mock_determine_provider,
         user_provider,
         expected_urls,
     ):
-        mock_determine_provider.return_value = user_provider
         mock_get_device.return_value = {
             "device_code": "test_code",
             "user_code": "123456",
@@ -74,7 +69,6 @@ class TestAuthenticationCommand:
         mock_console_print.assert_called_once_with(
             "Signing in to CrewAI Enterprise...\n", style="bold blue"
         )
-        mock_determine_provider.assert_called_once()
         mock_get_device.assert_called_once()
         mock_display.assert_called_once_with(
             {"device_code": "test_code", "user_code": "123456"}
@@ -82,9 +76,17 @@ class TestAuthenticationCommand:
         mock_poll.assert_called_once_with(
             {"device_code": "test_code", "user_code": "123456"},
         )
-        assert self.auth_command.oauth2_provider.get_client_id() == expected_urls["client_id"]
-        assert self.auth_command.oauth2_provider.get_audience() == expected_urls["audience"]
-        assert self.auth_command.oauth2_provider._get_domain() == expected_urls["domain"]
+        assert (
+            self.auth_command.oauth2_provider.get_client_id()
+            == expected_urls["client_id"]
+        )
+        assert (
+            self.auth_command.oauth2_provider.get_audience()
+            == expected_urls["audience"]
+        )
+        assert (
+            self.auth_command.oauth2_provider._get_domain() == expected_urls["domain"]
+        )
 
     @patch("crewai.cli.authentication.main.webbrowser")
     @patch("crewai.cli.authentication.main.console.print")
@@ -140,9 +142,23 @@ class TestAuthenticationCommand:
         from crewai.cli.authentication.main import Oauth2Settings
 
         if user_provider == "auth0":
-            self.auth_command.oauth2_provider = Auth0Provider(settings=Oauth2Settings(provider=user_provider, client_id="test-client-id", domain=AUTH0_DOMAIN, audience=jwt_config["audience"]))
+            self.auth_command.oauth2_provider = Auth0Provider(
+                settings=Oauth2Settings(
+                    provider=user_provider,
+                    client_id="test-client-id",
+                    domain=AUTH0_DOMAIN,
+                    audience=jwt_config["audience"],
+                )
+            )
         elif user_provider == "workos":
-            self.auth_command.oauth2_provider = WorkosProvider(settings=Oauth2Settings(provider=user_provider, client_id="test-client-id", domain=CREWAI_ENTERPRISE_DEFAULT_OAUTH2_DOMAIN, audience=jwt_config["audience"]))
+            self.auth_command.oauth2_provider = WorkosProvider(
+                settings=Oauth2Settings(
+                    provider=user_provider,
+                    client_id="test-client-id",
+                    domain=CREWAI_ENTERPRISE_DEFAULT_OAUTH2_DOMAIN,
+                    audience=jwt_config["audience"],
+                )
+            )
 
         token_data = {"access_token": "test_access_token", "id_token": "test_id_token"}
 
@@ -234,83 +250,6 @@ class TestAuthenticationCommand:
         ]
         mock_console_print.assert_has_calls(expected_calls)
 
-    @pytest.mark.parametrize(
-        "api_response,expected_provider",
-        [
-            ({"provider": "auth0"}, "auth0"),
-            ({"provider": "workos"}, "workos"),
-            ({"provider": "none"}, "workos"),  # Default to workos for any other value
-            (
-                {},
-                "workos",
-            ),  # Default to workos if no provider key is sent in the response
-        ],
-    )
-    @patch("crewai.cli.authentication.main.PlusAPI")
-    @patch("crewai.cli.authentication.main.console.print")
-    @patch("builtins.input", return_value="test@example.com")
-    def test_determine_user_provider_success(
-        self,
-        mock_input,
-        mock_console_print,
-        mock_plus_api,
-        api_response,
-        expected_provider,
-    ):
-        mock_api_instance = MagicMock()
-        mock_response = MagicMock()
-        mock_response.status_code = 200
-        mock_response.json.return_value = api_response
-        mock_api_instance._make_request.return_value = mock_response
-        mock_plus_api.return_value = mock_api_instance
-
-        result = self.auth_command._determine_user_provider()
-
-        mock_input.assert_called_once()
-
-        mock_plus_api.assert_called_once_with("")
-        mock_api_instance._make_request.assert_called_once_with(
-            "GET", "/crewai_plus/api/v1/me/provider?email=test%40example.com"
-        )
-
-        assert result == expected_provider
-
-    @patch("crewai.cli.authentication.main.PlusAPI")
-    @patch("crewai.cli.authentication.main.console.print")
-    @patch("builtins.input", return_value="test@example.com")
-    def test_determine_user_provider_error(
-        self, mock_input, mock_console_print, mock_plus_api
-    ):
-        mock_api_instance = MagicMock()
-        mock_response = MagicMock()
-        mock_response.status_code = 500
-        mock_api_instance._make_request.return_value = mock_response
-        mock_plus_api.return_value = mock_api_instance
-
-        with pytest.raises(SystemExit):
-            self.auth_command._determine_user_provider()
-
-        mock_input.assert_called_once()
-
-        mock_plus_api.assert_called_once_with("")
-        mock_api_instance._make_request.assert_called_once_with(
-            "GET", "/crewai_plus/api/v1/me/provider?email=test%40example.com"
-        )
-
-        mock_console_print.assert_has_calls(
-            [
-                call(
-                    "Enter your CrewAI Enterprise account email: ",
-                    style="bold blue",
-                    end="",
-                ),
-                call(
-                    "Error: Failed to authenticate with crewai enterprise. Ensure that you are using the latest crewai version and please try again. If the problem persists, contact support@crewai.com.",
-                    style="red",
-                ),
-            ]
-        )
-
     @patch("requests.post")
     def test_get_device_code(self, mock_post):
         mock_response = MagicMock()
@@ -323,7 +262,9 @@ class TestAuthenticationCommand:
 
         self.auth_command.oauth2_provider = MagicMock()
         self.auth_command.oauth2_provider.get_client_id.return_value = "test_client"
-        self.auth_command.oauth2_provider.get_authorize_url.return_value = "https://example.com/device"
+        self.auth_command.oauth2_provider.get_authorize_url.return_value = (
+            "https://example.com/device"
+        )
         self.auth_command.oauth2_provider.get_audience.return_value = "test_audience"
 
         result = self.auth_command._get_device_code()
@@ -366,12 +307,12 @@ class TestAuthenticationCommand:
             ) as mock_tool_login,
         ):
             self.auth_command.oauth2_provider = MagicMock()
-            self.auth_command.oauth2_provider.get_token_url.return_value = "https://example.com/token"
+            self.auth_command.oauth2_provider.get_token_url.return_value = (
+                "https://example.com/token"
+            )
             self.auth_command.oauth2_provider.get_client_id.return_value = "test_client"
 
-            self.auth_command._poll_for_token(
-                device_code_data
-            )
+            self.auth_command._poll_for_token(device_code_data)
 
             mock_post.assert_called_once_with(
                 "https://example.com/token",
@@ -406,9 +347,7 @@ class TestAuthenticationCommand:
             "interval": 0.1,  # Short interval for testing
         }
 
-        self.auth_command._poll_for_token(
-            device_code_data
-        )
+        self.auth_command._poll_for_token(device_code_data)
 
         mock_console_print.assert_any_call(
             "Timeout: Failed to get the token. Please try again.", style="bold red"
@@ -429,15 +368,4 @@ class TestAuthenticationCommand:
         device_code_data = {"device_code": "test_device_code", "interval": 1}
 
         with pytest.raises(requests.HTTPError):
-            self.auth_command._poll_for_token(
-                device_code_data
-            )
-    # @patch(
-    #     "crewai.cli.authentication.main.AuthenticationCommand._determine_user_provider"
-    # )
-    # def test_login_with_auth0(self, mock_determine_provider):
-    #     from crewai.cli.authentication.providers.auth0 import Auth0Provider
-    #     from crewai.cli.authentication.main import Oauth2Settings
-
-    #     self.auth_command.oauth2_provider = Auth0Provider(settings=Oauth2Settings(provider="auth0", client_id=AUTH0_CLIENT_ID, domain=AUTH0_DOMAIN, audience=AUTH0_AUDIENCE))
-    #     self.auth_command.login()
+            self.auth_command._poll_for_token(device_code_data)
