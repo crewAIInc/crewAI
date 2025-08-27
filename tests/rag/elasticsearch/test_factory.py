@@ -1,6 +1,5 @@
 """Tests for Elasticsearch factory."""
 
-import sys
 from unittest.mock import Mock, patch
 
 import pytest

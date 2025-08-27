@@ -1,7 +1,7 @@
 """Type definitions for Elasticsearch RAG implementation."""
 
-from typing import Any, Protocol, TypedDict, Union, TYPE_CHECKING
-from typing_extensions import NotRequired
+from typing import Any, Protocol, Union, TYPE_CHECKING
+from typing_extensions import NotRequired, TypedDict
 from pydantic import GetCoreSchemaHandler
 from pydantic_core import CoreSchema, core_schema
 

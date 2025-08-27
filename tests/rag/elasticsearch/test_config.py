@@ -1,7 +1,5 @@
 """Tests for Elasticsearch configuration."""
 
-import pytest
-
 from crewai.rag.elasticsearch.config import ElasticsearchConfig
 
 
