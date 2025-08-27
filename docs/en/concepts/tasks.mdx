@@ -59,6 +59,7 @@ crew = Crew(
 | **Output Pydantic** _(optional)_ | `output_pydantic` | `Optional[Type[BaseModel]]`   | A Pydantic model for task output.                                                                                    |
 | **Callback** _(optional)_        | `callback`        | `Optional[Any]`               | Function/object to be executed after task completion.                                                                |
 | **Guardrail** _(optional)_       | `guardrail`       | `Optional[Callable]`             | Function to validate task output before proceeding to next task.                                                  |
+| **Guardrail Max Retries** _(optional)_ | `guardrail_max_retries` | `Optional[int]`     | Maximum number of retries when guardrail validation fails. Defaults to 3.                                         |
 
 ## Creating Tasks
 
@@ -452,7 +453,7 @@ task = Task(
     expected_output="A valid JSON object",
     agent=analyst,
     guardrail=validate_json_output,
-    max_retries=3  # Limit retry attempts
+    guardrail_max_retries=3  # Limit retry attempts
 )
 ```
 
