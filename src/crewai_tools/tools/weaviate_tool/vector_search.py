@@ -41,6 +41,7 @@ class WeaviateVectorSearchTool(BaseTool):
     collection_name: Optional[str] = None
     limit: Optional[int] = Field(default=3)
     headers: Optional[dict] = None
+    alpha: Optional[int] = Field(default=0.75)
     env_vars: List[EnvVar] = [
         EnvVar(name="OPENAI_API_KEY", description="OpenAI API key for embedding generation and retrieval", required=True),
     ]
@@ -110,9 +111,10 @@ class WeaviateVectorSearchTool(BaseTool):
                 generative_config=self.generative_model,
             )
 
-        response = internal_docs.query.near_text(
+        response = internal_docs.query.hybrid(
             query=query,
             limit=self.limit,
+            alpha=self.alpha
         )
         json_response = ""
         for obj in response.objects:
