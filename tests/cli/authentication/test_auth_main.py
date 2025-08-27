@@ -3,11 +3,6 @@ from datetime import datetime, timedelta
 import requests
 from unittest.mock import MagicMock, patch, call
 from crewai.cli.authentication.main import AuthenticationCommand
-from crewai.cli.authentication.constants import (
-    AUTH0_AUDIENCE,
-    AUTH0_CLIENT_ID,
-    AUTH0_DOMAIN,
-)
 from crewai.cli.constants import (
     CREWAI_ENTERPRISE_DEFAULT_OAUTH2_DOMAIN,
     CREWAI_ENTERPRISE_DEFAULT_OAUTH2_CLIENT_ID,
@@ -22,16 +17,6 @@ class TestAuthenticationCommand:
     @pytest.mark.parametrize(
         "user_provider,expected_urls",
         [
-            (
-                "auth0",
-                {
-                    "device_code_url": f"https://{AUTH0_DOMAIN}/oauth/device/code",
-                    "token_url": f"https://{AUTH0_DOMAIN}/oauth/token",
-                    "client_id": AUTH0_CLIENT_ID,
-                    "audience": AUTH0_AUDIENCE,
-                    "domain": AUTH0_DOMAIN,
-                },
-            ),
             (
                 "workos",
                 {
@@ -109,14 +94,6 @@ class TestAuthenticationCommand:
         "user_provider,jwt_config",
         [
             (
-                "auth0",
-                {
-                    "jwks_url": f"https://{AUTH0_DOMAIN}/.well-known/jwks.json",
-                    "issuer": f"https://{AUTH0_DOMAIN}/",
-                    "audience": AUTH0_AUDIENCE,
-                },
-            ),
-            (
                 "workos",
                 {
                     "jwks_url": f"https://{CREWAI_ENTERPRISE_DEFAULT_OAUTH2_DOMAIN}/oauth2/jwks",
@@ -137,20 +114,10 @@ class TestAuthenticationCommand:
         jwt_config,
         has_expiration,
     ):
-        from crewai.cli.authentication.providers.auth0 import Auth0Provider
         from crewai.cli.authentication.providers.workos import WorkosProvider
         from crewai.cli.authentication.main import Oauth2Settings
 
-        if user_provider == "auth0":
-            self.auth_command.oauth2_provider = Auth0Provider(
-                settings=Oauth2Settings(
-                    provider=user_provider,
-                    client_id="test-client-id",
-                    domain=AUTH0_DOMAIN,
-                    audience=jwt_config["audience"],
-                )
-            )
-        elif user_provider == "workos":
+        if user_provider == "workos":
             self.auth_command.oauth2_provider = WorkosProvider(
                 settings=Oauth2Settings(
                     provider=user_provider,
