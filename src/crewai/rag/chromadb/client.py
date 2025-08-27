@@ -40,8 +40,19 @@ class ChromaDBClient(BaseClient):
         embedding_function: Function to generate embeddings for documents.
     """
 
-    client: ChromaDBClientType
-    embedding_function: ChromaEmbeddingFunction[Embeddable]
+    def __init__(
+        self,
+        client: ChromaDBClientType,
+        embedding_function: ChromaEmbeddingFunction[Embeddable],
+    ) -> None:
+        """Initialize ChromaDBClient with client and embedding function.
+
+        Args:
+            client: Pre-configured ChromaDB client instance.
+            embedding_function: Embedding function for text to vector conversion.
+        """
+        self.client = client
+        self.embedding_function = embedding_function
 
     def create_collection(
         self, **kwargs: Unpack[ChromaDBCollectionCreateParams]

@@ -10,10 +10,8 @@ from chromadb.api.types import (
     IncludeEnum,
     QueryResult,
 )
-
 from chromadb.api.models.AsyncCollection import AsyncCollection
 from chromadb.api.models.Collection import Collection
-
 from crewai.rag.chromadb.types import (
     ChromaDBClientType,
     ChromaDBCollectionSearchParams,
