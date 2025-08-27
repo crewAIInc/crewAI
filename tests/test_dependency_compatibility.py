@@ -8,7 +8,6 @@ import subprocess
 import sys
 import tempfile
 import pytest
-from pathlib import Path
 
 
 class TestDependencyCompatibility:
@@ -17,11 +16,7 @@ class TestDependencyCompatibility:
     def test_opentelemetry_protobuf_compatibility(self):
         """Test that opentelemetry versions work with protobuf<5.0."""
         try:
-            import opentelemetry
-            from opentelemetry import trace, baggage
-            from opentelemetry.context import attach, detach
             from opentelemetry.sdk.trace import TracerProvider
-            from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
             
             tracer_provider = TracerProvider()
             tracer = tracer_provider.get_tracer("test")
@@ -54,7 +49,7 @@ class TestDependencyCompatibility:
             telemetry = Telemetry()
             assert telemetry is not None
             
-            context = get_crew_context()
+            get_crew_context()
             
         except ImportError as e:
             pytest.fail(f"Failed to import CrewAI telemetry modules: {e}")
