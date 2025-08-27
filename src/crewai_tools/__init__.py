@@ -46,6 +46,7 @@ from .tools import (
     MultiOnTool,
     MySQLSearchTool,
     NL2SQLTool,
+    OCRTool,
     OxylabsAmazonProductScraperTool,
     OxylabsAmazonSearchScraperTool,
     OxylabsGoogleSearchScraperTool,

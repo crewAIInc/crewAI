@@ -40,6 +40,7 @@ from .mongodb_vector_search_tool import (
 from .multion_tool.multion_tool import MultiOnTool
 from .mysql_search_tool.mysql_search_tool import MySQLSearchTool
 from .nl2sql.nl2sql_tool import NL2SQLTool
+from .ocr_tool.ocr_tool import OCRTool
 from .oxylabs_amazon_product_scraper_tool.oxylabs_amazon_product_scraper_tool import (
     OxylabsAmazonProductScraperTool,
 )
