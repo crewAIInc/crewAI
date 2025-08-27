@@ -36,6 +36,7 @@ from .tools import (
     FirecrawlSearchTool,
     GithubSearchTool,
     HyperbrowserLoadTool,
+    InvokeCrewAIAutomationTool,
     JSONSearchTool,
     LinkupSearchTool,
     LlamaIndexTool,
