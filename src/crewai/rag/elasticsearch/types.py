@@ -1,15 +1,20 @@
 """Type definitions for Elasticsearch RAG implementation."""
 
-from typing import Any, Protocol, TypedDict, Union
+from typing import Any, Protocol, TypedDict, Union, TYPE_CHECKING
 from typing_extensions import NotRequired
 from pydantic import GetCoreSchemaHandler
 from pydantic_core import CoreSchema, core_schema
 
-try:
+if TYPE_CHECKING:
+    from typing import TypeAlias
     from elasticsearch import Elasticsearch, AsyncElasticsearch
-    ElasticsearchClientType = Union[Elasticsearch, AsyncElasticsearch]
-except ImportError:
-    ElasticsearchClientType = Any
+    ElasticsearchClientType: TypeAlias = Union[Elasticsearch, AsyncElasticsearch]
+else:
+    try:
+        from elasticsearch import Elasticsearch, AsyncElasticsearch
+        ElasticsearchClientType = Union[Elasticsearch, AsyncElasticsearch]
+    except ImportError:
+        ElasticsearchClientType = Any
 
 
 class ElasticsearchClientParams(TypedDict, total=False):

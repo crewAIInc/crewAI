@@ -179,7 +179,7 @@ class TestElasticsearchClient:
         """Test that get_or_create_collection creates new index if not exists."""
         mock_elasticsearch_client.indices.exists.return_value = False
 
-        result = client.get_or_create_collection(collection_name="test_index")
+        client.get_or_create_collection(collection_name="test_index")
 
         mock_elasticsearch_client.indices.exists.assert_called_once_with(index="test_index")
         mock_elasticsearch_client.indices.create.assert_called_once()

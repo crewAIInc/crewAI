@@ -61,7 +61,7 @@ def _default_embedding_function() -> ElasticsearchEmbeddingFunctionWrapper:
             import hashlib
             import struct
             
-            hash_obj = hashlib.md5(text.encode())
+            hash_obj = hashlib.md5(text.encode(), usedforsecurity=False)
             hash_bytes = hash_obj.digest()
             
             vector = []
