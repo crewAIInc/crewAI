@@ -13,6 +13,9 @@ if TYPE_CHECKING:
     from crewai.rag.qdrant.config import QdrantConfig as QdrantConfig_
 
     QdrantConfig = QdrantConfig_
+    from crewai.rag.elasticsearch.config import ElasticsearchConfig as ElasticsearchConfig_
+
+    ElasticsearchConfig = ElasticsearchConfig_
 else:
     try:
         from crewai.rag.chromadb.config import ChromaDBConfig
@@ -28,7 +31,14 @@ else:
             MissingQdrantConfig as QdrantConfig,
         )
 
-SupportedProviderConfig: TypeAlias = ChromaDBConfig | QdrantConfig
+    try:
+        from crewai.rag.elasticsearch.config import ElasticsearchConfig
+    except ImportError:
+        from crewai.rag.config.optional_imports.providers import (
+            MissingElasticsearchConfig as ElasticsearchConfig,
+        )
+
+SupportedProviderConfig: TypeAlias = ChromaDBConfig | QdrantConfig | ElasticsearchConfig
 RagConfigType: TypeAlias = Annotated[
     SupportedProviderConfig, Field(discriminator=DISCRIMINATOR)
 ]
