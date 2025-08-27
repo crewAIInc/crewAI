@@ -1153,12 +1153,19 @@ class LLM(BaseLLM):
             and messages
             and messages[-1]["role"] == "assistant"
         ):
-            return [*messages, {"role": "user", "content": ""}]
-
+            return messages + [{"role": "user", "content": ""}]
+        
+       # Gemini: ensure at least one user turn (Vertex requires contents)
+        if "gemini" in self.model.lower():
+            if not any(m.get("role") == "user" for m in messages):
+                # Append a minimal user turn; do not reorder/replace earlier messages
+               return [*messages, {"role": "user", "content": "Okay."}]
+            return messages
+        
         # Handle Anthropic models
         if not self.is_anthropic:
             return messages
-
+        
         # Anthropic requires messages to start with 'user' role
         if not messages or messages[0]["role"] == "system":
             # If first message is system or empty, add a placeholder user message
