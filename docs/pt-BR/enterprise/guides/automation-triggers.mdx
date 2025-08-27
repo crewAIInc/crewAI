@@ -1,0 +1,171 @@
+---
+title: "Triggers de Automação"
+description: "Execute automaticamente seus workflows CrewAI quando eventos específicos ocorrem em integrações conectadas"
+icon: "bolt"
+---
+
+Os triggers de automação permitem executar automaticamente suas implantações CrewAI quando eventos específicos ocorrem em suas integrações conectadas, criando workflows poderosos orientados por eventos que respondem a mudanças em tempo real em seus sistemas de negócio.
+
+## Visão Geral
+
+Com triggers de automação, você pode:
+
+- **Responder a eventos em tempo real** - Execute workflows automaticamente quando condições específicas forem atendidas
+- **Integrar com sistemas externos** - Conecte com plataformas como Gmail, Outlook, OneDrive, JIRA, Slack, Stripe e muito mais
+- **Escalar sua automação** - Lide com eventos de alto volume sem intervenção manual
+- **Manter contexto** - Acesse dados do trigger dentro de suas crews e flows
+
+## Gerenciando Triggers de Automação
+
+### Visualizando Triggers Disponíveis
+
+Para acessar e gerenciar seus triggers de automação:
+
+1. Navegue até sua implantação no painel do CrewAI
+2. Clique na aba **Triggers** para visualizar todas as integrações de trigger disponíveis
+
+<Frame>
+  <img src="/images/enterprise/list-available-triggers.png" alt="Lista de triggers de automação disponíveis" />
+</Frame>
+
+Esta visualização mostra todas as integrações de trigger disponíveis para sua implantação, junto com seus status de conexão atuais.
+
+### Habilitando e Desabilitando Triggers
+
+Cada trigger pode ser facilmente habilitado ou desabilitado usando o botão de alternância:
+
+<Frame>
+  <img src="/images/enterprise/trigger-selected.png" alt="Habilitar ou desabilitar triggers com alternância" />
+</Frame>
+
+- **Habilitado (alternância azul)**: O trigger está ativo e executará automaticamente sua implantação quando os eventos especificados ocorrerem
+- **Desabilitado (alternância cinza)**: O trigger está inativo e não responderá a eventos
+
+Simplesmente clique na alternância para mudar o estado do trigger. As alterações entram em vigor imediatamente.
+
+### Monitorando Execuções de Trigger
+
+Acompanhe o desempenho e histórico de suas execuções acionadas:
+
+<Frame>
+  <img src="/images/enterprise/list-executions.png" alt="Lista de execuções acionadas por automação" />
+</Frame>
+
+## Construindo Automação
+
+Antes de construir sua automação, é útil entender a estrutura dos payloads de trigger que suas crews e flows receberão.
+
+### Repositório de Amostras de Payload
+
+Mantemos um repositório abrangente com amostras de payload de várias fontes de trigger para ajudá-lo a construir e testar suas automações:
+
+**🔗 [Amostras de Payload de Trigger CrewAI Enterprise](https://github.com/crewAIInc/crewai-enterprise-trigger-payload-samples)**
+
+Este repositório contém:
+
+- **Exemplos reais de payload** de diferentes fontes de trigger (Gmail, Google Drive, etc.)
+- **Documentação da estrutura de payload** mostrando o formato e campos disponíveis
+
+### Triggers com Crew
+
+Suas definições de crew existentes funcionam perfeitamente com triggers, você só precisa ter uma tarefa para analisar o payload recebido:
+
+```python
+@CrewBase
+class MinhaCrewAutomatizada:
+    @agent
+    def pesquisador(self) -> Agent:
+        return Agent(
+            config=self.agents_config['pesquisador'],
+        )
+
+    @task
+    def analisar_payload_trigger(self) -> Task:
+        return Task(
+            config=self.tasks_config['analisar_payload_trigger'],
+            agent=self.pesquisador(),
+        )
+
+    @task
+    def analisar_conteudo_trigger(self) -> Task:
+        return Task(
+            config=self.tasks_config['analisar_dados_trigger'],
+            agent=self.pesquisador(),
+        )
+```
+
+A crew receberá automaticamente e pode acessar o payload do trigger através dos mecanismos de contexto padrão do CrewAI.
+
+### Integração com Flows
+
+Para flows, você tem mais controle sobre como os dados do trigger são tratados:
+
+#### Acessando Payload do Trigger
+
+Todos os métodos `@start()` em seus flows aceitarão um parâmetro adicional chamado `crewai_trigger_payload`:
+
+```python
+from crewai.flow import Flow, start, listen
+
+class MeuFlowAutomatizado(Flow):
+    @start()
+    def lidar_com_trigger(self, crewai_trigger_payload: dict = None):
+        """
+        Este método start pode receber dados do trigger
+        """
+        if crewai_trigger_payload:
+            # Processa os dados do trigger
+            trigger_id = crewai_trigger_payload.get('id')
+            dados_evento = crewai_trigger_payload.get('payload', {})
+
+            # Armazena no estado do flow para uso por outros métodos
+            self.state.trigger_id = trigger_id
+            self.state.trigger_type = dados_evento
+
+            return dados_evento
+
+        # Lida com execução manual
+        return None
+
+    @listen(lidar_com_trigger)
+    def processar_dados(self, dados_trigger):
+        """
+        Processa os dados do trigger
+        """
+        # ... processa o trigger
+```
+
+#### Acionando Crews a partir de Flows
+
+Ao iniciar uma crew dentro de um flow que foi acionado, passe o payload do trigger conforme ele:
+
+```python
+@start()
+def delegar_para_crew(self, crewai_trigger_payload: dict = None):
+    """
+    Delega processamento para uma crew especializada
+    """
+    crew = MinhaCrewEspecializada()
+
+    # Passa o payload do trigger para a crew
+    resultado = crew.crew().kickoff(
+        inputs={
+            'parametro_personalizado': "valor_personalizado",
+            'crewai_trigger_payload': crewai_trigger_payload
+        },
+    )
+
+    return resultado
+```
+
+## Solução de Problemas
+
+**Trigger não está sendo disparado:**
+- Verifique se o trigger está habilitado
+- Verifique o status de conexão da integração
+
+**Falhas de execução:**
+- Verifique os logs de execução para detalhes do erro
+- Se você está desenvolvendo, certifique-se de que as entradas incluem o parâmetro `crewai_trigger_payload` com o payload correto
+
+Os triggers de automação transformam suas implantações CrewAI em sistemas responsivos orientados por eventos que podem se integrar perfeitamente com seus processos de negócio e ferramentas existentes.
