@@ -1,5 +1,6 @@
 """ChromaDB client implementation."""
 
+import logging
 from typing import Any
 
 from chromadb.api.types import (
@@ -22,6 +23,7 @@ from crewai.rag.chromadb.utils import (
     _process_query_results,
     _sanitize_collection_name,
 )
+from crewai.utilities.logger_utils import suppress_logging
 from crewai.rag.core.base_client import (
     BaseClient,
     BaseCollectionParams,
@@ -304,7 +306,7 @@ class ChromaDBClient(BaseClient):
         )
 
         prepared = _prepare_documents_for_chromadb(documents)
-        collection.add(
+        collection.upsert(
             ids=prepared.ids,
             documents=prepared.texts,
             metadatas=prepared.metadatas,
@@ -345,7 +347,7 @@ class ChromaDBClient(BaseClient):
             embedding_function=self.embedding_function,
         )
         prepared = _prepare_documents_for_chromadb(documents)
-        await collection.add(
+        await collection.upsert(
             ids=prepared.ids,
             documents=prepared.texts,
             metadatas=prepared.metadatas,
@@ -392,13 +394,16 @@ class ChromaDBClient(BaseClient):
 
         where = params.where if params.where is not None else params.metadata_filter
 
-        results: QueryResult = collection.query(
-            query_texts=[params.query],
-            n_results=params.limit,
-            where=where,
-            where_document=params.where_document,
-            include=params.include,
-        )
+        with suppress_logging(
+            "chromadb.segment.impl.vector.local_persistent_hnsw", logging.ERROR
+        ):
+            results: QueryResult = collection.query(
+                query_texts=[params.query],
+                n_results=params.limit,
+                where=where,
+                where_document=params.where_document,
+                include=params.include,
+            )
 
         return _process_query_results(
             collection=collection,
@@ -447,13 +452,16 @@ class ChromaDBClient(BaseClient):
 
         where = params.where if params.where is not None else params.metadata_filter
 
-        results: QueryResult = await collection.query(
-            query_texts=[params.query],
-            n_results=params.limit,
-            where=where,
-            where_document=params.where_document,
-            include=params.include,
-        )
+        with suppress_logging(
+            "chromadb.segment.impl.vector.local_persistent_hnsw", logging.ERROR
+        ):
+            results: QueryResult = await collection.query(
+                query_texts=[params.query],
+                n_results=params.limit,
+                where=where,
+                where_document=params.where_document,
+                include=params.include,
+            )
 
         return _process_query_results(
             collection=collection,
