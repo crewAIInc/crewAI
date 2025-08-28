@@ -1,0 +1,137 @@
+---
+title: Confident AI Integration
+description: Monitor and evaluate your CrewAI agents with Confident AI's comprehensive evaluation platform powered by DeepEval.
+icon: shield-check
+---
+
+# Confident AI Overview
+
+[Confident AI](https://confident-ai.com) is a comprehensive evaluation platform for LLM applications, powered by [DeepEval](https://github.com/confident-ai/deepeval). It provides advanced monitoring, evaluation, and optimization capabilities specifically designed for AI agent workflows.
+
+Confident AI offers both tracing capabilities to monitor your agents in real-time and evaluation tools to assess the quality, safety, and performance of your CrewAI applications.
+
+### Features
+
+- **Real-time Monitoring**: Track agent interactions, task execution, and performance metrics
+- **Comprehensive Evaluation**: Assess output quality, relevance, safety, and consistency
+- **Cost Tracking**: Monitor LLM API usage and associated costs across your crews
+- **Safety & Compliance**: Detect potential issues like bias, toxicity, and PII leaks
+- **Performance Analytics**: Analyze execution times, success rates, and bottlenecks
+- **Custom Metrics**: Define and track domain-specific evaluation criteria
+- **Team Collaboration**: Share insights and collaborate on agent optimization
+
+## Setup Instructions
+
+<Steps>
+    <Step title="Install Dependencies">
+      ```shell
+      pip install deepeval crewai
+      ```
+    </Step>
+    <Step title="Get API Key">
+      1. Sign up at [Confident AI](https://confident-ai.com)
+      2. Navigate to your project settings
+      3. Copy your API key
+    </Step>
+    <Step title="Configure CrewAI">
+      Instrument CrewAI with your Confident API key using `instrument_crewai`:
+
+      ```python
+      from crewai import Task, Crew, Agent
+      from deepeval.integrations.crewai import instrument_crewai
+
+      instrument_crewai()
+
+      agent = Agent(
+          role="Consultant",
+          goal="Write clear, concise explanation.",
+          backstory="An expert consultant with a keen eye for software trends.",
+      )
+
+      task = Task(
+          description="Explain the importance of {topic}",
+          expected_output="A clear and concise explanation of the topic.",
+          agent=agent,
+      )
+
+      crew = Crew(agents=[agent], tasks=[task])
+
+      result = crew.kickoff(inputs={"topic": "AI"})
+      ```
+    </Step>
+    <Step title="Add Evaluation (Optional)">
+      For comprehensive evaluation of your crew's outputs:
+
+      ```python
+      from deepeval import evaluate
+      from deepeval.metrics import AnswerRelevancyMetric, FaithfulnessMetric
+      from deepeval.test_case import LLMTestCase
+
+      # Define evaluation metrics
+      relevancy_metric = AnswerRelevancyMetric(threshold=0.7)
+      faithfulness_metric = FaithfulnessMetric(threshold=0.8)
+
+      # Execute crew
+      result = crew.kickoff(inputs={"topic": "artificial intelligence"})
+
+      # Create test case for evaluation
+      test_case = LLMTestCase(
+          input="Explain the importance of artificial intelligence",
+          actual_output=str(result),
+          expected_output="A comprehensive explanation of AI's significance"
+      )
+
+      # Evaluate the output
+      evaluate([test_case], [relevancy_metric, faithfulness_metric])
+      ```
+    </Step>
+    <Step title="View Results">
+      After running your CrewAI application with Confident AI integration:
+      
+      1. Visit your [Confident AI dashboard](https://confident-ai.com/dashboard)
+      2. Navigate to your project to view traces and evaluations
+      3. Analyze agent performance, costs, and quality metrics
+      4. Set up alerts for performance thresholds or quality issues
+    </Step>
+</Steps>
+
+## Key Metrics Tracked
+
+### Performance Metrics
+- **Execution Time**: Duration of individual tasks and overall crew execution
+- **Token Usage**: Input/output tokens consumed by each agent
+- **API Latency**: Response times from LLM providers
+- **Success Rate**: Percentage of successfully completed tasks
+
+### Quality Metrics
+- **Answer Relevancy**: How well outputs address the given tasks
+- **Faithfulness**: Accuracy and consistency of agent responses
+- **Coherence**: Logical flow and structure of outputs
+- **Safety**: Detection of harmful or inappropriate content
+
+### Cost Metrics
+- **API Costs**: Real-time tracking of LLM usage costs
+- **Cost per Task**: Economic efficiency analysis
+- **Budget Monitoring**: Alerts for spending thresholds
+
+## Best Practices
+
+### Development Phase
+- Start with basic tracing to understand agent behavior
+- Implement evaluation metrics early in development
+- Use custom metrics for domain-specific requirements
+- Monitor resource usage during testing
+
+### Production Phase
+- Set up comprehensive monitoring and alerting
+- Track performance trends over time
+- Implement automated quality checks
+- Maintain cost visibility and control
+
+### Continuous Improvement
+- Regular performance reviews using Confident AI analytics
+- A/B testing of different agent configurations
+- Feedback loops for quality improvement
+- Documentation of optimization insights
+
+For more detailed information and advanced configurations, visit the [Confident AI documentation](https://confident-ai.com/docs) and [DeepEval documentation](https://docs.deepeval.com/).
