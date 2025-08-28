@@ -1,5 +1,3 @@
-import contextlib
-import io
 import logging
 import os
 import shutil
@@ -12,24 +10,8 @@ from crewai.rag.embeddings.configurator import EmbeddingConfigurator
 from crewai.utilities.chromadb import create_persistent_client
 from crewai.utilities.constants import MAX_FILE_NAME_LENGTH
 from crewai.utilities.paths import db_storage_path
+from crewai.utilities.logger_utils import suppress_logging
 import warnings
-
-
-@contextlib.contextmanager
-def suppress_logging(
-    logger_name="chromadb.segment.impl.vector.local_persistent_hnsw",
-    level=logging.ERROR,
-):
-    logger = logging.getLogger(logger_name)
-    original_level = logger.getEffectiveLevel()
-    logger.setLevel(level)
-    with (
-        contextlib.redirect_stdout(io.StringIO()),
-        contextlib.redirect_stderr(io.StringIO()),
-        contextlib.suppress(UserWarning),
-    ):
-        yield
-    logger.setLevel(original_level)
 
 
 class RAGStorage(BaseRAGStorage):
@@ -122,7 +104,9 @@ class RAGStorage(BaseRAGStorage):
             self._initialize_app()
 
         try:
-            with suppress_logging():
+            with suppress_logging(
+                "chromadb.segment.impl.vector.local_persistent_hnsw", logging.ERROR
+            ):
                 response = self.collection.query(query_texts=query, n_results=limit)
 
             results = []

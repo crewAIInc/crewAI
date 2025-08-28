@@ -1,6 +1,4 @@
-import contextlib
 import hashlib
-import io
 import logging
 import os
 import shutil
@@ -20,23 +18,7 @@ from crewai.utilities.constants import KNOWLEDGE_DIRECTORY
 from crewai.utilities.logger import Logger
 from crewai.utilities.paths import db_storage_path
 from crewai.utilities.chromadb import create_persistent_client
-
-
-@contextlib.contextmanager
-def suppress_logging(
-    logger_name="chromadb.segment.impl.vector.local_persistent_hnsw",
-    level=logging.ERROR,
-):
-    logger = logging.getLogger(logger_name)
-    original_level = logger.getEffectiveLevel()
-    logger.setLevel(level)
-    with (
-        contextlib.redirect_stdout(io.StringIO()),
-        contextlib.redirect_stderr(io.StringIO()),
-        contextlib.suppress(UserWarning),
-    ):
-        yield
-    logger.setLevel(original_level)
+from crewai.utilities.logger_utils import suppress_logging
 
 
 class KnowledgeStorage(BaseKnowledgeStorage):
@@ -64,7 +46,9 @@ class KnowledgeStorage(BaseKnowledgeStorage):
         filter: Optional[dict] = None,
         score_threshold: float = 0.35,
     ) -> List[Dict[str, Any]]:
-        with suppress_logging():
+        with suppress_logging(
+            "chromadb.segment.impl.vector.local_persistent_hnsw", logging.ERROR
+        ):
             if self.collection:
                 fetched = self.collection.query(
                     query_texts=query,
