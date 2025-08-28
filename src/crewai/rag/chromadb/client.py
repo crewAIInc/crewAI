@@ -1,5 +1,6 @@
 """ChromaDB client implementation."""
 
+import logging
 from typing import Any
 
 from chromadb.api.types import (
@@ -20,7 +21,9 @@ from crewai.rag.chromadb.utils import (
     _is_sync_client,
     _prepare_documents_for_chromadb,
     _process_query_results,
+    _sanitize_collection_name,
 )
+from crewai.utilities.logger_utils import suppress_logging
 from crewai.rag.core.base_client import (
     BaseClient,
     BaseCollectionParams,
@@ -97,7 +100,7 @@ class ChromaDBClient(BaseClient):
             metadata["hnsw:space"] = "cosine"
 
         self.client.create_collection(
-            name=kwargs["collection_name"],
+            name=_sanitize_collection_name(kwargs["collection_name"]),
             configuration=kwargs.get("configuration"),
             metadata=metadata,
             embedding_function=kwargs.get(
@@ -154,7 +157,7 @@ class ChromaDBClient(BaseClient):
             metadata["hnsw:space"] = "cosine"
 
         await self.client.create_collection(
-            name=kwargs["collection_name"],
+            name=_sanitize_collection_name(kwargs["collection_name"]),
             configuration=kwargs.get("configuration"),
             metadata=metadata,
             embedding_function=kwargs.get(
@@ -205,7 +208,7 @@ class ChromaDBClient(BaseClient):
             metadata["hnsw:space"] = "cosine"
 
         return self.client.get_or_create_collection(
-            name=kwargs["collection_name"],
+            name=_sanitize_collection_name(kwargs["collection_name"]),
             configuration=kwargs.get("configuration"),
             metadata=metadata,
             embedding_function=kwargs.get(
@@ -258,7 +261,7 @@ class ChromaDBClient(BaseClient):
             metadata["hnsw:space"] = "cosine"
 
         return await self.client.get_or_create_collection(
-            name=kwargs["collection_name"],
+            name=_sanitize_collection_name(kwargs["collection_name"]),
             configuration=kwargs.get("configuration"),
             metadata=metadata,
             embedding_function=kwargs.get(
@@ -298,12 +301,12 @@ class ChromaDBClient(BaseClient):
             raise ValueError("Documents list cannot be empty")
 
         collection = self.client.get_collection(
-            name=collection_name,
+            name=_sanitize_collection_name(collection_name),
             embedding_function=self.embedding_function,
         )
 
         prepared = _prepare_documents_for_chromadb(documents)
-        collection.add(
+        collection.upsert(
             ids=prepared.ids,
             documents=prepared.texts,
             metadatas=prepared.metadatas,
@@ -340,11 +343,11 @@ class ChromaDBClient(BaseClient):
             raise ValueError("Documents list cannot be empty")
 
         collection = await self.client.get_collection(
-            name=collection_name,
+            name=_sanitize_collection_name(collection_name),
             embedding_function=self.embedding_function,
         )
         prepared = _prepare_documents_for_chromadb(documents)
-        await collection.add(
+        await collection.upsert(
             ids=prepared.ids,
             documents=prepared.texts,
             metadatas=prepared.metadatas,
@@ -385,19 +388,22 @@ class ChromaDBClient(BaseClient):
         params = _extract_search_params(kwargs)
 
         collection = self.client.get_collection(
-            name=params.collection_name,
+            name=_sanitize_collection_name(params.collection_name),
             embedding_function=self.embedding_function,
         )
 
         where = params.where if params.where is not None else params.metadata_filter
 
-        results: QueryResult = collection.query(
-            query_texts=[params.query],
-            n_results=params.limit,
-            where=where,
-            where_document=params.where_document,
-            include=params.include,
-        )
+        with suppress_logging(
+            "chromadb.segment.impl.vector.local_persistent_hnsw", logging.ERROR
+        ):
+            results: QueryResult = collection.query(
+                query_texts=[params.query],
+                n_results=params.limit,
+                where=where,
+                where_document=params.where_document,
+                include=params.include,
+            )
 
         return _process_query_results(
             collection=collection,
@@ -440,19 +446,22 @@ class ChromaDBClient(BaseClient):
         params = _extract_search_params(kwargs)
 
         collection = await self.client.get_collection(
-            name=params.collection_name,
+            name=_sanitize_collection_name(params.collection_name),
             embedding_function=self.embedding_function,
         )
 
         where = params.where if params.where is not None else params.metadata_filter
 
-        results: QueryResult = await collection.query(
-            query_texts=[params.query],
-            n_results=params.limit,
-            where=where,
-            where_document=params.where_document,
-            include=params.include,
-        )
+        with suppress_logging(
+            "chromadb.segment.impl.vector.local_persistent_hnsw", logging.ERROR
+        ):
+            results: QueryResult = await collection.query(
+                query_texts=[params.query],
+                n_results=params.limit,
+                where=where,
+                where_document=params.where_document,
+                include=params.include,
+            )
 
         return _process_query_results(
             collection=collection,
@@ -485,7 +494,7 @@ class ChromaDBClient(BaseClient):
             )
 
         collection_name = kwargs["collection_name"]
-        self.client.delete_collection(name=collection_name)
+        self.client.delete_collection(name=_sanitize_collection_name(collection_name))
 
     async def adelete_collection(self, **kwargs: Unpack[BaseCollectionParams]) -> None:
         """Delete a collection and all its data asynchronously.
@@ -515,7 +524,9 @@ class ChromaDBClient(BaseClient):
             )
 
         collection_name = kwargs["collection_name"]
-        await self.client.delete_collection(name=collection_name)
+        await self.client.delete_collection(
+            name=_sanitize_collection_name(collection_name)
+        )
 
     def reset(self) -> None:
         """Reset the vector database by deleting all collections and data.
