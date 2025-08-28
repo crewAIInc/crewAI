@@ -380,10 +380,10 @@ class LLM(BaseLLM):
 
     def _ensure_starts_with_user_message(self, messages: List[Dict[str, str]]) -> List[Dict[str, str]]:
         """Ensure messages list starts with a user message.
-        
+
         Args:
             messages: List of message dictionaries
-            
+
         Returns:
             List of messages with a user message at the start if needed
         """
