@@ -17,6 +17,9 @@ def create_client(config: ChromaDBConfig) -> ChromaDBClient:
 
     Returns:
         Configured ChromaDBClient instance.
+
+    Notes:
+        Need to update to use chromadb.Client to support more client types in the near future.
     """
 
     persist_dir = config.settings.persist_directory
