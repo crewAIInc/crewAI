@@ -20,3 +20,10 @@ class MissingQdrantConfig(_MissingProvider):
     """Placeholder for missing Qdrant configuration."""
 
     provider: Literal["qdrant"] = field(default="qdrant")
+
+
+@pyd_dataclass(config=ConfigDict(extra="forbid"))
+class MissingElasticsearchConfig(_MissingProvider):
+    """Placeholder for missing Elasticsearch configuration."""
+
+    provider: Literal["elasticsearch"] = field(default="elasticsearch")

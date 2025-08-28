@@ -5,6 +5,7 @@ from typing import cast
 from crewai.rag.config.optional_imports.protocols import (
     ChromaFactoryModule,
     QdrantFactoryModule,
+    ElasticsearchFactoryModule,
 )
 from crewai.rag.core.base_client import BaseClient
 from crewai.rag.config.types import RagConfigType
@@ -43,3 +44,15 @@ def create_client(config: RagConfigType) -> BaseClient:
             ),
         )
         return qdrant_mod.create_client(config)
+
+    if config.provider == "elasticsearch":
+        elasticsearch_mod = cast(
+            ElasticsearchFactoryModule,
+            require(
+                "crewai.rag.elasticsearch.factory",
+                purpose="The 'elasticsearch' provider",
+            ),
+        )
+        return elasticsearch_mod.create_client(config)
+
+    raise ValueError(f"Unsupported provider: {config.provider}")

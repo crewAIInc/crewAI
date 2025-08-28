@@ -1,0 +1,1 @@
+"""Elasticsearch RAG implementation."""

@@ -14,7 +14,7 @@ class _MissingProvider:
     Raises RuntimeError when instantiated to indicate missing dependencies.
     """
 
-    provider: Literal["chromadb", "qdrant", "__missing__"] = field(
+    provider: Literal["chromadb", "qdrant", "elasticsearch", "__missing__"] = field(
         default="__missing__"
     )
 
