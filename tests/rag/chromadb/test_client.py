@@ -253,8 +253,8 @@ class TestChromaDBClient:
         )
 
         # Verify documents were added to collection
-        mock_collection.add.assert_called_once()
-        call_args = mock_collection.add.call_args
+        mock_collection.upsert.assert_called_once()
+        call_args = mock_collection.upsert.call_args
         assert len(call_args.kwargs["ids"]) == 1
         assert call_args.kwargs["documents"] == ["Test document"]
         assert call_args.kwargs["metadatas"] == [{"source": "test"}]
@@ -279,7 +279,7 @@ class TestChromaDBClient:
 
         client.add_documents(collection_name="test_collection", documents=documents)
 
-        mock_collection.add.assert_called_once_with(
+        mock_collection.upsert.assert_called_once_with(
             ids=["custom_id_1", "custom_id_2"],
             documents=["First document", "Second document"],
             metadatas=[{"source": "test1"}, {"source": "test2"}],
@@ -319,8 +319,8 @@ class TestChromaDBClient:
         )
 
         # Verify documents were added to collection
-        mock_collection.add.assert_called_once()
-        call_args = mock_collection.add.call_args
+        mock_collection.upsert.assert_called_once()
+        call_args = mock_collection.upsert.call_args
         assert len(call_args.kwargs["ids"]) == 1
         assert call_args.kwargs["documents"] == ["Test document"]
         assert call_args.kwargs["metadatas"] == [{"source": "test"}]
@@ -352,7 +352,7 @@ class TestChromaDBClient:
             collection_name="test_collection", documents=documents
         )
 
-        mock_collection.add.assert_called_once_with(
+        mock_collection.upsert.assert_called_once_with(
             ids=["custom_id_1", "custom_id_2"],
             documents=["First document", "Second document"],
             metadatas=[{"source": "test1"}, {"source": "test2"}],
