@@ -56,6 +56,8 @@ class TokenManager:
         :return: The access token if valid and not expired, otherwise None.
         """
         encrypted_data = self.read_secure_file(self.file_path)
+        if encrypted_data is None:
+            return None
 
         decrypted_data = self.fernet.decrypt(encrypted_data)  # type: ignore
         data = json.loads(decrypted_data)

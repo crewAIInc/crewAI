@@ -119,12 +119,17 @@ class PlusAPI:
 
     def initialize_trace_batch(self, payload) -> requests.Response:
         return self._make_request(
-            "POST", f"{self.TRACING_RESOURCE}/batches", json=payload
+            "POST",
+            f"{self.TRACING_RESOURCE}/batches",
+            json=payload,
+            timeout=30,
         )
 
     def initialize_ephemeral_trace_batch(self, payload) -> requests.Response:
         return self._make_request(
-            "POST", f"{self.EPHEMERAL_TRACING_RESOURCE}/batches", json=payload
+            "POST",
+            f"{self.EPHEMERAL_TRACING_RESOURCE}/batches",
+            json=payload,
         )
 
     def send_trace_events(self, trace_batch_id: str, payload) -> requests.Response:
@@ -150,6 +155,7 @@ class PlusAPI:
             "PATCH",
             f"{self.TRACING_RESOURCE}/batches/{trace_batch_id}/finalize",
             json=payload,
+            timeout=30,
         )
 
     def finalize_ephemeral_trace_batch(
@@ -159,4 +165,5 @@ class PlusAPI:
             "PATCH",
             f"{self.EPHEMERAL_TRACING_RESOURCE}/batches/{trace_batch_id}/finalize",
             json=payload,
+            timeout=30,
         )
