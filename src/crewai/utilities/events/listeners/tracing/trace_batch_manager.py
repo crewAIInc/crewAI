@@ -150,10 +150,10 @@ class TraceBatchManager:
         """Add event to buffer"""
         self.event_buffer.append(trace_event)
 
-    def _send_events_to_backend(self):
+    def _send_events_to_backend(self) -> int:
         """Send buffered events to backend with graceful failure handling"""
         if not self.plus_api or not self.trace_batch_id or not self.event_buffer:
-            return
+            return 500
 
         try:
             payload = {
@@ -173,19 +173,22 @@ class TraceBatchManager:
 
             if response is None:
                 logger.warning("Failed to send trace events. Events will be lost.")
-                return
+                return 500
 
             if response.status_code in [200, 201]:
                 self.event_buffer.clear()
+                return 200
             else:
                 logger.warning(
                     f"Failed to send events: {response.status_code}. Events will be lost."
                 )
+                return 500
 
         except Exception as e:
             logger.warning(
                 f"Error sending events to backend: {str(e)}. Events will be lost."
             )
+            return 500
 
     def finalize_batch(self) -> Optional[TraceBatch]:
         """Finalize batch and return it for sending"""
@@ -194,7 +197,9 @@ class TraceBatchManager:
 
         self.current_batch.events = self.event_buffer.copy()
         if self.event_buffer:
-            self._send_events_to_backend()
+            events_sent_to_backend_status = self._send_events_to_backend()
+            if events_sent_to_backend_status == 500:
+                return None
         self._finalize_backend_batch()
 
         finalized_batch = self.current_batch

@@ -950,6 +950,8 @@ class LLM(BaseLLM):
                         tool_name=function_name,
                         tool_args=function_args,
                         error=f"Tool execution error: {str(e)}",
+                        from_task=from_task,
+                        from_agent=from_agent,
                     ),
                 )
         return None
@@ -990,6 +992,8 @@ class LLM(BaseLLM):
         """
         # --- 1) Emit call started event
         assert hasattr(crewai_event_bus, "emit")
+        print(f"from_task: {from_task}")
+        print(f"from_agent: {from_agent}")
         crewai_event_bus.emit(
             self,
             event=LLMCallStartedEvent(
