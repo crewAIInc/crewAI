@@ -220,14 +220,22 @@ class ConsoleFormatter:
         return tree
 
     def create_task_branch(
-        self, crew_tree: Optional[Tree], task_id: str
+        self, crew_tree: Optional[Tree], task_id: str, task_name: Optional[str] = None
     ) -> Optional[Tree]:
         """Create and initialize a task branch."""
         if not self.verbose:
             return None
 
         task_content = Text()
-        task_content.append(f"📋 Task: {task_id}", style="yellow bold")
+        
+        # Display task name if available, otherwise just the ID
+        if task_name:
+            task_content.append("📋 Task: ", style="yellow bold")
+            task_content.append(f"{task_name}", style="yellow bold")
+            task_content.append(f" (ID: {task_id})", style="yellow dim")
+        else:
+            task_content.append(f"📋 Task: {task_id}", style="yellow bold")
+            
         task_content.append("\nStatus: ", style="white")
         task_content.append("Executing Task...", style="yellow dim")
 
@@ -251,6 +259,7 @@ class ConsoleFormatter:
         task_id: str,
         agent_role: str,
         status: str = "completed",
+        task_name: Optional[str] = None,
     ) -> None:
         """Update task status in the tree."""
         if not self.verbose or crew_tree is None:
@@ -270,8 +279,13 @@ class ConsoleFormatter:
             if str(task_id) in str(branch.label):
                 # Build label without introducing stray blank lines
                 task_content = Text()
-                # First line: Task ID
-                task_content.append(f"📋 Task: {task_id}", style=f"{style} bold")
+                # First line: Task ID/name
+                if task_name:
+                    task_content.append("📋 Task: ", style=f"{style} bold")
+                    task_content.append(f"{task_name}", style=f"{style} bold")
+                    task_content.append(f" (ID: {task_id})", style=f"{style} dim")
+                else:
+                    task_content.append(f"📋 Task: {task_id}", style=f"{style} bold")
 
                 # Second line: Assigned to
                 task_content.append("\nAssigned to: ", style="white")
@@ -285,8 +299,9 @@ class ConsoleFormatter:
                 break
 
         # Show status panel
+        display_name = task_name if task_name else str(task_id)
         content = self.create_status_content(
-            f"Task {status.title()}", str(task_id), style, Agent=agent_role
+            f"Task {status.title()}", display_name, style, Agent=agent_role
         )
         self.print_panel(content, panel_title, style)
 
