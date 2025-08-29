@@ -992,8 +992,6 @@ class LLM(BaseLLM):
         """
         # --- 1) Emit call started event
         assert hasattr(crewai_event_bus, "emit")
-        print(f"from_task: {from_task}")
-        print(f"from_agent: {from_agent}")
         crewai_event_bus.emit(
             self,
             event=LLMCallStartedEvent(
