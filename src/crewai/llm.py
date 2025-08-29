@@ -950,6 +950,8 @@ class LLM(BaseLLM):
                         tool_name=function_name,
                         tool_args=function_args,
                         error=f"Tool execution error: {str(e)}",
+                        from_task=from_task,
+                        from_agent=from_agent,
                     ),
                 )
         return None
