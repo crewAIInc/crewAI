@@ -95,11 +95,11 @@ class Mem0Storage(Storage):
             assistant_content = ""
 
             for message in messages:
-                if message.get("role") == "user": # Using the latest user content 
-                    user_content = message.get("content")
+                if message.get("role") == "user": # Using the last appended user content 
+                    user_content = message.get("content","")
 
-                if message.get("role") == "assistant": # Using the latest assistant content
-                    assistant_content = message.get("content")
+                if message.get("role") == "assistant": # Using the last appended assistant content
+                    assistant_content = message.get("content","")
 
             if user_msg := self._get_user_message(user_content):
                 conversations.append({"role": "user", "content": user_msg})
