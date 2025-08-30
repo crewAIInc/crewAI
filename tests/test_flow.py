@@ -7,14 +7,14 @@ import pytest
 from pydantic import BaseModel
 
 from crewai.flow.flow import Flow, and_, listen, or_, router, start
-from crewai.events.event_types import (
+from crewai.events.event_bus import crewai_event_bus
+from crewai.events.types.flow_events import (
     FlowFinishedEvent,
     FlowStartedEvent,
+    FlowPlotEvent,
     MethodExecutionFinishedEvent,
     MethodExecutionStartedEvent,
-    crewai_event_bus,
 )
-from crewai.events.types.flow_events import FlowPlotEvent
 
 
 def test_simple_sequential_flow():

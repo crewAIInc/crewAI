@@ -1,6 +1,6 @@
 from unittest.mock import Mock
 
-from crewai.events.types.base_events import BaseEvent
+from crewai.events.base_events import BaseEvent
 from crewai.events.event_bus import crewai_event_bus
 
 
