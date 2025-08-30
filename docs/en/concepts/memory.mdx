@@ -1041,8 +1041,8 @@ CrewAI emits the following memory-related events:
 Track memory operation timing to optimize your application:
 
 ```python
-from crewai.utilities.events.base_event_listener import BaseEventListener
-from crewai.utilities.events import (
+from crewai.events import (
+    BaseEventListener,
     MemoryQueryCompletedEvent,
     MemorySaveCompletedEvent
 )
@@ -1076,8 +1076,8 @@ memory_monitor = MemoryPerformanceMonitor()
 Log memory operations for debugging and insights:
 
 ```python
-from crewai.utilities.events.base_event_listener import BaseEventListener
-from crewai.utilities.events import (
+from crewai.events import (
+    BaseEventListener,
     MemorySaveStartedEvent,
     MemoryQueryStartedEvent,
     MemoryRetrievalCompletedEvent
@@ -1117,8 +1117,8 @@ memory_logger = MemoryLogger()
 Capture and respond to memory errors:
 
 ```python
-from crewai.utilities.events.base_event_listener import BaseEventListener
-from crewai.utilities.events import (
+from crewai.events import (
+    BaseEventListener,
     MemorySaveFailedEvent,
     MemoryQueryFailedEvent
 )
@@ -1167,8 +1167,8 @@ error_tracker = MemoryErrorTracker(notify_email="admin@example.com")
 Memory events can be forwarded to analytics and monitoring platforms to track performance metrics, detect anomalies, and visualize memory usage patterns:
 
 ```python
-from crewai.utilities.events.base_event_listener import BaseEventListener
-from crewai.utilities.events import (
+from crewai.events import (
+    BaseEventListener,
     MemoryQueryCompletedEvent,
     MemorySaveCompletedEvent
 )
