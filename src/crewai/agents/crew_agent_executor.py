@@ -30,11 +30,11 @@ from crewai.utilities.constants import MAX_LLM_RETRY, TRAINING_DATA_FILE
 from crewai.utilities.logger import Logger
 from crewai.utilities.tool_utils import execute_tool_and_check_finality
 from crewai.utilities.training_handler import CrewTrainingHandler
-from crewai.utilities.events.agent_events import (
+from crewai.events.types.logging_events import (
     AgentLogsStartedEvent,
     AgentLogsExecutionEvent,
 )
-from crewai.utilities.events.crewai_event_bus import crewai_event_bus
+from crewai.events.event_bus import crewai_event_bus
 
 
 class CrewAgentExecutor(CrewAgentExecutorMixin):
@@ -122,7 +122,6 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             handle_unknown_error(self._printer, e)
             raise
 
-
         if self.ask_for_human_input:
             formatted_answer = self._handle_human_feedback(formatted_answer)
 
@@ -156,7 +155,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                     messages=self.messages,
                     callbacks=self.callbacks,
                     printer=self._printer,
-                    from_task=self.task
+                    from_task=self.task,
                 )
                 formatted_answer = process_llm_response(answer, self.use_stop_words)
 
