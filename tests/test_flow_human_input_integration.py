@@ -31,6 +31,8 @@ class TestFlowHumanInputIntegration:
         )
 
         executor = CrewAgentExecutorMixin()
+        executor.crew = MagicMock()
+        executor.crew._train = False
         executor._printer = MagicMock()
 
         formatter = event_listener.formatter
@@ -61,6 +63,8 @@ class TestFlowHumanInputIntegration:
         )
 
         executor = CrewAgentExecutorMixin()
+        executor.crew = MagicMock()
+        executor.crew._train = False
         executor._printer = MagicMock()
 
         formatter = event_listener.formatter
@@ -120,6 +124,8 @@ class TestFlowHumanInputIntegration:
         )
 
         executor = CrewAgentExecutorMixin()
+        executor.crew = MagicMock()
+        executor.crew._train = False
         executor._printer = MagicMock()
 
         formatter = event_listener.formatter
@@ -149,7 +155,8 @@ class TestFlowHumanInputIntegration:
         )
 
         executor = CrewAgentExecutorMixin()
-        executor.execution_context.is_training = True
+        executor.crew = MagicMock()
+        executor.crew._train = True
         executor._printer = MagicMock()
 
         formatter = event_listener.formatter
