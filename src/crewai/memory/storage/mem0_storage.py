@@ -1,5 +1,6 @@
 import os
 from typing import Any, Dict, List
+import re
 from collections import defaultdict
 from mem0 import Memory, MemoryClient
 from crewai.utilities.chromadb import sanitize_collection_name
@@ -87,9 +88,30 @@ class Mem0Storage(Storage):
         return filter
 
     def save(self, value: Any, metadata: Dict[str, Any]) -> None:
-        user_id = self.config.get("user_id", "")
-        assistant_message = [{"role" : "assistant","content" : value}]
+        conversations = []
 
+        if messages := metadata.get("messages"):    
+            user_content = ""
+            assistant_content = ""
+
+            for message in messages:
+                if message.get("role") == "user": # Using the latest user content 
+                    user_content = message.get("content")
+
+                if message.get("role") == "assistant": # Using the latest assistant content
+                    assistant_content = message.get("content")
+
+            if user_msg := self._get_user_message(user_content):
+                conversations.append({"role": "user", "content": user_msg})
+            if assistant_msg := self._get_assistant_message(assistant_content):
+                conversations.append({"role": "assistant", "content": assistant_msg})
+
+            metadata.pop('messages') # Dropping messages from the metadata dictionary
+        else:
+            conversations.append({"role": "assistant", "content": value})
+        
+        user_id = self.config.get("user_id", "")
+        
         base_metadata = {
             "short_term": "short_term",
             "long_term": "long_term",
@@ -119,7 +141,7 @@ class Mem0Storage(Storage):
         if agent_id := self.config.get("agent_id", self._get_agent_name()):
             params["agent_id"] = agent_id
 
-        self.memory.add(assistant_message, **params)
+        self.memory.add(conversations, **params)
 
     def search(self,query: str,limit: int = 3,score_threshold: float = 0.35) -> List[Any]:
         params = {
@@ -181,3 +203,16 @@ class Mem0Storage(Storage):
         agents = [self._sanitize_role(agent.role) for agent in agents]
         agents = "_".join(agents)
         return sanitize_collection_name(name=agents, max_collection_length=MAX_AGENT_ID_LENGTH_MEM0)
+    
+    def _get_assistant_message(self, text: str) -> str:
+        marker = "Final Answer:"
+        if marker in text:
+            return text.split(marker, 1)[1].strip()
+        return text
+    
+    def _get_user_message(self, text: str) -> str:
+        pattern = r"User message:\s*(.*)"
+        match = re.search(pattern, text)
+        if match:
+            return match.group(1).strip()
+        return text
