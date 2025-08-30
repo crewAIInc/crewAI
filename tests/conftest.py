@@ -80,7 +80,7 @@ def auto_mock_telemetry(request):
 
             with (
                 patch(
-                    "crewai.utilities.events.event_listener.Telemetry",
+                    "crewai.events.event_listener.Telemetry",
                     mock_telemetry_class,
                 ),
                 patch("crewai.tools.tool_usage.Telemetry", mock_telemetry_class),

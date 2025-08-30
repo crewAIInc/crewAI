@@ -5,13 +5,13 @@ from unittest.mock import patch, MagicMock
 
 from crewai import Agent, Task, Crew
 from crewai.flow.flow import Flow, start
-from crewai.utilities.events.listeners.tracing.trace_listener import (
+from crewai.events.listeners.tracing.trace_listener import (
     TraceCollectionListener,
 )
-from crewai.utilities.events.listeners.tracing.trace_batch_manager import (
+from crewai.events.listeners.tracing.trace_batch_manager import (
     TraceBatchManager,
 )
-from crewai.utilities.events.listeners.tracing.types import TraceEvent
+from crewai.events.listeners.tracing.types import TraceEvent
 
 
 class TestTraceListenerSetup:
@@ -27,11 +27,11 @@ class TestTraceListenerSetup:
                 return_value="mock_token_12345",
             ),
             patch(
-                "crewai.utilities.events.listeners.tracing.trace_listener.get_auth_token",
+                "crewai.events.listeners.tracing.trace_listener.get_auth_token",
                 return_value="mock_token_12345",
             ),
             patch(
-                "crewai.utilities.events.listeners.tracing.trace_batch_manager.get_auth_token",
+                "crewai.events.listeners.tracing.trace_batch_manager.get_auth_token",
                 return_value="mock_token_12345",
             ),
         ):
@@ -40,7 +40,7 @@ class TestTraceListenerSetup:
     @pytest.fixture(autouse=True)
     def clear_event_bus(self):
         """Clear event bus listeners before and after each test"""
-        from crewai.utilities.events import crewai_event_bus
+        from crewai.events.event_bus import crewai_event_bus
 
         # Store original handlers
         original_handlers = crewai_event_bus._handlers.copy()
@@ -123,7 +123,7 @@ class TestTraceListenerSetup:
             crew = Crew(agents=[agent], tasks=[task], verbose=True)
 
             trace_listener = TraceCollectionListener()
-            from crewai.utilities.events import crewai_event_bus
+            from crewai.events.event_bus import crewai_event_bus
 
             trace_listener.setup_listeners(crewai_event_bus)
 
@@ -162,7 +162,7 @@ class TestTraceListenerSetup:
 
             crew = Crew(agents=[agent], tasks=[task], verbose=True)
 
-            from crewai.utilities.events import crewai_event_bus
+            from crewai.events.event_bus import crewai_event_bus
 
             trace_listener = None
             for handler_list in crewai_event_bus._handlers.values():
@@ -207,7 +207,7 @@ class TestTraceListenerSetup:
             )
             crew = Crew(agents=[agent], tasks=[task], verbose=True)
 
-            from crewai.utilities.events import crewai_event_bus
+            from crewai.events.event_bus import crewai_event_bus
 
             # Create and setup trace listener explicitly
             trace_listener = TraceCollectionListener()
@@ -262,7 +262,7 @@ class TestTraceListenerSetup:
             result = crew.kickoff()
             assert result is not None
 
-            from crewai.utilities.events import crewai_event_bus
+            from crewai.events.event_bus import crewai_event_bus
 
             trace_handlers = []
             for handlers in crewai_event_bus._handlers.values():
@@ -281,9 +281,9 @@ class TestTraceListenerSetup:
                     ):
                         trace_handlers.append(handler)
 
-            assert len(trace_handlers) == 0, (
-                f"Found {len(trace_handlers)} trace handlers when tracing should be disabled"
-            )
+            assert (
+                len(trace_handlers) == 0
+            ), f"Found {len(trace_handlers)} trace handlers when tracing should be disabled"
 
     def test_trace_listener_setup_correctly_for_crew(self):
         """Test that trace listener is set up correctly when enabled"""
@@ -328,7 +328,7 @@ class TestTraceListenerSetup:
         with (
             patch.dict(os.environ, {"CREWAI_TRACING_ENABLED": "true"}),
             patch(
-                "crewai.utilities.events.listeners.tracing.trace_listener.TraceCollectionListener._check_authenticated",
+                "crewai.events.listeners.tracing.trace_listener.TraceCollectionListener._check_authenticated",
                 return_value=False,
             ),
         ):
@@ -357,7 +357,7 @@ class TestTraceListenerSetup:
         with (
             patch.dict(os.environ, {"CREWAI_TRACING_ENABLED": "true"}),
             patch(
-                "crewai.utilities.events.listeners.tracing.trace_batch_manager.PlusAPI"
+                "crewai.events.listeners.tracing.trace_batch_manager.PlusAPI"
             ) as mock_plus_api_class,
         ):
             mock_plus_api_instance = MagicMock()
@@ -393,13 +393,13 @@ class TestTraceListenerSetup:
     # Helper method to ensure cleanup
     def teardown_method(self):
         """Cleanup after each test method"""
-        from crewai.utilities.events import crewai_event_bus
+        from crewai.events.event_bus import crewai_event_bus
 
         crewai_event_bus._handlers.clear()
 
     @classmethod
     def teardown_class(cls):
         """Final cleanup after all tests in this class"""
-        from crewai.utilities.events import crewai_event_bus
+        from crewai.events.event_bus import crewai_event_bus
 
         crewai_event_bus._handlers.clear()

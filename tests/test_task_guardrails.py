@@ -7,11 +7,11 @@ from crewai.llm import LLM
 from crewai.tasks.hallucination_guardrail import HallucinationGuardrail
 from crewai.tasks.llm_guardrail import LLMGuardrail
 from crewai.tasks.task_output import TaskOutput
-from crewai.utilities.events import (
+from crewai.events.event_types import (
     LLMGuardrailCompletedEvent,
     LLMGuardrailStartedEvent,
 )
-from crewai.utilities.events.crewai_event_bus import crewai_event_bus
+from crewai.events.event_bus import crewai_event_bus
 
 
 def test_task_without_guardrail():

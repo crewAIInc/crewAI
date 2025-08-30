@@ -3,18 +3,28 @@ from typing import Dict, Any, List
 from rich.table import Table
 from rich.box import HEAVY_EDGE, ROUNDED
 from collections.abc import Sequence
-from crewai.experimental.evaluation.base_evaluator import AgentAggregatedEvaluationResult, AggregationStrategy, AgentEvaluationResult, MetricCategory
+from crewai.experimental.evaluation.base_evaluator import (
+    AgentAggregatedEvaluationResult,
+    AggregationStrategy,
+    AgentEvaluationResult,
+    MetricCategory,
+)
 from crewai.experimental.evaluation import EvaluationScore
-from crewai.utilities.events.utils.console_formatter import ConsoleFormatter
+from crewai.events.utils.console_formatter import ConsoleFormatter
 from crewai.utilities.llm_utils import create_llm
+
 
 class EvaluationDisplayFormatter:
     def __init__(self):
         self.console_formatter = ConsoleFormatter()
 
-    def display_evaluation_with_feedback(self, iterations_results: Dict[int, Dict[str, List[Any]]]):
+    def display_evaluation_with_feedback(
+        self, iterations_results: Dict[int, Dict[str, List[Any]]]
+    ):
         if not iterations_results:
-            self.console_formatter.print("[yellow]No evaluation results to display[/yellow]")
+            self.console_formatter.print(
+                "[yellow]No evaluation results to display[/yellow]"
+            )
             return
 
         all_agent_roles: set[str] = set()
@@ -22,7 +32,9 @@ class EvaluationDisplayFormatter:
             all_agent_roles.update(iter_results.keys())
 
         for agent_role in sorted(all_agent_roles):
-            self.console_formatter.print(f"\n[bold cyan]Agent: {agent_role}[/bold cyan]")
+            self.console_formatter.print(
+                f"\n[bold cyan]Agent: {agent_role}[/bold cyan]"
+            )
 
             for iter_num, results in sorted(iterations_results.items()):
                 if agent_role not in results or not results[agent_role]:
@@ -62,9 +74,7 @@ class EvaluationDisplayFormatter:
 
                         table.add_section()
                         table.add_row(
-                            metric.title(),
-                            score_text,
-                            evaluation_score.feedback or ""
+                            metric.title(), score_text, evaluation_score.feedback or ""
                         )
 
                 if aggregated_result.overall_score is not None:
@@ -82,19 +92,26 @@ class EvaluationDisplayFormatter:
                     table.add_row(
                         "Overall Score",
                         f"[{overall_color}]{overall_score:.1f}[/]",
-                        "Overall agent evaluation score"
+                        "Overall agent evaluation score",
                     )
 
                 self.console_formatter.print(table)
 
-    def display_summary_results(self, iterations_results: Dict[int, Dict[str, List[AgentAggregatedEvaluationResult]]]):
+    def display_summary_results(
+        self,
+        iterations_results: Dict[int, Dict[str, List[AgentAggregatedEvaluationResult]]],
+    ):
         if not iterations_results:
-            self.console_formatter.print("[yellow]No evaluation results to display[/yellow]")
+            self.console_formatter.print(
+                "[yellow]No evaluation results to display[/yellow]"
+            )
             return
 
         self.console_formatter.print("\n")
 
-        table = Table(title="Agent Performance Scores \n (1-10 Higher is better)", box=HEAVY_EDGE)
+        table = Table(
+            title="Agent Performance Scores \n (1-10 Higher is better)", box=HEAVY_EDGE
+        )
 
         table.add_column("Agent/Metric", style="cyan")
 
@@ -123,11 +140,14 @@ class EvaluationDisplayFormatter:
                     agent_id=agent_id,
                     agent_role=agent_role,
                     results=agent_results,
-                    strategy=AggregationStrategy.SIMPLE_AVERAGE
+                    strategy=AggregationStrategy.SIMPLE_AVERAGE,
                 )
 
-                valid_scores = [score.score for score in aggregated_result.metrics.values()
-                               if score.score is not None]
+                valid_scores = [
+                    score.score
+                    for score in aggregated_result.metrics.values()
+                    if score.score is not None
+                ]
                 if valid_scores:
                     avg_score = sum(valid_scores) / len(valid_scores)
                     agent_scores_by_iteration[iter_num] = avg_score
@@ -137,7 +157,9 @@ class EvaluationDisplayFormatter:
             if not agent_scores_by_iteration:
                 continue
 
-            avg_across_iterations = sum(agent_scores_by_iteration.values()) / len(agent_scores_by_iteration)
+            avg_across_iterations = sum(agent_scores_by_iteration.values()) / len(
+                agent_scores_by_iteration
+            )
 
             row = [f"[bold]{agent_role}[/bold]"]
 
@@ -178,9 +200,13 @@ class EvaluationDisplayFormatter:
                 row = [f"  - {metric.title()}"]
 
                 for iter_num in sorted(iterations_results.keys()):
-                    if (iter_num in agent_metrics_by_iteration and
-                            metric in agent_metrics_by_iteration[iter_num]):
-                        metric_score = agent_metrics_by_iteration[iter_num][metric].score
+                    if (
+                        iter_num in agent_metrics_by_iteration
+                        and metric in agent_metrics_by_iteration[iter_num]
+                    ):
+                        metric_score = agent_metrics_by_iteration[iter_num][
+                            metric
+                        ].score
                         if metric_score is not None:
                             metric_scores.append(metric_score)
                             if metric_score >= 8.0:
@@ -225,7 +251,9 @@ class EvaluationDisplayFormatter:
         results: Sequence[AgentEvaluationResult],
         strategy: AggregationStrategy = AggregationStrategy.SIMPLE_AVERAGE,
     ) -> AgentAggregatedEvaluationResult:
-        metrics_by_category: dict[MetricCategory, list[EvaluationScore]] = defaultdict(list)
+        metrics_by_category: dict[MetricCategory, list[EvaluationScore]] = defaultdict(
+            list
+        )
 
         for result in results:
             for metric_name, evaluation_score in result.metrics.items():
@@ -246,19 +274,20 @@ class EvaluationDisplayFormatter:
                         metric=category.title(),
                         feedbacks=feedbacks,
                         scores=[s.score for s in scores],
-                        strategy=strategy
+                        strategy=strategy,
                     )
                 else:
                     feedback_summary = feedbacks[0]
 
             aggregated_metrics[category] = EvaluationScore(
-                score=avg_score,
-                feedback=feedback_summary
+                score=avg_score, feedback=feedback_summary
             )
 
         overall_score = None
         if aggregated_metrics:
-            valid_scores = [m.score for m in aggregated_metrics.values() if m.score is not None]
+            valid_scores = [
+                m.score for m in aggregated_metrics.values() if m.score is not None
+            ]
             if valid_scores:
                 overall_score = sum(valid_scores) / len(valid_scores)
 
@@ -268,7 +297,7 @@ class EvaluationDisplayFormatter:
             metrics=aggregated_metrics,
             overall_score=overall_score,
             task_count=len(results),
-            aggregation_strategy=strategy
+            aggregation_strategy=strategy,
         )
 
     def _summarize_feedbacks(
@@ -277,10 +306,12 @@ class EvaluationDisplayFormatter:
         metric: str,
         feedbacks: List[str],
         scores: List[float | None],
-        strategy: AggregationStrategy
+        strategy: AggregationStrategy,
     ) -> str:
         if len(feedbacks) <= 2 and all(len(fb) < 200 for fb in feedbacks):
-            return "\n\n".join([f"Feedback {i+1}: {fb}" for i, fb in enumerate(feedbacks)])
+            return "\n\n".join(
+                [f"Feedback {i+1}: {fb}" for i, fb in enumerate(feedbacks)]
+            )
 
         try:
             llm = create_llm()
@@ -290,20 +321,26 @@ class EvaluationDisplayFormatter:
                 if len(feedback) > 500:
                     feedback = feedback[:500] + "..."
                 score_text = f"{score:.1f}" if score is not None else "N/A"
-                formatted_feedbacks.append(f"Feedback #{i+1} (Score: {score_text}):\n{feedback}")
+                formatted_feedbacks.append(
+                    f"Feedback #{i+1} (Score: {score_text}):\n{feedback}"
+                )
 
             all_feedbacks = "\n\n" + "\n\n---\n\n".join(formatted_feedbacks)
 
             strategy_guidance = ""
             if strategy == AggregationStrategy.BEST_PERFORMANCE:
-                strategy_guidance = "Focus on the highest-scoring aspects and strengths demonstrated."
+                strategy_guidance = (
+                    "Focus on the highest-scoring aspects and strengths demonstrated."
+                )
             elif strategy == AggregationStrategy.WORST_PERFORMANCE:
                 strategy_guidance = "Focus on areas that need improvement and common issues across tasks."
             else:
                 strategy_guidance = "Provide a balanced analysis of strengths and weaknesses across all tasks."
 
             prompt = [
-                {"role": "system", "content": f"""You are an expert evaluator creating a comprehensive summary of agent performance feedback.
+                {
+                    "role": "system",
+                    "content": f"""You are an expert evaluator creating a comprehensive summary of agent performance feedback.
                 Your job is to synthesize multiple feedback points about the same metric across different tasks.
 
                 Create a concise, insightful summary that captures the key patterns and themes from all feedback.
@@ -315,14 +352,18 @@ class EvaluationDisplayFormatter:
                 3. Highlighting patterns across tasks
                 4. 150-250 words in length
 
-                The summary should be directly usable as final feedback for the agent's performance on this metric."""},
-                {"role": "user", "content": f"""I need a synthesized summary of the following feedback for:
+                The summary should be directly usable as final feedback for the agent's performance on this metric.""",
+                },
+                {
+                    "role": "user",
+                    "content": f"""I need a synthesized summary of the following feedback for:
 
                 Agent Role: {agent_role}
                 Metric: {metric.title()}
 
                 {all_feedbacks}
-                """}
+                """,
+                },
             ]
             assert llm is not None
             response = llm.call(prompt)
@@ -330,4 +371,6 @@ class EvaluationDisplayFormatter:
             return response
 
         except Exception:
-            return "Synthesized from multiple tasks: " + "\n\n".join([f"- {fb[:500]}..." for fb in feedbacks])
+            return "Synthesized from multiple tasks: " + "\n\n".join(
+                [f"- {fb[:500]}..." for fb in feedbacks]
+            )

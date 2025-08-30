@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Any, Callable, Dict, Optional
 
-from .base_events import BaseEvent
+from crewai.events.base_events import BaseEvent
 
 
 class ToolUsageEvent(BaseEvent):

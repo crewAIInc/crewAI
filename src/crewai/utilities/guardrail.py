@@ -2,6 +2,7 @@ from typing import Any, Callable, Optional, Tuple, Union
 
 from pydantic import BaseModel, field_validator
 
+
 class GuardrailResult(BaseModel):
     """Result from a task guardrail execution.
 
@@ -14,6 +15,7 @@ class GuardrailResult(BaseModel):
         result (Any, optional): The validated/transformed result if successful
         error (str, optional): Error message if validation failed
     """
+
     success: bool
     result: Optional[Any] = None
     error: Optional[str] = None
@@ -24,9 +26,13 @@ class GuardrailResult(BaseModel):
         values = info.data
         if "success" in values:
             if values["success"] and v and "error" in values and values["error"]:
-                raise ValueError("Cannot have both result and error when success is True")
+                raise ValueError(
+                    "Cannot have both result and error when success is True"
+                )
             if not values["success"] and v and "result" in values and values["result"]:
-                raise ValueError("Cannot have both result and error when success is False")
+                raise ValueError(
+                    "Cannot have both result and error when success is False"
+                )
         return v
 
     @classmethod
@@ -44,11 +50,13 @@ class GuardrailResult(BaseModel):
         return cls(
             success=success,
             result=data if success else None,
-            error=data if not success else None
+            error=data if not success else None,
         )
 
 
-def process_guardrail(output: Any, guardrail: Callable, retry_count: int) -> GuardrailResult:
+def process_guardrail(
+    output: Any, guardrail: Callable, retry_count: int
+) -> GuardrailResult:
     """Process the guardrail for the agent output.
 
     Args:
@@ -60,21 +68,21 @@ def process_guardrail(output: Any, guardrail: Callable, retry_count: int) -> Gua
     from crewai.task import TaskOutput
     from crewai.lite_agent import LiteAgentOutput
 
-    assert isinstance(output, TaskOutput) or isinstance(output, LiteAgentOutput), "Output must be a TaskOutput or LiteAgentOutput"
+    assert isinstance(output, TaskOutput) or isinstance(
+        output, LiteAgentOutput
+    ), "Output must be a TaskOutput or LiteAgentOutput"
 
     assert guardrail is not None
 
-    from crewai.utilities.events import (
+    from crewai.events.types.llm_guardrail_events import (
         LLMGuardrailCompletedEvent,
         LLMGuardrailStartedEvent,
     )
-    from crewai.utilities.events.crewai_event_bus import crewai_event_bus
+    from crewai.events.event_bus import crewai_event_bus
 
     crewai_event_bus.emit(
         None,
-        LLMGuardrailStartedEvent(
-            guardrail=guardrail, retry_count=retry_count
-        ),
+        LLMGuardrailStartedEvent(guardrail=guardrail, retry_count=retry_count),
     )
 
     result = guardrail(output)

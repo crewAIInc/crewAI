@@ -9,9 +9,9 @@ from crewai import LLM, Agent
 from crewai.flow import Flow, start
 from crewai.lite_agent import LiteAgent, LiteAgentOutput
 from crewai.tools import BaseTool
-from crewai.utilities.events import crewai_event_bus
-from crewai.utilities.events.agent_events import LiteAgentExecutionStartedEvent
-from crewai.utilities.events.tool_usage_events import ToolUsageStartedEvent
+from crewai.events.event_bus import crewai_event_bus
+from crewai.events.types.agent_events import LiteAgentExecutionStartedEvent
+from crewai.events.types.tool_usage_events import ToolUsageStartedEvent
 from crewai.llms.base_llm import BaseLLM
 from unittest.mock import patch
 
@@ -322,7 +322,7 @@ def test_sets_parent_flow_when_inside_flow():
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_guardrail_is_called_using_string():
     guardrail_events = defaultdict(list)
-    from crewai.utilities.events import (
+    from crewai.events.event_types import (
         LLMGuardrailCompletedEvent,
         LLMGuardrailStartedEvent,
     )
@@ -359,7 +359,7 @@ def test_guardrail_is_called_using_string():
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_guardrail_is_called_using_callable():
     guardrail_events = defaultdict(list)
-    from crewai.utilities.events import (
+    from crewai.events.event_types import (
         LLMGuardrailCompletedEvent,
         LLMGuardrailStartedEvent,
     )
@@ -392,7 +392,7 @@ def test_guardrail_is_called_using_callable():
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_guardrail_reached_attempt_limit():
     guardrail_events = defaultdict(list)
-    from crewai.utilities.events import (
+    from crewai.events.event_types import (
         LLMGuardrailCompletedEvent,
         LLMGuardrailStartedEvent,
     )

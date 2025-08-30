@@ -10,8 +10,8 @@ from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.tools import BaseTool
 from crewai.tools.agent_tools.agent_tools import AgentTools
 from crewai.utilities import Logger
-from crewai.utilities.events import crewai_event_bus
-from crewai.utilities.events.agent_events import (
+from crewai.events.event_bus import crewai_event_bus
+from crewai.events.types.agent_events import (
     AgentExecutionCompletedEvent,
     AgentExecutionErrorEvent,
     AgentExecutionStartedEvent,

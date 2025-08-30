@@ -3,8 +3,8 @@ import time
 
 from crewai.memory.long_term.long_term_memory_item import LongTermMemoryItem
 from crewai.memory.memory import Memory
-from crewai.utilities.events.crewai_event_bus import crewai_event_bus
-from crewai.utilities.events.memory_events import (
+from crewai.events.event_bus import crewai_event_bus
+from crewai.events.types.memory_events import (
     MemoryQueryStartedEvent,
     MemoryQueryCompletedEvent,
     MemoryQueryFailedEvent,

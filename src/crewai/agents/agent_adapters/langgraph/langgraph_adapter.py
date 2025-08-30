@@ -1,4 +1,4 @@
-from typing import Any, AsyncIterable, Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from pydantic import Field, PrivateAttr
 
@@ -14,15 +14,14 @@ from crewai.tools.agent_tools.agent_tools import AgentTools
 from crewai.tools.base_tool import BaseTool
 from crewai.utilities import Logger
 from crewai.utilities.converter import Converter
-from crewai.utilities.events import crewai_event_bus
-from crewai.utilities.events.agent_events import (
+from crewai.events.event_bus import crewai_event_bus
+from crewai.events.types.agent_events import (
     AgentExecutionCompletedEvent,
     AgentExecutionErrorEvent,
     AgentExecutionStartedEvent,
 )
 
 try:
-    from langchain_core.messages import ToolMessage
     from langgraph.checkpoint.memory import MemorySaver
     from langgraph.prebuilt import create_react_agent
 

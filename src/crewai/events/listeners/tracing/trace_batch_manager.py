@@ -11,7 +11,7 @@ from crewai.cli.plus_api import PlusAPI
 from rich.console import Console
 from rich.panel import Panel
 
-from crewai.utilities.events.listeners.tracing.types import TraceEvent
+from crewai.events.listeners.tracing.types import TraceEvent
 from logging import getLogger
 
 logger = getLogger(__name__)

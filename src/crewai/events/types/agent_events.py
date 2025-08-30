@@ -1,13 +1,15 @@
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Sequence, Union
+"""Agent-related events moved to break circular dependencies."""
+
+from __future__ import annotations
+
+from typing import Any, Dict, List, Optional, Sequence, Union
+
+from pydantic import model_validator
 
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.tools.base_tool import BaseTool
 from crewai.tools.structured_tool import CrewStructuredTool
-
-from .base_events import BaseEvent
-
-if TYPE_CHECKING:
-    from crewai.agents.agent_builder.base_agent import BaseAgent
+from crewai.events.base_events import BaseEvent
 
 
 class AgentExecutionStartedEvent(BaseEvent):
@@ -21,9 +23,9 @@ class AgentExecutionStartedEvent(BaseEvent):
 
     model_config = {"arbitrary_types_allowed": True}
 
-    def __init__(self, **data):
-        super().__init__(**data)
-        # Set fingerprint data from the agent
+    @model_validator(mode="after")
+    def set_fingerprint_data(self):
+        """Set fingerprint data from the agent if available."""
         if hasattr(self.agent, "fingerprint") and self.agent.fingerprint:
             self.source_fingerprint = self.agent.fingerprint.uuid_str
             self.source_type = "agent"
@@ -32,6 +34,7 @@ class AgentExecutionStartedEvent(BaseEvent):
                 and self.agent.fingerprint.metadata
             ):
                 self.fingerprint_metadata = self.agent.fingerprint.metadata
+        return self
 
 
 class AgentExecutionCompletedEvent(BaseEvent):
@@ -42,9 +45,11 @@ class AgentExecutionCompletedEvent(BaseEvent):
     output: str
     type: str = "agent_execution_completed"
 
-    def __init__(self, **data):
-        super().__init__(**data)
-        # Set fingerprint data from the agent
+    model_config = {"arbitrary_types_allowed": True}
+
+    @model_validator(mode="after")
+    def set_fingerprint_data(self):
+        """Set fingerprint data from the agent if available."""
         if hasattr(self.agent, "fingerprint") and self.agent.fingerprint:
             self.source_fingerprint = self.agent.fingerprint.uuid_str
             self.source_type = "agent"
@@ -53,6 +58,7 @@ class AgentExecutionCompletedEvent(BaseEvent):
                 and self.agent.fingerprint.metadata
             ):
                 self.fingerprint_metadata = self.agent.fingerprint.metadata
+        return self
 
 
 class AgentExecutionErrorEvent(BaseEvent):
@@ -63,9 +69,11 @@ class AgentExecutionErrorEvent(BaseEvent):
     error: str
     type: str = "agent_execution_error"
 
-    def __init__(self, **data):
-        super().__init__(**data)
-        # Set fingerprint data from the agent
+    model_config = {"arbitrary_types_allowed": True}
+
+    @model_validator(mode="after")
+    def set_fingerprint_data(self):
+        """Set fingerprint data from the agent if available."""
         if hasattr(self.agent, "fingerprint") and self.agent.fingerprint:
             self.source_fingerprint = self.agent.fingerprint.uuid_str
             self.source_type = "agent"
@@ -74,6 +82,7 @@ class AgentExecutionErrorEvent(BaseEvent):
                 and self.agent.fingerprint.metadata
             ):
                 self.fingerprint_metadata = self.agent.fingerprint.metadata
+        return self
 
 
 # New event classes for LiteAgent
@@ -104,26 +113,6 @@ class LiteAgentExecutionErrorEvent(BaseEvent):
     type: str = "lite_agent_execution_error"
 
 
-# New logging events
-class AgentLogsStartedEvent(BaseEvent):
-    """Event emitted when agent logs should be shown at start"""
-
-    agent_role: str
-    task_description: Optional[str] = None
-    verbose: bool = False
-    type: str = "agent_logs_started"
-
-
-class AgentLogsExecutionEvent(BaseEvent):
-    """Event emitted when agent logs should be shown during execution"""
-
-    agent_role: str
-    formatted_answer: Any
-    verbose: bool = False
-    type: str = "agent_logs_execution"
-
-    model_config = {"arbitrary_types_allowed": True}
-
 # Agent Eval events
 class AgentEvaluationStartedEvent(BaseEvent):
     agent_id: str
@@ -131,6 +120,7 @@ class AgentEvaluationStartedEvent(BaseEvent):
     task_id: str | None = None
     iteration: int
     type: str = "agent_evaluation_started"
+
 
 class AgentEvaluationCompletedEvent(BaseEvent):
     agent_id: str
@@ -140,6 +130,7 @@ class AgentEvaluationCompletedEvent(BaseEvent):
     metric_category: Any
     score: Any
     type: str = "agent_evaluation_completed"
+
 
 class AgentEvaluationFailedEvent(BaseEvent):
     agent_id: str

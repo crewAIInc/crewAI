@@ -38,17 +38,17 @@ from crewai.utilities.agent_utils import (
 )
 from crewai.utilities.constants import TRAINED_AGENTS_DATA_FILE, TRAINING_DATA_FILE
 from crewai.utilities.converter import generate_model_description
-from crewai.utilities.events.agent_events import (
+from crewai.events.types.agent_events import (
     AgentExecutionCompletedEvent,
     AgentExecutionErrorEvent,
     AgentExecutionStartedEvent,
 )
-from crewai.utilities.events.crewai_event_bus import crewai_event_bus
-from crewai.utilities.events.memory_events import (
+from crewai.events.event_bus import crewai_event_bus
+from crewai.events.types.memory_events import (
     MemoryRetrievalStartedEvent,
     MemoryRetrievalCompletedEvent,
 )
-from crewai.utilities.events.knowledge_events import (
+from crewai.events.types.knowledge_events import (
     KnowledgeQueryCompletedEvent,
     KnowledgeQueryFailedEvent,
     KnowledgeQueryStartedEvent,

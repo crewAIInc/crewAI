@@ -1,7 +1,7 @@
 from unittest.mock import Mock
 
-from crewai.utilities.events.base_events import BaseEvent
-from crewai.utilities.events.crewai_event_bus import crewai_event_bus
+from crewai.events.base_events import BaseEvent
+from crewai.events.event_bus import crewai_event_bus
 
 
 class TestEvent(BaseEvent):

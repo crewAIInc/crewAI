@@ -11,12 +11,12 @@ from crewai.flow.flow import Flow, listen, start
 from crewai.llm import LLM
 from crewai.task import Task
 from crewai.tools.base_tool import BaseTool
-from crewai.utilities.events.agent_events import (
+from crewai.events.types.agent_events import (
     AgentExecutionCompletedEvent,
     AgentExecutionErrorEvent,
     AgentExecutionStartedEvent,
 )
-from crewai.utilities.events.crew_events import (
+from crewai.events.types.crew_events import (
     CrewKickoffCompletedEvent,
     CrewKickoffFailedEvent,
     CrewKickoffStartedEvent,
@@ -24,28 +24,28 @@ from crewai.utilities.events.crew_events import (
     CrewTestResultEvent,
     CrewTestStartedEvent,
 )
-from crewai.utilities.events.crewai_event_bus import crewai_event_bus
-from crewai.utilities.events.event_listener import EventListener
-from crewai.utilities.events.event_types import ToolUsageFinishedEvent
-from crewai.utilities.events.flow_events import (
+from crewai.events.event_bus import crewai_event_bus
+from crewai.events.event_listener import EventListener
+from crewai.events.types.tool_usage_events import ToolUsageFinishedEvent
+from crewai.events.types.flow_events import (
     FlowCreatedEvent,
     FlowFinishedEvent,
     FlowStartedEvent,
     MethodExecutionFailedEvent,
     MethodExecutionStartedEvent,
 )
-from crewai.utilities.events.llm_events import (
+from crewai.events.types.llm_events import (
     LLMCallCompletedEvent,
     LLMCallFailedEvent,
     LLMCallStartedEvent,
     LLMStreamChunkEvent,
 )
-from crewai.utilities.events.task_events import (
+from crewai.events.types.task_events import (
     TaskCompletedEvent,
     TaskFailedEvent,
     TaskStartedEvent,
 )
-from crewai.utilities.events.tool_usage_events import (
+from crewai.events.types.tool_usage_events import (
     ToolUsageErrorEvent,
 )
 
@@ -114,9 +114,7 @@ def test_crew_emits_start_kickoff_event(
     mock_telemetry.task_ended = Mock(return_value=mock_span)
 
     # Patch the Telemetry class to return our mock
-    with patch(
-        "crewai.utilities.events.event_listener.Telemetry", return_value=mock_telemetry
-    ):
+    with patch("crewai.events.event_listener.Telemetry", return_value=mock_telemetry):
         # Now when Crew creates EventListener, it will use our mocked telemetry
         crew = Crew(agents=[base_agent], tasks=[base_task], name="TestCrew")
         crew.kickoff()
@@ -241,9 +239,7 @@ def test_crew_emits_end_task_event(
     mock_telemetry.crew_execution_span = Mock()
     mock_telemetry.end_crew = Mock()
 
-    with patch(
-        "crewai.utilities.events.event_listener.Telemetry", return_value=mock_telemetry
-    ):
+    with patch("crewai.events.event_listener.Telemetry", return_value=mock_telemetry):
         crew = Crew(agents=[base_agent], tasks=[base_task], name="TestCrew")
         crew.kickoff()
 
@@ -455,9 +451,7 @@ def test_flow_emits_start_event(reset_event_listener_singleton):
     mock_telemetry.flow_creation_span = Mock()
     mock_telemetry.set_tracer = Mock()
 
-    with patch(
-        "crewai.utilities.events.event_listener.Telemetry", return_value=mock_telemetry
-    ):
+    with patch("crewai.events.event_listener.Telemetry", return_value=mock_telemetry):
         # Force creation of EventListener singleton with mocked telemetry
         _ = EventListener()
 

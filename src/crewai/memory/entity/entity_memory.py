@@ -6,8 +6,8 @@ from pydantic import PrivateAttr
 from crewai.memory.entity.entity_memory_item import EntityMemoryItem
 from crewai.memory.memory import Memory
 from crewai.memory.storage.rag_storage import RAGStorage
-from crewai.utilities.events.crewai_event_bus import crewai_event_bus
-from crewai.utilities.events.memory_events import (
+from crewai.events.event_bus import crewai_event_bus
+from crewai.events.types.memory_events import (
     MemoryQueryStartedEvent,
     MemoryQueryCompletedEvent,
     MemoryQueryFailedEvent,

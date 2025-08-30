@@ -1,5 +1,5 @@
-from crewai.utilities.events.base_event_listener import BaseEventListener
-from crewai.utilities.events.memory_events import (
+from crewai.events.base_event_listener import BaseEventListener
+from crewai.events.types.memory_events import (
     MemoryRetrievalCompletedEvent,
     MemoryRetrievalStartedEvent,
     MemoryQueryFailedEvent,
@@ -9,8 +9,8 @@ from crewai.utilities.events.memory_events import (
     MemorySaveFailedEvent,
 )
 
-class MemoryListener(BaseEventListener):
 
+class MemoryListener(BaseEventListener):
     def __init__(self, formatter):
         super().__init__()
         self.formatter = formatter
@@ -19,9 +19,7 @@ class MemoryListener(BaseEventListener):
 
     def setup_listeners(self, crewai_event_bus):
         @crewai_event_bus.on(MemoryRetrievalStartedEvent)
-        def on_memory_retrieval_started(
-            source, event: MemoryRetrievalStartedEvent
-        ):
+        def on_memory_retrieval_started(source, event: MemoryRetrievalStartedEvent):
             if self.memory_retrieval_in_progress:
                 return
 
@@ -33,9 +31,7 @@ class MemoryListener(BaseEventListener):
             )
 
         @crewai_event_bus.on(MemoryRetrievalCompletedEvent)
-        def on_memory_retrieval_completed(
-            source, event: MemoryRetrievalCompletedEvent
-        ):
+        def on_memory_retrieval_completed(source, event: MemoryRetrievalCompletedEvent):
             if not self.memory_retrieval_in_progress:
                 return
 
@@ -44,7 +40,7 @@ class MemoryListener(BaseEventListener):
                 self.formatter.current_agent_branch,
                 self.formatter.current_crew_tree,
                 event.memory_content,
-                event.retrieval_time_ms
+                event.retrieval_time_ms,
             )
 
         @crewai_event_bus.on(MemoryQueryCompletedEvent)

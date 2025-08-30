@@ -8,7 +8,7 @@ from pydantic import BaseModel
 
 from crewai.agents.agent_builder.utilities.base_token_process import TokenProcess
 from crewai.llm import CONTEXT_WINDOW_USAGE_RATIO, LLM
-from crewai.utilities.events import (
+from crewai.events.event_types import (
     LLMCallCompletedEvent,
     LLMStreamChunkEvent,
     ToolUsageStartedEvent,
@@ -563,7 +563,7 @@ def assert_event_count(
 
 @pytest.fixture
 def mock_emit() -> MagicMock:
-    from crewai.utilities.events.crewai_event_bus import CrewAIEventsBus
+    from crewai.events.event_bus import CrewAIEventsBus
 
     with patch.object(CrewAIEventsBus, "emit") as mock_emit:
         yield mock_emit

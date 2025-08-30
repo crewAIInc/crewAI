@@ -2,7 +2,7 @@ from typing import Any, Dict, Optional, Union
 
 from pydantic import BaseModel, ConfigDict
 
-from .base_events import BaseEvent
+from crewai.events.base_events import BaseEvent
 
 
 class FlowEvent(BaseEvent):

@@ -19,8 +19,8 @@ from crewai.tools.tool_calling import InstructorToolCalling
 from crewai.tools.tool_usage import ToolUsage
 from crewai.utilities import RPMController
 from crewai.utilities.errors import AgentRepositoryError
-from crewai.utilities.events import crewai_event_bus
-from crewai.utilities.events.tool_usage_events import ToolUsageFinishedEvent
+from crewai.events.event_bus import crewai_event_bus
+from crewai.events.types.tool_usage_events import ToolUsageFinishedEvent
 from crewai.process import Process
 
 

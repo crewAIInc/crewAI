@@ -1,6 +1,6 @@
 from typing import Any, Dict, Optional
 
-from crewai.utilities.events.base_events import BaseEvent
+from crewai.events.base_events import BaseEvent
 
 
 class MemoryBaseEvent(BaseEvent):

@@ -1,7 +1,7 @@
 from inspect import getsource
 from typing import Any, Callable, Optional, Union
 
-from crewai.utilities.events.base_events import BaseEvent
+from crewai.events.base_events import BaseEvent
 
 
 class LLMGuardrailStartedEvent(BaseEvent):

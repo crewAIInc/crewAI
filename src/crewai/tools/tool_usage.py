@@ -20,8 +20,8 @@ from crewai.utilities.agent_utils import (
     get_tool_names,
     render_text_description_and_args,
 )
-from crewai.utilities.events.crewai_event_bus import crewai_event_bus
-from crewai.utilities.events.tool_usage_events import (
+from crewai.events.event_bus import crewai_event_bus
+from crewai.events.types.tool_usage_events import (
     ToolSelectionErrorEvent,
     ToolUsageErrorEvent,
     ToolUsageFinishedEvent,
