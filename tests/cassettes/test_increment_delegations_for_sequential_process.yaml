@@ -449,4 +449,162 @@ interactions:
       - req_32907c02e96c6932e9424220bb24bb7a
     http_version: HTTP/1.1
     status_code: 200
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are Manager. You''re great
+      at delegating work about scoring.\nYour personal goal is: Coordinate scoring
+      processes\nYou ONLY have access to the following tools, and should NEVER make
+      up tools that are not listed here:\n\nTool Name: Delegate work to coworker\nTool
+      Arguments: {''task'': {''description'': ''The task to delegate'', ''type'':
+      ''str''}, ''context'': {''description'': ''The context for the task'', ''type'':
+      ''str''}, ''coworker'': {''description'': ''The role/name of the coworker to
+      delegate to'', ''type'': ''str''}}\nTool Description: Delegate a specific task
+      to one of the following coworkers: Scorer\nThe input to this tool should be
+      the coworker, the task you want them to do, and ALL necessary context to execute
+      the task, they know nothing about the task, so share absolutely everything you
+      know, don''t reference things but instead explain them.\nTool Name: Ask question
+      to coworker\nTool Arguments: {''question'': {''description'': ''The question
+      to ask'', ''type'': ''str''}, ''context'': {''description'': ''The context for
+      the question'', ''type'': ''str''}, ''coworker'': {''description'': ''The role/name
+      of the coworker to ask'', ''type'': ''str''}}\nTool Description: Ask a specific
+      question to one of the following coworkers: Scorer\nThe input to this tool should
+      be the coworker, the question you have for them, and ALL necessary context to
+      ask the question properly, they know nothing about the question, so share absolutely
+      everything you know, don''t reference things but instead explain them.\n\nIMPORTANT:
+      Use the following format in your response:\n\n```\nThought: you should always
+      think about what to do\nAction: the action to take, only one name of [Delegate
+      work to coworker, Ask question to coworker], just the name, exactly as it''s
+      written.\nAction Input: the input to the action, just a simple JSON object,
+      enclosed in curly braces, using \" to wrap keys and values.\nObservation: the
+      result of the action\n```\n\nOnce all necessary information is gathered, return
+      the following format:\n\n```\nThought: I now know the final answer\nFinal Answer:
+      the final answer to the original input question\n```"}, {"role": "user", "content":
+      "\nCurrent Task: Give me an integer score between 1-5 for the following title:
+      ''The impact of AI in the future of work''\n\nThis is the expected criteria
+      for your final answer: The score of the title.\nyou MUST return the actual complete
+      content as the final answer, not a summary.\n\nBegin! This is VERY important
+      to you, use the tools available and give your best Final Answer, your job depends
+      on it!\n\nThought:"}, {"role": "assistant", "content": "Thought: To provide
+      an accurate score for the title \"The impact of AI in the future of work,\"
+      I need to delegate the task of scoring it to the Scorer, who is specialized
+      in this activity.\n\nAction: Delegate work to coworker\nAction Input: {\"coworker\":
+      \"Scorer\", \"task\": \"Give me an integer score between 1-5 for the following
+      title: ''The impact of AI in the future of work''\", \"context\": \"Your task
+      is to evaluate the provided title on a scale from 1 to 5 based on criteria such
+      as relevance, clarity, and intrigue.\"}\n\nObservation: The scorer has received
+      the task to score the title ''The impact of AI in the future of work''.\nObservation:
+      4"}], "model": "gpt-4o", "stop": ["\nObservation:"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate, zstd
+      connection:
+      - keep-alive
+      content-length:
+      - '3322'
+      content-type:
+      - application/json
+      cookie:
+      - _cfuvid=CW_cKQGYWY3cL.S6Xo5z0cmkmWHy5Q50OA_KjPEijNk-1735926034530-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.93.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.93.0
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-read-timeout:
+      - '600.0'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.9
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAA4xSTWvcMBC9+1cMOq+Dvd/1LTQt5NJLP6C0wWjlsa1G1ghpnLSE/e9F2uzaaVPo
+        RSC9eU/vzcxTBiB0IyoQqpesBmfyt/vDSpvbDx+97L+gftjhzVdX3rzT1/3nrVhEBh1+oOIz60rR
+        4AyyJnuClUfJGFXL3WZbbjdluU7AQA2aSOsc52vKl8VynRf7vHjWVT1phUFU8C0DAHhKZ7RoG/wp
+        KigW55cBQ5AdiupSBCA8mfgiZAg6sLQsFhOoyDLa5PpTT2PXcwW3YOkR7uPBPUKrrTQgbXhEf/Xd
+        vk/X63StYD0X89iOQcYsdjRmBkhriWXsRYpx94wcL8YNdc7TIfxBFa22OvS1RxnIRpOByYmEHjOA
+        u9Sg8UVm4TwNjmume0zf7U59TmHPI5nQC8jE0sxYy/3iFb26QZbahFmLhZKqx2aiTvOQY6NpBmSz
+        1H+7eU37lFzb7n/kJ0ApdIxN7Tw2Wr1MPJV5jBv7r7JLl5NhEdA/aIU1a/RxEg22cjSnZRLhV2Ac
+        6lbbDr3z+rRRrav3xZvNdrNaqYPIjtlvAAAA//8DAAsTiaNaAwAA
+    headers:
+      CF-RAY:
+      - 974eec7c4d438486-SJC
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Mon, 25 Aug 2025 23:38:35 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - __cf_bm=ULOCzvd5MabFyMl9eSNQ3Sk_hNbVH25aTAfkSaYM6Cw-1756165115-1.0.1.1-jeyMlIwg.jml3h9XQDOYQXVxEFP44CSbUCENlr4W6RpdsZg08M.fWUD5kBWDNcupp2skTxNh5gCYFNop3HIrWq5pzgrydiA3FuSe7U15X1Y;
+        path=/; expires=Tue, 26-Aug-25 00:08:35 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=e_81pnlfj.JohLmFm8gTRISqkPCT6GwCVpOdPsECI.s-1756165115098-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '680'
+      openai-project:
+      - proj_xitITlrFeen7zjNSzML82h9x
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '715'
+      x-ratelimit-limit-project-requests:
+      - '10000'
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '30000000'
+      x-ratelimit-remaining-project-requests:
+      - '9999'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '29999221'
+      x-ratelimit-reset-project-requests:
+      - 6ms
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 1ms
+      x-request-id:
+      - req_4006f3362c434ea2a39b9901f3f2e5cb
+    status:
+      code: 200
+      message: OK
 version: 1

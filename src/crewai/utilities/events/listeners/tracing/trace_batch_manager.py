@@ -41,17 +41,20 @@ class TraceBatchManager:
     """Single responsibility: Manage batches and event buffering"""
 
     is_current_batch_ephemeral: bool = False
+    trace_batch_id: Optional[str] = None
+    current_batch: Optional[TraceBatch] = None
+    event_buffer: List[TraceEvent] = []
+    execution_start_times: Dict[str, datetime] = {}
+    batch_owner_type: Optional[str] = None
+    batch_owner_id: Optional[str] = None
 
     def __init__(self):
         try:
-            self.plus_api = PlusAPI(api_key=get_auth_token())
+            self.plus_api = PlusAPI(
+                api_key=get_auth_token(),
+            )
         except AuthError:
             self.plus_api = PlusAPI(api_key="")
-
-        self.trace_batch_id: Optional[str] = None  # Backend ID
-        self.current_batch: Optional[TraceBatch] = None
-        self.event_buffer: List[TraceEvent] = []
-        self.execution_start_times: Dict[str, datetime] = {}
 
     def initialize_batch(
         self,
@@ -113,7 +116,13 @@ class TraceBatchManager:
                 else self.plus_api.initialize_trace_batch(payload)
             )
 
-            if response.status_code == 201 or response.status_code == 200:
+            if response is None:
+                logger.warning(
+                    "Trace batch initialization failed gracefully. Continuing without tracing."
+                )
+                return
+
+            if response.status_code in [201, 200]:
                 response_data = response.json()
                 self.trace_batch_id = (
                     response_data["trace_id"]
@@ -128,21 +137,23 @@ class TraceBatchManager:
                 )
                 console.print(panel)
             else:
-                logger.error(
-                    f"❌ Failed to initialize trace batch: {response.status_code} - {response.text}"
+                logger.warning(
+                    f"Trace batch initialization returned status {response.status_code}. Continuing without tracing."
                 )
 
         except Exception as e:
-            logger.error(f"❌ Error initializing trace batch: {str(e)}")
+            logger.warning(
+                f"Error initializing trace batch: {str(e)}. Continuing without tracing."
+            )
 
     def add_event(self, trace_event: TraceEvent):
         """Add event to buffer"""
         self.event_buffer.append(trace_event)
 
-    def _send_events_to_backend(self):
-        """Send buffered events to backend"""
+    def _send_events_to_backend(self) -> int:
+        """Send buffered events to backend with graceful failure handling"""
         if not self.plus_api or not self.trace_batch_id or not self.event_buffer:
-            return
+            return 500
 
         try:
             payload = {
@@ -154,37 +165,47 @@ class TraceBatchManager:
                 },
             }
 
-            if not self.trace_batch_id:
-                raise Exception("❌ Trace batch ID not found")
-
             response = (
                 self.plus_api.send_ephemeral_trace_events(self.trace_batch_id, payload)
                 if self.is_current_batch_ephemeral
                 else self.plus_api.send_trace_events(self.trace_batch_id, payload)
             )
 
-            if response.status_code == 200 or response.status_code == 201:
+            if response is None:
+                logger.warning("Failed to send trace events. Events will be lost.")
+                return 500
+
+            if response.status_code in [200, 201]:
                 self.event_buffer.clear()
+                return 200
             else:
-                logger.error(
-                    f"❌ Failed to send events: {response.status_code} - {response.text}"
+                logger.warning(
+                    f"Failed to send events: {response.status_code}. Events will be lost."
                 )
+                return 500
 
         except Exception as e:
-            logger.error(f"❌ Error sending events to backend: {str(e)}")
+            logger.warning(
+                f"Error sending events to backend: {str(e)}. Events will be lost."
+            )
+            return 500
 
     def finalize_batch(self) -> Optional[TraceBatch]:
         """Finalize batch and return it for sending"""
         if not self.current_batch:
             return None
 
+        self.current_batch.events = self.event_buffer.copy()
         if self.event_buffer:
-            self._send_events_to_backend()
+            events_sent_to_backend_status = self._send_events_to_backend()
+            if events_sent_to_backend_status == 500:
+                return None
         self._finalize_backend_batch()
 
-        self.current_batch.events = self.event_buffer.copy()
-
         finalized_batch = self.current_batch
+
+        self.batch_owner_type = None
+        self.batch_owner_id = None
 
         self.current_batch = None
         self.event_buffer.clear()
