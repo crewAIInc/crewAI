@@ -104,6 +104,24 @@ exclude = [
 ]
 fix = true
 
+[tool.ruff.lint]
+select = [
+    "UP006",
+    "UP007",
+    "UP035",
+    "UP037",
+    "UP040",
+    "UP004",
+    "UP008",
+    "UP010",
+    "UP018",
+    "UP031",
+    "UP032",
+    "UP034",
+    "I001",
+    "I002",
+]
+
 [tool.mypy]
 strict = true
 exclude = ["src/crewai/cli/templates"]
