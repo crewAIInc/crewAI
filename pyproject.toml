@@ -106,6 +106,7 @@ fix = true
 
 [tool.ruff.lint]
 select = [
+    "B006",
     "UP006",
     "UP007",
     "UP035",
