@@ -77,6 +77,7 @@ dev-dependencies = [
     "ruff>=0.12.11",
     "mypy>=1.17.1",
     "pre-commit>=4.3.0",
+    "bandit>=1.8.6",
     "pillow>=10.2.0",
     "cairosvg>=2.7.1",
     "pytest>=8.0.0",
@@ -99,14 +100,13 @@ crewai = "crewai.cli.cli:crewai"
 
 [tool.ruff]
 exclude = [
-    "templates",
-    "__init__.py",
+    "src/crewai/cli/templates",
 ]
 fix = true
 
 [tool.mypy]
 strict = true
-exclude = ["cli/templates"]
+exclude = ["src/crewai/cli/templates"]
 
 [tool.bandit]
 exclude_dirs = ["src/crewai/cli/templates"]
