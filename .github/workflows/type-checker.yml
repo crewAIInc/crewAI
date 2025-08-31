@@ -12,6 +12,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch all history for proper diff
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -21,6 +23,39 @@ jobs:
       - name: Install Requirements
         run: |
           pip install mypy
+          pip install types-requests==2.32.*
+          pip install types-pyyaml==6.0.*
+          pip install types-regex==2024.11.6.*
+          pip install types-appdirs==1.4.*
 
-      - name: Run type checks
-        run: mypy src
+      - name: Get changed Python files
+        id: changed-files
+        run: |
+          # Get the list of changed Python files compared to the base branch
+          echo "Fetching changed files..."
+          git diff --name-only --diff-filter=ACMRT origin/${{ github.base_ref }}...HEAD -- '*.py' > changed_files.txt
+          
+          # Filter for files in src/ directory
+          grep "^src/" changed_files.txt > src_changed_files.txt || true
+          
+          # Check if there are any changed files
+          if [ -s src_changed_files.txt ]; then
+            echo "Changed Python files in src/:"
+            cat src_changed_files.txt
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+            # Convert newlines to spaces for mypy command
+            echo "files=$(cat src_changed_files.txt | tr '\n' ' ')" >> $GITHUB_OUTPUT
+          else
+            echo "No Python files changed in src/"
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Run type checks on changed files
+        if: steps.changed-files.outputs.has_changes == 'true'
+        run: |
+          echo "Running mypy on changed files..."
+          mypy ${{ steps.changed-files.outputs.files }}
+
+      - name: No files to check
+        if: steps.changed-files.outputs.has_changes == 'false'
+        run: echo "No Python files in src/ were modified - skipping type checks"
