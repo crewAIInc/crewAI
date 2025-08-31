@@ -54,11 +54,11 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         tools_description: str,
         tools_handler: ToolsHandler,
         step_callback: Any = None,
-        original_tools: List[Any] = None,
+        original_tools: List[Any] | None = None,
         function_calling_llm: Any = None,
         respect_context_window: bool = False,
         request_within_rpm_limit: Optional[Callable[[], bool]] = None,
-        callbacks: List[Any] = None,
+        callbacks: List[Any] | None = None,
     ):
         self._i18n: I18N = I18N()
         self.llm: BaseLLM = llm

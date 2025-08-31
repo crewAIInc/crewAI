@@ -65,7 +65,7 @@ class KickoffTaskOutputsSQLiteStorage:
         output: Dict[str, Any],
         task_index: int,
         was_replayed: bool = False,
-        inputs: Dict[str, Any] = None,
+        inputs: Dict[str, Any] | None = None,
     ) -> None:
         """Add a new task output record to the database.
 

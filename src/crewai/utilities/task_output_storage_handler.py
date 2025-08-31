@@ -58,7 +58,7 @@ class TaskOutputStorageHandler:
         task: Task,
         output: Dict[str, Any],
         task_index: int,
-        inputs: Dict[str, Any] = None,
+        inputs: Dict[str, Any] | None = None,
         was_replayed: bool = False,
     ):
         inputs = inputs or {}

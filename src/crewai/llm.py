@@ -311,7 +311,7 @@ class LLM(BaseLLM):
         api_base: Optional[str] = None,
         api_version: Optional[str] = None,
         api_key: Optional[str] = None,
-        callbacks: List[Any] = None,
+        callbacks: List[Any] | None = None,
         reasoning_effort: Optional[Literal["none", "low", "medium", "high"]] = None,
         stream: bool = False,
         **kwargs,
