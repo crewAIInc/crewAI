@@ -559,9 +559,10 @@ class Crew(FlowTrackable, BaseModel):
         CrewTrainingHandler(filename).initialize_file()
 
     def train(
-        self, n_iterations: int, filename: str, inputs: Optional[Dict[str, Any]] = {}
+        self, n_iterations: int, filename: str, inputs: Optional[Dict[str, Any]] = None
     ) -> None:
         """Trains the crew for a given number of iterations."""
+        inputs = inputs or {}
         try:
             crewai_event_bus.emit(
                 self,
@@ -702,8 +703,11 @@ class Crew(FlowTrackable, BaseModel):
         self._task_output_handler.reset()
         return results
 
-    async def kickoff_async(self, inputs: Optional[Dict[str, Any]] = {}) -> CrewOutput:
+    async def kickoff_async(
+        self, inputs: Optional[Dict[str, Any]] = None
+    ) -> CrewOutput:
         """Asynchronous kickoff method to start the crew execution."""
+        inputs = inputs or {}
         return await asyncio.to_thread(self.kickoff, inputs)
 
     async def kickoff_for_each_async(self, inputs: List[Dict]) -> List[CrewOutput]:
