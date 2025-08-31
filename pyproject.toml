@@ -74,9 +74,9 @@ qdrant = [
 
 [tool.uv]
 dev-dependencies = [
-    "ruff>=0.8.2",
-    "mypy>=1.10.0",
-    "pre-commit>=3.6.0",
+    "ruff>=0.12.11",
+    "mypy>=1.17.1",
+    "pre-commit>=4.3.0",
     "pillow>=10.2.0",
     "cairosvg>=2.7.1",
     "pytest>=8.0.0",
@@ -88,14 +88,24 @@ dev-dependencies = [
     "pytest-timeout>=2.3.1",
     "pytest-xdist>=3.6.1",
     "pytest-split>=0.9.0",
+    "types-requests==2.32.*",
+    "types-pyyaml==6.0.*",
+    "types-regex==2024.11.6.*",
+    "types-appdirs==1.4.*",
 ]
 
 [project.scripts]
 crewai = "crewai.cli.cli:crewai"
 
+[tool.ruff]
+exclude = [
+    "templates",
+    "__init__.py",
+]
+fix = true
+
 [tool.mypy]
-ignore_missing_imports = true
-disable_error_code = 'import-untyped'
+strict = true
 exclude = ["cli/templates"]
 
 [tool.bandit]
