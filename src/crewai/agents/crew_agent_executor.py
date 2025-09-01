@@ -54,11 +54,11 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         tools_description: str,
         tools_handler: ToolsHandler,
         step_callback: Any = None,
-        original_tools: List[Any] = [],
+        original_tools: List[Any] | None = None,
         function_calling_llm: Any = None,
         respect_context_window: bool = False,
         request_within_rpm_limit: Optional[Callable[[], bool]] = None,
-        callbacks: List[Any] = [],
+        callbacks: List[Any] | None = None,
     ):
         self._i18n: I18N = I18N()
         self.llm: BaseLLM = llm
@@ -70,10 +70,10 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         self.tools_names = tools_names
         self.stop = stop_words
         self.max_iter = max_iter
-        self.callbacks = callbacks
+        self.callbacks = callbacks or []
         self._printer: Printer = Printer()
         self.tools_handler = tools_handler
-        self.original_tools = original_tools
+        self.original_tools = original_tools or []
         self.step_callback = step_callback
         self.use_stop_words = self.llm.supports_stop_words()
         self.tools_description = tools_description

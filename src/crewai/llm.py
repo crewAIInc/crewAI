@@ -311,7 +311,7 @@ class LLM(BaseLLM):
         api_base: Optional[str] = None,
         api_version: Optional[str] = None,
         api_key: Optional[str] = None,
-        callbacks: List[Any] = [],
+        callbacks: List[Any] | None = None,
         reasoning_effort: Optional[Literal["none", "low", "medium", "high"]] = None,
         stream: bool = False,
         **kwargs,
@@ -351,7 +351,7 @@ class LLM(BaseLLM):
         else:
             self.stop = stop
 
-        self.set_callbacks(callbacks)
+        self.set_callbacks(callbacks or [])
         self.set_env_callbacks()
 
     def _is_anthropic_model(self, model: str) -> bool:
