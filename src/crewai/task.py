@@ -43,12 +43,12 @@ from crewai.utilities.config import process_config
 from crewai.utilities.constants import NOT_SPECIFIED, _NotSpecified
 from crewai.utilities.guardrail import process_guardrail, GuardrailResult
 from crewai.utilities.converter import Converter, convert_to_model
-from crewai.utilities.events import (
+from crewai.events.event_types import (
     TaskCompletedEvent,
     TaskFailedEvent,
     TaskStartedEvent,
 )
-from crewai.utilities.events.crewai_event_bus import crewai_event_bus
+from crewai.events.event_bus import crewai_event_bus
 from crewai.utilities.i18n import I18N
 from crewai.utilities.printer import Printer
 from crewai.utilities.string_utils import interpolate_only
@@ -160,11 +160,10 @@ class Task(BaseModel):
     )
     max_retries: Optional[int] = Field(
         default=None,
-        description="[DEPRECATED] Maximum number of retries when guardrail fails. Use guardrail_max_retries instead. Will be removed in v1.0.0"
+        description="[DEPRECATED] Maximum number of retries when guardrail fails. Use guardrail_max_retries instead. Will be removed in v1.0.0",
     )
     guardrail_max_retries: int = Field(
-        default=3,
-        description="Maximum number of retries when guardrail fails"
+        default=3, description="Maximum number of retries when guardrail fails"
     )
     retry_count: int = Field(default=0, description="Current number of retries")
     start_time: Optional[datetime.datetime] = Field(
@@ -367,7 +366,7 @@ class Task(BaseModel):
                 "The 'max_retries' parameter is deprecated and will be removed in CrewAI v1.0.0. "
                 "Please use 'guardrail_max_retries' instead.",
                 DeprecationWarning,
-                stacklevel=2
+                stacklevel=2,
             )
             self.guardrail_max_retries = self.max_retries
         return self
@@ -532,11 +531,11 @@ class Task(BaseModel):
     def _process_guardrail(self, task_output: TaskOutput) -> GuardrailResult:
         assert self._guardrail is not None
 
-        from crewai.utilities.events import (
+        from crewai.events.event_types import (
             LLMGuardrailCompletedEvent,
             LLMGuardrailStartedEvent,
         )
-        from crewai.utilities.events.crewai_event_bus import crewai_event_bus
+        from crewai.events.event_bus import crewai_event_bus
 
         crewai_event_bus.emit(
             self,

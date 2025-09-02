@@ -7,8 +7,8 @@ from crewai.crew import Crew
 from crewai.memory.short_term.short_term_memory import ShortTermMemory
 from crewai.memory.short_term.short_term_memory_item import ShortTermMemoryItem
 from crewai.task import Task
-from crewai.utilities.events import crewai_event_bus
-from crewai.utilities.events.memory_events import (
+from crewai.events.event_bus import crewai_event_bus
+from crewai.events.types.memory_events import (
     MemorySaveStartedEvent,
     MemorySaveCompletedEvent,
     MemoryQueryStartedEvent,

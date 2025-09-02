@@ -1,4 +1,4 @@
-from crewai.utilities.events.base_events import BaseEvent
+from crewai.events.base_events import BaseEvent
 from typing import Any, Optional
 
 
