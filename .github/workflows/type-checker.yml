@@ -7,7 +7,7 @@ permissions:
 
 jobs:
   type-checker:
-    name: type-check (Python ${{ matrix.python-version }})
+    name: type-checker (Python ${{ matrix.python-version }})
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
