@@ -281,10 +281,9 @@ class TestEnterpriseActionToolSchemaConversion(unittest.TestCase):
         call_args = mock_post.call_args
         payload = call_args[1]["json"]
 
-        self.assertEqual(payload["action"], "GMAIL_SEARCH_FOR_EMAIL")
-        self.assertIn("filterCriteria", payload["parameters"])
-        self.assertIn("options", payload["parameters"])
-        self.assertEqual(payload["parameters"]["filterCriteria"]["operation"], "OR")
+        self.assertIn("filterCriteria", payload)
+        self.assertIn("options", payload)
+        self.assertEqual(payload["filterCriteria"]["operation"], "OR")
 
     def test_model_naming_convention(self):
         """Test that generated model names follow proper conventions."""
