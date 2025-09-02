@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from io import StringIO
 from typing import Any, Dict
 
@@ -7,8 +9,8 @@ from crewai.task import Task
 from crewai.telemetry.telemetry import Telemetry
 from crewai.utilities import Logger
 from crewai.utilities.constants import EMITTER_COLOR
-from crewai.utilities.events.base_event_listener import BaseEventListener
-from crewai.utilities.events.knowledge_events import (
+from crewai.events.base_event_listener import BaseEventListener
+from crewai.events.types.knowledge_events import (
     KnowledgeQueryCompletedEvent,
     KnowledgeQueryFailedEvent,
     KnowledgeQueryStartedEvent,
@@ -16,28 +18,30 @@ from crewai.utilities.events.knowledge_events import (
     KnowledgeRetrievalStartedEvent,
     KnowledgeSearchQueryFailedEvent,
 )
-from crewai.utilities.events.llm_events import (
+from crewai.events.types.llm_events import (
     LLMCallCompletedEvent,
     LLMCallFailedEvent,
     LLMCallStartedEvent,
     LLMStreamChunkEvent,
 )
-from crewai.utilities.events.llm_guardrail_events import (
+from crewai.events.types.llm_guardrail_events import (
     LLMGuardrailStartedEvent,
     LLMGuardrailCompletedEvent,
 )
-from crewai.utilities.events.utils.console_formatter import ConsoleFormatter
+from crewai.events.utils.console_formatter import ConsoleFormatter
 
-from .agent_events import (
+from crewai.events.types.agent_events import (
     AgentExecutionCompletedEvent,
     AgentExecutionStartedEvent,
-    AgentLogsStartedEvent,
-    AgentLogsExecutionEvent,
     LiteAgentExecutionCompletedEvent,
     LiteAgentExecutionErrorEvent,
     LiteAgentExecutionStartedEvent,
 )
-from .crew_events import (
+from crewai.events.types.logging_events import (
+    AgentLogsStartedEvent,
+    AgentLogsExecutionEvent,
+)
+from crewai.events.types.crew_events import (
     CrewKickoffCompletedEvent,
     CrewKickoffFailedEvent,
     CrewKickoffStartedEvent,
@@ -49,7 +53,7 @@ from .crew_events import (
     CrewTrainFailedEvent,
     CrewTrainStartedEvent,
 )
-from .flow_events import (
+from .types.flow_events import (
     FlowCreatedEvent,
     FlowFinishedEvent,
     FlowStartedEvent,
@@ -57,13 +61,13 @@ from .flow_events import (
     MethodExecutionFinishedEvent,
     MethodExecutionStartedEvent,
 )
-from .task_events import TaskCompletedEvent, TaskFailedEvent, TaskStartedEvent
-from .tool_usage_events import (
+from .types.task_events import TaskCompletedEvent, TaskFailedEvent, TaskStartedEvent
+from .types.tool_usage_events import (
     ToolUsageErrorEvent,
     ToolUsageFinishedEvent,
     ToolUsageStartedEvent,
 )
-from .reasoning_events import (
+from .types.reasoning_events import (
     AgentReasoningStartedEvent,
     AgentReasoningCompletedEvent,
     AgentReasoningFailedEvent,
@@ -162,7 +166,7 @@ class EventListener(BaseEventListener):
             span = self._telemetry.task_started(crew=source.agent.crew, task=source)
             self.execution_spans[source] = span
             # Pass both task ID and task name (if set)
-            task_name = source.name if hasattr(source, 'name') and source.name else None
+            task_name = source.name if hasattr(source, "name") and source.name else None
             self.formatter.create_task_branch(
                 self.formatter.current_crew_tree, source.id, task_name
             )
@@ -176,13 +180,13 @@ class EventListener(BaseEventListener):
             self.execution_spans[source] = None
 
             # Pass task name if it exists
-            task_name = source.name if hasattr(source, 'name') and source.name else None
+            task_name = source.name if hasattr(source, "name") and source.name else None
             self.formatter.update_task_status(
                 self.formatter.current_crew_tree,
                 source.id,
                 source.agent.role,
                 "completed",
-                task_name
+                task_name,
             )
 
         @crewai_event_bus.on(TaskFailedEvent)
@@ -194,13 +198,13 @@ class EventListener(BaseEventListener):
                 self.execution_spans[source] = None
 
             # Pass task name if it exists
-            task_name = source.name if hasattr(source, 'name') and source.name else None
+            task_name = source.name if hasattr(source, "name") and source.name else None
             self.formatter.update_task_status(
                 self.formatter.current_crew_tree,
                 source.id,
                 source.agent.role,
                 "failed",
-                task_name
+                task_name,
             )
 
         # ----------- AGENT EVENTS -----------

@@ -27,19 +27,17 @@ from crewai.tasks.conditional_task import ConditionalTask
 from crewai.tasks.output_format import OutputFormat
 from crewai.tasks.task_output import TaskOutput
 from crewai.types.usage_metrics import UsageMetrics
-from crewai.utilities.events import (
-    CrewTrainCompletedEvent,
-    CrewTrainStartedEvent,
-    crewai_event_bus,
-)
-from crewai.utilities.events.crew_events import (
+from crewai.events.event_bus import crewai_event_bus
+from crewai.events.types.crew_events import (
     CrewTestCompletedEvent,
     CrewTestStartedEvent,
+    CrewTrainCompletedEvent,
+    CrewTrainStartedEvent,
 )
 from crewai.utilities.rpm_controller import RPMController
 from crewai.utilities.task_output_storage_handler import TaskOutputStorageHandler
 
-from crewai.utilities.events.memory_events import (
+from crewai.events.types.memory_events import (
     MemorySaveStartedEvent,
     MemorySaveCompletedEvent,
     MemorySaveFailedEvent,

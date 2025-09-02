@@ -62,13 +62,13 @@ from crewai.utilities.agent_utils import (
     render_text_description_and_args,
 )
 from crewai.utilities.converter import generate_model_description
-from crewai.utilities.events.agent_events import (
-    AgentLogsExecutionEvent,
+from crewai.events.types.logging_events import AgentLogsExecutionEvent
+from crewai.events.types.agent_events import (
     LiteAgentExecutionCompletedEvent,
     LiteAgentExecutionErrorEvent,
     LiteAgentExecutionStartedEvent,
 )
-from crewai.utilities.events.crewai_event_bus import crewai_event_bus
+from crewai.events.event_bus import crewai_event_bus
 
 from crewai.utilities.llm_utils import create_llm
 from crewai.utilities.printer import Printer
