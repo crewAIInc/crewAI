@@ -1,11 +1,12 @@
 import os
-from typing import Any, Dict, List
 import re
 from collections import defaultdict
+from typing import Any
+
 from mem0 import Memory, MemoryClient
-from crewai.utilities.chromadb import sanitize_collection_name
 
 from crewai.memory.storage.interface import Storage
+from crewai.utilities.chromadb import sanitize_collection_name
 
 MAX_AGENT_ID_LENGTH_MEM0 = 255
 
@@ -87,7 +88,7 @@ class Mem0Storage(Storage):
 
         return filter
 
-    def save(self, value: Any, metadata: Dict[str, Any]) -> None:
+    def save(self, value: Any, metadata: dict[str, Any]) -> None:
         conversations = []
 
         if messages := metadata.get("messages"):    
@@ -143,7 +144,7 @@ class Mem0Storage(Storage):
 
         self.memory.add(conversations, **params)
 
-    def search(self,query: str,limit: int = 3,score_threshold: float = 0.35) -> List[Any]:
+    def search(self,query: str,limit: int = 3,score_threshold: float = 0.35) -> list[Any]:
         params = {
             "query": query,
             "limit": limit,
