@@ -6,8 +6,8 @@ permissions:
   contents: write
 
 jobs:
-  type-checker:
-    name: type-checker (Python ${{ matrix.python-version }})
+  type-checker-matrix:
+    name: type-checker (${{ matrix.python-version }})
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -65,3 +65,19 @@ jobs:
       - name: No files to check
         if: steps.changed-files.outputs.has_changes == 'false'
         run: echo "No Python files in src/ or tests/ were modified - skipping type checks"
+
+  # Summary job to provide single status for branch protection
+  type-checker:
+    name: type-checker
+    runs-on: ubuntu-latest
+    needs: type-checker-matrix
+    if: always()
+    steps:
+      - name: Check matrix results
+        run: |
+          if [ "${{ needs.type-checker-matrix.result }}" == "success" ] || [ "${{ needs.type-checker-matrix.result }}" == "skipped" ]; then
+            echo "✅ All type checks passed"
+          else
+            echo "❌ Type checks failed"
+            exit 1
+          fi
