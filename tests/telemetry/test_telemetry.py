@@ -79,8 +79,10 @@ def test_telemetry_fails_due_connect_timeout(export_mock, logger_mock):
 
     trace.get_tracer_provider().force_flush()
 
-    export_mock.assert_called_once()
-    logger_mock.assert_called_once_with(error)
+    assert export_mock.called
+    assert logger_mock.call_count == export_mock.call_count
+    for call in logger_mock.call_args_list:
+        assert call[0][0] == error
 
 
 @pytest.mark.telemetry

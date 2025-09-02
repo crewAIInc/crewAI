@@ -311,7 +311,7 @@ class LLM(BaseLLM):
         api_base: Optional[str] = None,
         api_version: Optional[str] = None,
         api_key: Optional[str] = None,
-        callbacks: List[Any] = [],
+        callbacks: List[Any] | None = None,
         reasoning_effort: Optional[Literal["none", "low", "medium", "high"]] = None,
         stream: bool = False,
         **kwargs,
@@ -351,7 +351,7 @@ class LLM(BaseLLM):
         else:
             self.stop = stop
 
-        self.set_callbacks(callbacks)
+        self.set_callbacks(callbacks or [])
         self.set_env_callbacks()
 
     def _is_anthropic_model(self, model: str) -> bool:
@@ -851,7 +851,9 @@ class LLM(BaseLLM):
             return tool_calls
 
         # --- 7) Handle tool calls if present
-        tool_result = self._handle_tool_call(tool_calls, available_functions)
+        tool_result = self._handle_tool_call(
+            tool_calls, available_functions, from_task, from_agent
+        )
         if tool_result is not None:
             return tool_result
         # --- 8) If tool call handling didn't return a result, emit completion event and return text response
@@ -868,6 +870,8 @@ class LLM(BaseLLM):
         self,
         tool_calls: List[Any],
         available_functions: Optional[Dict[str, Any]] = None,
+        from_task: Optional[Any] = None,
+        from_agent: Optional[Any] = None,
     ) -> Optional[str]:
         """Handle a tool call from the LLM.
 
@@ -902,6 +906,8 @@ class LLM(BaseLLM):
                     event=ToolUsageStartedEvent(
                         tool_name=function_name,
                         tool_args=function_args,
+                        from_agent=from_agent,
+                        from_task=from_task,
                     ),
                 )
 
@@ -914,12 +920,17 @@ class LLM(BaseLLM):
                         tool_args=function_args,
                         started_at=started_at,
                         finished_at=datetime.now(),
+                        from_task=from_task,
+                        from_agent=from_agent,
                     ),
                 )
 
                 # --- 3.3) Emit success event
                 self._handle_emit_call_events(
-                    response=result, call_type=LLMCallType.TOOL_CALL
+                    response=result,
+                    call_type=LLMCallType.TOOL_CALL,
+                    from_task=from_task,
+                    from_agent=from_agent,
                 )
                 return result
             except Exception as e:
@@ -939,6 +950,8 @@ class LLM(BaseLLM):
                         tool_name=function_name,
                         tool_args=function_args,
                         error=f"Tool execution error: {str(e)}",
+                        from_task=from_task,
+                        from_agent=from_agent,
                     ),
                 )
         return None
@@ -1139,7 +1152,11 @@ class LLM(BaseLLM):
 
         # TODO: Remove this code after merging PR https://github.com/BerriAI/litellm/pull/10917
         # Ollama doesn't supports last message to be 'assistant'
-        if "ollama" in self.model.lower() and messages and messages[-1]["role"] == "assistant":
+        if (
+            "ollama" in self.model.lower()
+            and messages
+            and messages[-1]["role"] == "assistant"
+        ):
             return messages + [{"role": "user", "content": ""}]
 
         # Handle Anthropic models

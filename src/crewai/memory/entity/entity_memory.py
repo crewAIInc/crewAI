@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Any
 import time
 
 from pydantic import PrivateAttr
@@ -24,7 +24,7 @@ class EntityMemory(Memory):
     Inherits from the Memory class.
     """
 
-    _memory_provider: Optional[str] = PrivateAttr()
+    _memory_provider: str | None = PrivateAttr()
 
     def __init__(self, crew=None, embedder_config=None, storage=None, path=None):
         memory_provider = embedder_config.get("provider") if embedder_config else None
@@ -35,7 +35,7 @@ class EntityMemory(Memory):
                 raise ImportError(
                     "Mem0 is not installed. Please install it with `pip install mem0ai`."
                 )
-            config = embedder_config.get("config")
+            config = embedder_config.get("config") if embedder_config else None
             storage = Mem0Storage(type="short_term", crew=crew, config=config)
         else:
             storage = (
@@ -53,47 +53,99 @@ class EntityMemory(Memory):
         super().__init__(storage=storage)
         self._memory_provider = memory_provider
 
-    def save(self, item: EntityMemoryItem) -> None:  # type: ignore # BUG?: Signature of "save" incompatible with supertype "Memory"
-        """Saves an entity item into the SQLite storage."""
+    def save(
+        self,
+        value: EntityMemoryItem | list[EntityMemoryItem],
+        metadata: dict[str, Any] | None = None,
+    ) -> None:
+        """Saves one or more entity items into the SQLite storage.
+
+        Args:
+            value: Single EntityMemoryItem or list of EntityMemoryItems to save.
+            metadata: Optional metadata dict (included for supertype compatibility but not used).
+
+        Notes:
+            The metadata parameter is included to satisfy the supertype signature but is not
+            used - entity metadata is extracted from the EntityMemoryItem objects themselves.
+        """
+
+        if not value:
+            return
+
+        items = value if isinstance(value, list) else [value]
+        is_batch = len(items) > 1
+
+        metadata = {"entity_count": len(items)} if is_batch else items[0].metadata
         crewai_event_bus.emit(
             self,
             event=MemorySaveStartedEvent(
-                metadata=item.metadata,
+                metadata=metadata,
                 source_type="entity_memory",
+                from_agent=self.agent,
+                from_task=self.task,
             ),
         )
 
         start_time = time.time()
+        saved_count = 0
+        errors = []
+
         try:
-            if self._memory_provider == "mem0":
-                data = f"""
-                Remember details about the following entity:
-                Name: {item.name}
-                Type: {item.type}
-                Entity Description: {item.description}
-                """
+            for item in items:
+                try:
+                    if self._memory_provider == "mem0":
+                        data = f"""
+                        Remember details about the following entity:
+                        Name: {item.name}
+                        Type: {item.type}
+                        Entity Description: {item.description}
+                        """
+                    else:
+                        data = f"{item.name}({item.type}): {item.description}"
+
+                    super().save(data, item.metadata)
+                    saved_count += 1
+                except Exception as e:
+                    errors.append(f"{item.name}: {str(e)}")
+
+            if is_batch:
+                emit_value = f"Saved {saved_count} entities"
+                metadata = {"entity_count": saved_count, "errors": errors}
             else:
-                data = f"{item.name}({item.type}): {item.description}"
+                emit_value = f"{items[0].name}({items[0].type}): {items[0].description}"
+                metadata = items[0].metadata
 
-            super().save(data, item.metadata)
-
-            # Emit memory save completed event
             crewai_event_bus.emit(
                 self,
                 event=MemorySaveCompletedEvent(
-                    value=data,
-                    metadata=item.metadata,
+                    value=emit_value,
+                    metadata=metadata,
                     save_time_ms=(time.time() - start_time) * 1000,
                     source_type="entity_memory",
+                    from_agent=self.agent,
+                    from_task=self.task,
                 ),
             )
+
+            if errors:
+                raise Exception(
+                    f"Partial save: {len(errors)} failed out of {len(items)}"
+                )
+
         except Exception as e:
+            fail_metadata = (
+                {"entity_count": len(items), "saved": saved_count}
+                if is_batch
+                else items[0].metadata
+            )
             crewai_event_bus.emit(
                 self,
                 event=MemorySaveFailedEvent(
-                    metadata=item.metadata,
+                    metadata=fail_metadata,
                     error=str(e),
                     source_type="entity_memory",
+                    from_agent=self.agent,
+                    from_task=self.task,
                 ),
             )
             raise
@@ -111,6 +163,8 @@ class EntityMemory(Memory):
                 limit=limit,
                 score_threshold=score_threshold,
                 source_type="entity_memory",
+                from_agent=self.agent,
+                from_task=self.task,
             ),
         )
 
@@ -129,6 +183,8 @@ class EntityMemory(Memory):
                     score_threshold=score_threshold,
                     query_time_ms=(time.time() - start_time) * 1000,
                     source_type="entity_memory",
+                    from_agent=self.agent,
+                    from_task=self.task,
                 ),
             )
 

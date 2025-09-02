@@ -21,13 +21,17 @@ To use the training feature, follow these steps:
 3. Run the following command:
 
 ```shell
-crewai train -n <n_iterations> <filename> (optional)
+crewai train -n <n_iterations> -f <filename.pkl>
 ```
 <Tip>
   Replace `<n_iterations>` with the desired number of training iterations and `<filename>` with the appropriate filename ending with `.pkl`.
 </Tip>
 
-### Training Your Crew Programmatically
+<Note>
+  If you omit `-f`, the output defaults to `trained_agents_data.pkl` in the current working directory. You can pass an absolute path to control where the file is written.
+</Note>
+
+### Training your Crew programmatically
 
 To train your crew programmatically, use the following steps:
 
@@ -51,19 +55,65 @@ except Exception as e:
     raise Exception(f"An error occurred while training the crew: {e}")
 ```
 
-### Key Points to Note
+## How trained data is used by agents
 
-- **Positive Integer Requirement:** Ensure that the number of iterations (`n_iterations`) is a positive integer. The code will raise a `ValueError` if this condition is not met.
-- **Filename Requirement:** Ensure that the filename ends with `.pkl`. The code will raise a `ValueError` if this condition is not met.
-- **Error Handling:** The code handles subprocess errors and unexpected exceptions, providing error messages to the user.
+CrewAI uses the training artifacts in two ways: during training to incorporate your human feedback, and after training to guide agents with consolidated suggestions.
 
-It is important to note that the training process may take some time, depending on the complexity of your agents and will also require your feedback on each iteration.
+### Training data flow
 
-Once the training is complete, your agents will be equipped with enhanced capabilities and knowledge, ready to tackle complex tasks and provide more consistent and valuable insights.
+```mermaid
+flowchart TD
+  A["Start training<br/>CLI: crewai train -n -f<br/>or Python: crew.train(...)"] --> B["Setup training mode<br/>- task.human_input = true<br/>- disable delegation<br/>- init training_data.pkl + trained file"]
 
-Remember to regularly update and retrain your agents to ensure they stay up-to-date with the latest information and advancements in the field.
+  subgraph "Iterations"
+    direction LR
+    C["Iteration i<br/>initial_output"] --> D["User human_feedback"]
+    D --> E["improved_output"]
+    E --> F["Append to training_data.pkl<br/>by agent_id and iteration"]
+  end
 
-Happy training with CrewAI! 🚀
+  B --> C
+  F --> G{"More iterations?"}
+  G -- "Yes" --> C
+  G -- "No" --> H["Evaluate per agent<br/>aggregate iterations"]
+
+  H --> I["Consolidate<br/>suggestions[] + quality + final_summary"]
+  I --> J["Save by agent role to trained file<br/>(default: trained_agents_data.pkl)"]
+
+  J --> K["Normal (non-training) runs"]
+  K --> L["Auto-load suggestions<br/>from trained_agents_data.pkl"]
+  L --> M["Append to prompt<br/>for consistent improvements"]
+```
+
+### During training runs
+
+- On each iteration, the system records for every agent:
+  - `initial_output`: the agent’s first answer
+  - `human_feedback`: your inline feedback when prompted
+  - `improved_output`: the agent’s follow-up answer after feedback
+- This data is stored in a working file named `training_data.pkl` keyed by the agent’s internal ID and iteration.
+- While training is active, the agent automatically appends your prior human feedback to its prompt to enforce those instructions on subsequent attempts within the training session.
+  Training is interactive: tasks set `human_input = true`, so running in a non-interactive environment will block on user input.
+
+### After training completes
+
+- When `train(...)` finishes, CrewAI evaluates the collected training data per agent and produces a consolidated result containing:
+  - `suggestions`: clear, actionable instructions distilled from your feedback and the difference between initial/improved outputs
+  - `quality`: a 0–10 score capturing improvement
+  - `final_summary`: a step-by-step set of action items for future tasks
+- These consolidated results are saved to the filename you pass to `train(...)` (default via CLI is `trained_agents_data.pkl`). Entries are keyed by the agent’s `role` so they can be applied across sessions.
+- During normal (non-training) execution, each agent automatically loads its consolidated `suggestions` and appends them to the task prompt as mandatory instructions. This gives you consistent improvements without changing your agent definitions.
+
+### File summary
+
+- `training_data.pkl` (ephemeral, per-session):
+  - Structure: `agent_id -> { iteration_number: { initial_output, human_feedback, improved_output } }`
+  - Purpose: capture raw data and human feedback during training
+  - Location: saved in the current working directory (CWD)
+- `trained_agents_data.pkl` (or your custom filename):
+  - Structure: `agent_role -> { suggestions: string[], quality: number, final_summary: string }`
+  - Purpose: persist consolidated guidance for future runs
+  - Location: written to the CWD by default; use `-f` to set a custom (including absolute) path
 
 ## Small Language Model Considerations
 
@@ -129,3 +179,18 @@ Happy training with CrewAI! 🚀
     </Warning>
   </Tab>
 </Tabs>
+
+### Key Points to Note
+
+- **Positive Integer Requirement:** Ensure that the number of iterations (`n_iterations`) is a positive integer. The code will raise a `ValueError` if this condition is not met.
+- **Filename Requirement:** Ensure that the filename ends with `.pkl`. The code will raise a `ValueError` if this condition is not met.
+- **Error Handling:** The code handles subprocess errors and unexpected exceptions, providing error messages to the user.
+- Trained guidance is applied at prompt time; it does not modify your Python/YAML agent configuration.
+- Agents automatically load trained suggestions from a file named `trained_agents_data.pkl` located in the current working directory. If you trained to a different filename, either rename it to `trained_agents_data.pkl` before running, or adjust the loader in code.
+- You can change the output filename when calling `crewai train` with `-f/--filename`. Absolute paths are supported if you want to save outside the CWD.
+
+It is important to note that the training process may take some time, depending on the complexity of your agents and will also require your feedback on each iteration.
+
+Once the training is complete, your agents will be equipped with enhanced capabilities and knowledge, ready to tackle complex tasks and provide more consistent and valuable insights.
+
+Remember to regularly update and retrain your agents to ensure they stay up-to-date with the latest information and advancements in the field.

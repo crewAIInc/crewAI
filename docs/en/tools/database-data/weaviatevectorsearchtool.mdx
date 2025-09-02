@@ -1,13 +1,13 @@
 ---
 title: Weaviate Vector Search
-description: The `WeaviateVectorSearchTool` is designed to search a Weaviate vector database for semantically similar documents.
+description: The `WeaviateVectorSearchTool` is designed to search a Weaviate vector database for semantically similar documents using hybrid search.
 icon: network-wired
 ---
 
 ## Overview
 
 
-The `WeaviateVectorSearchTool` is specifically crafted for conducting semantic searches within documents stored in a Weaviate vector database. This tool allows you to find semantically similar documents to a given query, leveraging the power of vector embeddings for more accurate and contextually relevant search results.
+The `WeaviateVectorSearchTool` is specifically crafted for conducting semantic searches within documents stored in a Weaviate vector database. This tool allows you to find semantically similar documents to a given query, leveraging the power of vector and keyword search for more accurate and contextually relevant search results.
 
 [Weaviate](https://weaviate.io/) is a vector database that stores and queries vector embeddings, enabling semantic search capabilities.
 
@@ -39,6 +39,7 @@ from crewai_tools import WeaviateVectorSearchTool
 tool = WeaviateVectorSearchTool(
     collection_name='example_collections',
     limit=3,
+    alpha=0.75,
     weaviate_cluster_url="https://your-weaviate-cluster-url.com",
     weaviate_api_key="your-weaviate-api-key",
 )
@@ -63,6 +64,7 @@ The `WeaviateVectorSearchTool` accepts the following parameters:
 - **weaviate_cluster_url**: Required. The URL of the Weaviate cluster.
 - **weaviate_api_key**: Required. The API key for the Weaviate cluster.
 - **limit**: Optional. The number of results to return. Default is `3`.
+- **alpha**: Optional. Controls the weighting between vector and keyword (BM25) search. alpha = 0 -> BM25 only, alpha = 1 -> vector search only. Default is `0.75`.
 - **vectorizer**: Optional. The vectorizer to use. If not provided, it will use `text2vec_openai` with the `nomic-embed-text` model.
 - **generative_model**: Optional. The generative model to use. If not provided, it will use OpenAI's `gpt-4o`.
 
@@ -78,6 +80,7 @@ from weaviate.classes.config import Configure
 tool = WeaviateVectorSearchTool(
     collection_name='example_collections',
     limit=3,
+    alpha=0.75,
     vectorizer=Configure.Vectorizer.text2vec_openai(model="nomic-embed-text"),
     generative_model=Configure.Generative.openai(model="gpt-4o-mini"),
     weaviate_cluster_url="https://your-weaviate-cluster-url.com",
@@ -128,6 +131,7 @@ with test_docs.batch.dynamic() as batch:
 tool = WeaviateVectorSearchTool(
     collection_name='example_collections', 
     limit=3,
+    alpha=0.75,
     weaviate_cluster_url="https://your-weaviate-cluster-url.com",
     weaviate_api_key="your-weaviate-api-key",
 )
@@ -145,6 +149,7 @@ from crewai_tools import WeaviateVectorSearchTool
 weaviate_tool = WeaviateVectorSearchTool(
     collection_name='example_collections',
     limit=3,
+    alpha=0.75,
     weaviate_cluster_url="https://your-weaviate-cluster-url.com",
     weaviate_api_key="your-weaviate-api-key",
 )

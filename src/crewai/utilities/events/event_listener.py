@@ -161,8 +161,10 @@ class EventListener(BaseEventListener):
         def on_task_started(source, event: TaskStartedEvent):
             span = self._telemetry.task_started(crew=source.agent.crew, task=source)
             self.execution_spans[source] = span
+            # Pass both task ID and task name (if set)
+            task_name = source.name if hasattr(source, 'name') and source.name else None
             self.formatter.create_task_branch(
-                self.formatter.current_crew_tree, source.id
+                self.formatter.current_crew_tree, source.id, task_name
             )
 
         @crewai_event_bus.on(TaskCompletedEvent)
@@ -173,11 +175,14 @@ class EventListener(BaseEventListener):
                 self._telemetry.task_ended(span, source, source.agent.crew)
             self.execution_spans[source] = None
 
+            # Pass task name if it exists
+            task_name = source.name if hasattr(source, 'name') and source.name else None
             self.formatter.update_task_status(
                 self.formatter.current_crew_tree,
                 source.id,
                 source.agent.role,
                 "completed",
+                task_name
             )
 
         @crewai_event_bus.on(TaskFailedEvent)
@@ -188,11 +193,14 @@ class EventListener(BaseEventListener):
                     self._telemetry.task_ended(span, source, source.agent.crew)
                 self.execution_spans[source] = None
 
+            # Pass task name if it exists
+            task_name = source.name if hasattr(source, 'name') and source.name else None
             self.formatter.update_task_status(
                 self.formatter.current_crew_tree,
                 source.id,
                 source.agent.role,
                 "failed",
+                task_name
             )
 
         # ----------- AGENT EVENTS -----------
