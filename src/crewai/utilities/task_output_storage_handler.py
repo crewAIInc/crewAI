@@ -10,8 +10,10 @@ from crewai.task import Task
 
 """Handles storage and retrieval of task execution outputs."""
 
+
 class ExecutionLog(BaseModel):
     """Represents a log entry for task execution."""
+
     task_id: str
     expected_output: Optional[str] = None
     output: Dict[str, Any]
@@ -25,6 +27,7 @@ class ExecutionLog(BaseModel):
 
 
 """Manages storage and retrieval of task outputs."""
+
 
 class TaskOutputStorageHandler:
     def __init__(self) -> None:
@@ -55,9 +58,10 @@ class TaskOutputStorageHandler:
         task: Task,
         output: Dict[str, Any],
         task_index: int,
-        inputs: Dict[str, Any] = {},
+        inputs: Dict[str, Any] | None = None,
         was_replayed: bool = False,
     ):
+        inputs = inputs or {}
         self.storage.add(task, output, task_index, was_replayed, inputs)
 
     def reset(self):

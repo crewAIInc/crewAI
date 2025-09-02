@@ -681,11 +681,11 @@ O CrewAI emite eventos durante o processo de recuperação de knowledge que voc�
 #### Exemplo: Monitorando Recuperação de Knowledge
 
 ```python
-from crewai.utilities.events import (
+from crewai.events import (
     KnowledgeRetrievalStartedEvent,
     KnowledgeRetrievalCompletedEvent,
+    BaseEventListener,
 )
-from crewai.utilities.events.base_event_listener import BaseEventListener
 
 class KnowledgeMonitorListener(BaseEventListener):
     def setup_listeners(self, crewai_event_bus):

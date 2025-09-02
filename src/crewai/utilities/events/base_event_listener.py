@@ -1,16 +1,13 @@
-from abc import ABC, abstractmethod
-from logging import Logger
+"""Backwards compatibility stub for crewai.utilities.events.base_event_listener."""
 
-from crewai.utilities.events.crewai_event_bus import CrewAIEventsBus, crewai_event_bus
+import warnings
+from crewai.events import BaseEventListener
 
+warnings.warn(
+    "Importing from 'crewai.utilities.events.base_event_listener' is deprecated and will be removed in v1.0.0. "
+    "Please use 'from crewai.events import BaseEventListener' instead.",
+    DeprecationWarning,
+    stacklevel=2,
+)
 
-class BaseEventListener(ABC):
-    verbose: bool = False
-
-    def __init__(self):
-        super().__init__()
-        self.setup_listeners(crewai_event_bus)
-
-    @abstractmethod
-    def setup_listeners(self, crewai_event_bus: CrewAIEventsBus):
-        pass
+__all__ = ["BaseEventListener"]

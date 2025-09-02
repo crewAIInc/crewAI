@@ -7,7 +7,7 @@ from crewai.utilities import I18N
 from crewai.utilities.converter import ConverterError
 from crewai.utilities.evaluators.task_evaluator import TaskEvaluator
 from crewai.utilities.printer import Printer
-from crewai.utilities.events.event_listener import event_listener
+from crewai.events.event_listener import event_listener
 
 if TYPE_CHECKING:
     from crewai.agents.agent_builder.base_agent import BaseAgent

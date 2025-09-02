@@ -4,8 +4,8 @@ import time
 from crewai.memory.external.external_memory_item import ExternalMemoryItem
 from crewai.memory.memory import Memory
 from crewai.memory.storage.interface import Storage
-from crewai.utilities.events.crewai_event_bus import crewai_event_bus
-from crewai.utilities.events.memory_events import (
+from crewai.events.event_bus import crewai_event_bus
+from crewai.events.types.memory_events import (
     MemoryQueryStartedEvent,
     MemoryQueryCompletedEvent,
     MemoryQueryFailedEvent,
