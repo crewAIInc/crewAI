@@ -1,7 +1,7 @@
 import os
 import json
 import requests
-import logging
+import warnings
 from typing import List, Any, Dict, Literal, Optional, Union, get_origin, Type, cast
 from pydantic import Field, create_model
 from crewai.tools import BaseTool
@@ -409,8 +409,10 @@ class EnterpriseActionKitToolAdapter:
 
     def _set_enterprise_action_token(self, enterprise_action_token: Optional[str]):
         if enterprise_action_token and not enterprise_action_token.startswith("PK_"):
-            logging.warning(
-                "Legacy token detected, please consider using the new Enterprise Action Auth token. Check out our docs for more information https://docs.crewai.com/en/enterprise/features/integrations."
+            warnings.warn(
+                "Legacy token detected, please consider using the new Enterprise Action Auth token. Check out our docs for more information https://docs.crewai.com/en/enterprise/features/integrations.",
+                DeprecationWarning,
+                stacklevel=2
             )
 
         token = enterprise_action_token or os.environ.get("CREWAI_ENTERPRISE_TOOLS_TOKEN")
