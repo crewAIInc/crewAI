@@ -41,18 +41,18 @@ jobs:
           echo "Fetching changed files..."
           git diff --name-only --diff-filter=ACMRT origin/${{ github.base_ref }}...HEAD -- '*.py' > changed_files.txt
           
-          # Filter for files in src/ directory
-          grep "^src/" changed_files.txt > src_changed_files.txt || true
+          # Filter for files in src/ and tests/ directories
+          grep -E "^(src/|tests/)" changed_files.txt > filtered_changed_files.txt || true
           
           # Check if there are any changed files
-          if [ -s src_changed_files.txt ]; then
-            echo "Changed Python files in src/:"
-            cat src_changed_files.txt
+          if [ -s filtered_changed_files.txt ]; then
+            echo "Changed Python files in src/ and tests/:"
+            cat filtered_changed_files.txt
             echo "has_changes=true" >> $GITHUB_OUTPUT
             # Convert newlines to spaces for mypy command
-            echo "files=$(cat src_changed_files.txt | tr '\n' ' ')" >> $GITHUB_OUTPUT
+            echo "files=$(cat filtered_changed_files.txt | tr '\n' ' ')" >> $GITHUB_OUTPUT
           else
-            echo "No Python files changed in src/"
+            echo "No Python files changed in src/ or tests/"
             echo "has_changes=false" >> $GITHUB_OUTPUT
           fi
 
@@ -64,4 +64,4 @@ jobs:
 
       - name: No files to check
         if: steps.changed-files.outputs.has_changes == 'false'
-        run: echo "No Python files in src/ were modified - skipping type checks"
+        run: echo "No Python files in src/ or tests/ were modified - skipping type checks"
