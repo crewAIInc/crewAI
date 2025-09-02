@@ -1,5 +1,4 @@
-from typing import Any, Optional, Union
-from typing import Dict, List
+from typing import Any, Dict, List, Optional, Union
 from collections.abc import Callable
 
 from crewai.agents.agent_builder.base_agent import BaseAgent
