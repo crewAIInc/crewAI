@@ -53,7 +53,7 @@
 
 ### Fast and Flexible Multi-Agent Automation Framework
 
-> CrewAI is a lean, lightning-fast Python framework built entirely from scratch—completely **independent of LangChain or other agent frameworks**.
+> CrewAI is a lean, lightning-fast Python framework  and built entirely from scratch—completely **independent of LangChain or other agent frameworks**.
 > It empowers developers with both high-level simplicity and precise low-level control, ideal for creating autonomous AI agents tailored to any scenario.
 
 - **CrewAI Crews**: Optimize for autonomy and collaborative intelligence.
