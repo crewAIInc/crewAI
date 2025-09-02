@@ -3,8 +3,8 @@ import uuid
 
 from typing import Dict, Any, Optional
 
-from crewai.utilities.events.base_event_listener import BaseEventListener
-from crewai.utilities.events.agent_events import (
+from crewai.events.base_event_listener import BaseEventListener
+from crewai.events.types.agent_events import (
     AgentExecutionCompletedEvent,
     AgentExecutionStartedEvent,
     LiteAgentExecutionStartedEvent,
@@ -12,34 +12,34 @@ from crewai.utilities.events.agent_events import (
     LiteAgentExecutionErrorEvent,
     AgentExecutionErrorEvent,
 )
-from crewai.utilities.events.listeners.tracing.types import TraceEvent
-from crewai.utilities.events.reasoning_events import (
+from crewai.events.listeners.tracing.types import TraceEvent
+from crewai.events.types.reasoning_events import (
     AgentReasoningStartedEvent,
     AgentReasoningCompletedEvent,
     AgentReasoningFailedEvent,
 )
-from crewai.utilities.events.crew_events import (
+from crewai.events.types.crew_events import (
     CrewKickoffCompletedEvent,
     CrewKickoffFailedEvent,
     CrewKickoffStartedEvent,
 )
-from crewai.utilities.events.task_events import (
+from crewai.events.types.task_events import (
     TaskCompletedEvent,
     TaskFailedEvent,
     TaskStartedEvent,
 )
-from crewai.utilities.events.tool_usage_events import (
+from crewai.events.types.tool_usage_events import (
     ToolUsageErrorEvent,
     ToolUsageFinishedEvent,
     ToolUsageStartedEvent,
 )
-from crewai.utilities.events.llm_events import (
+from crewai.events.types.llm_events import (
     LLMCallCompletedEvent,
     LLMCallFailedEvent,
     LLMCallStartedEvent,
 )
 
-from crewai.utilities.events.flow_events import (
+from crewai.events.types.flow_events import (
     FlowCreatedEvent,
     FlowStartedEvent,
     FlowFinishedEvent,
@@ -48,7 +48,7 @@ from crewai.utilities.events.flow_events import (
     MethodExecutionFailedEvent,
     FlowPlotEvent,
 )
-from crewai.utilities.events.llm_guardrail_events import (
+from crewai.events.types.llm_guardrail_events import (
     LLMGuardrailStartedEvent,
     LLMGuardrailCompletedEvent,
 )
@@ -57,7 +57,7 @@ from crewai.utilities.serialization import to_serializable
 
 from .trace_batch_manager import TraceBatchManager
 
-from crewai.utilities.events.memory_events import (
+from crewai.events.types.memory_events import (
     MemoryQueryStartedEvent,
     MemoryQueryCompletedEvent,
     MemoryQueryFailedEvent,

@@ -1,10 +1,6 @@
-from typing import TYPE_CHECKING, Any
+from crewai.events.base_events import BaseEvent
 
 from crewai.agents.agent_builder.base_agent import BaseAgent
-from crewai.utilities.events.base_events import BaseEvent
-
-if TYPE_CHECKING:
-    from crewai.agents.agent_builder.base_agent import BaseAgent
 
 
 class KnowledgeRetrievalStartedEvent(BaseEvent):
@@ -20,7 +16,7 @@ class KnowledgeRetrievalCompletedEvent(BaseEvent):
     query: str
     type: str = "knowledge_search_query_completed"
     agent: BaseAgent
-    retrieved_knowledge: Any
+    retrieved_knowledge: str
 
 
 class KnowledgeQueryStartedEvent(BaseEvent):

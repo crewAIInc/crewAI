@@ -733,10 +733,10 @@ CrewAI supports streaming responses from LLMs, allowing your application to rece
     CrewAI emits events for each chunk received during streaming:
 
     ```python
-    from crewai.utilities.events import (
+    from crewai.events import (
       LLMStreamChunkEvent
     )
-    from crewai.utilities.events.base_event_listener import BaseEventListener
+    from crewai.events import BaseEventListener
 
     class MyCustomListener(BaseEventListener):
         def setup_listeners(self, crewai_event_bus):
@@ -758,8 +758,8 @@ CrewAI supports streaming responses from LLMs, allowing your application to rece
 
     ```python
     from crewai import LLM, Agent, Task, Crew
-    from crewai.utilities.events import LLMStreamChunkEvent
-    from crewai.utilities.events.base_event_listener import BaseEventListener
+    from crewai.events import LLMStreamChunkEvent
+    from crewai.events import BaseEventListener
 
     class MyCustomListener(BaseEventListener):
         def setup_listeners(self, crewai_event_bus):
