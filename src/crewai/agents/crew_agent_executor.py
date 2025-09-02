@@ -35,6 +35,10 @@ from crewai.events.types.logging_events import (
     AgentLogsExecutionEvent,
 )
 from crewai.events.event_bus import crewai_event_bus
+from crewai.utilities.exceptions import (
+    LLMContextLengthExceededException,
+    LLMQuotaLimitExceededException,
+)
 
 
 class CrewAgentExecutor(CrewAgentExecutorMixin):
@@ -201,6 +205,10 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                     printer=self._printer,
                 )
 
+            except LLMContextLengthExceededException as e:
+                raise e
+            except LLMQuotaLimitExceededException as e:
+                raise e
             except Exception as e:
                 if e.__class__.__module__.startswith("litellm"):
                     # Do not retry on litellm errors

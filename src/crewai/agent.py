@@ -48,6 +48,10 @@ from crewai.events.types.memory_events import (
     MemoryRetrievalStartedEvent,
     MemoryRetrievalCompletedEvent,
 )
+from crewai.utilities.exceptions import (
+    LLMContextLengthExceededException,
+    LLMQuotaLimitExceededException,
+)
 from crewai.events.types.knowledge_events import (
     KnowledgeQueryCompletedEvent,
     KnowledgeQueryFailedEvent,
@@ -452,6 +456,26 @@ class Agent(BaseAgent):
 
         except TimeoutError as e:
             # Propagate TimeoutError without retry
+            crewai_event_bus.emit(
+                self,
+                event=AgentExecutionErrorEvent(
+                    agent=self,
+                    task=task,
+                    error=str(e),
+                ),
+            )
+            raise e
+        except LLMContextLengthExceededException as e:
+            crewai_event_bus.emit(
+                self,
+                event=AgentExecutionErrorEvent(
+                    agent=self,
+                    task=task,
+                    error=str(e),
+                ),
+            )
+            raise e
+        except LLMQuotaLimitExceededException as e:
             crewai_event_bus.emit(
                 self,
                 event=AgentExecutionErrorEvent(

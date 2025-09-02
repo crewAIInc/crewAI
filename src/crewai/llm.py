@@ -35,12 +35,16 @@ from crewai.events.types.tool_usage_events import (
     ToolUsageFinishedEvent,
     ToolUsageErrorEvent,
 )
+from crewai.utilities.exceptions import (
+    LLMContextLengthExceededException,
+    LLMQuotaLimitExceededException,
+)
 
 with warnings.catch_warnings():
     warnings.simplefilter("ignore", UserWarning)
     import litellm
     from litellm import Choices
-    from litellm.exceptions import ContextWindowExceededError
+    from litellm.exceptions import ContextWindowExceededError, RateLimitError
     from litellm.litellm_core_utils.get_supported_openai_params import (
         get_supported_openai_params,
     )
@@ -669,6 +673,10 @@ class LLM(BaseLLM):
             )
             return full_response
 
+        except RateLimitError as e:
+            # Convert litellm's rate limit error to our own exception type
+            # for graceful quota limit handling
+            raise LLMQuotaLimitExceededException(str(e))
         except ContextWindowExceededError as e:
             # Catch context window errors from litellm and convert them to our own exception type.
             # This exception is handled by CrewAgentExecutor._invoke_loop() which can then
@@ -812,6 +820,10 @@ class LLM(BaseLLM):
             # length issues appropriately.
             response = litellm.completion(**params)
 
+        except RateLimitError as e:
+            # Convert litellm's rate limit error to our own exception type
+            # for graceful quota limit handling
+            raise LLMQuotaLimitExceededException(str(e))
         except ContextWindowExceededError as e:
             # Convert litellm's context window error to our own exception type
             # for consistent handling in the rest of the codebase
