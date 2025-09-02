@@ -1,7 +1,7 @@
 from typing import Any, Optional
 
 from crewai.tasks.task_output import TaskOutput
-from crewai.utilities.events.base_events import BaseEvent
+from crewai.events.base_events import BaseEvent
 
 
 class TaskStartedEvent(BaseEvent):
