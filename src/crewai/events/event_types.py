@@ -1,12 +1,12 @@
 from typing import Union
 
-from .agent_events import (
+from crewai.events.types.agent_events import (
     AgentExecutionCompletedEvent,
     AgentExecutionErrorEvent,
     AgentExecutionStartedEvent,
     LiteAgentExecutionCompletedEvent,
 )
-from .crew_events import (
+from .types.crew_events import (
     CrewKickoffCompletedEvent,
     CrewKickoffFailedEvent,
     CrewKickoffStartedEvent,
@@ -17,39 +17,39 @@ from .crew_events import (
     CrewTrainFailedEvent,
     CrewTrainStartedEvent,
 )
-from .flow_events import (
+from .types.flow_events import (
     FlowFinishedEvent,
     FlowStartedEvent,
     MethodExecutionFailedEvent,
     MethodExecutionFinishedEvent,
     MethodExecutionStartedEvent,
 )
-from .llm_events import (
+from .types.llm_events import (
     LLMCallCompletedEvent,
     LLMCallFailedEvent,
     LLMCallStartedEvent,
     LLMStreamChunkEvent,
 )
-from .llm_guardrail_events import (
+from .types.llm_guardrail_events import (
     LLMGuardrailCompletedEvent,
     LLMGuardrailStartedEvent,
 )
-from .task_events import (
+from .types.task_events import (
     TaskCompletedEvent,
     TaskFailedEvent,
     TaskStartedEvent,
 )
-from .tool_usage_events import (
+from .types.tool_usage_events import (
     ToolUsageErrorEvent,
     ToolUsageFinishedEvent,
     ToolUsageStartedEvent,
 )
-from .reasoning_events import (
+from .types.reasoning_events import (
     AgentReasoningStartedEvent,
     AgentReasoningCompletedEvent,
     AgentReasoningFailedEvent,
 )
-from .knowledge_events import (
+from .types.knowledge_events import (
     KnowledgeRetrievalStartedEvent,
     KnowledgeRetrievalCompletedEvent,
     KnowledgeQueryStartedEvent,
@@ -58,7 +58,7 @@ from .knowledge_events import (
     KnowledgeSearchQueryFailedEvent,
 )
 
-from .memory_events import (
+from .types.memory_events import (
     MemorySaveStartedEvent,
     MemorySaveCompletedEvent,
     MemorySaveFailedEvent,
