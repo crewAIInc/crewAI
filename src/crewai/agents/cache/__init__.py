@@ -1,3 +1,5 @@
-from .cache_handler import CacheHandler
+"""Internal caching utilities for agent tool execution.
 
-__all__ = ["CacheHandler"]
+This package provides caching mechanisms for storing and retrieving
+tool execution results to avoid redundant operations.
+"""
