@@ -21,7 +21,7 @@ def _suppress_pydantic_deprecation_warnings() -> None:
             return None
         return original_warn(message, category, stacklevel + 1, source)
 
-    warnings.warn = filtered_warn  # type: ignore[assignment]
+    warnings.warn = filtered_warn
 
 
 _suppress_pydantic_deprecation_warnings()
