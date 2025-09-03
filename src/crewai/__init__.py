@@ -1,18 +1,17 @@
 import warnings
-from collections.abc import Callable
-from typing import Any, Optional
+from typing import Any
 
 
 def _suppress_pydantic_deprecation_warnings() -> None:
-    """Suppress Pydantic deprecation warnings using Pydantic's own warning types."""
-    original_warn: Callable[..., Any] = warnings.warn
+    """Suppress Pydantic deprecation warnings using targeted monkey patch."""
+    original_warn = warnings.warn
 
     def filtered_warn(
         message: Any,
-        category: Optional[type] = None,
+        category: type | None = None,
         stacklevel: int = 1,
-        source: Optional[Any] = None,
-    ) -> Optional[Any]:
+        source: Any = None,
+    ) -> Any:
         if (
             category
             and hasattr(category, "__module__")
@@ -21,7 +20,7 @@ def _suppress_pydantic_deprecation_warnings() -> None:
             return None
         return original_warn(message, category, stacklevel + 1, source)
 
-    warnings.warn = filtered_warn  # type: ignore[assignment]
+    setattr(warnings, "warn", filtered_warn)
 
 
 _suppress_pydantic_deprecation_warnings()
