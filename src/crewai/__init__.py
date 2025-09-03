@@ -1,4 +1,24 @@
 import warnings
+
+
+def _suppress_pydantic_deprecation_warnings():
+    """Suppress Pydantic deprecation warnings using Pydantic's own warning types."""
+    original_warn = warnings.warn
+
+    def filtered_warn(message, category=None, stacklevel=1, source=None):
+        if (
+            category
+            and hasattr(category, "__module__")
+            and category.__module__ == "pydantic.warnings"
+        ):
+            return
+        return original_warn(message, category, stacklevel + 1, source)
+
+    warnings.warn = filtered_warn
+
+
+_suppress_pydantic_deprecation_warnings()
+
 import threading
 import urllib.request
 
@@ -15,13 +35,6 @@ from crewai.tasks.llm_guardrail import LLMGuardrail
 from crewai.tasks.task_output import TaskOutput
 from crewai.telemetry.telemetry import Telemetry
 
-warnings.filterwarnings(
-    "ignore",
-    message="Pydantic serializer warnings:",
-    category=UserWarning,
-    module="pydantic.main",
-)
-
 _telemetry_submitted = False
 
 
@@ -36,7 +49,7 @@ def _track_install():
         pixel_url = "https://api.scarf.sh/v2/packages/CrewAI/crewai/docs/00f2dad1-8334-4a39-934e-003b2e1146db"
 
         req = urllib.request.Request(pixel_url)
-        req.add_header('User-Agent', f'CrewAI-Python/{__version__}')
+        req.add_header("User-Agent", f"CrewAI-Python/{__version__}")
 
         with urllib.request.urlopen(req, timeout=2):  # nosec B310
             _telemetry_submitted = True
