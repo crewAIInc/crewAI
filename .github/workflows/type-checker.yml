@@ -12,13 +12,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ['3.10', '3.11', '3.12', '3.13']
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Fetch all history for proper diff
+          fetch-depth: 0 # Fetch all history for proper diff
 
       - name: Install uv
         uses: astral-sh/setup-uv@v6
@@ -40,10 +40,10 @@ jobs:
           # Get the list of changed Python files compared to the base branch
           echo "Fetching changed files..."
           git diff --name-only --diff-filter=ACMRT origin/${{ github.base_ref }}...HEAD -- '*.py' > changed_files.txt
-          
+
           # Filter for files in src/ and tests/ directories
           grep -E "^(src/|tests/)" changed_files.txt > filtered_changed_files.txt || true
-          
+
           # Check if there are any changed files
           if [ -s filtered_changed_files.txt ]; then
             echo "Changed Python files in src/ and tests/:"
