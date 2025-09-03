@@ -141,6 +141,16 @@ Traces are invaluable for troubleshooting issues with your crews:
   </Step>
 </Steps>
 
+## Performance and batching
+
+CrewAI batches trace uploads to reduce overhead on high-volume runs:
+
+- A TraceBatchManager buffers events and sends them in batches via the Plus API client
+- Reduces network chatter and improves reliability on flaky connections
+- Automatically enabled in the default trace listener; no configuration needed
+
+This yields more stable tracing under load while preserving detailed task/agent telemetry.
+
 <Card title="Need Help?" icon="headset" href="mailto:support@crewai.com">
   Contact our support team for assistance with trace analysis or any other CrewAI Enterprise features.
 </Card>
