@@ -25,8 +25,8 @@ from crewai.flow.flow_visualizer import plot_flow
 from crewai.flow.persistence.base import FlowPersistence
 from crewai.flow.types import FlowExecutionData
 from crewai.flow.utils import get_possible_return_constants
-from crewai.utilities.events.crewai_event_bus import crewai_event_bus
-from crewai.utilities.events.flow_events import (
+from crewai.events.event_bus import crewai_event_bus
+from crewai.events.types.flow_events import (
     FlowCreatedEvent,
     FlowFinishedEvent,
     FlowPlotEvent,
@@ -35,10 +35,10 @@ from crewai.utilities.events.flow_events import (
     MethodExecutionFinishedEvent,
     MethodExecutionStartedEvent,
 )
-from crewai.utilities.events.listeners.tracing.trace_listener import (
+from crewai.events.listeners.tracing.trace_listener import (
     TraceCollectionListener,
 )
-from crewai.utilities.events.listeners.tracing.utils import (
+from crewai.events.listeners.tracing.utils import (
     is_tracing_enabled,
 )
 from crewai.utilities.printer import Printer
@@ -934,12 +934,12 @@ class Flow(Generic[T], metaclass=FlowMeta):
         method = self._methods[start_method_name]
         enhanced_method = self._inject_trigger_payload_for_start_method(method)
 
-        result = await self._execute_method(
-            start_method_name, enhanced_method
-        )
+        result = await self._execute_method(start_method_name, enhanced_method)
         await self._execute_listeners(start_method_name, result)
 
-    def _inject_trigger_payload_for_start_method(self, original_method: Callable) -> Callable:
+    def _inject_trigger_payload_for_start_method(
+        self, original_method: Callable
+    ) -> Callable:
         def prepare_kwargs(*args, **kwargs):
             inputs = baggage.get_baggage("flow_inputs") or {}
             trigger_payload = inputs.get("crewai_trigger_payload")
@@ -952,15 +952,17 @@ class Flow(Generic[T], metaclass=FlowMeta):
             elif trigger_payload is not None:
                 self._log_flow_event(
                     f"Trigger payload available but {original_method.__name__} doesn't accept crewai_trigger_payload parameter",
-                    color="yellow"
+                    color="yellow",
                 )
             return args, kwargs
 
         if asyncio.iscoroutinefunction(original_method):
+
             async def enhanced_method(*args, **kwargs):
                 args, kwargs = prepare_kwargs(*args, **kwargs)
                 return await original_method(*args, **kwargs)
         else:
+
             def enhanced_method(*args, **kwargs):
                 args, kwargs = prepare_kwargs(*args, **kwargs)
                 return original_method(*args, **kwargs)

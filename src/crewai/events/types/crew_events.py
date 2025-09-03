@@ -1,6 +1,6 @@
 from typing import TYPE_CHECKING, Any, Dict, Optional, Union
 
-from crewai.utilities.events.base_events import BaseEvent
+from crewai.events.base_events import BaseEvent
 
 if TYPE_CHECKING:
     from crewai.crew import Crew

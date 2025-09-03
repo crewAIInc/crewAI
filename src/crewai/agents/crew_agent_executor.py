@@ -30,11 +30,11 @@ from crewai.utilities.constants import MAX_LLM_RETRY, TRAINING_DATA_FILE
 from crewai.utilities.logger import Logger
 from crewai.utilities.tool_utils import execute_tool_and_check_finality
 from crewai.utilities.training_handler import CrewTrainingHandler
-from crewai.utilities.events.agent_events import (
+from crewai.events.types.logging_events import (
     AgentLogsStartedEvent,
     AgentLogsExecutionEvent,
 )
-from crewai.utilities.events.crewai_event_bus import crewai_event_bus
+from crewai.events.event_bus import crewai_event_bus
 
 
 class CrewAgentExecutor(CrewAgentExecutorMixin):
@@ -54,11 +54,11 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         tools_description: str,
         tools_handler: ToolsHandler,
         step_callback: Any = None,
-        original_tools: List[Any] = [],
+        original_tools: List[Any] | None = None,
         function_calling_llm: Any = None,
         respect_context_window: bool = False,
         request_within_rpm_limit: Optional[Callable[[], bool]] = None,
-        callbacks: List[Any] = [],
+        callbacks: List[Any] | None = None,
     ):
         self._i18n: I18N = I18N()
         self.llm: BaseLLM = llm
@@ -70,10 +70,10 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         self.tools_names = tools_names
         self.stop = stop_words
         self.max_iter = max_iter
-        self.callbacks = callbacks
+        self.callbacks = callbacks or []
         self._printer: Printer = Printer()
         self.tools_handler = tools_handler
-        self.original_tools = original_tools
+        self.original_tools = original_tools or []
         self.step_callback = step_callback
         self.use_stop_words = self.llm.supports_stop_words()
         self.tools_description = tools_description
@@ -122,7 +122,6 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             handle_unknown_error(self._printer, e)
             raise
 
-
         if self.ask_for_human_input:
             formatted_answer = self._handle_human_feedback(formatted_answer)
 
@@ -156,7 +155,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                     messages=self.messages,
                     callbacks=self.callbacks,
                     printer=self._printer,
-                    from_task=self.task
+                    from_task=self.task,
                 )
                 formatted_answer = process_llm_response(answer, self.use_stop_words)
 
