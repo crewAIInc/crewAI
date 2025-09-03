@@ -282,7 +282,25 @@ Watch this video tutorial for a step-by-step demonstration of deploying your cre
   allowfullscreen
 ></iframe>
 
-### 11. API Keys
+### 11. Login
+
+Authenticate with CrewAI Enterprise using a secure device code flow (no email entry required).
+
+```shell Terminal
+crewai login
+```
+
+What happens:
+- A verification URL and short code are displayed in your terminal
+- Your browser opens to the verification URL
+- Enter/confirm the code to complete authentication
+
+Notes:
+- The OAuth2 provider and domain are configured via `crewai config` (defaults use `login.crewai.com`)
+- After successful login, the CLI also attempts to authenticate to the Tool Repository automatically
+- If you reset your configuration, run `crewai login` again to re-authenticate
+
+### 12. API Keys
 
 When running ```crewai create crew``` command, the CLI will show you a list of available LLM providers to choose from, followed by model selection for your chosen provider.
 
@@ -310,7 +328,7 @@ See the following link for each provider's key name:
 
 * [LiteLLM Providers](https://docs.litellm.ai/docs/providers)
 
-### 12. Configuration Management
+### 13. Configuration Management
 
 Manage CLI configuration settings for CrewAI.
 
@@ -384,6 +402,10 @@ Reset all configuration to defaults:
 ```shell Terminal
 crewai config reset
 ```
+
+<Tip>
+After resetting configuration, re-run `crewai login` to authenticate again.
+</Tip>
 
 <Note>
 Configuration settings are stored in `~/.config/crewai/settings.json`. Some settings like organization name and UUID are read-only and managed through authentication and organization commands. Tool repository related settings are hidden and cannot be set directly by users.
