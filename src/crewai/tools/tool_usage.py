@@ -189,7 +189,7 @@ class ToolUsage:
 
         if self.tools_handler and self.tools_handler.cache:
             result = self.tools_handler.cache.read(
-                tool=calling.tool_name, input=calling.arguments
+                tool=calling.tool_name, input_data=calling.arguments
             )  # type: ignore
             from_cache = result is not None
 
