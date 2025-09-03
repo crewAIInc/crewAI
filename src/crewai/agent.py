@@ -16,7 +16,7 @@ from typing import (
 
 from pydantic import Field, InstanceOf, PrivateAttr, model_validator
 
-from crewai.agents import CacheHandler
+from crewai.agents.cache.cache_handler import CacheHandler
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.agents.crew_agent_executor import CrewAgentExecutor
 from crewai.knowledge.knowledge import Knowledge

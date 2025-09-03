@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from crewai import Agent, Crew, Task
-from crewai.agents.cache import CacheHandler
+from crewai.agents.cache.cache_handler import CacheHandler
 from crewai.agents.crew_agent_executor import AgentFinish, CrewAgentExecutor
 from crewai.knowledge.knowledge import Knowledge
 from crewai.knowledge.knowledge_config import KnowledgeConfig
@@ -559,9 +559,9 @@ def test_agent_repeated_tool_usage(capsys):
     expected_message = (
         "I tried reusing the same input, I must stop using this action input."
     )
-    assert (
-        expected_message in output
-    ), f"Expected message not found in output. Output was: {output}"
+    assert expected_message in output, (
+        f"Expected message not found in output. Output was: {output}"
+    )
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -602,9 +602,9 @@ def test_agent_repeated_tool_usage_check_even_with_disabled_cache(capsys):
     has_max_iterations = "maximum iterations reached" in output_lower
     has_final_answer = "final answer" in output_lower or "42" in captured.out
 
-    assert (
-        has_repeated_usage_message or (has_max_iterations and has_final_answer)
-    ), f"Expected repeated tool usage handling or proper max iteration handling. Output was: {captured.out[:500]}..."
+    assert has_repeated_usage_message or (has_max_iterations and has_final_answer), (
+        f"Expected repeated tool usage handling or proper max iteration handling. Output was: {captured.out[:500]}..."
+    )
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])

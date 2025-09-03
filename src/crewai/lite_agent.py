@@ -33,7 +33,7 @@ from pydantic import (
 
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.agents.agent_builder.utilities.base_token_process import TokenProcess
-from crewai.agents.cache import CacheHandler
+from crewai.agents.cache.cache_handler import CacheHandler
 from crewai.agents.parser import (
     AgentAction,
     AgentFinish,
