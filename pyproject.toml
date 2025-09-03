@@ -48,7 +48,7 @@ Documentation = "https://docs.crewai.com"
 Repository = "https://github.com/crewAIInc/crewAI"
 
 [project.optional-dependencies]
-tools = ["crewai-tools~=0.62.1"]
+tools = ["crewai-tools~=0.65.0"]
 embeddings = [
     "tiktoken~=0.8.0"
 ]
@@ -74,9 +74,10 @@ qdrant = [
 
 [tool.uv]
 dev-dependencies = [
-    "ruff>=0.8.2",
-    "mypy>=1.10.0",
-    "pre-commit>=3.6.0",
+    "ruff>=0.12.11",
+    "mypy>=1.17.1",
+    "pre-commit>=4.3.0",
+    "bandit>=1.8.6",
     "pillow>=10.2.0",
     "cairosvg>=2.7.1",
     "pytest>=8.0.0",
@@ -88,15 +89,41 @@ dev-dependencies = [
     "pytest-timeout>=2.3.1",
     "pytest-xdist>=3.6.1",
     "pytest-split>=0.9.0",
+    "types-requests==2.32.*",
+    "types-pyyaml==6.0.*",
+    "types-regex==2024.11.6.*",
+    "types-appdirs==1.4.*",
 ]
 
 [project.scripts]
 crewai = "crewai.cli.cli:crewai"
 
+[tool.ruff]
+exclude = [
+    "src/crewai/cli/templates",
+]
+fix = true
+
+[tool.ruff.lint]
+select = [
+    "B006",
+    "UP006",
+    "UP007",
+    "UP035",
+    "UP037",
+    "UP004",
+    "UP008",
+    "UP010",
+    "UP018",
+    "UP031",
+    "UP032",
+    "I001",
+    "I002",
+]
+
 [tool.mypy]
-ignore_missing_imports = true
-disable_error_code = 'import-untyped'
-exclude = ["cli/templates"]
+strict = true
+exclude = ["src/crewai/cli/templates"]
 
 [tool.bandit]
 exclude_dirs = ["src/crewai/cli/templates"]

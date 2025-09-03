@@ -3,7 +3,8 @@ from typing import List
 from pydantic import BaseModel, Field
 
 from crewai.utilities import Converter
-from crewai.utilities.events import TaskEvaluationEvent, crewai_event_bus
+from crewai.events.types.task_events import TaskEvaluationEvent
+from crewai.events.event_bus import crewai_event_bus
 from crewai.utilities.pydantic_schema_parser import PydanticSchemaParser
 from crewai.utilities.training_converter import TrainingConverter
 

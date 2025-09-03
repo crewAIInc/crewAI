@@ -59,7 +59,7 @@ from crewai.utilities import I18N, FileHandler, Logger, RPMController
 from crewai.utilities.constants import NOT_SPECIFIED, TRAINING_DATA_FILE
 from crewai.utilities.evaluators.crew_evaluator_handler import CrewEvaluator
 from crewai.utilities.evaluators.task_evaluator import TaskEvaluator
-from crewai.utilities.events.crew_events import (
+from crewai.events.types.crew_events import (
     CrewKickoffCompletedEvent,
     CrewKickoffFailedEvent,
     CrewKickoffStartedEvent,
@@ -70,14 +70,14 @@ from crewai.utilities.events.crew_events import (
     CrewTrainFailedEvent,
     CrewTrainStartedEvent,
 )
-from crewai.utilities.events.crewai_event_bus import crewai_event_bus
-from crewai.utilities.events.event_listener import EventListener
-from crewai.utilities.events.listeners.tracing.trace_listener import (
+from crewai.events.event_bus import crewai_event_bus
+from crewai.events.event_listener import EventListener
+from crewai.events.listeners.tracing.trace_listener import (
     TraceCollectionListener,
 )
 
 
-from crewai.utilities.events.listeners.tracing.utils import (
+from crewai.events.listeners.tracing.utils import (
     is_tracing_enabled,
 )
 from crewai.utilities.formatter import (
@@ -559,9 +559,10 @@ class Crew(FlowTrackable, BaseModel):
         CrewTrainingHandler(filename).initialize_file()
 
     def train(
-        self, n_iterations: int, filename: str, inputs: Optional[Dict[str, Any]] = {}
+        self, n_iterations: int, filename: str, inputs: Optional[Dict[str, Any]] = None
     ) -> None:
         """Trains the crew for a given number of iterations."""
+        inputs = inputs or {}
         try:
             crewai_event_bus.emit(
                 self,
@@ -702,8 +703,11 @@ class Crew(FlowTrackable, BaseModel):
         self._task_output_handler.reset()
         return results
 
-    async def kickoff_async(self, inputs: Optional[Dict[str, Any]] = {}) -> CrewOutput:
+    async def kickoff_async(
+        self, inputs: Optional[Dict[str, Any]] = None
+    ) -> CrewOutput:
         """Asynchronous kickoff method to start the crew execution."""
+        inputs = inputs or {}
         return await asyncio.to_thread(self.kickoff, inputs)
 
     async def kickoff_for_each_async(self, inputs: List[Dict]) -> List[CrewOutput]:

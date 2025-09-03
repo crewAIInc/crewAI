@@ -23,6 +23,12 @@ warnings.filterwarnings(
     module="pydantic._internal._generate_schema",
 )
 
+warnings.filterwarnings(
+    "ignore",
+    message=r".*'model_fields'.*is deprecated.*",
+    module=r"^chromadb(\.|$)",
+)
+
 
 def _default_settings() -> Settings:
     """Create default ChromaDB settings.

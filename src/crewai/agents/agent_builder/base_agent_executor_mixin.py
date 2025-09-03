@@ -7,7 +7,7 @@ from crewai.utilities import I18N
 from crewai.utilities.converter import ConverterError
 from crewai.utilities.evaluators.task_evaluator import TaskEvaluator
 from crewai.utilities.printer import Printer
-from crewai.utilities.events.event_listener import event_listener
+from crewai.events.event_listener import event_listener
 
 if TYPE_CHECKING:
     from crewai.agents.agent_builder.base_agent import BaseAgent
@@ -98,8 +98,8 @@ class CrewAgentExecutorMixin:
                 )
                 self.crew._long_term_memory.save(long_term_memory)
 
-                for entity in evaluation.entities:
-                    entity_memory = EntityMemoryItem(
+                entity_memories = [
+                    EntityMemoryItem(
                         name=entity.name,
                         type=entity.type,
                         description=entity.description,
@@ -107,7 +107,10 @@ class CrewAgentExecutorMixin:
                             [f"- {r}" for r in entity.relationships]
                         ),
                     )
-                    self.crew._entity_memory.save(entity_memory)
+                    for entity in evaluation.entities
+                ]
+                if entity_memories:
+                    self.crew._entity_memory.save(entity_memories)
             except AttributeError as e:
                 print(f"Missing attributes for long term memory: {e}")
                 pass

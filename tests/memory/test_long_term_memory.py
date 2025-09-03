@@ -1,10 +1,10 @@
 import pytest
 from unittest.mock import ANY
 from collections import defaultdict
-from crewai.utilities.events import crewai_event_bus
+from crewai.events.event_bus import crewai_event_bus
 from crewai.memory.long_term.long_term_memory import LongTermMemory
 from crewai.memory.long_term.long_term_memory_item import LongTermMemoryItem
-from crewai.utilities.events.memory_events import (
+from crewai.events.types.memory_events import (
     MemorySaveStartedEvent,
     MemorySaveCompletedEvent,
     MemoryQueryStartedEvent,
