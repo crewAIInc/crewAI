@@ -1,20 +1,27 @@
 import warnings
+from collections.abc import Callable
+from typing import Any, Optional
 
 
-def _suppress_pydantic_deprecation_warnings():
+def _suppress_pydantic_deprecation_warnings() -> None:
     """Suppress Pydantic deprecation warnings using Pydantic's own warning types."""
-    original_warn = warnings.warn
+    original_warn: Callable[..., Any] = warnings.warn
 
-    def filtered_warn(message, category=None, stacklevel=1, source=None):
+    def filtered_warn(
+        message: Any,
+        category: Optional[type] = None,
+        stacklevel: int = 1,
+        source: Optional[Any] = None,
+    ) -> Optional[Any]:
         if (
             category
             and hasattr(category, "__module__")
             and category.__module__ == "pydantic.warnings"
         ):
-            return
+            return None
         return original_warn(message, category, stacklevel + 1, source)
 
-    warnings.warn = filtered_warn
+    warnings.warn = filtered_warn  # type: ignore[assignment]
 
 
 _suppress_pydantic_deprecation_warnings()
@@ -38,7 +45,7 @@ from crewai.telemetry.telemetry import Telemetry
 _telemetry_submitted = False
 
 
-def _track_install():
+def _track_install() -> None:
     """Track package installation/first-use via Scarf analytics."""
     global _telemetry_submitted
 
@@ -58,7 +65,7 @@ def _track_install():
         pass
 
 
-def _track_install_async():
+def _track_install_async() -> None:
     """Track installation in background thread to avoid blocking imports."""
     if not Telemetry._is_telemetry_disabled():
         thread = threading.Thread(target=_track_install, daemon=True)
