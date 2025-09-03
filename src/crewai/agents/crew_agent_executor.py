@@ -1,3 +1,9 @@
+"""Agent executor for crew AI agents.
+
+Handles agent execution flow including LLM interactions, tool execution,
+and memory management.
+"""
+
 from collections.abc import Callable
 from typing import Any
 
@@ -37,6 +43,12 @@ from crewai.utilities.training_handler import CrewTrainingHandler
 
 
 class CrewAgentExecutor(CrewAgentExecutorMixin):
+    """Executor for crew agents.
+
+    Manages the execution lifecycle of an agent including prompt formatting,
+    LLM interactions, tool execution, and feedback handling.
+    """
+
     def __init__(
         self,
         llm: Any,
@@ -56,7 +68,28 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         respect_context_window: bool = False,
         request_within_rpm_limit: Callable[[], bool] | None = None,
         callbacks: list[Any] | None = None,
-    ):
+    ) -> None:
+        """Initialize executor.
+
+        Args:
+            llm: Language model instance.
+            task: Task to execute.
+            crew: Crew instance.
+            agent: Agent to execute.
+            prompt: Prompt templates.
+            max_iter: Maximum iterations.
+            tools: Available tools.
+            tools_names: Tool names string.
+            stop_words: Stop word list.
+            tools_description: Tool descriptions.
+            tools_handler: Tool handler instance.
+            step_callback: Optional step callback.
+            original_tools: Original tool list.
+            function_calling_llm: Optional function calling LLM.
+            respect_context_window: Respect context limits.
+            request_within_rpm_limit: RPM limit check function.
+            callbacks: Optional callbacks list.
+        """
         self._i18n: I18N = I18N()
         self.llm: BaseLLM = llm
         self.task = task
@@ -91,6 +124,14 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         )
 
     def invoke(self, inputs: dict[str, str]) -> dict[str, Any]:
+        """Execute the agent with given inputs.
+
+        Args:
+            inputs: Input dictionary containing prompt variables.
+
+        Returns:
+            Dictionary with agent output.
+        """
         if "system" in self.prompt:
             system_prompt = self._format_prompt(self.prompt.get("system", ""), inputs)
             user_prompt = self._format_prompt(self.prompt.get("user", ""), inputs)
@@ -125,9 +166,10 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         return {"output": formatted_answer.output}
 
     def _invoke_loop(self) -> AgentFinish:
-        """
-        Main loop to invoke the agent's thought process until it reaches a conclusion
-        or the maximum number of iterations is reached.
+        """Execute agent loop until completion.
+
+        Returns:
+            Final answer from the agent.
         """
         formatted_answer = None
         while not isinstance(formatted_answer, AgentFinish):
@@ -226,7 +268,15 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
     def _handle_agent_action(
         self, formatted_answer: AgentAction, tool_result: ToolResult
     ) -> AgentAction | AgentFinish:
-        """Handle the AgentAction, execute tools, and process the results."""
+        """Process agent action and tool execution.
+
+        Args:
+            formatted_answer: Agent's action to execute.
+            tool_result: Result from tool execution.
+
+        Returns:
+            Updated action or final answer.
+        """
         # Special case for add_image_tool
         add_image_tool = self._i18n.tools("add_image")
         if (
@@ -248,16 +298,25 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
     def _invoke_step_callback(
         self, formatted_answer: AgentAction | AgentFinish
     ) -> None:
-        """Invoke the step callback if it exists."""
+        """Invoke step callback.
+
+        Args:
+            formatted_answer: Current agent response.
+        """
         if self.step_callback:
             self.step_callback(formatted_answer)
 
     def _append_message(self, text: str, role: str = "assistant") -> None:
-        """Append a message to the message list with the given role."""
+        """Add message to conversation history.
+
+        Args:
+            text: Message content.
+            role: Message role (default: assistant).
+        """
         self.messages.append(format_message_for_llm(text, role=role))
 
     def _show_start_logs(self) -> None:
-        """Show logs for the start of agent execution."""
+        """Emit agent start event."""
         if self.agent is None:
             raise ValueError("Agent cannot be None")
 
@@ -274,7 +333,11 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         )
 
     def _show_logs(self, formatted_answer: AgentAction | AgentFinish) -> None:
-        """Show logs for the agent's execution."""
+        """Emit agent execution event.
+
+        Args:
+            formatted_answer: Agent's response to log.
+        """
         if self.agent is None:
             raise ValueError("Agent cannot be None")
 
@@ -291,7 +354,12 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
     def _handle_crew_training_output(
         self, result: AgentFinish, human_feedback: str | None = None
     ) -> None:
-        """Handle the process of saving training data."""
+        """Save training data.
+
+        Args:
+            result: Agent's final output.
+            human_feedback: Optional feedback from human.
+        """
         agent_id = str(self.agent.id)
         train_iteration = (
             getattr(self.crew, "_train_iteration", None) if self.crew else None
@@ -336,19 +404,28 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
 
     @staticmethod
     def _format_prompt(prompt: str, inputs: dict[str, str]) -> str:
+        """Format prompt with input values.
+
+        Args:
+            prompt: Template string.
+            inputs: Values to substitute.
+
+        Returns:
+            Formatted prompt.
+        """
         prompt = prompt.replace("{input}", inputs["input"])
         prompt = prompt.replace("{tool_names}", inputs["tool_names"])
         prompt = prompt.replace("{tools}", inputs["tools"])
         return prompt
 
     def _handle_human_feedback(self, formatted_answer: AgentFinish) -> AgentFinish:
-        """Handle human feedback with different flows for training vs regular use.
+        """Process human feedback.
 
         Args:
-            formatted_answer: The initial AgentFinish result to get feedback on
+            formatted_answer: Initial agent result.
 
         Returns:
-            AgentFinish: The final answer after processing feedback
+            Final answer after feedback.
         """
         human_feedback = self._ask_human_input(formatted_answer.output)
 
@@ -358,13 +435,25 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         return self._handle_regular_feedback(formatted_answer, human_feedback)
 
     def _is_training_mode(self) -> bool:
-        """Check if crew is in training mode."""
+        """Check if training mode is active.
+
+        Returns:
+            True if in training mode.
+        """
         return bool(self.crew and self.crew._train)
 
     def _handle_training_feedback(
         self, initial_answer: AgentFinish, feedback: str
     ) -> AgentFinish:
-        """Process feedback for training scenarios with single iteration."""
+        """Process training feedback.
+
+        Args:
+            initial_answer: Initial agent output.
+            feedback: Training feedback.
+
+        Returns:
+            Improved answer.
+        """
         self._handle_crew_training_output(initial_answer, feedback)
         self.messages.append(
             format_message_for_llm(
@@ -379,7 +468,15 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
     def _handle_regular_feedback(
         self, current_answer: AgentFinish, initial_feedback: str
     ) -> AgentFinish:
-        """Process feedback for regular use with potential multiple iterations."""
+        """Process regular feedback iteratively.
+
+        Args:
+            current_answer: Current agent output.
+            initial_feedback: Initial user feedback.
+
+        Returns:
+            Final answer after iterations.
+        """
         feedback = initial_feedback
         answer = current_answer
 
@@ -394,7 +491,14 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         return answer
 
     def _process_feedback_iteration(self, feedback: str) -> AgentFinish:
-        """Process a single feedback iteration."""
+        """Process single feedback iteration.
+
+        Args:
+            feedback: User feedback.
+
+        Returns:
+            Updated agent response.
+        """
         self.messages.append(
             format_message_for_llm(
                 self._i18n.slice("feedback_instructions").format(feedback=feedback)
