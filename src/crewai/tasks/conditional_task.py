@@ -1,4 +1,5 @@
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 from pydantic import Field
 
@@ -38,7 +39,7 @@ class ConditionalTask(Task):
         """
         return self.condition(context)
 
-    def get_skipped_task_output(self):
+    def get_skipped_task_output(self) -> TaskOutput:
         return TaskOutput(
             description=self.description,
             raw="",

@@ -1,20 +1,20 @@
-from typing import Any, Dict, Optional
 import time
+from typing import Any, Optional
 
 from pydantic import PrivateAttr
 
+from crewai.events.event_bus import crewai_event_bus
+from crewai.events.types.memory_events import (
+    MemoryQueryCompletedEvent,
+    MemoryQueryFailedEvent,
+    MemoryQueryStartedEvent,
+    MemorySaveCompletedEvent,
+    MemorySaveFailedEvent,
+    MemorySaveStartedEvent,
+)
 from crewai.memory.memory import Memory
 from crewai.memory.short_term.short_term_memory_item import ShortTermMemoryItem
 from crewai.memory.storage.rag_storage import RAGStorage
-from crewai.events.event_bus import crewai_event_bus
-from crewai.events.types.memory_events import (
-    MemoryQueryStartedEvent,
-    MemoryQueryCompletedEvent,
-    MemoryQueryFailedEvent,
-    MemorySaveStartedEvent,
-    MemorySaveCompletedEvent,
-    MemorySaveFailedEvent,
-)
 
 
 class ShortTermMemory(Memory):
@@ -28,7 +28,9 @@ class ShortTermMemory(Memory):
 
     _memory_provider: Optional[str] = PrivateAttr()
 
-    def __init__(self, crew=None, embedder_config=None, storage=None, path=None):
+    def __init__(
+        self, crew=None, embedder_config=None, storage=None, path=None
+    ) -> None:
         memory_provider = embedder_config.get("provider") if embedder_config else None
         if memory_provider == "mem0":
             try:
@@ -56,7 +58,7 @@ class ShortTermMemory(Memory):
     def save(
         self,
         value: Any,
-        metadata: Optional[Dict[str, Any]] = None,
+        metadata: Optional[dict[str, Any]] = None,
     ) -> None:
         crewai_event_bus.emit(
             self,

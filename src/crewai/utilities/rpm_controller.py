@@ -50,7 +50,7 @@ class RPMController(BaseModel):
         else:
             return _check_and_increment()
 
-    def stop_rpm_counter(self):
+    def stop_rpm_counter(self) -> None:
         if self._timer:
             self._timer.cancel()
             self._timer = None

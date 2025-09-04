@@ -530,7 +530,7 @@ class Agent(BaseAgent):
                 future.cancel()
                 raise RuntimeError(f"Task execution failed: {str(e)}")
 
-    def _execute_without_timeout(self, task_prompt: str, task: Task) -> str:
+    def _execute_without_timeout(self, task_prompt: str, task: Task) -> Any:
         """Execute a task without a timeout.
 
         Args:

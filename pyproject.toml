@@ -123,7 +123,7 @@ select = [
 
 [tool.mypy]
 strict = true
-exclude = ["src/crewai/cli/templates"]
+exclude = ["src/crewai/cli/templates", "tests"]
 
 [tool.bandit]
 exclude_dirs = ["src/crewai/cli/templates"]

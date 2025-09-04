@@ -1,20 +1,20 @@
-from typing import Any
 import time
+from typing import Any
 
 from pydantic import PrivateAttr
 
+from crewai.events.event_bus import crewai_event_bus
+from crewai.events.types.memory_events import (
+    MemoryQueryCompletedEvent,
+    MemoryQueryFailedEvent,
+    MemoryQueryStartedEvent,
+    MemorySaveCompletedEvent,
+    MemorySaveFailedEvent,
+    MemorySaveStartedEvent,
+)
 from crewai.memory.entity.entity_memory_item import EntityMemoryItem
 from crewai.memory.memory import Memory
 from crewai.memory.storage.rag_storage import RAGStorage
-from crewai.events.event_bus import crewai_event_bus
-from crewai.events.types.memory_events import (
-    MemoryQueryStartedEvent,
-    MemoryQueryCompletedEvent,
-    MemoryQueryFailedEvent,
-    MemorySaveStartedEvent,
-    MemorySaveCompletedEvent,
-    MemorySaveFailedEvent,
-)
 
 
 class EntityMemory(Memory):
@@ -26,7 +26,9 @@ class EntityMemory(Memory):
 
     _memory_provider: str | None = PrivateAttr()
 
-    def __init__(self, crew=None, embedder_config=None, storage=None, path=None):
+    def __init__(
+        self, crew=None, embedder_config=None, storage=None, path=None
+    ) -> None:
         memory_provider = embedder_config.get("provider") if embedder_config else None
         if memory_provider == "mem0":
             try:

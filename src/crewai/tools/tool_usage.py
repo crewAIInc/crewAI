@@ -287,7 +287,8 @@ class ToolUsage:
             if self.tools_handler:
                 should_cache = True
                 if (
-                    hasattr(available_tool, "cache_function")
+                    available_tool
+                    and hasattr(available_tool, "cache_function")
                     and available_tool.cache_function
                 ):
                     should_cache = available_tool.cache_function(

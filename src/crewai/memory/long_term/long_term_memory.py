@@ -1,17 +1,17 @@
-from typing import Any, Dict, List
 import time
+from typing import Any
 
-from crewai.memory.long_term.long_term_memory_item import LongTermMemoryItem
-from crewai.memory.memory import Memory
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.memory_events import (
-    MemoryQueryStartedEvent,
     MemoryQueryCompletedEvent,
     MemoryQueryFailedEvent,
-    MemorySaveStartedEvent,
+    MemoryQueryStartedEvent,
     MemorySaveCompletedEvent,
     MemorySaveFailedEvent,
+    MemorySaveStartedEvent,
 )
+from crewai.memory.long_term.long_term_memory_item import LongTermMemoryItem
+from crewai.memory.memory import Memory
 from crewai.memory.storage.ltm_sqlite_storage import LTMSQLiteStorage
 
 
@@ -24,7 +24,7 @@ class LongTermMemory(Memory):
     LongTermMemoryItem instances.
     """
 
-    def __init__(self, storage=None, path=None):
+    def __init__(self, storage=None, path=None) -> None:
         if not storage:
             storage = LTMSQLiteStorage(db_path=path) if path else LTMSQLiteStorage()
         super().__init__(storage=storage)
@@ -84,7 +84,7 @@ class LongTermMemory(Memory):
         self,
         task: str,
         latest_n: int = 3,
-    ) -> List[Dict[str, Any]]:  # type: ignore # signature of "search" incompatible with supertype "Memory"
+    ) -> list[dict[str, Any]]:  # type: ignore # signature of "search" incompatible with supertype "Memory"
         crewai_event_bus.emit(
             self,
             event=MemoryQueryStartedEvent(
