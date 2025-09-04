@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 from rich.console import Console
 
@@ -32,12 +32,12 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
             style="bold red",
         )
 
-    def _display_deployment_info(self, json_response: Dict[str, Any]) -> None:
+    def _display_deployment_info(self, json_response: dict[str, Any]) -> None:
         """
         Display deployment information.
 
         Args:
-            json_response (Dict[str, Any]): The deployment information to display.
+            json_response (dict[str, Any]): The deployment information to display.
         """
         console.print("Deploying the crew...\n", style="bold blue")
         for key, value in json_response.items():
@@ -47,12 +47,12 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
         console.print(" or")
         console.print(f"crewai deploy status --uuid \"{json_response['uuid']}\"")
 
-    def _display_logs(self, log_messages: List[Dict[str, Any]]) -> None:
+    def _display_logs(self, log_messages: list[dict[str, Any]]) -> None:
         """
         Display log messages.
 
         Args:
-            log_messages (List[Dict[str, Any]]): The log messages to display.
+            log_messages (list[dict[str, Any]]): The log messages to display.
         """
         for log_message in log_messages:
             console.print(
@@ -110,13 +110,13 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
         self._display_creation_success(response.json())
 
     def _confirm_input(
-        self, env_vars: Dict[str, str], remote_repo_url: str, confirm: bool
+        self, env_vars: dict[str, str], remote_repo_url: str, confirm: bool
     ) -> None:
         """
         Confirm input parameters with the user.
 
         Args:
-            env_vars (Dict[str, str]): Environment variables.
+            env_vars (dict[str, str]): Environment variables.
             remote_repo_url (str): Remote repository URL.
             confirm (bool): Whether to confirm input.
         """
@@ -128,18 +128,18 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
 
     def _create_payload(
         self,
-        env_vars: Dict[str, str],
+        env_vars: dict[str, str],
         remote_repo_url: str,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Create the payload for crew creation.
 
         Args:
             remote_repo_url (str): Remote repository URL.
-            env_vars (Dict[str, str]): Environment variables.
+            env_vars (dict[str, str]): Environment variables.
 
         Returns:
-            Dict[str, Any]: The payload for crew creation.
+            dict[str, Any]: The payload for crew creation.
         """
         return {
             "deploy": {
@@ -149,12 +149,12 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
             }
         }
 
-    def _display_creation_success(self, json_response: Dict[str, Any]) -> None:
+    def _display_creation_success(self, json_response: dict[str, Any]) -> None:
         """
         Display success message after crew creation.
 
         Args:
-            json_response (Dict[str, Any]): The response containing crew information.
+            json_response (dict[str, Any]): The response containing crew information.
         """
         console.print("Deployment created successfully!\n", style="bold green")
         console.print(
@@ -179,12 +179,12 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
         else:
             self._display_no_crews_message()
 
-    def _display_crews(self, crews_data: List[Dict[str, Any]]) -> None:
+    def _display_crews(self, crews_data: list[dict[str, Any]]) -> None:
         """
         Display the list of crews.
 
         Args:
-            crews_data (List[Dict[str, Any]]): List of crew data to display.
+            crews_data (list[dict[str, Any]]): List of crew data to display.
         """
         for crew_data in crews_data:
             console.print(
@@ -217,12 +217,12 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
         self._validate_response(response)
         self._display_crew_status(response.json())
 
-    def _display_crew_status(self, status_data: Dict[str, str]) -> None:
+    def _display_crew_status(self, status_data: dict[str, str]) -> None:
         """
         Display the status of a crew.
 
         Args:
-            status_data (Dict[str, str]): The status data to display.
+            status_data (dict[str, str]): The status data to display.
         """
         console.print(f"Name:\t {status_data['name']}")
         console.print(f"Status:\t {status_data['status']}")

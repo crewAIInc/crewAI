@@ -1,4 +1,4 @@
-from typing import Any, List, Optional
+from typing import Any, Optional
 
 from pydantic import Field, PrivateAttr
 
@@ -44,7 +44,7 @@ class OpenAIAgentAdapter(BaseAgentAdapter):
     def __init__(
         self,
         model: str = "gpt-4o-mini",
-        tools: Optional[List[BaseTool]] = None,
+        tools: Optional[list[BaseTool]] = None,
         agent_config: Optional[dict] = None,
         **kwargs,
     ):
@@ -85,7 +85,7 @@ class OpenAIAgentAdapter(BaseAgentAdapter):
         self,
         task: Any,
         context: Optional[str] = None,
-        tools: Optional[List[BaseTool]] = None,
+        tools: Optional[list[BaseTool]] = None,
     ) -> str:
         """Execute a task using the OpenAI Assistant"""
         self._converter_adapter.configure_structured_output(task)
@@ -131,7 +131,7 @@ class OpenAIAgentAdapter(BaseAgentAdapter):
             )
             raise
 
-    def create_agent_executor(self, tools: Optional[List[BaseTool]] = None) -> None:
+    def create_agent_executor(self, tools: Optional[list[BaseTool]] = None) -> None:
         """
         Configure the OpenAI agent for execution.
         While OpenAI handles execution differently through Runner,
@@ -152,7 +152,7 @@ class OpenAIAgentAdapter(BaseAgentAdapter):
 
         self.agent_executor = Runner
 
-    def configure_tools(self, tools: Optional[List[BaseTool]] = None) -> None:
+    def configure_tools(self, tools: Optional[list[BaseTool]] = None) -> None:
         """Configure tools for the OpenAI Assistant"""
         if tools:
             self._tool_adapter.configure_tools(tools)
@@ -163,7 +163,7 @@ class OpenAIAgentAdapter(BaseAgentAdapter):
         """Process OpenAI Assistant execution result converting any structured output to a string"""
         return self._converter_adapter.post_process_result(result.final_output)
 
-    def get_delegation_tools(self, agents: List[BaseAgent]) -> List[BaseTool]:
+    def get_delegation_tools(self, agents: list[BaseAgent]) -> list[BaseTool]:
         """Implement delegation tools support"""
         agent_tools = AgentTools(agents=agents)
         tools = agent_tools.tools()

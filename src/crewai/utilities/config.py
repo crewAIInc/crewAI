@@ -1,20 +1,20 @@
-from typing import Any, Dict, Type
+from typing import Any, Type
 
 from pydantic import BaseModel
 
 
 def process_config(
-    values: Dict[str, Any], model_class: Type[BaseModel]
-) -> Dict[str, Any]:
+    values: dict[str, Any], model_class: Type[BaseModel]
+) -> dict[str, Any]:
     """
     Process the config dictionary and update the values accordingly.
 
     Args:
-        values (Dict[str, Any]): The dictionary of values to update.
+        values (dict[str, Any]): The dictionary of values to update.
         model_class (Type[BaseModel]): The Pydantic model class to reference for field validation.
 
     Returns:
-        Dict[str, Any]: The updated values dictionary.
+        dict[str, Any]: The updated values dictionary.
     """
     config = values.get("config", {})
     if not config:

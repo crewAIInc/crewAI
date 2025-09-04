@@ -1,7 +1,7 @@
 import json
 import sqlite3
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Optional, Union
 
 from crewai.utilities import Printer
 from crewai.utilities.paths import db_storage_path
@@ -53,7 +53,7 @@ class LTMSQLiteStorage:
     def save(
         self,
         task_description: str,
-        metadata: Dict[str, Any],
+        metadata: dict[str, Any],
         datetime: str,
         score: Union[int, float],
     ) -> None:
@@ -77,7 +77,7 @@ class LTMSQLiteStorage:
 
     def load(
         self, task_description: str, latest_n: int
-    ) -> Optional[List[Dict[str, Any]]]:
+    ) -> Optional[list[dict[str, Any]]]:
         """Queries the LTM table by task description with error handling."""
         try:
             with sqlite3.connect(self.db_path) as conn:

@@ -1,11 +1,11 @@
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 
 class ExternalMemoryItem:
     def __init__(
         self,
         value: Any,
-        metadata: Optional[Dict[str, Any]] = None,
+        metadata: Optional[dict[str, Any]] = None,
         agent: Optional[str] = None,
     ):
         self.value = value

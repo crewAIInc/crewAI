@@ -1,7 +1,7 @@
 import abc
 import enum
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 from pydantic import BaseModel, Field
 
@@ -57,7 +57,7 @@ class BaseEvaluator(abc.ABC):
     def evaluate(
         self,
         agent: Agent,
-        execution_trace: Dict[str, Any],
+        execution_trace: dict[str, Any],
         final_output: Any,
         task: Task | None = None,
     ) -> EvaluationScore:
@@ -67,7 +67,7 @@ class BaseEvaluator(abc.ABC):
 class AgentEvaluationResult(BaseModel):
     agent_id: str = Field(description="ID of the evaluated agent")
     task_id: str = Field(description="ID of the task that was executed")
-    metrics: Dict[MetricCategory, EvaluationScore] = Field(
+    metrics: dict[MetricCategory, EvaluationScore] = Field(
         default_factory=dict,
         description="Evaluation scores for each metric category"
     )
@@ -97,11 +97,11 @@ class AgentAggregatedEvaluationResult(BaseModel):
         default=AggregationStrategy.SIMPLE_AVERAGE,
         description="Strategy used for aggregation"
     )
-    metrics: Dict[MetricCategory, EvaluationScore] = Field(
+    metrics: dict[MetricCategory, EvaluationScore] = Field(
         default_factory=dict,
         description="Aggregated metrics across all tasks"
     )
-    task_results: List[str] = Field(
+    task_results: list[str] = Field(
         default_factory=list,
         description="IDs of tasks included in this aggregation"
     )

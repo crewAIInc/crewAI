@@ -91,7 +91,7 @@ class Task(BaseModel):
     expected_output: str = Field(
         description="Clear definition of expected output for the task."
     )
-    config: Optional[Dict[str, Any]] = Field(
+    config: Optional[dict[str, Any]] = Field(
         description="Configuration for the agent",
         default=None,
     )
@@ -101,7 +101,7 @@ class Task(BaseModel):
     agent: Optional[BaseAgent] = Field(
         description="Agent responsible for execution the task.", default=None
     )
-    context: Union[List["Task"], None, _NotSpecified] = Field(
+    context: Union[list["Task"], None, _NotSpecified] = Field(
         description="Other tasks that will have their output used as context for this task.",
         default=NOT_SPECIFIED,
     )
@@ -128,7 +128,7 @@ class Task(BaseModel):
     output: Optional[TaskOutput] = Field(
         description="Task output, it's final result after being executed", default=None
     )
-    tools: Optional[List[BaseTool]] = Field(
+    tools: Optional[list[BaseTool]] = Field(
         default_factory=list,
         description="Tools the agent is limited to use for this task.",
     )
@@ -153,8 +153,8 @@ class Task(BaseModel):
         description="A converter class used to export structured output",
         default=None,
     )
-    processed_by_agents: Set[str] = Field(default_factory=set)
-    guardrail: Optional[Union[Callable[[TaskOutput], Tuple[bool, Any]], str]] = Field(
+    processed_by_agents: set[str] = Field(default_factory=set)
+    guardrail: Optional[Union[Callable[[TaskOutput], tuple[bool, Any]], str]] = Field(
         default=None,
         description="Function or string description of a guardrail to validate task output before proceeding to next task",
     )
@@ -189,7 +189,7 @@ class Task(BaseModel):
 
         While type hints provide static checking, this validator ensures runtime safety by:
         1. Verifying the function accepts exactly one parameter (the TaskOutput)
-        2. Checking return type annotations match Tuple[bool, Any] if present
+        2. Checking return type annotations match tuple[bool, Any] if present
         3. Providing clear, immediate error messages for debugging
 
         This runtime validation is crucial because:
@@ -205,7 +205,7 @@ class Task(BaseModel):
 
         Raises:
             ValueError: If the function signature is invalid or return annotation
-                       doesn't match Tuple[bool, Any]
+                       doesn't match tuple[bool, Any]
         """
         if v is not None and callable(v):
             sig = inspect.signature(v)
@@ -233,7 +233,7 @@ class Task(BaseModel):
                     )
                 ):
                     raise ValueError(
-                        "If return type is annotated, it must be Tuple[bool, Any]"
+        "If return type is annotated, it must be tuple[bool, Any]"
                     )
         return v
 
@@ -375,7 +375,7 @@ class Task(BaseModel):
         self,
         agent: Optional[BaseAgent] = None,
         context: Optional[str] = None,
-        tools: Optional[List[BaseTool]] = None,
+        tools: Optional[list[BaseTool]] = None,
     ) -> TaskOutput:
         """Execute the task synchronously."""
         return self._execute_core(agent, context, tools)
@@ -398,7 +398,7 @@ class Task(BaseModel):
         self,
         agent: BaseAgent | None = None,
         context: Optional[str] = None,
-        tools: Optional[List[BaseTool]] = None,
+        tools: Optional[list[BaseTool]] = None,
     ) -> Future[TaskOutput]:
         """Execute the task asynchronously."""
         future: Future[TaskOutput] = Future()
@@ -413,7 +413,7 @@ class Task(BaseModel):
         self,
         agent: Optional[BaseAgent],
         context: Optional[str],
-        tools: Optional[List[Any]],
+        tools: Optional[list[Any]],
         future: Future[TaskOutput],
     ) -> None:
         """Execute the task asynchronously with context handling."""
@@ -424,7 +424,7 @@ class Task(BaseModel):
         self,
         agent: Optional[BaseAgent],
         context: Optional[str],
-        tools: Optional[List[Any]],
+        tools: Optional[list[Any]],
     ) -> TaskOutput:
         """Run the core execution logic of the task."""
         try:
@@ -604,7 +604,7 @@ Follow these guidelines:
         return "\n".join(tasks_slices)
 
     def interpolate_inputs_and_add_conversation_history(
-        self, inputs: Dict[str, Union[str, int, float, Dict[str, Any], List[Any]]]
+        self, inputs: dict[str, Union[str, int, float, dict[str, Any], list[Any]]]
     ) -> None:
         """Interpolate inputs into the task description, expected output, and output file path.
            Add conversation history if present.
@@ -688,7 +688,7 @@ Follow these guidelines:
         self.delegations += 1
 
     def copy(
-        self, agents: List["BaseAgent"], task_mapping: Dict[str, "Task"]
+        self, agents: list["BaseAgent"], task_mapping: dict[str, "Task"]
     ) -> "Task":
         """Creates a deep copy of the Task while preserving its original class type.
 
@@ -732,9 +732,9 @@ Follow these guidelines:
 
     def _export_output(
         self, result: str
-    ) -> Tuple[Optional[BaseModel], Optional[Dict[str, Any]]]:
+    ) -> tuple[Optional[BaseModel], Optional[dict[str, Any]]]:
         pydantic_output: Optional[BaseModel] = None
-        json_output: Optional[Dict[str, Any]] = None
+        json_output: Optional[dict[str, Any]] = None
 
         if self.output_pydantic or self.output_json:
             model_output = convert_to_model(

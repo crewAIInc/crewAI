@@ -5,11 +5,8 @@ import logging
 from typing import (
     Any,
     Callable,
-    Dict,
     Generic,
-    List,
     Optional,
-    Set,
     Type,
     TypeVar,
     Union,
@@ -57,10 +54,10 @@ class FlowState(BaseModel):
 
 # Type variables with explicit bounds
 T = TypeVar(
-    "T", bound=Union[Dict[str, Any], BaseModel]
+    "T", bound=Union[dict[str, Any], BaseModel]
 )  # Generic flow state type parameter
 StateT = TypeVar(
-    "StateT", bound=Union[Dict[str, Any], BaseModel]
+    "StateT", bound=Union[dict[str, Any], BaseModel]
 )  # State validation type parameter
 
 
@@ -436,14 +433,14 @@ class FlowMeta(type):
 class Flow(Generic[T], metaclass=FlowMeta):
     """Base class for all flows.
 
-    Type parameter T must be either Dict[str, Any] or a subclass of BaseModel."""
+    Type parameter T must be either dict[str, Any] or a subclass of BaseModel."""
 
     _printer = Printer()
 
-    _start_methods: List[str] = []
-    _listeners: Dict[str, tuple[str, List[str]]] = {}
-    _routers: Set[str] = set()
-    _router_paths: Dict[str, List[str]] = {}
+    _start_methods: list[str] = []
+    _listeners: dict[str, tuple[str, list[str]]] = {}
+    _routers: set[str] = set()
+    _router_paths: dict[str, list[str]] = {}
     initial_state: Union[Type[T], T, None] = None
     name: Optional[str] = None
     tracing: Optional[bool] = False
@@ -468,11 +465,11 @@ class Flow(Generic[T], metaclass=FlowMeta):
             **kwargs: Additional state values to initialize or override
         """
         # Initialize basic instance attributes
-        self._methods: Dict[str, Callable] = {}
-        self._method_execution_counts: Dict[str, int] = {}
-        self._pending_and_listeners: Dict[str, Set[str]] = {}
-        self._method_outputs: List[Any] = []  # List to store all method outputs
-        self._completed_methods: Set[str] = set()  # Track completed methods for reload
+        self._methods: dict[str, Callable] = {}
+        self._method_execution_counts: dict[str, int] = {}
+        self._pending_and_listeners: dict[str, set[str]] = {}
+        self._method_outputs: list[Any] = []  # List to store all method outputs
+        self._completed_methods: set[str] = set()  # Track completed methods for reload
         self._persistence: Optional[FlowPersistence] = persistence
         self._is_execution_resuming: bool = False
 
@@ -600,7 +597,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
         return self._state
 
     @property
-    def method_outputs(self) -> List[Any]:
+    def method_outputs(self) -> list[Any]:
         """Returns the list of all outputs from executed methods."""
         return self._method_outputs
 
@@ -637,7 +634,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
         except (AttributeError, TypeError):
             return ""  # Safely handle any unexpected attribute access issues
 
-    def _initialize_state(self, inputs: Dict[str, Any]) -> None:
+    def _initialize_state(self, inputs: dict[str, Any]) -> None:
         """Initialize or update flow state with new inputs.
 
         Args:
@@ -691,7 +688,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
         else:
             raise TypeError("State must be a BaseModel instance or a dictionary.")
 
-    def _restore_state(self, stored_state: Dict[str, Any]) -> None:
+    def _restore_state(self, stored_state: dict[str, Any]) -> None:
         """Restore flow state from persistence.
 
         Args:
@@ -783,7 +780,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
         elif hasattr(self._state, field_name):
             object.__setattr__(self._state, field_name, value)
 
-    def _apply_state_updates(self, updates: Dict[str, Any]) -> None:
+    def _apply_state_updates(self, updates: dict[str, Any]) -> None:
         """Apply multiple state updates efficiently."""
         if isinstance(self._state, dict):
             self._state.update(updates)
@@ -792,7 +789,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 if hasattr(self._state, key):
                     object.__setattr__(self._state, key, value)
 
-    def kickoff(self, inputs: Optional[Dict[str, Any]] = None) -> Any:
+    def kickoff(self, inputs: Optional[dict[str, Any]] = None) -> Any:
         """
         Start the flow execution in a synchronous context.
 
@@ -805,7 +802,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
 
         return asyncio.run(run_flow())
 
-    async def kickoff_async(self, inputs: Optional[Dict[str, Any]] = None) -> Any:
+    async def kickoff_async(self, inputs: Optional[dict[str, Any]] = None) -> Any:
         """
         Start the flow execution asynchronously.
 
@@ -1109,7 +1106,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
 
     def _find_triggered_methods(
         self, trigger_method: str, router_only: bool
-    ) -> List[str]:
+    ) -> list[str]:
         """
         Finds all methods that should be triggered based on conditions.
 
@@ -1126,7 +1123,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
 
         Returns
         -------
-        List[str]
+        list[str]
             Names of methods that should be triggered.
 
         Notes

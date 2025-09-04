@@ -17,7 +17,7 @@ Example
 
 import ast
 import inspect
-from typing import Any, Dict, List, Tuple, Union
+from typing import Any, Union
 
 from .utils import (
     build_ancestor_dict,
@@ -73,8 +73,8 @@ def method_calls_crew(method: Any) -> bool:
 def add_nodes_to_network(
     net: Any,
     flow: Any,
-    node_positions: Dict[str, Tuple[float, float]],
-    node_styles: Dict[str, Dict[str, Any]]
+    node_positions: dict[str, tuple[float, float]],
+    node_styles: dict[str, dict[str, Any]]
 ) -> None:
     """
     Add nodes to the network visualization with appropriate styling.
@@ -85,9 +85,9 @@ def add_nodes_to_network(
         The pyvis Network instance to add nodes to.
     flow : Any
         The flow instance containing method information.
-    node_positions : Dict[str, Tuple[float, float]]
+    node_positions : dict[str, tuple[float, float]]
         Dictionary mapping node names to their (x, y) positions.
-    node_styles : Dict[str, Dict[str, Any]]
+    node_styles : dict[str, dict[str, Any]]
         Dictionary containing style configurations for different node types.
 
     Notes
@@ -138,10 +138,10 @@ def add_nodes_to_network(
 
 def compute_positions(
     flow: Any,
-    node_levels: Dict[str, int],
+    node_levels: dict[str, int],
     y_spacing: float = 150,
     x_spacing: float = 300
-) -> Dict[str, Tuple[float, float]]:
+) -> dict[str, tuple[float, float]]:
     """
     Compute the (x, y) positions for each node in the flow graph.
 
@@ -149,7 +149,7 @@ def compute_positions(
     ----------
     flow : Any
         The flow instance to compute positions for.
-    node_levels : Dict[str, int]
+    node_levels : dict[str, int]
         Dictionary mapping node names to their hierarchical levels.
     y_spacing : float, optional
         Vertical spacing between levels, by default 150.
@@ -158,11 +158,11 @@ def compute_positions(
 
     Returns
     -------
-    Dict[str, Tuple[float, float]]
+    dict[str, tuple[float, float]]
         Dictionary mapping node names to their (x, y) coordinates.
     """
-    level_nodes: Dict[int, List[str]] = {}
-    node_positions: Dict[str, Tuple[float, float]] = {}
+    level_nodes: dict[int, list[str]] = {}
+    node_positions: dict[str, tuple[float, float]] = {}
 
     for method_name, level in node_levels.items():
         level_nodes.setdefault(level, []).append(method_name)
@@ -180,10 +180,10 @@ def compute_positions(
 def add_edges(
     net: Any,
     flow: Any,
-    node_positions: Dict[str, Tuple[float, float]],
-    colors: Dict[str, str]
+    node_positions: dict[str, tuple[float, float]],
+    colors: dict[str, str]
 ) -> None:
-    edge_smooth: Dict[str, Union[str, float]] = {"type": "continuous"}  # Default value
+    edge_smooth: dict[str, Union[str, float]] = {"type": "continuous"}  # Default value
     """
     Add edges to the network visualization with appropriate styling.
 
@@ -193,9 +193,9 @@ def add_edges(
         The pyvis Network instance to add edges to.
     flow : Any
         The flow instance containing edge information.
-    node_positions : Dict[str, Tuple[float, float]]
+    node_positions : dict[str, tuple[float, float]]
         Dictionary mapping node names to their positions.
-    colors : Dict[str, str]
+    colors : dict[str, str]
         Dictionary mapping edge types to their colors.
 
     Notes

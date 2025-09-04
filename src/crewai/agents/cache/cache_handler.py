@@ -6,7 +6,7 @@ from pydantic import BaseModel, PrivateAttr
 class CacheHandler(BaseModel):
     """Callback handler for tool usage."""
 
-    _cache: Dict[str, Any] = PrivateAttr(default_factory=dict)
+    _cache: dict[str, Any] = PrivateAttr(default_factory=dict)
 
     def add(self, tool, input, output):
         self._cache[f"{tool}-{input}"] = output

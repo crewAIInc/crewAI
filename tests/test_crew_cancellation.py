@@ -1,5 +1,6 @@
 import threading
 import time
+from typing import Any
 from unittest.mock import Mock, patch
 import pytest
 from crewai import Agent, Crew, Task
@@ -9,7 +10,7 @@ from crewai.tasks.task_output import TaskOutput
 
 
 @pytest.fixture
-def mock_agent():
+def mock_agent() -> Agent:
     return Agent(
         role="Test Agent",
         goal="Test goal",
@@ -19,9 +20,9 @@ def mock_agent():
 
 
 @pytest.fixture
-def slow_task():
+def slow_task() -> Task:
     """A task that takes some time to complete for testing cancellation"""
-    def slow_execution(*args, **kwargs):
+    def slow_execution(*args: Any, **kwargs: Any) -> TaskOutput:
         time.sleep(0.5)
         return TaskOutput(
             description="Task completed",
@@ -33,11 +34,11 @@ def slow_task():
         description="A slow task for testing",
         expected_output="Task output",
     )
-    task.execute_sync = Mock(side_effect=slow_execution)
+    task.execute_sync = Mock(side_effect=slow_execution)  # type: ignore[method-assign]
     return task
 
 
-def test_crew_cancellation_basic(mock_agent, slow_task):
+def test_crew_cancellation_basic(mock_agent: Agent, slow_task: Task) -> None:
     """Test basic cancellation functionality"""
     crew = Crew(agents=[mock_agent], tasks=[slow_task], verbose=False)
     
@@ -47,7 +48,7 @@ def test_crew_cancellation_basic(mock_agent, slow_task):
     assert crew.is_cancelled()
 
 
-def test_crew_cancellation_during_execution(mock_agent):
+def test_crew_cancellation_during_execution(mock_agent: Agent) -> None:
     """Test cancellation during crew execution"""
     tasks = []
     for i in range(3):
@@ -55,7 +56,7 @@ def test_crew_cancellation_during_execution(mock_agent):
             description=f"Task {i}",
             expected_output="Output",
         )
-        task.execute_sync = Mock(return_value=TaskOutput(
+        task.execute_sync = Mock(return_value=TaskOutput(  # type: ignore[method-assign]
             description=f"Task {i} completed",
             raw=f"Output {i}",
             agent="Test Agent"
@@ -67,7 +68,7 @@ def test_crew_cancellation_during_execution(mock_agent):
     result = None
     exception = None
     
-    def run_crew():
+    def run_crew() -> None:
         nonlocal result, exception
         try:
             result = crew.kickoff()
@@ -87,7 +88,7 @@ def test_crew_cancellation_during_execution(mock_agent):
     assert exception is None
 
 
-def test_crew_cancellation_events(mock_agent, slow_task):
+def test_crew_cancellation_events(mock_agent: Agent, slow_task: Task) -> None:
     """Test that cancellation events are emitted properly"""
     crew = Crew(agents=[mock_agent], tasks=[slow_task], verbose=False)
     
@@ -102,13 +103,13 @@ def test_crew_cancellation_events(mock_agent, slow_task):
         assert len(cancellation_events) > 0
 
 
-def test_crew_reuse_after_cancellation(mock_agent):
+def test_crew_reuse_after_cancellation(mock_agent: Agent) -> None:
     """Test that crew can be reused after cancellation"""
     task = Task(
         description="Test task",
         expected_output="Test output",
     )
-    task.execute_sync = Mock(return_value=TaskOutput(
+    task.execute_sync = Mock(return_value=TaskOutput(  # type: ignore[method-assign]
         description="Task completed",
         raw="Task completed",
         agent="Test Agent"
@@ -123,13 +124,13 @@ def test_crew_reuse_after_cancellation(mock_agent):
     assert not crew.is_cancelled()
 
 
-def test_crew_cancellation_hierarchical_process(mock_agent):
+def test_crew_cancellation_hierarchical_process(mock_agent: Agent) -> None:
     """Test cancellation works with hierarchical process"""
     task = Task(
         description="Test task",
         expected_output="Test output",
     )
-    task.execute_sync = Mock(return_value=TaskOutput(
+    task.execute_sync = Mock(return_value=TaskOutput(  # type: ignore[method-assign]
         description="Task completed",
         raw="Task completed",
         agent="Test Agent"
@@ -148,18 +149,18 @@ def test_crew_cancellation_hierarchical_process(mock_agent):
     assert crew.is_cancelled()
 
 
-def test_crew_cancellation_thread_safety():
+def test_crew_cancellation_thread_safety() -> None:
     """Test thread safety of cancellation mechanism"""
     agent = Agent(role="Test", goal="Test", backstory="Test", verbose=False)
     task = Task(description="Test", expected_output="Test")
-    task.execute_sync = Mock(return_value=TaskOutput(
+    task.execute_sync = Mock(return_value=TaskOutput(  # type: ignore[method-assign]
         description="Task completed",
         raw="Task completed",
         agent="Test Agent"
     ))
     crew = Crew(agents=[agent], tasks=[task], verbose=False)
     
-    def toggle_cancellation():
+    def toggle_cancellation() -> None:
         for _ in range(100):
             crew.cancel()
             crew._reset_cancellation()
@@ -173,7 +174,7 @@ def test_crew_cancellation_thread_safety():
     assert isinstance(crew.is_cancelled(), bool)
 
 
-def test_crew_cancellation_with_async_tasks(mock_agent):
+def test_crew_cancellation_with_async_tasks(mock_agent: Agent) -> None:
     """Test cancellation with async tasks"""
     task = Task(
         description="Async test task",
@@ -181,9 +182,9 @@ def test_crew_cancellation_with_async_tasks(mock_agent):
         async_execution=True
     )
     
-    def mock_execute_async(*args, **kwargs):
+    def mock_execute_async(*args: Any, **kwargs: Any) -> Any:
         from concurrent.futures import Future
-        future = Future()
+        future: Future[TaskOutput] = Future()
         future.set_result(TaskOutput(
             description="Async task completed",
             raw="Async task completed",
@@ -191,7 +192,7 @@ def test_crew_cancellation_with_async_tasks(mock_agent):
         ))
         return future
     
-    task.execute_async = Mock(side_effect=mock_execute_async)
+    task.execute_async = Mock(side_effect=mock_execute_async)  # type: ignore[method-assign]
     
     crew = Crew(agents=[mock_agent], tasks=[task], verbose=False)
     
@@ -200,7 +201,7 @@ def test_crew_cancellation_with_async_tasks(mock_agent):
     assert crew.is_cancelled()
 
 
-def test_crew_cancellation_partial_results(mock_agent):
+def test_crew_cancellation_partial_results(mock_agent: Agent) -> None:
     """Test that partial results are returned when cancelled"""
     tasks = []
     for i in range(3):
@@ -208,7 +209,7 @@ def test_crew_cancellation_partial_results(mock_agent):
             description=f"Task {i}",
             expected_output="Output",
         )
-        task.execute_sync = Mock(return_value=TaskOutput(
+        task.execute_sync = Mock(return_value=TaskOutput(  # type: ignore[method-assign]
             description=f"Task {i} completed",
             raw=f"Output {i}",
             agent="Test Agent"

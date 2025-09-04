@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Any, List, Optional
+from typing import Any, Optional
 
 from crewai.tools.base_tool import BaseTool
 
@@ -12,15 +12,15 @@ class BaseToolAdapter(ABC):
     different frameworks and platforms.
     """
 
-    original_tools: List[BaseTool]
-    converted_tools: List[Any]
+    original_tools: list[BaseTool]
+    converted_tools: list[Any]
 
-    def __init__(self, tools: Optional[List[BaseTool]] = None):
+    def __init__(self, tools: Optional[list[BaseTool]] = None):
         self.original_tools = tools or []
         self.converted_tools = []
 
     @abstractmethod
-    def configure_tools(self, tools: List[BaseTool]) -> None:
+    def configure_tools(self, tools: list[BaseTool]) -> None:
         """Configure and convert tools for the specific implementation.
 
         Args:
@@ -28,7 +28,7 @@ class BaseToolAdapter(ABC):
         """
         pass
 
-    def tools(self) -> List[Any]:
+    def tools(self) -> list[Any]:
         """Return all converted tools."""
         return self.converted_tools
 

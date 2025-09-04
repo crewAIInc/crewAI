@@ -1,6 +1,6 @@
 import logging
 import json
-from typing import Tuple, cast
+from typing import cast
 
 from pydantic import BaseModel, Field
 
@@ -126,12 +126,12 @@ class AgentReasoning:
         reasoning_plan = ReasoningPlan(plan=plan, ready=ready)
         return AgentReasoningOutput(plan=reasoning_plan)
 
-    def __create_initial_plan(self) -> Tuple[str, bool]:
+    def __create_initial_plan(self) -> tuple[str, bool]:
         """
         Creates the initial reasoning plan for the task.
 
         Returns:
-            Tuple[str, bool]: The initial plan and whether the agent is ready to execute the task.
+            tuple[str, bool]: The initial plan and whether the agent is ready to execute the task.
         """
         reasoning_prompt = self.__create_reasoning_prompt()
 
@@ -156,7 +156,7 @@ class AgentReasoning:
 
             return self.__parse_reasoning_response(str(response))
 
-    def __refine_plan_if_needed(self, plan: str, ready: bool) -> Tuple[str, bool]:
+    def __refine_plan_if_needed(self, plan: str, ready: bool) -> tuple[str, bool]:
         """
         Refines the reasoning plan if the agent is not ready to execute the task.
 
@@ -165,7 +165,7 @@ class AgentReasoning:
             ready: Whether the agent is ready to execute the task.
 
         Returns:
-            Tuple[str, bool]: The refined plan and whether the agent is ready to execute the task.
+            tuple[str, bool]: The refined plan and whether the agent is ready to execute the task.
         """
         attempt = 1
         max_attempts = self.agent.max_reasoning_attempts
@@ -216,7 +216,7 @@ class AgentReasoning:
 
         return plan, ready
 
-    def __call_with_function(self, prompt: str, prompt_type: str) -> Tuple[str, bool]:
+    def __call_with_function(self, prompt: str, prompt_type: str) -> tuple[str, bool]:
         """
         Calls the LLM with function calling to get a reasoning plan.
 
@@ -225,7 +225,7 @@ class AgentReasoning:
             prompt_type: The type of prompt (initial_plan or refine_plan).
 
         Returns:
-            Tuple[str, bool]: A tuple containing the plan and whether the agent is ready.
+            tuple[str, bool]: A tuple containing the plan and whether the agent is ready.
         """
         self.logger.debug(f"Using function calling for {prompt_type} reasoning")
 
@@ -378,7 +378,7 @@ class AgentReasoning:
             current_plan=current_plan,
         )
 
-    def __parse_reasoning_response(self, response: str) -> Tuple[str, bool]:
+    def __parse_reasoning_response(self, response: str) -> tuple[str, bool]:
         """
         Parses the reasoning response to extract the plan and whether
         the agent is ready to execute the task.
@@ -387,7 +387,7 @@ class AgentReasoning:
             response: The LLM response.
 
         Returns:
-            Tuple[str, bool]: The plan and whether the agent is ready to execute the task.
+            tuple[str, bool]: The plan and whether the agent is ready to execute the task.
         """
         if not response:
             return "No plan was generated.", False

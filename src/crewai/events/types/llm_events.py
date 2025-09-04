@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Optional, Union
 
 from pydantic import BaseModel
 
@@ -39,10 +39,10 @@ class LLMCallStartedEvent(LLMEventBase):
 
     type: str = "llm_call_started"
     model: Optional[str] = None
-    messages: Optional[Union[str, List[Dict[str, Any]]]] = None
-    tools: Optional[List[dict[str, Any]]] = None
-    callbacks: Optional[List[Any]] = None
-    available_functions: Optional[Dict[str, Any]] = None
+    messages: Optional[Union[str, list[dict[str, Any]]]] = None
+    tools: Optional[list[dict[str, Any]]] = None
+    callbacks: Optional[list[Any]] = None
+    available_functions: Optional[dict[str, Any]] = None
 
 
 class LLMCallCompletedEvent(LLMEventBase):

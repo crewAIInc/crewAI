@@ -1,7 +1,7 @@
 import os
 import uuid
 
-from typing import Dict, Any, Optional
+from typing import Any, Optional
 
 from crewai.events.base_event_listener import BaseEventListener
 from crewai.events.types.agent_events import (
@@ -112,7 +112,7 @@ class TraceCollectionListener(BaseEventListener):
         except AuthError:
             return False
 
-    def _get_user_context(self) -> Dict[str, str]:
+    def _get_user_context(self) -> dict[str, str]:
         """Extract user context for tracing"""
         return {
             "user_id": os.getenv("CREWAI_USER_ID", "anonymous"),
@@ -325,7 +325,7 @@ class TraceCollectionListener(BaseEventListener):
         self._initialize_batch(user_context, execution_metadata)
 
     def _initialize_batch(
-        self, user_context: Dict[str, str], execution_metadata: Dict[str, Any]
+        self, user_context: dict[str, str], execution_metadata: dict[str, Any]
     ):
         """Initialize trace batch if ephemeral"""
         if not self._check_authenticated():
@@ -371,7 +371,7 @@ class TraceCollectionListener(BaseEventListener):
 
     def _build_event_data(
         self, event_type: str, event: Any, source: Any
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Build event data"""
         if event_type not in self.complex_events:
             return self._safe_serialize_to_dict(event)
@@ -429,7 +429,7 @@ class TraceCollectionListener(BaseEventListener):
     # TODO: move to utils
     def _safe_serialize_to_dict(
         self, obj, exclude: set[str] | None = None
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Safely serialize an object to a dictionary for event data."""
         try:
             serialized = to_serializable(obj, exclude)

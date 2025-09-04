@@ -1,5 +1,5 @@
 import requests
-from typing import Dict, Any
+from typing import Any
 from rich.console import Console
 from requests.exceptions import RequestException, JSONDecodeError
 
@@ -32,7 +32,7 @@ class EnterpriseConfigureCommand(BaseCommand):
             console.print(f"❌ Failed to configure Enterprise settings: {str(e)}", style="bold red")
             raise SystemExit(1)
 
-    def _fetch_oauth_config(self, enterprise_url: str) -> Dict[str, Any]:
+    def _fetch_oauth_config(self, enterprise_url: str) -> dict[str, Any]:
         oauth_endpoint = f"{enterprise_url}/auth/parameters"
 
         try:
@@ -64,7 +64,7 @@ class EnterpriseConfigureCommand(BaseCommand):
         except Exception as e:
             raise ValueError(f"Error fetching OAuth2 configuration: {str(e)}")
 
-    def _update_oauth_settings(self, enterprise_url: str, oauth_config: Dict[str, Any]) -> None:
+    def _update_oauth_settings(self, enterprise_url: str, oauth_config: dict[str, Any]) -> None:
         try:
             config_mapping = {
                 'enterprise_base_url': enterprise_url,

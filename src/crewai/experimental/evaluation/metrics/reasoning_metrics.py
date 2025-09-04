@@ -9,7 +9,7 @@ This module provides evaluator implementations for:
 import logging
 import re
 from enum import Enum
-from typing import Any, Dict, List, Tuple
+from typing import Any
 import numpy as np
 from collections.abc import Sequence
 
@@ -36,7 +36,7 @@ class ReasoningEfficiencyEvaluator(BaseEvaluator):
     def evaluate(
         self,
         agent: Agent,
-        execution_trace: Dict[str, Any],
+        execution_trace: dict[str, Any],
         final_output: TaskOutput | str,
         task: Task | None = None,
     ) -> EvaluationScore:
@@ -183,7 +183,7 @@ Identify any inefficient reasoning patterns and provide specific suggestions for
                 raw_response=response
             )
 
-    def _detect_loops(self, llm_calls: List[Dict]) -> Tuple[bool, List[Dict]]:
+    def _detect_loops(self, llm_calls: list[dict]) -> tuple[bool, list[dict]]:
         loop_details = []
 
         messages = []
@@ -227,7 +227,7 @@ Identify any inefficient reasoning patterns and provide specific suggestions for
 
         return intersection / union if union > 0 else 0.0
 
-    def _analyze_reasoning_patterns(self, llm_calls: List[Dict]) -> Dict[str, Any]:
+    def _analyze_reasoning_patterns(self, llm_calls: list[dict]) -> dict[str, Any]:
         call_lengths = []
         response_times = []
 
@@ -331,7 +331,7 @@ Identify any inefficient reasoning patterns and provide specific suggestions for
 
         return np.mean(indicators) if indicators else 0.0
 
-    def _get_call_samples(self, llm_calls: List[Dict]) -> str:
+    def _get_call_samples(self, llm_calls: list[dict]) -> str:
         samples = []
 
         if len(llm_calls) <= 6:

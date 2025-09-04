@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import threading
 from contextlib import contextmanager
-from typing import Any, Callable, Dict, List, Type, TypeVar, cast
+from typing import Any, Callable, Type, TypeVar, cast
 
 from blinker import Signal
 
@@ -32,7 +32,7 @@ class CrewAIEventsBus:
     def _initialize(self) -> None:
         """Initialize the event bus internal state"""
         self._signal = Signal("crewai_event_bus")
-        self._handlers: Dict[Type[BaseEvent], List[Callable]] = {}
+        self._handlers: dict[Type[BaseEvent], list[Callable]] = {}
 
     def on(
         self, event_type: Type[EventT]

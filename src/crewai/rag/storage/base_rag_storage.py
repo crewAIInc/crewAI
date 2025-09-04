@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 
 class BaseRAGStorage(ABC):
@@ -13,7 +13,7 @@ class BaseRAGStorage(ABC):
         self,
         type: str,
         allow_reset: bool = True,
-        embedder_config: Optional[Dict[str, Any]] = None,
+        embedder_config: Optional[dict[str, Any]] = None,
         crew: Any = None,
     ):
         self.type = type
@@ -35,7 +35,7 @@ class BaseRAGStorage(ABC):
         pass
 
     @abstractmethod
-    def save(self, value: Any, metadata: Dict[str, Any]) -> None:
+    def save(self, value: Any, metadata: dict[str, Any]) -> None:
         """Save a value with metadata to the storage."""
         pass
 
@@ -46,7 +46,7 @@ class BaseRAGStorage(ABC):
         limit: int = 3,
         filter: Optional[dict] = None,
         score_threshold: float = 0.35,
-    ) -> List[Any]:
+    ) -> list[Any]:
         """Search for entries in the storage."""
         pass
 
@@ -57,7 +57,7 @@ class BaseRAGStorage(ABC):
 
     @abstractmethod
     def _generate_embedding(
-        self, text: str, metadata: Optional[Dict[str, Any]] = None
+        self, text: str, metadata: Optional[dict[str, Any]] = None
     ) -> Any:
         """Generate an embedding for the given text and metadata."""
         pass
@@ -67,7 +67,7 @@ class BaseRAGStorage(ABC):
         """Initialize the vector db."""
         pass
 
-    def setup_config(self, config: Dict[str, Any]):
+    def setup_config(self, config: dict[str, Any]):
         """Setup the config of the storage."""
         pass
 

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from io import StringIO
-from typing import Any, Dict
+from typing import Any
 
 from pydantic import Field, PrivateAttr
 from crewai.llm import LLM
@@ -80,7 +80,7 @@ class EventListener(BaseEventListener):
     _instance = None
     _telemetry: Telemetry = PrivateAttr(default_factory=lambda: Telemetry())
     logger = Logger(verbose=True, default_color=EMITTER_COLOR)
-    execution_spans: Dict[Task, Any] = Field(default_factory=dict)
+    execution_spans: dict[Task, Any] = Field(default_factory=dict)
     next_chunk = 0
     text_stream = StringIO()
     knowledge_retrieval_in_progress = False

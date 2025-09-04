@@ -5,7 +5,7 @@ import sys
 from functools import reduce
 from inspect import getmro, isclass, isfunction, ismethod
 from pathlib import Path
-from typing import Any, Dict, List, get_type_hints
+from typing import Any, get_type_hints
 
 import click
 import tomli
@@ -77,7 +77,7 @@ def get_project_description(
 
 
 def _get_project_attribute(
-    pyproject_path: str, keys: List[str], require: bool
+    pyproject_path: str, keys: list[str], require: bool
 ) -> Any | None:
     """Get an attribute from the pyproject.toml file."""
     attribute = None
@@ -117,7 +117,7 @@ def _get_project_attribute(
     return attribute
 
 
-def _get_nested_value(data: Dict[str, Any], keys: List[str]) -> Any:
+def _get_nested_value(data: dict[str, Any], keys: list[str]) -> Any:
     return reduce(dict.__getitem__, keys, data)
 
 

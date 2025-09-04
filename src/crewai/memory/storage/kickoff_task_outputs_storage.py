@@ -2,7 +2,7 @@ import json
 import logging
 import sqlite3
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 from crewai.task import Task
 from crewai.utilities import Printer
@@ -62,10 +62,10 @@ class KickoffTaskOutputsSQLiteStorage:
     def add(
         self,
         task: Task,
-        output: Dict[str, Any],
+        output: dict[str, Any],
         task_index: int,
         was_replayed: bool = False,
-        inputs: Dict[str, Any] | None = None,
+        inputs: dict[str, Any] | None = None,
     ) -> None:
         """Add a new task output record to the database.
 
@@ -153,7 +153,7 @@ class KickoffTaskOutputsSQLiteStorage:
             logger.error(error_msg)
             raise DatabaseOperationError(error_msg, e)
 
-    def load(self) -> List[Dict[str, Any]]:
+    def load(self) -> list[dict[str, Any]]:
         """Load all task output records from the database.
 
         Returns:

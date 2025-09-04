@@ -1,4 +1,4 @@
-from typing import Any, Dict, Optional, Union
+from typing import Any, Optional, Union
 
 from pydantic import BaseModel, ConfigDict
 
@@ -16,7 +16,7 @@ class FlowStartedEvent(FlowEvent):
     """Event emitted when a flow starts execution"""
 
     flow_name: str
-    inputs: Optional[Dict[str, Any]] = None
+    inputs: Optional[dict[str, Any]] = None
     type: str = "flow_started"
 
 
@@ -32,8 +32,8 @@ class MethodExecutionStartedEvent(FlowEvent):
 
     flow_name: str
     method_name: str
-    state: Union[Dict[str, Any], BaseModel]
-    params: Optional[Dict[str, Any]] = None
+    state: Union[dict[str, Any], BaseModel]
+    params: Optional[dict[str, Any]] = None
     type: str = "method_execution_started"
 
 
@@ -43,7 +43,7 @@ class MethodExecutionFinishedEvent(FlowEvent):
     flow_name: str
     method_name: str
     result: Any = None
-    state: Union[Dict[str, Any], BaseModel]
+    state: Union[dict[str, Any], BaseModel]
     type: str = "method_execution_finished"
 
 

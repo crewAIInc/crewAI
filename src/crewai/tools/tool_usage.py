@@ -69,12 +69,12 @@ class ToolUsage:
     def __init__(
         self,
         tools_handler: Optional[ToolsHandler],
-        tools: List[CrewStructuredTool],
+        tools: list[CrewStructuredTool],
         task: Optional[Task],
         function_calling_llm: Any,
         agent: Optional[Union["BaseAgent", "LiteAgent"]] = None,
         action: Any = None,
-        fingerprint_context: Optional[Dict[str, str]] = None,
+        fingerprint_context: Optional[dict[str, str]] = None,
     ) -> None:
         self._i18n: I18N = agent.i18n if agent else I18N()
         self._printer: Printer = Printer()
@@ -393,7 +393,7 @@ class ToolUsage:
                 return tool
         if self.task:
             self.task.increment_tools_errors()
-        tool_selection_data: Dict[str, Any] = {
+        tool_selection_data: dict[str, Any] = {
             "agent_key": getattr(self.agent, "key", None) if self.agent else None,
             "agent_role": getattr(self.agent, "role", None) if self.agent else None,
             "tool_name": tool_name,
@@ -510,7 +510,7 @@ class ToolUsage:
                 )
             return self._tool_calling(tool_string)
 
-    def _validate_tool_input(self, tool_input: Optional[str]) -> Dict[str, Any]:
+    def _validate_tool_input(self, tool_input: Optional[str]) -> dict[str, Any]:
         if tool_input is None:
             return {}
 

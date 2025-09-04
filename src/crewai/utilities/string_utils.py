@@ -1,10 +1,10 @@
 import re
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Optional, Union
 
 
 def interpolate_only(
     input_string: Optional[str],
-    inputs: Dict[str, Union[str, int, float, Dict[str, Any], List[Any]]],
+    inputs: dict[str, Union[str, int, float, dict[str, Any], list[Any]]],
 ) -> str:
     """Interpolate placeholders (e.g., {key}) in a string while leaving JSON untouched.
     Only interpolates placeholders that follow the pattern {variable_name} where

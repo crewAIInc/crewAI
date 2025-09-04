@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Any, Dict, Optional, Union
+from typing import TYPE_CHECKING, Any, Optional, Union
 
 from crewai.events.base_events import BaseEvent
 
@@ -14,7 +14,7 @@ class CrewBaseEvent(BaseEvent):
     crew_name: Optional[str]
     crew: Optional[Crew] = None
 
-    def __init__(self, **data):
+    def __init__(self, **data: Any) -> None:
         super().__init__(**data)
         self.set_crew_fingerprint()
 
@@ -28,7 +28,7 @@ class CrewBaseEvent(BaseEvent):
             ):
                 self.fingerprint_metadata = self.crew.fingerprint.metadata
 
-    def to_json(self, exclude: set[str] | None = None):
+    def to_json(self, exclude: set[str] | None = None) -> dict[str, Any]:
         if exclude is None:
             exclude = set()
         exclude.add("crew")
@@ -38,7 +38,7 @@ class CrewBaseEvent(BaseEvent):
 class CrewKickoffStartedEvent(CrewBaseEvent):
     """Event emitted when a crew starts execution"""
 
-    inputs: Optional[Dict[str, Any]]
+    inputs: Optional[dict[str, Any]]
     type: str = "crew_kickoff_started"
 
 
@@ -62,7 +62,7 @@ class CrewTrainStartedEvent(CrewBaseEvent):
 
     n_iterations: int
     filename: str
-    inputs: Optional[Dict[str, Any]]
+    inputs: Optional[dict[str, Any]]
     type: str = "crew_train_started"
 
 
@@ -86,7 +86,7 @@ class CrewTestStartedEvent(CrewBaseEvent):
 
     n_iterations: int
     eval_llm: Optional[Union[str, Any]]
-    inputs: Optional[Dict[str, Any]]
+    inputs: Optional[dict[str, Any]]
     type: str = "crew_test_started"
 
 

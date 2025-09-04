@@ -1,5 +1,5 @@
 import json
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 from pydantic import BaseModel, Field
 
@@ -15,7 +15,7 @@ class CrewOutput(BaseModel):
     pydantic: Optional[BaseModel] = Field(
         description="Pydantic output of Crew", default=None
     )
-    json_dict: Optional[Dict[str, Any]] = Field(
+    json_dict: Optional[dict[str, Any]] = Field(
         description="JSON dict output of Crew", default=None
     )
     tasks_output: list[TaskOutput] = Field(
@@ -32,7 +32,7 @@ class CrewOutput(BaseModel):
 
         return json.dumps(self.json_dict)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert json_output and pydantic_output to a dictionary."""
         output_dict = {}
         if self.json_dict:

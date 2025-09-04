@@ -9,8 +9,6 @@ from contextlib import contextmanager
 from typing import (
     Any,
     DefaultDict,
-    Dict,
-    List,
     Literal,
     Optional,
     Type,
@@ -297,12 +295,12 @@ class LLM(BaseLLM):
         temperature: Optional[float] = None,
         top_p: Optional[float] = None,
         n: Optional[int] = None,
-        stop: Optional[Union[str, List[str]]] = None,
+        stop: Optional[Union[str, list[str]]] = None,
         max_completion_tokens: Optional[int] = None,
         max_tokens: Optional[int] = None,
         presence_penalty: Optional[float] = None,
         frequency_penalty: Optional[float] = None,
-        logit_bias: Optional[Dict[int, float]] = None,
+        logit_bias: Optional[dict[int, float]] = None,
         response_format: Optional[Type[BaseModel]] = None,
         seed: Optional[int] = None,
         logprobs: Optional[int] = None,
@@ -311,7 +309,7 @@ class LLM(BaseLLM):
         api_base: Optional[str] = None,
         api_version: Optional[str] = None,
         api_key: Optional[str] = None,
-        callbacks: List[Any] | None = None,
+        callbacks: list[Any] | None = None,
         reasoning_effort: Optional[Literal["none", "low", "medium", "high"]] = None,
         stream: bool = False,
         **kwargs,
@@ -343,9 +341,9 @@ class LLM(BaseLLM):
 
         litellm.drop_params = True
 
-        # Normalize self.stop to always be a List[str]
+        # Normalize self.stop to always be a list[str]
         if stop is None:
-            self.stop: List[str] = []
+            self.stop: list[str] = []
         elif isinstance(stop, str):
             self.stop = [stop]
         else:
@@ -368,9 +366,9 @@ class LLM(BaseLLM):
 
     def _prepare_completion_params(
         self,
-        messages: Union[str, List[Dict[str, str]]],
-        tools: Optional[List[dict]] = None,
-    ) -> Dict[str, Any]:
+        messages: Union[str, list[dict[str, str]]],
+        tools: Optional[list[dict]] = None,
+    ) -> dict[str, Any]:
         """Prepare parameters for the completion call.
 
         Args:
@@ -380,7 +378,7 @@ class LLM(BaseLLM):
             available_functions: Optional dict of available functions
 
         Returns:
-            Dict[str, Any]: Parameters for the completion call
+            dict[str, Any]: Parameters for the completion call
         """
         # --- 1) Format messages according to provider requirements
         if isinstance(messages, str):
@@ -419,9 +417,9 @@ class LLM(BaseLLM):
 
     def _handle_streaming_response(
         self,
-        params: Dict[str, Any],
-        callbacks: Optional[List[Any]] = None,
-        available_functions: Optional[Dict[str, Any]] = None,
+        params: dict[str, Any],
+        callbacks: Optional[list[Any]] = None,
+        available_functions: Optional[dict[str, Any]] = None,
         from_task: Optional[Any] = None,
         from_agent: Optional[Any] = None,
     ) -> str:
@@ -447,7 +445,7 @@ class LLM(BaseLLM):
         usage_info = None
         tool_calls = None
 
-        accumulated_tool_args: DefaultDict[int, AccumulatedToolArgs] = defaultdict(
+        accumulated_tool_args: defaultdict[int, AccumulatedToolArgs] = defaultdict(
             AccumulatedToolArgs
         )
 
@@ -699,9 +697,9 @@ class LLM(BaseLLM):
 
     def _handle_streaming_tool_calls(
         self,
-        tool_calls: List[ChatCompletionDeltaToolCall],
-        accumulated_tool_args: DefaultDict[int, AccumulatedToolArgs],
-        available_functions: Optional[Dict[str, Any]] = None,
+        tool_calls: list[ChatCompletionDeltaToolCall],
+        accumulated_tool_args: defaultdict[int, AccumulatedToolArgs],
+        available_functions: Optional[dict[str, Any]] = None,
         from_task: Optional[Any] = None,
         from_agent: Optional[Any] = None,
     ) -> None | str:
@@ -744,8 +742,8 @@ class LLM(BaseLLM):
 
     def _handle_streaming_callbacks(
         self,
-        callbacks: Optional[List[Any]],
-        usage_info: Optional[Dict[str, Any]],
+        callbacks: Optional[list[Any]],
+        usage_info: Optional[dict[str, Any]],
         last_chunk: Optional[Any],
     ) -> None:
         """Handle callbacks with usage info for streaming responses.
@@ -786,9 +784,9 @@ class LLM(BaseLLM):
 
     def _handle_non_streaming_response(
         self,
-        params: Dict[str, Any],
-        callbacks: Optional[List[Any]] = None,
-        available_functions: Optional[Dict[str, Any]] = None,
+        params: dict[str, Any],
+        callbacks: Optional[list[Any]] = None,
+        available_functions: Optional[dict[str, Any]] = None,
         from_task: Optional[Any] = None,
         from_agent: Optional[Any] = None,
     ) -> str | Any:
@@ -868,8 +866,8 @@ class LLM(BaseLLM):
 
     def _handle_tool_call(
         self,
-        tool_calls: List[Any],
-        available_functions: Optional[Dict[str, Any]] = None,
+        tool_calls: list[Any],
+        available_functions: Optional[dict[str, Any]] = None,
         from_task: Optional[Any] = None,
         from_agent: Optional[Any] = None,
     ) -> Optional[str]:
@@ -958,10 +956,10 @@ class LLM(BaseLLM):
 
     def call(
         self,
-        messages: Union[str, List[Dict[str, str]]],
-        tools: Optional[List[dict]] = None,
-        callbacks: Optional[List[Any]] = None,
-        available_functions: Optional[Dict[str, Any]] = None,
+        messages: Union[str, list[dict[str, str]]],
+        tools: Optional[list[dict]] = None,
+        callbacks: Optional[list[Any]] = None,
+        available_functions: Optional[dict[str, Any]] = None,
         from_task: Optional[Any] = None,
         from_agent: Optional[Any] = None,
     ) -> Union[str, Any]:
@@ -1105,8 +1103,8 @@ class LLM(BaseLLM):
         )
 
     def _format_messages_for_provider(
-        self, messages: List[Dict[str, str]]
-    ) -> List[Dict[str, str]]:
+        self, messages: list[dict[str, str]]
+    ) -> list[dict[str, str]]:
         """Format messages according to provider requirements.
 
         Args:
@@ -1247,7 +1245,7 @@ class LLM(BaseLLM):
                 self.context_window_size = int(value * CONTEXT_WINDOW_USAGE_RATIO)
         return self.context_window_size
 
-    def set_callbacks(self, callbacks: List[Any]):
+    def set_callbacks(self, callbacks: list[Any]):
         """
         Attempt to keep a single set of callbacks in litellm by removing old
         duplicates and adding new ones.

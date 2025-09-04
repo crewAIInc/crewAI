@@ -275,11 +275,11 @@ def generate_model_description(model: Type[BaseModel]) -> str:
             else:
                 return f"Optional[Union[{', '.join(describe_field(arg) for arg in non_none_args)}]]"
         elif origin is list:
-            return f"List[{describe_field(args[0])}]"
+            return f"list[{describe_field(args[0])}]"
         elif origin is dict:
             key_type = describe_field(args[0])
             value_type = describe_field(args[1])
-            return f"Dict[{key_type}, {value_type}]"
+            return f"dict[{key_type}, {value_type}]"
         elif isinstance(field_type, type) and issubclass(field_type, BaseModel):
             return generate_model_description(field_type)
         elif hasattr(field_type, "__name__"):

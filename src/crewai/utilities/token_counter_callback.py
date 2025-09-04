@@ -1,5 +1,5 @@
 import warnings
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 from litellm.integrations.custom_logger import CustomLogger
 from litellm.types.utils import Usage
@@ -13,8 +13,8 @@ class TokenCalcHandler(CustomLogger):
 
     def log_success_event(
         self,
-        kwargs: Dict[str, Any],
-        response_obj: Dict[str, Any],
+        kwargs: dict[str, Any],
+        response_obj: dict[str, Any],
         start_time: float,
         end_time: float,
     ) -> None:

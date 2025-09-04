@@ -1,5 +1,5 @@
 import os
-from typing import Any, Dict, List
+from typing import Any
 from collections import defaultdict
 from mem0 import Memory, MemoryClient
 from crewai.utilities.chromadb import sanitize_collection_name
@@ -86,7 +86,7 @@ class Mem0Storage(Storage):
 
         return filter
 
-    def save(self, value: Any, metadata: Dict[str, Any]) -> None:
+    def save(self, value: Any, metadata: dict[str, Any]) -> None:
         user_id = self.config.get("user_id", "")
         assistant_message = [{"role" : "assistant","content" : value}]
 
@@ -121,7 +121,7 @@ class Mem0Storage(Storage):
 
         self.memory.add(assistant_message, **params)
 
-    def search(self,query: str,limit: int = 3,score_threshold: float = 0.35) -> List[Any]:
+    def search(self,query: str,limit: int = 3,score_threshold: float = 0.35) -> list[Any]:
         params = {
             "query": query,
             "limit": limit,

@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 from pydantic import BaseModel, Field
 
 from crewai.utilities.serialization import to_serializable
@@ -14,7 +14,7 @@ class BaseEvent(BaseModel):
     source_type: Optional[str] = (
         None  # "agent", "task", "crew", "memory", "entity_memory", "short_term_memory", "long_term_memory", "external_memory"
     )
-    fingerprint_metadata: Optional[Dict[str, Any]] = None  # Any relevant metadata
+    fingerprint_metadata: Optional[dict[str, Any]] = None  # Any relevant metadata
 
     def to_json(self, exclude: set[str] | None = None):
         """
@@ -28,13 +28,13 @@ class BaseEvent(BaseModel):
         """
         return to_serializable(self, exclude=exclude)
 
-    def _set_task_params(self, data: Dict[str, Any]):
+    def _set_task_params(self, data: dict[str, Any]):
         if "from_task" in data and (task := data["from_task"]):
             self.task_id = task.id
             self.task_name = task.name or task.description
             self.from_task = None
 
-    def _set_agent_params(self, data: Dict[str, Any]):
+    def _set_agent_params(self, data: dict[str, Any]):
         task = data.get("from_task", None)
         agent = task.agent if task else data.get("from_agent", None)
 

@@ -1,5 +1,5 @@
 import os
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Optional, Union
 
 from crewai.cli.constants import DEFAULT_LLM_MODEL, ENV_VARS, LITELLM_PARAMS
 from crewai.llm import LLM, BaseLLM
@@ -97,12 +97,12 @@ def _llm_via_environment_or_fallback() -> Optional[LLM]:
     frequency_penalty: Optional[float] = None
     top_p: Optional[float] = None
     n: Optional[int] = None
-    stop: Optional[Union[str, List[str]]] = None
-    logit_bias: Optional[Dict[int, float]] = None
-    response_format: Optional[Dict[str, Any]] = None
+    stop: Optional[Union[str, list[str]]] = None
+    logit_bias: Optional[dict[int, float]] = None
+    response_format: Optional[dict[str, Any]] = None
     seed: Optional[int] = None
     top_logprobs: Optional[int] = None
-    callbacks: List[Any] = []
+    callbacks: list[Any] = []
 
     # Optional base URL from env
     base_url = (
@@ -120,7 +120,7 @@ def _llm_via_environment_or_fallback() -> Optional[LLM]:
         base_url = api_base
 
     # Initialize llm_params dictionary
-    llm_params: Dict[str, Any] = {
+    llm_params: dict[str, Any] = {
         "model": model,
         "temperature": temperature,
         "max_tokens": max_tokens,

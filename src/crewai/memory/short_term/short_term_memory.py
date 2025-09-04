@@ -1,4 +1,4 @@
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 import time
 
 from pydantic import PrivateAttr
@@ -56,7 +56,7 @@ class ShortTermMemory(Memory):
     def save(
         self,
         value: Any,
-        metadata: Optional[Dict[str, Any]] = None,
+        metadata: Optional[dict[str, Any]] = None,
     ) -> None:
         crewai_event_bus.emit(
             self,

@@ -1,4 +1,4 @@
-from typing import Any, Dict, List
+from typing import Any
 import time
 
 from crewai.memory.long_term.long_term_memory_item import LongTermMemoryItem
@@ -84,7 +84,7 @@ class LongTermMemory(Memory):
         self,
         task: str,
         latest_n: int = 3,
-    ) -> List[Dict[str, Any]]:  # type: ignore # signature of "search" incompatible with supertype "Memory"
+    ) -> list[dict[str, Any]]:  # type: ignore # signature of "search" incompatible with supertype "Memory"
         crewai_event_bus.emit(
             self,
             event=MemoryQueryStartedEvent(

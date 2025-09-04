@@ -1,6 +1,6 @@
 import json
 import os
-from typing import Dict, Optional, Union
+from typing import Optional, Union
 
 from pydantic import BaseModel, Field, PrivateAttr, model_validator
 
@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field, PrivateAttr, model_validator
 
 class I18N(BaseModel):
     """Handles loading and retrieving internationalized prompts."""
-    _prompts: Dict[str, Dict[str, str]] = PrivateAttr()
+    _prompts: dict[str, dict[str, str]] = PrivateAttr()
     prompt_file: Optional[str] = Field(
         default=None,
         description="Path to the prompt_file file to load",
@@ -43,7 +43,7 @@ class I18N(BaseModel):
     def errors(self, error: str) -> str:
         return self.retrieve("errors", error)
 
-    def tools(self, tool: str) -> Union[str, Dict[str, str]]:
+    def tools(self, tool: str) -> Union[str, dict[str, str]]:
         return self.retrieve("tools", tool)
 
     def retrieve(self, kind, key) -> str:

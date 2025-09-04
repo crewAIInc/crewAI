@@ -1,5 +1,5 @@
 import inspect
-from typing import Any, List, Optional
+from typing import Any, Optional
 
 from crewai.agents.agent_adapters.base_tool_adapter import BaseToolAdapter
 from crewai.tools.base_tool import BaseTool
@@ -8,11 +8,11 @@ from crewai.tools.base_tool import BaseTool
 class LangGraphToolAdapter(BaseToolAdapter):
     """Adapts CrewAI tools to LangGraph agent tool compatible format"""
 
-    def __init__(self, tools: Optional[List[BaseTool]] = None):
+    def __init__(self, tools: Optional[list[BaseTool]] = None):
         self.original_tools = tools or []
         self.converted_tools = []
 
-    def configure_tools(self, tools: List[BaseTool]) -> None:
+    def configure_tools(self, tools: list[BaseTool]) -> None:
         """
         Configure and convert CrewAI tools to LangGraph-compatible format.
         LangGraph expects tools in langchain_core.tools format.
@@ -57,5 +57,5 @@ class LangGraphToolAdapter(BaseToolAdapter):
 
         self.converted_tools = converted_tools
 
-    def tools(self) -> List[Any]:
+    def tools(self) -> list[Any]:
         return self.converted_tools or []
