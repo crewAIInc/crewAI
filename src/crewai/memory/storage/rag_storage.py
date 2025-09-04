@@ -5,6 +5,7 @@ import uuid
 import warnings
 from typing import Any, Optional
 
+from chromadb import EmbeddingFunction
 from chromadb.api import ClientAPI
 
 from crewai.rag.embeddings.configurator import EmbeddingConfigurator
@@ -22,6 +23,7 @@ class RAGStorage(BaseRAGStorage):
     """
 
     app: ClientAPI | None = None
+    embedder_config: EmbeddingFunction | None = None  # type: ignore[assignment]
 
     def __init__(
         self,
@@ -44,11 +46,11 @@ class RAGStorage(BaseRAGStorage):
         self.path = path
         self._initialize_app()
 
-    def _set_embedder_config(self):
+    def _set_embedder_config(self) -> None:
         configurator = EmbeddingConfigurator()
         self.embedder_config = configurator.configure_embedder(self.embedder_config)
 
-    def _initialize_app(self):
+    def _initialize_app(self) -> None:
         from chromadb.config import Settings
 
         # Suppress deprecation warnings from chromadb, which are not relevant to us
@@ -103,7 +105,7 @@ class RAGStorage(BaseRAGStorage):
         self,
         query: str,
         limit: int = 3,
-        filter: Optional[dict] = None,
+        filter: Optional[dict[str, Any]] = None,
         score_threshold: float = 0.35,
     ) -> list[Any]:
         if not hasattr(self, "app"):
@@ -116,15 +118,24 @@ class RAGStorage(BaseRAGStorage):
                 response = self.collection.query(query_texts=query, n_results=limit)
 
             results = []
-            for i in range(len(response["ids"][0])):
-                result = {
-                    "id": response["ids"][0][i],
-                    "metadata": response["metadatas"][0][i],
-                    "context": response["documents"][0][i],
-                    "score": response["distances"][0][i],
-                }
-                if result["score"] >= score_threshold:
-                    results.append(result)
+            if response and "ids" in response and response["ids"]:
+                for i in range(len(response["ids"][0])):
+                    result = {
+                        "id": response["ids"][0][i],
+                        "metadata": response["metadatas"][0][i]
+                        if response.get("metadatas")
+                        else {},
+                        "context": response["documents"][0][i]
+                        if response.get("documents")
+                        else "",
+                        "score": response["distances"][0][i]
+                        if response.get("distances")
+                        else 1.0,
+                    }
+                    if (
+                        result["score"] <= score_threshold
+                    ):  # Note: distances are smaller when more similar
+                        results.append(result)
 
             return results
         except Exception as e:

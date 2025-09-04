@@ -7,6 +7,7 @@ from typing import Any, Optional, Union
 
 import chromadb
 import chromadb.errors
+from chromadb import EmbeddingFunction
 from chromadb.api import ClientAPI
 from chromadb.api.types import OneOrMany
 from chromadb.config import Settings
@@ -29,6 +30,7 @@ class KnowledgeStorage(BaseKnowledgeStorage):
     collection: Optional[chromadb.Collection] = None
     collection_name: Optional[str] = "knowledge"
     app: Optional[ClientAPI] = None
+    embedder: Optional[EmbeddingFunction] = None
 
     def __init__(
         self,
@@ -42,7 +44,7 @@ class KnowledgeStorage(BaseKnowledgeStorage):
         self,
         query: list[str],
         limit: int = 3,
-        filter: Optional[dict] = None,
+        filter: Optional[dict[str, Any]] = None,
         score_threshold: float = 0.35,
     ) -> list[dict[str, Any]]:
         with suppress_logging(
@@ -55,14 +57,16 @@ class KnowledgeStorage(BaseKnowledgeStorage):
                     where=filter,
                 )
                 results = []
-                for i in range(len(fetched["ids"][0])):  # type: ignore
+                for i in range(len(fetched["ids"][0])):
                     result = {
-                        "id": fetched["ids"][0][i],  # type: ignore
-                        "metadata": fetched["metadatas"][0][i],  # type: ignore
-                        "context": fetched["documents"][0][i],  # type: ignore
-                        "score": fetched["distances"][0][i],  # type: ignore
+                        "id": fetched["ids"][0][i],
+                        "metadata": fetched["metadatas"][0][i],
+                        "context": fetched["documents"][0][i],
+                        "score": fetched["distances"][0][i],
                     }
-                    if result["score"] >= score_threshold:
+                    if (
+                        result["score"] <= score_threshold
+                    ):  # Note: distances are smaller when more similar
                         results.append(result)
                 return results
             else:
@@ -114,7 +118,7 @@ class KnowledgeStorage(BaseKnowledgeStorage):
         self,
         documents: list[str],
         metadata: Optional[dict[str, Any] | list[dict[str, Any]]] = None,
-    ):
+    ) -> None:
         if not self.collection:
             raise Exception("Collection not initialized")
 
@@ -169,7 +173,7 @@ class KnowledgeStorage(BaseKnowledgeStorage):
             Logger(verbose=True).log("error", f"Failed to upsert documents: {e}", "red")
             raise
 
-    def _create_default_embedding_function(self):
+    def _create_default_embedding_function(self) -> Any:
         from chromadb.utils.embedding_functions.openai_embedding_function import (
             OpenAIEmbeddingFunction,
         )
