@@ -14,7 +14,6 @@ from typing import (
     Callable,
     ClassVar,
     Optional,
-    Type,
     Union,
     get_args,
     get_origin,
@@ -105,11 +104,11 @@ class Task(BaseModel):
         description="Whether the task should be executed asynchronously or not.",
         default=False,
     )
-    output_json: Optional[Type[BaseModel]] = Field(
+    output_json: Optional[type[BaseModel]] = Field(
         description="A Pydantic model to be used to create a JSON output.",
         default=None,
     )
-    output_pydantic: Optional[Type[BaseModel]] = Field(
+    output_pydantic: Optional[type[BaseModel]] = Field(
         description="A Pydantic model to be used to create a Pydantic output.",
         default=None,
     )
@@ -145,7 +144,7 @@ class Task(BaseModel):
         description="Whether the task should instruct the agent to return the final answer formatted in Markdown",
         default=False,
     )
-    converter_cls: Optional[Type[Converter]] = Field(
+    converter_cls: Optional[type[Converter]] = Field(
         description="A converter class used to export structured output",
         default=None,
     )
@@ -225,7 +224,7 @@ class Task(BaseModel):
                         return_annotation_args[1] is Any
                         or return_annotation_args[1] is str
                         or return_annotation_args[1] is TaskOutput
-                        or return_annotation_args[1] == Union[str, TaskOutput]
+                        or return_annotation_args[1] == (str | TaskOutput)
                     )
                 ):
                     raise ValueError(
@@ -760,7 +759,7 @@ Follow these guidelines:
             return OutputFormat.PYDANTIC
         return OutputFormat.RAW
 
-    def _save_file(self, result: Union[Dict, str, Any]) -> None:
+    def _save_file(self, result: Union[dict, str, Any]) -> None:
         """Save task output to a file.
 
         Note:

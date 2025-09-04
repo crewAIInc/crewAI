@@ -7,7 +7,6 @@ from typing import (
     Callable,
     Generic,
     Optional,
-    Type,
     TypeVar,
     Union,
     cast,
@@ -61,7 +60,7 @@ StateT = TypeVar(
 )  # State validation type parameter
 
 
-def ensure_state_type(state: Any, expected_type: Type[StateT]) -> StateT:
+def ensure_state_type(state: Any, expected_type: type[StateT]) -> StateT:
     """Ensure state matches expected type with proper validation.
 
     Args:
@@ -441,11 +440,11 @@ class Flow(Generic[T], metaclass=FlowMeta):
     _listeners: dict[str, tuple[str, list[str]]] = {}
     _routers: set[str] = set()
     _router_paths: dict[str, list[str]] = {}
-    initial_state: Union[Type[T], T, None] = None
+    initial_state: Union[type[T], T, None] = None
     name: Optional[str] = None
     tracing: Optional[bool] = False
 
-    def __class_getitem__(cls: Type["Flow"], item: Type[T]) -> Type["Flow"]:
+    def __class_getitem__(cls: type["Flow"], item: type[T]) -> type["Flow"]:
         class _FlowGeneric(cls):  # type: ignore
             _initial_state_T = item  # type: ignore
 
