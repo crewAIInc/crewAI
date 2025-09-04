@@ -908,7 +908,7 @@ class Crew(FlowTrackable, BaseModel):
                 f"Skipping conditional task: {task.description}",
                 color="yellow",
             )
-            skipped_task_output = cast(TaskOutput, task.get_skipped_task_output())
+            skipped_task_output = task.get_skipped_task_output()
 
             if not was_replayed:
                 self._store_execution_log(task, skipped_task_output, task_index)

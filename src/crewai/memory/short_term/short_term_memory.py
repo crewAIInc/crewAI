@@ -29,7 +29,11 @@ class ShortTermMemory(Memory):
     _memory_provider: Optional[str] = PrivateAttr()
 
     def __init__(
-        self, crew=None, embedder_config=None, storage=None, path=None
+        self,
+        crew: Any = None,
+        embedder_config: Any = None,
+        storage: Any = None,
+        path: Any = None,
     ) -> None:
         memory_provider = embedder_config.get("provider") if embedder_config else None
         if memory_provider == "mem0":
@@ -116,7 +120,7 @@ class ShortTermMemory(Memory):
         query: str,
         limit: int = 3,
         score_threshold: float = 0.35,
-    ):
+    ) -> Any:
         crewai_event_bus.emit(
             self,
             event=MemoryQueryStartedEvent(
@@ -133,7 +137,7 @@ class ShortTermMemory(Memory):
         try:
             results = self.storage.search(
                 query=query, limit=limit, score_threshold=score_threshold
-            )  # type: ignore # BUG? The reference is to the parent class, but the parent class does not have this parameters
+            )
 
             crewai_event_bus.emit(
                 self,

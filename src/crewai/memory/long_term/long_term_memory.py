@@ -24,12 +24,12 @@ class LongTermMemory(Memory):
     LongTermMemoryItem instances.
     """
 
-    def __init__(self, storage=None, path=None) -> None:
+    def __init__(self, storage: Any = None, path: Any = None) -> None:
         if not storage:
             storage = LTMSQLiteStorage(db_path=path) if path else LTMSQLiteStorage()
         super().__init__(storage=storage)
 
-    def save(self, item: LongTermMemoryItem) -> None:  # type: ignore # BUG?: Signature of "save" incompatible with supertype "Memory"
+    def save(self, item: LongTermMemoryItem) -> None:
         crewai_event_bus.emit(
             self,
             event=MemorySaveStartedEvent(
@@ -48,7 +48,7 @@ class LongTermMemory(Memory):
             metadata.update(
                 {"agent": item.agent, "expected_output": item.expected_output}
             )
-            self.storage.save(  # type: ignore # BUG?: Unexpected keyword argument "task_description","score","datetime" for "save" of "Storage"
+            self.storage.save(
                 task_description=item.task,
                 score=metadata["quality"],
                 metadata=metadata,
@@ -80,11 +80,11 @@ class LongTermMemory(Memory):
             )
             raise
 
-    def search(  # type: ignore # signature of "search" incompatible with supertype "Memory"
+    def search(
         self,
         task: str,
         latest_n: int = 3,
-    ) -> list[dict[str, Any]]:  # type: ignore # signature of "search" incompatible with supertype "Memory"
+    ) -> list[dict[str, Any]]:
         crewai_event_bus.emit(
             self,
             event=MemoryQueryStartedEvent(
@@ -98,7 +98,7 @@ class LongTermMemory(Memory):
 
         start_time = time.time()
         try:
-            results = self.storage.load(task, latest_n)  # type: ignore # BUG?: "Storage" has no attribute "load"
+            results = self.storage.load(task, latest_n)
 
             crewai_event_bus.emit(
                 self,

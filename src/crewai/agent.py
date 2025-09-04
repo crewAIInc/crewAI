@@ -497,7 +497,7 @@ class Agent(BaseAgent):
         )
         return result
 
-    def _execute_with_timeout(self, task_prompt: str, task: Task, timeout: int) -> str:
+    def _execute_with_timeout(self, task_prompt: str, task: Task, timeout: int) -> Any:
         """Execute a task with a timeout.
 
         Args:

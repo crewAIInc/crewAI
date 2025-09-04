@@ -27,7 +27,11 @@ class EntityMemory(Memory):
     _memory_provider: str | None = PrivateAttr()
 
     def __init__(
-        self, crew=None, embedder_config=None, storage=None, path=None
+        self,
+        crew: Any = None,
+        embedder_config: Any = None,
+        storage: Any = None,
+        path: Any = None,
     ) -> None:
         memory_provider = embedder_config.get("provider") if embedder_config else None
         if memory_provider == "mem0":
@@ -157,7 +161,7 @@ class EntityMemory(Memory):
         query: str,
         limit: int = 3,
         score_threshold: float = 0.35,
-    ):
+    ) -> Any:
         crewai_event_bus.emit(
             self,
             event=MemoryQueryStartedEvent(

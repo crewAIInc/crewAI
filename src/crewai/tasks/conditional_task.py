@@ -1,5 +1,5 @@
 from collections.abc import Callable
-from typing import Any
+from typing import Any, Optional
 
 from pydantic import Field
 
@@ -14,7 +14,7 @@ class ConditionalTask(Task):
     Note: This cannot be the only task you have in your crew and cannot be the first since its needs context from the previous task.
     """
 
-    condition: Callable[[TaskOutput], bool] = Field(
+    condition: Optional[Callable[[TaskOutput], bool]] = Field(
         default=None,
         description="Maximum number of retries for an agent to execute a task when an error occurs.",
     )
@@ -22,8 +22,8 @@ class ConditionalTask(Task):
     def __init__(
         self,
         condition: Callable[[Any], bool],
-        **kwargs,
-    ):
+        **kwargs: Any,
+    ) -> None:
         super().__init__(**kwargs)
         self.condition = condition
 

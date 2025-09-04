@@ -30,8 +30,8 @@ class Knowledge(BaseModel):
         sources: list[BaseKnowledgeSource],
         embedder: Optional[dict[str, Any]] = None,
         storage: Optional[KnowledgeStorage] = None,
-        **data,
-    ):
+        **data: Any,
+    ) -> None:
         super().__init__(**data)
         if storage:
             self.storage = storage

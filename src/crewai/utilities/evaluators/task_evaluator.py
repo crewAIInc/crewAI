@@ -1,3 +1,5 @@
+from typing import Any
+
 from pydantic import BaseModel, Field
 
 from crewai.events.event_bus import crewai_event_bus
@@ -39,11 +41,11 @@ class TrainingTaskEvaluation(BaseModel):
 
 
 class TaskEvaluator:
-    def __init__(self, original_agent) -> None:
+    def __init__(self, original_agent: Any) -> None:
         self.llm = original_agent.llm
         self.original_agent = original_agent
 
-    def evaluate(self, task, output) -> TaskEvaluation:
+    def evaluate(self, task: Any, output: Any) -> TaskEvaluation:
         crewai_event_bus.emit(
             self, TaskEvaluationEvent(evaluation_type="task_evaluation", task=task)
         )
@@ -74,7 +76,7 @@ class TaskEvaluator:
         return converter.to_pydantic()
 
     def evaluate_training_data(
-        self, training_data: dict, agent_id: str
+        self, training_data: dict[str, Any], agent_id: str
     ) -> TrainingTaskEvaluation:
         """
         Evaluate the training data based on the llm output, human feedback, and improved output.
