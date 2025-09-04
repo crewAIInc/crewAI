@@ -66,7 +66,7 @@ class CrewStructuredTool:
     @classmethod
     def from_function(
         cls,
-        func: Callable,
+        func: Callable[..., Any],
         name: Optional[str] = None,
         description: Optional[str] = None,
         return_direct: bool = False,
@@ -127,7 +127,7 @@ class CrewStructuredTool:
     @staticmethod
     def _create_schema_from_function(
         name: str,
-        func: Callable,
+        func: Callable[..., Any],
     ) -> type[BaseModel]:
         """Create a Pydantic schema from a function's signature.
 
@@ -162,7 +162,7 @@ class CrewStructuredTool:
 
         # Create model
         schema_name = f"{name.title()}Schema"
-        return create_model(schema_name, **fields)
+        return create_model(schema_name, **fields)  # type: ignore[call-overload,no-any-return]
 
     def _validate_function_signature(self) -> None:
         """Validate that the function signature matches the args schema."""
@@ -190,7 +190,7 @@ class CrewStructuredTool:
                         f"not found in args_schema"
                     )
 
-    def _parse_args(self, raw_args: str | dict) -> dict:
+    def _parse_args(self, raw_args: str | dict[str, Any]) -> dict[str, Any]:
         """Parse and validate the input arguments against the schema.
 
         Args:
@@ -215,8 +215,8 @@ class CrewStructuredTool:
 
     async def ainvoke(
         self,
-        input: str | dict,
-        config: Optional[dict] = None,
+        input: str | dict[str, Any],
+        config: Optional[dict[str, Any]] = None,
         **kwargs: Any,
     ) -> Any:
         """Asynchronously invoke the tool.
@@ -251,7 +251,7 @@ class CrewStructuredTool:
         except Exception:
             raise
 
-    def _run(self, *args, **kwargs) -> Any:
+    def _run(self, *args: Any, **kwargs: Any) -> Any:
         """Legacy method for compatibility."""
         # Convert args/kwargs to our expected format
         input_dict = dict(zip(self.args_schema.model_fields.keys(), args))
@@ -259,7 +259,10 @@ class CrewStructuredTool:
         return self.invoke(input_dict)
 
     def invoke(
-        self, input: str | dict, config: Optional[dict] = None, **kwargs: Any
+        self,
+        input: str | dict[str, Any],
+        config: Optional[dict[str, Any]] = None,
+        **kwargs: Any,
     ) -> Any:
         """Main method for tool execution."""
         parsed_args = self._parse_args(input)
@@ -319,9 +322,9 @@ class CrewStructuredTool:
             self._original_tool.current_usage_count = self.current_usage_count
 
     @property
-    def args(self) -> dict:
+    def args(self) -> dict[str, Any]:
         """Get the tool's input arguments schema."""
-        return self.args_schema.model_json_schema()["properties"]
+        return self.args_schema.model_json_schema()["properties"]  # type: ignore[no-any-return]
 
     def __repr__(self) -> str:
         return (
