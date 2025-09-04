@@ -1,6 +1,7 @@
 import asyncio
 import json
 import re
+import threading
 import uuid
 import warnings
 from concurrent.futures import Future
@@ -60,6 +61,7 @@ from crewai.utilities.constants import NOT_SPECIFIED, TRAINING_DATA_FILE
 from crewai.utilities.evaluators.crew_evaluator_handler import CrewEvaluator
 from crewai.utilities.evaluators.task_evaluator import TaskEvaluator
 from crewai.events.types.crew_events import (
+    CrewKickoffCancelledEvent,
     CrewKickoffCompletedEvent,
     CrewKickoffFailedEvent,
     CrewKickoffStartedEvent,
@@ -137,6 +139,7 @@ class Crew(FlowTrackable, BaseModel):
     _task_output_handler: TaskOutputStorageHandler = PrivateAttr(
         default_factory=TaskOutputStorageHandler
     )
+    _cancellation_event: threading.Event = PrivateAttr(default_factory=threading.Event)
 
     name: Optional[str] = Field(default="crew")
     cache: bool = Field(default=True)
@@ -613,6 +616,8 @@ class Crew(FlowTrackable, BaseModel):
         self,
         inputs: Optional[Dict[str, Any]] = None,
     ) -> CrewOutput:
+        self._reset_cancellation()
+        
         ctx = baggage.set_baggage(
             "crew_context", CrewContext(id=str(self.id), key=self.key)
         )
@@ -826,6 +831,18 @@ class Crew(FlowTrackable, BaseModel):
         last_sync_output: Optional[TaskOutput] = None
 
         for task_index, task in enumerate(tasks):
+            if self.is_cancelled():
+                self._logger.log("info", f"Crew execution cancelled after {task_index} tasks", color="yellow")
+                crewai_event_bus.emit(
+                    self,
+                    CrewKickoffCancelledEvent(
+                        crew_name=self.name,
+                        completed_tasks=task_index,
+                        total_tasks=len(tasks),
+                    ),
+                )
+                return self._create_crew_output(task_outputs)
+            
             if start_index is not None and task_index < start_index:
                 if task.output:
                     if task.async_execution:
@@ -1093,6 +1110,10 @@ class Crew(FlowTrackable, BaseModel):
     ) -> List[TaskOutput]:
         task_outputs: List[TaskOutput] = []
         for future_task, future, task_index in futures:
+            if self.is_cancelled():
+                future.cancel()
+                continue
+            
             task_output = future.result()
             task_outputs.append(task_output)
             self._process_task_result(future_task, task_output)
@@ -1525,3 +1546,16 @@ class Crew(FlowTrackable, BaseModel):
             and able_to_inject
         ):
             self.tasks[0].allow_crewai_trigger_context = True
+
+    def cancel(self) -> None:
+        """Cancel the crew execution. This will stop the crew after the current task completes."""
+        self._cancellation_event.set()
+        self._logger.log("info", "Crew cancellation requested", color="yellow")
+
+    def is_cancelled(self) -> bool:
+        """Check if the crew execution has been cancelled."""
+        return self._cancellation_event.is_set()
+
+    def _reset_cancellation(self) -> None:
+        """Reset the cancellation state for reuse of the crew instance."""
+        self._cancellation_event.clear()

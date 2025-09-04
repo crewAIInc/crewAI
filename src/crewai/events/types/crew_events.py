@@ -110,3 +110,12 @@ class CrewTestResultEvent(CrewBaseEvent):
     execution_duration: float
     model: str
     type: str = "crew_test_result"
+
+
+class CrewKickoffCancelledEvent(CrewBaseEvent):
+    """Event emitted when a crew execution is cancelled"""
+
+    reason: str = "External cancellation requested"
+    completed_tasks: int = 0
+    total_tasks: int = 0
+    type: str = "crew_kickoff_cancelled"
