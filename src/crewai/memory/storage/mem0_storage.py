@@ -15,7 +15,9 @@ class Mem0Storage(Storage):
     Extends Storage to handle embedding and searching across entities using Mem0.
     """
 
-    def __init__(self, type, crew=None, config=None):
+    def __init__(
+        self, type: str, crew: Any = None, config: dict[str, Any] | None = None
+    ) -> None:
         super().__init__()
 
         self._validate_type(type)
@@ -26,21 +28,21 @@ class Mem0Storage(Storage):
         self._extract_config_values()
         self._initialize_memory()
 
-    def _validate_type(self, type):
+    def _validate_type(self, type: str) -> None:
         supported_types = {"short_term", "long_term", "entities", "external"}
         if type not in supported_types:
             raise ValueError(
                 f"Invalid type '{type}' for Mem0Storage. Must be one of: {', '.join(supported_types)}"
             )
 
-    def _extract_config_values(self):
+    def _extract_config_values(self) -> None:
         self.mem0_run_id = self.config.get("run_id")
         self.includes = self.config.get("includes")
         self.excludes = self.config.get("excludes")
         self.custom_categories = self.config.get("custom_categories")
         self.infer = self.config.get("infer", True)
 
-    def _initialize_memory(self):
+    def _initialize_memory(self) -> None:
         api_key = self.config.get("api_key") or os.getenv("MEM0_API_KEY")
         org_id = self.config.get("org_id")
         project_id = self.config.get("project_id")
@@ -61,7 +63,7 @@ class Mem0Storage(Storage):
                 else Memory()
             )
 
-    def _create_filter_for_search(self):
+    def _create_filter_for_search(self) -> dict[str, Any]:
         """
         Returns:
             dict: A filter dictionary containing AND conditions for querying data.

@@ -620,6 +620,7 @@ class Agent(BaseAgent):
             self._logger.log(
                 "info", "Coding tools not available. Install crewai_tools. "
             )
+            return []
 
     def get_output_converter(
         self, llm: BaseLLM, text: str, model: str, instructions: str
@@ -671,7 +672,7 @@ class Agent(BaseAgent):
 
         return description
 
-    def _inject_date_to_task(self, task: str) -> str:
+    def _inject_date_to_task(self, task: Task) -> None:
         """Inject the current date into the task description if inject_date is enabled."""
         if self.inject_date:
             from datetime import datetime
