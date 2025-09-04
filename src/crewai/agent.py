@@ -1,29 +1,42 @@
 import shutil
 import subprocess
 import time
+from collections.abc import Callable, Sequence
 from typing import (
     Any,
-    Callable,
-    Dict,
-    List,
     Literal,
     Optional,
-    Sequence,
-    Tuple,
-    Type,
-    Union,
 )
 
 from pydantic import Field, InstanceOf, PrivateAttr, model_validator
+from typing_extensions import Self
 
-from crewai.agents.cache.cache_handler import CacheHandler
 from crewai.agents.agent_builder.base_agent import BaseAgent
+from crewai.agents.cache.cache_handler import CacheHandler
 from crewai.agents.crew_agent_executor import CrewAgentExecutor
+from crewai.events.event_bus import crewai_event_bus
+from crewai.events.types.agent_events import (
+    AgentExecutionCompletedEvent,
+    AgentExecutionErrorEvent,
+    AgentExecutionStartedEvent,
+)
+from crewai.events.types.knowledge_events import (
+    KnowledgeQueryCompletedEvent,
+    KnowledgeQueryFailedEvent,
+    KnowledgeQueryStartedEvent,
+    KnowledgeRetrievalCompletedEvent,
+    KnowledgeRetrievalStartedEvent,
+    KnowledgeSearchQueryFailedEvent,
+)
+from crewai.events.types.memory_events import (
+    MemoryRetrievalCompletedEvent,
+    MemoryRetrievalStartedEvent,
+)
 from crewai.knowledge.knowledge import Knowledge
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
 from crewai.knowledge.utils.knowledge_utils import extract_knowledge_context
 from crewai.lite_agent import LiteAgent, LiteAgentOutput
-from crewai.llm import BaseLLM
+from crewai.llms.base_llm import BaseLLM
 from crewai.memory.contextual.contextual_memory import ContextualMemory
 from crewai.security import Fingerprint
 from crewai.task import Task
@@ -38,24 +51,6 @@ from crewai.utilities.agent_utils import (
 )
 from crewai.utilities.constants import TRAINED_AGENTS_DATA_FILE, TRAINING_DATA_FILE
 from crewai.utilities.converter import generate_model_description
-from crewai.events.types.agent_events import (
-    AgentExecutionCompletedEvent,
-    AgentExecutionErrorEvent,
-    AgentExecutionStartedEvent,
-)
-from crewai.events.event_bus import crewai_event_bus
-from crewai.events.types.memory_events import (
-    MemoryRetrievalStartedEvent,
-    MemoryRetrievalCompletedEvent,
-)
-from crewai.events.types.knowledge_events import (
-    KnowledgeQueryCompletedEvent,
-    KnowledgeQueryFailedEvent,
-    KnowledgeQueryStartedEvent,
-    KnowledgeRetrievalCompletedEvent,
-    KnowledgeRetrievalStartedEvent,
-    KnowledgeSearchQueryFailedEvent,
-)
 from crewai.utilities.llm_utils import create_llm
 from crewai.utilities.token_counter_callback import TokenCalcHandler
 from crewai.utilities.training_handler import CrewTrainingHandler
@@ -101,10 +96,10 @@ class Agent(BaseAgent):
         default=True,
         description="Use system prompt for the agent.",
     )
-    llm: Union[str, InstanceOf[BaseLLM], Any] = Field(
+    llm: str | InstanceOf[BaseLLM] | Any = Field(
         description="Language model that will run the agent.", default=None
     )
-    function_calling_llm: Optional[Union[str, InstanceOf[BaseLLM], Any]] = Field(
+    function_calling_llm: Optional[str | InstanceOf[BaseLLM] | Any] = Field(
         description="Language model that will run the agent.", default=None
     )
     system_template: Optional[str] = Field(
@@ -151,7 +146,7 @@ class Agent(BaseAgent):
         default=None,
         description="Maximum number of reasoning attempts before executing the task. If None, will try until ready.",
     )
-    embedder: Optional[Dict[str, Any]] = Field(
+    embedder: Optional[dict[str, Any]] = Field(
         default=None,
         description="Embedder configuration for the agent.",
     )
@@ -171,7 +166,7 @@ class Agent(BaseAgent):
         default=None,
         description="The Agent's role to be used from your repository.",
     )
-    guardrail: Optional[Union[Callable[[Any], Tuple[bool, Any]], str]] = Field(
+    guardrail: Optional[Callable[[Any], tuple[bool, Any]] | str] = Field(
         default=None,
         description="Function or string description of a guardrail to validate agent output",
     )
@@ -180,13 +175,14 @@ class Agent(BaseAgent):
     )
 
     @model_validator(mode="before")
-    def validate_from_repository(cls, v):
+    @classmethod
+    def validate_from_repository(cls, v: Any) -> Any:
         if v is not None and (from_repository := v.get("from_repository")):
             return load_agent_from_repository(from_repository) | v
         return v
 
     @model_validator(mode="after")
-    def post_init_setup(self):
+    def post_init_setup(self) -> Self:
         self.agent_ops_agent_name = self.role
 
         self.llm = create_llm(self.llm)
@@ -203,12 +199,12 @@ class Agent(BaseAgent):
 
         return self
 
-    def _setup_agent_executor(self):
+    def _setup_agent_executor(self) -> None:
         if not self.cache_handler:
             self.cache_handler = CacheHandler()
         self.set_cache_handler(self.cache_handler)
 
-    def set_knowledge(self, crew_embedder: Optional[Dict[str, Any]] = None):
+    def set_knowledge(self, crew_embedder: Optional[dict[str, Any]] = None) -> None:
         try:
             if self.embedder is None and crew_embedder:
                 self.embedder = crew_embedder
@@ -245,7 +241,7 @@ class Agent(BaseAgent):
         self,
         task: Task,
         context: Optional[str] = None,
-        tools: Optional[List[BaseTool]] = None,
+        tools: Optional[list[BaseTool]] = None,
     ) -> str:
         """Execute a task with the agent.
 
@@ -492,7 +488,7 @@ class Agent(BaseAgent):
         # If there was any tool in self.tools_results that had result_as_answer
         # set to True, return the results of the last tool that had
         # result_as_answer set to True
-        for tool_result in self.tools_results:  # type: ignore # Item "None" of "list[Any] | None" has no attribute "__iter__" (not iterable)
+        for tool_result in self.tools_results:
             if tool_result.get("result_as_answer", False):
                 result = tool_result["result"]
         crewai_event_bus.emit(
@@ -554,14 +550,14 @@ class Agent(BaseAgent):
         )["output"]
 
     def create_agent_executor(
-        self, tools: Optional[List[BaseTool]] = None, task=None
+        self, tools: Optional[list[BaseTool]] = None, task: Optional[Task] = None
     ) -> None:
         """Create an agent executor for the agent.
 
         Returns:
             An instance of the CrewAgentExecutor class.
         """
-        raw_tools: List[BaseTool] = tools or self.tools or []
+        raw_tools: list[BaseTool] = tools or self.tools or []
         parsed_tools = parse_tools(raw_tools)
 
         prompt = Prompts(
@@ -603,7 +599,7 @@ class Agent(BaseAgent):
             callbacks=[TokenCalcHandler(self._token_process)],
         )
 
-    def get_delegation_tools(self, agents: List[BaseAgent]):
+    def get_delegation_tools(self, agents: list[BaseAgent]) -> list[BaseTool]:
         agent_tools = AgentTools(agents=agents)
         tools = agent_tools.tools()
         return tools
@@ -613,7 +609,7 @@ class Agent(BaseAgent):
 
         return [AddImageTool()]
 
-    def get_code_execution_tools(self):
+    def get_code_execution_tools(self) -> list[BaseTool]:
         try:
             from crewai_tools import CodeInterpreterTool  # type: ignore
 
@@ -625,7 +621,9 @@ class Agent(BaseAgent):
                 "info", "Coding tools not available. Install crewai_tools. "
             )
 
-    def get_output_converter(self, llm, text, model, instructions):
+    def get_output_converter(
+        self, llm: BaseLLM, text: str, model: str, instructions: str
+    ) -> Converter:
         return Converter(llm=llm, text=text, model=model, instructions=instructions)
 
     def _training_handler(self, task_prompt: str) -> str:
@@ -654,7 +652,7 @@ class Agent(BaseAgent):
                 )
         return task_prompt
 
-    def _render_text_description(self, tools: List[Any]) -> str:
+    def _render_text_description(self, tools: list[Any]) -> str:
         """Render the tool name and description in plain text.
 
         Output will be in the format of:
@@ -673,7 +671,7 @@ class Agent(BaseAgent):
 
         return description
 
-    def _inject_date_to_task(self, task):
+    def _inject_date_to_task(self, task: str) -> str:
         """Inject the current date into the task description if inject_date is enabled."""
         if self.inject_date:
             from datetime import datetime
@@ -723,7 +721,7 @@ class Agent(BaseAgent):
                 f"Docker is not running. Please start Docker to use code execution with agent: {self.role}"
             )
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"Agent(role={self.role}, goal={self.goal}, backstory={self.backstory})"
 
     @property
@@ -736,7 +734,7 @@ class Agent(BaseAgent):
         """
         return self.security_config.fingerprint
 
-    def set_fingerprint(self, fingerprint: Fingerprint):
+    def set_fingerprint(self, fingerprint: Fingerprint) -> None:
         self.security_config.fingerprint = fingerprint
 
     def _get_knowledge_search_query(self, task_prompt: str) -> str | None:
@@ -796,8 +794,8 @@ class Agent(BaseAgent):
 
     def kickoff(
         self,
-        messages: Union[str, List[Dict[str, str]]],
-        response_format: Optional[Type[Any]] = None,
+        messages: str | list[dict[str, str]],
+        response_format: Optional[type[Any]] = None,
     ) -> LiteAgentOutput:
         """
         Execute the agent with the given messages using a LiteAgent instance.
@@ -836,8 +834,8 @@ class Agent(BaseAgent):
 
     async def kickoff_async(
         self,
-        messages: Union[str, List[Dict[str, str]]],
-        response_format: Optional[Type[Any]] = None,
+        messages: str | list[dict[str, str]],
+        response_format: Optional[type[Any]] = None,
     ) -> LiteAgentOutput:
         """
         Execute the agent asynchronously with the given messages using a LiteAgent instance.

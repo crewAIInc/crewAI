@@ -5,10 +5,10 @@ import time
 from difflib import SequenceMatcher
 from json import JSONDecodeError
 from textwrap import dedent
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
+from typing import TYPE_CHECKING, Any, Optional, Union
 
 import json5
-from json_repair import repair_json
+from json_repair import repair_json  # type: ignore[import-untyped]
 
 from crewai.agents.tools_handler import ToolsHandler
 from crewai.events.event_bus import crewai_event_bus
@@ -100,7 +100,7 @@ class ToolUsage:
             self._max_parsing_attempts = 2
             self._remember_format_after_usages = 4
 
-    def parse_tool_calling(self, tool_string: str):
+    def parse_tool_calling(self, tool_string: str) -> Any:
         """Parse the tool string and return the tool calling."""
         return self._tool_calling(tool_string)
 
@@ -149,7 +149,21 @@ class ToolUsage:
         tool: CrewStructuredTool,
         calling: ToolCalling | InstructorToolCalling,
     ) -> str:
-        if self._check_tool_repeated_usage(calling=calling):  # type: ignore # _check_tool_repeated_usage of "ToolUsage" does not return a value (it only ever returns None)
+        """Use a tool with the given calling information.
+
+        Args:
+            tool_string: The string representation of the tool call.
+            tool: The CrewStructuredTool instance to use.
+            calling: The tool calling information.
+
+        Returns:
+            The formatted result of the tool usage.
+
+        Notes:
+            TODO: Investigate why BaseAgent/LiteAgent don't have fingerprint attribute.
+                  Currently using hasattr check as a workaround (lines 179-180).
+        """
+        if self._check_tool_repeated_usage(calling=calling):
             try:
                 result = self._i18n.errors("task_repeated_usage").format(
                     tool_names=self.tools_names
@@ -159,8 +173,8 @@ class ToolUsage:
                     tool_name=tool.name,
                     attempts=self._run_attempts,
                 )
-                result = self._format_result(result=result)  # type: ignore #  "_format_result" of "ToolUsage" does not return a value (it only ever returns None)
-                return result  # type: ignore # Fix the return type of this function
+                result = self._format_result(result=result)
+                return result
 
             except Exception:
                 if self.task:
@@ -176,7 +190,7 @@ class ToolUsage:
                 "agent": self.agent,
             }
 
-            if self.agent.fingerprint:
+            if hasattr(self.agent, "fingerprint") and self.agent.fingerprint:
                 event_data.update(self.agent.fingerprint)
             if self.task:
                 event_data["task_name"] = self.task.name or self.task.description
@@ -264,19 +278,19 @@ class ToolUsage:
                         self._printer.print(
                             content=f"\n\n{error_message}\n", color="red"
                         )
-                    return error  # type: ignore # No return value expected
+                    return error
 
                 if self.task:
                     self.task.increment_tools_errors()
-                return self.use(calling=calling, tool_string=tool_string)  # type: ignore # No return value expected
+                return self.use(calling=calling, tool_string=tool_string)
 
             if self.tools_handler:
                 should_cache = True
                 if (
                     hasattr(available_tool, "cache_function")
-                    and available_tool.cache_function  # type: ignore # Item "None" of "Any | None" has no attribute "cache_function"
+                    and available_tool.cache_function
                 ):
-                    should_cache = available_tool.cache_function(  # type: ignore # Item "None" of "Any | None" has no attribute "cache_function"
+                    should_cache = available_tool.cache_function(
                         calling.arguments, result
                     )
 
@@ -288,7 +302,7 @@ class ToolUsage:
             tool_name=tool.name,
             attempts=self._run_attempts,
         )
-        result = self._format_result(result=result)  # type: ignore # "_format_result" of "ToolUsage" does not return a value (it only ever returns None)
+        result = self._format_result(result=result)
         data = {
             "result": result,
             "tool_name": tool.name,
@@ -505,7 +519,7 @@ class ToolUsage:
                     self.task.increment_tools_errors()
                 if self.agent and self.agent.verbose:
                     self._printer.print(content=f"\n\n{e}\n", color="red")
-                return ToolUsageErrorException(  # type: ignore # Incompatible return value type (got "ToolUsageErrorException", expected "ToolCalling | InstructorToolCalling")
+                return ToolUsageErrorException(
                     f"{self._i18n.errors('tool_usage_error').format(error=e)}\nMoving on then. {self._i18n.slice('format').format(tool_names=self.tools_names)}"
                 )
             return self._tool_calling(tool_string)
@@ -564,7 +578,7 @@ class ToolUsage:
         # If all parsing attempts fail, raise an error
         raise Exception(error_message)
 
-    def _emit_validate_input_error(self, final_error: str):
+    def _emit_validate_input_error(self, final_error: str) -> None:
         tool_selection_data = {
             "agent_key": getattr(self.agent, "key", None) if self.agent else None,
             "agent_role": getattr(self.agent, "role", None) if self.agent else None,
@@ -617,7 +631,20 @@ class ToolUsage:
 
     def _prepare_event_data(
         self, tool: Any, tool_calling: ToolCalling | InstructorToolCalling
-    ) -> dict:
+    ) -> dict[str, Any]:
+        """Prepare event data for tool usage events.
+
+        Args:
+            tool: The tool being used.
+            tool_calling: The tool calling information containing arguments.
+
+        Returns:
+            A dictionary containing event data for tool usage tracking.
+
+        Notes:
+            TODO: Create a better type representation for the return value,
+                  possibly using TypedDict or a dataclass for stronger typing.
+        """
         event_data = {
             "run_attempts": self._run_attempts,
             "delegations": self.task.delegations if self.task else 0,
