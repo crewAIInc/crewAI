@@ -90,7 +90,7 @@ class PickleHandler:
         """
         self.save({})
 
-    def save(self, data) -> None:
+    def save(self, data: Any) -> None:
         """
         Save the data to the specified file using pickle.
 
@@ -100,12 +100,12 @@ class PickleHandler:
         with open(self.file_path, "wb") as file:
             pickle.dump(data, file)
 
-    def load(self) -> dict:
+    def load(self) -> Any:
         """
         Load the data from the specified file using pickle.
 
         Returns:
-        - dict: The data loaded from the file.
+        - The data loaded from the file.
         """
         if not os.path.exists(self.file_path) or os.path.getsize(self.file_path) == 0:
             return {}  # Return an empty dictionary if the file does not exist or is empty

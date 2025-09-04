@@ -14,11 +14,12 @@ class TaskStartedEvent(BaseEvent):
     def __init__(self, **data: Any) -> None:
         super().__init__(**data)
         # Set fingerprint data from the task
-        if hasattr(self.task, "fingerprint") and self.task.fingerprint:
+        if self.task and hasattr(self.task, "fingerprint") and self.task.fingerprint:
             self.source_fingerprint = self.task.fingerprint.uuid_str
             self.source_type = "task"
             if (
-                hasattr(self.task.fingerprint, "metadata")
+                self.task
+                and hasattr(self.task.fingerprint, "metadata")
                 and self.task.fingerprint.metadata
             ):
                 self.fingerprint_metadata = self.task.fingerprint.metadata
@@ -34,11 +35,12 @@ class TaskCompletedEvent(BaseEvent):
     def __init__(self, **data: Any) -> None:
         super().__init__(**data)
         # Set fingerprint data from the task
-        if hasattr(self.task, "fingerprint") and self.task.fingerprint:
+        if self.task and hasattr(self.task, "fingerprint") and self.task.fingerprint:
             self.source_fingerprint = self.task.fingerprint.uuid_str
             self.source_type = "task"
             if (
-                hasattr(self.task.fingerprint, "metadata")
+                self.task
+                and hasattr(self.task.fingerprint, "metadata")
                 and self.task.fingerprint.metadata
             ):
                 self.fingerprint_metadata = self.task.fingerprint.metadata
@@ -54,11 +56,12 @@ class TaskFailedEvent(BaseEvent):
     def __init__(self, **data: Any) -> None:
         super().__init__(**data)
         # Set fingerprint data from the task
-        if hasattr(self.task, "fingerprint") and self.task.fingerprint:
+        if self.task and hasattr(self.task, "fingerprint") and self.task.fingerprint:
             self.source_fingerprint = self.task.fingerprint.uuid_str
             self.source_type = "task"
             if (
-                hasattr(self.task.fingerprint, "metadata")
+                self.task
+                and hasattr(self.task.fingerprint, "metadata")
                 and self.task.fingerprint.metadata
             ):
                 self.fingerprint_metadata = self.task.fingerprint.metadata
@@ -74,11 +77,12 @@ class TaskEvaluationEvent(BaseEvent):
     def __init__(self, **data: Any) -> None:
         super().__init__(**data)
         # Set fingerprint data from the task
-        if hasattr(self.task, "fingerprint") and self.task.fingerprint:
+        if self.task and hasattr(self.task, "fingerprint") and self.task.fingerprint:
             self.source_fingerprint = self.task.fingerprint.uuid_str
             self.source_type = "task"
             if (
-                hasattr(self.task.fingerprint, "metadata")
+                self.task
+                and hasattr(self.task.fingerprint, "metadata")
                 and self.task.fingerprint.metadata
             ):
                 self.fingerprint_metadata = self.task.fingerprint.metadata
