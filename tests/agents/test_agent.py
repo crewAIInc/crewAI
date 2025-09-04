@@ -9,19 +9,19 @@ import pytest
 from crewai import Agent, Crew, Task
 from crewai.agents.cache.cache_handler import CacheHandler
 from crewai.agents.crew_agent_executor import AgentFinish, CrewAgentExecutor
+from crewai.events.event_bus import crewai_event_bus
+from crewai.events.types.tool_usage_events import ToolUsageFinishedEvent
 from crewai.knowledge.knowledge import Knowledge
 from crewai.knowledge.knowledge_config import KnowledgeConfig
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
 from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
 from crewai.llm import LLM
+from crewai.process import Process
 from crewai.tools import tool
 from crewai.tools.tool_calling import InstructorToolCalling
 from crewai.tools.tool_usage import ToolUsage
 from crewai.utilities import RPMController
 from crewai.utilities.errors import AgentRepositoryError
-from crewai.events.event_bus import crewai_event_bus
-from crewai.events.types.tool_usage_events import ToolUsageFinishedEvent
-from crewai.process import Process
 
 
 def test_agent_llm_creation_with_env_vars():
@@ -287,8 +287,8 @@ def test_cache_hitting():
     output = agent.execute_task(task1)
     output = agent.execute_task(task2)
     assert cache_handler._cache == {
-        "multiplier-{'first_number': 2, 'second_number': 6}": 12,
-        "multiplier-{'first_number': 3, 'second_number': 3}": 9,
+        'multiplier-{"first_number": 2, "second_number": 6}': 12,
+        'multiplier-{"first_number": 3, "second_number": 3}': 9,
     }
 
     task = Task(
@@ -300,9 +300,9 @@ def test_cache_hitting():
     assert output == "36"
 
     assert cache_handler._cache == {
-        "multiplier-{'first_number': 2, 'second_number': 6}": 12,
-        "multiplier-{'first_number': 3, 'second_number': 3}": 9,
-        "multiplier-{'first_number': 12, 'second_number': 3}": 36,
+        'multiplier-{"first_number": 2, "second_number": 6}': 12,
+        'multiplier-{"first_number": 3, "second_number": 3}': 9,
+        'multiplier-{"first_number": 12, "second_number": 3}': 36,
     }
     received_events = []
 
@@ -322,7 +322,7 @@ def test_cache_hitting():
         output = agent.execute_task(task)
         assert output == "0"
         read.assert_called_with(
-            tool="multiplier", input={"first_number": 2, "second_number": 6}
+            tool="multiplier", input_data={"first_number": 2, "second_number": 6}
         )
         assert len(received_events) == 1
         assert isinstance(received_events[0], ToolUsageFinishedEvent)
@@ -2312,9 +2312,9 @@ def test_agent_from_repository(mock_get_agent, mock_get_auth_token):
     # Mock embedchain initialization to prevent race conditions in parallel CI execution
     with patch("embedchain.client.Client.setup"):
         from crewai_tools import (
-            SerperDevTool,
-            FileReadTool,
             EnterpriseActionTool,
+            FileReadTool,
+            SerperDevTool,
         )
 
     mock_get_response = MagicMock()
