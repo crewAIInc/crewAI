@@ -3,6 +3,7 @@ import logging
 import os
 import shutil
 import warnings
+from collections.abc import Mapping
 from typing import Any, Optional, Union
 
 import chromadb
@@ -30,7 +31,7 @@ class KnowledgeStorage(BaseKnowledgeStorage):
     collection: Optional[chromadb.Collection] = None
     collection_name: Optional[str] = "knowledge"
     app: Optional[ClientAPI] = None
-    embedder: Optional[EmbeddingFunction] = None
+    embedder: Optional[EmbeddingFunction[Any]] = None
 
     def __init__(
         self,
@@ -57,17 +58,61 @@ class KnowledgeStorage(BaseKnowledgeStorage):
                     where=filter,
                 )
                 results = []
-                for i in range(len(fetched["ids"][0])):
-                    result = {
-                        "id": fetched["ids"][0][i],
-                        "metadata": fetched["metadatas"][0][i],
-                        "context": fetched["documents"][0][i],
-                        "score": fetched["distances"][0][i],
-                    }
-                    if (
-                        result["score"] <= score_threshold
-                    ):  # Note: distances are smaller when more similar
-                        results.append(result)
+                if (
+                    fetched
+                    and "ids" in fetched
+                    and fetched["ids"]
+                    and len(fetched["ids"]) > 0
+                ):
+                    ids_list = (
+                        fetched["ids"][0]
+                        if isinstance(fetched["ids"][0], list)
+                        else fetched["ids"]
+                    )
+                    for i in range(len(ids_list)):
+                        # Handle metadatas
+                        metadata = {}
+                        if fetched.get("metadatas") and len(fetched["metadatas"]) > 0:
+                            metadata_list = (
+                                fetched["metadatas"][0]
+                                if isinstance(fetched["metadatas"][0], list)
+                                else fetched["metadatas"]
+                            )
+                            if i < len(metadata_list):
+                                metadata = metadata_list[i]
+
+                        # Handle documents
+                        context = ""
+                        if fetched.get("documents") and len(fetched["documents"]) > 0:
+                            docs_list = (
+                                fetched["documents"][0]
+                                if isinstance(fetched["documents"][0], list)
+                                else fetched["documents"]
+                            )
+                            if i < len(docs_list):
+                                context = docs_list[i]
+
+                        # Handle distances
+                        score = 1.0
+                        if fetched.get("distances") and len(fetched["distances"]) > 0:
+                            dist_list = (
+                                fetched["distances"][0]
+                                if isinstance(fetched["distances"][0], list)
+                                else fetched["distances"]
+                            )
+                            if i < len(dist_list):
+                                score = dist_list[i]
+
+                        result = {
+                            "id": ids_list[i],
+                            "metadata": metadata,
+                            "context": context,
+                            "score": score,
+                        }
+
+                        # Check score threshold - distances are smaller when more similar
+                        if isinstance(score, (int, float)) and score <= score_threshold:
+                            results.append(result)
                 return results
             else:
                 raise Exception("Collection not initialized")
@@ -150,7 +195,7 @@ class KnowledgeStorage(BaseKnowledgeStorage):
 
             # If we have no metadata at all, set it to None
             final_metadata: Optional[OneOrMany[chromadb.Metadata]] = (
-                None if all(m is None for m in filtered_metadata) else filtered_metadata
+                None if all(m is None for m in filtered_metadata) else filtered_metadata  # type: ignore[assignment]
             )
 
             self.collection.upsert(

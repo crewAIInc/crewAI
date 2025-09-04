@@ -534,7 +534,7 @@ class Telemetry:
 
     def tool_usage_error(
         self, llm: Any, agent: Any = None, tool_name: Optional[str] = None
-    ):
+    ) -> None:
         """Records when a tool usage results in an error.
 
         Args:
@@ -572,7 +572,7 @@ class Telemetry:
 
     def individual_test_result_span(
         self, crew: Crew, quality: float, exec_time: int, model_name: str
-    ):
+    ) -> None:
         """Records individual test results for a crew execution.
 
         Args:
@@ -607,7 +607,7 @@ class Telemetry:
         iterations: int,
         inputs: dict[str, Any] | None,
         model_name: str,
-    ):
+    ) -> None:
         """Records the execution of a test suite for a crew.
 
         Args:
@@ -792,7 +792,8 @@ class Telemetry:
 
         if crew.share_crew:
             self._safe_telemetry_operation(operation)
-            return operation()
+            result = operation()
+            return result  # type: ignore[no-any-return]
         return None
 
     def end_crew(self, crew: Any, final_string_output: str) -> None:

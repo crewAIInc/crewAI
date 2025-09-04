@@ -99,7 +99,7 @@ class TraceCollectionListener(BaseEventListener):
             return
 
         super().__init__()
-        self.batch_manager = batch_manager or TraceBatchManager()
+        self.batch_manager = batch_manager or TraceBatchManager()  # type: ignore[call-arg]
         self._initialized = True
 
     def _check_authenticated(self) -> bool:
@@ -324,7 +324,7 @@ class TraceCollectionListener(BaseEventListener):
 
     def _initialize_batch(
         self, user_context: dict[str, str], execution_metadata: dict[str, Any]
-    ):
+    ) -> None:
         """Initialize trace batch if ephemeral"""
         if not self._check_authenticated():
             self.batch_manager.initialize_batch(
@@ -426,7 +426,7 @@ class TraceCollectionListener(BaseEventListener):
 
     # TODO: move to utils
     def _safe_serialize_to_dict(
-        self, obj, exclude: set[str] | None = None
+        self, obj: Any, exclude: set[str] | None = None
     ) -> dict[str, Any]:
         """Safely serialize an object to a dictionary for event data."""
         try:

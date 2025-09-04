@@ -23,7 +23,7 @@ class RAGStorage(BaseRAGStorage):
     """
 
     app: ClientAPI | None = None
-    embedder_config: EmbeddingFunction | None = None  # type: ignore[assignment]
+    embedder_config: EmbeddingFunction[Any] | None = None
 
     def __init__(
         self,
@@ -41,14 +41,22 @@ class RAGStorage(BaseRAGStorage):
         self.storage_file_name = self._build_storage_file_name(type, agents)
 
         self.type = type
-
+        self._original_embedder_config = (
+            embedder_config  # Store for later use in _set_embedder_config
+        )
         self.allow_reset = allow_reset
         self.path = path
         self._initialize_app()
 
     def _set_embedder_config(self) -> None:
         configurator = EmbeddingConfigurator()
-        self.embedder_config = configurator.configure_embedder(self.embedder_config)
+        # Pass the original embedder_config from __init__, not self.embedder_config
+        if hasattr(self, "_original_embedder_config"):
+            self.embedder_config = configurator.configure_embedder(
+                self._original_embedder_config
+            )
+        else:
+            self.embedder_config = configurator.configure_embedder(None)
 
     def _initialize_app(self) -> None:
         from chromadb.config import Settings
@@ -118,23 +126,60 @@ class RAGStorage(BaseRAGStorage):
                 response = self.collection.query(query_texts=query, n_results=limit)
 
             results = []
-            if response and "ids" in response and response["ids"]:
-                for i in range(len(response["ids"][0])):
+            if (
+                response
+                and "ids" in response
+                and response["ids"]
+                and len(response["ids"]) > 0
+            ):
+                ids_list = (
+                    response["ids"][0]
+                    if isinstance(response["ids"][0], list)
+                    else response["ids"]
+                )
+                for i in range(len(ids_list)):
+                    # Handle metadatas
+                    metadata = {}
+                    if response.get("metadatas") and len(response["metadatas"]) > 0:
+                        metadata_list = (
+                            response["metadatas"][0]
+                            if isinstance(response["metadatas"][0], list)
+                            else response["metadatas"]
+                        )
+                        if i < len(metadata_list):
+                            metadata = metadata_list[i]
+
+                    # Handle documents
+                    context = ""
+                    if response.get("documents") and len(response["documents"]) > 0:
+                        docs_list = (
+                            response["documents"][0]
+                            if isinstance(response["documents"][0], list)
+                            else response["documents"]
+                        )
+                        if i < len(docs_list):
+                            context = docs_list[i]
+
+                    # Handle distances
+                    score = 1.0
+                    if response.get("distances") and len(response["distances"]) > 0:
+                        dist_list = (
+                            response["distances"][0]
+                            if isinstance(response["distances"][0], list)
+                            else response["distances"]
+                        )
+                        if i < len(dist_list):
+                            score = dist_list[i]
+
                     result = {
-                        "id": response["ids"][0][i],
-                        "metadata": response["metadatas"][0][i]
-                        if response.get("metadatas")
-                        else {},
-                        "context": response["documents"][0][i]
-                        if response.get("documents")
-                        else "",
-                        "score": response["distances"][0][i]
-                        if response.get("distances")
-                        else 1.0,
+                        "id": ids_list[i],
+                        "metadata": metadata,
+                        "context": context,
+                        "score": score,
                     }
-                    if (
-                        result["score"] <= score_threshold
-                    ):  # Note: distances are smaller when more similar
+
+                    # Check score threshold - distances are smaller when more similar
+                    if isinstance(score, (int, float)) and score <= score_threshold:
                         results.append(result)
 
             return results
@@ -168,7 +213,7 @@ class RAGStorage(BaseRAGStorage):
                     f"An error occurred while resetting the {self.type} memory: {e}"
                 )
 
-    def _create_default_embedding_function(self):
+    def _create_default_embedding_function(self) -> EmbeddingFunction[Any]:
         from chromadb.utils.embedding_functions.openai_embedding_function import (
             OpenAIEmbeddingFunction,
         )
