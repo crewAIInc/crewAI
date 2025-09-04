@@ -860,7 +860,7 @@ class Crew(FlowTrackable, BaseModel):
             tools_for_task = self._prepare_tools(
                 agent_to_use,
                 task,
-                cast(Union[List[Tool], List[BaseTool]], tools_for_task),
+                cast(Union[list[Tool], list[BaseTool]], tools_for_task),
             )
 
             self._log_task_start(task, agent_to_use.role)
@@ -986,7 +986,7 @@ class Crew(FlowTrackable, BaseModel):
         # Add all new tools
         tools.extend(new_tools)
 
-        return cast(List[BaseTool], tools)
+        return cast(list[BaseTool], tools)
 
     def _inject_delegation_tools(
         self,
@@ -1001,8 +1001,8 @@ class Crew(FlowTrackable, BaseModel):
         return cast(list[BaseTool], tools)
 
     def _add_multimodal_tools(
-        self, agent: BaseAgent, tools: Union[List[Tool], List[BaseTool]]
-    ) -> List[BaseTool]:
+        self, agent: BaseAgent, tools: Union[list[Tool], list[BaseTool]]
+    ) -> list[BaseTool]:
         if hasattr(agent, "get_multimodal_tools"):
             multimodal_tools = agent.get_multimodal_tools()
             # Cast multimodal_tools to the expected type for _merge_tools
@@ -1010,17 +1010,17 @@ class Crew(FlowTrackable, BaseModel):
         return cast(list[BaseTool], tools)
 
     def _add_code_execution_tools(
-        self, agent: BaseAgent, tools: Union[List[Tool], List[BaseTool]]
-    ) -> List[BaseTool]:
+        self, agent: BaseAgent, tools: Union[list[Tool], list[BaseTool]]
+    ) -> list[BaseTool]:
         if hasattr(agent, "get_code_execution_tools"):
             code_tools = agent.get_code_execution_tools()
             # Cast code_tools to the expected type for _merge_tools
-            return self._merge_tools(tools, cast(List[BaseTool], code_tools))
-        return cast(List[BaseTool], tools)
+            return self._merge_tools(tools, cast(list[BaseTool], code_tools))
+        return cast(list[BaseTool], tools)
 
     def _add_delegation_tools(
-        self, task: Task, tools: Union[List[Tool], List[BaseTool]]
-    ) -> List[BaseTool]:
+        self, task: Task, tools: Union[list[Tool], list[BaseTool]]
+    ) -> list[BaseTool]:
         agents_for_delegation = [agent for agent in self.agents if agent != task.agent]
         if len(self.agents) > 1 and len(agents_for_delegation) > 0 and task.agent:
             if not tools:
@@ -1028,7 +1028,7 @@ class Crew(FlowTrackable, BaseModel):
             tools = self._inject_delegation_tools(
                 tools, task.agent, agents_for_delegation
             )
-        return cast(List[BaseTool], tools)
+        return cast(list[BaseTool], tools)
 
     def _log_task_start(self, task: Task, role: str = "None"):
         if self.output_log_file:
@@ -1037,8 +1037,8 @@ class Crew(FlowTrackable, BaseModel):
             )
 
     def _update_manager_tools(
-        self, task: Task, tools: Union[List[Tool], List[BaseTool]]
-    ) -> List[BaseTool]:
+        self, task: Task, tools: Union[list[Tool], list[BaseTool]]
+    ) -> list[BaseTool]:
         if self.manager_agent:
             if task.agent:
                 tools = self._inject_delegation_tools(tools, task.agent, [task.agent])
@@ -1046,9 +1046,9 @@ class Crew(FlowTrackable, BaseModel):
                 tools = self._inject_delegation_tools(
                     tools, self.manager_agent, self.agents
                 )
-        return cast(List[BaseTool], tools)
+        return cast(list[BaseTool], tools)
 
-    def _get_context(self, task: Task, task_outputs: List[TaskOutput]) -> str:
+    def _get_context(self, task: Task, task_outputs: list[TaskOutput]) -> str:
         if not task.context:
             return ""
 
@@ -1070,7 +1070,7 @@ class Crew(FlowTrackable, BaseModel):
                 output=output.raw,
             )
 
-    def _create_crew_output(self, task_outputs: List[TaskOutput]) -> CrewOutput:
+    def _create_crew_output(self, task_outputs: list[TaskOutput]) -> CrewOutput:
         if not task_outputs:
             raise ValueError("No task outputs available to create crew output.")
 
@@ -1119,7 +1119,7 @@ class Crew(FlowTrackable, BaseModel):
         return task_outputs
 
     def _find_task_index(
-        self, task_id: str, stored_outputs: List[Any]
+        self, task_id: str, stored_outputs: list[Any]
     ) -> Optional[int]:
         return next(
             (
@@ -1291,7 +1291,7 @@ class Crew(FlowTrackable, BaseModel):
             if not task.callback:
                 task.callback = self.task_callback
 
-    def _interpolate_inputs(self, inputs: Dict[str, Any]) -> None:
+    def _interpolate_inputs(self, inputs: dict[str, Any]) -> None:
         """Interpolates the inputs in the tasks and agents."""
         [
             task.interpolate_inputs_and_add_conversation_history(
@@ -1325,7 +1325,7 @@ class Crew(FlowTrackable, BaseModel):
         self,
         n_iterations: int,
         eval_llm: Union[str, InstanceOf[BaseLLM]],
-        inputs: Optional[Dict[str, Any]] = None,
+        inputs: Optional[dict[str, Any]] = None,
     ) -> None:
         """Test and evaluate the Crew with the given inputs for n iterations concurrently using concurrent.futures."""
         try:
@@ -1523,7 +1523,7 @@ class Crew(FlowTrackable, BaseModel):
             },
         }
 
-    def reset_knowledge(self, knowledges: List[Knowledge]) -> None:
+    def reset_knowledge(self, knowledges: list[Knowledge]) -> None:
         """Reset crew and agent knowledge storage."""
         for ks in knowledges:
             ks.reset()
