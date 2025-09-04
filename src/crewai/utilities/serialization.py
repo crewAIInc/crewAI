@@ -5,10 +5,8 @@ from typing import Any, Union
 
 from pydantic import BaseModel
 
-SerializablePrimitive = Union[str, int, float, bool, None]
-Serializable = Union[
-    SerializablePrimitive, list["Serializable"], dict[str, "Serializable"]
-]
+SerializablePrimitive = str | int | float | bool | None
+Serializable = SerializablePrimitive | list["Serializable"] | dict[str, "Serializable"]
 
 
 def to_serializable(

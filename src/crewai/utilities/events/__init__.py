@@ -3,7 +3,7 @@
 import warnings
 from abc import ABC
 from collections.abc import Callable
-from typing import Any, Type, TypeVar
+from typing import Any, TypeVar
 
 from typing_extensions import deprecated
 import crewai.events as new_events
@@ -32,7 +32,7 @@ class crewai_event_bus:  # noqa: N801
 
     @classmethod
     def on(
-        cls, event_type: Type[EventT]
+        cls, event_type: type[EventT]
     ) -> Callable[[Callable[[Any, EventT], None]], Callable[[Any, EventT], None]]:
         """Delegate to the actual event bus instance."""
         return new_events.crewai_event_bus.on(event_type)
@@ -44,7 +44,7 @@ class crewai_event_bus:  # noqa: N801
 
     @classmethod
     def register_handler(
-        cls, event_type: Type[EventTypes], handler: Callable[[Any, EventTypes], None]
+        cls, event_type: type[EventTypes], handler: Callable[[Any, EventTypes], None]
     ) -> None:
         """Delegate to the actual event bus instance."""
         return new_events.crewai_event_bus.register_handler(event_type, handler)

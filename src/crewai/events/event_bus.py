@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import threading
 from contextlib import contextmanager
-from typing import Any, Callable, Type, TypeVar, cast
+from typing import Any, Callable, TypeVar, cast
 
 from blinker import Signal
 
@@ -32,10 +32,10 @@ class CrewAIEventsBus:
     def _initialize(self) -> None:
         """Initialize the event bus internal state"""
         self._signal = Signal("crewai_event_bus")
-        self._handlers: dict[Type[BaseEvent], list[Callable]] = {}
+        self._handlers: dict[type[BaseEvent], list[Callable]] = {}
 
     def on(
-        self, event_type: Type[EventT]
+        self, event_type: type[EventT]
     ) -> Callable[[Callable[[Any, EventT], None]], Callable[[Any, EventT], None]]:
         """
         Decorator to register an event handler for a specific event type.
@@ -82,7 +82,7 @@ class CrewAIEventsBus:
         self._signal.send(source, event=event)
 
     def register_handler(
-        self, event_type: Type[EventTypes], handler: Callable[[Any, EventTypes], None]
+        self, event_type: type[EventTypes], handler: Callable[[Any, EventTypes], None]
     ) -> None:
         """Register an event handler for a specific event type"""
         if event_type not in self._handlers:

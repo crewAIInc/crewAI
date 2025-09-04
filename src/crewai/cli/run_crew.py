@@ -1,6 +1,6 @@
 import subprocess
 from enum import Enum
-from typing import List, Optional
+from typing import Optional
 
 import click
 from packaging import version
