@@ -11,4 +11,6 @@ repos:
     rev: v1.17.1
     hooks:
       - id: mypy
-        args: ["--config-file", "pyproject.toml"]
+        args: ["--strict", "--exclude", "src/crewai/cli/templates"]
+        files: ^src/
+        exclude: ^tests/
