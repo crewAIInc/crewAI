@@ -3,16 +3,15 @@ import subprocess
 import time
 from typing import (
     Any,
-    Callable,
     Dict,
     List,
     Literal,
     Optional,
-    Sequence,
     Tuple,
     Type,
     Union,
 )
+from collections.abc import Callable, Sequence
 
 from pydantic import Field, InstanceOf, PrivateAttr, model_validator
 
@@ -47,6 +46,10 @@ from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.memory_events import (
     MemoryRetrievalStartedEvent,
     MemoryRetrievalCompletedEvent,
+)
+from crewai.utilities.exceptions import (
+    LLMContextLengthExceededException,
+    LLMQuotaLimitExceededException,
 )
 from crewai.events.types.knowledge_events import (
     KnowledgeQueryCompletedEvent,
@@ -452,6 +455,26 @@ class Agent(BaseAgent):
 
         except TimeoutError as e:
             # Propagate TimeoutError without retry
+            crewai_event_bus.emit(
+                self,
+                event=AgentExecutionErrorEvent(
+                    agent=self,
+                    task=task,
+                    error=str(e),
+                ),
+            )
+            raise e
+        except LLMContextLengthExceededException as e:
+            crewai_event_bus.emit(
+                self,
+                event=AgentExecutionErrorEvent(
+                    agent=self,
+                    task=task,
+                    error=str(e),
+                ),
+            )
+            raise e
+        except LLMQuotaLimitExceededException as e:
             crewai_event_bus.emit(
                 self,
                 event=AgentExecutionErrorEvent(
