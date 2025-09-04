@@ -2,10 +2,10 @@
 
 import hashlib
 import json
+from collections import defaultdict
 from concurrent.futures import Future
 from unittest import mock
 from unittest.mock import ANY, MagicMock, patch
-from collections import defaultdict
 
 import pydantic_core
 import pytest
@@ -14,11 +14,29 @@ from crewai.agent import Agent
 from crewai.agents.cache.cache_handler import CacheHandler
 from crewai.crew import Crew
 from crewai.crews.crew_output import CrewOutput
+from crewai.events.event_bus import crewai_event_bus
+from crewai.events.types.crew_events import (
+    CrewTestCompletedEvent,
+    CrewTestStartedEvent,
+    CrewTrainCompletedEvent,
+    CrewTrainStartedEvent,
+)
+from crewai.events.types.memory_events import (
+    MemoryQueryCompletedEvent,
+    MemoryQueryFailedEvent,
+    MemoryQueryStartedEvent,
+    MemoryRetrievalCompletedEvent,
+    MemoryRetrievalStartedEvent,
+    MemorySaveCompletedEvent,
+    MemorySaveFailedEvent,
+    MemorySaveStartedEvent,
+)
 from crewai.flow import Flow, start
 from crewai.knowledge.knowledge import Knowledge
 from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
 from crewai.llm import LLM
 from crewai.memory.contextual.contextual_memory import ContextualMemory
+from crewai.memory.external.external_memory import ExternalMemory
 from crewai.memory.long_term.long_term_memory import LongTermMemory
 from crewai.memory.short_term.short_term_memory import ShortTermMemory
 from crewai.process import Process
@@ -27,27 +45,8 @@ from crewai.tasks.conditional_task import ConditionalTask
 from crewai.tasks.output_format import OutputFormat
 from crewai.tasks.task_output import TaskOutput
 from crewai.types.usage_metrics import UsageMetrics
-from crewai.events.event_bus import crewai_event_bus
-from crewai.events.types.crew_events import (
-    CrewTestCompletedEvent,
-    CrewTestStartedEvent,
-    CrewTrainCompletedEvent,
-    CrewTrainStartedEvent,
-)
 from crewai.utilities.rpm_controller import RPMController
 from crewai.utilities.task_output_storage_handler import TaskOutputStorageHandler
-
-from crewai.events.types.memory_events import (
-    MemorySaveStartedEvent,
-    MemorySaveCompletedEvent,
-    MemorySaveFailedEvent,
-    MemoryQueryStartedEvent,
-    MemoryQueryCompletedEvent,
-    MemoryQueryFailedEvent,
-    MemoryRetrievalStartedEvent,
-    MemoryRetrievalCompletedEvent,
-)
-from crewai.memory.external.external_memory import ExternalMemory
 
 
 @pytest.fixture
@@ -570,8 +569,6 @@ def test_crew_with_delegating_agents(ceo, writer):
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_crew_with_delegating_agents_should_not_override_task_tools(ceo, writer):
-    from typing import Type
-
     from pydantic import BaseModel, Field
 
     from crewai.tools import BaseTool
@@ -584,7 +581,7 @@ def test_crew_with_delegating_agents_should_not_override_task_tools(ceo, writer)
     class TestTool(BaseTool):
         name: str = "Test Tool"
         description: str = "A test tool that just returns the input"
-        args_schema: Type[BaseModel] = TestToolInput
+        args_schema: type[BaseModel] = TestToolInput
 
         def _run(self, query: str) -> str:
             return f"Processed: {query}"
@@ -632,8 +629,6 @@ def test_crew_with_delegating_agents_should_not_override_task_tools(ceo, writer)
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_crew_with_delegating_agents_should_not_override_agent_tools(ceo, writer):
-    from typing import Type
-
     from pydantic import BaseModel, Field
 
     from crewai.tools import BaseTool
@@ -646,7 +641,7 @@ def test_crew_with_delegating_agents_should_not_override_agent_tools(ceo, writer
     class TestTool(BaseTool):
         name: str = "Test Tool"
         description: str = "A test tool that just returns the input"
-        args_schema: Type[BaseModel] = TestToolInput
+        args_schema: type[BaseModel] = TestToolInput
 
         def _run(self, query: str) -> str:
             return f"Processed: {query}"
@@ -696,8 +691,6 @@ def test_crew_with_delegating_agents_should_not_override_agent_tools(ceo, writer
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_task_tools_override_agent_tools(researcher):
-    from typing import Type
-
     from pydantic import BaseModel, Field
 
     from crewai.tools import BaseTool
@@ -710,7 +703,7 @@ def test_task_tools_override_agent_tools(researcher):
     class TestTool(BaseTool):
         name: str = "Test Tool"
         description: str = "A test tool that just returns the input"
-        args_schema: Type[BaseModel] = TestToolInput
+        args_schema: type[BaseModel] = TestToolInput
 
         def _run(self, query: str) -> str:
             return f"Processed: {query}"
@@ -718,7 +711,7 @@ def test_task_tools_override_agent_tools(researcher):
     class AnotherTestTool(BaseTool):
         name: str = "Another Test Tool"
         description: str = "Another test tool"
-        args_schema: Type[BaseModel] = TestToolInput
+        args_schema: type[BaseModel] = TestToolInput
 
         def _run(self, query: str) -> str:
             return f"Another processed: {query}"
@@ -754,7 +747,6 @@ def test_task_tools_override_agent_tools_with_allow_delegation(researcher, write
     """
     Test that task tools override agent tools while preserving delegation tools when allow_delegation=True
     """
-    from typing import Type
 
     from pydantic import BaseModel, Field
 
@@ -766,7 +758,7 @@ def test_task_tools_override_agent_tools_with_allow_delegation(researcher, write
     class TestTool(BaseTool):
         name: str = "Test Tool"
         description: str = "A test tool that just returns the input"
-        args_schema: Type[BaseModel] = TestToolInput
+        args_schema: type[BaseModel] = TestToolInput
 
         def _run(self, query: str) -> str:
             return f"Processed: {query}"
@@ -774,7 +766,7 @@ def test_task_tools_override_agent_tools_with_allow_delegation(researcher, write
     class AnotherTestTool(BaseTool):
         name: str = "Another Test Tool"
         description: str = "Another test tool"
-        args_schema: Type[BaseModel] = TestToolInput
+        args_schema: type[BaseModel] = TestToolInput
 
         def _run(self, query: str) -> str:
             return f"Another processed: {query}"
@@ -3824,7 +3816,6 @@ def test_task_tools_preserve_code_execution_tools():
     """
     Test that task tools don't override code execution tools when allow_code_execution=True
     """
-    from typing import Type
 
     # Mock embedchain initialization to prevent race conditions in parallel CI execution
     with patch("embedchain.client.Client.setup"):
@@ -3841,7 +3832,7 @@ def test_task_tools_preserve_code_execution_tools():
     class TestTool(BaseTool):
         name: str = "Test Tool"
         description: str = "A test tool that just returns the input"
-        args_schema: Type[BaseModel] = TestToolInput
+        args_schema: type[BaseModel] = TestToolInput
 
         def _run(self, query: str) -> str:
             return f"Processed: {query}"
@@ -4232,13 +4223,11 @@ def test_before_kickoff_callback():
 
     @CrewBase
     class TestCrewClass:
-        from typing import List
-
         from crewai.agents.agent_builder.base_agent import BaseAgent
         from crewai.project import CrewBase, agent, before_kickoff, crew, task
 
-        agents: List[BaseAgent]
-        tasks: List[Task]
+        agents: list[BaseAgent]
+        tasks: list[Task]
 
         agents_config = None
         tasks_config = None
