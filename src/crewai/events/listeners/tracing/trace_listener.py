@@ -8,6 +8,7 @@ from crewai.cli.authentication.token import AuthError, get_auth_token
 from crewai.cli.version import get_crewai_version
 from crewai.events.base_event_listener import BaseEventListener
 from crewai.events.event_bus import CrewAIEventsBus
+from crewai.events.listeners.tracing.trace_batch_manager import TraceBatchManager
 from crewai.events.listeners.tracing.types import TraceEvent
 from crewai.events.types.agent_events import (
     AgentExecutionCompletedEvent,
@@ -65,8 +66,6 @@ from crewai.events.types.tool_usage_events import (
 )
 from crewai.utilities.serialization import to_serializable
 
-from .trace_batch_manager import TraceBatchManager
-
 
 class TraceCollectionListener(BaseEventListener):
     """
@@ -86,7 +85,7 @@ class TraceCollectionListener(BaseEventListener):
     _initialized = False
     _listeners_setup = False
 
-    def __new__(cls, batch_manager: Optional[Any] = None) -> "TraceCollectionListener":
+    def __new__(cls, batch_manager: Optional[Any] = None) -> Self:
         if cls._instance is None:
             cls._instance = super().__new__(cls)
         return cls._instance
@@ -99,10 +98,11 @@ class TraceCollectionListener(BaseEventListener):
             return
 
         super().__init__()
-        self.batch_manager = batch_manager or TraceBatchManager()  # type: ignore[call-arg]
+        self.batch_manager = batch_manager or TraceBatchManager()  # type: ignore
         self._initialized = True
 
-    def _check_authenticated(self) -> bool:
+    @staticmethod
+    def _check_authenticated() -> bool:
         """Check if tracing should be enabled"""
         try:
             res = bool(get_auth_token())
@@ -110,7 +110,8 @@ class TraceCollectionListener(BaseEventListener):
         except AuthError:
             return False
 
-    def _get_user_context(self) -> dict[str, str]:
+    @staticmethod
+    def _get_user_context() -> dict[str, str]:
         """Extract user context for tracing"""
         return {
             "user_id": os.getenv("CREWAI_USER_ID", "anonymous"),
@@ -331,9 +332,7 @@ class TraceCollectionListener(BaseEventListener):
                 user_context, execution_metadata, use_ephemeral=True
             )
         else:
-            self.batch_manager.initialize_batch(
-                user_context, execution_metadata, use_ephemeral=False
-            )
+            self.batch_manager.initialize_batch(user_context, execution_metadata)
 
     def _handle_trace_event(self, event_type: str, source: Any, event: Any) -> None:
         """Generic handler for context end events"""
@@ -424,11 +423,19 @@ class TraceCollectionListener(BaseEventListener):
                 "source": source,
             }
 
-    # TODO: move to utils
+    @staticmethod
     def _safe_serialize_to_dict(
-        self, obj: Any, exclude: set[str] | None = None
+        obj: Any, exclude: set[str] | None = None
     ) -> dict[str, Any]:
-        """Safely serialize an object to a dictionary for event data."""
+        """Safely serialize an object to a dictionary for event data.
+
+        Args:
+            obj: The object to serialize.
+            exclude: Optional set of attribute names to exclude from serialization.
+
+        Notes:
+            - TODO: refactor to utilities function.
+        """
         try:
             serialized = to_serializable(obj, exclude)
             if isinstance(serialized, dict):
@@ -438,11 +445,20 @@ class TraceCollectionListener(BaseEventListener):
         except Exception as e:
             return {"serialization_error": str(e), "object_type": type(obj).__name__}
 
-    # TODO: move to utils
+    @staticmethod
     def _truncate_messages(
-        self, messages: Any, max_content_length: int = 500, max_messages: int = 5
+        messages: Any, max_content_length: int = 500, max_messages: int = 5
     ) -> Any:
-        """Truncate message content and limit number of messages"""
+        """Truncate message content and limit number of messages
+
+        Args:
+            messages: List of message dicts with 'content' keys.
+            max_content_length: Max length of each message content.
+            max_messages: Max number of messages to retain.
+
+        Notes:
+            - TODO: refactor to utilities function.
+        """
         if not messages or not isinstance(messages, list):
             return messages
 

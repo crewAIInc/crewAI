@@ -22,6 +22,38 @@ from crewai.utilities.logger_utils import suppress_logging
 from crewai.utilities.paths import db_storage_path
 
 
+def _extract_chromadb_response_item(
+    response_data: Any,
+    index: int,
+    expected_type: type[Any] | tuple[type[Any], ...],
+) -> Any | None:
+    """Extract an item from ChromaDB response data at the given index.
+
+    Args:
+        response_data: The response data from ChromaDB query (e.g., documents, metadatas).
+        index: The index of the item to extract.
+        expected_type: The expected type(s) of the item.
+
+    Returns:
+        The extracted item if it exists and matches the expected type, otherwise None.
+    """
+    if response_data is None or not response_data:
+        return None
+
+    # ChromaDB sometimes returns nested lists, handle both cases
+    data_list = (
+        response_data[0]
+        if response_data and isinstance(response_data[0], list)
+        else response_data
+    )
+
+    if index < len(data_list):
+        item = data_list[index]
+        if isinstance(item, expected_type):
+            return item
+    return None
+
+
 class KnowledgeStorage(BaseKnowledgeStorage):
     """
     Extends Storage to handle embeddings for memory entries, improving
@@ -71,37 +103,22 @@ class KnowledgeStorage(BaseKnowledgeStorage):
                     )
                     for i in range(len(ids_list)):
                         # Handle metadatas
-                        metadata = {}
-                        if fetched.get("metadatas") and len(fetched["metadatas"]) > 0:
-                            metadata_list = (
-                                fetched["metadatas"][0]
-                                if isinstance(fetched["metadatas"][0], list)
-                                else fetched["metadatas"]
-                            )
-                            if i < len(metadata_list):
-                                metadata = metadata_list[i]
+                        meta_item = _extract_chromadb_response_item(
+                            fetched.get("metadatas"), i, dict
+                        )
+                        metadata: dict[str, Any] = meta_item if meta_item else {}
 
                         # Handle documents
-                        context = ""
-                        if fetched.get("documents") and len(fetched["documents"]) > 0:
-                            docs_list = (
-                                fetched["documents"][0]
-                                if isinstance(fetched["documents"][0], list)
-                                else fetched["documents"]
-                            )
-                            if i < len(docs_list):
-                                context = docs_list[i]
+                        doc_item = _extract_chromadb_response_item(
+                            fetched.get("documents"), i, str
+                        )
+                        context = doc_item if doc_item else ""
 
                         # Handle distances
-                        score = 1.0
-                        if fetched.get("distances") and len(fetched["distances"]) > 0:
-                            dist_list = (
-                                fetched["distances"][0]
-                                if isinstance(fetched["distances"][0], list)
-                                else fetched["distances"]
-                            )
-                            if i < len(dist_list):
-                                score = dist_list[i]
+                        dist_item = _extract_chromadb_response_item(
+                            fetched.get("distances"), i, (int, float)
+                        )
+                        score = dist_item if dist_item is not None else 1.0
 
                         result = {
                             "id": ids_list[i],
@@ -231,11 +248,14 @@ class KnowledgeStorage(BaseKnowledgeStorage):
         """Set the embedding configuration for the knowledge storage.
 
         Args:
-            embedder_config (Optional[Dict[str, Any]]): Configuration dictionary for the embedder.
+            embedder (Optional[Dict[str, Any]]): Configuration dictionary for the embedder.
                 If None or empty, defaults to the default embedding function.
+
+        Notes:
+            - TODO: Improve typing for embedder configuration, remove type: ignore
         """
         self.embedder = (
-            EmbeddingConfigurator().configure_embedder(embedder)
+            EmbeddingConfigurator().configure_embedder(embedder)  # type: ignore
             if embedder
             else self._create_default_embedding_function()
         )
