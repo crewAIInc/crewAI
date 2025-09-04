@@ -904,13 +904,13 @@ def test_cache_hitting_between_agents(researcher, writer, ceo):
         crew.kickoff()
         assert read.call_count == 2, "read was not called exactly twice"
 
-        # Filter the mock calls to only include the ones with 'tool' and 'input' keywords
+        # Filter the mock calls to only include the ones with 'tool' and 'input_data' keywords
         cache_calls = [
             call
             for call in read.call_args_list
             if len(call.kwargs) == 2
             and "tool" in call.kwargs
-            and "input" in call.kwargs
+            and "input_data" in call.kwargs
         ]
 
         # Check if we have the expected number of cache calls
@@ -918,7 +918,7 @@ def test_cache_hitting_between_agents(researcher, writer, ceo):
 
         # Check if both calls were made with the expected arguments
         expected_call = call(
-            tool="multiplier", input={"first_number": 2, "second_number": 6}
+            tool="multiplier", input_data={"first_number": 2, "second_number": 6}
         )
         assert cache_calls[0] == expected_call, f"First call mismatch: {cache_calls[0]}"
         assert cache_calls[1] == expected_call, (
@@ -2229,7 +2229,7 @@ def test_tools_with_custom_caching():
         # Verify that one of those calls was with the even number that should be cached
         add_to_cache.assert_any_call(
             tool="multiplcation_tool",
-            input={"first_number": 2, "second_number": 6},
+            input_data={"first_number": 2, "second_number": 6},
             output=12,
         )
 
