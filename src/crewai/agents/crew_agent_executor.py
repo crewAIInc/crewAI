@@ -4,8 +4,14 @@ Handles agent execution flow including LLM interactions, tool execution,
 and memory management.
 """
 
+from __future__ import annotations
+
 from collections.abc import Callable
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from crewai.crew import Crew
+    from crewai.task import Task
 
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.agents.agent_builder.base_agent_executor_mixin import CrewAgentExecutorMixin
@@ -21,6 +27,7 @@ from crewai.events.types.logging_events import (
     AgentLogsStartedEvent,
 )
 from crewai.llms.base_llm import BaseLLM
+from crewai.tools.base_tool import BaseTool
 from crewai.tools.structured_tool import CrewStructuredTool
 from crewai.tools.tool_types import ToolResult
 from crewai.utilities import I18N, Printer
@@ -51,9 +58,9 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
 
     def __init__(
         self,
-        llm: Any,
-        task: Any,
-        crew: Any,
+        llm: BaseLLM,
+        task: Task,
+        crew: Crew,
         agent: BaseAgent,
         prompt: dict[str, str],
         max_iter: int,
@@ -62,12 +69,12 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         stop_words: list[str],
         tools_description: str,
         tools_handler: ToolsHandler,
-        step_callback: Any = None,
-        original_tools: list[Any] | None = None,
-        function_calling_llm: Any = None,
+        step_callback: Callable[[AgentAction | AgentFinish], None] | None = None,
+        original_tools: list[BaseTool] | None = None,
+        function_calling_llm: BaseLLM | None = None,
         respect_context_window: bool = False,
         request_within_rpm_limit: Callable[[], bool] | None = None,
-        callbacks: list[Any] | None = None,
+        callbacks: list[Callable[..., Any]] | None = None,
     ) -> None:
         """Initialize executor.
 
@@ -91,7 +98,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             callbacks: Optional callbacks list.
         """
         self._i18n: I18N = I18N()
-        self.llm: BaseLLM = llm
+        self.llm = llm
         self.task = task
         self.agent = agent
         self.crew = crew
@@ -123,7 +130,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             )
         )
 
-    def invoke(self, inputs: dict[str, str]) -> dict[str, Any]:
+    def invoke(self, inputs: dict[str, str]) -> dict[str, str]:
         """Execute the agent with given inputs.
 
         Args:
@@ -131,6 +138,10 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
 
         Returns:
             Dictionary with agent output.
+
+        Raises:
+            AssertionError: If agent fails to reach final answer.
+            Exception: If unknown error occurs during execution.
         """
         if "system" in self.prompt:
             system_prompt = self._format_prompt(self.prompt.get("system", ""), inputs)
@@ -170,6 +181,9 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
 
         Returns:
             Final answer from the agent.
+
+        Raises:
+            Exception: If litellm error or unknown error occurs.
         """
         formatted_answer = None
         while not isinstance(formatted_answer, AgentFinish):
@@ -198,10 +212,8 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                 if isinstance(formatted_answer, AgentAction):
                     # Extract agent fingerprint if available
                     fingerprint_context = {}
-                    if (
-                        self.agent
-                        and hasattr(self.agent, "security_config")
-                        and hasattr(self.agent.security_config, "fingerprint")
+                    if hasattr(self.agent, "security_config") and hasattr(
+                        self.agent.security_config, "fingerprint"
                     ):
                         fingerprint_context = {
                             "agent_fingerprint": str(
@@ -214,8 +226,8 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                         fingerprint_context=fingerprint_context,
                         tools=self.tools,
                         i18n=self._i18n,
-                        agent_key=self.agent.key if self.agent else None,
-                        agent_role=self.agent.role if self.agent else None,
+                        agent_key=self.agent.key,
+                        agent_role=self.agent.role,
                         tools_handler=self.tools_handler,
                         task=self.task,
                         agent=self.agent,
@@ -317,18 +329,12 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
 
     def _show_start_logs(self) -> None:
         """Emit agent start event."""
-        if self.agent is None:
-            raise ValueError("Agent cannot be None")
-
         crewai_event_bus.emit(
             self.agent,
             AgentLogsStartedEvent(
                 agent_role=self.agent.role,
-                task_description=(
-                    getattr(self.task, "description") if self.task else "Not Found"
-                ),
-                verbose=self.agent.verbose
-                or (hasattr(self, "crew") and getattr(self.crew, "verbose", False)),
+                task_description=self.task.description,
+                verbose=self.agent.verbose or self.crew.verbose,
             ),
         )
 
@@ -338,16 +344,12 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         Args:
             formatted_answer: Agent's response to log.
         """
-        if self.agent is None:
-            raise ValueError("Agent cannot be None")
-
         crewai_event_bus.emit(
             self.agent,
             AgentLogsExecutionEvent(
                 agent_role=self.agent.role,
                 formatted_answer=formatted_answer,
-                verbose=self.agent.verbose
-                or (hasattr(self, "crew") and getattr(self.crew, "verbose", False)),
+                verbose=self.agent.verbose or self.crew.verbose,
             ),
         )
 
@@ -361,9 +363,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             human_feedback: Optional feedback from human.
         """
         agent_id = str(self.agent.id)
-        train_iteration = (
-            getattr(self.crew, "_train_iteration", None) if self.crew else None
-        )
+        train_iteration = getattr(self.crew, "_train_iteration", None)
 
         if train_iteration is None or not isinstance(train_iteration, int):
             self._printer.print(
@@ -440,7 +440,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         Returns:
             True if in training mode.
         """
-        return bool(self.crew and self.crew._train)
+        return bool(self.crew._train)
 
     def _handle_training_feedback(
         self, initial_answer: AgentFinish, feedback: str
