@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, cast
 
 from pydantic import BaseModel, Field
 
@@ -73,7 +73,7 @@ class TaskEvaluator:
             instructions=instructions,
         )
 
-        return converter.to_pydantic()
+        return cast(TaskEvaluation, converter.to_pydantic())
 
     def evaluate_training_data(
         self, training_data: dict[str, Any], agent_id: str
@@ -143,4 +143,4 @@ class TaskEvaluator:
         )
 
         pydantic_result = converter.to_pydantic()
-        return pydantic_result
+        return cast(TrainingTaskEvaluation, pydantic_result)

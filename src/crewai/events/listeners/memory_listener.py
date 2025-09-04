@@ -1,17 +1,19 @@
+from typing import Any
+
 from crewai.events.base_event_listener import BaseEventListener
 from crewai.events.types.memory_events import (
+    MemoryQueryCompletedEvent,
+    MemoryQueryFailedEvent,
     MemoryRetrievalCompletedEvent,
     MemoryRetrievalStartedEvent,
-    MemoryQueryFailedEvent,
-    MemoryQueryCompletedEvent,
-    MemorySaveStartedEvent,
     MemorySaveCompletedEvent,
     MemorySaveFailedEvent,
+    MemorySaveStartedEvent,
 )
 
 
 class MemoryListener(BaseEventListener):
-    def __init__(self, formatter):
+    def __init__(self, formatter: Any) -> None:
         super().__init__()
         self.formatter = formatter
         self.memory_retrieval_in_progress = False

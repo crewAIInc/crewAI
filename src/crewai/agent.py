@@ -242,7 +242,7 @@ class Agent(BaseAgent):
         task: Task,
         context: Optional[str] = None,
         tools: Optional[list[BaseTool]] = None,
-    ) -> str:
+    ) -> Any:
         """Execute a task with the agent.
 
         Args:

@@ -2,16 +2,17 @@ import logging
 import os
 import shutil
 import uuid
+import warnings
+from typing import Any, Optional
 
-from typing import Any, Dict, List, Optional
 from chromadb.api import ClientAPI
-from crewai.rag.storage.base_rag_storage import BaseRAGStorage
+
 from crewai.rag.embeddings.configurator import EmbeddingConfigurator
+from crewai.rag.storage.base_rag_storage import BaseRAGStorage
 from crewai.utilities.chromadb import create_persistent_client
 from crewai.utilities.constants import MAX_FILE_NAME_LENGTH
-from crewai.utilities.paths import db_storage_path
 from crewai.utilities.logger_utils import suppress_logging
-import warnings
+from crewai.utilities.paths import db_storage_path
 
 
 class RAGStorage(BaseRAGStorage):
@@ -23,8 +24,13 @@ class RAGStorage(BaseRAGStorage):
     app: ClientAPI | None = None
 
     def __init__(
-        self, type, allow_reset=True, embedder_config=None, crew=None, path=None
-    ):
+        self,
+        type: str,
+        allow_reset: bool = True,
+        embedder_config: Any = None,
+        crew: Any = None,
+        path: Optional[str] = None,
+    ) -> None:
         super().__init__(type, allow_reset, embedder_config, crew)
         agents = crew.agents if crew else []
         agents = [self._sanitize_role(agent.role) for agent in agents]
@@ -85,7 +91,7 @@ class RAGStorage(BaseRAGStorage):
 
         return f"{base_path}/{file_name}"
 
-    def save(self, value: Any, metadata: Dict[str, Any]) -> None:
+    def save(self, value: Any, metadata: dict[str, Any]) -> None:
         if not hasattr(self, "app") or not hasattr(self, "collection"):
             self._initialize_app()
         try:
@@ -99,7 +105,7 @@ class RAGStorage(BaseRAGStorage):
         limit: int = 3,
         filter: Optional[dict] = None,
         score_threshold: float = 0.35,
-    ) -> List[Any]:
+    ) -> list[Any]:
         if not hasattr(self, "app"):
             self._initialize_app()
 
@@ -125,7 +131,7 @@ class RAGStorage(BaseRAGStorage):
             logging.error(f"Error during {self.type} search: {str(e)}")
             return []
 
-    def _generate_embedding(self, text: str, metadata: Dict[str, Any]) -> None:  # type: ignore
+    def _generate_embedding(self, text: str, metadata: dict[str, Any]) -> None:  # type: ignore
         if not hasattr(self, "app") or not hasattr(self, "collection"):
             self._initialize_app()
 

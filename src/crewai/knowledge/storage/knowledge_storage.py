@@ -2,23 +2,22 @@ import hashlib
 import logging
 import os
 import shutil
-from typing import Any, Dict, List, Optional, Union
+import warnings
+from typing import Any, Optional, Union
 
 import chromadb
 import chromadb.errors
 from chromadb.api import ClientAPI
 from chromadb.api.types import OneOrMany
 from chromadb.config import Settings
-import warnings
 
 from crewai.knowledge.storage.base_knowledge_storage import BaseKnowledgeStorage
 from crewai.rag.embeddings.configurator import EmbeddingConfigurator
-from crewai.utilities.chromadb import sanitize_collection_name
+from crewai.utilities.chromadb import create_persistent_client, sanitize_collection_name
 from crewai.utilities.constants import KNOWLEDGE_DIRECTORY
 from crewai.utilities.logger import Logger
-from crewai.utilities.paths import db_storage_path
-from crewai.utilities.chromadb import create_persistent_client
 from crewai.utilities.logger_utils import suppress_logging
+from crewai.utilities.paths import db_storage_path
 
 
 class KnowledgeStorage(BaseKnowledgeStorage):
@@ -33,7 +32,7 @@ class KnowledgeStorage(BaseKnowledgeStorage):
 
     def __init__(
         self,
-        embedder: Optional[Dict[str, Any]] = None,
+        embedder: Optional[dict[str, Any]] = None,
         collection_name: Optional[str] = None,
     ):
         self.collection_name = collection_name
@@ -41,11 +40,11 @@ class KnowledgeStorage(BaseKnowledgeStorage):
 
     def search(
         self,
-        query: List[str],
+        query: list[str],
         limit: int = 3,
         filter: Optional[dict] = None,
         score_threshold: float = 0.35,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         with suppress_logging(
             "chromadb.segment.impl.vector.local_persistent_hnsw", logging.ERROR
         ):
@@ -69,7 +68,7 @@ class KnowledgeStorage(BaseKnowledgeStorage):
             else:
                 raise Exception("Collection not initialized")
 
-    def initialize_knowledge_storage(self):
+    def initialize_knowledge_storage(self) -> None:
         # Suppress deprecation warnings from chromadb, which are not relevant to us
         # TODO: Remove this once we upgrade chromadb to at least 1.0.8.
         warnings.filterwarnings(
@@ -99,7 +98,7 @@ class KnowledgeStorage(BaseKnowledgeStorage):
         except Exception:
             raise Exception("Failed to create or get collection")
 
-    def reset(self):
+    def reset(self) -> None:
         base_path = os.path.join(db_storage_path(), KNOWLEDGE_DIRECTORY)
         if not self.app:
             self.app = create_persistent_client(
@@ -113,8 +112,8 @@ class KnowledgeStorage(BaseKnowledgeStorage):
 
     def save(
         self,
-        documents: List[str],
-        metadata: Optional[Union[Dict[str, Any], List[Dict[str, Any]]]] = None,
+        documents: list[str],
+        metadata: Optional[dict[str, Any] | list[dict[str, Any]]] = None,
     ):
         if not self.collection:
             raise Exception("Collection not initialized")
@@ -179,7 +178,7 @@ class KnowledgeStorage(BaseKnowledgeStorage):
             api_key=os.getenv("OPENAI_API_KEY"), model_name="text-embedding-3-small"
         )
 
-    def _set_embedder_config(self, embedder: Optional[Dict[str, Any]] = None) -> None:
+    def _set_embedder_config(self, embedder: Optional[dict[str, Any]] = None) -> None:
         """Set the embedding configuration for the knowledge storage.
 
         Args:

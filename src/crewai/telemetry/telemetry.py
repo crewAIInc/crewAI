@@ -5,11 +5,12 @@ import json
 import logging
 import os
 import platform
+import threading
 import warnings
+from collections.abc import Callable
 from contextlib import contextmanager
 from importlib.metadata import version
-from typing import TYPE_CHECKING, Any, Callable, Optional
-import threading
+from typing import TYPE_CHECKING, Any, Optional
 
 from opentelemetry import trace
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import (
@@ -72,14 +73,14 @@ class Telemetry:
         if cls._instance is None:
             with cls._lock:
                 if cls._instance is None:
-                    cls._instance = super(Telemetry, cls).__new__(cls)
+                    cls._instance = super().__new__(cls)
                     cls._instance._initialized = False
         return cls._instance
 
     def __init__(self) -> None:
-        if hasattr(self, '_initialized') and self._initialized:
+        if hasattr(self, "_initialized") and self._initialized:
             return
-        
+
         self.ready: bool = False
         self.trace_set: bool = False
         self._initialized: bool = True
@@ -124,7 +125,7 @@ class Telemetry:
         """Check if telemetry operations should be executed."""
         return self.ready and not self._is_telemetry_disabled()
 
-    def set_tracer(self):
+    def set_tracer(self) -> None:
         if self.ready and not self.trace_set:
             try:
                 with suppress_warnings():
@@ -790,7 +791,7 @@ class Telemetry:
             return operation()
         return None
 
-    def end_crew(self, crew, final_string_output):
+    def end_crew(self, crew: Any, final_string_output: str) -> None:
         def operation():
             self._add_attribute(
                 crew._execution_span,

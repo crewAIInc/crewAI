@@ -1,27 +1,55 @@
 import os
 import uuid
+from typing import Any, Optional
 
-from typing import Dict, Any, Optional
-
+from crewai.cli.authentication.token import AuthError, get_auth_token
+from crewai.cli.version import get_crewai_version
 from crewai.events.base_event_listener import BaseEventListener
+from crewai.events.event_bus import CrewAIEventsBus
+from crewai.events.listeners.tracing.types import TraceEvent
 from crewai.events.types.agent_events import (
     AgentExecutionCompletedEvent,
+    AgentExecutionErrorEvent,
     AgentExecutionStartedEvent,
-    LiteAgentExecutionStartedEvent,
     LiteAgentExecutionCompletedEvent,
     LiteAgentExecutionErrorEvent,
-    AgentExecutionErrorEvent,
-)
-from crewai.events.listeners.tracing.types import TraceEvent
-from crewai.events.types.reasoning_events import (
-    AgentReasoningStartedEvent,
-    AgentReasoningCompletedEvent,
-    AgentReasoningFailedEvent,
+    LiteAgentExecutionStartedEvent,
 )
 from crewai.events.types.crew_events import (
     CrewKickoffCompletedEvent,
     CrewKickoffFailedEvent,
     CrewKickoffStartedEvent,
+)
+from crewai.events.types.flow_events import (
+    FlowCreatedEvent,
+    FlowFinishedEvent,
+    FlowPlotEvent,
+    FlowStartedEvent,
+    MethodExecutionFailedEvent,
+    MethodExecutionFinishedEvent,
+    MethodExecutionStartedEvent,
+)
+from crewai.events.types.llm_events import (
+    LLMCallCompletedEvent,
+    LLMCallFailedEvent,
+    LLMCallStartedEvent,
+)
+from crewai.events.types.llm_guardrail_events import (
+    LLMGuardrailCompletedEvent,
+    LLMGuardrailStartedEvent,
+)
+from crewai.events.types.memory_events import (
+    MemoryQueryCompletedEvent,
+    MemoryQueryFailedEvent,
+    MemoryQueryStartedEvent,
+    MemorySaveCompletedEvent,
+    MemorySaveFailedEvent,
+    MemorySaveStartedEvent,
+)
+from crewai.events.types.reasoning_events import (
+    AgentReasoningCompletedEvent,
+    AgentReasoningFailedEvent,
+    AgentReasoningStartedEvent,
 )
 from crewai.events.types.task_events import (
     TaskCompletedEvent,
@@ -33,41 +61,9 @@ from crewai.events.types.tool_usage_events import (
     ToolUsageFinishedEvent,
     ToolUsageStartedEvent,
 )
-from crewai.events.types.llm_events import (
-    LLMCallCompletedEvent,
-    LLMCallFailedEvent,
-    LLMCallStartedEvent,
-)
-
-from crewai.events.types.flow_events import (
-    FlowCreatedEvent,
-    FlowStartedEvent,
-    FlowFinishedEvent,
-    MethodExecutionStartedEvent,
-    MethodExecutionFinishedEvent,
-    MethodExecutionFailedEvent,
-    FlowPlotEvent,
-)
-from crewai.events.types.llm_guardrail_events import (
-    LLMGuardrailStartedEvent,
-    LLMGuardrailCompletedEvent,
-)
 from crewai.utilities.serialization import to_serializable
 
-
 from .trace_batch_manager import TraceBatchManager
-
-from crewai.events.types.memory_events import (
-    MemoryQueryStartedEvent,
-    MemoryQueryCompletedEvent,
-    MemoryQueryFailedEvent,
-    MemorySaveStartedEvent,
-    MemorySaveCompletedEvent,
-    MemorySaveFailedEvent,
-)
-
-from crewai.cli.authentication.token import AuthError, get_auth_token
-from crewai.cli.version import get_crewai_version
 
 
 class TraceCollectionListener(BaseEventListener):
@@ -112,7 +108,7 @@ class TraceCollectionListener(BaseEventListener):
         except AuthError:
             return False
 
-    def _get_user_context(self) -> Dict[str, str]:
+    def _get_user_context(self) -> dict[str, str]:
         """Extract user context for tracing"""
         return {
             "user_id": os.getenv("CREWAI_USER_ID", "anonymous"),
@@ -121,7 +117,7 @@ class TraceCollectionListener(BaseEventListener):
             "trace_id": str(uuid.uuid4()),
         }
 
-    def setup_listeners(self, crewai_event_bus):
+    def setup_listeners(self, crewai_event_bus: CrewAIEventsBus) -> None:
         """Setup event listeners - delegates to specific handlers"""
 
         if self._listeners_setup:
@@ -325,7 +321,7 @@ class TraceCollectionListener(BaseEventListener):
         self._initialize_batch(user_context, execution_metadata)
 
     def _initialize_batch(
-        self, user_context: Dict[str, str], execution_metadata: Dict[str, Any]
+        self, user_context: dict[str, str], execution_metadata: dict[str, Any]
     ):
         """Initialize trace batch if ephemeral"""
         if not self._check_authenticated():
@@ -371,7 +367,7 @@ class TraceCollectionListener(BaseEventListener):
 
     def _build_event_data(
         self, event_type: str, event: Any, source: Any
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Build event data"""
         if event_type not in self.complex_events:
             return self._safe_serialize_to_dict(event)
@@ -429,7 +425,7 @@ class TraceCollectionListener(BaseEventListener):
     # TODO: move to utils
     def _safe_serialize_to_dict(
         self, obj, exclude: set[str] | None = None
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Safely serialize an object to a dictionary for event data."""
         try:
             serialized = to_serializable(obj, exclude)

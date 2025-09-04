@@ -37,6 +37,8 @@ class ConditionalTask(Task):
         Returns:
             bool: True if the task should be executed, False otherwise.
         """
+        if self.condition is None:
+            return False
         return self.condition(context)
 
     def get_skipped_task_output(self) -> TaskOutput:

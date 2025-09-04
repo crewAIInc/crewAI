@@ -7,6 +7,7 @@ from pydantic import Field, PrivateAttr
 from typing_extensions import Self
 
 from crewai.events.base_event_listener import BaseEventListener
+from crewai.events.event_bus import CrewAIEventsBus
 from crewai.events.types.agent_events import (
     AgentExecutionCompletedEvent,
     AgentExecutionStartedEvent,
@@ -79,6 +80,7 @@ from .types.tool_usage_events import (
 
 class EventListener(BaseEventListener):
     _instance = None
+    _initialized: bool = False
     _telemetry: Telemetry = PrivateAttr(default_factory=lambda: Telemetry())
     logger = Logger(verbose=True, default_color=EMITTER_COLOR)
     execution_spans: dict[Task, Any] = Field(default_factory=dict)
@@ -106,7 +108,7 @@ class EventListener(BaseEventListener):
 
     # ----------- CREW EVENTS -----------
 
-    def setup_listeners(self, crewai_event_bus: Any) -> None:
+    def setup_listeners(self, crewai_event_bus: CrewAIEventsBus) -> None:
         @crewai_event_bus.on(CrewKickoffStartedEvent)
         def on_crew_started(source: Any, event: CrewKickoffStartedEvent) -> None:
             self.formatter.create_crew_tree(event.crew_name or "Crew", source.id)
