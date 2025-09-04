@@ -40,7 +40,7 @@ from crewai.events.types.logging_events import AgentLogsExecutionEvent
 from crewai.flow.flow_trackable import FlowTrackable
 from crewai.llm import LLM
 from crewai.llms.base_llm import BaseLLM
-from crewai.task import TaskOutput
+from crewai.tasks import TaskOutput
 from crewai.tools.base_tool import BaseTool
 from crewai.tools.structured_tool import CrewStructuredTool
 from crewai.utilities import I18N
@@ -217,7 +217,10 @@ class LiteAgent(FlowTrackable, BaseModel):
     @model_validator(mode="after")
     def ensure_guardrail_is_callable(self) -> Self:
         if callable(self.guardrail):
-            self._guardrail = self.guardrail
+            self._guardrail = cast(
+                Callable[[LiteAgentOutput | TaskOutput], tuple[bool, Any]],
+                self.guardrail,
+            )
         elif isinstance(self.guardrail, str):
             from crewai.tasks.llm_guardrail import LLMGuardrail
 
@@ -226,7 +229,10 @@ class LiteAgent(FlowTrackable, BaseModel):
                     f"Guardrail requires LLM instance of type BaseLLM, got {type(self.llm).__name__}"
                 )
 
-            self._guardrail = LLMGuardrail(description=self.guardrail, llm=self.llm)
+            self._guardrail = cast(
+                Callable[[LiteAgentOutput | TaskOutput], tuple[bool, Any]],
+                LLMGuardrail(description=self.guardrail, llm=self.llm),
+            )
 
         return self
 

@@ -165,7 +165,7 @@ class ToolUsage:
         """
         if self._check_tool_repeated_usage(calling=calling):
             try:
-                result = self._i18n.errors("task_repeated_usage").format(
+                repeated_usage_msg = self._i18n.errors("task_repeated_usage").format(
                     tool_names=self.tools_names
                 )
                 self._telemetry.tool_repeated_usage(
@@ -173,8 +173,8 @@ class ToolUsage:
                     tool_name=tool.name,
                     attempts=self._run_attempts,
                 )
-                result = self._format_result(result=result)
-                return result
+                repeated_usage_result = self._format_result(result=repeated_usage_msg)
+                return repeated_usage_result
 
             except Exception:
                 if self.task:
@@ -303,7 +303,7 @@ class ToolUsage:
             attempts=self._run_attempts,
         )
         result = self._format_result(result=result)
-        data = {
+        data: dict[str, Any] = {
             "result": result,
             "tool_name": tool.name,
             "tool_args": calling.arguments,
