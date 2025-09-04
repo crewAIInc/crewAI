@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import Optional
 
 from pydantic import Field
 
@@ -26,7 +26,7 @@ class StringKnowledgeSource(BaseKnowledgeSource):
         self.chunks.extend(new_chunks)
         self._save_documents()
 
-    def _chunk_text(self, text: str) -> List[str]:
+    def _chunk_text(self, text: str) -> list[str]:
         """Utility method to split text into chunks."""
         return [
             text[i : i + self.chunk_size]

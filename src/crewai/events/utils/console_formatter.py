@@ -1,4 +1,4 @@
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 from rich.console import Console
 from rich.panel import Panel
@@ -16,7 +16,7 @@ class ConsoleFormatter:
     current_flow_tree: Optional[Tree] = None
     current_method_branch: Optional[Tree] = None
     current_lite_agent_branch: Optional[Tree] = None
-    tool_usage_counts: Dict[str, int] = {}
+    tool_usage_counts: dict[str, int] = {}
     current_reasoning_branch: Optional[Tree] = None  # Track reasoning status
     _live_paused: bool = False
     current_llm_tool_tree: Optional[Tree] = None
@@ -45,7 +45,7 @@ class ConsoleFormatter:
         title: str,
         name: str,
         status_style: str = "blue",
-        tool_args: Dict[str, Any] | str = "",
+        tool_args: dict[str, Any] | str = "",
         **fields,
     ) -> Text:
         """Create standardized status content with consistent formatting."""
@@ -480,7 +480,7 @@ class ConsoleFormatter:
     def handle_llm_tool_usage_started(
         self,
         tool_name: str,
-        tool_args: Dict[str, Any] | str,
+        tool_args: dict[str, Any] | str,
     ):
         # Create status content for the tool usage
         content = self.create_status_content(
@@ -523,7 +523,7 @@ class ConsoleFormatter:
         agent_branch: Optional[Tree],
         tool_name: str,
         crew_tree: Optional[Tree],
-        tool_args: Dict[str, Any] | str = "",
+        tool_args: dict[str, Any] | str = "",
     ) -> Optional[Tree]:
         """Handle tool usage started event."""
         if not self.verbose:
@@ -938,7 +938,7 @@ class ConsoleFormatter:
         lite_agent_branch: Optional[Tree],
         lite_agent_role: str,
         status: str = "completed",
-        **fields: Dict[str, Any],
+        **fields: dict[str, Any],
     ) -> None:
         """Update lite agent status in the tree."""
         if not self.verbose or lite_agent_branch is None:
@@ -981,7 +981,7 @@ class ConsoleFormatter:
         lite_agent_role: str,
         status: str = "started",
         error: Any = None,
-        **fields: Dict[str, Any],
+        **fields: dict[str, Any],
     ) -> None:
         """Handle lite agent execution events with consistent formatting."""
         if not self.verbose:

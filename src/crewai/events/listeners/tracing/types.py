@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field, asdict
 from datetime import datetime, timezone
-from typing import Dict, Any
+from typing import Any
 import uuid
 
 
@@ -13,7 +13,7 @@ class TraceEvent:
         default_factory=lambda: datetime.now(timezone.utc).isoformat()
     )
     type: str = ""
-    event_data: Dict[str, Any] = field(default_factory=dict)
+    event_data: dict[str, Any] = field(default_factory=dict)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return asdict(self)

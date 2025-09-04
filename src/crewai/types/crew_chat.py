@@ -1,4 +1,4 @@
-from typing import List
+from typing import TYPE_CHECKING
 
 from pydantic import BaseModel, Field
 
@@ -35,6 +35,6 @@ class ChatInputs(BaseModel):
     crew_description: str = Field(
         ..., description="A description of the crew's purpose"
     )
-    inputs: List[ChatInputField] = Field(
+    inputs: list[ChatInputField] = Field(
         default_factory=list, description="A list of input fields for the crew"
     )

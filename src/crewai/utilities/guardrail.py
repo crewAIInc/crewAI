@@ -1,4 +1,4 @@
-from typing import Any, Callable, Optional, Tuple, Union
+from typing import Any, Callable, Optional, Union
 
 from pydantic import BaseModel, field_validator
 
@@ -36,7 +36,7 @@ class GuardrailResult(BaseModel):
         return v
 
     @classmethod
-    def from_tuple(cls, result: Tuple[bool, Union[Any, str]]) -> "GuardrailResult":
+    def from_tuple(cls, result: tuple[bool, Union[Any, str]]) -> "GuardrailResult":
         """Create a GuardrailResult from a validation tuple.
 
         Args:

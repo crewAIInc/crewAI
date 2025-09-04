@@ -1,4 +1,4 @@
-from typing import Any, Tuple
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -65,14 +65,14 @@ class LLMGuardrail:
 
         return result
 
-    def __call__(self, task_output: TaskOutput) -> Tuple[bool, Any]:
+    def __call__(self, task_output: TaskOutput) -> tuple[bool, Any]:
         """Validates the output of a task based on specified criteria.
 
         Args:
             task_output (TaskOutput): The output to be validated.
 
         Returns:
-            Tuple[bool, Any]: A tuple containing:
+            tuple[bool, Any]: A tuple containing:
                 - bool: True if validation passed, False otherwise
                 - Any: The validation result or error message
         """

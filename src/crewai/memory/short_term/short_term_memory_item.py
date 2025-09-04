@@ -1,4 +1,4 @@
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 
 class ShortTermMemoryItem:
@@ -6,7 +6,7 @@ class ShortTermMemoryItem:
         self,
         data: Any,
         agent: Optional[str] = None,
-        metadata: Optional[Dict[str, Any]] = None,
+        metadata: Optional[dict[str, Any]] = None,
     ):
         self.data = data
         self.agent = agent

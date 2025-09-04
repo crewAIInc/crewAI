@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 from crewai.agents.parser import AgentAction
 from crewai.security import Fingerprint
@@ -10,7 +10,7 @@ from crewai.utilities.i18n import I18N
 
 def execute_tool_and_check_finality(
     agent_action: AgentAction,
-    tools: List[CrewStructuredTool],
+    tools: list[CrewStructuredTool],
     i18n: I18N,
     agent_key: Optional[str] = None,
     agent_role: Optional[str] = None,
@@ -18,7 +18,7 @@ def execute_tool_and_check_finality(
     task: Optional[Any] = None,
     agent: Optional[Any] = None,
     function_calling_llm: Optional[Any] = None,
-    fingerprint_context: Optional[Dict[str, str]] = None,
+    fingerprint_context: Optional[dict[str, str]] = None,
 ) -> ToolResult:
     """Execute a tool and check if the result should be treated as a final answer.
 

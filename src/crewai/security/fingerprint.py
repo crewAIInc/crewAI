@@ -7,7 +7,7 @@ for CrewAI agents. These identifiers are used for tracking, auditing, and securi
 
 import uuid
 from datetime import datetime
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -23,12 +23,12 @@ class Fingerprint(BaseModel):
     Attributes:
         uuid_str (str): String representation of the UUID for this fingerprint, auto-generated
         created_at (datetime): When this fingerprint was created, auto-generated
-        metadata (Dict[str, Any]): Additional metadata associated with this fingerprint
+        metadata (dict[str, Any]): Additional metadata associated with this fingerprint
     """
 
     uuid_str: str = Field(default_factory=lambda: str(uuid.uuid4()), description="String representation of the UUID")
     created_at: datetime = Field(default_factory=datetime.now, description="When this fingerprint was created")
-    metadata: Dict[str, Any] = Field(default_factory=dict, description="Additional metadata for this fingerprint")
+    metadata: dict[str, Any] = Field(default_factory=dict, description="Additional metadata for this fingerprint")
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
     
@@ -100,14 +100,14 @@ class Fingerprint(BaseModel):
         return str(uuid.uuid5(CREW_AI_NAMESPACE, seed))
 
     @classmethod
-    def generate(cls, seed: Optional[str] = None, metadata: Optional[Dict[str, Any]] = None) -> 'Fingerprint':
+    def generate(cls, seed: Optional[str] = None, metadata: Optional[dict[str, Any]] = None) -> 'Fingerprint':
         """
         Static factory method to create a new Fingerprint.
 
         Args:
             seed (Optional[str]): A string to use as seed for the UUID generation.
                 If None, a random UUID is generated.
-            metadata (Optional[Dict[str, Any]]): Additional metadata to store with the fingerprint.
+            metadata (Optional[dict[str, Any]]): Additional metadata to store with the fingerprint.
 
         Returns:
             Fingerprint: A new Fingerprint instance
@@ -132,12 +132,12 @@ class Fingerprint(BaseModel):
         """Hash of the fingerprint (based on UUID)."""
         return hash(self.uuid_str)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """
         Convert the fingerprint to a dictionary representation.
 
         Returns:
-            Dict[str, Any]: Dictionary representation of the fingerprint
+            dict[str, Any]: Dictionary representation of the fingerprint
         """
         return {
             "uuid_str": self.uuid_str,
@@ -146,12 +146,12 @@ class Fingerprint(BaseModel):
         }
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> 'Fingerprint':
+    def from_dict(cls, data: dict[str, Any]) -> 'Fingerprint':
         """
         Create a Fingerprint from a dictionary representation.
 
         Args:
-            data (Dict[str, Any]): Dictionary representation of a fingerprint
+            data (dict[str, Any]): Dictionary representation of a fingerprint
 
         Returns:
             Fingerprint: A new Fingerprint instance

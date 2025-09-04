@@ -1,10 +1,10 @@
-from typing import Dict, List, Type, Union, get_args, get_origin
+from typing import Union, get_args, get_origin
 
 from pydantic import BaseModel
 
 
 class PydanticSchemaParser(BaseModel):
-    model: Type[BaseModel]
+    model: type[BaseModel]
 
     def get_schema(self) -> str:
         """
@@ -14,7 +14,7 @@ class PydanticSchemaParser(BaseModel):
         """
         return "{\n" + self._get_model_schema(self.model) + "\n}"
 
-    def _get_model_schema(self, model: Type[BaseModel], depth: int = 0) -> str:
+    def _get_model_schema(self, model: type[BaseModel], depth: int = 0) -> str:
         indent = " " * 4 * depth
         lines = [
             f"{indent}    {field_name}: {self._get_field_type(field, depth + 1)}"
@@ -26,13 +26,13 @@ class PydanticSchemaParser(BaseModel):
         field_type = field.annotation
         origin = get_origin(field_type)
 
-        if origin in {list, List}:
+        if origin is list:
             list_item_type = get_args(field_type)[0]
             return self._format_list_type(list_item_type, depth)
 
-        if origin in {dict, Dict}:
+        if origin is dict:
             key_type, value_type = get_args(field_type)
-            return f"Dict[{key_type.__name__}, {value_type.__name__}]"
+            return f"dict[{key_type.__name__}, {value_type.__name__}]"
 
         if origin is Union:
             return self._format_union_type(field_type, depth)
@@ -48,8 +48,8 @@ class PydanticSchemaParser(BaseModel):
         if isinstance(list_item_type, type) and issubclass(list_item_type, BaseModel):
             nested_schema = self._get_model_schema(list_item_type, depth + 1)
             nested_indent = " " * 4 * (depth)
-            return f"List[\n{nested_indent}{{\n{nested_schema}\n{nested_indent}}}\n{nested_indent}]"
-        return f"List[{list_item_type.__name__}]"
+            return f"list[\n{nested_indent}{{\n{nested_schema}\n{nested_indent}}}\n{nested_indent}]"
+        return f"list[{list_item_type.__name__}]"
 
     def _format_union_type(self, field_type, depth: int) -> str:
         args = get_args(field_type)
@@ -77,12 +77,12 @@ class PydanticSchemaParser(BaseModel):
 
     def _get_field_type_for_annotation(self, annotation, depth: int) -> str:
         origin = get_origin(annotation)
-        if origin in {list, List}:
+        if origin is list:
             list_item_type = get_args(annotation)[0]
             return self._format_list_type(list_item_type, depth)
-        if origin in {dict, Dict}:
+        if origin is dict:
             key_type, value_type = get_args(annotation)
-            return f"Dict[{key_type.__name__}, {value_type.__name__}]"
+            return f"dict[{key_type.__name__}, {value_type.__name__}]"
         if origin is Union:
             return self._format_union_type(annotation, depth)
         if isinstance(annotation, type) and issubclass(annotation, BaseModel):

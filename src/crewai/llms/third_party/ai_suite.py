@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Optional, Union
 
 import aisuite as ai
 
@@ -12,10 +12,10 @@ class AISuiteLLM(BaseLLM):
 
     def call(
         self,
-        messages: Union[str, List[Dict[str, str]]],
-        tools: Optional[List[dict]] = None,
-        callbacks: Optional[List[Any]] = None,
-        available_functions: Optional[Dict[str, Any]] = None,
+        messages: Union[str, list[dict[str, str]]],
+        tools: Optional[list[dict]] = None,
+        callbacks: Optional[list[Any]] = None,
+        available_functions: Optional[dict[str, Any]] = None,
         from_task: Optional[Any] = None,
         from_agent: Optional[Any] = None,
     ) -> Union[str, Any]:
@@ -26,9 +26,9 @@ class AISuiteLLM(BaseLLM):
 
     def _prepare_completion_params(
         self,
-        messages: Union[str, List[Dict[str, str]]],
-        tools: Optional[List[dict]] = None,
-    ) -> Dict[str, Any]:
+        messages: Union[str, list[dict[str, str]]],
+        tools: Optional[list[dict]] = None,
+    ) -> dict[str, Any]:
         return {
             "model": self.model,
             "messages": messages,

@@ -1,4 +1,4 @@
-from typing import Any, Dict
+from typing import Any
 
 from crewai.agent import Agent
 from crewai.task import Task
@@ -14,7 +14,7 @@ class GoalAlignmentEvaluator(BaseEvaluator):
     def evaluate(
         self,
         agent: Agent,
-        execution_trace: Dict[str, Any],
+        execution_trace: dict[str, Any],
         final_output: Any,
         task: Task | None = None,
     ) -> EvaluationScore:

@@ -4,7 +4,7 @@ CrewAI Flow Persistence.
 This module provides interfaces and implementations for persisting flow states.
 """
 
-from typing import Any, Dict, TypeVar, Union
+from typing import Any, TypeVar, Union
 
 from pydantic import BaseModel
 
@@ -14,5 +14,5 @@ from crewai.flow.persistence.sqlite import SQLiteFlowPersistence
 
 __all__ = ["FlowPersistence", "persist", "SQLiteFlowPersistence"]
 
-StateType = TypeVar('StateType', bound=Union[Dict[str, Any], BaseModel])
-DictStateType = Dict[str, Any]
+StateType = TypeVar('StateType', bound=Union[dict[str, Any], BaseModel])
+DictStateType = dict[str, Any]

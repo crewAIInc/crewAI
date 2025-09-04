@@ -1,4 +1,4 @@
-from typing import Dict, Any
+from typing import Any
 from rich.console import Console
 from rich.table import Table
 from rich.panel import Panel
@@ -23,7 +23,7 @@ class ExperimentResultsDisplay:
 
         self.console.print(table)
 
-    def comparison_summary(self, comparison: Dict[str, Any], baseline_timestamp: str):
+    def comparison_summary(self, comparison: dict[str, Any], baseline_timestamp: str):
         self.console.print(Panel(f"[bold]Comparison with baseline run from {baseline_timestamp}[/bold]",
                                  expand=False))
 

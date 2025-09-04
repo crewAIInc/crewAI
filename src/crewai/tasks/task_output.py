@@ -1,5 +1,5 @@
 import json
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -19,7 +19,7 @@ class TaskOutput(BaseModel):
     pydantic: Optional[BaseModel] = Field(
         description="Pydantic output of task", default=None
     )
-    json_dict: Optional[Dict[str, Any]] = Field(
+    json_dict: Optional[dict[str, Any]] = Field(
         description="JSON dictionary of task", default=None
     )
     agent: str = Field(description="Agent that executed the task")
@@ -47,7 +47,7 @@ class TaskOutput(BaseModel):
 
         return json.dumps(self.json_dict)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert json_output and pydantic_output to a dictionary."""
         output_dict = {}
         if self.json_dict:

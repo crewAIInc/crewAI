@@ -4,12 +4,9 @@ import time
 from typing import (
     Any,
     Callable,
-    Dict,
-    List,
     Literal,
     Optional,
     Sequence,
-    Tuple,
     Type,
     Union,
 )
@@ -151,7 +148,7 @@ class Agent(BaseAgent):
         default=None,
         description="Maximum number of reasoning attempts before executing the task. If None, will try until ready.",
     )
-    embedder: Optional[Dict[str, Any]] = Field(
+    embedder: Optional[dict[str, Any]] = Field(
         default=None,
         description="Embedder configuration for the agent.",
     )
@@ -171,7 +168,7 @@ class Agent(BaseAgent):
         default=None,
         description="The Agent's role to be used from your repository.",
     )
-    guardrail: Optional[Union[Callable[[Any], Tuple[bool, Any]], str]] = Field(
+    guardrail: Optional[Union[Callable[[Any], tuple[bool, Any]], str]] = Field(
         default=None,
         description="Function or string description of a guardrail to validate agent output",
     )
@@ -208,7 +205,7 @@ class Agent(BaseAgent):
             self.cache_handler = CacheHandler()
         self.set_cache_handler(self.cache_handler)
 
-    def set_knowledge(self, crew_embedder: Optional[Dict[str, Any]] = None):
+    def set_knowledge(self, crew_embedder: Optional[dict[str, Any]] = None):
         try:
             if self.embedder is None and crew_embedder:
                 self.embedder = crew_embedder
@@ -245,7 +242,7 @@ class Agent(BaseAgent):
         self,
         task: Task,
         context: Optional[str] = None,
-        tools: Optional[List[BaseTool]] = None,
+        tools: Optional[list[BaseTool]] = None,
     ) -> str:
         """Execute a task with the agent.
 
@@ -554,14 +551,14 @@ class Agent(BaseAgent):
         )["output"]
 
     def create_agent_executor(
-        self, tools: Optional[List[BaseTool]] = None, task=None
+        self, tools: Optional[list[BaseTool]] = None, task=None
     ) -> None:
         """Create an agent executor for the agent.
 
         Returns:
             An instance of the CrewAgentExecutor class.
         """
-        raw_tools: List[BaseTool] = tools or self.tools or []
+        raw_tools: list[BaseTool] = tools or self.tools or []
         parsed_tools = parse_tools(raw_tools)
 
         prompt = Prompts(
@@ -603,7 +600,7 @@ class Agent(BaseAgent):
             callbacks=[TokenCalcHandler(self._token_process)],
         )
 
-    def get_delegation_tools(self, agents: List[BaseAgent]):
+    def get_delegation_tools(self, agents: list[BaseAgent]):
         agent_tools = AgentTools(agents=agents)
         tools = agent_tools.tools()
         return tools
@@ -654,7 +651,7 @@ class Agent(BaseAgent):
                 )
         return task_prompt
 
-    def _render_text_description(self, tools: List[Any]) -> str:
+    def _render_text_description(self, tools: list[Any]) -> str:
         """Render the tool name and description in plain text.
 
         Output will be in the format of:
@@ -796,7 +793,7 @@ class Agent(BaseAgent):
 
     def kickoff(
         self,
-        messages: Union[str, List[Dict[str, str]]],
+        messages: Union[str, list[dict[str, str]]],
         response_format: Optional[Type[Any]] = None,
     ) -> LiteAgentOutput:
         """
@@ -836,7 +833,7 @@ class Agent(BaseAgent):
 
     async def kickoff_async(
         self,
-        messages: Union[str, List[Dict[str, str]]],
+        messages: Union[str, list[dict[str, str]]],
         response_format: Optional[Type[Any]] = None,
     ) -> LiteAgentOutput:
         """

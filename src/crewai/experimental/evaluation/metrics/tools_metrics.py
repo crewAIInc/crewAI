@@ -1,5 +1,5 @@
 import json
-from typing import Dict, Any
+from typing import Any
 
 from crewai.experimental.evaluation.base_evaluator import BaseEvaluator, EvaluationScore, MetricCategory
 from crewai.experimental.evaluation.json_parser import extract_json_from_llm_response
@@ -16,7 +16,7 @@ class ToolSelectionEvaluator(BaseEvaluator):
     def evaluate(
         self,
         agent: Agent,
-        execution_trace: Dict[str, Any],
+        execution_trace: dict[str, Any],
         final_output: str,
         task: Task | None = None,
     ) -> EvaluationScore:
@@ -132,7 +132,7 @@ class ParameterExtractionEvaluator(BaseEvaluator):
     def evaluate(
         self,
         agent: Agent,
-        execution_trace: Dict[str, Any],
+        execution_trace: dict[str, Any],
         final_output: str,
         task: Task | None = None,
     ) -> EvaluationScore:
@@ -274,7 +274,7 @@ class ToolInvocationEvaluator(BaseEvaluator):
     def evaluate(
         self,
         agent: Agent,
-        execution_trace: Dict[str, Any],
+        execution_trace: dict[str, Any],
         final_output: str,
         task: Task | None = None,
     ) -> EvaluationScore:

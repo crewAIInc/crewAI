@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 from collections.abc import Sequence
 
@@ -253,7 +253,7 @@ class EvaluationTraceCallback(BaseEventListener):
         if hasattr(self, "current_llm_call"):
             self.current_llm_call = {}
 
-    def get_trace(self, agent_id: str, task_id: str) -> Optional[Dict[str, Any]]:
+    def get_trace(self, agent_id: str, task_id: str) -> Optional[dict[str, Any]]:
         trace_key = f"{agent_id}_{task_id}"
         return self.traces.get(trace_key)
 

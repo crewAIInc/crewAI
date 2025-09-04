@@ -1,5 +1,5 @@
 import time
-from typing import TYPE_CHECKING, Dict, List
+from typing import TYPE_CHECKING
 
 from crewai.memory.entity.entity_memory_item import EntityMemoryItem
 from crewai.memory.long_term.long_term_memory_item import LongTermMemoryItem
@@ -21,7 +21,7 @@ class CrewAgentExecutorMixin:
     task: "Task"
     iterations: int
     max_iter: int
-    messages: List[Dict[str, str]]
+    messages: list[dict[str, str]]
     _i18n: I18N
     _printer: Printer = Printer()
 

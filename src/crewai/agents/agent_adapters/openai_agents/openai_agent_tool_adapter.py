@@ -1,5 +1,5 @@
 import inspect
-from typing import Any, List, Optional
+from typing import Any, Optional
 
 from agents import FunctionTool, Tool
 
@@ -10,10 +10,10 @@ from crewai.tools import BaseTool
 class OpenAIAgentToolAdapter(BaseToolAdapter):
     """Adapter for OpenAI Assistant tools"""
 
-    def __init__(self, tools: Optional[List[BaseTool]] = None):
+    def __init__(self, tools: Optional[list[BaseTool]] = None):
         self.original_tools = tools or []
 
-    def configure_tools(self, tools: List[BaseTool]) -> None:
+    def configure_tools(self, tools: list[BaseTool]) -> None:
         """Configure tools for the OpenAI Assistant"""
         if self.original_tools:
             all_tools = tools + self.original_tools
@@ -23,8 +23,8 @@ class OpenAIAgentToolAdapter(BaseToolAdapter):
             self.converted_tools = self._convert_tools_to_openai_format(all_tools)
 
     def _convert_tools_to_openai_format(
-        self, tools: Optional[List[BaseTool]]
-    ) -> List[Tool]:
+        self, tools: Optional[list[BaseTool]]
+    ) -> list[Tool]:
         """Convert CrewAI tools to OpenAI Assistant tool format"""
         if not tools:
             return []

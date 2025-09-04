@@ -2,7 +2,7 @@ import hashlib
 import logging
 import os
 import shutil
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Optional, Union
 
 import chromadb
 import chromadb.errors
@@ -33,7 +33,7 @@ class KnowledgeStorage(BaseKnowledgeStorage):
 
     def __init__(
         self,
-        embedder: Optional[Dict[str, Any]] = None,
+        embedder: Optional[dict[str, Any]] = None,
         collection_name: Optional[str] = None,
     ):
         self.collection_name = collection_name
@@ -41,11 +41,11 @@ class KnowledgeStorage(BaseKnowledgeStorage):
 
     def search(
         self,
-        query: List[str],
+        query: list[str],
         limit: int = 3,
         filter: Optional[dict] = None,
         score_threshold: float = 0.35,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         with suppress_logging(
             "chromadb.segment.impl.vector.local_persistent_hnsw", logging.ERROR
         ):
@@ -113,8 +113,8 @@ class KnowledgeStorage(BaseKnowledgeStorage):
 
     def save(
         self,
-        documents: List[str],
-        metadata: Optional[Union[Dict[str, Any], List[Dict[str, Any]]]] = None,
+        documents: list[str],
+        metadata: Optional[Union[dict[str, Any], list[dict[str, Any]]]] = None,
     ):
         if not self.collection:
             raise Exception("Collection not initialized")
@@ -179,11 +179,11 @@ class KnowledgeStorage(BaseKnowledgeStorage):
             api_key=os.getenv("OPENAI_API_KEY"), model_name="text-embedding-3-small"
         )
 
-    def _set_embedder_config(self, embedder: Optional[Dict[str, Any]] = None) -> None:
+    def _set_embedder_config(self, embedder: Optional[dict[str, Any]] = None) -> None:
         """Set the embedding configuration for the knowledge storage.
 
         Args:
-            embedder_config (Optional[Dict[str, Any]]): Configuration dictionary for the embedder.
+            embedder_config (Optional[dict[str, Any]]): Configuration dictionary for the embedder.
                 If None or empty, defaults to the default embedding function.
         """
         self.embedder = (

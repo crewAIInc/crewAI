@@ -1,6 +1,6 @@
 import json
 import re
-from typing import Any, Callable, Dict, List, Optional, Sequence, Union
+from typing import Any, Callable, Optional, Sequence, Union
 
 from crewai.agents.constants import FINAL_ANSWER_AND_PARSABLE_ACTION_ERROR_MESSAGE
 from crewai.agents.parser import (
@@ -26,7 +26,7 @@ from crewai.cli.config import Settings
 console = Console()
 
 
-def parse_tools(tools: List[BaseTool]) -> List[CrewStructuredTool]:
+def parse_tools(tools: list[BaseTool]) -> list[CrewStructuredTool]:
     """Parse tools to be used for the task."""
     tools_list = []
 
@@ -69,9 +69,9 @@ def handle_max_iterations_exceeded(
     formatted_answer: Union[AgentAction, AgentFinish, None],
     printer: Printer,
     i18n: I18N,
-    messages: List[Dict[str, str]],
+    messages: list[dict[str, str]],
     llm: Union[LLM, BaseLLM],
-    callbacks: List[Any],
+    callbacks: list[Any],
 ) -> Union[AgentAction, AgentFinish]:
     """
     Handles the case when the maximum number of iterations is exceeded.
@@ -115,7 +115,7 @@ def handle_max_iterations_exceeded(
     return formatted_answer
 
 
-def format_message_for_llm(prompt: str, role: str = "user") -> Dict[str, str]:
+def format_message_for_llm(prompt: str, role: str = "user") -> dict[str, str]:
     prompt = prompt.rstrip()
     return {"role": role, "content": prompt}
 
@@ -143,8 +143,8 @@ def enforce_rpm_limit(
 
 def get_llm_response(
     llm: Union[LLM, BaseLLM],
-    messages: List[Dict[str, str]],
-    callbacks: List[Any],
+    messages: list[dict[str, str]],
+    callbacks: list[Any],
     printer: Printer,
     from_task: Optional[Any] = None,
     from_agent: Optional[Any] = None,
@@ -187,7 +187,7 @@ def process_llm_response(
 def handle_agent_action_core(
     formatted_answer: AgentAction,
     tool_result: ToolResult,
-    messages: Optional[List[Dict[str, str]]] = None,
+    messages: Optional[list[dict[str, str]]] = None,
     step_callback: Optional[Callable] = None,
     show_logs: Optional[Callable] = None,
 ) -> Union[AgentAction, AgentFinish]:
@@ -246,7 +246,7 @@ def handle_unknown_error(printer: Any, exception: Exception) -> None:
 
 def handle_output_parser_exception(
     e: OutputParserException,
-    messages: List[Dict[str, str]],
+    messages: list[dict[str, str]],
     iterations: int,
     log_error_after: int = 3,
     printer: Optional[Any] = None,
@@ -298,9 +298,9 @@ def is_context_length_exceeded(exception: Exception) -> bool:
 def handle_context_length(
     respect_context_window: bool,
     printer: Any,
-    messages: List[Dict[str, str]],
+    messages: list[dict[str, str]],
     llm: Any,
-    callbacks: List[Any],
+    callbacks: list[Any],
     i18n: Any,
 ) -> None:
     """Handle context length exceeded by either summarizing or raising an error.
@@ -330,9 +330,9 @@ def handle_context_length(
 
 
 def summarize_messages(
-    messages: List[Dict[str, str]],
+    messages: list[dict[str, str]],
     llm: Any,
-    callbacks: List[Any],
+    callbacks: list[Any],
     i18n: Any,
 ) -> None:
     """Summarize messages to fit within context window.
@@ -458,8 +458,8 @@ def _print_current_organization():
         )
 
 
-def load_agent_from_repository(from_repository: str) -> Dict[str, Any]:
-    attributes: Dict[str, Any] = {}
+def load_agent_from_repository(from_repository: str) -> dict[str, Any]:
+    attributes: dict[str, Any] = {}
     if from_repository:
         import importlib
 

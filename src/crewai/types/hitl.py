@@ -1,4 +1,4 @@
-from typing import List, Dict, TypedDict
+from typing import TypedDict
 
 
 class HITLResumeInfo(TypedDict, total=False):
@@ -9,7 +9,7 @@ class HITLResumeInfo(TypedDict, total=False):
     task_key: str
     task_output: str
     human_feedback: str
-    previous_messages: List[Dict[str, str]]
+    previous_messages: list[dict[str, str]]
 
 
 class CrewInputsWithHITL(TypedDict, total=False):

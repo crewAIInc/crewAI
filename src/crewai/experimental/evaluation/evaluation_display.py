@@ -1,5 +1,5 @@
 from collections import defaultdict
-from typing import Dict, Any, List
+from typing import Any
 from rich.table import Table
 from rich.box import HEAVY_EDGE, ROUNDED
 from collections.abc import Sequence
@@ -19,7 +19,7 @@ class EvaluationDisplayFormatter:
         self.console_formatter = ConsoleFormatter()
 
     def display_evaluation_with_feedback(
-        self, iterations_results: Dict[int, Dict[str, List[Any]]]
+        self, iterations_results: dict[int, dict[str, list[Any]]]
     ):
         if not iterations_results:
             self.console_formatter.print(
@@ -99,7 +99,7 @@ class EvaluationDisplayFormatter:
 
     def display_summary_results(
         self,
-        iterations_results: Dict[int, Dict[str, List[AgentAggregatedEvaluationResult]]],
+        iterations_results: dict[int, dict[str, list[AgentAggregatedEvaluationResult]]],
     ):
         if not iterations_results:
             self.console_formatter.print(
@@ -304,8 +304,8 @@ class EvaluationDisplayFormatter:
         self,
         agent_role: str,
         metric: str,
-        feedbacks: List[str],
-        scores: List[float | None],
+        feedbacks: list[str],
+        scores: list[float | None],
         strategy: AggregationStrategy,
     ) -> str:
         if len(feedbacks) <= 2 and all(len(fb) < 200 for fb in feedbacks):

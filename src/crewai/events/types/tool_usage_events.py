@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Any, Callable, Dict, Optional
+from typing import Any, Callable, Optional
 
 from crewai.events.base_events import BaseEvent
 
@@ -11,7 +11,7 @@ class ToolUsageEvent(BaseEvent):
     agent_role: Optional[str] = None
     agent_id: Optional[str] = None
     tool_name: str
-    tool_args: Dict[str, Any] | str
+    tool_args: dict[str, Any] | str
     tool_class: Optional[str] = None
     run_attempts: int | None = None
     delegations: int | None = None
@@ -81,7 +81,7 @@ class ToolExecutionErrorEvent(BaseEvent):
     error: Any
     type: str = "tool_execution_error"
     tool_name: str
-    tool_args: Dict[str, Any]
+    tool_args: dict[str, Any]
     tool_class: Callable
     agent: Optional[Any] = None
 

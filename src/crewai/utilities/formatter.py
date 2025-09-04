@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, List, Union
+from typing import TYPE_CHECKING, Union
 from crewai.utilities.constants import _NotSpecified
 
 if TYPE_CHECKING:
@@ -6,7 +6,7 @@ if TYPE_CHECKING:
     from crewai.tasks.task_output import TaskOutput
 
 
-def aggregate_raw_outputs_from_task_outputs(task_outputs: List["TaskOutput"]) -> str:
+def aggregate_raw_outputs_from_task_outputs(task_outputs: list["TaskOutput"]) -> str:
     """Generate string context from the task outputs."""
     dividers = "\n\n----------\n\n"
 
@@ -15,7 +15,7 @@ def aggregate_raw_outputs_from_task_outputs(task_outputs: List["TaskOutput"]) ->
     return context
 
 
-def aggregate_raw_outputs_from_tasks(tasks: Union[List["Task"],_NotSpecified]) -> str:
+def aggregate_raw_outputs_from_tasks(tasks: Union[list["Task"],_NotSpecified]) -> str:
     """Generate string context from the tasks."""
 
     task_outputs = (

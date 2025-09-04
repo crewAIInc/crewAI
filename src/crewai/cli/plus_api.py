@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import Optional
 from urllib.parse import urljoin
 
 import requests
@@ -58,7 +58,7 @@ class PlusAPI:
         version: str,
         description: Optional[str],
         encoded_file: str,
-        available_exports: Optional[List[str]] = None,
+        available_exports: Optional[list[str]] = None,
     ):
         params = {
             "handle": handle,

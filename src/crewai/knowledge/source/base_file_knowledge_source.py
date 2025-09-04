@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Dict, List, Optional, Union
+from typing import Optional, Union
 
 from pydantic import Field, field_validator
 
@@ -14,16 +14,16 @@ class BaseFileKnowledgeSource(BaseKnowledgeSource, ABC):
     """Base class for knowledge sources that load content from files."""
 
     _logger: Logger = Logger(verbose=True)
-    file_path: Optional[Union[Path, List[Path], str, List[str]]] = Field(
+    file_path: Optional[Union[Path, list[Path], str, list[str]]] = Field(
         default=None,
         description="[Deprecated] The path to the file. Use file_paths instead.",
     )
-    file_paths: Optional[Union[Path, List[Path], str, List[str]]] = Field(
+    file_paths: Optional[Union[Path, list[Path], str, list[str]]] = Field(
         default_factory=list, description="The path to the file"
     )
-    content: Dict[Path, str] = Field(init=False, default_factory=dict)
+    content: dict[Path, str] = Field(init=False, default_factory=dict)
     storage: Optional[KnowledgeStorage] = Field(default=None)
-    safe_file_paths: List[Path] = Field(default_factory=list)
+    safe_file_paths: list[Path] = Field(default_factory=list)
 
     @field_validator("file_path", "file_paths", mode="before")
     def validate_file_path(cls, v, info):
@@ -46,7 +46,7 @@ class BaseFileKnowledgeSource(BaseKnowledgeSource, ABC):
         self.content = self.load_content()
 
     @abstractmethod
-    def load_content(self) -> Dict[Path, str]:
+    def load_content(self) -> dict[Path, str]:
         """Load and preprocess file content. Should be overridden by subclasses. Assume that the file path is relative to the project root in the knowledge directory."""
         pass
 
@@ -78,7 +78,7 @@ class BaseFileKnowledgeSource(BaseKnowledgeSource, ABC):
         """Convert a path to a Path object."""
         return Path(KNOWLEDGE_DIRECTORY + "/" + path) if isinstance(path, str) else path
 
-    def _process_file_paths(self) -> List[Path]:
+    def _process_file_paths(self) -> list[Path]:
         """Convert file_path to a list of Path objects."""
 
         if hasattr(self, "file_path") and self.file_path is not None:
@@ -93,7 +93,7 @@ class BaseFileKnowledgeSource(BaseKnowledgeSource, ABC):
             raise ValueError("Your source must be provided with a file_paths: []")
 
         # Convert single path to list
-        path_list: List[Union[Path, str]] = (
+        path_list: list[Union[Path, str]] = (
             [self.file_paths]
             if isinstance(self.file_paths, (str, Path))
             else list(self.file_paths)

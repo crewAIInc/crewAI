@@ -1,4 +1,4 @@
-from typing import Any, Callable, Dict, List, Optional, Union
+from typing import Any, Callable, Optional, Union
 
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.agents.agent_builder.base_agent_executor_mixin import CrewAgentExecutorMixin
@@ -48,17 +48,17 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         agent: BaseAgent,
         prompt: dict[str, str],
         max_iter: int,
-        tools: List[CrewStructuredTool],
+        tools: list[CrewStructuredTool],
         tools_names: str,
-        stop_words: List[str],
+        stop_words: list[str],
         tools_description: str,
         tools_handler: ToolsHandler,
         step_callback: Any = None,
-        original_tools: List[Any] | None = None,
+        original_tools: list[Any] | None = None,
         function_calling_llm: Any = None,
         respect_context_window: bool = False,
         request_within_rpm_limit: Optional[Callable[[], bool]] = None,
-        callbacks: List[Any] | None = None,
+        callbacks: list[Any] | None = None,
     ):
         self._i18n: I18N = I18N()
         self.llm: BaseLLM = llm
@@ -81,10 +81,10 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         self.respect_context_window = respect_context_window
         self.request_within_rpm_limit = request_within_rpm_limit
         self.ask_for_human_input = False
-        self.messages: List[Dict[str, str]] = []
+        self.messages: list[dict[str, str]] = []
         self.iterations = 0
         self.log_error_after = 3
-        self.tool_name_to_tool_map: Dict[str, Union[CrewStructuredTool, BaseTool]] = {
+        self.tool_name_to_tool_map: dict[str, Union[CrewStructuredTool, BaseTool]] = {
             tool.name: tool for tool in self.tools
         }
         existing_stop = self.llm.stop or []
@@ -96,7 +96,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             )
         )
 
-    def invoke(self, inputs: Dict[str, str]) -> Dict[str, Any]:
+    def invoke(self, inputs: dict[str, str]) -> dict[str, Any]:
         if "system" in self.prompt:
             system_prompt = self._format_prompt(self.prompt.get("system", ""), inputs)
             user_prompt = self._format_prompt(self.prompt.get("user", ""), inputs)
@@ -371,7 +371,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         training_data[agent_id] = agent_training_data
         training_handler.save(training_data)
 
-    def _format_prompt(self, prompt: str, inputs: Dict[str, str]) -> str:
+    def _format_prompt(self, prompt: str, inputs: dict[str, str]) -> str:
         prompt = prompt.replace("{input}", inputs["input"])
         prompt = prompt.replace("{tool_names}", inputs["tool_names"])
         prompt = prompt.replace("{tools}", inputs["tools"])

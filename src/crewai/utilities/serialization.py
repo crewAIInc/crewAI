@@ -1,14 +1,12 @@
 import json
 import uuid
 from datetime import date, datetime
-from typing import Any, Dict, List, Union
+from typing import Any, Union
 
 from pydantic import BaseModel
 
-SerializablePrimitive = Union[str, int, float, bool, None]
-Serializable = Union[
-    SerializablePrimitive, List["Serializable"], Dict[str, "Serializable"]
-]
+SerializablePrimitive = str | int | float | bool | None
+Serializable = SerializablePrimitive | list["Serializable"] | dict[str, "Serializable"]
 
 
 def to_serializable(

@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Optional, Union
 
 
 class BaseLLM(ABC):
@@ -21,7 +21,7 @@ class BaseLLM(ABC):
 
     model: str
     temperature: Optional[float] = None
-    stop: Optional[List[str]] = None
+    stop: Optional[list[str]] = None
 
     def __init__(
         self,
@@ -43,10 +43,10 @@ class BaseLLM(ABC):
     @abstractmethod
     def call(
         self,
-        messages: Union[str, List[Dict[str, str]]],
-        tools: Optional[List[dict]] = None,
-        callbacks: Optional[List[Any]] = None,
-        available_functions: Optional[Dict[str, Any]] = None,
+        messages: Union[str, list[dict[str, str]]],
+        tools: Optional[list[dict]] = None,
+        callbacks: Optional[list[Any]] = None,
+        available_functions: Optional[dict[str, Any]] = None,
         from_task: Optional[Any] = None,
         from_agent: Optional[Any] = None,
     ) -> Union[str, Any]:

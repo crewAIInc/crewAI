@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime, timezone
-from typing import Dict, List, Any, Optional
+from typing import Any, Optional
 from dataclasses import dataclass, field
 
 from crewai.utilities.constants import CREWAI_BASE_URL
@@ -23,11 +23,11 @@ class TraceBatch:
 
     version: str = field(default_factory=get_crewai_version)
     batch_id: str = field(default_factory=lambda: str(uuid.uuid4()))
-    user_context: Dict[str, str] = field(default_factory=dict)
-    execution_metadata: Dict[str, Any] = field(default_factory=dict)
-    events: List[TraceEvent] = field(default_factory=list)
+    user_context: dict[str, str] = field(default_factory=dict)
+    execution_metadata: dict[str, Any] = field(default_factory=dict)
+    events: list[TraceEvent] = field(default_factory=list)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "version": self.version,
             "batch_id": self.batch_id,
@@ -43,8 +43,8 @@ class TraceBatchManager:
     is_current_batch_ephemeral: bool = False
     trace_batch_id: Optional[str] = None
     current_batch: Optional[TraceBatch] = None
-    event_buffer: List[TraceEvent] = []
-    execution_start_times: Dict[str, datetime] = {}
+    event_buffer: list[TraceEvent] = []
+    execution_start_times: dict[str, datetime] = {}
     batch_owner_type: Optional[str] = None
     batch_owner_id: Optional[str] = None
 
@@ -58,8 +58,8 @@ class TraceBatchManager:
 
     def initialize_batch(
         self,
-        user_context: Dict[str, str],
-        execution_metadata: Dict[str, Any],
+        user_context: dict[str, str],
+        execution_metadata: dict[str, Any],
         use_ephemeral: bool = False,
     ) -> TraceBatch:
         """Initialize a new trace batch"""
@@ -76,8 +76,8 @@ class TraceBatchManager:
 
     def _initialize_backend_batch(
         self,
-        user_context: Dict[str, str],
-        execution_metadata: Dict[str, Any],
+        user_context: dict[str, str],
+        execution_metadata: dict[str, Any],
         use_ephemeral: bool = False,
     ):
         """Send batch initialization to backend"""

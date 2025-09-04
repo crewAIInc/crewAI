@@ -5,7 +5,7 @@ import sys
 import threading
 import time
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Optional
 
 import click
 import tomli
@@ -157,7 +157,7 @@ def build_system_message(crew_chat_inputs: ChatInputs) -> str:
     )
 
 
-def create_tool_function(crew: Crew, messages: List[Dict[str, str]]) -> Any:
+def create_tool_function(crew: Crew, messages: list[dict[str, str]]) -> Any:
     """Creates a wrapper function for running the crew tool with messages."""
 
     def run_crew_tool_with_messages(**kwargs):
@@ -221,9 +221,9 @@ def get_user_input() -> str:
 def handle_user_input(
     user_input: str,
     chat_llm: LLM,
-    messages: List[Dict[str, str]],
-    crew_tool_schema: Dict[str, Any],
-    available_functions: Dict[str, Any],
+    messages: list[dict[str, str]],
+    crew_tool_schema: dict[str, Any],
+    available_functions: dict[str, Any],
 ) -> None:
     if user_input.strip().lower() == "exit":
         click.echo("Exiting chat. Goodbye!")
@@ -281,13 +281,13 @@ def generate_crew_tool_schema(crew_inputs: ChatInputs) -> dict:
     }
 
 
-def run_crew_tool(crew: Crew, messages: List[Dict[str, str]], **kwargs):
+def run_crew_tool(crew: Crew, messages: list[dict[str, str]], **kwargs):
     """
     Runs the crew using crew.kickoff(inputs=kwargs) and returns the output.
 
     Args:
         crew (Crew): The crew instance to run.
-        messages (List[Dict[str, str]]): The chat messages up to this point.
+        messages (list[dict[str, str]]): The chat messages up to this point.
         **kwargs: The inputs collected from the user.
 
     Returns:
@@ -314,12 +314,12 @@ def run_crew_tool(crew: Crew, messages: List[Dict[str, str]], **kwargs):
         sys.exit(1)
 
 
-def load_crew_and_name() -> Tuple[Crew, str]:
+def load_crew_and_name() -> tuple[Crew, str]:
     """
     Loads the crew by importing the crew class from the user's project.
 
     Returns:
-        Tuple[Crew, str]: A tuple containing the Crew instance and the name of the crew.
+        tuple[Crew, str]: A tuple containing the Crew instance and the name of the crew.
     """
     # Get the current working directory
     cwd = Path.cwd()
@@ -395,7 +395,7 @@ def generate_crew_chat_inputs(crew: Crew, crew_name: str, chat_llm) -> ChatInput
     )
 
 
-def fetch_required_inputs(crew: Crew) -> Set[str]:
+def fetch_required_inputs(crew: Crew) -> set[str]:
     """
     Extracts placeholders from the crew's tasks and agents.
 
@@ -403,10 +403,10 @@ def fetch_required_inputs(crew: Crew) -> Set[str]:
         crew (Crew): The crew object.
 
     Returns:
-        Set[str]: A set of placeholder names.
+        set[str]: A set of placeholder names.
     """
     placeholder_pattern = re.compile(r"\{(.+?)\}")
-    required_inputs: Set[str] = set()
+    required_inputs: set[str] = set()
 
     # Scan tasks
     for task in crew.tasks:

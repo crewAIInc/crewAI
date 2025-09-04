@@ -3,7 +3,7 @@ import os
 import shutil
 import uuid
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 from chromadb.api import ClientAPI
 from crewai.rag.storage.base_rag_storage import BaseRAGStorage
 from crewai.rag.embeddings.configurator import EmbeddingConfigurator
@@ -85,7 +85,7 @@ class RAGStorage(BaseRAGStorage):
 
         return f"{base_path}/{file_name}"
 
-    def save(self, value: Any, metadata: Dict[str, Any]) -> None:
+    def save(self, value: Any, metadata: dict[str, Any]) -> None:
         if not hasattr(self, "app") or not hasattr(self, "collection"):
             self._initialize_app()
         try:
@@ -99,7 +99,7 @@ class RAGStorage(BaseRAGStorage):
         limit: int = 3,
         filter: Optional[dict] = None,
         score_threshold: float = 0.35,
-    ) -> List[Any]:
+    ) -> list[Any]:
         if not hasattr(self, "app"):
             self._initialize_app()
 
@@ -125,7 +125,7 @@ class RAGStorage(BaseRAGStorage):
             logging.error(f"Error during {self.type} search: {str(e)}")
             return []
 
-    def _generate_embedding(self, text: str, metadata: Dict[str, Any]) -> None:  # type: ignore
+    def _generate_embedding(self, text: str, metadata: dict[str, Any]) -> None:  # type: ignore
         if not hasattr(self, "app") or not hasattr(self, "collection"):
             self._initialize_app()
 

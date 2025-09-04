@@ -7,7 +7,7 @@ traversal attacks and ensure paths remain within allowed boundaries.
 
 import os
 from pathlib import Path
-from typing import List, Union
+from typing import Union
 
 
 def safe_path_join(*parts: str, root: Union[str, Path, None] = None) -> str:
@@ -101,7 +101,7 @@ def validate_path_exists(path: Union[str, Path], file_type: str = "file") -> str
         raise ValueError(f"Invalid path: {str(e)}")
 
 
-def list_files(directory: Union[str, Path], pattern: str = "*") -> List[str]:
+def list_files(directory: Union[str, Path], pattern: str = "*") -> list[str]:
     """
     Safely list files in a directory matching a pattern.
 
@@ -114,7 +114,7 @@ def list_files(directory: Union[str, Path], pattern: str = "*") -> List[str]:
 
     Returns
     -------
-    List[str]
+    list[str]
         List of matching file paths.
 
     Raises
