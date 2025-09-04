@@ -199,7 +199,7 @@ class ToolUsage:
 
         started_at = time.time()
         from_cache = False
-        result = None  # type: ignore
+        result: str | None = None
 
         if self.tools_handler and self.tools_handler.cache:
             result = self.tools_handler.cache.read(
@@ -243,7 +243,7 @@ class ToolUsage:
                     try:
                         acceptable_args = tool.args_schema.model_json_schema()[
                             "properties"
-                        ].keys()  # type: ignore
+                        ].keys()
                         arguments = {
                             k: v
                             for k, v in calling.arguments.items()
@@ -668,7 +668,7 @@ class ToolUsage:
 
         return event_data
 
-    def _add_fingerprint_metadata(self, arguments: dict) -> dict:
+    def _add_fingerprint_metadata(self, arguments: dict[str, Any]) -> dict[str, Any]:
         """Add fingerprint metadata to tool arguments if available.
 
         Args:

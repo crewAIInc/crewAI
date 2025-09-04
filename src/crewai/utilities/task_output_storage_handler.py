@@ -33,7 +33,7 @@ class TaskOutputStorageHandler:
     def __init__(self) -> None:
         self.storage = KickoffTaskOutputsSQLiteStorage()
 
-    def update(self, task_index: int, log: dict[str, Any]):
+    def update(self, task_index: int, log: dict[str, Any]) -> None:
         saved_outputs = self.load()
         if saved_outputs is None:
             raise ValueError("Logs cannot be None")
@@ -60,7 +60,7 @@ class TaskOutputStorageHandler:
         task_index: int,
         inputs: dict[str, Any] | None = None,
         was_replayed: bool = False,
-    ):
+    ) -> None:
         inputs = inputs or {}
         self.storage.add(task, output, task_index, was_replayed, inputs)
 

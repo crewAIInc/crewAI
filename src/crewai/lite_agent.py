@@ -5,6 +5,7 @@ from collections.abc import Callable
 from typing import (
     Any,
     Optional,
+    Union,
     cast,
     get_args,
     get_origin,
@@ -39,6 +40,7 @@ from crewai.events.types.logging_events import AgentLogsExecutionEvent
 from crewai.flow.flow_trackable import FlowTrackable
 from crewai.llm import LLM
 from crewai.llms.base_llm import BaseLLM
+from crewai.task import TaskOutput
 from crewai.tools.base_tool import BaseTool
 from crewai.tools.structured_tool import CrewStructuredTool
 from crewai.utilities import I18N
@@ -185,8 +187,8 @@ class LiteAgent(FlowTrackable, BaseModel):
     _messages: list[dict[str, str]] = PrivateAttr(default_factory=list)
     _iterations: int = PrivateAttr(default=0)
     _printer: Printer = PrivateAttr(default_factory=Printer)
-    _guardrail: Optional[Callable[[LiteAgentOutput], tuple[bool, Any]]] = PrivateAttr(
-        default=None
+    _guardrail: Optional[Callable[[LiteAgentOutput | TaskOutput], tuple[bool, Any]]] = (
+        PrivateAttr(default=None)
     )
     _guardrail_retry_count: int = PrivateAttr(default=0)
 

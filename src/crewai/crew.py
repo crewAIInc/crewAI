@@ -273,7 +273,7 @@ class Crew(FlowTrackable, BaseModel):
         """
 
         # TODO: Improve typing
-        return json.loads(v) if isinstance(v, Json) else v
+        return json.loads(v) if isinstance(v, str) else v
 
     @model_validator(mode="after")
     def set_private_attrs(self) -> Self:
@@ -641,7 +641,7 @@ class Crew(FlowTrackable, BaseModel):
 
             for agent in self.agents:
                 agent.i18n = i18n
-                agent.crew = self  # type: ignore[attr-defined]
+                agent.crew = self
                 agent.set_knowledge(crew_embedder=self.embedder)
                 # TODO: Create an AgentFunctionCalling protocol for future refactoring
                 if not agent.function_calling_llm:  # type: ignore # "BaseAgent" has no attribute "function_calling_llm"
@@ -983,7 +983,7 @@ class Crew(FlowTrackable, BaseModel):
         if hasattr(task_agent, "get_delegation_tools"):
             delegation_tools = task_agent.get_delegation_tools(agents)
             # Cast delegation_tools to the expected type for _merge_tools
-            return self._merge_tools(tools, cast(list[BaseTool], delegation_tools))
+            return self._merge_tools(tools, delegation_tools)
         return cast(list[BaseTool], tools)
 
     def _add_multimodal_tools(
