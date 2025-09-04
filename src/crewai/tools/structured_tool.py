@@ -1,16 +1,14 @@
 from __future__ import annotations
 
 import asyncio
-
 import inspect
 import textwrap
-from typing import Any, Callable, Optional, Union, get_type_hints
+from collections.abc import Callable
+from typing import TYPE_CHECKING, Any, Optional, Union, get_type_hints
 
 from pydantic import BaseModel, Field, create_model
 
 from crewai.utilities.logger import Logger
-
-from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from crewai.tools.base_tool import BaseTool
@@ -192,7 +190,7 @@ class CrewStructuredTool:
                         f"not found in args_schema"
                     )
 
-    def _parse_args(self, raw_args: Union[str, dict]) -> dict:
+    def _parse_args(self, raw_args: str | dict) -> dict:
         """Parse and validate the input arguments against the schema.
 
         Args:
@@ -217,7 +215,7 @@ class CrewStructuredTool:
 
     async def ainvoke(
         self,
-        input: Union[str, dict],
+        input: str | dict,
         config: Optional[dict] = None,
         **kwargs: Any,
     ) -> Any:
@@ -261,7 +259,7 @@ class CrewStructuredTool:
         return self.invoke(input_dict)
 
     def invoke(
-        self, input: Union[str, dict], config: Optional[dict] = None, **kwargs: Any
+        self, input: str | dict, config: Optional[dict] = None, **kwargs: Any
     ) -> Any:
         """Main method for tool execution."""
         parsed_args = self._parse_args(input)
@@ -273,21 +271,39 @@ class CrewStructuredTool:
 
         self._increment_usage_count()
 
-        if inspect.iscoroutinefunction(self.func):
-            result = asyncio.run(self.func(**parsed_args, **kwargs))
-            return result
-
         try:
-            result = self.func(**parsed_args, **kwargs)
+            if inspect.iscoroutinefunction(self.func):
+                coro = self.func(**parsed_args, **kwargs)
+                try:
+                    asyncio.get_running_loop()
+                    raise RuntimeError(
+                        f"Cannot call async tool '{self.name}' from synchronous context within an event loop. "
+                        f"Use ainvoke() instead or call from outside the event loop."
+                    )
+                except RuntimeError as e:
+                    if "Cannot call async tool" in str(e):
+                        raise
+                    else:
+                        return asyncio.run(coro)
+            else:
+                result = self.func(**parsed_args, **kwargs)
+
+                if asyncio.iscoroutine(result):
+                    try:
+                        asyncio.get_running_loop()
+                        raise RuntimeError(
+                            f"Sync function '{self.name}' returned a coroutine but we're in an event loop. "
+                            f"Use ainvoke() instead or call from outside the event loop."
+                        )
+                    except RuntimeError as e:
+                        if "returned a coroutine but we're in an event loop" in str(e):
+                            raise
+                        else:
+                            return asyncio.run(result)
+
+                return result
         except Exception:
             raise
-
-        result = self.func(**parsed_args, **kwargs)
-
-        if asyncio.iscoroutine(result):
-            return asyncio.run(result)
-
-        return result
 
     def has_reached_max_usage_count(self) -> bool:
         """Check if the tool has reached its maximum usage count."""
