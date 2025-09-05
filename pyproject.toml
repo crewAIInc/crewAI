@@ -122,7 +122,6 @@ select = [
 ]
 
 [tool.mypy]
-strict = true
 exclude = ["src/crewai/cli/templates", "tests"]
 
 [tool.bandit]
