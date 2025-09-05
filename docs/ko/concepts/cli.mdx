@@ -352,19 +352,16 @@ crewai config list
 ```
 
 예시 출력:
-```
-CrewAI CLI Configuration
-┏━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
-┃ Setting            ┃ Value                              ┃ Description                                                                                      ┃
-┡━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
-│ enterprise_base_url│ https://app.crewai.com             │ CrewAI Enterprise 인스턴스의 기본 URL                                                           │
-│ org_name           │ Not set                            │ 현재 활성화된 조직의 이름                                                                         │
-│ org_uuid           │ Not set                            │ 현재 활성화된 조직의 UUID                                                                         │
-│ oauth2_provider    │ workos                             │ 인증에 사용되는 OAuth2 제공자 (예: workos, okta, auth0)                                            │
-│ oauth2_audience    │ client_01YYY                       │ 일반적으로 대상 API나 리소스를 식별하는 데 사용되는 OAuth2 audience 값                               │
-│ oauth2_client_id   │ client_01XXX                       │ 제공자로부터 발급된 OAuth2 client ID로, 인증 요청 시 사용됨                                       │
-│ oauth2_domain      │ login.crewai.com                   │ 토큰 발급에 사용되는 OAuth2 제공자의 도메인(예: your-org.auth0.com)                               │
-```
+
+| 설정                 | 값                      | 설명                                                                 |
+| :------------------- | :---------------------- | :------------------------------------------------------------------- |
+| enterprise_base_url  | https://app.crewai.com | CrewAI Enterprise 인스턴스의 기본 URL                                |
+| org_name             | Not set                 | 현재 활성화된 조직의 이름                                            |
+| org_uuid             | Not set                 | 현재 활성화된 조직의 UUID                                            |
+| oauth2_provider      | workos                  | 인증에 사용되는 OAuth2 제공자 (예: workos, okta, auth0)              |
+| oauth2_audience      | client_01YYY            | 일반적으로 대상 API/리소스를 식별하는 데 사용되는 OAuth2 audience 값 |
+| oauth2_client_id     | client_01XXX            | 제공자로부터 발급된 OAuth2 client ID (인증 요청 시 사용)             |
+| oauth2_domain        | login.crewai.com        | OAuth2 제공자의 도메인 (예: your-org.auth0.com)                      |
 
 엔터프라이즈 기본 URL 설정:
 ```shell Terminal

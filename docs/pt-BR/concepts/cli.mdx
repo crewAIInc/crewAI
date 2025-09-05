@@ -367,19 +367,16 @@ crewai config list
 ```
 
 Exemplo de saída:
-```
-CrewAI CLI Configuration
-┏━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
-┃ Setting            ┃ Value                              ┃ Description                                                                                      ┃
-┡━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
-│ enterprise_base_url│ https://app.crewai.com             │ Base URL of the CrewAI Enterprise instance                                                       │
-│ org_name           │ Not set                            │ Name of the currently active organization                                                        │
-│ org_uuid           │ Not set                            │ UUID of the currently active organization                                                        │
-│ oauth2_provider    │ workos                             │ OAuth2 provider used for authentication (e.g., workos, okta, auth0).                             │
-│ oauth2_audience    │ client_01YYY                       │ OAuth2 audience value, typically used to identify the target API or resource.                    │
-│ oauth2_client_id   │ client_01XXX                       │ OAuth2 client ID issued by the provider, used during authentication requests.                    │
-│ oauth2_domain      │ login.crewai.com                   │ OAuth2 provider's domain (e.g., your-org.auth0.com) used for issuing tokens.                     │
-```
+
+| Parâmetro            | Valor                   | Descrição                                                     |
+| :------------------- | :---------------------- | :------------------------------------------------------------ |
+| enterprise_base_url  | https://app.crewai.com | URL base da instância CrewAI Enterprise                       |
+| org_name             | Not set                 | Nome da organização atualmente ativa                          |
+| org_uuid             | Not set                 | UUID da organização atualmente ativa                          |
+| oauth2_provider      | workos                  | Provedor OAuth2 (ex.: workos, okta, auth0)                    |
+| oauth2_audience      | client_01YYY            | Audience usada para identificar a API/recurso de destino       |
+| oauth2_client_id     | client_01XXX            | Client ID OAuth2 emitido pelo provedor (usado na autenticação) |
+| oauth2_domain        | login.crewai.com        | Domínio do provedor OAuth2 (ex.: your-org.auth0.com)          |
 
 Definir a URL base do enterprise:
 ```shell Terminal
