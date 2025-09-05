@@ -1625,3 +1625,78 @@ def test_agent_with_knowledge_sources():
 
         # Assert that the agent provides the correct information
         assert "red" in result.raw.lower()
+
+
+def test_proactive_context_length_handling_prevents_empty_response():
+    """Test that proactive context length checking prevents empty LLM responses."""
+    agent = Agent(
+        role="test role",
+        goal="test goal", 
+        backstory="test backstory",
+        sliding_context_window=True,
+    )
+    
+    long_input = "This is a very long input that should exceed the context window. " * 1000
+    
+    with patch.object(agent.llm, 'get_context_window_size', return_value=100):
+        with patch.object(agent.agent_executor, '_handle_context_length') as mock_handle:
+            with patch.object(agent.llm, 'call', return_value="Proper response after summarization"):
+                
+                agent.agent_executor.messages = [
+                    {"role": "user", "content": long_input}
+                ]
+                
+                task = Task(
+                    description="Process this long input",
+                    expected_output="A response",
+                    agent=agent,
+                )
+                
+                result = agent.execute_task(task)
+                
+                mock_handle.assert_called()
+                assert result and result.strip() != ""
+
+
+def test_proactive_context_length_handling_with_no_summarization():
+    """Test proactive context length checking when summarization is disabled."""
+    agent = Agent(
+        role="test role",
+        goal="test goal",
+        backstory="test backstory", 
+        sliding_context_window=False,
+    )
+    
+    long_input = "This is a very long input. " * 1000
+    
+    with patch.object(agent.llm, 'get_context_window_size', return_value=100):
+        agent.agent_executor.messages = [
+            {"role": "user", "content": long_input}
+        ]
+        
+        with pytest.raises(SystemExit):
+            agent.agent_executor._check_context_length_before_call()
+
+
+def test_context_length_estimation():
+    """Test the token estimation logic."""
+    agent = Agent(
+        role="test role",
+        goal="test goal",
+        backstory="test backstory",
+    )
+    
+    agent.agent_executor.messages = [
+        {"role": "user", "content": "Short message"},
+        {"role": "assistant", "content": "Another short message"},
+    ]
+    
+    with patch.object(agent.llm, 'get_context_window_size', return_value=10):
+        with patch.object(agent.agent_executor, '_handle_context_length') as mock_handle:
+            agent.agent_executor._check_context_length_before_call()
+            mock_handle.assert_not_called()
+    
+    with patch.object(agent.llm, 'get_context_window_size', return_value=5):
+        with patch.object(agent.agent_executor, '_handle_context_length') as mock_handle:
+            agent.agent_executor._check_context_length_before_call()
+            mock_handle.assert_called()

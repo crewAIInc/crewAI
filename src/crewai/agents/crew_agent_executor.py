@@ -112,6 +112,8 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         try:
             while not isinstance(formatted_answer, AgentFinish):
                 if not self.request_within_rpm_limit or self.request_within_rpm_limit():
+                    self._check_context_length_before_call()
+                    
                     answer = self.llm.call(
                         self.messages,
                         callbacks=self.callbacks,
@@ -326,6 +328,19 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                 self._i18n.slice("summary").format(merged_summary=merged_summary)
             )
         ]
+
+    def _check_context_length_before_call(self) -> None:
+        total_chars = sum(len(msg.get("content", "")) for msg in self.messages)
+        estimated_tokens = total_chars // 4
+        
+        context_window_size = self.llm.get_context_window_size()
+        
+        if estimated_tokens > context_window_size:
+            self._printer.print(
+                content=f"Estimated token count ({estimated_tokens}) exceeds context window ({context_window_size}). Handling proactively.",
+                color="yellow",
+            )
+            self._handle_context_length()
 
     def _handle_context_length(self) -> None:
         if self.respect_context_window:
