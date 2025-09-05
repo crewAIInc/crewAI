@@ -53,18 +53,22 @@
                 "pages": [
                   {
                     "group": "Strategy",
+                    "icon": "compass",
                     "pages": ["en/guides/concepts/evaluating-use-cases"]
                   },
                   {
                     "group": "Agents",
+                    "icon": "user",
                     "pages": ["en/guides/agents/crafting-effective-agents"]
                   },
                   {
                     "group": "Crews",
+                    "icon": "users",
                     "pages": ["en/guides/crews/first-crew"]
                   },
                   {
                     "group": "Flows",
+                    "icon": "code-branch",
                     "pages": [
                       "en/guides/flows/first-flow",
                       "en/guides/flows/mastering-flow-state"
@@ -72,6 +76,7 @@
                   },
                   {
                     "group": "Advanced",
+                    "icon": "gear",
                     "pages": [
                       "en/guides/advanced/customizing-prompts",
                       "en/guides/advanced/fingerprinting"
@@ -117,6 +122,7 @@
                   "en/tools/overview",
                   {
                     "group": "File & Document",
+                    "icon": "folder-open",
                     "pages": [
                       "en/tools/file-document/overview",
                       "en/tools/file-document/filereadtool",
@@ -136,6 +142,7 @@
                   },
                   {
                     "group": "Web Scraping & Browsing",
+                    "icon": "globe",
                     "pages": [
                       "en/tools/web-scraping/overview",
                       "en/tools/web-scraping/scrapewebsitetool",
@@ -155,6 +162,7 @@
                   },
                   {
                     "group": "Search & Research",
+                    "icon": "magnifying-glass",
                     "pages": [
                       "en/tools/search-research/overview",
                       "en/tools/search-research/serperdevtool",
@@ -176,6 +184,7 @@
                   },
                   {
                     "group": "Database & Data",
+                    "icon": "database",
                     "pages": [
                       "en/tools/database-data/overview",
                       "en/tools/database-data/mysqltool",
@@ -190,6 +199,7 @@
                   },
                   {
                     "group": "AI & Machine Learning",
+                    "icon": "brain",
                     "pages": [
                       "en/tools/ai-ml/overview",
                       "en/tools/ai-ml/dalletool",
@@ -203,16 +213,26 @@
                   },
                   {
                     "group": "Cloud & Storage",
+                    "icon": "cloud",
                     "pages": [
                       "en/tools/cloud-storage/overview",
                       "en/tools/cloud-storage/s3readertool",
                       "en/tools/cloud-storage/s3writertool",
-                      "en/tools/cloud-storage/bedrockinvokeagenttool",
                       "en/tools/cloud-storage/bedrockkbretriever"
                     ]
                   },
                   {
-                    "group": "Automation & Integration",
+                    "group": "Integrations",
+                    "icon": "plug",
+                    "pages": [
+                      "en/tools/tool-integrations/overview",
+                      "en/tools/tool-integrations/bedrockinvokeagenttool",
+                      "en/tools/tool-integrations/crewaiautomationtool"
+                    ]
+                  },
+                  {
+                    "group": "Automation",
+                    "icon": "bolt",
                     "pages": [
                       "en/tools/automation/overview",
                       "en/tools/automation/apifyactorstool",
@@ -420,18 +440,22 @@
                 "pages": [
                   {
                     "group": "Estratégia",
+                    "icon": "compass",
                     "pages": ["pt-BR/guides/concepts/evaluating-use-cases"]
                   },
                   {
                     "group": "Agentes",
+                    "icon": "user",
                     "pages": ["pt-BR/guides/agents/crafting-effective-agents"]
                   },
                   {
                     "group": "Crews",
+                    "icon": "users",
                     "pages": ["pt-BR/guides/crews/first-crew"]
                   },
                   {
                     "group": "Flows",
+                    "icon": "code-branch",
                     "pages": [
                       "pt-BR/guides/flows/first-flow",
                       "pt-BR/guides/flows/mastering-flow-state"
@@ -439,6 +463,7 @@
                   },
                   {
                     "group": "Avançado",
+                    "icon": "gear",
                     "pages": [
                       "pt-BR/guides/advanced/customizing-prompts",
                       "pt-BR/guides/advanced/fingerprinting"
@@ -484,6 +509,7 @@
                   "pt-BR/tools/overview",
                   {
                     "group": "Arquivo & Documento",
+                    "icon": "folder-open",
                     "pages": [
                       "pt-BR/tools/file-document/overview",
                       "pt-BR/tools/file-document/filereadtool",
@@ -501,6 +527,7 @@
                   },
                   {
                     "group": "Web Scraping & Navegação",
+                    "icon": "globe",
                     "pages": [
                       "pt-BR/tools/web-scraping/overview",
                       "pt-BR/tools/web-scraping/scrapewebsitetool",
@@ -519,6 +546,7 @@
                   },
                   {
                     "group": "Pesquisa",
+                    "icon": "magnifying-glass",
                     "pages": [
                       "pt-BR/tools/search-research/overview",
                       "pt-BR/tools/search-research/serperdevtool",
@@ -534,6 +562,7 @@
                   },
                   {
                     "group": "Dados",
+                    "icon": "database",
                     "pages": [
                       "pt-BR/tools/database-data/overview",
                       "pt-BR/tools/database-data/mysqltool",
@@ -546,6 +575,7 @@
                   },
                   {
                     "group": "IA & Machine Learning",
+                    "icon": "brain",
                     "pages": [
                       "pt-BR/tools/ai-ml/overview",
                       "pt-BR/tools/ai-ml/dalletool",
@@ -559,16 +589,26 @@
                   },
                   {
                     "group": "Cloud & Armazenamento",
+                    "icon": "cloud",
                     "pages": [
                       "pt-BR/tools/cloud-storage/overview",
                       "pt-BR/tools/cloud-storage/s3readertool",
                       "pt-BR/tools/cloud-storage/s3writertool",
-                      "pt-BR/tools/cloud-storage/bedrockinvokeagenttool",
                       "pt-BR/tools/cloud-storage/bedrockkbretriever"
                     ]
                   },
                   {
-                    "group": "Automação & Integração",
+                    "group": "Integrações",
+                    "icon": "plug",
+                    "pages": [
+                      "pt-BR/tools/tool-integrations/overview",
+                      "pt-BR/tools/tool-integrations/bedrockinvokeagenttool",
+                      "pt-BR/tools/tool-integrations/crewaiautomationtool"
+                    ]
+                  },
+                  {
+                    "group": "Automação",
+                    "icon": "bolt",
                     "pages": [
                       "pt-BR/tools/automation/overview",
                       "pt-BR/tools/automation/apifyactorstool",
@@ -771,18 +811,22 @@
                 "pages": [
                   {
                     "group": "전략",
+                    "icon": "compass",
                     "pages": ["ko/guides/concepts/evaluating-use-cases"]
                   },
                   {
                     "group": "에이전트 (Agents)",
+                    "icon": "user",
                     "pages": ["ko/guides/agents/crafting-effective-agents"]
                   },
                   {
                     "group": "크루 (Crews)",
+                    "icon": "users",
                     "pages": ["ko/guides/crews/first-crew"]
                   },
                   {
                     "group": "플로우 (Flows)",
+                    "icon": "code-branch",
                     "pages": [
                       "ko/guides/flows/first-flow",
                       "ko/guides/flows/mastering-flow-state"
@@ -790,6 +834,7 @@
                   },
                   {
                     "group": "고급",
+                    "icon": "gear",
                     "pages": [
                       "ko/guides/advanced/customizing-prompts",
                       "ko/guides/advanced/fingerprinting"
@@ -835,6 +880,7 @@
                   "ko/tools/overview",
                   {
                     "group": "파일 & 문서",
+                    "icon": "folder-open",
                     "pages": [
                       "ko/tools/file-document/overview",
                       "ko/tools/file-document/filereadtool",
@@ -854,6 +900,7 @@
                   },
                   {
                     "group": "웹 스크래핑 & 브라우징",
+                    "icon": "globe",
                     "pages": [
                       "ko/tools/web-scraping/overview",
                       "ko/tools/web-scraping/scrapewebsitetool",
@@ -873,6 +920,7 @@
                   },
                   {
                     "group": "검색 및 연구",
+                    "icon": "magnifying-glass",
                     "pages": [
                       "ko/tools/search-research/overview",
                       "ko/tools/search-research/serperdevtool",
@@ -894,6 +942,7 @@
                   },
                   {
                     "group": "데이터베이스 & 데이터",
+                    "icon": "database",
                     "pages": [
                       "ko/tools/database-data/overview",
                       "ko/tools/database-data/mysqltool",
@@ -908,6 +957,7 @@
                   },
                   {
                     "group": "인공지능 & 머신러닝",
+                    "icon": "brain",
                     "pages": [
                       "ko/tools/ai-ml/overview",
                       "ko/tools/ai-ml/dalletool",
@@ -921,6 +971,7 @@
                   },
                   {
                     "group": "클라우드 & 스토리지",
+                    "icon": "cloud",
                     "pages": [
                       "ko/tools/cloud-storage/overview",
                       "ko/tools/cloud-storage/s3readertool",
@@ -930,7 +981,17 @@
                     ]
                   },
                   {
-                    "group": "자동화 & 통합",
+                    "group": "통합",
+                    "icon": "plug",
+                    "pages": [
+                      "ko/tools/tool-integrations/overview",
+                      "ko/tools/tool-integrations/bedrockinvokeagenttool",
+                      "ko/tools/tool-integrations/crewaiautomationtool"
+                    ]
+                  },
+                  {
+                    "group": "자동화",
+                    "icon": "bolt",
                     "pages": [
                       "ko/tools/automation/overview",
                       "ko/tools/automation/apifyactorstool",
