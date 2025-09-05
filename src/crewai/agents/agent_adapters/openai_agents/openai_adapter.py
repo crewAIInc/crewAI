@@ -18,8 +18,8 @@ from crewai.tools.agent_tools.agent_tools import AgentTools
 from crewai.utilities import Logger
 
 try:
-    from agents import Agent as OpenAIAgent  # type: ignore
-    from agents import Runner, enable_verbose_stdout_logging  # type: ignore
+    from agents import Agent as OpenAIAgent  # type: ignore[import-not-found]
+    from agents import Runner, enable_verbose_stdout_logging
 
     from .openai_agent_tool_adapter import OpenAIAgentToolAdapter
 
@@ -40,13 +40,14 @@ class OpenAIAgentAdapter(BaseAgentAdapter):
     step_callback: Any = Field(default=None)
     _tool_adapter: "OpenAIAgentToolAdapter" = PrivateAttr()
     _converter_adapter: OpenAIConverterAdapter = PrivateAttr()
+    agent_executor: Any = Field(default=None)
 
     def __init__(
         self,
         model: str = "gpt-4o-mini",
         tools: Optional[list[BaseTool]] = None,
-        agent_config: Optional[dict] = None,
-        **kwargs,
+        agent_config: Optional[dict[str, Any]] = None,
+        **kwargs: Any,
     ):
         if not OPENAI_AVAILABLE:
             raise ImportError(
@@ -109,6 +110,7 @@ class OpenAIAgentAdapter(BaseAgentAdapter):
                     task=task,
                 ),
             )
+            assert hasattr(self, "agent_executor"), "agent_executor not initialized"
             result = self.agent_executor.run_sync(self._openai_agent, task_prompt)
             final_answer = self.handle_execution_result(result)
             crewai_event_bus.emit(
@@ -132,7 +134,7 @@ class OpenAIAgentAdapter(BaseAgentAdapter):
             raise
 
     def create_agent_executor(
-        self, task=None, tools: Optional[list[BaseTool]] = None
+        self, task: Any = None, tools: Optional[list[BaseTool]] = None
     ) -> None:
         """
         Configure the OpenAI agent for execution.
@@ -171,7 +173,7 @@ class OpenAIAgentAdapter(BaseAgentAdapter):
         tools = agent_tools.tools()
         return tools
 
-    def configure_structured_output(self, task) -> None:
+    def configure_structured_output(self, task: Any) -> None:
         """Configure the structured output for the specific agent implementation.
 
         Args:

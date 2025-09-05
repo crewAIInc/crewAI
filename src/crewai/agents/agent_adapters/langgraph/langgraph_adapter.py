@@ -22,8 +22,10 @@ from crewai.utilities import Logger
 from crewai.utilities.converter import Converter
 
 try:
-    from langgraph.checkpoint.memory import MemorySaver
-    from langgraph.prebuilt import create_react_agent
+    from langgraph.checkpoint.memory import (
+        MemorySaver,  # type: ignore[import-not-found]
+    )
+    from langgraph.prebuilt import create_react_agent  # type: ignore[import-not-found]
 
     LANGGRAPH_AVAILABLE = True
 except ImportError:
@@ -55,7 +57,7 @@ class LangGraphAgentAdapter(BaseAgentAdapter):
         llm: Any = None,
         max_iterations: int = 10,
         agent_config: Optional[dict[str, Any]] = None,
-        **kwargs,
+        **kwargs: Any,
     ):
         """Initialize the LangGraph agent adapter."""
         if not LANGGRAPH_AVAILABLE:
@@ -198,7 +200,7 @@ class LangGraphAgentAdapter(BaseAgentAdapter):
             raise
 
     def create_agent_executor(
-        self, task=None, tools: Optional[list[BaseTool]] = None
+        self, task: Any = None, tools: Optional[list[BaseTool]] = None
     ) -> None:
         """Configure the LangGraph agent for execution."""
         self.configure_tools(tools)
@@ -222,6 +224,6 @@ class LangGraphAgentAdapter(BaseAgentAdapter):
         """Convert output format if needed."""
         return Converter(llm=llm, text=text, model=model, instructions=instructions)
 
-    def configure_structured_output(self, task) -> None:
+    def configure_structured_output(self, task: Any) -> None:
         """Configure the structured output for LangGraph."""
         self._converter_adapter.configure_structured_output(task)

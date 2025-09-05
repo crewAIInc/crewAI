@@ -791,7 +791,12 @@ class Crew(FlowTrackable, BaseModel):
                 manager.tools = []
                 raise Exception("Manager agent should not have tools")
         else:
-            self.manager_llm = create_llm(self.manager_llm)
+            if self.manager_llm is None:
+                from crewai.utilities.llm_utils import create_default_llm
+
+                self.manager_llm = create_default_llm()
+            else:
+                self.manager_llm = create_llm(self.manager_llm)
             manager = Agent(
                 role=i18n.retrieve("hierarchical_manager_agent", "role"),
                 goal=i18n.retrieve("hierarchical_manager_agent", "goal"),

@@ -62,7 +62,7 @@ from crewai.utilities.agent_utils import (
 )
 from crewai.utilities.converter import generate_model_description
 from crewai.utilities.guardrail import process_guardrail
-from crewai.utilities.llm_utils import create_llm
+from crewai.utilities.llm_utils import create_default_llm, create_llm
 from crewai.utilities.printer import Printer
 from crewai.utilities.token_counter_callback import TokenCalcHandler
 from crewai.utilities.tool_utils import execute_tool_and_check_finality
@@ -195,7 +195,10 @@ class LiteAgent(FlowTrackable, BaseModel):
     @model_validator(mode="after")
     def setup_llm(self) -> Self:
         """Set up the LLM and other components after initialization."""
-        self.llm = create_llm(self.llm)
+        if self.llm is None:
+            self.llm = create_default_llm()
+        else:
+            self.llm = create_llm(self.llm)
         if not isinstance(self.llm, BaseLLM):
             raise ValueError(
                 f"Expected LLM instance of type BaseLLM, got {type(self.llm).__name__}"

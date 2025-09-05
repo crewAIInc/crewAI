@@ -1,4 +1,5 @@
 import json
+from typing import Any
 
 from crewai.agents.agent_adapters.base_converter_adapter import BaseConverterAdapter
 from crewai.utilities.converter import generate_model_description
@@ -7,14 +8,14 @@ from crewai.utilities.converter import generate_model_description
 class LangGraphConverterAdapter(BaseConverterAdapter):
     """Adapter for handling structured output conversion in LangGraph agents"""
 
-    def __init__(self, agent_adapter):
+    def __init__(self, agent_adapter: Any) -> None:
         """Initialize the converter adapter with a reference to the agent adapter"""
         self.agent_adapter = agent_adapter
-        self._output_format = None
+        self._output_format: str | None = None
         self._schema = None
         self._system_prompt_appendix = None
 
-    def configure_structured_output(self, task) -> None:
+    def configure_structured_output(self, task: Any) -> None:
         """Configure the structured output for LangGraph."""
         if not (task.output_json or task.output_pydantic):
             self._output_format = None
@@ -41,7 +42,7 @@ Important: Your final answer MUST be provided in the following structured format
 
 {self._schema}
 
-DO NOT include any markdown code blocks, backticks, or other formatting around your response. 
+DO NOT include any markdown code blocks, backticks, or other formatting around your response.
 The output should be raw JSON that exactly matches the specified schema.
 """
 
