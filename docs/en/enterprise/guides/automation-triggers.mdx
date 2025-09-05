@@ -96,6 +96,13 @@ class MyAutomatedCrew:
 
 The crew will automatically receive and can access the trigger payload through the standard CrewAI context mechanisms.
 
+<Note>
+  Crew and Flow inputs can include `crewai_trigger_payload`. CrewAI automatically injects this payload:
+  - Tasks: appended to the first task's description by default ("Trigger Payload: {crewai_trigger_payload}")
+  - Control via `allow_crewai_trigger_context`: set `True` to always inject, `False` to never inject
+  - Flows: any `@start()` method that accepts a `crewai_trigger_payload` parameter will receive it
+</Note>
+
 ### Integration with Flows
 
 For flows, you have more control over how trigger data is handled:
