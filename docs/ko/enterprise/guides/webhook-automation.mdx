@@ -79,6 +79,8 @@ CrewAI Enterprise를 사용하면 웹훅을 통해 워크플로우를 자동화�
 
 ## Webhook 출력 예시
 
+**참고:** kickoff 요청에 제공된 모든 `meta` 객체는 모든 webhook 페이로드에 포함되어, 전체 crew 실행 생명주기에 걸쳐 요청을 추적하고 컨텍스트를 유지할 수 있습니다.
+
 <Tabs>
     <Tab title="Step Webhook">
         `stepWebhookUrl` - 각 agent의 inner thought가 실행될 때마다 호출되는 콜백
