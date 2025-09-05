@@ -22,10 +22,10 @@ from crewai.utilities import Logger
 from crewai.utilities.converter import Converter
 
 try:
-    from langgraph.checkpoint.memory import (
-        MemorySaver,  # type: ignore[import-not-found]
+    from langgraph.checkpoint.memory import (  # type: ignore
+        MemorySaver,
     )
-    from langgraph.prebuilt import create_react_agent  # type: ignore[import-not-found]
+    from langgraph.prebuilt import create_react_agent  # type: ignore
 
     LANGGRAPH_AVAILABLE = True
 except ImportError:

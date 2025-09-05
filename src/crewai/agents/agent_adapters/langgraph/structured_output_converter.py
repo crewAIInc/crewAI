@@ -12,8 +12,8 @@ class LangGraphConverterAdapter(BaseConverterAdapter):
         """Initialize the converter adapter with a reference to the agent adapter"""
         self.agent_adapter = agent_adapter
         self._output_format: str | None = None
-        self._schema = None
-        self._system_prompt_appendix = None
+        self._schema: str | None = None
+        self._system_prompt_appendix: str | None = None
 
     def configure_structured_output(self, task: Any) -> None:
         """Configure the structured output for LangGraph."""
