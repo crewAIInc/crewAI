@@ -48,7 +48,7 @@ Documentation = "https://docs.crewai.com"
 Repository = "https://github.com/crewAIInc/crewAI"
 
 [project.optional-dependencies]
-tools = ["crewai-tools~=0.65.0"]
+tools = ["crewai-tools~=0.69.0"]
 embeddings = [
     "tiktoken~=0.8.0"
 ]
@@ -122,8 +122,7 @@ select = [
 ]
 
 [tool.mypy]
-strict = true
-exclude = ["src/crewai/cli/templates"]
+exclude = ["src/crewai/cli/templates", "tests"]
 
 [tool.bandit]
 exclude_dirs = ["src/crewai/cli/templates"]

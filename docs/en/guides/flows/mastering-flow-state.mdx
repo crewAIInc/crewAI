@@ -348,6 +348,31 @@ class SelectivePersistFlow(Flow):
 
 ## Advanced State Patterns
 
+### Conditional starts and resumable execution
+
+Flows support conditional `@start()` and resumable execution for HITL/cyclic scenarios:
+
+```python
+from crewai.flow.flow import Flow, start, listen, and_, or_
+
+class ResumableFlow(Flow):
+    @start()  # unconditional start
+    def init(self):
+        ...
+
+    # Conditional start: run after "init" or external trigger name
+    @start("init")
+    def maybe_begin(self):
+        ...
+
+    @listen(and_(init, maybe_begin))
+    def proceed(self):
+        ...
+```
+
+- Conditional `@start()` accepts a method name, a router label, or a callable condition.
+- During resume, listeners continue from prior checkpoints; cycle/router branches honor resumption flags.
+
 ### State-Based Conditional Logic
 
 You can use state to implement complex conditional logic in your flows:
