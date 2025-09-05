@@ -87,7 +87,7 @@ class OpenAIAgentAdapter(BaseAgentAdapter):
         task: Any,
         context: Optional[str] = None,
         tools: Optional[list[BaseTool]] = None,
-    ) -> str:
+    ) -> Any:
         """Execute a task using the OpenAI Assistant"""
         self._converter_adapter.configure_structured_output(task)
         self.create_agent_executor(task, tools)
@@ -163,7 +163,7 @@ class OpenAIAgentAdapter(BaseAgentAdapter):
             if self._tool_adapter.converted_tools:
                 self._openai_agent.tools = self._tool_adapter.converted_tools
 
-    def handle_execution_result(self, result: Any) -> str:
+    def handle_execution_result(self, result: Any) -> Any:
         """Process OpenAI Assistant execution result converting any structured output to a string"""
         return self._converter_adapter.post_process_result(result.final_output)
 
