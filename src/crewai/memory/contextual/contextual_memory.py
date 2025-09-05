@@ -1,4 +1,4 @@
-from typing import Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 from crewai.memory import (
     EntityMemory,
@@ -83,7 +83,7 @@ class ContextualMemory:
         if self.ltm is None:
             return ""
 
-        ltm_results = self.ltm.search(task, latest_n=2)
+        ltm_results = self.ltm.search(task, limit=2)
         if not ltm_results:
             return None
 
