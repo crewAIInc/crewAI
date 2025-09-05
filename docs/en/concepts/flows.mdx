@@ -97,7 +97,13 @@ The state's unique ID and stored data can be useful for tracking flow executions
 
 ### @start()
 
-The `@start()` decorator is used to mark a method as the starting point of a Flow. When a Flow is started, all the methods decorated with `@start()` are executed in parallel. You can have multiple start methods in a Flow, and they will all be executed when the Flow is started.
+The `@start()` decorator marks entry points for a Flow. You can:
+
+- Declare multiple unconditional starts: `@start()`
+- Gate a start on a prior method or router label: `@start("method_or_label")`
+- Provide a callable condition to control when a start should fire
+
+All satisfied `@start()` methods will execute (often in parallel) when the Flow begins or resumes.
 
 ### @listen()
 

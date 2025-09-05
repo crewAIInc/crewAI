@@ -738,6 +738,17 @@ print(f"OpenAI: {openai_time:.2f}s")
 print(f"Ollama: {ollama_time:.2f}s")
 ```
 
+### Entity Memory batching behavior
+
+Entity Memory supports batching when saving multiple entities at once. When you pass a list of `EntityMemoryItem`, the system:
+
+- Emits a single MemorySaveStartedEvent with `entity_count`
+- Saves each entity internally, collecting any partial errors
+- Emits MemorySaveCompletedEvent with aggregate metadata (saved count, errors)
+- Raises a partial-save exception if some entities failed (includes counts)
+
+This improves performance and observability when writing many entities in one operation.
+
 ## 2. External Memory 
 External Memory provides a standalone memory system that operates independently from the crew's built-in memory. This is ideal for specialized memory providers or cross-application memory sharing.
 

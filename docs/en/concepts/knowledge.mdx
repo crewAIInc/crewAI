@@ -24,6 +24,41 @@ For file-based Knowledge Sources, make sure to place your files in a `knowledge`
 Also, use relative paths from the `knowledge` directory when creating the source.
 </Tip>
 
+### Vector store (RAG) client configuration
+
+CrewAI exposes a provider-neutral RAG client abstraction for vector stores. The default provider is ChromaDB, and Qdrant is supported as well. You can switch providers using configuration utilities.
+
+Supported today:
+- ChromaDB (default)
+- Qdrant
+
+```python Code
+from crewai.rag.config.utils import set_rag_config, get_rag_client, clear_rag_config
+
+# ChromaDB (default)
+from crewai.rag.chromadb.config import ChromaDBConfig
+set_rag_config(ChromaDBConfig())
+chromadb_client = get_rag_client()
+
+# Qdrant
+from crewai.rag.qdrant.config import QdrantConfig
+set_rag_config(QdrantConfig())
+qdrant_client = get_rag_client()
+
+# Example operations (same API for any provider)
+client = qdrant_client  # or chromadb_client
+client.create_collection(collection_name="docs")
+client.add_documents(
+    collection_name="docs",
+    documents=[{"id": "1", "content": "CrewAI enables collaborative AI agents."}],
+)
+results = client.search(collection_name="docs", query="collaborative agents", limit=3)
+
+clear_rag_config()  # optional reset
+```
+
+This RAG client is separate from Knowledge’s built-in storage. Use it when you need direct vector-store control or custom retrieval pipelines.
+
 ### Basic String Knowledge Example
 
 ```python Code
