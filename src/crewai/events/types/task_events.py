@@ -10,6 +10,7 @@ class TaskStartedEvent(BaseEvent):
     type: str = "task_started"
     context: Optional[str]
     task: Optional[Any] = None
+    attempt_number: Optional[int] = None
 
     def __init__(self, **data):
         super().__init__(**data)
@@ -30,6 +31,7 @@ class TaskCompletedEvent(BaseEvent):
     output: TaskOutput
     type: str = "task_completed"
     task: Optional[Any] = None
+    attempt_number: Optional[int] = None
 
     def __init__(self, **data):
         super().__init__(**data)
@@ -50,6 +52,7 @@ class TaskFailedEvent(BaseEvent):
     error: str
     type: str = "task_failed"
     task: Optional[Any] = None
+    attempt_number: Optional[int] = None
 
     def __init__(self, **data):
         super().__init__(**data)
