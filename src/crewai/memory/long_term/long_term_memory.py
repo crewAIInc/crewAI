@@ -66,7 +66,7 @@ class LongTermMemory(Memory):
                     self,
                     event=MemorySaveCompletedEvent(
                         value=item.task,
-                        metadata=item.metadata,
+                        metadata=metadata,
                         agent_role=item.agent,
                         save_time_ms=(time.time() - start_time) * 1000,
                         source_type="long_term_memory",
