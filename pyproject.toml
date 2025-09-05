@@ -40,6 +40,8 @@ dependencies = [
     "blinker>=1.9.0",
     "json5>=0.10.0",
     "portalocker==2.7.0",
+    "boto3>=1.40.19",
+    "botocore>=1.40.19",
 ]
 
 [project.urls]
@@ -62,6 +64,10 @@ openpyxl = [
     "openpyxl>=3.1.5",
 ]
 mem0 = ["mem0ai>=0.1.94"]
+agentcore = [
+    "boto3>=1.35.0",
+    "botocore>=1.35.0",
+]
 docling = [
     "docling>=2.12.0",
 ]

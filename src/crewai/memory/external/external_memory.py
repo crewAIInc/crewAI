@@ -16,6 +16,7 @@ from crewai.utilities.events.memory_events import (
 
 if TYPE_CHECKING:
     from crewai.memory.storage.mem0_storage import Mem0Storage
+    from crewai.memory.storage.bedrock_agentcore_storage import BedrockAgentCoreStorage
 
 
 class ExternalMemory(Memory):
@@ -29,9 +30,36 @@ class ExternalMemory(Memory):
         return Mem0Storage(type="external", crew=crew, config=config)
 
     @staticmethod
+    def _configure_agentcore(crew: Any, config: Any) -> "BedrockAgentCoreStorage":
+        from crewai.memory.storage.bedrock_agentcore_storage import (
+            BedrockAgentCoreStorage,
+            BedrockAgentCoreConfig,
+        )
+
+        # AgentCore requires explicit configuration - no crew fallback
+        if not config:
+            raise ValueError(
+                "AgentCore storage requires explicit configuration in embedder_config['config']"
+            )
+
+        try:
+            # Handle both AgentCoreConfig instances and dictionaries
+            if isinstance(config, BedrockAgentCoreConfig):
+                typed_config = config
+            else:
+                raise ValueError(
+                    f"Config must be either AgentCoreConfig instance got {type(config)}"
+                )
+
+            return BedrockAgentCoreStorage(type="external", config=typed_config)
+        except Exception as e:
+            raise ValueError(f"Invalid AgentCore configuration: {str(e)}")
+
+    @staticmethod
     def external_supported_storages() -> Dict[str, Any]:
         return {
             "mem0": ExternalMemory._configure_mem0,
+            "agentcore": ExternalMemory._configure_agentcore,
         }
 
     @staticmethod

@@ -37,7 +37,7 @@ class MemorySaveStartedEvent(BaseEvent):
     """Event emitted when a memory save operation is started"""
 
     type: str = "memory_save_started"
-    value: Optional[str] = None
+    value: Optional[Any] = None
     metadata: Optional[Dict[str, Any]] = None
     agent_role: Optional[str] = None
 
@@ -46,7 +46,7 @@ class MemorySaveCompletedEvent(BaseEvent):
     """Event emitted when a memory save operation is completed successfully"""
 
     type: str = "memory_save_completed"
-    value: str
+    value: Any
     metadata: Optional[Dict[str, Any]] = None
     agent_role: Optional[str] = None
     save_time_ms: float
@@ -56,7 +56,7 @@ class MemorySaveFailedEvent(BaseEvent):
     """Event emitted when a memory save operation fails"""
 
     type: str = "memory_save_failed"
-    value: Optional[str] = None
+    value: Optional[Any] = None
     metadata: Optional[Dict[str, Any]] = None
     agent_role: Optional[str] = None
     error: str
