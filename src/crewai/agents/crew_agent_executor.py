@@ -60,7 +60,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         self,
         llm: BaseLLM,
         task: Task,
-        crew: Crew,
+        crew: Crew | None,
         agent: BaseAgent,
         prompt: dict[str, str],
         max_iter: int,
@@ -74,14 +74,14 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         function_calling_llm: BaseLLM | None = None,
         respect_context_window: bool = False,
         request_within_rpm_limit: Callable[[], bool] | None = None,
-        callbacks: list[Callable[..., Any]] | None = None,
+        litellm_callbacks: list[Any] | None = None,
     ) -> None:
         """Initialize executor.
 
         Args:
             llm: Language model instance.
             task: Task to execute.
-            crew: Crew instance.
+            crew: Optional Crew instance.
             agent: Agent to execute.
             prompt: Prompt templates.
             max_iter: Maximum iterations.
@@ -95,19 +95,19 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             function_calling_llm: Optional function calling LLM.
             respect_context_window: Respect context limits.
             request_within_rpm_limit: RPM limit check function.
-            callbacks: Optional callbacks list.
+            litellm_callbacks: Optional litellm callbacks list.
         """
         self._i18n: I18N = I18N()
         self.llm = llm
         self.task = task
         self.agent = agent
-        self.crew = crew
+        self.crew: Crew | None = crew
         self.prompt = prompt
         self.tools = tools
         self.tools_names = tools_names
         self.stop = stop_words
         self.max_iter = max_iter
-        self.callbacks = callbacks or []
+        self.litellm_callbacks = litellm_callbacks or []
         self._printer: Printer = Printer()
         self.tools_handler = tools_handler
         self.original_tools = original_tools or []
@@ -195,7 +195,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                         i18n=self._i18n,
                         messages=self.messages,
                         llm=self.llm,
-                        callbacks=self.callbacks,
+                        callbacks=self.litellm_callbacks,
                     )
 
                 enforce_rpm_limit(self.request_within_rpm_limit)
@@ -203,7 +203,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                 answer = get_llm_response(
                     llm=self.llm,
                     messages=self.messages,
-                    callbacks=self.callbacks,
+                    callbacks=self.litellm_callbacks,
                     printer=self._printer,
                     from_task=self.task,
                 )
@@ -259,7 +259,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                         printer=self._printer,
                         messages=self.messages,
                         llm=self.llm,
-                        callbacks=self.callbacks,
+                        callbacks=self.litellm_callbacks,
                         i18n=self._i18n,
                     )
                     continue
@@ -334,7 +334,8 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             AgentLogsStartedEvent(
                 agent_role=self.agent.role,
                 task_description=self.task.description,
-                verbose=self.agent.verbose or self.crew.verbose,
+                verbose=self.agent.verbose
+                or (self.crew.verbose if self.crew else False),
             ),
         )
 
@@ -349,7 +350,8 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             AgentLogsExecutionEvent(
                 agent_role=self.agent.role,
                 formatted_answer=formatted_answer,
-                verbose=self.agent.verbose or self.crew.verbose,
+                verbose=self.agent.verbose
+                or (self.crew.verbose if self.crew else False),
             ),
         )
 
@@ -440,7 +442,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         Returns:
             True if in training mode.
         """
-        return bool(self.crew._train)
+        return bool(self.crew and self.crew._train)
 
     def _handle_training_feedback(
         self, initial_answer: AgentFinish, feedback: str

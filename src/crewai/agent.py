@@ -8,7 +8,15 @@ from typing import (
     Optional,
 )
 
-from pydantic import Field, InstanceOf, PrivateAttr, model_validator
+from pydantic import (
+    BeforeValidator,
+    Field,
+    InstanceOf,
+    PrivateAttr,
+    computed_field,
+    field_validator,
+    model_validator,
+)
 from typing_extensions import Self
 
 from crewai.agents.agent_builder.base_agent import BaseAgent
@@ -51,7 +59,7 @@ from crewai.utilities.agent_utils import (
 )
 from crewai.utilities.constants import TRAINED_AGENTS_DATA_FILE, TRAINING_DATA_FILE
 from crewai.utilities.converter import generate_model_description
-from crewai.utilities.llm_utils import create_llm
+from crewai.utilities.llm_utils import create_default_llm, create_llm
 from crewai.utilities.token_counter_callback import TokenCalcHandler
 from crewai.utilities.training_handler import CrewTrainingHandler
 
@@ -82,6 +90,8 @@ class Agent(BaseAgent):
     """
 
     _times_executed: int = PrivateAttr(default=0)
+    _llm: BaseLLM = PrivateAttr()
+    _function_calling_llm: BaseLLM | None = PrivateAttr(default=None)
     max_execution_time: Optional[int] = Field(
         default=None,
         description="Maximum execution time for an agent to execute a task",
@@ -96,10 +106,11 @@ class Agent(BaseAgent):
         default=True,
         description="Use system prompt for the agent.",
     )
-    llm: str | InstanceOf[BaseLLM] | Any = Field(
-        description="Language model that will run the agent.", default=None
+    llm: str | InstanceOf[BaseLLM] | None = Field(
+        description="Language model that will run the agent.",
+        default_factory=create_default_llm,
     )
-    function_calling_llm: Optional[str | InstanceOf[BaseLLM] | Any] = Field(
+    function_calling_llm: str | InstanceOf[BaseLLM] | None = Field(
         description="Language model that will run the agent.", default=None
     )
     system_template: Optional[str] = Field(
@@ -181,15 +192,30 @@ class Agent(BaseAgent):
             return load_agent_from_repository(from_repository) | v
         return v
 
+    @field_validator("function_calling_llm", mode="after")
+    @classmethod
+    def validate_function_calling_llm(cls, v: Any) -> BaseLLM | None:
+        if not v or isinstance(v, BaseLLM):
+            return v
+        return create_llm(v)
+
     @model_validator(mode="after")
     def post_init_setup(self) -> Self:
         self.agent_ops_agent_name = self.role
 
-        self.llm = create_llm(self.llm)
-        if self.function_calling_llm and not isinstance(
-            self.function_calling_llm, BaseLLM
-        ):
-            self.function_calling_llm = create_llm(self.function_calling_llm)
+        # Validate and set the private LLM attributes
+        if isinstance(self.llm, BaseLLM):
+            self._llm = self.llm
+        elif self.llm is None:
+            self._llm = create_default_llm()
+        else:
+            self._llm = create_llm(self.llm)
+
+        if self.function_calling_llm:
+            if isinstance(self.function_calling_llm, BaseLLM):
+                self._function_calling_llm = self.function_calling_llm
+            else:
+                self._function_calling_llm = create_llm(self.function_calling_llm)
 
         if not self.agent_executor:
             self._setup_agent_executor()
@@ -413,7 +439,7 @@ class Agent(BaseAgent):
                 )
 
         tools = tools or self.tools or []
-        self.create_agent_executor(tools=tools, task=task)
+        self.create_agent_executor(task=task, tools=tools)
 
         if self.crew and self.crew._train:
             task_prompt = self._training_handler(task_prompt=task_prompt)
@@ -540,6 +566,9 @@ class Agent(BaseAgent):
         Returns:
             The output of the agent.
         """
+        assert self.agent_executor is not None, (
+            "Agent executor must be created before execution"
+        )
         return self.agent_executor.invoke(
             {
                 "input": task_prompt,
@@ -550,12 +579,13 @@ class Agent(BaseAgent):
         )["output"]
 
     def create_agent_executor(
-        self, tools: Optional[list[BaseTool]] = None, task: Optional[Task] = None
+        self, task: Task, tools: Optional[list[BaseTool]] = None
     ) -> None:
         """Create an agent executor for the agent.
 
-        Returns:
-            An instance of the CrewAgentExecutor class.
+        Args:
+            task: Task to execute.
+            tools: Optional list of tools to use.
         """
         raw_tools: list[BaseTool] = tools or self.tools or []
         parsed_tools = parse_tools(raw_tools)
@@ -578,7 +608,7 @@ class Agent(BaseAgent):
             )
 
         self.agent_executor = CrewAgentExecutor(
-            llm=self.llm,
+            llm=self._llm,
             task=task,
             agent=self,
             crew=self.crew,
@@ -591,12 +621,12 @@ class Agent(BaseAgent):
             tools_names=get_tool_names(parsed_tools),
             tools_description=render_text_description_and_args(parsed_tools),
             step_callback=self.step_callback,
-            function_calling_llm=self.function_calling_llm,
+            function_calling_llm=self._function_calling_llm,
             respect_context_window=self.respect_context_window,
             request_within_rpm_limit=(
                 self._rpm_controller.check_or_wait if self._rpm_controller else None
             ),
-            callbacks=[TokenCalcHandler(self._token_process)],
+            litellm_callbacks=[TokenCalcHandler(self._token_process)],
         )
 
     def get_delegation_tools(self, agents: list[BaseAgent]) -> list[BaseTool]:
@@ -751,22 +781,8 @@ class Agent(BaseAgent):
             task_prompt=task_prompt
         )
         rewriter_prompt = self.i18n.slice("knowledge_search_query_system_prompt")
-        if not isinstance(self.llm, BaseLLM):
-            self._logger.log(
-                "warning",
-                f"Knowledge search query failed: LLM for agent '{self.role}' is not an instance of BaseLLM",
-            )
-            crewai_event_bus.emit(
-                self,
-                event=KnowledgeQueryFailedEvent(
-                    agent=self,
-                    error="LLM is not compatible with knowledge search queries",
-                ),
-            )
-            return None
-
         try:
-            rewritten_query = self.llm.call(
+            rewritten_query = self._llm.call(
                 [
                     {
                         "role": "system",
@@ -818,7 +834,7 @@ class Agent(BaseAgent):
             role=self.role,
             goal=self.goal,
             backstory=self.backstory,
-            llm=self.llm,
+            llm=self._llm,
             tools=self.tools or [],
             max_iterations=self.max_iter,
             max_execution_time=self.max_execution_time,
@@ -856,7 +872,7 @@ class Agent(BaseAgent):
             role=self.role,
             goal=self.goal,
             backstory=self.backstory,
-            llm=self.llm,
+            llm=self._llm,
             tools=self.tools or [],
             max_iterations=self.max_iter,
             max_execution_time=self.max_execution_time,

@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 from pydantic import Field, PrivateAttr
 
@@ -10,16 +10,16 @@ from crewai.agents.agent_adapters.langgraph.structured_output_converter import (
     LangGraphConverterAdapter,
 )
 from crewai.agents.agent_builder.base_agent import BaseAgent
-from crewai.tools.agent_tools.agent_tools import AgentTools
-from crewai.tools.base_tool import BaseTool
-from crewai.utilities import Logger
-from crewai.utilities.converter import Converter
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.agent_events import (
     AgentExecutionCompletedEvent,
     AgentExecutionErrorEvent,
     AgentExecutionStartedEvent,
 )
+from crewai.tools.agent_tools.agent_tools import AgentTools
+from crewai.tools.base_tool import BaseTool
+from crewai.utilities import Logger
+from crewai.utilities.converter import Converter
 
 try:
     from langgraph.checkpoint.memory import MemorySaver
@@ -51,10 +51,10 @@ class LangGraphAgentAdapter(BaseAgentAdapter):
         role: str,
         goal: str,
         backstory: str,
-        tools: Optional[List[BaseTool]] = None,
+        tools: Optional[list[BaseTool]] = None,
         llm: Any = None,
         max_iterations: int = 10,
-        agent_config: Optional[Dict[str, Any]] = None,
+        agent_config: Optional[dict[str, Any]] = None,
         **kwargs,
     ):
         """Initialize the LangGraph agent adapter."""
@@ -81,7 +81,7 @@ class LangGraphAgentAdapter(BaseAgentAdapter):
         try:
             self._memory = MemorySaver()
 
-            converted_tools: List[Any] = self._tool_adapter.tools()
+            converted_tools: list[Any] = self._tool_adapter.tools()
             if self._agent_config:
                 self._graph = create_react_agent(
                     model=self.llm,
@@ -111,7 +111,7 @@ class LangGraphAgentAdapter(BaseAgentAdapter):
         """Build a system prompt for the LangGraph agent."""
         base_prompt = f"""
             You are {self.role}.
-        
+
             Your goal is: {self.goal}
 
             Your backstory: {self.backstory}
@@ -124,10 +124,10 @@ class LangGraphAgentAdapter(BaseAgentAdapter):
         self,
         task: Any,
         context: Optional[str] = None,
-        tools: Optional[List[BaseTool]] = None,
+        tools: Optional[list[BaseTool]] = None,
     ) -> str:
         """Execute a task using the LangGraph workflow."""
-        self.create_agent_executor(tools)
+        self.create_agent_executor(task, tools)
 
         self.configure_structured_output(task)
 
@@ -197,11 +197,13 @@ class LangGraphAgentAdapter(BaseAgentAdapter):
             )
             raise
 
-    def create_agent_executor(self, tools: Optional[List[BaseTool]] = None) -> None:
+    def create_agent_executor(
+        self, task=None, tools: Optional[list[BaseTool]] = None
+    ) -> None:
         """Configure the LangGraph agent for execution."""
         self.configure_tools(tools)
 
-    def configure_tools(self, tools: Optional[List[BaseTool]] = None) -> None:
+    def configure_tools(self, tools: Optional[list[BaseTool]] = None) -> None:
         """Configure tools for the LangGraph agent."""
         if tools:
             all_tools = list(self.tools or []) + list(tools or [])
@@ -209,7 +211,7 @@ class LangGraphAgentAdapter(BaseAgentAdapter):
             available_tools = self._tool_adapter.tools()
             self._graph.tools = available_tools
 
-    def get_delegation_tools(self, agents: List[BaseAgent]) -> List[BaseTool]:
+    def get_delegation_tools(self, agents: list[BaseAgent]) -> list[BaseTool]:
         """Implement delegation tools support for LangGraph."""
         agent_tools = AgentTools(agents=agents)
         return agent_tools.tools()

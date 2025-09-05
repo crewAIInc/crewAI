@@ -1116,7 +1116,9 @@ def test_not_using_system_prompt():
         use_system_prompt=False,
     )
 
-    agent.create_agent_executor()
+    # Create a dummy task for testing
+    task = Task(description="Test task", expected_output="Test output", agent=agent)
+    agent.create_agent_executor(task)
     assert not agent.agent_executor.prompt.get("user")
     assert not agent.agent_executor.prompt.get("system")
 
@@ -1128,7 +1130,9 @@ def test_using_system_prompt():
         backstory="I am the master of {role}",
     )
 
-    agent.create_agent_executor()
+    # Create a dummy task for testing
+    task = Task(description="Test task", expected_output="Test output", agent=agent)
+    agent.create_agent_executor(task)
     assert agent.agent_executor.prompt.get("user")
     assert agent.agent_executor.prompt.get("system")
 

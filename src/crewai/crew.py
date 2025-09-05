@@ -650,7 +650,7 @@ class Crew(FlowTrackable, BaseModel):
                 if not agent.step_callback:  # type: ignore # "BaseAgent" has no attribute "step_callback"
                     agent.step_callback = self.step_callback  # type: ignore # "BaseAgent" has no attribute "step_callback"
 
-                agent.create_agent_executor()
+                # Agent executor will be created when tasks are executed
 
             if self.planning:
                 self._handle_crew_planning()
