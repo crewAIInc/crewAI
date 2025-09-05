@@ -10,6 +10,7 @@ class LangGraphConverterAdapter(BaseConverterAdapter):
 
     def __init__(self, agent_adapter: Any) -> None:
         """Initialize the converter adapter with a reference to the agent adapter"""
+        super().__init__(agent_adapter)  # type: ignore
         self.agent_adapter = agent_adapter
         self._output_format: str | None = None
         self._schema: str | None = None
