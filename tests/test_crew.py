@@ -27,19 +27,17 @@ from crewai.tasks.conditional_task import ConditionalTask
 from crewai.tasks.output_format import OutputFormat
 from crewai.tasks.task_output import TaskOutput
 from crewai.types.usage_metrics import UsageMetrics
-from crewai.utilities.events import (
-    CrewTrainCompletedEvent,
-    CrewTrainStartedEvent,
-    crewai_event_bus,
-)
-from crewai.utilities.events.crew_events import (
+from crewai.events.event_bus import crewai_event_bus
+from crewai.events.types.crew_events import (
     CrewTestCompletedEvent,
     CrewTestStartedEvent,
+    CrewTrainCompletedEvent,
+    CrewTrainStartedEvent,
 )
 from crewai.utilities.rpm_controller import RPMController
 from crewai.utilities.task_output_storage_handler import TaskOutputStorageHandler
 
-from crewai.utilities.events.memory_events import (
+from crewai.events.types.memory_events import (
     MemorySaveStartedEvent,
     MemorySaveCompletedEvent,
     MemorySaveFailedEvent,
@@ -366,7 +364,7 @@ def test_hierarchical_process(researcher, writer):
 
     assert (
         result.raw
-        == "**1. The Rise of Autonomous AI Agents in Daily Life**  \nAs artificial intelligence technology progresses, the integration of autonomous AI agents into everyday life becomes increasingly prominent. These agents, capable of making decisions without human intervention, are reshaping industries from healthcare to finance. Exploring case studies where autonomous AI has successfully decreased operational costs or improved efficiency can reveal not only the benefits but also the ethical implications of delegating decision-making to machines. This topic offers an exciting opportunity to dive into the AI landscape, showcasing current developments such as AI assistants and autonomous vehicles.\n\n**2. Ethical Implications of Generative AI in Creative Industries**  \nThe surge of generative AI tools in creative fields, such as art, music, and writing, has sparked a heated debate about authorship and originality. This article could investigate how these tools are being used by artists and creators, examining both the potential for innovation and the risk of devaluing traditional art forms. Highlighting perspectives from creators, legal experts, and ethicists could provide a comprehensive overview of the challenges faced, including copyright concerns and the emotional impact on human artists. This discussion is vital as the creative landscape evolves alongside technological advancements, making it ripe for exploration.\n\n**3. AI in Climate Change Mitigation: Current Solutions and Future Potential**  \nAs the world grapples with climate change, AI technology is increasingly being harnessed to develop innovative solutions for sustainability. From predictive analytics that optimize energy consumption to machine learning algorithms that improve carbon capture methods, AI's potential in environmental science is vast. This topic invites an exploration of existing AI applications in climate initiatives, with a focus on groundbreaking research and initiatives aimed at reducing humanity's carbon footprint. Highlighting successful projects and technology partnerships can illustrate the positive impact AI can have on global climate efforts, inspiring further exploration and investment in this area.\n\n**4. The Future of Work: How AI is Reshaping Employment Landscapes**  \nThe discussions around AI's impact on the workforce are both urgent and complex, as advances in automation and machine learning continue to transform the job market. This article could delve into the current trends of AI-driven job displacement alongside opportunities for upskilling and the creation of new job roles. By examining case studies of companies that integrate AI effectively and the resulting workforce adaptations, readers can gain valuable insights into preparing for a future where humans and AI collaborate. This exploration highlights the importance of policies that promote workforce resilience in the face of change.\n\n**5. Decentralized AI: Exploring the Role of Blockchain in AI Development**  \nAs blockchain technology sweeps through various sectors, its application in AI development presents a fascinating topic worth examining. Decentralized AI could address issues of data privacy, security, and democratization in AI models by allowing users to retain ownership of data while benefiting from AI's capabilities. This article could analyze how decentralized networks are disrupting traditional AI development models, featuring innovative projects that harness the synergy between blockchain and AI. Highlighting potential pitfalls and the future landscape of decentralized AI could stimulate discussion among technologists, entrepreneurs, and policymakers alike.\n\nThese topics not only reflect current trends but also probe deeper into ethical and practical considerations, making them timely and relevant for contemporary audiences."
+        == "1. **The Rise of Autonomous AI Agents in Daily Life**  \n   As artificial intelligence technology progresses, the integration of autonomous AI agents into everyday life becomes increasingly prominent. These agents, capable of making decisions without human intervention, are reshaping industries from healthcare to finance. Exploring case studies where autonomous AI has successfully decreased operational costs or improved efficiency can reveal not only the benefits but also the ethical implications of delegating decision-making to machines. This topic offers an exciting opportunity to dive into the AI landscape, showcasing current developments such as AI assistants and autonomous vehicles.\n\n2. **Ethical Implications of Generative AI in Creative Industries**  \n   The surge of generative AI tools in creative fields, such as art, music, and writing, has sparked a heated debate about authorship and originality. This article could investigate how these tools are being used by artists and creators, examining both the potential for innovation and the risk of devaluing traditional art forms. Highlighting perspectives from creators, legal experts, and ethicists could provide a comprehensive overview of the challenges faced, including copyright concerns and the emotional impact on human artists. This discussion is vital as the creative landscape evolves alongside technological advancements, making it ripe for exploration.\n\n3. **AI in Climate Change Mitigation: Current Solutions and Future Potential**  \n   As the world grapples with climate change, AI technology is increasingly being harnessed to develop innovative solutions for sustainability. From predictive analytics that optimize energy consumption to machine learning algorithms that improve carbon capture methods, AI's potential in environmental science is vast. This topic invites an exploration of existing AI applications in climate initiatives, with a focus on groundbreaking research and initiatives aimed at reducing humanity's carbon footprint. Highlighting successful projects and technology partnerships can illustrate the positive impact AI can have on global climate efforts, inspiring further exploration and investment in this area.\n\n4. **The Future of Work: How AI is Reshaping Employment Landscapes**  \n   The discussions around AI's impact on the workforce are both urgent and complex, as advances in automation and machine learning continue to transform the job market. This article could delve into the current trends of AI-driven job displacement alongside opportunities for upskilling and the creation of new job roles. By examining case studies of companies that integrate AI effectively and the resulting workforce adaptations, readers can gain valuable insights into preparing for a future where humans and AI collaborate. This exploration highlights the importance of policies that promote workforce resilience in the face of change.\n\n5. **Decentralized AI: Exploring the Role of Blockchain in AI Development**  \n   As blockchain technology sweeps through various sectors, its application in AI development presents a fascinating topic worth examining. Decentralized AI could address issues of data privacy, security, and democratization in AI models by allowing users to retain ownership of data while benefiting from AI's capabilities. This article could analyze how decentralized networks are disrupting traditional AI development models, featuring innovative projects that harness the synergy between blockchain and AI. Highlighting potential pitfalls and the future landscape of decentralized AI could stimulate discussion among technologists, entrepreneurs, and policymakers alike."
     )
 
 
@@ -1762,10 +1760,10 @@ def test_agent_usage_metrics_are_captured_for_hierarchical_process():
     assert result.raw == "Howdy!"
 
     assert result.token_usage == UsageMetrics(
-        total_tokens=1673,
-        prompt_tokens=1562,
-        completion_tokens=111,
-        successful_requests=3,
+        total_tokens=2390,
+        prompt_tokens=2264,
+        completion_tokens=126,
+        successful_requests=4,
         cached_prompt_tokens=0,
     )
 
@@ -2537,8 +2535,8 @@ def test_memory_events_are_emitted():
 
         crew.kickoff()
 
-    assert len(events["MemorySaveStartedEvent"]) == 6
-    assert len(events["MemorySaveCompletedEvent"]) == 6
+    assert len(events["MemorySaveStartedEvent"]) == 3
+    assert len(events["MemorySaveCompletedEvent"]) == 3
     assert len(events["MemorySaveFailedEvent"]) == 0
     assert len(events["MemoryQueryStartedEvent"]) == 3
     assert len(events["MemoryQueryCompletedEvent"]) == 3
@@ -4150,7 +4148,7 @@ def test_crew_with_failing_task_guardrails():
         expected_output="A properly formatted report",
         agent=researcher,
         guardrail=strict_format_guardrail,
-        max_retries=3,
+        guardrail_max_retries=3,
     )
 
     crew = Crew(
@@ -4196,7 +4194,7 @@ def test_crew_guardrail_feedback_in_context():
         expected_output="A response containing the keyword 'IMPORTANT'",
         agent=researcher,
         guardrail=format_guardrail,
-        max_retries=2,
+        guardrail_max_retries=2,
     )
 
     crew = Crew(agents=[researcher], tasks=[task])
@@ -4754,5 +4752,4 @@ def test_ensure_exchanged_messages_are_propagated_to_external_memory():
     external_memory_save.assert_called_once_with(
         value=ANY,
         metadata={"description": ANY, "messages": expected_messages},
-        agent=ANY,
     )

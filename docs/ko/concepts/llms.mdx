@@ -731,10 +731,10 @@ CrewAI는 LLM의 스트리밍 응답을 지원하여, 애플리케이션이 출�
     CrewAI는 스트리밍 중 수신되는 각 청크에 대해 이벤트를 발생시킵니다:
 
     ```python
-    from crewai.utilities.events import (
+    from crewai.events import (
       LLMStreamChunkEvent
     )
-    from crewai.utilities.events.base_event_listener import BaseEventListener
+    from crewai.events import BaseEventListener
 
     class MyCustomListener(BaseEventListener):
         def setup_listeners(self, crewai_event_bus):
@@ -756,8 +756,8 @@ CrewAI는 LLM의 스트리밍 응답을 지원하여, 애플리케이션이 출�
 
     ```python
     from crewai import LLM, Agent, Task, Crew
-    from crewai.utilities.events import LLMStreamChunkEvent
-    from crewai.utilities.events.base_event_listener import BaseEventListener
+    from crewai.events import LLMStreamChunkEvent
+    from crewai.events import BaseEventListener
 
     class MyCustomListener(BaseEventListener):
         def setup_listeners(self, crewai_event_bus):

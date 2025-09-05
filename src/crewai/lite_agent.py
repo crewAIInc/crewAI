@@ -62,19 +62,14 @@ from crewai.utilities.agent_utils import (
     render_text_description_and_args,
 )
 from crewai.utilities.converter import generate_model_description
-from crewai.utilities.events.agent_events import (
-    AgentLogsExecutionEvent,
+from crewai.events.types.logging_events import AgentLogsExecutionEvent
+from crewai.events.types.agent_events import (
     LiteAgentExecutionCompletedEvent,
     LiteAgentExecutionErrorEvent,
     LiteAgentExecutionStartedEvent,
 )
-from crewai.utilities.events.crewai_event_bus import crewai_event_bus
-from crewai.utilities.events.llm_events import (
-    LLMCallCompletedEvent,
-    LLMCallFailedEvent,
-    LLMCallStartedEvent,
-    LLMCallType,
-)
+from crewai.events.event_bus import crewai_event_bus
+
 from crewai.utilities.llm_utils import create_llm
 from crewai.utilities.printer import Printer
 from crewai.utilities.token_counter_callback import TokenCalcHandler
@@ -519,19 +514,6 @@ class LiteAgent(FlowTrackable, BaseModel):
 
                 enforce_rpm_limit(self.request_within_rpm_limit)
 
-                llm = cast(LLM, self.llm)
-                model = llm.model if hasattr(llm, "model") else "unknown"
-                crewai_event_bus.emit(
-                    self,
-                    event=LLMCallStartedEvent(
-                        messages=self._messages,
-                        tools=None,
-                        callbacks=self._callbacks,
-                        from_agent=self,
-                        model=model,
-                    ),
-                )
-
                 try:
                     answer = get_llm_response(
                         llm=cast(LLM, self.llm),
@@ -541,23 +523,7 @@ class LiteAgent(FlowTrackable, BaseModel):
                         from_agent=self,
                     )
 
-                    # Emit LLM call completed event
-                    crewai_event_bus.emit(
-                        self,
-                        event=LLMCallCompletedEvent(
-                            messages=self._messages,
-                            response=answer,
-                            call_type=LLMCallType.LLM_CALL,
-                            from_agent=self,
-                            model=model,
-                        ),
-                    )
                 except Exception as e:
-                    # Emit LLM call failed event
-                    crewai_event_bus.emit(
-                        self,
-                        event=LLMCallFailedEvent(error=str(e), from_agent=self),
-                    )
                     raise e
 
                 formatted_answer = process_llm_response(answer, self.use_stop_words)
