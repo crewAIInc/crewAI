@@ -1,6 +1,6 @@
 {
   "$schema": "https://mintlify.com/docs.json",
-  "theme": "mint",
+  "theme": "aspen",
   "name": "CrewAI",
   "colors": {
     "primary": "#EB6658",
@@ -28,20 +28,21 @@
               "icon": "discourse"
             },
             {
-              "anchor": "Crew GPT",
-              "href": "https://chatgpt.com/g/g-qqTuUWsBY-crewai-assistant",
-              "icon": "robot"
+              "anchor": "Blog",
+              "href": "https://blog.crewai.com",
+              "icon": "newspaper"
             },
             {
-              "anchor": "Releases",
-              "href": "https://github.com/crewAIInc/crewAI/releases",
-              "icon": "tag"
+              "anchor": "CrewGPT",
+              "href": "https://chatgpt.com/g/g-qqTuUWsBY-crewai-assistant",
+              "icon": "robot"
             }
           ]
         },
         "tabs": [
           {
             "tab": "Documentation",
+            "icon": "book-open",
             "groups": [
               {
                 "group": "Get Started",
@@ -273,6 +274,7 @@
           },
           {
             "tab": "Enterprise",
+            "icon": "briefcase",
             "groups": [
               {
                 "group": "Getting Started",
@@ -339,6 +341,7 @@
           },
           {
             "tab": "API Reference",
+            "icon": "magnifying-glass",
             "groups": [
               {
                 "group": "Getting Started",
@@ -353,10 +356,21 @@
           },
           {
             "tab": "Examples",
+            "icon": "code",
             "groups": [
               {
                 "group": "Examples",
                 "pages": ["en/examples/example", "en/examples/cookbooks"]
+              }
+            ]
+          },
+          {
+            "tab": "Changelog",
+            "icon": "clock",
+            "groups": [
+              {
+                "group": "Release Notes",
+                "pages": ["en/changelog"]
               }
             ]
           }
@@ -377,20 +391,21 @@
               "icon": "discourse"
             },
             {
-              "anchor": "Crew GPT",
-              "href": "https://chatgpt.com/g/g-qqTuUWsBY-crewai-assistant",
-              "icon": "robot"
+              "anchor": "Blog",
+              "href": "https://blog.crewai.com",
+              "icon": "newspaper"
             },
             {
-              "anchor": "Lançamentos",
-              "href": "https://github.com/crewAIInc/crewAI/releases",
-              "icon": "tag"
+              "anchor": "CrewGPT",
+              "href": "https://chatgpt.com/g/g-qqTuUWsBY-crewai-assistant",
+              "icon": "robot"
             }
           ]
         },
         "tabs": [
           {
             "tab": "Documentação",
+            "icon": "book-open",
             "groups": [
               {
                 "group": "Começando",
@@ -613,6 +628,7 @@
           },
           {
             "tab": "Enterprise",
+            "icon": "briefcase",
             "groups": [
               {
                 "group": "Começando",
@@ -680,6 +696,7 @@
           },
           {
             "tab": "Referência da API",
+            "icon": "magnifying-glass",
             "groups": [
               {
                 "group": "Começando",
@@ -694,10 +711,21 @@
           },
           {
             "tab": "Exemplos",
+            "icon": "code",
             "groups": [
               {
                 "group": "Exemplos",
                 "pages": ["pt-BR/examples/example", "pt-BR/examples/cookbooks"]
+              }
+            ]
+          },
+          {
+            "tab": "Notas de Versão",
+            "icon": "clock",
+            "groups": [
+              {
+                "group": "Notas de Versão",
+                "pages": ["pt-BR/changelog"]
               }
             ]
           }
@@ -718,20 +746,21 @@
               "icon": "discourse"
             },
             {
-              "anchor": "Crew GPT",
-              "href": "https://chatgpt.com/g/g-qqTuUWsBY-crewai-assistant",
-              "icon": "robot"
+              "anchor": "블로그",
+              "href": "https://blog.crewai.com",
+              "icon": "newspaper"
             },
             {
-              "anchor": "릴리스",
-              "href": "https://github.com/crewAIInc/crewAI/releases",
-              "icon": "tag"
+              "anchor": "CrewGPT",
+              "href": "https://chatgpt.com/g/g-qqTuUWsBY-crewai-assistant",
+              "icon": "robot"
             }
           ]
         },
         "tabs": [
           {
             "tab": "기술 문서",
+            "icon": "book-open",
             "groups": [
               {
                 "group": "시작 안내",
@@ -962,6 +991,7 @@
           },
           {
             "tab": "엔터프라이즈",
+            "icon": "briefcase",
             "groups": [
               {
                 "group": "시작 안내",
@@ -1028,6 +1058,7 @@
           },
           {
             "tab": "API 레퍼런스",
+            "icon": "magnifying-glass",
             "groups": [
               {
                 "group": "시작 안내",
@@ -1042,10 +1073,21 @@
           },
           {
             "tab": "예시",
+            "icon": "code",
             "groups": [
               {
                 "group": "예시",
                 "pages": ["ko/examples/example", "ko/examples/cookbooks"]
+              }
+            ]
+          },
+          {
+            "tab": "변경 로그",
+            "icon": "clock",
+            "groups": [
+              {
+                "group": "릴리스 노트",
+                "pages": ["ko/changelog"]
               }
             ]
           }
@@ -1057,15 +1099,23 @@
     "light": "/images/crew_only_logo.png",
     "dark": "/images/crew_only_logo.png"
   },
+  "fonts": {
+    "family": "Inter"
+  },
   "appearance": {
-    "default": "dark",
-    "strict": false
+    "default": "system",
+    "strict": false,
+    "layout": "sidenav"
+  },
+  "background": {
+    "decoration": "grid"
   },
   "navbar": {
     "links": [
       {
         "label": "Start Cloud Trial",
-        "href": "https://app.crewai.com"
+        "href": "https://app.crewai.com",
+        "icon": "arrow-up-right-from-square"
       }
     ],
     "primary": {
@@ -1084,7 +1134,20 @@
     }
   },
   "seo": {
-    "indexing": "all"
+    "indexing": "all",
+    "metatags": {
+      "og:type": "website",
+      "og:site_name": "CrewAI Documentation",
+      "og:image": "https://docs.crewai.com/images/crew_only_logo.png",
+      "twitter:card": "summary_large_image",
+      "twitter:site": "@crewAIInc",
+      "keywords": "AI agents, multi-agent systems, CrewAI, artificial intelligence, automation, Python framework, agent collaboration, AI workflows"
+    }
+  },
+  "feedback": {
+    "enabled": true,
+    "thumbsRating": true,
+    "suggestEdit": true
   },
   "redirects": [
     {
@@ -1105,7 +1168,7 @@
     },
     {
       "source": "/changelog",
-      "destination": "https://github.com/crewAIInc/crewAI/releases"
+      "destination": "/en/changelog"
     },
     {
       "source": "/telemetry",
