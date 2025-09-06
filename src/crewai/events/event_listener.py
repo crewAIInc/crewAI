@@ -167,8 +167,9 @@ class EventListener(BaseEventListener):
             self.execution_spans[source] = span
             # Pass both task ID and task name (if set)
             task_name = source.name if hasattr(source, "name") and source.name else None
+            attempt_number = getattr(event, "attempt_number", None)
             self.formatter.create_task_branch(
-                self.formatter.current_crew_tree, source.id, task_name
+                self.formatter.current_crew_tree, source.id, task_name, attempt_number
             )
 
         @crewai_event_bus.on(TaskCompletedEvent)
@@ -181,12 +182,14 @@ class EventListener(BaseEventListener):
 
             # Pass task name if it exists
             task_name = source.name if hasattr(source, "name") and source.name else None
+            attempt_number = getattr(event, "attempt_number", None)
             self.formatter.update_task_status(
                 self.formatter.current_crew_tree,
                 source.id,
                 source.agent.role,
                 "completed",
                 task_name,
+                attempt_number,
             )
 
         @crewai_event_bus.on(TaskFailedEvent)
@@ -199,12 +202,14 @@ class EventListener(BaseEventListener):
 
             # Pass task name if it exists
             task_name = source.name if hasattr(source, "name") and source.name else None
+            attempt_number = getattr(event, "attempt_number", None)
             self.formatter.update_task_status(
                 self.formatter.current_crew_tree,
                 source.id,
                 source.agent.role,
                 "failed",
                 task_name,
+                attempt_number,
             )
 
         # ----------- AGENT EVENTS -----------
