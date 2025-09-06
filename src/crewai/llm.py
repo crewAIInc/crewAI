@@ -701,6 +701,21 @@ class LLM(BaseLLM):
         from_task: Any | None = None,
         from_agent: Any | None = None,
     ) -> None | str:
+        """Handle streaming tool calls from the LLM.
+
+        Args:
+            tool_calls: List of streaming tool calls from the LLM
+            accumulated_tool_args: Dictionary of accumulated tool arguments by index
+            available_functions: Optional dict of available functions
+            from_task: Optional task object
+            from_agent: Optional agent object
+
+        Returns:
+            Optional[str]: The result of the tool call, or None if not ready
+
+        Notes:
+            - TODO: Convert tool_call.to_dict() to proper ToolCall format for events
+        """
         for tool_call in tool_calls:
             current_tool_accumulator = accumulated_tool_args[tool_call.index]
 
@@ -715,7 +730,7 @@ class LLM(BaseLLM):
                 crewai_event_bus.emit(
                     self,
                     event=LLMStreamChunkEvent(
-                        tool_call=tool_call.to_dict(),
+                        tool_call=tool_call.to_dict(),  # type: ignore[arg-type]
                         chunk=tool_call.function.arguments,
                         from_task=from_task,
                         from_agent=from_agent,
