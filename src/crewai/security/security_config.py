@@ -1,5 +1,4 @@
-"""
-Security Configuration Module
+"""Security Configuration Module
 
 This module provides configuration for CrewAI security features, including:
 - Authentication settings
