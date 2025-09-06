@@ -1,7 +1,12 @@
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
-from typing import Any, Optional
+from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field
+
+if TYPE_CHECKING:
+    from crewai.llm import LLM
 
 
 class OutputConverter(BaseModel, ABC):
@@ -15,15 +20,17 @@ class OutputConverter(BaseModel, ABC):
 
     Attributes:
         text (str): The input text to be converted.
-        llm (Any): The language model used for conversion.
-        model (Any): The target model for structuring the output.
+        llm (LLM): The language model used for conversion.
+        model (type[BaseModel]): The target model class for structuring the output.
         instructions (str): Specific instructions for the conversion process.
         max_attempts (int): Maximum number of conversion attempts (default: 3).
     """
 
     text: str = Field(description="Text to be converted.")
-    llm: Any = Field(description="The language model to be used to convert the text.")
-    model: Any = Field(description="The model to be used to convert the text.")
+    llm: LLM = Field(description="The language model to be used to convert the text.")
+    model: type[BaseModel] = Field(
+        description="The model to be used to convert the text."
+    )
     instructions: str = Field(description="Conversion instructions to the LLM.")
     max_attempts: int = Field(
         description="Max number of attempts to try to get the output formatted.",
@@ -31,11 +38,9 @@ class OutputConverter(BaseModel, ABC):
     )
 
     @abstractmethod
-    def to_pydantic(self, current_attempt=1) -> BaseModel:
+    def to_pydantic(self, current_attempt: int = 1) -> BaseModel:
         """Convert text to pydantic."""
-        pass
 
     @abstractmethod
-    def to_json(self, current_attempt=1) -> dict:
+    def to_json(self, current_attempt: int = 1) -> dict[str, Any]:
         """Convert text to json."""
-        pass
