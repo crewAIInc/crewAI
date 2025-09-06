@@ -1,86 +1,75 @@
-"""
-Fingerprint Module
+"""Fingerprint Module
 
 This module provides functionality for generating and validating unique identifiers
 for CrewAI agents. These identifiers are used for tracking, auditing, and security.
 """
 
 from datetime import datetime
-from typing import Any
+from typing import Annotated, Any
 from uuid import UUID, uuid4, uuid5
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, BeforeValidator, ConfigDict, Field
 from typing_extensions import Self
 
 from crewai.security.constants import CREW_AI_NAMESPACE
 
 
+def _validate_metadata(v: Any) -> dict[str, Any]:
+    """Validate that metadata is a dictionary with string keys and valid values."""
+    if not isinstance(v, dict):
+        raise ValueError("Metadata must be a dictionary")
+
+    # Validate that all keys are strings
+    for key, value in v.items():
+        if not isinstance(key, str):
+            raise ValueError(f"Metadata keys must be strings, got {type(key)}")
+
+        # Validate nested dictionaries (prevent deeply nested structures)
+        if isinstance(value, dict):
+            # Check for nested dictionaries (limit depth to 1)
+            for nested_key, nested_value in value.items():
+                if not isinstance(nested_key, str):
+                    raise ValueError(
+                        f"Nested metadata keys must be strings, got {type(nested_key)}"
+                    )
+                if isinstance(nested_value, dict):
+                    raise ValueError("Metadata can only be nested one level deep")
+
+    # Check for maximum metadata size (prevent DoS)
+    if len(str(v)) > 10_000:  # Limit metadata size to 10KB
+        raise ValueError("Metadata size exceeds maximum allowed (10KB)")
+
+    return v
+
+
 class Fingerprint(BaseModel):
-    """
-    A class for generating and managing unique identifiers for agents.
+    """A class for generating and managing unique identifiers for agents.
 
     Each agent has dual identifiers:
     - Human-readable ID: For debugging and reference (derived from role if not specified)
     - Fingerprint UUID: Unique runtime identifier for tracking and auditing
 
     Attributes:
-        uuid_str (str): String representation of the UUID for this fingerprint, auto-generated
-        created_at (datetime): When this fingerprint was created, auto-generated
-        metadata (dict[str, Any]): Additional metadata associated with this fingerprint
+        uuid_str: String representation of the UUID for this fingerprint, auto-generated
+        created_at: When this fingerprint was created, auto-generated
+        metadata: Additional metadata associated with this fingerprint
     """
 
     uuid_str: str = Field(
         default_factory=lambda: str(uuid4()),
         description="String representation of the UUID",
+        init=False,
     )
     created_at: datetime = Field(
-        default_factory=datetime.now, description="When this fingerprint was created"
+        default_factory=datetime.now,
+        description="When this fingerprint was created",
+        init=False,
     )
-    metadata: dict[str, Any] = Field(
+    metadata: Annotated[dict[str, Any], BeforeValidator(_validate_metadata)] = Field(
         default_factory=dict, description="Additional metadata for this fingerprint"
     )
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
-
-    @field_validator("metadata")
-    @classmethod
-    def validate_metadata(cls, v):
-        """Validate that metadata is a dictionary with string keys and valid values."""
-        if not isinstance(v, dict):
-            raise ValueError("Metadata must be a dictionary")
-
-        # Validate that all keys are strings
-        for key, value in v.items():
-            if not isinstance(key, str):
-                raise ValueError(f"Metadata keys must be strings, got {type(key)}")
-
-            # Validate nested dictionaries (prevent deeply nested structures)
-            if isinstance(value, dict):
-                # Check for nested dictionaries (limit depth to 1)
-                for nested_key, nested_value in value.items():
-                    if not isinstance(nested_key, str):
-                        raise ValueError(
-                            f"Nested metadata keys must be strings, got {type(nested_key)}"
-                        )
-                    if isinstance(nested_value, dict):
-                        raise ValueError("Metadata can only be nested one level deep")
-
-        # Check for maximum metadata size (prevent DoS)
-        if len(str(v)) > 10000:  # Limit metadata size to 10KB
-            raise ValueError("Metadata size exceeds maximum allowed (10KB)")
-
-        return v
-
-    def __init__(self, **data):
-        """Initialize a Fingerprint with auto-generated uuid_str and created_at."""
-        # Remove uuid_str and created_at from data to ensure they're auto-generated
-        if "uuid_str" in data:
-            data.pop("uuid_str")
-        if "created_at" in data:
-            data.pop("created_at")
-
-        # Call the parent constructor with the modified data
-        super().__init__(**data)
 
     @property
     def uuid(self) -> UUID:
@@ -89,31 +78,24 @@ class Fingerprint(BaseModel):
 
     @classmethod
     def _generate_uuid(cls, seed: str) -> str:
-        """
-        Generate a deterministic UUID based on a seed string.
+        """Generate a deterministic UUID based on a seed string.
 
         Args:
-            seed (str): The seed string to use for UUID generation
+            seed: The seed string to use for UUID generation
 
         Returns:
-            str: A string representation of the UUID consistently generated from the seed
+            A string representation of the UUID consistently generated from the seed
         """
-        if not isinstance(seed, str):
-            raise ValueError("Seed must be a string")
-
         if not seed.strip():
             raise ValueError("Seed cannot be empty or whitespace")
 
-        # Create a deterministic UUID using v5 (SHA-1)
-        # Custom namespace for CrewAI to enhance security
         return str(uuid5(CREW_AI_NAMESPACE, seed))
 
     @classmethod
     def generate(
         cls, seed: str | None = None, metadata: dict[str, Any] | None = None
     ) -> Self:
-        """
-        Static factory method to create a new Fingerprint.
+        """Static factory method to create a new Fingerprint.
 
         Args:
             seed: A string to use as seed for the UUID generation.
@@ -133,7 +115,7 @@ class Fingerprint(BaseModel):
         """String representation of the fingerprint (the UUID)."""
         return self.uuid_str
 
-    def __eq__(self, other) -> bool:
+    def __eq__(self, other: Any) -> bool:
         """Compare fingerprints by their UUID."""
         if isinstance(other, Fingerprint):
             return self.uuid_str == other.uuid_str
@@ -144,8 +126,7 @@ class Fingerprint(BaseModel):
         return hash(self.uuid_str)
 
     def to_dict(self) -> dict[str, Any]:
-        """
-        Convert the fingerprint to a dictionary representation.
+        """Convert the fingerprint to a dictionary representation.
 
         Returns:
             Dictionary representation of the fingerprint
@@ -158,8 +139,7 @@ class Fingerprint(BaseModel):
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> Self:
-        """
-        Create a Fingerprint from a dictionary representation.
+        """Create a Fingerprint from a dictionary representation.
 
         Args:
             data: Dictionary representation of a fingerprint

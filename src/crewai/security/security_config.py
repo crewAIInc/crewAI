@@ -70,7 +70,7 @@ class SecurityConfig(BaseModel):
 
     @model_validator(mode="before")
     @classmethod
-    def validate_fingerprint(cls, values):
+    def validate_fingerprint(cls, values: Any) -> dict[str, Any]:
         """Ensure fingerprint is properly initialized."""
         if isinstance(values, dict):
             # Handle case where fingerprint is not provided or is None
