@@ -2,15 +2,16 @@ import os
 import pytest
 from unittest.mock import patch, MagicMock
 
-# Remove the module-level patch
+
 from crewai import Agent, Task, Crew
-from crewai.utilities.events.listeners.tracing.trace_listener import (
+from crewai.flow.flow import Flow, start
+from crewai.events.listeners.tracing.trace_listener import (
     TraceCollectionListener,
 )
-from crewai.utilities.events.listeners.tracing.trace_batch_manager import (
+from crewai.events.listeners.tracing.trace_batch_manager import (
     TraceBatchManager,
 )
-from crewai.utilities.events.listeners.tracing.types import TraceEvent
+from crewai.events.listeners.tracing.types import TraceEvent
 
 
 class TestTraceListenerSetup:
@@ -26,11 +27,11 @@ class TestTraceListenerSetup:
                 return_value="mock_token_12345",
             ),
             patch(
-                "crewai.utilities.events.listeners.tracing.trace_listener.get_auth_token",
+                "crewai.events.listeners.tracing.trace_listener.get_auth_token",
                 return_value="mock_token_12345",
             ),
             patch(
-                "crewai.utilities.events.listeners.tracing.trace_batch_manager.get_auth_token",
+                "crewai.events.listeners.tracing.trace_batch_manager.get_auth_token",
                 return_value="mock_token_12345",
             ),
         ):
@@ -39,7 +40,7 @@ class TestTraceListenerSetup:
     @pytest.fixture(autouse=True)
     def clear_event_bus(self):
         """Clear event bus listeners before and after each test"""
-        from crewai.utilities.events import crewai_event_bus
+        from crewai.events.event_bus import crewai_event_bus
 
         # Store original handlers
         original_handlers = crewai_event_bus._handlers.copy()
@@ -122,7 +123,7 @@ class TestTraceListenerSetup:
             crew = Crew(agents=[agent], tasks=[task], verbose=True)
 
             trace_listener = TraceCollectionListener()
-            from crewai.utilities.events import crewai_event_bus
+            from crewai.events.event_bus import crewai_event_bus
 
             trace_listener.setup_listeners(crewai_event_bus)
 
@@ -161,7 +162,7 @@ class TestTraceListenerSetup:
 
             crew = Crew(agents=[agent], tasks=[task], verbose=True)
 
-            from crewai.utilities.events import crewai_event_bus
+            from crewai.events.event_bus import crewai_event_bus
 
             trace_listener = None
             for handler_list in crewai_event_bus._handlers.values():
@@ -206,7 +207,7 @@ class TestTraceListenerSetup:
             )
             crew = Crew(agents=[agent], tasks=[task], verbose=True)
 
-            from crewai.utilities.events import crewai_event_bus
+            from crewai.events.event_bus import crewai_event_bus
 
             # Create and setup trace listener explicitly
             trace_listener = TraceCollectionListener()
@@ -261,7 +262,7 @@ class TestTraceListenerSetup:
             result = crew.kickoff()
             assert result is not None
 
-            from crewai.utilities.events import crewai_event_bus
+            from crewai.events.event_bus import crewai_event_bus
 
             trace_handlers = []
             for handlers in crewai_event_bus._handlers.values():
@@ -280,44 +281,125 @@ class TestTraceListenerSetup:
                     ):
                         trace_handlers.append(handler)
 
-            assert len(trace_handlers) == 0, (
-                f"Found {len(trace_handlers)} trace handlers when tracing should be disabled"
-            )
+            assert (
+                len(trace_handlers) == 0
+            ), f"Found {len(trace_handlers)} trace handlers when tracing should be disabled"
 
-    def test_trace_listener_setup_correctly(self):
+    def test_trace_listener_setup_correctly_for_crew(self):
         """Test that trace listener is set up correctly when enabled"""
 
         with patch.dict(os.environ, {"CREWAI_TRACING_ENABLED": "true"}):
-            trace_listener = TraceCollectionListener()
+            agent = Agent(
+                role="Test Agent",
+                goal="Test goal",
+                backstory="Test backstory",
+                llm="gpt-4o-mini",
+            )
+            task = Task(
+                description="Say hello to the world",
+                expected_output="hello world",
+                agent=agent,
+            )
+            with patch.object(
+                TraceCollectionListener, "setup_listeners"
+            ) as mock_listener_setup:
+                Crew(agents=[agent], tasks=[task], verbose=True)
+                assert mock_listener_setup.call_count >= 1
 
-            assert trace_listener.trace_enabled is True
-            assert trace_listener.batch_manager is not None
+    def test_trace_listener_setup_correctly_for_flow(self):
+        """Test that trace listener is set up correctly when enabled"""
+
+        with patch.dict(os.environ, {"CREWAI_TRACING_ENABLED": "true"}):
+
+            class FlowExample(Flow):
+                @start()
+                def start(self):
+                    pass
+
+            with patch.object(
+                TraceCollectionListener, "setup_listeners"
+            ) as mock_listener_setup:
+                FlowExample()
+                assert mock_listener_setup.call_count >= 1
 
     @pytest.mark.vcr(filter_headers=["authorization"])
-    def test_trace_listener_setup_correctly_with_tracing_flag(self):
-        """Test that trace listener is set up correctly when enabled"""
-        agent = Agent(role="Test Agent", goal="Test goal", backstory="Test backstory")
-        task = Task(
-            description="Say hello to the world",
-            expected_output="hello world",
-            agent=agent,
-        )
-        crew = Crew(agents=[agent], tasks=[task], verbose=True, tracing=True)
-        crew.kickoff()
-        trace_listener = TraceCollectionListener(tracing=True)
-        assert trace_listener.trace_enabled is True
-        assert trace_listener.batch_manager is not None
+    def test_trace_listener_ephemeral_batch(self):
+        """Test that trace listener properly handles ephemeral batches"""
+        with (
+            patch.dict(os.environ, {"CREWAI_TRACING_ENABLED": "true"}),
+            patch(
+                "crewai.events.listeners.tracing.trace_listener.TraceCollectionListener._check_authenticated",
+                return_value=False,
+            ),
+        ):
+            agent = Agent(
+                role="Test Agent",
+                goal="Test goal",
+                backstory="Test backstory",
+                llm="gpt-4o-mini",
+            )
+            task = Task(
+                description="Say hello to the world",
+                expected_output="hello world",
+                agent=agent,
+            )
+            crew = Crew(agents=[agent], tasks=[task], tracing=True)
+
+            with patch.object(TraceBatchManager, "initialize_batch") as mock_initialize:
+                crew.kickoff()
+
+                assert mock_initialize.call_count >= 1
+                assert mock_initialize.call_args_list[0][1]["use_ephemeral"] is True
+
+    @pytest.mark.vcr(filter_headers=["authorization"])
+    def test_trace_listener_with_authenticated_user(self):
+        """Test that trace listener properly handles authenticated batches"""
+        with (
+            patch.dict(os.environ, {"CREWAI_TRACING_ENABLED": "true"}),
+            patch(
+                "crewai.events.listeners.tracing.trace_batch_manager.PlusAPI"
+            ) as mock_plus_api_class,
+        ):
+            mock_plus_api_instance = MagicMock()
+            mock_plus_api_class.return_value = mock_plus_api_instance
+
+            agent = Agent(
+                role="Test Agent",
+                goal="Test goal",
+                backstory="Test backstory",
+                llm="gpt-4o-mini",
+            )
+            task = Task(
+                description="Say hello to the world",
+                expected_output="hello world",
+                agent=agent,
+            )
+
+            with (
+                patch.object(TraceBatchManager, "initialize_batch") as mock_initialize,
+                patch.object(
+                    TraceBatchManager, "finalize_batch"
+                ) as mock_finalize_backend_batch,
+            ):
+                crew = Crew(agents=[agent], tasks=[task], tracing=True)
+                crew.kickoff()
+
+                mock_plus_api_class.assert_called_with(api_key="mock_token_12345")
+
+                assert mock_initialize.call_count >= 1
+                mock_finalize_backend_batch.assert_called_with()
+                assert mock_finalize_backend_batch.call_count >= 1
 
     # Helper method to ensure cleanup
     def teardown_method(self):
         """Cleanup after each test method"""
-        from crewai.utilities.events import crewai_event_bus
+        from crewai.events.event_bus import crewai_event_bus
 
         crewai_event_bus._handlers.clear()
 
     @classmethod
     def teardown_class(cls):
         """Final cleanup after all tests in this class"""
-        from crewai.utilities.events import crewai_event_bus
+        from crewai.events.event_bus import crewai_event_bus
 
         crewai_event_bus._handlers.clear()

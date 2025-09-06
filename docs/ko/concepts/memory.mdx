@@ -2,6 +2,7 @@
 title: 메모리
 description: CrewAI 프레임워크에서 메모리 시스템을 활용하여 에이전트의 역량을 강화합니다.
 icon: database
+mode: "wide"
 ---
 
 ## 개요
@@ -985,8 +986,8 @@ CrewAI는 다음과 같은 메모리 관련 이벤트를 발생시킵니다:
 애플리케이션을 최적화하기 위해 메모리 작업 타이밍을 추적하세요:
 
 ```python
-from crewai.utilities.events.base_event_listener import BaseEventListener
-from crewai.utilities.events import (
+from crewai.events import (
+    BaseEventListener,
     MemoryQueryCompletedEvent,
     MemorySaveCompletedEvent
 )
@@ -1020,8 +1021,8 @@ memory_monitor = MemoryPerformanceMonitor()
 디버깅 및 인사이트를 위해 메모리 작업을 로깅합니다:
 
 ```python
-from crewai.utilities.events.base_event_listener import BaseEventListener
-from crewai.utilities.events import (
+from crewai.events import (
+    BaseEventListener,
     MemorySaveStartedEvent,
     MemoryQueryStartedEvent,
     MemoryRetrievalCompletedEvent
@@ -1061,8 +1062,8 @@ memory_logger = MemoryLogger()
 메모리 오류를 캡처하고 대응합니다:
 
 ```python
-from crewai.utilities.events.base_event_listener import BaseEventListener
-from crewai.utilities.events import (
+from crewai.events import (
+    BaseEventListener,
     MemorySaveFailedEvent,
     MemoryQueryFailedEvent
 )
@@ -1111,8 +1112,8 @@ error_tracker = MemoryErrorTracker(notify_email="admin@example.com")
 메모리 이벤트는 분석 및 모니터링 플랫폼으로 전달되어 성능 지표를 추적하고, 이상 징후를 감지하며, 메모리 사용 패턴을 시각화할 수 있습니다:
 
 ```python
-from crewai.utilities.events.base_event_listener import BaseEventListener
-from crewai.utilities.events import (
+from crewai.events import (
+    BaseEventListener,
     MemoryQueryCompletedEvent,
     MemorySaveCompletedEvent
 )

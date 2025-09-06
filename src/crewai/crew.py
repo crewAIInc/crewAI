@@ -59,7 +59,7 @@ from crewai.utilities import I18N, FileHandler, Logger, RPMController
 from crewai.utilities.constants import NOT_SPECIFIED, TRAINING_DATA_FILE
 from crewai.utilities.evaluators.crew_evaluator_handler import CrewEvaluator
 from crewai.utilities.evaluators.task_evaluator import TaskEvaluator
-from crewai.utilities.events.crew_events import (
+from crewai.events.types.crew_events import (
     CrewKickoffCompletedEvent,
     CrewKickoffFailedEvent,
     CrewKickoffStartedEvent,
@@ -70,14 +70,16 @@ from crewai.utilities.events.crew_events import (
     CrewTrainFailedEvent,
     CrewTrainStartedEvent,
 )
-from crewai.utilities.events.crewai_event_bus import crewai_event_bus
-from crewai.utilities.events.event_listener import EventListener
-from crewai.utilities.events.listeners.tracing.trace_listener import (
+from crewai.events.event_bus import crewai_event_bus
+from crewai.events.event_listener import EventListener
+from crewai.events.listeners.tracing.trace_listener import (
     TraceCollectionListener,
 )
 
 
-from crewai.utilities.events.listeners.tracing.utils import is_tracing_enabled
+from crewai.events.listeners.tracing.utils import (
+    is_tracing_enabled,
+)
 from crewai.utilities.formatter import (
     aggregate_raw_outputs_from_task_outputs,
     aggregate_raw_outputs_from_tasks,
@@ -283,8 +285,9 @@ class Crew(FlowTrackable, BaseModel):
 
         self._cache_handler = CacheHandler()
         event_listener = EventListener()
+
         if is_tracing_enabled() or self.tracing:
-            trace_listener = TraceCollectionListener(tracing=self.tracing)
+            trace_listener = TraceCollectionListener()
             trace_listener.setup_listeners(crewai_event_bus)
         event_listener.verbose = self.verbose
         event_listener.formatter.verbose = self.verbose
@@ -556,9 +559,10 @@ class Crew(FlowTrackable, BaseModel):
         CrewTrainingHandler(filename).initialize_file()
 
     def train(
-        self, n_iterations: int, filename: str, inputs: Optional[Dict[str, Any]] = {}
+        self, n_iterations: int, filename: str, inputs: Optional[Dict[str, Any]] = None
     ) -> None:
         """Trains the crew for a given number of iterations."""
+        inputs = inputs or {}
         try:
             crewai_event_bus.emit(
                 self,
@@ -633,6 +637,7 @@ class Crew(FlowTrackable, BaseModel):
                 self._inputs = inputs
                 self._interpolate_inputs(inputs)
             self._set_tasks_callbacks()
+            self._set_allow_crewai_trigger_context_for_first_task()
 
             i18n = I18N(prompt_file=self.prompt_file)
 
@@ -698,8 +703,11 @@ class Crew(FlowTrackable, BaseModel):
         self._task_output_handler.reset()
         return results
 
-    async def kickoff_async(self, inputs: Optional[Dict[str, Any]] = {}) -> CrewOutput:
+    async def kickoff_async(
+        self, inputs: Optional[Dict[str, Any]] = None
+    ) -> CrewOutput:
         """Asynchronous kickoff method to start the crew execution."""
+        inputs = inputs or {}
         return await asyncio.to_thread(self.kickoff, inputs)
 
     async def kickoff_for_each_async(self, inputs: List[Dict]) -> List[CrewOutput]:
@@ -1502,3 +1510,18 @@ class Crew(FlowTrackable, BaseModel):
         """Reset crew and agent knowledge storage."""
         for ks in knowledges:
             ks.reset()
+
+    def _set_allow_crewai_trigger_context_for_first_task(self):
+        crewai_trigger_payload = self._inputs and self._inputs.get(
+            "crewai_trigger_payload"
+        )
+        able_to_inject = (
+            self.tasks and self.tasks[0].allow_crewai_trigger_context is None
+        )
+
+        if (
+            self.process == Process.sequential
+            and crewai_trigger_payload
+            and able_to_inject
+        ):
+            self.tasks[0].allow_crewai_trigger_context = True

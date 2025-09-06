@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 
 from crewai.memory import (
     EntityMemory,
@@ -6,6 +6,10 @@ from crewai.memory import (
     LongTermMemory,
     ShortTermMemory,
 )
+
+if TYPE_CHECKING:
+    from crewai.agent import Agent
+    from crewai.task import Task
 
 
 class ContextualMemory:
@@ -15,11 +19,28 @@ class ContextualMemory:
         ltm: LongTermMemory,
         em: EntityMemory,
         exm: ExternalMemory,
+        agent: Optional["Agent"] = None,
+        task: Optional["Task"] = None,
     ):
         self.stm = stm
         self.ltm = ltm
         self.em = em
         self.exm = exm
+        self.agent = agent
+        self.task = task
+
+        if self.stm is not None:
+            self.stm.agent = self.agent
+            self.stm.task = self.task
+        if self.ltm is not None:
+            self.ltm.agent = self.agent
+            self.ltm.task = self.task
+        if self.em is not None:
+            self.em.agent = self.agent
+            self.em.task = self.task
+        if self.exm is not None:
+            self.exm.agent = self.agent
+            self.exm.task = self.task
 
     def build_context_for_task(self, task, context) -> str:
         """
@@ -49,10 +70,7 @@ class ContextualMemory:
 
         stm_results = self.stm.search(query)
         formatted_results = "\n".join(
-            [
-                f"- {result['context']}"
-                for result in stm_results
-            ]
+            [f"- {result['context']}" for result in stm_results]
         )
         return f"Recent Insights:\n{formatted_results}" if stm_results else ""
 
@@ -89,10 +107,7 @@ class ContextualMemory:
 
         em_results = self.em.search(query)
         formatted_results = "\n".join(
-            [
-                f"- {result['context']}"
-                for result in em_results
-            ]  # type: ignore #  Invalid index type "str" for "str"; expected type "SupportsIndex | slice"
+            [f"- {result['context']}" for result in em_results]  # type: ignore #  Invalid index type "str" for "str"; expected type "SupportsIndex | slice"
         )
         return f"Entities:\n{formatted_results}" if em_results else ""
 

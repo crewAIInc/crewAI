@@ -2,6 +2,7 @@
 title: 'LLMs'
 description: 'Um guia abrangente para configurar e usar Modelos de Linguagem de Grande Escala (LLMs) em seus projetos CrewAI'
 icon: 'microchip-ai'
+mode: "wide"
 ---
 
 ## Visão Geral
@@ -708,10 +709,10 @@ O CrewAI suporta respostas em streaming de LLMs, permitindo que sua aplicação 
     O CrewAI emite eventos para cada chunk recebido durante o streaming:
 
     ```python
-    from crewai.utilities.events import (
+    from crewai.events import (
       LLMStreamChunkEvent
     )
-    from crewai.utilities.events.base_event_listener import BaseEventListener
+    from crewai.events import BaseEventListener
 
     class MyCustomListener(BaseEventListener):
         def setup_listeners(self, crewai_event_bus):

@@ -1,0 +1,296 @@
+interactions:
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are First Agent. First
+      backstory\nYour personal goal is: First goal\nTo give my best complete final
+      answer to the task respond using the exact following format:\n\nThought: I now
+      can give a great answer\nFinal Answer: Your final answer must be the great and
+      the most complete as possible, it must be outcome described.\n\nI MUST use these
+      formats, my job depends on it!"}, {"role": "user", "content": "\nCurrent Task:
+      Process initial data\n\nThis is the expected criteria for your final answer:
+      Initial analysis\nyou MUST return the actual complete content as the final answer,
+      not a summary.\n\nBegin! This is VERY important to you, use the tools available
+      and give your best Final Answer, your job depends on it!\n\nThought:"}], "model":
+      "gpt-4o-mini", "stop": ["\nObservation:"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate, zstd
+      connection:
+      - keep-alive
+      content-length:
+      - '831'
+      content-type:
+      - application/json
+      cookie:
+      - _cfuvid=PslIVDqXn7jd_NXBGdSU5kVFvzwCchKPRVe9LpQVdQA-1736351415895-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.93.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.93.0
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-read-timeout:
+      - '600.0'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.12
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAAwAAAP//jFVNbxw3DL37VxBzyWV3YTtZ2/EtLerCQNH2kCAFmmDBlTgzjDXURKR2
+        vQny3wtpNp7Nx6EXr0eUqPceH6nPZwAN++YWGtejuWEMy1+vLm6Gi93rF9f4x+/h7V26/zi8fPv3
+        xT/34c1vzaKciNsP5OzrqZWLwxjIOMoUdonQqGS9uF6v1+vz5zc3NTBET6Ec60ZbvojLgYWXl+eX
+        L5bn18uLm+PpPrIjbW7h3zMAgM/1b8Epnh6bWzhffF0ZSBU7am6fNgE0KYay0qAqq6FYs5iDLoqR
+        VOj3IHEPDgU63hEgdAU2oOieEsA7uWPBAK/q9y287glY2BgDoGA4KCvEFqwn8GgILLsYdqSgtKOE
+        AVxiY4cB1GjUFdxxUlvAnmDIasCexLg91Awac3L0TcIFkGhOLB1Yj1bWD4CJIFFg3AYCFF8+aIdi
+        YLGenErDuznXmGJZWsFf4ugEroKLIZAz8hXUSKmNaQCEsdwwsGA6AD1i+a8Ut1zhenIP0MYE6FxO
+        6A4VxdEBJKS6gBDjQ4Fdt8kBBlYt3zsMueBK4FldohHFMenqnbyTP+lx0sahURcTfzrFKhZhIBSW
+        rs0BlLqBxHQBOI7hUHJvUdmBGhrrpPpA1kevBbXmYcCa8oEO0BJaTqVQ2fWAWjMvYCDP5bfwKUZd
+        weuetci3Y08KLMpdbzqhqdhYLfE2V3GqDCRWKm8kniq304JWnq+857IfQzgsYMeaMfCnqu8MqGe1
+        2CUcdAHb+AhjiIVsTKAOzShNK9UNx2YrNLdUY1k8peL86o4pdc+jVohjPS8Ke7aeZQZXDK50RATI
+        XqGnMALLk1OrFROJL1iyBaakk15jLF1VWyMRVtYuiqMklfRdTtZTGmKiWmNUJdW5vsUobApZccuB
+        7VBuRe8TTcapHTKS45YdfMykk1xo0KP47xuFDTBwd+R42gPPFLqIQVfwy9R2JH6qEOsPzV2R7jkE
+        6LHOBxcIE8QdpR3T/rSyzxS0CNNZP6m8J3wovUC6gC6zL9hyseIek1coQgDL0tNofRkchVF3NEFp
+        Gv8hq1WLgxB58lWiNhffTpIde5ejrOBNMB7QqDiqUmljFo+TzeZhpWST5mrY0WnGumXqmjFFV4FX
+        Hp4cK0dZDlg7etKojpfV6VhN1GbFMtolh3ASQJFoE7Ey0N8fI1+eRniI3ZjiVr872rQsrP2muClK
+        GddqcWxq9MsZwPv6VORvpn8zpjiMtrH4QPW6i/V6ytfML9QcvXx+fYxaNAxz4PnLy8VPEm48GXLQ
+        k9emceh68vPR+WnC7DmeBM5OaP8I52e5J+os3f9JPweco9HIb8ZEnt23lOdtiT7Uyf/zbU8yV8CN
+        Fsc72hhTKqXw1GIO07va6EGNhk3L0lEaE0+Paztu1lfn2F7Rev2yOfty9h8AAAD//wMAaw+BEmoI
+        AAA=
+    headers:
+      CF-RAY:
+      - 97144c8758cd1abc-GRU
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Mon, 18 Aug 2025 20:53:12 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - __cf_bm=VDTNVbhdzLyVi3fpAyOvoFppI0NEm6YkT9eWIm1wnrs-1755550392-1.0.1.1-vfYBbcAz.yp6ATfVycTWX6tFDJ.1yb_ghwed7t5GOMhNlsFeYYNGz4uupfWMnhc4QLK4UNXIeZGeGKJ.me4S240xKk6FUEu3F5tEAvhPnCM;
+        path=/; expires=Mon, 18-Aug-25 21:23:12 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=FFe5KuJ6P4BUXOoz57aqNdKwRoz64NOw_EhuSGirJWc-1755550392539-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '4008'
+      openai-project:
+      - proj_xitITlrFeen7zjNSzML82h9x
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '4027'
+      x-ratelimit-limit-project-tokens:
+      - '150000000'
+      x-ratelimit-limit-requests:
+      - '30000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-project-tokens:
+      - '149999825'
+      x-ratelimit-remaining-requests:
+      - '29999'
+      x-ratelimit-remaining-tokens:
+      - '149999825'
+      x-ratelimit-reset-project-tokens:
+      - 0s
+      x-ratelimit-reset-requests:
+      - 2ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_f287350aa2ac4662b9a5e01e85cc221f
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are Second Agent. Second
+      backstory\nYour personal goal is: Second goal\nTo give my best complete final
+      answer to the task respond using the exact following format:\n\nThought: I now
+      can give a great answer\nFinal Answer: Your final answer must be the great and
+      the most complete as possible, it must be outcome described.\n\nI MUST use these
+      formats, my job depends on it!"}, {"role": "user", "content": "\nCurrent Task:
+      Process secondary data\n\nTrigger Payload: Context data\n\nThis is the expected
+      criteria for your final answer: Secondary analysis\nyou MUST return the actual
+      complete content as the final answer, not a summary.\n\nThis is the context
+      you''re working with:\nThe initial analysis of the data involves several critical
+      steps. First, we must identify the sources of the data, ensuring that they are
+      reliable and relevant to the objectives of the project. Once the data is collected,
+      we perform a preliminary examination to check for accuracy and completeness,
+      looking for any missing values or discrepancies.\n\nNext, we categorize the
+      data into meaningful segments, applying basic statistical methods to summarize
+      key features such as mean, median, and mode. This provides insights into the
+      distribution and central tendencies of the data.\n\nAdditionally, visualizations
+      such as histograms, box plots, or scatter plots are created to better understand
+      relationships and patterns within the data. These visual aids help in identifying
+      trends, outliers, and potential areas of concern.\n\nFurthermore, we assess
+      the data for its usability in addressing the specific questions at hand, ensuring
+      that it aligns with the project''s goals. By the end of this initial analysis,
+      we will have a clear overview of the data''s strengths and weaknesses, guiding
+      us towards more in-depth investigations or adjustments needed for future data
+      collection. Ultimately, this foundational analysis sets the stage for future
+      analytical processes and decision-making initiatives.\n\nBegin! This is VERY
+      important to you, use the tools available and give your best Final Answer, your
+      job depends on it!\n\nThought:"}], "model": "gpt-4o-mini", "stop": ["\nObservation:"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate, zstd
+      connection:
+      - keep-alive
+      content-length:
+      - '2214'
+      content-type:
+      - application/json
+      cookie:
+      - _cfuvid=FFe5KuJ6P4BUXOoz57aqNdKwRoz64NOw_EhuSGirJWc-1755550392539-0.0.1.1-604800000;
+        __cf_bm=VDTNVbhdzLyVi3fpAyOvoFppI0NEm6YkT9eWIm1wnrs-1755550392-1.0.1.1-vfYBbcAz.yp6ATfVycTWX6tFDJ.1yb_ghwed7t5GOMhNlsFeYYNGz4uupfWMnhc4QLK4UNXIeZGeGKJ.me4S240xKk6FUEu3F5tEAvhPnCM
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.93.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.93.0
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-read-timeout:
+      - '600.0'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.12
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        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
+        AP//AwAAHGphwAsAAA==
+    headers:
+      CF-RAY:
+      - 97144ca1b97b1abc-GRU
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Mon, 18 Aug 2025 20:53:21 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '8604'
+      openai-project:
+      - proj_xitITlrFeen7zjNSzML82h9x
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '8628'
+      x-ratelimit-limit-project-tokens:
+      - '150000000'
+      x-ratelimit-limit-requests:
+      - '30000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-project-tokens:
+      - '149999482'
+      x-ratelimit-remaining-requests:
+      - '29999'
+      x-ratelimit-remaining-tokens:
+      - '149999485'
+      x-ratelimit-reset-project-tokens:
+      - 0s
+      x-ratelimit-reset-requests:
+      - 2ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_545a8ffcdf954433b9059a5b35dddf20
+    status:
+      code: 200
+      message: OK
+version: 1

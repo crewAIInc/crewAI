@@ -1,9 +1,10 @@
+import os
 import re
 import portalocker
 from chromadb import PersistentClient
 from hashlib import md5
 from typing import Optional
-
+from crewai.utilities.paths import db_storage_path
 
 MIN_COLLECTION_LENGTH = 3
 MAX_COLLECTION_LENGTH = 63
@@ -27,7 +28,9 @@ def is_ipv4_pattern(name: str) -> bool:
     return bool(IPV4_PATTERN.match(name))
 
 
-def sanitize_collection_name(name: Optional[str], max_collection_length: int = MAX_COLLECTION_LENGTH) -> str:
+def sanitize_collection_name(
+    name: Optional[str], max_collection_length: int = MAX_COLLECTION_LENGTH
+) -> str:
     """
     Sanitize a collection name to meet ChromaDB requirements:
     1. 3-63 characters long
@@ -72,7 +75,8 @@ def create_persistent_client(path: str, **kwargs):
     concurrent creations. Works for both multi-threads and multi-processes
     environments.
     """
-    lockfile = f"chromadb-{md5(path.encode(), usedforsecurity=False).hexdigest()}.lock"
+    lock_id = md5(path.encode(), usedforsecurity=False).hexdigest()
+    lockfile = os.path.join(db_storage_path(), f"chromadb-{lock_id}.lock")
     with portalocker.Lock(lockfile):
         client = PersistentClient(path=path, **kwargs)
 
