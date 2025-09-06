@@ -1,128 +1,127 @@
 import json
-import sqlite3
-from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+import logging
+from typing import Any, Dict, List, Optional
 
-from crewai.utilities import Printer
-from crewai.utilities.paths import db_storage_path
+from sqlalchemy import (
+    JSON,
+    Column,
+    DateTime,
+    Integer,
+    String,
+    Table,
+    MetaData,
+    create_engine,
+    func,
+    select,
+)
+from sqlalchemy.orm import declarative_base, sessionmaker
+from sqlalchemy import text
+
+from crewai.memory.storage.interface import Storage
+
+logger = logging.getLogger(__name__)
+Base = declarative_base()
 
 
-class LTMSQLiteStorage:
+class LTMSQLiteStorage(Storage):
     """
-    An updated SQLite storage class for LTM data storage.
+    An updated implementation of the Storage interface using SQLite as the backend.
+    This version includes improved querying methods and metadata handling.
     """
 
-    def __init__(
-        self, db_path: Optional[str] = None
-    ) -> None:
-        if db_path is None:
-            # Get the parent directory of the default db path and create our db file there
-            db_path = str(Path(db_storage_path()) / "long_term_memory_storage.db")
+    def __init__(self, db_path: str = "ltm_storage.db", table_name: str = "long_term_memories"):
         self.db_path = db_path
-        self._printer: Printer = Printer()
-        # Ensure parent directory exists
-        Path(self.db_path).parent.mkdir(parents=True, exist_ok=True)
+        self.table_name = table_name
+        self.engine = create_engine(f"sqlite:///{db_path}")
+        Session = sessionmaker(bind=self.engine)
+        self.session = Session()
         self._initialize_db()
 
     def _initialize_db(self):
-        """
-        Initializes the SQLite database and creates LTM table
-        """
-        try:
-            with sqlite3.connect(self.db_path) as conn:
-                cursor = conn.cursor()
-                cursor.execute(
-                    """
-                    CREATE TABLE IF NOT EXISTS long_term_memories (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        task_description TEXT,
-                        metadata TEXT,
-                        datetime TEXT,
-                        score REAL
-                    )
-                """
-                )
+        """Initialize the database and create the table if it doesn't exist."""
+        Base.metadata.create_all(self.engine)
+        
+        # Create table dynamically
+        metadata = MetaData()
+        self.table = Table(
+            self.table_name,
+            metadata,
+            Column("id", Integer, primary_key=True, autoincrement=True),
+            Column("agent", String, nullable=False),
+            Column("key", String, nullable=False),
+            Column("value", JSON, nullable=False),
+            Column("metadata", JSON, nullable=True),
+            Column("created_at", DateTime, default=func.current_timestamp()),
+            Column("updated_at", DateTime, default=func.current_timestamp(), onupdate=func.current_timestamp()),
+            extend_existing=True
+        )
+        metadata.create_all(self.engine)
 
-                conn.commit()
-        except sqlite3.Error as e:
-            self._printer.print(
-                content=f"MEMORY ERROR: An error occurred during database initialization: {e}",
-                color="red",
+    def save(self, key: str, value: Any, metadata: Optional[Dict[str, Any]] = None) -> None:
+        """Save a value with the given key and optional metadata."""
+        data = {
+            "agent": "default",
+            "key": key,
+            "value": json.dumps(value) if not isinstance(value, str) else value,
+            "metadata": metadata
+        }
+        
+        # Check if the key already exists
+        existing = self.session.execute(
+            select(self.table).where(self.table.c.key == key)
+        ).first()
+        
+        if existing:
+            # Update existing record
+            self.session.execute(
+                self.table.update().where(self.table.c.key == key).values(**data)
             )
+        else:
+            # Insert new record
+            self.session.execute(self.table.insert().values(**data))
+        
+        self.session.commit()
 
-    def save(
-        self,
-        task_description: str,
-        metadata: Dict[str, Any],
-        datetime: str,
-        score: Union[int, float],
-    ) -> None:
-        """Saves data to the LTM table with error handling."""
-        try:
-            with sqlite3.connect(self.db_path) as conn:
-                cursor = conn.cursor()
-                cursor.execute(
-                    """
-                INSERT INTO long_term_memories (task_description, metadata, datetime, score)
-                VALUES (?, ?, ?, ?)
-            """,
-                    (task_description, json.dumps(metadata), datetime, score),
-                )
-                conn.commit()
-        except sqlite3.Error as e:
-            self._printer.print(
-                content=f"MEMORY ERROR: An error occurred while saving to LTM: {e}",
-                color="red",
-            )
-
-    def load(
-        self, task_description: str, latest_n: int
-    ) -> Optional[List[Dict[str, Any]]]:
-        """Queries the LTM table by task description with error handling."""
-        try:
-            with sqlite3.connect(self.db_path) as conn:
-                cursor = conn.cursor()
-                cursor.execute(
-                    f"""
-                    SELECT metadata, datetime, score
-                    FROM long_term_memories
-                    WHERE task_description = ?
-                    ORDER BY datetime DESC, score ASC
-                    LIMIT {latest_n}
-                """,  # nosec
-                    (task_description,),
-                )
-                rows = cursor.fetchall()
-                if rows:
-                    return [
-                        {
-                            "metadata": json.loads(row[0]),
-                            "datetime": row[1],
-                            "score": row[2],
-                        }
-                        for row in rows
-                    ]
-
-        except sqlite3.Error as e:
-            self._printer.print(
-                content=f"MEMORY ERROR: An error occurred while querying LTM: {e}",
-                color="red",
-            )
+    def load(self, key: str) -> Optional[Any]:
+        """Load the value associated with the given key."""
+        result = self.session.execute(
+            select(self.table).where(self.table.c.key == key)
+        ).first()
+        
+        if result:
+            value = result.value
+            try:
+                return json.loads(value) if isinstance(value, str) else value
+            except json.JSONDecodeError:
+                return value
         return None
 
-    def reset(
-        self,
-    ) -> None:
-        """Resets the LTM table with error handling."""
-        try:
-            with sqlite3.connect(self.db_path) as conn:
-                cursor = conn.cursor()
-                cursor.execute("DELETE FROM long_term_memories")
-                conn.commit()
+    def delete(self, key: str) -> None:
+        """Delete the value associated with the given key."""
+        self.session.execute(
+            self.table.delete().where(self.table.c.key == key)
+        )
+        self.session.commit()
 
-        except sqlite3.Error as e:
-            self._printer.print(
-                content=f"MEMORY ERROR: An error occurred while deleting all rows in LTM: {e}",
-                color="red",
-            )
-        return None
+    def exists(self, key: str) -> bool:
+        """Check if a key exists in the storage."""
+        result = self.session.execute(
+            select(self.table).where(self.table.c.key == key)
+        ).first()
+        return result is not None
+
+    def reset(self) -> None:
+        """Reset the storage by deleting all records from the table."""
+        # Use SQLAlchemy's table operations instead of raw SQL
+        self.session.execute(self.table.delete())
+        self.session.commit()
+        logger.info(f"Table '{self.table_name}' has been reset.")
+
+    def list_keys(self) -> List[str]:
+        """List all keys in the storage."""
+        results = self.session.execute(select(self.table.c.key)).all()
+        return [row.key for row in results]
+
+    def close(self) -> None:
+        """Close the database connection."""
+        self.session.close()
