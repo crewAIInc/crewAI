@@ -1,0 +1,96 @@
+---
+title: "CrewAI Documentation"
+description: "Build collaborative AI agents, crews, and flows — fast."
+mode: "center"
+---
+
+<div style={{
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'center',
+  gap: 16,
+  textAlign: 'center',
+  padding: '48px 0',
+  background: 'linear-gradient(180deg, rgba(235,102,88,0.10) 0%, rgba(201,76,60,0.10) 100%)',
+  border: '1px solid rgba(235,102,88,0.25)',
+  borderRadius: 12
+}}>
+  <img src="/images/crew_only_logo.png" alt="CrewAI" width="96" height="96" />
+  <p style={{ marginTop: 8, maxWidth: 820, color: 'var(--mint-text-2)' }}>
+    Orchestrate multi‑agent systems and flows with guardrails, memory, knowledge, tools, and observability. Production‑ready by default.
+  </p>
+
+  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, justifyContent: 'center', marginTop: 16 }}>
+    <a className="button button-primary" href="/en/quickstart">Get started</a>
+    <a className="button" href="/en/installation">Installation</a>
+    <a className="button" href="/en/concepts/flows">Flows</a>
+    <a className="button" href="/en/concepts/agents">Agents</a>
+    <a className="button" href="/en/tools/overview">Tools</a>
+    <a className="button" href="/en/api-reference/introduction">API Reference</a>
+  </div>
+</div>
+
+<CardGroup cols={3}>
+  <Card title="Quickstart" href="/en/quickstart" icon="rocket">
+    Create your first crew in minutes. Learn the core runtime, project layout, and dev loop.
+  </Card>
+  <Card title="Installation" href="/en/installation" icon="wrench">
+    Install via UV and set up environment keys for OpenAI and tools.
+  </Card>
+  <Card title="CLI" href="/en/concepts/cli" icon="terminal">
+    Create, run, train, test, deploy, and manage configs — all from the CLI.
+  </Card>
+</CardGroup>
+
+<CardGroup cols={3}>
+  <Card title="Agents" href="/en/concepts/agents" icon="users">
+    Compose robust agents with memory, knowledge, and tools. Structure outputs with Pydantic.
+  </Card>
+  <Card title="Flows" href="/en/concepts/flows" icon="arrow-progress">
+    Design complex workflows with start/listen/router, state, persistence, and resumability.
+  </Card>
+  <Card title="Memory & Knowledge" href="/en/concepts/memory" icon="database">
+    Short‑term, long‑term, and entity memory. Built‑in knowledge with vector storage.
+  </Card>
+</CardGroup>
+
+<CardGroup cols={3}>
+  <Card title="RAG & Vector Stores" href="/en/concepts/knowledge#vector-store-rag-client-configuration" icon="stack">
+    Provider‑neutral client. ChromaDB by default, Qdrant supported. Configure per use case.
+  </Card>
+  <Card title="Observability" href="/en/observability/overview" icon="timeline">
+    Traces with batching, metrics, and integrations (Langfuse, Phoenix, and more).
+  </Card>
+  <Card title="Enterprise" href="/en/enterprise/introduction" icon="building">
+    Deploy, automate with triggers, manage orgs, and run at scale.
+  </Card>
+</CardGroup>
+
+<Frame>
+  <img src="/images/asset.png" alt="CrewAI — multi‑agent orchestration" />
+  <figcaption>Compose agents, tasks, flows, and tools — production‑ready by default.</figcaption>
+  
+</Frame>
+
+## Popular paths
+
+- Getting started: [/en/quickstart](/en/quickstart)
+- Install + requirements: [/en/installation](/en/installation)
+- Define crews via YAML: [/en/guides/crews/first-crew](/en/guides/crews/first-crew)
+- Build flows: [/en/guides/flows/first-flow](/en/guides/flows/first-flow)
+- API Reference: [/en/api-reference/introduction](/en/api-reference/introduction)
+
+<Note>
+  Looking for examples? Check out the examples repo and cookbooks under <a href="/en/examples/cookbooks">/en/examples/cookbooks</a>.
+</Note>
+
+<CardGroup cols={2}>
+  <Card title="Star us on GitHub" href="https://github.com/crewAIInc/crewAI" icon="star">
+    If CrewAI helps you ship faster, give us a star and join the community.
+  </Card>
+  <Card title="Join the community" href="https://community.crewai.com" icon="comments">
+    Ask questions, share feedback, and see what others are building.
+  </Card>
+</CardGroup>
+
+
