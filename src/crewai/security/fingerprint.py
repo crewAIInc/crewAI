@@ -10,6 +10,7 @@ from typing import Any
 from uuid import UUID, uuid4, uuid5
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
+from typing_extensions import Self
 
 from crewai.security.constants import CREW_AI_NAMESPACE
 
@@ -110,7 +111,7 @@ class Fingerprint(BaseModel):
     @classmethod
     def generate(
         cls, seed: str | None = None, metadata: dict[str, Any] | None = None
-    ) -> "Fingerprint":
+    ) -> Self:
         """
         Static factory method to create a new Fingerprint.
 
@@ -156,7 +157,7 @@ class Fingerprint(BaseModel):
         }
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "Fingerprint":
+    def from_dict(cls, data: dict[str, Any]) -> Self:
         """
         Create a Fingerprint from a dictionary representation.
 

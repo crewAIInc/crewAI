@@ -13,6 +13,7 @@ in CrewAI applications.
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
+from typing_extensions import Self
 
 from crewai.security.fingerprint import Fingerprint
 
@@ -92,7 +93,7 @@ class SecurityConfig(BaseModel):
         return {"fingerprint": self.fingerprint.to_dict()}
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "SecurityConfig":
+    def from_dict(cls, data: dict[str, Any]) -> Self:
         """
         Create a SecurityConfig from a dictionary.
 
