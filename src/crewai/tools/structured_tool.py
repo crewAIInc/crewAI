@@ -10,6 +10,17 @@ from pydantic import BaseModel, Field, create_model
 
 from crewai.utilities.logger import Logger
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from crewai.tools.base_tool import BaseTool
+
+
+class ToolUsageLimitExceeded(Exception):
+    """Exception raised when a tool has reached its maximum usage limit."""
+
+    pass
+
 
 class CrewStructuredTool:
     """A structured tool that can operate on any number of inputs.
@@ -17,6 +28,8 @@ class CrewStructuredTool:
     This tool intends to replace StructuredTool with a custom implementation
     that integrates better with CrewAI's ecosystem.
     """
+
+    _original_tool: BaseTool | None = None
 
     def __init__(
         self,
@@ -47,6 +60,7 @@ class CrewStructuredTool:
         self.result_as_answer = result_as_answer
         self.max_usage_count = max_usage_count
         self.current_usage_count = current_usage_count
+        self._original_tool = None
 
         # Validate the function signature matches the schema
         self._validate_function_signature()
@@ -219,15 +233,25 @@ class CrewStructuredTool:
         """
         parsed_args = self._parse_args(input)
 
-        if inspect.iscoroutinefunction(self.func):
-            return await self.func(**parsed_args, **kwargs)
-        else:
-            # Run sync functions in a thread pool
-            import asyncio
-
-            return await asyncio.get_event_loop().run_in_executor(
-                None, lambda: self.func(**parsed_args, **kwargs)
+        if self.has_reached_max_usage_count():
+            raise ToolUsageLimitExceeded(
+                f"Tool '{self.name}' has reached its maximum usage limit of {self.max_usage_count}. You should not use the {self.name} tool again."
             )
+
+        self._increment_usage_count()
+
+        try:
+            if inspect.iscoroutinefunction(self.func):
+                return await self.func(**parsed_args, **kwargs)
+            else:
+                # Run sync functions in a thread pool
+                import asyncio
+
+                return await asyncio.get_event_loop().run_in_executor(
+                    None, lambda: self.func(**parsed_args, **kwargs)
+                )
+        except Exception:
+            raise
 
     def _run(self, *args, **kwargs) -> Any:
         """Legacy method for compatibility."""
@@ -242,9 +266,21 @@ class CrewStructuredTool:
         """Main method for tool execution."""
         parsed_args = self._parse_args(input)
 
+        if self.has_reached_max_usage_count():
+            raise ToolUsageLimitExceeded(
+                f"Tool '{self.name}' has reached its maximum usage limit of {self.max_usage_count}. You should not use the {self.name} tool again."
+            )
+
+        self._increment_usage_count()
+
         if inspect.iscoroutinefunction(self.func):
             result = asyncio.run(self.func(**parsed_args, **kwargs))
             return result
+
+        try:
+            result = self.func(**parsed_args, **kwargs)
+        except Exception:
+            raise
 
         result = self.func(**parsed_args, **kwargs)
 
@@ -252,6 +288,19 @@ class CrewStructuredTool:
             return asyncio.run(result)
 
         return result
+
+    def has_reached_max_usage_count(self) -> bool:
+        """Check if the tool has reached its maximum usage count."""
+        return (
+            self.max_usage_count is not None
+            and self.current_usage_count >= self.max_usage_count
+        )
+
+    def _increment_usage_count(self) -> None:
+        """Increment the usage count."""
+        self.current_usage_count += 1
+        if self._original_tool is not None:
+            self._original_tool.current_usage_count = self.current_usage_count
 
     @property
     def args(self) -> dict:

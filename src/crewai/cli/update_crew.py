@@ -44,8 +44,9 @@ def migrate_pyproject(input_file, output_file):
         ]
         new_pyproject["project"]["requires-python"] = poetry_data.get("python")
     else:
-        # If it's already in the new format, just copy the project section
+        # If it's already in the new format, just copy the project and tool sections
         new_pyproject["project"] = pyproject_data.get("project", {})
+        new_pyproject["tool"] = pyproject_data.get("tool", {})
 
     # Migrate or copy dependencies
     if "dependencies" in new_pyproject["project"]:

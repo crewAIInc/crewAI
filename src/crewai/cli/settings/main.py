@@ -10,8 +10,9 @@ console = Console()
 class SettingsCommand(BaseCommand):
     """A class to handle CLI configuration commands."""
 
-    def __init__(self, settings_kwargs: dict[str, Any] = {}):
+    def __init__(self, settings_kwargs: dict[str, Any] | None = None):
         super().__init__()
+        settings_kwargs = settings_kwargs or {}
         self.settings = Settings(**settings_kwargs)
 
     def list(self) -> None:

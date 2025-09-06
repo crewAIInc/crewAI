@@ -18,6 +18,7 @@ class PlusAPI:
     CREWS_RESOURCE = "/crewai_plus/api/v1/crews"
     AGENTS_RESOURCE = "/crewai_plus/api/v1/agents"
     TRACING_RESOURCE = "/crewai_plus/api/v1/tracing"
+    EPHEMERAL_TRACING_RESOURCE = "/crewai_plus/api/v1/tracing/ephemeral"
 
     def __init__(self, api_key: str) -> None:
         self.api_key = api_key
@@ -116,12 +117,19 @@ class PlusAPI:
     def get_organizations(self) -> requests.Response:
         return self._make_request("GET", self.ORGANIZATIONS_RESOURCE)
 
-    def send_trace_batch(self, payload) -> requests.Response:
-        return self._make_request("POST", self.TRACING_RESOURCE, json=payload)
-
     def initialize_trace_batch(self, payload) -> requests.Response:
         return self._make_request(
-            "POST", f"{self.TRACING_RESOURCE}/batches", json=payload
+            "POST",
+            f"{self.TRACING_RESOURCE}/batches",
+            json=payload,
+            timeout=30,
+        )
+
+    def initialize_ephemeral_trace_batch(self, payload) -> requests.Response:
+        return self._make_request(
+            "POST",
+            f"{self.EPHEMERAL_TRACING_RESOURCE}/batches",
+            json=payload,
         )
 
     def send_trace_events(self, trace_batch_id: str, payload) -> requests.Response:
@@ -129,6 +137,17 @@ class PlusAPI:
             "POST",
             f"{self.TRACING_RESOURCE}/batches/{trace_batch_id}/events",
             json=payload,
+            timeout=30,
+        )
+
+    def send_ephemeral_trace_events(
+        self, trace_batch_id: str, payload
+    ) -> requests.Response:
+        return self._make_request(
+            "POST",
+            f"{self.EPHEMERAL_TRACING_RESOURCE}/batches/{trace_batch_id}/events",
+            json=payload,
+            timeout=30,
         )
 
     def finalize_trace_batch(self, trace_batch_id: str, payload) -> requests.Response:
@@ -136,4 +155,15 @@ class PlusAPI:
             "PATCH",
             f"{self.TRACING_RESOURCE}/batches/{trace_batch_id}/finalize",
             json=payload,
+            timeout=30,
+        )
+
+    def finalize_ephemeral_trace_batch(
+        self, trace_batch_id: str, payload
+    ) -> requests.Response:
+        return self._make_request(
+            "PATCH",
+            f"{self.EPHEMERAL_TRACING_RESOURCE}/batches/{trace_batch_id}/finalize",
+            json=payload,
+            timeout=30,
         )

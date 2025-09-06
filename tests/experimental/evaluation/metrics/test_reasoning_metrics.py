@@ -6,9 +6,12 @@ from crewai.tasks.task_output import TaskOutput
 from crewai.experimental.evaluation.metrics.reasoning_metrics import (
     ReasoningEfficiencyEvaluator,
 )
-from tests.experimental.evaluation.metrics.base_evaluation_metrics_test import BaseEvaluationMetricsTest
+from tests.experimental.evaluation.metrics.test_base_evaluation_metrics import (
+    BaseEvaluationMetricsTest,
+)
 from crewai.utilities.llm_utils import LLM
 from crewai.experimental.evaluation.base_evaluator import EvaluationScore
+
 
 class TestReasoningEfficiencyEvaluator(BaseEvaluationMetricsTest):
     @pytest.fixture
@@ -23,18 +26,18 @@ class TestReasoningEfficiencyEvaluator(BaseEvaluationMetricsTest):
             {
                 "prompt": "How should I approach this task?",
                 "response": "I'll first research the topic, then compile findings.",
-                "timestamp": 1626987654
+                "timestamp": 1626987654,
             },
             {
                 "prompt": "What resources should I use?",
                 "response": "I'll use relevant academic papers and reliable websites.",
-                "timestamp": 1626987754
+                "timestamp": 1626987754,
             },
             {
                 "prompt": "How should I structure the output?",
                 "response": "I'll organize information clearly with headings and bullet points.",
-                "timestamp": 1626987854
-            }
+                "timestamp": 1626987854,
+            },
         ]
 
     def test_insufficient_llm_calls(self, mock_agent, mock_task, mock_output):
@@ -45,7 +48,7 @@ class TestReasoningEfficiencyEvaluator(BaseEvaluationMetricsTest):
             agent=mock_agent,
             task=mock_task,
             execution_trace=execution_trace,
-            final_output=mock_output
+            final_output=mock_output,
         )
 
         assert isinstance(result, EvaluationScore)
@@ -53,7 +56,9 @@ class TestReasoningEfficiencyEvaluator(BaseEvaluationMetricsTest):
         assert "Insufficient LLM calls" in result.feedback
 
     @patch("crewai.utilities.llm_utils.create_llm")
-    def test_successful_evaluation(self, mock_create_llm, mock_agent, mock_task, mock_output, llm_calls):
+    def test_successful_evaluation(
+        self, mock_create_llm, mock_agent, mock_task, mock_output, llm_calls
+    ):
         mock_llm = MagicMock(spec=LLM)
         mock_llm.call.return_value = """
         {
@@ -83,7 +88,7 @@ class TestReasoningEfficiencyEvaluator(BaseEvaluationMetricsTest):
             agent=mock_agent,
             task=mock_task,
             execution_trace=execution_trace,
-            final_output=mock_output
+            final_output=mock_output,
         )
 
         # Assertions
@@ -97,7 +102,9 @@ class TestReasoningEfficiencyEvaluator(BaseEvaluationMetricsTest):
         mock_llm.call.assert_called_once()
 
     @patch("crewai.utilities.llm_utils.create_llm")
-    def test_parse_error_handling(self, mock_create_llm, mock_agent, mock_task, mock_output, llm_calls):
+    def test_parse_error_handling(
+        self, mock_create_llm, mock_agent, mock_task, mock_output, llm_calls
+    ):
         mock_llm = MagicMock(spec=LLM)
         mock_llm.call.return_value = "Invalid JSON response"
         mock_create_llm.return_value = mock_llm
@@ -114,7 +121,7 @@ class TestReasoningEfficiencyEvaluator(BaseEvaluationMetricsTest):
             agent=mock_agent,
             task=mock_task,
             execution_trace=execution_trace,
-            final_output=mock_output
+            final_output=mock_output,
         )
 
         # Assertions for error handling
@@ -126,11 +133,31 @@ class TestReasoningEfficiencyEvaluator(BaseEvaluationMetricsTest):
     def test_loop_detection(self, mock_create_llm, mock_agent, mock_task, mock_output):
         # Setup LLM calls with a repeating pattern
         repetitive_llm_calls = [
-            {"prompt": "How to solve?", "response": "I'll try method A", "timestamp": 1000},
-            {"prompt": "Let me try method A", "response": "It didn't work", "timestamp": 1100},
-            {"prompt": "How to solve?", "response": "I'll try method A again", "timestamp": 1200},
-            {"prompt": "Let me try method A", "response": "It didn't work", "timestamp": 1300},
-            {"prompt": "How to solve?", "response": "I'll try method A one more time", "timestamp": 1400}
+            {
+                "prompt": "How to solve?",
+                "response": "I'll try method A",
+                "timestamp": 1000,
+            },
+            {
+                "prompt": "Let me try method A",
+                "response": "It didn't work",
+                "timestamp": 1100,
+            },
+            {
+                "prompt": "How to solve?",
+                "response": "I'll try method A again",
+                "timestamp": 1200,
+            },
+            {
+                "prompt": "Let me try method A",
+                "response": "It didn't work",
+                "timestamp": 1300,
+            },
+            {
+                "prompt": "How to solve?",
+                "response": "I'll try method A one more time",
+                "timestamp": 1400,
+            },
         ]
 
         mock_llm = MagicMock(spec=LLM)
@@ -158,7 +185,7 @@ class TestReasoningEfficiencyEvaluator(BaseEvaluationMetricsTest):
             agent=mock_agent,
             task=mock_task,
             execution_trace=execution_trace,
-            final_output=mock_output
+            final_output=mock_output,
         )
 
         assert isinstance(result, EvaluationScore)

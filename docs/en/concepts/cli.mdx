@@ -2,6 +2,7 @@
 title: CLI
 description: Learn how to use the CrewAI CLI to interact with CrewAI.
 icon: terminal
+mode: "wide"
 ---
 
 <Warning>Since release 0.140.0, CrewAI Enterprise started a process of migrating their login provider. As such, the authentication flow via CLI was updated. Users that use Google to login, or that created their account after July 3rd, 2025 will be unable to log in with older versions of the `crewai` library.</Warning>
@@ -282,7 +283,25 @@ Watch this video tutorial for a step-by-step demonstration of deploying your cre
   allowfullscreen
 ></iframe>
 
-### 11. API Keys
+### 11. Login
+
+Authenticate with CrewAI Enterprise using a secure device code flow (no email entry required).
+
+```shell Terminal
+crewai login
+```
+
+What happens:
+- A verification URL and short code are displayed in your terminal
+- Your browser opens to the verification URL
+- Enter/confirm the code to complete authentication
+
+Notes:
+- The OAuth2 provider and domain are configured via `crewai config` (defaults use `login.crewai.com`)
+- After successful login, the CLI also attempts to authenticate to the Tool Repository automatically
+- If you reset your configuration, run `crewai login` again to re-authenticate
+
+### 12. API Keys
 
 When running ```crewai create crew``` command, the CLI will show you a list of available LLM providers to choose from, followed by model selection for your chosen provider.
 
@@ -310,7 +329,7 @@ See the following link for each provider's key name:
 
 * [LiteLLM Providers](https://docs.litellm.ai/docs/providers)
 
-### 12. Configuration Management
+### 13. Configuration Management
 
 Manage CLI configuration settings for CrewAI.
 
@@ -351,19 +370,15 @@ crewai config list
 ```
 
 Example output:
-```
-CrewAI CLI Configuration
-┏━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
-┃ Setting            ┃ Value                              ┃ Description                                                                                      ┃
-┡━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
-│ enterprise_base_url│ https://app.crewai.com             │ Base URL of the CrewAI Enterprise instance                                                       │
-│ org_name           │ Not set                            │ Name of the currently active organization                                                        │
-│ org_uuid           │ Not set                            │ UUID of the currently active organization                                                        │
-│ oauth2_provider    │ workos                             │ OAuth2 provider used for authentication (e.g., workos, okta, auth0).                             │
-│ oauth2_audience    │ client_01YYY                       │ OAuth2 audience value, typically used to identify the target API or resource.                    │
-│ oauth2_client_id   │ client_01XXX                       │ OAuth2 client ID issued by the provider, used during authentication requests.                    │
-│ oauth2_domain      │ login.crewai.com                   │ OAuth2 provider's domain (e.g., your-org.auth0.com) used for issuing tokens.                     │
-```
+| Setting             | Value                    | Description                                                 |
+| :------------------ | :----------------------- | :---------------------------------------------------------- |
+| enterprise_base_url | https://app.crewai.com   | Base URL of the CrewAI Enterprise instance                  |
+| org_name            | Not set                  | Name of the currently active organization                   |
+| org_uuid            | Not set                  | UUID of the currently active organization                   |
+| oauth2_provider     | workos                   | OAuth2 provider (e.g., workos, okta, auth0)                 |
+| oauth2_audience     | client_01YYY             | Audience identifying the target API/resource                |
+| oauth2_client_id    | client_01XXX             | OAuth2 client ID issued by the provider                     |
+| oauth2_domain       | login.crewai.com         | Provider domain (e.g., your-org.auth0.com)                  |
 
 Set the enterprise base URL:
 ```shell Terminal
@@ -384,6 +399,10 @@ Reset all configuration to defaults:
 ```shell Terminal
 crewai config reset
 ```
+
+<Tip>
+After resetting configuration, re-run `crewai login` to authenticate again.
+</Tip>
 
 <Note>
 Configuration settings are stored in `~/.config/crewai/settings.json`. Some settings like organization name and UUID are read-only and managed through authentication and organization commands. Tool repository related settings are hidden and cannot be set directly by users.

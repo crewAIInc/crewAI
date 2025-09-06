@@ -2,6 +2,7 @@
 title: "Automação com Webhook"
 description: "Automatize fluxos de trabalho do CrewAI Enterprise usando webhooks com plataformas como ActivePieces, Zapier e Make.com"
 icon: "webhook"
+mode: "wide"
 ---
 
 O CrewAI Enterprise permite que você automatize seu fluxo de trabalho usando webhooks. Este artigo irá guiá-lo no processo de configuração e uso de webhooks para iniciar a execução do crew, com foco na integração com o ActivePieces, uma plataforma de automação de fluxos de trabalho semelhante ao Zapier e Make.com.
@@ -78,6 +79,8 @@ O CrewAI Enterprise permite que você automatize seu fluxo de trabalho usando we
 </Steps>
 
 ## Exemplos de Output do Webhook
+
+**Nota:** Qualquer objeto `meta` fornecido na sua requisição de kickoff será incluído em todos os payloads de webhook, permitindo rastrear requisições e manter contexto durante todo o ciclo de vida da execução do crew.
 
 <Tabs>
     <Tab title="Step Webhook">
