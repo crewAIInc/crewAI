@@ -1,7 +1,6 @@
 """Test Knowledge creation and querying functionality."""
 
 from pathlib import Path
-from typing import List, Union
 from unittest.mock import patch
 
 import pytest
@@ -23,7 +22,7 @@ def mock_vector_db():
         instance = mock.return_value
         instance.query.return_value = [
             {
-                "context": "Brandon's favorite color is blue and he likes Mexican food.",
+                "content": "Brandon's favorite color is blue and he likes Mexican food.",
                 "score": 0.9,
             }
         ]
@@ -44,13 +43,13 @@ def test_single_short_string(mock_vector_db):
         content=content, metadata={"preference": "personal"}
     )
     mock_vector_db.sources = [string_source]
-    mock_vector_db.query.return_value = [{"context": content, "score": 0.9}]
+    mock_vector_db.query.return_value = [{"content": content, "score": 0.9}]
     # Perform a query
     query = "What is Brandon's favorite color?"
     results = mock_vector_db.query(query)
 
     # Assert that the results contain the expected information
-    assert any("blue" in result["context"].lower() for result in results)
+    assert any("blue" in result["content"].lower() for result in results)
     # Verify the mock was called
     mock_vector_db.query.assert_called_once()
 
@@ -84,14 +83,14 @@ def test_single_2k_character_string(mock_vector_db):
         content=content, metadata={"preference": "personal"}
     )
     mock_vector_db.sources = [string_source]
-    mock_vector_db.query.return_value = [{"context": content, "score": 0.9}]
+    mock_vector_db.query.return_value = [{"content": content, "score": 0.9}]
 
     # Perform a query
     query = "What is Brandon's favorite movie?"
     results = mock_vector_db.query(query)
 
     # Assert that the results contain the expected information
-    assert any("inception" in result["context"].lower() for result in results)
+    assert any("inception" in result["content"].lower() for result in results)
     mock_vector_db.query.assert_called_once()
 
 
@@ -109,7 +108,7 @@ def test_multiple_short_strings(mock_vector_db):
 
     # Mock the vector db query response
     mock_vector_db.query.return_value = [
-        {"context": "Brandon has a dog named Max.", "score": 0.9}
+        {"content": "Brandon has a dog named Max.", "score": 0.9}
     ]
 
     mock_vector_db.sources = string_sources
@@ -119,7 +118,7 @@ def test_multiple_short_strings(mock_vector_db):
     results = mock_vector_db.query(query)
 
     # Assert that the correct information is retrieved
-    assert any("max" in result["context"].lower() for result in results)
+    assert any("max" in result["content"].lower() for result in results)
     # Verify the mock was called
     mock_vector_db.query.assert_called_once()
 
@@ -180,7 +179,7 @@ def test_multiple_2k_character_strings(mock_vector_db):
     ]
 
     mock_vector_db.sources = string_sources
-    mock_vector_db.query.return_value = [{"context": contents[1], "score": 0.9}]
+    mock_vector_db.query.return_value = [{"content": contents[1], "score": 0.9}]
 
     # Perform a query
     query = "What is Brandon's favorite book?"
@@ -188,7 +187,7 @@ def test_multiple_2k_character_strings(mock_vector_db):
 
     # Assert that the correct information is retrieved
     assert any(
-        "the hitchhiker's guide to the galaxy" in result["context"].lower()
+        "the hitchhiker's guide to the galaxy" in result["content"].lower()
         for result in results
     )
     mock_vector_db.query.assert_called_once()
@@ -205,13 +204,13 @@ def test_single_short_file(mock_vector_db, tmpdir):
         file_paths=[file_path], metadata={"preference": "personal"}
     )
     mock_vector_db.sources = [file_source]
-    mock_vector_db.query.return_value = [{"context": content, "score": 0.9}]
+    mock_vector_db.query.return_value = [{"content": content, "score": 0.9}]
     # Perform a query
     query = "What sport does Brandon like?"
     results = mock_vector_db.query(query)
 
     # Assert that the results contain the expected information
-    assert any("basketball" in result["context"].lower() for result in results)
+    assert any("basketball" in result["content"].lower() for result in results)
     mock_vector_db.query.assert_called_once()
 
 
@@ -247,13 +246,13 @@ def test_single_2k_character_file(mock_vector_db, tmpdir):
         file_paths=[file_path], metadata={"preference": "personal"}
     )
     mock_vector_db.sources = [file_source]
-    mock_vector_db.query.return_value = [{"context": content, "score": 0.9}]
+    mock_vector_db.query.return_value = [{"content": content, "score": 0.9}]
     # Perform a query
     query = "What is Brandon's favorite movie?"
     results = mock_vector_db.query(query)
 
     # Assert that the results contain the expected information
-    assert any("inception" in result["context"].lower() for result in results)
+    assert any("inception" in result["content"].lower() for result in results)
     mock_vector_db.query.assert_called_once()
 
 
@@ -286,13 +285,13 @@ def test_multiple_short_files(mock_vector_db, tmpdir):
     ]
     mock_vector_db.sources = file_sources
     mock_vector_db.query.return_value = [
-        {"context": "Brandon lives in New York.", "score": 0.9}
+        {"content": "Brandon lives in New York.", "score": 0.9}
     ]
     # Perform a query
     query = "What city does he reside in?"
     results = mock_vector_db.query(query)
     # Assert that the correct information is retrieved
-    assert any("new york" in result["context"].lower() for result in results)
+    assert any("new york" in result["content"].lower() for result in results)
     mock_vector_db.query.assert_called_once()
 
 
@@ -360,7 +359,7 @@ def test_multiple_2k_character_files(mock_vector_db, tmpdir):
     mock_vector_db.sources = file_sources
     mock_vector_db.query.return_value = [
         {
-            "context": "Brandon's favorite book is 'The Hitchhiker's Guide to the Galaxy'.",
+            "content": "Brandon's favorite book is 'The Hitchhiker's Guide to the Galaxy'.",
             "score": 0.9,
         }
     ]
@@ -370,7 +369,7 @@ def test_multiple_2k_character_files(mock_vector_db, tmpdir):
 
     # Assert that the correct information is retrieved
     assert any(
-        "the hitchhiker's guide to the galaxy" in result["context"].lower()
+        "the hitchhiker's guide to the galaxy" in result["content"].lower()
         for result in results
     )
     mock_vector_db.query.assert_called_once()
@@ -407,14 +406,14 @@ def test_hybrid_string_and_files(mock_vector_db, tmpdir):
 
     # Combine string and file sources
     mock_vector_db.sources = string_sources + file_sources
-    mock_vector_db.query.return_value = [{"context": file_contents[1], "score": 0.9}]
+    mock_vector_db.query.return_value = [{"content": file_contents[1], "score": 0.9}]
 
     # Perform a query
     query = "What is Brandon's favorite book?"
     results = mock_vector_db.query(query)
 
     # Assert that the correct information is retrieved
-    assert any("the alchemist" in result["context"].lower() for result in results)
+    assert any("the alchemist" in result["content"].lower() for result in results)
     mock_vector_db.query.assert_called_once()
 
 
@@ -430,7 +429,7 @@ def test_pdf_knowledge_source(mock_vector_db):
     )
     mock_vector_db.sources = [pdf_source]
     mock_vector_db.query.return_value = [
-        {"context": "crewai create crew latest-ai-development", "score": 0.9}
+        {"content": "crewai create crew latest-ai-development", "score": 0.9}
     ]
 
     # Perform a query
@@ -439,7 +438,7 @@ def test_pdf_knowledge_source(mock_vector_db):
 
     # Assert that the correct information is retrieved
     assert any(
-        "crewai create crew latest-ai-development" in result["context"].lower()
+        "crewai create crew latest-ai-development" in result["content"].lower()
         for result in results
     )
     mock_vector_db.query.assert_called_once()
@@ -467,7 +466,7 @@ def test_csv_knowledge_source(mock_vector_db, tmpdir):
     )
     mock_vector_db.sources = [csv_source]
     mock_vector_db.query.return_value = [
-        {"context": "Brandon is 30 years old.", "score": 0.9}
+        {"content": "Brandon is 30 years old.", "score": 0.9}
     ]
 
     # Perform a query
@@ -475,7 +474,7 @@ def test_csv_knowledge_source(mock_vector_db, tmpdir):
     results = mock_vector_db.query(query)
 
     # Assert that the correct information is retrieved
-    assert any("30" in result["context"] for result in results)
+    assert any("30" in result["content"] for result in results)
     mock_vector_db.query.assert_called_once()
 
 
@@ -502,7 +501,7 @@ def test_json_knowledge_source(mock_vector_db, tmpdir):
     )
     mock_vector_db.sources = [json_source]
     mock_vector_db.query.return_value = [
-        {"context": "Alice lives in Los Angeles.", "score": 0.9}
+        {"content": "Alice lives in Los Angeles.", "score": 0.9}
     ]
 
     # Perform a query
@@ -510,7 +509,7 @@ def test_json_knowledge_source(mock_vector_db, tmpdir):
     results = mock_vector_db.query(query)
 
     # Assert that the correct information is retrieved
-    assert any("los angeles" in result["context"].lower() for result in results)
+    assert any("los angeles" in result["content"].lower() for result in results)
     mock_vector_db.query.assert_called_once()
 
 
@@ -518,7 +517,7 @@ def test_excel_knowledge_source(mock_vector_db, tmpdir):
     """Test ExcelKnowledgeSource with a simple Excel file."""
 
     # Create an Excel file with sample data
-    import pandas as pd
+    import pandas as pd  # type: ignore[import-untyped]
 
     excel_data = {
         "Name": ["Brandon", "Alice", "Bob"],
@@ -535,7 +534,7 @@ def test_excel_knowledge_source(mock_vector_db, tmpdir):
     )
     mock_vector_db.sources = [excel_source]
     mock_vector_db.query.return_value = [
-        {"context": "Brandon is 30 years old.", "score": 0.9}
+        {"content": "Brandon is 30 years old.", "score": 0.9}
     ]
 
     # Perform a query
@@ -543,7 +542,7 @@ def test_excel_knowledge_source(mock_vector_db, tmpdir):
     results = mock_vector_db.query(query)
 
     # Assert that the correct information is retrieved
-    assert any("30" in result["context"] for result in results)
+    assert any("30" in result["content"] for result in results)
     mock_vector_db.query.assert_called_once()
 
 
@@ -557,20 +556,20 @@ def test_docling_source(mock_vector_db):
     mock_vector_db.sources = [docling_source]
     mock_vector_db.query.return_value = [
         {
-            "context": "Reward hacking is a technique used to improve the performance of reinforcement learning agents.",
+            "content": "Reward hacking is a technique used to improve the performance of reinforcement learning agents.",
             "score": 0.9,
         }
     ]
     # Perform a query
     query = "What is reward hacking?"
     results = mock_vector_db.query(query)
-    assert any("reward hacking" in result["context"].lower() for result in results)
+    assert any("reward hacking" in result["content"].lower() for result in results)
     mock_vector_db.query.assert_called_once()
 
 
 @pytest.mark.vcr
-def test_multiple_docling_sources():
-    urls: List[Union[Path, str]] = [
+def test_multiple_docling_sources() -> None:
+    urls: list[Path | str] = [
         "https://lilianweng.github.io/posts/2024-11-28-reward-hacking/",
         "https://lilianweng.github.io/posts/2024-07-07-hallucination/",
     ]

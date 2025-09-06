@@ -3,18 +3,18 @@
 import warnings
 from dataclasses import field
 from typing import Literal, cast
-from pydantic.dataclasses import dataclass as pyd_dataclass
+
 from chromadb.config import Settings
 from chromadb.utils.embedding_functions import DefaultEmbeddingFunction
+from pydantic.dataclasses import dataclass as pyd_dataclass
 
-from crewai.rag.chromadb.types import ChromaEmbeddingFunctionWrapper
-from crewai.rag.config.base import BaseRagConfig
 from crewai.rag.chromadb.constants import (
-    DEFAULT_TENANT,
     DEFAULT_DATABASE,
     DEFAULT_STORAGE_PATH,
+    DEFAULT_TENANT,
 )
-
+from crewai.rag.chromadb.types import ChromaEmbeddingFunctionWrapper
+from crewai.rag.config.base import BaseRagConfig
 
 warnings.filterwarnings(
     "ignore",

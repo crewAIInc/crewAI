@@ -7,8 +7,12 @@ repos:
       - id: ruff-format
         args: ["--config", "pyproject.toml"]
   
-  - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.17.1
+  - repo: local
     hooks:
       - id: mypy
+        name: mypy
+        entry: uv run mypy
+        language: system
+        files: \.py$
+        exclude: ^tests/
         args: ["--config-file", "pyproject.toml"]

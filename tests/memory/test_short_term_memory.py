@@ -1,19 +1,20 @@
-from unittest.mock import patch, ANY
 from collections import defaultdict
+from unittest.mock import ANY, patch
+
 import pytest
 
 from crewai.agent import Agent
 from crewai.crew import Crew
+from crewai.events.event_bus import crewai_event_bus
+from crewai.events.types.memory_events import (
+    MemoryQueryCompletedEvent,
+    MemoryQueryStartedEvent,
+    MemorySaveCompletedEvent,
+    MemorySaveStartedEvent,
+)
 from crewai.memory.short_term.short_term_memory import ShortTermMemory
 from crewai.memory.short_term.short_term_memory_item import ShortTermMemoryItem
 from crewai.task import Task
-from crewai.events.event_bus import crewai_event_bus
-from crewai.events.types.memory_events import (
-    MemorySaveStartedEvent,
-    MemorySaveCompletedEvent,
-    MemoryQueryStartedEvent,
-    MemoryQueryCompletedEvent,
-)
 
 
 @pytest.fixture
@@ -173,12 +174,12 @@ def test_save_and_search(short_term_memory):
 
     expected_result = [
         {
-            "context": memory.data,
+            "content": memory.data,
             "metadata": {"agent": "test_agent"},
             "score": 0.95,
         }
     ]
     with patch.object(ShortTermMemory, "search", return_value=expected_result):
         find = short_term_memory.search("test value", score_threshold=0.01)[0]
-        assert find["context"] == memory.data, "Data value mismatch."
+        assert find["content"] == memory.data, "Data value mismatch."
         assert find["metadata"]["agent"] == "test_agent", "Agent value mismatch."
