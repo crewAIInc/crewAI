@@ -90,6 +90,7 @@ class InternalCrew:
 @CrewBase
 class InternalCrewWithMCP(InternalCrew):
     mcp_server_params = {"host": "localhost", "port": 8000}
+    mcp_connect_timeout = 120
 
     @agent
     def reporting_analyst(self):
@@ -284,4 +285,4 @@ def test_internal_crew_with_mcp():
         assert crew.reporting_analyst().tools == [simple_tool, another_simple_tool]
         assert crew.researcher().tools == [simple_tool]
 
-    adapter_mock.assert_called_once_with({"host": "localhost", "port": 8000})
+    adapter_mock.assert_called_once_with({"host": "localhost", "port": 8000}, connect_timeout=120)

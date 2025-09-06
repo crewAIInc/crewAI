@@ -29,6 +29,7 @@ def CrewBase(cls: T) -> T:
         original_tasks_config_path = getattr(cls, "tasks_config", "config/tasks.yaml")
 
         mcp_server_params: Any = getattr(cls, "mcp_server_params", None)
+        mcp_connect_timeout: int = getattr(cls, "mcp_connect_timeout", 30)
 
         def __init__(self, *args, **kwargs):
             super().__init__(*args, **kwargs)
@@ -94,7 +95,10 @@ def CrewBase(cls: T) -> T:
 
             adapter = getattr(self, '_mcp_server_adapter', None)
             if not adapter:
-                self._mcp_server_adapter = MCPServerAdapter(self.mcp_server_params)
+                self._mcp_server_adapter = MCPServerAdapter(
+                    self.mcp_server_params,
+                    connect_timeout=self.mcp_connect_timeout
+                )
 
             return self._mcp_server_adapter.tools.filter_by_names(tool_names or None)
 
