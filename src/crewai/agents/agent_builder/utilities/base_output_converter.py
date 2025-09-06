@@ -3,12 +3,9 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from pydantic import BaseModel, Field
-
-if TYPE_CHECKING:
-    from crewai.llm import LLM
 
 
 class OutputConverter(BaseModel, ABC):
@@ -26,7 +23,7 @@ class OutputConverter(BaseModel, ABC):
     """
 
     text: str = Field(description="Text to be converted.")
-    llm: LLM = Field(description="The language model to be used to convert the text.")
+    llm: Any = Field(description="The language model to be used to convert the text.")
     model: type[BaseModel] = Field(
         description="The model to be used to convert the text."
     )
