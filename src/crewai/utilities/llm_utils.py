@@ -1,78 +1,105 @@
 import os
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Protocol, TypedDict, runtime_checkable
+
+from typing_extensions import Required
 
 from crewai.cli.constants import DEFAULT_LLM_MODEL, ENV_VARS, LITELLM_PARAMS
-from crewai.llm import LLM, BaseLLM
+from crewai.llm import LLM
+from crewai.llms.base_llm import BaseLLM
+
+
+class LLMParams(TypedDict, total=False):
+    """TypedDict defining LLM parameters we extract from LLMLike objects."""
+
+    model: Required[str]
+    temperature: float
+    max_tokens: int
+    logprobs: int
+    timeout: float
+    api_key: str
+    base_url: str
+    api_base: str
+
+
+@runtime_checkable
+class LLMLike(Protocol):
+    """Protocol for objects that can be converted to an LLM instance."""
+
+    model: str | None
+    model_name: str | None
+    deployment_name: str | None
+    temperature: float | None
+    max_tokens: int | None
+    logprobs: int | None
+    timeout: float | None
+    api_key: str | None
+    base_url: str | None
+    api_base: str | None
+
+
+def create_default_llm() -> LLM:
+    """Creates a default LLM instance using environment variables or fallback defaults.
+
+    Returns:
+        A default LLM instance configured from environment or using defaults.
+
+    Raises:
+        ValueError: If LLM creation fails.
+    """
+    result = _llm_via_environment_or_fallback()
+    if result is None:
+        raise ValueError("Failed to create default LLM instance")
+    return result
 
 
 def create_llm(
-    llm_value: Union[str, LLM, Any, None] = None,
-) -> Optional[LLM | BaseLLM]:
+    llm_value: str | BaseLLM | LLMLike,
+) -> BaseLLM:
     """
     Creates or returns an LLM instance based on the given llm_value.
 
     Args:
-        llm_value (str | BaseLLM | Any | None):
+        llm_value (str | BaseLLM | LLMLike):
             - str: The model name (e.g., "gpt-4").
             - BaseLLM: Already instantiated BaseLLM (including LLM), returned as-is.
-            - Any: Attempt to extract known attributes like model_name, temperature, etc.
-            - None: Use environment-based or fallback default model.
+            - LLMLike: Object with LLM-compatible attributes (model_name, temperature, etc.)
 
     Returns:
-        A BaseLLM instance if successful, or None if something fails.
-    """
+        A BaseLLM instance.
 
-    # 1) If llm_value is already a BaseLLM or LLM object, return it directly
-    if isinstance(llm_value, LLM) or isinstance(llm_value, BaseLLM):
+    Raises:
+        ValueError: If LLM creation fails.
+    """
+    if isinstance(llm_value, BaseLLM):
         return llm_value
 
-    # 2) If llm_value is a string (model name)
     if isinstance(llm_value, str):
-        try:
-            created_llm = LLM(model=llm_value)
-            return created_llm
-        except Exception as e:
-            print(f"Failed to instantiate LLM with model='{llm_value}': {e}")
-            return None
+        return LLM(model=llm_value)
 
-    # 3) If llm_value is None, parse environment variables or use default
-    if llm_value is None:
-        return _llm_via_environment_or_fallback()
-
-    # 4) Otherwise, attempt to extract relevant attributes from an unknown object
     try:
-        # Extract attributes with explicit types
-        model = (
+        obj_attrs = set(dir(llm_value))
+
+        llm_kwargs = {
+            param: getattr(llm_value, param)
+            for param in LLMParams.__annotations__
+            if param != "model"
+            and param in obj_attrs
+            and getattr(llm_value, param) is not None
+        }
+
+        llm_kwargs["model"] = (
             getattr(llm_value, "model", None)
             or getattr(llm_value, "model_name", None)
             or getattr(llm_value, "deployment_name", None)
             or str(llm_value)
         )
-        temperature: Optional[float] = getattr(llm_value, "temperature", None)
-        max_tokens: Optional[int] = getattr(llm_value, "max_tokens", None)
-        logprobs: Optional[int] = getattr(llm_value, "logprobs", None)
-        timeout: Optional[float] = getattr(llm_value, "timeout", None)
-        api_key: Optional[str] = getattr(llm_value, "api_key", None)
-        base_url: Optional[str] = getattr(llm_value, "base_url", None)
-        api_base: Optional[str] = getattr(llm_value, "api_base", None)
 
-        created_llm = LLM(
-            model=model,
-            temperature=temperature,
-            max_tokens=max_tokens,
-            logprobs=logprobs,
-            timeout=timeout,
-            api_key=api_key,
-            base_url=base_url,
-            api_base=api_base,
-        )
-        return created_llm
+        return LLM(**llm_kwargs)
     except Exception as e:
-        print(f"Error instantiating LLM from unknown object type: {e}")
-        return None
+        raise ValueError(f"Error instantiating LLM from object: {e}")
 
 
-def _llm_via_environment_or_fallback() -> Optional[LLM]:
+def _llm_via_environment_or_fallback() -> LLM | None:
     """
     Helper function: if llm_value is None, we load environment variables or fallback default model.
     """
@@ -85,24 +112,24 @@ def _llm_via_environment_or_fallback() -> Optional[LLM]:
 
     # Initialize parameters with correct types
     model: str = model_name
-    temperature: Optional[float] = None
-    max_tokens: Optional[int] = None
-    max_completion_tokens: Optional[int] = None
-    logprobs: Optional[int] = None
-    timeout: Optional[float] = None
-    api_key: Optional[str] = None
-    base_url: Optional[str] = None
-    api_version: Optional[str] = None
-    presence_penalty: Optional[float] = None
-    frequency_penalty: Optional[float] = None
-    top_p: Optional[float] = None
-    n: Optional[int] = None
-    stop: Optional[Union[str, List[str]]] = None
-    logit_bias: Optional[Dict[int, float]] = None
-    response_format: Optional[Dict[str, Any]] = None
-    seed: Optional[int] = None
-    top_logprobs: Optional[int] = None
-    callbacks: List[Any] = []
+    temperature: float | None = None
+    max_tokens: int | None = None
+    max_completion_tokens: int | None = None
+    logprobs: int | None = None
+    timeout: float | None = None
+    api_key: str | None = None
+    base_url: str | None = None
+    api_version: str | None = None
+    presence_penalty: float | None = None
+    frequency_penalty: float | None = None
+    top_p: float | None = None
+    n: int | None = None
+    stop: str | list[str] | None = None
+    logit_bias: dict[int, float] | None = None
+    response_format: dict[str, Any] | None = None
+    seed: int | None = None
+    top_logprobs: int | None = None
+    callbacks: list[Any] = []
 
     # Optional base URL from env
     base_url = (
@@ -120,7 +147,7 @@ def _llm_via_environment_or_fallback() -> Optional[LLM]:
         base_url = api_base
 
     # Initialize llm_params dictionary
-    llm_params: Dict[str, Any] = {
+    llm_params: dict[str, Any] = {
         "model": model,
         "temperature": temperature,
         "max_tokens": max_tokens,

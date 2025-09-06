@@ -1,15 +1,17 @@
-import pytest
-from unittest.mock import ANY
 from collections import defaultdict
+from unittest.mock import ANY
+
+import pytest
+
 from crewai.events.event_bus import crewai_event_bus
+from crewai.events.types.memory_events import (
+    MemoryQueryCompletedEvent,
+    MemoryQueryStartedEvent,
+    MemorySaveCompletedEvent,
+    MemorySaveStartedEvent,
+)
 from crewai.memory.long_term.long_term_memory import LongTermMemory
 from crewai.memory.long_term.long_term_memory_item import LongTermMemoryItem
-from crewai.events.types.memory_events import (
-    MemorySaveStartedEvent,
-    MemorySaveCompletedEvent,
-    MemoryQueryStartedEvent,
-    MemoryQueryCompletedEvent,
-)
 
 
 @pytest.fixture
@@ -98,7 +100,7 @@ def test_long_term_memory_search_events(long_term_memory):
 
         test_query = "test query"
 
-        long_term_memory.search(test_query, latest_n=5)
+        long_term_memory.search(test_query, limit=5)
 
     assert len(events["MemoryQueryStartedEvent"]) == 1
     assert len(events["MemoryQueryCompletedEvent"]) == 1
@@ -151,7 +153,7 @@ def test_save_and_search(long_term_memory):
         metadata={"task": "test_task", "quality": 0.5},
     )
     long_term_memory.save(memory)
-    find = long_term_memory.search("test_task", latest_n=5)[0]
+    find = long_term_memory.search("test_task", limit=5)[0]
     assert find["score"] == 0.5
     assert find["datetime"] == "test_datetime"
     assert find["metadata"]["agent"] == "test_agent"

@@ -1,5 +1,6 @@
 import json
 import re
+from typing import Any
 
 from crewai.agents.agent_adapters.base_converter_adapter import BaseConverterAdapter
 from crewai.utilities.converter import generate_model_description
@@ -19,14 +20,15 @@ class OpenAIConverterAdapter(BaseConverterAdapter):
         _output_model: The Pydantic model for the output
     """
 
-    def __init__(self, agent_adapter):
+    def __init__(self, agent_adapter: Any) -> None:
         """Initialize the converter adapter with a reference to the agent adapter"""
+        super().__init__(agent_adapter)  # type: ignore
         self.agent_adapter = agent_adapter
-        self._output_format = None
-        self._schema = None
-        self._output_model = None
+        self._output_format: str | None = None
+        self._schema: str | None = None
+        self._output_model: Any = None
 
-    def configure_structured_output(self, task) -> None:
+    def configure_structured_output(self, task: Any) -> None:
         """
         Configure the structured output for OpenAI agent based on task requirements.
 
@@ -75,7 +77,7 @@ class OpenAIConverterAdapter(BaseConverterAdapter):
 
         return f"{base_prompt}\n\n{output_schema}"
 
-    def post_process_result(self, result: str) -> str:
+    def post_process_result(self, result: str) -> Any:
         """
         Post-process the result to ensure it matches the expected format.
 

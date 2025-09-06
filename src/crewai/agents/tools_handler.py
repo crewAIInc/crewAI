@@ -1,8 +1,8 @@
 """Tools handler for managing tool execution and caching."""
 
+from crewai.agents.cache.cache_handler import CacheHandler
 from crewai.tools.cache_tools.cache_tools import CacheTools
 from crewai.tools.tool_calling import InstructorToolCalling, ToolCalling
-from crewai.agents.cache.cache_handler import CacheHandler
 
 
 class ToolsHandler:
@@ -39,6 +39,6 @@ class ToolsHandler:
         if self.cache and should_cache and calling.tool_name != CacheTools().name:
             self.cache.add(
                 tool=calling.tool_name,
-                input=calling.arguments,
+                input_data=calling.arguments,
                 output=output,
             )

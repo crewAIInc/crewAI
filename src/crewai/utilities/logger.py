@@ -10,7 +10,7 @@ class Logger(BaseModel):
     _printer: Printer = PrivateAttr(default_factory=Printer)
     default_color: str = Field(default="bold_yellow")
 
-    def log(self, level, message, color=None):
+    def log(self, level: str, message: str, color: str | None = None) -> None:
         if color is None:
             color = self.default_color
         if self.verbose:

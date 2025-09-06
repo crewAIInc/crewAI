@@ -1,4 +1,4 @@
-from typing import Any, List, Optional
+from typing import Any, Optional
 
 from pydantic import Field, PrivateAttr
 
@@ -7,19 +7,19 @@ from crewai.agents.agent_adapters.openai_agents.structured_output_converter impo
     OpenAIConverterAdapter,
 )
 from crewai.agents.agent_builder.base_agent import BaseAgent
-from crewai.tools import BaseTool
-from crewai.tools.agent_tools.agent_tools import AgentTools
-from crewai.utilities import Logger
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.agent_events import (
     AgentExecutionCompletedEvent,
     AgentExecutionErrorEvent,
     AgentExecutionStartedEvent,
 )
+from crewai.tools import BaseTool
+from crewai.tools.agent_tools.agent_tools import AgentTools
+from crewai.utilities import Logger
 
 try:
-    from agents import Agent as OpenAIAgent  # type: ignore
-    from agents import Runner, enable_verbose_stdout_logging  # type: ignore
+    from agents import Agent as OpenAIAgent  # type: ignore[import-not-found]
+    from agents import Runner, enable_verbose_stdout_logging
 
     from .openai_agent_tool_adapter import OpenAIAgentToolAdapter
 
@@ -40,13 +40,14 @@ class OpenAIAgentAdapter(BaseAgentAdapter):
     step_callback: Any = Field(default=None)
     _tool_adapter: "OpenAIAgentToolAdapter" = PrivateAttr()
     _converter_adapter: OpenAIConverterAdapter = PrivateAttr()
+    agent_executor: Any = Field(default=None)
 
     def __init__(
         self,
         model: str = "gpt-4o-mini",
-        tools: Optional[List[BaseTool]] = None,
-        agent_config: Optional[dict] = None,
-        **kwargs,
+        tools: Optional[list[BaseTool]] = None,
+        agent_config: Optional[dict[str, Any]] = None,
+        **kwargs: Any,
     ):
         if not OPENAI_AVAILABLE:
             raise ImportError(
@@ -72,7 +73,7 @@ class OpenAIAgentAdapter(BaseAgentAdapter):
         """Build a system prompt for the OpenAI agent."""
         base_prompt = f"""
             You are {self.role}.
-        
+
             Your goal is: {self.goal}
 
             Your backstory: {self.backstory}
@@ -85,11 +86,11 @@ class OpenAIAgentAdapter(BaseAgentAdapter):
         self,
         task: Any,
         context: Optional[str] = None,
-        tools: Optional[List[BaseTool]] = None,
-    ) -> str:
+        tools: Optional[list[BaseTool]] = None,
+    ) -> Any:
         """Execute a task using the OpenAI Assistant"""
         self._converter_adapter.configure_structured_output(task)
-        self.create_agent_executor(tools)
+        self.create_agent_executor(task, tools)
 
         if self.verbose:
             enable_verbose_stdout_logging()
@@ -109,6 +110,7 @@ class OpenAIAgentAdapter(BaseAgentAdapter):
                     task=task,
                 ),
             )
+            assert hasattr(self, "agent_executor"), "agent_executor not initialized"
             result = self.agent_executor.run_sync(self._openai_agent, task_prompt)
             final_answer = self.handle_execution_result(result)
             crewai_event_bus.emit(
@@ -131,7 +133,9 @@ class OpenAIAgentAdapter(BaseAgentAdapter):
             )
             raise
 
-    def create_agent_executor(self, tools: Optional[List[BaseTool]] = None) -> None:
+    def create_agent_executor(
+        self, task: Any = None, tools: Optional[list[BaseTool]] = None
+    ) -> None:
         """
         Configure the OpenAI agent for execution.
         While OpenAI handles execution differently through Runner,
@@ -152,24 +156,24 @@ class OpenAIAgentAdapter(BaseAgentAdapter):
 
         self.agent_executor = Runner
 
-    def configure_tools(self, tools: Optional[List[BaseTool]] = None) -> None:
+    def configure_tools(self, tools: Optional[list[BaseTool]] = None) -> None:
         """Configure tools for the OpenAI Assistant"""
         if tools:
             self._tool_adapter.configure_tools(tools)
             if self._tool_adapter.converted_tools:
                 self._openai_agent.tools = self._tool_adapter.converted_tools
 
-    def handle_execution_result(self, result: Any) -> str:
+    def handle_execution_result(self, result: Any) -> Any:
         """Process OpenAI Assistant execution result converting any structured output to a string"""
         return self._converter_adapter.post_process_result(result.final_output)
 
-    def get_delegation_tools(self, agents: List[BaseAgent]) -> List[BaseTool]:
+    def get_delegation_tools(self, agents: list[BaseAgent]) -> list[BaseTool]:
         """Implement delegation tools support"""
         agent_tools = AgentTools(agents=agents)
         tools = agent_tools.tools()
         return tools
 
-    def configure_structured_output(self, task) -> None:
+    def configure_structured_output(self, task: Any) -> None:
         """Configure the structured output for the specific agent implementation.
 
         Args:

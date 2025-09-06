@@ -1,15 +1,32 @@
 from __future__ import annotations
 
 from io import StringIO
-from typing import Any, Dict
+from typing import Any
 
 from pydantic import Field, PrivateAttr
-from crewai.llm import LLM
-from crewai.task import Task
-from crewai.telemetry.telemetry import Telemetry
-from crewai.utilities import Logger
-from crewai.utilities.constants import EMITTER_COLOR
+from typing_extensions import Self
+
 from crewai.events.base_event_listener import BaseEventListener
+from crewai.events.event_bus import CrewAIEventsBus
+from crewai.events.types.agent_events import (
+    AgentExecutionCompletedEvent,
+    AgentExecutionStartedEvent,
+    LiteAgentExecutionCompletedEvent,
+    LiteAgentExecutionErrorEvent,
+    LiteAgentExecutionStartedEvent,
+)
+from crewai.events.types.crew_events import (
+    CrewKickoffCompletedEvent,
+    CrewKickoffFailedEvent,
+    CrewKickoffStartedEvent,
+    CrewTestCompletedEvent,
+    CrewTestFailedEvent,
+    CrewTestResultEvent,
+    CrewTestStartedEvent,
+    CrewTrainCompletedEvent,
+    CrewTrainFailedEvent,
+    CrewTrainStartedEvent,
+)
 from crewai.events.types.knowledge_events import (
     KnowledgeQueryCompletedEvent,
     KnowledgeQueryFailedEvent,
@@ -25,34 +42,21 @@ from crewai.events.types.llm_events import (
     LLMStreamChunkEvent,
 )
 from crewai.events.types.llm_guardrail_events import (
-    LLMGuardrailStartedEvent,
     LLMGuardrailCompletedEvent,
-)
-from crewai.events.utils.console_formatter import ConsoleFormatter
-
-from crewai.events.types.agent_events import (
-    AgentExecutionCompletedEvent,
-    AgentExecutionStartedEvent,
-    LiteAgentExecutionCompletedEvent,
-    LiteAgentExecutionErrorEvent,
-    LiteAgentExecutionStartedEvent,
+    LLMGuardrailStartedEvent,
 )
 from crewai.events.types.logging_events import (
-    AgentLogsStartedEvent,
     AgentLogsExecutionEvent,
+    AgentLogsStartedEvent,
 )
-from crewai.events.types.crew_events import (
-    CrewKickoffCompletedEvent,
-    CrewKickoffFailedEvent,
-    CrewKickoffStartedEvent,
-    CrewTestCompletedEvent,
-    CrewTestFailedEvent,
-    CrewTestResultEvent,
-    CrewTestStartedEvent,
-    CrewTrainCompletedEvent,
-    CrewTrainFailedEvent,
-    CrewTrainStartedEvent,
-)
+from crewai.events.utils.console_formatter import ConsoleFormatter
+from crewai.llm import LLM
+from crewai.task import Task
+from crewai.telemetry.telemetry import Telemetry
+from crewai.utilities import Logger
+from crewai.utilities.constants import EMITTER_COLOR
+
+from .listeners.memory_listener import MemoryListener
 from .types.flow_events import (
     FlowCreatedEvent,
     FlowFinishedEvent,
@@ -61,38 +65,37 @@ from .types.flow_events import (
     MethodExecutionFinishedEvent,
     MethodExecutionStartedEvent,
 )
+from .types.reasoning_events import (
+    AgentReasoningCompletedEvent,
+    AgentReasoningFailedEvent,
+    AgentReasoningStartedEvent,
+)
 from .types.task_events import TaskCompletedEvent, TaskFailedEvent, TaskStartedEvent
 from .types.tool_usage_events import (
     ToolUsageErrorEvent,
     ToolUsageFinishedEvent,
     ToolUsageStartedEvent,
 )
-from .types.reasoning_events import (
-    AgentReasoningStartedEvent,
-    AgentReasoningCompletedEvent,
-    AgentReasoningFailedEvent,
-)
-
-from .listeners.memory_listener import MemoryListener
 
 
 class EventListener(BaseEventListener):
     _instance = None
+    _initialized: bool = False
     _telemetry: Telemetry = PrivateAttr(default_factory=lambda: Telemetry())
     logger = Logger(verbose=True, default_color=EMITTER_COLOR)
-    execution_spans: Dict[Task, Any] = Field(default_factory=dict)
+    execution_spans: dict[Task, Any] = Field(default_factory=dict)
     next_chunk = 0
     text_stream = StringIO()
     knowledge_retrieval_in_progress = False
     knowledge_query_in_progress = False
 
-    def __new__(cls):
+    def __new__(cls) -> Self:
         if cls._instance is None:
             cls._instance = super().__new__(cls)
             cls._instance._initialized = False
         return cls._instance
 
-    def __init__(self):
+    def __init__(self) -> None:
         if not hasattr(self, "_initialized") or not self._initialized:
             super().__init__()
             self._telemetry = Telemetry()
@@ -105,14 +108,14 @@ class EventListener(BaseEventListener):
 
     # ----------- CREW EVENTS -----------
 
-    def setup_listeners(self, crewai_event_bus):
+    def setup_listeners(self, crewai_event_bus: CrewAIEventsBus) -> None:
         @crewai_event_bus.on(CrewKickoffStartedEvent)
-        def on_crew_started(source, event: CrewKickoffStartedEvent):
+        def on_crew_started(source: Any, event: CrewKickoffStartedEvent) -> None:
             self.formatter.create_crew_tree(event.crew_name or "Crew", source.id)
             self._telemetry.crew_execution_span(source, event.inputs)
 
         @crewai_event_bus.on(CrewKickoffCompletedEvent)
-        def on_crew_completed(source, event: CrewKickoffCompletedEvent):
+        def on_crew_completed(source: Any, event: CrewKickoffCompletedEvent) -> None:
             # Handle telemetry
             final_string_output = event.output.raw
             self._telemetry.end_crew(source, final_string_output)
@@ -126,7 +129,7 @@ class EventListener(BaseEventListener):
             )
 
         @crewai_event_bus.on(CrewKickoffFailedEvent)
-        def on_crew_failed(source, event: CrewKickoffFailedEvent):
+        def on_crew_failed(source: Any, event: CrewKickoffFailedEvent) -> None:
             self.formatter.update_crew_tree(
                 self.formatter.current_crew_tree,
                 event.crew_name or "Crew",
@@ -135,23 +138,25 @@ class EventListener(BaseEventListener):
             )
 
         @crewai_event_bus.on(CrewTrainStartedEvent)
-        def on_crew_train_started(source, event: CrewTrainStartedEvent):
+        def on_crew_train_started(source: Any, event: CrewTrainStartedEvent) -> None:
             self.formatter.handle_crew_train_started(
                 event.crew_name or "Crew", str(event.timestamp)
             )
 
         @crewai_event_bus.on(CrewTrainCompletedEvent)
-        def on_crew_train_completed(source, event: CrewTrainCompletedEvent):
+        def on_crew_train_completed(
+            source: Any, event: CrewTrainCompletedEvent
+        ) -> None:
             self.formatter.handle_crew_train_completed(
                 event.crew_name or "Crew", str(event.timestamp)
             )
 
         @crewai_event_bus.on(CrewTrainFailedEvent)
-        def on_crew_train_failed(source, event: CrewTrainFailedEvent):
+        def on_crew_train_failed(source: Any, event: CrewTrainFailedEvent) -> None:
             self.formatter.handle_crew_train_failed(event.crew_name or "Crew")
 
         @crewai_event_bus.on(CrewTestResultEvent)
-        def on_crew_test_result(source, event: CrewTestResultEvent):
+        def on_crew_test_result(source: Any, event: CrewTestResultEvent) -> None:
             self._telemetry.individual_test_result_span(
                 source.crew,
                 event.quality,
@@ -162,7 +167,7 @@ class EventListener(BaseEventListener):
         # ----------- TASK EVENTS -----------
 
         @crewai_event_bus.on(TaskStartedEvent)
-        def on_task_started(source, event: TaskStartedEvent):
+        def on_task_started(source: Any, event: TaskStartedEvent) -> None:
             span = self._telemetry.task_started(crew=source.agent.crew, task=source)
             self.execution_spans[source] = span
             # Pass both task ID and task name (if set)
@@ -172,7 +177,7 @@ class EventListener(BaseEventListener):
             )
 
         @crewai_event_bus.on(TaskCompletedEvent)
-        def on_task_completed(source, event: TaskCompletedEvent):
+        def on_task_completed(source: Any, event: TaskCompletedEvent) -> None:
             # Handle telemetry
             span = self.execution_spans.get(source)
             if span:
@@ -190,7 +195,7 @@ class EventListener(BaseEventListener):
             )
 
         @crewai_event_bus.on(TaskFailedEvent)
-        def on_task_failed(source, event: TaskFailedEvent):
+        def on_task_failed(source: Any, event: TaskFailedEvent) -> None:
             span = self.execution_spans.get(source)
             if span:
                 if source.agent and source.agent.crew:
@@ -210,7 +215,9 @@ class EventListener(BaseEventListener):
         # ----------- AGENT EVENTS -----------
 
         @crewai_event_bus.on(AgentExecutionStartedEvent)
-        def on_agent_execution_started(source, event: AgentExecutionStartedEvent):
+        def on_agent_execution_started(
+            source: Any, event: AgentExecutionStartedEvent
+        ) -> None:
             self.formatter.create_agent_branch(
                 self.formatter.current_task_branch,
                 event.agent.role,
@@ -218,7 +225,9 @@ class EventListener(BaseEventListener):
             )
 
         @crewai_event_bus.on(AgentExecutionCompletedEvent)
-        def on_agent_execution_completed(source, event: AgentExecutionCompletedEvent):
+        def on_agent_execution_completed(
+            source: Any, event: AgentExecutionCompletedEvent
+        ) -> None:
             self.formatter.update_agent_status(
                 self.formatter.current_agent_branch,
                 event.agent.role,
@@ -229,8 +238,8 @@ class EventListener(BaseEventListener):
 
         @crewai_event_bus.on(LiteAgentExecutionStartedEvent)
         def on_lite_agent_execution_started(
-            source, event: LiteAgentExecutionStartedEvent
-        ):
+            source: Any, event: LiteAgentExecutionStartedEvent
+        ) -> None:
             """Handle LiteAgent execution started event."""
             self.formatter.handle_lite_agent_execution(
                 event.agent_info["role"], status="started", **event.agent_info
@@ -238,15 +247,17 @@ class EventListener(BaseEventListener):
 
         @crewai_event_bus.on(LiteAgentExecutionCompletedEvent)
         def on_lite_agent_execution_completed(
-            source, event: LiteAgentExecutionCompletedEvent
-        ):
+            source: Any, event: LiteAgentExecutionCompletedEvent
+        ) -> None:
             """Handle LiteAgent execution completed event."""
             self.formatter.handle_lite_agent_execution(
                 event.agent_info["role"], status="completed", **event.agent_info
             )
 
         @crewai_event_bus.on(LiteAgentExecutionErrorEvent)
-        def on_lite_agent_execution_error(source, event: LiteAgentExecutionErrorEvent):
+        def on_lite_agent_execution_error(
+            source: Any, event: LiteAgentExecutionErrorEvent
+        ) -> None:
             """Handle LiteAgent execution error event."""
             self.formatter.handle_lite_agent_execution(
                 event.agent_info["role"],
@@ -258,25 +269,27 @@ class EventListener(BaseEventListener):
         # ----------- FLOW EVENTS -----------
 
         @crewai_event_bus.on(FlowCreatedEvent)
-        def on_flow_created(source, event: FlowCreatedEvent):
+        def on_flow_created(source: Any, event: FlowCreatedEvent) -> None:
             self._telemetry.flow_creation_span(event.flow_name)
             self.formatter.create_flow_tree(event.flow_name, str(source.flow_id))
 
         @crewai_event_bus.on(FlowStartedEvent)
-        def on_flow_started(source, event: FlowStartedEvent):
+        def on_flow_started(source: Any, event: FlowStartedEvent) -> None:
             self._telemetry.flow_execution_span(
                 event.flow_name, list(source._methods.keys())
             )
             self.formatter.start_flow(event.flow_name, str(source.flow_id))
 
         @crewai_event_bus.on(FlowFinishedEvent)
-        def on_flow_finished(source, event: FlowFinishedEvent):
+        def on_flow_finished(source: Any, event: FlowFinishedEvent) -> None:
             self.formatter.update_flow_status(
                 self.formatter.current_flow_tree, event.flow_name, source.flow_id
             )
 
         @crewai_event_bus.on(MethodExecutionStartedEvent)
-        def on_method_execution_started(source, event: MethodExecutionStartedEvent):
+        def on_method_execution_started(
+            source: Any, event: MethodExecutionStartedEvent
+        ) -> None:
             self.formatter.update_method_status(
                 self.formatter.current_method_branch,
                 self.formatter.current_flow_tree,
@@ -285,7 +298,9 @@ class EventListener(BaseEventListener):
             )
 
         @crewai_event_bus.on(MethodExecutionFinishedEvent)
-        def on_method_execution_finished(source, event: MethodExecutionFinishedEvent):
+        def on_method_execution_finished(
+            source: Any, event: MethodExecutionFinishedEvent
+        ) -> None:
             self.formatter.update_method_status(
                 self.formatter.current_method_branch,
                 self.formatter.current_flow_tree,
@@ -294,7 +309,9 @@ class EventListener(BaseEventListener):
             )
 
         @crewai_event_bus.on(MethodExecutionFailedEvent)
-        def on_method_execution_failed(source, event: MethodExecutionFailedEvent):
+        def on_method_execution_failed(
+            source: Any, event: MethodExecutionFailedEvent
+        ) -> None:
             self.formatter.update_method_status(
                 self.formatter.current_method_branch,
                 self.formatter.current_flow_tree,
@@ -305,7 +322,7 @@ class EventListener(BaseEventListener):
         # ----------- TOOL USAGE EVENTS -----------
 
         @crewai_event_bus.on(ToolUsageStartedEvent)
-        def on_tool_usage_started(source, event: ToolUsageStartedEvent):
+        def on_tool_usage_started(source: Any, event: ToolUsageStartedEvent) -> None:
             if isinstance(source, LLM):
                 self.formatter.handle_llm_tool_usage_started(
                     event.tool_name,
@@ -319,7 +336,7 @@ class EventListener(BaseEventListener):
                 )
 
         @crewai_event_bus.on(ToolUsageFinishedEvent)
-        def on_tool_usage_finished(source, event: ToolUsageFinishedEvent):
+        def on_tool_usage_finished(source: Any, event: ToolUsageFinishedEvent) -> None:
             if isinstance(source, LLM):
                 self.formatter.handle_llm_tool_usage_finished(
                     event.tool_name,
@@ -332,7 +349,7 @@ class EventListener(BaseEventListener):
                 )
 
         @crewai_event_bus.on(ToolUsageErrorEvent)
-        def on_tool_usage_error(source, event: ToolUsageErrorEvent):
+        def on_tool_usage_error(source: Any, event: ToolUsageErrorEvent) -> None:
             if isinstance(source, LLM):
                 self.formatter.handle_llm_tool_usage_error(
                     event.tool_name,
@@ -349,7 +366,7 @@ class EventListener(BaseEventListener):
         # ----------- LLM EVENTS -----------
 
         @crewai_event_bus.on(LLMCallStartedEvent)
-        def on_llm_call_started(source, event: LLMCallStartedEvent):
+        def on_llm_call_started(source: Any, event: LLMCallStartedEvent) -> None:
             # Capture the returned tool branch and update the current_tool_branch reference
             thinking_branch = self.formatter.handle_llm_call_started(
                 self.formatter.current_agent_branch,
@@ -360,7 +377,7 @@ class EventListener(BaseEventListener):
                 self.formatter.current_tool_branch = thinking_branch
 
         @crewai_event_bus.on(LLMCallCompletedEvent)
-        def on_llm_call_completed(source, event: LLMCallCompletedEvent):
+        def on_llm_call_completed(source: Any, event: LLMCallCompletedEvent) -> None:
             self.formatter.handle_llm_call_completed(
                 self.formatter.current_tool_branch,
                 self.formatter.current_agent_branch,
@@ -368,7 +385,7 @@ class EventListener(BaseEventListener):
             )
 
         @crewai_event_bus.on(LLMCallFailedEvent)
-        def on_llm_call_failed(source, event: LLMCallFailedEvent):
+        def on_llm_call_failed(source: Any, event: LLMCallFailedEvent) -> None:
             self.formatter.handle_llm_call_failed(
                 self.formatter.current_tool_branch,
                 event.error,
@@ -376,7 +393,7 @@ class EventListener(BaseEventListener):
             )
 
         @crewai_event_bus.on(LLMStreamChunkEvent)
-        def on_llm_stream_chunk(source, event: LLMStreamChunkEvent):
+        def on_llm_stream_chunk(source: Any, event: LLMStreamChunkEvent) -> None:
             self.text_stream.write(event.chunk)
 
             self.text_stream.seek(self.next_chunk)
@@ -389,7 +406,9 @@ class EventListener(BaseEventListener):
         # ----------- LLM GUARDRAIL EVENTS -----------
 
         @crewai_event_bus.on(LLMGuardrailStartedEvent)
-        def on_llm_guardrail_started(source, event: LLMGuardrailStartedEvent):
+        def on_llm_guardrail_started(
+            source: Any, event: LLMGuardrailStartedEvent
+        ) -> None:
             guardrail_str = str(event.guardrail)
             guardrail_name = (
                 guardrail_str[:50] + "..." if len(guardrail_str) > 50 else guardrail_str
@@ -398,13 +417,15 @@ class EventListener(BaseEventListener):
             self.formatter.handle_guardrail_started(guardrail_name, event.retry_count)
 
         @crewai_event_bus.on(LLMGuardrailCompletedEvent)
-        def on_llm_guardrail_completed(source, event: LLMGuardrailCompletedEvent):
+        def on_llm_guardrail_completed(
+            source: Any, event: LLMGuardrailCompletedEvent
+        ) -> None:
             self.formatter.handle_guardrail_completed(
                 event.success, event.error, event.retry_count
             )
 
         @crewai_event_bus.on(CrewTestStartedEvent)
-        def on_crew_test_started(source, event: CrewTestStartedEvent):
+        def on_crew_test_started(source: Any, event: CrewTestStartedEvent) -> None:
             cloned_crew = source.copy()
             self._telemetry.test_execution_span(
                 cloned_crew,
@@ -418,20 +439,20 @@ class EventListener(BaseEventListener):
             )
 
         @crewai_event_bus.on(CrewTestCompletedEvent)
-        def on_crew_test_completed(source, event: CrewTestCompletedEvent):
+        def on_crew_test_completed(source: Any, event: CrewTestCompletedEvent) -> None:
             self.formatter.handle_crew_test_completed(
                 self.formatter.current_flow_tree,
                 event.crew_name or "Crew",
             )
 
         @crewai_event_bus.on(CrewTestFailedEvent)
-        def on_crew_test_failed(source, event: CrewTestFailedEvent):
+        def on_crew_test_failed(source: Any, event: CrewTestFailedEvent) -> None:
             self.formatter.handle_crew_test_failed(event.crew_name or "Crew")
 
         @crewai_event_bus.on(KnowledgeRetrievalStartedEvent)
         def on_knowledge_retrieval_started(
-            source, event: KnowledgeRetrievalStartedEvent
-        ):
+            source: Any, event: KnowledgeRetrievalStartedEvent
+        ) -> None:
             if self.knowledge_retrieval_in_progress:
                 return
 
@@ -444,8 +465,8 @@ class EventListener(BaseEventListener):
 
         @crewai_event_bus.on(KnowledgeRetrievalCompletedEvent)
         def on_knowledge_retrieval_completed(
-            source, event: KnowledgeRetrievalCompletedEvent
-        ):
+            source: Any, event: KnowledgeRetrievalCompletedEvent
+        ) -> None:
             if not self.knowledge_retrieval_in_progress:
                 return
 
@@ -457,11 +478,15 @@ class EventListener(BaseEventListener):
             )
 
         @crewai_event_bus.on(KnowledgeQueryStartedEvent)
-        def on_knowledge_query_started(source, event: KnowledgeQueryStartedEvent):
+        def on_knowledge_query_started(
+            source: Any, event: KnowledgeQueryStartedEvent
+        ) -> None:
             pass
 
         @crewai_event_bus.on(KnowledgeQueryFailedEvent)
-        def on_knowledge_query_failed(source, event: KnowledgeQueryFailedEvent):
+        def on_knowledge_query_failed(
+            source: Any, event: KnowledgeQueryFailedEvent
+        ) -> None:
             self.formatter.handle_knowledge_query_failed(
                 self.formatter.current_agent_branch,
                 event.error,
@@ -469,13 +494,15 @@ class EventListener(BaseEventListener):
             )
 
         @crewai_event_bus.on(KnowledgeQueryCompletedEvent)
-        def on_knowledge_query_completed(source, event: KnowledgeQueryCompletedEvent):
+        def on_knowledge_query_completed(
+            source: Any, event: KnowledgeQueryCompletedEvent
+        ) -> None:
             pass
 
         @crewai_event_bus.on(KnowledgeSearchQueryFailedEvent)
         def on_knowledge_search_query_failed(
-            source, event: KnowledgeSearchQueryFailedEvent
-        ):
+            source: Any, event: KnowledgeSearchQueryFailedEvent
+        ) -> None:
             self.formatter.handle_knowledge_search_query_failed(
                 self.formatter.current_agent_branch,
                 event.error,
@@ -485,7 +512,9 @@ class EventListener(BaseEventListener):
         # ----------- REASONING EVENTS -----------
 
         @crewai_event_bus.on(AgentReasoningStartedEvent)
-        def on_agent_reasoning_started(source, event: AgentReasoningStartedEvent):
+        def on_agent_reasoning_started(
+            source: Any, event: AgentReasoningStartedEvent
+        ) -> None:
             self.formatter.handle_reasoning_started(
                 self.formatter.current_agent_branch,
                 event.attempt,
@@ -493,7 +522,9 @@ class EventListener(BaseEventListener):
             )
 
         @crewai_event_bus.on(AgentReasoningCompletedEvent)
-        def on_agent_reasoning_completed(source, event: AgentReasoningCompletedEvent):
+        def on_agent_reasoning_completed(
+            source: Any, event: AgentReasoningCompletedEvent
+        ) -> None:
             self.formatter.handle_reasoning_completed(
                 event.plan,
                 event.ready,
@@ -501,7 +532,9 @@ class EventListener(BaseEventListener):
             )
 
         @crewai_event_bus.on(AgentReasoningFailedEvent)
-        def on_agent_reasoning_failed(source, event: AgentReasoningFailedEvent):
+        def on_agent_reasoning_failed(
+            source: Any, event: AgentReasoningFailedEvent
+        ) -> None:
             self.formatter.handle_reasoning_failed(
                 event.error,
                 self.formatter.current_crew_tree,
@@ -510,7 +543,7 @@ class EventListener(BaseEventListener):
         # ----------- AGENT LOGGING EVENTS -----------
 
         @crewai_event_bus.on(AgentLogsStartedEvent)
-        def on_agent_logs_started(source, event: AgentLogsStartedEvent):
+        def on_agent_logs_started(source: Any, event: AgentLogsStartedEvent) -> None:
             self.formatter.handle_agent_logs_started(
                 event.agent_role,
                 event.task_description,
@@ -518,7 +551,9 @@ class EventListener(BaseEventListener):
             )
 
         @crewai_event_bus.on(AgentLogsExecutionEvent)
-        def on_agent_logs_execution(source, event: AgentLogsExecutionEvent):
+        def on_agent_logs_execution(
+            source: Any, event: AgentLogsExecutionEvent
+        ) -> None:
             self.formatter.handle_agent_logs_execution(
                 event.agent_role,
                 event.formatted_answer,

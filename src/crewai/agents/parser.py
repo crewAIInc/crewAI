@@ -7,18 +7,18 @@ AgentAction or AgentFinish objects.
 
 from dataclasses import dataclass
 
-from json_repair import repair_json
+from json_repair import repair_json  # type: ignore[import-untyped]
 
 from crewai.agents.constants import (
+    ACTION_INPUT_ONLY_REGEX,
     ACTION_INPUT_REGEX,
     ACTION_REGEX,
-    ACTION_INPUT_ONLY_REGEX,
     FINAL_ANSWER_ACTION,
     MISSING_ACTION_AFTER_THOUGHT_ERROR_MESSAGE,
     MISSING_ACTION_INPUT_AFTER_ACTION_ERROR_MESSAGE,
     UNABLE_TO_REPAIR_JSON_RESULTS,
 )
-from crewai.utilities import I18N
+from crewai.utilities.i18n import I18N
 
 _I18N = I18N()
 

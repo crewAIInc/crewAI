@@ -1,8 +1,9 @@
 import uuid
 from abc import ABC, abstractmethod
+from collections.abc import Callable
 from copy import copy as shallow_copy
 from hashlib import md5
-from typing import Any, Callable, Dict, List, Optional, TypeVar
+from typing import Any, Optional, TypeVar
 
 from pydantic import (
     UUID4,
@@ -14,6 +15,7 @@ from pydantic import (
     model_validator,
 )
 from pydantic_core import PydanticCustomError
+from typing_extensions import Self
 
 from crewai.agents.agent_builder.utilities.base_token_process import TokenProcess
 from crewai.agents.cache.cache_handler import CacheHandler
@@ -61,7 +63,7 @@ class BaseAgent(ABC, BaseModel):
     Methods:
         execute_task(task: Any, context: Optional[str] = None, tools: Optional[List[BaseTool]] = None) -> str:
             Abstract method to execute a task.
-        create_agent_executor(tools=None) -> None:
+        create_agent_executor(task, tools=None) -> None:
             Abstract method to create an agent executor.
         get_delegation_tools(agents: List["BaseAgent"]):
             Abstract method to set the agents task tools for handling delegation and question asking to other agents in crew.
@@ -79,7 +81,7 @@ class BaseAgent(ABC, BaseModel):
             Set private attributes.
     """
 
-    __hash__ = object.__hash__  # type: ignore
+    __hash__ = object.__hash__
     _logger: Logger = PrivateAttr(default_factory=lambda: Logger(verbose=False))
     _rpm_controller: Optional[RPMController] = PrivateAttr(default=None)
     _request_within_rpm_limit: Any = PrivateAttr(default=None)
@@ -91,7 +93,7 @@ class BaseAgent(ABC, BaseModel):
     role: str = Field(description="Role of the agent")
     goal: str = Field(description="Objective of the agent")
     backstory: str = Field(description="Backstory of the agent")
-    config: Optional[Dict[str, Any]] = Field(
+    config: Optional[dict[str, Any]] = Field(
         description="Configuration for the agent", default=None, exclude=True
     )
     cache: bool = Field(
@@ -108,14 +110,14 @@ class BaseAgent(ABC, BaseModel):
         default=False,
         description="Enable agent to delegate and ask questions among each other.",
     )
-    tools: Optional[List[BaseTool]] = Field(
+    tools: Optional[list[BaseTool]] = Field(
         default_factory=list, description="Tools at agents' disposal"
     )
     max_iter: int = Field(
         default=25, description="Maximum iterations for an agent to execute a task"
     )
-    agent_executor: InstanceOf = Field(
-        default=None, description="An instance of the CrewAgentExecutor class."
+    agent_executor: Optional[Any] = Field(
+        default=None, description="An instance of the agent executor class."
     )
     llm: Any = Field(
         default=None, description="Language model that will run the agent."
@@ -129,7 +131,7 @@ class BaseAgent(ABC, BaseModel):
         default_factory=ToolsHandler,
         description="An instance of the ToolsHandler class.",
     )
-    tools_results: List[Dict[str, Any]] = Field(
+    tools_results: list[dict[str, Any]] = Field(
         default=[], description="Results of the tools used by the agent."
     )
     max_tokens: Optional[int] = Field(
@@ -138,7 +140,7 @@ class BaseAgent(ABC, BaseModel):
     knowledge: Optional[Knowledge] = Field(
         default=None, description="Knowledge for the agent."
     )
-    knowledge_sources: Optional[List[BaseKnowledgeSource]] = Field(
+    knowledge_sources: Optional[list[BaseKnowledgeSource]] = Field(
         default=None,
         description="Knowledge sources for the agent.",
     )
@@ -150,7 +152,7 @@ class BaseAgent(ABC, BaseModel):
         default_factory=SecurityConfig,
         description="Security configuration for the agent, including fingerprinting.",
     )
-    callbacks: List[Callable] = Field(
+    callbacks: list[Callable[..., Any]] = Field(
         default=[], description="Callbacks to be used for the agent"
     )
     adapted_agent: bool = Field(
@@ -163,12 +165,12 @@ class BaseAgent(ABC, BaseModel):
 
     @model_validator(mode="before")
     @classmethod
-    def process_model_config(cls, values):
+    def process_model_config(cls, values: Any) -> Any:
         return process_config(values, cls)
 
     @field_validator("tools")
     @classmethod
-    def validate_tools(cls, tools: List[Any]) -> List[BaseTool]:
+    def validate_tools(cls, tools: list[Any]) -> list[BaseTool]:
         """Validate and process the tools provided to the agent.
 
         This method ensures that each tool is either an instance of BaseTool
@@ -196,7 +198,7 @@ class BaseAgent(ABC, BaseModel):
         return processed_tools
 
     @model_validator(mode="after")
-    def validate_and_set_attributes(self):
+    def validate_and_set_attributes(self) -> Self:
         # Validate required fields
         for field in ["role", "goal", "backstory"]:
             if getattr(self, field) is None:
@@ -228,7 +230,7 @@ class BaseAgent(ABC, BaseModel):
             )
 
     @model_validator(mode="after")
-    def set_private_attrs(self):
+    def set_private_attrs(self) -> Self:
         """Set private attributes."""
         self._logger = Logger(verbose=self.verbose)
         if self.max_rpm and not self._rpm_controller:
@@ -240,7 +242,7 @@ class BaseAgent(ABC, BaseModel):
         return self
 
     @property
-    def key(self):
+    def key(self) -> str:
         source = [
             self._original_role or self.role,
             self._original_goal or self.goal,
@@ -253,16 +255,18 @@ class BaseAgent(ABC, BaseModel):
         self,
         task: Any,
         context: Optional[str] = None,
-        tools: Optional[List[BaseTool]] = None,
+        tools: Optional[list[BaseTool]] = None,
     ) -> str:
         pass
 
     @abstractmethod
-    def create_agent_executor(self, tools=None) -> None:
+    def create_agent_executor(
+        self, task: Any, tools: Optional[list[BaseTool]] = None
+    ) -> None:
         pass
 
     @abstractmethod
-    def get_delegation_tools(self, agents: List["BaseAgent"]) -> List[BaseTool]:
+    def get_delegation_tools(self, agents: list["BaseAgent"]) -> list[BaseTool]:
         """Set the task tools that init BaseAgenTools class."""
         pass
 
@@ -320,7 +324,7 @@ class BaseAgent(ABC, BaseModel):
 
         return copied_agent
 
-    def interpolate_inputs(self, inputs: Dict[str, Any]) -> None:
+    def interpolate_inputs(self, inputs: dict[str, Any]) -> None:
         """Interpolate inputs into the agent description and backstory."""
         if self._original_role is None:
             self._original_role = self.role
@@ -350,7 +354,7 @@ class BaseAgent(ABC, BaseModel):
         if self.cache:
             self.cache_handler = cache_handler
             self.tools_handler.cache = cache_handler
-        self.create_agent_executor()
+        # Executor will be created when a task is executed
 
     def set_rpm_controller(self, rpm_controller: RPMController) -> None:
         """Set the rpm controller for the agent.
@@ -360,7 +364,7 @@ class BaseAgent(ABC, BaseModel):
         """
         if not self._rpm_controller:
             self._rpm_controller = rpm_controller
-            self.create_agent_executor()
+        # Executor will be created when a task is executed
 
-    def set_knowledge(self, crew_embedder: Optional[Dict[str, Any]] = None):
+    def set_knowledge(self, crew_embedder: Optional[dict[str, Any]] = None) -> None:
         pass

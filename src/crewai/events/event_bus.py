@@ -1,15 +1,17 @@
 from __future__ import annotations
 
 import threading
+from collections.abc import Callable, Iterator
 from contextlib import contextmanager
-from typing import Any, Callable, Dict, List, Type, TypeVar, cast
+from typing import Any, ParamSpec, TypeVar, cast
 
 from blinker import Signal
+from typing_extensions import Self
 
 from crewai.events.base_events import BaseEvent
-from crewai.events.event_types import EventTypes
 
 EventT = TypeVar("EventT", bound=BaseEvent)
+P = ParamSpec("P")
 
 
 class CrewAIEventsBus:
@@ -21,21 +23,21 @@ class CrewAIEventsBus:
     _instance = None
     _lock = threading.Lock()
 
-    def __new__(cls):
+    def __new__(cls) -> Self:
         if cls._instance is None:
             with cls._lock:
                 if cls._instance is None:  # prevent race condition
-                    cls._instance = super(CrewAIEventsBus, cls).__new__(cls)
+                    cls._instance = super().__new__(cls)
                     cls._instance._initialize()
         return cls._instance
 
     def _initialize(self) -> None:
         """Initialize the event bus internal state"""
         self._signal = Signal("crewai_event_bus")
-        self._handlers: Dict[Type[BaseEvent], List[Callable]] = {}
+        self._handlers: dict[type[BaseEvent], list[Callable[[Any, Any], None]]] = {}
 
     def on(
-        self, event_type: Type[EventT]
+        self, event_type: type[EventT]
     ) -> Callable[[Callable[[Any, EventT], None]], Callable[[Any, EventT], None]]:
         """
         Decorator to register an event handler for a specific event type.
@@ -54,9 +56,7 @@ class CrewAIEventsBus:
         ) -> Callable[[Any, EventT], None]:
             if event_type not in self._handlers:
                 self._handlers[event_type] = []
-            self._handlers[event_type].append(
-                cast(Callable[[Any, EventT], None], handler)
-            )
+            self._handlers[event_type].append(cast(Callable[[Any, Any], None], handler))
             return handler
 
         return decorator
@@ -82,17 +82,15 @@ class CrewAIEventsBus:
         self._signal.send(source, event=event)
 
     def register_handler(
-        self, event_type: Type[EventTypes], handler: Callable[[Any, EventTypes], None]
+        self, event_type: type[BaseEvent], handler: Callable[[Any, Any], None]
     ) -> None:
         """Register an event handler for a specific event type"""
         if event_type not in self._handlers:
             self._handlers[event_type] = []
-        self._handlers[event_type].append(
-            cast(Callable[[Any, EventTypes], None], handler)
-        )
+        self._handlers[event_type].append(handler)
 
     @contextmanager
-    def scoped_handlers(self):
+    def scoped_handlers(self) -> Iterator[None]:
         """
         Context manager for temporary event handling scope.
         Useful for testing or temporary event handling.

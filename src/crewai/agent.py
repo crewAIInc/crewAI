@@ -1,29 +1,50 @@
 import shutil
 import subprocess
 import time
+from collections.abc import Callable, Sequence
 from typing import (
     Any,
-    Callable,
-    Dict,
-    List,
     Literal,
     Optional,
-    Sequence,
-    Tuple,
-    Type,
-    Union,
 )
 
-from pydantic import Field, InstanceOf, PrivateAttr, model_validator
+from pydantic import (
+    BeforeValidator,
+    Field,
+    InstanceOf,
+    PrivateAttr,
+    computed_field,
+    field_validator,
+    model_validator,
+)
+from typing_extensions import Self
 
-from crewai.agents import CacheHandler
 from crewai.agents.agent_builder.base_agent import BaseAgent
+from crewai.agents.cache.cache_handler import CacheHandler
 from crewai.agents.crew_agent_executor import CrewAgentExecutor
+from crewai.events.event_bus import crewai_event_bus
+from crewai.events.types.agent_events import (
+    AgentExecutionCompletedEvent,
+    AgentExecutionErrorEvent,
+    AgentExecutionStartedEvent,
+)
+from crewai.events.types.knowledge_events import (
+    KnowledgeQueryCompletedEvent,
+    KnowledgeQueryFailedEvent,
+    KnowledgeQueryStartedEvent,
+    KnowledgeRetrievalCompletedEvent,
+    KnowledgeRetrievalStartedEvent,
+    KnowledgeSearchQueryFailedEvent,
+)
+from crewai.events.types.memory_events import (
+    MemoryRetrievalCompletedEvent,
+    MemoryRetrievalStartedEvent,
+)
 from crewai.knowledge.knowledge import Knowledge
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
 from crewai.knowledge.utils.knowledge_utils import extract_knowledge_context
 from crewai.lite_agent import LiteAgent, LiteAgentOutput
-from crewai.llm import BaseLLM
+from crewai.llms.base_llm import BaseLLM
 from crewai.memory.contextual.contextual_memory import ContextualMemory
 from crewai.security import Fingerprint
 from crewai.task import Task
@@ -38,25 +59,7 @@ from crewai.utilities.agent_utils import (
 )
 from crewai.utilities.constants import TRAINED_AGENTS_DATA_FILE, TRAINING_DATA_FILE
 from crewai.utilities.converter import generate_model_description
-from crewai.events.types.agent_events import (
-    AgentExecutionCompletedEvent,
-    AgentExecutionErrorEvent,
-    AgentExecutionStartedEvent,
-)
-from crewai.events.event_bus import crewai_event_bus
-from crewai.events.types.memory_events import (
-    MemoryRetrievalStartedEvent,
-    MemoryRetrievalCompletedEvent,
-)
-from crewai.events.types.knowledge_events import (
-    KnowledgeQueryCompletedEvent,
-    KnowledgeQueryFailedEvent,
-    KnowledgeQueryStartedEvent,
-    KnowledgeRetrievalCompletedEvent,
-    KnowledgeRetrievalStartedEvent,
-    KnowledgeSearchQueryFailedEvent,
-)
-from crewai.utilities.llm_utils import create_llm
+from crewai.utilities.llm_utils import create_default_llm, create_llm
 from crewai.utilities.token_counter_callback import TokenCalcHandler
 from crewai.utilities.training_handler import CrewTrainingHandler
 
@@ -87,6 +90,8 @@ class Agent(BaseAgent):
     """
 
     _times_executed: int = PrivateAttr(default=0)
+    _llm: BaseLLM = PrivateAttr()
+    _function_calling_llm: BaseLLM | None = PrivateAttr(default=None)
     max_execution_time: Optional[int] = Field(
         default=None,
         description="Maximum execution time for an agent to execute a task",
@@ -101,10 +106,11 @@ class Agent(BaseAgent):
         default=True,
         description="Use system prompt for the agent.",
     )
-    llm: Union[str, InstanceOf[BaseLLM], Any] = Field(
-        description="Language model that will run the agent.", default=None
+    llm: str | InstanceOf[BaseLLM] | None = Field(
+        description="Language model that will run the agent.",
+        default_factory=create_default_llm,
     )
-    function_calling_llm: Optional[Union[str, InstanceOf[BaseLLM], Any]] = Field(
+    function_calling_llm: str | InstanceOf[BaseLLM] | None = Field(
         description="Language model that will run the agent.", default=None
     )
     system_template: Optional[str] = Field(
@@ -151,7 +157,7 @@ class Agent(BaseAgent):
         default=None,
         description="Maximum number of reasoning attempts before executing the task. If None, will try until ready.",
     )
-    embedder: Optional[Dict[str, Any]] = Field(
+    embedder: Optional[dict[str, Any]] = Field(
         default=None,
         description="Embedder configuration for the agent.",
     )
@@ -171,7 +177,7 @@ class Agent(BaseAgent):
         default=None,
         description="The Agent's role to be used from your repository.",
     )
-    guardrail: Optional[Union[Callable[[Any], Tuple[bool, Any]], str]] = Field(
+    guardrail: Optional[Callable[[Any], tuple[bool, Any]] | str] = Field(
         default=None,
         description="Function or string description of a guardrail to validate agent output",
     )
@@ -180,20 +186,36 @@ class Agent(BaseAgent):
     )
 
     @model_validator(mode="before")
-    def validate_from_repository(cls, v):
+    @classmethod
+    def validate_from_repository(cls, v: Any) -> Any:
         if v is not None and (from_repository := v.get("from_repository")):
             return load_agent_from_repository(from_repository) | v
         return v
 
+    @field_validator("function_calling_llm", mode="after")
+    @classmethod
+    def validate_function_calling_llm(cls, v: Any) -> BaseLLM | None:
+        if not v or isinstance(v, BaseLLM):
+            return v
+        return create_llm(v)
+
     @model_validator(mode="after")
-    def post_init_setup(self):
+    def post_init_setup(self) -> Self:
         self.agent_ops_agent_name = self.role
 
-        self.llm = create_llm(self.llm)
-        if self.function_calling_llm and not isinstance(
-            self.function_calling_llm, BaseLLM
-        ):
-            self.function_calling_llm = create_llm(self.function_calling_llm)
+        # Validate and set the private LLM attributes
+        if isinstance(self.llm, BaseLLM):
+            self._llm = self.llm
+        elif self.llm is None:
+            self._llm = create_default_llm()
+        else:
+            self._llm = create_llm(self.llm)
+
+        if self.function_calling_llm:
+            if isinstance(self.function_calling_llm, BaseLLM):
+                self._function_calling_llm = self.function_calling_llm
+            else:
+                self._function_calling_llm = create_llm(self.function_calling_llm)
 
         if not self.agent_executor:
             self._setup_agent_executor()
@@ -203,12 +225,12 @@ class Agent(BaseAgent):
 
         return self
 
-    def _setup_agent_executor(self):
+    def _setup_agent_executor(self) -> None:
         if not self.cache_handler:
             self.cache_handler = CacheHandler()
         self.set_cache_handler(self.cache_handler)
 
-    def set_knowledge(self, crew_embedder: Optional[Dict[str, Any]] = None):
+    def set_knowledge(self, crew_embedder: Optional[dict[str, Any]] = None) -> None:
         try:
             if self.embedder is None and crew_embedder:
                 self.embedder = crew_embedder
@@ -245,8 +267,8 @@ class Agent(BaseAgent):
         self,
         task: Task,
         context: Optional[str] = None,
-        tools: Optional[List[BaseTool]] = None,
-    ) -> str:
+        tools: Optional[list[BaseTool]] = None,
+    ) -> Any:
         """Execute a task with the agent.
 
         Args:
@@ -417,7 +439,7 @@ class Agent(BaseAgent):
                 )
 
         tools = tools or self.tools or []
-        self.create_agent_executor(tools=tools, task=task)
+        self.create_agent_executor(task=task, tools=tools)
 
         if self.crew and self.crew._train:
             task_prompt = self._training_handler(task_prompt=task_prompt)
@@ -492,7 +514,7 @@ class Agent(BaseAgent):
         # If there was any tool in self.tools_results that had result_as_answer
         # set to True, return the results of the last tool that had
         # result_as_answer set to True
-        for tool_result in self.tools_results:  # type: ignore # Item "None" of "list[Any] | None" has no attribute "__iter__" (not iterable)
+        for tool_result in self.tools_results:
             if tool_result.get("result_as_answer", False):
                 result = tool_result["result"]
         crewai_event_bus.emit(
@@ -501,7 +523,7 @@ class Agent(BaseAgent):
         )
         return result
 
-    def _execute_with_timeout(self, task_prompt: str, task: Task, timeout: int) -> str:
+    def _execute_with_timeout(self, task_prompt: str, task: Task, timeout: int) -> Any:
         """Execute a task with a timeout.
 
         Args:
@@ -534,7 +556,7 @@ class Agent(BaseAgent):
                 future.cancel()
                 raise RuntimeError(f"Task execution failed: {str(e)}")
 
-    def _execute_without_timeout(self, task_prompt: str, task: Task) -> str:
+    def _execute_without_timeout(self, task_prompt: str, task: Task) -> Any:
         """Execute a task without a timeout.
 
         Args:
@@ -544,6 +566,9 @@ class Agent(BaseAgent):
         Returns:
             The output of the agent.
         """
+        assert self.agent_executor is not None, (
+            "Agent executor must be created before execution"
+        )
         return self.agent_executor.invoke(
             {
                 "input": task_prompt,
@@ -554,14 +579,15 @@ class Agent(BaseAgent):
         )["output"]
 
     def create_agent_executor(
-        self, tools: Optional[List[BaseTool]] = None, task=None
+        self, task: Task, tools: Optional[list[BaseTool]] = None
     ) -> None:
         """Create an agent executor for the agent.
 
-        Returns:
-            An instance of the CrewAgentExecutor class.
+        Args:
+            task: Task to execute.
+            tools: Optional list of tools to use.
         """
-        raw_tools: List[BaseTool] = tools or self.tools or []
+        raw_tools: list[BaseTool] = tools or self.tools or []
         parsed_tools = parse_tools(raw_tools)
 
         prompt = Prompts(
@@ -582,7 +608,7 @@ class Agent(BaseAgent):
             )
 
         self.agent_executor = CrewAgentExecutor(
-            llm=self.llm,
+            llm=self._llm,
             task=task,
             agent=self,
             crew=self.crew,
@@ -595,15 +621,15 @@ class Agent(BaseAgent):
             tools_names=get_tool_names(parsed_tools),
             tools_description=render_text_description_and_args(parsed_tools),
             step_callback=self.step_callback,
-            function_calling_llm=self.function_calling_llm,
+            function_calling_llm=self._function_calling_llm,
             respect_context_window=self.respect_context_window,
             request_within_rpm_limit=(
                 self._rpm_controller.check_or_wait if self._rpm_controller else None
             ),
-            callbacks=[TokenCalcHandler(self._token_process)],
+            litellm_callbacks=[TokenCalcHandler(self._token_process)],
         )
 
-    def get_delegation_tools(self, agents: List[BaseAgent]):
+    def get_delegation_tools(self, agents: list[BaseAgent]) -> list[BaseTool]:
         agent_tools = AgentTools(agents=agents)
         tools = agent_tools.tools()
         return tools
@@ -613,7 +639,7 @@ class Agent(BaseAgent):
 
         return [AddImageTool()]
 
-    def get_code_execution_tools(self):
+    def get_code_execution_tools(self) -> list[BaseTool]:
         try:
             from crewai_tools import CodeInterpreterTool  # type: ignore
 
@@ -624,8 +650,11 @@ class Agent(BaseAgent):
             self._logger.log(
                 "info", "Coding tools not available. Install crewai_tools. "
             )
+            return []
 
-    def get_output_converter(self, llm, text, model, instructions):
+    def get_output_converter(
+        self, llm: BaseLLM, text: str, model: str, instructions: str
+    ) -> Converter:
         return Converter(llm=llm, text=text, model=model, instructions=instructions)
 
     def _training_handler(self, task_prompt: str) -> str:
@@ -654,7 +683,7 @@ class Agent(BaseAgent):
                 )
         return task_prompt
 
-    def _render_text_description(self, tools: List[Any]) -> str:
+    def _render_text_description(self, tools: list[Any]) -> str:
         """Render the tool name and description in plain text.
 
         Output will be in the format of:
@@ -673,7 +702,7 @@ class Agent(BaseAgent):
 
         return description
 
-    def _inject_date_to_task(self, task):
+    def _inject_date_to_task(self, task: Task) -> None:
         """Inject the current date into the task description if inject_date is enabled."""
         if self.inject_date:
             from datetime import datetime
@@ -723,7 +752,7 @@ class Agent(BaseAgent):
                 f"Docker is not running. Please start Docker to use code execution with agent: {self.role}"
             )
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"Agent(role={self.role}, goal={self.goal}, backstory={self.backstory})"
 
     @property
@@ -736,7 +765,7 @@ class Agent(BaseAgent):
         """
         return self.security_config.fingerprint
 
-    def set_fingerprint(self, fingerprint: Fingerprint):
+    def set_fingerprint(self, fingerprint: Fingerprint) -> None:
         self.security_config.fingerprint = fingerprint
 
     def _get_knowledge_search_query(self, task_prompt: str) -> str | None:
@@ -752,22 +781,8 @@ class Agent(BaseAgent):
             task_prompt=task_prompt
         )
         rewriter_prompt = self.i18n.slice("knowledge_search_query_system_prompt")
-        if not isinstance(self.llm, BaseLLM):
-            self._logger.log(
-                "warning",
-                f"Knowledge search query failed: LLM for agent '{self.role}' is not an instance of BaseLLM",
-            )
-            crewai_event_bus.emit(
-                self,
-                event=KnowledgeQueryFailedEvent(
-                    agent=self,
-                    error="LLM is not compatible with knowledge search queries",
-                ),
-            )
-            return None
-
         try:
-            rewritten_query = self.llm.call(
+            rewritten_query = self._llm.call(
                 [
                     {
                         "role": "system",
@@ -796,8 +811,8 @@ class Agent(BaseAgent):
 
     def kickoff(
         self,
-        messages: Union[str, List[Dict[str, str]]],
-        response_format: Optional[Type[Any]] = None,
+        messages: str | list[dict[str, str]],
+        response_format: Optional[type[Any]] = None,
     ) -> LiteAgentOutput:
         """
         Execute the agent with the given messages using a LiteAgent instance.
@@ -819,7 +834,7 @@ class Agent(BaseAgent):
             role=self.role,
             goal=self.goal,
             backstory=self.backstory,
-            llm=self.llm,
+            llm=self._llm,
             tools=self.tools or [],
             max_iterations=self.max_iter,
             max_execution_time=self.max_execution_time,
@@ -836,8 +851,8 @@ class Agent(BaseAgent):
 
     async def kickoff_async(
         self,
-        messages: Union[str, List[Dict[str, str]]],
-        response_format: Optional[Type[Any]] = None,
+        messages: str | list[dict[str, str]],
+        response_format: Optional[type[Any]] = None,
     ) -> LiteAgentOutput:
         """
         Execute the agent asynchronously with the given messages using a LiteAgent instance.
@@ -857,7 +872,7 @@ class Agent(BaseAgent):
             role=self.role,
             goal=self.goal,
             backstory=self.backstory,
-            llm=self.llm,
+            llm=self._llm,
             tools=self.tools or [],
             max_iterations=self.max_iter,
             max_execution_time=self.max_execution_time,

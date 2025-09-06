@@ -7,10 +7,8 @@ from pydantic import Field
 from crewai.agent import Agent
 from crewai.agents.crew_agent_executor import CrewAgentExecutor
 from crewai.crew import Crew
-from crewai.flow.flow import Flow, listen, start
-from crewai.llm import LLM
-from crewai.task import Task
-from crewai.tools.base_tool import BaseTool
+from crewai.events.event_bus import crewai_event_bus
+from crewai.events.event_listener import EventListener
 from crewai.events.types.agent_events import (
     AgentExecutionCompletedEvent,
     AgentExecutionErrorEvent,
@@ -24,9 +22,6 @@ from crewai.events.types.crew_events import (
     CrewTestResultEvent,
     CrewTestStartedEvent,
 )
-from crewai.events.event_bus import crewai_event_bus
-from crewai.events.event_listener import EventListener
-from crewai.events.types.tool_usage_events import ToolUsageFinishedEvent
 from crewai.events.types.flow_events import (
     FlowCreatedEvent,
     FlowFinishedEvent,
@@ -47,7 +42,12 @@ from crewai.events.types.task_events import (
 )
 from crewai.events.types.tool_usage_events import (
     ToolUsageErrorEvent,
+    ToolUsageFinishedEvent,
 )
+from crewai.flow.flow import Flow, listen, start
+from crewai.llm import LLM
+from crewai.task import Task
+from crewai.tools.base_tool import BaseTool
 
 
 @pytest.fixture(scope="module")
@@ -327,9 +327,9 @@ def test_agent_emits_execution_error_event(base_agent, base_task):
 
     error_message = "Error happening while sending prompt to model."
     base_agent.max_retry_limit = 0
-    with patch.object(
-        CrewAgentExecutor, "invoke", wraps=base_agent.agent_executor.invoke
-    ) as invoke_mock:
+
+    # Patch the invoke method on the CrewAgentExecutor class directly
+    with patch.object(CrewAgentExecutor, "invoke") as invoke_mock:
         invoke_mock.side_effect = Exception(error_message)
 
         with pytest.raises(Exception):
