@@ -142,7 +142,7 @@ with MCPServerAdapter(server_params, "tool_name", connect_timeout=60) as mcp_too
 
 ## Using with CrewBase
 
-To use MCPServer tools within a CrewBase class, use the `mcp_tools` method. Server configurations should be provided via the mcp_server_params attribute. You can pass either a single configuration or a list of multiple server configurations.
+To use MCPServer tools within a CrewBase class, use the `get_mcp_tools` method. Server configurations should be provided via the `mcp_server_params` attribute. You can pass either a single configuration or a list of multiple server configurations.
 
 ```python
 @CrewBase
@@ -175,6 +175,34 @@ class CrewWithMCP:
     # ... rest of your crew setup ...
 ```
 
+### Connection Timeout Configuration
+
+You can configure the connection timeout for MCP servers by setting the `mcp_connect_timeout` class attribute. If no timeout is specified, it defaults to 30 seconds.
+
+```python
+@CrewBase
+class CrewWithMCP:
+  mcp_server_params = [...]
+  mcp_connect_timeout = 60  # 60 seconds timeout for all MCP connections
+
+  @agent
+  def your_agent(self):
+      return Agent(config=self.agents_config["your_agent"], tools=self.get_mcp_tools())
+```
+
+```python
+@CrewBase
+class CrewWithDefaultTimeout:
+  mcp_server_params = [...]
+  # No mcp_connect_timeout specified - uses default 30 seconds
+
+  @agent
+  def your_agent(self):
+      return Agent(config=self.agents_config["your_agent"], tools=self.get_mcp_tools())
+```
+
+### Filtering Tools
+
 You can filter which tools are available to your agent by passing a list of tool names to the `get_mcp_tools` method.
 
 ```python
@@ -184,6 +212,22 @@ def another_agent(self):
       config=self.agents_config["your_agent"],
       tools=self.get_mcp_tools("tool_1", "tool_2") # get specific tools
     )
+```
+
+The timeout configuration applies to all MCP tool calls within the crew:
+
+```python
+@CrewBase
+class CrewWithCustomTimeout:
+  mcp_server_params = [...]
+  mcp_connect_timeout = 90  # 90 seconds timeout for all MCP connections
+
+  @agent
+  def filtered_agent(self):
+      return Agent(
+        config=self.agents_config["your_agent"],
+        tools=self.get_mcp_tools("tool_1", "tool_2") # specific tools with custom timeout
+      )
 ```
 
 ## Explore MCP Integrations
