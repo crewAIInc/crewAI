@@ -9,6 +9,9 @@ class CacheHandler(BaseModel):
     """Handles caching of tool execution results.
 
     Provides in-memory caching for tool outputs based on tool name and input.
+
+    Notes:
+        - TODO: Make thread-safe.
     """
 
     _cache: dict[str, Any] = PrivateAttr(default_factory=dict)
@@ -20,6 +23,9 @@ class CacheHandler(BaseModel):
             tool: Name of the tool.
             input: Input string used for the tool.
             output: Output result from tool execution.
+
+        Notes:
+            - TODO: Rename 'input' parameter to avoid shadowing builtin.
         """
         self._cache[f"{tool}-{input}"] = output
 
@@ -32,5 +38,8 @@ class CacheHandler(BaseModel):
 
         Returns:
             Cached result if found, None otherwise.
+
+        Notes:
+            - TODO: Rename 'input' parameter to avoid shadowing builtin.
         """
         return self._cache.get(f"{tool}-{input}")
