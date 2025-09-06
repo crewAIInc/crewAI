@@ -10,7 +10,7 @@ The SecurityConfig class is the primary interface for managing security settings
 in CrewAI applications.
 """
 
-from typing import Any, Dict, Optional
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -38,79 +38,78 @@ class SecurityConfig(BaseModel):
     )
 
     version: str = Field(
-        default="1.0.0", 
-        description="Version of the security configuration"
+        default="1.0.0", description="Version of the security configuration"
     )
 
     fingerprint: Fingerprint = Field(
-        default_factory=Fingerprint, 
-        description="Unique identifier for the component"
+        default_factory=Fingerprint, description="Unique identifier for the component"
     )
-    
+
     def is_compatible(self, min_version: str) -> bool:
         """
         Check if this security configuration is compatible with the minimum required version.
-        
+
         Args:
-            min_version (str): Minimum required version in semver format (e.g., "1.0.0")
-            
+            min_version: Minimum required version in semver format (e.g., "1.0.0")
+
         Returns:
-            bool: True if this configuration is compatible, False otherwise
+            True if this configuration is compatible, False otherwise
         """
         # Simple version comparison (can be enhanced with packaging.version if needed)
         current = [int(x) for x in self.version.split(".")]
         minimum = [int(x) for x in min_version.split(".")]
-        
+
         # Compare major, minor, patch versions
-        for c, m in zip(current, minimum):
+        for c, m in zip(current, minimum, strict=False):
             if c > m:
                 return True
             if c < m:
                 return False
         return True
 
-    @model_validator(mode='before')
+    @model_validator(mode="before")
     @classmethod
     def validate_fingerprint(cls, values):
         """Ensure fingerprint is properly initialized."""
         if isinstance(values, dict):
             # Handle case where fingerprint is not provided or is None
-            if 'fingerprint' not in values or values['fingerprint'] is None:
-                values['fingerprint'] = Fingerprint()
+            if "fingerprint" not in values or values["fingerprint"] is None:
+                values["fingerprint"] = Fingerprint()
             # Handle case where fingerprint is a string (seed)
-            elif isinstance(values['fingerprint'], str):
-                if not values['fingerprint'].strip():
+            elif isinstance(values["fingerprint"], str):
+                if not values["fingerprint"].strip():
                     raise ValueError("Fingerprint seed cannot be empty")
-                values['fingerprint'] = Fingerprint.generate(seed=values['fingerprint'])
+                values["fingerprint"] = Fingerprint.generate(seed=values["fingerprint"])
         return values
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """
         Convert the security config to a dictionary.
 
         Returns:
-            Dict[str, Any]: Dictionary representation of the security config
+            Dictionary representation of the security config
         """
-        result = {
-            "fingerprint": self.fingerprint.to_dict()
-        }
-        return result
+        return {"fingerprint": self.fingerprint.to_dict()}
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> 'SecurityConfig':
+    def from_dict(cls, data: dict[str, Any]) -> "SecurityConfig":
         """
         Create a SecurityConfig from a dictionary.
 
         Args:
-            data (Dict[str, Any]): Dictionary representation of a security config
+            data: Dictionary representation of a security config
 
         Returns:
-            SecurityConfig: A new SecurityConfig instance
+            A new SecurityConfig instance
         """
         # Make a copy to avoid modifying the original
         data_copy = data.copy()
 
         fingerprint_data = data_copy.pop("fingerprint", None)
-        fingerprint = Fingerprint.from_dict(fingerprint_data) if fingerprint_data else Fingerprint()
+        fingerprint = (
+            Fingerprint.from_dict(fingerprint_data)
+            if fingerprint_data
+            else Fingerprint()
+        )
 
         return cls(fingerprint=fingerprint)
