@@ -12,7 +12,7 @@ in CrewAI applications.
 
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from typing_extensions import Self
 
 from crewai.security.fingerprint import Fingerprint
@@ -29,7 +29,6 @@ class SecurityConfig(BaseModel):
     - Impersonation/delegation tokens *TODO*
 
     Attributes:
-        version (str): Version of the security configuration
         fingerprint (Fingerprint): The unique fingerprint automatically generated for the component
     """
 
@@ -38,50 +37,24 @@ class SecurityConfig(BaseModel):
         # Note: Cannot use frozen=True as existing tests modify the fingerprint property
     )
 
-    version: str = Field(
-        default="1.0.0", description="Version of the security configuration"
-    )
-
     fingerprint: Fingerprint = Field(
         default_factory=Fingerprint, description="Unique identifier for the component"
     )
 
-    def is_compatible(self, min_version: str) -> bool:
-        """
-        Check if this security configuration is compatible with the minimum required version.
-
-        Args:
-            min_version: Minimum required version in semver format (e.g., "1.0.0")
-
-        Returns:
-            True if this configuration is compatible, False otherwise
-        """
-        # Simple version comparison (can be enhanced with packaging.version if needed)
-        current = [int(x) for x in self.version.split(".")]
-        minimum = [int(x) for x in min_version.split(".")]
-
-        # Compare major, minor, patch versions
-        for c, m in zip(current, minimum, strict=False):
-            if c > m:
-                return True
-            if c < m:
-                return False
-        return True
-
-    @model_validator(mode="before")
+    @field_validator("fingerprint", mode="before")
     @classmethod
-    def validate_fingerprint(cls, values: Any) -> dict[str, Any]:
+    def validate_fingerprint(cls, v: Any) -> Fingerprint:
         """Ensure fingerprint is properly initialized."""
-        if isinstance(values, dict):
-            # Handle case where fingerprint is not provided or is None
-            if "fingerprint" not in values or values["fingerprint"] is None:
-                values["fingerprint"] = Fingerprint()
-            # Handle case where fingerprint is a string (seed)
-            elif isinstance(values["fingerprint"], str):
-                if not values["fingerprint"].strip():
-                    raise ValueError("Fingerprint seed cannot be empty")
-                values["fingerprint"] = Fingerprint.generate(seed=values["fingerprint"])
-        return values
+        if v is None:
+            return Fingerprint()
+        if isinstance(v, str):
+            if not v.strip():
+                raise ValueError("Fingerprint seed cannot be empty")
+            return Fingerprint.generate(seed=v)
+        if isinstance(v, Fingerprint):
+            return v
+
+        raise ValueError(f"Invalid fingerprint type: {type(v)}")
 
     def to_dict(self) -> dict[str, Any]:
         """
@@ -103,10 +76,7 @@ class SecurityConfig(BaseModel):
         Returns:
             A new SecurityConfig instance
         """
-        # Make a copy to avoid modifying the original
-        data_copy = data.copy()
-
-        fingerprint_data = data_copy.pop("fingerprint", None)
+        fingerprint_data = data.get("fingerprint")
         fingerprint = (
             Fingerprint.from_dict(fingerprint_data)
             if fingerprint_data
