@@ -284,4 +284,53 @@ def test_internal_crew_with_mcp():
         assert crew.reporting_analyst().tools == [simple_tool, another_simple_tool]
         assert crew.researcher().tools == [simple_tool]
 
-    adapter_mock.assert_called_once_with({"host": "localhost", "port": 8000})
+    adapter_mock.assert_called_once_with({"host": "localhost", "port": 8000}, connect_timeout=30)
+
+def test_internal_crew_with_mcp_custom_timeout():
+    with patch("embedchain.client.Client.setup"):
+        from crewai_tools import MCPServerAdapter
+        from crewai_tools.adapters.mcp_adapter import ToolCollection
+
+    @CrewBase
+    class CrewWithCustomTimeout(InternalCrew):
+        mcp_server_params = {"host": "localhost", "port": 8000}
+
+        @agent
+        def test_agent(self):
+            return Agent(
+                config=self.agents_config["researcher"],
+                tools=self.get_mcp_tools("simple_tool", connect_timeout=60),
+            )
+
+    mock = Mock(spec=MCPServerAdapter)
+    mock.tools = ToolCollection([simple_tool])
+    with patch("crewai_tools.MCPServerAdapter", return_value=mock) as adapter_mock:
+        crew = CrewWithCustomTimeout()
+        assert crew.test_agent().tools == [simple_tool]
+
+    adapter_mock.assert_called_once_with({"host": "localhost", "port": 8000}, connect_timeout=60)
+
+
+def test_internal_crew_with_mcp_backward_compatibility():
+    with patch("embedchain.client.Client.setup"):
+        from crewai_tools import MCPServerAdapter
+        from crewai_tools.adapters.mcp_adapter import ToolCollection
+
+    @CrewBase
+    class CrewWithoutTimeout(InternalCrew):
+        mcp_server_params = {"host": "localhost", "port": 8000}
+
+        @agent
+        def test_agent(self):
+            return Agent(
+                config=self.agents_config["researcher"],
+                tools=self.get_mcp_tools("simple_tool"),
+            )
+
+    mock = Mock(spec=MCPServerAdapter)
+    mock.tools = ToolCollection([simple_tool])
+    with patch("crewai_tools.MCPServerAdapter", return_value=mock) as adapter_mock:
+        crew = CrewWithoutTimeout()
+        assert crew.test_agent().tools == [simple_tool]
+
+    adapter_mock.assert_called_once_with({"host": "localhost", "port": 8000}, connect_timeout=30)
