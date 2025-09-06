@@ -1,4 +1,5 @@
 from typing import List
+from typing import ClassVar
 from unittest.mock import Mock, patch
 import pytest
 
@@ -284,7 +285,9 @@ def test_internal_crew_with_mcp():
         assert crew.reporting_analyst().tools == [simple_tool, another_simple_tool]
         assert crew.researcher().tools == [simple_tool]
 
-    adapter_mock.assert_called_once_with({"host": "localhost", "port": 8000}, connect_timeout=30)
+    adapter_mock.assert_called_once_with(
+        {"host": "localhost", "port": 8000}, connect_timeout=30
+    )
 
 def test_internal_crew_with_mcp_custom_timeout():
     with patch("embedchain.client.Client.setup"):
@@ -293,7 +296,7 @@ def test_internal_crew_with_mcp_custom_timeout():
 
     @CrewBase
     class CrewWithCustomTimeout(InternalCrew):
-        mcp_server_params = {"host": "localhost", "port": 8000}
+        mcp_server_params: ClassVar = {"host": "localhost", "port": 8000}
 
         @agent
         def test_agent(self):
@@ -308,7 +311,9 @@ def test_internal_crew_with_mcp_custom_timeout():
         crew = CrewWithCustomTimeout()
         assert crew.test_agent().tools == [simple_tool]
 
-    adapter_mock.assert_called_once_with({"host": "localhost", "port": 8000}, connect_timeout=60)
+    adapter_mock.assert_called_once_with(
+        {"host": "localhost", "port": 8000}, connect_timeout=60
+    )
 
 
 def test_internal_crew_with_mcp_backward_compatibility():
@@ -318,7 +323,7 @@ def test_internal_crew_with_mcp_backward_compatibility():
 
     @CrewBase
     class CrewWithoutTimeout(InternalCrew):
-        mcp_server_params = {"host": "localhost", "port": 8000}
+        mcp_server_params: ClassVar = {"host": "localhost", "port": 8000}
 
         @agent
         def test_agent(self):
@@ -333,4 +338,6 @@ def test_internal_crew_with_mcp_backward_compatibility():
         crew = CrewWithoutTimeout()
         assert crew.test_agent().tools == [simple_tool]
 
-    adapter_mock.assert_called_once_with({"host": "localhost", "port": 8000}, connect_timeout=30)
+    adapter_mock.assert_called_once_with(
+        {"host": "localhost", "port": 8000}, connect_timeout=30
+    )
