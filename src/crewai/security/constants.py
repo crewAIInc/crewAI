@@ -1,7 +1,9 @@
-"""
-Security constants for CrewAI.
+"""Security constants for CrewAI.
 
 This module contains security-related constants used throughout the security module.
+
+Notes:
+    - TODO: Determine if CREW_AI_NAMESPACE should be made dynamic or configurable
 """
 
 from typing import Annotated
