@@ -8,7 +8,7 @@ from datetime import datetime
 from typing import Annotated, Any
 from uuid import UUID, uuid4, uuid5
 
-from pydantic import BaseModel, BeforeValidator, Field, PrivateAttr, computed_field
+from pydantic import BaseModel, BeforeValidator, Field, PrivateAttr
 from typing_extensions import Self
 
 from crewai.security.constants import CREW_AI_NAMESPACE
@@ -61,24 +61,14 @@ class Fingerprint(BaseModel):
         default_factory=dict
     )
 
-    @computed_field  # type: ignore[misc]
     @property
     def uuid_str(self) -> str:
-        """Get the string representation of the UUID for this fingerprint.
-
-        Notes:
-            Mimics frozen field behavior using computed_field.
-        """
+        """Get the string representation of the UUID for this fingerprint."""
         return self._uuid_str
 
-    @computed_field  # type: ignore[misc]
     @property
     def created_at(self) -> datetime:
-        """Get the creation timestamp for this fingerprint.
-
-        Notes:
-            Mimics frozen field behavior using computed_field.
-        """
+        """Get the creation timestamp for this fingerprint."""
         return self._created_at
 
     @property
