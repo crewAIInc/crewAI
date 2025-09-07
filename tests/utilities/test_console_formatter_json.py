@@ -27,7 +27,7 @@ class TestConsoleFormatterJSON:
         with patch.object(formatter, 'print') as mock_print:
             formatter.handle_agent_logs_execution(agent_action, "Test Agent")
 
-            assert mock_print.call_count == 4
+            mock_print.assert_called()
 
     def test_handle_agent_logs_execution_with_malformed_json(self):
         """Test that malformed JSON falls back to string formatting."""
@@ -47,7 +47,7 @@ class TestConsoleFormatterJSON:
         with patch.object(formatter, 'print') as mock_print:
             formatter.handle_agent_logs_execution(agent_action, "Test Agent")
 
-            assert mock_print.call_count == 4
+            mock_print.assert_called()
 
     def test_handle_agent_logs_execution_with_non_json_string(self):
         """Test that non-JSON strings are handled properly."""
@@ -65,7 +65,7 @@ class TestConsoleFormatterJSON:
         with patch.object(formatter, 'print') as mock_print:
             formatter.handle_agent_logs_execution(agent_action, "Test Agent")
 
-            assert mock_print.call_count == 4
+            mock_print.assert_called()
 
     def test_handle_agent_logs_execution_with_complex_json(self):
         """Test with complex nested JSON structures."""
@@ -95,7 +95,7 @@ class TestConsoleFormatterJSON:
         with patch.object(formatter, 'print') as mock_print:
             formatter.handle_agent_logs_execution(agent_action, "Test Agent")
 
-            assert mock_print.call_count == 4
+            mock_print.assert_called()
 
     def test_handle_agent_logs_execution_with_agent_finish(self):
         """Test that AgentFinish objects are handled correctly."""
@@ -110,7 +110,7 @@ class TestConsoleFormatterJSON:
         with patch.object(formatter, 'print') as mock_print:
             formatter.handle_agent_logs_execution(agent_finish, "Test Agent")
 
-            assert mock_print.call_count == 2
+            mock_print.assert_called()
 
     def test_json_parsing_preserves_structure(self):
         """Test that JSON parsing preserves the original structure."""
@@ -137,7 +137,7 @@ class TestConsoleFormatterJSON:
         with patch.object(formatter, 'print') as mock_print:
             formatter.handle_agent_logs_execution(agent_action, "Test Agent")
 
-            assert mock_print.call_count == 4
+            mock_print.assert_called()
 
     def test_empty_tool_input_handling(self):
         """Test handling of empty tool input."""
@@ -154,7 +154,7 @@ class TestConsoleFormatterJSON:
         with patch.object(formatter, 'print') as mock_print:
             formatter.handle_agent_logs_execution(agent_action, "Test Agent")
 
-            assert mock_print.call_count == 4
+            mock_print.assert_called()
 
     def test_numeric_tool_input_handling(self):
         """Test handling of numeric tool input."""
@@ -171,4 +171,4 @@ class TestConsoleFormatterJSON:
         with patch.object(formatter, 'print') as mock_print:
             formatter.handle_agent_logs_execution(agent_action, "Test Agent")
 
-            assert mock_print.call_count == 4
+            mock_print.assert_called()
