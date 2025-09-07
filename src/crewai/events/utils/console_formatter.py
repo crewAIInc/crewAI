@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, ClassVar
 
 from rich.console import Console
 from rich.live import Live
@@ -16,7 +16,7 @@ class ConsoleFormatter:
     current_flow_tree: Tree | None = None
     current_method_branch: Tree | None = None
     current_lite_agent_branch: Tree | None = None
-    tool_usage_counts: dict[str, int] = {}
+    tool_usage_counts: ClassVar[dict[str, int]] = {}
     current_reasoning_branch: Tree | None = None  # Track reasoning status
     _live_paused: bool = False
     current_llm_tool_tree: Tree | None = None
@@ -115,7 +115,7 @@ class ConsoleFormatter:
                 self._live.update(tree, refresh=True)
             return  # Nothing else to do
 
-        # Case 2: blank line while a live session is running – ignore so we
+        # Case 2: blank line while a live session is running - ignore so we
         # don't break the in-place rendering behaviour
         if len(args) == 0 and self._live:
             return
@@ -693,7 +693,7 @@ class ConsoleFormatter:
         if tool_branch is not None and "Thinking" in str(tool_branch.label):
             thinking_branch_to_remove = tool_branch
 
-        # Method 2: Fallback - search for any thinking node if tool_branch is None or not thinking
+        # Method 2: Fallback - search for any thinking node if tool_branch is None
         if thinking_branch_to_remove is None:
             parents = [
                 self.current_lite_agent_branch,
@@ -752,7 +752,7 @@ class ConsoleFormatter:
         if tool_branch is not None and "Thinking" in str(tool_branch.label):
             thinking_branch_to_update = tool_branch
 
-        # Method 2: Fallback - search for any thinking node if tool_branch is None or not thinking
+        # Method 2: Fallback - search for any thinking node if tool_branch is None
         if thinking_branch_to_update is None:
             parents = [
                 self.current_lite_agent_branch,
@@ -1596,9 +1596,9 @@ class ConsoleFormatter:
 
         for child in branch_to_use.children:
             if "Memory Retrieval" in str(child.label):
-                for child in child.children:
-                    sources_branch = child
-                    if "Sources Used" in str(child.label):
+                for inner_child in child.children:
+                    sources_branch = inner_child
+                    if "Sources Used" in str(inner_child.label):
                         sources_branch.add(f"✅ {memory_type} ({query_time_ms:.2f}ms)")
                         break
                 else:
@@ -1629,9 +1629,9 @@ class ConsoleFormatter:
 
         for child in branch_to_use.children:
             if "Memory Retrieval" in str(child.label):
-                for child in child.children:
-                    sources_branch = child
-                    if "Sources Used" in str(child.label):
+                for inner_child in child.children:
+                    sources_branch = inner_child
+                    if "Sources Used" in str(inner_child.label):
                         sources_branch.add(f"❌ {memory_type} - Error: {error}")
                         break
                 else:
