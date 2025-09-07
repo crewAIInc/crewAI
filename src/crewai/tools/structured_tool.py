@@ -4,7 +4,7 @@ import asyncio
 import inspect
 import textwrap
 from collections.abc import Callable
-from typing import TYPE_CHECKING, Any, get_type_hints, cast
+from typing import TYPE_CHECKING, Any, get_type_hints
 
 from pydantic import BaseModel, Field, create_model
 
@@ -145,7 +145,7 @@ class CrewStructuredTool:
         type_hints = get_type_hints(func)
 
         # Create field definitions
-        fields = {}
+        fields: dict[str, Any] = {}
         for param_name, param in sig.parameters.items():
             # Skip self/cls for methods
             if param_name in ("self", "cls"):
@@ -162,7 +162,7 @@ class CrewStructuredTool:
 
         # Create model
         schema_name = f"{name.title()}Schema"
-        return create_model(schema_name, **cast(dict[str, Any], fields))
+        return create_model(schema_name, **fields)
 
     def _validate_function_signature(self) -> None:
         """Validate that the function signature matches the args schema."""
