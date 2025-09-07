@@ -4,13 +4,11 @@ This module provides functionality for generating and validating unique identifi
 for CrewAI agents. These identifiers are used for tracking, auditing, and security.
 """
 
-from dataclasses import field
 from datetime import datetime
 from typing import Annotated, Any
 from uuid import UUID, uuid4, uuid5
 
-from pydantic import BeforeValidator
-from pydantic.dataclasses import dataclass
+from pydantic import BaseModel, BeforeValidator, Field, PrivateAttr, computed_field
 from typing_extensions import Self
 
 from crewai.security.constants import CREW_AI_NAMESPACE
@@ -44,8 +42,7 @@ def _validate_metadata(v: Any) -> dict[str, Any]:
     return v
 
 
-@dataclass
-class Fingerprint:
+class Fingerprint(BaseModel):
     """A class for generating and managing unique identifiers for agents.
 
     Each agent has dual identifiers:
@@ -58,11 +55,31 @@ class Fingerprint:
         metadata: Additional metadata associated with this fingerprint
     """
 
-    uuid_str: str = field(init=False, default_factory=lambda: str(uuid4()))
-    created_at: datetime = field(init=False, default_factory=datetime.now)
-    metadata: Annotated[dict[str, Any], BeforeValidator(_validate_metadata)] = field(
+    _uuid_str: str = PrivateAttr(default_factory=lambda: str(uuid4()))
+    _created_at: datetime = PrivateAttr(default_factory=datetime.now)
+    metadata: Annotated[dict[str, Any], BeforeValidator(_validate_metadata)] = Field(
         default_factory=dict
     )
+
+    @computed_field  # type: ignore[misc]
+    @property
+    def uuid_str(self) -> str:
+        """Get the string representation of the UUID for this fingerprint.
+
+        Notes:
+            Mimics frozen field behavior using computed_field.
+        """
+        return self._uuid_str
+
+    @computed_field  # type: ignore[misc]
+    @property
+    def created_at(self) -> datetime:
+        """Get the creation timestamp for this fingerprint.
+
+        Notes:
+            Mimics frozen field behavior using computed_field.
+        """
+        return self._created_at
 
     @property
     def uuid(self) -> UUID:
@@ -100,8 +117,8 @@ class Fingerprint:
         """
         fingerprint = cls(metadata=metadata or {})
         if seed:
-            # For seed-based generation, we need to manually set the uuid_str after creation
-            object.__setattr__(fingerprint, "uuid_str", cls._generate_uuid(seed))
+            # For seed-based generation, we need to manually set the _uuid_str after creation
+            fingerprint.__dict__["_uuid_str"] = cls._generate_uuid(seed)
         return fingerprint
 
     def __str__(self) -> str:
@@ -147,10 +164,10 @@ class Fingerprint:
 
         # For consistency with existing stored fingerprints, we need to manually set these
         if "uuid_str" in data:
-            object.__setattr__(fingerprint, "uuid_str", data["uuid_str"])
+            fingerprint.__dict__["_uuid_str"] = data["uuid_str"]
         if "created_at" in data and isinstance(data["created_at"], str):
-            object.__setattr__(
-                fingerprint, "created_at", datetime.fromisoformat(data["created_at"])
+            fingerprint.__dict__["_created_at"] = datetime.fromisoformat(
+                data["created_at"]
             )
 
         return fingerprint
