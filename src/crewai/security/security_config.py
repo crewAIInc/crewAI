@@ -50,6 +50,8 @@ class SecurityConfig(BaseModel):
             if not v.strip():
                 raise ValueError("Fingerprint seed cannot be empty")
             return Fingerprint.generate(seed=v)
+        if isinstance(v, dict):
+            return Fingerprint.from_dict(v)
         if isinstance(v, Fingerprint):
             return v
 

@@ -4,11 +4,13 @@ This module provides functionality for generating and validating unique identifi
 for CrewAI agents. These identifiers are used for tracking, auditing, and security.
 """
 
+from dataclasses import field
 from datetime import datetime
 from typing import Annotated, Any
 from uuid import UUID, uuid4, uuid5
 
-from pydantic import BaseModel, BeforeValidator, ConfigDict, Field
+from pydantic import BeforeValidator
+from pydantic.dataclasses import dataclass
 from typing_extensions import Self
 
 from crewai.security.constants import CREW_AI_NAMESPACE
@@ -42,7 +44,8 @@ def _validate_metadata(v: Any) -> dict[str, Any]:
     return v
 
 
-class Fingerprint(BaseModel):
+@dataclass
+class Fingerprint:
     """A class for generating and managing unique identifiers for agents.
 
     Each agent has dual identifiers:
@@ -55,21 +58,11 @@ class Fingerprint(BaseModel):
         metadata: Additional metadata associated with this fingerprint
     """
 
-    uuid_str: str = Field(
-        default_factory=lambda: str(uuid4()),
-        description="String representation of the UUID",
-        init=False,
+    uuid_str: str = field(init=False, default_factory=lambda: str(uuid4()))
+    created_at: datetime = field(init=False, default_factory=datetime.now)
+    metadata: Annotated[dict[str, Any], BeforeValidator(_validate_metadata)] = field(
+        default_factory=dict
     )
-    created_at: datetime = Field(
-        default_factory=datetime.now,
-        description="When this fingerprint was created",
-        init=False,
-    )
-    metadata: Annotated[dict[str, Any], BeforeValidator(_validate_metadata)] = Field(
-        default_factory=dict, description="Additional metadata for this fingerprint"
-    )
-
-    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     @property
     def uuid(self) -> UUID:
@@ -117,7 +110,7 @@ class Fingerprint(BaseModel):
 
     def __eq__(self, other: Any) -> bool:
         """Compare fingerprints by their UUID."""
-        if isinstance(other, Fingerprint):
+        if type(other) is Fingerprint:
             return self.uuid_str == other.uuid_str
         return False
 
