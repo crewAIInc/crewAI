@@ -1376,7 +1376,7 @@ class ConsoleFormatter:
         if isinstance(formatted_answer, AgentAction):
             thought = re.sub(r"\n+", "\n", formatted_answer.thought)
             formatted_json = json.dumps(
-                formatted_answer.tool_input,
+                json.loads(formatted_answer.tool_input),
                 indent=2,
                 ensure_ascii=False,
             )
