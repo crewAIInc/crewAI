@@ -32,7 +32,7 @@ jobs:
         run: uv python install ${{ matrix.python-version }}
 
       - name: Install dependencies
-        run: uv sync --dev --no-install-project
+        run: uv sync --dev --all-extras --no-install-project
 
       - name: Get changed Python files
         id: changed-files
