@@ -93,4 +93,5 @@ from .tools import (
     YoutubeChannelSearchTool,
     YoutubeVideoSearchTool,
     ZapierActionTools,
+    ParallelSearchTool,
 )
