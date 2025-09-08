@@ -2,6 +2,7 @@
 title: "Automation Triggers"
 description: "Automatically execute your CrewAI workflows when specific events occur in connected integrations"
 icon: "bolt"
+mode: "wide"
 ---
 
 Automation triggers enable you to automatically run your CrewAI deployments when specific events occur in your connected integrations, creating powerful event-driven workflows that respond to real-time changes in your business systems.
@@ -95,6 +96,13 @@ class MyAutomatedCrew:
 ```
 
 The crew will automatically receive and can access the trigger payload through the standard CrewAI context mechanisms.
+
+<Note>
+  Crew and Flow inputs can include `crewai_trigger_payload`. CrewAI automatically injects this payload:
+  - Tasks: appended to the first task's description by default ("Trigger Payload: {crewai_trigger_payload}")
+  - Control via `allow_crewai_trigger_context`: set `True` to always inject, `False` to never inject
+  - Flows: any `@start()` method that accepts a `crewai_trigger_payload` parameter will receive it
+</Note>
 
 ### Integration with Flows
 
