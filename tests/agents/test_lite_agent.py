@@ -520,6 +520,53 @@ def test_lite_agent_with_custom_llm_and_guardrails():
     assert result2.raw == "Modified by guardrail"
 
 
+def test_lite_agent_structured_output_with_malformed_json():
+    """Test that LiteAgent can handle malformed JSON wrapped in markdown blocks."""
+    
+    class FounderNames(BaseModel):
+        names: list[str] = Field(description="List of founder names")
+    
+    class MockLLMWithMalformedJSON(BaseLLM):
+        def __init__(self):
+            super().__init__(model="mock-model")
+        
+        def call(self, messages, **kwargs):
+            return '''Thought: I need to extract the founder names
+Final Answer: ```json
+{
+  "names": ["John Smith", "Jane Doe"]
+}
+```'''
+        
+        def supports_function_calling(self):
+            return False
+        
+        def supports_stop_words(self):
+            return False
+        
+        def get_context_window_size(self):
+            return 4096
+    
+    mock_llm = MockLLMWithMalformedJSON()
+    
+    agent = Agent(
+        role="Data Extraction Specialist",
+        goal="Extract founder names from text",
+        backstory="You extract and structure information accurately.",
+        llm=mock_llm,
+        verbose=True,
+    )
+    
+    result = agent.kickoff(
+        messages="Extract founder names from: 'The company was founded by John Smith and Jane Doe.'",
+        response_format=FounderNames
+    )
+    
+    assert result.pydantic is not None, "Should successfully parse malformed JSON"
+    assert isinstance(result.pydantic, FounderNames), "Should return correct Pydantic model"
+    assert result.pydantic.names == ["John Smith", "Jane Doe"], "Should extract correct founder names"
+
+
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_lite_agent_with_invalid_llm():
     """Test that LiteAgent raises proper error when create_llm returns None."""

@@ -44,6 +44,7 @@ from crewai.llm import LLM, BaseLLM
 from crewai.tools.base_tool import BaseTool
 from crewai.tools.structured_tool import CrewStructuredTool
 from crewai.utilities import I18N
+from crewai.utilities.converter import convert_to_model
 from crewai.utilities.guardrail import process_guardrail
 from crewai.utilities.agent_utils import (
     enforce_rpm_limit,
@@ -354,10 +355,15 @@ class LiteAgent(FlowTrackable, BaseModel):
         formatted_result: Optional[BaseModel] = None
         if self.response_format:
             try:
-                # Cast to BaseModel to ensure type safety
-                result = self.response_format.model_validate_json(agent_finish.output)
-                if isinstance(result, BaseModel):
-                    formatted_result = result
+                converted_result = convert_to_model(
+                    result=agent_finish.output,
+                    output_pydantic=self.response_format,
+                    output_json=None,
+                    agent=self,
+                    converter_cls=None,
+                )
+                if isinstance(converted_result, BaseModel):
+                    formatted_result = converted_result
             except Exception as e:
                 self._printer.print(
                     content=f"Failed to parse output into response format: {str(e)}",
@@ -596,3 +602,13 @@ class LiteAgent(FlowTrackable, BaseModel):
     def _append_message(self, text: str, role: str = "assistant") -> None:
         """Append a message to the message list with the given role."""
         self._messages.append(format_message_for_llm(text, role=role))
+
+    def get_output_converter(self, llm, model, instructions):
+        """Get the converter class for the agent to create json/pydantic outputs."""
+        from crewai.utilities.converter import Converter
+        return Converter(
+            text="",
+            llm=llm,
+            model=model,
+            instructions=instructions,
+        )
