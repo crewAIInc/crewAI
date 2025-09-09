@@ -837,6 +837,144 @@ crew = Crew(
 )
 ```
 
+### External Memory with Zep
+
+[Zep](https://www.getzep.com/) is a [context engineering platform](https://www.getzep.com/solutions/context-engineering/) that can be used to provide advanced memory capabilities for AI agents. Zep offers persistent memory across conversations and supports both user-specific and shared knowledge storage.
+
+#### Installation and Setup
+
+First, install the Zep-CrewAI integration package:
+
+```bash
+pip install zep-crewai
+```
+
+Set your Zep API key as an environment variable:
+
+```bash
+export ZEP_API_KEY="your-zep-api-key"
+```
+
+#### Basic Zep User Storage
+
+Zep provides two main storage types that can be used with CrewAI's external memory system. Before using Zep storage, you need to create the necessary users and threads:
+
+```python
+import os
+import uuid
+from crewai import Agent, Crew, Task
+from crewai.memory.external.external_memory import ExternalMemory
+from zep_cloud.client import Zep
+from zep_crewai import ZepUserStorage
+
+# Initialize Zep client
+zep_client = Zep(api_key=os.getenv("ZEP_API_KEY"))
+
+# Create user and thread (required before using storage)
+user_id = "alice_123"
+thread_id = uuid.uuid4().hex
+
+# Create user in Zep
+zep_client.user.add(
+    user_id=user_id,
+    email="alice@example.com",
+    first_name="Alice",
+    last_name="Johnson"
+)
+
+# Create thread in Zep
+zep_client.thread.create(
+    thread_id=thread_id,
+    user_id=user_id
+)
+
+# Create user-specific storage
+user_storage = ZepUserStorage(
+    client=zep_client,
+    user_id=user_id,
+    thread_id=thread_id,
+    mode="summary"  # or "raw_messages"
+)
+
+# Create external memory with Zep storage
+external_memory = ExternalMemory(storage=user_storage)
+
+# Create crew with Zep memory
+crew = Crew(
+    agents=[your_agent],
+    tasks=[your_task],
+    external_memory=external_memory,
+    verbose=True
+)
+```
+
+#### Advanced Configuration with Graph Storage
+
+For shared organizational knowledge, use ZepGraphStorage. You need to create the graph first:
+
+```python
+from zep_crewai import ZepGraphStorage
+
+# Create graph in Zep (required before using storage)
+graph_id = "company_knowledge"
+graph = zep_client.graph.create(
+    graph_id=graph_id,
+    name="Company Knowledge Base",
+    description="Shared organizational knowledge and information"
+)
+
+# Create shared graph storage for organizational knowledge
+graph_storage = ZepGraphStorage(
+    client=zep_client,
+    graph_id=graph_id,
+    entity_limit=50,
+    fact_limit=100
+)
+
+# Use with external memory
+external_memory = ExternalMemory(storage=graph_storage)
+
+crew = Crew(
+    agents=[your_agent],
+    tasks=[your_task],
+    external_memory=external_memory
+)
+```
+
+#### Key Features
+
+- **Persistent Memory**: Conversations and context persist across sessions
+- **Dual Storage Types**: User-specific storage for personal context and graph storage for shared knowledge
+- **Intelligent Search**: Built-in search capabilities for retrieving relevant information
+- **Context Routing**: Automatically routes different data types to appropriate storage locations
+- **Configurable Modes**: Choose between "summary" and "raw_messages" modes for different use cases
+
+#### Storage Modes
+
+**Summary Mode** (Recommended for most use cases):
+```python
+# Ensure user and thread exist first (see Basic Zep User Storage section above)
+user_storage = ZepUserStorage(
+    client=zep_client,
+    user_id="user_123",
+    thread_id="session_456",
+    mode="summary"  # Stores condensed, relevant information
+)
+```
+
+**Raw Messages Mode** (For complete conversation history):
+```python
+# Ensure user and thread exist first (see Basic Zep User Storage section above)
+user_storage = ZepUserStorage(
+    client=zep_client,
+    user_id="user_123",
+    thread_id="session_456",
+    mode="raw_messages"  # Stores complete conversation history
+)
+```
+
+For more detailed configuration options and advanced features, refer to the [Zep CrewAI integration documentation](https://help.getzep.com/docs/ecosystem/crew-ai).
+
 ### Custom Storage Implementation
 ```python
 from crewai.memory.external.external_memory import ExternalMemory
@@ -876,7 +1014,7 @@ crew = Crew(
 |---------------------|------------------------|-----------------------------|------------------------------|
 | **Ease of Use**     | Setup Complexity       | Simple                      | Moderate                     |
 |                     | Integration            | Built-in (contextual)       | Standalone                   |
-| **Persistence**     | Storage                | Local files                 | Custom / Mem0                |
+| **Persistence**     | Storage                | Local files                 | Custom / Third-party         |
 |                     | Cross-session Support  | ✅                           | ✅                           |
 | **Personalization** | User-specific Memory   | ❌                          |  ✅                           |
 |                     | Custom Providers       | Limited                     | Any provider                 |
