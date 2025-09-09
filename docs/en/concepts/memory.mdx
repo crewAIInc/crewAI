@@ -893,7 +893,7 @@ user_storage = ZepUserStorage(
     client=zep_client,
     user_id=user_id,
     thread_id=thread_id,
-    mode="summary"  # or "raw_messages"
+    mode="summary"  # or "basic"
 )
 
 # Create external memory with Zep storage
@@ -947,7 +947,7 @@ crew = Crew(
 - **Dual Storage Types**: User-specific storage for personal context and graph storage for shared knowledge
 - **Intelligent Search**: Built-in search capabilities for retrieving relevant information
 - **Context Routing**: Automatically routes different data types to appropriate storage locations
-- **Configurable Modes**: Choose between "summary" and "raw_messages" modes for different use cases
+- **Configurable Modes**: Choose between "summary" and "basic" modes for different use cases
 
 #### Storage Modes
 
@@ -962,14 +962,14 @@ user_storage = ZepUserStorage(
 )
 ```
 
-**Raw Messages Mode** (For complete conversation history):
+**Basic Mode** (Faster):
 ```python
 # Ensure user and thread exist first (see Basic Zep User Storage section above)
 user_storage = ZepUserStorage(
     client=zep_client,
     user_id="user_123",
     thread_id="session_456",
-    mode="raw_messages"  # Stores complete conversation history
+    mode="basic"  # Returns raw artifacts from knowledge graph as context, but faster
 )
 ```
 
