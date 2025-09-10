@@ -53,6 +53,7 @@ class CalculatorTool(BaseTool):
     def _run(self, expression: str) -> str:
         """Calculate the result of a mathematical expression."""
         try:
+            # Using eval with restricted builtins for test purposes only
             result = eval(expression, {"__builtins__": {}})  # noqa: S307
             return f"The result of {expression} is {result}"
         except Exception as e:

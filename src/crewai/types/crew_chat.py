@@ -1,14 +1,22 @@
+"""Crew chat input models.
+
+This module provides models for defining chat inputs and fields
+for crew interactions.
+"""
+
 from pydantic import BaseModel, Field
 
 
 class ChatInputField(BaseModel):
-    """
-    Represents a single required input for the crew, with a name and short description.
+    """Represents a single required input for the crew.
+
     Example:
-        {
-            "name": "topic",
-            "description": "The topic to focus on for the conversation"
-        }
+        ```python
+        field = ChatInputField(
+            name="topic",
+            description="The topic to focus on for the conversation"
+        )
+        ```
     """
 
     name: str = Field(..., description="The name of the input field")
@@ -16,17 +24,19 @@ class ChatInputField(BaseModel):
 
 
 class ChatInputs(BaseModel):
-    """
-    Holds a high-level crew_description plus a list of ChatInputFields.
+    """Holds crew metadata and input field definitions.
+
     Example:
-        {
-            "crew_name": "topic-based-qa",
-            "crew_description": "Use this crew for topic-based Q&A",
-            "inputs": [
-                {"name": "topic", "description": "The topic to focus on"},
-                {"name": "username", "description": "Name of the user"},
+        ```python
+        inputs = ChatInputs(
+            crew_name="topic-based-qa",
+            crew_description="Use this crew for topic-based Q&A",
+            inputs=[
+                ChatInputField(name="topic", description="The topic to focus on"),
+                ChatInputField(name="username", description="Name of the user"),
             ]
-        }
+        )
+        ```
     """
 
     crew_name: str = Field(..., description="The name of the crew")

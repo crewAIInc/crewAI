@@ -5,7 +5,7 @@ This module provides integration with AI Suite for LLM capabilities.
 
 from typing import Any
 
-import aisuite as ai  # type: ignore[import-untyped, import-not-found]
+import aisuite as ai  # type: ignore
 
 from crewai.llms.base_llm import BaseLLM
 
