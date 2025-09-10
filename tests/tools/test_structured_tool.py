@@ -39,6 +39,7 @@ def test_initialization(basic_function, schema_class):
     assert tool.func == basic_function
     assert tool.args_schema == schema_class
 
+
 def test_from_function(basic_function):
     """Test creating tool from function"""
     tool = CrewStructuredTool.from_function(
@@ -49,6 +50,7 @@ def test_from_function(basic_function):
     assert tool.description == "Test description"
     assert tool.func == basic_function
     assert isinstance(tool.args_schema, type(BaseModel))
+
 
 def test_validate_function_signature(basic_function, schema_class):
     """Test function signature validation"""
@@ -62,6 +64,7 @@ def test_validate_function_signature(basic_function, schema_class):
     # Should not raise any exceptions
     tool._validate_function_signature()
 
+
 @pytest.mark.asyncio
 async def test_ainvoke(basic_function):
     """Test asynchronous invocation"""
@@ -69,6 +72,7 @@ async def test_ainvoke(basic_function):
 
     result = await tool.ainvoke(input={"param1": "test"})
     assert result == "test 0"
+
 
 def test_parse_args_dict(basic_function):
     """Test parsing dictionary arguments"""
@@ -78,6 +82,7 @@ def test_parse_args_dict(basic_function):
     assert parsed["param1"] == "test"
     assert parsed["param2"] == 42
 
+
 def test_parse_args_string(basic_function):
     """Test parsing string arguments"""
     tool = CrewStructuredTool.from_function(func=basic_function, name="test_tool")
@@ -85,6 +90,7 @@ def test_parse_args_string(basic_function):
     parsed = tool._parse_args('{"param1": "test", "param2": 42}')
     assert parsed["param1"] == "test"
     assert parsed["param2"] == 42
+
 
 def test_complex_types():
     """Test handling of complex parameter types"""
@@ -98,6 +104,7 @@ def test_complex_types():
     )
     result = tool.invoke({"nested": {"key": "value"}, "items": [1, 2, 3]})
     assert result == "Processed 3 items with 1 nested keys"
+
 
 def test_schema_inheritance():
     """Test tool creation with inherited schema"""
@@ -118,6 +125,7 @@ def test_schema_inheritance():
 
     result = tool.invoke({"base_param": "test", "extra_param": 42})
     assert result == "test 42"
+
 
 def test_default_values_in_schema():
     """Test handling of default values in schema"""
@@ -144,6 +152,7 @@ def test_default_values_in_schema():
     )
     assert result == "test custom 42"
 
+
 @pytest.fixture
 def custom_tool_decorator():
     from crewai.tools import tool
@@ -154,6 +163,7 @@ def custom_tool_decorator():
         return "Hello World from Custom Tool"
 
     return custom_tool
+
 
 @pytest.fixture
 def custom_tool():
@@ -169,17 +179,26 @@ def custom_tool():
 
     return CustomTool()
 
+
 def build_simple_crew(tool):
     from crewai import Agent, Task, Crew
 
-    agent1 = Agent(role="Simple role", goal="Simple goal", backstory="Simple backstory", tools=[tool])
+    agent1 = Agent(
+        role="Simple role",
+        goal="Simple goal",
+        backstory="Simple backstory",
+        tools=[tool],
+    )
 
     say_hi_task = Task(
-        description="Use the custom tool result as answer.", agent=agent1, expected_output="Use the tool result"
+        description="Use the custom tool result as answer.",
+        agent=agent1,
+        expected_output="Use the tool result",
     )
 
     crew = Crew(agents=[agent1], tasks=[say_hi_task])
     return crew
+
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_async_tool_using_within_isolated_crew(custom_tool):
@@ -188,12 +207,14 @@ def test_async_tool_using_within_isolated_crew(custom_tool):
 
     assert result.raw == "Hello World from Custom Tool"
 
+
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_async_tool_using_decorator_within_isolated_crew(custom_tool_decorator):
     crew = build_simple_crew(custom_tool_decorator)
     result = crew.kickoff()
 
     assert result.raw == "Hello World from Custom Tool"
+
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_async_tool_within_flow(custom_tool):
@@ -219,6 +240,7 @@ def test_async_tool_using_decorator_within_flow(custom_tool_decorator):
 
     class StructuredExampleFlow(Flow):
         from crewai.flow.flow import start
+
         @start()
         async def start(self):
             crew = build_simple_crew(custom_tool_decorator)
@@ -228,3 +250,58 @@ def test_async_tool_using_decorator_within_flow(custom_tool_decorator):
     flow = StructuredExampleFlow()
     result = flow.kickoff()
     assert result.raw == "Hello World from Custom Tool"
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_tool_called_only_once_in_crew_execution():
+    """Test that a tool is called exactly once during crew execution, not twice."""
+    from crewai import Agent, Crew, Task
+    from crewai.tools import BaseTool
+
+    call_count = 0
+    call_history = []
+
+    class CountingTool(BaseTool):
+        name: str = "counting_tool"
+        description: str = "A tool that counts executions to detect duplicate calls"
+
+        def _run(self, query: str) -> str:
+            """A tool that counts how many times it's called."""
+            nonlocal call_count
+            call_count += 1
+            call_history.append(f"Call #{call_count}: {query}")
+            return f"Tool executed once with query: {query} (call #{call_count})"
+
+    counting_tool = CountingTool()
+
+    agent = Agent(
+        role="Test Agent",
+        goal="Test that tools are called only once",
+        backstory="An agent designed to test tool execution behavior",
+        tools=[counting_tool],
+    )
+
+    task = Task(
+        description="Use the counting_tool with query 'test_query' to verify it's called only once.",
+        agent=agent,
+        expected_output="Tool execution result showing it was called exactly once",
+    )
+
+    crew = Crew(
+        agents=[agent],
+        tasks=[task],
+        verbose=False,
+    )
+
+    result = crew.kickoff()
+
+    assert call_count == 1, (
+        f"DUPLICATE EXECUTION DETECTED: Tool was called {call_count} times instead of 1. "
+        f"Call history: {call_history}"
+    )
+
+    assert len(call_history) == 1
+
+    assert "Call #1:" in call_history[0]
+
+    assert "Tool executed once" in result.raw
