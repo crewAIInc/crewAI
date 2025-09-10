@@ -252,56 +252,130 @@ def test_async_tool_using_decorator_within_flow(custom_tool_decorator):
     assert result.raw == "Hello World from Custom Tool"
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
-def test_tool_called_only_once_in_crew_execution():
-    """Test that a tool is called exactly once during crew execution, not twice."""
-    from crewai import Agent, Crew, Task
-    from crewai.tools import BaseTool
-
+def test_structured_tool_invoke_calls_func_only_once():
+    """Test that CrewStructuredTool.invoke() calls the underlying function exactly once."""
     call_count = 0
     call_history = []
 
-    class CountingTool(BaseTool):
-        name: str = "counting_tool"
-        description: str = "A tool that counts executions to detect duplicate calls"
+    def counting_function(param: str) -> str:
+        """Function that tracks how many times it's called."""
+        nonlocal call_count
+        call_count += 1
+        call_history.append(f"Call #{call_count} with param: {param}")
+        return f"Result from call #{call_count}: {param}"
 
-        def _run(self, query: str) -> str:
-            """A tool that counts how many times it's called."""
-            nonlocal call_count
-            call_count += 1
-            call_history.append(f"Call #{call_count}: {query}")
-            return f"Tool executed once with query: {query} (call #{call_count})"
-
-    counting_tool = CountingTool()
-
-    agent = Agent(
-        role="Test Agent",
-        goal="Test that tools are called only once",
-        backstory="An agent designed to test tool execution behavior",
-        tools=[counting_tool],
+    # Create CrewStructuredTool directly
+    tool = CrewStructuredTool.from_function(
+        func=counting_function,
+        name="direct_test_tool",
+        description="Tool to test direct invoke() method",
     )
 
-    task = Task(
-        description="Use the counting_tool with query 'test_query' to verify it's called only once.",
-        agent=agent,
-        expected_output="Tool execution result showing it was called exactly once",
-    )
+    # Call invoke() directly - this is where the bug was
+    result = tool.invoke({"param": "test_value"})
 
-    crew = Crew(
-        agents=[agent],
-        tasks=[task],
-        verbose=False,
-    )
-
-    result = crew.kickoff()
-
+    # Critical assertions that would catch the duplicate execution bug
     assert call_count == 1, (
-        f"DUPLICATE EXECUTION DETECTED: Tool was called {call_count} times instead of 1. "
+        f"DUPLICATE EXECUTION BUG: Function was called {call_count} times instead of 1. "
+        f"This means CrewStructuredTool.invoke() has duplicate function calls. "
         f"Call history: {call_history}"
     )
 
-    assert len(call_history) == 1
+    assert len(call_history) == 1, (
+        f"Expected 1 call in history, got {len(call_history)}: {call_history}"
+    )
 
-    assert "Call #1:" in call_history[0]
+    assert call_history[0] == "Call #1 with param: test_value", (
+        f"Expected 'Call #1 with param: test_value', got: {call_history[0]}"
+    )
 
-    assert "Tool executed once" in result.raw
+    assert result == "Result from call #1: test_value", (
+        f"Expected result from first call, got: {result}"
+    )
+
+
+def test_structured_tool_invoke_multiple_calls_increment_correctly():
+    """Test multiple calls to invoke() to ensure each increments correctly."""
+    call_count = 0
+
+    def incrementing_function(value: int) -> int:
+        nonlocal call_count
+        call_count += 1
+        return value + call_count
+
+    tool = CrewStructuredTool.from_function(
+        func=incrementing_function,
+        name="incrementing_tool",
+        description="Tool that increments on each call",
+    )
+
+    result1 = tool.invoke({"value": 10})
+    assert call_count == 1, (
+        f"After first invoke, expected call_count=1, got {call_count}"
+    )
+    assert result1 == 11, f"Expected 11 (10+1), got {result1}"
+
+    result2 = tool.invoke({"value": 20})
+    assert call_count == 2, (
+        f"After second invoke, expected call_count=2, got {call_count}"
+    )
+    assert result2 == 22, f"Expected 22 (20+2), got {result2}"
+
+    result3 = tool.invoke({"value": 30})
+    assert call_count == 3, (
+        f"After third invoke, expected call_count=3, got {call_count}"
+    )
+    assert result3 == 33, f"Expected 33 (30+3), got {result3}"
+
+
+def test_structured_tool_invoke_with_side_effects():
+    """Test that side effects only happen once per invoke() call."""
+    side_effects = []
+
+    def side_effect_function(action: str) -> str:
+        side_effects.append(f"SIDE_EFFECT: {action} executed at call")
+        return f"Action {action} completed"
+
+    tool = CrewStructuredTool.from_function(
+        func=side_effect_function,
+        name="side_effect_tool",
+        description="Tool with observable side effects",
+    )
+
+    result = tool.invoke({"action": "write_file"})
+
+    assert len(side_effects) == 1, (
+        f"SIDE EFFECT BUG: Expected 1 side effect, got {len(side_effects)}. "
+        f"This indicates the function was called multiple times. "
+        f"Side effects: {side_effects}"
+    )
+
+    assert side_effects[0] == "SIDE_EFFECT: write_file executed at call"
+    assert result == "Action write_file completed"
+
+
+def test_structured_tool_invoke_exception_handling():
+    """Test that exceptions don't cause duplicate execution."""
+    call_count = 0
+
+    def failing_function(should_fail: bool) -> str:
+        nonlocal call_count
+        call_count += 1
+        if should_fail:
+            raise ValueError(f"Intentional failure on call #{call_count}")
+        return f"Success on call #{call_count}"
+
+    tool = CrewStructuredTool.from_function(
+        func=failing_function, name="failing_tool", description="Tool that can fail"
+    )
+
+    result = tool.invoke({"should_fail": False})
+    assert call_count == 1, f"Expected 1 call for success case, got {call_count}"
+    assert result == "Success on call #1"
+
+    call_count = 0
+
+    with pytest.raises(ValueError, match="Intentional failure on call #1"):
+        tool.invoke({"should_fail": True})
+
+    assert call_count == 1
