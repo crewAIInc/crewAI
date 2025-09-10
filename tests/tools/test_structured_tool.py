@@ -1,5 +1,3 @@
-from typing import Optional
-
 import pytest
 from pydantic import BaseModel, Field
 
@@ -133,7 +131,7 @@ def test_default_values_in_schema():
     def default_func(
         required_param: str,
         optional_param: str = "default",
-        nullable_param: Optional[int] = None,
+        nullable_param: int | None = None,
     ) -> str:
         """Test function with default values."""
         return f"{required_param} {optional_param} {nullable_param}"
@@ -181,7 +179,7 @@ def custom_tool():
 
 
 def build_simple_crew(tool):
-    from crewai import Agent, Task, Crew
+    from crewai import Agent, Crew, Task
 
     agent1 = Agent(
         role="Simple role",
@@ -196,8 +194,7 @@ def build_simple_crew(tool):
         expected_output="Use the tool result",
     )
 
-    crew = Crew(agents=[agent1], tasks=[say_hi_task])
-    return crew
+    return Crew(agents=[agent1], tasks=[say_hi_task])
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -226,8 +223,7 @@ def test_async_tool_within_flow(custom_tool):
         @start()
         async def start(self):
             crew = build_simple_crew(custom_tool)
-            result = await crew.kickoff_async()
-            return result
+            return await crew.kickoff_async()
 
     flow = StructuredExampleFlow()
     result = flow.kickoff()
@@ -244,8 +240,7 @@ def test_async_tool_using_decorator_within_flow(custom_tool_decorator):
         @start()
         async def start(self):
             crew = build_simple_crew(custom_tool_decorator)
-            result = await crew.kickoff_async()
-            return result
+            return await crew.kickoff_async()
 
     flow = StructuredExampleFlow()
     result = flow.kickoff()
