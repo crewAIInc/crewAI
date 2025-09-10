@@ -40,7 +40,7 @@ def _suppress_pydantic_deprecation_warnings() -> None:
 
 _suppress_pydantic_deprecation_warnings()
 
-
+__version__ = "0.186.0"
 _telemetry_submitted = False
 
 
@@ -51,13 +51,16 @@ def _track_install() -> None:
     if _telemetry_submitted or Telemetry._is_telemetry_disabled():
         return
 
-    pixel_url = "https://api.scarf.sh/v2/packages/CrewAI/crewai/docs/00f2dad1-8334-4a39-934e-003b2e1146db"
+    try:
+        pixel_url = "https://api.scarf.sh/v2/packages/CrewAI/crewai/docs/00f2dad1-8334-4a39-934e-003b2e1146db"
 
-    req = urllib.request.Request(pixel_url)  # noqa: S310
-    req.add_header("User-Agent", f"CrewAI-Python/{__version__}")
+        req = urllib.request.Request(pixel_url)  # noqa: S310
+        req.add_header("User-Agent", f"CrewAI-Python/{__version__}")
 
-    with urllib.request.urlopen(req, timeout=2):  # noqa: S310
-        _telemetry_submitted = True
+        with urllib.request.urlopen(req, timeout=2):  # noqa: S310
+            _telemetry_submitted = True
+    except Exception:  # noqa: S110
+        pass
 
 
 def _track_install_async() -> None:
@@ -68,8 +71,6 @@ def _track_install_async() -> None:
 
 
 _track_install_async()
-
-__version__ = "0.186.0"
 __all__ = [
     "LLM",
     "Agent",
