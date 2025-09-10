@@ -34,10 +34,10 @@ def test_initialization(basic_function, schema_class):
         args_schema=schema_class,
     )
 
-    assert tool.name == "test_tool"
-    assert tool.description == "Test tool description"
-    assert tool.func == basic_function
-    assert tool.args_schema == schema_class
+    assert tool.name == "test_tool"  # noqa: S101
+    assert tool.description == "Test tool description"  # noqa: S101
+    assert tool.func == basic_function  # noqa: S101
+    assert tool.args_schema == schema_class  # noqa: S101
 
 def test_from_function(basic_function):
     """Test creating tool from function"""
@@ -45,10 +45,10 @@ def test_from_function(basic_function):
         func=basic_function, name="test_tool", description="Test description"
     )
 
-    assert tool.name == "test_tool"
-    assert tool.description == "Test description"
-    assert tool.func == basic_function
-    assert isinstance(tool.args_schema, type(BaseModel))
+    assert tool.name == "test_tool"  # noqa: S101
+    assert tool.description == "Test description"  # noqa: S101
+    assert tool.func == basic_function  # noqa: S101
+    assert isinstance(tool.args_schema, type(BaseModel))  # noqa: S101
 
 def test_validate_function_signature(basic_function, schema_class):
     """Test function signature validation"""
@@ -68,23 +68,23 @@ async def test_ainvoke(basic_function):
     tool = CrewStructuredTool.from_function(func=basic_function, name="test_tool")
 
     result = await tool.ainvoke(input={"param1": "test"})
-    assert result == "test 0"
+    assert result == "test 0"  # noqa: S101
 
 def test_parse_args_dict(basic_function):
     """Test parsing dictionary arguments"""
     tool = CrewStructuredTool.from_function(func=basic_function, name="test_tool")
 
     parsed = tool._parse_args({"param1": "test", "param2": 42})
-    assert parsed["param1"] == "test"
-    assert parsed["param2"] == 42
+    assert parsed["param1"] == "test"  # noqa: S101
+    assert parsed["param2"] == 42  # noqa: S101
 
 def test_parse_args_string(basic_function):
     """Test parsing string arguments"""
     tool = CrewStructuredTool.from_function(func=basic_function, name="test_tool")
 
     parsed = tool._parse_args('{"param1": "test", "param2": 42}')
-    assert parsed["param1"] == "test"
-    assert parsed["param2"] == 42
+    assert parsed["param1"] == "test"  # noqa: S101
+    assert parsed["param2"] == 42  # noqa: S101
 
 def test_complex_types():
     """Test handling of complex parameter types"""
@@ -97,7 +97,7 @@ def test_complex_types():
         func=complex_func, name="test_tool", description="Test complex types"
     )
     result = tool.invoke({"nested": {"key": "value"}, "items": [1, 2, 3]})
-    assert result == "Processed 3 items with 1 nested keys"
+    assert result == "Processed 3 items with 1 nested keys"  # noqa: S101
 
 def test_schema_inheritance():
     """Test tool creation with inherited schema"""
@@ -117,7 +117,7 @@ def test_schema_inheritance():
     )
 
     result = tool.invoke({"base_param": "test", "extra_param": 42})
-    assert result == "test 42"
+    assert result == "test 42"  # noqa: S101
 
 def test_default_values_in_schema():
     """Test handling of default values in schema"""
@@ -136,13 +136,13 @@ def test_default_values_in_schema():
 
     # Test with minimal parameters
     result = tool.invoke({"required_param": "test"})
-    assert result == "test default None"
+    assert result == "test default None"  # noqa: S101
 
     # Test with all parameters
     result = tool.invoke(
         {"required_param": "test", "optional_param": "custom", "nullable_param": 42}
     )
-    assert result == "test custom 42"
+    assert result == "test custom 42"  # noqa: S101
 
 
 def test_tool_not_executed_twice():
@@ -204,22 +204,21 @@ def build_simple_crew(tool):
         description="Use the custom tool result as answer.", agent=agent1, expected_output="Use the tool result"
     )
 
-    crew = Crew(agents=[agent1], tasks=[say_hi_task])
-    return crew
+    return Crew(agents=[agent1], tasks=[say_hi_task])
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_async_tool_using_within_isolated_crew(custom_tool):
     crew = build_simple_crew(custom_tool)
     result = crew.kickoff()
 
-    assert result.raw == "Hello World from Custom Tool"
+    assert result.raw == "Hello World from Custom Tool"  # noqa: S101
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_async_tool_using_decorator_within_isolated_crew(custom_tool_decorator):
     crew = build_simple_crew(custom_tool_decorator)
     result = crew.kickoff()
 
-    assert result.raw == "Hello World from Custom Tool"
+    assert result.raw == "Hello World from Custom Tool"  # noqa: S101
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_async_tool_within_flow(custom_tool):
@@ -231,12 +230,11 @@ def test_async_tool_within_flow(custom_tool):
         @start()
         async def start(self):
             crew = build_simple_crew(custom_tool)
-            result = await crew.kickoff_async()
-            return result
+            return await crew.kickoff_async()
 
     flow = StructuredExampleFlow()
     result = flow.kickoff()
-    assert result.raw == "Hello World from Custom Tool"
+    assert result.raw == "Hello World from Custom Tool"  # noqa: S101
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -248,9 +246,8 @@ def test_async_tool_using_decorator_within_flow(custom_tool_decorator):
         @start()
         async def start(self):
             crew = build_simple_crew(custom_tool_decorator)
-            result = await crew.kickoff_async()
-            return result
+            return await crew.kickoff_async()
 
     flow = StructuredExampleFlow()
     result = flow.kickoff()
-    assert result.raw == "Hello World from Custom Tool"
+    assert result.raw == "Hello World from Custom Tool"  # noqa: S101

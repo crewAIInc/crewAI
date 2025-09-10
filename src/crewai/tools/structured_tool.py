@@ -16,7 +16,7 @@ if TYPE_CHECKING:
     from crewai.tools.base_tool import BaseTool
 
 
-class ToolUsageLimitExceeded(Exception):
+class ToolUsageLimitExceededError(Exception):
     """Exception raised when a tool has reached its maximum usage limit."""
 
     pass
@@ -234,7 +234,7 @@ class CrewStructuredTool:
         parsed_args = self._parse_args(input)
 
         if self.has_reached_max_usage_count():
-            raise ToolUsageLimitExceeded(
+            raise ToolUsageLimitExceededError(
                 f"Tool '{self.name}' has reached its maximum usage limit of {self.max_usage_count}. You should not use the {self.name} tool again."
             )
 
@@ -267,7 +267,7 @@ class CrewStructuredTool:
         parsed_args = self._parse_args(input)
 
         if self.has_reached_max_usage_count():
-            raise ToolUsageLimitExceeded(
+            raise ToolUsageLimitExceededError(
                 f"Tool '{self.name}' has reached its maximum usage limit of {self.max_usage_count}. You should not use the {self.name} tool again."
             )
 
