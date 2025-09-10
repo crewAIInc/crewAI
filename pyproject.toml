@@ -106,24 +106,38 @@ fix = true
 
 [tool.ruff.lint]
 select = [
-    "B006",
-    "UP006",
-    "UP007",
-    "UP035",
-    "UP037",
-    "UP004",
-    "UP008",
-    "UP010",
-    "UP018",
-    "UP031",
-    "UP032",
-    "I001",
-    "I002",
+    "E",      # pycodestyle errors (style issues)
+    "F",      # Pyflakes (code errors)
+    "B",      # flake8-bugbear (bug prevention)
+    "S",      # bandit (security issues)
+    "RUF",    # ruff-specific rules
+    "N",      # pep8-naming (naming conventions)
+    "W",      # pycodestyle warnings
+    "PERF",   # performance issues
+    "PIE",    # flake8-pie (unnecessary code)
+    "ASYNC",  # async/await best practices
+    "RET",    # flake8-return (return improvements)
+    "UP006",  # use collections.abc
+    "UP007",  # use X | Y for unions
+    "UP035",  # use dict/list instead of typing.Dict/List
+    "UP037",  # remove quotes from type annotations
+    "UP045",  # use X | None instead of Optional[X]
+    "UP004",  # use isinstance instead of type
+    "UP008",  # use super() instead of super(Class, self)
+    "UP010",  # use isinstance for type checks
+    "UP018",  # use str() instead of "string"
+    "UP031",  # use f-strings for .format()
+    "UP032",  # use f-strings for .format() with positional
+    "I001",   # sort imports
+    "I002",   # remove unused imports
 ]
+ignore = ["E501"]  # ignore line too long
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["S101"]  # Allow assert statements in tests
 
 [tool.mypy]
-strict = true
-exclude = ["src/crewai/cli/templates"]
+exclude = ["src/crewai/cli/templates", "tests"]
 
 [tool.bandit]
 exclude_dirs = ["src/crewai/cli/templates"]

@@ -2,6 +2,7 @@
 title: "웹후크 자동화"
 description: "ActivePieces, Zapier, Make.com과 같은 플랫폼을 사용하여 CrewAI Enterprise 워크플로우를 웹후크로 자동화하세요"
 icon: "webhook"
+mode: "wide"
 ---
 
 CrewAI Enterprise를 사용하면 웹훅을 통해 워크플로우를 자동화할 수 있습니다. 이 문서에서는 웹훅을 설정하고 사용하는 과정을 안내하며, Zapier와 Make.com과 유사한 워크플로우 자동화 플랫폼인 ActivePieces와의 통합에 중점을 두고 crew 실행을 시작하는 방법을 설명합니다.
@@ -78,6 +79,8 @@ CrewAI Enterprise를 사용하면 웹훅을 통해 워크플로우를 자동화�
 </Steps>
 
 ## Webhook 출력 예시
+
+**참고:** kickoff 요청에 제공된 모든 `meta` 객체는 모든 webhook 페이로드에 포함되어, 전체 crew 실행 생명주기에 걸쳐 요청을 추적하고 컨텍스트를 유지할 수 있습니다.
 
 <Tabs>
     <Tab title="Step Webhook">
