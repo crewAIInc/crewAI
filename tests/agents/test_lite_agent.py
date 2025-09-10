@@ -1,3 +1,5 @@
+# ruff: noqa: S101
+# mypy: ignore-errors
 from collections import defaultdict
 from typing import cast
 from unittest.mock import Mock, patch
