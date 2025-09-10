@@ -3,7 +3,7 @@ name: Run Type Checks
 on: [pull_request]
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   type-checker-matrix:
@@ -20,19 +20,27 @@ jobs:
         with:
           fetch-depth: 0 # Fetch all history for proper diff
 
+      - name: Restore global uv cache
+        id: cache-restore
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/.cache/uv
+            ~/.local/share/uv
+            .venv
+          key: uv-main-py${{ matrix.python-version }}-${{ hashFiles('uv.lock') }}
+          restore-keys: |
+            uv-main-py${{ matrix.python-version }}-
+
       - name: Install uv
         uses: astral-sh/setup-uv@v6
         with:
-          enable-cache: true
-          cache-dependency-glob: |
-            **/pyproject.toml
-            **/uv.lock
-
-      - name: Set up Python ${{ matrix.python-version }}
-        run: uv python install ${{ matrix.python-version }}
+          version: "0.8.4"
+          python-version: ${{ matrix.python-version }}
+          enable-cache: false
 
       - name: Install dependencies
-        run: uv sync --dev --all-extras --no-install-project
+        run: uv sync --all-groups --all-extras
 
       - name: Get changed Python files
         id: changed-files
@@ -65,6 +73,16 @@ jobs:
       - name: No files to check
         if: steps.changed-files.outputs.has_changes == 'false'
         run: echo "No Python files in src/ were modified - skipping type checks"
+
+      - name: Save uv caches
+        if: steps.cache-restore.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            ~/.cache/uv
+            ~/.local/share/uv
+            .venv
+          key: uv-main-py${{ matrix.python-version }}-${{ hashFiles('uv.lock') }}
 
   # Summary job to provide single status for branch protection
   type-checker:
