@@ -7,9 +7,6 @@ on:
     paths:
       - "uv.lock"
       - "pyproject.toml"
-  pull_request:
-    paths:
-      - ".github/workflows/build-uv-cache.yml"
   workflow_dispatch:
 
 permissions:
