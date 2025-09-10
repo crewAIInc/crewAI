@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - gl/feat/add-test-duration-caching  # Temporary for testing
     paths:
       - 'tests/**/*.py'
   workflow_dispatch:
