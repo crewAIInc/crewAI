@@ -59,8 +59,8 @@ class TraceBatchManager:
 
     def initialize_batch(
         self,
-        user_context: Dict[str, str],
-        execution_metadata: Dict[str, Any],
+        user_context: dict[str, str],
+        execution_metadata: dict[str, Any],
         use_ephemeral: bool = False,
     ) -> TraceBatch:
         """Initialize a new trace batch"""
@@ -77,8 +77,8 @@ class TraceBatchManager:
 
     def _initialize_backend_batch(
         self,
-        user_context: Dict[str, str],
-        execution_metadata: Dict[str, Any],
+        user_context: dict[str, str],
+        execution_metadata: dict[str, Any],
         use_ephemeral: bool = False,
     ):
         """Send batch initialization to backend"""
