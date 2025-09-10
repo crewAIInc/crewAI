@@ -16,7 +16,7 @@ if TYPE_CHECKING:
     from crewai.tools.base_tool import BaseTool
 
 
-class ToolUsageLimitExceeded(Exception):
+class ToolUsageLimitExceededError(Exception):
     """Exception raised when a tool has reached its maximum usage limit."""
 
     pass
@@ -164,7 +164,7 @@ class CrewStructuredTool:
 
         # Create model
         schema_name = f"{name.title()}Schema"
-        return create_model(schema_name, **fields)
+        return create_model(schema_name, **fields)  # type: ignore[call-overload]
 
     def _validate_function_signature(self) -> None:
         """Validate that the function signature matches the args schema."""
@@ -207,13 +207,13 @@ class CrewStructuredTool:
 
                 raw_args = json.loads(raw_args)
             except json.JSONDecodeError as e:
-                raise ValueError(f"Failed to parse arguments as JSON: {e}")
+                raise ValueError(f"Failed to parse arguments as JSON: {e}") from e
 
         try:
             validated_args = self.args_schema.model_validate(raw_args)
             return validated_args.model_dump()
         except Exception as e:
-            raise ValueError(f"Arguments validation failed: {e}")
+            raise ValueError(f"Arguments validation failed: {e}") from e
 
     async def ainvoke(
         self,
@@ -234,7 +234,7 @@ class CrewStructuredTool:
         parsed_args = self._parse_args(input)
 
         if self.has_reached_max_usage_count():
-            raise ToolUsageLimitExceeded(
+            raise ToolUsageLimitExceededError(
                 f"Tool '{self.name}' has reached its maximum usage limit of {self.max_usage_count}. You should not use the {self.name} tool again."
             )
 
@@ -267,22 +267,19 @@ class CrewStructuredTool:
         parsed_args = self._parse_args(input)
 
         if self.has_reached_max_usage_count():
-            raise ToolUsageLimitExceeded(
+            raise ToolUsageLimitExceededError(
                 f"Tool '{self.name}' has reached its maximum usage limit of {self.max_usage_count}. You should not use the {self.name} tool again."
             )
 
         self._increment_usage_count()
 
         if inspect.iscoroutinefunction(self.func):
-            result = asyncio.run(self.func(**parsed_args, **kwargs))
-            return result
+            return asyncio.run(self.func(**parsed_args, **kwargs))
 
         try:
             result = self.func(**parsed_args, **kwargs)
         except Exception:
             raise
-
-        result = self.func(**parsed_args, **kwargs)
 
         if asyncio.iscoroutine(result):
             return asyncio.run(result)
