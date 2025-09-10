@@ -178,6 +178,7 @@ class Agent(BaseAgent):
     )
 
     @model_validator(mode="before")
+    @classmethod
     def validate_from_repository(cls, v):
         if v is not None and (from_repository := v.get("from_repository")):
             return load_agent_from_repository(from_repository) | v
@@ -733,7 +734,7 @@ class Agent(BaseAgent):
 
         try:
             subprocess.run(
-                ["docker", "info"],
+                ["/usr/bin/docker", "info"],
                 check=True,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
