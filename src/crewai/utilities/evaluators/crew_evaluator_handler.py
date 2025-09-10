@@ -9,8 +9,8 @@ from crewai.agent import Agent
 from crewai.llm import BaseLLM
 from crewai.task import Task
 from crewai.tasks.task_output import TaskOutput
-from crewai.utilities.events import crewai_event_bus
-from crewai.utilities.events.crew_events import CrewTestResultEvent
+from crewai.events.event_bus import crewai_event_bus
+from crewai.events.types.crew_events import CrewTestResultEvent
 
 
 class TaskEvaluationPydanticOutput(BaseModel):
@@ -155,6 +155,7 @@ class CrewEvaluator:
         )
 
         console = Console()
+        console.print("\n")
         console.print(table)
 
     def evaluate(self, task_output: TaskOutput):

@@ -3,8 +3,10 @@ from typing import List
 from pydantic import BaseModel, Field
 
 from crewai.utilities import Converter
-from crewai.utilities.events import TaskEvaluationEvent, crewai_event_bus
+from crewai.events.types.task_events import TaskEvaluationEvent
+from crewai.events.event_bus import crewai_event_bus
 from crewai.utilities.pydantic_schema_parser import PydanticSchemaParser
+from crewai.utilities.training_converter import TrainingConverter
 
 
 class Entity(BaseModel):
@@ -133,7 +135,7 @@ class TaskEvaluator:
             ).get_schema()
             instructions = f"{instructions}\n\nThe json should have the following structure, with the following keys:\n{model_schema}"
 
-        converter = Converter(
+        converter = TrainingConverter(
             llm=self.llm,
             text=evaluation_query,
             model=TrainingTaskEvaluation,

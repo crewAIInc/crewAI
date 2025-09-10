@@ -1,6 +1,4 @@
-import contextlib
 import hashlib
-import io
 import logging
 import os
 import shutil
@@ -11,30 +9,16 @@ import chromadb.errors
 from chromadb.api import ClientAPI
 from chromadb.api.types import OneOrMany
 from chromadb.config import Settings
+import warnings
 
 from crewai.knowledge.storage.base_knowledge_storage import BaseKnowledgeStorage
-from crewai.utilities import EmbeddingConfigurator
+from crewai.rag.embeddings.configurator import EmbeddingConfigurator
 from crewai.utilities.chromadb import sanitize_collection_name
 from crewai.utilities.constants import KNOWLEDGE_DIRECTORY
 from crewai.utilities.logger import Logger
 from crewai.utilities.paths import db_storage_path
-
-
-@contextlib.contextmanager
-def suppress_logging(
-    logger_name="chromadb.segment.impl.vector.local_persistent_hnsw",
-    level=logging.ERROR,
-):
-    logger = logging.getLogger(logger_name)
-    original_level = logger.getEffectiveLevel()
-    logger.setLevel(level)
-    with (
-        contextlib.redirect_stdout(io.StringIO()),
-        contextlib.redirect_stderr(io.StringIO()),
-        contextlib.suppress(UserWarning),
-    ):
-        yield
-    logger.setLevel(original_level)
+from crewai.utilities.chromadb import create_persistent_client
+from crewai.utilities.logger_utils import suppress_logging
 
 
 class KnowledgeStorage(BaseKnowledgeStorage):
@@ -62,7 +46,9 @@ class KnowledgeStorage(BaseKnowledgeStorage):
         filter: Optional[dict] = None,
         score_threshold: float = 0.35,
     ) -> List[Dict[str, Any]]:
-        with suppress_logging():
+        with suppress_logging(
+            "chromadb.segment.impl.vector.local_persistent_hnsw", logging.ERROR
+        ):
             if self.collection:
                 fetched = self.collection.query(
                     query_texts=query,
@@ -84,13 +70,18 @@ class KnowledgeStorage(BaseKnowledgeStorage):
                 raise Exception("Collection not initialized")
 
     def initialize_knowledge_storage(self):
-        base_path = os.path.join(db_storage_path(), "knowledge")
-        chroma_client = chromadb.PersistentClient(
-            path=base_path,
-            settings=Settings(allow_reset=True),
+        # Suppress deprecation warnings from chromadb, which are not relevant to us
+        # TODO: Remove this once we upgrade chromadb to at least 1.0.8.
+        warnings.filterwarnings(
+            "ignore",
+            message=r".*'model_fields'.*is deprecated.*",
+            module=r"^chromadb(\.|$)",
         )
 
-        self.app = chroma_client
+        self.app = create_persistent_client(
+            path=os.path.join(db_storage_path(), "knowledge"),
+            settings=Settings(allow_reset=True),
+        )
 
         try:
             collection_name = (
@@ -111,9 +102,8 @@ class KnowledgeStorage(BaseKnowledgeStorage):
     def reset(self):
         base_path = os.path.join(db_storage_path(), KNOWLEDGE_DIRECTORY)
         if not self.app:
-            self.app = chromadb.PersistentClient(
-                path=base_path,
-                settings=Settings(allow_reset=True),
+            self.app = create_persistent_client(
+                path=base_path, settings=Settings(allow_reset=True)
             )
 
         self.app.reset()

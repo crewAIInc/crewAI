@@ -1,33 +1,46 @@
-from typing import Any, Dict, Optional
+from typing import Optional, TYPE_CHECKING
 
 from crewai.memory import (
     EntityMemory,
     ExternalMemory,
     LongTermMemory,
     ShortTermMemory,
-    UserMemory,
 )
+
+if TYPE_CHECKING:
+    from crewai.agent import Agent
+    from crewai.task import Task
 
 
 class ContextualMemory:
     def __init__(
         self,
-        memory_config: Optional[Dict[str, Any]],
         stm: ShortTermMemory,
         ltm: LongTermMemory,
         em: EntityMemory,
-        um: UserMemory,
         exm: ExternalMemory,
+        agent: Optional["Agent"] = None,
+        task: Optional["Task"] = None,
     ):
-        if memory_config is not None:
-            self.memory_provider = memory_config.get("provider")
-        else:
-            self.memory_provider = None
         self.stm = stm
         self.ltm = ltm
         self.em = em
-        self.um = um
         self.exm = exm
+        self.agent = agent
+        self.task = task
+
+        if self.stm is not None:
+            self.stm.agent = self.agent
+            self.stm.task = self.task
+        if self.ltm is not None:
+            self.ltm.agent = self.agent
+            self.ltm.task = self.task
+        if self.em is not None:
+            self.em.agent = self.agent
+            self.em.task = self.task
+        if self.exm is not None:
+            self.exm.agent = self.agent
+            self.exm.task = self.task
 
     def build_context_for_task(self, task, context) -> str:
         """
@@ -44,8 +57,6 @@ class ContextualMemory:
         context.append(self._fetch_stm_context(query))
         context.append(self._fetch_entity_context(query))
         context.append(self._fetch_external_context(query))
-        if self.memory_provider == "mem0":
-            context.append(self._fetch_user_context(query))
         return "\n".join(filter(None, context))
 
     def _fetch_stm_context(self, query) -> str:
@@ -59,10 +70,7 @@ class ContextualMemory:
 
         stm_results = self.stm.search(query)
         formatted_results = "\n".join(
-            [
-                f"- {result['memory'] if self.memory_provider == 'mem0' else result['context']}"
-                for result in stm_results
-            ]
+            [f"- {result['context']}" for result in stm_results]
         )
         return f"Recent Insights:\n{formatted_results}" if stm_results else ""
 
@@ -99,33 +107,9 @@ class ContextualMemory:
 
         em_results = self.em.search(query)
         formatted_results = "\n".join(
-            [
-                f"- {result['memory'] if self.memory_provider == 'mem0' else result['context']}"
-                for result in em_results
-            ]  # type: ignore #  Invalid index type "str" for "str"; expected type "SupportsIndex | slice"
+            [f"- {result['context']}" for result in em_results]  # type: ignore #  Invalid index type "str" for "str"; expected type "SupportsIndex | slice"
         )
         return f"Entities:\n{formatted_results}" if em_results else ""
-
-    def _fetch_user_context(self, query: str) -> str:
-        """
-        Fetches and formats relevant user information from User Memory.
-        Args:
-            query (str): The search query to find relevant user memories.
-        Returns:
-            str: Formatted user memories as bullet points, or an empty string if none found.
-        """
-
-        if self.um is None:
-            return ""
-
-        user_memories = self.um.search(query)
-        if not user_memories:
-            return ""
-
-        formatted_memories = "\n".join(
-            f"- {result['memory']}" for result in user_memories
-        )
-        return f"User memories/preferences:\n{formatted_memories}"
 
     def _fetch_external_context(self, query: str) -> str:
         """
@@ -144,6 +128,6 @@ class ContextualMemory:
             return ""
 
         formatted_memories = "\n".join(
-            f"- {result['memory']}" for result in external_memories
+            f"- {result['context']}" for result in external_memories
         )
         return f"External memories:\n{formatted_memories}"

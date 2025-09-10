@@ -2,7 +2,8 @@ from importlib.metadata import version as get_version
 from typing import Optional
 
 import click
-
+from crewai.cli.config import Settings
+from crewai.cli.settings.main import SettingsCommand
 from crewai.cli.add_crew_to_flow import add_crew_to_flow
 from crewai.cli.create_crew import create_crew
 from crewai.cli.create_flow import create_flow
@@ -13,6 +14,7 @@ from crewai.memory.storage.kickoff_task_outputs_storage import (
 
 from .authentication.main import AuthenticationCommand
 from .deploy.main import DeployCommand
+from .enterprise.main import EnterpriseConfigureCommand
 from .evaluate_crew import evaluate_crew
 from .install_crew import install_crew
 from .kickoff_flow import kickoff_flow
@@ -138,8 +140,12 @@ def log_tasks_outputs() -> None:
 @click.option("-s", "--short", is_flag=True, help="Reset SHORT TERM memory")
 @click.option("-e", "--entities", is_flag=True, help="Reset ENTITIES memory")
 @click.option("-kn", "--knowledge", is_flag=True, help="Reset KNOWLEDGE storage")
-@click.option("-akn", "--agent-knowledge", is_flag=True, help="Reset AGENT KNOWLEDGE storage")
-@click.option("-k","--kickoff-outputs",is_flag=True,help="Reset LATEST KICKOFF TASK OUTPUTS")
+@click.option(
+    "-akn", "--agent-knowledge", is_flag=True, help="Reset AGENT KNOWLEDGE storage"
+)
+@click.option(
+    "-k", "--kickoff-outputs", is_flag=True, help="Reset LATEST KICKOFF TASK OUTPUTS"
+)
 @click.option("-a", "--all", is_flag=True, help="Reset ALL memories")
 def reset_memories(
     long: bool,
@@ -154,13 +160,23 @@ def reset_memories(
     Reset the crew memories (long, short, entity, latest_crew_kickoff_ouputs, knowledge, agent_knowledge). This will delete all the data saved.
     """
     try:
-        memory_types = [long, short, entities, knowledge, agent_knowledge, kickoff_outputs, all]
+        memory_types = [
+            long,
+            short,
+            entities,
+            knowledge,
+            agent_knowledge,
+            kickoff_outputs,
+            all,
+        ]
         if not any(memory_types):
             click.echo(
                 "Please specify at least one memory type to reset using the appropriate flags."
             )
             return
-        reset_memories_command(long, short, entities, knowledge, agent_knowledge, kickoff_outputs, all)
+        reset_memories_command(
+            long, short, entities, knowledge, agent_knowledge, kickoff_outputs, all
+        )
     except Exception as e:
         click.echo(f"An error occurred while resetting memories: {e}", err=True)
 
@@ -211,15 +227,10 @@ def update():
 
 
 @crewai.command()
-def signup():
-    """Sign Up/Login to CrewAI+."""
-    AuthenticationCommand().signup()
-
-
-@crewai.command()
 def login():
-    """Sign Up/Login to CrewAI+."""
-    AuthenticationCommand().signup()
+    """Sign Up/Login to CrewAI Enterprise."""
+    Settings().clear_user_settings()
+    AuthenticationCommand().login()
 
 
 # DEPLOY CREWAI+ COMMANDS
@@ -360,8 +371,8 @@ def org():
     pass
 
 
-@org.command()
-def list():
+@org.command("list")
+def org_list():
     """List available organizations."""
     org_command = OrganizationCommand()
     org_command.list()
@@ -380,6 +391,49 @@ def current():
     """Show current organization when 'crewai org' is called without subcommands."""
     org_command = OrganizationCommand()
     org_command.current()
+
+
+@crewai.group()
+def enterprise():
+    """Enterprise Configuration commands."""
+    pass
+
+
+@enterprise.command("configure")
+@click.argument("enterprise_url")
+def enterprise_configure(enterprise_url: str):
+    """Configure CrewAI Enterprise OAuth2 settings from the provided Enterprise URL."""
+    enterprise_command = EnterpriseConfigureCommand()
+    enterprise_command.configure(enterprise_url)
+
+
+@crewai.group()
+def config():
+    """CLI Configuration commands."""
+    pass
+
+
+@config.command("list")
+def config_list():
+    """List all CLI configuration parameters."""
+    config_command = SettingsCommand()
+    config_command.list()
+
+
+@config.command("set")
+@click.argument("key")
+@click.argument("value")
+def config_set(key: str, value: str):
+    """Set a CLI configuration parameter."""
+    config_command = SettingsCommand()
+    config_command.set(key, value)
+
+
+@config.command("reset")
+def config_reset():
+    """Reset all CLI configuration parameters to default values."""
+    config_command = SettingsCommand()
+    config_command.reset_all_settings()
 
 
 if __name__ == "__main__":

@@ -81,7 +81,7 @@ class SQLiteFlowPersistence(FlowPersistence):
         """
         # Convert state_data to dict, handling both Pydantic and dict cases
         if isinstance(state_data, BaseModel):
-            state_dict = dict(state_data)  # Use dict() for better type compatibility
+            state_dict = state_data.model_dump()
         elif isinstance(state_data, dict):
             state_dict = state_data
         else:

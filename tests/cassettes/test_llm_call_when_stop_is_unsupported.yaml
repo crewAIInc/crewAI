@@ -1,0 +1,209 @@
+interactions:
+- request:
+    body: '{"messages": [{"role": "user", "content": "What is the capital of France?"}],
+      "model": "o1-mini", "stop": ["stop"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate, zstd
+      connection:
+      - keep-alive
+      content-length:
+      - '115'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.75.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.75.0
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-read-timeout:
+      - '600.0'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.12
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"error\": {\n    \"message\": \"Unsupported parameter: 'stop'
+        is not supported with this model.\",\n    \"type\": \"invalid_request_error\",\n
+        \   \"param\": \"stop\",\n    \"code\": \"unsupported_parameter\"\n  }\n}"
+    headers:
+      CF-RAY:
+      - 961215744c94cb45-GIG
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '196'
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 18 Jul 2025 12:46:46 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - __cf_bm=KwJ1K47OHX4n2TZN8bMW37yKzKyK__S4HbTiCfyWjXM-1752842806-1.0.1.1-lweHFR7Kv2v7hT5I6xxYVz_7Ruu6aBdEgpJrSWrMxi_ficAeWC0oDeQ.0w2Lr1WRejIjqqcwSgdl6RixF2qEkjJZfS0pz_Vjjqexe44ayp4;
+        path=/; expires=Fri, 18-Jul-25 13:16:46 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=zv09c6bwcgNsYU80ah3wXzqeaIKyt_h61EAh_XRA87I-1752842806652-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '20'
+      openai-project:
+      - proj_xitITlrFeen7zjNSzML82h9x
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-envoy-upstream-service-time:
+      - '32'
+      x-ratelimit-limit-requests:
+      - '30000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-requests:
+      - '29999'
+      x-ratelimit-remaining-tokens:
+      - '149999990'
+      x-ratelimit-reset-requests:
+      - 2ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_7be4715c3ee32aa406eacb68c7cc966e
+    status:
+      code: 400
+      message: Bad Request
+- request:
+    body: '{"messages": [{"role": "user", "content": "What is the capital of France?"}],
+      "model": "o1-mini"}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate, zstd
+      connection:
+      - keep-alive
+      content-length:
+      - '97'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=KwJ1K47OHX4n2TZN8bMW37yKzKyK__S4HbTiCfyWjXM-1752842806-1.0.1.1-lweHFR7Kv2v7hT5I6xxYVz_7Ruu6aBdEgpJrSWrMxi_ficAeWC0oDeQ.0w2Lr1WRejIjqqcwSgdl6RixF2qEkjJZfS0pz_Vjjqexe44ayp4;
+        _cfuvid=zv09c6bwcgNsYU80ah3wXzqeaIKyt_h61EAh_XRA87I-1752842806652-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.75.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.75.0
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-read-timeout:
+      - '600.0'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.12
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAA3RSwU7jMBC95ytGPlYNakJhQ2/sgSsg7QUhFA32pJni2JHtwFao/76yC3XQwsWH
+        efOe35uZ9wJAsBIbELLHIIdRl78nGvaqOt/dPDxf71/fdg/9bXO3e5ETXt+LZWTY5x3J8Mk6k3YY
+        NQW25ghLRxgoqla/LupmXTeXqwQMVpGONFuVAxsu61W9LldXZVV/MHvLkrzYwGMBAPCe3ujRKPor
+        NpB0UmUg73FLYnNqAhDO6lgR6D37gCaIZQalNYFMsv2nJ5A4ckANtoMbh0YSsIfF4g4d+8XibM50
+        1E0eo3MzaT0D0BgbMCZPnp8+kMPJZceGfd86Qm9N/NkHO4qEHgqAp5R6+hJEjM4OY2iDfaEkW62P
+        ciLPOYPNJxhsQJ3rV83yG7VWUUDWfjY1IVH2pDIzjxgnxXYGFLNs/5v5TvuYm802q1yuf9TPgJQ0
+        BlLt6Eix/Jo4tzmKZ/hT22nIybHw5F5ZUhuYXFyEog4nfTwQ4fc+0NB2bLbkRsfpSuKui0PxDwAA
+        //8DAN7IUy8kAwAA
+    headers:
+      CF-RAY:
+      - 961216c3f9837e07-GRU
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 18 Jul 2025 12:47:41 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '1027'
+      openai-project:
+      - proj_xitITlrFeen7zjNSzML82h9x
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-envoy-upstream-service-time:
+      - '1029'
+      x-ratelimit-limit-requests:
+      - '30000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-requests:
+      - '29999'
+      x-ratelimit-remaining-tokens:
+      - '149999990'
+      x-ratelimit-reset-requests:
+      - 2ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_19a0763b09f0410b9d09598078a04cd6
+    status:
+      code: 200
+      message: OK
+version: 1

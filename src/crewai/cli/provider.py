@@ -1,3 +1,5 @@
+import os
+import certifi
 import json
 import time
 from collections import defaultdict
@@ -163,8 +165,10 @@ def fetch_provider_data(cache_file):
     Returns:
     - dict or None: The fetched provider data or None if the operation fails.
     """
+    ssl_config = os.environ['SSL_CERT_FILE'] = certifi.where()
+
     try:
-        response = requests.get(JSON_URL, stream=True, timeout=60)
+        response = requests.get(JSON_URL, stream=True, timeout=60, verify=ssl_config)
         response.raise_for_status()
         data = download_data(response)
         with open(cache_file, "w") as f:

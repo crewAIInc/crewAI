@@ -1,50 +1,67 @@
-import re
-from typing import Any, Optional, Union
+"""Agent output parsing module for ReAct-style LLM responses.
+
+This module provides parsing functionality for agent outputs that follow
+the ReAct (Reasoning and Acting) format, converting them into structured
+AgentAction or AgentFinish objects.
+"""
+
+from dataclasses import dataclass
 
 from json_repair import repair_json
 
+from crewai.agents.constants import (
+    ACTION_INPUT_REGEX,
+    ACTION_REGEX,
+    ACTION_INPUT_ONLY_REGEX,
+    FINAL_ANSWER_ACTION,
+    MISSING_ACTION_AFTER_THOUGHT_ERROR_MESSAGE,
+    MISSING_ACTION_INPUT_AFTER_ACTION_ERROR_MESSAGE,
+    UNABLE_TO_REPAIR_JSON_RESULTS,
+)
 from crewai.utilities import I18N
 
-FINAL_ANSWER_ACTION = "Final Answer:"
-MISSING_ACTION_AFTER_THOUGHT_ERROR_MESSAGE = "I did it wrong. Invalid Format: I missed the 'Action:' after 'Thought:'. I will do right next, and don't use a tool I have already used.\n"
-MISSING_ACTION_INPUT_AFTER_ACTION_ERROR_MESSAGE = "I did it wrong. Invalid Format: I missed the 'Action Input:' after 'Action:'. I will do right next, and don't use a tool I have already used.\n"
-FINAL_ANSWER_AND_PARSABLE_ACTION_ERROR_MESSAGE = "I did it wrong. Tried to both perform Action and give a Final Answer at the same time, I must do one or the other"
+_I18N = I18N()
 
 
+@dataclass
 class AgentAction:
+    """Represents an action to be taken by an agent."""
+
     thought: str
     tool: str
     tool_input: str
     text: str
-    result: str
-
-    def __init__(self, thought: str, tool: str, tool_input: str, text: str):
-        self.thought = thought
-        self.tool = tool
-        self.tool_input = tool_input
-        self.text = text
+    result: str | None = None
 
 
+@dataclass
 class AgentFinish:
+    """Represents the final answer from an agent."""
+
     thought: str
     output: str
     text: str
 
-    def __init__(self, thought: str, output: str, text: str):
-        self.thought = thought
-        self.output = output
-        self.text = text
-
 
 class OutputParserException(Exception):
-    error: str
+    """Exception raised when output parsing fails.
 
-    def __init__(self, error: str):
+    Attributes:
+        error: The error message.
+    """
+
+    def __init__(self, error: str) -> None:
+        """Initialize OutputParserException.
+
+        Args:
+            error: The error message.
+        """
         self.error = error
+        super().__init__(error)
 
 
-class CrewAgentParser:
-    """Parses ReAct-style LLM calls that have a single tool input.
+def parse(text: str) -> AgentAction | AgentFinish:
+    """Parse agent output text into AgentAction or AgentFinish.
 
     Expects output to be in one of two formats.
 
@@ -62,108 +79,117 @@ class CrewAgentParser:
 
     Thought: agent thought here
     Final Answer: The temperature is 100 degrees
+
+    Args:
+        text: The agent output text to parse.
+
+    Returns:
+        AgentAction or AgentFinish based on the content.
+
+    Raises:
+        OutputParserException: If the text format is invalid.
     """
+    thought = _extract_thought(text)
+    includes_answer = FINAL_ANSWER_ACTION in text
+    action_match = ACTION_INPUT_REGEX.search(text)
 
-    _i18n: I18N = I18N()
-    agent: Any = None
+    if includes_answer:
+        final_answer = text.split(FINAL_ANSWER_ACTION)[-1].strip()
+        # Check whether the final answer ends with triple backticks.
+        if final_answer.endswith("```"):
+            # Count occurrences of triple backticks in the final answer.
+            count = final_answer.count("```")
+            # If count is odd then it's an unmatched trailing set; remove it.
+            if count % 2 != 0:
+                final_answer = final_answer[:-3].rstrip()
+        return AgentFinish(thought=thought, output=final_answer, text=text)
 
-    def __init__(self, agent: Optional[Any] = None):
-        self.agent = agent
+    elif action_match:
+        action = action_match.group(1)
+        clean_action = _clean_action(action)
 
-    @staticmethod
-    def parse_text(text: str) -> Union[AgentAction, AgentFinish]:
-        """
-        Static method to parse text into an AgentAction or AgentFinish without needing to instantiate the class.
+        action_input = action_match.group(2).strip()
 
-        Args:
-            text: The text to parse.
+        tool_input = action_input.strip(" ").strip('"')
+        safe_tool_input = _safe_repair_json(tool_input)
 
-        Returns:
-            Either an AgentAction or AgentFinish based on the parsed content.
-        """
-        parser = CrewAgentParser()
-        return parser.parse(text)
-
-    def parse(self, text: str) -> Union[AgentAction, AgentFinish]:
-        thought = self._extract_thought(text)
-        includes_answer = FINAL_ANSWER_ACTION in text
-        regex = (
-            r"Action\s*\d*\s*:[\s]*(.*?)[\s]*Action\s*\d*\s*Input\s*\d*\s*:[\s]*(.*)"
+        return AgentAction(
+            thought=thought, tool=clean_action, tool_input=safe_tool_input, text=text
         )
-        action_match = re.search(regex, text, re.DOTALL)
-        if includes_answer:
-            final_answer = text.split(FINAL_ANSWER_ACTION)[-1].strip()
-            # Check whether the final answer ends with triple backticks.
-            if final_answer.endswith("```"):
-                # Count occurrences of triple backticks in the final answer.
-                count = final_answer.count("```")
-                # If count is odd then it's an unmatched trailing set; remove it.
-                if count % 2 != 0:
-                    final_answer = final_answer[:-3].rstrip()
-            return AgentFinish(thought, final_answer, text)
 
-        elif action_match:
-            action = action_match.group(1)
-            clean_action = self._clean_action(action)
+    if not ACTION_REGEX.search(text):
+        raise OutputParserException(
+            f"{MISSING_ACTION_AFTER_THOUGHT_ERROR_MESSAGE}\n{_I18N.slice('final_answer_format')}",
+        )
+    elif not ACTION_INPUT_ONLY_REGEX.search(text):
+        raise OutputParserException(
+            MISSING_ACTION_INPUT_AFTER_ACTION_ERROR_MESSAGE,
+        )
+    else:
+        err_format = _I18N.slice("format_without_tools")
+        error = f"{err_format}"
+        raise OutputParserException(
+            error,
+        )
 
-            action_input = action_match.group(2).strip()
 
-            tool_input = action_input.strip(" ").strip('"')
-            safe_tool_input = self._safe_repair_json(tool_input)
+def _extract_thought(text: str) -> str:
+    """Extract the thought portion from the text.
 
-            return AgentAction(thought, clean_action, safe_tool_input, text)
+    Args:
+        text: The full agent output text.
 
-        if not re.search(r"Action\s*\d*\s*:[\s]*(.*?)", text, re.DOTALL):
-            raise OutputParserException(
-                f"{MISSING_ACTION_AFTER_THOUGHT_ERROR_MESSAGE}\n{self._i18n.slice('final_answer_format')}",
-            )
-        elif not re.search(
-            r"[\s]*Action\s*\d*\s*Input\s*\d*\s*:[\s]*(.*)", text, re.DOTALL
-        ):
-            raise OutputParserException(
-                MISSING_ACTION_INPUT_AFTER_ACTION_ERROR_MESSAGE,
-            )
-        else:
-            format = self._i18n.slice("format_without_tools")
-            error = f"{format}"
-            raise OutputParserException(
-                error,
-            )
+    Returns:
+        The extracted thought string.
+    """
+    thought_index = text.find("\nAction")
+    if thought_index == -1:
+        thought_index = text.find("\nFinal Answer")
+    if thought_index == -1:
+        return ""
+    thought = text[:thought_index].strip()
+    # Remove any triple backticks from the thought string
+    thought = thought.replace("```", "").strip()
+    return thought
 
-    def _extract_thought(self, text: str) -> str:
-        thought_index = text.find("\nAction")
-        if thought_index == -1:
-            thought_index = text.find("\nFinal Answer")
-        if thought_index == -1:
-            return ""
-        thought = text[:thought_index].strip()
-        # Remove any triple backticks from the thought string
-        thought = thought.replace("```", "").strip()
-        return thought
 
-    def _clean_action(self, text: str) -> str:
-        """Clean action string by removing non-essential formatting characters."""
-        return text.strip().strip("*").strip()
+def _clean_action(text: str) -> str:
+    """Clean action string by removing non-essential formatting characters.
 
-    def _safe_repair_json(self, tool_input: str) -> str:
-        UNABLE_TO_REPAIR_JSON_RESULTS = ['""', "{}"]
+    Args:
+        text: The action text to clean.
 
-        # Skip repair if the input starts and ends with square brackets
-        # Explanation: The JSON parser has issues handling inputs that are enclosed in square brackets ('[]').
-        # These are typically valid JSON arrays or strings that do not require repair. Attempting to repair such inputs
-        # might lead to unintended alterations, such as wrapping the entire input in additional layers or modifying
-        # the structure in a way that changes its meaning. By skipping the repair for inputs that start and end with
-        # square brackets, we preserve the integrity of these valid JSON structures and avoid unnecessary modifications.
-        if tool_input.startswith("[") and tool_input.endswith("]"):
-            return tool_input
+    Returns:
+        The cleaned action string.
+    """
+    return text.strip().strip("*").strip()
 
-        # Before repair, handle common LLM issues:
-        # 1. Replace """ with " to avoid JSON parser errors
 
-        tool_input = tool_input.replace('"""', '"')
+def _safe_repair_json(tool_input: str) -> str:
+    """Safely repair JSON input.
 
-        result = repair_json(tool_input)
-        if result in UNABLE_TO_REPAIR_JSON_RESULTS:
-            return tool_input
+    Args:
+        tool_input: The tool input string to repair.
 
-        return str(result)
+    Returns:
+        The repaired JSON string or original if repair fails.
+    """
+    # Skip repair if the input starts and ends with square brackets
+    # Explanation: The JSON parser has issues handling inputs that are enclosed in square brackets ('[]').
+    # These are typically valid JSON arrays or strings that do not require repair. Attempting to repair such inputs
+    # might lead to unintended alterations, such as wrapping the entire input in additional layers or modifying
+    # the structure in a way that changes its meaning. By skipping the repair for inputs that start and end with
+    # square brackets, we preserve the integrity of these valid JSON structures and avoid unnecessary modifications.
+    if tool_input.startswith("[") and tool_input.endswith("]"):
+        return tool_input
+
+    # Before repair, handle common LLM issues:
+    # 1. Replace """ with " to avoid JSON parser errors
+
+    tool_input = tool_input.replace('"""', '"')
+
+    result = repair_json(tool_input)
+    if result in UNABLE_TO_REPAIR_JSON_RESULTS:
+        return tool_input
+
+    return str(result)

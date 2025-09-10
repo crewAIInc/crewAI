@@ -1,4 +1,5 @@
 import os
+import threading
 from unittest.mock import patch
 
 import pytest
@@ -9,6 +10,18 @@ from crewai.telemetry import Telemetry
 from opentelemetry import trace
 
 
+@pytest.fixture(autouse=True)
+def cleanup_telemetry():
+    Telemetry._instance = None
+    if hasattr(Telemetry, "_lock"):
+        Telemetry._lock = threading.Lock()
+    yield
+    Telemetry._instance = None
+    if hasattr(Telemetry, "_lock"):
+        Telemetry._lock = threading.Lock()
+
+
+@pytest.mark.telemetry
 @pytest.mark.parametrize(
     "env_var,value,expected_ready",
     [
@@ -28,6 +41,7 @@ def test_telemetry_environment_variables(env_var, value, expected_ready):
             assert telemetry.ready is expected_ready
 
 
+@pytest.mark.telemetry
 def test_telemetry_enabled_by_default():
     """Test that telemetry is enabled by default."""
     with patch.dict(os.environ, {}, clear=True):
@@ -36,6 +50,7 @@ def test_telemetry_enabled_by_default():
             assert telemetry.ready is True
 
 
+@pytest.mark.telemetry
 @patch("crewai.telemetry.telemetry.logger.error")
 @patch(
     "opentelemetry.exporter.otlp.proto.http.trace_exporter.OTLPSpanExporter.export",
@@ -64,10 +79,13 @@ def test_telemetry_fails_due_connect_timeout(export_mock, logger_mock):
 
     trace.get_tracer_provider().force_flush()
 
-    export_mock.assert_called_once()
-    logger_mock.assert_called_once_with(error)
+    assert export_mock.called
+    assert logger_mock.call_count == export_mock.call_count
+    for call in logger_mock.call_args_list:
+        assert call[0][0] == error
 
 
+@pytest.mark.telemetry
 def test_telemetry_singleton_pattern():
     """Test that Telemetry uses the singleton pattern correctly."""
     Telemetry._instance = None

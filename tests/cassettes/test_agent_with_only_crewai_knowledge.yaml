@@ -1,0 +1,150 @@
+interactions:
+- request:
+    body: '{"model": "openai/gpt-4o-mini", "messages": [{"role": "system", "content":
+      "Your goal is to rewrite the user query so that it is optimized for retrieval
+      from a vector database. Consider how the query will be used to find relevant
+      documents, and aim to make it more specific and context-aware. \n\n Do not include
+      any other text than the rewritten query, especially any preamble or postamble
+      and only add expected output format if its relevant to the rewritten query.
+      \n\n Focus on the key words of the intended task and to retrieve the most relevant
+      information. \n\n There will be some extra context provided that might need
+      to be removed such as expected_output formats structured_outputs and other instructions."},
+      {"role": "user", "content": "The original query is: What is Vidit''s favorite
+      color?\n\nThis is the expected criteria for your final answer: Vidit''s favorclearite
+      color.\nyou MUST return the actual complete content as the final answer, not
+      a summary.."}], "stream": false, "stop": ["\nObservation:"]}'
+    headers:
+      accept:
+      - '*/*'
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '1017'
+      content-type:
+      - application/json
+      host:
+      - openrouter.ai
+      http-referer:
+      - https://litellm.ai
+      user-agent:
+      - litellm/1.68.0
+      x-title:
+      - liteLLM
+    method: POST
+    uri: https://openrouter.ai/api/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAAwAAAP//4lKAAS4AAAAA//90kE1PIzEMhv8Kei97Sdnplwq5gTgAF8ShcFitRmnG
+        nTFk4ihxq11V899Xs6gFJLja78djH8ANLFqKk+lqsZpP56vpYqJhublfP1eP65v1i79Lt9fdMwxS
+        lj03lGHxkChe3cGgl4YCLCRRdPyzTTpZyKTnyDCQzQt5hYXvnJ576VMgZYkw8JmcUgP7XmvgO2FP
+        BfbXAUHalGVTYOMuBIMtRy5dnckVibAoKgkG0Snvqf5my7GhP7CVQU+luJZgD8gSCBauFC7qoo40
+        EpXiSPrEDeuPcrZ1e8msdOYlSIZBpu2uuHDEeWvi2L4NhuG3QflblPqRpaWcMv8P3Ka6ml/OLmaz
+        6rKCwe6IkbL0SWuVV4pl/MNy5Di+6DRfGqioC+/Ci8p8NtcNqeNQxlTvfEfNSVwNX4R+1J/u+GAZ
+        hn8AAAD//wMAIwJ79CICAAA=
+    headers:
+      Access-Control-Allow-Origin:
+      - '*'
+      CF-RAY:
+      - 9402c9db99ec4722-BOM
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Thu, 15 May 2025 12:55:14 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      Vary:
+      - Accept-Encoding
+      x-clerk-auth-message:
+      - Invalid JWT form. A JWT consists of three parts separated by dots. (reason=token-invalid,
+        token-carrier=header)
+      x-clerk-auth-reason:
+      - token-invalid
+      x-clerk-auth-status:
+      - signed-out
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"model": "openai/gpt-4o-mini", "messages": [{"role": "system", "content":
+      "You are Information Agent. You have access to specific knowledge sources.\nYour
+      personal goal is: Provide information based on knowledge sources\nTo give my
+      best complete final answer to the task respond using the exact following format:\n\nThought:
+      I now can give a great answer\nFinal Answer: Your final answer must be the great
+      and the most complete as possible, it must be outcome described.\n\nI MUST use
+      these formats, my job depends on it!"}, {"role": "user", "content": "\nCurrent
+      Task: What is Vidit''s favorite color?\n\nThis is the expected criteria for
+      your final answer: Vidit''s favorclearite color.\nyou MUST return the actual
+      complete content as the final answer, not a summary.\n\nBegin! This is VERY
+      important to you, use the tools available and give your best Final Answer, your
+      job depends on it!\n\nThought:"}], "stream": false, "stop": ["\nObservation:"]}'
+    headers:
+      accept:
+      - '*/*'
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '951'
+      content-type:
+      - application/json
+      host:
+      - openrouter.ai
+      http-referer:
+      - https://litellm.ai
+      user-agent:
+      - litellm/1.68.0
+      x-title:
+      - liteLLM
+    method: POST
+    uri: https://openrouter.ai/api/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAAwAAAP//4lKAAS4AAAAA///iQjABAAAA//90kN1qGzEQRl9FfNdyul4nday73ARy
+        VUpLE2jLIu+O15NoZ4QkOy1moa/R1+uTlE1wnEB7qU/zc84cwB0cepLZfHm+XMwXy/nF7II/3d7V
+        H+tOPvsS3le3d+keFjHpnjtKcPgQSa5uYDFoRwEOGkk8v+tjmZ3rbGBhWOj6ntoCh3bry1mrQwxU
+        WAUWbSJfqIM7rbVot8otZbivBwTtY9J1hpNdCBYbFs7bJpHPKnDIRSMsxBfeU/OfX5aOfsBVFgPl
+        7HuCOyBpIDj4nDkXL2WiUSkkE+mNEX00rRfT856MN/0EarzkR0rGfJNrFh/M1dPbmS/ccfnz63c2
+        G7/XxIVMq0GT4WzWYUdnsEi02WUfjiLPjCz9czCO3y3yz1xomCx6SjHxE8omNtViVV/WdbWqYLE7
+        CsSkQyxN0QeSPF2wmgyOxz3lK4uixYdTcrmyb7ubjornkKexrW+31L0UV+M/pr6ufxF51TKOfwEA
+        AP//AwBybekMaAIAAA==
+    headers:
+      Access-Control-Allow-Origin:
+      - '*'
+      CF-RAY:
+      - 9402c9e1b94a4722-BOM
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Thu, 15 May 2025 12:55:15 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      Vary:
+      - Accept-Encoding
+      x-clerk-auth-message:
+      - Invalid JWT form. A JWT consists of three parts separated by dots. (reason=token-invalid,
+        token-carrier=header)
+      x-clerk-auth-reason:
+      - token-invalid
+      x-clerk-auth-status:
+      - signed-out
+    status:
+      code: 200
+      message: OK
+version: 1

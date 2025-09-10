@@ -1,5 +1,14 @@
+"""Base LLM abstract class for CrewAI.
+
+This module provides the abstract base class for all LLM implementations
+in CrewAI.
+"""
+
 from abc import ABC, abstractmethod
-from typing import Any, Callable, Dict, List, Optional, Union
+from typing import Any, Final
+
+DEFAULT_CONTEXT_WINDOW_SIZE: Final[int] = 4096
+DEFAULT_SUPPORTS_STOP_WORDS: Final[bool] = True
 
 
 class BaseLLM(ABC):
@@ -15,39 +24,38 @@ class BaseLLM(ABC):
     messages when things go wrong.
 
     Attributes:
-        stop (list): A list of stop sequences that the LLM should use to stop generation.
-            This is used by the CrewAgentExecutor and other components.
+        model: The model identifier/name.
+        temperature: Optional temperature setting for response generation.
+        stop: A list of stop sequences that the LLM should use to stop generation.
     """
-
-    model: str
-    temperature: Optional[float] = None
-    stop: Optional[List[str]] = None
 
     def __init__(
         self,
         model: str,
-        temperature: Optional[float] = None,
-    ):
+        temperature: float | None = None,
+        stop: list[str] | None = None,
+    ) -> None:
         """Initialize the BaseLLM with default attributes.
 
-        This constructor sets default values for attributes that are expected
-        by the CrewAgentExecutor and other components.
-
-        All custom LLM implementations should call super().__init__() to ensure
-        that these default attributes are properly initialized.
+        Args:
+            model: The model identifier/name.
+            temperature: Optional temperature setting for response generation.
+            stop: Optional list of stop sequences for generation.
         """
         self.model = model
         self.temperature = temperature
-        self.stop = []
+        self.stop: list[str] = stop or []
 
     @abstractmethod
     def call(
         self,
-        messages: Union[str, List[Dict[str, str]]],
-        tools: Optional[List[dict]] = None,
-        callbacks: Optional[List[Any]] = None,
-        available_functions: Optional[Dict[str, Any]] = None,
-    ) -> Union[str, Any]:
+        messages: str | list[dict[str, str]],
+        tools: list[dict] | None = None,
+        callbacks: list[Any] | None = None,
+        available_functions: dict[str, Any] | None = None,
+        from_task: Any | None = None,
+        from_agent: Any | None = None,
+    ) -> str | Any:
         """Call the LLM with the given messages.
 
         Args:
@@ -61,6 +69,8 @@ class BaseLLM(ABC):
                       during and after the LLM call.
             available_functions: Optional dict mapping function names to callables
                                that can be invoked by the LLM.
+            from_task: Optional task caller to be used for the LLM call.
+            from_agent: Optional agent caller to be used for the LLM call.
 
         Returns:
             Either a text response from the LLM (str) or
@@ -71,21 +81,20 @@ class BaseLLM(ABC):
             TimeoutError: If the LLM request times out.
             RuntimeError: If the LLM request fails for other reasons.
         """
-        pass
 
     def supports_stop_words(self) -> bool:
         """Check if the LLM supports stop words.
 
         Returns:
-            bool: True if the LLM supports stop words, False otherwise.
+            True if the LLM supports stop words, False otherwise.
         """
-        return True  # Default implementation assumes support for stop words
+        return DEFAULT_SUPPORTS_STOP_WORDS
 
     def get_context_window_size(self) -> int:
         """Get the context window size for the LLM.
 
         Returns:
-            int: The number of tokens/characters the model can handle.
+            The number of tokens/characters the model can handle.
         """
         # Default implementation - subclasses should override with model-specific values
-        return 4096
+        return DEFAULT_CONTEXT_WINDOW_SIZE

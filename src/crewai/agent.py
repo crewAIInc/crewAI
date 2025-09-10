@@ -1,6 +1,18 @@
 import shutil
 import subprocess
-from typing import Any, Dict, List, Literal, Optional, Sequence, Type, Union
+import time
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    List,
+    Literal,
+    Optional,
+    Sequence,
+    Tuple,
+    Type,
+    Union,
+)
 
 from pydantic import Field, InstanceOf, PrivateAttr, model_validator
 
@@ -26,13 +38,17 @@ from crewai.utilities.agent_utils import (
 )
 from crewai.utilities.constants import TRAINED_AGENTS_DATA_FILE, TRAINING_DATA_FILE
 from crewai.utilities.converter import generate_model_description
-from crewai.utilities.events.agent_events import (
+from crewai.events.types.agent_events import (
     AgentExecutionCompletedEvent,
     AgentExecutionErrorEvent,
     AgentExecutionStartedEvent,
 )
-from crewai.utilities.events.crewai_event_bus import crewai_event_bus
-from crewai.utilities.events.knowledge_events import (
+from crewai.events.event_bus import crewai_event_bus
+from crewai.events.types.memory_events import (
+    MemoryRetrievalStartedEvent,
+    MemoryRetrievalCompletedEvent,
+)
+from crewai.events.types.knowledge_events import (
     KnowledgeQueryCompletedEvent,
     KnowledgeQueryFailedEvent,
     KnowledgeQueryStartedEvent,
@@ -155,6 +171,13 @@ class Agent(BaseAgent):
         default=None,
         description="The Agent's role to be used from your repository.",
     )
+    guardrail: Optional[Union[Callable[[Any], Tuple[bool, Any]], str]] = Field(
+        default=None,
+        description="Function or string description of a guardrail to validate agent output",
+    )
+    guardrail_max_retries: int = Field(
+        default=3, description="Maximum number of retries when guardrail fails"
+    )
 
     @model_validator(mode="before")
     def validate_from_repository(cls, v):
@@ -198,7 +221,6 @@ class Agent(BaseAgent):
                         sources=self.knowledge_sources,
                         embedder=self.embedder,
                         collection_name=self.role,
-                        storage=self.knowledge_storage or None,
                     )
                     self.knowledge.add_sources()
         except (TypeError, ValueError) as e:
@@ -211,11 +233,9 @@ class Agent(BaseAgent):
 
         memory_attributes = [
             "memory",
-            "memory_config",
             "_short_term_memory",
             "_long_term_memory",
             "_entity_memory",
-            "_user_memory",
             "_external_memory",
         ]
 
@@ -267,7 +287,7 @@ class Agent(BaseAgent):
         self._inject_date_to_task(task)
 
         if self.tools_handler:
-            self.tools_handler.last_used_tool = {}  # type: ignore # Incompatible types in assignment (expression has type "dict[Never, Never]", variable has type "ToolCalling")
+            self.tools_handler.last_used_tool = None
 
         task_prompt = task.prompt()
 
@@ -295,22 +315,46 @@ class Agent(BaseAgent):
             )
 
         if self._is_any_available_memory():
+            crewai_event_bus.emit(
+                self,
+                event=MemoryRetrievalStartedEvent(
+                    task_id=str(task.id) if task else None,
+                    source_type="agent",
+                    from_agent=self,
+                    from_task=task,
+                ),
+            )
+
+            start_time = time.time()
+
             contextual_memory = ContextualMemory(
-                self.crew.memory_config,
                 self.crew._short_term_memory,
                 self.crew._long_term_memory,
                 self.crew._entity_memory,
-                self.crew._user_memory,
                 self.crew._external_memory,
+                agent=self,
+                task=task,
             )
             memory = contextual_memory.build_context_for_task(task, context)
             if memory.strip() != "":
                 task_prompt += self.i18n.slice("memory").format(memory=memory)
+
+            crewai_event_bus.emit(
+                self,
+                event=MemoryRetrievalCompletedEvent(
+                    task_id=str(task.id) if task else None,
+                    memory_content=memory,
+                    retrieval_time_ms=(time.time() - start_time) * 1000,
+                    source_type="agent",
+                    from_agent=self,
+                    from_task=task,
+                ),
+            )
         knowledge_config = (
             self.knowledge_config.model_dump() if self.knowledge_config else {}
         )
 
-        if self.knowledge:
+        if self.knowledge or (self.crew and self.crew.knowledge):
             crewai_event_bus.emit(
                 self,
                 event=KnowledgeRetrievalStartedEvent(
@@ -322,25 +366,28 @@ class Agent(BaseAgent):
                     task_prompt
                 )
                 if self.knowledge_search_query:
-                    agent_knowledge_snippets = self.knowledge.query(
-                        [self.knowledge_search_query], **knowledge_config
-                    )
-                    if agent_knowledge_snippets:
-                        self.agent_knowledge_context = extract_knowledge_context(
-                            agent_knowledge_snippets
-                        )
-                        if self.agent_knowledge_context:
-                            task_prompt += self.agent_knowledge_context
-                    if self.crew:
-                        knowledge_snippets = self.crew.query_knowledge(
+                    # Quering agent specific knowledge
+                    if self.knowledge:
+                        agent_knowledge_snippets = self.knowledge.query(
                             [self.knowledge_search_query], **knowledge_config
                         )
-                        if knowledge_snippets:
-                            self.crew_knowledge_context = extract_knowledge_context(
-                                knowledge_snippets
+                        if agent_knowledge_snippets:
+                            self.agent_knowledge_context = extract_knowledge_context(
+                                agent_knowledge_snippets
                             )
-                            if self.crew_knowledge_context:
-                                task_prompt += self.crew_knowledge_context
+                            if self.agent_knowledge_context:
+                                task_prompt += self.agent_knowledge_context
+
+                    # Quering crew specific knowledge
+                    knowledge_snippets = self.crew.query_knowledge(
+                        [self.knowledge_search_query], **knowledge_config
+                    )
+                    if knowledge_snippets:
+                        self.crew_knowledge_context = extract_knowledge_context(
+                            knowledge_snippets
+                        )
+                        if self.crew_knowledge_context:
+                            task_prompt += self.crew_knowledge_context
 
                     crewai_event_bus.emit(
                         self,
@@ -768,6 +815,7 @@ class Agent(BaseAgent):
             LiteAgentOutput: The result of the agent execution.
         """
         lite_agent = LiteAgent(
+            id=self.id,
             role=self.role,
             goal=self.goal,
             backstory=self.backstory,
@@ -780,6 +828,8 @@ class Agent(BaseAgent):
             response_format=response_format,
             i18n=self.i18n,
             original_agent=self,
+            guardrail=self.guardrail,
+            guardrail_max_retries=self.guardrail_max_retries,
         )
 
         return lite_agent.kickoff(messages)

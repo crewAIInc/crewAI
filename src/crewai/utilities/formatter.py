@@ -1,5 +1,5 @@
-from typing import TYPE_CHECKING, List
-
+from typing import TYPE_CHECKING, List, Union
+from crewai.utilities.constants import _NotSpecified
 
 if TYPE_CHECKING:
     from crewai.task import Task
@@ -15,7 +15,7 @@ def aggregate_raw_outputs_from_task_outputs(task_outputs: List["TaskOutput"]) ->
     return context
 
 
-def aggregate_raw_outputs_from_tasks(tasks: List["Task"]) -> str:
+def aggregate_raw_outputs_from_tasks(tasks: Union[List["Task"],_NotSpecified]) -> str:
     """Generate string context from the tasks."""
 
     task_outputs = (

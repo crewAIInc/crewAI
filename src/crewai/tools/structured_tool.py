@@ -1,14 +1,21 @@
 from __future__ import annotations
 
 import asyncio
-
 import inspect
 import textwrap
-from typing import Any, Callable, Optional, Union, get_type_hints
+from collections.abc import Callable
+from typing import TYPE_CHECKING, Any, get_type_hints
 
 from pydantic import BaseModel, Field, create_model
 
 from crewai.utilities.logger import Logger
+
+if TYPE_CHECKING:
+    from crewai.tools.base_tool import BaseTool
+
+
+class ToolUsageLimitExceededError(Exception):
+    """Exception raised when a tool has reached its maximum usage limit."""
 
 
 class CrewStructuredTool:
@@ -17,6 +24,8 @@ class CrewStructuredTool:
     This tool intends to replace StructuredTool with a custom implementation
     that integrates better with CrewAI's ecosystem.
     """
+
+    _original_tool: BaseTool | None = None
 
     def __init__(
         self,
@@ -47,6 +56,7 @@ class CrewStructuredTool:
         self.result_as_answer = result_as_answer
         self.max_usage_count = max_usage_count
         self.current_usage_count = current_usage_count
+        self._original_tool = None
 
         # Validate the function signature matches the schema
         self._validate_function_signature()
@@ -55,10 +65,10 @@ class CrewStructuredTool:
     def from_function(
         cls,
         func: Callable,
-        name: Optional[str] = None,
-        description: Optional[str] = None,
+        name: str | None = None,
+        description: str | None = None,
         return_direct: bool = False,
-        args_schema: Optional[type[BaseModel]] = None,
+        args_schema: type[BaseModel] | None = None,
         infer_schema: bool = True,
         **kwargs: Any,
     ) -> CrewStructuredTool:
@@ -150,7 +160,7 @@ class CrewStructuredTool:
 
         # Create model
         schema_name = f"{name.title()}Schema"
-        return create_model(schema_name, **fields)
+        return create_model(schema_name, **fields)  # type: ignore[call-overload]
 
     def _validate_function_signature(self) -> None:
         """Validate that the function signature matches the args schema."""
@@ -178,7 +188,7 @@ class CrewStructuredTool:
                         f"not found in args_schema"
                     )
 
-    def _parse_args(self, raw_args: Union[str, dict]) -> dict:
+    def _parse_args(self, raw_args: str | dict) -> dict:
         """Parse and validate the input arguments against the schema.
 
         Args:
@@ -193,18 +203,18 @@ class CrewStructuredTool:
 
                 raw_args = json.loads(raw_args)
             except json.JSONDecodeError as e:
-                raise ValueError(f"Failed to parse arguments as JSON: {e}")
+                raise ValueError(f"Failed to parse arguments as JSON: {e}") from e
 
         try:
             validated_args = self.args_schema.model_validate(raw_args)
             return validated_args.model_dump()
         except Exception as e:
-            raise ValueError(f"Arguments validation failed: {e}")
+            raise ValueError(f"Arguments validation failed: {e}") from e
 
     async def ainvoke(
         self,
-        input: Union[str, dict],
-        config: Optional[dict] = None,
+        input: str | dict,
+        config: dict | None = None,
         **kwargs: Any,
     ) -> Any:
         """Asynchronously invoke the tool.
@@ -219,32 +229,47 @@ class CrewStructuredTool:
         """
         parsed_args = self._parse_args(input)
 
-        if inspect.iscoroutinefunction(self.func):
-            return await self.func(**parsed_args, **kwargs)
-        else:
+        if self.has_reached_max_usage_count():
+            raise ToolUsageLimitExceededError(
+                f"Tool '{self.name}' has reached its maximum usage limit of {self.max_usage_count}. You should not use the {self.name} tool again."
+            )
+
+        self._increment_usage_count()
+
+        try:
+            if inspect.iscoroutinefunction(self.func):
+                return await self.func(**parsed_args, **kwargs)
             # Run sync functions in a thread pool
             import asyncio
 
             return await asyncio.get_event_loop().run_in_executor(
                 None, lambda: self.func(**parsed_args, **kwargs)
             )
+        except Exception:
+            raise
 
     def _run(self, *args, **kwargs) -> Any:
         """Legacy method for compatibility."""
         # Convert args/kwargs to our expected format
-        input_dict = dict(zip(self.args_schema.model_fields.keys(), args))
+        input_dict = dict(zip(self.args_schema.model_fields.keys(), args, strict=False))
         input_dict.update(kwargs)
         return self.invoke(input_dict)
 
     def invoke(
-        self, input: Union[str, dict], config: Optional[dict] = None, **kwargs: Any
+        self, input: str | dict, config: dict | None = None, **kwargs: Any
     ) -> Any:
         """Main method for tool execution."""
         parsed_args = self._parse_args(input)
 
+        if self.has_reached_max_usage_count():
+            raise ToolUsageLimitExceededError(
+                f"Tool '{self.name}' has reached its maximum usage limit of {self.max_usage_count}. You should not use the {self.name} tool again."
+            )
+
+        self._increment_usage_count()
+
         if inspect.iscoroutinefunction(self.func):
-            result = asyncio.run(self.func(**parsed_args, **kwargs))
-            return result
+            return asyncio.run(self.func(**parsed_args, **kwargs))
 
         result = self.func(**parsed_args, **kwargs)
 
@@ -252,6 +277,19 @@ class CrewStructuredTool:
             return asyncio.run(result)
 
         return result
+
+    def has_reached_max_usage_count(self) -> bool:
+        """Check if the tool has reached its maximum usage count."""
+        return (
+            self.max_usage_count is not None
+            and self.current_usage_count >= self.max_usage_count
+        )
+
+    def _increment_usage_count(self) -> None:
+        """Increment the usage count."""
+        self.current_usage_count += 1
+        if self._original_tool is not None:
+            self._original_tool.current_usage_count = self.current_usage_count
 
     @property
     def args(self) -> dict:

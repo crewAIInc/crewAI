@@ -1,34 +1,17 @@
-import contextlib
-import io
 import logging
 import os
 import shutil
 import uuid
+
 from typing import Any, Dict, List, Optional
-
 from chromadb.api import ClientAPI
-
-from crewai.memory.storage.base_rag_storage import BaseRAGStorage
-from crewai.utilities import EmbeddingConfigurator
+from crewai.rag.storage.base_rag_storage import BaseRAGStorage
+from crewai.rag.embeddings.configurator import EmbeddingConfigurator
+from crewai.utilities.chromadb import create_persistent_client
 from crewai.utilities.constants import MAX_FILE_NAME_LENGTH
 from crewai.utilities.paths import db_storage_path
-
-
-@contextlib.contextmanager
-def suppress_logging(
-    logger_name="chromadb.segment.impl.vector.local_persistent_hnsw",
-    level=logging.ERROR,
-):
-    logger = logging.getLogger(logger_name)
-    original_level = logger.getEffectiveLevel()
-    logger.setLevel(level)
-    with (
-        contextlib.redirect_stdout(io.StringIO()),
-        contextlib.redirect_stderr(io.StringIO()),
-        contextlib.suppress(UserWarning),
-    ):
-        yield
-    logger.setLevel(original_level)
+from crewai.utilities.logger_utils import suppress_logging
+import warnings
 
 
 class RAGStorage(BaseRAGStorage):
@@ -60,25 +43,27 @@ class RAGStorage(BaseRAGStorage):
         self.embedder_config = configurator.configure_embedder(self.embedder_config)
 
     def _initialize_app(self):
-        import chromadb
         from chromadb.config import Settings
 
+        # Suppress deprecation warnings from chromadb, which are not relevant to us
+        # TODO: Remove this once we upgrade chromadb to at least 1.0.8.
+        warnings.filterwarnings(
+            "ignore",
+            message=r".*'model_fields'.*is deprecated.*",
+            module=r"^chromadb(\.|$)",
+        )
+
         self._set_embedder_config()
-        chroma_client = chromadb.PersistentClient(
+
+        self.app = create_persistent_client(
             path=self.path if self.path else self.storage_file_name,
             settings=Settings(allow_reset=self.allow_reset),
         )
 
-        self.app = chroma_client
-
-        try:
-            self.collection = self.app.get_collection(
-                name=self.type, embedding_function=self.embedder_config
-            )
-        except Exception:
-            self.collection = self.app.create_collection(
-                name=self.type, embedding_function=self.embedder_config
-            )
+        self.collection = self.app.get_or_create_collection(
+            name=self.type, embedding_function=self.embedder_config
+        )
+        logging.info(f"Collection found or created: {self.collection}")
 
     def _sanitize_role(self, role: str) -> str:
         """
@@ -119,7 +104,9 @@ class RAGStorage(BaseRAGStorage):
             self._initialize_app()
 
         try:
-            with suppress_logging():
+            with suppress_logging(
+                "chromadb.segment.impl.vector.local_persistent_hnsw", logging.ERROR
+            ):
                 response = self.collection.query(query_texts=query, n_results=limit)
 
             results = []

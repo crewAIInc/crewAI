@@ -3,32 +3,66 @@ name: Run Tests
 on: [pull_request]
 
 permissions:
-  contents: write
+  contents: read
 
 env:
   OPENAI_API_KEY: fake-api-key
+  PYTHONUNBUFFERED: 1
 
 jobs:
   tests:
+    name: tests (${{ matrix.python-version }})
     runs-on: ubuntu-latest
     timeout-minutes: 15
     strategy:
+      fail-fast: true
       matrix:
         python-version: ['3.10', '3.11', '3.12', '3.13']
+        group: [1, 2, 3, 4, 5, 6, 7, 8]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install uv
-        uses: astral-sh/setup-uv@v3
+      - name: Restore global uv cache
+        id: cache-restore
+        uses: actions/cache/restore@v4
         with:
-          enable-cache: true
+          path: |
+            ~/.cache/uv
+            ~/.local/share/uv
+            .venv
+          key: uv-main-py${{ matrix.python-version }}-${{ hashFiles('uv.lock') }}
+          restore-keys: |
+            uv-main-py${{ matrix.python-version }}-
 
-      - name: Set up Python ${{ matrix.python-version }}
-        run: uv python install ${{ matrix.python-version }}
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.8.4"
+          python-version: ${{ matrix.python-version }}
+          enable-cache: false
 
       - name: Install the project
-        run: uv sync --dev --all-extras
+        run: uv sync --all-groups --all-extras
 
-      - name: Run tests
-        run: uv run pytest --block-network --timeout=60 -vv
+      - name: Run tests (group ${{ matrix.group }} of 8)
+        run: |
+          uv run pytest \
+            --block-network \
+            --timeout=30 \
+            -vv \
+            --splits 8 \
+            --group ${{ matrix.group }} \
+            --durations=10 \
+            -n auto \
+            --maxfail=3
+
+      - name: Save uv caches
+        if: steps.cache-restore.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            ~/.cache/uv
+            ~/.local/share/uv
+            .venv
+          key: uv-main-py${{ matrix.python-version }}-${{ hashFiles('uv.lock') }}
