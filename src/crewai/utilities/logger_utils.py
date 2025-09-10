@@ -1,8 +1,9 @@
-"""Logging utility functions for CrewAI."""
+"""Logging and warning utility functions for CrewAI."""
 
 import contextlib
 import io
 import logging
+import warnings
 from collections.abc import Generator
 
 
@@ -36,3 +37,20 @@ def suppress_logging(
     ):
         yield
     logger.setLevel(original_level)
+
+
+@contextlib.contextmanager
+def suppress_warnings() -> Generator[None, None, None]:
+    """Context manager to suppress all warnings.
+
+    Yields:
+        None during the context execution.
+
+    Note:
+        There is a similar implementation in src/crewai/llm.py that also
+        suppresses a specific deprecation warning. That version may be
+        consolidated here in the future.
+    """
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore")
+        yield
