@@ -1,0 +1,75 @@
+name: Regression Tests
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Branch to run tests on'
+        required: true
+        default: 'main'
+        type: string
+
+permissions:
+  contents: write
+
+env:
+  OPENAI_API_KEY: fake-api-key
+  PYTHONUNBUFFERED: 1
+
+jobs:
+  regression-tests:
+    name: Regression - ${{ github.event.inputs.branch }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.branch }}
+          fetch-depth: 0
+
+      - name: Display execution info
+        run: |
+          echo "🚀 Running Regression Tests"
+          echo "📂 Branch: ${{ github.event.inputs.branch }}"
+          echo "📊 Current commit: $(git rev-parse --short HEAD)"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+          cache-dependency-glob: |
+            **/pyproject.toml
+            **/uv.lock
+
+      - name: Set up Python 3.13
+        run: uv python install 3.13
+
+      - name: Install the project
+        run: uv sync --dev --all-extras
+
+      - name: Install SQLite with FTS5 support
+        run: |
+          # WORKAROUND: GitHub Actions' Ubuntu runner uses SQLite without FTS5 support compiled in.
+          # This is a temporary fix until the runner includes SQLite with FTS5 or Python's sqlite3
+          # module is compiled with FTS5 support by default.
+          # TODO: Remove this workaround once GitHub Actions runners include SQLite FTS5 support
+
+          # Install pysqlite3-binary which has FTS5 support
+          uv pip install pysqlite3-binary
+          # Create a sitecustomize.py to override sqlite3 with pysqlite3
+          mkdir -p .pytest_sqlite_override
+          echo "import sys; import pysqlite3; sys.modules['sqlite3'] = pysqlite3" > .pytest_sqlite_override/sitecustomize.py
+          # Test FTS5 availability
+          PYTHONPATH=.pytest_sqlite_override uv run python -c "import sqlite3; print(f'SQLite version: {sqlite3.sqlite_version}')"
+          PYTHONPATH=.pytest_sqlite_override uv run python -c "import sqlite3; conn = sqlite3.connect(':memory:'); conn.execute('CREATE VIRTUAL TABLE test USING fts5(content)'); print('FTS5 module available')"
+
+      - name: Run Regression Tests
+        run: |
+          PYTHONPATH=.pytest_sqlite_override uv run pytest \
+            --block-network \
+            --timeout=30 \
+            -vv \
+            --durations=10 \
+            -n auto \
+            --maxfail=5 \
+            tests/regression

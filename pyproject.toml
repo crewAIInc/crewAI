@@ -186,3 +186,6 @@ exclude = [
 "docs/**",
 "docs/",
 ]
+
+[tool.pytest.ini_options]
+norecursedirs = ["tests/regression"]

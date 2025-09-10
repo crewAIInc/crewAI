@@ -1,4 +1,5 @@
 import inspect
+from pathlib import Path
 
 from typing_extensions import Any
 import warnings
@@ -41,12 +42,30 @@ def run_experiment(dataset: list[dict[str, Any]], crew: Crew | None = None, agen
     return runner.run(agents=agents, crew=crew, print_summary=verbose)
 
 def _get_baseline_filepath_fallback() -> str:
-    test_func_name = "experiment_fallback"
+    filename = "experiment_fallback.json"
+    calling_file = None
 
     try:
         current_frame = inspect.currentframe()
         if current_frame is not None:
             test_func_name = current_frame.f_back.f_back.f_code.co_name # type: ignore[union-attr]
+            filename = f"{test_func_name}.json"
+            calling_file = current_frame.f_back.f_back.f_code.co_filename # type: ignore[union-attr]
     except Exception:
-        ...
-    return f"{test_func_name}_results.json"
+        return filename
+
+    if not calling_file:
+        return filename
+
+    calling_path = Path(calling_file)
+    try:
+        baseline_dir_parts = calling_path.parts[:-1]
+        baseline_dir = Path(*baseline_dir_parts) / "results"
+        baseline_dir.mkdir(parents=True, exist_ok=True)
+        baseline_filepath = baseline_dir / filename
+        return str(baseline_filepath)
+
+    except (ValueError, IndexError):
+        pass
+
+    return filename
