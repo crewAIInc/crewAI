@@ -282,8 +282,6 @@ class CrewStructuredTool:
         except Exception:
             raise
 
-        result = self.func(**parsed_args, **kwargs)
-
         if asyncio.iscoroutine(result):
             return asyncio.run(result)
 

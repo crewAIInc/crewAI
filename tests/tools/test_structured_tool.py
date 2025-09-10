@@ -144,6 +144,32 @@ def test_default_values_in_schema():
     )
     assert result == "test custom 42"
 
+
+def test_tool_not_executed_twice():
+    """Test that tool function is only executed once per invoke call (bug #3489)"""
+    call_count = 0
+    
+    def counting_func(param: str) -> str:
+        """Function that counts how many times it's called."""
+        nonlocal call_count
+        call_count += 1
+        return f"Called {call_count} times with {param}"
+    
+    tool = CrewStructuredTool.from_function(
+        func=counting_func, name="counting_tool", description="Counts calls"
+    )
+    
+    call_count = 0
+    
+    result = tool.invoke({"param": "test"})
+    
+    assert call_count == 1, f"Expected function to be called once, but was called {call_count} times"
+    assert result == "Called 1 times with test"
+    
+    result = tool.invoke({"param": "test2"})
+    assert call_count == 2, f"Expected function to be called twice total, but was called {call_count} times"
+    assert result == "Called 2 times with test2"
+
 @pytest.fixture
 def custom_tool_decorator():
     from crewai.tools import tool
