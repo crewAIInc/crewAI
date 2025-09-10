@@ -201,6 +201,8 @@ class CrewStructuredTool:
         Returns:
             The validated arguments as a dictionary
         """
+        if ('query' in raw_args):
+                raw_args['sql_query'] = raw_args.pop('query')
         if isinstance(raw_args, str):
             try:
                 import json
