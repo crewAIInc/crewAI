@@ -1,14 +1,85 @@
 import os
 import certifi
 import json
+import logging
 import time
 from collections import defaultdict
 from pathlib import Path
 
 import click
 import requests
+import subprocess
 
 from crewai.cli.constants import JSON_URL, MODELS, PROVIDERS
+
+
+# ---------------------------------------------------------------------------
+# Ollama dynamic model detection helpers
+# ---------------------------------------------------------------------------
+
+_OLLAMA_CACHE = {"models": None, "timestamp": 0.0}
+
+logger = logging.getLogger(__name__)
+
+
+def _get_local_ollama_models() -> list[str]:
+    """Return list of Ollama model names available locally.
+
+    Caches results for 60 s to avoid repeatedly spawning subprocesses while the
+    user navigates the CLI wizard.
+    """
+
+    # Simple 60-second in-process cache
+    now = time.time()
+    if _OLLAMA_CACHE["models"] and now - _OLLAMA_CACHE["timestamp"] < 60:
+        return _OLLAMA_CACHE["models"]
+
+    models: list[str] = _fetch_ollama_models()
+    _OLLAMA_CACHE.update({"models": models, "timestamp": now})
+    return models
+
+
+def _fetch_ollama_models() -> list[str]:
+    """Fetch model names from the Ollama CLI.
+
+    1. Tries `ollama list --json` (present in newer versions).
+    2. Falls back to parsing the plain-text table from `ollama list`.
+    """
+
+    # First try the JSON flag (fast to parse, stable)
+    try:
+        result = subprocess.run(
+            ["ollama", "list", "--json"],
+            capture_output=True,
+            text=True,
+            check=True,
+            timeout=5,
+        )
+        data = json.loads(result.stdout)
+        return [entry["name"] for entry in data if entry.get("name")]
+    except (FileNotFoundError, subprocess.SubprocessError, json.JSONDecodeError):
+        logger.debug("`ollama list --json` failed; falling back to text output")
+
+    # Fallback: plain-text parsing
+    try:
+        result = subprocess.run(
+            ["ollama", "list"],
+            capture_output=True,
+            text=True,
+            check=True,
+            timeout=5,
+        )
+        models: list[str] = []
+        for line in result.stdout.strip().splitlines():
+            # Skip empty lines and header rows
+            if not line or any(h in line.upper() for h in ("NAME", "ID", "SIZE")):
+                continue
+            models.append(line.split()[0])
+
+        return models
+    except Exception as exc:  # noqa: BLE001
+        logger.debug("Failed to parse plain text output from `ollama list`: %s", exc)
+        return []
 
 
 def select_choice(prompt_message, choices):
@@ -93,7 +164,20 @@ def select_model(provider, provider_models):
     """
     predefined_providers = [p.lower() for p in PROVIDERS]
 
-    if provider in predefined_providers:
+    if provider == "ollama":
+        # Dynamically fetch local models, cache for 60 s
+        available_models = _get_local_ollama_models()
+
+        # Fallback to hard-coded list if detection failed
+        if not available_models:
+            available_models = MODELS.get(provider, [])
+
+        # Normalise: ensure each string is prefixed with `ollama/`
+        available_models = [
+            m if m.lower().startswith("ollama/") else f"ollama/{m}"
+            for m in available_models
+        ]
+    elif provider in predefined_providers:
         available_models = MODELS.get(provider, [])
     else:
         available_models = provider_models.get(provider, [])
