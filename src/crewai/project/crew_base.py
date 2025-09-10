@@ -93,7 +93,7 @@ def CrewBase(cls: T) -> T:  # noqa: N802
             if not self.mcp_server_params:
                 return []
 
-            from crewai_tools import MCPServerAdapter
+            from crewai_tools import MCPServerAdapter  # type: ignore[import-untyped]
 
             adapter = getattr(self, '_mcp_server_adapter', None)
             if not adapter:
