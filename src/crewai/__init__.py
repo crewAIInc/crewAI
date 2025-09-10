@@ -1,5 +1,20 @@
+import threading
+import urllib.request
 import warnings
 from typing import Any
+
+from crewai.agent import Agent
+from crewai.crew import Crew
+from crewai.crews.crew_output import CrewOutput
+from crewai.flow.flow import Flow
+from crewai.knowledge.knowledge import Knowledge
+from crewai.llm import LLM
+from crewai.llms.base_llm import BaseLLM
+from crewai.process import Process
+from crewai.task import Task
+from crewai.tasks.llm_guardrail import LLMGuardrail
+from crewai.tasks.task_output import TaskOutput
+from crewai.telemetry.telemetry import Telemetry
 
 
 def _suppress_pydantic_deprecation_warnings() -> None:
@@ -20,26 +35,11 @@ def _suppress_pydantic_deprecation_warnings() -> None:
             return None
         return original_warn(message, category, stacklevel + 1, source)
 
-    setattr(warnings, "warn", filtered_warn)
+    warnings.warn = filtered_warn  # type: ignore[assignment]
 
 
 _suppress_pydantic_deprecation_warnings()
 
-import threading
-import urllib.request
-
-from crewai.agent import Agent
-from crewai.crew import Crew
-from crewai.crews.crew_output import CrewOutput
-from crewai.flow.flow import Flow
-from crewai.knowledge.knowledge import Knowledge
-from crewai.llm import LLM
-from crewai.llms.base_llm import BaseLLM
-from crewai.process import Process
-from crewai.task import Task
-from crewai.tasks.llm_guardrail import LLMGuardrail
-from crewai.tasks.task_output import TaskOutput
-from crewai.telemetry.telemetry import Telemetry
 
 _telemetry_submitted = False
 
@@ -51,17 +51,13 @@ def _track_install() -> None:
     if _telemetry_submitted or Telemetry._is_telemetry_disabled():
         return
 
-    try:
-        pixel_url = "https://api.scarf.sh/v2/packages/CrewAI/crewai/docs/00f2dad1-8334-4a39-934e-003b2e1146db"
+    pixel_url = "https://api.scarf.sh/v2/packages/CrewAI/crewai/docs/00f2dad1-8334-4a39-934e-003b2e1146db"
 
-        req = urllib.request.Request(pixel_url)
-        req.add_header("User-Agent", f"CrewAI-Python/{__version__}")
+    req = urllib.request.Request(pixel_url)  # noqa: S310
+    req.add_header("User-Agent", f"CrewAI-Python/{__version__}")
 
-        with urllib.request.urlopen(req, timeout=2):  # nosec B310
-            _telemetry_submitted = True
-
-    except Exception:
-        pass
+    with urllib.request.urlopen(req, timeout=2):  # noqa: S310
+        _telemetry_submitted = True
 
 
 def _track_install_async() -> None:
@@ -73,18 +69,18 @@ def _track_install_async() -> None:
 
 _track_install_async()
 
-__version__ = "0.177.0"
+__version__ = "0.186.0"
 __all__ = [
+    "LLM",
     "Agent",
+    "BaseLLM",
     "Crew",
     "CrewOutput",
-    "Process",
-    "Task",
-    "LLM",
-    "BaseLLM",
     "Flow",
     "Knowledge",
-    "TaskOutput",
     "LLMGuardrail",
+    "Process",
+    "Task",
+    "TaskOutput",
     "__version__",
 ]
