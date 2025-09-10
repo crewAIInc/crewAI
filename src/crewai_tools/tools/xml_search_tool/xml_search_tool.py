@@ -1,6 +1,5 @@
-from typing import Any, Optional, Type
+from typing import Optional, Type
 
-from embedchain.models.data_type import DataType
 from pydantic import BaseModel, Field
 
 from ..rag.rag_tool import RagTool
@@ -18,7 +17,7 @@ class FixedXMLSearchToolSchema(BaseModel):
 class XMLSearchToolSchema(FixedXMLSearchToolSchema):
     """Input for XMLSearchTool."""
 
-    xml: str = Field(..., description="Mandatory xml path you want to search")
+    xml: str = Field(..., description="File path or URL of a XML file to be searched")
 
 
 class XMLSearchTool(RagTool):

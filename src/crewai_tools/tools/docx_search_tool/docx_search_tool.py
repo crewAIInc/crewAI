@@ -10,7 +10,7 @@ class FixedDOCXSearchToolSchema(BaseModel):
     """Input for DOCXSearchTool."""
 
     docx: Optional[str] = Field(
-        ..., description="Mandatory docx path you want to search"
+        ..., description="File path or URL of a DOCX file to be searched"
     )
     search_query: str = Field(
         ...,

@@ -17,7 +17,7 @@ class FixedTXTSearchToolSchema(BaseModel):
 class TXTSearchToolSchema(FixedTXTSearchToolSchema):
     """Input for TXTSearchTool."""
 
-    txt: str = Field(..., description="Mandatory txt path you want to search")
+    txt: str = Field(..., description="File path or URL of a TXT file to be searched")
 
 
 class TXTSearchTool(RagTool):

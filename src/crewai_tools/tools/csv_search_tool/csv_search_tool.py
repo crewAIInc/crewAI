@@ -1,4 +1,4 @@
-from typing import Any, Optional, Type
+from typing import Optional, Type
 
 from embedchain.models.data_type import DataType
 from pydantic import BaseModel, Field
@@ -18,7 +18,7 @@ class FixedCSVSearchToolSchema(BaseModel):
 class CSVSearchToolSchema(FixedCSVSearchToolSchema):
     """Input for CSVSearchTool."""
 
-    csv: str = Field(..., description="Mandatory csv path you want to search")
+    csv: str = Field(..., description="File path or URL of a CSV file to be searched")
 
 
 class CSVSearchTool(RagTool):

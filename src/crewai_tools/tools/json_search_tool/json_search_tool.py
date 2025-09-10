@@ -1,6 +1,5 @@
-from typing import Any, Optional, Type
+from typing import Optional, Type
 
-from embedchain.models.data_type import DataType
 from pydantic import BaseModel, Field
 
 from ..rag.rag_tool import RagTool
@@ -18,7 +17,9 @@ class FixedJSONSearchToolSchema(BaseModel):
 class JSONSearchToolSchema(FixedJSONSearchToolSchema):
     """Input for JSONSearchTool."""
 
-    json_path: str = Field(..., description="Mandatory json path you want to search")
+    json_path: str = Field(
+        ..., description="File path or URL of a JSON file to be searched"
+    )
 
 
 class JSONSearchTool(RagTool):

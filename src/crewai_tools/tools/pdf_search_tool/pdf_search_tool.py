@@ -1,7 +1,7 @@
-from typing import Any, Optional, Type
+from typing import Optional, Type
 
 from embedchain.models.data_type import DataType
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field
 
 from ..rag.rag_tool import RagTool
 
@@ -17,7 +17,7 @@ class FixedPDFSearchToolSchema(BaseModel):
 class PDFSearchToolSchema(FixedPDFSearchToolSchema):
     """Input for PDFSearchTool."""
 
-    pdf: str = Field(..., description="Mandatory pdf path you want to search")
+    pdf: str = Field(..., description="File path or URL of a PDF file to be searched")
 
 
 class PDFSearchTool(RagTool):
