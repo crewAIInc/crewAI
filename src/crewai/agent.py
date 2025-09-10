@@ -59,6 +59,7 @@ from crewai.events.types.knowledge_events import (
 from crewai.utilities.llm_utils import create_llm
 from crewai.utilities.token_counter_callback import TokenCalcHandler
 from crewai.utilities.training_handler import CrewTrainingHandler
+from crewai.responsibility.models import AgentCapability
 
 
 class Agent(BaseAgent):
@@ -178,6 +179,10 @@ class Agent(BaseAgent):
     guardrail_max_retries: int = Field(
         default=3, description="Maximum number of retries when guardrail fails"
     )
+    capabilities: Optional[List[AgentCapability]] = Field(
+        default_factory=list,
+        description="List of agent capabilities for responsibility tracking"
+    )
 
     @model_validator(mode="before")
     def validate_from_repository(cls, v):
@@ -188,6 +193,7 @@ class Agent(BaseAgent):
     @model_validator(mode="after")
     def post_init_setup(self):
         self.agent_ops_agent_name = self.role
+        self._responsibility_system = None
 
         self.llm = create_llm(self.llm)
         if self.function_calling_llm and not isinstance(
@@ -207,6 +213,30 @@ class Agent(BaseAgent):
         if not self.cache_handler:
             self.cache_handler = CacheHandler()
         self.set_cache_handler(self.cache_handler)
+
+    def set_responsibility_system(self, responsibility_system) -> None:
+        """Set the responsibility tracking system for this agent."""
+        self._responsibility_system = responsibility_system
+        
+        if self.capabilities:
+            self._responsibility_system.register_agent(self, self.capabilities)
+
+    def add_capability(self, capability: AgentCapability) -> None:
+        """Add a capability to this agent."""
+        if self.capabilities is None:
+            self.capabilities = []
+        self.capabilities.append(capability)
+        
+        if self._responsibility_system:
+            self._responsibility_system.hierarchy.add_agent(self, self.capabilities)
+
+    def get_capabilities(self) -> List[AgentCapability]:
+        """Get all capabilities for this agent."""
+        return self.capabilities or []
+    
+    def get_responsibility_system(self):
+        """Get the responsibility tracking system for this agent."""
+        return self._responsibility_system
 
     def set_knowledge(self, crew_embedder: Optional[Dict[str, Any]] = None):
         try:

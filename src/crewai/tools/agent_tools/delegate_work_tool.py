@@ -27,4 +27,19 @@ class DelegateWorkTool(BaseAgentTool):
         **kwargs,
     ) -> str:
         coworker = self._get_coworker(coworker, **kwargs)
+        
+        if hasattr(self, 'agents') and self.agents:
+            delegating_agent = kwargs.get('delegating_agent')
+            if delegating_agent and hasattr(delegating_agent, 'responsibility_system'):
+                responsibility_system = delegating_agent.responsibility_system
+                if responsibility_system and responsibility_system.enabled:
+                    task_obj = kwargs.get('task_obj')
+                    if task_obj:
+                        responsibility_system.delegate_task(
+                            delegating_agent=delegating_agent,
+                            receiving_agent=coworker,
+                            task=task_obj,
+                            reason=f"Delegation based on capability match for: {task[:100]}..."
+                        )
+        
         return self._execute(coworker, task, context)

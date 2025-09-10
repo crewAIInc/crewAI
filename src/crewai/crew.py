@@ -298,7 +298,16 @@ class Crew(FlowTrackable, BaseModel):
         if self.function_calling_llm and not isinstance(self.function_calling_llm, LLM):
             self.function_calling_llm = create_llm(self.function_calling_llm)
 
+        # Initialize responsibility system
+        from crewai.responsibility.system import ResponsibilitySystem
+        self._responsibility_system = ResponsibilitySystem()
+
         return self
+
+    @property
+    def responsibility_system(self):
+        """Get the responsibility tracking system for this crew."""
+        return getattr(self, '_responsibility_system', None)
 
     def _initialize_default_memories(self):
         self._long_term_memory = self._long_term_memory or LongTermMemory()
@@ -389,6 +398,8 @@ class Crew(FlowTrackable, BaseModel):
                     agent.set_cache_handler(self._cache_handler)
                 if self.max_rpm:
                     agent.set_rpm_controller(self._rpm_controller)
+                if self.responsibility_system:
+                    agent.set_responsibility_system(self.responsibility_system)
         return self
 
     @model_validator(mode="after")
@@ -778,6 +789,10 @@ class Crew(FlowTrackable, BaseModel):
     def _run_hierarchical_process(self) -> CrewOutput:
         """Creates and assigns a manager agent to make sure the crew completes the tasks."""
         self._create_manager_agent()
+        
+        if self.manager_agent and self.responsibility_system:
+            self.manager_agent.set_responsibility_system(self.responsibility_system)
+            
         return self._execute_tasks(self.tasks)
 
     def _create_manager_agent(self):
