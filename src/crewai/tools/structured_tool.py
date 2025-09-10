@@ -160,7 +160,7 @@ class CrewStructuredTool:
 
         # Create model
         schema_name = f"{name.title()}Schema"
-        return create_model(schema_name, **fields)
+        return create_model(schema_name, **fields)  # type: ignore[call-overload]
 
     def _validate_function_signature(self) -> None:
         """Validate that the function signature matches the args schema."""
