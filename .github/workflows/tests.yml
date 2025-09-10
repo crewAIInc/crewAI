@@ -48,16 +48,19 @@ jobs:
       - name: Restore test durations
         uses: actions/cache/restore@v4
         with:
-          path: .test_durations_py${{ matrix.python-version }}
+          path: .test_durations_py*
           key: test-durations-py${{ matrix.python-version }}-
           restore-keys: |
             test-durations-py${{ matrix.python-version }}-
 
       - name: Run tests (group ${{ matrix.group }} of 8)
         run: |
-          if [ -f .test_durations_py${{ matrix.python-version }} ]; then
+          PYTHON_VERSION_SAFE=$(echo "${{ matrix.python-version }}" | tr '.' '_')
+          DURATION_FILE=".test_durations_py${PYTHON_VERSION_SAFE}"
+          
+          if [ -f "$DURATION_FILE" ]; then
             echo "Using cached test durations for optimal splitting"
-            DURATIONS_ARG="--durations-path=.test_durations_py${{ matrix.python-version }}"
+            DURATIONS_ARG="--durations-path=${DURATION_FILE}"
           else
             echo "No cached durations found, tests will be split evenly"
             DURATIONS_ARG=""
