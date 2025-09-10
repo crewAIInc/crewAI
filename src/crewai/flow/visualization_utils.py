@@ -17,7 +17,7 @@ Example
 
 import ast
 import inspect
-from typing import Any, Dict, List, Tuple, Union
+from typing import Any, Dict, List, Literal, Tuple, Union
 
 from .utils import (
     build_ancestor_dict,
@@ -56,6 +56,7 @@ def method_calls_crew(method: Any) -> bool:
 
     class CrewCallVisitor(ast.NodeVisitor):
         """AST visitor to detect .crew() method calls."""
+
         def __init__(self):
             self.found = False
 
@@ -74,7 +75,7 @@ def add_nodes_to_network(
     net: Any,
     flow: Any,
     node_positions: Dict[str, Tuple[float, float]],
-    node_styles: Dict[str, Dict[str, Any]]
+    node_styles: Dict[str, Dict[str, Any]],
 ) -> None:
     """
     Add nodes to the network visualization with appropriate styling.
@@ -98,6 +99,7 @@ def add_nodes_to_network(
     - Crew methods
     - Regular methods
     """
+
     def human_friendly_label(method_name):
         return method_name.replace("_", " ").title()
 
@@ -140,7 +142,8 @@ def compute_positions(
     flow: Any,
     node_levels: Dict[str, int],
     y_spacing: float = 150,
-    x_spacing: float = 300
+    x_spacing: float = 300,
+    orientation: Literal["horizontal", "vertical"] = "horizontal",
 ) -> Dict[str, Tuple[float, float]]:
     """
     Compute the (x, y) positions for each node in the flow graph.
@@ -155,11 +158,18 @@ def compute_positions(
         Vertical spacing between levels, by default 150.
     x_spacing : float, optional
         Horizontal spacing between nodes, by default 300.
+    orientation : Literal["horizontal", "vertical"], optional
+        Orientation of the plot.
 
     Returns
     -------
     Dict[str, Tuple[float, float]]
         Dictionary mapping node names to their (x, y) coordinates.
+
+    Raises
+    -------
+    ValueError
+        If orientation is invalid.
     """
     level_nodes: Dict[int, List[str]] = {}
     node_positions: Dict[str, Tuple[float, float]] = {}
@@ -167,12 +177,21 @@ def compute_positions(
     for method_name, level in node_levels.items():
         level_nodes.setdefault(level, []).append(method_name)
 
+    # Swap x and y spacing if orientation is horizontal
+    if orientation == "horizontal":
+        x_spacing, y_spacing = y_spacing, x_spacing
+    elif orientation != "vertical":
+        raise ValueError(
+            f"Invalid `orientation` value: {orientation}. Must be 'horizontal' or 'vertical'."
+        )
+
     for level, nodes in level_nodes.items():
-        x_offset = -(len(nodes) - 1) * x_spacing / 2  # Center nodes horizontally
+        offset = -(len(nodes) - 1) * x_spacing / 2  # Center nodes horizontally
         for i, method_name in enumerate(nodes):
-            x = x_offset + i * x_spacing
+            x = offset + i * x_spacing
             y = level * y_spacing
-            node_positions[method_name] = (x, y)
+            coord = (x, y) if orientation == "vertical" else (y, x)
+            node_positions[method_name] = coord
 
     return node_positions
 
@@ -181,7 +200,8 @@ def add_edges(
     net: Any,
     flow: Any,
     node_positions: Dict[str, Tuple[float, float]],
-    colors: Dict[str, str]
+    colors: Dict[str, str],
+    orientation: Literal["horizontal", "vertical"] = "horizontal",
 ) -> None:
     edge_smooth: Dict[str, Union[str, float]] = {"type": "continuous"}  # Default value
     """
@@ -197,6 +217,13 @@ def add_edges(
         Dictionary mapping node names to their positions.
     colors : Dict[str, str]
         Dictionary mapping edge types to their colors.
+    orientation : Literal["horizontal", "vertical"], optional
+        Orientation of the plot.
+
+    Raises
+    -------
+    ValueError
+        If orientation is invalid.
 
     Notes
     -----
@@ -206,6 +233,17 @@ def add_edges(
     """
     ancestors = build_ancestor_dict(flow)
     parent_children = build_parent_children_dict(flow)
+
+    # Select a coordinate (x or y) to calculate the delta
+    # between target_pos and source_pos
+    if orientation == "vertical":
+        coord_id = 0
+    elif orientation == "horizontal":
+        coord_id = 1
+    else:
+        raise ValueError(
+            f"Invalid `orientation` value: {orientation}. Must be 'horizontal' or 'vertical'."
+        )
 
     # Edges for normal listeners
     for method_name in flow._listeners:
@@ -229,8 +267,8 @@ def add_edges(
                     target_pos = node_positions.get(method_name)
 
                     if source_pos and target_pos:
-                        dx = target_pos[0] - source_pos[0]
-                        smooth_type = "curvedCCW" if dx <= 0 else "curvedCW"
+                        delta = target_pos[coord_id] - source_pos[coord_id]
+                        smooth_type = "curvedCCW" if delta <= 0 else "curvedCW"
                         index = get_child_index(trigger, method_name, parent_children)
                         edge_smooth = {
                             "type": smooth_type,
@@ -290,8 +328,8 @@ def add_edges(
                             target_pos = node_positions.get(listener_name)
 
                             if source_pos and target_pos:
-                                dx = target_pos[0] - source_pos[0]
-                                smooth_type = "curvedCCW" if dx <= 0 else "curvedCW"
+                                delta = target_pos[coord_id] - source_pos[coord_id]
+                                smooth_type = "curvedCCW" if delta <= 0 else "curvedCW"
                                 index = get_child_index(
                                     router_method_name, listener_name, parent_children
                                 )

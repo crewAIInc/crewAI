@@ -1,14 +1,14 @@
 # flow_visualizer.py
 
 import os
-from pathlib import Path
+from typing import Literal
 
 from pyvis.network import Network
 
 from crewai.flow.config import COLORS, NODE_STYLES
 from crewai.flow.html_template_handler import HTMLTemplateHandler
 from crewai.flow.legend_generator import generate_legend_items_html, get_legend_items
-from crewai.flow.path_utils import safe_path_join, validate_path_exists
+from crewai.flow.path_utils import safe_path_join
 from crewai.flow.utils import calculate_node_levels
 from crewai.flow.visualization_utils import (
     add_edges,
@@ -34,18 +34,20 @@ class FlowPlot:
         ValueError
             If flow object is invalid or missing required attributes.
         """
-        if not hasattr(flow, '_methods'):
+        if not hasattr(flow, "_methods"):
             raise ValueError("Invalid flow object: missing '_methods' attribute")
-        if not hasattr(flow, '_listeners'):
+        if not hasattr(flow, "_listeners"):
             raise ValueError("Invalid flow object: missing '_listeners' attribute")
-        if not hasattr(flow, '_start_methods'):
+        if not hasattr(flow, "_start_methods"):
             raise ValueError("Invalid flow object: missing '_start_methods' attribute")
-            
+
         self.flow = flow
         self.colors = COLORS
         self.node_styles = NODE_STYLES
 
-    def plot(self, filename):
+    def plot(
+        self, filename, orientation: Literal["horizontal", "vertical"] = "horizontal"
+    ):
         """
         Generate and save an HTML visualization of the flow.
 
@@ -53,11 +55,13 @@ class FlowPlot:
         ----------
         filename : str
             Name of the output file (without extension).
+        orientation : Literal["horizontal", "vertical"], optional
+            Orientation of the plot.
 
         Raises
         ------
         ValueError
-            If filename is invalid or network generation fails.
+            If filename or orientation is invalid or network generation fails.
         IOError
             If file operations fail or visualization cannot be generated.
         RuntimeError
@@ -65,7 +69,7 @@ class FlowPlot:
         """
         if not filename or not isinstance(filename, str):
             raise ValueError("Filename must be a non-empty string")
-            
+
         try:
             # Initialize network
             net = Network(
@@ -100,7 +104,9 @@ class FlowPlot:
 
             # Compute positions
             try:
-                node_positions = compute_positions(self.flow, node_levels)
+                node_positions = compute_positions(
+                    self.flow, node_levels, orientation=orientation
+                )
             except Exception as e:
                 raise ValueError(f"Failed to compute node positions: {str(e)}")
 
@@ -112,7 +118,9 @@ class FlowPlot:
 
             # Add edges to the network
             try:
-                add_edges(net, self.flow, node_positions, self.colors)
+                add_edges(
+                    net, self.flow, node_positions, self.colors, orientation=orientation
+                )
             except Exception as e:
                 raise RuntimeError(f"Failed to add edges to network: {str(e)}")
 
@@ -121,7 +129,9 @@ class FlowPlot:
                 network_html = net.generate_html()
                 final_html_content = self._generate_final_html(network_html)
             except Exception as e:
-                raise RuntimeError(f"Failed to generate network visualization: {str(e)}")
+                raise RuntimeError(
+                    f"Failed to generate network visualization: {str(e)}"
+                )
 
             # Save the final HTML content to the file
             try:
@@ -129,7 +139,9 @@ class FlowPlot:
                     f.write(final_html_content)
                 print(f"Plot saved as {filename}.html")
             except IOError as e:
-                raise IOError(f"Failed to save flow visualization to {filename}.html: {str(e)}")
+                raise IOError(
+                    f"Failed to save flow visualization to {filename}.html: {str(e)}"
+                )
 
         except (ValueError, RuntimeError, IOError) as e:
             raise e
@@ -165,7 +177,9 @@ class FlowPlot:
         try:
             # Extract just the body content from the generated HTML
             current_dir = os.path.dirname(__file__)
-            template_path = safe_path_join("assets", "crewai_flow_visual_template.html", root=current_dir)
+            template_path = safe_path_join(
+                "assets", "crewai_flow_visual_template.html", root=current_dir
+            )
             logo_path = safe_path_join("assets", "crewai_logo.svg", root=current_dir)
 
             if not os.path.exists(template_path):
@@ -197,6 +211,7 @@ class FlowPlot:
             lib_folder = safe_path_join("lib", root=os.getcwd())
             if os.path.exists(lib_folder) and os.path.isdir(lib_folder):
                 import shutil
+
                 shutil.rmtree(lib_folder)
         except ValueError as e:
             print(f"Error validating lib folder path: {e}")
@@ -204,7 +219,11 @@ class FlowPlot:
             print(f"Error cleaning up lib folder: {e}")
 
 
-def plot_flow(flow, filename="flow_plot"):
+def plot_flow(
+    flow,
+    filename="flow_plot",
+    orientation: Literal["horizontal", "vertical"] = "horizontal",
+):
     """
     Convenience function to create and save a flow visualization.
 
@@ -214,13 +233,15 @@ def plot_flow(flow, filename="flow_plot"):
         Flow instance to visualize.
     filename : str, optional
         Output filename without extension, by default "flow_plot".
+    orientation : Literal["horizontal", "vertical"], optional
+        Orientation of the plot.
 
     Raises
     ------
     ValueError
-        If flow object or filename is invalid.
+        If flow object, filename or orientation is invalid.
     IOError
         If file operations fail.
     """
     visualizer = FlowPlot(flow)
-    visualizer.plot(filename)
+    visualizer.plot(filename, orientation)
