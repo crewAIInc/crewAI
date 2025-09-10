@@ -4,10 +4,8 @@ on:
   push:
     branches:
       - main
-      - gl/feat/add-test-duration-caching  # TEMPORARY: Remove before merging
     paths:
       - 'tests/**/*.py'
-      - '.github/workflows/update-test-durations.yml'  # TEMPORARY: For testing
   workflow_dispatch:
 
 permissions:
