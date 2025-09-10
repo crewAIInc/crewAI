@@ -12,6 +12,9 @@ on:
       - ".github/workflows/build-uv-cache.yml"
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   build-cache:
     runs-on: ubuntu-latest
