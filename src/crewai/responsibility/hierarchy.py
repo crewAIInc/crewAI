@@ -152,7 +152,7 @@ class CapabilityHierarchy:
 
     def get_capability_distribution(self) -> dict[CapabilityType, dict[str, int]]:
         """Get distribution of capabilities across all agents."""
-        distribution = defaultdict(lambda: defaultdict(int))
+        distribution: dict[CapabilityType, dict[str, int]] = defaultdict(lambda: defaultdict(int))
 
         for capabilities in self.agent_capabilities.values():
             for capability in capabilities:

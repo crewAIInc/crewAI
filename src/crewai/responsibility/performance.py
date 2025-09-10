@@ -3,6 +3,7 @@ Performance-based capability adjustment system.
 """
 
 from datetime import timedelta
+from typing import Any
 
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.responsibility.hierarchy import CapabilityHierarchy
@@ -101,7 +102,7 @@ class PerformanceTracker:
     def identify_improvement_opportunities(
         self,
         agent: BaseAgent
-    ) -> list[dict[str, any]]:
+    ) -> list[dict[str, Any]]:
         """Identify areas where an agent could improve."""
         agent_id = self._get_agent_id(agent)
         metrics = self.performance_metrics.get(agent_id)

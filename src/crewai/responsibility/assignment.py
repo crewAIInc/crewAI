@@ -53,8 +53,8 @@ class ResponsibilityCalculator:
         strategy: AssignmentStrategy = AssignmentStrategy.OPTIMAL
     ) -> list[ResponsibilityAssignment]:
         """Calculate assignment for tasks requiring multiple agents."""
-        assignments = []
-        used_agents = set()
+        assignments: list[ResponsibilityAssignment] = []
+        used_agents: set[str] = set()
 
         sorted_requirements = sorted(requirements, key=lambda r: r.weight, reverse=True)
 
@@ -104,7 +104,9 @@ class ResponsibilityCalculator:
             task_id=str(task.id),
             responsibility_score=score,
             capability_matches=matches,
-            reasoning=f"Greedy assignment: highest capability match score ({score:.3f})"
+            reasoning=f"Greedy assignment: highest capability match score ({score:.3f})",
+            completed_at=None,
+            success=None
         )
 
     def _balanced_assignment(
@@ -121,7 +123,7 @@ class ResponsibilityCalculator:
 
         best_agent = None
         best_score = -1.0
-        best_matches = []
+        best_matches: list[str] = []
 
         for agent, capability_score in capable_agents:
             agent_id = self.hierarchy._get_agent_id(agent)
@@ -146,7 +148,9 @@ class ResponsibilityCalculator:
                 task_id=str(task.id),
                 responsibility_score=best_score,
                 capability_matches=best_matches,
-                reasoning=f"Balanced assignment: capability ({capability_score:.3f}) with workload consideration"
+                reasoning=f"Balanced assignment: capability ({capability_score:.3f}) with workload consideration",
+                completed_at=None,
+                success=None
             )
 
         return None
@@ -165,7 +169,7 @@ class ResponsibilityCalculator:
 
         best_agent = None
         best_score = -1.0
-        best_matches = []
+        best_matches: list[str] = []
 
         for agent, capability_score in capable_agents:
             agent_id = self.hierarchy._get_agent_id(agent)
@@ -189,7 +193,9 @@ class ResponsibilityCalculator:
                 task_id=str(task.id),
                 responsibility_score=best_score,
                 capability_matches=best_matches,
-                reasoning=f"Optimal assignment: multi-factor optimization score ({best_score:.3f})"
+                reasoning=f"Optimal assignment: multi-factor optimization score ({best_score:.3f})",
+                completed_at=None,
+                success=None
             )
 
         return None

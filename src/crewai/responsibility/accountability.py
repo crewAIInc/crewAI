@@ -36,7 +36,9 @@ class AccountabilityLogger:
             action_type=action_type,
             action_description=action_description,
             task_id=task_id,
-            context=context or {}
+            context=context or {},
+            outcome=None,
+            success=None
         )
 
         self.records.append(record)
@@ -161,9 +163,9 @@ class AccountabilityLogger:
                 records = [r for r in records if r.timestamp >= since]
             agent_id = "all_agents"
 
-        action_counts = defaultdict(int)
-        success_counts = defaultdict(int)
-        failure_counts = defaultdict(int)
+        action_counts: dict[str, int] = defaultdict(int)
+        success_counts: dict[str, int] = defaultdict(int)
+        failure_counts: dict[str, int] = defaultdict(int)
 
         for record in records:
             action_counts[record.action_type] += 1
@@ -172,7 +174,7 @@ class AccountabilityLogger:
             elif record.success is False:
                 failure_counts[record.action_type] += 1
 
-        success_rates = {}
+        success_rates: dict[str, float | None] = {}
         for action_type in action_counts:
             total = success_counts[action_type] + failure_counts[action_type]
             if total > 0:

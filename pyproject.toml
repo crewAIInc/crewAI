@@ -131,7 +131,7 @@ select = [
     "I001",   # sort imports
     "I002",   # remove unused imports
 ]
-ignore = ["E501"]  # ignore line too long
+ignore = ["E501", "S101"]  # ignore line too long and assert statements
 
 [tool.mypy]
 exclude = ["src/crewai/cli/templates", "tests"]
