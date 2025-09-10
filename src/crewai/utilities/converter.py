@@ -125,18 +125,19 @@ def convert_to_model(
     if model is None:
         return result
     try:
+        # Attempt to load and validate the JSON directly
         escaped_result = json.dumps(json.loads(result, strict=False))
         return validate_model(escaped_result, model, bool(output_json))
     except json.JSONDecodeError:
+        # If direct parsing fails, try to handle partial/wrapped JSON
         return handle_partial_json(
             result, model, bool(output_json), agent, converter_cls
         )
-
     except ValidationError:
+        # If validation fails, also try to handle partial/wrapped JSON
         return handle_partial_json(
             result, model, bool(output_json), agent, converter_cls
         )
-
     except Exception as e:
         Printer().print(
             content=f"Unexpected error during model conversion: {type(e).__name__}: {e}. Returning original result.",
@@ -148,6 +149,7 @@ def convert_to_model(
 def validate_model(
     result: str, model: Type[BaseModel], is_json_output: bool
 ) -> Union[dict, BaseModel]:
+    """Validates a JSON string against a Pydantic model."""
     exported_result = model.model_validate_json(result)
     if is_json_output:
         return exported_result.model_dump()
@@ -161,16 +163,21 @@ def handle_partial_json(
     agent: Any,
     converter_cls: Optional[Type[Converter]] = None,
 ) -> Union[dict, BaseModel, str]:
+    """
+    Attempts to extract and validate a JSON object from a string that may contain
+    extra text (e.g., conversational text from an LLM).
+    """
+    # Use regex to find a JSON object within the text
     match = re.search(r"({.*})", result, re.DOTALL)
     if match:
         try:
+            # Try to validate the extracted JSON
             exported_result = model.model_validate_json(match.group(0))
             if is_json_output:
                 return exported_result.model_dump()
             return exported_result
-        except json.JSONDecodeError:
-            pass
-        except ValidationError:
+        except (json.JSONDecodeError, ValidationError):
+            # If extraction/validation fails, fall through to re-prompting
             pass
         except Exception as e:
             Printer().print(
@@ -178,6 +185,7 @@ def handle_partial_json(
                 color="red",
             )
 
+    # If all else fails, re-prompt the LLM to fix the formatting
     return convert_with_instructions(
         result, model, is_json_output, agent, converter_cls
     )
@@ -190,6 +198,10 @@ def convert_with_instructions(
     agent: Any,
     converter_cls: Optional[Type[Converter]] = None,
 ) -> Union[dict, BaseModel, str]:
+    """
+    Uses the LLM to convert a raw string into the desired structured format
+    by providing explicit instructions and the schema.
+    """
     llm = agent.function_calling_llm or agent.llm
     instructions = get_conversion_instructions(model, llm)
     converter = create_converter(
@@ -215,6 +227,7 @@ def convert_with_instructions(
 
 
 def get_conversion_instructions(model: Type[BaseModel], llm: Any) -> str:
+    """Generates instructions for the LLM to format output as JSON."""
     instructions = "Please convert the following text into valid JSON."
     if llm and not isinstance(llm, str) and llm.supports_function_calling():
         model_schema = PydanticSchemaParser(model=model).get_schema()
@@ -237,6 +250,7 @@ def create_converter(
     *args,
     **kwargs,
 ) -> Converter:
+    """Factory function to create a converter instance."""
     if agent and not converter_cls:
         if hasattr(agent, "get_output_converter"):
             converter = agent.get_output_converter(*args, **kwargs)
@@ -267,8 +281,8 @@ def generate_model_description(model: Type[BaseModel]) -> str:
         origin = get_origin(field_type)
         args = get_args(field_type)
 
-        if origin is Union or (origin is None and len(args) > 0):
-            # Handle both Union and the new '|' syntax
+        if origin is Union or (origin is None and len(args) > 0 and type(None) in args):
+            # Handle Optional[T] and Union[T, None]
             non_none_args = [arg for arg in args if arg is not type(None)]
             if len(non_none_args) == 1:
                 return f"Optional[{describe_field(non_none_args[0])}]"
