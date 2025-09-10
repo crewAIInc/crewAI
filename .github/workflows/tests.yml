@@ -45,14 +45,31 @@ jobs:
       - name: Install the project
         run: uv sync --all-groups --all-extras
 
+      - name: Restore test durations
+        uses: actions/cache/restore@v4
+        with:
+          path: .test_durations_py${{ matrix.python-version }}
+          key: test-durations-py${{ matrix.python-version }}-
+          restore-keys: |
+            test-durations-py${{ matrix.python-version }}-
+
       - name: Run tests (group ${{ matrix.group }} of 8)
         run: |
+          if [ -f .test_durations_py${{ matrix.python-version }} ]; then
+            echo "Using cached test durations for optimal splitting"
+            DURATIONS_ARG="--durations-path=.test_durations_py${{ matrix.python-version }}"
+          else
+            echo "No cached durations found, tests will be split evenly"
+            DURATIONS_ARG=""
+          fi
+          
           uv run pytest \
             --block-network \
             --timeout=30 \
             -vv \
             --splits 8 \
             --group ${{ matrix.group }} \
+            $DURATIONS_ARG \
             --durations=10 \
             -n auto \
             --maxfail=3
