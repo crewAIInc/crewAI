@@ -2,12 +2,13 @@
 title: 'CrewAI에서 MCP 서버를 도구로 활용하기'
 description: '`crewai-tools` 라이브러리를 사용하여 MCP 서버를 CrewAI agent에 도구로 통합하는 방법을 알아봅니다.'
 icon: plug
+mode: "wide"
 ---
 
 ## 개요
 
-[Model Context Protocol](https://modelcontextprotocol.io/introduction) (MCP)는 AI 에이전트가 MCP 서버로 알려진 외부 서비스와 통신함으로써 LLM에 컨텍스트를 제공할 수 있도록 표준화된 방식을 제공합니다.  
-`crewai-tools` 라이브러리는 CrewAI의 기능을 확장하여, 이러한 MCP 서버에서 제공하는 툴을 에이전트에 원활하게 통합할 수 있도록 해줍니다.  
+[Model Context Protocol](https://modelcontextprotocol.io/introduction) (MCP)는 AI 에이전트가 MCP 서버로 알려진 외부 서비스와 통신함으로써 LLM에 컨텍스트를 제공할 수 있도록 표준화된 방식을 제공합니다.
+`crewai-tools` 라이브러리는 CrewAI의 기능을 확장하여, 이러한 MCP 서버에서 제공하는 툴을 에이전트에 원활하게 통합할 수 있도록 해줍니다.
 이를 통해 여러분의 crew는 방대한 기능 에코시스템에 접근할 수 있습니다.
 
 현재 다음과 같은 전송 메커니즘을 지원합니다:
@@ -141,7 +142,7 @@ with MCPServerAdapter(server_params, "tool_name", connect_timeout=60) as mcp_too
 
 ## CrewBase와 함께 사용하기
 
-CrewBase 클래스 내에서 MCPServer 도구를 사용하려면 `mcp_tools` 메서드를 사용하세요. 서버 구성은 mcp_server_params 속성을 통해 제공되어야 합니다. 단일 구성 또는 여러 서버 구성을 리스트 형태로 전달할 수 있습니다.
+CrewBase 클래스 내에서 MCPServer 도구를 사용하려면 `get_mcp_tools` 메서드를 사용하세요. 서버 구성은 `mcp_server_params` 속성을 통해 제공되어야 합니다. 단일 구성 또는 여러 서버 구성을 리스트 형태로 전달할 수 있습니다.
 
 ```python
 @CrewBase
@@ -174,6 +175,34 @@ class CrewWithMCP:
     # ... 나머지 crew 설정 ...
 ```
 
+### 연결 타임아웃 구성
+
+`mcp_connect_timeout` 클래스 속성을 설정하여 MCP 서버의 연결 타임아웃을 구성할 수 있습니다. 타임아웃을 지정하지 않으면 기본값으로 30초가 사용됩니다.
+
+```python
+@CrewBase
+class CrewWithMCP:
+  mcp_server_params = [...]
+  mcp_connect_timeout = 60  # 모든 MCP 연결에 60초 타임아웃
+
+  @agent
+  def your_agent(self):
+      return Agent(config=self.agents_config["your_agent"], tools=self.get_mcp_tools())
+```
+
+```python
+@CrewBase
+class CrewWithDefaultTimeout:
+  mcp_server_params = [...]
+  # mcp_connect_timeout 지정하지 않음 - 기본 30초 사용
+
+  @agent
+  def your_agent(self):
+      return Agent(config=self.agents_config["your_agent"], tools=self.get_mcp_tools())
+```
+
+### 도구 필터링
+
 `get_mcp_tools` 메서드에 도구 이름의 리스트를 전달하여, 에이전트에 제공되는 도구를 필터링할 수 있습니다.
 
 ```python
@@ -183,6 +212,22 @@ def another_agent(self):
       config=self.agents_config["your_agent"],
       tools=self.get_mcp_tools("tool_1", "tool_2") # 특정 도구만 가져오기
     )
+```
+
+타임아웃 구성은 crew 내의 모든 MCP 도구 호출에 적용됩니다:
+
+```python
+@CrewBase
+class CrewWithCustomTimeout:
+  mcp_server_params = [...]
+  mcp_connect_timeout = 90  # 모든 MCP 연결에 90초 타임아웃
+
+  @agent
+  def filtered_agent(self):
+      return Agent(
+        config=self.agents_config["your_agent"],
+        tools=self.get_mcp_tools("tool_1", "tool_2") # 사용자 지정 타임아웃으로 특정 도구
+      )
 ```
 
 ## MCP 통합 탐색

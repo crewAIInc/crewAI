@@ -1,5 +1,4 @@
-"""
-Security Configuration Module
+"""Security Configuration Module
 
 This module provides configuration for CrewAI security features, including:
 - Authentication settings
@@ -10,9 +9,10 @@ The SecurityConfig class is the primary interface for managing security settings
 in CrewAI applications.
 """
 
-from typing import Any, Dict, Optional
+from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+from typing_extensions import Self
 
 from crewai.security.fingerprint import Fingerprint
 
@@ -28,7 +28,6 @@ class SecurityConfig(BaseModel):
     - Impersonation/delegation tokens *TODO*
 
     Attributes:
-        version (str): Version of the security configuration
         fingerprint (Fingerprint): The unique fingerprint automatically generated for the component
     """
 
@@ -37,80 +36,52 @@ class SecurityConfig(BaseModel):
         # Note: Cannot use frozen=True as existing tests modify the fingerprint property
     )
 
-    version: str = Field(
-        default="1.0.0", 
-        description="Version of the security configuration"
-    )
-
     fingerprint: Fingerprint = Field(
-        default_factory=Fingerprint, 
-        description="Unique identifier for the component"
+        default_factory=Fingerprint, description="Unique identifier for the component"
     )
-    
-    def is_compatible(self, min_version: str) -> bool:
-        """
-        Check if this security configuration is compatible with the minimum required version.
-        
-        Args:
-            min_version (str): Minimum required version in semver format (e.g., "1.0.0")
-            
-        Returns:
-            bool: True if this configuration is compatible, False otherwise
-        """
-        # Simple version comparison (can be enhanced with packaging.version if needed)
-        current = [int(x) for x in self.version.split(".")]
-        minimum = [int(x) for x in min_version.split(".")]
-        
-        # Compare major, minor, patch versions
-        for c, m in zip(current, minimum):
-            if c > m:
-                return True
-            if c < m:
-                return False
-        return True
 
-    @model_validator(mode='before')
+    @field_validator("fingerprint", mode="before")
     @classmethod
-    def validate_fingerprint(cls, values):
+    def validate_fingerprint(cls, v: Any) -> Fingerprint:
         """Ensure fingerprint is properly initialized."""
-        if isinstance(values, dict):
-            # Handle case where fingerprint is not provided or is None
-            if 'fingerprint' not in values or values['fingerprint'] is None:
-                values['fingerprint'] = Fingerprint()
-            # Handle case where fingerprint is a string (seed)
-            elif isinstance(values['fingerprint'], str):
-                if not values['fingerprint'].strip():
-                    raise ValueError("Fingerprint seed cannot be empty")
-                values['fingerprint'] = Fingerprint.generate(seed=values['fingerprint'])
-        return values
+        if v is None:
+            return Fingerprint()
+        if isinstance(v, str):
+            if not v.strip():
+                raise ValueError("Fingerprint seed cannot be empty")
+            return Fingerprint.generate(seed=v)
+        if isinstance(v, dict):
+            return Fingerprint.from_dict(v)
+        if isinstance(v, Fingerprint):
+            return v
 
-    def to_dict(self) -> Dict[str, Any]:
+        raise ValueError(f"Invalid fingerprint type: {type(v)}")
+
+    def to_dict(self) -> dict[str, Any]:
         """
         Convert the security config to a dictionary.
 
         Returns:
-            Dict[str, Any]: Dictionary representation of the security config
+            Dictionary representation of the security config
         """
-        result = {
-            "fingerprint": self.fingerprint.to_dict()
-        }
-        return result
+        return {"fingerprint": self.fingerprint.to_dict()}
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> 'SecurityConfig':
+    def from_dict(cls, data: dict[str, Any]) -> Self:
         """
         Create a SecurityConfig from a dictionary.
 
         Args:
-            data (Dict[str, Any]): Dictionary representation of a security config
+            data: Dictionary representation of a security config
 
         Returns:
-            SecurityConfig: A new SecurityConfig instance
+            A new SecurityConfig instance
         """
-        # Make a copy to avoid modifying the original
-        data_copy = data.copy()
-
-        fingerprint_data = data_copy.pop("fingerprint", None)
-        fingerprint = Fingerprint.from_dict(fingerprint_data) if fingerprint_data else Fingerprint()
+        fingerprint_data = data.get("fingerprint")
+        fingerprint = (
+            Fingerprint.from_dict(fingerprint_data)
+            if fingerprint_data
+            else Fingerprint()
+        )
 
         return cls(fingerprint=fingerprint)
