@@ -163,12 +163,12 @@ def test_tool_not_executed_twice():
     
     result = tool.invoke({"param": "test"})
     
-    assert call_count == 1, f"Expected function to be called once, but was called {call_count} times"
-    assert result == "Called 1 times with test"
+    assert call_count == 1, f"Expected function to be called once, but was called {call_count} times"  # noqa: S101
+    assert result == "Called 1 times with test"  # noqa: S101
     
     result = tool.invoke({"param": "test2"})
-    assert call_count == 2, f"Expected function to be called twice total, but was called {call_count} times"
-    assert result == "Called 2 times with test2"
+    assert call_count == 2, f"Expected function to be called twice total, but was called {call_count} times"  # noqa: S101
+    assert result == "Called 2 times with test2"  # noqa: S101
 
 @pytest.fixture
 def custom_tool_decorator():
