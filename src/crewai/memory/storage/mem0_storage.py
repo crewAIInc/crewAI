@@ -1,7 +1,7 @@
 import os
 import re
 from collections import defaultdict
-from typing import Any
+from typing import Any, Iterable
 
 from mem0 import Memory, MemoryClient
 
@@ -89,25 +89,23 @@ class Mem0Storage(Storage):
         return filter
 
     def save(self, value: Any, metadata: dict[str, Any]) -> None:
+        def _last_content(messages: Iterable[dict[str, Any]], role: str) -> str:
+            return next(
+                (m.get("content", "") for m in reversed(list(messages)) if m.get("role") == role),
+                ""
+            )
+        
         conversations = []
+        messages = metadata.pop("messages", None)
+        if messages:
+            last_user = _last_content(messages, "user")
+            last_assistant = _last_content(messages, "assistant")
 
-        if messages := metadata.get("messages"):
-            user_content = ""
-            assistant_content = ""
-
-            for message in messages:
-                if message.get("role") == "user": # Using the last appended user content
-                    user_content = message.get("content","")
-
-                if message.get("role") == "assistant": # Using the last appended assistant content
-                    assistant_content = message.get("content","")
-
-            if user_msg := self._get_user_message(user_content):
+            if user_msg := self._get_user_message(last_user):
                 conversations.append({"role": "user", "content": user_msg})
-            if assistant_msg := self._get_assistant_message(assistant_content):
+                
+            if assistant_msg := self._get_assistant_message(last_assistant):
                 conversations.append({"role": "assistant", "content": assistant_msg})
-
-            metadata.pop('messages') # Dropping messages from the metadata dictionary
         else:
             conversations.append({"role": "assistant", "content": value})
 
