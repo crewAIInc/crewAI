@@ -1,6 +1,6 @@
 import os
 import uuid
-from typing import Any, Optional
+from typing import Any, ClassVar
 
 from crewai.cli.authentication.token import AuthError, get_auth_token
 from crewai.cli.version import get_crewai_version
@@ -70,7 +70,7 @@ class TraceCollectionListener(BaseEventListener):
     Trace collection listener that orchestrates trace collection
     """
 
-    complex_events = [
+    complex_events: ClassVar[list[str]] = [
         "task_started",
         "task_completed",
         "llm_call_started",
@@ -90,7 +90,7 @@ class TraceCollectionListener(BaseEventListener):
 
     def __init__(
         self,
-        batch_manager: Optional[TraceBatchManager] = None,
+        batch_manager: TraceBatchManager | None = None,
     ):
         if self._initialized:
             return
@@ -102,8 +102,7 @@ class TraceCollectionListener(BaseEventListener):
     def _check_authenticated(self) -> bool:
         """Check if tracing should be enabled"""
         try:
-            res = bool(get_auth_token())
-            return res
+            return bool(get_auth_token())
         except AuthError:
             return False
 
@@ -370,7 +369,7 @@ class TraceCollectionListener(BaseEventListener):
         """Build event data"""
         if event_type not in self.complex_events:
             return self._safe_serialize_to_dict(event)
-        elif event_type == "task_started":
+        if event_type == "task_started":
             return {
                 "task_description": event.task.description,
                 "expected_output": event.task.expected_output,
@@ -379,7 +378,7 @@ class TraceCollectionListener(BaseEventListener):
                 "agent_role": source.agent.role,
                 "task_id": str(event.task.id),
             }
-        elif event_type == "task_completed":
+        if event_type == "task_completed":
             return {
                 "task_description": event.task.description if event.task else None,
                 "task_name": event.task.name or event.task.description
@@ -392,19 +391,19 @@ class TraceCollectionListener(BaseEventListener):
                 else None,
                 "agent_role": event.output.agent if event.output else None,
             }
-        elif event_type == "agent_execution_started":
+        if event_type == "agent_execution_started":
             return {
                 "agent_role": event.agent.role,
                 "agent_goal": event.agent.goal,
                 "agent_backstory": event.agent.backstory,
             }
-        elif event_type == "agent_execution_completed":
+        if event_type == "agent_execution_completed":
             return {
                 "agent_role": event.agent.role,
                 "agent_goal": event.agent.goal,
                 "agent_backstory": event.agent.backstory,
             }
-        elif event_type == "llm_call_started":
+        if event_type == "llm_call_started":
             event_data = self._safe_serialize_to_dict(event)
             event_data["task_name"] = (
                 event.task_name or event.task_description
@@ -412,14 +411,13 @@ class TraceCollectionListener(BaseEventListener):
                 else None
             )
             return event_data
-        elif event_type == "llm_call_completed":
+        if event_type == "llm_call_completed":
             return self._safe_serialize_to_dict(event)
-        else:
-            return {
-                "event_type": event_type,
-                "event": self._safe_serialize_to_dict(event),
-                "source": source,
-            }
+        return {
+            "event_type": event_type,
+            "event": self._safe_serialize_to_dict(event),
+            "source": source,
+        }
 
     # TODO: move to utils
     def _safe_serialize_to_dict(
@@ -430,7 +428,6 @@ class TraceCollectionListener(BaseEventListener):
             serialized = to_serializable(obj, exclude)
             if isinstance(serialized, dict):
                 return serialized
-            else:
-                return {"serialized_data": serialized}
+            return {"serialized_data": serialized}
         except Exception as e:
             return {"serialization_error": str(e), "object_type": type(obj).__name__}

@@ -2,7 +2,7 @@ import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from logging import getLogger
-from typing import Any, Optional
+from typing import Any, ClassVar
 
 from rich.align import Align
 from rich.console import Console
@@ -42,12 +42,12 @@ class TraceBatchManager:
     """Single responsibility: Manage batches and event buffering"""
 
     is_current_batch_ephemeral: bool = False
-    trace_batch_id: Optional[str] = None
-    current_batch: Optional[TraceBatch] = None
-    event_buffer: list[TraceEvent] = []
-    execution_start_times: list[str, datetime] = {}
-    batch_owner_type: Optional[str] = None
-    batch_owner_id: Optional[str] = None
+    trace_batch_id: str | None = None
+    current_batch: TraceBatch | None = None
+    event_buffer: ClassVar[list[TraceEvent]] = []
+    execution_start_times: ClassVar[dict[str, datetime]] = {}
+    batch_owner_type: str | None = None
+    batch_owner_id: str | None = None
 
     def __init__(self):
         try:
@@ -144,7 +144,7 @@ class TraceBatchManager:
 
         except Exception as e:
             logger.warning(
-                f"Error initializing trace batch: {str(e)}. Continuing without tracing."
+                f"Error initializing trace batch: {e!s}. Continuing without tracing."
             )
 
     def add_event(self, trace_event: TraceEvent):
@@ -179,19 +179,18 @@ class TraceBatchManager:
             if response.status_code in [200, 201]:
                 self.event_buffer.clear()
                 return 200
-            else:
-                logger.warning(
-                    f"Failed to send events: {response.status_code}. Events will be lost."
-                )
-                return 500
-
-        except Exception as e:
             logger.warning(
-                f"Error sending events to backend: {str(e)}. Events will be lost."
+                f"Failed to send events: {response.status_code}. Events will be lost."
             )
             return 500
 
-    def finalize_batch(self) -> Optional[TraceBatch]:
+        except Exception as e:
+            logger.warning(
+                f"Error sending events to backend: {e!s}. Events will be lost."
+            )
+            return 500
+
+    def finalize_batch(self) -> TraceBatch | None:
         """Finalize batch and return it for sending"""
         if not self.current_batch:
             return None
@@ -255,11 +254,11 @@ class TraceBatchManager:
                 )
 
         except Exception as e:
-            logger.error(f"❌ Error finalizing trace batch: {str(e)}")
+            logger.error(f"❌ Error finalizing trace batch: {e!s}")
             # TODO: send error to app
 
     def _display_traces_events_link(
-        self, console: Console, return_link: str, access_code: Optional[str] = None
+        self, console: Console, return_link: str, access_code: str | None = None
     ):
         """Display trace batch finalization information"""
         try:
@@ -301,7 +300,7 @@ class TraceBatchManager:
             console.print(final_panel)
 
         except Exception as e:
-            logger.warning(f"Display failed, falling back to simple display: {str(e)}")
+            logger.warning(f"Display failed, falling back to simple display: {e!s}")
             fallback_panel = Panel(
                 f"✅ Trace batch finalized with session ID: {self.trace_batch_id}. View here: {return_link} {f', Access Code: {access_code}' if access_code else ''}",
                 title="Trace Batch Finalization",
@@ -324,7 +323,7 @@ class TraceBatchManager:
                 self.batch_sequence = 0
 
         except Exception as e:
-            logger.error(f"Warning: Error during cleanup: {str(e)}")
+            logger.error(f"Warning: Error during cleanup: {e!s}")
 
     def has_events(self) -> bool:
         """Check if there are events in the buffer"""
@@ -353,7 +352,7 @@ class TraceBatchManager:
             return duration_ms
         return 0
 
-    def get_trace_id(self) -> Optional[str]:
+    def get_trace_id(self) -> str | None:
         """Get current trace ID"""
         if self.current_batch:
             return self.current_batch.user_context.get("trace_id")
