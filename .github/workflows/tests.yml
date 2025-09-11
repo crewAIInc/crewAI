@@ -22,6 +22,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch all history for proper diff
 
       - name: Restore global uv cache
         id: cache-restore
@@ -56,8 +58,8 @@ jobs:
           PYTHON_VERSION_SAFE=$(echo "${{ matrix.python-version }}" | tr '.' '_')
           DURATION_FILE=".test_durations_py${PYTHON_VERSION_SAFE}"
           
-          # Check if any test files have changed compared to main
-          if git diff origin/main...HEAD --name-only | grep -q "^tests/.*\.py$"; then
+          # Check if any test files have changed compared to base branch
+          if git diff origin/${{ github.base_ref }}...HEAD --name-only 2>/dev/null | grep -q "^tests/.*\.py$"; then
             echo "Test files have changed, skipping cached durations to avoid mismatches"
             DURATIONS_ARG=""
           elif [ -f "$DURATION_FILE" ]; then
