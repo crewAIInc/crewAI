@@ -139,6 +139,10 @@ ignore = ["E501"]  # ignore line too long
 [tool.mypy]
 exclude = ["src/crewai/cli/templates", "tests"]
 
+[[tool.mypy.overrides]]
+module = "mem0.*"
+ignore_missing_imports = true
+
 [tool.bandit]
 exclude_dirs = ["src/crewai/cli/templates"]
 
