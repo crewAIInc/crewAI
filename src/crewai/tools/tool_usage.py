@@ -8,7 +8,7 @@ from textwrap import dedent
 from typing import TYPE_CHECKING, Any, Union
 
 import json5
-from json_repair import repair_json
+from json_repair import repair_json  # type: ignore
 
 from crewai.agents.tools_handler import ToolsHandler
 from crewai.events.event_bus import crewai_event_bus
@@ -174,7 +174,7 @@ class ToolUsage:
                 "agent": self.agent,
             }
 
-            if self.agent.fingerprint:
+            if hasattr(self.agent, 'fingerprint') and self.agent.fingerprint:
                 event_data.update(self.agent.fingerprint)
             if self.task:
                 event_data["task_name"] = self.task.name or self.task.description
@@ -183,13 +183,14 @@ class ToolUsage:
 
         started_at = time.time()
         from_cache = False
-        result = None  # type: ignore
 
         if self.tools_handler and self.tools_handler.cache:
-            result = self.tools_handler.cache.read(
-                tool=calling.tool_name, input=calling.arguments
-            )  # type: ignore
-            from_cache = result is not None
+            cache_result = self.tools_handler.cache.read(
+                tool=calling.tool_name, input=str(calling.arguments)
+            )
+            from_cache = cache_result is not None
+            if cache_result is not None:
+                result = cache_result
 
         available_tool = next(
             (
