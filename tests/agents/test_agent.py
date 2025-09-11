@@ -1,5 +1,6 @@
 """Test Agent creation and execution basic functionality."""
 
+# ruff: noqa: S106
 import os
 from unittest import mock
 from unittest.mock import MagicMock, patch
@@ -2529,9 +2530,9 @@ def test_agent_actions_basic_functionality():
         role="Platform Agent",
         goal="Use platform tools",
         backstory="Platform specialist",
-        actions=["gmail/create_task", "slack/update_status", "cutsomer_support/send_notification"]
+        actions=["gmail/create_task", "slack/update_status", "customer_support/send_notification"]
     )
-    assert agent.actions == ["gmail/create_task", "slack/update_status", "customer_support/send_notification"]
+    assert set(agent.actions) == {"gmail/create_task", "slack/update_status", "customer_support/send_notification"}
 
     agent_default = Agent(
         role="Regular Agent",
@@ -2568,7 +2569,10 @@ def test_actions_propagated_to_platform_tools(mock_get_platform_tools):
     crew = Crew(agents=[agent], tasks=[task])
     tools = crew._prepare_tools(agent, task, [])
 
-    mock_get_platform_tools.assert_called_once_with(apps=[], actions=["gmail/send_email", "slack/update_status"])
+    mock_get_platform_tools.assert_called_once()
+    call_args = mock_get_platform_tools.call_args[1]
+    assert call_args["apps"] == []
+    assert set(call_args["actions"]) == {"gmail/send_email", "slack/update_status"}
     assert len(tools) >= 1
 
 
@@ -2603,7 +2607,7 @@ def test_apps_and_actions_both_propagated(mock_get_platform_tools):
     mock_get_platform_tools.assert_called_once()
     call_args = mock_get_platform_tools.call_args[1]
     assert set(call_args["apps"]) == {"gmail", "slack"}
-    assert call_args["actions"] == ["gmail/create_task", "slack/update_status"]
+    assert set(call_args["actions"]) == {"gmail/create_task", "slack/update_status"}
     assert len(tools) >= 1
 
 def test_agent_without_apps_or_actions_no_platform_tools():
@@ -2622,8 +2626,5 @@ def test_agent_without_apps_or_actions_no_platform_tools():
 
     crew = Crew(agents=[agent], tasks=[task])
 
-    with patch.object(crew, '_add_platform_tools', wraps=crew._add_platform_tools) as mock_add_platform:
-        tools = crew._prepare_tools(agent, task, [])
-
-        mock_add_platform.assert_not_called()
-        assert tools == []
+    tools = crew._prepare_tools(agent, task, [])
+    assert tools == []

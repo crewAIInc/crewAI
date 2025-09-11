@@ -1032,16 +1032,16 @@ class Crew(FlowTrackable, BaseModel):
 
     def _inject_platform_tools(
         self,
-        tools: Union[List[Tool], List[BaseTool]],
+        tools: list[Tool] | list[BaseTool],
         task_agent: BaseAgent,
-    ) -> List[BaseTool]:
+    ) -> list[BaseTool]:
         apps = getattr(task_agent, "apps", None) or []
         actions = getattr(task_agent, "actions", None) or []
 
         if hasattr(task_agent, "get_platform_tools") and (apps or actions):
             platform_tools = task_agent.get_platform_tools(apps=apps, actions=actions)
-            return self._merge_tools(tools, cast(List[BaseTool], platform_tools))
-        return cast(List[BaseTool], tools)
+            return self._merge_tools(tools, cast(list[BaseTool], platform_tools))
+        return cast(list[BaseTool], tools)
 
     def _add_multimodal_tools(
         self, agent: BaseAgent, tools: list[Tool] | list[BaseTool]
@@ -1074,12 +1074,12 @@ class Crew(FlowTrackable, BaseModel):
         return cast(list[BaseTool], tools)
 
     def _add_platform_tools(
-        self, task: Task, tools: Union[List[Tool], List[BaseTool]]
-    ) -> List[BaseTool]:
+        self, task: Task, tools: list[Tool] | list[BaseTool]
+    ) -> list[BaseTool]:
         if task.agent:
             tools = self._inject_platform_tools(tools, task.agent)
 
-        return cast(List[BaseTool], tools or [])
+        return cast(list[BaseTool], tools or [])
 
     def _log_task_start(self, task: Task, role: str = "None"):
         if self.output_log_file:

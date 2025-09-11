@@ -187,7 +187,7 @@ class BaseAgent(ABC, BaseModel):
         default=None,
         description="List of applications that the agent can access through CrewAI Platform",
     )
-    actions: Optional[List[str]] = Field(
+    actions: list[str] | None = Field(
         default=None,
         description="List of actions that the agent can access through CrewAI Platform",
     )
@@ -325,6 +325,7 @@ class BaseAgent(ABC, BaseModel):
             "knowledge_storage",
             "knowledge",
             "apps",
+            "actions",
         }
 
         # Copy llm
