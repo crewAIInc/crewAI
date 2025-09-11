@@ -339,6 +339,7 @@ class LLM(BaseLLM):
         self.reasoning_effort = reasoning_effort
         self.additional_params = kwargs
         self.is_anthropic = self._is_anthropic_model(model)
+        self.is_nova = self._is_nova_model(model)
         self.stream = stream
 
         litellm.drop_params = True
@@ -354,6 +355,17 @@ class LLM(BaseLLM):
         self.set_callbacks(callbacks or [])
         self.set_env_callbacks()
 
+    def _is_nova_model(self, model: str) -> bool:
+        """Determine if the model is an Amazon Nova model.
+
+        Args:
+            model: The model identifier string.
+
+        Returns:
+            bool: True if the model is a Nova model, False otherwise.
+        """
+        return "amazon.nova-" in model.lower()
+
     def _is_anthropic_model(self, model: str) -> bool:
         """Determine if the model is from Anthropic provider.
 
@@ -365,6 +377,20 @@ class LLM(BaseLLM):
         """
         ANTHROPIC_PREFIXES = ("anthropic/", "claude-", "claude/")
         return any(prefix in model.lower() for prefix in ANTHROPIC_PREFIXES)
+
+    def _ensure_starts_with_user_message(self, messages: List[Dict[str, str]]) -> List[Dict[str, str]]:
+        """Ensure messages list starts with a user message.
+
+        Args:
+            messages: List of message dictionaries
+
+        Returns:
+            List of messages with a user message at the start if needed
+        """
+        # Check if first message is system (or empty list)
+        if not messages or messages[0]["role"] == "system":
+            return [{"role": "user", "content": "."}, *messages]
+        return messages
 
     def _prepare_completion_params(
         self,
@@ -1159,15 +1185,9 @@ class LLM(BaseLLM):
         ):
             return messages + [{"role": "user", "content": ""}]
 
-        # Handle Anthropic models
-        if not self.is_anthropic:
-            return messages
-
-        # Anthropic requires messages to start with 'user' role
-        if not messages or messages[0]["role"] == "system":
-            # If first message is system or empty, add a placeholder user message
-            return [{"role": "user", "content": "."}, *messages]
-
+        # Both Nova and Anthropic require the conversation to start with a user message
+        if self.is_nova or self.is_anthropic:
+            return self._ensure_starts_with_user_message(messages)
         return messages
 
     def _get_custom_llm_provider(self) -> Optional[str]:
