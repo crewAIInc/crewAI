@@ -3,7 +3,7 @@ name: Run Tests
 on: [pull_request]
 
 permissions:
-  contents: write
+  contents: read
 
 env:
   OPENAI_API_KEY: fake-api-key
@@ -23,19 +23,27 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Restore global uv cache
+        id: cache-restore
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/.cache/uv
+            ~/.local/share/uv
+            .venv
+          key: uv-main-py${{ matrix.python-version }}-${{ hashFiles('uv.lock') }}
+          restore-keys: |
+            uv-main-py${{ matrix.python-version }}-
+
       - name: Install uv
         uses: astral-sh/setup-uv@v6
         with:
-          enable-cache: true
-          cache-dependency-glob: |
-            **/pyproject.toml
-            **/uv.lock
-
-      - name: Set up Python ${{ matrix.python-version }}
-        run: uv python install ${{ matrix.python-version }}
+          version: "0.8.4"
+          python-version: ${{ matrix.python-version }}
+          enable-cache: false
 
       - name: Install the project
-        run: uv sync --dev --all-extras
+        run: uv sync --all-groups --all-extras
 
       - name: Run tests (group ${{ matrix.group }} of 8)
         run: |
@@ -48,3 +56,13 @@ jobs:
             --durations=10 \
             -n auto \
             --maxfail=3
+
+      - name: Save uv caches
+        if: steps.cache-restore.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            ~/.cache/uv
+            ~/.local/share/uv
+            .venv
+          key: uv-main-py${{ matrix.python-version }}-${{ hashFiles('uv.lock') }}
