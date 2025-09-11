@@ -2522,3 +2522,72 @@ def test_agent_from_repository_without_org_set(
         "No organization currently set. We recommend setting one before using: `crewai org switch <org_id>` command.",
         style="yellow",
     )
+
+def test_agent_apps_validation_rejects_invalid():
+    """Test that invalid apps are rejected."""
+    with pytest.raises(Exception):
+        Agent(
+            role="Test Agent",
+            goal="Test goal",
+            backstory="Test backstory",
+            apps=["invalid_app", "another_invalid"]
+        )
+
+
+def test_agent_apps_basic_functionality():
+    """Test basic Agent.apps functionality - accepts valid apps and defaults to None."""
+    agent = Agent(
+        role="Platform Agent",
+        goal="Use platform tools",
+        backstory="Platform specialist",
+        apps=["gmail", "slack", "notion"]
+    )
+    assert set(agent.apps) == {"gmail", "slack", "notion"}
+
+    agent_default = Agent(
+        role="Regular Agent",
+        goal="Regular tasks",
+        backstory="Regular agent"
+    )
+    assert agent_default.apps is None
+
+@patch.object(Agent, 'get_platform_tools')
+def test_crew_integrates_platform_tools(mock_get_platform_tools):
+    from crewai.tools import tool
+
+    @tool
+    def gmail_tool() -> str:
+        """Mock Gmail platform tool."""
+        return "gmail tool result"
+
+    @tool
+    def original_tool() -> str:
+        """Original agent tool."""
+        return "original tool result"
+
+    mock_get_platform_tools.return_value = [gmail_tool]
+
+    agent = Agent(
+        role="Platform Agent",
+        goal="Use platform tools",
+        backstory="Platform specialist",
+        apps=["gmail", "slack"],
+        tools=[original_tool]
+    )
+
+    task = Task(
+        description="Test task",
+        expected_output="Test output",
+        agent=agent
+    )
+
+    crew = Crew(agents=[agent], tasks=[task])
+
+    tools = crew._prepare_tools(agent, task, agent.tools)
+
+    mock_get_platform_tools.assert_called_once()
+
+    tool_names = [tool.name for tool in tools]
+    assert "gmail_tool" in tool_names
+    assert "original_tool" in tool_names
+    assert len(tools) == 2

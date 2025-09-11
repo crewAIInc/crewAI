@@ -84,6 +84,7 @@ class Agent(BaseAgent):
             step_callback: Callback to be executed after each step of the agent execution.
             knowledge_sources: Knowledge sources for the agent.
             embedder: Embedder configuration for the agent.
+            apps: List of applications that the agent can access through CrewAI Platform.
     """
 
     _times_executed: int = PrivateAttr(default=0)
@@ -607,6 +608,15 @@ class Agent(BaseAgent):
         agent_tools = AgentTools(agents=agents)
         tools = agent_tools.tools()
         return tools
+
+    def get_platform_tools(self, apps_list: list[str]) -> list[BaseTool]:
+        try:
+            from crewai_tools.tools.crewai_platform_tools import CrewaiPlatformTools  # type: ignore
+
+            platform_tools = CrewaiPlatformTools(apps=apps_list)
+            return platform_tools
+        except Exception:
+            return []
 
     def get_multimodal_tools(self) -> Sequence[BaseTool]:
         from crewai.tools.agent_tools.add_image_tool import AddImageTool

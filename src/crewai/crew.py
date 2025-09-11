@@ -984,7 +984,10 @@ class Crew(FlowTrackable, BaseModel):
         ):
             tools = self._add_multimodal_tools(agent, tools)
 
-        # Return a List[BaseTool] compatible with Task.execute_sync and execute_async
+        if agent and hasattr(agent, "apps") and getattr(agent, "apps", None):
+            tools = self._add_platform_tools(task, tools)
+
+        # Return a list[BaseTool] compatible with Task.execute_sync and execute_async
         return cast(list[BaseTool], tools)
 
     def _get_agent_to_use(self, task: Task) -> BaseAgent | None:
@@ -1024,6 +1027,16 @@ class Crew(FlowTrackable, BaseModel):
             return self._merge_tools(tools, cast(list[BaseTool], delegation_tools))
         return cast(list[BaseTool], tools)
 
+    def _inject_platform_tools(
+        self,
+        tools: Union[List[Tool], List[BaseTool]],
+        task_agent: BaseAgent,
+    ) -> List[BaseTool]:
+        if hasattr(task_agent, "get_platform_tools") and hasattr(task_agent, "apps") and task_agent.apps:
+            platform_tools = task_agent.get_platform_tools(apps=task_agent.apps)
+            return self._merge_tools(tools, cast(List[BaseTool], platform_tools))
+        return cast(List[BaseTool], tools)
+
     def _add_multimodal_tools(
         self, agent: BaseAgent, tools: list[Tool] | list[BaseTool]
     ) -> list[BaseTool]:
@@ -1053,6 +1066,14 @@ class Crew(FlowTrackable, BaseModel):
                 tools, task.agent, agents_for_delegation
             )
         return cast(list[BaseTool], tools)
+
+    def _add_platform_tools(
+        self, task: Task, tools: Union[List[Tool], List[BaseTool]]
+    ) -> List[BaseTool]:
+        if task.agent:
+            tools = self._inject_platform_tools(tools, task.agent)
+
+        return cast(List[BaseTool], tools or [])
 
     def _log_task_start(self, task: Task, role: str = "None"):
         if self.output_log_file:
