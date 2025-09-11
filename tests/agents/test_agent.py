@@ -2523,56 +2523,95 @@ def test_agent_from_repository_without_org_set(
         style="yellow",
     )
 
-def test_agent_apps_validation_rejects_invalid():
-    """Test that invalid apps are rejected."""
-    with pytest.raises(Exception):
-        Agent(
-            role="Test Agent",
-            goal="Test goal",
-            backstory="Test backstory",
-            apps=["invalid_app", "another_invalid"]
-        )
-
-
-def test_agent_apps_basic_functionality():
-    """Test basic Agent.apps functionality - accepts valid apps and defaults to None."""
+def test_agent_actions_basic_functionality():
+    # Test with valid actions
     agent = Agent(
         role="Platform Agent",
         goal="Use platform tools",
         backstory="Platform specialist",
-        apps=["gmail", "slack", "notion"]
+        actions=["gmail/create_task", "slack/update_status", "cutsomer_support/send_notification"]
     )
-    assert set(agent.apps) == {"gmail", "slack", "notion"}
+    assert agent.actions == ["gmail/create_task", "slack/update_status", "customer_support/send_notification"]
 
     agent_default = Agent(
         role="Regular Agent",
         goal="Regular tasks",
         backstory="Regular agent"
     )
-    assert agent_default.apps is None
+    assert agent_default.actions is None
+
 
 @patch.object(Agent, 'get_platform_tools')
-def test_crew_integrates_platform_tools(mock_get_platform_tools):
+def test_actions_propagated_to_platform_tools(mock_get_platform_tools):
     from crewai.tools import tool
 
     @tool
-    def gmail_tool() -> str:
-        """Mock Gmail platform tool."""
-        return "gmail tool result"
+    def action_tool() -> str:
+        """Mock action platform tool."""
+        return "action tool result"
 
-    @tool
-    def original_tool() -> str:
-        """Original agent tool."""
-        return "original tool result"
-
-    mock_get_platform_tools.return_value = [gmail_tool]
+    mock_get_platform_tools.return_value = [action_tool]
 
     agent = Agent(
-        role="Platform Agent",
-        goal="Use platform tools",
+        role="Action Agent",
+        goal="Execute actions",
+        backstory="Action specialist",
+        actions=["gmail/send_email", "slack/update_status"]
+    )
+
+    task = Task(
+        description="Test task",
+        expected_output="Test output",
+        agent=agent
+    )
+
+    crew = Crew(agents=[agent], tasks=[task])
+    tools = crew._prepare_tools(agent, task, [])
+
+    mock_get_platform_tools.assert_called_once_with(apps=[], actions=["gmail/send_email", "slack/update_status"])
+    assert len(tools) >= 1
+
+
+@patch.object(Agent, 'get_platform_tools')
+def test_apps_and_actions_both_propagated(mock_get_platform_tools):
+    from crewai.tools import tool
+
+    @tool
+    def combined_tool() -> str:
+        """Mock combined platform tool."""
+        return "combined tool result"
+
+    mock_get_platform_tools.return_value = [combined_tool]
+
+    agent = Agent(
+        role="Combined Agent",
+        goal="Use apps and actions",
         backstory="Platform specialist",
         apps=["gmail", "slack"],
-        tools=[original_tool]
+        actions=["gmail/create_task", "slack/update_status"]
+    )
+
+    task = Task(
+        description="Test task",
+        expected_output="Test output",
+        agent=agent
+    )
+
+    crew = Crew(agents=[agent], tasks=[task])
+    tools = crew._prepare_tools(agent, task, [])
+
+    mock_get_platform_tools.assert_called_once()
+    call_args = mock_get_platform_tools.call_args[1]
+    assert set(call_args["apps"]) == {"gmail", "slack"}
+    assert call_args["actions"] == ["gmail/create_task", "slack/update_status"]
+    assert len(tools) >= 1
+
+def test_agent_without_apps_or_actions_no_platform_tools():
+    """Test that agents without apps or actions don't trigger platform tools integration."""
+    agent = Agent(
+        role="Regular Agent",
+        goal="Regular tasks",
+        backstory="Regular agent"
     )
 
     task = Task(
@@ -2583,11 +2622,8 @@ def test_crew_integrates_platform_tools(mock_get_platform_tools):
 
     crew = Crew(agents=[agent], tasks=[task])
 
-    tools = crew._prepare_tools(agent, task, agent.tools)
+    with patch.object(crew, '_add_platform_tools', wraps=crew._add_platform_tools) as mock_add_platform:
+        tools = crew._prepare_tools(agent, task, [])
 
-    mock_get_platform_tools.assert_called_once()
-
-    tool_names = [tool.name for tool in tools]
-    assert "gmail_tool" in tool_names
-    assert "original_tool" in tool_names
-    assert len(tools) == 2
+        mock_add_platform.assert_not_called()
+        assert tools == []

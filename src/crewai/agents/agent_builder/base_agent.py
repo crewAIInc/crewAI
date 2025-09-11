@@ -76,6 +76,7 @@ class BaseAgent(ABC, BaseModel):
         knowledge_storage: Custom knowledge storage for the agent.
         security_config: Security configuration for the agent, including fingerprinting.
         apps: List of enterprise applications that the agent can access through CrewAI Enterprise Tools.
+        actions: List of actions that the agent can access through CrewAI Enterprise Tools.
 
 
     Methods:
@@ -85,7 +86,7 @@ class BaseAgent(ABC, BaseModel):
             Abstract method to create an agent executor.
         get_delegation_tools(agents: list["BaseAgent"]):
             Abstract method to set the agents task tools for handling delegation and question asking to other agents in crew.
-        get_platform_tools(apps_list: list[PlatformApp]):
+        get_platform_tools(apps: list[PlatformApp], actions: list[str]):
             Abstract method to get platform tools for the specified list of applications.
         get_output_converter(llm, model, instructions):
             Abstract method to get the converter class for the agent to create json/pydantic outputs.
@@ -185,6 +186,10 @@ class BaseAgent(ABC, BaseModel):
     apps: list[PlatformApp] | None = Field(
         default=None,
         description="List of applications that the agent can access through CrewAI Platform",
+    )
+    actions: Optional[List[str]] = Field(
+        default=None,
+        description="List of actions that the agent can access through CrewAI Platform",
     )
 
     @model_validator(mode="before")
@@ -300,7 +305,7 @@ class BaseAgent(ABC, BaseModel):
         """Set the task tools that init BaseAgenTools class."""
 
     @abstractmethod
-    def get_platform_tools(self, apps: list[PlatformApp]) -> list[BaseTool]:
+    def get_platform_tools(self, apps: list[PlatformApp], actions: list[str]) -> list[BaseTool]:
         pass
 
     def copy(self: T) -> T:  # type: ignore # Signature of "copy" incompatible with supertype "BaseModel"

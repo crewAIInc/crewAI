@@ -604,16 +604,16 @@ class Agent(BaseAgent):
             callbacks=[TokenCalcHandler(self._token_process)],
         )
 
-    def get_delegation_tools(self, agents: List[BaseAgent]):
+    def get_delegation_tools(self, agents: list[BaseAgent]):
         agent_tools = AgentTools(agents=agents)
         tools = agent_tools.tools()
         return tools
 
-    def get_platform_tools(self, apps_list: list[str]) -> list[BaseTool]:
+    def get_platform_tools(self, apps: list[str], actions: list[str]) -> list[BaseTool]:
         try:
             from crewai_tools.tools.crewai_platform_tools import CrewaiPlatformTools  # type: ignore
 
-            platform_tools = CrewaiPlatformTools(apps=apps_list)
+            platform_tools = CrewaiPlatformTools(apps=apps, actions=actions)
             return platform_tools
         except Exception:
             return []
