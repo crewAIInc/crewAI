@@ -22,6 +22,18 @@
 </p>
 
 <p align="center">
+	<!-- Keep these links. Translations will automatically update with the README. -->
+	<a href="https://zdoc.app/de/crewAIInc/crewAI">Deutsch</a> · 
+	<a href="https://zdoc.app/es/crewAIInc/crewAI">Español</a> · 
+	<a href="https://zdoc.app/fr/crewAIInc/crewAI">français</a> · 
+	<a href="https://zdoc.app/ja/crewAIInc/crewAI">日本語</a> · 
+	<a href="https://zdoc.app/ko/crewAIInc/crewAI">한국어</a> · 
+	<a href="https://zdoc.app/pt/crewAIInc/crewAI">Português</a> · 
+	<a href="https://zdoc.app/ru/crewAIInc/crewAI">Русский</a> ·  
+	<a href="https://zdoc.app/zh/crewAIInc/crewAI">中文</a>
+</p>
+
+<p align="center">
   <a href="https://github.com/crewAIInc/crewAI">
     <img src="https://img.shields.io/github/stars/crewAIInc/crewAI" alt="GitHub Repo stars">
   </a>
