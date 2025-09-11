@@ -39,6 +39,7 @@ from crewai.security import Fingerprint, SecurityConfig
 from crewai.tasks.output_format import OutputFormat
 from crewai.tasks.task_output import TaskOutput
 from crewai.tools.base_tool import BaseTool
+from crewai.tools.tool_types import ToolAnswerResult
 from crewai.utilities.config import process_config
 from crewai.utilities.constants import NOT_SPECIFIED, _NotSpecified
 from crewai.utilities.guardrail import process_guardrail, GuardrailResult
@@ -442,6 +443,7 @@ class Task(BaseModel):
 
             self.processed_by_agents.add(agent.role)
             crewai_event_bus.emit(self, TaskStartedEvent(context=context, task=self))
+            
             result = agent.execute_task(
                 task=self,
                 context=context,
@@ -449,11 +451,14 @@ class Task(BaseModel):
             )
 
             pydantic_output, json_output = self._export_output(result)
+            
+            raw_result = result.result if hasattr(result, 'result') else result
+
             task_output = TaskOutput(
                 name=self.name or self.description,
                 description=self.description,
                 expected_output=self.expected_output,
-                raw=result,
+                raw=raw_result,
                 pydantic=pydantic_output,
                 json_dict=json_output,
                 agent=agent.role,
@@ -731,8 +736,11 @@ Follow these guidelines:
         return copied_task
 
     def _export_output(
-        self, result: str
+        self, result: Union[str, ToolAnswerResult]
     ) -> Tuple[Optional[BaseModel], Optional[Dict[str, Any]]]:
+        if isinstance(result, ToolAnswerResult):
+            return None, None
+
         pydantic_output: Optional[BaseModel] = None
         json_output: Optional[Dict[str, Any]] = None
 
