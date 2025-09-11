@@ -5,12 +5,20 @@ import time
 from difflib import SequenceMatcher
 from json import JSONDecodeError
 from textwrap import dedent
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
+from typing import TYPE_CHECKING, Any, Union
 
 import json5
 from json_repair import repair_json
 
 from crewai.agents.tools_handler import ToolsHandler
+from crewai.events.event_bus import crewai_event_bus
+from crewai.events.types.tool_usage_events import (
+    ToolSelectionErrorEvent,
+    ToolUsageErrorEvent,
+    ToolUsageFinishedEvent,
+    ToolUsageStartedEvent,
+    ToolValidateInputErrorEvent,
+)
 from crewai.task import Task
 from crewai.telemetry import Telemetry
 from crewai.tools.structured_tool import CrewStructuredTool
@@ -19,14 +27,6 @@ from crewai.utilities import I18N, Converter, Printer
 from crewai.utilities.agent_utils import (
     get_tool_names,
     render_text_description_and_args,
-)
-from crewai.events.event_bus import crewai_event_bus
-from crewai.events.types.tool_usage_events import (
-    ToolSelectionErrorEvent,
-    ToolUsageErrorEvent,
-    ToolUsageFinishedEvent,
-    ToolUsageStartedEvent,
-    ToolValidateInputErrorEvent,
 )
 
 if TYPE_CHECKING:
@@ -68,13 +68,13 @@ class ToolUsage:
 
     def __init__(
         self,
-        tools_handler: Optional[ToolsHandler],
-        tools: List[CrewStructuredTool],
-        task: Optional[Task],
+        tools_handler: ToolsHandler | None,
+        tools: list[CrewStructuredTool],
+        task: Task | None,
         function_calling_llm: Any,
-        agent: Optional[Union["BaseAgent", "LiteAgent"]] = None,
+        agent: Union["BaseAgent", "LiteAgent"] | None = None,
         action: Any = None,
-        fingerprint_context: Optional[Dict[str, str]] = None,
+        fingerprint_context: dict[str, str] | None = None,
     ) -> None:
         self._i18n: I18N = agent.i18n if agent else I18N()
         self._printer: Printer = Printer()
@@ -105,7 +105,7 @@ class ToolUsage:
         return self._tool_calling(tool_string)
 
     def use(
-        self, calling: Union[ToolCalling, InstructorToolCalling], tool_string: str
+        self, calling: ToolCalling | InstructorToolCalling, tool_string: str
     ) -> str:
         if isinstance(calling, ToolUsageErrorException):
             error = calling.message
@@ -147,7 +147,7 @@ class ToolUsage:
         self,
         tool_string: str,
         tool: CrewStructuredTool,
-        calling: Union[ToolCalling, InstructorToolCalling],
+        calling: ToolCalling | InstructorToolCalling,
     ) -> str:
         if self._check_tool_repeated_usage(calling=calling):  # type: ignore # _check_tool_repeated_usage of "ToolUsage" does not return a value (it only ever returns None)
             try:
@@ -331,6 +331,15 @@ class ToolUsage:
             self.task.used_tools += 1
         if self._should_remember_format():
             result = self._remember_format(result=result)
+
+        if isinstance(result, (list, dict)):
+            import json
+
+            try:
+                return json.dumps(result, indent=2, ensure_ascii=False)
+            except (TypeError, ValueError):
+                return str(result)
+
         return str(result)
 
     def _should_remember_format(self) -> bool:
@@ -346,7 +355,7 @@ class ToolUsage:
         return result
 
     def _check_tool_repeated_usage(
-        self, calling: Union[ToolCalling, InstructorToolCalling]
+        self, calling: ToolCalling | InstructorToolCalling
     ) -> bool:
         if not self.tools_handler:
             return False
@@ -393,7 +402,7 @@ class ToolUsage:
                 return tool
         if self.task:
             self.task.increment_tools_errors()
-        tool_selection_data: Dict[str, Any] = {
+        tool_selection_data: dict[str, Any] = {
             "agent_key": getattr(self.agent, "key", None) if self.agent else None,
             "agent_role": getattr(self.agent, "role", None) if self.agent else None,
             "tool_name": tool_name,
@@ -410,16 +419,15 @@ class ToolUsage:
                 ),
             )
             raise Exception(error)
-        else:
-            error = f"I forgot the Action name, these are the only available Actions: {self.tools_description}"
-            crewai_event_bus.emit(
-                self,
-                ToolSelectionErrorEvent(
-                    **tool_selection_data,
-                    error=error,
-                ),
-            )
-            raise Exception(error)
+        error = f"I forgot the Action name, these are the only available Actions: {self.tools_description}"
+        crewai_event_bus.emit(
+            self,
+            ToolSelectionErrorEvent(
+                **tool_selection_data,
+                error=error,
+            ),
+        )
+        raise Exception(error)
 
     def _render(self) -> str:
         """Render the tool name and description in plain text."""
@@ -430,7 +438,7 @@ class ToolUsage:
 
     def _function_calling(
         self, tool_string: str
-    ) -> Union[ToolCalling, InstructorToolCalling]:
+    ) -> ToolCalling | InstructorToolCalling:
         model = (
             InstructorToolCalling
             if self.function_calling_llm.supports_function_calling()
@@ -459,7 +467,7 @@ class ToolUsage:
 
     def _original_tool_calling(
         self, tool_string: str, raise_error: bool = False
-    ) -> Union[ToolCalling, InstructorToolCalling, ToolUsageErrorException]:
+    ) -> ToolCalling | InstructorToolCalling | ToolUsageErrorException:
         tool_name = self.action.tool
         tool = self._select_tool(tool_name)
         try:
@@ -468,18 +476,16 @@ class ToolUsage:
         except Exception:
             if raise_error:
                 raise
-            else:
-                return ToolUsageErrorException(
-                    f"{self._i18n.errors('tool_arguments_error')}"
-                )
+            return ToolUsageErrorException(
+                f"{self._i18n.errors('tool_arguments_error')}"
+            )
 
         if not isinstance(arguments, dict):
             if raise_error:
                 raise
-            else:
-                return ToolUsageErrorException(
-                    f"{self._i18n.errors('tool_arguments_error')}"
-                )
+            return ToolUsageErrorException(
+                f"{self._i18n.errors('tool_arguments_error')}"
+            )
 
         return ToolCalling(
             tool_name=tool.name,
@@ -488,15 +494,14 @@ class ToolUsage:
 
     def _tool_calling(
         self, tool_string: str
-    ) -> Union[ToolCalling, InstructorToolCalling, ToolUsageErrorException]:
+    ) -> ToolCalling | InstructorToolCalling | ToolUsageErrorException:
         try:
             try:
                 return self._original_tool_calling(tool_string, raise_error=True)
             except Exception:
                 if self.function_calling_llm:
                     return self._function_calling(tool_string)
-                else:
-                    return self._original_tool_calling(tool_string)
+                return self._original_tool_calling(tool_string)
         except Exception as e:
             self._run_attempts += 1
             if self._run_attempts > self._max_parsing_attempts:
@@ -510,7 +515,7 @@ class ToolUsage:
                 )
             return self._tool_calling(tool_string)
 
-    def _validate_tool_input(self, tool_input: Optional[str]) -> Dict[str, Any]:
+    def _validate_tool_input(self, tool_input: str | None) -> dict[str, Any]:
         if tool_input is None:
             return {}
 
@@ -534,7 +539,7 @@ class ToolUsage:
                 return arguments
         except (ValueError, SyntaxError):
             repaired_input = repair_json(tool_input)
-            pass  # Continue to the next parsing attempt
+            # Continue to the next parsing attempt
 
         # Attempt 3: Parse as JSON5
         try:
@@ -586,7 +591,7 @@ class ToolUsage:
     def on_tool_error(
         self,
         tool: Any,
-        tool_calling: Union[ToolCalling, InstructorToolCalling],
+        tool_calling: ToolCalling | InstructorToolCalling,
         e: Exception,
     ) -> None:
         event_data = self._prepare_event_data(tool, tool_calling)
@@ -595,7 +600,7 @@ class ToolUsage:
     def on_tool_use_finished(
         self,
         tool: Any,
-        tool_calling: Union[ToolCalling, InstructorToolCalling],
+        tool_calling: ToolCalling | InstructorToolCalling,
         from_cache: bool,
         started_at: float,
         result: Any,
@@ -616,7 +621,7 @@ class ToolUsage:
         crewai_event_bus.emit(self, ToolUsageFinishedEvent(**event_data))
 
     def _prepare_event_data(
-        self, tool: Any, tool_calling: Union[ToolCalling, InstructorToolCalling]
+        self, tool: Any, tool_calling: ToolCalling | InstructorToolCalling
     ) -> dict:
         event_data = {
             "run_attempts": self._run_attempts,
