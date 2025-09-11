@@ -130,8 +130,7 @@ class ToolUsage:
             and tool.name == self._i18n.tools("add_image")["name"]  # type: ignore
         ):
             try:
-                result = self._use(tool_string=tool_string, tool=tool, calling=calling)
-                return result
+                return self._use(tool_string=tool_string, tool=tool, calling=calling)
 
             except Exception as e:
                 error = getattr(e, "message", str(e))
@@ -159,8 +158,7 @@ class ToolUsage:
                     tool_name=tool.name,
                     attempts=self._run_attempts,
                 )
-                result = self._format_result(result=result)  # type: ignore #  "_format_result" of "ToolUsage" does not return a value (it only ever returns None)
-                return result  # type: ignore # Fix the return type of this function
+                return self._format_result(result=result)  # type: ignore #  "_format_result" of "ToolUsage" does not return a value (it only ever returns None)
 
             except Exception:
                 if self.task:
@@ -207,8 +205,7 @@ class ToolUsage:
             try:
                 result = usage_limit_error
                 self._telemetry.tool_usage_error(llm=self.function_calling_llm)
-                result = self._format_result(result=result)
-                return result
+                return self._format_result(result=result)
             except Exception:
                 if self.task:
                     self.task.increment_tools_errors()
@@ -431,9 +428,7 @@ class ToolUsage:
 
     def _render(self) -> str:
         """Render the tool name and description in plain text."""
-        descriptions = []
-        for tool in self.tools:
-            descriptions.append(tool.description)
+        descriptions = [tool.description for tool in self.tools]
         return "\n--\n".join(descriptions)
 
     def _function_calling(
