@@ -91,12 +91,12 @@ class Mem0Storage(Storage):
     def save(self, value: Any, metadata: dict[str, Any]) -> None:
         conversations = []
 
-        if messages := metadata.get("messages"):    
+        if messages := metadata.get("messages"):
             user_content = ""
             assistant_content = ""
 
             for message in messages:
-                if message.get("role") == "user": # Using the last appended user content 
+                if message.get("role") == "user": # Using the last appended user content
                     user_content = message.get("content","")
 
                 if message.get("role") == "assistant": # Using the last appended assistant content
@@ -110,9 +110,9 @@ class Mem0Storage(Storage):
             metadata.pop('messages') # Dropping messages from the metadata dictionary
         else:
             conversations.append({"role": "assistant", "content": value})
-        
+
         user_id = self.config.get("user_id", "")
-        
+
         base_metadata = {
             "short_term": "short_term",
             "long_term": "long_term",
@@ -183,7 +183,7 @@ class Mem0Storage(Storage):
         # This makes it compatible for Contextual Memory to retrieve
         for result in results["results"]:
             result["context"] = result["memory"]
-        
+
         return [r for r in results["results"]]
 
     def reset(self):
@@ -204,13 +204,13 @@ class Mem0Storage(Storage):
         agents = [self._sanitize_role(agent.role) for agent in agents]
         agents = "_".join(agents)
         return sanitize_collection_name(name=agents, max_collection_length=MAX_AGENT_ID_LENGTH_MEM0)
-    
+
     def _get_assistant_message(self, text: str) -> str:
         marker = "Final Answer:"
         if marker in text:
             return text.split(marker, 1)[1].strip()
         return text
-    
+
     def _get_user_message(self, text: str) -> str:
         pattern = r"User message:\s*(.*)"
         match = re.search(pattern, text)
