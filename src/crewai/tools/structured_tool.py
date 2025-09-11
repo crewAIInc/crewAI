@@ -270,6 +270,8 @@ class CrewStructuredTool:
 
         if inspect.iscoroutinefunction(self.func):
             return asyncio.run(self.func(**parsed_args, **kwargs))
+        
+        result = self.func(**parsed_args, **kwargs)
 
         if asyncio.iscoroutine(result):
             return asyncio.run(result)
