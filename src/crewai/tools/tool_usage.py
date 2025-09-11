@@ -44,7 +44,7 @@ OPENAI_BIGGER_MODELS = [
 ]
 
 
-class ToolUsageErrorException(Exception):
+class ToolUsageError(Exception):
     """Exception raised for errors in the tool usage."""
 
     def __init__(self, message: str) -> None:
@@ -107,7 +107,7 @@ class ToolUsage:
     def use(
         self, calling: ToolCalling | InstructorToolCalling, tool_string: str
     ) -> str:
-        if isinstance(calling, ToolUsageErrorException):
+        if isinstance(calling, ToolUsageError):
             error = calling.message
             if self.agent and self.agent.verbose:
                 self._printer.print(content=f"\n\n{error}\n", color="red")
@@ -252,7 +252,7 @@ class ToolUsage:
                     error_message = self._i18n.errors("tool_usage_exception").format(
                         error=e, tool=tool.name, tool_inputs=tool.description
                     )
-                    error = ToolUsageErrorException(
+                    error = ToolUsageError(
                         f"\n{error_message}.\nMoving on then. {self._i18n.slice('format').format(tool_names=self.tools_names)}"
                     ).message
                     if self.task:
@@ -456,13 +456,13 @@ class ToolUsage:
         )
         tool_object = converter.to_pydantic()
         if not isinstance(tool_object, (ToolCalling, InstructorToolCalling)):
-            raise ToolUsageErrorException("Failed to parse tool calling")
+            raise ToolUsageError("Failed to parse tool calling")
 
         return tool_object
 
     def _original_tool_calling(
         self, tool_string: str, raise_error: bool = False
-    ) -> ToolCalling | InstructorToolCalling | ToolUsageErrorException:
+    ) -> ToolCalling | InstructorToolCalling | ToolUsageError:
         tool_name = self.action.tool
         tool = self._select_tool(tool_name)
         try:
@@ -471,14 +471,14 @@ class ToolUsage:
         except Exception:
             if raise_error:
                 raise
-            return ToolUsageErrorException(
+            return ToolUsageError(
                 f"{self._i18n.errors('tool_arguments_error')}"
             )
 
         if not isinstance(arguments, dict):
             if raise_error:
                 raise
-            return ToolUsageErrorException(
+            return ToolUsageError(
                 f"{self._i18n.errors('tool_arguments_error')}"
             )
 
@@ -489,7 +489,7 @@ class ToolUsage:
 
     def _tool_calling(
         self, tool_string: str
-    ) -> ToolCalling | InstructorToolCalling | ToolUsageErrorException:
+    ) -> ToolCalling | InstructorToolCalling | ToolUsageError:
         try:
             try:
                 return self._original_tool_calling(tool_string, raise_error=True)
@@ -505,7 +505,7 @@ class ToolUsage:
                     self.task.increment_tools_errors()
                 if self.agent and self.agent.verbose:
                     self._printer.print(content=f"\n\n{e}\n", color="red")
-                return ToolUsageErrorException(  # type: ignore # Incompatible return value type (got "ToolUsageErrorException", expected "ToolCalling | InstructorToolCalling")
+                return ToolUsageError(  # type: ignore # Incompatible return value type (got "ToolUsageError", expected "ToolCalling | InstructorToolCalling")
                     f"{self._i18n.errors('tool_usage_error').format(error=e)}\nMoving on then. {self._i18n.slice('format').format(tool_names=self.tools_names)}"
                 )
             return self._tool_calling(tool_string)
