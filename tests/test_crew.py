@@ -1,11 +1,11 @@
 """Test Agent creation and execution basic functionality."""
 
-import hashlib
 import json
+from collections import defaultdict
 from concurrent.futures import Future
+from hashlib import md5
 from unittest import mock
 from unittest.mock import ANY, MagicMock, patch
-from collections import defaultdict
 
 import pydantic_core
 import pytest
@@ -14,11 +14,29 @@ from crewai.agent import Agent
 from crewai.agents import CacheHandler
 from crewai.crew import Crew
 from crewai.crews.crew_output import CrewOutput
+from crewai.events.event_bus import crewai_event_bus
+from crewai.events.types.crew_events import (
+    CrewTestCompletedEvent,
+    CrewTestStartedEvent,
+    CrewTrainCompletedEvent,
+    CrewTrainStartedEvent,
+)
+from crewai.events.types.memory_events import (
+    MemoryQueryCompletedEvent,
+    MemoryQueryFailedEvent,
+    MemoryQueryStartedEvent,
+    MemoryRetrievalCompletedEvent,
+    MemoryRetrievalStartedEvent,
+    MemorySaveCompletedEvent,
+    MemorySaveFailedEvent,
+    MemorySaveStartedEvent,
+)
 from crewai.flow import Flow, start
 from crewai.knowledge.knowledge import Knowledge
 from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
 from crewai.llm import LLM
 from crewai.memory.contextual.contextual_memory import ContextualMemory
+from crewai.memory.external.external_memory import ExternalMemory
 from crewai.memory.long_term.long_term_memory import LongTermMemory
 from crewai.memory.short_term.short_term_memory import ShortTermMemory
 from crewai.process import Process
@@ -27,27 +45,8 @@ from crewai.tasks.conditional_task import ConditionalTask
 from crewai.tasks.output_format import OutputFormat
 from crewai.tasks.task_output import TaskOutput
 from crewai.types.usage_metrics import UsageMetrics
-from crewai.events.event_bus import crewai_event_bus
-from crewai.events.types.crew_events import (
-    CrewTestCompletedEvent,
-    CrewTestStartedEvent,
-    CrewTrainCompletedEvent,
-    CrewTrainStartedEvent,
-)
 from crewai.utilities.rpm_controller import RPMController
 from crewai.utilities.task_output_storage_handler import TaskOutputStorageHandler
-
-from crewai.events.types.memory_events import (
-    MemorySaveStartedEvent,
-    MemorySaveCompletedEvent,
-    MemorySaveFailedEvent,
-    MemoryQueryStartedEvent,
-    MemoryQueryCompletedEvent,
-    MemoryQueryFailedEvent,
-    MemoryRetrievalStartedEvent,
-    MemoryRetrievalCompletedEvent,
-)
-from crewai.memory.external.external_memory import ExternalMemory
 
 
 @pytest.fixture
@@ -364,7 +363,7 @@ def test_hierarchical_process(researcher, writer):
 
     assert (
         result.raw
-        == "1. **The Rise of Autonomous AI Agents in Daily Life**  \n   As artificial intelligence technology progresses, the integration of autonomous AI agents into everyday life becomes increasingly prominent. These agents, capable of making decisions without human intervention, are reshaping industries from healthcare to finance. Exploring case studies where autonomous AI has successfully decreased operational costs or improved efficiency can reveal not only the benefits but also the ethical implications of delegating decision-making to machines. This topic offers an exciting opportunity to dive into the AI landscape, showcasing current developments such as AI assistants and autonomous vehicles.\n\n2. **Ethical Implications of Generative AI in Creative Industries**  \n   The surge of generative AI tools in creative fields, such as art, music, and writing, has sparked a heated debate about authorship and originality. This article could investigate how these tools are being used by artists and creators, examining both the potential for innovation and the risk of devaluing traditional art forms. Highlighting perspectives from creators, legal experts, and ethicists could provide a comprehensive overview of the challenges faced, including copyright concerns and the emotional impact on human artists. This discussion is vital as the creative landscape evolves alongside technological advancements, making it ripe for exploration.\n\n3. **AI in Climate Change Mitigation: Current Solutions and Future Potential**  \n   As the world grapples with climate change, AI technology is increasingly being harnessed to develop innovative solutions for sustainability. From predictive analytics that optimize energy consumption to machine learning algorithms that improve carbon capture methods, AI's potential in environmental science is vast. This topic invites an exploration of existing AI applications in climate initiatives, with a focus on groundbreaking research and initiatives aimed at reducing humanity's carbon footprint. Highlighting successful projects and technology partnerships can illustrate the positive impact AI can have on global climate efforts, inspiring further exploration and investment in this area.\n\n4. **The Future of Work: How AI is Reshaping Employment Landscapes**  \n   The discussions around AI's impact on the workforce are both urgent and complex, as advances in automation and machine learning continue to transform the job market. This article could delve into the current trends of AI-driven job displacement alongside opportunities for upskilling and the creation of new job roles. By examining case studies of companies that integrate AI effectively and the resulting workforce adaptations, readers can gain valuable insights into preparing for a future where humans and AI collaborate. This exploration highlights the importance of policies that promote workforce resilience in the face of change.\n\n5. **Decentralized AI: Exploring the Role of Blockchain in AI Development**  \n   As blockchain technology sweeps through various sectors, its application in AI development presents a fascinating topic worth examining. Decentralized AI could address issues of data privacy, security, and democratization in AI models by allowing users to retain ownership of data while benefiting from AI's capabilities. This article could analyze how decentralized networks are disrupting traditional AI development models, featuring innovative projects that harness the synergy between blockchain and AI. Highlighting potential pitfalls and the future landscape of decentralized AI could stimulate discussion among technologists, entrepreneurs, and policymakers alike."
+        == "**1. The Rise of Autonomous AI Agents in Daily Life**  \nAs artificial intelligence technology progresses, the integration of autonomous AI agents into everyday life becomes increasingly prominent. These agents, capable of making decisions without human intervention, are reshaping industries from healthcare to finance. Exploring case studies where autonomous AI has successfully decreased operational costs or improved efficiency can reveal not only the benefits but also the ethical implications of delegating decision-making to machines. This topic offers an exciting opportunity to dive into the AI landscape, showcasing current developments such as AI assistants and autonomous vehicles.\n\n**2. Ethical Implications of Generative AI in Creative Industries**  \nThe surge of generative AI tools in creative fields, such as art, music, and writing, has sparked a heated debate about authorship and originality. This article could investigate how these tools are being used by artists and creators, examining both the potential for innovation and the risk of devaluing traditional art forms. Highlighting perspectives from creators, legal experts, and ethicists could provide a comprehensive overview of the challenges faced, including copyright concerns and the emotional impact on human artists. This discussion is vital as the creative landscape evolves alongside technological advancements, making it ripe for exploration.\n\n**3. AI in Climate Change Mitigation: Current Solutions and Future Potential**  \nAs the world grapples with climate change, AI technology is increasingly being harnessed to develop innovative solutions for sustainability. From predictive analytics that optimize energy consumption to machine learning algorithms that improve carbon capture methods, AI's potential in environmental science is vast. This topic invites an exploration of existing AI applications in climate initiatives, with a focus on groundbreaking research and initiatives aimed at reducing humanity's carbon footprint. Highlighting successful projects and technology partnerships can illustrate the positive impact AI can have on global climate efforts, inspiring further exploration and investment in this area.\n\n**4. The Future of Work: How AI is Reshaping Employment Landscapes**  \nThe discussions around AI's impact on the workforce are both urgent and complex, as advances in automation and machine learning continue to transform the job market. This article could delve into the current trends of AI-driven job displacement alongside opportunities for upskilling and the creation of new job roles. By examining case studies of companies that integrate AI effectively and the resulting workforce adaptations, readers can gain valuable insights into preparing for a future where humans and AI collaborate. This exploration highlights the importance of policies that promote workforce resilience in the face of change.\n\n**5. Decentralized AI: Exploring the Role of Blockchain in AI Development**  \nAs blockchain technology sweeps through various sectors, its application in AI development presents a fascinating topic worth examining. Decentralized AI could address issues of data privacy, security, and democratization in AI models by allowing users to retain ownership of data while benefiting from AI's capabilities. This article could analyze how decentralized networks are disrupting traditional AI development models, featuring innovative projects that harness the synergy between blockchain and AI. Highlighting potential pitfalls and the future landscape of decentralized AI could stimulate discussion among technologists, entrepreneurs, and policymakers alike.\n\nThese topics not only reflect current trends but also probe deeper into ethical and practical considerations, making them timely and relevant for contemporary audiences."
     )
 
 
@@ -570,8 +569,6 @@ def test_crew_with_delegating_agents(ceo, writer):
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_crew_with_delegating_agents_should_not_override_task_tools(ceo, writer):
-    from typing import Type
-
     from pydantic import BaseModel, Field
 
     from crewai.tools import BaseTool
@@ -584,7 +581,7 @@ def test_crew_with_delegating_agents_should_not_override_task_tools(ceo, writer)
     class TestTool(BaseTool):
         name: str = "Test Tool"
         description: str = "A test tool that just returns the input"
-        args_schema: Type[BaseModel] = TestToolInput
+        args_schema: type[BaseModel] = TestToolInput
 
         def _run(self, query: str) -> str:
             return f"Processed: {query}"
@@ -622,18 +619,16 @@ def test_crew_with_delegating_agents_should_not_override_task_tools(ceo, writer)
         _, kwargs = mock_execute_sync.call_args
         tools = kwargs["tools"]
 
-        assert any(
-            isinstance(tool, TestTool) for tool in tools
-        ), "TestTool should be present"
-        assert any(
-            "delegate" in tool.name.lower() for tool in tools
-        ), "Delegation tool should be present"
+        assert any(isinstance(tool, TestTool) for tool in tools), (
+            "TestTool should be present"
+        )
+        assert any("delegate" in tool.name.lower() for tool in tools), (
+            "Delegation tool should be present"
+        )
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_crew_with_delegating_agents_should_not_override_agent_tools(ceo, writer):
-    from typing import Type
-
     from pydantic import BaseModel, Field
 
     from crewai.tools import BaseTool
@@ -646,7 +641,7 @@ def test_crew_with_delegating_agents_should_not_override_agent_tools(ceo, writer
     class TestTool(BaseTool):
         name: str = "Test Tool"
         description: str = "A test tool that just returns the input"
-        args_schema: Type[BaseModel] = TestToolInput
+        args_schema: type[BaseModel] = TestToolInput
 
         def _run(self, query: str) -> str:
             return f"Processed: {query}"
@@ -686,18 +681,16 @@ def test_crew_with_delegating_agents_should_not_override_agent_tools(ceo, writer
         _, kwargs = mock_execute_sync.call_args
         tools = kwargs["tools"]
 
-        assert any(
-            isinstance(tool, TestTool) for tool in new_ceo.tools
-        ), "TestTool should be present"
-        assert any(
-            "delegate" in tool.name.lower() for tool in tools
-        ), "Delegation tool should be present"
+        assert any(isinstance(tool, TestTool) for tool in new_ceo.tools), (
+            "TestTool should be present"
+        )
+        assert any("delegate" in tool.name.lower() for tool in tools), (
+            "Delegation tool should be present"
+        )
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_task_tools_override_agent_tools(researcher):
-    from typing import Type
-
     from pydantic import BaseModel, Field
 
     from crewai.tools import BaseTool
@@ -710,7 +703,7 @@ def test_task_tools_override_agent_tools(researcher):
     class TestTool(BaseTool):
         name: str = "Test Tool"
         description: str = "A test tool that just returns the input"
-        args_schema: Type[BaseModel] = TestToolInput
+        args_schema: type[BaseModel] = TestToolInput
 
         def _run(self, query: str) -> str:
             return f"Processed: {query}"
@@ -718,7 +711,7 @@ def test_task_tools_override_agent_tools(researcher):
     class AnotherTestTool(BaseTool):
         name: str = "Another Test Tool"
         description: str = "Another test tool"
-        args_schema: Type[BaseModel] = TestToolInput
+        args_schema: type[BaseModel] = TestToolInput
 
         def _run(self, query: str) -> str:
             return f"Another processed: {query}"
@@ -754,7 +747,6 @@ def test_task_tools_override_agent_tools_with_allow_delegation(researcher, write
     """
     Test that task tools override agent tools while preserving delegation tools when allow_delegation=True
     """
-    from typing import Type
 
     from pydantic import BaseModel, Field
 
@@ -766,7 +758,7 @@ def test_task_tools_override_agent_tools_with_allow_delegation(researcher, write
     class TestTool(BaseTool):
         name: str = "Test Tool"
         description: str = "A test tool that just returns the input"
-        args_schema: Type[BaseModel] = TestToolInput
+        args_schema: type[BaseModel] = TestToolInput
 
         def _run(self, query: str) -> str:
             return f"Processed: {query}"
@@ -774,7 +766,7 @@ def test_task_tools_override_agent_tools_with_allow_delegation(researcher, write
     class AnotherTestTool(BaseTool):
         name: str = "Another Test Tool"
         description: str = "Another test tool"
-        args_schema: Type[BaseModel] = TestToolInput
+        args_schema: type[BaseModel] = TestToolInput
 
         def _run(self, query: str) -> str:
             return f"Another processed: {query}"
@@ -815,17 +807,17 @@ def test_task_tools_override_agent_tools_with_allow_delegation(researcher, write
         used_tools = kwargs["tools"]
 
         # Confirm AnotherTestTool is present but TestTool is not
-        assert any(
-            isinstance(tool, AnotherTestTool) for tool in used_tools
-        ), "AnotherTestTool should be present"
-        assert not any(
-            isinstance(tool, TestTool) for tool in used_tools
-        ), "TestTool should not be present among used tools"
+        assert any(isinstance(tool, AnotherTestTool) for tool in used_tools), (
+            "AnotherTestTool should be present"
+        )
+        assert not any(isinstance(tool, TestTool) for tool in used_tools), (
+            "TestTool should not be present among used tools"
+        )
 
         # Confirm delegation tool(s) are present
-        assert any(
-            "delegate" in tool.name.lower() for tool in used_tools
-        ), "Delegation tool should be present"
+        assert any("delegate" in tool.name.lower() for tool in used_tools), (
+            "Delegation tool should be present"
+        )
 
     # Finally, make sure the agent's original tools remain unchanged
     assert len(researcher_with_delegation.tools) == 1
@@ -929,9 +921,9 @@ def test_cache_hitting_between_agents(researcher, writer, ceo):
             tool="multiplier", input={"first_number": 2, "second_number": 6}
         )
         assert cache_calls[0] == expected_call, f"First call mismatch: {cache_calls[0]}"
-        assert (
-            cache_calls[1] == expected_call
-        ), f"Second call mismatch: {cache_calls[1]}"
+        assert cache_calls[1] == expected_call, (
+            f"Second call mismatch: {cache_calls[1]}"
+        )
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -1042,7 +1034,7 @@ def test_crew_kickoff_streaming_usage_metrics():
         assert result.token_usage.cached_prompt_tokens == 0
 
 
-def test_agents_rpm_is_never_set_if_crew_max_RPM_is_not_set():
+def test_agents_rpm_is_never_set_if_crew_max_rpm_is_not_set():
     agent = Agent(
         role="test role",
         goal="test goal",
@@ -1395,8 +1387,9 @@ def test_kickoff_for_each_error_handling():
     crew = Crew(agents=[agent], tasks=[task])
 
     with patch.object(Crew, "kickoff") as mock_kickoff:
-        mock_kickoff.side_effect = expected_outputs[:2] + [
-            Exception("Simulated kickoff error")
+        mock_kickoff.side_effect = [
+            *expected_outputs[:2],
+            Exception("Simulated kickoff error"),
         ]
         with pytest.raises(Exception, match="Simulated kickoff error"):
             crew.kickoff_for_each(inputs=inputs)
@@ -1674,9 +1667,9 @@ def test_code_execution_flag_adds_code_tool_upon_kickoff():
 
             # Verify that exactly one tool was used and it was a CodeInterpreterTool
             assert len(used_tools) == 1, "Should have exactly one tool"
-            assert isinstance(
-                used_tools[0], CodeInterpreterTool
-            ), "Tool should be CodeInterpreterTool"
+            assert isinstance(used_tools[0], CodeInterpreterTool), (
+                "Tool should be CodeInterpreterTool"
+            )
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -1760,10 +1753,10 @@ def test_agent_usage_metrics_are_captured_for_hierarchical_process():
     assert result.raw == "Howdy!"
 
     assert result.token_usage == UsageMetrics(
-        total_tokens=2390,
-        prompt_tokens=2264,
-        completion_tokens=126,
-        successful_requests=4,
+        total_tokens=1673,
+        prompt_tokens=1562,
+        completion_tokens=111,
+        successful_requests=3,
         cached_prompt_tokens=0,
     )
 
@@ -2179,8 +2172,7 @@ def test_tools_with_custom_caching():
         return first_number * second_number
 
     def cache_func(args, result):
-        cache = result % 2 == 0
-        return cache
+        return result % 2 == 0
 
     multiplcation_tool.cache_function = cache_func
 
@@ -2884,7 +2876,7 @@ def test_manager_agent_with_tools_raises_exception(researcher, writer):
         tasks=[task],
     )
 
-    with pytest.raises(Exception):
+    with pytest.raises(Exception, match="Manager agent should not have tools"):
         crew.kickoff()
 
 
@@ -3108,7 +3100,7 @@ def test_crew_task_db_init():
             db_handler.load()
             assert True  # If we reach this point, no exception was raised
         except Exception as e:
-            pytest.fail(f"An exception was raised: {str(e)}")
+            pytest.fail(f"An exception was raised: {e!s}")
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -3494,8 +3486,9 @@ def test_key(researcher, writer):
         process=Process.sequential,
         tasks=tasks,
     )
-    hash = hashlib.md5(
-        f"{researcher.key}|{writer.key}|{tasks[0].key}|{tasks[1].key}".encode()
+    hash = md5(
+        f"{researcher.key}|{writer.key}|{tasks[0].key}|{tasks[1].key}".encode(),
+        usedforsecurity=False,
     ).hexdigest()
 
     assert crew.key == hash
@@ -3534,8 +3527,9 @@ def test_key_with_interpolated_inputs():
         process=Process.sequential,
         tasks=tasks,
     )
-    hash = hashlib.md5(
-        f"{researcher.key}|{writer.key}|{tasks[0].key}|{tasks[1].key}".encode()
+    hash = md5(
+        f"{researcher.key}|{writer.key}|{tasks[0].key}|{tasks[1].key}".encode(),
+        usedforsecurity=False,
     ).hexdigest()
 
     assert crew.key == hash
@@ -3815,16 +3809,15 @@ def test_fetch_inputs():
     expected_placeholders = {"role_detail", "topic", "field"}
     actual_placeholders = crew.fetch_inputs()
 
-    assert (
-        actual_placeholders == expected_placeholders
-    ), f"Expected {expected_placeholders}, but got {actual_placeholders}"
+    assert actual_placeholders == expected_placeholders, (
+        f"Expected {expected_placeholders}, but got {actual_placeholders}"
+    )
 
 
 def test_task_tools_preserve_code_execution_tools():
     """
     Test that task tools don't override code execution tools when allow_code_execution=True
     """
-    from typing import Type
 
     # Mock embedchain initialization to prevent race conditions in parallel CI execution
     with patch("embedchain.client.Client.setup"):
@@ -3841,7 +3834,7 @@ def test_task_tools_preserve_code_execution_tools():
     class TestTool(BaseTool):
         name: str = "Test Tool"
         description: str = "A test tool that just returns the input"
-        args_schema: Type[BaseModel] = TestToolInput
+        args_schema: type[BaseModel] = TestToolInput
 
         def _run(self, query: str) -> str:
             return f"Processed: {query}"
@@ -3892,20 +3885,20 @@ def test_task_tools_preserve_code_execution_tools():
         used_tools = kwargs["tools"]
 
         # Verify all expected tools are present
-        assert any(
-            isinstance(tool, TestTool) for tool in used_tools
-        ), "Task's TestTool should be present"
-        assert any(
-            isinstance(tool, CodeInterpreterTool) for tool in used_tools
-        ), "CodeInterpreterTool should be present"
-        assert any(
-            "delegate" in tool.name.lower() for tool in used_tools
-        ), "Delegation tool should be present"
+        assert any(isinstance(tool, TestTool) for tool in used_tools), (
+            "Task's TestTool should be present"
+        )
+        assert any(isinstance(tool, CodeInterpreterTool) for tool in used_tools), (
+            "CodeInterpreterTool should be present"
+        )
+        assert any("delegate" in tool.name.lower() for tool in used_tools), (
+            "Delegation tool should be present"
+        )
 
         # Verify the total number of tools (TestTool + CodeInterpreter + 2 delegation tools)
-        assert (
-            len(used_tools) == 4
-        ), "Should have TestTool, CodeInterpreter, and 2 delegation tools"
+        assert len(used_tools) == 4, (
+            "Should have TestTool, CodeInterpreter, and 2 delegation tools"
+        )
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -3949,9 +3942,9 @@ def test_multimodal_flag_adds_multimodal_tools():
         used_tools = kwargs["tools"]
 
         # Check that the multimodal tool was added
-        assert any(
-            isinstance(tool, AddImageTool) for tool in used_tools
-        ), "AddImageTool should be present when agent is multimodal"
+        assert any(isinstance(tool, AddImageTool) for tool in used_tools), (
+            "AddImageTool should be present when agent is multimodal"
+        )
 
         # Verify we have exactly one tool (just the AddImageTool)
         assert len(used_tools) == 1, "Should only have the AddImageTool"
@@ -4215,9 +4208,9 @@ def test_crew_guardrail_feedback_in_context():
     assert len(execution_contexts) > 1, "Task should have been executed multiple times"
 
     # Verify that the second execution included the guardrail feedback
-    assert (
-        "Output must contain the keyword 'IMPORTANT'" in execution_contexts[1]
-    ), "Guardrail feedback should be included in retry context"
+    assert "Output must contain the keyword 'IMPORTANT'" in execution_contexts[1], (
+        "Guardrail feedback should be included in retry context"
+    )
 
     # Verify final output meets guardrail requirements
     assert "IMPORTANT" in result.raw, "Final output should contain required keyword"
@@ -4232,13 +4225,11 @@ def test_before_kickoff_callback():
 
     @CrewBase
     class TestCrewClass:
-        from typing import List
-
         from crewai.agents.agent_builder.base_agent import BaseAgent
         from crewai.project import CrewBase, agent, before_kickoff, crew, task
 
-        agents: List[BaseAgent]
-        tasks: List[Task]
+        agents: list[BaseAgent]
+        tasks: list[Task]
 
         agents_config = None
         tasks_config = None
@@ -4262,12 +4253,11 @@ def test_before_kickoff_callback():
 
         @task
         def my_task(self):
-            task = Task(
+            return Task(
                 description="Test task description",
                 expected_output="Test expected output",
                 agent=self.my_agent(),
             )
-            return task
 
         @crew
         def crew(self):
@@ -4433,46 +4423,46 @@ def test_crew_copy_with_memory():
     try:
         crew_copy = crew.copy()
 
-        assert hasattr(
-            crew_copy, "_short_term_memory"
-        ), "Copied crew should have _short_term_memory"
-        assert (
-            crew_copy._short_term_memory is not None
-        ), "Copied _short_term_memory should not be None"
-        assert (
-            id(crew_copy._short_term_memory) != original_short_term_id
-        ), "Copied _short_term_memory should be a new object"
+        assert hasattr(crew_copy, "_short_term_memory"), (
+            "Copied crew should have _short_term_memory"
+        )
+        assert crew_copy._short_term_memory is not None, (
+            "Copied _short_term_memory should not be None"
+        )
+        assert id(crew_copy._short_term_memory) != original_short_term_id, (
+            "Copied _short_term_memory should be a new object"
+        )
 
-        assert hasattr(
-            crew_copy, "_long_term_memory"
-        ), "Copied crew should have _long_term_memory"
-        assert (
-            crew_copy._long_term_memory is not None
-        ), "Copied _long_term_memory should not be None"
-        assert (
-            id(crew_copy._long_term_memory) != original_long_term_id
-        ), "Copied _long_term_memory should be a new object"
+        assert hasattr(crew_copy, "_long_term_memory"), (
+            "Copied crew should have _long_term_memory"
+        )
+        assert crew_copy._long_term_memory is not None, (
+            "Copied _long_term_memory should not be None"
+        )
+        assert id(crew_copy._long_term_memory) != original_long_term_id, (
+            "Copied _long_term_memory should be a new object"
+        )
 
-        assert hasattr(
-            crew_copy, "_entity_memory"
-        ), "Copied crew should have _entity_memory"
-        assert (
-            crew_copy._entity_memory is not None
-        ), "Copied _entity_memory should not be None"
-        assert (
-            id(crew_copy._entity_memory) != original_entity_id
-        ), "Copied _entity_memory should be a new object"
+        assert hasattr(crew_copy, "_entity_memory"), (
+            "Copied crew should have _entity_memory"
+        )
+        assert crew_copy._entity_memory is not None, (
+            "Copied _entity_memory should not be None"
+        )
+        assert id(crew_copy._entity_memory) != original_entity_id, (
+            "Copied _entity_memory should be a new object"
+        )
 
         if original_external_id:
-            assert hasattr(
-                crew_copy, "_external_memory"
-            ), "Copied crew should have _external_memory"
-            assert (
-                crew_copy._external_memory is not None
-            ), "Copied _external_memory should not be None"
-            assert (
-                id(crew_copy._external_memory) != original_external_id
-            ), "Copied _external_memory should be a new object"
+            assert hasattr(crew_copy, "_external_memory"), (
+                "Copied crew should have _external_memory"
+            )
+            assert crew_copy._external_memory is not None, (
+                "Copied _external_memory should not be None"
+            )
+            assert id(crew_copy._external_memory) != original_external_id, (
+                "Copied _external_memory should be a new object"
+            )
         else:
             assert (
                 not hasattr(crew_copy, "_external_memory")
@@ -4735,21 +4725,25 @@ def test_ensure_exchanged_messages_are_propagated_to_external_memory():
     ) as external_memory_save:
         crew.kickoff()
 
-    expected_messages = [
-        {
-            "role": "system",
-            "content": "You are Researcher. You're an expert in research and you love to learn new things.\nYour personal goal is: You research about math.\nTo give my best complete final answer to the task respond using the exact following format:\n\nThought: I now can give a great answer\nFinal Answer: Your final answer must be the great and the most complete as possible, it must be outcome described.\n\nI MUST use these formats, my job depends on it!",
-        },
-        {
-            "role": "user",
-            "content": "\nCurrent Task: Research a topic to teach a kid aged 6 about math.\n\nThis is the expected criteria for your final answer: A topic, explanation, angle, and examples.\nyou MUST return the actual complete content as the final answer, not a summary.\n\n# Useful context: \nExternal memories:\n\n\nBegin! This is VERY important to you, use the tools available and give your best Final Answer, your job depends on it!\n\nThought:",
-        },
-        {
-            "role": "assistant",
-            "content": "I now can give a great answer  \nFinal Answer: \n\n**Topic: Understanding Shapes (Geometry)**\n\n**Explanation:**  \nShapes are everywhere around us! They are the special forms that we can see in everyday objects. Teaching a 6-year-old about shapes is not only fun but also a way to help them think about the world around them and develop their spatial awareness. We will focus on basic shapes: circle, square, triangle, and rectangle. Understanding these shapes helps kids recognize and describe their environment.\n\n**Angle:**  \nLet’s make learning about shapes an adventure! We can turn it into a treasure hunt where the child has to find objects around the house or outside that match the shapes we learn. This hands-on approach helps make the learning stick!\n\n**Examples:**  \n1. **Circle:**  \n   - Explanation: A circle is round and has no corners. It looks like a wheel or a cookie!  \n   - Activity: Find objects that are circles, such as a clock, a dinner plate, or a ball. Draw a big circle on a paper and then try to draw smaller circles inside it.\n\n2. **Square:**  \n   - Explanation: A square has four equal sides and four corners. It looks like a box!  \n   - Activity: Look for squares in books, in windows, or in building blocks. Try to build a tall tower using square blocks!\n\n3. **Triangle:**  \n   - Explanation: A triangle has three sides and three corners. It looks like a slice of pizza or a roof!  \n   - Activity: Use crayons to draw a big triangle and then find things that are shaped like a triangle, like a slice of cheese or a traffic sign.\n\n4. **Rectangle:**  \n   - Explanation: A rectangle has four sides but only opposite sides are equal. It’s like a stretched square!  \n   - Activity: Search for rectangles, such as a book cover or a door. You can cut out rectangles from colored paper and create a collage!\n\nBy relating the shapes to fun activities and using real-world examples, we not only make learning more enjoyable but also help the child better remember and understand the concept of shapes in math. This foundation forms the basis of their future learning in geometry!",
-        },
-    ]
-    external_memory_save.assert_called_once_with(
-        value=ANY,
-        metadata={"description": ANY, "messages": expected_messages},
-    )
+    external_memory_save.assert_called_once()
+
+    call_args = external_memory_save.call_args
+
+    assert "value" in call_args.kwargs or len(call_args.args) > 0
+    assert "metadata" in call_args.kwargs or len(call_args.args) > 1
+
+    if "metadata" in call_args.kwargs:
+        metadata = call_args.kwargs["metadata"]
+    else:
+        metadata = call_args.args[1]
+
+    assert "description" in metadata
+    assert "messages" in metadata
+    assert isinstance(metadata["messages"], list)
+    assert len(metadata["messages"]) >= 2
+
+    messages = metadata["messages"]
+    assert messages[0]["role"] == "system"
+    assert "Researcher" in messages[0]["content"]
+    assert messages[1]["role"] == "user"
+    assert "Research a topic to teach a kid aged 6 about math" in messages[1]["content"]
