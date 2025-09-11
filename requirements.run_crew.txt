@@ -1,0 +1,4 @@
+# Minimal extra dependencies to run e:\ai\crewAI\run_crew.py
+# Install with: pip install -r requirements.run_crew.txt
+
+google-cloud-aiplatform>=1.60.0

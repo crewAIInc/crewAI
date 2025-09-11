@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pip show:*)",
+      "Read(//e/ai/**)",
+      "Bash(python:*)",
+      "Bash(.venvScriptsactivate)",
+      "Bash(pip install:*)",
+      "Bash(\".\\venv\\Scripts\\activate.bat\")",
+      "Bash(pip uninstall:*)",
+      "Bash(\"E:\\ai\\venv\\Scripts\\python.exe\" -m pip install google-cloud-aiplatform)",
+      "Bash(\"E:\\ai\\venv\\Scripts\\python.exe\" -c \"import google.cloud.aiplatform; print(''Successfully installed in virtual environment'')\")",
+      "Bash(\"E:\\ai\\venv\\Scripts\\python.exe\" -c \"import google.cloud.aiplatform; print(''Google Cloud AI Platform successfully installed in E:\\ai\\venv'')\")"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
