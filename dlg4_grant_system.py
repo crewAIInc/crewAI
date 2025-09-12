@@ -42,9 +42,10 @@ class WebSearchTool(BaseTool):
     description: str = "Search the internet for information using a search query string"
     args_schema: type[BaseModel] = WebSearchInput
     
-    def __init__(self):
+    def __init__(self, smoke_mode: bool = False):
         super().__init__()
         self._serper = SerperDevTool()
+        self.smoke_mode = smoke_mode or os.getenv("DLG4_SMOKE") == "1"
     
     def _run(
         self,
@@ -53,31 +54,34 @@ class WebSearchTool(BaseTool):
         description: str | None = None,
         **kwargs: Any,
     ) -> str:
-        try:
-            # Choose the first non-empty candidate as the query
-            q = next(
-                (v for v in (query, search_query, description) if isinstance(v, str) and v.strip()),
-                None,
-            )
-            # Additional fallbacks from loosely structured inputs
-            if not q:
-                if isinstance(kwargs.get("input"), str) and kwargs["input"].strip():
-                    q = kwargs["input"].strip()
-                elif "messages" in kwargs and isinstance(kwargs["messages"], list) and kwargs["messages"]:
-                    # Try to extract last user content if available
-                    for m in reversed(kwargs["messages"]):
-                        if isinstance(m, dict) and m.get("role") == "user":
-                            content = m.get("content")
-                            if isinstance(content, str) and content.strip():
-                                q = content.strip()
-                                break
-            if not q:
-                return "Search failed: no query provided"
+        # Choose the first non-empty candidate as the query
+        q = next(
+            (v for v in (query, search_query, description) if isinstance(v, str) and v.strip()),
+            None,
+        )
+        # Additional fallbacks from loosely structured inputs
+        if not q:
+            if isinstance(kwargs.get("input"), str) and kwargs["input"].strip():
+                q = kwargs["input"].strip()
+            elif "messages" in kwargs and isinstance(kwargs["messages"], list) and kwargs["messages"]:
+                # Try to extract last user content if available
+                for m in reversed(kwargs["messages"]):
+                    if isinstance(m, dict) and m.get("role") == "user":
+                        content = m.get("content")
+                        if isinstance(content, str) and content.strip():
+                            q = content.strip()
+                            break
+        if not q:
+            return f"Search failed: no query provided. Input args: query={query}, search_query={search_query}, description={description}, kwargs={kwargs}"
 
+        if self.smoke_mode:
+            return f"This is a smoke test search result for query: {q}"
+
+        try:
             result = self._serper.run(search_query=q)
             return str(result)
         except Exception as e:
-            return f"Search failed: {str(e)}"
+            return f"Search failed due to an exception with the search provider: {str(e)}. Check your API key, quota, and network connection."
 
 # Simple file write function since FileWriteTool isn't available
 def write_file(filename: str, content: str) -> str:
@@ -100,9 +104,10 @@ OUTPUT_DIR.mkdir(exist_ok=True)
 APPLICATIONS_DIR.mkdir(exist_ok=True)
 
 class DLG4GrantSystem:
-    def __init__(self):
+    def __init__(self, smoke_mode: bool = False):
         self.llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.1)
-        self.search_tool = WebSearchTool()
+        self.smoke_mode = smoke_mode
+        self.search_tool = WebSearchTool(smoke_mode=self.smoke_mode)
         
         # Initialize agents
         self.foundation_researcher = self._create_foundation_researcher()
@@ -199,6 +204,26 @@ class DLG4GrantSystem:
             expected_output="Comprehensive foundation profile document with all required sections and proper citations.",
             agent=self.foundation_researcher
         )
+
+        if self.smoke_mode:
+            application_planning_task = Task(
+                description="""
+                For a dummy 'Smoke Test Grant', create detailed application plans and requirements analysis.
+                
+                Create a folder: out/applications/smoke-test-grant/
+                
+                Generate these files for the grant:
+                1. 01_grant_brief.md: Eligibility mapping, alignment rationale, risks, go/no-go decision
+                2. 02_requirements_checklist.md: Itemized prompts, limits, attachments, compliance checks
+                3. 03_outline.md: Structured outline mapped to prompts and scoring criteria
+                
+                Ensure the plan is tailored to a generic grant's requirements.
+                """,
+                expected_output="Complete application planning package for the smoke test grant.",
+                agent=self.application_planner,
+                context=[foundation_research_task]
+            )
+            return [foundation_research_task, application_planning_task]
         
         # Task 2: Grant Discovery
         grant_discovery_task = Task(
@@ -356,14 +381,7 @@ class DLG4GrantSystem:
         
         # Create crew
         crew = Crew(
-            agents=[
-                self.foundation_researcher,
-                self.grant_discoverer,
-                self.eligibility_analyst,
-                self.application_planner,
-                self.grant_writer,
-                self.qa_specialist
-            ],
+            agents=list({id(task.agent): task.agent for task in tasks if task.agent}.values()),
             tasks=tasks,
             process=Process.sequential,
             verbose=True
@@ -425,6 +443,7 @@ def main():
     parser.add_argument("--foundation", default=FOUNDATION_NAME, help="Foundation name to research")
     parser.add_argument("--date-anchor", default=DATE_ANCHOR, help="Date anchor for deadline filtering")
     parser.add_argument("--output-dir", default=str(OUTPUT_DIR), help="Output directory for results")
+    parser.add_argument("--smoke", action="store_true", help="Run in smoke test mode with canned data")
     
     args = parser.parse_args()
     
@@ -439,18 +458,24 @@ def main():
     APPLICATIONS_DIR.mkdir(exist_ok=True)
     
     # Check for required environment variables
-    required_env_vars = ["OPENAI_API_KEY", "SERPER_API_KEY"]
+    required_env_vars = ["OPENAI_API_KEY"]
+    if not args.smoke:
+        required_env_vars.append("SERPER_API_KEY")
+    
     missing_vars = [var for var in required_env_vars if not os.getenv(var)]
     
     if missing_vars:
         print("Missing required environment variables:")
         for var in missing_vars:
             print(f"   - {var}")
-        print("\nPlease set these in your .env file or environment.")
+        if "SERPER_API_KEY" in missing_vars:
+            print("\nSERPER_API_KEY is required for web searches. To run without it, use the --smoke flag.")
+        else:
+            print("\nPlease set these in your .env file or environment.")
         return 1
     
     # Run the system
-    system = DLG4GrantSystem()
+    system = DLG4GrantSystem(smoke_mode=args.smoke)
     system.run()
     
     return 0
