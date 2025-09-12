@@ -2,8 +2,13 @@ from typing import Any, Type, Union
 
 from crewai.tools import BaseTool
 from pydantic import BaseModel, Field
-from sqlalchemy import create_engine, text
-from sqlalchemy.orm import sessionmaker
+
+try:
+    from sqlalchemy import create_engine, text
+    from sqlalchemy.orm import sessionmaker
+    SQLALCHEMY_AVAILABLE = True
+except ImportError:
+    SQLALCHEMY_AVAILABLE = False
 
 
 class NL2SQLToolInput(BaseModel):
@@ -25,6 +30,9 @@ class NL2SQLTool(BaseTool):
     args_schema: Type[BaseModel] = NL2SQLToolInput
 
     def model_post_init(self, __context: Any) -> None:
+        if not SQLALCHEMY_AVAILABLE:
+            raise ImportError("sqlalchemy is not installed. Please install it with `pip install crewai-tools[sqlalchemy]`")
+
         data = {}
         tables = self._fetch_available_tables()
 
@@ -58,6 +66,9 @@ class NL2SQLTool(BaseTool):
         return data
 
     def execute_sql(self, sql_query: str) -> Union[list, str]:
+        if not SQLALCHEMY_AVAILABLE:
+            raise ImportError("sqlalchemy is not installed. Please install it with `pip install crewai-tools[sqlalchemy]`")
+
         engine = create_engine(self.db_uri)
         Session = sessionmaker(bind=engine)
         session = Session()

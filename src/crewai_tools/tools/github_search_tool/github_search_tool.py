@@ -1,6 +1,11 @@
-from typing import List, Optional, Type
+from typing import List, Optional, Type, Any
 
-from embedchain.loaders.github import GithubLoader
+try:
+    from embedchain.loaders.github import GithubLoader
+    EMBEDCHAIN_AVAILABLE = True
+except ImportError:
+    EMBEDCHAIN_AVAILABLE = False
+
 from pydantic import BaseModel, Field, PrivateAttr
 
 from ..rag.rag_tool import RagTool
@@ -37,7 +42,7 @@ class GithubSearchTool(RagTool):
         default_factory=lambda: ["code", "repo", "pr", "issue"],
         description="Content types you want to be included search, options: [code, repo, pr, issue]",
     )
-    _loader: GithubLoader | None = PrivateAttr(default=None)
+    _loader: Any | None = PrivateAttr(default=None)
 
     def __init__(
         self,
@@ -45,6 +50,8 @@ class GithubSearchTool(RagTool):
         content_types: Optional[List[str]] = None,
         **kwargs,
     ):
+        if not EMBEDCHAIN_AVAILABLE:
+            raise ImportError("embedchain is not installed. Please install it with `pip install crewai-tools[embedchain]`")
         super().__init__(**kwargs)
         self._loader = GithubLoader(config={"token": self.gh_token})
 

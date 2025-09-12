@@ -1,7 +1,12 @@
 from typing import Optional, Type
 
-from embedchain.models.data_type import DataType
 from pydantic import BaseModel, Field
+
+try:
+    from embedchain.models.data_type import DataType
+    EMBEDCHAIN_AVAILABLE = True
+except ImportError:
+    EMBEDCHAIN_AVAILABLE = False
 
 from ..rag.rag_tool import RagTool
 
@@ -36,6 +41,8 @@ class PDFSearchTool(RagTool):
             self._generate_description()
 
     def add(self, pdf: str) -> None:
+        if not EMBEDCHAIN_AVAILABLE:
+            raise ImportError("embedchain is not installed. Please install it with `pip install crewai-tools[embedchain]`")
         super().add(pdf, data_type=DataType.PDF_FILE)
 
     def _run(

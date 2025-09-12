@@ -4,12 +4,15 @@ from typing import Any, Optional, Type
 import requests
 from crewai.tools import BaseTool
 from pydantic import BaseModel, Field
-from pydantic_settings import BaseSettings
 
-class BrightDataConfig(BaseSettings):
-    API_URL: str = "https://api.brightdata.com/request"    
-    class Config:
-        env_prefix = "BRIGHTDATA_"
+class BrightDataConfig(BaseModel):
+    API_URL: str = "https://api.brightdata.com/request"
+
+    @classmethod
+    def from_env(cls):
+        return cls(
+            API_URL=os.environ.get("BRIGHTDATA_API_URL", "https://api.brightdata.com/request")
+        )
 
 class BrightDataUnlockerToolSchema(BaseModel):
     """
@@ -57,7 +60,7 @@ class BrightDataWebUnlockerTool(BaseTool):
     name: str = "Bright Data Web Unlocker Scraping"
     description: str = "Tool to perform web scraping using Bright Data Web Unlocker"
     args_schema: Type[BaseModel] = BrightDataUnlockerToolSchema
-    _config = BrightDataConfig() 
+    _config = BrightDataConfig.from_env()
     base_url: str = ""
     api_key: str = ""
     zone: str = ""
@@ -71,7 +74,7 @@ class BrightDataWebUnlockerTool(BaseTool):
         self.url = url
         self.format = format
         self.data_format = data_format
-        
+
         self.api_key = os.getenv("BRIGHT_DATA_API_KEY")
         self.zone = os.getenv("BRIGHT_DATA_ZONE")
         if not self.api_key:
@@ -83,10 +86,10 @@ class BrightDataWebUnlockerTool(BaseTool):
         url = url or self.url
         format = format or self.format
         data_format = data_format or self.data_format
-        
+
         if not url:
             raise ValueError("url is required either in constructor or method call")
-        
+
         payload = {
             "url": url,
             "zone": self.zone,

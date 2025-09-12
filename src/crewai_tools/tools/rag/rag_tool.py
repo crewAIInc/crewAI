@@ -40,7 +40,11 @@ class RagTool(BaseTool):
     @model_validator(mode="after")
     def _set_default_adapter(self):
         if isinstance(self.adapter, RagTool._AdapterPlaceholder):
-            from embedchain import App
+            try:
+                from embedchain import App
+            except ImportError:
+                raise ImportError("embedchain is not installed. Please install it with `pip install crewai-tools[embedchain]`")
+
             from crewai_tools.adapters.embedchain_adapter import EmbedchainAdapter
 
             with portalocker.Lock("crewai-rag-tool.lock", timeout=10):

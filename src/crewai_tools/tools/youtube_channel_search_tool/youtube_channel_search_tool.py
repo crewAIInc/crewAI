@@ -1,6 +1,11 @@
 from typing import Any, Optional, Type
 
-from embedchain.models.data_type import DataType
+try:
+    from embedchain.models.data_type import DataType
+    EMBEDCHAIN_AVAILABLE = True
+except ImportError:
+    EMBEDCHAIN_AVAILABLE = False
+
 from pydantic import BaseModel, Field
 
 from ..rag.rag_tool import RagTool

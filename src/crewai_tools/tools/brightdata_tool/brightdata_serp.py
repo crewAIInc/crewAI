@@ -5,12 +5,15 @@ from typing import Any, Optional, Type
 import requests
 from crewai.tools import BaseTool
 from pydantic import BaseModel, Field
-from pydantic_settings import BaseSettings
 
-class BrightDataConfig(BaseSettings):
-    API_URL: str = "https://api.brightdata.com/request"    
-    class Config:
-        env_prefix = "BRIGHTDATA_"
+class BrightDataConfig(BaseModel):
+    API_URL: str = "https://api.brightdata.com/request"
+
+    @classmethod
+    def from_env(cls):
+        return cls(
+            API_URL=os.environ.get("BRIGHTDATA_API_URL", "https://api.brightdata.com/request")
+        )
 
 class BrightDataSearchToolSchema(BaseModel):
     """
@@ -73,7 +76,7 @@ class BrightDataSearchTool(BaseTool):
     name: str = "Bright Data SERP Search"
     description: str = "Tool to perform web search using Bright Data SERP API."
     args_schema: Type[BaseModel] = BrightDataSearchToolSchema
-    _config = BrightDataConfig() 
+    _config = BrightDataConfig.from_env()
     base_url: str = ""
     api_key: str = ""
     zone: str = ""
@@ -95,7 +98,7 @@ class BrightDataSearchTool(BaseTool):
         self.search_type = search_type
         self.device_type = device_type
         self.parse_results = parse_results
-        
+
         self.api_key = os.getenv("BRIGHT_DATA_API_KEY")
         self.zone = os.getenv("BRIGHT_DATA_ZONE")
         if not self.api_key:
@@ -136,7 +139,7 @@ class BrightDataSearchTool(BaseTool):
         device_type = device_type or self.device_type
         parse_results = parse_results if parse_results is not None else self.parse_results
         results_count = kwargs.get("results_count", "10")
-    
+
         # Validate required parameters
         if not query:
             raise ValueError("query is required either in constructor or method call")

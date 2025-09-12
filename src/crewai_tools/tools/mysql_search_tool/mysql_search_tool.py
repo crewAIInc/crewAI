@@ -1,6 +1,11 @@
 from typing import Any, Type
 
-from embedchain.loaders.mysql import MySQLLoader
+try:
+    from embedchain.loaders.mysql import MySQLLoader
+    EMBEDCHAIN_AVAILABLE = True
+except ImportError:
+    EMBEDCHAIN_AVAILABLE = False
+
 from pydantic import BaseModel, Field
 
 from ..rag.rag_tool import RagTool
@@ -22,6 +27,8 @@ class MySQLSearchTool(RagTool):
     db_uri: str = Field(..., description="Mandatory database URI")
 
     def __init__(self, table_name: str, **kwargs):
+        if not EMBEDCHAIN_AVAILABLE:
+            raise ImportError("embedchain is not installed. Please install it with `pip install crewai-tools[embedchain]`")
         super().__init__(**kwargs)
         kwargs["data_type"] = "mysql"
         kwargs["loader"] = MySQLLoader(config=dict(url=self.db_uri))

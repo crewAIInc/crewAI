@@ -1,14 +1,23 @@
 from typing import Any, Optional
 
-from embedchain import App
-
 from crewai_tools.tools.rag.rag_tool import Adapter
+
+try:
+    from embedchain import App
+    EMBEDCHAIN_AVAILABLE = True
+except ImportError:
+    EMBEDCHAIN_AVAILABLE = False
 
 
 class PDFEmbedchainAdapter(Adapter):
-    embedchain_app: App
+    embedchain_app: Any  # Will be App when embedchain is available
     summarize: bool = False
     src: Optional[str] = None
+
+    def __init__(self, **data):
+        if not EMBEDCHAIN_AVAILABLE:
+            raise ImportError("embedchain is not installed. Please install it with `pip install crewai-tools[embedchain]`")
+        super().__init__(**data)
 
     def query(self, question: str) -> str:
         where = (

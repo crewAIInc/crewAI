@@ -1,6 +1,11 @@
 from typing import Any, Optional, Type
 
-from embedchain.models.data_type import DataType
+try:
+    from embedchain.models.data_type import DataType
+    EMBEDCHAIN_AVAILABLE = True
+except ImportError:
+    EMBEDCHAIN_AVAILABLE = False
+
 from pydantic import BaseModel, Field
 
 from ..rag.rag_tool import RagTool
@@ -39,6 +44,8 @@ class WebsiteSearchTool(RagTool):
             self._generate_description()
 
     def add(self, website: str) -> None:
+        if not EMBEDCHAIN_AVAILABLE:
+            raise ImportError("embedchain is not installed. Please install it with `pip install crewai-tools[embedchain]`")
         super().add(website, data_type=DataType.WEB_PAGE)
 
     def _run(

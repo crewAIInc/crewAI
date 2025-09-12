@@ -5,15 +5,19 @@ from typing import Any, Dict, Optional, Type
 import aiohttp
 from crewai.tools import BaseTool
 from pydantic import BaseModel, Field
-from pydantic_settings import BaseSettings
 
-class BrightDataConfig(BaseSettings):
+class BrightDataConfig(BaseModel):
     API_URL: str = "https://api.brightdata.com"
     DEFAULT_TIMEOUT: int = 600
     DEFAULT_POLLING_INTERVAL: int = 1
-    
-    class Config:
-        env_prefix = "BRIGHTDATA_"
+
+    @classmethod
+    def from_env(cls):
+        return cls(
+            API_URL=os.environ.get("BRIGHTDATA_API_URL", "https://api.brightdata.com"),
+            DEFAULT_TIMEOUT=int(os.environ.get("BRIGHTDATA_DEFAULT_TIMEOUT", "600")),
+            DEFAULT_POLLING_INTERVAL=int(os.environ.get("BRIGHTDATA_DEFAULT_POLLING_INTERVAL", "1"))
+        )
 class BrightDataDatasetToolException(Exception):
     """Exception raised for custom error in the application."""
 
@@ -48,10 +52,10 @@ class BrightDataDatasetToolSchema(BaseModel):
         default=None, description="Additional params if any"
     )
 
-config = BrightDataConfig()
+config = BrightDataConfig.from_env()
 
-BRIGHTDATA_API_URL = config.API_URL  
-timeout = config.DEFAULT_TIMEOUT    
+BRIGHTDATA_API_URL = config.API_URL
+timeout = config.DEFAULT_TIMEOUT
 
 datasets = [
     {
@@ -532,7 +536,7 @@ class BrightDataDatasetTool(BaseTool):
         url = url or self.url
         zipcode = zipcode or self.zipcode
         additional_params = additional_params or self.additional_params
-        
+
         if not dataset_type:
             raise ValueError("dataset_type is required either in constructor or method call")
         if not url:
