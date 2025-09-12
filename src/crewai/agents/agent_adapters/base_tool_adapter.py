@@ -1,5 +1,7 @@
+"""Base adapter for tool conversions across different agent frameworks."""
+
 from abc import ABC, abstractmethod
-from typing import Any, List, Optional
+from typing import Any
 
 from crewai.tools.base_tool import BaseTool
 
@@ -12,26 +14,39 @@ class BaseToolAdapter(ABC):
     different frameworks and platforms.
     """
 
-    original_tools: List[BaseTool]
-    converted_tools: List[Any]
+    def __init__(self, tools: list[BaseTool] | None = None) -> None:
+        """Initialize the tool adapter.
 
-    def __init__(self, tools: Optional[List[BaseTool]] = None):
-        self.original_tools = tools or []
-        self.converted_tools = []
+        Args:
+            tools: Optional list of BaseTool instances to be adapted.
+        """
+        self.original_tools: list[BaseTool] = tools or []
+        self.converted_tools: list[Any] = []
 
     @abstractmethod
-    def configure_tools(self, tools: List[BaseTool]) -> None:
+    def configure_tools(self, tools: list[BaseTool]) -> None:
         """Configure and convert tools for the specific implementation.
 
         Args:
-            tools: List of BaseTool instances to be configured and converted
+            tools: List of BaseTool instances to be configured and converted.
         """
-        pass
 
-    def tools(self) -> List[Any]:
-        """Return all converted tools."""
+    def tools(self) -> list[Any]:
+        """Return all converted tools.
+
+        Returns:
+            List of tools converted to the target framework format.
+        """
         return self.converted_tools
 
+    @abstractmethod
     def sanitize_tool_name(self, tool_name: str) -> str:
-        """Sanitize tool name for API compatibility."""
+        """Sanitize tool name for API compatibility.
+
+        Args:
+            tool_name: Original tool name that may contain spaces or special characters.
+
+        Returns:
+            Sanitized tool name with underscores replacing spaces.
+        """
         return tool_name.replace(" ", "_")
