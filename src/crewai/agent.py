@@ -272,13 +272,9 @@ class Agent(BaseAgent):
                 # Add the reasoning plan to the task description
                 task.description += f"\n\nReasoning Plan:\n{reasoning_output.plan.plan}"
             except Exception as e:
-                if hasattr(self, "_logger"):
-                    self._logger.log(
-                        "error", f"Error during reasoning process: {e!s}"
-                    )
-                else:
-                    print(f"Error during reasoning process: {e!s}")
-
+                self._logger.log(
+                    "error", f"Error during reasoning process: {e!s}"
+                )
         self._inject_date_to_task(task)
 
         if self.tools_handler:
