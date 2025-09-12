@@ -1,5 +1,12 @@
+"""OpenAI structured output converter for CrewAI task integration.
+
+This module contains the OpenAIConverterAdapter class that handles structured
+output conversion for OpenAI agents, supporting JSON and Pydantic model formats.
+"""
+
 import json
 import re
+from typing import Any, Literal
 
 from crewai.agents.agent_adapters.base_converter_adapter import BaseConverterAdapter
 from crewai.utilities.converter import generate_model_description
@@ -7,8 +14,7 @@ from crewai.utilities.i18n import I18N
 
 
 class OpenAIConverterAdapter(BaseConverterAdapter):
-    """
-    Adapter for handling structured output conversion in OpenAI agents.
+    """Adapter for handling structured output conversion in OpenAI agents.
 
     This adapter enhances the OpenAI agent to handle structured output formats
     and post-processes the results when needed.
@@ -19,19 +25,23 @@ class OpenAIConverterAdapter(BaseConverterAdapter):
         _output_model: The Pydantic model for the output
     """
 
-    def __init__(self, agent_adapter):
-        """Initialize the converter adapter with a reference to the agent adapter"""
-        self.agent_adapter = agent_adapter
-        self._output_format = None
-        self._schema = None
-        self._output_model = None
-
-    def configure_structured_output(self, task) -> None:
-        """
-        Configure the structured output for OpenAI agent based on task requirements.
+    def __init__(self, agent_adapter: Any) -> None:
+        """Initialize the converter adapter with a reference to the agent adapter.
 
         Args:
-            task: The task containing output format requirements
+            agent_adapter: The OpenAI agent adapter instance.
+        """
+        super().__init__(agent_adapter=agent_adapter)
+        self.agent_adapter: Any = agent_adapter
+        self._output_format: Literal["json", "pydantic"] | None = None
+        self._schema: str | None = None
+        self._output_model: Any = None
+
+    def configure_structured_output(self, task: Any) -> None:
+        """Configure the structured output for OpenAI agent based on task requirements.
+
+        Args:
+            task: The task containing output format requirements.
         """
         # Reset configuration
         self._output_format = None
@@ -55,19 +65,18 @@ class OpenAIConverterAdapter(BaseConverterAdapter):
             self._output_model = task.output_pydantic
 
     def enhance_system_prompt(self, base_prompt: str) -> str:
-        """
-        Enhance the base system prompt with structured output requirements if needed.
+        """Enhance the base system prompt with structured output requirements if needed.
 
         Args:
-            base_prompt: The original system prompt
+            base_prompt: The original system prompt.
 
         Returns:
-            Enhanced system prompt with output format instructions if needed
+            Enhanced system prompt with output format instructions if needed.
         """
         if not self._output_format:
             return base_prompt
 
-        output_schema = (
+        output_schema: str = (
             I18N()
             .slice("formatted_task_instructions")
             .format(output_format=self._schema)
@@ -76,16 +85,15 @@ class OpenAIConverterAdapter(BaseConverterAdapter):
         return f"{base_prompt}\n\n{output_schema}"
 
     def post_process_result(self, result: str) -> str:
-        """
-        Post-process the result to ensure it matches the expected format.
+        """Post-process the result to ensure it matches the expected format.
 
         This method attempts to extract valid JSON from the result if necessary.
 
         Args:
-            result: The raw result from the agent
+            result: The raw result from the agent.
 
         Returns:
-            Processed result conforming to the expected output format
+            Processed result conforming to the expected output format.
         """
         if not self._output_format:
             return result
@@ -97,26 +105,30 @@ class OpenAIConverterAdapter(BaseConverterAdapter):
                 return result
             except json.JSONDecodeError:
                 # Try to extract JSON from markdown code blocks
-                code_block_pattern = r"```(?:json)?\s*([\s\S]*?)```"
-                code_blocks = re.findall(code_block_pattern, result)
+                code_block_pattern: str = r"```(?:json)?\s*([\s\S]*?)```"
+                code_blocks: list[str] = re.findall(code_block_pattern, result)
 
                 for block in code_blocks:
+                    stripped_block = block.strip()
                     try:
-                        json.loads(block.strip())
-                        return block.strip()
+                        json.loads(stripped_block)
+                        return stripped_block
                     except json.JSONDecodeError:
-                        continue
+                        pass
 
                 # Try to extract any JSON-like structure
-                json_pattern = r"(\{[\s\S]*\})"
-                json_matches = re.findall(json_pattern, result, re.DOTALL)
+                json_pattern: str = r"(\{[\s\S]*\})"
+                json_matches: list[str] = re.findall(json_pattern, result, re.DOTALL)
 
                 for match in json_matches:
+                    is_valid = True
                     try:
                         json.loads(match)
-                        return match
                     except json.JSONDecodeError:
-                        continue
+                        is_valid = False
+
+                    if is_valid:
+                        return match
 
         # If all extraction attempts fail, return the original
         return str(result)
