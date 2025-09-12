@@ -39,7 +39,6 @@ class BaseToolAdapter(ABC):
         """
         return self.converted_tools
 
-    @abstractmethod
     def sanitize_tool_name(self, tool_name: str) -> str:
         """Sanitize tool name for API compatibility.
 

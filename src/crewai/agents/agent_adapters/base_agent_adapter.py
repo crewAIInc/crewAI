@@ -2,9 +2,10 @@
 
 from abc import ABC, abstractmethod
 from collections.abc import Callable
-from typing import Any, TypedDict, Unpack
+from typing import Any, TypedDict
 
 from pydantic import ConfigDict, PrivateAttr
+from typing_extensions import Unpack
 
 from crewai.agent import BaseAgent
 from crewai.knowledge.knowledge import Knowledge
