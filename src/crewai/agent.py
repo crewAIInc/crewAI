@@ -10,7 +10,7 @@ from typing import (
 from pydantic import Field, InstanceOf, PrivateAttr, model_validator
 
 from crewai.agents import CacheHandler
-from crewai.agents.agent_builder.base_agent import BaseAgent
+from crewai.agents.agent_builder.base_agent import BaseAgent, PlatformAppOrAction
 from crewai.agents.crew_agent_executor import CrewAgentExecutor
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.agent_events import (
@@ -602,13 +602,13 @@ class Agent(BaseAgent):
         agent_tools = AgentTools(agents=agents)
         return agent_tools.tools()
 
-    def get_platform_tools(self, apps: list[str], actions: list[str]) -> list[BaseTool]:
+    def get_platform_tools(self, apps: list[PlatformAppOrAction]) -> list[BaseTool]:
         try:
             from crewai_tools.tools.crewai_platform_tools import (
                 CrewaiPlatformTools,  # type: ignore
             )
 
-            return CrewaiPlatformTools(apps=apps, actions=actions)
+            return CrewaiPlatformTools(apps=apps)
         except Exception:
             return []
 

@@ -49,6 +49,8 @@ PlatformApp = Literal[
     "zendesk",
 ]
 
+PlatformAppOrAction = PlatformApp | str
+
 
 class BaseAgent(ABC, BaseModel):
     """Abstract Base Class for all third party agents compatible with CrewAI.
@@ -87,7 +89,7 @@ class BaseAgent(ABC, BaseModel):
         get_delegation_tools(agents: list["BaseAgent"]):
             Abstract method to set the agents task tools for handling delegation and question asking to other agents in crew.
         get_platform_tools(apps: list[PlatformApp], actions: list[str]):
-            Abstract method to get platform tools for the specified list of applications.
+            Abstract method to get platform tools for the specified list of applications and/or application/action combinations.
         get_output_converter(llm, model, instructions):
             Abstract method to get the converter class for the agent to create json/pydantic outputs.
         interpolate_inputs(inputs: dict[str, Any]) -> None:
@@ -183,13 +185,9 @@ class BaseAgent(ABC, BaseModel):
         default=None,
         description="Knowledge configuration for the agent such as limits and threshold",
     )
-    apps: list[PlatformApp] | None = Field(
+    apps: list[PlatformAppOrAction] | None = Field(
         default=None,
-        description="List of applications that the agent can access through CrewAI Platform",
-    )
-    actions: list[str] | None = Field(
-        default=None,
-        description="List of actions that the agent can access through CrewAI Platform",
+        description="List of applications or application/action combinations that the agent can access through CrewAI Platform. Can contain app names (e.g., 'gmail') or specific actions (e.g., 'gmail/send_email')",
     )
 
     @model_validator(mode="before")
@@ -228,11 +226,17 @@ class BaseAgent(ABC, BaseModel):
 
     @field_validator("apps")
     @classmethod
-    def validate_apps(cls, apps: list[PlatformApp] | None) -> list[PlatformApp] | None:
+    def validate_apps(cls, apps: list[PlatformAppOrAction] | None) -> list[PlatformAppOrAction] | None:
         if not apps:
             return apps
 
-        return list(set(apps))
+        validated_apps = []
+        for app in apps:
+            if app.count("/") > 1:
+                raise ValueError(f"Invalid app format '{app}'. Apps can only have one '/' for app/action format (e.g., 'gmail/send_email')")
+            validated_apps.append(app)
+
+        return list(set(validated_apps))
 
     @model_validator(mode="after")
     def validate_and_set_attributes(self):
@@ -305,8 +309,8 @@ class BaseAgent(ABC, BaseModel):
         """Set the task tools that init BaseAgenTools class."""
 
     @abstractmethod
-    def get_platform_tools(self, apps: list[PlatformApp], actions: list[str]) -> list[BaseTool]:
-        pass
+    def get_platform_tools(self, apps: list[PlatformAppOrAction]) -> list[BaseTool]:
+        """Get platform tools for the specified list of applications and/or application/action combinations."""
 
     def copy(self: T) -> T:  # type: ignore # Signature of "copy" incompatible with supertype "BaseModel"
         """Create a deep copy of the Agent."""

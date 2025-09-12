@@ -2524,26 +2524,52 @@ def test_agent_from_repository_without_org_set(
         style="yellow",
     )
 
-def test_agent_actions_basic_functionality():
-    # Test with valid actions
+def test_agent_apps_consolidated_functionality():
     agent = Agent(
         role="Platform Agent",
         goal="Use platform tools",
         backstory="Platform specialist",
-        actions=["gmail/create_task", "slack/update_status", "customer_support/send_notification"]
+        apps=["gmail/create_task", "slack/update_status", "hubspot"]
     )
-    assert set(agent.actions) == {"gmail/create_task", "slack/update_status", "customer_support/send_notification"}
+    expected = {"gmail/create_task", "slack/update_status", "hubspot"}
+    assert set(agent.apps) == expected
+
+    agent_apps_only = Agent(
+        role="App Agent",
+        goal="Use apps",
+        backstory="App specialist",
+        apps=["gmail", "slack"]
+    )
+    assert set(agent_apps_only.apps) == {"gmail", "slack"}
 
     agent_default = Agent(
         role="Regular Agent",
         goal="Regular tasks",
         backstory="Regular agent"
     )
-    assert agent_default.actions is None
+    assert agent_default.apps is None
+
+
+def test_agent_apps_validation():
+    agent = Agent(
+        role="Custom Agent",
+        goal="Test validation",
+        backstory="Test agent",
+        apps=["custom_app", "another_app/action"]
+    )
+    assert set(agent.apps) == {"custom_app", "another_app/action"}
+
+    with pytest.raises(ValueError, match="Invalid app format.*Apps can only have one '/' for app/action format"):
+        Agent(
+            role="Invalid Agent",
+            goal="Test validation",
+            backstory="Test agent",
+            apps=["app/action/invalid"]
+        )
 
 
 @patch.object(Agent, 'get_platform_tools')
-def test_actions_propagated_to_platform_tools(mock_get_platform_tools):
+def test_app_actions_propagated_to_platform_tools(mock_get_platform_tools):
     from crewai.tools import tool
 
     @tool
@@ -2557,7 +2583,7 @@ def test_actions_propagated_to_platform_tools(mock_get_platform_tools):
         role="Action Agent",
         goal="Execute actions",
         backstory="Action specialist",
-        actions=["gmail/send_email", "slack/update_status"]
+        apps=["gmail/send_email", "slack/update_status"]
     )
 
     task = Task(
@@ -2571,13 +2597,12 @@ def test_actions_propagated_to_platform_tools(mock_get_platform_tools):
 
     mock_get_platform_tools.assert_called_once()
     call_args = mock_get_platform_tools.call_args[1]
-    assert call_args["apps"] == []
-    assert set(call_args["actions"]) == {"gmail/send_email", "slack/update_status"}
+    assert set(call_args["apps"]) == {"gmail/send_email", "slack/update_status"}
     assert len(tools) >= 1
 
 
 @patch.object(Agent, 'get_platform_tools')
-def test_apps_and_actions_both_propagated(mock_get_platform_tools):
+def test_mixed_apps_and_actions_propagated(mock_get_platform_tools):
     from crewai.tools import tool
 
     @tool
@@ -2591,8 +2616,7 @@ def test_apps_and_actions_both_propagated(mock_get_platform_tools):
         role="Combined Agent",
         goal="Use apps and actions",
         backstory="Platform specialist",
-        apps=["gmail", "slack"],
-        actions=["gmail/create_task", "slack/update_status"]
+        apps=["gmail", "slack", "gmail/create_task", "slack/update_status"]
     )
 
     task = Task(
@@ -2606,12 +2630,12 @@ def test_apps_and_actions_both_propagated(mock_get_platform_tools):
 
     mock_get_platform_tools.assert_called_once()
     call_args = mock_get_platform_tools.call_args[1]
-    assert set(call_args["apps"]) == {"gmail", "slack"}
-    assert set(call_args["actions"]) == {"gmail/create_task", "slack/update_status"}
+    expected_apps = {"gmail", "slack", "gmail/create_task", "slack/update_status"}
+    assert set(call_args["apps"]) == expected_apps
     assert len(tools) >= 1
 
-def test_agent_without_apps_or_actions_no_platform_tools():
-    """Test that agents without apps or actions don't trigger platform tools integration."""
+def test_agent_without_apps_no_platform_tools():
+    """Test that agents without apps don't trigger platform tools integration."""
     agent = Agent(
         role="Regular Agent",
         goal="Regular tasks",

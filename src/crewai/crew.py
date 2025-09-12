@@ -984,10 +984,7 @@ class Crew(FlowTrackable, BaseModel):
         ):
             tools = self._add_multimodal_tools(agent, tools)
 
-        if agent and (
-            (hasattr(agent, "apps") and getattr(agent, "apps", None))
-            or (hasattr(agent, "actions") and getattr(agent, "actions", None))
-        ):
+        if agent and (hasattr(agent, "apps") and getattr(agent, "apps", None)):
             tools = self._add_platform_tools(task, tools)
 
         # Return a list[BaseTool] compatible with Task.execute_sync and execute_async
@@ -1036,10 +1033,9 @@ class Crew(FlowTrackable, BaseModel):
         task_agent: BaseAgent,
     ) -> list[BaseTool]:
         apps = getattr(task_agent, "apps", None) or []
-        actions = getattr(task_agent, "actions", None) or []
 
-        if hasattr(task_agent, "get_platform_tools") and (apps or actions):
-            platform_tools = task_agent.get_platform_tools(apps=apps, actions=actions)
+        if hasattr(task_agent, "get_platform_tools") and apps:
+            platform_tools = task_agent.get_platform_tools(apps=apps)
             return self._merge_tools(tools, cast(list[BaseTool], platform_tools))
         return cast(list[BaseTool], tools)
 
