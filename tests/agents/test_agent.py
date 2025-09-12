@@ -1,5 +1,6 @@
 """Test Agent creation and execution basic functionality."""
 
+# ruff: noqa: S106
 import os
 from unittest import mock
 from unittest.mock import MagicMock, patch
@@ -9,19 +10,19 @@ import pytest
 from crewai import Agent, Crew, Task
 from crewai.agents.cache import CacheHandler
 from crewai.agents.crew_agent_executor import AgentFinish, CrewAgentExecutor
+from crewai.events.event_bus import crewai_event_bus
+from crewai.events.types.tool_usage_events import ToolUsageFinishedEvent
 from crewai.knowledge.knowledge import Knowledge
 from crewai.knowledge.knowledge_config import KnowledgeConfig
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
 from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
 from crewai.llm import LLM
+from crewai.process import Process
 from crewai.tools import tool
 from crewai.tools.tool_calling import InstructorToolCalling
 from crewai.tools.tool_usage import ToolUsage
 from crewai.utilities import RPMController
 from crewai.utilities.errors import AgentRepositoryError
-from crewai.events.event_bus import crewai_event_bus
-from crewai.events.types.tool_usage_events import ToolUsageFinishedEvent
-from crewai.process import Process
 
 
 def test_agent_llm_creation_with_env_vars():
@@ -880,7 +881,7 @@ def test_agent_step_callback():
     with patch.object(StepCallback, "callback") as callback:
 
         @tool
-        def learn_about_AI() -> str:
+        def learn_about_ai() -> str:
             """Useful for when you need to learn about AI to write an paragraph about it."""
             return "AI is a very broad field."
 
@@ -888,7 +889,7 @@ def test_agent_step_callback():
             role="test role",
             goal="test goal",
             backstory="test backstory",
-            tools=[learn_about_AI],
+            tools=[learn_about_ai],
             step_callback=StepCallback().callback,
         )
 
@@ -910,7 +911,7 @@ def test_agent_function_calling_llm():
     llm = "gpt-4o"
 
     @tool
-    def learn_about_AI() -> str:
+    def learn_about_ai() -> str:
         """Useful for when you need to learn about AI to write an paragraph about it."""
         return "AI is a very broad field."
 
@@ -918,7 +919,7 @@ def test_agent_function_calling_llm():
         role="test role",
         goal="test goal",
         backstory="test backstory",
-        tools=[learn_about_AI],
+        tools=[learn_about_ai],
         llm="gpt-4o",
         max_iter=2,
         function_calling_llm=llm,
@@ -1356,7 +1357,7 @@ def test_agent_training_handler(crew_training_handler):
         verbose=True,
     )
     crew_training_handler().load.return_value = {
-        f"{str(agent.id)}": {"0": {"human_feedback": "good"}}
+        f"{agent.id!s}": {"0": {"human_feedback": "good"}}
     }
 
     result = agent._training_handler(task_prompt=task_prompt)
@@ -1473,7 +1474,7 @@ def test_agent_with_custom_stop_words():
     )
 
     assert isinstance(agent.llm, LLM)
-    assert set(agent.llm.stop) == set(stop_words + ["\nObservation:"])
+    assert set(agent.llm.stop) == set([*stop_words, "\nObservation:"])
     assert all(word in agent.llm.stop for word in stop_words)
     assert "\nObservation:" in agent.llm.stop
 
@@ -1530,7 +1531,8 @@ def test_llm_call_with_error():
     llm = LLM(model="non-existent-model")
     messages = [{"role": "user", "content": "This should fail"}]
 
-    with pytest.raises(Exception):
+    from litellm.exceptions import BadRequestError
+    with pytest.raises(BadRequestError):
         llm.call(messages)
 
 
@@ -1830,11 +1832,11 @@ def test_agent_execute_task_with_ollama():
 def test_agent_with_knowledge_sources():
     content = "Brandon's favorite color is red and he likes Mexican food."
     string_source = StringKnowledgeSource(content=content)
-    with patch("crewai.knowledge") as MockKnowledge:
-        mock_knowledge_instance = MockKnowledge.return_value
+    with patch("crewai.knowledge") as mock_knowledge:
+        mock_knowledge_instance = mock_knowledge.return_value
         mock_knowledge_instance.sources = [string_source]
         mock_knowledge_instance.search.return_value = [{"content": content}]
-        MockKnowledge.add_sources.return_value = [string_source]
+        mock_knowledge.add_sources.return_value = [string_source]
 
         agent = Agent(
             role="Information Agent",
@@ -1865,8 +1867,8 @@ def test_agent_with_knowledge_sources_with_query_limit_and_score_threshold():
     knowledge_config = KnowledgeConfig(results_limit=10, score_threshold=0.5)
     with patch(
         "crewai.knowledge.storage.knowledge_storage.KnowledgeStorage"
-    ) as MockKnowledge:
-        mock_knowledge_instance = MockKnowledge.return_value
+    ) as mock_knowledge:
+        mock_knowledge_instance = mock_knowledge.return_value
         mock_knowledge_instance.sources = [string_source]
         mock_knowledge_instance.query.return_value = [{"content": content}]
         with patch.object(Knowledge, "query") as mock_knowledge_query:
@@ -1900,8 +1902,8 @@ def test_agent_with_knowledge_sources_with_query_limit_and_score_threshold_defau
     knowledge_config = KnowledgeConfig()
     with patch(
         "crewai.knowledge.storage.knowledge_storage.KnowledgeStorage"
-    ) as MockKnowledge:
-        mock_knowledge_instance = MockKnowledge.return_value
+    ) as mock_knowledge:
+        mock_knowledge_instance = mock_knowledge.return_value
         mock_knowledge_instance.sources = [string_source]
         mock_knowledge_instance.query.return_value = [{"content": content}]
         with patch.object(Knowledge, "query") as mock_knowledge_query:
@@ -1935,8 +1937,8 @@ def test_agent_with_knowledge_sources_extensive_role():
     content = "Brandon's favorite color is red and he likes Mexican food."
     string_source = StringKnowledgeSource(content=content)
 
-    with patch("crewai.knowledge") as MockKnowledge:
-        mock_knowledge_instance = MockKnowledge.return_value
+    with patch("crewai.knowledge") as mock_knowledge:
+        mock_knowledge_instance = mock_knowledge.return_value
         mock_knowledge_instance.sources = [string_source]
         mock_knowledge_instance.query.return_value = [{"content": content}]
 
@@ -1968,8 +1970,8 @@ def test_agent_with_knowledge_sources_works_with_copy():
     with patch(
         "crewai.knowledge.source.base_knowledge_source.BaseKnowledgeSource",
         autospec=True,
-    ) as MockKnowledgeSource:
-        mock_knowledge_source_instance = MockKnowledgeSource.return_value
+    ) as mock_knowledge_source:
+        mock_knowledge_source_instance = mock_knowledge_source.return_value
         mock_knowledge_source_instance.__class__ = BaseKnowledgeSource
         mock_knowledge_source_instance.sources = [string_source]
 
@@ -1983,8 +1985,8 @@ def test_agent_with_knowledge_sources_works_with_copy():
 
         with patch(
             "crewai.knowledge.storage.knowledge_storage.KnowledgeStorage"
-        ) as MockKnowledgeStorage:
-            mock_knowledge_storage = MockKnowledgeStorage.return_value
+        ) as mock_knowledge_storage:
+            mock_knowledge_storage = mock_knowledge_storage.return_value
             agent.knowledge_storage = mock_knowledge_storage
 
             agent_copy = agent.copy()
@@ -2004,8 +2006,8 @@ def test_agent_with_knowledge_sources_generate_search_query():
     content = "Brandon's favorite color is red and he likes Mexican food."
     string_source = StringKnowledgeSource(content=content)
 
-    with patch("crewai.knowledge") as MockKnowledge:
-        mock_knowledge_instance = MockKnowledge.return_value
+    with patch("crewai.knowledge") as mock_knowledge:
+        mock_knowledge_instance = mock_knowledge.return_value
         mock_knowledge_instance.sources = [string_source]
         mock_knowledge_instance.query.return_value = [{"content": content}]
 
@@ -2312,9 +2314,9 @@ def test_agent_from_repository(mock_get_agent, mock_get_auth_token):
     # Mock embedchain initialization to prevent race conditions in parallel CI execution
     with patch("embedchain.client.Client.setup"):
         from crewai_tools import (
-            SerperDevTool,
-            FileReadTool,
             EnterpriseActionTool,
+            FileReadTool,
+            SerperDevTool,
         )
 
     mock_get_response = MagicMock()
@@ -2503,3 +2505,132 @@ def test_agent_from_repository_without_org_set(
         "No organization currently set. We recommend setting one before using: `crewai org switch <org_id>` command.",
         style="yellow",
     )
+
+def test_agent_apps_consolidated_functionality():
+    agent = Agent(
+        role="Platform Agent",
+        goal="Use platform tools",
+        backstory="Platform specialist",
+        apps=["gmail/create_task", "slack/update_status", "hubspot"]
+    )
+    expected = {"gmail/create_task", "slack/update_status", "hubspot"}
+    assert set(agent.apps) == expected
+
+    agent_apps_only = Agent(
+        role="App Agent",
+        goal="Use apps",
+        backstory="App specialist",
+        apps=["gmail", "slack"]
+    )
+    assert set(agent_apps_only.apps) == {"gmail", "slack"}
+
+    agent_default = Agent(
+        role="Regular Agent",
+        goal="Regular tasks",
+        backstory="Regular agent"
+    )
+    assert agent_default.apps is None
+
+
+def test_agent_apps_validation():
+    agent = Agent(
+        role="Custom Agent",
+        goal="Test validation",
+        backstory="Test agent",
+        apps=["custom_app", "another_app/action"]
+    )
+    assert set(agent.apps) == {"custom_app", "another_app/action"}
+
+    with pytest.raises(ValueError, match="Invalid app format.*Apps can only have one '/' for app/action format"):
+        Agent(
+            role="Invalid Agent",
+            goal="Test validation",
+            backstory="Test agent",
+            apps=["app/action/invalid"]
+        )
+
+
+@patch.object(Agent, 'get_platform_tools')
+def test_app_actions_propagated_to_platform_tools(mock_get_platform_tools):
+    from crewai.tools import tool
+
+    @tool
+    def action_tool() -> str:
+        """Mock action platform tool."""
+        return "action tool result"
+
+    mock_get_platform_tools.return_value = [action_tool]
+
+    agent = Agent(
+        role="Action Agent",
+        goal="Execute actions",
+        backstory="Action specialist",
+        apps=["gmail/send_email", "slack/update_status"]
+    )
+
+    task = Task(
+        description="Test task",
+        expected_output="Test output",
+        agent=agent
+    )
+
+    crew = Crew(agents=[agent], tasks=[task])
+    tools = crew._prepare_tools(agent, task, [])
+
+    mock_get_platform_tools.assert_called_once()
+    call_args = mock_get_platform_tools.call_args[1]
+    assert set(call_args["apps"]) == {"gmail/send_email", "slack/update_status"}
+    assert len(tools) >= 1
+
+
+@patch.object(Agent, 'get_platform_tools')
+def test_mixed_apps_and_actions_propagated(mock_get_platform_tools):
+    from crewai.tools import tool
+
+    @tool
+    def combined_tool() -> str:
+        """Mock combined platform tool."""
+        return "combined tool result"
+
+    mock_get_platform_tools.return_value = [combined_tool]
+
+    agent = Agent(
+        role="Combined Agent",
+        goal="Use apps and actions",
+        backstory="Platform specialist",
+        apps=["gmail", "slack", "gmail/create_task", "slack/update_status"]
+    )
+
+    task = Task(
+        description="Test task",
+        expected_output="Test output",
+        agent=agent
+    )
+
+    crew = Crew(agents=[agent], tasks=[task])
+    tools = crew._prepare_tools(agent, task, [])
+
+    mock_get_platform_tools.assert_called_once()
+    call_args = mock_get_platform_tools.call_args[1]
+    expected_apps = {"gmail", "slack", "gmail/create_task", "slack/update_status"}
+    assert set(call_args["apps"]) == expected_apps
+    assert len(tools) >= 1
+
+def test_agent_without_apps_no_platform_tools():
+    """Test that agents without apps don't trigger platform tools integration."""
+    agent = Agent(
+        role="Regular Agent",
+        goal="Regular tasks",
+        backstory="Regular agent"
+    )
+
+    task = Task(
+        description="Test task",
+        expected_output="Test output",
+        agent=agent
+    )
+
+    crew = Crew(agents=[agent], tasks=[task])
+
+    tools = crew._prepare_tools(agent, task, [])
+    assert tools == []

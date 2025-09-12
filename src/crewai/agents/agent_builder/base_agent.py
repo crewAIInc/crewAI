@@ -1,8 +1,9 @@
 import uuid
 from abc import ABC, abstractmethod
+from collections.abc import Callable
 from copy import copy as shallow_copy
 from hashlib import md5
-from typing import Any, Callable, Dict, List, Optional, TypeVar
+from typing import Any, Literal, TypeVar
 
 from pydantic import (
     UUID4,
@@ -25,10 +26,30 @@ from crewai.security.security_config import SecurityConfig
 from crewai.tools.base_tool import BaseTool, Tool
 from crewai.utilities import I18N, Logger, RPMController
 from crewai.utilities.config import process_config
-from crewai.utilities.converter import Converter
 from crewai.utilities.string_utils import interpolate_only
 
 T = TypeVar("T", bound="BaseAgent")
+
+PlatformApp = Literal[
+    "asana",
+    "box",
+    "clickup",
+    "github",
+    "gmail",
+    "google_calendar",
+    "google_sheets",
+    "hubspot",
+    "jira",
+    "linear",
+    "notion",
+    "salesforce",
+    "shopify",
+    "slack",
+    "stripe",
+    "zendesk",
+]
+
+PlatformAppOrAction = PlatformApp | str
 
 
 class BaseAgent(ABC, BaseModel):
@@ -56,6 +77,8 @@ class BaseAgent(ABC, BaseModel):
         knowledge_sources: Knowledge sources for the agent.
         knowledge_storage: Custom knowledge storage for the agent.
         security_config: Security configuration for the agent, including fingerprinting.
+        apps: List of enterprise applications that the agent can access through CrewAI Enterprise Tools.
+        actions: List of actions that the agent can access through CrewAI Enterprise Tools.
 
 
     Methods:
@@ -65,6 +88,8 @@ class BaseAgent(ABC, BaseModel):
             Abstract method to create an agent executor.
         get_delegation_tools(agents: List["BaseAgent"]):
             Abstract method to set the agents task tools for handling delegation and question asking to other agents in crew.
+        get_platform_tools(apps: List[PlatformAppOrAction]):
+            Abstract method to get platform tools for the specified list of applications and/or application/action combinations.
         get_output_converter(llm, model, instructions):
             Abstract method to get the converter class for the agent to create json/pydantic outputs.
         interpolate_inputs(inputs: Dict[str, Any]) -> None:
@@ -81,17 +106,17 @@ class BaseAgent(ABC, BaseModel):
 
     __hash__ = object.__hash__  # type: ignore
     _logger: Logger = PrivateAttr(default_factory=lambda: Logger(verbose=False))
-    _rpm_controller: Optional[RPMController] = PrivateAttr(default=None)
+    _rpm_controller: RPMController | None = PrivateAttr(default=None)
     _request_within_rpm_limit: Any = PrivateAttr(default=None)
-    _original_role: Optional[str] = PrivateAttr(default=None)
-    _original_goal: Optional[str] = PrivateAttr(default=None)
-    _original_backstory: Optional[str] = PrivateAttr(default=None)
+    _original_role: str | None = PrivateAttr(default=None)
+    _original_goal: str | None = PrivateAttr(default=None)
+    _original_backstory: str | None = PrivateAttr(default=None)
     _token_process: TokenProcess = PrivateAttr(default_factory=TokenProcess)
     id: UUID4 = Field(default_factory=uuid.uuid4, frozen=True)
     role: str = Field(description="Role of the agent")
     goal: str = Field(description="Objective of the agent")
     backstory: str = Field(description="Backstory of the agent")
-    config: Optional[Dict[str, Any]] = Field(
+    config: dict[str, Any] | None = Field(
         description="Configuration for the agent", default=None, exclude=True
     )
     cache: bool = Field(
@@ -100,7 +125,7 @@ class BaseAgent(ABC, BaseModel):
     verbose: bool = Field(
         default=False, description="Verbose mode for the Agent Execution"
     )
-    max_rpm: Optional[int] = Field(
+    max_rpm: int | None = Field(
         default=None,
         description="Maximum number of requests per minute for the agent execution to be respected.",
     )
@@ -108,7 +133,7 @@ class BaseAgent(ABC, BaseModel):
         default=False,
         description="Enable agent to delegate and ask questions among each other.",
     )
-    tools: Optional[List[BaseTool]] = Field(
+    tools: list[BaseTool] | None = Field(
         default_factory=list, description="Tools at agents' disposal"
     )
     max_iter: int = Field(
@@ -122,27 +147,27 @@ class BaseAgent(ABC, BaseModel):
     )
     crew: Any = Field(default=None, description="Crew to which the agent belongs.")
     i18n: I18N = Field(default=I18N(), description="Internationalization settings.")
-    cache_handler: Optional[InstanceOf[CacheHandler]] = Field(
+    cache_handler: InstanceOf[CacheHandler] | None = Field(
         default=None, description="An instance of the CacheHandler class."
     )
     tools_handler: InstanceOf[ToolsHandler] = Field(
         default_factory=ToolsHandler,
         description="An instance of the ToolsHandler class.",
     )
-    tools_results: List[Dict[str, Any]] = Field(
+    tools_results: list[dict[str, Any]] = Field(
         default=[], description="Results of the tools used by the agent."
     )
-    max_tokens: Optional[int] = Field(
+    max_tokens: int | None = Field(
         default=None, description="Maximum number of tokens for the agent's execution."
     )
-    knowledge: Optional[Knowledge] = Field(
+    knowledge: Knowledge | None = Field(
         default=None, description="Knowledge for the agent."
     )
-    knowledge_sources: Optional[List[BaseKnowledgeSource]] = Field(
+    knowledge_sources: list[BaseKnowledgeSource] | None = Field(
         default=None,
         description="Knowledge sources for the agent.",
     )
-    knowledge_storage: Optional[Any] = Field(
+    knowledge_storage: Any | None = Field(
         default=None,
         description="Custom knowledge storage for the agent.",
     )
@@ -150,15 +175,19 @@ class BaseAgent(ABC, BaseModel):
         default_factory=SecurityConfig,
         description="Security configuration for the agent, including fingerprinting.",
     )
-    callbacks: List[Callable] = Field(
+    callbacks: list[Callable] = Field(
         default=[], description="Callbacks to be used for the agent"
     )
     adapted_agent: bool = Field(
         default=False, description="Whether the agent is adapted"
     )
-    knowledge_config: Optional[KnowledgeConfig] = Field(
+    knowledge_config: KnowledgeConfig | None = Field(
         default=None,
         description="Knowledge configuration for the agent such as limits and threshold",
+    )
+    apps: list[PlatformAppOrAction] | None = Field(
+        default=None,
+        description="List of applications or application/action combinations that the agent can access through CrewAI Platform. Can contain app names (e.g., 'gmail') or specific actions (e.g., 'gmail/send_email')",
     )
 
     @model_validator(mode="before")
@@ -168,7 +197,7 @@ class BaseAgent(ABC, BaseModel):
 
     @field_validator("tools")
     @classmethod
-    def validate_tools(cls, tools: List[Any]) -> List[BaseTool]:
+    def validate_tools(cls, tools: list[Any]) -> list[BaseTool]:
         """Validate and process the tools provided to the agent.
 
         This method ensures that each tool is either an instance of BaseTool
@@ -194,6 +223,20 @@ class BaseAgent(ABC, BaseModel):
                     "an object with 'name', 'func', and 'description' attributes."
                 )
         return processed_tools
+
+    @field_validator("apps")
+    @classmethod
+    def validate_apps(cls, apps: list[PlatformAppOrAction] | None) -> list[PlatformAppOrAction] | None:
+        if not apps:
+            return apps
+
+        validated_apps = []
+        for app in apps:
+            if app.count("/") > 1:
+                raise ValueError(f"Invalid app format '{app}'. Apps can only have one '/' for app/action format (e.g., 'gmail/send_email')")
+            validated_apps.append(app)
+
+        return list(set(validated_apps))
 
     @model_validator(mode="after")
     def validate_and_set_attributes(self):
@@ -221,7 +264,7 @@ class BaseAgent(ABC, BaseModel):
 
     @field_validator("id", mode="before")
     @classmethod
-    def _deny_user_set_id(cls, v: Optional[UUID4]) -> None:
+    def _deny_user_set_id(cls, v: UUID4 | None) -> None:
         if v:
             raise PydanticCustomError(
                 "may_not_set_field", "This field is not to be set by the user.", {}
@@ -252,8 +295,8 @@ class BaseAgent(ABC, BaseModel):
     def execute_task(
         self,
         task: Any,
-        context: Optional[str] = None,
-        tools: Optional[List[BaseTool]] = None,
+        context: str | None = None,
+        tools: list[BaseTool] | None = None,
     ) -> str:
         pass
 
@@ -262,9 +305,12 @@ class BaseAgent(ABC, BaseModel):
         pass
 
     @abstractmethod
-    def get_delegation_tools(self, agents: List["BaseAgent"]) -> List[BaseTool]:
+    def get_delegation_tools(self, agents: list["BaseAgent"]) -> list[BaseTool]:
         """Set the task tools that init BaseAgenTools class."""
-        pass
+
+    @abstractmethod
+    def get_platform_tools(self, apps: list[PlatformAppOrAction]) -> list[BaseTool]:
+        """Get platform tools for the specified list of applications and/or application/action combinations."""
 
     def copy(self: T) -> T:  # type: ignore # Signature of "copy" incompatible with supertype "BaseModel"
         """Create a deep copy of the Agent."""
@@ -282,6 +328,8 @@ class BaseAgent(ABC, BaseModel):
             "knowledge_sources",
             "knowledge_storage",
             "knowledge",
+            "apps",
+            "actions",
         }
 
         # Copy llm
@@ -309,7 +357,7 @@ class BaseAgent(ABC, BaseModel):
 
         copied_data = self.model_dump(exclude=exclude)
         copied_data = {k: v for k, v in copied_data.items() if v is not None}
-        copied_agent = type(self)(
+        return type(self)(
             **copied_data,
             llm=existing_llm,
             tools=self.tools,
@@ -318,9 +366,8 @@ class BaseAgent(ABC, BaseModel):
             knowledge_storage=copied_knowledge_storage,
         )
 
-        return copied_agent
 
-    def interpolate_inputs(self, inputs: Dict[str, Any]) -> None:
+    def interpolate_inputs(self, inputs: dict[str, Any]) -> None:
         """Interpolate inputs into the agent description and backstory."""
         if self._original_role is None:
             self._original_role = self.role
@@ -362,5 +409,5 @@ class BaseAgent(ABC, BaseModel):
             self._rpm_controller = rpm_controller
             self.create_agent_executor()
 
-    def set_knowledge(self, crew_embedder: Optional[Dict[str, Any]] = None):
+    def set_knowledge(self, crew_embedder: dict[str, Any] | None = None):
         pass
