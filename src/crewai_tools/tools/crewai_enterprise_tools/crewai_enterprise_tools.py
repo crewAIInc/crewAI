@@ -33,6 +33,13 @@ def CrewaiEnterpriseTools(
         A ToolCollection of BaseTool instances for enterprise actions
     """
 
+    import warnings
+    warnings.warn(
+        "CrewaiEnterpriseTools will be removed in v1.0.0. Considering use `Agent(apps=[...])` instead.",
+        DeprecationWarning,
+        stacklevel=2
+    )
+
     if enterprise_token is None or enterprise_token == "":
         enterprise_token = os.environ.get("CREWAI_ENTERPRISE_TOOLS_TOKEN")
         if not enterprise_token:

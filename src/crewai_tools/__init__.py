@@ -25,6 +25,7 @@ from .tools import (
     ContextualAIRerankTool,
     CouchbaseFTSVectorSearchTool,
     CrewaiEnterpriseTools,
+    CrewaiPlatformTools,
     CSVSearchTool,
     DallETool,
     DatabricksQueryTool,

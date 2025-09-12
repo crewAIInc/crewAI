@@ -19,6 +19,7 @@ from .contextualai_query_tool.contextual_query_tool import ContextualAIQueryTool
 from .contextualai_rerank_tool.contextual_rerank_tool import ContextualAIRerankTool
 from .couchbase_tool.couchbase_tool import CouchbaseFTSVectorSearchTool
 from .crewai_enterprise_tools.crewai_enterprise_tools import CrewaiEnterpriseTools
+from .crewai_platform_tools.crewai_platform_tools import CrewaiPlatformTools
 from .csv_search_tool.csv_search_tool import CSVSearchTool
 from .dalle_tool.dalle_tool import DallETool
 from .databricks_query_tool.databricks_query_tool import DatabricksQueryTool
