@@ -1,11 +1,11 @@
 import pytest
 
+from crewai.agents import parser
 from crewai.agents.crew_agent_executor import (
     AgentAction,
     AgentFinish,
     OutputParserException,
 )
-from crewai.agents import parser
 
 
 def test_valid_action_parsing_special_characters():
@@ -345,12 +345,16 @@ def test_integration_valid_and_invalid():
     """
     parts = text.strip().split("\n\n")
     results = []
-    for part in parts:
+
+    def parse_part(part_text):
         try:
-            result = parser.parse(part.strip())
-            results.append(result)
+            return parser.parse(part_text.strip())
         except OutputParserException as e:
-            results.append(e)
+            return e
+
+    for part in parts:
+        result = parse_part(part)
+        results.append(result)
 
     assert isinstance(results[0], AgentAction)
     assert isinstance(results[1], AgentFinish)
@@ -402,10 +406,10 @@ def test_harmony_format_detection():
     """Test that Harmony format is properly detected."""
     harmony_text = "<|start|>assistant<|channel|>analysis<|message|>result<|end|>"
     react_text = "Thought: test\nFinal Answer: result"
-    
+
     harmony_result = parser.parse(harmony_text)
     react_result = parser.parse(react_text)
-    
+
     assert isinstance(harmony_result, parser.AgentFinish)
     assert isinstance(react_result, parser.AgentFinish)
     assert harmony_result.output == "result"
@@ -424,10 +428,10 @@ def test_automatic_format_detection():
     """Test that the parser automatically detects different formats."""
     react_action = "Thought: Let's search\nAction: search\nAction Input: query"
     react_finish = "Thought: Done\nFinal Answer: result"
-    
+
     harmony_action = '<|start|>assistant<|channel|>commentary to=tool<|message|>{"input": "test"}<|call|>'
     harmony_finish = "<|start|>assistant<|channel|>analysis<|message|>final result<|end|>"
-    
+
     assert isinstance(parser.parse(react_action), parser.AgentAction)
     assert isinstance(parser.parse(react_finish), parser.AgentFinish)
     assert isinstance(parser.parse(harmony_action), parser.AgentAction)
@@ -437,13 +441,13 @@ def test_automatic_format_detection():
 def test_format_registry():
     """Test the format registry functionality."""
     from crewai.agents.parser import _format_registry
-    
+
     assert 'react' in _format_registry._parsers
     assert 'harmony' in _format_registry._parsers
-    
+
     react_text = "Thought: test\nAction: search\nAction Input: query"
     harmony_text = "<|start|>assistant<|channel|>analysis<|message|>result<|end|>"
-    
+
     assert _format_registry._parsers['react'].can_parse(react_text)
     assert _format_registry._parsers['harmony'].can_parse(harmony_text)
     assert not _format_registry._parsers['react'].can_parse(harmony_text)
@@ -452,4 +456,3 @@ def test_format_registry():
 
 def test_backward_compatibility():
     """Test that all existing ReAct format tests still pass."""
-    pass
