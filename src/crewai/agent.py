@@ -600,7 +600,7 @@ class Agent(BaseAgent):
 
     def get_platform_tools(self, apps: list[PlatformAppOrAction]) -> list[BaseTool]:
         try:
-            from crewai_tools.tools.crewai_platform_tools import (
+            from crewai_tools import (
                 CrewaiPlatformTools,  # type: ignore
             )
 
