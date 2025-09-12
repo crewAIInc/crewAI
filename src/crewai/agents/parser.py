@@ -1,11 +1,15 @@
-"""Agent output parsing module for ReAct-style LLM responses.
+"""Agent output parsing module for multiple LLM response formats.
 
 This module provides parsing functionality for agent outputs that follow
-the ReAct (Reasoning and Acting) format, converting them into structured
-AgentAction or AgentFinish objects.
+different formats (ReAct, OpenAI Harmony, etc.), converting them into structured
+AgentAction or AgentFinish objects with automatic format detection.
 """
 
+from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from typing import Dict, Union
+import re
+import json
 
 from json_repair import repair_json
 
@@ -17,6 +21,11 @@ from crewai.agents.constants import (
     MISSING_ACTION_AFTER_THOUGHT_ERROR_MESSAGE,
     MISSING_ACTION_INPUT_AFTER_ACTION_ERROR_MESSAGE,
     UNABLE_TO_REPAIR_JSON_RESULTS,
+    HARMONY_START_PATTERN,
+    HARMONY_ANALYSIS_CHANNEL,
+    HARMONY_COMMENTARY_CHANNEL,
+    HARMONY_FINAL_ANSWER_ERROR_MESSAGE,
+    HARMONY_MISSING_CONTENT_ERROR_MESSAGE,
 )
 from crewai.utilities import I18N
 
@@ -60,77 +69,180 @@ class OutputParserException(Exception):
         super().__init__(error)
 
 
+class BaseOutputParser(ABC):
+    """Abstract base class for output parsers."""
+    
+    @abstractmethod
+    def can_parse(self, text: str) -> bool:
+        """Check if this parser can handle the given text format."""
+        pass
+    
+    @abstractmethod
+    def parse_text(self, text: str) -> Union[AgentAction, AgentFinish]:
+        """Parse the text into AgentAction or AgentFinish."""
+        pass
+
+
+class OutputFormatRegistry:
+    """Registry for managing different output format parsers."""
+    
+    def __init__(self):
+        self._parsers: Dict[str, BaseOutputParser] = {}
+    
+    def register(self, name: str, parser: BaseOutputParser) -> None:
+        """Register a parser for a specific format."""
+        self._parsers[name] = parser
+    
+    def detect_and_parse(self, text: str) -> Union[AgentAction, AgentFinish]:
+        """Automatically detect format and parse with appropriate parser."""
+        for name, parser in self._parsers.items():
+            if parser.can_parse(text):
+                return parser.parse_text(text)
+        
+        return self._parsers.get('react', ReActParser()).parse_text(text)
+
+
+class ReActParser(BaseOutputParser):
+    """Parser for ReAct format outputs."""
+    
+    def can_parse(self, text: str) -> bool:
+        """Check if text follows ReAct format."""
+        return (
+            FINAL_ANSWER_ACTION in text or 
+            ACTION_INPUT_REGEX.search(text) is not None or
+            ACTION_REGEX.search(text) is not None
+        )
+    
+    def parse_text(self, text: str) -> Union[AgentAction, AgentFinish]:
+        """Parse ReAct format text."""
+        thought = _extract_thought(text)
+        includes_answer = FINAL_ANSWER_ACTION in text
+        action_match = ACTION_INPUT_REGEX.search(text)
+
+        if includes_answer:
+            final_answer = text.split(FINAL_ANSWER_ACTION)[-1].strip()
+            if final_answer.endswith("```"):
+                count = final_answer.count("```")
+                if count % 2 != 0:
+                    final_answer = final_answer[:-3].rstrip()
+            return AgentFinish(thought=thought, output=final_answer, text=text)
+
+        elif action_match:
+            action = action_match.group(1)
+            clean_action = _clean_action(action)
+
+            action_input = action_match.group(2).strip()
+
+            tool_input = action_input.strip(" ").strip('"')
+            safe_tool_input = _safe_repair_json(tool_input)
+
+            return AgentAction(
+                thought=thought, tool=clean_action, tool_input=safe_tool_input, text=text
+            )
+
+        if not ACTION_REGEX.search(text):
+            raise OutputParserException(
+                f"{MISSING_ACTION_AFTER_THOUGHT_ERROR_MESSAGE}\n{_I18N.slice('final_answer_format')}",
+            )
+        elif not ACTION_INPUT_ONLY_REGEX.search(text):
+            raise OutputParserException(
+                MISSING_ACTION_INPUT_AFTER_ACTION_ERROR_MESSAGE,
+            )
+        else:
+            err_format = _I18N.slice("format_without_tools")
+            error = f"{err_format}"
+            raise OutputParserException(error)
+
+
+class HarmonyParser(BaseOutputParser):
+    """Parser for OpenAI Harmony format outputs."""
+    
+    def can_parse(self, text: str) -> bool:
+        """Check if text follows OpenAI Harmony format."""
+        return HARMONY_START_PATTERN.search(text) is not None
+    
+    def parse_text(self, text: str) -> Union[AgentAction, AgentFinish]:
+        """Parse OpenAI Harmony format text."""
+        matches = HARMONY_START_PATTERN.findall(text)
+        
+        if not matches:
+            raise OutputParserException(HARMONY_MISSING_CONTENT_ERROR_MESSAGE)
+        
+        channel, tool_name, content = matches[-1]
+        content = content.strip()
+        
+        if channel == HARMONY_ANALYSIS_CHANNEL:
+            return AgentFinish(
+                thought=f"Analysis: {content}",
+                output=content,
+                text=text
+            )
+        
+        elif channel == HARMONY_COMMENTARY_CHANNEL and tool_name:
+            thought_content = content
+            tool_input = content
+            
+            try:
+                json_match = re.search(r'\{.*\}', content, re.DOTALL)
+                if json_match:
+                    tool_input = json_match.group(0)
+                    thought_content = content[:json_match.start()].strip()
+                    if not thought_content:
+                        thought_content = f"Using tool {tool_name}"
+            except:
+                pass
+            
+            safe_tool_input = _safe_repair_json(tool_input)
+            
+            return AgentAction(
+                thought=thought_content,
+                tool=tool_name,
+                tool_input=safe_tool_input,
+                text=text
+            )
+        
+        else:
+            raise OutputParserException(HARMONY_FINAL_ANSWER_ERROR_MESSAGE)
+
+
+_format_registry = OutputFormatRegistry()
+_format_registry.register('react', ReActParser())
+_format_registry.register('harmony', HarmonyParser())
+
+
 def parse(text: str) -> AgentAction | AgentFinish:
     """Parse agent output text into AgentAction or AgentFinish.
-
-    Expects output to be in one of two formats.
-
-    If the output signals that an action should be taken,
-    should be in the below format. This will result in an AgentAction
-    being returned.
-
+    
+    Automatically detects the format (ReAct, OpenAI Harmony, etc.) and uses
+    the appropriate parser. Maintains backward compatibility with existing ReAct format.
+    
+    Supports multiple formats:
+    
+    ReAct format:
     Thought: agent thought here
     Action: search
     Action Input: what is the temperature in SF?
-
-    If the output signals that a final answer should be given,
-    should be in the below format. This will result in an AgentFinish
-    being returned.
-
+    
+    Or for final answers:
     Thought: agent thought here
     Final Answer: The temperature is 100 degrees
-
+    
+    OpenAI Harmony format:
+    <|start|>assistant<|channel|>analysis<|message|>The temperature is 100 degrees<|end|>
+    
+    Or for tool actions:
+    <|start|>assistant<|channel|>commentary to=search<|message|>{"query": "temperature in SF"}<|call|>
+    
     Args:
         text: The agent output text to parse.
-
+        
     Returns:
         AgentAction or AgentFinish based on the content.
-
+        
     Raises:
-        OutputParserException: If the text format is invalid.
+        OutputParserException: If the text format is invalid or unsupported.
     """
-    thought = _extract_thought(text)
-    includes_answer = FINAL_ANSWER_ACTION in text
-    action_match = ACTION_INPUT_REGEX.search(text)
-
-    if includes_answer:
-        final_answer = text.split(FINAL_ANSWER_ACTION)[-1].strip()
-        # Check whether the final answer ends with triple backticks.
-        if final_answer.endswith("```"):
-            # Count occurrences of triple backticks in the final answer.
-            count = final_answer.count("```")
-            # If count is odd then it's an unmatched trailing set; remove it.
-            if count % 2 != 0:
-                final_answer = final_answer[:-3].rstrip()
-        return AgentFinish(thought=thought, output=final_answer, text=text)
-
-    elif action_match:
-        action = action_match.group(1)
-        clean_action = _clean_action(action)
-
-        action_input = action_match.group(2).strip()
-
-        tool_input = action_input.strip(" ").strip('"')
-        safe_tool_input = _safe_repair_json(tool_input)
-
-        return AgentAction(
-            thought=thought, tool=clean_action, tool_input=safe_tool_input, text=text
-        )
-
-    if not ACTION_REGEX.search(text):
-        raise OutputParserException(
-            f"{MISSING_ACTION_AFTER_THOUGHT_ERROR_MESSAGE}\n{_I18N.slice('final_answer_format')}",
-        )
-    elif not ACTION_INPUT_ONLY_REGEX.search(text):
-        raise OutputParserException(
-            MISSING_ACTION_INPUT_AFTER_ACTION_ERROR_MESSAGE,
-        )
-    else:
-        err_format = _I18N.slice("format_without_tools")
-        error = f"{err_format}"
-        raise OutputParserException(
-            error,
-        )
+    return _format_registry.detect_and_parse(text)
 
 
 def _extract_thought(text: str) -> str:

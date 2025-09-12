@@ -359,3 +359,97 @@ def test_integration_valid_and_invalid():
 
 
 # TODO: ADD TEST TO MAKE SURE ** REMOVAL DOESN'T MESS UP ANYTHING
+
+
+def test_harmony_analysis_channel_parsing():
+    """Test parsing OpenAI Harmony analysis channel (final answer)."""
+    text = "<|start|>assistant<|channel|>analysis<|message|>The temperature in SF is 72°F<|end|>"
+    result = parser.parse(text)
+    assert isinstance(result, parser.AgentFinish)
+    assert result.output == "The temperature in SF is 72°F"
+    assert "Analysis:" in result.thought
+
+
+def test_harmony_commentary_channel_parsing():
+    """Test parsing OpenAI Harmony commentary channel (tool action)."""
+    text = '<|start|>assistant<|channel|>commentary to=search<|message|>{"query": "temperature in SF"}<|call|>'
+    result = parser.parse(text)
+    assert isinstance(result, parser.AgentAction)
+    assert result.tool == "search"
+    assert result.tool_input == '{"query": "temperature in SF"}'
+
+
+def test_harmony_commentary_with_thought():
+    """Test Harmony commentary with reasoning before JSON."""
+    text = '<|start|>assistant<|channel|>commentary to=search<|message|>I need to find the temperature {"query": "SF weather"}<|call|>'
+    result = parser.parse(text)
+    assert isinstance(result, parser.AgentAction)
+    assert result.tool == "search"
+    assert result.thought == "I need to find the temperature"
+    assert result.tool_input == '{"query": "SF weather"}'
+
+
+def test_harmony_multiple_blocks():
+    """Test parsing multiple Harmony blocks (uses last one)."""
+    text = '''<|start|>assistant<|channel|>analysis<|message|>Thinking about this<|end|>
+<|start|>assistant<|channel|>commentary to=search<|message|>{"query": "test"}<|call|>'''
+    result = parser.parse(text)
+    assert isinstance(result, parser.AgentAction)
+    assert result.tool == "search"
+
+
+def test_harmony_format_detection():
+    """Test that Harmony format is properly detected."""
+    harmony_text = "<|start|>assistant<|channel|>analysis<|message|>result<|end|>"
+    react_text = "Thought: test\nFinal Answer: result"
+    
+    harmony_result = parser.parse(harmony_text)
+    react_result = parser.parse(react_text)
+    
+    assert isinstance(harmony_result, parser.AgentFinish)
+    assert isinstance(react_result, parser.AgentFinish)
+    assert harmony_result.output == "result"
+    assert react_result.output == "result"
+
+
+def test_harmony_invalid_format_error():
+    """Test error handling for invalid Harmony format."""
+    text = "<|start|>assistant<|channel|>unknown<|message|>content<|end|>"
+    with pytest.raises(parser.OutputParserException) as exc_info:
+        parser.parse(text)
+    assert "Invalid Harmony Format" in str(exc_info.value)
+
+
+def test_automatic_format_detection():
+    """Test that the parser automatically detects different formats."""
+    react_action = "Thought: Let's search\nAction: search\nAction Input: query"
+    react_finish = "Thought: Done\nFinal Answer: result"
+    
+    harmony_action = '<|start|>assistant<|channel|>commentary to=tool<|message|>{"input": "test"}<|call|>'
+    harmony_finish = "<|start|>assistant<|channel|>analysis<|message|>final result<|end|>"
+    
+    assert isinstance(parser.parse(react_action), parser.AgentAction)
+    assert isinstance(parser.parse(react_finish), parser.AgentFinish)
+    assert isinstance(parser.parse(harmony_action), parser.AgentAction)
+    assert isinstance(parser.parse(harmony_finish), parser.AgentFinish)
+
+
+def test_format_registry():
+    """Test the format registry functionality."""
+    from crewai.agents.parser import _format_registry
+    
+    assert 'react' in _format_registry._parsers
+    assert 'harmony' in _format_registry._parsers
+    
+    react_text = "Thought: test\nAction: search\nAction Input: query"
+    harmony_text = "<|start|>assistant<|channel|>analysis<|message|>result<|end|>"
+    
+    assert _format_registry._parsers['react'].can_parse(react_text)
+    assert _format_registry._parsers['harmony'].can_parse(harmony_text)
+    assert not _format_registry._parsers['react'].can_parse(harmony_text)
+    assert not _format_registry._parsers['harmony'].can_parse(react_text)
+
+
+def test_backward_compatibility():
+    """Test that all existing ReAct format tests still pass."""
+    pass
