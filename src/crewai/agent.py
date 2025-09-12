@@ -605,7 +605,8 @@ class Agent(BaseAgent):
             )
 
             return CrewaiPlatformTools(apps=apps)
-        except Exception:
+        except Exception as e:
+            self._logger.log("error", f"Error getting platform tools: {e!s}")
             return []
 
     def get_multimodal_tools(self) -> Sequence[BaseTool]:
