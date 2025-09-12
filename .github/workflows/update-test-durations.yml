@@ -58,7 +58,7 @@ jobs:
         uses: actions/cache/save@v4
         with:
           path: .test_durations_py*
-          key: test-durations-py${{ matrix.python-version }}-${{ github.sha }}
+          key: test-durations-py${{ matrix.python-version }}
 
       - name: Save uv caches
         if: steps.cache-restore.outputs.cache-hit != 'true'
