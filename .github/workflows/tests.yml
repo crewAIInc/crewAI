@@ -45,7 +45,7 @@ jobs:
           enable-cache: false
 
       - name: Install the project
-        run: uv sync --all-groups && uv sync --package crewai-core --all-extras
+        run: uv sync --all-groups --package crewai-core --all-extras
 
       - name: Restore test durations
         uses: actions/cache/restore@v4
@@ -75,7 +75,7 @@ jobs:
           #   DURATIONS_ARG="--durations-path=${DURATION_FILE}"
           # fi
           
-          cd packages/crewai && uv run pytest \
+          uv run --package=crewai-core --directory=packages/crewai pytest \
             --block-network \
             --timeout=30 \
             -vv \

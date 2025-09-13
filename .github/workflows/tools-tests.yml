@@ -36,7 +36,7 @@ jobs:
         run: uv python install ${{ matrix.python-version }}
 
       - name: Install the project
-        run: uv sync --all-groups && uv sync --package crewai-tools --all-extras
+        run: uv sync --all-groups --package crewai-tools --all-extras
 
       - name: Run tests
-        run: cd packages/tools && uv run pytest -vv
+        run: uv run --package=crewai-tools --directory=packages/tools pytest -vv
