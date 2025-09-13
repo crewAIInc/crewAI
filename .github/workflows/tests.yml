@@ -6,7 +6,7 @@ permissions:
   contents: read
 
 env:
-  OPENAI_API_KEY: fake-api-key
+  OPENAI_API_KEY: fake-openai-key
   PYTHONUNBUFFERED: 1
 
 jobs:
@@ -45,7 +45,7 @@ jobs:
           enable-cache: false
 
       - name: Install the project
-        run: uv sync --all-groups --all-extras
+        run: uv sync --all-groups --package crewai-core --all-extras
 
       - name: Restore test durations
         uses: actions/cache/restore@v4
@@ -75,7 +75,7 @@ jobs:
           #   DURATIONS_ARG="--durations-path=${DURATION_FILE}"
           # fi
           
-          uv run pytest \
+          uv run pytest packages/crewai/tests \
             --block-network \
             --timeout=30 \
             -vv \

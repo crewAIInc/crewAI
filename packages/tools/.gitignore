@@ -1,0 +1,15 @@
+.DS_Store
+.pytest_cache
+__pycache__
+dist/
+.env
+.idea
+test.py
+docs_crew/
+chroma.sqlite3
+venv
+.venv/
+
+# chroma db
+db
+crewai-rag-tool.lock
