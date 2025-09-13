@@ -17,9 +17,9 @@ Documentation = "https://docs.crewai.com"
 Repository = "https://github.com/crewAIInc/crewAI"
 
 [project.optional-dependencies]
-# tools = ["crewai-tools"]  # TODO: Re-enable after adding tools package
+tools = ["crewai-tools"]
 core = ["crewai-core"]
-# all = ["crewai-core", "crewai-tools"]  # TODO: Re-enable after adding tools package
+all = ["crewai-core", "crewai-tools"]
 # Core framework optional dependencies
 embeddings = [
     "tiktoken~=0.8.0"
@@ -118,7 +118,7 @@ exclude_dirs = ["packages/crewai/src/crewai/cli/templates"]
 [tool.pytest.ini_options]
 testpaths = [
     "packages/crewai/tests",
-    # "packages/tools/tests",  # TODO: Add after subtree merge
+    "packages/tools/tests",
 ]
 markers = [
     "telemetry: mark test as a telemetry test (don't mock telemetry)",
@@ -138,12 +138,12 @@ explicit = true
 [tool.uv.workspace]
 members = [
     "packages/crewai",
-    # "packages/tools",  # TODO: Add after subtree merge
+    "packages/tools",
 ]
 
 [tool.uv.sources]
 crewai-core = { workspace = true }
-# crewai-tools = { workspace = true }  # TODO: Add after subtree merge
+crewai-tools = { workspace = true }
 torch = [
   { index = "pytorch-nightly", marker = "python_version >= '3.13'" },
   { index = "pytorch", marker = "python_version < '3.13'" },
@@ -161,6 +161,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
+packages = ["packages/crewai/src/crewai"]
 exclude = [
 "docs/**",
 "docs/",
