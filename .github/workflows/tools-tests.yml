@@ -1,4 +1,4 @@
-name: Run Tests
+name: Tools Tests
 
 on: [pull_request]
 
@@ -39,4 +39,4 @@ jobs:
         run: uv sync --dev --all-extras
 
       - name: Run tests
-        run: uv run pytest tests -vv
+        run: uv run pytest packages/tools/tests -vv

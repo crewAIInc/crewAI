@@ -31,7 +31,7 @@ jobs:
         run: uv sync --dev --all-extras
 
       - name: Generate tool specifications
-        run: uv run python generate_tool_specs.py
+        run: uv run python packages/tools/generate_tool_specs.py
 
       - name: Configure Git and add upstream
         run: |
@@ -43,7 +43,7 @@ jobs:
       - name: Check for changes in tool specifications
         id: check_changes
         run: |
-          git add tool.specs.json
+          git add packages/tools/tool.specs.json
           if git diff --quiet --staged; then
             echo "No changes detected in tool.specs.json"
             echo "specs_changed=false" >> $GITHUB_OUTPUT
