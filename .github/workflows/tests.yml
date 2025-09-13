@@ -6,7 +6,7 @@ permissions:
   contents: read
 
 env:
-  OPENAI_API_KEY: fake-api-key
+  OPENAI_API_KEY: fake-openai-key
   PYTHONUNBUFFERED: 1
 
 jobs:
