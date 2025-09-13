@@ -83,6 +83,15 @@ ignore = ["E501"]  # ignore line too long
 [tool.ruff.lint.per-file-ignores]
 "tests/**/*.py" = ["S101"]  # Allow assert statements in tests
 
+[tool.pytest.ini_options]
+testpaths = [
+    "packages/crewai/tests",
+    "packages/tools/tests",
+]
+markers = [
+    "telemetry: mark test as a telemetry test (don't mock telemetry)",
+]
+
 [tool.mypy]
 exclude = ["packages/crewai/src/crewai/cli/templates", "packages/*/tests"]
 

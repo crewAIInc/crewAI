@@ -137,7 +137,6 @@ contextual = [
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-pythonpath = ["."]
 
 [tool.hatch.version]
 path = "src/crewai_tools/__init__.py"
