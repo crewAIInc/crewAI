@@ -20,43 +20,17 @@ Repository = "https://github.com/crewAIInc/crewAI"
 tools = ["crewai-tools"]
 core = ["crewai-core"]
 all = ["crewai-core", "crewai-tools"]
-# Core framework optional dependencies
-embeddings = [
-    "tiktoken~=0.8.0"
-]
-pdfplumber = [
-    "pdfplumber>=0.11.4",
-]
-pandas = [
-    "pandas>=2.2.3",
-]
-openpyxl = [
-    "openpyxl>=3.1.5",
-]
-mem0 = ["mem0ai>=0.1.94"]
-docling = [
-    "docling>=2.12.0",
-]
-aisuite = [
-    "aisuite>=0.1.10",
-]
-qdrant = [
-    "qdrant-client[fastembed]>=1.14.3",
-]
 
-[tool.uv]
-dev-dependencies = [
+[dependency-groups]
+dev = [
     "ruff>=0.12.11",
     "mypy>=1.17.1",
     "pre-commit>=4.3.0",
-    "bandit>=1.8.6",
-    "pillow>=10.2.0",
-    "cairosvg>=2.7.1",
     "pytest>=8.0.0",
     "python-dotenv>=1.0.0",
-    "pytest-asyncio>=0.23.7",
+    "pytest-asyncio>=0.25.2",
     "pytest-subprocess>=1.5.2",
-    "pytest-recording>=0.13.2",
+    "pytest-recording>=0.13.3",
     "pytest-randomly>=3.16.0",
     "pytest-timeout>=2.3.1",
     "pytest-xdist>=3.6.1",
@@ -67,8 +41,8 @@ dev-dependencies = [
     "types-appdirs==1.4.*",
 ]
 
-[project.scripts]
-crewai = "crewai.cli.cli:crewai"
+[tool.uv]
+default-groups = ["dev"]
 
 [tool.ruff]
 exclude = [
@@ -111,9 +85,6 @@ ignore = ["E501"]  # ignore line too long
 
 [tool.mypy]
 exclude = ["packages/crewai/src/crewai/cli/templates", "packages/*/tests"]
-
-[tool.bandit]
-exclude_dirs = ["packages/crewai/src/crewai/cli/templates"]
 
 [tool.pytest.ini_options]
 testpaths = [
@@ -162,13 +133,3 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["packages/crewai/src/crewai"]
-exclude = [
-"docs/**",
-"docs/",
-]
-
-[tool.hatch.build.targets.sdist]
-exclude = [
-"docs/**",
-"docs/",
-]

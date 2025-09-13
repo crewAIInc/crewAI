@@ -9,18 +9,12 @@ authors = [
 requires-python = ">=3.10,<3.14"
 dependencies = [
     "crewai-core",
-    "pydantic>=2.6.1",
     "lancedb>=0.5.4",
-    "openai>=1.12.0",
-    "chromadb==0.5.23",
-    "pyright>=1.1.350",
     "pytube>=15.0.0",
     "requests>=2.31.0",
     "docker>=7.1.0",
-    "click>=8.1.8",
     "tiktoken>=0.8.0",
     "stagehand>=0.4.1",
-    "portalocker==2.7.0",
 ]
 
 [project.urls]
@@ -28,8 +22,6 @@ Homepage = "https://crewai.com"
 Repository = "https://github.com/crewAIInc/crewAI-tools"
 Documentation = "https://docs.crewai.com"
 
-
-[project.scripts]
 
 [project.optional-dependencies]
 embedchain = [
@@ -146,11 +138,6 @@ contextual = [
 [tool.pytest.ini_options]
 pythonpath = ["."]
 
-[tool.uv]
-dev-dependencies = [
-    "pytest>=8.3.4",
-]
-
 [tool.hatch.version]
 path = "src/crewai_tools/__init__.py"
 
@@ -162,10 +149,3 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/crewai_tools"]
-
-[dependency-groups]
-dev = [
-    "pytest-asyncio>=0.25.2",
-    "pytest>=8.0.0",
-    "pytest-recording>=0.13.3",
-]
