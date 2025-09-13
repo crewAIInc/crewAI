@@ -1,0 +1,42 @@
+name: Run Tests
+
+on: [pull_request]
+
+permissions:
+  contents: write
+
+env:
+  OPENAI_API_KEY: fake-openai-key
+  BRAVE_API_KEY: fake-brave-key
+  SNOWFLAKE_USER: fake-snowflake-user
+  SNOWFLAKE_PASSWORD: fake-snowflake-password
+  SNOWFLAKE_ACCOUNT: fake-snowflake-account
+  SNOWFLAKE_WAREHOUSE: fake-snowflake-warehouse
+  SNOWFLAKE_DATABASE: fake-snowflake-database
+  SNOWFLAKE_SCHEMA: fake-snowflake-schema
+  EMBEDCHAIN_DB_URI: sqlite:///test.db
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      matrix:
+        python-version: ['3.10', '3.11', '3.12', '3.13']
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+
+      - name: Set up Python ${{ matrix.python-version }}
+        run: uv python install ${{ matrix.python-version }}
+
+      - name: Install the project
+        run: uv sync --dev --all-extras
+
+      - name: Run tests
+        run: uv run pytest tests -vv
