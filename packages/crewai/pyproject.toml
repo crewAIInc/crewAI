@@ -71,6 +71,12 @@ qdrant = [
 [project.scripts]
 crewai = "crewai.cli.cli:crewai"
 
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "telemetry: mark test as a telemetry test (don't mock telemetry)",
+]
+
 [tool.hatch.version]
 path = "src/crewai/__init__.py"
 

@@ -75,7 +75,7 @@ jobs:
           #   DURATIONS_ARG="--durations-path=${DURATION_FILE}"
           # fi
           
-          uv run pytest \
+          uv run --package crewai-core pytest \
             --block-network \
             --timeout=30 \
             -vv \

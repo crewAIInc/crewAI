@@ -39,4 +39,4 @@ jobs:
         run: uv sync --dev --all-extras
 
       - name: Run tests
-        run: uv run pytest packages/tools/tests -vv
+        run: uv run --package crewai-tools pytest -vv
