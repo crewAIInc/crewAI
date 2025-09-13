@@ -25,3 +25,16 @@ ACTION_REGEX: Final[re.Pattern[str]] = re.compile(
 ACTION_INPUT_ONLY_REGEX: Final[re.Pattern[str]] = re.compile(
     r"\s*Action\s*\d*\s*Input\s*\d*\s*:\s*(.*)", re.DOTALL
 )
+
+HARMONY_START_PATTERN: Final[re.Pattern[str]] = re.compile(
+    r"<\|start\|>assistant<\|channel\|>(\w+)(?:\s+to=(\w+))?<\|message\|>(.*?)<\|(?:end|call)\|>", 
+    re.DOTALL
+)
+HARMONY_ANALYSIS_CHANNEL: Final[str] = "analysis"
+HARMONY_COMMENTARY_CHANNEL: Final[str] = "commentary"
+HARMONY_FINAL_ANSWER_ERROR_MESSAGE: Final[str] = (
+    "I did it wrong. Invalid Harmony Format: I need to use proper channel structure."
+)
+HARMONY_MISSING_CONTENT_ERROR_MESSAGE: Final[str] = (
+    "I did it wrong. Invalid Harmony Format: Missing content in message section."
+)
