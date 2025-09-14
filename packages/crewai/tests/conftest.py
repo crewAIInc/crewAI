@@ -162,7 +162,7 @@ def mock_opentelemetry_components():
 @pytest.fixture(scope="module")
 def vcr_config(request) -> dict:
     return {
-        "cassette_library_dir": "tests/cassettes",
+        "cassette_library_dir": "cassettes",
         "record_mode": "new_episodes",
         "filter_headers": [("authorization", "AUTHORIZATION-XXX")],
     }
