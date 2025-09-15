@@ -1,3 +1,4 @@
+import os
 from datetime import datetime
 from unittest.mock import Mock, patch
 
@@ -52,8 +53,10 @@ from crewai.events.types.tool_usage_events import (
 
 @pytest.fixture(scope="module")
 def vcr_config(request) -> dict:
+    test_dir = os.path.dirname(os.path.abspath(__file__))
+    cassette_dir = os.path.join(test_dir, "cassettes")
     return {
-        "cassette_library_dir": "tests/utilities/cassettes",
+        "cassette_library_dir": cassette_dir,
     }
 
 
