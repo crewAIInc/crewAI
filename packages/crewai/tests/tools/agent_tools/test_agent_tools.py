@@ -18,8 +18,11 @@ ask_tool = tools[1]
 
 @pytest.fixture(scope="module")
 def vcr_config(request) -> dict:
+    import os
+    test_dir = os.path.dirname(os.path.abspath(__file__))
+    cassette_dir = os.path.join(test_dir, "cassettes")
     return {
-        "cassette_library_dir": "tests/tools/agent_tools/cassettes",
+        "cassette_library_dir": cassette_dir,
     }
 
 

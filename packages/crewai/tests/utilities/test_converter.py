@@ -24,8 +24,11 @@ from enum import Enum
 
 @pytest.fixture(scope="module")
 def vcr_config(request) -> dict:
+    import os
+    test_dir = os.path.dirname(os.path.abspath(__file__))
+    cassette_dir = os.path.join(test_dir, "cassettes")
     return {
-        "cassette_library_dir": "tests/utilities/cassettes",
+        "cassette_library_dir": cassette_dir,
     }
 
 
