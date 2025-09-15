@@ -20,7 +20,8 @@ def temp_project():
     """
     
     (project_dir / "pyproject.toml").write_text(pyproject_content)
-    run_command(["uv", "add", "--editable", f"file://{Path.cwd().absolute()}"], project_dir)
+    tools_package_path = Path(__file__).parent.parent.absolute()
+    run_command(["uv", "add", "--editable", f"file://{tools_package_path}"], project_dir)
     run_command(["uv", "sync"], project_dir)
     yield project_dir
 
