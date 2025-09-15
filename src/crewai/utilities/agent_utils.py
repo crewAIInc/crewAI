@@ -1,6 +1,9 @@
 import json
 import re
-from typing import Any, Callable, Dict, List, Optional, Sequence, Union
+from collections.abc import Callable, Sequence
+from typing import Any
+
+from rich.console import Console
 
 from crewai.agents.constants import FINAL_ANSWER_AND_PARSABLE_ACTION_ERROR_MESSAGE
 from crewai.agents.parser import (
@@ -9,6 +12,7 @@ from crewai.agents.parser import (
     OutputParserException,
     parse,
 )
+from crewai.cli.config import Settings
 from crewai.llm import LLM
 from crewai.llms.base_llm import BaseLLM
 from crewai.tools import BaseTool as CrewAITool
@@ -20,13 +24,11 @@ from crewai.utilities.errors import AgentRepositoryError
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededException,
 )
-from rich.console import Console
-from crewai.cli.config import Settings
 
 console = Console()
 
 
-def parse_tools(tools: List[BaseTool]) -> List[CrewStructuredTool]:
+def parse_tools(tools: list[BaseTool]) -> list[CrewStructuredTool]:
     """Parse tools to be used for the task."""
     tools_list = []
 
@@ -39,13 +41,13 @@ def parse_tools(tools: List[BaseTool]) -> List[CrewStructuredTool]:
     return tools_list
 
 
-def get_tool_names(tools: Sequence[Union[CrewStructuredTool, BaseTool]]) -> str:
+def get_tool_names(tools: Sequence[CrewStructuredTool | BaseTool]) -> str:
     """Get the names of the tools."""
     return ", ".join([t.name for t in tools])
 
 
 def render_text_description_and_args(
-    tools: Sequence[Union[CrewStructuredTool, BaseTool]],
+    tools: Sequence[CrewStructuredTool | BaseTool],
 ) -> str:
     """Render the tool name, description, and args in plain text.
 
@@ -53,11 +55,7 @@ def render_text_description_and_args(
         calculator: This tool is used for math, \
         args: {"expression": {"type": "string"}}
     """
-    tool_strings = []
-    for tool in tools:
-        tool_strings.append(tool.description)
-
-    return "\n".join(tool_strings)
+    return "\n".join([tool.description for tool in tools])
 
 
 def has_reached_max_iterations(iterations: int, max_iterations: int) -> bool:
@@ -66,13 +64,13 @@ def has_reached_max_iterations(iterations: int, max_iterations: int) -> bool:
 
 
 def handle_max_iterations_exceeded(
-    formatted_answer: Union[AgentAction, AgentFinish, None],
+    formatted_answer: AgentAction | AgentFinish | None,
     printer: Printer,
     i18n: I18N,
-    messages: List[Dict[str, str]],
-    llm: Union[LLM, BaseLLM],
-    callbacks: List[Any],
-) -> Union[AgentAction, AgentFinish]:
+    messages: list[dict[str, str]],
+    llm: LLM | BaseLLM,
+    callbacks: list[Any],
+) -> AgentAction | AgentFinish:
     """
     Handles the case when the maximum number of iterations is exceeded.
     Performs one more LLM call to get the final answer.
@@ -90,7 +88,7 @@ def handle_max_iterations_exceeded(
 
     if formatted_answer and hasattr(formatted_answer, "text"):
         assistant_message = (
-            formatted_answer.text + f'\n{i18n.errors("force_final_answer")}'
+            formatted_answer.text + f"\n{i18n.errors('force_final_answer')}"
         )
     else:
         assistant_message = i18n.errors("force_final_answer")
@@ -110,17 +108,16 @@ def handle_max_iterations_exceeded(
         )
         raise ValueError("Invalid response from LLM call - None or empty.")
 
-    formatted_answer = format_answer(answer)
     # Return the formatted answer, regardless of its type
-    return formatted_answer
+    return format_answer(answer)
 
 
-def format_message_for_llm(prompt: str, role: str = "user") -> Dict[str, str]:
+def format_message_for_llm(prompt: str, role: str = "user") -> dict[str, str]:
     prompt = prompt.rstrip()
     return {"role": role, "content": prompt}
 
 
-def format_answer(answer: str) -> Union[AgentAction, AgentFinish]:
+def format_answer(answer: str) -> AgentAction | AgentFinish:
     """Format a response from the LLM into an AgentAction or AgentFinish."""
     try:
         return parse(answer)
@@ -134,7 +131,7 @@ def format_answer(answer: str) -> Union[AgentAction, AgentFinish]:
 
 
 def enforce_rpm_limit(
-    request_within_rpm_limit: Optional[Callable[[], bool]] = None,
+    request_within_rpm_limit: Callable[[], bool] | None = None,
 ) -> None:
     """Enforce the requests per minute (RPM) limit if applicable."""
     if request_within_rpm_limit:
@@ -142,12 +139,12 @@ def enforce_rpm_limit(
 
 
 def get_llm_response(
-    llm: Union[LLM, BaseLLM],
-    messages: List[Dict[str, str]],
-    callbacks: List[Any],
+    llm: LLM | BaseLLM,
+    messages: list[dict[str, str]],
+    callbacks: list[Any],
     printer: Printer,
-    from_task: Optional[Any] = None,
-    from_agent: Optional[Any] = None,
+    from_task: Any | None = None,
+    from_agent: Any | None = None,
 ) -> str:
     """Call the LLM and return the response, handling any invalid responses."""
     try:
@@ -171,7 +168,7 @@ def get_llm_response(
 
 def process_llm_response(
     answer: str, use_stop_words: bool
-) -> Union[AgentAction, AgentFinish]:
+) -> AgentAction | AgentFinish:
     """Process the LLM response and format it into an AgentAction or AgentFinish."""
     if not use_stop_words:
         try:
@@ -187,10 +184,10 @@ def process_llm_response(
 def handle_agent_action_core(
     formatted_answer: AgentAction,
     tool_result: ToolResult,
-    messages: Optional[List[Dict[str, str]]] = None,
-    step_callback: Optional[Callable] = None,
-    show_logs: Optional[Callable] = None,
-) -> Union[AgentAction, AgentFinish]:
+    messages: list[dict[str, str]] | None = None,
+    step_callback: Callable | None = None,
+    show_logs: Callable | None = None,
+) -> AgentAction | AgentFinish:
     """Core logic for handling agent actions and tool results.
 
     Args:
@@ -246,10 +243,10 @@ def handle_unknown_error(printer: Any, exception: Exception) -> None:
 
 def handle_output_parser_exception(
     e: OutputParserException,
-    messages: List[Dict[str, str]],
+    messages: list[dict[str, str]],
     iterations: int,
     log_error_after: int = 3,
-    printer: Optional[Any] = None,
+    printer: Any | None = None,
 ) -> AgentAction:
     """Handle OutputParserException by updating messages and formatted_answer.
 
@@ -298,9 +295,9 @@ def is_context_length_exceeded(exception: Exception) -> bool:
 def handle_context_length(
     respect_context_window: bool,
     printer: Any,
-    messages: List[Dict[str, str]],
+    messages: list[dict[str, str]],
     llm: Any,
-    callbacks: List[Any],
+    callbacks: list[Any],
     i18n: Any,
 ) -> None:
     """Handle context length exceeded by either summarizing or raising an error.
@@ -330,9 +327,9 @@ def handle_context_length(
 
 
 def summarize_messages(
-    messages: List[Dict[str, str]],
+    messages: list[dict[str, str]],
     llm: Any,
-    callbacks: List[Any],
+    callbacks: list[Any],
     i18n: Any,
 ) -> None:
     """Summarize messages to fit within context window.
@@ -344,12 +341,12 @@ def summarize_messages(
         i18n: I18N instance for messages
     """
     messages_string = " ".join([message["content"] for message in messages])
-    messages_groups = []
-
     cut_size = llm.get_context_window_size()
 
-    for i in range(0, len(messages_string), cut_size):
-        messages_groups.append({"content": messages_string[i : i + cut_size]})
+    messages_groups = [
+        {"content": messages_string[i : i + cut_size]}
+        for i in range(0, len(messages_string), cut_size)
+    ]
 
     summarized_contents = []
 
@@ -385,8 +382,8 @@ def summarize_messages(
 def show_agent_logs(
     printer: Printer,
     agent_role: str,
-    formatted_answer: Optional[Union[AgentAction, AgentFinish]] = None,
-    task_description: Optional[str] = None,
+    formatted_answer: AgentAction | AgentFinish | None = None,
+    task_description: str | None = None,
     verbose: bool = False,
 ) -> None:
     """Show agent logs for both start and execution states.
@@ -420,11 +417,18 @@ def show_agent_logs(
 
         if isinstance(formatted_answer, AgentAction):
             thought = re.sub(r"\n+", "\n", formatted_answer.thought)
-            formatted_json = json.dumps(
-                formatted_answer.tool_input,
-                indent=2,
-                ensure_ascii=False,
-            )
+            # Handle case where tool_input might be a string
+            raw_tool_input = formatted_answer.tool_input
+            if isinstance(raw_tool_input, str):
+                try:
+                    import json
+
+                    tool_input = json.loads(raw_tool_input)
+                except (json.JSONDecodeError, TypeError):
+                    tool_input = {"input": raw_tool_input}
+            else:
+                tool_input = raw_tool_input
+            formatted_json = _format_tool_input_json(tool_input)
             if thought and thought != "":
                 printer.print(
                     content=f"\033[95m## Thought:\033[00m \033[92m{thought}\033[00m"
@@ -432,9 +436,8 @@ def show_agent_logs(
             printer.print(
                 content=f"\033[95m## Using tool:\033[00m \033[92m{formatted_answer.tool}\033[00m"
             )
-            printer.print(
-                content=f"\033[95m## Tool Input:\033[00m \033[92m\n{formatted_json}\033[00m"
-            )
+            printer.print(content="\033[95m## Tool Input:\033[00m")
+            printer.print(content=formatted_json)
             printer.print(
                 content=f"\033[95m## Tool Output:\033[00m \033[92m\n{formatted_answer.result}\033[00m"
             )
@@ -442,6 +445,87 @@ def show_agent_logs(
             printer.print(
                 content=f"\033[95m## Final Answer:\033[00m \033[92m\n{formatted_answer.output}\033[00m\n\n"
             )
+
+
+def _format_tool_input_json(tool_input: dict) -> str:
+    """Format tool input as a nicely formatted and colored JSON string.
+
+    Args:
+        tool_input: The tool input dictionary to format
+
+    Returns:
+        Formatted JSON string with colors and improved readability
+    """
+
+    if not tool_input:
+        return "\033[93m{}\033[00m"  # Yellow empty dict
+
+    # Format JSON with proper indentation
+    try:
+        formatted_json = json.dumps(
+            tool_input,
+            indent=4,  # Increased from 2 to 4 for better readability
+            ensure_ascii=False,
+            sort_keys=True,  # Sort keys for consistency
+        )
+
+        # Apply syntax-like coloring to JSON elements
+        return _apply_json_colors(formatted_json)
+
+    except (TypeError, ValueError) as e:
+        # Fallback for non-serializable objects
+        return f"\033[91mError formatting tool input: {e!s}\033[00m"
+
+
+def _apply_json_colors(json_str: str) -> str:
+    """Apply color coding to JSON string for better console readability.
+
+    Args:
+        json_str: The JSON string to colorize
+
+    Returns:
+        Colorized JSON string with ANSI color codes
+    """
+    import re
+
+    # Color scheme:
+    # Keys: bright cyan
+    # Strings: green
+    # Numbers: yellow
+    # Booleans/null: magenta
+    # Brackets/braces: white
+
+    # Apply structural coloring FIRST to avoid interfering with other escape codes
+    # Color structural characters
+    json_str = re.sub(r"([{}\[\]])", r"\033[37m\1\033[00m", json_str)
+
+    # Color JSON keys ("key":)
+    json_str = re.sub(
+        r'"([^"]+)"\s*:',
+        r'\033[96m"\1"\033[00m\033[37m:\033[00m',  # Bright cyan keys with white colon
+        json_str,
+    )
+
+    # Color string values ("value") - account for colored colon
+    json_str = re.sub(
+        r"(\033\[37m:\033\[00m)\s*\"([^\"]+)\"",
+        r"\1 \033[92m\"\2\"\033[00m",  # Green string values
+        json_str,
+    )
+
+    # Color numbers - account for colored colon
+    json_str = re.sub(
+        r"(\033\[37m:\033\[00m)\s*([0-9]+\.?[0-9]*)",
+        r"\1 \033[93m\2\033[00m",  # Yellow numbers
+        json_str,
+    )
+
+    # Color booleans and null - account for colored colon
+    return re.sub(
+        r"(\033\[37m:\033\[00m)\s*(true|false|null)",
+        r"\1 \033[95m\2\033[00m",  # Magenta booleans/null
+        json_str,
+    )
 
 
 def _print_current_organization():
@@ -458,8 +542,8 @@ def _print_current_organization():
         )
 
 
-def load_agent_from_repository(from_repository: str) -> Dict[str, Any]:
-    attributes: Dict[str, Any] = {}
+def load_agent_from_repository(from_repository: str) -> dict[str, Any]:
+    attributes: dict[str, Any] = {}
     if from_repository:
         import importlib
 
