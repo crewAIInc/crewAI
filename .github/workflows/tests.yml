@@ -45,7 +45,7 @@ jobs:
           enable-cache: false
 
       - name: Install the project
-        run: uv sync --all-groups --all-extras && uv sync --package crewai-core --all-extras && uv sync --package crewai-tools --all-extras
+        run: uv sync --all-groups --all-extras && uv sync --all-extras --package crewai-core && uv sync --all-extras --package crewai-tools
 
       - name: Restore test durations
         uses: actions/cache/restore@v4
