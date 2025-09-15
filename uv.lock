@@ -376,21 +376,6 @@ wheels = [
 ]
 
 [[package]]
-name = "bandit"
-version = "1.8.6"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "colorama", marker = "sys_platform == 'win32'" },
-    { name = "pyyaml" },
-    { name = "rich" },
-    { name = "stevedore" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/fb/b5/7eb834e213d6f73aace21938e5e90425c92e5f42abafaf8a6d5d21beed51/bandit-1.8.6.tar.gz", hash = "sha256:dbfe9c25fc6961c2078593de55fd19f2559f9e45b99f1272341f5b95dea4e56b", size = 4240271, upload-time = "2025-07-06T03:10:50.9Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/48/ca/ba5f909b40ea12ec542d5d7bdd13ee31c4d65f3beed20211ef81c18fa1f3/bandit-1.8.6-py3-none-any.whl", hash = "sha256:3348e934d736fcdb68b6aa4030487097e23a501adf3e7827b63658df464dddd0", size = 133808, upload-time = "2025-07-06T03:10:49.134Z" },
-]
-
-[[package]]
 name = "bcrypt"
 version = "4.3.0"
 source = { registry = "https://pypi.org/simple" }
@@ -556,34 +541,6 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/6c/81/3747dad6b14fa2cf53fcf10548cf5aea6913e96fab41a3c198676f8948a5/cachetools-5.5.2.tar.gz", hash = "sha256:1a661caa9175d26759571b2e19580f9d6393969e5dfca11fdb1f947a23e640d4", size = 28380, upload-time = "2025-02-20T21:01:19.524Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/72/76/20fa66124dbe6be5cafeb312ece67de6b61dd91a0247d1ea13db4ebb33c2/cachetools-5.5.2-py3-none-any.whl", hash = "sha256:d26a22bcc62eb95c3beabd9f1ee5e820d3d2704fe2967cbe350e20c8ffcd3f0a", size = 10080, upload-time = "2025-02-20T21:01:16.647Z" },
-]
-
-[[package]]
-name = "cairocffi"
-version = "1.7.1"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "cffi" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/70/c5/1a4dc131459e68a173cbdab5fad6b524f53f9c1ef7861b7698e998b837cc/cairocffi-1.7.1.tar.gz", hash = "sha256:2e48ee864884ec4a3a34bfa8c9ab9999f688286eb714a15a43ec9d068c36557b", size = 88096, upload-time = "2024-06-18T10:56:06.741Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/93/d8/ba13451aa6b745c49536e87b6bf8f629b950e84bd0e8308f7dc6883b67e2/cairocffi-1.7.1-py3-none-any.whl", hash = "sha256:9803a0e11f6c962f3b0ae2ec8ba6ae45e957a146a004697a1ac1bbf16b073b3f", size = 75611, upload-time = "2024-06-18T10:55:59.489Z" },
-]
-
-[[package]]
-name = "cairosvg"
-version = "2.8.2"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "cairocffi" },
-    { name = "cssselect2" },
-    { name = "defusedxml" },
-    { name = "pillow" },
-    { name = "tinycss2" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/ab/b9/5106168bd43d7cd8b7cc2a2ee465b385f14b63f4c092bb89eee2d48c8e67/cairosvg-2.8.2.tar.gz", hash = "sha256:07cbf4e86317b27a92318a4cac2a4bb37a5e9c1b8a27355d06874b22f85bef9f", size = 8398590, upload-time = "2025-05-15T06:56:32.653Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/67/48/816bd4aaae93dbf9e408c58598bc32f4a8c65f4b86ab560864cb3ee60adb/cairosvg-2.8.2-py3-none-any.whl", hash = "sha256:eab46dad4674f33267a671dce39b64be245911c901c70d65d2b7b0821e852bf5", size = 45773, upload-time = "2025-05-15T06:56:28.552Z" },
 ]
 
 [[package]]
@@ -1088,9 +1045,6 @@ dependencies = [
 ]
 
 [package.optional-dependencies]
-aisuite = [
-    { name = "aisuite" },
-]
 all = [
     { name = "crewai-core" },
     { name = "crewai-tools" },
@@ -1098,37 +1052,13 @@ all = [
 core = [
     { name = "crewai-core" },
 ]
-docling = [
-    { name = "docling" },
-]
-embeddings = [
-    { name = "tiktoken" },
-]
-mem0 = [
-    { name = "mem0ai" },
-]
-openpyxl = [
-    { name = "openpyxl" },
-]
-pandas = [
-    { name = "pandas" },
-]
-pdfplumber = [
-    { name = "pdfplumber" },
-]
-qdrant = [
-    { name = "qdrant-client", extra = ["fastembed"] },
-]
 tools = [
     { name = "crewai-tools" },
 ]
 
 [package.dev-dependencies]
 dev = [
-    { name = "bandit" },
-    { name = "cairosvg" },
     { name = "mypy" },
-    { name = "pillow" },
     { name = "pre-commit" },
     { name = "pytest" },
     { name = "pytest-asyncio" },
@@ -1148,33 +1078,22 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "aisuite", marker = "extra == 'aisuite'", specifier = ">=0.1.10" },
     { name = "crewai-core", editable = "packages/crewai" },
     { name = "crewai-core", marker = "extra == 'all'", editable = "packages/crewai" },
     { name = "crewai-core", marker = "extra == 'core'", editable = "packages/crewai" },
     { name = "crewai-tools", marker = "extra == 'all'", editable = "packages/tools" },
     { name = "crewai-tools", marker = "extra == 'tools'", editable = "packages/tools" },
-    { name = "docling", marker = "extra == 'docling'", specifier = ">=2.12.0" },
-    { name = "mem0ai", marker = "extra == 'mem0'", specifier = ">=0.1.94" },
-    { name = "openpyxl", marker = "extra == 'openpyxl'", specifier = ">=3.1.5" },
-    { name = "pandas", marker = "extra == 'pandas'", specifier = ">=2.2.3" },
-    { name = "pdfplumber", marker = "extra == 'pdfplumber'", specifier = ">=0.11.4" },
-    { name = "qdrant-client", extras = ["fastembed"], marker = "extra == 'qdrant'", specifier = ">=1.14.3" },
-    { name = "tiktoken", marker = "extra == 'embeddings'", specifier = "~=0.8.0" },
 ]
-provides-extras = ["aisuite", "all", "core", "docling", "embeddings", "mem0", "openpyxl", "pandas", "pdfplumber", "qdrant", "tools"]
+provides-extras = ["all", "core", "tools"]
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "bandit", specifier = ">=1.8.6" },
-    { name = "cairosvg", specifier = ">=2.7.1" },
     { name = "mypy", specifier = ">=1.17.1" },
-    { name = "pillow", specifier = ">=10.2.0" },
     { name = "pre-commit", specifier = ">=4.3.0" },
     { name = "pytest", specifier = ">=8.0.0" },
-    { name = "pytest-asyncio", specifier = ">=0.23.7" },
+    { name = "pytest-asyncio", specifier = ">=0.25.2" },
     { name = "pytest-randomly", specifier = ">=3.16.0" },
-    { name = "pytest-recording", specifier = ">=0.13.2" },
+    { name = "pytest-recording", specifier = ">=0.13.3" },
     { name = "pytest-split", specifier = ">=0.9.0" },
     { name = "pytest-subprocess", specifier = ">=1.5.2" },
     { name = "pytest-timeout", specifier = ">=2.3.1" },
@@ -1248,36 +1167,13 @@ tools = [
     { name = "crewai-tools" },
 ]
 
-[package.dev-dependencies]
-dev = [
-    { name = "bandit" },
-    { name = "cairosvg" },
-    { name = "mypy" },
-    { name = "pillow" },
-    { name = "pre-commit" },
-    { name = "pytest" },
-    { name = "pytest-asyncio" },
-    { name = "pytest-randomly" },
-    { name = "pytest-recording" },
-    { name = "pytest-split" },
-    { name = "pytest-subprocess" },
-    { name = "pytest-timeout" },
-    { name = "pytest-xdist" },
-    { name = "python-dotenv" },
-    { name = "ruff" },
-    { name = "types-appdirs" },
-    { name = "types-pyyaml" },
-    { name = "types-regex" },
-    { name = "types-requests" },
-]
-
 [package.metadata]
 requires-dist = [
     { name = "aisuite", marker = "extra == 'aisuite'", specifier = ">=0.1.10" },
     { name = "appdirs", specifier = ">=1.4.4" },
     { name = "blinker", specifier = ">=1.9.0" },
     { name = "chromadb", specifier = ">=0.5.23" },
-    { name = "click", specifier = ">=8.1.7" },
+    { name = "click", specifier = ">=8.1.8" },
     { name = "crewai-tools", marker = "extra == 'tools'", editable = "packages/tools" },
     { name = "docling", marker = "extra == 'docling'", specifier = ">=2.12.0" },
     { name = "instructor", specifier = ">=1.3.3" },
@@ -1297,7 +1193,7 @@ requires-dist = [
     { name = "pdfplumber", specifier = ">=0.11.4" },
     { name = "pdfplumber", marker = "extra == 'pdfplumber'", specifier = ">=0.11.4" },
     { name = "portalocker", specifier = "==2.7.0" },
-    { name = "pydantic", specifier = ">=2.4.2" },
+    { name = "pydantic", specifier = ">=2.6.1" },
     { name = "pyjwt", specifier = ">=2.9.0" },
     { name = "python-dotenv", specifier = ">=1.0.0" },
     { name = "pyvis", specifier = ">=0.3.2" },
@@ -1311,42 +1207,13 @@ requires-dist = [
 ]
 provides-extras = ["aisuite", "docling", "embeddings", "mem0", "openpyxl", "pandas", "pdfplumber", "qdrant", "tools"]
 
-[package.metadata.requires-dev]
-dev = [
-    { name = "bandit", specifier = ">=1.8.6" },
-    { name = "cairosvg", specifier = ">=2.7.1" },
-    { name = "mypy", specifier = ">=1.17.1" },
-    { name = "pillow", specifier = ">=10.2.0" },
-    { name = "pre-commit", specifier = ">=4.3.0" },
-    { name = "pytest", specifier = ">=8.0.0" },
-    { name = "pytest-asyncio", specifier = ">=0.23.7" },
-    { name = "pytest-randomly", specifier = ">=3.16.0" },
-    { name = "pytest-recording", specifier = ">=0.13.2" },
-    { name = "pytest-split", specifier = ">=0.9.0" },
-    { name = "pytest-subprocess", specifier = ">=1.5.2" },
-    { name = "pytest-timeout", specifier = ">=2.3.1" },
-    { name = "pytest-xdist", specifier = ">=3.6.1" },
-    { name = "python-dotenv", specifier = ">=1.0.0" },
-    { name = "ruff", specifier = ">=0.12.11" },
-    { name = "types-appdirs", specifier = "==1.4.*" },
-    { name = "types-pyyaml", specifier = "==6.0.*" },
-    { name = "types-regex", specifier = "==2024.11.6.*" },
-    { name = "types-requests", specifier = "==2.32.*" },
-]
-
 [[package]]
 name = "crewai-tools"
 source = { editable = "packages/tools" }
 dependencies = [
-    { name = "chromadb" },
-    { name = "click" },
     { name = "crewai-core" },
     { name = "docker" },
     { name = "lancedb" },
-    { name = "openai" },
-    { name = "portalocker" },
-    { name = "pydantic" },
-    { name = "pyright" },
     { name = "pytube" },
     { name = "requests" },
     { name = "stagehand" },
@@ -1465,21 +1332,12 @@ xml = [
     { name = "unstructured", extra = ["all-docs", "local-inference"] },
 ]
 
-[package.dev-dependencies]
-dev = [
-    { name = "pytest" },
-    { name = "pytest-asyncio" },
-    { name = "pytest-recording" },
-]
-
 [package.metadata]
 requires-dist = [
     { name = "beautifulsoup4", marker = "extra == 'beautifulsoup4'", specifier = ">=4.12.3" },
     { name = "beautifulsoup4", marker = "extra == 'bedrock'", specifier = ">=4.13.4" },
     { name = "bedrock-agentcore", marker = "extra == 'bedrock'", specifier = ">=0.1.0" },
     { name = "browserbase", marker = "extra == 'browserbase'", specifier = ">=1.0.5" },
-    { name = "chromadb", specifier = "==0.5.23" },
-    { name = "click", specifier = ">=8.1.8" },
     { name = "composio-core", marker = "extra == 'composio-core'", specifier = ">=0.6.11.post1" },
     { name = "contextual-client", marker = "extra == 'contextual'", specifier = ">=0.1.0" },
     { name = "couchbase", marker = "extra == 'couchbase'", specifier = ">=4.3.5" },
@@ -1501,15 +1359,11 @@ requires-dist = [
     { name = "multion", marker = "extra == 'multion'", specifier = ">=1.1.0" },
     { name = "nest-asyncio", marker = "extra == 'bedrock'", specifier = ">=1.6.0" },
     { name = "nest-asyncio", marker = "extra == 'contextual'", specifier = ">=1.6.0" },
-    { name = "openai", specifier = ">=1.12.0" },
     { name = "oxylabs", marker = "extra == 'oxylabs'", specifier = "==2.0.0" },
     { name = "patronus", marker = "extra == 'patronus'", specifier = ">=0.0.16" },
     { name = "playwright", marker = "extra == 'bedrock'", specifier = ">=1.52.0" },
-    { name = "portalocker", specifier = "==2.7.0" },
-    { name = "pydantic", specifier = ">=2.6.1" },
     { name = "pygithub", marker = "extra == 'github'", specifier = "==1.59.1" },
     { name = "pymongo", marker = "extra == 'mongodb'", specifier = ">=4.13" },
-    { name = "pyright", specifier = ">=1.1.350" },
     { name = "python-docx", marker = "extra == 'rag'", specifier = ">=1.1.0" },
     { name = "pytube", specifier = ">=15.0.0" },
     { name = "qdrant-client", marker = "extra == 'qdrant-client'", specifier = ">=1.12.1" },
@@ -1532,14 +1386,6 @@ requires-dist = [
     { name = "weaviate-client", marker = "extra == 'weaviate-client'", specifier = ">=4.10.2" },
 ]
 provides-extras = ["apify", "beautifulsoup4", "bedrock", "browserbase", "composio-core", "contextual", "couchbase", "databricks-sdk", "embedchain", "exa-py", "firecrawl-py", "github", "hyperbrowser", "linkup-sdk", "mcp", "mongodb", "multion", "oxylabs", "patronus", "qdrant-client", "rag", "scrapegraph-py", "scrapfly-sdk", "selenium", "serpapi", "singlestore", "snowflake", "spider-client", "sqlalchemy", "stagehand", "tavily-python", "weaviate-client", "xml"]
-
-[package.metadata.requires-dev]
-dev = [
-    { name = "pytest", specifier = ">=8.0.0" },
-    { name = "pytest", specifier = ">=8.3.4" },
-    { name = "pytest-asyncio", specifier = ">=0.25.2" },
-    { name = "pytest-recording", specifier = ">=0.13.3" },
-]
 
 [[package]]
 name = "cryptography"
@@ -1589,19 +1435,6 @@ wheels = [
 ]
 
 [[package]]
-name = "cssselect2"
-version = "0.8.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "tinycss2" },
-    { name = "webencodings" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/9f/86/fd7f58fc498b3166f3a7e8e0cddb6e620fe1da35b02248b1bd59e95dbaaa/cssselect2-0.8.0.tar.gz", hash = "sha256:7674ffb954a3b46162392aee2a3a0aedb2e14ecf99fcc28644900f4e6e3e9d3a", size = 35716, upload-time = "2025-03-05T14:46:07.988Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/0f/e7/aa315e6a749d9b96c2504a1ba0ba031ba2d0517e972ce22682e3fccecb09/cssselect2-0.8.0-py3-none-any.whl", hash = "sha256:46fc70ebc41ced7a32cd42d58b1884d72ade23d21e5a4eaaf022401c13f0e76e", size = 15454, upload-time = "2025-03-05T14:46:06.463Z" },
-]
-
-[[package]]
 name = "cycler"
 version = "0.12.1"
 source = { registry = "https://pypi.org/simple" }
@@ -1643,15 +1476,6 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/43/fa/6d96a0978d19e17b68d634497769987b16c8f4cd0a7a05048bec693caa6b/decorator-5.2.1.tar.gz", hash = "sha256:65f266143752f734b0a7cc83c46f4618af75b8c5911b00ccb61d0ac9b6da0360", size = 56711, upload-time = "2025-02-24T04:41:34.073Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/4e/8c/f3147f5c4b73e7550fe5f9352eaa956ae838d5c51eb58e7a25b9f3e2643b/decorator-5.2.1-py3-none-any.whl", hash = "sha256:d316bb415a2d9e2d2b3abcc4084c6502fc09240e292cd76a76afc106a1c8e04a", size = 9190, upload-time = "2025-02-24T04:41:32.565Z" },
-]
-
-[[package]]
-name = "defusedxml"
-version = "0.7.1"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/0f/d5/c66da9b79e5bdb124974bfe172b4daf3c984ebd9c2a06e2b8a4dc7331c72/defusedxml-0.7.1.tar.gz", hash = "sha256:1bb3032db185915b62d7c6209c5a8792be6a32ab2fedacc84e01b52c51aa3e69", size = 75520, upload-time = "2021-03-08T10:59:26.269Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/07/6c/aa3f2f849e01cb6a001cd8554a88d4c77c5c1a31c95bdf1cf9301e6d9ef4/defusedxml-0.7.1-py2.py3-none-any.whl", hash = "sha256:a352e7e428770286cc899e2542b6cdaedb2b4953ff269a210103ec58f6198a61", size = 25604, upload-time = "2021-03-08T10:59:24.45Z" },
 ]
 
 [[package]]
@@ -6269,19 +6093,6 @@ wheels = [
 ]
 
 [[package]]
-name = "pyright"
-version = "1.1.402"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "nodeenv" },
-    { name = "typing-extensions" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/aa/04/ce0c132d00e20f2d2fb3b3e7c125264ca8b909e693841210534b1ea1752f/pyright-1.1.402.tar.gz", hash = "sha256:85a33c2d40cd4439c66aa946fd4ce71ab2f3f5b8c22ce36a623f59ac22937683", size = 3888207, upload-time = "2025-06-11T08:48:35.759Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/fe/37/1a1c62d955e82adae588be8e374c7f77b165b6cb4203f7d581269959abbc/pyright-1.1.402-py3-none-any.whl", hash = "sha256:2c721f11869baac1884e846232800fe021c33f1b4acb3929cff321f7ea4e2982", size = 5624004, upload-time = "2025-06-11T08:48:33.998Z" },
-]
-
-[[package]]
 name = "pysbd"
 version = "0.3.4"
 source = { registry = "https://pypi.org/simple" }
@@ -7807,15 +7618,6 @@ wheels = [
 ]
 
 [[package]]
-name = "stevedore"
-version = "5.5.0"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/2a/5f/8418daad5c353300b7661dd8ce2574b0410a6316a8be650a189d5c68d938/stevedore-5.5.0.tar.gz", hash = "sha256:d31496a4f4df9825e1a1e4f1f74d19abb0154aff311c3b376fcc89dae8fccd73", size = 513878, upload-time = "2025-08-25T12:54:26.806Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/80/c5/0c06759b95747882bb50abda18f5fb48c3e9b0fbfc6ebc0e23550b52415d/stevedore-5.5.0-py3-none-any.whl", hash = "sha256:18363d4d268181e8e8452e71a38cd77630f345b2ef6b4a8d5614dac5ee0d18cf", size = 49518, upload-time = "2025-08-25T12:54:25.445Z" },
-]
-
-[[package]]
 name = "sympy"
 version = "1.14.0"
 source = { registry = "https://pypi.org/simple" }
@@ -7967,18 +7769,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/1c/78/0789838cf20ba1cc09907914a008c1823d087132b48aa1ccde5e7934175a/timm-1.0.19.tar.gz", hash = "sha256:6e71e1f67ac80c229d3a78ca58347090514c508aeba8f2e2eb5289eda86e9f43", size = 2353261, upload-time = "2025-07-24T03:04:05.281Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/dc/74/661c63260cccf19ed5932e8b3f22f95ecd8bb34b9d9e6af9e1e7b961f254/timm-1.0.19-py3-none-any.whl", hash = "sha256:c07b56c32f3d3226c656f75c1b5479c08eb34eefed927c82fd8751a852f47931", size = 2497950, upload-time = "2025-07-24T03:04:03.097Z" },
-]
-
-[[package]]
-name = "tinycss2"
-version = "1.4.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "webencodings" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/7a/fd/7a5ee21fd08ff70d3d33a5781c255cbe779659bd03278feb98b19ee550f4/tinycss2-1.4.0.tar.gz", hash = "sha256:10c0972f6fc0fbee87c3edb76549357415e94548c1ae10ebccdea16fb404a9b7", size = 87085, upload-time = "2024-10-24T14:58:29.895Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/e6/34/ebdc18bae6aa14fbee1a08b63c015c72b64868ff7dae68808ab500c492e2/tinycss2-1.4.0-py3-none-any.whl", hash = "sha256:3a49cf47b7675da0b15d0c6e1df8df4ebd96e9394bb905a5775adb0d884c5289", size = 26610, upload-time = "2024-10-24T14:58:28.029Z" },
 ]
 
 [[package]]
