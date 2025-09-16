@@ -135,6 +135,7 @@ ignore = ["E501"]  # ignore line too long
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**/*.py" = ["S101"]  # Allow assert statements in tests
+"src/crewai/cli/subprocess_utils.py" = ["S602", "S603"]  # Allow shell=True for Windows compatibility
 
 [tool.mypy]
 exclude = ["src/crewai/cli/templates", "tests"]

@@ -1,6 +1,8 @@
 import subprocess
 from functools import lru_cache
 
+from crewai.cli.subprocess_utils import run_command
+
 
 class Repository:
     def __init__(self, path="."):
@@ -17,7 +19,7 @@ class Repository:
     def is_git_installed(self) -> bool:
         """Check if Git is installed and available in the system."""
         try:
-            subprocess.run(
+            run_command(
                 ["git", "--version"], capture_output=True, check=True, text=True
             )
             return True
@@ -26,24 +28,29 @@ class Repository:
 
     def fetch(self) -> None:
         """Fetch latest updates from the remote."""
-        subprocess.run(["git", "fetch"], cwd=self.path, check=True)
+        run_command(["git", "fetch"], cwd=self.path, check=True)
 
     def status(self) -> str:
         """Get the git status in porcelain format."""
-        return subprocess.check_output(
+        result = run_command(
             ["git", "status", "--branch", "--porcelain"],
             cwd=self.path,
-            encoding="utf-8",
-        ).strip()
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        return result.stdout.strip()
 
     @lru_cache(maxsize=None)
     def is_git_repo(self) -> bool:
         """Check if the current directory is a git repository."""
         try:
-            subprocess.check_output(
+            run_command(
                 ["git", "rev-parse", "--is-inside-work-tree"],
                 cwd=self.path,
-                encoding="utf-8",
+                capture_output=True,
+                text=True,
+                check=True,
             )
             return True
         except subprocess.CalledProcessError:
@@ -70,7 +77,7 @@ class Repository:
     def origin_url(self) -> str | None:
         """Get the Git repository's remote URL."""
         try:
-            result = subprocess.run(
+            result = run_command(
                 ["git", "remote", "get-url", "origin"],
                 cwd=self.path,
                 capture_output=True,

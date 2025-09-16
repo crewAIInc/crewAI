@@ -2,6 +2,8 @@ import subprocess
 
 import click
 
+from crewai.cli.subprocess_utils import run_command
+
 
 # Be mindful about changing this.
 # on some environments we don't use this command but instead uv sync directly
@@ -12,8 +14,8 @@ def install_crew(proxy_options: list[str]) -> None:
     Install the crew by running the UV command to lock and install.
     """
     try:
-        command = ["uv", "sync"] + proxy_options
-        subprocess.run(command, check=True, capture_output=False, text=True)
+        command = ["uv", "sync", *proxy_options]
+        run_command(command, check=True, capture_output=False, text=True)
 
     except subprocess.CalledProcessError as e:
         click.echo(f"An error occurred while running the crew: {e}", err=True)

@@ -2,6 +2,8 @@ import subprocess
 
 import click
 
+from crewai.cli.subprocess_utils import run_command
+
 
 def replay_task_command(task_id: str) -> None:
     """
@@ -13,7 +15,7 @@ def replay_task_command(task_id: str) -> None:
     command = ["uv", "run", "replay", task_id]
 
     try:
-        result = subprocess.run(command, capture_output=False, text=True, check=True)
+        result = run_command(command, capture_output=False, text=True, check=True)
         if result.stderr:
             click.echo(result.stderr, err=True)
 
