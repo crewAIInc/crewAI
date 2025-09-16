@@ -9,6 +9,7 @@ from dbos import DBOS, DBOSConfig, SetWorkflowID
 
 from crewai import Agent, Task
 from crewai.durable_execution.dbos.dbos_agent import DBOSAgent
+from crewai.durable_execution.dbos.dbos_utils import StepConfig
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.tool_usage_events import ToolUsageFinishedEvent
 from crewai.tools import tool
@@ -52,9 +53,10 @@ def test_agent_creation(dbos: DBOS):
     assert agent.backstory == "test backstory"
 
     dbos_agent = DBOSAgent(
+        agent_name="test_agent_creation",
         orig_agent=agent,
-        llm_step_config={"step_name": "llm_step"},
-        function_calling_llm_step_config={"step_name": "func_call_step"},
+        llm_step_config=StepConfig(retries_allowed=False),
+        function_calling_llm_step_config=StepConfig(retries_allowed=True),
     )
 
     assert dbos_agent.role == "test role"
@@ -65,10 +67,8 @@ def test_agent_creation(dbos: DBOS):
         isinstance(dbos_agent._wrapped_agent, Agent)
         and dbos_agent._wrapped_agent != agent
     )
-    assert dbos_agent.llm_step_config == {"step_name": "llm_step"}
-    assert dbos_agent.function_calling_llm_step_config == {
-        "step_name": "func_call_step"
-    }
+    assert dbos_agent.llm_step_config == {"retries_allowed": False}
+    assert dbos_agent.function_calling_llm_step_config == {"retries_allowed": True}
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -86,6 +86,7 @@ def test_agent_execution_with_tools(dbos: DBOS):
         allow_delegation=False,
     )
     dbos_agent = DBOSAgent(
+        agent_name="test_agent_execution_with_tools",
         orig_agent=orig_agent,
         llm_step_config={"step_name": "llm_step"},
         function_calling_llm_step_config={"step_name": "func_call_step"},
@@ -123,14 +124,25 @@ def test_agent_execution_with_tools(dbos: DBOS):
     # Make sure DBOS correctly recorded the steps and workflows
     steps = DBOS.list_workflow_steps("test_execution")
     assert len(steps) == 2
-    assert steps[0]["function_name"] == "dbos_agent_executor_invoke"
+    assert (
+        steps[0]["function_name"]
+        == "test_agent_execution_with_tools.dbos_agent_executor_invoke"
+    )
     assert steps[1]["function_name"] == "DBOS.getResult"
     assert step_cnt == 1
 
     # The child workflow is the agent's main execution loop
     child_steps = DBOS.list_workflow_steps(steps[0]["child_workflow_id"])
-    assert len(child_steps) == 1
-    assert "handle_tool_end" in child_steps[0]["function_name"]
+    assert len(child_steps) == 3
+    assert (
+        child_steps[0]["function_name"]
+        == "test_agent_execution_with_tools.dbos_llm_call.gpt-4o-mini"
+    )
+    assert child_steps[1]["function_name"].endswith("handle_tool_end")
+    assert (
+        child_steps[2]["function_name"]
+        == "test_agent_execution_with_tools.dbos_llm_call.gpt-4o-mini"
+    )
 
     # Re-run the same workflow with the same ID
     with SetWorkflowID("test_execution"):

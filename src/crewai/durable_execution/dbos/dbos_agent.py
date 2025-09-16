@@ -1,5 +1,4 @@
 from typing import (
-    Any,
     cast,
 )
 
@@ -8,6 +7,8 @@ from pydantic import Field, PrivateAttr, model_validator
 from crewai.agent import Agent
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.durable_execution.dbos.dbos_agent_executor import DBOSAgentExecutor
+from crewai.durable_execution.dbos.dbos_llm import DBOSLLM
+from crewai.durable_execution.dbos.dbos_utils import StepConfig
 from crewai.task import Task
 from crewai.tools import BaseTool
 from crewai.utilities.agent_utils import (
@@ -30,12 +31,13 @@ class DBOSAgent(BaseAgent):
             function_calling_llm_step_config:  The DBOS step configuration to use for function calling LLM steps.
     """
 
+    agent_name: str = Field(description="The unique name of the DBOS agent.")
     orig_agent: Agent = Field(exclude=True, description="The original agent instance.")
-    llm_step_config: dict[str, Any] | None = Field(
+    llm_step_config: StepConfig | None = Field(
         default=None,
         description="The DBOS step configuration to use for LLM steps.",
     )
-    function_calling_llm_step_config: dict[str, Any] | None = Field(
+    function_calling_llm_step_config: StepConfig | None = Field(
         default=None,
         description="The DBOS step configuration to use for function calling LLM steps.",
     )
@@ -62,6 +64,17 @@ class DBOSAgent(BaseAgent):
             self._wrapped_agent, "create_agent_executor", self.create_agent_executor
         )
         # TODO: wrap LLM/function calling LLM as steps
+        self._wrapped_agent.llm = DBOSLLM(
+            orig_llm=self._wrapped_agent.llm,
+            step_config=self.llm_step_config,
+            agent_name=self.agent_name,
+        )
+        if self._wrapped_agent.function_calling_llm:
+            self._wrapped_agent.function_calling_llm = DBOSLLM(
+                orig_llm=self._wrapped_agent.function_calling_llm,
+                step_config=self.function_calling_llm_step_config,
+                agent_name=self.agent_name,
+            )
         return self
 
     def execute_task(
@@ -87,7 +100,6 @@ class DBOSAgent(BaseAgent):
         Returns:
             An instance of the DBOSAgentExecutor class.
         """
-        # TODO: wrap with DBOS.
         print("DBOS create_agent_executor called")
 
         raw_tools: list[BaseTool] = tools or self._wrapped_agent.tools or []
@@ -134,4 +146,5 @@ class DBOSAgent(BaseAgent):
                 else None
             ),
             callbacks=[TokenCalcHandler(self._wrapped_agent._token_process)],
+            agent_name=self.agent_name,
         )

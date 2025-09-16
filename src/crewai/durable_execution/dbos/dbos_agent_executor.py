@@ -12,6 +12,7 @@ from dbos import DBOS
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.agents.crew_agent_executor import CrewAgentExecutor
 from crewai.agents.tools_handler import ToolsHandler
+from crewai.durable_execution.dbos.dbos_llm import DBOSLLM
 from crewai.tools.structured_tool import CrewStructuredTool
 
 
@@ -41,6 +42,8 @@ class DBOSAgentExecutor(CrewAgentExecutor):
         respect_context_window: bool = False,
         request_within_rpm_limit: Callable[[], bool] | None = None,
         callbacks: list[Any] | None = None,
+        *,
+        agent_name: str,
     ) -> None:
         """Initialize executor.
 
@@ -62,9 +65,17 @@ class DBOSAgentExecutor(CrewAgentExecutor):
             respect_context_window: Respect context limits.
             request_within_rpm_limit: RPM limit check function.
             callbacks: Optional callbacks list.
-            llm_step_config: DBOS step config for LLM calls.
-            function_calling_llm_step_config: DBOS step config for function calling LLM calls.
         """
+        if isinstance(llm, DBOSLLM):
+            print("DBOSAgentExecutor received a DBOS-wrapped LLM.")
+        else:
+            raise ValueError("LLM must be a DBOSLLM instance.")
+
+        if isinstance(function_calling_llm, DBOSLLM) or function_calling_llm is None:
+            print("DBOSAgentExecutor received a valid function calling LLM.")
+        else:
+            raise ValueError("function_calling_llm must be a DBOSLLM instance or None.")
+
         super().__init__(
             llm=llm,
             task=task,
@@ -86,7 +97,7 @@ class DBOSAgentExecutor(CrewAgentExecutor):
         )
 
         # Overload invoke with DBOS workflow
-        @DBOS.workflow(name="dbos_agent_executor_invoke")
+        @DBOS.workflow(name=f"{agent_name}.dbos_agent_executor_invoke")
         def dbos_invoke(inputs: dict[str, str]) -> dict[str, Any]:
             print("DBOSAgentExecutor invoke called")
             return super(DBOSAgentExecutor, self).invoke(inputs)
