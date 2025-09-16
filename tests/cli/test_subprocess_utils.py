@@ -1,4 +1,3 @@
-import platform
 import subprocess
 from unittest import mock
 
@@ -24,7 +23,7 @@ class TestRunCommand:
 
         mock_subprocess_run.assert_called_once()
         call_args = mock_subprocess_run.call_args
-        
+
         assert call_args[1]["shell"] is True
         assert isinstance(call_args[0][0], str)
         assert "uv run test" in call_args[0][0]
@@ -43,7 +42,7 @@ class TestRunCommand:
 
         mock_subprocess_run.assert_called_once()
         call_args = mock_subprocess_run.call_args
-        
+
         assert call_args[1].get("shell", False) is False
         assert call_args[0][0] == command
 
@@ -62,7 +61,7 @@ class TestRunCommand:
         mock_subprocess_run.assert_called_once()
         call_args = mock_subprocess_run.call_args
         command_str = call_args[0][0]
-        
+
         assert '"hello world"' in command_str or "'hello world'" in command_str
 
     @mock.patch("platform.system")
@@ -89,18 +88,18 @@ class TestRunCommand:
             capture_output=True,
             text=False,
             check=False,
-            cwd="/tmp",
+            cwd="/home/test",
             env={"TEST": "value"},
             timeout=30
         )
 
         mock_subprocess_run.assert_called_once()
         call_args = mock_subprocess_run.call_args
-        
+
         assert call_args[1]["capture_output"] is True
         assert call_args[1]["text"] is False
         assert call_args[1]["check"] is False
-        assert call_args[1]["cwd"] == "/tmp"
+        assert call_args[1]["cwd"] == "/home/test"
         assert call_args[1]["env"] == {"TEST": "value"}
         assert call_args[1]["timeout"] == 30
 
@@ -118,13 +117,13 @@ class TestRunCommand:
 
         mock_subprocess_run.assert_called_once()
         call_args = mock_subprocess_run.call_args
-        
+
         assert call_args[1].get("shell", False) is False
         assert call_args[0][0] == command
 
     @mock.patch("platform.system")
     @mock.patch("subprocess.run")
-    def test_windows_string_command_passthrough(self, mock_subprocess_run, mock_platform):
+    def test_windows_string_passthrough(self, mock_subprocess_run, mock_platform):
         """Test that Windows passes through string commands unchanged."""
         mock_platform.return_value = "Windows"
         mock_subprocess_run.return_value = subprocess.CompletedProcess(
@@ -136,6 +135,6 @@ class TestRunCommand:
 
         mock_subprocess_run.assert_called_once()
         call_args = mock_subprocess_run.call_args
-        
+
         assert call_args[0][0] == command_str
         assert call_args[1]["shell"] is True
