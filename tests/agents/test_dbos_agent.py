@@ -8,7 +8,7 @@ import pytest
 from dbos import DBOS, DBOSConfig, SetWorkflowID
 
 from crewai import Agent, Task
-from crewai.durable_execution.dbos.agent import DBOSAgent
+from crewai.durable_execution.dbos.dbos_agent import DBOSAgent
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.tool_usage_events import ToolUsageFinishedEvent
 from crewai.tools import tool
