@@ -132,7 +132,7 @@ class ExcelKnowledgeSource(BaseKnowledgeSource):
     def _import_dependencies(self):
         """Dynamically import dependencies."""
         try:
-            import pandas as pd
+            import pandas as pd  # type: ignore[import-untyped]
 
             return pd
         except ImportError as e:
