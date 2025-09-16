@@ -12,15 +12,18 @@ from crewai.rag.embeddings.types import EmbeddingOptions  # type: ignore[import-
 
 def test_get_embedding_function_default() -> None:
     """Test default embedding function when no config provided."""
-    with patch(
-        "crewai.rag.embeddings.factory.DefaultEmbeddingFunction"
-    ) as mock_default:
+    with patch("crewai.rag.embeddings.factory.OpenAIEmbeddingFunction") as mock_openai:
         mock_instance = MagicMock()
-        mock_default.return_value = mock_instance
+        mock_openai.return_value = mock_instance
 
-        result = get_embedding_function()
+        with patch(
+            "crewai.rag.embeddings.factory.os.getenv", return_value="test-api-key"
+        ):
+            result = get_embedding_function()
 
-        mock_default.assert_called_once()
+        mock_openai.assert_called_once_with(
+            api_key="test-api-key", model_name="text-embedding-3-small"
+        )
         assert result == mock_instance
 
 
