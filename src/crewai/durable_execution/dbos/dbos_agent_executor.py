@@ -43,7 +43,7 @@ class DBOSAgentExecutor(CrewAgentExecutor):
         request_within_rpm_limit: Callable[[], bool] | None = None,
         callbacks: list[Any] | None = None,
         *,
-        agent_name: str,
+        name_prefix: str,
     ) -> None:
         """Initialize executor.
 
@@ -65,6 +65,7 @@ class DBOSAgentExecutor(CrewAgentExecutor):
             respect_context_window: Respect context limits.
             request_within_rpm_limit: RPM limit check function.
             callbacks: Optional callbacks list.
+            name_prefix: Prefix for DBOS workflow names.
         """
         if not isinstance(llm, DBOSLLM):
             raise ValueError("LLM must be a DBOSLLM instance.")
@@ -95,9 +96,9 @@ class DBOSAgentExecutor(CrewAgentExecutor):
         )
 
         # Overload invoke with DBOS workflow
-        @DBOS.workflow(name=f"{agent_name}.dbos_agent_executor_invoke")
+        # TODO (Qian): DBOS requires workflows to be defined statically, so the recovery can correctly find the workflow definition. Currently, AgentExecutor might be created dynamically in execute_task. This means if the server crashes, recovery cannot find the workflow definition by name. For durable execution, we might need require a static definition of the executor.
+        @DBOS.workflow(name=f"{name_prefix}.executor.invoke")
         def dbos_invoke(inputs: dict[str, str]) -> dict[str, Any]:
-            print("DBOSAgentExecutor invoke called")
             return super(DBOSAgentExecutor, self).invoke(inputs)
 
         self.dbos_invoke = dbos_invoke

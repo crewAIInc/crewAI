@@ -100,6 +100,7 @@ class DBOSAgent(BaseAgent):
         Returns:
             An instance of the DBOSAgentExecutor class.
         """
+
         raw_tools: list[BaseTool] = tools or self._wrapped_agent.tools or []
         parsed_tools = parse_tools(raw_tools)
 
@@ -144,5 +145,5 @@ class DBOSAgent(BaseAgent):
                 else None
             ),
             callbacks=[TokenCalcHandler(self._wrapped_agent._token_process)],
-            agent_name=self.agent_name,
+            name_prefix=self.agent_name,
         )

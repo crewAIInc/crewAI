@@ -111,6 +111,7 @@ def test_agent_execution_with_tools(dbos: DBOS):
         received_events.append(event)
 
     with SetWorkflowID("test_execution"):
+        # The main agent execution loop is automatically a DBOS workflow, and the LLM calls are DBOS steps. Tools that are annotated with DBOS.step() are also DBOS steps.
         output = dbos_agent.execute_task(task)
     assert output == "The result of the multiplication is 12."
 
@@ -120,6 +121,11 @@ def test_agent_execution_with_tools(dbos: DBOS):
     assert received_events[0].tool_args == {"first_number": 3, "second_number": 4}
 
     # Make sure DBOS correctly recorded the steps and workflows
+    wf = DBOS.get_workflow_status("test_execution")
+    assert wf is not None
+    assert wf.status == "SUCCESS"
+    assert wf.name == "test_agent_execution_with_tools.executor.invoke"
+
     child_steps = DBOS.list_workflow_steps("test_execution")
     assert len(child_steps) == 4
     assert (
@@ -133,7 +139,7 @@ def test_agent_execution_with_tools(dbos: DBOS):
         == "test_agent_execution_with_tools.llm.gpt-4o-mini"
     )
 
-    # Re-run the same workflow with the same ID
+    # Re-run the same workflow with the same ID should succeed
     with SetWorkflowID("test_execution"):
         output2 = dbos_agent.execute_task(task)
     assert output2 == "The result of the multiplication is 12."
