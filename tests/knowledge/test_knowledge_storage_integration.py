@@ -10,15 +10,16 @@ from crewai.knowledge.storage.knowledge_storage import (  # type: ignore[import-
 
 
 @patch("crewai.knowledge.storage.knowledge_storage.get_rag_client")
-@patch("crewai.knowledge.storage.knowledge_storage.set_rag_config")
+@patch("crewai.knowledge.storage.knowledge_storage.create_client")
 @patch("crewai.knowledge.storage.knowledge_storage.get_embedding_function")
 def test_knowledge_storage_uses_rag_client(
     mock_get_embedding: MagicMock,
-    mock_set_config: MagicMock,
+    mock_create_client: MagicMock,
     mock_get_client: MagicMock,
 ) -> None:
     """Test that KnowledgeStorage properly integrates with RAG client."""
     mock_client = MagicMock()
+    mock_create_client.return_value = mock_client
     mock_get_client.return_value = mock_client
     mock_client.search.return_value = [
         {"content": "test content", "score": 0.9, "metadata": {"source": "test"}}
@@ -29,16 +30,16 @@ def test_knowledge_storage_uses_rag_client(
         embedder=embedder_config, collection_name="test_knowledge"
     )
 
-    mock_set_config.assert_called_once()
+    mock_create_client.assert_called_once()
 
     results = storage.search(["test query"], limit=5, score_threshold=0.3)
 
-    mock_get_client.assert_called()
+    mock_get_client.assert_not_called()
     mock_client.search.assert_called_once_with(
         collection_name="knowledge_test_knowledge",
         query="test query",
         limit=5,
-        metadata_filter={},
+        metadata_filter=None,
         score_threshold=0.3,
     )
 
@@ -178,7 +179,7 @@ def test_metadata_filter_handling(mock_get_client: MagicMock) -> None:
     storage.search(["test"], metadata_filter=None)
 
     call_kwargs = mock_client.search.call_args.kwargs
-    assert call_kwargs["metadata_filter"] == {}
+    assert call_kwargs["metadata_filter"] is None
 
 
 @patch("crewai.knowledge.storage.knowledge_storage.get_rag_client")
