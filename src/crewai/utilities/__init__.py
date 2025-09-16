@@ -1,7 +1,4 @@
 from .converter import Converter, ConverterError
-from .exceptions.context_window_exceeding_exception import (
-    LLMContextLengthExceededException,
-)
 from .file_handler import FileHandler
 from .i18n import I18N
 from .internal_instructor import InternalInstructor
@@ -18,7 +15,6 @@ __all__ = [
     "ConverterError",
     "FileHandler",
     "InternalInstructor",
-    "LLMContextLengthExceededException",
     "Logger",
     "Printer",
     "Prompts",
