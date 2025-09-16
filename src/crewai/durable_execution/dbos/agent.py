@@ -32,9 +32,6 @@ class DBOSAgent(BaseAgent):
         description="The DBOS step configuration to use for function calling LLM steps.",
     )
     _wrapped_agent: Agent = PrivateAttr()
-    # Field(
-    #     default=None, description="A deep copy of the original agent instance."
-    # )
 
     @model_validator(mode="before")
     @classmethod
