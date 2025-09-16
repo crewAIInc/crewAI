@@ -18,6 +18,7 @@ from pydantic import Field
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
 from crewai.utilities.constants import KNOWLEDGE_DIRECTORY
 from crewai.utilities.logger import Logger
+from crewai.utilities.paths import get_knowledge_directory
 
 
 class CrewDoclingSource(BaseKnowledgeSource):
@@ -110,7 +111,7 @@ class CrewDoclingSource(BaseKnowledgeSource):
                     except Exception as e:
                         raise ValueError(f"Invalid URL: {path}. Error: {str(e)}")
                 else:
-                    local_path = Path(KNOWLEDGE_DIRECTORY + "/" + path)
+                    local_path = Path(get_knowledge_directory() + "/" + path)
                     if local_path.exists():
                         processed_paths.append(local_path)
                     else:

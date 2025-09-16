@@ -8,6 +8,7 @@ from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
 from crewai.knowledge.storage.knowledge_storage import KnowledgeStorage
 from crewai.utilities.constants import KNOWLEDGE_DIRECTORY
 from crewai.utilities.logger import Logger
+from crewai.utilities.paths import get_knowledge_directory
 
 
 class BaseFileKnowledgeSource(BaseKnowledgeSource, ABC):
@@ -76,7 +77,7 @@ class BaseFileKnowledgeSource(BaseKnowledgeSource, ABC):
 
     def convert_to_path(self, path: Union[Path, str]) -> Path:
         """Convert a path to a Path object."""
-        return Path(KNOWLEDGE_DIRECTORY + "/" + path) if isinstance(path, str) else path
+        return Path(get_knowledge_directory() + "/" + path) if isinstance(path, str) else path
 
     def _process_file_paths(self) -> List[Path]:
         """Convert file_path to a list of Path objects."""

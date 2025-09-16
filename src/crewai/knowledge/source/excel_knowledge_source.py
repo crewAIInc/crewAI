@@ -7,6 +7,7 @@ from pydantic import Field, field_validator
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
 from crewai.utilities.constants import KNOWLEDGE_DIRECTORY
 from crewai.utilities.logger import Logger
+from crewai.utilities.paths import get_knowledge_directory
 
 
 class ExcelKnowledgeSource(BaseKnowledgeSource):
@@ -128,7 +129,7 @@ class ExcelKnowledgeSource(BaseKnowledgeSource):
 
     def convert_to_path(self, path: Union[Path, str]) -> Path:
         """Convert a path to a Path object."""
-        return Path(KNOWLEDGE_DIRECTORY + "/" + path) if isinstance(path, str) else path
+        return Path(get_knowledge_directory() + "/" + path) if isinstance(path, str) else path
 
     def _import_dependencies(self):
         """Dynamically import dependencies."""

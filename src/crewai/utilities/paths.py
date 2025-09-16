@@ -29,3 +29,16 @@ def get_project_directory_name():
         cwd = Path.cwd()
         project_directory_name = cwd.name
         return project_directory_name
+
+
+def get_knowledge_directory():
+    """Returns the knowledge directory path from environment variable or default."""
+    knowledge_dir = os.environ.get("CREWAI_KNOWLEDGE_FILE_DIR")
+    
+    if knowledge_dir:
+        knowledge_path = Path(knowledge_dir)
+        if not knowledge_path.exists():
+            raise ValueError(f"Knowledge directory does not exist: {knowledge_dir}")
+        return str(knowledge_path)
+    else:
+        return "knowledge"
