@@ -55,7 +55,6 @@ def test_agent_creation(dbos: DBOS):
     dbos_agent = DBOSAgent(
         agent_name="test_agent_creation",
         orig_agent=agent,
-        llm_step_config=StepConfig(retries_allowed=False),
         function_calling_llm_step_config=StepConfig(retries_allowed=True),
     )
 
@@ -67,7 +66,7 @@ def test_agent_creation(dbos: DBOS):
         isinstance(dbos_agent._wrapped_agent, Agent)
         and dbos_agent._wrapped_agent != agent
     )
-    assert dbos_agent.llm_step_config == {"retries_allowed": False}
+    assert dbos_agent.llm_step_config is None
     assert dbos_agent.function_calling_llm_step_config == {"retries_allowed": True}
 
 
@@ -111,12 +110,8 @@ def test_agent_execution_with_tools(dbos: DBOS):
         step_cnt += 1
         received_events.append(event)
 
-    @DBOS.workflow(name="test_execution_with_tools")
-    def run_task_with_dbos() -> str:
-        return dbos_agent.execute_task(task)
-
     with SetWorkflowID("test_execution"):
-        output = run_task_with_dbos()
+        output = dbos_agent.execute_task(task)
     assert output == "The result of the multiplication is 12."
 
     assert len(received_events) == 1
@@ -125,17 +120,7 @@ def test_agent_execution_with_tools(dbos: DBOS):
     assert received_events[0].tool_args == {"first_number": 3, "second_number": 4}
 
     # Make sure DBOS correctly recorded the steps and workflows
-    steps = DBOS.list_workflow_steps("test_execution")
-    assert len(steps) == 2
-    assert (
-        steps[0]["function_name"]
-        == "test_agent_execution_with_tools.dbos_agent_executor_invoke"
-    )
-    assert steps[1]["function_name"] == "DBOS.getResult"
-    assert step_cnt == 2
-
-    # The child workflow is the agent's main execution loop
-    child_steps = DBOS.list_workflow_steps(steps[0]["child_workflow_id"])
+    child_steps = DBOS.list_workflow_steps("test_execution")
     assert len(child_steps) == 4
     assert (
         child_steps[0]["function_name"]
@@ -150,8 +135,7 @@ def test_agent_execution_with_tools(dbos: DBOS):
 
     # Re-run the same workflow with the same ID
     with SetWorkflowID("test_execution"):
-        output2 = run_task_with_dbos()
+        output2 = dbos_agent.execute_task(task)
     assert output2 == "The result of the multiplication is 12."
-    assert (
-        step_cnt == 2
-    )  # step count should not increase because DBOS has recorded the step
+    # The step count should not increase because DBOS has already recorded the workflow, no duplicate runs
+    assert step_cnt == 2
