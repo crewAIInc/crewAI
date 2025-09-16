@@ -3,8 +3,10 @@ import warnings
 from typing import Any
 
 from crewai.rag.chromadb.config import ChromaDBConfig
-from crewai.rag.config.utils import get_rag_client, set_rag_config
+from crewai.rag.config.utils import get_rag_client
+from crewai.rag.core.base_client import BaseClient
 from crewai.rag.embeddings.factory import get_embedding_function
+from crewai.rag.factory import create_client
 from crewai.rag.storage.base_rag_storage import BaseRAGStorage
 from crewai.rag.types import BaseRecord
 from crewai.utilities.constants import MAX_FILE_NAME_LENGTH
@@ -28,6 +30,7 @@ class RAGStorage(BaseRAGStorage):
         self.storage_file_name = self._build_storage_file_name(type, agents)
 
         self.type = type
+        self._client: BaseClient | None = None
 
         self.allow_reset = allow_reset
         self.path = path
@@ -41,7 +44,11 @@ class RAGStorage(BaseRAGStorage):
         if self.embedder_config:
             embedding_function = get_embedding_function(self.embedder_config)
             config = ChromaDBConfig(embedding_function=embedding_function)
-            set_rag_config(config)
+            self._client = create_client(config)
+
+    def _get_client(self) -> BaseClient:
+        """Get the appropriate client - instance-specific or global."""
+        return self._client if self._client else get_rag_client()
 
     def _sanitize_role(self, role: str) -> str:
         """
@@ -65,7 +72,7 @@ class RAGStorage(BaseRAGStorage):
 
     def save(self, value: Any, metadata: dict[str, Any]) -> None:
         try:
-            client = get_rag_client()
+            client = self._get_client()
             collection_name = (
                 f"memory_{self.type}_{self.agents}"
                 if self.agents
@@ -89,7 +96,7 @@ class RAGStorage(BaseRAGStorage):
         score_threshold: float = 0.35,
     ) -> list[Any]:
         try:
-            client = get_rag_client()
+            client = self._get_client()
             collection_name = (
                 f"memory_{self.type}_{self.agents}"
                 if self.agents
@@ -108,7 +115,7 @@ class RAGStorage(BaseRAGStorage):
 
     def reset(self) -> None:
         try:
-            client = get_rag_client()
+            client = self._get_client()
             collection_name = (
                 f"memory_{self.type}_{self.agents}"
                 if self.agents

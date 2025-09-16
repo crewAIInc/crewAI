@@ -5,8 +5,10 @@ from typing import Any, cast
 from crewai.knowledge.storage.base_knowledge_storage import BaseKnowledgeStorage
 from crewai.rag.chromadb.config import ChromaDBConfig
 from crewai.rag.chromadb.types import ChromaEmbeddingFunctionWrapper
-from crewai.rag.config.utils import get_rag_client, set_rag_config
+from crewai.rag.config.utils import get_rag_client
+from crewai.rag.core.base_client import BaseClient
 from crewai.rag.embeddings.factory import get_embedding_function
+from crewai.rag.factory import create_client
 from crewai.rag.types import BaseRecord, SearchResult
 from crewai.utilities.logger import Logger
 
@@ -23,6 +25,7 @@ class KnowledgeStorage(BaseKnowledgeStorage):
         collection_name: str | None = None,
     ) -> None:
         self.collection_name = collection_name
+        self._client: BaseClient | None = None
 
         warnings.filterwarnings(
             "ignore",
@@ -37,7 +40,11 @@ class KnowledgeStorage(BaseKnowledgeStorage):
                     ChromaEmbeddingFunctionWrapper, embedding_function
                 )
             )
-            set_rag_config(config)
+            self._client = create_client(config)
+
+    def _get_client(self) -> BaseClient:
+        """Get the appropriate client - instance-specific or global."""
+        return self._client if self._client else get_rag_client()
 
     def search(
         self,
@@ -47,7 +54,7 @@ class KnowledgeStorage(BaseKnowledgeStorage):
         score_threshold: float = 0.35,
     ) -> list[SearchResult]:
         try:
-            client = get_rag_client()
+            client = self._get_client()
             collection_name = (
                 f"knowledge_{self.collection_name}"
                 if self.collection_name
@@ -68,7 +75,7 @@ class KnowledgeStorage(BaseKnowledgeStorage):
 
     def reset(self) -> None:
         try:
-            client = get_rag_client()
+            client = self._get_client()
             collection_name = (
                 f"knowledge_{self.collection_name}"
                 if self.collection_name
@@ -80,7 +87,7 @@ class KnowledgeStorage(BaseKnowledgeStorage):
 
     def save(self, documents: list[str]) -> None:
         try:
-            client = get_rag_client()
+            client = self._get_client()
             collection_name = (
                 f"knowledge_{self.collection_name}"
                 if self.collection_name
