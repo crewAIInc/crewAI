@@ -80,6 +80,7 @@ class DBOSAgent(BaseAgent):
         context: str | None = None,
         tools: list[BaseTool] | None = None,
     ) -> str:
+        # TODO: wrap this as a DBOS workflow?
         return self.wrapped_agent.execute_task(
             task=task,
             context=context,
