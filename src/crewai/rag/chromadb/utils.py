@@ -155,7 +155,7 @@ def _convert_chromadb_results_to_search_results(
     """
     search_results: list[SearchResult] = []
 
-    include_strings = [item.value for item in include]
+    include_strings = [item.value for item in include] if include else []
 
     ids = results["ids"][0] if results.get("ids") else []
 
@@ -189,7 +189,9 @@ def _convert_chromadb_results_to_search_results(
         result: SearchResult = {
             "id": doc_id,
             "content": documents[i] if documents and i < len(documents) else "",
-            "metadata": dict(metadatas[i]) if metadatas and i < len(metadatas) else {},
+            "metadata": dict(metadatas[i])
+            if metadatas and i < len(metadatas) and metadatas[i] is not None
+            else {},
             "score": score,
         }
         search_results.append(result)

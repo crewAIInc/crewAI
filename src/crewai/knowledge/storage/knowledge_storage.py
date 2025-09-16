@@ -54,6 +54,9 @@ class KnowledgeStorage(BaseKnowledgeStorage):
         score_threshold: float = 0.35,
     ) -> list[SearchResult]:
         try:
+            if not query:
+                raise ValueError("Query cannot be empty")
+
             client = self._get_client()
             collection_name = (
                 f"knowledge_{self.collection_name}"
@@ -66,7 +69,7 @@ class KnowledgeStorage(BaseKnowledgeStorage):
                 collection_name=collection_name,
                 query=query_text,
                 limit=limit,
-                metadata_filter=metadata_filter or {},
+                metadata_filter=metadata_filter,
                 score_threshold=score_threshold,
             )
         except Exception as e:

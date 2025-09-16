@@ -106,7 +106,7 @@ class RAGStorage(BaseRAGStorage):
                 collection_name=collection_name,
                 query=query,
                 limit=limit,
-                metadata_filter=filter or {},
+                metadata_filter=filter,
                 score_threshold=score_threshold,
             )
         except Exception as e:
