@@ -3,27 +3,28 @@
 from collections.abc import Mapping
 from typing import Any, NamedTuple
 
-from pydantic import GetCoreSchemaHandler
-from pydantic_core import CoreSchema, core_schema
-from chromadb.api import ClientAPI, AsyncClientAPI
+from chromadb.api import AsyncClientAPI, ClientAPI
 from chromadb.api.configuration import CollectionConfigurationInterface
 from chromadb.api.types import (
     CollectionMetadata,
     DataLoader,
-    Embeddable,
-    EmbeddingFunction as ChromaEmbeddingFunction,
     Include,
     Loadable,
     Where,
     WhereDocument,
 )
+from chromadb.api.types import (
+    EmbeddingFunction as ChromaEmbeddingFunction,
+)
+from pydantic import GetCoreSchemaHandler
+from pydantic_core import CoreSchema, core_schema
 
 from crewai.rag.core.base_client import BaseCollectionParams, BaseCollectionSearchParams
 
 ChromaDBClientType = ClientAPI | AsyncClientAPI
 
 
-class ChromaEmbeddingFunctionWrapper(ChromaEmbeddingFunction[Embeddable]):
+class ChromaEmbeddingFunctionWrapper(ChromaEmbeddingFunction):
     """Base class for ChromaDB EmbeddingFunction to work with Pydantic validation."""
 
     @classmethod
@@ -44,7 +45,7 @@ class PreparedDocuments(NamedTuple):
     Attributes:
         ids: List of document IDs
         texts: List of document texts
-        metadatas: List of document metadata mappings
+        metadatas: List of document metadata mappings (empty dict for no metadata)
     """
 
     ids: list[str]
@@ -85,7 +86,7 @@ class ChromaDBCollectionCreateParams(BaseCollectionParams, total=False):
 
     configuration: CollectionConfigurationInterface
     metadata: CollectionMetadata
-    embedding_function: ChromaEmbeddingFunction[Embeddable]
+    embedding_function: ChromaEmbeddingFunction
     data_loader: DataLoader[Loadable]
     get_or_create: bool
 
