@@ -7,16 +7,17 @@ solves CrewAI Issue #3154: "Agent does not actually invoke tools,
 only simulates tool usage with fabricated output"
 """
 
-import sys
 import os
+import sys
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
 
 from crewai.utilities.tool_execution_verifier import (
-    execution_registry,
-    ExecutionToken,
     ToolExecutionWrapper,
-    verify_observation_token
+    execution_registry,
+    verify_observation_token,
 )
+
 
 # Example tool that actually performs work
 def web_search_tool(query: str) -> str:
@@ -68,7 +69,7 @@ def demonstrate_fabrication_prevention():
     print("-" * 40)
 
     # Agent tries to use a fabricated observation
-    fake_token_id = "this-token-was-never-generated-by-the-system"
+    fake_token_id = "test-token-id-for-demo"  # noqa: S105
     print(f"📝 Agent attempts to use fabricated token: {fake_token_id}")
 
     # Try to verify the fake token
@@ -78,9 +79,8 @@ def demonstrate_fabrication_prevention():
     if not is_valid:
         print("❌ Fabrication detected - no valid execution record!")
         return True
-    else:
-        print("⚠️  Unexpected: Fabrication was not detected")
-        return False
+    print("⚠️  Unexpected: Fabrication was not detected")
+    return False
 
 def demonstrate_multiple_executions():
     """Demonstrate multiple concurrent tool executions"""
@@ -124,7 +124,7 @@ def demonstrate_multiple_executions():
     # Verify all results
     print("\n🔍 Verifying all executions:")
     all_valid = True
-    for token, result, success in results:
+    for token, _result, _success in results:
         is_valid = verify_observation_token(token.token_id)
         status = "PASSED" if is_valid else "FAILED"
         print(f"   Token {token.token_id[:8]}: {status}")

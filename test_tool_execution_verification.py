@@ -4,7 +4,6 @@ Test suite for the Tool Execution Verification System
 """
 
 import sys
-import os
 import time
 import unittest
 from pathlib import Path
@@ -13,11 +12,12 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
 from crewai.utilities.tool_execution_verifier import (
-    execution_registry,
-    ToolExecutionWrapper,
     ExecutionToken,
-    verify_observation_token
+    ToolExecutionWrapper,
+    execution_registry,
+    verify_observation_token,
 )
+
 
 class TestWebSearchTool:
     """Mock web search tool for testing"""
@@ -60,7 +60,7 @@ class TestToolExecutionVerification(unittest.TestCase):
     def test_fabricated_observation_detection(self):
         """Test that fabricated observations are correctly detected"""
         # Arrange
-        fake_token_id = "this-token-was-never-generated-by-the-system"
+        fake_token_id = "test-token-id-for-validation"  # noqa: S105
 
         # Act
         is_valid = verify_observation_token(fake_token_id)
@@ -74,7 +74,7 @@ class TestToolExecutionVerification(unittest.TestCase):
         tool = TestWebSearchTool()
         tool_wrapper = ToolExecutionWrapper(tool.run, "TestWebSearchTool")
         fake_token = ExecutionToken(
-            token_id="fake-token-1234567890",
+            token_id="invalid-test-token-id",  # noqa: S106
             tool_name="TestWebSearchTool",
             agent_id="test_agent",
             task_id="test_task",
@@ -98,7 +98,7 @@ class TestToolExecutionVerification(unittest.TestCase):
 
         # Act
         results = []
-        for i, (wrapper, token) in enumerate(zip(wrappers, tokens)):
+        for i, (wrapper, token) in enumerate(zip(wrappers, tokens, strict=False)):
             result = wrapper.execute_with_token(token, f"Query {i}")
             results.append((result, token))
 
