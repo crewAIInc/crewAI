@@ -32,20 +32,25 @@ class Repository:
 
     def status(self) -> str:
         """Get the git status in porcelain format."""
-        return subprocess.check_output(
+        result = run_command(
             ["git", "status", "--branch", "--porcelain"],
             cwd=self.path,
-            encoding="utf-8",
-        ).strip()
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        return result.stdout.strip()
 
     @lru_cache(maxsize=None)
     def is_git_repo(self) -> bool:
         """Check if the current directory is a git repository."""
         try:
-            subprocess.check_output(
+            run_command(
                 ["git", "rev-parse", "--is-inside-work-tree"],
                 cwd=self.path,
-                encoding="utf-8",
+                capture_output=True,
+                text=True,
+                check=True,
             )
             return True
         except subprocess.CalledProcessError:
