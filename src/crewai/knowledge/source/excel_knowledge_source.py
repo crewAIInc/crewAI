@@ -26,6 +26,7 @@ class ExcelKnowledgeSource(BaseKnowledgeSource):
     safe_file_paths: list[Path] = Field(default_factory=list)
 
     @field_validator("file_path", "file_paths", mode="before")
+    @classmethod
     def validate_file_path(cls, v, info):
         """Validate that at least one of file_path or file_paths is provided."""
         # Single check if both are None, O(1) instead of nested conditions
