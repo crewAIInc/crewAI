@@ -1,7 +1,8 @@
 """Minimal embedding function factory for CrewAI."""
 
+import os
+
 from chromadb import EmbeddingFunction
-from chromadb.utils.embedding_functions import DefaultEmbeddingFunction
 from chromadb.utils.embedding_functions.amazon_bedrock_embedding_function import (
     AmazonBedrockEmbeddingFunction,
 )
@@ -52,7 +53,7 @@ def get_embedding_function(
 
     Args:
         config: Optional configuration - either an EmbeddingOptions object or a dict with:
-            - provider: The embedding provider to use (default: ChromaDB's DefaultEmbeddingFunction)
+            - provider: The embedding provider to use (default: "openai")
             - Any other provider-specific parameters
 
     Returns:
@@ -76,7 +77,7 @@ def get_embedding_function(
         - onnx: ONNX MiniLM-L6-v2 (no API key needed, included with ChromaDB)
 
     Examples:
-        # Use default ChromaDB embedding (all-MiniLM-L6-v2)
+        # Use default OpenAI embedding
         >>> embedder = get_embedding_function()
 
         # Use Cohere with dict
@@ -109,7 +110,9 @@ def get_embedding_function(
         ... })
     """
     if config is None:
-        return DefaultEmbeddingFunction()  # type: ignore
+        return OpenAIEmbeddingFunction(
+            api_key=os.getenv("OPENAI_API_KEY"), model_name="text-embedding-3-small"
+        )
 
     # Handle EmbeddingOptions object
     if isinstance(config, EmbeddingOptions):
