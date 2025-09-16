@@ -1,6 +1,8 @@
 import subprocess
 from functools import lru_cache
 
+from crewai.cli.subprocess_utils import run_command
+
 
 class Repository:
     def __init__(self, path="."):
@@ -17,7 +19,7 @@ class Repository:
     def is_git_installed(self) -> bool:
         """Check if Git is installed and available in the system."""
         try:
-            subprocess.run(
+            run_command(
                 ["git", "--version"], capture_output=True, check=True, text=True
             )
             return True
@@ -26,7 +28,7 @@ class Repository:
 
     def fetch(self) -> None:
         """Fetch latest updates from the remote."""
-        subprocess.run(["git", "fetch"], cwd=self.path, check=True)
+        run_command(["git", "fetch"], cwd=self.path, check=True)
 
     def status(self) -> str:
         """Get the git status in porcelain format."""
@@ -70,7 +72,7 @@ class Repository:
     def origin_url(self) -> str | None:
         """Get the Git repository's remote URL."""
         try:
-            result = subprocess.run(
+            result = run_command(
                 ["git", "remote", "get-url", "origin"],
                 cwd=self.path,
                 capture_output=True,

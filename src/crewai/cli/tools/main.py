@@ -1,6 +1,5 @@
 import base64
 import os
-import subprocess
 import tempfile
 from pathlib import Path
 from typing import Any
@@ -11,6 +10,7 @@ from rich.console import Console
 from crewai.cli import git
 from crewai.cli.command import BaseCommand, PlusAPIMixin
 from crewai.cli.config import Settings
+from crewai.cli.subprocess_utils import run_command
 from crewai.cli.utils import (
     extract_available_exports,
     get_project_description,
@@ -56,7 +56,7 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
         os.chdir(project_root)
         try:
             self.login()
-            subprocess.run(["git", "init"], check=True)
+            run_command(["git", "init"], check=True)
             console.print(
                 f"[green]Created custom tool [bold]{folder_name}[/bold]. Run [bold]cd {project_root}[/bold] to start working.[/green]"
             )
@@ -94,7 +94,7 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
         self._print_current_organization()
 
         with tempfile.TemporaryDirectory() as temp_build_dir:
-            subprocess.run(
+            run_command(
                 ["uv", "build", "--sdist", "--out-dir", temp_build_dir],
                 check=True,
                 capture_output=False,
@@ -196,7 +196,7 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
         else:
             add_package_command.extend(["--index", index, tool_handle])
 
-        add_package_result = subprocess.run(
+        add_package_result = run_command(
             add_package_command,
             capture_output=False,
             env=self._build_env_with_credentials(repository_handle),

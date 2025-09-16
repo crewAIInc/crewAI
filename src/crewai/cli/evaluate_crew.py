@@ -2,6 +2,8 @@ import subprocess
 
 import click
 
+from crewai.cli.subprocess_utils import run_command
+
 
 def evaluate_crew(n_iterations: int, model: str) -> None:
     """
@@ -17,7 +19,7 @@ def evaluate_crew(n_iterations: int, model: str) -> None:
         if n_iterations <= 0:
             raise ValueError("The number of iterations must be a positive integer.")
 
-        result = subprocess.run(command, capture_output=False, text=True, check=True)
+        result = run_command(command, capture_output=False, text=True, check=True)
 
         if result.stderr:
             click.echo(result.stderr, err=True)

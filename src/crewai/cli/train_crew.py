@@ -2,6 +2,8 @@ import subprocess
 
 import click
 
+from crewai.cli.subprocess_utils import run_command
+
 
 def train_crew(n_iterations: int, filename: str) -> None:
     """
@@ -19,7 +21,7 @@ def train_crew(n_iterations: int, filename: str) -> None:
         if not filename.endswith(".pkl"):
             raise ValueError("The filename must not end with .pkl")
 
-        result = subprocess.run(command, capture_output=False, text=True, check=True)
+        result = run_command(command, capture_output=False, text=True, check=True)
 
         if result.stderr:
             click.echo(result.stderr, err=True)

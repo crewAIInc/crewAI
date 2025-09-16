@@ -1,12 +1,12 @@
 import subprocess
 from enum import Enum
-from typing import List, Optional
 
 import click
 from packaging import version
 
 from crewai.cli.utils import read_toml
 from crewai.cli.version import get_crewai_version
+from crewai.cli.subprocess_utils import run_command
 
 
 class CrewType(Enum):
@@ -57,7 +57,7 @@ def execute_command(crew_type: CrewType) -> None:
     command = ["uv", "run", "kickoff" if crew_type == CrewType.FLOW else "run_crew"]
 
     try:
-        subprocess.run(command, capture_output=False, text=True, check=True)
+        run_command(command, capture_output=False, text=True, check=True)
 
     except subprocess.CalledProcessError as e:
         handle_error(e, crew_type)
