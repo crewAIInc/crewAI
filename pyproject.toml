@@ -71,6 +71,9 @@ aisuite = [
 qdrant = [
     "qdrant-client[fastembed]>=1.14.3",
 ]
+dbos = [
+    "dbos>=1.13.0",
+]
 
 [tool.uv]
 dev-dependencies = [
