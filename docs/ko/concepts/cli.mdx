@@ -2,6 +2,7 @@
 title: CLI
 description: CrewAI CLI를 사용하여 CrewAI와 상호 작용하는 방법을 알아보세요.
 icon: terminal
+mode: "wide"
 ---
 
 <Warning>릴리즈 0.140.0부터 CrewAI Enterprise는 로그인 제공자 마이그레이션 프로세스를 시작했습니다. 이에 따라 CLI를 통한 인증 흐름이 업데이트되었습니다. Google을 통해 로그인하거나 2025년 7월 3일 이후에 계정을 생성한 사용자는 이전 버전의 `crewai` 라이브러리로는 로그인할 수 없습니다.</Warning>
@@ -351,19 +352,16 @@ crewai config list
 ```
 
 예시 출력:
-```
-CrewAI CLI Configuration
-┏━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
-┃ Setting            ┃ Value                              ┃ Description                                                                                      ┃
-┡━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
-│ enterprise_base_url│ https://app.crewai.com             │ CrewAI Enterprise 인스턴스의 기본 URL                                                           │
-│ org_name           │ Not set                            │ 현재 활성화된 조직의 이름                                                                         │
-│ org_uuid           │ Not set                            │ 현재 활성화된 조직의 UUID                                                                         │
-│ oauth2_provider    │ workos                             │ 인증에 사용되는 OAuth2 제공자 (예: workos, okta, auth0)                                            │
-│ oauth2_audience    │ client_01YYY                       │ 일반적으로 대상 API나 리소스를 식별하는 데 사용되는 OAuth2 audience 값                               │
-│ oauth2_client_id   │ client_01XXX                       │ 제공자로부터 발급된 OAuth2 client ID로, 인증 요청 시 사용됨                                       │
-│ oauth2_domain      │ login.crewai.com                   │ 토큰 발급에 사용되는 OAuth2 제공자의 도메인(예: your-org.auth0.com)                               │
-```
+
+| 설정                 | 값                      | 설명                                                                 |
+| :------------------- | :---------------------- | :------------------------------------------------------------------- |
+| enterprise_base_url  | https://app.crewai.com | CrewAI Enterprise 인스턴스의 기본 URL                                |
+| org_name             | Not set                 | 현재 활성화된 조직의 이름                                            |
+| org_uuid             | Not set                 | 현재 활성화된 조직의 UUID                                            |
+| oauth2_provider      | workos                  | 인증에 사용되는 OAuth2 제공자 (예: workos, okta, auth0)              |
+| oauth2_audience      | client_01YYY            | 일반적으로 대상 API/리소스를 식별하는 데 사용되는 OAuth2 audience 값 |
+| oauth2_client_id     | client_01XXX            | 제공자로부터 발급된 OAuth2 client ID (인증 요청 시 사용)             |
+| oauth2_domain        | login.crewai.com        | OAuth2 제공자의 도메인 (예: your-org.auth0.com)                      |
 
 엔터프라이즈 기본 URL 설정:
 ```shell Terminal

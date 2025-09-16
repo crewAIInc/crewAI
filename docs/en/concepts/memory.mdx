@@ -2,11 +2,12 @@
 title: Memory
 description: Leveraging memory systems in the CrewAI framework to enhance agent capabilities.
 icon: database
+mode: "wide"
 ---
 
 ## Overview
 
-The CrewAI framework provides a sophisticated memory system designed to significantly enhance AI agent capabilities. CrewAI offers **three distinct memory approaches** that serve different use cases:
+The CrewAI framework provides a sophisticated memory system designed to significantly enhance AI agent capabilities. CrewAI offers **two distinct memory approaches** that serve different use cases:
 
 1. **Basic Memory System** - Built-in short-term, long-term, and entity memory
 2. **External Memory** - Standalone external memory providers
@@ -738,6 +739,17 @@ print(f"OpenAI: {openai_time:.2f}s")
 print(f"Ollama: {ollama_time:.2f}s")
 ```
 
+### Entity Memory batching behavior
+
+Entity Memory supports batching when saving multiple entities at once. When you pass a list of `EntityMemoryItem`, the system:
+
+- Emits a single MemorySaveStartedEvent with `entity_count`
+- Saves each entity internally, collecting any partial errors
+- Emits MemorySaveCompletedEvent with aggregate metadata (saved count, errors)
+- Raises a partial-save exception if some entities failed (includes counts)
+
+This improves performance and observability when writing many entities in one operation.
+
 ## 2. External Memory 
 External Memory provides a standalone memory system that operates independently from the crew's built-in memory. This is ideal for specialized memory providers or cross-application memory sharing.
 
@@ -1041,8 +1053,8 @@ CrewAI emits the following memory-related events:
 Track memory operation timing to optimize your application:
 
 ```python
-from crewai.utilities.events.base_event_listener import BaseEventListener
-from crewai.utilities.events import (
+from crewai.events import (
+    BaseEventListener,
     MemoryQueryCompletedEvent,
     MemorySaveCompletedEvent
 )
@@ -1076,8 +1088,8 @@ memory_monitor = MemoryPerformanceMonitor()
 Log memory operations for debugging and insights:
 
 ```python
-from crewai.utilities.events.base_event_listener import BaseEventListener
-from crewai.utilities.events import (
+from crewai.events import (
+    BaseEventListener,
     MemorySaveStartedEvent,
     MemoryQueryStartedEvent,
     MemoryRetrievalCompletedEvent
@@ -1117,8 +1129,8 @@ memory_logger = MemoryLogger()
 Capture and respond to memory errors:
 
 ```python
-from crewai.utilities.events.base_event_listener import BaseEventListener
-from crewai.utilities.events import (
+from crewai.events import (
+    BaseEventListener,
     MemorySaveFailedEvent,
     MemoryQueryFailedEvent
 )
@@ -1167,8 +1179,8 @@ error_tracker = MemoryErrorTracker(notify_email="admin@example.com")
 Memory events can be forwarded to analytics and monitoring platforms to track performance metrics, detect anomalies, and visualize memory usage patterns:
 
 ```python
-from crewai.utilities.events.base_event_listener import BaseEventListener
-from crewai.utilities.events import (
+from crewai.events import (
+    BaseEventListener,
     MemoryQueryCompletedEvent,
     MemorySaveCompletedEvent
 )

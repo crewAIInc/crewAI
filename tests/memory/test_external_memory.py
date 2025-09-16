@@ -1,7 +1,7 @@
 from unittest.mock import MagicMock, patch, ANY
 from collections import defaultdict
-from crewai.utilities.events import crewai_event_bus
-from crewai.utilities.events.memory_events import (
+from crewai.events.event_bus import crewai_event_bus
+from crewai.events.types.memory_events import (
     MemorySaveStartedEvent,
     MemorySaveCompletedEvent,
     MemoryQueryStartedEvent,
@@ -222,13 +222,12 @@ def test_external_memory_custom_storage(custom_storage, crew_with_external_memor
 
     test_value = "test value"
     test_metadata = {"source": "test"}
-    test_agent = "test_agent"
-    external_memory.save(value=test_value, metadata=test_metadata, agent=test_agent)
+    external_memory.save(value=test_value, metadata=test_metadata)
 
     results = external_memory.search("test")
     assert len(results) == 1
     assert results[0]["value"] == test_value
-    assert results[0]["metadata"] == test_metadata | {"agent": test_agent}
+    assert results[0]["metadata"] == test_metadata
 
     external_memory.reset()
     results = external_memory.search("test")
@@ -259,7 +258,6 @@ def test_external_memory_search_events(
 
     assert len(events["MemoryQueryStartedEvent"]) == 1
     assert len(events["MemoryQueryCompletedEvent"]) == 1
-    assert len(events["MemoryQueryFailedEvent"]) == 0
 
     assert dict(events["MemoryQueryStartedEvent"][0]) == {
         "timestamp": ANY,
@@ -267,6 +265,12 @@ def test_external_memory_search_events(
         "source_fingerprint": None,
         "source_type": "external_memory",
         "fingerprint_metadata": None,
+        "task_id": None,
+        "task_name": None,
+        "from_task": None,
+        "from_agent": None,
+        "agent_role": None,
+        "agent_id": None,
         "query": "test value",
         "limit": 3,
         "score_threshold": 0.35,
@@ -278,6 +282,12 @@ def test_external_memory_search_events(
         "source_fingerprint": None,
         "source_type": "external_memory",
         "fingerprint_metadata": None,
+        "task_id": None,
+        "task_name": None,
+        "from_task": None,
+        "from_agent": None,
+        "agent_role": None,
+        "agent_id": None,
         "query": "test value",
         "results": [],
         "limit": 3,
@@ -306,12 +316,10 @@ def test_external_memory_save_events(
         external_memory_with_mocked_config.save(
             value="saving value",
             metadata={"task": "test_task"},
-            agent="test_agent",
         )
 
     assert len(events["MemorySaveStartedEvent"]) == 1
     assert len(events["MemorySaveCompletedEvent"]) == 1
-    assert len(events["MemorySaveFailedEvent"]) == 0
 
     assert dict(events["MemorySaveStartedEvent"][0]) == {
         "timestamp": ANY,
@@ -319,9 +327,14 @@ def test_external_memory_save_events(
         "source_fingerprint": None,
         "source_type": "external_memory",
         "fingerprint_metadata": None,
+        "task_id": None,
+        "task_name": None,
+        "from_task": None,
+        "from_agent": None,
+        "agent_role": None,
+        "agent_id": None,
         "value": "saving value",
         "metadata": {"task": "test_task"},
-        "agent_role": "test_agent",
     }
 
     assert dict(events["MemorySaveCompletedEvent"][0]) == {
@@ -330,8 +343,13 @@ def test_external_memory_save_events(
         "source_fingerprint": None,
         "source_type": "external_memory",
         "fingerprint_metadata": None,
+        "task_id": None,
+        "task_name": None,
+        "from_task": None,
+        "from_agent": None,
+        "agent_role": None,
+        "agent_id": None,
         "value": "saving value",
-        "metadata": {"task": "test_task", "agent": "test_agent"},
-        "agent_role": "test_agent",
+        "metadata": {"task": "test_task"},
         "save_time_ms": ANY,
     }

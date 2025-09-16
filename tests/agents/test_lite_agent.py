@@ -1,19 +1,20 @@
+# ruff: noqa: S101
+# mypy: ignore-errors
 from collections import defaultdict
 from typing import cast
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 import pytest
 from pydantic import BaseModel, Field
 
 from crewai import LLM, Agent
+from crewai.events.event_bus import crewai_event_bus
+from crewai.events.types.agent_events import LiteAgentExecutionStartedEvent
+from crewai.events.types.tool_usage_events import ToolUsageStartedEvent
 from crewai.flow import Flow, start
 from crewai.lite_agent import LiteAgent, LiteAgentOutput
-from crewai.tools import BaseTool
-from crewai.utilities.events import crewai_event_bus
-from crewai.utilities.events.agent_events import LiteAgentExecutionStartedEvent
-from crewai.utilities.events.tool_usage_events import ToolUsageStartedEvent
 from crewai.llms.base_llm import BaseLLM
-from unittest.mock import patch
+from crewai.tools import BaseTool
 
 
 # A simple test tool
@@ -37,10 +38,9 @@ class WebSearchTool(BaseTool):
         # This is a mock implementation
         if "tokyo" in query.lower():
             return "Tokyo's population in 2023 was approximately 21 million people in the city proper, and 37 million in the greater metropolitan area."
-        elif "climate change" in query.lower() and "coral" in query.lower():
+        if "climate change" in query.lower() and "coral" in query.lower():
             return "Climate change severely impacts coral reefs through: 1) Ocean warming causing coral bleaching, 2) Ocean acidification reducing calcification, 3) Sea level rise affecting light availability, 4) Increased storm frequency damaging reef structures. Sources: NOAA Coral Reef Conservation Program, Global Coral Reef Alliance."
-        else:
-            return f"Found information about {query}: This is a simulated search result for demonstration purposes."
+        return f"Found information about {query}: This is a simulated search result for demonstration purposes."
 
 
 # Define Mock Calculator Tool
@@ -53,10 +53,11 @@ class CalculatorTool(BaseTool):
     def _run(self, expression: str) -> str:
         """Calculate the result of a mathematical expression."""
         try:
-            result = eval(expression, {"__builtins__": {}})
+            # Using eval with restricted builtins for test purposes only
+            result = eval(expression, {"__builtins__": {}})  # noqa: S307
             return f"The result of {expression} is {result}"
         except Exception as e:
-            return f"Error calculating {expression}: {str(e)}"
+            return f"Error calculating {expression}: {e!s}"
 
 
 # Define a custom response format using Pydantic
@@ -148,12 +149,12 @@ def test_lite_agent_with_tools():
         "What is the population of Tokyo and how many people would that be per square kilometer if Tokyo's area is 2,194 square kilometers?"
     )
 
-    assert (
-        "21 million" in result.raw or "37 million" in result.raw
-    ), "Agent should find Tokyo's population"
-    assert (
-        "per square kilometer" in result.raw
-    ), "Agent should calculate population density"
+    assert "21 million" in result.raw or "37 million" in result.raw, (
+        "Agent should find Tokyo's population"
+    )
+    assert "per square kilometer" in result.raw, (
+        "Agent should calculate population density"
+    )
 
     received_events = []
 
@@ -294,6 +295,7 @@ def test_sets_parent_flow_when_inside_flow():
 
     mock_llm = Mock(spec=LLM)
     mock_llm.call.return_value = "Test response"
+    mock_llm.stop = []
 
     class MyFlow(Flow):
         @start()
@@ -322,7 +324,7 @@ def test_sets_parent_flow_when_inside_flow():
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_guardrail_is_called_using_string():
     guardrail_events = defaultdict(list)
-    from crewai.utilities.events import (
+    from crewai.events.event_types import (
         LLMGuardrailCompletedEvent,
         LLMGuardrailStartedEvent,
     )
@@ -359,7 +361,7 @@ def test_guardrail_is_called_using_string():
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_guardrail_is_called_using_callable():
     guardrail_events = defaultdict(list)
-    from crewai.utilities.events import (
+    from crewai.events.event_types import (
         LLMGuardrailCompletedEvent,
         LLMGuardrailStartedEvent,
     )
@@ -392,7 +394,7 @@ def test_guardrail_is_called_using_callable():
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_guardrail_reached_attempt_limit():
     guardrail_events = defaultdict(list)
-    from crewai.utilities.events import (
+    from crewai.events.event_types import (
         LLMGuardrailCompletedEvent,
         LLMGuardrailStartedEvent,
     )

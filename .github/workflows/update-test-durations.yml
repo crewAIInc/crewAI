@@ -1,0 +1,71 @@
+name: Update Test Durations
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'tests/**/*.py'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  update-durations:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.10', '3.11', '3.12', '3.13']
+    env:
+      OPENAI_API_KEY: fake-api-key
+      PYTHONUNBUFFERED: 1
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Restore global uv cache
+        id: cache-restore
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/.cache/uv
+            ~/.local/share/uv
+            .venv
+          key: uv-main-py${{ matrix.python-version }}-${{ hashFiles('uv.lock') }}
+          restore-keys: |
+            uv-main-py${{ matrix.python-version }}-
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.8.4"
+          python-version: ${{ matrix.python-version }}
+          enable-cache: false
+
+      - name: Install the project
+        run: uv sync --all-groups --all-extras
+
+      - name: Run all tests and store durations
+        run: |
+          PYTHON_VERSION_SAFE=$(echo "${{ matrix.python-version }}" | tr '.' '_')
+          uv run pytest --store-durations --durations-path=.test_durations_py${PYTHON_VERSION_SAFE} -n auto
+        continue-on-error: true
+
+      - name: Save durations to cache
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: .test_durations_py*
+          key: test-durations-py${{ matrix.python-version }}
+
+      - name: Save uv caches
+        if: steps.cache-restore.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            ~/.cache/uv
+            ~/.local/share/uv
+            .venv
+          key: uv-main-py${{ matrix.python-version }}-${{ hashFiles('uv.lock') }}

@@ -1,48 +1,56 @@
-from typing import Any, AsyncIterable, Dict, List, Optional
+"""LangGraph agent adapter for CrewAI integration.
 
-from pydantic import Field, PrivateAttr
+This module contains the LangGraphAgentAdapter class that integrates LangGraph ReAct agents
+with CrewAI's agent system. Provides memory persistence, tool integration, and structured
+output functionality.
+"""
+
+from collections.abc import Callable
+from typing import Any, cast
+
+from pydantic import ConfigDict, Field, PrivateAttr
 
 from crewai.agents.agent_adapters.base_agent_adapter import BaseAgentAdapter
 from crewai.agents.agent_adapters.langgraph.langgraph_tool_adapter import (
     LangGraphToolAdapter,
 )
+from crewai.agents.agent_adapters.langgraph.protocols import (
+    LangGraphCheckPointMemoryModule,
+    LangGraphPrebuiltModule,
+)
 from crewai.agents.agent_adapters.langgraph.structured_output_converter import (
     LangGraphConverterAdapter,
 )
 from crewai.agents.agent_builder.base_agent import BaseAgent
-from crewai.tools.agent_tools.agent_tools import AgentTools
-from crewai.tools.base_tool import BaseTool
-from crewai.utilities import Logger
-from crewai.utilities.converter import Converter
-from crewai.utilities.events import crewai_event_bus
-from crewai.utilities.events.agent_events import (
+from crewai.events.event_bus import crewai_event_bus
+from crewai.events.types.agent_events import (
     AgentExecutionCompletedEvent,
     AgentExecutionErrorEvent,
     AgentExecutionStartedEvent,
 )
-
-try:
-    from langchain_core.messages import ToolMessage
-    from langgraph.checkpoint.memory import MemorySaver
-    from langgraph.prebuilt import create_react_agent
-
-    LANGGRAPH_AVAILABLE = True
-except ImportError:
-    LANGGRAPH_AVAILABLE = False
+from crewai.tools.agent_tools.agent_tools import AgentTools
+from crewai.tools.base_tool import BaseTool
+from crewai.utilities import Logger
+from crewai.utilities.converter import Converter
+from crewai.utilities.import_utils import require
 
 
 class LangGraphAgentAdapter(BaseAgentAdapter):
-    """Adapter for LangGraph agents to work with CrewAI."""
+    """Adapter for LangGraph agents to work with CrewAI.
 
-    model_config = {"arbitrary_types_allowed": True}
+    This adapter integrates LangGraph's ReAct agents with CrewAI's agent system,
+    providing memory persistence, tool integration, and structured output support.
+    """
 
-    _logger: Logger = PrivateAttr(default_factory=lambda: Logger())
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    _logger: Logger = PrivateAttr(default_factory=Logger)
     _tool_adapter: LangGraphToolAdapter = PrivateAttr()
     _graph: Any = PrivateAttr(default=None)
     _memory: Any = PrivateAttr(default=None)
     _max_iterations: int = PrivateAttr(default=10)
     function_calling_llm: Any = Field(default=None)
-    step_callback: Any = Field(default=None)
+    step_callback: Callable[..., Any] | None = Field(default=None)
 
     model: str = Field(default="gpt-4o")
     verbose: bool = Field(default=False)
@@ -52,17 +60,24 @@ class LangGraphAgentAdapter(BaseAgentAdapter):
         role: str,
         goal: str,
         backstory: str,
-        tools: Optional[List[BaseTool]] = None,
+        tools: list[BaseTool] | None = None,
         llm: Any = None,
         max_iterations: int = 10,
-        agent_config: Optional[Dict[str, Any]] = None,
+        agent_config: dict[str, Any] | None = None,
         **kwargs,
-    ):
-        """Initialize the LangGraph agent adapter."""
-        if not LANGGRAPH_AVAILABLE:
-            raise ImportError(
-                "LangGraph Agent Dependencies are not installed. Please install it using `uv add langchain-core langgraph`"
-            )
+    ) -> None:
+        """Initialize the LangGraph agent adapter.
+
+        Args:
+            role: The role description for the agent.
+            goal: The primary goal the agent should achieve.
+            backstory: Background information about the agent.
+            tools: Optional list of tools available to the agent.
+            llm: Language model to use, defaults to gpt-4o.
+            max_iterations: Maximum number of iterations for task execution.
+            agent_config: Additional configuration for the LangGraph agent.
+            **kwargs: Additional arguments passed to the base adapter.
+        """
         super().__init__(
             role=role,
             goal=goal,
@@ -73,46 +88,65 @@ class LangGraphAgentAdapter(BaseAgentAdapter):
             **kwargs,
         )
         self._tool_adapter = LangGraphToolAdapter(tools=tools)
-        self._converter_adapter = LangGraphConverterAdapter(self)
+        self._converter_adapter: LangGraphConverterAdapter = LangGraphConverterAdapter(
+            self
+        )
         self._max_iterations = max_iterations
         self._setup_graph()
 
     def _setup_graph(self) -> None:
-        """Set up the LangGraph workflow graph."""
-        try:
-            self._memory = MemorySaver()
+        """Set up the LangGraph workflow graph.
 
-            converted_tools: List[Any] = self._tool_adapter.tools()
-            if self._agent_config:
-                self._graph = create_react_agent(
-                    model=self.llm,
-                    tools=converted_tools,
-                    checkpointer=self._memory,
-                    debug=self.verbose,
-                    **self._agent_config,
-                )
-            else:
-                self._graph = create_react_agent(
-                    model=self.llm,
-                    tools=converted_tools or [],
-                    checkpointer=self._memory,
-                    debug=self.verbose,
-                )
+        Initializes the memory saver and creates a ReAct agent with the configured
+        tools, memory checkpointer, and debug settings.
+        """
 
-        except ImportError as e:
-            self._logger.log(
-                "error", f"Failed to import LangGraph dependencies: {str(e)}"
+        memory_saver: type[Any] = cast(
+            LangGraphCheckPointMemoryModule,
+            require(
+                "langgraph.checkpoint.memory",
+                purpose="LangGraph core functionality",
+            ),
+        ).MemorySaver
+        create_react_agent: Callable[..., Any] = cast(
+            LangGraphPrebuiltModule,
+            require(
+                "langgraph.prebuilt",
+                purpose="LangGraph core functionality",
+            ),
+        ).create_react_agent
+
+        self._memory = memory_saver()
+
+        converted_tools: list[Any] = self._tool_adapter.tools()
+        if self._agent_config:
+            self._graph = create_react_agent(
+                model=self.llm,
+                tools=converted_tools,
+                checkpointer=self._memory,
+                debug=self.verbose,
+                **self._agent_config,
             )
-            raise
-        except Exception as e:
-            self._logger.log("error", f"Error setting up LangGraph agent: {str(e)}")
-            raise
+        else:
+            self._graph = create_react_agent(
+                model=self.llm,
+                tools=converted_tools or [],
+                checkpointer=self._memory,
+                debug=self.verbose,
+            )
 
     def _build_system_prompt(self) -> str:
-        """Build a system prompt for the LangGraph agent."""
+        """Build a system prompt for the LangGraph agent.
+
+        Creates a prompt that includes the agent's role, goal, and backstory,
+        then enhances it through the converter adapter for structured output.
+
+        Returns:
+            The complete system prompt string.
+        """
         base_prompt = f"""
             You are {self.role}.
-        
+
             Your goal is: {self.goal}
 
             Your backstory: {self.backstory}
@@ -124,10 +158,25 @@ class LangGraphAgentAdapter(BaseAgentAdapter):
     def execute_task(
         self,
         task: Any,
-        context: Optional[str] = None,
-        tools: Optional[List[BaseTool]] = None,
+        context: str | None = None,
+        tools: list[BaseTool] | None = None,
     ) -> str:
-        """Execute a task using the LangGraph workflow."""
+        """Execute a task using the LangGraph workflow.
+
+        Configures the agent, processes the task through the LangGraph workflow,
+        and handles event emission for execution tracking.
+
+        Args:
+            task: The task object to execute.
+            context: Optional context information for the task.
+            tools: Optional additional tools for this specific execution.
+
+        Returns:
+            The final answer from the task execution.
+
+        Raises:
+            Exception: If task execution fails.
+        """
         self.create_agent_executor(tools)
 
         self.configure_structured_output(task)
@@ -152,9 +201,11 @@ class LangGraphAgentAdapter(BaseAgentAdapter):
 
             session_id = f"task_{id(task)}"
 
-            config = {"configurable": {"thread_id": session_id}}
+            config: dict[str, dict[str, str]] = {
+                "configurable": {"thread_id": session_id}
+            }
 
-            result = self._graph.invoke(
+            result: dict[str, Any] = self._graph.invoke(
                 {
                     "messages": [
                         ("system", self._build_system_prompt()),
@@ -164,10 +215,10 @@ class LangGraphAgentAdapter(BaseAgentAdapter):
                 config,
             )
 
-            messages = result.get("messages", [])
-            last_message = messages[-1] if messages else None
+            messages: list[Any] = result.get("messages", [])
+            last_message: Any = messages[-1] if messages else None
 
-            final_answer = ""
+            final_answer: str = ""
             if isinstance(last_message, dict):
                 final_answer = last_message.get("content", "")
             elif hasattr(last_message, "content"):
@@ -187,7 +238,7 @@ class LangGraphAgentAdapter(BaseAgentAdapter):
             return final_answer
 
         except Exception as e:
-            self._logger.log("error", f"Error executing LangGraph task: {str(e)}")
+            self._logger.log("error", f"Error executing LangGraph task: {e!s}")
             crewai_event_bus.emit(
                 self,
                 event=AgentExecutionErrorEvent(
@@ -198,29 +249,67 @@ class LangGraphAgentAdapter(BaseAgentAdapter):
             )
             raise
 
-    def create_agent_executor(self, tools: Optional[List[BaseTool]] = None) -> None:
-        """Configure the LangGraph agent for execution."""
+    def create_agent_executor(self, tools: list[BaseTool] | None = None) -> None:
+        """Configure the LangGraph agent for execution.
+
+        Args:
+            tools: Optional tools to configure for the agent.
+        """
         self.configure_tools(tools)
 
-    def configure_tools(self, tools: Optional[List[BaseTool]] = None) -> None:
-        """Configure tools for the LangGraph agent."""
+    def configure_tools(self, tools: list[BaseTool] | None = None) -> None:
+        """Configure tools for the LangGraph agent.
+
+        Merges additional tools with existing ones and updates the graph's
+        available tools through the tool adapter.
+
+        Args:
+            tools: Optional additional tools to configure.
+        """
         if tools:
-            all_tools = list(self.tools or []) + list(tools or [])
+            all_tools: list[BaseTool] = list(self.tools or []) + list(tools or [])
             self._tool_adapter.configure_tools(all_tools)
-            available_tools = self._tool_adapter.tools()
+            available_tools: list[Any] = self._tool_adapter.tools()
             self._graph.tools = available_tools
 
-    def get_delegation_tools(self, agents: List[BaseAgent]) -> List[BaseTool]:
-        """Implement delegation tools support for LangGraph."""
-        agent_tools = AgentTools(agents=agents)
+    def get_delegation_tools(self, agents: list[BaseAgent]) -> list[BaseTool]:
+        """Implement delegation tools support for LangGraph.
+
+        Creates delegation tools that allow this agent to delegate tasks to other agents.
+
+        Args:
+            agents: List of agents available for delegation.
+
+        Returns:
+            List of delegation tools.
+        """
+        agent_tools: AgentTools = AgentTools(agents=agents)
         return agent_tools.tools()
 
+    @staticmethod
     def get_output_converter(
-        self, llm: Any, text: str, model: Any, instructions: str
-    ) -> Any:
-        """Convert output format if needed."""
+        llm: Any, text: str, model: Any, instructions: str
+    ) -> Converter:
+        """Convert output format if needed.
+
+        Args:
+            llm: Language model instance.
+            text: Text to convert.
+            model: Model configuration.
+            instructions: Conversion instructions.
+
+        Returns:
+            Converter instance for output transformation.
+        """
         return Converter(llm=llm, text=text, model=model, instructions=instructions)
 
-    def configure_structured_output(self, task) -> None:
-        """Configure the structured output for LangGraph."""
+    def configure_structured_output(self, task: Any) -> None:
+        """Configure the structured output for LangGraph.
+
+        Uses the converter adapter to set up structured output formatting
+        based on the task requirements.
+
+        Args:
+            task: Task object containing output requirements.
+        """
         self._converter_adapter.configure_structured_output(task)
