@@ -41,9 +41,6 @@ class DBOSAgentExecutor(CrewAgentExecutor):
         respect_context_window: bool = False,
         request_within_rpm_limit: Callable[[], bool] | None = None,
         callbacks: list[Any] | None = None,
-        *,
-        llm_step_config: dict[str, Any] | None = None,
-        function_calling_llm_step_config: dict[str, Any] | None = None,
     ) -> None:
         """Initialize executor.
 
@@ -87,9 +84,6 @@ class DBOSAgentExecutor(CrewAgentExecutor):
             request_within_rpm_limit=request_within_rpm_limit,
             callbacks=callbacks,
         )
-        # DBOS step configs
-        self.llm_step_config = llm_step_config or {}
-        self.function_calling_llm_step_config = function_calling_llm_step_config or {}
 
         # Overload invoke with DBOS workflow
         @DBOS.workflow(name="dbos_agent_executor_invoke")
@@ -106,6 +100,6 @@ class DBOSAgentExecutor(CrewAgentExecutor):
             inputs: Input dictionary containing the task input.
 
         Returns:
-            Output dictionary with the final response.
+            Dictionary with agent output.
         """
         return self.dbos_invoke(inputs)

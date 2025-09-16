@@ -120,12 +120,14 @@ def test_agent_execution_with_tools(dbos: DBOS):
     assert received_events[0].tool_name == "multiplier"
     assert received_events[0].tool_args == {"first_number": 3, "second_number": 4}
 
+    # Make sure DBOS correctly recorded the steps and workflows
     steps = DBOS.list_workflow_steps("test_execution")
     assert len(steps) == 2
     assert steps[0]["function_name"] == "dbos_agent_executor_invoke"
     assert steps[1]["function_name"] == "DBOS.getResult"
     assert step_cnt == 1
 
+    # The child workflow is the agent's main execution loop
     child_steps = DBOS.list_workflow_steps(steps[0]["child_workflow_id"])
     assert len(child_steps) == 1
     assert "handle_tool_end" in child_steps[0]["function_name"]

@@ -134,6 +134,4 @@ class DBOSAgent(BaseAgent):
                 else None
             ),
             callbacks=[TokenCalcHandler(self._wrapped_agent._token_process)],
-            llm_step_config=self.llm_step_config,
-            function_calling_llm_step_config=self.function_calling_llm_step_config,
         )
