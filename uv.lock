@@ -804,7 +804,7 @@ requires-dist = [
     { name = "chromadb", specifier = ">=0.5.23" },
     { name = "click", specifier = ">=8.1.7" },
     { name = "crewai-tools", marker = "extra == 'tools'", specifier = "~=0.71.0" },
-    { name = "dbos", marker = "extra == 'dbos'", specifier = ">=1.13.0" },
+    { name = "dbos", marker = "extra == 'dbos'", specifier = ">=1.14.0" },
     { name = "docling", marker = "extra == 'docling'", specifier = ">=2.12.0" },
     { name = "instructor", specifier = ">=1.3.3" },
     { name = "json-repair", specifier = "==0.25.2" },
@@ -960,7 +960,7 @@ wheels = [
 
 [[package]]
 name = "dbos"
-version = "1.13.2"
+version = "1.14.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "alembic" },
@@ -981,9 +981,9 @@ dependencies = [
     { name = "typer" },
     { name = "websockets" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/22/e2/abd9cf3444e0c890d122f127048bd32ea91b4d89b38fd3ec95445cd0187a/dbos-1.13.2.tar.gz", hash = "sha256:53b47261074c6b248989b55a844f2e51259ba54227921856c4e4ecd5561f202e", size = 209626, upload-time = "2025-09-12T16:03:07.488Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/6b/b7/2cfefeb96fe67481ec2cf009c427ccbb32c82e2026cf2c259acbe6b22045/dbos-1.14.0.tar.gz", hash = "sha256:16052bd8ad004c7dce6b9cd2c10b282c2c4bb3b1bd7c5f6714e4bc437b7ca6f4", size = 216135, upload-time = "2025-09-16T16:49:08.741Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/95/04/0f1edab572bff30264a9e5e78c149a7458023cd9aa461c1892d8b65a63d9/dbos-1.13.2-py3-none-any.whl", hash = "sha256:74ebec2f47084c97fdc376631a188c15285c71b10446bc05fee55653a25b5948", size = 147309, upload-time = "2025-09-12T16:03:05.25Z" },
+    { url = "https://files.pythonhosted.org/packages/7d/7f/2461485e608594a4c43e65dac7a5c6614256f2ca9aeeddcd080e4fb52939/dbos-1.14.0-py3-none-any.whl", hash = "sha256:544c99a641636f6b9f528f64ae92430c444bc68486fc2511ab5415f61304e2bb", size = 151550, upload-time = "2025-09-16T16:49:05.806Z" },
 ]
 
 [[package]]

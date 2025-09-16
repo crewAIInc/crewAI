@@ -1,6 +1,11 @@
 """Test DBOSAgent creation and execution basic functionality."""
 
+import os
+from collections.abc import Generator, Iterator
+from typing import Any
+
 import pytest
+from dbos import DBOS, DBOSConfig
 
 from crewai import Agent, Task
 from crewai.durable_execution.dbos.agent import DBOSAgent
@@ -8,8 +13,38 @@ from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.tool_usage_events import ToolUsageFinishedEvent
 from crewai.tools import tool
 
+DBOS_SQLITE_FILE = "dbostest.sqlite"
+DBOS_CONFIG: DBOSConfig = {
+    "name": "pydantic_dbos_tests",
+    "database_url": f"sqlite:///{DBOS_SQLITE_FILE}",
+    "system_database_url": f"sqlite:///{DBOS_SQLITE_FILE}",
+    "run_admin_server": False,
+}
 
-def test_agent_creation():
+
+@pytest.fixture(scope="module")
+def dbos() -> Generator[DBOS, Any, None]:
+    dbos = DBOS(config=DBOS_CONFIG)
+    DBOS.launch()
+    try:
+        yield dbos
+    finally:
+        DBOS.destroy()
+
+
+# Automatically clean up old DBOS sqlite files
+@pytest.fixture(autouse=True, scope="module")
+def cleanup_test_sqlite_file() -> Iterator[None]:
+    if os.path.exists(DBOS_SQLITE_FILE):
+        os.remove(DBOS_SQLITE_FILE)
+    try:
+        yield
+    finally:
+        if os.path.exists(DBOS_SQLITE_FILE):
+            os.remove(DBOS_SQLITE_FILE)
+
+
+def test_agent_creation(dbos: DBOS):
     agent = Agent(role="test role", goal="test goal", backstory="test backstory")
 
     assert agent.role == "test role"
@@ -35,7 +70,7 @@ def test_agent_creation():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_agent_execution_with_tools():
+def test_agent_execution_with_tools(dbos: DBOS):
     @tool
     def multiplier(first_number: int, second_number: int) -> float:
         """Useful for when you need to multiply two numbers together."""
