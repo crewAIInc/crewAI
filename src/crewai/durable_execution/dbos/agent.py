@@ -36,7 +36,7 @@ class DBOSAgent(BaseAgent):
     function_calling_llm: str | InstanceOf[BaseLLM] | Any | None = None
 
     @model_validator(mode="before")
-    def pre_init_setup(self, values):
+    def pre_init_setup(cls, values):  # noqa: N805
         if "wrapped_agent" not in values or not isinstance(
             values["wrapped_agent"], Agent
         ):
