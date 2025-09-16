@@ -5,7 +5,7 @@ from collections.abc import Generator, Iterator
 from typing import Any
 
 import pytest
-from dbos import DBOS, DBOSConfig
+from dbos import DBOS, DBOSConfig, SetWorkflowID
 
 from crewai import Agent, Task
 from crewai.durable_execution.dbos.agent import DBOSAgent
@@ -96,14 +96,36 @@ def test_agent_execution_with_tools(dbos: DBOS):
     )
     received_events = []
 
+    step_cnt = 0
+
     @crewai_event_bus.on(ToolUsageFinishedEvent)
+    @DBOS.step()
     def handle_tool_end(source, event):
+        nonlocal step_cnt
+        step_cnt += 1
         received_events.append(event)
 
-    output = dbos_agent.execute_task(task)
+    @DBOS.workflow(name="test_execution_with_tools")
+    def run_task_with_dbos() -> str:
+        return dbos_agent.execute_task(task)
+
+    with SetWorkflowID("test_execution"):
+        output = run_task_with_dbos()
     assert output == "The result of the multiplication is 12."
 
     assert len(received_events) == 1
     assert isinstance(received_events[0], ToolUsageFinishedEvent)
     assert received_events[0].tool_name == "multiplier"
     assert received_events[0].tool_args == {"first_number": 3, "second_number": 4}
+
+    steps = DBOS.list_workflow_steps("test_execution")
+    assert len(steps) == 1
+    assert step_cnt == 1
+
+    # Re-run the same workflow with the same ID
+    with SetWorkflowID("test_execution"):
+        output2 = run_task_with_dbos()
+    assert output2 == "The result of the multiplication is 12."
+    assert (
+        step_cnt == 1
+    )  # step count should not increase because DBOS has recorded the step

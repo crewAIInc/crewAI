@@ -36,7 +36,8 @@ class DBOSAgent(BaseAgent):
     function_calling_llm: str | InstanceOf[BaseLLM] | Any | None = None
 
     @model_validator(mode="before")
-    def pre_init_setup(cls, values):  # noqa: N805
+    @classmethod
+    def pre_init_setup(cls, values):
         if "wrapped_agent" not in values or not isinstance(
             values["wrapped_agent"], Agent
         ):
@@ -80,7 +81,6 @@ class DBOSAgent(BaseAgent):
         context: str | None = None,
         tools: list[BaseTool] | None = None,
     ) -> str:
-        # TODO: wrap this as a DBOS workflow?
         return self.wrapped_agent.execute_task(
             task=task,
             context=context,
