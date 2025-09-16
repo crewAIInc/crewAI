@@ -20,10 +20,27 @@ class TestProcess:
         assert Process.hierarchical.value == "hierarchical"
 
     def test_process_string_representation(self):
-        """Test that Process enum values can be used as strings."""
+        """Test that Process enum values can be used as strings.
+
+        Note: Even though Process subclasses str, str() returns the qualified name
+        (e.g., "Process.sequential") while the enum member itself equals its value
+        (e.g., Process.sequential == "sequential").
+        """
+        # str() returns qualified name for better debugging
         assert str(Process.sequential) == "Process.sequential"
-        assert Process.sequential == "sequential"
+        assert str(Process.hierarchical) == "Process.hierarchical"
+
+        # f-string formatting behaves the same as str()
+        assert f"{Process.sequential}" == "Process.sequential"
         assert f"{Process.hierarchical}" == "Process.hierarchical"
+
+        # The enum member itself equals its string value (because it subclasses str)
+        assert Process.sequential == "sequential"
+        assert Process.hierarchical == "hierarchical"
+
+        # .value gives the actual string value
+        assert Process.sequential.value == "sequential"
+        assert Process.hierarchical.value == "hierarchical"
 
     def test_process_comparison(self):
         """Test Process enum comparison."""
@@ -80,3 +97,31 @@ class TestProcess:
         }
         assert process_config[Process.sequential] == {"order": "linear"}
         assert process_config[Process.hierarchical] == {"order": "tree"}
+
+    def test_process_string_enum_behavior(self):
+        """Test that Process behaves correctly as a string enum.
+
+        String enums (Enum subclassing str) have special behavior:
+        - The member itself can be compared directly to strings
+        - Can be used anywhere a string is expected
+        - str() returns qualified name for clarity
+        """
+        # Can be used in string operations
+        assert Process.sequential.upper() == "SEQUENTIAL"
+        assert Process.hierarchical.lower() == "hierarchical"
+
+        # Can be used in string methods
+        assert Process.sequential.startswith("seq")
+        assert Process.hierarchical.endswith("cal")
+
+        # Length and indexing work
+        assert len(Process.sequential) == len("sequential")
+        assert Process.sequential[0] == "s"
+
+        # Format string behavior (note: %s and {} use str() which returns qualified name)
+        assert "Mode: %s" % Process.sequential == "Mode: Process.sequential"
+        assert "Mode: {}".format(Process.sequential) == "Mode: Process.sequential"
+
+        # To get the value in format strings, use .value explicitly
+        assert "Mode: %s" % Process.sequential.value == "Mode: sequential"
+        assert "Mode: {}".format(Process.sequential.value) == "Mode: sequential"
