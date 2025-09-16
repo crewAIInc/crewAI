@@ -73,9 +73,16 @@ def test_agent_creation(dbos: DBOS):
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_agent_execution_with_tools(dbos: DBOS):
+    # Count the number of steps executed
+    step_cnt = 0
+
+    # Make this tool a DBOS step
     @tool
+    @DBOS.step()
     def multiplier(first_number: int, second_number: int) -> float:
         """Useful for when you need to multiply two numbers together."""
+        nonlocal step_cnt
+        step_cnt += 1
         return first_number * second_number
 
     orig_agent = Agent(
@@ -88,8 +95,6 @@ def test_agent_execution_with_tools(dbos: DBOS):
     dbos_agent = DBOSAgent(
         agent_name="test_agent_execution_with_tools",
         orig_agent=orig_agent,
-        llm_step_config={"step_name": "llm_step"},
-        function_calling_llm_step_config={"step_name": "func_call_step"},
     )
 
     task = Task(
@@ -98,8 +103,6 @@ def test_agent_execution_with_tools(dbos: DBOS):
         expected_output="The result of the multiplication.",
     )
     received_events = []
-
-    step_cnt = 0
 
     @crewai_event_bus.on(ToolUsageFinishedEvent)
     @DBOS.step()
@@ -129,19 +132,20 @@ def test_agent_execution_with_tools(dbos: DBOS):
         == "test_agent_execution_with_tools.dbos_agent_executor_invoke"
     )
     assert steps[1]["function_name"] == "DBOS.getResult"
-    assert step_cnt == 1
+    assert step_cnt == 2
 
     # The child workflow is the agent's main execution loop
     child_steps = DBOS.list_workflow_steps(steps[0]["child_workflow_id"])
-    assert len(child_steps) == 3
+    assert len(child_steps) == 4
     assert (
         child_steps[0]["function_name"]
-        == "test_agent_execution_with_tools.dbos_llm_call.gpt-4o-mini"
+        == "test_agent_execution_with_tools.llm.gpt-4o-mini"
     )
-    assert child_steps[1]["function_name"].endswith("handle_tool_end")
+    assert child_steps[1]["function_name"].endswith("multiplier")
+    assert child_steps[2]["function_name"].endswith("handle_tool_end")
     assert (
-        child_steps[2]["function_name"]
-        == "test_agent_execution_with_tools.dbos_llm_call.gpt-4o-mini"
+        child_steps[3]["function_name"]
+        == "test_agent_execution_with_tools.llm.gpt-4o-mini"
     )
 
     # Re-run the same workflow with the same ID
@@ -149,5 +153,5 @@ def test_agent_execution_with_tools(dbos: DBOS):
         output2 = run_task_with_dbos()
     assert output2 == "The result of the multiplication is 12."
     assert (
-        step_cnt == 1
+        step_cnt == 2
     )  # step count should not increase because DBOS has recorded the step

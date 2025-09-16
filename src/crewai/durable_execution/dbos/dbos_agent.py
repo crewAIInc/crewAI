@@ -67,13 +67,13 @@ class DBOSAgent(BaseAgent):
         self._wrapped_agent.llm = DBOSLLM(
             orig_llm=self._wrapped_agent.llm,
             step_config=self.llm_step_config,
-            agent_name=self.agent_name,
+            name_prefix=f"{self.agent_name}.llm",
         )
         if self._wrapped_agent.function_calling_llm:
             self._wrapped_agent.function_calling_llm = DBOSLLM(
                 orig_llm=self._wrapped_agent.function_calling_llm,
                 step_config=self.function_calling_llm_step_config,
-                agent_name=self.agent_name,
+                name_prefix=f"{self.agent_name}.function_calling_llm",
             )
         return self
 
@@ -100,8 +100,6 @@ class DBOSAgent(BaseAgent):
         Returns:
             An instance of the DBOSAgentExecutor class.
         """
-        print("DBOS create_agent_executor called")
-
         raw_tools: list[BaseTool] = tools or self._wrapped_agent.tools or []
         parsed_tools = parse_tools(raw_tools)
 

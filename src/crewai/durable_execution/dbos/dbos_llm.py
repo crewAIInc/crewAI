@@ -15,7 +15,7 @@ from crewai.llms.base_llm import BaseLLM
 class DBOSLLM(BaseLLM):
     def __init__(
         self,
-        agent_name: str,
+        name_prefix: str,
         orig_llm: BaseLLM,
         step_config: StepConfig | None = None,
     ):
@@ -34,9 +34,7 @@ class DBOSLLM(BaseLLM):
         self._step_config = step_config or {}
 
         # Wrap the call method as a DBOS step
-        @DBOS.step(
-            name=f"{agent_name}.dbos_llm_call.{orig_llm.model}", **self._step_config
-        )
+        @DBOS.step(name=f"{name_prefix}.{orig_llm.model}", **self._step_config)
         def dbos_call(
             messages: str | list[dict[str, str]],
             tools: list[dict] | None = None,
@@ -45,7 +43,6 @@ class DBOSLLM(BaseLLM):
             from_task: Any | None = None,
             from_agent: Any | None = None,
         ) -> str | Any:
-            print("DBOSLLM call invoked")
             return self._orig_llm.call(
                 tools=tools,
                 messages=messages,

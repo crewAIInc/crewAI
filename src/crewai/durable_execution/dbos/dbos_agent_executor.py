@@ -66,14 +66,12 @@ class DBOSAgentExecutor(CrewAgentExecutor):
             request_within_rpm_limit: RPM limit check function.
             callbacks: Optional callbacks list.
         """
-        if isinstance(llm, DBOSLLM):
-            print("DBOSAgentExecutor received a DBOS-wrapped LLM.")
-        else:
+        if not isinstance(llm, DBOSLLM):
             raise ValueError("LLM must be a DBOSLLM instance.")
 
-        if isinstance(function_calling_llm, DBOSLLM) or function_calling_llm is None:
-            print("DBOSAgentExecutor received a valid function calling LLM.")
-        else:
+        if function_calling_llm is not None and not isinstance(
+            function_calling_llm, DBOSLLM
+        ):
             raise ValueError("function_calling_llm must be a DBOSLLM instance or None.")
 
         super().__init__(
