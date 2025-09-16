@@ -1,9 +1,11 @@
 import os
 import tempfile
 from pathlib import Path
+
 import pytest
-from crewai.knowledge.source.text_file_knowledge_source import TextFileKnowledgeSource
+
 from crewai.knowledge.source.json_knowledge_source import JSONKnowledgeSource
+from crewai.knowledge.source.text_file_knowledge_source import TextFileKnowledgeSource
 
 
 class TestExternalKnowledgeDirectory:
@@ -13,15 +15,15 @@ class TestExternalKnowledgeDirectory:
             test_file = Path(temp_dir) / "test.txt"
             test_content = "This is a test file for external knowledge directory."
             test_file.write_text(test_content)
-            
+
             os.environ["CREWAI_KNOWLEDGE_FILE_DIR"] = temp_dir
             try:
                 source = TextFileKnowledgeSource(file_paths=["test.txt"])
-                
+
                 assert len(source.content) == 1
-                loaded_content = list(source.content.values())[0]
+                loaded_content = next(iter(source.content.values()))
                 assert loaded_content == test_content
-                
+
             finally:
                 del os.environ["CREWAI_KNOWLEDGE_FILE_DIR"]
 
@@ -32,17 +34,17 @@ class TestExternalKnowledgeDirectory:
             test_data = {"name": "John", "age": 30, "city": "New York"}
             import json
             test_file.write_text(json.dumps(test_data))
-            
+
             os.environ["CREWAI_KNOWLEDGE_FILE_DIR"] = temp_dir
             try:
                 source = JSONKnowledgeSource(file_paths=["test.json"])
-                
+
                 assert len(source.content) == 1
-                loaded_content = list(source.content.values())[0]
+                loaded_content = next(iter(source.content.values()))
                 assert "John" in loaded_content
                 assert "30" in loaded_content
                 assert "New York" in loaded_content
-                
+
             finally:
                 del os.environ["CREWAI_KNOWLEDGE_FILE_DIR"]
 
@@ -50,21 +52,21 @@ class TestExternalKnowledgeDirectory:
         """Test that knowledge sources fall back to default directory when env var not set."""
         if "CREWAI_KNOWLEDGE_FILE_DIR" in os.environ:
             del os.environ["CREWAI_KNOWLEDGE_FILE_DIR"]
-        
+
         knowledge_dir = Path("knowledge")
         knowledge_dir.mkdir(exist_ok=True)
         test_file = knowledge_dir / "test_fallback.txt"
         test_content = "This is a test file for default knowledge directory."
-        
+
         try:
             test_file.write_text(test_content)
-            
+
             source = TextFileKnowledgeSource(file_paths=["test_fallback.txt"])
-            
+
             assert len(source.content) == 1
-            loaded_content = list(source.content.values())[0]
+            loaded_content = next(iter(source.content.values()))
             assert loaded_content == test_content
-            
+
         finally:
             if test_file.exists():
                 test_file.unlink()
@@ -75,16 +77,16 @@ class TestExternalKnowledgeDirectory:
             test_file = Path(temp_dir) / "test_absolute.txt"
             test_content = "This is a test file with absolute path."
             test_file.write_text(test_content)
-            
+
             with tempfile.TemporaryDirectory() as other_dir:
                 os.environ["CREWAI_KNOWLEDGE_FILE_DIR"] = other_dir
                 try:
                     source = TextFileKnowledgeSource(file_paths=[str(test_file)])
-                    
+
                     assert len(source.content) == 1
-                    loaded_content = list(source.content.values())[0]
+                    loaded_content = next(iter(source.content.values()))
                     assert loaded_content == test_content
-                    
+
                 finally:
                     del os.environ["CREWAI_KNOWLEDGE_FILE_DIR"]
 
