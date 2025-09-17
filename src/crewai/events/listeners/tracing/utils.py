@@ -1,17 +1,25 @@
+import getpass
+import hashlib
+import json
+import logging
 import os
 import platform
-import uuid
-import hashlib
-import subprocess
-import getpass
-from pathlib import Path
-from datetime import datetime
 import re
-import json
+import subprocess
+import uuid
+from datetime import datetime
+from pathlib import Path
+from typing import Any
 
 import click
+from rich.console import Console
+from rich.panel import Panel
+from rich.text import Text
 
 from crewai.utilities.paths import db_storage_path
+from crewai.utilities.serialization import to_serializable
+
+logger = logging.getLogger(__name__)
 
 
 def is_tracing_enabled() -> bool:
@@ -41,15 +49,10 @@ def _get_machine_id() -> str:
     """Stable, privacy-preserving machine fingerprint (cross-platform)."""
     parts = []
 
-    try:
-        mac = ":".join(
-            ["{:02x}".format((uuid.getnode() >> b) & 0xFF) for b in range(0, 12, 2)][
-                ::-1
-            ]
-        )
-        parts.append(mac)
-    except Exception:
-        pass
+    mac = ":".join(
+        [f"{(uuid.getnode() >> b) & 0xFF:02x}" for b in range(0, 12, 2)][::-1]
+    )
+    parts.append(mac)
 
     sysname = platform.system()
     parts.append(sysname)
@@ -57,7 +60,7 @@ def _get_machine_id() -> str:
     try:
         if sysname == "Darwin":
             res = subprocess.run(
-                ["system_profiler", "SPHardwareDataType"],
+                ["/usr/sbin/system_profiler", "SPHardwareDataType"],
                 capture_output=True,
                 text=True,
                 timeout=2,
@@ -72,7 +75,7 @@ def _get_machine_id() -> str:
                 parts.append(Path("/sys/class/dmi/id/product_uuid").read_text().strip())
         elif sysname == "Windows":
             res = subprocess.run(
-                ["wmic", "csproduct", "get", "UUID"],
+                ["C:\\Windows\\System32\\wbem\\wmic.exe", "csproduct", "get", "UUID"],
                 capture_output=True,
                 text=True,
                 timeout=2,
@@ -81,7 +84,7 @@ def _get_machine_id() -> str:
             if len(lines) >= 2:
                 parts.append(lines[1])
     except Exception:
-        pass
+        logger.exception("Error getting machine ID")
 
     return hashlib.sha256("".join(parts).encode()).hexdigest()
 
@@ -95,19 +98,14 @@ def _user_data_file() -> Path:
 def _load_user_data() -> dict:
     p = _user_data_file()
     if p.exists():
-        try:
-            return json.loads(p.read_text())
-        except Exception:
-            pass
+        return json.loads(p.read_text())
+
     return {}
 
 
 def _save_user_data(data: dict) -> None:
-    try:
-        p = _user_data_file()
-        p.write_text(json.dumps(data, indent=2))
-    except Exception:
-        pass
+    p = _user_data_file()
+    p.write_text(json.dumps(data, indent=2))
 
 
 def get_user_id() -> str:
@@ -151,3 +149,100 @@ def mark_first_execution_done() -> None:
         }
     )
     _save_user_data(data)
+
+
+def safe_serialize_to_dict(obj, exclude: set[str] | None = None) -> dict[str, Any]:
+    """Safely serialize an object to a dictionary for event data."""
+    try:
+        serialized = to_serializable(obj, exclude)
+        if isinstance(serialized, dict):
+            return serialized
+        return {"serialized_data": serialized}
+    except Exception as e:
+        return {"serialization_error": str(e), "object_type": type(obj).__name__}
+
+
+def truncate_messages(messages, max_content_length=500, max_messages=5):
+    """Truncate message content and limit number of messages"""
+    if not messages or not isinstance(messages, list):
+        return messages
+
+    limited_messages = messages[:max_messages]
+
+    for msg in limited_messages:
+        if isinstance(msg, dict) and "content" in msg:
+            content = msg["content"]
+            if len(content) > max_content_length:
+                msg["content"] = content[:max_content_length] + "..."
+
+    return limited_messages
+
+
+def should_auto_collect_first_time_traces() -> bool:
+    """True if we should auto-collect traces for first-time user."""
+    if _is_test_environment():
+        return False
+    return is_first_execution()
+
+
+def prompt_user_for_trace_viewing(timeout_seconds: int = 20) -> bool:
+    """
+    Prompt user if they want to see their traces with timeout.
+    Returns True if user wants to see traces, False otherwise.
+    """
+    if _is_test_environment():
+        return False
+
+    try:
+        import signal
+
+        def timeout_handler(signum, frame):
+            raise TimeoutError("User input timeout")
+
+        signal.signal(signal.SIGALRM, timeout_handler)
+        signal.alarm(timeout_seconds)
+
+        console = Console()
+
+        content = Text()
+        content.append("🔍 ", style="cyan bold")
+        content.append(
+            "Detailed execution traces are available!\n\n", style="cyan bold"
+        )
+        content.append("View insights including:\n", style="white")
+        content.append("  • Agent decision-making process\n", style="bright_blue")
+        content.append("  • Task execution flow and timing\n", style="bright_blue")
+        content.append("  • Tool usage details", style="bright_blue")
+
+        panel = Panel(
+            content,
+            title="[bold cyan]Execution Traces[/bold cyan]",
+            border_style="cyan",
+            padding=(1, 2),
+        )
+        console.print("\n")
+        console.print(panel)
+
+        result = click.confirm(
+            click.style(
+                "Would you like to view your execution traces?",
+                fg="white",
+                bold=True,
+            ),
+            default=False,
+            show_default=True,
+        )
+        signal.alarm(0)
+        return result
+
+    except TimeoutError:
+        signal.alarm(0)
+        click.echo("\n⏰ Timed out - continuing without showing traces")
+        return False
+    except Exception:
+        return False
+
+
+def mark_first_execution_completed() -> None:
+    """Mark first execution as completed (called after trace prompt)."""
+    mark_first_execution_done()

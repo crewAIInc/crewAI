@@ -1,27 +1,58 @@
 import os
 import uuid
+from typing import Any, ClassVar
 
-from typing import Dict, Any, Optional
-
+from crewai.cli.authentication.token import AuthError, get_auth_token
+from crewai.cli.version import get_crewai_version
 from crewai.events.base_event_listener import BaseEventListener
-from crewai.events.types.agent_events import (
-    AgentExecutionCompletedEvent,
-    AgentExecutionStartedEvent,
-    LiteAgentExecutionStartedEvent,
-    LiteAgentExecutionCompletedEvent,
-    LiteAgentExecutionErrorEvent,
-    AgentExecutionErrorEvent,
+from crewai.events.listeners.tracing.first_time_trace_handler import (
+    FirstTimeTraceHandler,
 )
 from crewai.events.listeners.tracing.types import TraceEvent
-from crewai.events.types.reasoning_events import (
-    AgentReasoningStartedEvent,
-    AgentReasoningCompletedEvent,
-    AgentReasoningFailedEvent,
+from crewai.events.listeners.tracing.utils import safe_serialize_to_dict
+from crewai.events.types.agent_events import (
+    AgentExecutionCompletedEvent,
+    AgentExecutionErrorEvent,
+    AgentExecutionStartedEvent,
+    LiteAgentExecutionCompletedEvent,
+    LiteAgentExecutionErrorEvent,
+    LiteAgentExecutionStartedEvent,
 )
 from crewai.events.types.crew_events import (
     CrewKickoffCompletedEvent,
     CrewKickoffFailedEvent,
     CrewKickoffStartedEvent,
+)
+from crewai.events.types.flow_events import (
+    FlowCreatedEvent,
+    FlowFinishedEvent,
+    FlowPlotEvent,
+    FlowStartedEvent,
+    MethodExecutionFailedEvent,
+    MethodExecutionFinishedEvent,
+    MethodExecutionStartedEvent,
+)
+from crewai.events.types.llm_events import (
+    LLMCallCompletedEvent,
+    LLMCallFailedEvent,
+    LLMCallStartedEvent,
+)
+from crewai.events.types.llm_guardrail_events import (
+    LLMGuardrailCompletedEvent,
+    LLMGuardrailStartedEvent,
+)
+from crewai.events.types.memory_events import (
+    MemoryQueryCompletedEvent,
+    MemoryQueryFailedEvent,
+    MemoryQueryStartedEvent,
+    MemorySaveCompletedEvent,
+    MemorySaveFailedEvent,
+    MemorySaveStartedEvent,
+)
+from crewai.events.types.reasoning_events import (
+    AgentReasoningCompletedEvent,
+    AgentReasoningFailedEvent,
+    AgentReasoningStartedEvent,
 )
 from crewai.events.types.task_events import (
     TaskCompletedEvent,
@@ -33,41 +64,8 @@ from crewai.events.types.tool_usage_events import (
     ToolUsageFinishedEvent,
     ToolUsageStartedEvent,
 )
-from crewai.events.types.llm_events import (
-    LLMCallCompletedEvent,
-    LLMCallFailedEvent,
-    LLMCallStartedEvent,
-)
-
-from crewai.events.types.flow_events import (
-    FlowCreatedEvent,
-    FlowStartedEvent,
-    FlowFinishedEvent,
-    MethodExecutionStartedEvent,
-    MethodExecutionFinishedEvent,
-    MethodExecutionFailedEvent,
-    FlowPlotEvent,
-)
-from crewai.events.types.llm_guardrail_events import (
-    LLMGuardrailStartedEvent,
-    LLMGuardrailCompletedEvent,
-)
-from crewai.utilities.serialization import to_serializable
-
 
 from .trace_batch_manager import TraceBatchManager
-
-from crewai.events.types.memory_events import (
-    MemoryQueryStartedEvent,
-    MemoryQueryCompletedEvent,
-    MemoryQueryFailedEvent,
-    MemorySaveStartedEvent,
-    MemorySaveCompletedEvent,
-    MemorySaveFailedEvent,
-)
-
-from crewai.cli.authentication.token import AuthError, get_auth_token
-from crewai.cli.version import get_crewai_version
 
 
 class TraceCollectionListener(BaseEventListener):
@@ -75,7 +73,7 @@ class TraceCollectionListener(BaseEventListener):
     Trace collection listener that orchestrates trace collection
     """
 
-    complex_events = [
+    complex_events: ClassVar[list[str]] = [
         "task_started",
         "task_completed",
         "llm_call_started",
@@ -88,14 +86,14 @@ class TraceCollectionListener(BaseEventListener):
     _initialized = False
     _listeners_setup = False
 
-    def __new__(cls, batch_manager=None):
+    def __new__(cls, batch_manager: TraceBatchManager | None = None):
         if cls._instance is None:
             cls._instance = super().__new__(cls)
         return cls._instance
 
     def __init__(
         self,
-        batch_manager: Optional[TraceBatchManager] = None,
+        batch_manager: TraceBatchManager | None = None,
     ):
         if self._initialized:
             return
@@ -103,16 +101,19 @@ class TraceCollectionListener(BaseEventListener):
         super().__init__()
         self.batch_manager = batch_manager or TraceBatchManager()
         self._initialized = True
+        self.first_time_handler = FirstTimeTraceHandler()
+
+        if self.first_time_handler.initialize_for_first_time_user():
+            self.first_time_handler.set_batch_manager(self.batch_manager)
 
     def _check_authenticated(self) -> bool:
         """Check if tracing should be enabled"""
         try:
-            res = bool(get_auth_token())
-            return res
+            return bool(get_auth_token())
         except AuthError:
             return False
 
-    def _get_user_context(self) -> Dict[str, str]:
+    def _get_user_context(self) -> dict[str, str]:
         """Extract user context for tracing"""
         return {
             "user_id": os.getenv("CREWAI_USER_ID", "anonymous"),
@@ -161,8 +162,14 @@ class TraceCollectionListener(BaseEventListener):
         @event_bus.on(FlowFinishedEvent)
         def on_flow_finished(source, event):
             self._handle_trace_event("flow_finished", source, event)
+
             if self.batch_manager.batch_owner_type == "flow":
-                self.batch_manager.finalize_batch()
+                if self.first_time_handler.is_first_time:
+                    self.first_time_handler.mark_events_collected()
+                    self.first_time_handler.handle_execution_completion()
+                else:
+                    # Normal flow finalization
+                    self.batch_manager.finalize_batch()
 
         @event_bus.on(FlowPlotEvent)
         def on_flow_plot(source, event):
@@ -179,14 +186,16 @@ class TraceCollectionListener(BaseEventListener):
 
         @event_bus.on(CrewKickoffCompletedEvent)
         def on_crew_completed(source, event):
-            self._handle_trace_event("crew_kickoff_completed", source, event)
-            if self.batch_manager.batch_owner_type == "crew":
-                self.batch_manager.finalize_batch()
+            if self.first_time_handler.is_first_time:
+                self.first_time_handler.mark_events_collected()
+                self.first_time_handler.handle_execution_completion()
 
         @event_bus.on(CrewKickoffFailedEvent)
         def on_crew_failed(source, event):
-            self._handle_trace_event("crew_kickoff_failed", source, event)
-            self.batch_manager.finalize_batch()
+            if self.first_time_handler.is_first_time:
+                # Still offer traces even if crew failed
+                self.first_time_handler.mark_events_collected()
+                self.first_time_handler.handle_execution_completion()
 
         @event_bus.on(TaskStartedEvent)
         def on_task_started(source, event):
@@ -325,17 +334,19 @@ class TraceCollectionListener(BaseEventListener):
         self._initialize_batch(user_context, execution_metadata)
 
     def _initialize_batch(
-        self, user_context: Dict[str, str], execution_metadata: Dict[str, Any]
+        self, user_context: dict[str, str], execution_metadata: dict[str, Any]
     ):
-        """Initialize trace batch if ephemeral"""
-        if not self._check_authenticated():
-            self.batch_manager.initialize_batch(
+        """Initialize trace batch - auto-enable ephemeral for first-time users."""
+
+        if self.first_time_handler.is_first_time:
+            return self.batch_manager.initialize_batch(
                 user_context, execution_metadata, use_ephemeral=True
             )
-        else:
-            self.batch_manager.initialize_batch(
-                user_context, execution_metadata, use_ephemeral=False
-            )
+
+        use_ephemeral = not self._check_authenticated()
+        return self.batch_manager.initialize_batch(
+            user_context, execution_metadata, use_ephemeral=use_ephemeral
+        )
 
     def _handle_trace_event(self, event_type: str, source: Any, event: Any):
         """Generic handler for context end events"""
@@ -371,11 +382,11 @@ class TraceCollectionListener(BaseEventListener):
 
     def _build_event_data(
         self, event_type: str, event: Any, source: Any
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Build event data"""
         if event_type not in self.complex_events:
-            return self._safe_serialize_to_dict(event)
-        elif event_type == "task_started":
+            return safe_serialize_to_dict(event)
+        if event_type == "task_started":
             return {
                 "task_description": event.task.description,
                 "expected_output": event.task.expected_output,
@@ -384,7 +395,7 @@ class TraceCollectionListener(BaseEventListener):
                 "agent_role": source.agent.role,
                 "task_id": str(event.task.id),
             }
-        elif event_type == "task_completed":
+        if event_type == "task_completed":
             return {
                 "task_description": event.task.description if event.task else None,
                 "task_name": event.task.name or event.task.description
@@ -397,63 +408,31 @@ class TraceCollectionListener(BaseEventListener):
                 else None,
                 "agent_role": event.output.agent if event.output else None,
             }
-        elif event_type == "agent_execution_started":
+        if event_type == "agent_execution_started":
             return {
                 "agent_role": event.agent.role,
                 "agent_goal": event.agent.goal,
                 "agent_backstory": event.agent.backstory,
             }
-        elif event_type == "agent_execution_completed":
+        if event_type == "agent_execution_completed":
             return {
                 "agent_role": event.agent.role,
                 "agent_goal": event.agent.goal,
                 "agent_backstory": event.agent.backstory,
             }
-        elif event_type == "llm_call_started":
-            event_data = self._safe_serialize_to_dict(event)
+        if event_type == "llm_call_started":
+            event_data = safe_serialize_to_dict(event)
             event_data["task_name"] = (
                 event.task_name or event.task_description
                 if hasattr(event, "task_name") and event.task_name
                 else None
             )
             return event_data
-        elif event_type == "llm_call_completed":
-            return self._safe_serialize_to_dict(event)
-        else:
-            return {
-                "event_type": event_type,
-                "event": self._safe_serialize_to_dict(event),
-                "source": source,
-            }
+        if event_type == "llm_call_completed":
+            return safe_serialize_to_dict(event)
 
-    # TODO: move to utils
-    def _safe_serialize_to_dict(
-        self, obj, exclude: set[str] | None = None
-    ) -> Dict[str, Any]:
-        """Safely serialize an object to a dictionary for event data."""
-        try:
-            serialized = to_serializable(obj, exclude)
-            if isinstance(serialized, dict):
-                return serialized
-            else:
-                return {"serialized_data": serialized}
-        except Exception as e:
-            return {"serialization_error": str(e), "object_type": type(obj).__name__}
-
-    # TODO: move to utils
-    def _truncate_messages(self, messages, max_content_length=500, max_messages=5):
-        """Truncate message content and limit number of messages"""
-        if not messages or not isinstance(messages, list):
-            return messages
-
-        # Limit number of messages
-        limited_messages = messages[:max_messages]
-
-        # Truncate each message content
-        for msg in limited_messages:
-            if isinstance(msg, dict) and "content" in msg:
-                content = msg["content"]
-                if len(content) > max_content_length:
-                    msg["content"] = content[:max_content_length] + "..."
-
-        return limited_messages
+        return {
+            "event_type": event_type,
+            "event": safe_serialize_to_dict(event),
+            "source": source,
+        }
