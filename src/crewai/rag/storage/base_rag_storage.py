@@ -41,9 +41,9 @@ class BaseRAGStorage(ABC):
     def search(
         self,
         query: str,
-        limit: int = 3,
+        limit: int = 5,
         filter: dict[str, Any] | None = None,
-        score_threshold: float = 0.35,
+        score_threshold: float = 0.6,
     ) -> list[Any]:
         """Search for entries in the storage."""
 
