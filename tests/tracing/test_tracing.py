@@ -1,5 +1,5 @@
 import os
-from unittest.mock import MagicMock, call, patch
+from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 
@@ -14,6 +14,10 @@ from crewai.events.listeners.tracing.trace_listener import (
     TraceCollectionListener,
 )
 from crewai.events.listeners.tracing.types import TraceEvent
+from crewai.events.listeners.tracing.utils import (
+    FuturesTimeoutError,
+    prompt_user_for_trace_viewing,
+)
 from crewai.flow.flow import Flow, start
 
 
@@ -613,21 +617,29 @@ class TestTraceListenerSetup:
                 "crewai.events.listeners.tracing.utils._is_test_environment",
                 return_value=False,
             ),
-            patch("signal.signal") as mock_signal,
-            patch("signal.alarm") as mock_alarm,
-            patch("click.confirm", side_effect=TimeoutError("User input timeout")),
+            patch(
+                "crewai.events.listeners.tracing.utils.ThreadPoolExecutor"
+            ) as mock_executor,
+            patch("click.echo") as mock_echo,
         ):
-            from crewai.events.listeners.tracing.utils import (
-                prompt_user_for_trace_viewing,
+            # Mock the executor and future to simulate timeout
+            mock_future = Mock()
+            mock_future.result.side_effect = FuturesTimeoutError("Timeout")
+            mock_executor.return_value.__enter__.return_value.submit.return_value = (
+                mock_future
             )
 
             result = prompt_user_for_trace_viewing(timeout_seconds=20)
 
             assert result is False
-            mock_signal.assert_called_once()
-
-            expected_calls = [call(20), call(0)]
-            mock_alarm.assert_has_calls(expected_calls)
+            # Verify ThreadPoolExecutor was used
+            mock_executor.assert_called_once()
+            # Verify timeout message was displayed
+            mock_echo.assert_called_once_with(
+                "\n⏰ Timed out - continuing without showing traces"
+            )
+            # Verify future.cancel() was called
+            mock_future.cancel.assert_called_once()
 
     def test_first_time_handler_graceful_error_handling(self):
         """Test graceful error handling in first-time trace logic"""
