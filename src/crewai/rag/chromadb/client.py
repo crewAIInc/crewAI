@@ -4,8 +4,9 @@ import logging
 from typing import Any
 
 from chromadb.api.types import (
-    Embeddable,
     EmbeddingFunction as ChromaEmbeddingFunction,
+)
+from chromadb.api.types import (
     QueryResult,
 )
 from typing_extensions import Unpack
@@ -23,13 +24,13 @@ from crewai.rag.chromadb.utils import (
     _process_query_results,
     _sanitize_collection_name,
 )
-from crewai.utilities.logger_utils import suppress_logging
 from crewai.rag.core.base_client import (
     BaseClient,
-    BaseCollectionParams,
     BaseCollectionAddParams,
+    BaseCollectionParams,
 )
 from crewai.rag.types import SearchResult
+from crewai.utilities.logger_utils import suppress_logging
 
 
 class ChromaDBClient(BaseClient):
@@ -46,7 +47,7 @@ class ChromaDBClient(BaseClient):
     def __init__(
         self,
         client: ChromaDBClientType,
-        embedding_function: ChromaEmbeddingFunction[Embeddable],
+        embedding_function: ChromaEmbeddingFunction,
     ) -> None:
         """Initialize ChromaDBClient with client and embedding function.
 
@@ -306,10 +307,12 @@ class ChromaDBClient(BaseClient):
         )
 
         prepared = _prepare_documents_for_chromadb(documents)
+        # ChromaDB doesn't accept empty metadata dicts, so pass None if all are empty
+        metadatas = prepared.metadatas if any(m for m in prepared.metadatas) else None
         collection.upsert(
             ids=prepared.ids,
             documents=prepared.texts,
-            metadatas=prepared.metadatas,
+            metadatas=metadatas,
         )
 
     async def aadd_documents(self, **kwargs: Unpack[BaseCollectionAddParams]) -> None:
@@ -347,10 +350,12 @@ class ChromaDBClient(BaseClient):
             embedding_function=self.embedding_function,
         )
         prepared = _prepare_documents_for_chromadb(documents)
+        # ChromaDB doesn't accept empty metadata dicts, so pass None if all are empty
+        metadatas = prepared.metadatas if any(m for m in prepared.metadatas) else None
         await collection.upsert(
             ids=prepared.ids,
             documents=prepared.texts,
-            metadatas=prepared.metadatas,
+            metadatas=metadatas,
         )
 
     def search(
