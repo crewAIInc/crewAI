@@ -9,19 +9,19 @@ import pytest
 from crewai import Agent, Crew, Task
 from crewai.agents.cache import CacheHandler
 from crewai.agents.crew_agent_executor import AgentFinish, CrewAgentExecutor
+from crewai.events.event_bus import crewai_event_bus
+from crewai.events.types.tool_usage_events import ToolUsageFinishedEvent
 from crewai.knowledge.knowledge import Knowledge
 from crewai.knowledge.knowledge_config import KnowledgeConfig
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
 from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
 from crewai.llm import LLM
+from crewai.process import Process
 from crewai.tools import tool
 from crewai.tools.tool_calling import InstructorToolCalling
 from crewai.tools.tool_usage import ToolUsage
 from crewai.utilities import RPMController
 from crewai.utilities.errors import AgentRepositoryError
-from crewai.events.event_bus import crewai_event_bus
-from crewai.events.types.tool_usage_events import ToolUsageFinishedEvent
-from crewai.process import Process
 
 
 def test_agent_llm_creation_with_env_vars():
@@ -445,7 +445,7 @@ def test_agent_powered_by_new_o_model_family_that_allows_skipping_tool():
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_agent_powered_by_new_o_model_family_that_uses_tool():
     @tool
-    def comapny_customer_data() -> float:
+    def comapny_customer_data() -> str:
         """Useful for getting customer related data."""
         return "The company has 42 customers"
 
@@ -559,9 +559,9 @@ def test_agent_repeated_tool_usage(capsys):
     expected_message = (
         "I tried reusing the same input, I must stop using this action input."
     )
-    assert (
-        expected_message in output
-    ), f"Expected message not found in output. Output was: {output}"
+    assert expected_message in output, (
+        f"Expected message not found in output. Output was: {output}"
+    )
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -602,9 +602,9 @@ def test_agent_repeated_tool_usage_check_even_with_disabled_cache(capsys):
     has_max_iterations = "maximum iterations reached" in output_lower
     has_final_answer = "final answer" in output_lower or "42" in captured.out
 
-    assert (
-        has_repeated_usage_message or (has_max_iterations and has_final_answer)
-    ), f"Expected repeated tool usage handling or proper max iteration handling. Output was: {captured.out[:500]}..."
+    assert has_repeated_usage_message or (has_max_iterations and has_final_answer), (
+        f"Expected repeated tool usage handling or proper max iteration handling. Output was: {captured.out[:500]}..."
+    )
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -880,7 +880,7 @@ def test_agent_step_callback():
     with patch.object(StepCallback, "callback") as callback:
 
         @tool
-        def learn_about_AI() -> str:
+        def learn_about_ai() -> str:
             """Useful for when you need to learn about AI to write an paragraph about it."""
             return "AI is a very broad field."
 
@@ -888,7 +888,7 @@ def test_agent_step_callback():
             role="test role",
             goal="test goal",
             backstory="test backstory",
-            tools=[learn_about_AI],
+            tools=[learn_about_ai],
             step_callback=StepCallback().callback,
         )
 
@@ -910,7 +910,7 @@ def test_agent_function_calling_llm():
     llm = "gpt-4o"
 
     @tool
-    def learn_about_AI() -> str:
+    def learn_about_ai() -> str:
         """Useful for when you need to learn about AI to write an paragraph about it."""
         return "AI is a very broad field."
 
@@ -918,7 +918,7 @@ def test_agent_function_calling_llm():
         role="test role",
         goal="test goal",
         backstory="test backstory",
-        tools=[learn_about_AI],
+        tools=[learn_about_ai],
         llm="gpt-4o",
         max_iter=2,
         function_calling_llm=llm,
@@ -1356,7 +1356,7 @@ def test_agent_training_handler(crew_training_handler):
         verbose=True,
     )
     crew_training_handler().load.return_value = {
-        f"{str(agent.id)}": {"0": {"human_feedback": "good"}}
+        f"{agent.id!s}": {"0": {"human_feedback": "good"}}
     }
 
     result = agent._training_handler(task_prompt=task_prompt)
@@ -1473,7 +1473,7 @@ def test_agent_with_custom_stop_words():
     )
 
     assert isinstance(agent.llm, LLM)
-    assert set(agent.llm.stop) == set(stop_words + ["\nObservation:"])
+    assert set(agent.llm.stop) == set([*stop_words, "\nObservation:"])
     assert all(word in agent.llm.stop for word in stop_words)
     assert "\nObservation:" in agent.llm.stop
 
@@ -1530,7 +1530,7 @@ def test_llm_call_with_error():
     llm = LLM(model="non-existent-model")
     messages = [{"role": "user", "content": "This should fail"}]
 
-    with pytest.raises(Exception):
+    with pytest.raises(Exception):  # noqa: B017
         llm.call(messages)
 
 
@@ -1830,11 +1830,11 @@ def test_agent_execute_task_with_ollama():
 def test_agent_with_knowledge_sources():
     content = "Brandon's favorite color is red and he likes Mexican food."
     string_source = StringKnowledgeSource(content=content)
-    with patch("crewai.knowledge") as MockKnowledge:
-        mock_knowledge_instance = MockKnowledge.return_value
+    with patch("crewai.knowledge") as mock_knowledge:
+        mock_knowledge_instance = mock_knowledge.return_value
         mock_knowledge_instance.sources = [string_source]
         mock_knowledge_instance.search.return_value = [{"content": content}]
-        MockKnowledge.add_sources.return_value = [string_source]
+        mock_knowledge.add_sources.return_value = [string_source]
 
         agent = Agent(
             role="Information Agent",
@@ -1863,12 +1863,25 @@ def test_agent_with_knowledge_sources_with_query_limit_and_score_threshold():
     content = "Brandon's favorite color is red and he likes Mexican food."
     string_source = StringKnowledgeSource(content=content)
     knowledge_config = KnowledgeConfig(results_limit=10, score_threshold=0.5)
-    with patch(
-        "crewai.knowledge.storage.knowledge_storage.KnowledgeStorage"
-    ) as MockKnowledge:
-        mock_knowledge_instance = MockKnowledge.return_value
-        mock_knowledge_instance.sources = [string_source]
-        mock_knowledge_instance.query.return_value = [{"content": content}]
+    with (
+        patch(
+            "crewai.knowledge.storage.knowledge_storage.KnowledgeStorage"
+        ) as mock_knowledge_storage,
+        patch(
+            "crewai.knowledge.source.base_knowledge_source.KnowledgeStorage"
+        ) as mock_base_knowledge_storage,
+        patch("crewai.rag.chromadb.client.ChromaDBClient") as mock_chromadb,
+    ):
+        mock_storage_instance = mock_knowledge_storage.return_value
+        mock_storage_instance.sources = [string_source]
+        mock_storage_instance.query.return_value = [{"content": content}]
+        mock_storage_instance.save.return_value = None
+
+        mock_chromadb_instance = mock_chromadb.return_value
+        mock_chromadb_instance.add_documents.return_value = None
+
+        mock_base_knowledge_storage.return_value = mock_storage_instance
+
         with patch.object(Knowledge, "query") as mock_knowledge_query:
             agent = Agent(
                 role="Information Agent",
@@ -1898,15 +1911,27 @@ def test_agent_with_knowledge_sources_with_query_limit_and_score_threshold_defau
     content = "Brandon's favorite color is red and he likes Mexican food."
     string_source = StringKnowledgeSource(content=content)
     knowledge_config = KnowledgeConfig()
-    with patch(
-        "crewai.knowledge.storage.knowledge_storage.KnowledgeStorage"
-    ) as MockKnowledge:
-        mock_knowledge_instance = MockKnowledge.return_value
-        mock_knowledge_instance.sources = [string_source]
-        mock_knowledge_instance.query.return_value = [{"content": content}]
+
+    with (
+        patch(
+            "crewai.knowledge.storage.knowledge_storage.KnowledgeStorage"
+        ) as mock_knowledge_storage,
+        patch(
+            "crewai.knowledge.source.base_knowledge_source.KnowledgeStorage"
+        ) as mock_base_knowledge_storage,
+        patch("crewai.rag.chromadb.client.ChromaDBClient") as mock_chromadb,
+    ):
+        mock_storage_instance = mock_knowledge_storage.return_value
+        mock_storage_instance.sources = [string_source]
+        mock_storage_instance.query.return_value = [{"content": content}]
+        mock_storage_instance.save.return_value = None
+
+        mock_chromadb_instance = mock_chromadb.return_value
+        mock_chromadb_instance.add_documents.return_value = None
+
+        mock_base_knowledge_storage.return_value = mock_storage_instance
+
         with patch.object(Knowledge, "query") as mock_knowledge_query:
-            string_source = StringKnowledgeSource(content=content)
-            knowledge_config = KnowledgeConfig()
             agent = Agent(
                 role="Information Agent",
                 goal="Provide information based on knowledge sources",
@@ -1935,10 +1960,16 @@ def test_agent_with_knowledge_sources_extensive_role():
     content = "Brandon's favorite color is red and he likes Mexican food."
     string_source = StringKnowledgeSource(content=content)
 
-    with patch("crewai.knowledge") as MockKnowledge:
-        mock_knowledge_instance = MockKnowledge.return_value
+    with (
+        patch("crewai.knowledge") as mock_knowledge,
+        patch(
+            "crewai.knowledge.storage.knowledge_storage.KnowledgeStorage.save"
+        ) as mock_save,
+    ):
+        mock_knowledge_instance = mock_knowledge.return_value
         mock_knowledge_instance.sources = [string_source]
         mock_knowledge_instance.query.return_value = [{"content": content}]
+        mock_save.return_value = None
 
         agent = Agent(
             role="Information Agent with extensive role description that is longer than 80 characters",
@@ -1968,8 +1999,8 @@ def test_agent_with_knowledge_sources_works_with_copy():
     with patch(
         "crewai.knowledge.source.base_knowledge_source.BaseKnowledgeSource",
         autospec=True,
-    ) as MockKnowledgeSource:
-        mock_knowledge_source_instance = MockKnowledgeSource.return_value
+    ) as mock_knowledge_source:
+        mock_knowledge_source_instance = mock_knowledge_source.return_value
         mock_knowledge_source_instance.__class__ = BaseKnowledgeSource
         mock_knowledge_source_instance.sources = [string_source]
 
@@ -1983,9 +2014,9 @@ def test_agent_with_knowledge_sources_works_with_copy():
 
         with patch(
             "crewai.knowledge.storage.knowledge_storage.KnowledgeStorage"
-        ) as MockKnowledgeStorage:
-            mock_knowledge_storage = MockKnowledgeStorage.return_value
-            agent.knowledge_storage = mock_knowledge_storage
+        ) as mock_knowledge_storage:
+            mock_knowledge_storage_instance = mock_knowledge_storage.return_value
+            agent.knowledge_storage = mock_knowledge_storage_instance
 
             agent_copy = agent.copy()
 
@@ -2004,10 +2035,29 @@ def test_agent_with_knowledge_sources_generate_search_query():
     content = "Brandon's favorite color is red and he likes Mexican food."
     string_source = StringKnowledgeSource(content=content)
 
-    with patch("crewai.knowledge") as MockKnowledge:
-        mock_knowledge_instance = MockKnowledge.return_value
+    with (
+        patch("crewai.knowledge") as mock_knowledge,
+        patch(
+            "crewai.knowledge.storage.knowledge_storage.KnowledgeStorage"
+        ) as mock_knowledge_storage,
+        patch(
+            "crewai.knowledge.source.base_knowledge_source.KnowledgeStorage"
+        ) as mock_base_knowledge_storage,
+        patch("crewai.rag.chromadb.client.ChromaDBClient") as mock_chromadb,
+    ):
+        mock_knowledge_instance = mock_knowledge.return_value
         mock_knowledge_instance.sources = [string_source]
         mock_knowledge_instance.query.return_value = [{"content": content}]
+
+        mock_storage_instance = mock_knowledge_storage.return_value
+        mock_storage_instance.sources = [string_source]
+        mock_storage_instance.query.return_value = [{"content": content}]
+        mock_storage_instance.save.return_value = None
+
+        mock_chromadb_instance = mock_chromadb.return_value
+        mock_chromadb_instance.add_documents.return_value = None
+
+        mock_base_knowledge_storage.return_value = mock_storage_instance
 
         agent = Agent(
             role="Information Agent with extensive role description that is longer than 80 characters",
@@ -2270,7 +2320,26 @@ def test_get_knowledge_search_query():
     i18n = I18N()
     task_prompt = task.prompt()
 
-    with patch.object(agent, "_get_knowledge_search_query") as mock_get_query:
+    with (
+        patch(
+            "crewai.knowledge.storage.knowledge_storage.KnowledgeStorage"
+        ) as mock_knowledge_storage,
+        patch(
+            "crewai.knowledge.source.base_knowledge_source.KnowledgeStorage"
+        ) as mock_base_knowledge_storage,
+        patch("crewai.rag.chromadb.client.ChromaDBClient") as mock_chromadb,
+        patch.object(agent, "_get_knowledge_search_query") as mock_get_query,
+    ):
+        mock_storage_instance = mock_knowledge_storage.return_value
+        mock_storage_instance.sources = [string_source]
+        mock_storage_instance.query.return_value = [{"content": content}]
+        mock_storage_instance.save.return_value = None
+
+        mock_chromadb_instance = mock_chromadb.return_value
+        mock_chromadb_instance.add_documents.return_value = None
+
+        mock_base_knowledge_storage.return_value = mock_storage_instance
+
         mock_get_query.return_value = "Capital of France"
 
         crew = Crew(agents=[agent], tasks=[task])
@@ -2312,9 +2381,9 @@ def test_agent_from_repository(mock_get_agent, mock_get_auth_token):
     # Mock embedchain initialization to prevent race conditions in parallel CI execution
     with patch("embedchain.client.Client.setup"):
         from crewai_tools import (
-            SerperDevTool,
-            FileReadTool,
             EnterpriseActionTool,
+            FileReadTool,
+            SerperDevTool,
         )
 
     mock_get_response = MagicMock()
@@ -2347,7 +2416,7 @@ def test_agent_from_repository(mock_get_agent, mock_get_auth_token):
     tool_action = EnterpriseActionTool(
         name="test_name",
         description="test_description",
-        enterprise_action_token="test_token",
+        enterprise_action_token="test_token",  # noqa: S106
         action_name="test_action_name",
         action_schema={"test": "test"},
     )
