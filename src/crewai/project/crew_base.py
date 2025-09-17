@@ -89,7 +89,7 @@ def CrewBase(cls: T) -> T:  # noqa: N802
             import types
             return types.MethodType(_close_mcp_server, self)
 
-        def get_mcp_tools(self, *tool_names: list[str]) -> list[BaseTool]:
+        def get_mcp_tools(self, *tool_names: str) -> list[BaseTool]:
             if not self.mcp_server_params:
                 return []
 
