@@ -831,10 +831,8 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 if "id" in inputs:
                     if isinstance(self._state, dict):
                         self._state["id"] = inputs["id"]
-                    elif isinstance(self._state, BaseModel) and hasattr(
-                        self._state, "id"
-                    ):
-                        self._state.id = inputs["id"]
+                    elif isinstance(self._state, BaseModel):
+                        setattr(self._state, "id", inputs["id"])  # noqa: B010
 
                 # If persistence is enabled, attempt to restore the stored state using the provided id.
                 if "id" in inputs and self._persistence is not None:
