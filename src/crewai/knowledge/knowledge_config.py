@@ -9,8 +9,8 @@ class KnowledgeConfig(BaseModel):
         score_threshold (float): The minimum score for a document to be considered relevant.
     """
 
-    results_limit: int = Field(default=3, description="The number of results to return")
+    results_limit: int = Field(default=5, description="The number of results to return")
     score_threshold: float = Field(
-        default=0.35,
+        default=0.6,
         description="The minimum score for a result to be considered relevant",
     )
