@@ -186,16 +186,22 @@ class TraceCollectionListener(BaseEventListener):
 
         @event_bus.on(CrewKickoffCompletedEvent)
         def on_crew_completed(source, event):
-            if self.first_time_handler.is_first_time:
-                self.first_time_handler.mark_events_collected()
-                self.first_time_handler.handle_execution_completion()
+            self._handle_trace_event("crew_kickoff_completed", source, event)
+            if self.batch_manager.batch_owner_type == "crew":
+                if self.first_time_handler.is_first_time:
+                    self.first_time_handler.mark_events_collected()
+                    self.first_time_handler.handle_execution_completion()
+                else:
+                    self.batch_manager.finalize_batch()
 
         @event_bus.on(CrewKickoffFailedEvent)
         def on_crew_failed(source, event):
+            self._handle_trace_event("crew_kickoff_failed", source, event)
             if self.first_time_handler.is_first_time:
-                # Still offer traces even if crew failed
                 self.first_time_handler.mark_events_collected()
                 self.first_time_handler.handle_execution_completion()
+            else:
+                self.batch_manager.finalize_batch()
 
         @event_bus.on(TaskStartedEvent)
         def on_task_started(source, event):
