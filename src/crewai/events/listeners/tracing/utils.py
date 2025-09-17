@@ -49,10 +49,13 @@ def _get_machine_id() -> str:
     """Stable, privacy-preserving machine fingerprint (cross-platform)."""
     parts = []
 
-    mac = ":".join(
-        [f"{(uuid.getnode() >> b) & 0xFF:02x}" for b in range(0, 12, 2)][::-1]
-    )
-    parts.append(mac)
+    try:
+        mac = ":".join(
+            [f"{(uuid.getnode() >> b) & 0xFF:02x}" for b in range(0, 12, 2)][::-1]
+        )
+        parts.append(mac)
+    except Exception:
+        logger.warning("Error getting machine id for fingerprinting")
 
     sysname = platform.system()
     parts.append(sysname)
