@@ -14,10 +14,6 @@ from crewai.events.listeners.tracing.trace_listener import (
     TraceCollectionListener,
 )
 from crewai.events.listeners.tracing.types import TraceEvent
-from crewai.events.listeners.tracing.utils import (
-    FuturesTimeoutError,
-    prompt_user_for_trace_viewing,
-)
 from crewai.flow.flow import Flow, start
 
 
@@ -617,29 +613,26 @@ class TestTraceListenerSetup:
                 "crewai.events.listeners.tracing.utils._is_test_environment",
                 return_value=False,
             ),
-            patch(
-                "crewai.events.listeners.tracing.utils.ThreadPoolExecutor"
-            ) as mock_executor,
-            patch("click.echo") as mock_echo,
+            patch("threading.Thread") as mock_thread,
         ):
-            # Mock the executor and future to simulate timeout
-            mock_future = Mock()
-            mock_future.result.side_effect = FuturesTimeoutError("Timeout")
-            mock_executor.return_value.__enter__.return_value.submit.return_value = (
-                mock_future
+            from crewai.events.listeners.tracing.utils import (
+                prompt_user_for_trace_viewing,
             )
 
-            result = prompt_user_for_trace_viewing(timeout_seconds=20)
+            mock_thread_instance = Mock()
+            mock_thread_instance.is_alive.return_value = True
+            mock_thread.return_value = mock_thread_instance
+
+            result = prompt_user_for_trace_viewing(timeout_seconds=5)
 
             assert result is False
-            # Verify ThreadPoolExecutor was used
-            mock_executor.assert_called_once()
-            # Verify timeout message was displayed
-            mock_echo.assert_called_once_with(
-                "\n⏰ Timed out - continuing without showing traces"
-            )
-            # Verify future.cancel() was called
-            mock_future.cancel.assert_called_once()
+            mock_thread.assert_called_once()
+            call_args = mock_thread.call_args
+            assert call_args[1]["daemon"] is True
+
+            mock_thread_instance.start.assert_called_once()
+            mock_thread_instance.join.assert_called_once_with(timeout=5)
+            mock_thread_instance.is_alive.assert_called_once()
 
     def test_first_time_handler_graceful_error_handling(self):
         """Test graceful error handling in first-time trace logic"""

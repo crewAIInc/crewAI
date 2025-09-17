@@ -199,13 +199,7 @@ def prompt_user_for_trace_viewing(timeout_seconds: int = 20) -> bool:
         return False
 
     try:
-        import signal
-
-        def timeout_handler(signum, frame):
-            raise TimeoutError("User input timeout")
-
-        signal.signal(signal.SIGALRM, timeout_handler)
-        signal.alarm(timeout_seconds)
+        import threading
 
         console = Console()
 
@@ -228,22 +222,31 @@ def prompt_user_for_trace_viewing(timeout_seconds: int = 20) -> bool:
         console.print("\n")
         console.print(panel)
 
-        result = click.confirm(
-            click.style(
-                "Would you like to view your execution traces?",
-                fg="white",
-                bold=True,
-            ),
-            default=False,
-            show_default=True,
+        prompt_text = click.style(
+            f"Would you like to view your execution traces? [y/N] ({timeout_seconds}s timeout): ",
+            fg="white",
+            bold=True,
         )
-        signal.alarm(0)
-        return result
+        click.echo(prompt_text, nl=False)
 
-    except TimeoutError:
-        signal.alarm(0)
-        click.echo("\n⏰ Timed out - continuing without showing traces")
-        return False
+        result = [False]
+
+        def get_input():
+            try:
+                response = input().strip().lower()
+                result[0] = response in ["y", "yes"]
+            except (EOFError, KeyboardInterrupt):
+                result[0] = False
+
+        input_thread = threading.Thread(target=get_input, daemon=True)
+        input_thread.start()
+        input_thread.join(timeout=timeout_seconds)
+
+        if input_thread.is_alive():
+            return False
+
+        return result[0]
+
     except Exception:
         return False
 
