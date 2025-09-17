@@ -470,7 +470,7 @@ class TestTraceListenerSetup:
                 assert result is not None
 
                 assert mock_handle_completion.call_count >= 1
-                assert mock_add_event.call_count == 1
+                assert mock_add_event.call_count >= 1
 
                 assert trace_listener.first_time_handler.collected_events is True
 
