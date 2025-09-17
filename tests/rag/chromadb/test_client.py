@@ -450,7 +450,7 @@ class TestChromaDBClient:
         )
         mock_collection.query.assert_called_once_with(
             query_texts=["test query"],
-            n_results=10,
+            n_results=5,
             where=None,
             where_document=None,
             include=["metadatas", "documents", "distances"],
@@ -521,7 +521,7 @@ class TestChromaDBClient:
         )
         mock_collection.query.assert_called_once_with(
             query_texts=["test query"],
-            n_results=10,
+            n_results=5,
             where=None,
             where_document=None,
             include=["metadatas", "documents", "distances"],
