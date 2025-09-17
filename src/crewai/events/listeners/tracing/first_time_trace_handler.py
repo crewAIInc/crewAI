@@ -123,7 +123,7 @@ This trace shows:
 • Tool usage and results
 • LLM calls and responses
 
-To use traces add tracing=True to your Crew(..., tracing=True) / Flow(..., tracing=True)
+To use traces add tracing=True to your Crew(tracing=True) / Flow(tracing=True)
 
 📝 Note: This link will expire in 24 hours.
         """.strip()

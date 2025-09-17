@@ -98,14 +98,19 @@ def _user_data_file() -> Path:
 def _load_user_data() -> dict:
     p = _user_data_file()
     if p.exists():
-        return json.loads(p.read_text())
-
+        try:
+            return json.loads(p.read_text())
+        except (json.JSONDecodeError, OSError, PermissionError) as e:
+            logger.warning(f"Failed to load user data: {e}")
     return {}
 
 
 def _save_user_data(data: dict) -> None:
-    p = _user_data_file()
-    p.write_text(json.dumps(data, indent=2))
+    try:
+        p = _user_data_file()
+        p.write_text(json.dumps(data, indent=2))
+    except (OSError, PermissionError) as e:
+        logger.warning(f"Failed to save user data: {e}")
 
 
 def get_user_id() -> str:
