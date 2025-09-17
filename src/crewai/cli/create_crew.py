@@ -41,7 +41,7 @@ def create_folder_structure(name, parent_folder=None):
     if not folder_name.isidentifier():
         raise ValueError(f"Project name '{name}' would generate invalid Python module name '{folder_name}'")
     
-    class_name = name.replace("_", " ").replace("-", " ").title().replace(" ", "")
+    class_name = "".join(word.capitalize() for word in folder_name.split("_"))
     
     class_name = re.sub(r'[^a-zA-Z0-9_]', '', class_name)
     
