@@ -2,7 +2,7 @@ import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from logging import getLogger
-from typing import Any, ClassVar
+from typing import Any
 
 from rich.console import Console
 from rich.panel import Panel
@@ -40,17 +40,16 @@ class TraceBatch:
 class TraceBatchManager:
     """Single responsibility: Manage batches and event buffering"""
 
-    is_current_batch_ephemeral: bool = False
-    trace_batch_id: str | None = None
-    current_batch: TraceBatch | None = None
-    event_buffer: ClassVar[list[TraceEvent]] = []
-    execution_start_times: ClassVar[dict[str, datetime]] = {}
-    batch_owner_type: str | None = None
-    batch_owner_id: str | None = None
-    backend_initialized: bool = False
-    ephemeral_trace_url: str | None = None
-
     def __init__(self):
+        self.is_current_batch_ephemeral: bool = False
+        self.trace_batch_id: str | None = None
+        self.current_batch: TraceBatch | None = None
+        self.event_buffer: list[TraceEvent] = []
+        self.execution_start_times: dict[str, datetime] = {}
+        self.batch_owner_type: str | None = None
+        self.batch_owner_id: str | None = None
+        self.backend_initialized: bool = False
+        self.ephemeral_trace_url: str | None = None
         try:
             self.plus_api = PlusAPI(
                 api_key=get_auth_token(),
