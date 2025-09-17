@@ -114,7 +114,7 @@ class DBOSAgent(BaseAgent):
             response_template=self._wrapped_agent.response_template,
         ).task_execution()
 
-        stop_words = [self.i18n.slice("observation")]
+        stop_words = [self._wrapped_agent.i18n.slice("observation")]
 
         if self._wrapped_agent.response_template:
             stop_words.append(
