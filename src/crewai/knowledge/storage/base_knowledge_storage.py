@@ -1,5 +1,7 @@
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional
+from typing import Any
+
+from crewai.rag.types import SearchResult
 
 
 class BaseKnowledgeStorage(ABC):
@@ -8,22 +10,17 @@ class BaseKnowledgeStorage(ABC):
     @abstractmethod
     def search(
         self,
-        query: List[str],
+        query: list[str],
         limit: int = 3,
-        filter: Optional[dict] = None,
+        metadata_filter: dict[str, Any] | None = None,
         score_threshold: float = 0.35,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[SearchResult]:
         """Search for documents in the knowledge base."""
-        pass
 
     @abstractmethod
-    def save(
-        self, documents: List[str], metadata: Dict[str, Any] | List[Dict[str, Any]]
-    ) -> None:
+    def save(self, documents: list[str]) -> None:
         """Save documents to the knowledge base."""
-        pass
 
     @abstractmethod
     def reset(self) -> None:
         """Reset the knowledge base."""
-        pass

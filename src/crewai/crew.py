@@ -7,7 +7,10 @@ from collections.abc import Callable
 from concurrent.futures import Future
 from copy import copy as shallow_copy
 from hashlib import md5
-from typing import Any, cast
+from typing import (
+    Any,
+    cast,
+)
 
 from opentelemetry import baggage
 from opentelemetry.context import attach, detach
@@ -56,6 +59,7 @@ from crewai.memory.external.external_memory import ExternalMemory
 from crewai.memory.long_term.long_term_memory import LongTermMemory
 from crewai.memory.short_term.short_term_memory import ShortTermMemory
 from crewai.process import Process
+from crewai.rag.types import SearchResult
 from crewai.security import Fingerprint, SecurityConfig
 from crewai.task import Task
 from crewai.tasks.conditional_task import ConditionalTask
@@ -82,28 +86,40 @@ warnings.filterwarnings("ignore", category=SyntaxWarning, module="pysbd")
 
 class Crew(FlowTrackable, BaseModel):
     """
-    Represents a group of agents, defining how they should collaborate and the tasks they should perform.
+    Represents a group of agents, defining how they should collaborate and the
+    tasks they should perform.
 
     Attributes:
         tasks: list of tasks assigned to the crew.
         agents: list of agents part of this crew.
         manager_llm: The language model that will run manager agent.
         manager_agent: Custom agent that will be used as manager.
-        memory: Whether the crew should use memory to store memories of it's execution.
-        cache: Whether the crew should use a cache to store the results of the tools execution.
-        function_calling_llm: The language model that will run the tool calling for all the agents.
-        process: The process flow that the crew will follow (e.g., sequential, hierarchical).
+        memory: Whether the crew should use memory to store memories of it's
+            execution.
+        cache: Whether the crew should use a cache to store the results of the
+            tools execution.
+        function_calling_llm: The language model that will run the tool calling
+            for all the agents.
+        process: The process flow that the crew will follow (e.g., sequential,
+            hierarchical).
         verbose: Indicates the verbosity level for logging during execution.
         config: Configuration settings for the crew.
-        max_rpm: Maximum number of requests per minute for the crew execution to be respected.
+        max_rpm: Maximum number of requests per minute for the crew execution to
+            be respected.
         prompt_file: Path to the prompt json file to be used for the crew.
         id: A unique identifier for the crew instance.
-        task_callback: Callback to be executed after each task for every agents execution.
-        step_callback: Callback to be executed after each step for every agents execution.
-        share_crew: Whether you want to share the complete crew information and execution with crewAI to make the library better, and allow us to train models.
+        task_callback: Callback to be executed after each task for every agents
+            execution.
+        step_callback: Callback to be executed after each step for every agents
+            execution.
+        share_crew: Whether you want to share the complete crew information and
+            execution with crewAI to make the library better, and allow us to
+            train models.
         planning: Plan the crew execution and add the plan to the crew.
-        chat_llm: The language model used for orchestrating chat interactions with the crew.
-        security_config: Security configuration for the crew, including fingerprinting.
+        chat_llm: The language model used for orchestrating chat interactions
+            with the crew.
+        security_config: Security configuration for the crew, including
+            fingerprinting.
     """
 
     __hash__ = object.__hash__  # type: ignore
@@ -134,7 +150,7 @@ class Crew(FlowTrackable, BaseModel):
     verbose: bool = Field(default=False)
     memory: bool = Field(
         default=False,
-        description="Whether the crew should use memory to store memories of it's execution",
+        description="If crew should use memory to store memories of it's execution",
     )
     short_term_memory: InstanceOf[ShortTermMemory] | None = Field(
         default=None,
@@ -184,15 +200,24 @@ class Crew(FlowTrackable, BaseModel):
         Callable[[dict[str, Any] | None], dict[str, Any] | None]
     ] = Field(
         default_factory=list,
-        description="list of callbacks to be executed before crew kickoff. It may be used to adjust inputs before the crew is executed.",
+        description=(
+            "List of callbacks to be executed before crew kickoff. "
+            "It may be used to adjust inputs before the crew is executed."
+        ),
     )
     after_kickoff_callbacks: list[Callable[[CrewOutput], CrewOutput]] = Field(
         default_factory=list,
-        description="list of callbacks to be executed after crew kickoff. It may be used to adjust the output of the crew.",
+        description=(
+            "List of callbacks to be executed after crew kickoff. "
+            "It may be used to adjust the output of the crew."
+        ),
     )
     max_rpm: int | None = Field(
         default=None,
-        description="Maximum number of requests per minute for the crew execution to be respected.",
+        description=(
+            "Maximum number of requests per minute for the crew execution "
+            "to be respected."
+        ),
     )
     prompt_file: str | None = Field(
         default=None,
@@ -208,7 +233,9 @@ class Crew(FlowTrackable, BaseModel):
     )
     planning_llm: str | InstanceOf[BaseLLM] | Any | None = Field(
         default=None,
-        description="Language model that will run the AgentPlanner if planning is True.",
+        description=(
+            "Language model that will run the AgentPlanner if planning is True."
+        ),
     )
     task_execution_output_json_files: list[str] | None = Field(
         default=None,
@@ -220,7 +247,10 @@ class Crew(FlowTrackable, BaseModel):
     )
     knowledge_sources: list[BaseKnowledgeSource] | None = Field(
         default=None,
-        description="Knowledge sources for the crew. Add knowledge sources to the knowledge object.",
+        description=(
+            "Knowledge sources for the crew. Add knowledge sources to the "
+            "knowledge object."
+        ),
     )
     chat_llm: str | InstanceOf[BaseLLM] | Any | None = Field(
         default=None,
@@ -304,7 +334,8 @@ class Crew(FlowTrackable, BaseModel):
     def create_crew_memory(self) -> "Crew":
         """Initialize private memory attributes."""
         self._external_memory = (
-            # External memory doesn’t support a default value since it was designed to be managed entirely externally
+            # External memory does not support a default value since it was
+            # designed to be managed entirely externally
             self.external_memory.set_crew(self) if self.external_memory else None
         )
 
@@ -345,7 +376,10 @@ class Crew(FlowTrackable, BaseModel):
             if not self.manager_llm and not self.manager_agent:
                 raise PydanticCustomError(
                     "missing_manager_llm_or_manager_agent",
-                    "Attribute `manager_llm` or `manager_agent` is required when using hierarchical process.",
+                    (
+                        "Attribute `manager_llm` or `manager_agent` is required "
+                        "when using hierarchical process."
+                    ),
                     {},
                 )
 
@@ -388,7 +422,10 @@ class Crew(FlowTrackable, BaseModel):
                 if task.agent is None:
                     raise PydanticCustomError(
                         "missing_agent_in_task",
-                        f"Sequential process error: Agent is missing in the task with the following description: {task.description}",  # type: ignore # Argument of type "str" cannot be assigned to parameter "message_template" of type "LiteralString"
+                        (
+                            f"Sequential process error: Agent is missing in the task "
+                            f"with the following description: {task.description}"
+                        ),  # type: ignore # Dynamic string in error message
                         {},
                     )
 
@@ -449,7 +486,10 @@ class Crew(FlowTrackable, BaseModel):
             if task.async_execution and isinstance(task, ConditionalTask):
                 raise PydanticCustomError(
                     "invalid_async_conditional_task",
-                    f"Conditional Task: {task.description} , cannot be executed asynchronously.",  # type: ignore # Argument of type "str" cannot be assigned to parameter "message_template" of type "LiteralString"
+                    (
+                        f"Conditional Task: {task.description}, "
+                        f"cannot be executed asynchronously."
+                    ),
                     {},
                 )
         return self
@@ -468,7 +508,9 @@ class Crew(FlowTrackable, BaseModel):
                         for j in range(i - 1, -1, -1):
                             if self.tasks[j] == context_task:
                                 raise ValueError(
-                                    f"Task '{task.description}' is asynchronous and cannot include other sequential asynchronous tasks in its context."
+                                    f"Task '{task.description}' is asynchronous and "
+                                    f"cannot include other sequential asynchronous "
+                                    f"tasks in its context."
                                 )
                             if not self.tasks[j].async_execution:
                                 break
@@ -486,7 +528,9 @@ class Crew(FlowTrackable, BaseModel):
                         continue  # Skip context tasks not in the main tasks list
                     if task_indices[id(context_task)] > task_indices[id(task)]:
                         raise ValueError(
-                            f"Task '{task.description}' has a context dependency on a future task '{context_task.description}', which is not allowed."
+                            f"Task '{task.description}' has a context dependency "
+                            f"on a future task '{context_task.description}', "
+                            f"which is not allowed."
                         )
         return self
 
@@ -508,9 +552,9 @@ class Crew(FlowTrackable, BaseModel):
         return self.security_config.fingerprint
 
     def _setup_from_config(self):
-        assert self.config is not None, "Config should not be None."
-
         """Initializes agents and tasks from the provided config."""
+        if self.config is None:
+            raise ValueError("Config should not be None.")
         if not self.config.get("agents") or not self.config.get("tasks"):
             raise PydanticCustomError(
                 "missing_keys_in_config", "Config should have 'agents' and 'tasks'.", {}
@@ -673,7 +717,7 @@ class Crew(FlowTrackable, BaseModel):
             detach(token)
 
     def kickoff_for_each(self, inputs: list[dict[str, Any]]) -> list[CrewOutput]:
-        """Executes the Crew's workflow for each input in the list and aggregates results."""
+        """Executes the Crew's workflow for each input and aggregates results."""
         results: list[CrewOutput] = []
 
         # Initialize the parent crew's usage metrics
@@ -766,7 +810,7 @@ class Crew(FlowTrackable, BaseModel):
         return self._execute_tasks(self.tasks)
 
     def _run_hierarchical_process(self) -> CrewOutput:
-        """Creates and assigns a manager agent to make sure the crew completes the tasks."""
+        """Creates and assigns a manager agent to complete the tasks."""
         self._create_manager_agent()
         return self._execute_tasks(self.tasks)
 
@@ -804,8 +848,9 @@ class Crew(FlowTrackable, BaseModel):
         """Executes tasks sequentially and returns the final output.
 
         Args:
-            tasks (list[Task]): list of tasks to execute
-            manager (Optional[BaseAgent], optional): Manager agent to use for delegation. Defaults to None.
+            tasks (List[Task]): List of tasks to execute
+            manager (Optional[BaseAgent], optional): Manager agent to use for
+                delegation. Defaults to None.
 
         Returns:
             CrewOutput: Final output of the crew
@@ -828,7 +873,9 @@ class Crew(FlowTrackable, BaseModel):
             agent_to_use = self._get_agent_to_use(task)
             if agent_to_use is None:
                 raise ValueError(
-                    f"No agent available for task: {task.description}. Ensure that either the task has an assigned agent or a manager agent is provided."
+                    f"No agent available for task: {task.description}. "
+                    f"Ensure that either the task has an assigned agent "
+                    f"or a manager agent is provided."
                 )
 
             # Determine which tools to use - task tools take precedence over agent tools
@@ -937,7 +984,7 @@ class Crew(FlowTrackable, BaseModel):
         ):
             tools = self._add_multimodal_tools(agent, tools)
 
-        # Return a list[BaseTool] which is compatible with both Task.execute_sync and Task.execute_async
+        # Return a List[BaseTool] compatible with Task.execute_sync and execute_async
         return cast(list[BaseTool], tools)
 
     def _get_agent_to_use(self, task: Task) -> BaseAgent | None:
@@ -950,7 +997,7 @@ class Crew(FlowTrackable, BaseModel):
         existing_tools: list[Tool] | list[BaseTool],
         new_tools: list[Tool] | list[BaseTool],
     ) -> list[BaseTool]:
-        """Merge new tools into existing tools list, avoiding duplicates by tool name."""
+        """Merge new tools into existing tools list, avoiding duplicates."""
         if not new_tools:
             return cast(list[BaseTool], existing_tools)
 
@@ -1029,12 +1076,11 @@ class Crew(FlowTrackable, BaseModel):
         if not task.context:
             return ""
 
-        context = (
+        return (
             aggregate_raw_outputs_from_task_outputs(task_outputs)
             if task.context is NOT_SPECIFIED
             else aggregate_raw_outputs_from_tasks(task.context)
         )
-        return context
 
     def _process_task_result(self, task: Task, output: TaskOutput) -> None:
         role = task.agent.role if task.agent is not None else "None"
@@ -1102,6 +1148,7 @@ class Crew(FlowTrackable, BaseModel):
         )
 
     def replay(self, task_id: str, inputs: dict[str, Any] | None = None) -> CrewOutput:
+        """Replay the crew execution from a specific task."""
         stored_outputs = self._task_output_handler.load()
         if not stored_outputs:
             raise ValueError(f"Task with id {task_id} not found in the crew's tasks.")
@@ -1137,12 +1184,12 @@ class Crew(FlowTrackable, BaseModel):
             self.tasks[i].output = task_output
 
         self._logging_color = "bold_blue"
-        result = self._execute_tasks(self.tasks, start_index, True)
-        return result
+        return self._execute_tasks(self.tasks, start_index, True)
 
     def query_knowledge(
         self, query: list[str], results_limit: int = 3, score_threshold: float = 0.35
-    ) -> list[dict[str, Any]] | None:
+    ) -> list[SearchResult] | None:
+        """Query the crew's knowledge base for relevant information."""
         if self.knowledge:
             return self.knowledge.query(
                 query, results_limit=results_limit, score_threshold=score_threshold
@@ -1162,7 +1209,7 @@ class Crew(FlowTrackable, BaseModel):
 
         # Scan tasks for inputs
         for task in self.tasks:
-            # description and expected_output might contain e.g. {topic}, {user_name}, etc.
+            # description and expected_output might contain e.g. {topic}, {user_name}
             text = f"{task.description or ''} {task.expected_output or ''}"
             required_inputs.update(placeholder_pattern.findall(text))
 
@@ -1242,7 +1289,7 @@ class Crew(FlowTrackable, BaseModel):
         copied_data.pop("agents", None)
         copied_data.pop("tasks", None)
 
-        copied_crew = Crew(
+        return Crew(
             **copied_data,
             agents=cloned_agents,
             tasks=cloned_tasks,
@@ -1251,8 +1298,6 @@ class Crew(FlowTrackable, BaseModel):
             manager_agent=manager_agent,
             manager_llm=manager_llm,
         )
-
-        return copied_crew
 
     def _set_tasks_callbacks(self) -> None:
         """Sets callback for every task suing task_callback"""
@@ -1296,7 +1341,10 @@ class Crew(FlowTrackable, BaseModel):
         eval_llm: str | InstanceOf[BaseLLM],
         inputs: dict[str, Any] | None = None,
     ) -> None:
-        """Test and evaluate the Crew with the given inputs for n iterations concurrently using concurrent.futures."""
+        """Test and evaluate the Crew with the given inputs for n iterations.
+
+        Uses concurrent.futures for concurrent execution.
+        """
         try:
             # Create LLM instance and ensure it's of type LLM for CrewEvaluator
             llm_instance = create_llm(eval_llm)
@@ -1336,7 +1384,11 @@ class Crew(FlowTrackable, BaseModel):
             raise
 
     def __repr__(self):
-        return f"Crew(id={self.id}, process={self.process}, number_of_agents={len(self.agents)}, number_of_tasks={len(self.tasks)})"
+        return (
+            f"Crew(id={self.id}, process={self.process}, "
+            f"number_of_agents={len(self.agents)}, "
+            f"number_of_tasks={len(self.tasks)})"
+        )
 
     def reset_memories(self, command_type: str) -> None:
         """Reset specific or all memories for the crew.
@@ -1350,7 +1402,7 @@ class Crew(FlowTrackable, BaseModel):
             ValueError: If an invalid command type is provided.
             RuntimeError: If memory reset operation fails.
         """
-        VALID_TYPES = frozenset(
+        valid_types = frozenset(
             [
                 "long",
                 "short",
@@ -1363,9 +1415,10 @@ class Crew(FlowTrackable, BaseModel):
             ]
         )
 
-        if command_type not in VALID_TYPES:
+        if command_type not in valid_types:
             raise ValueError(
-                f"Invalid command type. Must be one of: {', '.join(sorted(VALID_TYPES))}"
+                f"Invalid command type. Must be one of: "
+                f"{', '.join(sorted(valid_types))}"
             )
 
         try:
@@ -1383,7 +1436,7 @@ class Crew(FlowTrackable, BaseModel):
         """Reset all available memory systems."""
         memory_systems = self._get_memory_systems()
 
-        for memory_type, config in memory_systems.items():
+        for config in memory_systems.values():
             if (system := config.get("system")) is not None:
                 name = config.get("name")
                 try:
@@ -1391,11 +1444,13 @@ class Crew(FlowTrackable, BaseModel):
                     reset_fn(system)
                     self._logger.log(
                         "info",
-                        f"[Crew ({self.name if self.name else self.id})] {name} memory has been reset",
+                        f"[Crew ({self.name if self.name else self.id})] "
+                        f"{name} memory has been reset",
                     )
                 except Exception as e:
                     raise RuntimeError(
-                        f"[Crew ({self.name if self.name else self.id})] Failed to reset {name} memory: {e!s}"
+                        f"[Crew ({self.name if self.name else self.id})] "
+                        f"Failed to reset {name} memory: {e!s}"
                     ) from e
 
     def _reset_specific_memory(self, memory_type: str) -> None:
@@ -1420,18 +1475,21 @@ class Crew(FlowTrackable, BaseModel):
             reset_fn(system)
             self._logger.log(
                 "info",
-                f"[Crew ({self.name if self.name else self.id})] {name} memory has been reset",
+                f"[Crew ({self.name if self.name else self.id})] "
+                f"{name} memory has been reset",
             )
         except Exception as e:
             raise RuntimeError(
-                f"[Crew ({self.name if self.name else self.id})] Failed to reset {name} memory: {e!s}"
+                f"[Crew ({self.name if self.name else self.id})] "
+                f"Failed to reset {name} memory: {e!s}"
             ) from e
 
     def _get_memory_systems(self):
         """Get all available memory systems with their configuration.
 
         Returns:
-            dict containing all memory systems with their reset functions and display names.
+            Dict containing all memory systems with their reset functions and
+            display names.
         """
 
         def default_reset(memory):
