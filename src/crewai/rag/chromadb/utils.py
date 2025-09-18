@@ -133,6 +133,9 @@ def _convert_distance_to_score(
     if distance_metric == "cosine":
         score = 1.0 - 0.5 * distance
         return max(0.0, min(1.0, score))
+    if distance_metric == "l2":
+        score = 1.0 / (1.0 + distance)
+        return max(0.0, min(1.0, score))
     raise ValueError(f"Unsupported distance metric: {distance_metric}")
 
 
