@@ -740,7 +740,7 @@ class LLM(BaseLLM):
             # Catch context window errors from litellm and convert them to our own exception type.
             # This exception is handled by CrewAgentExecutor._invoke_loop() which can then
             # decide whether to summarize the content or abort based on the respect_context_window flag.
-            raise LLMContextLengthExceededException(str(e))
+            raise LLMContextLengthExceededException(str(e)) from e
         except Exception as e:
             logging.error(f"Error in streaming response: {e!s}")
             if full_response.strip():
@@ -762,7 +762,7 @@ class LLM(BaseLLM):
                         error=str(e), from_task=from_task, from_agent=from_agent
                     ),
                 )
-            raise Exception(f"Failed to get streaming response: {e!s}")
+            raise Exception(f"Failed to get streaming response: {e!s}") from e
 
     def _handle_streaming_tool_calls(
         self,
@@ -891,7 +891,7 @@ class LLM(BaseLLM):
         except ContextWindowExceededError as e:
             # Convert litellm's context window error to our own exception type
             # for consistent handling in the rest of the codebase
-            raise LLMContextLengthExceededException(str(e))
+            raise LLMContextLengthExceededException(str(e)) from e
         # --- 2) Extract response message and content
         response_message = cast(Choices, cast(ModelResponse, response).choices)[
             0
