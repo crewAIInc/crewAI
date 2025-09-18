@@ -782,27 +782,27 @@ class LLM(BaseLLM):
                 current_tool_accumulator.function.arguments += (
                     tool_call.function.arguments
                 )
-            assert hasattr(crewai_event_bus, "emit")
-            # Convert ChatCompletionDeltaToolCall to ToolCall format
-            from crewai.events.types.llm_events import ToolCall, FunctionCall
-            converted_tool_call = ToolCall(
-                id=tool_call.id,
-                function=FunctionCall(
-                    name=tool_call.function.name,
-                    arguments=tool_call.function.arguments or ""
-                ),
-                type=tool_call.type,
-                index=tool_call.index
-            )
-            crewai_event_bus.emit(
-                self,
-                event=LLMStreamChunkEvent(
-                    tool_call=converted_tool_call,
-                    chunk=tool_call.function.arguments,
-                    from_task=from_task,
-                    from_agent=from_agent,
-                ),
-            )
+            if hasattr(crewai_event_bus, "emit"):
+                # Convert ChatCompletionDeltaToolCall to ToolCall format
+                from crewai.events.types.llm_events import ToolCall, FunctionCall
+                converted_tool_call = ToolCall(
+                    id=tool_call.id,
+                    function=FunctionCall(
+                        name=tool_call.function.name,
+                        arguments=tool_call.function.arguments or ""
+                    ),
+                    type=tool_call.type,
+                    index=tool_call.index
+                )
+                crewai_event_bus.emit(
+                    self,
+                    event=LLMStreamChunkEvent(
+                        tool_call=converted_tool_call,
+                        chunk=tool_call.function.arguments,
+                        from_task=from_task,
+                        from_agent=from_agent,
+                    ),
+                )
 
             if (
                 current_tool_accumulator.function.name
