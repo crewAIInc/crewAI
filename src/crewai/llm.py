@@ -600,15 +600,15 @@ class LLM(BaseLLM):
                     full_response += chunk_content
 
                     # Emit the chunk event
-                    assert hasattr(crewai_event_bus, "emit")
-                    crewai_event_bus.emit(
-                        self,
-                        event=LLMStreamChunkEvent(
-                            chunk=chunk_content,
-                            from_task=from_task,
-                            from_agent=from_agent,
-                        ),
-                    )
+                    if hasattr(crewai_event_bus, "emit"):
+                        crewai_event_bus.emit(
+                            self,
+                            event=LLMStreamChunkEvent(
+                                chunk=chunk_content,
+                                from_task=from_task,
+                                from_agent=from_agent,
+                            ),
+                        )
             # --- 4) Fallback to non-streaming if no content received
             if not full_response.strip() and chunk_count == 0:
                 logging.warning(
@@ -755,13 +755,13 @@ class LLM(BaseLLM):
                 return full_response
 
             # Emit failed event and re-raise the exception
-            assert hasattr(crewai_event_bus, "emit")
-            crewai_event_bus.emit(
-                self,
-                event=LLMCallFailedEvent(
-                    error=str(e), from_task=from_task, from_agent=from_agent
-                ),
-            )
+            if hasattr(crewai_event_bus, "emit"):
+                crewai_event_bus.emit(
+                    self,
+                    event=LLMCallFailedEvent(
+                        error=str(e), from_task=from_task, from_agent=from_agent
+                    ),
+                )
             raise Exception(f"Failed to get streaming response: {e!s}")
 
     def _handle_streaming_tool_calls(
@@ -975,9 +975,9 @@ class LLM(BaseLLM):
                 fn = available_functions[function_name]
 
                 # --- 3.2) Execute function
-                assert hasattr(crewai_event_bus, "emit")
-                started_at = datetime.now()
-                crewai_event_bus.emit(
+                if hasattr(crewai_event_bus, "emit"):
+                    started_at = datetime.now()
+                    crewai_event_bus.emit(
                     self,
                     event=ToolUsageStartedEvent(
                         tool_name=function_name,
@@ -1015,8 +1015,8 @@ class LLM(BaseLLM):
                     function_name, lambda: None
                 )  # Ensure fn is always a callable
                 logging.error(f"Error executing function '{function_name}': {e}")
-                assert hasattr(crewai_event_bus, "emit")
-                crewai_event_bus.emit(
+                if hasattr(crewai_event_bus, "emit"):
+                    crewai_event_bus.emit(
                     self,
                     event=LLMCallFailedEvent(error=f"Tool execution error: {e!s}"),
                 )
@@ -1067,8 +1067,8 @@ class LLM(BaseLLM):
             LLMContextLengthExceededException: If input exceeds model's context limit
         """
         # --- 1) Emit call started event
-        assert hasattr(crewai_event_bus, "emit")
-        crewai_event_bus.emit(
+        if hasattr(crewai_event_bus, "emit"):
+            crewai_event_bus.emit(
             self,
             event=LLMCallStartedEvent(
                 messages=messages,
@@ -1140,13 +1140,13 @@ class LLM(BaseLLM):
                         from_agent=from_agent,
                     )
 
-                assert hasattr(crewai_event_bus, "emit")
-                crewai_event_bus.emit(
-                    self,
-                    event=LLMCallFailedEvent(
-                        error=str(e), from_task=from_task, from_agent=from_agent
-                    ),
-                )
+                if hasattr(crewai_event_bus, "emit"):
+                    crewai_event_bus.emit(
+                        self,
+                        event=LLMCallFailedEvent(
+                            error=str(e), from_task=from_task, from_agent=from_agent
+                        ),
+                    )
                 raise
 
     def _handle_emit_call_events(
@@ -1166,18 +1166,18 @@ class LLM(BaseLLM):
             from_agent: Optional agent object
             messages: Optional messages object
         """
-        assert hasattr(crewai_event_bus, "emit")
-        crewai_event_bus.emit(
-            self,
-            event=LLMCallCompletedEvent(
-                messages=messages,
-                response=response,
-                call_type=call_type,
-                from_task=from_task,
-                from_agent=from_agent,
-                model=self.model,
-            ),
-        )
+        if hasattr(crewai_event_bus, "emit"):
+            crewai_event_bus.emit(
+                self,
+                event=LLMCallCompletedEvent(
+                    messages=messages,
+                    response=response,
+                    call_type=call_type,
+                    from_task=from_task,
+                    from_agent=from_agent,
+                    model=self.model,
+                ),
+            )
 
     def _format_messages_for_provider(
         self, messages: list[dict[str, str]]
@@ -1222,7 +1222,7 @@ class LLM(BaseLLM):
         if "mistral" in self.model.lower():
             # Check if the last message has a role of 'assistant'
             if messages and messages[-1]["role"] == "assistant":
-                return messages + [{"role": "user", "content": "Please continue."}]
+                return [*messages, {"role": "user", "content": "Please continue."}]
             return messages
 
         # TODO: Remove this code after merging PR https://github.com/BerriAI/litellm/pull/10917
@@ -1232,7 +1232,7 @@ class LLM(BaseLLM):
             and messages
             and messages[-1]["role"] == "assistant"
         ):
-            return messages + [{"role": "user", "content": ""}]
+            return [*messages, {"role": "user", "content": ""}]
 
         # Handle Anthropic models
         if self.is_anthropic:
@@ -1306,14 +1306,14 @@ class LLM(BaseLLM):
         if self.context_window_size != 0:
             return self.context_window_size
 
-        MIN_CONTEXT = 1024
-        MAX_CONTEXT = 2097152  # Current max from gemini-1.5-pro
+        min_context = 1024
+        max_context = 2097152  # Current max from gemini-1.5-pro
 
         # Validate all context window sizes
         for key, value in LLM_CONTEXT_WINDOW_SIZES.items():
-            if value < MIN_CONTEXT or value > MAX_CONTEXT:
+            if value < min_context or value > max_context:
                 raise ValueError(
-                    f"Context window for {key} must be between {MIN_CONTEXT} and {MAX_CONTEXT}"
+                    f"Context window for {key} must be between {min_context} and {max_context}"
                 )
 
         self.context_window_size = int(
