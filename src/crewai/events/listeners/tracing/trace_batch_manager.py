@@ -138,13 +138,6 @@ class TraceBatchManager:
                     if not use_ephemeral
                     else response_data["ephemeral_trace_id"]
                 )
-                console = Console()
-                panel = Panel(
-                    f"✅ Trace batch initialized with session ID: {self.trace_batch_id}",
-                    title="Trace Batch Initialization",
-                    border_style="green",
-                )
-                console.print(panel)
             else:
                 logger.warning(
                     f"Trace batch initialization returned status {response.status_code}. Continuing without tracing."
@@ -263,7 +256,8 @@ class TraceBatchManager:
                     title="Trace Batch Finalization",
                     border_style="green",
                 )
-                console.print(panel)
+                if not should_auto_collect_first_time_traces():
+                    console.print(panel)
 
             else:
                 logger.error(

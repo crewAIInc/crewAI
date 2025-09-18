@@ -1,5 +1,6 @@
 import logging
 import uuid
+import webbrowser
 
 from rich.console import Console
 from rich.panel import Panel
@@ -108,8 +109,13 @@ class FirstTimeTraceHandler:
             self._gracefully_fail(f"Backend initialization failed: {e}")
 
     def _display_ephemeral_trace_link(self):
-        """Display the ephemeral trace link to the user."""
+        """Display the ephemeral trace link to the user and automatically open browser."""
         console = Console()
+
+        try:
+            webbrowser.open(self.ephemeral_url)
+        except Exception as e:
+            pass
 
         panel_content = f"""
 🎉 Your First CrewAI Execution Trace is Ready!
