@@ -9,7 +9,7 @@ mode: "wide"
 
 ## Description
 
-The `RagTool` is designed to answer questions by leveraging the power of Retrieval-Augmented Generation (RAG) through EmbedChain.
+The `RagTool` is designed to answer questions by leveraging the power of Retrieval-Augmented Generation (RAG) through CrewAI's native RAG system.
 It provides a dynamic knowledge base that can be queried to retrieve relevant information from various data sources.
 This tool is particularly useful for applications that require access to a vast array of information and need to provide contextually relevant answers.
 
@@ -76,8 +76,8 @@ The `RagTool` can be used with a wide variety of data sources, including:
 The `RagTool` accepts the following parameters:
 
 - **summarize**: Optional. Whether to summarize the retrieved content. Default is `False`.
-- **adapter**: Optional. A custom adapter for the knowledge base. If not provided, an EmbedchainAdapter will be used.
-- **config**: Optional. Configuration for the underlying EmbedChain App.
+- **adapter**: Optional. A custom adapter for the knowledge base. If not provided, a CrewAIRagAdapter will be used.
+- **config**: Optional. Configuration for the underlying CrewAI RAG system.
 
 ## Adding Content
 
@@ -130,44 +130,17 @@ from crewai_tools import RagTool
 
 # Create a RAG tool with custom configuration
 config = {
-    "app": {
-        "name": "custom_app",
-    },
-    "llm": {
-        "provider": "openai",
-        "config": {
-            "model": "gpt-4",
-        }
-    },
-    "embedding_model": {
-        "provider": "openai",
-        "config": {
-            "model": "text-embedding-ada-002"
-        }
-    },
     "vectordb": {
-        "provider": "elasticsearch",
+        "provider": "chromadb",  # or "qdrant"
         "config": {
-            "collection_name": "my-collection",
-            "cloud_id": "deployment-name:xxxx",
-            "api_key": "your-key",
-            "verify_certs": False
+            "collection_name": "my-collection"
         }
-    },
-    "chunker": {
-        "chunk_size": 400,
-        "chunk_overlap": 100,
-        "length_function": "len",
-        "min_chunk_size": 0
     }
 }
 
 rag_tool = RagTool(config=config, summarize=True)
 ```
 
-The internal RAG tool utilizes the Embedchain adapter, allowing you to pass any configuration options that are supported by Embedchain.
-You can refer to the [Embedchain documentation](https://docs.embedchain.ai/components/introduction) for details.
-Make sure to review the configuration options available in the .yaml file.
 
 ## Conclusion
 The `RagTool` provides a powerful way to create and query knowledge bases from various data sources. By leveraging Retrieval-Augmented Generation, it enables agents to access and retrieve relevant information efficiently, enhancing their ability to provide accurate and contextually appropriate responses.
