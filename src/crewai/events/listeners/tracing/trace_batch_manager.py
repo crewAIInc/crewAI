@@ -251,8 +251,18 @@ class TraceBatchManager:
                 if self.is_current_batch_ephemeral:
                     self.ephemeral_trace_url = return_link
 
+                # Create a properly formatted message with URL on its own line
+                message_parts = [
+                    f"✅ Trace batch finalized with session ID: {self.trace_batch_id}",
+                    "",
+                    f"🔗 View here: {return_link}",
+                ]
+
+                if access_code:
+                    message_parts.append(f"🔑 Access Code: {access_code}")
+
                 panel = Panel(
-                    f"✅ Trace batch finalized with session ID: {self.trace_batch_id}. View here: {return_link} {f', Access Code: {access_code}' if access_code else ''}",
+                    "\n".join(message_parts),
                     title="Trace Batch Finalization",
                     border_style="green",
                 )
