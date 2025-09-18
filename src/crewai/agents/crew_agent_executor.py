@@ -186,6 +186,23 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
 
                 enforce_rpm_limit(self.request_within_rpm_limit)
 
+                # Pre-handle context length just before calling the LLM
+                try:
+                    window_size = self.llm.get_context_window_size()
+                except Exception:
+                    window_size = None
+                if window_size is not None:
+                    total_len = sum(len(m.get("content", "")) for m in self.messages)
+                    if total_len >= window_size:
+                        handle_context_length(
+                            respect_context_window=self.respect_context_window,
+                            printer=self._printer,
+                            messages=self.messages,
+                            llm=self.llm,
+                            callbacks=self.callbacks,
+                            i18n=self._i18n,
+                        )
+
                 answer = get_llm_response(
                     llm=self.llm,
                     messages=self.messages,
