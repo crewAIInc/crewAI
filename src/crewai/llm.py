@@ -413,7 +413,7 @@ class LLM(BaseLLM):
             ):
                 content = message.get("content", "")
                 if isinstance(content, str):
-                    formatted_message["content"] = [
+                    formatted_message["content"] = [  # type: ignore[assignment]
                         {
                             "type": "text",
                             "text": content,
@@ -783,10 +783,21 @@ class LLM(BaseLLM):
                     tool_call.function.arguments
                 )
             assert hasattr(crewai_event_bus, "emit")
+            # Convert ChatCompletionDeltaToolCall to ToolCall format
+            from crewai.events.types.llm_events import ToolCall, FunctionCall
+            converted_tool_call = ToolCall(
+                id=tool_call.id,
+                function=FunctionCall(
+                    name=tool_call.function.name,
+                    arguments=tool_call.function.arguments or ""
+                ),
+                type=tool_call.type,
+                index=tool_call.index
+            )
             crewai_event_bus.emit(
                 self,
                 event=LLMStreamChunkEvent(
-                    tool_call=tool_call.to_dict(),
+                    tool_call=converted_tool_call,
                     chunk=tool_call.function.arguments,
                     from_task=from_task,
                     from_agent=from_agent,
