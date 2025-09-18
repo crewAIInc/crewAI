@@ -500,6 +500,15 @@ def test_agent_custom_max_iterations():
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_agent_repeated_tool_usage(capsys):
+    """Test that agents handle repeated tool usage appropriately.
+
+    Notes:
+        Investigate whether to pin down the specific execution flow by examining
+        src/crewai/agents/crew_agent_executor.py:177-186 (max iterations check)
+        and src/crewai/tools/tool_usage.py:152-157 (repeated usage detection)
+        to ensure deterministic behavior.
+    """
+
     @tool
     def get_final_answer() -> float:
         """Get the final answer but don't give it yet, just re-use this tool non-stop."""
