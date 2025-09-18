@@ -112,7 +112,10 @@ class RecursiveCharacterTextSplitter:
                 if separator == "":
                     doc = "".join(current_doc)
                 else:
-                    doc = separator.join(current_doc)
+                    if self._keep_separator and separator == " ":
+                        doc = "".join(current_doc)
+                    else:
+                        doc = separator.join(current_doc)
 
                 if doc:
                     docs.append(doc)
@@ -133,7 +136,10 @@ class RecursiveCharacterTextSplitter:
             if separator == "":
                 doc = "".join(current_doc)
             else:
-                doc = separator.join(current_doc)
+                if self._keep_separator and separator == " ":
+                    doc = "".join(current_doc)
+                else:
+                    doc = separator.join(current_doc)
 
             if doc:
                 docs.append(doc)
