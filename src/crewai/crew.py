@@ -37,6 +37,7 @@ from crewai.events.listeners.tracing.trace_listener import (
 )
 from crewai.events.listeners.tracing.utils import (
     is_tracing_enabled,
+    should_auto_collect_first_time_traces,
 )
 from crewai.events.types.crew_events import (
     CrewKickoffCompletedEvent,
@@ -89,8 +90,8 @@ class Crew(FlowTrackable, BaseModel):
     tasks they should perform.
 
     Attributes:
-        tasks: List of tasks assigned to the crew.
-        agents: List of agents part of this crew.
+        tasks: list of tasks assigned to the crew.
+        agents: list of agents part of this crew.
         manager_llm: The language model that will run manager agent.
         manager_agent: Custom agent that will be used as manager.
         memory: Whether the crew should use memory to store memories of it's
@@ -238,11 +239,11 @@ class Crew(FlowTrackable, BaseModel):
     )
     task_execution_output_json_files: list[str] | None = Field(
         default=None,
-        description="List of file paths for task execution JSON files.",
+        description="list of file paths for task execution JSON files.",
     )
     execution_logs: list[dict[str, Any]] = Field(
         default=[],
-        description="List of execution logs for tasks",
+        description="list of execution logs for tasks",
     )
     knowledge_sources: list[BaseKnowledgeSource] | None = Field(
         default=None,
@@ -296,12 +297,16 @@ class Crew(FlowTrackable, BaseModel):
 
     @model_validator(mode="after")
     def set_private_attrs(self) -> "Crew":
-        """Set private attributes."""
+        """set private attributes."""
 
         self._cache_handler = CacheHandler()
         event_listener = EventListener()
 
-        if is_tracing_enabled() or self.tracing:
+        if (
+            is_tracing_enabled()
+            or self.tracing
+            or should_auto_collect_first_time_traces()
+        ):
             trace_listener = TraceCollectionListener()
             trace_listener.setup_listeners(crewai_event_bus)
         event_listener.verbose = self.verbose
