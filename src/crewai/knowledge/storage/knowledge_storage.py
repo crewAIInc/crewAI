@@ -1,4 +1,5 @@
 import logging
+import traceback
 import warnings
 from typing import Any, cast
 
@@ -49,9 +50,9 @@ class KnowledgeStorage(BaseKnowledgeStorage):
     def search(
         self,
         query: list[str],
-        limit: int = 3,
+        limit: int = 5,
         metadata_filter: dict[str, Any] | None = None,
-        score_threshold: float = 0.35,
+        score_threshold: float = 0.6,
     ) -> list[SearchResult]:
         try:
             if not query:
@@ -73,7 +74,9 @@ class KnowledgeStorage(BaseKnowledgeStorage):
                 score_threshold=score_threshold,
             )
         except Exception as e:
-            logging.error(f"Error during knowledge search: {e!s}")
+            logging.error(
+                f"Error during knowledge search: {e!s}\n{traceback.format_exc()}"
+            )
             return []
 
     def reset(self) -> None:
@@ -86,7 +89,9 @@ class KnowledgeStorage(BaseKnowledgeStorage):
             )
             client.delete_collection(collection_name=collection_name)
         except Exception as e:
-            logging.error(f"Error during knowledge reset: {e!s}")
+            logging.error(
+                f"Error during knowledge reset: {e!s}\n{traceback.format_exc()}"
+            )
 
     def save(self, documents: list[str]) -> None:
         try:

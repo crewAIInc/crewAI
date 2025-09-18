@@ -1,4 +1,5 @@
 import logging
+import traceback
 import warnings
 from typing import Any
 
@@ -86,14 +87,16 @@ class RAGStorage(BaseRAGStorage):
 
             client.add_documents(collection_name=collection_name, documents=[document])
         except Exception as e:
-            logging.error(f"Error during {self.type} save: {e!s}")
+            logging.error(
+                f"Error during {self.type} save: {e!s}\n{traceback.format_exc()}"
+            )
 
     def search(
         self,
         query: str,
-        limit: int = 3,
+        limit: int = 5,
         filter: dict[str, Any] | None = None,
-        score_threshold: float = 0.35,
+        score_threshold: float = 0.6,
     ) -> list[Any]:
         try:
             client = self._get_client()
@@ -110,7 +113,9 @@ class RAGStorage(BaseRAGStorage):
                 score_threshold=score_threshold,
             )
         except Exception as e:
-            logging.error(f"Error during {self.type} search: {e!s}")
+            logging.error(
+                f"Error during {self.type} search: {e!s}\n{traceback.format_exc()}"
+            )
             return []
 
     def reset(self) -> None:

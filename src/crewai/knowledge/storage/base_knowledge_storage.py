@@ -11,9 +11,9 @@ class BaseKnowledgeStorage(ABC):
     def search(
         self,
         query: list[str],
-        limit: int = 3,
+        limit: int = 5,
         metadata_filter: dict[str, Any] | None = None,
-        score_threshold: float = 0.35,
+        score_threshold: float = 0.6,
     ) -> list[SearchResult]:
         """Search for documents in the knowledge base."""
 

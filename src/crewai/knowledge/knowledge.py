@@ -43,7 +43,7 @@ class Knowledge(BaseModel):
         self.sources = sources
 
     def query(
-        self, query: list[str], results_limit: int = 3, score_threshold: float = 0.35
+        self, query: list[str], results_limit: int = 5, score_threshold: float = 0.6
     ) -> list[SearchResult]:
         """
         Query across all knowledge sources to find the most relevant information.

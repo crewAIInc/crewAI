@@ -151,7 +151,7 @@ class Mem0Storage(Storage):
         self.memory.add(conversations, **params)
 
     def search(
-        self, query: str, limit: int = 3, score_threshold: float = 0.35
+        self, query: str, limit: int = 5, score_threshold: float = 0.6
     ) -> list[Any]:
         params = {
             "query": query,
