@@ -15,7 +15,7 @@ def db_storage_path() -> str:
     if storage_dir:
         data_dir = Path(storage_dir)
     else:
-        data_dir = Path.cwd() / ".db"
+        data_dir = Path.cwd() / "db"
 
     data_dir.mkdir(parents=True, exist_ok=True)
     return str(data_dir)
