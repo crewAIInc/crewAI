@@ -1,11 +1,11 @@
 """ChromaDB configuration model."""
 
+import os
 import warnings
 from dataclasses import field
 from typing import Literal, cast
 
 from chromadb.config import Settings
-from chromadb.utils.embedding_functions import DefaultEmbeddingFunction
 from pydantic.dataclasses import dataclass as pyd_dataclass
 
 from crewai.rag.chromadb.constants import (
@@ -49,7 +49,17 @@ def _default_embedding_function() -> ChromaEmbeddingFunctionWrapper:
     Returns:
         Default embedding function using all-MiniLM-L6-v2 via ONNX.
     """
-    return cast(ChromaEmbeddingFunctionWrapper, DefaultEmbeddingFunction())
+    from chromadb.utils.embedding_functions.openai_embedding_function import (
+        OpenAIEmbeddingFunction,
+    )
+
+    return cast(
+        ChromaEmbeddingFunctionWrapper,
+        OpenAIEmbeddingFunction(
+            api_key=os.getenv("OPENAI_API_KEY"),
+            model_name="text-embedding-3-small",
+        ),
+    )
 
 
 @pyd_dataclass(frozen=True)
