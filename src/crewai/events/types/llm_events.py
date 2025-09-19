@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Any, Dict, List, Optional, Union
+from typing import Any
 
 from pydantic import BaseModel
 
@@ -7,14 +7,14 @@ from crewai.events.base_events import BaseEvent
 
 
 class LLMEventBase(BaseEvent):
-    task_name: Optional[str] = None
-    task_id: Optional[str] = None
+    task_name: str | None = None
+    task_id: str | None = None
 
-    agent_id: Optional[str] = None
-    agent_role: Optional[str] = None
+    agent_id: str | None = None
+    agent_role: str | None = None
 
-    from_task: Optional[Any] = None
-    from_agent: Optional[Any] = None
+    from_task: Any | None = None
+    from_agent: Any | None = None
 
     def __init__(self, **data):
         super().__init__(**data)
@@ -38,11 +38,11 @@ class LLMCallStartedEvent(LLMEventBase):
     """
 
     type: str = "llm_call_started"
-    model: Optional[str] = None
-    messages: Optional[Union[str, List[Dict[str, Any]]]] = None
-    tools: Optional[List[dict[str, Any]]] = None
-    callbacks: Optional[List[Any]] = None
-    available_functions: Optional[Dict[str, Any]] = None
+    model: str | None = None
+    messages: str | list[dict[str, Any]] | None = None
+    tools: list[dict[str, Any]] | None = None
+    callbacks: list[Any] | None = None
+    available_functions: dict[str, Any] | None = None
 
 
 class LLMCallCompletedEvent(LLMEventBase):
@@ -52,7 +52,7 @@ class LLMCallCompletedEvent(LLMEventBase):
     messages: str | list[dict[str, Any]] | None = None
     response: Any
     call_type: LLMCallType
-    model: Optional[str] = None
+    model: str | None = None
 
 
 class LLMCallFailedEvent(LLMEventBase):
@@ -64,13 +64,13 @@ class LLMCallFailedEvent(LLMEventBase):
 
 class FunctionCall(BaseModel):
     arguments: str
-    name: Optional[str] = None
+    name: str | None = None
 
 
 class ToolCall(BaseModel):
-    id: Optional[str] = None
+    id: str | None = None
     function: FunctionCall
-    type: Optional[str] = None
+    type: str | None = None
     index: int
 
 
@@ -79,4 +79,4 @@ class LLMStreamChunkEvent(LLMEventBase):
 
     type: str = "llm_stream_chunk"
     chunk: str
-    tool_call: Optional[ToolCall] = None
+    tool_call: ToolCall | None = None
