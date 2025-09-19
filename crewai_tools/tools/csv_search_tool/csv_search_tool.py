@@ -1,14 +1,10 @@
 from typing import Optional, Type
 
-try:
-    from embedchain.models.data_type import DataType
-    EMBEDCHAIN_AVAILABLE = True
-except ImportError:
-    EMBEDCHAIN_AVAILABLE = False
 
 from pydantic import BaseModel, Field
 
 from ..rag.rag_tool import RagTool
+from crewai_tools.rag.data_types import DataType
 
 
 class FixedCSVSearchToolSchema(BaseModel):
@@ -42,15 +38,16 @@ class CSVSearchTool(RagTool):
             self._generate_description()
 
     def add(self, csv: str) -> None:
-        if not EMBEDCHAIN_AVAILABLE:
-            raise ImportError("embedchain is not installed. Please install it with `pip install crewai-tools[embedchain]`")
         super().add(csv, data_type=DataType.CSV)
 
     def _run(
         self,
         search_query: str,
         csv: Optional[str] = None,
+        similarity_threshold: float | None = None,
+        limit: int | None = None,
     ) -> str:
         if csv is not None:
             self.add(csv)
-        return super()._run(query=search_query)
+        return super()._run(query=search_query, similarity_threshold=similarity_threshold, limit=limit)
+

@@ -11,7 +11,7 @@ class XMLLoader(BaseLoader):
 
         if source_content.is_url():
             content = self._load_from_url(source_ref, kwargs)
-        elif os.path.exists(source_ref):
+        elif source_content.path_exists():
             content = self._load_from_file(source_ref)
 
         return self._parse_xml(content, source_ref)

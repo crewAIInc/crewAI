@@ -25,6 +25,8 @@ class DataType(str, Enum):
     # Web types
     WEBSITE = "website"
     DOCS_SITE = "docs_site"
+    YOUTUBE_VIDEO = "youtube_video"
+    YOUTUBE_CHANNEL = "youtube_channel"
 
     # Raw types
     TEXT = "text"
@@ -34,6 +36,7 @@ class DataType(str, Enum):
         from importlib import import_module
 
         chunkers = {
+            DataType.PDF_FILE: ("text_chunker", "TextChunker"),
             DataType.TEXT_FILE: ("text_chunker", "TextChunker"),
             DataType.TEXT: ("text_chunker", "TextChunker"),
             DataType.DOCX: ("text_chunker", "DocxChunker"),
@@ -45,9 +48,18 @@ class DataType(str, Enum):
             DataType.XML: ("structured_chunker", "XmlChunker"),
 
             DataType.WEBSITE: ("web_chunker", "WebsiteChunker"),
+            DataType.DIRECTORY: ("text_chunker", "TextChunker"),
+            DataType.YOUTUBE_VIDEO: ("text_chunker", "TextChunker"),
+            DataType.YOUTUBE_CHANNEL: ("text_chunker", "TextChunker"),
+            DataType.GITHUB: ("text_chunker", "TextChunker"),
+            DataType.DOCS_SITE: ("text_chunker", "TextChunker"),
+            DataType.MYSQL: ("text_chunker", "TextChunker"),
+            DataType.POSTGRES: ("text_chunker", "TextChunker"),
         }
 
-        module_name, class_name = chunkers.get(self, ("default_chunker", "DefaultChunker"))
+        if self not in chunkers:
+            raise ValueError(f"No chunker defined for {self}")
+        module_name, class_name = chunkers[self]
         module_path = f"crewai_tools.rag.chunkers.{module_name}"
 
         try:
@@ -60,6 +72,7 @@ class DataType(str, Enum):
         from importlib import import_module
 
         loaders = {
+            DataType.PDF_FILE: ("pdf_loader", "PDFLoader"),
             DataType.TEXT_FILE: ("text_loader", "TextFileLoader"),
             DataType.TEXT: ("text_loader", "TextLoader"),
             DataType.XML: ("xml_loader", "XMLLoader"),
@@ -69,9 +82,17 @@ class DataType(str, Enum):
             DataType.DOCX: ("docx_loader", "DOCXLoader"),
             DataType.CSV: ("csv_loader", "CSVLoader"),
             DataType.DIRECTORY: ("directory_loader", "DirectoryLoader"),
+            DataType.YOUTUBE_VIDEO: ("youtube_video_loader", "YoutubeVideoLoader"),
+            DataType.YOUTUBE_CHANNEL: ("youtube_channel_loader", "YoutubeChannelLoader"),
+            DataType.GITHUB: ("github_loader", "GithubLoader"),
+            DataType.DOCS_SITE: ("docs_site_loader", "DocsSiteLoader"),
+            DataType.MYSQL: ("mysql_loader", "MySQLLoader"),
+            DataType.POSTGRES: ("postgres_loader", "PostgresLoader"),
         }
 
-        module_name, class_name = loaders.get(self, ("text_loader", "TextLoader"))
+        if self not in loaders:
+            raise ValueError(f"No loader defined for {self}")
+        module_name, class_name = loaders[self]
         module_path = f"crewai_tools.rag.loaders.{module_name}"
         try:
             module = import_module(module_path)

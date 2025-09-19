@@ -1,6 +1,6 @@
 [project]
 name = "crewai-tools"
-version = "0.71.0"
+version = "0.73.0"
 description = "Set of tools for the crewAI framework"
 readme = "README.md"
 authors = [
@@ -16,12 +16,16 @@ dependencies = [
     "pytube>=15.0.0",
     "requests>=2.31.0",
     "docker>=7.1.0",
-    "crewai>=0.177.0",
+    "crewai>=0.186.1",
     "click>=8.1.8",
     "lancedb>=0.5.4",
     "tiktoken>=0.8.0",
     "stagehand>=0.4.1",
     "portalocker==2.7.0",
+    "beautifulsoup4>=4.13.4",
+    "pypdf>=5.9.0",
+    "python-docx>=1.2.0",
+    "youtube-transcript-api>=1.2.2",
 ]
 
 [project.urls]
@@ -33,9 +37,6 @@ Documentation = "https://docs.crewai.com"
 [project.scripts]
 
 [project.optional-dependencies]
-embedchain = [
-    "embedchain>=0.1.114",
-]
 scrapfly-sdk = [
     "scrapfly-sdk>=0.8.19",
 ]
@@ -133,6 +134,12 @@ oxylabs = [
 mongodb = [
     "pymongo>=4.13"
 ]
+mysql = [
+    "pymysql>=1.1.1"
+]
+postgresql = [
+    "psycopg2-binary>=2.9.10"
+]
 bedrock = [
     "beautifulsoup4>=4.13.4",
     "bedrock-agentcore>=0.1.0",
@@ -143,6 +150,9 @@ contextual = [
     "contextual-client>=0.1.0",
     "nest-asyncio>=1.6.0",
 ]
+
+[tool.hatch.metadata]
+allow-direct-references = true
 
 [tool.pytest.ini_options]
 pythonpath = ["."]
@@ -163,4 +173,6 @@ dev = [
     "pytest-asyncio>=0.25.2",
     "pytest>=8.0.0",
     "pytest-recording>=0.13.3",
+    "mypy>=1.18.1",
+    "ruff>=0.13.0",
 ]
