@@ -7,7 +7,7 @@ from crewai.utilities.converter import ConverterError
 from crewai.utilities.training_converter import TrainingConverter
 
 
-class TestModel(BaseModel):
+class SampleModel(BaseModel):
     string_field: str = Field(description="A simple string field")
     list_field: List[str] = Field(description="A list of strings")
     number_field: float = Field(description="A number field")
@@ -22,7 +22,7 @@ class TestTrainingConverter:
         self.converter = TrainingConverter(
             llm=self.llm_mock,
             text=self.test_text,
-            model=TestModel,
+            model=SampleModel,
             instructions=self.test_instructions
         )
 
