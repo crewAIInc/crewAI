@@ -1,5 +1,5 @@
 import os
-from typing import TYPE_CHECKING, Any, Optional, Type, List
+from typing import TYPE_CHECKING, Any, Optional
 from urllib.parse import urlparse
 
 from crewai.tools import BaseTool, EnvVar
@@ -32,7 +32,7 @@ class ScrapegraphScrapeToolSchema(FixedScrapegraphScrapeToolSchema):
     )
 
     @field_validator("website_url")
-    def validate_url(cls, v):
+    def validate_url(self, v):
         """Validate URL format"""
         try:
             result = urlparse(v)
@@ -61,22 +61,26 @@ class ScrapegraphScrapeTool(BaseTool):
     description: str = (
         "A tool that uses Scrapegraph AI to intelligently scrape website content."
     )
-    args_schema: Type[BaseModel] = ScrapegraphScrapeToolSchema
-    website_url: Optional[str] = None
-    user_prompt: Optional[str] = None
-    api_key: Optional[str] = None
+    args_schema: type[BaseModel] = ScrapegraphScrapeToolSchema
+    website_url: str | None = None
+    user_prompt: str | None = None
+    api_key: str | None = None
     enable_logging: bool = False
     _client: Optional["Client"] = None
-    package_dependencies: List[str] = ["scrapegraph-py"]
-    env_vars: List[EnvVar] = [
-        EnvVar(name="SCRAPEGRAPH_API_KEY", description="API key for Scrapegraph AI services", required=False),
+    package_dependencies: list[str] = ["scrapegraph-py"]
+    env_vars: list[EnvVar] = [
+        EnvVar(
+            name="SCRAPEGRAPH_API_KEY",
+            description="API key for Scrapegraph AI services",
+            required=False,
+        ),
     ]
 
     def __init__(
         self,
-        website_url: Optional[str] = None,
-        user_prompt: Optional[str] = None,
-        api_key: Optional[str] = None,
+        website_url: str | None = None,
+        user_prompt: str | None = None,
+        api_key: str | None = None,
         enable_logging: bool = False,
         **kwargs,
     ):
@@ -167,17 +171,15 @@ class ScrapegraphScrapeTool(BaseTool):
 
         try:
             # Make the SmartScraper request
-            response = self._client.smartscraper(
+            return self._client.smartscraper(
                 website_url=website_url,
                 user_prompt=user_prompt,
             )
 
-            return response
-
         except RateLimitError:
             raise  # Re-raise rate limit errors
         except Exception as e:
-            raise RuntimeError(f"Scraping failed: {str(e)}")
+            raise RuntimeError(f"Scraping failed: {e!s}")
         finally:
             # Always close the client
             self._client.close()

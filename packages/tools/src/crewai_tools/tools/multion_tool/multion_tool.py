@@ -1,7 +1,7 @@
 """Multion tool spec."""
 
 import os
-from typing import Any, Optional, List
+from typing import Any
 
 from crewai.tools import BaseTool, EnvVar
 
@@ -13,18 +13,20 @@ class MultiOnTool(BaseTool):
     description: str = """Multion gives the ability for LLMs to control web browsers using natural language instructions.
             If the status is 'CONTINUE', reissue the same instruction to continue execution
         """
-    multion: Optional[Any] = None
-    session_id: Optional[str] = None
+    multion: Any | None = None
+    session_id: str | None = None
     local: bool = False
     max_steps: int = 3
-    package_dependencies: List[str] = ["multion"]
-    env_vars: List[EnvVar] = [
-        EnvVar(name="MULTION_API_KEY", description="API key for Multion", required=True),
+    package_dependencies: list[str] = ["multion"]
+    env_vars: list[EnvVar] = [
+        EnvVar(
+            name="MULTION_API_KEY", description="API key for Multion", required=True
+        ),
     ]
 
     def __init__(
         self,
-        api_key: Optional[str] = None,
+        api_key: str | None = None,
         local: bool = False,
         max_steps: int = 3,
         **kwargs,

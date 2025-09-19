@@ -1,5 +1,5 @@
-from typing import List, Optional
 import re
+
 
 class RecursiveCharacterTextSplitter:
     """
@@ -10,7 +10,7 @@ class RecursiveCharacterTextSplitter:
         self,
         chunk_size: int = 4000,
         chunk_overlap: int = 200,
-        separators: Optional[List[str]] = None,
+        separators: list[str] | None = None,
         keep_separator: bool = True,
     ):
         """
@@ -23,7 +23,9 @@ class RecursiveCharacterTextSplitter:
             keep_separator: Whether to keep the separator in the split text
         """
         if chunk_overlap >= chunk_size:
-            raise ValueError(f"Chunk overlap ({chunk_overlap}) cannot be >= chunk size ({chunk_size})")
+            raise ValueError(
+                f"Chunk overlap ({chunk_overlap}) cannot be >= chunk size ({chunk_size})"
+            )
 
         self._chunk_size = chunk_size
         self._chunk_overlap = chunk_overlap
@@ -36,10 +38,10 @@ class RecursiveCharacterTextSplitter:
             "",
         ]
 
-    def split_text(self, text: str) -> List[str]:
+    def split_text(self, text: str) -> list[str]:
         return self._split_text(text, self._separators)
 
-    def _split_text(self, text: str, separators: List[str]) -> List[str]:
+    def _split_text(self, text: str, separators: list[str]) -> list[str]:
         separator = separators[-1]
         new_separators = []
 
@@ -49,7 +51,7 @@ class RecursiveCharacterTextSplitter:
                 break
             if re.search(re.escape(sep), text):
                 separator = sep
-                new_separators = separators[i + 1:]
+                new_separators = separators[i + 1 :]
                 break
 
         splits = self._split_text_with_separator(text, separator)
@@ -68,7 +70,7 @@ class RecursiveCharacterTextSplitter:
 
         return self._merge_splits(good_splits, separator)
 
-    def _split_text_with_separator(self, text: str, separator: str) -> List[str]:
+    def _split_text_with_separator(self, text: str, separator: str) -> list[str]:
         if separator == "":
             return list(text)
 
@@ -90,16 +92,15 @@ class RecursiveCharacterTextSplitter:
                             splits[-1] += separator
 
             return [s for s in splits if s]
-        else:
-            return text.split(separator)
+        return text.split(separator)
 
-    def _split_by_characters(self, text: str) -> List[str]:
+    def _split_by_characters(self, text: str) -> list[str]:
         chunks = []
         for i in range(0, len(text), self._chunk_size):
-            chunks.append(text[i:i + self._chunk_size])
+            chunks.append(text[i : i + self._chunk_size])
         return chunks
 
-    def _merge_splits(self, splits: List[str], separator: str) -> List[str]:
+    def _merge_splits(self, splits: list[str], separator: str) -> list[str]:
         """Merge splits into chunks with proper overlap."""
         docs = []
         current_doc = []
@@ -112,7 +113,10 @@ class RecursiveCharacterTextSplitter:
                 if separator == "":
                     doc = "".join(current_doc)
                 else:
-                    doc = separator.join(current_doc)
+                    if self._keep_separator and separator == " ":
+                        doc = "".join(current_doc)
+                    else:
+                        doc = separator.join(current_doc)
 
                 if doc:
                     docs.append(doc)
@@ -133,15 +137,25 @@ class RecursiveCharacterTextSplitter:
             if separator == "":
                 doc = "".join(current_doc)
             else:
-                doc = separator.join(current_doc)
+                if self._keep_separator and separator == " ":
+                    doc = "".join(current_doc)
+                else:
+                    doc = separator.join(current_doc)
 
             if doc:
                 docs.append(doc)
 
         return docs
 
+
 class BaseChunker:
-    def __init__(self, chunk_size: int = 1000, chunk_overlap: int = 200, separators: Optional[List[str]] = None, keep_separator: bool = True):
+    def __init__(
+        self,
+        chunk_size: int = 1000,
+        chunk_overlap: int = 200,
+        separators: list[str] | None = None,
+        keep_separator: bool = True,
+    ):
         """
         Initialize the Chunker
 
@@ -159,8 +173,7 @@ class BaseChunker:
             keep_separator=keep_separator,
         )
 
-
-    def chunk(self, text: str) -> List[str]:
+    def chunk(self, text: str) -> list[str]:
         if not text or not text.strip():
             return []
 

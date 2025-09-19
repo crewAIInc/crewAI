@@ -1,11 +1,6 @@
-from typing import Any, Type
+from typing import Any
 
-try:
-    from embedchain.loaders.mysql import MySQLLoader
-    EMBEDCHAIN_AVAILABLE = True
-except ImportError:
-    EMBEDCHAIN_AVAILABLE = False
-
+from crewai_tools.rag.data_types import DataType
 from pydantic import BaseModel, Field
 
 from ..rag.rag_tool import RagTool
@@ -23,16 +18,12 @@ class MySQLSearchToolSchema(BaseModel):
 class MySQLSearchTool(RagTool):
     name: str = "Search a database's table content"
     description: str = "A tool that can be used to semantic search a query from a database table's content."
-    args_schema: Type[BaseModel] = MySQLSearchToolSchema
+    args_schema: type[BaseModel] = MySQLSearchToolSchema
     db_uri: str = Field(..., description="Mandatory database URI")
 
     def __init__(self, table_name: str, **kwargs):
-        if not EMBEDCHAIN_AVAILABLE:
-            raise ImportError("embedchain is not installed. Please install it with `pip install crewai-tools[embedchain]`")
         super().__init__(**kwargs)
-        kwargs["data_type"] = "mysql"
-        kwargs["loader"] = MySQLLoader(config=dict(url=self.db_uri))
-        self.add(table_name)
+        self.add(table_name, data_type=DataType.MYSQL, metadata={"db_uri": self.db_uri})
         self.description = f"A tool that can be used to semantic search a query the {table_name} database table's content."
         self._generate_description()
 
@@ -46,6 +37,10 @@ class MySQLSearchTool(RagTool):
     def _run(
         self,
         search_query: str,
+        similarity_threshold: float | None = None,
+        limit: int | None = None,
         **kwargs: Any,
     ) -> Any:
-        return super()._run(query=search_query)
+        return super()._run(
+            query=search_query, similarity_threshold=similarity_threshold, limit=limit
+        )

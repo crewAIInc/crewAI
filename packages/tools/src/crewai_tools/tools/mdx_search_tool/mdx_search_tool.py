@@ -1,12 +1,5 @@
-from typing import Optional, Type
-
+from crewai_tools.rag.data_types import DataType
 from pydantic import BaseModel, Field
-
-try:
-    from embedchain.models.data_type import DataType
-    EMBEDCHAIN_AVAILABLE = True
-except ImportError:
-    EMBEDCHAIN_AVAILABLE = False
 
 from ..rag.rag_tool import RagTool
 
@@ -31,9 +24,9 @@ class MDXSearchTool(RagTool):
     description: str = (
         "A tool that can be used to semantic search a query from a MDX's content."
     )
-    args_schema: Type[BaseModel] = MDXSearchToolSchema
+    args_schema: type[BaseModel] = MDXSearchToolSchema
 
-    def __init__(self, mdx: Optional[str] = None, **kwargs):
+    def __init__(self, mdx: str | None = None, **kwargs):
         super().__init__(**kwargs)
         if mdx is not None:
             self.add(mdx)
@@ -42,15 +35,17 @@ class MDXSearchTool(RagTool):
             self._generate_description()
 
     def add(self, mdx: str) -> None:
-        if not EMBEDCHAIN_AVAILABLE:
-            raise ImportError("embedchain is not installed. Please install it with `pip install crewai-tools[embedchain]`")
         super().add(mdx, data_type=DataType.MDX)
 
     def _run(
         self,
         search_query: str,
-        mdx: Optional[str] = None,
+        mdx: str | None = None,
+        similarity_threshold: float | None = None,
+        limit: int | None = None,
     ) -> str:
         if mdx is not None:
             self.add(mdx)
-        return super()._run(query=search_query)
+        return super()._run(
+            query=search_query, similarity_threshold=similarity_threshold, limit=limit
+        )

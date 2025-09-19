@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from time import monotonic, sleep
-from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from pymongo.collection import Collection
@@ -11,9 +12,9 @@ def _vector_search_index_definition(
     dimensions: int,
     path: str,
     similarity: str,
-    filters: Optional[List[str]] = None,
+    filters: list[str] | None = None,
     **kwargs: Any,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     # https://www.mongodb.com/docs/atlas/atlas-vector-search/vector-search-type/
     fields = [
         {
@@ -37,9 +38,9 @@ def create_vector_search_index(
     dimensions: int,
     path: str,
     similarity: str,
-    filters: Optional[List[str]] = None,
+    filters: list[str] | None = None,
     *,
-    wait_until_complete: Optional[float] = None,
+    wait_until_complete: float | None = None,
     **kwargs: Any,
 ) -> None:
     """Experimental Utility function to create a vector search index
@@ -60,7 +61,7 @@ def create_vector_search_index(
     if collection.name not in collection.database.list_collection_names():
         collection.database.create_collection(collection.name)
 
-    result = collection.create_search_index(
+    collection.create_search_index(
         SearchIndexModel(
             definition=_vector_search_index_definition(
                 dimensions=dimensions,

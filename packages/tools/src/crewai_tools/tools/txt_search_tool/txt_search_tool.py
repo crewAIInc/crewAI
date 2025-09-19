@@ -1,5 +1,3 @@
-from typing import Optional, Type
-
 from pydantic import BaseModel, Field
 
 from ..rag.rag_tool import RagTool
@@ -25,9 +23,9 @@ class TXTSearchTool(RagTool):
     description: str = (
         "A tool that can be used to semantic search a query from a txt's content."
     )
-    args_schema: Type[BaseModel] = TXTSearchToolSchema
+    args_schema: type[BaseModel] = TXTSearchToolSchema
 
-    def __init__(self, txt: Optional[str] = None, **kwargs):
+    def __init__(self, txt: str | None = None, **kwargs):
         super().__init__(**kwargs)
         if txt is not None:
             self.add(txt)
@@ -38,8 +36,12 @@ class TXTSearchTool(RagTool):
     def _run(
         self,
         search_query: str,
-        txt: Optional[str] = None,
+        txt: str | None = None,
+        similarity_threshold: float | None = None,
+        limit: int | None = None,
     ) -> str:
         if txt is not None:
             self.add(txt)
-        return super()._run(query=search_query)
+        return super()._run(
+            query=search_query, similarity_threshold=similarity_threshold, limit=limit
+        )

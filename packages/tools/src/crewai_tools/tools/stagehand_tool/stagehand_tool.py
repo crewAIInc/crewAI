@@ -2,7 +2,7 @@ import asyncio
 import json
 import os
 import re
-from typing import Any, Dict, List, Optional, Type, Union
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -52,10 +52,10 @@ class StagehandResult(BaseModel):
     success: bool = Field(
         ..., description="Whether the operation completed successfully"
     )
-    data: Union[str, Dict, List] = Field(
+    data: str | dict | list = Field(
         ..., description="The result data from the operation"
     )
-    error: Optional[str] = Field(
+    error: str | None = Field(
         None, description="Optional error message if the operation failed"
     )
 
@@ -63,15 +63,15 @@ class StagehandResult(BaseModel):
 class StagehandToolSchema(BaseModel):
     """Input for StagehandTool."""
 
-    instruction: Optional[str] = Field(
+    instruction: str | None = Field(
         None,
         description="Single atomic action with location context. For reliability on complex pages, use ONE specific action with location hints. Good examples: 'Click the search input field in the header', 'Type Italy in the focused field', 'Press Enter', 'Click the first link in the results area'. Avoid combining multiple actions. For 'navigate' command type, this can be omitted if only URL is provided.",
     )
-    url: Optional[str] = Field(
+    url: str | None = Field(
         None,
         description="The URL to navigate to before executing the instruction. MUST be used with 'navigate' command. ",
     )
-    command_type: Optional[str] = Field(
+    command_type: str | None = Field(
         "act",
         description="""The type of command to execute (choose one):
         - 'act': Perform an action like clicking buttons, filling forms, etc. (default)
@@ -133,14 +133,14 @@ class StagehandTool(BaseTool):
     - 'extract': For getting data from a specific page section
     - 'observe': For finding elements in a specific area
     """
-    args_schema: Type[BaseModel] = StagehandToolSchema
+    args_schema: type[BaseModel] = StagehandToolSchema
 
     # Stagehand configuration
-    api_key: Optional[str] = None
-    project_id: Optional[str] = None
-    model_api_key: Optional[str] = None
-    model_name: Optional[AvailableModel] = AvailableModel.CLAUDE_3_7_SONNET_LATEST
-    server_url: Optional[str] = "https://api.stagehand.browserbase.com/v1"
+    api_key: str | None = None
+    project_id: str | None = None
+    model_api_key: str | None = None
+    model_name: AvailableModel | None = AvailableModel.CLAUDE_3_7_SONNET_LATEST
+    server_url: str | None = "https://api.stagehand.browserbase.com/v1"
     headless: bool = False
     dom_settle_timeout_ms: int = 3000
     self_heal: bool = True
@@ -152,24 +152,24 @@ class StagehandTool(BaseTool):
     use_simplified_dom: bool = True
 
     # Instance variables
-    _stagehand: Optional[Stagehand] = None
-    _page: Optional[StagehandPage] = None
-    _session_id: Optional[str] = None
+    _stagehand: Stagehand | None = None
+    _page: StagehandPage | None = None
+    _session_id: str | None = None
     _testing: bool = False
 
     def __init__(
         self,
-        api_key: Optional[str] = None,
-        project_id: Optional[str] = None,
-        model_api_key: Optional[str] = None,
-        model_name: Optional[str] = None,
-        server_url: Optional[str] = None,
-        session_id: Optional[str] = None,
-        headless: Optional[bool] = None,
-        dom_settle_timeout_ms: Optional[int] = None,
-        self_heal: Optional[bool] = None,
-        wait_for_captcha_solves: Optional[bool] = None,
-        verbose: Optional[int] = None,
+        api_key: str | None = None,
+        project_id: str | None = None,
+        model_api_key: str | None = None,
+        model_name: str | None = None,
+        server_url: str | None = None,
+        session_id: str | None = None,
+        headless: bool | None = None,
+        dom_settle_timeout_ms: int | None = None,
+        self_heal: bool | None = None,
+        wait_for_captcha_solves: bool | None = None,
+        verbose: int | None = None,
         _testing: bool = False,
         **kwargs,
     ):
@@ -241,19 +241,18 @@ class StagehandTool(BaseTool):
         model_str = str(self.model_name)
         if "gpt" in model_str.lower():
             return self.model_api_key or os.getenv("OPENAI_API_KEY")
-        elif "claude" in model_str.lower() or "anthropic" in model_str.lower():
+        if "claude" in model_str.lower() or "anthropic" in model_str.lower():
             return self.model_api_key or os.getenv("ANTHROPIC_API_KEY")
-        elif "gemini" in model_str.lower():
+        if "gemini" in model_str.lower():
             return self.model_api_key or os.getenv("GOOGLE_API_KEY")
-        else:
-            # Default to trying OpenAI, then Anthropic
-            return (
-                self.model_api_key
-                or os.getenv("OPENAI_API_KEY")
-                or os.getenv("ANTHROPIC_API_KEY")
-            )
+        # Default to trying OpenAI, then Anthropic
+        return (
+            self.model_api_key
+            or os.getenv("OPENAI_API_KEY")
+            or os.getenv("ANTHROPIC_API_KEY")
+        )
 
-    async def _setup_stagehand(self, session_id: Optional[str] = None):
+    async def _setup_stagehand(self, session_id: str | None = None):
         """Initialize Stagehand if not already set up."""
 
         # If we're in testing mode, return mock objects
@@ -342,7 +341,7 @@ class StagehandTool(BaseTool):
 
         return self._stagehand, self._page
 
-    def _extract_steps(self, instruction: str) -> List[str]:
+    def _extract_steps(self, instruction: str) -> list[str]:
         """Extract individual steps from multi-step instructions"""
         # Check for numbered steps (Step 1:, Step 2:, etc.)
         if re.search(r"Step \d+:", instruction, re.IGNORECASE):
@@ -353,10 +352,9 @@ class StagehandTool(BaseTool):
             )
             return [step.strip() for step in steps if step.strip()]
         # Check for semicolon-separated instructions
-        elif ";" in instruction:
+        if ";" in instruction:
             return [step.strip() for step in instruction.split(";") if step.strip()]
-        else:
-            return [instruction]
+        return [instruction]
 
     def _simplify_instruction(self, instruction: str) -> str:
         """Simplify complex instructions to basic actions"""
@@ -367,27 +365,24 @@ class StagehandTool(BaseTool):
             # For search tasks, focus on the search action first
             if "type" in instruction_lower or "enter" in instruction_lower:
                 return "click on the search input field"
-            else:
-                return "search for content on the page"
-        elif "click" in instruction_lower:
+            return "search for content on the page"
+        if "click" in instruction_lower:
             # Extract what to click
             if "button" in instruction_lower:
                 return "click the button"
-            elif "link" in instruction_lower:
+            if "link" in instruction_lower:
                 return "click the link"
-            elif "search" in instruction_lower:
+            if "search" in instruction_lower:
                 return "click the search field"
-            else:
-                return "click on the element"
-        elif "type" in instruction_lower or "enter" in instruction_lower:
+            return "click on the element"
+        if "type" in instruction_lower or "enter" in instruction_lower:
             return "type in the input field"
-        else:
-            return instruction  # Return as-is if can't simplify
+        return instruction  # Return as-is if can't simplify
 
     async def _async_run(
         self,
-        instruction: Optional[str] = None,
-        url: Optional[str] = None,
+        instruction: str | None = None,
+        url: str | None = None,
         command_type: str = "act",
     ):
         """Override _async_run with improved atomic action handling"""
@@ -490,12 +485,11 @@ class StagehandTool(BaseTool):
                             False, results[0], results[0]["error"]
                         )
                     return self._format_result(True, results[0])
-                else:
-                    # Multiple steps, return all results
-                    has_errors = any("error" in result for result in results)
-                    return self._format_result(not has_errors, {"steps": results})
+                # Multiple steps, return all results
+                has_errors = any("error" in result for result in results)
+                return self._format_result(not has_errors, {"steps": results})
 
-            elif command_type.lower() == "navigate":
+            if command_type.lower() == "navigate":
                 # For navigation, use the goto method directly
                 if not url:
                     error_msg = "No URL provided for navigation. Please provide a URL."
@@ -512,7 +506,7 @@ class StagehandTool(BaseTool):
                     },
                 )
 
-            elif command_type.lower() == "extract":
+            if command_type.lower() == "extract":
                 # Create extract options with API key
                 from stagehand.schemas import ExtractOptions
 
@@ -528,7 +522,7 @@ class StagehandTool(BaseTool):
                 self._logger.info(f"Extract operation completed successfully {result}")
                 return self._format_result(True, result.model_dump())
 
-            elif command_type.lower() == "observe":
+            if command_type.lower() == "observe":
                 # Create observe options with API key
                 from stagehand.schemas import ObserveOptions
 
@@ -558,13 +552,12 @@ class StagehandTool(BaseTool):
                 )
                 return self._format_result(True, formatted_results)
 
-            else:
-                error_msg = f"Unknown command type: {command_type}"
-                self._logger.error(error_msg)
-                return self._format_result(False, {}, error_msg)
+            error_msg = f"Unknown command type: {command_type}"
+            self._logger.error(error_msg)
+            return self._format_result(False, {}, error_msg)
 
         except Exception as e:
-            error_msg = f"Error using Stagehand: {str(e)}"
+            error_msg = f"Error using Stagehand: {e!s}"
             self._logger.error(f"Operation failed: {error_msg}")
             return self._format_result(False, {}, error_msg)
 
@@ -574,8 +567,8 @@ class StagehandTool(BaseTool):
 
     def _run(
         self,
-        instruction: Optional[str] = None,
-        url: Optional[str] = None,
+        instruction: str | None = None,
+        url: str | None = None,
         command_type: str = "act",
     ) -> str:
         """
@@ -633,13 +626,10 @@ class StagehandTool(BaseTool):
                                     f"Step {i + 1}: {step.get('message', 'Completed')}"
                                 )
                         return "\n".join(step_messages)
-                    else:
-                        return (
-                            f"Action result: {result.data.get('message', 'Completed')}"
-                        )
-                elif command_type.lower() == "extract":
+                    return f"Action result: {result.data.get('message', 'Completed')}"
+                if command_type.lower() == "extract":
                     return f"Extracted data: {json.dumps(result.data, indent=2)}"
-                elif command_type.lower() == "observe":
+                if command_type.lower() == "observe":
                     formatted_results = []
                     for element in result.data:
                         formatted_results.append(
@@ -650,10 +640,8 @@ class StagehandTool(BaseTool):
                                 f"Suggested action: {element['method']}"
                             )
                     return "\n".join(formatted_results)
-                else:
-                    return json.dumps(result.data, indent=2)
-            else:
-                return f"Error: {result.error}"
+                return json.dumps(result.data, indent=2)
+            return f"Error: {result.error}"
 
         except RuntimeError:
             # No event loop exists, create one
@@ -662,10 +650,8 @@ class StagehandTool(BaseTool):
             if result.success:
                 if isinstance(result.data, dict):
                     return json.dumps(result.data, indent=2)
-                else:
-                    return str(result.data)
-            else:
-                return f"Error: {result.error}"
+                return str(result.data)
+            return f"Error: {result.error}"
 
     async def _async_close(self):
         """Asynchronously clean up Stagehand resources."""
@@ -715,7 +701,7 @@ class StagehandTool(BaseTool):
                         self._stagehand.close()
             except Exception as e:
                 # Log but don't raise - we're cleaning up
-                print(f"Error closing Stagehand: {str(e)}")
+                print(f"Error closing Stagehand: {e!s}")
 
             self._stagehand = None
 
@@ -729,4 +715,3 @@ class StagehandTool(BaseTool):
     def __exit__(self, exc_type, exc_val, exc_tb):
         """Exit the context manager and clean up resources."""
         self.close()
-

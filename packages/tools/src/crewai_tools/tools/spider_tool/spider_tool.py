@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Dict, Literal, Optional, Type, List
+from typing import Any, Literal
 from urllib.parse import unquote, urlparse
 
 from crewai.tools import BaseTool, EnvVar
@@ -46,23 +46,25 @@ class SpiderTool(BaseTool):
     description: str = (
         "A tool to scrape or crawl a website and return LLM-ready content."
     )
-    args_schema: Type[BaseModel] = SpiderToolSchema
-    custom_params: Optional[Dict[str, Any]] = None
-    website_url: Optional[str] = None
-    api_key: Optional[str] = None
+    args_schema: type[BaseModel] = SpiderToolSchema
+    custom_params: dict[str, Any] | None = None
+    website_url: str | None = None
+    api_key: str | None = None
     spider: Any = None
     log_failures: bool = True
     config: SpiderToolConfig = SpiderToolConfig()
-    package_dependencies: List[str] = ["spider-client"]
-    env_vars: List[EnvVar] = [
-        EnvVar(name="SPIDER_API_KEY", description="API key for Spider.cloud", required=True),
+    package_dependencies: list[str] = ["spider-client"]
+    env_vars: list[EnvVar] = [
+        EnvVar(
+            name="SPIDER_API_KEY", description="API key for Spider.cloud", required=True
+        ),
     ]
 
     def __init__(
         self,
-        api_key: Optional[str] = None,
-        website_url: Optional[str] = None,
-        custom_params: Optional[Dict[str, Any]] = None,
+        api_key: str | None = None,
+        website_url: str | None = None,
+        custom_params: dict[str, Any] | None = None,
         log_failures: bool = True,
         **kwargs,
     ):
@@ -135,7 +137,7 @@ class SpiderTool(BaseTool):
         self,
         website_url: str,
         mode: Literal["scrape", "crawl"] = "scrape",
-    ) -> Optional[str]:
+    ) -> str | None:
         """Execute the spider tool to scrape or crawl the specified website.
 
         Args:
@@ -191,24 +193,24 @@ class SpiderTool(BaseTool):
 
         except ValueError as ve:
             if self.log_failures:
-                logger.error(f"Validation error for URL {url}: {str(ve)}")
+                logger.error(f"Validation error for URL {url}: {ve!s}")
                 return None
             raise ve
 
         except ImportError as ie:
-            logger.error(f"Spider client import error: {str(ie)}")
+            logger.error(f"Spider client import error: {ie!s}")
             raise ie
 
         except ConnectionError as ce:
             if self.log_failures:
-                logger.error(f"Connection error while accessing {url}: {str(ce)}")
+                logger.error(f"Connection error while accessing {url}: {ce!s}")
                 return None
             raise ce
 
         except Exception as e:
             if self.log_failures:
                 logger.error(
-                    f"Unexpected error during {mode} operation on {url}: {str(e)}"
+                    f"Unexpected error during {mode} operation on {url}: {e!s}"
                 )
                 return None
             raise e

@@ -1,5 +1,4 @@
 import os
-from typing import List, Optional, Type
 
 import requests
 from crewai.tools import BaseTool, EnvVar
@@ -10,7 +9,7 @@ class GenerateCrewaiAutomationToolSchema(BaseModel):
     prompt: str = Field(
         description="The prompt to generate the CrewAI automation, e.g. 'Generate a CrewAI automation that will scrape the website and store the data in a database.'"
     )
-    organization_id: Optional[str] = Field(
+    organization_id: str | None = Field(
         default=None,
         description="The identifier for the CrewAI Enterprise organization. If not specified, a default organization will be used.",
     )
@@ -23,16 +22,16 @@ class GenerateCrewaiAutomationTool(BaseTool):
         "automations based on natural language descriptions. It translates high-level requirements into "
         "functional CrewAI implementations."
     )
-    args_schema: Type[BaseModel] = GenerateCrewaiAutomationToolSchema
+    args_schema: type[BaseModel] = GenerateCrewaiAutomationToolSchema
     crewai_enterprise_url: str = Field(
         default_factory=lambda: os.getenv("CREWAI_PLUS_URL", "https://app.crewai.com"),
         description="The base URL of CrewAI Enterprise. If not provided, it will be loaded from the environment variable CREWAI_PLUS_URL with default https://app.crewai.com.",
     )
-    personal_access_token: Optional[str] = Field(
+    personal_access_token: str | None = Field(
         default_factory=lambda: os.getenv("CREWAI_PERSONAL_ACCESS_TOKEN"),
         description="The user's Personal Access Token to access CrewAI Enterprise API. If not provided, it will be loaded from the environment variable CREWAI_PERSONAL_ACCESS_TOKEN.",
     )
-    env_vars: List[EnvVar] = [
+    env_vars: list[EnvVar] = [
         EnvVar(
             name="CREWAI_PERSONAL_ACCESS_TOKEN",
             description="Personal Access Token for CrewAI Enterprise API",
@@ -57,7 +56,7 @@ class GenerateCrewaiAutomationTool(BaseTool):
         studio_project_url = response.json().get("url")
         return f"Generated CrewAI Studio project URL: {studio_project_url}"
 
-    def _get_headers(self, organization_id: Optional[str] = None) -> dict:
+    def _get_headers(self, organization_id: str | None = None) -> dict:
         headers = {
             "Authorization": f"Bearer {self.personal_access_token}",
             "Content-Type": "application/json",

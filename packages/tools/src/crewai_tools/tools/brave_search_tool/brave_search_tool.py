@@ -1,7 +1,7 @@
 import datetime
 import os
 import time
-from typing import Any, ClassVar, List, Optional, Type
+from typing import Any, ClassVar
 
 import requests
 from crewai.tools import BaseTool, EnvVar
@@ -41,15 +41,17 @@ class BraveSearchTool(BaseTool):
     description: str = (
         "A tool that can be used to search the internet with a search_query."
     )
-    args_schema: Type[BaseModel] = BraveSearchToolSchema
+    args_schema: type[BaseModel] = BraveSearchToolSchema
     search_url: str = "https://api.search.brave.com/res/v1/web/search"
-    country: Optional[str] = ""
+    country: str | None = ""
     n_results: int = 10
     save_file: bool = False
     _last_request_time: ClassVar[float] = 0
     _min_request_interval: ClassVar[float] = 1.0  # seconds
-    env_vars: List[EnvVar] = [
-        EnvVar(name="BRAVE_API_KEY", description="API key for Brave Search", required=True),
+    env_vars: ClassVar[list[EnvVar]] = [
+        EnvVar(
+            name="BRAVE_API_KEY", description="API key for Brave Search", required=True
+        ),
     ]
 
     def __init__(self, *args, **kwargs):
@@ -87,7 +89,9 @@ class BraveSearchTool(BaseTool):
                 "Accept": "application/json",
             }
 
-            response = requests.get(self.search_url, headers=headers, params=payload)
+            response = requests.get(
+                self.search_url, headers=headers, params=payload, timeout=30
+            )
             response.raise_for_status()  # Handle non-200 responses
             results = response.json()
 
@@ -111,11 +115,10 @@ class BraveSearchTool(BaseTool):
 
             content = "\n".join(string)
         except requests.RequestException as e:
-            return f"Error performing search: {str(e)}"
+            return f"Error performing search: {e!s}"
         except KeyError as e:
-            return f"Error parsing search results: {str(e)}"
+            return f"Error parsing search results: {e!s}"
         if save_file:
             _save_results_to_file(content)
             return f"\nSearch results: {content}\n"
-        else:
-            return content
+        return content

@@ -1,5 +1,3 @@
-from typing import Optional, Type
-
 from pydantic import BaseModel, Field
 
 from ..rag.rag_tool import RagTool
@@ -27,9 +25,9 @@ class JSONSearchTool(RagTool):
     description: str = (
         "A tool that can be used to semantic search a query from a JSON's content."
     )
-    args_schema: Type[BaseModel] = JSONSearchToolSchema
+    args_schema: type[BaseModel] = JSONSearchToolSchema
 
-    def __init__(self, json_path: Optional[str] = None, **kwargs):
+    def __init__(self, json_path: str | None = None, **kwargs):
         super().__init__(**kwargs)
         if json_path is not None:
             self.add(json_path)
@@ -40,8 +38,12 @@ class JSONSearchTool(RagTool):
     def _run(
         self,
         search_query: str,
-        json_path: Optional[str] = None,
+        json_path: str | None = None,
+        similarity_threshold: float | None = None,
+        limit: int | None = None,
     ) -> str:
         if json_path is not None:
             self.add(json_path)
-        return super()._run(query=search_query)
+        return super()._run(
+            query=search_query, similarity_threshold=similarity_threshold, limit=limit
+        )

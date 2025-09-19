@@ -1,12 +1,10 @@
 import os
-from typing import Any, List, Optional, Type
 from urllib.parse import urlencode
 
 import requests
-from pydantic import BaseModel, Field
-
 from crewai.tools import EnvVar
 from crewai_tools.tools.rag.rag_tool import RagTool
+from pydantic import BaseModel, Field
 
 
 class SerplyJobSearchToolSchema(BaseModel):
@@ -23,16 +21,20 @@ class SerplyJobSearchTool(RagTool):
     description: str = (
         "A tool to perform to perform a job search in the US with a search_query."
     )
-    args_schema: Type[BaseModel] = SerplyJobSearchToolSchema
+    args_schema: type[BaseModel] = SerplyJobSearchToolSchema
     request_url: str = "https://api.serply.io/v1/job/search/"
-    proxy_location: Optional[str] = "US"
+    proxy_location: str | None = "US"
     """
         proxy_location: (str): Where to get jobs, specifically for a specific country results.
             - Currently only supports US
     """
-    headers: Optional[dict] = {}
-    env_vars: List[EnvVar] = [
-        EnvVar(name="SERPLY_API_KEY", description="API key for Serply services", required=True),
+    headers: dict | None = {}
+    env_vars: list[EnvVar] = [
+        EnvVar(
+            name="SERPLY_API_KEY",
+            description="API key for Serply services",
+            required=True,
+        ),
     ]
 
     def __init__(self, **kwargs):
@@ -45,8 +47,8 @@ class SerplyJobSearchTool(RagTool):
 
     def _run(
         self,
-        query: Optional[str] = None,
-        search_query: Optional[str] = None,
+        query: str | None = None,
+        search_query: str | None = None,
     ) -> str:
         query_payload = {}
 
@@ -75,7 +77,7 @@ class SerplyJobSearchTool(RagTool):
                             f"Employer: {job['employer']}",
                             f"Location: {job['location']}",
                             f"Link: {job['link']}",
-                            f"""Highest: {', '.join([h for h in job['highlights']])}""",
+                            f"""Highest: {", ".join([h for h in job["highlights"]])}""",
                             f"Is Remote: {job['is_remote']}",
                             f"Is Hybrid: {job['is_remote']}",
                             "---",

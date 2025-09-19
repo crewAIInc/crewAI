@@ -1,7 +1,8 @@
 import os
+from collections.abc import Iterable
 from importlib.metadata import version
 from logging import getLogger
-from typing import Any, Dict, Iterable, List, Optional, Type
+from typing import Any
 
 from crewai.tools import BaseTool, EnvVar
 from openai import AzureOpenAI, Client
@@ -12,7 +13,7 @@ from crewai_tools.tools.mongodb_vector_search_tool.utils import (
 )
 
 try:
-    import pymongo  # noqa: F403
+    import pymongo
 
     MONGODB_AVAILABLE = True
 except ImportError:
@@ -24,14 +25,12 @@ logger = getLogger(__name__)
 class MongoDBVectorSearchConfig(BaseModel):
     """Configuration for MongoDB vector search queries."""
 
-    limit: Optional[int] = Field(
-        default=4, description="number of documents to return."
-    )
-    pre_filter: Optional[dict[str, Any]] = Field(
+    limit: int | None = Field(default=4, description="number of documents to return.")
+    pre_filter: dict[str, Any] | None = Field(
         default=None,
         description="List of MQL match expressions comparing an indexed field",
     )
-    post_filter_pipeline: Optional[list[dict]] = Field(
+    post_filter_pipeline: list[dict] | None = Field(
         default=None,
         description="Pipeline of MongoDB aggregation stages to filter/process results after $vectorSearch.",
     )
@@ -60,8 +59,8 @@ class MongoDBVectorSearchTool(BaseTool):
     name: str = "MongoDBVectorSearchTool"
     description: str = "A tool to perfrom a vector search on a MongoDB database for relevant information on internal documents."
 
-    args_schema: Type[BaseModel] = MongoDBToolSchema
-    query_config: Optional[MongoDBVectorSearchConfig] = Field(
+    args_schema: type[BaseModel] = MongoDBToolSchema
+    query_config: MongoDBVectorSearchConfig | None = Field(
         default=None, description="MongoDB Vector Search query configuration"
     )
     embedding_model: str = Field(
@@ -89,7 +88,7 @@ class MongoDBVectorSearchTool(BaseTool):
         default=1536,
         description="Number of dimensions in the embedding vector",
     )
-    env_vars: List[EnvVar] = [
+    env_vars: list[EnvVar] = [
         EnvVar(
             name="BROWSERBASE_API_KEY",
             description="API key for Browserbase services",
@@ -101,7 +100,7 @@ class MongoDBVectorSearchTool(BaseTool):
             required=False,
         ),
     ]
-    package_dependencies: List[str] = ["mongdb"]
+    package_dependencies: list[str] = ["mongdb"]
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -166,11 +165,11 @@ class MongoDBVectorSearchTool(BaseTool):
     def add_texts(
         self,
         texts: Iterable[str],
-        metadatas: Optional[List[Dict[str, Any]]] = None,
-        ids: Optional[List[str]] = None,
+        metadatas: list[dict[str, Any]] | None = None,
+        ids: list[str] | None = None,
         batch_size: int = 100,
         **kwargs: Any,
-    ) -> List[str]:
+    ) -> list[str]:
         """Add texts, create embeddings, and add to the Collection and index.
 
         Important notes on ids:
@@ -203,7 +202,7 @@ class MongoDBVectorSearchTool(BaseTool):
         metadatas_batch = []
         size = 0
         i = 0
-        for j, (text, metadata) in enumerate(zip(texts, _metadatas)):
+        for j, (text, metadata) in enumerate(zip(texts, _metadatas, strict=False)):
             size += len(text) + len(metadata)
             texts_batch.append(text)
             metadatas_batch.append(metadata)
@@ -223,7 +222,7 @@ class MongoDBVectorSearchTool(BaseTool):
             result_ids.extend(batch_res)
         return result_ids
 
-    def _embed_texts(self, texts: List[str]) -> List[List[float]]:
+    def _embed_texts(self, texts: list[str]) -> list[list[float]]:
         return [
             i.embedding
             for i in self._openai_client.embeddings.create(
@@ -235,10 +234,10 @@ class MongoDBVectorSearchTool(BaseTool):
 
     def _bulk_embed_and_insert_texts(
         self,
-        texts: List[str],
-        metadatas: List[dict],
-        ids: List[str],
-    ) -> List[str]:
+        texts: list[str],
+        metadatas: list[dict],
+        ids: list[str],
+    ) -> list[str]:
         """Bulk insert single batch of texts, embeddings, and ids."""
         from bson import ObjectId
         from pymongo.operations import ReplaceOne
@@ -254,7 +253,9 @@ class MongoDBVectorSearchTool(BaseTool):
                 self.embedding_key: embedding,
                 **m,
             }
-            for i, t, m, embedding in zip(ids, texts, metadatas, embeddings)
+            for i, t, m, embedding in zip(
+                ids, texts, metadatas, embeddings, strict=False
+            )
         ]
         operations = [ReplaceOne({"_id": doc["_id"]}, doc, upsert=True) for doc in docs]
         # insert the documents in MongoDB Atlas

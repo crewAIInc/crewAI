@@ -1,9 +1,10 @@
 import os
-from typing import Any, Optional, Type
+from typing import Any
 
 import requests
 from crewai.tools import BaseTool
 from pydantic import BaseModel, Field
+
 
 class BrightDataConfig(BaseModel):
     API_URL: str = "https://api.brightdata.com/request"
@@ -11,8 +12,11 @@ class BrightDataConfig(BaseModel):
     @classmethod
     def from_env(cls):
         return cls(
-            API_URL=os.environ.get("BRIGHTDATA_API_URL", "https://api.brightdata.com/request")
+            API_URL=os.environ.get(
+                "BRIGHTDATA_API_URL", "https://api.brightdata.com/request"
+            )
         )
+
 
 class BrightDataUnlockerToolSchema(BaseModel):
     """
@@ -28,10 +32,10 @@ class BrightDataUnlockerToolSchema(BaseModel):
     """
 
     url: str = Field(..., description="URL to perform the web scraping")
-    format: Optional[str] = Field(
+    format: str | None = Field(
         default="raw", description="Response format (raw is standard)"
     )
-    data_format: Optional[str] = Field(
+    data_format: str | None = Field(
         default="markdown", description="Response data format (html by default)"
     )
 
@@ -59,16 +63,18 @@ class BrightDataWebUnlockerTool(BaseTool):
 
     name: str = "Bright Data Web Unlocker Scraping"
     description: str = "Tool to perform web scraping using Bright Data Web Unlocker"
-    args_schema: Type[BaseModel] = BrightDataUnlockerToolSchema
+    args_schema: type[BaseModel] = BrightDataUnlockerToolSchema
     _config = BrightDataConfig.from_env()
     base_url: str = ""
     api_key: str = ""
     zone: str = ""
-    url: Optional[str] = None
+    url: str | None = None
     format: str = "raw"
     data_format: str = "markdown"
 
-    def __init__(self, url: str = None, format: str = "raw", data_format: str = "markdown"):
+    def __init__(
+        self, url: str | None = None, format: str = "raw", data_format: str = "markdown"
+    ):
         super().__init__()
         self.base_url = self._config.API_URL
         self.url = url
@@ -82,7 +88,13 @@ class BrightDataWebUnlockerTool(BaseTool):
         if not self.zone:
             raise ValueError("BRIGHT_DATA_ZONE environment variable is required.")
 
-    def _run(self, url: str = None, format: str = None, data_format: str = None, **kwargs: Any) -> Any:
+    def _run(
+        self,
+        url: str | None = None,
+        format: str | None = None,
+        data_format: str | None = None,
+        **kwargs: Any,
+    ) -> Any:
         url = url or self.url
         format = format or self.format
         data_format = data_format or self.data_format
@@ -119,4 +131,4 @@ class BrightDataWebUnlockerTool(BaseTool):
         except requests.RequestException as e:
             return f"HTTP Error performing BrightData Web Unlocker Scrape: {e}\nResponse: {getattr(e.response, 'text', '')}"
         except Exception as e:
-            return f"Error fetching results: {str(e)}"
+            return f"Error fetching results: {e!s}"

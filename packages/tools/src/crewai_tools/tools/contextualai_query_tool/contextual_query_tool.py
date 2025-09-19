@@ -1,33 +1,39 @@
-from typing import Any, Optional, Type, List
+import asyncio
+from typing import Any
+
+import requests
 from crewai.tools import BaseTool
 from pydantic import BaseModel, Field
-import asyncio
-import requests
-import os
 
 
 class ContextualAIQuerySchema(BaseModel):
     """Schema for contextual query tool."""
+
     query: str = Field(..., description="Query to send to the Contextual AI agent.")
     agent_id: str = Field(..., description="ID of the Contextual AI agent to query")
-    datastore_id: Optional[str] = Field(None, description="Optional datastore ID for document readiness verification")
+    datastore_id: str | None = Field(
+        None, description="Optional datastore ID for document readiness verification"
+    )
 
 
 class ContextualAIQueryTool(BaseTool):
     """Tool to query Contextual AI RAG agents."""
-    
+
     name: str = "Contextual AI Query Tool"
-    description: str = "Use this tool to query a Contextual AI RAG agent with access to your documents"
-    args_schema: Type[BaseModel] = ContextualAIQuerySchema
-    
+    description: str = (
+        "Use this tool to query a Contextual AI RAG agent with access to your documents"
+    )
+    args_schema: type[BaseModel] = ContextualAIQuerySchema
+
     api_key: str
     contextual_client: Any = None
-    package_dependencies: List[str] = ["contextual-client"]
+    package_dependencies: list[str] = ["contextual-client"]
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         try:
             from contextual import ContextualAI
+
             self.contextual_client = ContextualAI(api_key=self.api_key)
         except ImportError:
             raise ImportError(
@@ -41,13 +47,17 @@ class ContextualAIQueryTool(BaseTool):
         response = requests.get(url, headers=headers)
         if response.status_code == 200:
             data = response.json()
-            documents = data.get('documents', [])
-            return not any(doc.get('status') in ('processing', 'pending') for doc in documents)
+            documents = data.get("documents", [])
+            return not any(
+                doc.get("status") in ("processing", "pending") for doc in documents
+            )
         return True
 
-    async def _wait_for_documents_async(self, datastore_id: str, max_attempts: int = 20, interval: float = 30.0) -> bool:
+    async def _wait_for_documents_async(
+        self, datastore_id: str, max_attempts: int = 20, interval: float = 30.0
+    ) -> bool:
         """Asynchronously poll until documents are ready, exiting early if possible."""
-        for attempt in range(max_attempts):
+        for _attempt in range(max_attempts):
             ready = await asyncio.to_thread(self._check_documents_ready, datastore_id)
             if ready:
                 return True
@@ -55,10 +65,10 @@ class ContextualAIQueryTool(BaseTool):
             print("Processing documents ...")
         return True  # give up but don't fail hard
 
-    def _run(self, query: str, agent_id: str, datastore_id: Optional[str] = None) -> str:
+    def _run(self, query: str, agent_id: str, datastore_id: str | None = None) -> str:
         if not agent_id:
             raise ValueError("Agent ID is required to query the Contextual AI agent")
-        
+
         if datastore_id:
             ready = self._check_documents_ready(datastore_id)
             if not ready:
@@ -69,31 +79,42 @@ class ContextualAIQueryTool(BaseTool):
                     loop = None
 
                 if loop and loop.is_running():
-                    # Already inside an event loop 
+                    # Already inside an event loop
                     try:
                         import nest_asyncio
+
                         nest_asyncio.apply(loop)
-                        loop.run_until_complete(self._wait_for_documents_async(datastore_id))
+                        loop.run_until_complete(
+                            self._wait_for_documents_async(datastore_id)
+                        )
                     except Exception as e:
-                        print(f"Failed to apply nest_asyncio: {str(e)}")
+                        print(f"Failed to apply nest_asyncio: {e!s}")
                 else:
                     asyncio.run(self._wait_for_documents_async(datastore_id))
         else:
-            print("Warning: No datastore_id provided. Document status checking disabled.")
+            print(
+                "Warning: No datastore_id provided. Document status checking disabled."
+            )
 
         try:
             response = self.contextual_client.agents.query.create(
-                agent_id=agent_id,
-                messages=[{"role": "user", "content": query}]
+                agent_id=agent_id, messages=[{"role": "user", "content": query}]
             )
-            if hasattr(response, 'content'):
+            if hasattr(response, "content"):
                 return response.content
-            elif hasattr(response, 'message'):
-                return response.message.content if hasattr(response.message, 'content') else str(response.message)
-            elif hasattr(response, 'messages') and len(response.messages) > 0:
+            if hasattr(response, "message"):
+                return (
+                    response.message.content
+                    if hasattr(response.message, "content")
+                    else str(response.message)
+                )
+            if hasattr(response, "messages") and len(response.messages) > 0:
                 last_message = response.messages[-1]
-                return last_message.content if hasattr(last_message, 'content') else str(last_message)
-            else:
-                return str(response)
+                return (
+                    last_message.content
+                    if hasattr(last_message, "content")
+                    else str(last_message)
+                )
+            return str(response)
         except Exception as e:
-            return f"Error querying Contextual AI agent: {str(e)}"
+            return f"Error querying Contextual AI agent: {e!s}"

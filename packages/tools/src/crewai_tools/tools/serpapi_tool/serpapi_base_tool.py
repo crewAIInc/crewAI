@@ -1,6 +1,6 @@
 import os
 import re
-from typing import Any, Optional, Union, List
+from typing import Any
 
 from crewai.tools import BaseTool, EnvVar
 
@@ -8,12 +8,16 @@ from crewai.tools import BaseTool, EnvVar
 class SerpApiBaseTool(BaseTool):
     """Base class for SerpApi functionality with shared capabilities."""
 
-    package_dependencies: List[str] = ["serpapi"]
-    env_vars: List[EnvVar] = [
-        EnvVar(name="SERPAPI_API_KEY", description="API key for SerpApi searches", required=True),
+    package_dependencies: list[str] = ["serpapi"]
+    env_vars: list[EnvVar] = [
+        EnvVar(
+            name="SERPAPI_API_KEY",
+            description="API key for SerpApi searches",
+            required=True,
+        ),
     ]
 
-    client: Optional[Any] = None
+    client: Any | None = None
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -41,7 +45,7 @@ class SerpApiBaseTool(BaseTool):
             )
         self.client = Client(api_key=api_key)
 
-    def _omit_fields(self, data: Union[dict, list], omit_patterns: list[str]) -> None:
+    def _omit_fields(self, data: dict | list, omit_patterns: list[str]) -> None:
         if isinstance(data, dict):
             for field in list(data.keys()):
                 if any(re.compile(p).match(field) for p in omit_patterns):

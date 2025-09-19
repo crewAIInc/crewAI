@@ -1,5 +1,5 @@
 import os
-from typing import Any, List
+from typing import Any
 
 from crewai.tools import BaseTool, EnvVar
 
@@ -20,12 +20,8 @@ class LinkupSearchTool(BaseTool):
         "Performs an API call to Linkup to retrieve contextual information."
     )
     _client: LinkupClient = PrivateAttr()  # type: ignore
-    description: str = (
-        "Performs an API call to Linkup to retrieve contextual information."
-    )
-    _client: LinkupClient = PrivateAttr()  # type: ignore
-    package_dependencies: List[str] = ["linkup-sdk"]
-    env_vars: List[EnvVar] = [
+    package_dependencies: list[str] = ["linkup-sdk"]
+    env_vars: list[EnvVar] = [
         EnvVar(name="LINKUP_API_KEY", description="API key for Linkup", required=True),
     ]
 

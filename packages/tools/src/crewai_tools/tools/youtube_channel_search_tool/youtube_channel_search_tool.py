@@ -1,11 +1,4 @@
-from typing import Any, Optional, Type
-
-try:
-    from embedchain.models.data_type import DataType
-    EMBEDCHAIN_AVAILABLE = True
-except ImportError:
-    EMBEDCHAIN_AVAILABLE = False
-
+from crewai_tools.rag.data_types import DataType
 from pydantic import BaseModel, Field
 
 from ..rag.rag_tool import RagTool
@@ -30,12 +23,10 @@ class YoutubeChannelSearchToolSchema(FixedYoutubeChannelSearchToolSchema):
 
 class YoutubeChannelSearchTool(RagTool):
     name: str = "Search a Youtube Channels content"
-    description: str = (
-        "A tool that can be used to semantic search a query from a Youtube Channels content."
-    )
-    args_schema: Type[BaseModel] = YoutubeChannelSearchToolSchema
+    description: str = "A tool that can be used to semantic search a query from a Youtube Channels content."
+    args_schema: type[BaseModel] = YoutubeChannelSearchToolSchema
 
-    def __init__(self, youtube_channel_handle: Optional[str] = None, **kwargs):
+    def __init__(self, youtube_channel_handle: str | None = None, **kwargs):
         super().__init__(**kwargs)
         if youtube_channel_handle is not None:
             self.add(youtube_channel_handle)
@@ -54,8 +45,12 @@ class YoutubeChannelSearchTool(RagTool):
     def _run(
         self,
         search_query: str,
-        youtube_channel_handle: Optional[str] = None,
+        youtube_channel_handle: str | None = None,
+        similarity_threshold: float | None = None,
+        limit: int | None = None,
     ) -> str:
         if youtube_channel_handle is not None:
             self.add(youtube_channel_handle)
-        return super()._run(query=search_query)
+        return super()._run(
+            query=search_query, similarity_threshold=similarity_threshold, limit=limit
+        )

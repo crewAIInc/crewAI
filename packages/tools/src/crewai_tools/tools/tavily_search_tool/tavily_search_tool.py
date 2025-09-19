@@ -1,13 +1,15 @@
-from crewai.tools import BaseTool, EnvVar
-from pydantic import BaseModel, Field
-from typing import Optional, Type, Any, Union, Literal, Sequence, List
-from dotenv import load_dotenv
-import os
 import json
+import os
+from collections.abc import Sequence
+from typing import Any, Literal
+
+from crewai.tools import BaseTool, EnvVar
+from dotenv import load_dotenv
+from pydantic import BaseModel, Field
 
 load_dotenv()
 try:
-    from tavily import TavilyClient, AsyncTavilyClient
+    from tavily import AsyncTavilyClient, TavilyClient
 
     TAVILY_AVAILABLE = True
 except ImportError:
@@ -49,19 +51,19 @@ class TavilySearchTool(BaseTool):
     """
 
     model_config = {"arbitrary_types_allowed": True}
-    client: Optional[TavilyClient] = None
-    async_client: Optional[AsyncTavilyClient] = None
+    client: TavilyClient | None = None
+    async_client: AsyncTavilyClient | None = None
     name: str = "Tavily Search"
     description: str = (
         "A tool that performs web searches using the Tavily Search API. "
         "It returns a JSON object containing the search results."
     )
-    args_schema: Type[BaseModel] = TavilySearchToolSchema
-    api_key: Optional[str] = Field(
+    args_schema: type[BaseModel] = TavilySearchToolSchema
+    api_key: str | None = Field(
         default_factory=lambda: os.getenv("TAVILY_API_KEY"),
         description="The Tavily API key. If not provided, it will be loaded from the environment variable TAVILY_API_KEY.",
     )
-    proxies: Optional[dict[str, str]] = Field(
+    proxies: dict[str, str] | None = Field(
         default=None,
         description="Optional proxies to use for the Tavily API requests.",
     )
@@ -71,20 +73,20 @@ class TavilySearchTool(BaseTool):
     topic: Literal["general", "news", "finance"] = Field(
         default="general", description="The topic to focus the search on."
     )
-    time_range: Optional[Literal["day", "week", "month", "year"]] = Field(
+    time_range: Literal["day", "week", "month", "year"] | None = Field(
         default=None, description="The time range for the search."
     )
     days: int = Field(default=7, description="The number of days to search back.")
     max_results: int = Field(
         default=5, description="The maximum number of results to return."
     )
-    include_domains: Optional[Sequence[str]] = Field(
+    include_domains: Sequence[str] | None = Field(
         default=None, description="A list of domains to include in the search."
     )
-    exclude_domains: Optional[Sequence[str]] = Field(
+    exclude_domains: Sequence[str] | None = Field(
         default=None, description="A list of domains to exclude from the search."
     )
-    include_answer: Union[bool, Literal["basic", "advanced"]] = Field(
+    include_answer: bool | Literal["basic", "advanced"] = Field(
         default=False, description="Whether to include a direct answer to the query."
     )
     include_raw_content: bool = Field(
@@ -101,9 +103,13 @@ class TavilySearchTool(BaseTool):
         default=1000,
         description="Maximum length for the 'content' of each search result to avoid context window issues.",
     )
-    package_dependencies: List[str] = ["tavily-python"]
-    env_vars: List[EnvVar] = [
-        EnvVar(name="TAVILY_API_KEY", description="API key for Tavily search service", required=True),
+    package_dependencies: list[str] = ["tavily-python"]
+    env_vars: list[EnvVar] = [
+        EnvVar(
+            name="TAVILY_API_KEY",
+            description="API key for Tavily search service",
+            required=True,
+        ),
     ]
 
     def __init__(self, **kwargs: Any):
@@ -115,8 +121,9 @@ class TavilySearchTool(BaseTool):
             )
         else:
             try:
-                import click
                 import subprocess
+
+                import click
             except ImportError:
                 raise ImportError(
                     "The 'tavily-python' package is required. 'click' and 'subprocess' are also needed to assist with installation if the package is missing. "

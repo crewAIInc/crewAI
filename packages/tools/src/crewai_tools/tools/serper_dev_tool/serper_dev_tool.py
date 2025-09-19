@@ -2,7 +2,7 @@ import datetime
 import json
 import logging
 import os
-from typing import Any, List, Optional, Type
+from typing import Any
 
 import requests
 from crewai.tools import BaseTool, EnvVar
@@ -37,15 +37,15 @@ class SerperDevTool(BaseTool):
         "A tool that can be used to search the internet with a search_query. "
         "Supports different search types: 'search' (default), 'news'"
     )
-    args_schema: Type[BaseModel] = SerperDevToolSchema
+    args_schema: type[BaseModel] = SerperDevToolSchema
     base_url: str = "https://google.serper.dev"
     n_results: int = 10
     save_file: bool = False
     search_type: str = "search"
-    country: Optional[str] = ""
-    location: Optional[str] = ""
-    locale: Optional[str] = ""
-    env_vars: List[EnvVar] = [
+    country: str | None = ""
+    location: str | None = ""
+    locale: str | None = ""
+    env_vars: list[EnvVar] = [
         EnvVar(name="SERPER_API_KEY", description="API key for Serper", required=True),
     ]
 

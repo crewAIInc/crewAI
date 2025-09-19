@@ -2,7 +2,7 @@ import json
 import os
 from importlib.metadata import version
 from platform import architecture, python_version
-from typing import Any, List, Type
+from typing import Any
 
 from crewai.tools import BaseTool, EnvVar
 from pydantic import BaseModel, ConfigDict, Field
@@ -19,7 +19,7 @@ except ImportError:
     OXYLABS_AVAILABLE = False
 
 
-__all__ = ["OxylabsAmazonSearchScraperTool", "OxylabsAmazonSearchScraperConfig"]
+__all__ = ["OxylabsAmazonSearchScraperConfig", "OxylabsAmazonSearchScraperTool"]
 
 
 class OxylabsAmazonSearchScraperArgs(BaseModel):
@@ -70,14 +70,18 @@ class OxylabsAmazonSearchScraperTool(BaseTool):
     )
     name: str = "Oxylabs Amazon Search Scraper tool"
     description: str = "Scrape Amazon search results with Oxylabs Amazon Search Scraper"
-    args_schema: Type[BaseModel] = OxylabsAmazonSearchScraperArgs
+    args_schema: type[BaseModel] = OxylabsAmazonSearchScraperArgs
 
     oxylabs_api: RealtimeClient
     config: OxylabsAmazonSearchScraperConfig
-    package_dependencies: List[str] = ["oxylabs"]
-    env_vars: List[EnvVar] = [
-        EnvVar(name="OXYLABS_USERNAME", description="Username for Oxylabs", required=True),
-        EnvVar(name="OXYLABS_PASSWORD", description="Password for Oxylabs", required=True),
+    package_dependencies: list[str] = ["oxylabs"]
+    env_vars: list[EnvVar] = [
+        EnvVar(
+            name="OXYLABS_USERNAME", description="Username for Oxylabs", required=True
+        ),
+        EnvVar(
+            name="OXYLABS_PASSWORD", description="Password for Oxylabs", required=True
+        ),
     ]
 
     def __init__(

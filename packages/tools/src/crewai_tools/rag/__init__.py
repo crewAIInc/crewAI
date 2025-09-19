@@ -3,6 +3,6 @@ from crewai_tools.rag.data_types import DataType
 
 __all__ = [
     "RAG",
-    "EmbeddingService",
     "DataType",
+    "EmbeddingService",
 ]

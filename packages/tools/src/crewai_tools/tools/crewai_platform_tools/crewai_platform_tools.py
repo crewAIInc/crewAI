@@ -1,18 +1,16 @@
-import re
-import os
-import typing as t
-from typing import Literal
 import logging
-import json
+
 from crewai.tools import BaseTool
-from crewai_tools.tools.crewai_platform_tools.crewai_platform_tool_builder import CrewaiPlatformToolBuilder
+
 from crewai_tools.adapters.tool_collection import ToolCollection
+from crewai_tools.tools.crewai_platform_tools.crewai_platform_tool_builder import (
+    CrewaiPlatformToolBuilder,
+)
 
 logger = logging.getLogger(__name__)
 
 
-
-def CrewaiPlatformTools(
+def CrewaiPlatformTools(  # noqa: N802
     apps: list[str],
 ) -> ToolCollection[BaseTool]:
     """Factory function that returns crewai platform tools.

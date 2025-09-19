@@ -1,6 +1,5 @@
 import base64
 from pathlib import Path
-from typing import List, Optional, Type
 
 from crewai import LLM
 from crewai.tools import BaseTool, EnvVar
@@ -13,7 +12,7 @@ class ImagePromptSchema(BaseModel):
     image_path_url: str = "The image path or URL."
 
     @field_validator("image_path_url")
-    def validate_image_path_url(cls, v: str) -> str:
+    def validate_image_path_url(self, v: str) -> str:
         if v.startswith("http"):
             return v
 
@@ -43,15 +42,19 @@ class VisionTool(BaseTool):
     description: str = (
         "This tool uses OpenAI's Vision API to describe the contents of an image."
     )
-    args_schema: Type[BaseModel] = ImagePromptSchema
-    env_vars: List[EnvVar] = [
-        EnvVar(name="OPENAI_API_KEY", description="API key for OpenAI services", required=True),
+    args_schema: type[BaseModel] = ImagePromptSchema
+    env_vars: list[EnvVar] = [
+        EnvVar(
+            name="OPENAI_API_KEY",
+            description="API key for OpenAI services",
+            required=True,
+        ),
     ]
 
     _model: str = PrivateAttr(default="gpt-4o-mini")
-    _llm: Optional[LLM] = PrivateAttr(default=None)
+    _llm: LLM | None = PrivateAttr(default=None)
 
-    def __init__(self, llm: Optional[LLM] = None, model: str = "gpt-4o-mini", **kwargs):
+    def __init__(self, llm: LLM | None = None, model: str = "gpt-4o-mini", **kwargs):
         """Initialize the vision tool.
 
         Args:
@@ -97,9 +100,9 @@ class VisionTool(BaseTool):
                     base64_image = self._encode_image(image_path_url)
                     image_data = f"data:image/jpeg;base64,{base64_image}"
                 except Exception as e:
-                    return f"Error processing image: {str(e)}"
+                    return f"Error processing image: {e!s}"
 
-            response = self.llm.call(
+            return self.llm.call(
                 messages=[
                     {
                         "role": "user",
@@ -113,9 +116,8 @@ class VisionTool(BaseTool):
                     },
                 ],
             )
-            return response
         except Exception as e:
-            return f"An error occurred: {str(e)}"
+            return f"An error occurred: {e!s}"
 
     def _encode_image(self, image_path: str) -> str:
         """Encode an image file as base64.

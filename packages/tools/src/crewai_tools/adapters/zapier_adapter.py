@@ -1,6 +1,5 @@
-import os
 import logging
-from typing import List
+import os
 
 import requests
 from crewai.tools import BaseTool
@@ -42,7 +41,7 @@ class ZapierActionTool(BaseTool):
 
         execute_url = f"{ACTIONS_URL}/{self.action_id}/execute/"
         response = requests.request(
-            "POST", execute_url, headers=headers, json=action_params
+            "POST", execute_url, headers=headers, json=action_params, timeout=30
         )
 
         response.raise_for_status()
@@ -57,7 +56,7 @@ class ZapierActionsAdapter:
 
     api_key: str
 
-    def __init__(self, api_key: str = None):
+    def __init__(self, api_key: str | None = None):
         self.api_key = api_key or os.getenv("ZAPIER_API_KEY")
         if not self.api_key:
             logger.error("Zapier Actions API key is required")
@@ -67,13 +66,12 @@ class ZapierActionsAdapter:
         headers = {
             "x-api-key": self.api_key,
         }
-        response = requests.request("GET", ACTIONS_URL, headers=headers)
+        response = requests.request("GET", ACTIONS_URL, headers=headers, timeout=30)
         response.raise_for_status()
 
-        response_json = response.json()
-        return response_json
+        return response.json()
 
-    def tools(self) -> List[BaseTool]:
+    def tools(self) -> list[BaseTool]:
         """Convert Zapier actions to BaseTool instances"""
         actions_response = self.get_zapier_actions()
         tools = []

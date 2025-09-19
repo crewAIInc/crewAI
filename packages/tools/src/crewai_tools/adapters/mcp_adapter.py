@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Any
 
 from crewai.tools import BaseTool
 from crewai_tools.adapters.tool_collection import ToolCollection
+
 """
 MCPServer for CrewAI.
 
@@ -103,8 +104,8 @@ class MCPServerAdapter:
                 try:
                     subprocess.run(["uv", "add", "mcp crewai-tools[mcp]"], check=True)
 
-                except subprocess.CalledProcessError:
-                    raise ImportError("Failed to install mcp package")
+                except subprocess.CalledProcessError as e:
+                    raise ImportError("Failed to install mcp package") from e
             else:
                 raise ImportError(
                     "`mcp` package not found, please run `uv add crewai-tools[mcp]`"
@@ -112,7 +113,9 @@ class MCPServerAdapter:
 
         try:
             self._serverparams = serverparams
-            self._adapter = MCPAdapt(self._serverparams, CrewAIAdapter(), connect_timeout)
+            self._adapter = MCPAdapt(
+                self._serverparams, CrewAIAdapter(), connect_timeout
+            )
             self.start()
 
         except Exception as e:

@@ -1,4 +1,5 @@
-from typing import Any, Callable, Dict, List, Optional, Type
+from collections.abc import Callable
+from typing import Any
 
 from crewai.tools import BaseTool, EnvVar
 from pydantic import BaseModel, Field
@@ -40,10 +41,10 @@ class SingleStoreSearchTool(BaseTool):
     description: str = (
         "A tool that can be used to semantic search a query from a database."
     )
-    args_schema: Type[BaseModel] = SingleStoreSearchToolSchema
+    args_schema: type[BaseModel] = SingleStoreSearchToolSchema
 
-    package_dependencies: List[str] = ["singlestoredb", "SQLAlchemy"]
-    env_vars: List[EnvVar] = [
+    package_dependencies: list[str] = ["singlestoredb", "SQLAlchemy"]
+    env_vars: list[EnvVar] = [
         EnvVar(
             name="SINGLESTOREDB_URL",
             description="A comprehensive URL string that can encapsulate host, port,"
@@ -112,57 +113,57 @@ class SingleStoreSearchTool(BaseTool):
     ]
 
     connection_args: dict = {}
-    connection_pool: Optional[Any] = None
+    connection_pool: Any | None = None
 
     def __init__(
         self,
-        tables: List[str] = [],
+        tables: list[str] | None = None,
         # Basic connection parameters
-        host: Optional[str] = None,
-        user: Optional[str] = None,
-        password: Optional[str] = None,
-        port: Optional[int] = None,
-        database: Optional[str] = None,
-        driver: Optional[str] = None,
+        host: str | None = None,
+        user: str | None = None,
+        password: str | None = None,
+        port: int | None = None,
+        database: str | None = None,
+        driver: str | None = None,
         # Connection behavior options
-        pure_python: Optional[bool] = None,
-        local_infile: Optional[bool] = None,
-        charset: Optional[str] = None,
+        pure_python: bool | None = None,
+        local_infile: bool | None = None,
+        charset: str | None = None,
         # SSL/TLS configuration
-        ssl_key: Optional[str] = None,
-        ssl_cert: Optional[str] = None,
-        ssl_ca: Optional[str] = None,
-        ssl_disabled: Optional[bool] = None,
-        ssl_cipher: Optional[str] = None,
-        ssl_verify_cert: Optional[bool] = None,
-        tls_sni_servername: Optional[str] = None,
-        ssl_verify_identity: Optional[bool] = None,
+        ssl_key: str | None = None,
+        ssl_cert: str | None = None,
+        ssl_ca: str | None = None,
+        ssl_disabled: bool | None = None,
+        ssl_cipher: str | None = None,
+        ssl_verify_cert: bool | None = None,
+        tls_sni_servername: str | None = None,
+        ssl_verify_identity: bool | None = None,
         # Advanced connection options
-        conv: Optional[Dict[int, Callable[..., Any]]] = None,
-        credential_type: Optional[str] = None,
-        autocommit: Optional[bool] = None,
+        conv: dict[int, Callable[..., Any]] | None = None,
+        credential_type: str | None = None,
+        autocommit: bool | None = None,
         # Result formatting options
-        results_type: Optional[str] = None,
-        buffered: Optional[bool] = None,
-        results_format: Optional[str] = None,
-        program_name: Optional[str] = None,
-        conn_attrs: Optional[Dict[str, str]] = {},
+        results_type: str | None = None,
+        buffered: bool | None = None,
+        results_format: str | None = None,
+        program_name: str | None = None,
+        conn_attrs: dict[str, str] | None = None,
         # Query execution options
-        multi_statements: Optional[bool] = None,
-        client_found_rows: Optional[bool] = None,
-        connect_timeout: Optional[int] = None,
+        multi_statements: bool | None = None,
+        client_found_rows: bool | None = None,
+        connect_timeout: int | None = None,
         # Data type handling
-        nan_as_null: Optional[bool] = None,
-        inf_as_null: Optional[bool] = None,
-        encoding_errors: Optional[str] = None,
-        track_env: Optional[bool] = None,
-        enable_extended_data_types: Optional[bool] = None,
-        vector_data_format: Optional[str] = None,
-        parse_json: Optional[bool] = None,
+        nan_as_null: bool | None = None,
+        inf_as_null: bool | None = None,
+        encoding_errors: str | None = None,
+        track_env: bool | None = None,
+        enable_extended_data_types: bool | None = None,
+        vector_data_format: str | None = None,
+        parse_json: bool | None = None,
         # Connection pool configuration
-        pool_size: Optional[int] = 5,
-        max_overflow: Optional[int] = 10,
-        timeout: Optional[float] = 30,
+        pool_size: int | None = 5,
+        max_overflow: int | None = 10,
+        timeout: float | None = 30,
         **kwargs,
     ):
         """Initialize the SingleStore search tool.
@@ -180,6 +181,10 @@ class SingleStoreSearchTool(BaseTool):
             **kwargs: Additional arguments passed to the parent class
         """
 
+        if conn_attrs is None:
+            conn_attrs = {}
+        if tables is None:
+            tables = []
         if not SINGLSTORE_AVAILABLE:
             import click
 
@@ -257,9 +262,9 @@ class SingleStoreSearchTool(BaseTool):
             self.connection_args["conn_attrs"] = dict()
 
         # Add tool identification to connection attributes
-        self.connection_args["conn_attrs"][
-            "_connector_name"
-        ] = "crewAI SingleStore Tool"
+        self.connection_args["conn_attrs"]["_connector_name"] = (
+            "crewAI SingleStore Tool"
+        )
         self.connection_args["conn_attrs"]["_connector_version"] = "1.0"
 
         # Initialize connection pool for efficient connection management
@@ -273,7 +278,7 @@ class SingleStoreSearchTool(BaseTool):
         # Validate database schema and initialize table information
         self._initialize_tables(tables)
 
-    def _initialize_tables(self, tables: List[str]) -> None:
+    def _initialize_tables(self, tables: list[str]) -> None:
         """Initialize and validate the tables that this tool will work with.
 
         Args:
@@ -325,7 +330,7 @@ class SingleStoreSearchTool(BaseTool):
         )
         self._generate_description()
 
-    def _get_connection(self) -> Optional[Any]:
+    def _get_connection(self) -> Any | None:
         """Get a connection from the connection pool.
 
         Returns:
@@ -335,13 +340,12 @@ class SingleStoreSearchTool(BaseTool):
             Exception: If connection cannot be established
         """
         try:
-            conn = self.connection_pool.connect()
-            return conn
+            return self.connection_pool.connect()
         except Exception:
             # Re-raise the exception to be handled by the caller
             raise
 
-    def _create_connection(self) -> Optional[Any]:
+    def _create_connection(self) -> Any | None:
         """Create a new SingleStore connection.
 
         This method is used by the connection pool to create new connections
@@ -354,8 +358,7 @@ class SingleStoreSearchTool(BaseTool):
             Exception: If connection cannot be created
         """
         try:
-            conn = connect(**self.connection_args)
-            return conn
+            return connect(**self.connection_args)
         except Exception:
             # Re-raise the exception to be handled by the caller
             raise
@@ -379,7 +382,7 @@ class SingleStoreSearchTool(BaseTool):
         query_lower = search_query.strip().lower()
 
         # Allow only SELECT and SHOW statements
-        if not (query_lower.startswith("select") or query_lower.startswith("show")):
+        if not (query_lower.startswith(("select", "show"))):
             return (
                 False,
                 "Only SELECT and SHOW queries are supported for security reasons.",

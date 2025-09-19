@@ -1,5 +1,5 @@
 import os
-from typing import Any, List, Optional, Type
+from typing import Any
 from urllib.parse import urlencode
 
 import requests
@@ -18,16 +18,20 @@ class SerplyWebSearchToolSchema(BaseModel):
 class SerplyWebSearchTool(BaseTool):
     name: str = "Google Search"
     description: str = "A tool to perform Google search with a search_query."
-    args_schema: Type[BaseModel] = SerplyWebSearchToolSchema
+    args_schema: type[BaseModel] = SerplyWebSearchToolSchema
     search_url: str = "https://api.serply.io/v1/search/"
-    hl: Optional[str] = "us"
-    limit: Optional[int] = 10
-    device_type: Optional[str] = "desktop"
-    proxy_location: Optional[str] = "US"
-    query_payload: Optional[dict] = {}
-    headers: Optional[dict] = {}
-    env_vars: List[EnvVar] = [
-        EnvVar(name="SERPLY_API_KEY", description="API key for Serply services", required=True),
+    hl: str | None = "us"
+    limit: int | None = 10
+    device_type: str | None = "desktop"
+    proxy_location: str | None = "US"
+    query_payload: dict | None = {}
+    headers: dict | None = {}
+    env_vars: list[EnvVar] = [
+        EnvVar(
+            name="SERPLY_API_KEY",
+            description="API key for Serply services",
+            required=True,
+        ),
     ]
 
     def __init__(
@@ -100,5 +104,4 @@ class SerplyWebSearchTool(BaseTool):
 
             content = "\n".join(string)
             return f"\nSearch results: {content}\n"
-        else:
-            return results
+        return results

@@ -1,4 +1,4 @@
-from typing import Any, Optional, Type, cast
+from typing import Any, cast
 
 from crewai.tools import BaseTool
 from pydantic import BaseModel, Field
@@ -36,7 +36,7 @@ class LlamaIndexTool(BaseTool):
             raise ValueError(
                 "The LlamaIndex tool does not have an fn_schema specified."
             )
-        args_schema = cast(Type[BaseModel], tool.metadata.fn_schema)
+        args_schema = cast(type[BaseModel], tool.metadata.fn_schema)
 
         return cls(
             name=tool.metadata.name,
@@ -50,8 +50,8 @@ class LlamaIndexTool(BaseTool):
     def from_query_engine(
         cls,
         query_engine: Any,
-        name: Optional[str] = None,
-        description: Optional[str] = None,
+        name: str | None = None,
+        description: str | None = None,
         return_direct: bool = False,
         **kwargs: Any,
     ) -> "LlamaIndexTool":

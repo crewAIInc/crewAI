@@ -2,7 +2,7 @@ import json
 import os
 from importlib.metadata import version
 from platform import architecture, python_version
-from typing import Any, List, Type
+from typing import Any
 
 from crewai.tools import BaseTool, EnvVar
 from pydantic import BaseModel, ConfigDict, Field
@@ -18,7 +18,7 @@ except ImportError:
 
     OXYLABS_AVAILABLE = False
 
-__all__ = ["OxylabsUniversalScraperTool", "OxylabsUniversalScraperConfig"]
+__all__ = ["OxylabsUniversalScraperConfig", "OxylabsUniversalScraperTool"]
 
 
 class OxylabsUniversalScraperArgs(BaseModel):
@@ -64,14 +64,18 @@ class OxylabsUniversalScraperTool(BaseTool):
     )
     name: str = "Oxylabs Universal Scraper tool"
     description: str = "Scrape any url with Oxylabs Universal Scraper"
-    args_schema: Type[BaseModel] = OxylabsUniversalScraperArgs
+    args_schema: type[BaseModel] = OxylabsUniversalScraperArgs
 
     oxylabs_api: RealtimeClient
     config: OxylabsUniversalScraperConfig
-    package_dependencies: List[str] = ["oxylabs"]
-    env_vars: List[EnvVar] = [
-        EnvVar(name="OXYLABS_USERNAME", description="Username for Oxylabs", required=True),
-        EnvVar(name="OXYLABS_PASSWORD", description="Password for Oxylabs", required=True),
+    package_dependencies: list[str] = ["oxylabs"]
+    env_vars: list[EnvVar] = [
+        EnvVar(
+            name="OXYLABS_USERNAME", description="Username for Oxylabs", required=True
+        ),
+        EnvVar(
+            name="OXYLABS_PASSWORD", description="Password for Oxylabs", required=True
+        ),
     ]
 
     def __init__(

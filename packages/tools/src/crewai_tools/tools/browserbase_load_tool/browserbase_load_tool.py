@@ -1,5 +1,5 @@
 import os
-from typing import Any, Optional, Type, List
+from typing import Any
 
 from crewai.tools import BaseTool, EnvVar
 from pydantic import BaseModel, Field
@@ -12,26 +12,34 @@ class BrowserbaseLoadToolSchema(BaseModel):
 class BrowserbaseLoadTool(BaseTool):
     name: str = "Browserbase web load tool"
     description: str = "Load webpages url in a headless browser using Browserbase and return the contents"
-    args_schema: Type[BaseModel] = BrowserbaseLoadToolSchema
-    api_key: Optional[str] = os.getenv("BROWSERBASE_API_KEY")
-    project_id: Optional[str] = os.getenv("BROWSERBASE_PROJECT_ID")
-    text_content: Optional[bool] = False
-    session_id: Optional[str] = None
-    proxy: Optional[bool] = None
-    browserbase: Optional[Any] = None
-    package_dependencies: List[str] = ["browserbase"]
-    env_vars: List[EnvVar] = [
-        EnvVar(name="BROWSERBASE_API_KEY", description="API key for Browserbase services", required=False),
-        EnvVar(name="BROWSERBASE_PROJECT_ID", description="Project ID for Browserbase services", required=False),
+    args_schema: type[BaseModel] = BrowserbaseLoadToolSchema
+    api_key: str | None = os.getenv("BROWSERBASE_API_KEY")
+    project_id: str | None = os.getenv("BROWSERBASE_PROJECT_ID")
+    text_content: bool | None = False
+    session_id: str | None = None
+    proxy: bool | None = None
+    browserbase: Any | None = None
+    package_dependencies: list[str] = ["browserbase"]
+    env_vars: list[EnvVar] = [
+        EnvVar(
+            name="BROWSERBASE_API_KEY",
+            description="API key for Browserbase services",
+            required=False,
+        ),
+        EnvVar(
+            name="BROWSERBASE_PROJECT_ID",
+            description="Project ID for Browserbase services",
+            required=False,
+        ),
     ]
 
     def __init__(
         self,
-        api_key: Optional[str] = None,
-        project_id: Optional[str] = None,
-        text_content: Optional[bool] = False,
-        session_id: Optional[str] = None,
-        proxy: Optional[bool] = None,
+        api_key: str | None = None,
+        project_id: str | None = None,
+        text_content: bool | None = False,
+        session_id: str | None = None,
+        proxy: bool | None = None,
         **kwargs,
     ):
         super().__init__(**kwargs)

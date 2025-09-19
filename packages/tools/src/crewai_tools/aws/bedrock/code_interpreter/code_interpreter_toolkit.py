@@ -1,9 +1,10 @@
 """Toolkit for working with AWS Bedrock Code Interpreter."""
+
 from __future__ import annotations
 
 import json
 import logging
-from typing import TYPE_CHECKING, Dict, List, Tuple, Optional, Type, Any
+from typing import TYPE_CHECKING, Any
 
 from crewai.tools import BaseTool
 from pydantic import BaseModel, Field
@@ -39,124 +40,184 @@ def extract_output_from_stream(response):
                         output.append(f"==== File: {file_path} ====\n{file_content}\n")
                     else:
                         output.append(json.dumps(resource))
-    
+
     return "\n".join(output)
 
 
 # Input schemas
 class ExecuteCodeInput(BaseModel):
     """Input for ExecuteCode."""
+
     code: str = Field(description="The code to execute")
-    language: str = Field(default="python", description="The programming language of the code")
-    clear_context: bool = Field(default=False, description="Whether to clear execution context")
-    thread_id: str = Field(default="default", description="Thread ID for the code interpreter session")
+    language: str = Field(
+        default="python", description="The programming language of the code"
+    )
+    clear_context: bool = Field(
+        default=False, description="Whether to clear execution context"
+    )
+    thread_id: str = Field(
+        default="default", description="Thread ID for the code interpreter session"
+    )
 
 
 class ExecuteCommandInput(BaseModel):
     """Input for ExecuteCommand."""
+
     command: str = Field(description="The command to execute")
-    thread_id: str = Field(default="default", description="Thread ID for the code interpreter session")
+    thread_id: str = Field(
+        default="default", description="Thread ID for the code interpreter session"
+    )
 
 
 class ReadFilesInput(BaseModel):
     """Input for ReadFiles."""
-    paths: List[str] = Field(description="List of file paths to read")
-    thread_id: str = Field(default="default", description="Thread ID for the code interpreter session")
+
+    paths: list[str] = Field(description="List of file paths to read")
+    thread_id: str = Field(
+        default="default", description="Thread ID for the code interpreter session"
+    )
 
 
 class ListFilesInput(BaseModel):
     """Input for ListFiles."""
+
     directory_path: str = Field(default="", description="Path to the directory to list")
-    thread_id: str = Field(default="default", description="Thread ID for the code interpreter session")
+    thread_id: str = Field(
+        default="default", description="Thread ID for the code interpreter session"
+    )
 
 
 class DeleteFilesInput(BaseModel):
     """Input for DeleteFiles."""
-    paths: List[str] = Field(description="List of file paths to delete")
-    thread_id: str = Field(default="default", description="Thread ID for the code interpreter session")
+
+    paths: list[str] = Field(description="List of file paths to delete")
+    thread_id: str = Field(
+        default="default", description="Thread ID for the code interpreter session"
+    )
 
 
 class WriteFilesInput(BaseModel):
     """Input for WriteFiles."""
-    files: List[Dict[str, str]] = Field(description="List of dictionaries with path and text fields")
-    thread_id: str = Field(default="default", description="Thread ID for the code interpreter session")
+
+    files: list[dict[str, str]] = Field(
+        description="List of dictionaries with path and text fields"
+    )
+    thread_id: str = Field(
+        default="default", description="Thread ID for the code interpreter session"
+    )
 
 
 class StartCommandInput(BaseModel):
     """Input for StartCommand."""
+
     command: str = Field(description="The command to execute asynchronously")
-    thread_id: str = Field(default="default", description="Thread ID for the code interpreter session")
+    thread_id: str = Field(
+        default="default", description="Thread ID for the code interpreter session"
+    )
 
 
 class GetTaskInput(BaseModel):
     """Input for GetTask."""
+
     task_id: str = Field(description="The ID of the task to check")
-    thread_id: str = Field(default="default", description="Thread ID for the code interpreter session")
+    thread_id: str = Field(
+        default="default", description="Thread ID for the code interpreter session"
+    )
 
 
 class StopTaskInput(BaseModel):
     """Input for StopTask."""
+
     task_id: str = Field(description="The ID of the task to stop")
-    thread_id: str = Field(default="default", description="Thread ID for the code interpreter session")
+    thread_id: str = Field(
+        default="default", description="Thread ID for the code interpreter session"
+    )
 
 
 # Tool classes
 class ExecuteCodeTool(BaseTool):
     """Tool for executing code in various languages."""
+
     name: str = "execute_code"
     description: str = "Execute code in various languages (primarily Python)"
-    args_schema: Type[BaseModel] = ExecuteCodeInput
+    args_schema: type[BaseModel] = ExecuteCodeInput
     toolkit: Any = Field(default=None, exclude=True)
-    
+
     def __init__(self, toolkit):
         super().__init__()
         self.toolkit = toolkit
-        
-    def _run(self, code: str, language: str = "python", clear_context: bool = False, thread_id: str = "default") -> str:
+
+    def _run(
+        self,
+        code: str,
+        language: str = "python",
+        clear_context: bool = False,
+        thread_id: str = "default",
+    ) -> str:
         try:
             # Get or create code interpreter
-            code_interpreter = self.toolkit._get_or_create_interpreter(thread_id=thread_id)
-            
+            code_interpreter = self.toolkit._get_or_create_interpreter(
+                thread_id=thread_id
+            )
+
             # Execute code
             response = code_interpreter.invoke(
                 method="executeCode",
-                params={"code": code, "language": language, "clearContext": clear_context},
+                params={
+                    "code": code,
+                    "language": language,
+                    "clearContext": clear_context,
+                },
             )
-            
+
             return extract_output_from_stream(response)
         except Exception as e:
-            return f"Error executing code: {str(e)}"
-        
-    async def _arun(self, code: str, language: str = "python", clear_context: bool = False, thread_id: str = "default") -> str:
+            return f"Error executing code: {e!s}"
+
+    async def _arun(
+        self,
+        code: str,
+        language: str = "python",
+        clear_context: bool = False,
+        thread_id: str = "default",
+    ) -> str:
         # Use _run as we're working with a synchronous API that's thread-safe
-        return self._run(code=code, language=language, clear_context=clear_context, thread_id=thread_id)
+        return self._run(
+            code=code,
+            language=language,
+            clear_context=clear_context,
+            thread_id=thread_id,
+        )
 
 
 class ExecuteCommandTool(BaseTool):
     """Tool for running shell commands in the code interpreter environment."""
+
     name: str = "execute_command"
     description: str = "Run shell commands in the code interpreter environment"
-    args_schema: Type[BaseModel] = ExecuteCommandInput
+    args_schema: type[BaseModel] = ExecuteCommandInput
     toolkit: Any = Field(default=None, exclude=True)
-    
+
     def __init__(self, toolkit):
         super().__init__()
         self.toolkit = toolkit
-        
+
     def _run(self, command: str, thread_id: str = "default") -> str:
         try:
             # Get or create code interpreter
-            code_interpreter = self.toolkit._get_or_create_interpreter(thread_id=thread_id)
-            
+            code_interpreter = self.toolkit._get_or_create_interpreter(
+                thread_id=thread_id
+            )
+
             # Execute command
             response = code_interpreter.invoke(
                 method="executeCommand", params={"command": command}
             )
-            
+
             return extract_output_from_stream(response)
         except Exception as e:
-            return f"Error executing command: {str(e)}"
-        
+            return f"Error executing command: {e!s}"
+
     async def _arun(self, command: str, thread_id: str = "default") -> str:
         # Use _run as we're working with a synchronous API that's thread-safe
         return self._run(command=command, thread_id=thread_id)
@@ -164,57 +225,65 @@ class ExecuteCommandTool(BaseTool):
 
 class ReadFilesTool(BaseTool):
     """Tool for reading content of files in the environment."""
+
     name: str = "read_files"
     description: str = "Read content of files in the environment"
-    args_schema: Type[BaseModel] = ReadFilesInput
+    args_schema: type[BaseModel] = ReadFilesInput
     toolkit: Any = Field(default=None, exclude=True)
-    
+
     def __init__(self, toolkit):
         super().__init__()
         self.toolkit = toolkit
-        
-    def _run(self, paths: List[str], thread_id: str = "default") -> str:
+
+    def _run(self, paths: list[str], thread_id: str = "default") -> str:
         try:
             # Get or create code interpreter
-            code_interpreter = self.toolkit._get_or_create_interpreter(thread_id=thread_id)
-            
+            code_interpreter = self.toolkit._get_or_create_interpreter(
+                thread_id=thread_id
+            )
+
             # Read files
-            response = code_interpreter.invoke(method="readFiles", params={"paths": paths})
-            
+            response = code_interpreter.invoke(
+                method="readFiles", params={"paths": paths}
+            )
+
             return extract_output_from_stream(response)
         except Exception as e:
-            return f"Error reading files: {str(e)}"
-        
-    async def _arun(self, paths: List[str], thread_id: str = "default") -> str:
+            return f"Error reading files: {e!s}"
+
+    async def _arun(self, paths: list[str], thread_id: str = "default") -> str:
         # Use _run as we're working with a synchronous API that's thread-safe
         return self._run(paths=paths, thread_id=thread_id)
 
 
 class ListFilesTool(BaseTool):
     """Tool for listing files in directories in the environment."""
+
     name: str = "list_files"
     description: str = "List files in directories in the environment"
-    args_schema: Type[BaseModel] = ListFilesInput
+    args_schema: type[BaseModel] = ListFilesInput
     toolkit: Any = Field(default=None, exclude=True)
-    
+
     def __init__(self, toolkit):
         super().__init__()
         self.toolkit = toolkit
-        
+
     def _run(self, directory_path: str = "", thread_id: str = "default") -> str:
         try:
             # Get or create code interpreter
-            code_interpreter = self.toolkit._get_or_create_interpreter(thread_id=thread_id)
-            
+            code_interpreter = self.toolkit._get_or_create_interpreter(
+                thread_id=thread_id
+            )
+
             # List files
             response = code_interpreter.invoke(
                 method="listFiles", params={"directoryPath": directory_path}
             )
-            
+
             return extract_output_from_stream(response)
         except Exception as e:
-            return f"Error listing files: {str(e)}"
-        
+            return f"Error listing files: {e!s}"
+
     async def _arun(self, directory_path: str = "", thread_id: str = "default") -> str:
         # Use _run as we're working with a synchronous API that's thread-safe
         return self._run(directory_path=directory_path, thread_id=thread_id)
@@ -222,89 +291,100 @@ class ListFilesTool(BaseTool):
 
 class DeleteFilesTool(BaseTool):
     """Tool for removing files from the environment."""
+
     name: str = "delete_files"
     description: str = "Remove files from the environment"
-    args_schema: Type[BaseModel] = DeleteFilesInput
+    args_schema: type[BaseModel] = DeleteFilesInput
     toolkit: Any = Field(default=None, exclude=True)
-    
+
     def __init__(self, toolkit):
         super().__init__()
         self.toolkit = toolkit
-        
-    def _run(self, paths: List[str], thread_id: str = "default") -> str:
+
+    def _run(self, paths: list[str], thread_id: str = "default") -> str:
         try:
             # Get or create code interpreter
-            code_interpreter = self.toolkit._get_or_create_interpreter(thread_id=thread_id)
-            
+            code_interpreter = self.toolkit._get_or_create_interpreter(
+                thread_id=thread_id
+            )
+
             # Remove files
             response = code_interpreter.invoke(
                 method="removeFiles", params={"paths": paths}
             )
-            
+
             return extract_output_from_stream(response)
         except Exception as e:
-            return f"Error deleting files: {str(e)}"
-        
-    async def _arun(self, paths: List[str], thread_id: str = "default") -> str:
+            return f"Error deleting files: {e!s}"
+
+    async def _arun(self, paths: list[str], thread_id: str = "default") -> str:
         # Use _run as we're working with a synchronous API that's thread-safe
         return self._run(paths=paths, thread_id=thread_id)
 
 
 class WriteFilesTool(BaseTool):
     """Tool for creating or updating files in the environment."""
+
     name: str = "write_files"
     description: str = "Create or update files in the environment"
-    args_schema: Type[BaseModel] = WriteFilesInput
+    args_schema: type[BaseModel] = WriteFilesInput
     toolkit: Any = Field(default=None, exclude=True)
-    
+
     def __init__(self, toolkit):
         super().__init__()
         self.toolkit = toolkit
-        
-    def _run(self, files: List[Dict[str, str]], thread_id: str = "default") -> str:
+
+    def _run(self, files: list[dict[str, str]], thread_id: str = "default") -> str:
         try:
             # Get or create code interpreter
-            code_interpreter = self.toolkit._get_or_create_interpreter(thread_id=thread_id)
-            
+            code_interpreter = self.toolkit._get_or_create_interpreter(
+                thread_id=thread_id
+            )
+
             # Write files
             response = code_interpreter.invoke(
                 method="writeFiles", params={"content": files}
             )
-            
+
             return extract_output_from_stream(response)
         except Exception as e:
-            return f"Error writing files: {str(e)}"
-        
-    async def _arun(self, files: List[Dict[str, str]], thread_id: str = "default") -> str:
+            return f"Error writing files: {e!s}"
+
+    async def _arun(
+        self, files: list[dict[str, str]], thread_id: str = "default"
+    ) -> str:
         # Use _run as we're working with a synchronous API that's thread-safe
         return self._run(files=files, thread_id=thread_id)
 
 
 class StartCommandTool(BaseTool):
     """Tool for starting long-running commands asynchronously."""
+
     name: str = "start_command_execution"
     description: str = "Start long-running commands asynchronously"
-    args_schema: Type[BaseModel] = StartCommandInput
+    args_schema: type[BaseModel] = StartCommandInput
     toolkit: Any = Field(default=None, exclude=True)
-    
+
     def __init__(self, toolkit):
         super().__init__()
         self.toolkit = toolkit
-        
+
     def _run(self, command: str, thread_id: str = "default") -> str:
         try:
             # Get or create code interpreter
-            code_interpreter = self.toolkit._get_or_create_interpreter(thread_id=thread_id)
-            
+            code_interpreter = self.toolkit._get_or_create_interpreter(
+                thread_id=thread_id
+            )
+
             # Start command execution
             response = code_interpreter.invoke(
                 method="startCommandExecution", params={"command": command}
             )
-            
+
             return extract_output_from_stream(response)
         except Exception as e:
-            return f"Error starting command: {str(e)}"
-        
+            return f"Error starting command: {e!s}"
+
     async def _arun(self, command: str, thread_id: str = "default") -> str:
         # Use _run as we're working with a synchronous API that's thread-safe
         return self._run(command=command, thread_id=thread_id)
@@ -312,27 +392,32 @@ class StartCommandTool(BaseTool):
 
 class GetTaskTool(BaseTool):
     """Tool for checking status of async tasks."""
+
     name: str = "get_task"
     description: str = "Check status of async tasks"
-    args_schema: Type[BaseModel] = GetTaskInput
+    args_schema: type[BaseModel] = GetTaskInput
     toolkit: Any = Field(default=None, exclude=True)
-    
+
     def __init__(self, toolkit):
         super().__init__()
         self.toolkit = toolkit
-        
+
     def _run(self, task_id: str, thread_id: str = "default") -> str:
         try:
             # Get or create code interpreter
-            code_interpreter = self.toolkit._get_or_create_interpreter(thread_id=thread_id)
-            
+            code_interpreter = self.toolkit._get_or_create_interpreter(
+                thread_id=thread_id
+            )
+
             # Get task status
-            response = code_interpreter.invoke(method="getTask", params={"taskId": task_id})
-            
+            response = code_interpreter.invoke(
+                method="getTask", params={"taskId": task_id}
+            )
+
             return extract_output_from_stream(response)
         except Exception as e:
-            return f"Error getting task status: {str(e)}"
-        
+            return f"Error getting task status: {e!s}"
+
     async def _arun(self, task_id: str, thread_id: str = "default") -> str:
         # Use _run as we're working with a synchronous API that's thread-safe
         return self._run(task_id=task_id, thread_id=thread_id)
@@ -340,29 +425,32 @@ class GetTaskTool(BaseTool):
 
 class StopTaskTool(BaseTool):
     """Tool for stopping running tasks."""
+
     name: str = "stop_task"
     description: str = "Stop running tasks"
-    args_schema: Type[BaseModel] = StopTaskInput
+    args_schema: type[BaseModel] = StopTaskInput
     toolkit: Any = Field(default=None, exclude=True)
-    
+
     def __init__(self, toolkit):
         super().__init__()
         self.toolkit = toolkit
-        
+
     def _run(self, task_id: str, thread_id: str = "default") -> str:
         try:
             # Get or create code interpreter
-            code_interpreter = self.toolkit._get_or_create_interpreter(thread_id=thread_id)
-            
+            code_interpreter = self.toolkit._get_or_create_interpreter(
+                thread_id=thread_id
+            )
+
             # Stop task
             response = code_interpreter.invoke(
                 method="stopTask", params={"taskId": task_id}
             )
-            
+
             return extract_output_from_stream(response)
         except Exception as e:
-            return f"Error stopping task: {str(e)}"
-        
+            return f"Error stopping task: {e!s}"
+
     async def _arun(self, task_id: str, thread_id: str = "default") -> str:
         # Use _run as we're working with a synchronous API that's thread-safe
         return self._run(task_id=task_id, thread_id=thread_id)
@@ -429,8 +517,8 @@ class CodeInterpreterToolkit:
             region: AWS region for the code interpreter
         """
         self.region = region
-        self._code_interpreters: Dict[str, CodeInterpreter] = {}
-        self.tools: List[BaseTool] = []
+        self._code_interpreters: dict[str, CodeInterpreter] = {}
+        self.tools: list[BaseTool] = []
         self._setup_tools()
 
     def _setup_tools(self) -> None:
@@ -444,17 +532,15 @@ class CodeInterpreterToolkit:
             WriteFilesTool(self),
             StartCommandTool(self),
             GetTaskTool(self),
-            StopTaskTool(self)
+            StopTaskTool(self),
         ]
 
-    def _get_or_create_interpreter(
-        self, thread_id: str = "default"
-    ) -> CodeInterpreter:
+    def _get_or_create_interpreter(self, thread_id: str = "default") -> CodeInterpreter:
         """Get or create a code interpreter for the specified thread.
-        
+
         Args:
             thread_id: Thread ID for the code interpreter session
-            
+
         Returns:
             CodeInterpreter instance
         """
@@ -463,6 +549,7 @@ class CodeInterpreterToolkit:
 
         # Create a new code interpreter for this thread
         from bedrock_agentcore.tools.code_interpreter_client import CodeInterpreter
+
         code_interpreter = CodeInterpreter(region=self.region)
         code_interpreter.start()
         logger.info(
@@ -473,8 +560,7 @@ class CodeInterpreterToolkit:
         self._code_interpreters[thread_id] = code_interpreter
         return code_interpreter
 
-
-    def get_tools(self) -> List[BaseTool]:
+    def get_tools(self) -> list[BaseTool]:
         """
         Get the list of code interpreter tools
 
@@ -483,7 +569,7 @@ class CodeInterpreterToolkit:
         """
         return self.tools
 
-    def get_tools_by_name(self) -> Dict[str, BaseTool]:
+    def get_tools_by_name(self) -> dict[str, BaseTool]:
         """
         Get a dictionary of tools mapped by their names
 
@@ -492,9 +578,9 @@ class CodeInterpreterToolkit:
         """
         return {tool.name: tool for tool in self.tools}
 
-    async def cleanup(self, thread_id: Optional[str] = None) -> None:
+    async def cleanup(self, thread_id: str | None = None) -> None:
         """Clean up resources
-        
+
         Args:
             thread_id: Optional thread ID to clean up. If None, cleans up all sessions.
         """
@@ -521,14 +607,14 @@ class CodeInterpreterToolkit:
                     logger.warning(
                         f"Error stopping code interpreter for thread {tid}: {e}"
                     )
-            
+
             self._code_interpreters = {}
             logger.info("All code interpreter sessions cleaned up")
 
 
 def create_code_interpreter_toolkit(
     region: str = "us-west-2",
-) -> Tuple[CodeInterpreterToolkit, List[BaseTool]]:
+) -> tuple[CodeInterpreterToolkit, list[BaseTool]]:
     """
     Create a CodeInterpreterToolkit
 

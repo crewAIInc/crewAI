@@ -1,6 +1,6 @@
 import json
-import os
-from typing import Any, Optional, Type, List, Dict, Callable
+from collections.abc import Callable
+from typing import Any
 
 try:
     import couchbase.search as search
@@ -29,30 +29,33 @@ class CouchbaseToolSchema(BaseModel):
         description="The query to search retrieve relevant information from the Couchbase database. Pass only the query, not the question.",
     )
 
+
 class CouchbaseFTSVectorSearchTool(BaseTool):
     """Tool to search the Couchbase database"""
 
     model_config = {"arbitrary_types_allowed": True}
     name: str = "CouchbaseFTSVectorSearchTool"
     description: str = "A tool to search the Couchbase database for relevant information on internal documents."
-    args_schema: Type[BaseModel] = CouchbaseToolSchema
-    cluster: SkipValidation[Optional[Cluster]] = None
-    collection_name: Optional[str] = None,
-    scope_name: Optional[str] = None,
-    bucket_name: Optional[str] = None,
-    index_name: Optional[str] = None,
-    embedding_key: Optional[str] = Field(
+    args_schema: type[BaseModel] = CouchbaseToolSchema
+    cluster: SkipValidation[Cluster | None] = None
+    collection_name: str | None = (None,)
+    scope_name: str | None = (None,)
+    bucket_name: str | None = (None,)
+    index_name: str | None = (None,)
+    embedding_key: str | None = Field(
         default="embedding",
-        description="Name of the field in the search index that stores the vector"
+        description="Name of the field in the search index that stores the vector",
     )
-    scoped_index: Optional[bool] = Field(
-        default=True,
-        description="Specify whether the index is scoped. Is True by default."
-    ),
-    limit: Optional[int] = Field(default=3)
-    embedding_function: SkipValidation[Callable[[str], List[float]]] = Field(
+    scoped_index: bool | None = (
+        Field(
+            default=True,
+            description="Specify whether the index is scoped. Is True by default.",
+        ),
+    )
+    limit: int | None = Field(default=3)
+    embedding_function: SkipValidation[Callable[[str], list[float]]] = Field(
         default=None,
-        description="A function that takes a string and returns a list of floats. This is used to embed the query before searching the database."
+        description="A function that takes a string and returns a list of floats. This is used to embed the query before searching the database.",
     )
 
     def _check_bucket_exists(self) -> bool:
@@ -67,7 +70,7 @@ class CouchbaseFTSVectorSearchTool(BaseTool):
     def _check_scope_and_collection_exists(self) -> bool:
         """Check if the scope and collection exists in the linked Couchbase bucket
         Raises a ValueError if either is not found"""
-        scope_collection_map: Dict[str, Any] = {}
+        scope_collection_map: dict[str, Any] = {}
 
         # Get a list of all scopes in the bucket
         for scope in self._bucket.collections().get_all_scopes():
@@ -203,11 +206,7 @@ class CouchbaseFTSVectorSearchTool(BaseTool):
 
         search_req = search.SearchRequest.create(
             VectorSearch.from_vector_query(
-                VectorQuery(
-                    self.embedding_key,
-                    query_embedding,
-                    self.limit
-                )
+                VectorQuery(self.embedding_key, query_embedding, self.limit)
             )
         )
 
@@ -219,16 +218,13 @@ class CouchbaseFTSVectorSearchTool(BaseTool):
                     SearchOptions(
                         limit=self.limit,
                         fields=fields,
-                    )
+                    ),
                 )
             else:
                 search_iter = self.cluster.search(
                     self.index_name,
                     search_req,
-                    SearchOptions(
-                        limit=self.limit,
-                        fields=fields
-                    )
+                    SearchOptions(limit=self.limit, fields=fields),
                 )
 
             json_response = []

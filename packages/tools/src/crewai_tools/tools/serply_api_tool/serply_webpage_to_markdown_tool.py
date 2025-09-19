@@ -1,11 +1,9 @@
 import os
-from typing import Any, List, Optional, Type
 
 import requests
 from crewai.tools import EnvVar
-from pydantic import BaseModel, Field
-
 from crewai_tools.tools.rag.rag_tool import RagTool
+from pydantic import BaseModel, Field
 
 
 class SerplyWebpageToMarkdownToolSchema(BaseModel):
@@ -19,18 +17,20 @@ class SerplyWebpageToMarkdownToolSchema(BaseModel):
 
 class SerplyWebpageToMarkdownTool(RagTool):
     name: str = "Webpage to Markdown"
-    description: str = (
-        "A tool to perform convert a webpage to markdown to make it easier for LLMs to understand"
-    )
-    args_schema: Type[BaseModel] = SerplyWebpageToMarkdownToolSchema
+    description: str = "A tool to perform convert a webpage to markdown to make it easier for LLMs to understand"
+    args_schema: type[BaseModel] = SerplyWebpageToMarkdownToolSchema
     request_url: str = "https://api.serply.io/v1/request"
-    proxy_location: Optional[str] = "US"
-    headers: Optional[dict] = {}
-    env_vars: List[EnvVar] = [
-        EnvVar(name="SERPLY_API_KEY", description="API key for Serply services", required=True),
+    proxy_location: str | None = "US"
+    headers: dict | None = {}
+    env_vars: list[EnvVar] = [
+        EnvVar(
+            name="SERPLY_API_KEY",
+            description="API key for Serply services",
+            required=True,
+        ),
     ]
 
-    def __init__(self, proxy_location: Optional[str] = "US", **kwargs):
+    def __init__(self, proxy_location: str | None = "US", **kwargs):
         """
         proxy_location: (str): Where to perform the search, specifically for a specific country results.
              ['US', 'CA', 'IE', 'GB', 'FR', 'DE', 'SE', 'IN', 'JP', 'KR', 'SG', 'AU', 'BR'] (defaults to US)

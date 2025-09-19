@@ -1,11 +1,6 @@
-from typing import Any, Optional, Type
+from typing import Any
 
-try:
-    from embedchain.models.data_type import DataType
-    EMBEDCHAIN_AVAILABLE = True
-except ImportError:
-    EMBEDCHAIN_AVAILABLE = False
-
+from crewai_tools.rag.data_types import DataType
 from pydantic import BaseModel, Field
 
 from ..rag.rag_tool import RagTool
@@ -14,7 +9,7 @@ from ..rag.rag_tool import RagTool
 class FixedDOCXSearchToolSchema(BaseModel):
     """Input for DOCXSearchTool."""
 
-    docx: Optional[str] = Field(
+    docx: str | None = Field(
         ..., description="File path or URL of a DOCX file to be searched"
     )
     search_query: str = Field(
@@ -37,9 +32,9 @@ class DOCXSearchTool(RagTool):
     description: str = (
         "A tool that can be used to semantic search a query from a DOCX's content."
     )
-    args_schema: Type[BaseModel] = DOCXSearchToolSchema
+    args_schema: type[BaseModel] = DOCXSearchToolSchema
 
-    def __init__(self, docx: Optional[str] = None, **kwargs):
+    def __init__(self, docx: str | None = None, **kwargs):
         super().__init__(**kwargs)
         if docx is not None:
             self.add(docx)
@@ -48,15 +43,17 @@ class DOCXSearchTool(RagTool):
             self._generate_description()
 
     def add(self, docx: str) -> None:
-        if not EMBEDCHAIN_AVAILABLE:
-            raise ImportError("embedchain is not installed. Please install it with `pip install crewai-tools[embedchain]`")
         super().add(docx, data_type=DataType.DOCX)
 
     def _run(
         self,
         search_query: str,
-        docx: Optional[str] = None,
+        docx: str | None = None,
+        similarity_threshold: float | None = None,
+        limit: int | None = None,
     ) -> Any:
         if docx is not None:
             self.add(docx)
-        return super()._run(query=search_query)
+        return super()._run(
+            query=search_query, similarity_threshold=similarity_threshold, limit=limit
+        )

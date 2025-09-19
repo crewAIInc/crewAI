@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Union
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from playwright.async_api import Browser as AsyncBrowser
@@ -9,7 +9,7 @@ if TYPE_CHECKING:
     from playwright.sync_api import Page as SyncPage
 
 
-async def aget_current_page(browser: Union[AsyncBrowser, Any]) -> AsyncPage:
+async def aget_current_page(browser: AsyncBrowser | Any) -> AsyncPage:
     """
     Asynchronously get the current page of the browser.
     Args:
@@ -26,7 +26,7 @@ async def aget_current_page(browser: Union[AsyncBrowser, Any]) -> AsyncPage:
     return context.pages[-1]
 
 
-def get_current_page(browser: Union[SyncBrowser, Any]) -> SyncPage:
+def get_current_page(browser: SyncBrowser | Any) -> SyncPage:
     """
     Get the current page of the browser.
     Args:

@@ -1,8 +1,8 @@
 import os
-from urllib.parse import urlparse
-from typing import TYPE_CHECKING
-from pathlib import Path
 from functools import cached_property
+from pathlib import Path
+from typing import TYPE_CHECKING
+from urllib.parse import urlparse
 
 from crewai_tools.rag.misc import compute_sha256
 
@@ -34,7 +34,7 @@ class SourceContent:
 
     @cached_property
     def source_ref(self) -> str:
-        """"
+        """ "
         Returns the source reference for the content.
         If the content is a URL or a local file, returns the source.
         Otherwise, returns the hash of the content.

@@ -1,17 +1,19 @@
-import os
 import json
-import requests
-import warnings
-from typing import List, Any, Dict, Literal, Optional, Union, get_origin, Type, cast
-from pydantic import Field, create_model
-from crewai.tools import BaseTool
+import os
 import re
+import warnings
+from typing import Any, Literal, Optional, Union, cast, get_origin
+
+import requests
+from crewai.tools import BaseTool
+from pydantic import Field, create_model
 
 
 def get_enterprise_api_base_url() -> str:
     """Get the enterprise API base URL from environment or use default."""
     base_url = os.getenv("CREWAI_PLUS_URL", "https://app.crewai.com")
     return f"{base_url}/crewai_plus/api/v1/integrations"
+
 
 ENTERPRISE_API_BASE_URL = get_enterprise_api_base_url()
 
@@ -23,7 +25,7 @@ class EnterpriseActionTool(BaseTool):
         default="", description="The enterprise action token"
     )
     action_name: str = Field(default="", description="The name of the action")
-    action_schema: Dict[str, Any] = Field(
+    action_schema: dict[str, Any] = Field(
         default={}, description="The schema of the action"
     )
     enterprise_api_base_url: str = Field(
@@ -36,8 +38,8 @@ class EnterpriseActionTool(BaseTool):
         description: str,
         enterprise_action_token: str,
         action_name: str,
-        action_schema: Dict[str, Any],
-        enterprise_api_base_url: Optional[str] = None,
+        action_schema: dict[str, Any],
+        enterprise_api_base_url: str | None = None,
     ):
         self._model_registry = {}
         self._base_name = self._sanitize_name(name)
@@ -86,7 +88,9 @@ class EnterpriseActionTool(BaseTool):
         self.enterprise_action_token = enterprise_action_token
         self.action_name = action_name
         self.action_schema = action_schema
-        self.enterprise_api_base_url = enterprise_api_base_url or get_enterprise_api_base_url()
+        self.enterprise_api_base_url = (
+            enterprise_api_base_url or get_enterprise_api_base_url()
+        )
 
     def _sanitize_name(self, name: str) -> str:
         """Sanitize names to create proper Python class names."""
@@ -95,8 +99,8 @@ class EnterpriseActionTool(BaseTool):
         return "".join(word.capitalize() for word in parts if word)
 
     def _extract_schema_info(
-        self, action_schema: Dict[str, Any]
-    ) -> tuple[Dict[str, Any], List[str]]:
+        self, action_schema: dict[str, Any]
+    ) -> tuple[dict[str, Any], list[str]]:
         """Extract schema properties and required fields from action schema."""
         schema_props = (
             action_schema.get("function", {})
@@ -108,7 +112,7 @@ class EnterpriseActionTool(BaseTool):
         )
         return schema_props, required
 
-    def _process_schema_type(self, schema: Dict[str, Any], type_name: str) -> Type[Any]:
+    def _process_schema_type(self, schema: dict[str, Any], type_name: str) -> type[Any]:
         """Process a JSON schema and return appropriate Python type."""
         if "anyOf" in schema:
             any_of_types = schema["anyOf"]
@@ -118,7 +122,7 @@ class EnterpriseActionTool(BaseTool):
             if non_null_types:
                 base_type = self._process_schema_type(non_null_types[0], type_name)
                 return Optional[base_type] if is_nullable else base_type
-            return cast(Type[Any], Optional[str])
+            return cast(type[Any], Optional[str])
 
         if "oneOf" in schema:
             return self._process_schema_type(schema["oneOf"][0], type_name)
@@ -137,14 +141,16 @@ class EnterpriseActionTool(BaseTool):
         if json_type == "array":
             items_schema = schema.get("items", {"type": "string"})
             item_type = self._process_schema_type(items_schema, f"{type_name}Item")
-            return List[item_type]
+            return list[item_type]
 
         if json_type == "object":
             return self._create_nested_model(schema, type_name)
 
         return self._map_json_type_to_python(json_type)
 
-    def _create_nested_model(self, schema: Dict[str, Any], model_name: str) -> Type[Any]:
+    def _create_nested_model(
+        self, schema: dict[str, Any], model_name: str
+    ) -> type[Any]:
         """Create a nested Pydantic model for complex objects."""
         full_model_name = f"{self._base_name}{model_name}"
 
@@ -183,21 +189,19 @@ class EnterpriseActionTool(BaseTool):
             return dict
 
     def _create_field_definition(
-        self, field_type: Type[Any], is_required: bool, description: str
+        self, field_type: type[Any], is_required: bool, description: str
     ) -> tuple:
         """Create Pydantic field definition based on type and requirement."""
         if is_required:
             return (field_type, Field(description=description))
-        else:
-            if get_origin(field_type) is Union:
-                return (field_type, Field(default=None, description=description))
-            else:
-                return (
-                    Optional[field_type],
-                    Field(default=None, description=description),
-                )
+        if get_origin(field_type) is Union:
+            return (field_type, Field(default=None, description=description))
+        return (
+            Optional[field_type],
+            Field(default=None, description=description),
+        )
 
-    def _map_json_type_to_python(self, json_type: str) -> Type[Any]:
+    def _map_json_type_to_python(self, json_type: str) -> type[Any]:
         """Map basic JSON schema types to Python types."""
         type_mapping = {
             "string": str,
@@ -210,7 +214,7 @@ class EnterpriseActionTool(BaseTool):
         }
         return type_mapping.get(json_type, str)
 
-    def _get_required_nullable_fields(self) -> List[str]:
+    def _get_required_nullable_fields(self) -> list[str]:
         """Get a list of required nullable fields from the action schema."""
         schema_props, required = self._extract_schema_info(self.action_schema)
 
@@ -222,7 +226,7 @@ class EnterpriseActionTool(BaseTool):
 
         return required_nullable_fields
 
-    def _is_nullable_type(self, schema: Dict[str, Any]) -> bool:
+    def _is_nullable_type(self, schema: dict[str, Any]) -> bool:
         """Check if a schema represents a nullable type."""
         if "anyOf" in schema:
             return any(t.get("type") == "null" for t in schema["anyOf"])
@@ -242,8 +246,9 @@ class EnterpriseActionTool(BaseTool):
                 if field_name not in cleaned_kwargs:
                     cleaned_kwargs[field_name] = None
 
-
-            api_url = f"{self.enterprise_api_base_url}/actions/{self.action_name}/execute"
+            api_url = (
+                f"{self.enterprise_api_base_url}/actions/{self.action_name}/execute"
+            )
             headers = {
                 "Authorization": f"Bearer {self.enterprise_action_token}",
                 "Content-Type": "application/json",
@@ -262,7 +267,7 @@ class EnterpriseActionTool(BaseTool):
             return json.dumps(data, indent=2)
 
         except Exception as e:
-            return f"Error executing action {self.action_name}: {str(e)}"
+            return f"Error executing action {self.action_name}: {e!s}"
 
 
 class EnterpriseActionKitToolAdapter:
@@ -271,15 +276,17 @@ class EnterpriseActionKitToolAdapter:
     def __init__(
         self,
         enterprise_action_token: str,
-        enterprise_api_base_url: Optional[str] = None,
+        enterprise_api_base_url: str | None = None,
     ):
         """Initialize the adapter with an enterprise action token."""
         self._set_enterprise_action_token(enterprise_action_token)
         self._actions_schema = {}
         self._tools = None
-        self.enterprise_api_base_url = enterprise_api_base_url or get_enterprise_api_base_url()
+        self.enterprise_api_base_url = (
+            enterprise_api_base_url or get_enterprise_api_base_url()
+        )
 
-    def tools(self) -> List[BaseTool]:
+    def tools(self) -> list[BaseTool]:
         """Get the list of tools created from enterprise actions."""
         if self._tools is None:
             self._fetch_actions()
@@ -289,13 +296,10 @@ class EnterpriseActionKitToolAdapter:
     def _fetch_actions(self):
         """Fetch available actions from the API."""
         try:
-
             actions_url = f"{self.enterprise_api_base_url}/actions"
             headers = {"Authorization": f"Bearer {self.enterprise_action_token}"}
 
-            response = requests.get(
-                actions_url, headers=headers, timeout=30
-            )
+            response = requests.get(actions_url, headers=headers, timeout=30)
             response.raise_for_status()
 
             raw_data = response.json()
@@ -306,7 +310,7 @@ class EnterpriseActionKitToolAdapter:
             parsed_schema = {}
             action_categories = raw_data["actions"]
 
-            for integration_type, action_list in action_categories.items():
+            for action_list in action_categories.values():
                 if isinstance(action_list, list):
                     for action in action_list:
                         action_name = action.get("name")
@@ -314,8 +318,10 @@ class EnterpriseActionKitToolAdapter:
                             action_schema = {
                                 "function": {
                                     "name": action_name,
-                                    "description": action.get("description", f"Execute {action_name}"),
-                                    "parameters": action.get("parameters", {})
+                                    "description": action.get(
+                                        "description", f"Execute {action_name}"
+                                    ),
+                                    "parameters": action.get("parameters", {}),
                                 }
                             }
                             parsed_schema[action_name] = action_schema
@@ -329,8 +335,8 @@ class EnterpriseActionKitToolAdapter:
             traceback.print_exc()
 
     def _generate_detailed_description(
-        self, schema: Dict[str, Any], indent: int = 0
-    ) -> List[str]:
+        self, schema: dict[str, Any], indent: int = 0
+    ) -> list[str]:
         """Generate detailed description for nested schema structures."""
         descriptions = []
         indent_str = "  " * indent
@@ -407,15 +413,17 @@ class EnterpriseActionKitToolAdapter:
 
         self._tools = tools
 
-    def _set_enterprise_action_token(self, enterprise_action_token: Optional[str]):
+    def _set_enterprise_action_token(self, enterprise_action_token: str | None):
         if enterprise_action_token and not enterprise_action_token.startswith("PK_"):
             warnings.warn(
                 "Legacy token detected, please consider using the new Enterprise Action Auth token. Check out our docs for more information https://docs.crewai.com/en/enterprise/features/integrations.",
                 DeprecationWarning,
-                stacklevel=2
+                stacklevel=2,
             )
 
-        token = enterprise_action_token or os.environ.get("CREWAI_ENTERPRISE_TOOLS_TOKEN")
+        token = enterprise_action_token or os.environ.get(
+            "CREWAI_ENTERPRISE_TOOLS_TOKEN"
+        )
 
         self.enterprise_action_token = token
 

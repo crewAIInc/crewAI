@@ -1,11 +1,4 @@
-from typing import Any, Optional, Type
-
-try:
-    from embedchain.models.data_type import DataType
-    EMBEDCHAIN_AVAILABLE = True
-except ImportError:
-    EMBEDCHAIN_AVAILABLE = False
-
+from crewai_tools.rag.data_types import DataType
 from pydantic import BaseModel, Field
 
 from ..rag.rag_tool import RagTool
@@ -31,9 +24,9 @@ class CodeDocsSearchTool(RagTool):
     description: str = (
         "A tool that can be used to semantic search a query from a Code Docs content."
     )
-    args_schema: Type[BaseModel] = CodeDocsSearchToolSchema
+    args_schema: type[BaseModel] = CodeDocsSearchToolSchema
 
-    def __init__(self, docs_url: Optional[str] = None, **kwargs):
+    def __init__(self, docs_url: str | None = None, **kwargs):
         super().__init__(**kwargs)
         if docs_url is not None:
             self.add(docs_url)
@@ -42,15 +35,17 @@ class CodeDocsSearchTool(RagTool):
             self._generate_description()
 
     def add(self, docs_url: str) -> None:
-        if not EMBEDCHAIN_AVAILABLE:
-            raise ImportError("embedchain is not installed. Please install it with `pip install crewai-tools[embedchain]`")
         super().add(docs_url, data_type=DataType.DOCS_SITE)
 
     def _run(
         self,
         search_query: str,
-        docs_url: Optional[str] = None,
+        docs_url: str | None = None,
+        similarity_threshold: float | None = None,
+        limit: int | None = None,
     ) -> str:
         if docs_url is not None:
             self.add(docs_url)
-        return super()._run(query=search_query)
+        return super()._run(
+            query=search_query, similarity_threshold=similarity_threshold, limit=limit
+        )

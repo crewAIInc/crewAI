@@ -78,10 +78,17 @@ select = [
     "I001",   # sort imports
     "I002",   # remove unused imports
 ]
-ignore = ["E501"]  # ignore line too long
+ignore = [
+    "E501",  # ignore line too long
+    "S607",  # Starting a process with a partial executable path - OK for uv/pip commands
+]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**/*.py" = ["S101"]  # Allow assert statements in tests
+"packages/*/tests/**/*.py" = ["S101"]  # Allow assert statements in tests
+"**/*_test.py" = ["S101"]  # Allow assert statements in test files
+"**/test_*.py" = ["S101"]  # Allow assert statements in test files
+"**/__init__.py" = ["F401"]  # Allow unused imports in __init__ files (re-exports)
 
 [tool.pytest.ini_options]
 testpaths = [

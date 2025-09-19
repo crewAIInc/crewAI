@@ -1,4 +1,4 @@
-from typing import Any, Optional, Type, List, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Optional
 
 from crewai.tools import BaseTool, EnvVar
 from pydantic import BaseModel, ConfigDict, Field, PrivateAttr
@@ -43,9 +43,9 @@ class FirecrawlCrawlWebsiteTool(BaseTool):
     )
     name: str = "Firecrawl web crawl tool"
     description: str = "Crawl webpages using Firecrawl and return the contents"
-    args_schema: Type[BaseModel] = FirecrawlCrawlWebsiteToolSchema
-    api_key: Optional[str] = None
-    config: Optional[dict[str, Any]] = Field(
+    args_schema: type[BaseModel] = FirecrawlCrawlWebsiteToolSchema
+    api_key: str | None = None
+    config: dict[str, Any] | None = Field(
         default_factory=lambda: {
             "maxDepth": 2,
             "ignoreSitemap": True,
@@ -60,12 +60,16 @@ class FirecrawlCrawlWebsiteTool(BaseTool):
         }
     )
     _firecrawl: Optional["FirecrawlApp"] = PrivateAttr(None)
-    package_dependencies: List[str] = ["firecrawl-py"]
-    env_vars: List[EnvVar] = [
-        EnvVar(name="FIRECRAWL_API_KEY", description="API key for Firecrawl services", required=True),
+    package_dependencies: list[str] = ["firecrawl-py"]
+    env_vars: list[EnvVar] = [
+        EnvVar(
+            name="FIRECRAWL_API_KEY",
+            description="API key for Firecrawl services",
+            required=True,
+        ),
     ]
 
-    def __init__(self, api_key: Optional[str] = None, **kwargs):
+    def __init__(self, api_key: str | None = None, **kwargs):
         super().__init__(**kwargs)
         self.api_key = api_key
         self._initialize_firecrawl()

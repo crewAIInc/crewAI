@@ -1,12 +1,5 @@
-from typing import Optional, Type
-
+from crewai_tools.rag.data_types import DataType
 from pydantic import BaseModel, Field
-
-try:
-    from embedchain.models.data_type import DataType
-    EMBEDCHAIN_AVAILABLE = True
-except ImportError:
-    EMBEDCHAIN_AVAILABLE = False
 
 from ..rag.rag_tool import RagTool
 
@@ -30,9 +23,9 @@ class PDFSearchTool(RagTool):
     description: str = (
         "A tool that can be used to semantic search a query from a PDF's content."
     )
-    args_schema: Type[BaseModel] = PDFSearchToolSchema
+    args_schema: type[BaseModel] = PDFSearchToolSchema
 
-    def __init__(self, pdf: Optional[str] = None, **kwargs):
+    def __init__(self, pdf: str | None = None, **kwargs):
         super().__init__(**kwargs)
         if pdf is not None:
             self.add(pdf)
@@ -41,15 +34,17 @@ class PDFSearchTool(RagTool):
             self._generate_description()
 
     def add(self, pdf: str) -> None:
-        if not EMBEDCHAIN_AVAILABLE:
-            raise ImportError("embedchain is not installed. Please install it with `pip install crewai-tools[embedchain]`")
         super().add(pdf, data_type=DataType.PDF_FILE)
 
     def _run(
         self,
         query: str,
-        pdf: Optional[str] = None,
+        pdf: str | None = None,
+        similarity_threshold: float | None = None,
+        limit: int | None = None,
     ) -> str:
         if pdf is not None:
             self.add(pdf)
-        return super()._run(query=query)
+        return super()._run(
+            query=query, similarity_threshold=similarity_threshold, limit=limit
+        )

@@ -12,8 +12,12 @@ class ComposioTool(BaseTool):
     """Wrapper for composio tools."""
 
     composio_action: t.Callable
-    env_vars: t.List[EnvVar] = [
-        EnvVar(name="COMPOSIO_API_KEY", description="API key for Composio services", required=True),
+    env_vars: list[EnvVar] = [
+        EnvVar(
+            name="COMPOSIO_API_KEY",
+            description="API key for Composio services",
+            required=True,
+        ),
     ]
 
     def _run(self, *args: t.Any, **kwargs: t.Any) -> t.Any:
@@ -31,7 +35,7 @@ class ComposioTool(BaseTool):
             return
 
         connections = t.cast(
-            t.List[ConnectedAccountModel],
+            list[ConnectedAccountModel],
             toolset.client.connected_accounts.get(),
         )
         if tool.app not in [connection.appUniqueId for connection in connections]:
@@ -66,7 +70,7 @@ class ComposioTool(BaseTool):
         schema = action_schema.model_dump(exclude_none=True)
         entity_id = kwargs.pop("entity_id", DEFAULT_ENTITY_ID)
 
-        def function(**kwargs: t.Any) -> t.Dict:
+        def function(**kwargs: t.Any) -> dict:
             """Wrapper function for composio action."""
             return toolset.execute_action(
                 action=Action(schema["name"]),
@@ -93,10 +97,10 @@ class ComposioTool(BaseTool):
     def from_app(
         cls,
         *apps: t.Any,
-        tags: t.Optional[t.List[str]] = None,
-        use_case: t.Optional[str] = None,
+        tags: list[str] | None = None,
+        use_case: str | None = None,
         **kwargs: t.Any,
-    ) -> t.List[te.Self]:
+    ) -> list[te.Self]:
         """Create toolset from an app."""
         if len(apps) == 0:
             raise ValueError("You need to provide at least one app name")

@@ -5,7 +5,7 @@ from .snowflake_search_tool import (
 )
 
 __all__ = [
+    "SnowflakeConfig",
     "SnowflakeSearchTool",
     "SnowflakeSearchToolInput",
-    "SnowflakeConfig",
 ]

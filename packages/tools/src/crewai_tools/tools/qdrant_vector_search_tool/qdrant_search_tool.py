@@ -1,11 +1,11 @@
 import json
 import os
-from typing import Any, Callable, Optional, Type, List
-
+from collections.abc import Callable
+from typing import Any
 
 try:
     from qdrant_client import QdrantClient
-    from qdrant_client.http.models import Filter, FieldCondition, MatchValue
+    from qdrant_client.http.models import FieldCondition, Filter, MatchValue
 
     QDRANT_AVAILABLE = True
 except ImportError:
@@ -26,11 +26,11 @@ class QdrantToolSchema(BaseModel):
         ...,
         description="The query to search retrieve relevant information from the Qdrant database. Pass only the query, not the question.",
     )
-    filter_by: Optional[str] = Field(
+    filter_by: str | None = Field(
         default=None,
         description="Filter by properties. Pass only the properties, not the question.",
     )
-    filter_value: Optional[str] = Field(
+    filter_value: str | None = Field(
         default=None,
         description="Filter by value. Pass only the value, not the question.",
     )
@@ -55,26 +55,26 @@ class QdrantVectorSearchTool(BaseTool):
     client: QdrantClient = None
     name: str = "QdrantVectorSearchTool"
     description: str = "A tool to search the Qdrant database for relevant information on internal documents."
-    args_schema: Type[BaseModel] = QdrantToolSchema
-    query: Optional[str] = None
-    filter_by: Optional[str] = None
-    filter_value: Optional[str] = None
-    collection_name: Optional[str] = None
-    limit: Optional[int] = Field(default=3)
+    args_schema: type[BaseModel] = QdrantToolSchema
+    query: str | None = None
+    filter_by: str | None = None
+    filter_value: str | None = None
+    collection_name: str | None = None
+    limit: int | None = Field(default=3)
     score_threshold: float = Field(default=0.35)
     qdrant_url: str = Field(
         ...,
         description="The URL of the Qdrant server",
     )
-    qdrant_api_key: Optional[str] = Field(
+    qdrant_api_key: str | None = Field(
         default=None,
         description="The API key for the Qdrant server",
     )
-    custom_embedding_fn: Optional[Callable] = Field(
+    custom_embedding_fn: Callable | None = Field(
         default=None,
         description="A custom embedding function to use for vectorization. If not provided, the default model will be used.",
     )
-    package_dependencies: List[str] = ["qdrant-client"]
+    package_dependencies: list[str] = ["qdrant-client"]
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -102,8 +102,8 @@ class QdrantVectorSearchTool(BaseTool):
     def _run(
         self,
         query: str,
-        filter_by: Optional[str] = None,
-        filter_value: Optional[str] = None,
+        filter_by: str | None = None,
+        filter_value: str | None = None,
     ) -> str:
         """Execute vector similarity search on Qdrant.
 
@@ -172,7 +172,7 @@ class QdrantVectorSearchTool(BaseTool):
         import openai
 
         client = openai.Client(api_key=os.getenv("OPENAI_API_KEY"))
-        embedding = (
+        return (
             client.embeddings.create(
                 input=[query],
                 model=embedding_model,
@@ -180,4 +180,3 @@ class QdrantVectorSearchTool(BaseTool):
             .data[0]
             .embedding
         )
-        return embedding

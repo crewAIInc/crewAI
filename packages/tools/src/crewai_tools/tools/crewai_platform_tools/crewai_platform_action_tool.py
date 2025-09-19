@@ -1,18 +1,24 @@
 """
 Crewai Enterprise Tools
 """
-import re
+
 import json
+import re
+from typing import Any, Literal, Optional, Union, cast, get_origin
+
 import requests
-from typing import Dict, Any, List, Type, Optional, Union, get_origin, cast, Literal
-from pydantic import Field, create_model
 from crewai.tools import BaseTool
-from crewai_tools.tools.crewai_platform_tools.misc import get_platform_api_base_url, get_platform_integration_token
+from pydantic import Field, create_model
+
+from crewai_tools.tools.crewai_platform_tools.misc import (
+    get_platform_api_base_url,
+    get_platform_integration_token,
+)
 
 
 class CrewAIPlatformActionTool(BaseTool):
     action_name: str = Field(default="", description="The name of the action")
-    action_schema: Dict[str, Any] = Field(
+    action_schema: dict[str, Any] = Field(
         default_factory=dict, description="The schema of the action"
     )
 
@@ -20,7 +26,7 @@ class CrewAIPlatformActionTool(BaseTool):
         self,
         description: str,
         action_name: str,
-        action_schema: Dict[str, Any],
+        action_schema: dict[str, Any],
     ):
         self._model_registry = {}
         self._base_name = self._sanitize_name(action_name)
@@ -36,7 +42,7 @@ class CrewAIPlatformActionTool(BaseTool):
                 field_type = self._process_schema_type(
                     param_details, self._sanitize_name(param_name).title()
                 )
-            except Exception as e:
+            except Exception:
                 field_type = str
 
             field_definitions[param_name] = self._create_field_definition(
@@ -60,7 +66,11 @@ class CrewAIPlatformActionTool(BaseTool):
                 input_text=(str, Field(description="Input for the action")),
             )
 
-        super().__init__(name=action_name.lower().replace(" ", "_"), description=description, args_schema=args_schema)
+        super().__init__(
+            name=action_name.lower().replace(" ", "_"),
+            description=description,
+            args_schema=args_schema,
+        )
         self.action_name = action_name
         self.action_schema = action_schema
 
@@ -71,8 +81,8 @@ class CrewAIPlatformActionTool(BaseTool):
         return "".join(word.capitalize() for word in parts if word)
 
     def _extract_schema_info(
-        self, action_schema: Dict[str, Any]
-    ) -> tuple[Dict[str, Any], List[str]]:
+        self, action_schema: dict[str, Any]
+    ) -> tuple[dict[str, Any], list[str]]:
         schema_props = (
             action_schema.get("function", {})
             .get("parameters", {})
@@ -83,7 +93,7 @@ class CrewAIPlatformActionTool(BaseTool):
         )
         return schema_props, required
 
-    def _process_schema_type(self, schema: Dict[str, Any], type_name: str) -> Type[Any]:
+    def _process_schema_type(self, schema: dict[str, Any], type_name: str) -> type[Any]:
         if "anyOf" in schema:
             any_of_types = schema["anyOf"]
             is_nullable = any(t.get("type") == "null" for t in any_of_types)
@@ -92,7 +102,7 @@ class CrewAIPlatformActionTool(BaseTool):
             if non_null_types:
                 base_type = self._process_schema_type(non_null_types[0], type_name)
                 return Optional[base_type] if is_nullable else base_type
-            return cast(Type[Any], Optional[str])
+            return cast(type[Any], Optional[str])
 
         if "oneOf" in schema:
             return self._process_schema_type(schema["oneOf"][0], type_name)
@@ -111,14 +121,16 @@ class CrewAIPlatformActionTool(BaseTool):
         if json_type == "array":
             items_schema = schema.get("items", {"type": "string"})
             item_type = self._process_schema_type(items_schema, f"{type_name}Item")
-            return List[item_type]
+            return list[item_type]
 
         if json_type == "object":
             return self._create_nested_model(schema, type_name)
 
         return self._map_json_type_to_python(json_type)
 
-    def _create_nested_model(self, schema: Dict[str, Any], model_name: str) -> Type[Any]:
+    def _create_nested_model(
+        self, schema: dict[str, Any], model_name: str
+    ) -> type[Any]:
         full_model_name = f"{self._base_name}{model_name}"
 
         if full_model_name in self._model_registry:
@@ -139,7 +151,7 @@ class CrewAIPlatformActionTool(BaseTool):
                 prop_type = self._process_schema_type(
                     prop_schema, f"{model_name}{self._sanitize_name(prop_name).title()}"
                 )
-            except Exception as e:
+            except Exception:
                 prop_type = str
 
             field_definitions[prop_name] = self._create_field_definition(
@@ -155,20 +167,18 @@ class CrewAIPlatformActionTool(BaseTool):
             return dict
 
     def _create_field_definition(
-        self, field_type: Type[Any], is_required: bool, description: str
+        self, field_type: type[Any], is_required: bool, description: str
     ) -> tuple:
         if is_required:
             return (field_type, Field(description=description))
-        else:
-            if get_origin(field_type) is Union:
-                return (field_type, Field(default=None, description=description))
-            else:
-                return (
-                    Optional[field_type],
-                    Field(default=None, description=description),
-                )
+        if get_origin(field_type) is Union:
+            return (field_type, Field(default=None, description=description))
+        return (
+            Optional[field_type],
+            Field(default=None, description=description),
+        )
 
-    def _map_json_type_to_python(self, json_type: str) -> Type[Any]:
+    def _map_json_type_to_python(self, json_type: str) -> type[Any]:
         type_mapping = {
             "string": str,
             "integer": int,
@@ -180,7 +190,7 @@ class CrewAIPlatformActionTool(BaseTool):
         }
         return type_mapping.get(json_type, str)
 
-    def _get_required_nullable_fields(self) -> List[str]:
+    def _get_required_nullable_fields(self) -> list[str]:
         schema_props, required = self._extract_schema_info(self.action_schema)
 
         required_nullable_fields = []
@@ -191,7 +201,7 @@ class CrewAIPlatformActionTool(BaseTool):
 
         return required_nullable_fields
 
-    def _is_nullable_type(self, schema: Dict[str, Any]) -> bool:
+    def _is_nullable_type(self, schema: dict[str, Any]) -> bool:
         if "anyOf" in schema:
             return any(t.get("type") == "null" for t in schema["anyOf"])
         return schema.get("type") == "null"
@@ -209,8 +219,9 @@ class CrewAIPlatformActionTool(BaseTool):
                 if field_name not in cleaned_kwargs:
                     cleaned_kwargs[field_name] = None
 
-
-            api_url = f"{get_platform_api_base_url()}/actions/{self.action_name}/execute"
+            api_url = (
+                f"{get_platform_api_base_url()}/actions/{self.action_name}/execute"
+            )
             token = get_platform_integration_token()
             headers = {
                 "Authorization": f"Bearer {token}",
@@ -230,4 +241,4 @@ class CrewAIPlatformActionTool(BaseTool):
             return json.dumps(data, indent=2)
 
         except Exception as e:
-            return f"Error executing action {self.action_name}: {str(e)}"
+            return f"Error executing action {self.action_name}: {e!s}"

@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Any, Type, List
+from typing import TYPE_CHECKING, Any
 
 from crewai.tools import BaseTool
 from pydantic import BaseModel, ConfigDict, Field
@@ -32,16 +32,14 @@ class FixedLocalEvaluatorToolSchema(BaseModel):
 
 class PatronusLocalEvaluatorTool(BaseTool):
     name: str = "Patronus Local Evaluator Tool"
-    description: str = (
-        "This tool is used to evaluate the model input and output using custom function evaluators."
-    )
-    args_schema: Type[BaseModel] = FixedLocalEvaluatorToolSchema
+    description: str = "This tool is used to evaluate the model input and output using custom function evaluators."
+    args_schema: type[BaseModel] = FixedLocalEvaluatorToolSchema
     client: "Client" = None
     evaluator: str
     evaluated_model_gold_answer: str
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
-    package_dependencies: List[str] = ["patronus"]
+    package_dependencies: list[str] = ["patronus"]
 
     def __init__(
         self,
@@ -99,7 +97,7 @@ class PatronusLocalEvaluatorTool(BaseTool):
         evaluated_model_gold_answer = self.evaluated_model_gold_answer
         evaluator = self.evaluator
 
-        result: "EvaluationResult" = self.client.evaluate(
+        result: EvaluationResult = self.client.evaluate(
             evaluator=evaluator,
             evaluated_model_input=evaluated_model_input,
             evaluated_model_output=evaluated_model_output,
@@ -107,8 +105,7 @@ class PatronusLocalEvaluatorTool(BaseTool):
             evaluated_model_gold_answer=evaluated_model_gold_answer,
             tags={},  # Optional metadata, supports arbitrary key-value pairs
         )
-        output = f"Evaluation result: {result.pass_}, Explanation: {result.explanation}"
-        return output
+        return f"Evaluation result: {result.pass_}, Explanation: {result.explanation}"
 
 
 try:

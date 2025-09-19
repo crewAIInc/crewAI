@@ -59,6 +59,7 @@ from .tools import (
     OxylabsAmazonSearchScraperTool,
     OxylabsGoogleSearchScraperTool,
     OxylabsUniversalScraperTool,
+    ParallelSearchTool,
     PatronusEvalTool,
     PatronusLocalEvaluatorTool,
     PatronusPredefinedCriteriaEvalTool,
@@ -96,5 +97,4 @@ from .tools import (
     YoutubeChannelSearchTool,
     YoutubeVideoSearchTool,
     ZapierActionTools,
-    ParallelSearchTool,
 )

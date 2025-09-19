@@ -1,11 +1,4 @@
-from typing import Any, Optional, Type
-
-try:
-    from embedchain.models.data_type import DataType
-    EMBEDCHAIN_AVAILABLE = True
-except ImportError:
-    EMBEDCHAIN_AVAILABLE = False
-
+from crewai_tools.rag.data_types import DataType
 from pydantic import BaseModel, Field
 
 from ..rag.rag_tool import RagTool
@@ -30,12 +23,10 @@ class WebsiteSearchToolSchema(FixedWebsiteSearchToolSchema):
 
 class WebsiteSearchTool(RagTool):
     name: str = "Search in a specific website"
-    description: str = (
-        "A tool that can be used to semantic search a query from a specific URL content."
-    )
-    args_schema: Type[BaseModel] = WebsiteSearchToolSchema
+    description: str = "A tool that can be used to semantic search a query from a specific URL content."
+    args_schema: type[BaseModel] = WebsiteSearchToolSchema
 
-    def __init__(self, website: Optional[str] = None, **kwargs):
+    def __init__(self, website: str | None = None, **kwargs):
         super().__init__(**kwargs)
         if website is not None:
             self.add(website)
@@ -44,15 +35,17 @@ class WebsiteSearchTool(RagTool):
             self._generate_description()
 
     def add(self, website: str) -> None:
-        if not EMBEDCHAIN_AVAILABLE:
-            raise ImportError("embedchain is not installed. Please install it with `pip install crewai-tools[embedchain]`")
-        super().add(website, data_type=DataType.WEB_PAGE)
+        super().add(website, data_type=DataType.WEBSITE)
 
     def _run(
         self,
         search_query: str,
-        website: Optional[str] = None,
+        website: str | None = None,
+        similarity_threshold: float | None = None,
+        limit: int | None = None,
     ) -> str:
         if website is not None:
             self.add(website)
-        return super()._run(query=search_query)
+        return super()._run(
+            query=search_query, similarity_threshold=similarity_threshold, limit=limit
+        )

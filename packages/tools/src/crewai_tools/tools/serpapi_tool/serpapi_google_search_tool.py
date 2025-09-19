@@ -1,7 +1,7 @@
-from typing import Any, Optional, Type
+from typing import Any
 
-import re
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
+
 from .serpapi_base_tool import SerpApiBaseTool
 
 try:
@@ -16,7 +16,7 @@ class SerpApiGoogleSearchToolSchema(BaseModel):
     search_query: str = Field(
         ..., description="Mandatory search query you want to use to Google search."
     )
-    location: Optional[str] = Field(
+    location: str | None = Field(
         None, description="Location you want the search to be performed in."
     )
 
@@ -29,7 +29,7 @@ class SerpApiGoogleSearchTool(SerpApiBaseTool):
     description: str = (
         "A tool to perform to perform a Google search with a search_query."
     )
-    args_schema: Type[BaseModel] = SerpApiGoogleSearchToolSchema
+    args_schema: type[BaseModel] = SerpApiGoogleSearchToolSchema
 
     def _run(
         self,
@@ -57,4 +57,4 @@ class SerpApiGoogleSearchTool(SerpApiBaseTool):
 
             return results
         except HTTPError as e:
-            return f"An error occurred: {str(e)}. Some parameters may be invalid."
+            return f"An error occurred: {e!s}. Some parameters may be invalid."

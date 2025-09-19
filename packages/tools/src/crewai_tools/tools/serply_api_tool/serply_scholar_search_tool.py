@@ -1,5 +1,5 @@
 import os
-from typing import Any, List, Optional, Type
+from typing import Any
 from urllib.parse import urlencode
 
 import requests
@@ -21,16 +21,20 @@ class SerplyScholarSearchTool(BaseTool):
     description: str = (
         "A tool to perform scholarly literature search with a search_query."
     )
-    args_schema: Type[BaseModel] = SerplyScholarSearchToolSchema
+    args_schema: type[BaseModel] = SerplyScholarSearchToolSchema
     search_url: str = "https://api.serply.io/v1/scholar/"
-    hl: Optional[str] = "us"
-    proxy_location: Optional[str] = "US"
-    headers: Optional[dict] = {}
-    env_vars: List[EnvVar] = [
-        EnvVar(name="SERPLY_API_KEY", description="API key for Serply services", required=True),
+    hl: str | None = "us"
+    proxy_location: str | None = "US"
+    headers: dict | None = {}
+    env_vars: list[EnvVar] = [
+        EnvVar(
+            name="SERPLY_API_KEY",
+            description="API key for Serply services",
+            required=True,
+        ),
     ]
 
-    def __init__(self, hl: str = "us", proxy_location: Optional[str] = "US", **kwargs):
+    def __init__(self, hl: str = "us", proxy_location: str | None = "US", **kwargs):
         """
         param: hl (str): host Language code to display results in
             (reference https://developers.google.com/custom-search/docs/xml_results?hl=en#wsInterfaceLanguages)

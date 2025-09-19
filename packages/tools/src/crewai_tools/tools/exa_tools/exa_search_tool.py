@@ -1,5 +1,5 @@
 import os
-from typing import Any, List, Optional, Type
+from typing import Any, Optional
 
 from crewai.tools import BaseTool, EnvVar
 from pydantic import BaseModel, Field
@@ -17,13 +17,11 @@ class EXABaseToolSchema(BaseModel):
     search_query: str = Field(
         ..., description="Mandatory search query you want to use to search the internet"
     )
-    start_published_date: Optional[str] = Field(
+    start_published_date: str | None = Field(
         None, description="Start date for the search"
     )
-    end_published_date: Optional[str] = Field(
-        None, description="End date for the search"
-    )
-    include_domains: Optional[list[str]] = Field(
+    end_published_date: str | None = Field(None, description="End date for the search")
+    include_domains: list[str] | None = Field(
         None, description="List of domains to include in the search"
     )
 
@@ -32,18 +30,18 @@ class EXASearchTool(BaseTool):
     model_config = {"arbitrary_types_allowed": True}
     name: str = "EXASearchTool"
     description: str = "Search the internet using Exa"
-    args_schema: Type[BaseModel] = EXABaseToolSchema
+    args_schema: type[BaseModel] = EXABaseToolSchema
     client: Optional["Exa"] = None
-    content: Optional[bool] = False
-    summary: Optional[bool] = False
-    type: Optional[str] = "auto"
-    package_dependencies: List[str] = ["exa_py"]
-    api_key: Optional[str] = Field(
+    content: bool | None = False
+    summary: bool | None = False
+    type: str | None = "auto"
+    package_dependencies: list[str] = ["exa_py"]
+    api_key: str | None = Field(
         default_factory=lambda: os.getenv("EXA_API_KEY"),
         description="API key for Exa services",
         json_schema_extra={"required": False},
     )
-    env_vars: List[EnvVar] = [
+    env_vars: list[EnvVar] = [
         EnvVar(
             name="EXA_API_KEY", description="API key for Exa services", required=False
         ),
@@ -51,9 +49,9 @@ class EXASearchTool(BaseTool):
 
     def __init__(
         self,
-        content: Optional[bool] = False,
-        summary: Optional[bool] = False,
-        type: Optional[str] = "auto",
+        content: bool | None = False,
+        summary: bool | None = False,
+        type: str | None = "auto",
         **kwargs,
     ):
         super().__init__(
@@ -81,9 +79,9 @@ class EXASearchTool(BaseTool):
     def _run(
         self,
         search_query: str,
-        start_published_date: Optional[str] = None,
-        end_published_date: Optional[str] = None,
-        include_domains: Optional[list[str]] = None,
+        start_published_date: str | None = None,
+        end_published_date: str | None = None,
+        include_domains: list[str] | None = None,
     ) -> Any:
         if self.client is None:
             raise ValueError("Client not initialized")

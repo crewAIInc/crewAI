@@ -1,8 +1,8 @@
-import os
 import xml.etree.ElementTree as ET
 
 from crewai_tools.rag.base_loader import BaseLoader, LoaderResult
 from crewai_tools.rag.source_content import SourceContent
+
 
 class XMLLoader(BaseLoader):
     def load(self, source_content: SourceContent, **kwargs) -> LoaderResult:
@@ -11,7 +11,7 @@ class XMLLoader(BaseLoader):
 
         if source_content.is_url():
             content = self._load_from_url(source_ref, kwargs)
-        elif os.path.exists(source_ref):
+        elif source_content.path_exists():
             content = self._load_from_file(source_ref)
 
         return self._parse_xml(content, source_ref)
@@ -19,17 +19,20 @@ class XMLLoader(BaseLoader):
     def _load_from_url(self, url: str, kwargs: dict) -> str:
         import requests
 
-        headers = kwargs.get("headers", {
-            "Accept": "application/xml, text/xml, text/plain",
-            "User-Agent": "Mozilla/5.0 (compatible; crewai-tools XMLLoader)"
-        })
+        headers = kwargs.get(
+            "headers",
+            {
+                "Accept": "application/xml, text/xml, text/plain",
+                "User-Agent": "Mozilla/5.0 (compatible; crewai-tools XMLLoader)",
+            },
+        )
 
         try:
             response = requests.get(url, headers=headers, timeout=30)
             response.raise_for_status()
             return response.text
         except Exception as e:
-            raise ValueError(f"Error fetching XML from URL {url}: {str(e)}")
+            raise ValueError(f"Error fetching XML from URL {url}: {e!s}")
 
     def _load_from_file(self, path: str) -> str:
         with open(path, "r", encoding="utf-8") as file:
@@ -37,7 +40,7 @@ class XMLLoader(BaseLoader):
 
     def _parse_xml(self, content: str, source_ref: str) -> LoaderResult:
         try:
-            if content.strip().startswith('<'):
+            if content.strip().startswith("<"):
                 root = ET.fromstring(content)
             else:
                 root = ET.parse(source_ref).getroot()
@@ -57,5 +60,5 @@ class XMLLoader(BaseLoader):
             content=text,
             source=source_ref,
             metadata=metadata,
-            doc_id=self.generate_doc_id(source_ref=source_ref, content=text)
+            doc_id=self.generate_doc_id(source_ref=source_ref, content=text),
         )

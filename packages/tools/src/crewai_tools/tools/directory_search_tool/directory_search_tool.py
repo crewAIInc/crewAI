@@ -1,11 +1,4 @@
-from typing import Optional, Type
-
-try:
-    from embedchain.loaders.directory_loader import DirectoryLoader
-    EMBEDCHAIN_AVAILABLE = True
-except ImportError:
-    EMBEDCHAIN_AVAILABLE = False
-
+from crewai_tools.rag.data_types import DataType
 from pydantic import BaseModel, Field
 
 from ..rag.rag_tool import RagTool
@@ -31,11 +24,9 @@ class DirectorySearchTool(RagTool):
     description: str = (
         "A tool that can be used to semantic search a query from a directory's content."
     )
-    args_schema: Type[BaseModel] = DirectorySearchToolSchema
+    args_schema: type[BaseModel] = DirectorySearchToolSchema
 
-    def __init__(self, directory: Optional[str] = None, **kwargs):
-        if not EMBEDCHAIN_AVAILABLE:
-            raise ImportError("embedchain is not installed. Please install it with `pip install crewai-tools[embedchain]`")
+    def __init__(self, directory: str | None = None, **kwargs):
         super().__init__(**kwargs)
         if directory is not None:
             self.add(directory)
@@ -44,16 +35,17 @@ class DirectorySearchTool(RagTool):
             self._generate_description()
 
     def add(self, directory: str) -> None:
-        super().add(
-            directory,
-            loader=DirectoryLoader(config=dict(recursive=True)),
-        )
+        super().add(directory, data_type=DataType.DIRECTORY)
 
     def _run(
         self,
         search_query: str,
-        directory: Optional[str] = None,
+        directory: str | None = None,
+        similarity_threshold: float | None = None,
+        limit: int | None = None,
     ) -> str:
         if directory is not None:
             self.add(directory)
-        return super()._run(query=search_query)
+        return super()._run(
+            query=search_query, similarity_threshold=similarity_threshold, limit=limit
+        )

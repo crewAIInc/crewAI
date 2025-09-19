@@ -1,5 +1,5 @@
 import os
-from typing import Any, List, Optional, Type
+from typing import Any
 from urllib.parse import urlencode
 
 import requests
@@ -18,17 +18,21 @@ class SerplyNewsSearchToolSchema(BaseModel):
 class SerplyNewsSearchTool(BaseTool):
     name: str = "News Search"
     description: str = "A tool to perform News article search with a search_query."
-    args_schema: Type[BaseModel] = SerplyNewsSearchToolSchema
+    args_schema: type[BaseModel] = SerplyNewsSearchToolSchema
     search_url: str = "https://api.serply.io/v1/news/"
-    proxy_location: Optional[str] = "US"
-    headers: Optional[dict] = {}
-    limit: Optional[int] = 10
-    env_vars: List[EnvVar] = [
-        EnvVar(name="SERPLY_API_KEY", description="API key for Serply services", required=True),
+    proxy_location: str | None = "US"
+    headers: dict | None = {}
+    limit: int | None = 10
+    env_vars: list[EnvVar] = [
+        EnvVar(
+            name="SERPLY_API_KEY",
+            description="API key for Serply services",
+            required=True,
+        ),
     ]
 
     def __init__(
-        self, limit: Optional[int] = 10, proxy_location: Optional[str] = "US", **kwargs
+        self, limit: int | None = 10, proxy_location: str | None = "US", **kwargs
     ):
         """
         param: limit (int): The maximum number of results to return [10-100, defaults to 10]
@@ -85,5 +89,4 @@ class SerplyNewsSearchTool(BaseTool):
 
             content = "\n".join(string)
             return f"\nSearch results: {content}\n"
-        else:
-            return results
+        return results

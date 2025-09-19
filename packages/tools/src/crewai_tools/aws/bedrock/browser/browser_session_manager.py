@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, Dict, Tuple
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from bedrock_agentcore.tools.browser_client import BrowserClient
     from playwright.async_api import Browser as AsyncBrowser
     from playwright.sync_api import Browser as SyncBrowser
-    from bedrock_agentcore.tools.browser_client import BrowserClient
 
 logger = logging.getLogger(__name__)
 
@@ -28,8 +28,8 @@ class BrowserSessionManager:
             region: AWS region for browser client
         """
         self.region = region
-        self._async_sessions: Dict[str, Tuple[BrowserClient, AsyncBrowser]] = {}
-        self._sync_sessions: Dict[str, Tuple[BrowserClient, SyncBrowser]] = {}
+        self._async_sessions: dict[str, tuple[BrowserClient, AsyncBrowser]] = {}
+        self._sync_sessions: dict[str, tuple[BrowserClient, SyncBrowser]] = {}
 
     async def get_async_browser(self, thread_id: str) -> AsyncBrowser:
         """
@@ -75,6 +75,7 @@ class BrowserSessionManager:
             Exception: If browser session creation fails
         """
         from bedrock_agentcore.tools.browser_client import BrowserClient
+
         browser_client = BrowserClient(region=self.region)
 
         try:
@@ -132,6 +133,7 @@ class BrowserSessionManager:
             Exception: If browser session creation fails
         """
         from bedrock_agentcore.tools.browser_client import BrowserClient
+
         browser_client = BrowserClient(region=self.region)
 
         try:

@@ -1,14 +1,20 @@
+import os
+from typing import TYPE_CHECKING, Any, ClassVar
+
 from crewai.tools import BaseTool, EnvVar
 from pydantic import Field
-from typing import TYPE_CHECKING, Any, Dict, List
-import os
 
 if TYPE_CHECKING:
     from langchain_apify import ApifyActorsTool as _ApifyActorsTool
 
+
 class ApifyActorsTool(BaseTool):
-    env_vars: List[EnvVar] = [
-        EnvVar(name="APIFY_API_TOKEN", description="API token for Apify platform access", required=True),
+    env_vars: ClassVar[list[EnvVar]] = [
+        EnvVar(
+            name="APIFY_API_TOKEN",
+            description="API token for Apify platform access",
+            required=True,
+        ),
     ]
     """Tool that runs Apify Actors.
 
@@ -40,15 +46,10 @@ class ApifyActorsTool(BaseTool):
                 print(f"URL: {result['metadata']['url']}")
                 print(f"Content: {result.get('markdown', 'N/A')[:100]}...")
     """
-    actor_tool: '_ApifyActorsTool' = Field(description="Apify Actor Tool")
-    package_dependencies: List[str] = ["langchain-apify"]
+    actor_tool: "_ApifyActorsTool" = Field(description="Apify Actor Tool")
+    package_dependencies: ClassVar[list[str]] = ["langchain-apify"]
 
-    def __init__(
-        self,
-        actor_name: str,
-        *args: Any,
-        **kwargs: Any
-    ) -> None:
+    def __init__(self, actor_name: str, *args: Any, **kwargs: Any) -> None:
         if not os.environ.get("APIFY_API_TOKEN"):
             msg = (
                 "APIFY_API_TOKEN environment variable is not set. "
@@ -59,11 +60,11 @@ class ApifyActorsTool(BaseTool):
 
         try:
             from langchain_apify import ApifyActorsTool as _ApifyActorsTool
-        except ImportError:
+        except ImportError as e:
             raise ImportError(
                 "Could not import langchain_apify python package. "
                 "Please install it with `pip install langchain-apify` or `uv add langchain-apify`."
-            )
+            ) from e
         actor_tool = _ApifyActorsTool(actor_name)
 
         kwargs.update(
@@ -76,7 +77,7 @@ class ApifyActorsTool(BaseTool):
         )
         super().__init__(*args, **kwargs)
 
-    def _run(self, run_input: Dict[str, Any]) -> List[Dict[str, Any]]:
+    def _run(self, run_input: dict[str, Any]) -> list[dict[str, Any]]:
         """Run the Actor tool with the given input.
 
         Returns:
@@ -89,8 +90,8 @@ class ApifyActorsTool(BaseTool):
             return self.actor_tool._run(run_input)
         except Exception as e:
             msg = (
-                f'Failed to run ApifyActorsTool {self.name}. '
-                'Please check your Apify account Actor run logs for more details.'
-                f'Error: {e}'
+                f"Failed to run ApifyActorsTool {self.name}. "
+                "Please check your Apify account Actor run logs for more details."
+                f"Error: {e}"
             )
             raise RuntimeError(msg) from e

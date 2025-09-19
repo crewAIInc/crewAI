@@ -1,43 +1,54 @@
-import os
-from tempfile import NamedTemporaryFile
+from tempfile import TemporaryDirectory
 from typing import cast
-from unittest import mock
+from pathlib import Path
 
-from pytest import fixture
 
-from crewai_tools.adapters.embedchain_adapter import EmbedchainAdapter
+from crewai_tools.adapters.crewai_rag_adapter import CrewAIRagAdapter
 from crewai_tools.tools.rag.rag_tool import RagTool
 
 
-@fixture(autouse=True)
-def mock_embedchain_db_uri():
-    with NamedTemporaryFile() as tmp:
-        uri = f"sqlite:///{tmp.name}"
-        with mock.patch.dict(os.environ, {"EMBEDCHAIN_DB_URI": uri}):
-            yield
-
-
-def test_custom_llm_and_embedder():
+def test_rag_tool_initialization():
+    """Test that RagTool initializes with CrewAI adapter by default."""
     class MyTool(RagTool):
         pass
 
-    tool = MyTool(
-        config=dict(
-            llm=dict(
-                provider="openai",
-                config=dict(model="gpt-3.5-custom"),
-            ),
-            embedder=dict(
-                provider="openai",
-                config=dict(model="text-embedding-3-custom"),
-            ),
-        )
-    )
+    tool = MyTool()
     assert tool.adapter is not None
-    assert isinstance(tool.adapter, EmbedchainAdapter)
+    assert isinstance(tool.adapter, CrewAIRagAdapter)
+    
+    adapter = cast(CrewAIRagAdapter, tool.adapter)
+    assert adapter.collection_name == "rag_tool_collection"
+    assert adapter._client is not None
 
-    adapter = cast(EmbedchainAdapter, tool.adapter)
-    assert adapter.embedchain_app.llm.config.model == "gpt-3.5-custom"
-    assert (
-        adapter.embedchain_app.embedding_model.config.model == "text-embedding-3-custom"
-    )
+
+def test_rag_tool_add_and_query():
+    """Test adding content and querying with RagTool."""
+    class MyTool(RagTool):
+        pass
+    
+    tool = MyTool()
+    
+    tool.add("The sky is blue on a clear day.")
+    tool.add("Machine learning is a subset of artificial intelligence.")
+    
+    result = tool._run(query="What color is the sky?")
+    assert "Relevant Content:" in result
+    
+    result = tool._run(query="Tell me about machine learning")
+    assert "Relevant Content:" in result
+
+
+def test_rag_tool_with_file():
+    """Test RagTool with file content."""
+    with TemporaryDirectory() as tmpdir:
+        test_file = Path(tmpdir) / "test.txt"
+        test_file.write_text("Python is a programming language known for its simplicity.")
+        
+        class MyTool(RagTool):
+            pass
+        
+        tool = MyTool()
+        tool.add(str(test_file))
+        
+        result = tool._run(query="What is Python?")
+        assert "Relevant Content:" in result
