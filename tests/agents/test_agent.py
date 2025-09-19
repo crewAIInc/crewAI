@@ -287,8 +287,8 @@ def test_cache_hitting():
     output = agent.execute_task(task1)
     output = agent.execute_task(task2)
     assert cache_handler._cache == {
-        "multiplier-{'first_number': 2, 'second_number': 6}": 12,
-        "multiplier-{'first_number': 3, 'second_number': 3}": 9,
+        'multiplier-{"first_number": 2, "second_number": 6}': 12,
+        'multiplier-{"first_number": 3, "second_number": 3}': 9,
     }
 
     task = Task(
@@ -300,9 +300,9 @@ def test_cache_hitting():
     assert output == "36"
 
     assert cache_handler._cache == {
-        "multiplier-{'first_number': 2, 'second_number': 6}": 12,
-        "multiplier-{'first_number': 3, 'second_number': 3}": 9,
-        "multiplier-{'first_number': 12, 'second_number': 3}": 36,
+        'multiplier-{"first_number": 2, "second_number": 6}': 12,
+        'multiplier-{"first_number": 3, "second_number": 3}': 9,
+        'multiplier-{"first_number": 12, "second_number": 3}': 36,
     }
     received_events = []
 
@@ -322,7 +322,7 @@ def test_cache_hitting():
         output = agent.execute_task(task)
         assert output == "0"
         read.assert_called_with(
-            tool="multiplier", input={"first_number": 2, "second_number": 6}
+            tool="multiplier", input='{"first_number": 2, "second_number": 6}'
         )
         assert len(received_events) == 1
         assert isinstance(received_events[0], ToolUsageFinishedEvent)
@@ -363,8 +363,8 @@ def test_disabling_cache_for_agent():
     output = agent.execute_task(task1)
     output = agent.execute_task(task2)
     assert cache_handler._cache != {
-        "multiplier-{'first_number': 2, 'second_number': 6}": 12,
-        "multiplier-{'first_number': 3, 'second_number': 3}": 9,
+        'multiplier-{"first_number": 2, "second_number": 6}': 12,
+        'multiplier-{"first_number": 3, "second_number": 3}': 9,
     }
 
     task = Task(
@@ -376,9 +376,9 @@ def test_disabling_cache_for_agent():
     assert output == "36"
 
     assert cache_handler._cache != {
-        "multiplier-{'first_number': 2, 'second_number': 6}": 12,
-        "multiplier-{'first_number': 3, 'second_number': 3}": 9,
-        "multiplier-{'first_number': 12, 'second_number': 3}": 36,
+        'multiplier-{"first_number": 2, "second_number": 6}': 12,
+        'multiplier-{"first_number": 3, "second_number": 3}': 9,
+        'multiplier-{"first_number": 12, "second_number": 3}': 36,
     }
 
     with patch.object(CacheHandler, "read") as read:
