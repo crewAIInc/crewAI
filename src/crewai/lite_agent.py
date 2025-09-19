@@ -9,11 +9,6 @@ from typing import (
     get_origin,
 )
 
-try:
-    from typing import Self
-except ImportError:
-    from typing_extensions import Self
-
 from pydantic import (
     UUID4,
     BaseModel,
@@ -23,6 +18,7 @@ from pydantic import (
     field_validator,
     model_validator,
 )
+from typing_extensions import Self
 
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.agents.agent_builder.utilities.base_token_process import TokenProcess
