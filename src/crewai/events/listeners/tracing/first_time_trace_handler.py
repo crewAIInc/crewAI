@@ -1,5 +1,4 @@
 import logging
-import os
 import uuid
 import webbrowser
 from pathlib import Path
@@ -95,7 +94,7 @@ class FirstTimeTraceHandler:
                 # Enable tracing for future runs by updating .env file
                 try:
                     _update_or_create_env_file()
-                except Exception as e:
+                except Exception:  # noqa: S110
                     pass
 
                 if self.ephemeral_url:
@@ -163,7 +162,7 @@ class FirstTimeTraceHandler:
 
         try:
             webbrowser.open(self.ephemeral_url)
-        except Exception as e:
+        except Exception:  # noqa: S110
             pass
 
         panel_content = f"""
