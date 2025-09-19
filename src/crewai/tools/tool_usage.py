@@ -362,7 +362,8 @@ class ToolUsage:
             )
         return False
 
-    def _check_usage_limit(self, tool: Any, tool_name: str) -> str | None:
+    @staticmethod
+    def _check_usage_limit(tool: Any, tool_name: str) -> str | None:
         """Check if tool has reached its usage limit.
 
         Args:
