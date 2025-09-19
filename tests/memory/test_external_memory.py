@@ -21,7 +21,6 @@ from crewai.memory.external.external_memory_item import ExternalMemoryItem
 from crewai.memory.storage.interface import Storage
 from crewai.memory.storage.bedrock_agentcore_storage import (
     BedrockAgentCoreConfig,
-    BedrockAgentCoreStrategyConfig,
     BedrockAgentCoreStorage,
 )
 from crewai.task import Task
@@ -51,59 +50,61 @@ def external_memory_with_mocked_config(patch_configure_mem0):
 
 @pytest.fixture
 def crew_with_external_memory(external_memory_with_mocked_config, patch_configure_mem0):
-    agent = Agent(
-        role="Researcher",
-        goal="Search relevant data and provide results",
-        backstory="You are a researcher at a leading tech think tank.",
-        tools=[],
-        verbose=True,
-    )
+    with patch.dict("os.environ", {"OPENAI_API_KEY": "test-key"}):
+        agent = Agent(
+            role="Researcher",
+            goal="Search relevant data and provide results",
+            backstory="You are a researcher at a leading tech think tank.",
+            tools=[],
+            verbose=True,
+        )
 
-    task = Task(
-        description="Perform a search on specific topics.",
-        expected_output="A list of relevant URLs based on the search query.",
-        agent=agent,
-    )
+        task = Task(
+            description="Perform a search on specific topics.",
+            expected_output="A list of relevant URLs based on the search query.",
+            agent=agent,
+        )
 
-    crew = Crew(
-        agents=[agent],
-        tasks=[task],
-        verbose=True,
-        process=Process.sequential,
-        memory=True,
-        external_memory=external_memory_with_mocked_config,
-    )
+        crew = Crew(
+            agents=[agent],
+            tasks=[task],
+            verbose=True,
+            process=Process.sequential,
+            memory=True,
+            external_memory=external_memory_with_mocked_config,
+        )
 
-    return crew
+        return crew
 
 
 @pytest.fixture
 def crew_with_external_memory_without_memory_flag(
     external_memory_with_mocked_config, patch_configure_mem0
 ):
-    agent = Agent(
-        role="Researcher",
-        goal="Search relevant data and provide results",
-        backstory="You are a researcher at a leading tech think tank.",
-        tools=[],
-        verbose=True,
-    )
+    with patch.dict("os.environ", {"OPENAI_API_KEY": "test-key"}):
+        agent = Agent(
+            role="Researcher",
+            goal="Search relevant data and provide results",
+            backstory="You are a researcher at a leading tech think tank.",
+            tools=[],
+            verbose=True,
+        )
 
-    task = Task(
-        description="Perform a search on specific topics.",
-        expected_output="A list of relevant URLs based on the search query.",
-        agent=agent,
-    )
+        task = Task(
+            description="Perform a search on specific topics.",
+            expected_output="A list of relevant URLs based on the search query.",
+            agent=agent,
+        )
 
-    crew = Crew(
-        agents=[agent],
-        tasks=[task],
-        verbose=True,
-        process=Process.sequential,
-        external_memory=external_memory_with_mocked_config,
-    )
+        crew = Crew(
+            agents=[agent],
+            tasks=[task],
+            verbose=True,
+            process=Process.sequential,
+            external_memory=external_memory_with_mocked_config,
+        )
 
-    return crew
+        return crew
 
 
 def test_external_memory_initialization(external_memory_with_mocked_config):
@@ -379,24 +380,14 @@ def agentcore_config():
 
 
 @pytest.fixture
-def agentcore_config_with_strategies():
-    """Fixture for AgentCore configuration with strategies."""
-    strategy1 = BedrockAgentCoreStrategyConfig(
-        name="user_preferences",
-        namespaces=["/preferences/actor-456"],
-        strategy_id="strategy-pref-123",
-    )
-    strategy2 = BedrockAgentCoreStrategyConfig(
-        name="semantic_facts",
-        namespaces=["/facts/actor-456/session-789"],
-        strategy_id="strategy-facts-456",
-    )
+def agentcore_config_with_namespaces():
+    """Fixture for AgentCore configuration with namespaces."""
     return BedrockAgentCoreConfig(
         memory_id="memory-123",
         actor_id="actor-456",
         session_id="session-789",
         region_name="us-west-2",
-        strategies=[strategy1, strategy2],
+        namespaces=["/preferences/actor-456", "/facts/actor-456/session-789"],
     )
 
 
@@ -420,7 +411,7 @@ def test_external_memory_agentcore_create_storage_success(agentcore_config):
     """Test successful creation of AgentCore storage."""
     embedder_config = {"provider": "agentcore", "config": agentcore_config}
 
-    with patch("crewai.memory.storage.bedrock_agentcore_storage.MemoryClient"):
+    with patch("boto3.client"):
         storage = ExternalMemory.create_storage(None, embedder_config)
         assert isinstance(storage, BedrockAgentCoreStorage)
 
@@ -536,23 +527,23 @@ def test_external_memory_agentcore_reset_operation(
         mock_reset.assert_called_once()
 
 
-def test_external_memory_agentcore_with_strategies(
-    agentcore_config_with_strategies, patch_configure_agentcore
+def test_external_memory_agentcore_with_namespaces(
+    agentcore_config_with_namespaces, patch_configure_agentcore
 ):
-    """Test AgentCore external memory with memory strategies."""
+    """Test AgentCore external memory with namespaces."""
     embedder_config = {
         "provider": "agentcore",
-        "config": agentcore_config_with_strategies,
+        "config": agentcore_config_with_namespaces,
     }
     external_memory = ExternalMemory(embedder_config=embedder_config)
 
     assert external_memory is not None
     assert isinstance(external_memory, ExternalMemory)
 
-    # Verify the configuration has strategies
-    assert len(agentcore_config_with_strategies.strategies) == 2
-    assert agentcore_config_with_strategies.strategies[0].name == "user_preferences"
-    assert agentcore_config_with_strategies.strategies[1].name == "semantic_facts"
+    # Verify the configuration has namespaces
+    assert len(agentcore_config_with_namespaces.namespaces) == 2
+    assert "/preferences/actor-456" in agentcore_config_with_namespaces.namespaces
+    assert "/facts/actor-456/session-789" in agentcore_config_with_namespaces.namespaces
 
 
 def test_external_memory_agentcore_error_handling(agentcore_config):
@@ -561,10 +552,12 @@ def test_external_memory_agentcore_error_handling(agentcore_config):
 
     # Test with invalid AgentCore client initialization
     with patch(
-        "crewai.memory.storage.bedrock_agentcore_storage.MemoryClient",
+        "boto3.client",
         side_effect=Exception("Client error"),
     ):
-        with pytest.raises(ValueError, match="Invalid AgentCore configuration"):
+        with pytest.raises(
+            ValueError, match="Failed to initialize Bedrock AgentCore clients"
+        ):
             ExternalMemory.create_storage(None, embedder_config)
 
 
