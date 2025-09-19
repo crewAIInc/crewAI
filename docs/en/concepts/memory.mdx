@@ -590,106 +590,6 @@ crew = Crew(
 )
 ```
 
-### AWS Bedrock AgentCore Provider
-
-External Memory supports integration with AWS Bedrock AgentCore Memory for enterprise-grade memory capabilities with advanced features like semantic search, user preference learning, and conversation structure.
-
-```python
-from crewai.memory.external.external_memory import ExternalMemory
-from crewai.memory.storage.bedrock_agentcore_storage import BedrockAgentCoreConfig, BedrockAgentCoreStrategyConfig, BedrockAgentCoreStorage
-
-# AgentCore configuration with memory strategies
-agentcore_config = BedrockAgentCoreConfig(
-    memory_id="your-bedrock-memory-id",
-    actor_id="user-123",
-    session_id="session-456",
-    region_name="us-east-1",
-    strategies=[
-        BedrockAgentCoreStrategyConfig(
-            name="user_preferences",
-            namespaces=["/preferences/user-123"],
-            strategy_id="strategy-pref-123"
-        ),
-        BedrockAgentCoreStrategyConfig(
-            name="semantic_facts",
-            namespaces=["/facts/user-123/session-456"],
-            strategy_id="strategy-facts-456"
-        ),
-        BedrockAgentCoreStrategyConfig(
-            name="session_summaries",
-            namespaces=["/summaries/user-123/session-456/summary"],
-            strategy_id="strategy-summary-789"
-        )
-    ]
-)
-
-# Using namespace template resolution utility (optional)
-resolved_config = BedrockAgentCoreConfig(
-    memory_id="your-bedrock-memory-id",
-    actor_id="user-123",
-    session_id="session-456",
-    region_name="us-east-1",
-    strategies=[
-        BedrockAgentCoreStrategyConfig(
-            name="user_preferences",
-            namespaces=[BedrockAgentCoreStorage.resolve_namespace_template(
-                "/preferences/{actorId}",
-                "user-123", "session-456", "strategy-pref-123"
-            )],
-            strategy_id="strategy-pref-123"
-        ),
-        BedrockAgentCoreStrategyConfig(
-            name="semantic_facts",
-            namespaces=[BedrockAgentCoreStorage.resolve_namespace_template(
-                "/facts/{actorId}/{sessionId}",
-                "user-123", "session-456", "strategy-facts-456"
-            )],
-            strategy_id="strategy-facts-456"
-        )
-    ]
-)
-
-external_memory = ExternalMemory(
-    embedder_config={
-        "provider": "agentcore",
-        "config": agentcore_config  # or resolved_config
-    }
-)
-
-crew = Crew(
-    agents=[...],
-    tasks=[...],
-    external_memory=external_memory,
-    verbose=True
-)
-```
-
-**Per-Strategy Namespace Benefits:**
-- **Organized Memory**: Each strategy stores memories in its own namespace
-- **Targeted Search**: Search specific strategy namespaces for better relevance
-- **Flexible Organization**: Customize namespace structure per strategy needs
-- **Scalable Architecture**: Separate concerns for different memory types
-
-**Available Namespace Placeholders:**
-- `{actorId}`: The actor/user ID
-- `{sessionId}`: The current session ID
-- `{memoryStrategyId}`: The memory strategy ID
-
-**AgentCore Features:**
-- **Semantic Search**: Intelligent context-aware memory retrieval
-- **Memory Strategies**: User preferences, semantic facts, and session summaries
-- **Per-Strategy Namespaces**: Organize memories by strategy type
-- **Conversation Structure**: Proper USER/ASSISTANT/TOOL role handling
-- **Enterprise Security**: AWS IAM integration and data encryption
-- **Scalability**: Built for production workloads
-- **Batch Processing**: Support for up to 100 messages per batch operation
-
-**Prerequisites:**
-- AWS account with Bedrock AgentCore access
-- Configured AWS credentials
-- Install with: `pip install crewai[agentcore]`
-- Created memory resource in AWS Bedrock AgentCore
-
 ### Choosing the Right Embedding Provider
 
 When selecting an embedding provider, consider factors like performance, privacy, cost, and integration needs.  
@@ -943,37 +843,49 @@ External Memory supports integration with AWS Bedrock AgentCore Memory for enter
 
 ```python
 from crewai.memory.external.external_memory import ExternalMemory
-from crewai.memory.storage.bedrock_agentcore_storage import BedrockAgentCoreConfig, BedrockAgentCoreStrategyConfig, BedrockAgentCoreStorage
+from crewai.memory.storage.bedrock_agentcore_storage import BedrockAgentCoreConfig, BedrockAgentCoreStorage
 
-# AgentCore configuration with memory strategies
+# Basic AgentCore configuration
 agentcore_config = BedrockAgentCoreConfig(
     memory_id="your-bedrock-memory-id",
     actor_id="user-123",
     session_id="session-456",
     region_name="us-east-1",
-    strategies=[
-        BedrockAgentCoreStrategyConfig(
-            name="user_preferences",
-            namespaces=["/preferences/user-123"],
-            strategy_id="strategy-pref-123"
-        ),
-        BedrockAgentCoreStrategyConfig(
-            name="semantic_facts",
-            namespaces=["/facts/user-123/session-456"],
-            strategy_id="strategy-facts-456"
-        ),
-        BedrockAgentCoreStrategyConfig(
-            name="session_summaries",
-            namespaces=["/summaries/user-123/session-456/summary"],
-            strategy_id="strategy-summary-789"
-        )
+    namespaces=[
+        "/preferences/user-123",
+        "/facts/user-123/session-456",
+        "/summaries/user-123/session-456"
     ]
+)
+
+# Using namespace template resolution utility (optional)
+resolved_namespaces = [
+    BedrockAgentCoreStorage.resolve_namespace_template(
+        "/preferences/{actorId}",
+        actor_id="user-123", 
+        session_id="session-456", 
+        strategy_id="strategy-pref-123"
+    ),
+    BedrockAgentCoreStorage.resolve_namespace_template(
+        "/facts/{actorId}/{sessionId}",
+        actor_id="user-123", 
+        session_id="session-456", 
+        strategy_id="strategy-facts-456"
+    )
+]
+
+resolved_config = BedrockAgentCoreConfig(
+    memory_id="your-bedrock-memory-id",
+    actor_id="user-123",
+    session_id="session-456",
+    region_name="us-east-1",
+    namespaces=resolved_namespaces
 )
 
 external_memory = ExternalMemory(
     embedder_config={
         "provider": "agentcore",
-        "config": agentcore_config
+        "config": agentcore_config  # or resolved_config
     }
 )
 
@@ -983,21 +895,11 @@ crew = Crew(
     external_memory=external_memory,
     verbose=True
 )
-
-external_memory.set_crew(crew)
 ```
-
-**AgentCore Features:**
-- **Semantic Search**: Intelligent context-aware memory retrieval
-- **Memory Strategies**: User preferences, semantic facts, and session summaries
-- **Per-Strategy Namespaces**: Organize memories by strategy type
-- **Conversation Structure**: Proper USER/ASSISTANT/TOOL role handling
-- **Enterprise Security**: AWS IAM integration and data encryption
-- **Scalability**: Built for production workloads
 
 **Prerequisites:**
 - AWS account with Bedrock AgentCore access
-- Configured AWS credentials
+- Configured AWS credentials (boto3)
 - Install with: `pip install crewai[agentcore]`
 - Created memory resource in AWS Bedrock AgentCore
 
