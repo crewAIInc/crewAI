@@ -71,6 +71,10 @@ aisuite = [
 qdrant = [
     "qdrant-client[fastembed]>=1.14.3",
 ]
+# TODO (Qian): Update dbos version
+dbos = [
+    "dbos==1.15.0a1",
+]
 
 [tool.uv]
 dev-dependencies = [
