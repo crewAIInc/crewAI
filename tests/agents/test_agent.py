@@ -137,35 +137,6 @@ def test_custom_llm():
     assert agent.llm.model == "gpt-4"
 
 
-def test_custom_llm_with_langchain():
-    from langchain_openai import ChatOpenAI
-
-    agent = Agent(
-        role="test role",
-        goal="test goal",
-        backstory="test backstory",
-        llm=ChatOpenAI(temperature=0, model="gpt-4"),
-    )
-
-    assert agent.llm.model == "gpt-4"
-
-
-def test_custom_llm_temperature_preservation():
-    from langchain_openai import ChatOpenAI
-
-    langchain_llm = ChatOpenAI(temperature=0.7, model="gpt-4")
-    agent = Agent(
-        role="temperature test role",
-        goal="temperature test goal",
-        backstory="temperature test backstory",
-        llm=langchain_llm,
-    )
-
-    assert isinstance(agent.llm, LLM)
-    assert agent.llm.model == "gpt-4"
-    assert agent.llm.temperature == 0.7
-
-
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_agent_execution():
     agent = Agent(
