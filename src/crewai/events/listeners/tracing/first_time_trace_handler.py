@@ -1,6 +1,8 @@
 import logging
+import os
 import uuid
 import webbrowser
+from pathlib import Path
 
 from rich.console import Console
 from rich.panel import Panel
@@ -13,6 +15,47 @@ from crewai.events.listeners.tracing.utils import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+def _update_or_create_env_file():
+    """Update or create .env file with CREWAI_TRACING_ENABLED=true."""
+    env_path = Path(".env")
+    env_content = ""
+    variable_name = "CREWAI_TRACING_ENABLED"
+    variable_value = "true"
+
+    # Read existing content if file exists
+    if env_path.exists():
+        with open(env_path, "r") as f:
+            env_content = f.read()
+
+    # Check if CREWAI_TRACING_ENABLED is already set
+    lines = env_content.splitlines()
+    variable_exists = False
+    updated_lines = []
+
+    for line in lines:
+        if line.strip().startswith(f"{variable_name}="):
+            # Update existing variable
+            updated_lines.append(f"{variable_name}={variable_value}")
+            variable_exists = True
+        else:
+            updated_lines.append(line)
+
+    # Add variable if it doesn't exist
+    if not variable_exists:
+        if updated_lines and not updated_lines[-1].strip():
+            # If last line is empty, replace it
+            updated_lines[-1] = f"{variable_name}={variable_value}"
+        else:
+            # Add new line and then the variable
+            updated_lines.append(f"{variable_name}={variable_value}")
+
+    # Write updated content
+    with open(env_path, "w") as f:
+        f.write("\n".join(updated_lines))
+        if updated_lines:  # Add final newline if there's content
+            f.write("\n")
 
 
 class FirstTimeTraceHandler:
@@ -48,6 +91,12 @@ class FirstTimeTraceHandler:
 
             if user_wants_traces:
                 self._initialize_backend_and_send_events()
+
+                # Enable tracing for future runs by updating .env file
+                try:
+                    _update_or_create_env_file()
+                except Exception as e:
+                    pass
 
                 if self.ephemeral_url:
                     self._display_ephemeral_trace_link()
@@ -129,7 +178,8 @@ This trace shows:
 • Tool usage and results
 • LLM calls and responses
 
-To use traces add tracing=True to your Crew(tracing=True) / Flow(tracing=True)
+✅ Tracing has been enabled for future runs! (CREWAI_TRACING_ENABLED=true added to .env)
+You can also add tracing=True to your Crew(tracing=True) / Flow(tracing=True) for more control.
 
 📝 Note: This link will expire in 24 hours.
         """.strip()
@@ -164,8 +214,8 @@ Unfortunately, we couldn't upload them to the server right now, but here's what 
 • Execution duration: {self.batch_manager.calculate_duration("execution")}ms
 • Batch ID: {self.batch_manager.trace_batch_id}
 
+Tracing has been enabled for future runs! (CREWAI_TRACING_ENABLED=true added to .env)
 The traces include agent decisions, task execution, and tool usage.
-Try running with CREWAI_TRACING_ENABLED=true next time for persistent traces.
     """.strip()
 
         panel = Panel(
