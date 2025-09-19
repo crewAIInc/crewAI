@@ -1,15 +1,14 @@
 import json
 from pathlib import Path
-from typing import Optional
 
 from pydantic import BaseModel, Field
 
 from crewai.cli.constants import (
-    DEFAULT_CREWAI_ENTERPRISE_URL,
-    CREWAI_ENTERPRISE_DEFAULT_OAUTH2_PROVIDER,
     CREWAI_ENTERPRISE_DEFAULT_OAUTH2_AUDIENCE,
     CREWAI_ENTERPRISE_DEFAULT_OAUTH2_CLIENT_ID,
     CREWAI_ENTERPRISE_DEFAULT_OAUTH2_DOMAIN,
+    CREWAI_ENTERPRISE_DEFAULT_OAUTH2_PROVIDER,
+    DEFAULT_CREWAI_ENTERPRISE_URL,
 )
 from crewai.cli.shared.token_manager import TokenManager
 
@@ -56,20 +55,20 @@ HIDDEN_SETTINGS_KEYS = [
 
 
 class Settings(BaseModel):
-    enterprise_base_url: Optional[str] = Field(
+    enterprise_base_url: str | None = Field(
         default=DEFAULT_CLI_SETTINGS["enterprise_base_url"],
         description="Base URL of the CrewAI Enterprise instance",
     )
-    tool_repository_username: Optional[str] = Field(
+    tool_repository_username: str | None = Field(
         None, description="Username for interacting with the Tool Repository"
     )
-    tool_repository_password: Optional[str] = Field(
+    tool_repository_password: str | None = Field(
         None, description="Password for interacting with the Tool Repository"
     )
-    org_name: Optional[str] = Field(
+    org_name: str | None = Field(
         None, description="Name of the currently active organization"
     )
-    org_uuid: Optional[str] = Field(
+    org_uuid: str | None = Field(
         None, description="UUID of the currently active organization"
     )
     config_path: Path = Field(default=DEFAULT_CONFIG_PATH, frozen=True, exclude=True)
@@ -79,7 +78,7 @@ class Settings(BaseModel):
         default=DEFAULT_CLI_SETTINGS["oauth2_provider"],
     )
 
-    oauth2_audience: Optional[str] = Field(
+    oauth2_audience: str | None = Field(
         description="OAuth2 audience value, typically used to identify the target API or resource.",
         default=DEFAULT_CLI_SETTINGS["oauth2_audience"],
     )
