@@ -2229,7 +2229,7 @@ def test_tools_with_custom_caching():
         # Verify that one of those calls was with the even number that should be cached
         add_to_cache.assert_any_call(
             tool="multiplcation_tool",
-            input={"first_number": 2, "second_number": 6},
+            input='{"first_number": 2, "second_number": 6}',
             output=12,
         )
 
