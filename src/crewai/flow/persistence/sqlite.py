@@ -6,7 +6,7 @@ import json
 import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, Optional, Union
+from typing import Any
 
 from pydantic import BaseModel
 
@@ -23,7 +23,7 @@ class SQLiteFlowPersistence(FlowPersistence):
 
     db_path: str
 
-    def __init__(self, db_path: Optional[str] = None):
+    def __init__(self, db_path: str | None = None):
         """Initialize SQLite persistence.
 
         Args:
@@ -70,7 +70,7 @@ class SQLiteFlowPersistence(FlowPersistence):
         self,
         flow_uuid: str,
         method_name: str,
-        state_data: Union[Dict[str, Any], BaseModel],
+        state_data: dict[str, Any] | BaseModel,
     ) -> None:
         """Save the current flow state to SQLite.
 
@@ -107,7 +107,7 @@ class SQLiteFlowPersistence(FlowPersistence):
                 ),
             )
 
-    def load_state(self, flow_uuid: str) -> Optional[Dict[str, Any]]:
+    def load_state(self, flow_uuid: str) -> dict[str, Any] | None:
         """Load the most recent state for a given flow UUID.
 
         Args:
