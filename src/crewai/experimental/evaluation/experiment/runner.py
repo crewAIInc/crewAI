@@ -2,11 +2,20 @@ from collections import defaultdict
 from hashlib import md5
 from typing import Any
 
-from crewai import Crew, Agent
+from crewai import Agent, Crew
+from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.experimental.evaluation import AgentEvaluator, create_default_evaluator
-from crewai.experimental.evaluation.experiment.result_display import ExperimentResultsDisplay
-from crewai.experimental.evaluation.experiment.result import ExperimentResults, ExperimentResult
-from crewai.experimental.evaluation.evaluation_display import AgentAggregatedEvaluationResult
+from crewai.experimental.evaluation.evaluation_display import (
+    AgentAggregatedEvaluationResult,
+)
+from crewai.experimental.evaluation.experiment.result import (
+    ExperimentResult,
+    ExperimentResults,
+)
+from crewai.experimental.evaluation.experiment.result_display import (
+    ExperimentResultsDisplay,
+)
+
 
 class ExperimentRunner:
     def __init__(self, dataset: list[dict[str, Any]]):
@@ -14,11 +23,17 @@ class ExperimentRunner:
         self.evaluator: AgentEvaluator | None = None
         self.display = ExperimentResultsDisplay()
 
-    def run(self, crew: Crew | None = None, agents: list[Agent] | None = None, print_summary: bool = False) -> ExperimentResults:
+    def run(
+        self,
+        crew: Crew | None = None,
+        agents: list[Agent] | list[BaseAgent] | None = None,
+        print_summary: bool = False,
+    ) -> ExperimentResults:
         if crew and not agents:
             agents = crew.agents
 
-        assert agents is not None
+        if agents is None:
+            raise ValueError("Agents must be provided either directly or via a crew")
         self.evaluator = create_default_evaluator(agents=agents)
 
         results = []
@@ -35,21 +50,37 @@ class ExperimentRunner:
 
         return experiment_results
 
-    def _run_test_case(self, test_case: dict[str, Any], agents: list[Agent], crew: Crew | None = None) -> ExperimentResult:
+    def _run_test_case(
+        self,
+        test_case: dict[str, Any],
+        agents: list[Agent] | list[BaseAgent],
+        crew: Crew | None = None,
+    ) -> ExperimentResult:
         inputs = test_case["inputs"]
         expected_score = test_case["expected_score"]
-        identifier = test_case.get("identifier") or md5(str(test_case).encode(), usedforsecurity=False).hexdigest()
+        identifier = (
+            test_case.get("identifier")
+            or md5(str(test_case).encode(), usedforsecurity=False).hexdigest()
+        )
 
         try:
-            self.display.console.print(f"[dim]Running crew with input: {str(inputs)[:50]}...[/dim]")
+            self.display.console.print(
+                f"[dim]Running crew with input: {str(inputs)[:50]}...[/dim]"
+            )
             self.display.console.print("\n")
             if crew:
                 crew.kickoff(inputs=inputs)
             else:
                 for agent in agents:
-                    agent.kickoff(**inputs)
+                    if isinstance(agent, Agent):
+                        agent.kickoff(**inputs)
+                    else:
+                        raise TypeError(
+                            f"Agent {agent} is not an instance of Agent and cannot be kicked off directly"
+                        )
 
-            assert self.evaluator is not None
+            if self.evaluator is None:
+                raise ValueError("Evaluator must be initialized")
             agent_evaluations = self.evaluator.get_agent_evaluation()
 
             actual_score = self._extract_scores(agent_evaluations)
@@ -61,35 +92,38 @@ class ExperimentRunner:
                 score=actual_score,
                 expected_score=expected_score,
                 passed=passed,
-                agent_evaluations=agent_evaluations
+                agent_evaluations=agent_evaluations,
             )
 
         except Exception as e:
-            self.display.console.print(f"[red]Error running test case: {str(e)}[/red]")
+            self.display.console.print(f"[red]Error running test case: {e!s}[/red]")
             return ExperimentResult(
                 identifier=identifier,
                 inputs=inputs,
-                score=0,
+                score=0.0,
                 expected_score=expected_score,
-                passed=False
+                passed=False,
             )
 
-    def _extract_scores(self, agent_evaluations: dict[str, AgentAggregatedEvaluationResult]) -> float | dict[str,  float]:
+    def _extract_scores(
+        self, agent_evaluations: dict[str, AgentAggregatedEvaluationResult]
+    ) -> float | dict[str, float]:
         all_scores: dict[str, list[float]] = defaultdict(list)
         for evaluation in agent_evaluations.values():
             for metric_name, score in evaluation.metrics.items():
                 if score.score is not None:
                     all_scores[metric_name.value].append(score.score)
 
-        avg_scores = {m: sum(s)/len(s) for m, s in all_scores.items()}
+        avg_scores = {m: sum(s) / len(s) for m, s in all_scores.items()}
 
         if len(avg_scores) == 1:
-            return list(avg_scores.values())[0]
+            return next(iter(avg_scores.values()))
 
         return avg_scores
 
-    def _assert_scores(self, expected: float | dict[str, float],
-                        actual: float | dict[str, float]) -> bool:
+    def _assert_scores(
+        self, expected: float | dict[str, float], actual: float | dict[str, float]
+    ) -> bool:
         """
         Compare expected and actual scores, and return whether the test case passed.
 

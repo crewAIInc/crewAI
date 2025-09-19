@@ -13,11 +13,11 @@ def extract_json_from_llm_response(text: str) -> dict[str, Any]:
 
     json_patterns = [
         # Standard markdown code blocks with json
-        r'```json\s*([\s\S]*?)\s*```',
+        r"```json\s*([\s\S]*?)\s*```",
         # Code blocks without language specifier
-        r'```\s*([\s\S]*?)\s*```',
+        r"```\s*([\s\S]*?)\s*```",
         # Inline code with JSON
-        r'`([{\\[].*[}\]])`',
+        r"`([{\\[].*[}\]])`",
     ]
 
     for pattern in json_patterns:
@@ -25,6 +25,6 @@ def extract_json_from_llm_response(text: str) -> dict[str, Any]:
         for match in matches:
             try:
                 return json.loads(match.strip())
-            except json.JSONDecodeError:
+            except json.JSONDecodeError:  # noqa: PERF203
                 continue
     raise ValueError("No valid JSON found in the response")
