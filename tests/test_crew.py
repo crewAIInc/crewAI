@@ -3818,10 +3818,7 @@ def test_task_tools_preserve_code_execution_tools():
     """
     Test that task tools don't override code execution tools when allow_code_execution=True
     """
-
-    # Mock embedchain initialization to prevent race conditions in parallel CI execution
-    with patch("embedchain.client.Client.setup"):
-        from crewai_tools import CodeInterpreterTool
+    from crewai_tools import CodeInterpreterTool
     from pydantic import BaseModel, Field
 
     from crewai.tools import BaseTool

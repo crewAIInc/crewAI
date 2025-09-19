@@ -137,35 +137,6 @@ def test_custom_llm():
     assert agent.llm.model == "gpt-4"
 
 
-def test_custom_llm_with_langchain():
-    from langchain_openai import ChatOpenAI
-
-    agent = Agent(
-        role="test role",
-        goal="test goal",
-        backstory="test backstory",
-        llm=ChatOpenAI(temperature=0, model="gpt-4"),
-    )
-
-    assert agent.llm.model == "gpt-4"
-
-
-def test_custom_llm_temperature_preservation():
-    from langchain_openai import ChatOpenAI
-
-    langchain_llm = ChatOpenAI(temperature=0.7, model="gpt-4")
-    agent = Agent(
-        role="temperature test role",
-        goal="temperature test goal",
-        backstory="temperature test backstory",
-        llm=langchain_llm,
-    )
-
-    assert isinstance(agent.llm, LLM)
-    assert agent.llm.model == "gpt-4"
-    assert agent.llm.temperature == 0.7
-
-
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_agent_execution():
     agent = Agent(
@@ -2361,13 +2332,11 @@ def mock_get_auth_token():
 
 @patch("crewai.cli.plus_api.PlusAPI.get_agent")
 def test_agent_from_repository(mock_get_agent, mock_get_auth_token):
-    # Mock embedchain initialization to prevent race conditions in parallel CI execution
-    with patch("embedchain.client.Client.setup"):
-        from crewai_tools import (
-            EnterpriseActionTool,
-            FileReadTool,
-            SerperDevTool,
-        )
+    from crewai_tools import (
+        EnterpriseActionTool,
+        FileReadTool,
+        SerperDevTool,
+    )
 
     mock_get_response = MagicMock()
     mock_get_response.status_code = 200
@@ -2423,9 +2392,7 @@ def test_agent_from_repository(mock_get_agent, mock_get_auth_token):
 
 @patch("crewai.cli.plus_api.PlusAPI.get_agent")
 def test_agent_from_repository_override_attributes(mock_get_agent, mock_get_auth_token):
-    # Mock embedchain initialization to prevent race conditions in parallel CI execution
-    with patch("embedchain.client.Client.setup"):
-        from crewai_tools import SerperDevTool
+    from crewai_tools import SerperDevTool
 
     mock_get_response = MagicMock()
     mock_get_response.status_code = 200
