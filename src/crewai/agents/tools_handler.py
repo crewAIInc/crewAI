@@ -1,8 +1,10 @@
 """Tools handler for managing tool execution and caching."""
 
+import json
+
+from crewai.agents.cache.cache_handler import CacheHandler
 from crewai.tools.cache_tools.cache_tools import CacheTools
 from crewai.tools.tool_calling import InstructorToolCalling, ToolCalling
-from crewai.agents.cache.cache_handler import CacheHandler
 
 
 class ToolsHandler:
@@ -37,8 +39,16 @@ class ToolsHandler:
         """
         self.last_used_tool = calling
         if self.cache and should_cache and calling.tool_name != CacheTools().name:
+            # Convert arguments to string for cache
+            input_str = ""
+            if calling.arguments:
+                if isinstance(calling.arguments, dict):
+                    input_str = json.dumps(calling.arguments)
+                else:
+                    input_str = str(calling.arguments)
+
             self.cache.add(
                 tool=calling.tool_name,
-                input=calling.arguments,
+                input=input_str,
                 output=output,
             )
