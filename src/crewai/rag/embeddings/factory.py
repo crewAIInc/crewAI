@@ -10,8 +10,8 @@ from chromadb.utils.embedding_functions.cohere_embedding_function import (
     CohereEmbeddingFunction,
 )
 from chromadb.utils.embedding_functions.google_embedding_function import (
-    GooglePalmEmbeddingFunction,
     GoogleGenerativeAiEmbeddingFunction,
+    GooglePalmEmbeddingFunction,
     GoogleVertexEmbeddingFunction,
 )
 from chromadb.utils.embedding_functions.huggingface_embedding_function import (
@@ -60,7 +60,7 @@ def get_embedding_function(
         EmbeddingFunction instance ready for use with ChromaDB
 
     Supported providers:
-        - openai: OpenAI embeddings (default)
+        - openai: OpenAI embeddings
         - cohere: Cohere embeddings
         - ollama: Ollama local embeddings
         - huggingface: HuggingFace embeddings
@@ -77,7 +77,7 @@ def get_embedding_function(
         - onnx: ONNX MiniLM-L6-v2 (no API key needed, included with ChromaDB)
 
     Examples:
-        # Use default OpenAI with retry logic
+        # Use default OpenAI embedding
         >>> embedder = get_embedding_function()
 
         # Use Cohere with dict
