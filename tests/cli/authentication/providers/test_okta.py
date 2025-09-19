@@ -95,7 +95,7 @@ class TestOktaProvider:
         )
         provider = OktaProvider(settings)
 
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="Audience is required"):
             provider.get_audience()
 
     def test_get_client_id(self):
