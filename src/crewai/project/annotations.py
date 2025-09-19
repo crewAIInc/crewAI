@@ -1,5 +1,5 @@
+from collections.abc import Callable
 from functools import wraps
-from typing import Callable
 
 from crewai import Crew
 from crewai.project.utils import memoize
@@ -36,15 +36,13 @@ def task(func):
 def agent(func):
     """Marks a method as a crew agent."""
     func.is_agent = True
-    func = memoize(func)
-    return func
+    return memoize(func)
 
 
 def llm(func):
     """Marks a method as an LLM provider."""
     func.is_llm = True
-    func = memoize(func)
-    return func
+    return memoize(func)
 
 
 def output_json(cls):
@@ -91,7 +89,7 @@ def crew(func) -> Callable[..., Crew]:
         agents = self._original_agents.items()
 
         # Instantiate tasks in order
-        for task_name, task_method in tasks:
+        for _task_name, task_method in tasks:
             task_instance = task_method(self)
             instantiated_tasks.append(task_instance)
             agent_instance = getattr(task_instance, "agent", None)
@@ -100,7 +98,7 @@ def crew(func) -> Callable[..., Crew]:
                 agent_roles.add(agent_instance.role)
 
         # Instantiate agents not included by tasks
-        for agent_name, agent_method in agents:
+        for _agent_name, agent_method in agents:
             agent_instance = agent_method(self)
             if agent_instance.role not in agent_roles:
                 instantiated_agents.append(agent_instance)
@@ -117,9 +115,9 @@ def crew(func) -> Callable[..., Crew]:
 
             return wrapper
 
-        for _, callback in self._before_kickoff.items():
+        for callback in self._before_kickoff.values():
             crew.before_kickoff_callbacks.append(callback_wrapper(callback, self))
-        for _, callback in self._after_kickoff.items():
+        for callback in self._after_kickoff.values():
             crew.after_kickoff_callbacks.append(callback_wrapper(callback, self))
 
         return crew
