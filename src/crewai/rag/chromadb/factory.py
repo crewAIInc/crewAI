@@ -2,11 +2,12 @@
 
 import os
 from hashlib import md5
+
 import portalocker
 from chromadb import PersistentClient
 
-from crewai.rag.chromadb.config import ChromaDBConfig
 from crewai.rag.chromadb.client import ChromaDBClient
+from crewai.rag.chromadb.config import ChromaDBConfig
 
 
 def create_client(config: ChromaDBConfig) -> ChromaDBClient:
@@ -23,6 +24,7 @@ def create_client(config: ChromaDBConfig) -> ChromaDBClient:
     """
 
     persist_dir = config.settings.persist_directory
+    os.makedirs(persist_dir, exist_ok=True)
     lock_id = md5(persist_dir.encode(), usedforsecurity=False).hexdigest()
     lockfile = os.path.join(persist_dir, f"chromadb-{lock_id}.lock")
 
@@ -37,4 +39,6 @@ def create_client(config: ChromaDBConfig) -> ChromaDBClient:
     return ChromaDBClient(
         client=client,
         embedding_function=config.embedding_function,
+        default_limit=config.limit,
+        default_score_threshold=config.score_threshold,
     )
