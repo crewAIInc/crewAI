@@ -15,7 +15,7 @@ repos:
         files: ^(packages/crewai/src/|packages/tools/src/).*\.py$
       - id: mypy
         name: mypy
-        entry: uv run mypy src --exclude cli/templates
+        entry: uv run mypy
         language: system
         types: [python]
         exclude: ^(packages/.*/tests/|packages/crewai/src/crewai/cli/templates/)
