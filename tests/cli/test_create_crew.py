@@ -1,4 +1,5 @@
 import keyword
+import os
 import shutil
 import tempfile
 from pathlib import Path
@@ -276,3 +277,63 @@ def test_env_vars_are_uppercased_in_env_file(
     env_file_path = crew_path / ".env"
     content = env_file_path.read_text()
     assert "MODEL=" in content
+
+
+def test_create_folder_structure_handles_problematic_names():
+    """Test names that previously caused import issues like 'Dropbox RAG'"""
+    with tempfile.TemporaryDirectory() as temp_dir:
+        test_cases = [
+            ("Dropbox RAG", "dropbox_rag", "DropboxRag"),
+            ("Migration System", "migration_system", "MigrationSystem"),
+            ("AI-ML Project", "ai_ml_project", "AiMlProject"),
+            ("Data_Processing Tool", "data_processing_tool", "DataProcessingTool"),
+            ("dropbox_to_rag_migration_system", "dropbox_to_rag_migration_system", "DropboxToRagMigrationSystem"),
+            ("My Cool-Project", "my_cool_project", "MyCoolProject"),
+            ("test.project@name", "testprojectname", "Testprojectname"),
+        ]
+        
+        for input_name, expected_folder, expected_class in test_cases:
+            folder_path, folder_name, class_name = create_folder_structure(input_name, parent_folder=temp_dir)
+            assert folder_name == expected_folder, f"Expected folder name '{expected_folder}' but got '{folder_name}' for input '{input_name}'"
+            assert class_name == expected_class, f"Expected class name '{expected_class}' but got '{class_name}' for input '{input_name}'"
+            assert folder_name.isidentifier(), f"folder_name '{folder_name}' should be valid Python identifier"
+            assert class_name.isidentifier(), f"class_name '{class_name}' should be valid Python identifier"
+            
+            if folder_path.exists():
+                shutil.rmtree(folder_path)
+
+
+@mock.patch("crewai.cli.create_crew.copy_template")
+@mock.patch("crewai.cli.create_crew.write_env_file")
+@mock.patch("crewai.cli.create_crew.load_env_vars")
+def test_created_project_import_consistency(mock_load_env, mock_write_env, mock_copy_template):
+    """Test that generated projects with problematic names have consistent imports"""
+    mock_load_env.return_value = {}
+    
+    with tempfile.TemporaryDirectory() as temp_dir:
+        original_cwd = os.getcwd()
+        try:
+            os.chdir(temp_dir)
+            
+            create_crew("Dropbox RAG", skip_provider=True)
+            
+            project_path = Path("dropbox_rag")
+            assert project_path.exists()
+            
+            copy_calls = mock_copy_template.call_args_list
+            main_py_calls = [call for call in copy_calls if "main.py" in str(call[0][0])]
+            assert len(main_py_calls) > 0, "main.py template should have been copied"
+            
+            for call in main_py_calls:
+                args = call[0]
+                if len(args) >= 5:
+                    name_arg = args[2]  # name parameter
+                    class_name_arg = args[3]  # class_name parameter  
+                    folder_name_arg = args[4]  # folder_name parameter
+                    
+                    assert name_arg == "Dropbox RAG"
+                    assert class_name_arg == "DropboxRag"
+                    assert folder_name_arg == "dropbox_rag"
+                    
+        finally:
+            os.chdir(original_cwd)
