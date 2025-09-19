@@ -13,15 +13,18 @@ from crewai.events.types.agent_events import (
 )
 from crewai.events.types.task_events import TaskCompletedEvent
 from crewai.events.utils.console_formatter import ConsoleFormatter
-from crewai.experimental.evaluation import BaseEvaluator, create_evaluation_callbacks
 from crewai.experimental.evaluation.base_evaluator import (
     AgentAggregatedEvaluationResult,
     AgentEvaluationResult,
     AggregationStrategy,
+    BaseEvaluator,
     EvaluationScore,
     MetricCategory,
 )
 from crewai.experimental.evaluation.evaluation_display import EvaluationDisplayFormatter
+from crewai.experimental.evaluation.evaluation_listener import (
+    create_evaluation_callbacks,
+)
 from crewai.task import Task
 
 

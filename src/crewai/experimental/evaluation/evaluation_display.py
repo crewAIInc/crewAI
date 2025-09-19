@@ -6,11 +6,11 @@ from rich.box import HEAVY_EDGE, ROUNDED
 from rich.table import Table
 
 from crewai.events.utils.console_formatter import ConsoleFormatter
-from crewai.experimental.evaluation import EvaluationScore
 from crewai.experimental.evaluation.base_evaluator import (
     AgentAggregatedEvaluationResult,
     AgentEvaluationResult,
     AggregationStrategy,
+    EvaluationScore,
     MetricCategory,
 )
 from crewai.utilities.llm_utils import create_llm
