@@ -918,7 +918,7 @@ def test_cache_hitting_between_agents(researcher, writer, ceo):
 
         # Check if both calls were made with the expected arguments
         expected_call = call(
-            tool="multiplier", input={"first_number": 2, "second_number": 6}
+            tool="multiplier", input='{"first_number": 2, "second_number": 6}'
         )
         assert cache_calls[0] == expected_call, f"First call mismatch: {cache_calls[0]}"
         assert cache_calls[1] == expected_call, (
