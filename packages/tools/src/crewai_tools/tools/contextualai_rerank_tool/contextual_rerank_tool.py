@@ -66,7 +66,9 @@ class ContextualAIRerankTool(BaseTool):
                 payload["metadata"] = metadata
 
             rerank_url = f"{base_url}/rerank"
-            result = requests.post(rerank_url, json=payload, headers=headers, timeout=30)
+            result = requests.post(
+                rerank_url, json=payload, headers=headers, timeout=30
+            )
 
             if result.status_code != 200:
                 raise RuntimeError(

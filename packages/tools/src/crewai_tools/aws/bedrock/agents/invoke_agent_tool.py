@@ -96,7 +96,9 @@ class BedrockInvokeAgentTool(BaseTool):
             import boto3
             from botocore.exceptions import ClientError
         except ImportError as e:
-            raise ImportError("`boto3` package not found, please run `uv add boto3`") from e
+            raise ImportError(
+                "`boto3` package not found, please run `uv add boto3`"
+            ) from e
 
         try:
             # Initialize the Bedrock Agent Runtime client
