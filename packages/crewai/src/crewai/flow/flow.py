@@ -1086,7 +1086,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
                     for method_name in self._start_methods:
                         # Check if this start method is triggered by the current trigger
                         if method_name in self._listeners:
-                            condition_type, trigger_methods = self._listeners[
+                            _condition_type, trigger_methods = self._listeners[
                                 method_name
                             ]
                             if current_trigger in trigger_methods:

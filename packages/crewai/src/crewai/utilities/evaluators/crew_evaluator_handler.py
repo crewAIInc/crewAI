@@ -1,4 +1,5 @@
 from collections import defaultdict
+from typing import ClassVar
 
 from pydantic import BaseModel, Field, InstanceOf
 from rich.box import HEAVY_EDGE
@@ -6,11 +7,11 @@ from rich.console import Console
 from rich.table import Table
 
 from crewai.agent import Agent
+from crewai.events.event_bus import crewai_event_bus
+from crewai.events.types.crew_events import CrewTestResultEvent
 from crewai.llm import BaseLLM
 from crewai.task import Task
 from crewai.tasks.task_output import TaskOutput
-from crewai.events.event_bus import crewai_event_bus
-from crewai.events.types.crew_events import CrewTestResultEvent
 
 
 class TaskEvaluationPydanticOutput(BaseModel):
@@ -30,9 +31,9 @@ class CrewEvaluator:
         iteration (int): The current iteration of the evaluation.
     """
 
-    tasks_scores: defaultdict = defaultdict(list)
-    run_execution_times: defaultdict = defaultdict(list)
-    iteration: int = 0
+    tasks_scores: ClassVar[defaultdict] = defaultdict(list)
+    run_execution_times: ClassVar[defaultdict] = defaultdict(list)
+    iteration: ClassVar[int] = 0
 
     def __init__(self, crew, eval_llm: InstanceOf[BaseLLM]):
         self.crew = crew
@@ -97,7 +98,8 @@ class CrewEvaluator:
         └────────────────────┴───────┴───────┴───────┴────────────┴──────────────────────────────┘
         """
         task_averages = [
-            sum(scores) / len(scores) for scores in zip(*self.tasks_scores.values())
+            sum(scores) / len(scores)
+            for scores in zip(*self.tasks_scores.values(), strict=False)
         ]
         crew_average = sum(task_averages) / len(task_averages)
 

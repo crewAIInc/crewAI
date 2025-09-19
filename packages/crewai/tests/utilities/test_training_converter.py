@@ -1,7 +1,6 @@
 from unittest.mock import MagicMock, patch
 
 from pydantic import BaseModel, Field
-from typing import List
 
 from crewai.utilities.converter import ConverterError
 from crewai.utilities.training_converter import TrainingConverter
@@ -9,7 +8,7 @@ from crewai.utilities.training_converter import TrainingConverter
 
 class SampleModel(BaseModel):
     string_field: str = Field(description="A simple string field")
-    list_field: List[str] = Field(description="A list of strings")
+    list_field: list[str] = Field(description="A list of strings")
     number_field: float = Field(description="A number field")
 
 
@@ -40,9 +39,9 @@ class TestTrainingConverter:
             prompt = messages[1]["content"]
             if "string_field" in prompt:
                 return llm_responses["string_field"]
-            elif "list_field" in prompt:
+            if "list_field" in prompt:
                 return llm_responses["list_field"]
-            elif "number_field" in prompt:
+            if "number_field" in prompt:
                 return llm_responses["number_field"]
             return "unknown field"
 
@@ -81,14 +80,14 @@ class TestTrainingConverter:
 
     def test_process_field_value_list_with_bullet_points(self):
         response = "- Item 1\n- Item 2\n- Item 3"
-        result = self.converter._process_field_value(response, List[str])
+        result = self.converter._process_field_value(response, list[str])
         assert result == ["Item 1", "Item 2", "Item 3"]
 
     def test_process_field_value_list_with_json(self):
         response = '["Item 1", "Item 2", "Item 3"]'
         with patch("crewai.utilities.training_converter.json.loads") as json_mock:
             json_mock.return_value = ["Item 1", "Item 2", "Item 3"]
-            result = self.converter._process_field_value(response, List[str])
+            result = self.converter._process_field_value(response, list[str])
             assert result == ["Item 1", "Item 2", "Item 3"]
 
     def test_process_field_value_float(self):

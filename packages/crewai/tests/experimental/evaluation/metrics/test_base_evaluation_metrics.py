@@ -1,5 +1,7 @@
-import pytest
 from unittest.mock import MagicMock
+
+import pytest
+
 from crewai.agent import Agent
 from crewai.task import Task
 

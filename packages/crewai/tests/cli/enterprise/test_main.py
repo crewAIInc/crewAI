@@ -1,3 +1,4 @@
+import shutil
 import tempfile
 import unittest
 from pathlib import Path
@@ -8,7 +9,6 @@ from requests.exceptions import JSONDecodeError
 
 from crewai.cli.enterprise.main import EnterpriseConfigureCommand
 from crewai.cli.settings.main import SettingsCommand
-import shutil
 
 
 class TestEnterpriseConfigureCommand(unittest.TestCase):

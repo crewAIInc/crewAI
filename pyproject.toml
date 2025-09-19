@@ -89,6 +89,8 @@ ignore = [
 "**/*_test.py" = ["S101"]  # Allow assert statements in test files
 "**/test_*.py" = ["S101"]  # Allow assert statements in test files
 "**/__init__.py" = ["F401"]  # Allow unused imports in __init__ files (re-exports)
+"packages/crewai/src/crewai/cli/*.py" = ["S603"]  # Allow subprocess calls in CLI tools with hardcoded commands
+"packages/crewai/src/crewai/experimental/evaluation/**/*.py" = ["S101", "S110", "PERF401"]  # Allow asserts and exceptions in evaluation metrics
 
 [tool.pytest.ini_options]
 testpaths = [

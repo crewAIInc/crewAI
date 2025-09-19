@@ -1,28 +1,27 @@
 import pytest
 
 from crewai.agent import Agent
-from crewai.task import Task
 from crewai.crew import Crew
-from crewai.experimental.evaluation.agent_evaluator import AgentEvaluator
-from crewai.experimental.evaluation.base_evaluator import AgentEvaluationResult
-from crewai.experimental.evaluation import (
-    GoalAlignmentEvaluator,
-    SemanticQualityEvaluator,
-    ToolSelectionEvaluator,
-    ParameterExtractionEvaluator,
-    ToolInvocationEvaluator,
-    ReasoningEfficiencyEvaluator,
-    MetricCategory,
-    EvaluationScore,
-)
-
+from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.agent_events import (
-    AgentEvaluationStartedEvent,
     AgentEvaluationCompletedEvent,
     AgentEvaluationFailedEvent,
+    AgentEvaluationStartedEvent,
 )
-from crewai.events.event_bus import crewai_event_bus
-from crewai.experimental.evaluation import create_default_evaluator
+from crewai.experimental.evaluation import (
+    EvaluationScore,
+    GoalAlignmentEvaluator,
+    MetricCategory,
+    ParameterExtractionEvaluator,
+    ReasoningEfficiencyEvaluator,
+    SemanticQualityEvaluator,
+    ToolInvocationEvaluator,
+    ToolSelectionEvaluator,
+    create_default_evaluator,
+)
+from crewai.experimental.evaluation.agent_evaluator import AgentEvaluator
+from crewai.experimental.evaluation.base_evaluator import AgentEvaluationResult
+from crewai.task import Task
 
 
 class TestAgentEvaluator:
@@ -100,7 +99,7 @@ class TestAgentEvaluator:
         ]
 
         assert len(agent_evaluator.evaluators) == len(expected_types)
-        for evaluator, expected_type in zip(agent_evaluator.evaluators, expected_types):
+        for evaluator, expected_type in zip(agent_evaluator.evaluators, expected_types, strict=False):
             assert isinstance(evaluator, expected_type)
 
     @pytest.mark.vcr(filter_headers=["authorization"])
@@ -254,8 +253,8 @@ class TestAgentEvaluator:
                 events["failed"] = event
 
             # Create a mock evaluator that will raise an exception
-            from crewai.experimental.evaluation.base_evaluator import BaseEvaluator
             from crewai.experimental.evaluation import MetricCategory
+            from crewai.experimental.evaluation.base_evaluator import BaseEvaluator
 
             class FailingEvaluator(BaseEvaluator):
                 metric_category = MetricCategory.GOAL_ALIGNMENT

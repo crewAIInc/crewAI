@@ -1,12 +1,11 @@
 from unittest import mock
 from unittest.mock import MagicMock, patch
 
-
+from crewai.utilities.converter import ConverterError
 from crewai.utilities.evaluators.task_evaluator import (
     TaskEvaluator,
     TrainingTaskEvaluation,
 )
-from crewai.utilities.converter import ConverterError
 
 
 @patch("crewai.utilities.evaluators.task_evaluator.TrainingConverter")

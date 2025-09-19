@@ -17,8 +17,6 @@ def validate_jwt_token(
                        missing required claims).
     """
 
-    decoded_token = None
-
     try:
         jwk_client = PyJWKClient(jwks_url)
         signing_key = jwk_client.get_signing_key_from_jwt(jwt_token)
@@ -26,7 +24,7 @@ def validate_jwt_token(
         _unverified_decoded_token = jwt.decode(
             jwt_token, options={"verify_signature": False}
         )
-        decoded_token = jwt.decode(
+        return jwt.decode(
             jwt_token,
             signing_key.key,
             algorithms=["RS256"],
@@ -40,7 +38,6 @@ def validate_jwt_token(
                 "require": ["exp", "iat", "iss", "aud", "sub"],
             },
         )
-        return decoded_token
 
     except jwt.ExpiredSignatureError:
         raise Exception("Token has expired.")
@@ -55,8 +52,8 @@ def validate_jwt_token(
             f"Invalid token issuer. Got: '{actual_issuer}'. Expected: '{issuer}'"
         )
     except jwt.MissingRequiredClaimError as e:
-        raise Exception(f"Token is missing required claims: {str(e)}")
+        raise Exception(f"Token is missing required claims: {e!s}")
     except jwt.exceptions.PyJWKClientError as e:
-        raise Exception(f"JWKS or key processing error: {str(e)}")
+        raise Exception(f"JWKS or key processing error: {e!s}")
     except jwt.InvalidTokenError as e:
-        raise Exception(f"Invalid token: {str(e)}")
+        raise Exception(f"Invalid token: {e!s}")

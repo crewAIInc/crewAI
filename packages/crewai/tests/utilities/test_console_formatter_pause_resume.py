@@ -1,6 +1,8 @@
 from unittest.mock import MagicMock, patch
-from rich.tree import Tree
+
 from rich.live import Live
+from rich.tree import Tree
+
 from crewai.events.utils.console_formatter import ConsoleFormatter
 
 

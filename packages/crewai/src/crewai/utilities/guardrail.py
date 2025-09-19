@@ -1,4 +1,5 @@
-from typing import Any, Callable, Optional, Tuple, Union
+from collections.abc import Callable
+from typing import Any
 
 from pydantic import BaseModel, field_validator
 
@@ -17,8 +18,8 @@ class GuardrailResult(BaseModel):
     """
 
     success: bool
-    result: Optional[Any] = None
-    error: Optional[str] = None
+    result: Any | None = None
+    error: str | None = None
 
     @field_validator("result", "error")
     @classmethod
@@ -36,7 +37,7 @@ class GuardrailResult(BaseModel):
         return v
 
     @classmethod
-    def from_tuple(cls, result: Tuple[bool, Union[Any, str]]) -> "GuardrailResult":
+    def from_tuple(cls, result: tuple[bool, Any | str]) -> "GuardrailResult":
         """Create a GuardrailResult from a validation tuple.
 
         Args:
@@ -65,20 +66,20 @@ def process_guardrail(
     Returns:
         GuardrailResult: The result of the guardrail validation
     """
-    from crewai.task import TaskOutput
     from crewai.lite_agent import LiteAgentOutput
+    from crewai.task import TaskOutput
 
-    assert isinstance(output, TaskOutput) or isinstance(
-        output, LiteAgentOutput
-    ), "Output must be a TaskOutput or LiteAgentOutput"
+    assert isinstance(output, TaskOutput) or isinstance(output, LiteAgentOutput), (
+        "Output must be a TaskOutput or LiteAgentOutput"
+    )
 
     assert guardrail is not None
 
+    from crewai.events.event_bus import crewai_event_bus
     from crewai.events.types.llm_guardrail_events import (
         LLMGuardrailCompletedEvent,
         LLMGuardrailStartedEvent,
     )
-    from crewai.events.event_bus import crewai_event_bus
 
     crewai_event_bus.emit(
         None,

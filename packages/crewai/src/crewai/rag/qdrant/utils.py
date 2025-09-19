@@ -4,7 +4,8 @@ import asyncio
 from typing import TypeGuard
 from uuid import uuid4
 
-from qdrant_client import AsyncQdrantClient, QdrantClient as SyncQdrantClient
+from qdrant_client import AsyncQdrantClient
+from qdrant_client import QdrantClient as SyncQdrantClient
 from qdrant_client.models import (
     FieldCondition,
     Filter,
@@ -25,7 +26,7 @@ from crewai.rag.qdrant.types import (
     QdrantCollectionCreateParams,
     QueryEmbedding,
 )
-from crewai.rag.types import SearchResult, BaseRecord
+from crewai.rag.types import BaseRecord, SearchResult
 
 
 def _ensure_list_embedding(embedding: QueryEmbedding) -> list[float]:

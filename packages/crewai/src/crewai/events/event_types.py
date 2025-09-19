@@ -6,6 +6,7 @@ from crewai.events.types.agent_events import (
     AgentExecutionStartedEvent,
     LiteAgentExecutionCompletedEvent,
 )
+
 from .types.crew_events import (
     CrewKickoffCompletedEvent,
     CrewKickoffFailedEvent,
@@ -24,6 +25,14 @@ from .types.flow_events import (
     MethodExecutionFinishedEvent,
     MethodExecutionStartedEvent,
 )
+from .types.knowledge_events import (
+    KnowledgeQueryCompletedEvent,
+    KnowledgeQueryFailedEvent,
+    KnowledgeQueryStartedEvent,
+    KnowledgeRetrievalCompletedEvent,
+    KnowledgeRetrievalStartedEvent,
+    KnowledgeSearchQueryFailedEvent,
+)
 from .types.llm_events import (
     LLMCallCompletedEvent,
     LLMCallFailedEvent,
@@ -34,6 +43,21 @@ from .types.llm_guardrail_events import (
     LLMGuardrailCompletedEvent,
     LLMGuardrailStartedEvent,
 )
+from .types.memory_events import (
+    MemoryQueryCompletedEvent,
+    MemoryQueryFailedEvent,
+    MemoryQueryStartedEvent,
+    MemoryRetrievalCompletedEvent,
+    MemoryRetrievalStartedEvent,
+    MemorySaveCompletedEvent,
+    MemorySaveFailedEvent,
+    MemorySaveStartedEvent,
+)
+from .types.reasoning_events import (
+    AgentReasoningCompletedEvent,
+    AgentReasoningFailedEvent,
+    AgentReasoningStartedEvent,
+)
 from .types.task_events import (
     TaskCompletedEvent,
     TaskFailedEvent,
@@ -43,30 +67,6 @@ from .types.tool_usage_events import (
     ToolUsageErrorEvent,
     ToolUsageFinishedEvent,
     ToolUsageStartedEvent,
-)
-from .types.reasoning_events import (
-    AgentReasoningStartedEvent,
-    AgentReasoningCompletedEvent,
-    AgentReasoningFailedEvent,
-)
-from .types.knowledge_events import (
-    KnowledgeRetrievalStartedEvent,
-    KnowledgeRetrievalCompletedEvent,
-    KnowledgeQueryStartedEvent,
-    KnowledgeQueryCompletedEvent,
-    KnowledgeQueryFailedEvent,
-    KnowledgeSearchQueryFailedEvent,
-)
-
-from .types.memory_events import (
-    MemorySaveStartedEvent,
-    MemorySaveCompletedEvent,
-    MemorySaveFailedEvent,
-    MemoryQueryStartedEvent,
-    MemoryQueryCompletedEvent,
-    MemoryQueryFailedEvent,
-    MemoryRetrievalStartedEvent,
-    MemoryRetrievalCompletedEvent,
 )
 
 EventTypes = Union[

@@ -1,18 +1,18 @@
+import shutil
 import tempfile
 import unittest
 from pathlib import Path
-from unittest.mock import patch, MagicMock, call
+from unittest.mock import MagicMock, call, patch
 
-from crewai.cli.settings.main import SettingsCommand
 from crewai.cli.config import (
-    Settings,
-    USER_SETTINGS_KEYS,
     CLI_SETTINGS_KEYS,
     DEFAULT_CLI_SETTINGS,
     HIDDEN_SETTINGS_KEYS,
     READONLY_SETTINGS_KEYS,
+    USER_SETTINGS_KEYS,
+    Settings,
 )
-import shutil
+from crewai.cli.settings.main import SettingsCommand
 
 
 class TestSettingsCommand(unittest.TestCase):

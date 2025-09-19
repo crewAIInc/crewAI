@@ -1,7 +1,7 @@
 import json
 import sqlite3
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any
 
 from crewai.utilities import Printer
 from crewai.utilities.paths import db_storage_path
@@ -12,9 +12,7 @@ class LTMSQLiteStorage:
     An updated SQLite storage class for LTM data storage.
     """
 
-    def __init__(
-        self, db_path: Optional[str] = None
-    ) -> None:
+    def __init__(self, db_path: str | None = None) -> None:
         if db_path is None:
             # Get the parent directory of the default db path and create our db file there
             db_path = str(Path(db_storage_path()) / "long_term_memory_storage.db")
@@ -53,9 +51,9 @@ class LTMSQLiteStorage:
     def save(
         self,
         task_description: str,
-        metadata: Dict[str, Any],
+        metadata: dict[str, Any],
         datetime: str,
-        score: Union[int, float],
+        score: int | float,
     ) -> None:
         """Saves data to the LTM table with error handling."""
         try:
@@ -75,9 +73,7 @@ class LTMSQLiteStorage:
                 color="red",
             )
 
-    def load(
-        self, task_description: str, latest_n: int
-    ) -> Optional[List[Dict[str, Any]]]:
+    def load(self, task_description: str, latest_n: int) -> list[dict[str, Any]] | None:
         """Queries the LTM table by task description with error handling."""
         try:
             with sqlite3.connect(self.db_path) as conn:
@@ -125,4 +121,4 @@ class LTMSQLiteStorage:
                 content=f"MEMORY ERROR: An error occurred while deleting all rows in LTM: {e}",
                 color="red",
             )
-        return None
+        return

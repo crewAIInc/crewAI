@@ -1,5 +1,6 @@
 from crewai.cli.authentication.providers.base_provider import BaseProvider
 
+
 class OktaProvider(BaseProvider):
     def get_authorize_url(self) -> str:
         return f"https://{self.settings.domain}/oauth2/default/v1/device/authorize"

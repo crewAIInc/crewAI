@@ -10,9 +10,9 @@ from dataclasses import dataclass
 from json_repair import repair_json
 
 from crewai.agents.constants import (
+    ACTION_INPUT_ONLY_REGEX,
     ACTION_INPUT_REGEX,
     ACTION_REGEX,
-    ACTION_INPUT_ONLY_REGEX,
     FINAL_ANSWER_ACTION,
     MISSING_ACTION_AFTER_THOUGHT_ERROR_MESSAGE,
     MISSING_ACTION_INPUT_AFTER_ACTION_ERROR_MESSAGE,
@@ -104,7 +104,7 @@ def parse(text: str) -> AgentAction | AgentFinish:
                 final_answer = final_answer[:-3].rstrip()
         return AgentFinish(thought=thought, output=final_answer, text=text)
 
-    elif action_match:
+    if action_match:
         action = action_match.group(1)
         clean_action = _clean_action(action)
 
@@ -121,16 +121,15 @@ def parse(text: str) -> AgentAction | AgentFinish:
         raise OutputParserException(
             f"{MISSING_ACTION_AFTER_THOUGHT_ERROR_MESSAGE}\n{_I18N.slice('final_answer_format')}",
         )
-    elif not ACTION_INPUT_ONLY_REGEX.search(text):
+    if not ACTION_INPUT_ONLY_REGEX.search(text):
         raise OutputParserException(
             MISSING_ACTION_INPUT_AFTER_ACTION_ERROR_MESSAGE,
         )
-    else:
-        err_format = _I18N.slice("format_without_tools")
-        error = f"{err_format}"
-        raise OutputParserException(
-            error,
-        )
+    err_format = _I18N.slice("format_without_tools")
+    error = f"{err_format}"
+    raise OutputParserException(
+        error,
+    )
 
 
 def _extract_thought(text: str) -> str:
@@ -149,8 +148,7 @@ def _extract_thought(text: str) -> str:
         return ""
     thought = text[:thought_index].strip()
     # Remove any triple backticks from the thought string
-    thought = thought.replace("```", "").strip()
-    return thought
+    return thought.replace("```", "").strip()
 
 
 def _clean_action(text: str) -> str:

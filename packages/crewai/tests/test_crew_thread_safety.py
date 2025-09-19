@@ -1,7 +1,8 @@
 import asyncio
 import threading
+from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
-from typing import Dict, Any, Callable
+from typing import Any
 from unittest.mock import patch
 
 import pytest
@@ -50,7 +51,7 @@ class TestCrewThreadSafety:
         mock_execute_task.return_value = "Task completed"
         num_crews = 5
 
-        def run_crew_with_context_check(crew_id: str) -> Dict[str, Any]:
+        def run_crew_with_context_check(crew_id: str) -> dict[str, Any]:
             results = {"crew_id": crew_id, "contexts": []}
 
             def check_context_task(output):
@@ -134,7 +135,7 @@ class TestCrewThreadSafety:
         mock_execute_task.return_value = "Task completed"
         num_crews = 5
 
-        async def run_crew_async(crew_id: str) -> Dict[str, Any]:
+        async def run_crew_async(crew_id: str) -> dict[str, Any]:
             task_context = {"crew_id": crew_id, "context": None}
 
             def capture_context(output):

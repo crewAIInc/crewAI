@@ -1,14 +1,15 @@
 # ruff: noqa: S105
 
 import os
-import pytest
 from unittest.mock import patch
 
+import pytest
+
 from crewai.context import (
-    set_platform_integration_token,
+    _platform_integration_token,
     get_platform_integration_token,
     platform_context,
-    _platform_integration_token,
+    set_platform_integration_token,
 )
 
 

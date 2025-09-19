@@ -33,7 +33,9 @@ class TrainingConverter(Converter):
         try:
             return self.model(**field_values)
         except ValidationError as e:
-            raise ConverterError(f"Failed to create model from individually collected fields: {e}")
+            raise ConverterError(
+                f"Failed to create model from individually collected fields: {e}"
+            )
 
     def _ask_llm_for_field(self, field_name: str, field_description: str) -> str:
         prompt = f"""
@@ -45,10 +47,15 @@ Please provide ONLY the {field_name} field value as described:
 
 Respond with ONLY the requested information, nothing else.
 """
-        return self.llm.call([
-            {"role": "system", "content": f"Extract the {field_name} from the previous information."},
-            {"role": "user", "content": prompt}
-        ])
+        return self.llm.call(
+            [
+                {
+                    "role": "system",
+                    "content": f"Extract the {field_name} from the previous information.",
+                },
+                {"role": "user", "content": prompt},
+            ]
+        )
 
     def _process_field_value(self, response: str, field_type: Any) -> Any:
         response = response.strip()
@@ -67,10 +74,10 @@ Respond with ONLY the requested information, nothing else.
 
     def _parse_list(self, response: str) -> list:
         try:
-            if response.startswith('['):
+            if response.startswith("["):
                 return json.loads(response)
 
-            items = [item.strip() for item in response.split('\n') if item.strip()]
+            items = [item.strip() for item in response.split("\n") if item.strip()]
             return [self._strip_bullet(item) for item in items]
 
         except json.JSONDecodeError:
@@ -78,12 +85,12 @@ Respond with ONLY the requested information, nothing else.
 
     def _parse_float(self, response: str) -> float:
         try:
-            match = re.search(r'(\d+(\.\d+)?)', response)
+            match = re.search(r"(\d+(\.\d+)?)", response)
             return float(match.group(1)) if match else 0.0
         except Exception:
             return 0.0
 
     def _strip_bullet(self, item: str) -> str:
-        if item.startswith(('- ', '* ')):
+        if item.startswith(("- ", "* ")):
             return item[2:].strip()
         return item.strip()

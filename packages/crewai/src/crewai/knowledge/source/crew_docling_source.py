@@ -1,5 +1,5 @@
+from collections.abc import Iterator
 from pathlib import Path
-from typing import Iterator, List, Optional, Union
 from urllib.parse import urlparse
 
 try:
@@ -35,11 +35,11 @@ class CrewDoclingSource(BaseKnowledgeSource):
 
     _logger: Logger = Logger(verbose=True)
 
-    file_path: Optional[List[Union[Path, str]]] = Field(default=None)
-    file_paths: List[Union[Path, str]] = Field(default_factory=list)
-    chunks: List[str] = Field(default_factory=list)
-    safe_file_paths: List[Union[Path, str]] = Field(default_factory=list)
-    content: List["DoclingDocument"] = Field(default_factory=list)
+    file_path: list[Path | str] | None = Field(default=None)
+    file_paths: list[Path | str] = Field(default_factory=list)
+    chunks: list[str] = Field(default_factory=list)
+    safe_file_paths: list[Path | str] = Field(default_factory=list)
+    content: list["DoclingDocument"] = Field(default_factory=list)
     document_converter: "DocumentConverter" = Field(
         default_factory=lambda: DocumentConverter(
             allowed_formats=[
@@ -66,7 +66,7 @@ class CrewDoclingSource(BaseKnowledgeSource):
         self.safe_file_paths = self.validate_content()
         self.content = self._load_content()
 
-    def _load_content(self) -> List["DoclingDocument"]:
+    def _load_content(self) -> list["DoclingDocument"]:
         try:
             return self._convert_source_to_docling_documents()
         except ConversionError as e:
@@ -88,7 +88,7 @@ class CrewDoclingSource(BaseKnowledgeSource):
             self.chunks.extend(list(new_chunks_iterable))
         self._save_documents()
 
-    def _convert_source_to_docling_documents(self) -> List["DoclingDocument"]:
+    def _convert_source_to_docling_documents(self) -> list["DoclingDocument"]:
         conv_results_iter = self.document_converter.convert_all(self.safe_file_paths)
         return [result.document for result in conv_results_iter]
 
@@ -97,8 +97,8 @@ class CrewDoclingSource(BaseKnowledgeSource):
         for chunk in chunker.chunk(doc):
             yield chunk.text
 
-    def validate_content(self) -> List[Union[Path, str]]:
-        processed_paths: List[Union[Path, str]] = []
+    def validate_content(self) -> list[Path | str]:
+        processed_paths: list[Path | str] = []
         for path in self.file_paths:
             if isinstance(path, str):
                 if path.startswith(("http://", "https://")):
@@ -108,7 +108,7 @@ class CrewDoclingSource(BaseKnowledgeSource):
                         else:
                             raise ValueError(f"Invalid URL format: {path}")
                     except Exception as e:
-                        raise ValueError(f"Invalid URL: {path}. Error: {str(e)}")
+                        raise ValueError(f"Invalid URL: {path}. Error: {e!s}") from e
                 else:
                     local_path = Path(KNOWLEDGE_DIRECTORY + "/" + path)
                     if local_path.exists():

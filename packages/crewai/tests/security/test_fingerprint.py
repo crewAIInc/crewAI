@@ -5,7 +5,6 @@ import uuid
 from datetime import datetime, timedelta
 
 import pytest
-from pydantic import ValidationError
 
 from crewai.security import Fingerprint
 

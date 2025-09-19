@@ -1,11 +1,17 @@
-import pytest
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from crewai.crew import Crew
-from crewai.experimental.evaluation.experiment.runner import ExperimentRunner
+from crewai.experimental.evaluation.base_evaluator import (
+    EvaluationScore,
+    MetricCategory,
+)
+from crewai.experimental.evaluation.evaluation_display import (
+    AgentAggregatedEvaluationResult,
+)
 from crewai.experimental.evaluation.experiment.result import ExperimentResults
-from crewai.experimental.evaluation.evaluation_display import AgentAggregatedEvaluationResult
-from crewai.experimental.evaluation.base_evaluator import MetricCategory, EvaluationScore
+from crewai.experimental.evaluation.experiment.runner import ExperimentRunner
 
 
 class TestExperimentRunner:

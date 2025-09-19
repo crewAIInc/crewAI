@@ -1,12 +1,14 @@
-import pytest
 from datetime import datetime, timedelta
+from unittest.mock import MagicMock, call, patch
+
+import pytest
 import requests
-from unittest.mock import MagicMock, patch, call
+
 from crewai.cli.authentication.main import AuthenticationCommand
 from crewai.cli.constants import (
-    CREWAI_ENTERPRISE_DEFAULT_OAUTH2_DOMAIN,
-    CREWAI_ENTERPRISE_DEFAULT_OAUTH2_CLIENT_ID,
     CREWAI_ENTERPRISE_DEFAULT_OAUTH2_AUDIENCE,
+    CREWAI_ENTERPRISE_DEFAULT_OAUTH2_CLIENT_ID,
+    CREWAI_ENTERPRISE_DEFAULT_OAUTH2_DOMAIN,
 )
 
 
@@ -114,8 +116,8 @@ class TestAuthenticationCommand:
         jwt_config,
         has_expiration,
     ):
-        from crewai.cli.authentication.providers.workos import WorkosProvider
         from crewai.cli.authentication.main import Oauth2Settings
+        from crewai.cli.authentication.providers.workos import WorkosProvider
 
         if user_provider == "workos":
             self.auth_command.oauth2_provider = WorkosProvider(

@@ -1,12 +1,12 @@
 import unittest
-from unittest.mock import MagicMock, patch, call
+from unittest.mock import MagicMock, call, patch
 
 import pytest
-from click.testing import CliRunner
 import requests
+from click.testing import CliRunner
 
+from crewai.cli.cli import current, org_list, switch
 from crewai.cli.organization.main import OrganizationCommand
-from crewai.cli.cli import org_list, switch, current
 
 
 @pytest.fixture

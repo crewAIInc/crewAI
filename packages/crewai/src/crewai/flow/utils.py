@@ -17,10 +17,10 @@ import ast
 import inspect
 import textwrap
 from collections import defaultdict, deque
-from typing import Any, Deque, Dict, List, Optional, Set, Union
+from typing import Any
 
 
-def get_possible_return_constants(function: Any) -> Optional[List[str]]:
+def get_possible_return_constants(function: Any) -> list[str] | None:
     try:
         source = inspect.getsource(function)
     except OSError:
@@ -94,7 +94,7 @@ def get_possible_return_constants(function: Any) -> Optional[List[str]]:
     return list(return_values) if return_values else None
 
 
-def calculate_node_levels(flow: Any) -> Dict[str, int]:
+def calculate_node_levels(flow: Any) -> dict[str, int]:
     """
     Calculate the hierarchical level of each node in the flow.
 
@@ -118,10 +118,10 @@ def calculate_node_levels(flow: Any) -> Dict[str, int]:
     - Handles both OR and AND conditions for listeners
     - Processes router paths separately
     """
-    levels: Dict[str, int] = {}
-    queue: Deque[str] = deque()
-    visited: Set[str] = set()
-    pending_and_listeners: Dict[str, Set[str]] = {}
+    levels: dict[str, int] = {}
+    queue: deque[str] = deque()
+    visited: set[str] = set()
+    pending_and_listeners: dict[str, set[str]] = {}
 
     # Make all start methods at level 0
     for method_name, method in flow._methods.items():
@@ -172,7 +172,7 @@ def calculate_node_levels(flow: Any) -> Dict[str, int]:
     return levels
 
 
-def count_outgoing_edges(flow: Any) -> Dict[str, int]:
+def count_outgoing_edges(flow: Any) -> dict[str, int]:
     """
     Count the number of outgoing edges for each method in the flow.
 
@@ -197,7 +197,7 @@ def count_outgoing_edges(flow: Any) -> Dict[str, int]:
     return counts
 
 
-def build_ancestor_dict(flow: Any) -> Dict[str, Set[str]]:
+def build_ancestor_dict(flow: Any) -> dict[str, set[str]]:
     """
     Build a dictionary mapping each node to its ancestor nodes.
 
@@ -211,8 +211,8 @@ def build_ancestor_dict(flow: Any) -> Dict[str, Set[str]]:
     Dict[str, Set[str]]
         Dictionary mapping each node to a set of its ancestor nodes.
     """
-    ancestors: Dict[str, Set[str]] = {node: set() for node in flow._methods}
-    visited: Set[str] = set()
+    ancestors: dict[str, set[str]] = {node: set() for node in flow._methods}
+    visited: set[str] = set()
     for node in flow._methods:
         if node not in visited:
             dfs_ancestors(node, ancestors, visited, flow)
@@ -220,7 +220,7 @@ def build_ancestor_dict(flow: Any) -> Dict[str, Set[str]]:
 
 
 def dfs_ancestors(
-    node: str, ancestors: Dict[str, Set[str]], visited: Set[str], flow: Any
+    node: str, ancestors: dict[str, set[str]], visited: set[str], flow: Any
 ) -> None:
     """
     Perform depth-first search to build ancestor relationships.
@@ -265,7 +265,7 @@ def dfs_ancestors(
 
 
 def is_ancestor(
-    node: str, ancestor_candidate: str, ancestors: Dict[str, Set[str]]
+    node: str, ancestor_candidate: str, ancestors: dict[str, set[str]]
 ) -> bool:
     """
     Check if one node is an ancestor of another.
@@ -287,7 +287,7 @@ def is_ancestor(
     return ancestor_candidate in ancestors.get(node, set())
 
 
-def build_parent_children_dict(flow: Any) -> Dict[str, List[str]]:
+def build_parent_children_dict(flow: Any) -> dict[str, list[str]]:
     """
     Build a dictionary mapping parent nodes to their children.
 
@@ -307,7 +307,7 @@ def build_parent_children_dict(flow: Any) -> Dict[str, List[str]]:
     - Maps router methods to their paths and listeners
     - Children lists are sorted for consistent ordering
     """
-    parent_children: Dict[str, List[str]] = {}
+    parent_children: dict[str, list[str]] = {}
 
     # Map listeners to their trigger methods
     for listener_name, (_, trigger_methods) in flow._listeners.items():
@@ -332,7 +332,7 @@ def build_parent_children_dict(flow: Any) -> Dict[str, List[str]]:
 
 
 def get_child_index(
-    parent: str, child: str, parent_children: Dict[str, List[str]]
+    parent: str, child: str, parent_children: dict[str, list[str]]
 ) -> int:
     """
     Get the index of a child node in its parent's sorted children list.
@@ -364,7 +364,7 @@ def process_router_paths(flow, current, current_level, levels, queue):
         paths = flow._router_paths.get(current, [])
         for path in paths:
             for listener_name, (
-                condition_type,
+                _condition_type,
                 trigger_methods,
             ) in flow._listeners.items():
                 if path in trigger_methods:

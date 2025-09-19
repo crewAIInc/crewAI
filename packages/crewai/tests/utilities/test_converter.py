@@ -1,5 +1,7 @@
 import json
-from typing import Dict, List, Optional
+
+# Tests for enums
+from enum import Enum
 from unittest.mock import MagicMock, Mock, patch
 
 import pytest
@@ -18,8 +20,6 @@ from crewai.utilities.converter import (
     validate_model,
 )
 from crewai.utilities.pydantic_schema_parser import PydanticSchemaParser
-# Tests for enums
-from enum import Enum
 
 
 @pytest.fixture(scope="module")
@@ -313,7 +313,7 @@ def test_generate_model_description_nested_model():
 
 def test_generate_model_description_optional_field():
     class ModelWithOptionalField(BaseModel):
-        name: Optional[str]
+        name: str | None
         age: int
 
     description = generate_model_description(ModelWithOptionalField)
@@ -323,7 +323,7 @@ def test_generate_model_description_optional_field():
 
 def test_generate_model_description_list_field():
     class ModelWithListField(BaseModel):
-        items: List[int]
+        items: list[int]
 
     description = generate_model_description(ModelWithListField)
     expected_description = '{\n  "items": List[int]\n}'
@@ -332,7 +332,7 @@ def test_generate_model_description_list_field():
 
 def test_generate_model_description_dict_field():
     class ModelWithDictField(BaseModel):
-        attributes: Dict[str, int]
+        attributes: dict[str, int]
 
     description = generate_model_description(ModelWithDictField)
     expected_description = '{\n  "attributes": Dict[str, int]\n}'
@@ -472,7 +472,7 @@ def test_converter_retry_logic():
 def test_converter_with_optional_fields():
     class OptionalModel(BaseModel):
         name: str
-        age: Optional[int]
+        age: int | None
 
     llm = Mock(spec=LLM)
     llm.supports_function_calling.return_value = False
@@ -498,7 +498,7 @@ def test_converter_with_optional_fields():
 # Tests for list fields
 def test_converter_with_list_field():
     class ListModel(BaseModel):
-        items: List[int]
+        items: list[int]
 
     llm = Mock(spec=LLM)
     llm.supports_function_calling.return_value = False

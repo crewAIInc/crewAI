@@ -1,34 +1,32 @@
 import threading
-from typing import Any, Optional
+from collections.abc import Sequence
+from typing import Any
 
-from crewai.experimental.evaluation.base_evaluator import (
-    AgentEvaluationResult,
-    AggregationStrategy,
-)
 from crewai.agent import Agent
-from crewai.task import Task
-from crewai.experimental.evaluation.evaluation_display import EvaluationDisplayFormatter
+from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.agent_events import (
-    AgentEvaluationStartedEvent,
     AgentEvaluationCompletedEvent,
     AgentEvaluationFailedEvent,
+    AgentEvaluationStartedEvent,
+    LiteAgentExecutionCompletedEvent,
 )
-from crewai.experimental.evaluation import BaseEvaluator, create_evaluation_callbacks
-from collections.abc import Sequence
-from crewai.events.event_bus import crewai_event_bus
-from crewai.events.utils.console_formatter import ConsoleFormatter
 from crewai.events.types.task_events import TaskCompletedEvent
-from crewai.events.types.agent_events import LiteAgentExecutionCompletedEvent
+from crewai.events.utils.console_formatter import ConsoleFormatter
+from crewai.experimental.evaluation import BaseEvaluator, create_evaluation_callbacks
 from crewai.experimental.evaluation.base_evaluator import (
     AgentAggregatedEvaluationResult,
+    AgentEvaluationResult,
+    AggregationStrategy,
     EvaluationScore,
     MetricCategory,
 )
+from crewai.experimental.evaluation.evaluation_display import EvaluationDisplayFormatter
+from crewai.task import Task
 
 
 class ExecutionState:
-    current_agent_id: Optional[str] = None
-    current_task_id: Optional[str] = None
+    current_agent_id: str | None = None
+    current_task_id: str | None = None
 
     def __init__(self):
         self.traces = {}
@@ -284,7 +282,7 @@ class AgentEvaluator:
                     error=str(e),
                 )
                 self.console_formatter.print(
-                    f"Error in {evaluator.metric_category.value} evaluator: {str(e)}"
+                    f"Error in {evaluator.metric_category.value} evaluator: {e!s}"
                 )
 
         return result
@@ -340,11 +338,11 @@ class AgentEvaluator:
 def create_default_evaluator(agents: list[Agent], llm: None = None):
     from crewai.experimental.evaluation import (
         GoalAlignmentEvaluator,
-        SemanticQualityEvaluator,
-        ToolSelectionEvaluator,
         ParameterExtractionEvaluator,
-        ToolInvocationEvaluator,
         ReasoningEfficiencyEvaluator,
+        SemanticQualityEvaluator,
+        ToolInvocationEvaluator,
+        ToolSelectionEvaluator,
     )
 
     evaluators = [

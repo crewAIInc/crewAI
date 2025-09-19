@@ -1,5 +1,6 @@
 from crewai.cli.authentication.providers.base_provider import BaseProvider
 
+
 class Auth0Provider(BaseProvider):
     def get_authorize_url(self) -> str:
         return f"https://{self._get_domain()}/oauth/device/code"

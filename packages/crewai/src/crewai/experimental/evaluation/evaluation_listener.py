@@ -1,26 +1,25 @@
-from datetime import datetime
-from typing import Any, Dict, Optional
-
 from collections.abc import Sequence
+from datetime import datetime
+from typing import Any
 
 from crewai.agent import Agent
-from crewai.task import Task
 from crewai.events.base_event_listener import BaseEventListener
 from crewai.events.event_bus import CrewAIEventsBus
 from crewai.events.types.agent_events import (
-    AgentExecutionStartedEvent,
     AgentExecutionCompletedEvent,
-    LiteAgentExecutionStartedEvent,
+    AgentExecutionStartedEvent,
     LiteAgentExecutionCompletedEvent,
+    LiteAgentExecutionStartedEvent,
 )
+from crewai.events.types.llm_events import LLMCallCompletedEvent, LLMCallStartedEvent
 from crewai.events.types.tool_usage_events import (
-    ToolUsageFinishedEvent,
-    ToolUsageErrorEvent,
     ToolExecutionErrorEvent,
     ToolSelectionErrorEvent,
+    ToolUsageErrorEvent,
+    ToolUsageFinishedEvent,
     ToolValidateInputErrorEvent,
 )
-from crewai.events.types.llm_events import LLMCallStartedEvent, LLMCallCompletedEvent
+from crewai.task import Task
 
 
 class EvaluationTraceCallback(BaseEventListener):
@@ -253,7 +252,7 @@ class EvaluationTraceCallback(BaseEventListener):
         if hasattr(self, "current_llm_call"):
             self.current_llm_call = {}
 
-    def get_trace(self, agent_id: str, task_id: str) -> Optional[Dict[str, Any]]:
+    def get_trace(self, agent_id: str, task_id: str) -> dict[str, Any] | None:
         trace_key = f"{agent_id}_{task_id}"
         return self.traces.get(trace_key)
 

@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import pytest
 from pydantic import BaseModel
@@ -12,7 +12,7 @@ from crewai.utilities.token_counter_callback import TokenProcess
 # Concrete implementation for testing
 class ConcreteAgentAdapter(BaseAgentAdapter):
     def configure_tools(
-        self, tools: Optional[List[BaseTool]] = None, **kwargs: Any
+        self, tools: list[BaseTool] | None = None, **kwargs: Any
     ) -> None:
         # Simple implementation for testing
         self.tools = tools or []
@@ -20,19 +20,19 @@ class ConcreteAgentAdapter(BaseAgentAdapter):
     def execute_task(
         self,
         task: Any,
-        context: Optional[str] = None,
-        tools: Optional[List[Any]] = None,
+        context: str | None = None,
+        tools: list[Any] | None = None,
     ) -> str:
         # Dummy implementation needed due to BaseAgent inheritance
         return "Task executed"
 
-    def create_agent_executor(self, tools: Optional[List[BaseTool]] = None) -> Any:
+    def create_agent_executor(self, tools: list[BaseTool] | None = None) -> Any:
         # Dummy implementation
         return None
 
     def get_delegation_tools(
-        self, tools: List[BaseTool], tool_map: Optional[Dict[str, BaseTool]]
-    ) -> List[BaseTool]:
+        self, tools: list[BaseTool], tool_map: dict[str, BaseTool] | None
+    ) -> list[BaseTool]:
         # Dummy implementation
         return []
 
@@ -40,7 +40,7 @@ class ConcreteAgentAdapter(BaseAgentAdapter):
         # Dummy implementation
         pass
 
-    def get_output_converter(self, tools: Optional[List[BaseTool]] = None) -> Any:
+    def get_output_converter(self, tools: list[BaseTool] | None = None) -> Any:
         # Dummy implementation
         return None
 
@@ -95,7 +95,6 @@ def test_configure_structured_output_method_exists():
     adapter.configure_structured_output(structured_output)
     # Add assertions here if configure_structured_output modifies state
     # For now, just ensuring it runs without error is sufficient
-    pass
 
 
 def test_base_agent_adapter_inherits_base_agent():

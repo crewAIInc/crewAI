@@ -1,5 +1,5 @@
 import warnings
-from typing import Any, Optional, Type
+from typing import Any
 
 
 class InternalInstructor:
@@ -8,9 +8,9 @@ class InternalInstructor:
     def __init__(
         self,
         content: str,
-        model: Type,
-        agent: Optional[Any] = None,
-        llm: Optional[str] = None,
+        model: type,
+        agent: Any | None = None,
+        llm: str | None = None,
     ):
         self.content = content
         self.agent = agent
@@ -37,7 +37,6 @@ class InternalInstructor:
 
     def to_pydantic(self):
         messages = [{"role": "user", "content": self.content}]
-        model = self._client.chat.completions.create(
+        return self._client.chat.completions.create(
             model=self.llm.model, response_model=self.model, messages=messages
         )
-        return model

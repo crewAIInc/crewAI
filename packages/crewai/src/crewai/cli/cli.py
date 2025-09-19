@@ -1,13 +1,13 @@
 from importlib.metadata import version as get_version
-from typing import Optional
 
 import click
-from crewai.cli.config import Settings
-from crewai.cli.settings.main import SettingsCommand
+
 from crewai.cli.add_crew_to_flow import add_crew_to_flow
+from crewai.cli.config import Settings
 from crewai.cli.create_crew import create_crew
 from crewai.cli.create_flow import create_flow
 from crewai.cli.crew_chat import run_chat
+from crewai.cli.settings.main import SettingsCommand
 from crewai.memory.storage.kickoff_task_outputs_storage import (
     KickoffTaskOutputsSQLiteStorage,
 )
@@ -237,13 +237,11 @@ def login():
 @crewai.group()
 def deploy():
     """Deploy the Crew CLI group."""
-    pass
 
 
 @crewai.group()
 def tool():
     """Tool Repository related commands."""
-    pass
 
 
 @deploy.command(name="create")
@@ -263,7 +261,7 @@ def deploy_list():
 
 @deploy.command(name="push")
 @click.option("-u", "--uuid", type=str, help="Crew UUID parameter")
-def deploy_push(uuid: Optional[str]):
+def deploy_push(uuid: str | None):
     """Deploy the Crew."""
     deploy_cmd = DeployCommand()
     deploy_cmd.deploy(uuid=uuid)
@@ -271,7 +269,7 @@ def deploy_push(uuid: Optional[str]):
 
 @deploy.command(name="status")
 @click.option("-u", "--uuid", type=str, help="Crew UUID parameter")
-def deply_status(uuid: Optional[str]):
+def deply_status(uuid: str | None):
     """Get the status of a deployment."""
     deploy_cmd = DeployCommand()
     deploy_cmd.get_crew_status(uuid=uuid)
@@ -279,7 +277,7 @@ def deply_status(uuid: Optional[str]):
 
 @deploy.command(name="logs")
 @click.option("-u", "--uuid", type=str, help="Crew UUID parameter")
-def deploy_logs(uuid: Optional[str]):
+def deploy_logs(uuid: str | None):
     """Get the logs of a deployment."""
     deploy_cmd = DeployCommand()
     deploy_cmd.get_crew_logs(uuid=uuid)
@@ -287,7 +285,7 @@ def deploy_logs(uuid: Optional[str]):
 
 @deploy.command(name="remove")
 @click.option("-u", "--uuid", type=str, help="Crew UUID parameter")
-def deploy_remove(uuid: Optional[str]):
+def deploy_remove(uuid: str | None):
     """Remove a deployment."""
     deploy_cmd = DeployCommand()
     deploy_cmd.remove_crew(uuid=uuid)
@@ -327,7 +325,6 @@ def tool_publish(is_public: bool, force: bool):
 @crewai.group()
 def flow():
     """Flow related commands."""
-    pass
 
 
 @flow.command(name="kickoff")
@@ -359,7 +356,7 @@ def chat():
     and using the Chat LLM to generate responses.
     """
     click.secho(
-        "\nStarting a conversation with the Crew\n" "Type 'exit' or Ctrl+C to quit.\n",
+        "\nStarting a conversation with the Crew\nType 'exit' or Ctrl+C to quit.\n",
     )
 
     run_chat()
@@ -368,7 +365,6 @@ def chat():
 @crewai.group(invoke_without_command=True)
 def org():
     """Organization management commands."""
-    pass
 
 
 @org.command("list")
@@ -396,7 +392,6 @@ def current():
 @crewai.group()
 def enterprise():
     """Enterprise Configuration commands."""
-    pass
 
 
 @enterprise.command("configure")
@@ -410,7 +405,6 @@ def enterprise_configure(enterprise_url: str):
 @crewai.group()
 def config():
     """CLI Configuration commands."""
-    pass
 
 
 @config.command("list")

@@ -5,7 +5,7 @@ These tests ensure that:
 2. Cyclic flows can re-execute methods on each iteration
 """
 
-from typing import Dict
+
 from crewai.flow.flow import Flow, listen, router, start
 from crewai.flow.persistence.sqlite import SQLiteFlowPersistence
 
@@ -16,7 +16,7 @@ def test_hitl_resumption_skips_completed_listeners(tmp_path):
     persistence = SQLiteFlowPersistence(str(db_path))
     execution_log = []
 
-    class HitlFlow(Flow[Dict[str, str]]):
+    class HitlFlow(Flow[dict[str, str]]):
         @start()
         def step_1(self):
             execution_log.append("step_1_executed")
@@ -56,7 +56,7 @@ def test_cyclic_flow_re_executes_on_each_iteration():
     """Test that cyclic flows properly re-execute methods on each iteration."""
     execution_log = []
 
-    class CyclicFlowTest(Flow[Dict[str, str]]):
+    class CyclicFlowTest(Flow[dict[str, str]]):
         iteration = 0
         max_iterations = 3
 
@@ -95,7 +95,7 @@ def test_conditional_start_with_resumption(tmp_path):
     persistence = SQLiteFlowPersistence(str(db_path))
     execution_log = []
 
-    class ConditionalStartFlow(Flow[Dict[str, str]]):
+    class ConditionalStartFlow(Flow[dict[str, str]]):
         @start()
         def init(self):
             execution_log.append("init")
@@ -135,7 +135,7 @@ def test_cyclic_flow_with_conditional_start():
     """Test that cyclic flows work properly with conditional start methods."""
     execution_log = []
 
-    class CyclicConditionalFlow(Flow[Dict[str, str]]):
+    class CyclicConditionalFlow(Flow[dict[str, str]]):
         iteration = 0
 
         @start()

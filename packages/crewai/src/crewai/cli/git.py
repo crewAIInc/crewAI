@@ -64,8 +64,7 @@ class Repository:
         """Return True if the Git repository is fully synced with the remote, False otherwise."""
         if self.has_uncommitted_changes() or self.is_ahead_or_behind():
             return False
-        else:
-            return True
+        return True
 
     def origin_url(self) -> str | None:
         """Get the Git repository's remote URL."""

@@ -12,7 +12,7 @@ from crewai.flow.persistence.base import FlowPersistence
 from crewai.flow.persistence.decorators import persist
 from crewai.flow.persistence.sqlite import SQLiteFlowPersistence
 
-__all__ = ["FlowPersistence", "persist", "SQLiteFlowPersistence"]
+__all__ = ["FlowPersistence", "SQLiteFlowPersistence", "persist"]
 
-StateType = TypeVar('StateType', bound=Union[Dict[str, Any], BaseModel])
-DictStateType = Dict[str, Any]
+StateType = TypeVar("StateType", bound=dict[str, Any] | BaseModel)
+DictStateType = dict[str, Any]

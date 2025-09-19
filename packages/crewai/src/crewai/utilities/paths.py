@@ -5,6 +5,7 @@ import appdirs
 
 """Path management utilities for CrewAI storage and configuration."""
 
+
 def db_storage_path() -> str:
     """Returns the path for SQLite database storage.
 
@@ -25,7 +26,5 @@ def get_project_directory_name():
 
     if project_directory_name:
         return project_directory_name
-    else:
-        cwd = Path.cwd()
-        project_directory_name = cwd.name
-        return project_directory_name
+    cwd = Path.cwd()
+    return cwd.name

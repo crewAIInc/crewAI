@@ -1,10 +1,10 @@
 import re
-from typing import Any, Dict, List, Optional, Union
+from typing import Any
 
 
 def interpolate_only(
-    input_string: Optional[str],
-    inputs: Dict[str, Union[str, int, float, Dict[str, Any], List[Any]]],
+    input_string: str | None,
+    inputs: dict[str, str | int | float | dict[str, Any] | list[Any]],
 ) -> str:
     """Interpolate placeholders (e.g., {key}) in a string while leaving JSON untouched.
     Only interpolates placeholders that follow the pattern {variable_name} where
@@ -45,7 +45,7 @@ def interpolate_only(
         try:
             validate_type(value)
         except ValueError as e:
-            raise ValueError(f"Invalid value for key '{key}': {str(e)}") from e
+            raise ValueError(f"Invalid value for key '{key}': {e!s}") from e
 
     if input_string is None or not input_string:
         return ""

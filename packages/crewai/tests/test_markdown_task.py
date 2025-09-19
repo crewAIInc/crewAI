@@ -15,7 +15,7 @@ from crewai import Agent, Task
 )
 def test_markdown_option_in_task_prompt(markdown_enabled, should_contain_instructions):
     """Test that markdown flag correctly controls the inclusion of markdown formatting instructions."""
-    
+
     researcher = Agent(
         role="Researcher",
         goal="Research a topic",
@@ -31,10 +31,10 @@ def test_markdown_option_in_task_prompt(markdown_enabled, should_contain_instruc
     )
 
     prompt = task.prompt()
-    
+
     assert "Research advances in AI in 2023" in prompt
     assert "A summary of key AI advances in 2023" in prompt
-    
+
     if should_contain_instructions:
         assert "Your final answer MUST be formatted in Markdown syntax." in prompt
         assert "Use # for headers" in prompt
@@ -45,7 +45,7 @@ def test_markdown_option_in_task_prompt(markdown_enabled, should_contain_instruc
 
 def test_markdown_with_empty_description():
     """Test markdown formatting with empty description."""
-    
+
     researcher = Agent(
         role="Researcher",
         goal="Research a topic",
@@ -61,7 +61,7 @@ def test_markdown_with_empty_description():
     )
 
     prompt = task.prompt()
-    
+
     assert prompt.strip() != ""
     assert "A summary" in prompt
     assert "Your final answer MUST be formatted in Markdown syntax." in prompt
@@ -69,11 +69,11 @@ def test_markdown_with_empty_description():
 
 def test_markdown_with_complex_output_format():
     """Test markdown with JSON output format to ensure compatibility."""
-    
+
     class ResearchOutput(BaseModel):
         title: str
         findings: list[str]
-    
+
     researcher = Agent(
         role="Researcher",
         goal="Research a topic",
@@ -90,7 +90,7 @@ def test_markdown_with_complex_output_format():
     )
 
     prompt = task.prompt()
-    
+
     assert "Your final answer MUST be formatted in Markdown syntax." in prompt
     assert "Research topic" in prompt
     assert "Research results" in prompt

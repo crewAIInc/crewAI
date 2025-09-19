@@ -1,6 +1,5 @@
 """Test for the examples in the fingerprinting documentation."""
 
-import pytest
 
 from crewai import Agent, Crew, Task
 from crewai.security import Fingerprint, SecurityConfig

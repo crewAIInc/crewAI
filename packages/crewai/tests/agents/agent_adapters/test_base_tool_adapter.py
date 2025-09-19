@@ -1,4 +1,3 @@
-from typing import Any, List
 from unittest.mock import Mock
 
 import pytest
@@ -8,7 +7,7 @@ from crewai.tools.base_tool import BaseTool
 
 
 class ConcreteToolAdapter(BaseToolAdapter):
-    def configure_tools(self, tools: List[BaseTool]) -> None:
+    def configure_tools(self, tools: list[BaseTool]) -> None:
         self.converted_tools = [f"converted_{tool.name}" for tool in tools]
 
 

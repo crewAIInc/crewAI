@@ -1,16 +1,17 @@
-import pytest
-from unittest.mock import patch, MagicMock
-from typing import List, Dict, Any
+from typing import Any
+from unittest.mock import MagicMock, patch
 
-from crewai.tasks.task_output import TaskOutput
+import pytest
+
+from crewai.experimental.evaluation.base_evaluator import EvaluationScore
 from crewai.experimental.evaluation.metrics.reasoning_metrics import (
     ReasoningEfficiencyEvaluator,
 )
+from crewai.tasks.task_output import TaskOutput
+from crewai.utilities.llm_utils import LLM
 from tests.experimental.evaluation.metrics.test_base_evaluation_metrics import (
     BaseEvaluationMetricsTest,
 )
-from crewai.utilities.llm_utils import LLM
-from crewai.experimental.evaluation.base_evaluator import EvaluationScore
 
 
 class TestReasoningEfficiencyEvaluator(BaseEvaluationMetricsTest):
@@ -21,7 +22,7 @@ class TestReasoningEfficiencyEvaluator(BaseEvaluationMetricsTest):
         return output
 
     @pytest.fixture
-    def llm_calls(self) -> List[Dict[str, Any]]:
+    def llm_calls(self) -> list[dict[str, Any]]:
         return [
             {
                 "prompt": "How should I approach this task?",

@@ -3,13 +3,10 @@
 import inspect
 import json
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Type
+from typing import Any
 
-from pydantic import BaseModel
-
-from crewai_tools import tools
 from crewai.tools.base_tool import BaseTool, EnvVar
-
+from crewai_tools import tools
 from pydantic.json_schema import GenerateJsonSchema
 from pydantic_core import PydanticOmit
 
@@ -21,10 +18,10 @@ class SchemaGenerator(GenerateJsonSchema):
 
 class ToolSpecExtractor:
     def __init__(self) -> None:
-        self.tools_spec: List[Dict[str, Any]] = []
+        self.tools_spec: list[dict[str, Any]] = []
         self.processed_tools: set[str] = set()
 
-    def extract_all_tools(self) -> List[Dict[str, Any]]:
+    def extract_all_tools(self) -> list[dict[str, Any]]:
         for name in dir(tools):
             if name.endswith("Tool") and name not in self.processed_tools:
                 obj = getattr(tools, name, None)
@@ -63,14 +60,14 @@ class ToolSpecExtractor:
         except Exception as e:
             print(f"Error extracting {tool_class.__name__}: {e}")
 
-    def _unwrap_schema(self, schema: Dict) -> Dict:
+    def _unwrap_schema(self, schema: dict) -> dict:
         while (
             schema.get("type") in {"function-after", "default"} and "schema" in schema
         ):
             schema = schema["schema"]
         return schema
 
-    def _extract_field_default(self, field: Optional[Dict], fallback: str = "") -> str:
+    def _extract_field_default(self, field: dict | None, fallback: str = "") -> str:
         if not field:
             return fallback
 
@@ -79,8 +76,8 @@ class ToolSpecExtractor:
         return default if isinstance(default, (list, str, int)) else fallback
 
     def _extract_params(
-        self, args_schema_field: Optional[Dict]
-    ) -> List[Dict[str, str]]:
+        self, args_schema_field: dict | None
+    ) -> list[dict[str, str]]:
         if not args_schema_field:
             return {}
 
@@ -99,7 +96,7 @@ class ToolSpecExtractor:
             print(f"Error extracting params from {args_schema_class}: {e}")
             return {}
 
-    def _extract_env_vars(self, env_vars_field: Optional[Dict]) -> List[Dict[str, str]]:
+    def _extract_env_vars(self, env_vars_field: dict | None) -> list[dict[str, str]]:
         if not env_vars_field:
             return []
 

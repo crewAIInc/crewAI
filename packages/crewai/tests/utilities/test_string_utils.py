@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Union
+from typing import Any
 
 import pytest
 
@@ -11,7 +11,7 @@ class TestInterpolateOnly:
     def test_basic_variable_interpolation(self):
         """Test basic variable interpolation works correctly."""
         template = "Hello, {name}! Welcome to {company}."
-        inputs: Dict[str, Union[str, int, float, Dict[str, Any], List[Any]]] = {
+        inputs: dict[str, str | int | float | dict[str, Any] | list[Any]] = {
             "name": "Alice",
             "company": "CrewAI",
         }
@@ -23,7 +23,7 @@ class TestInterpolateOnly:
     def test_multiple_occurrences_of_same_variable(self):
         """Test that multiple occurrences of the same variable are replaced."""
         template = "{name} is using {name}'s account."
-        inputs: Dict[str, Union[str, int, float, Dict[str, Any], List[Any]]] = {
+        inputs: dict[str, str | int | float | dict[str, Any] | list[Any]] = {
             "name": "Bob"
         }
 
@@ -40,7 +40,7 @@ class TestInterpolateOnly:
 
         {"name": "person's name", "age": 25, "skills": ["coding", "testing"]}
         """
-        inputs: Dict[str, Union[str, int, float, Dict[str, Any], List[Any]]] = {
+        inputs: dict[str, str | int | float | dict[str, Any] | list[Any]] = {
             "agent": "DevAgent"
         }
 
@@ -65,7 +65,7 @@ class TestInterpolateOnly:
           }
         }
         """
-        inputs: Dict[str, Union[str, int, float, Dict[str, Any], List[Any]]] = {
+        inputs: dict[str, str | int | float | dict[str, Any] | list[Any]] = {
             "agent": "DataProcessor"
         }
 
@@ -79,7 +79,7 @@ class TestInterpolateOnly:
     def test_missing_variable(self):
         """Test that an error is raised when a required variable is missing."""
         template = "Hello, {name}!"
-        inputs: Dict[str, Union[str, int, float, Dict[str, Any], List[Any]]] = {
+        inputs: dict[str, str | int | float | dict[str, Any] | list[Any]] = {
             "not_name": "Alice"
         }
 
@@ -93,7 +93,7 @@ class TestInterpolateOnly:
         """Test that an error is raised with invalid input types."""
         template = "Hello, {name}!"
         # Using Any for this test since we're intentionally testing an invalid type
-        inputs: Dict[str, Any] = {"name": object()}  # Object is not a valid input type
+        inputs: dict[str, Any] = {"name": object()}  # Object is not a valid input type
 
         with pytest.raises(ValueError) as excinfo:
             interpolate_only(template, inputs)
@@ -102,7 +102,7 @@ class TestInterpolateOnly:
 
     def test_empty_input_string(self):
         """Test handling of empty or None input string."""
-        inputs: Dict[str, Union[str, int, float, Dict[str, Any], List[Any]]] = {
+        inputs: dict[str, str | int | float | dict[str, Any] | list[Any]] = {
             "name": "Alice"
         }
 
@@ -112,7 +112,7 @@ class TestInterpolateOnly:
     def test_no_variables_in_template(self):
         """Test a template with no variables to replace."""
         template = "This is a static string with no variables."
-        inputs: Dict[str, Union[str, int, float, Dict[str, Any], List[Any]]] = {
+        inputs: dict[str, str | int | float | dict[str, Any] | list[Any]] = {
             "name": "Alice"
         }
 
@@ -123,7 +123,7 @@ class TestInterpolateOnly:
     def test_variable_name_starting_with_underscore(self):
         """Test variables starting with underscore are replaced correctly."""
         template = "Variable: {_special_var}"
-        inputs: Dict[str, Union[str, int, float, Dict[str, Any], List[Any]]] = {
+        inputs: dict[str, str | int | float | dict[str, Any] | list[Any]] = {
             "_special_var": "Special Value"
         }
 
@@ -136,7 +136,7 @@ class TestInterpolateOnly:
         template = (
             "This {123} and {!var} should not be replaced but {valid_var} should."
         )
-        inputs: Dict[str, Union[str, int, float, Dict[str, Any], List[Any]]] = {
+        inputs: dict[str, str | int | float | dict[str, Any] | list[Any]] = {
             "valid_var": "works"
         }
 
@@ -164,7 +164,7 @@ class TestInterpolateOnly:
           }
         }
         """
-        inputs: Dict[str, Union[str, int, float, Dict[str, Any], List[Any]]] = {
+        inputs: dict[str, str | int | float | dict[str, Any] | list[Any]] = {
             "agent_name": "AnalyticsAgent",
             "task_id": "T-12345",
         }
@@ -179,7 +179,7 @@ class TestInterpolateOnly:
     def test_empty_inputs_dictionary(self):
         """Test that an error is raised with empty inputs dictionary."""
         template = "Hello, {name}!"
-        inputs: Dict[str, Any] = {}
+        inputs: dict[str, Any] = {}
 
         with pytest.raises(ValueError) as excinfo:
             interpolate_only(template, inputs)

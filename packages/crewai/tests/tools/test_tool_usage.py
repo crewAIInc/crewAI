@@ -8,14 +8,14 @@ import pytest
 from pydantic import BaseModel, Field
 
 from crewai import Agent, Task
-from crewai.tools import BaseTool
-from crewai.tools.tool_usage import ToolUsage
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.tool_usage_events import (
     ToolSelectionErrorEvent,
     ToolUsageFinishedEvent,
     ToolValidateInputErrorEvent,
 )
+from crewai.tools import BaseTool
+from crewai.tools.tool_usage import ToolUsage
 
 
 class RandomNumberToolInput(BaseModel):

@@ -1,13 +1,11 @@
 """Context management utilities for tracking crew and task execution context using OpenTelemetry baggage."""
 
-from typing import Optional
-
 from opentelemetry import baggage
 
 from crewai.utilities.crew.models import CrewContext
 
 
-def get_crew_context() -> Optional[CrewContext]:
+def get_crew_context() -> CrewContext | None:
     """Get the current crew context from OpenTelemetry baggage.
 
     Returns:

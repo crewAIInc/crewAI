@@ -1,4 +1,5 @@
 import pytest
+
 from crewai.cli.authentication.main import Oauth2Settings
 from crewai.cli.authentication.providers.okta import OktaProvider
 

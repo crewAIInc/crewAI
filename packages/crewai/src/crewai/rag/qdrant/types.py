@@ -2,12 +2,12 @@
 
 from collections.abc import Awaitable, Callable
 from typing import Annotated, Any, Protocol, TypeAlias
-from typing_extensions import NotRequired, TypedDict
 
 import numpy as np
 from pydantic import GetCoreSchemaHandler
 from pydantic_core import CoreSchema, core_schema
-from qdrant_client import AsyncQdrantClient, QdrantClient as SyncQdrantClient
+from qdrant_client import AsyncQdrantClient
+from qdrant_client import QdrantClient as SyncQdrantClient
 from qdrant_client.models import (
     FieldCondition,
     Filter,
@@ -25,6 +25,7 @@ from qdrant_client.models import (
     VectorsConfig,
     WalConfigDiff,
 )
+from typing_extensions import NotRequired, TypedDict
 
 from crewai.rag.core.base_client import BaseCollectionParams
 
@@ -133,8 +134,6 @@ class QdrantCollectionCreateParams(
     BaseCollectionParams, CommonCreateFields, total=False
 ):
     """High-level parameters for creating a Qdrant collection."""
-
-    pass
 
 
 class CreateCollectionParams(CommonCreateFields, total=False):

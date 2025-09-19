@@ -1,16 +1,18 @@
 from collections import defaultdict
-from typing import Dict, Any, List
-from rich.table import Table
-from rich.box import HEAVY_EDGE, ROUNDED
 from collections.abc import Sequence
+from typing import Any
+
+from rich.box import HEAVY_EDGE, ROUNDED
+from rich.table import Table
+
+from crewai.events.utils.console_formatter import ConsoleFormatter
+from crewai.experimental.evaluation import EvaluationScore
 from crewai.experimental.evaluation.base_evaluator import (
     AgentAggregatedEvaluationResult,
-    AggregationStrategy,
     AgentEvaluationResult,
+    AggregationStrategy,
     MetricCategory,
 )
-from crewai.experimental.evaluation import EvaluationScore
-from crewai.events.utils.console_formatter import ConsoleFormatter
 from crewai.utilities.llm_utils import create_llm
 
 
@@ -19,7 +21,7 @@ class EvaluationDisplayFormatter:
         self.console_formatter = ConsoleFormatter()
 
     def display_evaluation_with_feedback(
-        self, iterations_results: Dict[int, Dict[str, List[Any]]]
+        self, iterations_results: dict[int, dict[str, list[Any]]]
     ):
         if not iterations_results:
             self.console_formatter.print(
@@ -99,7 +101,7 @@ class EvaluationDisplayFormatter:
 
     def display_summary_results(
         self,
-        iterations_results: Dict[int, Dict[str, List[AgentAggregatedEvaluationResult]]],
+        iterations_results: dict[int, dict[str, list[AgentAggregatedEvaluationResult]]],
     ):
         if not iterations_results:
             self.console_formatter.print(
@@ -304,25 +306,25 @@ class EvaluationDisplayFormatter:
         self,
         agent_role: str,
         metric: str,
-        feedbacks: List[str],
-        scores: List[float | None],
+        feedbacks: list[str],
+        scores: list[float | None],
         strategy: AggregationStrategy,
     ) -> str:
         if len(feedbacks) <= 2 and all(len(fb) < 200 for fb in feedbacks):
             return "\n\n".join(
-                [f"Feedback {i+1}: {fb}" for i, fb in enumerate(feedbacks)]
+                [f"Feedback {i + 1}: {fb}" for i, fb in enumerate(feedbacks)]
             )
 
         try:
             llm = create_llm()
 
             formatted_feedbacks = []
-            for i, (feedback, score) in enumerate(zip(feedbacks, scores)):
+            for i, (feedback, score) in enumerate(zip(feedbacks, scores, strict=False)):
                 if len(feedback) > 500:
                     feedback = feedback[:500] + "..."
                 score_text = f"{score:.1f}" if score is not None else "N/A"
                 formatted_feedbacks.append(
-                    f"Feedback #{i+1} (Score: {score_text}):\n{feedback}"
+                    f"Feedback #{i + 1} (Score: {score_text}):\n{feedback}"
                 )
 
             all_feedbacks = "\n\n" + "\n\n---\n\n".join(formatted_feedbacks)
@@ -366,9 +368,7 @@ class EvaluationDisplayFormatter:
                 },
             ]
             assert llm is not None
-            response = llm.call(prompt)
-
-            return response
+            return llm.call(prompt)
 
         except Exception:
             return "Synthesized from multiple tasks: " + "\n\n".join(

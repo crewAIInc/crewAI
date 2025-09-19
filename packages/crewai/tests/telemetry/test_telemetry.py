@@ -3,11 +3,10 @@ import threading
 from unittest.mock import patch
 
 import pytest
+from opentelemetry import trace
 
 from crewai import Agent, Crew, Task
 from crewai.telemetry import Telemetry
-
-from opentelemetry import trace
 
 
 @pytest.fixture(autouse=True)
@@ -95,9 +94,9 @@ def test_telemetry_singleton_pattern():
 
     assert telemetry1 is telemetry2
 
-    setattr(telemetry1, "test_attribute", "test_value")
+    telemetry1.test_attribute = "test_value"
     assert hasattr(telemetry2, "test_attribute")
-    assert getattr(telemetry2, "test_attribute") == "test_value"
+    assert telemetry2.test_attribute == "test_value"
 
     import threading
 

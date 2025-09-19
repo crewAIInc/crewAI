@@ -6,8 +6,8 @@ from crewai.rag.config.optional_imports.protocols import (
     ChromaFactoryModule,
     QdrantFactoryModule,
 )
-from crewai.rag.core.base_client import BaseClient
 from crewai.rag.config.types import RagConfigType
+from crewai.rag.core.base_client import BaseClient
 from crewai.utilities.import_utils import require
 
 
@@ -43,3 +43,4 @@ def create_client(config: RagConfigType) -> BaseClient:
             ),
         )
         return qdrant_mod.create_client(config)
+    return None

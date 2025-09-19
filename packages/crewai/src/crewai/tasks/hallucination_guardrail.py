@@ -6,7 +6,7 @@ Classes:
     HallucinationGuardrail: Placeholder guardrail that validates task outputs.
 """
 
-from typing import Any, Optional, Tuple
+from typing import Any
 
 from crewai.llm import LLM
 from crewai.tasks.task_output import TaskOutput
@@ -48,7 +48,7 @@ class HallucinationGuardrail:
         self,
         context: str,
         llm: LLM,
-        threshold: Optional[float] = None,
+        threshold: float | None = None,
         tool_response: str = "",
     ):
         """Initialize the HallucinationGuardrail placeholder.
@@ -75,7 +75,7 @@ class HallucinationGuardrail:
         """Generate a description of this guardrail for event logging."""
         return "HallucinationGuardrail (no-op)"
 
-    def __call__(self, task_output: TaskOutput) -> Tuple[bool, Any]:
+    def __call__(self, task_output: TaskOutput) -> tuple[bool, Any]:
         """Validate a task output against hallucination criteria.
 
         In the open source, this method always returns that the output is valid.

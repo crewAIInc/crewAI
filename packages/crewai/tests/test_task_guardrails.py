@@ -3,15 +3,15 @@ from unittest.mock import Mock, patch
 import pytest
 
 from crewai import Agent, Task
-from crewai.llm import LLM
-from crewai.tasks.hallucination_guardrail import HallucinationGuardrail
-from crewai.tasks.llm_guardrail import LLMGuardrail
-from crewai.tasks.task_output import TaskOutput
+from crewai.events.event_bus import crewai_event_bus
 from crewai.events.event_types import (
     LLMGuardrailCompletedEvent,
     LLMGuardrailStartedEvent,
 )
-from crewai.events.event_bus import crewai_event_bus
+from crewai.llm import LLM
+from crewai.tasks.hallucination_guardrail import HallucinationGuardrail
+from crewai.tasks.llm_guardrail import LLMGuardrail
+from crewai.tasks.task_output import TaskOutput
 
 
 def test_task_without_guardrail():

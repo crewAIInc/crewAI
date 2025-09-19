@@ -1,9 +1,9 @@
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 from crewai.experimental.evaluation.metrics.tools_metrics import (
-    ToolSelectionEvaluator,
     ParameterExtractionEvaluator,
     ToolInvocationEvaluator,
+    ToolSelectionEvaluator,
 )
 from crewai.utilities.llm_utils import LLM
 from tests.experimental.evaluation.metrics.test_base_evaluation_metrics import (

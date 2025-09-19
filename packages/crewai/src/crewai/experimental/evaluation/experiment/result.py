@@ -2,7 +2,9 @@ import json
 import os
 from datetime import datetime, timezone
 from typing import Any
+
 from pydantic import BaseModel
+
 
 class ExperimentResult(BaseModel):
     identifier: str
@@ -12,35 +14,48 @@ class ExperimentResult(BaseModel):
     passed: bool
     agent_evaluations: dict[str, Any] | None = None
 
+
 class ExperimentResults:
-    def __init__(self, results: list[ExperimentResult], metadata: dict[str, Any] | None = None):
+    def __init__(
+        self, results: list[ExperimentResult], metadata: dict[str, Any] | None = None
+    ):
         self.results = results
         self.metadata = metadata or {}
         self.timestamp = datetime.now(timezone.utc)
 
-        from crewai.experimental.evaluation.experiment.result_display import ExperimentResultsDisplay
+        from crewai.experimental.evaluation.experiment.result_display import (
+            ExperimentResultsDisplay,
+        )
+
         self.display = ExperimentResultsDisplay()
 
     def to_json(self, filepath: str | None = None) -> dict[str, Any]:
         data = {
             "timestamp": self.timestamp.isoformat(),
             "metadata": self.metadata,
-            "results": [r.model_dump(exclude={"agent_evaluations"}) for r in self.results]
+            "results": [
+                r.model_dump(exclude={"agent_evaluations"}) for r in self.results
+            ],
         }
 
         if filepath:
-            with open(filepath, 'w') as f:
+            with open(filepath, "w") as f:
                 json.dump(data, f, indent=2)
             self.display.console.print(f"[green]Results saved to {filepath}[/green]")
 
         return data
 
-    def compare_with_baseline(self, baseline_filepath: str, save_current: bool = True, print_summary: bool = False) -> dict[str, Any]:
+    def compare_with_baseline(
+        self,
+        baseline_filepath: str,
+        save_current: bool = True,
+        print_summary: bool = False,
+    ) -> dict[str, Any]:
         baseline_runs = []
 
         if os.path.exists(baseline_filepath) and os.path.getsize(baseline_filepath) > 0:
             try:
-                with open(baseline_filepath, 'r') as f:
+                with open(baseline_filepath, "r") as f:
                     baseline_data = json.load(f)
 
                 if isinstance(baseline_data, dict) and "timestamp" in baseline_data:
@@ -48,14 +63,18 @@ class ExperimentResults:
                 elif isinstance(baseline_data, list):
                     baseline_runs = baseline_data
             except (json.JSONDecodeError, FileNotFoundError) as e:
-                self.display.console.print(f"[yellow]Warning: Could not load baseline file: {str(e)}[/yellow]")
+                self.display.console.print(
+                    f"[yellow]Warning: Could not load baseline file: {e!s}[/yellow]"
+                )
 
         if not baseline_runs:
             if save_current:
                 current_data = self.to_json()
-                with open(baseline_filepath, 'w') as f:
+                with open(baseline_filepath, "w") as f:
                     json.dump([current_data], f, indent=2)
-                self.display.console.print(f"[green]Saved current results as new baseline to {baseline_filepath}[/green]")
+                self.display.console.print(
+                    f"[green]Saved current results as new baseline to {baseline_filepath}[/green]"
+                )
             return {"is_baseline": True, "changes": {}}
 
         baseline_runs.sort(key=lambda x: x.get("timestamp", ""), reverse=True)
@@ -69,9 +88,11 @@ class ExperimentResults:
         if save_current:
             current_data = self.to_json()
             baseline_runs.append(current_data)
-            with open(baseline_filepath, 'w') as f:
+            with open(baseline_filepath, "w") as f:
                 json.dump(baseline_runs, f, indent=2)
-            self.display.console.print(f"[green]Added current results to baseline file {baseline_filepath}[/green]")
+            self.display.console.print(
+                f"[green]Added current results to baseline file {baseline_filepath}[/green]"
+            )
 
         return comparison
 
@@ -118,5 +139,5 @@ class ExperimentResults:
             "new_tests": new_tests,
             "missing_tests": missing_tests,
             "total_compared": len(improved) + len(regressed) + len(unchanged),
-            "baseline_timestamp": baseline_run.get("timestamp", "unknown")
+            "baseline_timestamp": baseline_run.get("timestamp", "unknown"),
         }

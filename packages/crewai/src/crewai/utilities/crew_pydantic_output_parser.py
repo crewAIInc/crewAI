@@ -1,5 +1,5 @@
 import json
-from typing import Any, Type
+from typing import Any
 
 import regex
 from pydantic import BaseModel, ValidationError
@@ -8,10 +8,11 @@ from crewai.agents.parser import OutputParserException
 
 """Parser for converting text outputs into Pydantic models."""
 
+
 class CrewPydanticOutputParser:
     """Parses text outputs into specified Pydantic models."""
 
-    pydantic_object: Type[BaseModel]
+    pydantic_object: type[BaseModel]
 
     def parse_result(self, result: str) -> Any:
         result = self._transform_in_valid_json(result)

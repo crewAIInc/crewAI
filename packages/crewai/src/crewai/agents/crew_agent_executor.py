@@ -251,9 +251,8 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                         i18n=self._i18n,
                     )
                     continue
-                else:
-                    handle_unknown_error(self._printer, e)
-                    raise e
+                handle_unknown_error(self._printer, e)
+                raise e
             finally:
                 self.iterations += 1
 
@@ -324,9 +323,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             self.agent,
             AgentLogsStartedEvent(
                 agent_role=self.agent.role,
-                task_description=(
-                    getattr(self.task, "description") if self.task else "Not Found"
-                ),
+                task_description=(self.task.description if self.task else "Not Found"),
                 verbose=self.agent.verbose
                 or (hasattr(self, "crew") and getattr(self.crew, "verbose", False)),
             ),
@@ -415,8 +412,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         """
         prompt = prompt.replace("{input}", inputs["input"])
         prompt = prompt.replace("{tool_names}", inputs["tool_names"])
-        prompt = prompt.replace("{tools}", inputs["tools"])
-        return prompt
+        return prompt.replace("{tools}", inputs["tools"])
 
     def _handle_human_feedback(self, formatted_answer: AgentFinish) -> AgentFinish:
         """Process human feedback.

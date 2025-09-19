@@ -1,4 +1,4 @@
-from typing import Any, Tuple
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -53,7 +53,7 @@ class LLMGuardrail:
 
         Guardrail:
         {self.description}
-        
+
         Your task:
         - Confirm if the Task result complies with the guardrail.
         - If not, provide clear feedback explaining what is wrong (e.g., by how much it violates the rule, or what specific part fails).
@@ -61,11 +61,9 @@ class LLMGuardrail:
         - If the Task result complies with the guardrail, saying that is valid
         """
 
-        result = agent.kickoff(query, response_format=LLMGuardrailResult)
+        return agent.kickoff(query, response_format=LLMGuardrailResult)
 
-        return result
-
-    def __call__(self, task_output: TaskOutput) -> Tuple[bool, Any]:
+    def __call__(self, task_output: TaskOutput) -> tuple[bool, Any]:
         """Validates the output of a task based on specified criteria.
 
         Args:
@@ -79,13 +77,12 @@ class LLMGuardrail:
 
         try:
             result = self._validate_output(task_output)
-            assert isinstance(
-                result.pydantic, LLMGuardrailResult
-            ), "The guardrail result is not a valid pydantic model"
+            assert isinstance(result.pydantic, LLMGuardrailResult), (
+                "The guardrail result is not a valid pydantic model"
+            )
 
             if result.pydantic.valid:
                 return True, task_output.raw
-            else:
-                return False, result.pydantic.feedback
+            return False, result.pydantic.feedback
         except Exception as e:
-            return False, f"Error while validating the task output: {str(e)}"
+            return False, f"Error while validating the task output: {e!s}"

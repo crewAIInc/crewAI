@@ -1,14 +1,13 @@
 # flow_visualizer.py
 
 import os
-from pathlib import Path
 
 from pyvis.network import Network
 
 from crewai.flow.config import COLORS, NODE_STYLES
 from crewai.flow.html_template_handler import HTMLTemplateHandler
 from crewai.flow.legend_generator import generate_legend_items_html, get_legend_items
-from crewai.flow.path_utils import safe_path_join, validate_path_exists
+from crewai.flow.path_utils import safe_path_join
 from crewai.flow.utils import calculate_node_levels
 from crewai.flow.visualization_utils import (
     add_edges,
@@ -34,13 +33,13 @@ class FlowPlot:
         ValueError
             If flow object is invalid or missing required attributes.
         """
-        if not hasattr(flow, '_methods'):
+        if not hasattr(flow, "_methods"):
             raise ValueError("Invalid flow object: missing '_methods' attribute")
-        if not hasattr(flow, '_listeners'):
+        if not hasattr(flow, "_listeners"):
             raise ValueError("Invalid flow object: missing '_listeners' attribute")
-        if not hasattr(flow, '_start_methods'):
+        if not hasattr(flow, "_start_methods"):
             raise ValueError("Invalid flow object: missing '_start_methods' attribute")
-            
+
         self.flow = flow
         self.colors = COLORS
         self.node_styles = NODE_STYLES
@@ -65,7 +64,7 @@ class FlowPlot:
         """
         if not filename or not isinstance(filename, str):
             raise ValueError("Filename must be a non-empty string")
-            
+
         try:
             # Initialize network
             net = Network(
@@ -96,32 +95,32 @@ class FlowPlot:
             try:
                 node_levels = calculate_node_levels(self.flow)
             except Exception as e:
-                raise ValueError(f"Failed to calculate node levels: {str(e)}")
+                raise ValueError(f"Failed to calculate node levels: {e!s}")
 
             # Compute positions
             try:
                 node_positions = compute_positions(self.flow, node_levels)
             except Exception as e:
-                raise ValueError(f"Failed to compute node positions: {str(e)}")
+                raise ValueError(f"Failed to compute node positions: {e!s}")
 
             # Add nodes to the network
             try:
                 add_nodes_to_network(net, self.flow, node_positions, self.node_styles)
             except Exception as e:
-                raise RuntimeError(f"Failed to add nodes to network: {str(e)}")
+                raise RuntimeError(f"Failed to add nodes to network: {e!s}")
 
             # Add edges to the network
             try:
                 add_edges(net, self.flow, node_positions, self.colors)
             except Exception as e:
-                raise RuntimeError(f"Failed to add edges to network: {str(e)}")
+                raise RuntimeError(f"Failed to add edges to network: {e!s}")
 
             # Generate HTML
             try:
                 network_html = net.generate_html()
                 final_html_content = self._generate_final_html(network_html)
             except Exception as e:
-                raise RuntimeError(f"Failed to generate network visualization: {str(e)}")
+                raise RuntimeError(f"Failed to generate network visualization: {e!s}")
 
             # Save the final HTML content to the file
             try:
@@ -129,12 +128,14 @@ class FlowPlot:
                     f.write(final_html_content)
                 print(f"Plot saved as {filename}.html")
             except IOError as e:
-                raise IOError(f"Failed to save flow visualization to {filename}.html: {str(e)}")
+                raise IOError(
+                    f"Failed to save flow visualization to {filename}.html: {e!s}"
+                )
 
         except (ValueError, RuntimeError, IOError) as e:
             raise e
         except Exception as e:
-            raise RuntimeError(f"Unexpected error during flow visualization: {str(e)}")
+            raise RuntimeError(f"Unexpected error during flow visualization: {e!s}")
         finally:
             self._cleanup_pyvis_lib()
 
@@ -165,7 +166,9 @@ class FlowPlot:
         try:
             # Extract just the body content from the generated HTML
             current_dir = os.path.dirname(__file__)
-            template_path = safe_path_join("assets", "crewai_flow_visual_template.html", root=current_dir)
+            template_path = safe_path_join(
+                "assets", "crewai_flow_visual_template.html", root=current_dir
+            )
             logo_path = safe_path_join("assets", "crewai_logo.svg", root=current_dir)
 
             if not os.path.exists(template_path):
@@ -179,12 +182,9 @@ class FlowPlot:
             # Generate the legend items HTML
             legend_items = get_legend_items(self.colors)
             legend_items_html = generate_legend_items_html(legend_items)
-            final_html_content = html_handler.generate_final_html(
-                network_body, legend_items_html
-            )
-            return final_html_content
+            return html_handler.generate_final_html(network_body, legend_items_html)
         except Exception as e:
-            raise IOError(f"Failed to generate visualization HTML: {str(e)}")
+            raise IOError(f"Failed to generate visualization HTML: {e!s}")
 
     def _cleanup_pyvis_lib(self):
         """
@@ -197,6 +197,7 @@ class FlowPlot:
             lib_folder = safe_path_join("lib", root=os.getcwd())
             if os.path.exists(lib_folder) and os.path.isdir(lib_folder):
                 import shutil
+
                 shutil.rmtree(lib_folder)
         except ValueError as e:
             print(f"Error validating lib folder path: {e}")

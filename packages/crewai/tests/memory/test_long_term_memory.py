@@ -1,15 +1,17 @@
-import pytest
-from unittest.mock import ANY
 from collections import defaultdict
+from unittest.mock import ANY
+
+import pytest
+
 from crewai.events.event_bus import crewai_event_bus
+from crewai.events.types.memory_events import (
+    MemoryQueryCompletedEvent,
+    MemoryQueryStartedEvent,
+    MemorySaveCompletedEvent,
+    MemorySaveStartedEvent,
+)
 from crewai.memory.long_term.long_term_memory import LongTermMemory
 from crewai.memory.long_term.long_term_memory_item import LongTermMemoryItem
-from crewai.events.types.memory_events import (
-    MemorySaveStartedEvent,
-    MemorySaveCompletedEvent,
-    MemoryQueryStartedEvent,
-    MemoryQueryCompletedEvent,
-)
 
 
 @pytest.fixture

@@ -1,8 +1,8 @@
 import unittest
-from unittest.mock import MagicMock, patch, ANY
+from unittest.mock import ANY, MagicMock, patch
 
-from crewai.cli.plus_api import PlusAPI
 from crewai.cli.constants import DEFAULT_CREWAI_ENTERPRISE_URL
+from crewai.cli.plus_api import PlusAPI
 
 
 class TestPlusAPI(unittest.TestCase):

@@ -1,9 +1,10 @@
 """Tests for import utilities."""
 
-import pytest
 from unittest.mock import patch
 
-from crewai.utilities.import_utils import require, OptionalDependencyError
+import pytest
+
+from crewai.utilities.import_utils import OptionalDependencyError, require
 
 
 class TestRequire:

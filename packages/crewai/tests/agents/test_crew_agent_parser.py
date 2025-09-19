@@ -1,11 +1,11 @@
 import pytest
 
+from crewai.agents import parser
 from crewai.agents.crew_agent_executor import (
     AgentAction,
     AgentFinish,
     OutputParserException,
 )
-from crewai.agents import parser
 
 
 def test_valid_action_parsing_special_characters():

@@ -1,19 +1,19 @@
-import logging
 import json
-from typing import Tuple, cast
+import logging
+from typing import cast
 
 from pydantic import BaseModel, Field
 
 from crewai.agent import Agent
-from crewai.task import Task
-from crewai.utilities import I18N
-from crewai.llm import LLM
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.reasoning_events import (
-    AgentReasoningStartedEvent,
     AgentReasoningCompletedEvent,
     AgentReasoningFailedEvent,
+    AgentReasoningStartedEvent,
 )
+from crewai.llm import LLM
+from crewai.task import Task
+from crewai.utilities import I18N
 
 
 class ReasoningPlan(BaseModel):
@@ -126,7 +126,7 @@ class AgentReasoning:
         reasoning_plan = ReasoningPlan(plan=plan, ready=ready)
         return AgentReasoningOutput(plan=reasoning_plan)
 
-    def __create_initial_plan(self) -> Tuple[str, bool]:
+    def __create_initial_plan(self) -> tuple[str, bool]:
         """
         Creates the initial reasoning plan for the task.
 
@@ -138,25 +138,24 @@ class AgentReasoning:
         if self.llm.supports_function_calling():
             plan, ready = self.__call_with_function(reasoning_prompt, "initial_plan")
             return plan, ready
-        else:
-            system_prompt = self.i18n.retrieve("reasoning", "initial_plan").format(
-                role=self.agent.role,
-                goal=self.agent.goal,
-                backstory=self.__get_agent_backstory(),
-            )
+        system_prompt = self.i18n.retrieve("reasoning", "initial_plan").format(
+            role=self.agent.role,
+            goal=self.agent.goal,
+            backstory=self.__get_agent_backstory(),
+        )
 
-            response = self.llm.call(
-                [
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": reasoning_prompt},
-                ],
-                from_task=self.task,
-                from_agent=self.agent,
-            )
+        response = self.llm.call(
+            [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": reasoning_prompt},
+            ],
+            from_task=self.task,
+            from_agent=self.agent,
+        )
 
-            return self.__parse_reasoning_response(str(response))
+        return self.__parse_reasoning_response(str(response))
 
-    def __refine_plan_if_needed(self, plan: str, ready: bool) -> Tuple[str, bool]:
+    def __refine_plan_if_needed(self, plan: str, ready: bool) -> tuple[str, bool]:
         """
         Refines the reasoning plan if the agent is not ready to execute the task.
 
@@ -216,7 +215,7 @@ class AgentReasoning:
 
         return plan, ready
 
-    def __call_with_function(self, prompt: str, prompt_type: str) -> Tuple[str, bool]:
+    def __call_with_function(self, prompt: str, prompt_type: str) -> tuple[str, bool]:
         """
         Calls the LLM with function calling to get a reasoning plan.
 
@@ -259,7 +258,7 @@ class AgentReasoning:
             )
 
             # Prepare a simple callable that just returns the tool arguments as JSON
-            def _create_reasoning_plan(plan: str, ready: bool):  # noqa: N802
+            def _create_reasoning_plan(plan: str, ready: bool):
                 """Return the reasoning plan result in JSON string form."""
                 return json.dumps({"plan": plan, "ready": ready})
 
@@ -291,7 +290,7 @@ class AgentReasoning:
 
         except Exception as e:
             self.logger.warning(
-                f"Error during function calling: {str(e)}. Falling back to text parsing."
+                f"Error during function calling: {e!s}. Falling back to text parsing."
             )
 
             try:
@@ -316,7 +315,7 @@ class AgentReasoning:
                     "READY: I am ready to execute the task." in fallback_str,
                 )
             except Exception as inner_e:
-                self.logger.error(f"Error during fallback text parsing: {str(inner_e)}")
+                self.logger.error(f"Error during fallback text parsing: {inner_e!s}")
                 return (
                     "Failed to generate a plan due to an error.",
                     True,
@@ -378,7 +377,7 @@ class AgentReasoning:
             current_plan=current_plan,
         )
 
-    def __parse_reasoning_response(self, response: str) -> Tuple[str, bool]:
+    def __parse_reasoning_response(self, response: str) -> tuple[str, bool]:
         """
         Parses the reasoning response to extract the plan and whether
         the agent is ready to execute the task.

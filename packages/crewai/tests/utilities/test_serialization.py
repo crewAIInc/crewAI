@@ -1,6 +1,4 @@
 from datetime import date, datetime
-from typing import List
-from unittest.mock import Mock
 
 import pytest
 from pydantic import BaseModel
@@ -19,7 +17,7 @@ class Person(BaseModel):
     age: int
     address: Address
     birthday: date
-    skills: List[str]
+    skills: list[str]
 
 
 @pytest.mark.parametrize(

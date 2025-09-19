@@ -1,7 +1,7 @@
-import jwt
 import unittest
 from unittest.mock import MagicMock, patch
 
+import jwt
 
 from crewai.cli.authentication.utils import validate_jwt_token
 

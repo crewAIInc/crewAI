@@ -6,15 +6,15 @@ from datetime import datetime
 import pytest
 from pydantic import BaseModel
 
-from crewai.flow.flow import Flow, and_, listen, or_, router, start
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.flow_events import (
     FlowFinishedEvent,
-    FlowStartedEvent,
     FlowPlotEvent,
+    FlowStartedEvent,
     MethodExecutionFinishedEvent,
     MethodExecutionStartedEvent,
 )
+from crewai.flow.flow import Flow, and_, listen, or_, router, start
 
 
 def test_simple_sequential_flow():
@@ -679,11 +679,11 @@ def test_structured_flow_event_emission():
     assert isinstance(received_events[3], MethodExecutionStartedEvent)
     assert received_events[3].method_name == "send_welcome_message"
     assert received_events[3].params == {}
-    assert getattr(received_events[3].state, "sent") is False
+    assert received_events[3].state.sent is False
 
     assert isinstance(received_events[4], MethodExecutionFinishedEvent)
     assert received_events[4].method_name == "send_welcome_message"
-    assert getattr(received_events[4].state, "sent") is True
+    assert received_events[4].state.sent is True
     assert received_events[4].result == "Welcome, Anakin!"
 
     assert isinstance(received_events[5], FlowFinishedEvent)

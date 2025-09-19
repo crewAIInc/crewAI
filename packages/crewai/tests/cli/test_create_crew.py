@@ -9,6 +9,7 @@ from click.testing import CliRunner
 
 from crewai.cli.create_crew import create_crew, create_folder_structure
 
+
 @pytest.fixture
 def runner():
     return CliRunner()

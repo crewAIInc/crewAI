@@ -1,5 +1,5 @@
 import os
-from typing import Any, Dict, Optional, cast
+from typing import Any, cast
 
 from chromadb import Documents, EmbeddingFunction, Embeddings
 from chromadb.api.types import validate_embedding_function
@@ -23,7 +23,7 @@ class EmbeddingConfigurator:
 
     def configure_embedder(
         self,
-        embedder_config: Optional[Dict[str, Any]] = None,
+        embedder_config: dict[str, Any] | None = None,
     ) -> EmbeddingFunction:
         """Configures and returns an embedding function based on the provided config."""
         if embedder_config is None:
@@ -42,9 +42,9 @@ class EmbeddingConfigurator:
             embedding_function = self.embedding_functions[provider]
         except ImportError as e:
             missing_package = str(e).split()[-1]
-            raise ImportError( 
+            raise ImportError(
                 f"{missing_package} is not installed. Please install it with: pip install {missing_package}"
-            )
+            ) from e
 
         return (
             embedding_function(config)
@@ -225,7 +225,7 @@ class EmbeddingConfigurator:
                 validate_embedding_function(custom_embedder)
                 return custom_embedder
             except Exception as e:
-                raise ValueError(f"Invalid custom embedding function: {str(e)}")
+                raise ValueError(f"Invalid custom embedding function: {e!s}") from e
         elif callable(custom_embedder):
             try:
                 instance = custom_embedder()
@@ -236,7 +236,7 @@ class EmbeddingConfigurator:
                     "Custom embedder does not create an EmbeddingFunction instance"
                 )
             except Exception as e:
-                raise ValueError(f"Error instantiating custom embedder: {str(e)}")
+                raise ValueError(f"Error instantiating custom embedder: {e!s}") from e
         else:
             raise ValueError(
                 "Custom embedder must be an instance of `EmbeddingFunction` or a callable that creates one"

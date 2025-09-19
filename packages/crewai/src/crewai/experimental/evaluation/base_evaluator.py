@@ -1,14 +1,15 @@
 import abc
 import enum
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from pydantic import BaseModel, Field
 
 from crewai.agent import Agent
-from crewai.task import Task
 from crewai.llm import BaseLLM
+from crewai.task import Task
 from crewai.utilities.llm_utils import create_llm
+
 
 class MetricCategory(enum.Enum):
     GOAL_ALIGNMENT = "goal_alignment"
@@ -19,7 +20,7 @@ class MetricCategory(enum.Enum):
     TOOL_INVOCATION = "tool_invocation"
 
     def title(self):
-        return self.value.replace('_', ' ').title()
+        return self.value.replace("_", " ").title()
 
 
 class EvaluationScore(BaseModel):
@@ -27,15 +28,13 @@ class EvaluationScore(BaseModel):
         default=5.0,
         description="Numeric score from 0-10 where 0 is worst and 10 is best, None if not applicable",
         ge=0.0,
-        le=10.0
+        le=10.0,
     )
     feedback: str = Field(
-        default="",
-        description="Detailed feedback explaining the evaluation score"
+        default="", description="Detailed feedback explaining the evaluation score"
     )
     raw_response: str | None = Field(
-        default=None,
-        description="Raw response from the evaluator (e.g., LLM)"
+        default=None, description="Raw response from the evaluator (e.g., LLM)"
     )
 
     def __str__(self) -> str:
@@ -57,7 +56,7 @@ class BaseEvaluator(abc.ABC):
     def evaluate(
         self,
         agent: Agent,
-        execution_trace: Dict[str, Any],
+        execution_trace: dict[str, Any],
         final_output: Any,
         task: Task | None = None,
     ) -> EvaluationScore:
@@ -67,9 +66,8 @@ class BaseEvaluator(abc.ABC):
 class AgentEvaluationResult(BaseModel):
     agent_id: str = Field(description="ID of the evaluated agent")
     task_id: str = Field(description="ID of the task that was executed")
-    metrics: Dict[MetricCategory, EvaluationScore] = Field(
-        default_factory=dict,
-        description="Evaluation scores for each metric category"
+    metrics: dict[MetricCategory, EvaluationScore] = Field(
+        default_factory=dict, description="Evaluation scores for each metric category"
     )
 
 
@@ -81,33 +79,23 @@ class AggregationStrategy(Enum):
 
 
 class AgentAggregatedEvaluationResult(BaseModel):
-    agent_id: str = Field(
-        default="",
-        description="ID of the agent"
-    )
-    agent_role: str = Field(
-        default="",
-        description="Role of the agent"
-    )
+    agent_id: str = Field(default="", description="ID of the agent")
+    agent_role: str = Field(default="", description="Role of the agent")
     task_count: int = Field(
-        default=0,
-        description="Number of tasks included in this aggregation"
+        default=0, description="Number of tasks included in this aggregation"
     )
     aggregation_strategy: AggregationStrategy = Field(
         default=AggregationStrategy.SIMPLE_AVERAGE,
-        description="Strategy used for aggregation"
+        description="Strategy used for aggregation",
     )
-    metrics: Dict[MetricCategory, EvaluationScore] = Field(
-        default_factory=dict,
-        description="Aggregated metrics across all tasks"
+    metrics: dict[MetricCategory, EvaluationScore] = Field(
+        default_factory=dict, description="Aggregated metrics across all tasks"
     )
-    task_results: List[str] = Field(
-        default_factory=list,
-        description="IDs of tasks included in this aggregation"
+    task_results: list[str] = Field(
+        default_factory=list, description="IDs of tasks included in this aggregation"
     )
-    overall_score: Optional[float] = Field(
-        default=None,
-        description="Overall score for this agent"
+    overall_score: float | None = Field(
+        default=None, description="Overall score for this agent"
     )
 
     def __str__(self) -> str:
@@ -119,7 +107,7 @@ class AgentAggregatedEvaluationResult(BaseModel):
             result += f"\n\n- {category.value.upper()}: {score.score}/10\n"
 
             if score.feedback:
-                detailed_feedback = "\n  ".join(score.feedback.split('\n'))
+                detailed_feedback = "\n  ".join(score.feedback.split("\n"))
                 result += f"  {detailed_feedback}\n"
 
         return result
