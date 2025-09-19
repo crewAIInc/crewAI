@@ -138,6 +138,7 @@ ignore = ["E501"]  # ignore line too long globally
 
 [tool.mypy]
 exclude = ["src/crewai/cli/templates", "tests/"]
+plugins = ["pydantic.mypy"]
 
 
 [tool.bandit]
