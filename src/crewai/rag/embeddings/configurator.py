@@ -1,5 +1,5 @@
 import os
-from typing import Any, Dict, Optional, cast
+from typing import Any, cast
 
 from chromadb import Documents, EmbeddingFunction, Embeddings
 from chromadb.api.types import validate_embedding_function
@@ -23,7 +23,7 @@ class EmbeddingConfigurator:
 
     def configure_embedder(
         self,
-        embedder_config: Optional[Dict[str, Any]] = None,
+        embedder_config: dict[str, Any] | None = None,
     ) -> EmbeddingFunction:
         """Configures and returns an embedding function based on the provided config."""
         if embedder_config is None:
@@ -42,9 +42,9 @@ class EmbeddingConfigurator:
             embedding_function = self.embedding_functions[provider]
         except ImportError as e:
             missing_package = str(e).split()[-1]
-            raise ImportError( 
+            raise ImportError(
                 f"{missing_package} is not installed. Please install it with: pip install {missing_package}"
-            )
+            ) from e
 
         return (
             embedding_function(config)
@@ -147,7 +147,7 @@ class EmbeddingConfigurator:
 
     @staticmethod
     def _configure_voyageai(config, model_name):
-        from chromadb.utils.embedding_functions.voyageai_embedding_function import (
+        from chromadb.utils.embedding_functions.voyageai_embedding_function import (  # type: ignore[import-not-found]
             VoyageAIEmbeddingFunction,
         )
 
@@ -181,9 +181,11 @@ class EmbeddingConfigurator:
     @staticmethod
     def _configure_watson(config, model_name):
         try:
-            import ibm_watsonx_ai.foundation_models as watson_models
-            from ibm_watsonx_ai import Credentials
-            from ibm_watsonx_ai.metanames import EmbedTextParamsMetaNames as EmbedParams
+            import ibm_watsonx_ai.foundation_models as watson_models  # type: ignore[import-not-found]
+            from ibm_watsonx_ai import Credentials  # type: ignore[import-not-found]
+            from ibm_watsonx_ai.metanames import (  # type: ignore[import-not-found]
+                EmbedTextParamsMetaNames as EmbedParams,
+            )
         except ImportError as e:
             raise ImportError(
                 "IBM Watson dependencies are not installed. Please install them to use Watson embedding."
@@ -225,7 +227,7 @@ class EmbeddingConfigurator:
                 validate_embedding_function(custom_embedder)
                 return custom_embedder
             except Exception as e:
-                raise ValueError(f"Invalid custom embedding function: {str(e)}")
+                raise ValueError(f"Invalid custom embedding function: {e!s}") from e
         elif callable(custom_embedder):
             try:
                 instance = custom_embedder()
@@ -236,7 +238,7 @@ class EmbeddingConfigurator:
                     "Custom embedder does not create an EmbeddingFunction instance"
                 )
             except Exception as e:
-                raise ValueError(f"Error instantiating custom embedder: {str(e)}")
+                raise ValueError(f"Error instantiating custom embedder: {e!s}") from e
         else:
             raise ValueError(
                 "Custom embedder must be an instance of `EmbeddingFunction` or a callable that creates one"
