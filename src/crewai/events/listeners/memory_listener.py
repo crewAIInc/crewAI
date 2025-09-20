@@ -1,12 +1,12 @@
 from crewai.events.base_event_listener import BaseEventListener
 from crewai.events.types.memory_events import (
+    MemoryQueryCompletedEvent,
+    MemoryQueryFailedEvent,
     MemoryRetrievalCompletedEvent,
     MemoryRetrievalStartedEvent,
-    MemoryQueryFailedEvent,
-    MemoryQueryCompletedEvent,
-    MemorySaveStartedEvent,
     MemorySaveCompletedEvent,
     MemorySaveFailedEvent,
+    MemorySaveStartedEvent,
 )
 
 
