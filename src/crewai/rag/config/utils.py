@@ -4,14 +4,14 @@ from contextvars import ContextVar
 
 from pydantic import BaseModel, Field
 
-from crewai.utilities.import_utils import require
-from crewai.rag.core.base_client import BaseClient
-from crewai.rag.config.types import RagConfigType
 from crewai.rag.config.constants import (
-    DEFAULT_RAG_CONFIG_PATH,
     DEFAULT_RAG_CONFIG_CLASS,
+    DEFAULT_RAG_CONFIG_PATH,
 )
+from crewai.rag.config.types import RagConfigType
+from crewai.rag.core.base_client import BaseClient
 from crewai.rag.factory import create_client
+from crewai.utilities.import_utils import require
 
 
 class RagContext(BaseModel):
