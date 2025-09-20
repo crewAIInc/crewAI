@@ -55,7 +55,7 @@ class BaseTool(BaseModel, ABC):
     def _default_args_schema(
         cls, v: type[PydanticBaseModel]
     ) -> type[PydanticBaseModel]:
-        if not isinstance(v, cls._ArgsSchemaPlaceholder):
+        if v != cls._ArgsSchemaPlaceholder:
             return v
 
         return type(
