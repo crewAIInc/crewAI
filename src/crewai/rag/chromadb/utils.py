@@ -5,13 +5,14 @@ from collections.abc import Mapping
 from typing import Literal, TypeGuard, cast
 
 from chromadb.api import AsyncClientAPI, ClientAPI
+from chromadb.api.models.AsyncCollection import AsyncCollection
+from chromadb.api.models.Collection import Collection
 from chromadb.api.types import (
     Include,
     IncludeEnum,
     QueryResult,
 )
-from chromadb.api.models.AsyncCollection import AsyncCollection
-from chromadb.api.models.Collection import Collection
+
 from crewai.rag.chromadb.constants import (
     DEFAULT_COLLECTION,
     INVALID_CHARS_PATTERN,
@@ -78,7 +79,7 @@ def _prepare_documents_for_chromadb(
         metadata = doc.get("metadata")
         if metadata:
             if isinstance(metadata, list):
-                metadatas.append(metadata[0] if metadata else {})
+                metadatas.append(metadata[0] if metadata and metadata[0] else {})
             else:
                 metadatas.append(metadata)
         else:
@@ -132,6 +133,9 @@ def _convert_distance_to_score(
     if distance_metric == "cosine":
         score = 1.0 - 0.5 * distance
         return max(0.0, min(1.0, score))
+    if distance_metric == "l2":
+        score = 1.0 / (1.0 + distance)
+        return max(0.0, min(1.0, score))
     raise ValueError(f"Unsupported distance metric: {distance_metric}")
 
 
@@ -154,7 +158,7 @@ def _convert_chromadb_results_to_search_results(
     """
     search_results: list[SearchResult] = []
 
-    include_strings = [item.value for item in include]
+    include_strings = [item.value for item in include] if include else []
 
     ids = results["ids"][0] if results.get("ids") else []
 
@@ -188,7 +192,9 @@ def _convert_chromadb_results_to_search_results(
         result: SearchResult = {
             "id": doc_id,
             "content": documents[i] if documents and i < len(documents) else "",
-            "metadata": dict(metadatas[i]) if metadatas and i < len(metadatas) else {},
+            "metadata": dict(metadatas[i])
+            if metadatas and i < len(metadatas) and metadatas[i] is not None
+            else {},
             "score": score,
         }
         search_results.append(result)
@@ -271,7 +277,7 @@ def _sanitize_collection_name(
         sanitized = sanitized[:-1] + "z"
 
     if len(sanitized) < MIN_COLLECTION_LENGTH:
-        sanitized = sanitized + "x" * (MIN_COLLECTION_LENGTH - len(sanitized))
+        sanitized += "x" * (MIN_COLLECTION_LENGTH - len(sanitized))
     if len(sanitized) > max_collection_length:
         sanitized = sanitized[:max_collection_length]
         if not sanitized[-1].isalnum():

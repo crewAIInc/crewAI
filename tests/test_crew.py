@@ -918,7 +918,7 @@ def test_cache_hitting_between_agents(researcher, writer, ceo):
 
         # Check if both calls were made with the expected arguments
         expected_call = call(
-            tool="multiplier", input={"first_number": 2, "second_number": 6}
+            tool="multiplier", input='{"first_number": 2, "second_number": 6}'
         )
         assert cache_calls[0] == expected_call, f"First call mismatch: {cache_calls[0]}"
         assert cache_calls[1] == expected_call, (
@@ -2229,7 +2229,7 @@ def test_tools_with_custom_caching():
         # Verify that one of those calls was with the even number that should be cached
         add_to_cache.assert_any_call(
             tool="multiplcation_tool",
-            input={"first_number": 2, "second_number": 6},
+            input='{"first_number": 2, "second_number": 6}',
             output=12,
         )
 
@@ -3818,10 +3818,7 @@ def test_task_tools_preserve_code_execution_tools():
     """
     Test that task tools don't override code execution tools when allow_code_execution=True
     """
-
-    # Mock embedchain initialization to prevent race conditions in parallel CI execution
-    with patch("embedchain.client.Client.setup"):
-        from crewai_tools import CodeInterpreterTool
+    from crewai_tools import CodeInterpreterTool
     from pydantic import BaseModel, Field
 
     from crewai.tools import BaseTool

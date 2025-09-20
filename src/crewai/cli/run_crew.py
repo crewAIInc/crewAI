@@ -1,6 +1,5 @@
 import subprocess
 from enum import Enum
-from typing import List, Optional
 
 import click
 from packaging import version
@@ -57,7 +56,7 @@ def execute_command(crew_type: CrewType) -> None:
     command = ["uv", "run", "kickoff" if crew_type == CrewType.FLOW else "run_crew"]
 
     try:
-        subprocess.run(command, capture_output=False, text=True, check=True)
+        subprocess.run(command, capture_output=False, text=True, check=True)  # noqa: S603
 
     except subprocess.CalledProcessError as e:
         handle_error(e, crew_type)

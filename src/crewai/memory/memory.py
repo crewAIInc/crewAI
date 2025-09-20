@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Optional
 
 from pydantic import BaseModel
 
@@ -12,8 +12,8 @@ class Memory(BaseModel):
     Base class for memory, now supporting agent tags and generic metadata.
     """
 
-    embedder_config: Optional[Dict[str, Any]] = None
-    crew: Optional[Any] = None
+    embedder_config: dict[str, Any] | None = None
+    crew: Any | None = None
 
     storage: Any
     _agent: Optional["Agent"] = None
@@ -45,7 +45,7 @@ class Memory(BaseModel):
     def save(
         self,
         value: Any,
-        metadata: Optional[Dict[str, Any]] = None,
+        metadata: dict[str, Any] | None = None,
     ) -> None:
         metadata = metadata or {}
 
@@ -54,9 +54,9 @@ class Memory(BaseModel):
     def search(
         self,
         query: str,
-        limit: int = 3,
-        score_threshold: float = 0.35,
-    ) -> List[Any]:
+        limit: int = 5,
+        score_threshold: float = 0.6,
+    ) -> list[Any]:
         return self.storage.search(
             query=query, limit=limit, score_threshold=score_threshold
         )

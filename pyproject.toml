@@ -48,7 +48,7 @@ Documentation = "https://docs.crewai.com"
 Repository = "https://github.com/crewAIInc/crewAI"
 
 [project.optional-dependencies]
-tools = ["crewai-tools~=0.71.0"]
+tools = ["crewai-tools~=0.73.0"]
 embeddings = [
     "tiktoken~=0.8.0"
 ]
@@ -131,13 +131,15 @@ select = [
     "I001",   # sort imports
     "I002",   # remove unused imports
 ]
-ignore = ["E501"]  # ignore line too long
+ignore = ["E501"]  # ignore line too long globally
 
 [tool.ruff.lint.per-file-ignores]
-"tests/**/*.py" = ["S101"]  # Allow assert statements in tests
+"tests/**/*.py" = ["S101", "RET504"]  # Allow assert statements and unnecessary assignments before return in tests
 
 [tool.mypy]
-exclude = ["src/crewai/cli/templates", "tests"]
+exclude = ["src/crewai/cli/templates", "tests/"]
+plugins = ["pydantic.mypy"]
+
 
 [tool.bandit]
 exclude_dirs = ["src/crewai/cli/templates"]

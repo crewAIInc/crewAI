@@ -1,5 +1,8 @@
+from collections.abc import Callable
 from datetime import datetime
-from typing import Any, Callable, Dict, Optional
+from typing import Any
+
+from pydantic import ConfigDict
 
 from crewai.events.base_events import BaseEvent
 
@@ -7,21 +10,21 @@ from crewai.events.base_events import BaseEvent
 class ToolUsageEvent(BaseEvent):
     """Base event for tool usage tracking"""
 
-    agent_key: Optional[str] = None
-    agent_role: Optional[str] = None
-    agent_id: Optional[str] = None
+    agent_key: str | None = None
+    agent_role: str | None = None
+    agent_id: str | None = None
     tool_name: str
-    tool_args: Dict[str, Any] | str
-    tool_class: Optional[str] = None
+    tool_args: dict[str, Any] | str
+    tool_class: str | None = None
     run_attempts: int | None = None
     delegations: int | None = None
-    agent: Optional[Any] = None
-    task_name: Optional[str] = None
-    task_id: Optional[str] = None
-    from_task: Optional[Any] = None
-    from_agent: Optional[Any] = None
+    agent: Any | None = None
+    task_name: str | None = None
+    task_id: str | None = None
+    from_task: Any | None = None
+    from_agent: Any | None = None
 
-    model_config = {"arbitrary_types_allowed": True}
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     def __init__(self, **data):
         super().__init__(**data)
@@ -81,9 +84,9 @@ class ToolExecutionErrorEvent(BaseEvent):
     error: Any
     type: str = "tool_execution_error"
     tool_name: str
-    tool_args: Dict[str, Any]
+    tool_args: dict[str, Any]
     tool_class: Callable
-    agent: Optional[Any] = None
+    agent: Any | None = None
 
     def __init__(self, **data):
         super().__init__(**data)

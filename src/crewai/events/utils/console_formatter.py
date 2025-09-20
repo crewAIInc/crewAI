@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, ClassVar
 
 from rich.console import Console
 from rich.live import Live
@@ -16,6 +16,7 @@ class ConsoleFormatter:
     current_flow_tree: Tree | None = None
     current_method_branch: Tree | None = None
     current_lite_agent_branch: Tree | None = None
+    tool_usage_counts: ClassVar[dict[str, int]] = {}
     current_reasoning_branch: Tree | None = None  # Track reasoning status
     _live_paused: bool = False
     current_llm_tool_tree: Tree | None = None
@@ -1589,12 +1590,10 @@ class ConsoleFormatter:
 
         for child in branch_to_use.children:
             if "Memory Retrieval" in str(child.label):
-                sources_branch = None
-
-                # Try to find an existing "Sources Used" branch
-                for sub_child in child.children:
-                    if "Sources Used" in str(sub_child.label):
-                        sources_branch = sub_child
+                for inner_child in child.children:
+                    sources_branch = inner_child
+                    if "Sources Used" in str(inner_child.label):
+                        sources_branch.add(f"✅ {memory_type} ({query_time_ms:.2f}ms)")
                         break
 
                 # If not found, create it under this child
@@ -1628,12 +1627,10 @@ class ConsoleFormatter:
 
         for child in branch_to_use.children:
             if "Memory Retrieval" in str(child.label):
-                sources_branch = None
-
-                # Try to find an existing "Sources Used" branch
-                for sub_child in child.children:
-                    if "Sources Used" in str(sub_child.label):
-                        sources_branch = sub_child
+                for inner_child in child.children:
+                    sources_branch = inner_child
+                    if "Sources Used" in str(inner_child.label):
+                        sources_branch.add(f"❌ {memory_type} - Error: {error}")
                         break
 
                 # If not found, create it under this child
