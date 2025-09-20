@@ -55,41 +55,145 @@ def _get_machine_id() -> str:
         )
         parts.append(mac)
     except Exception:
-        logger.warning("Error getting machine id for fingerprinting")
+        pass
 
-    sysname = platform.system()
-    parts.append(sysname)
+    try:
+        sysname = platform.system()
+        parts.append(sysname)
+    except Exception:
+        sysname = "unknown"
+        parts.append(sysname)
 
     try:
         if sysname == "Darwin":
-            res = subprocess.run(
-                ["/usr/sbin/system_profiler", "SPHardwareDataType"],
-                capture_output=True,
-                text=True,
-                timeout=2,
-            )
-            m = re.search(r"Hardware UUID:\s*([A-Fa-f0-9\-]+)", res.stdout)
-            if m:
-                parts.append(m.group(1))
-        elif sysname == "Linux":
             try:
-                parts.append(Path("/etc/machine-id").read_text().strip())
-            except Exception:
-                parts.append(Path("/sys/class/dmi/id/product_uuid").read_text().strip())
+                res = subprocess.run(
+                    ["/usr/sbin/system_profiler", "SPHardwareDataType"],
+                    capture_output=True,
+                    text=True,
+                    timeout=2,
+                )
+                m = re.search(r"Hardware UUID:\s*([A-Fa-f0-9\-]+)", res.stdout)
+                if m:
+                    parts.append(m.group(1))
+            except Exception as e:
+                pass
+
+        elif sysname == "Linux":
+            linux_id = _get_linux_machine_id()
+            if linux_id:
+                parts.append(linux_id)
+
         elif sysname == "Windows":
-            res = subprocess.run(
-                ["C:\\Windows\\System32\\wbem\\wmic.exe", "csproduct", "get", "UUID"],
-                capture_output=True,
-                text=True,
-                timeout=2,
-            )
-            lines = [line.strip() for line in res.stdout.splitlines() if line.strip()]
-            if len(lines) >= 2:
-                parts.append(lines[1])
-    except Exception:
-        logger.exception("Error getting machine ID")
+            try:
+                res = subprocess.run(
+                    ["C:\\Windows\\System32\\wbem\\wmic.exe", "csproduct", "get", "UUID"],
+                    capture_output=True,
+                    text=True,
+                    timeout=2,
+                )
+                lines = [line.strip() for line in res.stdout.splitlines() if line.strip()]
+                if len(lines) >= 2:
+                    parts.append(lines[1])
+            except Exception as e:
+                pass
+        else:
+            generic_id = _get_generic_system_id()
+            if generic_id:
+                parts.append(generic_id)
+
+    except Exception as e:
+        pass
+
+    if len(parts) <= 1:
+        try:
+            import socket
+            parts.append(socket.gethostname())
+        except Exception:
+            pass
+
+        try:
+            parts.append(getpass.getuser())
+        except Exception:
+            pass
+
+        try:
+            parts.append(platform.machine())
+            parts.append(platform.processor())
+        except Exception:
+            pass
+
+    if not parts:
+        parts.append("unknown-system")
+        parts.append(str(uuid.uuid4()))
 
     return hashlib.sha256("".join(parts).encode()).hexdigest()
+
+
+def _get_linux_machine_id() -> str | None:
+    linux_id_sources = [
+        "/etc/machine-id",
+        "/sys/class/dmi/id/product_uuid",
+        "/proc/sys/kernel/random/boot_id",
+        "/sys/class/dmi/id/board_serial",
+        "/sys/class/dmi/id/chassis_serial",
+    ]
+
+    for source in linux_id_sources:
+        try:
+            path = Path(source)
+            if path.exists() and path.is_file():
+                content = path.read_text().strip()
+                if content and content.lower() not in ['unknown', 'to be filled by o.e.m.', '']:
+                    return content
+        except Exception as e:
+            continue
+
+    try:
+        import socket
+        hostname = socket.gethostname()
+        arch = platform.machine()
+        if hostname and arch:
+            return f"{hostname}-{arch}"
+    except Exception as e:
+        pass
+
+    return None
+
+
+def _get_generic_system_id() -> str | None:
+    try:
+        parts = []
+
+        try:
+            import socket
+            hostname = socket.gethostname()
+            if hostname:
+                parts.append(hostname)
+        except Exception:
+            pass
+
+        try:
+            parts.append(platform.machine())
+            parts.append(platform.processor())
+            parts.append(platform.architecture()[0])
+        except Exception:
+            pass
+
+        try:
+            container_id = os.environ.get('HOSTNAME', os.environ.get('CONTAINER_ID', ''))
+            if container_id:
+                parts.append(container_id)
+        except Exception:
+            pass
+
+        if parts:
+            return "-".join(filter(None, parts))
+
+    except Exception as e:
+        pass
+
+    return None
 
 
 def _user_data_file() -> Path:
