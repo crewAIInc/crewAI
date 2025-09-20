@@ -60,7 +60,7 @@ def _get_machine_id() -> str:
     try:
         sysname = platform.system()
         parts.append(sysname)
-    except Exception:  # noqa: S110
+    except Exception:
         sysname = "unknown"
         parts.append(sysname)
 
@@ -76,7 +76,7 @@ def _get_machine_id() -> str:
                 m = re.search(r"Hardware UUID:\s*([A-Fa-f0-9\-]+)", res.stdout)
                 if m:
                     parts.append(m.group(1))
-            except Exception as e:
+            except Exception:  # noqa: S110
                 pass
 
         elif sysname == "Linux":
@@ -87,27 +87,35 @@ def _get_machine_id() -> str:
         elif sysname == "Windows":
             try:
                 res = subprocess.run(
-                    ["C:\\Windows\\System32\\wbem\\wmic.exe", "csproduct", "get", "UUID"],
+                    [
+                        "C:\\Windows\\System32\\wbem\\wmic.exe",
+                        "csproduct",
+                        "get",
+                        "UUID",
+                    ],
                     capture_output=True,
                     text=True,
                     timeout=2,
                 )
-                lines = [line.strip() for line in res.stdout.splitlines() if line.strip()]
+                lines = [
+                    line.strip() for line in res.stdout.splitlines() if line.strip()
+                ]
                 if len(lines) >= 2:
                     parts.append(lines[1])
-            except Exception as e:
+            except Exception:  # noqa: S110
                 pass
         else:
             generic_id = _get_generic_system_id()
             if generic_id:
                 parts.append(generic_id)
 
-    except Exception as e:
+    except Exception:  # noqa: S110
         pass
 
     if len(parts) <= 1:
         try:
             import socket
+
             parts.append(socket.gethostname())
         except Exception:  # noqa: S110
             pass
@@ -144,18 +152,23 @@ def _get_linux_machine_id() -> str | None:
             path = Path(source)
             if path.exists() and path.is_file():
                 content = path.read_text().strip()
-                if content and content.lower() not in ['unknown', 'to be filled by o.e.m.', '']:
+                if content and content.lower() not in [
+                    "unknown",
+                    "to be filled by o.e.m.",
+                    "",
+                ]:
                     return content
-        except Exception as e:
+        except Exception:  # noqa: S112, PERF203
             continue
 
     try:
         import socket
+
         hostname = socket.gethostname()
         arch = platform.machine()
         if hostname and arch:
             return f"{hostname}-{arch}"
-    except Exception as e:
+    except Exception:  # noqa: S110
         pass
 
     return None
@@ -167,6 +180,7 @@ def _get_generic_system_id() -> str | None:
 
         try:
             import socket
+
             hostname = socket.gethostname()
             if hostname:
                 parts.append(hostname)
@@ -181,7 +195,9 @@ def _get_generic_system_id() -> str | None:
             pass
 
         try:
-            container_id = os.environ.get('HOSTNAME', os.environ.get('CONTAINER_ID', ''))
+            container_id = os.environ.get(
+                "HOSTNAME", os.environ.get("CONTAINER_ID", "")
+            )
             if container_id:
                 parts.append(container_id)
         except Exception:  # noqa: S110
@@ -190,7 +206,7 @@ def _get_generic_system_id() -> str | None:
         if parts:
             return "-".join(filter(None, parts))
 
-    except Exception as e:
+    except Exception:  # noqa: S110
         pass
 
     return None
@@ -229,7 +245,7 @@ def get_user_id() -> str:
 
     try:
         username = getpass.getuser()
-    except Exception:  # noqa: S110
+    except Exception:
         username = "unknown"
 
     seed = f"{username}|{_get_machine_id()}"
@@ -354,7 +370,7 @@ def prompt_user_for_trace_viewing(timeout_seconds: int = 20) -> bool:
 
         return result[0]
 
-    except Exception:  # noqa: S110
+    except Exception:
         return False
 
 
