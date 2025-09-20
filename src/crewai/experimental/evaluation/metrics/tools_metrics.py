@@ -1,22 +1,26 @@
 import json
-from typing import Dict, Any
+from typing import Any
 
-from crewai.experimental.evaluation.base_evaluator import BaseEvaluator, EvaluationScore, MetricCategory
-from crewai.experimental.evaluation.json_parser import extract_json_from_llm_response
 from crewai.agent import Agent
+from crewai.agents.agent_builder.base_agent import BaseAgent
+from crewai.experimental.evaluation.base_evaluator import (
+    BaseEvaluator,
+    EvaluationScore,
+    MetricCategory,
+)
+from crewai.experimental.evaluation.json_parser import extract_json_from_llm_response
 from crewai.task import Task
 
 
 class ToolSelectionEvaluator(BaseEvaluator):
-
     @property
     def metric_category(self) -> MetricCategory:
         return MetricCategory.TOOL_SELECTION
 
     def evaluate(
         self,
-        agent: Agent,
-        execution_trace: Dict[str, Any],
+        agent: Agent | BaseAgent,
+        execution_trace: dict[str, Any],
         final_output: str,
         task: Task | None = None,
     ) -> EvaluationScore:
@@ -26,19 +30,18 @@ class ToolSelectionEvaluator(BaseEvaluator):
 
         tool_uses = execution_trace.get("tool_uses", [])
         tool_count = len(tool_uses)
-        unique_tool_types = set([tool.get("tool", "Unknown tool") for tool in tool_uses])
+        unique_tool_types = set(
+            [tool.get("tool", "Unknown tool") for tool in tool_uses]
+        )
 
         if tool_count == 0:
             if not agent.tools:
                 return EvaluationScore(
-                    score=None,
-                    feedback="Agent had no tools available to use."
+                    score=None, feedback="Agent had no tools available to use."
                 )
-            else:
-                return EvaluationScore(
-                    score=None,
-                    feedback="Agent had tools available but didn't use any."
-                )
+            return EvaluationScore(
+                score=None, feedback="Agent had tools available but didn't use any."
+            )
 
         available_tools_info = ""
         if agent.tools:
@@ -52,7 +55,9 @@ class ToolSelectionEvaluator(BaseEvaluator):
             tool_types_summary += f"- {tool_type}\n"
 
         prompt = [
-            {"role": "system", "content": """You are an expert evaluator assessing if an AI agent selected the most appropriate tools for a given task.
+            {
+                "role": "system",
+                "content": """You are an expert evaluator assessing if an AI agent selected the most appropriate tools for a given task.
 
 You must evaluate based on these 2 criteria:
 1. Relevance (0-10): Were the tools chosen directly aligned with the task's goals?
@@ -73,8 +78,11 @@ Return your evaluation as JSON with these fields:
 - overall_score: number (average of all scores, 0-10)
 - feedback: string (focused ONLY on tool selection decisions from available tools)
 - improvement_suggestions: string (ONLY suggest better selection from the AVAILABLE tools list, NOT new tools)
-"""},
-            {"role": "user", "content": f"""
+""",
+            },
+            {
+                "role": "user",
+                "content": f"""
 Agent role: {agent.role}
 {task_context}
 
@@ -89,14 +97,17 @@ IMPORTANT:
 - ONLY evaluate selection from tools listed as available
 - DO NOT suggest new tools that aren't in the available tools list
 - DO NOT evaluate tool usage or results
-"""}
+""",
+            },
         ]
-        assert self.llm is not None
+        if self.llm is None:
+            raise ValueError("LLM must be initialized")
         response = self.llm.call(prompt)
 
         try:
             evaluation_data = extract_json_from_llm_response(response)
-            assert evaluation_data is not None
+            if evaluation_data is None:
+                raise ValueError("Failed to extract evaluation data from LLM response")
 
             scores = evaluation_data.get("scores", {})
             relevance = scores.get("relevance", 5.0)
@@ -105,22 +116,24 @@ IMPORTANT:
 
             feedback = "Tool Selection Evaluation:\n"
             feedback += f"• Relevance: {relevance}/10 - Selection of appropriate tool types for the task\n"
-            feedback += f"• Coverage: {coverage}/10 - Selection of all necessary tool types\n"
+            feedback += (
+                f"• Coverage: {coverage}/10 - Selection of all necessary tool types\n"
+            )
             if "improvement_suggestions" in evaluation_data:
                 feedback += f"Improvement Suggestions:\n{evaluation_data['improvement_suggestions']}"
             else:
-                feedback += evaluation_data.get("feedback", "No detailed feedback available.")
+                feedback += evaluation_data.get(
+                    "feedback", "No detailed feedback available."
+                )
 
             return EvaluationScore(
-                score=overall_score,
-                feedback=feedback,
-                raw_response=response
+                score=overall_score, feedback=feedback, raw_response=response
             )
         except Exception as e:
             return EvaluationScore(
                 score=None,
                 feedback=f"Error evaluating tool selection: {e}",
-                raw_response=response
+                raw_response=response,
             )
 
 
@@ -131,8 +144,8 @@ class ParameterExtractionEvaluator(BaseEvaluator):
 
     def evaluate(
         self,
-        agent: Agent,
-        execution_trace: Dict[str, Any],
+        agent: Agent | BaseAgent,
+        execution_trace: dict[str, Any],
         final_output: str,
         task: Task | None = None,
     ) -> EvaluationScore:
@@ -145,19 +158,23 @@ class ParameterExtractionEvaluator(BaseEvaluator):
         if tool_count == 0:
             return EvaluationScore(
                 score=None,
-                feedback="No tool usage detected. Cannot evaluate parameter extraction."
+                feedback="No tool usage detected. Cannot evaluate parameter extraction.",
             )
 
-        validation_errors = []
-        for tool_use in tool_uses:
-            if not tool_use.get("success", True) and tool_use.get("error_type") == "validation_error":
-                validation_errors.append({
-                    "tool": tool_use.get("tool", "Unknown tool"),
-                    "error": tool_use.get("result"),
-                    "args": tool_use.get("args", {})
-                })
+        validation_errors = [
+            {
+                "tool": tool_use.get("tool", "Unknown tool"),
+                "error": tool_use.get("result"),
+                "args": tool_use.get("args", {}),
+            }
+            for tool_use in tool_uses
+            if not tool_use.get("success", True)
+            and tool_use.get("error_type") == "validation_error"
+        ]
 
-        validation_error_rate = len(validation_errors) / tool_count if tool_count > 0 else 0
+        validation_error_rate = (
+            len(validation_errors) / tool_count if tool_count > 0 else 0
+        )
 
         param_samples = []
         for i, tool_use in enumerate(tool_uses[:5]):
@@ -168,7 +185,7 @@ class ParameterExtractionEvaluator(BaseEvaluator):
 
             is_validation_error = error_type == "validation_error"
 
-            sample = f"Tool use #{i+1} - {tool_name}:\n"
+            sample = f"Tool use #{i + 1} - {tool_name}:\n"
             sample += f"- Parameters: {json.dumps(tool_args, indent=2)}\n"
             sample += f"- Success: {'No' if not success else 'Yes'}"
 
@@ -187,13 +204,17 @@ class ParameterExtractionEvaluator(BaseEvaluator):
                 tool_name = err.get("tool", "Unknown tool")
                 error_msg = err.get("error", "Unknown error")
                 args = err.get("args", {})
-                validation_errors_info += f"\nValidation Error #{i+1}:\n- Tool: {tool_name}\n- Args: {json.dumps(args, indent=2)}\n- Error: {error_msg}"
+                validation_errors_info += f"\nValidation Error #{i + 1}:\n- Tool: {tool_name}\n- Args: {json.dumps(args, indent=2)}\n- Error: {error_msg}"
 
             if len(validation_errors) > 3:
-                validation_errors_info += f"\n...and {len(validation_errors) - 3} more validation errors."
+                validation_errors_info += (
+                    f"\n...and {len(validation_errors) - 3} more validation errors."
+                )
         param_samples_text = "\n\n".join(param_samples)
         prompt = [
-            {"role": "system", "content": """You are an expert evaluator assessing how well an AI agent extracts and formats PARAMETER VALUES for tool calls.
+            {
+                "role": "system",
+                "content": """You are an expert evaluator assessing how well an AI agent extracts and formats PARAMETER VALUES for tool calls.
 
 Your job is to evaluate ONLY whether the agent used the correct parameter VALUES, not whether the right tools were selected or how the tools were invoked.
 
@@ -216,8 +237,11 @@ Return your evaluation as JSON with these fields:
 - overall_score: number (average of all scores, 0-10)
 - feedback: string (focused ONLY on parameter value extraction quality)
 - improvement_suggestions: string (concrete suggestions for better parameter VALUE extraction)
-"""},
-            {"role": "user", "content": f"""
+""",
+            },
+            {
+                "role": "user",
+                "content": f"""
 Agent role: {agent.role}
 {task_context}
 
@@ -226,15 +250,18 @@ Parameter extraction examples:
 {validation_errors_info}
 
 Evaluate the quality of the agent's parameter extraction for this task.
-"""}
+""",
+            },
         ]
 
-        assert self.llm is not None
+        if self.llm is None:
+            raise ValueError("LLM must be initialized")
         response = self.llm.call(prompt)
 
         try:
             evaluation_data = extract_json_from_llm_response(response)
-            assert evaluation_data is not None
+            if evaluation_data is None:
+                raise ValueError("Failed to extract evaluation data from LLM response")
 
             scores = evaluation_data.get("scores", {})
             accuracy = scores.get("accuracy", 5.0)
@@ -251,18 +278,18 @@ Evaluate the quality of the agent's parameter extraction for this task.
             if "improvement_suggestions" in evaluation_data:
                 feedback += f"Improvement Suggestions:\n{evaluation_data['improvement_suggestions']}"
             else:
-                feedback += evaluation_data.get("feedback", "No detailed feedback available.")
+                feedback += evaluation_data.get(
+                    "feedback", "No detailed feedback available."
+                )
 
             return EvaluationScore(
-                score=overall_score,
-                feedback=feedback,
-                raw_response=response
+                score=overall_score, feedback=feedback, raw_response=response
             )
         except Exception as e:
             return EvaluationScore(
                 score=None,
                 feedback=f"Error evaluating parameter extraction: {e}",
-                raw_response=response
+                raw_response=response,
             )
 
 
@@ -273,8 +300,8 @@ class ToolInvocationEvaluator(BaseEvaluator):
 
     def evaluate(
         self,
-        agent: Agent,
-        execution_trace: Dict[str, Any],
+        agent: Agent | BaseAgent,
+        execution_trace: dict[str, Any],
         final_output: str,
         task: Task | None = None,
     ) -> EvaluationScore:
@@ -288,7 +315,7 @@ class ToolInvocationEvaluator(BaseEvaluator):
         if tool_count == 0:
             return EvaluationScore(
                 score=None,
-                feedback="No tool usage detected. Cannot evaluate tool invocation."
+                feedback="No tool usage detected. Cannot evaluate tool invocation.",
             )
 
         for tool_use in tool_uses:
@@ -296,7 +323,7 @@ class ToolInvocationEvaluator(BaseEvaluator):
                 error_info = {
                     "tool": tool_use.get("tool", "Unknown tool"),
                     "error": tool_use.get("result"),
-                    "error_type": tool_use.get("error_type", "unknown_error")
+                    "error_type": tool_use.get("error_type", "unknown_error"),
                 }
                 tool_errors.append(error_info)
 
@@ -315,9 +342,11 @@ class ToolInvocationEvaluator(BaseEvaluator):
             tool_args = tool_use.get("args", {})
             success = tool_use.get("success", True) and not tool_use.get("error", False)
             error_type = tool_use.get("error_type", "") if not success else ""
-            error_msg = tool_use.get("result", "No error") if not success else "No error"
+            error_msg = (
+                tool_use.get("result", "No error") if not success else "No error"
+            )
 
-            sample = f"Tool invocation #{i+1}:\n"
+            sample = f"Tool invocation #{i + 1}:\n"
             sample += f"- Tool: {tool_name}\n"
             sample += f"- Parameters: {json.dumps(tool_args, indent=2)}\n"
             sample += f"- Success: {'No' if not success else 'Yes'}\n"
@@ -330,11 +359,13 @@ class ToolInvocationEvaluator(BaseEvaluator):
         if error_types:
             error_type_summary = "Error type breakdown:\n"
             for error_type, count in error_types.items():
-                error_type_summary += f"- {error_type}: {count} occurrences ({(count/tool_count):.1%})\n"
+                error_type_summary += f"- {error_type}: {count} occurrences ({(count / tool_count):.1%})\n"
 
         invocation_samples_text = "\n\n".join(invocation_samples)
         prompt = [
-            {"role": "system", "content": """You are an expert evaluator assessing how correctly an AI agent's tool invocations are STRUCTURED.
+            {
+                "role": "system",
+                "content": """You are an expert evaluator assessing how correctly an AI agent's tool invocations are STRUCTURED.
 
 Your job is to evaluate ONLY the structural and syntactical aspects of how the agent called tools, NOT which tools were selected or what parameter values were used.
 
@@ -359,8 +390,11 @@ Return your evaluation as JSON with these fields:
 - overall_score: number (average of all scores, 0-10)
 - feedback: string (focused ONLY on structural aspects of tool invocation)
 - improvement_suggestions: string (concrete suggestions for better structuring of tool calls)
-"""},
-            {"role": "user", "content": f"""
+""",
+            },
+            {
+                "role": "user",
+                "content": f"""
 Agent role: {agent.role}
 {task_context}
 
@@ -371,15 +405,18 @@ Tool error rate: {error_rate:.2%} ({len(tool_errors)} errors out of {tool_count}
 {error_type_summary}
 
 Evaluate the quality of the agent's tool invocation structure during this task.
-"""}
+""",
+            },
         ]
 
-        assert self.llm is not None
+        if self.llm is None:
+            raise ValueError("LLM must be initialized")
         response = self.llm.call(prompt)
 
         try:
             evaluation_data = extract_json_from_llm_response(response)
-            assert evaluation_data is not None
+            if evaluation_data is None:
+                raise ValueError("Failed to extract evaluation data from LLM response")
             scores = evaluation_data.get("scores", {})
             structure = scores.get("structure", 5.0)
             error_handling = scores.get("error_handling", 5.0)
@@ -388,23 +425,25 @@ Evaluate the quality of the agent's tool invocation structure during this task.
             overall_score = float(evaluation_data.get("overall_score", 5.0))
 
             feedback = "Tool Invocation Evaluation:\n"
-            feedback += f"• Structure: {structure}/10 - Following proper syntax and format\n"
+            feedback += (
+                f"• Structure: {structure}/10 - Following proper syntax and format\n"
+            )
             feedback += f"• Error Handling: {error_handling}/10 - Appropriately handling tool errors\n"
             feedback += f"• Invocation Patterns: {invocation_patterns}/10 - Proper sequencing and management of calls\n\n"
 
             if "improvement_suggestions" in evaluation_data:
                 feedback += f"Improvement Suggestions:\n{evaluation_data['improvement_suggestions']}"
             else:
-                feedback += evaluation_data.get("feedback", "No detailed feedback available.")
+                feedback += evaluation_data.get(
+                    "feedback", "No detailed feedback available."
+                )
 
             return EvaluationScore(
-                score=overall_score,
-                feedback=feedback,
-                raw_response=response
+                score=overall_score, feedback=feedback, raw_response=response
             )
         except Exception as e:
             return EvaluationScore(
                 score=None,
                 feedback=f"Error evaluating tool invocation: {e}",
-                raw_response=response
+                raw_response=response,
             )

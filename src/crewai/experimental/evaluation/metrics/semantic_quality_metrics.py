@@ -1,10 +1,15 @@
-from typing import Any, Dict
+from typing import Any
 
 from crewai.agent import Agent
+from crewai.agents.agent_builder.base_agent import BaseAgent
+from crewai.experimental.evaluation.base_evaluator import (
+    BaseEvaluator,
+    EvaluationScore,
+    MetricCategory,
+)
+from crewai.experimental.evaluation.json_parser import extract_json_from_llm_response
 from crewai.task import Task
 
-from crewai.experimental.evaluation.base_evaluator import BaseEvaluator, EvaluationScore, MetricCategory
-from crewai.experimental.evaluation.json_parser import extract_json_from_llm_response
 
 class SemanticQualityEvaluator(BaseEvaluator):
     @property
@@ -13,8 +18,8 @@ class SemanticQualityEvaluator(BaseEvaluator):
 
     def evaluate(
         self,
-        agent: Agent,
-        execution_trace: Dict[str, Any],
+        agent: Agent | BaseAgent,
+        execution_trace: dict[str, Any],
         final_output: Any,
         task: Task | None = None,
     ) -> EvaluationScore:
@@ -22,7 +27,9 @@ class SemanticQualityEvaluator(BaseEvaluator):
         if task is not None:
             task_context = f"Task description: {task.description}"
         prompt = [
-            {"role": "system", "content": """You are an expert evaluator assessing the semantic quality of an AI agent's output.
+            {
+                "role": "system",
+                "content": """You are an expert evaluator assessing the semantic quality of an AI agent's output.
 
 Score the semantic quality on a scale from 0-10 where:
 - 0: Completely incoherent, confusing, or logically flawed output
@@ -37,8 +44,11 @@ Consider:
 5. Is the output free from contradictions and logical fallacies?
 
 Return your evaluation as JSON with fields 'score' (number) and 'feedback' (string).
-"""},
-            {"role": "user", "content": f"""
+""",
+            },
+            {
+                "role": "user",
+                "content": f"""
 Agent role: {agent.role}
 {task_context}
 
@@ -46,23 +56,28 @@ Agent's final output:
 {final_output}
 
 Evaluate the semantic quality and reasoning of this output.
-"""}
+""",
+            },
         ]
 
-        assert self.llm is not None
+        if self.llm is None:
+            raise ValueError("LLM must be initialized")
         response = self.llm.call(prompt)
 
         try:
             evaluation_data: dict[str, Any] = extract_json_from_llm_response(response)
-            assert evaluation_data is not None
+            if evaluation_data is None:
+                raise ValueError("Failed to extract evaluation data from LLM response")
             return EvaluationScore(
-                score=float(evaluation_data["score"]) if evaluation_data.get("score") is not None else None,
+                score=float(evaluation_data["score"])
+                if evaluation_data.get("score") is not None
+                else None,
                 feedback=evaluation_data.get("feedback", response),
-                raw_response=response
+                raw_response=response,
             )
         except Exception:
             return EvaluationScore(
                 score=None,
                 feedback=f"Failed to parse evaluation. Raw response: {response}",
-                raw_response=response
+                raw_response=response,
             )
