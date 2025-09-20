@@ -1,17 +1,18 @@
 import json
-from typing import Any, Type
+from typing import Any
 
 import regex
 from pydantic import BaseModel, ValidationError
 
-from crewai.agents.parser import OutputParserException
+from crewai.agents.parser import OutputParserError
 
 """Parser for converting text outputs into Pydantic models."""
+
 
 class CrewPydanticOutputParser:
     """Parses text outputs into specified Pydantic models."""
 
-    pydantic_object: Type[BaseModel]
+    pydantic_object: type[BaseModel]
 
     def parse_result(self, result: str) -> Any:
         result = self._transform_in_valid_json(result)
@@ -27,7 +28,7 @@ class CrewPydanticOutputParser:
         except ValidationError as e:
             name = self.pydantic_object.__name__
             msg = f"Failed to parse {name} from completion {json_object}. Got: {e}"
-            raise OutputParserException(error=msg)
+            raise OutputParserError(error=msg) from e
 
     def _transform_in_valid_json(self, text) -> str:
         text = text.replace("```", "").replace("json", "")
@@ -41,7 +42,7 @@ class CrewPydanticOutputParser:
                 # Return the first successfully parsed JSON object
                 json_obj = json.dumps(json_obj)
                 return str(json_obj)
-            except json.JSONDecodeError:
+            except json.JSONDecodeError:  # noqa: PERF203
                 # If parsing fails, skip to the next match
                 continue
         return text
