@@ -1,9 +1,10 @@
 import logging
 import traceback
 import warnings
-from typing import Any
+from typing import Any, cast
 
 from crewai.rag.chromadb.config import ChromaDBConfig
+from crewai.rag.chromadb.types import ChromaEmbeddingFunctionWrapper
 from crewai.rag.config.utils import get_rag_client
 from crewai.rag.core.base_client import BaseClient
 from crewai.rag.embeddings.factory import get_embedding_function
@@ -21,8 +22,13 @@ class RAGStorage(BaseRAGStorage):
     """
 
     def __init__(
-        self, type, allow_reset=True, embedder_config=None, crew=None, path=None
-    ):
+        self,
+        type: str,
+        allow_reset: bool = True,
+        embedder_config: dict[str, Any] | None = None,
+        crew: Any = None,
+        path: str | None = None,
+    ) -> None:
         super().__init__(type, allow_reset, embedder_config, crew)
         agents = crew.agents if crew else []
         agents = [self._sanitize_role(agent.role) for agent in agents]
@@ -44,7 +50,11 @@ class RAGStorage(BaseRAGStorage):
 
         if self.embedder_config:
             embedding_function = get_embedding_function(self.embedder_config)
-            config = ChromaDBConfig(embedding_function=embedding_function)
+            config = ChromaDBConfig(
+                embedding_function=cast(
+                    ChromaEmbeddingFunctionWrapper, embedding_function
+                )
+            )
             self._client = create_client(config)
 
     def _get_client(self) -> BaseClient:
