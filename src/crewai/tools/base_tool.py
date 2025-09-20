@@ -36,7 +36,7 @@ class BaseTool(BaseModel, ABC):
     env_vars: list[EnvVar] = []
     """List of environment variables used by the tool."""
     args_schema: type[PydanticBaseModel] = Field(
-        default_factory=lambda: BaseTool._ArgsSchemaPlaceholder, validate_default=True
+        default=_ArgsSchemaPlaceholder, validate_default=True
     )
     """The schema for the arguments that the tool accepts."""
     description_updated: bool = False
