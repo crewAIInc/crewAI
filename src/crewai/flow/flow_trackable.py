@@ -1,5 +1,4 @@
 import inspect
-from typing import Optional
 
 from pydantic import BaseModel, Field, InstanceOf, model_validator
 
@@ -14,7 +13,7 @@ class FlowTrackable(BaseModel):
     inspecting the call stack.
     """
 
-    parent_flow: Optional[InstanceOf[Flow]] = Field(
+    parent_flow: InstanceOf[Flow] | None = Field(
         default=None,
         description="The parent flow of the instance, if it was created inside a flow.",
     )
