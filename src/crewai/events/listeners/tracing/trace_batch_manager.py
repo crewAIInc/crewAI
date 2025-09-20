@@ -51,9 +51,8 @@ class TraceBatchManager:
         self.backend_initialized: bool = False
         self.ephemeral_trace_url: str | None = None
         try:
-            self.plus_api = PlusAPI(
-                api_key=get_auth_token(),
-            )
+            api_key = get_auth_token()
+            self.plus_api = PlusAPI(api_key=api_key)
         except AuthError:
             self.plus_api = PlusAPI(api_key="")
         self.ephemeral_trace_url = None
