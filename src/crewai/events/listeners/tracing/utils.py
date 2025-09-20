@@ -54,13 +54,13 @@ def _get_machine_id() -> str:
             [f"{(uuid.getnode() >> b) & 0xFF:02x}" for b in range(0, 12, 2)][::-1]
         )
         parts.append(mac)
-    except Exception:
+    except Exception:  # noqa: S110
         pass
 
     try:
         sysname = platform.system()
         parts.append(sysname)
-    except Exception:
+    except Exception:  # noqa: S110
         sysname = "unknown"
         parts.append(sysname)
 
@@ -109,18 +109,18 @@ def _get_machine_id() -> str:
         try:
             import socket
             parts.append(socket.gethostname())
-        except Exception:
+        except Exception:  # noqa: S110
             pass
 
         try:
             parts.append(getpass.getuser())
-        except Exception:
+        except Exception:  # noqa: S110
             pass
 
         try:
             parts.append(platform.machine())
             parts.append(platform.processor())
-        except Exception:
+        except Exception:  # noqa: S110
             pass
 
     if not parts:
@@ -170,21 +170,21 @@ def _get_generic_system_id() -> str | None:
             hostname = socket.gethostname()
             if hostname:
                 parts.append(hostname)
-        except Exception:
+        except Exception:  # noqa: S110
             pass
 
         try:
             parts.append(platform.machine())
             parts.append(platform.processor())
             parts.append(platform.architecture()[0])
-        except Exception:
+        except Exception:  # noqa: S110
             pass
 
         try:
             container_id = os.environ.get('HOSTNAME', os.environ.get('CONTAINER_ID', ''))
             if container_id:
                 parts.append(container_id)
-        except Exception:
+        except Exception:  # noqa: S110
             pass
 
         if parts:
@@ -229,7 +229,7 @@ def get_user_id() -> str:
 
     try:
         username = getpass.getuser()
-    except Exception:
+    except Exception:  # noqa: S110
         username = "unknown"
 
     seed = f"{username}|{_get_machine_id()}"
@@ -354,7 +354,7 @@ def prompt_user_for_trace_viewing(timeout_seconds: int = 20) -> bool:
 
         return result[0]
 
-    except Exception:
+    except Exception:  # noqa: S110
         return False
 
 
