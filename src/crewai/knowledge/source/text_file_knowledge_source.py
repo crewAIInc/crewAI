@@ -1,5 +1,4 @@
 from pathlib import Path
-from typing import Dict, List
 
 from crewai.knowledge.source.base_file_knowledge_source import BaseFileKnowledgeSource
 
@@ -7,7 +6,7 @@ from crewai.knowledge.source.base_file_knowledge_source import BaseFileKnowledge
 class TextFileKnowledgeSource(BaseFileKnowledgeSource):
     """A knowledge source that stores and queries text file content using embeddings."""
 
-    def load_content(self) -> Dict[Path, str]:
+    def load_content(self) -> dict[Path, str]:
         """Load and preprocess text file content."""
         content = {}
         for path in self.safe_file_paths:
@@ -21,12 +20,12 @@ class TextFileKnowledgeSource(BaseFileKnowledgeSource):
         Add text file content to the knowledge source, chunk it, compute embeddings,
         and save the embeddings.
         """
-        for _, text in self.content.items():
+        for text in self.content.values():
             new_chunks = self._chunk_text(text)
             self.chunks.extend(new_chunks)
         self._save_documents()
 
-    def _chunk_text(self, text: str) -> List[str]:
+    def _chunk_text(self, text: str) -> list[str]:
         """Utility method to split text into chunks."""
         return [
             text[i : i + self.chunk_size]
