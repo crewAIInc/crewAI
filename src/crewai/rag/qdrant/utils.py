@@ -41,7 +41,8 @@ def _ensure_list_embedding(embedding: QueryEmbedding) -> list[float]:
         Embedding as list[float].
     """
     if not isinstance(embedding, list):
-        return embedding.tolist()
+        result = embedding.tolist()
+        return result if isinstance(result, list) else [result]
     return embedding
 
 
