@@ -6,19 +6,9 @@ import threading
 import warnings
 from collections import defaultdict
 from contextlib import contextmanager
-from typing import (
-    Any,
-    DefaultDict,
-    Dict,
-    List,
-    Literal,
-    Optional,
-    Type,
-    TypedDict,
-    Union,
-    cast,
-)
 from datetime import datetime
+from typing import Any, Literal, TypedDict, cast
+
 from dotenv import load_dotenv
 from litellm.types.utils import ChatCompletionDeltaToolCall
 from pydantic import BaseModel, Field
@@ -31,9 +21,9 @@ from crewai.events.types.llm_events import (
     LLMStreamChunkEvent,
 )
 from crewai.events.types.tool_usage_events import (
-    ToolUsageStartedEvent,
-    ToolUsageFinishedEvent,
     ToolUsageErrorEvent,
+    ToolUsageFinishedEvent,
+    ToolUsageStartedEvent,
 )
 
 with warnings.catch_warnings():
@@ -51,8 +41,8 @@ with warnings.catch_warnings():
 import io
 from typing import TextIO
 
-from crewai.llms.base_llm import BaseLLM
 from crewai.events.event_bus import crewai_event_bus
+from crewai.llms.base_llm import BaseLLM
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededException,
 )
@@ -268,14 +258,14 @@ def suppress_warnings():
 
 
 class Delta(TypedDict):
-    content: Optional[str]
-    role: Optional[str]
+    content: str | None
+    role: str | None
 
 
 class StreamingChoices(TypedDict):
     delta: Delta
     index: int
-    finish_reason: Optional[str]
+    finish_reason: str | None
 
 
 class FunctionArgs(BaseModel):
@@ -288,31 +278,31 @@ class AccumulatedToolArgs(BaseModel):
 
 
 class LLM(BaseLLM):
-    completion_cost: Optional[float] = None
+    completion_cost: float | None = None
 
     def __init__(
         self,
         model: str,
-        timeout: Optional[Union[float, int]] = None,
-        temperature: Optional[float] = None,
-        top_p: Optional[float] = None,
-        n: Optional[int] = None,
-        stop: Optional[Union[str, List[str]]] = None,
-        max_completion_tokens: Optional[int] = None,
-        max_tokens: Optional[int] = None,
-        presence_penalty: Optional[float] = None,
-        frequency_penalty: Optional[float] = None,
-        logit_bias: Optional[Dict[int, float]] = None,
-        response_format: Optional[Type[BaseModel]] = None,
-        seed: Optional[int] = None,
-        logprobs: Optional[int] = None,
-        top_logprobs: Optional[int] = None,
-        base_url: Optional[str] = None,
-        api_base: Optional[str] = None,
-        api_version: Optional[str] = None,
-        api_key: Optional[str] = None,
-        callbacks: List[Any] | None = None,
-        reasoning_effort: Optional[Literal["none", "low", "medium", "high"]] = None,
+        timeout: float | int | None = None,
+        temperature: float | None = None,
+        top_p: float | None = None,
+        n: int | None = None,
+        stop: str | list[str] | None = None,
+        max_completion_tokens: int | None = None,
+        max_tokens: int | None = None,
+        presence_penalty: float | None = None,
+        frequency_penalty: float | None = None,
+        logit_bias: dict[int, float] | None = None,
+        response_format: type[BaseModel] | None = None,
+        seed: int | None = None,
+        logprobs: int | None = None,
+        top_logprobs: int | None = None,
+        base_url: str | None = None,
+        api_base: str | None = None,
+        api_version: str | None = None,
+        api_key: str | None = None,
+        callbacks: list[Any] | None = None,
+        reasoning_effort: Literal["none", "low", "medium", "high"] | None = None,
         stream: bool = False,
         **kwargs,
     ):
@@ -343,9 +333,9 @@ class LLM(BaseLLM):
 
         litellm.drop_params = True
 
-        # Normalize self.stop to always be a List[str]
+        # Normalize self.stop to always be a list[str]
         if stop is None:
-            self.stop: List[str] = []
+            self.stop: list[str] = []
         elif isinstance(stop, str):
             self.stop = [stop]
         else:
@@ -363,14 +353,14 @@ class LLM(BaseLLM):
         Returns:
             bool: True if the model is from Anthropic, False otherwise.
         """
-        ANTHROPIC_PREFIXES = ("anthropic/", "claude-", "claude/")
-        return any(prefix in model.lower() for prefix in ANTHROPIC_PREFIXES)
+        anthropic_prefixes = ("anthropic/", "claude-", "claude/")
+        return any(prefix in model.lower() for prefix in anthropic_prefixes)
 
     def _prepare_completion_params(
         self,
-        messages: Union[str, List[Dict[str, str]]],
-        tools: Optional[List[dict]] = None,
-    ) -> Dict[str, Any]:
+        messages: str | list[dict[str, str]],
+        tools: list[dict] | None = None,
+    ) -> dict[str, Any]:
         """Prepare parameters for the completion call.
 
         Args:
@@ -419,11 +409,11 @@ class LLM(BaseLLM):
 
     def _handle_streaming_response(
         self,
-        params: Dict[str, Any],
-        callbacks: Optional[List[Any]] = None,
-        available_functions: Optional[Dict[str, Any]] = None,
-        from_task: Optional[Any] = None,
-        from_agent: Optional[Any] = None,
+        params: dict[str, Any],
+        callbacks: list[Any] | None = None,
+        available_functions: dict[str, Any] | None = None,
+        from_task: Any | None = None,
+        from_agent: Any | None = None,
     ) -> str:
         """Handle a streaming response from the LLM.
 
@@ -447,7 +437,7 @@ class LLM(BaseLLM):
         usage_info = None
         tool_calls = None
 
-        accumulated_tool_args: DefaultDict[int, AccumulatedToolArgs] = defaultdict(
+        accumulated_tool_args: defaultdict[int, AccumulatedToolArgs] = defaultdict(
             AccumulatedToolArgs
         )
 
@@ -472,16 +462,16 @@ class LLM(BaseLLM):
                         choices = chunk["choices"]
                     elif hasattr(chunk, "choices"):
                         # Check if choices is not a type but an actual attribute with value
-                        if not isinstance(getattr(chunk, "choices"), type):
-                            choices = getattr(chunk, "choices")
+                        if not isinstance(chunk.choices, type):
+                            choices = chunk.choices
 
                     # Try to extract usage information if available
                     if isinstance(chunk, dict) and "usage" in chunk:
                         usage_info = chunk["usage"]
                     elif hasattr(chunk, "usage"):
                         # Check if usage is not a type but an actual attribute with value
-                        if not isinstance(getattr(chunk, "usage"), type):
-                            usage_info = getattr(chunk, "usage")
+                        if not isinstance(chunk.usage, type):
+                            usage_info = chunk.usage
 
                     if choices and len(choices) > 0:
                         choice = choices[0]
@@ -491,7 +481,7 @@ class LLM(BaseLLM):
                         if isinstance(choice, dict) and "delta" in choice:
                             delta = choice["delta"]
                         elif hasattr(choice, "delta"):
-                            delta = getattr(choice, "delta")
+                            delta = choice.delta
 
                         # Extract content from delta
                         if delta:
@@ -501,7 +491,7 @@ class LLM(BaseLLM):
                                     chunk_content = delta["content"]
                             # Handle object format
                             elif hasattr(delta, "content"):
-                                chunk_content = getattr(delta, "content")
+                                chunk_content = delta.content
 
                             # Handle case where content might be None or empty
                             if chunk_content is None and isinstance(delta, dict):
@@ -533,7 +523,11 @@ class LLM(BaseLLM):
                     full_response += chunk_content
 
                     # Emit the chunk event
-                    assert hasattr(crewai_event_bus, "emit")
+                    if not hasattr(crewai_event_bus, "emit"):
+                        raise ValueError(
+                            "crewai_event_bus does not have an emit method"
+                        ) from None
+
                     crewai_event_bus.emit(
                         self,
                         event=LLMStreamChunkEvent(
@@ -572,8 +566,8 @@ class LLM(BaseLLM):
                         if isinstance(last_chunk, dict) and "choices" in last_chunk:
                             choices = last_chunk["choices"]
                         elif hasattr(last_chunk, "choices"):
-                            if not isinstance(getattr(last_chunk, "choices"), type):
-                                choices = getattr(last_chunk, "choices")
+                            if not isinstance(last_chunk.choices, type):
+                                choices = last_chunk.choices
 
                         if choices and len(choices) > 0:
                             choice = choices[0]
@@ -583,14 +577,14 @@ class LLM(BaseLLM):
                             if isinstance(choice, dict) and "message" in choice:
                                 message = choice["message"]
                             elif hasattr(choice, "message"):
-                                message = getattr(choice, "message")
+                                message = choice.message
 
                             if message:
                                 content = None
                                 if isinstance(message, dict) and "content" in message:
                                     content = message["content"]
                                 elif hasattr(message, "content"):
-                                    content = getattr(message, "content")
+                                    content = message.content
 
                                 if content:
                                     full_response = content
@@ -617,8 +611,8 @@ class LLM(BaseLLM):
                     if isinstance(last_chunk, dict) and "choices" in last_chunk:
                         choices = last_chunk["choices"]
                     elif hasattr(last_chunk, "choices"):
-                        if not isinstance(getattr(last_chunk, "choices"), type):
-                            choices = getattr(last_chunk, "choices")
+                        if not isinstance(last_chunk.choices, type):
+                            choices = last_chunk.choices
 
                     if choices and len(choices) > 0:
                         choice = choices[0]
@@ -627,13 +621,13 @@ class LLM(BaseLLM):
                         if isinstance(choice, dict) and "message" in choice:
                             message = choice["message"]
                         elif hasattr(choice, "message"):
-                            message = getattr(choice, "message")
+                            message = choice.message
 
                         if message:
                             if isinstance(message, dict) and "tool_calls" in message:
                                 tool_calls = message["tool_calls"]
                             elif hasattr(message, "tool_calls"):
-                                tool_calls = getattr(message, "tool_calls")
+                                tool_calls = message.tool_calls
             except Exception as e:
                 logging.debug(f"Error checking for tool calls: {e}")
             # --- 8) If no tool calls or no available functions, return the text response directly
@@ -673,11 +667,11 @@ class LLM(BaseLLM):
             # Catch context window errors from litellm and convert them to our own exception type.
             # This exception is handled by CrewAgentExecutor._invoke_loop() which can then
             # decide whether to summarize the content or abort based on the respect_context_window flag.
-            raise LLMContextLengthExceededException(str(e))
+            raise LLMContextLengthExceededException(str(e)) from e
         except Exception as e:
-            logging.error(f"Error in streaming response: {str(e)}")
+            logging.error(f"Error in streaming response: {e!s}")
             if full_response.strip():
-                logging.warning(f"Returning partial response despite error: {str(e)}")
+                logging.warning(f"Returning partial response despite error: {e!s}")
                 self._handle_emit_call_events(
                     response=full_response,
                     call_type=LLMCallType.LLM_CALL,
@@ -688,22 +682,26 @@ class LLM(BaseLLM):
                 return full_response
 
             # Emit failed event and re-raise the exception
-            assert hasattr(crewai_event_bus, "emit")
+            if not hasattr(crewai_event_bus, "emit"):
+                raise ValueError(
+                    "crewai_event_bus does not have an emit method"
+                ) from None
+
             crewai_event_bus.emit(
                 self,
                 event=LLMCallFailedEvent(
                     error=str(e), from_task=from_task, from_agent=from_agent
                 ),
             )
-            raise Exception(f"Failed to get streaming response: {str(e)}")
+            raise Exception(f"Failed to get streaming response: {e!s}") from e
 
     def _handle_streaming_tool_calls(
         self,
-        tool_calls: List[ChatCompletionDeltaToolCall],
-        accumulated_tool_args: DefaultDict[int, AccumulatedToolArgs],
-        available_functions: Optional[Dict[str, Any]] = None,
-        from_task: Optional[Any] = None,
-        from_agent: Optional[Any] = None,
+        tool_calls: list[ChatCompletionDeltaToolCall],
+        accumulated_tool_args: defaultdict[int, AccumulatedToolArgs],
+        available_functions: dict[str, Any] | None = None,
+        from_task: Any | None = None,
+        from_agent: Any | None = None,
     ) -> None | str:
         for tool_call in tool_calls:
             current_tool_accumulator = accumulated_tool_args[tool_call.index]
@@ -715,7 +713,11 @@ class LLM(BaseLLM):
                 current_tool_accumulator.function.arguments += (
                     tool_call.function.arguments
                 )
-            assert hasattr(crewai_event_bus, "emit")
+            if not hasattr(crewai_event_bus, "emit"):
+                raise ValueError(
+                    "crewai_event_bus does not have an emit method"
+                ) from None
+
             crewai_event_bus.emit(
                 self,
                 event=LLMStreamChunkEvent(
@@ -744,9 +746,9 @@ class LLM(BaseLLM):
 
     def _handle_streaming_callbacks(
         self,
-        callbacks: Optional[List[Any]],
-        usage_info: Optional[Dict[str, Any]],
-        last_chunk: Optional[Any],
+        callbacks: list[Any] | None,
+        usage_info: dict[str, Any] | None,
+        last_chunk: Any | None,
     ) -> None:
         """Handle callbacks with usage info for streaming responses.
 
@@ -769,10 +771,8 @@ class LLM(BaseLLM):
                                 ):
                                     usage_info = last_chunk["usage"]
                                 elif hasattr(last_chunk, "usage"):
-                                    if not isinstance(
-                                        getattr(last_chunk, "usage"), type
-                                    ):
-                                        usage_info = getattr(last_chunk, "usage")
+                                    if not isinstance(last_chunk.usage, type):
+                                        usage_info = last_chunk.usage
                         except Exception as e:
                             logging.debug(f"Error extracting usage info: {e}")
 
@@ -786,11 +786,11 @@ class LLM(BaseLLM):
 
     def _handle_non_streaming_response(
         self,
-        params: Dict[str, Any],
-        callbacks: Optional[List[Any]] = None,
-        available_functions: Optional[Dict[str, Any]] = None,
-        from_task: Optional[Any] = None,
-        from_agent: Optional[Any] = None,
+        params: dict[str, Any],
+        callbacks: list[Any] | None = None,
+        available_functions: dict[str, Any] | None = None,
+        from_task: Any | None = None,
+        from_agent: Any | None = None,
     ) -> str | Any:
         """Handle a non-streaming response from the LLM.
 
@@ -815,7 +815,7 @@ class LLM(BaseLLM):
         except ContextWindowExceededError as e:
             # Convert litellm's context window error to our own exception type
             # for consistent handling in the rest of the codebase
-            raise LLMContextLengthExceededException(str(e))
+            raise LLMContextLengthExceededException(str(e)) from e
         # --- 2) Extract response message and content
         response_message = cast(Choices, cast(ModelResponse, response).choices)[
             0
@@ -846,8 +846,9 @@ class LLM(BaseLLM):
                 messages=params["messages"],
             )
             return text_response
+
         # --- 6) If there is no text response, no available functions, but there are tool calls, return the tool calls
-        elif tool_calls and not available_functions and not text_response:
+        if tool_calls and not available_functions and not text_response:
             return tool_calls
 
         # --- 7) Handle tool calls if present
@@ -868,11 +869,11 @@ class LLM(BaseLLM):
 
     def _handle_tool_call(
         self,
-        tool_calls: List[Any],
-        available_functions: Optional[Dict[str, Any]] = None,
-        from_task: Optional[Any] = None,
-        from_agent: Optional[Any] = None,
-    ) -> Optional[str]:
+        tool_calls: list[Any],
+        available_functions: dict[str, Any] | None = None,
+        from_task: Any | None = None,
+        from_agent: Any | None = None,
+    ) -> str | None:
         """Handle a tool call from the LLM.
 
         Args:
@@ -899,7 +900,11 @@ class LLM(BaseLLM):
                 fn = available_functions[function_name]
 
                 # --- 3.2) Execute function
-                assert hasattr(crewai_event_bus, "emit")
+                if not hasattr(crewai_event_bus, "emit"):
+                    raise ValueError(
+                        "crewai_event_bus does not have an emit method"
+                    ) from None
+
                 started_at = datetime.now()
                 crewai_event_bus.emit(
                     self,
@@ -939,17 +944,21 @@ class LLM(BaseLLM):
                     function_name, lambda: None
                 )  # Ensure fn is always a callable
                 logging.error(f"Error executing function '{function_name}': {e}")
-                assert hasattr(crewai_event_bus, "emit")
+                if not hasattr(crewai_event_bus, "emit"):
+                    raise ValueError(
+                        "crewai_event_bus does not have an emit method"
+                    ) from None
+
                 crewai_event_bus.emit(
                     self,
-                    event=LLMCallFailedEvent(error=f"Tool execution error: {str(e)}"),
+                    event=LLMCallFailedEvent(error=f"Tool execution error: {e!s}"),
                 )
                 crewai_event_bus.emit(
                     self,
                     event=ToolUsageErrorEvent(
                         tool_name=function_name,
                         tool_args=function_args,
-                        error=f"Tool execution error: {str(e)}",
+                        error=f"Tool execution error: {e!s}",
                         from_task=from_task,
                         from_agent=from_agent,
                     ),
@@ -958,13 +967,13 @@ class LLM(BaseLLM):
 
     def call(
         self,
-        messages: Union[str, List[Dict[str, str]]],
-        tools: Optional[List[dict]] = None,
-        callbacks: Optional[List[Any]] = None,
-        available_functions: Optional[Dict[str, Any]] = None,
-        from_task: Optional[Any] = None,
-        from_agent: Optional[Any] = None,
-    ) -> Union[str, Any]:
+        messages: str | list[dict[str, str]],
+        tools: list[dict] | None = None,
+        callbacks: list[Any] | None = None,
+        available_functions: dict[str, Any] | None = None,
+        from_task: Any | None = None,
+        from_agent: Any | None = None,
+    ) -> str | Any:
         """High-level LLM call method.
 
         Args:
@@ -991,7 +1000,10 @@ class LLM(BaseLLM):
             LLMContextLengthExceededException: If input exceeds model's context limit
         """
         # --- 1) Emit call started event
-        assert hasattr(crewai_event_bus, "emit")
+
+        if not hasattr(crewai_event_bus, "emit"):
+            raise ValueError("crewai_event_bus does not have an emit method") from None
+
         crewai_event_bus.emit(
             self,
             event=LLMCallStartedEvent(
@@ -1028,10 +1040,10 @@ class LLM(BaseLLM):
                     return self._handle_streaming_response(
                         params, callbacks, available_functions, from_task, from_agent
                     )
-                else:
-                    return self._handle_non_streaming_response(
-                        params, callbacks, available_functions, from_task, from_agent
-                    )
+
+                return self._handle_non_streaming_response(
+                    params, callbacks, available_functions, from_task, from_agent
+                )
 
             except LLMContextLengthExceededException:
                 # Re-raise LLMContextLengthExceededException as it should be handled
@@ -1065,7 +1077,10 @@ class LLM(BaseLLM):
                         from_agent=from_agent,
                     )
 
-                assert hasattr(crewai_event_bus, "emit")
+                if not hasattr(crewai_event_bus, "emit"):
+                    raise ValueError(
+                        "crewai_event_bus does not have an emit method"
+                    ) from None
                 crewai_event_bus.emit(
                     self,
                     event=LLMCallFailedEvent(
@@ -1078,8 +1093,8 @@ class LLM(BaseLLM):
         self,
         response: Any,
         call_type: LLMCallType,
-        from_task: Optional[Any] = None,
-        from_agent: Optional[Any] = None,
+        from_task: Any | None = None,
+        from_agent: Any | None = None,
         messages: str | list[dict[str, Any]] | None = None,
     ):
         """Handle the events for the LLM call.
@@ -1091,7 +1106,9 @@ class LLM(BaseLLM):
             from_agent: Optional agent object
             messages: Optional messages object
         """
-        assert hasattr(crewai_event_bus, "emit")
+        if not hasattr(crewai_event_bus, "emit"):
+            raise ValueError("crewai_event_bus does not have an emit method") from None
+
         crewai_event_bus.emit(
             self,
             event=LLMCallCompletedEvent(
@@ -1105,8 +1122,8 @@ class LLM(BaseLLM):
         )
 
     def _format_messages_for_provider(
-        self, messages: List[Dict[str, str]]
-    ) -> List[Dict[str, str]]:
+        self, messages: list[dict[str, str]]
+    ) -> list[dict[str, str]]:
         """Format messages according to provider requirements.
 
         Args:
@@ -1147,7 +1164,7 @@ class LLM(BaseLLM):
         if "mistral" in self.model.lower():
             # Check if the last message has a role of 'assistant'
             if messages and messages[-1]["role"] == "assistant":
-                return messages + [{"role": "user", "content": "Please continue."}]
+                return [*messages, {"role": "user", "content": "Please continue."}]
             return messages
 
         # TODO: Remove this code after merging PR https://github.com/BerriAI/litellm/pull/10917
@@ -1157,7 +1174,7 @@ class LLM(BaseLLM):
             and messages
             and messages[-1]["role"] == "assistant"
         ):
-            return messages + [{"role": "user", "content": ""}]
+            return [*messages, {"role": "user", "content": ""}]
 
         # Handle Anthropic models
         if not self.is_anthropic:
@@ -1170,7 +1187,7 @@ class LLM(BaseLLM):
 
         return messages
 
-    def _get_custom_llm_provider(self) -> Optional[str]:
+    def _get_custom_llm_provider(self) -> str | None:
         """
         Derives the custom_llm_provider from the model string.
         - For example, if the model is "openrouter/deepseek/deepseek-chat", returns "openrouter".
@@ -1207,7 +1224,7 @@ class LLM(BaseLLM):
                 self.model, custom_llm_provider=provider
             )
         except Exception as e:
-            logging.error(f"Failed to check function calling support: {str(e)}")
+            logging.error(f"Failed to check function calling support: {e!s}")
             return False
 
     def supports_stop_words(self) -> bool:
@@ -1215,7 +1232,7 @@ class LLM(BaseLLM):
             params = get_supported_openai_params(model=self.model)
             return params is not None and "stop" in params
         except Exception as e:
-            logging.error(f"Failed to get supported params: {str(e)}")
+            logging.error(f"Failed to get supported params: {e!s}")
             return False
 
     def get_context_window_size(self) -> int:
@@ -1229,14 +1246,14 @@ class LLM(BaseLLM):
         if self.context_window_size != 0:
             return self.context_window_size
 
-        MIN_CONTEXT = 1024
-        MAX_CONTEXT = 2097152  # Current max from gemini-1.5-pro
+        min_context = 1024
+        max_context = 2097152  # Current max from gemini-1.5-pro
 
         # Validate all context window sizes
         for key, value in LLM_CONTEXT_WINDOW_SIZES.items():
-            if value < MIN_CONTEXT or value > MAX_CONTEXT:
+            if value < min_context or value > max_context:
                 raise ValueError(
-                    f"Context window for {key} must be between {MIN_CONTEXT} and {MAX_CONTEXT}"
+                    f"Context window for {key} must be between {min_context} and {max_context}"
                 )
 
         self.context_window_size = int(
@@ -1247,7 +1264,7 @@ class LLM(BaseLLM):
                 self.context_window_size = int(value * CONTEXT_WINDOW_USAGE_RATIO)
         return self.context_window_size
 
-    def set_callbacks(self, callbacks: List[Any]):
+    def set_callbacks(self, callbacks: list[Any]):
         """
         Attempt to keep a single set of callbacks in litellm by removing old
         duplicates and adding new ones.
