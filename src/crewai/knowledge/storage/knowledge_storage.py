@@ -2,23 +2,21 @@ import hashlib
 import logging
 import os
 import shutil
-from typing import Any, Dict, List, Optional, Union
+from typing import Any
 
 import chromadb
 import chromadb.errors
 from chromadb.api import ClientAPI
 from chromadb.api.types import OneOrMany
 from chromadb.config import Settings
-import warnings
 
 from crewai.knowledge.storage.base_knowledge_storage import BaseKnowledgeStorage
 from crewai.rag.embeddings.configurator import EmbeddingConfigurator
-from crewai.utilities.chromadb import sanitize_collection_name
+from crewai.utilities.chromadb import create_persistent_client, sanitize_collection_name
 from crewai.utilities.constants import KNOWLEDGE_DIRECTORY
 from crewai.utilities.logger import Logger
-from crewai.utilities.paths import db_storage_path
-from crewai.utilities.chromadb import create_persistent_client
 from crewai.utilities.logger_utils import suppress_logging
+from crewai.utilities.paths import db_storage_path
 
 
 class KnowledgeStorage(BaseKnowledgeStorage):
@@ -27,25 +25,25 @@ class KnowledgeStorage(BaseKnowledgeStorage):
     search efficiency.
     """
 
-    collection: Optional[chromadb.Collection] = None
-    collection_name: Optional[str] = "knowledge"
-    app: Optional[ClientAPI] = None
+    collection: chromadb.Collection | None = None
+    collection_name: str | None = "knowledge"
+    app: ClientAPI | None = None
 
     def __init__(
         self,
-        embedder: Optional[Dict[str, Any]] = None,
-        collection_name: Optional[str] = None,
+        embedder: dict[str, Any] | None = None,
+        collection_name: str | None = None,
     ):
         self.collection_name = collection_name
         self._set_embedder_config(embedder)
 
     def search(
         self,
-        query: List[str],
+        query: list[str],
         limit: int = 3,
-        filter: Optional[dict] = None,
+        filter: dict | None = None,
         score_threshold: float = 0.35,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         with suppress_logging(
             "chromadb.segment.impl.vector.local_persistent_hnsw", logging.ERROR
         ):
@@ -66,18 +64,9 @@ class KnowledgeStorage(BaseKnowledgeStorage):
                     if result["score"] >= score_threshold:
                         results.append(result)
                 return results
-            else:
-                raise Exception("Collection not initialized")
+            raise Exception("Collection not initialized")
 
     def initialize_knowledge_storage(self):
-        # Suppress deprecation warnings from chromadb, which are not relevant to us
-        # TODO: Remove this once we upgrade chromadb to at least 1.0.8.
-        warnings.filterwarnings(
-            "ignore",
-            message=r".*'model_fields'.*is deprecated.*",
-            module=r"^chromadb(\.|$)",
-        )
-
         self.app = create_persistent_client(
             path=os.path.join(db_storage_path(), "knowledge"),
             settings=Settings(allow_reset=True),
@@ -96,8 +85,8 @@ class KnowledgeStorage(BaseKnowledgeStorage):
                 )
             else:
                 raise Exception("Vector Database Client not initialized")
-        except Exception:
-            raise Exception("Failed to create or get collection")
+        except Exception as e:
+            raise Exception("Failed to create or get collection") from e
 
     def reset(self):
         base_path = os.path.join(db_storage_path(), KNOWLEDGE_DIRECTORY)
@@ -113,8 +102,8 @@ class KnowledgeStorage(BaseKnowledgeStorage):
 
     def save(
         self,
-        documents: List[str],
-        metadata: Optional[Union[Dict[str, Any], List[Dict[str, Any]]]] = None,
+        documents: list[str],
+        metadata: dict[str, Any] | list[dict[str, Any]] | None = None,
     ):
         if not self.collection:
             raise Exception("Collection not initialized")
@@ -146,7 +135,7 @@ class KnowledgeStorage(BaseKnowledgeStorage):
                 filtered_ids.append(doc_id)
 
             # If we have no metadata at all, set it to None
-            final_metadata: Optional[OneOrMany[chromadb.Metadata]] = (
+            final_metadata: OneOrMany[chromadb.Metadata] | None = (
                 None if all(m is None for m in filtered_metadata) else filtered_metadata
             )
 
@@ -179,7 +168,7 @@ class KnowledgeStorage(BaseKnowledgeStorage):
             api_key=os.getenv("OPENAI_API_KEY"), model_name="text-embedding-3-small"
         )
 
-    def _set_embedder_config(self, embedder: Optional[Dict[str, Any]] = None) -> None:
+    def _set_embedder_config(self, embedder: dict[str, Any] | None = None) -> None:
         """Set the embedding configuration for the knowledge storage.
 
         Args:

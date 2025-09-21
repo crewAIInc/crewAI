@@ -2,16 +2,16 @@ import logging
 import os
 import shutil
 import uuid
+from typing import Any
 
-from typing import Any, Dict, List, Optional
 from chromadb.api import ClientAPI
-from crewai.rag.storage.base_rag_storage import BaseRAGStorage
+
 from crewai.rag.embeddings.configurator import EmbeddingConfigurator
+from crewai.rag.storage.base_rag_storage import BaseRAGStorage
 from crewai.utilities.chromadb import create_persistent_client
 from crewai.utilities.constants import MAX_FILE_NAME_LENGTH
-from crewai.utilities.paths import db_storage_path
 from crewai.utilities.logger_utils import suppress_logging
-import warnings
+from crewai.utilities.paths import db_storage_path
 
 
 class RAGStorage(BaseRAGStorage):
@@ -45,14 +45,6 @@ class RAGStorage(BaseRAGStorage):
     def _initialize_app(self):
         from chromadb.config import Settings
 
-        # Suppress deprecation warnings from chromadb, which are not relevant to us
-        # TODO: Remove this once we upgrade chromadb to at least 1.0.8.
-        warnings.filterwarnings(
-            "ignore",
-            message=r".*'model_fields'.*is deprecated.*",
-            module=r"^chromadb(\.|$)",
-        )
-
         self._set_embedder_config()
 
         self.app = create_persistent_client(
@@ -85,21 +77,21 @@ class RAGStorage(BaseRAGStorage):
 
         return f"{base_path}/{file_name}"
 
-    def save(self, value: Any, metadata: Dict[str, Any]) -> None:
+    def save(self, value: Any, metadata: dict[str, Any]) -> None:
         if not hasattr(self, "app") or not hasattr(self, "collection"):
             self._initialize_app()
         try:
             self._generate_embedding(value, metadata)
         except Exception as e:
-            logging.error(f"Error during {self.type} save: {str(e)}")
+            logging.error(f"Error during {self.type} save: {e!s}")
 
     def search(
         self,
         query: str,
         limit: int = 3,
-        filter: Optional[dict] = None,
+        filter: dict | None = None,
         score_threshold: float = 0.35,
-    ) -> List[Any]:
+    ) -> list[Any]:
         if not hasattr(self, "app"):
             self._initialize_app()
 
@@ -122,10 +114,10 @@ class RAGStorage(BaseRAGStorage):
 
             return results
         except Exception as e:
-            logging.error(f"Error during {self.type} search: {str(e)}")
+            logging.error(f"Error during {self.type} search: {e!s}")
             return []
 
-    def _generate_embedding(self, text: str, metadata: Dict[str, Any]) -> None:  # type: ignore
+    def _generate_embedding(self, text: str, metadata: dict[str, Any]) -> None:  # type: ignore
         if not hasattr(self, "app") or not hasattr(self, "collection"):
             self._initialize_app()
 
@@ -149,7 +141,7 @@ class RAGStorage(BaseRAGStorage):
             else:
                 raise Exception(
                     f"An error occurred while resetting the {self.type} memory: {e}"
-                )
+                ) from e
 
     def _create_default_embedding_function(self):
         from chromadb.utils.embedding_functions.openai_embedding_function import (
