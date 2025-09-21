@@ -1,6 +1,5 @@
 import logging
 import traceback
-import warnings
 from typing import Any, cast
 
 from crewai.rag.chromadb.config import ChromaDBConfig
@@ -41,12 +40,6 @@ class RAGStorage(BaseRAGStorage):
 
         self.allow_reset = allow_reset
         self.path = path
-
-        warnings.filterwarnings(
-            "ignore",
-            message=r".*'model_fields'.*is deprecated.*",
-            module=r"^chromadb(\.|$)",
-        )
 
         if self.embedder_config:
             embedding_function = get_embedding_function(self.embedder_config)

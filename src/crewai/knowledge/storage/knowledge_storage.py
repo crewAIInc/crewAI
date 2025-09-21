@@ -1,6 +1,5 @@
 import logging
 import traceback
-import warnings
 from typing import Any, cast
 
 from crewai.knowledge.storage.base_knowledge_storage import BaseKnowledgeStorage
@@ -27,12 +26,6 @@ class KnowledgeStorage(BaseKnowledgeStorage):
     ) -> None:
         self.collection_name = collection_name
         self._client: BaseClient | None = None
-
-        warnings.filterwarnings(
-            "ignore",
-            message=r".*'model_fields'.*is deprecated.*",
-            module=r"^chromadb(\.|$)",
-        )
 
         if embedder:
             embedding_function = get_embedding_function(embedder)
