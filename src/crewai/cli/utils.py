@@ -258,9 +258,33 @@ def write_env_file(folder_path, env_vars):
             file.write(f"{key.upper()}={value}\n")
 
 
+def normalize_project_name(project_name: str) -> tuple[str, str]:
+    """
+    Normalize project name for module import and class name generation.
+
+    Args:
+        project_name: The original project name from pyproject.toml
+
+    Returns:
+        Tuple of (module_name, class_name)
+    """
+    # For module import: replace hyphens with underscores, keep underscores
+    module_name = project_name.replace("-", "_")
+
+    # For class name: convert to PascalCase
+    # Handle both hyphens and underscores as word separators
+    class_name = (
+        project_name.replace("_", " ").replace("-", " ").title().replace(" ", "")
+    )
+
+    return module_name, class_name
+
+
 def get_crews(crew_path: str = "crew.py", require: bool = False) -> list[Crew]:
     """Get the crew instances from a file."""
     crew_instances = []
+    import_errors = []
+
     try:
         import importlib.util
 
@@ -282,27 +306,48 @@ def get_crews(crew_path: str = "crew.py", require: bool = False) -> list[Crew]:
                 if crew_path in files and "cli/templates" not in root:
                     crew_os_path = os.path.join(root, crew_path)
                     try:
+                        # Generate a unique module name to avoid conflicts
+                        module_name = f"crew_module_{abs(hash(crew_os_path))}"
+
                         spec = importlib.util.spec_from_file_location(
-                            "crew_module", crew_os_path
+                            module_name, crew_os_path
                         )
                         if not spec or not spec.loader:
+                            import_errors.append(
+                                f"Could not create spec for {crew_os_path}"
+                            )
                             continue
 
                         module = importlib.util.module_from_spec(spec)
-                        sys.modules[spec.name] = module
+
+                        # Clean up any existing module with the same name
+                        if module_name in sys.modules:
+                            del sys.modules[module_name]
+
+                        sys.modules[module_name] = module
 
                         try:
                             spec.loader.exec_module(module)
 
                             for attr_name in dir(module):
+                                if attr_name.startswith("_"):
+                                    continue
+
                                 module_attr = getattr(module, attr_name)
                                 try:
-                                    crew_instances.extend(fetch_crews(module_attr))
+                                    found_crews = fetch_crews(module_attr)
+                                    crew_instances.extend(found_crews)
+                                    if found_crews and require:
+                                        console.print(
+                                            f"Found {len(found_crews)} crew(s) in {crew_os_path}",
+                                            style="bold green",
+                                        )
                                 except Exception as e:
-                                    console.print(
-                                        f"Error processing attribute {attr_name}: {e}",
-                                        style="bold red",
-                                    )
+                                    if require:
+                                        console.print(
+                                            f"Error processing attribute {attr_name} in {crew_os_path}: {e}",
+                                            style="bold yellow",
+                                        )
                                     continue
 
                             # If we found crew instances, break out of the loop
@@ -310,17 +355,24 @@ def get_crews(crew_path: str = "crew.py", require: bool = False) -> list[Crew]:
                                 break
 
                         except Exception as exec_error:
-                            console.print(
-                                f"Error executing module: {exec_error}",
-                                style="bold red",
+                            error_msg = (
+                                f"Error executing module {crew_os_path}: {exec_error}"
                             )
+                            import_errors.append(error_msg)
+                            if require:
+                                console.print(error_msg, style="bold red")
 
                     except (ImportError, AttributeError) as e:
+                        error_msg = f"Error importing crew from {crew_os_path}: {e!s}"
+                        import_errors.append(error_msg)
                         if require:
-                            console.print(
-                                f"Error importing crew from {crew_path}: {e!s}",
-                                style="bold red",
-                            )
+                            console.print(error_msg, style="bold red")
+                        continue
+                    except Exception as e:
+                        error_msg = f"Unexpected error processing {crew_os_path}: {e!s}"
+                        import_errors.append(error_msg)
+                        if require:
+                            console.print(error_msg, style="bold red")
                         continue
 
             # If we found crew instances in this search path, break out of the search paths loop
@@ -329,6 +381,10 @@ def get_crews(crew_path: str = "crew.py", require: bool = False) -> list[Crew]:
 
         if require and not crew_instances:
             console.print("No valid Crew instance found in crew.py", style="bold red")
+            if import_errors:
+                console.print("\nDetailed import errors:", style="bold red")
+                for error in import_errors[-5:]:  # Show last 5 errors
+                    console.print(f"  - {error}", style="red")
             raise SystemExit
 
     except Exception as e:
