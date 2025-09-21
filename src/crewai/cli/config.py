@@ -1,8 +1,7 @@
 import json
-import os
 import tempfile
-from pathlib import Path
 from logging import getLogger
+from pathlib import Path
 
 from pydantic import BaseModel, Field
 
@@ -20,7 +19,7 @@ logger = getLogger(__name__)
 DEFAULT_CONFIG_PATH = Path.home() / ".config" / "crewai" / "settings.json"
 
 
-def get_writable_config_path() -> Path:
+def get_writable_config_path() -> Path | None:
     """
     Find a writable location for the config file with fallback options.
 
@@ -34,9 +33,9 @@ def get_writable_config_path() -> Path:
         Path object for writable config location, or None if no writable location found
     """
     fallback_paths = [
-        DEFAULT_CONFIG_PATH, # Default location
-        Path(tempfile.gettempdir()) / "crewai_settings.json", # Temporary directory
-        Path.cwd() / "crewai_settings.json", # Current working directory
+        DEFAULT_CONFIG_PATH,  # Default location
+        Path(tempfile.gettempdir()) / "crewai_settings.json",  # Temporary directory
+        Path.cwd() / "crewai_settings.json",  # Current working directory
     ]
 
     for config_path in fallback_paths:
@@ -48,13 +47,14 @@ def get_writable_config_path() -> Path:
                 test_file.unlink()  # Clean up test file
                 logger.info(f"Using config path: {config_path}")
                 return config_path
-            except Exception:
+            except Exception:  # noqa: S112
                 continue
 
-        except Exception:
+        except Exception:  # noqa: S112
             continue
 
     return None
+
 
 # Settings that are related to the user's account
 USER_SETTINGS_KEYS = [
@@ -135,7 +135,7 @@ class Settings(BaseModel):
         default=DEFAULT_CLI_SETTINGS["oauth2_domain"],
     )
 
-    def __init__(self, config_path: Path = None, **data):
+    def __init__(self, config_path: Path | None = None, **data):
         """Load Settings from config path with fallback support"""
         if config_path is None:
             config_path = get_writable_config_path()
@@ -149,7 +149,7 @@ class Settings(BaseModel):
 
         try:
             config_path.parent.mkdir(parents=True, exist_ok=True)
-        except Exception as e:
+        except Exception:
             merged_data = {**data}
             # Dummy path for memory-only mode
             super().__init__(config_path=Path("/dev/null"), **merged_data)
@@ -160,7 +160,7 @@ class Settings(BaseModel):
             try:
                 with config_path.open("r") as f:
                     file_data = json.load(f)
-            except Exception as e:
+            except Exception:
                 file_data = {}
 
         merged_data = {**file_data, **data}
@@ -194,7 +194,7 @@ class Settings(BaseModel):
             with self.config_path.open("w") as f:
                 json.dump(updated_data, f, indent=4)
 
-        except Exception as e:
+        except Exception:  # noqa: S110
             pass
 
     def _reset_user_settings(self) -> None:
