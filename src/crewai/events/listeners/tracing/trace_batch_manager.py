@@ -50,12 +50,13 @@ class TraceBatchManager:
         self.batch_owner_id: str | None = None
         self.backend_initialized: bool = False
         self.ephemeral_trace_url: str | None = None
+
         try:
-            self.plus_api = PlusAPI(
-                api_key=get_auth_token(),
-            )
+            self.token = get_auth_token()
         except AuthError:
-            self.plus_api = PlusAPI(api_key="")
+            self.token = ""
+        
+        self.plus_api = PlusAPI(api_key=self.token)
         self.ephemeral_trace_url = None
 
     def initialize_batch(
