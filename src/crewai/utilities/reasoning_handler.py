@@ -259,7 +259,7 @@ class AgentReasoning:
             )
 
             # Prepare a simple callable that just returns the tool arguments as JSON
-            def _create_reasoning_plan(plan: str, ready: bool):  # noqa: N802
+            def _create_reasoning_plan(plan: str, ready: bool = True):  # noqa: N802
                 """Return the reasoning plan result in JSON string form."""
                 return json.dumps({"plan": plan, "ready": ready})
 
