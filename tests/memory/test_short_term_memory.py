@@ -1,19 +1,20 @@
-from unittest.mock import patch, ANY
 from collections import defaultdict
+from unittest.mock import ANY, patch
+
 import pytest
 
 from crewai.agent import Agent
 from crewai.crew import Crew
+from crewai.events.event_bus import crewai_event_bus
+from crewai.events.types.memory_events import (
+    MemoryQueryCompletedEvent,
+    MemoryQueryStartedEvent,
+    MemorySaveCompletedEvent,
+    MemorySaveStartedEvent,
+)
 from crewai.memory.short_term.short_term_memory import ShortTermMemory
 from crewai.memory.short_term.short_term_memory_item import ShortTermMemoryItem
 from crewai.task import Task
-from crewai.utilities.events import crewai_event_bus
-from crewai.utilities.events.memory_events import (
-    MemorySaveStartedEvent,
-    MemorySaveCompletedEvent,
-    MemoryQueryStartedEvent,
-    MemoryQueryCompletedEvent,
-)
 
 
 @pytest.fixture
@@ -38,26 +39,26 @@ def short_term_memory():
 def test_short_term_memory_search_events(short_term_memory):
     events = defaultdict(list)
 
-    with crewai_event_bus.scoped_handlers():
+    with patch("crewai.rag.chromadb.client.ChromaDBClient.search", return_value=[]):
+        with crewai_event_bus.scoped_handlers():
 
-        @crewai_event_bus.on(MemoryQueryStartedEvent)
-        def on_search_started(source, event):
-            events["MemoryQueryStartedEvent"].append(event)
+            @crewai_event_bus.on(MemoryQueryStartedEvent)
+            def on_search_started(source, event):
+                events["MemoryQueryStartedEvent"].append(event)
 
-        @crewai_event_bus.on(MemoryQueryCompletedEvent)
-        def on_search_completed(source, event):
-            events["MemoryQueryCompletedEvent"].append(event)
+            @crewai_event_bus.on(MemoryQueryCompletedEvent)
+            def on_search_completed(source, event):
+                events["MemoryQueryCompletedEvent"].append(event)
 
-        # Call the save method
-        short_term_memory.search(
-            query="test value",
-            limit=3,
-            score_threshold=0.35,
-        )
+            # Call the save method
+            short_term_memory.search(
+                query="test value",
+                limit=3,
+                score_threshold=0.35,
+            )
 
     assert len(events["MemoryQueryStartedEvent"]) == 1
     assert len(events["MemoryQueryCompletedEvent"]) == 1
-    assert len(events["MemoryQueryFailedEvent"]) == 0
 
     assert dict(events["MemoryQueryStartedEvent"][0]) == {
         "timestamp": ANY,
@@ -65,6 +66,12 @@ def test_short_term_memory_search_events(short_term_memory):
         "source_fingerprint": None,
         "source_type": "short_term_memory",
         "fingerprint_metadata": None,
+        "task_id": None,
+        "task_name": None,
+        "from_task": None,
+        "from_agent": None,
+        "agent_role": None,
+        "agent_id": None,
         "query": "test value",
         "limit": 3,
         "score_threshold": 0.35,
@@ -76,6 +83,12 @@ def test_short_term_memory_search_events(short_term_memory):
         "source_fingerprint": None,
         "source_type": "short_term_memory",
         "fingerprint_metadata": None,
+        "task_id": None,
+        "task_name": None,
+        "from_task": None,
+        "from_agent": None,
+        "agent_role": None,
+        "agent_id": None,
         "query": "test value",
         "results": [],
         "limit": 3,
@@ -99,12 +112,10 @@ def test_short_term_memory_save_events(short_term_memory):
         short_term_memory.save(
             value="test value",
             metadata={"task": "test_task"},
-            agent="test_agent",
         )
 
     assert len(events["MemorySaveStartedEvent"]) == 1
     assert len(events["MemorySaveCompletedEvent"]) == 1
-    assert len(events["MemorySaveFailedEvent"]) == 0
 
     assert dict(events["MemorySaveStartedEvent"][0]) == {
         "timestamp": ANY,
@@ -112,9 +123,14 @@ def test_short_term_memory_save_events(short_term_memory):
         "source_fingerprint": None,
         "source_type": "short_term_memory",
         "fingerprint_metadata": None,
+        "task_id": None,
+        "task_name": None,
+        "from_task": None,
+        "from_agent": None,
+        "agent_role": None,
+        "agent_id": None,
         "value": "test value",
         "metadata": {"task": "test_task"},
-        "agent_role": "test_agent",
     }
 
     assert dict(events["MemorySaveCompletedEvent"][0]) == {
@@ -123,9 +139,14 @@ def test_short_term_memory_save_events(short_term_memory):
         "source_fingerprint": None,
         "source_type": "short_term_memory",
         "fingerprint_metadata": None,
+        "task_id": None,
+        "task_name": None,
+        "from_task": None,
+        "from_agent": None,
+        "agent_role": None,
+        "agent_id": None,
         "value": "test value",
-        "metadata": {"task": "test_task", "agent": "test_agent"},
-        "agent_role": "test_agent",
+        "metadata": {"task": "test_task"},
         "save_time_ms": ANY,
     }
 
@@ -154,12 +175,12 @@ def test_save_and_search(short_term_memory):
 
     expected_result = [
         {
-            "context": memory.data,
+            "content": memory.data,
             "metadata": {"agent": "test_agent"},
             "score": 0.95,
         }
     ]
     with patch.object(ShortTermMemory, "search", return_value=expected_result):
         find = short_term_memory.search("test value", score_threshold=0.01)[0]
-        assert find["context"] == memory.data, "Data value mismatch."
+        assert find["content"] == memory.data, "Data value mismatch."
         assert find["metadata"]["agent"] == "test_agent", "Agent value mismatch."

@@ -48,7 +48,7 @@ Documentation = "https://docs.crewai.com"
 Repository = "https://github.com/crewAIInc/crewAI"
 
 [project.optional-dependencies]
-tools = ["crewai-tools~=0.62.1"]
+tools = ["crewai-tools~=0.73.0"]
 embeddings = [
     "tiktoken~=0.8.0"
 ]
@@ -68,12 +68,16 @@ docling = [
 aisuite = [
     "aisuite>=0.1.10",
 ]
+qdrant = [
+    "qdrant-client[fastembed]>=1.14.3",
+]
 
 [tool.uv]
 dev-dependencies = [
-    "ruff>=0.8.2",
-    "mypy>=1.10.0",
-    "pre-commit>=3.6.0",
+    "ruff>=0.12.11",
+    "mypy>=1.17.1",
+    "pre-commit>=4.3.0",
+    "bandit>=1.8.6",
     "pillow>=10.2.0",
     "cairosvg>=2.7.1",
     "pytest>=8.0.0",
@@ -85,15 +89,57 @@ dev-dependencies = [
     "pytest-timeout>=2.3.1",
     "pytest-xdist>=3.6.1",
     "pytest-split>=0.9.0",
+    "types-requests==2.32.*",
+    "types-pyyaml==6.0.*",
+    "types-regex==2024.11.6.*",
+    "types-appdirs==1.4.*",
 ]
 
 [project.scripts]
 crewai = "crewai.cli.cli:crewai"
 
+[tool.ruff]
+exclude = [
+    "src/crewai/cli/templates",
+]
+fix = true
+
+[tool.ruff.lint]
+select = [
+    "E",      # pycodestyle errors (style issues)
+    "F",      # Pyflakes (code errors)
+    "B",      # flake8-bugbear (bug prevention)
+    "S",      # bandit (security issues)
+    "RUF",    # ruff-specific rules
+    "N",      # pep8-naming (naming conventions)
+    "W",      # pycodestyle warnings
+    "PERF",   # performance issues
+    "PIE",    # flake8-pie (unnecessary code)
+    "ASYNC",  # async/await best practices
+    "RET",    # flake8-return (return improvements)
+    "UP006",  # use collections.abc
+    "UP007",  # use X | Y for unions
+    "UP035",  # use dict/list instead of typing.Dict/List
+    "UP037",  # remove quotes from type annotations
+    "UP045",  # use X | None instead of Optional[X]
+    "UP004",  # use isinstance instead of type
+    "UP008",  # use super() instead of super(Class, self)
+    "UP010",  # use isinstance for type checks
+    "UP018",  # use str() instead of "string"
+    "UP031",  # use f-strings for .format()
+    "UP032",  # use f-strings for .format() with positional
+    "I001",   # sort imports
+    "I002",   # remove unused imports
+]
+ignore = ["E501"]  # ignore line too long globally
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["S101", "RET504"]  # Allow assert statements and unnecessary assignments before return in tests
+
 [tool.mypy]
-ignore_missing_imports = true
-disable_error_code = 'import-untyped'
-exclude = ["cli/templates"]
+exclude = ["src/crewai/cli/templates", "tests/"]
+plugins = ["pydantic.mypy"]
+
 
 [tool.bandit]
 exclude_dirs = ["src/crewai/cli/templates"]

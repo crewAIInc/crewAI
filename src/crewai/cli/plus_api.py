@@ -1,11 +1,10 @@
-from typing import List, Optional
 from urllib.parse import urljoin
 
 import requests
 
 from crewai.cli.config import Settings
-from crewai.cli.version import get_crewai_version
 from crewai.cli.constants import DEFAULT_CREWAI_ENTERPRISE_URL
+from crewai.cli.version import get_crewai_version
 
 
 class PlusAPI:
@@ -56,9 +55,9 @@ class PlusAPI:
         handle: str,
         is_public: bool,
         version: str,
-        description: Optional[str],
+        description: str | None,
         encoded_file: str,
-        available_exports: Optional[List[str]] = None,
+        available_exports: list[str] | None = None,
     ):
         params = {
             "handle": handle,
@@ -117,17 +116,19 @@ class PlusAPI:
     def get_organizations(self) -> requests.Response:
         return self._make_request("GET", self.ORGANIZATIONS_RESOURCE)
 
-    def send_trace_batch(self, payload) -> requests.Response:
-        return self._make_request("POST", self.TRACING_RESOURCE, json=payload)
-
     def initialize_trace_batch(self, payload) -> requests.Response:
         return self._make_request(
-            "POST", f"{self.TRACING_RESOURCE}/batches", json=payload
+            "POST",
+            f"{self.TRACING_RESOURCE}/batches",
+            json=payload,
+            timeout=30,
         )
 
     def initialize_ephemeral_trace_batch(self, payload) -> requests.Response:
         return self._make_request(
-            "POST", f"{self.EPHEMERAL_TRACING_RESOURCE}/batches", json=payload
+            "POST",
+            f"{self.EPHEMERAL_TRACING_RESOURCE}/batches",
+            json=payload,
         )
 
     def send_trace_events(self, trace_batch_id: str, payload) -> requests.Response:
@@ -135,6 +136,7 @@ class PlusAPI:
             "POST",
             f"{self.TRACING_RESOURCE}/batches/{trace_batch_id}/events",
             json=payload,
+            timeout=30,
         )
 
     def send_ephemeral_trace_events(
@@ -144,6 +146,7 @@ class PlusAPI:
             "POST",
             f"{self.EPHEMERAL_TRACING_RESOURCE}/batches/{trace_batch_id}/events",
             json=payload,
+            timeout=30,
         )
 
     def finalize_trace_batch(self, trace_batch_id: str, payload) -> requests.Response:
@@ -151,6 +154,7 @@ class PlusAPI:
             "PATCH",
             f"{self.TRACING_RESOURCE}/batches/{trace_batch_id}/finalize",
             json=payload,
+            timeout=30,
         )
 
     def finalize_ephemeral_trace_batch(
@@ -160,4 +164,5 @@ class PlusAPI:
             "PATCH",
             f"{self.EPHEMERAL_TRACING_RESOURCE}/batches/{trace_batch_id}/finalize",
             json=payload,
+            timeout=30,
         )

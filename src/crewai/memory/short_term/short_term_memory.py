@@ -1,20 +1,20 @@
-from typing import Any, Dict, Optional
 import time
+from typing import Any
 
 from pydantic import PrivateAttr
 
+from crewai.events.event_bus import crewai_event_bus
+from crewai.events.types.memory_events import (
+    MemoryQueryCompletedEvent,
+    MemoryQueryFailedEvent,
+    MemoryQueryStartedEvent,
+    MemorySaveCompletedEvent,
+    MemorySaveFailedEvent,
+    MemorySaveStartedEvent,
+)
 from crewai.memory.memory import Memory
 from crewai.memory.short_term.short_term_memory_item import ShortTermMemoryItem
 from crewai.memory.storage.rag_storage import RAGStorage
-from crewai.utilities.events.crewai_event_bus import crewai_event_bus
-from crewai.utilities.events.memory_events import (
-    MemoryQueryStartedEvent,
-    MemoryQueryCompletedEvent,
-    MemoryQueryFailedEvent,
-    MemorySaveStartedEvent,
-    MemorySaveCompletedEvent,
-    MemorySaveFailedEvent,
-)
 
 
 class ShortTermMemory(Memory):
@@ -26,18 +26,18 @@ class ShortTermMemory(Memory):
     MemoryItem instances.
     """
 
-    _memory_provider: Optional[str] = PrivateAttr()
+    _memory_provider: str | None = PrivateAttr()
 
     def __init__(self, crew=None, embedder_config=None, storage=None, path=None):
         memory_provider = embedder_config.get("provider") if embedder_config else None
         if memory_provider == "mem0":
             try:
                 from crewai.memory.storage.mem0_storage import Mem0Storage
-            except ImportError:
+            except ImportError as e:
                 raise ImportError(
                     "Mem0 is not installed. Please install it with `pip install mem0ai`."
-                )
-            config = embedder_config.get("config")
+                ) from e
+            config = embedder_config.get("config") if embedder_config else None
             storage = Mem0Storage(type="short_term", crew=crew, config=config)
         else:
             storage = (
@@ -56,35 +56,43 @@ class ShortTermMemory(Memory):
     def save(
         self,
         value: Any,
-        metadata: Optional[Dict[str, Any]] = None,
-        agent: Optional[str] = None,
+        metadata: dict[str, Any] | None = None,
     ) -> None:
         crewai_event_bus.emit(
             self,
             event=MemorySaveStartedEvent(
                 value=value,
                 metadata=metadata,
-                agent_role=agent,
                 source_type="short_term_memory",
+                from_agent=self.agent,
+                from_task=self.task,
             ),
         )
 
         start_time = time.time()
         try:
-            item = ShortTermMemoryItem(data=value, metadata=metadata, agent=agent)
+            item = ShortTermMemoryItem(
+                data=value,
+                metadata=metadata,
+                agent=self.agent.role if self.agent else None,
+            )
             if self._memory_provider == "mem0":
-                item.data = f"Remember the following insights from Agent run: {item.data}"
+                item.data = (
+                    f"Remember the following insights from Agent run: {item.data}"
+                )
 
-            super().save(value=item.data, metadata=item.metadata, agent=item.agent)
+            super().save(value=item.data, metadata=item.metadata)
 
             crewai_event_bus.emit(
                 self,
                 event=MemorySaveCompletedEvent(
                     value=value,
                     metadata=metadata,
-                    agent_role=agent,
+                    # agent_role=agent,
                     save_time_ms=(time.time() - start_time) * 1000,
                     source_type="short_term_memory",
+                    from_agent=self.agent,
+                    from_task=self.task,
                 ),
             )
         except Exception as e:
@@ -93,9 +101,10 @@ class ShortTermMemory(Memory):
                 event=MemorySaveFailedEvent(
                     value=value,
                     metadata=metadata,
-                    agent_role=agent,
                     error=str(e),
                     source_type="short_term_memory",
+                    from_agent=self.agent,
+                    from_task=self.task,
                 ),
             )
             raise
@@ -103,8 +112,8 @@ class ShortTermMemory(Memory):
     def search(
         self,
         query: str,
-        limit: int = 3,
-        score_threshold: float = 0.35,
+        limit: int = 5,
+        score_threshold: float = 0.6,
     ):
         crewai_event_bus.emit(
             self,
@@ -113,6 +122,8 @@ class ShortTermMemory(Memory):
                 limit=limit,
                 score_threshold=score_threshold,
                 source_type="short_term_memory",
+                from_agent=self.agent,
+                from_task=self.task,
             ),
         )
 
@@ -131,6 +142,8 @@ class ShortTermMemory(Memory):
                     score_threshold=score_threshold,
                     query_time_ms=(time.time() - start_time) * 1000,
                     source_type="short_term_memory",
+                    from_agent=self.agent,
+                    from_task=self.task,
                 ),
             )
 
@@ -154,4 +167,4 @@ class ShortTermMemory(Memory):
         except Exception as e:
             raise Exception(
                 f"An error occurred while resetting the short-term memory: {e}"
-            )
+            ) from e

@@ -728,4 +728,173 @@ interactions:
       - req_c065668c78262d2781db5b3b04f70dba
     http_version: HTTP/1.1
     status_code: 200
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are Crew Manager. You
+      are a seasoned manager with a knack for getting the best out of your team.\nYou
+      are also known for your ability to delegate work to the right people, and to
+      ask the right questions to get the best out of your team.\nEven though you don''t
+      perform tasks by yourself, you have a lot of experience in the field, which
+      allows you to properly evaluate the work of your team members.\nYour personal
+      goal is: Manage the team to complete the task in the best way possible.\nYou
+      ONLY have access to the following tools, and should NEVER make up tools that
+      are not listed here:\n\nTool Name: Delegate work to coworker\nTool Arguments:
+      {''task'': {''description'': ''The task to delegate'', ''type'': ''str''}, ''context'':
+      {''description'': ''The context for the task'', ''type'': ''str''}, ''coworker'':
+      {''description'': ''The role/name of the coworker to delegate to'', ''type'':
+      ''str''}}\nTool Description: Delegate a specific task to one of the following
+      coworkers: Scorer\nThe input to this tool should be the coworker, the task you
+      want them to do, and ALL necessary context to execute the task, they know nothing
+      about the task, so share absolutely everything you know, don''t reference things
+      but instead explain them.\nTool Name: Ask question to coworker\nTool Arguments:
+      {''question'': {''description'': ''The question to ask'', ''type'': ''str''},
+      ''context'': {''description'': ''The context for the question'', ''type'': ''str''},
+      ''coworker'': {''description'': ''The role/name of the coworker to ask'', ''type'':
+      ''str''}}\nTool Description: Ask a specific question to one of the following
+      coworkers: Scorer\nThe input to this tool should be the coworker, the question
+      you have for them, and ALL necessary context to ask the question properly, they
+      know nothing about the question, so share absolutely everything you know, don''t
+      reference things but instead explain them.\n\nIMPORTANT: Use the following format
+      in your response:\n\n```\nThought: you should always think about what to do\nAction:
+      the action to take, only one name of [Delegate work to coworker, Ask question
+      to coworker], just the name, exactly as it''s written.\nAction Input: the input
+      to the action, just a simple JSON object, enclosed in curly braces, using \"
+      to wrap keys and values.\nObservation: the result of the action\n```\n\nOnce
+      all necessary information is gathered, return the following format:\n\n```\nThought:
+      I now know the final answer\nFinal Answer: the final answer to the original
+      input question\n```"}, {"role": "user", "content": "\nCurrent Task: Give me
+      an integer score between 1-5 for the following title: ''The impact of AI in
+      the future of work'', check examples to based your evaluation.\n\nThis is the
+      expected criteria for your final answer: The score of the title.\nyou MUST return
+      the actual complete content as the final answer, not a summary.\n\nBegin! This
+      is VERY important to you, use the tools available and give your best Final Answer,
+      your job depends on it!\n\nThought:"}, {"role": "assistant", "content": "Thought:
+      To give an accurate score for the title \"The impact of AI in the future of
+      work\" based on the specified criteria, I''ll need the expertise of the Scorer.
+      They specialize in evaluating content, so I must delegate this task to them.
+      I need to provide them with all the necessary context, including the title and
+      the importance of giving a well-considered, integer score between 1-5. Since
+      the request stresses the importance of this task and its implications for my
+      job, I will make sure to communicate the urgency and the criteria very clearly
+      to the Scorer.\n\nAction: Delegate work to coworker\n\nAction Input: {\"task\":
+      \"Evaluate the title ''The impact of AI in the future of work'' and give it
+      an integer score between 1-5, based on your expert assessment.\", \"context\":
+      \"The task is to assign a score to the given title based on its significance,
+      relevance, and impactfulness regarding the future of work influenced by artificial
+      intelligence. This score needs to reflect a thorough evaluation within the range
+      of 1 (being the least impactful or relevant) to 5 (being the most impactful
+      or relevant). The assessment is highly important and could significantly affect
+      our future work, so it''s crucial to consider the current discourse on AI, its
+      potential transformative power on industries and job markets, and general expectations
+      of its future role.\", \"coworker\": \"Scorer\"}\nObservation: The score of
+      the title \"The impact of AI in the future of work\" is 5."}], "model": "gpt-4-0125-preview",
+      "stop": ["\nObservation:"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate, zstd
+      connection:
+      - keep-alive
+      content-length:
+      - '4575'
+      content-type:
+      - application/json
+      cookie:
+      - _cfuvid=FasG_74jjKfEtA2Mjn2iKdu62tv3zosBxYNYTk1E12M-1734025911900-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.93.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.93.0
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-read-timeout:
+      - '600.0'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.9
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAAwAAAP//jJJNaxsxEIbv/hWDznaIE9t19uYWUkLTQiG3OiyydnZXtlajSLN2m+D/
+        XqSNvZs2hV4E0jPvq/l6GQEIXYgMhKolq8aZyafl5nq7emqWz9+/bO8/Pu9n3+4VL+nz01e8FeOo
+        oM0WFZ9UF4oaZ5A12Q4rj5Ixuk4/zBfTxXw6nSfQUIEmyirHk9nkcno1nziPe42HV2VNWmEQGfwY
+        AQC8pDPmaAv8KTK4HJ9eGgxBViiycxCA8GTii5Ah6MDSshj3UJFltCnth5raquYM7sDSAXbx4Bqh
+        1FYakDYc0K/t2t6m+yrdM3ioEYIij0BlCmfNBmEtItCNk4ojWd2Btp1dy20XfSC/WwvQAeYXw5w8
+        lm2QsSe2NWYApLXEMvY0dePxlRzP9RuqnKdN+EMqSm11qHOPMpCNtQYmJxI9jgAeU5/bN60TzlPj
+        OGfaYfruZnHV+Yl+tD29PkEmlmagupmN3/HLC2SpTRhMSiipaix6aT9W2RaaBmA0qPrvbN7z7irX
+        tvof+x4ohY6xyJ3HQqu3FfdhHuPm/yvs3OWUsAjo91phzhp9nESBpWxNt5Mi/AqMTV5qW6F3XqfF
+        jJMcHUe/AQAA//8DAErhO7yXAwAA
+    headers:
+      CF-RAY:
+      - 974eec827a978486-SJC
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Mon, 25 Aug 2025 23:38:36 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - __cf_bm=r95s2Hh1kHgI6PI08wwTySLyufxeDnmixIX5GVDEyoA-1756165116-1.0.1.1-X5dML3NG4uvFgDnjqJ4pQWbB9MyxJisxAZJlRivMc7T1f83cCNBH_cy5fJjn4XjKks_UKUUj5PvBGifu2gLkaiqYYWvbSjrhjKseuPN8.Q4;
+        path=/; expires=Tue, 26-Aug-25 00:08:36 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=lnKPmS3pW0Tw6qE4ZI8cf4lyVDuLg7ZNxmzxi7CqlME-1756165116673-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '1211'
+      openai-project:
+      - proj_xitITlrFeen7zjNSzML82h9x
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '1305'
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '2000000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '1998911'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 32ms
+      x-request-id:
+      - req_3ee53a55bafb9d8ab8855cf07987362b
+    status:
+      code: 200
+      message: OK
 version: 1

@@ -1,13 +1,15 @@
 """Protocol for vector database client implementations."""
 
 from abc import abstractmethod
-from typing import Any, Protocol, runtime_checkable, TypedDict, Annotated
-from typing_extensions import Unpack, Required
+from typing import Annotated, Any, Protocol, runtime_checkable
 
+from pydantic import GetCoreSchemaHandler
+from pydantic_core import CoreSchema, core_schema
+from typing_extensions import Required, TypedDict, Unpack
 
 from crewai.rag.types import (
-    EmbeddingFunction,
     BaseRecord,
+    EmbeddingFunction,
     SearchResult,
 )
 
@@ -55,7 +57,7 @@ class BaseCollectionSearchParams(BaseCollectionParams, total=False):
 
     query: Required[str]
     limit: int
-    metadata_filter: dict[str, Any]
+    metadata_filter: dict[str, Any] | None
     score_threshold: float
 
 
@@ -95,6 +97,17 @@ class BaseClient(Protocol):
 
     client: Any
     embedding_function: EmbeddingFunction
+
+    @classmethod
+    def __get_pydantic_core_schema__(
+        cls, _source_type: Any, _handler: GetCoreSchemaHandler
+    ) -> CoreSchema:
+        """Generate Pydantic core schema for BaseClient Protocol.
+
+        This allows the Protocol to be used in Pydantic models without
+        requiring arbitrary_types_allowed=True.
+        """
+        return core_schema.any_schema()
 
     @abstractmethod
     def create_collection(self, **kwargs: Unpack[BaseCollectionParams]) -> None:

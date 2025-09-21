@@ -38,17 +38,17 @@ from crewai.utilities.agent_utils import (
 )
 from crewai.utilities.constants import TRAINED_AGENTS_DATA_FILE, TRAINING_DATA_FILE
 from crewai.utilities.converter import generate_model_description
-from crewai.utilities.events.agent_events import (
+from crewai.events.types.agent_events import (
     AgentExecutionCompletedEvent,
     AgentExecutionErrorEvent,
     AgentExecutionStartedEvent,
 )
-from crewai.utilities.events.crewai_event_bus import crewai_event_bus
-from crewai.utilities.events.memory_events import (
+from crewai.events.event_bus import crewai_event_bus
+from crewai.events.types.memory_events import (
     MemoryRetrievalStartedEvent,
     MemoryRetrievalCompletedEvent,
 )
-from crewai.utilities.events.knowledge_events import (
+from crewai.events.types.knowledge_events import (
     KnowledgeQueryCompletedEvent,
     KnowledgeQueryFailedEvent,
     KnowledgeQueryStartedEvent,
@@ -320,15 +320,20 @@ class Agent(BaseAgent):
                 event=MemoryRetrievalStartedEvent(
                     task_id=str(task.id) if task else None,
                     source_type="agent",
+                    from_agent=self,
+                    from_task=task,
                 ),
             )
 
             start_time = time.time()
+
             contextual_memory = ContextualMemory(
                 self.crew._short_term_memory,
                 self.crew._long_term_memory,
                 self.crew._entity_memory,
                 self.crew._external_memory,
+                agent=self,
+                task=task,
             )
             memory = contextual_memory.build_context_for_task(task, context)
             if memory.strip() != "":
@@ -341,6 +346,8 @@ class Agent(BaseAgent):
                     memory_content=memory,
                     retrieval_time_ms=(time.time() - start_time) * 1000,
                     source_type="agent",
+                    from_agent=self,
+                    from_task=task,
                 ),
             )
         knowledge_config = (

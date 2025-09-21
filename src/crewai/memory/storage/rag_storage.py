@@ -1,35 +1,18 @@
-import contextlib
-import io
 import logging
-import os
-import shutil
-import uuid
+import traceback
+import warnings
+from typing import Any, cast
 
-from typing import Any, Dict, List, Optional
-from chromadb.api import ClientAPI
+from crewai.rag.chromadb.config import ChromaDBConfig
+from crewai.rag.chromadb.types import ChromaEmbeddingFunctionWrapper
+from crewai.rag.config.utils import get_rag_client
+from crewai.rag.core.base_client import BaseClient
+from crewai.rag.embeddings.factory import get_embedding_function
+from crewai.rag.factory import create_client
 from crewai.rag.storage.base_rag_storage import BaseRAGStorage
-from crewai.rag.embeddings.configurator import EmbeddingConfigurator
-from crewai.utilities.chromadb import create_persistent_client
+from crewai.rag.types import BaseRecord
 from crewai.utilities.constants import MAX_FILE_NAME_LENGTH
 from crewai.utilities.paths import db_storage_path
-import warnings
-
-
-@contextlib.contextmanager
-def suppress_logging(
-    logger_name="chromadb.segment.impl.vector.local_persistent_hnsw",
-    level=logging.ERROR,
-):
-    logger = logging.getLogger(logger_name)
-    original_level = logger.getEffectiveLevel()
-    logger.setLevel(level)
-    with (
-        contextlib.redirect_stdout(io.StringIO()),
-        contextlib.redirect_stderr(io.StringIO()),
-        contextlib.suppress(UserWarning),
-    ):
-        yield
-    logger.setLevel(original_level)
 
 
 class RAGStorage(BaseRAGStorage):
@@ -38,11 +21,14 @@ class RAGStorage(BaseRAGStorage):
     search efficiency.
     """
 
-    app: ClientAPI | None = None
-
     def __init__(
-        self, type, allow_reset=True, embedder_config=None, crew=None, path=None
-    ):
+        self,
+        type: str,
+        allow_reset: bool = True,
+        embedder_config: dict[str, Any] | None = None,
+        crew: Any = None,
+        path: str | None = None,
+    ) -> None:
         super().__init__(type, allow_reset, embedder_config, crew)
         agents = crew.agents if crew else []
         agents = [self._sanitize_role(agent.role) for agent in agents]
@@ -51,37 +37,29 @@ class RAGStorage(BaseRAGStorage):
         self.storage_file_name = self._build_storage_file_name(type, agents)
 
         self.type = type
+        self._client: BaseClient | None = None
 
         self.allow_reset = allow_reset
         self.path = path
-        self._initialize_app()
 
-    def _set_embedder_config(self):
-        configurator = EmbeddingConfigurator()
-        self.embedder_config = configurator.configure_embedder(self.embedder_config)
-
-    def _initialize_app(self):
-        from chromadb.config import Settings
-
-        # Suppress deprecation warnings from chromadb, which are not relevant to us
-        # TODO: Remove this once we upgrade chromadb to at least 1.0.8.
         warnings.filterwarnings(
             "ignore",
             message=r".*'model_fields'.*is deprecated.*",
             module=r"^chromadb(\.|$)",
         )
 
-        self._set_embedder_config()
+        if self.embedder_config:
+            embedding_function = get_embedding_function(self.embedder_config)
+            config = ChromaDBConfig(
+                embedding_function=cast(
+                    ChromaEmbeddingFunctionWrapper, embedding_function
+                )
+            )
+            self._client = create_client(config)
 
-        self.app = create_persistent_client(
-            path=self.path if self.path else self.storage_file_name,
-            settings=Settings(allow_reset=self.allow_reset),
-        )
-
-        self.collection = self.app.get_or_create_collection(
-            name=self.type, embedding_function=self.embedder_config
-        )
-        logging.info(f"Collection found or created: {self.collection}")
+    def _get_client(self) -> BaseClient:
+        """Get the appropriate client - instance-specific or global."""
+        return self._client if self._client else get_rag_client()
 
     def _sanitize_role(self, role: str) -> str:
         """
@@ -103,75 +81,69 @@ class RAGStorage(BaseRAGStorage):
 
         return f"{base_path}/{file_name}"
 
-    def save(self, value: Any, metadata: Dict[str, Any]) -> None:
-        if not hasattr(self, "app") or not hasattr(self, "collection"):
-            self._initialize_app()
+    def save(self, value: Any, metadata: dict[str, Any]) -> None:
         try:
-            self._generate_embedding(value, metadata)
+            client = self._get_client()
+            collection_name = (
+                f"memory_{self.type}_{self.agents}"
+                if self.agents
+                else f"memory_{self.type}"
+            )
+            client.get_or_create_collection(collection_name=collection_name)
+
+            document: BaseRecord = {"content": value}
+            if metadata:
+                document["metadata"] = metadata
+
+            client.add_documents(collection_name=collection_name, documents=[document])
         except Exception as e:
-            logging.error(f"Error during {self.type} save: {str(e)}")
+            logging.error(
+                f"Error during {self.type} save: {e!s}\n{traceback.format_exc()}"
+            )
 
     def search(
         self,
         query: str,
-        limit: int = 3,
-        filter: Optional[dict] = None,
-        score_threshold: float = 0.35,
-    ) -> List[Any]:
-        if not hasattr(self, "app"):
-            self._initialize_app()
-
+        limit: int = 5,
+        filter: dict[str, Any] | None = None,
+        score_threshold: float = 0.6,
+    ) -> list[Any]:
         try:
-            with suppress_logging():
-                response = self.collection.query(query_texts=query, n_results=limit)
-
-            results = []
-            for i in range(len(response["ids"][0])):
-                result = {
-                    "id": response["ids"][0][i],
-                    "metadata": response["metadatas"][0][i],
-                    "context": response["documents"][0][i],
-                    "score": response["distances"][0][i],
-                }
-                if result["score"] >= score_threshold:
-                    results.append(result)
-
-            return results
+            client = self._get_client()
+            collection_name = (
+                f"memory_{self.type}_{self.agents}"
+                if self.agents
+                else f"memory_{self.type}"
+            )
+            return client.search(
+                collection_name=collection_name,
+                query=query,
+                limit=limit,
+                metadata_filter=filter,
+                score_threshold=score_threshold,
+            )
         except Exception as e:
-            logging.error(f"Error during {self.type} search: {str(e)}")
+            logging.error(
+                f"Error during {self.type} search: {e!s}\n{traceback.format_exc()}"
+            )
             return []
-
-    def _generate_embedding(self, text: str, metadata: Dict[str, Any]) -> None:  # type: ignore
-        if not hasattr(self, "app") or not hasattr(self, "collection"):
-            self._initialize_app()
-
-        self.collection.add(
-            documents=[text],
-            metadatas=[metadata or {}],
-            ids=[str(uuid.uuid4())],
-        )
 
     def reset(self) -> None:
         try:
-            if self.app:
-                self.app.reset()
-                shutil.rmtree(f"{db_storage_path()}/{self.type}")
-                self.app = None
-                self.collection = None
+            client = self._get_client()
+            collection_name = (
+                f"memory_{self.type}_{self.agents}"
+                if self.agents
+                else f"memory_{self.type}"
+            )
+            client.delete_collection(collection_name=collection_name)
         except Exception as e:
-            if "attempt to write a readonly database" in str(e):
-                # Ignore this specific error
+            if "attempt to write a readonly database" in str(
+                e
+            ) or "does not exist" in str(e):
+                # Ignore readonly database and collection not found errors (already reset)
                 pass
             else:
                 raise Exception(
                     f"An error occurred while resetting the {self.type} memory: {e}"
-                )
-
-    def _create_default_embedding_function(self):
-        from chromadb.utils.embedding_functions.openai_embedding_function import (
-            OpenAIEmbeddingFunction,
-        )
-
-        return OpenAIEmbeddingFunction(
-            api_key=os.getenv("OPENAI_API_KEY"), model_name="text-embedding-3-small"
-        )
+                ) from e

@@ -498,4 +498,204 @@ interactions:
     status:
       code: 200
       message: OK
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are Crew Manager. You
+      are a seasoned manager with a knack for getting the best out of your team.\nYou
+      are also known for your ability to delegate work to the right people, and to
+      ask the right questions to get the best out of your team.\nEven though you don''t
+      perform tasks by yourself, you have a lot of experience in the field, which
+      allows you to properly evaluate the work of your team members.\nYour personal
+      goal is: Manage the team to complete the task in the best way possible.\nYou
+      ONLY have access to the following tools, and should NEVER make up tools that
+      are not listed here:\n\nTool Name: Delegate work to coworker\nTool Arguments:
+      {''task'': {''description'': ''The task to delegate'', ''type'': ''str''}, ''context'':
+      {''description'': ''The context for the task'', ''type'': ''str''}, ''coworker'':
+      {''description'': ''The role/name of the coworker to delegate to'', ''type'':
+      ''str''}}\nTool Description: Delegate a specific task to one of the following
+      coworkers: First Agent\nThe input to this tool should be the coworker, the task
+      you want them to do, and ALL necessary context to execute the task, they know
+      nothing about the task, so share absolutely everything you know, don''t reference
+      things but instead explain them.\nTool Name: Ask question to coworker\nTool
+      Arguments: {''question'': {''description'': ''The question to ask'', ''type'':
+      ''str''}, ''context'': {''description'': ''The context for the question'', ''type'':
+      ''str''}, ''coworker'': {''description'': ''The role/name of the coworker to
+      ask'', ''type'': ''str''}}\nTool Description: Ask a specific question to one
+      of the following coworkers: First Agent\nThe input to this tool should be the
+      coworker, the question you have for them, and ALL necessary context to ask the
+      question properly, they know nothing about the question, so share absolutely
+      everything you know, don''t reference things but instead explain them.\n\nIMPORTANT:
+      Use the following format in your response:\n\n```\nThought: you should always
+      think about what to do\nAction: the action to take, only one name of [Delegate
+      work to coworker, Ask question to coworker], just the name, exactly as it''s
+      written.\nAction Input: the input to the action, just a simple JSON object,
+      enclosed in curly braces, using \" to wrap keys and values.\nObservation: the
+      result of the action\n```\n\nOnce all necessary information is gathered, return
+      the following format:\n\n```\nThought: I now know the final answer\nFinal Answer:
+      the final answer to the original input question\n```"}, {"role": "user", "content":
+      "\nCurrent Task: Process initial data\n\nThis is the expected criteria for your
+      final answer: Initial analysis\nyou MUST return the actual complete content
+      as the final answer, not a summary.\n\nBegin! This is VERY important to you,
+      use the tools available and give your best Final Answer, your job depends on
+      it!\n\nThought:"}, {"role": "assistant", "content": "Thought: I need to delegate
+      the task of processing the initial data to the First Agent to ensure we have
+      a thorough and accurate analysis. I will provide them with all the necessary
+      details to complete this task effectively.\n\nAction: Delegate work to coworker\nAction
+      Input: {\"task\": \"Process initial data\", \"context\": \"The task involves
+      analyzing the initial data set we have received. This includes cleaning the
+      data, categorizing it for analysis, identifying any trends or patterns, and
+      summarizing the findings. The goal is to have a clear understanding of what
+      the data indicates and any initial insights that can be drawn from it.\", \"coworker\":
+      \"First Agent\"}\nObservation: To process the initial data set effectively,
+      we will follow several key steps to ensure we clean, categorize, analyze, and
+      summarize our findings comprehensively.\n\n1. **Data Cleaning**: \n   - First,
+      we will review the dataset for missing, inconsistent, or erroneous entries.
+      \n   - We will handle missing values by either imputing them based on surrounding
+      data or removing records where necessary.\n   - Additionally, we will standardize
+      categorical variables to ensure consistency (e.g., ensuring all location names
+      are spelled the same way).\n\n2. **Data Categorization**: \n   - Next, we will
+      categorize the data into relevant segments that will aid our analysis. \n   -
+      This involves grouping data points based on common characteristics, such as
+      demographics, time periods, or any key performance indicators (KPIs) we are
+      focusing on.\n\n3. **Trend and Pattern Identification**: \n   - With the cleaned
+      and categorized data, we will perform a detailed analysis to identify trends
+      and patterns.\n   - This will involve using statistical tools and visualizations
+      to uncover relationships within the data. We will look at time series analysis,
+      correlation coefficients, and significant outliers that may require further
+      investigation.\n\n4. **Summarizing Findings**: \n   - Finally, we will compile
+      a summary of our findings, including both qualitative insights and quantitative
+      metrics.\n   - This summary should encapsulate the key trends identified, any
+      notable patterns, and implications of these findings.\n   - We will also document
+      any limitations of the data and suggest areas for further research if necessary.\n\nBy
+      completing these steps, we will not only have a clear understanding of what
+      the data indicates but also provide actionable insights that can guide our next
+      steps. This comprehensive analysis will serve as a solid foundation for any
+      additional exploration or decision-making initiatives related to our project."}],
+      "model": "gpt-4o", "stop": ["\nObservation:"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate, zstd
+      connection:
+      - keep-alive
+      content-length:
+      - '5593'
+      content-type:
+      - application/json
+      cookie:
+      - _cfuvid=YeODa6MF5ug3OZUV6ob1dSrBKCM8BXbKkS77TIihYoE-1755550362828-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.93.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.93.0
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-read-timeout:
+      - '600.0'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.9
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAAwAAAP//jFXbbtxGDH33VxB6KRCsDV8T129pmgBBH5qiblO0DuzxDCWxHnFUklpn
+        HeTfC472ljYF+rLAisPLOTwkPx0ANJSaK2hiHywOYz58dTn2H18/9T+d/KT8+Otr/uXFu6ffLs/k
+        +rvfY7Nwj3L/J0bbeB3FMowZjQrP5igYDD3qyYuL56enJ+enF9UwlITZ3brRDs/L4enx6fnh8eXh
+        8fO1Y18oojZX8McBAMCn+uslcsKPzRUcLzZfBlQNHTZX20cAjZTsX5qgSmqBrVnsjLGwIdeq7+7u
+        bvi6L1PX2xW8BS6P8OA/1iO0xCFDYH1EueE39d/L+u8KrguMUiKq1qfEZBQypGABFA2wbTEaLTGv
+        FvCI8Eg5w8QJxcIDguISJWSIQkYxZFDDUcEKIOskCAGcS8EeWWmJEDjklZIewQ3f8MkRPHv2ved6
+        lTEwcffs2RW8X6dRC2JwvwJKyEbtiriDwAliEfGquIOBVIm7BRDHwk4Ssi2gCKBIYSyTArIJocIj
+        WU9ccTo+RTuC654UiJclL1Eh9qV4OECyHgVoGCcLrgMY0PqSFNoim6SwDHlC9WSCQ1n6Jy+jagdB
+        MBZJegRvJvFoQxGsHA6TmoPjFCTRE0IMhl2RSuAyCIX7jHOmiaktMpCtjpyv0x1fa5enWp2z9iNH
+        hOg0YlpsQc5M3iMU6QLTEyYgtgIjihEjGyh2A7J5/4NBGyJlsmD7raoZOynT6BA3Ee+DYoLCoH0Q
+        TBD7ICEaCqlRVMj0gJBwKJ2EsfcvRcBoQE9OJekCkPvA0YN6vYIZl8FhlBaIlbreFJKER67ozxz9
+        tSCnqoJ3wQyF4e2sDopbKt6T9VtSHbIzsYAyCbQlTrqWV0+tuVT35fWAKzBPoTXHOOdQWFLwllnF
+        FjJYKXl+siSdQl43Qo/gB1xtxVLzEMc8JZyhK1YpbrjdyTnPMlObEqEu4LGnjKDUcYXGBmWyTCi6
+        bQAXw1Rl0k7mw6ZRJiOetXLubP08DUMQenJob4gTcafO0HWPEEstzE0+tbspSBLaOlwBtPqvZm3U
+        AhgV/nLATsYSd30KuXCnlNDNbBv7gCYUdT1ptfRYlii140Pweax0L7ZcL2bmi0/ydhdlGmiexLVd
+        p65DNWjn4QJBxSCxh0R1N3gvnIaXqUepCiueUnG9oropSGBDbwZYX8R35/6yKuwy3MzRN+rLIK9F
+        pot5B47EPE+9T6kLDSO56+EQHjbbat2cUYrfGBj7oOi13d3d7W9zwXbS4MeEp5z3DIG5rKH7Hfmw
+        tnzeXo5culHKvf7DtWmJSftbwaCF/UqolbGp1s8HAB/qhZq+ODrNKGUY7dbKA9Z0Jycn53PAZncU
+        d+bTi43VioW853f2/HLxlZC3CS1Q1r0z18QQe0w7391NDFOismc42AP+73q+FnsGT9z9n/A7Q4w4
+        GqbbUTBR/BLz7pmgd/S/nm2JrgU3irKkiLdGKN6MhG2Y8nzQG12p4XDbEncoo9B81dvx9vL424vn
+        F2dn8b45+HzwNwAAAP//AwDhfkSS3ggAAA==
+    headers:
+      CF-RAY:
+      - 97544b3fd9c66894-SJC
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Tue, 26 Aug 2025 15:17:10 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - __cf_bm=AK6x7s00CdjvAhZqoKc.oyU2huXbBJAB_qi1o9cIHkk-1756221430-1.0.1.1-s9cWi1kLPHCBoqRe8BhCYWgaKEG.LQvm0b0NNJkJrpuMMIAUz9sSqijPatK.t2wknR3Qo65.PTew2trnDH5_.mL1l4JewiW1VndksvCWngY;
+        path=/; expires=Tue, 26-Aug-25 15:47:10 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=3NkIk1Ua5GwknkJHax_bb1dBUHU9Yobu11sjZ9yu7Rg-1756221430892-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '5563'
+      openai-project:
+      - proj_xitITlrFeen7zjNSzML82h9x
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '5651'
+      x-ratelimit-limit-project-requests:
+      - '10000'
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '30000000'
+      x-ratelimit-remaining-project-requests:
+      - '9999'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '29998658'
+      x-ratelimit-reset-project-requests:
+      - 6ms
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 2ms
+      x-request-id:
+      - req_8ee5ddbc01374cf487da8763d7dee507
+    status:
+      code: 200
+      message: OK
 version: 1
