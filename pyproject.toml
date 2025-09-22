@@ -39,7 +39,6 @@ dependencies = [
     "blinker>=1.9.0",
     "json5>=0.10.0",
     "portalocker==2.7.0",
-    "exa-py>=1.9.1",
 ]
 
 [project.urls]
