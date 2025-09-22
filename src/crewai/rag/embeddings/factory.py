@@ -2,7 +2,7 @@
 
 import os
 from collections.abc import Callable
-from typing import Any, Final, Literal, NotRequired, TypedDict
+from typing import Any, Final, Literal, TypedDict
 
 from chromadb import EmbeddingFunction
 from chromadb.utils.embedding_functions.amazon_bedrock_embedding_function import (
@@ -44,6 +44,7 @@ from chromadb.utils.embedding_functions.sentence_transformer_embedding_function 
 from chromadb.utils.embedding_functions.text2vec_embedding_function import (
     Text2VecEmbeddingFunction,
 )
+from typing_extensions import NotRequired
 
 from crewai.rag.embeddings.types import EmbeddingOptions
 
