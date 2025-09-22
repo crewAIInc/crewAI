@@ -1,4 +1,5 @@
-from typing import Any, Callable, Optional, Tuple, Union
+from collections.abc import Callable
+from typing import Any
 
 from pydantic import BaseModel, field_validator
 
@@ -17,8 +18,8 @@ class GuardrailResult(BaseModel):
     """
 
     success: bool
-    result: Optional[Any] = None
-    error: Optional[str] = None
+    result: Any | None = None
+    error: str | None = None
 
     @field_validator("result", "error")
     @classmethod
@@ -36,7 +37,7 @@ class GuardrailResult(BaseModel):
         return v
 
     @classmethod
-    def from_tuple(cls, result: Tuple[bool, Union[Any, str]]) -> "GuardrailResult":
+    def from_tuple(cls, result: tuple[bool, Any | str]) -> "GuardrailResult":
         """Create a GuardrailResult from a validation tuple.
 
         Args:
@@ -55,33 +56,27 @@ class GuardrailResult(BaseModel):
 
 
 def process_guardrail(
-    output: Any, guardrail: Callable, retry_count: int
+    output: Any, guardrail: Callable, retry_count: int, event_source: Any | None = None
 ) -> GuardrailResult:
     """Process the guardrail for the agent output.
 
     Args:
         output: The output to validate with the guardrail
+        guardrail: The guardrail to validate the output with
+        retry_count: The number of times the guardrail has been retried
+        event_source: The source of the guardrail to be sent in events
 
     Returns:
         GuardrailResult: The result of the guardrail validation
     """
-    from crewai.task import TaskOutput
-    from crewai.lite_agent import LiteAgentOutput
-
-    assert isinstance(output, TaskOutput) or isinstance(
-        output, LiteAgentOutput
-    ), "Output must be a TaskOutput or LiteAgentOutput"
-
-    assert guardrail is not None
-
+    from crewai.events.event_bus import crewai_event_bus
     from crewai.events.types.llm_guardrail_events import (
         LLMGuardrailCompletedEvent,
         LLMGuardrailStartedEvent,
     )
-    from crewai.events.event_bus import crewai_event_bus
 
     crewai_event_bus.emit(
-        None,
+        event_source,
         LLMGuardrailStartedEvent(guardrail=guardrail, retry_count=retry_count),
     )
 
@@ -89,7 +84,7 @@ def process_guardrail(
     guardrail_result = GuardrailResult.from_tuple(result)
 
     crewai_event_bus.emit(
-        None,
+        event_source,
         LLMGuardrailCompletedEvent(
             success=guardrail_result.success,
             result=guardrail_result.result,
