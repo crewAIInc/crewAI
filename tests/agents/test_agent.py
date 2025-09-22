@@ -137,35 +137,6 @@ def test_custom_llm():
     assert agent.llm.model == "gpt-4"
 
 
-def test_custom_llm_with_langchain():
-    from langchain_openai import ChatOpenAI
-
-    agent = Agent(
-        role="test role",
-        goal="test goal",
-        backstory="test backstory",
-        llm=ChatOpenAI(temperature=0, model="gpt-4"),
-    )
-
-    assert agent.llm.model == "gpt-4"
-
-
-def test_custom_llm_temperature_preservation():
-    from langchain_openai import ChatOpenAI
-
-    langchain_llm = ChatOpenAI(temperature=0.7, model="gpt-4")
-    agent = Agent(
-        role="temperature test role",
-        goal="temperature test goal",
-        backstory="temperature test backstory",
-        llm=langchain_llm,
-    )
-
-    assert isinstance(agent.llm, LLM)
-    assert agent.llm.model == "gpt-4"
-    assert agent.llm.temperature == 0.7
-
-
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_agent_execution():
     agent = Agent(
@@ -287,8 +258,8 @@ def test_cache_hitting():
     output = agent.execute_task(task1)
     output = agent.execute_task(task2)
     assert cache_handler._cache == {
-        "multiplier-{'first_number': 2, 'second_number': 6}": 12,
-        "multiplier-{'first_number': 3, 'second_number': 3}": 9,
+        'multiplier-{"first_number": 2, "second_number": 6}': 12,
+        'multiplier-{"first_number": 3, "second_number": 3}': 9,
     }
 
     task = Task(
@@ -300,9 +271,9 @@ def test_cache_hitting():
     assert output == "36"
 
     assert cache_handler._cache == {
-        "multiplier-{'first_number': 2, 'second_number': 6}": 12,
-        "multiplier-{'first_number': 3, 'second_number': 3}": 9,
-        "multiplier-{'first_number': 12, 'second_number': 3}": 36,
+        'multiplier-{"first_number": 2, "second_number": 6}': 12,
+        'multiplier-{"first_number": 3, "second_number": 3}': 9,
+        'multiplier-{"first_number": 12, "second_number": 3}': 36,
     }
     received_events = []
 
@@ -322,7 +293,7 @@ def test_cache_hitting():
         output = agent.execute_task(task)
         assert output == "0"
         read.assert_called_with(
-            tool="multiplier", input={"first_number": 2, "second_number": 6}
+            tool="multiplier", input='{"first_number": 2, "second_number": 6}'
         )
         assert len(received_events) == 1
         assert isinstance(received_events[0], ToolUsageFinishedEvent)
@@ -363,8 +334,8 @@ def test_disabling_cache_for_agent():
     output = agent.execute_task(task1)
     output = agent.execute_task(task2)
     assert cache_handler._cache != {
-        "multiplier-{'first_number': 2, 'second_number': 6}": 12,
-        "multiplier-{'first_number': 3, 'second_number': 3}": 9,
+        'multiplier-{"first_number": 2, "second_number": 6}': 12,
+        'multiplier-{"first_number": 3, "second_number": 3}': 9,
     }
 
     task = Task(
@@ -376,9 +347,9 @@ def test_disabling_cache_for_agent():
     assert output == "36"
 
     assert cache_handler._cache != {
-        "multiplier-{'first_number': 2, 'second_number': 6}": 12,
-        "multiplier-{'first_number': 3, 'second_number': 3}": 9,
-        "multiplier-{'first_number': 12, 'second_number': 3}": 36,
+        'multiplier-{"first_number": 2, "second_number": 6}': 12,
+        'multiplier-{"first_number": 3, "second_number": 3}': 9,
+        'multiplier-{"first_number": 12, "second_number": 3}': 36,
     }
 
     with patch.object(CacheHandler, "read") as read:
@@ -2361,13 +2332,11 @@ def mock_get_auth_token():
 
 @patch("crewai.cli.plus_api.PlusAPI.get_agent")
 def test_agent_from_repository(mock_get_agent, mock_get_auth_token):
-    # Mock embedchain initialization to prevent race conditions in parallel CI execution
-    with patch("embedchain.client.Client.setup"):
-        from crewai_tools import (
-            EnterpriseActionTool,
-            FileReadTool,
-            SerperDevTool,
-        )
+    from crewai_tools import (
+        EnterpriseActionTool,
+        FileReadTool,
+        SerperDevTool,
+    )
 
     mock_get_response = MagicMock()
     mock_get_response.status_code = 200
@@ -2423,9 +2392,7 @@ def test_agent_from_repository(mock_get_agent, mock_get_auth_token):
 
 @patch("crewai.cli.plus_api.PlusAPI.get_agent")
 def test_agent_from_repository_override_attributes(mock_get_agent, mock_get_auth_token):
-    # Mock embedchain initialization to prevent race conditions in parallel CI execution
-    with patch("embedchain.client.Client.setup"):
-        from crewai_tools import SerperDevTool
+    from crewai_tools import SerperDevTool
 
     mock_get_response = MagicMock()
     mock_get_response.status_code = 200

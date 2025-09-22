@@ -48,7 +48,7 @@ Documentation = "https://docs.crewai.com"
 Repository = "https://github.com/crewAIInc/crewAI"
 
 [project.optional-dependencies]
-tools = ["crewai-tools~=0.71.0"]
+tools = ["crewai-tools~=0.73.0"]
 embeddings = [
     "tiktoken~=0.8.0"
 ]
@@ -138,6 +138,7 @@ ignore = ["E501"]  # ignore line too long globally
 
 [tool.mypy]
 exclude = ["src/crewai/cli/templates", "tests/"]
+plugins = ["pydantic.mypy"]
 
 
 [tool.bandit]

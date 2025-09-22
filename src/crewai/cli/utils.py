@@ -5,7 +5,7 @@ import sys
 from functools import reduce
 from inspect import getmro, isclass, isfunction, ismethod
 from pathlib import Path
-from typing import Any, Dict, List, get_type_hints
+from typing import Any, get_type_hints
 
 import click
 import tomli
@@ -41,8 +41,7 @@ def copy_template(src, dst, name, class_name, folder_name):
 def read_toml(file_path: str = "pyproject.toml"):
     """Read the content of a TOML file and return it as a dictionary."""
     with open(file_path, "rb") as f:
-        toml_dict = tomli.load(f)
-    return toml_dict
+        return tomli.load(f)
 
 
 def parse_toml(content):
@@ -77,7 +76,7 @@ def get_project_description(
 
 
 def _get_project_attribute(
-    pyproject_path: str, keys: List[str], require: bool
+    pyproject_path: str, keys: list[str], require: bool
 ) -> Any | None:
     """Get an attribute from the pyproject.toml file."""
     attribute = None
@@ -96,16 +95,20 @@ def _get_project_attribute(
     except FileNotFoundError:
         console.print(f"Error: {pyproject_path} not found.", style="bold red")
     except KeyError:
-        console.print(f"Error: {pyproject_path} is not a valid pyproject.toml file.", style="bold red")
-    except tomllib.TOMLDecodeError if sys.version_info >= (3, 11) else Exception as e:  # type: ignore
         console.print(
-            f"Error: {pyproject_path} is not a valid TOML file."
-            if sys.version_info >= (3, 11)
-            else f"Error reading the pyproject.toml file: {e}",
+            f"Error: {pyproject_path} is not a valid pyproject.toml file.",
             style="bold red",
         )
     except Exception as e:
-        console.print(f"Error reading the pyproject.toml file: {e}", style="bold red")
+        # Handle TOML decode errors for Python 3.11+
+        if sys.version_info >= (3, 11) and isinstance(e, tomllib.TOMLDecodeError):  # type: ignore
+            console.print(
+                f"Error: {pyproject_path} is not a valid TOML file.", style="bold red"
+            )
+        else:
+            console.print(
+                f"Error reading the pyproject.toml file: {e}", style="bold red"
+            )
 
     if require and not attribute:
         console.print(
@@ -117,7 +120,7 @@ def _get_project_attribute(
     return attribute
 
 
-def _get_nested_value(data: Dict[str, Any], keys: List[str]) -> Any:
+def _get_nested_value(data: dict[str, Any], keys: list[str]) -> Any:
     return reduce(dict.__getitem__, keys, data)
 
 
@@ -296,7 +299,10 @@ def get_crews(crew_path: str = "crew.py", require: bool = False) -> list[Crew]:
                                 try:
                                     crew_instances.extend(fetch_crews(module_attr))
                                 except Exception as e:
-                                    console.print(f"Error processing attribute {attr_name}: {e}", style="bold red")
+                                    console.print(
+                                        f"Error processing attribute {attr_name}: {e}",
+                                        style="bold red",
+                                    )
                                     continue
 
                             # If we found crew instances, break out of the loop
@@ -304,12 +310,15 @@ def get_crews(crew_path: str = "crew.py", require: bool = False) -> list[Crew]:
                                 break
 
                         except Exception as exec_error:
-                            console.print(f"Error executing module: {exec_error}", style="bold red")
+                            console.print(
+                                f"Error executing module: {exec_error}",
+                                style="bold red",
+                            )
 
                     except (ImportError, AttributeError) as e:
                         if require:
                             console.print(
-                                f"Error importing crew from {crew_path}: {str(e)}",
+                                f"Error importing crew from {crew_path}: {e!s}",
                                 style="bold red",
                             )
                         continue
@@ -325,9 +334,9 @@ def get_crews(crew_path: str = "crew.py", require: bool = False) -> list[Crew]:
     except Exception as e:
         if require:
             console.print(
-                f"Unexpected error while loading crew: {str(e)}", style="bold red"
+                f"Unexpected error while loading crew: {e!s}", style="bold red"
             )
-            raise SystemExit
+            raise SystemExit from e
     return crew_instances
 
 
@@ -348,8 +357,7 @@ def get_crew_instance(module_attr) -> Crew | None:
 
     if isinstance(module_attr, Crew):
         return module_attr
-    else:
-        return None
+    return None
 
 
 def fetch_crews(module_attr) -> list[Crew]:
@@ -402,11 +410,11 @@ def extract_available_exports(dir_path: str = "src"):
         return available_exports
 
     except Exception as e:
-        console.print(f"[red]Error: Could not extract tool classes: {str(e)}[/red]")
+        console.print(f"[red]Error: Could not extract tool classes: {e!s}[/red]")
         console.print(
             "Please ensure your project contains valid tools (classes inheriting from BaseTool or functions with @tool decorator)."
         )
-        raise SystemExit(1)
+        raise SystemExit(1) from e
 
 
 def _load_tools_from_init(init_file: Path) -> list[dict[str, Any]]:
@@ -440,8 +448,8 @@ def _load_tools_from_init(init_file: Path) -> list[dict[str, Any]]:
         ]
 
     except Exception as e:
-        console.print(f"[red]Warning: Could not load {init_file}: {str(e)}[/red]")
-        raise SystemExit(1)
+        console.print(f"[red]Warning: Could not load {init_file}: {e!s}[/red]")
+        raise SystemExit(1) from e
 
     finally:
         sys.modules.pop("temp_module", None)
