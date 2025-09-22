@@ -18,8 +18,8 @@ class RPMController(BaseModel):
     )
     logger: Logger = Field(default_factory=lambda: Logger(verbose=False))
     _current_rpm: int = PrivateAttr(default=0)
-    _timer: threading.Timer | None = PrivateAttr(default=None)
-    _lock: threading.Lock | None = PrivateAttr(default=None)
+    _timer: "threading.Timer | None" = PrivateAttr(default=None)
+    _lock: "threading.Lock | None" = PrivateAttr(default=None)
     _shutdown_flag: bool = PrivateAttr(default=False)
 
     @model_validator(mode="after")
