@@ -1,71 +1,70 @@
 """Utility for colored console output."""
 
-from typing import Optional
+from typing import Final, Literal, NamedTuple
+
+PrinterColor = Literal[
+    "purple",
+    "bold_purple",
+    "green",
+    "bold_green",
+    "cyan",
+    "bold_cyan",
+    "magenta",
+    "bold_magenta",
+    "yellow",
+    "bold_yellow",
+    "red",
+    "bold_blue",
+]
+
+_COLOR_CODES: Final[dict[PrinterColor, str]] = {
+    "purple": "\033[95m",
+    "bold_purple": "\033[1m\033[95m",
+    "red": "\033[91m",
+    "bold_green": "\033[1m\033[92m",
+    "green": "\033[32m",
+    "bold_blue": "\033[1m\033[94m",
+    "yellow": "\033[93m",
+    "bold_yellow": "\033[1m\033[93m",
+    "cyan": "\033[96m",
+    "bold_cyan": "\033[1m\033[96m",
+    "magenta": "\033[35m",
+    "bold_magenta": "\033[1m\033[35m",
+}
+
+RESET: Final[str] = "\033[0m"
+
+
+class ColoredText(NamedTuple):
+    """Represents text with an optional color for console output.
+
+    Attributes:
+        text: The text content to be printed.
+        color: Optional color for the text, specified as a PrinterColor.
+    """
+
+    text: str
+    color: PrinterColor | None
 
 
 class Printer:
     """Handles colored console output formatting."""
 
-    def print(self, content: str, color: Optional[str] = None):
-        if color == "purple":
-            self._print_purple(content)
-        elif color == "red":
-            self._print_red(content)
-        elif color == "bold_green":
-            self._print_bold_green(content)
-        elif color == "bold_purple":
-            self._print_bold_purple(content)
-        elif color == "bold_blue":
-            self._print_bold_blue(content)
-        elif color == "yellow":
-            self._print_yellow(content)
-        elif color == "bold_yellow":
-            self._print_bold_yellow(content)
-        elif color == "cyan":
-            self._print_cyan(content)
-        elif color == "bold_cyan":
-            self._print_bold_cyan(content)
-        elif color == "magenta":
-            self._print_magenta(content)
-        elif color == "bold_magenta":
-            self._print_bold_magenta(content)
-        elif color == "green":
-            self._print_green(content)
-        else:
-            print(content)
+    @staticmethod
+    def print(
+        content: str | list[ColoredText], color: PrinterColor | None = None
+    ) -> None:
+        """Prints content to the console with optional color formatting.
 
-    def _print_bold_purple(self, content):
-        print("\033[1m\033[95m {}\033[00m".format(content))
-
-    def _print_bold_green(self, content):
-        print("\033[1m\033[92m {}\033[00m".format(content))
-
-    def _print_purple(self, content):
-        print("\033[95m {}\033[00m".format(content))
-
-    def _print_red(self, content):
-        print("\033[91m {}\033[00m".format(content))
-
-    def _print_bold_blue(self, content):
-        print("\033[1m\033[94m {}\033[00m".format(content))
-
-    def _print_yellow(self, content):
-        print("\033[93m {}\033[00m".format(content))
-
-    def _print_bold_yellow(self, content):
-        print("\033[1m\033[93m {}\033[00m".format(content))
-
-    def _print_cyan(self, content):
-        print("\033[96m {}\033[00m".format(content))
-
-    def _print_bold_cyan(self, content):
-        print("\033[1m\033[96m {}\033[00m".format(content))
-
-    def _print_magenta(self, content):
-        print("\033[35m {}\033[00m".format(content))
-
-    def _print_bold_magenta(self, content):
-        print("\033[1m\033[35m {}\033[00m".format(content))
-
-    def _print_green(self, content):
-        print("\033[32m {}\033[00m".format(content))
+        Args:
+            content: Either a string or a list of ColoredText objects for multicolor output.
+            color: Optional color for the text when content is a string. Ignored when content is a list.
+        """
+        if isinstance(content, str):
+            content = [ColoredText(content, color)]
+        print(
+            "".join(
+                f"{_COLOR_CODES[c.color] if c.color else ''}{c.text}{RESET}"
+                for c in content
+            )
+        )
