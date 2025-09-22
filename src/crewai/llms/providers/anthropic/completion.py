@@ -253,7 +253,6 @@ class AnthropicCompletion(BaseLLM):
 
         usage = self._extract_anthropic_token_usage(response)
         self._track_token_usage_internal(usage)
-        print(f"usage: {usage}")
 
         if response.content and available_functions:
             for content_block in response.content:
@@ -288,7 +287,6 @@ class AnthropicCompletion(BaseLLM):
             from_agent=from_agent,
             messages=params["messages"],
         )
-        print(f"usage 2: {usage}")
 
         if usage.get("total_tokens", 0) > 0:
             logging.info(f"Anthropic API usage: {usage}")
