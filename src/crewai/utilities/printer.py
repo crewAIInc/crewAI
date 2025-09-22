@@ -14,6 +14,7 @@ PrinterColor = Literal[
     "yellow",
     "bold_yellow",
     "red",
+    "blue",
     "bold_blue",
 ]
 
@@ -23,6 +24,7 @@ _COLOR_CODES: Final[dict[PrinterColor, str]] = {
     "red": "\033[91m",
     "bold_green": "\033[1m\033[92m",
     "green": "\033[32m",
+    "blue": "\033[94m",
     "bold_blue": "\033[1m\033[94m",
     "yellow": "\033[93m",
     "bold_yellow": "\033[1m\033[93m",
