@@ -4,7 +4,9 @@ import json
 import os
 import pickle
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, TypedDict, Unpack, cast
+from typing import TYPE_CHECKING, Any, TypedDict, cast
+
+from typing_extensions import Unpack
 
 if TYPE_CHECKING:
     from _typeshed import SupportsWrite
