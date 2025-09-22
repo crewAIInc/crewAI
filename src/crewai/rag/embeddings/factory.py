@@ -1,6 +1,8 @@
 """Minimal embedding function factory for CrewAI."""
 
 import os
+from collections.abc import Callable
+from typing import Any, Final, Literal, NotRequired, TypedDict
 
 from chromadb import EmbeddingFunction
 from chromadb.utils.embedding_functions.amazon_bedrock_embedding_function import (
@@ -45,16 +47,63 @@ from chromadb.utils.embedding_functions.text2vec_embedding_function import (
 
 from crewai.rag.embeddings.types import EmbeddingOptions
 
+AllowedEmbeddingProviders = Literal[
+    "openai",
+    "cohere",
+    "ollama",
+    "huggingface",
+    "sentence-transformer",
+    "instructor",
+    "google-palm",
+    "google-generativeai",
+    "google-vertex",
+    "amazon-bedrock",
+    "jina",
+    "roboflow",
+    "openclip",
+    "text2vec",
+    "onnx",
+]
+
+
+class EmbedderConfig(TypedDict):
+    """Configuration for embedding functions with nested format."""
+
+    provider: AllowedEmbeddingProviders
+    config: NotRequired[dict[str, Any]]
+
+
+EMBEDDING_PROVIDERS: Final[
+    dict[AllowedEmbeddingProviders, Callable[..., EmbeddingFunction]]
+] = {
+    "openai": OpenAIEmbeddingFunction,
+    "cohere": CohereEmbeddingFunction,
+    "ollama": OllamaEmbeddingFunction,
+    "huggingface": HuggingFaceEmbeddingFunction,
+    "sentence-transformer": SentenceTransformerEmbeddingFunction,
+    "instructor": InstructorEmbeddingFunction,
+    "google-palm": GooglePalmEmbeddingFunction,
+    "google-generativeai": GoogleGenerativeAiEmbeddingFunction,
+    "google-vertex": GoogleVertexEmbeddingFunction,
+    "amazon-bedrock": AmazonBedrockEmbeddingFunction,
+    "jina": JinaEmbeddingFunction,
+    "roboflow": RoboflowEmbeddingFunction,
+    "openclip": OpenCLIPEmbeddingFunction,
+    "text2vec": Text2VecEmbeddingFunction,
+    "onnx": ONNXMiniLM_L6_V2,
+}
+
 
 def get_embedding_function(
-    config: EmbeddingOptions | dict | None = None,
+    config: EmbeddingOptions | EmbedderConfig | None = None,
 ) -> EmbeddingFunction:
     """Get embedding function - delegates to ChromaDB.
 
     Args:
-        config: Optional configuration - either an EmbeddingOptions object or a dict with:
-            - provider: The embedding provider to use (default: "openai")
-            - Any other provider-specific parameters
+        config: Optional configuration - either:
+            - EmbeddingOptions: Pydantic model with flat configuration
+            - EmbedderConfig: TypedDict with nested format {"provider": str, "config": dict}
+            - None: Uses default OpenAI configuration
 
     Returns:
         EmbeddingFunction instance ready for use with ChromaDB
@@ -81,31 +130,33 @@ def get_embedding_function(
         >>> embedder = get_embedding_function()
 
         # Use Cohere with dict
-        >>> embedder = get_embedding_function({
+        >>> embedder = get_embedding_function(EmbedderConfig(**{
         ...     "provider": "cohere",
-        ...     "api_key": "your-key",
-        ...     "model_name": "embed-english-v3.0"
-        ... })
+        ...     "config": {
+        ...         "api_key": "your-key",
+        ...         "model_name": "embed-english-v3.0"
+        ...     }
+        ... }))
 
         # Use with EmbeddingOptions
         >>> embedder = get_embedding_function(
         ...     EmbeddingOptions(provider="sentence-transformer", model_name="all-MiniLM-L6-v2")
         ... )
 
-        # Use local sentence transformers (no API key needed)
-        >>> embedder = get_embedding_function({
-        ...     "provider": "sentence-transformer",
-        ...     "model_name": "all-MiniLM-L6-v2"
+        # Use Azure OpenAI
+        >>> embedder = get_embedding_function(EmbedderConfig(**{
+        ...     "provider": "openai",
+        ...     "config": {
+        ...         "api_key": "your-azure-key",
+        ...         "api_base": "https://your-resource.openai.azure.com/",
+        ...         "api_type": "azure",
+        ...         "api_version": "2023-05-15",
+        ...         "model": "text-embedding-3-small",
+        ...         "deployment_id": "your-deployment-name"
+        ...     }
         ... })
 
-        # Use Ollama for local embeddings
-        >>> embedder = get_embedding_function({
-        ...     "provider": "ollama",
-        ...     "model_name": "nomic-embed-text"
-        ... })
-
-        # Use ONNX (no API key needed)
-        >>> embedder = get_embedding_function({
+        >>> embedder = get_embedding_function(EmbedderConfig(**{
         ...     "provider": "onnx"
         ... })
     """
@@ -114,35 +165,30 @@ def get_embedding_function(
             api_key=os.getenv("OPENAI_API_KEY"), model_name="text-embedding-3-small"
         )
 
-    # Handle EmbeddingOptions object
     if isinstance(config, EmbeddingOptions):
         config_dict = config.model_dump(exclude_none=True)
+        provider = config_dict.pop("provider", "openai")
+        if "model" in config_dict and "model_name" not in config_dict:
+            config_dict["model_name"] = config_dict.pop("model")
     else:
-        config_dict = config.copy()
+        provider = config["provider"]
+        nested = config.get("config", {})
 
-    provider = config_dict.pop("provider", "openai")
+        # Validate format
+        if not nested and len(config) > 1:
+            raise ValueError(
+                "Invalid embedder configuration format. "
+                "Configuration must be nested under a 'config' key. "
+                "Example: {'provider': 'openai', 'config': {'api_key': '...', 'model': '...'}}"
+            )
 
-    embedding_functions = {
-        "openai": OpenAIEmbeddingFunction,
-        "cohere": CohereEmbeddingFunction,
-        "ollama": OllamaEmbeddingFunction,
-        "huggingface": HuggingFaceEmbeddingFunction,
-        "sentence-transformer": SentenceTransformerEmbeddingFunction,
-        "instructor": InstructorEmbeddingFunction,
-        "google-palm": GooglePalmEmbeddingFunction,
-        "google-generativeai": GoogleGenerativeAiEmbeddingFunction,
-        "google-vertex": GoogleVertexEmbeddingFunction,
-        "amazon-bedrock": AmazonBedrockEmbeddingFunction,
-        "jina": JinaEmbeddingFunction,
-        "roboflow": RoboflowEmbeddingFunction,
-        "openclip": OpenCLIPEmbeddingFunction,
-        "text2vec": Text2VecEmbeddingFunction,
-        "onnx": ONNXMiniLM_L6_V2,
-    }
+        config_dict = dict(nested)
+        if "model" in config_dict and "model_name" not in config_dict:
+            config_dict["model_name"] = config_dict.pop("model")
 
-    if provider not in embedding_functions:
+    if provider not in EMBEDDING_PROVIDERS:
         raise ValueError(
             f"Unsupported provider: {provider}. "
-            f"Available providers: {list(embedding_functions.keys())}"
+            f"Available providers: {list(EMBEDDING_PROVIDERS.keys())}"
         )
-    return embedding_functions[provider](**config_dict)
+    return EMBEDDING_PROVIDERS[provider](**config_dict)
