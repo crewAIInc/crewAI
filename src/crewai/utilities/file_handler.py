@@ -1,15 +1,10 @@
-from __future__ import annotations
-
 import json
 import os
 import pickle
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, TypedDict, cast
+from typing import Any, TypedDict
 
 from typing_extensions import Unpack
-
-if TYPE_CHECKING:
-    from _typeshed import SupportsWrite
 
 
 class LogEntry(TypedDict, total=False):
@@ -159,7 +154,7 @@ class PickleHandler:
           data: The data to be saved to the file.
         """
         with open(self.file_path, "wb") as f:
-            pickle.dump(data, cast(SupportsWrite[bytes], f))
+            pickle.dump(obj=data, file=f)
 
     def load(self) -> Any:
         """Load the data from the specified file using pickle.
