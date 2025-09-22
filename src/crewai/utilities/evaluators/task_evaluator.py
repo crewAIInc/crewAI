@@ -1,35 +1,42 @@
-from typing import List
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, cast
 
 from pydantic import BaseModel, Field
 
-from crewai.utilities import Converter
-from crewai.events.types.task_events import TaskEvaluationEvent
 from crewai.events.event_bus import crewai_event_bus
+from crewai.events.types.task_events import TaskEvaluationEvent
+from crewai.utilities.converter import Converter
 from crewai.utilities.pydantic_schema_parser import PydanticSchemaParser
 from crewai.utilities.training_converter import TrainingConverter
+
+if TYPE_CHECKING:
+    from crewai.agent import Agent
+    from crewai.llm import LLM
+    from crewai.task import Task
 
 
 class Entity(BaseModel):
     name: str = Field(description="The name of the entity.")
     type: str = Field(description="The type of the entity.")
     description: str = Field(description="Description of the entity.")
-    relationships: List[str] = Field(description="Relationships of the entity.")
+    relationships: list[str] = Field(description="Relationships of the entity.")
 
 
 class TaskEvaluation(BaseModel):
-    suggestions: List[str] = Field(
+    suggestions: list[str] = Field(
         description="Suggestions to improve future similar tasks."
     )
     quality: float = Field(
         description="A score from 0 to 10 evaluating on completion, quality, and overall performance, all taking into account the task description, expected output, and the result of the task."
     )
-    entities: List[Entity] = Field(
+    entities: list[Entity] = Field(
         description="Entities extracted from the task output."
     )
 
 
 class TrainingTaskEvaluation(BaseModel):
-    suggestions: List[str] = Field(
+    suggestions: list[str] = Field(
         description="List of clear, actionable instructions derived from the Human Feedbacks to enhance the Agent's performance. Analyze the differences between Initial Outputs and Improved Outputs to generate specific action items for future tasks. Ensure all key and specific points from the human feedback are incorporated into these instructions."
     )
     quality: float = Field(
@@ -41,11 +48,35 @@ class TrainingTaskEvaluation(BaseModel):
 
 
 class TaskEvaluator:
-    def __init__(self, original_agent):
-        self.llm = original_agent.llm
+    """A class to evaluate the performance of an agent based on the tasks they have performed.
+
+    Attributes:
+        llm: The LLM to use for evaluation.
+        original_agent: The agent to evaluate.
+    """
+
+    def __init__(self, original_agent: Agent) -> None:
+        """Initializes the TaskEvaluator with the given LLM and agent.
+
+        Args:
+            original_agent: The agent to evaluate.
+        """
+        self.llm = cast(LLM, original_agent.llm)
         self.original_agent = original_agent
 
-    def evaluate(self, task, output) -> TaskEvaluation:
+    def evaluate(self, task: Task, output: str) -> TaskEvaluation:
+        """
+
+        Args:
+          task: The task to be evaluated.
+          output: The output of the task.
+
+        Returns:
+            TaskEvaluation: The evaluation of the task.
+
+        Notes:
+            - Investigate the Converter.to_pydantic signature, returns BaseModel strictly?
+        """
         crewai_event_bus.emit(
             self, TaskEvaluationEvent(evaluation_type="task_evaluation", task=task)
         )
@@ -73,7 +104,7 @@ class TaskEvaluator:
             instructions=instructions,
         )
 
-        return converter.to_pydantic()
+        return cast(TaskEvaluation, converter.to_pydantic())
 
     def evaluate_training_data(
         self, training_data: dict, agent_id: str
@@ -81,9 +112,12 @@ class TaskEvaluator:
         """
         Evaluate the training data based on the llm output, human feedback, and improved output.
 
-        Parameters:
-            - training_data (dict): The training data to be evaluated.
-            - agent_id (str): The ID of the agent.
+        Args:
+            - training_data: The training data to be evaluated.
+            - agent_id: The ID of the agent.
+
+        Notes:
+            - Investigate the Converter.to_pydantic signature, returns BaseModel strictly?
         """
         crewai_event_bus.emit(
             self, TaskEvaluationEvent(evaluation_type="training_data_evaluation")
@@ -142,5 +176,4 @@ class TaskEvaluator:
             instructions=instructions,
         )
 
-        pydantic_result = converter.to_pydantic()
-        return pydantic_result
+        return cast(TrainingTaskEvaluation, converter.to_pydantic())

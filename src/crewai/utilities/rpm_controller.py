@@ -1,41 +1,54 @@
+"""Controls request rate limiting for API calls."""
+
 import threading
 import time
-from typing import Optional
 
 from pydantic import BaseModel, Field, PrivateAttr, model_validator
+from typing_extensions import Self
 
 from crewai.utilities.logger import Logger
-
-"""Controls request rate limiting for API calls."""
 
 
 class RPMController(BaseModel):
     """Manages requests per minute limiting."""
 
-    max_rpm: Optional[int] = Field(default=None)
+    max_rpm: int | None = Field(
+        default=None,
+        description="Maximum requests per minute. If None, no limit is applied.",
+    )
     logger: Logger = Field(default_factory=lambda: Logger(verbose=False))
     _current_rpm: int = PrivateAttr(default=0)
-    _timer: Optional[threading.Timer] = PrivateAttr(default=None)
-    _lock: Optional[threading.Lock] = PrivateAttr(default=None)
+    _timer: threading.Timer | None = PrivateAttr(default=None)
+    _lock: threading.Lock | None = PrivateAttr(default=None)
     _shutdown_flag: bool = PrivateAttr(default=False)
 
     @model_validator(mode="after")
-    def reset_counter(self):
+    def reset_counter(self) -> Self:
+        """Resets the RPM counter and starts the timer if max_rpm is set.
+
+        Returns:
+            The instance of the RPMController.
+        """
         if self.max_rpm is not None:
             if not self._shutdown_flag:
                 self._lock = threading.Lock()
                 self._reset_request_count()
         return self
 
-    def check_or_wait(self):
+    def check_or_wait(self) -> bool:
+        """Checks if a new request can be made based on the RPM limit.
+
+        Returns:
+            True if a new request can be made, False otherwise.
+        """
         if self.max_rpm is None:
             return True
 
-        def _check_and_increment():
+        def _check_and_increment() -> bool:
             if self.max_rpm is not None and self._current_rpm < self.max_rpm:
                 self._current_rpm += 1
                 return True
-            elif self.max_rpm is not None:
+            if self.max_rpm is not None:
                 self.logger.log(
                     "info", "Max RPM reached, waiting for next minute to start."
                 )
@@ -50,16 +63,18 @@ class RPMController(BaseModel):
         else:
             return _check_and_increment()
 
-    def stop_rpm_counter(self):
+    def stop_rpm_counter(self) -> None:
+        """Stops the RPM counter and cancels any active timers."""
+        self._shutdown_flag = True
         if self._timer:
             self._timer.cancel()
             self._timer = None
 
-    def _wait_for_next_minute(self):
+    def _wait_for_next_minute(self) -> None:
         time.sleep(60)
         self._current_rpm = 0
 
-    def _reset_request_count(self):
+    def _reset_request_count(self) -> None:
         def _reset():
             self._current_rpm = 0
             if not self._shutdown_flag:
@@ -71,7 +86,3 @@ class RPMController(BaseModel):
                 _reset()
         else:
             _reset()
-
-        if self._timer:
-            self._shutdown_flag = True
-            self._timer.cancel()
