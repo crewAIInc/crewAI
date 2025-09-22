@@ -2,6 +2,8 @@
 
 from unittest.mock import Mock, patch
 
+import pytest
+
 from crewai.rag.factory import create_client
 
 
@@ -26,9 +28,9 @@ def test_create_client_chromadb():
 
 
 def test_create_client_unsupported_provider():
-    """Test unsupported provider returns None for now."""
+    """Test unsupported provider raises ValueError."""
     mock_config = Mock()
     mock_config.provider = "unsupported"
 
-    result = create_client(mock_config)
-    assert result is None
+    with pytest.raises(ValueError, match="Unsupported provider: unsupported"):
+        create_client(mock_config)

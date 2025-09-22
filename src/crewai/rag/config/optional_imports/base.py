@@ -1,7 +1,7 @@
 """Base classes for missing provider configurations."""
 
-from typing import Literal
 from dataclasses import field
+from typing import Literal
 
 from pydantic import ConfigDict
 from pydantic.dataclasses import dataclass as pyd_dataclass

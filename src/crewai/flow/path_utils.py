@@ -5,12 +5,10 @@ This module provides utilities for secure path handling to prevent directory
 traversal attacks and ensure paths remain within allowed boundaries.
 """
 
-import os
 from pathlib import Path
-from typing import List, Union
 
 
-def safe_path_join(*parts: str, root: Union[str, Path, None] = None) -> str:
+def safe_path_join(*parts: str, root: str | Path | None = None) -> str:
     """
     Safely join path components and ensure the result is within allowed boundaries.
 
@@ -43,25 +41,25 @@ def safe_path_join(*parts: str, root: Union[str, Path, None] = None) -> str:
 
         # Establish root directory
         root_path = Path(root).resolve() if root else Path.cwd()
-        
+
         # Join and resolve the full path
         full_path = Path(root_path, *clean_parts).resolve()
-        
+
         # Check if the resolved path is within root
         if not str(full_path).startswith(str(root_path)):
             raise ValueError(
                 f"Invalid path: Potential directory traversal. Path must be within {root_path}"
             )
-            
+
         return str(full_path)
-        
+
     except Exception as e:
         if isinstance(e, ValueError):
             raise
-        raise ValueError(f"Invalid path components: {str(e)}")
+        raise ValueError(f"Invalid path components: {e!s}") from e
 
 
-def validate_path_exists(path: Union[str, Path], file_type: str = "file") -> str:
+def validate_path_exists(path: str | Path, file_type: str = "file") -> str:
     """
     Validate that a path exists and is of the expected type.
 
@@ -84,24 +82,24 @@ def validate_path_exists(path: Union[str, Path], file_type: str = "file") -> str
     """
     try:
         path_obj = Path(path).resolve()
-        
+
         if not path_obj.exists():
             raise ValueError(f"Path does not exist: {path}")
-            
+
         if file_type == "file" and not path_obj.is_file():
             raise ValueError(f"Path is not a file: {path}")
-        elif file_type == "directory" and not path_obj.is_dir():
+        if file_type == "directory" and not path_obj.is_dir():
             raise ValueError(f"Path is not a directory: {path}")
-            
+
         return str(path_obj)
-        
+
     except Exception as e:
         if isinstance(e, ValueError):
             raise
-        raise ValueError(f"Invalid path: {str(e)}")
+        raise ValueError(f"Invalid path: {e!s}") from e
 
 
-def list_files(directory: Union[str, Path], pattern: str = "*") -> List[str]:
+def list_files(directory: str | Path, pattern: str = "*") -> list[str]:
     """
     Safely list files in a directory matching a pattern.
 
@@ -126,10 +124,10 @@ def list_files(directory: Union[str, Path], pattern: str = "*") -> List[str]:
         dir_path = Path(directory).resolve()
         if not dir_path.is_dir():
             raise ValueError(f"Not a directory: {directory}")
-            
+
         return [str(p) for p in dir_path.glob(pattern) if p.is_file()]
-        
+
     except Exception as e:
         if isinstance(e, ValueError):
             raise
-        raise ValueError(f"Error listing files: {str(e)}")
+        raise ValueError(f"Error listing files: {e!s}") from e
