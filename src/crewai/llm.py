@@ -1,9 +1,9 @@
+import io
 import json
 import logging
 import os
 import sys
 import threading
-import warnings
 from collections import defaultdict
 from collections.abc import Callable
 from datetime import datetime
@@ -11,6 +11,7 @@ from typing import (
     Any,
     Final,
     Literal,
+    TextIO,
     TypedDict,
     cast,
 )
@@ -19,6 +20,7 @@ from dotenv import load_dotenv
 from litellm.types.utils import ChatCompletionDeltaToolCall
 from pydantic import BaseModel, Field
 
+from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.llm_events import (
     LLMCallCompletedEvent,
     LLMCallFailedEvent,
@@ -31,9 +33,13 @@ from crewai.events.types.tool_usage_events import (
     ToolUsageFinishedEvent,
     ToolUsageStartedEvent,
 )
+from crewai.llms.base_llm import BaseLLM
+from crewai.utilities.exceptions.context_window_exceeding_exception import (
+    LLMContextLengthExceededError,
+)
+from crewai.utilities.logger_utils import suppress_warnings
 
-with warnings.catch_warnings():
-    warnings.simplefilter("ignore", UserWarning)
+with suppress_warnings():
     import litellm
     from litellm import Choices, CustomLogger
     from litellm.exceptions import ContextWindowExceededError
@@ -42,17 +48,6 @@ with warnings.catch_warnings():
     )
     from litellm.types.utils import ModelResponse
     from litellm.utils import supports_response_schema
-
-
-import io
-from typing import TextIO
-
-from crewai.events.event_bus import crewai_event_bus
-from crewai.llms.base_llm import BaseLLM
-from crewai.utilities.exceptions.context_window_exceeding_exception import (
-    LLMContextLengthExceededError,
-)
-from crewai.utilities.logger_utils import suppress_warnings
 
 load_dotenv()
 
