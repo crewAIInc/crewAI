@@ -4,6 +4,7 @@ from unittest.mock import MagicMock, Mock, patch
 import pytest
 
 from crewai import Agent, Crew, Task
+from crewai.cli.authentication.token import AuthError
 from crewai.events.listeners.tracing.first_time_trace_handler import (
     FirstTimeTraceHandler,
 )
@@ -657,3 +658,67 @@ class TestTraceListenerSetup:
             handler.handle_execution_completion()
 
             mock_mark_completed.assert_called_once()
+
+    def test_trace_batch_manager_handles_missing_auth_gracefully(self):
+        """Test that TraceBatchManager handles missing authentication gracefully"""
+        
+        with (
+            patch(
+                "crewai.events.listeners.tracing.trace_batch_manager.get_auth_token",
+                side_effect=AuthError("No token found, make sure you are logged in")
+            ),
+            patch(
+                "crewai.events.listeners.tracing.trace_batch_manager.should_auto_collect_first_time_traces",
+                return_value=False
+            ),
+            patch.object(TraceBatchManager, "_initialize_backend_batch") as mock_backend_init,
+        ):
+            batch_manager = TraceBatchManager()
+            
+            # Verify that the manager was created with empty API key due to auth error
+            assert batch_manager.plus_api.api_key == ""
+            
+            user_context = {"user_id": "test"}
+            execution_metadata = {"crew_name": "test_crew"}
+            
+            batch = batch_manager.initialize_batch(user_context, execution_metadata)
+            
+            # Verify the batch was created successfully
+            assert batch is not None
+            assert batch_manager.is_batch_initialized()
+            assert batch.user_context == user_context
+            assert batch.execution_metadata == execution_metadata
+            assert isinstance(batch.batch_id, str)
+            assert len(batch.batch_id) > 0
+            
+            # Verify that backend initialization was attempted but handled gracefully
+            mock_backend_init.assert_called_once()
+
+    @pytest.mark.vcr(filter_headers=["authorization"])
+    def test_crew_works_without_authentication(self):
+        """Test that crews work properly when no authentication token is present"""
+        
+        with (
+            patch(
+                "crewai.events.listeners.tracing.trace_batch_manager.get_auth_token",
+                side_effect=AuthError("No token found, make sure you are logged in")
+            ),
+            patch.dict(os.environ, {"CREWAI_TRACING_ENABLED": "false"}),
+        ):
+            agent = Agent(
+                role="Test Agent",
+                goal="Test goal",
+                backstory="Test backstory",
+                llm="gpt-4o-mini",
+            )
+            task = Task(
+                description="Say hello to the world",
+                expected_output="hello world",
+                agent=agent,
+            )
+            
+            crew = Crew(agents=[agent], tasks=[task], verbose=True)
+            
+            assert crew is not None
+            assert len(crew.agents) == 1
+            assert len(crew.tasks) == 1
