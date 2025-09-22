@@ -1,26 +1,25 @@
-from datetime import datetime
-from typing import Any, Dict, Optional
-
 from collections.abc import Sequence
+from datetime import datetime
+from typing import Any
 
-from crewai.agent import Agent
-from crewai.task import Task
+from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.events.base_event_listener import BaseEventListener
 from crewai.events.event_bus import CrewAIEventsBus
 from crewai.events.types.agent_events import (
-    AgentExecutionStartedEvent,
     AgentExecutionCompletedEvent,
-    LiteAgentExecutionStartedEvent,
+    AgentExecutionStartedEvent,
     LiteAgentExecutionCompletedEvent,
+    LiteAgentExecutionStartedEvent,
 )
+from crewai.events.types.llm_events import LLMCallCompletedEvent, LLMCallStartedEvent
 from crewai.events.types.tool_usage_events import (
-    ToolUsageFinishedEvent,
-    ToolUsageErrorEvent,
     ToolExecutionErrorEvent,
     ToolSelectionErrorEvent,
+    ToolUsageErrorEvent,
+    ToolUsageFinishedEvent,
     ToolValidateInputErrorEvent,
 )
-from crewai.events.types.llm_events import LLMCallStartedEvent, LLMCallCompletedEvent
+from crewai.task import Task
 
 
 class EvaluationTraceCallback(BaseEventListener):
@@ -136,7 +135,7 @@ class EvaluationTraceCallback(BaseEventListener):
     def _init_trace(self, trace_key: str, **kwargs: Any):
         self.traces[trace_key] = kwargs
 
-    def on_agent_start(self, agent: Agent, task: Task):
+    def on_agent_start(self, agent: BaseAgent, task: Task):
         self.current_agent_id = agent.id
         self.current_task_id = task.id
 
@@ -151,7 +150,7 @@ class EvaluationTraceCallback(BaseEventListener):
             final_output=None,
         )
 
-    def on_agent_finish(self, agent: Agent, task: Task, output: Any):
+    def on_agent_finish(self, agent: BaseAgent, task: Task, output: Any):
         trace_key = f"{agent.id}_{task.id}"
         if trace_key in self.traces:
             self.traces[trace_key]["final_output"] = output
@@ -253,7 +252,7 @@ class EvaluationTraceCallback(BaseEventListener):
         if hasattr(self, "current_llm_call"):
             self.current_llm_call = {}
 
-    def get_trace(self, agent_id: str, task_id: str) -> Optional[Dict[str, Any]]:
+    def get_trace(self, agent_id: str, task_id: str) -> dict[str, Any] | None:
         trace_key = f"{agent_id}_{task_id}"
         return self.traces.get(trace_key)
 
