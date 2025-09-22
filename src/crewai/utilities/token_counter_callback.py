@@ -5,10 +5,23 @@ for LLM API calls through the litellm library.
 """
 
 import warnings
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from litellm.integrations.custom_logger import CustomLogger
-from litellm.types.utils import Usage
+if TYPE_CHECKING:
+    from litellm.integrations.custom_logger import CustomLogger
+    from litellm.types.utils import Usage
+else:
+    try:
+        from litellm.integrations.custom_logger import CustomLogger
+        from litellm.types.utils import Usage
+    except ImportError:
+
+        class CustomLogger:
+            """Fallback CustomLogger when litellm is not available."""
+
+        class Usage:
+            """Fallback Usage when litellm is not available."""
+
 
 from crewai.agents.agent_builder.utilities.base_token_process import TokenProcess
 

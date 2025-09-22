@@ -7,10 +7,9 @@ import warnings
 from collections import defaultdict
 from contextlib import contextmanager
 from datetime import datetime
-from typing import Any, Literal, TypedDict, cast
+from typing import TYPE_CHECKING, Any, Literal, TypedDict, cast
 
 from dotenv import load_dotenv
-from litellm.types.utils import ChatCompletionDeltaToolCall
 from pydantic import BaseModel, Field
 
 from crewai.events.types.llm_events import (
@@ -26,16 +25,35 @@ from crewai.events.types.tool_usage_events import (
     ToolUsageStartedEvent,
 )
 
-with warnings.catch_warnings():
-    warnings.simplefilter("ignore", UserWarning)
+if TYPE_CHECKING:
+    from litellm import Choices
+    from litellm.exceptions import ContextWindowExceededError
+    from litellm.litellm_core_utils.get_supported_openai_params import (
+        get_supported_openai_params,
+    )
+    from litellm.types.utils import ChatCompletionDeltaToolCall, ModelResponse
+    from litellm.utils import supports_response_schema
+
+try:
     import litellm
     from litellm import Choices
     from litellm.exceptions import ContextWindowExceededError
     from litellm.litellm_core_utils.get_supported_openai_params import (
         get_supported_openai_params,
     )
-    from litellm.types.utils import ModelResponse
+    from litellm.types.utils import ChatCompletionDeltaToolCall, ModelResponse
     from litellm.utils import supports_response_schema
+
+    LITELLM_AVAILABLE = True
+except ImportError:
+    LITELLM_AVAILABLE = False
+    litellm = None  # type: ignore
+    Choices = None  # type: ignore
+    ContextWindowExceededError = Exception  # type: ignore
+    get_supported_openai_params = None  # type: ignore
+    ChatCompletionDeltaToolCall = None  # type: ignore
+    ModelResponse = None  # type: ignore
+    supports_response_schema = None  # type: ignore
 
 
 import io
@@ -49,7 +67,8 @@ from crewai.utilities.exceptions.context_window_exceeding_exception import (
 
 load_dotenv()
 
-litellm.suppress_debug_info = True
+if LITELLM_AVAILABLE:
+    litellm.suppress_debug_info = True
 
 
 class FilteredStream(io.TextIOBase):
@@ -280,6 +299,66 @@ class AccumulatedToolArgs(BaseModel):
 class LLM(BaseLLM):
     completion_cost: float | None = None
 
+    def __new__(cls, model: str, **kwargs) -> "LLM":
+        """Factory method that routes to native SDK or falls back to LiteLLM."""
+        provider = model.partition("/")[0] if "/" in model else "openai"
+
+        native_class = cls._get_native_provider(provider)
+        if native_class:
+            model_string = model.partition("/")[2] if "/" in model else model
+            return native_class(model=model_string, **kwargs)
+
+        # FALLBACK
+        if not LITELLM_AVAILABLE:
+            raise ImportError(
+                "Please install the required dependencies:\n"
+                "- For LiteLLM: uv add litellm"
+            )
+
+        instance = object.__new__(cls)
+        super(LLM, instance).__init__(model=model, **kwargs)
+        instance.is_litellm = True
+        return instance
+
+    @classmethod
+    def _get_native_provider(cls, provider: str) -> type | None:
+        """Get native provider class if available."""
+        if provider == "openai":
+            try:
+                from crewai.llms.providers.openai.completion import OpenAICompletion
+
+                return OpenAICompletion
+            except ImportError:
+                return None
+
+        elif provider == "anthropic":
+            try:
+                from crewai.llms.providers.anthropic.completion import (
+                    AnthropicCompletion,
+                )
+
+                return AnthropicCompletion
+            except ImportError:
+                return None
+
+        elif provider == "azure":
+            try:
+                from crewai.llms.providers.azure.completion import AzureCompletion
+
+                return AzureCompletion
+            except ImportError:
+                return None
+
+        elif provider == "google" or provider == "gemini":
+            try:
+                from crewai.llms.providers.gemini.completion import GeminiCompletion
+
+                return GeminiCompletion
+            except ImportError:
+                return None
+
+        return None
+
     def __init__(
         self,
         model: str,
@@ -306,6 +385,11 @@ class LLM(BaseLLM):
         stream: bool = False,
         **kwargs,
     ):
+        """Initialize LLM instance.
+
+        Note: This __init__ method is only called for fallback instances.
+        Native provider instances handle their own initialization in their respective classes.
+        """
         self.model = model
         self.timeout = timeout
         self.temperature = temperature
@@ -665,8 +749,8 @@ class LLM(BaseLLM):
 
         except ContextWindowExceededError as e:
             # Catch context window errors from litellm and convert them to our own exception type.
-            # This exception is handled by CrewAgentExecutor._invoke_loop() which can then
-            # decide whether to summarize the content or abort based on the respect_context_window flag.
+            # This exception is handled by CrewAgentExecutor._invoke_loop() which can then decide
+            # whether to summarize the content or abort based on the respect_context_window flag.
             raise LLMContextLengthExceededException(str(e)) from e
         except Exception as e:
             logging.error(f"Error in streaming response: {e!s}")
@@ -680,19 +764,6 @@ class LLM(BaseLLM):
                     messages=params["messages"],
                 )
                 return full_response
-
-            # Emit failed event and re-raise the exception
-            if not hasattr(crewai_event_bus, "emit"):
-                raise ValueError(
-                    "crewai_event_bus does not have an emit method"
-                ) from None
-
-            crewai_event_bus.emit(
-                self,
-                event=LLMCallFailedEvent(
-                    error=str(e), from_task=from_task, from_agent=from_agent
-                ),
-            )
             raise Exception(f"Failed to get streaming response: {e!s}") from e
 
     def _handle_streaming_tool_calls(
@@ -816,6 +887,8 @@ class LLM(BaseLLM):
             # Convert litellm's context window error to our own exception type
             # for consistent handling in the rest of the codebase
             raise LLMContextLengthExceededException(str(e)) from e
+        except Exception as e:
+            raise Exception(f"Failed to get response: {e!s}") from e
         # --- 2) Extract response message and content
         response_message = cast(Choices, cast(ModelResponse, response).choices)[
             0
@@ -949,10 +1022,10 @@ class LLM(BaseLLM):
                         "crewai_event_bus does not have an emit method"
                     ) from None
 
-                crewai_event_bus.emit(
-                    self,
-                    event=LLMCallFailedEvent(error=f"Tool execution error: {e!s}"),
-                )
+                # crewai_event_bus.emit(
+                #     self,
+                #     event=LLMCallFailedEvent(error=f"Tool execution error: {e!s}"),
+                # )
                 crewai_event_bus.emit(
                     self,
                     event=ToolUsageErrorEvent(
@@ -1000,7 +1073,6 @@ class LLM(BaseLLM):
             LLMContextLengthExceededException: If input exceeds model's context limit
         """
         # --- 1) Emit call started event
-
         if not hasattr(crewai_event_bus, "emit"):
             raise ValueError("crewai_event_bus does not have an emit method") from None
 

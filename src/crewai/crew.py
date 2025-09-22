@@ -1325,13 +1325,44 @@ class Crew(FlowTrackable, BaseModel):
     def calculate_usage_metrics(self) -> UsageMetrics:
         """Calculates and returns the usage metrics."""
         total_usage_metrics = UsageMetrics()
+
         for agent in self.agents:
-            if hasattr(agent, "_token_process"):
-                token_sum = agent._token_process.get_summary()
-                total_usage_metrics.add_usage_metrics(token_sum)
+            if hasattr(agent, "llm") and not agent.llm.is_litellm:
+                llm_usage = agent.llm.get_token_usage_summary()
+
+                llm_metrics = UsageMetrics(
+                    total_tokens=llm_usage.get("total_tokens", 0),
+                    prompt_tokens=llm_usage.get("prompt_tokens", 0),
+                    completion_tokens=llm_usage.get("completion_tokens", 0),
+                    successful_requests=llm_usage.get("successful_requests", 0),
+                    cached_prompt_tokens=llm_usage.get("cached_prompt_tokens", 0),
+                )
+                total_usage_metrics.add_usage_metrics(llm_metrics)
+            else:
+                if hasattr(agent, "_token_process"):
+                    token_sum = agent._token_process.get_summary()
+                    total_usage_metrics.add_usage_metrics(token_sum)
+
         if self.manager_agent and hasattr(self.manager_agent, "_token_process"):
             token_sum = self.manager_agent._token_process.get_summary()
             total_usage_metrics.add_usage_metrics(token_sum)
+
+        if (
+            self.manager_agent
+            and hasattr(self.manager_agent, "llm")
+            and hasattr(self.manager_agent.llm, "get_token_usage_summary")
+        ):
+            llm_usage = self.manager_agent.llm.get_token_usage_summary()
+
+            llm_metrics = UsageMetrics(
+                total_tokens=llm_usage.get("total_tokens", 0),
+                prompt_tokens=llm_usage.get("prompt_tokens", 0),
+                completion_tokens=llm_usage.get("completion_tokens", 0),
+                successful_requests=llm_usage.get("successful_requests", 0),
+                cached_prompt_tokens=llm_usage.get("cached_prompt_tokens", 0),
+            )
+            total_usage_metrics.add_usage_metrics(llm_metrics)
+
         self.usage_metrics = total_usage_metrics
         return total_usage_metrics
 
