@@ -43,9 +43,17 @@ class EXASearchTool(BaseTool):
         description="API key for Exa services",
         json_schema_extra={"required": False},
     )
+    base_url: Optional[str] = Field(
+        default_factory=lambda: os.getenv("EXA_BASE_URL"),
+        description="API server url",
+        json_schema_extra={"required": False},
+    )
     env_vars: List[EnvVar] = [
         EnvVar(
             name="EXA_API_KEY", description="API key for Exa services", required=False
+        ),
+        EnvVar(
+            name="EXA_BASE_URL", description="API url for the Exa services", required=False
         ),
     ]
 
@@ -73,7 +81,10 @@ class EXASearchTool(BaseTool):
                 raise ImportError(
                     "You are missing the 'exa_py' package. Would you like to install it?"
                 )
-        self.client = Exa(api_key=self.api_key)
+        client_kwargs = {"api_key": self.api_key}
+        if self.base_url:
+            client_kwargs["base_url"] = self.base_url
+        self.client = Exa(**client_kwargs)
         self.content = content
         self.summary = summary
         self.type = type
