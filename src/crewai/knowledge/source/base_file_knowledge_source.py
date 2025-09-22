@@ -23,6 +23,10 @@ class BaseFileKnowledgeSource(BaseKnowledgeSource, ABC):
     content: dict[Path, str] = Field(init=False, default_factory=dict)
     storage: KnowledgeStorage | None = Field(default=None)
     safe_file_paths: list[Path] = Field(default_factory=list)
+    batch_size: int = Field(
+        default=50,
+        description="Number of chunks to process in each batch to avoid token limits",
+    )
 
     @field_validator("file_path", "file_paths", mode="before")
     def validate_file_path(cls, v, info):  # noqa: N805
@@ -66,9 +70,11 @@ class BaseFileKnowledgeSource(BaseKnowledgeSource, ABC):
                 )
 
     def _save_documents(self):
-        """Save the documents to the storage."""
+        """Save the documents to the storage in batches to avoid token limits."""
         if self.storage:
-            self.storage.save(self.chunks)
+            for i in range(0, len(self.chunks), self.batch_size):
+                batch = self.chunks[i : i + self.batch_size]
+                self.storage.save(batch)
         else:
             raise ValueError("No storage found to save documents.")
 
