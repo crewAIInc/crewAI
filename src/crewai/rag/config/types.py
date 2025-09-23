@@ -1,6 +1,7 @@
 """Type definitions for RAG configuration."""
 
-from typing import Annotated, TypeAlias, TYPE_CHECKING
+from typing import TYPE_CHECKING, Annotated, TypeAlias
+
 from pydantic import Field
 
 from crewai.rag.config.constants import DISCRIMINATOR

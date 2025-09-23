@@ -1,10 +1,10 @@
 """Type definitions for the embeddings module."""
 
 from typing import Literal
+
 from pydantic import BaseModel, Field, SecretStr
 
 from crewai.rag.types import EmbeddingFunction
-
 
 EmbeddingProvider = Literal[
     "openai",
