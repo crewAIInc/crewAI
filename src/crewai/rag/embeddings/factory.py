@@ -1,6 +1,7 @@
 """Minimal embedding function factory for CrewAI."""
 
 import os
+from typing import Any, Callable
 
 from chromadb import EmbeddingFunction
 from chromadb.utils.embedding_functions.amazon_bedrock_embedding_function import (
@@ -76,15 +77,14 @@ def _create_watson_embedding_function(**config_dict) -> EmbeddingFunction:
                 model_id=self.config.get("model_name") or self.config.get("model"),
                 params=embed_params,
                 credentials=Credentials(
-                    api_key=self.config.get("api_key"), 
+                    api_key=self.config.get("api_key"),
                     url=self.config.get("api_url") or self.config.get("url")
                 ),
                 project_id=self.config.get("project_id"),
             )
 
             try:
-                embeddings = embedding.embed_documents(input)
-                return embeddings
+                return embedding.embed_documents(input)
             except Exception as e:
                 raise RuntimeError(f"Error during Watson embedding: {e}") from e
 
@@ -177,7 +177,7 @@ def get_embedding_function(
 
     provider = config_dict.pop("provider", "openai")
 
-    embedding_functions = {
+    embedding_functions: dict[str, Callable[..., EmbeddingFunction]] = {
         "openai": OpenAIEmbeddingFunction,
         "cohere": CohereEmbeddingFunction,
         "ollama": OllamaEmbeddingFunction,
