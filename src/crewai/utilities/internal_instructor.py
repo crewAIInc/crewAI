@@ -1,43 +1,98 @@
-import warnings
-from typing import Any, Optional, Type
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any, Generic, TypeGuard, TypeVar
+
+from pydantic import BaseModel
+
+if TYPE_CHECKING:
+    from crewai.agent import Agent
+    from crewai.llm import LLM
+    from crewai.llms.base_llm import BaseLLM
+
+from crewai.utilities.logger_utils import suppress_warnings
+from crewai.utilities.types import LLMMessage
+
+T = TypeVar("T", bound=BaseModel)
 
 
-class InternalInstructor:
-    """Class that wraps an agent llm with instructor."""
+def _is_valid_llm(llm: Any) -> TypeGuard[str | LLM | BaseLLM]:
+    """Type guard to ensure LLM is valid and not None.
+
+    Args:
+        llm: The LLM to validate
+
+    Returns:
+        True if LLM is valid (string or has model attribute), False otherwise
+    """
+    return llm is not None and (isinstance(llm, str) or hasattr(llm, "model"))
+
+
+class InternalInstructor(Generic[T]):
+    """Class that wraps an agent LLM with instructor for structured output generation.
+
+    Attributes:
+        content: The content to be processed
+        model: The Pydantic model class for the response
+        agent: The agent with LLM
+        llm: The LLM instance or model name
+    """
 
     def __init__(
         self,
         content: str,
-        model: Type,
-        agent: Optional[Any] = None,
-        llm: Optional[str] = None,
-    ):
+        model: type[T],
+        agent: Agent | None = None,
+        llm: LLM | BaseLLM | str | None = None,
+    ) -> None:
+        """Initialize InternalInstructor.
+
+        Args:
+            content: The content to be processed
+            model: The Pydantic model class for the response
+            agent: The agent with LLM
+            llm: The LLM instance or model name
+        """
         self.content = content
         self.agent = agent
-        self.llm = llm
         self.model = model
-        self._client = None
-        self.set_instructor()
+        self.llm = llm or (agent.function_calling_llm or agent.llm if agent else None)
 
-    def set_instructor(self):
-        """Set instructor."""
-        if self.agent and not self.llm:
-            self.llm = self.agent.function_calling_llm or self.agent.llm
-
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore", UserWarning)
+        with suppress_warnings():
             import instructor
             from litellm import completion
 
             self._client = instructor.from_litellm(completion)
 
-    def to_json(self):
-        model = self.to_pydantic()
-        return model.model_dump_json(indent=2)
+    def to_json(self) -> str:
+        """Convert the structured output to JSON format.
 
-    def to_pydantic(self):
-        messages = [{"role": "user", "content": self.content}]
-        model = self._client.chat.completions.create(
-            model=self.llm.model, response_model=self.model, messages=messages
+        Returns:
+            JSON string representation of the structured output
+        """
+        pydantic_model = self.to_pydantic()
+        return pydantic_model.model_dump_json(indent=2)
+
+    def to_pydantic(self) -> T:
+        """Generate structured output using the specified Pydantic model.
+
+        Returns:
+            Instance of the specified Pydantic model with structured data
+
+        Raises:
+            ValueError: If LLM is not provided or invalid
+        """
+        messages: list[LLMMessage] = [{"role": "user", "content": self.content}]
+
+        if not _is_valid_llm(self.llm):
+            raise ValueError(
+                "LLM must be provided and have a model attribute or be a string"
+            )
+
+        if isinstance(self.llm, str):
+            model_name = self.llm
+        else:
+            model_name = self.llm.model
+
+        return self._client.chat.completions.create(
+            model=model_name, response_model=self.model, messages=messages
         )
-        return model
