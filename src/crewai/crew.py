@@ -1346,16 +1346,12 @@ class Crew(FlowTrackable, BaseModel):
             and hasattr(self.manager_agent, "llm")
             and hasattr(self.manager_agent.llm, "get_token_usage_summary")
         ):
-            llm_usage = self.manager_agent.llm.get_token_usage_summary()
+            if isinstance(self.manager_agent.llm, BaseLLM):
+                llm_usage = self.manager_agent.llm.get_token_usage_summary()
+            else:
+                llm_usage = self.manager_agent.llm._token_process.get_summary()
 
-            llm_metrics = UsageMetrics(
-                total_tokens=llm_usage.get("total_tokens", 0),
-                prompt_tokens=llm_usage.get("prompt_tokens", 0),
-                completion_tokens=llm_usage.get("completion_tokens", 0),
-                successful_requests=llm_usage.get("successful_requests", 0),
-                cached_prompt_tokens=llm_usage.get("cached_prompt_tokens", 0),
-            )
-            total_usage_metrics.add_usage_metrics(llm_metrics)
+            total_usage_metrics.add_usage_metrics(llm_usage)
 
         self.usage_metrics = total_usage_metrics
         return total_usage_metrics
