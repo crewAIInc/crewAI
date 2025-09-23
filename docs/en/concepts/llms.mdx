@@ -709,6 +709,34 @@ In this section, you'll find detailed examples that help you select, configure, 
   </Accordion>
 </AccordionGroup>
 
+## Prompt Caching Via LiteLLM
+Prompt caching is a technique that improves large language model (LLM) efficiency by storing and reusing static parts of a prompt, such as system instructions or template text, to avoid repeated processing. When a user sends a prompt with a known, static prefix, the system reuses the cached portion, significantly reducing computation, latency, and cost for subsequent interactions. This is particularly beneficial for applications with repetitive prompts, like chatbots or document analysis tools, allowing for faster and more cost-effective operation. 
+
+LiteLLM currently supports:
+
+- OpenAI (`openai/`)
+- Anthropic API (`anthropic/`)
+- Bedrock
+  - `bedrock/`
+  - `bedrock/invoke/`
+  - `bedrock/converse`
+- Deepseek API (`deepseek/`)
+
+Here is how you can enable it
+```python code 
+from crewai import LLM
+
+llm = LLM(
+    model="bedrock/anthropic.claude-3-7-sonnet-20250219-v1:0",
+    reasoning_effort='high',
+    cache_control_injection_points = [{
+        "location" : "message",
+        "role" : "system"
+    }]
+)
+```
+For more information check out the Litellm docs [here](https://docs.litellm.ai/docs/tutorials/prompt_caching)
+
 ## Streaming Responses
 
 CrewAI supports streaming responses from LLMs, allowing your application to receive and process outputs in real-time as they're generated.
