@@ -355,8 +355,6 @@ class LiteAgent(FlowTrackable, BaseModel):
             usage_metrics = self.llm.get_token_usage_summary()
         else:
             usage_metrics = self._token_process.get_summary()
-        print(f"lorenze usage_metrics: {usage_metrics}")
-        print(f"lorenze type of usage_metrics: {type(usage_metrics)}")
 
         # Create output
         output = LiteAgentOutput(
