@@ -56,6 +56,9 @@ class BaseLLM(ABC):
         model: str,
         temperature: float | None = None,
         stop: list[str] | None = None,
+        api_key: str | None = None,
+        base_url: str | None = None,
+        timeout: float | None = None,
         **kwargs,
     ) -> None:
         """Initialize the BaseLLM with default attributes.
@@ -69,7 +72,8 @@ class BaseLLM(ABC):
         self.model = model
         self.temperature = temperature
         self.stop: list[str] = stop or []
-
+        self.api_key = api_key
+        self.base_url = base_url
         # Store additional parameters for provider-specific use
         self.additional_params = kwargs
 

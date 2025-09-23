@@ -548,4 +548,291 @@ interactions:
     status:
       code: 200
       message: OK
+- request:
+    body: '{"trace_id": "b941789c-72e1-421e-94f3-fe1b24b12f6c", "execution_type":
+      "crew", "user_identifier": null, "execution_context": {"crew_fingerprint": null,
+      "crew_name": "crew", "flow_name": null, "crewai_version": "0.193.2", "privacy_level":
+      "standard"}, "execution_metadata": {"expected_duration_estimate": 300, "agent_count":
+      0, "task_count": 0, "flow_method_count": 0, "execution_started_at": "2025-09-23T20:49:29.893592+00:00"},
+      "ephemeral_trace_id": "b941789c-72e1-421e-94f3-fe1b24b12f6c"}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '490'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - CrewAI-CLI/0.193.2
+      X-Crewai-Version:
+      - 0.193.2
+    method: POST
+    uri: http://localhost:3000/crewai_plus/api/v1/tracing/ephemeral/batches
+  response:
+    body:
+      string: '{"id":"bbe07705-81a4-420e-97f8-7330fb4175a9","ephemeral_trace_id":"b941789c-72e1-421e-94f3-fe1b24b12f6c","execution_type":"crew","crew_name":"crew","flow_name":null,"status":"running","duration_ms":null,"crewai_version":"0.193.2","total_events":0,"execution_context":{"crew_fingerprint":null,"crew_name":"crew","flow_name":null,"crewai_version":"0.193.2","privacy_level":"standard"},"created_at":"2025-09-23T20:49:30.007Z","updated_at":"2025-09-23T20:49:30.007Z","access_code":"TRACE-b45d983b1c","user_identifier":null}'
+    headers:
+      Content-Length:
+      - '519'
+      cache-control:
+      - max-age=0, private, must-revalidate
+      content-security-policy:
+      - 'default-src ''self'' *.crewai.com crewai.com; script-src ''self'' ''unsafe-inline''
+        *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts https://www.gstatic.com
+        https://run.pstmn.io https://share.descript.com/; style-src ''self'' ''unsafe-inline''
+        *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts; img-src ''self''
+        data: *.crewai.com crewai.com https://zeus.tools.crewai.com https://dashboard.tools.crewai.com
+        https://cdn.jsdelivr.net; font-src ''self'' data: *.crewai.com crewai.com;
+        connect-src ''self'' *.crewai.com crewai.com https://zeus.tools.crewai.com
+        https://connect.useparagon.com/ https://zeus.useparagon.com/* https://*.useparagon.com/*
+        https://run.pstmn.io https://connect.tools.crewai.com/ ws://localhost:3036
+        wss://localhost:3036; frame-src ''self'' *.crewai.com crewai.com https://connect.useparagon.com/
+        https://zeus.tools.crewai.com https://zeus.useparagon.com/* https://connect.tools.crewai.com/
+        https://www.youtube.com https://share.descript.com'
+      content-type:
+      - application/json; charset=utf-8
+      etag:
+      - W/"50aedc9569ece0d375a20633962fa07e"
+      permissions-policy:
+      - camera=(), microphone=(self), geolocation=()
+      referrer-policy:
+      - strict-origin-when-cross-origin
+      server-timing:
+      - cache_read.active_support;dur=0.17, sql.active_record;dur=39.36, cache_generate.active_support;dur=29.08,
+        cache_write.active_support;dur=0.25, cache_read_multi.active_support;dur=0.32,
+        start_processing.action_controller;dur=0.00, start_transaction.active_record;dur=0.01,
+        transaction.active_record;dur=7.21, process_action.action_controller;dur=13.24
+      vary:
+      - Accept
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-permitted-cross-domain-policies:
+      - none
+      x-request-id:
+      - 211af10a-48e1-4744-8dbb-92701294ce44
+      x-runtime:
+      - '0.110752'
+      x-xss-protection:
+      - 1; mode=block
+    status:
+      code: 201
+      message: Created
+- request:
+    body: '{"events": [{"event_id": "41ab9672-845a-4cd5-be99-4e276bd2eda4", "timestamp":
+      "2025-09-23T20:49:30.013109+00:00", "type": "crew_kickoff_started", "event_data":
+      {"timestamp": "2025-09-23T20:49:29.892786+00:00", "type": "crew_kickoff_started",
+      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
+      "task_id": null, "task_name": null, "agent_id": null, "agent_role": null, "crew_name":
+      "crew", "crew": null, "inputs": null}}, {"event_id": "7494059f-8827-47d9-a668-57ac9fdd004e",
+      "timestamp": "2025-09-23T20:49:30.194307+00:00", "type": "task_started", "event_data":
+      {"task_description": "What is the capital of France?", "expected_output": "The
+      capital of France is Paris.", "task_name": "What is the capital of France?",
+      "context": "", "agent_role": "Information Agent", "task_id": "d27d799a-8a00-49ef-b044-d1812068c899"}},
+      {"event_id": "bc196993-87fe-4837-a9e4-e42a091628c9", "timestamp": "2025-09-23T20:49:30.195009+00:00",
+      "type": "agent_execution_started", "event_data": {"agent_role": "Information
+      Agent", "agent_goal": "Provide information based on knowledge sources", "agent_backstory":
+      "I have access to knowledge sources"}}, {"event_id": "02515fa4-6e9a-4500-b2bc-a74305a0c58f",
+      "timestamp": "2025-09-23T20:49:30.195393+00:00", "type": "llm_call_started",
+      "event_data": {"timestamp": "2025-09-23T20:49:30.195090+00:00", "type": "llm_call_started",
+      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
+      "task_id": "d27d799a-8a00-49ef-b044-d1812068c899", "task_name": "What is the
+      capital of France?", "agent_id": null, "agent_role": null, "from_task": null,
+      "from_agent": null, "model": "gpt-4", "messages": [{"role": "system", "content":
+      "You are Information Agent. I have access to knowledge sources\nYour personal
+      goal is: Provide information based on knowledge sources\nTo give my best complete
+      final answer to the task respond using the exact following format:\n\nThought:
+      I now can give a great answer\nFinal Answer: Your final answer must be the great
+      and the most complete as possible, it must be outcome described.\n\nI MUST use
+      these formats, my job depends on it!"}, {"role": "user", "content": "\nCurrent
+      Task: What is the capital of France?\n\nThis is the expected criteria for your
+      final answer: The capital of France is Paris.\nyou MUST return the actual complete
+      content as the final answer, not a summary.\n\nBegin! This is VERY important
+      to you, use the tools available and give your best Final Answer, your job depends
+      on it!\n\nThought:"}], "tools": null, "callbacks": ["<crewai.utilities.token_counter_callback.TokenCalcHandler
+      object at 0x134dc6000>"], "available_functions": null}}, {"event_id": "5369c2a1-6bca-4539-9215-3535f62ab676",
+      "timestamp": "2025-09-23T20:49:30.225574+00:00", "type": "llm_call_completed",
+      "event_data": {"timestamp": "2025-09-23T20:49:30.225414+00:00", "type": "llm_call_completed",
+      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
+      "task_id": "d27d799a-8a00-49ef-b044-d1812068c899", "task_name": "What is the
+      capital of France?", "agent_id": null, "agent_role": null, "from_task": null,
+      "from_agent": null, "messages": [{"role": "system", "content": "You are Information
+      Agent. I have access to knowledge sources\nYour personal goal is: Provide information
+      based on knowledge sources\nTo give my best complete final answer to the task
+      respond using the exact following format:\n\nThought: I now can give a great
+      answer\nFinal Answer: Your final answer must be the great and the most complete
+      as possible, it must be outcome described.\n\nI MUST use these formats, my job
+      depends on it!"}, {"role": "user", "content": "\nCurrent Task: What is the capital
+      of France?\n\nThis is the expected criteria for your final answer: The capital
+      of France is Paris.\nyou MUST return the actual complete content as the final
+      answer, not a summary.\n\nBegin! This is VERY important to you, use the tools
+      available and give your best Final Answer, your job depends on it!\n\nThought:"}],
+      "response": "I cannot provide any other information as the task clearly states
+      the expected final answer and doesn''t require additional information. I should
+      provide the exact answer required.\n\nFinal Answer: The capital of France is
+      Paris.", "call_type": "<LLMCallType.LLM_CALL: ''llm_call''>", "model": "gpt-4"}},
+      {"event_id": "561c9b1c-f4fe-4535-b52a-82cf719346d6", "timestamp": "2025-09-23T20:49:30.225876+00:00",
+      "type": "agent_execution_completed", "event_data": {"agent_role": "Information
+      Agent", "agent_goal": "Provide information based on knowledge sources", "agent_backstory":
+      "I have access to knowledge sources"}}, {"event_id": "3a36af33-001b-4ca5-81be-e5dc02ac80e5",
+      "timestamp": "2025-09-23T20:49:30.225968+00:00", "type": "task_completed", "event_data":
+      {"task_description": "What is the capital of France?", "task_name": "What is
+      the capital of France?", "task_id": "d27d799a-8a00-49ef-b044-d1812068c899",
+      "output_raw": "The capital of France is Paris.", "output_format": "OutputFormat.RAW",
+      "agent_role": "Information Agent"}}, {"event_id": "7b298050-65b0-4872-8f1c-2afa09de055d",
+      "timestamp": "2025-09-23T20:49:30.227117+00:00", "type": "crew_kickoff_completed",
+      "event_data": {"timestamp": "2025-09-23T20:49:30.227097+00:00", "type": "crew_kickoff_completed",
+      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
+      "task_id": null, "task_name": null, "agent_id": null, "agent_role": null, "crew_name":
+      "crew", "crew": null, "output": {"description": "What is the capital of France?",
+      "name": "What is the capital of France?", "expected_output": "The capital of
+      France is Paris.", "summary": "What is the capital of France?...", "raw": "The
+      capital of France is Paris.", "pydantic": null, "json_dict": null, "agent":
+      "Information Agent", "output_format": "raw"}, "total_tokens": 210}}], "batch_metadata":
+      {"events_count": 8, "batch_sequence": 1, "is_final_batch": false}}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '5919'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - CrewAI-CLI/0.193.2
+      X-Crewai-Version:
+      - 0.193.2
+    method: POST
+    uri: http://localhost:3000/crewai_plus/api/v1/tracing/ephemeral/batches/b941789c-72e1-421e-94f3-fe1b24b12f6c/events
+  response:
+    body:
+      string: '{"events_created":8,"ephemeral_trace_batch_id":"bbe07705-81a4-420e-97f8-7330fb4175a9"}'
+    headers:
+      Content-Length:
+      - '86'
+      cache-control:
+      - max-age=0, private, must-revalidate
+      content-security-policy:
+      - 'default-src ''self'' *.crewai.com crewai.com; script-src ''self'' ''unsafe-inline''
+        *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts https://www.gstatic.com
+        https://run.pstmn.io https://share.descript.com/; style-src ''self'' ''unsafe-inline''
+        *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts; img-src ''self''
+        data: *.crewai.com crewai.com https://zeus.tools.crewai.com https://dashboard.tools.crewai.com
+        https://cdn.jsdelivr.net; font-src ''self'' data: *.crewai.com crewai.com;
+        connect-src ''self'' *.crewai.com crewai.com https://zeus.tools.crewai.com
+        https://connect.useparagon.com/ https://zeus.useparagon.com/* https://*.useparagon.com/*
+        https://run.pstmn.io https://connect.tools.crewai.com/ ws://localhost:3036
+        wss://localhost:3036; frame-src ''self'' *.crewai.com crewai.com https://connect.useparagon.com/
+        https://zeus.tools.crewai.com https://zeus.useparagon.com/* https://connect.tools.crewai.com/
+        https://www.youtube.com https://share.descript.com'
+      content-type:
+      - application/json; charset=utf-8
+      etag:
+      - W/"71e17b496b71534c22212aa2bf533741"
+      permissions-policy:
+      - camera=(), microphone=(self), geolocation=()
+      referrer-policy:
+      - strict-origin-when-cross-origin
+      server-timing:
+      - cache_read.active_support;dur=0.07, sql.active_record;dur=43.18, cache_generate.active_support;dur=1.89,
+        cache_write.active_support;dur=0.11, cache_read_multi.active_support;dur=0.88,
+        start_processing.action_controller;dur=0.00, instantiation.active_record;dur=0.05,
+        start_transaction.active_record;dur=0.00, transaction.active_record;dur=73.81,
+        process_action.action_controller;dur=82.81
+      vary:
+      - Accept
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-permitted-cross-domain-policies:
+      - none
+      x-request-id:
+      - bdbcba06-d61c-458c-b65a-6cf59051e444
+      x-runtime:
+      - '0.127129'
+      x-xss-protection:
+      - 1; mode=block
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"status": "completed", "duration_ms": 464, "final_event_count": 8}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '67'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - CrewAI-CLI/0.193.2
+      X-Crewai-Version:
+      - 0.193.2
+    method: PATCH
+    uri: http://localhost:3000/crewai_plus/api/v1/tracing/ephemeral/batches/b941789c-72e1-421e-94f3-fe1b24b12f6c/finalize
+  response:
+    body:
+      string: '{"id":"bbe07705-81a4-420e-97f8-7330fb4175a9","ephemeral_trace_id":"b941789c-72e1-421e-94f3-fe1b24b12f6c","execution_type":"crew","crew_name":"crew","flow_name":null,"status":"completed","duration_ms":464,"crewai_version":"0.193.2","total_events":8,"execution_context":{"crew_name":"crew","flow_name":null,"privacy_level":"standard","crewai_version":"0.193.2","crew_fingerprint":null},"created_at":"2025-09-23T20:49:30.007Z","updated_at":"2025-09-23T20:49:30.395Z","access_code":"TRACE-b45d983b1c","user_identifier":null}'
+    headers:
+      Content-Length:
+      - '520'
+      cache-control:
+      - max-age=0, private, must-revalidate
+      content-security-policy:
+      - 'default-src ''self'' *.crewai.com crewai.com; script-src ''self'' ''unsafe-inline''
+        *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts https://www.gstatic.com
+        https://run.pstmn.io https://share.descript.com/; style-src ''self'' ''unsafe-inline''
+        *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts; img-src ''self''
+        data: *.crewai.com crewai.com https://zeus.tools.crewai.com https://dashboard.tools.crewai.com
+        https://cdn.jsdelivr.net; font-src ''self'' data: *.crewai.com crewai.com;
+        connect-src ''self'' *.crewai.com crewai.com https://zeus.tools.crewai.com
+        https://connect.useparagon.com/ https://zeus.useparagon.com/* https://*.useparagon.com/*
+        https://run.pstmn.io https://connect.tools.crewai.com/ ws://localhost:3036
+        wss://localhost:3036; frame-src ''self'' *.crewai.com crewai.com https://connect.useparagon.com/
+        https://zeus.tools.crewai.com https://zeus.useparagon.com/* https://connect.tools.crewai.com/
+        https://www.youtube.com https://share.descript.com'
+      content-type:
+      - application/json; charset=utf-8
+      etag:
+      - W/"334d82609391aa60071c2810537c5798"
+      permissions-policy:
+      - camera=(), microphone=(self), geolocation=()
+      referrer-policy:
+      - strict-origin-when-cross-origin
+      server-timing:
+      - cache_read.active_support;dur=0.05, sql.active_record;dur=9.51, cache_generate.active_support;dur=2.05,
+        cache_write.active_support;dur=3.86, cache_read_multi.active_support;dur=0.09,
+        start_processing.action_controller;dur=0.00, instantiation.active_record;dur=0.03,
+        unpermitted_parameters.action_controller;dur=0.00, start_transaction.active_record;dur=0.00,
+        transaction.active_record;dur=5.76, process_action.action_controller;dur=10.64
+      vary:
+      - Accept
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-permitted-cross-domain-policies:
+      - none
+      x-request-id:
+      - 312ce323-fbd7-419e-99e7-2cec034f92ad
+      x-runtime:
+      - '0.037061'
+      x-xss-protection:
+      - 1; mode=block
+    status:
+      code: 200
+      message: OK
 version: 1

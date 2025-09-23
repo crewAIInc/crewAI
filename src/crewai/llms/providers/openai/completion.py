@@ -54,7 +54,15 @@ class OpenAICompletion(BaseLLM):
             else:
                 stop_list = stop
 
-        super().__init__(model=model, temperature=temperature, stop=stop_list, **kwargs)
+        super().__init__(
+            model=model,
+            temperature=temperature,
+            stop=stop_list,
+            api_key=api_key or os.getenv("OPENAI_API_KEY"),
+            base_url=base_url,
+            timeout=timeout,
+            **kwargs,
+        )
 
         self.client = OpenAI(
             api_key=api_key or os.getenv("OPENAI_API_KEY"),
@@ -76,7 +84,7 @@ class OpenAICompletion(BaseLLM):
         self.logprobs = logprobs
         self.top_logprobs = top_logprobs
         self.reasoning_effort = reasoning_effort
-
+        self.timeout = timeout
         self.is_o1_model = "o1" in model.lower()
         self.is_gpt4_model = "gpt-4" in model.lower()
 

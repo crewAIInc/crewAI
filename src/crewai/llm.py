@@ -299,9 +299,15 @@ class AccumulatedToolArgs(BaseModel):
 class LLM(BaseLLM):
     completion_cost: float | None = None
 
-    def __new__(cls, model: str, **kwargs) -> "LLM":
+    def __new__(cls, model: str, is_litellm: bool = False, **kwargs) -> "LLM":
         """Factory method that routes to native SDK or falls back to LiteLLM."""
         provider = model.partition("/")[0] if "/" in model else "openai"
+
+        if is_litellm:
+            instance = object.__new__(cls)
+            super(LLM, instance).__init__(model=model, **kwargs)
+            instance.is_litellm = True
+            return instance
 
         native_class = cls._get_native_provider(provider)
         if native_class:

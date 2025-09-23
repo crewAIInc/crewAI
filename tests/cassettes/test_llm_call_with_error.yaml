@@ -1,16 +1,7 @@
 interactions:
 - request:
-    body: '{"messages": [{"role": "system", "content": "You are test role. test backstory\nYour
-      personal goal is: test goal\nTo give my best complete final answer to the task
-      use the exact following format:\n\nThought: I now can give a great answer\nFinal
-      Answer: Your final answer must be the great and the most complete as possible,
-      it must be outcome described.\n\nI MUST use these formats, my job depends on
-      it!"}, {"role": "user", "content": "\nCurrent Task: Write a haiku about AI\n\nThis
-      is the expect criteria for your final answer: A haiku (3 lines, 5-7-5 syllable
-      pattern) about AI\nyou MUST return the actual complete content as the final
-      answer, not a summary.\n\nBegin! This is VERY important to you, use the tools
-      available and give your best Final Answer, your job depends on it!\n\nThought:"}],
-      "model": "gpt-3.5-turbo", "max_tokens": 50, "temperature": 0.7}'
+    body: '{"messages": [{"role": "user", "content": "This should fail"}], "model":
+      "non-existent-model", "stream": false}'
     headers:
       accept:
       - application/json
@@ -19,16 +10,13 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '863'
+      - '111'
       content-type:
       - application/json
-      cookie:
-      - __cf_bm=rb61BZH2ejzD5YPmLaEJqI7km71QqyNJGTVdNxBq6qk-1727213194-1.0.1.1-pJ49onmgX9IugEMuYQMralzD7oj_6W.CHbSu4Su1z3NyjTGYg.rhgJZWng8feFYah._oSnoYlkTjpK1Wd2C9FA;
-        _cfuvid=lbRdAddVWV6W3f5Dm9SaOPWDUOxqtZBSPr_fTW26nEA-1727213194587-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.47.0
+      - OpenAI/Python 1.93.0
       x-stainless-arch:
       - arm64
       x-stainless-async:
@@ -38,77 +26,68 @@ interactions:
       x-stainless-os:
       - MacOS
       x-stainless-package-version:
-      - 1.47.0
-      x-stainless-raw-response:
-      - 'true'
+      - 1.93.0
+      x-stainless-retry-count:
+      - '0'
       x-stainless-runtime:
       - CPython
       x-stainless-runtime-version:
-      - 3.11.7
+      - 3.12.9
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AB7WZv5OlVCOGOMPGCGTnwO1dwuyC\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1727213895,\n  \"model\": \"gpt-3.5-turbo-0125\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"I now can give a great answer\\nFinal
-      Answer: Artificial minds,\\nCoding thoughts in circuits bright,\\nAI's silent
-      might.\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
-      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      173,\n    \"completion_tokens\": 25,\n    \"total_tokens\": 198,\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": null\n}\n"
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAA0yOQQ6DMBAD77zCyrn0Abyj9xCRbYkUdmmyQUWIv1faHsrRY1v20QGAo1KkuAGH
+        SUML1Rpe5Aa4x0xYJFLGyMI9fVJVYu2NjYhCFSwKMyAFuzREMTaHjRCmiWqFCpLe3e0/ovtqC4m3
+        kFP0hd6Nqvrfn0twDSUsbgC3nC94kmh9e+JZ1D+lcXSWOLuz+wIAAP//AwDwJ9T24AAAAA==
     headers:
-      CF-Cache-Status:
-      - DYNAMIC
       CF-RAY:
-      - 8c85eb9e9bb01cf3-GRU
+      - 983bb3062e52cfdd-SJC
       Connection:
       - keep-alive
       Content-Encoding:
       - gzip
       Content-Type:
-      - application/json
+      - application/json; charset=utf-8
       Date:
-      - Tue, 24 Sep 2024 21:38:16 GMT
+      - Tue, 23 Sep 2025 17:18:05 GMT
       Server:
       - cloudflare
+      Set-Cookie:
+      - __cf_bm=l6zvKL1cBSJCxBKgoyWNqDYgKbN15TzoXPOG_Pqn2x0-1758647885-1.0.1.1-rXihI1tsZOnuE2R7fcfOGGKQvNUdbuWqS0hEjwdVNeEuLmF2XwKVItJWKSsJR5_xDi4KPbe_Wk.zJPjaBzSLowk8eLMRzhsYEdH1eu_B4_I;
+        path=/; expires=Tue, 23-Sep-25 17:48:05 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=ftgVtZirdknUkriQmKHRKPo90LBNQJlaHxs6Skum1rY-1758647885920-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
       Transfer-Encoding:
       - chunked
       X-Content-Type-Options:
       - nosniff
-      access-control-expose-headers:
-      - X-Request-ID
-      openai-organization:
-      - crewai-iuxna1
-      openai-processing-ms:
-      - '377'
-      openai-version:
-      - '2020-10-01'
-      strict-transport-security:
-      - max-age=31536000; includeSubDomains; preload
-      x-ratelimit-limit-requests:
-      - '10000'
-      x-ratelimit-limit-tokens:
-      - '50000000'
-      x-ratelimit-remaining-requests:
-      - '9999'
-      x-ratelimit-remaining-tokens:
-      - '49999771'
-      x-ratelimit-reset-requests:
-      - 6ms
-      x-ratelimit-reset-tokens:
-      - 0s
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      vary:
+      - Origin
+      x-envoy-upstream-service-time:
+      - '77'
+      x-openai-proxy-wasm:
+      - v0.1
       x-request-id:
-      - req_ae48f8aa852eb1e19deffc2025a430a2
-    http_version: HTTP/1.1
-    status_code: 200
+      - req_9441b7808a504cc8abfc6276fd5c7721
+    status:
+      code: 404
+      message: Not Found
 - request:
-    body: '{"trace_id": "6eb03cbb-e6e1-480b-8bd9-fe8a4bf6e458", "execution_type":
+    body: '{"trace_id": "13adb67d-0c60-4432-88ab-ee3b84286f78", "execution_type":
       "crew", "user_identifier": null, "execution_context": {"crew_fingerprint": null,
       "crew_name": "Unknown Crew", "flow_name": null, "crewai_version": "0.193.2",
       "privacy_level": "standard"}, "execution_metadata": {"expected_duration_estimate":
       300, "agent_count": 0, "task_count": 0, "flow_method_count": 0, "execution_started_at":
-      "2025-09-23T20:10:41.947170+00:00"}}'
+      "2025-09-23T17:20:19.459979+00:00"}}'
     headers:
       Accept:
       - '*/*'
@@ -154,9 +133,9 @@ interactions:
       referrer-policy:
       - strict-origin-when-cross-origin
       server-timing:
-      - cache_read.active_support;dur=0.06, sql.active_record;dur=5.97, cache_generate.active_support;dur=6.07,
-        cache_write.active_support;dur=0.16, cache_read_multi.active_support;dur=0.10,
-        start_processing.action_controller;dur=0.00, process_action.action_controller;dur=2.21
+      - cache_read.active_support;dur=0.03, cache_fetch_hit.active_support;dur=0.00,
+        cache_read_multi.active_support;dur=0.05, start_processing.action_controller;dur=0.00,
+        process_action.action_controller;dur=1.58
       vary:
       - Accept
       x-content-type-options:
@@ -166,9 +145,9 @@ interactions:
       x-permitted-cross-domain-policies:
       - none
       x-request-id:
-      - 670e8523-6b62-4a8e-b0d2-6ef0bcd6aeba
+      - 6a4750c4-d698-4e70-8865-928a82e9ed81
       x-runtime:
-      - '0.037480'
+      - '0.020057'
       x-xss-protection:
       - 1; mode=block
     status:
