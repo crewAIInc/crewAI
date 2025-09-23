@@ -1,17 +1,20 @@
 import os
+from unittest.mock import MagicMock, Mock, patch
+
 import pytest
-from unittest.mock import patch, MagicMock
 
-
-from crewai import Agent, Task, Crew
-from crewai.flow.flow import Flow, start
-from crewai.events.listeners.tracing.trace_listener import (
-    TraceCollectionListener,
+from crewai import Agent, Crew, Task
+from crewai.events.listeners.tracing.first_time_trace_handler import (
+    FirstTimeTraceHandler,
 )
 from crewai.events.listeners.tracing.trace_batch_manager import (
     TraceBatchManager,
 )
+from crewai.events.listeners.tracing.trace_listener import (
+    TraceCollectionListener,
+)
 from crewai.events.listeners.tracing.types import TraceEvent
+from crewai.flow.flow import Flow, start
 
 
 class TestTraceListenerSetup:
@@ -281,9 +284,9 @@ class TestTraceListenerSetup:
                     ):
                         trace_handlers.append(handler)
 
-            assert (
-                len(trace_handlers) == 0
-            ), f"Found {len(trace_handlers)} trace handlers when tracing should be disabled"
+            assert len(trace_handlers) == 0, (
+                f"Found {len(trace_handlers)} trace handlers when tracing should be disabled"
+            )
 
     def test_trace_listener_setup_correctly_for_crew(self):
         """Test that trace listener is set up correctly when enabled"""
@@ -403,3 +406,254 @@ class TestTraceListenerSetup:
         from crewai.events.event_bus import crewai_event_bus
 
         crewai_event_bus._handlers.clear()
+
+    @pytest.mark.vcr(filter_headers=["authorization"])
+    def test_first_time_user_trace_collection_with_timeout(self, mock_plus_api_calls):
+        """Test first-time user trace collection logic with timeout behavior"""
+
+        with (
+            patch.dict(os.environ, {"CREWAI_TRACING_ENABLED": "false"}),
+            patch(
+                "crewai.events.listeners.tracing.utils._is_test_environment",
+                return_value=False,
+            ),
+            patch(
+                "crewai.events.listeners.tracing.utils.should_auto_collect_first_time_traces",
+                return_value=True,
+            ),
+            patch(
+                "crewai.events.listeners.tracing.utils.is_first_execution",
+                return_value=True,
+            ),
+            patch(
+                "crewai.events.listeners.tracing.first_time_trace_handler.prompt_user_for_trace_viewing",
+                return_value=False,
+            ) as mock_prompt,
+            patch(
+                "crewai.events.listeners.tracing.first_time_trace_handler.mark_first_execution_completed"
+            ) as mock_mark_completed,
+        ):
+            agent = Agent(
+                role="Test Agent",
+                goal="Test goal",
+                backstory="Test backstory",
+                llm="gpt-4o-mini",
+            )
+            task = Task(
+                description="Say hello to the world",
+                expected_output="hello world",
+                agent=agent,
+            )
+            crew = Crew(agents=[agent], tasks=[task], verbose=True)
+
+            from crewai.events.event_bus import crewai_event_bus
+
+            trace_listener = TraceCollectionListener()
+            trace_listener.setup_listeners(crewai_event_bus)
+
+            assert trace_listener.first_time_handler.is_first_time is True
+            assert trace_listener.first_time_handler.collected_events is False
+
+            with (
+                patch.object(
+                    trace_listener.first_time_handler,
+                    "handle_execution_completion",
+                    wraps=trace_listener.first_time_handler.handle_execution_completion,
+                ) as mock_handle_completion,
+                patch.object(
+                    trace_listener.batch_manager,
+                    "add_event",
+                    wraps=trace_listener.batch_manager.add_event,
+                ) as mock_add_event,
+            ):
+                result = crew.kickoff()
+                assert result is not None
+
+                assert mock_handle_completion.call_count >= 1
+                assert mock_add_event.call_count >= 1
+
+                assert trace_listener.first_time_handler.collected_events is True
+
+                mock_prompt.assert_called_once_with(timeout_seconds=20)
+
+                mock_mark_completed.assert_called_once()
+
+    @pytest.mark.vcr(filter_headers=["authorization"])
+    def test_first_time_user_trace_collection_user_accepts(self, mock_plus_api_calls):
+        """Test first-time user trace collection when user accepts viewing traces"""
+
+        with (
+            patch.dict(os.environ, {"CREWAI_TRACING_ENABLED": "false"}),
+            patch(
+                "crewai.events.listeners.tracing.utils._is_test_environment",
+                return_value=False,
+            ),
+            patch(
+                "crewai.events.listeners.tracing.utils.should_auto_collect_first_time_traces",
+                return_value=True,
+            ),
+            patch(
+                "crewai.events.listeners.tracing.utils.is_first_execution",
+                return_value=True,
+            ),
+            patch(
+                "crewai.events.listeners.tracing.first_time_trace_handler.prompt_user_for_trace_viewing",
+                return_value=True,
+            ),
+            patch(
+                "crewai.events.listeners.tracing.first_time_trace_handler.mark_first_execution_completed"
+            ) as mock_mark_completed,
+        ):
+            agent = Agent(
+                role="Test Agent",
+                goal="Test goal",
+                backstory="Test backstory",
+                llm="gpt-4o-mini",
+            )
+            task = Task(
+                description="Say hello to the world",
+                expected_output="hello world",
+                agent=agent,
+            )
+            crew = Crew(agents=[agent], tasks=[task], verbose=True)
+
+            from crewai.events.event_bus import crewai_event_bus
+
+            trace_listener = TraceCollectionListener()
+            trace_listener.setup_listeners(crewai_event_bus)
+
+            assert trace_listener.first_time_handler.is_first_time is True
+
+            with (
+                patch.object(
+                    trace_listener.first_time_handler,
+                    "_initialize_backend_and_send_events",
+                    wraps=trace_listener.first_time_handler._initialize_backend_and_send_events,
+                ) as mock_init_backend,
+                patch.object(
+                    trace_listener.first_time_handler, "_display_ephemeral_trace_link"
+                ) as mock_display_link,
+                patch.object(
+                    trace_listener.first_time_handler,
+                    "handle_execution_completion",
+                    wraps=trace_listener.first_time_handler.handle_execution_completion,
+                ) as mock_handle_completion,
+            ):
+                trace_listener.batch_manager.ephemeral_trace_url = (
+                    "https://crewai.com/trace/mock-id"
+                )
+
+                crew.kickoff()
+
+                assert mock_handle_completion.call_count >= 1, (
+                    "handle_execution_completion should be called"
+                )
+
+                assert trace_listener.first_time_handler.collected_events is True, (
+                    "Events should be marked as collected"
+                )
+
+                mock_init_backend.assert_called_once()
+
+                mock_display_link.assert_called_once()
+
+                mock_mark_completed.assert_called_once()
+
+    @pytest.mark.vcr(filter_headers=["authorization"])
+    def test_first_time_user_trace_consolidation_logic(self, mock_plus_api_calls):
+        """Test the consolidation logic for first-time users vs regular tracing"""
+
+        with (
+            patch.dict(os.environ, {"CREWAI_TRACING_ENABLED": "false"}),
+            patch(
+                "crewai.events.listeners.tracing.utils._is_test_environment",
+                return_value=False,
+            ),
+            patch(
+                "crewai.events.listeners.tracing.utils.should_auto_collect_first_time_traces",
+                return_value=True,
+            ),
+            patch(
+                "crewai.events.listeners.tracing.utils.is_first_execution",
+                return_value=True,
+            ),
+        ):
+            from crewai.events.event_bus import crewai_event_bus
+
+            crewai_event_bus._handlers.clear()
+
+            trace_listener = TraceCollectionListener()
+            trace_listener.setup_listeners(crewai_event_bus)
+
+            assert trace_listener.first_time_handler.is_first_time is True
+
+            agent = Agent(
+                role="Test Agent",
+                goal="Test goal",
+                backstory="Test backstory",
+                llm="gpt-4o-mini",
+            )
+            task = Task(
+                description="Test task", expected_output="test output", agent=agent
+            )
+            crew = Crew(agents=[agent], tasks=[task])
+
+            with patch.object(TraceBatchManager, "initialize_batch") as mock_initialize:
+                result = crew.kickoff()
+
+                assert mock_initialize.call_count >= 1
+                assert mock_initialize.call_args_list[0][1]["use_ephemeral"] is True
+                assert result is not None
+
+    def test_first_time_handler_timeout_behavior(self):
+        """Test the timeout behavior of the first-time trace prompt"""
+
+        with (
+            patch(
+                "crewai.events.listeners.tracing.utils._is_test_environment",
+                return_value=False,
+            ),
+            patch("threading.Thread") as mock_thread,
+        ):
+            from crewai.events.listeners.tracing.utils import (
+                prompt_user_for_trace_viewing,
+            )
+
+            mock_thread_instance = Mock()
+            mock_thread_instance.is_alive.return_value = True
+            mock_thread.return_value = mock_thread_instance
+
+            result = prompt_user_for_trace_viewing(timeout_seconds=5)
+
+            assert result is False
+            mock_thread.assert_called_once()
+            call_args = mock_thread.call_args
+            assert call_args[1]["daemon"] is True
+
+            mock_thread_instance.start.assert_called_once()
+            mock_thread_instance.join.assert_called_once_with(timeout=5)
+            mock_thread_instance.is_alive.assert_called_once()
+
+    def test_first_time_handler_graceful_error_handling(self):
+        """Test graceful error handling in first-time trace logic"""
+
+        with (
+            patch(
+                "crewai.events.listeners.tracing.utils.should_auto_collect_first_time_traces",
+                return_value=True,
+            ),
+            patch(
+                "crewai.events.listeners.tracing.first_time_trace_handler.prompt_user_for_trace_viewing",
+                side_effect=Exception("Prompt failed"),
+            ),
+            patch(
+                "crewai.events.listeners.tracing.first_time_trace_handler.mark_first_execution_completed"
+            ) as mock_mark_completed,
+        ):
+            handler = FirstTimeTraceHandler()
+            handler.is_first_time = True
+            handler.collected_events = True
+
+            handler.handle_execution_completion()
+
+            mock_mark_completed.assert_called_once()

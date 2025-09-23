@@ -404,6 +404,10 @@ crewai config reset
 After resetting configuration, re-run `crewai login` to authenticate again.
 </Tip>
 
+<Tip>
+CrewAI CLI handles authentication to the Tool Repository automatically when adding packages to your project. Just append `crewai` before any `uv` command to use it. E.g. `crewai uv add requests`. For more information, see [Tool Repository](https://docs.crewai.com/enterprise/features/tool-repository) docs.
+</Tip>
+
 <Note>
 Configuration settings are stored in `~/.config/crewai/settings.json`. Some settings like organization name and UUID are read-only and managed through authentication and organization commands. Tool repository related settings are hidden and cannot be set directly by users.
 </Note>

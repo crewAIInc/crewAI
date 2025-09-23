@@ -14,11 +14,15 @@ class Repository:
 
         self.fetch()
 
-    def is_git_installed(self) -> bool:
+    @staticmethod
+    def is_git_installed() -> bool:
         """Check if Git is installed and available in the system."""
         try:
             subprocess.run(
-                ["git", "--version"], capture_output=True, check=True, text=True
+                ["git", "--version"],  # noqa: S607
+                capture_output=True,
+                check=True,
+                text=True,
             )
             return True
         except (subprocess.CalledProcessError, FileNotFoundError):
@@ -26,22 +30,26 @@ class Repository:
 
     def fetch(self) -> None:
         """Fetch latest updates from the remote."""
-        subprocess.run(["git", "fetch"], cwd=self.path, check=True)
+        subprocess.run(["git", "fetch"], cwd=self.path, check=True)  # noqa: S607
 
     def status(self) -> str:
         """Get the git status in porcelain format."""
         return subprocess.check_output(
-            ["git", "status", "--branch", "--porcelain"],
+            ["git", "status", "--branch", "--porcelain"],  # noqa: S607
             cwd=self.path,
             encoding="utf-8",
         ).strip()
 
-    @lru_cache(maxsize=None)
+    @lru_cache(maxsize=None)  # noqa: B019
     def is_git_repo(self) -> bool:
-        """Check if the current directory is a git repository."""
+        """Check if the current directory is a git repository.
+
+        Notes:
+          - TODO: This method is cached to avoid redundant checks, but using lru_cache on methods can lead to memory leaks
+        """
         try:
             subprocess.check_output(
-                ["git", "rev-parse", "--is-inside-work-tree"],
+                ["git", "rev-parse", "--is-inside-work-tree"],  # noqa: S607
                 cwd=self.path,
                 encoding="utf-8",
             )
@@ -64,14 +72,13 @@ class Repository:
         """Return True if the Git repository is fully synced with the remote, False otherwise."""
         if self.has_uncommitted_changes() or self.is_ahead_or_behind():
             return False
-        else:
-            return True
+        return True
 
     def origin_url(self) -> str | None:
         """Get the Git repository's remote URL."""
         try:
             result = subprocess.run(
-                ["git", "remote", "get-url", "origin"],
+                ["git", "remote", "get-url", "origin"],  # noqa: S607
                 cwd=self.path,
                 capture_output=True,
                 text=True,

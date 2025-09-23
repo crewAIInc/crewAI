@@ -7,8 +7,6 @@ from types import ModuleType
 class OptionalDependencyError(ImportError):
     """Exception raised when an optional dependency is not installed."""
 
-    pass
-
 
 def require(name: str, *, purpose: str) -> ModuleType:
     """Import a module, raising a helpful error if it's not installed.

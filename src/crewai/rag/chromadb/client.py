@@ -4,8 +4,9 @@ import logging
 from typing import Any
 
 from chromadb.api.types import (
-    Embeddable,
     EmbeddingFunction as ChromaEmbeddingFunction,
+)
+from chromadb.api.types import (
     QueryResult,
 )
 from typing_extensions import Unpack
@@ -23,13 +24,13 @@ from crewai.rag.chromadb.utils import (
     _process_query_results,
     _sanitize_collection_name,
 )
-from crewai.utilities.logger_utils import suppress_logging
 from crewai.rag.core.base_client import (
     BaseClient,
-    BaseCollectionParams,
     BaseCollectionAddParams,
+    BaseCollectionParams,
 )
 from crewai.rag.types import SearchResult
+from crewai.utilities.logger_utils import suppress_logging
 
 
 class ChromaDBClient(BaseClient):
@@ -41,21 +42,29 @@ class ChromaDBClient(BaseClient):
     Attributes:
         client: ChromaDB client instance (ClientAPI or AsyncClientAPI).
         embedding_function: Function to generate embeddings for documents.
+        default_limit: Default number of results to return in searches.
+        default_score_threshold: Default minimum score for search results.
     """
 
     def __init__(
         self,
         client: ChromaDBClientType,
-        embedding_function: ChromaEmbeddingFunction[Embeddable],
+        embedding_function: ChromaEmbeddingFunction,
+        default_limit: int = 5,
+        default_score_threshold: float = 0.6,
     ) -> None:
         """Initialize ChromaDBClient with client and embedding function.
 
         Args:
             client: Pre-configured ChromaDB client instance.
             embedding_function: Embedding function for text to vector conversion.
+            default_limit: Default number of results to return in searches.
+            default_score_threshold: Default minimum score for search results.
         """
         self.client = client
         self.embedding_function = embedding_function
+        self.default_limit = default_limit
+        self.default_score_threshold = default_score_threshold
 
     def create_collection(
         self, **kwargs: Unpack[ChromaDBCollectionCreateParams]
@@ -300,16 +309,18 @@ class ChromaDBClient(BaseClient):
         if not documents:
             raise ValueError("Documents list cannot be empty")
 
-        collection = self.client.get_collection(
+        collection = self.client.get_or_create_collection(
             name=_sanitize_collection_name(collection_name),
             embedding_function=self.embedding_function,
         )
 
         prepared = _prepare_documents_for_chromadb(documents)
+        # ChromaDB doesn't accept empty metadata dicts, so pass None if all are empty
+        metadatas = prepared.metadatas if any(m for m in prepared.metadatas) else None
         collection.upsert(
             ids=prepared.ids,
             documents=prepared.texts,
-            metadatas=prepared.metadatas,
+            metadatas=metadatas,
         )
 
     async def aadd_documents(self, **kwargs: Unpack[BaseCollectionAddParams]) -> None:
@@ -342,15 +353,17 @@ class ChromaDBClient(BaseClient):
         if not documents:
             raise ValueError("Documents list cannot be empty")
 
-        collection = await self.client.get_collection(
+        collection = await self.client.get_or_create_collection(
             name=_sanitize_collection_name(collection_name),
             embedding_function=self.embedding_function,
         )
         prepared = _prepare_documents_for_chromadb(documents)
+        # ChromaDB doesn't accept empty metadata dicts, so pass None if all are empty
+        metadatas = prepared.metadatas if any(m for m in prepared.metadatas) else None
         await collection.upsert(
             ids=prepared.ids,
             documents=prepared.texts,
-            metadatas=prepared.metadatas,
+            metadatas=metadatas,
         )
 
     def search(
@@ -385,9 +398,14 @@ class ChromaDBClient(BaseClient):
                 "Use asearch() for AsyncClientAPI."
             )
 
+        if "limit" not in kwargs:
+            kwargs["limit"] = self.default_limit
+        if "score_threshold" not in kwargs:
+            kwargs["score_threshold"] = self.default_score_threshold
+
         params = _extract_search_params(kwargs)
 
-        collection = self.client.get_collection(
+        collection = self.client.get_or_create_collection(
             name=_sanitize_collection_name(params.collection_name),
             embedding_function=self.embedding_function,
         )
@@ -443,9 +461,14 @@ class ChromaDBClient(BaseClient):
                 "Use search() for ClientAPI."
             )
 
+        if "limit" not in kwargs:
+            kwargs["limit"] = self.default_limit
+        if "score_threshold" not in kwargs:
+            kwargs["score_threshold"] = self.default_score_threshold
+
         params = _extract_search_params(kwargs)
 
-        collection = await self.client.get_collection(
+        collection = await self.client.get_or_create_collection(
             name=_sanitize_collection_name(params.collection_name),
             embedding_function=self.embedding_function,
         )

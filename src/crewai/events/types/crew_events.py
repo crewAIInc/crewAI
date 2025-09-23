@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Any, Dict, Optional, Union
+from typing import TYPE_CHECKING, Any
 
 from crewai.events.base_events import BaseEvent
 
@@ -11,8 +11,8 @@ else:
 class CrewBaseEvent(BaseEvent):
     """Base class for crew events with fingerprint handling"""
 
-    crew_name: Optional[str]
-    crew: Optional[Crew] = None
+    crew_name: str | None
+    crew: Crew | None = None
 
     def __init__(self, **data):
         super().__init__(**data)
@@ -38,7 +38,7 @@ class CrewBaseEvent(BaseEvent):
 class CrewKickoffStartedEvent(CrewBaseEvent):
     """Event emitted when a crew starts execution"""
 
-    inputs: Optional[Dict[str, Any]]
+    inputs: dict[str, Any] | None
     type: str = "crew_kickoff_started"
 
 
@@ -62,7 +62,7 @@ class CrewTrainStartedEvent(CrewBaseEvent):
 
     n_iterations: int
     filename: str
-    inputs: Optional[Dict[str, Any]]
+    inputs: dict[str, Any] | None
     type: str = "crew_train_started"
 
 
@@ -85,8 +85,8 @@ class CrewTestStartedEvent(CrewBaseEvent):
     """Event emitted when a crew starts testing"""
 
     n_iterations: int
-    eval_llm: Optional[Union[str, Any]]
-    inputs: Optional[Dict[str, Any]]
+    eval_llm: str | Any | None
+    inputs: dict[str, Any] | None
     type: str = "crew_test_started"
 
 

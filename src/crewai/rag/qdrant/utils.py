@@ -4,8 +4,11 @@ import asyncio
 from typing import TypeGuard
 from uuid import uuid4
 
-from qdrant_client import AsyncQdrantClient, QdrantClient as SyncQdrantClient
-from qdrant_client.models import (
+from qdrant_client import AsyncQdrantClient  # type: ignore[import-not-found]
+from qdrant_client import (
+    QdrantClient as SyncQdrantClient,  # type: ignore[import-not-found]
+)
+from qdrant_client.models import (  # type: ignore[import-not-found]
     FieldCondition,
     Filter,
     MatchValue,
@@ -25,7 +28,7 @@ from crewai.rag.qdrant.types import (
     QdrantCollectionCreateParams,
     QueryEmbedding,
 )
-from crewai.rag.types import SearchResult, BaseRecord
+from crewai.rag.types import BaseRecord, SearchResult
 
 
 def _ensure_list_embedding(embedding: QueryEmbedding) -> list[float]:
@@ -38,7 +41,8 @@ def _ensure_list_embedding(embedding: QueryEmbedding) -> list[float]:
         Embedding as list[float].
     """
     if not isinstance(embedding, list):
-        return embedding.tolist()
+        result = embedding.tolist()
+        return result if isinstance(result, list) else [result]
     return embedding
 
 

@@ -1,41 +1,41 @@
-from typing import TYPE_CHECKING, Any, Dict, Optional
 import time
+from typing import TYPE_CHECKING, Any
 
+from crewai.events.event_bus import crewai_event_bus
+from crewai.events.types.memory_events import (
+    MemoryQueryCompletedEvent,
+    MemoryQueryFailedEvent,
+    MemoryQueryStartedEvent,
+    MemorySaveCompletedEvent,
+    MemorySaveFailedEvent,
+    MemorySaveStartedEvent,
+)
 from crewai.memory.external.external_memory_item import ExternalMemoryItem
 from crewai.memory.memory import Memory
 from crewai.memory.storage.interface import Storage
-from crewai.events.event_bus import crewai_event_bus
-from crewai.events.types.memory_events import (
-    MemoryQueryStartedEvent,
-    MemoryQueryCompletedEvent,
-    MemoryQueryFailedEvent,
-    MemorySaveStartedEvent,
-    MemorySaveCompletedEvent,
-    MemorySaveFailedEvent,
-)
 
 if TYPE_CHECKING:
     from crewai.memory.storage.mem0_storage import Mem0Storage
 
 
 class ExternalMemory(Memory):
-    def __init__(self, storage: Optional[Storage] = None, **data: Any):
+    def __init__(self, storage: Storage | None = None, **data: Any):
         super().__init__(storage=storage, **data)
 
     @staticmethod
-    def _configure_mem0(crew: Any, config: Dict[str, Any]) -> "Mem0Storage":
+    def _configure_mem0(crew: Any, config: dict[str, Any]) -> "Mem0Storage":
         from crewai.memory.storage.mem0_storage import Mem0Storage
 
         return Mem0Storage(type="external", crew=crew, config=config)
 
     @staticmethod
-    def external_supported_storages() -> Dict[str, Any]:
+    def external_supported_storages() -> dict[str, Any]:
         return {
             "mem0": ExternalMemory._configure_mem0,
         }
 
     @staticmethod
-    def create_storage(crew: Any, embedder_config: Optional[Dict[str, Any]]) -> Storage:
+    def create_storage(crew: Any, embedder_config: dict[str, Any] | None) -> Storage:
         if not embedder_config:
             raise ValueError("embedder_config is required")
 
@@ -52,7 +52,7 @@ class ExternalMemory(Memory):
     def save(
         self,
         value: Any,
-        metadata: Optional[Dict[str, Any]] = None,
+        metadata: dict[str, Any] | None = None,
     ) -> None:
         """Saves a value into the external storage."""
         crewai_event_bus.emit(
@@ -103,8 +103,8 @@ class ExternalMemory(Memory):
     def search(
         self,
         query: str,
-        limit: int = 3,
-        score_threshold: float = 0.35,
+        limit: int = 5,
+        score_threshold: float = 0.6,
     ):
         crewai_event_bus.emit(
             self,

@@ -2,14 +2,15 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, Sequence, Union
+from collections.abc import Sequence
+from typing import Any
 
-from pydantic import model_validator
+from pydantic import ConfigDict, model_validator
 
 from crewai.agents.agent_builder.base_agent import BaseAgent
+from crewai.events.base_events import BaseEvent
 from crewai.tools.base_tool import BaseTool
 from crewai.tools.structured_tool import CrewStructuredTool
-from crewai.events.base_events import BaseEvent
 
 
 class AgentExecutionStartedEvent(BaseEvent):
@@ -17,11 +18,11 @@ class AgentExecutionStartedEvent(BaseEvent):
 
     agent: BaseAgent
     task: Any
-    tools: Optional[Sequence[Union[BaseTool, CrewStructuredTool]]]
+    tools: Sequence[BaseTool | CrewStructuredTool] | None
     task_prompt: str
     type: str = "agent_execution_started"
 
-    model_config = {"arbitrary_types_allowed": True}
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     @model_validator(mode="after")
     def set_fingerprint_data(self):
@@ -45,7 +46,7 @@ class AgentExecutionCompletedEvent(BaseEvent):
     output: str
     type: str = "agent_execution_completed"
 
-    model_config = {"arbitrary_types_allowed": True}
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     @model_validator(mode="after")
     def set_fingerprint_data(self):
@@ -69,7 +70,7 @@ class AgentExecutionErrorEvent(BaseEvent):
     error: str
     type: str = "agent_execution_error"
 
-    model_config = {"arbitrary_types_allowed": True}
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     @model_validator(mode="after")
     def set_fingerprint_data(self):
@@ -89,18 +90,18 @@ class AgentExecutionErrorEvent(BaseEvent):
 class LiteAgentExecutionStartedEvent(BaseEvent):
     """Event emitted when a LiteAgent starts executing"""
 
-    agent_info: Dict[str, Any]
-    tools: Optional[Sequence[Union[BaseTool, CrewStructuredTool]]]
-    messages: Union[str, List[Dict[str, str]]]
+    agent_info: dict[str, Any]
+    tools: Sequence[BaseTool | CrewStructuredTool] | None
+    messages: str | list[dict[str, str]]
     type: str = "lite_agent_execution_started"
 
-    model_config = {"arbitrary_types_allowed": True}
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
 
 class LiteAgentExecutionCompletedEvent(BaseEvent):
     """Event emitted when a LiteAgent completes execution"""
 
-    agent_info: Dict[str, Any]
+    agent_info: dict[str, Any]
     output: str
     type: str = "lite_agent_execution_completed"
 
@@ -108,7 +109,7 @@ class LiteAgentExecutionCompletedEvent(BaseEvent):
 class LiteAgentExecutionErrorEvent(BaseEvent):
     """Event emitted when a LiteAgent encounters an error during execution"""
 
-    agent_info: Dict[str, Any]
+    agent_info: dict[str, Any]
     error: str
     type: str = "lite_agent_execution_error"
 

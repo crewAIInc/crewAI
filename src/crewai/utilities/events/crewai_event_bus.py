@@ -1,6 +1,7 @@
 """Backwards compatibility stub for crewai.utilities.events.crewai_event_bus."""
 
 import warnings
+
 from crewai.events import crewai_event_bus
 
 warnings.warn(

@@ -236,7 +236,7 @@ class TestChromaDBClient:
     def test_add_documents(self, client, mock_chromadb_client) -> None:
         """Test that add_documents adds documents to collection."""
         mock_collection = Mock()
-        mock_chromadb_client.get_collection.return_value = mock_collection
+        mock_chromadb_client.get_or_create_collection.return_value = mock_collection
 
         documents: list[BaseRecord] = [
             {
@@ -247,7 +247,7 @@ class TestChromaDBClient:
 
         client.add_documents(collection_name="test_collection", documents=documents)
 
-        mock_chromadb_client.get_collection.assert_called_once_with(
+        mock_chromadb_client.get_or_create_collection.assert_called_once_with(
             name="test_collection",
             embedding_function=client.embedding_function,
         )
@@ -262,7 +262,7 @@ class TestChromaDBClient:
     def test_add_documents_with_custom_ids(self, client, mock_chromadb_client) -> None:
         """Test add_documents with custom document IDs."""
         mock_collection = Mock()
-        mock_chromadb_client.get_collection.return_value = mock_collection
+        mock_chromadb_client.get_or_create_collection.return_value = mock_collection
 
         documents: list[BaseRecord] = [
             {
@@ -285,6 +285,43 @@ class TestChromaDBClient:
             metadatas=[{"source": "test1"}, {"source": "test2"}],
         )
 
+    def test_add_documents_without_metadata(self, client, mock_chromadb_client) -> None:
+        """Test add_documents with documents that have no metadata."""
+        mock_collection = Mock()
+        mock_chromadb_client.get_or_create_collection.return_value = mock_collection
+
+        documents: list[BaseRecord] = [
+            {"content": "Document without metadata"},
+            {"content": "Another document", "metadata": None},
+            {"content": "Document with metadata", "metadata": {"key": "value"}},
+        ]
+
+        client.add_documents(collection_name="test_collection", documents=documents)
+
+        # Verify upsert was called with empty dicts for missing metadata
+        mock_collection.upsert.assert_called_once()
+        call_args = mock_collection.upsert.call_args
+        assert call_args[1]["metadatas"] == [{}, {}, {"key": "value"}]
+
+    def test_add_documents_all_without_metadata(
+        self, client, mock_chromadb_client
+    ) -> None:
+        """Test add_documents when all documents have no metadata."""
+        mock_collection = Mock()
+        mock_chromadb_client.get_or_create_collection.return_value = mock_collection
+
+        documents: list[BaseRecord] = [
+            {"content": "Document 1"},
+            {"content": "Document 2"},
+            {"content": "Document 3"},
+        ]
+
+        client.add_documents(collection_name="test_collection", documents=documents)
+
+        mock_collection.upsert.assert_called_once()
+        call_args = mock_collection.upsert.call_args
+        assert call_args[1]["metadatas"] is None
+
     def test_add_documents_empty_list_raises_error(
         self, client, mock_chromadb_client
     ) -> None:
@@ -298,7 +335,7 @@ class TestChromaDBClient:
     ) -> None:
         """Test that aadd_documents adds documents to collection asynchronously."""
         mock_collection = AsyncMock()
-        mock_async_chromadb_client.get_collection = AsyncMock(
+        mock_async_chromadb_client.get_or_create_collection = AsyncMock(
             return_value=mock_collection
         )
 
@@ -313,7 +350,7 @@ class TestChromaDBClient:
             collection_name="test_collection", documents=documents
         )
 
-        mock_async_chromadb_client.get_collection.assert_called_once_with(
+        mock_async_chromadb_client.get_or_create_collection.assert_called_once_with(
             name="test_collection",
             embedding_function=async_client.embedding_function,
         )
@@ -331,7 +368,7 @@ class TestChromaDBClient:
     ) -> None:
         """Test aadd_documents with custom document IDs."""
         mock_collection = AsyncMock()
-        mock_async_chromadb_client.get_collection = AsyncMock(
+        mock_async_chromadb_client.get_or_create_collection = AsyncMock(
             return_value=mock_collection
         )
 
@@ -359,6 +396,31 @@ class TestChromaDBClient:
         )
 
     @pytest.mark.asyncio
+    async def test_aadd_documents_without_metadata(
+        self, async_client, mock_async_chromadb_client
+    ) -> None:
+        """Test aadd_documents with documents that have no metadata."""
+        mock_collection = AsyncMock()
+        mock_async_chromadb_client.get_or_create_collection = AsyncMock(
+            return_value=mock_collection
+        )
+
+        documents: list[BaseRecord] = [
+            {"content": "Document without metadata"},
+            {"content": "Another document", "metadata": None},
+            {"content": "Document with metadata", "metadata": {"key": "value"}},
+        ]
+
+        await async_client.aadd_documents(
+            collection_name="test_collection", documents=documents
+        )
+
+        # Verify upsert was called with empty dicts for missing metadata
+        mock_collection.upsert.assert_called_once()
+        call_args = mock_collection.upsert.call_args
+        assert call_args[1]["metadatas"] == [{}, {}, {"key": "value"}]
+
+    @pytest.mark.asyncio
     async def test_aadd_documents_empty_list_raises_error(
         self, async_client, mock_async_chromadb_client
     ) -> None:
@@ -372,7 +434,7 @@ class TestChromaDBClient:
         """Test that search queries the collection correctly."""
         mock_collection = Mock()
         mock_collection.metadata = {"hnsw:space": "cosine"}
-        mock_chromadb_client.get_collection.return_value = mock_collection
+        mock_chromadb_client.get_or_create_collection.return_value = mock_collection
         mock_collection.query.return_value = {
             "ids": [["doc1", "doc2"]],
             "documents": [["Document 1", "Document 2"]],
@@ -382,13 +444,13 @@ class TestChromaDBClient:
 
         results = client.search(collection_name="test_collection", query="test query")
 
-        mock_chromadb_client.get_collection.assert_called_once_with(
+        mock_chromadb_client.get_or_create_collection.assert_called_once_with(
             name="test_collection",
             embedding_function=client.embedding_function,
         )
         mock_collection.query.assert_called_once_with(
             query_texts=["test query"],
-            n_results=10,
+            n_results=5,
             where=None,
             where_document=None,
             include=["metadatas", "documents", "distances"],
@@ -404,7 +466,7 @@ class TestChromaDBClient:
         """Test search with optional parameters."""
         mock_collection = Mock()
         mock_collection.metadata = {"hnsw:space": "cosine"}
-        mock_chromadb_client.get_collection.return_value = mock_collection
+        mock_chromadb_client.get_or_create_collection.return_value = mock_collection
         mock_collection.query.return_value = {
             "ids": [["doc1", "doc2", "doc3"]],
             "documents": [["Document 1", "Document 2", "Document 3"]],
@@ -437,7 +499,7 @@ class TestChromaDBClient:
         """Test that asearch queries the collection correctly."""
         mock_collection = AsyncMock()
         mock_collection.metadata = {"hnsw:space": "cosine"}
-        mock_async_chromadb_client.get_collection = AsyncMock(
+        mock_async_chromadb_client.get_or_create_collection = AsyncMock(
             return_value=mock_collection
         )
         mock_collection.query = AsyncMock(
@@ -453,13 +515,13 @@ class TestChromaDBClient:
             collection_name="test_collection", query="test query"
         )
 
-        mock_async_chromadb_client.get_collection.assert_called_once_with(
+        mock_async_chromadb_client.get_or_create_collection.assert_called_once_with(
             name="test_collection",
             embedding_function=async_client.embedding_function,
         )
         mock_collection.query.assert_called_once_with(
             query_texts=["test query"],
-            n_results=10,
+            n_results=5,
             where=None,
             where_document=None,
             include=["metadatas", "documents", "distances"],
@@ -478,7 +540,7 @@ class TestChromaDBClient:
         """Test asearch with optional parameters."""
         mock_collection = AsyncMock()
         mock_collection.metadata = {"hnsw:space": "cosine"}
-        mock_async_chromadb_client.get_collection = AsyncMock(
+        mock_async_chromadb_client.get_or_create_collection = AsyncMock(
             return_value=mock_collection
         )
         mock_collection.query = AsyncMock(

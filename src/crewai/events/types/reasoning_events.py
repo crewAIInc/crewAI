@@ -1,5 +1,6 @@
+from typing import Any
+
 from crewai.events.base_events import BaseEvent
-from typing import Any, Optional
 
 
 class ReasoningEvent(BaseEvent):
@@ -9,10 +10,10 @@ class ReasoningEvent(BaseEvent):
     attempt: int = 1
     agent_role: str
     task_id: str
-    task_name: Optional[str] = None
-    from_task: Optional[Any] = None
-    agent_id: Optional[str] = None
-    from_agent: Optional[Any] = None
+    task_name: str | None = None
+    from_task: Any | None = None
+    agent_id: str | None = None
+    from_agent: Any | None = None
 
     def __init__(self, **data):
         super().__init__(**data)

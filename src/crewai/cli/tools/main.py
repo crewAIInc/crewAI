@@ -12,6 +12,7 @@ from crewai.cli import git
 from crewai.cli.command import BaseCommand, PlusAPIMixin
 from crewai.cli.config import Settings
 from crewai.cli.utils import (
+    build_env_with_tool_repository_credentials,
     extract_available_exports,
     get_project_description,
     get_project_name,
@@ -42,8 +43,7 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
         if project_root.exists():
             click.secho(f"Folder {folder_name} already exists.", fg="red")
             raise SystemExit
-        else:
-            os.makedirs(project_root)
+        os.makedirs(project_root)
 
         click.secho(f"Creating custom tool {folder_name}...", fg="green", bold=True)
 
@@ -56,7 +56,7 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
         os.chdir(project_root)
         try:
             self.login()
-            subprocess.run(["git", "init"], check=True)
+            subprocess.run(["git", "init"], check=True)  # noqa: S607
             console.print(
                 f"[green]Created custom tool [bold]{folder_name}[/bold]. Run [bold]cd {project_root}[/bold] to start working.[/green]"
             )
@@ -76,10 +76,10 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
             raise SystemExit()
 
         project_name = get_project_name(require=True)
-        assert isinstance(project_name, str)
+        assert isinstance(project_name, str)  # noqa: S101
 
         project_version = get_project_version(require=True)
-        assert isinstance(project_version, str)
+        assert isinstance(project_version, str)  # noqa: S101
 
         project_description = get_project_description(require=False)
         encoded_tarball = None
@@ -94,8 +94,8 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
         self._print_current_organization()
 
         with tempfile.TemporaryDirectory() as temp_build_dir:
-            subprocess.run(
-                ["uv", "build", "--sdist", "--out-dir", temp_build_dir],
+            subprocess.run(  # noqa: S603
+                ["uv", "build", "--sdist", "--out-dir", temp_build_dir],  # noqa: S607
                 check=True,
                 capture_output=False,
             )
@@ -146,7 +146,7 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
                 style="bold red",
             )
             raise SystemExit
-        elif get_response.status_code != 200:
+        if get_response.status_code != 200:
             console.print(
                 "Failed to get tool details. Please try again later.", style="bold red"
             )
@@ -196,10 +196,10 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
         else:
             add_package_command.extend(["--index", index, tool_handle])
 
-        add_package_result = subprocess.run(
+        add_package_result = subprocess.run(  # noqa: S603
             add_package_command,
             capture_output=False,
-            env=self._build_env_with_credentials(repository_handle),
+            env=build_env_with_tool_repository_credentials(repository_handle),
             text=True,
             check=True,
         )
@@ -220,20 +220,6 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
                 "[bold yellow]Tip:[/bold yellow] Navigate to a different directory and try again."
             )
             raise SystemExit
-
-    def _build_env_with_credentials(self, repository_handle: str):
-        repository_handle = repository_handle.upper().replace("-", "_")
-        settings = Settings()
-
-        env = os.environ.copy()
-        env[f"UV_INDEX_{repository_handle}_USERNAME"] = str(
-            settings.tool_repository_username or ""
-        )
-        env[f"UV_INDEX_{repository_handle}_PASSWORD"] = str(
-            settings.tool_repository_password or ""
-        )
-
-        return env
 
     def _print_current_organization(self) -> None:
         settings = Settings()

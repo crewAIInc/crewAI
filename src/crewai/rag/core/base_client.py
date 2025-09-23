@@ -1,15 +1,15 @@
 """Protocol for vector database client implementations."""
 
 from abc import abstractmethod
-from typing import Any, Protocol, runtime_checkable, Annotated
-from typing_extensions import Unpack, Required, TypedDict
+from typing import Annotated, Any, Protocol, runtime_checkable
+
 from pydantic import GetCoreSchemaHandler
 from pydantic_core import CoreSchema, core_schema
-
+from typing_extensions import Required, TypedDict, Unpack
 
 from crewai.rag.types import (
-    EmbeddingFunction,
     BaseRecord,
+    EmbeddingFunction,
     SearchResult,
 )
 
@@ -57,7 +57,7 @@ class BaseCollectionSearchParams(BaseCollectionParams, total=False):
 
     query: Required[str]
     limit: int
-    metadata_filter: dict[str, Any]
+    metadata_filter: dict[str, Any] | None
     score_threshold: float
 
 

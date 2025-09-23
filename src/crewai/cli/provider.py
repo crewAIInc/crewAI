@@ -1,10 +1,10 @@
-import os
-import certifi
 import json
+import os
 import time
 from collections import defaultdict
 from pathlib import Path
 
+import certifi
 import click
 import requests
 
@@ -25,7 +25,7 @@ def select_choice(prompt_message, choices):
 
     provider_models = get_provider_data()
     if not provider_models:
-        return
+        return None
     click.secho(prompt_message, fg="cyan")
     for idx, choice in enumerate(choices, start=1):
         click.secho(f"{idx}. {choice}", fg="cyan")
@@ -67,7 +67,7 @@ def select_provider(provider_models):
     all_providers = sorted(set(predefined_providers + list(provider_models.keys())))
 
     provider = select_choice(
-        "Select a provider to set up:", predefined_providers + ["other"]
+        "Select a provider to set up:", [*predefined_providers, "other"]
     )
     if provider is None:  # User typed 'q'
         return None
@@ -102,10 +102,9 @@ def select_model(provider, provider_models):
         click.secho(f"No models available for provider '{provider}'.", fg="red")
         return None
 
-    selected_model = select_choice(
+    return select_choice(
         f"Select a model to use for {provider.capitalize()}:", available_models
     )
-    return selected_model
 
 
 def load_provider_data(cache_file, cache_expiry):
@@ -165,7 +164,7 @@ def fetch_provider_data(cache_file):
     Returns:
     - dict or None: The fetched provider data or None if the operation fails.
     """
-    ssl_config = os.environ['SSL_CERT_FILE'] = certifi.where()
+    ssl_config = os.environ["SSL_CERT_FILE"] = certifi.where()
 
     try:
         response = requests.get(JSON_URL, stream=True, timeout=60, verify=ssl_config)

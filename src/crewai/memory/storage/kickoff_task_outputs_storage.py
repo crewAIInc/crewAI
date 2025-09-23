@@ -2,7 +2,7 @@ import json
 import logging
 import sqlite3
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from crewai.task import Task
 from crewai.utilities import Printer
@@ -18,7 +18,7 @@ class KickoffTaskOutputsSQLiteStorage:
     An updated SQLite storage class for kickoff task outputs storage.
     """
 
-    def __init__(self, db_path: Optional[str] = None) -> None:
+    def __init__(self, db_path: str | None = None) -> None:
         if db_path is None:
             # Get the parent directory of the default db path and create our db file there
             db_path = str(Path(db_storage_path()) / "latest_kickoff_task_outputs.db")
@@ -57,15 +57,15 @@ class KickoffTaskOutputsSQLiteStorage:
         except sqlite3.Error as e:
             error_msg = DatabaseError.format_error(DatabaseError.INIT_ERROR, e)
             logger.error(error_msg)
-            raise DatabaseOperationError(error_msg, e)
+            raise DatabaseOperationError(error_msg, e) from e
 
     def add(
         self,
         task: Task,
-        output: Dict[str, Any],
+        output: dict[str, Any],
         task_index: int,
         was_replayed: bool = False,
-        inputs: Dict[str, Any] | None = None,
+        inputs: dict[str, Any] | None = None,
     ) -> None:
         """Add a new task output record to the database.
 
@@ -103,7 +103,7 @@ class KickoffTaskOutputsSQLiteStorage:
         except sqlite3.Error as e:
             error_msg = DatabaseError.format_error(DatabaseError.SAVE_ERROR, e)
             logger.error(error_msg)
-            raise DatabaseOperationError(error_msg, e)
+            raise DatabaseOperationError(error_msg, e) from e
 
     def update(
         self,
@@ -138,7 +138,7 @@ class KickoffTaskOutputsSQLiteStorage:
                         else value
                     )
 
-                query = f"UPDATE latest_kickoff_task_outputs SET {', '.join(fields)} WHERE task_index = ?"  # nosec
+                query = f"UPDATE latest_kickoff_task_outputs SET {', '.join(fields)} WHERE task_index = ?"  # nosec # noqa: S608
                 values.append(task_index)
 
                 cursor.execute(query, tuple(values))
@@ -151,9 +151,9 @@ class KickoffTaskOutputsSQLiteStorage:
         except sqlite3.Error as e:
             error_msg = DatabaseError.format_error(DatabaseError.UPDATE_ERROR, e)
             logger.error(error_msg)
-            raise DatabaseOperationError(error_msg, e)
+            raise DatabaseOperationError(error_msg, e) from e
 
-    def load(self) -> List[Dict[str, Any]]:
+    def load(self) -> list[dict[str, Any]]:
         """Load all task output records from the database.
 
         Returns:
@@ -192,7 +192,7 @@ class KickoffTaskOutputsSQLiteStorage:
         except sqlite3.Error as e:
             error_msg = DatabaseError.format_error(DatabaseError.LOAD_ERROR, e)
             logger.error(error_msg)
-            raise DatabaseOperationError(error_msg, e)
+            raise DatabaseOperationError(error_msg, e) from e
 
     def delete_all(self) -> None:
         """Delete all task output records from the database.
@@ -212,4 +212,4 @@ class KickoffTaskOutputsSQLiteStorage:
         except sqlite3.Error as e:
             error_msg = DatabaseError.format_error(DatabaseError.DELETE_ERROR, e)
             logger.error(error_msg)
-            raise DatabaseOperationError(error_msg, e)
+            raise DatabaseOperationError(error_msg, e) from e

@@ -4,6 +4,7 @@ import json
 from datetime import date, datetime
 from decimal import Decimal
 from enum import Enum
+from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel
@@ -11,18 +12,28 @@ from pydantic import BaseModel
 
 class CrewJSONEncoder(json.JSONEncoder):
     """Custom JSON encoder for CrewAI objects and special types."""
-    def default(self, obj):
+
+    def default(self, obj: Any) -> Any:
+        """Custom serialization for CrewAI specific types.
+
+        Args:
+            obj: The object to serialize.
+
+        Returns:
+            A JSON-serializable representation of the object.
+        """
         if isinstance(obj, BaseModel):
             return self._handle_pydantic_model(obj)
-        elif isinstance(obj, UUID) or isinstance(obj, Decimal) or isinstance(obj, Enum):
+        if isinstance(obj, (UUID, Decimal, Enum)):
             return str(obj)
 
-        elif isinstance(obj, datetime) or isinstance(obj, date):
+        if isinstance(obj, (datetime, date)):
             return obj.isoformat()
 
         return super().default(obj)
 
-    def _handle_pydantic_model(self, obj):
+    @staticmethod
+    def _handle_pydantic_model(obj: BaseModel) -> str | Any:
         try:
             data = obj.model_dump()
             # Remove circular references

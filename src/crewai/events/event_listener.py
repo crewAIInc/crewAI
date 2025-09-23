@@ -1,15 +1,30 @@
 from __future__ import annotations
 
 from io import StringIO
-from typing import Any, Dict
+from typing import Any
 
 from pydantic import Field, PrivateAttr
-from crewai.llm import LLM
-from crewai.task import Task
-from crewai.telemetry.telemetry import Telemetry
-from crewai.utilities import Logger
-from crewai.utilities.constants import EMITTER_COLOR
+
 from crewai.events.base_event_listener import BaseEventListener
+from crewai.events.types.agent_events import (
+    AgentExecutionCompletedEvent,
+    AgentExecutionStartedEvent,
+    LiteAgentExecutionCompletedEvent,
+    LiteAgentExecutionErrorEvent,
+    LiteAgentExecutionStartedEvent,
+)
+from crewai.events.types.crew_events import (
+    CrewKickoffCompletedEvent,
+    CrewKickoffFailedEvent,
+    CrewKickoffStartedEvent,
+    CrewTestCompletedEvent,
+    CrewTestFailedEvent,
+    CrewTestResultEvent,
+    CrewTestStartedEvent,
+    CrewTrainCompletedEvent,
+    CrewTrainFailedEvent,
+    CrewTrainStartedEvent,
+)
 from crewai.events.types.knowledge_events import (
     KnowledgeQueryCompletedEvent,
     KnowledgeQueryFailedEvent,
@@ -25,34 +40,21 @@ from crewai.events.types.llm_events import (
     LLMStreamChunkEvent,
 )
 from crewai.events.types.llm_guardrail_events import (
-    LLMGuardrailStartedEvent,
     LLMGuardrailCompletedEvent,
-)
-from crewai.events.utils.console_formatter import ConsoleFormatter
-
-from crewai.events.types.agent_events import (
-    AgentExecutionCompletedEvent,
-    AgentExecutionStartedEvent,
-    LiteAgentExecutionCompletedEvent,
-    LiteAgentExecutionErrorEvent,
-    LiteAgentExecutionStartedEvent,
+    LLMGuardrailStartedEvent,
 )
 from crewai.events.types.logging_events import (
-    AgentLogsStartedEvent,
     AgentLogsExecutionEvent,
+    AgentLogsStartedEvent,
 )
-from crewai.events.types.crew_events import (
-    CrewKickoffCompletedEvent,
-    CrewKickoffFailedEvent,
-    CrewKickoffStartedEvent,
-    CrewTestCompletedEvent,
-    CrewTestFailedEvent,
-    CrewTestResultEvent,
-    CrewTestStartedEvent,
-    CrewTrainCompletedEvent,
-    CrewTrainFailedEvent,
-    CrewTrainStartedEvent,
-)
+from crewai.events.utils.console_formatter import ConsoleFormatter
+from crewai.llm import LLM
+from crewai.task import Task
+from crewai.telemetry.telemetry import Telemetry
+from crewai.utilities import Logger
+from crewai.utilities.constants import EMITTER_COLOR
+
+from .listeners.memory_listener import MemoryListener
 from .types.flow_events import (
     FlowCreatedEvent,
     FlowFinishedEvent,
@@ -61,26 +63,24 @@ from .types.flow_events import (
     MethodExecutionFinishedEvent,
     MethodExecutionStartedEvent,
 )
+from .types.reasoning_events import (
+    AgentReasoningCompletedEvent,
+    AgentReasoningFailedEvent,
+    AgentReasoningStartedEvent,
+)
 from .types.task_events import TaskCompletedEvent, TaskFailedEvent, TaskStartedEvent
 from .types.tool_usage_events import (
     ToolUsageErrorEvent,
     ToolUsageFinishedEvent,
     ToolUsageStartedEvent,
 )
-from .types.reasoning_events import (
-    AgentReasoningStartedEvent,
-    AgentReasoningCompletedEvent,
-    AgentReasoningFailedEvent,
-)
-
-from .listeners.memory_listener import MemoryListener
 
 
 class EventListener(BaseEventListener):
     _instance = None
     _telemetry: Telemetry = PrivateAttr(default_factory=lambda: Telemetry())
     logger = Logger(verbose=True, default_color=EMITTER_COLOR)
-    execution_spans: Dict[Task, Any] = Field(default_factory=dict)
+    execution_spans: dict[Task, Any] = Field(default_factory=dict)
     next_chunk = 0
     text_stream = StringIO()
     knowledge_retrieval_in_progress = False

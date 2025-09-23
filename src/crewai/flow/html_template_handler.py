@@ -1,8 +1,7 @@
 import base64
 import re
-from pathlib import Path
 
-from crewai.flow.path_utils import safe_path_join, validate_path_exists
+from crewai.flow.path_utils import validate_path_exists
 
 
 class HTMLTemplateHandler:
@@ -28,7 +27,7 @@ class HTMLTemplateHandler:
             self.template_path = validate_path_exists(template_path, "file")
             self.logo_path = validate_path_exists(logo_path, "file")
         except ValueError as e:
-            raise ValueError(f"Invalid template or logo path: {e}")
+            raise ValueError(f"Invalid template or logo path: {e}") from e
 
     def read_template(self):
         """Read and return the HTML template file contents."""
@@ -53,23 +52,23 @@ class HTMLTemplateHandler:
             if "border" in item:
                 legend_items_html += f"""
                 <div class="legend-item">
-                <div class="legend-color-box" style="background-color: {item['color']}; border: 2px dashed {item['border']};"></div>
-                <div>{item['label']}</div>
+                <div class="legend-color-box" style="background-color: {item["color"]}; border: 2px dashed {item["border"]};"></div>
+                <div>{item["label"]}</div>
                 </div>
                 """
             elif item.get("dashed") is not None:
                 style = "dashed" if item["dashed"] else "solid"
                 legend_items_html += f"""
                 <div class="legend-item">
-                <div class="legend-{style}" style="border-bottom: 2px {style} {item['color']};"></div>
-                <div>{item['label']}</div>
+                <div class="legend-{style}" style="border-bottom: 2px {style} {item["color"]};"></div>
+                <div>{item["label"]}</div>
                 </div>
                 """
             else:
                 legend_items_html += f"""
                 <div class="legend-item">
-                <div class="legend-color-box" style="background-color: {item['color']};"></div>
-                <div>{item['label']}</div>
+                <div class="legend-color-box" style="background-color: {item["color"]};"></div>
+                <div>{item["label"]}</div>
                 </div>
                 """
         return legend_items_html
@@ -79,15 +78,9 @@ class HTMLTemplateHandler:
         html_template = self.read_template()
         logo_svg_base64 = self.encode_logo()
 
-        final_html_content = html_template.replace("{{ title }}", title)
-        final_html_content = final_html_content.replace(
-            "{{ network_content }}", network_body
+        return (
+            html_template.replace("{{ title }}", title)
+            .replace("{{ network_content }}", network_body)
+            .replace("{{ logo_svg_base64 }}", logo_svg_base64)
+            .replace("<!-- LEGEND_ITEMS_PLACEHOLDER -->", legend_items_html)
         )
-        final_html_content = final_html_content.replace(
-            "{{ logo_svg_base64 }}", logo_svg_base64
-        )
-        final_html_content = final_html_content.replace(
-            "<!-- LEGEND_ITEMS_PLACEHOLDER -->", legend_items_html
-        )
-
-        return final_html_content

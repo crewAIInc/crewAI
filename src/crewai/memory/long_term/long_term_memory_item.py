@@ -1,4 +1,4 @@
-from typing import Any, Dict, Optional, Union
+from typing import Any
 
 
 class LongTermMemoryItem:
@@ -8,8 +8,8 @@ class LongTermMemoryItem:
         task: str,
         expected_output: str,
         datetime: str,
-        quality: Optional[Union[int, float]] = None,
-        metadata: Optional[Dict[str, Any]] = None,
+        quality: int | float | None = None,
+        metadata: dict[str, Any] | None = None,
     ):
         self.task = task
         self.agent = agent

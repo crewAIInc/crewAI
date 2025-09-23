@@ -17,8 +17,6 @@ def validate_jwt_token(
                        missing required claims).
     """
 
-    decoded_token = None
-
     try:
         jwk_client = PyJWKClient(jwks_url)
         signing_key = jwk_client.get_signing_key_from_jwt(jwt_token)
@@ -26,7 +24,7 @@ def validate_jwt_token(
         _unverified_decoded_token = jwt.decode(
             jwt_token, options={"verify_signature": False}
         )
-        decoded_token = jwt.decode(
+        return jwt.decode(
             jwt_token,
             signing_key.key,
             algorithms=["RS256"],
@@ -40,23 +38,22 @@ def validate_jwt_token(
                 "require": ["exp", "iat", "iss", "aud", "sub"],
             },
         )
-        return decoded_token
 
-    except jwt.ExpiredSignatureError:
-        raise Exception("Token has expired.")
-    except jwt.InvalidAudienceError:
+    except jwt.ExpiredSignatureError as e:
+        raise Exception("Token has expired.") from e
+    except jwt.InvalidAudienceError as e:
         actual_audience = _unverified_decoded_token.get("aud", "[no audience found]")
         raise Exception(
             f"Invalid token audience. Got: '{actual_audience}'. Expected: '{audience}'"
-        )
-    except jwt.InvalidIssuerError:
+        ) from e
+    except jwt.InvalidIssuerError as e:
         actual_issuer = _unverified_decoded_token.get("iss", "[no issuer found]")
         raise Exception(
             f"Invalid token issuer. Got: '{actual_issuer}'. Expected: '{issuer}'"
-        )
+        ) from e
     except jwt.MissingRequiredClaimError as e:
-        raise Exception(f"Token is missing required claims: {str(e)}")
+        raise Exception(f"Token is missing required claims: {e!s}") from e
     except jwt.exceptions.PyJWKClientError as e:
-        raise Exception(f"JWKS or key processing error: {str(e)}")
+        raise Exception(f"JWKS or key processing error: {e!s}") from e
     except jwt.InvalidTokenError as e:
-        raise Exception(f"Invalid token: {str(e)}")
+        raise Exception(f"Invalid token: {e!s}") from e

@@ -1,20 +1,20 @@
-from typing import Any
 import time
+from typing import Any
 
 from pydantic import PrivateAttr
 
+from crewai.events.event_bus import crewai_event_bus
+from crewai.events.types.memory_events import (
+    MemoryQueryCompletedEvent,
+    MemoryQueryFailedEvent,
+    MemoryQueryStartedEvent,
+    MemorySaveCompletedEvent,
+    MemorySaveFailedEvent,
+    MemorySaveStartedEvent,
+)
 from crewai.memory.entity.entity_memory_item import EntityMemoryItem
 from crewai.memory.memory import Memory
 from crewai.memory.storage.rag_storage import RAGStorage
-from crewai.events.event_bus import crewai_event_bus
-from crewai.events.types.memory_events import (
-    MemoryQueryStartedEvent,
-    MemoryQueryCompletedEvent,
-    MemoryQueryFailedEvent,
-    MemorySaveStartedEvent,
-    MemorySaveCompletedEvent,
-    MemorySaveFailedEvent,
-)
 
 
 class EntityMemory(Memory):
@@ -31,10 +31,10 @@ class EntityMemory(Memory):
         if memory_provider == "mem0":
             try:
                 from crewai.memory.storage.mem0_storage import Mem0Storage
-            except ImportError:
+            except ImportError as e:
                 raise ImportError(
                     "Mem0 is not installed. Please install it with `pip install mem0ai`."
-                )
+                ) from e
             config = embedder_config.get("config") if embedder_config else None
             storage = Mem0Storage(type="short_term", crew=crew, config=config)
         else:
@@ -90,23 +90,31 @@ class EntityMemory(Memory):
         saved_count = 0
         errors = []
 
+        def save_single_item(item: EntityMemoryItem) -> tuple[bool, str | None]:
+            """Save a single item and return success status."""
+            try:
+                if self._memory_provider == "mem0":
+                    data = f"""
+                    Remember details about the following entity:
+                    Name: {item.name}
+                    Type: {item.type}
+                    Entity Description: {item.description}
+                    """
+                else:
+                    data = f"{item.name}({item.type}): {item.description}"
+
+                super(EntityMemory, self).save(data, item.metadata)
+                return True, None
+            except Exception as e:
+                return False, f"{item.name}: {e!s}"
+
         try:
             for item in items:
-                try:
-                    if self._memory_provider == "mem0":
-                        data = f"""
-                        Remember details about the following entity:
-                        Name: {item.name}
-                        Type: {item.type}
-                        Entity Description: {item.description}
-                        """
-                    else:
-                        data = f"{item.name}({item.type}): {item.description}"
-
-                    super().save(data, item.metadata)
+                success, error = save_single_item(item)
+                if success:
                     saved_count += 1
-                except Exception as e:
-                    errors.append(f"{item.name}: {str(e)}")
+                else:
+                    errors.append(error)
 
             if is_batch:
                 emit_value = f"Saved {saved_count} entities"
@@ -153,8 +161,8 @@ class EntityMemory(Memory):
     def search(
         self,
         query: str,
-        limit: int = 3,
-        score_threshold: float = 0.35,
+        limit: int = 5,
+        score_threshold: float = 0.6,
     ):
         crewai_event_bus.emit(
             self,
@@ -206,4 +214,6 @@ class EntityMemory(Memory):
         try:
             self.storage.reset()
         except Exception as e:
-            raise Exception(f"An error occurred while resetting the entity memory: {e}")
+            raise Exception(
+                f"An error occurred while resetting the entity memory: {e}"
+            ) from e

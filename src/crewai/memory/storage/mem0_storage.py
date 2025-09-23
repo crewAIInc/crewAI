@@ -1,10 +1,13 @@
 import os
-from typing import Any, Dict, List
+import re
 from collections import defaultdict
-from mem0 import Memory, MemoryClient
-from crewai.utilities.chromadb import sanitize_collection_name
+from collections.abc import Iterable
+from typing import Any
+
+from mem0 import Memory, MemoryClient  # type: ignore[import-untyped,import-not-found]
 
 from crewai.memory.storage.interface import Storage
+from crewai.rag.chromadb.utils import _sanitize_collection_name
 
 MAX_AGENT_ID_LENGTH_MEM0 = 255
 
@@ -13,6 +16,7 @@ class Mem0Storage(Storage):
     """
     Extends Storage to handle embedding and searching across entities using Mem0.
     """
+
     def __init__(self, type, crew=None, config=None):
         super().__init__()
 
@@ -28,7 +32,8 @@ class Mem0Storage(Storage):
         supported_types = {"short_term", "long_term", "entities", "external"}
         if type not in supported_types:
             raise ValueError(
-                f"Invalid type '{type}' for Mem0Storage. Must be one of: {', '.join(supported_types)}"
+                f"Invalid type '{type}' for Mem0Storage. "
+                f"Must be one of: {', '.join(supported_types)}"
             )
 
     def _extract_config_values(self):
@@ -66,7 +71,8 @@ class Mem0Storage(Storage):
                 - Includes user_id and agent_id if both are present.
                 - Includes user_id if only user_id is present.
                 - Includes agent_id if only agent_id is present.
-                - Includes run_id if memory_type is 'short_term' and mem0_run_id is present.
+                - Includes run_id if memory_type is 'short_term' and
+                  mem0_run_id is present.
         """
         filter = defaultdict(list)
 
@@ -86,21 +92,44 @@ class Mem0Storage(Storage):
 
         return filter
 
-    def save(self, value: Any, metadata: Dict[str, Any]) -> None:
+    def save(self, value: Any, metadata: dict[str, Any]) -> None:
+        def _last_content(messages: Iterable[dict[str, Any]], role: str) -> str:
+            return next(
+                (
+                    m.get("content", "")
+                    for m in reversed(list(messages))
+                    if m.get("role") == role
+                ),
+                "",
+            )
+
+        conversations = []
+        messages = metadata.pop("messages", None)
+        if messages:
+            last_user = _last_content(messages, "user")
+            last_assistant = _last_content(messages, "assistant")
+
+            if user_msg := self._get_user_message(last_user):
+                conversations.append({"role": "user", "content": user_msg})
+
+            if assistant_msg := self._get_assistant_message(last_assistant):
+                conversations.append({"role": "assistant", "content": assistant_msg})
+        else:
+            conversations.append({"role": "assistant", "content": value})
+
         user_id = self.config.get("user_id", "")
-        assistant_message = [{"role" : "assistant","content" : value}]
 
         base_metadata = {
             "short_term": "short_term",
             "long_term": "long_term",
             "entities": "entity",
-            "external": "external"
+            "external": "external",
         }
 
         # Shared base params
         params: dict[str, Any] = {
             "metadata": {"type": base_metadata[self.memory_type], **metadata},
-            "infer": self.infer
+            "infer": self.infer,
         }
 
         # MemoryClient-specific overrides
@@ -119,15 +148,17 @@ class Mem0Storage(Storage):
         if agent_id := self.config.get("agent_id", self._get_agent_name()):
             params["agent_id"] = agent_id
 
-        self.memory.add(assistant_message, **params)
+        self.memory.add(conversations, **params)
 
-    def search(self,query: str,limit: int = 3,score_threshold: float = 0.35) -> List[Any]:
+    def search(
+        self, query: str, limit: int = 5, score_threshold: float = 0.6
+    ) -> list[Any]:
         params = {
             "query": query,
             "limit": limit,
             "version": "v2",
-            "output_format": "v1.1"
-            }
+            "output_format": "v1.1",
+        }
 
         if user_id := self.config.get("user_id", ""):
             params["user_id"] = user_id
@@ -148,10 +179,10 @@ class Mem0Storage(Storage):
         # automatically when the crew is created.
 
         params["filters"] = self._create_filter_for_search()
-        params['threshold'] = score_threshold
+        params["threshold"] = score_threshold
 
         if isinstance(self.memory, Memory):
-            del params["metadata"], params["version"], params['output_format']
+            del params["metadata"], params["version"], params["output_format"]
             if params.get("run_id"):
                 del params["run_id"]
 
@@ -159,8 +190,8 @@ class Mem0Storage(Storage):
 
         # This makes it compatible for Contextual Memory to retrieve
         for result in results["results"]:
-            result["context"] = result["memory"]
-        
+            result["content"] = result["memory"]
+
         return [r for r in results["results"]]
 
     def reset(self):
@@ -180,4 +211,19 @@ class Mem0Storage(Storage):
         agents = self.crew.agents
         agents = [self._sanitize_role(agent.role) for agent in agents]
         agents = "_".join(agents)
-        return sanitize_collection_name(name=agents, max_collection_length=MAX_AGENT_ID_LENGTH_MEM0)
+        return _sanitize_collection_name(
+            name=agents, max_collection_length=MAX_AGENT_ID_LENGTH_MEM0
+        )
+
+    def _get_assistant_message(self, text: str) -> str:
+        marker = "Final Answer:"
+        if marker in text:
+            return text.split(marker, 1)[1].strip()
+        return text
+
+    def _get_user_message(self, text: str) -> str:
+        pattern = r"User message:\s*(.*)"
+        match = re.search(pattern, text)
+        if match:
+            return match.group(1).strip()
+        return text

@@ -1,11 +1,13 @@
 import pytest
 
-from crewai.agents.crew_agent_executor import (
+from crewai.agents import parser
+from crewai.agents.parser import (
     AgentAction,
     AgentFinish,
-    OutputParserException,
 )
-from crewai.agents import parser
+from crewai.agents.parser import (
+    OutputParserError as OutputParserException,
+)
 
 
 def test_valid_action_parsing_special_characters():
@@ -348,9 +350,9 @@ def test_integration_valid_and_invalid():
     for part in parts:
         try:
             result = parser.parse(part.strip())
-            results.append(result)
         except OutputParserException as e:
-            results.append(e)
+            result = e
+        results.append(result)
 
     assert isinstance(results[0], AgentAction)
     assert isinstance(results[1], AgentFinish)

@@ -4,48 +4,12 @@ This module provides functionality for storing and retrieving task outputs
 from persistent storage, supporting replay and audit capabilities.
 """
 
-from datetime import datetime
 from typing import Any
-
-from pydantic import BaseModel, Field
 
 from crewai.memory.storage.kickoff_task_outputs_storage import (
     KickoffTaskOutputsSQLiteStorage,
 )
 from crewai.task import Task
-
-
-class ExecutionLog(BaseModel):
-    """Represents a log entry for task execution.
-
-    Attributes:
-        task_id: Unique identifier for the task.
-        expected_output: The expected output description for the task.
-        output: The actual output produced by the task.
-        timestamp: When the task was executed.
-        task_index: The position of the task in the execution sequence.
-        inputs: Input parameters provided to the task.
-        was_replayed: Whether this output was replayed from a previous run.
-    """
-
-    task_id: str
-    expected_output: str | None = None
-    output: dict[str, Any]
-    timestamp: datetime = Field(default_factory=datetime.now)
-    task_index: int
-    inputs: dict[str, Any] = Field(default_factory=dict)
-    was_replayed: bool = False
-
-    def __getitem__(self, key: str) -> Any:
-        """Enable dictionary-style access to execution log attributes.
-
-        Args:
-            key: The attribute name to access.
-
-        Returns:
-            The value of the requested attribute.
-        """
-        return getattr(self, key)
 
 
 class TaskOutputStorageHandler:

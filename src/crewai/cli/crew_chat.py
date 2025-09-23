@@ -5,7 +5,7 @@ import sys
 import threading
 import time
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any
 
 import click
 import tomli
@@ -116,7 +116,7 @@ def show_loading(event: threading.Event):
     print()
 
 
-def initialize_chat_llm(crew: Crew) -> Optional[LLM | BaseLLM]:
+def initialize_chat_llm(crew: Crew) -> LLM | BaseLLM | None:
     """Initializes the chat LLM and handles exceptions."""
     try:
         return create_llm(crew.chat_llm)
@@ -157,7 +157,7 @@ def build_system_message(crew_chat_inputs: ChatInputs) -> str:
     )
 
 
-def create_tool_function(crew: Crew, messages: List[Dict[str, str]]) -> Any:
+def create_tool_function(crew: Crew, messages: list[dict[str, str]]) -> Any:
     """Creates a wrapper function for running the crew tool with messages."""
 
     def run_crew_tool_with_messages(**kwargs):
@@ -193,7 +193,7 @@ def chat_loop(chat_llm, messages, crew_tool_schema, available_functions):
                 user_input, chat_llm, messages, crew_tool_schema, available_functions
             )
 
-        except KeyboardInterrupt:
+        except KeyboardInterrupt:  # noqa: PERF203
             click.echo("\nExiting chat. Goodbye!")
             break
         except Exception as e:
@@ -221,9 +221,9 @@ def get_user_input() -> str:
 def handle_user_input(
     user_input: str,
     chat_llm: LLM,
-    messages: List[Dict[str, str]],
-    crew_tool_schema: Dict[str, Any],
-    available_functions: Dict[str, Any],
+    messages: list[dict[str, str]],
+    crew_tool_schema: dict[str, Any],
+    available_functions: dict[str, Any],
 ) -> None:
     if user_input.strip().lower() == "exit":
         click.echo("Exiting chat. Goodbye!")
@@ -281,7 +281,7 @@ def generate_crew_tool_schema(crew_inputs: ChatInputs) -> dict:
     }
 
 
-def run_crew_tool(crew: Crew, messages: List[Dict[str, str]], **kwargs):
+def run_crew_tool(crew: Crew, messages: list[dict[str, str]], **kwargs):
     """
     Runs the crew using crew.kickoff(inputs=kwargs) and returns the output.
 
@@ -304,9 +304,8 @@ def run_crew_tool(crew: Crew, messages: List[Dict[str, str]], **kwargs):
         crew_output = crew.kickoff(inputs=kwargs)
 
         # Convert CrewOutput to a string to send back to the user
-        result = str(crew_output)
+        return str(crew_output)
 
-        return result
     except Exception as e:
         # Exit the chat and show the error message
         click.secho("An error occurred while running the crew:", fg="red")
@@ -314,7 +313,7 @@ def run_crew_tool(crew: Crew, messages: List[Dict[str, str]], **kwargs):
         sys.exit(1)
 
 
-def load_crew_and_name() -> Tuple[Crew, str]:
+def load_crew_and_name() -> tuple[Crew, str]:
     """
     Loads the crew by importing the crew class from the user's project.
 
@@ -351,15 +350,17 @@ def load_crew_and_name() -> Tuple[Crew, str]:
     try:
         crew_module = __import__(crew_module_name, fromlist=[crew_class_name])
     except ImportError as e:
-        raise ImportError(f"Failed to import crew module {crew_module_name}: {e}")
+        raise ImportError(
+            f"Failed to import crew module {crew_module_name}: {e}"
+        ) from e
 
     # Get the crew class from the module
     try:
         crew_class = getattr(crew_module, crew_class_name)
-    except AttributeError:
+    except AttributeError as e:
         raise AttributeError(
             f"Crew class {crew_class_name} not found in module {crew_module_name}"
-        )
+        ) from e
 
     # Instantiate the crew
     crew_instance = crew_class().crew()
@@ -395,7 +396,7 @@ def generate_crew_chat_inputs(crew: Crew, crew_name: str, chat_llm) -> ChatInput
     )
 
 
-def fetch_required_inputs(crew: Crew) -> Set[str]:
+def fetch_required_inputs(crew: Crew) -> set[str]:
     """
     Extracts placeholders from the crew's tasks and agents.
 
@@ -405,8 +406,8 @@ def fetch_required_inputs(crew: Crew) -> Set[str]:
     Returns:
         Set[str]: A set of placeholder names.
     """
-    placeholder_pattern = re.compile(r"\{(.+?)\}")
-    required_inputs: Set[str] = set()
+    placeholder_pattern = re.compile(r"\{(.+?)}")
+    required_inputs: set[str] = set()
 
     # Scan tasks
     for task in crew.tasks:
@@ -435,7 +436,7 @@ def generate_input_description_with_ai(input_name: str, crew: Crew, chat_llm) ->
     """
     # Gather context from tasks and agents where the input is used
     context_texts = []
-    placeholder_pattern = re.compile(r"\{(.+?)\}")
+    placeholder_pattern = re.compile(r"\{(.+?)}")
 
     for task in crew.tasks:
         if (
@@ -479,9 +480,7 @@ def generate_input_description_with_ai(input_name: str, crew: Crew, chat_llm) ->
         f"{context}"
     )
     response = chat_llm.call(messages=[{"role": "user", "content": prompt}])
-    description = response.strip()
-
-    return description
+    return response.strip()
 
 
 def generate_crew_description_with_ai(crew: Crew, chat_llm) -> str:
@@ -497,7 +496,7 @@ def generate_crew_description_with_ai(crew: Crew, chat_llm) -> str:
     """
     # Gather context from tasks and agents
     context_texts = []
-    placeholder_pattern = re.compile(r"\{(.+?)\}")
+    placeholder_pattern = re.compile(r"\{(.+?)}")
 
     for task in crew.tasks:
         # Replace placeholders with input names
@@ -531,6 +530,4 @@ def generate_crew_description_with_ai(crew: Crew, chat_llm) -> str:
         f"{context}"
     )
     response = chat_llm.call(messages=[{"role": "user", "content": prompt}])
-    crew_description = response.strip()
-
-    return crew_description
+    return response.strip()

@@ -1,25 +1,25 @@
-from typing import Any, Dict, Optional
+from typing import Any, ClassVar
 
 from rich.console import Console
+from rich.live import Live
 from rich.panel import Panel
+from rich.syntax import Syntax
 from rich.text import Text
 from rich.tree import Tree
-from rich.live import Live
-from rich.syntax import Syntax
 
 
 class ConsoleFormatter:
-    current_crew_tree: Optional[Tree] = None
-    current_task_branch: Optional[Tree] = None
-    current_agent_branch: Optional[Tree] = None
-    current_tool_branch: Optional[Tree] = None
-    current_flow_tree: Optional[Tree] = None
-    current_method_branch: Optional[Tree] = None
-    current_lite_agent_branch: Optional[Tree] = None
-    tool_usage_counts: Dict[str, int] = {}
-    current_reasoning_branch: Optional[Tree] = None  # Track reasoning status
+    current_crew_tree: Tree | None = None
+    current_task_branch: Tree | None = None
+    current_agent_branch: Tree | None = None
+    current_tool_branch: Tree | None = None
+    current_flow_tree: Tree | None = None
+    current_method_branch: Tree | None = None
+    current_lite_agent_branch: Tree | None = None
+    tool_usage_counts: ClassVar[dict[str, int]] = {}
+    current_reasoning_branch: Tree | None = None  # Track reasoning status
     _live_paused: bool = False
-    current_llm_tool_tree: Optional[Tree] = None
+    current_llm_tool_tree: Tree | None = None
 
     def __init__(self, verbose: bool = False):
         self.console = Console(width=None)
@@ -29,7 +29,7 @@ class ConsoleFormatter:
         # instance so the previous render is replaced instead of writing a new one.
         # Once any non-Tree renderable is printed we stop the Live session so the
         # final Tree persists on the terminal.
-        self._live: Optional[Live] = None
+        self._live: Live | None = None
 
     def create_panel(self, content: Text, title: str, style: str = "blue") -> Panel:
         """Create a standardized panel with consistent styling."""
@@ -45,7 +45,7 @@ class ConsoleFormatter:
         title: str,
         name: str,
         status_style: str = "blue",
-        tool_args: Dict[str, Any] | str = "",
+        tool_args: dict[str, Any] | str = "",
         **fields,
     ) -> Text:
         """Create standardized status content with consistent formatting."""
@@ -70,7 +70,7 @@ class ConsoleFormatter:
         prefix: str,
         name: str,
         style: str = "blue",
-        status: Optional[str] = None,
+        status: str | None = None,
     ) -> None:
         """Update tree label with consistent formatting."""
         label = Text()
@@ -115,7 +115,7 @@ class ConsoleFormatter:
                 self._live.update(tree, refresh=True)
             return  # Nothing else to do
 
-        # Case 2: blank line while a live session is running – ignore so we
+        # Case 2: blank line while a live session is running - ignore so we
         # don't break the in-place rendering behaviour
         if len(args) == 0 and self._live:
             return
@@ -156,7 +156,7 @@ class ConsoleFormatter:
 
     def update_crew_tree(
         self,
-        tree: Optional[Tree],
+        tree: Tree | None,
         crew_name: str,
         source_id: str,
         status: str = "completed",
@@ -196,7 +196,7 @@ class ConsoleFormatter:
 
         self.print_panel(content, title, style)
 
-    def create_crew_tree(self, crew_name: str, source_id: str) -> Optional[Tree]:
+    def create_crew_tree(self, crew_name: str, source_id: str) -> Tree | None:
         """Create and initialize a new crew tree with initial status."""
         if not self.verbose:
             return None
@@ -220,12 +220,9 @@ class ConsoleFormatter:
         return tree
 
     def create_task_branch(
-        self,
-        crew_tree: Optional[Tree],
-        task_id: str,
-        task_name: Optional[str] = None,
-        attempt_number: Optional[int] = None,
-    ) -> Optional[Tree]:
+        self, crew_tree: Tree | None, task_id: str, task_name: str | None = None,
+        attempt_number: int | None = None
+    ) -> Tree | None:
         """Create and initialize a task branch."""
         if not self.verbose:
             return None
@@ -298,12 +295,12 @@ class ConsoleFormatter:
 
     def update_task_status(
         self,
-        crew_tree: Optional[Tree],
+        crew_tree: Tree | None,
         task_id: str,
         agent_role: str,
         status: str = "completed",
-        task_name: Optional[str] = None,
-        attempt_number: Optional[int] = None,
+        task_name: str | None = None,
+        attempt_number: int | None = None,
     ) -> None:
         """Update task status in the tree."""
         if not self.verbose or crew_tree is None:
@@ -359,8 +356,8 @@ class ConsoleFormatter:
         self.print_panel(content, panel_title, style)
 
     def create_agent_branch(
-        self, task_branch: Optional[Tree], agent_role: str, crew_tree: Optional[Tree]
-    ) -> Optional[Tree]:
+        self, task_branch: Tree | None, agent_role: str, crew_tree: Tree | None
+    ) -> Tree | None:
         """Create and initialize an agent branch."""
         if not self.verbose or not task_branch or not crew_tree:
             return None
@@ -378,9 +375,9 @@ class ConsoleFormatter:
 
     def update_agent_status(
         self,
-        agent_branch: Optional[Tree],
+        agent_branch: Tree | None,
         agent_role: str,
-        crew_tree: Optional[Tree],
+        crew_tree: Tree | None,
         status: str = "completed",
     ) -> None:
         """Update agent status in the tree."""
@@ -389,7 +386,7 @@ class ConsoleFormatter:
         # altering the tree. Keeping it a no-op avoids duplicate status lines.
         return
 
-    def create_flow_tree(self, flow_name: str, flow_id: str) -> Optional[Tree]:
+    def create_flow_tree(self, flow_name: str, flow_id: str) -> Tree | None:
         """Create and initialize a flow tree."""
         content = self.create_status_content(
             "Starting Flow Execution", flow_name, "blue", ID=flow_id
@@ -409,7 +406,7 @@ class ConsoleFormatter:
 
         return flow_tree
 
-    def start_flow(self, flow_name: str, flow_id: str) -> Optional[Tree]:
+    def start_flow(self, flow_name: str, flow_id: str) -> Tree | None:
         """Initialize a flow execution tree."""
         flow_tree = Tree("")
         flow_label = Text()
@@ -429,7 +426,7 @@ class ConsoleFormatter:
 
     def update_flow_status(
         self,
-        flow_tree: Optional[Tree],
+        flow_tree: Tree | None,
         flow_name: str,
         flow_id: str,
         status: str = "completed",
@@ -476,11 +473,11 @@ class ConsoleFormatter:
 
     def update_method_status(
         self,
-        method_branch: Optional[Tree],
-        flow_tree: Optional[Tree],
+        method_branch: Tree | None,
+        flow_tree: Tree | None,
         method_name: str,
         status: str = "running",
-    ) -> Optional[Tree]:
+    ) -> Tree | None:
         """Update method status in the flow tree."""
         if not flow_tree:
             return None
@@ -533,7 +530,7 @@ class ConsoleFormatter:
     def handle_llm_tool_usage_started(
         self,
         tool_name: str,
-        tool_args: Dict[str, Any] | str,
+        tool_args: dict[str, Any] | str,
     ):
         # Create status content for the tool usage
         content = self.create_status_content(
@@ -573,11 +570,11 @@ class ConsoleFormatter:
 
     def handle_tool_usage_started(
         self,
-        agent_branch: Optional[Tree],
+        agent_branch: Tree | None,
         tool_name: str,
-        crew_tree: Optional[Tree],
-        tool_args: Dict[str, Any] | str = "",
-    ) -> Optional[Tree]:
+        crew_tree: Tree | None,
+        tool_args: dict[str, Any] | str = "",
+    ) -> Tree | None:
         """Handle tool usage started event."""
         if not self.verbose:
             return None
@@ -622,9 +619,9 @@ class ConsoleFormatter:
 
     def handle_tool_usage_finished(
         self,
-        tool_branch: Optional[Tree],
+        tool_branch: Tree | None,
         tool_name: str,
-        crew_tree: Optional[Tree],
+        crew_tree: Tree | None,
     ) -> None:
         """Handle tool usage finished event."""
         if not self.verbose or tool_branch is None:
@@ -653,10 +650,10 @@ class ConsoleFormatter:
 
     def handle_tool_usage_error(
         self,
-        tool_branch: Optional[Tree],
+        tool_branch: Tree | None,
         tool_name: str,
         error: str,
-        crew_tree: Optional[Tree],
+        crew_tree: Tree | None,
     ) -> None:
         """Handle tool usage error event."""
         if not self.verbose:
@@ -684,9 +681,9 @@ class ConsoleFormatter:
 
     def handle_llm_call_started(
         self,
-        agent_branch: Optional[Tree],
-        crew_tree: Optional[Tree],
-    ) -> Optional[Tree]:
+        agent_branch: Tree | None,
+        crew_tree: Tree | None,
+    ) -> Tree | None:
         """Handle LLM call started event."""
         if not self.verbose:
             return None
@@ -725,9 +722,9 @@ class ConsoleFormatter:
 
     def handle_llm_call_completed(
         self,
-        tool_branch: Optional[Tree],
-        agent_branch: Optional[Tree],
-        crew_tree: Optional[Tree],
+        tool_branch: Tree | None,
+        agent_branch: Tree | None,
+        crew_tree: Tree | None,
     ) -> None:
         """Handle LLM call completed event."""
         if not self.verbose:
@@ -789,7 +786,7 @@ class ConsoleFormatter:
                 self.print()
 
     def handle_llm_call_failed(
-        self, tool_branch: Optional[Tree], error: str, crew_tree: Optional[Tree]
+        self, tool_branch: Tree | None, error: str, crew_tree: Tree | None
     ) -> None:
         """Handle LLM call failed event."""
         if not self.verbose:
@@ -842,7 +839,7 @@ class ConsoleFormatter:
 
     def handle_crew_test_started(
         self, crew_name: str, source_id: str, n_iterations: int
-    ) -> Optional[Tree]:
+    ) -> Tree | None:
         """Handle crew test started event."""
         if not self.verbose:
             return None
@@ -876,7 +873,7 @@ class ConsoleFormatter:
         return test_tree
 
     def handle_crew_test_completed(
-        self, flow_tree: Optional[Tree], crew_name: str
+        self, flow_tree: Tree | None, crew_name: str
     ) -> None:
         """Handle crew test completed event."""
         if not self.verbose:
@@ -966,7 +963,7 @@ class ConsoleFormatter:
         self.print_panel(failure_content, "Test Failure", "red")
         self.print()
 
-    def create_lite_agent_branch(self, lite_agent_role: str) -> Optional[Tree]:
+    def create_lite_agent_branch(self, lite_agent_role: str) -> Tree | None:
         """Create and initialize a lite agent branch."""
         if not self.verbose:
             return None
@@ -988,10 +985,10 @@ class ConsoleFormatter:
 
     def update_lite_agent_status(
         self,
-        lite_agent_branch: Optional[Tree],
+        lite_agent_branch: Tree | None,
         lite_agent_role: str,
         status: str = "completed",
-        **fields: Dict[str, Any],
+        **fields: dict[str, Any],
     ) -> None:
         """Update lite agent status in the tree."""
         if not self.verbose or lite_agent_branch is None:
@@ -1034,7 +1031,7 @@ class ConsoleFormatter:
         lite_agent_role: str,
         status: str = "started",
         error: Any = None,
-        **fields: Dict[str, Any],
+        **fields: dict[str, Any],
     ) -> None:
         """Handle lite agent execution events with consistent formatting."""
         if not self.verbose:
@@ -1059,9 +1056,9 @@ class ConsoleFormatter:
 
     def handle_knowledge_retrieval_started(
         self,
-        agent_branch: Optional[Tree],
-        crew_tree: Optional[Tree],
-    ) -> Optional[Tree]:
+        agent_branch: Tree | None,
+        crew_tree: Tree | None,
+    ) -> Tree | None:
         """Handle knowledge retrieval started event."""
         if not self.verbose:
             return None
@@ -1087,13 +1084,13 @@ class ConsoleFormatter:
 
     def handle_knowledge_retrieval_completed(
         self,
-        agent_branch: Optional[Tree],
-        crew_tree: Optional[Tree],
+        agent_branch: Tree | None,
+        crew_tree: Tree | None,
         retrieved_knowledge: Any,
     ) -> None:
         """Handle knowledge retrieval completed event."""
         if not self.verbose:
-            return None
+            return
 
         branch_to_use = self.current_lite_agent_branch or agent_branch
         tree_to_use = branch_to_use or crew_tree
@@ -1115,7 +1112,7 @@ class ConsoleFormatter:
                 )
                 self.print(knowledge_panel)
                 self.print()
-            return None
+            return
 
         knowledge_branch_found = False
         for child in branch_to_use.children:
@@ -1164,18 +1161,18 @@ class ConsoleFormatter:
 
     def handle_knowledge_query_started(
         self,
-        agent_branch: Optional[Tree],
+        agent_branch: Tree | None,
         task_prompt: str,
-        crew_tree: Optional[Tree],
+        crew_tree: Tree | None,
     ) -> None:
         """Handle knowledge query generated event."""
         if not self.verbose:
-            return None
+            return
 
         branch_to_use = self.current_lite_agent_branch or agent_branch
         tree_to_use = branch_to_use or crew_tree
         if branch_to_use is None or tree_to_use is None:
-            return None
+            return
 
         query_branch = branch_to_use.add("")
         self.update_tree_label(
@@ -1187,9 +1184,9 @@ class ConsoleFormatter:
 
     def handle_knowledge_query_failed(
         self,
-        agent_branch: Optional[Tree],
+        agent_branch: Tree | None,
         error: str,
-        crew_tree: Optional[Tree],
+        crew_tree: Tree | None,
     ) -> None:
         """Handle knowledge query failed event."""
         if not self.verbose:
@@ -1212,18 +1209,18 @@ class ConsoleFormatter:
 
     def handle_knowledge_query_completed(
         self,
-        agent_branch: Optional[Tree],
-        crew_tree: Optional[Tree],
+        agent_branch: Tree | None,
+        crew_tree: Tree | None,
     ) -> None:
         """Handle knowledge query completed event."""
         if not self.verbose:
-            return None
+            return
 
         branch_to_use = self.current_lite_agent_branch or agent_branch
         tree_to_use = branch_to_use or crew_tree
 
         if branch_to_use is None or tree_to_use is None:
-            return None
+            return
 
         query_branch = branch_to_use.add("")
         self.update_tree_label(query_branch, "✅", "Knowledge Query Completed", "green")
@@ -1233,9 +1230,9 @@ class ConsoleFormatter:
 
     def handle_knowledge_search_query_failed(
         self,
-        agent_branch: Optional[Tree],
+        agent_branch: Tree | None,
         error: str,
-        crew_tree: Optional[Tree],
+        crew_tree: Tree | None,
     ) -> None:
         """Handle knowledge search query failed event."""
         if not self.verbose:
@@ -1260,10 +1257,10 @@ class ConsoleFormatter:
 
     def handle_reasoning_started(
         self,
-        agent_branch: Optional[Tree],
+        agent_branch: Tree | None,
         attempt: int,
-        crew_tree: Optional[Tree],
-    ) -> Optional[Tree]:
+        crew_tree: Tree | None,
+    ) -> Tree | None:
         """Handle agent reasoning started (or refinement) event."""
         if not self.verbose:
             return None
@@ -1302,7 +1299,7 @@ class ConsoleFormatter:
         self,
         plan: str,
         ready: bool,
-        crew_tree: Optional[Tree],
+        crew_tree: Tree | None,
     ) -> None:
         """Handle agent reasoning completed event."""
         if not self.verbose:
@@ -1345,7 +1342,7 @@ class ConsoleFormatter:
     def handle_reasoning_failed(
         self,
         error: str,
-        crew_tree: Optional[Tree],
+        crew_tree: Tree | None,
     ) -> None:
         """Handle agent reasoning failure event."""
         if not self.verbose:
@@ -1382,7 +1379,7 @@ class ConsoleFormatter:
     def handle_agent_logs_started(
         self,
         agent_role: str,
-        task_description: Optional[str] = None,
+        task_description: str | None = None,
         verbose: bool = False,
     ) -> None:
         """Handle agent logs started event."""
@@ -1420,9 +1417,10 @@ class ConsoleFormatter:
         if not verbose:
             return
 
-        from crewai.agents.parser import AgentAction, AgentFinish
         import json
         import re
+
+        from crewai.agents.parser import AgentAction, AgentFinish
 
         agent_role = agent_role.partition("\n")[0]
 
@@ -1526,9 +1524,9 @@ class ConsoleFormatter:
 
     def handle_memory_retrieval_started(
         self,
-        agent_branch: Optional[Tree],
-        crew_tree: Optional[Tree],
-    ) -> Optional[Tree]:
+        agent_branch: Tree | None,
+        crew_tree: Tree | None,
+    ) -> Tree | None:
         if not self.verbose:
             return None
 
@@ -1550,13 +1548,13 @@ class ConsoleFormatter:
 
     def handle_memory_retrieval_completed(
         self,
-        agent_branch: Optional[Tree],
-        crew_tree: Optional[Tree],
+        agent_branch: Tree | None,
+        crew_tree: Tree | None,
         memory_content: str,
         retrieval_time_ms: float,
     ) -> None:
         if not self.verbose:
-            return None
+            return
 
         branch_to_use = self.current_lite_agent_branch or agent_branch
         tree_to_use = branch_to_use or crew_tree
@@ -1581,7 +1579,7 @@ class ConsoleFormatter:
 
         if branch_to_use is None or tree_to_use is None:
             add_panel()
-            return None
+            return
 
         memory_branch_found = False
         for child in branch_to_use.children:
@@ -1618,13 +1616,13 @@ class ConsoleFormatter:
 
     def handle_memory_query_completed(
         self,
-        agent_branch: Optional[Tree],
+        agent_branch: Tree | None,
         source_type: str,
         query_time_ms: float,
-        crew_tree: Optional[Tree],
+        crew_tree: Tree | None,
     ) -> None:
         if not self.verbose:
-            return None
+            return
 
         branch_to_use = self.current_lite_agent_branch or agent_branch
         tree_to_use = branch_to_use or crew_tree
@@ -1633,15 +1631,15 @@ class ConsoleFormatter:
             branch_to_use = tree_to_use
 
         if branch_to_use is None:
-            return None
+            return
 
         memory_type = source_type.replace("_", " ").title()
 
         for child in branch_to_use.children:
             if "Memory Retrieval" in str(child.label):
-                for child in child.children:
-                    sources_branch = child
-                    if "Sources Used" in str(child.label):
+                for inner_child in child.children:
+                    sources_branch = inner_child
+                    if "Sources Used" in str(inner_child.label):
                         sources_branch.add(f"✅ {memory_type} ({query_time_ms:.2f}ms)")
                         break
                 else:
@@ -1651,13 +1649,13 @@ class ConsoleFormatter:
 
     def handle_memory_query_failed(
         self,
-        agent_branch: Optional[Tree],
-        crew_tree: Optional[Tree],
+        agent_branch: Tree | None,
+        crew_tree: Tree | None,
         error: str,
         source_type: str,
     ) -> None:
         if not self.verbose:
-            return None
+            return
 
         branch_to_use = self.current_lite_agent_branch or agent_branch
         tree_to_use = branch_to_use or crew_tree
@@ -1666,15 +1664,15 @@ class ConsoleFormatter:
             branch_to_use = tree_to_use
 
         if branch_to_use is None:
-            return None
+            return
 
         memory_type = source_type.replace("_", " ").title()
 
         for child in branch_to_use.children:
             if "Memory Retrieval" in str(child.label):
-                for child in child.children:
-                    sources_branch = child
-                    if "Sources Used" in str(child.label):
+                for inner_child in child.children:
+                    sources_branch = inner_child
+                    if "Sources Used" in str(inner_child.label):
                         sources_branch.add(f"❌ {memory_type} - Error: {error}")
                         break
                 else:
@@ -1683,16 +1681,16 @@ class ConsoleFormatter:
                     break
 
     def handle_memory_save_started(
-        self, agent_branch: Optional[Tree], crew_tree: Optional[Tree]
+        self, agent_branch: Tree | None, crew_tree: Tree | None
     ) -> None:
         if not self.verbose:
-            return None
+            return
 
         branch_to_use = agent_branch or self.current_lite_agent_branch
         tree_to_use = branch_to_use or crew_tree
 
         if tree_to_use is None:
-            return None
+            return
 
         for child in tree_to_use.children:
             if "Memory Update" in str(child.label):
@@ -1708,19 +1706,19 @@ class ConsoleFormatter:
 
     def handle_memory_save_completed(
         self,
-        agent_branch: Optional[Tree],
-        crew_tree: Optional[Tree],
+        agent_branch: Tree | None,
+        crew_tree: Tree | None,
         save_time_ms: float,
         source_type: str,
     ) -> None:
         if not self.verbose:
-            return None
+            return
 
         branch_to_use = agent_branch or self.current_lite_agent_branch
         tree_to_use = branch_to_use or crew_tree
 
         if tree_to_use is None:
-            return None
+            return
 
         memory_type = source_type.replace("_", " ").title()
         content = f"✅ {memory_type} Memory Saved ({save_time_ms:.2f}ms)"
@@ -1738,19 +1736,19 @@ class ConsoleFormatter:
 
     def handle_memory_save_failed(
         self,
-        agent_branch: Optional[Tree],
+        agent_branch: Tree | None,
         error: str,
         source_type: str,
-        crew_tree: Optional[Tree],
+        crew_tree: Tree | None,
     ) -> None:
         if not self.verbose:
-            return None
+            return
 
         branch_to_use = agent_branch or self.current_lite_agent_branch
         tree_to_use = branch_to_use or crew_tree
 
         if branch_to_use is None or tree_to_use is None:
-            return None
+            return
 
         memory_type = source_type.replace("_", " ").title()
         content = f"❌ {memory_type} Memory Save Failed"
@@ -1791,7 +1789,7 @@ class ConsoleFormatter:
     def handle_guardrail_completed(
         self,
         success: bool,
-        error: Optional[str],
+        error: str | None,
         retry_count: int,
     ) -> None:
         """Display guardrail evaluation result.
