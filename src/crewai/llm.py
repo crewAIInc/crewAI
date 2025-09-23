@@ -1028,10 +1028,6 @@ class LLM(BaseLLM):
                         "crewai_event_bus does not have an emit method"
                     ) from None
 
-                # crewai_event_bus.emit(
-                #     self,
-                #     event=LLMCallFailedEvent(error=f"Tool execution error: {e!s}"),
-                # )
                 crewai_event_bus.emit(
                     self,
                     event=ToolUsageErrorEvent(
