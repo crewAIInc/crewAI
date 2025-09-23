@@ -367,6 +367,7 @@ class LiteAgent(FlowTrackable, BaseModel):
                 output=output,
                 guardrail=self._guardrail,
                 retry_count=self._guardrail_retry_count,
+                event_source=self,
             )
 
             if not guardrail_result.success:

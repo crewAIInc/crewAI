@@ -3,15 +3,15 @@ from unittest.mock import Mock, patch
 import pytest
 
 from crewai import Agent, Task
-from crewai.llm import LLM
-from crewai.tasks.hallucination_guardrail import HallucinationGuardrail
-from crewai.tasks.llm_guardrail import LLMGuardrail
-from crewai.tasks.task_output import TaskOutput
+from crewai.events.event_bus import crewai_event_bus
 from crewai.events.event_types import (
     LLMGuardrailCompletedEvent,
     LLMGuardrailStartedEvent,
 )
-from crewai.events.event_bus import crewai_event_bus
+from crewai.llm import LLM
+from crewai.tasks.hallucination_guardrail import HallucinationGuardrail
+from crewai.tasks.llm_guardrail import LLMGuardrail
+from crewai.tasks.task_output import TaskOutput
 
 
 def test_task_without_guardrail():
@@ -177,16 +177,25 @@ def test_guardrail_emits_events(sample_agent):
     started_guardrail = []
     completed_guardrail = []
 
+    task = Task(
+        description="Gather information about available books on the First World War",
+        agent=sample_agent,
+        expected_output="A list of available books on the First World War",
+        guardrail="Ensure the authors are from Italy",
+    )
+
     with crewai_event_bus.scoped_handlers():
 
         @crewai_event_bus.on(LLMGuardrailStartedEvent)
         def handle_guardrail_started(source, event):
+            assert source == task
             started_guardrail.append(
                 {"guardrail": event.guardrail, "retry_count": event.retry_count}
             )
 
         @crewai_event_bus.on(LLMGuardrailCompletedEvent)
         def handle_guardrail_completed(source, event):
+            assert source == task
             completed_guardrail.append(
                 {
                     "success": event.success,
@@ -195,13 +204,6 @@ def test_guardrail_emits_events(sample_agent):
                     "retry_count": event.retry_count,
                 }
             )
-
-        task = Task(
-            description="Gather information about available books on the First World War",
-            agent=sample_agent,
-            expected_output="A list of available books on the First World War",
-            guardrail="Ensure the authors are from Italy",
-        )
 
         result = task.execute_sync(agent=sample_agent)
 
