@@ -1,7 +1,7 @@
 """Minimal embedding function factory for CrewAI."""
 
 import os
-from collections.abc import Callable
+from collections.abc import Callable, MutableMapping
 from typing import Any, Final, Literal, TypedDict
 
 from chromadb import EmbeddingFunction
@@ -94,6 +94,55 @@ EMBEDDING_PROVIDERS: Final[
     "onnx": ONNXMiniLM_L6_V2,
 }
 
+PROVIDER_ENV_MAPPING: Final[dict[AllowedEmbeddingProviders, tuple[str, str]]] = {
+    "openai": ("OPENAI_API_KEY", "api_key"),
+    "cohere": ("COHERE_API_KEY", "api_key"),
+    "huggingface": ("HUGGINGFACE_API_KEY", "api_key"),
+    "google-palm": ("GOOGLE_API_KEY", "api_key"),
+    "google-generativeai": ("GOOGLE_API_KEY", "api_key"),
+    "google-vertex": ("GOOGLE_API_KEY", "api_key"),
+    "jina": ("JINA_API_KEY", "api_key"),
+    "roboflow": ("ROBOFLOW_API_KEY", "api_key"),
+}
+
+
+def _inject_api_key_from_env(
+    provider: AllowedEmbeddingProviders, config_dict: MutableMapping[str, Any]
+) -> None:
+    """Inject API key or other required configuration from environment if not explicitly provided.
+
+    Args:
+        provider: The embedding provider name
+        config_dict: The configuration dictionary to modify in-place
+
+    Raises:
+        ImportError: If required libraries for certain providers are not installed
+        ValueError: If AWS session creation fails for amazon-bedrock
+    """
+    if provider in PROVIDER_ENV_MAPPING:
+        env_var_name, config_key = PROVIDER_ENV_MAPPING[provider]
+        if config_key not in config_dict:
+            env_value = os.getenv(env_var_name)
+            if env_value:
+                config_dict[config_key] = env_value
+
+    if provider == "amazon-bedrock":
+        if "session" not in config_dict:
+            try:
+                import boto3  # type: ignore[import]
+
+                config_dict["session"] = boto3.Session()
+            except ImportError as e:
+                raise ImportError(
+                    "boto3 is required for amazon-bedrock embeddings. "
+                    "Install it with: uv add boto3"
+                ) from e
+            except Exception as e:
+                raise ValueError(
+                    f"Failed to create AWS session for amazon-bedrock. "
+                    f"Ensure AWS credentials are configured. Error: {e}"
+                ) from e
+
 
 def get_embedding_function(
     config: EmbeddingOptions | EmbedderConfig | None = None,
@@ -166,16 +215,16 @@ def get_embedding_function(
             api_key=os.getenv("OPENAI_API_KEY"), model_name="text-embedding-3-small"
         )
 
+    provider: AllowedEmbeddingProviders
+    config_dict: dict[str, Any]
+
     if isinstance(config, EmbeddingOptions):
         config_dict = config.model_dump(exclude_none=True)
-        provider = config_dict.pop("provider", "openai")
-        if "model" in config_dict and "model_name" not in config_dict:
-            config_dict["model_name"] = config_dict.pop("model")
+        provider = config_dict["provider"]
     else:
         provider = config["provider"]
-        nested = config.get("config", {})
+        nested: dict[str, Any] = config.get("config", {})
 
-        # Validate format
         if not nested and len(config) > 1:
             raise ValueError(
                 "Invalid embedder configuration format. "
@@ -192,4 +241,7 @@ def get_embedding_function(
             f"Unsupported provider: {provider}. "
             f"Available providers: {list(EMBEDDING_PROVIDERS.keys())}"
         )
+
+    _inject_api_key_from_env(provider, config_dict)
+
     return EMBEDDING_PROVIDERS[provider](**config_dict)
