@@ -30,9 +30,11 @@ def test_get_embedding_function_default() -> None:
 
 def test_get_embedding_function_with_embedding_options() -> None:
     """Test embedding function creation with EmbeddingOptions object."""
-    with patch("crewai.rag.embeddings.factory.OpenAIEmbeddingFunction") as mock_openai:
+    with patch("crewai.rag.embeddings.factory.EMBEDDING_PROVIDERS") as mock_providers:
         mock_instance = MagicMock()
-        mock_openai.return_value = mock_instance
+        mock_openai = MagicMock(return_value=mock_instance)
+        mock_providers.__getitem__.return_value = mock_openai
+        mock_providers.__contains__.return_value = True
 
         options = EmbeddingOptions(
             provider="openai",
@@ -45,16 +47,18 @@ def test_get_embedding_function_with_embedding_options() -> None:
         call_kwargs = mock_openai.call_args.kwargs
         assert "api_key" in call_kwargs
         assert call_kwargs["api_key"].get_secret_value() == "test-key"
+        assert "model_name" in call_kwargs
+        assert call_kwargs["model_name"] == "text-embedding-3-large"
         assert result == mock_instance
 
 
 def test_get_embedding_function_sentence_transformer() -> None:
     """Test sentence transformer embedding function."""
-    with patch(
-        "crewai.rag.embeddings.factory.SentenceTransformerEmbeddingFunction"
-    ) as mock_st:
+    with patch("crewai.rag.embeddings.factory.EMBEDDING_PROVIDERS") as mock_providers:
         mock_instance = MagicMock()
-        mock_st.return_value = mock_instance
+        mock_st = MagicMock(return_value=mock_instance)
+        mock_providers.__getitem__.return_value = mock_st
+        mock_providers.__contains__.return_value = True
 
         config = {
             "provider": "sentence-transformer",
@@ -69,9 +73,11 @@ def test_get_embedding_function_sentence_transformer() -> None:
 
 def test_get_embedding_function_ollama() -> None:
     """Test Ollama embedding function."""
-    with patch("crewai.rag.embeddings.factory.OllamaEmbeddingFunction") as mock_ollama:
+    with patch("crewai.rag.embeddings.factory.EMBEDDING_PROVIDERS") as mock_providers:
         mock_instance = MagicMock()
-        mock_ollama.return_value = mock_instance
+        mock_ollama = MagicMock(return_value=mock_instance)
+        mock_providers.__getitem__.return_value = mock_ollama
+        mock_providers.__contains__.return_value = True
 
         config = {
             "provider": "ollama",
@@ -152,11 +158,11 @@ def test_get_embedding_function_onnx() -> None:
 
 def test_get_embedding_function_google_palm() -> None:
     """Test Google PaLM embedding function."""
-    with patch(
-        "crewai.rag.embeddings.factory.GooglePalmEmbeddingFunction"
-    ) as mock_palm:
+    with patch("crewai.rag.embeddings.factory.EMBEDDING_PROVIDERS") as mock_providers:
         mock_instance = MagicMock()
-        mock_palm.return_value = mock_instance
+        mock_palm = MagicMock(return_value=mock_instance)
+        mock_providers.__getitem__.return_value = mock_palm
+        mock_providers.__contains__.return_value = True
 
         config = {"provider": "google-palm", "config": {"api_key": "palm-key"}}
 
@@ -230,7 +236,12 @@ def test_get_embedding_function_config_modification() -> None:
     }
     config_copy = original_config.copy()
 
-    with patch("crewai.rag.embeddings.factory.OpenAIEmbeddingFunction"):
+    with patch("crewai.rag.embeddings.factory.EMBEDDING_PROVIDERS") as mock_providers:
+        mock_instance = MagicMock()
+        mock_openai = MagicMock(return_value=mock_instance)
+        mock_providers.__getitem__.return_value = mock_openai
+        mock_providers.__contains__.return_value = True
+
         get_embedding_function(config_copy)
 
     assert config_copy == original_config
@@ -259,11 +270,11 @@ def test_get_embedding_function_exclude_none_values() -> None:
 
 def test_get_embedding_function_instructor() -> None:
     """Test Instructor embedding function."""
-    with patch(
-        "crewai.rag.embeddings.factory.InstructorEmbeddingFunction"
-    ) as mock_instructor:
+    with patch("crewai.rag.embeddings.factory.EMBEDDING_PROVIDERS") as mock_providers:
         mock_instance = MagicMock()
-        mock_instructor.return_value = mock_instance
+        mock_instructor = MagicMock(return_value=mock_instance)
+        mock_providers.__getitem__.return_value = mock_instructor
+        mock_providers.__contains__.return_value = True
 
         config = {
             "provider": "instructor",
