@@ -91,9 +91,11 @@ def test_get_embedding_function_ollama() -> None:
 
 def test_get_embedding_function_cohere() -> None:
     """Test Cohere embedding function."""
-    with patch("crewai.rag.embeddings.factory.CohereEmbeddingFunction") as mock_cohere:
+    with patch("crewai.rag.embeddings.factory.EMBEDDING_PROVIDERS") as mock_providers:
         mock_instance = MagicMock()
-        mock_cohere.return_value = mock_instance
+        mock_cohere = MagicMock(return_value=mock_instance)
+        mock_providers.__getitem__.return_value = mock_cohere
+        mock_providers.__contains__.return_value = True
 
         config = {
             "provider": "cohere",
@@ -110,9 +112,11 @@ def test_get_embedding_function_cohere() -> None:
 
 def test_get_embedding_function_huggingface() -> None:
     """Test HuggingFace embedding function."""
-    with patch("crewai.rag.embeddings.factory.HuggingFaceEmbeddingFunction") as mock_hf:
+    with patch("crewai.rag.embeddings.factory.EMBEDDING_PROVIDERS") as mock_providers:
         mock_instance = MagicMock()
-        mock_hf.return_value = mock_instance
+        mock_hf = MagicMock(return_value=mock_instance)
+        mock_providers.__getitem__.return_value = mock_hf
+        mock_providers.__contains__.return_value = True
 
         config = {
             "provider": "huggingface",
@@ -132,9 +136,11 @@ def test_get_embedding_function_huggingface() -> None:
 
 def test_get_embedding_function_onnx() -> None:
     """Test ONNX embedding function."""
-    with patch("crewai.rag.embeddings.factory.ONNXMiniLM_L6_V2") as mock_onnx:
+    with patch("crewai.rag.embeddings.factory.EMBEDDING_PROVIDERS") as mock_providers:
         mock_instance = MagicMock()
-        mock_onnx.return_value = mock_instance
+        mock_onnx = MagicMock(return_value=mock_instance)
+        mock_providers.__getitem__.return_value = mock_onnx
+        mock_providers.__contains__.return_value = True
 
         config = {"provider": "onnx"}
 
@@ -162,11 +168,11 @@ def test_get_embedding_function_google_palm() -> None:
 
 def test_get_embedding_function_amazon_bedrock() -> None:
     """Test Amazon Bedrock embedding function."""
-    with patch(
-        "crewai.rag.embeddings.factory.AmazonBedrockEmbeddingFunction"
-    ) as mock_bedrock:
+    with patch("crewai.rag.embeddings.factory.EMBEDDING_PROVIDERS") as mock_providers:
         mock_instance = MagicMock()
-        mock_bedrock.return_value = mock_instance
+        mock_bedrock = MagicMock(return_value=mock_instance)
+        mock_providers.__getitem__.return_value = mock_bedrock
+        mock_providers.__contains__.return_value = True
 
         config = {
             "provider": "amazon-bedrock",
@@ -186,9 +192,11 @@ def test_get_embedding_function_amazon_bedrock() -> None:
 
 def test_get_embedding_function_jina() -> None:
     """Test Jina embedding function."""
-    with patch("crewai.rag.embeddings.factory.JinaEmbeddingFunction") as mock_jina:
+    with patch("crewai.rag.embeddings.factory.EMBEDDING_PROVIDERS") as mock_providers:
         mock_instance = MagicMock()
-        mock_jina.return_value = mock_instance
+        mock_jina = MagicMock(return_value=mock_instance)
+        mock_providers.__getitem__.return_value = mock_jina
+        mock_providers.__contains__.return_value = True
 
         config = {
             "provider": "jina",
@@ -230,9 +238,11 @@ def test_get_embedding_function_config_modification() -> None:
 
 def test_get_embedding_function_exclude_none_values() -> None:
     """Test that None values are excluded from embedding function calls."""
-    with patch("crewai.rag.embeddings.factory.OpenAIEmbeddingFunction") as mock_openai:
+    with patch("crewai.rag.embeddings.factory.EMBEDDING_PROVIDERS") as mock_providers:
         mock_instance = MagicMock()
-        mock_openai.return_value = mock_instance
+        mock_openai = MagicMock(return_value=mock_instance)
+        mock_providers.__getitem__.return_value = mock_openai
+        mock_providers.__contains__.return_value = True
 
         options = EmbeddingOptions(
             provider="openai", api_key=SecretStr("test-key"), model_name=None
@@ -243,7 +253,7 @@ def test_get_embedding_function_exclude_none_values() -> None:
         call_kwargs = mock_openai.call_args.kwargs
         assert "api_key" in call_kwargs
         assert call_kwargs["api_key"].get_secret_value() == "test-key"
-        assert "model" not in call_kwargs
+        assert "model_name" not in call_kwargs
         assert result == mock_instance
 
 
