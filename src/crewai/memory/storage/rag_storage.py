@@ -7,7 +7,8 @@ from crewai.rag.chromadb.config import ChromaDBConfig
 from crewai.rag.chromadb.types import ChromaEmbeddingFunctionWrapper
 from crewai.rag.config.utils import get_rag_client
 from crewai.rag.core.base_client import BaseClient
-from crewai.rag.embeddings.factory import get_embedding_function
+from crewai.rag.embeddings.factory import EmbedderConfig, get_embedding_function
+from crewai.rag.embeddings.types import EmbeddingOptions
 from crewai.rag.factory import create_client
 from crewai.rag.storage.base_rag_storage import BaseRAGStorage
 from crewai.rag.types import BaseRecord
@@ -25,7 +26,7 @@ class RAGStorage(BaseRAGStorage):
         self,
         type: str,
         allow_reset: bool = True,
-        embedder_config: dict[str, Any] | None = None,
+        embedder_config: EmbeddingOptions | EmbedderConfig | None = None,
         crew: Any = None,
         path: str | None = None,
     ) -> None:
@@ -50,6 +51,21 @@ class RAGStorage(BaseRAGStorage):
 
         if self.embedder_config:
             embedding_function = get_embedding_function(self.embedder_config)
+
+            try:
+                _ = embedding_function(["test"])
+            except Exception as e:
+                provider = (
+                    self.embedder_config.provider
+                    if isinstance(self.embedder_config, EmbeddingOptions)
+                    else self.embedder_config.get("provider", "unknown")
+                )
+                raise ValueError(
+                    f"Failed to initialize embedder. Please check your configuration or connection.\n"
+                    f"Provider: {provider}\n"
+                    f"Error: {e}"
+                ) from e
+
             config = ChromaDBConfig(
                 embedding_function=cast(
                     ChromaEmbeddingFunctionWrapper, embedding_function
