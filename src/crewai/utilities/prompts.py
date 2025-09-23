@@ -37,7 +37,7 @@ class Prompts(BaseModel):
         default=None, description="Custom response prompt template"
     )
     use_system_prompt: bool | None = Field(
-        default=True,
+        default=False,
         description="Whether to use the system prompt when no custom templates are provided",
     )
     agent: Any = Field(description="Reference to the agent using these prompts")
