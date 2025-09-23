@@ -244,4 +244,6 @@ def get_embedding_function(
 
     _inject_api_key_from_env(provider, config_dict)
 
+    config_dict.pop("batch_size", None)
+
     return EMBEDDING_PROVIDERS[provider](**config_dict)
