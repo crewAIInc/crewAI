@@ -12,6 +12,10 @@ from pydantic import BaseModel
 
 from crewai.events.types.llm_events import LLMCallType
 from crewai.llms.base_llm import BaseLLM
+from crewai.utilities.agent_utils import is_context_length_exceeded
+from crewai.utilities.exceptions.context_window_exceeding_exception import (
+    LLMContextLengthExceededExceptionError,
+)
 
 
 class OpenAICompletion(BaseLLM):
@@ -43,6 +47,7 @@ class OpenAICompletion(BaseLLM):
         logprobs: bool | None = None,
         top_logprobs: int | None = None,
         reasoning_effort: str | None = None,  # For o1 models
+        provider: str | None = None,  # Add provider parameter
         **kwargs,
     ):
         """Initialize OpenAI chat completion client."""
@@ -54,6 +59,9 @@ class OpenAICompletion(BaseLLM):
             else:
                 stop_list = stop
 
+        if provider is None:
+            provider = kwargs.pop("provider", "openai")
+
         super().__init__(
             model=model,
             temperature=temperature,
@@ -61,6 +69,7 @@ class OpenAICompletion(BaseLLM):
             api_key=api_key or os.getenv("OPENAI_API_KEY"),
             base_url=base_url,
             timeout=timeout,
+            provider=provider,
             **kwargs,
         )
 
@@ -243,65 +252,71 @@ class OpenAICompletion(BaseLLM):
         from_agent: Any | None = None,
     ) -> str | Any:
         """Handle non-streaming chat completion."""
-        response: ChatCompletion = self.client.chat.completions.create(**params)
+        try:
+            response: ChatCompletion = self.client.chat.completions.create(**params)
 
-        usage = self._extract_openai_token_usage(response)
+            usage = self._extract_openai_token_usage(response)
 
-        self._track_token_usage_internal(usage)
+            self._track_token_usage_internal(usage)
 
-        choice: Choice = response.choices[0]
-        message = choice.message
+            choice: Choice = response.choices[0]
+            message = choice.message
 
-        if message.tool_calls and available_functions:
-            tool_call = message.tool_calls[0]
-            function_name = tool_call.function.name
+            if message.tool_calls and available_functions:
+                tool_call = message.tool_calls[0]
+                function_name = tool_call.function.name
 
-            try:
-                function_args = json.loads(tool_call.function.arguments)
-            except json.JSONDecodeError as e:
-                logging.error(f"Failed to parse tool arguments: {e}")
-                function_args = {}
+                try:
+                    function_args = json.loads(tool_call.function.arguments)
+                except json.JSONDecodeError as e:
+                    logging.error(f"Failed to parse tool arguments: {e}")
+                    function_args = {}
 
-            result = self._handle_tool_execution(
-                function_name=function_name,
-                function_args=function_args,
-                available_functions=available_functions,
-                from_task=from_task,
-                from_agent=from_agent,
-            )
-
-            if result is not None:
-                return result
-
-        content = message.content or ""
-        content = self._apply_stop_words(content)
-
-        if self.response_format and isinstance(self.response_format, type):
-            try:
-                structured_result = self._validate_structured_output(
-                    content, self.response_format
-                )
-                self._emit_call_completed_event(
-                    response=structured_result,
-                    call_type=LLMCallType.LLM_CALL,
+                result = self._handle_tool_execution(
+                    function_name=function_name,
+                    function_args=function_args,
+                    available_functions=available_functions,
                     from_task=from_task,
                     from_agent=from_agent,
-                    messages=params["messages"],
                 )
-                return structured_result
-            except ValueError as e:
-                logging.warning(f"Structured output validation failed: {e}")
 
-        self._emit_call_completed_event(
-            response=content,
-            call_type=LLMCallType.LLM_CALL,
-            from_task=from_task,
-            from_agent=from_agent,
-            messages=params["messages"],
-        )
+                if result is not None:
+                    return result
 
-        if usage.get("total_tokens", 0) > 0:
-            logging.info(f"OpenAI API usage: {usage}")
+            content = message.content or ""
+            content = self._apply_stop_words(content)
+
+            if self.response_format and isinstance(self.response_format, type):
+                try:
+                    structured_result = self._validate_structured_output(
+                        content, self.response_format
+                    )
+                    self._emit_call_completed_event(
+                        response=structured_result,
+                        call_type=LLMCallType.LLM_CALL,
+                        from_task=from_task,
+                        from_agent=from_agent,
+                        messages=params["messages"],
+                    )
+                    return structured_result
+                except ValueError as e:
+                    logging.warning(f"Structured output validation failed: {e}")
+
+            self._emit_call_completed_event(
+                response=content,
+                call_type=LLMCallType.LLM_CALL,
+                from_task=from_task,
+                from_agent=from_agent,
+                messages=params["messages"],
+            )
+
+            if usage.get("total_tokens", 0) > 0:
+                logging.info(f"OpenAI API usage: {usage}")
+        except Exception as e:
+            if is_context_length_exceeded(e):
+                logging.error(f"Context window exceeded: {e}")
+                raise LLMContextLengthExceededExceptionError(str(e)) from e
+            raise e from e
 
         return content
 

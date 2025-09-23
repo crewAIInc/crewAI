@@ -60,6 +60,7 @@ class BaseLLM(ABC):
         api_key: str | None = None,
         base_url: str | None = None,
         timeout: float | None = None,
+        provider: str | None = None,
         **kwargs,
     ) -> None:
         """Initialize the BaseLLM with default attributes.
@@ -70,6 +71,9 @@ class BaseLLM(ABC):
             stop: Optional list of stop sequences for generation.
             **kwargs: Additional provider-specific parameters.
         """
+        if not model:
+            raise ValueError("Model name is required and cannot be empty")
+
         self.model = model
         self.temperature = temperature
         self.stop: list[str] = stop or []
@@ -77,6 +81,7 @@ class BaseLLM(ABC):
         self.base_url = base_url
         # Store additional parameters for provider-specific use
         self.additional_params = kwargs
+        self._provider = provider or "openai"
 
         self._token_usage = {
             "total_tokens": 0,
@@ -85,6 +90,16 @@ class BaseLLM(ABC):
             "successful_requests": 0,
             "cached_prompt_tokens": 0,
         }
+
+    @property
+    def provider(self) -> str:
+        """Get the provider of the LLM."""
+        return self._provider
+
+    @provider.setter
+    def provider(self, value: str) -> None:
+        """Set the provider of the LLM."""
+        self._provider = value
 
     @abstractmethod
     def call(

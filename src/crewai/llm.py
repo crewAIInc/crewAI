@@ -62,7 +62,7 @@ from typing import TextIO
 from crewai.events.event_bus import crewai_event_bus
 from crewai.llms.base_llm import BaseLLM
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
-    LLMContextLengthExceededException,
+    LLMContextLengthExceededExceptionError,
 )
 
 load_dotenv()
@@ -312,7 +312,7 @@ class LLM(BaseLLM):
         native_class = cls._get_native_provider(provider)
         if native_class:
             model_string = model.partition("/")[2] if "/" in model else model
-            return native_class(model=model_string, **kwargs)
+            return native_class(model=model_string, provider=provider, **kwargs)
 
         # FALLBACK
         if not LITELLM_AVAILABLE:
@@ -337,7 +337,7 @@ class LLM(BaseLLM):
             except ImportError:
                 return None
 
-        elif provider == "anthropic":
+        elif provider == "anthropic" or provider == "claude":
             try:
                 from crewai.llms.providers.anthropic.completion import (
                     AnthropicCompletion,
@@ -757,7 +757,7 @@ class LLM(BaseLLM):
             # Catch context window errors from litellm and convert them to our own exception type.
             # This exception is handled by CrewAgentExecutor._invoke_loop() which can then decide
             # whether to summarize the content or abort based on the respect_context_window flag.
-            raise LLMContextLengthExceededException(str(e)) from e
+            raise LLMContextLengthExceededExceptionError(str(e)) from e
         except Exception as e:
             logging.error(f"Error in streaming response: {e!s}")
             if full_response.strip():
@@ -892,7 +892,7 @@ class LLM(BaseLLM):
         except ContextWindowExceededError as e:
             # Convert litellm's context window error to our own exception type
             # for consistent handling in the rest of the codebase
-            raise LLMContextLengthExceededException(str(e)) from e
+            raise LLMContextLengthExceededExceptionError(str(e)) from e
         except Exception as e:
             raise Exception(f"Failed to get response: {e!s}") from e
         # --- 2) Extract response message and content
@@ -1072,7 +1072,7 @@ class LLM(BaseLLM):
         Raises:
             TypeError: If messages format is invalid
             ValueError: If response format is not supported
-            LLMContextLengthExceededException: If input exceeds model's context limit
+            LLMContextLengthExceededExceptionError: If input exceeds model's context limit
         """
         # --- 1) Emit call started event
         if not hasattr(crewai_event_bus, "emit"):
@@ -1119,8 +1119,8 @@ class LLM(BaseLLM):
                     params, callbacks, available_functions, from_task, from_agent
                 )
 
-            except LLMContextLengthExceededException:
-                # Re-raise LLMContextLengthExceededException as it should be handled
+            except LLMContextLengthExceededExceptionError:
+                # Re-raise LLMContextLengthExceededExceptionError as it should be handled
                 # by the CrewAgentExecutor._invoke_loop method, which can then decide
                 # whether to summarize the content or abort based on the respect_context_window flag
                 raise

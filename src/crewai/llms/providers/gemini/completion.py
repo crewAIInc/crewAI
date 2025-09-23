@@ -4,6 +4,10 @@ from typing import Any
 
 from crewai.events.types.llm_events import LLMCallType
 from crewai.llms.base_llm import BaseLLM
+from crewai.utilities.agent_utils import is_context_length_exceeded
+from crewai.utilities.exceptions.context_window_exceeding_exception import (
+    LLMContextLengthExceededExceptionError,
+)
 
 try:
     from google import genai  # type: ignore
@@ -295,9 +299,15 @@ class GeminiCompletion(BaseLLM):
             "config": config,
         }
 
-        response = self.client.models.generate_content(**api_params)
+        try:
+            response = self.client.models.generate_content(**api_params)
 
-        usage = self._extract_token_usage(response)
+            usage = self._extract_token_usage(response)
+        except Exception as e:
+            if is_context_length_exceeded(e):
+                logging.error(f"Context window exceeded: {e}")
+                raise LLMContextLengthExceededExceptionError(str(e)) from e
+            raise e from e
 
         self._track_token_usage_internal(usage)
 

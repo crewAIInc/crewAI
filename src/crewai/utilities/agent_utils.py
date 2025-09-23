@@ -22,7 +22,7 @@ from crewai.tools.tool_types import ToolResult
 from crewai.utilities import I18N, Printer
 from crewai.utilities.errors import AgentRepositoryError
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
-    LLMContextLengthExceededException,
+    LLMContextLengthExceededExceptionError,
 )
 
 console = Console()
@@ -288,9 +288,9 @@ def is_context_length_exceeded(exception: Exception) -> bool:
     Returns:
         bool: True if the exception is due to context length exceeding
     """
-    return LLMContextLengthExceededException(str(exception))._is_context_limit_error(
+    return LLMContextLengthExceededExceptionError(
         str(exception)
-    )
+    )._is_context_limit_error(str(exception))
 
 
 def handle_context_length(

@@ -5,6 +5,10 @@ from typing import Any
 
 from crewai.events.types.llm_events import LLMCallType
 from crewai.llms.base_llm import BaseLLM
+from crewai.utilities.agent_utils import is_context_length_exceeded
+from crewai.utilities.exceptions.context_window_exceeding_exception import (
+    LLMContextLengthExceededExceptionError,
+)
 
 try:
     from anthropic import Anthropic
@@ -236,7 +240,11 @@ class AnthropicCompletion(BaseLLM):
                 formatted_messages.append({"role": role_str, "content": content_str})
 
         # Ensure first message is from user (Anthropic requirement)
-        if formatted_messages and formatted_messages[0]["role"] != "user":
+        if not formatted_messages:
+            # If no messages, add a default user message
+            formatted_messages.append({"role": "user", "content": "Hello"})
+        elif formatted_messages[0]["role"] != "user":
+            # If first message is not from user, insert a user message at the beginning
             formatted_messages.insert(0, {"role": "user", "content": "Hello"})
 
         return formatted_messages, system_message
@@ -249,7 +257,14 @@ class AnthropicCompletion(BaseLLM):
         from_agent: Any | None = None,
     ) -> str | Any:
         """Handle non-streaming message completion."""
-        response: Message = self.client.messages.create(**params)
+        try:
+            response: Message = self.client.messages.create(**params)
+
+        except Exception as e:
+            if is_context_length_exceeded(e):
+                logging.error(f"Context window exceeded: {e}")
+                raise LLMContextLengthExceededExceptionError(str(e)) from e
+            raise e from e
 
         usage = self._extract_anthropic_token_usage(response)
         self._track_token_usage_internal(usage)

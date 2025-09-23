@@ -1,5 +1,8 @@
-class LLMContextLengthExceededException(Exception):
-    CONTEXT_LIMIT_ERRORS = [
+from typing import ClassVar
+
+
+class LLMContextLengthExceededExceptionError(Exception):
+    CONTEXT_LIMIT_ERRORS: ClassVar[list[str]] = [
         "expected a string with maximum length",
         "maximum context length",
         "context length exceeded",

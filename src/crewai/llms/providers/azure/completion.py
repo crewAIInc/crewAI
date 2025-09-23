@@ -3,15 +3,20 @@ import logging
 import os
 from typing import Any
 
+from crewai.utilities.agent_utils import is_context_length_exceeded
+from crewai.utilities.exceptions.context_window_exceeding_exception import (
+    LLMContextLengthExceededExceptionError,
+)
+
 try:
-    from azure.ai.inference import ChatCompletionsClient
-    from azure.ai.inference.models import (
+    from azure.ai.inference import ChatCompletionsClient  # type: ignore
+    from azure.ai.inference.models import (  # type: ignore
         ChatCompletions,
         ChatCompletionsToolCall,
         StreamingChatCompletionsUpdate,
     )
-    from azure.core.credentials import AzureKeyCredential
-    from azure.core.exceptions import HttpResponseError
+    from azure.core.credentials import AzureKeyCredential  # type: ignore
+    from azure.core.exceptions import HttpResponseError  # type: ignore
 
     from crewai.events.types.llm_events import LLMCallType
     from crewai.llms.base_llm import BaseLLM
@@ -277,56 +282,62 @@ class AzureCompletion(BaseLLM):
     ) -> str | Any:
         """Handle non-streaming chat completion."""
         # Make API call
-        response: ChatCompletions = self.client.complete(**params)
+        try:
+            response: ChatCompletions = self.client.complete(**params)
 
-        if not response.choices:
-            raise ValueError("No choices returned from Azure API")
+            if not response.choices:
+                raise ValueError("No choices returned from Azure API")
 
-        choice = response.choices[0]
-        message = choice.message
+            choice = response.choices[0]
+            message = choice.message
 
-        # Extract and track token usage
-        usage = self._extract_azure_token_usage(response)
-        self._track_token_usage_internal(usage)
+            # Extract and track token usage
+            usage = self._extract_azure_token_usage(response)
+            self._track_token_usage_internal(usage)
 
-        # Handle tool calls
-        if message.tool_calls and available_functions:
-            tool_call = message.tool_calls[0]  # Handle first tool call
-            if isinstance(tool_call, ChatCompletionsToolCall):
-                function_name = tool_call.function.name
+            # Handle tool calls
+            if message.tool_calls and available_functions:
+                tool_call = message.tool_calls[0]  # Handle first tool call
+                if isinstance(tool_call, ChatCompletionsToolCall):
+                    function_name = tool_call.function.name
 
-                try:
-                    function_args = json.loads(tool_call.function.arguments)
-                except json.JSONDecodeError as e:
-                    logging.error(f"Failed to parse tool arguments: {e}")
-                    function_args = {}
+                    try:
+                        function_args = json.loads(tool_call.function.arguments)
+                    except json.JSONDecodeError as e:
+                        logging.error(f"Failed to parse tool arguments: {e}")
+                        function_args = {}
 
-                # Execute tool
-                result = self._handle_tool_execution(
-                    function_name=function_name,
-                    function_args=function_args,
-                    available_functions=available_functions,
-                    from_task=from_task,
-                    from_agent=from_agent,
-                )
+                    # Execute tool
+                    result = self._handle_tool_execution(
+                        function_name=function_name,
+                        function_args=function_args,
+                        available_functions=available_functions,
+                        from_task=from_task,
+                        from_agent=from_agent,
+                    )
 
-                if result is not None:
-                    return result
+                    if result is not None:
+                        return result
 
-        # Extract content
-        content = message.content or ""
+            # Extract content
+            content = message.content or ""
 
-        # Apply stop words
-        content = self._apply_stop_words(content)
+            # Apply stop words
+            content = self._apply_stop_words(content)
 
-        # Emit completion event and return content
-        self._emit_call_completed_event(
-            response=content,
-            call_type=LLMCallType.LLM_CALL,
-            from_task=from_task,
-            from_agent=from_agent,
-            messages=params["messages"],
-        )
+            # Emit completion event and return content
+            self._emit_call_completed_event(
+                response=content,
+                call_type=LLMCallType.LLM_CALL,
+                from_task=from_task,
+                from_agent=from_agent,
+                messages=params["messages"],
+            )
+
+        except Exception as e:
+            if is_context_length_exceeded(e):
+                logging.error(f"Context window exceeded: {e}")
+                raise LLMContextLengthExceededExceptionError(str(e)) from e
 
         return content
 
