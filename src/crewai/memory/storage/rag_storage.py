@@ -66,11 +66,28 @@ class RAGStorage(BaseRAGStorage):
                     f"Error: {e}"
                 ) from e
 
-            config = ChromaDBConfig(
-                embedding_function=cast(
-                    ChromaEmbeddingFunctionWrapper, embedding_function
+            batch_size = None
+            if (
+                isinstance(self.embedder_config, dict)
+                and "config" in self.embedder_config
+            ):
+                nested_config = self.embedder_config["config"]
+                if isinstance(nested_config, dict):
+                    batch_size = nested_config.get("batch_size")
+
+            if batch_size is not None:
+                config = ChromaDBConfig(
+                    embedding_function=cast(
+                        ChromaEmbeddingFunctionWrapper, embedding_function
+                    ),
+                    batch_size=batch_size,
                 )
-            )
+            else:
+                config = ChromaDBConfig(
+                    embedding_function=cast(
+                        ChromaEmbeddingFunctionWrapper, embedding_function
+                    )
+                )
             self._client = create_client(config)
 
     def _get_client(self) -> BaseClient:
@@ -111,7 +128,26 @@ class RAGStorage(BaseRAGStorage):
             if metadata:
                 document["metadata"] = metadata
 
-            client.add_documents(collection_name=collection_name, documents=[document])
+            batch_size = None
+            if (
+                self.embedder_config
+                and isinstance(self.embedder_config, dict)
+                and "config" in self.embedder_config
+            ):
+                nested_config = self.embedder_config["config"]
+                if isinstance(nested_config, dict):
+                    batch_size = nested_config.get("batch_size")
+
+            if batch_size is not None:
+                client.add_documents(
+                    collection_name=collection_name,
+                    documents=[document],
+                    batch_size=batch_size,
+                )
+            else:
+                client.add_documents(
+                    collection_name=collection_name, documents=[document]
+                )
         except Exception as e:
             logging.error(
                 f"Error during {self.type} save: {e!s}\n{traceback.format_exc()}"

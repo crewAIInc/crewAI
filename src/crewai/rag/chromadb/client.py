@@ -17,6 +17,7 @@ from crewai.rag.chromadb.types import (
     ChromaDBCollectionSearchParams,
 )
 from crewai.rag.chromadb.utils import (
+    _create_batch_slice,
     _extract_search_params,
     _is_async_client,
     _is_sync_client,
@@ -322,15 +323,9 @@ class ChromaDBClient(BaseClient):
         prepared = _prepare_documents_for_chromadb(documents)
 
         for i in range(0, len(prepared.ids), batch_size):
-            batch_end = min(i + batch_size, len(prepared.ids))
-            batch_ids = prepared.ids[i:batch_end]
-            batch_texts = prepared.texts[i:batch_end]
-            batch_metadatas = (
-                prepared.metadatas[i:batch_end] if prepared.metadatas else None
+            batch_ids, batch_texts, batch_metadatas = _create_batch_slice(
+                prepared=prepared, start_index=i, batch_size=batch_size
             )
-
-            if batch_metadatas and not any(m for m in batch_metadatas):
-                batch_metadatas = None
 
             collection.upsert(
                 ids=batch_ids,
@@ -377,15 +372,9 @@ class ChromaDBClient(BaseClient):
         prepared = _prepare_documents_for_chromadb(documents)
 
         for i in range(0, len(prepared.ids), batch_size):
-            batch_end = min(i + batch_size, len(prepared.ids))
-            batch_ids = prepared.ids[i:batch_end]
-            batch_texts = prepared.texts[i:batch_end]
-            batch_metadatas = (
-                prepared.metadatas[i:batch_end] if prepared.metadatas else None
+            batch_ids, batch_texts, batch_metadatas = _create_batch_slice(
+                prepared=prepared, start_index=i, batch_size=batch_size
             )
-
-            if batch_metadatas and not any(m for m in batch_metadatas):
-                batch_metadatas = None
 
             await collection.upsert(
                 ids=batch_ids,
