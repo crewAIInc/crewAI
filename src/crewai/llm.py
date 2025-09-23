@@ -368,7 +368,7 @@ class LLM(BaseLLM):
         n: int | None = None,
         stop: str | list[str] | None = None,
         max_completion_tokens: int | None = None,
-        max_tokens: int | None = None,
+        max_tokens: int | float | None = None,
         presence_penalty: float | None = None,
         frequency_penalty: float | None = None,
         logit_bias: dict[int, float] | None = None,
