@@ -40,7 +40,7 @@ dependencies = [
     "json5>=0.10.0",
     "portalocker==2.7.0",
     "pydantic-settings>=2.10.1",
-    "boto3>=1.40.19",
+    "boto3>=1.40.36",
     "botocore>=1.40.19",
 ]
 
@@ -67,7 +67,7 @@ openpyxl = [
 ]
 mem0 = ["mem0ai>=0.1.94"]
 agentcore = [
-    "boto3>=1.35.0",
+    "boto3>=1.39.7",
     "botocore>=1.35.0",
 ]
 docling = [
@@ -107,6 +107,7 @@ dev = [
     "types-pyyaml==6.0.*",
     "types-regex==2024.11.6.*",
     "types-appdirs==1.4.*",
+    "boto3-stubs[bedrock-agentcore]>=1.40.37",
 ]
 
 [project.scripts]

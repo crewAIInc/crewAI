@@ -1,6 +1,7 @@
 import logging
-from typing import Any, Dict, List
+from typing import Any
 
+from botocore.client import Config
 from pydantic import BaseModel, Field, field_validator
 
 from crewai.memory.storage.interface import Storage
@@ -27,7 +28,7 @@ class BedrockAgentCoreConfig(BaseModel):
     )
 
     # Namespace configuration
-    namespaces: List[str] = Field(
+    namespaces: list[str] = Field(
         default_factory=list,
         description="List of namespaces to be searched (default: empty list)",
     )
@@ -84,7 +85,7 @@ class BedrockAgentCoreStorage(Storage):
         self.config = config
 
         # Initialize boto3 clients
-        self.bedrock_agentcore_memory_client = None
+        self.bedrock_agentcore_memory_client: Any | None = None
 
         # Initialize memory clients
         self._initialize_memory_client()
@@ -108,21 +109,26 @@ class BedrockAgentCoreStorage(Storage):
         """Initialize the Bedrock AgentCore Memory client."""
         try:
             import boto3
-        except ImportError:
+        except ImportError as e:
             raise ModuleNotFoundError(
-                "boto3 is required for Bedrock AgentCore. Use `pip install crewai[agentcore]` to install the required dependencies."
-            )
+                "boto3 is required for Bedrock AgentCore. Install `crewai[agentcore]` for the required dependencies."
+            ) from e
 
         try:
             # Initialize boto3 clients directly as used by the MemoryClient
+            bedrock_agentcore_memory_client_config = Config(
+                user_agent_extra="x-client-framework:crew_ai"
+            )
             self.bedrock_agentcore_memory_client = boto3.client(
-                "bedrock-agentcore", region_name=self.config.region_name
+                "bedrock-agentcore",
+                region_name=self.config.region_name,
+                config=bedrock_agentcore_memory_client_config,
             )
 
         except Exception as e:
             raise ValueError(
-                f"Failed to initialize Bedrock AgentCore clients: {str(e)}"
-            )
+                f"Failed to initialize Bedrock AgentCore clients: {e!s}"
+            ) from e
 
     @staticmethod
     def resolve_namespace_template(
@@ -167,7 +173,7 @@ class BedrockAgentCoreStorage(Storage):
 
         return resolved_namespace
 
-    def save(self, value: Any, metadata: Dict[str, Any]) -> None:
+    def save(self, value: Any, metadata: dict[str, Any]) -> None:
         """
         Save memory item to AWS Bedrock AgentCore.
 
@@ -201,9 +207,157 @@ class BedrockAgentCoreStorage(Storage):
             logger.error("Error saving to AgentCore: %s", str(e))
             raise
 
+    def _search_long_term(
+        self, query: str, limit: int, score_threshold: float
+    ) -> list[dict[str, Any]]:
+        """
+        Search for memories in long-term storage (namespaces).
+
+        Args:
+            query: Search query
+            limit: Maximum number of results
+            score_threshold: Minimum relevance score
+
+        Returns:
+            List of memory items from long-term storage
+        """
+        namespaces_to_search = self.config.namespaces
+
+        if not namespaces_to_search:
+            logger.warning("No namespaces configured - no namespaces to search")
+            return []
+
+        logger.debug(
+            "Searching configured namespaces: %s",
+            namespaces_to_search,
+        )
+
+        long_term_memory_results = []
+
+        # Search each namespace
+        for search_namespace in namespaces_to_search:
+            logger.debug("Searching namespace: %s", search_namespace)
+
+            try:
+                # Use the boto3 client retrieve_memory_records method directly
+                long_term_memory_response = (
+                    self.bedrock_agentcore_memory_client.retrieve_memory_records(  # type: ignore
+                        memoryId=str(self.config.memory_id),
+                        namespace=search_namespace,
+                        searchCriteria={"searchQuery": query, "topK": limit},
+                    )
+                )
+            except Exception as e:
+                logger.warning(f"Error searching namespace {search_namespace}: {e}")
+                # Continue with next namespace
+                continue
+
+            long_term_memories = long_term_memory_response.get(
+                "memoryRecordSummaries", []
+            )
+
+            logger.info(
+                "Retrieved %d memories from namespace: %s",
+                len(long_term_memories),
+                search_namespace,
+            )
+
+            # Process search results
+            for long_term_memory in long_term_memories:
+                # Extract text content from memory record
+                content = long_term_memory.get("content", {})
+                text = content.get("text", "")
+
+                # Get score if available
+                score = long_term_memory.get("score", 0.0)
+
+                # Apply score threshold filter
+                if score < 0:
+                    continue
+
+                long_term_memory_results.append(
+                    {
+                        "id": long_term_memory.get("memoryRecordId"),
+                        "content": text,
+                        "metadata": {
+                            "namespaces": long_term_memory.get("namespaces"),
+                            "created_at": long_term_memory.get("createdAt"),
+                            "search_namespace": search_namespace,
+                            "memory_strategy_id": long_term_memory.get(
+                                "memoryStrategyId"
+                            ),
+                        },
+                        "score": score,
+                    }
+                )
+
+        # Sort by score (results are already limited by top_k parameter)
+        long_term_memory_results.sort(key=lambda x: x.get("score", 0.0), reverse=True)
+
+        logger.info(
+            "AgentCore long-term search returned %d results from %d namespaces",
+            len(long_term_memory_results),
+            len(namespaces_to_search),
+        )
+
+        return long_term_memory_results
+
+    def _search_short_term(self, query: str, max_results: int) -> list[dict[str, Any]]:
+        """
+        Search for memories in short-term storage (events).
+
+        Args:
+            query: Search query (not used for short-term, but kept for consistency)
+            max_results: Maximum number of results to retrieve
+
+        Returns:
+            List of memory items from short-term storage
+        """
+        short_term_results: list[dict[str, Any]] = []
+
+        if max_results <= 0:
+            return short_term_results
+
+        logger.info(
+            "Searching short-term memory for up to %d results",
+            max_results,
+        )
+
+        short_term_memory = self.bedrock_agentcore_memory_client.list_events(  # type: ignore
+            memoryId=self.config.memory_id,
+            actorId=self.config.actor_id,
+            sessionId=self.config.session_id,
+            includePayloads=True,
+            maxResults=max_results,
+        )
+
+        for event in short_term_memory["events"]:
+            for payload_item in event["payload"]:
+                if "conversational" in payload_item:
+                    text = payload_item["conversational"]["content"]["text"]
+                    role = payload_item["conversational"]["role"]
+                    short_term_results.append(
+                        {
+                            "id": event.get("eventId"),
+                            "content": text,
+                            "metadata": {
+                                "created_at": event.get("eventTimestamp"),
+                                "role": role,
+                            },
+                            "score": 1.0,  # Default score for short-term memory
+                        }
+                    )
+
+        logger.info(
+            "Retrieved %d results from short-term memory",
+            len(short_term_results),
+        )
+
+        return short_term_results
+
     def search(
         self, query: str, limit: int = 3, score_threshold: float = 0.35
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         Search for memories using AgentCore boto3 client.
 
@@ -222,139 +376,39 @@ class BedrockAgentCoreStorage(Storage):
         if limit >= 100:
             raise ValueError("Limit must be less than 100")
 
-        try:
-            # Use the configured namespaces directly
-            namespaces_to_search = self.config.namespaces
+        # Search long-term memory first
+        long_term_results = self._search_long_term(query, limit, score_threshold)
 
-            if not namespaces_to_search:
-                logger.warning("No namespaces configured - no namespaces to search")
-                return []
+        # Apply limit to long-term results
+        final_results = long_term_results[:limit]
 
-            logger.debug(
-                "Searching configured namespaces: %s",
-                namespaces_to_search,
-            )
-
-            long_term_memory_results = []
-
-            # Search each namespace
-            for search_namespace in namespaces_to_search:
-                try:
-                    logger.debug("Searching namespace: %s", search_namespace)
-
-                    # Use the boto3 client retrieve_memory_records method directly
-                    long_term_memory = (
-                        self.bedrock_agentcore_memory_client.retrieve_memory_records(
-                            memoryId=str(self.config.memory_id),
-                            namespace=search_namespace,
-                            searchCriteria={"searchQuery": query, "topK": limit},
-                        )
-                    )
-                    long_term_memories = long_term_memory.get(
-                        "memoryRecordSummaries", []
-                    )
-
-                    logger.info(
-                        "Retrieved %d memories from namespace: %s",
-                        len(long_term_memories),
-                        search_namespace,
-                    )
-
-                    # Process search results
-                    for long_term_memory in long_term_memories:
-                        # Extract text content from memory record
-                        content = long_term_memory.get("content", {})
-                        text = content.get("text", "")
-
-                        # Get score if available
-                        score = long_term_memory.get("score", 0.0)
-
-                        # Apply score threshold filter
-                        if score < score_threshold:
-                            continue
-
-                        long_term_memory_results.append(
-                            {
-                                "id": long_term_memory.get("memoryRecordId"),
-                                "context": text,
-                                "metadata": {
-                                    "namespaces": long_term_memory.get("namespaces"),
-                                    "created_at": long_term_memory.get("createdAt"),
-                                    "search_namespace": search_namespace,
-                                    "memory_strategy_id": long_term_memory.get(
-                                        "memoryStrategyId"
-                                    ),
-                                },
-                                "score": score,
-                            }
-                        )
-
-                except Exception as e:
-                    logger.warning(
-                        "Failed to search namespace %s: %s", search_namespace, str(e)
-                    )
-                    continue
-
-            # Sort by score (results are already limited by top_k parameter)
-            long_term_memory_results.sort(key=lambda x: x.get("score"), reverse=True)
-
+        # If we have fewer results than requested
+        # search short-term memory
+        if len(final_results) < limit:
+            remaining_limit = limit - len(final_results)
             logger.info(
-                "AgentCore search returned %d results from %d namespaces",
-                len(long_term_memory_results),
-                len(namespaces_to_search),
-            )
-
-            # Apply limit
-            final_results = long_term_memory_results[:limit]
-
-            # If we have fewer results than requested, search short-term memory
-            if len(final_results) < limit:
-                logger.info(
-                    "Found %d long term memory results, searching through short term memory",
-                    len(final_results),
-                )
-                try:
-                    short_term_memory = (
-                        self.bedrock_agentcore_memory_client.list_events(
-                            memoryId=self.config.memory_id,
-                            actorId=self.config.actor_id,
-                            sessionId=self.config.session_id,
-                            includePayloads=True,
-                            maxResults=(limit - len(final_results)),
-                        )
-                    )
-                    for event in short_term_memory["events"]:
-                        for payload_item in event["payload"]:
-                            if "conversational" in payload_item:
-                                text = payload_item["conversational"]["content"]["text"]
-                                role = payload_item["conversational"]["role"]
-                                final_results.append(
-                                    {
-                                        "id": event.get("eventId"),
-                                        "context": text,
-                                        "metadata": {
-                                            "created_at": event.get("eventTimestamp"),
-                                            "role": role,
-                                        },
-                                        "score": 1.0,  # Default score for short-term memory
-                                    }
-                                )
-                except Exception as e:
-                    logger.warning("Failed to search short term memory: %s", str(e))
-
-            logger.info(
-                "Returning %d results",
+                "Found %d long-term memory results, searching short-term memory for %d more",
                 len(final_results),
+                remaining_limit,
             )
-            return final_results
 
-        except Exception as e:
-            logger.error("Unexpected error searching AgentCore: %s", str(e))
-            return []
+            try:
+                short_term_results = self._search_short_term(query, remaining_limit)
+                final_results.extend(short_term_results)
+            except Exception as e:
+                logger.warning(f"Error searching short-term memory: {e}")
+                # Continue with just long-term results
+
+        logger.info(
+            "Returning %d total results",
+            len(final_results),
+        )
+
+        return final_results
 
     def _convert_to_event_payload(
-        self, value: Any, metadata: Dict[str, Any]
-    ) -> List[Dict[str, Any]]:
+        self, value: Any, metadata: dict[str, Any]
+    ) -> list[dict[str, Any]]:
         """
         Convert CrewAI content to enhanced event payload that utilizes metadata when available.
 
@@ -369,7 +423,7 @@ class BedrockAgentCoreStorage(Storage):
         payload = []
 
         # Role mapping dictionary
-        ROLE_MAPPING = {
+        role_mapping = {
             "SYSTEM": "OTHER",  # AWS Bedrock AgentCore doesn't recognize SYSTEM
             "USER": "USER",
             "ASSISTANT": "ASSISTANT",
@@ -381,12 +435,12 @@ class BedrockAgentCoreStorage(Storage):
             role = msg["role"].upper()
             content = msg["content"]
 
-            payload_role = ROLE_MAPPING.get(role, "OTHER")  # Default to OTHER
+            payload_role = role_mapping.get(role, "OTHER")  # Default to OTHER
 
             payload.append(
                 {
                     "conversational": {
-                        "content": {"text": content},
+                        "content": {"text": content[:9000]},
                         "role": payload_role,
                     }
                 }
@@ -395,7 +449,7 @@ class BedrockAgentCoreStorage(Storage):
         payload.append(
             {
                 "conversational": {
-                    "content": {"text": str(value)},
+                    "content": {"text": str(value)[:9000]},
                     "role": "ASSISTANT",
                 }
             }

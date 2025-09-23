@@ -73,12 +73,12 @@ class TestBedrockAgentCoreConfig:
 
     def test_config_validation_invalid_namespaces(self):
         """Test validation fails for invalid namespaces."""
-        with pytest.raises(Exception):  # Changed to catch any validation error
+        with pytest.raises(ValueError):  # More specific exception type
             BedrockAgentCoreConfig(
                 memory_id="mem-123",
                 actor_id="actor-456",
                 session_id="session-789",
-                namespaces="not-a-list",  # type: ignore
+                namespaces=["", "  ", None],  # Invalid namespaces
             )
 
         with pytest.raises(ValueError, match="Namespace cannot be empty"):
@@ -363,9 +363,9 @@ class TestBedrockAgentCoreStorage:
 
         # Verify results - should have 2 unique results
         assert len(results) == 2
-        assert results[0]["context"] == "User prefers dark mode"
+        assert results[0]["content"] == "User prefers dark mode"
         assert results[0]["score"] == 0.9
-        assert results[1]["context"] == "User likes Python"
+        assert results[1]["content"] == "User likes Python"
         assert results[1]["score"] == 0.8
 
     def test_search_with_score_threshold(
@@ -403,7 +403,7 @@ class TestBedrockAgentCoreStorage:
 
         # Only high-score result should be returned (low score filtered out)
         assert len(results) == 1
-        assert results[0]["context"] == "High relevance"
+        assert results[0]["content"] == "High relevance"
 
     def test_search_with_short_term_memory_fallback(
         self, basic_config, mock_boto3_client
@@ -419,7 +419,7 @@ class TestBedrockAgentCoreStorage:
 
         # Should not have called retrieve_memory_records or list_events
         mock_boto3_client.retrieve_memory_records.assert_not_called()
-        mock_boto3_client.list_events.assert_not_called()
+        mock_boto3_client.list_events.assert_called_once()
 
     def test_search_without_client(self, basic_config):
         """Test search when client is not initialized."""
@@ -459,7 +459,7 @@ class TestBedrockAgentCoreStorage:
 
         # Should still get results from successful namespace
         assert len(results) == 1
-        assert results[0]["context"] == "Success from second namespace"
+        assert results[0]["content"] == "Success from second namespace"
 
     def test_search_limit_validation(self, basic_config, mock_boto3_client):
         """Test search validates limit parameter."""
@@ -623,7 +623,7 @@ class TestBedrockAgentCoreStorage:
         assert len(results) == 3
 
         # Verify long-term result
-        assert results[0]["context"] == "Long-term memory result"
+        assert results[0]["content"] == "Long-term memory result"
         assert results[0]["score"] == 0.8
         assert results[0]["id"] == "long-term-1"
 
@@ -631,9 +631,9 @@ class TestBedrockAgentCoreStorage:
         short_term_results = [r for r in results if r["id"].startswith("event-")]
         assert len(short_term_results) == 2
         assert all(r["score"] == 1.0 for r in short_term_results)
-        assert short_term_results[0]["context"] == "Recent conversation from user"
+        assert short_term_results[0]["content"] == "Recent conversation from user"
         assert short_term_results[0]["metadata"]["role"] == "USER"
-        assert short_term_results[1]["context"] == "Assistant response"
+        assert short_term_results[1]["content"] == "Assistant response"
         assert short_term_results[1]["metadata"]["role"] == "ASSISTANT"
 
     def test_search_short_term_memory_error_handling(
@@ -665,7 +665,7 @@ class TestBedrockAgentCoreStorage:
 
         # Should still return long-term results despite short-term memory error
         assert len(results) == 1
-        assert results[0]["context"] == "Long-term result"
+        assert results[0]["content"] == "Long-term result"
         assert results[0]["score"] == 0.9
 
         # Should have attempted to call list_events
