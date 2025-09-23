@@ -11,6 +11,7 @@ import click
 import tomli
 from rich.console import Console
 
+from crewai.cli.config import Settings
 from crewai.cli.constants import ENV_VARS
 from crewai.crew import Crew
 from crewai.flow import Flow
@@ -415,6 +416,21 @@ def extract_available_exports(dir_path: str = "src"):
             "Please ensure your project contains valid tools (classes inheriting from BaseTool or functions with @tool decorator)."
         )
         raise SystemExit(1) from e
+
+
+def build_env_with_tool_repository_credentials(repository_handle: str):
+    repository_handle = repository_handle.upper().replace("-", "_")
+    settings = Settings()
+
+    env = os.environ.copy()
+    env[f"UV_INDEX_{repository_handle}_USERNAME"] = str(
+        settings.tool_repository_username or ""
+    )
+    env[f"UV_INDEX_{repository_handle}_PASSWORD"] = str(
+        settings.tool_repository_password or ""
+    )
+
+    return env
 
 
 def _load_tools_from_init(init_file: Path) -> list[dict[str, Any]]:
