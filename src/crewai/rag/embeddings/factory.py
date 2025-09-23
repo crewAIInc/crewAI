@@ -46,6 +46,51 @@ from chromadb.utils.embedding_functions.text2vec_embedding_function import (
 from crewai.rag.embeddings.types import EmbeddingOptions
 
 
+def _create_watson_embedding_function(**config_dict) -> EmbeddingFunction:
+    """Create Watson embedding function with proper error handling."""
+    try:
+        import ibm_watsonx_ai.foundation_models as watson_models  # type: ignore[import-not-found]
+        from ibm_watsonx_ai import Credentials  # type: ignore[import-not-found]
+        from ibm_watsonx_ai.metanames import (  # type: ignore[import-not-found]
+            EmbedTextParamsMetaNames as EmbedParams,
+        )
+    except ImportError as e:
+        raise ImportError(
+            "IBM Watson dependencies are not installed. Please install them to use Watson embedding."
+        ) from e
+
+    class WatsonEmbeddingFunction(EmbeddingFunction):
+        def __init__(self, **kwargs):
+            self.config = kwargs
+
+        def __call__(self, input):
+            if isinstance(input, str):
+                input = [input]
+
+            embed_params = {
+                EmbedParams.TRUNCATE_INPUT_TOKENS: 3,
+                EmbedParams.RETURN_OPTIONS: {"input_text": True},
+            }
+
+            embedding = watson_models.Embeddings(
+                model_id=self.config.get("model_name") or self.config.get("model"),
+                params=embed_params,
+                credentials=Credentials(
+                    api_key=self.config.get("api_key"), 
+                    url=self.config.get("api_url") or self.config.get("url")
+                ),
+                project_id=self.config.get("project_id"),
+            )
+
+            try:
+                embeddings = embedding.embed_documents(input)
+                return embeddings
+            except Exception as e:
+                raise RuntimeError(f"Error during Watson embedding: {e}") from e
+
+    return WatsonEmbeddingFunction(**config_dict)
+
+
 def get_embedding_function(
     config: EmbeddingOptions | dict | None = None,
 ) -> EmbeddingFunction:
@@ -75,6 +120,7 @@ def get_embedding_function(
         - openclip: OpenCLIP embeddings for multimodal tasks
         - text2vec: Text2Vec embeddings
         - onnx: ONNX MiniLM-L6-v2 (no API key needed, included with ChromaDB)
+        - watson: IBM Watson embeddings
 
     Examples:
         # Use default OpenAI embedding
@@ -108,6 +154,15 @@ def get_embedding_function(
         >>> embedder = get_embedding_function({
         ...     "provider": "onnx"
         ... })
+
+        # Use Watson embeddings
+        >>> embedder = get_embedding_function({
+        ...     "provider": "watson",
+        ...     "api_key": "your-watson-api-key",
+        ...     "api_url": "your-watson-url",
+        ...     "project_id": "your-project-id",
+        ...     "model_name": "ibm/slate-125m-english-rtrvr"
+        ... })
     """
     if config is None:
         return OpenAIEmbeddingFunction(
@@ -138,6 +193,7 @@ def get_embedding_function(
         "openclip": OpenCLIPEmbeddingFunction,
         "text2vec": Text2VecEmbeddingFunction,
         "onnx": ONNXMiniLM_L6_V2,
+        "watson": _create_watson_embedding_function,
     }
 
     if provider not in embedding_functions:

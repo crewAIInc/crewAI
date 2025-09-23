@@ -22,6 +22,7 @@ EmbeddingProvider = Literal[
     "openclip",
     "text2vec",
     "onnx",
+    "watson",
 ]
 """Supported embedding providers.
 
