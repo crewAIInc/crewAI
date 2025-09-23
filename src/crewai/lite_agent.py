@@ -351,7 +351,12 @@ class LiteAgent(FlowTrackable, BaseModel):
                 )
 
         # Calculate token usage metrics
-        usage_metrics = self._token_process.get_summary()
+        if isinstance(self.llm, BaseLLM):
+            usage_metrics = self.llm.get_token_usage_summary()
+        else:
+            usage_metrics = self._token_process.get_summary()
+        print(f"lorenze usage_metrics: {usage_metrics}")
+        print(f"lorenze type of usage_metrics: {type(usage_metrics)}")
 
         # Create output
         output = LiteAgentOutput(
@@ -400,7 +405,10 @@ class LiteAgent(FlowTrackable, BaseModel):
                 elif isinstance(guardrail_result.result, BaseModel):
                     output.pydantic = guardrail_result.result
 
-            usage_metrics = self._token_process.get_summary()
+            if isinstance(self.llm, BaseLLM):
+                usage_metrics = self.llm.get_token_usage_summary()
+            else:
+                usage_metrics = self._token_process.get_summary()
             output.usage_metrics = usage_metrics.model_dump() if usage_metrics else None
 
         # Emit completion event

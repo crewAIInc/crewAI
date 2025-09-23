@@ -296,6 +296,17 @@ def test_sets_parent_flow_when_inside_flow():
     mock_llm.call.return_value = "Test response"
     mock_llm.stop = []
 
+    from crewai.types.usage_metrics import UsageMetrics
+
+    mock_usage_metrics = UsageMetrics(
+        total_tokens=100,
+        prompt_tokens=50,
+        completion_tokens=50,
+        cached_prompt_tokens=0,
+        successful_requests=1,
+    )
+    mock_llm.get_token_usage_summary.return_value = mock_usage_metrics
+
     class MyFlow(Flow):
         @start()
         def start(self):

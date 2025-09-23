@@ -25,6 +25,7 @@ from crewai.events.types.tool_usage_events import (
     ToolUsageFinishedEvent,
     ToolUsageStartedEvent,
 )
+from crewai.types.usage_metrics import UsageMetrics
 
 DEFAULT_CONTEXT_WINDOW_SIZE: Final[int] = 4096
 DEFAULT_SUPPORTS_STOP_WORDS: Final[bool] = True
@@ -504,20 +505,10 @@ class BaseLLM(ABC):
         self._token_usage["successful_requests"] += 1
         self._token_usage["cached_prompt_tokens"] += cached_tokens
 
-    def get_token_usage_summary(self) -> dict[str, int]:
+    def get_token_usage_summary(self) -> UsageMetrics:
         """Get summary of token usage for this LLM instance.
 
         Returns:
             Dictionary with token usage totals
         """
-        return self._token_usage.copy()
-
-    def reset_token_usage(self) -> None:
-        """Reset token usage counters to zero."""
-        self._token_usage = {
-            "total_tokens": 0,
-            "prompt_tokens": 0,
-            "completion_tokens": 0,
-            "successful_requests": 0,
-            "cached_prompt_tokens": 0,
-        }
+        return UsageMetrics(**self._token_usage)
