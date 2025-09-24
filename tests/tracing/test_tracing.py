@@ -100,11 +100,15 @@ class TestTraceListenerSetup:
             mock_put.return_value = mock_response
             mock_delete.return_value = mock_response
 
+            mock_mark_failed = MagicMock()
+            mock_mark_failed.return_value = mock_response
+
             yield {
                 "post": mock_post,
                 "get": mock_get,
                 "put": mock_put,
                 "delete": mock_delete,
+                "mark_trace_batch_as_failed": mock_mark_failed,
             }
 
     @pytest.mark.vcr(filter_headers=["authorization"])
@@ -657,3 +661,51 @@ class TestTraceListenerSetup:
             handler.handle_execution_completion()
 
             mock_mark_completed.assert_called_once()
+
+    @pytest.mark.vcr(filter_headers=["authorization"])
+    def test_trace_batch_marked_as_failed_on_finalize_error(self, mock_plus_api_calls):
+        """Test that trace batch is marked as failed when finalization returns non-200 status"""
+
+        with patch.dict(os.environ, {"CREWAI_TRACING_ENABLED": "true"}):
+            agent = Agent(
+                role="Test Agent",
+                goal="Test goal",
+                backstory="Test backstory",
+                llm="gpt-4o-mini",
+            )
+            task = Task(
+                description="Say hello to the world",
+                expected_output="hello world",
+                agent=agent,
+            )
+            crew = Crew(agents=[agent], tasks=[task], verbose=True)
+
+            trace_listener = TraceCollectionListener()
+            from crewai.events.event_bus import crewai_event_bus
+
+            trace_listener.setup_listeners(crewai_event_bus)
+
+            with (
+                patch.object(
+                    trace_listener.batch_manager.plus_api,
+                    "send_trace_events",
+                    return_value=MagicMock(status_code=200),
+                ),
+                patch.object(
+                    trace_listener.batch_manager.plus_api,
+                    "finalize_trace_batch",
+                    return_value=MagicMock(
+                        status_code=500, text="Internal Server Error"
+                    ),
+                ),
+                patch.object(
+                    trace_listener.batch_manager.plus_api,
+                    "mark_trace_batch_as_failed",
+                    wraps=mock_plus_api_calls["mark_trace_batch_as_failed"],
+                ) as mock_mark_failed,
+            ):
+                crew.kickoff()
+
+                mock_mark_failed.assert_called_once()
+                call_args = mock_mark_failed.call_args_list[0]
+                assert call_args[0][1] == "Error sending events to backend"
