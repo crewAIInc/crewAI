@@ -80,10 +80,6 @@ class TestTraceListenerSetup:
             patch("requests.get") as mock_get,
             patch("requests.put") as mock_put,
             patch("requests.delete") as mock_delete,
-            patch.object(TraceBatchManager, "initialize_batch", return_value=None),
-            patch.object(
-                TraceBatchManager, "_finalize_backend_batch", return_value=True
-            ),
             patch.object(TraceBatchManager, "_cleanup_batch_data", return_value=True),
         ):
             mock_response = MagicMock()
