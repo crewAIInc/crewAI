@@ -4,6 +4,10 @@ on:
   push:
     branches:
       - main
+      - Canary-Crew-Github-Action
+  pull_request:
+    branches:
+      - main
 
 permissions:
   contents: read
