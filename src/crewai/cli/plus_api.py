@@ -166,3 +166,13 @@ class PlusAPI:
             json=payload,
             timeout=30,
         )
+
+    def mark_trace_batch_as_failed(
+        self, trace_batch_id: str, error_message: str
+    ) -> requests.Response:
+        return self._make_request(
+            "PATCH",
+            f"{self.TRACING_RESOURCE}/batches/{trace_batch_id}",
+            json={"status": "failed", "failure_reason": error_message},
+            timeout=30,
+        )

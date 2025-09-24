@@ -1,36 +1,51 @@
-import json
-import os
-from typing import Dict, Optional, Union
-
-from pydantic import BaseModel, Field, PrivateAttr, model_validator
-
 """Internationalization support for CrewAI prompts and messages."""
 
+import json
+import os
+from typing import Literal
+
+from pydantic import BaseModel, Field, PrivateAttr, model_validator
+from typing_extensions import Self
+
+
 class I18N(BaseModel):
-    """Handles loading and retrieving internationalized prompts."""
-    _prompts: Dict[str, Dict[str, str]] = PrivateAttr()
-    prompt_file: Optional[str] = Field(
+    """Handles loading and retrieving internationalized prompts.
+
+    Attributes:
+        _prompts: Internal dictionary storing loaded prompts.
+        prompt_file: Optional path to a custom JSON file containing prompts.
+    """
+
+    _prompts: dict[str, dict[str, str]] = PrivateAttr()
+    prompt_file: str | None = Field(
         default=None,
         description="Path to the prompt_file file to load",
     )
 
     @model_validator(mode="after")
-    def load_prompts(self) -> "I18N":
-        """Load prompts from a JSON file."""
+    def load_prompts(self) -> Self:
+        """Load prompts from a JSON file.
+
+        Returns:
+            The I18N instance with loaded prompts.
+
+        Raises:
+            Exception: If the prompt file is not found or cannot be decoded.
+        """
         try:
             if self.prompt_file:
-                with open(self.prompt_file, "r", encoding="utf-8") as f:
+                with open(self.prompt_file, encoding="utf-8") as f:
                     self._prompts = json.load(f)
             else:
                 dir_path = os.path.dirname(os.path.realpath(__file__))
                 prompts_path = os.path.join(dir_path, "../translations/en.json")
 
-                with open(prompts_path, "r", encoding="utf-8") as f:
+                with open(prompts_path, encoding="utf-8") as f:
                     self._prompts = json.load(f)
-        except FileNotFoundError:
-            raise Exception(f"Prompt file '{self.prompt_file}' not found.")
-        except json.JSONDecodeError:
-            raise Exception("Error decoding JSON from the prompts file.")
+        except FileNotFoundError as e:
+            raise Exception(f"Prompt file '{self.prompt_file}' not found.") from e
+        except json.JSONDecodeError as e:
+            raise Exception("Error decoding JSON from the prompts file.") from e
 
         if not self._prompts:
             self._prompts = {}
@@ -38,16 +53,58 @@ class I18N(BaseModel):
         return self
 
     def slice(self, slice: str) -> str:
+        """Retrieve a prompt slice by key.
+
+        Args:
+            slice: The key of the prompt slice to retrieve.
+
+        Returns:
+            The prompt slice as a string.
+        """
         return self.retrieve("slices", slice)
 
     def errors(self, error: str) -> str:
+        """Retrieve an error message by key.
+
+        Args:
+            error: The key of the error message to retrieve.
+
+        Returns:
+            The error message as a string.
+        """
         return self.retrieve("errors", error)
 
-    def tools(self, tool: str) -> Union[str, Dict[str, str]]:
+    def tools(self, tool: str) -> str | dict[str, str]:
+        """Retrieve a tool prompt by key.
+
+        Args:
+            tool: The key of the tool prompt to retrieve.
+
+        Returns:
+            The tool prompt as a string or dictionary.
+        """
         return self.retrieve("tools", tool)
 
-    def retrieve(self, kind, key) -> str:
+    def retrieve(
+        self,
+        kind: Literal[
+            "slices", "errors", "tools", "reasoning", "hierarchical_manager_agent"
+        ],
+        key: str,
+    ) -> str:
+        """Retrieve a prompt by kind and key.
+
+        Args:
+            kind: The kind of prompt.
+            key: The key of the specific prompt to retrieve.
+
+        Returns:
+            The prompt as a string.
+
+        Raises:
+            Exception: If the prompt for the given kind and key is not found.
+        """
         try:
             return self._prompts[kind][key]
-        except Exception as _:
-            raise Exception(f"Prompt for '{kind}':'{key}'  not found.")
+        except Exception as e:
+            raise Exception(f"Prompt for '{kind}':'{key}'  not found.") from e

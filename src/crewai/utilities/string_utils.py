@@ -1,10 +1,12 @@
 import re
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Final
+
+_VARIABLE_PATTERN: Final[re.Pattern[str]] = re.compile(r"\{([A-Za-z_][A-Za-z0-9_\-]*)}")
 
 
 def interpolate_only(
-    input_string: Optional[str],
-    inputs: Dict[str, Union[str, int, float, Dict[str, Any], List[Any]]],
+    input_string: str | None,
+    inputs: dict[str, str | int | float | dict[str, Any] | list[Any]],
 ) -> str:
     """Interpolate placeholders (e.g., {key}) in a string while leaving JSON untouched.
     Only interpolates placeholders that follow the pattern {variable_name} where
@@ -26,26 +28,30 @@ def interpolate_only(
     """
 
     # Validation function for recursive type checking
-    def validate_type(value: Any) -> None:
-        if value is None:
+    def _validate_type(validate_value: Any) -> None:
+        if validate_value is None:
             return
-        if isinstance(value, (str, int, float, bool)):
+        if isinstance(validate_value, (str, int, float, bool)):
             return
-        if isinstance(value, (dict, list)):
-            for item in value.values() if isinstance(value, dict) else value:
-                validate_type(item)
+        if isinstance(validate_value, (dict, list)):
+            for item in (
+                validate_value.values()
+                if isinstance(validate_value, dict)
+                else validate_value
+            ):
+                _validate_type(item)
             return
         raise ValueError(
-            f"Unsupported type {type(value).__name__} in inputs. "
+            f"Unsupported type {type(validate_value).__name__} in inputs. "
             "Only str, int, float, bool, dict, and list are allowed."
         )
 
     # Validate all input values
     for key, value in inputs.items():
         try:
-            validate_type(value)
-        except ValueError as e:
-            raise ValueError(f"Invalid value for key '{key}': {str(e)}") from e
+            _validate_type(value)
+        except ValueError as e:  # noqa: PERF203
+            raise ValueError(f"Invalid value for key '{key}': {e!s}") from e
 
     if input_string is None or not input_string:
         return ""
@@ -56,13 +62,7 @@ def interpolate_only(
             "Inputs dictionary cannot be empty when interpolating variables"
         )
 
-    # The regex pattern to find valid variable placeholders
-    # Matches {variable_name} where variable_name starts with a letter/underscore
-    # and contains only letters, numbers, and underscores
-    pattern = r"\{([A-Za-z_][A-Za-z0-9_\-]*)\}"
-
-    # Find all matching variables in the input string
-    variables = re.findall(pattern, input_string)
+    variables = _VARIABLE_PATTERN.findall(input_string)
     result = input_string
 
     # Check if all variables exist in inputs

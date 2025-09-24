@@ -8,7 +8,11 @@ from typing import Final
 
 
 class DatabaseOperationError(Exception):
-    """Base exception class for database operation errors."""
+    """Base exception class for database operation errors.
+
+    Attributes:
+        original_error: The original exception that caused this error, if any.
+    """
 
     def __init__(self, message: str, original_error: Exception | None = None) -> None:
         """Initialize the database operation error.

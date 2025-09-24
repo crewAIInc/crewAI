@@ -29,7 +29,7 @@ class BaseCollectionParams(TypedDict):
     ]
 
 
-class BaseCollectionAddParams(BaseCollectionParams):
+class BaseCollectionAddParams(BaseCollectionParams, total=False):
     """Parameters for adding documents to a collection.
 
     Extends BaseCollectionParams with document-specific fields.
@@ -37,9 +37,11 @@ class BaseCollectionAddParams(BaseCollectionParams):
     Attributes:
         collection_name: The name of the collection to add documents to.
         documents: List of BaseRecord dictionaries containing document data.
+        batch_size: Optional batch size for processing documents to avoid token limits.
     """
 
-    documents: list[BaseRecord]
+    documents: Required[list[BaseRecord]]
+    batch_size: int
 
 
 class BaseCollectionSearchParams(BaseCollectionParams, total=False):

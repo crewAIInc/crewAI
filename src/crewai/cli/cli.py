@@ -1,3 +1,5 @@
+import os
+import subprocess
 from importlib.metadata import version as get_version
 
 import click
@@ -8,6 +10,7 @@ from crewai.cli.create_crew import create_crew
 from crewai.cli.create_flow import create_flow
 from crewai.cli.crew_chat import run_chat
 from crewai.cli.settings.main import SettingsCommand
+from crewai.cli.utils import build_env_with_tool_repository_credentials, read_toml
 from crewai.memory.storage.kickoff_task_outputs_storage import (
     KickoffTaskOutputsSQLiteStorage,
 )
@@ -32,6 +35,46 @@ from .update_crew import update_crew
 @click.version_option(get_version("crewai"))
 def crewai():
     """Top-level command group for crewai."""
+
+
+@crewai.command(
+    name="uv",
+    context_settings=dict(
+        ignore_unknown_options=True,
+    ),
+)
+@click.argument("uv_args", nargs=-1, type=click.UNPROCESSED)
+def uv(uv_args):
+    """A wrapper around uv commands that adds custom tool authentication through env vars."""
+    env = os.environ.copy()
+    try:
+        pyproject_data = read_toml()
+        sources = pyproject_data.get("tool", {}).get("uv", {}).get("sources", {})
+
+        for source_config in sources.values():
+            if isinstance(source_config, dict):
+                index = source_config.get("index")
+                if index:
+                    index_env = build_env_with_tool_repository_credentials(index)
+                    env.update(index_env)
+    except (FileNotFoundError, KeyError) as e:
+        raise SystemExit(
+            "Error. A valid pyproject.toml file is required. Check that a valid pyproject.toml file exists in the current directory."
+        ) from e
+    except Exception as e:
+        raise SystemExit(f"Error: {e}") from e
+
+    try:
+        subprocess.run(  # noqa: S603
+            ["uv", *uv_args],  # noqa: S607
+            capture_output=False,
+            env=env,
+            text=True,
+            check=True,
+        )
+    except subprocess.CalledProcessError as e:
+        click.secho(f"uv command failed with exit code {e.returncode}", fg="red")
+        raise SystemExit(e.returncode) from e
 
 
 @crewai.command()
@@ -239,11 +282,6 @@ def deploy():
     """Deploy the Crew CLI group."""
 
 
-@crewai.group()
-def tool():
-    """Tool Repository related commands."""
-
-
 @deploy.command(name="create")
 @click.option("-y", "--yes", is_flag=True, help="Skip the confirmation prompt")
 def deploy_create(yes: bool):
@@ -289,6 +327,11 @@ def deploy_remove(uuid: str | None):
     """Remove a deployment."""
     deploy_cmd = DeployCommand()
     deploy_cmd.remove_crew(uuid=uuid)
+
+
+@crewai.group()
+def tool():
+    """Tool Repository related commands."""
 
 
 @tool.command(name="create")

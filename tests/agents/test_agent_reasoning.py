@@ -1,11 +1,11 @@
 """Tests for reasoning in agents."""
 
 import json
+
 import pytest
 
 from crewai import Agent, Task
 from crewai.llm import LLM
-from crewai.utilities.reasoning_handler import AgentReasoning
 
 
 @pytest.fixture
@@ -79,10 +79,8 @@ def test_agent_with_reasoning_not_ready_initially(mock_llm_responses):
             call_count[0] += 1
             if call_count[0] == 1:
                 return mock_llm_responses["not_ready"]
-            else:
-                return mock_llm_responses["ready_after_refine"]
-        else:
-            return "2x"
+            return mock_llm_responses["ready_after_refine"]
+        return "2x"
 
     agent.llm.call = mock_llm_call
 
@@ -121,8 +119,7 @@ def test_agent_with_reasoning_max_attempts_reached():
         ) or any("refine your plan" in msg.get("content", "") for msg in messages):
             call_count[0] += 1
             return f"Attempt {call_count[0]}: I need more time to think.\n\nNOT READY: I need to refine my plan further."
-        else:
-            return "This is an unsolved problem in mathematics."
+        return "This is an unsolved problem in mathematics."
 
     agent.llm.call = mock_llm_call
 
@@ -133,26 +130,6 @@ def test_agent_with_reasoning_max_attempts_reached():
         call_count[0] == 2
     )  # Should have made exactly 2 reasoning calls (max_attempts)
     assert "Reasoning Plan:" in task.description
-
-
-def test_agent_reasoning_input_validation():
-    """Test input validation in AgentReasoning."""
-    llm = LLM("gpt-3.5-turbo")
-
-    agent = Agent(
-        role="Test Agent",
-        goal="To test the reasoning feature",
-        backstory="I am a test agent created to verify the reasoning feature works correctly.",
-        llm=llm,
-        reasoning=True,
-    )
-
-    with pytest.raises(ValueError, match="Both task and agent must be provided"):
-        AgentReasoning(task=None, agent=agent)
-
-    task = Task(description="Simple task", expected_output="Simple output")
-    with pytest.raises(ValueError, match="Both task and agent must be provided"):
-        AgentReasoning(task=task, agent=None)
 
 
 def test_agent_reasoning_error_handling():
@@ -215,8 +192,7 @@ def test_agent_with_function_calling():
             return json.dumps(
                 {"plan": "I'll solve this simple math problem: 2+2=4.", "ready": True}
             )
-        else:
-            return "4"
+        return "4"
 
     agent.llm.call = mock_function_call
 
@@ -251,8 +227,7 @@ def test_agent_with_function_calling_fallback():
     def mock_function_call(messages, *args, **kwargs):
         if "tools" in kwargs:
             return "Invalid JSON that will trigger fallback. READY: I am ready to execute the task."
-        else:
-            return "4"
+        return "4"
 
     agent.llm.call = mock_function_call
 

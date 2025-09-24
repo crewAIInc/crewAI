@@ -16,3 +16,4 @@ class BaseRagConfig:
     embedding_function: Any | None = field(default=None)
     limit: int = field(default=5)
     score_threshold: float = field(default=0.6)
+    batch_size: int = field(default=100)

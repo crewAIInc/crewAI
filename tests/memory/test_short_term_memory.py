@@ -39,7 +39,7 @@ def short_term_memory():
 def test_short_term_memory_search_events(short_term_memory):
     events = defaultdict(list)
 
-    with patch("crewai.rag.chromadb.client.ChromaDBClient.search", return_value=[]):
+    with patch.object(short_term_memory.storage, "search", return_value=[]):
         with crewai_event_bus.scoped_handlers():
 
             @crewai_event_bus.on(MemoryQueryStartedEvent)
