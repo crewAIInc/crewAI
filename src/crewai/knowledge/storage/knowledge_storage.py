@@ -37,7 +37,7 @@ class KnowledgeStorage(BaseKnowledgeStorage):
 
         if embedder:
             # Cast to EmbedderConfig for type checking
-            embedder_typed = cast(EmbedderConfig, embedder) if embedder else None
+            embedder_typed = cast(EmbedderConfig, embedder)
             embedding_function = get_embedding_function(embedder_typed)
             batch_size = None
             if isinstance(embedder, dict) and "config" in embedder:
