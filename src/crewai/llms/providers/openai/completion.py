@@ -41,7 +41,6 @@ class OpenAICompletion(BaseLLM):
         max_tokens: int | None = None,
         max_completion_tokens: int | None = None,
         seed: int | None = None,
-        stop: str | list[str] | None = None,
         stream: bool = False,
         response_format: dict[str, Any] | type[BaseModel] | None = None,
         logprobs: bool | None = None,
@@ -51,13 +50,6 @@ class OpenAICompletion(BaseLLM):
         **kwargs,
     ):
         """Initialize OpenAI chat completion client."""
-        # Convert stop to list[str] | None for BaseLLM compatibility
-        stop_list: list[str] | None = None
-        if stop is not None:
-            if isinstance(stop, str):
-                stop_list = [stop]
-            else:
-                stop_list = stop
 
         if provider is None:
             provider = kwargs.pop("provider", "openai")
@@ -65,7 +57,6 @@ class OpenAICompletion(BaseLLM):
         super().__init__(
             model=model,
             temperature=temperature,
-            stop=stop_list,
             api_key=api_key or os.getenv("OPENAI_API_KEY"),
             base_url=base_url,
             timeout=timeout,
@@ -155,22 +146,15 @@ class OpenAICompletion(BaseLLM):
     def _prepare_completion_params(
         self, messages: list[dict[str, str]], tools: list[dict] | None = None
     ) -> dict[str, Any]:
-        """Prepare parameters for OpenAI chat completion.
-
-        Args:
-            messages: Formatted messages
-            tools: Tool definitions
-
-        Returns:
-            Parameters dictionary for OpenAI API
-        """
+        """Prepare parameters for OpenAI chat completion."""
         params = {
             "model": self.model,
             "messages": messages,
             "stream": self.stream,
         }
 
-        # Add optional parameters if set
+        params.update(self.additional_params)
+
         if self.temperature is not None:
             params["temperature"] = self.temperature
         if self.top_p is not None:
@@ -214,7 +198,20 @@ class OpenAICompletion(BaseLLM):
             params["tools"] = self._convert_tools_for_interference(tools)
             params["tool_choice"] = "auto"
 
-        return params
+        # Filter out CrewAI-specific parameters that shouldn't go to the API
+        crewai_specific_params = {
+            "callbacks",
+            "available_functions",
+            "from_task",
+            "from_agent",
+            "provider",
+            "api_key",
+            "base_url",
+            "timeout",
+            "max_retries",
+        }
+
+        return {k: v for k, v in params.items() if k not in crewai_specific_params}
 
     def _convert_tools_for_interference(self, tools: list[dict]) -> list[dict]:
         """Convert CrewAI tool format to OpenAI function calling format."""

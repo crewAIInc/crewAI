@@ -114,7 +114,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         self.messages: list[dict[str, str]] = []
         self.iterations = 0
         self.log_error_after = 3
-        existing_stop = self.llm.stop or []
+        existing_stop = getattr(self.llm, "stop", [])
         self.llm.stop = list(
             set(
                 existing_stop + self.stop
