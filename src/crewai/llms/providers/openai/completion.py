@@ -185,8 +185,6 @@ class OpenAICompletion(BaseLLM):
             params["max_tokens"] = self.max_tokens
         if self.seed is not None:
             params["seed"] = self.seed
-        if self.stop:
-            params["stop"] = self.stop
         if self.logprobs is not None:
             params["logprobs"] = self.logprobs
         if self.top_logprobs is not None:
@@ -370,9 +368,21 @@ class OpenAICompletion(BaseLLM):
         if tool_calls and available_functions:
             for call_data in tool_calls.values():
                 function_name = call_data["name"]
+                arguments = call_data["arguments"]
+
+                # Skip if function name is empty or arguments are empty
+                if not function_name or not arguments:
+                    continue
+
+                # Check if function exists in available functions
+                if function_name not in available_functions:
+                    logging.warning(
+                        f"Function '{function_name}' not found in available functions"
+                    )
+                    continue
 
                 try:
-                    function_args = json.loads(call_data["arguments"])
+                    function_args = json.loads(arguments)
                 except json.JSONDecodeError as e:
                     logging.error(f"Failed to parse streamed tool arguments: {e}")
                     continue
@@ -412,6 +422,17 @@ class OpenAICompletion(BaseLLM):
 
     def get_context_window_size(self) -> int:
         """Get the context window size for the model."""
+        from crewai.llm import CONTEXT_WINDOW_USAGE_RATIO, LLM_CONTEXT_WINDOW_SIZES
+
+        min_context = 1024
+        max_context = 2097152
+
+        for key, value in LLM_CONTEXT_WINDOW_SIZES.items():
+            if value < min_context or value > max_context:
+                raise ValueError(
+                    f"Context window for {key} must be between {min_context} and {max_context}"
+                )
+
         # Context window sizes for OpenAI models
         context_windows = {
             "gpt-4": 8192,
@@ -430,10 +451,10 @@ class OpenAICompletion(BaseLLM):
         # Find the best match for the model name
         for model_prefix, size in context_windows.items():
             if self.model.startswith(model_prefix):
-                return size
+                return int(size * CONTEXT_WINDOW_USAGE_RATIO)
 
         # Default context window size
-        return 8192
+        return int(8192 * CONTEXT_WINDOW_USAGE_RATIO)
 
     def _extract_openai_token_usage(self, response: ChatCompletion) -> dict[str, Any]:
         """Extract token usage from OpenAI ChatCompletion response."""

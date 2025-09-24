@@ -431,6 +431,17 @@ class AzureCompletion(BaseLLM):
 
     def get_context_window_size(self) -> int:
         """Get the context window size for the model."""
+        from crewai.llm import CONTEXT_WINDOW_USAGE_RATIO, LLM_CONTEXT_WINDOW_SIZES
+
+        min_context = 1024
+        max_context = 2097152
+
+        for key, value in LLM_CONTEXT_WINDOW_SIZES.items():
+            if value < min_context or value > max_context:
+                raise ValueError(
+                    f"Context window for {key} must be between {min_context} and {max_context}"
+                )
+
         # Context window sizes for common Azure models
         context_windows = {
             "gpt-4": 8192,
@@ -445,10 +456,10 @@ class AzureCompletion(BaseLLM):
         # Find the best match for the model name
         for model_prefix, size in context_windows.items():
             if self.model.startswith(model_prefix):
-                return size
+                return int(size * CONTEXT_WINDOW_USAGE_RATIO)
 
         # Default context window size
-        return 8192
+        return int(8192 * CONTEXT_WINDOW_USAGE_RATIO)
 
     def _extract_azure_token_usage(self, response: ChatCompletions) -> dict[str, Any]:
         """Extract token usage from Azure response."""

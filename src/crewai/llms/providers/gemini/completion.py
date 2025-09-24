@@ -430,6 +430,17 @@ class GeminiCompletion(BaseLLM):
 
     def get_context_window_size(self) -> int:
         """Get the context window size for the model."""
+        from crewai.llm import CONTEXT_WINDOW_USAGE_RATIO, LLM_CONTEXT_WINDOW_SIZES
+
+        min_context = 1024
+        max_context = 2097152
+
+        for key, value in LLM_CONTEXT_WINDOW_SIZES.items():
+            if value < min_context or value > max_context:
+                raise ValueError(
+                    f"Context window for {key} must be between {min_context} and {max_context}"
+                )
+
         context_windows = {
             "gemini-2.0-flash": 1048576,  # 1M tokens
             "gemini-2.0-flash-thinking": 32768,
@@ -449,10 +460,10 @@ class GeminiCompletion(BaseLLM):
         # Find the best match for the model name
         for model_prefix, size in context_windows.items():
             if self.model.startswith(model_prefix):
-                return size
+                return int(size * CONTEXT_WINDOW_USAGE_RATIO)
 
         # Default context window size for Gemini models
-        return 1048576  # 1M tokens
+        return int(1048576 * CONTEXT_WINDOW_USAGE_RATIO)  # 1M tokens
 
     def _extract_token_usage(self, response: dict[str, Any]) -> dict[str, Any]:
         """Extract token usage from Gemini response."""

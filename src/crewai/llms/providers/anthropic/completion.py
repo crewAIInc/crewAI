@@ -394,6 +394,8 @@ class AnthropicCompletion(BaseLLM):
 
     def get_context_window_size(self) -> int:
         """Get the context window size for the model."""
+        from crewai.llm import CONTEXT_WINDOW_USAGE_RATIO
+
         # Context window sizes for Anthropic models
         context_windows = {
             "claude-3-5-sonnet": 200000,
@@ -410,10 +412,10 @@ class AnthropicCompletion(BaseLLM):
         # Find the best match for the model name
         for model_prefix, size in context_windows.items():
             if self.model.startswith(model_prefix):
-                return size
+                return int(size * CONTEXT_WINDOW_USAGE_RATIO)
 
         # Default context window size for Claude models
-        return 200000
+        return int(200000 * CONTEXT_WINDOW_USAGE_RATIO)
 
     def _extract_anthropic_token_usage(self, response: Message) -> dict[str, Any]:
         """Extract token usage from Anthropic response."""
