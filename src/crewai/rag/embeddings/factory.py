@@ -357,3 +357,7 @@ def build_embedder(spec):
     if isinstance(spec, BaseEmbeddingsProvider):
         return build_embedder_from_provider(spec)
     return build_embedder_from_dict(spec)
+
+
+# Backward compatibility alias
+get_embedding_function = build_embedder

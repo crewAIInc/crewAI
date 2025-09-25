@@ -16,5 +16,7 @@ class Text2VecProvider(BaseEmbeddingsProvider[Text2VecEmbeddingFunction]):
         description="Text2Vec embedding function class",
     )
     model_name: str = Field(
-        default="shibing624/text2vec-base-chinese", description="Model name to use"
+        default="shibing624/text2vec-base-chinese",
+        description="Model name to use",
+        validation_alias="TEXT2VEC_MODEL_NAME",
     )

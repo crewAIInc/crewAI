@@ -1,12 +1,12 @@
 """Type definitions for VoyageAI embedding providers."""
 
-from typing import Annotated, Literal, Required, TypedDict
+from typing import Annotated, Literal, TypedDict
 
 
 class VoyageAIProviderConfig(TypedDict, total=False):
     """Configuration for VoyageAI provider."""
 
-    api_key: Required[str]
+    api_key: str
     model: Annotated[str, "voyage-2"]
     input_type: str
     truncation: Annotated[bool, True]

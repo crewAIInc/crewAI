@@ -15,4 +15,6 @@ class HuggingFaceProvider(BaseEmbeddingsProvider[HuggingFaceEmbeddingServer]):
         default=HuggingFaceEmbeddingServer,
         description="HuggingFace embedding function class",
     )
-    url: str = Field(description="HuggingFace API URL")
+    url: str = Field(
+        description="HuggingFace API URL", validation_alias="HUGGINGFACE_URL"
+    )

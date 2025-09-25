@@ -1,12 +1,13 @@
 """Type definitions for IBM Watson embedding providers."""
 
-from typing import Annotated, Any, Literal, Required, TypedDict
+from typing import Annotated, Any, Literal, TypedDict
 
 
 class WatsonProviderConfig(TypedDict, total=False):
     """Configuration for Watson provider."""
 
-    model_id: Required[str]
+    model_id: str
+    url: str
     params: dict[str, str | dict[str, str]]
     credentials: Any
     project_id: str
@@ -19,8 +20,6 @@ class WatsonProviderConfig(TypedDict, total=False):
     max_retries: int
     delay_time: float
     retry_status_codes: list[int]
-    api_url: str
-    url: str
     api_key: str
     name: str
     iam_serviceid_crn: str

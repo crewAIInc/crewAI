@@ -1,6 +1,6 @@
 """Type definitions for SentenceTransformer embedding providers."""
 
-from typing import Annotated, Any, Literal, TypedDict
+from typing import Annotated, Literal, TypedDict
 
 
 class SentenceTransformerProviderConfig(TypedDict, total=False):
@@ -9,7 +9,6 @@ class SentenceTransformerProviderConfig(TypedDict, total=False):
     model_name: Annotated[str, "all-MiniLM-L6-v2"]
     device: Annotated[str, "cpu"]
     normalize_embeddings: Annotated[bool, False]
-    kwargs: dict[str, Any]
 
 
 class SentenceTransformerProviderSpec(TypedDict):

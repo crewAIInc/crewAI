@@ -72,8 +72,6 @@ class WatsonEmbeddingFunction(EmbeddingFunction[Documents]):
             embeddings_config["credentials"] = self._config["credentials"]
         else:
             cred_config: dict = {}
-            if "api_url" in self._config and self._config["api_url"] is not None:
-                cred_config["url"] = self._config["api_url"]
             if "url" in self._config and self._config["url"] is not None:
                 cred_config["url"] = self._config["url"]
             if "api_key" in self._config and self._config["api_key"] is not None:

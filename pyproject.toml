@@ -72,6 +72,15 @@ aisuite = [
 qdrant = [
     "qdrant-client[fastembed]>=1.14.3",
 ]
+aws = [
+    "boto3>=1.40.38",
+]
+watson = [
+    "ibm-watsonx-ai>=1.3.39",
+]
+voyageai = [
+    "voyageai>=0.3.5",
+]
 
 [dependency-groups]
 dev = [

@@ -15,6 +15,18 @@ class OpenCLIPProvider(BaseEmbeddingsProvider[OpenCLIPEmbeddingFunction]):
         default=OpenCLIPEmbeddingFunction,
         description="OpenCLIP embedding function class",
     )
-    model_name: str = Field(default="ViT-B-32", description="Model name to use")
-    checkpoint: str = Field(default="laion2b_s34b_b79k", description="Model checkpoint")
-    device: str | None = Field(default="cpu", description="Device to run model on")
+    model_name: str = Field(
+        default="ViT-B-32",
+        description="Model name to use",
+        validation_alias="OPENCLIP_MODEL_NAME",
+    )
+    checkpoint: str = Field(
+        default="laion2b_s34b_b79k",
+        description="Model checkpoint",
+        validation_alias="OPENCLIP_CHECKPOINT",
+    )
+    device: str | None = Field(
+        default="cpu",
+        description="Device to run model on",
+        validation_alias="OPENCLIP_DEVICE",
+    )

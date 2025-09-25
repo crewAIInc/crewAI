@@ -14,7 +14,11 @@ class CohereProvider(BaseEmbeddingsProvider[CohereEmbeddingFunction]):
     embedding_callable: type[CohereEmbeddingFunction] = Field(
         default=CohereEmbeddingFunction, description="Cohere embedding function class"
     )
-    api_key: str = Field(description="Cohere API key", alias="COHERE_API_KEY")
+    api_key: str = Field(
+        description="Cohere API key", validation_alias="COHERE_API_KEY"
+    )
     model_name: str = Field(
-        default="large", description="Model name to use for embeddings"
+        default="large",
+        description="Model name to use for embeddings",
+        validation_alias="COHERE_MODEL_NAME",
     )

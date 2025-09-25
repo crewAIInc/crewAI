@@ -1,12 +1,12 @@
 """Type definitions for OpenAI embedding providers."""
 
-from typing import Annotated, Any, Literal, Required, TypedDict
+from typing import Annotated, Any, Literal, TypedDict
 
 
 class OpenAIProviderConfig(TypedDict, total=False):
     """Configuration for OpenAI provider."""
 
-    api_key: Required[str]
+    api_key: str
     model_name: Annotated[str, "text-embedding-ada-002"]
     api_base: str
     api_type: str

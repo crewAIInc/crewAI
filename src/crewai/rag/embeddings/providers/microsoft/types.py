@@ -1,12 +1,12 @@
 """Type definitions for Microsoft Azure embedding providers."""
 
-from typing import Annotated, Any, Literal, Required, TypedDict
+from typing import Annotated, Any, Literal, TypedDict
 
 
 class AzureProviderConfig(TypedDict, total=False):
     """Configuration for Azure provider."""
 
-    api_key: Required[str]
+    api_key: str
     api_base: str
     api_type: Annotated[str, "azure"]
     api_version: str

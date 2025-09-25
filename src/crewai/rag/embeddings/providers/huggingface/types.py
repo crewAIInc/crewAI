@@ -1,12 +1,12 @@
 """Type definitions for HuggingFace embedding providers."""
 
-from typing import Literal, Required, TypedDict
+from typing import Literal, TypedDict
 
 
 class HuggingFaceProviderConfig(TypedDict, total=False):
     """Configuration for HuggingFace provider."""
 
-    url: Required[str]
+    url: str
 
 
 class HuggingFaceProviderSpec(TypedDict):

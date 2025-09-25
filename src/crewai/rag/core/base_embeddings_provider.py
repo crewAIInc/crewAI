@@ -3,7 +3,7 @@
 from typing import Generic, TypeVar
 
 from pydantic import Field
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from crewai.rag.core.base_embeddings_callable import EmbeddingFunction
 
@@ -17,6 +17,7 @@ class BaseEmbeddingsProvider(BaseSettings, Generic[T]):
     embedding functions from various providers.
     """
 
+    model_config = SettingsConfigDict(extra="allow", populate_by_name=True)
     embedding_callable: type[T] = Field(
         ..., description="The embedding function class to use"
     )

@@ -16,8 +16,10 @@ class RoboflowProvider(BaseEmbeddingsProvider[RoboflowEmbeddingFunction]):
         description="Roboflow embedding function class",
     )
     api_key: str = Field(
-        default="", description="Roboflow API key", alias="ROBOFLOW_API_KEY"
+        default="", description="Roboflow API key", validation_alias="ROBOFLOW_API_KEY"
     )
     api_url: str = Field(
-        default="https://infer.roboflow.com", description="Roboflow API URL"
+        default="https://infer.roboflow.com",
+        description="Roboflow API URL",
+        validation_alias="ROBOFLOW_API_URL",
     )

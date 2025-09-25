@@ -1,6 +1,6 @@
 """Type definitions for custom embedding providers."""
 
-from typing import Literal, Required, TypedDict
+from typing import Literal, TypedDict
 
 from chromadb.api.types import EmbeddingFunction
 
@@ -8,7 +8,7 @@ from chromadb.api.types import EmbeddingFunction
 class CustomProviderConfig(TypedDict, total=False):
     """Configuration for Custom provider."""
 
-    embedding_callable: Required[type[EmbeddingFunction]]
+    embedding_callable: type[EmbeddingFunction]
 
 
 class CustomProviderSpec(TypedDict):

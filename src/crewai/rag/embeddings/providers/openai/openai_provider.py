@@ -14,20 +14,45 @@ class OpenAIProvider(BaseEmbeddingsProvider[OpenAIEmbeddingFunction]):
     """OpenAI embeddings provider."""
 
     embedding_callable: type[OpenAIEmbeddingFunction] = Field(
-        default=OpenAIEmbeddingFunction, description="OpenAI embedding function class"
+        default=OpenAIEmbeddingFunction,
+        description="OpenAI embedding function class",
     )
-    api_key: str = Field(description="OpenAI API key", alias="OPENAI_API_KEY")
+    api_key: str = Field(
+        description="OpenAI API key", validation_alias="OPENAI_API_KEY"
+    )
     model_name: str = Field(
-        default="text-embedding-ada-002", description="Model name to use for embeddings"
+        default="text-embedding-ada-002",
+        description="Model name to use for embeddings",
+        validation_alias="OPENAI_MODEL_NAME",
     )
-    api_base: str | None = Field(default=None, description="Base URL for API requests")
-    api_type: str | None = Field(default=None, description="API type (e.g., 'azure')")
-    api_version: str | None = Field(default=None, description="API version")
+    api_base: str | None = Field(
+        default=None,
+        description="Base URL for API requests",
+        validation_alias="OPENAI_API_BASE",
+    )
+    api_type: str | None = Field(
+        default=None,
+        description="API type (e.g., 'azure')",
+        validation_alias="OPENAI_API_TYPE",
+    )
+    api_version: str | None = Field(
+        default=None, description="API version", validation_alias="OPENAI_API_VERSION"
+    )
     default_headers: dict[str, Any] | None = Field(
         default=None, description="Default headers for API requests"
     )
-    dimensions: int | None = Field(default=None, description="Embedding dimensions")
-    deployment_id: str | None = Field(default=None, description="Azure deployment ID")
+    dimensions: int | None = Field(
+        default=None,
+        description="Embedding dimensions",
+        validation_alias="OPENAI_DIMENSIONS",
+    )
+    deployment_id: str | None = Field(
+        default=None,
+        description="Azure deployment ID",
+        validation_alias="OPENAI_DEPLOYMENT_ID",
+    )
     organization_id: str | None = Field(
-        default=None, description="OpenAI organization ID"
+        default=None,
+        description="OpenAI organization ID",
+        validation_alias="OPENAI_ORGANIZATION_ID",
     )

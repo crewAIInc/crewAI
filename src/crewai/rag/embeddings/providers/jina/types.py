@@ -1,12 +1,12 @@
 """Type definitions for Jina embedding providers."""
 
-from typing import Annotated, Literal, Required, TypedDict
+from typing import Annotated, Literal, TypedDict
 
 
 class JinaProviderConfig(TypedDict, total=False):
     """Configuration for Jina provider."""
 
-    api_key: Required[str]
+    api_key: str
     model_name: Annotated[str, "jina-embeddings-v2-base-en"]
 
 

@@ -17,24 +17,42 @@ class AzureProvider(BaseEmbeddingsProvider[OpenAIEmbeddingFunction]):
         default=OpenAIEmbeddingFunction,
         description="Azure OpenAI embedding function class",
     )
-    api_key: str = Field(description="Azure API key", alias="AZURE_OPENAI_API_KEY")
+    api_key: str = Field(description="Azure API key", validation_alias="OPENAI_API_KEY")
     api_base: str | None = Field(
-        default=None, description="Azure endpoint URL", alias="AZURE_OPENAI_ENDPOINT"
+        default=None,
+        description="Azure endpoint URL",
+        validation_alias="OPENAI_API_BASE",
     )
-    api_type: str = Field(default="azure", description="API type for Azure")
+    api_type: str = Field(
+        default="azure",
+        description="API type for Azure",
+        validation_alias="OPENAI_API_TYPE",
+    )
     api_version: str | None = Field(
-        default=None, description="Azure API version", alias="AZURE_OPENAI_API_VERSION"
+        default=None,
+        description="Azure API version",
+        validation_alias="OPENAI_API_VERSION",
     )
     model_name: str = Field(
-        default="text-embedding-ada-002", description="Model name to use for embeddings"
+        default="text-embedding-ada-002",
+        description="Model name to use for embeddings",
+        validation_alias="OPENAI_MODEL_NAME",
     )
     default_headers: dict[str, Any] | None = Field(
         default=None, description="Default headers for API requests"
     )
-    dimensions: int | None = Field(default=None, description="Embedding dimensions")
+    dimensions: int | None = Field(
+        default=None,
+        description="Embedding dimensions",
+        validation_alias="OPENAI_DIMENSIONS",
+    )
     deployment_id: str | None = Field(
         default=None,
         description="Azure deployment ID",
-        alias="AZURE_OPENAI_DEPLOYMENT_NAME",
+        validation_alias="OPENAI_DEPLOYMENT_ID",
     )
-    organization_id: str | None = Field(default=None, description="Organization ID")
+    organization_id: str | None = Field(
+        default=None,
+        description="Organization ID",
+        validation_alias="OPENAI_ORGANIZATION_ID",
+    )
