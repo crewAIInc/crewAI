@@ -2,6 +2,8 @@
 
 from typing import Annotated, Any, Literal, TypedDict
 
+from typing_extensions import Required
+
 
 class OpenAIProviderConfig(TypedDict, total=False):
     """Configuration for OpenAI provider."""
@@ -17,8 +19,8 @@ class OpenAIProviderConfig(TypedDict, total=False):
     organization_id: str
 
 
-class OpenAIProviderSpec(TypedDict):
+class OpenAIProviderSpec(TypedDict, total=False):
     """OpenAI provider specification."""
 
-    provider: Literal["openai"]
+    provider: Required[Literal["openai"]]
     config: OpenAIProviderConfig

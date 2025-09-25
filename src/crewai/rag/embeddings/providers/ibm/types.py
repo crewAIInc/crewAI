@@ -2,6 +2,8 @@
 
 from typing import Annotated, Any, Literal, TypedDict
 
+from typing_extensions import Required
+
 
 class WatsonProviderConfig(TypedDict, total=False):
     """Configuration for Watson provider."""
@@ -35,8 +37,8 @@ class WatsonProviderConfig(TypedDict, total=False):
     proxies: dict
 
 
-class WatsonProviderSpec(TypedDict):
+class WatsonProviderSpec(TypedDict, total=False):
     """Watson provider specification."""
 
-    provider: Literal["watson"]
+    provider: Required[Literal["watson"]]
     config: WatsonProviderConfig

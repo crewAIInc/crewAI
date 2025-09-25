@@ -2,6 +2,8 @@
 
 from typing import Annotated, Literal, TypedDict
 
+from typing_extensions import Required
+
 
 class InstructorProviderConfig(TypedDict, total=False):
     """Configuration for Instructor provider."""
@@ -11,8 +13,8 @@ class InstructorProviderConfig(TypedDict, total=False):
     instruction: str
 
 
-class InstructorProviderSpec(TypedDict):
+class InstructorProviderSpec(TypedDict, total=False):
     """Instructor provider specification."""
 
-    provider: Literal["instructor"]
+    provider: Required[Literal["instructor"]]
     config: InstructorProviderConfig

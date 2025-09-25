@@ -3,6 +3,7 @@
 from typing import Literal, TypedDict
 
 from chromadb.api.types import EmbeddingFunction
+from typing_extensions import Required
 
 
 class CustomProviderConfig(TypedDict, total=False):
@@ -11,8 +12,8 @@ class CustomProviderConfig(TypedDict, total=False):
     embedding_callable: type[EmbeddingFunction]
 
 
-class CustomProviderSpec(TypedDict):
+class CustomProviderSpec(TypedDict, total=False):
     """Custom provider specification."""
 
-    provider: Literal["custom"]
+    provider: Required[Literal["custom"]]
     config: CustomProviderConfig

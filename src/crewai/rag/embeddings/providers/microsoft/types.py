@@ -2,6 +2,8 @@
 
 from typing import Annotated, Any, Literal, TypedDict
 
+from typing_extensions import Required
+
 
 class AzureProviderConfig(TypedDict, total=False):
     """Configuration for Azure provider."""
@@ -17,8 +19,8 @@ class AzureProviderConfig(TypedDict, total=False):
     organization_id: str
 
 
-class AzureProviderSpec(TypedDict):
+class AzureProviderSpec(TypedDict, total=False):
     """Azure provider specification."""
 
-    provider: Literal["azure"]
+    provider: Required[Literal["azure"]]
     config: AzureProviderConfig

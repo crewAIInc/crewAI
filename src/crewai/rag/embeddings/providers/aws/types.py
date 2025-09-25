@@ -2,6 +2,8 @@
 
 from typing import Annotated, Any, Literal, TypedDict
 
+from typing_extensions import Required
+
 
 class BedrockProviderConfig(TypedDict, total=False):
     """Configuration for Bedrock provider."""
@@ -10,8 +12,8 @@ class BedrockProviderConfig(TypedDict, total=False):
     session: Any
 
 
-class BedrockProviderSpec(TypedDict):
+class BedrockProviderSpec(TypedDict, total=False):
     """Bedrock provider specification."""
 
-    provider: Literal["amazon-bedrock"]
+    provider: Required[Literal["amazon-bedrock"]]
     config: BedrockProviderConfig

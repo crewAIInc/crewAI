@@ -174,8 +174,7 @@ class Agent(BaseAgent):
     )
 
     @model_validator(mode="before")
-    @classmethod
-    def validate_from_repository(cls, v):
+    def validate_from_repository(cls, v): # noqa: N805
         if v is not None and (from_repository := v.get("from_repository")):
             return load_agent_from_repository(from_repository) | v
         return v
@@ -686,7 +685,7 @@ class Agent(BaseAgent):
                 if not is_valid:
                     raise ValueError(f"Invalid date format: {self.date_format}")
 
-                current_date: str = datetime.now().strftime(self.date_format)
+                current_date = datetime.now().strftime(self.date_format)
                 task.description += f"\n\nCurrent Date: {current_date}"
             except Exception as e:
                 if hasattr(self, "_logger"):

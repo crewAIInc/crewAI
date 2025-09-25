@@ -2,6 +2,8 @@
 
 from typing import Literal, TypedDict
 
+from typing_extensions import Required
+
 
 class HuggingFaceProviderConfig(TypedDict, total=False):
     """Configuration for HuggingFace provider."""
@@ -9,8 +11,8 @@ class HuggingFaceProviderConfig(TypedDict, total=False):
     url: str
 
 
-class HuggingFaceProviderSpec(TypedDict):
+class HuggingFaceProviderSpec(TypedDict, total=False):
     """HuggingFace provider specification."""
 
-    provider: Literal["huggingface"]
+    provider: Required[Literal["huggingface"]]
     config: HuggingFaceProviderConfig

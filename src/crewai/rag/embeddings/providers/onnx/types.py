@@ -1,6 +1,6 @@
 """Type definitions for ONNX embedding providers."""
 
-from typing import Literal, TypedDict
+from typing import Literal, TypedDict, Required
 
 
 class ONNXProviderConfig(TypedDict, total=False):
@@ -9,8 +9,8 @@ class ONNXProviderConfig(TypedDict, total=False):
     preferred_providers: list[str]
 
 
-class ONNXProviderSpec(TypedDict):
+class ONNXProviderSpec(TypedDict, total=False):
     """ONNX provider specification."""
 
-    provider: Literal["onnx"]
+    provider: Required[Literal["onnx"]]
     config: ONNXProviderConfig
