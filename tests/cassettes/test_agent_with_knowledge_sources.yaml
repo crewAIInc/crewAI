@@ -976,4 +976,335 @@ interactions:
     status:
       code: 200
       message: OK
+- request:
+    body: '{"trace_id": "54a8adea-c972-420f-a708-1a544eff9635", "execution_type":
+      "crew", "user_identifier": null, "execution_context": {"crew_fingerprint": null,
+      "crew_name": "crew", "flow_name": null, "crewai_version": "0.193.2", "privacy_level":
+      "standard"}, "execution_metadata": {"expected_duration_estimate": 300, "agent_count":
+      0, "task_count": 0, "flow_method_count": 0, "execution_started_at": "2025-09-24T05:24:12.861068+00:00"}}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '428'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - CrewAI-CLI/0.193.2
+      X-Crewai-Organization-Id:
+      - d3a3d10c-35db-423f-a7a4-c026030ba64d
+      X-Crewai-Version:
+      - 0.193.2
+    method: POST
+    uri: http://localhost:3000/crewai_plus/api/v1/tracing/batches
+  response:
+    body:
+      string: '{"id":"61db142f-783b-4fd1-9aa3-6a3a004dcd01","trace_id":"54a8adea-c972-420f-a708-1a544eff9635","execution_type":"crew","crew_name":"crew","flow_name":null,"status":"running","duration_ms":null,"crewai_version":"0.193.2","privacy_level":"standard","total_events":0,"execution_context":{"crew_fingerprint":null,"crew_name":"crew","flow_name":null,"crewai_version":"0.193.2","privacy_level":"standard"},"created_at":"2025-09-24T05:24:13.678Z","updated_at":"2025-09-24T05:24:13.678Z"}'
+    headers:
+      Content-Length:
+      - '480'
+      cache-control:
+      - max-age=0, private, must-revalidate
+      content-security-policy:
+      - 'default-src ''self'' *.crewai.com crewai.com; script-src ''self'' ''unsafe-inline''
+        *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts https://www.gstatic.com
+        https://run.pstmn.io https://share.descript.com/; style-src ''self'' ''unsafe-inline''
+        *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts; img-src ''self''
+        data: *.crewai.com crewai.com https://zeus.tools.crewai.com https://dashboard.tools.crewai.com
+        https://cdn.jsdelivr.net; font-src ''self'' data: *.crewai.com crewai.com;
+        connect-src ''self'' *.crewai.com crewai.com https://zeus.tools.crewai.com
+        https://connect.useparagon.com/ https://zeus.useparagon.com/* https://*.useparagon.com/*
+        https://run.pstmn.io https://connect.tools.crewai.com/ ws://localhost:3036
+        wss://localhost:3036; frame-src ''self'' *.crewai.com crewai.com https://connect.useparagon.com/
+        https://zeus.tools.crewai.com https://zeus.useparagon.com/* https://connect.tools.crewai.com/
+        https://www.youtube.com https://share.descript.com'
+      content-type:
+      - application/json; charset=utf-8
+      etag:
+      - W/"bef69fc49b08b5ac7bb3eac00e96085a"
+      permissions-policy:
+      - camera=(), microphone=(self), geolocation=()
+      referrer-policy:
+      - strict-origin-when-cross-origin
+      server-timing:
+      - cache_read.active_support;dur=0.05, sql.active_record;dur=24.34, cache_generate.active_support;dur=1.98,
+        cache_write.active_support;dur=0.12, cache_read_multi.active_support;dur=0.09,
+        start_processing.action_controller;dur=0.00, instantiation.active_record;dur=0.56,
+        feature_operation.flipper;dur=0.11, start_transaction.active_record;dur=0.01,
+        transaction.active_record;dur=6.41, process_action.action_controller;dur=793.70
+      vary:
+      - Accept
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-permitted-cross-domain-policies:
+      - none
+      x-request-id:
+      - 1fc54a38-7fa9-4fbd-9adc-5a67f11c6fc2
+      x-runtime:
+      - '0.820447'
+      x-xss-protection:
+      - 1; mode=block
+    status:
+      code: 201
+      message: Created
+- request:
+    body: '{"events": [{"event_id": "71c92873-7e03-4150-bc17-c6840ee49538", "timestamp":
+      "2025-09-24T05:24:13.685702+00:00", "type": "crew_kickoff_started", "event_data":
+      {"timestamp": "2025-09-24T05:24:12.858951+00:00", "type": "crew_kickoff_started",
+      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
+      "task_id": null, "task_name": null, "agent_id": null, "agent_role": null, "crew_name":
+      "crew", "crew": null, "inputs": null}}, {"event_id": "e619fc6f-2dd4-4520-abbd-ac4e52f992ca",
+      "timestamp": "2025-09-24T05:24:13.691993+00:00", "type": "task_started", "event_data":
+      {"task_description": "What is Brandon''s favorite color?", "expected_output":
+      "Brandon''s favorite color.", "task_name": "What is Brandon''s favorite color?",
+      "context": "", "agent_role": "Information Agent", "task_id": "a89d3b30-df0d-4107-a477-ef54077c6833"}},
+      {"event_id": "8fae8f69-b0a5-426e-802c-a3b2e5b018db", "timestamp": "2025-09-24T05:24:13.692473+00:00",
+      "type": "llm_call_started", "event_data": {"timestamp": "2025-09-24T05:24:13.692433+00:00",
+      "type": "llm_call_started", "source_fingerprint": null, "source_type": null,
+      "fingerprint_metadata": null, "task_id": null, "task_name": null, "agent_id":
+      null, "agent_role": null, "from_task": null, "from_agent": null, "model": "gpt-4o-mini",
+      "messages": [{"role": "system", "content": "Your goal is to rewrite the user
+      query so that it is optimized for retrieval from a vector database. Consider
+      how the query will be used to find relevant documents, and aim to make it more
+      specific and context-aware. \n\n Do not include any other text than the rewritten
+      query, especially any preamble or postamble and only add expected output format
+      if its relevant to the rewritten query. \n\n Focus on the key words of the intended
+      task and to retrieve the most relevant information. \n\n There will be some
+      extra context provided that might need to be removed such as expected_output
+      formats structured_outputs and other instructions."}, {"role": "user", "content":
+      "The original query is: What is Brandon''s favorite color?\n\nThis is the expected
+      criteria for your final answer: Brandon''s favorite color.\nyou MUST return
+      the actual complete content as the final answer, not a summary.."}], "tools":
+      null, "callbacks": null, "available_functions": null}}, {"event_id": "0fcc1faf-8534-48e9-9823-bfe04645a79b",
+      "timestamp": "2025-09-24T05:24:13.694713+00:00", "type": "llm_call_completed",
+      "event_data": {"timestamp": "2025-09-24T05:24:13.694669+00:00", "type": "llm_call_completed",
+      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
+      "task_id": null, "task_name": null, "agent_id": null, "agent_role": null, "from_task":
+      null, "from_agent": null, "messages": [{"role": "system", "content": "Your goal
+      is to rewrite the user query so that it is optimized for retrieval from a vector
+      database. Consider how the query will be used to find relevant documents, and
+      aim to make it more specific and context-aware. \n\n Do not include any other
+      text than the rewritten query, especially any preamble or postamble and only
+      add expected output format if its relevant to the rewritten query. \n\n Focus
+      on the key words of the intended task and to retrieve the most relevant information.
+      \n\n There will be some extra context provided that might need to be removed
+      such as expected_output formats structured_outputs and other instructions."},
+      {"role": "user", "content": "The original query is: What is Brandon''s favorite
+      color?\n\nThis is the expected criteria for your final answer: Brandon''s favorite
+      color.\nyou MUST return the actual complete content as the final answer, not
+      a summary.."}], "response": "Brandon favorite color", "call_type": "<LLMCallType.LLM_CALL:
+      ''llm_call''>", "model": "gpt-4o-mini"}}, {"event_id": "b82cf317-57e0-448f-a028-e74ed3a4cdb6",
+      "timestamp": "2025-09-24T05:24:13.825341+00:00", "type": "agent_execution_started",
+      "event_data": {"agent_role": "Information Agent", "agent_goal": "Provide information
+      based on knowledge sources", "agent_backstory": "You have access to specific
+      knowledge sources."}}, {"event_id": "820353d4-e621-463e-a512-45ebe3cbcd99",
+      "timestamp": "2025-09-24T05:24:13.825393+00:00", "type": "llm_call_started",
+      "event_data": {"timestamp": "2025-09-24T05:24:13.825378+00:00", "type": "llm_call_started",
+      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
+      "task_id": "a89d3b30-df0d-4107-a477-ef54077c6833", "task_name": "What is Brandon''s
+      favorite color?", "agent_id": "36311e2d-ffd3-4d3b-a212-f12d63c1cb06", "agent_role":
+      "Information Agent", "from_task": null, "from_agent": null, "model": "gpt-4o-mini",
+      "messages": [{"role": "system", "content": "You are Information Agent. You have
+      access to specific knowledge sources.\nYour personal goal is: Provide information
+      based on knowledge sources\nTo give my best complete final answer to the task
+      respond using the exact following format:\n\nThought: I now can give a great
+      answer\nFinal Answer: Your final answer must be the great and the most complete
+      as possible, it must be outcome described.\n\nI MUST use these formats, my job
+      depends on it!"}, {"role": "user", "content": "\nCurrent Task: What is Brandon''s
+      favorite color?\n\nThis is the expected criteria for your final answer: Brandon''s
+      favorite color.\nyou MUST return the actual complete content as the final answer,
+      not a summary.Additional Information: Brandon''s favorite color is red and he
+      likes Mexican food.\n\nBegin! This is VERY important to you, use the tools available
+      and give your best Final Answer, your job depends on it!\n\nThought:"}], "tools":
+      null, "callbacks": ["<crewai.utilities.token_counter_callback.TokenCalcHandler
+      object at 0x13b1efbc0>"], "available_functions": null}}, {"event_id": "0c94bb30-872b-40e2-bea1-8898056c6989",
+      "timestamp": "2025-09-24T05:24:13.826292+00:00", "type": "llm_call_completed",
+      "event_data": {"timestamp": "2025-09-24T05:24:13.826275+00:00", "type": "llm_call_completed",
+      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
+      "task_id": "a89d3b30-df0d-4107-a477-ef54077c6833", "task_name": "What is Brandon''s
+      favorite color?", "agent_id": "36311e2d-ffd3-4d3b-a212-f12d63c1cb06", "agent_role":
+      "Information Agent", "from_task": null, "from_agent": null, "messages": [{"role":
+      "system", "content": "You are Information Agent. You have access to specific
+      knowledge sources.\nYour personal goal is: Provide information based on knowledge
+      sources\nTo give my best complete final answer to the task respond using the
+      exact following format:\n\nThought: I now can give a great answer\nFinal Answer:
+      Your final answer must be the great and the most complete as possible, it must
+      be outcome described.\n\nI MUST use these formats, my job depends on it!"},
+      {"role": "user", "content": "\nCurrent Task: What is Brandon''s favorite color?\n\nThis
+      is the expected criteria for your final answer: Brandon''s favorite color.\nyou
+      MUST return the actual complete content as the final answer, not a summary.Additional
+      Information: Brandon''s favorite color is red and he likes Mexican food.\n\nBegin!
+      This is VERY important to you, use the tools available and give your best Final
+      Answer, your job depends on it!\n\nThought:"}], "response": "I now can give
+      a great answer  \nFinal Answer: Brandon''s favorite color is red.", "call_type":
+      "<LLMCallType.LLM_CALL: ''llm_call''>", "model": "gpt-4o-mini"}}, {"event_id":
+      "e8a00053-f0ef-4712-9ab8-1f17554390c5", "timestamp": "2025-09-24T05:24:13.826380+00:00",
+      "type": "agent_execution_completed", "event_data": {"agent_role": "Information
+      Agent", "agent_goal": "Provide information based on knowledge sources", "agent_backstory":
+      "You have access to specific knowledge sources."}}, {"event_id": "e8a26836-8bcb-4020-ae54-ef8fad2b5eaf",
+      "timestamp": "2025-09-24T05:24:13.826421+00:00", "type": "task_completed", "event_data":
+      {"task_description": "What is Brandon''s favorite color?", "task_name": "What
+      is Brandon''s favorite color?", "task_id": "a89d3b30-df0d-4107-a477-ef54077c6833",
+      "output_raw": "Brandon''s favorite color is red.", "output_format": "OutputFormat.RAW",
+      "agent_role": "Information Agent"}}, {"event_id": "6947f01a-4023-4f2a-a72d-6f058ea76498",
+      "timestamp": "2025-09-24T05:24:13.827029+00:00", "type": "crew_kickoff_completed",
+      "event_data": {"timestamp": "2025-09-24T05:24:13.827017+00:00", "type": "crew_kickoff_completed",
+      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
+      "task_id": null, "task_name": null, "agent_id": null, "agent_role": null, "crew_name":
+      "crew", "crew": null, "output": {"description": "What is Brandon''s favorite
+      color?", "name": "What is Brandon''s favorite color?", "expected_output": "Brandon''s
+      favorite color.", "summary": "What is Brandon''s favorite color?...", "raw":
+      "Brandon''s favorite color is red.", "pydantic": null, "json_dict": null, "agent":
+      "Information Agent", "output_format": "raw"}, "total_tokens": 380}}], "batch_metadata":
+      {"events_count": 10, "batch_sequence": 1, "is_final_batch": false}}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '9020'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - CrewAI-CLI/0.193.2
+      X-Crewai-Organization-Id:
+      - d3a3d10c-35db-423f-a7a4-c026030ba64d
+      X-Crewai-Version:
+      - 0.193.2
+    method: POST
+    uri: http://localhost:3000/crewai_plus/api/v1/tracing/batches/54a8adea-c972-420f-a708-1a544eff9635/events
+  response:
+    body:
+      string: '{"events_created":10,"trace_batch_id":"61db142f-783b-4fd1-9aa3-6a3a004dcd01"}'
+    headers:
+      Content-Length:
+      - '77'
+      cache-control:
+      - max-age=0, private, must-revalidate
+      content-security-policy:
+      - 'default-src ''self'' *.crewai.com crewai.com; script-src ''self'' ''unsafe-inline''
+        *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts https://www.gstatic.com
+        https://run.pstmn.io https://share.descript.com/; style-src ''self'' ''unsafe-inline''
+        *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts; img-src ''self''
+        data: *.crewai.com crewai.com https://zeus.tools.crewai.com https://dashboard.tools.crewai.com
+        https://cdn.jsdelivr.net; font-src ''self'' data: *.crewai.com crewai.com;
+        connect-src ''self'' *.crewai.com crewai.com https://zeus.tools.crewai.com
+        https://connect.useparagon.com/ https://zeus.useparagon.com/* https://*.useparagon.com/*
+        https://run.pstmn.io https://connect.tools.crewai.com/ ws://localhost:3036
+        wss://localhost:3036; frame-src ''self'' *.crewai.com crewai.com https://connect.useparagon.com/
+        https://zeus.tools.crewai.com https://zeus.useparagon.com/* https://connect.tools.crewai.com/
+        https://www.youtube.com https://share.descript.com'
+      content-type:
+      - application/json; charset=utf-8
+      etag:
+      - W/"a52ad8652657c7785d695eec97440bdf"
+      permissions-policy:
+      - camera=(), microphone=(self), geolocation=()
+      referrer-policy:
+      - strict-origin-when-cross-origin
+      server-timing:
+      - cache_read.active_support;dur=0.05, sql.active_record;dur=33.94, cache_generate.active_support;dur=2.76,
+        cache_write.active_support;dur=0.14, cache_read_multi.active_support;dur=0.08,
+        start_processing.action_controller;dur=0.00, instantiation.active_record;dur=0.25,
+        start_transaction.active_record;dur=0.00, transaction.active_record;dur=44.09,
+        process_action.action_controller;dur=322.17
+      vary:
+      - Accept
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-permitted-cross-domain-policies:
+      - none
+      x-request-id:
+      - d977667c-2447-4373-aca9-6af8c50cc7e8
+      x-runtime:
+      - '0.378785'
+      x-xss-protection:
+      - 1; mode=block
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"status": "completed", "duration_ms": 1355, "final_event_count": 10}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '69'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - CrewAI-CLI/0.193.2
+      X-Crewai-Organization-Id:
+      - d3a3d10c-35db-423f-a7a4-c026030ba64d
+      X-Crewai-Version:
+      - 0.193.2
+    method: PATCH
+    uri: http://localhost:3000/crewai_plus/api/v1/tracing/batches/54a8adea-c972-420f-a708-1a544eff9635/finalize
+  response:
+    body:
+      string: '{"id":"61db142f-783b-4fd1-9aa3-6a3a004dcd01","trace_id":"54a8adea-c972-420f-a708-1a544eff9635","execution_type":"crew","crew_name":"crew","flow_name":null,"status":"completed","duration_ms":1355,"crewai_version":"0.193.2","privacy_level":"standard","total_events":10,"execution_context":{"crew_name":"crew","flow_name":null,"privacy_level":"standard","crewai_version":"0.193.2","crew_fingerprint":null},"created_at":"2025-09-24T05:24:13.678Z","updated_at":"2025-09-24T05:24:14.660Z"}'
+    headers:
+      Content-Length:
+      - '483'
+      cache-control:
+      - max-age=0, private, must-revalidate
+      content-security-policy:
+      - 'default-src ''self'' *.crewai.com crewai.com; script-src ''self'' ''unsafe-inline''
+        *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts https://www.gstatic.com
+        https://run.pstmn.io https://share.descript.com/; style-src ''self'' ''unsafe-inline''
+        *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts; img-src ''self''
+        data: *.crewai.com crewai.com https://zeus.tools.crewai.com https://dashboard.tools.crewai.com
+        https://cdn.jsdelivr.net; font-src ''self'' data: *.crewai.com crewai.com;
+        connect-src ''self'' *.crewai.com crewai.com https://zeus.tools.crewai.com
+        https://connect.useparagon.com/ https://zeus.useparagon.com/* https://*.useparagon.com/*
+        https://run.pstmn.io https://connect.tools.crewai.com/ ws://localhost:3036
+        wss://localhost:3036; frame-src ''self'' *.crewai.com crewai.com https://connect.useparagon.com/
+        https://zeus.tools.crewai.com https://zeus.useparagon.com/* https://connect.tools.crewai.com/
+        https://www.youtube.com https://share.descript.com'
+      content-type:
+      - application/json; charset=utf-8
+      etag:
+      - W/"38e0f70fac59670de2df6d90478b7e43"
+      permissions-policy:
+      - camera=(), microphone=(self), geolocation=()
+      referrer-policy:
+      - strict-origin-when-cross-origin
+      server-timing:
+      - cache_read.active_support;dur=0.04, cache_fetch_hit.active_support;dur=0.00,
+        cache_read_multi.active_support;dur=0.05, start_processing.action_controller;dur=0.00,
+        sql.active_record;dur=14.79, instantiation.active_record;dur=0.59, unpermitted_parameters.action_controller;dur=0.02,
+        start_transaction.active_record;dur=0.00, transaction.active_record;dur=4.39,
+        process_action.action_controller;dur=430.19
+      vary:
+      - Accept
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-permitted-cross-domain-policies:
+      - none
+      x-request-id:
+      - 8faa01f5-3c5f-47c0-8aef-e0807a0e0dcf
+      x-runtime:
+      - '0.445912'
+      x-xss-protection:
+      - 1; mode=block
+    status:
+      code: 200
+      message: OK
 version: 1

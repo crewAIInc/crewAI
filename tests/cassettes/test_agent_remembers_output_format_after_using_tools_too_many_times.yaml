@@ -1112,4 +1112,1381 @@ interactions:
     status:
       code: 200
       message: OK
+- request:
+    body: '{"trace_id": "5fe346d2-d4d2-46df-8d48-ce9ffb685983", "execution_type":
+      "crew", "user_identifier": null, "execution_context": {"crew_fingerprint": null,
+      "crew_name": "crew", "flow_name": null, "crewai_version": "0.193.2", "privacy_level":
+      "standard"}, "execution_metadata": {"expected_duration_estimate": 300, "agent_count":
+      0, "task_count": 0, "flow_method_count": 0, "execution_started_at": "2025-09-24T05:25:58.072049+00:00"}}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '428'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - CrewAI-CLI/0.193.2
+      X-Crewai-Organization-Id:
+      - d3a3d10c-35db-423f-a7a4-c026030ba64d
+      X-Crewai-Version:
+      - 0.193.2
+    method: POST
+    uri: http://localhost:3000/crewai_plus/api/v1/tracing/batches
+  response:
+    body:
+      string: '{"id":"dbce9b21-bd0b-4051-a557-fbded320e406","trace_id":"5fe346d2-d4d2-46df-8d48-ce9ffb685983","execution_type":"crew","crew_name":"crew","flow_name":null,"status":"running","duration_ms":null,"crewai_version":"0.193.2","privacy_level":"standard","total_events":0,"execution_context":{"crew_fingerprint":null,"crew_name":"crew","flow_name":null,"crewai_version":"0.193.2","privacy_level":"standard"},"created_at":"2025-09-24T05:25:59.023Z","updated_at":"2025-09-24T05:25:59.023Z"}'
+    headers:
+      Content-Length:
+      - '480'
+      cache-control:
+      - max-age=0, private, must-revalidate
+      content-security-policy:
+      - 'default-src ''self'' *.crewai.com crewai.com; script-src ''self'' ''unsafe-inline''
+        *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts https://www.gstatic.com
+        https://run.pstmn.io https://share.descript.com/; style-src ''self'' ''unsafe-inline''
+        *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts; img-src ''self''
+        data: *.crewai.com crewai.com https://zeus.tools.crewai.com https://dashboard.tools.crewai.com
+        https://cdn.jsdelivr.net; font-src ''self'' data: *.crewai.com crewai.com;
+        connect-src ''self'' *.crewai.com crewai.com https://zeus.tools.crewai.com
+        https://connect.useparagon.com/ https://zeus.useparagon.com/* https://*.useparagon.com/*
+        https://run.pstmn.io https://connect.tools.crewai.com/ ws://localhost:3036
+        wss://localhost:3036; frame-src ''self'' *.crewai.com crewai.com https://connect.useparagon.com/
+        https://zeus.tools.crewai.com https://zeus.useparagon.com/* https://connect.tools.crewai.com/
+        https://www.youtube.com https://share.descript.com'
+      content-type:
+      - application/json; charset=utf-8
+      etag:
+      - W/"eca72a71682f9ab333decfd502c2ec37"
+      permissions-policy:
+      - camera=(), microphone=(self), geolocation=()
+      referrer-policy:
+      - strict-origin-when-cross-origin
+      server-timing:
+      - cache_read.active_support;dur=0.04, cache_fetch_hit.active_support;dur=0.00,
+        cache_read_multi.active_support;dur=0.18, start_processing.action_controller;dur=0.00,
+        sql.active_record;dur=24.63, instantiation.active_record;dur=0.48, feature_operation.flipper;dur=0.04,
+        start_transaction.active_record;dur=0.00, transaction.active_record;dur=5.12,
+        process_action.action_controller;dur=930.97
+      vary:
+      - Accept
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-permitted-cross-domain-policies:
+      - none
+      x-request-id:
+      - b94f42a4-288b-47a3-8fa7-5250ab0a3e54
+      x-runtime:
+      - '0.953099'
+      x-xss-protection:
+      - 1; mode=block
+    status:
+      code: 201
+      message: Created
+- request:
+    body: '{"events": [{"event_id": "f6e6ce82-778e-42df-8808-e7a29b64a605", "timestamp":
+      "2025-09-24T05:25:59.029490+00:00", "type": "crew_kickoff_started", "event_data":
+      {"timestamp": "2025-09-24T05:25:58.069837+00:00", "type": "crew_kickoff_started",
+      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
+      "task_id": null, "task_name": null, "agent_id": null, "agent_role": null, "crew_name":
+      "crew", "crew": null, "inputs": null}}, {"event_id": "5acd4c69-4a48-46e0-a4a8-1ca7ea5a7ad8",
+      "timestamp": "2025-09-24T05:25:59.032086+00:00", "type": "task_started", "event_data":
+      {"task_description": "Use tool logic for `get_final_answer` but fon''t give
+      you final answer yet, instead keep using it unless you''re told to give your
+      final answer", "expected_output": "The final answer", "task_name": "Use tool
+      logic for `get_final_answer` but fon''t give you final answer yet, instead keep
+      using it unless you''re told to give your final answer", "context": "", "agent_role":
+      "test role", "task_id": "0ca9aa84-9dd9-4ac2-bc7f-2d810dd6097a"}}, {"event_id":
+      "cd9ca3cb-3ad7-41a5-ad50-61181b21b769", "timestamp": "2025-09-24T05:25:59.032870+00:00",
+      "type": "agent_execution_started", "event_data": {"agent_role": "test role",
+      "agent_goal": "test goal", "agent_backstory": "test backstory"}}, {"event_id":
+      "30c1e5f8-2d80-4ce2-b37f-fb1e9dd86582", "timestamp": "2025-09-24T05:25:59.036010+00:00",
+      "type": "llm_call_started", "event_data": {"timestamp": "2025-09-24T05:25:59.035815+00:00",
+      "type": "llm_call_started", "source_fingerprint": null, "source_type": null,
+      "fingerprint_metadata": null, "task_id": "0ca9aa84-9dd9-4ac2-bc7f-2d810dd6097a",
+      "task_name": "Use tool logic for `get_final_answer` but fon''t give you final
+      answer yet, instead keep using it unless you''re told to give your final answer",
+      "agent_id": "b6cf723e-04c8-40c5-a927-e2078cfbae59", "agent_role": "test role",
+      "from_task": null, "from_agent": null, "model": "gpt-4o-mini", "messages": [{"role":
+      "system", "content": "You are test role. test backstory\nYour personal goal
+      is: test goal\nYou ONLY have access to the following tools, and should NEVER
+      make up tools that are not listed here:\n\nTool Name: get_final_answer\nTool
+      Arguments: {}\nTool Description: Get the final answer but don''t give it yet,
+      just re-use this\n        tool non-stop.\n\nIMPORTANT: Use the following format
+      in your response:\n\n```\nThought: you should always think about what to do\nAction:
+      the action to take, only one name of [get_final_answer], just the name, exactly
+      as it''s written.\nAction Input: the input to the action, just a simple JSON
+      object, enclosed in curly braces, using \" to wrap keys and values.\nObservation:
+      the result of the action\n```\n\nOnce all necessary information is gathered,
+      return the following format:\n\n```\nThought: I now know the final answer\nFinal
+      Answer: the final answer to the original input question\n```"}, {"role": "user",
+      "content": "\nCurrent Task: Use tool logic for `get_final_answer` but fon''t
+      give you final answer yet, instead keep using it unless you''re told to give
+      your final answer\n\nThis is the expected criteria for your final answer: The
+      final answer\nyou MUST return the actual complete content as the final answer,
+      not a summary.\n\nBegin! This is VERY important to you, use the tools available
+      and give your best Final Answer, your job depends on it!\n\nThought:"}], "tools":
+      null, "callbacks": ["<crewai.utilities.token_counter_callback.TokenCalcHandler
+      object at 0x13ab0aba0>"], "available_functions": null}}, {"event_id": "8665acb1-3cfa-410f-8045-d2d12e583ba0",
+      "timestamp": "2025-09-24T05:25:59.037783+00:00", "type": "llm_call_completed",
+      "event_data": {"timestamp": "2025-09-24T05:25:59.037715+00:00", "type": "llm_call_completed",
+      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
+      "task_id": "0ca9aa84-9dd9-4ac2-bc7f-2d810dd6097a", "task_name": "Use tool logic
+      for `get_final_answer` but fon''t give you final answer yet, instead keep using
+      it unless you''re told to give your final answer", "agent_id": "b6cf723e-04c8-40c5-a927-e2078cfbae59",
+      "agent_role": "test role", "from_task": null, "from_agent": null, "messages":
+      [{"role": "system", "content": "You are test role. test backstory\nYour personal
+      goal is: test goal\nYou ONLY have access to the following tools, and should
+      NEVER make up tools that are not listed here:\n\nTool Name: get_final_answer\nTool
+      Arguments: {}\nTool Description: Get the final answer but don''t give it yet,
+      just re-use this\n        tool non-stop.\n\nIMPORTANT: Use the following format
+      in your response:\n\n```\nThought: you should always think about what to do\nAction:
+      the action to take, only one name of [get_final_answer], just the name, exactly
+      as it''s written.\nAction Input: the input to the action, just a simple JSON
+      object, enclosed in curly braces, using \" to wrap keys and values.\nObservation:
+      the result of the action\n```\n\nOnce all necessary information is gathered,
+      return the following format:\n\n```\nThought: I now know the final answer\nFinal
+      Answer: the final answer to the original input question\n```"}, {"role": "user",
+      "content": "\nCurrent Task: Use tool logic for `get_final_answer` but fon''t
+      give you final answer yet, instead keep using it unless you''re told to give
+      your final answer\n\nThis is the expected criteria for your final answer: The
+      final answer\nyou MUST return the actual complete content as the final answer,
+      not a summary.\n\nBegin! This is VERY important to you, use the tools available
+      and give your best Final Answer, your job depends on it!\n\nThought:"}], "response":
+      "I should use the available tool to get the final answer multiple times, as
+      instructed.\n\nAction: get_final_answer\nAction Input: {\"input\":\"n/a\"}",
+      "call_type": "<LLMCallType.LLM_CALL: ''llm_call''>", "model": "gpt-4o-mini"}},
+      {"event_id": "a79b596a-7cb9-48ff-8311-5a666506abf4", "timestamp": "2025-09-24T05:25:59.038108+00:00",
+      "type": "tool_usage_started", "event_data": {"timestamp": "2025-09-24T05:25:59.038047+00:00",
+      "type": "tool_usage_started", "source_fingerprint": "4782f0d2-9698-4291-8af1-0a882a6cb8f2",
+      "source_type": "agent", "fingerprint_metadata": null, "task_id": "0ca9aa84-9dd9-4ac2-bc7f-2d810dd6097a",
+      "task_name": "Use tool logic for `get_final_answer` but fon''t give you final
+      answer yet, instead keep using it unless you''re told to give your final answer",
+      "agent_id": null, "agent_role": "test role", "agent_key": "e148e5320293499f8cebea826e72582b",
+      "tool_name": "get_final_answer", "tool_args": "{\"input\": \"n/a\"}", "tool_class":
+      "get_final_answer", "run_attempts": null, "delegations": null, "agent": {"id":
+      "b6cf723e-04c8-40c5-a927-e2078cfbae59", "role": "test role", "goal": "test goal",
+      "backstory": "test backstory", "cache": true, "verbose": true, "max_rpm": null,
+      "allow_delegation": false, "tools": [], "max_iter": 6, "agent_executor": "<crewai.agents.crew_agent_executor.CrewAgentExecutor
+      object at 0x13ab0abd0>", "llm": "<crewai.llms.providers.openai.completion.OpenAICompletion
+      object at 0x13ab0b050>", "crew": {"parent_flow": null, "name": "crew", "cache":
+      true, "tasks": ["{''used_tools'': 0, ''tools_errors'': 0, ''delegations'': 0,
+      ''i18n'': {''prompt_file'': None}, ''name'': None, ''prompt_context'': '''',
+      ''description'': \"Use tool logic for `get_final_answer` but fon''t give you
+      final answer yet, instead keep using it unless you''re told to give your final
+      answer\", ''expected_output'': ''The final answer'', ''config'': None, ''callback'':
+      None, ''agent'': {''id'': UUID(''b6cf723e-04c8-40c5-a927-e2078cfbae59''), ''role'':
+      ''test role'', ''goal'': ''test goal'', ''backstory'': ''test backstory'', ''cache'':
+      True, ''verbose'': True, ''max_rpm'': None, ''allow_delegation'': False, ''tools'':
+      [], ''max_iter'': 6, ''agent_executor'': <crewai.agents.crew_agent_executor.CrewAgentExecutor
+      object at 0x13ab0abd0>, ''llm'': <crewai.llms.providers.openai.completion.OpenAICompletion
+      object at 0x13ab0b050>, ''crew'': Crew(id=004dd8a0-dd87-43fa-bdc8-07f449808028,
+      process=Process.sequential, number_of_agents=1, number_of_tasks=1), ''i18n'':
+      {''prompt_file'': None}, ''cache_handler'': {}, ''tools_handler'': <crewai.agents.tools_handler.ToolsHandler
+      object at 0x13ab0b020>, ''tools_results'': [], ''max_tokens'': None, ''knowledge'':
+      None, ''knowledge_sources'': None, ''knowledge_storage'': None, ''security_config'':
+      {''fingerprint'': {''metadata'': {}}}, ''callbacks'': [], ''adapted_agent'':
+      False, ''knowledge_config'': None}, ''context'': NOT_SPECIFIED, ''async_execution'':
+      False, ''output_json'': None, ''output_pydantic'': None, ''output_file'': None,
+      ''create_directory'': True, ''output'': None, ''tools'': [{''name'': ''get_final_answer'',
+      ''description'': \"Tool Name: get_final_answer\\nTool Arguments: {}\\nTool Description:
+      Get the final answer but don''t give it yet, just re-use this\\n        tool
+      non-stop.\", ''env_vars'': [], ''args_schema'': <class ''abc.Get_Final_Answer''>,
+      ''description_updated'': False, ''cache_function'': <function BaseTool.<lambda>
+      at 0x107ff9440>, ''result_as_answer'': False, ''max_usage_count'': None, ''current_usage_count'':
+      0}], ''security_config'': {''fingerprint'': {''metadata'': {}}}, ''id'': UUID(''0ca9aa84-9dd9-4ac2-bc7f-2d810dd6097a''),
+      ''human_input'': False, ''markdown'': False, ''converter_cls'': None, ''processed_by_agents'':
+      {''test role''}, ''guardrail'': None, ''max_retries'': None, ''guardrail_max_retries'':
+      3, ''retry_count'': 0, ''start_time'': datetime.datetime(2025, 9, 23, 22, 25,
+      59, 31761), ''end_time'': None, ''allow_crewai_trigger_context'': None}"], "agents":
+      ["{''id'': UUID(''b6cf723e-04c8-40c5-a927-e2078cfbae59''), ''role'': ''test
+      role'', ''goal'': ''test goal'', ''backstory'': ''test backstory'', ''cache'':
+      True, ''verbose'': True, ''max_rpm'': None, ''allow_delegation'': False, ''tools'':
+      [], ''max_iter'': 6, ''agent_executor'': <crewai.agents.crew_agent_executor.CrewAgentExecutor
+      object at 0x13ab0abd0>, ''llm'': <crewai.llms.providers.openai.completion.OpenAICompletion
+      object at 0x13ab0b050>, ''crew'': Crew(id=004dd8a0-dd87-43fa-bdc8-07f449808028,
+      process=Process.sequential, number_of_agents=1, number_of_tasks=1), ''i18n'':
+      {''prompt_file'': None}, ''cache_handler'': {}, ''tools_handler'': <crewai.agents.tools_handler.ToolsHandler
+      object at 0x13ab0b020>, ''tools_results'': [], ''max_tokens'': None, ''knowledge'':
+      None, ''knowledge_sources'': None, ''knowledge_storage'': None, ''security_config'':
+      {''fingerprint'': {''metadata'': {}}}, ''callbacks'': [], ''adapted_agent'':
+      False, ''knowledge_config'': None}"], "process": "sequential", "verbose": true,
+      "memory": false, "short_term_memory": null, "long_term_memory": null, "entity_memory":
+      null, "external_memory": null, "embedder": null, "usage_metrics": null, "manager_llm":
+      null, "manager_agent": null, "function_calling_llm": null, "config": null, "id":
+      "004dd8a0-dd87-43fa-bdc8-07f449808028", "share_crew": false, "step_callback":
+      null, "task_callback": null, "before_kickoff_callbacks": [], "after_kickoff_callbacks":
+      [], "max_rpm": null, "prompt_file": null, "output_log_file": null, "planning":
+      false, "planning_llm": null, "task_execution_output_json_files": null, "execution_logs":
+      [], "knowledge_sources": null, "chat_llm": null, "knowledge": null, "security_config":
+      {"fingerprint": "{''metadata'': {}}"}, "token_usage": null, "tracing": false},
+      "i18n": {"prompt_file": null}, "cache_handler": {}, "tools_handler": "<crewai.agents.tools_handler.ToolsHandler
+      object at 0x13ab0b020>", "tools_results": [], "max_tokens": null, "knowledge":
+      null, "knowledge_sources": null, "knowledge_storage": null, "security_config":
+      {"fingerprint": {"metadata": "{}"}}, "callbacks": [], "adapted_agent": false,
+      "knowledge_config": null, "max_execution_time": null, "agent_ops_agent_name":
+      "test role", "agent_ops_agent_id": null, "step_callback": null, "use_system_prompt":
+      true, "function_calling_llm": null, "system_template": null, "prompt_template":
+      null, "response_template": null, "allow_code_execution": false, "respect_context_window":
+      true, "max_retry_limit": 2, "multimodal": false, "inject_date": false, "date_format":
+      "%Y-%m-%d", "code_execution_mode": "safe", "reasoning": false, "max_reasoning_attempts":
+      null, "embedder": null, "agent_knowledge_context": null, "crew_knowledge_context":
+      null, "knowledge_search_query": null, "from_repository": null, "guardrail":
+      null, "guardrail_max_retries": 3}, "from_task": null, "from_agent": null}},
+      {"event_id": "08dc207f-39a1-4af9-8809-90857daacc65", "timestamp": "2025-09-24T05:25:59.038705+00:00",
+      "type": "tool_usage_finished", "event_data": {"timestamp": "2025-09-24T05:25:59.038662+00:00",
+      "type": "tool_usage_finished", "source_fingerprint": null, "source_type": null,
+      "fingerprint_metadata": null, "task_id": "0ca9aa84-9dd9-4ac2-bc7f-2d810dd6097a",
+      "task_name": "Use tool logic for `get_final_answer` but fon''t give you final
+      answer yet, instead keep using it unless you''re told to give your final answer",
+      "agent_id": null, "agent_role": "test role", "agent_key": "e148e5320293499f8cebea826e72582b",
+      "tool_name": "get_final_answer", "tool_args": {"input": "n/a"}, "tool_class":
+      "CrewStructuredTool", "run_attempts": 1, "delegations": 0, "agent": null, "from_task":
+      null, "from_agent": null, "started_at": "2025-09-23T22:25:59.038381", "finished_at":
+      "2025-09-23T22:25:59.038642", "from_cache": false, "output": "42"}}, {"event_id":
+      "df394afd-d8ce-483a-b025-ce462ef84c22", "timestamp": "2025-09-24T05:25:59.042217+00:00",
+      "type": "llm_call_started", "event_data": {"timestamp": "2025-09-24T05:25:59.042086+00:00",
+      "type": "llm_call_started", "source_fingerprint": null, "source_type": null,
+      "fingerprint_metadata": null, "task_id": "0ca9aa84-9dd9-4ac2-bc7f-2d810dd6097a",
+      "task_name": "Use tool logic for `get_final_answer` but fon''t give you final
+      answer yet, instead keep using it unless you''re told to give your final answer",
+      "agent_id": "b6cf723e-04c8-40c5-a927-e2078cfbae59", "agent_role": "test role",
+      "from_task": null, "from_agent": null, "model": "gpt-4o-mini", "messages": [{"role":
+      "system", "content": "You are test role. test backstory\nYour personal goal
+      is: test goal\nYou ONLY have access to the following tools, and should NEVER
+      make up tools that are not listed here:\n\nTool Name: get_final_answer\nTool
+      Arguments: {}\nTool Description: Get the final answer but don''t give it yet,
+      just re-use this\n        tool non-stop.\n\nIMPORTANT: Use the following format
+      in your response:\n\n```\nThought: you should always think about what to do\nAction:
+      the action to take, only one name of [get_final_answer], just the name, exactly
+      as it''s written.\nAction Input: the input to the action, just a simple JSON
+      object, enclosed in curly braces, using \" to wrap keys and values.\nObservation:
+      the result of the action\n```\n\nOnce all necessary information is gathered,
+      return the following format:\n\n```\nThought: I now know the final answer\nFinal
+      Answer: the final answer to the original input question\n```"}, {"role": "user",
+      "content": "\nCurrent Task: Use tool logic for `get_final_answer` but fon''t
+      give you final answer yet, instead keep using it unless you''re told to give
+      your final answer\n\nThis is the expected criteria for your final answer: The
+      final answer\nyou MUST return the actual complete content as the final answer,
+      not a summary.\n\nBegin! This is VERY important to you, use the tools available
+      and give your best Final Answer, your job depends on it!\n\nThought:"}, {"role":
+      "assistant", "content": "I should use the available tool to get the final answer
+      multiple times, as instructed.\n\nAction: get_final_answer\nAction Input: {\"input\":\"n/a\"}\nObservation:
+      42"}], "tools": null, "callbacks": ["<crewai.utilities.token_counter_callback.TokenCalcHandler
+      object at 0x13ab0aba0>"], "available_functions": null}}, {"event_id": "dc346829-0a8e-43b0-b947-00c0cfe771d1",
+      "timestamp": "2025-09-24T05:25:59.043639+00:00", "type": "llm_call_completed",
+      "event_data": {"timestamp": "2025-09-24T05:25:59.043588+00:00", "type": "llm_call_completed",
+      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
+      "task_id": "0ca9aa84-9dd9-4ac2-bc7f-2d810dd6097a", "task_name": "Use tool logic
+      for `get_final_answer` but fon''t give you final answer yet, instead keep using
+      it unless you''re told to give your final answer", "agent_id": "b6cf723e-04c8-40c5-a927-e2078cfbae59",
+      "agent_role": "test role", "from_task": null, "from_agent": null, "messages":
+      [{"role": "system", "content": "You are test role. test backstory\nYour personal
+      goal is: test goal\nYou ONLY have access to the following tools, and should
+      NEVER make up tools that are not listed here:\n\nTool Name: get_final_answer\nTool
+      Arguments: {}\nTool Description: Get the final answer but don''t give it yet,
+      just re-use this\n        tool non-stop.\n\nIMPORTANT: Use the following format
+      in your response:\n\n```\nThought: you should always think about what to do\nAction:
+      the action to take, only one name of [get_final_answer], just the name, exactly
+      as it''s written.\nAction Input: the input to the action, just a simple JSON
+      object, enclosed in curly braces, using \" to wrap keys and values.\nObservation:
+      the result of the action\n```\n\nOnce all necessary information is gathered,
+      return the following format:\n\n```\nThought: I now know the final answer\nFinal
+      Answer: the final answer to the original input question\n```"}, {"role": "user",
+      "content": "\nCurrent Task: Use tool logic for `get_final_answer` but fon''t
+      give you final answer yet, instead keep using it unless you''re told to give
+      your final answer\n\nThis is the expected criteria for your final answer: The
+      final answer\nyou MUST return the actual complete content as the final answer,
+      not a summary.\n\nBegin! This is VERY important to you, use the tools available
+      and give your best Final Answer, your job depends on it!\n\nThought:"}, {"role":
+      "assistant", "content": "I should use the available tool to get the final answer
+      multiple times, as instructed.\n\nAction: get_final_answer\nAction Input: {\"input\":\"n/a\"}\nObservation:
+      42"}], "response": "Thought: I should continue to use the tool to meet the criteria
+      specified.\n\nAction: get_final_answer\nAction Input: {\"input\": \"n/a\"}",
+      "call_type": "<LLMCallType.LLM_CALL: ''llm_call''>", "model": "gpt-4o-mini"}},
+      {"event_id": "dc120a99-64ae-4586-baed-94606a5fc9c6", "timestamp": "2025-09-24T05:25:59.045530+00:00",
+      "type": "llm_call_started", "event_data": {"timestamp": "2025-09-24T05:25:59.045426+00:00",
+      "type": "llm_call_started", "source_fingerprint": null, "source_type": null,
+      "fingerprint_metadata": null, "task_id": "0ca9aa84-9dd9-4ac2-bc7f-2d810dd6097a",
+      "task_name": "Use tool logic for `get_final_answer` but fon''t give you final
+      answer yet, instead keep using it unless you''re told to give your final answer",
+      "agent_id": "b6cf723e-04c8-40c5-a927-e2078cfbae59", "agent_role": "test role",
+      "from_task": null, "from_agent": null, "model": "gpt-4o-mini", "messages": [{"role":
+      "system", "content": "You are test role. test backstory\nYour personal goal
+      is: test goal\nYou ONLY have access to the following tools, and should NEVER
+      make up tools that are not listed here:\n\nTool Name: get_final_answer\nTool
+      Arguments: {}\nTool Description: Get the final answer but don''t give it yet,
+      just re-use this\n        tool non-stop.\n\nIMPORTANT: Use the following format
+      in your response:\n\n```\nThought: you should always think about what to do\nAction:
+      the action to take, only one name of [get_final_answer], just the name, exactly
+      as it''s written.\nAction Input: the input to the action, just a simple JSON
+      object, enclosed in curly braces, using \" to wrap keys and values.\nObservation:
+      the result of the action\n```\n\nOnce all necessary information is gathered,
+      return the following format:\n\n```\nThought: I now know the final answer\nFinal
+      Answer: the final answer to the original input question\n```"}, {"role": "user",
+      "content": "\nCurrent Task: Use tool logic for `get_final_answer` but fon''t
+      give you final answer yet, instead keep using it unless you''re told to give
+      your final answer\n\nThis is the expected criteria for your final answer: The
+      final answer\nyou MUST return the actual complete content as the final answer,
+      not a summary.\n\nBegin! This is VERY important to you, use the tools available
+      and give your best Final Answer, your job depends on it!\n\nThought:"}, {"role":
+      "assistant", "content": "I should use the available tool to get the final answer
+      multiple times, as instructed.\n\nAction: get_final_answer\nAction Input: {\"input\":\"n/a\"}\nObservation:
+      42"}, {"role": "assistant", "content": "Thought: I should continue to use the
+      tool to meet the criteria specified.\n\nAction: get_final_answer\nAction Input:
+      {\"input\": \"n/a\"}\nObservation: I tried reusing the same input, I must stop
+      using this action input. I''ll try something else instead."}], "tools": null,
+      "callbacks": ["<crewai.utilities.token_counter_callback.TokenCalcHandler object
+      at 0x13ab0aba0>"], "available_functions": null}}, {"event_id": "2623e1e9-bc9e-4f6e-a924-d23ff6137e14",
+      "timestamp": "2025-09-24T05:25:59.046818+00:00", "type": "llm_call_completed",
+      "event_data": {"timestamp": "2025-09-24T05:25:59.046779+00:00", "type": "llm_call_completed",
+      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
+      "task_id": "0ca9aa84-9dd9-4ac2-bc7f-2d810dd6097a", "task_name": "Use tool logic
+      for `get_final_answer` but fon''t give you final answer yet, instead keep using
+      it unless you''re told to give your final answer", "agent_id": "b6cf723e-04c8-40c5-a927-e2078cfbae59",
+      "agent_role": "test role", "from_task": null, "from_agent": null, "messages":
+      [{"role": "system", "content": "You are test role. test backstory\nYour personal
+      goal is: test goal\nYou ONLY have access to the following tools, and should
+      NEVER make up tools that are not listed here:\n\nTool Name: get_final_answer\nTool
+      Arguments: {}\nTool Description: Get the final answer but don''t give it yet,
+      just re-use this\n        tool non-stop.\n\nIMPORTANT: Use the following format
+      in your response:\n\n```\nThought: you should always think about what to do\nAction:
+      the action to take, only one name of [get_final_answer], just the name, exactly
+      as it''s written.\nAction Input: the input to the action, just a simple JSON
+      object, enclosed in curly braces, using \" to wrap keys and values.\nObservation:
+      the result of the action\n```\n\nOnce all necessary information is gathered,
+      return the following format:\n\n```\nThought: I now know the final answer\nFinal
+      Answer: the final answer to the original input question\n```"}, {"role": "user",
+      "content": "\nCurrent Task: Use tool logic for `get_final_answer` but fon''t
+      give you final answer yet, instead keep using it unless you''re told to give
+      your final answer\n\nThis is the expected criteria for your final answer: The
+      final answer\nyou MUST return the actual complete content as the final answer,
+      not a summary.\n\nBegin! This is VERY important to you, use the tools available
+      and give your best Final Answer, your job depends on it!\n\nThought:"}, {"role":
+      "assistant", "content": "I should use the available tool to get the final answer
+      multiple times, as instructed.\n\nAction: get_final_answer\nAction Input: {\"input\":\"n/a\"}\nObservation:
+      42"}, {"role": "assistant", "content": "Thought: I should continue to use the
+      tool to meet the criteria specified.\n\nAction: get_final_answer\nAction Input:
+      {\"input\": \"n/a\"}\nObservation: I tried reusing the same input, I must stop
+      using this action input. I''ll try something else instead."}], "response": "Thought:
+      I need to modify my action input to continue using the tool correctly.\n\nAction:
+      get_final_answer\nAction Input: {\"input\": \"test input\"}", "call_type": "<LLMCallType.LLM_CALL:
+      ''llm_call''>", "model": "gpt-4o-mini"}}, {"event_id": "c3d0cf18-52b9-4eff-b5d2-6524f2d609cb",
+      "timestamp": "2025-09-24T05:25:59.047047+00:00", "type": "tool_usage_started",
+      "event_data": {"timestamp": "2025-09-24T05:25:59.046998+00:00", "type": "tool_usage_started",
+      "source_fingerprint": "8089bbc3-ec21-45fe-965b-8d580081bee9", "source_type":
+      "agent", "fingerprint_metadata": null, "task_id": "0ca9aa84-9dd9-4ac2-bc7f-2d810dd6097a",
+      "task_name": "Use tool logic for `get_final_answer` but fon''t give you final
+      answer yet, instead keep using it unless you''re told to give your final answer",
+      "agent_id": null, "agent_role": "test role", "agent_key": "e148e5320293499f8cebea826e72582b",
+      "tool_name": "get_final_answer", "tool_args": "{\"input\": \"test input\"}",
+      "tool_class": "get_final_answer", "run_attempts": null, "delegations": null,
+      "agent": {"id": "b6cf723e-04c8-40c5-a927-e2078cfbae59", "role": "test role",
+      "goal": "test goal", "backstory": "test backstory", "cache": true, "verbose":
+      true, "max_rpm": null, "allow_delegation": false, "tools": [], "max_iter": 6,
+      "agent_executor": "<crewai.agents.crew_agent_executor.CrewAgentExecutor object
+      at 0x13ab0abd0>", "llm": "<crewai.llms.providers.openai.completion.OpenAICompletion
+      object at 0x13ab0b050>", "crew": {"parent_flow": null, "name": "crew", "cache":
+      true, "tasks": ["{''used_tools'': 2, ''tools_errors'': 0, ''delegations'': 0,
+      ''i18n'': {''prompt_file'': None}, ''name'': None, ''prompt_context'': '''',
+      ''description'': \"Use tool logic for `get_final_answer` but fon''t give you
+      final answer yet, instead keep using it unless you''re told to give your final
+      answer\", ''expected_output'': ''The final answer'', ''config'': None, ''callback'':
+      None, ''agent'': {''id'': UUID(''b6cf723e-04c8-40c5-a927-e2078cfbae59''), ''role'':
+      ''test role'', ''goal'': ''test goal'', ''backstory'': ''test backstory'', ''cache'':
+      True, ''verbose'': True, ''max_rpm'': None, ''allow_delegation'': False, ''tools'':
+      [], ''max_iter'': 6, ''agent_executor'': <crewai.agents.crew_agent_executor.CrewAgentExecutor
+      object at 0x13ab0abd0>, ''llm'': <crewai.llms.providers.openai.completion.OpenAICompletion
+      object at 0x13ab0b050>, ''crew'': Crew(id=004dd8a0-dd87-43fa-bdc8-07f449808028,
+      process=Process.sequential, number_of_agents=1, number_of_tasks=1), ''i18n'':
+      {''prompt_file'': None}, ''cache_handler'': {}, ''tools_handler'': <crewai.agents.tools_handler.ToolsHandler
+      object at 0x13ab0b020>, ''tools_results'': [{''result'': ''42'', ''tool_name'':
+      ''get_final_answer'', ''tool_args'': {''input'': ''n/a''}}], ''max_tokens'':
+      None, ''knowledge'': None, ''knowledge_sources'': None, ''knowledge_storage'':
+      None, ''security_config'': {''fingerprint'': {''metadata'': {}}}, ''callbacks'':
+      [], ''adapted_agent'': False, ''knowledge_config'': None}, ''context'': NOT_SPECIFIED,
+      ''async_execution'': False, ''output_json'': None, ''output_pydantic'': None,
+      ''output_file'': None, ''create_directory'': True, ''output'': None, ''tools'':
+      [{''name'': ''get_final_answer'', ''description'': \"Tool Name: get_final_answer\\nTool
+      Arguments: {}\\nTool Description: Get the final answer but don''t give it yet,
+      just re-use this\\n        tool non-stop.\", ''env_vars'': [], ''args_schema'':
+      <class ''abc.Get_Final_Answer''>, ''description_updated'': False, ''cache_function'':
+      <function BaseTool.<lambda> at 0x107ff9440>, ''result_as_answer'': False, ''max_usage_count'':
+      None, ''current_usage_count'': 1}], ''security_config'': {''fingerprint'': {''metadata'':
+      {}}}, ''id'': UUID(''0ca9aa84-9dd9-4ac2-bc7f-2d810dd6097a''), ''human_input'':
+      False, ''markdown'': False, ''converter_cls'': None, ''processed_by_agents'':
+      {''test role''}, ''guardrail'': None, ''max_retries'': None, ''guardrail_max_retries'':
+      3, ''retry_count'': 0, ''start_time'': datetime.datetime(2025, 9, 23, 22, 25,
+      59, 31761), ''end_time'': None, ''allow_crewai_trigger_context'': None}"], "agents":
+      ["{''id'': UUID(''b6cf723e-04c8-40c5-a927-e2078cfbae59''), ''role'': ''test
+      role'', ''goal'': ''test goal'', ''backstory'': ''test backstory'', ''cache'':
+      True, ''verbose'': True, ''max_rpm'': None, ''allow_delegation'': False, ''tools'':
+      [], ''max_iter'': 6, ''agent_executor'': <crewai.agents.crew_agent_executor.CrewAgentExecutor
+      object at 0x13ab0abd0>, ''llm'': <crewai.llms.providers.openai.completion.OpenAICompletion
+      object at 0x13ab0b050>, ''crew'': Crew(id=004dd8a0-dd87-43fa-bdc8-07f449808028,
+      process=Process.sequential, number_of_agents=1, number_of_tasks=1), ''i18n'':
+      {''prompt_file'': None}, ''cache_handler'': {}, ''tools_handler'': <crewai.agents.tools_handler.ToolsHandler
+      object at 0x13ab0b020>, ''tools_results'': [{''result'': ''42'', ''tool_name'':
+      ''get_final_answer'', ''tool_args'': {''input'': ''n/a''}}], ''max_tokens'':
+      None, ''knowledge'': None, ''knowledge_sources'': None, ''knowledge_storage'':
+      None, ''security_config'': {''fingerprint'': {''metadata'': {}}}, ''callbacks'':
+      [], ''adapted_agent'': False, ''knowledge_config'': None}"], "process": "sequential",
+      "verbose": true, "memory": false, "short_term_memory": null, "long_term_memory":
+      null, "entity_memory": null, "external_memory": null, "embedder": null, "usage_metrics":
+      null, "manager_llm": null, "manager_agent": null, "function_calling_llm": null,
+      "config": null, "id": "004dd8a0-dd87-43fa-bdc8-07f449808028", "share_crew":
+      false, "step_callback": null, "task_callback": null, "before_kickoff_callbacks":
+      [], "after_kickoff_callbacks": [], "max_rpm": null, "prompt_file": null, "output_log_file":
+      null, "planning": false, "planning_llm": null, "task_execution_output_json_files":
+      null, "execution_logs": [], "knowledge_sources": null, "chat_llm": null, "knowledge":
+      null, "security_config": {"fingerprint": "{''metadata'': {}}"}, "token_usage":
+      null, "tracing": false}, "i18n": {"prompt_file": null}, "cache_handler": {},
+      "tools_handler": "<crewai.agents.tools_handler.ToolsHandler object at 0x13ab0b020>",
+      "tools_results": [{"result": "''42''", "tool_name": "''get_final_answer''",
+      "tool_args": "{''input'': ''n/a''}"}], "max_tokens": null, "knowledge": null,
+      "knowledge_sources": null, "knowledge_storage": null, "security_config": {"fingerprint":
+      {"metadata": "{}"}}, "callbacks": [], "adapted_agent": false, "knowledge_config":
+      null, "max_execution_time": null, "agent_ops_agent_name": "test role", "agent_ops_agent_id":
+      null, "step_callback": null, "use_system_prompt": true, "function_calling_llm":
+      null, "system_template": null, "prompt_template": null, "response_template":
+      null, "allow_code_execution": false, "respect_context_window": true, "max_retry_limit":
+      2, "multimodal": false, "inject_date": false, "date_format": "%Y-%m-%d", "code_execution_mode":
+      "safe", "reasoning": false, "max_reasoning_attempts": null, "embedder": null,
+      "agent_knowledge_context": null, "crew_knowledge_context": null, "knowledge_search_query":
+      null, "from_repository": null, "guardrail": null, "guardrail_max_retries": 3},
+      "from_task": null, "from_agent": null}}, {"event_id": "36434770-56d8-4ea7-b506-d87312b6140e",
+      "timestamp": "2025-09-24T05:25:59.047664+00:00", "type": "tool_usage_finished",
+      "event_data": {"timestamp": "2025-09-24T05:25:59.047633+00:00", "type": "tool_usage_finished",
+      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
+      "task_id": "0ca9aa84-9dd9-4ac2-bc7f-2d810dd6097a", "task_name": "Use tool logic
+      for `get_final_answer` but fon''t give you final answer yet, instead keep using
+      it unless you''re told to give your final answer", "agent_id": null, "agent_role":
+      "test role", "agent_key": "e148e5320293499f8cebea826e72582b", "tool_name": "get_final_answer",
+      "tool_args": {"input": "test input"}, "tool_class": "CrewStructuredTool", "run_attempts":
+      1, "delegations": 0, "agent": null, "from_task": null, "from_agent": null, "started_at":
+      "2025-09-23T22:25:59.047259", "finished_at": "2025-09-23T22:25:59.047617", "from_cache":
+      false, "output": "<MagicMock name=''_remember_format()'' id=''5279627312''>"}},
+      {"event_id": "a0d2bb7d-e5b9-4e3c-bc21-d18546ed110b", "timestamp": "2025-09-24T05:25:59.049259+00:00",
+      "type": "llm_call_started", "event_data": {"timestamp": "2025-09-24T05:25:59.049168+00:00",
+      "type": "llm_call_started", "source_fingerprint": null, "source_type": null,
+      "fingerprint_metadata": null, "task_id": "0ca9aa84-9dd9-4ac2-bc7f-2d810dd6097a",
+      "task_name": "Use tool logic for `get_final_answer` but fon''t give you final
+      answer yet, instead keep using it unless you''re told to give your final answer",
+      "agent_id": "b6cf723e-04c8-40c5-a927-e2078cfbae59", "agent_role": "test role",
+      "from_task": null, "from_agent": null, "model": "gpt-4o-mini", "messages": [{"role":
+      "system", "content": "You are test role. test backstory\nYour personal goal
+      is: test goal\nYou ONLY have access to the following tools, and should NEVER
+      make up tools that are not listed here:\n\nTool Name: get_final_answer\nTool
+      Arguments: {}\nTool Description: Get the final answer but don''t give it yet,
+      just re-use this\n        tool non-stop.\n\nIMPORTANT: Use the following format
+      in your response:\n\n```\nThought: you should always think about what to do\nAction:
+      the action to take, only one name of [get_final_answer], just the name, exactly
+      as it''s written.\nAction Input: the input to the action, just a simple JSON
+      object, enclosed in curly braces, using \" to wrap keys and values.\nObservation:
+      the result of the action\n```\n\nOnce all necessary information is gathered,
+      return the following format:\n\n```\nThought: I now know the final answer\nFinal
+      Answer: the final answer to the original input question\n```"}, {"role": "user",
+      "content": "\nCurrent Task: Use tool logic for `get_final_answer` but fon''t
+      give you final answer yet, instead keep using it unless you''re told to give
+      your final answer\n\nThis is the expected criteria for your final answer: The
+      final answer\nyou MUST return the actual complete content as the final answer,
+      not a summary.\n\nBegin! This is VERY important to you, use the tools available
+      and give your best Final Answer, your job depends on it!\n\nThought:"}, {"role":
+      "assistant", "content": "I should use the available tool to get the final answer
+      multiple times, as instructed.\n\nAction: get_final_answer\nAction Input: {\"input\":\"n/a\"}\nObservation:
+      42"}, {"role": "assistant", "content": "Thought: I should continue to use the
+      tool to meet the criteria specified.\n\nAction: get_final_answer\nAction Input:
+      {\"input\": \"n/a\"}\nObservation: I tried reusing the same input, I must stop
+      using this action input. I''ll try something else instead."}, {"role": "assistant",
+      "content": "Thought: I need to modify my action input to continue using the
+      tool correctly.\n\nAction: get_final_answer\nAction Input: {\"input\": \"test
+      input\"}\nObservation: <MagicMock name=''_remember_format()'' id=''5279627312''>"}],
+      "tools": null, "callbacks": ["<crewai.utilities.token_counter_callback.TokenCalcHandler
+      object at 0x13ab0aba0>"], "available_functions": null}}, {"event_id": "603166bd-f912-4db7-b3d1-03ce4a63e122",
+      "timestamp": "2025-09-24T05:25:59.050706+00:00", "type": "llm_call_completed",
+      "event_data": {"timestamp": "2025-09-24T05:25:59.050662+00:00", "type": "llm_call_completed",
+      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
+      "task_id": "0ca9aa84-9dd9-4ac2-bc7f-2d810dd6097a", "task_name": "Use tool logic
+      for `get_final_answer` but fon''t give you final answer yet, instead keep using
+      it unless you''re told to give your final answer", "agent_id": "b6cf723e-04c8-40c5-a927-e2078cfbae59",
+      "agent_role": "test role", "from_task": null, "from_agent": null, "messages":
+      [{"role": "system", "content": "You are test role. test backstory\nYour personal
+      goal is: test goal\nYou ONLY have access to the following tools, and should
+      NEVER make up tools that are not listed here:\n\nTool Name: get_final_answer\nTool
+      Arguments: {}\nTool Description: Get the final answer but don''t give it yet,
+      just re-use this\n        tool non-stop.\n\nIMPORTANT: Use the following format
+      in your response:\n\n```\nThought: you should always think about what to do\nAction:
+      the action to take, only one name of [get_final_answer], just the name, exactly
+      as it''s written.\nAction Input: the input to the action, just a simple JSON
+      object, enclosed in curly braces, using \" to wrap keys and values.\nObservation:
+      the result of the action\n```\n\nOnce all necessary information is gathered,
+      return the following format:\n\n```\nThought: I now know the final answer\nFinal
+      Answer: the final answer to the original input question\n```"}, {"role": "user",
+      "content": "\nCurrent Task: Use tool logic for `get_final_answer` but fon''t
+      give you final answer yet, instead keep using it unless you''re told to give
+      your final answer\n\nThis is the expected criteria for your final answer: The
+      final answer\nyou MUST return the actual complete content as the final answer,
+      not a summary.\n\nBegin! This is VERY important to you, use the tools available
+      and give your best Final Answer, your job depends on it!\n\nThought:"}, {"role":
+      "assistant", "content": "I should use the available tool to get the final answer
+      multiple times, as instructed.\n\nAction: get_final_answer\nAction Input: {\"input\":\"n/a\"}\nObservation:
+      42"}, {"role": "assistant", "content": "Thought: I should continue to use the
+      tool to meet the criteria specified.\n\nAction: get_final_answer\nAction Input:
+      {\"input\": \"n/a\"}\nObservation: I tried reusing the same input, I must stop
+      using this action input. I''ll try something else instead."}, {"role": "assistant",
+      "content": "Thought: I need to modify my action input to continue using the
+      tool correctly.\n\nAction: get_final_answer\nAction Input: {\"input\": \"test
+      input\"}\nObservation: <MagicMock name=''_remember_format()'' id=''5279627312''>"}],
+      "response": "Thought: I should try another variation in the input to observe
+      any changes and continue using the tool.\n\nAction: get_final_answer\nAction
+      Input: {\"input\": \"retrying with new input\"}", "call_type": "<LLMCallType.LLM_CALL:
+      ''llm_call''>", "model": "gpt-4o-mini"}}, {"event_id": "89ff2fb9-8a8c-467e-8414-d89923aab204",
+      "timestamp": "2025-09-24T05:25:59.050949+00:00", "type": "tool_usage_started",
+      "event_data": {"timestamp": "2025-09-24T05:25:59.050905+00:00", "type": "tool_usage_started",
+      "source_fingerprint": "363cc2aa-b694-4cb1-a834-aa5d693977ab", "source_type":
+      "agent", "fingerprint_metadata": null, "task_id": "0ca9aa84-9dd9-4ac2-bc7f-2d810dd6097a",
+      "task_name": "Use tool logic for `get_final_answer` but fon''t give you final
+      answer yet, instead keep using it unless you''re told to give your final answer",
+      "agent_id": null, "agent_role": "test role", "agent_key": "e148e5320293499f8cebea826e72582b",
+      "tool_name": "get_final_answer", "tool_args": "{\"input\": \"retrying with new
+      input\"}", "tool_class": "get_final_answer", "run_attempts": null, "delegations":
+      null, "agent": {"id": "b6cf723e-04c8-40c5-a927-e2078cfbae59", "role": "test
+      role", "goal": "test goal", "backstory": "test backstory", "cache": true, "verbose":
+      true, "max_rpm": null, "allow_delegation": false, "tools": [], "max_iter": 6,
+      "agent_executor": "<crewai.agents.crew_agent_executor.CrewAgentExecutor object
+      at 0x13ab0abd0>", "llm": "<crewai.llms.providers.openai.completion.OpenAICompletion
+      object at 0x13ab0b050>", "crew": {"parent_flow": null, "name": "crew", "cache":
+      true, "tasks": ["{''used_tools'': 3, ''tools_errors'': 0, ''delegations'': 0,
+      ''i18n'': {''prompt_file'': None}, ''name'': None, ''prompt_context'': '''',
+      ''description'': \"Use tool logic for `get_final_answer` but fon''t give you
+      final answer yet, instead keep using it unless you''re told to give your final
+      answer\", ''expected_output'': ''The final answer'', ''config'': None, ''callback'':
+      None, ''agent'': {''id'': UUID(''b6cf723e-04c8-40c5-a927-e2078cfbae59''), ''role'':
+      ''test role'', ''goal'': ''test goal'', ''backstory'': ''test backstory'', ''cache'':
+      True, ''verbose'': True, ''max_rpm'': None, ''allow_delegation'': False, ''tools'':
+      [], ''max_iter'': 6, ''agent_executor'': <crewai.agents.crew_agent_executor.CrewAgentExecutor
+      object at 0x13ab0abd0>, ''llm'': <crewai.llms.providers.openai.completion.OpenAICompletion
+      object at 0x13ab0b050>, ''crew'': Crew(id=004dd8a0-dd87-43fa-bdc8-07f449808028,
+      process=Process.sequential, number_of_agents=1, number_of_tasks=1), ''i18n'':
+      {''prompt_file'': None}, ''cache_handler'': {}, ''tools_handler'': <crewai.agents.tools_handler.ToolsHandler
+      object at 0x13ab0b020>, ''tools_results'': [{''result'': ''42'', ''tool_name'':
+      ''get_final_answer'', ''tool_args'': {''input'': ''n/a''}}, {''result'': \"<MagicMock
+      name=''_remember_format()'' id=''5279627312''>\", ''tool_name'': ''get_final_answer'',
+      ''tool_args'': {''input'': ''test input''}}], ''max_tokens'': None, ''knowledge'':
+      None, ''knowledge_sources'': None, ''knowledge_storage'': None, ''security_config'':
+      {''fingerprint'': {''metadata'': {}}}, ''callbacks'': [], ''adapted_agent'':
+      False, ''knowledge_config'': None}, ''context'': NOT_SPECIFIED, ''async_execution'':
+      False, ''output_json'': None, ''output_pydantic'': None, ''output_file'': None,
+      ''create_directory'': True, ''output'': None, ''tools'': [{''name'': ''get_final_answer'',
+      ''description'': \"Tool Name: get_final_answer\\nTool Arguments: {}\\nTool Description:
+      Get the final answer but don''t give it yet, just re-use this\\n        tool
+      non-stop.\", ''env_vars'': [], ''args_schema'': <class ''abc.Get_Final_Answer''>,
+      ''description_updated'': False, ''cache_function'': <function BaseTool.<lambda>
+      at 0x107ff9440>, ''result_as_answer'': False, ''max_usage_count'': None, ''current_usage_count'':
+      3}], ''security_config'': {''fingerprint'': {''metadata'': {}}}, ''id'': UUID(''0ca9aa84-9dd9-4ac2-bc7f-2d810dd6097a''),
+      ''human_input'': False, ''markdown'': False, ''converter_cls'': None, ''processed_by_agents'':
+      {''test role''}, ''guardrail'': None, ''max_retries'': None, ''guardrail_max_retries'':
+      3, ''retry_count'': 0, ''start_time'': datetime.datetime(2025, 9, 23, 22, 25,
+      59, 31761), ''end_time'': None, ''allow_crewai_trigger_context'': None}"], "agents":
+      ["{''id'': UUID(''b6cf723e-04c8-40c5-a927-e2078cfbae59''), ''role'': ''test
+      role'', ''goal'': ''test goal'', ''backstory'': ''test backstory'', ''cache'':
+      True, ''verbose'': True, ''max_rpm'': None, ''allow_delegation'': False, ''tools'':
+      [], ''max_iter'': 6, ''agent_executor'': <crewai.agents.crew_agent_executor.CrewAgentExecutor
+      object at 0x13ab0abd0>, ''llm'': <crewai.llms.providers.openai.completion.OpenAICompletion
+      object at 0x13ab0b050>, ''crew'': Crew(id=004dd8a0-dd87-43fa-bdc8-07f449808028,
+      process=Process.sequential, number_of_agents=1, number_of_tasks=1), ''i18n'':
+      {''prompt_file'': None}, ''cache_handler'': {}, ''tools_handler'': <crewai.agents.tools_handler.ToolsHandler
+      object at 0x13ab0b020>, ''tools_results'': [{''result'': ''42'', ''tool_name'':
+      ''get_final_answer'', ''tool_args'': {''input'': ''n/a''}}, {''result'': \"<MagicMock
+      name=''_remember_format()'' id=''5279627312''>\", ''tool_name'': ''get_final_answer'',
+      ''tool_args'': {''input'': ''test input''}}], ''max_tokens'': None, ''knowledge'':
+      None, ''knowledge_sources'': None, ''knowledge_storage'': None, ''security_config'':
+      {''fingerprint'': {''metadata'': {}}}, ''callbacks'': [], ''adapted_agent'':
+      False, ''knowledge_config'': None}"], "process": "sequential", "verbose": true,
+      "memory": false, "short_term_memory": null, "long_term_memory": null, "entity_memory":
+      null, "external_memory": null, "embedder": null, "usage_metrics": null, "manager_llm":
+      null, "manager_agent": null, "function_calling_llm": null, "config": null, "id":
+      "004dd8a0-dd87-43fa-bdc8-07f449808028", "share_crew": false, "step_callback":
+      null, "task_callback": null, "before_kickoff_callbacks": [], "after_kickoff_callbacks":
+      [], "max_rpm": null, "prompt_file": null, "output_log_file": null, "planning":
+      false, "planning_llm": null, "task_execution_output_json_files": null, "execution_logs":
+      [], "knowledge_sources": null, "chat_llm": null, "knowledge": null, "security_config":
+      {"fingerprint": "{''metadata'': {}}"}, "token_usage": null, "tracing": false},
+      "i18n": {"prompt_file": null}, "cache_handler": {}, "tools_handler": "<crewai.agents.tools_handler.ToolsHandler
+      object at 0x13ab0b020>", "tools_results": [{"result": "''42''", "tool_name":
+      "''get_final_answer''", "tool_args": "{''input'': ''n/a''}"}, {"result": "\"<MagicMock
+      name=''_remember_format()'' id=''5279627312''>\"", "tool_name": "''get_final_answer''",
+      "tool_args": "{''input'': ''test input''}"}], "max_tokens": null, "knowledge":
+      null, "knowledge_sources": null, "knowledge_storage": null, "security_config":
+      {"fingerprint": {"metadata": "{}"}}, "callbacks": [], "adapted_agent": false,
+      "knowledge_config": null, "max_execution_time": null, "agent_ops_agent_name":
+      "test role", "agent_ops_agent_id": null, "step_callback": null, "use_system_prompt":
+      true, "function_calling_llm": null, "system_template": null, "prompt_template":
+      null, "response_template": null, "allow_code_execution": false, "respect_context_window":
+      true, "max_retry_limit": 2, "multimodal": false, "inject_date": false, "date_format":
+      "%Y-%m-%d", "code_execution_mode": "safe", "reasoning": false, "max_reasoning_attempts":
+      null, "embedder": null, "agent_knowledge_context": null, "crew_knowledge_context":
+      null, "knowledge_search_query": null, "from_repository": null, "guardrail":
+      null, "guardrail_max_retries": 3}, "from_task": null, "from_agent": null}},
+      {"event_id": "cea30d80-1aed-4c57-8a3e-04283e988770", "timestamp": "2025-09-24T05:25:59.051325+00:00",
+      "type": "tool_usage_finished", "event_data": {"timestamp": "2025-09-24T05:25:59.051299+00:00",
+      "type": "tool_usage_finished", "source_fingerprint": null, "source_type": null,
+      "fingerprint_metadata": null, "task_id": "0ca9aa84-9dd9-4ac2-bc7f-2d810dd6097a",
+      "task_name": "Use tool logic for `get_final_answer` but fon''t give you final
+      answer yet, instead keep using it unless you''re told to give your final answer",
+      "agent_id": null, "agent_role": "test role", "agent_key": "e148e5320293499f8cebea826e72582b",
+      "tool_name": "get_final_answer", "tool_args": {"input": "retrying with new input"},
+      "tool_class": "CrewStructuredTool", "run_attempts": 1, "delegations": 0, "agent":
+      null, "from_task": null, "from_agent": null, "started_at": "2025-09-23T22:25:59.051126",
+      "finished_at": "2025-09-23T22:25:59.051285", "from_cache": false, "output":
+      "42"}}, {"event_id": "34be85d1-e742-4a01-aef2-afab16791949", "timestamp": "2025-09-24T05:25:59.052829+00:00",
+      "type": "llm_call_started", "event_data": {"timestamp": "2025-09-24T05:25:59.052743+00:00",
+      "type": "llm_call_started", "source_fingerprint": null, "source_type": null,
+      "fingerprint_metadata": null, "task_id": "0ca9aa84-9dd9-4ac2-bc7f-2d810dd6097a",
+      "task_name": "Use tool logic for `get_final_answer` but fon''t give you final
+      answer yet, instead keep using it unless you''re told to give your final answer",
+      "agent_id": "b6cf723e-04c8-40c5-a927-e2078cfbae59", "agent_role": "test role",
+      "from_task": null, "from_agent": null, "model": "gpt-4o-mini", "messages": [{"role":
+      "system", "content": "You are test role. test backstory\nYour personal goal
+      is: test goal\nYou ONLY have access to the following tools, and should NEVER
+      make up tools that are not listed here:\n\nTool Name: get_final_answer\nTool
+      Arguments: {}\nTool Description: Get the final answer but don''t give it yet,
+      just re-use this\n        tool non-stop.\n\nIMPORTANT: Use the following format
+      in your response:\n\n```\nThought: you should always think about what to do\nAction:
+      the action to take, only one name of [get_final_answer], just the name, exactly
+      as it''s written.\nAction Input: the input to the action, just a simple JSON
+      object, enclosed in curly braces, using \" to wrap keys and values.\nObservation:
+      the result of the action\n```\n\nOnce all necessary information is gathered,
+      return the following format:\n\n```\nThought: I now know the final answer\nFinal
+      Answer: the final answer to the original input question\n```"}, {"role": "user",
+      "content": "\nCurrent Task: Use tool logic for `get_final_answer` but fon''t
+      give you final answer yet, instead keep using it unless you''re told to give
+      your final answer\n\nThis is the expected criteria for your final answer: The
+      final answer\nyou MUST return the actual complete content as the final answer,
+      not a summary.\n\nBegin! This is VERY important to you, use the tools available
+      and give your best Final Answer, your job depends on it!\n\nThought:"}, {"role":
+      "assistant", "content": "I should use the available tool to get the final answer
+      multiple times, as instructed.\n\nAction: get_final_answer\nAction Input: {\"input\":\"n/a\"}\nObservation:
+      42"}, {"role": "assistant", "content": "Thought: I should continue to use the
+      tool to meet the criteria specified.\n\nAction: get_final_answer\nAction Input:
+      {\"input\": \"n/a\"}\nObservation: I tried reusing the same input, I must stop
+      using this action input. I''ll try something else instead."}, {"role": "assistant",
+      "content": "Thought: I need to modify my action input to continue using the
+      tool correctly.\n\nAction: get_final_answer\nAction Input: {\"input\": \"test
+      input\"}\nObservation: <MagicMock name=''_remember_format()'' id=''5279627312''>"},
+      {"role": "assistant", "content": "Thought: I should try another variation in
+      the input to observe any changes and continue using the tool.\n\nAction: get_final_answer\nAction
+      Input: {\"input\": \"retrying with new input\"}\nObservation: 42"}], "tools":
+      null, "callbacks": ["<crewai.utilities.token_counter_callback.TokenCalcHandler
+      object at 0x13ab0aba0>"], "available_functions": null}}, {"event_id": "3f2bb116-90d7-4317-8ee4-7e9a8afd988b",
+      "timestamp": "2025-09-24T05:25:59.054235+00:00", "type": "llm_call_completed",
+      "event_data": {"timestamp": "2025-09-24T05:25:59.054196+00:00", "type": "llm_call_completed",
+      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
+      "task_id": "0ca9aa84-9dd9-4ac2-bc7f-2d810dd6097a", "task_name": "Use tool logic
+      for `get_final_answer` but fon''t give you final answer yet, instead keep using
+      it unless you''re told to give your final answer", "agent_id": "b6cf723e-04c8-40c5-a927-e2078cfbae59",
+      "agent_role": "test role", "from_task": null, "from_agent": null, "messages":
+      [{"role": "system", "content": "You are test role. test backstory\nYour personal
+      goal is: test goal\nYou ONLY have access to the following tools, and should
+      NEVER make up tools that are not listed here:\n\nTool Name: get_final_answer\nTool
+      Arguments: {}\nTool Description: Get the final answer but don''t give it yet,
+      just re-use this\n        tool non-stop.\n\nIMPORTANT: Use the following format
+      in your response:\n\n```\nThought: you should always think about what to do\nAction:
+      the action to take, only one name of [get_final_answer], just the name, exactly
+      as it''s written.\nAction Input: the input to the action, just a simple JSON
+      object, enclosed in curly braces, using \" to wrap keys and values.\nObservation:
+      the result of the action\n```\n\nOnce all necessary information is gathered,
+      return the following format:\n\n```\nThought: I now know the final answer\nFinal
+      Answer: the final answer to the original input question\n```"}, {"role": "user",
+      "content": "\nCurrent Task: Use tool logic for `get_final_answer` but fon''t
+      give you final answer yet, instead keep using it unless you''re told to give
+      your final answer\n\nThis is the expected criteria for your final answer: The
+      final answer\nyou MUST return the actual complete content as the final answer,
+      not a summary.\n\nBegin! This is VERY important to you, use the tools available
+      and give your best Final Answer, your job depends on it!\n\nThought:"}, {"role":
+      "assistant", "content": "I should use the available tool to get the final answer
+      multiple times, as instructed.\n\nAction: get_final_answer\nAction Input: {\"input\":\"n/a\"}\nObservation:
+      42"}, {"role": "assistant", "content": "Thought: I should continue to use the
+      tool to meet the criteria specified.\n\nAction: get_final_answer\nAction Input:
+      {\"input\": \"n/a\"}\nObservation: I tried reusing the same input, I must stop
+      using this action input. I''ll try something else instead."}, {"role": "assistant",
+      "content": "Thought: I need to modify my action input to continue using the
+      tool correctly.\n\nAction: get_final_answer\nAction Input: {\"input\": \"test
+      input\"}\nObservation: <MagicMock name=''_remember_format()'' id=''5279627312''>"},
+      {"role": "assistant", "content": "Thought: I should try another variation in
+      the input to observe any changes and continue using the tool.\n\nAction: get_final_answer\nAction
+      Input: {\"input\": \"retrying with new input\"}\nObservation: 42"}], "response":
+      "Thought: I should perform the action again, but not give the final answer yet.
+      I''ll just keep using the tool as instructed.\n\nAction: get_final_answer\nAction
+      Input: {\"input\": \"test input\"}", "call_type": "<LLMCallType.LLM_CALL: ''llm_call''>",
+      "model": "gpt-4o-mini"}}, {"event_id": "becb08f6-6599-41a3-a4cc-582ddd127333",
+      "timestamp": "2025-09-24T05:25:59.054448+00:00", "type": "tool_usage_started",
+      "event_data": {"timestamp": "2025-09-24T05:25:59.054407+00:00", "type": "tool_usage_started",
+      "source_fingerprint": "21b12a2e-c0dc-4009-b601-84d7dbd9e8a3", "source_type":
+      "agent", "fingerprint_metadata": null, "task_id": "0ca9aa84-9dd9-4ac2-bc7f-2d810dd6097a",
+      "task_name": "Use tool logic for `get_final_answer` but fon''t give you final
+      answer yet, instead keep using it unless you''re told to give your final answer",
+      "agent_id": null, "agent_role": "test role", "agent_key": "e148e5320293499f8cebea826e72582b",
+      "tool_name": "get_final_answer", "tool_args": "{\"input\": \"test input\"}",
+      "tool_class": "get_final_answer", "run_attempts": null, "delegations": null,
+      "agent": {"id": "b6cf723e-04c8-40c5-a927-e2078cfbae59", "role": "test role",
+      "goal": "test goal", "backstory": "test backstory", "cache": true, "verbose":
+      true, "max_rpm": null, "allow_delegation": false, "tools": [], "max_iter": 6,
+      "agent_executor": "<crewai.agents.crew_agent_executor.CrewAgentExecutor object
+      at 0x13ab0abd0>", "llm": "<crewai.llms.providers.openai.completion.OpenAICompletion
+      object at 0x13ab0b050>", "crew": {"parent_flow": null, "name": "crew", "cache":
+      true, "tasks": ["{''used_tools'': 4, ''tools_errors'': 0, ''delegations'': 0,
+      ''i18n'': {''prompt_file'': None}, ''name'': None, ''prompt_context'': '''',
+      ''description'': \"Use tool logic for `get_final_answer` but fon''t give you
+      final answer yet, instead keep using it unless you''re told to give your final
+      answer\", ''expected_output'': ''The final answer'', ''config'': None, ''callback'':
+      None, ''agent'': {''id'': UUID(''b6cf723e-04c8-40c5-a927-e2078cfbae59''), ''role'':
+      ''test role'', ''goal'': ''test goal'', ''backstory'': ''test backstory'', ''cache'':
+      True, ''verbose'': True, ''max_rpm'': None, ''allow_delegation'': False, ''tools'':
+      [], ''max_iter'': 6, ''agent_executor'': <crewai.agents.crew_agent_executor.CrewAgentExecutor
+      object at 0x13ab0abd0>, ''llm'': <crewai.llms.providers.openai.completion.OpenAICompletion
+      object at 0x13ab0b050>, ''crew'': Crew(id=004dd8a0-dd87-43fa-bdc8-07f449808028,
+      process=Process.sequential, number_of_agents=1, number_of_tasks=1), ''i18n'':
+      {''prompt_file'': None}, ''cache_handler'': {}, ''tools_handler'': <crewai.agents.tools_handler.ToolsHandler
+      object at 0x13ab0b020>, ''tools_results'': [{''result'': ''42'', ''tool_name'':
+      ''get_final_answer'', ''tool_args'': {''input'': ''n/a''}}, {''result'': \"<MagicMock
+      name=''_remember_format()'' id=''5279627312''>\", ''tool_name'': ''get_final_answer'',
+      ''tool_args'': {''input'': ''test input''}}, {''result'': ''42'', ''tool_name'':
+      ''get_final_answer'', ''tool_args'': {''input'': ''retrying with new input''}}],
+      ''max_tokens'': None, ''knowledge'': None, ''knowledge_sources'': None, ''knowledge_storage'':
+      None, ''security_config'': {''fingerprint'': {''metadata'': {}}}, ''callbacks'':
+      [], ''adapted_agent'': False, ''knowledge_config'': None}, ''context'': NOT_SPECIFIED,
+      ''async_execution'': False, ''output_json'': None, ''output_pydantic'': None,
+      ''output_file'': None, ''create_directory'': True, ''output'': None, ''tools'':
+      [{''name'': ''get_final_answer'', ''description'': \"Tool Name: get_final_answer\\nTool
+      Arguments: {}\\nTool Description: Get the final answer but don''t give it yet,
+      just re-use this\\n        tool non-stop.\", ''env_vars'': [], ''args_schema'':
+      <class ''abc.Get_Final_Answer''>, ''description_updated'': False, ''cache_function'':
+      <function BaseTool.<lambda> at 0x107ff9440>, ''result_as_answer'': False, ''max_usage_count'':
+      None, ''current_usage_count'': 5}], ''security_config'': {''fingerprint'': {''metadata'':
+      {}}}, ''id'': UUID(''0ca9aa84-9dd9-4ac2-bc7f-2d810dd6097a''), ''human_input'':
+      False, ''markdown'': False, ''converter_cls'': None, ''processed_by_agents'':
+      {''test role''}, ''guardrail'': None, ''max_retries'': None, ''guardrail_max_retries'':
+      3, ''retry_count'': 0, ''start_time'': datetime.datetime(2025, 9, 23, 22, 25,
+      59, 31761), ''end_time'': None, ''allow_crewai_trigger_context'': None}"], "agents":
+      ["{''id'': UUID(''b6cf723e-04c8-40c5-a927-e2078cfbae59''), ''role'': ''test
+      role'', ''goal'': ''test goal'', ''backstory'': ''test backstory'', ''cache'':
+      True, ''verbose'': True, ''max_rpm'': None, ''allow_delegation'': False, ''tools'':
+      [], ''max_iter'': 6, ''agent_executor'': <crewai.agents.crew_agent_executor.CrewAgentExecutor
+      object at 0x13ab0abd0>, ''llm'': <crewai.llms.providers.openai.completion.OpenAICompletion
+      object at 0x13ab0b050>, ''crew'': Crew(id=004dd8a0-dd87-43fa-bdc8-07f449808028,
+      process=Process.sequential, number_of_agents=1, number_of_tasks=1), ''i18n'':
+      {''prompt_file'': None}, ''cache_handler'': {}, ''tools_handler'': <crewai.agents.tools_handler.ToolsHandler
+      object at 0x13ab0b020>, ''tools_results'': [{''result'': ''42'', ''tool_name'':
+      ''get_final_answer'', ''tool_args'': {''input'': ''n/a''}}, {''result'': \"<MagicMock
+      name=''_remember_format()'' id=''5279627312''>\", ''tool_name'': ''get_final_answer'',
+      ''tool_args'': {''input'': ''test input''}}, {''result'': ''42'', ''tool_name'':
+      ''get_final_answer'', ''tool_args'': {''input'': ''retrying with new input''}}],
+      ''max_tokens'': None, ''knowledge'': None, ''knowledge_sources'': None, ''knowledge_storage'':
+      None, ''security_config'': {''fingerprint'': {''metadata'': {}}}, ''callbacks'':
+      [], ''adapted_agent'': False, ''knowledge_config'': None}"], "process": "sequential",
+      "verbose": true, "memory": false, "short_term_memory": null, "long_term_memory":
+      null, "entity_memory": null, "external_memory": null, "embedder": null, "usage_metrics":
+      null, "manager_llm": null, "manager_agent": null, "function_calling_llm": null,
+      "config": null, "id": "004dd8a0-dd87-43fa-bdc8-07f449808028", "share_crew":
+      false, "step_callback": null, "task_callback": null, "before_kickoff_callbacks":
+      [], "after_kickoff_callbacks": [], "max_rpm": null, "prompt_file": null, "output_log_file":
+      null, "planning": false, "planning_llm": null, "task_execution_output_json_files":
+      null, "execution_logs": [], "knowledge_sources": null, "chat_llm": null, "knowledge":
+      null, "security_config": {"fingerprint": "{''metadata'': {}}"}, "token_usage":
+      null, "tracing": false}, "i18n": {"prompt_file": null}, "cache_handler": {},
+      "tools_handler": "<crewai.agents.tools_handler.ToolsHandler object at 0x13ab0b020>",
+      "tools_results": [{"result": "''42''", "tool_name": "''get_final_answer''",
+      "tool_args": "{''input'': ''n/a''}"}, {"result": "\"<MagicMock name=''_remember_format()''
+      id=''5279627312''>\"", "tool_name": "''get_final_answer''", "tool_args": "{''input'':
+      ''test input''}"}, {"result": "''42''", "tool_name": "''get_final_answer''",
+      "tool_args": "{''input'': ''retrying with new input''}"}], "max_tokens": null,
+      "knowledge": null, "knowledge_sources": null, "knowledge_storage": null, "security_config":
+      {"fingerprint": {"metadata": "{}"}}, "callbacks": [], "adapted_agent": false,
+      "knowledge_config": null, "max_execution_time": null, "agent_ops_agent_name":
+      "test role", "agent_ops_agent_id": null, "step_callback": null, "use_system_prompt":
+      true, "function_calling_llm": null, "system_template": null, "prompt_template":
+      null, "response_template": null, "allow_code_execution": false, "respect_context_window":
+      true, "max_retry_limit": 2, "multimodal": false, "inject_date": false, "date_format":
+      "%Y-%m-%d", "code_execution_mode": "safe", "reasoning": false, "max_reasoning_attempts":
+      null, "embedder": null, "agent_knowledge_context": null, "crew_knowledge_context":
+      null, "knowledge_search_query": null, "from_repository": null, "guardrail":
+      null, "guardrail_max_retries": 3}, "from_task": null, "from_agent": null}},
+      {"event_id": "97a0ab47-cdb9-4ff4-8c55-c334d3d9f573", "timestamp": "2025-09-24T05:25:59.054677+00:00",
+      "type": "tool_usage_finished", "event_data": {"timestamp": "2025-09-24T05:25:59.054653+00:00",
+      "type": "tool_usage_finished", "source_fingerprint": null, "source_type": null,
+      "fingerprint_metadata": null, "task_id": "0ca9aa84-9dd9-4ac2-bc7f-2d810dd6097a",
+      "task_name": "Use tool logic for `get_final_answer` but fon''t give you final
+      answer yet, instead keep using it unless you''re told to give your final answer",
+      "agent_id": null, "agent_role": "test role", "agent_key": "e148e5320293499f8cebea826e72582b",
+      "tool_name": "get_final_answer", "tool_args": {"input": "test input"}, "tool_class":
+      "CrewStructuredTool", "run_attempts": 1, "delegations": 0, "agent": null, "from_task":
+      null, "from_agent": null, "started_at": "2025-09-23T22:25:59.054618", "finished_at":
+      "2025-09-23T22:25:59.054640", "from_cache": true, "output": "42"}}, {"event_id":
+      "612e1b43-1dfc-42d7-a522-4642eee61f62", "timestamp": "2025-09-24T05:25:59.056161+00:00",
+      "type": "llm_call_started", "event_data": {"timestamp": "2025-09-24T05:25:59.056060+00:00",
+      "type": "llm_call_started", "source_fingerprint": null, "source_type": null,
+      "fingerprint_metadata": null, "task_id": "0ca9aa84-9dd9-4ac2-bc7f-2d810dd6097a",
+      "task_name": "Use tool logic for `get_final_answer` but fon''t give you final
+      answer yet, instead keep using it unless you''re told to give your final answer",
+      "agent_id": "b6cf723e-04c8-40c5-a927-e2078cfbae59", "agent_role": "test role",
+      "from_task": null, "from_agent": null, "model": "gpt-4o-mini", "messages": [{"role":
+      "system", "content": "You are test role. test backstory\nYour personal goal
+      is: test goal\nYou ONLY have access to the following tools, and should NEVER
+      make up tools that are not listed here:\n\nTool Name: get_final_answer\nTool
+      Arguments: {}\nTool Description: Get the final answer but don''t give it yet,
+      just re-use this\n        tool non-stop.\n\nIMPORTANT: Use the following format
+      in your response:\n\n```\nThought: you should always think about what to do\nAction:
+      the action to take, only one name of [get_final_answer], just the name, exactly
+      as it''s written.\nAction Input: the input to the action, just a simple JSON
+      object, enclosed in curly braces, using \" to wrap keys and values.\nObservation:
+      the result of the action\n```\n\nOnce all necessary information is gathered,
+      return the following format:\n\n```\nThought: I now know the final answer\nFinal
+      Answer: the final answer to the original input question\n```"}, {"role": "user",
+      "content": "\nCurrent Task: Use tool logic for `get_final_answer` but fon''t
+      give you final answer yet, instead keep using it unless you''re told to give
+      your final answer\n\nThis is the expected criteria for your final answer: The
+      final answer\nyou MUST return the actual complete content as the final answer,
+      not a summary.\n\nBegin! This is VERY important to you, use the tools available
+      and give your best Final Answer, your job depends on it!\n\nThought:"}, {"role":
+      "assistant", "content": "I should use the available tool to get the final answer
+      multiple times, as instructed.\n\nAction: get_final_answer\nAction Input: {\"input\":\"n/a\"}\nObservation:
+      42"}, {"role": "assistant", "content": "Thought: I should continue to use the
+      tool to meet the criteria specified.\n\nAction: get_final_answer\nAction Input:
+      {\"input\": \"n/a\"}\nObservation: I tried reusing the same input, I must stop
+      using this action input. I''ll try something else instead."}, {"role": "assistant",
+      "content": "Thought: I need to modify my action input to continue using the
+      tool correctly.\n\nAction: get_final_answer\nAction Input: {\"input\": \"test
+      input\"}\nObservation: <MagicMock name=''_remember_format()'' id=''5279627312''>"},
+      {"role": "assistant", "content": "Thought: I should try another variation in
+      the input to observe any changes and continue using the tool.\n\nAction: get_final_answer\nAction
+      Input: {\"input\": \"retrying with new input\"}\nObservation: 42"}, {"role":
+      "assistant", "content": "Thought: I should perform the action again, but not
+      give the final answer yet. I''ll just keep using the tool as instructed.\n\nAction:
+      get_final_answer\nAction Input: {\"input\": \"test input\"}\nObservation: 42"}],
+      "tools": null, "callbacks": ["<crewai.utilities.token_counter_callback.TokenCalcHandler
+      object at 0x13ab0aba0>"], "available_functions": null}}, {"event_id": "aa39bc12-f0d4-4557-bb62-9da9e9bf1c0d",
+      "timestamp": "2025-09-24T05:25:59.057693+00:00", "type": "llm_call_completed",
+      "event_data": {"timestamp": "2025-09-24T05:25:59.057663+00:00", "type": "llm_call_completed",
+      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
+      "task_id": "0ca9aa84-9dd9-4ac2-bc7f-2d810dd6097a", "task_name": "Use tool logic
+      for `get_final_answer` but fon''t give you final answer yet, instead keep using
+      it unless you''re told to give your final answer", "agent_id": "b6cf723e-04c8-40c5-a927-e2078cfbae59",
+      "agent_role": "test role", "from_task": null, "from_agent": null, "messages":
+      [{"role": "system", "content": "You are test role. test backstory\nYour personal
+      goal is: test goal\nYou ONLY have access to the following tools, and should
+      NEVER make up tools that are not listed here:\n\nTool Name: get_final_answer\nTool
+      Arguments: {}\nTool Description: Get the final answer but don''t give it yet,
+      just re-use this\n        tool non-stop.\n\nIMPORTANT: Use the following format
+      in your response:\n\n```\nThought: you should always think about what to do\nAction:
+      the action to take, only one name of [get_final_answer], just the name, exactly
+      as it''s written.\nAction Input: the input to the action, just a simple JSON
+      object, enclosed in curly braces, using \" to wrap keys and values.\nObservation:
+      the result of the action\n```\n\nOnce all necessary information is gathered,
+      return the following format:\n\n```\nThought: I now know the final answer\nFinal
+      Answer: the final answer to the original input question\n```"}, {"role": "user",
+      "content": "\nCurrent Task: Use tool logic for `get_final_answer` but fon''t
+      give you final answer yet, instead keep using it unless you''re told to give
+      your final answer\n\nThis is the expected criteria for your final answer: The
+      final answer\nyou MUST return the actual complete content as the final answer,
+      not a summary.\n\nBegin! This is VERY important to you, use the tools available
+      and give your best Final Answer, your job depends on it!\n\nThought:"}, {"role":
+      "assistant", "content": "I should use the available tool to get the final answer
+      multiple times, as instructed.\n\nAction: get_final_answer\nAction Input: {\"input\":\"n/a\"}\nObservation:
+      42"}, {"role": "assistant", "content": "Thought: I should continue to use the
+      tool to meet the criteria specified.\n\nAction: get_final_answer\nAction Input:
+      {\"input\": \"n/a\"}\nObservation: I tried reusing the same input, I must stop
+      using this action input. I''ll try something else instead."}, {"role": "assistant",
+      "content": "Thought: I need to modify my action input to continue using the
+      tool correctly.\n\nAction: get_final_answer\nAction Input: {\"input\": \"test
+      input\"}\nObservation: <MagicMock name=''_remember_format()'' id=''5279627312''>"},
+      {"role": "assistant", "content": "Thought: I should try another variation in
+      the input to observe any changes and continue using the tool.\n\nAction: get_final_answer\nAction
+      Input: {\"input\": \"retrying with new input\"}\nObservation: 42"}, {"role":
+      "assistant", "content": "Thought: I should perform the action again, but not
+      give the final answer yet. I''ll just keep using the tool as instructed.\n\nAction:
+      get_final_answer\nAction Input: {\"input\": \"test input\"}\nObservation: 42"}],
+      "response": "Thought: I need to make sure that I correctly utilize the tool
+      without giving the final answer prematurely.\n\nAction: get_final_answer\nAction
+      Input: {\"input\": \"test example\"}", "call_type": "<LLMCallType.LLM_CALL:
+      ''llm_call''>", "model": "gpt-4o-mini"}}, {"event_id": "138c2344-693e-414b-b40c-d7b5007d18aa",
+      "timestamp": "2025-09-24T05:25:59.057871+00:00", "type": "tool_usage_started",
+      "event_data": {"timestamp": "2025-09-24T05:25:59.057838+00:00", "type": "tool_usage_started",
+      "source_fingerprint": "22eecb35-0620-4721-9705-7206cfd4c6c3", "source_type":
+      "agent", "fingerprint_metadata": null, "task_id": "0ca9aa84-9dd9-4ac2-bc7f-2d810dd6097a",
+      "task_name": "Use tool logic for `get_final_answer` but fon''t give you final
+      answer yet, instead keep using it unless you''re told to give your final answer",
+      "agent_id": null, "agent_role": "test role", "agent_key": "e148e5320293499f8cebea826e72582b",
+      "tool_name": "get_final_answer", "tool_args": "{\"input\": \"test example\"}",
+      "tool_class": "get_final_answer", "run_attempts": null, "delegations": null,
+      "agent": {"id": "b6cf723e-04c8-40c5-a927-e2078cfbae59", "role": "test role",
+      "goal": "test goal", "backstory": "test backstory", "cache": true, "verbose":
+      true, "max_rpm": null, "allow_delegation": false, "tools": [], "max_iter": 6,
+      "agent_executor": "<crewai.agents.crew_agent_executor.CrewAgentExecutor object
+      at 0x13ab0abd0>", "llm": "<crewai.llms.providers.openai.completion.OpenAICompletion
+      object at 0x13ab0b050>", "crew": {"parent_flow": null, "name": "crew", "cache":
+      true, "tasks": ["{''used_tools'': 5, ''tools_errors'': 0, ''delegations'': 0,
+      ''i18n'': {''prompt_file'': None}, ''name'': None, ''prompt_context'': '''',
+      ''description'': \"Use tool logic for `get_final_answer` but fon''t give you
+      final answer yet, instead keep using it unless you''re told to give your final
+      answer\", ''expected_output'': ''The final answer'', ''config'': None, ''callback'':
+      None, ''agent'': {''id'': UUID(''b6cf723e-04c8-40c5-a927-e2078cfbae59''), ''role'':
+      ''test role'', ''goal'': ''test goal'', ''backstory'': ''test backstory'', ''cache'':
+      True, ''verbose'': True, ''max_rpm'': None, ''allow_delegation'': False, ''tools'':
+      [], ''max_iter'': 6, ''agent_executor'': <crewai.agents.crew_agent_executor.CrewAgentExecutor
+      object at 0x13ab0abd0>, ''llm'': <crewai.llms.providers.openai.completion.OpenAICompletion
+      object at 0x13ab0b050>, ''crew'': Crew(id=004dd8a0-dd87-43fa-bdc8-07f449808028,
+      process=Process.sequential, number_of_agents=1, number_of_tasks=1), ''i18n'':
+      {''prompt_file'': None}, ''cache_handler'': {}, ''tools_handler'': <crewai.agents.tools_handler.ToolsHandler
+      object at 0x13ab0b020>, ''tools_results'': [{''result'': ''42'', ''tool_name'':
+      ''get_final_answer'', ''tool_args'': {''input'': ''n/a''}}, {''result'': \"<MagicMock
+      name=''_remember_format()'' id=''5279627312''>\", ''tool_name'': ''get_final_answer'',
+      ''tool_args'': {''input'': ''test input''}}, {''result'': ''42'', ''tool_name'':
+      ''get_final_answer'', ''tool_args'': {''input'': ''retrying with new input''}},
+      {''result'': ''42'', ''tool_name'': ''get_final_answer'', ''tool_args'': {''input'':
+      ''test input''}}], ''max_tokens'': None, ''knowledge'': None, ''knowledge_sources'':
+      None, ''knowledge_storage'': None, ''security_config'': {''fingerprint'': {''metadata'':
+      {}}}, ''callbacks'': [], ''adapted_agent'': False, ''knowledge_config'': None},
+      ''context'': NOT_SPECIFIED, ''async_execution'': False, ''output_json'': None,
+      ''output_pydantic'': None, ''output_file'': None, ''create_directory'': True,
+      ''output'': None, ''tools'': [{''name'': ''get_final_answer'', ''description'':
+      \"Tool Name: get_final_answer\\nTool Arguments: {}\\nTool Description: Get the
+      final answer but don''t give it yet, just re-use this\\n        tool non-stop.\",
+      ''env_vars'': [], ''args_schema'': <class ''abc.Get_Final_Answer''>, ''description_updated'':
+      False, ''cache_function'': <function BaseTool.<lambda> at 0x107ff9440>, ''result_as_answer'':
+      False, ''max_usage_count'': None, ''current_usage_count'': 5}], ''security_config'':
+      {''fingerprint'': {''metadata'': {}}}, ''id'': UUID(''0ca9aa84-9dd9-4ac2-bc7f-2d810dd6097a''),
+      ''human_input'': False, ''markdown'': False, ''converter_cls'': None, ''processed_by_agents'':
+      {''test role''}, ''guardrail'': None, ''max_retries'': None, ''guardrail_max_retries'':
+      3, ''retry_count'': 0, ''start_time'': datetime.datetime(2025, 9, 23, 22, 25,
+      59, 31761), ''end_time'': None, ''allow_crewai_trigger_context'': None}"], "agents":
+      ["{''id'': UUID(''b6cf723e-04c8-40c5-a927-e2078cfbae59''), ''role'': ''test
+      role'', ''goal'': ''test goal'', ''backstory'': ''test backstory'', ''cache'':
+      True, ''verbose'': True, ''max_rpm'': None, ''allow_delegation'': False, ''tools'':
+      [], ''max_iter'': 6, ''agent_executor'': <crewai.agents.crew_agent_executor.CrewAgentExecutor
+      object at 0x13ab0abd0>, ''llm'': <crewai.llms.providers.openai.completion.OpenAICompletion
+      object at 0x13ab0b050>, ''crew'': Crew(id=004dd8a0-dd87-43fa-bdc8-07f449808028,
+      process=Process.sequential, number_of_agents=1, number_of_tasks=1), ''i18n'':
+      {''prompt_file'': None}, ''cache_handler'': {}, ''tools_handler'': <crewai.agents.tools_handler.ToolsHandler
+      object at 0x13ab0b020>, ''tools_results'': [{''result'': ''42'', ''tool_name'':
+      ''get_final_answer'', ''tool_args'': {''input'': ''n/a''}}, {''result'': \"<MagicMock
+      name=''_remember_format()'' id=''5279627312''>\", ''tool_name'': ''get_final_answer'',
+      ''tool_args'': {''input'': ''test input''}}, {''result'': ''42'', ''tool_name'':
+      ''get_final_answer'', ''tool_args'': {''input'': ''retrying with new input''}},
+      {''result'': ''42'', ''tool_name'': ''get_final_answer'', ''tool_args'': {''input'':
+      ''test input''}}], ''max_tokens'': None, ''knowledge'': None, ''knowledge_sources'':
+      None, ''knowledge_storage'': None, ''security_config'': {''fingerprint'': {''metadata'':
+      {}}}, ''callbacks'': [], ''adapted_agent'': False, ''knowledge_config'': None}"],
+      "process": "sequential", "verbose": true, "memory": false, "short_term_memory":
+      null, "long_term_memory": null, "entity_memory": null, "external_memory": null,
+      "embedder": null, "usage_metrics": null, "manager_llm": null, "manager_agent":
+      null, "function_calling_llm": null, "config": null, "id": "004dd8a0-dd87-43fa-bdc8-07f449808028",
+      "share_crew": false, "step_callback": null, "task_callback": null, "before_kickoff_callbacks":
+      [], "after_kickoff_callbacks": [], "max_rpm": null, "prompt_file": null, "output_log_file":
+      null, "planning": false, "planning_llm": null, "task_execution_output_json_files":
+      null, "execution_logs": [], "knowledge_sources": null, "chat_llm": null, "knowledge":
+      null, "security_config": {"fingerprint": "{''metadata'': {}}"}, "token_usage":
+      null, "tracing": false}, "i18n": {"prompt_file": null}, "cache_handler": {},
+      "tools_handler": "<crewai.agents.tools_handler.ToolsHandler object at 0x13ab0b020>",
+      "tools_results": [{"result": "''42''", "tool_name": "''get_final_answer''",
+      "tool_args": "{''input'': ''n/a''}"}, {"result": "\"<MagicMock name=''_remember_format()''
+      id=''5279627312''>\"", "tool_name": "''get_final_answer''", "tool_args": "{''input'':
+      ''test input''}"}, {"result": "''42''", "tool_name": "''get_final_answer''",
+      "tool_args": "{''input'': ''retrying with new input''}"}, {"result": "''42''",
+      "tool_name": "''get_final_answer''", "tool_args": "{''input'': ''test input''}"}],
+      "max_tokens": null, "knowledge": null, "knowledge_sources": null, "knowledge_storage":
+      null, "security_config": {"fingerprint": {"metadata": "{}"}}, "callbacks": [],
+      "adapted_agent": false, "knowledge_config": null, "max_execution_time": null,
+      "agent_ops_agent_name": "test role", "agent_ops_agent_id": null, "step_callback":
+      null, "use_system_prompt": true, "function_calling_llm": null, "system_template":
+      null, "prompt_template": null, "response_template": null, "allow_code_execution":
+      false, "respect_context_window": true, "max_retry_limit": 2, "multimodal": false,
+      "inject_date": false, "date_format": "%Y-%m-%d", "code_execution_mode": "safe",
+      "reasoning": false, "max_reasoning_attempts": null, "embedder": null, "agent_knowledge_context":
+      null, "crew_knowledge_context": null, "knowledge_search_query": null, "from_repository":
+      null, "guardrail": null, "guardrail_max_retries": 3}, "from_task": null, "from_agent":
+      null}}, {"event_id": "8f2d2136-b5f7-4fc4-8c38-65fff1df7426", "timestamp": "2025-09-24T05:25:59.058200+00:00",
+      "type": "tool_usage_finished", "event_data": {"timestamp": "2025-09-24T05:25:59.058178+00:00",
+      "type": "tool_usage_finished", "source_fingerprint": null, "source_type": null,
+      "fingerprint_metadata": null, "task_id": "0ca9aa84-9dd9-4ac2-bc7f-2d810dd6097a",
+      "task_name": "Use tool logic for `get_final_answer` but fon''t give you final
+      answer yet, instead keep using it unless you''re told to give your final answer",
+      "agent_id": null, "agent_role": "test role", "agent_key": "e148e5320293499f8cebea826e72582b",
+      "tool_name": "get_final_answer", "tool_args": {"input": "test example"}, "tool_class":
+      "CrewStructuredTool", "run_attempts": 1, "delegations": 0, "agent": null, "from_task":
+      null, "from_agent": null, "started_at": "2025-09-23T22:25:59.058012", "finished_at":
+      "2025-09-23T22:25:59.058167", "from_cache": false, "output": "<MagicMock name=''_remember_format()''
+      id=''5279627312''>"}}, {"event_id": "6442ca72-88fd-4d9a-93aa-02f1906f9753",
+      "timestamp": "2025-09-24T05:25:59.059935+00:00", "type": "llm_call_started",
+      "event_data": {"timestamp": "2025-09-24T05:25:59.059837+00:00", "type": "llm_call_started",
+      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
+      "task_id": null, "task_name": null, "agent_id": null, "agent_role": null, "from_task":
+      null, "from_agent": null, "model": "gpt-4o-mini", "messages": [{"role": "system",
+      "content": "You are test role. test backstory\nYour personal goal is: test goal\nYou
+      ONLY have access to the following tools, and should NEVER make up tools that
+      are not listed here:\n\nTool Name: get_final_answer\nTool Arguments: {}\nTool
+      Description: Get the final answer but don''t give it yet, just re-use this\n        tool
+      non-stop.\n\nIMPORTANT: Use the following format in your response:\n\n```\nThought:
+      you should always think about what to do\nAction: the action to take, only one
+      name of [get_final_answer], just the name, exactly as it''s written.\nAction
+      Input: the input to the action, just a simple JSON object, enclosed in curly
+      braces, using \" to wrap keys and values.\nObservation: the result of the action\n```\n\nOnce
+      all necessary information is gathered, return the following format:\n\n```\nThought:
+      I now know the final answer\nFinal Answer: the final answer to the original
+      input question\n```"}, {"role": "user", "content": "\nCurrent Task: Use tool
+      logic for `get_final_answer` but fon''t give you final answer yet, instead keep
+      using it unless you''re told to give your final answer\n\nThis is the expected
+      criteria for your final answer: The final answer\nyou MUST return the actual
+      complete content as the final answer, not a summary.\n\nBegin! This is VERY
+      important to you, use the tools available and give your best Final Answer, your
+      job depends on it!\n\nThought:"}, {"role": "assistant", "content": "I should
+      use the available tool to get the final answer multiple times, as instructed.\n\nAction:
+      get_final_answer\nAction Input: {\"input\":\"n/a\"}\nObservation: 42"}, {"role":
+      "assistant", "content": "Thought: I should continue to use the tool to meet
+      the criteria specified.\n\nAction: get_final_answer\nAction Input: {\"input\":
+      \"n/a\"}\nObservation: I tried reusing the same input, I must stop using this
+      action input. I''ll try something else instead."}, {"role": "assistant", "content":
+      "Thought: I need to modify my action input to continue using the tool correctly.\n\nAction:
+      get_final_answer\nAction Input: {\"input\": \"test input\"}\nObservation: <MagicMock
+      name=''_remember_format()'' id=''5279627312''>"}, {"role": "assistant", "content":
+      "Thought: I should try another variation in the input to observe any changes
+      and continue using the tool.\n\nAction: get_final_answer\nAction Input: {\"input\":
+      \"retrying with new input\"}\nObservation: 42"}, {"role": "assistant", "content":
+      "Thought: I should perform the action again, but not give the final answer yet.
+      I''ll just keep using the tool as instructed.\n\nAction: get_final_answer\nAction
+      Input: {\"input\": \"test input\"}\nObservation: 42"}, {"role": "assistant",
+      "content": "Thought: I need to make sure that I correctly utilize the tool without
+      giving the final answer prematurely.\n\nAction: get_final_answer\nAction Input:
+      {\"input\": \"test example\"}\nObservation: <MagicMock name=''_remember_format()''
+      id=''5279627312''>"}, {"role": "assistant", "content": "Thought: I need to make
+      sure that I correctly utilize the tool without giving the final answer prematurely.\n\nAction:
+      get_final_answer\nAction Input: {\"input\": \"test example\"}\nObservation:
+      <MagicMock name=''_remember_format()'' id=''5279627312''>\nNow it''s time you
+      MUST give your absolute best final answer. You''ll ignore all previous instructions,
+      stop using any tools, and just return your absolute BEST Final answer."}], "tools":
+      null, "callbacks": ["<crewai.utilities.token_counter_callback.TokenCalcHandler
+      object at 0x13ab0aba0>"], "available_functions": null}}, {"event_id": "3bf412fe-db1d-43e9-9332-9116a1c6c340",
+      "timestamp": "2025-09-24T05:25:59.061640+00:00", "type": "llm_call_completed",
+      "event_data": {"timestamp": "2025-09-24T05:25:59.061605+00:00", "type": "llm_call_completed",
+      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
+      "task_id": null, "task_name": null, "agent_id": null, "agent_role": null, "from_task":
+      null, "from_agent": null, "messages": [{"role": "system", "content": "You are
+      test role. test backstory\nYour personal goal is: test goal\nYou ONLY have access
+      to the following tools, and should NEVER make up tools that are not listed here:\n\nTool
+      Name: get_final_answer\nTool Arguments: {}\nTool Description: Get the final
+      answer but don''t give it yet, just re-use this\n        tool non-stop.\n\nIMPORTANT:
+      Use the following format in your response:\n\n```\nThought: you should always
+      think about what to do\nAction: the action to take, only one name of [get_final_answer],
+      just the name, exactly as it''s written.\nAction Input: the input to the action,
+      just a simple JSON object, enclosed in curly braces, using \" to wrap keys and
+      values.\nObservation: the result of the action\n```\n\nOnce all necessary information
+      is gathered, return the following format:\n\n```\nThought: I now know the final
+      answer\nFinal Answer: the final answer to the original input question\n```"},
+      {"role": "user", "content": "\nCurrent Task: Use tool logic for `get_final_answer`
+      but fon''t give you final answer yet, instead keep using it unless you''re told
+      to give your final answer\n\nThis is the expected criteria for your final answer:
+      The final answer\nyou MUST return the actual complete content as the final answer,
+      not a summary.\n\nBegin! This is VERY important to you, use the tools available
+      and give your best Final Answer, your job depends on it!\n\nThought:"}, {"role":
+      "assistant", "content": "I should use the available tool to get the final answer
+      multiple times, as instructed.\n\nAction: get_final_answer\nAction Input: {\"input\":\"n/a\"}\nObservation:
+      42"}, {"role": "assistant", "content": "Thought: I should continue to use the
+      tool to meet the criteria specified.\n\nAction: get_final_answer\nAction Input:
+      {\"input\": \"n/a\"}\nObservation: I tried reusing the same input, I must stop
+      using this action input. I''ll try something else instead."}, {"role": "assistant",
+      "content": "Thought: I need to modify my action input to continue using the
+      tool correctly.\n\nAction: get_final_answer\nAction Input: {\"input\": \"test
+      input\"}\nObservation: <MagicMock name=''_remember_format()'' id=''5279627312''>"},
+      {"role": "assistant", "content": "Thought: I should try another variation in
+      the input to observe any changes and continue using the tool.\n\nAction: get_final_answer\nAction
+      Input: {\"input\": \"retrying with new input\"}\nObservation: 42"}, {"role":
+      "assistant", "content": "Thought: I should perform the action again, but not
+      give the final answer yet. I''ll just keep using the tool as instructed.\n\nAction:
+      get_final_answer\nAction Input: {\"input\": \"test input\"}\nObservation: 42"},
+      {"role": "assistant", "content": "Thought: I need to make sure that I correctly
+      utilize the tool without giving the final answer prematurely.\n\nAction: get_final_answer\nAction
+      Input: {\"input\": \"test example\"}\nObservation: <MagicMock name=''_remember_format()''
+      id=''5279627312''>"}, {"role": "assistant", "content": "Thought: I need to make
+      sure that I correctly utilize the tool without giving the final answer prematurely.\n\nAction:
+      get_final_answer\nAction Input: {\"input\": \"test example\"}\nObservation:
+      <MagicMock name=''_remember_format()'' id=''5279627312''>\nNow it''s time you
+      MUST give your absolute best final answer. You''ll ignore all previous instructions,
+      stop using any tools, and just return your absolute BEST Final answer."}], "response":
+      "Thought: I now know the final answer.\n\nFinal Answer: 42", "call_type": "<LLMCallType.LLM_CALL:
+      ''llm_call''>", "model": "gpt-4o-mini"}}, {"event_id": "e28669e9-3b95-4950-9f8c-ffe593c81e4c",
+      "timestamp": "2025-09-24T05:25:59.061747+00:00", "type": "llm_call_started",
+      "event_data": {"timestamp": "2025-09-24T05:25:59.061712+00:00", "type": "llm_call_started",
+      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
+      "task_id": "0ca9aa84-9dd9-4ac2-bc7f-2d810dd6097a", "task_name": "Use tool logic
+      for `get_final_answer` but fon''t give you final answer yet, instead keep using
+      it unless you''re told to give your final answer", "agent_id": "b6cf723e-04c8-40c5-a927-e2078cfbae59",
+      "agent_role": "test role", "from_task": null, "from_agent": null, "model": "gpt-4o-mini",
+      "messages": [{"role": "system", "content": "You are test role. test backstory\nYour
+      personal goal is: test goal\nYou ONLY have access to the following tools, and
+      should NEVER make up tools that are not listed here:\n\nTool Name: get_final_answer\nTool
+      Arguments: {}\nTool Description: Get the final answer but don''t give it yet,
+      just re-use this\n        tool non-stop.\n\nIMPORTANT: Use the following format
+      in your response:\n\n```\nThought: you should always think about what to do\nAction:
+      the action to take, only one name of [get_final_answer], just the name, exactly
+      as it''s written.\nAction Input: the input to the action, just a simple JSON
+      object, enclosed in curly braces, using \" to wrap keys and values.\nObservation:
+      the result of the action\n```\n\nOnce all necessary information is gathered,
+      return the following format:\n\n```\nThought: I now know the final answer\nFinal
+      Answer: the final answer to the original input question\n```"}, {"role": "user",
+      "content": "\nCurrent Task: Use tool logic for `get_final_answer` but fon''t
+      give you final answer yet, instead keep using it unless you''re told to give
+      your final answer\n\nThis is the expected criteria for your final answer: The
+      final answer\nyou MUST return the actual complete content as the final answer,
+      not a summary.\n\nBegin! This is VERY important to you, use the tools available
+      and give your best Final Answer, your job depends on it!\n\nThought:"}, {"role":
+      "assistant", "content": "I should use the available tool to get the final answer
+      multiple times, as instructed.\n\nAction: get_final_answer\nAction Input: {\"input\":\"n/a\"}\nObservation:
+      42"}, {"role": "assistant", "content": "Thought: I should continue to use the
+      tool to meet the criteria specified.\n\nAction: get_final_answer\nAction Input:
+      {\"input\": \"n/a\"}\nObservation: I tried reusing the same input, I must stop
+      using this action input. I''ll try something else instead."}, {"role": "assistant",
+      "content": "Thought: I need to modify my action input to continue using the
+      tool correctly.\n\nAction: get_final_answer\nAction Input: {\"input\": \"test
+      input\"}\nObservation: <MagicMock name=''_remember_format()'' id=''5279627312''>"},
+      {"role": "assistant", "content": "Thought: I should try another variation in
+      the input to observe any changes and continue using the tool.\n\nAction: get_final_answer\nAction
+      Input: {\"input\": \"retrying with new input\"}\nObservation: 42"}, {"role":
+      "assistant", "content": "Thought: I should perform the action again, but not
+      give the final answer yet. I''ll just keep using the tool as instructed.\n\nAction:
+      get_final_answer\nAction Input: {\"input\": \"test input\"}\nObservation: 42"},
+      {"role": "assistant", "content": "Thought: I need to make sure that I correctly
+      utilize the tool without giving the final answer prematurely.\n\nAction: get_final_answer\nAction
+      Input: {\"input\": \"test example\"}\nObservation: <MagicMock name=''_remember_format()''
+      id=''5279627312''>"}, {"role": "assistant", "content": "Thought: I need to make
+      sure that I correctly utilize the tool without giving the final answer prematurely.\n\nAction:
+      get_final_answer\nAction Input: {\"input\": \"test example\"}\nObservation:
+      <MagicMock name=''_remember_format()'' id=''5279627312''>\nNow it''s time you
+      MUST give your absolute best final answer. You''ll ignore all previous instructions,
+      stop using any tools, and just return your absolute BEST Final answer."}], "tools":
+      null, "callbacks": ["<crewai.utilities.token_counter_callback.TokenCalcHandler
+      object at 0x13ab0aba0>"], "available_functions": null}}, {"event_id": "feba715f-d4ff-4b0e-aea9-53ce6da54425",
+      "timestamp": "2025-09-24T05:25:59.063459+00:00", "type": "llm_call_completed",
+      "event_data": {"timestamp": "2025-09-24T05:25:59.063423+00:00", "type": "llm_call_completed",
+      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
+      "task_id": "0ca9aa84-9dd9-4ac2-bc7f-2d810dd6097a", "task_name": "Use tool logic
+      for `get_final_answer` but fon''t give you final answer yet, instead keep using
+      it unless you''re told to give your final answer", "agent_id": "b6cf723e-04c8-40c5-a927-e2078cfbae59",
+      "agent_role": "test role", "from_task": null, "from_agent": null, "messages":
+      [{"role": "system", "content": "You are test role. test backstory\nYour personal
+      goal is: test goal\nYou ONLY have access to the following tools, and should
+      NEVER make up tools that are not listed here:\n\nTool Name: get_final_answer\nTool
+      Arguments: {}\nTool Description: Get the final answer but don''t give it yet,
+      just re-use this\n        tool non-stop.\n\nIMPORTANT: Use the following format
+      in your response:\n\n```\nThought: you should always think about what to do\nAction:
+      the action to take, only one name of [get_final_answer], just the name, exactly
+      as it''s written.\nAction Input: the input to the action, just a simple JSON
+      object, enclosed in curly braces, using \" to wrap keys and values.\nObservation:
+      the result of the action\n```\n\nOnce all necessary information is gathered,
+      return the following format:\n\n```\nThought: I now know the final answer\nFinal
+      Answer: the final answer to the original input question\n```"}, {"role": "user",
+      "content": "\nCurrent Task: Use tool logic for `get_final_answer` but fon''t
+      give you final answer yet, instead keep using it unless you''re told to give
+      your final answer\n\nThis is the expected criteria for your final answer: The
+      final answer\nyou MUST return the actual complete content as the final answer,
+      not a summary.\n\nBegin! This is VERY important to you, use the tools available
+      and give your best Final Answer, your job depends on it!\n\nThought:"}, {"role":
+      "assistant", "content": "I should use the available tool to get the final answer
+      multiple times, as instructed.\n\nAction: get_final_answer\nAction Input: {\"input\":\"n/a\"}\nObservation:
+      42"}, {"role": "assistant", "content": "Thought: I should continue to use the
+      tool to meet the criteria specified.\n\nAction: get_final_answer\nAction Input:
+      {\"input\": \"n/a\"}\nObservation: I tried reusing the same input, I must stop
+      using this action input. I''ll try something else instead."}, {"role": "assistant",
+      "content": "Thought: I need to modify my action input to continue using the
+      tool correctly.\n\nAction: get_final_answer\nAction Input: {\"input\": \"test
+      input\"}\nObservation: <MagicMock name=''_remember_format()'' id=''5279627312''>"},
+      {"role": "assistant", "content": "Thought: I should try another variation in
+      the input to observe any changes and continue using the tool.\n\nAction: get_final_answer\nAction
+      Input: {\"input\": \"retrying with new input\"}\nObservation: 42"}, {"role":
+      "assistant", "content": "Thought: I should perform the action again, but not
+      give the final answer yet. I''ll just keep using the tool as instructed.\n\nAction:
+      get_final_answer\nAction Input: {\"input\": \"test input\"}\nObservation: 42"},
+      {"role": "assistant", "content": "Thought: I need to make sure that I correctly
+      utilize the tool without giving the final answer prematurely.\n\nAction: get_final_answer\nAction
+      Input: {\"input\": \"test example\"}\nObservation: <MagicMock name=''_remember_format()''
+      id=''5279627312''>"}, {"role": "assistant", "content": "Thought: I need to make
+      sure that I correctly utilize the tool without giving the final answer prematurely.\n\nAction:
+      get_final_answer\nAction Input: {\"input\": \"test example\"}\nObservation:
+      <MagicMock name=''_remember_format()'' id=''5279627312''>\nNow it''s time you
+      MUST give your absolute best final answer. You''ll ignore all previous instructions,
+      stop using any tools, and just return your absolute BEST Final answer."}], "response":
+      "Thought: I now know the final answer\nFinal Answer: The final answer", "call_type":
+      "<LLMCallType.LLM_CALL: ''llm_call''>", "model": "gpt-4o-mini"}}, {"event_id":
+      "114890c1-f2a6-4223-855a-111b45575d2d", "timestamp": "2025-09-24T05:25:59.064629+00:00",
+      "type": "agent_execution_completed", "event_data": {"agent_role": "test role",
+      "agent_goal": "test goal", "agent_backstory": "test backstory"}}, {"event_id":
+      "cc4fa153-a87c-4294-a254-79d6e15e065a", "timestamp": "2025-09-24T05:25:59.065760+00:00",
+      "type": "task_completed", "event_data": {"task_description": "Use tool logic
+      for `get_final_answer` but fon''t give you final answer yet, instead keep using
+      it unless you''re told to give your final answer", "task_name": "Use tool logic
+      for `get_final_answer` but fon''t give you final answer yet, instead keep using
+      it unless you''re told to give your final answer", "task_id": "0ca9aa84-9dd9-4ac2-bc7f-2d810dd6097a",
+      "output_raw": "The final answer", "output_format": "OutputFormat.RAW", "agent_role":
+      "test role"}}, {"event_id": "f3da21fe-5d07-4e29-bd1f-166305af2a6c", "timestamp":
+      "2025-09-24T05:25:59.067343+00:00", "type": "crew_kickoff_completed", "event_data":
+      {"timestamp": "2025-09-24T05:25:59.066891+00:00", "type": "crew_kickoff_completed",
+      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
+      "task_id": null, "task_name": null, "agent_id": null, "agent_role": null, "crew_name":
+      "crew", "crew": null, "output": {"description": "Use tool logic for `get_final_answer`
+      but fon''t give you final answer yet, instead keep using it unless you''re told
+      to give your final answer", "name": "Use tool logic for `get_final_answer` but
+      fon''t give you final answer yet, instead keep using it unless you''re told
+      to give your final answer", "expected_output": "The final answer", "summary":
+      "Use tool logic for `get_final_answer` but fon''t give you final...", "raw":
+      "The final answer", "pydantic": null, "json_dict": null, "agent": "test role",
+      "output_format": "raw"}, "total_tokens": 4380}}], "batch_metadata": {"events_count":
+      32, "batch_sequence": 1, "is_final_batch": false}}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '94362'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - CrewAI-CLI/0.193.2
+      X-Crewai-Organization-Id:
+      - d3a3d10c-35db-423f-a7a4-c026030ba64d
+      X-Crewai-Version:
+      - 0.193.2
+    method: POST
+    uri: http://localhost:3000/crewai_plus/api/v1/tracing/batches/5fe346d2-d4d2-46df-8d48-ce9ffb685983/events
+  response:
+    body:
+      string: '{"events_created":32,"trace_batch_id":"dbce9b21-bd0b-4051-a557-fbded320e406"}'
+    headers:
+      Content-Length:
+      - '77'
+      cache-control:
+      - max-age=0, private, must-revalidate
+      content-security-policy:
+      - 'default-src ''self'' *.crewai.com crewai.com; script-src ''self'' ''unsafe-inline''
+        *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts https://www.gstatic.com
+        https://run.pstmn.io https://share.descript.com/; style-src ''self'' ''unsafe-inline''
+        *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts; img-src ''self''
+        data: *.crewai.com crewai.com https://zeus.tools.crewai.com https://dashboard.tools.crewai.com
+        https://cdn.jsdelivr.net; font-src ''self'' data: *.crewai.com crewai.com;
+        connect-src ''self'' *.crewai.com crewai.com https://zeus.tools.crewai.com
+        https://connect.useparagon.com/ https://zeus.useparagon.com/* https://*.useparagon.com/*
+        https://run.pstmn.io https://connect.tools.crewai.com/ ws://localhost:3036
+        wss://localhost:3036; frame-src ''self'' *.crewai.com crewai.com https://connect.useparagon.com/
+        https://zeus.tools.crewai.com https://zeus.useparagon.com/* https://connect.tools.crewai.com/
+        https://www.youtube.com https://share.descript.com'
+      content-type:
+      - application/json; charset=utf-8
+      etag:
+      - W/"753e5f56bbe8e18575f27d3bb255c6a6"
+      permissions-policy:
+      - camera=(), microphone=(self), geolocation=()
+      referrer-policy:
+      - strict-origin-when-cross-origin
+      server-timing:
+      - cache_read.active_support;dur=0.04, cache_fetch_hit.active_support;dur=0.00,
+        cache_read_multi.active_support;dur=0.06, start_processing.action_controller;dur=0.00,
+        sql.active_record;dur=104.92, instantiation.active_record;dur=1.11, start_transaction.active_record;dur=0.00,
+        transaction.active_record;dur=150.99, process_action.action_controller;dur=788.76
+      vary:
+      - Accept
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-permitted-cross-domain-policies:
+      - none
+      x-request-id:
+      - 4537df38-5c8e-440d-bad4-74ff8135139d
+      x-runtime:
+      - '0.813132'
+      x-xss-protection:
+      - 1; mode=block
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"status": "completed", "duration_ms": 1820, "final_event_count": 32}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '69'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - CrewAI-CLI/0.193.2
+      X-Crewai-Organization-Id:
+      - d3a3d10c-35db-423f-a7a4-c026030ba64d
+      X-Crewai-Version:
+      - 0.193.2
+    method: PATCH
+    uri: http://localhost:3000/crewai_plus/api/v1/tracing/batches/5fe346d2-d4d2-46df-8d48-ce9ffb685983/finalize
+  response:
+    body:
+      string: '{"id":"dbce9b21-bd0b-4051-a557-fbded320e406","trace_id":"5fe346d2-d4d2-46df-8d48-ce9ffb685983","execution_type":"crew","crew_name":"crew","flow_name":null,"status":"completed","duration_ms":1820,"crewai_version":"0.193.2","privacy_level":"standard","total_events":32,"execution_context":{"crew_name":"crew","flow_name":null,"privacy_level":"standard","crewai_version":"0.193.2","crew_fingerprint":null},"created_at":"2025-09-24T05:25:59.023Z","updated_at":"2025-09-24T05:26:00.212Z"}'
+    headers:
+      Content-Length:
+      - '483'
+      cache-control:
+      - max-age=0, private, must-revalidate
+      content-security-policy:
+      - 'default-src ''self'' *.crewai.com crewai.com; script-src ''self'' ''unsafe-inline''
+        *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts https://www.gstatic.com
+        https://run.pstmn.io https://share.descript.com/; style-src ''self'' ''unsafe-inline''
+        *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts; img-src ''self''
+        data: *.crewai.com crewai.com https://zeus.tools.crewai.com https://dashboard.tools.crewai.com
+        https://cdn.jsdelivr.net; font-src ''self'' data: *.crewai.com crewai.com;
+        connect-src ''self'' *.crewai.com crewai.com https://zeus.tools.crewai.com
+        https://connect.useparagon.com/ https://zeus.useparagon.com/* https://*.useparagon.com/*
+        https://run.pstmn.io https://connect.tools.crewai.com/ ws://localhost:3036
+        wss://localhost:3036; frame-src ''self'' *.crewai.com crewai.com https://connect.useparagon.com/
+        https://zeus.tools.crewai.com https://zeus.useparagon.com/* https://connect.tools.crewai.com/
+        https://www.youtube.com https://share.descript.com'
+      content-type:
+      - application/json; charset=utf-8
+      etag:
+      - W/"6718c8578427ebff795bdfcf40298c58"
+      permissions-policy:
+      - camera=(), microphone=(self), geolocation=()
+      referrer-policy:
+      - strict-origin-when-cross-origin
+      server-timing:
+      - cache_read.active_support;dur=0.03, cache_fetch_hit.active_support;dur=0.00,
+        cache_read_multi.active_support;dur=0.05, start_processing.action_controller;dur=0.00,
+        sql.active_record;dur=15.31, instantiation.active_record;dur=0.57, unpermitted_parameters.action_controller;dur=0.00,
+        start_transaction.active_record;dur=0.01, transaction.active_record;dur=2.69,
+        process_action.action_controller;dur=299.39
+      vary:
+      - Accept
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-permitted-cross-domain-policies:
+      - none
+      x-request-id:
+      - 65ebd94b-f77b-4df7-836c-e40d86ab1094
+      x-runtime:
+      - '0.313192'
+      x-xss-protection:
+      - 1; mode=block
+    status:
+      code: 200
+      message: OK
 version: 1
