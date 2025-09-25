@@ -24,8 +24,7 @@ class BaseRecord(TypedDict, total=False):
     )
 
 
-DenseVector: TypeAlias = list[float]
-IntVector: TypeAlias = list[int]
+Embeddings: TypeAlias = list[list[float]]
 
 EmbeddingFunction: TypeAlias = Callable[..., Any]
 
