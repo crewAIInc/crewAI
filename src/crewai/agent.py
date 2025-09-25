@@ -713,7 +713,8 @@ class Agent(BaseAgent):
 
         try:
             subprocess.run(
-                ["docker", "info"],
+                "docker info",
+                shell=True,
                 check=True,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
