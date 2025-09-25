@@ -601,7 +601,7 @@ class Agent(BaseAgent):
 
     def get_platform_tools(self, apps: list[PlatformAppOrAction]) -> list[BaseTool]:
         try:
-            from crewai_tools import CrewaiPlatformTools # type: ignore[import-untyped]
+            from crewai_tools import CrewaiPlatformTools  # type: ignore[import-untyped]
 
             return CrewaiPlatformTools(apps=apps)
         except Exception as e:
