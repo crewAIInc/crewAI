@@ -2369,7 +2369,7 @@ def test_agent_from_repository(mock_get_agent, mock_get_auth_token):
     tool_action = EnterpriseActionTool(
         name="test_name",
         description="test_description",
-        enterprise_action_token="test_token",  # noqa: S106
+        enterprise_action_token="test_token",
         action_name="test_action_name",
         action_schema={"test": "test"},
     )
@@ -2559,7 +2559,7 @@ def test_agent_apps_validation():
     )
     assert set(agent.apps) == {"custom_app", "another_app/action"}
 
-    with pytest.raises(ValueError, match="Invalid app format.*Apps can only have one '/' for app/action format"):
+    with pytest.raises(ValueError, match=r"Invalid app format.*Apps can only have one '/' for app/action format"):
         Agent(
             role="Invalid Agent",
             goal="Test validation",
