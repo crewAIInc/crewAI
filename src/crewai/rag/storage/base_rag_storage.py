@@ -1,8 +1,11 @@
 from abc import ABC, abstractmethod
-from typing import Any
+from typing import Any, TypeVar
 
-from crewai.rag.embeddings.factory import EmbedderConfig
-from crewai.rag.embeddings.types import EmbeddingOptions
+from crewai.rag.core.base_embeddings_callable import EmbeddingFunction
+from crewai.rag.core.base_embeddings_provider import BaseEmbeddingsProvider
+from crewai.rag.embeddings.types import ProviderSpec
+
+T = TypeVar("T", bound=EmbeddingFunction[Any])
 
 
 class BaseRAGStorage(ABC):
@@ -16,7 +19,7 @@ class BaseRAGStorage(ABC):
         self,
         type: str,
         allow_reset: bool = True,
-        embedder_config: EmbeddingOptions | EmbedderConfig | None = None,
+        embedder_config: ProviderSpec | BaseEmbeddingsProvider[T] | None = None,
         crew: Any = None,
     ):
         self.type = type
