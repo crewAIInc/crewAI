@@ -984,7 +984,10 @@ class Crew(FlowTrackable, BaseModel):
         ):
             tools = self._add_multimodal_tools(agent, tools)
 
-        # Return a List[BaseTool] compatible with Task.execute_sync and execute_async
+        if agent and (hasattr(agent, "apps") and getattr(agent, "apps", None)):
+            tools = self._add_platform_tools(task, tools)
+
+        # Return a list[BaseTool] compatible with Task.execute_sync and execute_async
         return cast(list[BaseTool], tools)
 
     def _get_agent_to_use(self, task: Task) -> BaseAgent | None:
@@ -1024,6 +1027,18 @@ class Crew(FlowTrackable, BaseModel):
             return self._merge_tools(tools, cast(list[BaseTool], delegation_tools))
         return cast(list[BaseTool], tools)
 
+    def _inject_platform_tools(
+        self,
+        tools: list[Tool] | list[BaseTool],
+        task_agent: BaseAgent,
+    ) -> list[BaseTool]:
+        apps = getattr(task_agent, "apps", None) or []
+
+        if hasattr(task_agent, "get_platform_tools") and apps:
+            platform_tools = task_agent.get_platform_tools(apps=apps)
+            return self._merge_tools(tools, cast(list[BaseTool], platform_tools))
+        return cast(list[BaseTool], tools)
+
     def _add_multimodal_tools(
         self, agent: BaseAgent, tools: list[Tool] | list[BaseTool]
     ) -> list[BaseTool]:
@@ -1054,10 +1069,18 @@ class Crew(FlowTrackable, BaseModel):
             )
         return cast(list[BaseTool], tools)
 
+    def _add_platform_tools(
+        self, task: Task, tools: list[Tool] | list[BaseTool]
+    ) -> list[BaseTool]:
+        if task.agent:
+            tools = self._inject_platform_tools(tools, task.agent)
+
+        return cast(list[BaseTool], tools or [])
+
     def _log_task_start(self, task: Task, role: str = "None"):
         if self.output_log_file:
             self._file_handler.log(
-                task_name=task.name, task=task.description, agent=role, status="started"
+                task_name=task.name or "unnamed_task", task=task.description, agent=role, status="started"
             )
 
     def _update_manager_tools(
@@ -1086,7 +1109,7 @@ class Crew(FlowTrackable, BaseModel):
         role = task.agent.role if task.agent is not None else "None"
         if self.output_log_file:
             self._file_handler.log(
-                task_name=task.name,
+                task_name=task.name or "unnamed_task",
                 task=task.description,
                 agent=role,
                 status="completed",

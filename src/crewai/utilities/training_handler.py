@@ -5,7 +5,7 @@ from crewai.utilities.file_handler import PickleHandler
 
 
 class CrewTrainingHandler(PickleHandler):
-    def save_trained_data(self, agent_id: str, trained_data: dict[int, Any]) -> None:
+    def save_trained_data(self, agent_id: str, trained_data: dict[str, Any]) -> None:
         """Save the trained data for a specific agent.
 
         Args:

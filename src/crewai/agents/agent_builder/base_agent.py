@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Callable
 from copy import copy as shallow_copy
 from hashlib import md5
-from typing import Any, TypeVar
+from typing import Any, Literal, TypeVar
 
 from pydantic import (
     UUID4,
@@ -30,6 +30,27 @@ from crewai.utilities.string_utils import interpolate_only
 
 T = TypeVar("T", bound="BaseAgent")
 
+PlatformApp = Literal[
+    "asana",
+    "box",
+    "clickup",
+    "github",
+    "gmail",
+    "google_calendar",
+    "google_sheets",
+    "hubspot",
+    "jira",
+    "linear",
+    "notion",
+    "salesforce",
+    "shopify",
+    "slack",
+    "stripe",
+    "zendesk",
+]
+
+PlatformAppOrAction = PlatformApp | str
+
 
 class BaseAgent(ABC, BaseModel):
     """Abstract Base Class for all third party agents compatible with CrewAI.
@@ -40,11 +61,11 @@ class BaseAgent(ABC, BaseModel):
         goal (str): Objective of the agent.
         backstory (str): Backstory of the agent.
         cache (bool): Whether the agent should use a cache for tool usage.
-        config (Optional[Dict[str, Any]]): Configuration for the agent.
+        config (dict[str, Any] | None): Configuration for the agent.
         verbose (bool): Verbose mode for the Agent Execution.
-        max_rpm (Optional[int]): Maximum number of requests per minute for the agent execution.
+        max_rpm (int | None): Maximum number of requests per minute for the agent execution.
         allow_delegation (bool): Allow delegation of tasks to agents.
-        tools (Optional[List[Any]]): Tools at the agent's disposal.
+        tools (list[Any] | None): Tools at the agent's disposal.
         max_iter (int): Maximum iterations for an agent to execute a task.
         agent_executor (InstanceOf): An instance of the CrewAgentExecutor class.
         llm (Any): Language model that will run the agent.
@@ -56,18 +77,22 @@ class BaseAgent(ABC, BaseModel):
         knowledge_sources: Knowledge sources for the agent.
         knowledge_storage: Custom knowledge storage for the agent.
         security_config: Security configuration for the agent, including fingerprinting.
+        apps: List of enterprise applications that the agent can access through CrewAI Enterprise Tools.
+        actions: List of actions that the agent can access through CrewAI Enterprise Tools.
 
 
     Methods:
-        execute_task(task: Any, context: Optional[str] = None, tools: Optional[List[BaseTool]] = None) -> str:
+        execute_task(task: Any, context: str | None = None, tools: list[BaseTool] | None = None) -> str:
             Abstract method to execute a task.
         create_agent_executor(tools=None) -> None:
             Abstract method to create an agent executor.
-        get_delegation_tools(agents: List["BaseAgent"]):
+        get_delegation_tools(agents: list["BaseAgent"]):
             Abstract method to set the agents task tools for handling delegation and question asking to other agents in crew.
+        get_platform_tools(apps: list[PlatformAppOrAction]):
+            Abstract method to get platform tools for the specified list of applications and/or application/action combinations.
         get_output_converter(llm, model, instructions):
             Abstract method to get the converter class for the agent to create json/pydantic outputs.
-        interpolate_inputs(inputs: Dict[str, Any]) -> None:
+        interpolate_inputs(inputs: dict[str, Any]) -> None:
             Interpolate inputs into the agent description and backstory.
         set_cache_handler(cache_handler: CacheHandler) -> None:
             Set the cache handler for the agent.
@@ -160,6 +185,10 @@ class BaseAgent(ABC, BaseModel):
         default=None,
         description="Knowledge configuration for the agent such as limits and threshold",
     )
+    apps: list[PlatformAppOrAction] | None = Field(
+        default=None,
+        description="List of applications or application/action combinations that the agent can access through CrewAI Platform. Can contain app names (e.g., 'gmail') or specific actions (e.g., 'gmail/send_email')",
+    )
 
     @model_validator(mode="before")
     @classmethod
@@ -194,6 +223,20 @@ class BaseAgent(ABC, BaseModel):
                     "an object with 'name', 'func', and 'description' attributes."
                 )
         return processed_tools
+
+    @field_validator("apps")
+    @classmethod
+    def validate_apps(cls, apps: list[PlatformAppOrAction] | None) -> list[PlatformAppOrAction] | None:
+        if not apps:
+            return apps
+
+        validated_apps = []
+        for app in apps:
+            if app.count("/") > 1:
+                raise ValueError(f"Invalid app format '{app}'. Apps can only have one '/' for app/action format (e.g., 'gmail/send_email')")
+            validated_apps.append(app)
+
+        return list(set(validated_apps))
 
     @model_validator(mode="after")
     def validate_and_set_attributes(self):
@@ -265,6 +308,10 @@ class BaseAgent(ABC, BaseModel):
     def get_delegation_tools(self, agents: list["BaseAgent"]) -> list[BaseTool]:
         """Set the task tools that init BaseAgenTools class."""
 
+    @abstractmethod
+    def get_platform_tools(self, apps: list[PlatformAppOrAction]) -> list[BaseTool]:
+        """Get platform tools for the specified list of applications and/or application/action combinations."""
+
     def copy(self: T) -> T:  # type: ignore # Signature of "copy" incompatible with supertype "BaseModel"
         """Create a deep copy of the Agent."""
         exclude = {
@@ -281,6 +328,8 @@ class BaseAgent(ABC, BaseModel):
             "knowledge_sources",
             "knowledge_storage",
             "knowledge",
+            "apps",
+            "actions",
         }
 
         # Copy llm
