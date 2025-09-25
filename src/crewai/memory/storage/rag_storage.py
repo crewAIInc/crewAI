@@ -1,13 +1,12 @@
 import logging
 import traceback
 import warnings
-from typing import Any, TypeVar, cast
+from typing import Any, cast
 
 from crewai.rag.chromadb.config import ChromaDBConfig
 from crewai.rag.chromadb.types import ChromaEmbeddingFunctionWrapper
 from crewai.rag.config.utils import get_rag_client
 from crewai.rag.core.base_client import BaseClient
-from crewai.rag.core.base_embeddings_callable import EmbeddingFunction
 from crewai.rag.core.base_embeddings_provider import BaseEmbeddingsProvider
 from crewai.rag.embeddings.factory import build_embedder
 from crewai.rag.embeddings.types import ProviderSpec
@@ -16,8 +15,6 @@ from crewai.rag.storage.base_rag_storage import BaseRAGStorage
 from crewai.rag.types import BaseRecord
 from crewai.utilities.constants import MAX_FILE_NAME_LENGTH
 from crewai.utilities.paths import db_storage_path
-
-T = TypeVar("T", bound=EmbeddingFunction[Any])
 
 
 class RAGStorage(BaseRAGStorage):
@@ -30,7 +27,7 @@ class RAGStorage(BaseRAGStorage):
         self,
         type: str,
         allow_reset: bool = True,
-        embedder_config: ProviderSpec | BaseEmbeddingsProvider[T] | None = None,
+        embedder_config: ProviderSpec | BaseEmbeddingsProvider | None = None,
         crew: Any = None,
         path: str | None = None,
     ) -> None:

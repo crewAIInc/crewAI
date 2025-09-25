@@ -1,22 +1,19 @@
 import logging
 import traceback
 import warnings
-from typing import Any, TypeVar, cast
+from typing import Any, cast
 
 from crewai.knowledge.storage.base_knowledge_storage import BaseKnowledgeStorage
 from crewai.rag.chromadb.config import ChromaDBConfig
 from crewai.rag.chromadb.types import ChromaEmbeddingFunctionWrapper
 from crewai.rag.config.utils import get_rag_client
 from crewai.rag.core.base_client import BaseClient
-from crewai.rag.core.base_embeddings_callable import EmbeddingFunction
 from crewai.rag.core.base_embeddings_provider import BaseEmbeddingsProvider
 from crewai.rag.embeddings.factory import build_embedder
 from crewai.rag.embeddings.types import ProviderSpec
 from crewai.rag.factory import create_client
 from crewai.rag.types import BaseRecord, SearchResult
 from crewai.utilities.logger import Logger
-
-T = TypeVar("T", bound=EmbeddingFunction[Any])
 
 
 class KnowledgeStorage(BaseKnowledgeStorage):
@@ -27,7 +24,7 @@ class KnowledgeStorage(BaseKnowledgeStorage):
 
     def __init__(
         self,
-        embedder: ProviderSpec | BaseEmbeddingsProvider[T] | None = None,
+        embedder: ProviderSpec | BaseEmbeddingsProvider | None = None,
         collection_name: str | None = None,
     ) -> None:
         self.collection_name = collection_name
