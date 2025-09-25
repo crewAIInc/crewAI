@@ -438,3 +438,5 @@ def test_mistral_embedding_with_fixtures(mock_mistral_api_response, test_embedde
         
         assert len(embeddings) == 1
         assert len(embeddings[0]) == 5
+
+
