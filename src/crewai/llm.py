@@ -1284,12 +1284,12 @@ class LLM(BaseLLM):
                 success_callbacks = [
                     cb.strip() for cb in success_callbacks_str.split(",") if cb.strip()
                 ]
-
+                litellm.success_callback = success_callbacks
+            
             failure_callbacks_str = os.environ.get("LITELLM_FAILURE_CALLBACKS", "")
             if failure_callbacks_str:
                 failure_callbacks: list[str | Callable[..., Any] | CustomLogger] = [
                     cb.strip() for cb in failure_callbacks_str.split(",") if cb.strip()
                 ]
 
-                litellm.success_callback = success_callbacks
                 litellm.failure_callback = failure_callbacks
