@@ -88,7 +88,7 @@ class BaseAgent(ABC, BaseModel):
             Abstract method to create an agent executor.
         get_delegation_tools(agents: list["BaseAgent"]):
             Abstract method to set the agents task tools for handling delegation and question asking to other agents in crew.
-        get_platform_tools(apps: list[PlatformApp], actions: list[str]):
+        get_platform_tools(apps: list[PlatformAppOrAction]):
             Abstract method to get platform tools for the specified list of applications and/or application/action combinations.
         get_output_converter(llm, model, instructions):
             Abstract method to get the converter class for the agent to create json/pydantic outputs.

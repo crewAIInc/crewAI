@@ -5,6 +5,7 @@ from collections.abc import Callable, Sequence
 from typing import (
     Any,
     Literal,
+    cast,
 )
 
 from pydantic import Field, InstanceOf, PrivateAttr, model_validator
@@ -326,7 +327,7 @@ class Agent(BaseAgent):
                 agent=self,
                 task=task,
             )
-            memory = contextual_memory.build_context_for_task(task, context)
+            memory = contextual_memory.build_context_for_task(task, context or "")
             if memory.strip() != "":
                 task_prompt += self.i18n.slice("memory").format(memory=memory)
 
@@ -578,7 +579,7 @@ class Agent(BaseAgent):
             agent=self,
             crew=self.crew,
             tools=parsed_tools,
-            prompt=prompt,
+            prompt=cast(dict[str, str], prompt),
             original_tools=raw_tools,
             stop_words=stop_words,
             max_iter=self.max_iter,
@@ -600,9 +601,7 @@ class Agent(BaseAgent):
 
     def get_platform_tools(self, apps: list[PlatformAppOrAction]) -> list[BaseTool]:
         try:
-            from crewai_tools import (
-                CrewaiPlatformTools,  # type: ignore
-            )
+            from crewai_tools import CrewaiPlatformTools # type: ignore[import-untyped]
 
             return CrewaiPlatformTools(apps=apps)
         except Exception as e:

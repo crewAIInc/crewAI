@@ -1080,7 +1080,7 @@ class Crew(FlowTrackable, BaseModel):
     def _log_task_start(self, task: Task, role: str = "None"):
         if self.output_log_file:
             self._file_handler.log(
-                task_name=task.name, task=task.description, agent=role, status="started"
+                task_name=task.name or "unnamed_task", task=task.description, agent=role, status="started"
             )
 
     def _update_manager_tools(
@@ -1109,7 +1109,7 @@ class Crew(FlowTrackable, BaseModel):
         role = task.agent.role if task.agent is not None else "None"
         if self.output_log_file:
             self._file_handler.log(
-                task_name=task.name,
+                task_name=task.name or "unnamed_task",
                 task=task.description,
                 agent=role,
                 status="completed",
