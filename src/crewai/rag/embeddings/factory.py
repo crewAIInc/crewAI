@@ -1,249 +1,359 @@
-"""Minimal embedding function factory for CrewAI."""
+"""Factory functions for creating embedding providers and functions."""
 
-import os
-from collections.abc import Callable, MutableMapping
-from typing import Any, Final, Literal, TypedDict
+from __future__ import annotations
 
-from chromadb import EmbeddingFunction
-from chromadb.utils.embedding_functions.amazon_bedrock_embedding_function import (
-    AmazonBedrockEmbeddingFunction,
-)
-from chromadb.utils.embedding_functions.cohere_embedding_function import (
-    CohereEmbeddingFunction,
-)
-from chromadb.utils.embedding_functions.google_embedding_function import (
-    GoogleGenerativeAiEmbeddingFunction,
-    GooglePalmEmbeddingFunction,
-    GoogleVertexEmbeddingFunction,
-)
-from chromadb.utils.embedding_functions.huggingface_embedding_function import (
-    HuggingFaceEmbeddingFunction,
-)
-from chromadb.utils.embedding_functions.instructor_embedding_function import (
-    InstructorEmbeddingFunction,
-)
-from chromadb.utils.embedding_functions.jina_embedding_function import (
-    JinaEmbeddingFunction,
-)
-from chromadb.utils.embedding_functions.ollama_embedding_function import (
-    OllamaEmbeddingFunction,
-)
-from chromadb.utils.embedding_functions.onnx_mini_lm_l6_v2 import ONNXMiniLM_L6_V2
-from chromadb.utils.embedding_functions.open_clip_embedding_function import (
-    OpenCLIPEmbeddingFunction,
-)
-from chromadb.utils.embedding_functions.openai_embedding_function import (
-    OpenAIEmbeddingFunction,
-)
-from chromadb.utils.embedding_functions.roboflow_embedding_function import (
-    RoboflowEmbeddingFunction,
-)
-from chromadb.utils.embedding_functions.sentence_transformer_embedding_function import (
-    SentenceTransformerEmbeddingFunction,
-)
-from chromadb.utils.embedding_functions.text2vec_embedding_function import (
-    Text2VecEmbeddingFunction,
-)
-from typing_extensions import NotRequired
+from typing import TYPE_CHECKING, TypeVar, overload
 
-from crewai.rag.embeddings.types import EmbeddingOptions
+from crewai.rag.core.base_embeddings_callable import EmbeddingFunction
+from crewai.rag.core.base_embeddings_provider import BaseEmbeddingsProvider
+from crewai.utilities.import_utils import import_and_validate_definition
 
-AllowedEmbeddingProviders = Literal[
-    "openai",
-    "cohere",
-    "ollama",
-    "huggingface",
-    "sentence-transformer",
-    "instructor",
-    "google-palm",
-    "google-generativeai",
-    "google-vertex",
-    "amazon-bedrock",
-    "jina",
-    "roboflow",
-    "openclip",
-    "text2vec",
-    "onnx",
-]
+if TYPE_CHECKING:
+    from chromadb.utils.embedding_functions.amazon_bedrock_embedding_function import (
+        AmazonBedrockEmbeddingFunction,
+    )
+    from chromadb.utils.embedding_functions.cohere_embedding_function import (
+        CohereEmbeddingFunction,
+    )
+    from chromadb.utils.embedding_functions.google_embedding_function import (
+        GoogleGenerativeAiEmbeddingFunction,
+        GoogleVertexEmbeddingFunction,
+    )
+    from chromadb.utils.embedding_functions.huggingface_embedding_function import (
+        HuggingFaceEmbeddingFunction,
+    )
+    from chromadb.utils.embedding_functions.instructor_embedding_function import (
+        InstructorEmbeddingFunction,
+    )
+    from chromadb.utils.embedding_functions.jina_embedding_function import (
+        JinaEmbeddingFunction,
+    )
+    from chromadb.utils.embedding_functions.ollama_embedding_function import (
+        OllamaEmbeddingFunction,
+    )
+    from chromadb.utils.embedding_functions.onnx_mini_lm_l6_v2 import ONNXMiniLM_L6_V2
+    from chromadb.utils.embedding_functions.open_clip_embedding_function import (
+        OpenCLIPEmbeddingFunction,
+    )
+    from chromadb.utils.embedding_functions.openai_embedding_function import (
+        OpenAIEmbeddingFunction,
+    )
+    from chromadb.utils.embedding_functions.roboflow_embedding_function import (
+        RoboflowEmbeddingFunction,
+    )
+    from chromadb.utils.embedding_functions.sentence_transformer_embedding_function import (
+        SentenceTransformerEmbeddingFunction,
+    )
+    from chromadb.utils.embedding_functions.text2vec_embedding_function import (
+        Text2VecEmbeddingFunction,
+    )
+
+    from crewai.rag.embeddings.providers.aws.types import BedrockProviderSpec
+    from crewai.rag.embeddings.providers.cohere.types import CohereProviderSpec
+    from crewai.rag.embeddings.providers.custom.types import CustomProviderSpec
+    from crewai.rag.embeddings.providers.google.types import (
+        GenerativeAiProviderSpec,
+        VertexAIProviderSpec,
+    )
+    from crewai.rag.embeddings.providers.huggingface.types import (
+        HuggingFaceProviderSpec,
+    )
+    from crewai.rag.embeddings.providers.ibm.embedding_callable import (
+        WatsonEmbeddingFunction,
+    )
+    from crewai.rag.embeddings.providers.ibm.types import WatsonProviderSpec
+    from crewai.rag.embeddings.providers.instructor.types import InstructorProviderSpec
+    from crewai.rag.embeddings.providers.jina.types import JinaProviderSpec
+    from crewai.rag.embeddings.providers.microsoft.types import AzureProviderSpec
+    from crewai.rag.embeddings.providers.ollama.types import OllamaProviderSpec
+    from crewai.rag.embeddings.providers.onnx.types import ONNXProviderSpec
+    from crewai.rag.embeddings.providers.openai.types import OpenAIProviderSpec
+    from crewai.rag.embeddings.providers.openclip.types import OpenCLIPProviderSpec
+    from crewai.rag.embeddings.providers.roboflow.types import RoboflowProviderSpec
+    from crewai.rag.embeddings.providers.sentence_transformer.types import (
+        SentenceTransformerProviderSpec,
+    )
+    from crewai.rag.embeddings.providers.text2vec.types import Text2VecProviderSpec
+    from crewai.rag.embeddings.providers.voyageai.embedding_callable import (
+        VoyageAIEmbeddingFunction,
+    )
+    from crewai.rag.embeddings.providers.voyageai.types import VoyageAIProviderSpec
+
+T = TypeVar("T", bound=EmbeddingFunction)
 
 
-class EmbedderConfig(TypedDict):
-    """Configuration for embedding functions with nested format."""
-
-    provider: AllowedEmbeddingProviders
-    config: NotRequired[dict[str, Any]]
-
-
-EMBEDDING_PROVIDERS: Final[
-    dict[AllowedEmbeddingProviders, Callable[..., EmbeddingFunction]]
-] = {
-    "openai": OpenAIEmbeddingFunction,
-    "cohere": CohereEmbeddingFunction,
-    "ollama": OllamaEmbeddingFunction,
-    "huggingface": HuggingFaceEmbeddingFunction,
-    "sentence-transformer": SentenceTransformerEmbeddingFunction,
-    "instructor": InstructorEmbeddingFunction,
-    "google-palm": GooglePalmEmbeddingFunction,
-    "google-generativeai": GoogleGenerativeAiEmbeddingFunction,
-    "google-vertex": GoogleVertexEmbeddingFunction,
-    "amazon-bedrock": AmazonBedrockEmbeddingFunction,
-    "jina": JinaEmbeddingFunction,
-    "roboflow": RoboflowEmbeddingFunction,
-    "openclip": OpenCLIPEmbeddingFunction,
-    "text2vec": Text2VecEmbeddingFunction,
-    "onnx": ONNXMiniLM_L6_V2,
+PROVIDER_PATHS = {
+    "azure": "crewai.rag.embeddings.providers.microsoft.azure.AzureProvider",
+    "amazon-bedrock": "crewai.rag.embeddings.providers.aws.bedrock.BedrockProvider",
+    "cohere": "crewai.rag.embeddings.providers.cohere.cohere_provider.CohereProvider",
+    "custom": "crewai.rag.embeddings.providers.custom.custom_provider.CustomProvider",
+    "google-generativeai": "crewai.rag.embeddings.providers.google.generative_ai.GenerativeAiProvider",
+    "google-vertex": "crewai.rag.embeddings.providers.google.vertex.VertexAIProvider",
+    "huggingface": "crewai.rag.embeddings.providers.huggingface.huggingface_provider.HuggingFaceProvider",
+    "instructor": "crewai.rag.embeddings.providers.instructor.instructor_provider.InstructorProvider",
+    "jina": "crewai.rag.embeddings.providers.jina.jina_provider.JinaProvider",
+    "ollama": "crewai.rag.embeddings.providers.ollama.ollama_provider.OllamaProvider",
+    "onnx": "crewai.rag.embeddings.providers.onnx.onnx_provider.ONNXProvider",
+    "openai": "crewai.rag.embeddings.providers.openai.openai_provider.OpenAIProvider",
+    "openclip": "crewai.rag.embeddings.providers.openclip.openclip_provider.OpenCLIPProvider",
+    "roboflow": "crewai.rag.embeddings.providers.roboflow.roboflow_provider.RoboflowProvider",
+    "sentence-transformer": "crewai.rag.embeddings.providers.sentence_transformer.sentence_transformer_provider.SentenceTransformerProvider",
+    "text2vec": "crewai.rag.embeddings.providers.text2vec.text2vec_provider.Text2VecProvider",
+    "voyageai": "crewai.rag.embeddings.providers.voyageai.voyageai_provider.VoyageAIProvider",
+    "watson": "crewai.rag.embeddings.providers.ibm.watson.WatsonProvider",
 }
 
-PROVIDER_ENV_MAPPING: Final[dict[AllowedEmbeddingProviders, tuple[str, str]]] = {
-    "openai": ("OPENAI_API_KEY", "api_key"),
-    "cohere": ("COHERE_API_KEY", "api_key"),
-    "huggingface": ("HUGGINGFACE_API_KEY", "api_key"),
-    "google-palm": ("GOOGLE_API_KEY", "api_key"),
-    "google-generativeai": ("GOOGLE_API_KEY", "api_key"),
-    "google-vertex": ("GOOGLE_API_KEY", "api_key"),
-    "jina": ("JINA_API_KEY", "api_key"),
-    "roboflow": ("ROBOFLOW_API_KEY", "api_key"),
-}
 
-
-def _inject_api_key_from_env(
-    provider: AllowedEmbeddingProviders, config_dict: MutableMapping[str, Any]
-) -> None:
-    """Inject API key or other required configuration from environment if not explicitly provided.
+def build_embedder_from_provider(provider: BaseEmbeddingsProvider[T]) -> T:
+    """Build an embedding function instance from a provider.
 
     Args:
-        provider: The embedding provider name
-        config_dict: The configuration dictionary to modify in-place
-
-    Raises:
-        ImportError: If required libraries for certain providers are not installed
-        ValueError: If AWS session creation fails for amazon-bedrock
-    """
-    if provider in PROVIDER_ENV_MAPPING:
-        env_var_name, config_key = PROVIDER_ENV_MAPPING[provider]
-        if config_key not in config_dict:
-            env_value = os.getenv(env_var_name)
-            if env_value:
-                config_dict[config_key] = env_value
-
-    if provider == "amazon-bedrock":
-        if "session" not in config_dict:
-            try:
-                import boto3  # type: ignore[import]
-
-                config_dict["session"] = boto3.Session()
-            except ImportError as e:
-                raise ImportError(
-                    "boto3 is required for amazon-bedrock embeddings. "
-                    "Install it with: uv add boto3"
-                ) from e
-            except Exception as e:
-                raise ValueError(
-                    f"Failed to create AWS session for amazon-bedrock. "
-                    f"Ensure AWS credentials are configured. Error: {e}"
-                ) from e
-
-
-def get_embedding_function(
-    config: EmbeddingOptions | EmbedderConfig | None = None,
-) -> EmbeddingFunction:
-    """Get embedding function - delegates to ChromaDB.
-
-    Args:
-        config: Optional configuration - either:
-            - EmbeddingOptions: Pydantic model with flat configuration
-            - EmbedderConfig: TypedDict with nested format {"provider": str, "config": dict}
-            - None: Uses default OpenAI configuration
+        provider: The embedding provider configuration.
 
     Returns:
-        EmbeddingFunction instance ready for use with ChromaDB
+        An instance of the specified embedding function type.
+    """
+    return provider.embedding_callable(
+        **provider.model_dump(exclude={"embedding_callable"})
+    )
 
-    Supported providers:
-        - openai: OpenAI embeddings
-        - cohere: Cohere embeddings
-        - ollama: Ollama local embeddings
-        - huggingface: HuggingFace embeddings
-        - sentence-transformer: Local sentence transformers
-        - instructor: Instructor embeddings for specialized tasks
-        - google-palm: Google PaLM embeddings
-        - google-generativeai: Google Generative AI embeddings
-        - google-vertex: Google Vertex AI embeddings
-        - amazon-bedrock: AWS Bedrock embeddings
-        - jina: Jina AI embeddings
-        - roboflow: Roboflow embeddings for vision tasks
-        - openclip: OpenCLIP embeddings for multimodal tasks
-        - text2vec: Text2Vec embeddings
-        - onnx: ONNX MiniLM-L6-v2 (no API key needed, included with ChromaDB)
+
+@overload
+def build_embedder_from_dict(spec: AzureProviderSpec) -> OpenAIEmbeddingFunction: ...
+
+
+@overload
+def build_embedder_from_dict(
+    spec: BedrockProviderSpec,
+) -> AmazonBedrockEmbeddingFunction: ...
+
+
+@overload
+def build_embedder_from_dict(spec: CohereProviderSpec) -> CohereEmbeddingFunction: ...
+
+
+@overload
+def build_embedder_from_dict(spec: CustomProviderSpec) -> EmbeddingFunction: ...
+
+
+@overload
+def build_embedder_from_dict(
+    spec: GenerativeAiProviderSpec,
+) -> GoogleGenerativeAiEmbeddingFunction: ...
+
+
+@overload
+def build_embedder_from_dict(
+    spec: HuggingFaceProviderSpec,
+) -> HuggingFaceEmbeddingFunction: ...
+
+
+@overload
+def build_embedder_from_dict(spec: OllamaProviderSpec) -> OllamaEmbeddingFunction: ...
+
+
+@overload
+def build_embedder_from_dict(spec: OpenAIProviderSpec) -> OpenAIEmbeddingFunction: ...
+
+
+@overload
+def build_embedder_from_dict(
+    spec: VertexAIProviderSpec,
+) -> GoogleVertexEmbeddingFunction: ...
+
+
+@overload
+def build_embedder_from_dict(
+    spec: VoyageAIProviderSpec,
+) -> VoyageAIEmbeddingFunction: ...
+
+
+@overload
+def build_embedder_from_dict(spec: WatsonProviderSpec) -> WatsonEmbeddingFunction: ...
+
+
+@overload
+def build_embedder_from_dict(
+    spec: SentenceTransformerProviderSpec,
+) -> SentenceTransformerEmbeddingFunction: ...
+
+
+@overload
+def build_embedder_from_dict(
+    spec: InstructorProviderSpec,
+) -> InstructorEmbeddingFunction: ...
+
+
+@overload
+def build_embedder_from_dict(spec: JinaProviderSpec) -> JinaEmbeddingFunction: ...
+
+
+@overload
+def build_embedder_from_dict(
+    spec: RoboflowProviderSpec,
+) -> RoboflowEmbeddingFunction: ...
+
+
+@overload
+def build_embedder_from_dict(
+    spec: OpenCLIPProviderSpec,
+) -> OpenCLIPEmbeddingFunction: ...
+
+
+@overload
+def build_embedder_from_dict(
+    spec: Text2VecProviderSpec,
+) -> Text2VecEmbeddingFunction: ...
+
+
+@overload
+def build_embedder_from_dict(spec: ONNXProviderSpec) -> ONNXMiniLM_L6_V2: ...
+
+
+def build_embedder_from_dict(spec):
+    """Build an embedding function instance from a dictionary specification.
+
+    Args:
+        spec: A dictionary with 'provider' and 'config' keys.
+              Example: {
+                  "provider": "openai",
+                  "config": {
+                      "api_key": "sk-...",
+                      "model_name": "text-embedding-3-small"
+                  }
+              }
+
+    Returns:
+        An instance of the appropriate embedding function.
+
+    Raises:
+        ValueError: If the provider is not recognized.
+    """
+    provider_name = spec["provider"]
+    if not provider_name:
+        raise ValueError("Missing 'provider' key in specification")
+
+    if provider_name not in PROVIDER_PATHS:
+        raise ValueError(
+            f"Unknown provider: {provider_name}. Available providers: {list(PROVIDER_PATHS.keys())}"
+        )
+
+    provider_path = PROVIDER_PATHS[provider_name]
+    try:
+        provider_class = import_and_validate_definition(provider_path)
+    except (ImportError, AttributeError, ValueError) as e:
+        raise ImportError(f"Failed to import provider {provider_name}: {e}") from e
+
+    provider_config = spec.get("config", {})
+
+    if provider_name == "custom" and "embedding_callable" not in provider_config:
+        raise ValueError("Custom provider requires 'embedding_callable' in config")
+
+    provider = provider_class(**provider_config)
+    return build_embedder_from_provider(provider)
+
+
+@overload
+def build_embedder(spec: BaseEmbeddingsProvider[T]) -> T: ...
+
+
+@overload
+def build_embedder(spec: AzureProviderSpec) -> OpenAIEmbeddingFunction: ...
+
+
+@overload
+def build_embedder(spec: BedrockProviderSpec) -> AmazonBedrockEmbeddingFunction: ...
+
+
+@overload
+def build_embedder(spec: CohereProviderSpec) -> CohereEmbeddingFunction: ...
+
+
+@overload
+def build_embedder(spec: CustomProviderSpec) -> EmbeddingFunction: ...
+
+
+@overload
+def build_embedder(
+    spec: GenerativeAiProviderSpec,
+) -> GoogleGenerativeAiEmbeddingFunction: ...
+
+
+@overload
+def build_embedder(spec: HuggingFaceProviderSpec) -> HuggingFaceEmbeddingFunction: ...
+
+
+@overload
+def build_embedder(spec: OllamaProviderSpec) -> OllamaEmbeddingFunction: ...
+
+
+@overload
+def build_embedder(spec: OpenAIProviderSpec) -> OpenAIEmbeddingFunction: ...
+
+
+@overload
+def build_embedder(spec: VertexAIProviderSpec) -> GoogleVertexEmbeddingFunction: ...
+
+
+@overload
+def build_embedder(spec: VoyageAIProviderSpec) -> VoyageAIEmbeddingFunction: ...
+
+
+@overload
+def build_embedder(spec: WatsonProviderSpec) -> WatsonEmbeddingFunction: ...
+
+
+@overload
+def build_embedder(
+    spec: SentenceTransformerProviderSpec,
+) -> SentenceTransformerEmbeddingFunction: ...
+
+
+@overload
+def build_embedder(spec: InstructorProviderSpec) -> InstructorEmbeddingFunction: ...
+
+
+@overload
+def build_embedder(spec: JinaProviderSpec) -> JinaEmbeddingFunction: ...
+
+
+@overload
+def build_embedder(spec: RoboflowProviderSpec) -> RoboflowEmbeddingFunction: ...
+
+
+@overload
+def build_embedder(spec: OpenCLIPProviderSpec) -> OpenCLIPEmbeddingFunction: ...
+
+
+@overload
+def build_embedder(spec: Text2VecProviderSpec) -> Text2VecEmbeddingFunction: ...
+
+
+@overload
+def build_embedder(spec: ONNXProviderSpec) -> ONNXMiniLM_L6_V2: ...
+
+
+def build_embedder(spec):
+    """Build an embedding function from either a provider spec or a provider instance.
+
+    Args:
+        spec: Either a provider specification dictionary or a provider instance.
+
+    Returns:
+        An embedding function instance. If a typed provider is passed, returns
+        the specific embedding function type.
 
     Examples:
-        # Use default OpenAI embedding
-        >>> embedder = get_embedding_function()
+        # From dictionary specification
+        embedder = build_embedder({
+            "provider": "openai",
+            "config": {"api_key": "sk-..."}
+        })
 
-        # Use Cohere with dict
-        >>> embedder = get_embedding_function(EmbedderConfig(**{
-        ...     "provider": "cohere",
-        ...     "config": {
-        ...         "api_key": "your-key",
-        ...         "model_name": "embed-english-v3.0"
-        ...     }
-        ... }))
-
-        # Use with EmbeddingOptions
-        >>> embedder = get_embedding_function(
-        ...     EmbeddingOptions(provider="sentence-transformer", model_name="all-MiniLM-L6-v2")
-        ... )
-
-        # Use Azure OpenAI
-        >>> embedder = get_embedding_function(EmbedderConfig(**{
-        ...     "provider": "openai",
-        ...     "config": {
-        ...         "api_key": "your-azure-key",
-        ...         "api_base": "https://your-resource.openai.azure.com/",
-        ...         "api_type": "azure",
-        ...         "api_version": "2023-05-15",
-        ...         "model": "text-embedding-3-small",
-        ...         "deployment_id": "your-deployment-name"
-        ...     }
-        ... })
-
-        >>> embedder = get_embedding_function(EmbedderConfig(**{
-        ...     "provider": "onnx"
-        ... })
+        # From provider instance
+        provider = OpenAIProvider(api_key="sk-...")
+        embedder = build_embedder(provider)
     """
-    if config is None:
-        return OpenAIEmbeddingFunction(
-            api_key=os.getenv("OPENAI_API_KEY"), model_name="text-embedding-3-small"
-        )
-
-    provider: AllowedEmbeddingProviders
-    config_dict: dict[str, Any]
-
-    if isinstance(config, EmbeddingOptions):
-        config_dict = config.model_dump(exclude_none=True)
-        provider = config_dict["provider"]
-    else:
-        provider = config["provider"]
-        nested: dict[str, Any] = config.get("config", {})
-
-        if not nested and len(config) > 1:
-            raise ValueError(
-                "Invalid embedder configuration format. "
-                "Configuration must be nested under a 'config' key. "
-                "Example: {'provider': 'openai', 'config': {'api_key': '...', 'model': '...'}}"
-            )
-
-        config_dict = dict(nested)
-        if "model" in config_dict and "model_name" not in config_dict:
-            config_dict["model_name"] = config_dict.pop("model")
-
-    if provider not in EMBEDDING_PROVIDERS:
-        raise ValueError(
-            f"Unsupported provider: {provider}. "
-            f"Available providers: {list(EMBEDDING_PROVIDERS.keys())}"
-        )
-
-    _inject_api_key_from_env(provider, config_dict)
-
-    config_dict.pop("batch_size", None)
-
-    return EMBEDDING_PROVIDERS[provider](**config_dict)
+    if isinstance(spec, BaseEmbeddingsProvider):
+        return build_embedder_from_provider(spec)
+    return build_embedder_from_dict(spec)

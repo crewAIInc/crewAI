@@ -2,61 +2,67 @@
 
 from typing import Literal
 
-from pydantic import BaseModel, Field, SecretStr
+from crewai.rag.embeddings.providers.aws.types import BedrockProviderSpec
+from crewai.rag.embeddings.providers.cohere.types import CohereProviderSpec
+from crewai.rag.embeddings.providers.custom.types import CustomProviderSpec
+from crewai.rag.embeddings.providers.google.types import (
+    GenerativeAiProviderSpec,
+    VertexAIProviderSpec,
+)
+from crewai.rag.embeddings.providers.huggingface.types import HuggingFaceProviderSpec
+from crewai.rag.embeddings.providers.ibm.types import WatsonProviderSpec
+from crewai.rag.embeddings.providers.instructor.types import InstructorProviderSpec
+from crewai.rag.embeddings.providers.jina.types import JinaProviderSpec
+from crewai.rag.embeddings.providers.microsoft.types import AzureProviderSpec
+from crewai.rag.embeddings.providers.ollama.types import OllamaProviderSpec
+from crewai.rag.embeddings.providers.onnx.types import ONNXProviderSpec
+from crewai.rag.embeddings.providers.openai.types import OpenAIProviderSpec
+from crewai.rag.embeddings.providers.openclip.types import OpenCLIPProviderSpec
+from crewai.rag.embeddings.providers.roboflow.types import RoboflowProviderSpec
+from crewai.rag.embeddings.providers.sentence_transformer.types import (
+    SentenceTransformerProviderSpec,
+)
+from crewai.rag.embeddings.providers.text2vec.types import Text2VecProviderSpec
+from crewai.rag.embeddings.providers.voyageai.types import VoyageAIProviderSpec
 
-from crewai.rag.types import EmbeddingFunction
+ProviderSpec = (
+    AzureProviderSpec
+    | BedrockProviderSpec
+    | CohereProviderSpec
+    | CustomProviderSpec
+    | GenerativeAiProviderSpec
+    | HuggingFaceProviderSpec
+    | InstructorProviderSpec
+    | JinaProviderSpec
+    | OllamaProviderSpec
+    | ONNXProviderSpec
+    | OpenAIProviderSpec
+    | OpenCLIPProviderSpec
+    | RoboflowProviderSpec
+    | SentenceTransformerProviderSpec
+    | Text2VecProviderSpec
+    | VertexAIProviderSpec
+    | VoyageAIProviderSpec
+    | WatsonProviderSpec
+)
 
-EmbeddingProvider = Literal[
-    "openai",
+AllowedEmbeddingProviders = Literal[
+    "azure",
+    "amazon-bedrock",
     "cohere",
-    "ollama",
-    "huggingface",
-    "sentence-transformer",
-    "instructor",
-    "google-palm",
+    "custom",
     "google-generativeai",
     "google-vertex",
-    "amazon-bedrock",
+    "huggingface",
+    "instructor",
     "jina",
-    "roboflow",
-    "openclip",
-    "text2vec",
+    "ollama",
     "onnx",
+    "openai",
+    "openclip",
+    "roboflow",
+    "sentence-transformer",
+    "text2vec",
+    "voyageai",
+    "watson",
 ]
-"""Supported embedding providers.
-
-These correspond to the embedding functions available in ChromaDB's
-embedding_functions module. Each provider has specific requirements
-and configuration options.
-"""
-
-
-class EmbeddingOptions(BaseModel):
-    """Configuration options for embedding providers.
-
-    Generic attributes that can be passed to get_embedding_function
-    to configure various embedding providers.
-    """
-
-    provider: EmbeddingProvider = Field(
-        ..., description="Embedding provider name (e.g., 'openai', 'cohere', 'onnx')"
-    )
-    model_name: str | None = Field(
-        default=None, description="Model name for the embedding provider"
-    )
-    api_key: SecretStr | None = Field(
-        default=None, description="API key for the embedding provider"
-    )
-
-
-class EmbeddingConfig(BaseModel):
-    """Configuration wrapper for embedding functions.
-
-    Accepts either a pre-configured EmbeddingFunction or EmbeddingOptions
-    to create one. This provides flexibility in how embeddings are configured.
-
-    Attributes:
-        function: Either a callable EmbeddingFunction or EmbeddingOptions to create one
-    """
-
-    function: EmbeddingFunction | EmbeddingOptions
