@@ -2,7 +2,6 @@
 
 from typing import cast
 
-import voyageai
 from typing_extensions import Unpack
 
 from crewai.rag.core.base_embeddings_callable import EmbeddingFunction
@@ -19,6 +18,14 @@ class VoyageAIEmbeddingFunction(EmbeddingFunction[Documents]):
         Args:
             **kwargs: Configuration parameters for VoyageAI.
         """
+        try:
+            import voyageai  # type: ignore[import-not-found]
+
+        except ImportError as e:
+            raise ImportError(
+                "voyageai is required for voyageai embeddings. "
+                "Install it with: uv add voyageai"
+            ) from e
         self._config = kwargs
         self._client = voyageai.Client(
             api_key=kwargs["api_key"],
@@ -35,6 +42,7 @@ class VoyageAIEmbeddingFunction(EmbeddingFunction[Documents]):
         Returns:
             List of embedding vectors.
         """
+
         if isinstance(input, str):
             input = [input]
 

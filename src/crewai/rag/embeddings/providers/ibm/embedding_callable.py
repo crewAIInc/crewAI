@@ -2,11 +2,6 @@
 
 from typing import cast
 
-import ibm_watsonx_ai.foundation_models as watson_models  # type: ignore[import-not-found, import-untyped]
-from ibm_watsonx_ai import Credentials  # type: ignore[import-not-found, import-untyped]
-from ibm_watsonx_ai.metanames import (  # type: ignore[import-not-found, import-untyped]
-    EmbedTextParamsMetaNames as EmbedParams,
-)
 from typing_extensions import Unpack
 
 from crewai.rag.core.base_embeddings_callable import EmbeddingFunction
@@ -34,6 +29,21 @@ class WatsonEmbeddingFunction(EmbeddingFunction[Documents]):
         Returns:
             List of embedding vectors.
         """
+        try:
+            import ibm_watsonx_ai.foundation_models as watson_models  # type: ignore[import-not-found, import-untyped]
+            from ibm_watsonx_ai import (
+                Credentials,  # type: ignore[import-not-found, import-untyped]
+            )
+            from ibm_watsonx_ai.metanames import (  # type: ignore[import-not-found, import-untyped]
+                EmbedTextParamsMetaNames as EmbedParams,
+            )
+
+        except ImportError as e:
+            raise ImportError(
+                "ibm-watsonx-ai is required for watson embeddings. "
+                "Install it with: uv add ibm-watsonx-ai"
+            ) from e
+
         if isinstance(input, str):
             input = [input]
 

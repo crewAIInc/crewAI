@@ -10,7 +10,6 @@ from chromadb.api.models.AsyncCollection import AsyncCollection
 from chromadb.api.models.Collection import Collection
 from chromadb.api.types import (
     Include,
-    IncludeEnum,
     QueryResult,
 )
 
@@ -142,9 +141,12 @@ def _extract_search_params(
         score_threshold=kwargs.get("score_threshold"),
         where=kwargs.get("where"),
         where_document=kwargs.get("where_document"),
-        include=kwargs.get(
-            "include",
-            [IncludeEnum.metadatas, IncludeEnum.documents, IncludeEnum.distances],
+        include=cast(
+            Include,
+            kwargs.get(
+                "include",
+                ["metadatas", "documents", "distances"],
+            ),
         ),
     )
 
@@ -193,7 +195,7 @@ def _convert_chromadb_results_to_search_results(
     """
     search_results: list[SearchResult] = []
 
-    include_strings = [item.value for item in include] if include else []
+    include_strings = list(include) if include else []
 
     ids = results["ids"][0] if results.get("ids") else []
 
