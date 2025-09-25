@@ -41,4 +41,5 @@ def create_client(config: ChromaDBConfig) -> ChromaDBClient:
         embedding_function=config.embedding_function,
         default_limit=config.limit,
         default_score_threshold=config.score_threshold,
+        default_batch_size=config.batch_size,
     )
