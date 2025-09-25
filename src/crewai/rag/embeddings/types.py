@@ -1,7 +1,8 @@
 """Type definitions for the embeddings module."""
 
-from typing import Literal
+from typing import Literal, TypeAlias
 
+from crewai.rag.core.base_embeddings_provider import BaseEmbeddingsProvider
 from crewai.rag.embeddings.providers.aws.types import BedrockProviderSpec
 from crewai.rag.embeddings.providers.cohere.types import CohereProviderSpec
 from crewai.rag.embeddings.providers.custom.types import CustomProviderSpec
@@ -66,3 +67,5 @@ AllowedEmbeddingProviders = Literal[
     "voyageai",
     "watson",
 ]
+
+EmbedderConfig: TypeAlias = ProviderSpec | BaseEmbeddingsProvider

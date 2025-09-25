@@ -2,6 +2,8 @@ from typing import TYPE_CHECKING, Any, Optional
 
 from pydantic import BaseModel
 
+from crewai.rag.embeddings.types import EmbedderConfig
+
 if TYPE_CHECKING:
     from crewai.agent import Agent
     from crewai.task import Task
@@ -12,7 +14,7 @@ class Memory(BaseModel):
     Base class for memory, now supporting agent tags and generic metadata.
     """
 
-    embedder_config: dict[str, Any] | None = None
+    embedder_config: EmbedderConfig | None = None
     crew: Any | None = None
 
     storage: Any

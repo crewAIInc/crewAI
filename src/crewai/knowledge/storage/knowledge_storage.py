@@ -24,7 +24,7 @@ class KnowledgeStorage(BaseKnowledgeStorage):
 
     def __init__(
         self,
-        embedder: ProviderSpec | BaseEmbeddingsProvider | None = None,
+        embedder: ProviderSpec | type[BaseEmbeddingsProvider] | None = None,
         collection_name: str | None = None,
     ) -> None:
         self.collection_name = collection_name
@@ -37,7 +37,7 @@ class KnowledgeStorage(BaseKnowledgeStorage):
         )
 
         if embedder:
-            embedding_function = build_embedder(embedder)
+            embedding_function = build_embedder(embedder)  # type: ignore[arg-type]
             config = ChromaDBConfig(
                 embedding_function=cast(
                     ChromaEmbeddingFunctionWrapper, embedding_function
