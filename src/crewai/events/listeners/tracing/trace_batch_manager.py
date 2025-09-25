@@ -200,6 +200,9 @@ class TraceBatchManager:
         if self.event_buffer:
             events_sent_to_backend_status = self._send_events_to_backend()
             if events_sent_to_backend_status == 500:
+                self.plus_api.mark_trace_batch_as_failed(
+                    self.trace_batch_id, "Error sending events to backend"
+                )
                 return None
         self._finalize_backend_batch()
 
@@ -273,10 +276,13 @@ class TraceBatchManager:
                 logger.error(
                     f"❌ Failed to finalize trace batch: {response.status_code} - {response.text}"
                 )
+                self.plus_api.mark_trace_batch_as_failed(
+                    self.trace_batch_id, response.text
+                )
 
         except Exception as e:
             logger.error(f"❌ Error finalizing trace batch: {e}")
-            # TODO: send error to app marking as failed
+            self.plus_api.mark_trace_batch_as_failed(self.trace_batch_id, str(e))
 
     def _cleanup_batch_data(self):
         """Clean up batch data after successful finalization to free memory"""
