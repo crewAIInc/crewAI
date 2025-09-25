@@ -1,19 +1,19 @@
-import logging
 import json
-from typing import Tuple, cast
+import logging
+from typing import cast
 
 from pydantic import BaseModel, Field
 
 from crewai.agent import Agent
-from crewai.task import Task
-from crewai.utilities import I18N
-from crewai.llm import LLM
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.reasoning_events import (
-    AgentReasoningStartedEvent,
     AgentReasoningCompletedEvent,
     AgentReasoningFailedEvent,
+    AgentReasoningStartedEvent,
 )
+from crewai.llm import LLM
+from crewai.task import Task
+from crewai.utilities import I18N
 
 
 class ReasoningPlan(BaseModel):
@@ -59,39 +59,32 @@ class AgentReasoning:
         Returns:
             AgentReasoningOutput: The output of the agent reasoning process.
         """
-        # Emit a reasoning started event (attempt 1)
-        try:
-            crewai_event_bus.emit(
-                self.agent,
-                AgentReasoningStartedEvent(
-                    agent_role=self.agent.role,
-                    task_id=str(self.task.id),
-                    attempt=1,
-                    from_task=self.task,
-                ),
-            )
-        except Exception:
-            # Ignore event bus errors to avoid breaking execution
-            pass
+        crewai_event_bus.emit(
+            self.agent,
+            AgentReasoningStartedEvent(
+                agent_role=self.agent.role,
+                task_id=str(self.task.id),
+                attempt=1,
+                from_task=self.task,
+                from_agent=self.agent,
+            ),
+        )
 
         try:
             output = self.__handle_agent_reasoning()
 
-            # Emit reasoning completed event
-            try:
-                crewai_event_bus.emit(
-                    self.agent,
-                    AgentReasoningCompletedEvent(
-                        agent_role=self.agent.role,
-                        task_id=str(self.task.id),
-                        plan=output.plan.plan,
-                        ready=output.plan.ready,
-                        attempt=1,
-                        from_task=self.task,
-                    ),
-                )
-            except Exception:
-                pass
+            crewai_event_bus.emit(
+                self.agent,
+                AgentReasoningCompletedEvent(
+                    agent_role=self.agent.role,
+                    task_id=str(self.task.id),
+                    plan=output.plan.plan,
+                    ready=output.plan.ready,
+                    attempt=1,
+                    from_task=self.task,
+                    from_agent=self.agent,
+                ),
+            )
 
             return output
         except Exception as e:
@@ -105,10 +98,11 @@ class AgentReasoning:
                         error=str(e),
                         attempt=1,
                         from_task=self.task,
+                        from_agent=self.agent,
                     ),
                 )
-            except Exception:
-                pass
+            except Exception as e:
+                logging.error(f"Error emitting reasoning failed event: {e}")
 
             raise
 
@@ -126,37 +120,37 @@ class AgentReasoning:
         reasoning_plan = ReasoningPlan(plan=plan, ready=ready)
         return AgentReasoningOutput(plan=reasoning_plan)
 
-    def __create_initial_plan(self) -> Tuple[str, bool]:
+    def __create_initial_plan(self) -> tuple[str, bool]:
         """
         Creates the initial reasoning plan for the task.
 
         Returns:
-            Tuple[str, bool]: The initial plan and whether the agent is ready to execute the task.
+            tuple[str, bool]: The initial plan and whether the agent is ready to execute the task.
         """
         reasoning_prompt = self.__create_reasoning_prompt()
 
         if self.llm.supports_function_calling():
             plan, ready = self.__call_with_function(reasoning_prompt, "initial_plan")
             return plan, ready
-        else:
-            system_prompt = self.i18n.retrieve("reasoning", "initial_plan").format(
-                role=self.agent.role,
-                goal=self.agent.goal,
-                backstory=self.__get_agent_backstory(),
-            )
 
-            response = self.llm.call(
-                [
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": reasoning_prompt},
-                ],
-                from_task=self.task,
-                from_agent=self.agent,
-            )
+        system_prompt = self.i18n.retrieve("reasoning", "initial_plan").format(
+            role=self.agent.role,
+            goal=self.agent.goal,
+            backstory=self.__get_agent_backstory(),
+        )
 
-            return self.__parse_reasoning_response(str(response))
+        response = self.llm.call(
+            [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": reasoning_prompt},
+            ],
+            from_task=self.task,
+            from_agent=self.agent,
+        )
 
-    def __refine_plan_if_needed(self, plan: str, ready: bool) -> Tuple[str, bool]:
+        return self.__parse_reasoning_response(str(response))
+
+    def __refine_plan_if_needed(self, plan: str, ready: bool) -> tuple[str, bool]:
         """
         Refines the reasoning plan if the agent is not ready to execute the task.
 
@@ -165,25 +159,22 @@ class AgentReasoning:
             ready: Whether the agent is ready to execute the task.
 
         Returns:
-            Tuple[str, bool]: The refined plan and whether the agent is ready to execute the task.
+            tuple[str, bool]: The refined plan and whether the agent is ready to execute the task.
         """
         attempt = 1
         max_attempts = self.agent.max_reasoning_attempts
 
         while not ready and (max_attempts is None or attempt < max_attempts):
-            # Emit event for each refinement attempt
-            try:
-                crewai_event_bus.emit(
-                    self.agent,
-                    AgentReasoningStartedEvent(
-                        agent_role=self.agent.role,
-                        task_id=str(self.task.id),
-                        attempt=attempt + 1,
-                        from_task=self.task,
-                    ),
-                )
-            except Exception:
-                pass
+            crewai_event_bus.emit(
+                self.agent,
+                AgentReasoningStartedEvent(
+                    agent_role=self.agent.role,
+                    task_id=str(self.task.id),
+                    attempt=attempt + 1,
+                    from_task=self.task,
+                    from_agent=self.agent,
+                ),
+            )
 
             refine_prompt = self.__create_refine_prompt(plan)
 
@@ -216,7 +207,7 @@ class AgentReasoning:
 
         return plan, ready
 
-    def __call_with_function(self, prompt: str, prompt_type: str) -> Tuple[str, bool]:
+    def __call_with_function(self, prompt: str, prompt_type: str) -> tuple[str, bool]:
         """
         Calls the LLM with function calling to get a reasoning plan.
 
@@ -225,7 +216,7 @@ class AgentReasoning:
             prompt_type: The type of prompt (initial_plan or refine_plan).
 
         Returns:
-            Tuple[str, bool]: A tuple containing the plan and whether the agent is ready.
+            tuple[str, bool]: A tuple containing the plan and whether the agent is ready.
         """
         self.logger.debug(f"Using function calling for {prompt_type} reasoning")
 
@@ -259,7 +250,7 @@ class AgentReasoning:
             )
 
             # Prepare a simple callable that just returns the tool arguments as JSON
-            def _create_reasoning_plan(plan: str, ready: bool = True):  # noqa: N802
+            def _create_reasoning_plan(plan: str, ready: bool = True):
                 """Return the reasoning plan result in JSON string form."""
                 return json.dumps({"plan": plan, "ready": ready})
 
@@ -291,7 +282,7 @@ class AgentReasoning:
 
         except Exception as e:
             self.logger.warning(
-                f"Error during function calling: {str(e)}. Falling back to text parsing."
+                f"Error during function calling: {e}. Falling back to text parsing."
             )
 
             try:
@@ -316,7 +307,7 @@ class AgentReasoning:
                     "READY: I am ready to execute the task." in fallback_str,
                 )
             except Exception as inner_e:
-                self.logger.error(f"Error during fallback text parsing: {str(inner_e)}")
+                self.logger.error(f"Error during fallback text parsing: {inner_e}")
                 return (
                     "Failed to generate a plan due to an error.",
                     True,
@@ -378,7 +369,7 @@ class AgentReasoning:
             current_plan=current_plan,
         )
 
-    def __parse_reasoning_response(self, response: str) -> Tuple[str, bool]:
+    def __parse_reasoning_response(self, response: str) -> tuple[str, bool]:
         """
         Parses the reasoning response to extract the plan and whether
         the agent is ready to execute the task.
@@ -387,7 +378,7 @@ class AgentReasoning:
             response: The LLM response.
 
         Returns:
-            Tuple[str, bool]: The plan and whether the agent is ready to execute the task.
+            tuple[str, bool]: The plan and whether the agent is ready to execute the task.
         """
         if not response:
             return "No plan was generated.", False

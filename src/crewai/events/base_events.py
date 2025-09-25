@@ -17,6 +17,11 @@ class BaseEvent(BaseModel):
     )
     fingerprint_metadata: dict[str, Any] | None = None  # Any relevant metadata
 
+    task_id: str | None = None
+    task_name: str | None = None
+    agent_id: str | None = None
+    agent_role: str | None = None
+
     def to_json(self, exclude: set[str] | None = None):
         """
         Converts the event to a JSON-serializable dictionary.
@@ -31,7 +36,7 @@ class BaseEvent(BaseModel):
 
     def _set_task_params(self, data: dict[str, Any]):
         if "from_task" in data and (task := data["from_task"]):
-            self.task_id = task.id
+            self.task_id = str(task.id)
             self.task_name = task.name or task.description
             self.from_task = None
 
@@ -42,6 +47,6 @@ class BaseEvent(BaseModel):
         if not agent:
             return
 
-        self.agent_id = agent.id
+        self.agent_id = str(agent.id)
         self.agent_role = agent.role
         self.from_agent = None

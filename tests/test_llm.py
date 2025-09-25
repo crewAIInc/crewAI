@@ -7,15 +7,14 @@ import pytest
 from pydantic import BaseModel
 
 from crewai.agents.agent_builder.utilities.base_token_process import TokenProcess
-from crewai.llm import CONTEXT_WINDOW_USAGE_RATIO, LLM
 from crewai.events.event_types import (
     LLMCallCompletedEvent,
     LLMStreamChunkEvent,
-    ToolUsageStartedEvent,
-    ToolUsageFinishedEvent,
     ToolUsageErrorEvent,
+    ToolUsageFinishedEvent,
+    ToolUsageStartedEvent,
 )
-
+from crewai.llm import CONTEXT_WINDOW_USAGE_RATIO, LLM
 from crewai.utilities.token_counter_callback import TokenCalcHandler
 
 
@@ -376,11 +375,11 @@ def get_weather_tool_schema():
 
 
 def test_context_window_exceeded_error_handling():
-    """Test that litellm.ContextWindowExceededError is converted to LLMContextLengthExceededException."""
+    """Test that litellm.ContextWindowExceededError is converted to LLMContextLengthExceededExceptionError."""
     from litellm.exceptions import ContextWindowExceededError
 
     from crewai.utilities.exceptions.context_window_exceeding_exception import (
-        LLMContextLengthExceededException,
+        LLMContextLengthExceededExceptionError,
     )
 
     llm = LLM(model="gpt-4")
@@ -393,7 +392,7 @@ def test_context_window_exceeded_error_handling():
             llm_provider="openai",
         )
 
-        with pytest.raises(LLMContextLengthExceededException) as excinfo:
+        with pytest.raises(LLMContextLengthExceededExceptionError) as excinfo:
             llm.call("This is a test message")
 
         assert "context length exceeded" in str(excinfo.value).lower()
@@ -408,7 +407,7 @@ def test_context_window_exceeded_error_handling():
             llm_provider="openai",
         )
 
-        with pytest.raises(LLMContextLengthExceededException) as excinfo:
+        with pytest.raises(LLMContextLengthExceededExceptionError) as excinfo:
             llm.call("This is a test message")
 
         assert "context length exceeded" in str(excinfo.value).lower()
@@ -437,25 +436,30 @@ def user_message():
 def test_anthropic_message_formatting_edge_cases(anthropic_llm):
     """Test edge cases for Anthropic message formatting."""
     # Test None messages
-    with pytest.raises(TypeError, match="Messages cannot be None"):
-        anthropic_llm._format_messages_for_provider(None)
+    with pytest.raises(TypeError, match="'NoneType' object is not iterable"):
+        anthropic_llm._format_messages_for_anthropic(None)
 
     # Test empty message list
-    formatted = anthropic_llm._format_messages_for_provider([])
-    assert len(formatted) == 1
-    assert formatted[0]["role"] == "user"
-    assert formatted[0]["content"] == "."
+    formatted_messages, system_msg = anthropic_llm._format_messages_for_anthropic([])
+    print(f"lorenze formatted_messages: {formatted_messages}")
+    print(f"lorenze system_msg: {system_msg}")
+    assert len(formatted_messages) == 1
+    assert system_msg is None
+    assert formatted_messages[0]["role"] == "user"
+    assert formatted_messages[0]["content"] == "Hello"  # Default user message
 
     # Test invalid message format
-    with pytest.raises(TypeError, match="Invalid message format"):
-        anthropic_llm._format_messages_for_provider([{"invalid": "message"}])
+    with pytest.raises(
+        ValueError, match="Message at index 0 must have 'role' and 'content' keys"
+    ):
+        anthropic_llm._format_messages_for_anthropic([{"invalid": "message"}])
 
 
 def test_anthropic_model_detection():
     """Test Anthropic model detection with various formats."""
     models = [
         ("anthropic/claude-3", True),
-        ("claude-instant", True),
+        ("claude-instant", False),
         ("claude/v1", True),
         ("gpt-4", False),
         ("", False),
@@ -464,28 +468,38 @@ def test_anthropic_model_detection():
 
     for model, expected in models:
         llm = LLM(model=model)
-        assert llm.is_anthropic == expected, f"Failed for model: {model}"
+        is_anthropic = llm.provider == "anthropic" or llm.provider == "claude"
+        assert is_anthropic == expected, f"Failed for model: {model}"
 
 
 def test_anthropic_message_formatting(anthropic_llm, system_message, user_message):
     """Test Anthropic message formatting with fixtures."""
     # Test when first message is system
-    formatted = anthropic_llm._format_messages_for_provider([system_message])
-    assert len(formatted) == 2
-    assert formatted[0]["role"] == "user"
-    assert formatted[0]["content"] == "."
-    assert formatted[1] == system_message
+    print(f"lorenze system_message: {system_message}")
+    formatted_messages, system_msg = anthropic_llm._format_messages_for_anthropic(
+        [system_message]
+    )
+    assert len(formatted_messages) == 1  # Should have one user message
+    assert system_msg == "test"  # System message should be extracted
+    assert formatted_messages[0]["role"] == "user"
+    assert (
+        formatted_messages[0]["content"] == "Hello"
+    )  # Default user message when no user messages exist
 
     # Test when first message is already user
-    formatted = anthropic_llm._format_messages_for_provider([user_message])
-    assert len(formatted) == 1
-    assert formatted[0] == user_message
+    formatted_messages, system_msg = anthropic_llm._format_messages_for_anthropic(
+        [user_message]
+    )
+    assert len(formatted_messages) == 1
+    assert system_msg is None  # No system message
+    assert formatted_messages[0] == user_message
 
     # Test with empty message list
-    formatted = anthropic_llm._format_messages_for_provider([])
-    assert len(formatted) == 1
-    assert formatted[0]["role"] == "user"
-    assert formatted[0]["content"] == "."
+    formatted_messages, system_msg = anthropic_llm._format_messages_for_anthropic([])
+    assert len(formatted_messages) == 1
+    assert system_msg is None
+    assert formatted_messages[0]["role"] == "user"
+    assert formatted_messages[0]["content"] == "Hello"  # Default user message
 
     # Test with non-Anthropic model (should not modify messages)
     non_anthropic_llm = LLM(model="gpt-4")

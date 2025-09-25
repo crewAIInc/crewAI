@@ -1325,13 +1325,34 @@ class Crew(FlowTrackable, BaseModel):
     def calculate_usage_metrics(self) -> UsageMetrics:
         """Calculates and returns the usage metrics."""
         total_usage_metrics = UsageMetrics()
+
         for agent in self.agents:
-            if hasattr(agent, "_token_process"):
-                token_sum = agent._token_process.get_summary()
-                total_usage_metrics.add_usage_metrics(token_sum)
+            if isinstance(agent.llm, BaseLLM):
+                llm_usage = agent.llm.get_token_usage_summary()
+
+                total_usage_metrics.add_usage_metrics(llm_usage)
+            else:
+                # fallback litellm
+                if hasattr(agent, "_token_process"):
+                    token_sum = agent._token_process.get_summary()
+                    total_usage_metrics.add_usage_metrics(token_sum)
+
         if self.manager_agent and hasattr(self.manager_agent, "_token_process"):
             token_sum = self.manager_agent._token_process.get_summary()
             total_usage_metrics.add_usage_metrics(token_sum)
+
+        if (
+            self.manager_agent
+            and hasattr(self.manager_agent, "llm")
+            and hasattr(self.manager_agent.llm, "get_token_usage_summary")
+        ):
+            if isinstance(self.manager_agent.llm, BaseLLM):
+                llm_usage = self.manager_agent.llm.get_token_usage_summary()
+            else:
+                llm_usage = self.manager_agent.llm._token_process.get_summary()
+
+            total_usage_metrics.add_usage_metrics(llm_usage)
+
         self.usage_metrics = total_usage_metrics
         return total_usage_metrics
 

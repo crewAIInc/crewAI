@@ -7,19 +7,23 @@ from crewai.events.base_events import BaseEvent
 
 
 class LLMEventBase(BaseEvent):
-    task_name: str | None = None
-    task_id: str | None = None
-
-    agent_id: str | None = None
-    agent_role: str | None = None
-
     from_task: Any | None = None
     from_agent: Any | None = None
 
     def __init__(self, **data):
+        if data.get("from_task"):
+            task = data["from_task"]
+            data["task_id"] = str(task.id)
+            data["task_name"] = task.name or task.description
+            data["from_task"] = None
+
+        if data.get("from_agent"):
+            agent = data["from_agent"]
+            data["agent_id"] = str(agent.id)
+            data["agent_role"] = agent.role
+            data["from_agent"] = None
+
         super().__init__(**data)
-        self._set_agent_params(data)
-        self._set_task_params(data)
 
 
 class LLMCallType(Enum):

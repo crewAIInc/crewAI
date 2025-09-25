@@ -587,7 +587,23 @@ class ToolUsage:
         e: Exception,
     ) -> None:
         event_data = self._prepare_event_data(tool, tool_calling)
-        crewai_event_bus.emit(self, ToolUsageErrorEvent(**{**event_data, "error": e}))
+        event_data.update(
+            {
+                "task_id": str(self.task.id) if self.task else None,
+                "task_name": self.task.name or self.task.description
+                if self.task
+                else None,
+            }
+        )
+        crewai_event_bus.emit(
+            self,
+            ToolUsageErrorEvent(
+                **{
+                    **event_data,
+                    "error": e,
+                }
+            ),
+        )
 
     def on_tool_use_finished(
         self,

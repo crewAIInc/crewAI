@@ -434,4 +434,604 @@ interactions:
     status:
       code: 200
       message: OK
+- request:
+    body: '{"trace_id": "8fb6e82b-be8f-411d-82e6-16493b2a06b6", "execution_type":
+      "crew", "user_identifier": null, "execution_context": {"crew_fingerprint": null,
+      "crew_name": "crew", "flow_name": null, "crewai_version": "0.193.2", "privacy_level":
+      "standard"}, "execution_metadata": {"expected_duration_estimate": 300, "agent_count":
+      0, "task_count": 0, "flow_method_count": 0, "execution_started_at": "2025-09-24T06:05:21.465921+00:00"}}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '428'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - CrewAI-CLI/0.193.2
+      X-Crewai-Organization-Id:
+      - d3a3d10c-35db-423f-a7a4-c026030ba64d
+      X-Crewai-Version:
+      - 0.193.2
+    method: POST
+    uri: http://localhost:3000/crewai_plus/api/v1/tracing/batches
+  response:
+    body:
+      string: '{"id":"0d052099-8eb5-4bf2-8baf-a95eb71969dc","trace_id":"8fb6e82b-be8f-411d-82e6-16493b2a06b6","execution_type":"crew","crew_name":"crew","flow_name":null,"status":"running","duration_ms":null,"crewai_version":"0.193.2","privacy_level":"standard","total_events":0,"execution_context":{"crew_fingerprint":null,"crew_name":"crew","flow_name":null,"crewai_version":"0.193.2","privacy_level":"standard"},"created_at":"2025-09-24T06:05:21.890Z","updated_at":"2025-09-24T06:05:21.890Z"}'
+    headers:
+      Content-Length:
+      - '480'
+      cache-control:
+      - max-age=0, private, must-revalidate
+      content-security-policy:
+      - 'default-src ''self'' *.crewai.com crewai.com; script-src ''self'' ''unsafe-inline''
+        *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts https://www.gstatic.com
+        https://run.pstmn.io https://share.descript.com/; style-src ''self'' ''unsafe-inline''
+        *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts; img-src ''self''
+        data: *.crewai.com crewai.com https://zeus.tools.crewai.com https://dashboard.tools.crewai.com
+        https://cdn.jsdelivr.net; font-src ''self'' data: *.crewai.com crewai.com;
+        connect-src ''self'' *.crewai.com crewai.com https://zeus.tools.crewai.com
+        https://connect.useparagon.com/ https://zeus.useparagon.com/* https://*.useparagon.com/*
+        https://run.pstmn.io https://connect.tools.crewai.com/ ws://localhost:3036
+        wss://localhost:3036; frame-src ''self'' *.crewai.com crewai.com https://connect.useparagon.com/
+        https://zeus.tools.crewai.com https://zeus.useparagon.com/* https://connect.tools.crewai.com/
+        https://www.youtube.com https://share.descript.com'
+      content-type:
+      - application/json; charset=utf-8
+      etag:
+      - W/"d113f6351e859e55dd012a0b86a71547"
+      permissions-policy:
+      - camera=(), microphone=(self), geolocation=()
+      referrer-policy:
+      - strict-origin-when-cross-origin
+      server-timing:
+      - cache_read.active_support;dur=0.06, sql.active_record;dur=28.50, cache_generate.active_support;dur=2.05,
+        cache_write.active_support;dur=0.14, cache_read_multi.active_support;dur=0.08,
+        start_processing.action_controller;dur=0.00, instantiation.active_record;dur=0.29,
+        feature_operation.flipper;dur=0.04, start_transaction.active_record;dur=0.00,
+        transaction.active_record;dur=11.90, process_action.action_controller;dur=375.53
+      vary:
+      - Accept
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-permitted-cross-domain-policies:
+      - none
+      x-request-id:
+      - 38fabbf7-3da4-49e0-b14c-d3ef4df07248
+      x-runtime:
+      - '0.435366'
+      x-xss-protection:
+      - 1; mode=block
+    status:
+      code: 201
+      message: Created
+- request:
+    body: '{"events": [{"event_id": "03f563de-b12f-4e2f-b438-c6fa6b88867f", "timestamp":
+      "2025-09-24T06:05:21.905484+00:00", "type": "crew_kickoff_started", "event_data":
+      {"timestamp": "2025-09-24T06:05:21.464975+00:00", "type": "crew_kickoff_started",
+      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
+      "task_id": null, "task_name": null, "agent_id": null, "agent_role": null, "crew_name":
+      "crew", "crew": null, "inputs": {"crewai_trigger_payload": "Initial context
+      data"}}}, {"event_id": "b87be533-9b05-49fb-8f2b-b2f8fe7f6f44", "timestamp":
+      "2025-09-24T06:05:21.908647+00:00", "type": "task_started", "event_data": {"task_description":
+      "Process initial data", "expected_output": "Initial analysis", "task_name":
+      "Process initial data", "context": "", "agent_role": "First Agent", "task_id":
+      "80f088cc-435d-4f6e-9093-da23633a2c25"}}, {"event_id": "3f93ed70-ac54-44aa-b4e8-2f7c5873accd",
+      "timestamp": "2025-09-24T06:05:21.909526+00:00", "type": "agent_execution_started",
+      "event_data": {"agent_role": "First Agent", "agent_goal": "First goal", "agent_backstory":
+      "First backstory"}}, {"event_id": "e7767906-214d-4de9-bcd2-ee17e5e62e8c", "timestamp":
+      "2025-09-24T06:05:21.909670+00:00", "type": "llm_call_started", "event_data":
+      {"timestamp": "2025-09-24T06:05:21.909630+00:00", "type": "llm_call_started",
+      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
+      "task_id": "80f088cc-435d-4f6e-9093-da23633a2c25", "task_name": "Process initial
+      data", "agent_id": "b770adc7-09ea-4805-b5ac-e299a7a54ef5", "agent_role": "First
+      Agent", "from_task": null, "from_agent": null, "model": "gpt-4o-mini", "messages":
+      [{"role": "system", "content": "You are First Agent. First backstory\nYour personal
+      goal is: First goal\nTo give my best complete final answer to the task respond
+      using the exact following format:\n\nThought: I now can give a great answer\nFinal
+      Answer: Your final answer must be the great and the most complete as possible,
+      it must be outcome described.\n\nI MUST use these formats, my job depends on
+      it!"}, {"role": "user", "content": "\nCurrent Task: Process initial data\n\nTrigger
+      Payload: Initial context data\n\nThis is the expected criteria for your final
+      answer: Initial analysis\nyou MUST return the actual complete content as the
+      final answer, not a summary.\n\nBegin! This is VERY important to you, use the
+      tools available and give your best Final Answer, your job depends on it!\n\nThought:"}],
+      "tools": null, "callbacks": ["<crewai.utilities.token_counter_callback.TokenCalcHandler
+      object at 0x11ee99490>"], "available_functions": null}}, {"event_id": "e320f773-471b-4094-ac7e-30d48279d16c",
+      "timestamp": "2025-09-24T06:05:21.912116+00:00", "type": "llm_call_completed",
+      "event_data": {"timestamp": "2025-09-24T06:05:21.912076+00:00", "type": "llm_call_completed",
+      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
+      "task_id": "80f088cc-435d-4f6e-9093-da23633a2c25", "task_name": "Process initial
+      data", "agent_id": "b770adc7-09ea-4805-b5ac-e299a7a54ef5", "agent_role": "First
+      Agent", "from_task": null, "from_agent": null, "messages": [{"role": "system",
+      "content": "You are First Agent. First backstory\nYour personal goal is: First
+      goal\nTo give my best complete final answer to the task respond using the exact
+      following format:\n\nThought: I now can give a great answer\nFinal Answer: Your
+      final answer must be the great and the most complete as possible, it must be
+      outcome described.\n\nI MUST use these formats, my job depends on it!"}, {"role":
+      "user", "content": "\nCurrent Task: Process initial data\n\nTrigger Payload:
+      Initial context data\n\nThis is the expected criteria for your final answer:
+      Initial analysis\nyou MUST return the actual complete content as the final answer,
+      not a summary.\n\nBegin! This is VERY important to you, use the tools available
+      and give your best Final Answer, your job depends on it!\n\nThought:"}], "response":
+      "I now can give a great answer  \nFinal Answer: The initial analysis should
+      include a comprehensive examination of the data provided, identifying key patterns,
+      trends, and anomalies. It involves evaluating the sources of the data, the methodology
+      used in its collection, and any potential biases. \n\n1. **Data Sources**: Identify
+      where the data originated, including databases, surveys, experiments, or third-party
+      sources.\n\n2. **Data Types**: Determine the types of data (quantitative or
+      qualitative) and the specific metrics involved (e.g., numerical values, text
+      responses, categorical data).\n\n3. **Preliminary Trends**: Look for initial
+      trends in the data, such as averages, distributions, and correlations between
+      variables. This can include graphical representations like charts or histograms
+      to visualize trends.\n\n4. **Outliers**: Identify any data points that significantly
+      deviate from the expected range, which could affect the overall analysis. Understand
+      potential reasons for these anomalies.\n\n5. **Comparative Analysis**: If applicable,
+      compare the data across different segments or over time to identify stable trends
+      versus temporary fluctuations.\n\n6. **Limitations**: Recognize any limitations
+      within the dataset, including missing data, potential errors in data entry,
+      and sampling biases that could affect the reliability of the analysis.\n\n7.
+      **Recommendations for Further Analysis**: Based on the initial analysis, suggest
+      areas for deeper investigation. This may include additional data collection,
+      more complex modeling, or exploring other variables that could influence the
+      findings.\n\nBy thoroughly addressing these elements, the initial analysis will
+      provide a solid foundational understanding of the dataset, paving the way for
+      informed decision-making and strategic planning.", "call_type": "<LLMCallType.LLM_CALL:
+      ''llm_call''>", "model": "gpt-4o-mini"}}, {"event_id": "5854745d-a82c-49a0-8d22-62c19277f310",
+      "timestamp": "2025-09-24T06:05:21.912391+00:00", "type": "agent_execution_completed",
+      "event_data": {"agent_role": "First Agent", "agent_goal": "First goal", "agent_backstory":
+      "First backstory"}}, {"event_id": "6a42277b-c362-4ea4-843e-840ef92ead23", "timestamp":
+      "2025-09-24T06:05:21.912470+00:00", "type": "task_completed", "event_data":
+      {"task_description": "Process initial data", "task_name": "Process initial data",
+      "task_id": "80f088cc-435d-4f6e-9093-da23633a2c25", "output_raw": "The initial
+      analysis should include a comprehensive examination of the data provided, identifying
+      key patterns, trends, and anomalies. It involves evaluating the sources of the
+      data, the methodology used in its collection, and any potential biases. \n\n1.
+      **Data Sources**: Identify where the data originated, including databases, surveys,
+      experiments, or third-party sources.\n\n2. **Data Types**: Determine the types
+      of data (quantitative or qualitative) and the specific metrics involved (e.g.,
+      numerical values, text responses, categorical data).\n\n3. **Preliminary Trends**:
+      Look for initial trends in the data, such as averages, distributions, and correlations
+      between variables. This can include graphical representations like charts or
+      histograms to visualize trends.\n\n4. **Outliers**: Identify any data points
+      that significantly deviate from the expected range, which could affect the overall
+      analysis. Understand potential reasons for these anomalies.\n\n5. **Comparative
+      Analysis**: If applicable, compare the data across different segments or over
+      time to identify stable trends versus temporary fluctuations.\n\n6. **Limitations**:
+      Recognize any limitations within the dataset, including missing data, potential
+      errors in data entry, and sampling biases that could affect the reliability
+      of the analysis.\n\n7. **Recommendations for Further Analysis**: Based on the
+      initial analysis, suggest areas for deeper investigation. This may include additional
+      data collection, more complex modeling, or exploring other variables that could
+      influence the findings.\n\nBy thoroughly addressing these elements, the initial
+      analysis will provide a solid foundational understanding of the dataset, paving
+      the way for informed decision-making and strategic planning.", "output_format":
+      "OutputFormat.RAW", "agent_role": "First Agent"}}, {"event_id": "a0644e65-190d-47f5-b64c-333e49d8773c",
+      "timestamp": "2025-09-24T06:05:21.914104+00:00", "type": "task_started", "event_data":
+      {"task_description": "Process secondary data", "expected_output": "Secondary
+      analysis", "task_name": "Process secondary data", "context": "The initial analysis
+      should include a comprehensive examination of the data provided, identifying
+      key patterns, trends, and anomalies. It involves evaluating the sources of the
+      data, the methodology used in its collection, and any potential biases. \n\n1.
+      **Data Sources**: Identify where the data originated, including databases, surveys,
+      experiments, or third-party sources.\n\n2. **Data Types**: Determine the types
+      of data (quantitative or qualitative) and the specific metrics involved (e.g.,
+      numerical values, text responses, categorical data).\n\n3. **Preliminary Trends**:
+      Look for initial trends in the data, such as averages, distributions, and correlations
+      between variables. This can include graphical representations like charts or
+      histograms to visualize trends.\n\n4. **Outliers**: Identify any data points
+      that significantly deviate from the expected range, which could affect the overall
+      analysis. Understand potential reasons for these anomalies.\n\n5. **Comparative
+      Analysis**: If applicable, compare the data across different segments or over
+      time to identify stable trends versus temporary fluctuations.\n\n6. **Limitations**:
+      Recognize any limitations within the dataset, including missing data, potential
+      errors in data entry, and sampling biases that could affect the reliability
+      of the analysis.\n\n7. **Recommendations for Further Analysis**: Based on the
+      initial analysis, suggest areas for deeper investigation. This may include additional
+      data collection, more complex modeling, or exploring other variables that could
+      influence the findings.\n\nBy thoroughly addressing these elements, the initial
+      analysis will provide a solid foundational understanding of the dataset, paving
+      the way for informed decision-making and strategic planning.", "agent_role":
+      "Second Agent", "task_id": "960ba106-b9ed-47a3-9be5-b5fffce54325"}}, {"event_id":
+      "31110230-05a9-443f-b4ad-9d0630a72d6a", "timestamp": "2025-09-24T06:05:21.915129+00:00",
+      "type": "agent_execution_started", "event_data": {"agent_role": "Second Agent",
+      "agent_goal": "Second goal", "agent_backstory": "Second backstory"}}, {"event_id":
+      "7ecd82f2-5de8-457f-88e1-65856f15e93a", "timestamp": "2025-09-24T06:05:21.915255+00:00",
+      "type": "llm_call_started", "event_data": {"timestamp": "2025-09-24T06:05:21.915224+00:00",
+      "type": "llm_call_started", "source_fingerprint": null, "source_type": null,
+      "fingerprint_metadata": null, "task_id": "960ba106-b9ed-47a3-9be5-b5fffce54325",
+      "task_name": "Process secondary data", "agent_id": "1459bd0a-302d-4687-9f49-3c79e1fce23d",
+      "agent_role": "Second Agent", "from_task": null, "from_agent": null, "model":
+      "gpt-4o-mini", "messages": [{"role": "system", "content": "You are Second Agent.
+      Second backstory\nYour personal goal is: Second goal\nTo give my best complete
+      final answer to the task respond using the exact following format:\n\nThought:
+      I now can give a great answer\nFinal Answer: Your final answer must be the great
+      and the most complete as possible, it must be outcome described.\n\nI MUST use
+      these formats, my job depends on it!"}, {"role": "user", "content": "\nCurrent
+      Task: Process secondary data\n\nThis is the expected criteria for your final
+      answer: Secondary analysis\nyou MUST return the actual complete content as the
+      final answer, not a summary.\n\nThis is the context you''re working with:\nThe
+      initial analysis should include a comprehensive examination of the data provided,
+      identifying key patterns, trends, and anomalies. It involves evaluating the
+      sources of the data, the methodology used in its collection, and any potential
+      biases. \n\n1. **Data Sources**: Identify where the data originated, including
+      databases, surveys, experiments, or third-party sources.\n\n2. **Data Types**:
+      Determine the types of data (quantitative or qualitative) and the specific metrics
+      involved (e.g., numerical values, text responses, categorical data).\n\n3. **Preliminary
+      Trends**: Look for initial trends in the data, such as averages, distributions,
+      and correlations between variables. This can include graphical representations
+      like charts or histograms to visualize trends.\n\n4. **Outliers**: Identify
+      any data points that significantly deviate from the expected range, which could
+      affect the overall analysis. Understand potential reasons for these anomalies.\n\n5.
+      **Comparative Analysis**: If applicable, compare the data across different segments
+      or over time to identify stable trends versus temporary fluctuations.\n\n6.
+      **Limitations**: Recognize any limitations within the dataset, including missing
+      data, potential errors in data entry, and sampling biases that could affect
+      the reliability of the analysis.\n\n7. **Recommendations for Further Analysis**:
+      Based on the initial analysis, suggest areas for deeper investigation. This
+      may include additional data collection, more complex modeling, or exploring
+      other variables that could influence the findings.\n\nBy thoroughly addressing
+      these elements, the initial analysis will provide a solid foundational understanding
+      of the dataset, paving the way for informed decision-making and strategic planning.\n\nBegin!
+      This is VERY important to you, use the tools available and give your best Final
+      Answer, your job depends on it!\n\nThought:"}], "tools": null, "callbacks":
+      ["<crewai.utilities.token_counter_callback.TokenCalcHandler object at 0x128919a60>"],
+      "available_functions": null}}, {"event_id": "cf2435b7-42e7-4d7d-b37c-11909a07293c",
+      "timestamp": "2025-09-24T06:05:21.917151+00:00", "type": "llm_call_completed",
+      "event_data": {"timestamp": "2025-09-24T06:05:21.917109+00:00", "type": "llm_call_completed",
+      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
+      "task_id": "960ba106-b9ed-47a3-9be5-b5fffce54325", "task_name": "Process secondary
+      data", "agent_id": "1459bd0a-302d-4687-9f49-3c79e1fce23d", "agent_role": "Second
+      Agent", "from_task": null, "from_agent": null, "messages": [{"role": "system",
+      "content": "You are Second Agent. Second backstory\nYour personal goal is: Second
+      goal\nTo give my best complete final answer to the task respond using the exact
+      following format:\n\nThought: I now can give a great answer\nFinal Answer: Your
+      final answer must be the great and the most complete as possible, it must be
+      outcome described.\n\nI MUST use these formats, my job depends on it!"}, {"role":
+      "user", "content": "\nCurrent Task: Process secondary data\n\nThis is the expected
+      criteria for your final answer: Secondary analysis\nyou MUST return the actual
+      complete content as the final answer, not a summary.\n\nThis is the context
+      you''re working with:\nThe initial analysis should include a comprehensive examination
+      of the data provided, identifying key patterns, trends, and anomalies. It involves
+      evaluating the sources of the data, the methodology used in its collection,
+      and any potential biases. \n\n1. **Data Sources**: Identify where the data originated,
+      including databases, surveys, experiments, or third-party sources.\n\n2. **Data
+      Types**: Determine the types of data (quantitative or qualitative) and the specific
+      metrics involved (e.g., numerical values, text responses, categorical data).\n\n3.
+      **Preliminary Trends**: Look for initial trends in the data, such as averages,
+      distributions, and correlations between variables. This can include graphical
+      representations like charts or histograms to visualize trends.\n\n4. **Outliers**:
+      Identify any data points that significantly deviate from the expected range,
+      which could affect the overall analysis. Understand potential reasons for these
+      anomalies.\n\n5. **Comparative Analysis**: If applicable, compare the data across
+      different segments or over time to identify stable trends versus temporary fluctuations.\n\n6.
+      **Limitations**: Recognize any limitations within the dataset, including missing
+      data, potential errors in data entry, and sampling biases that could affect
+      the reliability of the analysis.\n\n7. **Recommendations for Further Analysis**:
+      Based on the initial analysis, suggest areas for deeper investigation. This
+      may include additional data collection, more complex modeling, or exploring
+      other variables that could influence the findings.\n\nBy thoroughly addressing
+      these elements, the initial analysis will provide a solid foundational understanding
+      of the dataset, paving the way for informed decision-making and strategic planning.\n\nBegin!
+      This is VERY important to you, use the tools available and give your best Final
+      Answer, your job depends on it!\n\nThought:"}], "response": "I now can give
+      a great answer  \nFinal Answer: \n\n### Comprehensive Examination of Secondary
+      Data\n\n#### 1. **Data Sources**\nThe data originates from multiple sources,
+      attempting to encapsulate a holistic view of the researched topic. Specific
+      data sources include:\n- **Databases**: Publicly accessible databases, such
+      as PubMed for health-related data and the U.S. Census Bureau for demographic
+      statistics.\n- **Surveys**: National surveys conducted by reputable organizations
+      such as Pew Research Center, providing data on public opinion and behavior.\n-
+      **Experiments**: Published studies which have adhered to peer-review standards,
+      ensuring methodological rigor.\n- **Third-party sources**: Reports from think
+      tanks and academic institutions which aggregate data from primary research.\n\n####
+      2. **Data Types**\nThe dataset comprises both quantitative and qualitative types:\n-
+      **Quantitative Data**: Numerical values are predominantly used, including continuous
+      metrics such as age, income levels, and frequency of events. This is suitable
+      for statistical analysis.\n- **Qualitative Data**: Text responses from surveys
+      that capture opinions, experiences, and feedback. This can involve coding responses
+      into categories for easier analysis.\n\n#### 3. **Preliminary Trends**\nInitial
+      trends observed in the dataset include:\n- **Averages**: Calculation of mean
+      and median values to measure central tendency (e.g., average income levels across
+      demographic groups).\n- **Distributions**: Graphical representation using histograms
+      reveals how data points are spread across different categories or values (e.g.,
+      age groups).\n- **Correlations**: Initial analysis indicates potential correlations,
+      such as between education level and income, visualized through scatter plots
+      which depict the relationship between the two variables.\n\n#### 4. **Outliers**\nThe
+      analysis identifies several outliers:\n- Data points significantly exceeding
+      or falling below expected ranges (e.g., an income level substantially higher
+      than the surrounding cluster).\n- Potential reasons for these anomalies might
+      include errors in data entry, unique subpopulations not representative of the
+      larger group, or influential cases that merit further exploration.\n\n#### 5.
+      **Comparative Analysis**\nComparative analysis reveals:\n- **Temporal Fluctuations**:
+      Examining the same dataset over time indicates fluctuations in responses, such
+      as changing public opinion on specific social issues.\n- **Segmentation**: Segmenting
+      data by demographic factors (e.g., age, income, education) allows for comparisons
+      that highlight significant differences across groups, reinforcing the stability
+      or volatility of particular trends.\n\n#### 6. **Limitations**\nRecognizing
+      limitations is crucial:\n- **Missing Data**: Instances where values are absent,
+      leading to gaps in the analysis. This may necessitate imputation or exclusion
+      from certain calculations.\n- **Potential Errors**: Occurrences of data entry
+      mistakes can distort findings, which warrants cautious handling of datasets.\n-
+      **Sampling Biases**: If certain groups are overrepresented or underrepresented,
+      the dataset may not provide a fully representative view, affecting the generalizability
+      of results.\n\n#### 7. **Recommendations for Further Analysis**\nBased on these
+      insights, the following recommendations are proposed for deeper investigation:\n-
+      **Additional Data Collection**: To address gaps and enhance dataset robustness,
+      consider conducting focused surveys or engaging with underrepresented groups.\n-
+      **Complex Modeling**: Implement predictive modeling techniques to explore relationships
+      more intricately, adjusting for confounding variables.\n- **Exploratory Variables**:
+      Investigate additional factors that could impact outcomes (e.g., geographic
+      location, socioeconomic status) to enhance comprehension of observed trends.\n\nBy
+      thoroughly addressing these elements, this initial analysis paves the way for
+      informed decision-making and strategic planning, laying a solid groundwork for
+      future investigations and potential actions.", "call_type": "<LLMCallType.LLM_CALL:
+      ''llm_call''>", "model": "gpt-4o-mini"}}, {"event_id": "ea0b5d66-0163-4227-816a-d7a02b6efbc2",
+      "timestamp": "2025-09-24T06:05:21.917396+00:00", "type": "agent_execution_completed",
+      "event_data": {"agent_role": "Second Agent", "agent_goal": "Second goal", "agent_backstory":
+      "Second backstory"}}, {"event_id": "890be79b-dd68-4ff2-808b-df53f405e613", "timestamp":
+      "2025-09-24T06:05:21.917469+00:00", "type": "task_completed", "event_data":
+      {"task_description": "Process secondary data", "task_name": "Process secondary
+      data", "task_id": "960ba106-b9ed-47a3-9be5-b5fffce54325", "output_raw": "###
+      Comprehensive Examination of Secondary Data\n\n#### 1. **Data Sources**\nThe
+      data originates from multiple sources, attempting to encapsulate a holistic
+      view of the researched topic. Specific data sources include:\n- **Databases**:
+      Publicly accessible databases, such as PubMed for health-related data and the
+      U.S. Census Bureau for demographic statistics.\n- **Surveys**: National surveys
+      conducted by reputable organizations such as Pew Research Center, providing
+      data on public opinion and behavior.\n- **Experiments**: Published studies which
+      have adhered to peer-review standards, ensuring methodological rigor.\n- **Third-party
+      sources**: Reports from think tanks and academic institutions which aggregate
+      data from primary research.\n\n#### 2. **Data Types**\nThe dataset comprises
+      both quantitative and qualitative types:\n- **Quantitative Data**: Numerical
+      values are predominantly used, including continuous metrics such as age, income
+      levels, and frequency of events. This is suitable for statistical analysis.\n-
+      **Qualitative Data**: Text responses from surveys that capture opinions, experiences,
+      and feedback. This can involve coding responses into categories for easier analysis.\n\n####
+      3. **Preliminary Trends**\nInitial trends observed in the dataset include:\n-
+      **Averages**: Calculation of mean and median values to measure central tendency
+      (e.g., average income levels across demographic groups).\n- **Distributions**:
+      Graphical representation using histograms reveals how data points are spread
+      across different categories or values (e.g., age groups).\n- **Correlations**:
+      Initial analysis indicates potential correlations, such as between education
+      level and income, visualized through scatter plots which depict the relationship
+      between the two variables.\n\n#### 4. **Outliers**\nThe analysis identifies
+      several outliers:\n- Data points significantly exceeding or falling below expected
+      ranges (e.g., an income level substantially higher than the surrounding cluster).\n-
+      Potential reasons for these anomalies might include errors in data entry, unique
+      subpopulations not representative of the larger group, or influential cases
+      that merit further exploration.\n\n#### 5. **Comparative Analysis**\nComparative
+      analysis reveals:\n- **Temporal Fluctuations**: Examining the same dataset over
+      time indicates fluctuations in responses, such as changing public opinion on
+      specific social issues.\n- **Segmentation**: Segmenting data by demographic
+      factors (e.g., age, income, education) allows for comparisons that highlight
+      significant differences across groups, reinforcing the stability or volatility
+      of particular trends.\n\n#### 6. **Limitations**\nRecognizing limitations is
+      crucial:\n- **Missing Data**: Instances where values are absent, leading to
+      gaps in the analysis. This may necessitate imputation or exclusion from certain
+      calculations.\n- **Potential Errors**: Occurrences of data entry mistakes can
+      distort findings, which warrants cautious handling of datasets.\n- **Sampling
+      Biases**: If certain groups are overrepresented or underrepresented, the dataset
+      may not provide a fully representative view, affecting the generalizability
+      of results.\n\n#### 7. **Recommendations for Further Analysis**\nBased on these
+      insights, the following recommendations are proposed for deeper investigation:\n-
+      **Additional Data Collection**: To address gaps and enhance dataset robustness,
+      consider conducting focused surveys or engaging with underrepresented groups.\n-
+      **Complex Modeling**: Implement predictive modeling techniques to explore relationships
+      more intricately, adjusting for confounding variables.\n- **Exploratory Variables**:
+      Investigate additional factors that could impact outcomes (e.g., geographic
+      location, socioeconomic status) to enhance comprehension of observed trends.\n\nBy
+      thoroughly addressing these elements, this initial analysis paves the way for
+      informed decision-making and strategic planning, laying a solid groundwork for
+      future investigations and potential actions.", "output_format": "OutputFormat.RAW",
+      "agent_role": "Second Agent"}}, {"event_id": "7024dc08-b959-4405-9875-2ab8e719e30d",
+      "timestamp": "2025-09-24T06:05:21.918839+00:00", "type": "crew_kickoff_completed",
+      "event_data": {"timestamp": "2025-09-24T06:05:21.918816+00:00", "type": "crew_kickoff_completed",
+      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
+      "task_id": null, "task_name": null, "agent_id": null, "agent_role": null, "crew_name":
+      "crew", "crew": null, "output": {"description": "Process secondary data", "name":
+      "Process secondary data", "expected_output": "Secondary analysis", "summary":
+      "Process secondary data...", "raw": "### Comprehensive Examination of Secondary
+      Data\n\n#### 1. **Data Sources**\nThe data originates from multiple sources,
+      attempting to encapsulate a holistic view of the researched topic. Specific
+      data sources include:\n- **Databases**: Publicly accessible databases, such
+      as PubMed for health-related data and the U.S. Census Bureau for demographic
+      statistics.\n- **Surveys**: National surveys conducted by reputable organizations
+      such as Pew Research Center, providing data on public opinion and behavior.\n-
+      **Experiments**: Published studies which have adhered to peer-review standards,
+      ensuring methodological rigor.\n- **Third-party sources**: Reports from think
+      tanks and academic institutions which aggregate data from primary research.\n\n####
+      2. **Data Types**\nThe dataset comprises both quantitative and qualitative types:\n-
+      **Quantitative Data**: Numerical values are predominantly used, including continuous
+      metrics such as age, income levels, and frequency of events. This is suitable
+      for statistical analysis.\n- **Qualitative Data**: Text responses from surveys
+      that capture opinions, experiences, and feedback. This can involve coding responses
+      into categories for easier analysis.\n\n#### 3. **Preliminary Trends**\nInitial
+      trends observed in the dataset include:\n- **Averages**: Calculation of mean
+      and median values to measure central tendency (e.g., average income levels across
+      demographic groups).\n- **Distributions**: Graphical representation using histograms
+      reveals how data points are spread across different categories or values (e.g.,
+      age groups).\n- **Correlations**: Initial analysis indicates potential correlations,
+      such as between education level and income, visualized through scatter plots
+      which depict the relationship between the two variables.\n\n#### 4. **Outliers**\nThe
+      analysis identifies several outliers:\n- Data points significantly exceeding
+      or falling below expected ranges (e.g., an income level substantially higher
+      than the surrounding cluster).\n- Potential reasons for these anomalies might
+      include errors in data entry, unique subpopulations not representative of the
+      larger group, or influential cases that merit further exploration.\n\n#### 5.
+      **Comparative Analysis**\nComparative analysis reveals:\n- **Temporal Fluctuations**:
+      Examining the same dataset over time indicates fluctuations in responses, such
+      as changing public opinion on specific social issues.\n- **Segmentation**: Segmenting
+      data by demographic factors (e.g., age, income, education) allows for comparisons
+      that highlight significant differences across groups, reinforcing the stability
+      or volatility of particular trends.\n\n#### 6. **Limitations**\nRecognizing
+      limitations is crucial:\n- **Missing Data**: Instances where values are absent,
+      leading to gaps in the analysis. This may necessitate imputation or exclusion
+      from certain calculations.\n- **Potential Errors**: Occurrences of data entry
+      mistakes can distort findings, which warrants cautious handling of datasets.\n-
+      **Sampling Biases**: If certain groups are overrepresented or underrepresented,
+      the dataset may not provide a fully representative view, affecting the generalizability
+      of results.\n\n#### 7. **Recommendations for Further Analysis**\nBased on these
+      insights, the following recommendations are proposed for deeper investigation:\n-
+      **Additional Data Collection**: To address gaps and enhance dataset robustness,
+      consider conducting focused surveys or engaging with underrepresented groups.\n-
+      **Complex Modeling**: Implement predictive modeling techniques to explore relationships
+      more intricately, adjusting for confounding variables.\n- **Exploratory Variables**:
+      Investigate additional factors that could impact outcomes (e.g., geographic
+      location, socioeconomic status) to enhance comprehension of observed trends.\n\nBy
+      thoroughly addressing these elements, this initial analysis paves the way for
+      informed decision-making and strategic planning, laying a solid groundwork for
+      future investigations and potential actions.", "pydantic": null, "json_dict":
+      null, "agent": "Second Agent", "output_format": "raw"}, "total_tokens": 1700}}],
+      "batch_metadata": {"events_count": 14, "batch_sequence": 1, "is_final_batch":
+      false}}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '30659'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - CrewAI-CLI/0.193.2
+      X-Crewai-Organization-Id:
+      - d3a3d10c-35db-423f-a7a4-c026030ba64d
+      X-Crewai-Version:
+      - 0.193.2
+    method: POST
+    uri: http://localhost:3000/crewai_plus/api/v1/tracing/batches/8fb6e82b-be8f-411d-82e6-16493b2a06b6/events
+  response:
+    body:
+      string: '{"events_created":14,"trace_batch_id":"0d052099-8eb5-4bf2-8baf-a95eb71969dc"}'
+    headers:
+      Content-Length:
+      - '77'
+      cache-control:
+      - max-age=0, private, must-revalidate
+      content-security-policy:
+      - 'default-src ''self'' *.crewai.com crewai.com; script-src ''self'' ''unsafe-inline''
+        *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts https://www.gstatic.com
+        https://run.pstmn.io https://share.descript.com/; style-src ''self'' ''unsafe-inline''
+        *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts; img-src ''self''
+        data: *.crewai.com crewai.com https://zeus.tools.crewai.com https://dashboard.tools.crewai.com
+        https://cdn.jsdelivr.net; font-src ''self'' data: *.crewai.com crewai.com;
+        connect-src ''self'' *.crewai.com crewai.com https://zeus.tools.crewai.com
+        https://connect.useparagon.com/ https://zeus.useparagon.com/* https://*.useparagon.com/*
+        https://run.pstmn.io https://connect.tools.crewai.com/ ws://localhost:3036
+        wss://localhost:3036; frame-src ''self'' *.crewai.com crewai.com https://connect.useparagon.com/
+        https://zeus.tools.crewai.com https://zeus.useparagon.com/* https://connect.tools.crewai.com/
+        https://www.youtube.com https://share.descript.com'
+      content-type:
+      - application/json; charset=utf-8
+      etag:
+      - W/"83758bc1b206b54c47d9aa600804379e"
+      permissions-policy:
+      - camera=(), microphone=(self), geolocation=()
+      referrer-policy:
+      - strict-origin-when-cross-origin
+      server-timing:
+      - cache_read.active_support;dur=0.06, cache_fetch_hit.active_support;dur=0.00,
+        cache_read_multi.active_support;dur=0.07, start_processing.action_controller;dur=0.00,
+        sql.active_record;dur=51.11, instantiation.active_record;dur=0.63, start_transaction.active_record;dur=0.01,
+        transaction.active_record;dur=103.40, process_action.action_controller;dur=664.65
+      vary:
+      - Accept
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-permitted-cross-domain-policies:
+      - none
+      x-request-id:
+      - 79d03d81-9a8c-4b97-ae93-6425c960b5fa
+      x-runtime:
+      - '0.686847'
+      x-xss-protection:
+      - 1; mode=block
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"status": "completed", "duration_ms": 1150, "final_event_count": 14}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '69'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - CrewAI-CLI/0.193.2
+      X-Crewai-Organization-Id:
+      - d3a3d10c-35db-423f-a7a4-c026030ba64d
+      X-Crewai-Version:
+      - 0.193.2
+    method: PATCH
+    uri: http://localhost:3000/crewai_plus/api/v1/tracing/batches/8fb6e82b-be8f-411d-82e6-16493b2a06b6/finalize
+  response:
+    body:
+      string: '{"id":"0d052099-8eb5-4bf2-8baf-a95eb71969dc","trace_id":"8fb6e82b-be8f-411d-82e6-16493b2a06b6","execution_type":"crew","crew_name":"crew","flow_name":null,"status":"completed","duration_ms":1150,"crewai_version":"0.193.2","privacy_level":"standard","total_events":14,"execution_context":{"crew_name":"crew","flow_name":null,"privacy_level":"standard","crewai_version":"0.193.2","crew_fingerprint":null},"created_at":"2025-09-24T06:05:21.890Z","updated_at":"2025-09-24T06:05:23.259Z"}'
+    headers:
+      Content-Length:
+      - '483'
+      cache-control:
+      - max-age=0, private, must-revalidate
+      content-security-policy:
+      - 'default-src ''self'' *.crewai.com crewai.com; script-src ''self'' ''unsafe-inline''
+        *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts https://www.gstatic.com
+        https://run.pstmn.io https://share.descript.com/; style-src ''self'' ''unsafe-inline''
+        *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts; img-src ''self''
+        data: *.crewai.com crewai.com https://zeus.tools.crewai.com https://dashboard.tools.crewai.com
+        https://cdn.jsdelivr.net; font-src ''self'' data: *.crewai.com crewai.com;
+        connect-src ''self'' *.crewai.com crewai.com https://zeus.tools.crewai.com
+        https://connect.useparagon.com/ https://zeus.useparagon.com/* https://*.useparagon.com/*
+        https://run.pstmn.io https://connect.tools.crewai.com/ ws://localhost:3036
+        wss://localhost:3036; frame-src ''self'' *.crewai.com crewai.com https://connect.useparagon.com/
+        https://zeus.tools.crewai.com https://zeus.useparagon.com/* https://connect.tools.crewai.com/
+        https://www.youtube.com https://share.descript.com'
+      content-type:
+      - application/json; charset=utf-8
+      etag:
+      - W/"28372c2716257cf7a9ae9508b5ad437b"
+      permissions-policy:
+      - camera=(), microphone=(self), geolocation=()
+      referrer-policy:
+      - strict-origin-when-cross-origin
+      server-timing:
+      - cache_read.active_support;dur=0.03, cache_fetch_hit.active_support;dur=0.00,
+        cache_read_multi.active_support;dur=0.06, start_processing.action_controller;dur=0.00,
+        sql.active_record;dur=24.06, instantiation.active_record;dur=0.61, unpermitted_parameters.action_controller;dur=0.00,
+        start_transaction.active_record;dur=0.00, transaction.active_record;dur=2.80,
+        process_action.action_controller;dur=626.41
+      vary:
+      - Accept
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-permitted-cross-domain-policies:
+      - none
+      x-request-id:
+      - 421b37bd-c7d7-4618-ab08-79b6506320d8
+      x-runtime:
+      - '0.640806'
+      x-xss-protection:
+      - 1; mode=block
+    status:
+      code: 200
+      message: OK
 version: 1

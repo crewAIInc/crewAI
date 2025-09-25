@@ -153,4 +153,418 @@ interactions:
     status:
       code: 200
       message: OK
+- request:
+    body: '{"trace_id": "ebe3e255-33a6-4b40-8c73-acc782e2cb2e", "execution_type":
+      "crew", "user_identifier": null, "execution_context": {"crew_fingerprint": null,
+      "crew_name": "crew", "flow_name": null, "crewai_version": "0.193.2", "privacy_level":
+      "standard"}, "execution_metadata": {"expected_duration_estimate": 300, "agent_count":
+      0, "task_count": 0, "flow_method_count": 0, "execution_started_at": "2025-09-23T20:22:48.851064+00:00"},
+      "ephemeral_trace_id": "ebe3e255-33a6-4b40-8c73-acc782e2cb2e"}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '490'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - CrewAI-CLI/0.193.2
+      X-Crewai-Version:
+      - 0.193.2
+    method: POST
+    uri: http://localhost:3000/crewai_plus/api/v1/tracing/ephemeral/batches
+  response:
+    body:
+      string: '{"id":"dcf37266-a30f-4a61-9084-293f108becab","ephemeral_trace_id":"ebe3e255-33a6-4b40-8c73-acc782e2cb2e","execution_type":"crew","crew_name":"crew","flow_name":null,"status":"running","duration_ms":null,"crewai_version":"0.193.2","total_events":0,"execution_context":{"crew_fingerprint":null,"crew_name":"crew","flow_name":null,"crewai_version":"0.193.2","privacy_level":"standard"},"created_at":"2025-09-23T20:22:48.921Z","updated_at":"2025-09-23T20:22:48.921Z","access_code":"TRACE-20af0f540e","user_identifier":null}'
+    headers:
+      Content-Length:
+      - '519'
+      cache-control:
+      - max-age=0, private, must-revalidate
+      content-security-policy:
+      - 'default-src ''self'' *.crewai.com crewai.com; script-src ''self'' ''unsafe-inline''
+        *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts https://www.gstatic.com
+        https://run.pstmn.io https://share.descript.com/; style-src ''self'' ''unsafe-inline''
+        *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts; img-src ''self''
+        data: *.crewai.com crewai.com https://zeus.tools.crewai.com https://dashboard.tools.crewai.com
+        https://cdn.jsdelivr.net; font-src ''self'' data: *.crewai.com crewai.com;
+        connect-src ''self'' *.crewai.com crewai.com https://zeus.tools.crewai.com
+        https://connect.useparagon.com/ https://zeus.useparagon.com/* https://*.useparagon.com/*
+        https://run.pstmn.io https://connect.tools.crewai.com/ ws://localhost:3036
+        wss://localhost:3036; frame-src ''self'' *.crewai.com crewai.com https://connect.useparagon.com/
+        https://zeus.tools.crewai.com https://zeus.useparagon.com/* https://connect.tools.crewai.com/
+        https://www.youtube.com https://share.descript.com'
+      content-type:
+      - application/json; charset=utf-8
+      etag:
+      - W/"e3802608dd0afa467b9006ae28a09ac0"
+      permissions-policy:
+      - camera=(), microphone=(self), geolocation=()
+      referrer-policy:
+      - strict-origin-when-cross-origin
+      server-timing:
+      - cache_read.active_support;dur=0.08, sql.active_record;dur=17.40, cache_generate.active_support;dur=5.00,
+        cache_write.active_support;dur=0.23, cache_read_multi.active_support;dur=0.23,
+        start_processing.action_controller;dur=0.00, start_transaction.active_record;dur=0.00,
+        transaction.active_record;dur=10.40, process_action.action_controller;dur=15.72
+      vary:
+      - Accept
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-permitted-cross-domain-policies:
+      - none
+      x-request-id:
+      - 86297c99-3a4e-4797-8ce9-79442128fefd
+      x-runtime:
+      - '0.072605'
+      x-xss-protection:
+      - 1; mode=block
+    status:
+      code: 201
+      message: Created
+- request:
+    body: '{"events": [{"event_id": "fcb0a361-b236-47a2-8ae5-613d404a433a", "timestamp":
+      "2025-09-23T20:22:48.928654+00:00", "type": "crew_kickoff_started", "event_data":
+      {"timestamp": "2025-09-23T20:22:48.850336+00:00", "type": "crew_kickoff_started",
+      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
+      "task_id": null, "task_name": null, "agent_id": null, "agent_role": null, "crew_name":
+      "crew", "crew": null, "inputs": {"other_input": "other data"}}}, {"event_id":
+      "0850c159-2cf7-40d7-af41-dbafc4ec361d", "timestamp": "2025-09-23T20:22:48.930041+00:00",
+      "type": "task_started", "event_data": {"task_description": "Analyze the data",
+      "expected_output": "Analysis report", "task_name": "Analyze the data", "context":
+      "", "agent_role": "test role", "task_id": "7ef853e5-b583-450e-85f4-14f773feab58"}},
+      {"event_id": "c06bbca6-f2d9-4f66-a696-f0c201bb3587", "timestamp": "2025-09-23T20:22:48.930693+00:00",
+      "type": "agent_execution_started", "event_data": {"agent_role": "test role",
+      "agent_goal": "test goal", "agent_backstory": "test backstory"}}, {"event_id":
+      "a2f3bd4a-f298-4aec-90c7-fce24533c211", "timestamp": "2025-09-23T20:22:48.930847+00:00",
+      "type": "llm_call_started", "event_data": {"timestamp": "2025-09-23T20:22:48.930805+00:00",
+      "type": "llm_call_started", "source_fingerprint": null, "source_type": null,
+      "fingerprint_metadata": null, "task_id": "7ef853e5-b583-450e-85f4-14f773feab58",
+      "task_name": "Analyze the data", "agent_id": null, "agent_role": null, "from_task":
+      null, "from_agent": null, "model": "gpt-4o-mini", "messages": [{"role": "system",
+      "content": "You are test role. test backstory\nYour personal goal is: test goal\nTo
+      give my best complete final answer to the task respond using the exact following
+      format:\n\nThought: I now can give a great answer\nFinal Answer: Your final
+      answer must be the great and the most complete as possible, it must be outcome
+      described.\n\nI MUST use these formats, my job depends on it!"}, {"role": "user",
+      "content": "\nCurrent Task: Analyze the data\n\nThis is the expected criteria
+      for your final answer: Analysis report\nyou MUST return the actual complete
+      content as the final answer, not a summary.\n\nBegin! This is VERY important
+      to you, use the tools available and give your best Final Answer, your job depends
+      on it!\n\nThought:"}], "tools": null, "callbacks": ["<crewai.utilities.token_counter_callback.TokenCalcHandler
+      object at 0x124395280>"], "available_functions": null}}, {"event_id": "37cccb0f-facb-4b5b-a28d-31820381e77c",
+      "timestamp": "2025-09-23T20:22:49.029070+00:00", "type": "llm_call_completed",
+      "event_data": {"timestamp": "2025-09-23T20:22:49.028732+00:00", "type": "llm_call_completed",
+      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
+      "task_id": "7ef853e5-b583-450e-85f4-14f773feab58", "task_name": "Analyze the
+      data", "agent_id": null, "agent_role": null, "from_task": null, "from_agent":
+      null, "messages": [{"role": "system", "content": "You are test role. test backstory\nYour
+      personal goal is: test goal\nTo give my best complete final answer to the task
+      respond using the exact following format:\n\nThought: I now can give a great
+      answer\nFinal Answer: Your final answer must be the great and the most complete
+      as possible, it must be outcome described.\n\nI MUST use these formats, my job
+      depends on it!"}, {"role": "user", "content": "\nCurrent Task: Analyze the data\n\nThis
+      is the expected criteria for your final answer: Analysis report\nyou MUST return
+      the actual complete content as the final answer, not a summary.\n\nBegin! This
+      is VERY important to you, use the tools available and give your best Final Answer,
+      your job depends on it!\n\nThought:"}], "response": "I now can give a great
+      answer  \nFinal Answer: \n\n**Analysis Report**\n\n**1. Introduction**  \nThis
+      report presents a comprehensive analysis of the data collected over the last
+      quarter. The goal of this analysis is to derive actionable insights, identify
+      trends, and inform decision-making processes for future strategies.\n\n**2.
+      Data Overview**  \nThe data set comprises multiple parameters including sales
+      figures, customer demographics, product categories, and geographical distribution.
+      Key variables analyzed include:\n\n- **Sales Figures**: Total sales revenue,
+      average transaction value, units sold.\n- **Customer Demographics**: Age, gender,
+      location, and purchasing behavior.\n- **Product Categories**: Performance across
+      different categories, including most and least popular products.\n- **Geographical
+      Distribution**: Sales performance across various regions.\n\n**3. Key Findings**  \n-
+      **Sales Trends**: \n  - Sales increased by 15% compared to the previous quarter,
+      with a notable spike during the holiday season.\n  - The average transaction
+      value also rose by 10%, attributed to higher customer awareness and targeted
+      marketing campaigns.\n\n- **Customer Demographics**:\n  - The primary customer
+      base consists of individuals aged 25-34, accounting for 40% of total purchases.\n  -
+      Female customers outpaced male customers by 20% in overall spending.\n  - Online
+      shopping surged, particularly among urban customers, indicating a shift towards
+      digital engagement.\n\n- **Product Category Performance**:\n  - Electronics
+      emerged as the leading category with a 30% market share in total sales.\n  -
+      Home and garden products saw a decline in sales by 5%, prompting a review of
+      marketing strategies within this segment.\n  - Seasonal products during the
+      holidays significantly boosted sales figures by 25%.\n\n- **Geographical Insights**:\n  -
+      Major urban centers, especially in the Northeast and West Coast, showed the
+      highest revenue generation.\n  - Rural areas, while stable, revealed untapped
+      potential, demonstrating only a 5% increase in sales, indicating a need for
+      targeted outreach.\n\n**4. Recommendations**  \n- **Marketing Strategy**: Enhance
+      digital marketing efforts targeting younger demographics with personalized content
+      and promotions. Utilize social media platforms for engagement, especially considering
+      the demographic insights gathered from the data.\n\n- **Product Focus**: Reassess
+      the home and garden product offerings to cater to the evolving preferences of
+      consumers. Consider bundling products or creating seasonal promotions to reignite
+      interest.\n\n- **Geographical Expansion**: Develop a strategic plan focusing
+      on rural area penetration. Initiate campaigns tailored to local preferences
+      and potential influencers to enhance brand presence.\n\n- **Continuous Data
+      Monitoring**: Implement a regular data review process to keep track of changing
+      customer behaviors and market trends. Leverage analytics tools to automate insights
+      generation for timely decision-making.\n\n**5. Conclusion**  \nOverall, the
+      analysis identifies significant growth potential and areas requiring immediate
+      attention. By adopting the recommended strategies, the organization can enhance
+      overall performance, increase customer satisfaction, and ultimately drive more
+      significant revenue growth.\n\n**6. Appendix**  \n- Data tables and charts illustrating
+      sales growth, customer demographics, and product category performance.  \n-
+      Methodology used for data collection and analysis.\n\nThis report serves as
+      a foundational tool for understanding the current landscape and guiding future
+      actions to achieve the outlined business objectives.", "call_type": "<LLMCallType.LLM_CALL:
+      ''llm_call''>", "model": "gpt-4o-mini"}}, {"event_id": "d25a6a5f-f75f-42c4-b3be-fe540479d514",
+      "timestamp": "2025-09-23T20:22:49.029404+00:00", "type": "agent_execution_completed",
+      "event_data": {"agent_role": "test role", "agent_goal": "test goal", "agent_backstory":
+      "test backstory"}}, {"event_id": "bd4ec3c9-b8e9-45da-bf46-d15de6e7d0a7", "timestamp":
+      "2025-09-23T20:22:49.029547+00:00", "type": "task_completed", "event_data":
+      {"task_description": "Analyze the data", "task_name": "Analyze the data", "task_id":
+      "7ef853e5-b583-450e-85f4-14f773feab58", "output_raw": "**Analysis Report**\n\n**1.
+      Introduction**  \nThis report presents a comprehensive analysis of the data
+      collected over the last quarter. The goal of this analysis is to derive actionable
+      insights, identify trends, and inform decision-making processes for future strategies.\n\n**2.
+      Data Overview**  \nThe data set comprises multiple parameters including sales
+      figures, customer demographics, product categories, and geographical distribution.
+      Key variables analyzed include:\n\n- **Sales Figures**: Total sales revenue,
+      average transaction value, units sold.\n- **Customer Demographics**: Age, gender,
+      location, and purchasing behavior.\n- **Product Categories**: Performance across
+      different categories, including most and least popular products.\n- **Geographical
+      Distribution**: Sales performance across various regions.\n\n**3. Key Findings**  \n-
+      **Sales Trends**: \n  - Sales increased by 15% compared to the previous quarter,
+      with a notable spike during the holiday season.\n  - The average transaction
+      value also rose by 10%, attributed to higher customer awareness and targeted
+      marketing campaigns.\n\n- **Customer Demographics**:\n  - The primary customer
+      base consists of individuals aged 25-34, accounting for 40% of total purchases.\n  -
+      Female customers outpaced male customers by 20% in overall spending.\n  - Online
+      shopping surged, particularly among urban customers, indicating a shift towards
+      digital engagement.\n\n- **Product Category Performance**:\n  - Electronics
+      emerged as the leading category with a 30% market share in total sales.\n  -
+      Home and garden products saw a decline in sales by 5%, prompting a review of
+      marketing strategies within this segment.\n  - Seasonal products during the
+      holidays significantly boosted sales figures by 25%.\n\n- **Geographical Insights**:\n  -
+      Major urban centers, especially in the Northeast and West Coast, showed the
+      highest revenue generation.\n  - Rural areas, while stable, revealed untapped
+      potential, demonstrating only a 5% increase in sales, indicating a need for
+      targeted outreach.\n\n**4. Recommendations**  \n- **Marketing Strategy**: Enhance
+      digital marketing efforts targeting younger demographics with personalized content
+      and promotions. Utilize social media platforms for engagement, especially considering
+      the demographic insights gathered from the data.\n\n- **Product Focus**: Reassess
+      the home and garden product offerings to cater to the evolving preferences of
+      consumers. Consider bundling products or creating seasonal promotions to reignite
+      interest.\n\n- **Geographical Expansion**: Develop a strategic plan focusing
+      on rural area penetration. Initiate campaigns tailored to local preferences
+      and potential influencers to enhance brand presence.\n\n- **Continuous Data
+      Monitoring**: Implement a regular data review process to keep track of changing
+      customer behaviors and market trends. Leverage analytics tools to automate insights
+      generation for timely decision-making.\n\n**5. Conclusion**  \nOverall, the
+      analysis identifies significant growth potential and areas requiring immediate
+      attention. By adopting the recommended strategies, the organization can enhance
+      overall performance, increase customer satisfaction, and ultimately drive more
+      significant revenue growth.\n\n**6. Appendix**  \n- Data tables and charts illustrating
+      sales growth, customer demographics, and product category performance.  \n-
+      Methodology used for data collection and analysis.\n\nThis report serves as
+      a foundational tool for understanding the current landscape and guiding future
+      actions to achieve the outlined business objectives.", "output_format": "OutputFormat.RAW",
+      "agent_role": "test role"}}, {"event_id": "af918c94-ee6a-4699-9519-d01f6314cb87",
+      "timestamp": "2025-09-23T20:22:49.030535+00:00", "type": "crew_kickoff_completed",
+      "event_data": {"timestamp": "2025-09-23T20:22:49.030516+00:00", "type": "crew_kickoff_completed",
+      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
+      "task_id": null, "task_name": null, "agent_id": null, "agent_role": null, "crew_name":
+      "crew", "crew": null, "output": {"description": "Analyze the data", "name":
+      "Analyze the data", "expected_output": "Analysis report", "summary": "Analyze
+      the data...", "raw": "**Analysis Report**\n\n**1. Introduction**  \nThis report
+      presents a comprehensive analysis of the data collected over the last quarter.
+      The goal of this analysis is to derive actionable insights, identify trends,
+      and inform decision-making processes for future strategies.\n\n**2. Data Overview**  \nThe
+      data set comprises multiple parameters including sales figures, customer demographics,
+      product categories, and geographical distribution. Key variables analyzed include:\n\n-
+      **Sales Figures**: Total sales revenue, average transaction value, units sold.\n-
+      **Customer Demographics**: Age, gender, location, and purchasing behavior.\n-
+      **Product Categories**: Performance across different categories, including most
+      and least popular products.\n- **Geographical Distribution**: Sales performance
+      across various regions.\n\n**3. Key Findings**  \n- **Sales Trends**: \n  -
+      Sales increased by 15% compared to the previous quarter, with a notable spike
+      during the holiday season.\n  - The average transaction value also rose by 10%,
+      attributed to higher customer awareness and targeted marketing campaigns.\n\n-
+      **Customer Demographics**:\n  - The primary customer base consists of individuals
+      aged 25-34, accounting for 40% of total purchases.\n  - Female customers outpaced
+      male customers by 20% in overall spending.\n  - Online shopping surged, particularly
+      among urban customers, indicating a shift towards digital engagement.\n\n- **Product
+      Category Performance**:\n  - Electronics emerged as the leading category with
+      a 30% market share in total sales.\n  - Home and garden products saw a decline
+      in sales by 5%, prompting a review of marketing strategies within this segment.\n  -
+      Seasonal products during the holidays significantly boosted sales figures by
+      25%.\n\n- **Geographical Insights**:\n  - Major urban centers, especially in
+      the Northeast and West Coast, showed the highest revenue generation.\n  - Rural
+      areas, while stable, revealed untapped potential, demonstrating only a 5% increase
+      in sales, indicating a need for targeted outreach.\n\n**4. Recommendations**  \n-
+      **Marketing Strategy**: Enhance digital marketing efforts targeting younger
+      demographics with personalized content and promotions. Utilize social media
+      platforms for engagement, especially considering the demographic insights gathered
+      from the data.\n\n- **Product Focus**: Reassess the home and garden product
+      offerings to cater to the evolving preferences of consumers. Consider bundling
+      products or creating seasonal promotions to reignite interest.\n\n- **Geographical
+      Expansion**: Develop a strategic plan focusing on rural area penetration. Initiate
+      campaigns tailored to local preferences and potential influencers to enhance
+      brand presence.\n\n- **Continuous Data Monitoring**: Implement a regular data
+      review process to keep track of changing customer behaviors and market trends.
+      Leverage analytics tools to automate insights generation for timely decision-making.\n\n**5.
+      Conclusion**  \nOverall, the analysis identifies significant growth potential
+      and areas requiring immediate attention. By adopting the recommended strategies,
+      the organization can enhance overall performance, increase customer satisfaction,
+      and ultimately drive more significant revenue growth.\n\n**6. Appendix**  \n-
+      Data tables and charts illustrating sales growth, customer demographics, and
+      product category performance.  \n- Methodology used for data collection and
+      analysis.\n\nThis report serves as a foundational tool for understanding the
+      current landscape and guiding future actions to achieve the outlined business
+      objectives.", "pydantic": null, "json_dict": null, "agent": "test role", "output_format":
+      "raw"}, "total_tokens": 809}}], "batch_metadata": {"events_count": 8, "batch_sequence":
+      1, "is_final_batch": false}}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '16042'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - CrewAI-CLI/0.193.2
+      X-Crewai-Version:
+      - 0.193.2
+    method: POST
+    uri: http://localhost:3000/crewai_plus/api/v1/tracing/ephemeral/batches/ebe3e255-33a6-4b40-8c73-acc782e2cb2e/events
+  response:
+    body:
+      string: '{"events_created":8,"ephemeral_trace_batch_id":"dcf37266-a30f-4a61-9084-293f108becab"}'
+    headers:
+      Content-Length:
+      - '86'
+      cache-control:
+      - max-age=0, private, must-revalidate
+      content-security-policy:
+      - 'default-src ''self'' *.crewai.com crewai.com; script-src ''self'' ''unsafe-inline''
+        *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts https://www.gstatic.com
+        https://run.pstmn.io https://share.descript.com/; style-src ''self'' ''unsafe-inline''
+        *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts; img-src ''self''
+        data: *.crewai.com crewai.com https://zeus.tools.crewai.com https://dashboard.tools.crewai.com
+        https://cdn.jsdelivr.net; font-src ''self'' data: *.crewai.com crewai.com;
+        connect-src ''self'' *.crewai.com crewai.com https://zeus.tools.crewai.com
+        https://connect.useparagon.com/ https://zeus.useparagon.com/* https://*.useparagon.com/*
+        https://run.pstmn.io https://connect.tools.crewai.com/ ws://localhost:3036
+        wss://localhost:3036; frame-src ''self'' *.crewai.com crewai.com https://connect.useparagon.com/
+        https://zeus.tools.crewai.com https://zeus.useparagon.com/* https://connect.tools.crewai.com/
+        https://www.youtube.com https://share.descript.com'
+      content-type:
+      - application/json; charset=utf-8
+      etag:
+      - W/"5365b7d51712464f7429104b4339a428"
+      permissions-policy:
+      - camera=(), microphone=(self), geolocation=()
+      referrer-policy:
+      - strict-origin-when-cross-origin
+      server-timing:
+      - cache_read.active_support;dur=0.06, sql.active_record;dur=34.08, cache_generate.active_support;dur=2.20,
+        cache_write.active_support;dur=0.16, cache_read_multi.active_support;dur=0.10,
+        start_processing.action_controller;dur=0.00, instantiation.active_record;dur=0.06,
+        start_transaction.active_record;dur=0.00, transaction.active_record;dur=48.40,
+        process_action.action_controller;dur=55.37
+      vary:
+      - Accept
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-permitted-cross-domain-policies:
+      - none
+      x-request-id:
+      - dd950cf1-62f1-4126-b8b0-9e4629b5f5b6
+      x-runtime:
+      - '0.100871'
+      x-xss-protection:
+      - 1; mode=block
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"status": "completed", "duration_ms": 291, "final_event_count": 8}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '67'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - CrewAI-CLI/0.193.2
+      X-Crewai-Version:
+      - 0.193.2
+    method: PATCH
+    uri: http://localhost:3000/crewai_plus/api/v1/tracing/ephemeral/batches/ebe3e255-33a6-4b40-8c73-acc782e2cb2e/finalize
+  response:
+    body:
+      string: '{"id":"dcf37266-a30f-4a61-9084-293f108becab","ephemeral_trace_id":"ebe3e255-33a6-4b40-8c73-acc782e2cb2e","execution_type":"crew","crew_name":"crew","flow_name":null,"status":"completed","duration_ms":291,"crewai_version":"0.193.2","total_events":8,"execution_context":{"crew_name":"crew","flow_name":null,"privacy_level":"standard","crewai_version":"0.193.2","crew_fingerprint":null},"created_at":"2025-09-23T20:22:48.921Z","updated_at":"2025-09-23T20:22:49.192Z","access_code":"TRACE-20af0f540e","user_identifier":null}'
+    headers:
+      Content-Length:
+      - '520'
+      cache-control:
+      - max-age=0, private, must-revalidate
+      content-security-policy:
+      - 'default-src ''self'' *.crewai.com crewai.com; script-src ''self'' ''unsafe-inline''
+        *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts https://www.gstatic.com
+        https://run.pstmn.io https://share.descript.com/; style-src ''self'' ''unsafe-inline''
+        *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts; img-src ''self''
+        data: *.crewai.com crewai.com https://zeus.tools.crewai.com https://dashboard.tools.crewai.com
+        https://cdn.jsdelivr.net; font-src ''self'' data: *.crewai.com crewai.com;
+        connect-src ''self'' *.crewai.com crewai.com https://zeus.tools.crewai.com
+        https://connect.useparagon.com/ https://zeus.useparagon.com/* https://*.useparagon.com/*
+        https://run.pstmn.io https://connect.tools.crewai.com/ ws://localhost:3036
+        wss://localhost:3036; frame-src ''self'' *.crewai.com crewai.com https://connect.useparagon.com/
+        https://zeus.tools.crewai.com https://zeus.useparagon.com/* https://connect.tools.crewai.com/
+        https://www.youtube.com https://share.descript.com'
+      content-type:
+      - application/json; charset=utf-8
+      etag:
+      - W/"c260c7a5c5e94132d69ede0da4a3cc45"
+      permissions-policy:
+      - camera=(), microphone=(self), geolocation=()
+      referrer-policy:
+      - strict-origin-when-cross-origin
+      server-timing:
+      - cache_read.active_support;dur=0.07, sql.active_record;dur=10.48, cache_generate.active_support;dur=2.79,
+        cache_write.active_support;dur=0.14, cache_read_multi.active_support;dur=0.10,
+        start_processing.action_controller;dur=0.00, instantiation.active_record;dur=0.04,
+        unpermitted_parameters.action_controller;dur=0.00, start_transaction.active_record;dur=0.00,
+        transaction.active_record;dur=4.50, process_action.action_controller;dur=10.46
+      vary:
+      - Accept
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-permitted-cross-domain-policies:
+      - none
+      x-request-id:
+      - b38e7096-bfc4-46ea-ab8a-cecd09f0444b
+      x-runtime:
+      - '0.048311'
+      x-xss-protection:
+      - 1; mode=block
+    status:
+      code: 200
+      message: OK
 version: 1
