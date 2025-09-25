@@ -131,12 +131,9 @@ class RagTool(BaseTool):
             if api_key:
                 factory_config["api_key"] = api_key
 
-        print(f"Creating embedding function with config: {factory_config}")
 
         if provider == "chromadb":
             embedding_func = get_embedding_function(factory_config)
-            print(f"Created embedding function: {embedding_func}")
-            print(f"Embedding function type: {type(embedding_func)}")
             return embedding_func
 
         elif provider == "qdrant":
