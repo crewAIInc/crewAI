@@ -94,7 +94,10 @@ class MistralEmbeddingFunction(EmbeddingFunction):
         }
         
         # Make API request with retry logic
-        for attempt in range(self.max_retries):
+        # Ensure at least one attempt is made, even if max_retries is 0
+        attempts = max(1, self.max_retries + 1)
+        
+        for attempt in range(attempts):
             try:
                 response = requests.post(
                     f"{self.base_url}/embeddings",
@@ -110,11 +113,11 @@ class MistralEmbeddingFunction(EmbeddingFunction):
                 return cast(Embeddings, embeddings)
                 
             except requests.exceptions.RequestException as e:
-                if attempt == self.max_retries - 1:
-                    raise RuntimeError(f"Failed to get embeddings from Mistral API after {self.max_retries} attempts: {str(e)}")
+                # If this is the last attempt, raise the error
+                if attempt == attempts - 1:
+                    raise RuntimeError(f"Failed to get embeddings from Mistral API after {attempts} attempts: {str(e)}")
+                # Otherwise, continue to next attempt
                 continue
-        
-        return []
     
     def get_model_info(self) -> dict:
         """
