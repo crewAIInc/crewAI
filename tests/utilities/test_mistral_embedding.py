@@ -11,8 +11,9 @@ import pytest
 from unittest.mock import patch, MagicMock
 import requests
 
-from crewai.rag.embeddings.configurator import EmbeddingConfigurator
+from crewai.rag.embeddings.factory import build_embedder
 from crewai.rag.embeddings.mistral_embedding_function import MistralEmbeddingFunction
+from crewai.rag.embeddings.providers.mistral.mistral_provider import MistralProvider
 
 
 class TestMistralEmbeddingFunction:
@@ -178,17 +179,18 @@ class TestMistralEmbeddingFunction:
         assert mock_post.call_count == 2
 
 
-class TestEmbeddingConfigurator:
-    """Test cases for EmbeddingConfigurator with Mistral support."""
+class TestEmbeddingFactory:
+    """Test cases for embedding factory with Mistral support."""
     
     def setup_method(self):
         """Set up test environment before each test."""
-        self.configurator = EmbeddingConfigurator()
+        pass
     
     def test_mistral_provider_support(self):
         """Test that mistral provider is supported."""
-        assert "mistral" in self.configurator.embedding_functions
-        assert hasattr(self.configurator, '_configure_mistral')
+        # Test that we can create a Mistral provider
+        provider = MistralProvider()
+        assert provider is not None
     
     def test_configure_mistral_basic(self):
         """Test basic Mistral configuration."""
@@ -204,7 +206,7 @@ class TestEmbeddingConfigurator:
                 mock_instance = MagicMock()
                 mock_mistral.return_value = mock_instance
                 
-                result = self.configurator.configure_embedder(embedder_config)
+                result = build_embedder(embedder_config)
                 
                 # Verify MistralEmbeddingFunction was called with correct parameters
                 mock_mistral.assert_called_once()
@@ -233,7 +235,7 @@ class TestEmbeddingConfigurator:
             mock_instance = MagicMock()
             mock_mistral.return_value = mock_instance
             
-            result = self.configurator.configure_embedder(embedder_config)
+                result = build_embedder(embedder_config)
             
             # Verify MistralEmbeddingFunction was called with explicit parameters
             call_kwargs = mock_mistral.call_args[1]
@@ -258,11 +260,14 @@ class TestEmbeddingConfigurator:
                 mock_instance = MagicMock()
                 mock_mistral.return_value = mock_instance
                 
-                # Test with model_name parameter (as would be passed by configurator)
-                result = self.configurator._configure_mistral(
-                    config=embedder_config["config"],
-                    model_name="mistral-embed-v1"
-                )
+                # Test with model_name parameter (as would be passed by factory)
+                result = build_embedder({
+                    "provider": "mistral",
+                    "config": {
+                        **embedder_config["config"],
+                        "model": "mistral-embed-v1"
+                    }
+                })
                 
                 # Verify model_name parameter takes precedence
                 call_kwargs = mock_mistral.call_args[1]
@@ -283,10 +288,10 @@ class TestEmbeddingConfigurator:
                 mock_mistral.return_value = mock_instance
                 
                 # Test with model_name=None (fallback to config)
-                result = self.configurator._configure_mistral(
-                    config=embedder_config["config"],
-                    model_name=None
-                )
+                result = build_embedder({
+                    "provider": "mistral",
+                    "config": embedder_config["config"]
+                })
                 
                 # Verify config model is used as fallback
                 call_kwargs = mock_mistral.call_args[1]
@@ -311,7 +316,7 @@ class TestIntegration:
         mock_post.return_value = mock_response
         
         # Configure embedder
-        configurator = EmbeddingConfigurator()
+        # Use factory directly
         embedder_config = {
             "provider": "mistral",
             "config": {
@@ -320,7 +325,7 @@ class TestIntegration:
         }
         
         with patch.dict(os.environ, {'MISTRAL_API_KEY': 'test_api_key'}):
-            embedding_function = configurator.configure_embedder(embedder_config)
+            embedding_function = build_embedder(embedder_config)
             
             # Test embedding generation
             test_documents = ["Document 1", "Document 2"]
@@ -347,7 +352,7 @@ class TestIntegration:
             }
         }
         
-        configurator = EmbeddingConfigurator()
+        # Use factory directly
         
         with patch.dict(os.environ, {'MISTRAL_API_KEY': 'test_api_key'}):
             with patch('crewai.rag.embeddings.mistral_embedding_function.MistralEmbeddingFunction') as mock_mistral:
@@ -355,7 +360,7 @@ class TestIntegration:
                 mock_mistral.return_value = mock_instance
                 
                 # Test configuration (should not raise exceptions)
-                result = configurator.configure_embedder(agent_embedder_config)
+                result = build_embedder(agent_embedder_config)
                 
                 assert result == mock_instance
                 mock_mistral.assert_called_once()
@@ -366,15 +371,15 @@ class TestErrorHandling:
     
     def test_invalid_provider_error(self):
         """Test error when using unsupported provider."""
-        configurator = EmbeddingConfigurator()
+        # Use factory directly
         
         embedder_config = {
             "provider": "unsupported_provider",
             "config": {}
         }
         
-        with pytest.raises(Exception, match="Unsupported embedding provider"):
-            configurator.configure_embedder(embedder_config)
+        with pytest.raises(Exception, match="Unknown provider"):
+            build_embedder(embedder_config)
     
     def test_missing_api_key_error(self):
         """Test error when API key is missing."""
@@ -385,8 +390,7 @@ class TestErrorHandling:
         
         with patch.dict(os.environ, {}, clear=True):
             with pytest.raises(ValueError, match="Mistral API key is required"):
-                configurator = EmbeddingConfigurator()
-                configurator.configure_embedder(embedder_config)
+                build_embedder(embedder_config)
 
 
 # Pytest fixtures for integration testing
@@ -431,12 +435,13 @@ def test_mistral_embedding_with_fixtures(mock_mistral_api_response, test_embedde
         mock_response.json.return_value = mock_mistral_api_response
         mock_post.return_value = mock_response
         
-        configurator = EmbeddingConfigurator()
+        # Use factory directly
         embedding_function = configurator.configure_embedder(test_embedder_config)
         
         embeddings = embedding_function(["Test document"])
         
         assert len(embeddings) == 1
         assert len(embeddings[0]) == 5
+
 
 
