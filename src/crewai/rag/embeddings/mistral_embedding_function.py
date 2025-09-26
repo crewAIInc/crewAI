@@ -7,7 +7,7 @@ for use with CrewAI's RAG (Retrieval-Augmented Generation) functionality.
 
 import os
 import requests
-from typing import List, Union, cast
+from typing import cast
 from chromadb import Documents, EmbeddingFunction, Embeddings
 from chromadb.api.types import validate_embedding_function
 
@@ -50,7 +50,9 @@ class MistralEmbeddingFunction(EmbeddingFunction):
         """
         self.api_key = api_key or os.getenv("MISTRAL_API_KEY")
         if not self.api_key:
-            raise ValueError("Mistral API key is required. Set MISTRAL_API_KEY environment variable.")
+            raise ValueError(
+                "Mistral API key is required. Set MISTRAL_API_KEY environment variable."
+            )
         
         self.model_name = model_name
         self.base_url = base_url.rstrip('/')
@@ -61,7 +63,7 @@ class MistralEmbeddingFunction(EmbeddingFunction):
         try:
             validate_embedding_function(self)
         except Exception as e:
-            raise ValueError(f"Invalid Mistral embedding function: {str(e)}")
+            raise ValueError(f"Invalid Mistral embedding function: {str(e)}") from e
     
     def __call__(self, input: Documents) -> Embeddings:
         """
@@ -115,7 +117,10 @@ class MistralEmbeddingFunction(EmbeddingFunction):
             except requests.exceptions.RequestException as e:
                 # If this is the last attempt, raise the error
                 if attempt == attempts - 1:
-                    raise RuntimeError(f"Failed to get embeddings from Mistral API after {attempts} attempts: {str(e)}")
+                    raise RuntimeError(
+                        f"Failed to get embeddings from Mistral API after "
+                        f"{attempts} attempts: {str(e)}"
+                    ) from e
                 # Otherwise, continue to next attempt
                 continue
     
