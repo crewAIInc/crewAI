@@ -3,6 +3,7 @@ import os
 from time import sleep
 from unittest.mock import MagicMock, patch
 
+import litellm
 import pytest
 from pydantic import BaseModel
 
@@ -711,3 +712,28 @@ def test_ollama_does_not_modify_when_last_is_user(ollama_llm):
     formatted = ollama_llm._format_messages_for_provider(original_messages)
 
     assert formatted == original_messages
+
+
+def test_litellm_version_is_updated():
+    """Test that LiteLLM version is >= 1.77.4 to address CVEs."""
+    import importlib.metadata
+
+    litellm_version = importlib.metadata.version("litellm")
+    version_parts = [int(x) for x in litellm_version.split('.')]
+
+    # Check that version is >= 1.77.4
+    assert version_parts[0] >= 1
+    if version_parts[0] == 1:
+        assert version_parts[1] >= 77
+        if version_parts[1] == 77:
+            assert version_parts[2] >= 4
+
+
+def test_litellm_import_and_basic_functionality():
+    """Test that LiteLLM can be imported and basic functionality works."""
+    assert hasattr(litellm, 'completion')
+    assert hasattr(litellm, 'get_supported_openai_params')
+
+    supported_params = litellm.get_supported_openai_params("gpt-4")
+    assert isinstance(supported_params, list)
+    assert len(supported_params) > 0
