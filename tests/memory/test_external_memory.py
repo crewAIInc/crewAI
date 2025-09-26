@@ -1,13 +1,15 @@
-from unittest.mock import MagicMock, patch, ANY
 from collections import defaultdict
+from unittest.mock import ANY, MagicMock, patch
+
+import pytest
+
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.memory_events import (
-    MemorySaveStartedEvent,
-    MemorySaveCompletedEvent,
-    MemoryQueryStartedEvent,
     MemoryQueryCompletedEvent,
+    MemoryQueryStartedEvent,
+    MemorySaveCompletedEvent,
+    MemorySaveStartedEvent,
 )
-import pytest
 
 try:
     from mem0.memory.main import Memory
@@ -18,11 +20,11 @@ from crewai.agent import Agent
 from crewai.crew import Crew, Process
 from crewai.memory.external.external_memory import ExternalMemory
 from crewai.memory.external.external_memory_item import ExternalMemoryItem
-from crewai.memory.storage.interface import Storage
 from crewai.memory.storage.bedrock_agentcore_storage import (
     BedrockAgentCoreConfig,
     BedrockAgentCoreStorage,
 )
+from crewai.memory.storage.interface import Storage
 from crewai.task import Task
 
 
@@ -416,6 +418,54 @@ def test_external_memory_agentcore_create_storage_success(agentcore_config):
         assert isinstance(storage, BedrockAgentCoreStorage)
 
 
+def test_external_memory_agentcore_create_storage_with_dict_config():
+    """Test successful creation of AgentCore storage with dict configuration."""
+    # Create a dict configuration instead of BedrockAgentCoreConfig instance
+    config_dict = {
+        "memory_id": "test-memory-id",
+        "actor_id": "test-actor",
+        "session_id": "test-session",
+        "region_name": "us-west-2",
+        "namespaces": ["/test/namespace"],
+    }
+
+    embedder_config = {"provider": "agentcore", "config": config_dict}
+
+    with patch("boto3.client"):
+        storage = ExternalMemory.create_storage(None, embedder_config)
+        assert isinstance(storage, BedrockAgentCoreStorage)
+        # Verify the dict was converted to BedrockAgentCoreConfig
+        assert isinstance(storage.config, BedrockAgentCoreConfig)
+        assert storage.config.memory_id == "test-memory-id"
+        assert storage.config.actor_id == "test-actor"
+        assert storage.config.session_id == "test-session"
+        assert storage.config.region_name == "us-west-2"
+        assert storage.config.namespaces == ["/test/namespace"]
+
+
+def test_external_memory_agentcore_create_storage_with_minimal_dict_config():
+    """Test AgentCore storage creation with minimal dict configuration (only required fields)."""
+    # Create a minimal dict configuration with only required fields
+    config_dict = {
+        "memory_id": "minimal-memory",
+        "actor_id": "minimal-actor",
+        "session_id": "minimal-session",
+    }
+
+    embedder_config = {"provider": "agentcore", "config": config_dict}
+
+    with patch("boto3.client"):
+        storage = ExternalMemory.create_storage(None, embedder_config)
+        assert isinstance(storage, BedrockAgentCoreStorage)
+        assert isinstance(storage.config, BedrockAgentCoreConfig)
+        assert storage.config.memory_id == "minimal-memory"
+        assert storage.config.actor_id == "minimal-actor"
+        assert storage.config.session_id == "minimal-session"
+        # Check defaults are applied
+        assert storage.config.region_name == "us-east-1"  # default region
+        assert storage.config.namespaces == []  # default empty list
+
+
 def test_external_memory_agentcore_create_storage_missing_config():
     """Test AgentCore storage creation with missing config."""
     embedder_config = {"provider": "agentcore", "config": None}
@@ -430,9 +480,7 @@ def test_external_memory_agentcore_create_storage_invalid_config():
     """Test AgentCore storage creation with invalid config."""
     embedder_config = {"provider": "agentcore", "config": {"invalid": "config"}}
 
-    with pytest.raises(
-        ValueError, match="Config must be either AgentCoreConfig instance"
-    ):
+    with pytest.raises(ValueError, match="Invalid AgentCore configuration"):
         ExternalMemory.create_storage(None, embedder_config)
 
 
@@ -491,13 +539,11 @@ def test_external_memory_agentcore_save_operation(
         external_memory.save(
             value="test agentcore value",
             metadata={"task": "agentcore_test"},
-            agent="agentcore_agent",
         )
 
         mock_save.assert_called_once_with(
             value="test agentcore value",
             metadata={"task": "agentcore_test"},
-            agent="agentcore_agent",
         )
 
 
@@ -598,7 +644,6 @@ def test_external_memory_agentcore_events_integration(
         external_memory.save(
             value="agentcore test value",
             metadata={"strategy": "user_preferences"},
-            agent="agentcore_agent",
         )
 
         # Test search events
@@ -614,7 +659,6 @@ def test_external_memory_agentcore_events_integration(
     save_started_event = events["MemorySaveStartedEvent"][0]
     assert save_started_event.value == "agentcore test value"
     assert save_started_event.metadata == {"strategy": "user_preferences"}
-    assert save_started_event.agent_role == "agentcore_agent"
     assert save_started_event.source_type == "external_memory"
 
     search_started_event = events["MemoryQueryStartedEvent"][0]

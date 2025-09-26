@@ -1,5 +1,5 @@
 import time
-from typing import TYPE_CHECKING, Any, Dict
+from typing import TYPE_CHECKING, Any
 
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.memory_events import (
@@ -16,8 +16,8 @@ from crewai.memory.storage.interface import Storage
 from crewai.rag.embeddings.types import ProviderSpec
 
 if TYPE_CHECKING:
-    from crewai.memory.storage.mem0_storage import Mem0Storage
     from crewai.memory.storage.bedrock_agentcore_storage import BedrockAgentCoreStorage
+    from crewai.memory.storage.mem0_storage import Mem0Storage
 
 
 class ExternalMemory(Memory):
@@ -33,8 +33,8 @@ class ExternalMemory(Memory):
     @staticmethod
     def _configure_agentcore(crew: Any, config: Any) -> "BedrockAgentCoreStorage":
         from crewai.memory.storage.bedrock_agentcore_storage import (
-            BedrockAgentCoreStorage,
             BedrockAgentCoreConfig,
+            BedrockAgentCoreStorage,
         )
 
         # AgentCore requires explicit configuration - no crew fallback
@@ -44,20 +44,23 @@ class ExternalMemory(Memory):
             )
 
         try:
-            # Handle both AgentCoreConfig instances and dictionaries
+            # Handle both BedrockAgentCoreConfig instances and dict configurations
             if isinstance(config, BedrockAgentCoreConfig):
                 typed_config = config
+            elif isinstance(config, dict):
+                # Convert dict to BedrockAgentCoreConfig
+                typed_config = BedrockAgentCoreConfig(**config)
             else:
                 raise ValueError(
-                    f"Config must be either AgentCoreConfig instance got {type(config)}"
+                    f"Config must be either BedrockAgentCoreConfig instance or dict, got {type(config)}"
                 )
 
             return BedrockAgentCoreStorage(type="external", config=typed_config)
         except Exception as e:
-            raise ValueError(f"Invalid AgentCore configuration: {str(e)}")
+            raise ValueError(f"Invalid AgentCore configuration: {e}") from e
 
     @staticmethod
-    def external_supported_storages() -> Dict[str, Any]:
+    def external_supported_storages() -> dict[str, Any]:
         return {
             "mem0": ExternalMemory._configure_mem0,
             "agentcore": ExternalMemory._configure_agentcore,
