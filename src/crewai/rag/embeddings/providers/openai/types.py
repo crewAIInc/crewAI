@@ -1,6 +1,8 @@
 """Type definitions for OpenAI embedding providers."""
 
-from typing import Annotated, Any, Literal, TypedDict
+from typing import Annotated, Any, Literal
+
+from typing_extensions import Required, TypedDict
 
 
 class OpenAIProviderConfig(TypedDict, total=False):
@@ -17,8 +19,8 @@ class OpenAIProviderConfig(TypedDict, total=False):
     organization_id: str
 
 
-class OpenAIProviderSpec(TypedDict):
+class OpenAIProviderSpec(TypedDict, total=False):
     """OpenAI provider specification."""
 
-    provider: Literal["openai"]
+    provider: Required[Literal["openai"]]
     config: OpenAIProviderConfig

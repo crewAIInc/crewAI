@@ -1,9 +1,7 @@
 """IBM Watson embeddings provider."""
 
-from ibm_watsonx_ai import (  # type: ignore[import-not-found,import-untyped]
-    APIClient,
-    Credentials,
-)
+from typing import Any
+
 from pydantic import Field, model_validator
 from typing_extensions import Self
 
@@ -28,9 +26,7 @@ class WatsonProvider(BaseEmbeddingsProvider[WatsonEmbeddingFunction]):
     params: dict[str, str | dict[str, str]] | None = Field(
         default=None, description="Additional parameters"
     )
-    credentials: Credentials | None = Field(
-        default=None, description="Watson credentials"
-    )
+    credentials: Any | None = Field(default=None, description="Watson credentials")
     project_id: str | None = Field(
         default=None,
         description="Watson project ID",
@@ -39,7 +35,7 @@ class WatsonProvider(BaseEmbeddingsProvider[WatsonEmbeddingFunction]):
     space_id: str | None = Field(
         default=None, description="Watson space ID", validation_alias="WATSON_SPACE_ID"
     )
-    api_client: APIClient | None = Field(default=None, description="Watson API client")
+    api_client: Any | None = Field(default=None, description="Watson API client")
     verify: bool | str | None = Field(
         default=None, description="SSL verification", validation_alias="WATSON_VERIFY"
     )

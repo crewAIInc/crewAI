@@ -17,8 +17,8 @@ class OpenAIProvider(BaseEmbeddingsProvider[OpenAIEmbeddingFunction]):
         default=OpenAIEmbeddingFunction,
         description="OpenAI embedding function class",
     )
-    api_key: str = Field(
-        description="OpenAI API key", validation_alias="OPENAI_API_KEY"
+    api_key: str | None = Field(
+        default=None, description="OpenAI API key", validation_alias="OPENAI_API_KEY"
     )
     model_name: str = Field(
         default="text-embedding-ada-002",

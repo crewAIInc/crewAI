@@ -1,6 +1,8 @@
 """Type definitions for SentenceTransformer embedding providers."""
 
-from typing import Annotated, Literal, TypedDict
+from typing import Annotated, Literal
+
+from typing_extensions import Required, TypedDict
 
 
 class SentenceTransformerProviderConfig(TypedDict, total=False):
@@ -14,5 +16,5 @@ class SentenceTransformerProviderConfig(TypedDict, total=False):
 class SentenceTransformerProviderSpec(TypedDict):
     """SentenceTransformer provider specification."""
 
-    provider: Literal["sentence-transformer"]
+    provider: Required[Literal["sentence-transformer"]]
     config: SentenceTransformerProviderConfig

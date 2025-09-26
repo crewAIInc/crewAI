@@ -1,6 +1,8 @@
 """Type definitions for OpenCLIP embedding providers."""
 
-from typing import Annotated, Literal, TypedDict
+from typing import Annotated, Literal
+
+from typing_extensions import Required, TypedDict
 
 
 class OpenCLIPProviderConfig(TypedDict, total=False):
@@ -14,5 +16,5 @@ class OpenCLIPProviderConfig(TypedDict, total=False):
 class OpenCLIPProviderSpec(TypedDict):
     """OpenCLIP provider specification."""
 
-    provider: Literal["openclip"]
+    provider: Required[Literal["openclip"]]
     config: OpenCLIPProviderConfig

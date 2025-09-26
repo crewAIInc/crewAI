@@ -1,6 +1,8 @@
 """Type definitions for Google embedding providers."""
 
-from typing import Annotated, Literal, TypedDict
+from typing import Annotated, Literal
+
+from typing_extensions import Required, TypedDict
 
 
 class GenerativeAiProviderConfig(TypedDict, total=False):
@@ -27,8 +29,8 @@ class VertexAIProviderConfig(TypedDict, total=False):
     region: Annotated[str, "us-central1"]
 
 
-class VertexAIProviderSpec(TypedDict):
+class VertexAIProviderSpec(TypedDict, total=False):
     """Vertex AI provider specification."""
 
-    provider: Literal["google-vertex"]
+    provider: Required[Literal["google-vertex"]]
     config: VertexAIProviderConfig

@@ -1,6 +1,8 @@
 """Type definitions for VoyageAI embedding providers."""
 
-from typing import Annotated, Literal, TypedDict
+from typing import Annotated, Literal
+
+from typing_extensions import Required, TypedDict
 
 
 class VoyageAIProviderConfig(TypedDict, total=False):
@@ -19,5 +21,5 @@ class VoyageAIProviderConfig(TypedDict, total=False):
 class VoyageAIProviderSpec(TypedDict):
     """VoyageAI provider specification."""
 
-    provider: Literal["voyageai"]
+    provider: Required[Literal["voyageai"]]
     config: VoyageAIProviderConfig
