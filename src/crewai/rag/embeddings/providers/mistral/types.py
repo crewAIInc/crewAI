@@ -10,6 +10,7 @@ class MistralProviderSpec(TypedDict, total=False):
     provider: str
     api_key: str | None
     model_name: str
+    model: str  # Alias for model_name
     base_url: str
     max_retries: int
     timeout: int
@@ -26,6 +27,11 @@ class MistralConfig(BaseModel):
         default="mistral-embed",
         description="Model name to use for embeddings",
         validation_alias="MISTRAL_MODEL_NAME",
+    )
+    model: str | None = Field(
+        default=None,
+        description="Model name (alias for model_name)",
+        validation_alias="MISTRAL_MODEL",
     )
     base_url: str = Field(
         default="https://api.mistral.ai/v1",
@@ -50,6 +56,7 @@ class MistralConfig(BaseModel):
         return MistralProvider(
             api_key=self.api_key,
             model_name=self.model_name,
+            model=self.model,
             base_url=self.base_url,
             max_retries=self.max_retries,
             timeout=self.timeout,

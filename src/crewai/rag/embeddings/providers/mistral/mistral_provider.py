@@ -23,6 +23,11 @@ class MistralProvider(BaseEmbeddingsProvider[MistralEmbeddingFunction]):
         description="Model name to use for embeddings",
         validation_alias="MISTRAL_MODEL_NAME",
     )
+    model: str | None = Field(
+        default=None,
+        description="Model name (alias for model_name)",
+        validation_alias="MISTRAL_MODEL",
+    )
     base_url: str = Field(
         default="https://api.mistral.ai/v1",
         description="Base URL for API requests",
@@ -41,9 +46,12 @@ class MistralProvider(BaseEmbeddingsProvider[MistralEmbeddingFunction]):
 
     def _create_embedding_function(self) -> MistralEmbeddingFunction:
         """Create the Mistral embedding function."""
+        # Use model parameter if provided, otherwise use model_name
+        effective_model_name = self.model or self.model_name
+        
         return self.embedding_callable(
             api_key=self.api_key,
-            model_name=self.model_name,
+            model_name=effective_model_name,
             base_url=self.base_url,
             max_retries=self.max_retries,
             timeout=self.timeout,
