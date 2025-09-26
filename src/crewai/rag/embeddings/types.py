@@ -68,4 +68,4 @@ AllowedEmbeddingProviders = Literal[
     "watson",
 ]
 
-EmbedderConfig: TypeAlias = ProviderSpec | BaseEmbeddingsProvider
+EmbedderConfig: TypeAlias = ProviderSpec | type[BaseEmbeddingsProvider]
