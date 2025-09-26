@@ -219,7 +219,7 @@ class EmbeddingConfigurator:
 
         return MistralEmbeddingFunction(
             api_key=config.get("api_key") or os.getenv("MISTRAL_API_KEY"),
-            model_name=model_name,
+            model_name=model_name or config.get("model"),
             base_url=config.get("base_url", "https://api.mistral.ai/v1"),
             max_retries=config.get("max_retries", 3),
             timeout=config.get("timeout", 30),
