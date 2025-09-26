@@ -11,7 +11,7 @@ from crewai.rag.embeddings.providers.google.types import (
     VertexAIProviderSpec,
 )
 from crewai.rag.embeddings.providers.huggingface.types import HuggingFaceProviderSpec
-from crewai.rag.embeddings.providers.ibm.types import WatsonProviderSpec
+from crewai.rag.embeddings.providers.ibm.types import WatsonXProviderSpec
 from crewai.rag.embeddings.providers.instructor.types import InstructorProviderSpec
 from crewai.rag.embeddings.providers.jina.types import JinaProviderSpec
 from crewai.rag.embeddings.providers.microsoft.types import AzureProviderSpec
@@ -44,7 +44,7 @@ ProviderSpec = (
     | Text2VecProviderSpec
     | VertexAIProviderSpec
     | VoyageAIProviderSpec
-    | WatsonProviderSpec
+    | WatsonXProviderSpec
 )
 
 AllowedEmbeddingProviders = Literal[
@@ -65,7 +65,8 @@ AllowedEmbeddingProviders = Literal[
     "sentence-transformer",
     "text2vec",
     "voyageai",
-    "watson",
+    "watsonx",
+    "watson",  # for backward compatibility until v1.0.0
 ]
 
 EmbedderConfig: TypeAlias = (
