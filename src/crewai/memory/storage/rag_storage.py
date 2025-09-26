@@ -7,7 +7,9 @@ from crewai.rag.chromadb.config import ChromaDBConfig
 from crewai.rag.chromadb.types import ChromaEmbeddingFunctionWrapper
 from crewai.rag.config.utils import get_rag_client
 from crewai.rag.core.base_client import BaseClient
-from crewai.rag.embeddings.factory import get_embedding_function
+from crewai.rag.core.base_embeddings_provider import BaseEmbeddingsProvider
+from crewai.rag.embeddings.factory import build_embedder
+from crewai.rag.embeddings.types import ProviderSpec
 from crewai.rag.factory import create_client
 from crewai.rag.storage.base_rag_storage import BaseRAGStorage
 from crewai.rag.types import BaseRecord
@@ -25,7 +27,7 @@ class RAGStorage(BaseRAGStorage):
         self,
         type: str,
         allow_reset: bool = True,
-        embedder_config: dict[str, Any] | None = None,
+        embedder_config: ProviderSpec | BaseEmbeddingsProvider | None = None,
         crew: Any = None,
         path: str | None = None,
     ) -> None:
@@ -49,12 +51,46 @@ class RAGStorage(BaseRAGStorage):
         )
 
         if self.embedder_config:
-            embedding_function = get_embedding_function(self.embedder_config)
-            config = ChromaDBConfig(
-                embedding_function=cast(
-                    ChromaEmbeddingFunctionWrapper, embedding_function
+            embedding_function = build_embedder(self.embedder_config)
+
+            try:
+                _ = embedding_function(["test"])
+            except Exception as e:
+                provider = (
+                    self.embedder_config["provider"]
+                    if isinstance(self.embedder_config, dict)
+                    else self.embedder_config.__class__.__name__.replace(
+                        "Provider", ""
+                    ).lower()
                 )
-            )
+                raise ValueError(
+                    f"Failed to initialize embedder. Please check your configuration or connection.\n"
+                    f"Provider: {provider}\n"
+                    f"Error: {e}"
+                ) from e
+
+            batch_size = None
+            if (
+                isinstance(self.embedder_config, dict)
+                and "config" in self.embedder_config
+            ):
+                nested_config = self.embedder_config["config"]
+                if isinstance(nested_config, dict):
+                    batch_size = nested_config.get("batch_size")
+
+            if batch_size is not None:
+                config = ChromaDBConfig(
+                    embedding_function=cast(
+                        ChromaEmbeddingFunctionWrapper, embedding_function
+                    ),
+                    batch_size=cast(int, batch_size),
+                )
+            else:
+                config = ChromaDBConfig(
+                    embedding_function=cast(
+                        ChromaEmbeddingFunctionWrapper, embedding_function
+                    )
+                )
             self._client = create_client(config)
 
     def _get_client(self) -> BaseClient:
@@ -95,7 +131,26 @@ class RAGStorage(BaseRAGStorage):
             if metadata:
                 document["metadata"] = metadata
 
-            client.add_documents(collection_name=collection_name, documents=[document])
+            batch_size = None
+            if (
+                self.embedder_config
+                and isinstance(self.embedder_config, dict)
+                and "config" in self.embedder_config
+            ):
+                nested_config = self.embedder_config["config"]
+                if isinstance(nested_config, dict):
+                    batch_size = nested_config.get("batch_size")
+
+            if batch_size is not None:
+                client.add_documents(
+                    collection_name=collection_name,
+                    documents=[document],
+                    batch_size=cast(int, batch_size),
+                )
+            else:
+                client.add_documents(
+                    collection_name=collection_name, documents=[document]
+                )
         except Exception as e:
             logging.error(
                 f"Error during {self.type} save: {e!s}\n{traceback.format_exc()}"
