@@ -79,6 +79,7 @@ if TYPE_CHECKING:
     )
     from crewai.rag.embeddings.providers.voyageai.types import VoyageAIProviderSpec
     from crewai.rag.embeddings.mistral_embedding_function import MistralEmbeddingFunction
+    from crewai.rag.embeddings.providers.mistral.types import MistralProviderSpec
 
 T = TypeVar("T", bound=EmbeddingFunction)
 
@@ -213,7 +214,7 @@ def build_embedder_from_dict(spec: ONNXProviderSpec) -> ONNXMiniLM_L6_V2: ...
 
 
 @overload
-def build_embedder_from_dict(spec: dict) -> MistralEmbeddingFunction: ...
+def build_embedder_from_dict(spec: MistralProviderSpec) -> MistralEmbeddingFunction: ...
 
 
 def build_embedder_from_dict(spec):
@@ -340,7 +341,7 @@ def build_embedder(spec: ONNXProviderSpec) -> ONNXMiniLM_L6_V2: ...
 
 
 @overload
-def build_embedder(spec: dict) -> MistralEmbeddingFunction: ...
+def build_embedder(spec: MistralProviderSpec) -> MistralEmbeddingFunction: ...
 
 
 def build_embedder(spec):

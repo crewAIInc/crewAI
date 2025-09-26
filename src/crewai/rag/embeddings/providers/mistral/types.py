@@ -1,13 +1,21 @@
 """Mistral embedding types."""
 
-from typing import Any
+from typing import Any, TypedDict
 
-from pydantic import Field
-
-from crewai.rag.embeddings.providers.mistral.mistral_provider import MistralProvider
+from pydantic import BaseModel, Field
 
 
-class MistralConfig:
+class MistralProviderSpec(TypedDict, total=False):
+    """Mistral provider specification."""
+    provider: str
+    api_key: str | None
+    model_name: str
+    base_url: str
+    max_retries: int
+    timeout: int
+
+
+class MistralConfig(BaseModel):
     """Configuration for Mistral embeddings."""
 
     provider: str = Field(default="mistral", description="Provider name")
@@ -35,8 +43,10 @@ class MistralConfig:
         validation_alias="MISTRAL_TIMEOUT",
     )
 
-    def to_provider(self) -> MistralProvider:
+    def to_provider(self):
         """Convert config to provider instance."""
+        from crewai.rag.embeddings.providers.mistral.mistral_provider import MistralProvider
+        
         return MistralProvider(
             api_key=self.api_key,
             model_name=self.model_name,
