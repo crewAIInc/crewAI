@@ -397,6 +397,29 @@ def is_context_length_exceeded(exception: Exception) -> bool:
     )
 
 
+def is_null_response_because_context_length_exceeded(
+    exception: Exception,
+    messages: list[LLMMessage],
+    llm: LLM | BaseLLM,
+) -> bool:
+    """Check if the response is null/empty because context length excedded.
+
+    Args:
+        exception: The exception to check
+
+    Returns:
+        bool: True if the exception is due to context length exceeding
+    """
+    messages_string = " ".join([message["content"] for message in messages])
+    cut_size = llm.get_context_window_size()
+
+    messages_groups = [
+        {"content": messages_string[i : i + cut_size]}
+        for i in range(0, len(messages_string), cut_size)
+    ]
+    return len(messages_groups) and isinstance(exception, ValueError) and "None or empty" in str(exception) 
+
+
 def handle_context_length(
     respect_context_window: bool,
     printer: Printer,
