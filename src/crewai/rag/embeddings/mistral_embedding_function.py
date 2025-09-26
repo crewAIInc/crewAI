@@ -96,34 +96,42 @@ class MistralEmbeddingFunction(EmbeddingFunction):
         # Make API request with retry logic
         # Ensure at least one attempt is made, even if max_retries is 0
         attempts = max(1, self.max_retries)
+        last_exception = None
 
-        for attempt in range(attempts):
+        def make_request():
+            """Make a single API request."""
+            response = requests.post(
+                f"{self.base_url}/embeddings",
+                headers=headers,
+                json=data,
+                timeout=self.timeout,
+            )
+            response.raise_for_status()
+            return response
+
+        def attempt_request():
+            """Attempt a single request and return (success, result, exception)."""
             try:
-                response = requests.post(
-                    f"{self.base_url}/embeddings",
-                    headers=headers,
-                    json=data,
-                    timeout=self.timeout,
-                )
-                response.raise_for_status()
-
+                response = make_request()
                 result = response.json()
                 embeddings = [item["embedding"] for item in result["data"]]
-
-                return cast(Embeddings, embeddings)
-
+                return True, cast(Embeddings, embeddings), None
             except requests.exceptions.RequestException as e:
-                # If this is the last attempt, raise the error
-                if attempt == attempts - 1:
-                    raise RuntimeError(
-                        f"Failed to get embeddings from Mistral API after "
-                        f"{attempts} attempts: {e!s}"
-                    ) from e
-                # Otherwise, continue to next attempt
-                continue
+                return False, None, e
 
-        # This should never be reached, but added for type safety
-        raise RuntimeError("Unexpected end of retry loop")
+        for attempt in range(attempts):
+            success, result, exception = attempt_request()
+            if success:
+                return result
+            last_exception = exception
+            if attempt == attempts - 1:
+                break
+
+        # If we get here, all attempts failed
+        raise RuntimeError(
+            f"Failed to get embeddings from Mistral API after "
+            f"{attempts} attempts: {last_exception!s}"
+        ) from last_exception
 
     def get_model_info(self) -> dict:
         """
