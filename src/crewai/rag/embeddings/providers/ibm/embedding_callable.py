@@ -152,3 +152,8 @@ class WatsonEmbeddingFunction(EmbeddingFunction[Documents]):
         except Exception as e:
             print(f"Error during Watson embedding: {e}")
             raise
+
+    @staticmethod
+    def name() -> str:
+        """Return the name identifier for this embedding function."""
+        return "watson"
