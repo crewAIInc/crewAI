@@ -22,6 +22,7 @@ from crewai.agents.tools_handler import ToolsHandler
 from crewai.knowledge.knowledge import Knowledge
 from crewai.knowledge.knowledge_config import KnowledgeConfig
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
+from crewai.rag.embeddings.types import EmbedderConfig
 from crewai.security.security_config import SecurityConfig
 from crewai.tools.base_tool import BaseTool, Tool
 from crewai.utilities import I18N, Logger, RPMController
@@ -359,5 +360,5 @@ class BaseAgent(ABC, BaseModel):
             self._rpm_controller = rpm_controller
             self.create_agent_executor()
 
-    def set_knowledge(self, crew_embedder: dict[str, Any] | None = None):
+    def set_knowledge(self, crew_embedder: EmbedderConfig | None = None):
         pass
