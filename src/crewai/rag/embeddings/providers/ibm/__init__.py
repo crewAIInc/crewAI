@@ -1,15 +1,15 @@
 """IBM embedding providers."""
 
 from crewai.rag.embeddings.providers.ibm.types import (
-    WatsonProviderConfig,
-    WatsonProviderSpec,
+    WatsonXProviderConfig,
+    WatsonXProviderSpec,
 )
-from crewai.rag.embeddings.providers.ibm.watson import (
-    WatsonProvider,
+from crewai.rag.embeddings.providers.ibm.watsonx import (
+    WatsonXProvider,
 )
 
 __all__ = [
-    "WatsonProvider",
-    "WatsonProviderConfig",
-    "WatsonProviderSpec",
+    "WatsonXProvider",
+    "WatsonXProviderConfig",
+    "WatsonXProviderSpec",
 ]

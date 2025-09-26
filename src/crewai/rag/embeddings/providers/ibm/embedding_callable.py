@@ -1,4 +1,4 @@
-"""IBM Watson embedding function implementation."""
+"""IBM WatsonX embedding function implementation."""
 
 from typing import cast
 
@@ -6,17 +6,17 @@ from typing_extensions import Unpack
 
 from crewai.rag.core.base_embeddings_callable import EmbeddingFunction
 from crewai.rag.core.types import Documents, Embeddings
-from crewai.rag.embeddings.providers.ibm.types import WatsonProviderConfig
+from crewai.rag.embeddings.providers.ibm.types import WatsonXProviderConfig
 
 
-class WatsonEmbeddingFunction(EmbeddingFunction[Documents]):
-    """Embedding function for IBM Watson models."""
+class WatsonXEmbeddingFunction(EmbeddingFunction[Documents]):
+    """Embedding function for IBM WatsonX models."""
 
-    def __init__(self, **kwargs: Unpack[WatsonProviderConfig]) -> None:
-        """Initialize Watson embedding function.
+    def __init__(self, **kwargs: Unpack[WatsonXProviderConfig]) -> None:
+        """Initialize WatsonX embedding function.
 
         Args:
-            **kwargs: Configuration parameters for Watson Embeddings and Credentials.
+            **kwargs: Configuration parameters for WatsonX Embeddings and Credentials.
         """
         self._config = kwargs
 
@@ -40,7 +40,7 @@ class WatsonEmbeddingFunction(EmbeddingFunction[Documents]):
 
         except ImportError as e:
             raise ImportError(
-                "ibm-watsonx-ai is required for watson embeddings. "
+                "ibm-watsonx-ai is required for watsonx embeddings. "
                 "Install it with: uv add ibm-watsonx-ai"
             ) from e
 
@@ -150,5 +150,5 @@ class WatsonEmbeddingFunction(EmbeddingFunction[Documents]):
             embeddings = embedding.embed_documents(input)
             return cast(Embeddings, embeddings)
         except Exception as e:
-            print(f"Error during Watson embedding: {e}")
+            print(f"Error during WatsonX embedding: {e}")
             raise

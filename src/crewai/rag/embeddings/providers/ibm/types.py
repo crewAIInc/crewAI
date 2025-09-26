@@ -1,12 +1,12 @@
-"""Type definitions for IBM Watson embedding providers."""
+"""Type definitions for IBM WatsonX embedding providers."""
 
 from typing import Annotated, Any, Literal
 
 from typing_extensions import Required, TypedDict
 
 
-class WatsonProviderConfig(TypedDict, total=False):
-    """Configuration for Watson provider."""
+class WatsonXProviderConfig(TypedDict, total=False):
+    """Configuration for WatsonX provider."""
 
     model_id: str
     url: str
@@ -37,8 +37,8 @@ class WatsonProviderConfig(TypedDict, total=False):
     proxies: dict
 
 
-class WatsonProviderSpec(TypedDict, total=False):
-    """Watson provider specification."""
+class WatsonXProviderSpec(TypedDict, total=False):
+    """WatsonX provider specification."""
 
-    provider: Required[Literal["watson"]]
-    config: WatsonProviderConfig
+    provider: Required[Literal["watsonx"]]
+    config: WatsonXProviderConfig

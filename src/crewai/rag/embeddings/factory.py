@@ -59,9 +59,9 @@ if TYPE_CHECKING:
         HuggingFaceProviderSpec,
     )
     from crewai.rag.embeddings.providers.ibm.embedding_callable import (
-        WatsonEmbeddingFunction,
+        WatsonXEmbeddingFunction,
     )
-    from crewai.rag.embeddings.providers.ibm.types import WatsonProviderSpec
+    from crewai.rag.embeddings.providers.ibm.types import WatsonXProviderSpec
     from crewai.rag.embeddings.providers.instructor.types import InstructorProviderSpec
     from crewai.rag.embeddings.providers.jina.types import JinaProviderSpec
     from crewai.rag.embeddings.providers.microsoft.types import AzureProviderSpec
@@ -100,7 +100,7 @@ PROVIDER_PATHS = {
     "sentence-transformer": "crewai.rag.embeddings.providers.sentence_transformer.sentence_transformer_provider.SentenceTransformerProvider",
     "text2vec": "crewai.rag.embeddings.providers.text2vec.text2vec_provider.Text2VecProvider",
     "voyageai": "crewai.rag.embeddings.providers.voyageai.voyageai_provider.VoyageAIProvider",
-    "watson": "crewai.rag.embeddings.providers.ibm.watson.WatsonProvider",
+    "watsonx": "crewai.rag.embeddings.providers.ibm.watsonx.WatsonXProvider",
 }
 
 
@@ -169,7 +169,7 @@ def build_embedder_from_dict(
 
 
 @overload
-def build_embedder_from_dict(spec: WatsonProviderSpec) -> WatsonEmbeddingFunction: ...
+def build_embedder_from_dict(spec: WatsonXProviderSpec) -> WatsonXEmbeddingFunction: ...
 
 
 @overload
@@ -300,7 +300,7 @@ def build_embedder(spec: VoyageAIProviderSpec) -> VoyageAIEmbeddingFunction: ...
 
 
 @overload
-def build_embedder(spec: WatsonProviderSpec) -> WatsonEmbeddingFunction: ...
+def build_embedder(spec: WatsonXProviderSpec) -> WatsonXEmbeddingFunction: ...
 
 
 @overload
