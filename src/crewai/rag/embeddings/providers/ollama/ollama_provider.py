@@ -17,9 +17,9 @@ class OllamaProvider(BaseEmbeddingsProvider[OllamaEmbeddingFunction]):
     url: str = Field(
         default="http://localhost:11434/api/embeddings",
         description="Ollama API endpoint URL",
-        validation_alias="OLLAMA_URL",
+        validation_alias="EMBEDDINGS_OLLAMA_URL",
     )
     model_name: str = Field(
         description="Model name to use for embeddings",
-        validation_alias="OLLAMA_MODEL_NAME",
+        validation_alias="EMBEDDINGS_OLLAMA_MODEL_NAME",
     )
