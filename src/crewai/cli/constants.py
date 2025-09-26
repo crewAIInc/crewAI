@@ -1,3 +1,9 @@
+DEFAULT_CREWAI_ENTERPRISE_URL = "https://app.crewai.com"
+CREWAI_ENTERPRISE_DEFAULT_OAUTH2_PROVIDER = "workos"
+CREWAI_ENTERPRISE_DEFAULT_OAUTH2_AUDIENCE = "client_01JNJQWBJ4SPFN3SWJM5T7BDG8"
+CREWAI_ENTERPRISE_DEFAULT_OAUTH2_CLIENT_ID = "client_01JYT06R59SP0NXYGD994NFXXX"
+CREWAI_ENTERPRISE_DEFAULT_OAUTH2_DOMAIN = "login.crewai.com"
+
 ENV_VARS = {
     "openai": [
         {
@@ -319,6 +325,5 @@ MODELS = {
 DEFAULT_LLM_MODEL = "gpt-4o-mini"
 
 JSON_URL = "https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json"
-
 
 LITELLM_PARAMS = ["api_key", "api_base", "api_version"]

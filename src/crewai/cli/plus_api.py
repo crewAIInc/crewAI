@@ -1,10 +1,9 @@
-from os import getenv
-from typing import List, Optional
 from urllib.parse import urljoin
 
 import requests
 
 from crewai.cli.config import Settings
+from crewai.cli.constants import DEFAULT_CREWAI_ENTERPRISE_URL
 from crewai.cli.version import get_crewai_version
 
 
@@ -17,6 +16,8 @@ class PlusAPI:
     ORGANIZATIONS_RESOURCE = "/crewai_plus/api/v1/me/organizations"
     CREWS_RESOURCE = "/crewai_plus/api/v1/crews"
     AGENTS_RESOURCE = "/crewai_plus/api/v1/agents"
+    TRACING_RESOURCE = "/crewai_plus/api/v1/tracing"
+    EPHEMERAL_TRACING_RESOURCE = "/crewai_plus/api/v1/tracing/ephemeral"
 
     def __init__(self, api_key: str) -> None:
         self.api_key = api_key
@@ -29,7 +30,10 @@ class PlusAPI:
         settings = Settings()
         if settings.org_uuid:
             self.headers["X-Crewai-Organization-Id"] = settings.org_uuid
-        self.base_url = getenv("CREWAI_BASE_URL", "https://app.crewai.com")
+
+        self.base_url = (
+            str(settings.enterprise_base_url) or DEFAULT_CREWAI_ENTERPRISE_URL
+        )
 
     def _make_request(self, method: str, endpoint: str, **kwargs) -> requests.Response:
         url = urljoin(self.base_url, endpoint)
@@ -51,9 +55,9 @@ class PlusAPI:
         handle: str,
         is_public: bool,
         version: str,
-        description: Optional[str],
+        description: str | None,
         encoded_file: str,
-        available_exports: Optional[List[str]] = None,
+        available_exports: list[str] | None = None,
     ):
         params = {
             "handle": handle,
@@ -108,7 +112,67 @@ class PlusAPI:
 
     def create_crew(self, payload) -> requests.Response:
         return self._make_request("POST", self.CREWS_RESOURCE, json=payload)
-    
+
     def get_organizations(self) -> requests.Response:
         return self._make_request("GET", self.ORGANIZATIONS_RESOURCE)
-    
+
+    def initialize_trace_batch(self, payload) -> requests.Response:
+        return self._make_request(
+            "POST",
+            f"{self.TRACING_RESOURCE}/batches",
+            json=payload,
+            timeout=30,
+        )
+
+    def initialize_ephemeral_trace_batch(self, payload) -> requests.Response:
+        return self._make_request(
+            "POST",
+            f"{self.EPHEMERAL_TRACING_RESOURCE}/batches",
+            json=payload,
+        )
+
+    def send_trace_events(self, trace_batch_id: str, payload) -> requests.Response:
+        return self._make_request(
+            "POST",
+            f"{self.TRACING_RESOURCE}/batches/{trace_batch_id}/events",
+            json=payload,
+            timeout=30,
+        )
+
+    def send_ephemeral_trace_events(
+        self, trace_batch_id: str, payload
+    ) -> requests.Response:
+        return self._make_request(
+            "POST",
+            f"{self.EPHEMERAL_TRACING_RESOURCE}/batches/{trace_batch_id}/events",
+            json=payload,
+            timeout=30,
+        )
+
+    def finalize_trace_batch(self, trace_batch_id: str, payload) -> requests.Response:
+        return self._make_request(
+            "PATCH",
+            f"{self.TRACING_RESOURCE}/batches/{trace_batch_id}/finalize",
+            json=payload,
+            timeout=30,
+        )
+
+    def finalize_ephemeral_trace_batch(
+        self, trace_batch_id: str, payload
+    ) -> requests.Response:
+        return self._make_request(
+            "PATCH",
+            f"{self.EPHEMERAL_TRACING_RESOURCE}/batches/{trace_batch_id}/finalize",
+            json=payload,
+            timeout=30,
+        )
+
+    def mark_trace_batch_as_failed(
+        self, trace_batch_id: str, error_message: str
+    ) -> requests.Response:
+        return self._make_request(
+            "PATCH",
+            f"{self.TRACING_RESOURCE}/batches/{trace_batch_id}",
+            json={"status": "failed", "failure_reason": error_message},
+            timeout=30,
+        )

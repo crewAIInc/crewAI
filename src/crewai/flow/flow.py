@@ -2,28 +2,23 @@ import asyncio
 import copy
 import inspect
 import logging
-from typing import (
-    Any,
-    Callable,
-    Dict,
-    Generic,
-    List,
-    Optional,
-    Set,
-    Type,
-    TypeVar,
-    Union,
-    cast,
-)
+from collections.abc import Callable
+from typing import Any, ClassVar, Generic, TypeVar, cast
 from uuid import uuid4
 
+from opentelemetry import baggage
+from opentelemetry.context import attach, detach
 from pydantic import BaseModel, Field, ValidationError
 
-from crewai.flow.flow_visualizer import plot_flow
-from crewai.flow.persistence.base import FlowPersistence
-from crewai.flow.utils import get_possible_return_constants
-from crewai.utilities.events.crewai_event_bus import crewai_event_bus
-from crewai.utilities.events.flow_events import (
+from crewai.events.event_bus import crewai_event_bus
+from crewai.events.listeners.tracing.trace_listener import (
+    TraceCollectionListener,
+)
+from crewai.events.listeners.tracing.utils import (
+    is_tracing_enabled,
+    should_auto_collect_first_time_traces,
+)
+from crewai.events.types.flow_events import (
     FlowCreatedEvent,
     FlowFinishedEvent,
     FlowPlotEvent,
@@ -32,6 +27,10 @@ from crewai.utilities.events.flow_events import (
     MethodExecutionFinishedEvent,
     MethodExecutionStartedEvent,
 )
+from crewai.flow.flow_visualizer import plot_flow
+from crewai.flow.persistence.base import FlowPersistence
+from crewai.flow.types import FlowExecutionData
+from crewai.flow.utils import get_possible_return_constants
 from crewai.utilities.printer import Printer
 
 logger = logging.getLogger(__name__)
@@ -46,16 +45,14 @@ class FlowState(BaseModel):
     )
 
 
-# Type variables with explicit bounds
-T = TypeVar(
-    "T", bound=Union[Dict[str, Any], BaseModel]
-)  # Generic flow state type parameter
+# type variables with explicit bounds
+T = TypeVar("T", bound=dict[str, Any] | BaseModel)  # Generic flow state type parameter
 StateT = TypeVar(
-    "StateT", bound=Union[Dict[str, Any], BaseModel]
+    "StateT", bound=dict[str, Any] | BaseModel
 )  # State validation type parameter
 
 
-def ensure_state_type(state: Any, expected_type: Type[StateT]) -> StateT:
+def ensure_state_type(state: Any, expected_type: type[StateT]) -> StateT:
     """Ensure state matches expected type with proper validation.
 
     Args:
@@ -95,7 +92,7 @@ def ensure_state_type(state: Any, expected_type: Type[StateT]) -> StateT:
     raise TypeError(f"Invalid expected_type: {expected_type}")
 
 
-def start(condition: Optional[Union[str, dict, Callable]] = None) -> Callable:
+def start(condition: str | dict | Callable | None = None) -> Callable:
     """
     Marks a method as a flow's starting point.
 
@@ -162,7 +159,7 @@ def start(condition: Optional[Union[str, dict, Callable]] = None) -> Callable:
     return decorator
 
 
-def listen(condition: Union[str, dict, Callable]) -> Callable:
+def listen(condition: str | dict | Callable) -> Callable:
     """
     Creates a listener that executes when specified conditions are met.
 
@@ -222,7 +219,7 @@ def listen(condition: Union[str, dict, Callable]) -> Callable:
     return decorator
 
 
-def router(condition: Union[str, dict, Callable]) -> Callable:
+def router(condition: str | dict | Callable) -> Callable:
     """
     Creates a routing method that directs flow execution based on conditions.
 
@@ -288,7 +285,7 @@ def router(condition: Union[str, dict, Callable]) -> Callable:
     return decorator
 
 
-def or_(*conditions: Union[str, dict, Callable]) -> dict:
+def or_(*conditions: str | dict | Callable) -> dict:
     """
     Combines multiple conditions with OR logic for flow control.
 
@@ -334,7 +331,7 @@ def or_(*conditions: Union[str, dict, Callable]) -> dict:
     return {"type": "OR", "methods": methods}
 
 
-def and_(*conditions: Union[str, dict, Callable]) -> dict:
+def and_(*conditions: str | dict | Callable) -> dict:
     """
     Combines multiple conditions with AND logic for flow control.
 
@@ -416,10 +413,10 @@ class FlowMeta(type):
                         if possible_returns:
                             router_paths[attr_name] = possible_returns
 
-        setattr(cls, "_start_methods", start_methods)
-        setattr(cls, "_listeners", listeners)
-        setattr(cls, "_routers", routers)
-        setattr(cls, "_router_paths", router_paths)
+        cls._start_methods = start_methods
+        cls._listeners = listeners
+        cls._routers = routers
+        cls._router_paths = router_paths
 
         return cls
 
@@ -427,26 +424,29 @@ class FlowMeta(type):
 class Flow(Generic[T], metaclass=FlowMeta):
     """Base class for all flows.
 
-    Type parameter T must be either Dict[str, Any] or a subclass of BaseModel."""
+    type parameter T must be either dict[str, Any] or a subclass of BaseModel."""
 
     _printer = Printer()
 
-    _start_methods: List[str] = []
-    _listeners: Dict[str, tuple[str, List[str]]] = {}
-    _routers: Set[str] = set()
-    _router_paths: Dict[str, List[str]] = {}
-    initial_state: Union[Type[T], T, None] = None
+    _start_methods: ClassVar[list[str]] = []
+    _listeners: ClassVar[dict[str, tuple[str, list[str]]]] = {}
+    _routers: ClassVar[set[str]] = set()
+    _router_paths: ClassVar[dict[str, list[str]]] = {}
+    initial_state: type[T] | T | None = None
+    name: str | None = None
+    tracing: bool | None = False
 
-    def __class_getitem__(cls: Type["Flow"], item: Type[T]) -> Type["Flow"]:
+    def __class_getitem__(cls: type["Flow"], item: type[T]) -> type["Flow"]:
         class _FlowGeneric(cls):  # type: ignore
-            _initial_state_T = item  # type: ignore
+            _initial_state_t = item  # type: ignore
 
         _FlowGeneric.__name__ = f"{cls.__name__}[{item.__name__}]"
         return _FlowGeneric
 
     def __init__(
         self,
-        persistence: Optional[FlowPersistence] = None,
+        persistence: FlowPersistence | None = None,
+        tracing: bool | None = False,
         **kwargs: Any,
     ) -> None:
         """Initialize a new Flow instance.
@@ -456,15 +456,24 @@ class Flow(Generic[T], metaclass=FlowMeta):
             **kwargs: Additional state values to initialize or override
         """
         # Initialize basic instance attributes
-        self._methods: Dict[str, Callable] = {}
-        self._method_execution_counts: Dict[str, int] = {}
-        self._pending_and_listeners: Dict[str, Set[str]] = {}
-        self._method_outputs: List[Any] = []  # List to store all method outputs
-        self._persistence: Optional[FlowPersistence] = persistence
+        self._methods: dict[str, Callable] = {}
+        self._method_execution_counts: dict[str, int] = {}
+        self._pending_and_listeners: dict[str, set[str]] = {}
+        self._method_outputs: list[Any] = []  # list to store all method outputs
+        self._completed_methods: set[str] = set()  # Track completed methods for reload
+        self._persistence: FlowPersistence | None = persistence
+        self._is_execution_resuming: bool = False
 
         # Initialize state with initial values
         self._state = self._create_initial_state()
-
+        self.tracing = tracing
+        if (
+            is_tracing_enabled()
+            or self.tracing
+            or should_auto_collect_first_time_traces()
+        ):
+            trace_listener = TraceCollectionListener()
+            trace_listener.setup_listeners(crewai_event_bus)
         # Apply any additional kwargs
         if kwargs:
             self._initialize_state(kwargs)
@@ -473,7 +482,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
             self,
             FlowCreatedEvent(
                 type="flow_created",
-                flow_name=self.__class__.__name__,
+                flow_name=self.name or self.__class__.__name__,
             ),
         )
 
@@ -504,25 +513,25 @@ class Flow(Generic[T], metaclass=FlowMeta):
             TypeError: If state is neither BaseModel nor dictionary
         """
         # Handle case where initial_state is None but we have a type parameter
-        if self.initial_state is None and hasattr(self, "_initial_state_T"):
-            state_type = getattr(self, "_initial_state_T")
+        if self.initial_state is None and hasattr(self, "_initial_state_t"):
+            state_type = self._initial_state_t
             if isinstance(state_type, type):
                 if issubclass(state_type, FlowState):
                     # Create instance without id, then set it
                     instance = state_type()
                     if not hasattr(instance, "id"):
-                        setattr(instance, "id", str(uuid4()))
+                        instance.id = str(uuid4())
                     return cast(T, instance)
-                elif issubclass(state_type, BaseModel):
+                if issubclass(state_type, BaseModel):
                     # Create a new type that includes the ID field
                     class StateWithId(state_type, FlowState):  # type: ignore
                         pass
 
                     instance = StateWithId()
                     if not hasattr(instance, "id"):
-                        setattr(instance, "id", str(uuid4()))
+                        instance.id = str(uuid4())
                     return cast(T, instance)
-                elif state_type is dict:
+                if state_type is dict:
                     return cast(T, {"id": str(uuid4())})
 
         # Handle case where no initial state is provided
@@ -533,13 +542,13 @@ class Flow(Generic[T], metaclass=FlowMeta):
         if isinstance(self.initial_state, type):
             if issubclass(self.initial_state, FlowState):
                 return cast(T, self.initial_state())  # Uses model defaults
-            elif issubclass(self.initial_state, BaseModel):
+            if issubclass(self.initial_state, BaseModel):
                 # Validate that the model has an id field
                 model_fields = getattr(self.initial_state, "model_fields", None)
                 if not model_fields or "id" not in model_fields:
                     raise ValueError("Flow state model must have an 'id' field")
                 return cast(T, self.initial_state())  # Uses model defaults
-            elif self.initial_state is dict:
+            if self.initial_state is dict:
                 return cast(T, {"id": str(uuid4())})
 
         # Handle dictionary instance case
@@ -583,7 +592,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
         return self._state
 
     @property
-    def method_outputs(self) -> List[Any]:
+    def method_outputs(self) -> list[Any]:
         """Returns the list of all outputs from executed methods."""
         return self._method_outputs
 
@@ -614,13 +623,13 @@ class Flow(Generic[T], metaclass=FlowMeta):
 
             if isinstance(self._state, dict):
                 return str(self._state.get("id", ""))
-            elif isinstance(self._state, BaseModel):
+            if isinstance(self._state, BaseModel):
                 return str(getattr(self._state, "id", ""))
             return ""
         except (AttributeError, TypeError):
             return ""  # Safely handle any unexpected attribute access issues
 
-    def _initialize_state(self, inputs: Dict[str, Any]) -> None:
+    def _initialize_state(self, inputs: dict[str, Any]) -> None:
         """Initialize or update flow state with new inputs.
 
         Args:
@@ -674,7 +683,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
         else:
             raise TypeError("State must be a BaseModel instance or a dictionary.")
 
-    def _restore_state(self, stored_state: Dict[str, Any]) -> None:
+    def _restore_state(self, stored_state: dict[str, Any]) -> None:
         """Restore flow state from persistence.
 
         Args:
@@ -708,7 +717,74 @@ class Flow(Generic[T], metaclass=FlowMeta):
         else:
             raise TypeError(f"State must be dict or BaseModel, got {type(self._state)}")
 
-    def kickoff(self, inputs: Optional[Dict[str, Any]] = None) -> Any:
+    def reload(self, execution_data: FlowExecutionData) -> None:
+        """Reloads the flow from an execution data dict.
+
+        This method restores the flow's execution ID, completed methods, and state,
+        allowing it to resume from where it left off.
+
+        Args:
+            execution_data: Flow execution data containing:
+                - id: Flow execution ID
+                - flow: Flow structure
+                - completed_methods: list of successfully completed methods
+                - execution_methods: All execution methods with their status
+        """
+        flow_id = execution_data.get("id")
+        if flow_id:
+            self._update_state_field("id", flow_id)
+
+        self._completed_methods = {
+            name
+            for method_data in execution_data.get("completed_methods", [])
+            if (name := method_data.get("flow_method", {}).get("name")) is not None
+        }
+
+        execution_methods = execution_data.get("execution_methods", [])
+        if not execution_methods:
+            return
+
+        sorted_methods = sorted(
+            execution_methods,
+            key=lambda m: m.get("started_at", ""),
+        )
+
+        state_to_apply = None
+        for method in reversed(sorted_methods):
+            if method.get("final_state"):
+                state_to_apply = method["final_state"]
+                break
+
+        if not state_to_apply and sorted_methods:
+            last_method = sorted_methods[-1]
+            if last_method.get("initial_state"):
+                state_to_apply = last_method["initial_state"]
+
+        if state_to_apply:
+            self._apply_state_updates(state_to_apply)
+
+        for method in sorted_methods[:-1]:
+            method_name = method.get("flow_method", {}).get("name")
+            if method_name:
+                self._completed_methods.add(method_name)
+
+    def _update_state_field(self, field_name: str, value: Any) -> None:
+        """Update a single field in the state."""
+        if isinstance(self._state, dict):
+            self._state[field_name] = value
+        elif hasattr(self._state, field_name):
+            object.__setattr__(self._state, field_name, value)
+
+    def _apply_state_updates(self, updates: dict[str, Any]) -> None:
+        """Apply multiple state updates efficiently."""
+        if isinstance(self._state, dict):
+            self._state.update(updates)
+        elif hasattr(self._state, "__dict__"):
+            for key, value in updates.items():
+                if hasattr(self._state, key):
+                    object.__setattr__(self._state, key, value)
+
+    def kickoff(self, inputs: dict[str, Any] | None = None) -> Any:
         """
         Start the flow execution in a synchronous context.
 
@@ -721,7 +797,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
 
         return asyncio.run(run_flow())
 
-    async def kickoff_async(self, inputs: Optional[Dict[str, Any]] = None) -> Any:
+    async def kickoff_async(self, inputs: dict[str, Any] | None = None) -> Any:
         """
         Start the flow execution asynchronously.
 
@@ -736,68 +812,87 @@ class Flow(Generic[T], metaclass=FlowMeta):
         Returns:
             The final output from the flow, which is the result of the last executed method.
         """
-        if inputs:
-            # Override the id in the state if it exists in inputs
-            if "id" in inputs:
-                if isinstance(self._state, dict):
-                    self._state["id"] = inputs["id"]
-                elif isinstance(self._state, BaseModel):
-                    setattr(self._state, "id", inputs["id"])
+        ctx = baggage.set_baggage("flow_inputs", inputs or {})
+        flow_token = attach(ctx)
 
-            # If persistence is enabled, attempt to restore the stored state using the provided id.
-            if "id" in inputs and self._persistence is not None:
-                restore_uuid = inputs["id"]
-                stored_state = self._persistence.load_state(restore_uuid)
-                if stored_state:
-                    self._log_flow_event(
-                        f"Loading flow state from memory for UUID: {restore_uuid}",
-                        color="yellow",
-                    )
-                    self._restore_state(stored_state)
-                else:
-                    self._log_flow_event(
-                        f"No flow state found for UUID: {restore_uuid}", color="red"
-                    )
+        try:
+            # Reset flow state for fresh execution unless restoring from persistence
+            is_restoring = inputs and "id" in inputs and self._persistence is not None
+            if not is_restoring:
+                # Clear completed methods and outputs for a fresh start
+                self._completed_methods.clear()
+                self._method_outputs.clear()
+            else:
+                # We're restoring from persistence, set the flag
+                self._is_execution_resuming = True
 
-            # Update state with any additional inputs (ignoring the 'id' key)
-            filtered_inputs = {k: v for k, v in inputs.items() if k != "id"}
-            if filtered_inputs:
-                self._initialize_state(filtered_inputs)
+            if inputs:
+                # Override the id in the state if it exists in inputs
+                if "id" in inputs:
+                    if isinstance(self._state, dict):
+                        self._state["id"] = inputs["id"]
+                    elif isinstance(self._state, BaseModel):
+                        setattr(self._state, "id", inputs["id"])  # noqa: B010
 
-        # Emit FlowStartedEvent and log the start of the flow.
-        crewai_event_bus.emit(
-            self,
-            FlowStartedEvent(
-                type="flow_started",
-                flow_name=self.__class__.__name__,
-                inputs=inputs,
-            ),
-        )
-        self._log_flow_event(
-            f"Flow started with ID: {self.flow_id}", color="bold_magenta"
-        )
+                # If persistence is enabled, attempt to restore the stored state using the provided id.
+                if "id" in inputs and self._persistence is not None:
+                    restore_uuid = inputs["id"]
+                    stored_state = self._persistence.load_state(restore_uuid)
+                    if stored_state:
+                        self._log_flow_event(
+                            f"Loading flow state from memory for UUID: {restore_uuid}",
+                            color="yellow",
+                        )
+                        self._restore_state(stored_state)
+                    else:
+                        self._log_flow_event(
+                            f"No flow state found for UUID: {restore_uuid}", color="red"
+                        )
 
-        if inputs is not None and "id" not in inputs:
-            self._initialize_state(inputs)
+                # Update state with any additional inputs (ignoring the 'id' key)
+                filtered_inputs = {k: v for k, v in inputs.items() if k != "id"}
+                if filtered_inputs:
+                    self._initialize_state(filtered_inputs)
 
-        tasks = [
-            self._execute_start_method(start_method)
-            for start_method in self._start_methods
-        ]
-        await asyncio.gather(*tasks)
+            # Emit FlowStartedEvent and log the start of the flow.
+            crewai_event_bus.emit(
+                self,
+                FlowStartedEvent(
+                    type="flow_started",
+                    flow_name=self.name or self.__class__.__name__,
+                    inputs=inputs,
+                ),
+            )
+            self._log_flow_event(
+                f"Flow started with ID: {self.flow_id}", color="bold_magenta"
+            )
 
-        final_output = self._method_outputs[-1] if self._method_outputs else None
+            if inputs is not None and "id" not in inputs:
+                self._initialize_state(inputs)
 
-        crewai_event_bus.emit(
-            self,
-            FlowFinishedEvent(
-                type="flow_finished",
-                flow_name=self.__class__.__name__,
-                result=final_output,
-            ),
-        )
+            tasks = [
+                self._execute_start_method(start_method)
+                for start_method in self._start_methods
+            ]
+            await asyncio.gather(*tasks)
 
-        return final_output
+            # Clear the resumption flag after initial execution completes
+            self._is_execution_resuming = False
+
+            final_output = self._method_outputs[-1] if self._method_outputs else None
+
+            crewai_event_bus.emit(
+                self,
+                FlowFinishedEvent(
+                    type="flow_finished",
+                    flow_name=self.name or self.__class__.__name__,
+                    result=final_output,
+                ),
+            )
+
+            return final_output
+        finally:
+            detach(flow_token)
 
     async def _execute_start_method(self, start_method_name: str) -> None:
         """
@@ -816,11 +911,58 @@ class Flow(Generic[T], metaclass=FlowMeta):
         - Executes the start method and captures its result
         - Triggers execution of any listeners waiting on this start method
         - Part of the flow's initialization sequence
+        - Skips execution if method was already completed (e.g., after reload)
+        - Automatically injects crewai_trigger_payload if available in flow inputs
         """
-        result = await self._execute_method(
-            start_method_name, self._methods[start_method_name]
-        )
+        if start_method_name in self._completed_methods:
+            if self._is_execution_resuming:
+                # During resumption, skip execution but continue listeners
+                last_output = self._method_outputs[-1] if self._method_outputs else None
+                await self._execute_listeners(start_method_name, last_output)
+                return
+            # For cyclic flows, clear from completed to allow re-execution
+            self._completed_methods.discard(start_method_name)
+
+        method = self._methods[start_method_name]
+        enhanced_method = self._inject_trigger_payload_for_start_method(method)
+
+        result = await self._execute_method(start_method_name, enhanced_method)
         await self._execute_listeners(start_method_name, result)
+
+    def _inject_trigger_payload_for_start_method(
+        self, original_method: Callable
+    ) -> Callable:
+        def prepare_kwargs(*args, **kwargs):
+            inputs = baggage.get_baggage("flow_inputs") or {}
+            trigger_payload = inputs.get("crewai_trigger_payload")
+
+            sig = inspect.signature(original_method)
+            accepts_trigger_payload = "crewai_trigger_payload" in sig.parameters
+
+            if trigger_payload is not None and accepts_trigger_payload:
+                kwargs["crewai_trigger_payload"] = trigger_payload
+            elif trigger_payload is not None:
+                self._log_flow_event(
+                    f"Trigger payload available but {original_method.__name__} doesn't accept crewai_trigger_payload parameter",
+                    color="yellow",
+                )
+            return args, kwargs
+
+        if asyncio.iscoroutinefunction(original_method):
+
+            async def enhanced_method(*args, **kwargs):
+                args, kwargs = prepare_kwargs(*args, **kwargs)
+                return await original_method(*args, **kwargs)
+        else:
+
+            def enhanced_method(*args, **kwargs):
+                args, kwargs = prepare_kwargs(*args, **kwargs)
+                return original_method(*args, **kwargs)
+
+        enhanced_method.__name__ = original_method.__name__
+        enhanced_method.__doc__ = original_method.__doc__
+
+        return enhanced_method
 
     async def _execute_method(
         self, method_name: str, method: Callable, *args: Any, **kwargs: Any
@@ -834,7 +976,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 MethodExecutionStartedEvent(
                     type="method_execution_started",
                     method_name=method_name,
-                    flow_name=self.__class__.__name__,
+                    flow_name=self.name or self.__class__.__name__,
                     params=dumped_params,
                     state=self._copy_state(),
                 ),
@@ -851,12 +993,13 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 self._method_execution_counts.get(method_name, 0) + 1
             )
 
+            self._completed_methods.add(method_name)
             crewai_event_bus.emit(
                 self,
                 MethodExecutionFinishedEvent(
                     type="method_execution_finished",
                     method_name=method_name,
-                    flow_name=self.__class__.__name__,
+                    flow_name=self.name or self.__class__.__name__,
                     state=self._copy_state(),
                     result=result,
                 ),
@@ -869,7 +1012,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 MethodExecutionFailedEvent(
                     type="method_execution_failed",
                     method_name=method_name,
-                    flow_name=self.__class__.__name__,
+                    flow_name=self.name or self.__class__.__name__,
                     error=e,
                 ),
             )
@@ -912,15 +1055,19 @@ class Flow(Generic[T], metaclass=FlowMeta):
             for router_name in routers_triggered:
                 await self._execute_single_listener(router_name, result)
                 # After executing router, the router's result is the path
-                router_result = self._method_outputs[-1]
+                router_result = (
+                    self._method_outputs[-1] if self._method_outputs else None
+                )
                 if router_result:  # Only add non-None results
                     router_results.append(router_result)
                 current_trigger = (
-                    router_result  # Update for next iteration of router chain
+                    str(router_result)
+                    if router_result is not None
+                    else ""  # Update for next iteration of router chain
                 )
 
         # Now execute normal listeners for all router results and the original trigger
-        all_triggers = [trigger_method] + router_results
+        all_triggers = [trigger_method, *router_results]
 
         for current_trigger in all_triggers:
             if current_trigger:  # Skip None results
@@ -934,9 +1081,27 @@ class Flow(Generic[T], metaclass=FlowMeta):
                     ]
                     await asyncio.gather(*tasks)
 
+                if current_trigger in router_results:
+                    # Find start methods triggered by this router result
+                    for method_name in self._start_methods:
+                        # Check if this start method is triggered by the current trigger
+                        if method_name in self._listeners:
+                            condition_type, trigger_methods = self._listeners[
+                                method_name
+                            ]
+                            if current_trigger in trigger_methods:
+                                # Only execute if this is a cycle (method was already completed)
+                                if method_name in self._completed_methods:
+                                    # For router-triggered start methods in cycles, temporarily clear resumption flag
+                                    # to allow cyclic execution
+                                    was_resuming = self._is_execution_resuming
+                                    self._is_execution_resuming = False
+                                    await self._execute_start_method(method_name)
+                                    self._is_execution_resuming = was_resuming
+
     def _find_triggered_methods(
         self, trigger_method: str, router_only: bool
-    ) -> List[str]:
+    ) -> list[str]:
         """
         Finds all methods that should be triggered based on conditions.
 
@@ -953,7 +1118,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
 
         Returns
         -------
-        List[str]
+        list[str]
             Names of methods that should be triggered.
 
         Notes
@@ -969,6 +1134,9 @@ class Flow(Generic[T], metaclass=FlowMeta):
             is_router = listener_name in self._routers
 
             if router_only != is_router:
+                continue
+
+            if not router_only and listener_name in self._start_methods:
                 continue
 
             if condition_type == "OR":
@@ -1013,12 +1181,21 @@ class Flow(Generic[T], metaclass=FlowMeta):
         - Handles errors gracefully with detailed logging
         - Recursively triggers listeners of this listener
         - Supports both parameterized and parameter-less listeners
+        - Skips execution if method was already completed (e.g., after reload)
 
         Error Handling
         -------------
         Catches and logs any exceptions during execution, preventing
         individual listener failures from breaking the entire flow.
         """
+        if listener_name in self._completed_methods:
+            if self._is_execution_resuming:
+                # During resumption, skip execution but continue listeners
+                await self._execute_listeners(listener_name, None)
+                return
+            # For cyclic flows, clear from completed to allow re-execution
+            self._completed_methods.discard(listener_name)
+
         try:
             method = self._methods[listener_name]
 
@@ -1037,12 +1214,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
             await self._execute_listeners(listener_name, listener_result)
 
         except Exception as e:
-            print(
-                f"[Flow._execute_single_listener] Error in method {listener_name}: {e}"
-            )
-            import traceback
-
-            traceback.print_exc()
+            logger.error(f"Error executing listener {listener_name}: {e}")
             raise
 
     def _log_flow_event(
@@ -1076,7 +1248,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
             self,
             FlowPlotEvent(
                 type="flow_plot",
-                flow_name=self.__class__.__name__,
+                flow_name=self.name or self.__class__.__name__,
             ),
         )
         plot_flow(self, filename)

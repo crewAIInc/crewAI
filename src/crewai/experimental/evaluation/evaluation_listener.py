@@ -1,29 +1,26 @@
-from datetime import datetime
-from typing import Any, Dict, Optional
-
 from collections.abc import Sequence
+from datetime import datetime
+from typing import Any
 
-from crewai.agent import Agent
-from crewai.task import Task
-from crewai.utilities.events.base_event_listener import BaseEventListener
-from crewai.utilities.events.crewai_event_bus import CrewAIEventsBus
-from crewai.utilities.events.agent_events import (
-    AgentExecutionStartedEvent,
+from crewai.agents.agent_builder.base_agent import BaseAgent
+from crewai.events.base_event_listener import BaseEventListener
+from crewai.events.event_bus import CrewAIEventsBus
+from crewai.events.types.agent_events import (
     AgentExecutionCompletedEvent,
+    AgentExecutionStartedEvent,
+    LiteAgentExecutionCompletedEvent,
     LiteAgentExecutionStartedEvent,
-    LiteAgentExecutionCompletedEvent
 )
-from crewai.utilities.events.tool_usage_events import (
-    ToolUsageFinishedEvent,
-    ToolUsageErrorEvent,
+from crewai.events.types.llm_events import LLMCallCompletedEvent, LLMCallStartedEvent
+from crewai.events.types.tool_usage_events import (
     ToolExecutionErrorEvent,
     ToolSelectionErrorEvent,
-    ToolValidateInputErrorEvent
+    ToolUsageErrorEvent,
+    ToolUsageFinishedEvent,
+    ToolValidateInputErrorEvent,
 )
-from crewai.utilities.events.llm_events import (
-    LLMCallStartedEvent,
-    LLMCallCompletedEvent
-)
+from crewai.task import Task
+
 
 class EvaluationTraceCallback(BaseEventListener):
     """Event listener for collecting execution traces for evaluation.
@@ -68,27 +65,49 @@ class EvaluationTraceCallback(BaseEventListener):
 
         @event_bus.on(ToolUsageFinishedEvent)
         def on_tool_completed(source, event: ToolUsageFinishedEvent):
-            self.on_tool_use(event.tool_name, event.tool_args, event.output, success=True)
+            self.on_tool_use(
+                event.tool_name, event.tool_args, event.output, success=True
+            )
 
         @event_bus.on(ToolUsageErrorEvent)
         def on_tool_usage_error(source, event: ToolUsageErrorEvent):
-            self.on_tool_use(event.tool_name, event.tool_args, event.error,
-                           success=False, error_type="usage_error")
+            self.on_tool_use(
+                event.tool_name,
+                event.tool_args,
+                event.error,
+                success=False,
+                error_type="usage_error",
+            )
 
         @event_bus.on(ToolExecutionErrorEvent)
         def on_tool_execution_error(source, event: ToolExecutionErrorEvent):
-            self.on_tool_use(event.tool_name, event.tool_args, event.error,
-                           success=False, error_type="execution_error")
+            self.on_tool_use(
+                event.tool_name,
+                event.tool_args,
+                event.error,
+                success=False,
+                error_type="execution_error",
+            )
 
         @event_bus.on(ToolSelectionErrorEvent)
         def on_tool_selection_error(source, event: ToolSelectionErrorEvent):
-            self.on_tool_use(event.tool_name, event.tool_args, event.error,
-                           success=False, error_type="selection_error")
+            self.on_tool_use(
+                event.tool_name,
+                event.tool_args,
+                event.error,
+                success=False,
+                error_type="selection_error",
+            )
 
         @event_bus.on(ToolValidateInputErrorEvent)
         def on_tool_validate_input_error(source, event: ToolValidateInputErrorEvent):
-            self.on_tool_use(event.tool_name, event.tool_args, event.error,
-                           success=False, error_type="validation_error")
+            self.on_tool_use(
+                event.tool_name,
+                event.tool_args,
+                event.error,
+                success=False,
+                error_type="validation_error",
+            )
 
         @event_bus.on(LLMCallStartedEvent)
         def on_llm_call_started(source, event: LLMCallStartedEvent):
@@ -99,7 +118,7 @@ class EvaluationTraceCallback(BaseEventListener):
             self.on_llm_call_end(event.messages, event.response)
 
     def on_lite_agent_start(self, agent_info: dict[str, Any]):
-        self.current_agent_id = agent_info['id']
+        self.current_agent_id = agent_info["id"]
         self.current_task_id = "lite_task"
 
         trace_key = f"{self.current_agent_id}_{self.current_task_id}"
@@ -110,13 +129,13 @@ class EvaluationTraceCallback(BaseEventListener):
             tool_uses=[],
             llm_calls=[],
             start_time=datetime.now(),
-            final_output=None
+            final_output=None,
         )
 
     def _init_trace(self, trace_key: str, **kwargs: Any):
         self.traces[trace_key] = kwargs
 
-    def on_agent_start(self, agent: Agent, task: Task):
+    def on_agent_start(self, agent: BaseAgent, task: Task):
         self.current_agent_id = agent.id
         self.current_task_id = task.id
 
@@ -128,10 +147,10 @@ class EvaluationTraceCallback(BaseEventListener):
             tool_uses=[],
             llm_calls=[],
             start_time=datetime.now(),
-            final_output=None
+            final_output=None,
         )
 
-    def on_agent_finish(self, agent: Agent, task: Task, output: Any):
+    def on_agent_finish(self, agent: BaseAgent, task: Task, output: Any):
         trace_key = f"{agent.id}_{task.id}"
         if trace_key in self.traces:
             self.traces[trace_key]["final_output"] = output
@@ -151,8 +170,14 @@ class EvaluationTraceCallback(BaseEventListener):
 
         self._reset_current()
 
-    def on_tool_use(self, tool_name: str, tool_args: dict[str, Any] | str, result: Any,
-                   success: bool = True, error_type: str | None = None):
+    def on_tool_use(
+        self,
+        tool_name: str,
+        tool_args: dict[str, Any] | str,
+        result: Any,
+        success: bool = True,
+        error_type: str | None = None,
+    ):
         if not self.current_agent_id or not self.current_task_id:
             return
 
@@ -163,7 +188,7 @@ class EvaluationTraceCallback(BaseEventListener):
                 "args": tool_args,
                 "result": result,
                 "success": success,
-                "timestamp": datetime.now()
+                "timestamp": datetime.now(),
             }
 
             # Add error information if applicable
@@ -173,7 +198,11 @@ class EvaluationTraceCallback(BaseEventListener):
 
             self.traces[trace_key]["tool_uses"].append(tool_use)
 
-    def on_llm_call_start(self, messages: str | Sequence[dict[str, Any]] | None, tools: Sequence[dict[str, Any]] | None = None):
+    def on_llm_call_start(
+        self,
+        messages: str | Sequence[dict[str, Any]] | None,
+        tools: Sequence[dict[str, Any]] | None = None,
+    ):
         if not self.current_agent_id or not self.current_task_id:
             return
 
@@ -186,10 +215,12 @@ class EvaluationTraceCallback(BaseEventListener):
             "tools": tools,
             "start_time": datetime.now(),
             "response": None,
-            "end_time": None
+            "end_time": None,
         }
 
-    def on_llm_call_end(self, messages: str | list[dict[str, Any]] | None, response: Any):
+    def on_llm_call_end(
+        self, messages: str | list[dict[str, Any]] | None, response: Any
+    ):
         if not self.current_agent_id or not self.current_task_id:
             return
 
@@ -213,7 +244,7 @@ class EvaluationTraceCallback(BaseEventListener):
             "response": response,
             "start_time": start_time,
             "end_time": current_time,
-            "total_tokens": total_tokens
+            "total_tokens": total_tokens,
         }
 
         self.traces[trace_key]["llm_calls"].append(llm_call)
@@ -221,13 +252,13 @@ class EvaluationTraceCallback(BaseEventListener):
         if hasattr(self, "current_llm_call"):
             self.current_llm_call = {}
 
-    def get_trace(self, agent_id: str, task_id: str) -> Optional[Dict[str, Any]]:
+    def get_trace(self, agent_id: str, task_id: str) -> dict[str, Any] | None:
         trace_key = f"{agent_id}_{task_id}"
         return self.traces.get(trace_key)
 
 
 def create_evaluation_callbacks() -> EvaluationTraceCallback:
-    from crewai.utilities.events.crewai_event_bus import crewai_event_bus
+    from crewai.events.event_bus import crewai_event_bus
 
     callback = EvaluationTraceCallback()
     callback.setup_listeners(crewai_event_bus)

@@ -1,46 +1,77 @@
-import logging
 import json
-from typing import Tuple, cast
+import logging
+from typing import Any, Final, Literal, cast
 
 from pydantic import BaseModel, Field
 
 from crewai.agent import Agent
-from crewai.task import Task
-from crewai.utilities import I18N
-from crewai.llm import LLM
-from crewai.utilities.events.crewai_event_bus import crewai_event_bus
-from crewai.utilities.events.reasoning_events import (
-    AgentReasoningStartedEvent,
+from crewai.events.event_bus import crewai_event_bus
+from crewai.events.types.reasoning_events import (
     AgentReasoningCompletedEvent,
     AgentReasoningFailedEvent,
+    AgentReasoningStartedEvent,
 )
+from crewai.llm import LLM
+from crewai.task import Task
+from crewai.utilities.i18n import I18N
 
 
 class ReasoningPlan(BaseModel):
     """Model representing a reasoning plan for a task."""
+
     plan: str = Field(description="The detailed reasoning plan for the task.")
     ready: bool = Field(description="Whether the agent is ready to execute the task.")
 
 
 class AgentReasoningOutput(BaseModel):
     """Model representing the output of the agent reasoning process."""
+
     plan: ReasoningPlan = Field(description="The reasoning plan for the task.")
 
 
-class ReasoningFunction(BaseModel):
-    """Model for function calling with reasoning."""
-    plan: str = Field(description="The detailed reasoning plan for the task.")
-    ready: bool = Field(description="Whether the agent is ready to execute the task.")
+FUNCTION_SCHEMA: Final[dict[str, Any]] = {
+    "type": "function",
+    "function": {
+        "name": "create_reasoning_plan",
+        "description": "Create or refine a reasoning plan for a task",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "plan": {
+                    "type": "string",
+                    "description": "The detailed reasoning plan for the task.",
+                },
+                "ready": {
+                    "type": "boolean",
+                    "description": "Whether the agent is ready to execute the task.",
+                },
+            },
+            "required": ["plan", "ready"],
+        },
+    },
+}
 
 
 class AgentReasoning:
     """
     Handles the agent reasoning process, enabling an agent to reflect and create a plan
     before executing a task.
+
+    Attributes:
+        task: The task for which the agent is reasoning.
+        agent: The agent performing the reasoning.
+        llm: The language model used for reasoning.
+        logger: Logger for logging events and errors.
+        i18n: Internationalization utility for retrieving prompts.
     """
-    def __init__(self, task: Task, agent: Agent):
-        if not task or not agent:
-            raise ValueError("Both task and agent must be provided.")
+
+    def __init__(self, task: Task, agent: Agent) -> None:
+        """Initialize the AgentReasoning with a task and an agent.
+
+        Args:
+            task: The task for which the agent is reasoning.
+            agent: The agent performing the reasoning.
+        """
         self.task = task
         self.agent = agent
         self.llm = cast(LLM, agent.llm)
@@ -48,9 +79,7 @@ class AgentReasoning:
         self.i18n = I18N()
 
     def handle_agent_reasoning(self) -> AgentReasoningOutput:
-        """
-        Public method for the reasoning process that creates and refines a plan
-        for the task until the agent is ready to execute it.
+        """Public method for the reasoning process that creates and refines a plan for the task until the agent is ready to execute it.
 
         Returns:
             AgentReasoningOutput: The output of the agent reasoning process.
@@ -63,9 +92,10 @@ class AgentReasoning:
                     agent_role=self.agent.role,
                     task_id=str(self.task.id),
                     attempt=1,
+                    from_task=self.task,
                 ),
             )
-        except Exception:
+        except Exception:  # noqa: S110
             # Ignore event bus errors to avoid breaking execution
             pass
 
@@ -82,9 +112,10 @@ class AgentReasoning:
                         plan=output.plan.plan,
                         ready=output.plan.ready,
                         attempt=1,
+                        from_task=self.task,
                     ),
                 )
-            except Exception:
+            except Exception:  # noqa: S110
                 pass
 
             return output
@@ -98,19 +129,19 @@ class AgentReasoning:
                         task_id=str(self.task.id),
                         error=str(e),
                         attempt=1,
+                        from_task=self.task,
                     ),
                 )
-            except Exception:
+            except Exception:  # noqa: S110
                 pass
 
             raise
 
     def __handle_agent_reasoning(self) -> AgentReasoningOutput:
-        """
-        Private method that handles the agent reasoning process.
+        """Private method that handles the agent reasoning process.
 
         Returns:
-            AgentReasoningOutput: The output of the agent reasoning process.
+            The output of the agent reasoning process.
         """
         plan, ready = self.__create_initial_plan()
 
@@ -119,44 +150,38 @@ class AgentReasoning:
         reasoning_plan = ReasoningPlan(plan=plan, ready=ready)
         return AgentReasoningOutput(plan=reasoning_plan)
 
-    def __create_initial_plan(self) -> Tuple[str, bool]:
-        """
-        Creates the initial reasoning plan for the task.
+    def __create_initial_plan(self) -> tuple[str, bool]:
+        """Creates the initial reasoning plan for the task.
 
         Returns:
-            Tuple[str, bool]: The initial plan and whether the agent is ready to execute the task.
+            The initial plan and whether the agent is ready to execute the task.
         """
         reasoning_prompt = self.__create_reasoning_prompt()
 
         if self.llm.supports_function_calling():
             plan, ready = self.__call_with_function(reasoning_prompt, "initial_plan")
             return plan, ready
-        else:
-            system_prompt = self.i18n.retrieve("reasoning", "initial_plan").format(
-                role=self.agent.role,
-                goal=self.agent.goal,
-                backstory=self.__get_agent_backstory()
-            )
+        response = _call_llm_with_reasoning_prompt(
+            llm=self.llm,
+            prompt=reasoning_prompt,
+            task=self.task,
+            agent=self.agent,
+            i18n=self.i18n,
+            backstory=self.__get_agent_backstory(),
+            plan_type="initial_plan",
+        )
 
-            response = self.llm.call(
-                [
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": reasoning_prompt}
-                ]
-            )
+        return self.__parse_reasoning_response(str(response))
 
-            return self.__parse_reasoning_response(str(response))
-
-    def __refine_plan_if_needed(self, plan: str, ready: bool) -> Tuple[str, bool]:
-        """
-        Refines the reasoning plan if the agent is not ready to execute the task.
+    def __refine_plan_if_needed(self, plan: str, ready: bool) -> tuple[str, bool]:
+        """Refines the reasoning plan if the agent is not ready to execute the task.
 
         Args:
             plan: The current reasoning plan.
             ready: Whether the agent is ready to execute the task.
 
         Returns:
-            Tuple[str, bool]: The refined plan and whether the agent is ready to execute the task.
+            The refined plan and whether the agent is ready to execute the task.
         """
         attempt = 1
         max_attempts = self.agent.max_reasoning_attempts
@@ -170,9 +195,10 @@ class AgentReasoning:
                         agent_role=self.agent.role,
                         task_id=str(self.task.id),
                         attempt=attempt + 1,
+                        from_task=self.task,
                     ),
                 )
-            except Exception:
+            except Exception:  # noqa: S110
                 pass
 
             refine_prompt = self.__create_refine_prompt(plan)
@@ -180,17 +206,14 @@ class AgentReasoning:
             if self.llm.supports_function_calling():
                 plan, ready = self.__call_with_function(refine_prompt, "refine_plan")
             else:
-                system_prompt = self.i18n.retrieve("reasoning", "refine_plan").format(
-                    role=self.agent.role,
-                    goal=self.agent.goal,
-                    backstory=self.__get_agent_backstory()
-                )
-
-                response = self.llm.call(
-                    [
-                        {"role": "system", "content": system_prompt},
-                        {"role": "user", "content": refine_prompt}
-                    ]
+                response = _call_llm_with_reasoning_prompt(
+                    llm=self.llm,
+                    prompt=refine_prompt,
+                    task=self.task,
+                    agent=self.agent,
+                    i18n=self.i18n,
+                    backstory=self.__get_agent_backstory(),
+                    plan_type="refine_plan",
                 )
                 plan, ready = self.__parse_reasoning_response(str(response))
 
@@ -204,60 +227,39 @@ class AgentReasoning:
 
         return plan, ready
 
-    def __call_with_function(self, prompt: str, prompt_type: str) -> Tuple[str, bool]:
-        """
-        Calls the LLM with function calling to get a reasoning plan.
+    def __call_with_function(self, prompt: str, prompt_type: str) -> tuple[str, bool]:
+        """Calls the LLM with function calling to get a reasoning plan.
 
         Args:
             prompt: The prompt to send to the LLM.
             prompt_type: The type of prompt (initial_plan or refine_plan).
 
         Returns:
-            Tuple[str, bool]: A tuple containing the plan and whether the agent is ready.
+            A tuple containing the plan and whether the agent is ready.
         """
         self.logger.debug(f"Using function calling for {prompt_type} reasoning")
-
-        function_schema = {
-            "type": "function",
-            "function": {
-                "name": "create_reasoning_plan",
-                "description": "Create or refine a reasoning plan for a task",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "plan": {
-                            "type": "string",
-                            "description": "The detailed reasoning plan for the task."
-                        },
-                        "ready": {
-                            "type": "boolean",
-                            "description": "Whether the agent is ready to execute the task."
-                        }
-                    },
-                    "required": ["plan", "ready"]
-                }
-            }
-        }
 
         try:
             system_prompt = self.i18n.retrieve("reasoning", prompt_type).format(
                 role=self.agent.role,
                 goal=self.agent.goal,
-                backstory=self.__get_agent_backstory()
+                backstory=self.__get_agent_backstory(),
             )
 
             # Prepare a simple callable that just returns the tool arguments as JSON
-            def _create_reasoning_plan(plan: str, ready: bool):  # noqa: N802
+            def _create_reasoning_plan(plan: str, ready: bool = True):
                 """Return the reasoning plan result in JSON string form."""
                 return json.dumps({"plan": plan, "ready": ready})
 
             response = self.llm.call(
                 [
                     {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": prompt}
+                    {"role": "user", "content": prompt},
                 ],
-                tools=[function_schema],
+                tools=[FUNCTION_SCHEMA],
                 available_functions={"create_reasoning_plan": _create_reasoning_plan},
+                from_task=self.task,
+                from_agent=self.agent,
             )
 
             self.logger.debug(f"Function calling response: {response[:100]}...")
@@ -270,30 +272,43 @@ class AgentReasoning:
                 pass
 
             response_str = str(response)
-            return response_str, "READY: I am ready to execute the task." in response_str
+            return (
+                response_str,
+                "READY: I am ready to execute the task." in response_str,
+            )
 
         except Exception as e:
-            self.logger.warning(f"Error during function calling: {str(e)}. Falling back to text parsing.")
+            self.logger.warning(
+                f"Error during function calling: {e!s}. Falling back to text parsing."
+            )
 
             try:
                 system_prompt = self.i18n.retrieve("reasoning", prompt_type).format(
                     role=self.agent.role,
                     goal=self.agent.goal,
-                    backstory=self.__get_agent_backstory()
+                    backstory=self.__get_agent_backstory(),
                 )
 
                 fallback_response = self.llm.call(
                     [
                         {"role": "system", "content": system_prompt},
-                        {"role": "user", "content": prompt}
-                    ]
+                        {"role": "user", "content": prompt},
+                    ],
+                    from_task=self.task,
+                    from_agent=self.agent,
                 )
 
                 fallback_str = str(fallback_response)
-                return fallback_str, "READY: I am ready to execute the task." in fallback_str
+                return (
+                    fallback_str,
+                    "READY: I am ready to execute the task." in fallback_str,
+                )
             except Exception as inner_e:
-                self.logger.error(f"Error during fallback text parsing: {str(inner_e)}")
-                return "Failed to generate a plan due to an error.", True  # Default to ready to avoid getting stuck
+                self.logger.error(f"Error during fallback text parsing: {inner_e!s}")
+                return (
+                    "Failed to generate a plan due to an error.",
+                    True,
+                )  # Default to ready to avoid getting stuck
 
     def __get_agent_backstory(self) -> str:
         """
@@ -319,7 +334,7 @@ class AgentReasoning:
             backstory=self.__get_agent_backstory(),
             description=self.task.description,
             expected_output=self.task.expected_output,
-            tools=available_tools
+            tools=available_tools,
         )
 
     def __format_available_tools(self) -> str:
@@ -330,7 +345,7 @@ class AgentReasoning:
             str: Comma-separated list of tool names.
         """
         try:
-            return ', '.join([tool.name for tool in (self.task.tools or [])])
+            return ", ".join([tool.name for tool in (self.task.tools or [])])
         except (AttributeError, TypeError):
             return "No tools available"
 
@@ -348,10 +363,11 @@ class AgentReasoning:
             role=self.agent.role,
             goal=self.agent.goal,
             backstory=self.__get_agent_backstory(),
-            current_plan=current_plan
+            current_plan=current_plan,
         )
 
-    def __parse_reasoning_response(self, response: str) -> Tuple[str, bool]:
+    @staticmethod
+    def __parse_reasoning_response(response: str) -> tuple[str, bool]:
         """
         Parses the reasoning response to extract the plan and whether
         the agent is ready to execute the task.
@@ -360,7 +376,7 @@ class AgentReasoning:
             response: The LLM response.
 
         Returns:
-            Tuple[str, bool]: The plan and whether the agent is ready to execute the task.
+            The plan and whether the agent is ready to execute the task.
         """
         if not response:
             return "No plan was generated.", False
@@ -385,3 +401,43 @@ class AgentReasoning:
             "The _handle_agent_reasoning method is deprecated. Use handle_agent_reasoning instead."
         )
         return self.handle_agent_reasoning()
+
+
+def _call_llm_with_reasoning_prompt(
+    llm: LLM,
+    prompt: str,
+    task: Task,
+    agent: Agent,
+    i18n: I18N,
+    backstory: str,
+    plan_type: Literal["initial_plan", "refine_plan"],
+) -> str:
+    """Calls the LLM with the reasoning prompt.
+
+    Args:
+        llm: The language model to use.
+        prompt: The prompt to send to the LLM.
+        task: The task for which the agent is reasoning.
+        agent: The agent performing the reasoning.
+        i18n: Internationalization utility for retrieving prompts.
+        backstory: The agent's backstory.
+        plan_type: The type of plan being created ("initial_plan" or "refine_plan").
+
+    Returns:
+        The LLM response.
+    """
+    system_prompt = i18n.retrieve("reasoning", plan_type).format(
+        role=agent.role,
+        goal=agent.goal,
+        backstory=backstory,
+    )
+
+    response = llm.call(
+        [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": prompt},
+        ],
+        from_task=task,
+        from_agent=agent,
+    )
+    return str(response)

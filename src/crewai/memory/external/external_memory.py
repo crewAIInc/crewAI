@@ -1,41 +1,44 @@
-from typing import TYPE_CHECKING, Any, Dict, Optional
 import time
+from typing import TYPE_CHECKING, Any
 
+from crewai.events.event_bus import crewai_event_bus
+from crewai.events.types.memory_events import (
+    MemoryQueryCompletedEvent,
+    MemoryQueryFailedEvent,
+    MemoryQueryStartedEvent,
+    MemorySaveCompletedEvent,
+    MemorySaveFailedEvent,
+    MemorySaveStartedEvent,
+)
 from crewai.memory.external.external_memory_item import ExternalMemoryItem
 from crewai.memory.memory import Memory
 from crewai.memory.storage.interface import Storage
-from crewai.utilities.events.crewai_event_bus import crewai_event_bus
-from crewai.utilities.events.memory_events import (
-    MemoryQueryStartedEvent,
-    MemoryQueryCompletedEvent,
-    MemoryQueryFailedEvent,
-    MemorySaveStartedEvent,
-    MemorySaveCompletedEvent,
-    MemorySaveFailedEvent,
-)
+from crewai.rag.embeddings.types import ProviderSpec
 
 if TYPE_CHECKING:
     from crewai.memory.storage.mem0_storage import Mem0Storage
 
 
 class ExternalMemory(Memory):
-    def __init__(self, storage: Optional[Storage] = None, **data: Any):
+    def __init__(self, storage: Storage | None = None, **data: Any):
         super().__init__(storage=storage, **data)
 
     @staticmethod
-    def _configure_mem0(crew: Any, config: Dict[str, Any]) -> "Mem0Storage":
+    def _configure_mem0(crew: Any, config: dict[str, Any]) -> "Mem0Storage":
         from crewai.memory.storage.mem0_storage import Mem0Storage
 
         return Mem0Storage(type="external", crew=crew, config=config)
 
     @staticmethod
-    def external_supported_storages() -> Dict[str, Any]:
+    def external_supported_storages() -> dict[str, Any]:
         return {
             "mem0": ExternalMemory._configure_mem0,
         }
 
     @staticmethod
-    def create_storage(crew: Any, embedder_config: Optional[Dict[str, Any]]) -> Storage:
+    def create_storage(
+        crew: Any, embedder_config: dict[str, Any] | ProviderSpec | None
+    ) -> Storage:
         if not embedder_config:
             raise ValueError("embedder_config is required")
 
@@ -52,8 +55,7 @@ class ExternalMemory(Memory):
     def save(
         self,
         value: Any,
-        metadata: Optional[Dict[str, Any]] = None,
-        agent: Optional[str] = None,
+        metadata: dict[str, Any] | None = None,
     ) -> None:
         """Saves a value into the external storage."""
         crewai_event_bus.emit(
@@ -61,24 +63,30 @@ class ExternalMemory(Memory):
             event=MemorySaveStartedEvent(
                 value=value,
                 metadata=metadata,
-                agent_role=agent,
                 source_type="external_memory",
+                from_agent=self.agent,
+                from_task=self.task,
             ),
         )
 
         start_time = time.time()
         try:
-            item = ExternalMemoryItem(value=value, metadata=metadata, agent=agent)
-            super().save(value=item.value, metadata=item.metadata, agent=item.agent)
+            item = ExternalMemoryItem(
+                value=value,
+                metadata=metadata,
+                agent=self.agent.role if self.agent else None,
+            )
+            super().save(value=item.value, metadata=item.metadata)
 
             crewai_event_bus.emit(
                 self,
                 event=MemorySaveCompletedEvent(
                     value=value,
                     metadata=metadata,
-                    agent_role=agent,
                     save_time_ms=(time.time() - start_time) * 1000,
                     source_type="external_memory",
+                    from_agent=self.agent,
+                    from_task=self.task,
                 ),
             )
         except Exception as e:
@@ -87,9 +95,10 @@ class ExternalMemory(Memory):
                 event=MemorySaveFailedEvent(
                     value=value,
                     metadata=metadata,
-                    agent_role=agent,
                     error=str(e),
                     source_type="external_memory",
+                    from_agent=self.agent,
+                    from_task=self.task,
                 ),
             )
             raise
@@ -97,8 +106,8 @@ class ExternalMemory(Memory):
     def search(
         self,
         query: str,
-        limit: int = 3,
-        score_threshold: float = 0.35,
+        limit: int = 5,
+        score_threshold: float = 0.6,
     ):
         crewai_event_bus.emit(
             self,
@@ -107,6 +116,8 @@ class ExternalMemory(Memory):
                 limit=limit,
                 score_threshold=score_threshold,
                 source_type="external_memory",
+                from_agent=self.agent,
+                from_task=self.task,
             ),
         )
 
@@ -125,6 +136,8 @@ class ExternalMemory(Memory):
                     score_threshold=score_threshold,
                     query_time_ms=(time.time() - start_time) * 1000,
                     source_type="external_memory",
+                    from_agent=self.agent,
+                    from_task=self.task,
                 ),
             )
 
@@ -149,6 +162,6 @@ class ExternalMemory(Memory):
         super().set_crew(crew)
 
         if not self.storage:
-            self.storage = self.create_storage(crew, self.embedder_config)
+            self.storage = self.create_storage(crew, self.embedder_config)  # type: ignore[arg-type]
 
         return self

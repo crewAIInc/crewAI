@@ -2,6 +2,7 @@
 title: Tasks
 description: Detailed guide on managing and creating tasks within the CrewAI framework.
 icon: list-check
+mode: "wide"
 ---
 
 ## Overview
@@ -59,6 +60,12 @@ crew = Crew(
 | **Output Pydantic** _(optional)_ | `output_pydantic` | `Optional[Type[BaseModel]]`   | A Pydantic model for task output.                                                                                    |
 | **Callback** _(optional)_        | `callback`        | `Optional[Any]`               | Function/object to be executed after task completion.                                                                |
 | **Guardrail** _(optional)_       | `guardrail`       | `Optional[Callable]`             | Function to validate task output before proceeding to next task.                                                  |
+| **Guardrail Max Retries** _(optional)_ | `guardrail_max_retries` | `Optional[int]`     | Maximum number of retries when guardrail validation fails. Defaults to 3.                                         |
+
+<Note type="warning" title="Deprecated: max_retries">
+  The task attribute `max_retries` is deprecated and will be removed in v1.0.0.
+  Use `guardrail_max_retries` instead to control retry attempts when a guardrail fails.
+</Note>
 
 ## Creating Tasks
 
@@ -431,7 +438,7 @@ When a guardrail returns `(False, error)`:
 2. The agent attempts to fix the issue
 3. The process repeats until:
    - The guardrail returns `(True, result)`
-   - Maximum retries are reached
+   - Maximum retries are reached (`guardrail_max_retries`)
 
 Example with retry handling:
 ```python Code
@@ -452,7 +459,7 @@ task = Task(
     expected_output="A valid JSON object",
     agent=analyst,
     guardrail=validate_json_output,
-    max_retries=3  # Limit retry attempts
+    guardrail_max_retries=3  # Limit retry attempts
 )
 ```
 

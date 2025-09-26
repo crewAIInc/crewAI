@@ -2,6 +2,7 @@
 title: CLI
 description: Aprenda a usar o CLI do CrewAI para interagir com o CrewAI.
 icon: terminal
+mode: "wide"
 ---
 <Warning>A partir da versão 0.140.0, a plataforma CrewAI Enterprise iniciou um processo de migração de seu provedor de login. Como resultado, o fluxo de autenticação via CLI foi atualizado. Usuários que utlizam o Google para fazer login, ou que criaram conta após 3 de julho de 2025 não poderão fazer login com versões anteriores da biblioteca `crewai`.</Warning>
 
@@ -84,8 +85,8 @@ filename = "seu_modelo.pkl"
 
 try:
     SuaCrew().crew().train(
-      n_iterations=n_iterations, 
-      inputs=inputs, 
+      n_iterations=n_iterations,
+      inputs=inputs,
       filename=filename
     )
 except Exception as e:
@@ -103,7 +104,7 @@ crewai replay [OPTIONS]
 - `-t, --task_id TEXT`: Reexecuta o crew a partir deste task ID, incluindo todas as tarefas subsequentes
 
 Exemplo:
-```shell Terminal    
+```shell Terminal
 crewai replay -t task_123456
 ```
 
@@ -149,7 +150,7 @@ crewai test [OPTIONS]
 - `-m, --model TEXT`: Modelo LLM para executar os testes no Crew (padrão: "gpt-4o-mini")
 
 Exemplo:
-```shell Terminal    
+```shell Terminal
 crewai test -n 5 -m gpt-3.5-turbo
 ```
 
@@ -203,10 +204,7 @@ def crew(self) -> Crew:
 Implemente o crew ou flow no [CrewAI Enterprise](https://app.crewai.com).
 
 - **Autenticação**: Você precisa estar autenticado para implementar no CrewAI Enterprise.
-    ```shell Terminal
-    crewai signup
-    ```
-    Caso já tenha uma conta, você pode fazer login com:
+    Você pode fazer login ou criar uma conta com:
     ```shell Terminal
     crewai login
     ```
@@ -253,7 +251,7 @@ Você deve estar autenticado no CrewAI Enterprise para usar estes comandos de ge
 - **Implantar o Crew**: Depois de autenticado, você pode implantar seu crew ou flow no CrewAI Enterprise.
     ```shell Terminal
     crewai deploy push
-    ``` 
+    ```
     - Inicia o processo de deployment na plataforma CrewAI Enterprise.
     - Após a iniciação bem-sucedida, será exibida a mensagem Deployment created successfully! juntamente com o Nome do Deployment e um Deployment ID (UUID) único.
 
@@ -327,3 +325,79 @@ Ao escolher um provedor, o CLI solicitará que você informe o nome da chave e a
 Veja o seguinte link para o nome de chave de cada provedor:
 
 * [LiteLLM Providers](https://docs.litellm.ai/docs/providers)
+
+### 12. Gerenciamento de Configuração
+
+Gerencie as configurações do CLI para CrewAI.
+
+```shell Terminal
+crewai config [COMANDO] [OPÇÕES]
+```
+
+#### Comandos:
+
+- `list`: Exibir todos os parâmetros de configuração do CLI
+```shell Terminal
+crewai config list
+```
+
+- `set`: Definir um parâmetro de configuração do CLI
+```shell Terminal
+crewai config set <chave> <valor>
+```
+
+- `reset`: Redefinir todos os parâmetros de configuração do CLI para valores padrão
+```shell Terminal
+crewai config reset
+```
+
+#### Parâmetros de Configuração Disponíveis
+
+- `enterprise_base_url`: URL base da instância CrewAI Enterprise
+- `oauth2_provider`: Provedor OAuth2 usado para autenticação (ex: workos, okta, auth0)
+- `oauth2_audience`: Valor de audiência OAuth2, tipicamente usado para identificar a API ou recurso de destino
+- `oauth2_client_id`: ID do cliente OAuth2 emitido pelo provedor, usado durante solicitações de autenticação
+- `oauth2_domain`: Domínio do provedor OAuth2 (ex: sua-org.auth0.com) usado para emissão de tokens
+
+#### Exemplos
+
+Exibir configuração atual:
+```shell Terminal
+crewai config list
+```
+
+Exemplo de saída:
+
+| Parâmetro            | Valor                   | Descrição                                                     |
+| :------------------- | :---------------------- | :------------------------------------------------------------ |
+| enterprise_base_url  | https://app.crewai.com | URL base da instância CrewAI Enterprise                       |
+| org_name             | Not set                 | Nome da organização atualmente ativa                          |
+| org_uuid             | Not set                 | UUID da organização atualmente ativa                          |
+| oauth2_provider      | workos                  | Provedor OAuth2 (ex.: workos, okta, auth0)                    |
+| oauth2_audience      | client_01YYY            | Audience usada para identificar a API/recurso de destino       |
+| oauth2_client_id     | client_01XXX            | Client ID OAuth2 emitido pelo provedor (usado na autenticação) |
+| oauth2_domain        | login.crewai.com        | Domínio do provedor OAuth2 (ex.: your-org.auth0.com)          |
+
+Definir a URL base do enterprise:
+```shell Terminal
+crewai config set enterprise_base_url https://minha-empresa.crewai.com
+```
+
+Definir provedor OAuth2:
+```shell Terminal
+crewai config set oauth2_provider auth0
+```
+
+Definir domínio OAuth2:
+```shell Terminal
+crewai config set oauth2_domain minha-empresa.auth0.com
+```
+
+Redefinir todas as configurações para padrões:
+```shell Terminal
+crewai config reset
+```
+
+<Note>
+As configurações são armazenadas em `~/.config/crewai/settings.json`. Algumas configurações como nome da organização e UUID são somente leitura e gerenciadas através de comandos de autenticação e organização. Configurações relacionadas ao repositório de ferramentas são ocultas e não podem ser definidas diretamente pelo usuário.
+</Note>

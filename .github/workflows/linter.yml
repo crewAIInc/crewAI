@@ -2,6 +2,9 @@ name: Lint
 
 on: [pull_request]
 
+permissions:
+  contents: read
+
 jobs:
   lint:
     runs-on: ubuntu-latest
@@ -15,8 +18,27 @@ jobs:
       - name: Fetch Target Branch
         run: git fetch origin $TARGET_BRANCH --depth=1
 
-      - name: Install Ruff
-        run: pip install ruff
+      - name: Restore global uv cache
+        id: cache-restore
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/.cache/uv
+            ~/.local/share/uv
+            .venv
+          key: uv-main-py3.11-${{ hashFiles('uv.lock') }}
+          restore-keys: |
+            uv-main-py3.11-
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.8.4"
+          python-version: "3.11"
+          enable-cache: false
+
+      - name: Install dependencies
+        run: uv sync --all-groups --all-extras --no-install-project
 
       - name: Get Changed Python Files
         id: changed-files
@@ -33,4 +55,14 @@ jobs:
           echo "${{ steps.changed-files.outputs.files }}" \
             | tr ' ' '\n' \
             | grep -v 'src/crewai/cli/templates/' \
-            | xargs -I{} ruff check "{}"
+            | xargs -I{} uv run ruff check "{}"
+
+      - name: Save uv caches
+        if: steps.cache-restore.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            ~/.cache/uv
+            ~/.local/share/uv
+            .venv
+          key: uv-main-py3.11-${{ hashFiles('uv.lock') }}

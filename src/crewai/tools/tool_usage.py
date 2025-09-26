@@ -5,12 +5,20 @@ import time
 from difflib import SequenceMatcher
 from json import JSONDecodeError
 from textwrap import dedent
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
+from typing import TYPE_CHECKING, Any, Union
 
 import json5
-from json_repair import repair_json
+from json_repair import repair_json  # type: ignore[import-untyped,import-error]
 
 from crewai.agents.tools_handler import ToolsHandler
+from crewai.events.event_bus import crewai_event_bus
+from crewai.events.types.tool_usage_events import (
+    ToolSelectionErrorEvent,
+    ToolUsageErrorEvent,
+    ToolUsageFinishedEvent,
+    ToolUsageStartedEvent,
+    ToolValidateInputErrorEvent,
+)
 from crewai.task import Task
 from crewai.telemetry import Telemetry
 from crewai.tools.structured_tool import CrewStructuredTool
@@ -19,14 +27,6 @@ from crewai.utilities import I18N, Converter, Printer
 from crewai.utilities.agent_utils import (
     get_tool_names,
     render_text_description_and_args,
-)
-from crewai.utilities.events.crewai_event_bus import crewai_event_bus
-from crewai.utilities.events.tool_usage_events import (
-    ToolSelectionErrorEvent,
-    ToolUsageErrorEvent,
-    ToolUsageFinishedEvent,
-    ToolUsageStartedEvent,
-    ToolValidateInputErrorEvent,
 )
 
 if TYPE_CHECKING:
@@ -44,7 +44,7 @@ OPENAI_BIGGER_MODELS = [
 ]
 
 
-class ToolUsageErrorException(Exception):
+class ToolUsageError(Exception):
     """Exception raised for errors in the tool usage."""
 
     def __init__(self, message: str) -> None:
@@ -60,7 +60,6 @@ class ToolUsage:
       task: Task being executed.
       tools_handler: Tools handler that will manage the tool usage.
       tools: List of tools available for the agent.
-      original_tools: Original tools available for the agent before being converted to BaseTool.
       tools_description: Description of the tools available for the agent.
       tools_names: Names of the tools available for the agent.
       function_calling_llm: Language model to be used for the tool usage.
@@ -68,13 +67,13 @@ class ToolUsage:
 
     def __init__(
         self,
-        tools_handler: Optional[ToolsHandler],
-        tools: List[CrewStructuredTool],
-        task: Optional[Task],
+        tools_handler: ToolsHandler | None,
+        tools: list[CrewStructuredTool],
+        task: Task | None,
         function_calling_llm: Any,
-        agent: Optional[Union["BaseAgent", "LiteAgent"]] = None,
+        agent: Union["BaseAgent", "LiteAgent"] | None = None,
         action: Any = None,
-        fingerprint_context: Optional[Dict[str, str]] = None,
+        fingerprint_context: dict[str, str] | None = None,
     ) -> None:
         self._i18n: I18N = agent.i18n if agent else I18N()
         self._printer: Printer = Printer()
@@ -105,9 +104,9 @@ class ToolUsage:
         return self._tool_calling(tool_string)
 
     def use(
-        self, calling: Union[ToolCalling, InstructorToolCalling], tool_string: str
+        self, calling: ToolCalling | InstructorToolCalling, tool_string: str
     ) -> str:
-        if isinstance(calling, ToolUsageErrorException):
+        if isinstance(calling, ToolUsageError):
             error = calling.message
             if self.agent and self.agent.verbose:
                 self._printer.print(content=f"\n\n{error}\n", color="red")
@@ -130,8 +129,7 @@ class ToolUsage:
             and tool.name == self._i18n.tools("add_image")["name"]  # type: ignore
         ):
             try:
-                result = self._use(tool_string=tool_string, tool=tool, calling=calling)
-                return result
+                return self._use(tool_string=tool_string, tool=tool, calling=calling)
 
             except Exception as e:
                 error = getattr(e, "message", str(e))
@@ -147,7 +145,7 @@ class ToolUsage:
         self,
         tool_string: str,
         tool: CrewStructuredTool,
-        calling: Union[ToolCalling, InstructorToolCalling],
+        calling: ToolCalling | InstructorToolCalling,
     ) -> str:
         if self._check_tool_repeated_usage(calling=calling):  # type: ignore # _check_tool_repeated_usage of "ToolUsage" does not return a value (it only ever returns None)
             try:
@@ -159,8 +157,7 @@ class ToolUsage:
                     tool_name=tool.name,
                     attempts=self._run_attempts,
                 )
-                result = self._format_result(result=result)  # type: ignore #  "_format_result" of "ToolUsage" does not return a value (it only ever returns None)
-                return result  # type: ignore # Fix the return type of this function
+                return self._format_result(result=result)  # type: ignore #  "_format_result" of "ToolUsage" does not return a value (it only ever returns None)
 
             except Exception:
                 if self.task:
@@ -176,18 +173,30 @@ class ToolUsage:
                 "agent": self.agent,
             }
 
-            if self.agent.fingerprint:
-                event_data.update(self.agent.fingerprint)
+            # TODO: Investigate fingerprint attribute availability on BaseAgent/LiteAgent
+            if self.agent.fingerprint:  # type: ignore
+                event_data.update(self.agent.fingerprint)  # type: ignore
+            if self.task:
+                event_data["task_name"] = self.task.name or self.task.description
+                event_data["task_id"] = str(self.task.id)
+            crewai_event_bus.emit(self, ToolUsageStartedEvent(**event_data))
 
-            crewai_event_bus.emit(self,ToolUsageStartedEvent(**event_data))
-            
         started_at = time.time()
         from_cache = False
         result = None  # type: ignore
 
         if self.tools_handler and self.tools_handler.cache:
+            input_str = ""
+            if calling.arguments:
+                if isinstance(calling.arguments, dict):
+                    import json
+
+                    input_str = json.dumps(calling.arguments)
+                else:
+                    input_str = str(calling.arguments)
+
             result = self.tools_handler.cache.read(
-                tool=calling.tool_name, input=calling.arguments
+                tool=calling.tool_name, input=input_str
             )  # type: ignore
             from_cache = result is not None
 
@@ -205,8 +214,7 @@ class ToolUsage:
             try:
                 result = usage_limit_error
                 self._telemetry.tool_usage_error(llm=self.function_calling_llm)
-                result = self._format_result(result=result)
-                return result
+                return self._format_result(result=result)
             except Exception:
                 if self.task:
                     self.task.increment_tools_errors()
@@ -253,7 +261,7 @@ class ToolUsage:
                     error_message = self._i18n.errors("tool_usage_exception").format(
                         error=e, tool=tool.name, tool_inputs=tool.description
                     )
-                    error = ToolUsageErrorException(
+                    error = ToolUsageError(
                         f"\n{error_message}.\nMoving on then. {self._i18n.slice('format').format(tool_names=self.tools_names)}"
                     ).message
                     if self.task:
@@ -311,12 +319,15 @@ class ToolUsage:
         if self.agent and hasattr(self.agent, "tools_results"):
             self.agent.tools_results.append(data)
 
-        if available_tool and hasattr(available_tool, 'current_usage_count'):
+        if available_tool and hasattr(available_tool, "current_usage_count"):
             available_tool.current_usage_count += 1
-            if hasattr(available_tool, 'max_usage_count') and available_tool.max_usage_count is not None:
+            if (
+                hasattr(available_tool, "max_usage_count")
+                and available_tool.max_usage_count is not None
+            ):
                 self._printer.print(
                     content=f"Tool '{available_tool.name}' usage: {available_tool.current_usage_count}/{available_tool.max_usage_count}",
-                    color="blue"
+                    color="blue",
                 )
 
         return result
@@ -341,7 +352,7 @@ class ToolUsage:
         return result
 
     def _check_tool_repeated_usage(
-        self, calling: Union[ToolCalling, InstructorToolCalling]
+        self, calling: ToolCalling | InstructorToolCalling
     ) -> bool:
         if not self.tools_handler:
             return False
@@ -350,20 +361,21 @@ class ToolUsage:
                 calling.arguments == last_tool_usage.arguments
             )
         return False
-        
-    def _check_usage_limit(self, tool: Any, tool_name: str) -> str | None:
+
+    @staticmethod
+    def _check_usage_limit(tool: Any, tool_name: str) -> str | None:
         """Check if tool has reached its usage limit.
-        
+
         Args:
             tool: The tool to check
             tool_name: The name of the tool (used for error message)
-            
+
         Returns:
             Error message if limit reached, None otherwise
         """
         if (
-            hasattr(tool, 'max_usage_count') 
-            and tool.max_usage_count is not None 
+            hasattr(tool, "max_usage_count")
+            and tool.max_usage_count is not None
             and tool.current_usage_count >= tool.max_usage_count
         ):
             return f"Tool '{tool_name}' has reached its usage limit of {tool.max_usage_count} times and cannot be used anymore."
@@ -388,7 +400,7 @@ class ToolUsage:
                 return tool
         if self.task:
             self.task.increment_tools_errors()
-        tool_selection_data: Dict[str, Any] = {
+        tool_selection_data: dict[str, Any] = {
             "agent_key": getattr(self.agent, "key", None) if self.agent else None,
             "agent_role": getattr(self.agent, "role", None) if self.agent else None,
             "tool_name": tool_name,
@@ -405,27 +417,24 @@ class ToolUsage:
                 ),
             )
             raise Exception(error)
-        else:
-            error = f"I forgot the Action name, these are the only available Actions: {self.tools_description}"
-            crewai_event_bus.emit(
-                self,
-                ToolSelectionErrorEvent(
-                    **tool_selection_data,
-                    error=error,
-                ),
-            )
-            raise Exception(error)
+        error = f"I forgot the Action name, these are the only available Actions: {self.tools_description}"
+        crewai_event_bus.emit(
+            self,
+            ToolSelectionErrorEvent(
+                **tool_selection_data,
+                error=error,
+            ),
+        )
+        raise Exception(error)
 
     def _render(self) -> str:
         """Render the tool name and description in plain text."""
-        descriptions = []
-        for tool in self.tools:
-            descriptions.append(tool.description)
+        descriptions = [tool.description for tool in self.tools]
         return "\n--\n".join(descriptions)
 
     def _function_calling(
         self, tool_string: str
-    ) -> Union[ToolCalling, InstructorToolCalling]:
+    ) -> ToolCalling | InstructorToolCalling:
         model = (
             InstructorToolCalling
             if self.function_calling_llm.supports_function_calling()
@@ -448,13 +457,13 @@ class ToolUsage:
         )
         tool_object = converter.to_pydantic()
         if not isinstance(tool_object, (ToolCalling, InstructorToolCalling)):
-            raise ToolUsageErrorException("Failed to parse tool calling")
+            raise ToolUsageError("Failed to parse tool calling")
 
         return tool_object
 
     def _original_tool_calling(
         self, tool_string: str, raise_error: bool = False
-    ) -> Union[ToolCalling, InstructorToolCalling, ToolUsageErrorException]:
+    ) -> ToolCalling | InstructorToolCalling | ToolUsageError:
         tool_name = self.action.tool
         tool = self._select_tool(tool_name)
         try:
@@ -463,18 +472,12 @@ class ToolUsage:
         except Exception:
             if raise_error:
                 raise
-            else:
-                return ToolUsageErrorException(
-                    f"{self._i18n.errors('tool_arguments_error')}"
-                )
+            return ToolUsageError(f"{self._i18n.errors('tool_arguments_error')}")
 
         if not isinstance(arguments, dict):
             if raise_error:
                 raise
-            else:
-                return ToolUsageErrorException(
-                    f"{self._i18n.errors('tool_arguments_error')}"
-                )
+            return ToolUsageError(f"{self._i18n.errors('tool_arguments_error')}")
 
         return ToolCalling(
             tool_name=tool.name,
@@ -483,15 +486,14 @@ class ToolUsage:
 
     def _tool_calling(
         self, tool_string: str
-    ) -> Union[ToolCalling, InstructorToolCalling, ToolUsageErrorException]:
+    ) -> ToolCalling | InstructorToolCalling | ToolUsageError:
         try:
             try:
                 return self._original_tool_calling(tool_string, raise_error=True)
             except Exception:
                 if self.function_calling_llm:
                     return self._function_calling(tool_string)
-                else:
-                    return self._original_tool_calling(tool_string)
+                return self._original_tool_calling(tool_string)
         except Exception as e:
             self._run_attempts += 1
             if self._run_attempts > self._max_parsing_attempts:
@@ -500,12 +502,12 @@ class ToolUsage:
                     self.task.increment_tools_errors()
                 if self.agent and self.agent.verbose:
                     self._printer.print(content=f"\n\n{e}\n", color="red")
-                return ToolUsageErrorException(  # type: ignore # Incompatible return value type (got "ToolUsageErrorException", expected "ToolCalling | InstructorToolCalling")
+                return ToolUsageError(  # type: ignore # Incompatible return value type (got "ToolUsageError", expected "ToolCalling | InstructorToolCalling")
                     f"{self._i18n.errors('tool_usage_error').format(error=e)}\nMoving on then. {self._i18n.slice('format').format(tool_names=self.tools_names)}"
                 )
             return self._tool_calling(tool_string)
 
-    def _validate_tool_input(self, tool_input: Optional[str]) -> Dict[str, Any]:
+    def _validate_tool_input(self, tool_input: str | None) -> dict[str, Any]:
         if tool_input is None:
             return {}
 
@@ -529,7 +531,7 @@ class ToolUsage:
                 return arguments
         except (ValueError, SyntaxError):
             repaired_input = repair_json(tool_input)
-            pass  # Continue to the next parsing attempt
+            # Continue to the next parsing attempt
 
         # Attempt 3: Parse as JSON5
         try:
@@ -581,7 +583,7 @@ class ToolUsage:
     def on_tool_error(
         self,
         tool: Any,
-        tool_calling: Union[ToolCalling, InstructorToolCalling],
+        tool_calling: ToolCalling | InstructorToolCalling,
         e: Exception,
     ) -> None:
         event_data = self._prepare_event_data(tool, tool_calling)
@@ -590,7 +592,7 @@ class ToolUsage:
     def on_tool_use_finished(
         self,
         tool: Any,
-        tool_calling: Union[ToolCalling, InstructorToolCalling],
+        tool_calling: ToolCalling | InstructorToolCalling,
         from_cache: bool,
         started_at: float,
         result: Any,
@@ -605,10 +607,13 @@ class ToolUsage:
                 "output": result,
             }
         )
+        if self.task:
+            event_data["task_id"] = str(self.task.id)
+            event_data["task_name"] = self.task.name or self.task.description
         crewai_event_bus.emit(self, ToolUsageFinishedEvent(**event_data))
 
     def _prepare_event_data(
-        self, tool: Any, tool_calling: Union[ToolCalling, InstructorToolCalling]
+        self, tool: Any, tool_calling: ToolCalling | InstructorToolCalling
     ) -> dict:
         event_data = {
             "run_attempts": self._run_attempts,

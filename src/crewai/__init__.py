@@ -1,6 +1,7 @@
-import warnings
 import threading
 import urllib.request
+import warnings
+from typing import Any
 
 from crewai.agent import Agent
 from crewai.crew import Crew
@@ -15,17 +16,35 @@ from crewai.tasks.llm_guardrail import LLMGuardrail
 from crewai.tasks.task_output import TaskOutput
 from crewai.telemetry.telemetry import Telemetry
 
-warnings.filterwarnings(
-    "ignore",
-    message="Pydantic serializer warnings:",
-    category=UserWarning,
-    module="pydantic.main",
-)
 
+def _suppress_pydantic_deprecation_warnings() -> None:
+    """Suppress Pydantic deprecation warnings using targeted monkey patch."""
+    original_warn = warnings.warn
+
+    def filtered_warn(
+        message: Any,
+        category: type | None = None,
+        stacklevel: int = 1,
+        source: Any = None,
+    ) -> Any:
+        if (
+            category
+            and hasattr(category, "__module__")
+            and category.__module__ == "pydantic.warnings"
+        ):
+            return None
+        return original_warn(message, category, stacklevel + 1, source)
+
+    warnings.warn = filtered_warn  # type: ignore[assignment]
+
+
+_suppress_pydantic_deprecation_warnings()
+
+__version__ = "0.201.0"
 _telemetry_submitted = False
 
 
-def _track_install():
+def _track_install() -> None:
     """Track package installation/first-use via Scarf analytics."""
     global _telemetry_submitted
 
@@ -35,17 +54,16 @@ def _track_install():
     try:
         pixel_url = "https://api.scarf.sh/v2/packages/CrewAI/crewai/docs/00f2dad1-8334-4a39-934e-003b2e1146db"
 
-        req = urllib.request.Request(pixel_url)
-        req.add_header('User-Agent', f'CrewAI-Python/{__version__}')
+        req = urllib.request.Request(pixel_url)  # noqa: S310
+        req.add_header("User-Agent", f"CrewAI-Python/{__version__}")
 
-        with urllib.request.urlopen(req, timeout=2):  # nosec B310
+        with urllib.request.urlopen(req, timeout=2):  # noqa: S310
             _telemetry_submitted = True
-
-    except Exception:
+    except Exception:  # noqa: S110
         pass
 
 
-def _track_install_async():
+def _track_install_async() -> None:
     """Track installation in background thread to avoid blocking imports."""
     if not Telemetry._is_telemetry_disabled():
         thread = threading.Thread(target=_track_install, daemon=True)
@@ -53,19 +71,17 @@ def _track_install_async():
 
 
 _track_install_async()
-
-__version__ = "0.150.0"
 __all__ = [
+    "LLM",
     "Agent",
+    "BaseLLM",
     "Crew",
     "CrewOutput",
-    "Process",
-    "Task",
-    "LLM",
-    "BaseLLM",
     "Flow",
     "Knowledge",
-    "TaskOutput",
     "LLMGuardrail",
+    "Process",
+    "Task",
+    "TaskOutput",
     "__version__",
 ]

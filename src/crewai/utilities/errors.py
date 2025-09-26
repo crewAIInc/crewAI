@@ -1,12 +1,20 @@
-"""Error message definitions for CrewAI database operations."""
+"""Error message definitions for CrewAI database operations.
 
-from typing import Optional
+This module provides standardized error classes and message templates
+for database operations and agent repository handling.
+"""
+
+from typing import Final
 
 
 class DatabaseOperationError(Exception):
-    """Base exception class for database operation errors."""
+    """Base exception class for database operation errors.
 
-    def __init__(self, message: str, original_error: Optional[Exception] = None):
+    Attributes:
+        original_error: The original exception that caused this error, if any.
+    """
+
+    def __init__(self, message: str, original_error: Exception | None = None) -> None:
         """Initialize the database operation error.
 
         Args:
@@ -18,13 +26,17 @@ class DatabaseOperationError(Exception):
 
 
 class DatabaseError:
-    """Standardized error message templates for database operations."""
+    """Standardized error message templates for database operations.
 
-    INIT_ERROR: str = "Database initialization error: {}"
-    SAVE_ERROR: str = "Error saving task outputs: {}"
-    UPDATE_ERROR: str = "Error updating task outputs: {}"
-    LOAD_ERROR: str = "Error loading task outputs: {}"
-    DELETE_ERROR: str = "Error deleting task outputs: {}"
+    Provides consistent error message formatting for various database
+    operation failures.
+    """
+
+    INIT_ERROR: Final[str] = "Database initialization error: {}"
+    SAVE_ERROR: Final[str] = "Error saving task outputs: {}"
+    UPDATE_ERROR: Final[str] = "Error updating task outputs: {}"
+    LOAD_ERROR: Final[str] = "Error loading task outputs: {}"
+    DELETE_ERROR: Final[str] = "Error deleting task outputs: {}"
 
     @classmethod
     def format_error(cls, template: str, error: Exception) -> str:
@@ -42,5 +54,3 @@ class DatabaseError:
 
 class AgentRepositoryError(Exception):
     """Exception raised when an agent repository is not found."""
-
-    ...

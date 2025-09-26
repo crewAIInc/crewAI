@@ -10,8 +10,8 @@ from pydantic import BaseModel, Field
 from crewai import Agent, Task
 from crewai.tools import BaseTool
 from crewai.tools.tool_usage import ToolUsage
-from crewai.utilities.events import crewai_event_bus
-from crewai.utilities.events.tool_usage_events import (
+from crewai.events.event_bus import crewai_event_bus
+from crewai.events.types.tool_usage_events import (
     ToolSelectionErrorEvent,
     ToolUsageFinishedEvent,
     ToolValidateInputErrorEvent,
@@ -476,7 +476,7 @@ def test_tool_selection_error_event_direct():
     def event_handler(source, event):
         received_events.append(event)
 
-    with pytest.raises(Exception) as exc_info:
+    with pytest.raises(Exception):
         tool_usage._select_tool("Non Existent Tool")
     assert len(received_events) == 1
     event = received_events[0]
@@ -490,7 +490,7 @@ def test_tool_selection_error_event_direct():
     assert "don't exist" in event.error
 
     received_events.clear()
-    with pytest.raises(Exception) as exc_info:
+    with pytest.raises(Exception):
         tool_usage._select_tool("")
 
     assert len(received_events) == 1
@@ -563,7 +563,7 @@ def test_tool_validate_input_error_event():
 
         # Test invalid input
         invalid_input = "invalid json {[}"
-        with pytest.raises(Exception) as exc_info:
+        with pytest.raises(Exception):
             tool_usage._validate_tool_input(invalid_input)
 
         # Verify event was emitted
@@ -589,6 +589,9 @@ def test_tool_usage_finished_event_with_result():
     # Create mock task
     mock_task = MagicMock()
     mock_task.delegations = 0
+    mock_task.name = "Test Task"
+    mock_task.description = "A test task for tool usage"
+    mock_task.id = "test-task-id"
 
     # Create mock tool
     class TestTool(BaseTool):
@@ -665,6 +668,9 @@ def test_tool_usage_finished_event_with_cached_result():
     # Create mock task
     mock_task = MagicMock()
     mock_task.delegations = 0
+    mock_task.name = "Test Task"
+    mock_task.description = "A test task for tool usage"
+    mock_task.id = "test-task-id"
 
     # Create mock tool
     class TestTool(BaseTool):

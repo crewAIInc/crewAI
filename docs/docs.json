@@ -1,6 +1,6 @@
 {
   "$schema": "https://mintlify.com/docs.json",
-  "theme": "mint",
+  "theme": "aspen",
   "name": "CrewAI",
   "colors": {
     "primary": "#EB6658",
@@ -28,20 +28,21 @@
               "icon": "discourse"
             },
             {
-              "anchor": "Crew GPT",
-              "href": "https://chatgpt.com/g/g-qqTuUWsBY-crewai-assistant",
-              "icon": "robot"
+              "anchor": "Blog",
+              "href": "https://blog.crewai.com",
+              "icon": "newspaper"
             },
             {
-              "anchor": "Releases",
-              "href": "https://github.com/crewAIInc/crewAI/releases",
-              "icon": "tag"
+              "anchor": "CrewGPT",
+              "href": "https://chatgpt.com/g/g-qqTuUWsBY-crewai-assistant",
+              "icon": "robot"
             }
           ]
         },
         "tabs": [
           {
             "tab": "Documentation",
+            "icon": "book-open",
             "groups": [
               {
                 "group": "Get Started",
@@ -52,18 +53,22 @@
                 "pages": [
                   {
                     "group": "Strategy",
+                    "icon": "compass",
                     "pages": ["en/guides/concepts/evaluating-use-cases"]
                   },
                   {
                     "group": "Agents",
+                    "icon": "user",
                     "pages": ["en/guides/agents/crafting-effective-agents"]
                   },
                   {
                     "group": "Crews",
+                    "icon": "users",
                     "pages": ["en/guides/crews/first-crew"]
                   },
                   {
                     "group": "Flows",
+                    "icon": "code-branch",
                     "pages": [
                       "en/guides/flows/first-flow",
                       "en/guides/flows/mastering-flow-state"
@@ -71,6 +76,7 @@
                   },
                   {
                     "group": "Advanced",
+                    "icon": "gear",
                     "pages": [
                       "en/guides/advanced/customizing-prompts",
                       "en/guides/advanced/fingerprinting"
@@ -116,6 +122,7 @@
                   "en/tools/overview",
                   {
                     "group": "File & Document",
+                    "icon": "folder-open",
                     "pages": [
                       "en/tools/file-document/overview",
                       "en/tools/file-document/filereadtool",
@@ -128,11 +135,14 @@
                       "en/tools/file-document/jsonsearchtool",
                       "en/tools/file-document/csvsearchtool",
                       "en/tools/file-document/directorysearchtool",
-                      "en/tools/file-document/directoryreadtool"
+                      "en/tools/file-document/directoryreadtool",
+                      "en/tools/file-document/ocrtool",
+                      "en/tools/file-document/pdf-text-writing-tool"
                     ]
                   },
                   {
                     "group": "Web Scraping & Browsing",
+                    "icon": "globe",
                     "pages": [
                       "en/tools/web-scraping/overview",
                       "en/tools/web-scraping/scrapewebsitetool",
@@ -146,11 +156,13 @@
                       "en/tools/web-scraping/stagehandtool",
                       "en/tools/web-scraping/firecrawlcrawlwebsitetool",
                       "en/tools/web-scraping/firecrawlscrapewebsitetool",
-                      "en/tools/web-scraping/oxylabsscraperstool"
+                      "en/tools/web-scraping/oxylabsscraperstool",
+                      "en/tools/web-scraping/brightdata-tools"
                     ]
                   },
                   {
                     "group": "Search & Research",
+                    "icon": "magnifying-glass",
                     "pages": [
                       "en/tools/search-research/overview",
                       "en/tools/search-research/serperdevtool",
@@ -163,11 +175,16 @@
                       "en/tools/search-research/youtubechannelsearchtool",
                       "en/tools/search-research/youtubevideosearchtool",
                       "en/tools/search-research/tavilysearchtool",
-                      "en/tools/search-research/tavilyextractortool"
+                      "en/tools/search-research/tavilyextractortool",
+                      "en/tools/search-research/arxivpapertool",
+                      "en/tools/search-research/serpapi-googlesearchtool",
+                      "en/tools/search-research/serpapi-googleshoppingtool",
+                      "en/tools/search-research/databricks-query-tool"
                     ]
                   },
                   {
                     "group": "Database & Data",
+                    "icon": "database",
                     "pages": [
                       "en/tools/database-data/overview",
                       "en/tools/database-data/mysqltool",
@@ -175,11 +192,14 @@
                       "en/tools/database-data/snowflakesearchtool",
                       "en/tools/database-data/nl2sqltool",
                       "en/tools/database-data/qdrantvectorsearchtool",
-                      "en/tools/database-data/weaviatevectorsearchtool"
+                      "en/tools/database-data/weaviatevectorsearchtool",
+                      "en/tools/database-data/mongodbvectorsearchtool",
+                      "en/tools/database-data/singlestoresearchtool"
                     ]
                   },
                   {
                     "group": "AI & Machine Learning",
+                    "icon": "brain",
                     "pages": [
                       "en/tools/ai-ml/overview",
                       "en/tools/ai-ml/dalletool",
@@ -193,21 +213,32 @@
                   },
                   {
                     "group": "Cloud & Storage",
+                    "icon": "cloud",
                     "pages": [
                       "en/tools/cloud-storage/overview",
                       "en/tools/cloud-storage/s3readertool",
                       "en/tools/cloud-storage/s3writertool",
-                      "en/tools/cloud-storage/bedrockinvokeagenttool",
                       "en/tools/cloud-storage/bedrockkbretriever"
                     ]
                   },
                   {
-                    "group": "Automation & Integration",
+                    "group": "Integrations",
+                    "icon": "plug",
+                    "pages": [
+                      "en/tools/tool-integrations/overview",
+                      "en/tools/tool-integrations/bedrockinvokeagenttool",
+                      "en/tools/tool-integrations/crewaiautomationtool"
+                    ]
+                  },
+                  {
+                    "group": "Automation",
+                    "icon": "bolt",
                     "pages": [
                       "en/tools/automation/overview",
                       "en/tools/automation/apifyactorstool",
                       "en/tools/automation/composiotool",
-                      "en/tools/automation/multiontool"
+                      "en/tools/automation/multiontool",
+                      "en/tools/automation/zapieractionstool"
                     ]
                   }
                 ]
@@ -216,8 +247,8 @@
                 "group": "Observability",
                 "pages": [
                   "en/observability/overview",
-                  "en/observability/agentops",
                   "en/observability/arize-phoenix",
+                  "en/observability/langdb",
                   "en/observability/langfuse",
                   "en/observability/langtrace",
                   "en/observability/maxim",
@@ -227,7 +258,8 @@
                   "en/observability/opik",
                   "en/observability/patronus-evaluation",
                   "en/observability/portkey",
-                  "en/observability/weave"
+                  "en/observability/weave",
+                  "en/observability/truefoundry"
                 ]
               },
               {
@@ -262,6 +294,7 @@
           },
           {
             "tab": "Enterprise",
+            "icon": "briefcase",
             "groups": [
               {
                 "group": "Getting Started",
@@ -270,6 +303,7 @@
               {
                 "group": "Features",
                 "pages": [
+                  "en/enterprise/features/rbac",
                   "en/enterprise/features/tool-repository",
                   "en/enterprise/features/webhook-streaming",
                   "en/enterprise/features/traces",
@@ -308,6 +342,7 @@
                   "en/enterprise/guides/update-crew",
                   "en/enterprise/guides/enable-crew-studio",
                   "en/enterprise/guides/azure-openai-setup",
+                  "en/enterprise/guides/automation-triggers",
                   "en/enterprise/guides/hubspot-trigger",
                   "en/enterprise/guides/react-component-export",
                   "en/enterprise/guides/salesforce-trigger",
@@ -326,23 +361,36 @@
           },
           {
             "tab": "API Reference",
+            "icon": "magnifying-glass",
             "groups": [
               {
                 "group": "Getting Started",
-                "pages": ["en/api-reference/introduction"]
-              },
-              {
-                "group": "Endpoints",
-                "openapi": "enterprise-api.yaml"
+                "pages": [
+                  "en/api-reference/introduction",
+                  "en/api-reference/inputs",
+                  "en/api-reference/kickoff",
+                  "en/api-reference/status"
+                ]
               }
             ]
           },
           {
             "tab": "Examples",
+            "icon": "code",
             "groups": [
               {
                 "group": "Examples",
-                "pages": ["en/examples/example"]
+                "pages": ["en/examples/example", "en/examples/cookbooks"]
+              }
+            ]
+          },
+          {
+            "tab": "Changelog",
+            "icon": "clock",
+            "groups": [
+              {
+                "group": "Release Notes",
+                "pages": ["en/changelog"]
               }
             ]
           }
@@ -363,20 +411,21 @@
               "icon": "discourse"
             },
             {
-              "anchor": "Crew GPT",
-              "href": "https://chatgpt.com/g/g-qqTuUWsBY-crewai-assistant",
-              "icon": "robot"
+              "anchor": "Blog",
+              "href": "https://blog.crewai.com",
+              "icon": "newspaper"
             },
             {
-              "anchor": "Lançamentos",
-              "href": "https://github.com/crewAIInc/crewAI/releases",
-              "icon": "tag"
+              "anchor": "CrewGPT",
+              "href": "https://chatgpt.com/g/g-qqTuUWsBY-crewai-assistant",
+              "icon": "robot"
             }
           ]
         },
         "tabs": [
           {
             "tab": "Documentação",
+            "icon": "book-open",
             "groups": [
               {
                 "group": "Começando",
@@ -391,18 +440,22 @@
                 "pages": [
                   {
                     "group": "Estratégia",
+                    "icon": "compass",
                     "pages": ["pt-BR/guides/concepts/evaluating-use-cases"]
                   },
                   {
                     "group": "Agentes",
+                    "icon": "user",
                     "pages": ["pt-BR/guides/agents/crafting-effective-agents"]
                   },
                   {
                     "group": "Crews",
+                    "icon": "users",
                     "pages": ["pt-BR/guides/crews/first-crew"]
                   },
                   {
                     "group": "Flows",
+                    "icon": "code-branch",
                     "pages": [
                       "pt-BR/guides/flows/first-flow",
                       "pt-BR/guides/flows/mastering-flow-state"
@@ -410,6 +463,7 @@
                   },
                   {
                     "group": "Avançado",
+                    "icon": "gear",
                     "pages": [
                       "pt-BR/guides/advanced/customizing-prompts",
                       "pt-BR/guides/advanced/fingerprinting"
@@ -455,6 +509,7 @@
                   "pt-BR/tools/overview",
                   {
                     "group": "Arquivo & Documento",
+                    "icon": "folder-open",
                     "pages": [
                       "pt-BR/tools/file-document/overview",
                       "pt-BR/tools/file-document/filereadtool",
@@ -472,6 +527,7 @@
                   },
                   {
                     "group": "Web Scraping & Navegação",
+                    "icon": "globe",
                     "pages": [
                       "pt-BR/tools/web-scraping/overview",
                       "pt-BR/tools/web-scraping/scrapewebsitetool",
@@ -490,6 +546,7 @@
                   },
                   {
                     "group": "Pesquisa",
+                    "icon": "magnifying-glass",
                     "pages": [
                       "pt-BR/tools/search-research/overview",
                       "pt-BR/tools/search-research/serperdevtool",
@@ -505,6 +562,7 @@
                   },
                   {
                     "group": "Dados",
+                    "icon": "database",
                     "pages": [
                       "pt-BR/tools/database-data/overview",
                       "pt-BR/tools/database-data/mysqltool",
@@ -517,6 +575,7 @@
                   },
                   {
                     "group": "IA & Machine Learning",
+                    "icon": "brain",
                     "pages": [
                       "pt-BR/tools/ai-ml/overview",
                       "pt-BR/tools/ai-ml/dalletool",
@@ -530,16 +589,26 @@
                   },
                   {
                     "group": "Cloud & Armazenamento",
+                    "icon": "cloud",
                     "pages": [
                       "pt-BR/tools/cloud-storage/overview",
                       "pt-BR/tools/cloud-storage/s3readertool",
                       "pt-BR/tools/cloud-storage/s3writertool",
-                      "pt-BR/tools/cloud-storage/bedrockinvokeagenttool",
                       "pt-BR/tools/cloud-storage/bedrockkbretriever"
                     ]
                   },
                   {
-                    "group": "Automação & Integração",
+                    "group": "Integrações",
+                    "icon": "plug",
+                    "pages": [
+                      "pt-BR/tools/tool-integrations/overview",
+                      "pt-BR/tools/tool-integrations/bedrockinvokeagenttool",
+                      "pt-BR/tools/tool-integrations/crewaiautomationtool"
+                    ]
+                  },
+                  {
+                    "group": "Automação",
+                    "icon": "bolt",
                     "pages": [
                       "pt-BR/tools/automation/overview",
                       "pt-BR/tools/automation/apifyactorstool",
@@ -553,8 +622,8 @@
                 "group": "Observabilidade",
                 "pages": [
                   "pt-BR/observability/overview",
-                  "pt-BR/observability/agentops",
                   "pt-BR/observability/arize-phoenix",
+                  "pt-BR/observability/langdb",
                   "pt-BR/observability/langfuse",
                   "pt-BR/observability/langtrace",
                   "pt-BR/observability/maxim",
@@ -563,7 +632,8 @@
                   "pt-BR/observability/opik",
                   "pt-BR/observability/patronus-evaluation",
                   "pt-BR/observability/portkey",
-                  "pt-BR/observability/weave"
+                  "pt-BR/observability/weave",
+                  "pt-BR/observability/truefoundry"
                 ]
               },
               {
@@ -598,6 +668,7 @@
           },
           {
             "tab": "Enterprise",
+            "icon": "briefcase",
             "groups": [
               {
                 "group": "Começando",
@@ -606,6 +677,7 @@
               {
                 "group": "Funcionalidades",
                 "pages": [
+                  "pt-BR/enterprise/features/rbac",
                   "pt-BR/enterprise/features/tool-repository",
                   "pt-BR/enterprise/features/webhook-streaming",
                   "pt-BR/enterprise/features/traces",
@@ -643,6 +715,7 @@
                   "pt-BR/enterprise/guides/update-crew",
                   "pt-BR/enterprise/guides/enable-crew-studio",
                   "pt-BR/enterprise/guides/azure-openai-setup",
+                  "pt-BR/enterprise/guides/automation-triggers",
                   "pt-BR/enterprise/guides/hubspot-trigger",
                   "pt-BR/enterprise/guides/react-component-export",
                   "pt-BR/enterprise/guides/salesforce-trigger",
@@ -663,23 +736,419 @@
           },
           {
             "tab": "Referência da API",
+            "icon": "magnifying-glass",
             "groups": [
               {
                 "group": "Começando",
-                "pages": ["pt-BR/api-reference/introduction"]
-              },
-              {
-                "group": "Endpoints",
-                "openapi": "enterprise-api.yaml"
+                "pages": [
+                  "pt-BR/api-reference/introduction",
+                  "pt-BR/api-reference/inputs",
+                  "pt-BR/api-reference/kickoff",
+                  "pt-BR/api-reference/status"
+                ]
               }
             ]
           },
           {
             "tab": "Exemplos",
+            "icon": "code",
             "groups": [
               {
                 "group": "Exemplos",
-                "pages": ["pt-BR/examples/example"]
+                "pages": ["pt-BR/examples/example", "pt-BR/examples/cookbooks"]
+              }
+            ]
+          },
+          {
+            "tab": "Notas de Versão",
+            "icon": "clock",
+            "groups": [
+              {
+                "group": "Notas de Versão",
+                "pages": ["pt-BR/changelog"]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "language": "ko",
+        "global": {
+          "anchors": [
+            {
+              "anchor": "웹사이트",
+              "href": "https://crewai.com",
+              "icon": "globe"
+            },
+            {
+              "anchor": "포럼",
+              "href": "https://community.crewai.com",
+              "icon": "discourse"
+            },
+            {
+              "anchor": "블로그",
+              "href": "https://blog.crewai.com",
+              "icon": "newspaper"
+            },
+            {
+              "anchor": "CrewGPT",
+              "href": "https://chatgpt.com/g/g-qqTuUWsBY-crewai-assistant",
+              "icon": "robot"
+            }
+          ]
+        },
+        "tabs": [
+          {
+            "tab": "기술 문서",
+            "icon": "book-open",
+            "groups": [
+              {
+                "group": "시작 안내",
+                "pages": ["ko/introduction", "ko/installation", "ko/quickstart"]
+              },
+              {
+                "group": "가이드",
+                "pages": [
+                  {
+                    "group": "전략",
+                    "icon": "compass",
+                    "pages": ["ko/guides/concepts/evaluating-use-cases"]
+                  },
+                  {
+                    "group": "에이전트 (Agents)",
+                    "icon": "user",
+                    "pages": ["ko/guides/agents/crafting-effective-agents"]
+                  },
+                  {
+                    "group": "크루 (Crews)",
+                    "icon": "users",
+                    "pages": ["ko/guides/crews/first-crew"]
+                  },
+                  {
+                    "group": "플로우 (Flows)",
+                    "icon": "code-branch",
+                    "pages": [
+                      "ko/guides/flows/first-flow",
+                      "ko/guides/flows/mastering-flow-state"
+                    ]
+                  },
+                  {
+                    "group": "고급",
+                    "icon": "gear",
+                    "pages": [
+                      "ko/guides/advanced/customizing-prompts",
+                      "ko/guides/advanced/fingerprinting"
+                    ]
+                  }
+                ]
+              },
+              {
+                "group": "핵심 개념",
+                "pages": [
+                  "ko/concepts/agents",
+                  "ko/concepts/tasks",
+                  "ko/concepts/crews",
+                  "ko/concepts/flows",
+                  "ko/concepts/knowledge",
+                  "ko/concepts/llms",
+                  "ko/concepts/processes",
+                  "ko/concepts/collaboration",
+                  "ko/concepts/training",
+                  "ko/concepts/memory",
+                  "ko/concepts/reasoning",
+                  "ko/concepts/planning",
+                  "ko/concepts/testing",
+                  "ko/concepts/cli",
+                  "ko/concepts/tools",
+                  "ko/concepts/event-listener"
+                ]
+              },
+              {
+                "group": "MCP 통합",
+                "pages": [
+                  "ko/mcp/overview",
+                  "ko/mcp/stdio",
+                  "ko/mcp/sse",
+                  "ko/mcp/streamable-http",
+                  "ko/mcp/multiple-servers",
+                  "ko/mcp/security"
+                ]
+              },
+              {
+                "group": "도구 (Tools)",
+                "pages": [
+                  "ko/tools/overview",
+                  {
+                    "group": "파일 & 문서",
+                    "icon": "folder-open",
+                    "pages": [
+                      "ko/tools/file-document/overview",
+                      "ko/tools/file-document/filereadtool",
+                      "ko/tools/file-document/filewritetool",
+                      "ko/tools/file-document/pdfsearchtool",
+                      "ko/tools/file-document/docxsearchtool",
+                      "ko/tools/file-document/mdxsearchtool",
+                      "ko/tools/file-document/xmlsearchtool",
+                      "ko/tools/file-document/txtsearchtool",
+                      "ko/tools/file-document/jsonsearchtool",
+                      "ko/tools/file-document/csvsearchtool",
+                      "ko/tools/file-document/directorysearchtool",
+                      "ko/tools/file-document/directoryreadtool",
+                      "ko/tools/file-document/ocrtool",
+                      "ko/tools/file-document/pdf-text-writing-tool"
+                    ]
+                  },
+                  {
+                    "group": "웹 스크래핑 & 브라우징",
+                    "icon": "globe",
+                    "pages": [
+                      "ko/tools/web-scraping/overview",
+                      "ko/tools/web-scraping/scrapewebsitetool",
+                      "ko/tools/web-scraping/scrapeelementfromwebsitetool",
+                      "ko/tools/web-scraping/scrapflyscrapetool",
+                      "ko/tools/web-scraping/seleniumscrapingtool",
+                      "ko/tools/web-scraping/scrapegraphscrapetool",
+                      "ko/tools/web-scraping/spidertool",
+                      "ko/tools/web-scraping/browserbaseloadtool",
+                      "ko/tools/web-scraping/hyperbrowserloadtool",
+                      "ko/tools/web-scraping/stagehandtool",
+                      "ko/tools/web-scraping/firecrawlcrawlwebsitetool",
+                      "ko/tools/web-scraping/firecrawlscrapewebsitetool",
+                      "ko/tools/web-scraping/oxylabsscraperstool",
+                      "ko/tools/web-scraping/brightdata-tools"
+                    ]
+                  },
+                  {
+                    "group": "검색 및 연구",
+                    "icon": "magnifying-glass",
+                    "pages": [
+                      "ko/tools/search-research/overview",
+                      "ko/tools/search-research/serperdevtool",
+                      "ko/tools/search-research/bravesearchtool",
+                      "ko/tools/search-research/exasearchtool",
+                      "ko/tools/search-research/linkupsearchtool",
+                      "ko/tools/search-research/githubsearchtool",
+                      "ko/tools/search-research/websitesearchtool",
+                      "ko/tools/search-research/codedocssearchtool",
+                      "ko/tools/search-research/youtubechannelsearchtool",
+                      "ko/tools/search-research/youtubevideosearchtool",
+                      "ko/tools/search-research/tavilysearchtool",
+                      "ko/tools/search-research/tavilyextractortool",
+                      "ko/tools/search-research/arxivpapertool",
+                      "ko/tools/search-research/serpapi-googlesearchtool",
+                      "ko/tools/search-research/serpapi-googleshoppingtool",
+                      "ko/tools/search-research/databricks-query-tool"
+                    ]
+                  },
+                  {
+                    "group": "데이터베이스 & 데이터",
+                    "icon": "database",
+                    "pages": [
+                      "ko/tools/database-data/overview",
+                      "ko/tools/database-data/mysqltool",
+                      "ko/tools/database-data/pgsearchtool",
+                      "ko/tools/database-data/snowflakesearchtool",
+                      "ko/tools/database-data/nl2sqltool",
+                      "ko/tools/database-data/qdrantvectorsearchtool",
+                      "ko/tools/database-data/weaviatevectorsearchtool",
+                      "ko/tools/database-data/mongodbvectorsearchtool",
+                      "ko/tools/database-data/singlestoresearchtool"
+                    ]
+                  },
+                  {
+                    "group": "인공지능 & 머신러닝",
+                    "icon": "brain",
+                    "pages": [
+                      "ko/tools/ai-ml/overview",
+                      "ko/tools/ai-ml/dalletool",
+                      "ko/tools/ai-ml/visiontool",
+                      "ko/tools/ai-ml/aimindtool",
+                      "ko/tools/ai-ml/llamaindextool",
+                      "ko/tools/ai-ml/langchaintool",
+                      "ko/tools/ai-ml/ragtool",
+                      "ko/tools/ai-ml/codeinterpretertool"
+                    ]
+                  },
+                  {
+                    "group": "클라우드 & 스토리지",
+                    "icon": "cloud",
+                    "pages": [
+                      "ko/tools/cloud-storage/overview",
+                      "ko/tools/cloud-storage/s3readertool",
+                      "ko/tools/cloud-storage/s3writertool",
+                      "ko/tools/cloud-storage/bedrockinvokeagenttool",
+                      "ko/tools/cloud-storage/bedrockkbretriever"
+                    ]
+                  },
+                  {
+                    "group": "통합",
+                    "icon": "plug",
+                    "pages": [
+                      "ko/tools/tool-integrations/overview",
+                      "ko/tools/tool-integrations/bedrockinvokeagenttool",
+                      "ko/tools/tool-integrations/crewaiautomationtool"
+                    ]
+                  },
+                  {
+                    "group": "자동화",
+                    "icon": "bolt",
+                    "pages": [
+                      "ko/tools/automation/overview",
+                      "ko/tools/automation/apifyactorstool",
+                      "ko/tools/automation/composiotool",
+                      "ko/tools/automation/multiontool",
+                      "ko/tools/automation/zapieractionstool"
+                    ]
+                  }
+                ]
+              },
+              {
+                "group": "Observability",
+                "pages": [
+                  "ko/observability/overview",
+                  "ko/observability/arize-phoenix",
+                  "ko/observability/langdb",
+                  "ko/observability/langfuse",
+                  "ko/observability/langtrace",
+                  "ko/observability/maxim",
+                  "ko/observability/mlflow",
+                  "ko/observability/neatlogs",
+                  "ko/observability/openlit",
+                  "ko/observability/opik",
+                  "ko/observability/patronus-evaluation",
+                  "ko/observability/portkey",
+                  "ko/observability/weave"
+                ]
+              },
+              {
+                "group": "학습",
+                "pages": [
+                  "ko/learn/overview",
+                  "ko/learn/llm-selection-guide",
+                  "ko/learn/conditional-tasks",
+                  "ko/learn/coding-agents",
+                  "ko/learn/create-custom-tools",
+                  "ko/learn/custom-llm",
+                  "ko/learn/custom-manager-agent",
+                  "ko/learn/customizing-agents",
+                  "ko/learn/dalle-image-generation",
+                  "ko/learn/force-tool-output-as-result",
+                  "ko/learn/hierarchical-process",
+                  "ko/learn/human-input-on-execution",
+                  "ko/learn/kickoff-async",
+                  "ko/learn/kickoff-for-each",
+                  "ko/learn/llm-connections",
+                  "ko/learn/multimodal-agents",
+                  "ko/learn/replay-tasks-from-latest-crew-kickoff",
+                  "ko/learn/sequential-process",
+                  "ko/learn/using-annotations"
+                ]
+              },
+              {
+                "group": "Telemetry",
+                "pages": ["ko/telemetry"]
+              }
+            ]
+          },
+          {
+            "tab": "엔터프라이즈",
+            "icon": "briefcase",
+            "groups": [
+              {
+                "group": "시작 안내",
+                "pages": ["ko/enterprise/introduction"]
+              },
+              {
+                "group": "특징",
+                "pages": [
+                  "ko/enterprise/features/rbac",
+                  "ko/enterprise/features/tool-repository",
+                  "ko/enterprise/features/webhook-streaming",
+                  "ko/enterprise/features/traces",
+                  "ko/enterprise/features/hallucination-guardrail",
+                  "ko/enterprise/features/integrations",
+                  "ko/enterprise/features/agent-repositories"
+                ]
+              },
+              {
+                "group": "통합 문서",
+                "pages": [
+                  "ko/enterprise/integrations/asana",
+                  "ko/enterprise/integrations/box",
+                  "ko/enterprise/integrations/clickup",
+                  "ko/enterprise/integrations/github",
+                  "ko/enterprise/integrations/gmail",
+                  "ko/enterprise/integrations/google_calendar",
+                  "ko/enterprise/integrations/google_sheets",
+                  "ko/enterprise/integrations/hubspot",
+                  "ko/enterprise/integrations/jira",
+                  "ko/enterprise/integrations/linear",
+                  "ko/enterprise/integrations/notion",
+                  "ko/enterprise/integrations/salesforce",
+                  "ko/enterprise/integrations/shopify",
+                  "ko/enterprise/integrations/slack",
+                  "ko/enterprise/integrations/stripe",
+                  "ko/enterprise/integrations/zendesk"
+                ]
+              },
+              {
+                "group": "How-To Guides",
+                "pages": [
+                  "ko/enterprise/guides/build-crew",
+                  "ko/enterprise/guides/deploy-crew",
+                  "ko/enterprise/guides/kickoff-crew",
+                  "ko/enterprise/guides/update-crew",
+                  "ko/enterprise/guides/enable-crew-studio",
+                  "ko/enterprise/guides/azure-openai-setup",
+                  "ko/enterprise/guides/automation-triggers",
+                  "ko/enterprise/guides/hubspot-trigger",
+                  "ko/enterprise/guides/react-component-export",
+                  "ko/enterprise/guides/salesforce-trigger",
+                  "ko/enterprise/guides/slack-trigger",
+                  "ko/enterprise/guides/team-management",
+                  "ko/enterprise/guides/webhook-automation",
+                  "ko/enterprise/guides/human-in-the-loop",
+                  "ko/enterprise/guides/zapier-trigger"
+                ]
+              },
+              {
+                "group": "학습 자원",
+                "pages": ["ko/enterprise/resources/frequently-asked-questions"]
+              }
+            ]
+          },
+          {
+            "tab": "API 레퍼런스",
+            "icon": "magnifying-glass",
+            "groups": [
+              {
+                "group": "시작 안내",
+                "pages": [
+                  "ko/api-reference/introduction",
+                  "ko/api-reference/inputs",
+                  "ko/api-reference/kickoff",
+                  "ko/api-reference/status"
+                ]
+              }
+            ]
+          },
+          {
+            "tab": "예시",
+            "icon": "code",
+            "groups": [
+              {
+                "group": "예시",
+                "pages": ["ko/examples/example", "ko/examples/cookbooks"]
+              }
+            ]
+          },
+          {
+            "tab": "변경 로그",
+            "icon": "clock",
+            "groups": [
+              {
+                "group": "릴리스 노트",
+                "pages": ["ko/changelog"]
               }
             ]
           }
@@ -691,15 +1160,23 @@
     "light": "/images/crew_only_logo.png",
     "dark": "/images/crew_only_logo.png"
   },
+  "fonts": {
+    "family": "Inter"
+  },
   "appearance": {
-    "default": "dark",
-    "strict": false
+    "default": "system",
+    "strict": false,
+    "layout": "sidenav"
+  },
+  "background": {
+    "decoration": "grid"
   },
   "navbar": {
     "links": [
       {
         "label": "Start Cloud Trial",
-        "href": "https://app.crewai.com"
+        "href": "https://app.crewai.com",
+        "icon": "arrow-up-right-from-square"
       }
     ],
     "primary": {
@@ -718,9 +1195,26 @@
     }
   },
   "seo": {
-    "indexing": "all"
+    "indexing": "all",
+    "metatags": {
+      "og:type": "website",
+      "og:site_name": "CrewAI Documentation",
+      "og:image": "https://docs.crewai.com/images/crew_only_logo.png",
+      "twitter:card": "summary_large_image",
+      "twitter:site": "@crewAIInc",
+      "keywords": "AI agents, multi-agent systems, CrewAI, artificial intelligence, automation, Python framework, agent collaboration, AI workflows"
+    }
+  },
+  "feedback": {
+    "enabled": true,
+    "thumbsRating": true,
+    "suggestEdit": true
   },
   "redirects": [
+    {
+      "source": "/api-reference",
+      "destination": "/en/api-reference/introduction"
+    },
     {
       "source": "/introduction",
       "destination": "/en/introduction"
@@ -735,7 +1229,7 @@
     },
     {
       "source": "/changelog",
-      "destination": "https://github.com/crewAIInc/crewAI/releases"
+      "destination": "/en/changelog"
     },
     {
       "source": "/telemetry",
@@ -772,6 +1266,18 @@
     {
       "source": "/api-reference/:path*",
       "destination": "/en/api-reference/:path*"
+    },
+    {
+      "source": "/en/api-reference",
+      "destination": "/en/api-reference/introduction"
+    },
+    {
+      "source": "/pt-BR/api-reference",
+      "destination": "/pt-BR/api-reference/introduction"
+    },
+    {
+      "source": "/ko/api-reference",
+      "destination": "/ko/api-reference/introduction"
     },
     {
       "source": "/examples/:path*",

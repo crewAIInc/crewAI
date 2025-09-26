@@ -1,4 +1,7 @@
+from __future__ import annotations
+
 from collections import defaultdict
+from typing import TYPE_CHECKING
 
 from pydantic import BaseModel, Field, InstanceOf
 from rich.box import HEAVY_EDGE
@@ -6,11 +9,14 @@ from rich.console import Console
 from rich.table import Table
 
 from crewai.agent import Agent
-from crewai.llm import BaseLLM
+from crewai.events.event_bus import crewai_event_bus
+from crewai.events.types.crew_events import CrewTestResultEvent
+from crewai.llms.base_llm import BaseLLM
 from crewai.task import Task
 from crewai.tasks.task_output import TaskOutput
-from crewai.utilities.events import crewai_event_bus
-from crewai.utilities.events.crew_events import CrewTestResultEvent
+
+if TYPE_CHECKING:
+    from crewai.crew import Crew
 
 
 class TaskEvaluationPydanticOutput(BaseModel):
@@ -20,23 +26,21 @@ class TaskEvaluationPydanticOutput(BaseModel):
 
 
 class CrewEvaluator:
-    """
-    A class to evaluate the performance of the agents in the crew based on the tasks they have performed.
+    """A class to evaluate the performance of the agents in the crew based on the tasks they have performed.
 
     Attributes:
-        crew (Crew): The crew of agents to evaluate.
-        eval_llm (BaseLLM): Language model instance to use for evaluations
-        tasks_scores (defaultdict): A dictionary to store the scores of the agents for each task.
-        iteration (int): The current iteration of the evaluation.
+        crew: The crew of agents to evaluate.
+        tasks_scores: A dictionary to store the scores of the agents for each task.
+        run_execution_times: A dictionary to store execution times for each run.
+        iteration: The current iteration of the evaluation.
     """
 
-    tasks_scores: defaultdict = defaultdict(list)
-    run_execution_times: defaultdict = defaultdict(list)
-    iteration: int = 0
-
-    def __init__(self, crew, eval_llm: InstanceOf[BaseLLM]):
+    def __init__(self, crew: Crew, eval_llm: InstanceOf[BaseLLM]) -> None:
         self.crew = crew
         self.llm = eval_llm
+        self.tasks_scores: defaultdict[int, list[float]] = defaultdict(list)
+        self.run_execution_times: defaultdict[int, list[float]] = defaultdict(list)
+        self.iteration: int = 0
         self._setup_for_evaluating()
 
     def _setup_for_evaluating(self) -> None:
@@ -44,7 +48,7 @@ class CrewEvaluator:
         for task in self.crew.tasks:
             task.callback = self.evaluate
 
-    def _evaluator_agent(self):
+    def _evaluator_agent(self) -> Agent:
         return Agent(
             role="Task Execution Evaluator",
             goal=(
@@ -55,8 +59,9 @@ class CrewEvaluator:
             llm=self.llm,
         )
 
+    @staticmethod
     def _evaluation_task(
-        self, evaluator_agent: Agent, task_to_evaluate: Task, task_output: str
+        evaluator_agent: Agent, task_to_evaluate: Task, task_output: str
     ) -> Task:
         return Task(
             description=(
@@ -73,6 +78,11 @@ class CrewEvaluator:
         )
 
     def set_iteration(self, iteration: int) -> None:
+        """Sets the current iteration of the evaluation.
+
+        Args:
+            iteration: The current iteration number.
+        """
         self.iteration = iteration
 
     def print_crew_evaluation_result(self) -> None:
@@ -97,7 +107,8 @@ class CrewEvaluator:
         └────────────────────┴───────┴───────┴───────┴────────────┴──────────────────────────────┘
         """
         task_averages = [
-            sum(scores) / len(scores) for scores in zip(*self.tasks_scores.values())
+            sum(scores) / len(scores)
+            for scores in zip(*self.tasks_scores.values(), strict=False)
         ]
         crew_average = sum(task_averages) / len(task_averages)
 
@@ -158,8 +169,12 @@ class CrewEvaluator:
         console.print("\n")
         console.print(table)
 
-    def evaluate(self, task_output: TaskOutput):
-        """Evaluates the performance of the agents in the crew based on the tasks they have performed."""
+    def evaluate(self, task_output: TaskOutput) -> None:
+        """Evaluates the performance of the agents in the crew based on the tasks they have performed.
+
+        Args:
+            task_output: The output of the task to evaluate.
+        """
         current_task = None
         for task in self.crew.tasks:
             if task.description == task_output.description:
@@ -179,19 +194,24 @@ class CrewEvaluator:
         evaluation_result = evaluation_task.execute_sync()
 
         if isinstance(evaluation_result.pydantic, TaskEvaluationPydanticOutput):
+            quality_score = evaluation_result.pydantic.quality
+            if quality_score is None:
+                raise ValueError("Evaluation quality score cannot be None")
+
             crewai_event_bus.emit(
                 self.crew,
                 CrewTestResultEvent(
-                    quality=evaluation_result.pydantic.quality,
+                    quality=quality_score,
                     execution_duration=current_task.execution_duration,
                     model=self.llm.model,
                     crew_name=self.crew.name,
                     crew=self.crew,
                 ),
             )
-            self.tasks_scores[self.iteration].append(evaluation_result.pydantic.quality)
-            self.run_execution_times[self.iteration].append(
-                current_task.execution_duration
-            )
+            self.tasks_scores[self.iteration].append(quality_score)
+            if current_task.execution_duration is not None:
+                self.run_execution_times[self.iteration].append(
+                    current_task.execution_duration
+                )
         else:
             raise ValueError("Evaluation result is not in the expected format")

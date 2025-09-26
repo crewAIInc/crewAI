@@ -1,18 +1,23 @@
+import os
+import subprocess
 from importlib.metadata import version as get_version
-from typing import Optional
 
 import click
-from crewai.cli.config import Settings
+
 from crewai.cli.add_crew_to_flow import add_crew_to_flow
+from crewai.cli.config import Settings
 from crewai.cli.create_crew import create_crew
 from crewai.cli.create_flow import create_flow
 from crewai.cli.crew_chat import run_chat
+from crewai.cli.settings.main import SettingsCommand
+from crewai.cli.utils import build_env_with_tool_repository_credentials, read_toml
 from crewai.memory.storage.kickoff_task_outputs_storage import (
     KickoffTaskOutputsSQLiteStorage,
 )
 
 from .authentication.main import AuthenticationCommand
 from .deploy.main import DeployCommand
+from .enterprise.main import EnterpriseConfigureCommand
 from .evaluate_crew import evaluate_crew
 from .install_crew import install_crew
 from .kickoff_flow import kickoff_flow
@@ -30,6 +35,46 @@ from .update_crew import update_crew
 @click.version_option(get_version("crewai"))
 def crewai():
     """Top-level command group for crewai."""
+
+
+@crewai.command(
+    name="uv",
+    context_settings=dict(
+        ignore_unknown_options=True,
+    ),
+)
+@click.argument("uv_args", nargs=-1, type=click.UNPROCESSED)
+def uv(uv_args):
+    """A wrapper around uv commands that adds custom tool authentication through env vars."""
+    env = os.environ.copy()
+    try:
+        pyproject_data = read_toml()
+        sources = pyproject_data.get("tool", {}).get("uv", {}).get("sources", {})
+
+        for source_config in sources.values():
+            if isinstance(source_config, dict):
+                index = source_config.get("index")
+                if index:
+                    index_env = build_env_with_tool_repository_credentials(index)
+                    env.update(index_env)
+    except (FileNotFoundError, KeyError) as e:
+        raise SystemExit(
+            "Error. A valid pyproject.toml file is required. Check that a valid pyproject.toml file exists in the current directory."
+        ) from e
+    except Exception as e:
+        raise SystemExit(f"Error: {e}") from e
+
+    try:
+        subprocess.run(  # noqa: S603
+            ["uv", *uv_args],  # noqa: S607
+            capture_output=False,
+            env=env,
+            text=True,
+            check=True,
+        )
+    except subprocess.CalledProcessError as e:
+        click.secho(f"uv command failed with exit code {e.returncode}", fg="red")
+        raise SystemExit(e.returncode) from e
 
 
 @crewai.command()
@@ -227,7 +272,7 @@ def update():
 @crewai.command()
 def login():
     """Sign Up/Login to CrewAI Enterprise."""
-    Settings().clear()
+    Settings().clear_user_settings()
     AuthenticationCommand().login()
 
 
@@ -235,13 +280,6 @@ def login():
 @crewai.group()
 def deploy():
     """Deploy the Crew CLI group."""
-    pass
-
-
-@crewai.group()
-def tool():
-    """Tool Repository related commands."""
-    pass
 
 
 @deploy.command(name="create")
@@ -261,7 +299,7 @@ def deploy_list():
 
 @deploy.command(name="push")
 @click.option("-u", "--uuid", type=str, help="Crew UUID parameter")
-def deploy_push(uuid: Optional[str]):
+def deploy_push(uuid: str | None):
     """Deploy the Crew."""
     deploy_cmd = DeployCommand()
     deploy_cmd.deploy(uuid=uuid)
@@ -269,7 +307,7 @@ def deploy_push(uuid: Optional[str]):
 
 @deploy.command(name="status")
 @click.option("-u", "--uuid", type=str, help="Crew UUID parameter")
-def deply_status(uuid: Optional[str]):
+def deply_status(uuid: str | None):
     """Get the status of a deployment."""
     deploy_cmd = DeployCommand()
     deploy_cmd.get_crew_status(uuid=uuid)
@@ -277,7 +315,7 @@ def deply_status(uuid: Optional[str]):
 
 @deploy.command(name="logs")
 @click.option("-u", "--uuid", type=str, help="Crew UUID parameter")
-def deploy_logs(uuid: Optional[str]):
+def deploy_logs(uuid: str | None):
     """Get the logs of a deployment."""
     deploy_cmd = DeployCommand()
     deploy_cmd.get_crew_logs(uuid=uuid)
@@ -285,10 +323,15 @@ def deploy_logs(uuid: Optional[str]):
 
 @deploy.command(name="remove")
 @click.option("-u", "--uuid", type=str, help="Crew UUID parameter")
-def deploy_remove(uuid: Optional[str]):
+def deploy_remove(uuid: str | None):
     """Remove a deployment."""
     deploy_cmd = DeployCommand()
     deploy_cmd.remove_crew(uuid=uuid)
+
+
+@crewai.group()
+def tool():
+    """Tool Repository related commands."""
 
 
 @tool.command(name="create")
@@ -325,7 +368,6 @@ def tool_publish(is_public: bool, force: bool):
 @crewai.group()
 def flow():
     """Flow related commands."""
-    pass
 
 
 @flow.command(name="kickoff")
@@ -357,7 +399,7 @@ def chat():
     and using the Chat LLM to generate responses.
     """
     click.secho(
-        "\nStarting a conversation with the Crew\n" "Type 'exit' or Ctrl+C to quit.\n",
+        "\nStarting a conversation with the Crew\nType 'exit' or Ctrl+C to quit.\n",
     )
 
     run_chat()
@@ -366,11 +408,10 @@ def chat():
 @crewai.group(invoke_without_command=True)
 def org():
     """Organization management commands."""
-    pass
 
 
-@org.command()
-def list():
+@org.command("list")
+def org_list():
     """List available organizations."""
     org_command = OrganizationCommand()
     org_command.list()
@@ -389,6 +430,47 @@ def current():
     """Show current organization when 'crewai org' is called without subcommands."""
     org_command = OrganizationCommand()
     org_command.current()
+
+
+@crewai.group()
+def enterprise():
+    """Enterprise Configuration commands."""
+
+
+@enterprise.command("configure")
+@click.argument("enterprise_url")
+def enterprise_configure(enterprise_url: str):
+    """Configure CrewAI Enterprise OAuth2 settings from the provided Enterprise URL."""
+    enterprise_command = EnterpriseConfigureCommand()
+    enterprise_command.configure(enterprise_url)
+
+
+@crewai.group()
+def config():
+    """CLI Configuration commands."""
+
+
+@config.command("list")
+def config_list():
+    """List all CLI configuration parameters."""
+    config_command = SettingsCommand()
+    config_command.list()
+
+
+@config.command("set")
+@click.argument("key")
+@click.argument("value")
+def config_set(key: str, value: str):
+    """Set a CLI configuration parameter."""
+    config_command = SettingsCommand()
+    config_command.set(key, value)
+
+
+@config.command("reset")
+def config_reset():
+    """Reset all CLI configuration parameters to default values."""
+    config_command = SettingsCommand()
+    config_command.reset_all_settings()
 
 
 if __name__ == "__main__":
