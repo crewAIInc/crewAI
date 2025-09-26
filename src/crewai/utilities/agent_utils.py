@@ -286,7 +286,7 @@ def process_llm_response(
 def handle_agent_action_core(
     formatted_answer: AgentAction,
     tool_result: ToolResult,
-    messages: list[dict[str, str]] | None = None,
+    messages: list[LLMMessage] | None = None,
     step_callback: Callable | None = None,
     show_logs: Callable | None = None,
 ) -> AgentAction | AgentFinish:
@@ -383,8 +383,40 @@ def handle_output_parser_exception(
     return formatted_answer
 
 
-def is_context_length_exceeded(exception: Exception) -> bool:
-    """Check if the exception is due to context length exceeding.
+def is_context_length_exceeded(
+    exception: Exception,
+    messages: list[LLMMessage],
+    llm: LLM | BaseLLM,
+) -> bool:
+    """
+    Check if the exception is due to context length exceeding or
+    response is empty because context length exceeded.
+
+    Args:
+        exception: The exception to check
+        messages: Messages sent to the LLM
+        llm: The LLM instance
+
+    Returns:
+        True if the exception is due to context length exceeding or
+        the response is empty because of context length.
+    """
+    exceeded_error = LLMContextLengthExceededError(str(exception))._is_context_limit_error(
+        str(exception)
+    )
+    null_response = is_null_response_because_context_length_exceeded(
+        exception=exception, messages=messages, llm=llm
+    )
+    return exceeded_error or null_response
+
+
+def is_null_response_because_context_length_exceeded(
+    exception: Exception,
+    messages: list[LLMMessage],
+    llm: LLM | BaseLLM,
+) -> bool:
+    print("Insdie the function")
+    """Check if the response is null/empty because context length excedded.
 
     Args:
         exception: The exception to check
@@ -392,9 +424,14 @@ def is_context_length_exceeded(exception: Exception) -> bool:
     Returns:
         bool: True if the exception is due to context length exceeding
     """
-    return LLMContextLengthExceededError(str(exception))._is_context_limit_error(
-        str(exception)
-    )
+    messages_string = " ".join([message["content"] for message in messages])
+    cut_size = llm.get_context_window_size()
+
+    messages_groups = [
+        {"content": messages_string[i : i + cut_size]}
+        for i in range(0, len(messages_string), cut_size)
+    ]
+    return ((len(messages_groups) > 0) and isinstance(exception, ValueError) and "None or empty" in str(exception))
 
 
 def handle_context_length(
