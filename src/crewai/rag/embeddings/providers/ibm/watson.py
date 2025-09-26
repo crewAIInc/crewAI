@@ -21,7 +21,7 @@ class WatsonProvider(BaseEmbeddingsProvider[WatsonEmbeddingFunction]):
         default=WatsonEmbeddingFunction, description="Watson embedding function class"
     )
     model_id: str = Field(
-        description="Watson model ID", validation_alias="WATSON_MODEL_ID"
+        description="Watson model ID", validation_alias="EMBEDDINGS_WATSON_MODEL_ID"
     )
     params: dict[str, str | dict[str, str]] | None = Field(
         default=None, description="Additional parameters"
@@ -30,87 +30,107 @@ class WatsonProvider(BaseEmbeddingsProvider[WatsonEmbeddingFunction]):
     project_id: str | None = Field(
         default=None,
         description="Watson project ID",
-        validation_alias="WATSON_PROJECT_ID",
+        validation_alias="EMBEDDINGS_WATSON_PROJECT_ID",
     )
     space_id: str | None = Field(
-        default=None, description="Watson space ID", validation_alias="WATSON_SPACE_ID"
+        default=None,
+        description="Watson space ID",
+        validation_alias="EMBEDDINGS_WATSON_SPACE_ID",
     )
     api_client: Any | None = Field(default=None, description="Watson API client")
     verify: bool | str | None = Field(
-        default=None, description="SSL verification", validation_alias="WATSON_VERIFY"
+        default=None,
+        description="SSL verification",
+        validation_alias="EMBEDDINGS_WATSON_VERIFY",
     )
     persistent_connection: bool = Field(
         default=True,
         description="Use persistent connection",
-        validation_alias="WATSON_PERSISTENT_CONNECTION",
+        validation_alias="EMBEDDINGS_WATSON_PERSISTENT_CONNECTION",
     )
     batch_size: int = Field(
         default=100,
         description="Batch size for processing",
-        validation_alias="WATSON_BATCH_SIZE",
+        validation_alias="EMBEDDINGS_WATSON_BATCH_SIZE",
     )
     concurrency_limit: int = Field(
         default=10,
         description="Concurrency limit",
-        validation_alias="WATSON_CONCURRENCY_LIMIT",
+        validation_alias="EMBEDDINGS_WATSON_CONCURRENCY_LIMIT",
     )
     max_retries: int | None = Field(
         default=None,
         description="Maximum retries",
-        validation_alias="WATSON_MAX_RETRIES",
+        validation_alias="EMBEDDINGS_WATSON_MAX_RETRIES",
     )
     delay_time: float | None = Field(
         default=None,
         description="Delay time between retries",
-        validation_alias="WATSON_DELAY_TIME",
+        validation_alias="EMBEDDINGS_WATSON_DELAY_TIME",
     )
     retry_status_codes: list[int] | None = Field(
         default=None, description="HTTP status codes to retry on"
     )
-    url: str = Field(description="Watson API URL", validation_alias="WATSON_URL")
+    url: str = Field(
+        description="Watson API URL", validation_alias="EMBEDDINGS_WATSON_URL"
+    )
     api_key: str = Field(
-        description="Watson API key", validation_alias="WATSON_API_KEY"
+        description="Watson API key", validation_alias="EMBEDDINGS_WATSON_API_KEY"
     )
     name: str | None = Field(
-        default=None, description="Service name", validation_alias="WATSON_NAME"
+        default=None,
+        description="Service name",
+        validation_alias="EMBEDDINGS_WATSON_NAME",
     )
     iam_serviceid_crn: str | None = Field(
         default=None,
         description="IAM service ID CRN",
-        validation_alias="WATSON_IAM_SERVICEID_CRN",
+        validation_alias="EMBEDDINGS_WATSON_IAM_SERVICEID_CRN",
     )
     trusted_profile_id: str | None = Field(
         default=None,
         description="Trusted profile ID",
-        validation_alias="WATSON_TRUSTED_PROFILE_ID",
+        validation_alias="EMBEDDINGS_WATSON_TRUSTED_PROFILE_ID",
     )
     token: str | None = Field(
-        default=None, description="Bearer token", validation_alias="WATSON_TOKEN"
+        default=None,
+        description="Bearer token",
+        validation_alias="EMBEDDINGS_WATSON_TOKEN",
     )
     projects_token: str | None = Field(
         default=None,
         description="Projects token",
-        validation_alias="WATSON_PROJECTS_TOKEN",
+        validation_alias="EMBEDDINGS_WATSON_PROJECTS_TOKEN",
     )
     username: str | None = Field(
-        default=None, description="Username", validation_alias="WATSON_USERNAME"
+        default=None,
+        description="Username",
+        validation_alias="EMBEDDINGS_WATSON_USERNAME",
     )
     password: str | None = Field(
-        default=None, description="Password", validation_alias="WATSON_PASSWORD"
+        default=None,
+        description="Password",
+        validation_alias="EMBEDDINGS_WATSON_PASSWORD",
     )
     instance_id: str | None = Field(
         default=None,
         description="Service instance ID",
-        validation_alias="WATSON_INSTANCE_ID",
+        validation_alias="EMBEDDINGS_WATSON_INSTANCE_ID",
     )
     version: str | None = Field(
-        default=None, description="API version", validation_alias="WATSON_VERSION"
+        default=None,
+        description="API version",
+        validation_alias="EMBEDDINGS_WATSON_VERSION",
     )
     bedrock_url: str | None = Field(
-        default=None, description="Bedrock URL", validation_alias="WATSON_BEDROCK_URL"
+        default=None,
+        description="Bedrock URL",
+        validation_alias="EMBEDDINGS_WATSON_BEDROCK_URL",
     )
     platform_url: str | None = Field(
-        default=None, description="Platform URL", validation_alias="WATSON_PLATFORM_URL"
+        default=None,
+        description="Platform URL",
+        validation_alias="EMBEDDINGS_WATSON_PLATFORM_URL",
     )
     proxies: dict | None = Field(default=None, description="Proxy configuration")
 
