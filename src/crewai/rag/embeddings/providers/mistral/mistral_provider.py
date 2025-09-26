@@ -1,7 +1,5 @@
 """Mistral embeddings provider."""
 
-from typing import Any
-
 from pydantic import Field
 
 from crewai.rag.core.base_embeddings_provider import BaseEmbeddingsProvider
@@ -48,7 +46,7 @@ class MistralProvider(BaseEmbeddingsProvider[MistralEmbeddingFunction]):
         """Create the Mistral embedding function."""
         # Use model parameter if provided, otherwise use model_name
         effective_model_name = self.model or self.model_name
-        
+
         return self.embedding_callable(
             api_key=self.api_key,
             model_name=effective_model_name,

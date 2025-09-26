@@ -1,6 +1,6 @@
 """Mistral embedding types."""
 
-from typing import Any, TypedDict
+from typing import TypedDict
 
 from pydantic import BaseModel, Field
 
@@ -51,8 +51,10 @@ class MistralConfig(BaseModel):
 
     def to_provider(self):
         """Convert config to provider instance."""
-        from crewai.rag.embeddings.providers.mistral.mistral_provider import MistralProvider
-        
+        from crewai.rag.embeddings.providers.mistral.mistral_provider import (
+            MistralProvider,
+        )
+
         return MistralProvider(
             api_key=self.api_key,
             model_name=self.model_name,

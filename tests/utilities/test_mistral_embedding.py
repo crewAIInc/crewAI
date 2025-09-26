@@ -115,7 +115,9 @@ class TestMistralEmbeddingFunction:
         embedding_func = MistralEmbeddingFunction(api_key="test_api_key")
         
         # Empty input should raise a ValueError due to ChromaDB validation
-        with pytest.raises(ValueError, match="Expected Embeddings to be non-empty list or numpy array"):
+        with pytest.raises(
+            ValueError, match="Expected Embeddings to be non-empty list or numpy array"
+        ):
             embedding_func([])
         
         mock_post.assert_not_called()
@@ -441,6 +443,3 @@ def test_mistral_embedding_with_fixtures(mock_mistral_api_response, test_embedde
         
         assert len(embeddings) == 1
         assert len(embeddings[0]) == 5
-
-
-
