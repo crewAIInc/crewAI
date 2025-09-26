@@ -2,10 +2,9 @@
 
 from typing import cast
 
+from chromadb.api.types import Documents, EmbeddingFunction, Embeddings
 from typing_extensions import Unpack
 
-from crewai.rag.core.base_embeddings_callable import EmbeddingFunction
-from crewai.rag.core.types import Documents, Embeddings
 from crewai.rag.embeddings.providers.voyageai.types import VoyageAIProviderConfig
 
 
@@ -32,6 +31,11 @@ class VoyageAIEmbeddingFunction(EmbeddingFunction[Documents]):
             max_retries=kwargs.get("max_retries", 0),
             timeout=kwargs.get("timeout"),
         )
+
+    @staticmethod
+    def name() -> str:
+        """Return the name of the embedding function for ChromaDB compatibility."""
+        return "voyageai"
 
     def __call__(self, input: Documents) -> Embeddings:
         """Generate embeddings for input documents.
