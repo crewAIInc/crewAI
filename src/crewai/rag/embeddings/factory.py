@@ -116,9 +116,23 @@ def build_embedder_from_provider(provider: BaseEmbeddingsProvider[T]) -> T:
     Returns:
         An instance of the specified embedding function type.
     """
-    return provider.embedding_callable(
-        **provider.model_dump(exclude={"embedding_callable"})
-    )
+    # Use the provider's _create_embedding_function method if available
+    if hasattr(provider, '_create_embedding_function'):
+        return provider._create_embedding_function()
+    
+    # Fallback to direct instantiation
+    config = provider.model_dump(exclude={"embedding_callable"})
+    
+    # Handle parameter mapping for Mistral provider
+    if hasattr(provider, 'model') and hasattr(provider, 'model_name'):
+        # If both model and model_name are present, use model as model_name
+        if config.get('model') and not config.get('model_name'):
+            config['model_name'] = config.pop('model')
+        elif config.get('model') and config.get('model_name'):
+            # If both are present, prefer model over model_name
+            config['model_name'] = config.pop('model')
+    
+    return provider.embedding_callable(**config)
 
 
 @overload

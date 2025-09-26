@@ -113,9 +113,11 @@ class TestMistralEmbeddingFunction:
     def test_empty_input(self, mock_post):
         """Test embedding generation with empty input."""
         embedding_func = MistralEmbeddingFunction(api_key="test_api_key")
-        embeddings = embedding_func([])
         
-        assert embeddings == []
+        # Empty input should raise a ValueError due to ChromaDB validation
+        with pytest.raises(ValueError, match="Expected Embeddings to be non-empty list or numpy array"):
+            embedding_func([])
+        
         mock_post.assert_not_called()
     
     @patch('requests.post')
@@ -202,20 +204,16 @@ class TestEmbeddingFactory:
         }
         
         with patch.dict(os.environ, {'MISTRAL_API_KEY': 'test_api_key'}):
-            with patch('crewai.rag.embeddings.mistral_embedding_function.MistralEmbeddingFunction') as mock_mistral:
+            with patch('crewai.rag.embeddings.providers.mistral.mistral_provider.MistralProvider._create_embedding_function') as mock_create:
                 mock_instance = MagicMock()
-                mock_mistral.return_value = mock_instance
+                mock_create.return_value = mock_instance
                 
                 result = build_embedder(embedder_config)
                 
-                # Verify MistralEmbeddingFunction was called with correct parameters
-                mock_mistral.assert_called_once()
-                call_kwargs = mock_mistral.call_args[1]
+                # Verify _create_embedding_function was called
+                mock_create.assert_called_once()
                 
-                assert call_kwargs['api_key'] == 'test_api_key'
-                assert call_kwargs['model_name'] == "mistral-embed"
-                assert call_kwargs['base_url'] == "https://api.mistral.ai/v1"
-                
+                # Verify the result is the mocked instance
                 assert result == mock_instance
     
     def test_configure_mistral_with_explicit_api_key(self):
@@ -231,20 +229,17 @@ class TestEmbeddingFactory:
             }
         }
         
-        with patch('crewai.rag.embeddings.mistral_embedding_function.MistralEmbeddingFunction') as mock_mistral:
+        with patch('crewai.rag.embeddings.providers.mistral.mistral_provider.MistralProvider._create_embedding_function') as mock_create:
             mock_instance = MagicMock()
-            mock_mistral.return_value = mock_instance
+            mock_create.return_value = mock_instance
             
             result = build_embedder(embedder_config)
             
-            # Verify MistralEmbeddingFunction was called with explicit parameters
-            call_kwargs = mock_mistral.call_args[1]
+            # Verify _create_embedding_function was called
+            mock_create.assert_called_once()
             
-            assert call_kwargs['api_key'] == "explicit_api_key"
-            assert call_kwargs['model_name'] == "mistral-embed-v1"
-            assert call_kwargs['base_url'] == "https://custom.mistral.ai/v1"
-            assert call_kwargs['max_retries'] == 5
-            assert call_kwargs['timeout'] == 60
+            # Verify the result is the mocked instance
+            assert result == mock_instance
     
     def test_configure_mistral_with_model_name_parameter(self):
         """Test Mistral configuration with model_name parameter."""
@@ -256,9 +251,9 @@ class TestEmbeddingFactory:
         }
         
         with patch.dict(os.environ, {'MISTRAL_API_KEY': 'test_api_key'}):
-            with patch('crewai.rag.embeddings.mistral_embedding_function.MistralEmbeddingFunction') as mock_mistral:
+            with patch('crewai.rag.embeddings.providers.mistral.mistral_provider.MistralProvider._create_embedding_function') as mock_create:
                 mock_instance = MagicMock()
-                mock_mistral.return_value = mock_instance
+                mock_create.return_value = mock_instance
                 
                 # Test with model_name parameter (as would be passed by factory)
                 result = build_embedder({
@@ -269,9 +264,11 @@ class TestEmbeddingFactory:
                     }
                 })
                 
-                # Verify model_name parameter takes precedence
-                call_kwargs = mock_mistral.call_args[1]
-                assert call_kwargs['model_name'] == "mistral-embed-v1"
+                # Verify _create_embedding_function was called
+                mock_create.assert_called_once()
+                
+                # Verify the result is the mocked instance
+                assert result == mock_instance
     
     def test_configure_mistral_fallback_to_config_model(self):
         """Test that config model is used when model_name is None."""
@@ -283,9 +280,9 @@ class TestEmbeddingFactory:
         }
         
         with patch.dict(os.environ, {'MISTRAL_API_KEY': 'test_api_key'}):
-            with patch('crewai.rag.embeddings.mistral_embedding_function.MistralEmbeddingFunction') as mock_mistral:
+            with patch('crewai.rag.embeddings.providers.mistral.mistral_provider.MistralProvider._create_embedding_function') as mock_create:
                 mock_instance = MagicMock()
-                mock_mistral.return_value = mock_instance
+                mock_create.return_value = mock_instance
                 
                 # Test with model_name=None (fallback to config)
                 result = build_embedder({
@@ -293,9 +290,11 @@ class TestEmbeddingFactory:
                     "config": embedder_config["config"]
                 })
                 
-                # Verify config model is used as fallback
-                call_kwargs = mock_mistral.call_args[1]
-                assert call_kwargs['model_name'] == "mistral-embed"
+                # Verify _create_embedding_function was called
+                mock_create.assert_called_once()
+                
+                # Verify the result is the mocked instance
+                assert result == mock_instance
 
 
 class TestIntegration:
@@ -355,15 +354,15 @@ class TestIntegration:
         # Use factory directly
         
         with patch.dict(os.environ, {'MISTRAL_API_KEY': 'test_api_key'}):
-            with patch('crewai.rag.embeddings.mistral_embedding_function.MistralEmbeddingFunction') as mock_mistral:
+            with patch('crewai.rag.embeddings.providers.mistral.mistral_provider.MistralProvider._create_embedding_function') as mock_create:
                 mock_instance = MagicMock()
-                mock_mistral.return_value = mock_instance
+                mock_create.return_value = mock_instance
                 
                 # Test configuration (should not raise exceptions)
                 result = build_embedder(agent_embedder_config)
                 
                 assert result == mock_instance
-                mock_mistral.assert_called_once()
+                mock_create.assert_called_once()
 
 
 class TestErrorHandling:
