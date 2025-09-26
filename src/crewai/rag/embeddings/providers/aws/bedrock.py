@@ -46,7 +46,7 @@ class BedrockProvider(BaseEmbeddingsProvider[AmazonBedrockEmbeddingFunction]):
     model_name: str = Field(
         default="amazon.titan-embed-text-v1",
         description="Model name to use for embeddings",
-        validation_alias="BEDROCK_MODEL_NAME",
+        validation_alias="EMBEDDINGS_BEDROCK_MODEL_NAME",
     )
     session: Any = Field(
         default_factory=create_aws_session, description="AWS session object"

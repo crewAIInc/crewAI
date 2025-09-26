@@ -18,38 +18,38 @@ class VoyageAIProvider(BaseEmbeddingsProvider[VoyageAIEmbeddingFunction]):
     model: str = Field(
         default="voyage-2",
         description="Model to use for embeddings",
-        validation_alias="VOYAGEAI_MODEL",
+        validation_alias="EMBEDDINGS_VOYAGEAI_MODEL",
     )
     api_key: str = Field(
-        description="Voyage AI API key", validation_alias="VOYAGEAI_API_KEY"
+        description="Voyage AI API key", validation_alias="EMBEDDINGS_VOYAGEAI_API_KEY"
     )
     input_type: str | None = Field(
         default=None,
         description="Input type for embeddings",
-        validation_alias="VOYAGEAI_INPUT_TYPE",
+        validation_alias="EMBEDDINGS_VOYAGEAI_INPUT_TYPE",
     )
     truncation: bool = Field(
         default=True,
         description="Whether to truncate inputs",
-        validation_alias="VOYAGEAI_TRUNCATION",
+        validation_alias="EMBEDDINGS_VOYAGEAI_TRUNCATION",
     )
     output_dtype: str | None = Field(
         default=None,
         description="Output data type",
-        validation_alias="VOYAGEAI_OUTPUT_DTYPE",
+        validation_alias="EMBEDDINGS_VOYAGEAI_OUTPUT_DTYPE",
     )
     output_dimension: int | None = Field(
         default=None,
         description="Output dimension",
-        validation_alias="VOYAGEAI_OUTPUT_DIMENSION",
+        validation_alias="EMBEDDINGS_VOYAGEAI_OUTPUT_DIMENSION",
     )
     max_retries: int = Field(
         default=0,
         description="Maximum retries for API calls",
-        validation_alias="VOYAGEAI_MAX_RETRIES",
+        validation_alias="EMBEDDINGS_VOYAGEAI_MAX_RETRIES",
     )
     timeout: float | None = Field(
         default=None,
         description="Timeout for API calls",
-        validation_alias="VOYAGEAI_TIMEOUT",
+        validation_alias="EMBEDDINGS_VOYAGEAI_TIMEOUT",
     )
