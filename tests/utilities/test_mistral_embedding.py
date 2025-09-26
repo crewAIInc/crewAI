@@ -235,7 +235,7 @@ class TestEmbeddingFactory:
             mock_instance = MagicMock()
             mock_mistral.return_value = mock_instance
             
-                result = build_embedder(embedder_config)
+            result = build_embedder(embedder_config)
             
             # Verify MistralEmbeddingFunction was called with explicit parameters
             call_kwargs = mock_mistral.call_args[1]
@@ -436,7 +436,7 @@ def test_mistral_embedding_with_fixtures(mock_mistral_api_response, test_embedde
         mock_post.return_value = mock_response
         
         # Use factory directly
-        embedding_function = configurator.configure_embedder(test_embedder_config)
+        embedding_function = build_embedder(test_embedder_config)
         
         embeddings = embedding_function(["Test document"])
         

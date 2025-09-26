@@ -44,7 +44,7 @@ class TestMistralIntegration:
         }
         
         with patch.dict(os.environ, {'MISTRAL_API_KEY': 'test_api_key'}):
-            embedding_function = self.configurator.configure_embedder(embedder_config)
+            embedding_function = build_embedder(embedder_config)
             
             # Test with sample documents
             documents = [
@@ -90,7 +90,7 @@ class TestMistralIntegration:
             mock_instance = MagicMock()
             mock_mistral.return_value = mock_instance
             
-            result = self.configurator.configure_embedder(embedder_config)
+            result = build_embedder(embedder_config)
             
             # Verify all parameters were passed correctly
             call_kwargs = mock_mistral.call_args[1]
@@ -118,7 +118,7 @@ class TestMistralIntegration:
         }
         
         with patch.dict(os.environ, {'MISTRAL_API_KEY': 'test_api_key'}):
-            embedding_function = self.configurator.configure_embedder(embedder_config)
+            embedding_function = build_embedder(embedder_config)
             
             with pytest.raises(RuntimeError, match="Failed to get embeddings from Mistral API"):
                 embedding_function(["Test document"])
@@ -141,7 +141,7 @@ class TestMistralIntegration:
                 mock_instance = MagicMock()
                 mock_mistral.return_value = mock_instance
                 
-                result = self.configurator.configure_embedder(embedder_config)
+                result = build_embedder(embedder_config)
                 
                 # Verify environment variable was used
                 call_kwargs = mock_mistral.call_args[1]
@@ -158,7 +158,7 @@ class TestMistralIntegration:
         
         with patch.dict(os.environ, {}, clear=True):
             with pytest.raises(ValueError, match="Mistral API key is required"):
-                # Use factory directly.configure_embedder(embedder_config)
+                build_embedder(embedder_config)
 
 
 # Pytest fixtures
@@ -193,8 +193,8 @@ def test_mistral_embedding_with_fixtures(mistral_embedder_config, mock_mistral_r
         mock_response.json.return_value = mock_mistral_response
         mock_post.return_value = mock_response
         
-        configurator = EmbeddingConfigurator()
-        embedding_function = configurator.configure_embedder(mistral_embedder_config)
+        # Use factory directly
+        embedding_function = build_embedder(mistral_embedder_config)
         
         documents = ["Document 1", "Document 2"]
         embeddings = embedding_function(documents)
