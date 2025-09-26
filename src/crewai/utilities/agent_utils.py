@@ -430,7 +430,7 @@ def is_null_response_because_context_length_exceeded(
         {"content": messages_string[i : i + cut_size]}
         for i in range(0, len(messages_string), cut_size)
     ]
-    return len(messages_groups) and isinstance(exception, ValueError) and "None or empty" in str(exception)
+    return ((len(messages_groups) > 0) and isinstance(exception, ValueError) and "None or empty" in str(exception))
 
 
 def handle_context_length(
