@@ -5,6 +5,7 @@ This module provides integration with Mistral AI's embedding API
 for use with CrewAI's RAG (Retrieval-Augmented Generation) functionality.
 """
 
+import json
 import os
 from typing import cast
 
@@ -117,7 +118,7 @@ class MistralEmbeddingFunction(EmbeddingFunction):
                 result = response.json()
                 embeddings = [item["embedding"] for item in result["data"]]
                 return True, cast(Embeddings, embeddings), None
-            except requests.exceptions.RequestException as e:
+            except (requests.exceptions.RequestException, json.JSONDecodeError, KeyError, IndexError, TypeError) as e:
                 return False, None, e
 
         for attempt in range(attempts):

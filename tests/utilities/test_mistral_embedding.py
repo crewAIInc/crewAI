@@ -6,6 +6,7 @@ with the CrewAI embedding configurator, following the same patterns as
 other embedding provider tests.
 """
 
+import json
 import os
 from unittest.mock import MagicMock, patch
 
@@ -176,6 +177,48 @@ class TestMistralEmbeddingFunction:
         mock_response.raise_for_status.side_effect = requests.exceptions.HTTPError(
             "500 Server Error"
         )
+        mock_post.return_value = mock_response
+
+        embedding_func = MistralEmbeddingFunction(api_key="test_api_key", max_retries=2)
+
+        with pytest.raises(
+            RuntimeError,
+            match="Failed to get embeddings from Mistral API after 3 attempts",
+        ):
+            embedding_func(["Test document"])
+
+        # Should have made 3 calls (1 initial + 2 retries)
+        assert mock_post.call_count == 3
+
+    @patch("requests.post")
+    def test_malformed_json_response_retry(self, mock_post):
+        """Test that malformed JSON responses trigger retry logic."""
+        # Mock response with malformed JSON
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.raise_for_status.return_value = None
+        mock_response.json.side_effect = json.JSONDecodeError("Invalid JSON", "doc", 0)
+        mock_post.return_value = mock_response
+
+        embedding_func = MistralEmbeddingFunction(api_key="test_api_key", max_retries=2)
+
+        with pytest.raises(
+            RuntimeError,
+            match="Failed to get embeddings from Mistral API after 3 attempts",
+        ):
+            embedding_func(["Test document"])
+
+        # Should have made 3 calls (1 initial + 2 retries)
+        assert mock_post.call_count == 3
+
+    @patch("requests.post")
+    def test_missing_data_key_retry(self, mock_post):
+        """Test that missing 'data' key in response triggers retry logic."""
+        # Mock response missing 'data' key
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.raise_for_status.return_value = None
+        mock_response.json.return_value = {"error": "Invalid response"}  # Missing 'data' key
         mock_post.return_value = mock_response
 
         embedding_func = MistralEmbeddingFunction(api_key="test_api_key", max_retries=2)
