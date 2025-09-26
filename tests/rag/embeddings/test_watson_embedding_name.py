@@ -1,9 +1,11 @@
 """Tests for Watson embedding function name method."""
 
-import pytest
-from unittest.mock import patch, MagicMock
 
-from crewai.rag.embeddings.providers.ibm.embedding_callable import WatsonEmbeddingFunction
+import pytest
+
+from crewai.rag.embeddings.providers.ibm.embedding_callable import (
+    WatsonEmbeddingFunction,
+)
 
 
 class TestWatsonEmbeddingName:
@@ -12,7 +14,7 @@ class TestWatsonEmbeddingName:
     def test_watson_embedding_function_has_name_method(self):
         """Test that WatsonEmbeddingFunction has a name method."""
         assert hasattr(WatsonEmbeddingFunction, 'name')
-        assert callable(getattr(WatsonEmbeddingFunction, 'name'))
+        assert callable(WatsonEmbeddingFunction.name)
 
     def test_watson_embedding_function_name_returns_watson(self):
         """Test that the name method returns 'watson'."""
@@ -31,9 +33,9 @@ class TestWatsonEmbeddingName:
             "api_key": "test-key",
             "url": "https://test.com"
         }
-        
+
         watson_func = WatsonEmbeddingFunction(**config)
-        
+
         try:
             name = watson_func.name()
             assert name == "watson"
@@ -43,33 +45,33 @@ class TestWatsonEmbeddingName:
     def test_watson_embedding_function_name_method_signature(self):
         """Test that the name method has the correct signature."""
         import inspect
-        
-        name_method = getattr(WatsonEmbeddingFunction, 'name')
-        
+
+        name_method = WatsonEmbeddingFunction.name
+
         assert isinstance(inspect.getattr_static(WatsonEmbeddingFunction, 'name'), staticmethod)
-        
+
         sig = inspect.signature(name_method)
         if sig.return_annotation != inspect.Signature.empty:
-            assert sig.return_annotation == str
+            assert sig.return_annotation is str
 
     def test_watson_embedding_function_reproduces_original_issue(self):
         """Test that reproduces the original issue scenario from #3597."""
-        
-        
+
+
         config = {
             "model_id": "ibm/slate-125m-english-rtrvr",
             "api_key": "test-key",
             "url": "https://us-south.ml.cloud.ibm.com",
             "project_id": "test-project"
         }
-        
+
         watson_func = WatsonEmbeddingFunction(**config)
-        
+
         name = watson_func.name()
-        
+
         assert name == "watson"
         assert isinstance(name, str)
-        
+
         class_name = WatsonEmbeddingFunction.name()
         assert class_name == "watson"
         assert class_name == name
