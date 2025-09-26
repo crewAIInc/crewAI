@@ -383,18 +383,31 @@ def handle_output_parser_exception(
     return formatted_answer
 
 
-def is_context_length_exceeded(exception: Exception) -> bool:
-    """Check if the exception is due to context length exceeding.
+def is_context_length_exceeded(
+    exception: Exception,
+    messages: list[LLMMessage],
+    llm: LLM | BaseLLM,
+) -> bool:
+    """
+    Check if the exception is due to context length exceeding or
+    response is empty because context length exceeded.
 
     Args:
         exception: The exception to check
+        messages: Messages sent to the LLM
+        llm: The LLM instance
 
     Returns:
-        bool: True if the exception is due to context length exceeding
+        True if the exception is due to context length exceeding or
+        the response is empty because of context length.
     """
-    return LLMContextLengthExceededError(str(exception))._is_context_limit_error(
+    exceeded_error = LLMContextLengthExceededError(str(exception))._is_context_limit_error(
         str(exception)
     )
+    null_response = is_null_response_because_context_length_exceeded(
+        exception=exception, messages=messages, llm=llm
+    )
+    return exceeded_error or null_response
 
 
 def is_null_response_because_context_length_exceeded(
