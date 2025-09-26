@@ -48,6 +48,9 @@ if TYPE_CHECKING:
         Text2VecEmbeddingFunction,
     )
 
+    from crewai.rag.embeddings.mistral_embedding_function import (
+        MistralEmbeddingFunction,
+    )
     from crewai.rag.embeddings.providers.aws.types import BedrockProviderSpec
     from crewai.rag.embeddings.providers.cohere.types import CohereProviderSpec
     from crewai.rag.embeddings.providers.custom.types import CustomProviderSpec
@@ -65,6 +68,7 @@ if TYPE_CHECKING:
     from crewai.rag.embeddings.providers.instructor.types import InstructorProviderSpec
     from crewai.rag.embeddings.providers.jina.types import JinaProviderSpec
     from crewai.rag.embeddings.providers.microsoft.types import AzureProviderSpec
+    from crewai.rag.embeddings.providers.mistral.types import MistralProviderSpec
     from crewai.rag.embeddings.providers.ollama.types import OllamaProviderSpec
     from crewai.rag.embeddings.providers.onnx.types import ONNXProviderSpec
     from crewai.rag.embeddings.providers.openai.types import OpenAIProviderSpec
@@ -78,8 +82,6 @@ if TYPE_CHECKING:
         VoyageAIEmbeddingFunction,
     )
     from crewai.rag.embeddings.providers.voyageai.types import VoyageAIProviderSpec
-    from crewai.rag.embeddings.mistral_embedding_function import MistralEmbeddingFunction
-    from crewai.rag.embeddings.providers.mistral.types import MistralProviderSpec
 
 T = TypeVar("T", bound=EmbeddingFunction)
 
@@ -119,19 +121,9 @@ def build_embedder_from_provider(provider: BaseEmbeddingsProvider[T]) -> T:
     # Use the provider's _create_embedding_function method if available
     if hasattr(provider, '_create_embedding_function'):
         return provider._create_embedding_function()
-    
+
     # Fallback to direct instantiation
     config = provider.model_dump(exclude={"embedding_callable"})
-    
-    # Handle parameter mapping for Mistral provider
-    if hasattr(provider, 'model') and hasattr(provider, 'model_name'):
-        # If both model and model_name are present, use model as model_name
-        if config.get('model') and not config.get('model_name'):
-            config['model_name'] = config.pop('model')
-        elif config.get('model') and config.get('model_name'):
-            # If both are present, prefer model over model_name
-            config['model_name'] = config.pop('model')
-    
     return provider.embedding_callable(**config)
 
 

@@ -83,7 +83,7 @@ class MistralEmbeddingFunction(EmbeddingFunction):
             input = [input]
 
         if not input:
-            return []
+            raise ValueError("Expected Embeddings to be non-empty list or numpy array")
 
         # Prepare the request
         headers = {
