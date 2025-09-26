@@ -21,7 +21,7 @@ class TestMistralIntegration:
     def setup_method(self):
         """Set up test environment before each test."""
 
-    @patch('requests.post')
+    @patch("requests.post")
     def test_mistral_embedding_with_knowledge_base(self, mock_post):
         """Test Mistral embeddings with CrewAI knowledge base."""
         # Mock successful API response
@@ -30,26 +30,21 @@ class TestMistralIntegration:
         mock_response.json.return_value = {
             "data": [
                 {"embedding": [0.1, 0.2, 0.3, 0.4, 0.5]},
-                {"embedding": [0.6, 0.7, 0.8, 0.9, 1.0]}
+                {"embedding": [0.6, 0.7, 0.8, 0.9, 1.0]},
             ]
         }
         mock_post.return_value = mock_response
 
         # Configure Mistral embedder
-        embedder_config = {
-            "provider": "mistral",
-            "config": {
-                "model": "mistral-embed"
-            }
-        }
+        embedder_config = {"provider": "mistral", "config": {"model": "mistral-embed"}}
 
-        with patch.dict(os.environ, {'MISTRAL_API_KEY': 'test_api_key'}):
+        with patch.dict(os.environ, {"MISTRAL_API_KEY": "test_api_key"}):
             embedding_function = build_embedder(embedder_config)
 
             # Test with sample documents
             documents = [
                 "This is a test document about artificial intelligence.",
-                "Another document about machine learning and neural networks."
+                "Another document about machine learning and neural networks.",
             ]
 
             embeddings = embedding_function(documents)
@@ -82,11 +77,13 @@ class TestMistralIntegration:
                 "model": "mistral-embed",
                 "base_url": "https://api.mistral.ai/v1",
                 "max_retries": 5,
-                "timeout": 60
-            }
+                "timeout": 60,
+            },
         }
 
-        with patch('crewai.rag.embeddings.providers.mistral.mistral_provider.MistralProvider._create_embedding_function') as mock_create:
+        with patch(
+            "crewai.rag.embeddings.providers.mistral.mistral_provider.MistralProvider._create_embedding_function"
+        ) as mock_create:
             mock_instance = MagicMock()
             mock_create.return_value = mock_instance
 
@@ -95,27 +92,28 @@ class TestMistralIntegration:
             # Verify _create_embedding_function was called
             mock_create.assert_called_once()
 
-    @patch('requests.post')
+    @patch("requests.post")
     def test_mistral_error_handling(self, mock_post):
         """Test Mistral error handling and retry logic."""
         # Mock API error
         mock_response = MagicMock()
         mock_response.status_code = 429  # Rate limit
-        mock_response.raise_for_status.side_effect = requests.exceptions.HTTPError("429 Rate Limit")
+        mock_response.raise_for_status.side_effect = requests.exceptions.HTTPError(
+            "429 Rate Limit"
+        )
         mock_post.return_value = mock_response
 
         embedder_config = {
             "provider": "mistral",
-            "config": {
-                "model": "mistral-embed",
-                "max_retries": 2
-            }
+            "config": {"model": "mistral-embed", "max_retries": 2},
         }
 
-        with patch.dict(os.environ, {'MISTRAL_API_KEY': 'test_api_key'}):
+        with patch.dict(os.environ, {"MISTRAL_API_KEY": "test_api_key"}):
             embedding_function = build_embedder(embedder_config)
 
-            with pytest.raises(RuntimeError, match="Failed to get embeddings from Mistral API"):
+            with pytest.raises(
+                RuntimeError, match="Failed to get embeddings from Mistral API"
+            ):
                 embedding_function(["Test document"])
 
             # Should have made 2 calls (max_retries)
@@ -128,11 +126,13 @@ class TestMistralIntegration:
             "config": {
                 "model": "mistral-embed"
                 # No explicit api_key
-            }
+            },
         }
 
-        with patch.dict(os.environ, {'MISTRAL_API_KEY': 'env_api_key'}):
-            with patch('crewai.rag.embeddings.providers.mistral.mistral_provider.MistralProvider._create_embedding_function') as mock_create:
+        with patch.dict(os.environ, {"MISTRAL_API_KEY": "env_api_key"}):
+            with patch(
+                "crewai.rag.embeddings.providers.mistral.mistral_provider.MistralProvider._create_embedding_function"
+            ) as mock_create:
                 mock_instance = MagicMock()
                 mock_create.return_value = mock_instance
 
@@ -143,12 +143,7 @@ class TestMistralIntegration:
 
     def test_mistral_missing_api_key_error(self):
         """Test error when API key is missing."""
-        embedder_config = {
-            "provider": "mistral",
-            "config": {
-                "model": "mistral-embed"
-            }
-        }
+        embedder_config = {"provider": "mistral", "config": {"model": "mistral-embed"}}
 
         with patch.dict(os.environ, {}, clear=True):
             with pytest.raises(ValueError, match="Mistral API key is required"):
@@ -161,10 +156,7 @@ def mistral_embedder_config():
     """Fixture providing Mistral embedder configuration."""
     return {
         "provider": "mistral",
-        "config": {
-            "model": "mistral-embed",
-            "api_key": "test_api_key"
-        }
+        "config": {"model": "mistral-embed", "api_key": "test_api_key"},
     }
 
 
@@ -174,14 +166,16 @@ def mock_mistral_response():
     return {
         "data": [
             {"embedding": [0.1, 0.2, 0.3, 0.4, 0.5]},
-            {"embedding": [0.6, 0.7, 0.8, 0.9, 1.0]}
+            {"embedding": [0.6, 0.7, 0.8, 0.9, 1.0]},
         ]
     }
 
 
-def test_mistral_embedding_with_fixtures(mistral_embedder_config, mock_mistral_response):
+def test_mistral_embedding_with_fixtures(
+    mistral_embedder_config, mock_mistral_response
+):
     """Test Mistral embedding using pytest fixtures."""
-    with patch('requests.post') as mock_post:
+    with patch("requests.post") as mock_post:
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.json.return_value = mock_mistral_response

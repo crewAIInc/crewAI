@@ -56,7 +56,7 @@ class MistralEmbeddingFunction(EmbeddingFunction):
             )
 
         self.model_name = model_name
-        self.base_url = base_url.rstrip('/')
+        self.base_url = base_url.rstrip("/")
         self.max_retries = max_retries
         self.timeout = timeout
 
@@ -88,13 +88,10 @@ class MistralEmbeddingFunction(EmbeddingFunction):
         # Prepare the request
         headers = {
             "Authorization": f"Bearer {self.api_key}",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
         }
 
-        data = {
-            "model": self.model_name,
-            "input": input
-        }
+        data = {"model": self.model_name, "input": input}
 
         # Make API request with retry logic
         # Ensure at least one attempt is made, even if max_retries is 0
@@ -106,7 +103,7 @@ class MistralEmbeddingFunction(EmbeddingFunction):
                     f"{self.base_url}/embeddings",
                     headers=headers,
                     json=data,
-                    timeout=self.timeout
+                    timeout=self.timeout,
                 )
                 response.raise_for_status()
 
@@ -138,5 +135,5 @@ class MistralEmbeddingFunction(EmbeddingFunction):
         return {
             "provider": "mistral",
             "model": self.model_name,
-            "base_url": self.base_url
+            "base_url": self.base_url,
         }
