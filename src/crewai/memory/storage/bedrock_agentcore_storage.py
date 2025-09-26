@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime
 from typing import Any
 
 from botocore.client import Config
@@ -70,11 +71,11 @@ class BedrockAgentCoreConfig(BaseModel):
 
 class BedrockAgentCoreStorage(Storage):
     """
-    Enhanced AWS Bedrock AgentCore Memory storage implementation for CrewAI.
+    AWS Bedrock AgentCore Memory storage implementation for CrewAI.
 
-    This implementation provides sophisticated integration with AWS Bedrock AgentCore Memory,
-    supporting advanced features like user preference learning, semantic fact extraction,
-    and proper conversation structure mapping.
+    This implementation provides integration with AWS Bedrock AgentCore Memory,
+    supporting long term and short term memory. For more details, see the documentation:
+    https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/memory.html.
     """
 
     def __init__(self, type: str, config: BedrockAgentCoreConfig):
@@ -85,13 +86,13 @@ class BedrockAgentCoreStorage(Storage):
         self.config = config
 
         # Initialize boto3 clients
-        self.bedrock_agentcore_memory_client: Any | None = None
+        self.memory_client: Any | None = None
 
         # Initialize memory clients
         self._initialize_memory_client()
 
         logger.info(
-            "AgentCoreStorage initialized: memory_type=%s, namespaces=%s",
+            "BedrockAgentCoreStorage initialized: memory_type=%s, namespaces=%s",
             self.memory_type,
             self.config.namespaces,
         )
@@ -101,7 +102,7 @@ class BedrockAgentCoreStorage(Storage):
         supported_types = {"external"}
         if type not in supported_types:
             raise ValueError(
-                f"Invalid type '{type}' for AgentCoreStorage. "
+                f"Invalid type '{type}' for BedrockAgentCoreStorage. "
                 f"Must be one of: {', '.join(supported_types)}"
             )
 
@@ -116,13 +117,11 @@ class BedrockAgentCoreStorage(Storage):
 
         try:
             # Initialize boto3 clients directly as used by the MemoryClient
-            bedrock_agentcore_memory_client_config = Config(
-                user_agent_extra="x-client-framework:crew_ai"
-            )
-            self.bedrock_agentcore_memory_client = boto3.client(
+            config = Config(user_agent_extra="x-client-framework:crew_ai")
+            self.memory_client = boto3.client(
                 "bedrock-agentcore",
                 region_name=self.config.region_name,
-                config=bedrock_agentcore_memory_client_config,
+                config=config,
             )
 
         except Exception as e:
@@ -182,19 +181,14 @@ class BedrockAgentCoreStorage(Storage):
             metadata: Additional metadata for the memory item (default: None)
         """
 
-        if self.bedrock_agentcore_memory_client is None:
-            raise RuntimeError("AgentCore memory client not initialized")
-
         payload = self._convert_to_event_payload(value, metadata)
 
         try:
-            from datetime import datetime
-
             # Use the boto3 client create_event method directly
-            response = self.bedrock_agentcore_memory_client.create_event(
-                memoryId=str(self.config.memory_id),
-                actorId=str(self.config.actor_id),
-                sessionId=str(self.config.session_id),
+            response = self.memory_client.create_event(  # type: ignore
+                memoryId=self.config.memory_id,
+                actorId=self.config.actor_id,
+                sessionId=self.config.session_id,
                 eventTimestamp=datetime.now(),
                 payload=payload,
             )
@@ -239,18 +233,14 @@ class BedrockAgentCoreStorage(Storage):
             logger.debug("Searching namespace: %s", search_namespace)
 
             try:
-                # Use the boto3 client retrieve_memory_records method directly
-                long_term_memory_response = (
-                    self.bedrock_agentcore_memory_client.retrieve_memory_records(  # type: ignore
-                        memoryId=str(self.config.memory_id),
-                        namespace=search_namespace,
-                        searchCriteria={"searchQuery": query, "topK": limit},
-                    )
+                long_term_memory_response = self.memory_client.retrieve_memory_records(  # type: ignore
+                    memoryId=self.config.memory_id,
+                    namespace=search_namespace,
+                    searchCriteria={"searchQuery": query, "topK": limit},
                 )
             except Exception as e:
-                logger.warning(f"Error searching namespace {search_namespace}: {e}")
-                # Continue with next namespace
-                continue
+                logger.error(f"Error searching namespace {search_namespace}: {e}")
+                raise
 
             long_term_memories = long_term_memory_response.get(
                 "memoryRecordSummaries", []
@@ -272,7 +262,7 @@ class BedrockAgentCoreStorage(Storage):
                 score = long_term_memory.get("score", 0.0)
 
                 # Apply score threshold filter
-                if score < 0:
+                if score < score_threshold:
                     continue
 
                 long_term_memory_results.append(
@@ -315,21 +305,22 @@ class BedrockAgentCoreStorage(Storage):
         """
         short_term_results: list[dict[str, Any]] = []
 
-        if max_results <= 0:
-            return short_term_results
-
         logger.info(
             "Searching short-term memory for up to %d results",
             max_results,
         )
 
-        short_term_memory = self.bedrock_agentcore_memory_client.list_events(  # type: ignore
-            memoryId=self.config.memory_id,
-            actorId=self.config.actor_id,
-            sessionId=self.config.session_id,
-            includePayloads=True,
-            maxResults=max_results,
-        )
+        try:
+            short_term_memory = self.memory_client.list_events(  # type: ignore
+                memoryId=self.config.memory_id,
+                actorId=self.config.actor_id,
+                sessionId=self.config.session_id,
+                includePayloads=True,
+                maxResults=max_results,
+            )
+        except Exception as e:
+            logger.error(f"Error listing events: {e}")
+            raise
 
         for event in short_term_memory["events"]:
             for payload_item in event["payload"]:
@@ -356,7 +347,7 @@ class BedrockAgentCoreStorage(Storage):
         return short_term_results
 
     def search(
-        self, query: str, limit: int = 3, score_threshold: float = 0.35
+        self, query: str, limit: int = 5, score_threshold: float = 0.35
     ) -> list[dict[str, Any]]:
         """
         Search for memories using AgentCore boto3 client.
@@ -369,8 +360,6 @@ class BedrockAgentCoreStorage(Storage):
         Returns:
             List of memory items with context, sorted by relevance score
         """
-        if self.bedrock_agentcore_memory_client is None:
-            raise RuntimeError("AgentCore memory client not initialized")
 
         # Validate limit parameter
         if limit >= 100:
@@ -380,7 +369,7 @@ class BedrockAgentCoreStorage(Storage):
         long_term_results = self._search_long_term(query, limit, score_threshold)
 
         # Apply limit to long-term results
-        final_results = long_term_results[:limit]
+        final_results = long_term_results
 
         # If we have fewer results than requested
         # search short-term memory
@@ -410,14 +399,14 @@ class BedrockAgentCoreStorage(Storage):
         self, value: Any, metadata: dict[str, Any]
     ) -> list[dict[str, Any]]:
         """
-        Convert CrewAI content to enhanced event payload that utilizes metadata when available.
+        Convert CrewAI content to event payload that utilizes metadata when available.
 
         Args:
             value: The content to convert
             metadata: metadata containing messages, agent, and description
 
         Returns:
-            List of enhanced payload dictionaries for create_event
+            List of payload dictionaries for create_event
         """
         messages = metadata["messages"]
         payload = []

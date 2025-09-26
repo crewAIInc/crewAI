@@ -157,12 +157,12 @@ class TestBedrockAgentCoreStorage:
 
         assert storage.memory_type == "external"
         assert storage.config == basic_config
-        assert storage.bedrock_agentcore_memory_client is not None
+        assert storage.memory_client is not None
 
     def test_storage_initialization_invalid_type(self, basic_config):
         """Test storage initialization with invalid type."""
         with pytest.raises(
-            ValueError, match="Invalid type 'invalid' for AgentCoreStorage"
+            ValueError, match="Invalid type 'invalid' for BedrockAgentCoreStorage"
         ):
             BedrockAgentCoreStorage(type="invalid", config=basic_config)
 
@@ -300,16 +300,6 @@ class TestBedrockAgentCoreStorage:
         assert payload[3]["conversational"]["role"] == "TOOL"
         assert payload[4]["conversational"]["role"] == "OTHER"  # unknown -> OTHER
 
-    def test_save_without_client(self, basic_config):
-        """Test save when client is not initialized."""
-        storage = BedrockAgentCoreStorage(type="external", config=basic_config)
-        storage.bedrock_agentcore_memory_client = None
-
-        with pytest.raises(
-            RuntimeError, match="AgentCore memory client not initialized"
-        ):
-            storage.save(value="test", metadata={"messages": []})
-
     def test_save_with_error(self, basic_config, mock_boto3_client):
         """Test save with AWS error."""
         storage = BedrockAgentCoreStorage(type="external", config=basic_config)
@@ -421,45 +411,22 @@ class TestBedrockAgentCoreStorage:
         mock_boto3_client.retrieve_memory_records.assert_not_called()
         mock_boto3_client.list_events.assert_called_once()
 
-    def test_search_without_client(self, basic_config):
-        """Test search when client is not initialized."""
-        storage = BedrockAgentCoreStorage(type="external", config=basic_config)
-        storage.bedrock_agentcore_memory_client = None
-
-        with pytest.raises(
-            RuntimeError, match="AgentCore memory client not initialized"
-        ):
-            storage.search("test")
-
     def test_search_with_namespace_error(
         self, config_with_namespaces, mock_boto3_client
     ):
-        """Test search handles namespace-specific errors gracefully."""
+        """Test search raises exception when namespace search fails."""
         storage = BedrockAgentCoreStorage(
             type="external", config=config_with_namespaces
         )
 
-        # First namespace fails, second succeeds
-        mock_boto3_client.retrieve_memory_records.side_effect = [
-            Exception("Namespace error"),
-            {
-                "memoryRecordSummaries": [
-                    {
-                        "memoryRecordId": "record-1",
-                        "content": {"text": "Success from second namespace"},
-                        "score": 0.8,
-                    }
-                ]
-            },
-        ]
+        # First namespace fails - this should now raise the exception
+        mock_boto3_client.retrieve_memory_records.side_effect = Exception(
+            "Namespace error"
+        )
 
-        mock_boto3_client.list_events.return_value = {"events": []}
-
-        results = storage.search("test", limit=5)
-
-        # Should still get results from successful namespace
-        assert len(results) == 1
-        assert results[0]["content"] == "Success from second namespace"
+        # The search should raise the exception
+        with pytest.raises(Exception, match="Namespace error"):
+            storage.search("test", limit=5)
 
     def test_search_limit_validation(self, basic_config, mock_boto3_client):
         """Test search validates limit parameter."""

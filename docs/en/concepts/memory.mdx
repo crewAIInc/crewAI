@@ -841,11 +841,13 @@ crew = Crew(
 
 External Memory supports integration with AWS Bedrock AgentCore Memory for enterprise-grade memory capabilities with advanced features like semantic search, user preference learning, and conversation structure.
 
+You can configure AgentCore memory using either a `BedrockAgentCoreConfig` instance or a dictionary configuration:
+
 ```python
 from crewai.memory.external.external_memory import ExternalMemory
 from crewai.memory.storage.bedrock_agentcore_storage import BedrockAgentCoreConfig, BedrockAgentCoreStorage
 
-# Basic AgentCore configuration
+# Option 1: Using BedrockAgentCoreConfig instance
 agentcore_config = BedrockAgentCoreConfig(
     memory_id="your-bedrock-memory-id",
     actor_id="user-123",
@@ -857,6 +859,19 @@ agentcore_config = BedrockAgentCoreConfig(
         "/summaries/user-123/session-456"
     ]
 )
+
+# Option 2: Using dictionary configuration (automatically converted to BedrockAgentCoreConfig)
+agentcore_dict_config = {
+    "memory_id": "your-bedrock-memory-id",
+    "actor_id": "user-123",
+    "session_id": "session-456",
+    "region_name": "us-east-1",  # Optional, defaults to "us-east-1"
+    "namespaces": [  # Optional, defaults to empty list
+        "/preferences/user-123",
+        "/facts/user-123/session-456",
+        "/summaries/user-123/session-456"
+    ]
+}
 
 # Using namespace template resolution utility (optional)
 resolved_namespaces = [
@@ -882,10 +897,19 @@ resolved_config = BedrockAgentCoreConfig(
     namespaces=resolved_namespaces
 )
 
+# Both configuration styles work
 external_memory = ExternalMemory(
     embedder_config={
         "provider": "agentcore",
-        "config": agentcore_config  # or resolved_config
+        "config": agentcore_config  # BedrockAgentCoreConfig instance
+    }
+)
+
+# Or using dictionary configuration
+external_memory_dict = ExternalMemory(
+    embedder_config={
+        "provider": "agentcore",
+        "config": agentcore_dict_config  # Dictionary configuration
     }
 )
 
