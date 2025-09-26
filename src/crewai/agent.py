@@ -5,12 +5,13 @@ from collections.abc import Callable, Sequence
 from typing import (
     Any,
     Literal,
+    cast,
 )
 
 from pydantic import Field, InstanceOf, PrivateAttr, model_validator
 
 from crewai.agents import CacheHandler
-from crewai.agents.agent_builder.base_agent import BaseAgent
+from crewai.agents.agent_builder.base_agent import BaseAgent, PlatformAppOrAction
 from crewai.agents.crew_agent_executor import CrewAgentExecutor
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.agent_events import (
@@ -78,6 +79,7 @@ class Agent(BaseAgent):
             step_callback: Callback to be executed after each step of the agent execution.
             knowledge_sources: Knowledge sources for the agent.
             embedder: Embedder configuration for the agent.
+            apps: List of applications that the agent can access through CrewAI Platform.
     """
 
     _times_executed: int = PrivateAttr(default=0)
@@ -174,7 +176,7 @@ class Agent(BaseAgent):
     )
 
     @model_validator(mode="before")
-    def validate_from_repository(cls, v): # noqa: N805
+    def validate_from_repository(cls, v):  # noqa: N805
         if v is not None and (from_repository := v.get("from_repository")):
             return load_agent_from_repository(from_repository) | v
         return v
@@ -271,11 +273,7 @@ class Agent(BaseAgent):
                 # Add the reasoning plan to the task description
                 task.description += f"\n\nReasoning Plan:\n{reasoning_output.plan.plan}"
             except Exception as e:
-                if hasattr(self, "_logger"):
-                    self._logger.log("error", f"Error during reasoning process: {e!s}")
-                else:
-                    print(f"Error during reasoning process: {e!s}")
-
+                self._logger.log("error", f"Error during reasoning process: {e!s}")
         self._inject_date_to_task(task)
 
         if self.tools_handler:
@@ -327,7 +325,7 @@ class Agent(BaseAgent):
                 agent=self,
                 task=task,
             )
-            memory = contextual_memory.build_context_for_task(task, context)  # type: ignore[arg-type]
+            memory = contextual_memory.build_context_for_task(task, context or "")
             if memory.strip() != "":
                 task_prompt += self.i18n.slice("memory").format(memory=memory)
 
@@ -579,7 +577,7 @@ class Agent(BaseAgent):
             agent=self,
             crew=self.crew,
             tools=parsed_tools,
-            prompt=prompt,  # type: ignore[arg-type]
+            prompt=cast(dict[str, str], prompt),
             original_tools=raw_tools,
             stop_words=stop_words,
             max_iter=self.max_iter,
@@ -599,6 +597,17 @@ class Agent(BaseAgent):
         agent_tools = AgentTools(agents=agents)
         return agent_tools.tools()
 
+    def get_platform_tools(self, apps: list[PlatformAppOrAction]) -> list[BaseTool]:
+        try:
+            from crewai_tools import (  # type: ignore[import-not-found]
+                CrewaiPlatformTools,  # type: ignore[import-untyped]
+            )
+
+            return CrewaiPlatformTools(apps=apps)
+        except Exception as e:
+            self._logger.log("error", f"Error getting platform tools: {e!s}")
+            return []
+
     def get_multimodal_tools(self) -> Sequence[BaseTool]:
         from crewai.tools.agent_tools.add_image_tool import AddImageTool
 
@@ -606,7 +615,9 @@ class Agent(BaseAgent):
 
     def get_code_execution_tools(self):
         try:
-            from crewai_tools import CodeInterpreterTool  # type: ignore
+            from crewai_tools import (  # type: ignore[import-not-found]
+                CodeInterpreterTool,
+            )
 
             # Set the unsafe_mode based on the code_execution_mode attribute
             unsafe_mode = self.code_execution_mode == "unsafe"
@@ -695,14 +706,15 @@ class Agent(BaseAgent):
 
     def _validate_docker_installation(self) -> None:
         """Check if Docker is installed and running."""
-        if not shutil.which("docker"):
+        docker_path = shutil.which("docker")
+        if not docker_path:
             raise RuntimeError(
                 f"Docker is not installed. Please install Docker to use code execution with agent: {self.role}"
             )
 
         try:
-            subprocess.run(
-                ["/usr/bin/docker", "info"],
+            subprocess.run(  # noqa: S603
+                [docker_path, "info"],
                 check=True,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
@@ -710,6 +722,10 @@ class Agent(BaseAgent):
         except subprocess.CalledProcessError as e:
             raise RuntimeError(
                 f"Docker is not running. Please start Docker to use code execution with agent: {self.role}"
+            ) from e
+        except subprocess.TimeoutExpired as e:
+            raise RuntimeError(
+                f"Docker command timed out. Please check your Docker installation for agent: {self.role}"
             ) from e
 
     def __repr__(self):
