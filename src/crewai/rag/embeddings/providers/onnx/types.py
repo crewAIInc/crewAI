@@ -1,8 +1,8 @@
 """Type definitions for ONNX embedding providers."""
 
-from typing import Literal, TypedDict
+from typing import Literal
 
-from typing_extensions import Required
+from typing_extensions import Required, TypedDict
 
 
 class ONNXProviderConfig(TypedDict, total=False):

@@ -1,8 +1,8 @@
 """Type definitions for Cohere embedding providers."""
 
-from typing import Annotated, Literal, TypedDict
+from typing import Annotated, Literal
 
-from typing_extensions import Required
+from typing_extensions import Required, TypedDict
 
 
 class CohereProviderConfig(TypedDict, total=False):

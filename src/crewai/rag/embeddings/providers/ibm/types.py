@@ -1,8 +1,8 @@
 """Type definitions for IBM Watson embedding providers."""
 
-from typing import Annotated, Any, Literal, TypedDict
+from typing import Annotated, Any, Literal
 
-from typing_extensions import Required
+from typing_extensions import Required, TypedDict
 
 
 class WatsonProviderConfig(TypedDict, total=False):
