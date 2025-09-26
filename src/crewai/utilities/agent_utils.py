@@ -448,7 +448,7 @@ def summarize_messages(
         callbacks: List of callbacks for LLM
         i18n: I18N instance for messages
     """
-    messages_string = " ".join([message["content"] for message in messages])
+    messages_string = " ".join(f"{message['role']}: {message['content']}" for message in messages)
     cut_size = llm.get_context_window_size()
 
     messages_groups = [
