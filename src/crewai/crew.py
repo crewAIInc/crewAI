@@ -59,6 +59,7 @@ from crewai.memory.external.external_memory import ExternalMemory
 from crewai.memory.long_term.long_term_memory import LongTermMemory
 from crewai.memory.short_term.short_term_memory import ShortTermMemory
 from crewai.process import Process
+from crewai.rag.embeddings.types import EmbedderConfig
 from crewai.rag.types import SearchResult
 from crewai.security import Fingerprint, SecurityConfig
 from crewai.task import Task
@@ -168,7 +169,7 @@ class Crew(FlowTrackable, BaseModel):
         default=None,
         description="An Instance of the ExternalMemory to be used by the Crew",
     )
-    embedder: dict | None = Field(
+    embedder: EmbedderConfig | None = Field(
         default=None,
         description="Configuration for the embedder to be used for the crew.",
     )
@@ -622,7 +623,8 @@ class Crew(FlowTrackable, BaseModel):
                         training_data=training_data, agent_id=str(agent.id)
                     )
                     CrewTrainingHandler(filename).save_trained_data(
-                        agent_id=str(agent.role), trained_data=result.model_dump()
+                        agent_id=str(agent.role),
+                        trained_data=result.model_dump(),  # type: ignore[arg-type]
                     )
 
             crewai_event_bus.emit(
@@ -1080,7 +1082,10 @@ class Crew(FlowTrackable, BaseModel):
     def _log_task_start(self, task: Task, role: str = "None"):
         if self.output_log_file:
             self._file_handler.log(
-                task_name=task.name or "unnamed_task", task=task.description, agent=role, status="started"
+                task_name=task.name,  # type: ignore[arg-type]
+                task=task.description,
+                agent=role,
+                status="started",
             )
 
     def _update_manager_tools(
@@ -1109,7 +1114,7 @@ class Crew(FlowTrackable, BaseModel):
         role = task.agent.role if task.agent is not None else "None"
         if self.output_log_file:
             self._file_handler.log(
-                task_name=task.name or "unnamed_task",
+                task_name=task.name,  # type: ignore[arg-type]
                 task=task.description,
                 agent=role,
                 status="completed",

@@ -22,6 +22,7 @@ from crewai.agents.tools_handler import ToolsHandler
 from crewai.knowledge.knowledge import Knowledge
 from crewai.knowledge.knowledge_config import KnowledgeConfig
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
+from crewai.rag.embeddings.types import EmbedderConfig
 from crewai.security.security_config import SecurityConfig
 from crewai.tools.base_tool import BaseTool, Tool
 from crewai.utilities import I18N, Logger, RPMController
@@ -226,14 +227,18 @@ class BaseAgent(ABC, BaseModel):
 
     @field_validator("apps")
     @classmethod
-    def validate_apps(cls, apps: list[PlatformAppOrAction] | None) -> list[PlatformAppOrAction] | None:
+    def validate_apps(
+        cls, apps: list[PlatformAppOrAction] | None
+    ) -> list[PlatformAppOrAction] | None:
         if not apps:
             return apps
 
         validated_apps = []
         for app in apps:
             if app.count("/") > 1:
-                raise ValueError(f"Invalid app format '{app}'. Apps can only have one '/' for app/action format (e.g., 'gmail/send_email')")
+                raise ValueError(
+                    f"Invalid app format '{app}'. Apps can only have one '/' for app/action format (e.g., 'gmail/send_email')"
+                )
             validated_apps.append(app)
 
         return list(set(validated_apps))
@@ -408,5 +413,5 @@ class BaseAgent(ABC, BaseModel):
             self._rpm_controller = rpm_controller
             self.create_agent_executor()
 
-    def set_knowledge(self, crew_embedder: dict[str, Any] | None = None):
+    def set_knowledge(self, crew_embedder: EmbedderConfig | None = None):
         pass

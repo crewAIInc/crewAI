@@ -37,6 +37,7 @@ from crewai.knowledge.utils.knowledge_utils import extract_knowledge_context
 from crewai.lite_agent import LiteAgent, LiteAgentOutput
 from crewai.llm import BaseLLM
 from crewai.memory.contextual.contextual_memory import ContextualMemory
+from crewai.rag.embeddings.types import EmbedderConfig
 from crewai.security import Fingerprint
 from crewai.task import Task
 from crewai.tools import BaseTool
@@ -146,7 +147,7 @@ class Agent(BaseAgent):
         default=None,
         description="Maximum number of reasoning attempts before executing the task. If None, will try until ready.",
     )
-    embedder: dict[str, Any] | None = Field(
+    embedder: EmbedderConfig | None = Field(
         default=None,
         description="Embedder configuration for the agent.",
     )
@@ -175,8 +176,7 @@ class Agent(BaseAgent):
     )
 
     @model_validator(mode="before")
-    @classmethod
-    def validate_from_repository(cls, v):
+    def validate_from_repository(cls, v):  # noqa: N805
         if v is not None and (from_repository := v.get("from_repository")):
             return load_agent_from_repository(from_repository) | v
         return v
@@ -204,7 +204,7 @@ class Agent(BaseAgent):
             self.cache_handler = CacheHandler()
         self.set_cache_handler(self.cache_handler)
 
-    def set_knowledge(self, crew_embedder: dict[str, Any] | None = None):
+    def set_knowledge(self, crew_embedder: EmbedderConfig | None = None):
         try:
             if self.embedder is None and crew_embedder:
                 self.embedder = crew_embedder
@@ -273,9 +273,7 @@ class Agent(BaseAgent):
                 # Add the reasoning plan to the task description
                 task.description += f"\n\nReasoning Plan:\n{reasoning_output.plan.plan}"
             except Exception as e:
-                self._logger.log(
-                    "error", f"Error during reasoning process: {e!s}"
-                )
+                self._logger.log("error", f"Error during reasoning process: {e!s}")
         self._inject_date_to_task(task)
 
         if self.tools_handler:
@@ -601,7 +599,9 @@ class Agent(BaseAgent):
 
     def get_platform_tools(self, apps: list[PlatformAppOrAction]) -> list[BaseTool]:
         try:
-            from crewai_tools import CrewaiPlatformTools  # type: ignore[import-untyped]
+            from crewai_tools import (  # type: ignore[import-not-found]
+                CrewaiPlatformTools,  # type: ignore[import-untyped]
+            )
 
             return CrewaiPlatformTools(apps=apps)
         except Exception as e:
@@ -615,7 +615,9 @@ class Agent(BaseAgent):
 
     def get_code_execution_tools(self):
         try:
-            from crewai_tools import CodeInterpreterTool  # type: ignore
+            from crewai_tools import (  # type: ignore[import-not-found]
+                CodeInterpreterTool,
+            )
 
             # Set the unsafe_mode based on the code_execution_mode attribute
             unsafe_mode = self.code_execution_mode == "unsafe"
@@ -671,7 +673,6 @@ class Agent(BaseAgent):
             ]
         )
 
-
     def _inject_date_to_task(self, task):
         """Inject the current date into the task description if inject_date is enabled."""
         if self.inject_date:
@@ -695,7 +696,7 @@ class Agent(BaseAgent):
                 if not is_valid:
                     raise ValueError(f"Invalid date format: {self.date_format}")
 
-                current_date: str = datetime.now().strftime(self.date_format)
+                current_date = datetime.now().strftime(self.date_format)
                 task.description += f"\n\nCurrent Date: {current_date}"
             except Exception as e:
                 if hasattr(self, "_logger"):
