@@ -28,6 +28,7 @@ from .reset_memories_command import reset_memories_command
 from .run_crew import run_crew
 from .tools.main import ToolCommand
 from .train_crew import train_crew
+from .trigger_command import TriggerCommand
 from .update_crew import update_crew
 
 
@@ -471,6 +472,19 @@ def config_reset():
     """Reset all CLI configuration parameters to default values."""
     config_command = SettingsCommand()
     config_command.reset_all_settings()
+
+
+@crewai.command()
+@click.argument("action_or_trigger")
+def trigger(action_or_trigger: str):
+    """Trigger management. Use 'list' to list triggers or provide trigger identification to run."""
+    trigger_cmd = TriggerCommand()
+
+    if action_or_trigger == "list":
+        trigger_cmd.list_triggers()
+    else:
+        # Assume it's a trigger identification
+        trigger_cmd.run_trigger(action_or_trigger)
 
 
 if __name__ == "__main__":
