@@ -40,6 +40,7 @@ from crewai.utilities.agent_utils import (
 from crewai.utilities.constants import TRAINING_DATA_FILE
 from crewai.utilities.tool_utils import execute_tool_and_check_finality
 from crewai.utilities.training_handler import CrewTrainingHandler
+from crewai.utilities.types import LLMMessage
 
 
 class CrewAgentExecutor(CrewAgentExecutorMixin):
@@ -111,7 +112,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         self.respect_context_window = respect_context_window
         self.request_within_rpm_limit = request_within_rpm_limit
         self.ask_for_human_input = False
-        self.messages: list[dict[str, str]] = []
+        self.messages: list[LLMMessage] = []
         self.iterations = 0
         self.log_error_after = 3
         existing_stop = self.llm.stop or []
