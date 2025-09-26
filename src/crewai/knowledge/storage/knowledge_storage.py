@@ -24,7 +24,10 @@ class KnowledgeStorage(BaseKnowledgeStorage):
 
     def __init__(
         self,
-        embedder: ProviderSpec | type[BaseEmbeddingsProvider] | None = None,
+        embedder: ProviderSpec
+        | BaseEmbeddingsProvider
+        | type[BaseEmbeddingsProvider]
+        | None = None,
         collection_name: str | None = None,
     ) -> None:
         self.collection_name = collection_name
