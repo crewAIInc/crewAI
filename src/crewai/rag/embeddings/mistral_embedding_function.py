@@ -95,7 +95,7 @@ class MistralEmbeddingFunction(EmbeddingFunction):
         
         # Make API request with retry logic
         # Ensure at least one attempt is made, even if max_retries is 0
-        attempts = max(1, self.max_retries + 1)
+        attempts = max(1, self.max_retries)
         
         for attempt in range(attempts):
             try:
