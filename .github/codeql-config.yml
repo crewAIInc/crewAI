@@ -1,3 +1,0 @@
-name: "CodeQL config"
-paths-ignore:
-  - src/crewai/cli/templates/**
