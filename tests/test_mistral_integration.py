@@ -116,8 +116,8 @@ class TestMistralIntegration:
             ):
                 embedding_function(["Test document"])
 
-            # Should have made 2 calls (max_retries)
-            assert mock_post.call_count == 2
+            # Should have made 3 calls (1 initial + 2 retries)
+            assert mock_post.call_count == 3
 
     def test_mistral_environment_variable_fallback(self):
         """Test that Mistral uses environment variable when API key not provided."""

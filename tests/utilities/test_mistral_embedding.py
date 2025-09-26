@@ -182,12 +182,12 @@ class TestMistralEmbeddingFunction:
 
         with pytest.raises(
             RuntimeError,
-            match="Failed to get embeddings from Mistral API after 2 attempts",
+            match="Failed to get embeddings from Mistral API after 3 attempts",
         ):
             embedding_func(["Test document"])
 
-        # Should have made 2 calls (max_retries)
-        assert mock_post.call_count == 2
+        # Should have made 3 calls (1 initial + 2 retries)
+        assert mock_post.call_count == 3
 
 
 class TestEmbeddingFactory:

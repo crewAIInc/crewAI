@@ -94,8 +94,9 @@ class MistralEmbeddingFunction(EmbeddingFunction):
         data = {"model": self.model_name, "input": input}
 
         # Make API request with retry logic
-        # Ensure at least one attempt is made, even if max_retries is 0
-        attempts = max(1, self.max_retries)
+        # max_retries is the number of retries after the initial attempt
+        # So total attempts = 1 (initial) + max_retries (retries)
+        attempts = 1 + self.max_retries
         last_exception = None
 
         def make_request():
