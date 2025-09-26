@@ -1,6 +1,5 @@
-from crewai.events.base_events import BaseEvent
-
 from crewai.agents.agent_builder.base_agent import BaseAgent
+from crewai.events.base_events import BaseEvent
 
 
 class KnowledgeRetrievalStartedEvent(BaseEvent):

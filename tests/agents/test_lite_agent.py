@@ -1,3 +1,4 @@
+# mypy: ignore-errors
 from collections import defaultdict
 from typing import cast
 from unittest.mock import Mock, patch
@@ -327,22 +328,26 @@ def test_guardrail_is_called_using_string():
         LLMGuardrailStartedEvent,
     )
 
+    agent = Agent(
+        role="Sports Analyst",
+        goal="Gather information about the best soccer players",
+        backstory="""You are an expert at gathering and organizing information. You carefully collect details and present them in a structured way.""",
+        guardrail="""Only include Brazilian players, both women and men""",
+    )
+
     with crewai_event_bus.scoped_handlers():
 
         @crewai_event_bus.on(LLMGuardrailStartedEvent)
         def capture_guardrail_started(source, event):
+            assert isinstance(source, LiteAgent)
+            assert source.original_agent == agent
             guardrail_events["started"].append(event)
 
         @crewai_event_bus.on(LLMGuardrailCompletedEvent)
         def capture_guardrail_completed(source, event):
+            assert isinstance(source, LiteAgent)
+            assert source.original_agent == agent
             guardrail_events["completed"].append(event)
-
-        agent = Agent(
-            role="Sports Analyst",
-            goal="Gather information about the best soccer players",
-            backstory="""You are an expert at gathering and organizing information. You carefully collect details and present them in a structured way.""",
-            guardrail="""Only include Brazilian players, both women and men""",
-        )
 
         result = agent.kickoff(messages="Top 10 best players in the world?")
 

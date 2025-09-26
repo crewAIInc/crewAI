@@ -1,24 +1,19 @@
-import hashlib
 import logging
-import os
-import shutil
-from typing import Any, Dict, List, Optional, Union
-
-import chromadb
-import chromadb.errors
-from chromadb.api import ClientAPI
-from chromadb.api.types import OneOrMany
-from chromadb.config import Settings
+import traceback
 import warnings
+from typing import Any, cast
 
 from crewai.knowledge.storage.base_knowledge_storage import BaseKnowledgeStorage
-from crewai.rag.embeddings.configurator import EmbeddingConfigurator
-from crewai.utilities.chromadb import sanitize_collection_name
-from crewai.utilities.constants import KNOWLEDGE_DIRECTORY
+from crewai.rag.chromadb.config import ChromaDBConfig
+from crewai.rag.chromadb.types import ChromaEmbeddingFunctionWrapper
+from crewai.rag.config.utils import get_rag_client
+from crewai.rag.core.base_client import BaseClient
+from crewai.rag.core.base_embeddings_provider import BaseEmbeddingsProvider
+from crewai.rag.embeddings.factory import build_embedder
+from crewai.rag.embeddings.types import ProviderSpec
+from crewai.rag.factory import create_client
+from crewai.rag.types import BaseRecord, SearchResult
 from crewai.utilities.logger import Logger
-from crewai.utilities.paths import db_storage_path
-from crewai.utilities.chromadb import create_persistent_client
-from crewai.utilities.logger_utils import suppress_logging
 
 
 class KnowledgeStorage(BaseKnowledgeStorage):
@@ -27,167 +22,108 @@ class KnowledgeStorage(BaseKnowledgeStorage):
     search efficiency.
     """
 
-    collection: Optional[chromadb.Collection] = None
-    collection_name: Optional[str] = "knowledge"
-    app: Optional[ClientAPI] = None
-
     def __init__(
         self,
-        embedder: Optional[Dict[str, Any]] = None,
-        collection_name: Optional[str] = None,
-    ):
+        embedder: ProviderSpec
+        | BaseEmbeddingsProvider
+        | type[BaseEmbeddingsProvider]
+        | None = None,
+        collection_name: str | None = None,
+    ) -> None:
         self.collection_name = collection_name
-        self._set_embedder_config(embedder)
+        self._client: BaseClient | None = None
 
-    def search(
-        self,
-        query: List[str],
-        limit: int = 3,
-        filter: Optional[dict] = None,
-        score_threshold: float = 0.35,
-    ) -> List[Dict[str, Any]]:
-        with suppress_logging(
-            "chromadb.segment.impl.vector.local_persistent_hnsw", logging.ERROR
-        ):
-            if self.collection:
-                fetched = self.collection.query(
-                    query_texts=query,
-                    n_results=limit,
-                    where=filter,
-                )
-                results = []
-                for i in range(len(fetched["ids"][0])):  # type: ignore
-                    result = {
-                        "id": fetched["ids"][0][i],  # type: ignore
-                        "metadata": fetched["metadatas"][0][i],  # type: ignore
-                        "context": fetched["documents"][0][i],  # type: ignore
-                        "score": fetched["distances"][0][i],  # type: ignore
-                    }
-                    if result["score"] >= score_threshold:
-                        results.append(result)
-                return results
-            else:
-                raise Exception("Collection not initialized")
-
-    def initialize_knowledge_storage(self):
-        # Suppress deprecation warnings from chromadb, which are not relevant to us
-        # TODO: Remove this once we upgrade chromadb to at least 1.0.8.
         warnings.filterwarnings(
             "ignore",
             message=r".*'model_fields'.*is deprecated.*",
             module=r"^chromadb(\.|$)",
         )
 
-        self.app = create_persistent_client(
-            path=os.path.join(db_storage_path(), "knowledge"),
-            settings=Settings(allow_reset=True),
-        )
+        if embedder:
+            embedding_function = build_embedder(embedder)  # type: ignore[arg-type]
+            config = ChromaDBConfig(
+                embedding_function=cast(
+                    ChromaEmbeddingFunctionWrapper, embedding_function
+                )
+            )
+            self._client = create_client(config)
 
+    def _get_client(self) -> BaseClient:
+        """Get the appropriate client - instance-specific or global."""
+        return self._client if self._client else get_rag_client()
+
+    def search(
+        self,
+        query: list[str],
+        limit: int = 5,
+        metadata_filter: dict[str, Any] | None = None,
+        score_threshold: float = 0.6,
+    ) -> list[SearchResult]:
         try:
+            if not query:
+                raise ValueError("Query cannot be empty")
+
+            client = self._get_client()
             collection_name = (
                 f"knowledge_{self.collection_name}"
                 if self.collection_name
                 else "knowledge"
             )
-            if self.app:
-                self.collection = self.app.get_or_create_collection(
-                    name=sanitize_collection_name(collection_name),
-                    embedding_function=self.embedder,
-                )
-            else:
-                raise Exception("Vector Database Client not initialized")
-        except Exception:
-            raise Exception("Failed to create or get collection")
+            query_text = " ".join(query) if len(query) > 1 else query[0]
 
-    def reset(self):
-        base_path = os.path.join(db_storage_path(), KNOWLEDGE_DIRECTORY)
-        if not self.app:
-            self.app = create_persistent_client(
-                path=base_path, settings=Settings(allow_reset=True)
+            return client.search(
+                collection_name=collection_name,
+                query=query_text,
+                limit=limit,
+                metadata_filter=metadata_filter,
+                score_threshold=score_threshold,
             )
-
-        self.app.reset()
-        shutil.rmtree(base_path)
-        self.app = None
-        self.collection = None
-
-    def save(
-        self,
-        documents: List[str],
-        metadata: Optional[Union[Dict[str, Any], List[Dict[str, Any]]]] = None,
-    ):
-        if not self.collection:
-            raise Exception("Collection not initialized")
-
-        try:
-            # Create a dictionary to store unique documents
-            unique_docs = {}
-
-            # Generate IDs and create a mapping of id -> (document, metadata)
-            for idx, doc in enumerate(documents):
-                doc_id = hashlib.sha256(doc.encode("utf-8")).hexdigest()
-                doc_metadata = None
-                if metadata is not None:
-                    if isinstance(metadata, list):
-                        doc_metadata = metadata[idx]
-                    else:
-                        doc_metadata = metadata
-                unique_docs[doc_id] = (doc, doc_metadata)
-
-            # Prepare filtered lists for ChromaDB
-            filtered_docs = []
-            filtered_metadata = []
-            filtered_ids = []
-
-            # Build the filtered lists
-            for doc_id, (doc, meta) in unique_docs.items():
-                filtered_docs.append(doc)
-                filtered_metadata.append(meta)
-                filtered_ids.append(doc_id)
-
-            # If we have no metadata at all, set it to None
-            final_metadata: Optional[OneOrMany[chromadb.Metadata]] = (
-                None if all(m is None for m in filtered_metadata) else filtered_metadata
-            )
-
-            self.collection.upsert(
-                documents=filtered_docs,
-                metadatas=final_metadata,
-                ids=filtered_ids,
-            )
-        except chromadb.errors.InvalidDimensionException as e:
-            Logger(verbose=True).log(
-                "error",
-                "Embedding dimension mismatch. This usually happens when mixing different embedding models. Try resetting the collection using `crewai reset-memories -a`",
-                "red",
-            )
-            raise ValueError(
-                "Embedding dimension mismatch. Make sure you're using the same embedding model "
-                "across all operations with this collection."
-                "Try resetting the collection using `crewai reset-memories -a`"
-            ) from e
         except Exception as e:
+            logging.error(
+                f"Error during knowledge search: {e!s}\n{traceback.format_exc()}"
+            )
+            return []
+
+    def reset(self) -> None:
+        try:
+            client = self._get_client()
+            collection_name = (
+                f"knowledge_{self.collection_name}"
+                if self.collection_name
+                else "knowledge"
+            )
+            client.delete_collection(collection_name=collection_name)
+        except Exception as e:
+            logging.error(
+                f"Error during knowledge reset: {e!s}\n{traceback.format_exc()}"
+            )
+
+    def save(self, documents: list[str]) -> None:
+        try:
+            client = self._get_client()
+            collection_name = (
+                f"knowledge_{self.collection_name}"
+                if self.collection_name
+                else "knowledge"
+            )
+            client.get_or_create_collection(collection_name=collection_name)
+
+            rag_documents: list[BaseRecord] = [{"content": doc} for doc in documents]
+
+            client.add_documents(
+                collection_name=collection_name, documents=rag_documents
+            )
+        except Exception as e:
+            if "dimension mismatch" in str(e).lower():
+                Logger(verbose=True).log(
+                    "error",
+                    "Embedding dimension mismatch. This usually happens when mixing different embedding models. Try resetting the collection using `crewai reset-memories -a`",
+                    "red",
+                )
+                raise ValueError(
+                    "Embedding dimension mismatch. Make sure you're using the same embedding model "
+                    "across all operations with this collection."
+                    "Try resetting the collection using `crewai reset-memories -a`"
+                ) from e
             Logger(verbose=True).log("error", f"Failed to upsert documents: {e}", "red")
             raise
-
-    def _create_default_embedding_function(self):
-        from chromadb.utils.embedding_functions.openai_embedding_function import (
-            OpenAIEmbeddingFunction,
-        )
-
-        return OpenAIEmbeddingFunction(
-            api_key=os.getenv("OPENAI_API_KEY"), model_name="text-embedding-3-small"
-        )
-
-    def _set_embedder_config(self, embedder: Optional[Dict[str, Any]] = None) -> None:
-        """Set the embedding configuration for the knowledge storage.
-
-        Args:
-            embedder_config (Optional[Dict[str, Any]]): Configuration dictionary for the embedder.
-                If None or empty, defaults to the default embedding function.
-        """
-        self.embedder = (
-            EmbeddingConfigurator().configure_embedder(embedder)
-            if embedder
-            else self._create_default_embedding_function()
-        )

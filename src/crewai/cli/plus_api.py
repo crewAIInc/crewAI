@@ -1,11 +1,10 @@
-from typing import List, Optional
 from urllib.parse import urljoin
 
 import requests
 
 from crewai.cli.config import Settings
-from crewai.cli.version import get_crewai_version
 from crewai.cli.constants import DEFAULT_CREWAI_ENTERPRISE_URL
+from crewai.cli.version import get_crewai_version
 
 
 class PlusAPI:
@@ -56,9 +55,9 @@ class PlusAPI:
         handle: str,
         is_public: bool,
         version: str,
-        description: Optional[str],
+        description: str | None,
         encoded_file: str,
-        available_exports: Optional[List[str]] = None,
+        available_exports: list[str] | None = None,
     ):
         params = {
             "handle": handle,
@@ -165,5 +164,15 @@ class PlusAPI:
             "PATCH",
             f"{self.EPHEMERAL_TRACING_RESOURCE}/batches/{trace_batch_id}/finalize",
             json=payload,
+            timeout=30,
+        )
+
+    def mark_trace_batch_as_failed(
+        self, trace_batch_id: str, error_message: str
+    ) -> requests.Response:
+        return self._make_request(
+            "PATCH",
+            f"{self.TRACING_RESOURCE}/batches/{trace_batch_id}",
+            json={"status": "failed", "failure_reason": error_message},
             timeout=30,
         )

@@ -1,15 +1,15 @@
 """Protocol for vector database client implementations."""
 
 from abc import abstractmethod
-from typing import Any, Protocol, runtime_checkable, Annotated
-from typing_extensions import Unpack, Required, TypedDict
+from typing import Annotated, Any, Protocol, runtime_checkable
+
 from pydantic import GetCoreSchemaHandler
 from pydantic_core import CoreSchema, core_schema
-
+from typing_extensions import Required, TypedDict, Unpack
 
 from crewai.rag.types import (
-    EmbeddingFunction,
     BaseRecord,
+    EmbeddingFunction,
     SearchResult,
 )
 
@@ -29,7 +29,7 @@ class BaseCollectionParams(TypedDict):
     ]
 
 
-class BaseCollectionAddParams(BaseCollectionParams):
+class BaseCollectionAddParams(BaseCollectionParams, total=False):
     """Parameters for adding documents to a collection.
 
     Extends BaseCollectionParams with document-specific fields.
@@ -37,9 +37,11 @@ class BaseCollectionAddParams(BaseCollectionParams):
     Attributes:
         collection_name: The name of the collection to add documents to.
         documents: List of BaseRecord dictionaries containing document data.
+        batch_size: Optional batch size for processing documents to avoid token limits.
     """
 
-    documents: list[BaseRecord]
+    documents: Required[list[BaseRecord]]
+    batch_size: int
 
 
 class BaseCollectionSearchParams(BaseCollectionParams, total=False):
@@ -57,7 +59,7 @@ class BaseCollectionSearchParams(BaseCollectionParams, total=False):
 
     query: Required[str]
     limit: int
-    metadata_filter: dict[str, Any]
+    metadata_filter: dict[str, Any] | None
     score_threshold: float
 
 

@@ -1,6 +1,7 @@
 """Backwards compatibility stub for crewai.utilities.events.base_event_listener."""
 
 import warnings
+
 from crewai.events import BaseEventListener
 
 warnings.warn(
