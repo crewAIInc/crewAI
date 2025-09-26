@@ -2,6 +2,8 @@
 
 from typing import Annotated, Literal, TypedDict
 
+from typing_extensions import Required
+
 
 class VoyageAIProviderConfig(TypedDict, total=False):
     """Configuration for VoyageAI provider."""
@@ -19,5 +21,5 @@ class VoyageAIProviderConfig(TypedDict, total=False):
 class VoyageAIProviderSpec(TypedDict):
     """VoyageAI provider specification."""
 
-    provider: Literal["voyageai"]
+    provider: Required[Literal["voyageai"]]
     config: VoyageAIProviderConfig

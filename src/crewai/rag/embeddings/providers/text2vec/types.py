@@ -2,6 +2,8 @@
 
 from typing import Annotated, Literal, TypedDict
 
+from typing_extensions import Required
+
 
 class Text2VecProviderConfig(TypedDict, total=False):
     """Configuration for Text2Vec provider."""
@@ -12,5 +14,5 @@ class Text2VecProviderConfig(TypedDict, total=False):
 class Text2VecProviderSpec(TypedDict):
     """Text2Vec provider specification."""
 
-    provider: Literal["text2vec"]
+    provider: Required[Literal["text2vec"]]
     config: Text2VecProviderConfig

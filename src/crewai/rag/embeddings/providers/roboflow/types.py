@@ -2,6 +2,8 @@
 
 from typing import Annotated, Literal, TypedDict
 
+from typing_extensions import Required
+
 
 class RoboflowProviderConfig(TypedDict, total=False):
     """Configuration for Roboflow provider."""
@@ -13,5 +15,5 @@ class RoboflowProviderConfig(TypedDict, total=False):
 class RoboflowProviderSpec(TypedDict):
     """Roboflow provider specification."""
 
-    provider: Literal["roboflow"]
+    provider: Required[Literal["roboflow"]]
     config: RoboflowProviderConfig

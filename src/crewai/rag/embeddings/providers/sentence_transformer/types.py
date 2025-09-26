@@ -2,6 +2,8 @@
 
 from typing import Annotated, Literal, TypedDict
 
+from typing_extensions import Required
+
 
 class SentenceTransformerProviderConfig(TypedDict, total=False):
     """Configuration for SentenceTransformer provider."""
@@ -14,5 +16,5 @@ class SentenceTransformerProviderConfig(TypedDict, total=False):
 class SentenceTransformerProviderSpec(TypedDict):
     """SentenceTransformer provider specification."""
 
-    provider: Literal["sentence-transformer"]
+    provider: Required[Literal["sentence-transformer"]]
     config: SentenceTransformerProviderConfig

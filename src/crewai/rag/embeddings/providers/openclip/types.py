@@ -2,6 +2,8 @@
 
 from typing import Annotated, Literal, TypedDict
 
+from typing_extensions import Required
+
 
 class OpenCLIPProviderConfig(TypedDict, total=False):
     """Configuration for OpenCLIP provider."""
@@ -14,5 +16,5 @@ class OpenCLIPProviderConfig(TypedDict, total=False):
 class OpenCLIPProviderSpec(TypedDict):
     """OpenCLIP provider specification."""
 
-    provider: Literal["openclip"]
+    provider: Required[Literal["openclip"]]
     config: OpenCLIPProviderConfig
