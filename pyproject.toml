@@ -8,7 +8,7 @@ authors = [
 ]
 requires-python = ">=3.10,<3.14"
 
-dependencies = []
+dependencies = ["crewai"]
 
 [project.urls]
 Homepage = "https://crewai.com"
@@ -85,6 +85,8 @@ markers = [
     "telemetry: mark test as a telemetry test (don't mock telemetry)",
 ]
 
+[tool.uv.sources]
+crewai = { workspace = true }
 
 [tool.uv.workspace]
 members = [

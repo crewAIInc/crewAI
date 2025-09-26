@@ -788,6 +788,9 @@ wheels = [
 [[package]]
 name = "crewai-workspace"
 source = { editable = "." }
+dependencies = [
+    { name = "crewai" },
+]
 
 [package.dev-dependencies]
 dev = [
@@ -810,6 +813,7 @@ dev = [
 ]
 
 [package.metadata]
+requires-dist = [{ name = "crewai", editable = "lib/crewai" }]
 
 [package.metadata.requires-dev]
 dev = [
