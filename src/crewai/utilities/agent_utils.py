@@ -286,7 +286,7 @@ def process_llm_response(
 def handle_agent_action_core(
     formatted_answer: AgentAction,
     tool_result: ToolResult,
-    messages: list[dict[str, str]] | None = None,
+    messages: list[LLMMessage] | None = None,
     step_callback: Callable | None = None,
     show_logs: Callable | None = None,
 ) -> AgentAction | AgentFinish:

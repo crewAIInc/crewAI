@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.agents.parser import AgentAction
 from crewai.agents.tools_handler import ToolsHandler
 from crewai.security.fingerprint import Fingerprint
@@ -11,7 +12,6 @@ from crewai.tools.tool_usage import ToolUsage, ToolUsageError
 from crewai.utilities.i18n import I18N
 
 if TYPE_CHECKING:
-    from crewai.agent import Agent
     from crewai.llm import LLM
     from crewai.llms.base_llm import BaseLLM
     from crewai.task import Task
@@ -25,7 +25,7 @@ def execute_tool_and_check_finality(
     agent_role: str | None = None,
     tools_handler: ToolsHandler | None = None,
     task: Task | None = None,
-    agent: Agent | None = None,
+    agent: BaseAgent | None = None,
     function_calling_llm: BaseLLM | LLM | None = None,
     fingerprint_context: dict[str, str] | None = None,
 ) -> ToolResult:
