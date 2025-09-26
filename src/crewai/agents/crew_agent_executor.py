@@ -5,7 +5,7 @@ and memory management.
 """
 
 from collections.abc import Callable
-from typing import Any
+from typing import Any, Literal
 
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.agents.agent_builder.base_agent_executor_mixin import CrewAgentExecutorMixin
@@ -310,7 +310,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         if self.step_callback:
             self.step_callback(formatted_answer)
 
-    def _append_message(self, text: str, role: str = "assistant") -> None:
+    def _append_message(self, text: str, role: Literal["user", "assistant", "system"] = "assistant") -> None:
         """Add message to conversation history.
 
         Args:
