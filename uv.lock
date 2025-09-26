@@ -744,7 +744,7 @@ requires-dist = [
     { name = "boto3", marker = "extra == 'aws'", specifier = ">=1.40.38" },
     { name = "chromadb", specifier = ">=1.0.0" },
     { name = "click", specifier = ">=8.1.7" },
-    { name = "crewai-tools", marker = "extra == 'tools'", git = "https://github.com/crewAIInc/crewAI-tools.git" },
+    { name = "crewai-tools", marker = "extra == 'tools'", specifier = ">=0.74.0" },
     { name = "docling", marker = "extra == 'docling'", specifier = ">=2.12.0" },
     { name = "ibm-watsonx-ai", marker = "extra == 'watson'", specifier = ">=1.3.39" },
     { name = "instructor", specifier = ">=1.3.3" },
@@ -802,8 +802,8 @@ dev = [
 
 [[package]]
 name = "crewai-tools"
-version = "0.73.1"
-source = { git = "https://github.com/crewAIInc/crewAI-tools.git#e746ddc786cf433ccb75dcbbfd78c8993ed1b60b" }
+version = "0.74.0"
+source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "beautifulsoup4" },
     { name = "crewai" },
@@ -816,6 +816,10 @@ dependencies = [
     { name = "stagehand" },
     { name = "tiktoken" },
     { name = "youtube-transcript-api" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/f4/0e/f273a7b880f553f36391dbe4870d9079cd351c3e35765bb752d6de62622b/crewai_tools-0.74.0.tar.gz", hash = "sha256:64c1b627045312bba59d5cf8f624fce8c4bb82cfb6c6c627882208d9c7e3c058", size = 1126948, upload-time = "2025-09-25T23:31:07.83Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/b8/86/e3486cf2c7f155c46cf4599914d6fcf0f69ad161984896855bafa1675fcb/crewai_tools-0.74.0-py3-none-any.whl", hash = "sha256:16f4a95db499a04a1ed5ac34c91766448b3b6d159ce2c663f55f999ddd6f9a7d", size = 739647, upload-time = "2025-09-25T23:31:06.39Z" },
 ]
 
 [[package]]

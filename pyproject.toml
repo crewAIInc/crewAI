@@ -49,7 +49,9 @@ Documentation = "https://docs.crewai.com"
 Repository = "https://github.com/crewAIInc/crewAI"
 
 [project.optional-dependencies]
-tools = ["crewai-tools@https://github.com/crewAIInc/crewAI-tools.git"]
+tools = [
+    "crewai-tools>=0.74.0",
+]
 embeddings = [
     "tiktoken~=0.8.0"
 ]
@@ -196,5 +198,3 @@ exclude = [
 "docs/",
 ]
 
-[tool.hatch.metadata]
-allow-direct-references = true
