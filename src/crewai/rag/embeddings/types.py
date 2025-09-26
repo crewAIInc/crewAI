@@ -66,6 +66,7 @@ AllowedEmbeddingProviders = Literal[
     "text2vec",
     "voyageai",
     "watsonx",
+    "watson",  # for backward compatibility until v1.0.0
 ]
 
 EmbedderConfig: TypeAlias = (
