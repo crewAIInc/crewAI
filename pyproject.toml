@@ -36,6 +36,7 @@ dev = [
     "types-pyyaml==6.0.*",
     "types-regex==2024.11.6.*",
     "types-appdirs==1.4.*",
+    "git-filter-repo>=2.47.0",
 ]
 
 [tool.ruff]
