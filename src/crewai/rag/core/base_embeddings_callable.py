@@ -140,3 +140,10 @@ class EmbeddingFunction(Protocol[D]):
             return validate_embeddings(normalized)
 
         cls.__call__ = wrapped_call  # type: ignore[method-assign]
+
+    def embed_query(self, input: D) -> Embeddings:
+        """
+        Get the embeddings for a query input.
+        This method is optional, and if not implemented, the default behavior is to call __call__.
+        """
+        return self.__call__(input=input)

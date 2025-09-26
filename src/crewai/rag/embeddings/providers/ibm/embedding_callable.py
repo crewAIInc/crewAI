@@ -2,10 +2,9 @@
 
 from typing import cast
 
+from chromadb.api.types import Documents, EmbeddingFunction, Embeddings
 from typing_extensions import Unpack
 
-from crewai.rag.core.base_embeddings_callable import EmbeddingFunction
-from crewai.rag.core.types import Documents, Embeddings
 from crewai.rag.embeddings.providers.ibm.types import WatsonXProviderConfig
 
 
@@ -18,7 +17,13 @@ class WatsonXEmbeddingFunction(EmbeddingFunction[Documents]):
         Args:
             **kwargs: Configuration parameters for WatsonX Embeddings and Credentials.
         """
+        super().__init__(**kwargs)
         self._config = kwargs
+
+    @staticmethod
+    def name() -> str:
+        """Return the name of the embedding function for ChromaDB compatibility."""
+        return "watsonx"
 
     def __call__(self, input: Documents) -> Embeddings:
         """Generate embeddings for input documents.
