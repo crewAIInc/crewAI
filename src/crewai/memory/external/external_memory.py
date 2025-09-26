@@ -36,7 +36,9 @@ class ExternalMemory(Memory):
         }
 
     @staticmethod
-    def create_storage(crew: Any, embedder_config: ProviderSpec | None) -> Storage:
+    def create_storage(
+        crew: Any, embedder_config: dict[str, Any] | ProviderSpec | None
+    ) -> Storage:
         if not embedder_config:
             raise ValueError("embedder_config is required")
 

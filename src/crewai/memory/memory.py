@@ -14,7 +14,7 @@ class Memory(BaseModel):
     Base class for memory, now supporting agent tags and generic metadata.
     """
 
-    embedder_config: EmbedderConfig | None = None
+    embedder_config: EmbedderConfig | dict[str, Any] | None = None
     crew: Any | None = None
 
     storage: Any
