@@ -2,7 +2,7 @@
 
 from typing import Any
 
-from pydantic import Field, model_validator
+from pydantic import AliasChoices, Field, model_validator
 from typing_extensions import Self
 
 from crewai.rag.core.base_embeddings_provider import BaseEmbeddingsProvider
@@ -21,7 +21,8 @@ class WatsonProvider(BaseEmbeddingsProvider[WatsonEmbeddingFunction]):
         default=WatsonEmbeddingFunction, description="Watson embedding function class"
     )
     model_id: str = Field(
-        description="Watson model ID", validation_alias="WATSON_MODEL_ID"
+        description="Watson model ID",
+        validation_alias=AliasChoices("WATSONX_MODEL_ID", "WATSON_MODEL_ID"),
     )
     params: dict[str, str | dict[str, str]] | None = Field(
         default=None, description="Additional parameters"
@@ -30,7 +31,7 @@ class WatsonProvider(BaseEmbeddingsProvider[WatsonEmbeddingFunction]):
     project_id: str | None = Field(
         default=None,
         description="Watson project ID",
-        validation_alias="WATSON_PROJECT_ID",
+        validation_alias=AliasChoices("WATSONX_PROJECT_ID", "WATSON_PROJECT_ID"),
     )
     space_id: str | None = Field(
         default=None, description="Watson space ID", validation_alias="WATSON_SPACE_ID"
@@ -67,9 +68,13 @@ class WatsonProvider(BaseEmbeddingsProvider[WatsonEmbeddingFunction]):
     retry_status_codes: list[int] | None = Field(
         default=None, description="HTTP status codes to retry on"
     )
-    url: str = Field(description="Watson API URL", validation_alias="WATSON_URL")
+    url: str = Field(
+        description="Watson API URL",
+        validation_alias=AliasChoices("WATSONX_URL", "WATSON_URL"),
+    )
     api_key: str = Field(
-        description="Watson API key", validation_alias="WATSON_API_KEY"
+        description="Watson API key",
+        validation_alias=AliasChoices("WATSONX_APIKEY", "WATSON_API_KEY"),
     )
     name: str | None = Field(
         default=None, description="Service name", validation_alias="WATSON_NAME"
@@ -85,7 +90,9 @@ class WatsonProvider(BaseEmbeddingsProvider[WatsonEmbeddingFunction]):
         validation_alias="WATSON_TRUSTED_PROFILE_ID",
     )
     token: str | None = Field(
-        default=None, description="Bearer token", validation_alias="WATSON_TOKEN"
+        default=None,
+        description="Bearer token",
+        validation_alias=AliasChoices("WATSONX_TOKEN", "WATSON_TOKEN"),
     )
     projects_token: str | None = Field(
         default=None,
