@@ -1179,8 +1179,9 @@ class LLM(BaseLLM):
 
     def _validate_call_params(self) -> None:
         """
-        Validate parameters before making a call. Currently this only checks if
-        a response_format is provided and whether the model supports it.
+        Validate parameters before making a call. Currently this checks if
+        a response_format is provided and whether the model supports it, and
+        validates base_url for Ollama connections.
         The custom_llm_provider is dynamically determined from the model:
           - E.g., "openrouter/deepseek/deepseek-chat" yields "openrouter"
           - "gemini/gemini-1.5-pro" yields "gemini"
@@ -1195,6 +1196,56 @@ class LLM(BaseLLM):
                 f"The model {self.model} does not support response_format for provider '{provider}'. "
                 "Please remove response_format or use a supported model."
             )
+        
+        # Validate base_url for Ollama connections
+        if "ollama" in self.model.lower() and (self.base_url or self.api_base):
+            url_to_validate = self.base_url or self.api_base
+            if not self._validate_base_url(url_to_validate):
+                raise ValueError(
+                    f"Invalid Ollama base_url: '{url_to_validate}'. "
+                    "Please check that the URL format is correct and the IP address is valid. "
+                    "Example: 'http://localhost:11434' or 'http://192.168.1.100:11434'"
+                )
+
+    def _validate_base_url(self, url: str) -> bool:
+        """Validate base_url format and IP address for Ollama connections.
+        
+        Args:
+            url: The base URL to validate
+            
+        Returns:
+            bool: True if URL is valid, False otherwise
+        """
+        try:
+            from urllib.parse import urlparse
+            import ipaddress
+            
+            result = urlparse(url)
+            
+            if not all([result.scheme in ("http", "https"), result.netloc]):
+                return False
+            
+            # Extract hostname/IP from netloc (remove port if present)
+            hostname = result.hostname
+            if not hostname:
+                return False
+            
+            # Check if it looks like an IP address first
+            if all(part.isdigit() for part in hostname.split('.')) and len(hostname.split('.')) == 4:
+                try:
+                    ipaddress.ip_address(hostname)
+                    return True  # Valid IP address
+                except ValueError:
+                    return False  # Invalid IP address
+            else:
+                if hostname == "localhost":
+                    return True
+                if "." in hostname and all(c.isalnum() or c in ".-" for c in hostname):
+                    return True
+                return False
+                
+        except Exception:
+            return False
 
     def supports_function_calling(self) -> bool:
         try:
