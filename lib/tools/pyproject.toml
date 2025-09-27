@@ -8,7 +8,7 @@ authors = [
 ]
 requires-python = ">=3.10, <3.14"
 dependencies = [
-    "crewai-core",
+    "crewai",
     "lancedb>=0.5.4",
     "pytube>=15.0.0",
     "requests>=2.31.0",
@@ -141,6 +141,8 @@ contextual = [
     "contextual-client>=0.1.0",
     "nest-asyncio>=1.6.0",
 ]
+
+
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

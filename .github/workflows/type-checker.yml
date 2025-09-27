@@ -40,7 +40,7 @@ jobs:
           enable-cache: false
 
       - name: Install dependencies
-        run: uv sync --all-groups --all-extras
+        run: uv sync --all-packages --all-extras
 
       - name: Get changed Python files
         id: changed-files

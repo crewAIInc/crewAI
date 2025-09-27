@@ -45,7 +45,7 @@ jobs:
           enable-cache: false
 
       - name: Install the project
-        run: uv sync --all-packages --all-extras
+        run: uv sync --all-packages --all-extras --no-install-project
 
       - name: Restore test durations
         uses: actions/cache/restore@v4
@@ -75,7 +75,7 @@ jobs:
           #   DURATIONS_ARG="--durations-path=${DURATION_FILE}"
           # fi
 
-          uv run pytest tests/ \
+          cd lib/crewai && uv run pytest . \
             --block-network \
             --timeout=30 \
             -vv \
