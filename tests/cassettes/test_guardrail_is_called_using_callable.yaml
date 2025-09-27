@@ -47,34 +47,49 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-CKF2fBtZFxmdxyEkq6E5KE615QprZ\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1758940417,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I now can give a great answer\\nFinal
-      Answer: The top player widely regarded as the best in the world as of October
-      2023 is Lionel Messi. \\n\\n1. **Name:** Lionel Messi\\n2. **Nationality:**
-      Argentine\\n3. **Age:** 36 (born June 24, 1987)\\n4. **Club:** Inter Miami CF
-      (as of 2023)\\n5. **Position:** Forward\\n6. **Career Highlights:**\\n   - 7-time
-      Ballon d'Or winner\\n   - All-time top scorer for FC Barcelona and La Liga\\n
-      \  - Significant contributions to Argentina's 2021 Copa America victory and
-      2022 FIFA World Cup victory\\n   - Over 800 career goals, making him one of
-      the highest goal-scorers in soccer history\\n7. **Playing Style:** Known for
-      his exceptional dribbling, playmaking ability, and goal-scoring prowess, Messi
-      combines technical skill with extraordinary vision on the field. \\n8. **Influence
-      & Legacy:** Messi's dedication and consistency have set benchmarks in soccer,
-      making him a role model for aspiring players worldwide.\\n\\nIn summary, Lionel
-      Messi's combinations of talent, achievements, and impact on and off the field
-      solidify his status as the best soccer player in the world as of October 2023.\",\n
-      \       \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\":
-      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      122,\n    \"completion_tokens\": 267,\n    \"total_tokens\": 389,\n    \"prompt_tokens_details\":
-      {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
-      \"default\",\n  \"system_fingerprint\": \"fp_560af6e559\"\n}\n"
+    content: "{\n  \"id\": \"chatcmpl-CKF9XzyDXXSKpGb0pnzKDQoJjx9li\",\n  \"object\"\
+      : \"chat.completion\",\n  \"created\": 1758940843,\n  \"model\": \"gpt-4o-mini-2024-07-18\"\
+      ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n    \
+      \    \"role\": \"assistant\",\n        \"content\": \"Thought: I now can give\
+      \ a great answer  \\nFinal Answer: As of October 2023, the title of the best\
+      \ soccer player in the world is widely attributed to Lionel Messi. Here\u2019\
+      s an overview of his career and achievements that contribute to this status:\\\
+      n\\n1. **Profile**:  \\n   - **Name**: Lionel Messi  \\n   - **Nationality**:\
+      \ Argentine  \\n   - **Position**: Forward  \\n   - **Current Club**: Inter\
+      \ Miami (as of 2023)\\n\\n2. **Club Career Highlights**:  \\n   - **FC Barcelona**\
+      \ (2004\u20132021):  \\n     - 672 goals in 778 appearances  \\n     - 10 La\
+      \ Liga titles  \\n     - 7 Copa del Rey titles  \\n     - 4 UEFA Champions League\
+      \ titles  \\n   - **Paris Saint-Germain** (2021\u20132023):  \\n     - Continued\
+      \ to add to his goal tally and won the Ligue 1 title.\\n   - **Inter Miami**:\
+      \  \\n     - Joined in 2023, making an immediate impact in Major League Soccer\
+      \ (MLS).\\n\\n3. **International Achievements**:  \\n   - **Argentina National\
+      \ Team**:  \\n     - Won the Copa America in 2021  \\n     - Won the FIFA World\
+      \ Cup in 2022, where he played a pivotal role and was awarded the Golden Ball\
+      \ as the tournament's best player.  \\n     - Victories in previous youth tournaments,\
+      \ including the FIFA U-20 World Cup and Olympic Gold Medal in 2008.\\n\\n4.\
+      \ **Individual Awards**:  \\n   - 7-time Ballon d'Or winner (record)  \\n  \
+      \ - Numerous Best FIFA Men's Player awards  \\n   - Holds records for most goals\
+      \ in a calendar year and various other individual honors.\\n\\n5. **Playing\
+      \ Style**:  \\n   - Known for his incredible dribbling, vision, and goal-scoring\
+      \ ability.  \\n   - Exceptional playmaking skills and creativity on the field.\
+      \  \\n   - Renowned for his consistency and longevity at the highest level.\\\
+      n\\n6. **Impact on the Game**:  \\n   - Regarded as one of the greatest players\
+      \ of all time.  \\n   - Has inspired countless players and fans globally.  \\\
+      n   - Significant influence on the sport, both on and off the pitch.\\n\\nIn\
+      \ summary, Lionel Messi's extraordinary skill set, unmatched achievements, and\
+      \ ongoing influence on and off the field secure his position as the best soccer\
+      \ player in the world as of October 2023.\",\n        \"refusal\": null,\n \
+      \       \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\"\
+      : \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 122,\n    \"\
+      completion_tokens\": 497,\n    \"total_tokens\": 619,\n    \"prompt_tokens_details\"\
+      : {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"\
+      completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\"\
+      : 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\"\
+      : 0\n    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\"\
+      : \"fp_560af6e559\"\n}\n"
     headers:
       CF-RAY:
-      - 985798e02dc1c647-EWR
+      - 9857a3511d7d82a6-EWR
       Connection:
       - keep-alive
       Content-Encoding:
@@ -82,14 +97,14 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sat, 27 Sep 2025 02:33:49 GMT
+      - Sat, 27 Sep 2025 02:40:53 GMT
       Server:
       - cloudflare
       Set-Cookie:
-      - __cf_bm=VUzo5xKYNXLShjO87faeRnbZJh.EtoZbKyQf2LpAoaQ-1758940429-1.0.1.1-Nxgw_ljVv7uFm46.jZoZQGF8UVx167Fn8.KeENl.bG9tNlRI1ztScpF3vRc1lYdk6TriJQhx19L7K3qvJB1OQN8_jNRYSnsc33mvFTcvegs;
-        path=/; expires=Sat, 27-Sep-25 03:03:49 GMT; domain=.api.openai.com; HttpOnly;
+      - __cf_bm=_dl1fqaChvPLUMNNowzKzQVCqZL5c76mdXZd6eWNuDk-1758940853-1.0.1.1-2XRTx9G8wfNaWkDOcFtNQsvJ7XG5x.8ZoVjqShjYdbXBTanESI4pR2gzaL4EE5PMZHMITrQhJzaS6EQKEfPb3zPX7pweBq.dmTayvpinYxE;
+        path=/; expires=Sat, 27-Sep-25 03:10:53 GMT; domain=.api.openai.com; HttpOnly;
         Secure; SameSite=None
-      - _cfuvid=Q1ZvDltr9hJs.IDYqAbmPtxng910_lRu2WEyCoaspj8-1758940429939-0.0.1.1-604800000;
+      - _cfuvid=vekOLLrSBKAVaDf5QUb..wrDmpR5p_Orh0lASD059KY-1758940853536-0.0.1.1-604800000;
         path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
       Strict-Transport-Security:
       - max-age=31536000; includeSubDomains; preload
@@ -104,15 +119,15 @@ interactions:
       cf-cache-status:
       - DYNAMIC
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
-      - '12960'
+      - '9684'
       openai-project:
-      - proj_xitITlrFeen7zjNSzML82h9x
+      - REDACTED
       openai-version:
       - '2020-10-01'
       x-envoy-upstream-service-time:
-      - '13216'
+      - '9737'
       x-openai-proxy-wasm:
       - v0.1
       x-ratelimit-limit-project-tokens:
@@ -126,7 +141,7 @@ interactions:
       x-ratelimit-remaining-requests:
       - '29999'
       x-ratelimit-remaining-tokens:
-      - '149999860'
+      - '149999857'
       x-ratelimit-reset-project-tokens:
       - 0s
       x-ratelimit-reset-requests:
@@ -134,7 +149,7 @@ interactions:
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_e97931a084624fffaa5a548259cec845
+      - req_4050af3439ef43268693f6d3eda94ee4
     http_version: HTTP/1.1
     status_code: 200
 version: 1

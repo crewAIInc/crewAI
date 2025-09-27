@@ -55,19 +55,20 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-BHEnpxAj1kSC6XAUxC3lDuHZzp4T9\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1743448177,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"```\\nThought: I need to find the current
-      population of Tokyo to calculate the population density.\\nAction: search_web\\nAction
-      Input: {\\\"query\\\":\\\"current population of Tokyo 2023\\\"}\\n```\\n\",\n
-      \       \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\":
-      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      251,\n    \"completion_tokens\": 41,\n    \"total_tokens\": 292,\n    \"prompt_tokens_details\":
-      {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
-      \"default\",\n  \"system_fingerprint\": \"fp_b376dfbbd5\"\n}\n"
+    content: "{\n  \"id\": \"chatcmpl-BHEnpxAj1kSC6XAUxC3lDuHZzp4T9\",\n  \"object\"\
+      : \"chat.completion\",\n  \"created\": 1743448177,\n  \"model\": \"gpt-4o-mini-2024-07-18\"\
+      ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n    \
+      \    \"role\": \"assistant\",\n        \"content\": \"```\\nThought: I need\
+      \ to find the current population of Tokyo to calculate the population density.\\\
+      nAction: search_web\\nAction Input: {\\\"query\\\":\\\"current population of\
+      \ Tokyo 2023\\\"}\\n```\\n\",\n        \"refusal\": null,\n        \"annotations\"\
+      : []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\
+      \n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 251,\n    \"completion_tokens\"\
+      : 41,\n    \"total_tokens\": 292,\n    \"prompt_tokens_details\": {\n      \"\
+      cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\"\
+      : {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\"\
+      : 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\"\
+      : \"default\",\n  \"system_fingerprint\": \"fp_b376dfbbd5\"\n}\n"
     headers:
       CF-RAY:
       - 929224621caa15b4-SJC
@@ -98,7 +99,7 @@ interactions:
       cf-cache-status:
       - DYNAMIC
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '1156'
       openai-version:
@@ -184,23 +185,24 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-BHEnqB0VnEIObehNbRRxGmyYyAru0\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1743448178,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"```\\nThought: I have found that the
-      population of Tokyo is approximately 21 million people. Now, I need to calculate
-      the population density using the area of 2,194 square kilometers.\\n```\\n\\nPopulation
-      Density = Population / Area = 21,000,000 / 2,194 \u2248 9,570 people per square
-      kilometer.\\n\\n```\\nFinal Answer: The population of Tokyo is approximately
-      21 million people, resulting in a population density of about 9,570 people per
-      square kilometer.\\n```\",\n        \"refusal\": null,\n        \"annotations\":
-      []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
-      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 325,\n    \"completion_tokens\":
-      104,\n    \"total_tokens\": 429,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
-      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
-      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
-      \"default\",\n  \"system_fingerprint\": \"fp_b376dfbbd5\"\n}\n"
+    content: "{\n  \"id\": \"chatcmpl-BHEnqB0VnEIObehNbRRxGmyYyAru0\",\n  \"object\"\
+      : \"chat.completion\",\n  \"created\": 1743448178,\n  \"model\": \"gpt-4o-mini-2024-07-18\"\
+      ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n    \
+      \    \"role\": \"assistant\",\n        \"content\": \"```\\nThought: I have\
+      \ found that the population of Tokyo is approximately 21 million people. Now,\
+      \ I need to calculate the population density using the area of 2,194 square\
+      \ kilometers.\\n```\\n\\nPopulation Density = Population / Area = 21,000,000\
+      \ / 2,194 \u2248 9,570 people per square kilometer.\\n\\n```\\nFinal Answer:\
+      \ The population of Tokyo is approximately 21 million people, resulting in a\
+      \ population density of about 9,570 people per square kilometer.\\n```\",\n\
+      \        \"refusal\": null,\n        \"annotations\": []\n      },\n      \"\
+      logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\"\
+      : {\n    \"prompt_tokens\": 325,\n    \"completion_tokens\": 104,\n    \"total_tokens\"\
+      : 429,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n    \
+      \  \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n     \
+      \ \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\"\
+      : 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\"\
+      : \"default\",\n  \"system_fingerprint\": \"fp_b376dfbbd5\"\n}\n"
     headers:
       CF-RAY:
       - 9292246a3c7c15b4-SJC
@@ -225,7 +227,7 @@ interactions:
       cf-cache-status:
       - DYNAMIC
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '1796'
       openai-version:
@@ -340,19 +342,20 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-BHEnsVlmHXlessiDjYgHjd6Cz2hlT\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1743448180,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"```\\nThought: I should search for information
-      about the effects of climate change on coral reefs.\\nAction: search_web\\nAction
-      Input: {\\\"query\\\":\\\"effects of climate change on coral reefs\\\"}\\n```\\n\",\n
-      \       \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\":
-      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      234,\n    \"completion_tokens\": 41,\n    \"total_tokens\": 275,\n    \"prompt_tokens_details\":
-      {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
-      \"default\",\n  \"system_fingerprint\": \"fp_b376dfbbd5\"\n}\n"
+    content: "{\n  \"id\": \"chatcmpl-BHEnsVlmHXlessiDjYgHjd6Cz2hlT\",\n  \"object\"\
+      : \"chat.completion\",\n  \"created\": 1743448180,\n  \"model\": \"gpt-4o-mini-2024-07-18\"\
+      ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n    \
+      \    \"role\": \"assistant\",\n        \"content\": \"```\\nThought: I should\
+      \ search for information about the effects of climate change on coral reefs.\\\
+      nAction: search_web\\nAction Input: {\\\"query\\\":\\\"effects of climate change\
+      \ on coral reefs\\\"}\\n```\\n\",\n        \"refusal\": null,\n        \"annotations\"\
+      : []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\
+      \n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 234,\n    \"completion_tokens\"\
+      : 41,\n    \"total_tokens\": 275,\n    \"prompt_tokens_details\": {\n      \"\
+      cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\"\
+      : {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\"\
+      : 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\"\
+      : \"default\",\n  \"system_fingerprint\": \"fp_b376dfbbd5\"\n}\n"
     headers:
       CF-RAY:
       - 92922476092e15b4-SJC
@@ -377,7 +380,7 @@ interactions:
       cf-cache-status:
       - DYNAMIC
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '1057'
       openai-version:
@@ -465,20 +468,22 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-BHEntjDYNZqWsFxx678q6KZguXh2w\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1743448181,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"```\\nThought: I now know the final answer\\nFinal
-      Answer: Climate change affects coral reefs primarily through ocean warming leading
-      to coral bleaching, ocean acidification reducing calcification, increased sea
-      level affecting light availability, and more frequent storms damaging reef structures.\\n```\",\n
-      \       \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\":
-      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      340,\n    \"completion_tokens\": 52,\n    \"total_tokens\": 392,\n    \"prompt_tokens_details\":
-      {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
-      \"default\",\n  \"system_fingerprint\": \"fp_86d0290411\"\n}\n"
+    content: "{\n  \"id\": \"chatcmpl-BHEntjDYNZqWsFxx678q6KZguXh2w\",\n  \"object\"\
+      : \"chat.completion\",\n  \"created\": 1743448181,\n  \"model\": \"gpt-4o-mini-2024-07-18\"\
+      ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n    \
+      \    \"role\": \"assistant\",\n        \"content\": \"```\\nThought: I now know\
+      \ the final answer\\nFinal Answer: Climate change affects coral reefs primarily\
+      \ through ocean warming leading to coral bleaching, ocean acidification reducing\
+      \ calcification, increased sea level affecting light availability, and more\
+      \ frequent storms damaging reef structures.\\n```\",\n        \"refusal\": null,\n\
+      \        \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"\
+      finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\"\
+      : 340,\n    \"completion_tokens\": 52,\n    \"total_tokens\": 392,\n    \"prompt_tokens_details\"\
+      : {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"\
+      completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\"\
+      : 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\"\
+      : 0\n    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\"\
+      : \"fp_86d0290411\"\n}\n"
     headers:
       CF-RAY:
       - 9292247d48ac15b4-SJC
@@ -503,7 +508,7 @@ interactions:
       cf-cache-status:
       - DYNAMIC
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '952'
       openai-version:

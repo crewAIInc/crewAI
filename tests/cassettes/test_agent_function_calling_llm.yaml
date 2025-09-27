@@ -116,19 +116,20 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-BHImuG3FAgbOcTLxgpZthhEmVg7hf\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1743463496,\n  \"model\": \"gpt-4o-2024-08-06\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"```\\nThought: To write an amazing paragraph
-      on AI, I need to gather detailed information about it first.\\nAction: learn_about_AI\\nAction
-      Input: {}\",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n
-      \     \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n
-      \ \"usage\": {\n    \"prompt_tokens\": 276,\n    \"completion_tokens\": 32,\n
-      \   \"total_tokens\": 308,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
-      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
-      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
-      \"default\",\n  \"system_fingerprint\": \"fp_6dd05565ef\"\n}\n"
+    content: "{\n  \"id\": \"chatcmpl-BHImuG3FAgbOcTLxgpZthhEmVg7hf\",\n  \"object\"\
+      : \"chat.completion\",\n  \"created\": 1743463496,\n  \"model\": \"gpt-4o-2024-08-06\"\
+      ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n    \
+      \    \"role\": \"assistant\",\n        \"content\": \"```\\nThought: To write\
+      \ an amazing paragraph on AI, I need to gather detailed information about it\
+      \ first.\\nAction: learn_about_AI\\nAction Input: {}\",\n        \"refusal\"\
+      : null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n\
+      \      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\"\
+      : 276,\n    \"completion_tokens\": 32,\n    \"total_tokens\": 308,\n    \"prompt_tokens_details\"\
+      : {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"\
+      completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\"\
+      : 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\"\
+      : 0\n    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\"\
+      : \"fp_6dd05565ef\"\n}\n"
     headers:
       CF-RAY:
       - 92939a567c9a67c4-SJC
@@ -159,7 +160,7 @@ interactions:
       cf-cache-status:
       - DYNAMIC
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '1700'
       openai-version:
@@ -239,21 +240,22 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-BHImw7lLFFPaIqe3NQubFNJDgghnU\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1743463498,\n  \"model\": \"gpt-4o-2024-08-06\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": null,\n        \"tool_calls\": [\n          {\n
-      \           \"id\": \"call_NIY8OTJapOBOwYmnfHo6SigC\",\n            \"type\":
-      \"function\",\n            \"function\": {\n              \"name\": \"InstructorToolCalling\",\n
-      \             \"arguments\": \"{\\\"tool_name\\\":\\\"learn_about_AI\\\",\\\"arguments\\\":null}\"\n
-      \           }\n          }\n        ],\n        \"refusal\": null,\n        \"annotations\":
-      []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
-      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 199,\n    \"completion_tokens\":
-      13,\n    \"total_tokens\": 212,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
-      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
-      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
-      \"default\",\n  \"system_fingerprint\": \"fp_898ac29719\"\n}\n"
+    content: "{\n  \"id\": \"chatcmpl-BHImw7lLFFPaIqe3NQubFNJDgghnU\",\n  \"object\"\
+      : \"chat.completion\",\n  \"created\": 1743463498,\n  \"model\": \"gpt-4o-2024-08-06\"\
+      ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n    \
+      \    \"role\": \"assistant\",\n        \"content\": null,\n        \"tool_calls\"\
+      : [\n          {\n            \"id\": \"call_NIY8OTJapOBOwYmnfHo6SigC\",\n \
+      \           \"type\": \"function\",\n            \"function\": {\n         \
+      \     \"name\": \"InstructorToolCalling\",\n              \"arguments\": \"\
+      {\\\"tool_name\\\":\\\"learn_about_AI\\\",\\\"arguments\\\":null}\"\n      \
+      \      }\n          }\n        ],\n        \"refusal\": null,\n        \"annotations\"\
+      : []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\
+      \n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 199,\n    \"completion_tokens\"\
+      : 13,\n    \"total_tokens\": 212,\n    \"prompt_tokens_details\": {\n      \"\
+      cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\"\
+      : {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\"\
+      : 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\"\
+      : \"default\",\n  \"system_fingerprint\": \"fp_898ac29719\"\n}\n"
     headers:
       CF-RAY:
       - 92939a70fda567c4-SJC
@@ -278,7 +280,7 @@ interactions:
       cf-cache-status:
       - DYNAMIC
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '533'
       openai-version:
@@ -364,27 +366,29 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-BHImxQG4CPqO2OFhN7ZIwXtotTwwP\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1743463499,\n  \"model\": \"gpt-4o-2024-08-06\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"```\\nThought: I now have the necessary
-      information to craft a comprehensive and compelling paragraph about AI.\\nFinal
-      Answer: Artificial Intelligence (AI) is a transformative force in today's world,
-      dramatically reshaping industries from healthcare to automotive. By leveraging
-      complex algorithms and large datasets, AI systems can perform tasks that typically
-      require human intelligence, such as understanding natural language, recognizing
-      patterns, and making decisions. The potential of AI extends beyond automation;
-      it is a catalyst for innovation, enabling breakthroughs in personalized medicine,
-      autonomous vehicles, and more. As AI continues to evolve, it promises to enhance
-      efficiency, drive economic growth, and unlock new levels of problem-solving
-      capabilities, cementing its role as a cornerstone of technological progress.\\n```\",\n
-      \       \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\":
-      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      332,\n    \"completion_tokens\": 142,\n    \"total_tokens\": 474,\n    \"prompt_tokens_details\":
-      {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
-      \"default\",\n  \"system_fingerprint\": \"fp_6dd05565ef\"\n}\n"
+    content: "{\n  \"id\": \"chatcmpl-BHImxQG4CPqO2OFhN7ZIwXtotTwwP\",\n  \"object\"\
+      : \"chat.completion\",\n  \"created\": 1743463499,\n  \"model\": \"gpt-4o-2024-08-06\"\
+      ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n    \
+      \    \"role\": \"assistant\",\n        \"content\": \"```\\nThought: I now have\
+      \ the necessary information to craft a comprehensive and compelling paragraph\
+      \ about AI.\\nFinal Answer: Artificial Intelligence (AI) is a transformative\
+      \ force in today's world, dramatically reshaping industries from healthcare\
+      \ to automotive. By leveraging complex algorithms and large datasets, AI systems\
+      \ can perform tasks that typically require human intelligence, such as understanding\
+      \ natural language, recognizing patterns, and making decisions. The potential\
+      \ of AI extends beyond automation; it is a catalyst for innovation, enabling\
+      \ breakthroughs in personalized medicine, autonomous vehicles, and more. As\
+      \ AI continues to evolve, it promises to enhance efficiency, drive economic\
+      \ growth, and unlock new levels of problem-solving capabilities, cementing its\
+      \ role as a cornerstone of technological progress.\\n```\",\n        \"refusal\"\
+      : null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n\
+      \      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\"\
+      : 332,\n    \"completion_tokens\": 142,\n    \"total_tokens\": 474,\n    \"\
+      prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\"\
+      : 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\"\
+      : 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n\
+      \      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\": \"\
+      default\",\n  \"system_fingerprint\": \"fp_6dd05565ef\"\n}\n"
     headers:
       CF-RAY:
       - 92939a75b95d67c4-SJC
@@ -409,7 +413,7 @@ interactions:
       cf-cache-status:
       - DYNAMIC
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '1869'
       openai-version:

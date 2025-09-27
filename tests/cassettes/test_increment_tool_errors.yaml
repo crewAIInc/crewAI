@@ -162,34 +162,36 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AdhdgT49oskPNVzkbb9Z6SP7ikLJi\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1734025904,\n  \"model\": \"gpt-4-0125-preview\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: To give an accurate score for
-      the title \\\"The impact of AI in the future of work\\\" based on the specified
-      criteria, I'll need the expertise of the Scorer. They specialize in evaluating
-      content, so I must delegate this task to them. I need to provide them with all
-      the necessary context, including the title and the importance of giving a well-considered,
-      integer score between 1-5. Since the request stresses the importance of this
-      task and its implications for my job, I will make sure to communicate the urgency
-      and the criteria very clearly to the Scorer.\\n\\nAction: Delegate work to coworker\\n\\nAction
-      Input: {\\\"task\\\": \\\"Evaluate the title 'The impact of AI in the future
-      of work' and give it an integer score between 1-5, based on your expert assessment.\\\",
-      \\\"context\\\": \\\"The task is to assign a score to the given title based
-      on its significance, relevance, and impactfulness regarding the future of work
-      influenced by artificial intelligence. This score needs to reflect a thorough
-      evaluation within the range of 1 (being the least impactful or relevant) to
-      5 (being the most impactful or relevant). The assessment is highly important
-      and could significantly affect our future work, so it's crucial to consider
-      the current discourse on AI, its potential transformative power on industries
-      and job markets, and general expectations of its future role.\\\", \\\"coworker\\\":
-      \\\"Scorer\\\"}\",\n        \"refusal\": null\n      },\n      \"logprobs\":
-      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      631,\n    \"completion_tokens\": 286,\n    \"total_tokens\": 917,\n    \"prompt_tokens_details\":
-      {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"system_fingerprint\":
-      null\n}\n"
+    content: "{\n  \"id\": \"chatcmpl-AdhdgT49oskPNVzkbb9Z6SP7ikLJi\",\n  \"object\"\
+      : \"chat.completion\",\n  \"created\": 1734025904,\n  \"model\": \"gpt-4-0125-preview\"\
+      ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n    \
+      \    \"role\": \"assistant\",\n        \"content\": \"Thought: To give an accurate\
+      \ score for the title \\\"The impact of AI in the future of work\\\" based on\
+      \ the specified criteria, I'll need the expertise of the Scorer. They specialize\
+      \ in evaluating content, so I must delegate this task to them. I need to provide\
+      \ them with all the necessary context, including the title and the importance\
+      \ of giving a well-considered, integer score between 1-5. Since the request\
+      \ stresses the importance of this task and its implications for my job, I will\
+      \ make sure to communicate the urgency and the criteria very clearly to the\
+      \ Scorer.\\n\\nAction: Delegate work to coworker\\n\\nAction Input: {\\\"task\\\
+      \": \\\"Evaluate the title 'The impact of AI in the future of work' and give\
+      \ it an integer score between 1-5, based on your expert assessment.\\\", \\\"\
+      context\\\": \\\"The task is to assign a score to the given title based on its\
+      \ significance, relevance, and impactfulness regarding the future of work influenced\
+      \ by artificial intelligence. This score needs to reflect a thorough evaluation\
+      \ within the range of 1 (being the least impactful or relevant) to 5 (being\
+      \ the most impactful or relevant). The assessment is highly important and could\
+      \ significantly affect our future work, so it's crucial to consider the current\
+      \ discourse on AI, its potential transformative power on industries and job\
+      \ markets, and general expectations of its future role.\\\", \\\"coworker\\\"\
+      : \\\"Scorer\\\"}\",\n        \"refusal\": null\n      },\n      \"logprobs\"\
+      : null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n  \
+      \  \"prompt_tokens\": 631,\n    \"completion_tokens\": 286,\n    \"total_tokens\"\
+      : 917,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n    \
+      \  \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n     \
+      \ \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\"\
+      : 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"system_fingerprint\"\
+      : null\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
@@ -220,7 +222,7 @@ interactions:
       alt-svc:
       - h3=":443"; ma=86400
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '7000'
       openai-version:
@@ -310,21 +312,21 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AdhdoOZnBz23d3UiqKLBUQwmrMkSo\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1734025912,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"I need to evaluate the title \\\"The
-      impact of AI in the future of work\\\" based on its significance, relevance,
-      and impactfulness, considering the current discourse on AI and its transformative
-      role in industries and job markets.\\n\\nAction: scoring_examples  \\nAction
-      Input: {\\\"title\\\": \\\"The impact of AI in the future of work\\\"}  \",\n
-      \       \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
-      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 400,\n    \"completion_tokens\":
-      67,\n    \"total_tokens\": 467,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
-      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
-      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"system_fingerprint\":
-      \"fp_6fc10e10eb\"\n}\n"
+    content: "{\n  \"id\": \"chatcmpl-AdhdoOZnBz23d3UiqKLBUQwmrMkSo\",\n  \"object\"\
+      : \"chat.completion\",\n  \"created\": 1734025912,\n  \"model\": \"gpt-4o-mini-2024-07-18\"\
+      ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n    \
+      \    \"role\": \"assistant\",\n        \"content\": \"I need to evaluate the\
+      \ title \\\"The impact of AI in the future of work\\\" based on its significance,\
+      \ relevance, and impactfulness, considering the current discourse on AI and\
+      \ its transformative role in industries and job markets.\\n\\nAction: scoring_examples\
+      \  \\nAction Input: {\\\"title\\\": \\\"The impact of AI in the future of work\\\
+      \"}  \",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n \
+      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\"\
+      : 400,\n    \"completion_tokens\": 67,\n    \"total_tokens\": 467,\n    \"prompt_tokens_details\"\
+      : {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"\
+      completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\"\
+      : 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\"\
+      : 0\n    }\n  },\n  \"system_fingerprint\": \"fp_6fc10e10eb\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
@@ -349,7 +351,7 @@ interactions:
       alt-svc:
       - h3=":443"; ma=86400
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '1099'
       openai-version:
@@ -487,39 +489,41 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-Adhdp5Oq2gpRyz7oIh2YzjmLoX4RB\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1734025913,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: Since I cannot use the tool
-      to score the title, I will need to perform a manual evaluation based on my expertise
-      in scoring titles and the context provided. \\n\\nThe title \\\"The impact of
-      AI in the future of work\\\" is highly relevant given the current state of discourse
-      surrounding artificial intelligence and its rapid integration into various industries.
-      The title effectively captures a significant topic\u2014how AI will shape the
-      future of employment, job roles, and organizational structure.\\n\\nEvaluating
-      its significance, the title could attract attention from professionals, scholars,
-      and businesses interested in understanding the implications of AI on work environments
-      and labor markets. It addresses both the potential benefits and challenges posed
-      by AI, making it a crucial discussion point in contemporary and future work
-      scenarios.\\n\\nFurthermore, its impactfulness lies in its ability to reflect
-      concern over the potential job displacement caused by automation versus the
-      new opportunities that AI might create. It also aligns with ongoing debates
-      around the ethical use of AI in workplaces, further enhancing its relevance.\\n\\nConsidering
-      all these factors, I would assign the title a score of 5 for its profound significance,
-      relevance, and impactfulness concerning the future of work influenced by AI.\\n\\nThought:
-      I now know the final answer\\nFinal Answer: The title \\\"The impact of AI in
-      the future of work\\\" scores a 5 based on its significance, relevance, and
-      impactfulness. It effectively addresses a crucial topic that is highly relevant
-      in today's discourse on artificial intelligence and its transformative role
-      in industries and job markets. This title is pivotal for understanding the future
-      implications of AI on employment and work environments.\",\n        \"refusal\":
-      null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
-      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 651,\n    \"completion_tokens\":
-      313,\n    \"total_tokens\": 964,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
-      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
-      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"system_fingerprint\":
-      \"fp_6fc10e10eb\"\n}\n"
+    content: "{\n  \"id\": \"chatcmpl-Adhdp5Oq2gpRyz7oIh2YzjmLoX4RB\",\n  \"object\"\
+      : \"chat.completion\",\n  \"created\": 1734025913,\n  \"model\": \"gpt-4o-mini-2024-07-18\"\
+      ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n    \
+      \    \"role\": \"assistant\",\n        \"content\": \"Thought: Since I cannot\
+      \ use the tool to score the title, I will need to perform a manual evaluation\
+      \ based on my expertise in scoring titles and the context provided. \\n\\nThe\
+      \ title \\\"The impact of AI in the future of work\\\" is highly relevant given\
+      \ the current state of discourse surrounding artificial intelligence and its\
+      \ rapid integration into various industries. The title effectively captures\
+      \ a significant topic\u2014how AI will shape the future of employment, job roles,\
+      \ and organizational structure.\\n\\nEvaluating its significance, the title\
+      \ could attract attention from professionals, scholars, and businesses interested\
+      \ in understanding the implications of AI on work environments and labor markets.\
+      \ It addresses both the potential benefits and challenges posed by AI, making\
+      \ it a crucial discussion point in contemporary and future work scenarios.\\\
+      n\\nFurthermore, its impactfulness lies in its ability to reflect concern over\
+      \ the potential job displacement caused by automation versus the new opportunities\
+      \ that AI might create. It also aligns with ongoing debates around the ethical\
+      \ use of AI in workplaces, further enhancing its relevance.\\n\\nConsidering\
+      \ all these factors, I would assign the title a score of 5 for its profound\
+      \ significance, relevance, and impactfulness concerning the future of work influenced\
+      \ by AI.\\n\\nThought: I now know the final answer\\nFinal Answer: The title\
+      \ \\\"The impact of AI in the future of work\\\" scores a 5 based on its significance,\
+      \ relevance, and impactfulness. It effectively addresses a crucial topic that\
+      \ is highly relevant in today's discourse on artificial intelligence and its\
+      \ transformative role in industries and job markets. This title is pivotal for\
+      \ understanding the future implications of AI on employment and work environments.\"\
+      ,\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"\
+      finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\"\
+      : 651,\n    \"completion_tokens\": 313,\n    \"total_tokens\": 964,\n    \"\
+      prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\"\
+      : 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\"\
+      : 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n\
+      \      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"system_fingerprint\"\
+      : \"fp_6fc10e10eb\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
@@ -544,7 +548,7 @@ interactions:
       alt-svc:
       - h3=":443"; ma=86400
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '4850'
       openai-version:
@@ -669,18 +673,19 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-Adhduvx929aETP7FXGXyUZWKGhHgH\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1734025918,\n  \"model\": \"gpt-4-0125-preview\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I now know the final answer\\n\\nFinal
-      Answer: The score of the title \\\"The impact of AI in the future of work\\\"
-      is 5.\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
-      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 996,\n    \"completion_tokens\":
-      32,\n    \"total_tokens\": 1028,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
-      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
-      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"system_fingerprint\":
-      null\n}\n"
+    content: "{\n  \"id\": \"chatcmpl-Adhduvx929aETP7FXGXyUZWKGhHgH\",\n  \"object\"\
+      : \"chat.completion\",\n  \"created\": 1734025918,\n  \"model\": \"gpt-4-0125-preview\"\
+      ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n    \
+      \    \"role\": \"assistant\",\n        \"content\": \"Thought: I now know the\
+      \ final answer\\n\\nFinal Answer: The score of the title \\\"The impact of AI\
+      \ in the future of work\\\" is 5.\",\n        \"refusal\": null\n      },\n\
+      \      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n\
+      \  \"usage\": {\n    \"prompt_tokens\": 996,\n    \"completion_tokens\": 32,\n\
+      \    \"total_tokens\": 1028,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\"\
+      : 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":\
+      \ {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\"\
+      : 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"system_fingerprint\"\
+      : null\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
@@ -705,7 +710,7 @@ interactions:
       alt-svc:
       - h3=":443"; ma=86400
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '1402'
       openai-version:
@@ -871,11 +876,11 @@ interactions:
       cf-cache-status:
       - DYNAMIC
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '1211'
       openai-project:
-      - proj_xitITlrFeen7zjNSzML82h9x
+      - REDACTED
       openai-version:
       - '2020-10-01'
       x-envoy-upstream-service-time:

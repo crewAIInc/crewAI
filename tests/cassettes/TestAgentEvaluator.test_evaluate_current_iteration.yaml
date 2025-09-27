@@ -160,27 +160,29 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-BrUPlyy6FJgrPxOZMBZbbIE86pw5y\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1752087997,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"I now can give a great answer  \\nFinal
-      Answer: The expected test output is a comprehensive document that outlines the
-      specific parameters and criteria that define success for the task at hand. It
-      should include detailed descriptions of the tasks, the goals that need to be
-      achieved, and any specific formatting or structural requirements necessary for
-      the output. Each component of the task must be analyzed and addressed, providing
-      context as well as examples where applicable. Additionally, any tools or methodologies
-      that are relevant to executing the tasks successfully should be outlined, including
-      any potential risks or challenges that may arise during the process. This document
-      serves as a guiding framework to ensure that all aspects of the task are thoroughly
-      considered and executed to meet the high standards expected.\",\n        \"refusal\":
-      null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
-      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 161,\n    \"completion_tokens\":
-      142,\n    \"total_tokens\": 303,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
-      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
-      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
-      \"default\",\n  \"system_fingerprint\": \"fp_34a54ae93c\"\n}\n"
+    content: "{\n  \"id\": \"chatcmpl-BrUPlyy6FJgrPxOZMBZbbIE86pw5y\",\n  \"object\"\
+      : \"chat.completion\",\n  \"created\": 1752087997,\n  \"model\": \"gpt-4o-mini-2024-07-18\"\
+      ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n    \
+      \    \"role\": \"assistant\",\n        \"content\": \"I now can give a great\
+      \ answer  \\nFinal Answer: The expected test output is a comprehensive document\
+      \ that outlines the specific parameters and criteria that define success for\
+      \ the task at hand. It should include detailed descriptions of the tasks, the\
+      \ goals that need to be achieved, and any specific formatting or structural\
+      \ requirements necessary for the output. Each component of the task must be\
+      \ analyzed and addressed, providing context as well as examples where applicable.\
+      \ Additionally, any tools or methodologies that are relevant to executing the\
+      \ tasks successfully should be outlined, including any potential risks or challenges\
+      \ that may arise during the process. This document serves as a guiding framework\
+      \ to ensure that all aspects of the task are thoroughly considered and executed\
+      \ to meet the high standards expected.\",\n        \"refusal\": null,\n    \
+      \    \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\"\
+      : \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 161,\n    \"\
+      completion_tokens\": 142,\n    \"total_tokens\": 303,\n    \"prompt_tokens_details\"\
+      : {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"\
+      completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\"\
+      : 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\"\
+      : 0\n    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\"\
+      : \"fp_34a54ae93c\"\n}\n"
     headers:
       CF-RAY:
       - 95ca197e89637df2-GRU
@@ -211,7 +213,7 @@ interactions:
       cf-cache-status:
       - DYNAMIC
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '1872'
       openai-version:
@@ -302,23 +304,24 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-BrUPn4pG0PkiwTx9zAwzBaBYj6HG3\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1752087999,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"{\\n  \\\"score\\\": 5,\\n  \\\"feedback\\\":
-      \\\"The agent's output demonstrates an understanding of the need for a comprehensive
-      document outlining task parameters and success criteria. However, it does not
-      explicitly provide the expected test output or directly address the specific
-      test tasks as described in the task definition. The agent missed delivering
-      the precise expected output and did not include clear examples or structure
-      that align with the task at hand.\\\"\\n}\",\n        \"refusal\": null,\n        \"annotations\":
-      []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
-      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 344,\n    \"completion_tokens\":
-      84,\n    \"total_tokens\": 428,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
-      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
-      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
-      \"default\",\n  \"system_fingerprint\": \"fp_62a23a81ef\"\n}\n"
+    content: "{\n  \"id\": \"chatcmpl-BrUPn4pG0PkiwTx9zAwzBaBYj6HG3\",\n  \"object\"\
+      : \"chat.completion\",\n  \"created\": 1752087999,\n  \"model\": \"gpt-4o-mini-2024-07-18\"\
+      ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n    \
+      \    \"role\": \"assistant\",\n        \"content\": \"{\\n  \\\"score\\\": 5,\\\
+      n  \\\"feedback\\\": \\\"The agent's output demonstrates an understanding of\
+      \ the need for a comprehensive document outlining task parameters and success\
+      \ criteria. However, it does not explicitly provide the expected test output\
+      \ or directly address the specific test tasks as described in the task definition.\
+      \ The agent missed delivering the precise expected output and did not include\
+      \ clear examples or structure that align with the task at hand.\\\"\\n}\",\n\
+      \        \"refusal\": null,\n        \"annotations\": []\n      },\n      \"\
+      logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\"\
+      : {\n    \"prompt_tokens\": 344,\n    \"completion_tokens\": 84,\n    \"total_tokens\"\
+      : 428,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n    \
+      \  \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n     \
+      \ \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\"\
+      : 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\"\
+      : \"default\",\n  \"system_fingerprint\": \"fp_62a23a81ef\"\n}\n"
     headers:
       CF-RAY:
       - 95ca198b5aef7df2-GRU
@@ -343,7 +346,7 @@ interactions:
       cf-cache-status:
       - DYNAMIC
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '1197'
       openai-version:
@@ -537,7 +540,7 @@ interactions:
       cf-cache-status:
       - DYNAMIC
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '2729'
       openai-version:

@@ -55,15 +55,16 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AB7WF40CXhA3hdWFV0w1Py8m9X6E5\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1727213875,\n  \"model\": \"gpt-4o-2024-05-13\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I should start by using the
-      Get Greetings tool to get a random greeting.\\n\\nAction: Get Greetings\\nAction
-      Input: {}\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
-      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      284,\n    \"completion_tokens\": 26,\n    \"total_tokens\": 310,\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
+    content: "{\n  \"id\": \"chatcmpl-AB7WF40CXhA3hdWFV0w1Py8m9X6E5\",\n  \"object\"\
+      : \"chat.completion\",\n  \"created\": 1727213875,\n  \"model\": \"gpt-4o-2024-05-13\"\
+      ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n    \
+      \    \"role\": \"assistant\",\n        \"content\": \"Thought: I should start\
+      \ by using the Get Greetings tool to get a random greeting.\\n\\nAction: Get\
+      \ Greetings\\nAction Input: {}\",\n        \"refusal\": null\n      },\n   \
+      \   \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"\
+      usage\": {\n    \"prompt_tokens\": 284,\n    \"completion_tokens\": 26,\n  \
+      \  \"total_tokens\": 310,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\"\
+      : 0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
@@ -86,7 +87,7 @@ interactions:
       access-control-expose-headers:
       - X-Request-ID
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '521'
       openai-version:
@@ -225,37 +226,39 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AB7WGcsBd3iW1colmI280lUeERSVO\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1727213876,\n  \"model\": \"gpt-4o-2024-05-13\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I now have a greeting and can
-      focus on writing and reviewing a small paragraph about AI until it is amazing.\\n\\nArtificial
-      Intelligence (AI) represents one of the most transformative technologies of
-      our time, promising to redefine industries and enhance human capabilities in
-      unprecedented ways. From machine learning algorithms that predict consumer behavior
-      to autonomous systems that drive cars and diagnose diseases, the potential applications
-      of AI are vast and varied. By enabling machines to learn from data, make decisions,
-      and even improve over time, AI is not only increasing efficiency but also opening
-      new avenues for innovation. However, the ethical considerations and challenges
-      associated with AI, such as ensuring privacy and preventing bias, underscore
-      the importance of responsible development and deployment. In embracing AI\u2019s
-      potential, we stand on the brink of a new era where intelligent systems enrich
-      our lives while fostering sustainable progress.\\n\\nFinal Answer: Artificial
-      Intelligence (AI) represents one of the most transformative technologies of
-      our time, promising to redefine industries and enhance human capabilities in
-      unprecedented ways. From machine learning algorithms that predict consumer behavior
-      to autonomous systems that drive cars and diagnose diseases, the potential applications
-      of AI are vast and varied. By enabling machines to learn from data, make decisions,
-      and even improve over time, AI is not only increasing efficiency but also opening
-      new avenues for innovation. However, the ethical considerations and challenges
-      associated with AI, such as ensuring privacy and preventing bias, underscore
-      the importance of responsible development and deployment. In embracing AI\u2019s
-      potential, we stand on the brink of a new era where intelligent systems enrich
-      our lives while fostering sustainable progress.\",\n        \"refusal\": null\n
-      \     },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n
-      \ ],\n  \"usage\": {\n    \"prompt_tokens\": 319,\n    \"completion_tokens\":
-      309,\n    \"total_tokens\": 628,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
-      0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
+    content: "{\n  \"id\": \"chatcmpl-AB7WGcsBd3iW1colmI280lUeERSVO\",\n  \"object\"\
+      : \"chat.completion\",\n  \"created\": 1727213876,\n  \"model\": \"gpt-4o-2024-05-13\"\
+      ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n    \
+      \    \"role\": \"assistant\",\n        \"content\": \"Thought: I now have a\
+      \ greeting and can focus on writing and reviewing a small paragraph about AI\
+      \ until it is amazing.\\n\\nArtificial Intelligence (AI) represents one of the\
+      \ most transformative technologies of our time, promising to redefine industries\
+      \ and enhance human capabilities in unprecedented ways. From machine learning\
+      \ algorithms that predict consumer behavior to autonomous systems that drive\
+      \ cars and diagnose diseases, the potential applications of AI are vast and\
+      \ varied. By enabling machines to learn from data, make decisions, and even\
+      \ improve over time, AI is not only increasing efficiency but also opening new\
+      \ avenues for innovation. However, the ethical considerations and challenges\
+      \ associated with AI, such as ensuring privacy and preventing bias, underscore\
+      \ the importance of responsible development and deployment. In embracing AI\u2019\
+      s potential, we stand on the brink of a new era where intelligent systems enrich\
+      \ our lives while fostering sustainable progress.\\n\\nFinal Answer: Artificial\
+      \ Intelligence (AI) represents one of the most transformative technologies of\
+      \ our time, promising to redefine industries and enhance human capabilities\
+      \ in unprecedented ways. From machine learning algorithms that predict consumer\
+      \ behavior to autonomous systems that drive cars and diagnose diseases, the\
+      \ potential applications of AI are vast and varied. By enabling machines to\
+      \ learn from data, make decisions, and even improve over time, AI is not only\
+      \ increasing efficiency but also opening new avenues for innovation. However,\
+      \ the ethical considerations and challenges associated with AI, such as ensuring\
+      \ privacy and preventing bias, underscore the importance of responsible development\
+      \ and deployment. In embracing AI\u2019s potential, we stand on the brink of\
+      \ a new era where intelligent systems enrich our lives while fostering sustainable\
+      \ progress.\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n\
+      \      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\"\
+      : 319,\n    \"completion_tokens\": 309,\n    \"total_tokens\": 628,\n    \"\
+      completion_tokens_details\": {\n      \"reasoning_tokens\": 0\n    }\n  },\n\
+      \  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
@@ -278,7 +281,7 @@ interactions:
       access-control-expose-headers:
       - X-Request-ID
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '4477'
       openai-version:

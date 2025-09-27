@@ -75,18 +75,20 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AB7cCDhcGe826aJEs22GQ3mDsfDsN\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1727214244,\n  \"model\": \"gpt-4o-2024-05-13\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: To complete the task, I need
-      to ask the researcher to say \\\"Howdy!\\\" I will use the \\\"Ask question
-      to coworker\\\" tool to instruct the researcher accordingly.\\n\\nAction: Ask
-      question to coworker\\nAction Input: {\\\"question\\\": \\\"Can you please say
-      hi?\\\", \\\"context\\\": \\\"The expected greeting is: Howdy!\\\", \\\"coworker\\\":
-      \\\"Researcher\\\"}\",\n        \"refusal\": null\n      },\n      \"logprobs\":
-      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      642,\n    \"completion_tokens\": 78,\n    \"total_tokens\": 720,\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
+    content: "{\n  \"id\": \"chatcmpl-AB7cCDhcGe826aJEs22GQ3mDsfDsN\",\n  \"object\"\
+      : \"chat.completion\",\n  \"created\": 1727214244,\n  \"model\": \"gpt-4o-2024-05-13\"\
+      ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n    \
+      \    \"role\": \"assistant\",\n        \"content\": \"Thought: To complete the\
+      \ task, I need to ask the researcher to say \\\"Howdy!\\\" I will use the \\\
+      \"Ask question to coworker\\\" tool to instruct the researcher accordingly.\\\
+      n\\nAction: Ask question to coworker\\nAction Input: {\\\"question\\\": \\\"\
+      Can you please say hi?\\\", \\\"context\\\": \\\"The expected greeting is: Howdy!\\\
+      \", \\\"coworker\\\": \\\"Researcher\\\"}\",\n        \"refusal\": null\n  \
+      \    },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n\
+      \  ],\n  \"usage\": {\n    \"prompt_tokens\": 642,\n    \"completion_tokens\"\
+      : 78,\n    \"total_tokens\": 720,\n    \"completion_tokens_details\": {\n  \
+      \    \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\
+      \n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
@@ -109,7 +111,7 @@ interactions:
       access-control-expose-headers:
       - X-Request-ID
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '1465'
       openai-version:
@@ -320,15 +322,16 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AB7cEYSMG7ZRHFgtiueRTVpSuWaJT\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1727214246,\n  \"model\": \"gpt-4o-2024-05-13\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Howdy!\\n\\nThought: I now can give a
-      great answer\\nFinal Answer: Howdy!\",\n        \"refusal\": null\n      },\n
-      \     \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n
-      \ \"usage\": {\n    \"prompt_tokens\": 191,\n    \"completion_tokens\": 18,\n
-      \   \"total_tokens\": 209,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
-      0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
+    content: "{\n  \"id\": \"chatcmpl-AB7cEYSMG7ZRHFgtiueRTVpSuWaJT\",\n  \"object\"\
+      : \"chat.completion\",\n  \"created\": 1727214246,\n  \"model\": \"gpt-4o-2024-05-13\"\
+      ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n    \
+      \    \"role\": \"assistant\",\n        \"content\": \"Howdy!\\n\\nThought: I\
+      \ now can give a great answer\\nFinal Answer: Howdy!\",\n        \"refusal\"\
+      : null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\
+      \n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 191,\n    \"completion_tokens\"\
+      : 18,\n    \"total_tokens\": 209,\n    \"completion_tokens_details\": {\n  \
+      \    \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\
+      \n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
@@ -351,7 +354,7 @@ interactions:
       access-control-expose-headers:
       - X-Request-ID
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '294'
       openai-version:
@@ -455,14 +458,16 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AB7cFqi2W0uV3SlrqWLWdfmWau08H\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1727214247,\n  \"model\": \"gpt-4o-2024-05-13\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I now know the final answer.\\nFinal
-      Answer: Howdy!\",\n        \"refusal\": null\n      },\n      \"logprobs\":
-      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      729,\n    \"completion_tokens\": 15,\n    \"total_tokens\": 744,\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
+    content: "{\n  \"id\": \"chatcmpl-AB7cFqi2W0uV3SlrqWLWdfmWau08H\",\n  \"object\"\
+      : \"chat.completion\",\n  \"created\": 1727214247,\n  \"model\": \"gpt-4o-2024-05-13\"\
+      ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n    \
+      \    \"role\": \"assistant\",\n        \"content\": \"Thought: I now know the\
+      \ final answer.\\nFinal Answer: Howdy!\",\n        \"refusal\": null\n     \
+      \ },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n\
+      \  ],\n  \"usage\": {\n    \"prompt_tokens\": 729,\n    \"completion_tokens\"\
+      : 15,\n    \"total_tokens\": 744,\n    \"completion_tokens_details\": {\n  \
+      \    \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\
+      \n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
@@ -485,7 +490,7 @@ interactions:
       access-control-expose-headers:
       - X-Request-ID
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '342'
       openai-version:
@@ -634,11 +639,11 @@ interactions:
       cf-cache-status:
       - DYNAMIC
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '472'
       openai-project:
-      - proj_xitITlrFeen7zjNSzML82h9x
+      - REDACTED
       openai-version:
       - '2020-10-01'
       x-envoy-upstream-service-time:

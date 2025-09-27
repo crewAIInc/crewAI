@@ -57,15 +57,17 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AB7c8ieBqEbQdKzYTe6QChiS2830e\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1727214240,\n  \"model\": \"gpt-4o-2024-05-13\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I need to retrieve the data
-      related to sales to provide the total number of sales as an integer.\\n\\nAction:
-      return_data\\nAction Input: {}\",\n        \"refusal\": null\n      },\n      \"logprobs\":
-      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      316,\n    \"completion_tokens\": 31,\n    \"total_tokens\": 347,\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
+    content: "{\n  \"id\": \"chatcmpl-AB7c8ieBqEbQdKzYTe6QChiS2830e\",\n  \"object\"\
+      : \"chat.completion\",\n  \"created\": 1727214240,\n  \"model\": \"gpt-4o-2024-05-13\"\
+      ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n    \
+      \    \"role\": \"assistant\",\n        \"content\": \"Thought: I need to retrieve\
+      \ the data related to sales to provide the total number of sales as an integer.\\\
+      n\\nAction: return_data\\nAction Input: {}\",\n        \"refusal\": null\n \
+      \     },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n   \
+      \ }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 316,\n    \"completion_tokens\"\
+      : 31,\n    \"total_tokens\": 347,\n    \"completion_tokens_details\": {\n  \
+      \    \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\
+      \n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
@@ -88,7 +90,7 @@ interactions:
       access-control-expose-headers:
       - X-Request-ID
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '508'
       openai-version:
@@ -232,15 +234,16 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AB7c94bEPIg4rOK2mD2QZ2Od5xIXs\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1727214241,\n  \"model\": \"gpt-4o-2024-05-13\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I now know the final answer.\\n\\nFinal
-      Answer: The total number of sales is 75.\",\n        \"refusal\": null\n      },\n
-      \     \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n
-      \ \"usage\": {\n    \"prompt_tokens\": 377,\n    \"completion_tokens\": 21,\n
-      \   \"total_tokens\": 398,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
-      0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
+    content: "{\n  \"id\": \"chatcmpl-AB7c94bEPIg4rOK2mD2QZ2Od5xIXs\",\n  \"object\"\
+      : \"chat.completion\",\n  \"created\": 1727214241,\n  \"model\": \"gpt-4o-2024-05-13\"\
+      ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n    \
+      \    \"role\": \"assistant\",\n        \"content\": \"Thought: I now know the\
+      \ final answer.\\n\\nFinal Answer: The total number of sales is 75.\",\n   \
+      \     \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"finish_reason\"\
+      : \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 377,\n    \"\
+      completion_tokens\": 21,\n    \"total_tokens\": 398,\n    \"completion_tokens_details\"\
+      : {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"\
+      fp_e375328146\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
@@ -263,7 +266,7 @@ interactions:
       access-control-expose-headers:
       - X-Request-ID
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '318'
       openai-version:

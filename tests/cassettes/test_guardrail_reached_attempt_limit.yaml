@@ -47,61 +47,63 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-CKF47Rh23GJrzZtiBi53FWt6gYfOa\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1758940507,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I now can give a great answer\\nFinal
-      Answer: Here is a structured overview of the top 10 soccer players in the world
-      as of October 2023, based on their performances, achievements, and overall contribution
-      to the game:\\n\\n1. **Lionel Messi**\\n   - **Nationality:** Argentina\\n   -
-      **Current Club:** Inter Miami\\n   - **Key Achievements:** 7 Ballon d'Or awards,
-      copious domestic titles with Barcelona, FIFA World Cup winner (2022), Copa America
-      winner (2021).\\n   - **Playing Style:** Exceptional dribbling, vision, playmaking,
-      and goal-scoring ability.\\n\\n2. **Cristiano Ronaldo**\\n   - **Nationality:**
-      Portugal\\n   - **Current Club:** Al Nassr\\n   - **Key Achievements:** 5 Ballon
-      d'Or awards, UEFA Champions League winner multiple times, European Championship
-      winner (2016).\\n   - **Playing Style:** Powerful athleticism, prolific goal-scorer,
-      strong aerial ability, and leadership qualities.\\n\\n3. **Kylian Mbapp\xE9**\\n
-      \  - **Nationality:** France\\n   - **Current Club:** Paris Saint-Germain\\n
-      \  - **Key Achievements:** FIFA World Cup winner (2018), Ligue 1 titles, multiple
-      domestic cups.\\n   - **Playing Style:** Blistering speed, technical skills,
-      versatility in attack.\\n\\n4. **Erling Haaland**\\n   - **Nationality:** Norway\\n
-      \  - **Current Club:** Manchester City\\n   - **Key Achievements:** Premier
-      League winner, UEFA Champions League winner (2023), Bundesliga top scorer.\\n
-      \  - **Playing Style:** Exceptional finishing ability, strength, and pace; natural
-      goal-scorer.\\n\\n5. **Kevin De Bruyne**\\n   - **Nationality:** Belgium\\n
-      \  - **Current Club:** Manchester City\\n   - **Key Achievements:** Premier
-      League titles, UEFA Champions League winner (2023), multiple domestic cups.\\n
-      \  - **Playing Style:** Elite vision, passing ability, and creativity in midfield;
-      sets up numerous goals.\\n\\n6. **Robert Lewandowski**\\n   - **Nationality:**
-      Poland\\n   - **Current Club:** Barcelona\\n   - **Key Achievements:** FIFA
-      Best Men's Player award, Bundesliga titles, UEFA Champions League winner (2020).\\n
-      \  - **Playing Style:** Clinical finishing, positioning, and aerial prowess;
-      an exceptional goal-scorer.\\n\\n7. **Karim Benzema**\\n   - **Nationality:**
-      France\\n   - **Current Club:** Al-Ittihad\\n   - **Key Achievements:** 2022
-      Ballon d'Or, multiple Champions League titles, La Liga titles.\\n   - **Playing
-      Style:** Technical skill, experience, and ability to link play and score important
-      goals.\\n\\n8. **Neymar Jr.**\\n   - **Nationality:** Brazil\\n   - **Current
-      Club:** Al-Hilal\\n   - **Key Achievements:** UEFA Champions League winner,
-      Copa Libertadores winner, multiple domestic titles.\\n   - **Playing Style:**
-      Flair, creativity, dribbling, and playmaking ability.\\n\\n9. **Vin\xEDcius
-      J\xFAnior**\\n   - **Nationality:** Brazil\\n   - **Current Club:** Real Madrid\\n
-      \  - **Key Achievements:** UEFA Champions League winner (2022), La Liga title,
-      rising star recognition.\\n   - **Playing Style:** Speed, dribbling, and creativity;
-      known for his ability to influence games.\\n\\n10. **Luka Modri\u0107**\\n    -
-      **Nationality:** Croatia\\n    - **Current Club:** Real Madrid\\n    - **Key
-      Achievements:** Ballon d'Or winner (2018), multiple Champions League titles,
-      FIFA World Cup finalist (2018).\\n    - **Playing Style:** Tactical intelligence,
-      passing range, and ability to control midfield dynamics.\\n\\nThese players
-      are recognized as the elite in the world of soccer, contributing not just with
-      their skills but also with their impact on their teams and the sport overall.\",\n
-      \       \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\":
-      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      122,\n    \"completion_tokens\": 796,\n    \"total_tokens\": 918,\n    \"prompt_tokens_details\":
-      {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
-      \"default\",\n  \"system_fingerprint\": \"fp_560af6e559\"\n}\n"
+    content: "{\n  \"id\": \"chatcmpl-CKF47Rh23GJrzZtiBi53FWt6gYfOa\",\n  \"object\"\
+      : \"chat.completion\",\n  \"created\": 1758940507,\n  \"model\": \"gpt-4o-mini-2024-07-18\"\
+      ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n    \
+      \    \"role\": \"assistant\",\n        \"content\": \"Thought: I now can give\
+      \ a great answer\\nFinal Answer: Here is a structured overview of the top 10\
+      \ soccer players in the world as of October 2023, based on their performances,\
+      \ achievements, and overall contribution to the game:\\n\\n1. **Lionel Messi**\\\
+      n   - **Nationality:** Argentina\\n   - **Current Club:** Inter Miami\\n   -\
+      \ **Key Achievements:** 7 Ballon d'Or awards, copious domestic titles with Barcelona,\
+      \ FIFA World Cup winner (2022), Copa America winner (2021).\\n   - **Playing\
+      \ Style:** Exceptional dribbling, vision, playmaking, and goal-scoring ability.\\\
+      n\\n2. **Cristiano Ronaldo**\\n   - **Nationality:** Portugal\\n   - **Current\
+      \ Club:** Al Nassr\\n   - **Key Achievements:** 5 Ballon d'Or awards, UEFA Champions\
+      \ League winner multiple times, European Championship winner (2016).\\n   -\
+      \ **Playing Style:** Powerful athleticism, prolific goal-scorer, strong aerial\
+      \ ability, and leadership qualities.\\n\\n3. **Kylian Mbapp\xE9**\\n   - **Nationality:**\
+      \ France\\n   - **Current Club:** Paris Saint-Germain\\n   - **Key Achievements:**\
+      \ FIFA World Cup winner (2018), Ligue 1 titles, multiple domestic cups.\\n \
+      \  - **Playing Style:** Blistering speed, technical skills, versatility in attack.\\\
+      n\\n4. **Erling Haaland**\\n   - **Nationality:** Norway\\n   - **Current Club:**\
+      \ Manchester City\\n   - **Key Achievements:** Premier League winner, UEFA Champions\
+      \ League winner (2023), Bundesliga top scorer.\\n   - **Playing Style:** Exceptional\
+      \ finishing ability, strength, and pace; natural goal-scorer.\\n\\n5. **Kevin\
+      \ De Bruyne**\\n   - **Nationality:** Belgium\\n   - **Current Club:** Manchester\
+      \ City\\n   - **Key Achievements:** Premier League titles, UEFA Champions League\
+      \ winner (2023), multiple domestic cups.\\n   - **Playing Style:** Elite vision,\
+      \ passing ability, and creativity in midfield; sets up numerous goals.\\n\\\
+      n6. **Robert Lewandowski**\\n   - **Nationality:** Poland\\n   - **Current Club:**\
+      \ Barcelona\\n   - **Key Achievements:** FIFA Best Men's Player award, Bundesliga\
+      \ titles, UEFA Champions League winner (2020).\\n   - **Playing Style:** Clinical\
+      \ finishing, positioning, and aerial prowess; an exceptional goal-scorer.\\\
+      n\\n7. **Karim Benzema**\\n   - **Nationality:** France\\n   - **Current Club:**\
+      \ Al-Ittihad\\n   - **Key Achievements:** 2022 Ballon d'Or, multiple Champions\
+      \ League titles, La Liga titles.\\n   - **Playing Style:** Technical skill,\
+      \ experience, and ability to link play and score important goals.\\n\\n8. **Neymar\
+      \ Jr.**\\n   - **Nationality:** Brazil\\n   - **Current Club:** Al-Hilal\\n\
+      \   - **Key Achievements:** UEFA Champions League winner, Copa Libertadores\
+      \ winner, multiple domestic titles.\\n   - **Playing Style:** Flair, creativity,\
+      \ dribbling, and playmaking ability.\\n\\n9. **Vin\xEDcius J\xFAnior**\\n  \
+      \ - **Nationality:** Brazil\\n   - **Current Club:** Real Madrid\\n   - **Key\
+      \ Achievements:** UEFA Champions League winner (2022), La Liga title, rising\
+      \ star recognition.\\n   - **Playing Style:** Speed, dribbling, and creativity;\
+      \ known for his ability to influence games.\\n\\n10. **Luka Modri\u0107**\\\
+      n    - **Nationality:** Croatia\\n    - **Current Club:** Real Madrid\\n   \
+      \ - **Key Achievements:** Ballon d'Or winner (2018), multiple Champions League\
+      \ titles, FIFA World Cup finalist (2018).\\n    - **Playing Style:** Tactical\
+      \ intelligence, passing range, and ability to control midfield dynamics.\\n\\\
+      nThese players are recognized as the elite in the world of soccer, contributing\
+      \ not just with their skills but also with their impact on their teams and the\
+      \ sport overall.\",\n        \"refusal\": null,\n        \"annotations\": []\n\
+      \      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n  \
+      \  }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 122,\n    \"completion_tokens\"\
+      : 796,\n    \"total_tokens\": 918,\n    \"prompt_tokens_details\": {\n     \
+      \ \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\"\
+      : {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\"\
+      : 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\"\
+      : \"default\",\n  \"system_fingerprint\": \"fp_560af6e559\"\n}\n"
     headers:
       CF-RAY:
       - 98579b17bae0377a-EWR
@@ -134,11 +136,11 @@ interactions:
       cf-cache-status:
       - DYNAMIC
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '19881'
       openai-project:
-      - proj_xitITlrFeen7zjNSzML82h9x
+      - REDACTED
       openai-version:
       - '2020-10-01'
       x-envoy-upstream-service-time:
@@ -263,62 +265,64 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-CKF4R27Ah8YXZbgszcEiJ2uOgxIfh\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1758940527,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I now can give a great answer\\nFinal
-      Answer: Here is a structured overview of the top 10 soccer players in the world
-      as of October 2023, excluding Brazilian players, and based on their performances,
-      achievements, and overall contribution to the game:\\n\\n1. **Lionel Messi**\\n
-      \  - **Nationality:** Argentina\\n   - **Current Club:** Inter Miami\\n   -
-      **Key Achievements:** 7 Ballon d'Or awards, numerous domestic titles with Barcelona,
-      FIFA World Cup winner (2022), Copa America winner (2021).\\n   - **Playing Style:**
-      Exceptional dribbling, vision, playmaking, and goal-scoring ability.\\n\\n2.
-      **Cristiano Ronaldo**\\n   - **Nationality:** Portugal\\n   - **Current Club:**
-      Al Nassr\\n   - **Key Achievements:** 5 Ballon d'Or awards, multiple UEFA Champions
-      League titles, European Championship winner (2016).\\n   - **Playing Style:**
-      Powerful athleticism, prolific goal-scorer, strong aerial ability, and leadership
-      qualities.\\n\\n3. **Kylian Mbapp\xE9**\\n   - **Nationality:** France\\n   -
-      **Current Club:** Paris Saint-Germain\\n   - **Key Achievements:** FIFA World
-      Cup winner (2018), multiple Ligue 1 titles, domestic cups.\\n   - **Playing
-      Style:** Blistering speed, technical skills, and versatility in attack.\\n\\n4.
-      **Erling Haaland**\\n   - **Nationality:** Norway\\n   - **Current Club:** Manchester
-      City\\n   - **Key Achievements:** Premier League winner, UEFA Champions League
-      winner (2023), Bundesliga top scorer.\\n   - **Playing Style:** Exceptional
-      finishing ability, strength, and pace; a natural goal-scorer.\\n\\n5. **Kevin
-      De Bruyne**\\n   - **Nationality:** Belgium\\n   - **Current Club:** Manchester
-      City\\n   - **Key Achievements:** Multiple Premier League titles, UEFA Champions
-      League winner (2023), domestic cups.\\n   - **Playing Style:** Elite vision,
-      passing ability, and creativity in midfield; sets up numerous goals.\\n\\n6.
-      **Robert Lewandowski**\\n   - **Nationality:** Poland\\n   - **Current Club:**
-      Barcelona\\n   - **Key Achievements:** FIFA Best Men's Player award, Bundesliga
-      titles, UEFA Champions League winner (2020).\\n   - **Playing Style:** Clinical
-      finishing, positioning, and aerial prowess; an exceptional goal-scorer.\\n\\n7.
-      **Karim Benzema**\\n   - **Nationality:** France\\n   - **Current Club:** Al-Ittihad\\n
-      \  - **Key Achievements:** 2022 Ballon d'Or, multiple Champions League titles,
-      La Liga titles.\\n   - **Playing Style:** Technical skill, experience, and ability
-      to link play and score important goals.\\n\\n8. **Mohamed Salah**\\n   - **Nationality:**
-      Egypt\\n   - **Current Club:** Liverpool\\n   - **Key Achievements:** Premier
-      League winner, UEFA Champions League winner, multiple individual awards.\\n
-      \  - **Playing Style:** Speed, dribbling, and goal-scoring; known for his impact
-      on matches.\\n\\n9. **Luka Modri\u0107**\\n   - **Nationality:** Croatia\\n
-      \  - **Current Club:** Real Madrid\\n   - **Key Achievements:** Ballon d'Or
-      winner (2018), multiple Champions League titles, FIFA World Cup finalist (2018).\\n
-      \  - **Playing Style:** Tactical intelligence, wide passing range, and midfielder
-      control.\\n\\n10. **Harry Kane**\\n    - **Nationality:** England\\n    - **Current
-      Club:** Bayern Munich\\n    - **Key Achievements:** Premier League Golden Boot
-      winner multiple times, domestic cups, and now aiming for success in the Bundesliga.\\n
-      \   - **Playing Style:** Prolific goal-scorer, strong passing ability, and excellent
-      positioning.\\n\\nThese players represent the pinnacle of soccer talent in the
-      world today, contributing uniquely to their teams and the global popularity
-      of the sport.\",\n        \"refusal\": null,\n        \"annotations\": []\n
-      \     },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n
-      \ ],\n  \"usage\": {\n    \"prompt_tokens\": 934,\n    \"completion_tokens\":
-      793,\n    \"total_tokens\": 1727,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
-      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
-      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
-      \"default\",\n  \"system_fingerprint\": \"fp_560af6e559\"\n}\n"
+    content: "{\n  \"id\": \"chatcmpl-CKF4R27Ah8YXZbgszcEiJ2uOgxIfh\",\n  \"object\"\
+      : \"chat.completion\",\n  \"created\": 1758940527,\n  \"model\": \"gpt-4o-mini-2024-07-18\"\
+      ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n    \
+      \    \"role\": \"assistant\",\n        \"content\": \"Thought: I now can give\
+      \ a great answer\\nFinal Answer: Here is a structured overview of the top 10\
+      \ soccer players in the world as of October 2023, excluding Brazilian players,\
+      \ and based on their performances, achievements, and overall contribution to\
+      \ the game:\\n\\n1. **Lionel Messi**\\n   - **Nationality:** Argentina\\n  \
+      \ - **Current Club:** Inter Miami\\n   - **Key Achievements:** 7 Ballon d'Or\
+      \ awards, numerous domestic titles with Barcelona, FIFA World Cup winner (2022),\
+      \ Copa America winner (2021).\\n   - **Playing Style:** Exceptional dribbling,\
+      \ vision, playmaking, and goal-scoring ability.\\n\\n2. **Cristiano Ronaldo**\\\
+      n   - **Nationality:** Portugal\\n   - **Current Club:** Al Nassr\\n   - **Key\
+      \ Achievements:** 5 Ballon d'Or awards, multiple UEFA Champions League titles,\
+      \ European Championship winner (2016).\\n   - **Playing Style:** Powerful athleticism,\
+      \ prolific goal-scorer, strong aerial ability, and leadership qualities.\\n\\\
+      n3. **Kylian Mbapp\xE9**\\n   - **Nationality:** France\\n   - **Current Club:**\
+      \ Paris Saint-Germain\\n   - **Key Achievements:** FIFA World Cup winner (2018),\
+      \ multiple Ligue 1 titles, domestic cups.\\n   - **Playing Style:** Blistering\
+      \ speed, technical skills, and versatility in attack.\\n\\n4. **Erling Haaland**\\\
+      n   - **Nationality:** Norway\\n   - **Current Club:** Manchester City\\n  \
+      \ - **Key Achievements:** Premier League winner, UEFA Champions League winner\
+      \ (2023), Bundesliga top scorer.\\n   - **Playing Style:** Exceptional finishing\
+      \ ability, strength, and pace; a natural goal-scorer.\\n\\n5. **Kevin De Bruyne**\\\
+      n   - **Nationality:** Belgium\\n   - **Current Club:** Manchester City\\n \
+      \  - **Key Achievements:** Multiple Premier League titles, UEFA Champions League\
+      \ winner (2023), domestic cups.\\n   - **Playing Style:** Elite vision, passing\
+      \ ability, and creativity in midfield; sets up numerous goals.\\n\\n6. **Robert\
+      \ Lewandowski**\\n   - **Nationality:** Poland\\n   - **Current Club:** Barcelona\\\
+      n   - **Key Achievements:** FIFA Best Men's Player award, Bundesliga titles,\
+      \ UEFA Champions League winner (2020).\\n   - **Playing Style:** Clinical finishing,\
+      \ positioning, and aerial prowess; an exceptional goal-scorer.\\n\\n7. **Karim\
+      \ Benzema**\\n   - **Nationality:** France\\n   - **Current Club:** Al-Ittihad\\\
+      n   - **Key Achievements:** 2022 Ballon d'Or, multiple Champions League titles,\
+      \ La Liga titles.\\n   - **Playing Style:** Technical skill, experience, and\
+      \ ability to link play and score important goals.\\n\\n8. **Mohamed Salah**\\\
+      n   - **Nationality:** Egypt\\n   - **Current Club:** Liverpool\\n   - **Key\
+      \ Achievements:** Premier League winner, UEFA Champions League winner, multiple\
+      \ individual awards.\\n   - **Playing Style:** Speed, dribbling, and goal-scoring;\
+      \ known for his impact on matches.\\n\\n9. **Luka Modri\u0107**\\n   - **Nationality:**\
+      \ Croatia\\n   - **Current Club:** Real Madrid\\n   - **Key Achievements:**\
+      \ Ballon d'Or winner (2018), multiple Champions League titles, FIFA World Cup\
+      \ finalist (2018).\\n   - **Playing Style:** Tactical intelligence, wide passing\
+      \ range, and midfielder control.\\n\\n10. **Harry Kane**\\n    - **Nationality:**\
+      \ England\\n    - **Current Club:** Bayern Munich\\n    - **Key Achievements:**\
+      \ Premier League Golden Boot winner multiple times, domestic cups, and now aiming\
+      \ for success in the Bundesliga.\\n    - **Playing Style:** Prolific goal-scorer,\
+      \ strong passing ability, and excellent positioning.\\n\\nThese players represent\
+      \ the pinnacle of soccer talent in the world today, contributing uniquely to\
+      \ their teams and the global popularity of the sport.\",\n        \"refusal\"\
+      : null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n\
+      \      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\"\
+      : 934,\n    \"completion_tokens\": 793,\n    \"total_tokens\": 1727,\n    \"\
+      prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\"\
+      : 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\"\
+      : 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n\
+      \      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\": \"\
+      default\",\n  \"system_fingerprint\": \"fp_560af6e559\"\n}\n"
     headers:
       CF-RAY:
       - 98579b95ba26377a-EWR
@@ -345,11 +349,11 @@ interactions:
       cf-cache-status:
       - DYNAMIC
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '19412'
       openai-project:
-      - proj_xitITlrFeen7zjNSzML82h9x
+      - REDACTED
       openai-version:
       - '2020-10-01'
       x-envoy-upstream-service-time:
@@ -519,62 +523,64 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-CKF4lTi0AEZyQ8ZvOM3c9pyvUbxOr\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1758940547,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I now can give a great answer\\nFinal
-      Answer: Here is an updated structured overview of the top 10 soccer players
-      in the world as of October 2023, strictly excluding Brazilian players, and based
-      on their performances, achievements, and overall contribution to the game:\\n\\n1.
-      **Lionel Messi**\\n   - **Nationality:** Argentina\\n   - **Current Club:**
-      Inter Miami\\n   - **Key Achievements:** 7 Ballon d'Or awards, numerous domestic
-      titles with Barcelona, FIFA World Cup winner (2022), Copa America winner (2021).\\n
-      \  - **Playing Style:** Exceptional dribbling, vision, playmaking, and goal-scoring
-      ability.\\n\\n2. **Cristiano Ronaldo**\\n   - **Nationality:** Portugal\\n   -
-      **Current Club:** Al Nassr\\n   - **Key Achievements:** 5 Ballon d'Or awards,
-      multiple UEFA Champions League titles, European Championship winner (2016).\\n
-      \  - **Playing Style:** Powerful athleticism, prolific goal-scorer, strong aerial
-      ability, and leadership qualities.\\n\\n3. **Kylian Mbapp\xE9**\\n   - **Nationality:**
-      France\\n   - **Current Club:** Paris Saint-Germain\\n   - **Key Achievements:**
-      FIFA World Cup winner (2018), multiple Ligue 1 titles, domestic cups.\\n   -
-      **Playing Style:** Blistering speed, technical skills, and versatility in attack.\\n\\n4.
-      **Erling Haaland**\\n   - **Nationality:** Norway\\n   - **Current Club:** Manchester
-      City\\n   - **Key Achievements:** Premier League winner, UEFA Champions League
-      winner (2023), Bundesliga top scorer.\\n   - **Playing Style:** Exceptional
-      finishing ability, strength, and pace; a natural goal-scorer.\\n\\n5. **Kevin
-      De Bruyne**\\n   - **Nationality:** Belgium\\n   - **Current Club:** Manchester
-      City\\n   - **Key Achievements:** Multiple Premier League titles, UEFA Champions
-      League winner (2023), domestic cups.\\n   - **Playing Style:** Elite vision,
-      passing ability, and creativity in midfield; sets up numerous goals.\\n\\n6.
-      **Robert Lewandowski**\\n   - **Nationality:** Poland\\n   - **Current Club:**
-      Barcelona\\n   - **Key Achievements:** FIFA Best Men's Player award, Bundesliga
-      titles, UEFA Champions League winner (2020).\\n   - **Playing Style:** Clinical
-      finishing, positioning, and aerial prowess; an exceptional goal-scorer.\\n\\n7.
-      **Karim Benzema**\\n   - **Nationality:** France\\n   - **Current Club:** Al-Ittihad\\n
-      \  - **Key Achievements:** 2022 Ballon d'Or, multiple Champions League titles,
-      La Liga titles.\\n   - **Playing Style:** Technical skill, experience, and ability
-      to link play and score important goals.\\n\\n8. **Mohamed Salah**\\n   - **Nationality:**
-      Egypt\\n   - **Current Club:** Liverpool\\n   - **Key Achievements:** Premier
-      League winner, UEFA Champions League winner, multiple individual awards.\\n
-      \  - **Playing Style:** Speed, dribbling, and goal-scoring; known for his impact
-      on matches.\\n\\n9. **Luka Modri\u0107**\\n   - **Nationality:** Croatia\\n
-      \  - **Current Club:** Real Madrid\\n   - **Key Achievements:** Ballon d'Or
-      winner (2018), multiple Champions League titles, FIFA World Cup finalist (2018).\\n
-      \  - **Playing Style:** Tactical intelligence, wide passing range, and midfield
-      control.\\n\\n10. **Harry Kane**\\n    - **Nationality:** England\\n    - **Current
-      Club:** Bayern Munich\\n    - **Key Achievements:** Premier League Golden Boot
-      winner multiple times, domestic cups, and now aiming for success in the Bundesliga.\\n
-      \   - **Playing Style:** Prolific goal-scorer, strong passing ability, and excellent
-      positioning.\\n\\nThese players are the cream of the crop in soccer today, demonstrating
-      remarkable skills and making significant impacts in their respective leagues
-      and competitions.\",\n        \"refusal\": null,\n        \"annotations\": []\n
-      \     },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n
-      \ ],\n  \"usage\": {\n    \"prompt_tokens\": 1743,\n    \"completion_tokens\":
-      795,\n    \"total_tokens\": 2538,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
-      1664,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
-      \"default\",\n  \"system_fingerprint\": \"fp_560af6e559\"\n}\n"
+    content: "{\n  \"id\": \"chatcmpl-CKF4lTi0AEZyQ8ZvOM3c9pyvUbxOr\",\n  \"object\"\
+      : \"chat.completion\",\n  \"created\": 1758940547,\n  \"model\": \"gpt-4o-mini-2024-07-18\"\
+      ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n    \
+      \    \"role\": \"assistant\",\n        \"content\": \"Thought: I now can give\
+      \ a great answer\\nFinal Answer: Here is an updated structured overview of the\
+      \ top 10 soccer players in the world as of October 2023, strictly excluding\
+      \ Brazilian players, and based on their performances, achievements, and overall\
+      \ contribution to the game:\\n\\n1. **Lionel Messi**\\n   - **Nationality:**\
+      \ Argentina\\n   - **Current Club:** Inter Miami\\n   - **Key Achievements:**\
+      \ 7 Ballon d'Or awards, numerous domestic titles with Barcelona, FIFA World\
+      \ Cup winner (2022), Copa America winner (2021).\\n   - **Playing Style:** Exceptional\
+      \ dribbling, vision, playmaking, and goal-scoring ability.\\n\\n2. **Cristiano\
+      \ Ronaldo**\\n   - **Nationality:** Portugal\\n   - **Current Club:** Al Nassr\\\
+      n   - **Key Achievements:** 5 Ballon d'Or awards, multiple UEFA Champions League\
+      \ titles, European Championship winner (2016).\\n   - **Playing Style:** Powerful\
+      \ athleticism, prolific goal-scorer, strong aerial ability, and leadership qualities.\\\
+      n\\n3. **Kylian Mbapp\xE9**\\n   - **Nationality:** France\\n   - **Current\
+      \ Club:** Paris Saint-Germain\\n   - **Key Achievements:** FIFA World Cup winner\
+      \ (2018), multiple Ligue 1 titles, domestic cups.\\n   - **Playing Style:**\
+      \ Blistering speed, technical skills, and versatility in attack.\\n\\n4. **Erling\
+      \ Haaland**\\n   - **Nationality:** Norway\\n   - **Current Club:** Manchester\
+      \ City\\n   - **Key Achievements:** Premier League winner, UEFA Champions League\
+      \ winner (2023), Bundesliga top scorer.\\n   - **Playing Style:** Exceptional\
+      \ finishing ability, strength, and pace; a natural goal-scorer.\\n\\n5. **Kevin\
+      \ De Bruyne**\\n   - **Nationality:** Belgium\\n   - **Current Club:** Manchester\
+      \ City\\n   - **Key Achievements:** Multiple Premier League titles, UEFA Champions\
+      \ League winner (2023), domestic cups.\\n   - **Playing Style:** Elite vision,\
+      \ passing ability, and creativity in midfield; sets up numerous goals.\\n\\\
+      n6. **Robert Lewandowski**\\n   - **Nationality:** Poland\\n   - **Current Club:**\
+      \ Barcelona\\n   - **Key Achievements:** FIFA Best Men's Player award, Bundesliga\
+      \ titles, UEFA Champions League winner (2020).\\n   - **Playing Style:** Clinical\
+      \ finishing, positioning, and aerial prowess; an exceptional goal-scorer.\\\
+      n\\n7. **Karim Benzema**\\n   - **Nationality:** France\\n   - **Current Club:**\
+      \ Al-Ittihad\\n   - **Key Achievements:** 2022 Ballon d'Or, multiple Champions\
+      \ League titles, La Liga titles.\\n   - **Playing Style:** Technical skill,\
+      \ experience, and ability to link play and score important goals.\\n\\n8. **Mohamed\
+      \ Salah**\\n   - **Nationality:** Egypt\\n   - **Current Club:** Liverpool\\\
+      n   - **Key Achievements:** Premier League winner, UEFA Champions League winner,\
+      \ multiple individual awards.\\n   - **Playing Style:** Speed, dribbling, and\
+      \ goal-scoring; known for his impact on matches.\\n\\n9. **Luka Modri\u0107\
+      **\\n   - **Nationality:** Croatia\\n   - **Current Club:** Real Madrid\\n \
+      \  - **Key Achievements:** Ballon d'Or winner (2018), multiple Champions League\
+      \ titles, FIFA World Cup finalist (2018).\\n   - **Playing Style:** Tactical\
+      \ intelligence, wide passing range, and midfield control.\\n\\n10. **Harry Kane**\\\
+      n    - **Nationality:** England\\n    - **Current Club:** Bayern Munich\\n \
+      \   - **Key Achievements:** Premier League Golden Boot winner multiple times,\
+      \ domestic cups, and now aiming for success in the Bundesliga.\\n    - **Playing\
+      \ Style:** Prolific goal-scorer, strong passing ability, and excellent positioning.\\\
+      n\\nThese players are the cream of the crop in soccer today, demonstrating remarkable\
+      \ skills and making significant impacts in their respective leagues and competitions.\"\
+      ,\n        \"refusal\": null,\n        \"annotations\": []\n      },\n     \
+      \ \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"\
+      usage\": {\n    \"prompt_tokens\": 1743,\n    \"completion_tokens\": 795,\n\
+      \    \"total_tokens\": 2538,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\"\
+      : 1664,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\"\
+      : {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\"\
+      : 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\"\
+      : \"default\",\n  \"system_fingerprint\": \"fp_560af6e559\"\n}\n"
     headers:
       CF-RAY:
       - 98579c127cf0377a-EWR
@@ -601,11 +607,11 @@ interactions:
       cf-cache-status:
       - DYNAMIC
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '18392'
       openai-project:
-      - proj_xitITlrFeen7zjNSzML82h9x
+      - REDACTED
       openai-version:
       - '2020-10-01'
       x-envoy-upstream-service-time:

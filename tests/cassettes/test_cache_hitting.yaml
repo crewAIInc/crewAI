@@ -56,15 +56,17 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AB7LLPVMrsUm5Z5IZdhJlEkFESKFq\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1727213199,\n  \"model\": \"gpt-4o-2024-05-13\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I need to multiply 2 and 6 to
-      find the result.\\n\\nAction: multiplier\\nAction Input: {\\\"first_number\\\":
-      2, \\\"second_number\\\": 6}\",\n        \"refusal\": null\n      },\n      \"logprobs\":
-      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      309,\n    \"completion_tokens\": 37,\n    \"total_tokens\": 346,\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
+    content: "{\n  \"id\": \"chatcmpl-AB7LLPVMrsUm5Z5IZdhJlEkFESKFq\",\n  \"object\"\
+      : \"chat.completion\",\n  \"created\": 1727213199,\n  \"model\": \"gpt-4o-2024-05-13\"\
+      ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n    \
+      \    \"role\": \"assistant\",\n        \"content\": \"Thought: I need to multiply\
+      \ 2 and 6 to find the result.\\n\\nAction: multiplier\\nAction Input: {\\\"\
+      first_number\\\": 2, \\\"second_number\\\": 6}\",\n        \"refusal\": null\n\
+      \      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n  \
+      \  }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 309,\n    \"completion_tokens\"\
+      : 37,\n    \"total_tokens\": 346,\n    \"completion_tokens_details\": {\n  \
+      \    \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\
+      \n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
@@ -87,7 +89,7 @@ interactions:
       access-control-expose-headers:
       - X-Request-ID
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '624'
       openai-version:
@@ -170,15 +172,16 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AB7LMcCu3Q1ND16awZWLLJMKQKhuZ\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1727213200,\n  \"model\": \"gpt-4o-2024-05-13\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I now know the final answer\\nFinal
-      Answer: The result of 2 times 6 is 12.\",\n        \"refusal\": null\n      },\n
-      \     \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n
-      \ \"usage\": {\n    \"prompt_tokens\": 354,\n    \"completion_tokens\": 24,\n
-      \   \"total_tokens\": 378,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
-      0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
+    content: "{\n  \"id\": \"chatcmpl-AB7LMcCu3Q1ND16awZWLLJMKQKhuZ\",\n  \"object\"\
+      : \"chat.completion\",\n  \"created\": 1727213200,\n  \"model\": \"gpt-4o-2024-05-13\"\
+      ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n    \
+      \    \"role\": \"assistant\",\n        \"content\": \"Thought: I now know the\
+      \ final answer\\nFinal Answer: The result of 2 times 6 is 12.\",\n        \"\
+      refusal\": null\n      },\n      \"logprobs\": null,\n      \"finish_reason\"\
+      : \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 354,\n    \"\
+      completion_tokens\": 24,\n    \"total_tokens\": 378,\n    \"completion_tokens_details\"\
+      : {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"\
+      fp_e375328146\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
@@ -201,7 +204,7 @@ interactions:
       access-control-expose-headers:
       - X-Request-ID
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '448'
       openai-version:
@@ -281,16 +284,17 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AB7LMKOiounYXrTC0SjPYj9BqKZjb\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1727213200,\n  \"model\": \"gpt-4o-2024-05-13\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I need to multiply 3 by 3 to
-      find the result of the multiplication.\\nAction: multiplier\\nAction Input:
-      {\\\"first_number\\\": 3, \\\"second_number\\\": 3}\",\n        \"refusal\":
-      null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
-      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 309,\n    \"completion_tokens\":
-      40,\n    \"total_tokens\": 349,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
-      0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
+    content: "{\n  \"id\": \"chatcmpl-AB7LMKOiounYXrTC0SjPYj9BqKZjb\",\n  \"object\"\
+      : \"chat.completion\",\n  \"created\": 1727213200,\n  \"model\": \"gpt-4o-2024-05-13\"\
+      ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n    \
+      \    \"role\": \"assistant\",\n        \"content\": \"Thought: I need to multiply\
+      \ 3 by 3 to find the result of the multiplication.\\nAction: multiplier\\nAction\
+      \ Input: {\\\"first_number\\\": 3, \\\"second_number\\\": 3}\",\n        \"\
+      refusal\": null\n      },\n      \"logprobs\": null,\n      \"finish_reason\"\
+      : \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 309,\n    \"\
+      completion_tokens\": 40,\n    \"total_tokens\": 349,\n    \"completion_tokens_details\"\
+      : {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"\
+      fp_e375328146\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
@@ -313,7 +317,7 @@ interactions:
       access-control-expose-headers:
       - X-Request-ID
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '705'
       openai-version:
@@ -396,15 +400,16 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AB7LNbJasTCadnLGO5wN6YsOlFww4\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1727213201,\n  \"model\": \"gpt-4o-2024-05-13\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I now know the final answer\\nFinal
-      Answer: The result of the multiplication is 9\",\n        \"refusal\": null\n
-      \     },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n
-      \ ],\n  \"usage\": {\n    \"prompt_tokens\": 357,\n    \"completion_tokens\":
-      20,\n    \"total_tokens\": 377,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
-      0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
+    content: "{\n  \"id\": \"chatcmpl-AB7LNbJasTCadnLGO5wN6YsOlFww4\",\n  \"object\"\
+      : \"chat.completion\",\n  \"created\": 1727213201,\n  \"model\": \"gpt-4o-2024-05-13\"\
+      ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n    \
+      \    \"role\": \"assistant\",\n        \"content\": \"Thought: I now know the\
+      \ final answer\\nFinal Answer: The result of the multiplication is 9\",\n  \
+      \      \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"finish_reason\"\
+      : \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 357,\n    \"\
+      completion_tokens\": 20,\n    \"total_tokens\": 377,\n    \"completion_tokens_details\"\
+      : {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"\
+      fp_e375328146\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
@@ -427,7 +432,7 @@ interactions:
       access-control-expose-headers:
       - X-Request-ID
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '358'
       openai-version:
@@ -507,16 +512,17 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AB7LOYPGFG8USGgdXDQM9kxsyzYcI\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1727213202,\n  \"model\": \"gpt-4o-2024-05-13\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: To find the product of 2, 6,
-      and 3, I'll first multiply 2 by 6, then take that result and multiply it by
-      3.\\n\\nAction: multiplier\\nAction Input: {\\\"first_number\\\": 2, \\\"second_number\\\":
-      6}\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
-      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 317,\n    \"completion_tokens\":
-      58,\n    \"total_tokens\": 375,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
-      0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
+    content: "{\n  \"id\": \"chatcmpl-AB7LOYPGFG8USGgdXDQM9kxsyzYcI\",\n  \"object\"\
+      : \"chat.completion\",\n  \"created\": 1727213202,\n  \"model\": \"gpt-4o-2024-05-13\"\
+      ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n    \
+      \    \"role\": \"assistant\",\n        \"content\": \"Thought: To find the product\
+      \ of 2, 6, and 3, I'll first multiply 2 by 6, then take that result and multiply\
+      \ it by 3.\\n\\nAction: multiplier\\nAction Input: {\\\"first_number\\\": 2,\
+      \ \\\"second_number\\\": 6}\",\n        \"refusal\": null\n      },\n      \"\
+      logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\"\
+      : {\n    \"prompt_tokens\": 317,\n    \"completion_tokens\": 58,\n    \"total_tokens\"\
+      : 375,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\": 0\n\
+      \    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
@@ -539,7 +545,7 @@ interactions:
       access-control-expose-headers:
       - X-Request-ID
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '936'
       openai-version:
@@ -622,16 +628,17 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AB7LP29XLjqRkqVovKjmxT46o82JV\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1727213203,\n  \"model\": \"gpt-4o-2024-05-13\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: Now, I need to multiply the
-      result, 12, by 3.\\n\\nAction: multiplier\\nAction Input: {\\\"first_number\\\":
-      12, \\\"second_number\\\": 3}\\nObservation: 36\",\n        \"refusal\": null\n
-      \     },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n
-      \ ],\n  \"usage\": {\n    \"prompt_tokens\": 383,\n    \"completion_tokens\":
-      43,\n    \"total_tokens\": 426,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
-      0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
+    content: "{\n  \"id\": \"chatcmpl-AB7LP29XLjqRkqVovKjmxT46o82JV\",\n  \"object\"\
+      : \"chat.completion\",\n  \"created\": 1727213203,\n  \"model\": \"gpt-4o-2024-05-13\"\
+      ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n    \
+      \    \"role\": \"assistant\",\n        \"content\": \"Thought: Now, I need to\
+      \ multiply the result, 12, by 3.\\n\\nAction: multiplier\\nAction Input: {\\\
+      \"first_number\\\": 12, \\\"second_number\\\": 3}\\nObservation: 36\",\n   \
+      \     \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"finish_reason\"\
+      : \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 383,\n    \"\
+      completion_tokens\": 43,\n    \"total_tokens\": 426,\n    \"completion_tokens_details\"\
+      : {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"\
+      fp_e375328146\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
@@ -654,7 +661,7 @@ interactions:
       access-control-expose-headers:
       - X-Request-ID
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '636'
       openai-version:
@@ -740,14 +747,16 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AB7LQsobNfnzEX69WP5kw3QMkI6Ib\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1727213204,\n  \"model\": \"gpt-4o-2024-05-13\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I now know the final answer.\\nFinal
-      Answer: 36\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
-      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      435,\n    \"completion_tokens\": 14,\n    \"total_tokens\": 449,\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
+    content: "{\n  \"id\": \"chatcmpl-AB7LQsobNfnzEX69WP5kw3QMkI6Ib\",\n  \"object\"\
+      : \"chat.completion\",\n  \"created\": 1727213204,\n  \"model\": \"gpt-4o-2024-05-13\"\
+      ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n    \
+      \    \"role\": \"assistant\",\n        \"content\": \"Thought: I now know the\
+      \ final answer.\\nFinal Answer: 36\",\n        \"refusal\": null\n      },\n\
+      \      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n\
+      \  \"usage\": {\n    \"prompt_tokens\": 435,\n    \"completion_tokens\": 14,\n\
+      \    \"total_tokens\": 449,\n    \"completion_tokens_details\": {\n      \"\
+      reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\
+      \n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
@@ -770,7 +779,7 @@ interactions:
       access-control-expose-headers:
       - X-Request-ID
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '295'
       openai-version:
@@ -851,16 +860,17 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AB7LRjVtFXjtEDcJ5dzkK0qCWFTwG\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1727213205,\n  \"model\": \"gpt-4o-2024-05-13\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I need to use the multiplier
-      tool to find the result of 2 times 6.\\n\\nAction: multiplier\\nAction Input:
-      {\\\"first_number\\\": 2, \\\"second_number\\\": 6}\",\n        \"refusal\":
-      null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
-      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 332,\n    \"completion_tokens\":
-      41,\n    \"total_tokens\": 373,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
-      0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
+    content: "{\n  \"id\": \"chatcmpl-AB7LRjVtFXjtEDcJ5dzkK0qCWFTwG\",\n  \"object\"\
+      : \"chat.completion\",\n  \"created\": 1727213205,\n  \"model\": \"gpt-4o-2024-05-13\"\
+      ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n    \
+      \    \"role\": \"assistant\",\n        \"content\": \"Thought: I need to use\
+      \ the multiplier tool to find the result of 2 times 6.\\n\\nAction: multiplier\\\
+      nAction Input: {\\\"first_number\\\": 2, \\\"second_number\\\": 6}\",\n    \
+      \    \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"finish_reason\"\
+      : \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 332,\n    \"\
+      completion_tokens\": 41,\n    \"total_tokens\": 373,\n    \"completion_tokens_details\"\
+      : {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"\
+      fp_e375328146\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
@@ -883,7 +893,7 @@ interactions:
       access-control-expose-headers:
       - X-Request-ID
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '854'
       openai-version:
@@ -967,14 +977,16 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AB7LSFaQVHYibLK8TfiCZCL0I9L3a\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1727213206,\n  \"model\": \"gpt-4o-2024-05-13\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I now know the final answer\\nFinal
-      Answer: 0\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
-      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      381,\n    \"completion_tokens\": 14,\n    \"total_tokens\": 395,\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
+    content: "{\n  \"id\": \"chatcmpl-AB7LSFaQVHYibLK8TfiCZCL0I9L3a\",\n  \"object\"\
+      : \"chat.completion\",\n  \"created\": 1727213206,\n  \"model\": \"gpt-4o-2024-05-13\"\
+      ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n    \
+      \    \"role\": \"assistant\",\n        \"content\": \"Thought: I now know the\
+      \ final answer\\nFinal Answer: 0\",\n        \"refusal\": null\n      },\n \
+      \     \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n\
+      \  \"usage\": {\n    \"prompt_tokens\": 381,\n    \"completion_tokens\": 14,\n\
+      \    \"total_tokens\": 395,\n    \"completion_tokens_details\": {\n      \"\
+      reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\
+      \n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
@@ -997,7 +1009,7 @@ interactions:
       access-control-expose-headers:
       - X-Request-ID
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '300'
       openai-version:

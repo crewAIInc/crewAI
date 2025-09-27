@@ -54,18 +54,19 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AmjTkjHtNtJfKGo6wS35grXEzfoqv\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1736177928,\n  \"model\": \"gpt-3.5-turbo-0125\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"I should use the dummy tool to get a
-      result for the 'test query'.\\n\\nAction: dummy_tool\\nAction Input: {\\\"query\\\":
-      \\\"test query\\\"}\",\n        \"refusal\": null\n      },\n      \"logprobs\":
-      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      271,\n    \"completion_tokens\": 31,\n    \"total_tokens\": 302,\n    \"prompt_tokens_details\":
-      {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"system_fingerprint\":
-      null\n}\n"
+    content: "{\n  \"id\": \"chatcmpl-AmjTkjHtNtJfKGo6wS35grXEzfoqv\",\n  \"object\"\
+      : \"chat.completion\",\n  \"created\": 1736177928,\n  \"model\": \"gpt-3.5-turbo-0125\"\
+      ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n    \
+      \    \"role\": \"assistant\",\n        \"content\": \"I should use the dummy\
+      \ tool to get a result for the 'test query'.\\n\\nAction: dummy_tool\\nAction\
+      \ Input: {\\\"query\\\": \\\"test query\\\"}\",\n        \"refusal\": null\n\
+      \      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n  \
+      \  }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 271,\n    \"completion_tokens\"\
+      : 31,\n    \"total_tokens\": 302,\n    \"prompt_tokens_details\": {\n      \"\
+      cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\"\
+      : {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\"\
+      : 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"system_fingerprint\"\
+      : null\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
@@ -96,7 +97,7 @@ interactions:
       alt-svc:
       - h3=":443"; ma=86400
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '444'
       openai-version:
@@ -179,17 +180,18 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AmjTkjtDnt98YQ3k4y71C523EQM9p\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1736177928,\n  \"model\": \"gpt-3.5-turbo-0125\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Final Answer: Dummy result for: test
-      query\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
-      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 315,\n    \"completion_tokens\":
-      9,\n    \"total_tokens\": 324,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
-      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
-      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"system_fingerprint\":
-      null\n}\n"
+    content: "{\n  \"id\": \"chatcmpl-AmjTkjtDnt98YQ3k4y71C523EQM9p\",\n  \"object\"\
+      : \"chat.completion\",\n  \"created\": 1736177928,\n  \"model\": \"gpt-3.5-turbo-0125\"\
+      ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n    \
+      \    \"role\": \"assistant\",\n        \"content\": \"Final Answer: Dummy result\
+      \ for: test query\",\n        \"refusal\": null\n      },\n      \"logprobs\"\
+      : null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n  \
+      \  \"prompt_tokens\": 315,\n    \"completion_tokens\": 9,\n    \"total_tokens\"\
+      : 324,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n    \
+      \  \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n     \
+      \ \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\"\
+      : 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"system_fingerprint\"\
+      : null\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
@@ -214,7 +216,7 @@ interactions:
       alt-svc:
       - h3=":443"; ma=86400
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '249'
       openai-version:

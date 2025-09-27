@@ -58,19 +58,20 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-BHEoYLbLcG8I0GR0JGYzy87op52A6\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1743448222,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"```\\nThought: I need to search for the
-      latest information about the population of Tokyo.\\nAction: search_web\\nAction
-      Input: {\\\"query\\\":\\\"population of Tokyo\\\"}\\n```\\n\",\n        \"refusal\":
-      null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
-      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 248,\n    \"completion_tokens\":
-      36,\n    \"total_tokens\": 284,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
-      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
-      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
-      \"default\",\n  \"system_fingerprint\": \"fp_b376dfbbd5\"\n}\n"
+    content: "{\n  \"id\": \"chatcmpl-BHEoYLbLcG8I0GR0JGYzy87op52A6\",\n  \"object\"\
+      : \"chat.completion\",\n  \"created\": 1743448222,\n  \"model\": \"gpt-4o-mini-2024-07-18\"\
+      ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n    \
+      \    \"role\": \"assistant\",\n        \"content\": \"```\\nThought: I need\
+      \ to search for the latest information about the population of Tokyo.\\nAction:\
+      \ search_web\\nAction Input: {\\\"query\\\":\\\"population of Tokyo\\\"}\\n```\\\
+      n\",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n  \
+      \    \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n \
+      \ \"usage\": {\n    \"prompt_tokens\": 248,\n    \"completion_tokens\": 36,\n\
+      \    \"total_tokens\": 284,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\"\
+      : 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":\
+      \ {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\"\
+      : 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\"\
+      : \"default\",\n  \"system_fingerprint\": \"fp_b376dfbbd5\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
@@ -95,7 +96,7 @@ interactions:
       alt-svc:
       - h3=":443"; ma=86400
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '989'
       openai-version:
@@ -181,20 +182,21 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-BHEoad9v9xvJUsnua1LAzxoEmoCHv\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1743448224,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"```\\nThought: I now know the final answer\\nFinal
-      Answer: {\\n    \\\"summary\\\": \\\"As of 2023, the population of Tokyo is
-      approximately 21 million people in the city proper and around 37 million in
-      the greater metropolitan area.\\\",\\n    \\\"confidence\\\": \\\"high\\\"\\n}\\n```\",\n
-      \       \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\":
-      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      317,\n    \"completion_tokens\": 61,\n    \"total_tokens\": 378,\n    \"prompt_tokens_details\":
-      {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
-      \"default\",\n  \"system_fingerprint\": \"fp_b376dfbbd5\"\n}\n"
+    content: "{\n  \"id\": \"chatcmpl-BHEoad9v9xvJUsnua1LAzxoEmoCHv\",\n  \"object\"\
+      : \"chat.completion\",\n  \"created\": 1743448224,\n  \"model\": \"gpt-4o-mini-2024-07-18\"\
+      ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n    \
+      \    \"role\": \"assistant\",\n        \"content\": \"```\\nThought: I now know\
+      \ the final answer\\nFinal Answer: {\\n    \\\"summary\\\": \\\"As of 2023,\
+      \ the population of Tokyo is approximately 21 million people in the city proper\
+      \ and around 37 million in the greater metropolitan area.\\\",\\n    \\\"confidence\\\
+      \": \\\"high\\\"\\n}\\n```\",\n        \"refusal\": null,\n        \"annotations\"\
+      : []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\
+      \n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 317,\n    \"completion_tokens\"\
+      : 61,\n    \"total_tokens\": 378,\n    \"prompt_tokens_details\": {\n      \"\
+      cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\"\
+      : {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\"\
+      : 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\"\
+      : \"default\",\n  \"system_fingerprint\": \"fp_b376dfbbd5\"\n}\n"
     headers:
       CF-RAY:
       - 929225866a24eb2e-SJC
@@ -219,7 +221,7 @@ interactions:
       cf-cache-status:
       - DYNAMIC
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '1174'
       openai-version:

@@ -57,21 +57,22 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-BHJHRKs8rtkDFVdcMoayfSD4DTOEO\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1743465389,\n  \"model\": \"gpt-4-0613\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"The task requires to find the final answer
-      using the `get_final_answer` tool but not to disclose it until told to. Considering
-      the tool at my disposal, my next action would be to use the `get_final_answer`
-      tool.\\n\\nAction: get_final_answer\\nAction Input: {\\\"anything\\\": \\\"The
-      final answer is 42. But don't give it until I tell you so.\\\"}\",\n        \"refusal\":
-      null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
-      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 321,\n    \"completion_tokens\":
-      80,\n    \"total_tokens\": 401,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
-      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
-      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
-      \"default\",\n  \"system_fingerprint\": null\n}\n"
+    content: "{\n  \"id\": \"chatcmpl-BHJHRKs8rtkDFVdcMoayfSD4DTOEO\",\n  \"object\"\
+      : \"chat.completion\",\n  \"created\": 1743465389,\n  \"model\": \"gpt-4-0613\"\
+      ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n    \
+      \    \"role\": \"assistant\",\n        \"content\": \"The task requires to find\
+      \ the final answer using the `get_final_answer` tool but not to disclose it\
+      \ until told to. Considering the tool at my disposal, my next action would be\
+      \ to use the `get_final_answer` tool.\\n\\nAction: get_final_answer\\nAction\
+      \ Input: {\\\"anything\\\": \\\"The final answer is 42. But don't give it until\
+      \ I tell you so.\\\"}\",\n        \"refusal\": null,\n        \"annotations\"\
+      : []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\
+      \n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 321,\n    \"completion_tokens\"\
+      : 80,\n    \"total_tokens\": 401,\n    \"prompt_tokens_details\": {\n      \"\
+      cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\"\
+      : {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\"\
+      : 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\"\
+      : \"default\",\n  \"system_fingerprint\": null\n}\n"
     headers:
       CF-RAY:
       - 9293c89d4f1f7ad9-SJC
@@ -102,7 +103,7 @@ interactions:
       cf-cache-status:
       - DYNAMIC
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '2524'
       openai-version:
@@ -226,20 +227,21 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-BHJHUSTXCKJpNQXaAUjREO2mKJIs5\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1743465392,\n  \"model\": \"gpt-4-0613\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I have obtained the final answer
-      which is 42. However, I have been instructed not to disclose it until told to.
-      \\n\\nAction: get_final_answer\\nAction Input: {\\\"anything\\\": \\\"The final
-      answer is 42. But don't give it until I tell you so.\\\"}\",\n        \"refusal\":
-      null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
-      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 414,\n    \"completion_tokens\":
-      60,\n    \"total_tokens\": 474,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
-      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
-      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
-      \"default\",\n  \"system_fingerprint\": null\n}\n"
+    content: "{\n  \"id\": \"chatcmpl-BHJHUSTXCKJpNQXaAUjREO2mKJIs5\",\n  \"object\"\
+      : \"chat.completion\",\n  \"created\": 1743465392,\n  \"model\": \"gpt-4-0613\"\
+      ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n    \
+      \    \"role\": \"assistant\",\n        \"content\": \"Thought: I have obtained\
+      \ the final answer which is 42. However, I have been instructed not to disclose\
+      \ it until told to. \\n\\nAction: get_final_answer\\nAction Input: {\\\"anything\\\
+      \": \\\"The final answer is 42. But don't give it until I tell you so.\\\"}\"\
+      ,\n        \"refusal\": null,\n        \"annotations\": []\n      },\n     \
+      \ \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"\
+      usage\": {\n    \"prompt_tokens\": 414,\n    \"completion_tokens\": 60,\n  \
+      \  \"total_tokens\": 474,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\"\
+      : 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":\
+      \ {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\"\
+      : 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\"\
+      : \"default\",\n  \"system_fingerprint\": null\n}\n"
     headers:
       CF-RAY:
       - 9293c8ae6c677ad9-SJC
@@ -264,7 +266,7 @@ interactions:
       cf-cache-status:
       - DYNAMIC
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '2270'
       openai-version:
@@ -361,20 +363,21 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-BHJHWV6t0X7aNZ7mlRFMRPYX70vQ6\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1743465394,\n  \"model\": \"gpt-4-0613\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I need to continue using the
-      `get_final_answer` tool without revealing the final answer.\\n\\nAction: get_final_answer\\nAction
-      Input: {\\\"anything\\\": \\\"Keep using the `get_final_answer` tool without
-      revealing.\\\"}\",\n        \"refusal\": null,\n        \"annotations\": []\n
-      \     },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n
-      \ ],\n  \"usage\": {\n    \"prompt_tokens\": 531,\n    \"completion_tokens\":
-      46,\n    \"total_tokens\": 577,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
-      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
-      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
-      \"default\",\n  \"system_fingerprint\": null\n}\n"
+    content: "{\n  \"id\": \"chatcmpl-BHJHWV6t0X7aNZ7mlRFMRPYX70vQ6\",\n  \"object\"\
+      : \"chat.completion\",\n  \"created\": 1743465394,\n  \"model\": \"gpt-4-0613\"\
+      ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n    \
+      \    \"role\": \"assistant\",\n        \"content\": \"Thought: I need to continue\
+      \ using the `get_final_answer` tool without revealing the final answer.\\n\\\
+      nAction: get_final_answer\\nAction Input: {\\\"anything\\\": \\\"Keep using\
+      \ the `get_final_answer` tool without revealing.\\\"}\",\n        \"refusal\"\
+      : null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n\
+      \      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\"\
+      : 531,\n    \"completion_tokens\": 46,\n    \"total_tokens\": 577,\n    \"prompt_tokens_details\"\
+      : {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"\
+      completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\"\
+      : 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\"\
+      : 0\n    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\"\
+      : null\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
@@ -399,7 +402,7 @@ interactions:
       alt-svc:
       - h3=":443"; ma=86400
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '2423'
       openai-version:
@@ -559,20 +562,21 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-BHJHZoeC2ytmAnnNRojEnj9ZurCEQ\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1743465397,\n  \"model\": \"gpt-4-0613\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I must continue using the 'get_final_answer'
-      tool, but avoid revealing the final answer until explicitly told to do so.\\n\\nAction:
-      get_final_answer\\nAction Input: {\\\"anything\\\": \\\"Keep on using the 'get_final_answer'
-      tool without revealing the final answer.\\\"}\",\n        \"refusal\": null,\n
-      \       \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
-      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 979,\n    \"completion_tokens\":
-      57,\n    \"total_tokens\": 1036,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
-      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
-      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
-      \"default\",\n  \"system_fingerprint\": null\n}\n"
+    content: "{\n  \"id\": \"chatcmpl-BHJHZoeC2ytmAnnNRojEnj9ZurCEQ\",\n  \"object\"\
+      : \"chat.completion\",\n  \"created\": 1743465397,\n  \"model\": \"gpt-4-0613\"\
+      ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n    \
+      \    \"role\": \"assistant\",\n        \"content\": \"Thought: I must continue\
+      \ using the 'get_final_answer' tool, but avoid revealing the final answer until\
+      \ explicitly told to do so.\\n\\nAction: get_final_answer\\nAction Input: {\\\
+      \"anything\\\": \\\"Keep on using the 'get_final_answer' tool without revealing\
+      \ the final answer.\\\"}\",\n        \"refusal\": null,\n        \"annotations\"\
+      : []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\
+      \n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 979,\n    \"completion_tokens\"\
+      : 57,\n    \"total_tokens\": 1036,\n    \"prompt_tokens_details\": {\n     \
+      \ \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\"\
+      : {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\"\
+      : 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\"\
+      : \"default\",\n  \"system_fingerprint\": null\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
@@ -597,7 +601,7 @@ interactions:
       alt-svc:
       - h3=":443"; ma=86400
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '2524'
       openai-version:
@@ -731,18 +735,19 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-BHJHc680cRBdVQBdOYCe4MIarbCau\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1743465400,\n  \"model\": \"gpt-4-0613\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I now know the final answer\\nFinal
-      Answer: 42\",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n
-      \     \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n
-      \ \"usage\": {\n    \"prompt_tokens\": 1151,\n    \"completion_tokens\": 15,\n
-      \   \"total_tokens\": 1166,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
-      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
-      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
-      \"default\",\n  \"system_fingerprint\": null\n}\n"
+    content: "{\n  \"id\": \"chatcmpl-BHJHc680cRBdVQBdOYCe4MIarbCau\",\n  \"object\"\
+      : \"chat.completion\",\n  \"created\": 1743465400,\n  \"model\": \"gpt-4-0613\"\
+      ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n    \
+      \    \"role\": \"assistant\",\n        \"content\": \"Thought: I now know the\
+      \ final answer\\nFinal Answer: 42\",\n        \"refusal\": null,\n        \"\
+      annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\"\
+      : \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 1151,\n    \"\
+      completion_tokens\": 15,\n    \"total_tokens\": 1166,\n    \"prompt_tokens_details\"\
+      : {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"\
+      completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\"\
+      : 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\"\
+      : 0\n    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\"\
+      : null\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
@@ -767,7 +772,7 @@ interactions:
       alt-svc:
       - h3=":443"; ma=86400
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '995'
       openai-version:
@@ -901,18 +906,19 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-BHJHdfi7ErthQXWltvt7Jd2L2TUaY\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1743465401,\n  \"model\": \"gpt-4-0613\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I now know the final answer\\nFinal
-      Answer: 42\",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n
-      \     \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n
-      \ \"usage\": {\n    \"prompt_tokens\": 1151,\n    \"completion_tokens\": 15,\n
-      \   \"total_tokens\": 1166,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
-      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
-      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
-      \"default\",\n  \"system_fingerprint\": null\n}\n"
+    content: "{\n  \"id\": \"chatcmpl-BHJHdfi7ErthQXWltvt7Jd2L2TUaY\",\n  \"object\"\
+      : \"chat.completion\",\n  \"created\": 1743465401,\n  \"model\": \"gpt-4-0613\"\
+      ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n    \
+      \    \"role\": \"assistant\",\n        \"content\": \"Thought: I now know the\
+      \ final answer\\nFinal Answer: 42\",\n        \"refusal\": null,\n        \"\
+      annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\"\
+      : \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 1151,\n    \"\
+      completion_tokens\": 15,\n    \"total_tokens\": 1166,\n    \"prompt_tokens_details\"\
+      : {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"\
+      completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\"\
+      : 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\"\
+      : 0\n    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\"\
+      : null\n}\n"
     headers:
       CF-RAY:
       - 9293c8e50d137ad9-SJC
@@ -937,7 +943,7 @@ interactions:
       cf-cache-status:
       - DYNAMIC
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '1318'
       openai-version:

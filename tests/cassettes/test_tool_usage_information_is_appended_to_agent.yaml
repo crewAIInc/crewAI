@@ -54,15 +54,17 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AB7WLDvEd81QWPJNqps9qjopfsxQp\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1727213881,\n  \"model\": \"gpt-4o-2024-05-13\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I should use the Decide Greetings
-      tool to determine the most appropriate greeting to use.\\n\\nAction: Decide
-      Greetings\\nAction Input: {}\",\n        \"refusal\": null\n      },\n      \"logprobs\":
-      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      253,\n    \"completion_tokens\": 27,\n    \"total_tokens\": 280,\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_3537616b13\"\n}\n"
+    content: "{\n  \"id\": \"chatcmpl-AB7WLDvEd81QWPJNqps9qjopfsxQp\",\n  \"object\"\
+      : \"chat.completion\",\n  \"created\": 1727213881,\n  \"model\": \"gpt-4o-2024-05-13\"\
+      ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n    \
+      \    \"role\": \"assistant\",\n        \"content\": \"Thought: I should use\
+      \ the Decide Greetings tool to determine the most appropriate greeting to use.\\\
+      n\\nAction: Decide Greetings\\nAction Input: {}\",\n        \"refusal\": null\n\
+      \      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n  \
+      \  }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 253,\n    \"completion_tokens\"\
+      : 27,\n    \"total_tokens\": 280,\n    \"completion_tokens_details\": {\n  \
+      \    \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_3537616b13\"\
+      \n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
@@ -85,7 +87,7 @@ interactions:
       access-control-expose-headers:
       - X-Request-ID
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '531'
       openai-version:
@@ -165,15 +167,16 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AB7WMl6yHxaqiMEbmERJeO2wKy4ml\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1727213882,\n  \"model\": \"gpt-4o-2024-05-13\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I have determined the appropriate
-      greeting to use.\\n\\nFinal Answer: Howdy!\",\n        \"refusal\": null\n      },\n
-      \     \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n
-      \ \"usage\": {\n    \"prompt_tokens\": 289,\n    \"completion_tokens\": 17,\n
-      \   \"total_tokens\": 306,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
-      0\n    }\n  },\n  \"system_fingerprint\": \"fp_3537616b13\"\n}\n"
+    content: "{\n  \"id\": \"chatcmpl-AB7WMl6yHxaqiMEbmERJeO2wKy4ml\",\n  \"object\"\
+      : \"chat.completion\",\n  \"created\": 1727213882,\n  \"model\": \"gpt-4o-2024-05-13\"\
+      ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n    \
+      \    \"role\": \"assistant\",\n        \"content\": \"Thought: I have determined\
+      \ the appropriate greeting to use.\\n\\nFinal Answer: Howdy!\",\n        \"\
+      refusal\": null\n      },\n      \"logprobs\": null,\n      \"finish_reason\"\
+      : \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 289,\n    \"\
+      completion_tokens\": 17,\n    \"total_tokens\": 306,\n    \"completion_tokens_details\"\
+      : {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"\
+      fp_3537616b13\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
@@ -196,7 +199,7 @@ interactions:
       access-control-expose-headers:
       - X-Request-ID
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '262'
       openai-version:

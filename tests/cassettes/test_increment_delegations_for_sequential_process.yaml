@@ -71,22 +71,24 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AB7gSk1Z1rcVo96hskKeiE3yki3Kn\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1727214508,\n  \"model\": \"gpt-4o-2024-05-13\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: To provide an accurate score
-      for the title \\\"The impact of AI in the future of work,\\\" I need to delegate
-      the task of scoring it to the Scorer, who is specialized in this activity.\\n\\nAction:
-      Delegate work to coworker\\nAction Input: {\\\"coworker\\\": \\\"Scorer\\\",
-      \\\"task\\\": \\\"Give me an integer score between 1-5 for the following title:
-      'The impact of AI in the future of work'\\\", \\\"context\\\": \\\"Your task
-      is to evaluate the provided title on a scale from 1 to 5 based on criteria such
-      as relevance, clarity, and intrigue.\\\"}\\n\\nObservation: The scorer has received
-      the task to score the title 'The impact of AI in the future of work'.\",\n        \"refusal\":
-      null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
-      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 584,\n    \"completion_tokens\":
-      149,\n    \"total_tokens\": 733,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
-      0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
+    content: "{\n  \"id\": \"chatcmpl-AB7gSk1Z1rcVo96hskKeiE3yki3Kn\",\n  \"object\"\
+      : \"chat.completion\",\n  \"created\": 1727214508,\n  \"model\": \"gpt-4o-2024-05-13\"\
+      ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n    \
+      \    \"role\": \"assistant\",\n        \"content\": \"Thought: To provide an\
+      \ accurate score for the title \\\"The impact of AI in the future of work,\\\
+      \" I need to delegate the task of scoring it to the Scorer, who is specialized\
+      \ in this activity.\\n\\nAction: Delegate work to coworker\\nAction Input: {\\\
+      \"coworker\\\": \\\"Scorer\\\", \\\"task\\\": \\\"Give me an integer score between\
+      \ 1-5 for the following title: 'The impact of AI in the future of work'\\\"\
+      , \\\"context\\\": \\\"Your task is to evaluate the provided title on a scale\
+      \ from 1 to 5 based on criteria such as relevance, clarity, and intrigue.\\\"\
+      }\\n\\nObservation: The scorer has received the task to score the title 'The\
+      \ impact of AI in the future of work'.\",\n        \"refusal\": null\n     \
+      \ },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n\
+      \  ],\n  \"usage\": {\n    \"prompt_tokens\": 584,\n    \"completion_tokens\"\
+      : 149,\n    \"total_tokens\": 733,\n    \"completion_tokens_details\": {\n \
+      \     \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\
+      \n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
@@ -111,7 +113,7 @@ interactions:
       alt-svc:
       - h3=":443"; ma=86400
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '2017'
       openai-version:
@@ -253,18 +255,20 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AB7gVWj6JmMibt7mwANbQBq91qey2\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1727214511,\n  \"model\": \"gpt-4o-2024-05-13\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I now can give a great answer\\nFinal
-      Answer: 4. The title 'The impact of AI in the future of work' is clear and directly
-      addresses a highly relevant and intriguing topic. It captures the essence of
-      how AI could shape the job market, which is a subject of significant interest.
-      However, it could be more specific or detailed to achieve a perfect score.\",\n
-      \       \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
-      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 234,\n    \"completion_tokens\":
-      77,\n    \"total_tokens\": 311,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
-      0\n    }\n  },\n  \"system_fingerprint\": \"fp_52a7f40b0b\"\n}\n"
+    content: "{\n  \"id\": \"chatcmpl-AB7gVWj6JmMibt7mwANbQBq91qey2\",\n  \"object\"\
+      : \"chat.completion\",\n  \"created\": 1727214511,\n  \"model\": \"gpt-4o-2024-05-13\"\
+      ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n    \
+      \    \"role\": \"assistant\",\n        \"content\": \"Thought: I now can give\
+      \ a great answer\\nFinal Answer: 4. The title 'The impact of AI in the future\
+      \ of work' is clear and directly addresses a highly relevant and intriguing\
+      \ topic. It captures the essence of how AI could shape the job market, which\
+      \ is a subject of significant interest. However, it could be more specific or\
+      \ detailed to achieve a perfect score.\",\n        \"refusal\": null\n     \
+      \ },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n\
+      \  ],\n  \"usage\": {\n    \"prompt_tokens\": 234,\n    \"completion_tokens\"\
+      : 77,\n    \"total_tokens\": 311,\n    \"completion_tokens_details\": {\n  \
+      \    \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_52a7f40b0b\"\
+      \n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
@@ -287,7 +291,7 @@ interactions:
       access-control-expose-headers:
       - X-Request-ID
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '643'
       openai-version:
@@ -395,15 +399,17 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AB7gWvoNTNn6C1ZVbf5LEjk6zmRlG\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1727214512,\n  \"model\": \"gpt-4o-2024-05-13\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I now know the final answer
-      as the Scorer has provided the score for the title based on the given criteria.\\n\\nFinal
-      Answer: 4\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
-      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      803,\n    \"completion_tokens\": 30,\n    \"total_tokens\": 833,\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
+    content: "{\n  \"id\": \"chatcmpl-AB7gWvoNTNn6C1ZVbf5LEjk6zmRlG\",\n  \"object\"\
+      : \"chat.completion\",\n  \"created\": 1727214512,\n  \"model\": \"gpt-4o-2024-05-13\"\
+      ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n    \
+      \    \"role\": \"assistant\",\n        \"content\": \"Thought: I now know the\
+      \ final answer as the Scorer has provided the score for the title based on the\
+      \ given criteria.\\n\\nFinal Answer: 4\",\n        \"refusal\": null\n     \
+      \ },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n\
+      \  ],\n  \"usage\": {\n    \"prompt_tokens\": 803,\n    \"completion_tokens\"\
+      : 30,\n    \"total_tokens\": 833,\n    \"completion_tokens_details\": {\n  \
+      \    \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\
+      \n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
@@ -426,7 +432,7 @@ interactions:
       access-control-expose-headers:
       - X-Request-ID
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '454'
       openai-version:
@@ -575,11 +581,11 @@ interactions:
       cf-cache-status:
       - DYNAMIC
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '680'
       openai-project:
-      - proj_xitITlrFeen7zjNSzML82h9x
+      - REDACTED
       openai-version:
       - '2020-10-01'
       x-envoy-upstream-service-time:

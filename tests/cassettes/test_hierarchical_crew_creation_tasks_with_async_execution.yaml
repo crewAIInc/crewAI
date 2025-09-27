@@ -146,24 +146,25 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AB7cOpVQYU4uGWIpZkZfndhgdvXtO\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1727214256,\n  \"model\": \"gpt-4o-2024-05-13\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: To write an amazing paragraph
-      about AI, I need to delegate this task to the Senior Writer since they are skilled
-      in creating compelling content. I'll provide them with detailed context and
-      the specific instructions required for this task.\\n\\nAction: Delegate work
-      to coworker\\nAction Input: {\\\"coworker\\\": \\\"Senior Writer\\\", \\\"task\\\":
-      \\\"Write a single paragraph about AI with exactly four sentences.\\\", \\\"context\\\":
-      \\\"The paragraph should highlight the transformative impact of AI in various
-      aspects of life. It should be engaging and insightful, illustrating AI's capabilities
-      and potential. Mention the current advancements and future possibilities in
-      a concise and captivating manner without being overly technical. The goal is
-      to impress readers with the scope and promise of AI.\\\"}\",\n        \"refusal\":
-      null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
-      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 647,\n    \"completion_tokens\":
-      145,\n    \"total_tokens\": 792,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
-      0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
+    content: "{\n  \"id\": \"chatcmpl-AB7cOpVQYU4uGWIpZkZfndhgdvXtO\",\n  \"object\"\
+      : \"chat.completion\",\n  \"created\": 1727214256,\n  \"model\": \"gpt-4o-2024-05-13\"\
+      ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n    \
+      \    \"role\": \"assistant\",\n        \"content\": \"Thought: To write an amazing\
+      \ paragraph about AI, I need to delegate this task to the Senior Writer since\
+      \ they are skilled in creating compelling content. I'll provide them with detailed\
+      \ context and the specific instructions required for this task.\\n\\nAction:\
+      \ Delegate work to coworker\\nAction Input: {\\\"coworker\\\": \\\"Senior Writer\\\
+      \", \\\"task\\\": \\\"Write a single paragraph about AI with exactly four sentences.\\\
+      \", \\\"context\\\": \\\"The paragraph should highlight the transformative impact\
+      \ of AI in various aspects of life. It should be engaging and insightful, illustrating\
+      \ AI's capabilities and potential. Mention the current advancements and future\
+      \ possibilities in a concise and captivating manner without being overly technical.\
+      \ The goal is to impress readers with the scope and promise of AI.\\\"}\",\n\
+      \        \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"finish_reason\"\
+      : \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 647,\n    \"\
+      completion_tokens\": 145,\n    \"total_tokens\": 792,\n    \"completion_tokens_details\"\
+      : {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"\
+      fp_e375328146\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
@@ -186,7 +187,7 @@ interactions:
       access-control-expose-headers:
       - X-Request-ID
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '2014'
       openai-version:
@@ -266,22 +267,23 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AB7cQwlyyU0hTgIlj2BVc7phRjzjh\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1727214258,\n  \"model\": \"gpt-4o-2024-05-13\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"I now can give a great answer.\\nFinal
-      Answer: Artificial Intelligence is revolutionizing numerous facets of our daily
-      lives, from personalized recommendations on streaming services to advanced medical
-      diagnostics that save lives. Current advancements in AI enable machines to understand
-      natural language, recognize intricate patterns, and make decisions with incredible
-      accuracy. The future holds even more promise, with potential breakthroughs in
-      areas like autonomous vehicles and climate change mitigation. As AI continues
-      to evolve, it not only enhances efficiency and convenience but also fosters
-      innovative solutions to the world's most pressing challenges.\",\n        \"refusal\":
-      null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
-      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 280,\n    \"completion_tokens\":
-      104,\n    \"total_tokens\": 384,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
-      0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
+    content: "{\n  \"id\": \"chatcmpl-AB7cQwlyyU0hTgIlj2BVc7phRjzjh\",\n  \"object\"\
+      : \"chat.completion\",\n  \"created\": 1727214258,\n  \"model\": \"gpt-4o-2024-05-13\"\
+      ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n    \
+      \    \"role\": \"assistant\",\n        \"content\": \"I now can give a great\
+      \ answer.\\nFinal Answer: Artificial Intelligence is revolutionizing numerous\
+      \ facets of our daily lives, from personalized recommendations on streaming\
+      \ services to advanced medical diagnostics that save lives. Current advancements\
+      \ in AI enable machines to understand natural language, recognize intricate\
+      \ patterns, and make decisions with incredible accuracy. The future holds even\
+      \ more promise, with potential breakthroughs in areas like autonomous vehicles\
+      \ and climate change mitigation. As AI continues to evolve, it not only enhances\
+      \ efficiency and convenience but also fosters innovative solutions to the world's\
+      \ most pressing challenges.\",\n        \"refusal\": null\n      },\n      \"\
+      logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\"\
+      : {\n    \"prompt_tokens\": 280,\n    \"completion_tokens\": 104,\n    \"total_tokens\"\
+      : 384,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\": 0\n\
+      \    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
@@ -304,7 +306,7 @@ interactions:
       access-control-expose-headers:
       - X-Request-ID
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '1500'
       openai-version:
@@ -456,22 +458,23 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AB7cSbQ5sdVj66424ojTsMa2pfSTj\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1727214260,\n  \"model\": \"gpt-4o-2024-05-13\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I now know the final answer.\\n\\nFinal
-      Answer: Artificial Intelligence is revolutionizing numerous facets of our daily
-      lives, from personalized recommendations on streaming services to advanced medical
-      diagnostics that save lives. Current advancements in AI enable machines to understand
-      natural language, recognize intricate patterns, and make decisions with incredible
-      accuracy. The future holds even more promise, with potential breakthroughs in
-      areas like autonomous vehicles and climate change mitigation. As AI continues
-      to evolve, it not only enhances efficiency and convenience but also fosters
-      innovative solutions to the world's most pressing challenges.\",\n        \"refusal\":
-      null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
-      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 891,\n    \"completion_tokens\":
-      105,\n    \"total_tokens\": 996,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
-      0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
+    content: "{\n  \"id\": \"chatcmpl-AB7cSbQ5sdVj66424ojTsMa2pfSTj\",\n  \"object\"\
+      : \"chat.completion\",\n  \"created\": 1727214260,\n  \"model\": \"gpt-4o-2024-05-13\"\
+      ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n    \
+      \    \"role\": \"assistant\",\n        \"content\": \"Thought: I now know the\
+      \ final answer.\\n\\nFinal Answer: Artificial Intelligence is revolutionizing\
+      \ numerous facets of our daily lives, from personalized recommendations on streaming\
+      \ services to advanced medical diagnostics that save lives. Current advancements\
+      \ in AI enable machines to understand natural language, recognize intricate\
+      \ patterns, and make decisions with incredible accuracy. The future holds even\
+      \ more promise, with potential breakthroughs in areas like autonomous vehicles\
+      \ and climate change mitigation. As AI continues to evolve, it not only enhances\
+      \ efficiency and convenience but also fosters innovative solutions to the world's\
+      \ most pressing challenges.\",\n        \"refusal\": null\n      },\n      \"\
+      logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\"\
+      : {\n    \"prompt_tokens\": 891,\n    \"completion_tokens\": 105,\n    \"total_tokens\"\
+      : 996,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\": 0\n\
+      \    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
@@ -494,7 +497,7 @@ interactions:
       access-control-expose-headers:
       - X-Request-ID
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '1506'
       openai-version:

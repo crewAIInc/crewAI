@@ -143,27 +143,28 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-BHJJd2Cs40TdqJd4sC5HfN3AoJS8a\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1743465525,\n  \"model\": \"gpt-4o-2024-08-06\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"```\\nThought: To come up with interesting
-      article ideas and write compelling highlights, I should first generate a list
-      of potential topics. The Researcher can help with gathering current trends or
-      interesting topics that might be engaging. Then, I can delegate writing the
-      paragraph highlights to the Senior Writer.\\n\\nAction: Ask question to coworker\\nAction
-      Input: {\\\"question\\\": \\\"What are some current trending topics or subjects
-      that are interesting to explore for an article?\\\", \\\"context\\\": \\\"I
-      need to generate a list of 5 interesting ideas to explore for an article, each
-      paired with an amazing paragraph highlight. Current trends or unusual insights
-      could be a good source of inspiration for these ideas.\\\", \\\"coworker\\\":
-      \\\"Researcher\\\"}\",\n        \"refusal\": null,\n        \"annotations\":
-      []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
-      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 671,\n    \"completion_tokens\":
-      143,\n    \"total_tokens\": 814,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
-      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
-      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
-      \"default\",\n  \"system_fingerprint\": \"fp_6dd05565ef\"\n}\n"
+    content: "{\n  \"id\": \"chatcmpl-BHJJd2Cs40TdqJd4sC5HfN3AoJS8a\",\n  \"object\"\
+      : \"chat.completion\",\n  \"created\": 1743465525,\n  \"model\": \"gpt-4o-2024-08-06\"\
+      ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n    \
+      \    \"role\": \"assistant\",\n        \"content\": \"```\\nThought: To come\
+      \ up with interesting article ideas and write compelling highlights, I should\
+      \ first generate a list of potential topics. The Researcher can help with gathering\
+      \ current trends or interesting topics that might be engaging. Then, I can delegate\
+      \ writing the paragraph highlights to the Senior Writer.\\n\\nAction: Ask question\
+      \ to coworker\\nAction Input: {\\\"question\\\": \\\"What are some current trending\
+      \ topics or subjects that are interesting to explore for an article?\\\", \\\
+      \"context\\\": \\\"I need to generate a list of 5 interesting ideas to explore\
+      \ for an article, each paired with an amazing paragraph highlight. Current trends\
+      \ or unusual insights could be a good source of inspiration for these ideas.\\\
+      \", \\\"coworker\\\": \\\"Researcher\\\"}\",\n        \"refusal\": null,\n \
+      \       \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\"\
+      : \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 671,\n    \"\
+      completion_tokens\": 143,\n    \"total_tokens\": 814,\n    \"prompt_tokens_details\"\
+      : {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"\
+      completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\"\
+      : 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\"\
+      : 0\n    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\"\
+      : \"fp_6dd05565ef\"\n}\n"
     headers:
       CF-RAY:
       - 9293cbee6e8f7afd-SJC
@@ -194,7 +195,7 @@ interactions:
       cf-cache-status:
       - DYNAMIC
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '4259'
       openai-version:
@@ -278,66 +279,68 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-BHJJhlZ1FjNQOZeNGZxBS1iP5vz4U\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1743465529,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"I now can give a great answer  \\nFinal
-      Answer: \\n\\n**1. The Rise of Autonomous AI Agents in Daily Life**  \\nAs artificial
-      intelligence technology progresses, the integration of autonomous AI agents
-      into everyday life becomes increasingly prominent. These agents, capable of
-      making decisions without human intervention, are reshaping industries from healthcare
-      to finance. Exploring case studies where autonomous AI has successfully decreased
-      operational costs or improved efficiency can reveal not only the benefits but
-      also the ethical implications of delegating decision-making to machines. This
-      topic offers an exciting opportunity to dive into the AI landscape, showcasing
-      current developments such as AI assistants and autonomous vehicles.\\n\\n**2.
-      Ethical Implications of Generative AI in Creative Industries**  \\nThe surge
-      of generative AI tools in creative fields, such as art, music, and writing,
-      has sparked a heated debate about authorship and originality. This article could
-      investigate how these tools are being used by artists and creators, examining
-      both the potential for innovation and the risk of devaluing traditional art
-      forms. Highlighting perspectives from creators, legal experts, and ethicists
-      could provide a comprehensive overview of the challenges faced, including copyright
-      concerns and the emotional impact on human artists. This discussion is vital
-      as the creative landscape evolves alongside technological advancements, making
-      it ripe for exploration.\\n\\n**3. AI in Climate Change Mitigation: Current
-      Solutions and Future Potential**  \\nAs the world grapples with climate change,
-      AI technology is increasingly being harnessed to develop innovative solutions
-      for sustainability. From predictive analytics that optimize energy consumption
-      to machine learning algorithms that improve carbon capture methods, AI's potential
-      in environmental science is vast. This topic invites an exploration of existing
-      AI applications in climate initiatives, with a focus on groundbreaking research
-      and initiatives aimed at reducing humanity's carbon footprint. Highlighting
-      successful projects and technology partnerships can illustrate the positive
-      impact AI can have on global climate efforts, inspiring further exploration
-      and investment in this area.\\n\\n**4. The Future of Work: How AI is Reshaping
-      Employment Landscapes**  \\nThe discussions around AI's impact on the workforce
-      are both urgent and complex, as advances in automation and machine learning
-      continue to transform the job market. This article could delve into the current
-      trends of AI-driven job displacement alongside opportunities for upskilling
-      and the creation of new job roles. By examining case studies of companies that
-      integrate AI effectively and the resulting workforce adaptations, readers can
-      gain valuable insights into preparing for a future where humans and AI collaborate.
-      This exploration highlights the importance of policies that promote workforce
-      resilience in the face of change.\\n\\n**5. Decentralized AI: Exploring the
-      Role of Blockchain in AI Development**  \\nAs blockchain technology sweeps through
-      various sectors, its application in AI development presents a fascinating topic
-      worth examining. Decentralized AI could address issues of data privacy, security,
-      and democratization in AI models by allowing users to retain ownership of data
-      while benefiting from AI's capabilities. This article could analyze how decentralized
-      networks are disrupting traditional AI development models, featuring innovative
-      projects that harness the synergy between blockchain and AI. Highlighting potential
-      pitfalls and the future landscape of decentralized AI could stimulate discussion
-      among technologists, entrepreneurs, and policymakers alike.\\n\\nThese topics
-      not only reflect current trends but also probe deeper into ethical and practical
-      considerations, making them timely and relevant for contemporary audiences.\",\n
-      \       \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\":
-      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      273,\n    \"completion_tokens\": 650,\n    \"total_tokens\": 923,\n    \"prompt_tokens_details\":
-      {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
-      \"default\",\n  \"system_fingerprint\": \"fp_86d0290411\"\n}\n"
+    content: "{\n  \"id\": \"chatcmpl-BHJJhlZ1FjNQOZeNGZxBS1iP5vz4U\",\n  \"object\"\
+      : \"chat.completion\",\n  \"created\": 1743465529,\n  \"model\": \"gpt-4o-mini-2024-07-18\"\
+      ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n    \
+      \    \"role\": \"assistant\",\n        \"content\": \"I now can give a great\
+      \ answer  \\nFinal Answer: \\n\\n**1. The Rise of Autonomous AI Agents in Daily\
+      \ Life**  \\nAs artificial intelligence technology progresses, the integration\
+      \ of autonomous AI agents into everyday life becomes increasingly prominent.\
+      \ These agents, capable of making decisions without human intervention, are\
+      \ reshaping industries from healthcare to finance. Exploring case studies where\
+      \ autonomous AI has successfully decreased operational costs or improved efficiency\
+      \ can reveal not only the benefits but also the ethical implications of delegating\
+      \ decision-making to machines. This topic offers an exciting opportunity to\
+      \ dive into the AI landscape, showcasing current developments such as AI assistants\
+      \ and autonomous vehicles.\\n\\n**2. Ethical Implications of Generative AI in\
+      \ Creative Industries**  \\nThe surge of generative AI tools in creative fields,\
+      \ such as art, music, and writing, has sparked a heated debate about authorship\
+      \ and originality. This article could investigate how these tools are being\
+      \ used by artists and creators, examining both the potential for innovation\
+      \ and the risk of devaluing traditional art forms. Highlighting perspectives\
+      \ from creators, legal experts, and ethicists could provide a comprehensive\
+      \ overview of the challenges faced, including copyright concerns and the emotional\
+      \ impact on human artists. This discussion is vital as the creative landscape\
+      \ evolves alongside technological advancements, making it ripe for exploration.\\\
+      n\\n**3. AI in Climate Change Mitigation: Current Solutions and Future Potential**\
+      \  \\nAs the world grapples with climate change, AI technology is increasingly\
+      \ being harnessed to develop innovative solutions for sustainability. From predictive\
+      \ analytics that optimize energy consumption to machine learning algorithms\
+      \ that improve carbon capture methods, AI's potential in environmental science\
+      \ is vast. This topic invites an exploration of existing AI applications in\
+      \ climate initiatives, with a focus on groundbreaking research and initiatives\
+      \ aimed at reducing humanity's carbon footprint. Highlighting successful projects\
+      \ and technology partnerships can illustrate the positive impact AI can have\
+      \ on global climate efforts, inspiring further exploration and investment in\
+      \ this area.\\n\\n**4. The Future of Work: How AI is Reshaping Employment Landscapes**\
+      \  \\nThe discussions around AI's impact on the workforce are both urgent and\
+      \ complex, as advances in automation and machine learning continue to transform\
+      \ the job market. This article could delve into the current trends of AI-driven\
+      \ job displacement alongside opportunities for upskilling and the creation of\
+      \ new job roles. By examining case studies of companies that integrate AI effectively\
+      \ and the resulting workforce adaptations, readers can gain valuable insights\
+      \ into preparing for a future where humans and AI collaborate. This exploration\
+      \ highlights the importance of policies that promote workforce resilience in\
+      \ the face of change.\\n\\n**5. Decentralized AI: Exploring the Role of Blockchain\
+      \ in AI Development**  \\nAs blockchain technology sweeps through various sectors,\
+      \ its application in AI development presents a fascinating topic worth examining.\
+      \ Decentralized AI could address issues of data privacy, security, and democratization\
+      \ in AI models by allowing users to retain ownership of data while benefiting\
+      \ from AI's capabilities. This article could analyze how decentralized networks\
+      \ are disrupting traditional AI development models, featuring innovative projects\
+      \ that harness the synergy between blockchain and AI. Highlighting potential\
+      \ pitfalls and the future landscape of decentralized AI could stimulate discussion\
+      \ among technologists, entrepreneurs, and policymakers alike.\\n\\nThese topics\
+      \ not only reflect current trends but also probe deeper into ethical and practical\
+      \ considerations, making them timely and relevant for contemporary audiences.\"\
+      ,\n        \"refusal\": null,\n        \"annotations\": []\n      },\n     \
+      \ \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"\
+      usage\": {\n    \"prompt_tokens\": 273,\n    \"completion_tokens\": 650,\n \
+      \   \"total_tokens\": 923,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\"\
+      : 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":\
+      \ {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\"\
+      : 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\"\
+      : \"default\",\n  \"system_fingerprint\": \"fp_86d0290411\"\n}\n"
     headers:
       CF-RAY:
       - 9293cc09cfae7afd-SJC
@@ -362,7 +365,7 @@ interactions:
       cf-cache-status:
       - DYNAMIC
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '8549'
       openai-version:
@@ -609,66 +612,68 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-BHJJq4wV2B54HRuw5dIpI9fT5ZtHC\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1743465538,\n  \"model\": \"gpt-4o-2024-08-06\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"```\\nThought: I now know the final answer\\nFinal
-      Answer: **1. The Rise of Autonomous AI Agents in Daily Life**  \\nAs artificial
-      intelligence technology progresses, the integration of autonomous AI agents
-      into everyday life becomes increasingly prominent. These agents, capable of
-      making decisions without human intervention, are reshaping industries from healthcare
-      to finance. Exploring case studies where autonomous AI has successfully decreased
-      operational costs or improved efficiency can reveal not only the benefits but
-      also the ethical implications of delegating decision-making to machines. This
-      topic offers an exciting opportunity to dive into the AI landscape, showcasing
-      current developments such as AI assistants and autonomous vehicles.\\n\\n**2.
-      Ethical Implications of Generative AI in Creative Industries**  \\nThe surge
-      of generative AI tools in creative fields, such as art, music, and writing,
-      has sparked a heated debate about authorship and originality. This article could
-      investigate how these tools are being used by artists and creators, examining
-      both the potential for innovation and the risk of devaluing traditional art
-      forms. Highlighting perspectives from creators, legal experts, and ethicists
-      could provide a comprehensive overview of the challenges faced, including copyright
-      concerns and the emotional impact on human artists. This discussion is vital
-      as the creative landscape evolves alongside technological advancements, making
-      it ripe for exploration.\\n\\n**3. AI in Climate Change Mitigation: Current
-      Solutions and Future Potential**  \\nAs the world grapples with climate change,
-      AI technology is increasingly being harnessed to develop innovative solutions
-      for sustainability. From predictive analytics that optimize energy consumption
-      to machine learning algorithms that improve carbon capture methods, AI's potential
-      in environmental science is vast. This topic invites an exploration of existing
-      AI applications in climate initiatives, with a focus on groundbreaking research
-      and initiatives aimed at reducing humanity's carbon footprint. Highlighting
-      successful projects and technology partnerships can illustrate the positive
-      impact AI can have on global climate efforts, inspiring further exploration
-      and investment in this area.\\n\\n**4. The Future of Work: How AI is Reshaping
-      Employment Landscapes**  \\nThe discussions around AI's impact on the workforce
-      are both urgent and complex, as advances in automation and machine learning
-      continue to transform the job market. This article could delve into the current
-      trends of AI-driven job displacement alongside opportunities for upskilling
-      and the creation of new job roles. By examining case studies of companies that
-      integrate AI effectively and the resulting workforce adaptations, readers can
-      gain valuable insights into preparing for a future where humans and AI collaborate.
-      This exploration highlights the importance of policies that promote workforce
-      resilience in the face of change.\\n\\n**5. Decentralized AI: Exploring the
-      Role of Blockchain in AI Development**  \\nAs blockchain technology sweeps through
-      various sectors, its application in AI development presents a fascinating topic
-      worth examining. Decentralized AI could address issues of data privacy, security,
-      and democratization in AI models by allowing users to retain ownership of data
-      while benefiting from AI's capabilities. This article could analyze how decentralized
-      networks are disrupting traditional AI development models, featuring innovative
-      projects that harness the synergy between blockchain and AI. Highlighting potential
-      pitfalls and the future landscape of decentralized AI could stimulate discussion
-      among technologists, entrepreneurs, and policymakers alike.\\n\\nThese topics
-      not only reflect current trends but also probe deeper into ethical and practical
-      considerations, making them timely and relevant for contemporary audiences.\\n```\",\n
-      \       \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\":
-      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      2098,\n    \"completion_tokens\": 653,\n    \"total_tokens\": 2751,\n    \"prompt_tokens_details\":
-      {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
-      \"default\",\n  \"system_fingerprint\": \"fp_898ac29719\"\n}\n"
+    content: "{\n  \"id\": \"chatcmpl-BHJJq4wV2B54HRuw5dIpI9fT5ZtHC\",\n  \"object\"\
+      : \"chat.completion\",\n  \"created\": 1743465538,\n  \"model\": \"gpt-4o-2024-08-06\"\
+      ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n    \
+      \    \"role\": \"assistant\",\n        \"content\": \"```\\nThought: I now know\
+      \ the final answer\\nFinal Answer: **1. The Rise of Autonomous AI Agents in\
+      \ Daily Life**  \\nAs artificial intelligence technology progresses, the integration\
+      \ of autonomous AI agents into everyday life becomes increasingly prominent.\
+      \ These agents, capable of making decisions without human intervention, are\
+      \ reshaping industries from healthcare to finance. Exploring case studies where\
+      \ autonomous AI has successfully decreased operational costs or improved efficiency\
+      \ can reveal not only the benefits but also the ethical implications of delegating\
+      \ decision-making to machines. This topic offers an exciting opportunity to\
+      \ dive into the AI landscape, showcasing current developments such as AI assistants\
+      \ and autonomous vehicles.\\n\\n**2. Ethical Implications of Generative AI in\
+      \ Creative Industries**  \\nThe surge of generative AI tools in creative fields,\
+      \ such as art, music, and writing, has sparked a heated debate about authorship\
+      \ and originality. This article could investigate how these tools are being\
+      \ used by artists and creators, examining both the potential for innovation\
+      \ and the risk of devaluing traditional art forms. Highlighting perspectives\
+      \ from creators, legal experts, and ethicists could provide a comprehensive\
+      \ overview of the challenges faced, including copyright concerns and the emotional\
+      \ impact on human artists. This discussion is vital as the creative landscape\
+      \ evolves alongside technological advancements, making it ripe for exploration.\\\
+      n\\n**3. AI in Climate Change Mitigation: Current Solutions and Future Potential**\
+      \  \\nAs the world grapples with climate change, AI technology is increasingly\
+      \ being harnessed to develop innovative solutions for sustainability. From predictive\
+      \ analytics that optimize energy consumption to machine learning algorithms\
+      \ that improve carbon capture methods, AI's potential in environmental science\
+      \ is vast. This topic invites an exploration of existing AI applications in\
+      \ climate initiatives, with a focus on groundbreaking research and initiatives\
+      \ aimed at reducing humanity's carbon footprint. Highlighting successful projects\
+      \ and technology partnerships can illustrate the positive impact AI can have\
+      \ on global climate efforts, inspiring further exploration and investment in\
+      \ this area.\\n\\n**4. The Future of Work: How AI is Reshaping Employment Landscapes**\
+      \  \\nThe discussions around AI's impact on the workforce are both urgent and\
+      \ complex, as advances in automation and machine learning continue to transform\
+      \ the job market. This article could delve into the current trends of AI-driven\
+      \ job displacement alongside opportunities for upskilling and the creation of\
+      \ new job roles. By examining case studies of companies that integrate AI effectively\
+      \ and the resulting workforce adaptations, readers can gain valuable insights\
+      \ into preparing for a future where humans and AI collaborate. This exploration\
+      \ highlights the importance of policies that promote workforce resilience in\
+      \ the face of change.\\n\\n**5. Decentralized AI: Exploring the Role of Blockchain\
+      \ in AI Development**  \\nAs blockchain technology sweeps through various sectors,\
+      \ its application in AI development presents a fascinating topic worth examining.\
+      \ Decentralized AI could address issues of data privacy, security, and democratization\
+      \ in AI models by allowing users to retain ownership of data while benefiting\
+      \ from AI's capabilities. This article could analyze how decentralized networks\
+      \ are disrupting traditional AI development models, featuring innovative projects\
+      \ that harness the synergy between blockchain and AI. Highlighting potential\
+      \ pitfalls and the future landscape of decentralized AI could stimulate discussion\
+      \ among technologists, entrepreneurs, and policymakers alike.\\n\\nThese topics\
+      \ not only reflect current trends but also probe deeper into ethical and practical\
+      \ considerations, making them timely and relevant for contemporary audiences.\\\
+      n```\",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n\
+      \      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n\
+      \  \"usage\": {\n    \"prompt_tokens\": 2098,\n    \"completion_tokens\": 653,\n\
+      \    \"total_tokens\": 2751,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\"\
+      : 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":\
+      \ {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\"\
+      : 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\"\
+      : \"default\",\n  \"system_fingerprint\": \"fp_898ac29719\"\n}\n"
     headers:
       CF-RAY:
       - 9293cc3fbbc87afd-SJC
@@ -693,7 +698,7 @@ interactions:
       cf-cache-status:
       - DYNAMIC
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '8353'
       openai-version:
@@ -929,11 +934,11 @@ interactions:
       cf-cache-status:
       - DYNAMIC
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '6170'
       openai-project:
-      - proj_xitITlrFeen7zjNSzML82h9x
+      - REDACTED
       openai-version:
       - '2020-10-01'
       x-envoy-upstream-service-time:

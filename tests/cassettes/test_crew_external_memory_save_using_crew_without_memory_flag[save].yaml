@@ -113,25 +113,26 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-BLbjg0OfADWdrLsZxrjKHEeVVbWle\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1744489644,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"I now can give a great answer  \\nFinal
-      Answer: Here is a list of relevant URLs based on the specified search query:
-      \ \\n\\n1. https://www.forbes.com/technology/  \\n2. https://www.sciencedirect.com/
-      \ \\n3. https://www.techcrunch.com/  \\n4. https://www.wired.com/  \\n5. https://www.researchgate.net/
-      \ \\n6. https://www.springer.com/  \\n7. https://www.jstor.org/  \\n8. https://www.statista.com/
-      \ \\n9. https://www.pwc.com/gx/en/services/consulting/technology.html  \\n10.
-      https://www.gartner.com/en/information-technology  \\n\\nThese URLs provide
-      access to a wealth of information on various technology-related topics, including
-      articles, research papers, and analytics.\",\n        \"refusal\": null,\n        \"annotations\":
-      []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
-      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 185,\n    \"completion_tokens\":
-      169,\n    \"total_tokens\": 354,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
-      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
-      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
-      \"default\",\n  \"system_fingerprint\": \"fp_80cf447eee\"\n}\n"
+    content: "{\n  \"id\": \"chatcmpl-BLbjg0OfADWdrLsZxrjKHEeVVbWle\",\n  \"object\"\
+      : \"chat.completion\",\n  \"created\": 1744489644,\n  \"model\": \"gpt-4o-mini-2024-07-18\"\
+      ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n    \
+      \    \"role\": \"assistant\",\n        \"content\": \"I now can give a great\
+      \ answer  \\nFinal Answer: Here is a list of relevant URLs based on the specified\
+      \ search query:  \\n\\n1. https://www.forbes.com/technology/  \\n2. https://www.sciencedirect.com/\
+      \  \\n3. https://www.techcrunch.com/  \\n4. https://www.wired.com/  \\n5. https://www.researchgate.net/\
+      \  \\n6. https://www.springer.com/  \\n7. https://www.jstor.org/  \\n8. https://www.statista.com/\
+      \  \\n9. https://www.pwc.com/gx/en/services/consulting/technology.html  \\n10.\
+      \ https://www.gartner.com/en/information-technology  \\n\\nThese URLs provide\
+      \ access to a wealth of information on various technology-related topics, including\
+      \ articles, research papers, and analytics.\",\n        \"refusal\": null,\n\
+      \        \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"\
+      finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\"\
+      : 185,\n    \"completion_tokens\": 169,\n    \"total_tokens\": 354,\n    \"\
+      prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\"\
+      : 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\"\
+      : 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n\
+      \      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\": \"\
+      default\",\n  \"system_fingerprint\": \"fp_80cf447eee\"\n}\n"
     headers:
       CF-RAY:
       - 92f576d83a447e05-GRU
@@ -156,7 +157,7 @@ interactions:
       cf-cache-status:
       - DYNAMIC
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '2273'
       openai-version:

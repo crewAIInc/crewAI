@@ -183,7 +183,7 @@ interactions:
       openai-model:
       - text-embedding-3-small
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '271'
       openai-version:
@@ -304,7 +304,7 @@ interactions:
       cf-cache-status:
       - DYNAMIC
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '267'
       openai-version:
@@ -511,7 +511,7 @@ interactions:
       openai-model:
       - text-embedding-3-small
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '140'
       openai-version:
@@ -631,7 +631,7 @@ interactions:
       alt-svc:
       - h3=":443"; ma=86400
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '394'
       openai-version:

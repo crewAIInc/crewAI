@@ -168,6 +168,11 @@ def vcr_config(request) -> dict:
     return {
         "cassette_library_dir": "tests/cassettes",
         "record_mode": record_mode,
-        "filter_headers": [("authorization", "AUTHORIZATION-XXX")],
+        "filter_headers": [
+            ("authorization", "AUTHORIZATION-XXX"),
+            ("openai-organization", "ORG-XXX"),
+            ("openai-project", "PROJ-XXX"),
+            ("x-api-key", "API-KEY-XXX"),
+        ],
         "match_on": ["method", "scheme", "host", "port", "path", "query"],
     }

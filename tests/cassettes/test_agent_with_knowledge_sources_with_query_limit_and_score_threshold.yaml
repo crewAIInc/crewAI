@@ -183,7 +183,7 @@ interactions:
       openai-model:
       - text-embedding-3-small
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '38'
       openai-version:
@@ -303,7 +303,7 @@ interactions:
       alt-svc:
       - h3=":443"; ma=86400
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '167'
       openai-version:
@@ -420,7 +420,7 @@ interactions:
       cf-cache-status:
       - DYNAMIC
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '933'
       openai-version:

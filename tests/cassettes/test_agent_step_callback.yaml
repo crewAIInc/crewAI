@@ -54,15 +54,16 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AB7OLVmuaM29URTARYHzR23a9PqGU\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1727213385,\n  \"model\": \"gpt-4o-2024-05-13\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"I need to gather information about AI
-      in order to write an amazing paragraph. \\n\\nAction: learn_about_AI\\nAction
-      Input: {}\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
-      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      277,\n    \"completion_tokens\": 26,\n    \"total_tokens\": 303,\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_3537616b13\"\n}\n"
+    content: "{\n  \"id\": \"chatcmpl-AB7OLVmuaM29URTARYHzR23a9PqGU\",\n  \"object\"\
+      : \"chat.completion\",\n  \"created\": 1727213385,\n  \"model\": \"gpt-4o-2024-05-13\"\
+      ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n    \
+      \    \"role\": \"assistant\",\n        \"content\": \"I need to gather information\
+      \ about AI in order to write an amazing paragraph. \\n\\nAction: learn_about_AI\\\
+      nAction Input: {}\",\n        \"refusal\": null\n      },\n      \"logprobs\"\
+      : null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n  \
+      \  \"prompt_tokens\": 277,\n    \"completion_tokens\": 26,\n    \"total_tokens\"\
+      : 303,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\": 0\n\
+      \    }\n  },\n  \"system_fingerprint\": \"fp_3537616b13\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
@@ -85,7 +86,7 @@ interactions:
       access-control-expose-headers:
       - X-Request-ID
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '393'
       openai-version:
@@ -286,34 +287,36 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AB7OMcN6PafUT9TvM6aTX9jVuaHHP\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1727213386,\n  \"model\": \"gpt-4o-2024-05-13\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I now have information about
-      AI to craft a paragraph. Here is a draft:\\n\\nArtificial Intelligence (AI),
-      the simulation of human intelligence processes by machines, is revolutionizing
-      various industries. By leveraging algorithms and vast datasets, AI systems can
-      perform tasks that typically require human intelligence, such as visual perception,
-      speech recognition, decision-making, and language translation. One of its most
-      remarkable applications is in healthcare, where AI aids in diagnosing diseases
-      with remarkable accuracy. Moreover, AI-driven automation is reshaping the future
-      of work by optimizing supply chains and enhancing customer experiences. As AI
-      continues to evolve, its potential to solve complex problems and improve lives
-      is limitless, heralding an era of unprecedented innovation and progress.\\n\\nNow,
-      I need to review and refine it until it meets the criteria of being AMAZING.\\n\\nFinal
-      Answer: Artificial Intelligence (AI), the simulation of human intelligence processes
-      by machines, is revolutionizing various industries. By leveraging algorithms
-      and vast datasets, AI systems can perform tasks that typically require human
-      intelligence, such as visual perception, speech recognition, decision-making,
-      and language translation. One of its most remarkable applications is in healthcare,
-      where AI aids in diagnosing diseases with remarkable accuracy. Moreover, AI-driven
-      automation is reshaping the future of work by optimizing supply chains and enhancing
-      customer experiences. As AI continues to evolve, its potential to solve complex
-      problems and improve lives is limitless, heralding an era of unprecedented innovation
-      and progress.\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
-      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      316,\n    \"completion_tokens\": 283,\n    \"total_tokens\": 599,\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_3537616b13\"\n}\n"
+    content: "{\n  \"id\": \"chatcmpl-AB7OMcN6PafUT9TvM6aTX9jVuaHHP\",\n  \"object\"\
+      : \"chat.completion\",\n  \"created\": 1727213386,\n  \"model\": \"gpt-4o-2024-05-13\"\
+      ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n    \
+      \    \"role\": \"assistant\",\n        \"content\": \"Thought: I now have information\
+      \ about AI to craft a paragraph. Here is a draft:\\n\\nArtificial Intelligence\
+      \ (AI), the simulation of human intelligence processes by machines, is revolutionizing\
+      \ various industries. By leveraging algorithms and vast datasets, AI systems\
+      \ can perform tasks that typically require human intelligence, such as visual\
+      \ perception, speech recognition, decision-making, and language translation.\
+      \ One of its most remarkable applications is in healthcare, where AI aids in\
+      \ diagnosing diseases with remarkable accuracy. Moreover, AI-driven automation\
+      \ is reshaping the future of work by optimizing supply chains and enhancing\
+      \ customer experiences. As AI continues to evolve, its potential to solve complex\
+      \ problems and improve lives is limitless, heralding an era of unprecedented\
+      \ innovation and progress.\\n\\nNow, I need to review and refine it until it\
+      \ meets the criteria of being AMAZING.\\n\\nFinal Answer: Artificial Intelligence\
+      \ (AI), the simulation of human intelligence processes by machines, is revolutionizing\
+      \ various industries. By leveraging algorithms and vast datasets, AI systems\
+      \ can perform tasks that typically require human intelligence, such as visual\
+      \ perception, speech recognition, decision-making, and language translation.\
+      \ One of its most remarkable applications is in healthcare, where AI aids in\
+      \ diagnosing diseases with remarkable accuracy. Moreover, AI-driven automation\
+      \ is reshaping the future of work by optimizing supply chains and enhancing\
+      \ customer experiences. As AI continues to evolve, its potential to solve complex\
+      \ problems and improve lives is limitless, heralding an era of unprecedented\
+      \ innovation and progress.\",\n        \"refusal\": null\n      },\n      \"\
+      logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\"\
+      : {\n    \"prompt_tokens\": 316,\n    \"completion_tokens\": 283,\n    \"total_tokens\"\
+      : 599,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\": 0\n\
+      \    }\n  },\n  \"system_fingerprint\": \"fp_3537616b13\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
@@ -336,7 +339,7 @@ interactions:
       access-control-expose-headers:
       - X-Request-ID
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '3322'
       openai-version:

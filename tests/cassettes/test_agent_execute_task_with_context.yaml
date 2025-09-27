@@ -49,15 +49,17 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AB7WTXzhDaFVbUrrQKXCo78KID8N9\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1727213889,\n  \"model\": \"gpt-3.5-turbo-0125\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"I now can give a great answer\\nFinal
-      Answer: The quick brown fox jumps over the lazy dog. This sentence contains
-      every letter of the alphabet.\",\n        \"refusal\": null\n      },\n      \"logprobs\":
-      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      190,\n    \"completion_tokens\": 30,\n    \"total_tokens\": 220,\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": null\n}\n"
+    content: "{\n  \"id\": \"chatcmpl-AB7WTXzhDaFVbUrrQKXCo78KID8N9\",\n  \"object\"\
+      : \"chat.completion\",\n  \"created\": 1727213889,\n  \"model\": \"gpt-3.5-turbo-0125\"\
+      ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n    \
+      \    \"role\": \"assistant\",\n        \"content\": \"I now can give a great\
+      \ answer\\nFinal Answer: The quick brown fox jumps over the lazy dog. This sentence\
+      \ contains every letter of the alphabet.\",\n        \"refusal\": null\n   \
+      \   },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n\
+      \  ],\n  \"usage\": {\n    \"prompt_tokens\": 190,\n    \"completion_tokens\"\
+      : 30,\n    \"total_tokens\": 220,\n    \"completion_tokens_details\": {\n  \
+      \    \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": null\n\
+      }\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
@@ -80,7 +82,7 @@ interactions:
       access-control-expose-headers:
       - X-Request-ID
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '662'
       openai-version:

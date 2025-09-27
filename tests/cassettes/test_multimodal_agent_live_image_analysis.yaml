@@ -59,19 +59,20 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AiuIfzzcje5KdvKIG5CkFeORroiKk\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1735266213,\n  \"model\": \"gpt-4o-2024-08-06\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Action: Add image to content\\nAction
-      Input: {\\\"image_url\\\": \\\"https://media.istockphoto.com/id/946087016/photo/aerial-view-of-lower-manhattan-new-york.jpg?s=612x612&w=0&k=20&c=viLiMRznQ8v5LzKTt_LvtfPFUVl1oiyiemVdSlm29_k=\\\",
-      \\\"action\\\": \\\"Analyze the provided image and describe what you see in
-      detail.\\\"}\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
-      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      417,\n    \"completion_tokens\": 103,\n    \"total_tokens\": 520,\n    \"prompt_tokens_details\":
-      {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"system_fingerprint\":
-      \"fp_5f20662549\"\n}\n"
+    content: "{\n  \"id\": \"chatcmpl-AiuIfzzcje5KdvKIG5CkFeORroiKk\",\n  \"object\"\
+      : \"chat.completion\",\n  \"created\": 1735266213,\n  \"model\": \"gpt-4o-2024-08-06\"\
+      ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n    \
+      \    \"role\": \"assistant\",\n        \"content\": \"Action: Add image to content\\\
+      nAction Input: {\\\"image_url\\\": \\\"https://media.istockphoto.com/id/946087016/photo/aerial-view-of-lower-manhattan-new-york.jpg?s=612x612&w=0&k=20&c=viLiMRznQ8v5LzKTt_LvtfPFUVl1oiyiemVdSlm29_k=\\\
+      \", \\\"action\\\": \\\"Analyze the provided image and describe what you see\
+      \ in detail.\\\"}\",\n        \"refusal\": null\n      },\n      \"logprobs\"\
+      : null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n  \
+      \  \"prompt_tokens\": 417,\n    \"completion_tokens\": 103,\n    \"total_tokens\"\
+      : 520,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n    \
+      \  \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n     \
+      \ \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\"\
+      : 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"system_fingerprint\"\
+      : \"fp_5f20662549\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
@@ -102,7 +103,7 @@ interactions:
       alt-svc:
       - h3=":443"; ma=86400
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '1212'
       openai-version:
@@ -246,36 +247,38 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AiuIiqT33ROFMdw1gNmqH9jiw6PfF\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1735266216,\n  \"model\": \"gpt-4o-2024-08-06\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"The image is an aerial view of Lower
-      Manhattan in New York City. \\n\\nMain Elements:\\n- The One World Trade Center
-      tower stands prominently, distinguishable by its sleek, tapering structure reaching
-      into the sky, surrounded by other skyscrapers.\\n- Skyscrapers in varying heights
-      and architectural styles, fill the densely packed urban landscape.\\n- A waterfront
-      is visible at the edges, with docks and piers extending into the water.\\n\\nColors:\\n-
-      The buildings exhibit a mix of colors, predominantly grays, whites, and browns,
-      against the blues of the sky and water.\\n- There's a section of greenery visible,
-      likely a park or recreational space, offering a contrast with its vibrant green
-      hues.\\n\\nComposition:\\n- The angle of the photograph showcases the expanse
-      of the city, highlighting the density and scale of the buildings.\\n- Water
-      borders the city on two prominent sides, creating a natural boundary and enhancing
-      the island's urban island feel.\\n\\nNotable Details:\\n- The image captures
-      the iconic layout of Manhattan, with the surrounding Hudson River and New York
-      Harbor visible in the background.\\n- Beyond Lower Manhattan, more of the cityscape
-      stretches into the distance, illustrating the vastness of New York City.\\n-
-      The day appears clear and sunny, with shadows casting from the buildings, indicating
-      time in the morning or late afternoon.\\n\\nOverall, the image is a striking
-      depiction of the dynamic and bustling environment of New York's Lower Manhattan,
-      encapsulating its urban character and proximity to the water.\",\n        \"refusal\":
-      null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
-      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 858,\n    \"completion_tokens\":
-      295,\n    \"total_tokens\": 1153,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
-      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
-      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"system_fingerprint\":
-      \"fp_5f20662549\"\n}\n"
+    content: "{\n  \"id\": \"chatcmpl-AiuIiqT33ROFMdw1gNmqH9jiw6PfF\",\n  \"object\"\
+      : \"chat.completion\",\n  \"created\": 1735266216,\n  \"model\": \"gpt-4o-2024-08-06\"\
+      ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n    \
+      \    \"role\": \"assistant\",\n        \"content\": \"The image is an aerial\
+      \ view of Lower Manhattan in New York City. \\n\\nMain Elements:\\n- The One\
+      \ World Trade Center tower stands prominently, distinguishable by its sleek,\
+      \ tapering structure reaching into the sky, surrounded by other skyscrapers.\\\
+      n- Skyscrapers in varying heights and architectural styles, fill the densely\
+      \ packed urban landscape.\\n- A waterfront is visible at the edges, with docks\
+      \ and piers extending into the water.\\n\\nColors:\\n- The buildings exhibit\
+      \ a mix of colors, predominantly grays, whites, and browns, against the blues\
+      \ of the sky and water.\\n- There's a section of greenery visible, likely a\
+      \ park or recreational space, offering a contrast with its vibrant green hues.\\\
+      n\\nComposition:\\n- The angle of the photograph showcases the expanse of the\
+      \ city, highlighting the density and scale of the buildings.\\n- Water borders\
+      \ the city on two prominent sides, creating a natural boundary and enhancing\
+      \ the island's urban island feel.\\n\\nNotable Details:\\n- The image captures\
+      \ the iconic layout of Manhattan, with the surrounding Hudson River and New\
+      \ York Harbor visible in the background.\\n- Beyond Lower Manhattan, more of\
+      \ the cityscape stretches into the distance, illustrating the vastness of New\
+      \ York City.\\n- The day appears clear and sunny, with shadows casting from\
+      \ the buildings, indicating time in the morning or late afternoon.\\n\\nOverall,\
+      \ the image is a striking depiction of the dynamic and bustling environment\
+      \ of New York's Lower Manhattan, encapsulating its urban character and proximity\
+      \ to the water.\",\n        \"refusal\": null\n      },\n      \"logprobs\"\
+      : null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n  \
+      \  \"prompt_tokens\": 858,\n    \"completion_tokens\": 295,\n    \"total_tokens\"\
+      : 1153,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n   \
+      \   \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n    \
+      \  \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\"\
+      : 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"system_fingerprint\"\
+      : \"fp_5f20662549\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
@@ -300,7 +303,7 @@ interactions:
       alt-svc:
       - h3=":443"; ma=86400
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '5136'
       openai-version:
@@ -401,30 +404,31 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AiuInuYNldaQVo6B1EsEquT1VFMN7\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1735266221,\n  \"model\": \"gpt-4o-2024-08-06\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I now can give a great answer\\nFinal
-      Answer: The image is an aerial view of Lower Manhattan in New York City. The
-      photograph prominently features the cluster of skyscrapers that characterizes
-      the area, with One World Trade Center standing out as a particularly tall and
-      iconic structure. The buildings vary in color, with shades of glassy blue, grey,
-      and natural stone dominating the skyline. In the bottom part of the image, there
-      is a green space, likely Battery Park, providing a stark contrast to the dense
-      urban environment, with trees and pathways visible. The water surrounding Manhattan
-      is a deep blue, and several piers jut into the harbor. The Hudson River is visible
-      on the left, and the East River can be seen on the right, framing the island.
-      The overall composition captures the bustling and vibrant nature of New York\u2019s
-      financial hub, with bright sunlight illuminating the buildings, casting sharp
-      shadows and enhancing the depth of the cityscape. The sky is clear, suggesting
-      a sunny day with good visibility.\",\n        \"refusal\": null\n      },\n
-      \     \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n
-      \ \"usage\": {\n    \"prompt_tokens\": 952,\n    \"completion_tokens\": 203,\n
-      \   \"total_tokens\": 1155,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
-      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
-      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"system_fingerprint\":
-      \"fp_5f20662549\"\n}\n"
+    content: "{\n  \"id\": \"chatcmpl-AiuInuYNldaQVo6B1EsEquT1VFMN7\",\n  \"object\"\
+      : \"chat.completion\",\n  \"created\": 1735266221,\n  \"model\": \"gpt-4o-2024-08-06\"\
+      ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n    \
+      \    \"role\": \"assistant\",\n        \"content\": \"Thought: I now can give\
+      \ a great answer\\nFinal Answer: The image is an aerial view of Lower Manhattan\
+      \ in New York City. The photograph prominently features the cluster of skyscrapers\
+      \ that characterizes the area, with One World Trade Center standing out as a\
+      \ particularly tall and iconic structure. The buildings vary in color, with\
+      \ shades of glassy blue, grey, and natural stone dominating the skyline. In\
+      \ the bottom part of the image, there is a green space, likely Battery Park,\
+      \ providing a stark contrast to the dense urban environment, with trees and\
+      \ pathways visible. The water surrounding Manhattan is a deep blue, and several\
+      \ piers jut into the harbor. The Hudson River is visible on the left, and the\
+      \ East River can be seen on the right, framing the island. The overall composition\
+      \ captures the bustling and vibrant nature of New York\u2019s financial hub,\
+      \ with bright sunlight illuminating the buildings, casting sharp shadows and\
+      \ enhancing the depth of the cityscape. The sky is clear, suggesting a sunny\
+      \ day with good visibility.\",\n        \"refusal\": null\n      },\n      \"\
+      logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\"\
+      : {\n    \"prompt_tokens\": 952,\n    \"completion_tokens\": 203,\n    \"total_tokens\"\
+      : 1155,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n   \
+      \   \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n    \
+      \  \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\"\
+      : 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"system_fingerprint\"\
+      : \"fp_5f20662549\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
@@ -449,7 +453,7 @@ interactions:
       alt-svc:
       - h3=":443"; ma=86400
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '3108'
       openai-version:
