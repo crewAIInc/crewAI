@@ -75,7 +75,7 @@ jobs:
           #   DURATIONS_ARG="--durations-path=${DURATION_FILE}"
           # fi
           
-          uv run pytest \
+          uv run pytest tests/ \
             --block-network \
             --timeout=30 \
             -vv \
