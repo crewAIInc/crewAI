@@ -1196,11 +1196,11 @@ class LLM(BaseLLM):
                 f"The model {self.model} does not support response_format for provider '{provider}'. "
                 "Please remove response_format or use a supported model."
             )
-        
+
         # Validate base_url for Ollama connections
         if "ollama" in self.model.lower() and (self.base_url or self.api_base):
             url_to_validate = self.base_url or self.api_base
-            if not self._validate_base_url(url_to_validate):
+            if url_to_validate and not self._validate_base_url(url_to_validate):
                 raise ValueError(
                     f"Invalid Ollama base_url: '{url_to_validate}'. "
                     "Please check that the URL format is correct and the IP address is valid. "
@@ -1209,27 +1209,27 @@ class LLM(BaseLLM):
 
     def _validate_base_url(self, url: str) -> bool:
         """Validate base_url format and IP address for Ollama connections.
-        
+
         Args:
             url: The base URL to validate
-            
+
         Returns:
             bool: True if URL is valid, False otherwise
         """
         try:
-            from urllib.parse import urlparse
             import ipaddress
-            
+            from urllib.parse import urlparse
+
             result = urlparse(url)
-            
+
             if not all([result.scheme in ("http", "https"), result.netloc]):
                 return False
-            
+
             # Extract hostname/IP from netloc (remove port if present)
             hostname = result.hostname
             if not hostname:
                 return False
-            
+
             # Check if it looks like an IP address first
             if all(part.isdigit() for part in hostname.split('.')) and len(hostname.split('.')) == 4:
                 try:
@@ -1243,7 +1243,7 @@ class LLM(BaseLLM):
                 if "." in hostname and all(c.isalnum() or c in ".-" for c in hostname):
                     return True
                 return False
-                
+
         except Exception:
             return False
 
