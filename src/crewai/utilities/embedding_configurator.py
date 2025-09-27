@@ -18,6 +18,7 @@ class EmbeddingConfigurator:
             "bedrock": self._configure_bedrock,
             "huggingface": self._configure_huggingface,
             "watson": self._configure_watson,
+            "mistral": self._configure_mistral,
             "custom": self._configure_custom,
         }
 
@@ -209,6 +210,23 @@ class EmbeddingConfigurator:
                     raise e
 
         return WatsonEmbeddingFunction()
+
+    @staticmethod
+    def _configure_mistral(config, model_name=None):
+        """Configure Mistral embedding function."""
+        from crewai.rag.embeddings.mistral_embedding_function import MistralEmbeddingFunction
+        
+        api_key = config.get("api_key") or os.getenv("MISTRAL_API_KEY")
+        if not api_key:
+            raise ValueError("Mistral API key is required. Set MISTRAL_API_KEY environment variable or provide api_key in config.")
+        
+        return MistralEmbeddingFunction(
+            api_key=api_key,
+            model_name=model_name or config.get("model", "mistral-embed"),
+            base_url=config.get("base_url", "https://api.mistral.ai/v1"),
+            timeout=config.get("timeout", 30),
+            max_retries=config.get("max_retries", 3)
+        )
 
     @staticmethod
     def _configure_custom(config):
