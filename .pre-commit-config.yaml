@@ -7,16 +7,18 @@ repos:
         language: system
         types: [python]
         files: ^lib/crewai/src/
+        exclude: ^lib/crewai/
       - id: ruff-format
         name: ruff-format
         entry: uv run ruff format
         language: system
         types: [python]
         files: ^lib/crewai/src/
+        exclude: ^lib/crewai/
       - id: mypy
         name: mypy
         entry: uv run mypy
         language: system
         types: [python]
         files: ^lib/crewai/src/
-        exclude: ^lib/crewai/tests/
+        exclude: ^lib/crewai/
