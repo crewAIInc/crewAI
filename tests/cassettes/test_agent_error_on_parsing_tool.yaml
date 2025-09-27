@@ -55,19 +55,19 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-BHIrzTIGOht7LtyCu63s9y6al9Wt0\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1743463811,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"I need to determine what action to take
-      next to retrieve the final answer.  \\nAction: get_final_answer  \\nAction Input:
-      {}  \",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n
-      \     \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n
-      \ \"usage\": {\n    \"prompt_tokens\": 274,\n    \"completion_tokens\": 27,\n
-      \   \"total_tokens\": 301,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
-      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
-      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
-      \"default\",\n  \"system_fingerprint\": \"fp_b376dfbbd5\"\n}\n"
+    content: "{\n  \"id\": \"chatcmpl-BHIrzTIGOht7LtyCu63s9y6al9Wt0\",\n  \"object\"\
+      : \"chat.completion\",\n  \"created\": 1743463811,\n  \"model\": \"gpt-4o-mini-2024-07-18\"\
+      ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n    \
+      \    \"role\": \"assistant\",\n        \"content\": \"I need to determine what\
+      \ action to take next to retrieve the final answer.  \\nAction: get_final_answer\
+      \  \\nAction Input: {}  \",\n        \"refusal\": null,\n        \"annotations\"\
+      : []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\
+      \n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 274,\n    \"completion_tokens\"\
+      : 27,\n    \"total_tokens\": 301,\n    \"prompt_tokens_details\": {\n      \"\
+      cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\"\
+      : {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\"\
+      : 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\"\
+      : \"default\",\n  \"system_fingerprint\": \"fp_b376dfbbd5\"\n}\n"
     headers:
       CF-RAY:
       - 9293a2159f4c67b9-SJC
@@ -98,7 +98,7 @@ interactions:
       cf-cache-status:
       - DYNAMIC
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '2066'
       openai-version:
@@ -277,19 +277,20 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-BHIs3RZWE0pDm4saOP5a2j2pUORUD\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1743463815,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"```\\nThought: I now know the final answer\\nFinal
-      Answer: I must follow the predefined structure and utilize the get_final_answer
-      tool to extract the necessary information.\\n```\",\n        \"refusal\": null,\n
-      \       \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
-      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 878,\n    \"completion_tokens\":
-      35,\n    \"total_tokens\": 913,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
-      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
-      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
-      \"default\",\n  \"system_fingerprint\": \"fp_b376dfbbd5\"\n}\n"
+    content: "{\n  \"id\": \"chatcmpl-BHIs3RZWE0pDm4saOP5a2j2pUORUD\",\n  \"object\"\
+      : \"chat.completion\",\n  \"created\": 1743463815,\n  \"model\": \"gpt-4o-mini-2024-07-18\"\
+      ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n    \
+      \    \"role\": \"assistant\",\n        \"content\": \"```\\nThought: I now know\
+      \ the final answer\\nFinal Answer: I must follow the predefined structure and\
+      \ utilize the get_final_answer tool to extract the necessary information.\\\
+      n```\",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n\
+      \      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n\
+      \  \"usage\": {\n    \"prompt_tokens\": 878,\n    \"completion_tokens\": 35,\n\
+      \    \"total_tokens\": 913,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\"\
+      : 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":\
+      \ {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\"\
+      : 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\"\
+      : \"default\",\n  \"system_fingerprint\": \"fp_b376dfbbd5\"\n}\n"
     headers:
       CF-RAY:
       - 9293a2235a2467b9-SJC
@@ -314,7 +315,7 @@ interactions:
       cf-cache-status:
       - DYNAMIC
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '1050'
       openai-version:
@@ -431,18 +432,19 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-BHIs5hXcx2fn8tJmCAJHoKpvbM9C5\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1743463817,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"```\\nThought: you should always think
-      about what to do\\nAction: get_final_answer\\nAction Input: {}\",\n        \"refusal\":
-      null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
-      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 878,\n    \"completion_tokens\":
-      23,\n    \"total_tokens\": 901,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
-      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
-      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
-      \"default\",\n  \"system_fingerprint\": \"fp_b376dfbbd5\"\n}\n"
+    content: "{\n  \"id\": \"chatcmpl-BHIs5hXcx2fn8tJmCAJHoKpvbM9C5\",\n  \"object\"\
+      : \"chat.completion\",\n  \"created\": 1743463817,\n  \"model\": \"gpt-4o-mini-2024-07-18\"\
+      ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n    \
+      \    \"role\": \"assistant\",\n        \"content\": \"```\\nThought: you should\
+      \ always think about what to do\\nAction: get_final_answer\\nAction Input: {}\"\
+      ,\n        \"refusal\": null,\n        \"annotations\": []\n      },\n     \
+      \ \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"\
+      usage\": {\n    \"prompt_tokens\": 878,\n    \"completion_tokens\": 23,\n  \
+      \  \"total_tokens\": 901,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\"\
+      : 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":\
+      \ {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\"\
+      : 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\"\
+      : \"default\",\n  \"system_fingerprint\": \"fp_b376dfbbd5\"\n}\n"
     headers:
       CF-RAY:
       - 9293a237ced067b9-SJC
@@ -467,7 +469,7 @@ interactions:
       cf-cache-status:
       - DYNAMIC
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '760'
       openai-version:
@@ -618,19 +620,19 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-BHIs6Z7FbkaaEHZCks2aPg5RpB7p9\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1743463818,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"```\\nThought: I need to determine how
-      to proceed in order to get the final answer.\\nAction: get_final_answer\\nAction
-      Input: {}\",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n
-      \     \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n
-      \ \"usage\": {\n    \"prompt_tokens\": 1474,\n    \"completion_tokens\": 29,\n
-      \   \"total_tokens\": 1503,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
-      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
-      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
-      \"default\",\n  \"system_fingerprint\": \"fp_b376dfbbd5\"\n}\n"
+    content: "{\n  \"id\": \"chatcmpl-BHIs6Z7FbkaaEHZCks2aPg5RpB7p9\",\n  \"object\"\
+      : \"chat.completion\",\n  \"created\": 1743463818,\n  \"model\": \"gpt-4o-mini-2024-07-18\"\
+      ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n    \
+      \    \"role\": \"assistant\",\n        \"content\": \"```\\nThought: I need\
+      \ to determine how to proceed in order to get the final answer.\\nAction: get_final_answer\\\
+      nAction Input: {}\",\n        \"refusal\": null,\n        \"annotations\": []\n\
+      \      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n  \
+      \  }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 1474,\n    \"completion_tokens\"\
+      : 29,\n    \"total_tokens\": 1503,\n    \"prompt_tokens_details\": {\n     \
+      \ \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\"\
+      : {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\"\
+      : 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\"\
+      : \"default\",\n  \"system_fingerprint\": \"fp_b376dfbbd5\"\n}\n"
     headers:
       CF-RAY:
       - 9293a23dadf367b9-SJC
@@ -655,7 +657,7 @@ interactions:
       cf-cache-status:
       - DYNAMIC
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '807'
       openai-version:
@@ -840,18 +842,19 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-BHIs6TS0cl8Nktzxi2GavpYUOOcVV\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1743463818,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"```\\nThought: I need to pursue the action
-      to get the final answer.\\nAction: get_final_answer\\nAction Input: {}\",\n
-      \       \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\":
-      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      1474,\n    \"completion_tokens\": 26,\n    \"total_tokens\": 1500,\n    \"prompt_tokens_details\":
-      {\n      \"cached_tokens\": 1408,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
-      \"default\",\n  \"system_fingerprint\": \"fp_b376dfbbd5\"\n}\n"
+    content: "{\n  \"id\": \"chatcmpl-BHIs6TS0cl8Nktzxi2GavpYUOOcVV\",\n  \"object\"\
+      : \"chat.completion\",\n  \"created\": 1743463818,\n  \"model\": \"gpt-4o-mini-2024-07-18\"\
+      ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n    \
+      \    \"role\": \"assistant\",\n        \"content\": \"```\\nThought: I need\
+      \ to pursue the action to get the final answer.\\nAction: get_final_answer\\\
+      nAction Input: {}\",\n        \"refusal\": null,\n        \"annotations\": []\n\
+      \      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n  \
+      \  }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 1474,\n    \"completion_tokens\"\
+      : 26,\n    \"total_tokens\": 1500,\n    \"prompt_tokens_details\": {\n     \
+      \ \"cached_tokens\": 1408,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\"\
+      : {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\"\
+      : 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\"\
+      : \"default\",\n  \"system_fingerprint\": \"fp_b376dfbbd5\"\n}\n"
     headers:
       CF-RAY:
       - 9293a2433d5567b9-SJC
@@ -876,7 +879,7 @@ interactions:
       cf-cache-status:
       - DYNAMIC
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '1031'
       openai-version:
@@ -1061,18 +1064,19 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-BHIs88CTLDSND5eByFBW2ge57fKNW\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1743463820,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"```\\nThought: I need to pursue the action
-      to get the final answer.\\nAction: get_final_answer\\nAction Input: {}\",\n
-      \       \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\":
-      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      2076,\n    \"completion_tokens\": 26,\n    \"total_tokens\": 2102,\n    \"prompt_tokens_details\":
-      {\n      \"cached_tokens\": 1408,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
-      \"default\",\n  \"system_fingerprint\": \"fp_b376dfbbd5\"\n}\n"
+    content: "{\n  \"id\": \"chatcmpl-BHIs88CTLDSND5eByFBW2ge57fKNW\",\n  \"object\"\
+      : \"chat.completion\",\n  \"created\": 1743463820,\n  \"model\": \"gpt-4o-mini-2024-07-18\"\
+      ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n    \
+      \    \"role\": \"assistant\",\n        \"content\": \"```\\nThought: I need\
+      \ to pursue the action to get the final answer.\\nAction: get_final_answer\\\
+      nAction Input: {}\",\n        \"refusal\": null,\n        \"annotations\": []\n\
+      \      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n  \
+      \  }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 2076,\n    \"completion_tokens\"\
+      : 26,\n    \"total_tokens\": 2102,\n    \"prompt_tokens_details\": {\n     \
+      \ \"cached_tokens\": 1408,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\"\
+      : {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\"\
+      : 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\"\
+      : \"default\",\n  \"system_fingerprint\": \"fp_b376dfbbd5\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
@@ -1097,7 +1101,7 @@ interactions:
       alt-svc:
       - h3=":443"; ma=86400
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '724'
       openai-version:
@@ -1282,18 +1286,19 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-BHIs8PPr1kQwag3x7EeShzJwgKBHQ\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1743463820,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"```\\nThought: I need to pursue the action
-      to get the final answer.\\nAction: get_final_answer\\nAction Input: {}\",\n
-      \       \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\":
-      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      2076,\n    \"completion_tokens\": 26,\n    \"total_tokens\": 2102,\n    \"prompt_tokens_details\":
-      {\n      \"cached_tokens\": 2048,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
-      \"default\",\n  \"system_fingerprint\": \"fp_b376dfbbd5\"\n}\n"
+    content: "{\n  \"id\": \"chatcmpl-BHIs8PPr1kQwag3x7EeShzJwgKBHQ\",\n  \"object\"\
+      : \"chat.completion\",\n  \"created\": 1743463820,\n  \"model\": \"gpt-4o-mini-2024-07-18\"\
+      ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n    \
+      \    \"role\": \"assistant\",\n        \"content\": \"```\\nThought: I need\
+      \ to pursue the action to get the final answer.\\nAction: get_final_answer\\\
+      nAction Input: {}\",\n        \"refusal\": null,\n        \"annotations\": []\n\
+      \      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n  \
+      \  }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 2076,\n    \"completion_tokens\"\
+      : 26,\n    \"total_tokens\": 2102,\n    \"prompt_tokens_details\": {\n     \
+      \ \"cached_tokens\": 2048,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\"\
+      : {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\"\
+      : 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\"\
+      : \"default\",\n  \"system_fingerprint\": \"fp_b376dfbbd5\"\n}\n"
     headers:
       CF-RAY:
       - 9293a24f5b6e67b9-SJC
@@ -1318,7 +1323,7 @@ interactions:
       cf-cache-status:
       - DYNAMIC
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '970'
       openai-version:
@@ -1537,18 +1542,19 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-BHIs9EQi1thZCKE6iowM7PKovOwHL\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1743463821,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"```\\nThought: I need to take action
-      to get the final answer.\\nAction: get_final_answer\\nAction Input: {}\",\n
-      \       \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\":
-      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      2678,\n    \"completion_tokens\": 25,\n    \"total_tokens\": 2703,\n    \"prompt_tokens_details\":
-      {\n      \"cached_tokens\": 2048,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
-      \"default\",\n  \"system_fingerprint\": \"fp_b376dfbbd5\"\n}\n"
+    content: "{\n  \"id\": \"chatcmpl-BHIs9EQi1thZCKE6iowM7PKovOwHL\",\n  \"object\"\
+      : \"chat.completion\",\n  \"created\": 1743463821,\n  \"model\": \"gpt-4o-mini-2024-07-18\"\
+      ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n    \
+      \    \"role\": \"assistant\",\n        \"content\": \"```\\nThought: I need\
+      \ to take action to get the final answer.\\nAction: get_final_answer\\nAction\
+      \ Input: {}\",\n        \"refusal\": null,\n        \"annotations\": []\n  \
+      \    },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n\
+      \  ],\n  \"usage\": {\n    \"prompt_tokens\": 2678,\n    \"completion_tokens\"\
+      : 25,\n    \"total_tokens\": 2703,\n    \"prompt_tokens_details\": {\n     \
+      \ \"cached_tokens\": 2048,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\"\
+      : {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\"\
+      : 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\"\
+      : \"default\",\n  \"system_fingerprint\": \"fp_b376dfbbd5\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
@@ -1573,7 +1579,7 @@ interactions:
       alt-svc:
       - h3=":443"; ma=86400
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '954'
       openai-version:
@@ -1792,19 +1798,20 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-BHIsBMTtfSuUn9wxvCtunG64V1bHD\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1743463823,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"```\\nThought: I now know the final answer\\nFinal
-      Answer: I am unable to provide a final answer due to a continuous error when
-      trying to retrieve it using the get_final_answer tool.\\n```\",\n        \"refusal\":
-      null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
-      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 2678,\n    \"completion_tokens\":
-      41,\n    \"total_tokens\": 2719,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
-      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
-      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
-      \"default\",\n  \"system_fingerprint\": \"fp_b376dfbbd5\"\n}\n"
+    content: "{\n  \"id\": \"chatcmpl-BHIsBMTtfSuUn9wxvCtunG64V1bHD\",\n  \"object\"\
+      : \"chat.completion\",\n  \"created\": 1743463823,\n  \"model\": \"gpt-4o-mini-2024-07-18\"\
+      ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n    \
+      \    \"role\": \"assistant\",\n        \"content\": \"```\\nThought: I now know\
+      \ the final answer\\nFinal Answer: I am unable to provide a final answer due\
+      \ to a continuous error when trying to retrieve it using the get_final_answer\
+      \ tool.\\n```\",\n        \"refusal\": null,\n        \"annotations\": []\n\
+      \      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n  \
+      \  }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 2678,\n    \"completion_tokens\"\
+      : 41,\n    \"total_tokens\": 2719,\n    \"prompt_tokens_details\": {\n     \
+      \ \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\"\
+      : {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\"\
+      : 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\"\
+      : \"default\",\n  \"system_fingerprint\": \"fp_b376dfbbd5\"\n}\n"
     headers:
       CF-RAY:
       - 9293a25ceb3867b9-SJC
@@ -1829,7 +1836,7 @@ interactions:
       cf-cache-status:
       - DYNAMIC
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '1095'
       openai-version:

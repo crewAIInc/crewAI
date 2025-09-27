@@ -645,18 +645,19 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-ApfRLkycSd0vwuTw50dfB5bgIoWiC\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1736877387,\n  \"model\": \"gpt-4o-2024-08-06\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"I now can give a great answer  \\nFinal
-      Answer: The final answer must be the great and the most complete as possible,
-      it must be outcome described.\",\n        \"refusal\": null\n      },\n      \"logprobs\":
-      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      158,\n    \"completion_tokens\": 31,\n    \"total_tokens\": 189,\n    \"prompt_tokens_details\":
-      {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
-      \"default\",\n  \"system_fingerprint\": \"fp_50cad350e4\"\n}\n"
+    content: "{\n  \"id\": \"chatcmpl-ApfRLkycSd0vwuTw50dfB5bgIoWiC\",\n  \"object\"\
+      : \"chat.completion\",\n  \"created\": 1736877387,\n  \"model\": \"gpt-4o-2024-08-06\"\
+      ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n    \
+      \    \"role\": \"assistant\",\n        \"content\": \"I now can give a great\
+      \ answer  \\nFinal Answer: The final answer must be the great and the most complete\
+      \ as possible, it must be outcome described.\",\n        \"refusal\": null\n\
+      \      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n  \
+      \  }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 158,\n    \"completion_tokens\"\
+      : 31,\n    \"total_tokens\": 189,\n    \"prompt_tokens_details\": {\n      \"\
+      cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\"\
+      : {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\"\
+      : 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\"\
+      : \"default\",\n  \"system_fingerprint\": \"fp_50cad350e4\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
@@ -687,7 +688,7 @@ interactions:
       alt-svc:
       - h3=":443"; ma=86400
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '1020'
       openai-version:
@@ -758,18 +759,19 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-BExKOliqPgvHyozZaBu5oN50CHtsa\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1742904348,\n  \"model\": \"gpt-4o-2024-08-06\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"I now can give a great answer  \\nFinal
-      Answer: Test expected output\",\n        \"refusal\": null,\n        \"annotations\":
-      []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
-      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 158,\n    \"completion_tokens\":
-      15,\n    \"total_tokens\": 173,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
-      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
-      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
-      \"default\",\n  \"system_fingerprint\": \"fp_90d33c15d4\"\n}\n"
+    content: "{\n  \"id\": \"chatcmpl-BExKOliqPgvHyozZaBu5oN50CHtsa\",\n  \"object\"\
+      : \"chat.completion\",\n  \"created\": 1742904348,\n  \"model\": \"gpt-4o-2024-08-06\"\
+      ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n    \
+      \    \"role\": \"assistant\",\n        \"content\": \"I now can give a great\
+      \ answer  \\nFinal Answer: Test expected output\",\n        \"refusal\": null,\n\
+      \        \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"\
+      finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\"\
+      : 158,\n    \"completion_tokens\": 15,\n    \"total_tokens\": 173,\n    \"prompt_tokens_details\"\
+      : {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"\
+      completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\"\
+      : 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\"\
+      : 0\n    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\"\
+      : \"fp_90d33c15d4\"\n}\n"
     headers:
       CF-RAY:
       - 925e4749af02f227-GRU
@@ -800,7 +802,7 @@ interactions:
       cf-cache-status:
       - DYNAMIC
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '377'
       openai-version:

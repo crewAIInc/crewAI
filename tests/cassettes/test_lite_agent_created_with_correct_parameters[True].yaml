@@ -54,19 +54,20 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-BKUI2djjAEPBitxovNZdlibsOnAh6\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1744222694,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"```\\nThought: I need to understand what
-      specific information or topic to search for.\\nAction: search_web\\nAction Input:
-      {\\\"query\\\":\\\"Test query\\\"}\",\n        \"refusal\": null,\n        \"annotations\":
-      []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
-      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 242,\n    \"completion_tokens\":
-      31,\n    \"total_tokens\": 273,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
-      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
-      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
-      \"default\",\n  \"system_fingerprint\": \"fp_b376dfbbd5\"\n}\n"
+    content: "{\n  \"id\": \"chatcmpl-BKUI2djjAEPBitxovNZdlibsOnAh6\",\n  \"object\"\
+      : \"chat.completion\",\n  \"created\": 1744222694,\n  \"model\": \"gpt-4o-mini-2024-07-18\"\
+      ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n    \
+      \    \"role\": \"assistant\",\n        \"content\": \"```\\nThought: I need\
+      \ to understand what specific information or topic to search for.\\nAction:\
+      \ search_web\\nAction Input: {\\\"query\\\":\\\"Test query\\\"}\",\n       \
+      \ \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\"\
+      : null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n  \
+      \  \"prompt_tokens\": 242,\n    \"completion_tokens\": 31,\n    \"total_tokens\"\
+      : 273,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n    \
+      \  \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n     \
+      \ \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\"\
+      : 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\"\
+      : \"default\",\n  \"system_fingerprint\": \"fp_b376dfbbd5\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
@@ -97,7 +98,7 @@ interactions:
       alt-svc:
       - h3=":443"; ma=86400
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '992'
       openai-version:
@@ -181,20 +182,21 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-BKUI3cMLea2cs1wZznSDwEKIlNszH\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1744222695,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"```\\nThought: I have simulated search
-      results related to a test query. However, I need to clarify the specific topic
-      or question to provide a more accurate answer.\\nAction: search_web\\nAction
-      Input: {\\\"query\\\":\\\"What is the purpose and significance of a test query?\\\"}\",\n
-      \       \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\":
-      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      295,\n    \"completion_tokens\": 56,\n    \"total_tokens\": 351,\n    \"prompt_tokens_details\":
-      {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
-      \"default\",\n  \"system_fingerprint\": \"fp_b376dfbbd5\"\n}\n"
+    content: "{\n  \"id\": \"chatcmpl-BKUI3cMLea2cs1wZznSDwEKIlNszH\",\n  \"object\"\
+      : \"chat.completion\",\n  \"created\": 1744222695,\n  \"model\": \"gpt-4o-mini-2024-07-18\"\
+      ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n    \
+      \    \"role\": \"assistant\",\n        \"content\": \"```\\nThought: I have\
+      \ simulated search results related to a test query. However, I need to clarify\
+      \ the specific topic or question to provide a more accurate answer.\\nAction:\
+      \ search_web\\nAction Input: {\\\"query\\\":\\\"What is the purpose and significance\
+      \ of a test query?\\\"}\",\n        \"refusal\": null,\n        \"annotations\"\
+      : []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\
+      \n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 295,\n    \"completion_tokens\"\
+      : 56,\n    \"total_tokens\": 351,\n    \"prompt_tokens_details\": {\n      \"\
+      cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\"\
+      : {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\"\
+      : 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\"\
+      : \"default\",\n  \"system_fingerprint\": \"fp_b376dfbbd5\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
@@ -219,7 +221,7 @@ interactions:
       alt-svc:
       - h3=":443"; ma=86400
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '1515'
       openai-version:
@@ -346,20 +348,21 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-BKUI5apzxz891mmkVpae1FIcj5bog\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1744222697,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"```\\nThought: I have some simulated
-      search results regarding the purpose and significance of a test query but still
-      need clearer context to provide a meaningful answer.\\nAction: search_web\\nAction
-      Input: {\\\"query\\\":\\\"examples of test queries in various contexts\\\"}\",\n
-      \       \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\":
-      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      381,\n    \"completion_tokens\": 49,\n    \"total_tokens\": 430,\n    \"prompt_tokens_details\":
-      {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
-      \"default\",\n  \"system_fingerprint\": \"fp_44added55e\"\n}\n"
+    content: "{\n  \"id\": \"chatcmpl-BKUI5apzxz891mmkVpae1FIcj5bog\",\n  \"object\"\
+      : \"chat.completion\",\n  \"created\": 1744222697,\n  \"model\": \"gpt-4o-mini-2024-07-18\"\
+      ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n    \
+      \    \"role\": \"assistant\",\n        \"content\": \"```\\nThought: I have\
+      \ some simulated search results regarding the purpose and significance of a\
+      \ test query but still need clearer context to provide a meaningful answer.\\\
+      nAction: search_web\\nAction Input: {\\\"query\\\":\\\"examples of test queries\
+      \ in various contexts\\\"}\",\n        \"refusal\": null,\n        \"annotations\"\
+      : []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\
+      \n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 381,\n    \"completion_tokens\"\
+      : 49,\n    \"total_tokens\": 430,\n    \"prompt_tokens_details\": {\n      \"\
+      cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\"\
+      : {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\"\
+      : 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\"\
+      : \"default\",\n  \"system_fingerprint\": \"fp_44added55e\"\n}\n"
     headers:
       CF-RAY:
       - 92dc01919a73cf41-SJC
@@ -384,7 +387,7 @@ interactions:
       cf-cache-status:
       - DYNAMIC
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '817'
       openai-version:
@@ -479,20 +482,22 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-BKUI6HbKAVI6BU8OX4Zh6yr7BXwRo\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1744222698,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"```\\nThought: I still have only simulated
-      results and not specific information that can lead to a final answer. I need
-      to refine the search for more relevant information.\\nAction: search_web\\nAction
-      Input: {\\\"query\\\":\\\"test query examples in technology and software development\\\"}\",\n
-      \       \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\":
-      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      457,\n    \"completion_tokens\": 53,\n    \"total_tokens\": 510,\n    \"prompt_tokens_details\":
-      {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
-      \"default\",\n  \"system_fingerprint\": \"fp_b376dfbbd5\"\n}\n"
+    content: "{\n  \"id\": \"chatcmpl-BKUI6HbKAVI6BU8OX4Zh6yr7BXwRo\",\n  \"object\"\
+      : \"chat.completion\",\n  \"created\": 1744222698,\n  \"model\": \"gpt-4o-mini-2024-07-18\"\
+      ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n    \
+      \    \"role\": \"assistant\",\n        \"content\": \"```\\nThought: I still\
+      \ have only simulated results and not specific information that can lead to\
+      \ a final answer. I need to refine the search for more relevant information.\\\
+      nAction: search_web\\nAction Input: {\\\"query\\\":\\\"test query examples in\
+      \ technology and software development\\\"}\",\n        \"refusal\": null,\n\
+      \        \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"\
+      finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\"\
+      : 457,\n    \"completion_tokens\": 53,\n    \"total_tokens\": 510,\n    \"prompt_tokens_details\"\
+      : {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"\
+      completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\"\
+      : 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\"\
+      : 0\n    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\"\
+      : \"fp_b376dfbbd5\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
@@ -517,7 +522,7 @@ interactions:
       alt-svc:
       - h3=":443"; ma=86400
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '922'
       openai-version:
@@ -618,20 +623,22 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-BKUI8M2rjDrol5uVG9EQz1OGXUC8H\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1744222700,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"```\\nThought: I have gathered simulated
-      search results about test query examples in technology and software development,
-      but they are not precise enough to formulate a final answer.\\nAction: search_web\\nAction
-      Input: {\\\"query\\\":\\\"importance of test queries in software testing\\\"}
-      \",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\":
-      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      538,\n    \"completion_tokens\": 52,\n    \"total_tokens\": 590,\n    \"prompt_tokens_details\":
-      {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
-      \"default\",\n  \"system_fingerprint\": \"fp_b376dfbbd5\"\n}\n"
+    content: "{\n  \"id\": \"chatcmpl-BKUI8M2rjDrol5uVG9EQz1OGXUC8H\",\n  \"object\"\
+      : \"chat.completion\",\n  \"created\": 1744222700,\n  \"model\": \"gpt-4o-mini-2024-07-18\"\
+      ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n    \
+      \    \"role\": \"assistant\",\n        \"content\": \"```\\nThought: I have\
+      \ gathered simulated search results about test query examples in technology\
+      \ and software development, but they are not precise enough to formulate a final\
+      \ answer.\\nAction: search_web\\nAction Input: {\\\"query\\\":\\\"importance\
+      \ of test queries in software testing\\\"} \",\n        \"refusal\": null,\n\
+      \        \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"\
+      finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\"\
+      : 538,\n    \"completion_tokens\": 52,\n    \"total_tokens\": 590,\n    \"prompt_tokens_details\"\
+      : {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"\
+      completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\"\
+      : 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\"\
+      : 0\n    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\"\
+      : \"fp_b376dfbbd5\"\n}\n"
     headers:
       CF-RAY:
       - 92dc019f0893cf41-SJC
@@ -656,7 +663,7 @@ interactions:
       cf-cache-status:
       - DYNAMIC
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '1244'
       openai-version:
@@ -763,20 +770,21 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-BKUI9HXHFAlkT7hKyE5JAuzg4KlWY\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1744222701,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"```\\nThought: I have gathered simulated
-      search results regarding the importance of test queries in software testing,
-      but I still need a concrete answer about test queries.\\nAction: search_web\\nAction
-      Input: {\\\"query\\\":\\\"how to create effective test queries\\\"} \",\n        \"refusal\":
-      null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
-      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 617,\n    \"completion_tokens\":
-      50,\n    \"total_tokens\": 667,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
-      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
-      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
-      \"default\",\n  \"system_fingerprint\": \"fp_b376dfbbd5\"\n}\n"
+    content: "{\n  \"id\": \"chatcmpl-BKUI9HXHFAlkT7hKyE5JAuzg4KlWY\",\n  \"object\"\
+      : \"chat.completion\",\n  \"created\": 1744222701,\n  \"model\": \"gpt-4o-mini-2024-07-18\"\
+      ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n    \
+      \    \"role\": \"assistant\",\n        \"content\": \"```\\nThought: I have\
+      \ gathered simulated search results regarding the importance of test queries\
+      \ in software testing, but I still need a concrete answer about test queries.\\\
+      nAction: search_web\\nAction Input: {\\\"query\\\":\\\"how to create effective\
+      \ test queries\\\"} \",\n        \"refusal\": null,\n        \"annotations\"\
+      : []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\
+      \n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 617,\n    \"completion_tokens\"\
+      : 50,\n    \"total_tokens\": 667,\n    \"prompt_tokens_details\": {\n      \"\
+      cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\"\
+      : {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\"\
+      : 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\"\
+      : \"default\",\n  \"system_fingerprint\": \"fp_b376dfbbd5\"\n}\n"
     headers:
       CF-RAY:
       - 92dc01abdf49cf41-SJC
@@ -801,7 +809,7 @@ interactions:
       cf-cache-status:
       - DYNAMIC
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '986'
       openai-version:
@@ -956,21 +964,22 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-BKUIB21skPx3AsqMYyDsUC4tQcJFG\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1744222703,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"```\\nThought: I have gathered simulated
-      search results on how to create effective test queries, but I am still not reaching
-      a definitive conclusion that addresses a specific question about test queries.\\nAction:
-      search_web\\nAction Input: {\\\"query\\\":\\\"common practices for test queries
-      in software development\\\"}\",\n        \"refusal\": null,\n        \"annotations\":
-      []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
-      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 693,\n    \"completion_tokens\":
-      56,\n    \"total_tokens\": 749,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
-      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
-      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
-      \"default\",\n  \"system_fingerprint\": \"fp_44added55e\"\n}\n"
+    content: "{\n  \"id\": \"chatcmpl-BKUIB21skPx3AsqMYyDsUC4tQcJFG\",\n  \"object\"\
+      : \"chat.completion\",\n  \"created\": 1744222703,\n  \"model\": \"gpt-4o-mini-2024-07-18\"\
+      ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n    \
+      \    \"role\": \"assistant\",\n        \"content\": \"```\\nThought: I have\
+      \ gathered simulated search results on how to create effective test queries,\
+      \ but I am still not reaching a definitive conclusion that addresses a specific\
+      \ question about test queries.\\nAction: search_web\\nAction Input: {\\\"query\\\
+      \":\\\"common practices for test queries in software development\\\"}\",\n \
+      \       \"refusal\": null,\n        \"annotations\": []\n      },\n      \"\
+      logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\"\
+      : {\n    \"prompt_tokens\": 693,\n    \"completion_tokens\": 56,\n    \"total_tokens\"\
+      : 749,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n    \
+      \  \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n     \
+      \ \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\"\
+      : 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\"\
+      : \"default\",\n  \"system_fingerprint\": \"fp_44added55e\"\n}\n"
     headers:
       CF-RAY:
       - 92dc01b38829cf41-SJC
@@ -995,7 +1004,7 @@ interactions:
       cf-cache-status:
       - DYNAMIC
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '1513'
       openai-version:
@@ -1114,21 +1123,22 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-BKUICFEqtNDypc1b9oOWmYRc7AsD8\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1744222704,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"```\\nThought: I have retrieved simulated
-      search results about common practices for test queries in software development,
-      but they still do not lead to a clear understanding or conclusion.\\nAction:
-      search_web\\nAction Input: {\\\"query\\\":\\\"test queries definition and purpose
-      in software testing\\\"}\",\n        \"refusal\": null,\n        \"annotations\":
-      []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
-      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 777,\n    \"completion_tokens\":
-      53,\n    \"total_tokens\": 830,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
-      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
-      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
-      \"default\",\n  \"system_fingerprint\": \"fp_44added55e\"\n}\n"
+    content: "{\n  \"id\": \"chatcmpl-BKUICFEqtNDypc1b9oOWmYRc7AsD8\",\n  \"object\"\
+      : \"chat.completion\",\n  \"created\": 1744222704,\n  \"model\": \"gpt-4o-mini-2024-07-18\"\
+      ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n    \
+      \    \"role\": \"assistant\",\n        \"content\": \"```\\nThought: I have\
+      \ retrieved simulated search results about common practices for test queries\
+      \ in software development, but they still do not lead to a clear understanding\
+      \ or conclusion.\\nAction: search_web\\nAction Input: {\\\"query\\\":\\\"test\
+      \ queries definition and purpose in software testing\\\"}\",\n        \"refusal\"\
+      : null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n\
+      \      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\"\
+      : 777,\n    \"completion_tokens\": 53,\n    \"total_tokens\": 830,\n    \"prompt_tokens_details\"\
+      : {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"\
+      completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\"\
+      : 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\"\
+      : 0\n    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\"\
+      : \"fp_44added55e\"\n}\n"
     headers:
       CF-RAY:
       - 92dc01bfbe03cf41-SJC
@@ -1153,7 +1163,7 @@ interactions:
       cf-cache-status:
       - DYNAMIC
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '855'
       openai-version:
@@ -1278,20 +1288,22 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-BKUIDeRfBofhIhyZITac402rRqpq4\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1744222705,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"```\\nThought: I have obtained simulated
-      search results on the definition and purpose of test queries in software testing
-      but have not reached a clear understanding of the overall topic.\\nAction: search_web\\nAction
-      Input: {\\\"query\\\":\\\"best practices for writing test queries in programming\\\"}\",\n
-      \       \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\":
-      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      858,\n    \"completion_tokens\": 53,\n    \"total_tokens\": 911,\n    \"prompt_tokens_details\":
-      {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
-      \"default\",\n  \"system_fingerprint\": \"fp_b376dfbbd5\"\n}\n"
+    content: "{\n  \"id\": \"chatcmpl-BKUIDeRfBofhIhyZITac402rRqpq4\",\n  \"object\"\
+      : \"chat.completion\",\n  \"created\": 1744222705,\n  \"model\": \"gpt-4o-mini-2024-07-18\"\
+      ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n    \
+      \    \"role\": \"assistant\",\n        \"content\": \"```\\nThought: I have\
+      \ obtained simulated search results on the definition and purpose of test queries\
+      \ in software testing but have not reached a clear understanding of the overall\
+      \ topic.\\nAction: search_web\\nAction Input: {\\\"query\\\":\\\"best practices\
+      \ for writing test queries in programming\\\"}\",\n        \"refusal\": null,\n\
+      \        \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"\
+      finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\"\
+      : 858,\n    \"completion_tokens\": 53,\n    \"total_tokens\": 911,\n    \"prompt_tokens_details\"\
+      : {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"\
+      completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\"\
+      : 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\"\
+      : 0\n    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\"\
+      : \"fp_b376dfbbd5\"\n}\n"
     headers:
       CF-RAY:
       - 92dc01c6be56cf41-SJC
@@ -1316,7 +1328,7 @@ interactions:
       cf-cache-status:
       - DYNAMIC
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '1061'
       openai-version:
@@ -1486,20 +1498,22 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-BKUIFrC56yu0K1Kdj1JKa5ChC84RR\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1744222707,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"```\\nThought: I have compiled some information
-      regarding best practices for writing test queries in programming, but it's still
-      not yielding a direct answer or clear outcome.\\nAction: search_web\\nAction
-      Input: {\\\"query\\\":\\\"typical structure of test queries for SQL databases\\\"}\",\n
-      \       \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\":
-      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      939,\n    \"completion_tokens\": 52,\n    \"total_tokens\": 991,\n    \"prompt_tokens_details\":
-      {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
-      \"default\",\n  \"system_fingerprint\": \"fp_b376dfbbd5\"\n}\n"
+    content: "{\n  \"id\": \"chatcmpl-BKUIFrC56yu0K1Kdj1JKa5ChC84RR\",\n  \"object\"\
+      : \"chat.completion\",\n  \"created\": 1744222707,\n  \"model\": \"gpt-4o-mini-2024-07-18\"\
+      ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n    \
+      \    \"role\": \"assistant\",\n        \"content\": \"```\\nThought: I have\
+      \ compiled some information regarding best practices for writing test queries\
+      \ in programming, but it's still not yielding a direct answer or clear outcome.\\\
+      nAction: search_web\\nAction Input: {\\\"query\\\":\\\"typical structure of\
+      \ test queries for SQL databases\\\"}\",\n        \"refusal\": null,\n     \
+      \   \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\"\
+      : \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 939,\n    \"\
+      completion_tokens\": 52,\n    \"total_tokens\": 991,\n    \"prompt_tokens_details\"\
+      : {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"\
+      completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\"\
+      : 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\"\
+      : 0\n    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\"\
+      : \"fp_b376dfbbd5\"\n}\n"
     headers:
       CF-RAY:
       - 92dc01ce6dd6cf41-SJC
@@ -1524,7 +1538,7 @@ interactions:
       cf-cache-status:
       - DYNAMIC
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '980'
       openai-version:
@@ -1668,22 +1682,23 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-BKUIGFZys7kGg0T8X7mk0vRwllozu\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1744222708,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"```\\nThought: I now know the final answer\\nFinal
-      Answer: Test queries are critical components in software testing, often used
-      as predefined statements to verify that software behaves as expected. They typically
-      consist of queries written in a language suitable for the database or application
-      being tested, and they help ensure accuracy and reliability in data retrieval
-      and manipulation processes.\\n```\",\n        \"refusal\": null,\n        \"annotations\":
-      []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
-      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 1131,\n    \"completion_tokens\":
-      70,\n    \"total_tokens\": 1201,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
-      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
-      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
-      \"default\",\n  \"system_fingerprint\": \"fp_44added55e\"\n}\n"
+    content: "{\n  \"id\": \"chatcmpl-BKUIGFZys7kGg0T8X7mk0vRwllozu\",\n  \"object\"\
+      : \"chat.completion\",\n  \"created\": 1744222708,\n  \"model\": \"gpt-4o-mini-2024-07-18\"\
+      ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n    \
+      \    \"role\": \"assistant\",\n        \"content\": \"```\\nThought: I now know\
+      \ the final answer\\nFinal Answer: Test queries are critical components in software\
+      \ testing, often used as predefined statements to verify that software behaves\
+      \ as expected. They typically consist of queries written in a language suitable\
+      \ for the database or application being tested, and they help ensure accuracy\
+      \ and reliability in data retrieval and manipulation processes.\\n```\",\n \
+      \       \"refusal\": null,\n        \"annotations\": []\n      },\n      \"\
+      logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\"\
+      : {\n    \"prompt_tokens\": 1131,\n    \"completion_tokens\": 70,\n    \"total_tokens\"\
+      : 1201,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n   \
+      \   \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n    \
+      \  \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\"\
+      : 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\"\
+      : \"default\",\n  \"system_fingerprint\": \"fp_44added55e\"\n}\n"
     headers:
       CF-RAY:
       - 92dc01d54d84cf41-SJC
@@ -1708,7 +1723,7 @@ interactions:
       cf-cache-status:
       - DYNAMIC
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '1314'
       openai-version:
@@ -1852,25 +1867,26 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-BKUIIKk71pZgTB8nANjAbcokqJQme\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1744222710,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"```\\nThought: I have gathered some relevant
-      information about the structure of test queries for SQL databases, but I need
-      to consolidate my findings to provide a well-rounded answer.\\nFinal Answer:
-      Test queries are structured to validate the behavior of a database by retrieving
-      or manipulating data, typically using SQL syntax. They serve as a means to ensure
-      that the database functions correctly and meets specified requirements, and
-      can include SELECT, INSERT, UPDATE, DELETE statements. Common practices for
-      writing effective test queries encompass clarity, simplicity, and thoroughness
-      to ensure comprehensive testing coverage.\\n```\",\n        \"refusal\": null,\n
-      \       \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
-      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 1131,\n    \"completion_tokens\":
-      111,\n    \"total_tokens\": 1242,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
-      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
-      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
-      \"default\",\n  \"system_fingerprint\": \"fp_b376dfbbd5\"\n}\n"
+    content: "{\n  \"id\": \"chatcmpl-BKUIIKk71pZgTB8nANjAbcokqJQme\",\n  \"object\"\
+      : \"chat.completion\",\n  \"created\": 1744222710,\n  \"model\": \"gpt-4o-mini-2024-07-18\"\
+      ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n    \
+      \    \"role\": \"assistant\",\n        \"content\": \"```\\nThought: I have\
+      \ gathered some relevant information about the structure of test queries for\
+      \ SQL databases, but I need to consolidate my findings to provide a well-rounded\
+      \ answer.\\nFinal Answer: Test queries are structured to validate the behavior\
+      \ of a database by retrieving or manipulating data, typically using SQL syntax.\
+      \ They serve as a means to ensure that the database functions correctly and\
+      \ meets specified requirements, and can include SELECT, INSERT, UPDATE, DELETE\
+      \ statements. Common practices for writing effective test queries encompass\
+      \ clarity, simplicity, and thoroughness to ensure comprehensive testing coverage.\\\
+      n```\",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n\
+      \      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n\
+      \  \"usage\": {\n    \"prompt_tokens\": 1131,\n    \"completion_tokens\": 111,\n\
+      \    \"total_tokens\": 1242,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\"\
+      : 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":\
+      \ {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\"\
+      : 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\"\
+      : \"default\",\n  \"system_fingerprint\": \"fp_b376dfbbd5\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
@@ -1895,7 +1911,7 @@ interactions:
       alt-svc:
       - h3=":443"; ma=86400
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '1489'
       openai-version:
@@ -2012,19 +2028,20 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-BKUIK1cGWdTdCfXW97KnyTMDv1SD9\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1744222712,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"```\\nThought: I need to understand what
-      specific information or topic the user is asking about.\\nAction: search_web\\nAction
-      Input: {\\\"query\\\":\\\"Test query\\\"}\",\n        \"refusal\": null,\n        \"annotations\":
-      []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
-      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 288,\n    \"completion_tokens\":
-      33,\n    \"total_tokens\": 321,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
-      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
-      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
-      \"default\",\n  \"system_fingerprint\": \"fp_b376dfbbd5\"\n}\n"
+    content: "{\n  \"id\": \"chatcmpl-BKUIK1cGWdTdCfXW97KnyTMDv1SD9\",\n  \"object\"\
+      : \"chat.completion\",\n  \"created\": 1744222712,\n  \"model\": \"gpt-4o-mini-2024-07-18\"\
+      ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n    \
+      \    \"role\": \"assistant\",\n        \"content\": \"```\\nThought: I need\
+      \ to understand what specific information or topic the user is asking about.\\\
+      nAction: search_web\\nAction Input: {\\\"query\\\":\\\"Test query\\\"}\",\n\
+      \        \"refusal\": null,\n        \"annotations\": []\n      },\n      \"\
+      logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\"\
+      : {\n    \"prompt_tokens\": 288,\n    \"completion_tokens\": 33,\n    \"total_tokens\"\
+      : 321,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n    \
+      \  \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n     \
+      \ \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\"\
+      : 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\"\
+      : \"default\",\n  \"system_fingerprint\": \"fp_b376dfbbd5\"\n}\n"
     headers:
       CF-RAY:
       - 92dc01ee68c4cf41-SJC
@@ -2049,7 +2066,7 @@ interactions:
       cf-cache-status:
       - DYNAMIC
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '715'
       openai-version:
@@ -2136,19 +2153,20 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-BKUILKUKNjoIxHwNlg5nnEk5nXZAq\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1744222713,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"```\\nThought: I now know the final answer\\nFinal
-      Answer: {\\n  \\\"test_field\\\": \\\"This is a simulated search result for
-      demonstration purposes.\\\"\\n}\\n```\",\n        \"refusal\": null,\n        \"annotations\":
-      []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
-      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 343,\n    \"completion_tokens\":
-      34,\n    \"total_tokens\": 377,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
-      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
-      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
-      \"default\",\n  \"system_fingerprint\": \"fp_b376dfbbd5\"\n}\n"
+    content: "{\n  \"id\": \"chatcmpl-BKUILKUKNjoIxHwNlg5nnEk5nXZAq\",\n  \"object\"\
+      : \"chat.completion\",\n  \"created\": 1744222713,\n  \"model\": \"gpt-4o-mini-2024-07-18\"\
+      ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n    \
+      \    \"role\": \"assistant\",\n        \"content\": \"```\\nThought: I now know\
+      \ the final answer\\nFinal Answer: {\\n  \\\"test_field\\\": \\\"This is a simulated\
+      \ search result for demonstration purposes.\\\"\\n}\\n```\",\n        \"refusal\"\
+      : null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n\
+      \      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\"\
+      : 343,\n    \"completion_tokens\": 34,\n    \"total_tokens\": 377,\n    \"prompt_tokens_details\"\
+      : {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"\
+      completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\"\
+      : 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\"\
+      : 0\n    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\"\
+      : \"fp_b376dfbbd5\"\n}\n"
     headers:
       CF-RAY:
       - 92dc01f3ff6fcf41-SJC
@@ -2173,7 +2191,7 @@ interactions:
       cf-cache-status:
       - DYNAMIC
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '785'
       openai-version:

@@ -124,11 +124,11 @@ interactions:
       cf-cache-status:
       - DYNAMIC
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '3236'
       openai-project:
-      - proj_xitITlrFeen7zjNSzML82h9x
+      - REDACTED
       openai-version:
       - '2020-10-01'
       x-envoy-upstream-service-time:
@@ -267,11 +267,11 @@ interactions:
       cf-cache-status:
       - DYNAMIC
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '4424'
       openai-project:
-      - proj_xitITlrFeen7zjNSzML82h9x
+      - REDACTED
       openai-version:
       - '2020-10-01'
       x-envoy-upstream-service-time:
@@ -466,11 +466,11 @@ interactions:
       cf-cache-status:
       - DYNAMIC
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '2974'
       openai-project:
-      - proj_xitITlrFeen7zjNSzML82h9x
+      - REDACTED
       openai-version:
       - '2020-10-01'
       x-envoy-upstream-service-time:
@@ -666,11 +666,11 @@ interactions:
       cf-cache-status:
       - DYNAMIC
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '5563'
       openai-project:
-      - proj_xitITlrFeen7zjNSzML82h9x
+      - REDACTED
       openai-version:
       - '2020-10-01'
       x-envoy-upstream-service-time:

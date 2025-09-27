@@ -76,22 +76,23 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AB7g8URGcdob5DuebCrqcqCaXJczj\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1727214488,\n  \"model\": \"gpt-4o-2024-05-13\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"To give an accurate score between 1-5
-      for the title \\\"The impact of AI in the future of work,\\\" I need to engage
-      Scorer to evaluate it based on the criteria they have.\\n\\nAction: Ask question
-      to coworker\\nAction Input: {\\\"question\\\": \\\"Can you provide an integer
-      score between 1-5 for the title 'The impact of AI in the future of work'?\\\",
-      \\\"context\\\": \\\"We need to evaluate the title 'The impact of AI in the
-      future of work' according to its quality, relevance, and appeal. Please provide
-      a score between 1-5, where 1 is the lowest and 5 is the highest.\\\", \\\"coworker\\\":
-      \\\"Scorer\\\"}\\n\\nObservation:\",\n        \"refusal\": null\n      },\n
-      \     \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n
-      \ \"usage\": {\n    \"prompt_tokens\": 664,\n    \"completion_tokens\": 146,\n
-      \   \"total_tokens\": 810,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
-      0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
+    content: "{\n  \"id\": \"chatcmpl-AB7g8URGcdob5DuebCrqcqCaXJczj\",\n  \"object\"\
+      : \"chat.completion\",\n  \"created\": 1727214488,\n  \"model\": \"gpt-4o-2024-05-13\"\
+      ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n    \
+      \    \"role\": \"assistant\",\n        \"content\": \"To give an accurate score\
+      \ between 1-5 for the title \\\"The impact of AI in the future of work,\\\"\
+      \ I need to engage Scorer to evaluate it based on the criteria they have.\\\
+      n\\nAction: Ask question to coworker\\nAction Input: {\\\"question\\\": \\\"\
+      Can you provide an integer score between 1-5 for the title 'The impact of AI\
+      \ in the future of work'?\\\", \\\"context\\\": \\\"We need to evaluate the\
+      \ title 'The impact of AI in the future of work' according to its quality, relevance,\
+      \ and appeal. Please provide a score between 1-5, where 1 is the lowest and\
+      \ 5 is the highest.\\\", \\\"coworker\\\": \\\"Scorer\\\"}\\n\\nObservation:\"\
+      ,\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"\
+      finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\"\
+      : 664,\n    \"completion_tokens\": 146,\n    \"total_tokens\": 810,\n    \"\
+      completion_tokens_details\": {\n      \"reasoning_tokens\": 0\n    }\n  },\n\
+      \  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
@@ -114,7 +115,7 @@ interactions:
       access-control-expose-headers:
       - X-Request-ID
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '2091'
       openai-version:
@@ -248,21 +249,22 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AB7gBKY8RwpfJc5mSVrH1WmeT5L5z\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1727214491,\n  \"model\": \"gpt-4o-2024-05-13\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I now can give a great answer\\nFinal
-      Answer: I would score the title 'The impact of AI in the future of work' a 4
-      out of 5. The title is clear, relevant, and appealing as it addresses a highly
-      topical subject with significant interest in both the academic and professional
-      communities. It implies a forward-looking analysis which can attract various
-      stakeholders interested in the future trends of employment, technology, and
-      society. The only improvement could be to make it slightly more specific or
-      engaging to ensure maximum impact.\",\n        \"refusal\": null\n      },\n
-      \     \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n
-      \ \"usage\": {\n    \"prompt_tokens\": 255,\n    \"completion_tokens\": 106,\n
-      \   \"total_tokens\": 361,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
-      0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
+    content: "{\n  \"id\": \"chatcmpl-AB7gBKY8RwpfJc5mSVrH1WmeT5L5z\",\n  \"object\"\
+      : \"chat.completion\",\n  \"created\": 1727214491,\n  \"model\": \"gpt-4o-2024-05-13\"\
+      ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n    \
+      \    \"role\": \"assistant\",\n        \"content\": \"Thought: I now can give\
+      \ a great answer\\nFinal Answer: I would score the title 'The impact of AI in\
+      \ the future of work' a 4 out of 5. The title is clear, relevant, and appealing\
+      \ as it addresses a highly topical subject with significant interest in both\
+      \ the academic and professional communities. It implies a forward-looking analysis\
+      \ which can attract various stakeholders interested in the future trends of\
+      \ employment, technology, and society. The only improvement could be to make\
+      \ it slightly more specific or engaging to ensure maximum impact.\",\n     \
+      \   \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"finish_reason\"\
+      : \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 255,\n    \"\
+      completion_tokens\": 106,\n    \"total_tokens\": 361,\n    \"completion_tokens_details\"\
+      : {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"\
+      fp_e375328146\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
@@ -285,7 +287,7 @@ interactions:
       access-control-expose-headers:
       - X-Request-ID
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '1460'
       openai-version:
@@ -400,14 +402,16 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AB7gClsVUQLww5J3bHB40NunZxQTa\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1727214492,\n  \"model\": \"gpt-4o-2024-05-13\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I now know the final answer.\\n\\nFinal
-      Answer: 4\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
-      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      909,\n    \"completion_tokens\": 14,\n    \"total_tokens\": 923,\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
+    content: "{\n  \"id\": \"chatcmpl-AB7gClsVUQLww5J3bHB40NunZxQTa\",\n  \"object\"\
+      : \"chat.completion\",\n  \"created\": 1727214492,\n  \"model\": \"gpt-4o-2024-05-13\"\
+      ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n    \
+      \    \"role\": \"assistant\",\n        \"content\": \"Thought: I now know the\
+      \ final answer.\\n\\nFinal Answer: 4\",\n        \"refusal\": null\n      },\n\
+      \      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n\
+      \  \"usage\": {\n    \"prompt_tokens\": 909,\n    \"completion_tokens\": 14,\n\
+      \    \"total_tokens\": 923,\n    \"completion_tokens_details\": {\n      \"\
+      reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\
+      \n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
@@ -430,7 +434,7 @@ interactions:
       access-control-expose-headers:
       - X-Request-ID
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '298'
       openai-version:
@@ -499,17 +503,19 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AB7gDkv4V1cMJ6IVFldUfx5aJ54mS\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1727214493,\n  \"model\": \"gpt-4o-2024-05-13\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": null,\n        \"tool_calls\": [\n          {\n
-      \           \"id\": \"call_E79eAVdZeKx6iitt2tQLfiT6\",\n            \"type\":
-      \"function\",\n            \"function\": {\n              \"name\": \"ScoreOutput\",\n
-      \             \"arguments\": \"{\\\"score\\\":4}\"\n            }\n          }\n
-      \       ],\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
-      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      100,\n    \"completion_tokens\": 5,\n    \"total_tokens\": 105,\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_3537616b13\"\n}\n"
+    content: "{\n  \"id\": \"chatcmpl-AB7gDkv4V1cMJ6IVFldUfx5aJ54mS\",\n  \"object\"\
+      : \"chat.completion\",\n  \"created\": 1727214493,\n  \"model\": \"gpt-4o-2024-05-13\"\
+      ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n    \
+      \    \"role\": \"assistant\",\n        \"content\": null,\n        \"tool_calls\"\
+      : [\n          {\n            \"id\": \"call_E79eAVdZeKx6iitt2tQLfiT6\",\n \
+      \           \"type\": \"function\",\n            \"function\": {\n         \
+      \     \"name\": \"ScoreOutput\",\n              \"arguments\": \"{\\\"score\\\
+      \":4}\"\n            }\n          }\n        ],\n        \"refusal\": null\n\
+      \      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n  \
+      \  }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 100,\n    \"completion_tokens\"\
+      : 5,\n    \"total_tokens\": 105,\n    \"completion_tokens_details\": {\n   \
+      \   \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_3537616b13\"\
+      \n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
@@ -532,7 +538,7 @@ interactions:
       access-control-expose-headers:
       - X-Request-ID
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '220'
       openai-version:
@@ -682,11 +688,11 @@ interactions:
       cf-cache-status:
       - DYNAMIC
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '4262'
       openai-project:
-      - proj_xitITlrFeen7zjNSzML82h9x
+      - REDACTED
       openai-version:
       - '2020-10-01'
       x-envoy-upstream-service-time:
@@ -835,11 +841,11 @@ interactions:
       cf-cache-status:
       - DYNAMIC
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '4274'
       openai-project:
-      - proj_xitITlrFeen7zjNSzML82h9x
+      - REDACTED
       openai-version:
       - '2020-10-01'
       x-envoy-upstream-service-time:
@@ -998,11 +1004,11 @@ interactions:
       cf-cache-status:
       - DYNAMIC
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '570'
       openai-project:
-      - proj_xitITlrFeen7zjNSzML82h9x
+      - REDACTED
       openai-version:
       - '2020-10-01'
       x-envoy-upstream-service-time:
@@ -1158,11 +1164,11 @@ interactions:
       cf-cache-status:
       - DYNAMIC
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '867'
       openai-project:
-      - proj_xitITlrFeen7zjNSzML82h9x
+      - REDACTED
       openai-version:
       - '2020-10-01'
       x-envoy-upstream-service-time:

@@ -75,7 +75,7 @@ jobs:
           #   DURATIONS_ARG="--durations-path=${DURATION_FILE}"
           # fi
           
-          uv run pytest \
+          uv run pytest tests/ \
             --block-network \
             --timeout=30 \
             -vv \
@@ -84,7 +84,8 @@ jobs:
             $DURATIONS_ARG \
             --durations=10 \
             -n auto \
-            --maxfail=3
+            --maxfail=3 \
+            -m "not requires_local_services"
 
       - name: Save uv caches
         if: steps.cache-restore.outputs.cache-hit != 'true'

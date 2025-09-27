@@ -50,17 +50,18 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-ApfRMtnfMV4SCUJwrE5p1tu8fmAUB\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1736877388,\n  \"model\": \"gpt-4o-2024-08-06\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"I now can give a great answer  \\nFinal
-      Answer: Test expected output\",\n        \"refusal\": null\n      },\n      \"logprobs\":
-      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      158,\n    \"completion_tokens\": 14,\n    \"total_tokens\": 172,\n    \"prompt_tokens_details\":
-      {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
-      \"default\",\n  \"system_fingerprint\": \"fp_50cad350e4\"\n}\n"
+    content: "{\n  \"id\": \"chatcmpl-ApfRMtnfMV4SCUJwrE5p1tu8fmAUB\",\n  \"object\"\
+      : \"chat.completion\",\n  \"created\": 1736877388,\n  \"model\": \"gpt-4o-2024-08-06\"\
+      ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n    \
+      \    \"role\": \"assistant\",\n        \"content\": \"I now can give a great\
+      \ answer  \\nFinal Answer: Test expected output\",\n        \"refusal\": null\n\
+      \      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n  \
+      \  }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 158,\n    \"completion_tokens\"\
+      : 14,\n    \"total_tokens\": 172,\n    \"prompt_tokens_details\": {\n      \"\
+      cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\"\
+      : {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\"\
+      : 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\"\
+      : \"default\",\n  \"system_fingerprint\": \"fp_50cad350e4\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
@@ -85,7 +86,7 @@ interactions:
       alt-svc:
       - h3=":443"; ma=86400
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '393'
       openai-version:

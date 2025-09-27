@@ -161,8 +161,18 @@ def mock_opentelemetry_components():
 
 @pytest.fixture(scope="module")
 def vcr_config(request) -> dict:
+    import os
+    # In CI, use none mode to never record new requests
+    # Locally, use new_episodes to record new cassettes
+    record_mode = "none" if os.getenv("CI") else "new_episodes"
     return {
         "cassette_library_dir": "tests/cassettes",
-        "record_mode": "new_episodes",
-        "filter_headers": [("authorization", "AUTHORIZATION-XXX")],
+        "record_mode": record_mode,
+        "filter_headers": [
+            ("authorization", "AUTHORIZATION-XXX"),
+            ("openai-organization", "ORG-XXX"),
+            ("openai-project", "PROJ-XXX"),
+            ("x-api-key", "API-KEY-XXX"),
+        ],
+        "match_on": ["method", "scheme", "host", "port", "path", "query"],
     }

@@ -3,10 +3,11 @@ name = "crewai"
 dynamic = ["version"]
 description = "Cutting-edge framework for orchestrating role-playing, autonomous AI agents. By fostering collaborative intelligence, CrewAI empowers agents to work together seamlessly, tackling complex tasks."
 readme = "README.md"
-requires-python = ">=3.10,<3.14"
 authors = [
     { name = "Joao Moura", email = "joao@crewai.com" }
 ]
+requires-python = ">=3.10,<3.14"
+
 dependencies = [
     # Core Dependencies
     "pydantic>=2.11.9",
@@ -49,7 +50,7 @@ Repository = "https://github.com/crewAIInc/crewAI"
 
 [project.optional-dependencies]
 tools = [
-    "crewai-tools>=0.74.0",
+    "crewai-tools",
 ]
 embeddings = [
     "tiktoken~=0.8.0"
@@ -83,6 +84,9 @@ voyageai = [
     "voyageai>=0.3.5",
 ]
 
+[project.scripts]
+crewai = "crewai.cli.cli:crewai"
+
 [dependency-groups]
 dev = [
     "ruff>=0.13.1",
@@ -101,10 +105,8 @@ dev = [
     "types-pyyaml==6.0.*",
     "types-regex==2024.11.6.*",
     "types-appdirs==1.4.*",
+    "git-filter-repo>=2.47.0",
 ]
-
-[project.scripts]
-crewai = "crewai.cli.cli:crewai"
 
 [tool.ruff]
 exclude = [
@@ -148,16 +150,15 @@ ignore = ["E501"]  # ignore line too long globally
 exclude = ["src/crewai/cli/templates", "tests/"]
 plugins = ["pydantic.mypy"]
 
-
 [tool.bandit]
 exclude_dirs = ["src/crewai/cli/templates"]
 
 [tool.pytest.ini_options]
 markers = [
     "telemetry: mark test as a telemetry test (don't mock telemetry)",
+    "requires_local_services: mark test as requiring local services like Ollama (skip in CI)",
 ]
 
-# PyTorch index configuration, since torch 2.5.0 is not compatible with python 3.13
 [[tool.uv.index]]
 name = "pytorch-nightly"
 url = "https://download.pytorch.org/whl/nightly/cpu"
@@ -178,8 +179,13 @@ torchvision = [
   { index = "pytorch", marker = "python_version < '3.13'" },
 ]
 
-[tool.hatch.version]
-path = "src/crewai/__init__.py"
+crewai = { workspace = true }
+crewai-tools = { workspace = true }
+
+[tool.uv.workspace]
+members = [
+    "lib/tools",
+]
 
 [build-system]
 requires = ["hatchling"]
@@ -187,12 +193,15 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 exclude = [
-"docs/**",
-"docs/",
+    "docs/**",
+    "docs/",
 ]
 
 [tool.hatch.build.targets.sdist]
 exclude = [
-"docs/**",
-"docs/",
+    "docs/**",
+    "docs/",
 ]
+
+[tool.hatch.version]
+path = "src/crewai/__init__.py"

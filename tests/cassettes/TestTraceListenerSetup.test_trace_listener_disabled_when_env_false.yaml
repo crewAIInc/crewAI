@@ -91,11 +91,11 @@ interactions:
       cf-cache-status:
       - DYNAMIC
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '526'
       openai-project:
-      - proj_xitITlrFeen7zjNSzML82h9x
+      - REDACTED
       openai-version:
       - '2020-10-01'
       x-envoy-upstream-service-time:
@@ -214,11 +214,11 @@ interactions:
       cf-cache-status:
       - DYNAMIC
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '504'
       openai-project:
-      - proj_xitITlrFeen7zjNSzML82h9x
+      - REDACTED
       openai-version:
       - '2020-10-01'
       x-envoy-upstream-service-time:
@@ -273,28 +273,29 @@ interactions:
     uri: https://app.crewai.com/crewai_plus/api/v1/tracing/batches
   response:
     body:
-      string: "<!DOCTYPE html>\n<html>\n<head>\n  <title>The page you were looking
-        for doesn't exist (404)</title>\n  <meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">\n
-        \ <style>\n  .rails-default-error-page {\n    background-color: #EFEFEF;\n
-        \   color: #2E2F30;\n    text-align: center;\n    font-family: arial, sans-serif;\n
-        \   margin: 0;\n  }\n\n  .rails-default-error-page div.dialog {\n    width:
-        95%;\n    max-width: 33em;\n    margin: 4em auto 0;\n  }\n\n  .rails-default-error-page
-        div.dialog > div {\n    border: 1px solid #CCC;\n    border-right-color: #999;\n
-        \   border-left-color: #999;\n    border-bottom-color: #BBB;\n    border-top:
-        #B00100 solid 4px;\n    border-top-left-radius: 9px;\n    border-top-right-radius:
-        9px;\n    background-color: white;\n    padding: 7px 12% 0;\n    box-shadow:
-        0 3px 8px rgba(50, 50, 50, 0.17);\n  }\n\n  .rails-default-error-page h1 {\n
-        \   font-size: 100%;\n    color: #730E15;\n    line-height: 1.5em;\n  }\n\n
-        \ .rails-default-error-page div.dialog > p {\n    margin: 0 0 1em;\n    padding:
-        1em;\n    background-color: #F7F7F7;\n    border: 1px solid #CCC;\n    border-right-color:
-        #999;\n    border-left-color: #999;\n    border-bottom-color: #999;\n    border-bottom-left-radius:
-        4px;\n    border-bottom-right-radius: 4px;\n    border-top-color: #DADADA;\n
-        \   color: #666;\n    box-shadow: 0 3px 8px rgba(50, 50, 50, 0.17);\n  }\n
-        \ </style>\n</head>\n\n<body class=\"rails-default-error-page\">\n  <!-- This
-        file lives in public/404.html -->\n  <div class=\"dialog\">\n    <div>\n      <h1>The
-        page you were looking for doesn't exist.</h1>\n      <p>You may have mistyped
-        the address or the page may have moved.</p>\n    </div>\n    <p>If you are
-        the application owner check the logs for more information.</p>\n  </div>\n</body>\n</html>\n"
+      string: "<!DOCTYPE html>\n<html>\n<head>\n  <title>The page you were looking\
+        \ for doesn't exist (404)</title>\n  <meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"\
+        >\n  <style>\n  .rails-default-error-page {\n    background-color: #EFEFEF;\n\
+        \    color: #2E2F30;\n    text-align: center;\n    font-family: arial, sans-serif;\n\
+        \    margin: 0;\n  }\n\n  .rails-default-error-page div.dialog {\n    width:\
+        \ 95%;\n    max-width: 33em;\n    margin: 4em auto 0;\n  }\n\n  .rails-default-error-page\
+        \ div.dialog > div {\n    border: 1px solid #CCC;\n    border-right-color:\
+        \ #999;\n    border-left-color: #999;\n    border-bottom-color: #BBB;\n  \
+        \  border-top: #B00100 solid 4px;\n    border-top-left-radius: 9px;\n    border-top-right-radius:\
+        \ 9px;\n    background-color: white;\n    padding: 7px 12% 0;\n    box-shadow:\
+        \ 0 3px 8px rgba(50, 50, 50, 0.17);\n  }\n\n  .rails-default-error-page h1\
+        \ {\n    font-size: 100%;\n    color: #730E15;\n    line-height: 1.5em;\n\
+        \  }\n\n  .rails-default-error-page div.dialog > p {\n    margin: 0 0 1em;\n\
+        \    padding: 1em;\n    background-color: #F7F7F7;\n    border: 1px solid\
+        \ #CCC;\n    border-right-color: #999;\n    border-left-color: #999;\n   \
+        \ border-bottom-color: #999;\n    border-bottom-left-radius: 4px;\n    border-bottom-right-radius:\
+        \ 4px;\n    border-top-color: #DADADA;\n    color: #666;\n    box-shadow:\
+        \ 0 3px 8px rgba(50, 50, 50, 0.17);\n  }\n  </style>\n</head>\n\n<body class=\"\
+        rails-default-error-page\">\n  <!-- This file lives in public/404.html -->\n\
+        \  <div class=\"dialog\">\n    <div>\n      <h1>The page you were looking\
+        \ for doesn't exist.</h1>\n      <p>You may have mistyped the address or the\
+        \ page may have moved.</p>\n    </div>\n    <p>If you are the application\
+        \ owner check the logs for more information.</p>\n  </div>\n</body>\n</html>\n"
     headers:
       Connection:
       - keep-alive
@@ -390,28 +391,29 @@ interactions:
     uri: https://app.crewai.com/crewai_plus/api/v1/tracing
   response:
     body:
-      string: "<!DOCTYPE html>\n<html>\n<head>\n  <title>The page you were looking
-        for doesn't exist (404)</title>\n  <meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">\n
-        \ <style>\n  .rails-default-error-page {\n    background-color: #EFEFEF;\n
-        \   color: #2E2F30;\n    text-align: center;\n    font-family: arial, sans-serif;\n
-        \   margin: 0;\n  }\n\n  .rails-default-error-page div.dialog {\n    width:
-        95%;\n    max-width: 33em;\n    margin: 4em auto 0;\n  }\n\n  .rails-default-error-page
-        div.dialog > div {\n    border: 1px solid #CCC;\n    border-right-color: #999;\n
-        \   border-left-color: #999;\n    border-bottom-color: #BBB;\n    border-top:
-        #B00100 solid 4px;\n    border-top-left-radius: 9px;\n    border-top-right-radius:
-        9px;\n    background-color: white;\n    padding: 7px 12% 0;\n    box-shadow:
-        0 3px 8px rgba(50, 50, 50, 0.17);\n  }\n\n  .rails-default-error-page h1 {\n
-        \   font-size: 100%;\n    color: #730E15;\n    line-height: 1.5em;\n  }\n\n
-        \ .rails-default-error-page div.dialog > p {\n    margin: 0 0 1em;\n    padding:
-        1em;\n    background-color: #F7F7F7;\n    border: 1px solid #CCC;\n    border-right-color:
-        #999;\n    border-left-color: #999;\n    border-bottom-color: #999;\n    border-bottom-left-radius:
-        4px;\n    border-bottom-right-radius: 4px;\n    border-top-color: #DADADA;\n
-        \   color: #666;\n    box-shadow: 0 3px 8px rgba(50, 50, 50, 0.17);\n  }\n
-        \ </style>\n</head>\n\n<body class=\"rails-default-error-page\">\n  <!-- This
-        file lives in public/404.html -->\n  <div class=\"dialog\">\n    <div>\n      <h1>The
-        page you were looking for doesn't exist.</h1>\n      <p>You may have mistyped
-        the address or the page may have moved.</p>\n    </div>\n    <p>If you are
-        the application owner check the logs for more information.</p>\n  </div>\n</body>\n</html>\n"
+      string: "<!DOCTYPE html>\n<html>\n<head>\n  <title>The page you were looking\
+        \ for doesn't exist (404)</title>\n  <meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"\
+        >\n  <style>\n  .rails-default-error-page {\n    background-color: #EFEFEF;\n\
+        \    color: #2E2F30;\n    text-align: center;\n    font-family: arial, sans-serif;\n\
+        \    margin: 0;\n  }\n\n  .rails-default-error-page div.dialog {\n    width:\
+        \ 95%;\n    max-width: 33em;\n    margin: 4em auto 0;\n  }\n\n  .rails-default-error-page\
+        \ div.dialog > div {\n    border: 1px solid #CCC;\n    border-right-color:\
+        \ #999;\n    border-left-color: #999;\n    border-bottom-color: #BBB;\n  \
+        \  border-top: #B00100 solid 4px;\n    border-top-left-radius: 9px;\n    border-top-right-radius:\
+        \ 9px;\n    background-color: white;\n    padding: 7px 12% 0;\n    box-shadow:\
+        \ 0 3px 8px rgba(50, 50, 50, 0.17);\n  }\n\n  .rails-default-error-page h1\
+        \ {\n    font-size: 100%;\n    color: #730E15;\n    line-height: 1.5em;\n\
+        \  }\n\n  .rails-default-error-page div.dialog > p {\n    margin: 0 0 1em;\n\
+        \    padding: 1em;\n    background-color: #F7F7F7;\n    border: 1px solid\
+        \ #CCC;\n    border-right-color: #999;\n    border-left-color: #999;\n   \
+        \ border-bottom-color: #999;\n    border-bottom-left-radius: 4px;\n    border-bottom-right-radius:\
+        \ 4px;\n    border-top-color: #DADADA;\n    color: #666;\n    box-shadow:\
+        \ 0 3px 8px rgba(50, 50, 50, 0.17);\n  }\n  </style>\n</head>\n\n<body class=\"\
+        rails-default-error-page\">\n  <!-- This file lives in public/404.html -->\n\
+        \  <div class=\"dialog\">\n    <div>\n      <h1>The page you were looking\
+        \ for doesn't exist.</h1>\n      <p>You may have mistyped the address or the\
+        \ page may have moved.</p>\n    </div>\n    <p>If you are the application\
+        \ owner check the logs for more information.</p>\n  </div>\n</body>\n</html>\n"
     headers:
       Connection:
       - keep-alive

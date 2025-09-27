@@ -55,15 +55,16 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AB7arGwwTxjEFG1LW6CoSNFLrlOK8\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1727214161,\n  \"model\": \"gpt-4o-2024-05-13\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I should begin by gathering
-      the final answer using the available tool.\\n\\nAction: get_final_answer \\nAction
-      Input: {}\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
-      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      289,\n    \"completion_tokens\": 25,\n    \"total_tokens\": 314,\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
+    content: "{\n  \"id\": \"chatcmpl-AB7arGwwTxjEFG1LW6CoSNFLrlOK8\",\n  \"object\"\
+      : \"chat.completion\",\n  \"created\": 1727214161,\n  \"model\": \"gpt-4o-2024-05-13\"\
+      ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n    \
+      \    \"role\": \"assistant\",\n        \"content\": \"Thought: I should begin\
+      \ by gathering the final answer using the available tool.\\n\\nAction: get_final_answer\
+      \ \\nAction Input: {}\",\n        \"refusal\": null\n      },\n      \"logprobs\"\
+      : null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n  \
+      \  \"prompt_tokens\": 289,\n    \"completion_tokens\": 25,\n    \"total_tokens\"\
+      : 314,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\": 0\n\
+      \    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
@@ -86,7 +87,7 @@ interactions:
       access-control-expose-headers:
       - X-Request-ID
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '480'
       openai-version:
@@ -240,14 +241,16 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AB7at2ky0jO9NWxaRLGNCPNyEVDKv\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1727214163,\n  \"model\": \"gpt-4o-2024-05-13\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I now know the final answer.\\nFinal
-      Answer: 42\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
-      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      322,\n    \"completion_tokens\": 14,\n    \"total_tokens\": 336,\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
+    content: "{\n  \"id\": \"chatcmpl-AB7at2ky0jO9NWxaRLGNCPNyEVDKv\",\n  \"object\"\
+      : \"chat.completion\",\n  \"created\": 1727214163,\n  \"model\": \"gpt-4o-2024-05-13\"\
+      ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n    \
+      \    \"role\": \"assistant\",\n        \"content\": \"Thought: I now know the\
+      \ final answer.\\nFinal Answer: 42\",\n        \"refusal\": null\n      },\n\
+      \      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n\
+      \  \"usage\": {\n    \"prompt_tokens\": 322,\n    \"completion_tokens\": 14,\n\
+      \    \"total_tokens\": 336,\n    \"completion_tokens_details\": {\n      \"\
+      reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\
+      \n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
@@ -270,7 +273,7 @@ interactions:
       access-control-expose-headers:
       - X-Request-ID
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '931'
       openai-version:

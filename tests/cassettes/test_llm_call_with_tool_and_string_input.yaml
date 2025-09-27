@@ -43,20 +43,21 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AsZJ8HKXQU9nTB7xbGAkKxqrg9BZ2\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1737568798,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": null,\n        \"tool_calls\": [\n          {\n
-      \           \"id\": \"call_mfvEs2jngeFloVZpZOHZVaKY\",\n            \"type\":
-      \"function\",\n            \"function\": {\n              \"name\": \"get_current_year\",\n
-      \             \"arguments\": \"{}\"\n            }\n          }\n        ],\n
-      \       \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
-      \"tool_calls\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 46,\n    \"completion_tokens\":
-      12,\n    \"total_tokens\": 58,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
-      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
-      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
-      \"default\",\n  \"system_fingerprint\": \"fp_72ed7ab54c\"\n}\n"
+    content: "{\n  \"id\": \"chatcmpl-AsZJ8HKXQU9nTB7xbGAkKxqrg9BZ2\",\n  \"object\"\
+      : \"chat.completion\",\n  \"created\": 1737568798,\n  \"model\": \"gpt-4o-mini-2024-07-18\"\
+      ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n    \
+      \    \"role\": \"assistant\",\n        \"content\": null,\n        \"tool_calls\"\
+      : [\n          {\n            \"id\": \"call_mfvEs2jngeFloVZpZOHZVaKY\",\n \
+      \           \"type\": \"function\",\n            \"function\": {\n         \
+      \     \"name\": \"get_current_year\",\n              \"arguments\": \"{}\"\n\
+      \            }\n          }\n        ],\n        \"refusal\": null\n      },\n\
+      \      \"logprobs\": null,\n      \"finish_reason\": \"tool_calls\"\n    }\n\
+      \  ],\n  \"usage\": {\n    \"prompt_tokens\": 46,\n    \"completion_tokens\"\
+      : 12,\n    \"total_tokens\": 58,\n    \"prompt_tokens_details\": {\n      \"\
+      cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\"\
+      : {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\"\
+      : 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\"\
+      : \"default\",\n  \"system_fingerprint\": \"fp_72ed7ab54c\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
@@ -81,7 +82,7 @@ interactions:
       alt-svc:
       - h3=":443"; ma=86400
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '416'
       openai-version:

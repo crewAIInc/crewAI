@@ -44,9 +44,10 @@ interactions:
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: "{\n  \"error\": {\n    \"message\": \"Unsupported parameter: 'stop'
-        is not supported with this model.\",\n    \"type\": \"invalid_request_error\",\n
-        \   \"param\": \"stop\",\n    \"code\": \"unsupported_parameter\"\n  }\n}"
+      string: "{\n  \"error\": {\n    \"message\": \"Unsupported parameter: 'stop'\
+        \ is not supported with this model.\",\n    \"type\": \"invalid_request_error\"\
+        ,\n    \"param\": \"stop\",\n    \"code\": \"unsupported_parameter\"\n  }\n\
+        }"
     headers:
       CF-RAY:
       - 961220323a627e05-GRU
@@ -69,11 +70,11 @@ interactions:
       cf-cache-status:
       - DYNAMIC
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '9'
       openai-project:
-      - proj_xitITlrFeen7zjNSzML82h9x
+      - REDACTED
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -175,11 +176,11 @@ interactions:
       cf-cache-status:
       - DYNAMIC
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '1280'
       openai-project:
-      - proj_xitITlrFeen7zjNSzML82h9x
+      - REDACTED
       openai-version:
       - '2020-10-01'
       strict-transport-security:

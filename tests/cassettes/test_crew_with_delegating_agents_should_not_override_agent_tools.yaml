@@ -56,21 +56,22 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AhLsKP8xKkISk8ntUscyUKL30xRXW\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1734895556,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"I need to gather information to create
-      an amazing paragraph draft about AI Agents that aligns with the expected criteria
-      of a 4-paragraph article about AI. \\n\\nAction: Test Tool  \\nAction Input:
-      {\\\"query\\\": \\\"Write a captivating and informative paragraph about AI Agents,
-      focusing on their capabilities, applications, and significance in modern technology.\\\"}
-      \ \",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
-      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 309,\n    \"completion_tokens\":
-      68,\n    \"total_tokens\": 377,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
-      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
-      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"system_fingerprint\":
-      \"fp_0aa8d3e20b\"\n}\n"
+    content: "{\n  \"id\": \"chatcmpl-AhLsKP8xKkISk8ntUscyUKL30xRXW\",\n  \"object\"\
+      : \"chat.completion\",\n  \"created\": 1734895556,\n  \"model\": \"gpt-4o-mini-2024-07-18\"\
+      ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n    \
+      \    \"role\": \"assistant\",\n        \"content\": \"I need to gather information\
+      \ to create an amazing paragraph draft about AI Agents that aligns with the\
+      \ expected criteria of a 4-paragraph article about AI. \\n\\nAction: Test Tool\
+      \  \\nAction Input: {\\\"query\\\": \\\"Write a captivating and informative\
+      \ paragraph about AI Agents, focusing on their capabilities, applications, and\
+      \ significance in modern technology.\\\"}  \",\n        \"refusal\": null\n\
+      \      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n  \
+      \  }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 309,\n    \"completion_tokens\"\
+      : 68,\n    \"total_tokens\": 377,\n    \"prompt_tokens_details\": {\n      \"\
+      cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\"\
+      : {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\"\
+      : 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"system_fingerprint\"\
+      : \"fp_0aa8d3e20b\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
@@ -101,7 +102,7 @@ interactions:
       alt-svc:
       - h3=":443"; ma=86400
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '1075'
       openai-version:
@@ -191,22 +192,23 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AhLsMt1AgrzynC2TSJZZSwr9El8FV\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1734895558,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I have received the content
-      related to AI Agents, which I need to now use as a foundation for creating a
-      complete 4-paragraph article about AI. \\n\\nAction: Test Tool  \\nAction Input:
-      {\\\"query\\\": \\\"Based on the previous paragraph about AI Agents, write a
-      4-paragraph article about AI, including an introduction, discussion of AI Agents,
-      their applications, and a conclusion on the future of AI.\\\"}  \",\n        \"refusal\":
-      null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
-      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 409,\n    \"completion_tokens\":
-      88,\n    \"total_tokens\": 497,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
-      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
-      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"system_fingerprint\":
-      \"fp_0aa8d3e20b\"\n}\n"
+    content: "{\n  \"id\": \"chatcmpl-AhLsMt1AgrzynC2TSJZZSwr9El8FV\",\n  \"object\"\
+      : \"chat.completion\",\n  \"created\": 1734895558,\n  \"model\": \"gpt-4o-mini-2024-07-18\"\
+      ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n    \
+      \    \"role\": \"assistant\",\n        \"content\": \"Thought: I have received\
+      \ the content related to AI Agents, which I need to now use as a foundation\
+      \ for creating a complete 4-paragraph article about AI. \\n\\nAction: Test Tool\
+      \  \\nAction Input: {\\\"query\\\": \\\"Based on the previous paragraph about\
+      \ AI Agents, write a 4-paragraph article about AI, including an introduction,\
+      \ discussion of AI Agents, their applications, and a conclusion on the future\
+      \ of AI.\\\"}  \",\n        \"refusal\": null\n      },\n      \"logprobs\"\
+      : null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n  \
+      \  \"prompt_tokens\": 409,\n    \"completion_tokens\": 88,\n    \"total_tokens\"\
+      : 497,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n    \
+      \  \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n     \
+      \ \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\"\
+      : 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"system_fingerprint\"\
+      : \"fp_0aa8d3e20b\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
@@ -231,7 +233,7 @@ interactions:
       alt-svc:
       - h3=":443"; ma=86400
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '1346'
       openai-version:
@@ -394,42 +396,44 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AhLsNJa6GxRIHF8l8eViU7D6CyBHP\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1734895559,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I have gathered the complete
-      article on AI, which aligns with the expected criteria. Now I will present the
-      final answer as required. \\n\\nFinal Answer: \\n\\nArtificial Intelligence
-      (AI) has rapidly evolved to become an integral part of our modern world, driving
-      significant advancements across various industries. AI refers to the simulation
-      of human intelligence in machines programmed to think and learn like humans.
-      This technology enables machines to analyze data, recognize patterns, and make
-      decisions with minimal human intervention, paving the way for innovation in
-      fields like healthcare, finance, and transportation.\\n\\nAI Agents, in particular,
-      embody the future of artificial intelligence by acting autonomously to perform
-      complex tasks. These agents leverage machine learning and natural language processing
-      to interact with users and understand their needs. They're deployed in customer
-      service applications, virtual assistants, and personal scheduling tools, showcasing
-      their capability to streamline processes and enhance user experience. By mimicking
-      human reasoning, AI Agents can adapt to changing situations and provide personalized
-      solutions.\\n\\nThe applications of AI Agents extend beyond mere task completion;
-      they are transforming the way businesses operate. In the realm of customer engagement,
-      AI Agents analyze customer behavior to provide insights that help companies
-      tailor their offerings. In healthcare, they assist in diagnosing illnesses by
-      analyzing patient data and suggesting treatments. The versatility of AI Agents
-      makes them invaluable assets in our increasingly automated world.\\n\\nAs we
-      look to the future, the potential of AI continues to expand. With ongoing advancements
-      in technology, AI Agents are set to become even more sophisticated, further
-      bridging the gap between humans and machines. The prospects of AI promise not
-      only to improve efficiency and productivity but also to change the way we live
-      and work, promising a future where intelligent, autonomous agents support us
-      in our daily lives.\",\n        \"refusal\": null\n      },\n      \"logprobs\":
-      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      546,\n    \"completion_tokens\": 343,\n    \"total_tokens\": 889,\n    \"prompt_tokens_details\":
-      {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"system_fingerprint\":
-      \"fp_0aa8d3e20b\"\n}\n"
+    content: "{\n  \"id\": \"chatcmpl-AhLsNJa6GxRIHF8l8eViU7D6CyBHP\",\n  \"object\"\
+      : \"chat.completion\",\n  \"created\": 1734895559,\n  \"model\": \"gpt-4o-mini-2024-07-18\"\
+      ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n    \
+      \    \"role\": \"assistant\",\n        \"content\": \"Thought: I have gathered\
+      \ the complete article on AI, which aligns with the expected criteria. Now I\
+      \ will present the final answer as required. \\n\\nFinal Answer: \\n\\nArtificial\
+      \ Intelligence (AI) has rapidly evolved to become an integral part of our modern\
+      \ world, driving significant advancements across various industries. AI refers\
+      \ to the simulation of human intelligence in machines programmed to think and\
+      \ learn like humans. This technology enables machines to analyze data, recognize\
+      \ patterns, and make decisions with minimal human intervention, paving the way\
+      \ for innovation in fields like healthcare, finance, and transportation.\\n\\\
+      nAI Agents, in particular, embody the future of artificial intelligence by acting\
+      \ autonomously to perform complex tasks. These agents leverage machine learning\
+      \ and natural language processing to interact with users and understand their\
+      \ needs. They're deployed in customer service applications, virtual assistants,\
+      \ and personal scheduling tools, showcasing their capability to streamline processes\
+      \ and enhance user experience. By mimicking human reasoning, AI Agents can adapt\
+      \ to changing situations and provide personalized solutions.\\n\\nThe applications\
+      \ of AI Agents extend beyond mere task completion; they are transforming the\
+      \ way businesses operate. In the realm of customer engagement, AI Agents analyze\
+      \ customer behavior to provide insights that help companies tailor their offerings.\
+      \ In healthcare, they assist in diagnosing illnesses by analyzing patient data\
+      \ and suggesting treatments. The versatility of AI Agents makes them invaluable\
+      \ assets in our increasingly automated world.\\n\\nAs we look to the future,\
+      \ the potential of AI continues to expand. With ongoing advancements in technology,\
+      \ AI Agents are set to become even more sophisticated, further bridging the\
+      \ gap between humans and machines. The prospects of AI promise not only to improve\
+      \ efficiency and productivity but also to change the way we live and work, promising\
+      \ a future where intelligent, autonomous agents support us in our daily lives.\"\
+      ,\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"\
+      finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\"\
+      : 546,\n    \"completion_tokens\": 343,\n    \"total_tokens\": 889,\n    \"\
+      prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\"\
+      : 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\"\
+      : 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n\
+      \      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"system_fingerprint\"\
+      : \"fp_0aa8d3e20b\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
@@ -454,7 +458,7 @@ interactions:
       alt-svc:
       - h3=":443"; ma=86400
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '4897'
       openai-version:

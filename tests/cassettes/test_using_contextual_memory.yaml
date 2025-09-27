@@ -120,40 +120,43 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AB7d4BrARnIWeNI7ngTDSTGu9XBPA\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1727214298,\n  \"model\": \"gpt-4o-2024-05-13\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"I now can give a great answer.\\nFinal
-      Answer: \\n**Topic**: Basic Addition\\n\\n**Explanation**:\\nAddition is a fundamental
-      concept in math that means combining two or more numbers to get a new total.
-      It's like putting together pieces of a puzzle to see the whole picture. When
-      we add, we take two or more groups of things and count them all together.\\n\\n**Angle**:\\nUse
-      relatable and engaging real-life scenarios to illustrate addition, making it
-      fun and easier for a 6-year-old to understand and apply.\\n\\n**Examples**:\\n\\n1.
-      **Counting Apples**:\\n   Let's say you have 2 apples and your friend gives
-      you 3 more apples. How many apples do you have in total?\\n   - You start with
-      2 apples.\\n   - Your friend gives you 3 more apples.\\n   - Now, you count
-      all the apples together: 2 + 3 = 5.\\n   - So, you have 5 apples in total.\\n\\n2.
-      **Toy Cars**:\\n   Imagine you have 4 toy cars and you find 2 more toy cars
-      in your room. How many toy cars do you have now?\\n   - You start with 4 toy
-      cars.\\n   - You find 2 more toy cars.\\n   - You count them all together: 4
-      + 2 = 6.\\n   - So, you have 6 toy cars in total.\\n\\n3. **Drawing Pictures**:\\n
-      \  If you draw 3 pictures today and 2 pictures tomorrow, how many pictures will
-      you have drawn in total?\\n   - You draw 3 pictures today.\\n   - You draw 2
-      pictures tomorrow.\\n   - You add them together: 3 + 2 = 5.\\n   - So, you will
-      have drawn 5 pictures in total.\\n\\n4. **Using Fingers**:\\n   Let's use your
-      fingers to practice addition. Show 3 fingers on one hand and 1 finger on the
-      other hand. How many fingers are you holding up?\\n   - 3 fingers on one hand.\\n
-      \  - 1 finger on the other hand.\\n   - Put them together and count: 3 + 1 =
-      4.\\n   - So, you are holding up 4 fingers.\\n\\nBy using objects that kids
-      are familiar with, such as apples, toy cars, drawings, and even their own fingers,
-      we can make the concept of addition relatable and enjoyable. Practicing with
-      real items helps children visualize the math and understand that addition is
-      simply combining groups to find out how many there are altogether.\",\n        \"refusal\":
-      null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
-      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 205,\n    \"completion_tokens\":
-      511,\n    \"total_tokens\": 716,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
-      0\n    }\n  },\n  \"system_fingerprint\": \"fp_3537616b13\"\n}\n"
+    content: "{\n  \"id\": \"chatcmpl-AB7d4BrARnIWeNI7ngTDSTGu9XBPA\",\n  \"object\"\
+      : \"chat.completion\",\n  \"created\": 1727214298,\n  \"model\": \"gpt-4o-2024-05-13\"\
+      ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n    \
+      \    \"role\": \"assistant\",\n        \"content\": \"I now can give a great\
+      \ answer.\\nFinal Answer: \\n**Topic**: Basic Addition\\n\\n**Explanation**:\\\
+      nAddition is a fundamental concept in math that means combining two or more\
+      \ numbers to get a new total. It's like putting together pieces of a puzzle\
+      \ to see the whole picture. When we add, we take two or more groups of things\
+      \ and count them all together.\\n\\n**Angle**:\\nUse relatable and engaging\
+      \ real-life scenarios to illustrate addition, making it fun and easier for a\
+      \ 6-year-old to understand and apply.\\n\\n**Examples**:\\n\\n1. **Counting\
+      \ Apples**:\\n   Let's say you have 2 apples and your friend gives you 3 more\
+      \ apples. How many apples do you have in total?\\n   - You start with 2 apples.\\\
+      n   - Your friend gives you 3 more apples.\\n   - Now, you count all the apples\
+      \ together: 2 + 3 = 5.\\n   - So, you have 5 apples in total.\\n\\n2. **Toy\
+      \ Cars**:\\n   Imagine you have 4 toy cars and you find 2 more toy cars in your\
+      \ room. How many toy cars do you have now?\\n   - You start with 4 toy cars.\\\
+      n   - You find 2 more toy cars.\\n   - You count them all together: 4 + 2 =\
+      \ 6.\\n   - So, you have 6 toy cars in total.\\n\\n3. **Drawing Pictures**:\\\
+      n   If you draw 3 pictures today and 2 pictures tomorrow, how many pictures\
+      \ will you have drawn in total?\\n   - You draw 3 pictures today.\\n   - You\
+      \ draw 2 pictures tomorrow.\\n   - You add them together: 3 + 2 = 5.\\n   -\
+      \ So, you will have drawn 5 pictures in total.\\n\\n4. **Using Fingers**:\\\
+      n   Let's use your fingers to practice addition. Show 3 fingers on one hand\
+      \ and 1 finger on the other hand. How many fingers are you holding up?\\n  \
+      \ - 3 fingers on one hand.\\n   - 1 finger on the other hand.\\n   - Put them\
+      \ together and count: 3 + 1 = 4.\\n   - So, you are holding up 4 fingers.\\\
+      n\\nBy using objects that kids are familiar with, such as apples, toy cars,\
+      \ drawings, and even their own fingers, we can make the concept of addition\
+      \ relatable and enjoyable. Practicing with real items helps children visualize\
+      \ the math and understand that addition is simply combining groups to find out\
+      \ how many there are altogether.\",\n        \"refusal\": null\n      },\n \
+      \     \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n\
+      \  \"usage\": {\n    \"prompt_tokens\": 205,\n    \"completion_tokens\": 511,\n\
+      \    \"total_tokens\": 716,\n    \"completion_tokens_details\": {\n      \"\
+      reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_3537616b13\"\
+      \n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
@@ -176,7 +179,7 @@ interactions:
       access-control-expose-headers:
       - X-Request-ID
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '7751'
       openai-version:
@@ -409,7 +412,7 @@ interactions:
       openai-model:
       - text-embedding-3-small
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '76'
       openai-version:
@@ -582,7 +585,7 @@ interactions:
       cf-cache-status:
       - DYNAMIC
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '4149'
       openai-version:
@@ -790,7 +793,7 @@ interactions:
       openai-model:
       - text-embedding-3-small
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '457'
       openai-version:
@@ -1000,7 +1003,7 @@ interactions:
       openai-model:
       - text-embedding-3-small
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '128'
       openai-version:
@@ -1213,11 +1216,11 @@ interactions:
       openai-model:
       - text-embedding-3-small
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '69'
       openai-project:
-      - proj_xitITlrFeen7zjNSzML82h9x
+      - REDACTED
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -1425,11 +1428,11 @@ interactions:
       openai-model:
       - text-embedding-3-small
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '86'
       openai-project:
-      - proj_xitITlrFeen7zjNSzML82h9x
+      - REDACTED
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -1637,11 +1640,11 @@ interactions:
       openai-model:
       - text-embedding-3-small
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '67'
       openai-project:
-      - proj_xitITlrFeen7zjNSzML82h9x
+      - REDACTED
       openai-version:
       - '2020-10-01'
       strict-transport-security:

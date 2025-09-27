@@ -1,0 +1,58 @@
+from typing import Any, Optional, Type
+
+from pydantic import BaseModel, Field
+
+from ..rag.rag_tool import RagTool
+from crewai_tools.rag.data_types import DataType
+
+
+class FixedYoutubeChannelSearchToolSchema(BaseModel):
+    """Input for YoutubeChannelSearchTool."""
+
+    search_query: str = Field(
+        ...,
+        description="Mandatory search query you want to use to search the Youtube Channels content",
+    )
+
+
+class YoutubeChannelSearchToolSchema(FixedYoutubeChannelSearchToolSchema):
+    """Input for YoutubeChannelSearchTool."""
+
+    youtube_channel_handle: str = Field(
+        ..., description="Mandatory youtube_channel_handle path you want to search"
+    )
+
+
+class YoutubeChannelSearchTool(RagTool):
+    name: str = "Search a Youtube Channels content"
+    description: str = (
+        "A tool that can be used to semantic search a query from a Youtube Channels content."
+    )
+    args_schema: Type[BaseModel] = YoutubeChannelSearchToolSchema
+
+    def __init__(self, youtube_channel_handle: Optional[str] = None, **kwargs):
+        super().__init__(**kwargs)
+        if youtube_channel_handle is not None:
+            self.add(youtube_channel_handle)
+            self.description = f"A tool that can be used to semantic search a query the {youtube_channel_handle} Youtube Channels content."
+            self.args_schema = FixedYoutubeChannelSearchToolSchema
+            self._generate_description()
+
+    def add(
+        self,
+        youtube_channel_handle: str,
+    ) -> None:
+        if not youtube_channel_handle.startswith("@"):
+            youtube_channel_handle = f"@{youtube_channel_handle}"
+        super().add(youtube_channel_handle, data_type=DataType.YOUTUBE_CHANNEL)
+
+    def _run(
+        self,
+        search_query: str,
+        youtube_channel_handle: Optional[str] = None,
+        similarity_threshold: float | None = None,
+        limit: int | None = None,
+    ) -> str:
+        if youtube_channel_handle is not None:
+            self.add(youtube_channel_handle)
+        return super()._run(query=search_query, similarity_threshold=similarity_threshold, limit=limit)

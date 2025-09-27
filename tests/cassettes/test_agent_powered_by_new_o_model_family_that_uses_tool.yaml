@@ -54,19 +54,20 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-BHIeRex66NqQZhbzOTR7yLSo0WdT3\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1743462971,\n  \"model\": \"o3-mini-2025-01-31\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"```\\nThought: I need to retrieve the
-      total number of customers from the company's customer data.\\nAction: comapny_customer_data\\nAction
-      Input: {\\\"query\\\": \\\"number_of_customers\\\"}\",\n        \"refusal\":
-      null,\n        \"annotations\": []\n      },\n      \"finish_reason\": \"stop\"\n
-      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 262,\n    \"completion_tokens\":
-      881,\n    \"total_tokens\": 1143,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
-      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
-      \     \"reasoning_tokens\": 832,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
-      \"default\",\n  \"system_fingerprint\": \"fp_617f206dd9\"\n}\n"
+    content: "{\n  \"id\": \"chatcmpl-BHIeRex66NqQZhbzOTR7yLSo0WdT3\",\n  \"object\"\
+      : \"chat.completion\",\n  \"created\": 1743462971,\n  \"model\": \"o3-mini-2025-01-31\"\
+      ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n    \
+      \    \"role\": \"assistant\",\n        \"content\": \"```\\nThought: I need\
+      \ to retrieve the total number of customers from the company's customer data.\\\
+      nAction: comapny_customer_data\\nAction Input: {\\\"query\\\": \\\"number_of_customers\\\
+      \"}\",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n\
+      \      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\"\
+      : 262,\n    \"completion_tokens\": 881,\n    \"total_tokens\": 1143,\n    \"\
+      prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\"\
+      : 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\"\
+      : 832,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n\
+      \      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\": \"\
+      default\",\n  \"system_fingerprint\": \"fp_617f206dd9\"\n}\n"
     headers:
       CF-RAY:
       - 92938d93ac687ad0-SJC
@@ -97,7 +98,7 @@ interactions:
       cf-cache-status:
       - DYNAMIC
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '6491'
       openai-version:
@@ -216,18 +217,19 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-BHIeYiyOID6u9eviBPAKBkV1z1OYn\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1743462978,\n  \"model\": \"o3-mini-2025-01-31\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"```\\nThought: I retrieved the number
-      of customers from the company data and confirmed it.\\nFinal Answer: 42\\n```\",\n
-      \       \"refusal\": null,\n        \"annotations\": []\n      },\n      \"finish_reason\":
-      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 323,\n    \"completion_tokens\":
-      164,\n    \"total_tokens\": 487,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
-      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
-      \     \"reasoning_tokens\": 128,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
-      \"default\",\n  \"system_fingerprint\": \"fp_617f206dd9\"\n}\n"
+    content: "{\n  \"id\": \"chatcmpl-BHIeYiyOID6u9eviBPAKBkV1z1OYn\",\n  \"object\"\
+      : \"chat.completion\",\n  \"created\": 1743462978,\n  \"model\": \"o3-mini-2025-01-31\"\
+      ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n    \
+      \    \"role\": \"assistant\",\n        \"content\": \"```\\nThought: I retrieved\
+      \ the number of customers from the company data and confirmed it.\\nFinal Answer:\
+      \ 42\\n```\",\n        \"refusal\": null,\n        \"annotations\": []\n   \
+      \   },\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n   \
+      \ \"prompt_tokens\": 323,\n    \"completion_tokens\": 164,\n    \"total_tokens\"\
+      : 487,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n    \
+      \  \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n     \
+      \ \"reasoning_tokens\": 128,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\"\
+      : 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\"\
+      : \"default\",\n  \"system_fingerprint\": \"fp_617f206dd9\"\n}\n"
     headers:
       CF-RAY:
       - 92938dbdb99b7ad0-SJC
@@ -252,7 +254,7 @@ interactions:
       cf-cache-status:
       - DYNAMIC
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '2085'
       openai-version:

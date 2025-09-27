@@ -294,7 +294,7 @@ interactions:
       openai-model:
       - text-embedding-3-small
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '45'
       openai-version:
@@ -506,7 +506,7 @@ interactions:
       openai-model:
       - text-embedding-3-small
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '77'
       openai-version:
@@ -701,7 +701,7 @@ interactions:
       cf-cache-status:
       - DYNAMIC
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '13758'
       openai-version:
@@ -933,7 +933,7 @@ interactions:
       openai-model:
       - text-embedding-3-small
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '101'
       openai-version:
@@ -1101,7 +1101,7 @@ interactions:
       cf-cache-status:
       - DYNAMIC
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '3804'
       openai-version:
@@ -1309,7 +1309,7 @@ interactions:
       openai-model:
       - text-embedding-3-small
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '77'
       openai-version:
@@ -1518,7 +1518,7 @@ interactions:
       openai-model:
       - text-embedding-3-small
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '80'
       openai-version:
@@ -1728,7 +1728,7 @@ interactions:
       openai-model:
       - text-embedding-3-small
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '117'
       openai-version:
@@ -1938,7 +1938,7 @@ interactions:
       openai-model:
       - text-embedding-3-small
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '42'
       openai-version:

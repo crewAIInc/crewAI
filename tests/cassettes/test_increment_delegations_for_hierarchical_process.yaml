@@ -76,21 +76,22 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AB7gOcJBA71O3M4v6A9EJ29goBeMy\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1727214504,\n  \"model\": \"gpt-4o-2024-05-13\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I need to get an integer score
-      between 1-5 for the given title. To do this, I'll ask the Scorer to evaluate
-      the title based on specific criteria.\\n\\nAction: Ask question to coworker\\nAction
-      Input: {\\\"question\\\": \\\"Can you provide an integer score between 1-5 for
-      the following title: 'The impact of AI in the future of work'?\\\", \\\"context\\\":
-      \\\"We need a score for the title to assess its impact and relevance. Please
-      evaluate based on factors such as clarity, relevance, and potential interest
-      to readers.\\\", \\\"coworker\\\": \\\"Scorer\\\"}\",\n        \"refusal\":
-      null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
-      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 664,\n    \"completion_tokens\":
-      124,\n    \"total_tokens\": 788,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
-      0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
+    content: "{\n  \"id\": \"chatcmpl-AB7gOcJBA71O3M4v6A9EJ29goBeMy\",\n  \"object\"\
+      : \"chat.completion\",\n  \"created\": 1727214504,\n  \"model\": \"gpt-4o-2024-05-13\"\
+      ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n    \
+      \    \"role\": \"assistant\",\n        \"content\": \"Thought: I need to get\
+      \ an integer score between 1-5 for the given title. To do this, I'll ask the\
+      \ Scorer to evaluate the title based on specific criteria.\\n\\nAction: Ask\
+      \ question to coworker\\nAction Input: {\\\"question\\\": \\\"Can you provide\
+      \ an integer score between 1-5 for the following title: 'The impact of AI in\
+      \ the future of work'?\\\", \\\"context\\\": \\\"We need a score for the title\
+      \ to assess its impact and relevance. Please evaluate based on factors such\
+      \ as clarity, relevance, and potential interest to readers.\\\", \\\"coworker\\\
+      \": \\\"Scorer\\\"}\",\n        \"refusal\": null\n      },\n      \"logprobs\"\
+      : null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n  \
+      \  \"prompt_tokens\": 664,\n    \"completion_tokens\": 124,\n    \"total_tokens\"\
+      : 788,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\": 0\n\
+      \    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
@@ -113,7 +114,7 @@ interactions:
       access-control-expose-headers:
       - X-Request-ID
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '1910'
       openai-version:
@@ -298,18 +299,19 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AB7gQi9vjKcuuQMzpVIjr5zS9SZ1z\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1727214506,\n  \"model\": \"gpt-4o-2024-05-13\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I now can give a great answer\\nFinal
-      Answer: I would score the title 'The impact of AI in the future of work' a 4
-      out of 5. The title is clear, highly relevant given the current technological
-      trends, and likely to attract significant interest from readers who are curious
-      about how AI will shape employment and work environments in the future.\",\n
-      \       \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
-      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 238,\n    \"completion_tokens\":
-      74,\n    \"total_tokens\": 312,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
-      0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
+    content: "{\n  \"id\": \"chatcmpl-AB7gQi9vjKcuuQMzpVIjr5zS9SZ1z\",\n  \"object\"\
+      : \"chat.completion\",\n  \"created\": 1727214506,\n  \"model\": \"gpt-4o-2024-05-13\"\
+      ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n    \
+      \    \"role\": \"assistant\",\n        \"content\": \"Thought: I now can give\
+      \ a great answer\\nFinal Answer: I would score the title 'The impact of AI in\
+      \ the future of work' a 4 out of 5. The title is clear, highly relevant given\
+      \ the current technological trends, and likely to attract significant interest\
+      \ from readers who are curious about how AI will shape employment and work environments\
+      \ in the future.\",\n        \"refusal\": null\n      },\n      \"logprobs\"\
+      : null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n  \
+      \  \"prompt_tokens\": 238,\n    \"completion_tokens\": 74,\n    \"total_tokens\"\
+      : 312,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\": 0\n\
+      \    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
@@ -332,7 +334,7 @@ interactions:
       access-control-expose-headers:
       - X-Request-ID
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '773'
       openai-version:
@@ -443,15 +445,17 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AB7gRRgj9D56nEUAAM1gYVIPooTBL\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1727214507,\n  \"model\": \"gpt-4o-2024-05-13\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I now know the final answer.\\n\\nFinal
-      Answer: The score for the title 'The impact of AI in the future of work' is
-      4 out of 5.\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
-      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      855,\n    \"completion_tokens\": 36,\n    \"total_tokens\": 891,\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
+    content: "{\n  \"id\": \"chatcmpl-AB7gRRgj9D56nEUAAM1gYVIPooTBL\",\n  \"object\"\
+      : \"chat.completion\",\n  \"created\": 1727214507,\n  \"model\": \"gpt-4o-2024-05-13\"\
+      ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n    \
+      \    \"role\": \"assistant\",\n        \"content\": \"Thought: I now know the\
+      \ final answer.\\n\\nFinal Answer: The score for the title 'The impact of AI\
+      \ in the future of work' is 4 out of 5.\",\n        \"refusal\": null\n    \
+      \  },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n\
+      \  ],\n  \"usage\": {\n    \"prompt_tokens\": 855,\n    \"completion_tokens\"\
+      : 36,\n    \"total_tokens\": 891,\n    \"completion_tokens_details\": {\n  \
+      \    \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\
+      \n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
@@ -474,7 +478,7 @@ interactions:
       access-control-expose-headers:
       - X-Request-ID
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '619'
       openai-version:
@@ -734,11 +738,11 @@ interactions:
       cf-cache-status:
       - DYNAMIC
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '383'
       openai-project:
-      - proj_xitITlrFeen7zjNSzML82h9x
+      - REDACTED
       openai-version:
       - '2020-10-01'
       x-envoy-upstream-service-time:

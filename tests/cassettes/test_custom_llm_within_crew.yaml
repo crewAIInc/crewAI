@@ -46,9 +46,9 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"error\": {\n    \"message\": \"Missing required parameter: 'messages[1].content[0].type'.\",\n
-      \   \"type\": \"invalid_request_error\",\n    \"param\": \"messages[1].content[0].type\",\n
-      \   \"code\": \"missing_required_parameter\"\n  }\n}"
+    content: "{\n  \"error\": {\n    \"message\": \"Missing required parameter: 'messages[1].content[0].type'.\"\
+      ,\n    \"type\": \"invalid_request_error\",\n    \"param\": \"messages[1].content[0].type\"\
+      ,\n    \"code\": \"missing_required_parameter\"\n  }\n}"
     headers:
       CF-RAY:
       - 91b54660799a15b4-SJC
@@ -77,7 +77,7 @@ interactions:
       cf-cache-status:
       - DYNAMIC
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '19'
       openai-version:
@@ -147,9 +147,9 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"error\": {\n    \"message\": \"Missing required parameter: 'messages[1].content[0].type'.\",\n
-      \   \"type\": \"invalid_request_error\",\n    \"param\": \"messages[1].content[0].type\",\n
-      \   \"code\": \"missing_required_parameter\"\n  }\n}"
+    content: "{\n  \"error\": {\n    \"message\": \"Missing required parameter: 'messages[1].content[0].type'.\"\
+      ,\n    \"type\": \"invalid_request_error\",\n    \"param\": \"messages[1].content[0].type\"\
+      ,\n    \"code\": \"missing_required_parameter\"\n  }\n}"
     headers:
       CF-RAY:
       - 91b54664bb1acef1-SJC
@@ -178,7 +178,7 @@ interactions:
       cf-cache-status:
       - DYNAMIC
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '25'
       openai-version:
@@ -248,9 +248,9 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"error\": {\n    \"message\": \"Missing required parameter: 'messages[1].content[0].type'.\",\n
-      \   \"type\": \"invalid_request_error\",\n    \"param\": \"messages[1].content[0].type\",\n
-      \   \"code\": \"missing_required_parameter\"\n  }\n}"
+    content: "{\n  \"error\": {\n    \"message\": \"Missing required parameter: 'messages[1].content[0].type'.\"\
+      ,\n    \"type\": \"invalid_request_error\",\n    \"param\": \"messages[1].content[0].type\"\
+      ,\n    \"code\": \"missing_required_parameter\"\n  }\n}"
     headers:
       CF-RAY:
       - 91b54666183beb22-SJC
@@ -279,7 +279,7 @@ interactions:
       cf-cache-status:
       - DYNAMIC
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '56'
       openai-version:

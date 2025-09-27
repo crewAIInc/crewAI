@@ -49,14 +49,16 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AB7gMdbh6Ncs7ekM3mpk0rfbH9oHy\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1727214502,\n  \"model\": \"gpt-4o-2024-05-13\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I now can give a great answer\\nFinal
-      Answer: 4\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
-      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      186,\n    \"completion_tokens\": 15,\n    \"total_tokens\": 201,\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_52a7f40b0b\"\n}\n"
+    content: "{\n  \"id\": \"chatcmpl-AB7gMdbh6Ncs7ekM3mpk0rfbH9oHy\",\n  \"object\"\
+      : \"chat.completion\",\n  \"created\": 1727214502,\n  \"model\": \"gpt-4o-2024-05-13\"\
+      ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n    \
+      \    \"role\": \"assistant\",\n        \"content\": \"Thought: I now can give\
+      \ a great answer\\nFinal Answer: 4\",\n        \"refusal\": null\n      },\n\
+      \      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n\
+      \  \"usage\": {\n    \"prompt_tokens\": 186,\n    \"completion_tokens\": 15,\n\
+      \    \"total_tokens\": 201,\n    \"completion_tokens_details\": {\n      \"\
+      reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_52a7f40b0b\"\
+      \n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
@@ -79,7 +81,7 @@ interactions:
       access-control-expose-headers:
       - X-Request-ID
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '231'
       openai-version:
@@ -148,17 +150,19 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AB7gNjFjFYTE9aEM06OLFECfe74NF\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1727214503,\n  \"model\": \"gpt-4o-2024-05-13\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": null,\n        \"tool_calls\": [\n          {\n
-      \           \"id\": \"call_BriklYUCRXEHjLYyyPiFo1w7\",\n            \"type\":
-      \"function\",\n            \"function\": {\n              \"name\": \"ScoreOutput\",\n
-      \             \"arguments\": \"{\\\"score\\\":4}\"\n            }\n          }\n
-      \       ],\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
-      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      100,\n    \"completion_tokens\": 5,\n    \"total_tokens\": 105,\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
+    content: "{\n  \"id\": \"chatcmpl-AB7gNjFjFYTE9aEM06OLFECfe74NF\",\n  \"object\"\
+      : \"chat.completion\",\n  \"created\": 1727214503,\n  \"model\": \"gpt-4o-2024-05-13\"\
+      ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n    \
+      \    \"role\": \"assistant\",\n        \"content\": null,\n        \"tool_calls\"\
+      : [\n          {\n            \"id\": \"call_BriklYUCRXEHjLYyyPiFo1w7\",\n \
+      \           \"type\": \"function\",\n            \"function\": {\n         \
+      \     \"name\": \"ScoreOutput\",\n              \"arguments\": \"{\\\"score\\\
+      \":4}\"\n            }\n          }\n        ],\n        \"refusal\": null\n\
+      \      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n  \
+      \  }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 100,\n    \"completion_tokens\"\
+      : 5,\n    \"total_tokens\": 105,\n    \"completion_tokens_details\": {\n   \
+      \   \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\
+      \n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
@@ -181,7 +185,7 @@ interactions:
       access-control-expose-headers:
       - X-Request-ID
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '221'
       openai-version:

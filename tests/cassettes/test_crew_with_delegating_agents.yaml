@@ -50,46 +50,48 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-Ahe7liUPejwfqxMe8aEWmKGJ837em\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1734965705,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"I now can give a great answer  \\nFinal
-      Answer: In the rapidly evolving landscape of technology, AI agents have emerged
-      as formidable tools, revolutionizing how we interact with data and automate
-      tasks. These sophisticated systems leverage machine learning and natural language
-      processing to perform a myriad of functions, from virtual personal assistants
-      to complex decision-making companions in industries such as finance, healthcare,
-      and education. By mimicking human intelligence, AI agents can analyze massive
-      data sets at unparalleled speeds, enabling businesses to uncover valuable insights,
-      enhance productivity, and elevate user experiences to unprecedented levels.\\n\\nOne
-      of the most striking aspects of AI agents is their adaptability; they learn
-      from their interactions and continuously improve their performance over time.
-      This feature is particularly valuable in customer service where AI agents can
-      address inquiries, resolve issues, and provide personalized recommendations
-      without the limitations of human fatigue. Moreover, with intuitive interfaces,
-      AI agents enhance user interactions, making technology more accessible and user-friendly,
-      thereby breaking down barriers that have historically hindered digital engagement.\\n\\nDespite
-      their immense potential, the deployment of AI agents raises important ethical
-      and practical considerations. Issues related to privacy, data security, and
-      the potential for job displacement necessitate thoughtful dialogue and proactive
-      measures. Striking a balance between technological innovation and societal impact
-      will be crucial as organizations integrate these agents into their operations.
-      Additionally, ensuring transparency in AI decision-making processes is vital
-      to maintain public trust as AI agents become an integral part of daily life.\\n\\nLooking
-      ahead, the future of AI agents appears bright, with ongoing advancements promising
-      even greater capabilities. As we continue to harness the power of AI, we can
-      expect these agents to play a transformative role in shaping various sectors\u2014streamlining
-      workflows, enabling smarter decision-making, and fostering more personalized
-      experiences. Embracing this technology responsibly can lead to a future where
-      AI agents not only augment human effort but also inspire creativity and efficiency
-      across the board, ultimately redefining our interaction with the digital world.\",\n
-      \       \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
-      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 208,\n    \"completion_tokens\":
-      382,\n    \"total_tokens\": 590,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
-      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
-      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"system_fingerprint\":
-      \"fp_0aa8d3e20b\"\n}\n"
+    content: "{\n  \"id\": \"chatcmpl-Ahe7liUPejwfqxMe8aEWmKGJ837em\",\n  \"object\"\
+      : \"chat.completion\",\n  \"created\": 1734965705,\n  \"model\": \"gpt-4o-mini-2024-07-18\"\
+      ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n    \
+      \    \"role\": \"assistant\",\n        \"content\": \"I now can give a great\
+      \ answer  \\nFinal Answer: In the rapidly evolving landscape of technology,\
+      \ AI agents have emerged as formidable tools, revolutionizing how we interact\
+      \ with data and automate tasks. These sophisticated systems leverage machine\
+      \ learning and natural language processing to perform a myriad of functions,\
+      \ from virtual personal assistants to complex decision-making companions in\
+      \ industries such as finance, healthcare, and education. By mimicking human\
+      \ intelligence, AI agents can analyze massive data sets at unparalleled speeds,\
+      \ enabling businesses to uncover valuable insights, enhance productivity, and\
+      \ elevate user experiences to unprecedented levels.\\n\\nOne of the most striking\
+      \ aspects of AI agents is their adaptability; they learn from their interactions\
+      \ and continuously improve their performance over time. This feature is particularly\
+      \ valuable in customer service where AI agents can address inquiries, resolve\
+      \ issues, and provide personalized recommendations without the limitations of\
+      \ human fatigue. Moreover, with intuitive interfaces, AI agents enhance user\
+      \ interactions, making technology more accessible and user-friendly, thereby\
+      \ breaking down barriers that have historically hindered digital engagement.\\\
+      n\\nDespite their immense potential, the deployment of AI agents raises important\
+      \ ethical and practical considerations. Issues related to privacy, data security,\
+      \ and the potential for job displacement necessitate thoughtful dialogue and\
+      \ proactive measures. Striking a balance between technological innovation and\
+      \ societal impact will be crucial as organizations integrate these agents into\
+      \ their operations. Additionally, ensuring transparency in AI decision-making\
+      \ processes is vital to maintain public trust as AI agents become an integral\
+      \ part of daily life.\\n\\nLooking ahead, the future of AI agents appears bright,\
+      \ with ongoing advancements promising even greater capabilities. As we continue\
+      \ to harness the power of AI, we can expect these agents to play a transformative\
+      \ role in shaping various sectors\u2014streamlining workflows, enabling smarter\
+      \ decision-making, and fostering more personalized experiences. Embracing this\
+      \ technology responsibly can lead to a future where AI agents not only augment\
+      \ human effort but also inspire creativity and efficiency across the board,\
+      \ ultimately redefining our interaction with the digital world.\",\n       \
+      \ \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"finish_reason\"\
+      : \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 208,\n    \"\
+      completion_tokens\": 382,\n    \"total_tokens\": 590,\n    \"prompt_tokens_details\"\
+      : {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"\
+      completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\"\
+      : 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\"\
+      : 0\n    }\n  },\n  \"system_fingerprint\": \"fp_0aa8d3e20b\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
@@ -120,7 +122,7 @@ interactions:
       alt-svc:
       - h3=":443"; ma=86400
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '5401'
       openai-version:

@@ -49,17 +49,18 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AnSbv3ywhwedwS3YW9Crde6hpWpmK\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1736351415,\n  \"model\": \"gpt-4o-2024-08-06\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"I now can give a great answer  \\nFinal
-      Answer: Hi!\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
-      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      154,\n    \"completion_tokens\": 13,\n    \"total_tokens\": 167,\n    \"prompt_tokens_details\":
-      {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"system_fingerprint\":
-      \"fp_5f20662549\"\n}\n"
+    content: "{\n  \"id\": \"chatcmpl-AnSbv3ywhwedwS3YW9Crde6hpWpmK\",\n  \"object\"\
+      : \"chat.completion\",\n  \"created\": 1736351415,\n  \"model\": \"gpt-4o-2024-08-06\"\
+      ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n    \
+      \    \"role\": \"assistant\",\n        \"content\": \"I now can give a great\
+      \ answer  \\nFinal Answer: Hi!\",\n        \"refusal\": null\n      },\n   \
+      \   \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"\
+      usage\": {\n    \"prompt_tokens\": 154,\n    \"completion_tokens\": 13,\n  \
+      \  \"total_tokens\": 167,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\"\
+      : 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":\
+      \ {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\"\
+      : 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"system_fingerprint\"\
+      : \"fp_5f20662549\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
@@ -90,7 +91,7 @@ interactions:
       alt-svc:
       - h3=":443"; ma=86400
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '416'
       openai-version:
@@ -172,18 +173,19 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AnSbwn8QaqAzfBVnzhTzIcDKykYTu\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1736351416,\n  \"model\": \"gpt-4o-2024-08-06\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"I should use the available tool to get
-      the final answer, as per the instructions. \\n\\nAction: get_final_answer\\nAction
-      Input: {}\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
-      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      294,\n    \"completion_tokens\": 28,\n    \"total_tokens\": 322,\n    \"prompt_tokens_details\":
-      {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"system_fingerprint\":
-      \"fp_5f20662549\"\n}\n"
+    content: "{\n  \"id\": \"chatcmpl-AnSbwn8QaqAzfBVnzhTzIcDKykYTu\",\n  \"object\"\
+      : \"chat.completion\",\n  \"created\": 1736351416,\n  \"model\": \"gpt-4o-2024-08-06\"\
+      ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n    \
+      \    \"role\": \"assistant\",\n        \"content\": \"I should use the available\
+      \ tool to get the final answer, as per the instructions. \\n\\nAction: get_final_answer\\\
+      nAction Input: {}\",\n        \"refusal\": null\n      },\n      \"logprobs\"\
+      : null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n  \
+      \  \"prompt_tokens\": 294,\n    \"completion_tokens\": 28,\n    \"total_tokens\"\
+      : 322,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n    \
+      \  \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n     \
+      \ \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\"\
+      : 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"system_fingerprint\"\
+      : \"fp_5f20662549\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
@@ -208,7 +210,7 @@ interactions:
       alt-svc:
       - h3=":443"; ma=86400
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '1206'
       openai-version:
@@ -292,17 +294,18 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AnSbxXFL4NXuGjOX35eCjcWq456lA\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1736351417,\n  \"model\": \"gpt-4o-2024-08-06\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I now know the final answer\\nFinal
-      Answer: 42\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
-      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      330,\n    \"completion_tokens\": 14,\n    \"total_tokens\": 344,\n    \"prompt_tokens_details\":
-      {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"system_fingerprint\":
-      \"fp_5f20662549\"\n}\n"
+    content: "{\n  \"id\": \"chatcmpl-AnSbxXFL4NXuGjOX35eCjcWq456lA\",\n  \"object\"\
+      : \"chat.completion\",\n  \"created\": 1736351417,\n  \"model\": \"gpt-4o-2024-08-06\"\
+      ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n    \
+      \    \"role\": \"assistant\",\n        \"content\": \"Thought: I now know the\
+      \ final answer\\nFinal Answer: 42\",\n        \"refusal\": null\n      },\n\
+      \      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n\
+      \  \"usage\": {\n    \"prompt_tokens\": 330,\n    \"completion_tokens\": 14,\n\
+      \    \"total_tokens\": 344,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\"\
+      : 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":\
+      \ {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\"\
+      : 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"system_fingerprint\"\
+      : \"fp_5f20662549\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
@@ -327,7 +330,7 @@ interactions:
       alt-svc:
       - h3=":443"; ma=86400
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '438'
       openai-version:

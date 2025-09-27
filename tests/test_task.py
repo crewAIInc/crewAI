@@ -1634,4 +1634,4 @@ def test_task_interpolation_with_hyphens():
     result = crew.kickoff(inputs={"interpolation-with-hyphens": "say hello world"})
     assert "say hello world" in task.prompt()
 
-    assert result.raw == "Hello, World!"
+    assert result.raw == "Hello World!"

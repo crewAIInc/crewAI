@@ -13,7 +13,7 @@ interactions:
       accept:
       - application/json
       accept-encoding:
-      - gzip, deflate, zstd
+      - gzip, deflate
       connection:
       - keep-alive
       content-length:
@@ -23,7 +23,7 @@ interactions:
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.78.0
+      - OpenAI/Python 1.109.1
       x-stainless-arch:
       - arm64
       x-stainless-async:
@@ -33,7 +33,7 @@ interactions:
       x-stainless-os:
       - MacOS
       x-stainless-package-version:
-      - 1.78.0
+      - 1.109.1
       x-stainless-raw-response:
       - 'true'
       x-stainless-read-timeout:
@@ -43,37 +43,53 @@ interactions:
       x-stainless-runtime:
       - CPython
       x-stainless-runtime-version:
-      - 3.12.9
+      - 3.10.18
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    body:
-      string: !!binary |
-        H4sIAAAAAAAAAwAAAP//TFPRbttGEHzPVwz04taQBFt1nFZvsgsnRlvYqI0aafOyPK7IjY97xO1R
-        CpMv6nf0x4qlZLcvBHh3Mzs7s/vtDTCTerbGLLRUQtfHxVUzPF6udsaXHx/Cn7//8fG8e9rf/XxF
-        X+vqaTZ3RKo+cygvqGVIXR+5SNLDdchMhZ31/N3FT28vL99enE0XXao5Oqzpy+IiLTpRWazOVheL
-        s3eL8x+P6DZJYJut8dcbAPg2fV2n1vxltsbENZ10bEYNz9avj4BZTtFPZmQmVkjLbP7fZUhaWCfp
-        j20amrascQtNewRSNLJjEBrXD1LbcwY+6Y0oRWym/zUeW0ZJPfpII2eIorSMfcqxnoMMaYu7UFLF
-        Gauz1Q9ziOFXScoRv7GZLPEkNccRmRvKNdcTSNmBzjRVZyuwFALnY52Jl2JEkY7nBya0ZGipBikk
-        xsFKljQYAmXmjNBSplA4y1euUY3gLyVTyrUo5RH2LDHaHDsxSToHaY2Q1E1jDePSO/+kv/CITWiF
-        d9yxFlv78QKnp9dxqOz0dH2UYj1rmfR39DllKaMLbuVVDRXcXOOKcuCYlObYt5wZLaPiQB1P2BCH
-        6sS8z4X3ichUizawkDLnJT5MzxQlk9qWc+YaJeGeshgeSLQs3nPuSBTf3T+8/97TWZ2tzpcHzbda
-        OCv5pFJ07R+8RI1NbliLKDnZTkJJeXwJ1uG4Tj1h0/3zd5ZAk1PHqxVubm82ePL0cT30cxiHIbtm
-        7z1yQ2H0gAkvddFyTsuji5s95fp/Nnqi+6Tohlikj4wrijEp6pO7DJoez9FK00Zp2vJSxgqVwbxM
-        mfy08jKdTUwVxTgiKYx3nCkihUAeuS094PtIo/M8lDHylO5BiRieNe0V25SnIqIhcy1VZNRZqio6
-        iiqJUsY5+sxBjNH72mlzGKc+pyhbCWgSxYWHKNos8cGd8ZVjz8PnpMm085HxZveGVjpPoiPlYccZ
-        pc2+qyjeNGreshobjKmLbBbHOTp6PrjRgaYx9s13oK9yOkS5FY71chrrW93GgTUcOr7iMWk92ShW
-        JNhxwU4M0vUUXhka8uU7uHEk8CuyXqbMj7t66H5Kpk+5WEdqrfRo6V8AAAD//4xVy24CIRTdz1cQ
-        1m1Tx+nCr+gXGHKFO85NGSDAaF347w2ggtUmXR84931O0hcdLJP5mlC14yNzPfmJQlrB0qkkWWQW
-        VMyhH62fIUVNApUXgWk8oGZH1JqRiTYzzqRe1+8hDRFYEhOY83kWVKEimbcx55mFoLTlM2+IvuoL
-        fuPs0gQxsOMEkVFkM4IJiWmHD9vWaiGLVsHprRVfj+MSIBmAWbRuADDGxpxQlv3tBTnfhF7bvfN2
-        F3595SMZCpPwCMGaJOohWsczeu4Y22ZDWe48gjtvZxdFtF+Yw636vvDx6mMV7TebCxptBF2BoV+9
-        PCEUCiOQDo0ncQlyQlW/VgODRZFtgK4p+zGdZ9yldDL7/9BXQEp0EZVw6aTlfcn1mcfk8389u7U5
-        J8wD+gNJFJHQp1EoHGHRxX15OIWIsxjJ7NE7T8WCRyfWA3wMgJu15N25+wEAAP//AwDdzCHTkAgA
-        AA==
+    content: "{\n  \"id\": \"chatcmpl-CKF9XzyDXXSKpGb0pnzKDQoJjx9li\",\n  \"object\"\
+      : \"chat.completion\",\n  \"created\": 1758940843,\n  \"model\": \"gpt-4o-mini-2024-07-18\"\
+      ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n    \
+      \    \"role\": \"assistant\",\n        \"content\": \"Thought: I now can give\
+      \ a great answer  \\nFinal Answer: As of October 2023, the title of the best\
+      \ soccer player in the world is widely attributed to Lionel Messi. Here\u2019\
+      s an overview of his career and achievements that contribute to this status:\\\
+      n\\n1. **Profile**:  \\n   - **Name**: Lionel Messi  \\n   - **Nationality**:\
+      \ Argentine  \\n   - **Position**: Forward  \\n   - **Current Club**: Inter\
+      \ Miami (as of 2023)\\n\\n2. **Club Career Highlights**:  \\n   - **FC Barcelona**\
+      \ (2004\u20132021):  \\n     - 672 goals in 778 appearances  \\n     - 10 La\
+      \ Liga titles  \\n     - 7 Copa del Rey titles  \\n     - 4 UEFA Champions League\
+      \ titles  \\n   - **Paris Saint-Germain** (2021\u20132023):  \\n     - Continued\
+      \ to add to his goal tally and won the Ligue 1 title.\\n   - **Inter Miami**:\
+      \  \\n     - Joined in 2023, making an immediate impact in Major League Soccer\
+      \ (MLS).\\n\\n3. **International Achievements**:  \\n   - **Argentina National\
+      \ Team**:  \\n     - Won the Copa America in 2021  \\n     - Won the FIFA World\
+      \ Cup in 2022, where he played a pivotal role and was awarded the Golden Ball\
+      \ as the tournament's best player.  \\n     - Victories in previous youth tournaments,\
+      \ including the FIFA U-20 World Cup and Olympic Gold Medal in 2008.\\n\\n4.\
+      \ **Individual Awards**:  \\n   - 7-time Ballon d'Or winner (record)  \\n  \
+      \ - Numerous Best FIFA Men's Player awards  \\n   - Holds records for most goals\
+      \ in a calendar year and various other individual honors.\\n\\n5. **Playing\
+      \ Style**:  \\n   - Known for his incredible dribbling, vision, and goal-scoring\
+      \ ability.  \\n   - Exceptional playmaking skills and creativity on the field.\
+      \  \\n   - Renowned for his consistency and longevity at the highest level.\\\
+      n\\n6. **Impact on the Game**:  \\n   - Regarded as one of the greatest players\
+      \ of all time.  \\n   - Has inspired countless players and fans globally.  \\\
+      n   - Significant influence on the sport, both on and off the pitch.\\n\\nIn\
+      \ summary, Lionel Messi's extraordinary skill set, unmatched achievements, and\
+      \ ongoing influence on and off the field secure his position as the best soccer\
+      \ player in the world as of October 2023.\",\n        \"refusal\": null,\n \
+      \       \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\"\
+      : \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 122,\n    \"\
+      completion_tokens\": 497,\n    \"total_tokens\": 619,\n    \"prompt_tokens_details\"\
+      : {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"\
+      completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\"\
+      : 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\"\
+      : 0\n    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\"\
+      : \"fp_560af6e559\"\n}\n"
     headers:
       CF-RAY:
-      - 94d9a27f5dc000f9-GRU
+      - 9857a3511d7d82a6-EWR
       Connection:
       - keep-alive
       Content-Encoding:
@@ -81,15 +97,17 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Tue, 10 Jun 2025 14:42:51 GMT
+      - Sat, 27 Sep 2025 02:40:53 GMT
       Server:
       - cloudflare
       Set-Cookie:
-      - __cf_bm=7hq1JYlSmmLvjUR7npK1vcLJYOvCPn947S.EYBtvTcQ-1749566571-1.0.1.1-11XCSwdUqYCYC3zE9DZk20c_BHXTPqEi6YMhVtX9dekgrj0J3a4EHGdHvcnhBNkIxYzhM4zzQsetx2sxisMk62ywkO8Tzo3rlYdo__Kov7w;
-        path=/; expires=Tue, 10-Jun-25 15:12:51 GMT; domain=.api.openai.com; HttpOnly;
+      - __cf_bm=_dl1fqaChvPLUMNNowzKzQVCqZL5c76mdXZd6eWNuDk-1758940853-1.0.1.1-2XRTx9G8wfNaWkDOcFtNQsvJ7XG5x.8ZoVjqShjYdbXBTanESI4pR2gzaL4EE5PMZHMITrQhJzaS6EQKEfPb3zPX7pweBq.dmTayvpinYxE;
+        path=/; expires=Sat, 27-Sep-25 03:10:53 GMT; domain=.api.openai.com; HttpOnly;
         Secure; SameSite=None
-      - _cfuvid=bhxj6kzt6diFCyNbiiw60v4lKiUKaoHjQ3Yc4KWW4OI-1749566571331-0.0.1.1-604800000;
+      - _cfuvid=vekOLLrSBKAVaDf5QUb..wrDmpR5p_Orh0lASD059KY-1758940853536-0.0.1.1-604800000;
         path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
       Transfer-Encoding:
       - chunked
       X-Content-Type-Options:
@@ -101,30 +119,37 @@ interactions:
       cf-cache-status:
       - DYNAMIC
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
-      - '30419'
+      - '9684'
+      openai-project:
+      - REDACTED
       openai-version:
       - '2020-10-01'
-      strict-transport-security:
-      - max-age=31536000; includeSubDomains; preload
       x-envoy-upstream-service-time:
-      - '30424'
+      - '9737'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-project-tokens:
+      - '150000000'
       x-ratelimit-limit-requests:
       - '30000'
       x-ratelimit-limit-tokens:
       - '150000000'
+      x-ratelimit-remaining-project-tokens:
+      - '149999857'
       x-ratelimit-remaining-requests:
       - '29999'
       x-ratelimit-remaining-tokens:
-      - '149999859'
+      - '149999857'
+      x-ratelimit-reset-project-tokens:
+      - 0s
       x-ratelimit-reset-requests:
       - 2ms
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_b5983a9572e28ded39da7b12e678e2b7
-    status:
-      code: 200
-      message: OK
+      - req_4050af3439ef43268693f6d3eda94ee4
+    http_version: HTTP/1.1
+    status_code: 200
 version: 1

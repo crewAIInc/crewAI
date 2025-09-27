@@ -56,19 +56,20 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-BHIc6Eoq1bS5hOxvIXvHm8rvcS3Sg\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1743462826,\n  \"model\": \"o3-mini-2025-01-31\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"```\\nThought: I need to multiply 3 by
-      4 using the multiplier tool.\\nAction: multiplier\\nAction Input: {\\\"first_number\\\":
-      3, \\\"second_number\\\": 4}\",\n        \"refusal\": null,\n        \"annotations\":
-      []\n      },\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n
-      \   \"prompt_tokens\": 289,\n    \"completion_tokens\": 369,\n    \"total_tokens\":
-      658,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\":
-      0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
-      320,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n
-      \     \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\": \"default\",\n
-      \ \"system_fingerprint\": \"fp_617f206dd9\"\n}\n"
+    content: "{\n  \"id\": \"chatcmpl-BHIc6Eoq1bS5hOxvIXvHm8rvcS3Sg\",\n  \"object\"\
+      : \"chat.completion\",\n  \"created\": 1743462826,\n  \"model\": \"o3-mini-2025-01-31\"\
+      ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n    \
+      \    \"role\": \"assistant\",\n        \"content\": \"```\\nThought: I need\
+      \ to multiply 3 by 4 using the multiplier tool.\\nAction: multiplier\\nAction\
+      \ Input: {\\\"first_number\\\": 3, \\\"second_number\\\": 4}\",\n        \"\
+      refusal\": null,\n        \"annotations\": []\n      },\n      \"finish_reason\"\
+      : \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 289,\n    \"\
+      completion_tokens\": 369,\n    \"total_tokens\": 658,\n    \"prompt_tokens_details\"\
+      : {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"\
+      completion_tokens_details\": {\n      \"reasoning_tokens\": 320,\n      \"audio_tokens\"\
+      : 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\"\
+      : 0\n    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\"\
+      : \"fp_617f206dd9\"\n}\n"
     headers:
       CF-RAY:
       - 92938a09c9a47ac2-SJC
@@ -99,7 +100,7 @@ interactions:
       cf-cache-status:
       - DYNAMIC
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '4384'
       openai-version:
@@ -185,17 +186,18 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-BHIcBrSyMUt4ujKNww9ZR2m0FJgPj\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1743462831,\n  \"model\": \"o3-mini-2025-01-31\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"```\\nThought: I now know the final answer\\nFinal
-      Answer: 12\\n```\",\n        \"refusal\": null,\n        \"annotations\": []\n
-      \     },\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      341,\n    \"completion_tokens\": 29,\n    \"total_tokens\": 370,\n    \"prompt_tokens_details\":
-      {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
-      \"default\",\n  \"system_fingerprint\": \"fp_617f206dd9\"\n}\n"
+    content: "{\n  \"id\": \"chatcmpl-BHIcBrSyMUt4ujKNww9ZR2m0FJgPj\",\n  \"object\"\
+      : \"chat.completion\",\n  \"created\": 1743462831,\n  \"model\": \"o3-mini-2025-01-31\"\
+      ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n    \
+      \    \"role\": \"assistant\",\n        \"content\": \"```\\nThought: I now know\
+      \ the final answer\\nFinal Answer: 12\\n```\",\n        \"refusal\": null,\n\
+      \        \"annotations\": []\n      },\n      \"finish_reason\": \"stop\"\n\
+      \    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 341,\n    \"completion_tokens\"\
+      : 29,\n    \"total_tokens\": 370,\n    \"prompt_tokens_details\": {\n      \"\
+      cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\"\
+      : {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\"\
+      : 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\"\
+      : \"default\",\n  \"system_fingerprint\": \"fp_617f206dd9\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
@@ -220,7 +222,7 @@ interactions:
       alt-svc:
       - h3=":443"; ma=86400
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '1818'
       openai-version:

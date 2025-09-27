@@ -111,48 +111,50 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-BLc7zvaXoFAArOIDK9TrMtdq8kKY0\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1744491151,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"I now can give a great answer.  \\nFinal
-      Answer: \\n\\n**Topic: Introduction to Addition with Fun Objects**\\n\\n**Explanation:**
-      \ \\nAt its core, addition is all about combining two or more groups of things
-      to find out how many there are in total. We can think of addition as a way to
-      bring friends together! Imagine if you have some apples and your friend brings
-      some more apples; together, you want to find out how many apples there are altogether.
-      This is the foundation of addition, and it can be made fun and engaging for
-      a 6-year-old.\\n\\n**Angle:**  \\nTo make this relatable and enjoyable, we can
-      use everyday objects that kids love, such as toys, fruits, or even drawings.
-      We can create little stories or scenarios that involve addition, turning it
-      into a game where they get to count and add things together. By using real items,
-      children can see and feel what addition means, making it easier to grasp the
-      concept.\\n\\n**Examples:**  \\n1. **Using Fruits:**  \\n   Let's say you have
-      3 oranges. You can say, \\\"I have 3 oranges.\\\" Then, if your friend brings
-      you 2 more oranges, you can introduce the addition by saying, \\\"Now, how many
-      do we have all together?\\\"  \\n   - So you would show it as: 3 (oranges you
-      have) + 2 (oranges your friend brought) = ?  \\n   To find the answer, you can
-      count all the oranges together: 1, 2, 3 (your oranges) and 4, 5 (your friend's
-      oranges).  \\n   - The answer is 5 oranges in total!\\n\\n2. **Using Toys:**
-      \ \\n   If a child has 4 toy cars and finds 3 more under the couch, we can ask,
-      \\\"How many cars do you have now?\\\"  \\n   - Write it down: 4 (toy cars)
-      + 3 (found cars) = ?  \\n   Then, count the toy cars together: 1, 2, 3, 4 (original
-      cars), 5, 6, 7.  \\n   - The answer is 7 toy cars!\\n\\n3. **Story Scenario:**
-      \ \\n   Create an engaging story: \\\"Once upon a time, there were 2 friendly
-      puppies. One day, 3 more puppies came to play. How many puppies are playing
-      now?\\\"  \\n   - Present it as: 2 (original puppies) + 3 (new puppies) = ?
-      \ \\n   Count the puppies: 1, 2 (the first two) and then 3, 4, 5 (the new ones).
-      \ \\n   - The answer is 5 puppies playing!\\n\\nBy presenting addition through
-      fun scenarios and interactive counting, a 6-year-old can learn and understand
-      addition while enjoying the process. They can even use crayons to draw the items
-      or fruit to count in a playful, hands-on approach. This makes math not just
-      a subject, but also a delightful adventure!\",\n        \"refusal\": null,\n
-      \       \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
-      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 206,\n    \"completion_tokens\":
-      609,\n    \"total_tokens\": 815,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
-      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
-      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
-      \"default\",\n  \"system_fingerprint\": \"fp_44added55e\"\n}\n"
+    content: "{\n  \"id\": \"chatcmpl-BLc7zvaXoFAArOIDK9TrMtdq8kKY0\",\n  \"object\"\
+      : \"chat.completion\",\n  \"created\": 1744491151,\n  \"model\": \"gpt-4o-mini-2024-07-18\"\
+      ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n    \
+      \    \"role\": \"assistant\",\n        \"content\": \"I now can give a great\
+      \ answer.  \\nFinal Answer: \\n\\n**Topic: Introduction to Addition with Fun\
+      \ Objects**\\n\\n**Explanation:**  \\nAt its core, addition is all about combining\
+      \ two or more groups of things to find out how many there are in total. We can\
+      \ think of addition as a way to bring friends together! Imagine if you have\
+      \ some apples and your friend brings some more apples; together, you want to\
+      \ find out how many apples there are altogether. This is the foundation of addition,\
+      \ and it can be made fun and engaging for a 6-year-old.\\n\\n**Angle:**  \\\
+      nTo make this relatable and enjoyable, we can use everyday objects that kids\
+      \ love, such as toys, fruits, or even drawings. We can create little stories\
+      \ or scenarios that involve addition, turning it into a game where they get\
+      \ to count and add things together. By using real items, children can see and\
+      \ feel what addition means, making it easier to grasp the concept.\\n\\n**Examples:**\
+      \  \\n1. **Using Fruits:**  \\n   Let's say you have 3 oranges. You can say,\
+      \ \\\"I have 3 oranges.\\\" Then, if your friend brings you 2 more oranges,\
+      \ you can introduce the addition by saying, \\\"Now, how many do we have all\
+      \ together?\\\"  \\n   - So you would show it as: 3 (oranges you have) + 2 (oranges\
+      \ your friend brought) = ?  \\n   To find the answer, you can count all the\
+      \ oranges together: 1, 2, 3 (your oranges) and 4, 5 (your friend's oranges).\
+      \  \\n   - The answer is 5 oranges in total!\\n\\n2. **Using Toys:**  \\n  \
+      \ If a child has 4 toy cars and finds 3 more under the couch, we can ask, \\\
+      \"How many cars do you have now?\\\"  \\n   - Write it down: 4 (toy cars) +\
+      \ 3 (found cars) = ?  \\n   Then, count the toy cars together: 1, 2, 3, 4 (original\
+      \ cars), 5, 6, 7.  \\n   - The answer is 7 toy cars!\\n\\n3. **Story Scenario:**\
+      \  \\n   Create an engaging story: \\\"Once upon a time, there were 2 friendly\
+      \ puppies. One day, 3 more puppies came to play. How many puppies are playing\
+      \ now?\\\"  \\n   - Present it as: 2 (original puppies) + 3 (new puppies) =\
+      \ ?  \\n   Count the puppies: 1, 2 (the first two) and then 3, 4, 5 (the new\
+      \ ones).  \\n   - The answer is 5 puppies playing!\\n\\nBy presenting addition\
+      \ through fun scenarios and interactive counting, a 6-year-old can learn and\
+      \ understand addition while enjoying the process. They can even use crayons\
+      \ to draw the items or fruit to count in a playful, hands-on approach. This\
+      \ makes math not just a subject, but also a delightful adventure!\",\n     \
+      \   \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\"\
+      : null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n  \
+      \  \"prompt_tokens\": 206,\n    \"completion_tokens\": 609,\n    \"total_tokens\"\
+      : 815,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n    \
+      \  \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n     \
+      \ \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\"\
+      : 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\"\
+      : \"default\",\n  \"system_fingerprint\": \"fp_44added55e\"\n}\n"
     headers:
       CF-RAY:
       - 92f59ba1fa19572a-GRU
@@ -183,7 +185,7 @@ interactions:
       cf-cache-status:
       - DYNAMIC
       openai-organization:
-      - crewai-iuxna1
+      - REDACTED
       openai-processing-ms:
       - '12806'
       openai-version:

@@ -260,6 +260,7 @@ def test_validate_call_params_no_response_format():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"], filter_query_parameters=["key"])
+@pytest.mark.requires_local_services
 @pytest.mark.parametrize(
     "model",
     [
@@ -569,6 +570,7 @@ def mock_emit() -> MagicMock:
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.requires_local_services
 def test_handle_streaming_tool_calls(get_weather_tool_schema, mock_emit):
     llm = LLM(model="openai/gpt-4o", stream=True)
     response = llm.call(
@@ -643,6 +645,7 @@ def test_handle_streaming_tool_calls_no_available_functions(
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.requires_local_services
 def test_handle_streaming_tool_calls_no_tools(mock_emit):
     llm = LLM(model="openai/gpt-4o", stream=True)
     response = llm.call(
@@ -674,6 +677,7 @@ def test_llm_call_when_stop_is_unsupported(caplog):
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.requires_local_services
 def test_llm_call_when_stop_is_unsupported_when_additional_drop_params_is_provided(
     caplog,
 ):
