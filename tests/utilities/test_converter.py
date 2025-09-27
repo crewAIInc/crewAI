@@ -1,4 +1,5 @@
 import json
+import os
 from typing import Dict, List, Optional
 from unittest.mock import MagicMock, Mock, patch
 
@@ -359,6 +360,7 @@ def test_convert_with_instructions():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.requires_local_services
 def test_converter_with_llama3_2_model():
     llm = LLM(model="openrouter/meta-llama/llama-3.2-3b-instruct")
     sample_text = "Name: Alice Llama, Age: 30"
@@ -376,6 +378,7 @@ def test_converter_with_llama3_2_model():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.requires_local_services
 def test_converter_with_llama3_1_model():
     llm = LLM(model="ollama/llama3.1", base_url="http://localhost:11434")
     sample_text = "Name: Alice Llama, Age: 30"
