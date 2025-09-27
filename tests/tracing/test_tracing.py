@@ -108,6 +108,7 @@ class TestTraceListenerSetup:
             }
 
     @pytest.mark.vcr(filter_headers=["authorization"])
+    @pytest.mark.requires_local_services
     def test_trace_listener_collects_crew_events(self):
         """Test that trace listener properly collects events from crew execution"""
 
@@ -193,6 +194,7 @@ class TestTraceListenerSetup:
                 assert finalize_mock.call_count >= 1
 
     @pytest.mark.vcr(filter_headers=["authorization"])
+    @pytest.mark.requires_local_services
     def test_events_collection_batch_manager(self, mock_plus_api_calls):
         """Test that trace listener properly collects events from crew execution"""
 
@@ -245,6 +247,7 @@ class TestTraceListenerSetup:
                     assert hasattr(event, "type")
 
     @pytest.mark.vcr(filter_headers=["authorization"])
+    @pytest.mark.requires_local_services
     def test_trace_listener_disabled_when_env_false(self):
         """Test that trace listener doesn't make HTTP calls when tracing is disabled"""
 
@@ -326,6 +329,7 @@ class TestTraceListenerSetup:
                 assert mock_listener_setup.call_count >= 1
 
     @pytest.mark.vcr(filter_headers=["authorization"])
+    @pytest.mark.requires_local_services
     def test_trace_listener_ephemeral_batch(self):
         """Test that trace listener properly handles ephemeral batches"""
         with (
@@ -408,6 +412,7 @@ class TestTraceListenerSetup:
         crewai_event_bus._handlers.clear()
 
     @pytest.mark.vcr(filter_headers=["authorization"])
+    @pytest.mark.requires_local_services
     def test_first_time_user_trace_collection_with_timeout(self, mock_plus_api_calls):
         """Test first-time user trace collection logic with timeout behavior"""
 
