@@ -161,8 +161,12 @@ def mock_opentelemetry_components():
 
 @pytest.fixture(scope="module")
 def vcr_config(request) -> dict:
+    import os
+    # In CI, use once mode to fail if cassette doesn't exist
+    # Locally, use new_episodes to record new cassettes
+    record_mode = "once" if os.getenv("CI") else "new_episodes"
     return {
         "cassette_library_dir": "tests/cassettes",
-        "record_mode": "new_episodes",
+        "record_mode": record_mode,
         "filter_headers": [("authorization", "AUTHORIZATION-XXX")],
     }
