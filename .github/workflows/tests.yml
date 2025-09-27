@@ -84,7 +84,8 @@ jobs:
             $DURATIONS_ARG \
             --durations=10 \
             -n auto \
-            --maxfail=3
+            --maxfail=3 \
+            -m "not requires_local_services"
 
       - name: Save uv caches
         if: steps.cache-restore.outputs.cache-hit != 'true'
