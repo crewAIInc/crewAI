@@ -142,6 +142,12 @@ contextual = [
     "nest-asyncio>=1.6.0",
 ]
 
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "strict"
+asyncio_default_fixture_loop_scope = "function"
+
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
