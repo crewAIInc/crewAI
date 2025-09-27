@@ -13,7 +13,7 @@ interactions:
       accept:
       - application/json
       accept-encoding:
-      - gzip, deflate, zstd
+      - gzip, deflate
       connection:
       - keep-alive
       content-length:
@@ -23,7 +23,7 @@ interactions:
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.78.0
+      - OpenAI/Python 1.109.1
       x-stainless-arch:
       - arm64
       x-stainless-async:
@@ -33,7 +33,7 @@ interactions:
       x-stainless-os:
       - MacOS
       x-stainless-package-version:
-      - 1.78.0
+      - 1.109.1
       x-stainless-raw-response:
       - 'true'
       x-stainless-read-timeout:
@@ -43,37 +43,38 @@ interactions:
       x-stainless-runtime:
       - CPython
       x-stainless-runtime-version:
-      - 3.12.9
+      - 3.10.18
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    body:
-      string: !!binary |
-        H4sIAAAAAAAAAwAAAP//TFPRbttGEHzPVwz04taQBFt1nFZvsgsnRlvYqI0aafOyPK7IjY97xO1R
-        CpMv6nf0x4qlZLcvBHh3Mzs7s/vtDTCTerbGLLRUQtfHxVUzPF6udsaXHx/Cn7//8fG8e9rf/XxF
-        X+vqaTZ3RKo+cygvqGVIXR+5SNLDdchMhZ31/N3FT28vL99enE0XXao5Oqzpy+IiLTpRWazOVheL
-        s3eL8x+P6DZJYJut8dcbAPg2fV2n1vxltsbENZ10bEYNz9avj4BZTtFPZmQmVkjLbP7fZUhaWCfp
-        j20amrascQtNewRSNLJjEBrXD1LbcwY+6Y0oRWym/zUeW0ZJPfpII2eIorSMfcqxnoMMaYu7UFLF
-        Gauz1Q9ziOFXScoRv7GZLPEkNccRmRvKNdcTSNmBzjRVZyuwFALnY52Jl2JEkY7nBya0ZGipBikk
-        xsFKljQYAmXmjNBSplA4y1euUY3gLyVTyrUo5RH2LDHaHDsxSToHaY2Q1E1jDePSO/+kv/CITWiF
-        d9yxFlv78QKnp9dxqOz0dH2UYj1rmfR39DllKaMLbuVVDRXcXOOKcuCYlObYt5wZLaPiQB1P2BCH
-        6sS8z4X3ichUizawkDLnJT5MzxQlk9qWc+YaJeGeshgeSLQs3nPuSBTf3T+8/97TWZ2tzpcHzbda
-        OCv5pFJ07R+8RI1NbliLKDnZTkJJeXwJ1uG4Tj1h0/3zd5ZAk1PHqxVubm82ePL0cT30cxiHIbtm
-        7z1yQ2H0gAkvddFyTsuji5s95fp/Nnqi+6Tohlikj4wrijEp6pO7DJoez9FK00Zp2vJSxgqVwbxM
-        mfy08jKdTUwVxTgiKYx3nCkihUAeuS094PtIo/M8lDHylO5BiRieNe0V25SnIqIhcy1VZNRZqio6
-        iiqJUsY5+sxBjNH72mlzGKc+pyhbCWgSxYWHKNos8cGd8ZVjz8PnpMm085HxZveGVjpPoiPlYccZ
-        pc2+qyjeNGreshobjKmLbBbHOTp6PrjRgaYx9s13oK9yOkS5FY71chrrW93GgTUcOr7iMWk92ShW
-        JNhxwU4M0vUUXhka8uU7uHEk8CuyXqbMj7t66H5Kpk+5WEdqrfRo6V8AAAD//4xVy24CIRTdz1cQ
-        1m1Tx+nCr+gXGHKFO85NGSDAaF347w2ggtUmXR84931O0hcdLJP5mlC14yNzPfmJQlrB0qkkWWQW
-        VMyhH62fIUVNApUXgWk8oGZH1JqRiTYzzqRe1+8hDRFYEhOY83kWVKEimbcx55mFoLTlM2+IvuoL
-        fuPs0gQxsOMEkVFkM4IJiWmHD9vWaiGLVsHprRVfj+MSIBmAWbRuADDGxpxQlv3tBTnfhF7bvfN2
-        F3595SMZCpPwCMGaJOohWsczeu4Y22ZDWe48gjtvZxdFtF+Yw636vvDx6mMV7TebCxptBF2BoV+9
-        PCEUCiOQDo0ncQlyQlW/VgODRZFtgK4p+zGdZ9yldDL7/9BXQEp0EZVw6aTlfcn1mcfk8389u7U5
-        J8wD+gNJFJHQp1EoHGHRxX15OIWIsxjJ7NE7T8WCRyfWA3wMgJu15N25+wEAAP//AwDdzCHTkAgA
-        AA==
+    content: "{\n  \"id\": \"chatcmpl-CKF2fBtZFxmdxyEkq6E5KE615QprZ\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1758940417,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"Thought: I now can give a great answer\\nFinal
+      Answer: The top player widely regarded as the best in the world as of October
+      2023 is Lionel Messi. \\n\\n1. **Name:** Lionel Messi\\n2. **Nationality:**
+      Argentine\\n3. **Age:** 36 (born June 24, 1987)\\n4. **Club:** Inter Miami CF
+      (as of 2023)\\n5. **Position:** Forward\\n6. **Career Highlights:**\\n   - 7-time
+      Ballon d'Or winner\\n   - All-time top scorer for FC Barcelona and La Liga\\n
+      \  - Significant contributions to Argentina's 2021 Copa America victory and
+      2022 FIFA World Cup victory\\n   - Over 800 career goals, making him one of
+      the highest goal-scorers in soccer history\\n7. **Playing Style:** Known for
+      his exceptional dribbling, playmaking ability, and goal-scoring prowess, Messi
+      combines technical skill with extraordinary vision on the field. \\n8. **Influence
+      & Legacy:** Messi's dedication and consistency have set benchmarks in soccer,
+      making him a role model for aspiring players worldwide.\\n\\nIn summary, Lionel
+      Messi's combinations of talent, achievements, and impact on and off the field
+      solidify his status as the best soccer player in the world as of October 2023.\",\n
+      \       \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\":
+      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+      122,\n    \"completion_tokens\": 267,\n    \"total_tokens\": 389,\n    \"prompt_tokens_details\":
+      {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+      {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+      \"default\",\n  \"system_fingerprint\": \"fp_560af6e559\"\n}\n"
     headers:
       CF-RAY:
-      - 94d9a27f5dc000f9-GRU
+      - 985798e02dc1c647-EWR
       Connection:
       - keep-alive
       Content-Encoding:
@@ -81,15 +82,17 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Tue, 10 Jun 2025 14:42:51 GMT
+      - Sat, 27 Sep 2025 02:33:49 GMT
       Server:
       - cloudflare
       Set-Cookie:
-      - __cf_bm=7hq1JYlSmmLvjUR7npK1vcLJYOvCPn947S.EYBtvTcQ-1749566571-1.0.1.1-11XCSwdUqYCYC3zE9DZk20c_BHXTPqEi6YMhVtX9dekgrj0J3a4EHGdHvcnhBNkIxYzhM4zzQsetx2sxisMk62ywkO8Tzo3rlYdo__Kov7w;
-        path=/; expires=Tue, 10-Jun-25 15:12:51 GMT; domain=.api.openai.com; HttpOnly;
+      - __cf_bm=VUzo5xKYNXLShjO87faeRnbZJh.EtoZbKyQf2LpAoaQ-1758940429-1.0.1.1-Nxgw_ljVv7uFm46.jZoZQGF8UVx167Fn8.KeENl.bG9tNlRI1ztScpF3vRc1lYdk6TriJQhx19L7K3qvJB1OQN8_jNRYSnsc33mvFTcvegs;
+        path=/; expires=Sat, 27-Sep-25 03:03:49 GMT; domain=.api.openai.com; HttpOnly;
         Secure; SameSite=None
-      - _cfuvid=bhxj6kzt6diFCyNbiiw60v4lKiUKaoHjQ3Yc4KWW4OI-1749566571331-0.0.1.1-604800000;
+      - _cfuvid=Q1ZvDltr9hJs.IDYqAbmPtxng910_lRu2WEyCoaspj8-1758940429939-0.0.1.1-604800000;
         path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
       Transfer-Encoding:
       - chunked
       X-Content-Type-Options:
@@ -103,28 +106,35 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '30419'
+      - '12960'
+      openai-project:
+      - proj_xitITlrFeen7zjNSzML82h9x
       openai-version:
       - '2020-10-01'
-      strict-transport-security:
-      - max-age=31536000; includeSubDomains; preload
       x-envoy-upstream-service-time:
-      - '30424'
+      - '13216'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-project-tokens:
+      - '150000000'
       x-ratelimit-limit-requests:
       - '30000'
       x-ratelimit-limit-tokens:
       - '150000000'
+      x-ratelimit-remaining-project-tokens:
+      - '149999857'
       x-ratelimit-remaining-requests:
       - '29999'
       x-ratelimit-remaining-tokens:
-      - '149999859'
+      - '149999860'
+      x-ratelimit-reset-project-tokens:
+      - 0s
       x-ratelimit-reset-requests:
       - 2ms
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_b5983a9572e28ded39da7b12e678e2b7
-    status:
-      code: 200
-      message: OK
+      - req_e97931a084624fffaa5a548259cec845
+    http_version: HTTP/1.1
+    status_code: 200
 version: 1

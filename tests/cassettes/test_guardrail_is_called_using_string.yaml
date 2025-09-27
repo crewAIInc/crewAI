@@ -13,17 +13,20 @@ interactions:
       accept:
       - application/json
       accept-encoding:
-      - gzip, deflate, zstd
+      - gzip, deflate
       connection:
       - keep-alive
       content-length:
       - '694'
       content-type:
       - application/json
+      cookie:
+      - __cf_bm=0S.rcDw5EJOS0bhC5bMbVoGhgiYApQ1gZMC.rb1F1KU-1758940526-1.0.1.1-9v6i3zpNsm_MJwHfF8e2SKRM.aPdiLS3XtenW9PPO46onv.rIoEtodnhZYOONk.i2G2e9k6mNyRDTUyQ212gLUbO.6xHWv.BnRnLkjux6vo;
+        _cfuvid=9z01_C1JzDlEar0Qq91w2hNRBrNXDz5sqpzQW0ZCtlw-1758940526959-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.78.0
+      - OpenAI/Python 1.109.1
       x-stainless-arch:
       - arm64
       x-stainless-async:
@@ -33,7 +36,7 @@ interactions:
       x-stainless-os:
       - MacOS
       x-stainless-package-version:
-      - 1.78.0
+      - 1.109.1
       x-stainless-raw-response:
       - 'true'
       x-stainless-read-timeout:
@@ -43,46 +46,69 @@ interactions:
       x-stainless-runtime:
       - CPython
       x-stainless-runtime-version:
-      - 3.12.9
+      - 3.10.18
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    body:
-      string: !!binary |
-        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
-        BF+cIJ0em8Hel71fAQAA//8DAICIe4nBDwAA
+    content: "{\n  \"id\": \"chatcmpl-CKF53EHlnQ5kWttsJGVx1IDC8FaUa\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1758940565,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"Thought: I now can give a great answer
+      \ \\nFinal Answer: Here is a comprehensive overview of the top 10 best soccer
+      players in the world as of October 2023, based on their performances, achievements,
+      and contributions to their teams:\\n\\n1. **Lionel Messi (Inter Miami CF)**\\n
+      \  - Nationality: Argentine\\n   - Key Achievements: 7 Ballon d'Or awards, FIFA
+      World Cup 2022 Winner, numerous domestic league titles, and UEFA Champions League
+      titles.\\n   - Playing Style: Renowned for his dribbling, playmaking, and goal-scoring
+      abilities.\\n\\n2. **Kylian Mbapp\xE9 (Paris Saint-Germain)**\\n   - Nationality:
+      French\\n   - Key Achievements: FIFA World Cup 2018 Winner, multiple Ligue 1
+      titles, UEFA Champions League finalist.\\n   - Playing Style: Known for his
+      incredible speed, technical skills, and goal-scoring prowess.\\n\\n3. **Erling
+      Haaland (Manchester City)**\\n   - Nationality: Norwegian\\n   - Key Achievements:
+      2022-23 Premier League Top Scorer, UEFA Champions League Winner with Manchester
+      City.\\n   - Playing Style: Exceptional striker with remarkable physical attributes,
+      finishing skills, and positioning.\\n\\n4. **Kevin De Bruyne (Manchester City)**\\n
+      \  - Nationality: Belgian\\n   - Key Achievements: Multiple Premier League titles,
+      UEFA Champions League Winner, recognized for his assists in domestic and international
+      tournaments.\\n   - Playing Style: An elite playmaker known for his vision,
+      passing accuracy, and ability to control the game.\\n\\n5. **Cristiano Ronaldo
+      (Al Nassr)**\\n   - Nationality: Portuguese\\n   - Key Achievements: 5 Ballon
+      d'Or awards, 5 UEFA Champions League titles, and 2020 UEFA European Championship
+      Winner.\\n   - Playing Style: Known for his athleticism, goal-scoring ability,
+      and leadership on and off the pitch.\\n\\n6. **Neymar Jr. (Al Hilal)**\\n   -
+      Nationality: Brazilian\\n   - Key Achievements: Domestic titles in Spain and
+      France, UEFA Champions League Runner-Up, Copa America Winner.\\n   - Playing
+      Style: Known for his flair, creativity, dribbling skills, and ability to change
+      the game's momentum.\\n\\n7. **Luka Modri\u0107 (Real Madrid)**\\n   - Nationality:
+      Croatian\\n   - Key Achievements: 2018 Ballon d'Or Winner, UEFA Champions League
+      titles, and FIFA World Cup Runner-Up.\\n   - Playing Style: Expert midfield
+      conductor known for his intelligence, passing, and ability to dictate the game's
+      tempo.\\n\\n8. **Robert Lewandowski (FC Barcelona)**\\n   - Nationality: Polish\\n
+      \  - Key Achievements: Multiple Bundesliga titles, UEFA Champions League Winner,
+      FIFA Best Men\u2019s Player in 2020 and 2021.\\n   - Playing Style: Prolific
+      striker with outstanding finishing ability and positioning, well-rounded in
+      the penalty area.\\n\\n9. **Karim Benzema (Al-Ittihad)**\\n   - Nationality:
+      French\\n   - Key Achievements: 2022 Ballon d'Or Winner, multiple UEFA Champions
+      League titles with Real Madrid.\\n   - Playing Style: Known for his versatility
+      as a forward, exceptional link-up play, and ability to score in critical moments.\\n\\n10.
+      **Mohamed Salah (Liverpool)**\\n    - Nationality: Egyptian\\n    - Key Achievements:
+      Premier League titles, UEFA Champions League Winner, consistently among the
+      league's top goal scorers.\\n    - Playing Style: Renowned for his speed, dribbling
+      skills, and finishing ability, especially in one-on-one situations.\\n\\nThis
+      list reflects the influence and success of these players based on their recent
+      performances and contributions to soccer, making them stand out as the best
+      in the world as of October 2023. Each player's unique strengths and achievements
+      contribute to their status in the world of football.\",\n        \"refusal\":
+      null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
+      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 122,\n    \"completion_tokens\":
+      797,\n    \"total_tokens\": 919,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
+      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+      \"default\",\n  \"system_fingerprint\": \"fp_560af6e559\"\n}\n"
     headers:
       CF-RAY:
-      - 94d9947e9abcf1fe-GRU
+      - 98579c87dff0377a-EWR
       Connection:
       - keep-alive
       Content-Encoding:
@@ -90,15 +116,11 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Tue, 10 Jun 2025 14:33:27 GMT
+      - Sat, 27 Sep 2025 02:36:21 GMT
       Server:
       - cloudflare
-      Set-Cookie:
-      - __cf_bm=UscrLNUFPQp17ivpT2nYqbIb8GsK9e0GpWC7sIKWwnU-1749566007-1.0.1.1-fCm5jdN02Agxc9.Ep4aAnKukyBp9S3iOLK9NY51NLG1zib3MnfjyCm5HhsWtUvr2lIjQpD_EWosVk4JuLbGxrKYZBa4WTendGsY9lCU9naU;
-        path=/; expires=Tue, 10-Jun-25 15:03:27 GMT; domain=.api.openai.com; HttpOnly;
-        Secure; SameSite=None
-      - _cfuvid=CGbpwQsAGlm5OcWs4NP0JuyqJh.mIqHyUZjIdKm8_.I-1749566007688-0.0.1.1-604800000;
-        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
       Transfer-Encoding:
       - chunked
       X-Content-Type-Options:
@@ -112,30 +134,37 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '40370'
+      - '15787'
+      openai-project:
+      - proj_xitITlrFeen7zjNSzML82h9x
       openai-version:
       - '2020-10-01'
-      strict-transport-security:
-      - max-age=31536000; includeSubDomains; preload
       x-envoy-upstream-service-time:
-      - '40375'
+      - '15821'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-project-tokens:
+      - '150000000'
       x-ratelimit-limit-requests:
       - '30000'
       x-ratelimit-limit-tokens:
       - '150000000'
+      x-ratelimit-remaining-project-tokens:
+      - '149999857'
       x-ratelimit-remaining-requests:
       - '29999'
       x-ratelimit-remaining-tokens:
-      - '149999859'
+      - '149999860'
+      x-ratelimit-reset-project-tokens:
+      - 0s
       x-ratelimit-reset-requests:
       - 2ms
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_94fb13dc93d3bc9714811ff4ede4c08f
-    status:
-      code: 200
-      message: OK
+      - req_b5a662c2cf0347efb5b0830d26504fa0
+    http_version: HTTP/1.1
+    status_code: 200
 - request:
     body: '{"messages": [{"role": "system", "content": "You are Guardrail Agent. You
       are a expert at validating the output of a task. By providing effective feedback
@@ -148,72 +177,75 @@ interactions:
       format: {\n  \"valid\": bool,\n  \"feedback\": str | None\n}\n\nIMPORTANT: Ensure
       the final output does not include any code block markers like ```json or ```python."},
       {"role": "user", "content": "\n        Ensure the following task result complies
-      with the given guardrail.\n\n        Task result:\n        Here are the top
-      10 best soccer players in the world as of October 2023, based on their performance,
-      impact, and overall contributions to the game:\n\n1. **Lionel Messi** (Inter
-      Miami)\n   - Position: Forward\n   - Country: Argentina\n   - Highlights: Messi
-      continues to showcase his exceptional dribbling, vision, and playmaking ability,
-      leading Argentina to victory in the 2022 FIFA World Cup and significantly contributing
-      to his club''s successes.\n\n2. **Kylian Mbapp\u00e9** (Paris Saint-Germain)\n   -
-      Position: Forward\n   - Country: France\n   - Highlights: Known for his blistering
-      speed and clinical finishing, Mbapp\u00e9 is a key player for both PSG and the
-      French national team, known for his performances in Ligue 1 and international
-      tournaments.\n\n3. **Erling Haaland** (Manchester City)\n   - Position: Forward\n   -
-      Country: Norway\n   - Highlights: Haaland''s goal-scoring prowess and strength
-      have made him one of the most feared strikers in Europe, helping Manchester
-      City secure several titles including the UEFA Champions League.\n\n4. **Kevin
-      De Bruyne** (Manchester City)\n   - Position: Midfielder\n   - Country: Belgium\n   -
-      Highlights: De Bruyne\u2019s exceptional passing, control, and vision make him
-      one of the best playmakers in the world, instrumental in Manchester City\u2019s
-      dominance in domestic and European competitions.\n\n5. **Cristiano Ronaldo**
-      (Al Nassr)\n   - Position: Forward\n   - Country: Portugal\n   - Highlights:
-      Despite moving to the Saudi Pro League, Ronaldo''s extraordinary talent and
-      goal-scoring ability keep him in the conversation among the best, having had
-      a legendary career across multiple leagues.\n\n6. **Neymar Jr.** (Al Hilal)\n   -
-      Position: Forward\n   - Country: Brazil\n   - Highlights: Neymar''s agility,
-      creativity, and skill have kept him as a top performer in soccer, now showcasing
-      his talents in the Saudi Pro League while maintaining a strong national team
-      presence.\n\n7. **Robert Lewandowski** (Barcelona)\n   - Position: Forward\n   -
-      Country: Poland\n   - Highlights: The prolific striker continues to score consistently
-      in La Liga, known for his finishing, positioning, and aerial ability, contributing
-      to Barcelona\u2019s successes.\n\n8. **Karim Benzema** (Al Ittihad)\n   - Position:
-      Forward\n   - Country: France\n   - Highlights: The former Real Madrid star
-      remains a top talent, displaying leadership and technical skills, now continuing
-      his career in the Saudi Pro League.\n\n9. **Luka Modri\u0107** (Real Madrid)\n   -
-      Position: Midfielder\n   - Country: Croatia\n   - Highlights: A master of midfield
-      control and passing, Modri\u0107 remains an influential figure at Real Madrid,
-      showcasing his experience and football intelligence.\n\n10. **Mohamed Salah**
-      (Liverpool)\n    - Position: Forward\n    - Country: Egypt\n    - Highlights:
-      Salah''s explosive pace and goal-scoring ability keep him as a central figure
-      for Liverpool in the Premier League and European competitions, maintaining his
-      status as one of the elite forwards.\n\nThese players have demonstrated exceptional
-      skill, consistency, and impact in their respective teams and leagues, solidifying
-      their positions among the best in the world.\n\n        Guardrail:\n        Only
-      include Brazilian players, both women and men\n        \n        Your task:\n        -
-      Confirm if the Task result complies with the guardrail.\n        - If not, provide
-      clear feedback explaining what is wrong (e.g., by how much it violates the rule,
-      or what specific part fails).\n        - Focus only on identifying issues \u2014
-      do not propose corrections.\n        - If the Task result complies with the
-      guardrail, saying that is valid\n        "}], "model": "gpt-4o-mini", "stop":
-      ["\nObservation:"]}'
+      with the given guardrail.\n\n        Task result:\n        Here is a comprehensive
+      overview of the top 10 best soccer players in the world as of October 2023,
+      based on their performances, achievements, and contributions to their teams:\n\n1.
+      **Lionel Messi (Inter Miami CF)**\n   - Nationality: Argentine\n   - Key Achievements:
+      7 Ballon d''Or awards, FIFA World Cup 2022 Winner, numerous domestic league
+      titles, and UEFA Champions League titles.\n   - Playing Style: Renowned for
+      his dribbling, playmaking, and goal-scoring abilities.\n\n2. **Kylian Mbapp\u00e9
+      (Paris Saint-Germain)**\n   - Nationality: French\n   - Key Achievements: FIFA
+      World Cup 2018 Winner, multiple Ligue 1 titles, UEFA Champions League finalist.\n   -
+      Playing Style: Known for his incredible speed, technical skills, and goal-scoring
+      prowess.\n\n3. **Erling Haaland (Manchester City)**\n   - Nationality: Norwegian\n   -
+      Key Achievements: 2022-23 Premier League Top Scorer, UEFA Champions League Winner
+      with Manchester City.\n   - Playing Style: Exceptional striker with remarkable
+      physical attributes, finishing skills, and positioning.\n\n4. **Kevin De Bruyne
+      (Manchester City)**\n   - Nationality: Belgian\n   - Key Achievements: Multiple
+      Premier League titles, UEFA Champions League Winner, recognized for his assists
+      in domestic and international tournaments.\n   - Playing Style: An elite playmaker
+      known for his vision, passing accuracy, and ability to control the game.\n\n5.
+      **Cristiano Ronaldo (Al Nassr)**\n   - Nationality: Portuguese\n   - Key Achievements:
+      5 Ballon d''Or awards, 5 UEFA Champions League titles, and 2020 UEFA European
+      Championship Winner.\n   - Playing Style: Known for his athleticism, goal-scoring
+      ability, and leadership on and off the pitch.\n\n6. **Neymar Jr. (Al Hilal)**\n   -
+      Nationality: Brazilian\n   - Key Achievements: Domestic titles in Spain and
+      France, UEFA Champions League Runner-Up, Copa America Winner.\n   - Playing
+      Style: Known for his flair, creativity, dribbling skills, and ability to change
+      the game''s momentum.\n\n7. **Luka Modri\u0107 (Real Madrid)**\n   - Nationality:
+      Croatian\n   - Key Achievements: 2018 Ballon d''Or Winner, UEFA Champions League
+      titles, and FIFA World Cup Runner-Up.\n   - Playing Style: Expert midfield conductor
+      known for his intelligence, passing, and ability to dictate the game''s tempo.\n\n8.
+      **Robert Lewandowski (FC Barcelona)**\n   - Nationality: Polish\n   - Key Achievements:
+      Multiple Bundesliga titles, UEFA Champions League Winner, FIFA Best Men\u2019s
+      Player in 2020 and 2021.\n   - Playing Style: Prolific striker with outstanding
+      finishing ability and positioning, well-rounded in the penalty area.\n\n9. **Karim
+      Benzema (Al-Ittihad)**\n   - Nationality: French\n   - Key Achievements: 2022
+      Ballon d''Or Winner, multiple UEFA Champions League titles with Real Madrid.\n   -
+      Playing Style: Known for his versatility as a forward, exceptional link-up play,
+      and ability to score in critical moments.\n\n10. **Mohamed Salah (Liverpool)**\n    -
+      Nationality: Egyptian\n    - Key Achievements: Premier League titles, UEFA Champions
+      League Winner, consistently among the league''s top goal scorers.\n    - Playing
+      Style: Renowned for his speed, dribbling skills, and finishing ability, especially
+      in one-on-one situations.\n\nThis list reflects the influence and success of
+      these players based on their recent performances and contributions to soccer,
+      making them stand out as the best in the world as of October 2023. Each player''s
+      unique strengths and achievements contribute to their status in the world of
+      football.\n\n        Guardrail:\n        Only include Brazilian players, both
+      women and men\n\n        Your task:\n        - Confirm if the Task result complies
+      with the guardrail.\n        - If not, provide clear feedback explaining what
+      is wrong (e.g., by how much it violates the rule, or what specific part fails).\n        -
+      Focus only on identifying issues \u2014 do not propose corrections.\n        -
+      If the Task result complies with the guardrail, saying that is valid\n        "}],
+      "model": "gpt-4o-mini", "stop": ["\nObservation:"]}'
     headers:
       accept:
       - application/json
       accept-encoding:
-      - gzip, deflate, zstd
+      - gzip, deflate
       connection:
       - keep-alive
       content-length:
-      - '4676'
+      - '4995'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=UscrLNUFPQp17ivpT2nYqbIb8GsK9e0GpWC7sIKWwnU-1749566007-1.0.1.1-fCm5jdN02Agxc9.Ep4aAnKukyBp9S3iOLK9NY51NLG1zib3MnfjyCm5HhsWtUvr2lIjQpD_EWosVk4JuLbGxrKYZBa4WTendGsY9lCU9naU;
-        _cfuvid=CGbpwQsAGlm5OcWs4NP0JuyqJh.mIqHyUZjIdKm8_.I-1749566007688-0.0.1.1-604800000
+      - __cf_bm=0S.rcDw5EJOS0bhC5bMbVoGhgiYApQ1gZMC.rb1F1KU-1758940526-1.0.1.1-9v6i3zpNsm_MJwHfF8e2SKRM.aPdiLS3XtenW9PPO46onv.rIoEtodnhZYOONk.i2G2e9k6mNyRDTUyQ212gLUbO.6xHWv.BnRnLkjux6vo;
+        _cfuvid=9z01_C1JzDlEar0Qq91w2hNRBrNXDz5sqpzQW0ZCtlw-1758940526959-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.78.0
+      - OpenAI/Python 1.109.1
       x-stainless-arch:
       - arm64
       x-stainless-async:
@@ -223,7 +255,7 @@ interactions:
       x-stainless-os:
       - MacOS
       x-stainless-package-version:
-      - 1.78.0
+      - 1.109.1
       x-stainless-raw-response:
       - 'true'
       x-stainless-read-timeout:
@@ -233,27 +265,30 @@ interactions:
       x-stainless-runtime:
       - CPython
       x-stainless-runtime-version:
-      - 3.12.9
+      - 3.10.18
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    body:
-      string: !!binary |
-        H4sIAAAAAAAAA4xUwWobMRC9+ysGnVqwjZ3YjuNbQim0hULBtIc6mLE0uzuxVtpqtHbckH8v2o29
-        TpNCLwuapzfzZvRmH3sAio1agNIFRl1WdnCb119+LIvZh+/+h9zM55Op3Wzv5dt4rKei+onhN/ek
-        45E11L6sLEX2roV1IIyUso6vJtfT2Ww0mjdA6Q3ZRMurOJj4QcmOBxeji8lgdDUYz5/ZhWdNohbw
-        swcA8Nh8k05n6EEtYNQ/RkoSwZzU4nQJQAVvU0ShCEtEF1W/A7V3kVwjfVn4Oi/iAj6B83vQ6CDn
-        HQFCnvQDOtlTAFi5j+zQwk1zXsDjygGs1A4tm5VaQIZWqN8GMyKzQb1N8ZVaFgQRZQuBpLYRjCcB
-        5yM0AzvAnmMBsSDIawwmIFtAAY7ATtvakEBl8UBBIAu+hB0G9rWA9rWLgUkAnQHv7AFKcmn8AnHv
-        4Tbgb7aM7kR/95UOJQb4HIYNpz2+h33BloAeUjV2+Rlz70vq+Cl7IHsYwvKFWqlIc8YarT1AoF81
-        SRSI/thAK+6Vnj5sfCyeayQ9Jbl+EqML4HZCWW0ztpbMcKVW7un8CQNltWCykautPQPQOR+xmUMy
-        z90z8nSyi/V5FfxG/qKqjB1LsQ6E4l2yhkRfqQZ96gHcNbasXzhNVcGXVVxHv6Wm3PV01uZT3TZ0
-        6PwIRh/RdvHxaHLRfyPh2lBEtnLmbKVRF2Q6brcGWBv2Z0DvrO3Xct7K3bbOLv+f9B2gNVWRzLoK
-        ZFi/bLm7Fij9Lf517TTmRrASCjvWtI5MIT2FoQxr2+6wkoNEKtcZu5xCFbhd5KxaX05wOkG6vtSq
-        99T7AwAA//8DABZK9w/WBAAA
+    content: "{\n  \"id\": \"chatcmpl-CKF5KD93icWVQ2A44xM1X33BpT7nS\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1758940582,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"Thought: I now can give a great answer
+      \ \\nFinal Answer: {\\n  \\\"valid\\\": false,\\n  \\\"feedback\\\": \\\"The
+      task result includes multiple players from various nationalities, specifically
+      8 players who are not Brazilian (Lionel Messi, Kylian Mbapp\xE9, Erling Haaland,
+      Kevin De Bruyne, Cristiano Ronaldo, Luka Modri\u0107, Robert Lewandowski, Karim
+      Benzema, Mohamed Salah). The guardrail specifies to only include Brazilian players,
+      both women and men, which has not been adhered to.\\\"\\n}\",\n        \"refusal\":
+      null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
+      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 1062,\n    \"completion_tokens\":
+      109,\n    \"total_tokens\": 1171,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
+      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+      \"default\",\n  \"system_fingerprint\": \"fp_560af6e559\"\n}\n"
     headers:
       CF-RAY:
-      - 94d9957c4b46f1fe-GRU
+      - 98579cebbbf6377a-EWR
       Connection:
       - keep-alive
       Content-Encoding:
@@ -261,9 +296,11 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Tue, 10 Jun 2025 14:33:46 GMT
+      - Sat, 27 Sep 2025 02:36:25 GMT
       Server:
       - cloudflare
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
       Transfer-Encoding:
       - chunked
       X-Content-Type-Options:
@@ -277,30 +314,37 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '18280'
+      - '2596'
+      openai-project:
+      - proj_xitITlrFeen7zjNSzML82h9x
       openai-version:
       - '2020-10-01'
-      strict-transport-security:
-      - max-age=31536000; includeSubDomains; preload
       x-envoy-upstream-service-time:
-      - '18287'
+      - '2628'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-project-tokens:
+      - '150000000'
       x-ratelimit-limit-requests:
       - '30000'
       x-ratelimit-limit-tokens:
       - '150000000'
+      x-ratelimit-remaining-project-tokens:
+      - '149998805'
       x-ratelimit-remaining-requests:
       - '29999'
       x-ratelimit-remaining-tokens:
-      - '149998889'
+      - '149998807'
+      x-ratelimit-reset-project-tokens:
+      - 0s
       x-ratelimit-reset-requests:
       - 2ms
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_853da6b9ca8f386ff1427c837346290d
-    status:
-      code: 200
-      message: OK
+      - req_942eecb52ebb45fcb0504a39e0161275
+    http_version: HTTP/1.1
+    status_code: 200
 - request:
     body: '{"messages": [{"role": "system", "content": "You are Sports Analyst. You
       are an expert at gathering and organizing information. You carefully collect
@@ -311,70 +355,74 @@ interactions:
       the most complete as possible, it must be outcome described.\n\nI MUST use these
       formats, my job depends on it!"}, {"role": "user", "content": "Top 10 best players
       in the world?"}, {"role": "assistant", "content": "Thought: I now can give a
-      great answer  \nFinal Answer: Here are the top 10 best soccer players in the
-      world as of October 2023, based on their performance, impact, and overall contributions
-      to the game:\n\n1. **Lionel Messi** (Inter Miami)\n   - Position: Forward\n   -
-      Country: Argentina\n   - Highlights: Messi continues to showcase his exceptional
-      dribbling, vision, and playmaking ability, leading Argentina to victory in the
-      2022 FIFA World Cup and significantly contributing to his club''s successes.\n\n2.
-      **Kylian Mbapp\u00e9** (Paris Saint-Germain)\n   - Position: Forward\n   - Country:
-      France\n   - Highlights: Known for his blistering speed and clinical finishing,
-      Mbapp\u00e9 is a key player for both PSG and the French national team, known
-      for his performances in Ligue 1 and international tournaments.\n\n3. **Erling
-      Haaland** (Manchester City)\n   - Position: Forward\n   - Country: Norway\n   -
-      Highlights: Haaland''s goal-scoring prowess and strength have made him one of
-      the most feared strikers in Europe, helping Manchester City secure several titles
-      including the UEFA Champions League.\n\n4. **Kevin De Bruyne** (Manchester City)\n   -
-      Position: Midfielder\n   - Country: Belgium\n   - Highlights: De Bruyne\u2019s
-      exceptional passing, control, and vision make him one of the best playmakers
-      in the world, instrumental in Manchester City\u2019s dominance in domestic and
-      European competitions.\n\n5. **Cristiano Ronaldo** (Al Nassr)\n   - Position:
-      Forward\n   - Country: Portugal\n   - Highlights: Despite moving to the Saudi
-      Pro League, Ronaldo''s extraordinary talent and goal-scoring ability keep him
-      in the conversation among the best, having had a legendary career across multiple
-      leagues.\n\n6. **Neymar Jr.** (Al Hilal)\n   - Position: Forward\n   - Country:
-      Brazil\n   - Highlights: Neymar''s agility, creativity, and skill have kept
-      him as a top performer in soccer, now showcasing his talents in the Saudi Pro
-      League while maintaining a strong national team presence.\n\n7. **Robert Lewandowski**
-      (Barcelona)\n   - Position: Forward\n   - Country: Poland\n   - Highlights:
-      The prolific striker continues to score consistently in La Liga, known for his
-      finishing, positioning, and aerial ability, contributing to Barcelona\u2019s
-      successes.\n\n8. **Karim Benzema** (Al Ittihad)\n   - Position: Forward\n   -
-      Country: France\n   - Highlights: The former Real Madrid star remains a top
-      talent, displaying leadership and technical skills, now continuing his career
-      in the Saudi Pro League.\n\n9. **Luka Modri\u0107** (Real Madrid)\n   - Position:
-      Midfielder\n   - Country: Croatia\n   - Highlights: A master of midfield control
-      and passing, Modri\u0107 remains an influential figure at Real Madrid, showcasing
-      his experience and football intelligence.\n\n10. **Mohamed Salah** (Liverpool)\n    -
-      Position: Forward\n    - Country: Egypt\n    - Highlights: Salah''s explosive
-      pace and goal-scoring ability keep him as a central figure for Liverpool in
-      the Premier League and European competitions, maintaining his status as one
-      of the elite forwards.\n\nThese players have demonstrated exceptional skill,
-      consistency, and impact in their respective teams and leagues, solidifying their
-      positions among the best in the world."}, {"role": "user", "content": "The task
-      result does not comply with the guardrail as it includes players from various
-      countries and only mentions two Brazilian players (Neymar Jr. and Neymar) while
-      excluding Brazilian women players entirely. The guardrail specifically requests
-      to include only Brazilian players, both women and men, which is not fulfilled."}],
-      "model": "gpt-4o-mini", "stop": ["\nObservation:"]}'
+      great answer  \nFinal Answer: Here is a comprehensive overview of the top 10
+      best soccer players in the world as of October 2023, based on their performances,
+      achievements, and contributions to their teams:\n\n1. **Lionel Messi (Inter
+      Miami CF)**\n   - Nationality: Argentine\n   - Key Achievements: 7 Ballon d''Or
+      awards, FIFA World Cup 2022 Winner, numerous domestic league titles, and UEFA
+      Champions League titles.\n   - Playing Style: Renowned for his dribbling, playmaking,
+      and goal-scoring abilities.\n\n2. **Kylian Mbapp\u00e9 (Paris Saint-Germain)**\n   -
+      Nationality: French\n   - Key Achievements: FIFA World Cup 2018 Winner, multiple
+      Ligue 1 titles, UEFA Champions League finalist.\n   - Playing Style: Known for
+      his incredible speed, technical skills, and goal-scoring prowess.\n\n3. **Erling
+      Haaland (Manchester City)**\n   - Nationality: Norwegian\n   - Key Achievements:
+      2022-23 Premier League Top Scorer, UEFA Champions League Winner with Manchester
+      City.\n   - Playing Style: Exceptional striker with remarkable physical attributes,
+      finishing skills, and positioning.\n\n4. **Kevin De Bruyne (Manchester City)**\n   -
+      Nationality: Belgian\n   - Key Achievements: Multiple Premier League titles,
+      UEFA Champions League Winner, recognized for his assists in domestic and international
+      tournaments.\n   - Playing Style: An elite playmaker known for his vision, passing
+      accuracy, and ability to control the game.\n\n5. **Cristiano Ronaldo (Al Nassr)**\n   -
+      Nationality: Portuguese\n   - Key Achievements: 5 Ballon d''Or awards, 5 UEFA
+      Champions League titles, and 2020 UEFA European Championship Winner.\n   - Playing
+      Style: Known for his athleticism, goal-scoring ability, and leadership on and
+      off the pitch.\n\n6. **Neymar Jr. (Al Hilal)**\n   - Nationality: Brazilian\n   -
+      Key Achievements: Domestic titles in Spain and France, UEFA Champions League
+      Runner-Up, Copa America Winner.\n   - Playing Style: Known for his flair, creativity,
+      dribbling skills, and ability to change the game''s momentum.\n\n7. **Luka Modri\u0107
+      (Real Madrid)**\n   - Nationality: Croatian\n   - Key Achievements: 2018 Ballon
+      d''Or Winner, UEFA Champions League titles, and FIFA World Cup Runner-Up.\n   -
+      Playing Style: Expert midfield conductor known for his intelligence, passing,
+      and ability to dictate the game''s tempo.\n\n8. **Robert Lewandowski (FC Barcelona)**\n   -
+      Nationality: Polish\n   - Key Achievements: Multiple Bundesliga titles, UEFA
+      Champions League Winner, FIFA Best Men\u2019s Player in 2020 and 2021.\n   -
+      Playing Style: Prolific striker with outstanding finishing ability and positioning,
+      well-rounded in the penalty area.\n\n9. **Karim Benzema (Al-Ittihad)**\n   -
+      Nationality: French\n   - Key Achievements: 2022 Ballon d''Or Winner, multiple
+      UEFA Champions League titles with Real Madrid.\n   - Playing Style: Known for
+      his versatility as a forward, exceptional link-up play, and ability to score
+      in critical moments.\n\n10. **Mohamed Salah (Liverpool)**\n    - Nationality:
+      Egyptian\n    - Key Achievements: Premier League titles, UEFA Champions League
+      Winner, consistently among the league''s top goal scorers.\n    - Playing Style:
+      Renowned for his speed, dribbling skills, and finishing ability, especially
+      in one-on-one situations.\n\nThis list reflects the influence and success of
+      these players based on their recent performances and contributions to soccer,
+      making them stand out as the best in the world as of October 2023. Each player''s
+      unique strengths and achievements contribute to their status in the world of
+      football."}, {"role": "user", "content": "The task result includes multiple
+      players from various nationalities, specifically 8 players who are not Brazilian
+      (Lionel Messi, Kylian Mbapp\u00e9, Erling Haaland, Kevin De Bruyne, Cristiano
+      Ronaldo, Luka Modri\u0107, Robert Lewandowski, Karim Benzema, Mohamed Salah).
+      The guardrail specifies to only include Brazilian players, both women and men,
+      which has not been adhered to."}], "model": "gpt-4o-mini", "stop": ["\nObservation:"]}'
     headers:
       accept:
       - application/json
       accept-encoding:
-      - gzip, deflate, zstd
+      - gzip, deflate
       connection:
       - keep-alive
       content-length:
-      - '4338'
+      - '4720'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=UscrLNUFPQp17ivpT2nYqbIb8GsK9e0GpWC7sIKWwnU-1749566007-1.0.1.1-fCm5jdN02Agxc9.Ep4aAnKukyBp9S3iOLK9NY51NLG1zib3MnfjyCm5HhsWtUvr2lIjQpD_EWosVk4JuLbGxrKYZBa4WTendGsY9lCU9naU;
-        _cfuvid=CGbpwQsAGlm5OcWs4NP0JuyqJh.mIqHyUZjIdKm8_.I-1749566007688-0.0.1.1-604800000
+      - __cf_bm=0S.rcDw5EJOS0bhC5bMbVoGhgiYApQ1gZMC.rb1F1KU-1758940526-1.0.1.1-9v6i3zpNsm_MJwHfF8e2SKRM.aPdiLS3XtenW9PPO46onv.rIoEtodnhZYOONk.i2G2e9k6mNyRDTUyQ212gLUbO.6xHWv.BnRnLkjux6vo;
+        _cfuvid=9z01_C1JzDlEar0Qq91w2hNRBrNXDz5sqpzQW0ZCtlw-1758940526959-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.78.0
+      - OpenAI/Python 1.109.1
       x-stainless-arch:
       - arm64
       x-stainless-async:
@@ -384,7 +432,7 @@ interactions:
       x-stainless-os:
       - MacOS
       x-stainless-package-version:
-      - 1.78.0
+      - 1.109.1
       x-stainless-raw-response:
       - 'true'
       x-stainless-read-timeout:
@@ -394,44 +442,67 @@ interactions:
       x-stainless-runtime:
       - CPython
       x-stainless-runtime-version:
-      - 3.12.9
+      - 3.10.18
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    body:
-      string: !!binary |
-        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
+    content: "{\n  \"id\": \"chatcmpl-CKF5Oohfw4jN5dQJJvrI1MEhYCWn2\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1758940586,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"Thought: I now can give a great answer
+      \ \\nFinal Answer: Here is a comprehensive overview of the top Brazilian soccer
+      players in the world as of October 2023, highlighting their performances, achievements,
+      and contributions to their teams. This list includes both male and female players
+      who have made significant impacts in the sport.\\n\\n1. **Neymar Jr. (Al Hilal)**\\n
+      \  - Key Achievements: Domestic titles in La Liga and Ligue 1, UEFA Champions
+      League Runner-Up, Copa America Winner.\\n   - Playing Style: Known for his flair,
+      creativity, exceptional dribbling skills, and ability to change the momentum
+      of a game.\\n\\n2. **Vin\xEDcius J\xFAnior (Real Madrid)**\\n   - Key Achievements:
+      UEFA Champions League Winner, La Liga titles, and significant contributions
+      to his national team.\\n   - Playing Style: Noted for his pace, dribbling ability,
+      and scoring, as well as providing crucial assists.\\n\\n3. **Alisson Becker
+      (Liverpool)**\\n   - Key Achievements: UEFA Champions League Winner, Premier
+      League titles, 2021 Copa America Winner with Brazil.\\n   - Playing Style: Renowned
+      for his shot-stopping skills, distribution, and leadership as a goalkeeper.\\n\\n4.
+      **Richarlison (Tottenham Hotspur)**\\n   - Key Achievements: Olympic Gold Medalist
+      (2020), Copa America Runner-Up, praised for his versatility in attack.\\n   -
+      Playing Style: Known for his tenacity, aerial ability, and fundamental goal-scoring
+      skills.\\n\\n5. **Gabriel Jesus (Arsenal)**\\n   - Key Achievements: Premier
+      League titles with Manchester City, Olympic Gold Medalist (2020), and 2021 Copa
+      America Winner.\\n   - Playing Style: A dynamic forward with a great work ethic,
+      capable of playing multiple attacking roles.\\n\\n6. **Martina (Brazil Women's
+      National Team)**\\n   - Key Achievements: Olympic Gold Medalist (2004) and multiple
+      Copa Am\xE9rica titles with the women's team.\\n   - Playing Style: Known for
+      her technical skills, playmaking ability, and experience providing guidance
+      to younger players.\\n\\n7. **Debinha (North Carolina Courage)**\\n   - Key
+      Achievements: Renowned for her performances in the NWSL, two-time NWSL Champion
+      and prominent figures in the Brazil Women's National Team.\\n   - Playing Style:
+      Excellent at creating plays and scoring, making her a key player in crucial
+      matches.\\n\\n8. **Formiga (Retired)**\\n   - Key Achievements: One of the most
+      capped players in women's soccer history, competing in seven FIFA Women\u2019s
+      World Cups.\\n   - Playing Style: Known for her intelligence in midfield, leadership
+      qualities, and consistent performance.\\n\\n9. **Tamires (Brazil Women's National
+      Team)**\\n   - Key Achievements: Key player in multiple Copa Am\xE9rica titles,
+      helping Brazil women to qualify for significant tournaments.\\n   - Playing
+      Style: Strong defender known for her pace, technical skills, and ability to
+      contribute offensively from the back.\\n\\n10. **Geyse (FC Barcelona Femen\xED)**\\n
+      \   - Key Achievements: Rising star in women's soccer, gaining attention in
+      both national and club competitions.\\n    - Playing Style: Committed attacker
+      with solid dribbling skills and a keen eye for goal.\\n\\nThis list showcases
+      the talents from Brazil, highlighting the contributions of both men and women
+      athletes who have excelled in soccer and made important impacts on the global
+      stage as of October 2023. Each player represents the best of Brazilian soccer,
+      exhibiting exceptional skills and achievements in their careers.\",\n        \"refusal\":
+      null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
+      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 1010,\n    \"completion_tokens\":
+      722,\n    \"total_tokens\": 1732,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
+      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+      \"default\",\n  \"system_fingerprint\": \"fp_560af6e559\"\n}\n"
     headers:
       CF-RAY:
-      - 94d995f0ca0cf1fe-GRU
+      - 98579d0168e3377a-EWR
       Connection:
       - keep-alive
       Content-Encoding:
@@ -439,9 +510,11 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Tue, 10 Jun 2025 14:34:22 GMT
+      - Sat, 27 Sep 2025 02:36:40 GMT
       Server:
       - cloudflare
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
       Transfer-Encoding:
       - chunked
       X-Content-Type-Options:
@@ -455,30 +528,37 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '35941'
+      - '14038'
+      openai-project:
+      - proj_xitITlrFeen7zjNSzML82h9x
       openai-version:
       - '2020-10-01'
-      strict-transport-security:
-      - max-age=31536000; includeSubDomains; preload
       x-envoy-upstream-service-time:
-      - '35946'
+      - '14272'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-project-tokens:
+      - '150000000'
       x-ratelimit-limit-requests:
       - '30000'
       x-ratelimit-limit-tokens:
       - '150000000'
+      x-ratelimit-remaining-project-tokens:
+      - '149998887'
       x-ratelimit-remaining-requests:
       - '29999'
       x-ratelimit-remaining-tokens:
-      - '149998983'
+      - '149998887'
+      x-ratelimit-reset-project-tokens:
+      - 0s
       x-ratelimit-reset-requests:
       - 2ms
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_c874fed664f962f5ee90decb8ebad875
-    status:
-      code: 200
-      message: OK
+      - req_33bbb13fb176461e9a77b3df1e81b6bb
+    http_version: HTTP/1.1
+    status_code: 200
 - request:
     body: '{"messages": [{"role": "system", "content": "You are Guardrail Agent. You
       are a expert at validating the output of a task. By providing effective feedback
@@ -491,47 +571,50 @@ interactions:
       format: {\n  \"valid\": bool,\n  \"feedback\": str | None\n}\n\nIMPORTANT: Ensure
       the final output does not include any code block markers like ```json or ```python."},
       {"role": "user", "content": "\n        Ensure the following task result complies
-      with the given guardrail.\n\n        Task result:\n        Here are the top
-      10 best soccer players in the world, focusing exclusively on Brazilian players,
-      both women and men, based on their performance and impact in the game as of
-      October 2023:\n\n1. **Neymar Jr.**  \n   - Position: Forward  \n   - Club: Al
-      Hilal  \n   - Highlights: One of the most skilled forwards globally, Neymar
-      continues to dazzle with his dribbling, playmaking, and goal-scoring ability,
-      having a significant impact on both his club and the Brazilian national team.\n\n2.
-      **Vin\u00edcius J\u00fanior**  \n   - Position: Forward  \n   - Club: Real Madrid  \n   -
-      Highlights: Vin\u00edcius has emerged as a key player for Real Madrid, noted
-      for his speed, technical skills, and crucial goals in important matches, showcasing
-      his talent on both club and international levels.\n\n3. **Richarlison**  \n   -
-      Position: Forward  \n   - Club: Tottenham Hotspur  \n   - Highlights: Known
-      for his versatility and aerial ability, Richarlison has become a vital member
-      of the national team and has the capability to change the game with his pace
-      and scoring ability.\n\n4. **Marta**  \n   - Position: Forward  \n   - Club:
-      Orlando Pride  \n   - Highlights: A true legend of women''s soccer, Marta has
-      consistently showcased her skill, leadership, and goal-scoring prowess, earning
-      numerous awards and accolades throughout her legendary career.\n\n5. **Andressa
-      Alves**  \n   - Position: Midfielder  \n   - Club: Roma  \n   - Highlights:
-      A pivotal player in women''s soccer, Andressa has displayed her exceptional
-      skills and tactical awareness both in club play and for the Brazilian national
-      team.\n\n6. **Alana Santos**  \n   - Position: Defender  \n   - Club: Benfica  \n   -
-      Highlights: Alana is recognized for her defensive prowess and ability to contribute
-      to the attack, establishing herself as a key player for both her club and the
-      national team.\n\n7. **Gabriel Jesus**  \n   - Position: Forward  \n   - Club:
-      Arsenal  \n   - Highlights: With a flair for scoring and assisting, Gabriel
-      Jesus is an essential part of the national team, known for his work rate and
-      intelligence on the field.\n\n8. **Ta\u00eds Ara\u00fajo**  \n   - Position:
-      Midfielder  \n   - Club: S\u00e3o Paulo  \n   - Highlights: A rising star in
-      Brazilian women''s soccer, Ta\u00eds has gained recognition for her strong performances
-      in midfield, showcasing both skill and creativity.\n\n9. **Thiago Silva**  \n   -
-      Position: Defender  \n   - Club: Chelsea  \n   - Highlights: An experienced
-      and reliable center-back, Silva\u2019s leadership and defensive abilities have
-      made him a cornerstone for Chelsea and the Brazilian national team.\n\n10. **Bia
-      Zaneratto**  \n    - Position: Forward  \n    - Club: Palmeiras  \n    - Highlights:
-      A talented forward, Bia has become known for her goal-scoring capabilities and
-      playmaking skills, contributing significantly to both her club and the national
-      team.\n\nThis list highlights the incredible talent and contributions of Brazilian
-      players in soccer, showcasing their skills across both men''s and women''s games,
-      thus representing Brazil''s rich soccer legacy.\n\n        Guardrail:\n        Only
-      include Brazilian players, both women and men\n        \n        Your task:\n        -
+      with the given guardrail.\n\n        Task result:\n        Here is a comprehensive
+      overview of the top Brazilian soccer players in the world as of October 2023,
+      highlighting their performances, achievements, and contributions to their teams.
+      This list includes both male and female players who have made significant impacts
+      in the sport.\n\n1. **Neymar Jr. (Al Hilal)**\n   - Key Achievements: Domestic
+      titles in La Liga and Ligue 1, UEFA Champions League Runner-Up, Copa America
+      Winner.\n   - Playing Style: Known for his flair, creativity, exceptional dribbling
+      skills, and ability to change the momentum of a game.\n\n2. **Vin\u00edcius
+      J\u00fanior (Real Madrid)**\n   - Key Achievements: UEFA Champions League Winner,
+      La Liga titles, and significant contributions to his national team.\n   - Playing
+      Style: Noted for his pace, dribbling ability, and scoring, as well as providing
+      crucial assists.\n\n3. **Alisson Becker (Liverpool)**\n   - Key Achievements:
+      UEFA Champions League Winner, Premier League titles, 2021 Copa America Winner
+      with Brazil.\n   - Playing Style: Renowned for his shot-stopping skills, distribution,
+      and leadership as a goalkeeper.\n\n4. **Richarlison (Tottenham Hotspur)**\n   -
+      Key Achievements: Olympic Gold Medalist (2020), Copa America Runner-Up, praised
+      for his versatility in attack.\n   - Playing Style: Known for his tenacity,
+      aerial ability, and fundamental goal-scoring skills.\n\n5. **Gabriel Jesus (Arsenal)**\n   -
+      Key Achievements: Premier League titles with Manchester City, Olympic Gold Medalist
+      (2020), and 2021 Copa America Winner.\n   - Playing Style: A dynamic forward
+      with a great work ethic, capable of playing multiple attacking roles.\n\n6.
+      **Martina (Brazil Women''s National Team)**\n   - Key Achievements: Olympic
+      Gold Medalist (2004) and multiple Copa Am\u00e9rica titles with the women''s
+      team.\n   - Playing Style: Known for her technical skills, playmaking ability,
+      and experience providing guidance to younger players.\n\n7. **Debinha (North
+      Carolina Courage)**\n   - Key Achievements: Renowned for her performances in
+      the NWSL, two-time NWSL Champion and prominent figures in the Brazil Women''s
+      National Team.\n   - Playing Style: Excellent at creating plays and scoring,
+      making her a key player in crucial matches.\n\n8. **Formiga (Retired)**\n   -
+      Key Achievements: One of the most capped players in women''s soccer history,
+      competing in seven FIFA Women\u2019s World Cups.\n   - Playing Style: Known
+      for her intelligence in midfield, leadership qualities, and consistent performance.\n\n9.
+      **Tamires (Brazil Women''s National Team)**\n   - Key Achievements: Key player
+      in multiple Copa Am\u00e9rica titles, helping Brazil women to qualify for significant
+      tournaments.\n   - Playing Style: Strong defender known for her pace, technical
+      skills, and ability to contribute offensively from the back.\n\n10. **Geyse
+      (FC Barcelona Femen\u00ed)**\n    - Key Achievements: Rising star in women''s
+      soccer, gaining attention in both national and club competitions.\n    - Playing
+      Style: Committed attacker with solid dribbling skills and a keen eye for goal.\n\nThis
+      list showcases the talents from Brazil, highlighting the contributions of both
+      men and women athletes who have excelled in soccer and made important impacts
+      on the global stage as of October 2023. Each player represents the best of Brazilian
+      soccer, exhibiting exceptional skills and achievements in their careers.\n\n        Guardrail:\n        Only
+      include Brazilian players, both women and men\n\n        Your task:\n        -
       Confirm if the Task result complies with the guardrail.\n        - If not, provide
       clear feedback explaining what is wrong (e.g., by how much it violates the rule,
       or what specific part fails).\n        - Focus only on identifying issues \u2014
@@ -542,20 +625,20 @@ interactions:
       accept:
       - application/json
       accept-encoding:
-      - gzip, deflate, zstd
+      - gzip, deflate
       connection:
       - keep-alive
       content-length:
-      - '4571'
+      - '4847'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=UscrLNUFPQp17ivpT2nYqbIb8GsK9e0GpWC7sIKWwnU-1749566007-1.0.1.1-fCm5jdN02Agxc9.Ep4aAnKukyBp9S3iOLK9NY51NLG1zib3MnfjyCm5HhsWtUvr2lIjQpD_EWosVk4JuLbGxrKYZBa4WTendGsY9lCU9naU;
-        _cfuvid=CGbpwQsAGlm5OcWs4NP0JuyqJh.mIqHyUZjIdKm8_.I-1749566007688-0.0.1.1-604800000
+      - __cf_bm=0S.rcDw5EJOS0bhC5bMbVoGhgiYApQ1gZMC.rb1F1KU-1758940526-1.0.1.1-9v6i3zpNsm_MJwHfF8e2SKRM.aPdiLS3XtenW9PPO46onv.rIoEtodnhZYOONk.i2G2e9k6mNyRDTUyQ212gLUbO.6xHWv.BnRnLkjux6vo;
+        _cfuvid=9z01_C1JzDlEar0Qq91w2hNRBrNXDz5sqpzQW0ZCtlw-1758940526959-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.78.0
+      - OpenAI/Python 1.109.1
       x-stainless-arch:
       - arm64
       x-stainless-async:
@@ -565,7 +648,7 @@ interactions:
       x-stainless-os:
       - MacOS
       x-stainless-package-version:
-      - 1.78.0
+      - 1.109.1
       x-stainless-raw-response:
       - 'true'
       x-stainless-read-timeout:
@@ -575,24 +658,30 @@ interactions:
       x-stainless-runtime:
       - CPython
       x-stainless-runtime-version:
-      - 3.12.9
+      - 3.10.18
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    body:
-      string: !!binary |
-        H4sIAAAAAAAAA4ySTW/bMAyG7/4VhM72kLj5WHxrDwEKtNilGDYshcFItK1WlgRJTjYE+e+D7DR2
-        tw7YxYD58KX4kjwlAEwKVgDjDQbeWpXd1d3Dl+5Yfb3dPD6K7bri26cw899f5vruG0ujwuxfiIc3
-        1SduWqsoSKMHzB1hoFh1vl5slqvVbJX3oDWCVJTVNmQLk7VSyyyf5Ytsts7mny/qxkhOnhXwIwEA
-        OPXf2KcW9JMVMEvfIi15jzWx4poEwJxRMcLQe+kD6sDSEXKjA+m+9afGdHUTCrgHbY7AUUMtDwQI
-        dewfUPsjOYCd3kqNCm77/wJOOw2wYwdUUuxYAcF1lA6xikjskb/GsO6U2unz9HFHVedRXeAEoNYm
-        YBxgb/v5Qs5Xo8rU1pm9/0PKKqmlb0pH6I2OpnwwlvX0nAA89wPt3s2IWWdaG8pgXql/bpMvh3ps
-        3ONI8/UFBhNQTVTLPP2gXikooFR+shLGkTckRum4P+yENBOQTFz/3c1HtQfnUtf/U34EnJMNJErr
-        SEj+3vGY5iie+b/SrlPuG2ae3EFyKoMkFzchqMJODcfH/C8fqC0rqWty1snhAitb3ixwuUDa3HCW
-        nJPfAAAA//8DAOHOvQuPAwAA
+    content: "{\n  \"id\": \"chatcmpl-CKF5dUQOpvhyrwjCsmpON6zx9NG4s\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1758940601,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"Thought: I now can give a great answer
+      \ \\nFinal Answer: {\\n  \\\"valid\\\": false,\\n  \\\"feedback\\\": \\\"The
+      task result includes one player who is not currently a Brazilian national player,
+      specifically Formiga, who is noted as retired. While she has had a significant
+      impact on women's soccer, she does not meet the requirement of being an active
+      player. All other listed players comply with the guardrail of being Brazilian
+      players, but the inclusion of a retired athlete makes the overall result non-compliant.\\\"\\n}\",\n
+      \       \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\":
+      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+      987,\n    \"completion_tokens\": 103,\n    \"total_tokens\": 1090,\n    \"prompt_tokens_details\":
+      {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+      {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+      \"default\",\n  \"system_fingerprint\": \"fp_560af6e559\"\n}\n"
     headers:
       CF-RAY:
-      - 94d996d2b877f1fe-GRU
+      - 98579d62aa87377a-EWR
       Connection:
       - keep-alive
       Content-Encoding:
@@ -600,9 +689,11 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Tue, 10 Jun 2025 14:34:38 GMT
+      - Sat, 27 Sep 2025 02:36:43 GMT
       Server:
       - cloudflare
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
       Transfer-Encoding:
       - chunked
       X-Content-Type-Options:
@@ -616,28 +707,469 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '15341'
+      - '2290'
+      openai-project:
+      - proj_xitITlrFeen7zjNSzML82h9x
       openai-version:
       - '2020-10-01'
-      strict-transport-security:
-      - max-age=31536000; includeSubDomains; preload
       x-envoy-upstream-service-time:
-      - '15343'
+      - '2333'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-project-tokens:
+      - '150000000'
       x-ratelimit-limit-requests:
       - '30000'
       x-ratelimit-limit-tokens:
       - '150000000'
+      x-ratelimit-remaining-project-tokens:
+      - '149998845'
       x-ratelimit-remaining-requests:
       - '29999'
       x-ratelimit-remaining-tokens:
-      - '149998917'
+      - '149998842'
+      x-ratelimit-reset-project-tokens:
+      - 0s
       x-ratelimit-reset-requests:
       - 2ms
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_22419b91d42cf1e03278a29f3093ed3d
-    status:
-      code: 200
-      message: OK
+      - req_6a354f8be1b14ce0b9189d63a70e46dd
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are Sports Analyst. You
+      are an expert at gathering and organizing information. You carefully collect
+      details and present them in a structured way.\nYour personal goal is: Gather
+      information about the best soccer players\n\nTo give my best complete final
+      answer to the task respond using the exact following format:\n\nThought: I now
+      can give a great answer\nFinal Answer: Your final answer must be the great and
+      the most complete as possible, it must be outcome described.\n\nI MUST use these
+      formats, my job depends on it!"}, {"role": "user", "content": "Top 10 best players
+      in the world?"}, {"role": "assistant", "content": "Thought: I now can give a
+      great answer  \nFinal Answer: Here is a comprehensive overview of the top 10
+      best soccer players in the world as of October 2023, based on their performances,
+      achievements, and contributions to their teams:\n\n1. **Lionel Messi (Inter
+      Miami CF)**\n   - Nationality: Argentine\n   - Key Achievements: 7 Ballon d''Or
+      awards, FIFA World Cup 2022 Winner, numerous domestic league titles, and UEFA
+      Champions League titles.\n   - Playing Style: Renowned for his dribbling, playmaking,
+      and goal-scoring abilities.\n\n2. **Kylian Mbapp\u00e9 (Paris Saint-Germain)**\n   -
+      Nationality: French\n   - Key Achievements: FIFA World Cup 2018 Winner, multiple
+      Ligue 1 titles, UEFA Champions League finalist.\n   - Playing Style: Known for
+      his incredible speed, technical skills, and goal-scoring prowess.\n\n3. **Erling
+      Haaland (Manchester City)**\n   - Nationality: Norwegian\n   - Key Achievements:
+      2022-23 Premier League Top Scorer, UEFA Champions League Winner with Manchester
+      City.\n   - Playing Style: Exceptional striker with remarkable physical attributes,
+      finishing skills, and positioning.\n\n4. **Kevin De Bruyne (Manchester City)**\n   -
+      Nationality: Belgian\n   - Key Achievements: Multiple Premier League titles,
+      UEFA Champions League Winner, recognized for his assists in domestic and international
+      tournaments.\n   - Playing Style: An elite playmaker known for his vision, passing
+      accuracy, and ability to control the game.\n\n5. **Cristiano Ronaldo (Al Nassr)**\n   -
+      Nationality: Portuguese\n   - Key Achievements: 5 Ballon d''Or awards, 5 UEFA
+      Champions League titles, and 2020 UEFA European Championship Winner.\n   - Playing
+      Style: Known for his athleticism, goal-scoring ability, and leadership on and
+      off the pitch.\n\n6. **Neymar Jr. (Al Hilal)**\n   - Nationality: Brazilian\n   -
+      Key Achievements: Domestic titles in Spain and France, UEFA Champions League
+      Runner-Up, Copa America Winner.\n   - Playing Style: Known for his flair, creativity,
+      dribbling skills, and ability to change the game''s momentum.\n\n7. **Luka Modri\u0107
+      (Real Madrid)**\n   - Nationality: Croatian\n   - Key Achievements: 2018 Ballon
+      d''Or Winner, UEFA Champions League titles, and FIFA World Cup Runner-Up.\n   -
+      Playing Style: Expert midfield conductor known for his intelligence, passing,
+      and ability to dictate the game''s tempo.\n\n8. **Robert Lewandowski (FC Barcelona)**\n   -
+      Nationality: Polish\n   - Key Achievements: Multiple Bundesliga titles, UEFA
+      Champions League Winner, FIFA Best Men\u2019s Player in 2020 and 2021.\n   -
+      Playing Style: Prolific striker with outstanding finishing ability and positioning,
+      well-rounded in the penalty area.\n\n9. **Karim Benzema (Al-Ittihad)**\n   -
+      Nationality: French\n   - Key Achievements: 2022 Ballon d''Or Winner, multiple
+      UEFA Champions League titles with Real Madrid.\n   - Playing Style: Known for
+      his versatility as a forward, exceptional link-up play, and ability to score
+      in critical moments.\n\n10. **Mohamed Salah (Liverpool)**\n    - Nationality:
+      Egyptian\n    - Key Achievements: Premier League titles, UEFA Champions League
+      Winner, consistently among the league''s top goal scorers.\n    - Playing Style:
+      Renowned for his speed, dribbling skills, and finishing ability, especially
+      in one-on-one situations.\n\nThis list reflects the influence and success of
+      these players based on their recent performances and contributions to soccer,
+      making them stand out as the best in the world as of October 2023. Each player''s
+      unique strengths and achievements contribute to their status in the world of
+      football."}, {"role": "user", "content": "The task result includes multiple
+      players from various nationalities, specifically 8 players who are not Brazilian
+      (Lionel Messi, Kylian Mbapp\u00e9, Erling Haaland, Kevin De Bruyne, Cristiano
+      Ronaldo, Luka Modri\u0107, Robert Lewandowski, Karim Benzema, Mohamed Salah).
+      The guardrail specifies to only include Brazilian players, both women and men,
+      which has not been adhered to."}, {"role": "assistant", "content": "Thought:
+      I now can give a great answer  \nFinal Answer: Here is a comprehensive overview
+      of the top Brazilian soccer players in the world as of October 2023, highlighting
+      their performances, achievements, and contributions to their teams. This list
+      includes both male and female players who have made significant impacts in the
+      sport.\n\n1. **Neymar Jr. (Al Hilal)**\n   - Key Achievements: Domestic titles
+      in La Liga and Ligue 1, UEFA Champions League Runner-Up, Copa America Winner.\n   -
+      Playing Style: Known for his flair, creativity, exceptional dribbling skills,
+      and ability to change the momentum of a game.\n\n2. **Vin\u00edcius J\u00fanior
+      (Real Madrid)**\n   - Key Achievements: UEFA Champions League Winner, La Liga
+      titles, and significant contributions to his national team.\n   - Playing Style:
+      Noted for his pace, dribbling ability, and scoring, as well as providing crucial
+      assists.\n\n3. **Alisson Becker (Liverpool)**\n   - Key Achievements: UEFA Champions
+      League Winner, Premier League titles, 2021 Copa America Winner with Brazil.\n   -
+      Playing Style: Renowned for his shot-stopping skills, distribution, and leadership
+      as a goalkeeper.\n\n4. **Richarlison (Tottenham Hotspur)**\n   - Key Achievements:
+      Olympic Gold Medalist (2020), Copa America Runner-Up, praised for his versatility
+      in attack.\n   - Playing Style: Known for his tenacity, aerial ability, and
+      fundamental goal-scoring skills.\n\n5. **Gabriel Jesus (Arsenal)**\n   - Key
+      Achievements: Premier League titles with Manchester City, Olympic Gold Medalist
+      (2020), and 2021 Copa America Winner.\n   - Playing Style: A dynamic forward
+      with a great work ethic, capable of playing multiple attacking roles.\n\n6.
+      **Martina (Brazil Women''s National Team)**\n   - Key Achievements: Olympic
+      Gold Medalist (2004) and multiple Copa Am\u00e9rica titles with the women''s
+      team.\n   - Playing Style: Known for her technical skills, playmaking ability,
+      and experience providing guidance to younger players.\n\n7. **Debinha (North
+      Carolina Courage)**\n   - Key Achievements: Renowned for her performances in
+      the NWSL, two-time NWSL Champion and prominent figures in the Brazil Women''s
+      National Team.\n   - Playing Style: Excellent at creating plays and scoring,
+      making her a key player in crucial matches.\n\n8. **Formiga (Retired)**\n   -
+      Key Achievements: One of the most capped players in women''s soccer history,
+      competing in seven FIFA Women\u2019s World Cups.\n   - Playing Style: Known
+      for her intelligence in midfield, leadership qualities, and consistent performance.\n\n9.
+      **Tamires (Brazil Women''s National Team)**\n   - Key Achievements: Key player
+      in multiple Copa Am\u00e9rica titles, helping Brazil women to qualify for significant
+      tournaments.\n   - Playing Style: Strong defender known for her pace, technical
+      skills, and ability to contribute offensively from the back.\n\n10. **Geyse
+      (FC Barcelona Femen\u00ed)**\n    - Key Achievements: Rising star in women''s
+      soccer, gaining attention in both national and club competitions.\n    - Playing
+      Style: Committed attacker with solid dribbling skills and a keen eye for goal.\n\nThis
+      list showcases the talents from Brazil, highlighting the contributions of both
+      men and women athletes who have excelled in soccer and made important impacts
+      on the global stage as of October 2023. Each player represents the best of Brazilian
+      soccer, exhibiting exceptional skills and achievements in their careers."},
+      {"role": "user", "content": "The task result includes one player who is not
+      currently a Brazilian national player, specifically Formiga, who is noted as
+      retired. While she has had a significant impact on women''s soccer, she does
+      not meet the requirement of being an active player. All other listed players
+      comply with the guardrail of being Brazilian players, but the inclusion of a
+      retired athlete makes the overall result non-compliant."}], "model": "gpt-4o-mini",
+      "stop": ["\nObservation:"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '8627'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=0S.rcDw5EJOS0bhC5bMbVoGhgiYApQ1gZMC.rb1F1KU-1758940526-1.0.1.1-9v6i3zpNsm_MJwHfF8e2SKRM.aPdiLS3XtenW9PPO46onv.rIoEtodnhZYOONk.i2G2e9k6mNyRDTUyQ212gLUbO.6xHWv.BnRnLkjux6vo;
+        _cfuvid=9z01_C1JzDlEar0Qq91w2hNRBrNXDz5sqpzQW0ZCtlw-1758940526959-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.109.1
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.109.1
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-read-timeout:
+      - '600.0'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.10.18
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-CKF5fWN96vKtppayNnYmnGSuS2lc2\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1758940603,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"Thought: I now can give a great answer
+      \ \\nFinal Answer: Here is a comprehensive overview of the top current Brazilian
+      soccer players in the world as of October 2023, making sure to include only
+      active players who have made significant impacts in the sport, both in men's
+      and women's soccer.\\n\\n1. **Neymar Jr. (Al Hilal)**\\n   - Key Achievements:
+      Domestic titles in La Liga and Ligue 1, UEFA Champions League Runner-Up, Copa
+      America Winner.\\n   - Playing Style: Known for his flair, creativity, exceptional
+      dribbling skills, and ability to change the momentum of a game.\\n\\n2. **Vin\xEDcius
+      J\xFAnior (Real Madrid)**\\n   - Key Achievements: UEFA Champions League Winner,
+      La Liga titles, and significant contributions to his national team.\\n   - Playing
+      Style: Noted for his pace, dribbling ability, and scoring, as well as providing
+      crucial assists.\\n\\n3. **Alisson Becker (Liverpool)**\\n   - Key Achievements:
+      UEFA Champions League Winner, Premier League titles, 2021 Copa America Winner
+      with Brazil.\\n   - Playing Style: Renowned for his shot-stopping skills, distribution,
+      and leadership as a goalkeeper.\\n\\n4. **Richarlison (Tottenham Hotspur)**\\n
+      \  - Key Achievements: Olympic Gold Medalist (2020), Copa America Runner-Up,
+      praised for his versatility in attack.\\n   - Playing Style: Known for his tenacity,
+      aerial ability, and fundamental goal-scoring skills.\\n\\n5. **Gabriel Jesus
+      (Arsenal)**\\n   - Key Achievements: Premier League titles with Manchester City,
+      Olympic Gold Medalist (2020), and 2021 Copa America Winner.\\n   - Playing Style:
+      A dynamic forward with a great work ethic, capable of playing multiple attacking
+      roles.\\n\\n6. **Debinha (North Carolina Courage)**\\n   - Key Achievements:
+      Renowned for her performances in the NWSL, two-time NWSL Champion, and an influential
+      figure on the Brazil Women's National Team.\\n   - Playing Style: Excellent
+      at creating plays and scoring, making her a key player in crucial matches.\\n\\n7.
+      **Tamires (Brazil Women's National Team)**\\n   - Key Achievements: Key player
+      in multiple Copa Am\xE9rica titles, helping the Brazil women's team to qualify
+      for significant tournaments.\\n   - Playing Style: Strong defender known for
+      her pace, technical skills, and ability to contribute offensively from the back.\\n\\n8.
+      **Geyse (FC Barcelona Femen\xED)**\\n   - Key Achievements: Rising star in women's
+      soccer, gaining recognition in both national and club competitions.\\n   - Playing
+      Style: Committed attacker with solid dribbling skills and a keen eye for goal.\\n\\n9.
+      **Bia Zaneratto (Palmeiras)**\\n   - Key Achievements: Impressive performances
+      in both domestic and international competitions, representing Brazil in various
+      tournaments.\\n   - Playing Style: Known for her forward play, speed, and scoring
+      ability.\\n\\n10. **Aline (Sky Blue FC)**\\n    - Key Achievements: A key player
+      in various international competitions for Brazil, notable performances and goal-scoring
+      ability.\\n    - Playing Style: A versatile attacker recognized for her agility,
+      creativity, and skill on the ball.\\n\\nThis list proudly features only active
+      Brazilian players who have demonstrated exceptional skill and accomplishments
+      in soccer as of October 2023, both in men's and women's categories. Each player
+      reflects the strength and talent of Brazil in the sport today.\",\n        \"refusal\":
+      null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
+      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 1817,\n    \"completion_tokens\":
+      705,\n    \"total_tokens\": 2522,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+      1664,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+      {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+      \"default\",\n  \"system_fingerprint\": \"fp_560af6e559\"\n}\n"
+    headers:
+      CF-RAY:
+      - 98579d749e02377a-EWR
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Sat, 27 Sep 2025 02:36:57 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '13303'
+      openai-project:
+      - proj_xitITlrFeen7zjNSzML82h9x
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '13326'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-project-tokens:
+      - '150000000'
+      x-ratelimit-limit-requests:
+      - '30000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-project-tokens:
+      - '149997940'
+      x-ratelimit-remaining-requests:
+      - '29999'
+      x-ratelimit-remaining-tokens:
+      - '149997942'
+      x-ratelimit-reset-project-tokens:
+      - 0s
+      x-ratelimit-reset-requests:
+      - 2ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_f7173453c9ba4c78afa2abbb5df8f339
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are Guardrail Agent. You
+      are a expert at validating the output of a task. By providing effective feedback
+      if the output is not valid.\nYour personal goal is: Validate the output of the
+      task\n\nTo give my best complete final answer to the task respond using the
+      exact following format:\n\nThought: I now can give a great answer\nFinal Answer:
+      Your final answer must be the great and the most complete as possible, it must
+      be outcome described.\n\nI MUST use these formats, my job depends on it!\nIMPORTANT:
+      Your final answer MUST contain all the information requested in the following
+      format: {\n  \"valid\": bool,\n  \"feedback\": str | None\n}\n\nIMPORTANT: Ensure
+      the final output does not include any code block markers like ```json or ```python."},
+      {"role": "user", "content": "\n        Ensure the following task result complies
+      with the given guardrail.\n\n        Task result:\n        Here is a comprehensive
+      overview of the top current Brazilian soccer players in the world as of October
+      2023, making sure to include only active players who have made significant impacts
+      in the sport, both in men''s and women''s soccer.\n\n1. **Neymar Jr. (Al Hilal)**\n   -
+      Key Achievements: Domestic titles in La Liga and Ligue 1, UEFA Champions League
+      Runner-Up, Copa America Winner.\n   - Playing Style: Known for his flair, creativity,
+      exceptional dribbling skills, and ability to change the momentum of a game.\n\n2.
+      **Vin\u00edcius J\u00fanior (Real Madrid)**\n   - Key Achievements: UEFA Champions
+      League Winner, La Liga titles, and significant contributions to his national
+      team.\n   - Playing Style: Noted for his pace, dribbling ability, and scoring,
+      as well as providing crucial assists.\n\n3. **Alisson Becker (Liverpool)**\n   -
+      Key Achievements: UEFA Champions League Winner, Premier League titles, 2021
+      Copa America Winner with Brazil.\n   - Playing Style: Renowned for his shot-stopping
+      skills, distribution, and leadership as a goalkeeper.\n\n4. **Richarlison (Tottenham
+      Hotspur)**\n   - Key Achievements: Olympic Gold Medalist (2020), Copa America
+      Runner-Up, praised for his versatility in attack.\n   - Playing Style: Known
+      for his tenacity, aerial ability, and fundamental goal-scoring skills.\n\n5.
+      **Gabriel Jesus (Arsenal)**\n   - Key Achievements: Premier League titles with
+      Manchester City, Olympic Gold Medalist (2020), and 2021 Copa America Winner.\n   -
+      Playing Style: A dynamic forward with a great work ethic, capable of playing
+      multiple attacking roles.\n\n6. **Debinha (North Carolina Courage)**\n   - Key
+      Achievements: Renowned for her performances in the NWSL, two-time NWSL Champion,
+      and an influential figure on the Brazil Women''s National Team.\n   - Playing
+      Style: Excellent at creating plays and scoring, making her a key player in crucial
+      matches.\n\n7. **Tamires (Brazil Women''s National Team)**\n   - Key Achievements:
+      Key player in multiple Copa Am\u00e9rica titles, helping the Brazil women''s
+      team to qualify for significant tournaments.\n   - Playing Style: Strong defender
+      known for her pace, technical skills, and ability to contribute offensively
+      from the back.\n\n8. **Geyse (FC Barcelona Femen\u00ed)**\n   - Key Achievements:
+      Rising star in women''s soccer, gaining recognition in both national and club
+      competitions.\n   - Playing Style: Committed attacker with solid dribbling skills
+      and a keen eye for goal.\n\n9. **Bia Zaneratto (Palmeiras)**\n   - Key Achievements:
+      Impressive performances in both domestic and international competitions, representing
+      Brazil in various tournaments.\n   - Playing Style: Known for her forward play,
+      speed, and scoring ability.\n\n10. **Aline (Sky Blue FC)**\n    - Key Achievements:
+      A key player in various international competitions for Brazil, notable performances
+      and goal-scoring ability.\n    - Playing Style: A versatile attacker recognized
+      for her agility, creativity, and skill on the ball.\n\nThis list proudly features
+      only active Brazilian players who have demonstrated exceptional skill and accomplishments
+      in soccer as of October 2023, both in men''s and women''s categories. Each player
+      reflects the strength and talent of Brazil in the sport today.\n\n        Guardrail:\n        Only
+      include Brazilian players, both women and men\n\n        Your task:\n        -
+      Confirm if the Task result complies with the guardrail.\n        - If not, provide
+      clear feedback explaining what is wrong (e.g., by how much it violates the rule,
+      or what specific part fails).\n        - Focus only on identifying issues \u2014
+      do not propose corrections.\n        - If the Task result complies with the
+      guardrail, saying that is valid\n        "}], "model": "gpt-4o-mini", "stop":
+      ["\nObservation:"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '4724'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=0S.rcDw5EJOS0bhC5bMbVoGhgiYApQ1gZMC.rb1F1KU-1758940526-1.0.1.1-9v6i3zpNsm_MJwHfF8e2SKRM.aPdiLS3XtenW9PPO46onv.rIoEtodnhZYOONk.i2G2e9k6mNyRDTUyQ212gLUbO.6xHWv.BnRnLkjux6vo;
+        _cfuvid=9z01_C1JzDlEar0Qq91w2hNRBrNXDz5sqpzQW0ZCtlw-1758940526959-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.109.1
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.109.1
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-read-timeout:
+      - '600.0'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.10.18
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-CKF5tRl5IGWDbjHCAps0bYHwbf0L4\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1758940617,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"Thought: I now can give a great answer
+      \ \\nFinal Answer: {\\n  \\\"valid\\\": true,\\n  \\\"feedback\\\": null\\n}\",\n
+      \       \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\":
+      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+      970,\n    \"completion_tokens\": 27,\n    \"total_tokens\": 997,\n    \"prompt_tokens_details\":
+      {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+      {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+      \"default\",\n  \"system_fingerprint\": \"fp_560af6e559\"\n}\n"
+    headers:
+      CF-RAY:
+      - 98579dc919a9377a-EWR
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Sat, 27 Sep 2025 02:36:58 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '1228'
+      openai-project:
+      - proj_xitITlrFeen7zjNSzML82h9x
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '1368'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-project-tokens:
+      - '150000000'
+      x-ratelimit-limit-requests:
+      - '30000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-project-tokens:
+      - '149998872'
+      x-ratelimit-remaining-requests:
+      - '29999'
+      x-ratelimit-remaining-tokens:
+      - '149998872'
+      x-ratelimit-reset-project-tokens:
+      - 0s
+      x-ratelimit-reset-requests:
+      - 2ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_4aefee87ea34497ebeb424a48fb25ccc
+    http_version: HTTP/1.1
+    status_code: 200
 version: 1

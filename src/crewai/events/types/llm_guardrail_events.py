@@ -26,7 +26,11 @@ class LLMGuardrailStartedEvent(BaseEvent):
         if isinstance(self.guardrail, (LLMGuardrail, HallucinationGuardrail)):
             self.guardrail = self.guardrail.description.strip()
         elif isinstance(self.guardrail, Callable):
-            self.guardrail = getsource(self.guardrail).strip()
+            try:
+                self.guardrail = getsource(self.guardrail).strip()
+            except (OSError, TypeError):
+                # Can't get source for lambdas or built-in functions
+                self.guardrail = f"<{self.guardrail.__name__ if hasattr(self.guardrail, '__name__') else 'callable'}>"
 
 
 class LLMGuardrailCompletedEvent(BaseEvent):
