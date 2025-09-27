@@ -10,6 +10,7 @@ requires-python = ">=3.10,<3.14"
 
 dependencies = [
     # Core Dependencies
+    "crewai-core",
     "pydantic>=2.11.9",
     "openai>=1.13.3",
     "litellm==1.74.9",
@@ -21,8 +22,6 @@ dependencies = [
     "opentelemetry-api>=1.30.0",
     "opentelemetry-sdk>=1.30.0",
     "opentelemetry-exporter-otlp-proto-http>=1.30.0",
-    # Data Handling
-    "chromadb~=1.1.0",
     "tokenizers>=0.20.3",
     "openpyxl>=3.1.5",
     "pyvis>=0.3.2",
@@ -34,13 +33,11 @@ dependencies = [
     "appdirs>=1.4.4",
     "jsonref>=1.1.0",
     "json-repair==0.25.2",
-    "uv>=0.4.25",
     "tomli-w>=1.1.0",
     "tomli>=2.0.2",
     "blinker>=1.9.0",
     "json5>=0.10.0",
     "portalocker==2.7.0",
-    "pydantic-settings>=2.10.1",
 ]
 
 [project.urls]
@@ -88,6 +85,10 @@ voyageai = [
 crewai = "crewai.cli.cli:crewai"
 
 [dependency-groups]
+all = [
+    "crewai-core",
+    "crewai-tools",
+]
 dev = [
     "ruff>=0.13.1",
     "mypy>=1.18.2",
@@ -107,6 +108,9 @@ dev = [
     "types-appdirs==1.4.*",
     "git-filter-repo>=2.47.0",
 ]
+
+[tool.uv]
+default-groups = "all"
 
 [tool.ruff]
 exclude = [
@@ -179,23 +183,18 @@ torchvision = [
   { index = "pytorch", marker = "python_version < '3.13'" },
 ]
 
-crewai = { workspace = true }
+crewai-core = { workspace = true }
 crewai-tools = { workspace = true }
 
 [tool.uv.workspace]
 members = [
     "lib/tools",
+    "lib/core",
 ]
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
-
-[tool.hatch.build.targets.wheel]
-exclude = [
-    "docs/**",
-    "docs/",
-]
 
 [tool.hatch.build.targets.sdist]
 exclude = [
@@ -205,3 +204,10 @@ exclude = [
 
 [tool.hatch.version]
 path = "src/crewai/__init__.py"
+
+[tool.hatch.build.targets.wheel]
+only-include = [
+    "src/crewai",
+    "lib/core/src",
+    "lib/tools/src",
+]

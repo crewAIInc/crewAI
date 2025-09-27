@@ -11,7 +11,7 @@ from crewai.rag.config.constants import (
 from crewai.rag.config.types import RagConfigType
 from crewai.rag.core.base_client import BaseClient
 from crewai.rag.factory import create_client
-from crewai.utilities.import_utils import require
+from crewai.core.utilities.import_utils import require
 
 
 class RagContext(BaseModel):

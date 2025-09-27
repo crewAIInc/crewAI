@@ -1,0 +1,56 @@
+[project]
+name = "crewai-core"
+dynamic = ["version"]
+description = ""
+readme = "README.md"
+authors = [
+    { name = "Greyson Lalonde", email = "greyson.r.lalonde@gmail.com" }
+]
+keywords = [
+    "crewai",
+    "ai",
+    "agents",
+    "framework",
+    "orchestration",
+    "llm",
+    "core",
+    "typed",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Typing :: Typed",
+]
+requires-python = ">=3.10, <3.14"
+dependencies = [
+    "chromadb~=1.1.0",
+    "pydantic-settings>=2.10.1",
+    "uv>=0.4.25",
+]
+
+[project.urls]
+Homepage = "https://crewai.com"
+Documentation = "https://docs.crewai.com"
+Repository = "https://github.com/crewAIInc/crewAI"
+
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "strict"
+asyncio_default_fixture_loop_scope = "function"
+
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.version]
+path = "src/crewai/core/__init__.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/crewai"]

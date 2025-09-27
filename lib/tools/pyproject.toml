@@ -1,6 +1,6 @@
 [project]
 name = "crewai-tools"
-version = "0.75.0"
+dynamic = ["version"]
 description = "Set of tools for the crewAI framework"
 readme = "README.md"
 authors = [
@@ -8,11 +8,11 @@ authors = [
 ]
 requires-python = ">=3.10, <3.14"
 dependencies = [
+    "crewai-core",
     "lancedb>=0.5.4",
     "pytube>=15.0.0",
     "requests>=2.31.0",
     "docker>=7.1.0",
-    "crewai",
     "lancedb>=0.5.4",
     "tiktoken>=0.8.0",
     "stagehand>=0.4.1",
@@ -145,3 +145,9 @@ contextual = [
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[tool.hatch.version]
+path = "src/crewai_tools/__init__.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/tools"]

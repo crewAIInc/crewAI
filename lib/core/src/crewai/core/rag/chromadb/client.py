@@ -31,7 +31,7 @@ from crewai.rag.core.base_client import (
     BaseCollectionParams,
 )
 from crewai.rag.types import SearchResult
-from crewai.utilities.logger_utils import suppress_logging
+from crewai.core.utilities.logger_utils import suppress_logging
 
 
 class ChromaDBClient(BaseClient):

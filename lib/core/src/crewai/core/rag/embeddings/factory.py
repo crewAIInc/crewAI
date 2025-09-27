@@ -9,7 +9,7 @@ from typing_extensions import deprecated
 
 from crewai.rag.core.base_embeddings_callable import EmbeddingFunction
 from crewai.rag.core.base_embeddings_provider import BaseEmbeddingsProvider
-from crewai.utilities.import_utils import import_and_validate_definition
+from crewai.core.utilities.import_utils import import_and_validate_definition
 
 if TYPE_CHECKING:
     from chromadb.utils.embedding_functions.amazon_bedrock_embedding_function import (
