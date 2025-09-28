@@ -15,12 +15,13 @@ dev = [
     "pytest>=8.4.2",
     "pytest-asyncio>=1.2.0",
     "pytest-subprocess>=1.5.3",
+    "vcrpy==7.0.0", # pinned, less versions break pytest-recording
     "pytest-recording>=0.13.4",
     "pytest-randomly>=4.0.1",
     "pytest-timeout>=2.4.0",
     "pytest-xdist>=3.8.0",
     "pytest-split>=0.10.0",
-    "types-requests==2.32.*",
+#    "types-requests==2.32.*",
     "types-pyyaml==6.0.*",
     "types-regex==2024.11.6.*",
     "types-appdirs==1.4.*",
@@ -104,14 +105,14 @@ markers = [
 ]
 testpaths = [
     "lib/crewai/tests",
-#    "lib/crewai-tools/tests",
+    "lib/crewai-tools/tests",
 ]
-#asyncio_mode = "strict"
-#asyncio_default_fixture_loop_scope = "function"
-#addopts = "--tb=short"
-#python_files = "test_*.py"
-#python_classes = "Test*"
-#python_functions = "test_*"
+asyncio_mode = "strict"
+asyncio_default_fixture_loop_scope = "function"
+addopts = "--tb=short"
+python_files = "test_*.py"
+python_classes = "Test*"
+python_functions = "test_*"
 
 
 [tool.uv.workspace]
