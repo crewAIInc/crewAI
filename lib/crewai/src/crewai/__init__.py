@@ -1,7 +1,7 @@
 import threading
+from typing import Any
 import urllib.request
 import warnings
-from typing import Any
 
 from crewai.agent import Agent
 from crewai.crew import Crew
@@ -40,7 +40,7 @@ def _suppress_pydantic_deprecation_warnings() -> None:
 
 _suppress_pydantic_deprecation_warnings()
 
-__version__ = "1.0.0a0"
+__version__ = "1.0.0a1"
 _telemetry_submitted = False
 
 

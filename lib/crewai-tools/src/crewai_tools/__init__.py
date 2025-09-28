@@ -1,3 +1,4 @@
+# ruff: noqa: F401
 from .adapters.enterprise_adapter import EnterpriseActionTool
 from .adapters.mcp_adapter import MCPServerAdapter
 from .adapters.zapier_adapter import ZapierActionTool
@@ -98,4 +99,4 @@ from .tools import (
 )
 
 
-__version__ = "1.0.0a0"
+__version__ = "1.0.0a1"
