@@ -10,6 +10,8 @@ jobs:
     if: github.event.release.prerelease == true
     name: Build packages
     runs-on: ubuntu-latest
+    permissions:
+        contents: read
     steps:
       - uses: actions/checkout@v4
 
@@ -42,6 +44,7 @@ jobs:
       url: https://pypi.org/p/crewai
     permissions:
       id-token: write
+      contents: read
     steps:
       - uses: actions/checkout@v4
 
