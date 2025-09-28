@@ -109,3 +109,6 @@ python_functions = "test_*"
 members = [
     "lib/crewai",
 ]
+
+[tool.uv.sources]
+crewai = { workspace = true }
