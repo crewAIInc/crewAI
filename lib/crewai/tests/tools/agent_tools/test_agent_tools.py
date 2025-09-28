@@ -18,7 +18,7 @@ ask_tool = tools[1]
 @pytest.fixture(scope="module")
 def vcr_config(request) -> dict:
     return {
-        "cassette_library_dir": "tests/tools/agent_tools/cassettes",
+        "cassette_library_dir": "lib/crewai/tests/tools/agent_tools/cassettes",
     }
 
 
