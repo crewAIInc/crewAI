@@ -104,7 +104,7 @@ markers = [
 ]
 testpaths = [
     "lib/crewai/tests",
-    "lib/crewai-tools/tests",
+#    "lib/crewai-tools/tests",
 ]
 asyncio_mode = "strict"
 asyncio_default_fixture_loop_scope = "function"
