@@ -95,14 +95,13 @@ jobs:
             --maxfail=3
 
       - name: Run tool tests (group ${{ matrix.group }} of 8)
-        run:
+        run: |
           cd lib/crewai-tools && uv run pytest \
             --block-network \
             --timeout=30 \
             -vv \
             --splits 8 \
             --group ${{ matrix.group }} \
-            $DURATIONS_ARG \
             --durations=10 \
             -n auto \
             --maxfail=3
