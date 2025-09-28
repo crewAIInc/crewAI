@@ -1,0 +1,153 @@
+[project]
+name = "crewai-tools"
+dynamic = ["version"]
+description = "Set of tools for the crewAI framework"
+readme = "README.md"
+authors = [
+    { name = "João Moura", email = "joaomdmoura@gmail.com" },
+]
+requires-python = ">=3.10, <3.14"
+dependencies = [
+    "lancedb>=0.5.4",
+    "pytube>=15.0.0",
+    "requests>=2.32.0",
+    "docker>=7.1.0",
+    "crewai==1.0.0a1",
+    "lancedb>=0.5.4",
+    "tiktoken>=0.8.0",
+    "stagehand>=0.4.1",
+    "beautifulsoup4>=4.13.4",
+    "pypdf>=5.9.0",
+    "python-docx>=1.2.0",
+    "youtube-transcript-api>=1.2.2",
+]
+
+
+[project.urls]
+Homepage = "https://crewai.com"
+Repository = "https://github.com/crewAIInc/crewAI"
+Documentation = "https://docs.crewai.com"
+
+
+[project.optional-dependencies]
+scrapfly-sdk = [
+    "scrapfly-sdk>=0.8.19",
+]
+sqlalchemy = [
+    "sqlalchemy>=2.0.35",
+]
+multion = [
+    "multion>=1.1.0",
+]
+firecrawl-py = [
+    "firecrawl-py>=1.8.0",
+]
+composio-core = [
+    "composio-core>=0.6.11.post1",
+]
+browserbase = [
+    "browserbase>=1.0.5",
+]
+weaviate-client = [
+    "weaviate-client>=4.10.2",
+]
+patronus = [
+    "patronus>=0.0.16",
+]
+serpapi = [
+    "serpapi>=0.1.5",
+]
+beautifulsoup4 = [
+    "beautifulsoup4>=4.12.3",
+]
+selenium = [
+    "selenium>=4.27.1",
+]
+spider-client = [
+    "spider-client>=0.1.25",
+]
+scrapegraph-py = [
+    "scrapegraph-py>=1.9.0",
+]
+linkup-sdk = [
+    "linkup-sdk>=0.2.2",
+]
+tavily-python = [
+    "tavily-python>=0.5.4",
+]
+hyperbrowser = [
+    "hyperbrowser>=0.18.0",
+]
+snowflake = [
+    "cryptography>=43.0.3",
+    "snowflake-connector-python>=3.12.4",
+    "snowflake-sqlalchemy>=1.7.3",
+]
+singlestore = [
+    "singlestoredb>=1.12.4",
+    "SQLAlchemy>=2.0.40",
+]
+exa-py = [
+    "exa-py>=1.8.7",
+]
+qdrant-client = [
+    "qdrant-client>=1.12.1",
+]
+apify = [
+    "langchain-apify>=0.1.2,<1.0.0",
+]
+
+databricks-sdk = [
+    "databricks-sdk>=0.46.0",
+]
+couchbase = [
+    "couchbase>=4.3.5",
+]
+mcp = [
+    "mcp>=1.6.0",
+    "mcpadapt>=0.1.9",
+]
+stagehand = [
+    "stagehand>=0.4.1",
+]
+github = [
+    "gitpython==3.1.38",
+    "PyGithub==1.59.1",
+]
+rag = [
+    "python-docx>=1.1.0",
+    "lxml>=5.3.0,<5.4.0",  # Pin to avoid etree import issues in 5.4.0
+]
+xml = [
+    "unstructured[local-inference, all-docs]>=0.17.2"
+]
+oxylabs = [
+    "oxylabs==2.0.0"
+]
+mongodb = [
+    "pymongo>=4.13"
+]
+mysql = [
+    "pymysql>=1.1.1"
+]
+postgresql = [
+    "psycopg2-binary>=2.9.10"
+]
+bedrock = [
+    "beautifulsoup4>=4.13.4",
+    "bedrock-agentcore>=0.1.0",
+    "playwright>=1.52.0",
+    "nest-asyncio>=1.6.0",
+]
+contextual = [
+    "contextual-client>=0.1.0",
+    "nest-asyncio>=1.6.0",
+]
+
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.version]
+path = "src/crewai_tools/__init__.py"

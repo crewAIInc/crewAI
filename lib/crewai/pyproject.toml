@@ -1,0 +1,119 @@
+[project]
+name = "crewai"
+dynamic = ["version"]
+description = "Cutting-edge framework for orchestrating role-playing, autonomous AI agents. By fostering collaborative intelligence, CrewAI empowers agents to work together seamlessly, tackling complex tasks."
+readme = "README.md"
+authors = [
+    { name = "Joao Moura", email = "joao@crewai.com" }
+]
+requires-python = ">=3.10, <3.14"
+dependencies = [
+    # Core Dependencies
+    "pydantic>=2.11.9",
+    "openai>=1.13.3",
+    "litellm==1.74.9",
+    "instructor>=1.3.3",
+    # Text Processing
+    "pdfplumber>=0.11.4",
+    "regex>=2024.9.11",
+    # Telemetry and Monitoring
+    "opentelemetry-api>=1.30.0",
+    "opentelemetry-sdk>=1.30.0",
+    "opentelemetry-exporter-otlp-proto-http>=1.30.0",
+    # Data Handling
+    "chromadb~=1.1.0",
+    "tokenizers>=0.20.3",
+    "openpyxl>=3.1.5",
+    "pyvis>=0.3.2",
+    # Authentication and Security
+    "python-dotenv>=1.1.1",
+    "pyjwt>=2.9.0",
+    # Configuration and Utils
+    "click>=8.1.7",
+    "appdirs>=1.4.4",
+    "jsonref>=1.1.0",
+    "json-repair==0.25.2",
+    "uv>=0.4.25",
+    "tomli-w>=1.1.0",
+    "tomli>=2.0.2",
+    "blinker>=1.9.0",
+    "json5>=0.10.0",
+    "portalocker==2.7.0",
+    "pydantic-settings>=2.10.1",
+]
+
+[project.urls]
+Homepage = "https://crewai.com"
+Documentation = "https://docs.crewai.com"
+Repository = "https://github.com/crewAIInc/crewAI"
+
+
+[project.optional-dependencies]
+tools = [
+    "crewai-tools==1.0.0a1",
+]
+embeddings = [
+    "tiktoken~=0.8.0"
+]
+pdfplumber = [
+    "pdfplumber>=0.11.4",
+]
+pandas = [
+    "pandas>=2.2.3",
+]
+openpyxl = [
+    "openpyxl>=3.1.5",
+]
+mem0 = ["mem0ai>=0.1.94"]
+docling = [
+    "docling>=2.12.0",
+]
+aisuite = [
+    "aisuite>=0.1.10",
+]
+qdrant = [
+    "qdrant-client[fastembed]>=1.14.3",
+]
+aws = [
+    "boto3>=1.40.38",
+]
+watson = [
+    "ibm-watsonx-ai>=1.3.39",
+]
+voyageai = [
+    "voyageai>=0.3.5",
+]
+
+
+[project.scripts]
+crewai = "crewai.cli.cli:crewai"
+
+
+# PyTorch index configuration, since torch 2.5.0 is not compatible with python 3.13
+[[tool.uv.index]]
+name = "pytorch-nightly"
+url = "https://download.pytorch.org/whl/nightly/cpu"
+explicit = true
+
+[[tool.uv.index]]
+name = "pytorch"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[tool.uv.sources]
+torch = [
+  { index = "pytorch-nightly", marker = "python_version >= '3.13'" },
+  { index = "pytorch", marker = "python_version < '3.13'" },
+]
+torchvision = [
+  { index = "pytorch-nightly", marker = "python_version >= '3.13'" },
+  { index = "pytorch", marker = "python_version < '3.13'" },
+]
+
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.version]
+path = "src/crewai/__init__.py"
