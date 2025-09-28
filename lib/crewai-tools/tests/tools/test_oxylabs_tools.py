@@ -3,12 +3,7 @@ import os
 from typing import Type
 from unittest.mock import MagicMock
 
-import pytest
 from crewai.tools.base_tool import BaseTool
-from oxylabs import RealtimeClient
-from oxylabs.sources.response import Response as OxylabsResponse
-from pydantic import BaseModel
-
 from crewai_tools import (
     OxylabsAmazonProductScraperTool,
     OxylabsAmazonSearchScraperTool,
@@ -21,6 +16,10 @@ from crewai_tools.tools.oxylabs_amazon_product_scraper_tool.oxylabs_amazon_produ
 from crewai_tools.tools.oxylabs_google_search_scraper_tool.oxylabs_google_search_scraper_tool import (
     OxylabsGoogleSearchScraperConfig,
 )
+from oxylabs import RealtimeClient
+from oxylabs.sources.response import Response as OxylabsResponse
+from pydantic import BaseModel
+import pytest
 
 
 @pytest.fixture

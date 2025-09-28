@@ -2,9 +2,9 @@ import os
 from typing import Any, List, Optional, Type
 from urllib.parse import urlencode
 
-import requests
 from crewai.tools import BaseTool, EnvVar
 from pydantic import BaseModel, Field
+import requests
 
 
 class SerplyWebSearchToolSchema(BaseModel):
@@ -27,7 +27,11 @@ class SerplyWebSearchTool(BaseTool):
     query_payload: Optional[dict] = {}
     headers: Optional[dict] = {}
     env_vars: List[EnvVar] = [
-        EnvVar(name="SERPLY_API_KEY", description="API key for Serply services", required=True),
+        EnvVar(
+            name="SERPLY_API_KEY",
+            description="API key for Serply services",
+            required=True,
+        ),
     ]
 
     def __init__(
@@ -100,5 +104,4 @@ class SerplyWebSearchTool(BaseTool):
 
             content = "\n".join(string)
             return f"\nSearch results: {content}\n"
-        else:
-            return results
+        return results

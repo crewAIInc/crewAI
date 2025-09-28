@@ -1,9 +1,10 @@
 import os
 from typing import Any, Optional, Type
 
-import requests
 from crewai.tools import BaseTool
 from pydantic import BaseModel, Field
+import requests
+
 
 class BrightDataConfig(BaseModel):
     API_URL: str = "https://api.brightdata.com/request"
@@ -11,8 +12,11 @@ class BrightDataConfig(BaseModel):
     @classmethod
     def from_env(cls):
         return cls(
-            API_URL=os.environ.get("BRIGHTDATA_API_URL", "https://api.brightdata.com/request")
+            API_URL=os.environ.get(
+                "BRIGHTDATA_API_URL", "https://api.brightdata.com/request"
+            )
         )
+
 
 class BrightDataUnlockerToolSchema(BaseModel):
     """
@@ -68,7 +72,9 @@ class BrightDataWebUnlockerTool(BaseTool):
     format: str = "raw"
     data_format: str = "markdown"
 
-    def __init__(self, url: str = None, format: str = "raw", data_format: str = "markdown"):
+    def __init__(
+        self, url: str = None, format: str = "raw", data_format: str = "markdown"
+    ):
         super().__init__()
         self.base_url = self._config.API_URL
         self.url = url
@@ -82,7 +88,13 @@ class BrightDataWebUnlockerTool(BaseTool):
         if not self.zone:
             raise ValueError("BRIGHT_DATA_ZONE environment variable is required.")
 
-    def _run(self, url: str = None, format: str = None, data_format: str = None, **kwargs: Any) -> Any:
+    def _run(
+        self,
+        url: str = None,
+        format: str = None,
+        data_format: str = None,
+        **kwargs: Any,
+    ) -> Any:
         url = url or self.url
         format = format or self.format
         data_format = data_format or self.data_format
@@ -119,4 +131,4 @@ class BrightDataWebUnlockerTool(BaseTool):
         except requests.RequestException as e:
             return f"HTTP Error performing BrightData Web Unlocker Scrape: {e}\nResponse: {getattr(e.response, 'text', '')}"
         except Exception as e:
-            return f"Error fetching results: {str(e)}"
+            return f"Error fetching results: {e!s}"

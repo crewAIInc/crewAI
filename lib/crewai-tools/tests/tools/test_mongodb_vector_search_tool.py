@@ -1,9 +1,8 @@
 import json
 from unittest.mock import patch
 
-import pytest
-
 from crewai_tools import MongoDBVectorSearchConfig, MongoDBVectorSearchTool
+import pytest
 
 
 # Unit Test Fixtures

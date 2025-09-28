@@ -44,4 +44,6 @@ class XMLSearchTool(RagTool):
     ) -> str:
         if xml is not None:
             self.add(xml)
-        return super()._run(query=search_query, similarity_threshold=similarity_threshold, limit=limit)
+        return super()._run(
+            query=search_query, similarity_threshold=similarity_threshold, limit=limit
+        )

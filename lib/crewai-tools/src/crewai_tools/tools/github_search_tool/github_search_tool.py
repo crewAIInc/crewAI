@@ -1,9 +1,9 @@
 from typing import List, Optional, Type
 
+from crewai_tools.rag.data_types import DataType
 from pydantic import BaseModel, Field
 
 from ..rag.rag_tool import RagTool
-from crewai_tools.rag.data_types import DataType
 
 
 class FixedGithubSearchToolSchema(BaseModel):
@@ -27,9 +27,7 @@ class GithubSearchToolSchema(FixedGithubSearchToolSchema):
 
 class GithubSearchTool(RagTool):
     name: str = "Search a github repo's content"
-    description: str = (
-        "A tool that can be used to semantic search a query from a github repo's content. This is not the GitHub API, but instead a tool that can provide semantic search capabilities."
-    )
+    description: str = "A tool that can be used to semantic search a query from a github repo's content. This is not the GitHub API, but instead a tool that can provide semantic search capabilities."
     summarize: bool = False
     gh_token: str
     args_schema: Type[BaseModel] = GithubSearchToolSchema
@@ -61,7 +59,7 @@ class GithubSearchTool(RagTool):
         super().add(
             f"https://github.com/{repo}",
             data_type=DataType.GITHUB,
-            metadata={"content_types": content_types, "gh_token": self.gh_token}
+            metadata={"content_types": content_types, "gh_token": self.gh_token},
         )
 
     def _run(
@@ -77,4 +75,6 @@ class GithubSearchTool(RagTool):
                 repo=github_repo,
                 content_types=content_types,
             )
-        return super()._run(query=search_query, similarity_threshold=similarity_threshold, limit=limit)
+        return super()._run(
+            query=search_query, similarity_threshold=similarity_threshold, limit=limit
+        )

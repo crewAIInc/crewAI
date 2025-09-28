@@ -1,9 +1,9 @@
 import os
 from typing import List, Optional, Type
 
-import requests
 from crewai.tools import BaseTool, EnvVar
 from pydantic import BaseModel, Field
+import requests
 
 
 class GenerateCrewaiAutomationToolSchema(BaseModel):

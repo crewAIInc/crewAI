@@ -1,13 +1,19 @@
 """
 Crewai Enterprise Tools
 """
-import re
+
 import json
-import requests
-from typing import Dict, Any, List, Type, Optional, Union, get_origin, cast, Literal
-from pydantic import Field, create_model
+import re
+from typing import Any, Dict, List, Literal, Optional, Type, Union, cast, get_origin
+
 from crewai.tools import BaseTool
-from crewai_tools.tools.crewai_platform_tools.misc import get_platform_api_base_url, get_platform_integration_token
+from pydantic import Field, create_model
+import requests
+
+from crewai_tools.tools.crewai_platform_tools.misc import (
+    get_platform_api_base_url,
+    get_platform_integration_token,
+)
 
 
 class CrewAIPlatformActionTool(BaseTool):
@@ -36,7 +42,7 @@ class CrewAIPlatformActionTool(BaseTool):
                 field_type = self._process_schema_type(
                     param_details, self._sanitize_name(param_name).title()
                 )
-            except Exception as e:
+            except Exception:
                 field_type = str
 
             field_definitions[param_name] = self._create_field_definition(
@@ -60,7 +66,11 @@ class CrewAIPlatformActionTool(BaseTool):
                 input_text=(str, Field(description="Input for the action")),
             )
 
-        super().__init__(name=action_name.lower().replace(" ", "_"), description=description, args_schema=args_schema)
+        super().__init__(
+            name=action_name.lower().replace(" ", "_"),
+            description=description,
+            args_schema=args_schema,
+        )
         self.action_name = action_name
         self.action_schema = action_schema
 
@@ -118,7 +128,9 @@ class CrewAIPlatformActionTool(BaseTool):
 
         return self._map_json_type_to_python(json_type)
 
-    def _create_nested_model(self, schema: Dict[str, Any], model_name: str) -> Type[Any]:
+    def _create_nested_model(
+        self, schema: Dict[str, Any], model_name: str
+    ) -> Type[Any]:
         full_model_name = f"{self._base_name}{model_name}"
 
         if full_model_name in self._model_registry:
@@ -139,7 +151,7 @@ class CrewAIPlatformActionTool(BaseTool):
                 prop_type = self._process_schema_type(
                     prop_schema, f"{model_name}{self._sanitize_name(prop_name).title()}"
                 )
-            except Exception as e:
+            except Exception:
                 prop_type = str
 
             field_definitions[prop_name] = self._create_field_definition(
@@ -159,14 +171,12 @@ class CrewAIPlatformActionTool(BaseTool):
     ) -> tuple:
         if is_required:
             return (field_type, Field(description=description))
-        else:
-            if get_origin(field_type) is Union:
-                return (field_type, Field(default=None, description=description))
-            else:
-                return (
-                    Optional[field_type],
-                    Field(default=None, description=description),
-                )
+        if get_origin(field_type) is Union:
+            return (field_type, Field(default=None, description=description))
+        return (
+            Optional[field_type],
+            Field(default=None, description=description),
+        )
 
     def _map_json_type_to_python(self, json_type: str) -> Type[Any]:
         type_mapping = {
@@ -209,8 +219,9 @@ class CrewAIPlatformActionTool(BaseTool):
                 if field_name not in cleaned_kwargs:
                     cleaned_kwargs[field_name] = None
 
-
-            api_url = f"{get_platform_api_base_url()}/actions/{self.action_name}/execute"
+            api_url = (
+                f"{get_platform_api_base_url()}/actions/{self.action_name}/execute"
+            )
             token = get_platform_integration_token()
             headers = {
                 "Authorization": f"Bearer {token}",
@@ -230,4 +241,4 @@ class CrewAIPlatformActionTool(BaseTool):
             return json.dumps(data, indent=2)
 
         except Exception as e:
-            return f"Error executing action {self.action_name}: {str(e)}"
+            return f"Error executing action {self.action_name}: {e!s}"

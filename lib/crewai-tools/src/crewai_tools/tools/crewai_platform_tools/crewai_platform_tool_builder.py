@@ -1,9 +1,15 @@
+from typing import Any, Dict, List
 
-import requests
-from typing import List, Any, Dict
 from crewai.tools import BaseTool
-from crewai_tools.tools.crewai_platform_tools.misc import get_platform_api_base_url, get_platform_integration_token
-from crewai_tools.tools.crewai_platform_tools.crewai_platform_action_tool import CrewAIPlatformActionTool
+import requests
+
+from crewai_tools.tools.crewai_platform_tools.crewai_platform_action_tool import (
+    CrewAIPlatformActionTool,
+)
+from crewai_tools.tools.crewai_platform_tools.misc import (
+    get_platform_api_base_url,
+    get_platform_integration_token,
+)
 
 
 class CrewaiPlatformToolBuilder:
@@ -27,12 +33,14 @@ class CrewaiPlatformToolBuilder:
 
         try:
             response = requests.get(
-            actions_url, headers=headers, timeout=30, params={"apps": ",".join(self._apps)}
+                actions_url,
+                headers=headers,
+                timeout=30,
+                params={"apps": ",".join(self._apps)},
             )
             response.raise_for_status()
-        except Exception as e:
+        except Exception:
             return
-
 
         raw_data = response.json()
 
@@ -46,7 +54,9 @@ class CrewaiPlatformToolBuilder:
                         action_schema = {
                             "function": {
                                 "name": action_name,
-                                "description": action.get("description", f"Execute {action_name}"),
+                                "description": action.get(
+                                    "description", f"Execute {action_name}"
+                                ),
                                 "parameters": action.get("parameters", {}),
                                 "app": app,
                             }
@@ -126,7 +136,6 @@ class CrewaiPlatformToolBuilder:
             tools.append(tool)
 
         self._tools = tools
-
 
     def __enter__(self):
         return self.tools()

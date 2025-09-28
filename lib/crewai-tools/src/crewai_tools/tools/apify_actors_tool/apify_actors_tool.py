@@ -1,14 +1,21 @@
+import os
+from typing import TYPE_CHECKING, Any, Dict, List
+
 from crewai.tools import BaseTool, EnvVar
 from pydantic import Field
-from typing import TYPE_CHECKING, Any, Dict, List
-import os
+
 
 if TYPE_CHECKING:
     from langchain_apify import ApifyActorsTool as _ApifyActorsTool
 
+
 class ApifyActorsTool(BaseTool):
     env_vars: List[EnvVar] = [
-        EnvVar(name="APIFY_API_TOKEN", description="API token for Apify platform access", required=True),
+        EnvVar(
+            name="APIFY_API_TOKEN",
+            description="API token for Apify platform access",
+            required=True,
+        ),
     ]
     """Tool that runs Apify Actors.
 
@@ -40,15 +47,10 @@ class ApifyActorsTool(BaseTool):
                 print(f"URL: {result['metadata']['url']}")
                 print(f"Content: {result.get('markdown', 'N/A')[:100]}...")
     """
-    actor_tool: '_ApifyActorsTool' = Field(description="Apify Actor Tool")
+    actor_tool: "_ApifyActorsTool" = Field(description="Apify Actor Tool")
     package_dependencies: List[str] = ["langchain-apify"]
 
-    def __init__(
-        self,
-        actor_name: str,
-        *args: Any,
-        **kwargs: Any
-    ) -> None:
+    def __init__(self, actor_name: str, *args: Any, **kwargs: Any) -> None:
         if not os.environ.get("APIFY_API_TOKEN"):
             msg = (
                 "APIFY_API_TOKEN environment variable is not set. "
@@ -89,8 +91,8 @@ class ApifyActorsTool(BaseTool):
             return self.actor_tool._run(run_input)
         except Exception as e:
             msg = (
-                f'Failed to run ApifyActorsTool {self.name}. '
-                'Please check your Apify account Actor run logs for more details.'
-                f'Error: {e}'
+                f"Failed to run ApifyActorsTool {self.name}. "
+                "Please check your Apify account Actor run logs for more details."
+                f"Error: {e}"
             )
             raise RuntimeError(msg) from e

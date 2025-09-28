@@ -29,7 +29,7 @@ class Printer:
         Args:
             content: The string to be printed in bold purple.
         """
-        print("\033[1m\033[95m {}\033[00m".format(content))
+        print(f"\033[1m\033[95m {content}\033[00m")
 
     @staticmethod
     def _print_bold_green(content: str) -> None:
@@ -38,7 +38,7 @@ class Printer:
         Args:
             content: The string to be printed in bold green.
         """
-        print("\033[1m\033[92m {}\033[00m".format(content))
+        print(f"\033[1m\033[92m {content}\033[00m")
 
     @staticmethod
     def _print_purple(content: str) -> None:
@@ -47,7 +47,7 @@ class Printer:
         Args:
             content: The string to be printed in purple.
         """
-        print("\033[95m {}\033[00m".format(content))
+        print(f"\033[95m {content}\033[00m")
 
     @staticmethod
     def _print_red(content: str) -> None:
@@ -56,7 +56,7 @@ class Printer:
         Args:
             content: The string to be printed in red.
         """
-        print("\033[91m {}\033[00m".format(content))
+        print(f"\033[91m {content}\033[00m")
 
     @staticmethod
     def _print_bold_blue(content: str) -> None:
@@ -65,7 +65,7 @@ class Printer:
         Args:
             content: The string to be printed in bold blue.
         """
-        print("\033[1m\033[94m {}\033[00m".format(content))
+        print(f"\033[1m\033[94m {content}\033[00m")
 
     @staticmethod
     def _print_yellow(content: str) -> None:
@@ -74,7 +74,7 @@ class Printer:
         Args:
             content: The string to be printed in yellow.
         """
-        print("\033[93m {}\033[00m".format(content))
+        print(f"\033[93m {content}\033[00m")
 
     @staticmethod
     def _print_bold_yellow(content: str) -> None:
@@ -83,7 +83,7 @@ class Printer:
         Args:
             content: The string to be printed in bold yellow.
         """
-        print("\033[1m\033[93m {}\033[00m".format(content))
+        print(f"\033[1m\033[93m {content}\033[00m")
 
     @staticmethod
     def _print_cyan(content: str) -> None:
@@ -92,7 +92,7 @@ class Printer:
         Args:
             content: The string to be printed in cyan.
         """
-        print("\033[96m {}\033[00m".format(content))
+        print(f"\033[96m {content}\033[00m")
 
     @staticmethod
     def _print_bold_cyan(content: str) -> None:
@@ -101,7 +101,7 @@ class Printer:
         Args:
             content: The string to be printed in bold cyan.
         """
-        print("\033[1m\033[96m {}\033[00m".format(content))
+        print(f"\033[1m\033[96m {content}\033[00m")
 
     @staticmethod
     def _print_magenta(content: str) -> None:
@@ -110,7 +110,7 @@ class Printer:
         Args:
             content: The string to be printed in magenta.
         """
-        print("\033[35m {}\033[00m".format(content))
+        print(f"\033[35m {content}\033[00m")
 
     @staticmethod
     def _print_bold_magenta(content: str) -> None:
@@ -119,7 +119,7 @@ class Printer:
         Args:
             content: The string to be printed in bold magenta.
         """
-        print("\033[1m\033[35m {}\033[00m".format(content))
+        print(f"\033[1m\033[35m {content}\033[00m")
 
     @staticmethod
     def _print_green(content: str) -> None:
@@ -128,4 +128,4 @@ class Printer:
         Args:
             content: The string to be printed in green.
         """
-        print("\033[32m {}\033[00m".format(content))
+        print(f"\033[32m {content}\033[00m")

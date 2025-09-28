@@ -2,9 +2,9 @@ import json
 import os
 from typing import Any, Dict, List, Type
 
-import requests
 from crewai.tools import BaseTool
 from pydantic import BaseModel, Field
+import requests
 
 
 class FixedBaseToolSchema(BaseModel):

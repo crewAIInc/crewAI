@@ -1,10 +1,9 @@
 from typing import Any, Optional, Type
 
-
+from crewai_tools.rag.data_types import DataType
 from pydantic import BaseModel, Field
 
 from ..rag.rag_tool import RagTool
-from crewai_tools.rag.data_types import DataType
 
 
 class FixedDOCXSearchToolSchema(BaseModel):
@@ -55,4 +54,6 @@ class DOCXSearchTool(RagTool):
     ) -> Any:
         if docx is not None:
             self.add(docx)
-        return super()._run(query=search_query, similarity_threshold=similarity_threshold, limit=limit)
+        return super()._run(
+            query=search_query, similarity_threshold=similarity_threshold, limit=limit
+        )

@@ -45,7 +45,11 @@ class VisionTool(BaseTool):
     )
     args_schema: Type[BaseModel] = ImagePromptSchema
     env_vars: List[EnvVar] = [
-        EnvVar(name="OPENAI_API_KEY", description="API key for OpenAI services", required=True),
+        EnvVar(
+            name="OPENAI_API_KEY",
+            description="API key for OpenAI services",
+            required=True,
+        ),
     ]
 
     _model: str = PrivateAttr(default="gpt-4o-mini")
@@ -97,7 +101,7 @@ class VisionTool(BaseTool):
                     base64_image = self._encode_image(image_path_url)
                     image_data = f"data:image/jpeg;base64,{base64_image}"
                 except Exception as e:
-                    return f"Error processing image: {str(e)}"
+                    return f"Error processing image: {e!s}"
 
             response = self.llm.call(
                 messages=[
@@ -115,7 +119,7 @@ class VisionTool(BaseTool):
             )
             return response
         except Exception as e:
-            return f"An error occurred: {str(e)}"
+            return f"An error occurred: {e!s}"
 
     def _encode_image(self, image_path: str) -> str:
         """Encode an image file as base64.

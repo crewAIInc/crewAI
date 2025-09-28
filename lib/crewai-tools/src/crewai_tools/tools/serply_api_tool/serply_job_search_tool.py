@@ -1,12 +1,11 @@
 import os
-from typing import Any, List, Optional, Type
+from typing import List, Optional, Type
 from urllib.parse import urlencode
-
-import requests
-from pydantic import BaseModel, Field
 
 from crewai.tools import EnvVar
 from crewai_tools.tools.rag.rag_tool import RagTool
+from pydantic import BaseModel, Field
+import requests
 
 
 class SerplyJobSearchToolSchema(BaseModel):
@@ -32,7 +31,11 @@ class SerplyJobSearchTool(RagTool):
     """
     headers: Optional[dict] = {}
     env_vars: List[EnvVar] = [
-        EnvVar(name="SERPLY_API_KEY", description="API key for Serply services", required=True),
+        EnvVar(
+            name="SERPLY_API_KEY",
+            description="API key for Serply services",
+            required=True,
+        ),
     ]
 
     def __init__(self, **kwargs):
@@ -75,7 +78,7 @@ class SerplyJobSearchTool(RagTool):
                             f"Employer: {job['employer']}",
                             f"Location: {job['location']}",
                             f"Link: {job['link']}",
-                            f"""Highest: {', '.join([h for h in job['highlights']])}""",
+                            f"""Highest: {", ".join([h for h in job["highlights"]])}""",
                             f"Is Remote: {job['is_remote']}",
                             f"Is Hybrid: {job['is_remote']}",
                             "---",

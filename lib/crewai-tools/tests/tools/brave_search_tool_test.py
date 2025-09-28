@@ -1,8 +1,7 @@
 from unittest.mock import patch
 
-import pytest
-
 from crewai_tools.tools.brave_search_tool.brave_search_tool import BraveSearchTool
+import pytest
 
 
 @pytest.fixture

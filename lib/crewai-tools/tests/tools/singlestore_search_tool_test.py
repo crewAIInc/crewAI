@@ -1,12 +1,11 @@
+from collections.abc import Generator
 import os
-from typing import Generator
-
-import pytest
-from singlestoredb import connect
-from singlestoredb.server import docker
 
 from crewai_tools import SingleStoreSearchTool
 from crewai_tools.tools.singlestore_search_tool import SingleStoreSearchToolSchema
+import pytest
+from singlestoredb import connect
+from singlestoredb.server import docker
 
 
 @pytest.fixture(scope="session")

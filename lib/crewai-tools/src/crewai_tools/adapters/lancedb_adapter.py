@@ -1,13 +1,11 @@
 from pathlib import Path
 from typing import Any, Callable
 
-from lancedb import DBConnection as LanceDBConnection
-from lancedb import connect as lancedb_connect
+from crewai_tools.tools.rag.rag_tool import Adapter
+from lancedb import DBConnection as LanceDBConnection, connect as lancedb_connect
 from lancedb.table import Table as LanceDBTable
 from openai import Client as OpenAIClient
 from pydantic import Field, PrivateAttr
-
-from crewai_tools.tools.rag.rag_tool import Adapter
 
 
 def _default_embedding_function():

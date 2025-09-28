@@ -1,13 +1,12 @@
 import os
 from unittest.mock import MagicMock, patch
 
-import pytest
-import requests
-
 from crewai_tools.tools.generate_crewai_automation_tool.generate_crewai_automation_tool import (
     GenerateCrewaiAutomationTool,
     GenerateCrewaiAutomationToolSchema,
 )
+import pytest
+import requests
 
 
 @pytest.fixture(autouse=True)

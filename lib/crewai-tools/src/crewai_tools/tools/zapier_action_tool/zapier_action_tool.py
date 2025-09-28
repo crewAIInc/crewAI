@@ -1,8 +1,10 @@
-import os
 import logging
+import os
 from typing import List, Optional
+
 from crewai.tools import BaseTool
 from crewai_tools.adapters.zapier_adapter import ZapierActionsAdapter
+
 
 logger = logging.getLogger(__name__)
 

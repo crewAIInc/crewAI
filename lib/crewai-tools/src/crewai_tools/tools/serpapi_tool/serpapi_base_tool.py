@@ -1,6 +1,6 @@
 import os
 import re
-from typing import Any, Optional, Union, List
+from typing import Any, List, Optional, Union
 
 from crewai.tools import BaseTool, EnvVar
 
@@ -10,7 +10,11 @@ class SerpApiBaseTool(BaseTool):
 
     package_dependencies: List[str] = ["serpapi"]
     env_vars: List[EnvVar] = [
-        EnvVar(name="SERPAPI_API_KEY", description="API key for SerpApi searches", required=True),
+        EnvVar(
+            name="SERPAPI_API_KEY",
+            description="API key for SerpApi searches",
+            required=True,
+        ),
     ]
 
     client: Optional[Any] = None

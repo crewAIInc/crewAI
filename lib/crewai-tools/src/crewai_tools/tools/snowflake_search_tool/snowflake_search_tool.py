@@ -1,10 +1,11 @@
 import asyncio
-import logging
 from concurrent.futures import ThreadPoolExecutor
+import logging
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Type
 
 from crewai.tools.base_tool import BaseTool
 from pydantic import BaseModel, ConfigDict, Field, SecretStr
+
 
 if TYPE_CHECKING:
     # Import types for type checking only
@@ -12,9 +13,9 @@ if TYPE_CHECKING:
     from snowflake.connector.errors import DatabaseError, OperationalError
 
 try:
-    import snowflake.connector
     from cryptography.hazmat.backends import default_backend
     from cryptography.hazmat.primitives import serialization
+    import snowflake.connector
 
     SNOWFLAKE_AVAILABLE = True
 except ImportError:
@@ -99,7 +100,11 @@ class SnowflakeSearchTool(BaseTool):
     _pool_lock: Optional[asyncio.Lock] = None
     _thread_pool: Optional[ThreadPoolExecutor] = None
     _model_rebuilt: bool = False
-    package_dependencies: List[str] = ["snowflake-connector-python", "snowflake-sqlalchemy", "cryptography"]
+    package_dependencies: List[str] = [
+        "snowflake-connector-python",
+        "snowflake-sqlalchemy",
+        "cryptography",
+    ]
 
     def __init__(self, **data):
         """Initialize SnowflakeSearchTool."""
@@ -218,7 +223,7 @@ class SnowflakeSearchTool(BaseTool):
                 if attempt == self.max_retries - 1:
                     raise
                 await asyncio.sleep(self.retry_delay * (2**attempt))
-                logger.warning(f"Query failed, attempt {attempt + 1}: {str(e)}")
+                logger.warning(f"Query failed, attempt {attempt + 1}: {e!s}")
                 continue
 
     async def _run(
@@ -241,7 +246,7 @@ class SnowflakeSearchTool(BaseTool):
             results = await self._execute_query(query, timeout)
             return results
         except Exception as e:
-            logger.error(f"Error executing query: {str(e)}")
+            logger.error(f"Error executing query: {e!s}")
             raise
 
     def __del__(self):

@@ -1,8 +1,9 @@
 from typing import Any, Optional, Type
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
+
 from .serpapi_base_tool import SerpApiBaseTool
-from pydantic import ConfigDict
+
 
 try:
     from serpapi import HTTPError
@@ -57,4 +58,4 @@ class SerpApiGoogleShoppingTool(SerpApiBaseTool):
 
             return results
         except HTTPError as e:
-            return f"An error occurred: {str(e)}. Some parameters may be invalid."
+            return f"An error occurred: {e!s}. Some parameters may be invalid."

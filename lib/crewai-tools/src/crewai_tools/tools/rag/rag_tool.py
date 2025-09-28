@@ -1,5 +1,5 @@
-import os
 from abc import ABC, abstractmethod
+import os
 from typing import Any, cast
 
 from crewai.rag.embeddings.factory import get_embedding_function
@@ -102,17 +102,15 @@ class RagTool(BaseTool):
                     return self._create_provider_config(
                         provider, provider_config, embedding_function
                     )
-                else:
-                    return None
-            else:
-                embedding_config = config.get("embedding_model")
-                embedding_function = None
-                if embedding_config and isinstance(embedding_config, dict):
-                    embedding_function = self._create_embedding_function(
-                        embedding_config, "chromadb"
-                    )
+                return None
+            embedding_config = config.get("embedding_model")
+            embedding_function = None
+            if embedding_config and isinstance(embedding_config, dict):
+                embedding_function = self._create_embedding_function(
+                    embedding_config, "chromadb"
+                )
 
-                return self._create_provider_config("chromadb", {}, embedding_function)
+            return self._create_provider_config("chromadb", {}, embedding_function)
         return config
 
     @staticmethod
@@ -131,12 +129,11 @@ class RagTool(BaseTool):
             if api_key:
                 factory_config["api_key"] = api_key
 
-
         if provider == "chromadb":
             embedding_func = get_embedding_function(factory_config)
             return embedding_func
 
-        elif provider == "qdrant":
+        if provider == "qdrant":
             chromadb_func = get_embedding_function(factory_config)
 
             def qdrant_embed_fn(text: str) -> list[float]:
@@ -171,7 +168,7 @@ class RagTool(BaseTool):
 
             return ChromaDBConfig(**config_kwargs)
 
-        elif provider == "qdrant":
+        if provider == "qdrant":
             from crewai.rag.qdrant.config import QdrantConfig
 
             config_kwargs = {}

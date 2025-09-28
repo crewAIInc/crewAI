@@ -1,9 +1,10 @@
 import os
-from typing import TYPE_CHECKING, Any, Optional, Type, List
+from typing import TYPE_CHECKING, Any, List, Optional, Type
 from urllib.parse import urlparse
 
 from crewai.tools import BaseTool, EnvVar
 from pydantic import BaseModel, ConfigDict, Field, field_validator
+
 
 # Type checking import
 if TYPE_CHECKING:
@@ -69,7 +70,11 @@ class ScrapegraphScrapeTool(BaseTool):
     _client: Optional["Client"] = None
     package_dependencies: List[str] = ["scrapegraph-py"]
     env_vars: List[EnvVar] = [
-        EnvVar(name="SCRAPEGRAPH_API_KEY", description="API key for Scrapegraph AI services", required=False),
+        EnvVar(
+            name="SCRAPEGRAPH_API_KEY",
+            description="API key for Scrapegraph AI services",
+            required=False,
+        ),
     ]
 
     def __init__(
@@ -177,7 +182,7 @@ class ScrapegraphScrapeTool(BaseTool):
         except RateLimitError:
             raise  # Re-raise rate limit errors
         except Exception as e:
-            raise RuntimeError(f"Scraping failed: {str(e)}")
+            raise RuntimeError(f"Scraping failed: {e!s}")
         finally:
             # Always close the client
             self._client.close()

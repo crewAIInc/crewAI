@@ -8,8 +8,12 @@ class FileReadToolSchema(BaseModel):
     """Input for FileReadTool."""
 
     file_path: str = Field(..., description="Mandatory file full path to read the file")
-    start_line: Optional[int] = Field(1, description="Line number to start reading from (1-indexed)")
-    line_count: Optional[int] = Field(None, description="Number of lines to read. If None, reads the entire file")
+    start_line: Optional[int] = Field(
+        1, description="Line number to start reading from (1-indexed)"
+    )
+    line_count: Optional[int] = Field(
+        None, description="Number of lines to read. If None, reads the entire file"
+    )
 
 
 class FileReadTool(BaseTool):
@@ -33,7 +37,9 @@ class FileReadTool(BaseTool):
         >>> tool = FileReadTool(file_path="/path/to/file.txt")
         >>> content = tool.run()  # Reads /path/to/file.txt
         >>> content = tool.run(file_path="/path/to/other.txt")  # Reads other.txt
-        >>> content = tool.run(file_path="/path/to/file.txt", start_line=100, line_count=50)  # Reads lines 100-149
+        >>> content = tool.run(
+        ...     file_path="/path/to/file.txt", start_line=100, line_count=50
+        ... )  # Reads lines 100-149
     """
 
     name: str = "Read a file's content"
@@ -68,9 +74,7 @@ class FileReadTool(BaseTool):
         line_count = line_count or None
 
         if file_path is None:
-            return (
-                "Error: No file path provided. Please provide a file path either in the constructor or as an argument."
-            )
+            return "Error: No file path provided. Please provide a file path either in the constructor or as an argument."
 
         try:
             with open(file_path, "r") as file:
@@ -82,7 +86,8 @@ class FileReadTool(BaseTool):
                 selected_lines = [
                     line
                     for i, line in enumerate(file)
-                    if i >= start_idx and (line_count is None or i < start_idx + line_count)
+                    if i >= start_idx
+                    and (line_count is None or i < start_idx + line_count)
                 ]
 
                 if not selected_lines and start_idx > 0:
@@ -94,4 +99,4 @@ class FileReadTool(BaseTool):
         except PermissionError:
             return f"Error: Permission denied when trying to read file: {file_path}"
         except Exception as e:
-            return f"Error: Failed to read file {file_path}. {str(e)}"
+            return f"Error: Failed to read file {file_path}. {e!s}"

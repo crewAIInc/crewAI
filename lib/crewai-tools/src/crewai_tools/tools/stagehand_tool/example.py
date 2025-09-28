@@ -23,6 +23,7 @@ from stagehand.schemas import AvailableModel
 
 from crewai_tools import StagehandTool
 
+
 # Load environment variables from .env file
 load_dotenv()
 

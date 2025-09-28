@@ -3,13 +3,10 @@
 import inspect
 import json
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Type
+from typing import Any, Dict, List, Optional
 
-from pydantic import BaseModel
-
-from crewai_tools import tools
 from crewai.tools.base_tool import BaseTool, EnvVar
-
+from crewai_tools import tools
 from pydantic.json_schema import GenerateJsonSchema
 from pydantic_core import PydanticOmit
 

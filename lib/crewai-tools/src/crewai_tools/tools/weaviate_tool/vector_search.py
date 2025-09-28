@@ -1,6 +1,7 @@
 import json
 import os
-from typing import Any, Optional, Type, List
+from typing import Any, List, Optional, Type
+
 
 try:
     import weaviate
@@ -43,7 +44,11 @@ class WeaviateVectorSearchTool(BaseTool):
     headers: Optional[dict] = None
     alpha: Optional[int] = Field(default=0.75)
     env_vars: List[EnvVar] = [
-        EnvVar(name="OPENAI_API_KEY", description="OpenAI API key for embedding generation and retrieval", required=True),
+        EnvVar(
+            name="OPENAI_API_KEY",
+            description="OpenAI API key for embedding generation and retrieval",
+            required=True,
+        ),
     ]
     weaviate_cluster_url: str = Field(
         ...,
@@ -112,9 +117,7 @@ class WeaviateVectorSearchTool(BaseTool):
             )
 
         response = internal_docs.query.hybrid(
-            query=query,
-            limit=self.limit,
-            alpha=self.alpha
+            query=query, limit=self.limit, alpha=self.alpha
         )
         json_response = ""
         for obj in response.objects:

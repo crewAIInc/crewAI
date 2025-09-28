@@ -3,6 +3,7 @@ from typing import Any, List
 
 from crewai.tools import BaseTool, EnvVar
 
+
 try:
     from linkup import LinkupClient
 

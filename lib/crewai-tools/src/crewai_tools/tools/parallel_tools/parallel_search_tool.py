@@ -1,9 +1,9 @@
 import os
-from typing import Any, Dict, List, Optional, Type, Annotated
+from typing import Annotated, Any, Dict, List, Optional, Type
 
-import requests
 from crewai.tools import BaseTool, EnvVar
 from pydantic import BaseModel, Field
+import requests
 
 
 class ParallelSearchInput(BaseModel):
@@ -99,14 +99,18 @@ class ParallelSearchTool(BaseTool):
                 payload["source_policy"] = source_policy
 
             request_timeout = 90 if processor == "pro" else 30
-            resp = requests.post(self.search_url, json=payload, headers=headers, timeout=request_timeout)
+            resp = requests.post(
+                self.search_url, json=payload, headers=headers, timeout=request_timeout
+            )
             if resp.status_code >= 300:
-                return f"Parallel Search API error: {resp.status_code} {resp.text[:200]}"
+                return (
+                    f"Parallel Search API error: {resp.status_code} {resp.text[:200]}"
+                )
             data = resp.json()
             return self._format_output(data)
         except requests.Timeout:
             return "Parallel Search API timeout. Please try again later."
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             return f"Unexpected error calling Parallel Search API: {exc}"
 
     def _format_output(self, result: Dict[str, Any]) -> str:

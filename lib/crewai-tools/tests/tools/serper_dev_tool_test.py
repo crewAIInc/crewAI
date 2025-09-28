@@ -1,7 +1,8 @@
-from unittest.mock import patch
-import pytest
-from crewai_tools.tools.serper_dev_tool.serper_dev_tool import SerperDevTool
 import os
+from unittest.mock import patch
+
+from crewai_tools.tools.serper_dev_tool.serper_dev_tool import SerperDevTool
+import pytest
 
 
 @pytest.fixture(autouse=True)
@@ -32,7 +33,7 @@ def test_serper_tool_custom_initialization():
         search_type="news",
         country="US",
         location="New York",
-        locale="en"
+        locale="en",
     )
     assert tool.n_results == 5
     assert tool.save_file is True
@@ -46,32 +47,29 @@ def test_serper_tool_custom_initialization():
 def test_serper_tool_search(mock_post):
     tool = SerperDevTool(n_results=2)
     mock_response = {
-        "searchParameters": {
-            "q": "test query",
-            "type": "search"
-        },
+        "searchParameters": {"q": "test query", "type": "search"},
         "organic": [
             {
                 "title": "Test Title 1",
                 "link": "http://test1.com",
                 "snippet": "Test Description 1",
-                "position": 1
+                "position": 1,
             },
             {
                 "title": "Test Title 2",
                 "link": "http://test2.com",
                 "snippet": "Test Description 2",
-                "position": 2
-            }
+                "position": 2,
+            },
         ],
         "peopleAlsoAsk": [
             {
                 "question": "Test Question",
                 "snippet": "Test Answer",
                 "title": "Test Source",
-                "link": "http://test.com"
+                "link": "http://test.com",
             }
-        ]
+        ],
     }
     mock_post.return_value.json.return_value = mock_response
     mock_post.return_value.status_code = 200
@@ -88,10 +86,7 @@ def test_serper_tool_search(mock_post):
 def test_serper_tool_news_search(mock_post):
     tool = SerperDevTool(n_results=2, search_type="news")
     mock_response = {
-        "searchParameters": {
-            "q": "test news",
-            "type": "news"
-        },
+        "searchParameters": {"q": "test news", "type": "news"},
         "news": [
             {
                 "title": "News Title 1",
@@ -99,9 +94,9 @@ def test_serper_tool_news_search(mock_post):
                 "snippet": "News Description 1",
                 "date": "2024-01-01",
                 "source": "News Source 1",
-                "imageUrl": "http://image1.com"
+                "imageUrl": "http://image1.com",
             }
-        ]
+        ],
     }
     mock_post.return_value.json.return_value = mock_response
     mock_post.return_value.status_code = 200
@@ -115,12 +110,7 @@ def test_serper_tool_news_search(mock_post):
 
 @patch("requests.post")
 def test_serper_tool_with_location_params(mock_post):
-    tool = SerperDevTool(
-        n_results=2,
-        country="US",
-        location="New York",
-        locale="en"
-    )
+    tool = SerperDevTool(n_results=2, country="US", location="New York", locale="en")
 
     tool.run(search_query="test")
 

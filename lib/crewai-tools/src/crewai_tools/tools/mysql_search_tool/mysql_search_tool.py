@@ -1,9 +1,9 @@
 from typing import Any, Type
 
+from crewai_tools.rag.data_types import DataType
 from pydantic import BaseModel, Field
 
 from ..rag.rag_tool import RagTool
-from crewai_tools.rag.data_types import DataType
 
 
 class MySQLSearchToolSchema(BaseModel):
@@ -41,4 +41,6 @@ class MySQLSearchTool(RagTool):
         limit: int | None = None,
         **kwargs: Any,
     ) -> Any:
-        return super()._run(query=search_query, similarity_threshold=similarity_threshold, limit=limit)
+        return super()._run(
+            query=search_query, similarity_threshold=similarity_threshold, limit=limit
+        )

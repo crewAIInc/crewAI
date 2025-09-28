@@ -1,9 +1,9 @@
 from typing import Any, Type
 
+from crewai_tools.rag.data_types import DataType
 from pydantic import BaseModel, Field
 
 from ..rag.rag_tool import RagTool
-from crewai_tools.rag.data_types import DataType
 
 
 class PGSearchToolSchema(BaseModel):
@@ -23,7 +23,9 @@ class PGSearchTool(RagTool):
 
     def __init__(self, table_name: str, **kwargs):
         super().__init__(**kwargs)
-        self.add(table_name, data_type=DataType.POSTGRES, metadata={"db_uri": self.db_uri})
+        self.add(
+            table_name, data_type=DataType.POSTGRES, metadata={"db_uri": self.db_uri}
+        )
         self.description = f"A tool that can be used to semantic search a query the {table_name} database table's content."
         self._generate_description()
 
@@ -41,4 +43,9 @@ class PGSearchTool(RagTool):
         limit: int | None = None,
         **kwargs: Any,
     ) -> Any:
-        return super()._run(query=search_query, similarity_threshold=similarity_threshold, limit=limit, **kwargs)
+        return super()._run(
+            query=search_query,
+            similarity_threshold=similarity_threshold,
+            limit=limit,
+            **kwargs,
+        )

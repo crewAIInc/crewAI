@@ -1,12 +1,14 @@
 import os
 from typing import Any, Optional, Type
 
-import requests
 from crewai.tools import BaseTool
 from pydantic import BaseModel, Field
+import requests
+
 
 try:
     from bs4 import BeautifulSoup
+
     BEAUTIFULSOUP_AVAILABLE = True
 except ImportError:
     BEAUTIFULSOUP_AVAILABLE = False
@@ -67,7 +69,9 @@ class ScrapeElementFromWebsiteTool(BaseTool):
         **kwargs: Any,
     ) -> Any:
         if not BEAUTIFULSOUP_AVAILABLE:
-            raise ImportError("beautifulsoup4 is not installed. Please install it with `pip install crewai-tools[beautifulsoup4]`")
+            raise ImportError(
+                "beautifulsoup4 is not installed. Please install it with `pip install crewai-tools[beautifulsoup4]`"
+            )
 
         website_url = kwargs.get("website_url", self.website_url)
         css_element = kwargs.get("css_element", self.css_element)

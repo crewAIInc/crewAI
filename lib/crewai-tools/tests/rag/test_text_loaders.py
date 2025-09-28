@@ -1,15 +1,17 @@
 import hashlib
 import os
 import tempfile
-import pytest
 
-from crewai_tools.rag.loaders.text_loader import TextFileLoader, TextLoader
 from crewai_tools.rag.base_loader import LoaderResult
+from crewai_tools.rag.loaders.text_loader import TextFileLoader, TextLoader
 from crewai_tools.rag.source_content import SourceContent
+import pytest
 
 
 def write_temp_file(content, suffix=".txt", encoding="utf-8"):
-    with tempfile.NamedTemporaryFile(mode="w", suffix=suffix, delete=False, encoding=encoding) as f:
+    with tempfile.NamedTemporaryFile(
+        mode="w", suffix=suffix, delete=False, encoding=encoding
+    ) as f:
         f.write(content)
         return f.name
 

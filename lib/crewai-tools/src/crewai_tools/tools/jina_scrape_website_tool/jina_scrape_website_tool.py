@@ -1,8 +1,8 @@
 from typing import Optional, Type
 
-import requests
 from crewai.tools import BaseTool
 from pydantic import BaseModel, Field
+import requests
 
 
 class JinaScrapeWebsiteToolInput(BaseModel):

@@ -1,10 +1,11 @@
 import os
-import urllib.parse
 from typing import Any, Optional, Type
+import urllib.parse
 
-import requests
 from crewai.tools import BaseTool
 from pydantic import BaseModel, Field
+import requests
+
 
 class BrightDataConfig(BaseModel):
     API_URL: str = "https://api.brightdata.com/request"
@@ -12,8 +13,11 @@ class BrightDataConfig(BaseModel):
     @classmethod
     def from_env(cls):
         return cls(
-            API_URL=os.environ.get("BRIGHTDATA_API_URL", "https://api.brightdata.com/request")
+            API_URL=os.environ.get(
+                "BRIGHTDATA_API_URL", "https://api.brightdata.com/request"
+            )
         )
+
 
 class BrightDataSearchToolSchema(BaseModel):
     """
@@ -88,7 +92,16 @@ class BrightDataSearchTool(BaseTool):
     device_type: str = "desktop"
     parse_results: bool = True
 
-    def __init__(self, query: str = None, search_engine: str = "google", country: str = "us", language: str = "en", search_type: str = None, device_type: str = "desktop", parse_results: bool = True):
+    def __init__(
+        self,
+        query: str = None,
+        search_engine: str = "google",
+        country: str = "us",
+        language: str = "en",
+        search_type: str = None,
+        device_type: str = "desktop",
+        parse_results: bool = True,
+    ):
         super().__init__()
         self.base_url = self._config.API_URL
         self.query = query
@@ -109,11 +122,21 @@ class BrightDataSearchTool(BaseTool):
     def get_search_url(self, engine: str, query: str):
         if engine == "yandex":
             return f"https://yandex.com/search/?text=${query}"
-        elif engine == "bing":
+        if engine == "bing":
             return f"https://www.bing.com/search?q=${query}"
         return f"https://www.google.com/search?q=${query}"
 
-    def _run(self, query: str = None, search_engine: str = None, country: str = None, language: str = None, search_type: str = None, device_type: str = None, parse_results: bool = None, **kwargs) -> Any:
+    def _run(
+        self,
+        query: str = None,
+        search_engine: str = None,
+        country: str = None,
+        language: str = None,
+        search_type: str = None,
+        device_type: str = None,
+        parse_results: bool = None,
+        **kwargs,
+    ) -> Any:
         """
         Executes a search query using Bright Data SERP API and returns results.
 
@@ -137,7 +160,9 @@ class BrightDataSearchTool(BaseTool):
         language = language or self.language
         search_type = search_type or self.search_type
         device_type = device_type or self.device_type
-        parse_results = parse_results if parse_results is not None else self.parse_results
+        parse_results = (
+            parse_results if parse_results is not None else self.parse_results
+        )
         results_count = kwargs.get("results_count", "10")
 
         # Validate required parameters
@@ -161,7 +186,7 @@ class BrightDataSearchTool(BaseTool):
             params.append(f"num={results_count}")
 
         if parse_results:
-            params.append(f"brd_json=1")
+            params.append("brd_json=1")
 
         if search_type:
             if search_type == "jobs":
@@ -202,6 +227,6 @@ class BrightDataSearchTool(BaseTool):
             return response.text
 
         except requests.RequestException as e:
-            return f"Error performing BrightData search: {str(e)}"
+            return f"Error performing BrightData search: {e!s}"
         except Exception as e:
-            return f"Error fetching results: {str(e)}"
+            return f"Error fetching results: {e!s}"

@@ -1,77 +1,87 @@
+import time
+from typing import Any, Type
+
 from crewai.tools import BaseTool
 from pydantic import BaseModel, Field, create_model
-from typing import Any, Type
 import requests
-import time
+
 
 class InvokeCrewAIAutomationInput(BaseModel):
     """Input schema for InvokeCrewAIAutomationTool."""
+
     prompt: str = Field(..., description="The prompt or query to send to the crew")
+
 
 class InvokeCrewAIAutomationTool(BaseTool):
     """
     A CrewAI tool for invoking external crew/flows APIs.
-    
+
     This tool provides CrewAI Platform API integration with external crew services, supporting:
     - Dynamic input schema configuration
     - Automatic polling for task completion
     - Bearer token authentication
     - Comprehensive error handling
-    
+
     Example:
         Basic usage:
         >>> tool = InvokeCrewAIAutomationTool(
         ...     crew_api_url="https://api.example.com",
         ...     crew_bearer_token="your_token",
         ...     crew_name="My Crew",
-        ...     crew_description="Description of what the crew does"
+        ...     crew_description="Description of what the crew does",
         ... )
-        
+
         With custom inputs:
         >>> custom_inputs = {
         ...     "param1": Field(..., description="Description of param1"),
-        ...     "param2": Field(default="default_value", description="Description of param2")
+        ...     "param2": Field(
+        ...         default="default_value", description="Description of param2"
+        ...     ),
         ... }
         >>> tool = InvokeCrewAIAutomationTool(
         ...     crew_api_url="https://api.example.com",
         ...     crew_bearer_token="your_token",
         ...     crew_name="My Crew",
         ...     crew_description="Description of what the crew does",
-        ...     crew_inputs=custom_inputs
+        ...     crew_inputs=custom_inputs,
         ... )
-        
+
         Example:
-        >>> tools=[
+        >>> tools = [
         ...     InvokeCrewAIAutomationTool(
         ...         crew_api_url="https://canary-crew-[...].crewai.com",
         ...         crew_bearer_token="[Your token: abcdef012345]",
         ...         crew_name="State of AI Report",
         ...         crew_description="Retrieves a report on state of AI for a given year.",
         ...         crew_inputs={
-        ...             "year": Field(..., description="Year to retrieve the report for (integer)")
-        ...         }
+        ...             "year": Field(
+        ...                 ..., description="Year to retrieve the report for (integer)"
+        ...             )
+        ...         },
         ...     )
         ... ]
     """
+
     name: str = "invoke_amp_automation"
     description: str = "Invokes an CrewAI Platform Automation using API"
     args_schema: Type[BaseModel] = InvokeCrewAIAutomationInput
-    
+
     crew_api_url: str
     crew_bearer_token: str
-    max_polling_time: int = 10 * 60 # 10 minutes
-    
+    max_polling_time: int = 10 * 60  # 10 minutes
+
     def __init__(
-        self, 
-        crew_api_url: str, 
-        crew_bearer_token: str, 
+        self,
+        crew_api_url: str,
+        crew_bearer_token: str,
         crew_name: str,
         crew_description: str,
         max_polling_time: int = 10 * 60,
-        crew_inputs: dict[str, Any] = None):
+        crew_inputs: dict[str, Any] = None,
+    ):
         """
         Initialize the InvokeCrewAIAutomationTool.
-        
+
         Args:
             crew_api_url: Base URL of the crew API service
             crew_bearer_token: Bearer token for API authentication
@@ -84,7 +94,7 @@ class InvokeCrewAIAutomationTool(BaseTool):
         if crew_inputs:
             # Start with the base prompt field
             fields = {}
-            
+
             # Add custom fields
             for field_name, field_def in crew_inputs.items():
                 if isinstance(field_def, tuple):
@@ -92,12 +102,12 @@ class InvokeCrewAIAutomationTool(BaseTool):
                 else:
                     # Assume it's a Field object, extract type from annotation if available
                     fields[field_name] = (str, field_def)
-            
+
             # Create dynamic model
-            args_schema = create_model('DynamicInvokeCrewAIAutomationInput', **fields)
+            args_schema = create_model("DynamicInvokeCrewAIAutomationInput", **fields)
         else:
             args_schema = InvokeCrewAIAutomationInput
-        
+
         # Initialize the parent class with proper field values
         super().__init__(
             name=crew_name,
@@ -105,7 +115,7 @@ class InvokeCrewAIAutomationTool(BaseTool):
             args_schema=args_schema,
             crew_api_url=crew_api_url,
             crew_bearer_token=crew_bearer_token,
-            max_polling_time=max_polling_time
+            max_polling_time=max_polling_time,
         )
 
     def _kickoff_crew(self, inputs: dict[str, Any]) -> dict[str, Any]:
@@ -150,27 +160,27 @@ class InvokeCrewAIAutomationTool(BaseTool):
         """Execute the crew invocation tool."""
         if kwargs is None:
             kwargs = {}
-            
+
         # Start the crew
         response = self._kickoff_crew(inputs=kwargs)
-        
+
         if response.get("kickoff_id") is None:
             return f"Error: Failed to kickoff crew. Response: {response}"
 
         kickoff_id = response.get("kickoff_id")
-        
+
         # Poll for completion
         for i in range(self.max_polling_time):
             try:
                 status_response = self._get_crew_status(crew_id=kickoff_id)
                 if status_response.get("state", "").lower() == "success":
                     return status_response.get("result", "No result returned")
-                elif status_response.get("state", "").lower() == "failed":
+                if status_response.get("state", "").lower() == "failed":
                     return f"Error: Crew task failed. Response: {status_response}"
             except Exception as e:
                 if i == self.max_polling_time - 1:  # Last attempt
                     return f"Error: Failed to get crew status after {self.max_polling_time} attempts. Last error: {e}"
-            
+
             time.sleep(1)
-        
+
         return f"Error: Crew did not complete within {self.max_polling_time} seconds"

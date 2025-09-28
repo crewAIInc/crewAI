@@ -1,9 +1,9 @@
 from typing import Optional, Type
 
+from crewai_tools.rag.data_types import DataType
 from pydantic import BaseModel, Field
 
 from ..rag.rag_tool import RagTool
-from crewai_tools.rag.data_types import DataType
 
 
 class FixedDirectorySearchToolSchema(BaseModel):
@@ -48,4 +48,6 @@ class DirectorySearchTool(RagTool):
     ) -> str:
         if directory is not None:
             self.add(directory)
-        return super()._run(query=search_query, similarity_threshold=similarity_threshold, limit=limit)
+        return super()._run(
+            query=search_query, similarity_threshold=similarity_threshold, limit=limit
+        )

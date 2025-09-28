@@ -1,9 +1,9 @@
 """Toolkit for navigating web with AWS browser."""
 
+import asyncio
 import json
 import logging
-import asyncio
-from typing import Dict, List, Tuple, Any, Type
+from typing import Any, Dict, List, Tuple, Type
 from urllib.parse import urlparse
 
 from crewai.tools import BaseTool
@@ -12,84 +12,109 @@ from pydantic import BaseModel, Field
 from .browser_session_manager import BrowserSessionManager
 from .utils import aget_current_page, get_current_page
 
+
 logger = logging.getLogger(__name__)
 
 
 # Input schemas
 class NavigateToolInput(BaseModel):
     """Input for NavigateTool."""
+
     url: str = Field(description="URL to navigate to")
-    thread_id: str = Field(default="default", description="Thread ID for the browser session")
+    thread_id: str = Field(
+        default="default", description="Thread ID for the browser session"
+    )
 
 
 class ClickToolInput(BaseModel):
     """Input for ClickTool."""
+
     selector: str = Field(description="CSS selector for the element to click on")
-    thread_id: str = Field(default="default", description="Thread ID for the browser session")
+    thread_id: str = Field(
+        default="default", description="Thread ID for the browser session"
+    )
 
 
 class GetElementsToolInput(BaseModel):
     """Input for GetElementsTool."""
+
     selector: str = Field(description="CSS selector for elements to get")
-    thread_id: str = Field(default="default", description="Thread ID for the browser session")
+    thread_id: str = Field(
+        default="default", description="Thread ID for the browser session"
+    )
 
 
 class ExtractTextToolInput(BaseModel):
     """Input for ExtractTextTool."""
-    thread_id: str = Field(default="default", description="Thread ID for the browser session")
+
+    thread_id: str = Field(
+        default="default", description="Thread ID for the browser session"
+    )
 
 
 class ExtractHyperlinksToolInput(BaseModel):
     """Input for ExtractHyperlinksTool."""
-    thread_id: str = Field(default="default", description="Thread ID for the browser session")
+
+    thread_id: str = Field(
+        default="default", description="Thread ID for the browser session"
+    )
 
 
 class NavigateBackToolInput(BaseModel):
     """Input for NavigateBackTool."""
-    thread_id: str = Field(default="default", description="Thread ID for the browser session")
+
+    thread_id: str = Field(
+        default="default", description="Thread ID for the browser session"
+    )
 
 
 class CurrentWebPageToolInput(BaseModel):
     """Input for CurrentWebPageTool."""
-    thread_id: str = Field(default="default", description="Thread ID for the browser session")
+
+    thread_id: str = Field(
+        default="default", description="Thread ID for the browser session"
+    )
 
 
 # Base tool class
 class BrowserBaseTool(BaseTool):
     """Base class for browser tools."""
-    
+
     def __init__(self, session_manager: BrowserSessionManager):
         """Initialize with a session manager."""
         super().__init__()
         self._session_manager = session_manager
-        
-        if self._is_in_asyncio_loop() and hasattr(self, '_arun'):
+
+        if self._is_in_asyncio_loop() and hasattr(self, "_arun"):
             self._original_run = self._run
+
             # Override _run to use _arun when in an asyncio loop
             def patched_run(*args, **kwargs):
                 try:
                     import nest_asyncio
+
                     loop = asyncio.get_event_loop()
                     nest_asyncio.apply(loop)
                     return asyncio.get_event_loop().run_until_complete(
                         self._arun(*args, **kwargs)
                     )
                 except Exception as e:
-                    return f"Error in patched _run: {str(e)}"
+                    return f"Error in patched _run: {e!s}"
+
             self._run = patched_run
-        
+
     async def get_async_page(self, thread_id: str) -> Any:
         """Get or create a page for the specified thread."""
         browser = await self._session_manager.get_async_browser(thread_id)
         page = await aget_current_page(browser)
         return page
-        
+
     def get_sync_page(self, thread_id: str) -> Any:
         """Get or create a page for the specified thread."""
         browser = self._session_manager.get_sync_browser(thread_id)
         page = get_current_page(browser)
         return page
-    
+
     def _is_in_asyncio_loop(self) -> bool:
         """Check if we're currently in an asyncio event loop."""
         try:
@@ -106,7 +131,7 @@ class NavigateTool(BrowserBaseTool):
     name: str = "navigate_browser"
     description: str = "Navigate a browser to the specified URL"
     args_schema: Type[BaseModel] = NavigateToolInput
-    
+
     def _run(self, url: str, thread_id: str = "default", **kwargs) -> str:
         """Use the sync tool."""
         try:
@@ -123,7 +148,7 @@ class NavigateTool(BrowserBaseTool):
             status = response.status if response else "unknown"
             return f"Navigating to {url} returned status code {status}"
         except Exception as e:
-            return f"Error navigating to {url}: {str(e)}"
+            return f"Error navigating to {url}: {e!s}"
 
     async def _arun(self, url: str, thread_id: str = "default", **kwargs) -> str:
         """Use the async tool."""
@@ -141,7 +166,7 @@ class NavigateTool(BrowserBaseTool):
             status = response.status if response else "unknown"
             return f"Navigating to {url} returned status code {status}"
         except Exception as e:
-            return f"Error navigating to {url}: {str(e)}"
+            return f"Error navigating to {url}: {e!s}"
 
 
 class ClickTool(BrowserBaseTool):
@@ -150,7 +175,7 @@ class ClickTool(BrowserBaseTool):
     name: str = "click_element"
     description: str = "Click on an element with the given CSS selector"
     args_schema: Type[BaseModel] = ClickToolInput
-    
+
     visible_only: bool = True
     """Whether to consider only visible elements."""
     playwright_strict: bool = False
@@ -162,7 +187,7 @@ class ClickTool(BrowserBaseTool):
         if not self.visible_only:
             return selector
         return f"{selector} >> visible=1"
-    
+
     def _run(self, selector: str, thread_id: str = "default", **kwargs) -> str:
         """Use the sync tool."""
         try:
@@ -172,7 +197,7 @@ class ClickTool(BrowserBaseTool):
             # Click on the element
             selector_effective = self._selector_effective(selector=selector)
             from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
-            
+
             try:
                 page.click(
                     selector_effective,
@@ -182,11 +207,11 @@ class ClickTool(BrowserBaseTool):
             except PlaywrightTimeoutError:
                 return f"Unable to click on element '{selector}'"
             except Exception as click_error:
-                return f"Unable to click on element '{selector}': {str(click_error)}"
-            
+                return f"Unable to click on element '{selector}': {click_error!s}"
+
             return f"Clicked element '{selector}'"
         except Exception as e:
-            return f"Error clicking on element: {str(e)}"
+            return f"Error clicking on element: {e!s}"
 
     async def _arun(self, selector: str, thread_id: str = "default", **kwargs) -> str:
         """Use the async tool."""
@@ -197,7 +222,7 @@ class ClickTool(BrowserBaseTool):
             # Click on the element
             selector_effective = self._selector_effective(selector=selector)
             from playwright.async_api import TimeoutError as PlaywrightTimeoutError
-            
+
             try:
                 await page.click(
                     selector_effective,
@@ -207,19 +232,20 @@ class ClickTool(BrowserBaseTool):
             except PlaywrightTimeoutError:
                 return f"Unable to click on element '{selector}'"
             except Exception as click_error:
-                return f"Unable to click on element '{selector}': {str(click_error)}"
-            
+                return f"Unable to click on element '{selector}': {click_error!s}"
+
             return f"Clicked element '{selector}'"
         except Exception as e:
-            return f"Error clicking on element: {str(e)}"
+            return f"Error clicking on element: {e!s}"
 
 
 class NavigateBackTool(BrowserBaseTool):
     """Tool for navigating back in browser history."""
+
     name: str = "navigate_back"
     description: str = "Navigate back to the previous page"
     args_schema: Type[BaseModel] = NavigateBackToolInput
-    
+
     def _run(self, thread_id: str = "default", **kwargs) -> str:
         """Use the sync tool."""
         try:
@@ -231,9 +257,9 @@ class NavigateBackTool(BrowserBaseTool):
                 page.go_back()
                 return "Navigated back to the previous page"
             except Exception as nav_error:
-                return f"Unable to navigate back: {str(nav_error)}"
+                return f"Unable to navigate back: {nav_error!s}"
         except Exception as e:
-            return f"Error navigating back: {str(e)}"
+            return f"Error navigating back: {e!s}"
 
     async def _arun(self, thread_id: str = "default", **kwargs) -> str:
         """Use the async tool."""
@@ -246,17 +272,18 @@ class NavigateBackTool(BrowserBaseTool):
                 await page.go_back()
                 return "Navigated back to the previous page"
             except Exception as nav_error:
-                return f"Unable to navigate back: {str(nav_error)}"
+                return f"Unable to navigate back: {nav_error!s}"
         except Exception as e:
-            return f"Error navigating back: {str(e)}"
+            return f"Error navigating back: {e!s}"
 
 
 class ExtractTextTool(BrowserBaseTool):
     """Tool for extracting text from a webpage."""
+
     name: str = "extract_text"
     description: str = "Extract all the text on the current webpage"
     args_schema: Type[BaseModel] = ExtractTextToolInput
-    
+
     def _run(self, thread_id: str = "default", **kwargs) -> str:
         """Use the sync tool."""
         try:
@@ -268,7 +295,7 @@ class ExtractTextTool(BrowserBaseTool):
                     "The 'beautifulsoup4' package is required to use this tool."
                     " Please install it with 'pip install beautifulsoup4'."
                 )
-                
+
             # Get the current page
             page = self.get_sync_page(thread_id)
 
@@ -277,7 +304,7 @@ class ExtractTextTool(BrowserBaseTool):
             soup = BeautifulSoup(content, "html.parser")
             return soup.get_text(separator="\n").strip()
         except Exception as e:
-            return f"Error extracting text: {str(e)}"
+            return f"Error extracting text: {e!s}"
 
     async def _arun(self, thread_id: str = "default", **kwargs) -> str:
         """Use the async tool."""
@@ -290,7 +317,7 @@ class ExtractTextTool(BrowserBaseTool):
                     "The 'beautifulsoup4' package is required to use this tool."
                     " Please install it with 'pip install beautifulsoup4'."
                 )
-                
+
             # Get the current page
             page = await self.get_async_page(thread_id)
 
@@ -299,15 +326,16 @@ class ExtractTextTool(BrowserBaseTool):
             soup = BeautifulSoup(content, "html.parser")
             return soup.get_text(separator="\n").strip()
         except Exception as e:
-            return f"Error extracting text: {str(e)}"
+            return f"Error extracting text: {e!s}"
 
 
 class ExtractHyperlinksTool(BrowserBaseTool):
     """Tool for extracting hyperlinks from a webpage."""
+
     name: str = "extract_hyperlinks"
     description: str = "Extract all hyperlinks on the current webpage"
     args_schema: Type[BaseModel] = ExtractHyperlinksToolInput
-    
+
     def _run(self, thread_id: str = "default", **kwargs) -> str:
         """Use the sync tool."""
         try:
@@ -319,7 +347,7 @@ class ExtractHyperlinksTool(BrowserBaseTool):
                     "The 'beautifulsoup4' package is required to use this tool."
                     " Please install it with 'pip install beautifulsoup4'."
                 )
-                
+
             # Get the current page
             page = self.get_sync_page(thread_id)
 
@@ -332,13 +360,13 @@ class ExtractHyperlinksTool(BrowserBaseTool):
                 href = link["href"]
                 if href.startswith("http") or href.startswith("https"):
                     links.append({"text": text, "url": href})
-            
+
             if not links:
                 return "No hyperlinks found on the current page."
-            
+
             return json.dumps(links, indent=2)
         except Exception as e:
-            return f"Error extracting hyperlinks: {str(e)}"
+            return f"Error extracting hyperlinks: {e!s}"
 
     async def _arun(self, thread_id: str = "default", **kwargs) -> str:
         """Use the async tool."""
@@ -351,7 +379,7 @@ class ExtractHyperlinksTool(BrowserBaseTool):
                     "The 'beautifulsoup4' package is required to use this tool."
                     " Please install it with 'pip install beautifulsoup4'."
                 )
-                
+
             # Get the current page
             page = await self.get_async_page(thread_id)
 
@@ -364,21 +392,22 @@ class ExtractHyperlinksTool(BrowserBaseTool):
                 href = link["href"]
                 if href.startswith("http") or href.startswith("https"):
                     links.append({"text": text, "url": href})
-            
+
             if not links:
                 return "No hyperlinks found on the current page."
-            
+
             return json.dumps(links, indent=2)
         except Exception as e:
-            return f"Error extracting hyperlinks: {str(e)}"
+            return f"Error extracting hyperlinks: {e!s}"
 
 
 class GetElementsTool(BrowserBaseTool):
     """Tool for getting elements from a webpage."""
+
     name: str = "get_elements"
     description: str = "Get elements from the webpage using a CSS selector"
     args_schema: Type[BaseModel] = GetElementsToolInput
-    
+
     def _run(self, selector: str, thread_id: str = "default", **kwargs) -> str:
         """Use the sync tool."""
         try:
@@ -389,15 +418,15 @@ class GetElementsTool(BrowserBaseTool):
             elements = page.query_selector_all(selector)
             if not elements:
                 return f"No elements found with selector '{selector}'"
-            
+
             elements_text = []
             for i, element in enumerate(elements):
                 text = element.text_content()
-                elements_text.append(f"Element {i+1}: {text.strip()}")
-            
+                elements_text.append(f"Element {i + 1}: {text.strip()}")
+
             return "\n".join(elements_text)
         except Exception as e:
-            return f"Error getting elements: {str(e)}"
+            return f"Error getting elements: {e!s}"
 
     async def _arun(self, selector: str, thread_id: str = "default", **kwargs) -> str:
         """Use the async tool."""
@@ -409,23 +438,24 @@ class GetElementsTool(BrowserBaseTool):
             elements = await page.query_selector_all(selector)
             if not elements:
                 return f"No elements found with selector '{selector}'"
-            
+
             elements_text = []
             for i, element in enumerate(elements):
                 text = await element.text_content()
-                elements_text.append(f"Element {i+1}: {text.strip()}")
-            
+                elements_text.append(f"Element {i + 1}: {text.strip()}")
+
             return "\n".join(elements_text)
         except Exception as e:
-            return f"Error getting elements: {str(e)}"
+            return f"Error getting elements: {e!s}"
 
 
 class CurrentWebPageTool(BrowserBaseTool):
     """Tool for getting information about the current webpage."""
+
     name: str = "current_webpage"
     description: str = "Get information about the current webpage"
     args_schema: Type[BaseModel] = CurrentWebPageToolInput
-    
+
     def _run(self, thread_id: str = "default", **kwargs) -> str:
         """Use the sync tool."""
         try:
@@ -437,7 +467,7 @@ class CurrentWebPageTool(BrowserBaseTool):
             title = page.title()
             return f"URL: {url}\nTitle: {title}"
         except Exception as e:
-            return f"Error getting current webpage info: {str(e)}"
+            return f"Error getting current webpage info: {e!s}"
 
     async def _arun(self, thread_id: str = "default", **kwargs) -> str:
         """Use the async tool."""
@@ -450,7 +480,7 @@ class CurrentWebPageTool(BrowserBaseTool):
             title = await page.title()
             return f"URL: {url}\nTitle: {title}"
         except Exception as e:
-            return f"Error getting current webpage info: {str(e)}"
+            return f"Error getting current webpage info: {e!s}"
 
 
 class BrowserToolkit:
@@ -473,24 +503,22 @@ class BrowserToolkit:
             role="Web Researcher",
             goal="Research and summarize web content",
             backstory="You're an expert at finding information online.",
-            tools=browser_tools
+            tools=browser_tools,
         )
 
         # Create a task for the agent
         research_task = Task(
             description="Navigate to https://example.com and extract all text content. Summarize the main points.",
-            agent=research_agent
+            agent=research_agent,
         )
 
         # Create and run the crew
-        crew = Crew(
-            agents=[research_agent],
-            tasks=[research_task]
-        )
+        crew = Crew(agents=[research_agent], tasks=[research_task])
         result = crew.kickoff()
 
         # Clean up browser resources when done
         import asyncio
+
         asyncio.run(toolkit.cleanup())
         ```
     """
@@ -507,7 +535,7 @@ class BrowserToolkit:
         self.tools: List[BaseTool] = []
         self._nest_current_loop()
         self._setup_tools()
-    
+
     def _nest_current_loop(self):
         """Apply nest_asyncio if we're in an asyncio loop."""
         try:
@@ -515,9 +543,10 @@ class BrowserToolkit:
             if loop.is_running():
                 try:
                     import nest_asyncio
+
                     nest_asyncio.apply(loop)
                 except Exception as e:
-                    logger.warning(f"Failed to apply nest_asyncio: {str(e)}")
+                    logger.warning(f"Failed to apply nest_asyncio: {e!s}")
         except RuntimeError:
             pass
 
@@ -530,7 +559,7 @@ class BrowserToolkit:
             ExtractTextTool(session_manager=self.session_manager),
             ExtractHyperlinksTool(session_manager=self.session_manager),
             GetElementsTool(session_manager=self.session_manager),
-            CurrentWebPageTool(session_manager=self.session_manager)
+            CurrentWebPageTool(session_manager=self.session_manager),
         ]
 
     def get_tools(self) -> List[BaseTool]:
@@ -555,11 +584,11 @@ class BrowserToolkit:
         """Clean up all browser sessions asynchronously"""
         await self.session_manager.close_all_browsers()
         logger.info("All browser sessions cleaned up")
-        
+
     def sync_cleanup(self) -> None:
         """Clean up all browser sessions from synchronous code"""
         import asyncio
-        
+
         try:
             loop = asyncio.get_event_loop()
             if loop.is_running():

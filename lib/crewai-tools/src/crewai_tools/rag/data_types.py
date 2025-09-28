@@ -1,9 +1,11 @@
 from enum import Enum
+import os
 from pathlib import Path
 from urllib.parse import urlparse
-import os
-from crewai_tools.rag.chunkers.base_chunker import BaseChunker
+
 from crewai_tools.rag.base_loader import BaseLoader
+from crewai_tools.rag.chunkers.base_chunker import BaseChunker
+
 
 class DataType(str, Enum):
     PDF_FILE = "pdf_file"
@@ -31,7 +33,6 @@ class DataType(str, Enum):
     # Raw types
     TEXT = "text"
 
-
     def get_chunker(self) -> BaseChunker:
         from importlib import import_module
 
@@ -41,12 +42,10 @@ class DataType(str, Enum):
             DataType.TEXT: ("text_chunker", "TextChunker"),
             DataType.DOCX: ("text_chunker", "DocxChunker"),
             DataType.MDX: ("text_chunker", "MdxChunker"),
-
             # Structured formats
             DataType.CSV: ("structured_chunker", "CsvChunker"),
             DataType.JSON: ("structured_chunker", "JsonChunker"),
             DataType.XML: ("structured_chunker", "XmlChunker"),
-
             DataType.WEBSITE: ("web_chunker", "WebsiteChunker"),
             DataType.DIRECTORY: ("text_chunker", "TextChunker"),
             DataType.YOUTUBE_VIDEO: ("text_chunker", "TextChunker"),
@@ -83,7 +82,10 @@ class DataType(str, Enum):
             DataType.CSV: ("csv_loader", "CSVLoader"),
             DataType.DIRECTORY: ("directory_loader", "DirectoryLoader"),
             DataType.YOUTUBE_VIDEO: ("youtube_video_loader", "YoutubeVideoLoader"),
-            DataType.YOUTUBE_CHANNEL: ("youtube_channel_loader", "YoutubeChannelLoader"),
+            DataType.YOUTUBE_CHANNEL: (
+                "youtube_channel_loader",
+                "YoutubeChannelLoader",
+            ),
             DataType.GITHUB: ("github_loader", "GithubLoader"),
             DataType.DOCS_SITE: ("docs_site_loader", "DocsSiteLoader"),
             DataType.MYSQL: ("mysql_loader", "MySQLLoader"),
@@ -99,6 +101,7 @@ class DataType(str, Enum):
             return getattr(module, class_name)()
         except Exception as e:
             raise ValueError(f"Error loading loader for {self}: {e}")
+
 
 class DataTypes:
     @staticmethod

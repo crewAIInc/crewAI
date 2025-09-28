@@ -1,7 +1,8 @@
-from typing import Any, Optional, Type, Dict, List, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Type
 
 from crewai.tools import BaseTool, EnvVar
 from pydantic import BaseModel, ConfigDict, Field, PrivateAttr
+
 
 if TYPE_CHECKING:
     from firecrawl import FirecrawlApp
@@ -57,7 +58,11 @@ class FirecrawlScrapeWebsiteTool(BaseTool):
     _firecrawl: Optional["FirecrawlApp"] = PrivateAttr(None)
     package_dependencies: List[str] = ["firecrawl-py"]
     env_vars: List[EnvVar] = [
-        EnvVar(name="FIRECRAWL_API_KEY", description="API key for Firecrawl services", required=True),
+        EnvVar(
+            name="FIRECRAWL_API_KEY",
+            description="API key for Firecrawl services",
+            required=True,
+        ),
     ]
 
     def __init__(self, api_key: Optional[str] = None, **kwargs):

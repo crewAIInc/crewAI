@@ -1,17 +1,16 @@
 import os
 import tempfile
-import pytest
-from unittest.mock import patch, Mock
+from unittest.mock import Mock, patch
 
-from crewai_tools.rag.loaders.mdx_loader import MDXLoader
 from crewai_tools.rag.base_loader import LoaderResult
+from crewai_tools.rag.loaders.mdx_loader import MDXLoader
 from crewai_tools.rag.source_content import SourceContent
+import pytest
 
 
 class TestMDXLoader:
-
     def _write_temp_mdx(self, content):
-        f = tempfile.NamedTemporaryFile(mode='w', suffix='.mdx', delete=False)
+        f = tempfile.NamedTemporaryFile(mode="w", suffix=".mdx", delete=False)
         f.write(content)
         f.close()
         return f.name
@@ -44,8 +43,19 @@ Some more content.
         result, path = self._load_from_file(content)
 
         assert isinstance(result, LoaderResult)
-        assert all(tag not in result.content for tag in ["import", "export", "<Component", "<div", "</div>"])
-        assert all(text in result.content for text in ["# Test MDX File", "markdown", "Some more content", "Nested content"])
+        assert all(
+            tag not in result.content
+            for tag in ["import", "export", "<Component", "<div", "</div>"]
+        )
+        assert all(
+            text in result.content
+            for text in [
+                "# Test MDX File",
+                "markdown",
+                "Some more content",
+                "Nested content",
+            ]
+        )
         assert result.metadata["format"] == "mdx"
         assert result.source == path
 
@@ -81,8 +91,19 @@ Regular paragraph text.
 <MyComponent prop1="value1">Nested content inside component</MyComponent>
 """
         result, _ = self._load_from_file(content)
-        assert all(tag not in result.content for tag in ["<div", "<strong>", "<ul>", "<MyComponent"])
-        assert all(text in result.content for text in ["Info:", "Item 1", "Regular paragraph text.", "Nested content inside component"])
+        assert all(
+            tag not in result.content
+            for tag in ["<div", "<strong>", "<ul>", "<MyComponent"]
+        )
+        assert all(
+            text in result.content
+            for text in [
+                "Info:",
+                "Item 1",
+                "Regular paragraph text.",
+                "Nested content inside component",
+            ]
+        )
 
     def test_whitespace_cleanup(self):
         content = """
@@ -101,9 +122,9 @@ More content after multiple newlines.
 Final content.
 """
         result, _ = self._load_from_file(content)
-        assert result.content.count('\n\n\n') == 0
-        assert result.content.startswith('# Title')
-        assert result.content.endswith('Final content.')
+        assert result.content.count("\n\n\n") == 0
+        assert result.content.startswith("# Title")
+        assert result.content.endswith("Final content.")
 
     def test_only_jsx_content(self):
         content = """
@@ -117,22 +138,30 @@ Final content.
         assert "Only JSX content" in result.content
         assert "No markdown here" in result.content
 
-    @patch('requests.get')
+    @patch("requests.get")
     def test_load_mdx_from_url(self, mock_get):
-        mock_get.return_value = Mock(text="# MDX from URL\n\nContent here.\n\n<Component />", raise_for_status=lambda: None)
+        mock_get.return_value = Mock(
+            text="# MDX from URL\n\nContent here.\n\n<Component />",
+            raise_for_status=lambda: None,
+        )
         loader = MDXLoader()
         result = loader.load(SourceContent("https://example.com/content.mdx"))
         assert "# MDX from URL" in result.content
         assert "<Component />" not in result.content
 
-    @patch('requests.get')
+    @patch("requests.get")
     def test_load_mdx_with_custom_headers(self, mock_get):
-        mock_get.return_value = Mock(text="# Custom headers test", raise_for_status=lambda: None)
+        mock_get.return_value = Mock(
+            text="# Custom headers test", raise_for_status=lambda: None
+        )
         loader = MDXLoader()
-        loader.load(SourceContent("https://example.com"), headers={"Authorization": "Bearer token"})
-        assert mock_get.call_args[1]['headers'] == {"Authorization": "Bearer token"}
+        loader.load(
+            SourceContent("https://example.com"),
+            headers={"Authorization": "Bearer token"},
+        )
+        assert mock_get.call_args[1]["headers"] == {"Authorization": "Bearer token"}
 
-    @patch('requests.get')
+    @patch("requests.get")
     def test_mdx_url_fetch_error(self, mock_get):
         mock_get.side_effect = Exception("Network error")
         with pytest.raises(ValueError, match="Error fetching MDX from URL"):
@@ -173,4 +202,7 @@ Final text.
         assert "# Title" in result.content
         assert "JSX content" in result.content
         assert "Final text." in result.content
-        assert all(phrase not in result.content for phrase in ["import {", "export {", "<Component>"])
+        assert all(
+            phrase not in result.content
+            for phrase in ["import {", "export {", "<Component>"]
+        )

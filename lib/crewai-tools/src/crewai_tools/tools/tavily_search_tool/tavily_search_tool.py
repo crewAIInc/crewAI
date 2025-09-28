@@ -1,13 +1,16 @@
-from crewai.tools import BaseTool, EnvVar
-from pydantic import BaseModel, Field
-from typing import Optional, Type, Any, Union, Literal, Sequence, List
-from dotenv import load_dotenv
-import os
+from collections.abc import Sequence
 import json
+import os
+from typing import Any, List, Literal, Optional, Type, Union
+
+from crewai.tools import BaseTool, EnvVar
+from dotenv import load_dotenv
+from pydantic import BaseModel, Field
+
 
 load_dotenv()
 try:
-    from tavily import TavilyClient, AsyncTavilyClient
+    from tavily import AsyncTavilyClient, TavilyClient
 
     TAVILY_AVAILABLE = True
 except ImportError:
@@ -103,7 +106,11 @@ class TavilySearchTool(BaseTool):
     )
     package_dependencies: List[str] = ["tavily-python"]
     env_vars: List[EnvVar] = [
-        EnvVar(name="TAVILY_API_KEY", description="API key for Tavily search service", required=True),
+        EnvVar(
+            name="TAVILY_API_KEY",
+            description="API key for Tavily search service",
+            required=True,
+        ),
     ]
 
     def __init__(self, **kwargs: Any):
@@ -115,8 +122,9 @@ class TavilySearchTool(BaseTool):
             )
         else:
             try:
-                import click
                 import subprocess
+
+                import click
             except ImportError:
                 raise ImportError(
                     "The 'tavily-python' package is required. 'click' and 'subprocess' are also needed to assist with installation if the package is missing. "

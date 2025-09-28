@@ -3,10 +3,10 @@ import tempfile
 from unittest.mock import MagicMock, patch
 
 from bs4 import BeautifulSoup
-from selenium.webdriver.chrome.options import Options
 from crewai_tools.tools.selenium_scraping_tool.selenium_scraping_tool import (
     SeleniumScrapingTool,
 )
+from selenium.webdriver.chrome.options import Options
 
 
 def mock_driver_with_html(html_content):
@@ -44,6 +44,7 @@ def test_tool_initialization(mocked_chrome):
         os.rmdir(temp_dir)
     except:
         pass
+
 
 @patch("selenium.webdriver.Chrome")
 def test_tool_initialization_with_options(mocked_chrome):
@@ -121,6 +122,7 @@ def test_scrape_with_driver_error(_mocked_chrome_driver):
     result = tool._run(website_url="https://example.com")
     assert result == "Error scraping website: WebDriver error occurred"
     mock_driver.close.assert_called_once()
+
 
 @patch("selenium.webdriver.Chrome")
 def test_initialization_with_driver(_mocked_chrome_driver):

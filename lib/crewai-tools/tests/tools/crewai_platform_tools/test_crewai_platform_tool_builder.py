@@ -1,7 +1,11 @@
 import unittest
-from unittest.mock import patch, Mock
+from unittest.mock import Mock, patch
+
+from crewai_tools.tools.crewai_platform_tools import (
+    CrewAIPlatformActionTool,
+    CrewaiPlatformToolBuilder,
+)
 import pytest
-from crewai_tools.tools.crewai_platform_tools import CrewaiPlatformToolBuilder, CrewAIPlatformActionTool
 
 
 class TestCrewaiPlatformToolBuilder(unittest.TestCase):
@@ -21,11 +25,14 @@ class TestCrewaiPlatformToolBuilder(unittest.TestCase):
                         "parameters": {
                             "type": "object",
                             "properties": {
-                                "title": {"type": "string", "description": "Issue title"},
-                                "body": {"type": "string", "description": "Issue body"}
+                                "title": {
+                                    "type": "string",
+                                    "description": "Issue title",
+                                },
+                                "body": {"type": "string", "description": "Issue body"},
                             },
-                            "required": ["title"]
-                        }
+                            "required": ["title"],
+                        },
                     }
                 ],
                 "slack": [
@@ -35,18 +42,26 @@ class TestCrewaiPlatformToolBuilder(unittest.TestCase):
                         "parameters": {
                             "type": "object",
                             "properties": {
-                                "channel": {"type": "string", "description": "Channel name"},
-                                "text": {"type": "string", "description": "Message text"}
+                                "channel": {
+                                    "type": "string",
+                                    "description": "Channel name",
+                                },
+                                "text": {
+                                    "type": "string",
+                                    "description": "Message text",
+                                },
                             },
-                            "required": ["channel", "text"]
-                        }
+                            "required": ["channel", "text"],
+                        },
                     }
-                ]
+                ],
             }
         }
 
     @patch.dict("os.environ", {"CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token"})
-    @patch("crewai_tools.tools.crewai_platform_tools.crewai_platform_tool_builder.requests.get")
+    @patch(
+        "crewai_tools.tools.crewai_platform_tools.crewai_platform_tool_builder.requests.get"
+    )
     def test_fetch_actions_success(self, mock_get):
         mock_api_response = {
             "actions": {
@@ -57,10 +72,13 @@ class TestCrewaiPlatformToolBuilder(unittest.TestCase):
                         "parameters": {
                             "type": "object",
                             "properties": {
-                                "title": {"type": "string", "description": "Issue title"}
+                                "title": {
+                                    "type": "string",
+                                    "description": "Issue title",
+                                }
                             },
-                            "required": ["title"]
-                        }
+                            "required": ["title"],
+                        },
                     }
                 ]
             }
@@ -83,7 +101,10 @@ class TestCrewaiPlatformToolBuilder(unittest.TestCase):
         assert kwargs["params"]["apps"] == "github,slack/send_message"
 
         assert "create_issue" in builder._actions_schema
-        assert builder._actions_schema["create_issue"]["function"]["name"] == "create_issue"
+        assert (
+            builder._actions_schema["create_issue"]["function"]["name"]
+            == "create_issue"
+        )
 
     def test_fetch_actions_no_token(self):
         builder = CrewaiPlatformToolBuilder(apps=["github"])
@@ -94,7 +115,9 @@ class TestCrewaiPlatformToolBuilder(unittest.TestCase):
             assert "No platform integration token found" in str(context.exception)
 
     @patch.dict("os.environ", {"CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token"})
-    @patch("crewai_tools.tools.crewai_platform_tools.crewai_platform_tool_builder.requests.get")
+    @patch(
+        "crewai_tools.tools.crewai_platform_tools.crewai_platform_tool_builder.requests.get"
+    )
     def test_create_tools(self, mock_get):
         mock_api_response = {
             "actions": {
@@ -105,10 +128,13 @@ class TestCrewaiPlatformToolBuilder(unittest.TestCase):
                         "parameters": {
                             "type": "object",
                             "properties": {
-                                "title": {"type": "string", "description": "Issue title"}
+                                "title": {
+                                    "type": "string",
+                                    "description": "Issue title",
+                                }
                             },
-                            "required": ["title"]
-                        }
+                            "required": ["title"],
+                        },
                     }
                 ],
                 "slack": [
@@ -118,12 +144,15 @@ class TestCrewaiPlatformToolBuilder(unittest.TestCase):
                         "parameters": {
                             "type": "object",
                             "properties": {
-                                "channel": {"type": "string", "description": "Channel name"}
+                                "channel": {
+                                    "type": "string",
+                                    "description": "Channel name",
+                                }
                             },
-                            "required": ["channel"]
-                        }
+                            "required": ["channel"],
+                        },
                     }
-                ]
+                ],
             }
         }
 
@@ -159,9 +188,12 @@ class TestCrewaiPlatformToolBuilder(unittest.TestCase):
         def mock_create_tools():
             builder._tools = cached_tools
 
-        with patch.object(builder, '_fetch_actions') as mock_fetch, \
-             patch.object(builder, '_create_tools', side_effect=mock_create_tools) as mock_create:
-
+        with (
+            patch.object(builder, "_fetch_actions") as mock_fetch,
+            patch.object(
+                builder, "_create_tools", side_effect=mock_create_tools
+            ) as mock_create,
+        ):
             tools1 = builder.tools()
             assert mock_fetch.call_count == 1
             assert mock_create.call_count == 1
@@ -176,7 +208,9 @@ class TestCrewaiPlatformToolBuilder(unittest.TestCase):
     def test_empty_apps_list(self):
         builder = CrewaiPlatformToolBuilder(apps=[])
 
-        with patch("crewai_tools.tools.crewai_platform_tools.crewai_platform_tool_builder.requests.get") as mock_get:
+        with patch(
+            "crewai_tools.tools.crewai_platform_tools.crewai_platform_tool_builder.requests.get"
+        ) as mock_get:
             mock_response = Mock()
             mock_response.raise_for_status.return_value = None
             mock_response.json.return_value = {"actions": {}}
@@ -200,16 +234,19 @@ class TestCrewaiPlatformToolBuilder(unittest.TestCase):
                 "nested_object": {
                     "type": "object",
                     "properties": {
-                        "inner_prop": {"type": "integer", "description": "Inner property"}
+                        "inner_prop": {
+                            "type": "integer",
+                            "description": "Inner property",
+                        }
                     },
-                    "description": "Nested object"
+                    "description": "Nested object",
                 },
                 "array_prop": {
                     "type": "array",
                     "items": {"type": "string"},
-                    "description": "Array of strings"
-                }
-            }
+                    "description": "Array of strings",
+                },
+            },
         }
 
         descriptions = builder._generate_detailed_description(complex_schema)

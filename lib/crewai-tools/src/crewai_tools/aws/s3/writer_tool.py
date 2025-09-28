@@ -1,12 +1,16 @@
-from typing import Type, List
 import os
+from typing import List, Type
 
 from crewai.tools import BaseTool
 from pydantic import BaseModel, Field
 
+
 class S3WriterToolInput(BaseModel):
     """Input schema for S3WriterTool."""
-    file_path: str = Field(..., description="S3 file path (e.g., 's3://bucket-name/file-name')")
+
+    file_path: str = Field(
+        ..., description="S3 file path (e.g., 's3://bucket-name/file-name')"
+    )
     content: str = Field(..., description="Content to write to the file")
 
 
@@ -27,16 +31,18 @@ class S3WriterTool(BaseTool):
             bucket_name, object_key = self._parse_s3_path(file_path)
 
             s3 = boto3.client(
-                's3',
-                region_name=os.getenv('CREW_AWS_REGION', 'us-east-1'),
-                aws_access_key_id=os.getenv('CREW_AWS_ACCESS_KEY_ID'),
-                aws_secret_access_key=os.getenv('CREW_AWS_SEC_ACCESS_KEY')
+                "s3",
+                region_name=os.getenv("CREW_AWS_REGION", "us-east-1"),
+                aws_access_key_id=os.getenv("CREW_AWS_ACCESS_KEY_ID"),
+                aws_secret_access_key=os.getenv("CREW_AWS_SEC_ACCESS_KEY"),
             )
 
-            s3.put_object(Bucket=bucket_name, Key=object_key, Body=content.encode('utf-8'))
+            s3.put_object(
+                Bucket=bucket_name, Key=object_key, Body=content.encode("utf-8")
+            )
             return f"Successfully wrote content to {file_path}"
         except ClientError as e:
-            return f"Error writing file to S3: {str(e)}"
+            return f"Error writing file to S3: {e!s}"
 
     def _parse_s3_path(self, file_path: str) -> tuple:
         parts = file_path.replace("s3://", "").split("/", 1)

@@ -4,9 +4,10 @@ import logging
 import os
 from typing import Any, List, Optional, Type
 
-import requests
 from crewai.tools import BaseTool, EnvVar
 from pydantic import BaseModel, Field
+import requests
+
 
 logger = logging.getLogger(__name__)
 

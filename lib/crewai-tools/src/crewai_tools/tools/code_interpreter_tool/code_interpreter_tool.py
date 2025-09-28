@@ -11,13 +11,11 @@ from types import ModuleType
 from typing import Any, Dict, List, Optional, Type
 
 from crewai.tools import BaseTool
-from docker import DockerClient
-from docker import from_env as docker_from_env
+from crewai_tools.printer import Printer
+from docker import DockerClient, from_env as docker_from_env
 from docker.errors import ImageNotFound, NotFound
 from docker.models.containers import Container
 from pydantic import BaseModel, Field
-
-from crewai_tools.printer import Printer
 
 
 class CodeInterpreterSchema(BaseModel):
@@ -205,8 +203,7 @@ class CodeInterpreterTool(BaseTool):
 
         if self.unsafe_mode:
             return self.run_code_unsafe(code, libraries_used)
-        else:
-            return self.run_code_safety(code, libraries_used)
+        return self.run_code_safety(code, libraries_used)
 
     def _install_libraries(self, container: Container, libraries: List[str]) -> None:
         """Installs required Python libraries in the Docker container.
@@ -293,8 +290,7 @@ class CodeInterpreterTool(BaseTool):
         """
         if self._check_docker_available():
             return self.run_code_in_docker(code, libraries_used)
-        else:
-            return self.run_code_in_restricted_sandbox(code)
+        return self.run_code_in_restricted_sandbox(code)
 
     def run_code_in_docker(self, code: str, libraries_used: List[str]) -> str:
         """Runs Python code in a Docker container for safe isolation.
@@ -342,7 +338,7 @@ class CodeInterpreterTool(BaseTool):
             SandboxPython.exec(code=code, locals=exec_locals)
             return exec_locals.get("result", "No result variable found.")
         except Exception as e:
-            return f"An error occurred: {str(e)}"
+            return f"An error occurred: {e!s}"
 
     def run_code_unsafe(self, code: str, libraries_used: List[str]) -> str:
         """Runs code directly on the host machine without any safety restrictions.
@@ -370,4 +366,4 @@ class CodeInterpreterTool(BaseTool):
             exec(code, {}, exec_locals)
             return exec_locals.get("result", "No result variable found.")
         except Exception as e:
-            return f"An error occurred: {str(e)}"
+            return f"An error occurred: {e!s}"

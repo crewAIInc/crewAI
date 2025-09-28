@@ -83,6 +83,7 @@ convention = "google"
 "lib/crewai/tests/**/*.py" = ["S101", "RET504"]  # Allow assert statements and unnecessary assignments before return in tests
 "lib/crewai-tools/tests/**/*.py" = ["S101", "RET504"]  # Allow assert statements and unnecessary assignments before return in tests
 
+
 [tool.mypy]
 exclude = [
     "lib/crewai/src/crewai/cli/templates",
@@ -95,6 +96,7 @@ plugins = ["pydantic.mypy"]
 
 [tool.bandit]
 exclude_dirs = ["lib/crewai/src/crewai/cli/templates"]
+
 
 [tool.pytest.ini_options]
 markers = [
@@ -117,6 +119,7 @@ members = [
     "lib/crewai",
     "lib/crewai-tools",
 ]
+
 
 [tool.uv.sources]
 crewai = { workspace = true }

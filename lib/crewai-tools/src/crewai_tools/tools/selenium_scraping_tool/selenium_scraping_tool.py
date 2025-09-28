@@ -1,6 +1,6 @@
 import re
 import time
-from typing import Any, Optional, Type, List
+from typing import Any, List, Optional, Type
 from urllib.parse import urlparse
 
 from crewai.tools import BaseTool
@@ -39,7 +39,7 @@ class SeleniumScrapingToolSchema(FixedSeleniumScrapingToolSchema):
             if not all([result.scheme, result.netloc]):
                 raise ValueError("Invalid URL format")
         except Exception as e:
-            raise ValueError(f"Invalid URL: {str(e)}")
+            raise ValueError(f"Invalid URL: {e!s}")
 
         if re.search(r"\s", v):
             raise ValueError("URL cannot contain whitespace")
@@ -92,15 +92,15 @@ class SeleniumScrapingTool(BaseTool):
                     "`selenium` and `webdriver-manager` package not found, please run `uv add selenium webdriver-manager`"
                 )
 
-        if 'driver' not in kwargs:
-            if 'options' not in kwargs:
+        if "driver" not in kwargs:
+            if "options" not in kwargs:
                 options: Options = Options()
                 options.add_argument("--headless")
             else:
-                options = kwargs['options']
+                options = kwargs["options"]
             self.driver = webdriver.Chrome(options=options)
         else:
-            self.driver = kwargs['driver']
+            self.driver = kwargs["driver"]
 
         self._by = By
         if cookie is not None:
@@ -130,7 +130,7 @@ class SeleniumScrapingTool(BaseTool):
             content = self._get_content(css_element, return_html)
             return "\n".join(content)
         except Exception as e:
-            return f"Error scraping website: {str(e)}"
+            return f"Error scraping website: {e!s}"
         finally:
             self.driver.close()
 

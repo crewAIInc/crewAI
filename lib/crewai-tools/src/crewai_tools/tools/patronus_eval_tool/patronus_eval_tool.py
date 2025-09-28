@@ -1,10 +1,10 @@
 import json
 import os
-import warnings
 from typing import Any, Dict, List, Optional
+import warnings
 
-import requests
 from crewai.tools import BaseTool, EnvVar
+import requests
 
 
 class PatronusEvalTool(BaseTool):
@@ -14,7 +14,11 @@ class PatronusEvalTool(BaseTool):
     criteria: List[Dict[str, str]] = []
     description: str = ""
     env_vars: List[EnvVar] = [
-        EnvVar(name="PATRONUS_API_KEY", description="API key for Patronus evaluation services", required=True),
+        EnvVar(
+            name="PATRONUS_API_KEY",
+            description="API key for Patronus evaluation services",
+            required=True,
+        ),
     ]
 
     def __init__(self, **kwargs: Any):

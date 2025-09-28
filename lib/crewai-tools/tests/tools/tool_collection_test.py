@@ -7,16 +7,15 @@ from crewai_tools.adapters.tool_collection import ToolCollection
 
 class TestToolCollection(unittest.TestCase):
     def setUp(self):
-
-        self.search_tool = self._create_mock_tool("SearcH", "Search Tool") # Tool name is case sensitive
+        self.search_tool = self._create_mock_tool(
+            "SearcH", "Search Tool"
+        )  # Tool name is case sensitive
         self.calculator_tool = self._create_mock_tool("calculator", "Calculator Tool")
         self.translator_tool = self._create_mock_tool("translator", "Translator Tool")
 
-        self.tools = ToolCollection([
-            self.search_tool,
-            self.calculator_tool,
-            self.translator_tool
-        ])
+        self.tools = ToolCollection(
+            [self.search_tool, self.calculator_tool, self.translator_tool]
+        )
 
     def _create_mock_tool(self, name, description):
         mock_tool = MagicMock(spec=BaseTool)
@@ -143,7 +142,9 @@ class TestToolCollection(unittest.TestCase):
 
     def test_iteration(self):
         tools_list = list(self.tools)
-        self.assertEqual(tools_list, [self.search_tool, self.calculator_tool, self.translator_tool])
+        self.assertEqual(
+            tools_list, [self.search_tool, self.calculator_tool, self.translator_tool]
+        )
 
     def test_contains(self):
         self.assertIn(self.search_tool, self.tools)
@@ -172,7 +173,6 @@ class TestToolCollection(unittest.TestCase):
             _ = self.tools[123]
 
     def test_filter_by_names(self):
-
         filtered = self.tools.filter_by_names(None)
 
         self.assertIsInstance(filtered, ToolCollection)

@@ -1,9 +1,8 @@
 import asyncio
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 from crewai_tools import SnowflakeConfig, SnowflakeSearchTool
+import pytest
 
 
 # Unit Test Fixtures

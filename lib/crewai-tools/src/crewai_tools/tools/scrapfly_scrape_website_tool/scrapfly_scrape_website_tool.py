@@ -1,9 +1,10 @@
-import os
 import logging
-from typing import Any, Dict, Literal, Optional, Type, List
+import os
+from typing import Any, Dict, List, Literal, Optional, Type
 
 from crewai.tools import BaseTool, EnvVar
 from pydantic import BaseModel, Field
+
 
 logger = logging.getLogger(__file__)
 
@@ -31,7 +32,9 @@ class ScrapflyScrapeWebsiteTool(BaseTool):
     scrapfly: Optional[Any] = None
     package_dependencies: List[str] = ["scrapfly-sdk"]
     env_vars: List[EnvVar] = [
-        EnvVar(name="SCRAPFLY_API_KEY", description="API key for Scrapfly", required=True),
+        EnvVar(
+            name="SCRAPFLY_API_KEY", description="API key for Scrapfly", required=True
+        ),
     ]
 
     def __init__(self, api_key: str):
@@ -72,5 +75,4 @@ class ScrapflyScrapeWebsiteTool(BaseTool):
             if ignore_scrape_failures:
                 logger.error(f"Error fetching data from {url}, exception: {e}")
                 return None
-            else:
-                raise e
+            raise e

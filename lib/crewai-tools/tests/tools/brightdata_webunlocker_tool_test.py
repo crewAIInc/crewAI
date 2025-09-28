@@ -1,10 +1,9 @@
 from unittest.mock import Mock, patch
 
-import requests
-
 from crewai_tools.tools.brightdata_tool.brightdata_unlocker import (
     BrightDataWebUnlockerTool,
 )
+import requests
 
 
 @patch.dict(

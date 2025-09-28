@@ -1,9 +1,10 @@
 import logging
-from typing import Any, Dict, Literal, Optional, Type, List
+from typing import Any, Dict, List, Literal, Optional, Type
 from urllib.parse import unquote, urlparse
 
 from crewai.tools import BaseTool, EnvVar
 from pydantic import BaseModel, Field
+
 
 logger = logging.getLogger(__file__)
 
@@ -55,7 +56,9 @@ class SpiderTool(BaseTool):
     config: SpiderToolConfig = SpiderToolConfig()
     package_dependencies: List[str] = ["spider-client"]
     env_vars: List[EnvVar] = [
-        EnvVar(name="SPIDER_API_KEY", description="API key for Spider.cloud", required=True),
+        EnvVar(
+            name="SPIDER_API_KEY", description="API key for Spider.cloud", required=True
+        ),
     ]
 
     def __init__(
@@ -191,24 +194,24 @@ class SpiderTool(BaseTool):
 
         except ValueError as ve:
             if self.log_failures:
-                logger.error(f"Validation error for URL {url}: {str(ve)}")
+                logger.error(f"Validation error for URL {url}: {ve!s}")
                 return None
             raise ve
 
         except ImportError as ie:
-            logger.error(f"Spider client import error: {str(ie)}")
+            logger.error(f"Spider client import error: {ie!s}")
             raise ie
 
         except ConnectionError as ce:
             if self.log_failures:
-                logger.error(f"Connection error while accessing {url}: {str(ce)}")
+                logger.error(f"Connection error while accessing {url}: {ce!s}")
                 return None
             raise ce
 
         except Exception as e:
             if self.log_failures:
                 logger.error(
-                    f"Unexpected error during {mode} operation on {url}: {str(e)}"
+                    f"Unexpected error during {mode} operation on {url}: {e!s}"
                 )
                 return None
             raise e

@@ -6,6 +6,7 @@ import aiohttp
 from crewai.tools import BaseTool
 from pydantic import BaseModel, Field
 
+
 class BrightDataConfig(BaseModel):
     API_URL: str = "https://api.brightdata.com"
     DEFAULT_TIMEOUT: int = 600
@@ -16,8 +17,12 @@ class BrightDataConfig(BaseModel):
         return cls(
             API_URL=os.environ.get("BRIGHTDATA_API_URL", "https://api.brightdata.com"),
             DEFAULT_TIMEOUT=int(os.environ.get("BRIGHTDATA_DEFAULT_TIMEOUT", "600")),
-            DEFAULT_POLLING_INTERVAL=int(os.environ.get("BRIGHTDATA_DEFAULT_POLLING_INTERVAL", "1"))
+            DEFAULT_POLLING_INTERVAL=int(
+                os.environ.get("BRIGHTDATA_DEFAULT_POLLING_INTERVAL", "1")
+            ),
         )
+
+
 class BrightDataDatasetToolException(Exception):
     """Exception raised for custom error in the application."""
 
@@ -51,6 +56,7 @@ class BrightDataDatasetToolSchema(BaseModel):
     additional_params: Optional[Dict[str, Any]] = Field(
         default=None, description="Additional params if any"
     )
+
 
 config = BrightDataConfig.from_env()
 
@@ -411,7 +417,14 @@ class BrightDataDatasetTool(BaseTool):
     zipcode: Optional[str] = None
     additional_params: Optional[Dict[str, Any]] = None
 
-    def __init__(self, dataset_type: str = None, url: str = None, format: str = "json", zipcode: str = None, additional_params: Dict[str, Any] = None):
+    def __init__(
+        self,
+        dataset_type: str = None,
+        url: str = None,
+        format: str = "json",
+        zipcode: str = None,
+        additional_params: Dict[str, Any] = None,
+    ):
         super().__init__()
         self.dataset_type = dataset_type
         self.url = url
@@ -509,7 +522,7 @@ class BrightDataDatasetTool(BaseTool):
                     if status_data.get("status") == "ready":
                         print("Job is ready")
                         break
-                    elif status_data.get("status") == "error":
+                    if status_data.get("status") == "error":
                         raise BrightDataDatasetToolException(
                             f"Job failed: {status_data}", 0
                         )
@@ -530,7 +543,15 @@ class BrightDataDatasetTool(BaseTool):
 
                 return await snapshot_response.text()
 
-    def _run(self, url: str = None, dataset_type: str = None, format: str = None, zipcode: str = None, additional_params: Dict[str, Any] = None, **kwargs: Any) -> Any:
+    def _run(
+        self,
+        url: str = None,
+        dataset_type: str = None,
+        format: str = None,
+        zipcode: str = None,
+        additional_params: Dict[str, Any] = None,
+        **kwargs: Any,
+    ) -> Any:
         dataset_type = dataset_type or self.dataset_type
         output_format = format or self.format
         url = url or self.url
@@ -538,7 +559,9 @@ class BrightDataDatasetTool(BaseTool):
         additional_params = additional_params or self.additional_params
 
         if not dataset_type:
-            raise ValueError("dataset_type is required either in constructor or method call")
+            raise ValueError(
+                "dataset_type is required either in constructor or method call"
+            )
         if not url:
             raise ValueError("url is required either in constructor or method call")
 
@@ -563,8 +586,10 @@ class BrightDataDatasetTool(BaseTool):
                 )
             )
         except TimeoutError as e:
-            return f"Timeout Exception occured in method : get_dataset_data_async. Details - {str(e)}"
+            return f"Timeout Exception occured in method : get_dataset_data_async. Details - {e!s}"
         except BrightDataDatasetToolException as e:
-            return f"Exception occured in method : get_dataset_data_async. Details - {str(e)}"
+            return (
+                f"Exception occured in method : get_dataset_data_async. Details - {e!s}"
+            )
         except Exception as e:
-            return f"Bright Data API error: {str(e)}"
+            return f"Bright Data API error: {e!s}"

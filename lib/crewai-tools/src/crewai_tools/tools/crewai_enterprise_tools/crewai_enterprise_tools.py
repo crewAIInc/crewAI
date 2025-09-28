@@ -2,13 +2,15 @@
 Crewai Enterprise Tools
 """
 
+import json
+import logging
 import os
 import typing as t
-import logging
-import json
+
 from crewai.tools import BaseTool
 from crewai_tools.adapters.enterprise_adapter import EnterpriseActionKitToolAdapter
 from crewai_tools.adapters.tool_collection import ToolCollection
+
 
 logger = logging.getLogger(__name__)
 
@@ -34,10 +36,11 @@ def CrewaiEnterpriseTools(
     """
 
     import warnings
+
     warnings.warn(
         "CrewaiEnterpriseTools will be removed in v1.0.0. Considering use `Agent(apps=[...])` instead.",
         DeprecationWarning,
-        stacklevel=2
+        stacklevel=2,
     )
 
     if enterprise_token is None or enterprise_token == "":

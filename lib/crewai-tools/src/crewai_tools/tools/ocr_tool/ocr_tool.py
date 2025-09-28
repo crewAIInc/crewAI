@@ -7,16 +7,14 @@ This tool provides functionality for extracting text from images using supported
 import base64
 from typing import Optional, Type
 
-from openai import OpenAI
-from pydantic import BaseModel, PrivateAttr
-
-from crewai.tools.base_tool import BaseTool
 from crewai import LLM
+from crewai.tools.base_tool import BaseTool
+from pydantic import BaseModel, PrivateAttr
 
 
 class OCRToolSchema(BaseModel):
     """Input schema for Optical Character Recognition Tool.
-    
+
     Attributes:
         image_path_url (str): Path to a local image file or URL of an image.
             For local files, provide the absolute or relative path.
@@ -42,9 +40,7 @@ class OCRTool(BaseTool):
     """
 
     name: str = "Optical Character Recognition Tool"
-    description: str = (
-        "This tool uses an LLM's API to extract text from an image file."
-    )
+    description: str = "This tool uses an LLM's API to extract text from an image file."
     _llm: Optional[LLM] = PrivateAttr(default=None)
 
     args_schema: Type[BaseModel] = OCRToolSchema
@@ -93,11 +89,11 @@ class OCRTool(BaseTool):
         else:
             base64_image = self._encode_image(image_path_url)
             image_data = f"data:image/jpeg;base64,{base64_image}"
-        
-        messages=[
+
+        messages = [
             {
                 "role": "system",
-                "content": "You are an expert OCR specialist. Extract complete text from the provided image. Provide the result as a raw text."
+                "content": "You are an expert OCR specialist. Extract complete text from the provided image. Provide the result as a raw text.",
             },
             {
                 "role": "user",
@@ -107,7 +103,7 @@ class OCRTool(BaseTool):
                         "image_url": {"url": image_data},
                     }
                 ],
-            }
+            },
         ]
 
         response = self._llm.call(messages=messages)

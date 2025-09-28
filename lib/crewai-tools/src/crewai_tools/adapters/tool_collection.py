@@ -1,7 +1,10 @@
-from typing import List, Optional, Union, TypeVar, Generic, Dict, Callable
+from typing import Callable, Dict, Generic, List, Optional, TypeVar, Union
+
 from crewai.tools import BaseTool
 
-T = TypeVar('T', bound=BaseTool)
+
+T = TypeVar("T", bound=BaseTool)
+
 
 class ToolCollection(list, Generic[T]):
     """

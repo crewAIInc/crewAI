@@ -4,6 +4,7 @@ from crewai import Agent, Crew, Task
 from patronus import Client, EvaluationResult
 from patronus_local_evaluator_tool import PatronusLocalEvaluatorTool
 
+
 # Test the PatronusLocalEvaluatorTool where agent uses the local evaluator
 client = Client()
 

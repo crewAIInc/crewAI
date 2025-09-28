@@ -1,5 +1,5 @@
-import pytest
 from pydantic.warnings import PydanticDeprecatedSince20
+import pytest
 
 
 @pytest.mark.filterwarnings("error", category=PydanticDeprecatedSince20)

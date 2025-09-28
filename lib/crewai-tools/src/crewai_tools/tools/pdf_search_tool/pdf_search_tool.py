@@ -1,9 +1,9 @@
 from typing import Optional, Type
 
+from crewai_tools.rag.data_types import DataType
 from pydantic import BaseModel, Field
 
 from ..rag.rag_tool import RagTool
-from crewai_tools.rag.data_types import DataType
 
 
 class FixedPDFSearchToolSchema(BaseModel):
@@ -47,4 +47,6 @@ class PDFSearchTool(RagTool):
     ) -> str:
         if pdf is not None:
             self.add(pdf)
-        return super()._run(query=query, similarity_threshold=similarity_threshold, limit=limit)
+        return super()._run(
+            query=query, similarity_threshold=similarity_threshold, limit=limit
+        )

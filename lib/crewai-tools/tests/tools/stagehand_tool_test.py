@@ -3,23 +3,27 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+
 # Create mock classes that will be used by our fixture
 class MockStagehandModule:
     def __init__(self):
         self.Stagehand = MagicMock()
         self.StagehandConfig = MagicMock()
         self.StagehandPage = MagicMock()
-        
+
+
 class MockStagehandSchemas:
     def __init__(self):
         self.ActOptions = MagicMock()
         self.ExtractOptions = MagicMock()
         self.ObserveOptions = MagicMock()
         self.AvailableModel = MagicMock()
-        
+
+
 class MockStagehandUtils:
     def __init__(self):
         self.configure_logging = MagicMock()
+
 
 @pytest.fixture(scope="module", autouse=True)
 def mock_stagehand_modules():
@@ -29,25 +33,28 @@ def mock_stagehand_modules():
     for module_name in ["stagehand", "stagehand.schemas", "stagehand.utils"]:
         if module_name in sys.modules:
             original_modules[module_name] = sys.modules[module_name]
-    
+
     # Create and inject mock modules
     mock_stagehand = MockStagehandModule()
     mock_stagehand_schemas = MockStagehandSchemas()
     mock_stagehand_utils = MockStagehandUtils()
-    
+
     sys.modules["stagehand"] = mock_stagehand
     sys.modules["stagehand.schemas"] = mock_stagehand_schemas
     sys.modules["stagehand.utils"] = mock_stagehand_utils
-    
+
     # Import after mocking
-    from crewai_tools.tools.stagehand_tool.stagehand_tool import StagehandResult, StagehandTool
-    
+    from crewai_tools.tools.stagehand_tool.stagehand_tool import (
+        StagehandResult,
+        StagehandTool,
+    )
+
     # Make these available to tests in this module
     sys.modules[__name__].StagehandResult = StagehandResult
     sys.modules[__name__].StagehandTool = StagehandTool
-    
+
     yield
-    
+
     # Restore original modules
     for module_name, module in original_modules.items():
         sys.modules[module_name] = module
@@ -130,7 +137,9 @@ def test_stagehand_tool_initialization():
     assert tool.wait_for_captcha_solves is True
 
 
-@patch("crewai_tools.tools.stagehand_tool.stagehand_tool.StagehandTool._run", autospec=True)
+@patch(
+    "crewai_tools.tools.stagehand_tool.stagehand_tool.StagehandTool._run", autospec=True
+)
 def test_act_command(mock_run, stagehand_tool):
     """Test the 'act' command functionality."""
     # Setup mock
@@ -146,7 +155,9 @@ def test_act_command(mock_run, stagehand_tool):
     assert "Action completed successfully" in result
 
 
-@patch("crewai_tools.tools.stagehand_tool.stagehand_tool.StagehandTool._run", autospec=True)
+@patch(
+    "crewai_tools.tools.stagehand_tool.stagehand_tool.StagehandTool._run", autospec=True
+)
 def test_navigate_command(mock_run, stagehand_tool):
     """Test the 'navigate' command functionality."""
     # Setup mock
@@ -163,11 +174,15 @@ def test_navigate_command(mock_run, stagehand_tool):
     assert "https://example.com" in result
 
 
-@patch("crewai_tools.tools.stagehand_tool.stagehand_tool.StagehandTool._run", autospec=True)
+@patch(
+    "crewai_tools.tools.stagehand_tool.stagehand_tool.StagehandTool._run", autospec=True
+)
 def test_extract_command(mock_run, stagehand_tool):
     """Test the 'extract' command functionality."""
     # Setup mock
-    mock_run.return_value = "Extracted data: {\"data\": \"Extracted content\", \"metadata\": {\"source\": \"test\"}}"
+    mock_run.return_value = (
+        'Extracted data: {"data": "Extracted content", "metadata": {"source": "test"}}'
+    )
 
     # Run the tool
     result = stagehand_tool._run(
@@ -179,7 +194,9 @@ def test_extract_command(mock_run, stagehand_tool):
     assert "Extracted content" in result
 
 
-@patch("crewai_tools.tools.stagehand_tool.stagehand_tool.StagehandTool._run", autospec=True)
+@patch(
+    "crewai_tools.tools.stagehand_tool.stagehand_tool.StagehandTool._run", autospec=True
+)
 def test_observe_command(mock_run, stagehand_tool):
     """Test the 'observe' command functionality."""
     # Setup mock
@@ -197,7 +214,9 @@ def test_observe_command(mock_run, stagehand_tool):
     assert "Suggested action: type" in result
 
 
-@patch("crewai_tools.tools.stagehand_tool.stagehand_tool.StagehandTool._run", autospec=True)
+@patch(
+    "crewai_tools.tools.stagehand_tool.stagehand_tool.StagehandTool._run", autospec=True
+)
 def test_error_handling(mock_run, stagehand_tool):
     """Test error handling in the tool."""
     # Setup mock
@@ -248,15 +267,15 @@ def test_close_method():
         model_api_key="test_model_api_key",
         _testing=True,
     )
-    
+
     # Setup mock stagehand instance
     tool._stagehand = MagicMock()
     tool._stagehand.close = MagicMock()  # Non-async mock
     tool._page = MagicMock()
-    
+
     # Call the close method
     tool.close()
-    
+
     # Verify resources were cleaned up
     assert tool._stagehand is None
     assert tool._page is None

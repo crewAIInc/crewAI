@@ -1,7 +1,8 @@
-import os
+from collections.abc import Iterable
 from importlib.metadata import version
 from logging import getLogger
-from typing import Any, Dict, Iterable, List, Optional, Type
+import os
+from typing import Any, Dict, List, Optional, Type
 
 from crewai.tools import BaseTool, EnvVar
 from openai import AzureOpenAI, Client
@@ -11,8 +12,9 @@ from crewai_tools.tools.mongodb_vector_search_tool.utils import (
     create_vector_search_index,
 )
 
+
 try:
-    import pymongo  # noqa: F403
+    import pymongo
 
     MONGODB_AVAILABLE = True
 except ImportError:

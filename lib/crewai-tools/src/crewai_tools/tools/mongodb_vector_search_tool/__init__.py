@@ -4,8 +4,9 @@ from .vector_search import (
     MongoDBVectorSearchTool,
 )
 
+
 __all__ = [
+    "MongoDBToolSchema",
     "MongoDBVectorSearchConfig",
     "MongoDBVectorSearchTool",
-    "MongoDBToolSchema",
 ]

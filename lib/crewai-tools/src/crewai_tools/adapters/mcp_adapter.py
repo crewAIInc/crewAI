@@ -5,6 +5,8 @@ from typing import TYPE_CHECKING, Any
 
 from crewai.tools import BaseTool
 from crewai_tools.adapters.tool_collection import ToolCollection
+
+
 """
 MCPServer for CrewAI.
 
@@ -112,7 +114,9 @@ class MCPServerAdapter:
 
         try:
             self._serverparams = serverparams
-            self._adapter = MCPAdapt(self._serverparams, CrewAIAdapter(), connect_timeout)
+            self._adapter = MCPAdapt(
+                self._serverparams, CrewAIAdapter(), connect_timeout
+            )
             self.start()
 
         except Exception as e:

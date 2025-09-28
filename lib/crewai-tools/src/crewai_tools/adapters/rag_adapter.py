@@ -12,22 +12,19 @@ class RAGAdapter(Adapter):
         embedding_model: str = "text-embedding-3-small",
         top_k: int = 5,
         embedding_api_key: Optional[str] = None,
-        **embedding_kwargs
+        **embedding_kwargs,
     ):
         super().__init__()
 
         # Prepare embedding configuration
-        embedding_config = {
-            "api_key": embedding_api_key,
-            **embedding_kwargs
-        }
+        embedding_config = {"api_key": embedding_api_key, **embedding_kwargs}
 
         self._adapter = RAG(
             collection_name=collection_name,
             persist_directory=persist_directory,
             embedding_model=embedding_model,
             top_k=top_k,
-            embedding_config=embedding_config
+            embedding_config=embedding_config,
         )
 
     def query(self, question: str) -> str:

@@ -3,6 +3,7 @@ import os
 from crewai import Agent, Crew, Task
 from multion_tool import MultiOnTool
 
+
 os.environ["OPENAI_API_KEY"] = "Your Key"
 
 multion_browse_tool = MultiOnTool(api_key="Your Key")

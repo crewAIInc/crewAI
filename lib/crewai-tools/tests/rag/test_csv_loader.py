@@ -1,11 +1,11 @@
 import os
 import tempfile
-import pytest
-from unittest.mock import patch, Mock
+from unittest.mock import Mock, patch
 
-from crewai_tools.rag.loaders.csv_loader import CSVLoader
 from crewai_tools.rag.base_loader import LoaderResult
+from crewai_tools.rag.loaders.csv_loader import CSVLoader
 from crewai_tools.rag.source_content import SourceContent
+import pytest
 
 
 @pytest.fixture
@@ -52,7 +52,7 @@ class TestCSVLoader:
         assert result.metadata["rows"] == 2
 
     def test_load_csv_malformed(self, temp_csv_file):
-        path = temp_csv_file("invalid,csv\nunclosed quote \"missing")
+        path = temp_csv_file('invalid,csv\nunclosed quote "missing')
         result = CSVLoader().load(SourceContent(path))
 
         assert "Headers: invalid | csv" in result.content
@@ -88,8 +88,7 @@ class TestCSVLoader:
     @patch("requests.get")
     def test_load_csv_from_url(self, mock_get):
         mock_get.return_value = Mock(
-            text="name,value\ntest,123",
-            raise_for_status=Mock(return_value=None)
+            text="name,value\ntest,123", raise_for_status=Mock(return_value=None)
         )
 
         result = CSVLoader().load(SourceContent("https://example.com/data.csv"))
@@ -103,11 +102,12 @@ class TestCSVLoader:
     @patch("requests.get")
     def test_load_csv_with_custom_headers(self, mock_get):
         mock_get.return_value = Mock(
-            text="data,value\ntest,456",
-            raise_for_status=Mock(return_value=None)
+            text="data,value\ntest,456", raise_for_status=Mock(return_value=None)
         )
         headers = {"Authorization": "Bearer token", "Custom-Header": "value"}
-        result = CSVLoader().load(SourceContent("https://example.com/data.csv"), headers=headers)
+        result = CSVLoader().load(
+            SourceContent("https://example.com/data.csv"), headers=headers
+        )
 
         assert "Headers: data | value" in result.content
         assert mock_get.call_args[1]["headers"] == headers

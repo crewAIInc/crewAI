@@ -41,7 +41,9 @@ class AIMindTool(BaseTool):
         super().__init__(**kwargs)
         self.api_key = api_key or os.getenv("MINDS_API_KEY")
         if not self.api_key:
-            raise ValueError("API key must be provided either through constructor or MINDS_API_KEY environment variable")
+            raise ValueError(
+                "API key must be provided either through constructor or MINDS_API_KEY environment variable"
+            )
 
         try:
             from minds.client import Client  # type: ignore
@@ -74,13 +76,12 @@ class AIMindTool(BaseTool):
 
         self.mind_name = mind.name
 
-    def _run(
-        self,
-        query: str
-    ):
+    def _run(self, query: str):
         # Run the query on the AI-Mind.
         # The Minds API is OpenAI compatible and therefore, the OpenAI client can be used.
-        openai_client = OpenAI(base_url=AIMindToolConstants.MINDS_API_BASE_URL, api_key=self.api_key)
+        openai_client = OpenAI(
+            base_url=AIMindToolConstants.MINDS_API_BASE_URL, api_key=self.api_key
+        )
 
         completion = openai_client.chat.completions.create(
             model=self.mind_name,

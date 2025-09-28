@@ -1,7 +1,8 @@
-from typing import TYPE_CHECKING, Any, Type, List
+from typing import TYPE_CHECKING, Any, List, Type
 
 from crewai.tools import BaseTool
 from pydantic import BaseModel, ConfigDict, Field
+
 
 if TYPE_CHECKING:
     from patronus import Client, EvaluationResult
@@ -32,9 +33,7 @@ class FixedLocalEvaluatorToolSchema(BaseModel):
 
 class PatronusLocalEvaluatorTool(BaseTool):
     name: str = "Patronus Local Evaluator Tool"
-    description: str = (
-        "This tool is used to evaluate the model input and output using custom function evaluators."
-    )
+    description: str = "This tool is used to evaluate the model input and output using custom function evaluators."
     args_schema: Type[BaseModel] = FixedLocalEvaluatorToolSchema
     client: "Client" = None
     evaluator: str
@@ -99,7 +98,7 @@ class PatronusLocalEvaluatorTool(BaseTool):
         evaluated_model_gold_answer = self.evaluated_model_gold_answer
         evaluator = self.evaluator
 
-        result: "EvaluationResult" = self.client.evaluate(
+        result: EvaluationResult = self.client.evaluate(
             evaluator=evaluator,
             evaluated_model_input=evaluated_model_input,
             evaluated_model_output=evaluated_model_output,

@@ -1,10 +1,11 @@
-import os
 import logging
+import os
 from typing import List
 
-import requests
 from crewai.tools import BaseTool
 from pydantic import Field, create_model
+import requests
+
 
 ACTIONS_URL = "https://actions.zapier.com/api/v2/ai-actions"
 

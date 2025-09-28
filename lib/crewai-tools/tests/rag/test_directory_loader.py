@@ -1,10 +1,10 @@
 import os
 import tempfile
-import pytest
 
-from crewai_tools.rag.loaders.directory_loader import DirectoryLoader
 from crewai_tools.rag.base_loader import LoaderResult
+from crewai_tools.rag.loaders.directory_loader import DirectoryLoader
 from crewai_tools.rag.source_content import SourceContent
+import pytest
 
 
 @pytest.fixture
@@ -54,12 +54,16 @@ class TestDirectoryLoader:
         self._create_file(temp_directory, "c.md")
 
         loader = DirectoryLoader()
-        result = loader.load(SourceContent(temp_directory), include_extensions=[".txt", ".py"])
+        result = loader.load(
+            SourceContent(temp_directory), include_extensions=[".txt", ".py"]
+        )
         assert "a.txt" in result.content
         assert "b.py" in result.content
         assert "c.md" not in result.content
 
-        result2 = loader.load(SourceContent(temp_directory), exclude_extensions=[".py", ".md"])
+        result2 = loader.load(
+            SourceContent(temp_directory), exclude_extensions=[".py", ".md"]
+        )
         assert "a.txt" in result2.content
         assert "b.py" not in result2.content
         assert "c.md" not in result2.content
@@ -133,12 +137,19 @@ class TestDirectoryLoader:
         metadata = result.metadata
 
         expected_keys = {
-            "format", "directory_path", "total_files", "processed_files",
-            "errors", "file_details", "error_details"
+            "format",
+            "directory_path",
+            "total_files",
+            "processed_files",
+            "errors",
+            "file_details",
+            "error_details",
         }
 
         assert expected_keys.issubset(metadata)
-        assert all(k in metadata["file_details"][0] for k in ("path", "metadata", "source"))
+        assert all(
+            k in metadata["file_details"][0] for k in ("path", "metadata", "source")
+        )
 
     def test_empty_directory(self, temp_directory):
         loader = DirectoryLoader()

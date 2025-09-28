@@ -4,6 +4,7 @@ from typing import Any, List, Optional, Type
 from crewai.tools import BaseTool, EnvVar
 from pydantic import BaseModel, Field
 
+
 try:
     from exa_py import Exa
 
@@ -53,7 +54,9 @@ class EXASearchTool(BaseTool):
             name="EXA_API_KEY", description="API key for Exa services", required=False
         ),
         EnvVar(
-            name="EXA_BASE_URL", description="API url for the Exa services", required=False
+            name="EXA_BASE_URL",
+            description="API url for the Exa services",
+            required=False,
         ),
     ]
 

@@ -1,17 +1,19 @@
-import os
 import json
-import requests
-import warnings
-from typing import List, Any, Dict, Literal, Optional, Union, get_origin, Type, cast
-from pydantic import Field, create_model
-from crewai.tools import BaseTool
+import os
 import re
+from typing import Any, Dict, List, Literal, Optional, Type, Union, cast, get_origin
+import warnings
+
+from crewai.tools import BaseTool
+from pydantic import Field, create_model
+import requests
 
 
 def get_enterprise_api_base_url() -> str:
     """Get the enterprise API base URL from environment or use default."""
     base_url = os.getenv("CREWAI_PLUS_URL", "https://app.crewai.com")
     return f"{base_url}/crewai_plus/api/v1/integrations"
+
 
 ENTERPRISE_API_BASE_URL = get_enterprise_api_base_url()
 
@@ -86,7 +88,9 @@ class EnterpriseActionTool(BaseTool):
         self.enterprise_action_token = enterprise_action_token
         self.action_name = action_name
         self.action_schema = action_schema
-        self.enterprise_api_base_url = enterprise_api_base_url or get_enterprise_api_base_url()
+        self.enterprise_api_base_url = (
+            enterprise_api_base_url or get_enterprise_api_base_url()
+        )
 
     def _sanitize_name(self, name: str) -> str:
         """Sanitize names to create proper Python class names."""
@@ -144,7 +148,9 @@ class EnterpriseActionTool(BaseTool):
 
         return self._map_json_type_to_python(json_type)
 
-    def _create_nested_model(self, schema: Dict[str, Any], model_name: str) -> Type[Any]:
+    def _create_nested_model(
+        self, schema: Dict[str, Any], model_name: str
+    ) -> Type[Any]:
         """Create a nested Pydantic model for complex objects."""
         full_model_name = f"{self._base_name}{model_name}"
 
@@ -188,14 +194,12 @@ class EnterpriseActionTool(BaseTool):
         """Create Pydantic field definition based on type and requirement."""
         if is_required:
             return (field_type, Field(description=description))
-        else:
-            if get_origin(field_type) is Union:
-                return (field_type, Field(default=None, description=description))
-            else:
-                return (
-                    Optional[field_type],
-                    Field(default=None, description=description),
-                )
+        if get_origin(field_type) is Union:
+            return (field_type, Field(default=None, description=description))
+        return (
+            Optional[field_type],
+            Field(default=None, description=description),
+        )
 
     def _map_json_type_to_python(self, json_type: str) -> Type[Any]:
         """Map basic JSON schema types to Python types."""
@@ -242,8 +246,9 @@ class EnterpriseActionTool(BaseTool):
                 if field_name not in cleaned_kwargs:
                     cleaned_kwargs[field_name] = None
 
-
-            api_url = f"{self.enterprise_api_base_url}/actions/{self.action_name}/execute"
+            api_url = (
+                f"{self.enterprise_api_base_url}/actions/{self.action_name}/execute"
+            )
             headers = {
                 "Authorization": f"Bearer {self.enterprise_action_token}",
                 "Content-Type": "application/json",
@@ -262,7 +267,7 @@ class EnterpriseActionTool(BaseTool):
             return json.dumps(data, indent=2)
 
         except Exception as e:
-            return f"Error executing action {self.action_name}: {str(e)}"
+            return f"Error executing action {self.action_name}: {e!s}"
 
 
 class EnterpriseActionKitToolAdapter:
@@ -277,7 +282,9 @@ class EnterpriseActionKitToolAdapter:
         self._set_enterprise_action_token(enterprise_action_token)
         self._actions_schema = {}
         self._tools = None
-        self.enterprise_api_base_url = enterprise_api_base_url or get_enterprise_api_base_url()
+        self.enterprise_api_base_url = (
+            enterprise_api_base_url or get_enterprise_api_base_url()
+        )
 
     def tools(self) -> List[BaseTool]:
         """Get the list of tools created from enterprise actions."""
@@ -289,13 +296,10 @@ class EnterpriseActionKitToolAdapter:
     def _fetch_actions(self):
         """Fetch available actions from the API."""
         try:
-
             actions_url = f"{self.enterprise_api_base_url}/actions"
             headers = {"Authorization": f"Bearer {self.enterprise_action_token}"}
 
-            response = requests.get(
-                actions_url, headers=headers, timeout=30
-            )
+            response = requests.get(actions_url, headers=headers, timeout=30)
             response.raise_for_status()
 
             raw_data = response.json()
@@ -314,8 +318,10 @@ class EnterpriseActionKitToolAdapter:
                             action_schema = {
                                 "function": {
                                     "name": action_name,
-                                    "description": action.get("description", f"Execute {action_name}"),
-                                    "parameters": action.get("parameters", {})
+                                    "description": action.get(
+                                        "description", f"Execute {action_name}"
+                                    ),
+                                    "parameters": action.get("parameters", {}),
                                 }
                             }
                             parsed_schema[action_name] = action_schema
@@ -412,10 +418,12 @@ class EnterpriseActionKitToolAdapter:
             warnings.warn(
                 "Legacy token detected, please consider using the new Enterprise Action Auth token. Check out our docs for more information https://docs.crewai.com/en/enterprise/features/integrations.",
                 DeprecationWarning,
-                stacklevel=2
+                stacklevel=2,
             )
 
-        token = enterprise_action_token or os.environ.get("CREWAI_ENTERPRISE_TOOLS_TOKEN")
+        token = enterprise_action_token or os.environ.get(
+            "CREWAI_ENTERPRISE_TOOLS_TOKEN"
+        )
 
         self.enterprise_action_token = token
 

@@ -3,8 +3,11 @@ import re
 from typing import Any, Optional, Type
 
 import requests
+
+
 try:
     from bs4 import BeautifulSoup
+
     BEAUTIFULSOUP_AVAILABLE = True
 except ImportError:
     BEAUTIFULSOUP_AVAILABLE = False
@@ -45,7 +48,9 @@ class ScrapeWebsiteTool(BaseTool):
     ):
         super().__init__(**kwargs)
         if not BEAUTIFULSOUP_AVAILABLE:
-            raise ImportError("beautifulsoup4 is not installed. Please install it with `pip install crewai-tools[beautifulsoup4]`")
+            raise ImportError(
+                "beautifulsoup4 is not installed. Please install it with `pip install crewai-tools[beautifulsoup4]`"
+            )
 
         if website_url is not None:
             self.website_url = website_url

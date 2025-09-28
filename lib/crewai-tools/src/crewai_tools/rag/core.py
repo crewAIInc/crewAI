@@ -7,12 +7,13 @@ import chromadb
 import litellm
 from pydantic import BaseModel, Field, PrivateAttr
 
-from crewai_tools.tools.rag.rag_tool import Adapter
-from crewai_tools.rag.data_types import  DataType
 from crewai_tools.rag.base_loader import BaseLoader
 from crewai_tools.rag.chunkers.base_chunker import BaseChunker
-from crewai_tools.rag.source_content import SourceContent
+from crewai_tools.rag.data_types import DataType
 from crewai_tools.rag.misc import compute_sha256
+from crewai_tools.rag.source_content import SourceContent
+from crewai_tools.tools.rag.rag_tool import Adapter
+
 
 logger = logging.getLogger(__name__)
 
@@ -24,12 +25,8 @@ class EmbeddingService:
 
     def embed_text(self, text: str) -> List[float]:
         try:
-            response = litellm.embedding(
-                model=self.model,
-                input=[text],
-                **self.kwargs
-            )
-            return response.data[0]['embedding']
+            response = litellm.embedding(model=self.model, input=[text], **self.kwargs)
+            return response.data[0]["embedding"]
         except Exception as e:
             logger.error(f"Error generating embedding: {e}")
             raise
@@ -39,12 +36,8 @@ class EmbeddingService:
             return []
 
         try:
-            response = litellm.embedding(
-                model=self.model,
-                input=texts,
-                **self.kwargs
-            )
-            return [data['embedding'] for data in response.data]
+            response = litellm.embedding(model=self.model, input=texts, **self.kwargs)
+            return [data["embedding"] for data in response.data]
         except Exception as e:
             logger.error(f"Error generating batch embeddings: {e}")
             raise
@@ -79,10 +72,15 @@ class RAG(Adapter):
 
             self._collection = self._client.get_or_create_collection(
                 name=self.collection_name,
-                metadata={"hnsw:space": "cosine", "description": "CrewAI Knowledge Base"}
+                metadata={
+                    "hnsw:space": "cosine",
+                    "description": "CrewAI Knowledge Base",
+                },
             )
 
-            self._embedding_service = EmbeddingService(model=self.embedding_model, **self.embedding_config)
+            self._embedding_service = EmbeddingService(
+                model=self.embedding_model, **self.embedding_config
+            )
         except Exception as e:
             logger.error(f"Failed to initialize ChromaDB: {e}")
             raise
@@ -96,7 +94,7 @@ class RAG(Adapter):
         metadata: Optional[Dict[str, Any]] = None,
         loader: Optional[BaseLoader] = None,
         chunker: Optional[BaseChunker] = None,
-        **kwargs: Any
+        **kwargs: Any,
     ) -> None:
         source_content = SourceContent(content)
 
@@ -111,11 +109,19 @@ class RAG(Adapter):
         loader_result = loader.load(source_content)
         doc_id = loader_result.doc_id
 
-        existing_doc = self._collection.get(where={"source": source_content.source_ref}, limit=1)
-        existing_doc_id = existing_doc and existing_doc['metadatas'][0]['doc_id'] if existing_doc['metadatas'] else None
+        existing_doc = self._collection.get(
+            where={"source": source_content.source_ref}, limit=1
+        )
+        existing_doc_id = (
+            existing_doc and existing_doc["metadatas"][0]["doc_id"]
+            if existing_doc["metadatas"]
+            else None
+        )
 
         if existing_doc_id == doc_id:
-            logger.warning(f"Document with source {loader_result.source} already exists")
+            logger.warning(
+                f"Document with source {loader_result.source} already exists"
+            )
             return
 
         # Document with same source ref does exists but the content has changed, deleting the oldest reference
@@ -128,14 +134,16 @@ class RAG(Adapter):
         chunks = chunker.chunk(loader_result.content)
         for i, chunk in enumerate(chunks):
             doc_metadata = (metadata or {}).copy()
-            doc_metadata['chunk_index'] = i
-            documents.append(Document(
-                id=compute_sha256(chunk),
-                content=chunk,
-                metadata=doc_metadata,
-                data_type=data_type,
-                source=loader_result.source
-            ))
+            doc_metadata["chunk_index"] = i
+            documents.append(
+                Document(
+                    id=compute_sha256(chunk),
+                    content=chunk,
+                    metadata=doc_metadata,
+                    data_type=data_type,
+                    source=loader_result.source,
+                )
+            )
 
         if not documents:
             logger.warning("No documents to add")
@@ -153,11 +161,13 @@ class RAG(Adapter):
 
         for doc in documents:
             doc_metadata = doc.metadata.copy()
-            doc_metadata.update({
-                "data_type": doc.data_type.value,
-                "source": doc.source,
-                "doc_id": doc_id
-            })
+            doc_metadata.update(
+                {
+                    "data_type": doc.data_type.value,
+                    "source": doc.source,
+                    "doc_id": doc_id,
+                }
+            )
             metadatas.append(doc_metadata)
 
         try:
@@ -179,10 +189,14 @@ class RAG(Adapter):
                 query_embeddings=[question_embedding],
                 n_results=self.top_k,
                 where=where,
-                include=["documents", "metadatas", "distances"]
+                include=["documents", "metadatas", "distances"],
             )
 
-            if not results or not results.get("documents") or not results["documents"][0]:
+            if (
+                not results
+                or not results.get("documents")
+                or not results["documents"][0]
+            ):
                 return "No relevant content found."
 
             documents = results["documents"][0]
@@ -195,8 +209,12 @@ class RAG(Adapter):
                 metadata = metadatas[i] if i < len(metadatas) else {}
                 distance = distances[i] if i < len(distances) else 1.0
                 source = metadata.get("source", "unknown") if metadata else "unknown"
-                score = 1 - distance if distance is not None else 0  # Convert distance to similarity
-                formatted_results.append(f"[Source: {source}, Relevance: {score:.3f}]\n{doc}")
+                score = (
+                    1 - distance if distance is not None else 0
+                )  # Convert distance to similarity
+                formatted_results.append(
+                    f"[Source: {source}, Relevance: {score:.3f}]\n{doc}"
+                )
 
             return "\n\n".join(formatted_results)
         except Exception as e:
@@ -216,17 +234,19 @@ class RAG(Adapter):
             return {
                 "name": self.collection_name,
                 "count": count,
-                "embedding_model": self.embedding_model
+                "embedding_model": self.embedding_model,
             }
         except Exception as e:
             logger.error(f"Failed to get collection info: {e}")
             return {"error": str(e)}
 
-    def _get_data_type(self, content: SourceContent, data_type: str | DataType | None = None) -> DataType:
+    def _get_data_type(
+        self, content: SourceContent, data_type: str | DataType | None = None
+    ) -> DataType:
         try:
             if isinstance(data_type, str):
                 return DataType(data_type)
-        except Exception as e:
+        except Exception:
             pass
 
         return content.data_type

@@ -46,4 +46,6 @@ class JSONSearchTool(RagTool):
     ) -> str:
         if json_path is not None:
             self.add(json_path)
-        return super()._run(query=search_query, similarity_threshold=similarity_threshold, limit=limit)
+        return super()._run(
+            query=search_query, similarity_threshold=similarity_threshold, limit=limit
+        )

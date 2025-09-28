@@ -17,21 +17,23 @@ class CSVLoader(BaseLoader):
 
         return self._parse_csv(content_str, source_ref)
 
-
     def _load_from_url(self, url: str, kwargs: dict) -> str:
         import requests
 
-        headers = kwargs.get("headers", {
-            "Accept": "text/csv, application/csv, text/plain",
-            "User-Agent": "Mozilla/5.0 (compatible; crewai-tools CSVLoader)"
-        })
+        headers = kwargs.get(
+            "headers",
+            {
+                "Accept": "text/csv, application/csv, text/plain",
+                "User-Agent": "Mozilla/5.0 (compatible; crewai-tools CSVLoader)",
+            },
+        )
 
         try:
             response = requests.get(url, headers=headers, timeout=30)
             response.raise_for_status()
             return response.text
         except Exception as e:
-            raise ValueError(f"Error fetching CSV from URL {url}: {str(e)}")
+            raise ValueError(f"Error fetching CSV from URL {url}: {e!s}")
 
     def _load_from_file(self, path: str) -> str:
         with open(path, "r", encoding="utf-8") as file:
@@ -57,7 +59,7 @@ class CSVLoader(BaseLoader):
             metadata = {
                 "format": "csv",
                 "columns": headers,
-                "rows": len(text_parts) - 2 if headers else 0
+                "rows": len(text_parts) - 2 if headers else 0,
             }
 
         except Exception as e:
@@ -68,5 +70,5 @@ class CSVLoader(BaseLoader):
             content=text,
             source=source_ref,
             metadata=metadata,
-            doc_id=self.generate_doc_id(source_ref=source_ref, content=text)
+            doc_id=self.generate_doc_id(source_ref=source_ref, content=text),
         )

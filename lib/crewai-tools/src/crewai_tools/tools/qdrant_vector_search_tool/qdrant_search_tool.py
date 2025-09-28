@@ -1,11 +1,11 @@
 import json
 import os
-from typing import Any, Callable, Optional, Type, List
+from typing import Any, Callable, List, Optional, Type
 
 
 try:
     from qdrant_client import QdrantClient
-    from qdrant_client.http.models import Filter, FieldCondition, MatchValue
+    from qdrant_client.http.models import FieldCondition, Filter, MatchValue
 
     QDRANT_AVAILABLE = True
 except ImportError:

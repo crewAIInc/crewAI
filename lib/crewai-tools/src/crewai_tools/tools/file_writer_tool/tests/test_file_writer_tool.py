@@ -2,9 +2,8 @@ import os
 import shutil
 import tempfile
 
-import pytest
-
 from crewai_tools.tools.file_writer_tool.file_writer_tool import FileWriterTool
+import pytest
 
 
 @pytest.fixture

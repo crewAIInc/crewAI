@@ -1,11 +1,10 @@
 from unittest.mock import patch
 
-import pytest
-
 from crewai_tools.tools.code_interpreter_tool.code_interpreter_tool import (
     CodeInterpreterTool,
     SandboxPython,
 )
+import pytest
 
 
 @pytest.fixture

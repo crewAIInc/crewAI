@@ -1,13 +1,15 @@
-from crewai.tools import BaseTool, EnvVar
-from pydantic import BaseModel, Field
-from typing import Optional, Type, Any, Union, List, Literal
-from dotenv import load_dotenv
-import os
 import json
+import os
+from typing import Any, List, Literal, Optional, Type, Union
+
+from crewai.tools import BaseTool, EnvVar
+from dotenv import load_dotenv
+from pydantic import BaseModel, Field
+
 
 load_dotenv()
 try:
-    from tavily import TavilyClient, AsyncTavilyClient
+    from tavily import AsyncTavilyClient, TavilyClient
 
     TAVILY_AVAILABLE = True
 except ImportError:
@@ -28,7 +30,11 @@ class TavilyExtractorToolSchema(BaseModel):
 class TavilyExtractorTool(BaseTool):
     package_dependencies: List[str] = ["tavily-python"]
     env_vars: List[EnvVar] = [
-        EnvVar(name="TAVILY_API_KEY", description="API key for Tavily extraction service", required=True),
+        EnvVar(
+            name="TAVILY_API_KEY",
+            description="API key for Tavily extraction service",
+            required=True,
+        ),
     ]
     """
     Tool that uses the Tavily API to extract content from web pages.
@@ -88,8 +94,9 @@ class TavilyExtractorTool(BaseTool):
             )
         else:
             try:
-                import click
                 import subprocess
+
+                import click
             except ImportError:
                 raise ImportError(
                     "The 'tavily-python' package is required. 'click' and 'subprocess' are also needed to assist with installation if the package is missing. "

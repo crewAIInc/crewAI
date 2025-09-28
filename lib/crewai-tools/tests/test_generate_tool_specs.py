@@ -2,11 +2,10 @@ import json
 from typing import List, Optional, Type
 from unittest import mock
 
-import pytest
 from crewai.tools.base_tool import BaseTool, EnvVar
-from pydantic import BaseModel, Field
-
 from generate_tool_specs import ToolSpecExtractor
+from pydantic import BaseModel, Field
+import pytest
 
 
 class MockToolSchema(BaseModel):

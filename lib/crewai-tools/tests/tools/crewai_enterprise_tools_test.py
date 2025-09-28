@@ -1,12 +1,11 @@
 import os
 import unittest
-from unittest.mock import patch, MagicMock
-
+from unittest.mock import MagicMock, patch
 
 from crewai.tools import BaseTool
-from crewai_tools.tools import CrewaiEnterpriseTools
-from crewai_tools.adapters.tool_collection import ToolCollection
 from crewai_tools.adapters.enterprise_adapter import EnterpriseActionTool
+from crewai_tools.adapters.tool_collection import ToolCollection
+from crewai_tools.tools import CrewaiEnterpriseTools
 
 
 class TestCrewaiEnterpriseTools(unittest.TestCase):

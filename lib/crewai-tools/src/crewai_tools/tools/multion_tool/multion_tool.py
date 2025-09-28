@@ -1,7 +1,7 @@
 """Multion tool spec."""
 
 import os
-from typing import Any, Optional, List
+from typing import Any, List, Optional
 
 from crewai.tools import BaseTool, EnvVar
 
@@ -19,7 +19,9 @@ class MultiOnTool(BaseTool):
     max_steps: int = 3
     package_dependencies: List[str] = ["multion"]
     env_vars: List[EnvVar] = [
-        EnvVar(name="MULTION_API_KEY", description="API key for Multion", required=True),
+        EnvVar(
+            name="MULTION_API_KEY", description="API key for Multion", required=True
+        ),
     ]
 
     def __init__(

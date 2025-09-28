@@ -44,4 +44,6 @@ class TXTSearchTool(RagTool):
     ) -> str:
         if txt is not None:
             self.add(txt)
-        return super()._run(query=search_query, similarity_threshold=similarity_threshold, limit=limit)
+        return super()._run(
+            query=search_query, similarity_threshold=similarity_threshold, limit=limit
+        )

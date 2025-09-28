@@ -1,8 +1,8 @@
-
 import unittest
-from unittest.mock import patch, Mock
-import pytest
+from unittest.mock import Mock, patch
+
 from crewai_tools.tools.crewai_platform_tools import CrewAIPlatformActionTool
+import pytest
 
 
 class TestCrewAIPlatformActionTool(unittest.TestCase):
@@ -15,17 +15,14 @@ class TestCrewAIPlatformActionTool(unittest.TestCase):
                 "parameters": {
                     "type": "object",
                     "properties": {
-                        "message": {
-                            "type": "string",
-                            "description": "Message to send"
-                        },
+                        "message": {"type": "string", "description": "Message to send"},
                         "priority": {
                             "type": "integer",
-                            "description": "Priority level"
-                        }
+                            "description": "Priority level",
+                        },
                     },
-                    "required": ["message"]
-                }
+                    "required": ["message"],
+                },
             }
         }
 
@@ -34,12 +31,13 @@ class TestCrewAIPlatformActionTool(unittest.TestCase):
         return CrewAIPlatformActionTool(
             description="Test Action Tool\nTest description",
             action_name="test_action",
-            action_schema=sample_action_schema
+            action_schema=sample_action_schema,
         )
 
-
     @patch.dict("os.environ", {"CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token"})
-    @patch("crewai_tools.tools.crewai_platform_tools.crewai_platform_action_tool.requests.post")
+    @patch(
+        "crewai_tools.tools.crewai_platform_tools.crewai_platform_action_tool.requests.post"
+    )
     def test_run_success(self, mock_post):
         schema = {
             "function": {
@@ -50,15 +48,13 @@ class TestCrewAIPlatformActionTool(unittest.TestCase):
                     "properties": {
                         "message": {"type": "string", "description": "Message"}
                     },
-                    "required": ["message"]
-                }
+                    "required": ["message"],
+                },
             }
         }
 
         tool = CrewAIPlatformActionTool(
-            description="Test tool",
-            action_name="test_action",
-            action_schema=schema
+            description="Test tool", action_name="test_action", action_schema=schema
         )
 
         mock_response = Mock()
@@ -77,7 +73,9 @@ class TestCrewAIPlatformActionTool(unittest.TestCase):
         assert "success" in result
 
     @patch.dict("os.environ", {"CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token"})
-    @patch("crewai_tools.tools.crewai_platform_tools.crewai_platform_action_tool.requests.post")
+    @patch(
+        "crewai_tools.tools.crewai_platform_tools.crewai_platform_action_tool.requests.post"
+    )
     def test_run_api_error(self, mock_post):
         schema = {
             "function": {
@@ -88,15 +86,13 @@ class TestCrewAIPlatformActionTool(unittest.TestCase):
                     "properties": {
                         "message": {"type": "string", "description": "Message"}
                     },
-                    "required": ["message"]
-                }
+                    "required": ["message"],
+                },
             }
         }
 
         tool = CrewAIPlatformActionTool(
-            description="Test tool",
-            action_name="test_action",
-            action_schema=schema
+            description="Test tool", action_name="test_action", action_schema=schema
         )
 
         mock_response = Mock()
@@ -110,7 +106,9 @@ class TestCrewAIPlatformActionTool(unittest.TestCase):
         assert "Invalid request" in result
 
     @patch.dict("os.environ", {"CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token"})
-    @patch("crewai_tools.tools.crewai_platform_tools.crewai_platform_action_tool.requests.post")
+    @patch(
+        "crewai_tools.tools.crewai_platform_tools.crewai_platform_action_tool.requests.post"
+    )
     def test_run_exception(self, mock_post):
         schema = {
             "function": {
@@ -121,15 +119,13 @@ class TestCrewAIPlatformActionTool(unittest.TestCase):
                     "properties": {
                         "message": {"type": "string", "description": "Message"}
                     },
-                    "required": ["message"]
-                }
+                    "required": ["message"],
+                },
             }
         }
 
         tool = CrewAIPlatformActionTool(
-            description="Test tool",
-            action_name="test_action",
-            action_schema=schema
+            description="Test tool", action_name="test_action", action_schema=schema
         )
 
         mock_post.side_effect = Exception("Network error")
@@ -148,15 +144,13 @@ class TestCrewAIPlatformActionTool(unittest.TestCase):
                     "properties": {
                         "message": {"type": "string", "description": "Message"}
                     },
-                    "required": ["message"]
-                }
+                    "required": ["message"],
+                },
             }
         }
 
         tool = CrewAIPlatformActionTool(
-            description="Test tool",
-            action_name="test_action",
-            action_schema=schema
+            description="Test tool", action_name="test_action", action_schema=schema
         )
 
         with patch.dict("os.environ", {}, clear=True):

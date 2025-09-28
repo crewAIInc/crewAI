@@ -3,6 +3,7 @@ from typing import Any, Callable, Dict, List, Optional, Type
 from crewai.tools import BaseTool, EnvVar
 from pydantic import BaseModel, Field
 
+
 try:
     from singlestoredb import connect
     from sqlalchemy.pool import QueuePool
@@ -257,9 +258,9 @@ class SingleStoreSearchTool(BaseTool):
             self.connection_args["conn_attrs"] = dict()
 
         # Add tool identification to connection attributes
-        self.connection_args["conn_attrs"][
-            "_connector_name"
-        ] = "crewAI SingleStore Tool"
+        self.connection_args["conn_attrs"]["_connector_name"] = (
+            "crewAI SingleStore Tool"
+        )
         self.connection_args["conn_attrs"]["_connector_version"] = "1.0"
 
         # Initialize connection pool for efficient connection management
