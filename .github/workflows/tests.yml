@@ -75,7 +75,7 @@ jobs:
           #   DURATIONS_ARG="--durations-path=${DURATION_FILE}"
           # fi
 
-          cd lib/crewai && uv run pytest . \
+          uv run pytest lib/crewai \
             --block-network \
             --timeout=30 \
             -vv \
