@@ -1,5 +1,6 @@
 """Test Agent creation and execution basic functionality."""
 
+import os
 import pytest
 from crewai.agent import Agent
 from crewai.tools.agent_tools.agent_tools import AgentTools
@@ -18,7 +19,7 @@ ask_tool = tools[1]
 @pytest.fixture(scope="module")
 def vcr_config(request) -> dict:
     return {
-        "cassette_library_dir": "tests/tools/agent_tools/cassettes",
+        "cassette_library_dir": os.path.join(os.path.dirname(__file__), "cassettes"),
     }
 
 

@@ -1,4 +1,5 @@
 import json
+import os
 
 # Tests for enums
 from enum import Enum
@@ -25,7 +26,7 @@ from pydantic import BaseModel
 @pytest.fixture(scope="module")
 def vcr_config(request) -> dict:
     return {
-        "cassette_library_dir": "tests/utilities/cassettes",
+        "cassette_library_dir": os.path.join(os.path.dirname(__file__), "cassettes"),
     }
 
 
