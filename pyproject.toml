@@ -15,12 +15,13 @@ dev = [
     "pytest>=8.4.2",
     "pytest-asyncio>=1.2.0",
     "pytest-subprocess>=1.5.3",
+    "vcrpy==7.0.0", # pinned, less versions break pytest-recording
     "pytest-recording>=0.13.4",
     "pytest-randomly>=4.0.1",
     "pytest-timeout>=2.4.0",
     "pytest-xdist>=3.8.0",
     "pytest-split>=0.10.0",
-    "types-requests==2.32.*",
+#    "types-requests==2.32.*",
     "types-pyyaml==6.0.*",
     "types-regex==2024.11.6.*",
     "types-appdirs==1.4.*",
@@ -81,14 +82,22 @@ convention = "google"
 
 [tool.ruff.lint.per-file-ignores]
 "lib/crewai/tests/**/*.py" = ["S101", "RET504"]  # Allow assert statements and unnecessary assignments before return in tests
+"lib/crewai-tools/tests/**/*.py" = ["S101", "RET504"]  # Allow assert statements and unnecessary assignments before return in tests
+
 
 [tool.mypy]
-exclude = ["lib/crewai/src/crewai/cli/templates", "lib/crewai/tests/"]
+exclude = [
+    "lib/crewai/src/crewai/cli/templates",
+    "lib/crewai/tests/",
+    # crewai-tools
+    "lib/crewai-tools/tests/"
+]
 plugins = ["pydantic.mypy"]
 
 
 [tool.bandit]
 exclude_dirs = ["lib/crewai/src/crewai/cli/templates"]
+
 
 [tool.pytest.ini_options]
 markers = [
@@ -96,6 +105,7 @@ markers = [
 ]
 testpaths = [
     "lib/crewai/tests",
+    "lib/crewai-tools/tests",
 ]
 asyncio_mode = "strict"
 asyncio_default_fixture_loop_scope = "function"
@@ -108,7 +118,10 @@ python_functions = "test_*"
 [tool.uv.workspace]
 members = [
     "lib/crewai",
+    "lib/crewai-tools",
 ]
+
 
 [tool.uv.sources]
 crewai = { workspace = true }
+crewai-tools = { workspace = true }
