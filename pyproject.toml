@@ -81,9 +81,15 @@ convention = "google"
 
 [tool.ruff.lint.per-file-ignores]
 "lib/crewai/tests/**/*.py" = ["S101", "RET504"]  # Allow assert statements and unnecessary assignments before return in tests
+"lib/crewai-tools/tests/**/*.py" = ["S101", "RET504"]  # Allow assert statements and unnecessary assignments before return in tests
 
 [tool.mypy]
-exclude = ["lib/crewai/src/crewai/cli/templates", "lib/crewai/tests/"]
+exclude = [
+    "lib/crewai/src/crewai/cli/templates",
+    "lib/crewai/tests/",
+    # crewai-tools
+    "lib/crewai-tools/tests/"
+]
 plugins = ["pydantic.mypy"]
 
 
@@ -96,6 +102,7 @@ markers = [
 ]
 testpaths = [
     "lib/crewai/tests",
+    "lib/crewai-tools/tests",
 ]
 asyncio_mode = "strict"
 asyncio_default_fixture_loop_scope = "function"
@@ -113,3 +120,4 @@ members = [
 
 [tool.uv.sources]
 crewai = { workspace = true }
+crewai-tools = { workspace = true }
