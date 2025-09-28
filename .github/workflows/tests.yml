@@ -25,17 +25,17 @@ jobs:
         with:
           fetch-depth: 0  # Fetch all history for proper diff
 
-      - name: Restore global uv cache
-        id: cache-restore
-        uses: actions/cache/restore@v4
-        with:
-          path: |
-            ~/.cache/uv
-            ~/.local/share/uv
-            .venv
-          key: uv-main-py${{ matrix.python-version }}-${{ hashFiles('uv.lock') }}
-          restore-keys: |
-            uv-main-py${{ matrix.python-version }}-
+      # - name: Restore global uv cache
+      #   id: cache-restore
+      #   uses: actions/cache/restore@v4
+      #   with:
+      #     path: |
+      #       ~/.cache/uv
+      #       ~/.local/share/uv
+      #       .venv
+      #     key: uv-main-py${{ matrix.python-version }}-${{ hashFiles('uv.lock') }}
+      #     restore-keys: |
+      #       uv-main-py${{ matrix.python-version }}-
 
       - name: Install uv
         uses: astral-sh/setup-uv@v6
@@ -47,11 +47,11 @@ jobs:
       - name: Install the project
         run: uv sync --all-packages --all-extras
 
-      - name: Restore test durations
-        uses: actions/cache/restore@v4
-        with:
-          path: .test_durations_py*
-          key: test-durations-py${{ matrix.python-version }}
+      # - name: Restore test durations
+      #   uses: actions/cache/restore@v4
+      #   with:
+      #     path: .test_durations_py*
+      #     key: test-durations-py${{ matrix.python-version }}
 
       - name: Run tests (group ${{ matrix.group }} of 8)
         run: |
@@ -87,12 +87,12 @@ jobs:
             --maxfail=3 \
             -m "not requires_local_services"
 
-      - name: Save uv caches
-        if: steps.cache-restore.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v4
-        with:
-          path: |
-            ~/.cache/uv
-            ~/.local/share/uv
-            .venv
-          key: uv-main-py${{ matrix.python-version }}-${{ hashFiles('uv.lock') }}
+      # - name: Save uv caches
+      #   if: steps.cache-restore.outputs.cache-hit != 'true'
+      #   uses: actions/cache/save@v4
+      #   with:
+      #     path: |
+      #       ~/.cache/uv
+      #       ~/.local/share/uv
+      #       .venv
+      #     key: uv-main-py${{ matrix.python-version }}-${{ hashFiles('uv.lock') }}

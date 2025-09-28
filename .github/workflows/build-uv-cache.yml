@@ -33,7 +33,7 @@ jobs:
       - name: Install dependencies and populate cache
         run: |
           echo "Building global UV cache for Python ${{ matrix.python-version }}..."
-          uv sync --all-groups --all-extras --no-install-project
+          uv sync --all-groups --all-extras
           echo "Cache populated successfully"
 
       - name: Save uv caches
