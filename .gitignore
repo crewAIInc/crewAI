@@ -2,7 +2,6 @@
 .pytest_cache
 __pycache__
 dist/
-lib/
 .env
 assets/*
 .idea
