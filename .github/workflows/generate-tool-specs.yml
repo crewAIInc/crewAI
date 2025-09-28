@@ -1,0 +1,84 @@
+name: Generate Tool Specifications
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  generate-specs:
+    if: github.event.head_commit.author.name != 'crewai-tools-spec-generator[bot]'
+    runs-on: ubuntu-latest
+    outputs:
+      specs_changed: ${{ steps.check_changes.outputs.specs_changed }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install 3.12.8
+
+      - name: Install the project
+        run: uv sync --dev --all-extras
+
+      - name: Generate tool specifications
+        run: uv run python generate_tool_specs.py
+
+      - name: Configure Git and add upstream
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git remote add upstream https://github.com/crewAIInc/crewAI-tools.git
+          git fetch upstream
+
+      - name: Check for changes in tool specifications
+        id: check_changes
+        run: |
+          git add tool.specs.json
+          if git diff --quiet --staged; then
+            echo "No changes detected in tool.specs.json"
+            echo "specs_changed=false" >> $GITHUB_OUTPUT
+          else
+            echo "Changes detected in tool.specs.json"
+            echo "specs_changed=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Generate GitHub App token
+        if: steps.check_changes.outputs.specs_changed == 'true'
+        id: app-token
+        uses: tibdex/github-app-token@v2
+        with:
+          app_id: ${{ secrets.CREWAI_RELEASE_TOOL_APP_ID }}
+          private_key: ${{ secrets.CREWAI_RELEASE_TOOL_PRIVATE_KEY }}
+
+      - name: Create Pull Request
+        if: steps.check_changes.outputs.specs_changed == 'true'
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+          title: "Automatically update tool specifications"
+          base: main
+          branch: update-tool-specs
+          commit-message: "Automatically update tool specifications"
+          committer: github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>
+          author: github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>
+          delete-branch: true
+
+  notify-api:
+    if: github.event.head_commit.author.name == 'crewai-tools-spec-generator[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Notify API about tool specification update
+        run: |
+          curl -X POST https://app.crewai.com/crewai_plus/api/v1/internal_tool_releases \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${{ secrets.CREWAI_RELEASE_TOOL_API_KEY }}"
