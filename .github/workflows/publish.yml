@@ -8,6 +8,7 @@ on:
 jobs:
   build:
     if: github.event.release.prerelease == true
+    name: Build packages
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
