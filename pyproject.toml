@@ -42,6 +42,7 @@ select = [
     "RUF",    # ruff-specific rules
     "N",      # pep8-naming (naming conventions)
     "W",      # pycodestyle warnings
+    "I",      # isort (import formatting)
     "PERF",   # performance issues
     "PIE",    # flake8-pie (unnecessary code)
     "ASYNC",  # async/await best practices
@@ -62,6 +63,22 @@ select = [
 ]
 ignore = ["E501"]  # ignore line too long globally
 
+[tool.ruff.format]
+docstring-code-format = true
+
+[tool.ruff.lint.isort]
+case-sensitive = true
+combine-as-imports = true
+force-single-line = false
+force-sort-within-sections = true
+known-first-party = []
+section-order = ["future", "standard-library", "third-party", "first-party", "local-folder"]
+lines-after-imports = 2
+split-on-trailing-comma = true
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
 [tool.ruff.lint.per-file-ignores]
 "lib/crewai/tests/**/*.py" = ["S101", "RET504"]  # Allow assert statements and unnecessary assignments before return in tests
 
@@ -77,6 +94,15 @@ exclude_dirs = ["lib/crewai/src/crewai/cli/templates"]
 markers = [
     "telemetry: mark test as a telemetry test (don't mock telemetry)",
 ]
+testpaths = [
+    "lib/crewai/tests",
+]
+asyncio_mode = "strict"
+asyncio_default_fixture_loop_scope = "function"
+addopts = "--tb=short"
+python_files = "test_*.py"
+python_classes = "Test*"
+python_functions = "test_*"
 
 
 [tool.uv.workspace]
