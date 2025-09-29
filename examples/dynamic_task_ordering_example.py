@@ -12,12 +12,12 @@ from crewai.process import Process
 def priority_based_ordering(all_tasks, completed_outputs, current_index):
     """
     Order tasks by priority (lower number = higher priority).
-    
+
     Args:
         all_tasks: List of all tasks in the crew
         completed_outputs: List of TaskOutput objects for completed tasks
         current_index: Current task index (for default ordering)
-        
+
     Returns:
         int: Index of next task to execute
         Task: Task object to execute next
@@ -41,7 +41,7 @@ def priority_based_ordering(all_tasks, completed_outputs, current_index):
 def conditional_ordering(all_tasks, completed_outputs, current_index):
     """
     Order tasks based on previous task outputs.
-    
+
     This example shows how to make task ordering decisions based on
     the results of previously completed tasks.
     """
