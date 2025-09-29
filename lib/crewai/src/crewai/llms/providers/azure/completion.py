@@ -5,8 +5,9 @@ from typing import Any
 
 from crewai.utilities.agent_utils import is_context_length_exceeded
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
-    LLMContextLengthExceededExceptionError,
+    LLMContextLengthExceededError,
 )
+
 
 try:
     from azure.ai.inference import ChatCompletionsClient  # type: ignore
@@ -17,7 +18,6 @@ try:
     )
     from azure.core.credentials import AzureKeyCredential  # type: ignore
     from azure.core.exceptions import HttpResponseError  # type: ignore
-
     from crewai.events.types.llm_events import LLMCallType
     from crewai.llms.base_llm import BaseLLM
 
@@ -337,7 +337,7 @@ class AzureCompletion(BaseLLM):
         except Exception as e:
             if is_context_length_exceeded(e):
                 logging.error(f"Context window exceeded: {e}")
-                raise LLMContextLengthExceededExceptionError(str(e)) from e
+                raise LLMContextLengthExceededError(str(e)) from e
 
         return content
 

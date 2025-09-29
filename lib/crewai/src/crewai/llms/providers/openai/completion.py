@@ -1,21 +1,20 @@
+from collections.abc import Iterator
 import json
 import logging
 import os
-from collections.abc import Iterator
 from typing import Any
-
-from openai import OpenAI
-from openai.types.chat import ChatCompletion, ChatCompletionChunk
-from openai.types.chat.chat_completion import Choice
-from openai.types.chat.chat_completion_chunk import ChoiceDelta
-from pydantic import BaseModel
 
 from crewai.events.types.llm_events import LLMCallType
 from crewai.llms.base_llm import BaseLLM
 from crewai.utilities.agent_utils import is_context_length_exceeded
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
-    LLMContextLengthExceededExceptionError,
+    LLMContextLengthExceededError,
 )
+from openai import OpenAI
+from openai.types.chat import ChatCompletion, ChatCompletionChunk
+from openai.types.chat.chat_completion import Choice
+from openai.types.chat.chat_completion_chunk import ChoiceDelta
+from pydantic import BaseModel
 
 
 class OpenAICompletion(BaseLLM):
@@ -310,7 +309,7 @@ class OpenAICompletion(BaseLLM):
         except Exception as e:
             if is_context_length_exceeded(e):
                 logging.error(f"Context window exceeded: {e}")
-                raise LLMContextLengthExceededExceptionError(str(e)) from e
+                raise LLMContextLengthExceededError(str(e)) from e
             raise e from e
 
         return content

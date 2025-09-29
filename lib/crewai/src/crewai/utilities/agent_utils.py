@@ -15,7 +15,6 @@ from crewai.agents.parser import (
     parse,
 )
 from crewai.cli.config import Settings
-from crewai.llm import LLM
 from crewai.llms.base_llm import BaseLLM
 from crewai.tools import BaseTool as CrewAITool
 from crewai.tools.base_tool import BaseTool
@@ -32,7 +31,9 @@ from crewai.utilities.types import LLMMessage
 
 if TYPE_CHECKING:
     from crewai.agent import Agent
+    from crewai.llm import LLM
     from crewai.task import Task
+
 
 
 class SummaryContent(TypedDict):
