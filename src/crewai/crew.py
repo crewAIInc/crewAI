@@ -554,12 +554,13 @@ class Crew(FlowTrackable, BaseModel):
             
             try:
                 sig = inspect.signature(self.task_ordering_callback)
+            except (ValueError, TypeError):
+                pass
+            else:
                 if len(sig.parameters) != 3:
                     raise ValueError(
                         "task_ordering_callback must accept exactly 3 parameters: (tasks, outputs, current_index)"
                     )
-            except (ValueError, TypeError):
-                pass
         
         return self
 
