@@ -1,6 +1,8 @@
 """Type definitions for Text2Vec embedding providers."""
 
-from typing import Annotated, Literal, TypedDict
+from typing import Annotated, Literal
+
+from typing_extensions import Required, TypedDict
 
 
 class Text2VecProviderConfig(TypedDict, total=False):
@@ -12,5 +14,5 @@ class Text2VecProviderConfig(TypedDict, total=False):
 class Text2VecProviderSpec(TypedDict):
     """Text2Vec provider specification."""
 
-    provider: Literal["text2vec"]
+    provider: Required[Literal["text2vec"]]
     config: Text2VecProviderConfig

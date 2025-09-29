@@ -2,11 +2,9 @@
 
 from typing import cast
 
-import voyageai
+from chromadb.api.types import Documents, EmbeddingFunction, Embeddings
 from typing_extensions import Unpack
 
-from crewai.rag.core.base_embeddings_callable import EmbeddingFunction
-from crewai.rag.core.types import Documents, Embeddings
 from crewai.rag.embeddings.providers.voyageai.types import VoyageAIProviderConfig
 
 
@@ -19,12 +17,25 @@ class VoyageAIEmbeddingFunction(EmbeddingFunction[Documents]):
         Args:
             **kwargs: Configuration parameters for VoyageAI.
         """
+        try:
+            import voyageai  # type: ignore[import-not-found]
+
+        except ImportError as e:
+            raise ImportError(
+                "voyageai is required for voyageai embeddings. "
+                "Install it with: uv add voyageai"
+            ) from e
         self._config = kwargs
         self._client = voyageai.Client(
             api_key=kwargs["api_key"],
             max_retries=kwargs.get("max_retries", 0),
             timeout=kwargs.get("timeout"),
         )
+
+    @staticmethod
+    def name() -> str:
+        """Return the name of the embedding function for ChromaDB compatibility."""
+        return "voyageai"
 
     def __call__(self, input: Documents) -> Embeddings:
         """Generate embeddings for input documents.
@@ -35,6 +46,7 @@ class VoyageAIEmbeddingFunction(EmbeddingFunction[Documents]):
         Returns:
             List of embedding vectors.
         """
+
         if isinstance(input, str):
             input = [input]
 

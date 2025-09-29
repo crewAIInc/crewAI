@@ -1,10 +1,10 @@
 import os
-from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
 from crewai.knowledge.storage.knowledge_storage import KnowledgeStorage
+from crewai.rag.embeddings.types import EmbedderConfig
 from crewai.rag.types import SearchResult
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"  # removes logging from fastembed
@@ -16,20 +16,20 @@ class Knowledge(BaseModel):
     Args:
         sources: list[BaseKnowledgeSource] = Field(default_factory=list)
         storage: KnowledgeStorage | None = Field(default=None)
-        embedder: dict[str, Any] | None = None
+        embedder: EmbedderConfig | None = None
     """
 
     sources: list[BaseKnowledgeSource] = Field(default_factory=list)
     model_config = ConfigDict(arbitrary_types_allowed=True)
     storage: KnowledgeStorage | None = Field(default=None)
-    embedder: dict[str, Any] | None = None
+    embedder: EmbedderConfig | None = None
     collection_name: str | None = None
 
     def __init__(
         self,
         collection_name: str,
         sources: list[BaseKnowledgeSource],
-        embedder: dict[str, Any] | None = None,
+        embedder: EmbedderConfig | None = None,
         storage: KnowledgeStorage | None = None,
         **data,
     ):

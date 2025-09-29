@@ -1,6 +1,8 @@
 """Type definitions for Instructor embedding providers."""
 
-from typing import Annotated, Literal, TypedDict
+from typing import Annotated, Literal
+
+from typing_extensions import Required, TypedDict
 
 
 class InstructorProviderConfig(TypedDict, total=False):
@@ -11,8 +13,8 @@ class InstructorProviderConfig(TypedDict, total=False):
     instruction: str
 
 
-class InstructorProviderSpec(TypedDict):
+class InstructorProviderSpec(TypedDict, total=False):
     """Instructor provider specification."""
 
-    provider: Literal["instructor"]
+    provider: Required[Literal["instructor"]]
     config: InstructorProviderConfig

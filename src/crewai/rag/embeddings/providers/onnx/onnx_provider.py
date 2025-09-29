@@ -15,5 +15,5 @@ class ONNXProvider(BaseEmbeddingsProvider[ONNXMiniLM_L6_V2]):
     preferred_providers: list[str] | None = Field(
         default=None,
         description="Preferred ONNX execution providers",
-        validation_alias="ONNX_PREFERRED_PROVIDERS",
+        validation_alias="EMBEDDINGS_ONNX_PREFERRED_PROVIDERS",
     )

@@ -1,6 +1,8 @@
 """Type definitions for Cohere embedding providers."""
 
-from typing import Annotated, Literal, TypedDict
+from typing import Annotated, Literal
+
+from typing_extensions import Required, TypedDict
 
 
 class CohereProviderConfig(TypedDict, total=False):
@@ -10,8 +12,8 @@ class CohereProviderConfig(TypedDict, total=False):
     model_name: Annotated[str, "large"]
 
 
-class CohereProviderSpec(TypedDict):
+class CohereProviderSpec(TypedDict, total=False):
     """Cohere provider specification."""
 
-    provider: Literal["cohere"]
+    provider: Required[Literal["cohere"]]
     config: CohereProviderConfig

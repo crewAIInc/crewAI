@@ -1,6 +1,8 @@
 """Type definitions for Ollama embedding providers."""
 
-from typing import Annotated, Literal, TypedDict
+from typing import Annotated, Literal
+
+from typing_extensions import Required, TypedDict
 
 
 class OllamaProviderConfig(TypedDict, total=False):
@@ -10,8 +12,8 @@ class OllamaProviderConfig(TypedDict, total=False):
     model_name: str
 
 
-class OllamaProviderSpec(TypedDict):
+class OllamaProviderSpec(TypedDict, total=False):
     """Ollama provider specification."""
 
-    provider: Literal["ollama"]
+    provider: Required[Literal["ollama"]]
     config: OllamaProviderConfig

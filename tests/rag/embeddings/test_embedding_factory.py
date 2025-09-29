@@ -150,8 +150,8 @@ class TestEmbeddingFactory:
         )
 
     @patch("crewai.rag.embeddings.factory.import_and_validate_definition")
-    def test_build_embedder_watson(self, mock_import):
-        """Test building Watson embedder."""
+    def test_build_embedder_watsonx(self, mock_import):
+        """Test building WatsonX embedder."""
         mock_provider_class = MagicMock()
         mock_provider_instance = MagicMock()
         mock_embedding_function = MagicMock()
@@ -161,10 +161,10 @@ class TestEmbeddingFactory:
         mock_provider_instance.embedding_callable.return_value = mock_embedding_function
 
         config = {
-            "provider": "watson",
+            "provider": "watsonx",
             "config": {
                 "model_id": "ibm/slate-125m-english-rtrvr",
-                "api_key": "watson-key",
+                "api_key": "watsonx-key",
                 "url": "https://us-south.ml.cloud.ibm.com",
                 "project_id": "test-project",
             },
@@ -173,7 +173,7 @@ class TestEmbeddingFactory:
         build_embedder(config)
 
         mock_import.assert_called_once_with(
-            "crewai.rag.embeddings.providers.ibm.watson.WatsonProvider"
+            "crewai.rag.embeddings.providers.ibm.watsonx.WatsonXProvider"
         )
 
     def test_build_embedder_unknown_provider(self):

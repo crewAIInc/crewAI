@@ -1,5 +1,7 @@
 """Amazon Bedrock embeddings provider."""
 
+from typing import Any
+
 from chromadb.utils.embedding_functions.amazon_bedrock_embedding_function import (
     AmazonBedrockEmbeddingFunction,
 )
@@ -7,15 +9,8 @@ from pydantic import Field
 
 from crewai.rag.core.base_embeddings_provider import BaseEmbeddingsProvider
 
-try:
-    from boto3.session import Session  # type: ignore[import-untyped]
-except ImportError as exc:
-    raise ImportError(
-        "boto3 is required for amazon-bedrock embeddings. Install it with: uv add boto3"
-    ) from exc
 
-
-def create_aws_session() -> Session:
+def create_aws_session() -> Any:
     """Create an AWS session for Bedrock.
 
     Returns:
@@ -51,8 +46,8 @@ class BedrockProvider(BaseEmbeddingsProvider[AmazonBedrockEmbeddingFunction]):
     model_name: str = Field(
         default="amazon.titan-embed-text-v1",
         description="Model name to use for embeddings",
-        validation_alias="BEDROCK_MODEL_NAME",
+        validation_alias="EMBEDDINGS_BEDROCK_MODEL_NAME",
     )
-    session: Session = Field(
+    session: Any = Field(
         default_factory=create_aws_session, description="AWS session object"
     )

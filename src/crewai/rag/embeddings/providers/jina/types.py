@@ -1,6 +1,8 @@
 """Type definitions for Jina embedding providers."""
 
-from typing import Annotated, Literal, TypedDict
+from typing import Annotated, Literal
+
+from typing_extensions import Required, TypedDict
 
 
 class JinaProviderConfig(TypedDict, total=False):
@@ -10,8 +12,8 @@ class JinaProviderConfig(TypedDict, total=False):
     model_name: Annotated[str, "jina-embeddings-v2-base-en"]
 
 
-class JinaProviderSpec(TypedDict):
+class JinaProviderSpec(TypedDict, total=False):
     """Jina provider specification."""
 
-    provider: Literal["jina"]
+    provider: Required[Literal["jina"]]
     config: JinaProviderConfig

@@ -1,6 +1,8 @@
 """Type definitions for Roboflow embedding providers."""
 
-from typing import Annotated, Literal, TypedDict
+from typing import Annotated, Literal
+
+from typing_extensions import Required, TypedDict
 
 
 class RoboflowProviderConfig(TypedDict, total=False):
@@ -13,5 +15,5 @@ class RoboflowProviderConfig(TypedDict, total=False):
 class RoboflowProviderSpec(TypedDict):
     """Roboflow provider specification."""
 
-    provider: Literal["roboflow"]
+    provider: Required[Literal["roboflow"]]
     config: RoboflowProviderConfig
