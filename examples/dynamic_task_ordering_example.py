@@ -23,11 +23,11 @@ def priority_based_ordering(all_tasks, completed_outputs, current_index):
         Task: Task object to execute next
         None: Use default ordering
     """
-    completed_task_ids = {output.task_id for output in completed_outputs}
+    completed_tasks = {id(task) for task in all_tasks if task.output is not None}
     
     remaining_tasks = [
         (i, task) for i, task in enumerate(all_tasks)
-        if task.id not in completed_task_ids
+        if id(task) not in completed_tasks
     ]
     
     if not remaining_tasks:
@@ -51,9 +51,10 @@ def conditional_ordering(all_tasks, completed_outputs, current_index):
     last_output = completed_outputs[-1]
     
     if "urgent" in last_output.raw.lower():
+        completed_tasks = {id(task) for task in all_tasks if task.output is not None}
         for i, task in enumerate(all_tasks):
             if (hasattr(task, 'priority') and task.priority == 1 and 
-                task.id not in {out.task_id for out in completed_outputs}):
+                id(task) not in completed_tasks):
                 return i
     
     return None

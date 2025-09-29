@@ -550,19 +550,13 @@ class Crew(FlowTrackable, BaseModel):
         """Validates that the task ordering callback has the correct signature."""
         if self.task_ordering_callback is not None:
             if not callable(self.task_ordering_callback):
-                raise PydanticCustomError(
-                    "invalid_task_ordering_callback",
-                    "task_ordering_callback must be callable",
-                    {},
-                )
+                raise ValueError("task_ordering_callback must be callable")
             
             try:
                 sig = inspect.signature(self.task_ordering_callback)
                 if len(sig.parameters) != 3:
-                    raise PydanticCustomError(
-                        "invalid_task_ordering_callback_signature",
-                        "task_ordering_callback must accept exactly 3 parameters: (tasks, outputs, current_index)",
-                        {},
+                    raise ValueError(
+                        "task_ordering_callback must accept exactly 3 parameters: (tasks, outputs, current_index)"
                     )
             except (ValueError, TypeError):
                 pass
@@ -896,73 +890,72 @@ class Crew(FlowTrackable, BaseModel):
         futures: list[tuple[Task, Future[TaskOutput], int]] = []
         last_sync_output: TaskOutput | None = None
         executed_task_indices: set[int] = set()
-        current_index = start_index or 0
-
-        while current_index < len(tasks):
-            if current_index in executed_task_indices:
-                current_index += 1
-                continue
-
-            if start_index is not None and current_index < start_index:
-                task = tasks[current_index]
+        
+        for task_index, task in enumerate(tasks):
+            if start_index is not None and task_index < start_index:
                 if task.output:
                     if task.async_execution:
                         task_outputs.append(task.output)
                     else:
                         task_outputs = [task.output]
                         last_sync_output = task.output
-                executed_task_indices.add(current_index)
-                current_index += 1
-                continue
+                executed_task_indices.add(task_index)
 
+        while len(executed_task_indices) < len(tasks):
+            # Find next task to execute
             if self.task_ordering_callback:
                 try:
                     next_task_result = self.task_ordering_callback(
-                        tasks, task_outputs, current_index
+                        tasks, task_outputs, len(executed_task_indices)
                     )
                     
                     if next_task_result is None:
-                        task_index = current_index
+                        task_index = next(i for i in range(len(tasks)) if i not in executed_task_indices)
                     elif isinstance(next_task_result, int):
-                        if 0 <= next_task_result < len(tasks):
+                        if 0 <= next_task_result < len(tasks) and next_task_result not in executed_task_indices:
                             task_index = next_task_result
                         else:
                             self._logger.log(
                                 "warning", 
-                                f"Invalid task index {next_task_result} from ordering callback, using default",
+                                f"Invalid or already executed task index {next_task_result} from ordering callback, using default",
                                 color="yellow"
                             )
-                            task_index = current_index
+                            task_index = next(i for i in range(len(tasks)) if i not in executed_task_indices)
                     elif isinstance(next_task_result, Task):
                         try:
-                            task_index = tasks.index(next_task_result)
+                            candidate_index = tasks.index(next_task_result)
+                            if candidate_index not in executed_task_indices:
+                                task_index = candidate_index
+                            else:
+                                self._logger.log(
+                                    "warning",
+                                    "Task from ordering callback already executed, using default",
+                                    color="yellow"
+                                )
+                                task_index = next(i for i in range(len(tasks)) if i not in executed_task_indices)
                         except ValueError:
                             self._logger.log(
                                 "warning",
                                 "Task from ordering callback not found in tasks list, using default",
                                 color="yellow"
                             )
-                            task_index = current_index
+                            task_index = next(i for i in range(len(tasks)) if i not in executed_task_indices)
                     else:
                         self._logger.log(
                             "warning",
                             f"Invalid return type from ordering callback: {type(next_task_result)}, using default",
                             color="yellow"
                         )
-                        task_index = current_index
+                        task_index = next(i for i in range(len(tasks)) if i not in executed_task_indices)
                 except Exception as e:
                     self._logger.log(
                         "warning",
                         f"Error in task ordering callback: {e}, using default ordering",
                         color="yellow"
                     )
-                    task_index = current_index
+                    task_index = next(i for i in range(len(tasks)) if i not in executed_task_indices)
             else:
-                task_index = current_index
-
-            if task_index in executed_task_indices:
-                current_index += 1
-                continue
+                task_index = next(i for i in range(len(tasks)) if i not in executed_task_indices)
 
             task = tasks[task_index]
             executed_task_indices.add(task_index)
@@ -990,7 +983,6 @@ class Crew(FlowTrackable, BaseModel):
                 )
                 if skipped_task_output:
                     task_outputs.append(skipped_task_output)
-                    current_index += 1
                     continue
 
             if task.async_execution:
@@ -1018,8 +1010,6 @@ class Crew(FlowTrackable, BaseModel):
                 self._process_task_result(task, task_output)
                 self._store_execution_log(task, task_output, task_index, was_replayed)
                 last_sync_output = task_output
-
-            current_index += 1
 
         if futures:
             task_outputs = self._process_async_tasks(futures, was_replayed)

@@ -29,9 +29,9 @@ def test_sequential_process_with_reverse_ordering(agents, tasks):
     execution_order = []
     
     def reverse_ordering_callback(all_tasks, completed_outputs, current_index):
-        completed_task_ids = {output.task_id for output in completed_outputs}
+        completed_tasks = {id(task) for task in all_tasks if task.output is not None}
         remaining_indices = [i for i in range(len(all_tasks)) 
-                           if all_tasks[i].id not in completed_task_ids]
+                           if id(all_tasks[i]) not in completed_tasks]
         if remaining_indices:
             next_index = max(remaining_indices)
             execution_order.append(next_index)
@@ -62,10 +62,10 @@ def test_hierarchical_process_with_priority_ordering(agents, tasks):
     execution_order = []
     
     def priority_ordering_callback(all_tasks, completed_outputs, current_index):
-        completed_task_ids = {output.task_id for output in completed_outputs}
+        completed_tasks = {id(task) for task in all_tasks if task.output is not None}
         remaining_tasks = [
             (i, task) for i, task in enumerate(all_tasks)
-            if task.id not in completed_task_ids
+            if id(task) not in completed_tasks
         ]
         
         if remaining_tasks:
