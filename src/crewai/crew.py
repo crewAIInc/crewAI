@@ -1,4 +1,5 @@
 import asyncio
+import inspect
 import json
 import re
 import uuid
@@ -113,6 +114,9 @@ class Crew(FlowTrackable, BaseModel):
             execution.
         step_callback: Callback to be executed after each step for every agents
             execution.
+        task_ordering_callback: Callback to determine the next task to execute
+            dynamically. Receives (all_tasks, completed_outputs, current_index)
+            and returns next task index, Task object, or None for default ordering.
         share_crew: Whether you want to share the complete crew information and
             execution with crewAI to make the library better, and allow us to
             train models.
@@ -212,6 +216,12 @@ class Crew(FlowTrackable, BaseModel):
             "List of callbacks to be executed after crew kickoff. "
             "It may be used to adjust the output of the crew."
         ),
+    )
+    task_ordering_callback: Callable[
+        [list[Task], list[TaskOutput], int], int | Task | None
+    ] | None = Field(
+        default=None,
+        description="Callback to determine the next task to execute. Receives (all_tasks, completed_outputs, current_index) and returns next task index, Task object, or None for default ordering.",
     )
     max_rpm: int | None = Field(
         default=None,
@@ -535,6 +545,30 @@ class Crew(FlowTrackable, BaseModel):
                         )
         return self
 
+    @model_validator(mode="after")
+    def validate_task_ordering_callback(self):
+        """Validates that the task ordering callback has the correct signature."""
+        if self.task_ordering_callback is not None:
+            if not callable(self.task_ordering_callback):
+                raise PydanticCustomError(
+                    "invalid_task_ordering_callback",
+                    "task_ordering_callback must be callable",
+                    {},
+                )
+            
+            try:
+                sig = inspect.signature(self.task_ordering_callback)
+                if len(sig.parameters) != 3:
+                    raise PydanticCustomError(
+                        "invalid_task_ordering_callback_signature",
+                        "task_ordering_callback must accept exactly 3 parameters: (tasks, outputs, current_index)",
+                        {},
+                    )
+            except (ValueError, TypeError):
+                pass
+        
+        return self
+
     @property
     def key(self) -> str:
         source: list[str] = [agent.key for agent in self.agents] + [
@@ -847,12 +881,12 @@ class Crew(FlowTrackable, BaseModel):
         start_index: int | None = 0,
         was_replayed: bool = False,
     ) -> CrewOutput:
-        """Executes tasks sequentially and returns the final output.
+        """Executes tasks with optional dynamic ordering and returns the final output.
 
         Args:
             tasks (List[Task]): List of tasks to execute
-            manager (Optional[BaseAgent], optional): Manager agent to use for
-                delegation. Defaults to None.
+            start_index (int | None): Starting index for task execution
+            was_replayed (bool): Whether this is a replay execution
 
         Returns:
             CrewOutput: Final output of the crew
@@ -861,16 +895,77 @@ class Crew(FlowTrackable, BaseModel):
         task_outputs: list[TaskOutput] = []
         futures: list[tuple[Task, Future[TaskOutput], int]] = []
         last_sync_output: TaskOutput | None = None
+        executed_task_indices: set[int] = set()
+        current_index = start_index or 0
 
-        for task_index, task in enumerate(tasks):
-            if start_index is not None and task_index < start_index:
+        while current_index < len(tasks):
+            if current_index in executed_task_indices:
+                current_index += 1
+                continue
+
+            if start_index is not None and current_index < start_index:
+                task = tasks[current_index]
                 if task.output:
                     if task.async_execution:
                         task_outputs.append(task.output)
                     else:
                         task_outputs = [task.output]
                         last_sync_output = task.output
+                executed_task_indices.add(current_index)
+                current_index += 1
                 continue
+
+            if self.task_ordering_callback:
+                try:
+                    next_task_result = self.task_ordering_callback(
+                        tasks, task_outputs, current_index
+                    )
+                    
+                    if next_task_result is None:
+                        task_index = current_index
+                    elif isinstance(next_task_result, int):
+                        if 0 <= next_task_result < len(tasks):
+                            task_index = next_task_result
+                        else:
+                            self._logger.log(
+                                "warning", 
+                                f"Invalid task index {next_task_result} from ordering callback, using default",
+                                color="yellow"
+                            )
+                            task_index = current_index
+                    elif isinstance(next_task_result, Task):
+                        try:
+                            task_index = tasks.index(next_task_result)
+                        except ValueError:
+                            self._logger.log(
+                                "warning",
+                                "Task from ordering callback not found in tasks list, using default",
+                                color="yellow"
+                            )
+                            task_index = current_index
+                    else:
+                        self._logger.log(
+                            "warning",
+                            f"Invalid return type from ordering callback: {type(next_task_result)}, using default",
+                            color="yellow"
+                        )
+                        task_index = current_index
+                except Exception as e:
+                    self._logger.log(
+                        "warning",
+                        f"Error in task ordering callback: {e}, using default ordering",
+                        color="yellow"
+                    )
+                    task_index = current_index
+            else:
+                task_index = current_index
+
+            if task_index in executed_task_indices:
+                current_index += 1
+                continue
+
+            task = tasks[task_index]
+            executed_task_indices.add(task_index)
 
             agent_to_use = self._get_agent_to_use(task)
             if agent_to_use is None:
@@ -880,9 +975,7 @@ class Crew(FlowTrackable, BaseModel):
                     f"or a manager agent is provided."
                 )
 
-            # Determine which tools to use - task tools take precedence over agent tools
             tools_for_task = task.tools or agent_to_use.tools or []
-            # Prepare tools and ensure they're compatible with task execution
             tools_for_task = self._prepare_tools(
                 agent_to_use,
                 task,
@@ -897,6 +990,7 @@ class Crew(FlowTrackable, BaseModel):
                 )
                 if skipped_task_output:
                     task_outputs.append(skipped_task_output)
+                    current_index += 1
                     continue
 
             if task.async_execution:
@@ -923,6 +1017,9 @@ class Crew(FlowTrackable, BaseModel):
                 task_outputs.append(task_output)
                 self._process_task_result(task, task_output)
                 self._store_execution_log(task, task_output, task_index, was_replayed)
+                last_sync_output = task_output
+
+            current_index += 1
 
         if futures:
             task_outputs = self._process_async_tasks(futures, was_replayed)
