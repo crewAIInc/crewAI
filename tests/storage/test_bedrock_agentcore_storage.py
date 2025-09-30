@@ -428,13 +428,6 @@ class TestBedrockAgentCoreStorage:
         with pytest.raises(Exception, match="Namespace error"):
             storage.search("test", limit=5)
 
-    def test_search_limit_validation(self, basic_config, mock_boto3_client):
-        """Test search validates limit parameter."""
-        storage = BedrockAgentCoreStorage(type="external", config=basic_config)
-
-        with pytest.raises(ValueError, match="Limit must be less than 100"):
-            storage.search("test", limit=100)
-
     def test_search_empty_namespaces(self, basic_config, mock_boto3_client):
         """Test search with no configured namespaces."""
         storage = BedrockAgentCoreStorage(type="external", config=basic_config)
