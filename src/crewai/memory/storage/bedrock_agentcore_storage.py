@@ -361,10 +361,6 @@ class BedrockAgentCoreStorage(Storage):
             List of memory items with context, sorted by relevance score
         """
 
-        # Validate limit parameter
-        if limit >= 100:
-            raise ValueError("Limit must be less than 100")
-
         # Search long-term memory first
         long_term_results = self._search_long_term(query, limit, score_threshold)
 
@@ -394,6 +390,36 @@ class BedrockAgentCoreStorage(Storage):
         )
 
         return final_results
+
+    def _safe_truncate_utf8(self, text: str, max_bytes: int = 9000) -> str:
+        """
+        Safely truncate a UTF-8 string to a maximum number of bytes without corrupting characters.
+        Args:
+            text: The text to truncate
+            max_bytes: Maximum number of bytes (default: 9000)
+        Returns:
+            Truncated string that is valid UTF-8
+        """
+        if not text:
+            return ""
+
+        # Encode to UTF-8 bytes
+        encoded = text.encode("utf-8")
+
+        # If already within limit, return as-is
+        if len(encoded) <= max_bytes:
+            return text
+
+        # Truncate bytes and decode, ignoring incomplete characters at the end
+        truncated = encoded[:max_bytes].decode("utf-8", errors="ignore")
+
+        # Log if truncation occurred
+        if len(truncated) < len(text):
+            logger.debug(
+                f"Truncated text from {len(text)} chars to {len(truncated)} chars"
+            )
+
+        return truncated
 
     def _convert_to_event_payload(
         self, value: Any, metadata: dict[str, Any]
@@ -429,20 +455,24 @@ class BedrockAgentCoreStorage(Storage):
 
                 payload_role = role_mapping.get(role, "OTHER")  # Default to OTHER
 
+                # Safely truncate content to avoid UTF-8 corruption
+                truncated_content = self._safe_truncate_utf8(content, 9000)
+
                 payload.append(
                     {
                         "conversational": {
-                            "content": {"text": content[:9000]},
+                            "content": {"text": truncated_content},
                             "role": payload_role,
                         }
                     }
                 )
 
         # Always add the main value as an ASSISTANT message
+        truncated_value = self._safe_truncate_utf8(str(value), 9000)
         payload.append(
             {
                 "conversational": {
-                    "content": {"text": str(value)[:9000]},
+                    "content": {"text": truncated_value},
                     "role": "ASSISTANT",
                 }
             }
