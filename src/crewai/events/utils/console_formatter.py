@@ -220,12 +220,46 @@ class ConsoleFormatter:
         return tree
 
     def create_task_branch(
-        self, crew_tree: Tree | None, task_id: str, task_name: str | None = None
+        self, crew_tree: Tree | None, task_id: str, task_name: str | None = None,
+        attempt_number: int | None = None
     ) -> Tree | None:
         """Create and initialize a task branch."""
         if not self.verbose:
             return None
 
+        # Check if this is a retry (attempt > 1) and we have an existing branch
+        if (
+            attempt_number
+            and attempt_number > 1
+            and crew_tree
+            and self.current_task_branch
+        ):
+            # Update the existing task branch label instead of creating a new one
+            task_content = Text()
+
+            # Display task name if available, otherwise just the ID
+            if task_name:
+                task_content.append("📋 Task: ", style="yellow bold")
+                task_content.append(f"{task_name}", style="yellow bold")
+                task_content.append(f" (ID: {task_id})", style="yellow dim")
+            else:
+                task_content.append(f"📋 Task: {task_id}", style="yellow bold")
+
+            # Display attempt number for retries
+            task_content.append(
+                f" [Attempt {attempt_number}]", style="yellow dim italic"
+            )
+
+            task_content.append("\nStatus: ", style="white")
+            task_content.append("Executing Task...", style="yellow dim")
+
+            # Update the existing branch label
+            self.current_task_branch.label = task_content
+            self.print(crew_tree)
+            self.print()
+            return self.current_task_branch
+
+        # Create new task branch for first attempt or when no existing branch
         task_content = Text()
 
         # Display task name if available, otherwise just the ID
@@ -235,6 +269,12 @@ class ConsoleFormatter:
             task_content.append(f" (ID: {task_id})", style="yellow dim")
         else:
             task_content.append(f"📋 Task: {task_id}", style="yellow bold")
+
+        # Display attempt number if it's a retry (attempt > 1)
+        if attempt_number and attempt_number > 1:
+            task_content.append(
+                f" [Attempt {attempt_number}]", style="yellow dim italic"
+            )
 
         task_content.append("\nStatus: ", style="white")
         task_content.append("Executing Task...", style="yellow dim")
@@ -260,6 +300,7 @@ class ConsoleFormatter:
         agent_role: str,
         status: str = "completed",
         task_name: str | None = None,
+        attempt_number: int | None = None,
     ) -> None:
         """Update task status in the tree."""
         if not self.verbose or crew_tree is None:
@@ -287,6 +328,12 @@ class ConsoleFormatter:
                 else:
                     task_content.append(f"📋 Task: {task_id}", style=f"{style} bold")
 
+                # Display attempt number if it's a retry (attempt > 1)
+                if attempt_number and attempt_number > 1:
+                    task_content.append(
+                        f" [Attempt {attempt_number}]", style=f"{style} dim italic"
+                    )
+
                 # Second line: Assigned to
                 task_content.append("\nAssigned to: ", style="white")
                 task_content.append(agent_role, style=style)
@@ -300,6 +347,9 @@ class ConsoleFormatter:
 
         # Show status panel
         display_name = task_name if task_name else str(task_id)
+        # Add attempt number to display name if it's a retry
+        if attempt_number and attempt_number > 1:
+            display_name += f" [Attempt {attempt_number}]"
         content = self.create_status_content(
             f"Task {status.title()}", display_name, style, Agent=agent_role
         )
