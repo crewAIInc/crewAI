@@ -18,7 +18,7 @@ class TestUtils(unittest.TestCase):
         )
 
         decoded_token = validate_jwt_token(
-            jwt_token="aaaaa.bbbbbb.cccccc"  # nosec S105
+            jwt_token="aaaaa.bbbbbb.cccccc",  # nosec S105
             jwks_url="https://mock_jwks_url",
             issuer="https://mock_issuer",
             audience="app_id_xxxx",
@@ -45,7 +45,7 @@ class TestUtils(unittest.TestCase):
         mock_jwt.decode.side_effect = jwt.ExpiredSignatureError
         with self.assertRaises(Exception):
             validate_jwt_token(
-                jwt_token="aaaaa.bbbbbb.cccccc"  # nosec S105,
+                jwt_token="aaaaa.bbbbbb.cccccc",  # nosec S105
                 jwks_url="https://mock_jwks_url",
                 issuer="https://mock_issuer",
                 audience="app_id_xxxx",
@@ -55,7 +55,7 @@ class TestUtils(unittest.TestCase):
         mock_jwt.decode.side_effect = jwt.InvalidAudienceError
         with self.assertRaises(jwt.InvalidAudienceError):
             validate_jwt_token(
-                jwt_token="aaaaa.bbbbbb.cccccc"  # nosec S105,
+                jwt_token="aaaaa.bbbbbb.cccccc",  # nosec S105
                 jwks_url="https://mock_jwks_url",
                 issuer="https://mock_issuer",
                 audience="app_id_xxxx",
@@ -65,7 +65,7 @@ class TestUtils(unittest.TestCase):
         mock_jwt.decode.side_effect = jwt.InvalidIssuerError
         with self.assertRaises(jwt.InvalidIssuerError):
             validate_jwt_token(
-                jwt_token="aaaaa.bbbbbb.cccccc"  # nosec S105,
+                jwt_token="aaaaa.bbbbbb.cccccc",  # nosec S105
                 jwks_url="https://mock_jwks_url",
                 issuer="https://mock_issuer",
                 audience="app_id_xxxx",
@@ -77,7 +77,7 @@ class TestUtils(unittest.TestCase):
         mock_jwt.decode.side_effect = jwt.MissingRequiredClaimError
         with self.assertRaises(jwt.MissingRequiredClaimError):
             validate_jwt_token(
-                jwt_token="aaaaa.bbbbbb.cccccc"  # nosec S105,
+                jwt_token="aaaaa.bbbbbb.cccccc",  # nosec S105
                 jwks_url="https://mock_jwks_url",
                 issuer="https://mock_issuer",
                 audience="app_id_xxxx",
@@ -87,7 +87,7 @@ class TestUtils(unittest.TestCase):
         mock_jwt.decode.side_effect = jwt.exceptions.PyJWKClientError
         with self.assertRaises(jwt.exceptions.PyJWKClientError):
             validate_jwt_token(
-                jwt_token="aaaaa.bbbbbb.cccccc"  # nosec S105,
+                jwt_token="aaaaa.bbbbbb.cccccc",  # nosec S105
                 jwks_url="https://mock_jwks_url",
                 issuer="https://mock_issuer",
                 audience="app_id_xxxx",
@@ -97,7 +97,7 @@ class TestUtils(unittest.TestCase):
         mock_jwt.decode.side_effect = jwt.InvalidTokenError
         with self.assertRaises(jwt.InvalidTokenError):
             validate_jwt_token(
-                jwt_token="aaaaa.bbbbbb.cccccc"  # nosec S105,
+                jwt_token="aaaaa.bbbbbb.cccccc",  # nosec S105
                 jwks_url="https://mock_jwks_url",
                 issuer="https://mock_issuer",
                 audience="app_id_xxxx",
