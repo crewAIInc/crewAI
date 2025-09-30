@@ -630,3 +630,105 @@ class TestBedrockAgentCoreStorage:
 
         # Should have attempted to call list_events
         mock_boto3_client.list_events.assert_called_once()
+
+    def test_search_long_term_applies_overall_limit(
+        self, config_with_namespaces, mock_boto3_client
+    ):
+        """Test that _search_long_term applies the overall limit across all namespaces."""
+        storage = BedrockAgentCoreStorage(
+            type="external", config=config_with_namespaces
+        )
+
+        # Mock retrieve_memory_records to return many results from each namespace
+        # Each namespace returns 5 results, but we want a total limit of 3
+        mock_boto3_client.retrieve_memory_records.side_effect = [
+            {
+                "memoryRecordSummaries": [
+                    {
+                        "memoryRecordId": f"ns1-record-{i}",
+                        "content": {"text": f"Namespace 1 result {i}"},
+                        "score": 0.9 - (i * 0.05),  # Scores: 0.9, 0.85, 0.8, 0.75, 0.7
+                        "namespaces": ["/namespace1"],
+                        "createdAt": "2024-01-01T00:00:00Z",
+                        "memoryStrategyId": "strat-123",
+                    }
+                    for i in range(5)
+                ]
+            },
+            {
+                "memoryRecordSummaries": [
+                    {
+                        "memoryRecordId": f"ns2-record-{i}",
+                        "content": {"text": f"Namespace 2 result {i}"},
+                        "score": 0.95
+                        - (i * 0.05),  # Scores: 0.95, 0.9, 0.85, 0.8, 0.75
+                        "namespaces": ["/namespace2"],
+                        "createdAt": "2024-01-02T00:00:00Z",
+                        "memoryStrategyId": "strat-123",
+                    }
+                    for i in range(5)
+                ]
+            },
+        ]
+
+        # Mock list_events to return empty (not needed for this test)
+        mock_boto3_client.list_events.return_value = {"events": []}
+
+        # Search with a limit of 3
+        results = storage.search("test query", limit=3, score_threshold=0.5)
+
+        # Verify that retrieve_memory_records was called with a higher per-namespace limit
+        # The implementation uses max(limit * 2, 10) = max(6, 10) = 10
+        calls = mock_boto3_client.retrieve_memory_records.call_args_list
+        assert len(calls) == 2
+        for call in calls:
+            assert call.kwargs["searchCriteria"]["topK"] == 10
+
+        # Verify we only get 3 results total (the overall limit)
+        assert len(results) == 3
+
+        # Verify the results are the top 3 by score across both namespaces
+        # Expected: ns2-0 (0.95), ns2-1 (0.9), ns1-0 (0.9)
+        # Note: When scores are equal, order may vary, but we should have the highest scores
+        scores = [r["score"] for r in results]
+        assert scores[0] == 0.95  # Highest score
+        assert 0.9 in scores  # Should have at least one 0.9 score
+
+        # Verify the highest scoring result is from namespace 2
+        assert results[0]["content"] == "Namespace 2 result 0"
+        assert results[0]["id"] == "ns2-record-0"
+
+    def test_search_long_term_per_namespace_limit_calculation(self, mock_boto3_client):
+        """Test that per-namespace limit is calculated correctly."""
+        config = BedrockAgentCoreConfig(
+            memory_id="mem-123",
+            actor_id="actor-456",
+            session_id="session-789",
+            namespaces=["/ns1", "/ns2", "/ns3"],  # 3 namespaces
+        )
+        storage = BedrockAgentCoreStorage(type="external", config=config)
+
+        # Mock empty results for simplicity
+        mock_boto3_client.retrieve_memory_records.return_value = {
+            "memoryRecordSummaries": []
+        }
+        mock_boto3_client.list_events.return_value = {"events": []}
+
+        # Test with different limits
+        test_cases = [
+            (2, 10),  # limit=2 -> per_namespace_limit = max(2*2, 10) = 10
+            (5, 10),  # limit=5 -> per_namespace_limit = max(5*2, 10) = 10
+            (10, 20),  # limit=10 -> per_namespace_limit = max(10*2, 10) = 20
+            (50, 100),  # limit=50 -> per_namespace_limit = max(50*2, 10) = 100
+        ]
+
+        for limit, expected_per_ns_limit in test_cases:
+            mock_boto3_client.retrieve_memory_records.reset_mock()
+
+            storage.search("test", limit=limit)
+
+            # Verify each namespace was queried with the correct per-namespace limit
+            calls = mock_boto3_client.retrieve_memory_records.call_args_list
+            assert len(calls) == 3  # One call per namespace
+            for call in calls:
+                assert call.kwargs["searchCriteria"]["topK"] == expected_per_ns_limit

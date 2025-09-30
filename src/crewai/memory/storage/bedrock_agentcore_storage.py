@@ -228,6 +228,10 @@ class BedrockAgentCoreStorage(Storage):
 
         long_term_memory_results = []
 
+        # Calculate per-namespace limit to avoid fetching too many records
+        # Use a higher multiplier to ensure we get enough results after filtering
+        per_namespace_limit = max(limit * 2, 10)  # At least 10 per namespace
+
         # Search each namespace
         for search_namespace in namespaces_to_search:
             logger.debug("Searching namespace: %s", search_namespace)
@@ -236,7 +240,7 @@ class BedrockAgentCoreStorage(Storage):
                 long_term_memory_response = self.memory_client.retrieve_memory_records(  # type: ignore
                     memoryId=self.config.memory_id,
                     namespace=search_namespace,
-                    searchCriteria={"searchQuery": query, "topK": limit},
+                    searchCriteria={"searchQuery": query, "topK": per_namespace_limit},
                 )
             except Exception as e:
                 logger.error(f"Error searching namespace {search_namespace}: {e}")
@@ -281,8 +285,11 @@ class BedrockAgentCoreStorage(Storage):
                     }
                 )
 
-        # Sort by score (results are already limited by top_k parameter)
+        # Sort by score and apply the overall limit
         long_term_memory_results.sort(key=lambda x: x.get("score", 0.0), reverse=True)
+
+        # Apply the overall limit to the combined results
+        long_term_memory_results = long_term_memory_results[:limit]
 
         logger.info(
             "AgentCore long-term search returned %d results from %d namespaces",

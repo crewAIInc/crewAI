@@ -67,8 +67,8 @@ openpyxl = [
 ]
 mem0 = ["mem0ai>=0.1.94"]
 agentcore = [
-    "boto3>=1.39.7",
-    "botocore>=1.35.0",
+    "boto3>=1.40.36",
+    "botocore>=1.40.39",
 ]
 docling = [
     "docling>=2.12.0",
