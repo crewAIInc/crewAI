@@ -19,6 +19,7 @@ def test_is_null_response_because_context_length_exceeded_true():
     # Assert
     assert result is True
 
+
 def test_is_null_response_because_context_length_exceeded_false_wrong_exception():
     """
     Test that the function returns False when the exception is not a ValueError.
@@ -34,6 +35,7 @@ def test_is_null_response_because_context_length_exceeded_false_wrong_exception(
 
     # Assert
     assert result is False
+
 
 def test_is_null_response_because_context_length_exceeded_false_wrong_message():
     """
@@ -52,6 +54,7 @@ def test_is_null_response_because_context_length_exceeded_false_wrong_message():
     # Assert
     assert result is False
 
+
 def test_is_null_response_because_context_length_exceeded_false_empty_messages():
     """
     Test that the function returns False when the messages list is empty.
@@ -68,3 +71,23 @@ def test_is_null_response_because_context_length_exceeded_false_empty_messages()
 
     # Assert
     assert result is False
+
+
+def test_is_null_response_because_context_length_exceeded_false():
+    """
+    Test that the function returns True when the exception is a ValueError
+    with 'None or empty' and there are messages.
+    """
+    # Arrange
+    mock_llm = MagicMock()
+    mock_llm.get_context_window_size.return_value = 50
+    exception = ValueError("Invalid response from LLM call - None or empty.")
+    messages = [{"content": "This is a test message."}]
+
+    # Act
+    result = is_null_response_because_context_length_exceeded(exception, messages, mock_llm)
+
+    # Assert
+    assert result is False
+
+
