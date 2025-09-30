@@ -370,14 +370,12 @@ crew = Crew(
     memory=True,
     embedder={
         "provider": "openai",  # Use openai provider for Azure
-        "config": {
-            "api_key": "your-azure-api-key",
-            "api_base": "https://your-resource.openai.azure.com/",
-            "api_type": "azure",
-            "api_version": "2023-05-15",
-            "model": "text-embedding-3-small",
-            "deployment_id": "your-deployment-name"  # Azure deployment name
-        }
+        "api_key": "your-azure-api-key",
+        "api_base": "https://your-resource.openai.azure.com/",
+        "api_type": "azure",
+        "api_version": "2023-05-15",
+        "model_name": "text-embedding-3-small",
+        "deployment_id": "your-deployment-name"  # Azure deployment name
     }
 )
 ```
