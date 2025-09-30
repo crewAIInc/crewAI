@@ -22,6 +22,45 @@ Human-in-the-Loop (HITL) is a powerful approach that combines artificial intelli
         <Frame>
             <img src="/images/enterprise/crew-webhook-url.png" alt="Crew Webhook URL" />
         </Frame>
+
+        Example with Bearer authentication:
+        ```bash
+        curl -X POST https://api.crewai.com/v1/crews/{crew_id}/kickoff \
+          -H "Authorization: Bearer YOUR_API_TOKEN" \
+          -H "Content-Type: application/json" \
+          -d '{
+            "inputs": {
+              "topic": "AI Research"
+            },
+            "humanInputWebhook": {
+              "url": "https://your-webhook.com/hitl",
+              "authentication": {
+                "strategy": "bearer",
+                "token": "your-webhook-secret-token"
+              }
+            }
+          }'
+        ```
+
+        Or with Basic authentication:
+        ```bash
+        curl -X POST https://api.crewai.com/v1/crews/{crew_id}/kickoff \
+          -H "Authorization: Bearer YOUR_API_TOKEN" \
+          -H "Content-Type: application/json" \
+          -d '{
+            "inputs": {
+              "topic": "AI Research"
+            },
+            "humanInputWebhook": {
+              "url": "https://your-webhook.com/hitl",
+              "authentication": {
+                "strategy": "basic",
+                "username": "your-username",
+                "password": "your-password"
+              }
+            }
+          }'
+        ```
     </Step>
 
     <Step title="Receive Webhook Notification">
