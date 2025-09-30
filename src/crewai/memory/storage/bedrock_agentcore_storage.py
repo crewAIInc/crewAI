@@ -408,7 +408,6 @@ class BedrockAgentCoreStorage(Storage):
         Returns:
             List of payload dictionaries for create_event
         """
-        messages = metadata["messages"]
         payload = []
 
         # Role mapping dictionary
@@ -419,22 +418,27 @@ class BedrockAgentCoreStorage(Storage):
             "TOOL": "TOOL",
         }
 
-        # Process each message in the conversation
-        for msg in messages:
-            role = msg["role"].upper()
-            content = msg["content"]
+        # Check if messages exist in metadata and process them
+        messages = metadata.get("messages", [])
 
-            payload_role = role_mapping.get(role, "OTHER")  # Default to OTHER
+        if messages:
+            # Process each message in the conversation
+            for msg in messages:
+                role = msg.get("role", "OTHER").upper()
+                content = msg.get("content", "")
 
-            payload.append(
-                {
-                    "conversational": {
-                        "content": {"text": content[:9000]},
-                        "role": payload_role,
+                payload_role = role_mapping.get(role, "OTHER")  # Default to OTHER
+
+                payload.append(
+                    {
+                        "conversational": {
+                            "content": {"text": content[:9000]},
+                            "role": payload_role,
+                        }
                     }
-                }
-            )
+                )
 
+        # Always add the main value as an ASSISTANT message
         payload.append(
             {
                 "conversational": {
