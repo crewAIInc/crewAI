@@ -1,5 +1,8 @@
-from typing import Union, Optional, get_origin, get_args
-from crewai_tools.tools.crewai_platform_tools.crewai_platform_action_tool import CrewAIPlatformActionTool
+from typing import Union, get_args, get_origin
+
+from crewai_tools.tools.crewai_platform_tools.crewai_platform_action_tool import (
+    CrewAIPlatformActionTool,
+)
 
 
 class TestSchemaProcessing:
@@ -164,7 +167,7 @@ class TestSchemaProcessing:
             assert int in args
             assert bool in args
         else:
-            nested_union = [arg for arg in args if get_origin(arg) is Union][0]
+            nested_union = next(arg for arg in args if get_origin(arg) is Union)
             nested_args = get_args(nested_union)
             assert int in nested_args
             assert bool in nested_args
