@@ -134,7 +134,7 @@ class NetworkMonitor:
                             self._network_events.append(network_event)
                     
                     return response
-                except Exception as e:
+                except Exception as e:  # nosec B017 - catching network errors for monitoring
                     # Capture error event
                     duration_ms = (time.time() - start_time) * 1000
                     network_event = NetworkEvent(
@@ -205,7 +205,7 @@ class NetworkMonitor:
                             self._network_events.append(network_event)
                     
                     return response
-                except Exception as e:
+                except Exception as e:  # nosec B017 - catching network errors for monitoring
                     # Capture error event
                     duration_ms = (time.time() - start_time) * 1000
                     network_event = NetworkEvent(
@@ -483,7 +483,7 @@ class ToolExecutionWrapper:
 
             return result
 
-        except Exception as e:
+        except Exception as e:  # nosec B017 - catching all tool execution errors
             # Stop network monitoring in case of error and collect any events
             network_events = network_monitor.stop_monitoring()
             
