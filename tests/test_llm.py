@@ -711,3 +711,77 @@ def test_ollama_does_not_modify_when_last_is_user(ollama_llm):
     formatted = ollama_llm._format_messages_for_provider(original_messages)
 
     assert formatted == original_messages
+
+
+def test_ollama_invalid_ip_address_validation():
+    """Test that invalid IP addresses in base_url are caught and provide helpful error messages."""
+    with pytest.raises(ValueError) as excinfo:
+        llm = LLM(model="ollama/llama3.1", base_url="http://192.168.0.300:11434")
+        llm.call("Hello")
+    
+    assert "Invalid Ollama base_url" in str(excinfo.value)
+    assert "192.168.0.300" in str(excinfo.value)
+    assert "IP address is valid" in str(excinfo.value)
+
+
+def test_ollama_invalid_url_format_validation():
+    """Test that malformed URLs are caught."""
+    with pytest.raises(ValueError) as excinfo:
+        llm = LLM(model="ollama/llama3.1", base_url="not-a-url")
+        llm.call("Hello")
+    
+    assert "Invalid Ollama base_url" in str(excinfo.value)
+
+
+def test_ollama_valid_urls_pass_validation():
+    """Test that valid Ollama URLs pass validation."""
+    valid_urls = [
+        "http://localhost:11434",
+        "http://127.0.0.1:11434", 
+        "http://192.168.1.100:11434",
+        "https://ollama.example.com:11434"
+    ]
+    
+    for url in valid_urls:
+        llm = LLM(model="ollama/llama3.1", base_url=url)
+        # Should not raise validation error when calling _validate_call_params
+        try:
+            llm._validate_call_params()
+        except ValueError as e:
+            if "Invalid Ollama base_url" in str(e):
+                pytest.fail(f"Valid URL {url} was incorrectly rejected: {e}")
+            raise
+
+
+def test_non_ollama_models_skip_url_validation():
+    """Test that non-Ollama models don't validate base_url."""
+    llm = LLM(model="gpt-4", base_url="http://192.168.0.300:11434")
+    # Should not raise validation error for non-Ollama models
+    try:
+        llm._validate_call_params()
+    except ValueError as e:
+        if "Invalid Ollama base_url" in str(e):
+            pytest.fail(f"Non-Ollama model was incorrectly validated: {e}")
+        raise
+
+
+def test_ollama_api_base_validation():
+    """Test that api_base parameter is also validated for Ollama models."""
+    with pytest.raises(ValueError) as excinfo:
+        llm = LLM(model="ollama/llama3.1", api_base="http://192.168.0.300:11434")
+        llm.call("Hello")
+    
+    assert "Invalid Ollama base_url" in str(excinfo.value)
+    assert "192.168.0.300" in str(excinfo.value)
+
+
+def test_ollama_no_url_provided_passes():
+    """Test that Ollama models without base_url or api_base pass validation."""
+    llm = LLM(model="ollama/llama3.1")
+    # Should not raise validation error when no URL is provided
+    try:
+        llm._validate_call_params()
+    except ValueError as e:
+        if "Invalid Ollama base_url" in str(e):
+            pytest.fail(f"Ollama model without URL was incorrectly validated: {e}")
+        raise
