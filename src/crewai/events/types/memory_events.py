@@ -1,4 +1,4 @@
-from typing import Any, Optional, Dict
+from typing import Any
 
 from crewai.events.base_events import BaseEvent
 
@@ -54,18 +54,18 @@ class MemorySaveStartedEvent(MemoryBaseEvent):
     """Event emitted when a memory save operation is started"""
 
     type: str = "memory_save_started"
-    value: Optional[Any] = None
-    metadata: Optional[Dict[str, Any]] = None
-    agent_role: Optional[str] = None
+    value: str | None = None
+    metadata: dict[str, Any] | None = None
+    agent_role: str | None = None
 
 
 class MemorySaveCompletedEvent(MemoryBaseEvent):
     """Event emitted when a memory save operation is completed successfully"""
 
     type: str = "memory_save_completed"
-    value: Any
-    metadata: Optional[Dict[str, Any]] = None
-    agent_role: Optional[str] = None
+    value: str
+    metadata: dict[str, Any] | None = None
+    agent_role: str | None = None
     save_time_ms: float
 
 
@@ -73,9 +73,9 @@ class MemorySaveFailedEvent(MemoryBaseEvent):
     """Event emitted when a memory save operation fails"""
 
     type: str = "memory_save_failed"
-    value: Optional[Any] = None
-    metadata: Optional[Dict[str, Any]] = None
-    agent_role: Optional[str] = None
+    value: str | None = None
+    metadata: dict[str, Any] | None = None
+    agent_role: str | None = None
     error: str
 
 
