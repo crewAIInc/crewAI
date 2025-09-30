@@ -67,7 +67,6 @@ def test_is_null_response_because_context_length_exceeded_false_empty_messages()
 
     # Act
     result = is_null_response_because_context_length_exceeded(exception, messages, mock_llm)
-    print(result)
 
     # Assert
     assert result is False
