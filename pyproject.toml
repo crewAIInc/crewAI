@@ -40,8 +40,6 @@ dependencies = [
     "json5>=0.10.0",
     "portalocker==2.7.0",
     "pydantic-settings>=2.10.1",
-    "boto3>=1.40.36",
-    "botocore>=1.40.39",
 ]
 
 [project.urls]
