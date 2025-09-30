@@ -7,7 +7,7 @@ mode: "wide"
 
 # Integração com Arize Phoenix
 
-Este guia demonstra como integrar o **Arize Phoenix** ao **CrewAI** usando o OpenTelemetry através do [OpenInference](https://github.com/openinference/openinference) SDK. Ao final deste guia, você será capaz de rastrear seus agentes CrewAI e depurá-los com facilidade.
+Este guia demonstra como integrar o **Arize Phoenix** ao **CrewAI** usando o OpenTelemetry através do [OpenInference](https://github.com/Arize-ai/openinference) SDK. Ao final deste guia, você será capaz de rastrear seus agentes CrewAI e depurá-los com facilidade.
 
 > **O que é o Arize Phoenix?** O [Arize Phoenix](https://phoenix.arize.com) é uma plataforma de observabilidade de LLM que oferece rastreamento e avaliação para aplicações de IA.
 
@@ -43,7 +43,7 @@ OPENAI_API_KEY = getpass("🔑 Digite sua OpenAI API key: ")
 SERPER_API_KEY = getpass("🔑 Digite sua Serper API key: ")
 
 # Defina as variáveis de ambiente
-os.environ["PHOENIX_CLIENT_HEADERS"] = f"api_key={PHOENIX_API_KEY}"
+os.environ["PHOENIX_API_KEY"] = f"{PHOENIX_API_KEY}"
 os.environ["PHOENIX_COLLECTOR_ENDPOINT"] = "https://app.phoenix.arize.com" # Phoenix Cloud, altere para seu endpoint se estiver utilizando uma instância self-hosted
 os.environ["OPENAI_API_KEY"] = OPENAI_API_KEY
 os.environ["SERPER_API_KEY"] = SERPER_API_KEY
@@ -142,4 +142,4 @@ Acesse sua conta Phoenix Cloud e navegue até o projeto que você especificou no
 - [Documentação do Phoenix](https://docs.arize.com/phoenix/) - Visão geral da plataforma Phoenix.
 - [Documentação do CrewAI](https://docs.crewai.com/) - Visão geral do framework CrewAI.
 - [Documentação do OpenTelemetry](https://opentelemetry.io/docs/) - Guia do OpenTelemetry
-- [OpenInference GitHub](https://github.com/openinference/openinference) - Código-fonte do SDK OpenInference.
+- [OpenInference GitHub](https://github.com/Arize-ai/openinference) - Código-fonte do SDK OpenInference.
