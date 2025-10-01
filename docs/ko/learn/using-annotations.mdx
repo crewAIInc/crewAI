@@ -42,6 +42,15 @@ class LinkedinProfileCrew():
 
 `@CrewBase` 어노테이션은 메인 crew 클래스를 데코레이트하는 데 사용됩니다. 이 클래스는 일반적으로 agent, task, 그리고 crew 자체를 생성하기 위한 구성과 메서드를 포함합니다.
 
+<Tip>
+`@CrewBase`는 단순히 클래스를 등록하는 것 이상을 처리합니다.
+
+- **구성 부트스트래핑:** 클래스 파일과 동일한 경로에서 `agents_config`와 `tasks_config`(기본값은 각각 `config/agents.yaml`, `config/tasks.yaml`)을 찾아 인스턴스화 시점에 불러오며, 파일이 없으면 빈 딕셔너리로 안전하게 대체합니다.
+- **데코레이터 오케스트레이션:** `@agent`, `@task`, `@before_kickoff`, `@after_kickoff`로 표시된 메서드를 메모이즈하여 crew마다 한 번만 인스턴스화하고 선언 순서를 보장합니다.
+- **후크 연결:** 보존된 킥오프 훅을 `@crew` 메서드가 반환하는 `Crew` 객체에 자동으로 연결하여 `.kickoff()` 호출 전후에 실행되도록 합니다.
+- **MCP 연동:** 클래스에 `mcp_server_params`가 정의되어 있으면 `get_mcp_tools()`가 MCP 서버 어댑터를 지연 생성해 도구를 로드하고, 내부 after-kickoff 훅이 킥오프 종료 후 어댑터를 정리합니다. 어댑터 구성 방법은 [MCP 개요](/ko/mcp/overview)를 참고하세요.
+</Tip>
+
 ### 2. 도구 정의
 
 ```python
