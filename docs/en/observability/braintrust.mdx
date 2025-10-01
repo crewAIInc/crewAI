@@ -112,7 +112,7 @@ def create_crew() -> Crew:
 
     # Create tasks for your agents
     research_task = Task(
-        description="""Conduct a comprehensive analysis of the latest advancements in AI in 2024.
+        description="""Conduct a comprehensive analysis of the latest advancements in {topic}.
         Identify key trends, breakthrough technologies, and potential industry impacts.""",
         expected_output="Full analysis report in bullet points",
         agent=researcher,
@@ -120,7 +120,7 @@ def create_crew() -> Crew:
 
     writing_task = Task(
         description="""Using the insights provided, develop an engaging blog
-        post that highlights the most significant AI advancements.
+        post that highlights the most significant {topic} advancements.
         Your post should be informative yet accessible, catering to a tech-savvy audience.
         Make it sound cool, avoid complex words so it doesn't sound like AI.""",
         expected_output="Full blog post of at least 4 paragraphs",
@@ -141,7 +141,7 @@ def create_crew() -> Crew:
 def run_crew():
     """Run the crew and return results."""
     crew = create_crew()
-    result = crew.kickoff()
+    result = crew.kickoff(inputs={"topic": "AI developments"})
     return result
 
 # Run your crew

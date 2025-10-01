@@ -112,7 +112,7 @@ def create_crew() -> Crew:
 
     # Criar tarefas para seus agentes
     research_task = Task(
-        description="""Realize uma análise abrangente dos últimos avanços em IA em 2024.
+        description="""Realize uma análise abrangente dos últimos avanços em {topic}.
         Identifique tendências principais, tecnologias revolucionárias e impactos potenciais na indústria.""",
         expected_output="Relatório de análise completo em pontos de bala",
         agent=researcher,
@@ -120,7 +120,7 @@ def create_crew() -> Crew:
 
     writing_task = Task(
         description="""Usando os insights fornecidos, desenvolva um post de blog envolvente
-        que destaque os avanços mais significativos em IA.
+        que destaque os avanços mais significativos em {topic}.
         Seu post deve ser informativo, mas acessível, atendendo a um público conhecedor de tecnologia.
         Faça soar legal, evite palavras complexas para não soar como IA.""",
         expected_output="Post de blog completo de pelo menos 4 parágrafos",
@@ -141,7 +141,7 @@ def create_crew() -> Crew:
 def run_crew():
     """Executar a crew e retornar resultados."""
     crew = create_crew()
-    result = crew.kickoff()
+    result = crew.kickoff(inputs={"topic": "desenvolvimentos em IA"})
     return result
 
 # Executar sua crew

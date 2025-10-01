@@ -112,7 +112,7 @@ def create_crew() -> Crew:
 
     # agent를 위한 작업 생성
     research_task = Task(
-        description="""2024년 AI 분야의 최신 발전 상황에 대한 포괄적인 분석을 수행하세요.
+        description="""{topic} 분야의 최신 발전 상황에 대한 포괄적인 분석을 수행하세요.
         주요 트렌드, 획기적 기술, 산업에 미칠 잠재적 영향을 식별하세요.""",
         expected_output="주요 내용을 불릿 포인트로 정리한 전체 분석 보고서",
         agent=researcher,
@@ -120,7 +120,7 @@ def create_crew() -> Crew:
 
     writing_task = Task(
         description="""제공된 인사이트를 활용하여
-        가장 중요한 AI 발전 내용을 강조하는 흥미로운 블로그 글을 작성하세요.
+        가장 중요한 {topic} 발전 내용을 강조하는 흥미로운 블로그 글을 작성하세요.
         글은 정보성 있고, 기술에 밝은 독자를 대상으로 하면서 읽기 쉽게 써야 합니다.
         멋지게 들리도록 쓰되, 복잡한 단어는 피하여 AI처럼 들리지 않게 하세요.""",
         expected_output="최소 4개의 단락으로 구성된 전체 블로그 글",
@@ -141,7 +141,7 @@ def create_crew() -> Crew:
 def run_crew():
     """crew를 실행하고 결과 반환."""
     crew = create_crew()
-    result = crew.kickoff()
+    result = crew.kickoff(inputs={"topic": "AI 발전"})
     return result
 
 # crew 실행
