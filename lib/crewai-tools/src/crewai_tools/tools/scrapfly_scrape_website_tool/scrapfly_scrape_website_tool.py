@@ -1,6 +1,6 @@
 import logging
 import os
-from typing import Any, Dict, List, Literal, Optional, Type
+from typing import Any, Literal
 
 from crewai.tools import BaseTool, EnvVar
 from pydantic import BaseModel, Field
@@ -11,13 +11,13 @@ logger = logging.getLogger(__file__)
 
 class ScrapflyScrapeWebsiteToolSchema(BaseModel):
     url: str = Field(description="Webpage URL")
-    scrape_format: Optional[Literal["raw", "markdown", "text"]] = Field(
+    scrape_format: Literal["raw", "markdown", "text"] | None = Field(
         default="markdown", description="Webpage extraction format"
     )
-    scrape_config: Optional[Dict[str, Any]] = Field(
+    scrape_config: dict[str, Any] | None = Field(
         default=None, description="Scrapfly request scrape config"
     )
-    ignore_scrape_failures: Optional[bool] = Field(
+    ignore_scrape_failures: bool | None = Field(
         default=None, description="whether to ignore failures"
     )
 
@@ -27,15 +27,19 @@ class ScrapflyScrapeWebsiteTool(BaseTool):
     description: str = (
         "Scrape a webpage url using Scrapfly and return its content as markdown or text"
     )
-    args_schema: Type[BaseModel] = ScrapflyScrapeWebsiteToolSchema
+    args_schema: type[BaseModel] = ScrapflyScrapeWebsiteToolSchema
     api_key: str = None
-    scrapfly: Optional[Any] = None
-    package_dependencies: List[str] = ["scrapfly-sdk"]
-    env_vars: List[EnvVar] = [
-        EnvVar(
-            name="SCRAPFLY_API_KEY", description="API key for Scrapfly", required=True
-        ),
-    ]
+    scrapfly: Any | None = None
+    package_dependencies: list[str] = Field(default_factory=lambda: ["scrapfly-sdk"])
+    env_vars: list[EnvVar] = Field(
+        default_factory=lambda: [
+            EnvVar(
+                name="SCRAPFLY_API_KEY",
+                description="API key for Scrapfly",
+                required=True,
+            ),
+        ]
+    )
 
     def __init__(self, api_key: str):
         super().__init__()
@@ -49,19 +53,19 @@ class ScrapflyScrapeWebsiteTool(BaseTool):
             ):
                 import subprocess
 
-                subprocess.run(["uv", "add", "scrapfly-sdk"], check=True)
+                subprocess.run(["uv", "add", "scrapfly-sdk"], check=True)  # noqa: S607
             else:
                 raise ImportError(
                     "`scrapfly-sdk` package not found, please run `uv add scrapfly-sdk`"
-                )
+                ) from None
         self.scrapfly = ScrapflyClient(key=api_key or os.getenv("SCRAPFLY_API_KEY"))
 
     def _run(
         self,
         url: str,
         scrape_format: str = "markdown",
-        scrape_config: Optional[Dict[str, Any]] = None,
-        ignore_scrape_failures: Optional[bool] = None,
+        scrape_config: dict[str, Any] | None = None,
+        ignore_scrape_failures: bool | None = None,
     ):
         from scrapfly import ScrapeApiResponse, ScrapeConfig
 

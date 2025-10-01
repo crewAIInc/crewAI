@@ -1,7 +1,7 @@
 import datetime
 import os
 import time
-from typing import Any, ClassVar, List, Optional, Type
+from typing import Any, ClassVar
 
 from crewai.tools import BaseTool, EnvVar
 from pydantic import BaseModel, Field
@@ -13,7 +13,6 @@ def _save_results_to_file(content: str) -> None:
     filename = f"search_results_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.txt"
     with open(filename, "w") as file:
         file.write(content)
-    print(f"Results saved to {filename}")
 
 
 class BraveSearchToolSchema(BaseModel):
@@ -25,8 +24,7 @@ class BraveSearchToolSchema(BaseModel):
 
 
 class BraveSearchTool(BaseTool):
-    """
-    BraveSearchTool - A tool for performing web searches using the Brave Search API.
+    """BraveSearchTool - A tool for performing web searches using the Brave Search API.
 
     This module provides functionality to search the internet using Brave's Search API,
     supporting customizable result counts and country-specific searches.
@@ -41,18 +39,22 @@ class BraveSearchTool(BaseTool):
     description: str = (
         "A tool that can be used to search the internet with a search_query."
     )
-    args_schema: Type[BaseModel] = BraveSearchToolSchema
+    args_schema: type[BaseModel] = BraveSearchToolSchema
     search_url: str = "https://api.search.brave.com/res/v1/web/search"
-    country: Optional[str] = ""
+    country: str | None = ""
     n_results: int = 10
     save_file: bool = False
     _last_request_time: ClassVar[float] = 0
     _min_request_interval: ClassVar[float] = 1.0  # seconds
-    env_vars: List[EnvVar] = [
-        EnvVar(
-            name="BRAVE_API_KEY", description="API key for Brave Search", required=True
-        ),
-    ]
+    env_vars: list[EnvVar] = Field(
+        default_factory=lambda: [
+            EnvVar(
+                name="BRAVE_API_KEY",
+                description="API key for Brave Search",
+                required=True,
+            ),
+        ]
+    )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -89,7 +91,9 @@ class BraveSearchTool(BaseTool):
                 "Accept": "application/json",
             }
 
-            response = requests.get(self.search_url, headers=headers, params=payload)
+            response = requests.get(
+                self.search_url, headers=headers, params=payload, timeout=30
+            )
             response.raise_for_status()  # Handle non-200 responses
             results = response.json()
 
@@ -108,7 +112,7 @@ class BraveSearchTool(BaseTool):
                                 ]
                             )
                         )
-                    except KeyError:
+                    except KeyError:  # noqa: PERF203
                         continue
 
             content = "\n".join(string)

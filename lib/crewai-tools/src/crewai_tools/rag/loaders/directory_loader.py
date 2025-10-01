@@ -1,6 +1,5 @@
 import os
 from pathlib import Path
-from typing import List
 
 from crewai_tools.rag.base_loader import BaseLoader, LoaderResult
 from crewai_tools.rag.source_content import SourceContent
@@ -8,8 +7,7 @@ from crewai_tools.rag.source_content import SourceContent
 
 class DirectoryLoader(BaseLoader):
     def load(self, source_content: SourceContent, **kwargs) -> LoaderResult:
-        """
-        Load and process all files from a directory recursively.
+        """Load and process all files from a directory recursively.
 
         Args:
             source: Directory path or URL to a directory listing
@@ -63,7 +61,7 @@ class DirectoryLoader(BaseLoader):
                             "source": result.source,
                         }
                     )
-            except Exception as e:
+            except Exception as e:  # noqa: PERF203
                 error_msg = f"Error processing {file_path}: {e!s}"
                 errors.append(error_msg)
                 all_contents.append(f"=== File: {file_path} (ERROR) ===\n{error_msg}")
@@ -91,9 +89,9 @@ class DirectoryLoader(BaseLoader):
         self,
         dir_path: str,
         recursive: bool,
-        include_ext: List[str] | None = None,
-        exclude_ext: List[str] | None = None,
-    ) -> List[str]:
+        include_ext: list[str] | None = None,
+        exclude_ext: list[str] | None = None,
+    ) -> list[str]:
         """Find all files in directory matching criteria."""
         files = []
 
@@ -103,7 +101,7 @@ class DirectoryLoader(BaseLoader):
 
                 for filename in filenames:
                     if self._should_include_file(filename, include_ext, exclude_ext):
-                        files.append(os.path.join(root, filename))
+                        files.append(os.path.join(root, filename))  # noqa: PERF401
         else:
             try:
                 for item in os.listdir(dir_path):
@@ -120,8 +118,8 @@ class DirectoryLoader(BaseLoader):
     def _should_include_file(
         self,
         filename: str,
-        include_ext: List[str] = None,
-        exclude_ext: List[str] = None,
+        include_ext: list[str] | None = None,
+        exclude_ext: list[str] | None = None,
     ) -> bool:
         """Determine if a file should be included based on criteria."""
         if filename.startswith("."):

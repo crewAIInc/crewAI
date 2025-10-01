@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 
+from collections.abc import Mapping
 import inspect
 import json
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, cast
 
 from crewai.tools.base_tool import BaseTool, EnvVar
 from crewai_tools import tools
+from pydantic import BaseModel
 from pydantic.json_schema import GenerateJsonSchema
 from pydantic_core import PydanticOmit
 
@@ -18,19 +20,19 @@ class SchemaGenerator(GenerateJsonSchema):
 
 class ToolSpecExtractor:
     def __init__(self) -> None:
-        self.tools_spec: List[Dict[str, Any]] = []
+        self.tools_spec: list[dict[str, Any]] = []
         self.processed_tools: set[str] = set()
 
-    def extract_all_tools(self) -> List[Dict[str, Any]]:
+    def extract_all_tools(self) -> list[dict[str, Any]]:
         for name in dir(tools):
             if name.endswith("Tool") and name not in self.processed_tools:
                 obj = getattr(tools, name, None)
-                if inspect.isclass(obj):
+                if inspect.isclass(obj) and issubclass(obj, BaseTool):
                     self.extract_tool_info(obj)
                     self.processed_tools.add(name)
         return self.tools_spec
 
-    def extract_tool_info(self, tool_class: BaseTool) -> None:
+    def extract_tool_info(self, tool_class: type[BaseTool]) -> None:
         try:
             core_schema = tool_class.__pydantic_core_schema__
             if not core_schema:
@@ -44,8 +46,8 @@ class ToolSpecExtractor:
                 "humanized_name": self._extract_field_default(
                     fields.get("name"), fallback=tool_class.__name__
                 ),
-                "description": self._extract_field_default(
-                    fields.get("description")
+                "description": str(
+                    self._extract_field_default(fields.get("description"))
                 ).strip(),
                 "run_params_schema": self._extract_params(fields.get("args_schema")),
                 "init_params_schema": self._extract_init_params(tool_class),
@@ -57,17 +59,22 @@ class ToolSpecExtractor:
 
             self.tools_spec.append(tool_info)
 
-        except Exception as e:
-            print(f"Error extracting {tool_class.__name__}: {e}")
+        except Exception:  # noqa: S110
+            pass
 
-    def _unwrap_schema(self, schema: Dict) -> Dict:
+    @staticmethod
+    def _unwrap_schema(schema: Mapping[str, Any] | dict[str, Any]) -> dict[str, Any]:
+        result: dict[str, Any] = dict(schema)
         while (
-            schema.get("type") in {"function-after", "default"} and "schema" in schema
+            result.get("type") in {"function-after", "default"} and "schema" in result
         ):
-            schema = schema["schema"]
-        return schema
+            result = dict(result["schema"])
+        return result
 
-    def _extract_field_default(self, field: Optional[Dict], fallback: str = "") -> str:
+    @staticmethod
+    def _extract_field_default(
+        field: dict | None, fallback: str | list[Any] = ""
+    ) -> str | list[Any] | int:
         if not field:
             return fallback
 
@@ -75,45 +82,43 @@ class ToolSpecExtractor:
         default = schema.get("default")
         return default if isinstance(default, (list, str, int)) else fallback
 
-    def _extract_params(
-        self, args_schema_field: Optional[Dict]
-    ) -> List[Dict[str, str]]:
+    @staticmethod
+    def _extract_params(args_schema_field: dict | None) -> dict[str, Any]:
         if not args_schema_field:
             return {}
 
         args_schema_class = args_schema_field.get("schema", {}).get("default")
         if not (
             inspect.isclass(args_schema_class)
-            and hasattr(args_schema_class, "__pydantic_core_schema__")
+            and issubclass(args_schema_class, BaseModel)
         ):
             return {}
 
+        # Cast to type[BaseModel] after runtime check
+        schema_class = cast(type[BaseModel], args_schema_class)
         try:
-            return args_schema_class.model_json_schema(
-                schema_generator=SchemaGenerator, mode="validation"
-            )
-        except Exception as e:
-            print(f"Error extracting params from {args_schema_class}: {e}")
+            return schema_class.model_json_schema(schema_generator=SchemaGenerator)
+        except Exception:
             return {}
 
-    def _extract_env_vars(self, env_vars_field: Optional[Dict]) -> List[Dict[str, str]]:
+    @staticmethod
+    def _extract_env_vars(env_vars_field: dict | None) -> list[dict[str, Any]]:
         if not env_vars_field:
             return []
 
-        env_vars = []
-        for env_var in env_vars_field.get("schema", {}).get("default", []):
-            if isinstance(env_var, EnvVar):
-                env_vars.append(
-                    {
-                        "name": env_var.name,
-                        "description": env_var.description,
-                        "required": env_var.required,
-                        "default": env_var.default,
-                    }
-                )
-        return env_vars
+        return [
+            {
+                "name": env_var.name,
+                "description": env_var.description,
+                "required": env_var.required,
+                "default": env_var.default,
+            }
+            for env_var in env_vars_field.get("schema", {}).get("default", [])
+            if isinstance(env_var, EnvVar)
+        ]
 
-    def _extract_init_params(self, tool_class: BaseTool) -> dict:
+    @staticmethod
+    def _extract_init_params(tool_class: type[BaseTool]) -> dict[str, Any]:
         ignored_init_params = [
             "name",
             "description",
@@ -131,25 +136,21 @@ class ToolSpecExtractor:
             schema_generator=SchemaGenerator, mode="serialization"
         )
 
-        properties = {}
-        for key, value in json_schema["properties"].items():
-            if key not in ignored_init_params:
-                properties[key] = value
-
-        json_schema["properties"] = properties
+        json_schema["properties"] = {
+            key: value
+            for key, value in json_schema["properties"].items()
+            if key not in ignored_init_params
+        }
         return json_schema
 
     def save_to_json(self, output_path: str) -> None:
         with open(output_path, "w", encoding="utf-8") as f:
             json.dump({"tools": self.tools_spec}, f, indent=2, sort_keys=True)
-        print(f"Saved tool specs to {output_path}")
 
 
 if __name__ == "__main__":
     output_file = Path(__file__).parent / "tool.specs.json"
     extractor = ToolSpecExtractor()
 
-    specs = extractor.extract_all_tools()
+    extractor.extract_all_tools()
     extractor.save_to_json(str(output_file))
-
-    print(f"Extracted {len(specs)} tool classes.")

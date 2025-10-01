@@ -1,7 +1,7 @@
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
 import logging
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Type
+from typing import TYPE_CHECKING, Any
 
 from crewai.tools.base_tool import BaseTool
 from pydantic import BaseModel, ConfigDict, Field, SecretStr
@@ -37,15 +37,13 @@ class SnowflakeConfig(BaseModel):
         ..., description="Snowflake account identifier", pattern=r"^[a-zA-Z0-9\-_]+$"
     )
     user: str = Field(..., description="Snowflake username")
-    password: Optional[SecretStr] = Field(None, description="Snowflake password")
-    private_key_path: Optional[str] = Field(
-        None, description="Path to private key file"
-    )
-    warehouse: Optional[str] = Field(None, description="Snowflake warehouse")
-    database: Optional[str] = Field(None, description="Default database")
-    snowflake_schema: Optional[str] = Field(None, description="Default schema")
-    role: Optional[str] = Field(None, description="Snowflake role")
-    session_parameters: Optional[Dict[str, Any]] = Field(
+    password: SecretStr | None = Field(None, description="Snowflake password")
+    private_key_path: str | None = Field(None, description="Path to private key file")
+    warehouse: str | None = Field(None, description="Snowflake warehouse")
+    database: str | None = Field(None, description="Default database")
+    snowflake_schema: str | None = Field(None, description="Default schema")
+    role: str | None = Field(None, description="Snowflake role")
+    session_parameters: dict[str, Any] | None = Field(
         default_factory=dict, description="Session parameters"
     )
 
@@ -64,9 +62,9 @@ class SnowflakeSearchToolInput(BaseModel):
     model_config = ConfigDict(protected_namespaces=())
 
     query: str = Field(..., description="SQL query or semantic search query to execute")
-    database: Optional[str] = Field(None, description="Override default database")
-    snowflake_schema: Optional[str] = Field(None, description="Override default schema")
-    timeout: Optional[int] = Field(300, description="Query timeout in seconds")
+    database: str | None = Field(None, description="Override default database")
+    snowflake_schema: str | None = Field(None, description="Override default schema")
+    timeout: int | None = Field(300, description="Query timeout in seconds")
 
 
 class SnowflakeSearchTool(BaseTool):
@@ -77,7 +75,7 @@ class SnowflakeSearchTool(BaseTool):
         "Execute SQL queries or semantic search on Snowflake data warehouse. "
         "Supports both raw SQL and natural language queries."
     )
-    args_schema: Type[BaseModel] = SnowflakeSearchToolInput
+    args_schema: type[BaseModel] = SnowflakeSearchToolInput
 
     # Define Pydantic fields
     config: SnowflakeConfig = Field(
@@ -96,15 +94,17 @@ class SnowflakeSearchTool(BaseTool):
         arbitrary_types_allowed=True, validate_assignment=True, frozen=False
     )
 
-    _connection_pool: Optional[List["SnowflakeConnection"]] = None
-    _pool_lock: Optional[asyncio.Lock] = None
-    _thread_pool: Optional[ThreadPoolExecutor] = None
+    _connection_pool: list["SnowflakeConnection"] | None = None
+    _pool_lock: asyncio.Lock | None = None
+    _thread_pool: ThreadPoolExecutor | None = None
     _model_rebuilt: bool = False
-    package_dependencies: List[str] = [
-        "snowflake-connector-python",
-        "snowflake-sqlalchemy",
-        "cryptography",
-    ]
+    package_dependencies: list[str] = Field(
+        default_factory=lambda: [
+            "snowflake-connector-python",
+            "snowflake-sqlalchemy",
+            "cryptography",
+        ]
+    )
 
     def __init__(self, **data):
         """Initialize SnowflakeSearchTool."""
@@ -129,7 +129,7 @@ class SnowflakeSearchTool(BaseTool):
 
                 try:
                     subprocess.run(
-                        [
+                        [  # noqa: S607
                             "uv",
                             "add",
                             "cryptography",
@@ -142,13 +142,13 @@ class SnowflakeSearchTool(BaseTool):
                     self._connection_pool = []
                     self._pool_lock = asyncio.Lock()
                     self._thread_pool = ThreadPoolExecutor(max_workers=self.pool_size)
-                except subprocess.CalledProcessError:
-                    raise ImportError("Failed to install Snowflake dependencies")
+                except subprocess.CalledProcessError as e:
+                    raise ImportError("Failed to install Snowflake dependencies") from e
             else:
                 raise ImportError(
                     "Snowflake dependencies not found. Please install them by running "
                     "`uv add cryptography snowflake-connector-python snowflake-sqlalchemy`"
-                )
+                ) from None
 
     async def _get_connection(self) -> "SnowflakeConnection":
         """Get a connection from the pool or create a new one."""
@@ -189,9 +189,8 @@ class SnowflakeSearchTool(BaseTool):
 
     async def _execute_query(
         self, query: str, timeout: int = 300
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Execute a query with retries and return results."""
-
         if self.enable_caching:
             cache_key = self._get_cache_key(query, timeout)
             if cache_key in _query_cache:
@@ -209,7 +208,10 @@ class SnowflakeSearchTool(BaseTool):
                         return []
 
                     columns = [col[0] for col in cursor.description]
-                    results = [dict(zip(columns, row)) for row in cursor.fetchall()]
+                    results = [
+                        dict(zip(columns, row, strict=False))
+                        for row in cursor.fetchall()
+                    ]
 
                     if self.enable_caching:
                         _query_cache[self._get_cache_key(query, timeout)] = results
@@ -219,23 +221,23 @@ class SnowflakeSearchTool(BaseTool):
                     cursor.close()
                     async with self._pool_lock:
                         self._connection_pool.append(conn)
-            except (DatabaseError, OperationalError) as e:
+            except (DatabaseError, OperationalError) as e:  # noqa: PERF203
                 if attempt == self.max_retries - 1:
                     raise
                 await asyncio.sleep(self.retry_delay * (2**attempt))
                 logger.warning(f"Query failed, attempt {attempt + 1}: {e!s}")
                 continue
+        return None
 
     async def _run(
         self,
         query: str,
-        database: Optional[str] = None,
-        snowflake_schema: Optional[str] = None,
+        database: str | None = None,
+        snowflake_schema: str | None = None,
         timeout: int = 300,
         **kwargs: Any,
     ) -> Any:
         """Execute the search query."""
-
         try:
             # Override database/schema if provided
             if database:
@@ -243,8 +245,7 @@ class SnowflakeSearchTool(BaseTool):
             if snowflake_schema:
                 await self._execute_query(f"USE SCHEMA {snowflake_schema}")
 
-            results = await self._execute_query(query, timeout)
-            return results
+            return await self._execute_query(query, timeout)
         except Exception as e:
             logger.error(f"Error executing query: {e!s}")
             raise
@@ -256,11 +257,11 @@ class SnowflakeSearchTool(BaseTool):
                 for conn in self._connection_pool:
                     try:
                         conn.close()
-                    except Exception:
+                    except Exception:  # noqa: PERF203, S110
                         pass
             if self._thread_pool:
                 self._thread_pool.shutdown()
-        except Exception:
+        except Exception:  # noqa: S110
             pass
 
 
@@ -269,5 +270,5 @@ try:
     if not hasattr(SnowflakeSearchTool, "_model_rebuilt"):
         SnowflakeSearchTool.model_rebuild()
         SnowflakeSearchTool._model_rebuilt = True
-except Exception:
+except Exception:  # noqa: S110
     pass

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type
+from typing import TYPE_CHECKING, Any
 
 from crewai.tools import BaseTool
 from pydantic import BaseModel, Field
@@ -17,8 +17,7 @@ logger = logging.getLogger(__name__)
 
 
 def extract_output_from_stream(response):
-    """
-    Extract output from code interpreter response stream
+    """Extract output from code interpreter response stream.
 
     Args:
         response: Response from code interpreter execution
@@ -73,7 +72,7 @@ class ExecuteCommandInput(BaseModel):
 class ReadFilesInput(BaseModel):
     """Input for ReadFiles."""
 
-    paths: List[str] = Field(description="List of file paths to read")
+    paths: list[str] = Field(description="List of file paths to read")
     thread_id: str = Field(
         default="default", description="Thread ID for the code interpreter session"
     )
@@ -91,7 +90,7 @@ class ListFilesInput(BaseModel):
 class DeleteFilesInput(BaseModel):
     """Input for DeleteFiles."""
 
-    paths: List[str] = Field(description="List of file paths to delete")
+    paths: list[str] = Field(description="List of file paths to delete")
     thread_id: str = Field(
         default="default", description="Thread ID for the code interpreter session"
     )
@@ -100,7 +99,7 @@ class DeleteFilesInput(BaseModel):
 class WriteFilesInput(BaseModel):
     """Input for WriteFiles."""
 
-    files: List[Dict[str, str]] = Field(
+    files: list[dict[str, str]] = Field(
         description="List of dictionaries with path and text fields"
     )
     thread_id: str = Field(
@@ -141,7 +140,7 @@ class ExecuteCodeTool(BaseTool):
 
     name: str = "execute_code"
     description: str = "Execute code in various languages (primarily Python)"
-    args_schema: Type[BaseModel] = ExecuteCodeInput
+    args_schema: type[BaseModel] = ExecuteCodeInput
     toolkit: Any = Field(default=None, exclude=True)
 
     def __init__(self, toolkit):
@@ -196,7 +195,7 @@ class ExecuteCommandTool(BaseTool):
 
     name: str = "execute_command"
     description: str = "Run shell commands in the code interpreter environment"
-    args_schema: Type[BaseModel] = ExecuteCommandInput
+    args_schema: type[BaseModel] = ExecuteCommandInput
     toolkit: Any = Field(default=None, exclude=True)
 
     def __init__(self, toolkit):
@@ -229,14 +228,14 @@ class ReadFilesTool(BaseTool):
 
     name: str = "read_files"
     description: str = "Read content of files in the environment"
-    args_schema: Type[BaseModel] = ReadFilesInput
+    args_schema: type[BaseModel] = ReadFilesInput
     toolkit: Any = Field(default=None, exclude=True)
 
     def __init__(self, toolkit):
         super().__init__()
         self.toolkit = toolkit
 
-    def _run(self, paths: List[str], thread_id: str = "default") -> str:
+    def _run(self, paths: list[str], thread_id: str = "default") -> str:
         try:
             # Get or create code interpreter
             code_interpreter = self.toolkit._get_or_create_interpreter(
@@ -252,7 +251,7 @@ class ReadFilesTool(BaseTool):
         except Exception as e:
             return f"Error reading files: {e!s}"
 
-    async def _arun(self, paths: List[str], thread_id: str = "default") -> str:
+    async def _arun(self, paths: list[str], thread_id: str = "default") -> str:
         # Use _run as we're working with a synchronous API that's thread-safe
         return self._run(paths=paths, thread_id=thread_id)
 
@@ -262,7 +261,7 @@ class ListFilesTool(BaseTool):
 
     name: str = "list_files"
     description: str = "List files in directories in the environment"
-    args_schema: Type[BaseModel] = ListFilesInput
+    args_schema: type[BaseModel] = ListFilesInput
     toolkit: Any = Field(default=None, exclude=True)
 
     def __init__(self, toolkit):
@@ -295,14 +294,14 @@ class DeleteFilesTool(BaseTool):
 
     name: str = "delete_files"
     description: str = "Remove files from the environment"
-    args_schema: Type[BaseModel] = DeleteFilesInput
+    args_schema: type[BaseModel] = DeleteFilesInput
     toolkit: Any = Field(default=None, exclude=True)
 
     def __init__(self, toolkit):
         super().__init__()
         self.toolkit = toolkit
 
-    def _run(self, paths: List[str], thread_id: str = "default") -> str:
+    def _run(self, paths: list[str], thread_id: str = "default") -> str:
         try:
             # Get or create code interpreter
             code_interpreter = self.toolkit._get_or_create_interpreter(
@@ -318,7 +317,7 @@ class DeleteFilesTool(BaseTool):
         except Exception as e:
             return f"Error deleting files: {e!s}"
 
-    async def _arun(self, paths: List[str], thread_id: str = "default") -> str:
+    async def _arun(self, paths: list[str], thread_id: str = "default") -> str:
         # Use _run as we're working with a synchronous API that's thread-safe
         return self._run(paths=paths, thread_id=thread_id)
 
@@ -328,14 +327,14 @@ class WriteFilesTool(BaseTool):
 
     name: str = "write_files"
     description: str = "Create or update files in the environment"
-    args_schema: Type[BaseModel] = WriteFilesInput
+    args_schema: type[BaseModel] = WriteFilesInput
     toolkit: Any = Field(default=None, exclude=True)
 
     def __init__(self, toolkit):
         super().__init__()
         self.toolkit = toolkit
 
-    def _run(self, files: List[Dict[str, str]], thread_id: str = "default") -> str:
+    def _run(self, files: list[dict[str, str]], thread_id: str = "default") -> str:
         try:
             # Get or create code interpreter
             code_interpreter = self.toolkit._get_or_create_interpreter(
@@ -352,7 +351,7 @@ class WriteFilesTool(BaseTool):
             return f"Error writing files: {e!s}"
 
     async def _arun(
-        self, files: List[Dict[str, str]], thread_id: str = "default"
+        self, files: list[dict[str, str]], thread_id: str = "default"
     ) -> str:
         # Use _run as we're working with a synchronous API that's thread-safe
         return self._run(files=files, thread_id=thread_id)
@@ -363,7 +362,7 @@ class StartCommandTool(BaseTool):
 
     name: str = "start_command_execution"
     description: str = "Start long-running commands asynchronously"
-    args_schema: Type[BaseModel] = StartCommandInput
+    args_schema: type[BaseModel] = StartCommandInput
     toolkit: Any = Field(default=None, exclude=True)
 
     def __init__(self, toolkit):
@@ -396,7 +395,7 @@ class GetTaskTool(BaseTool):
 
     name: str = "get_task"
     description: str = "Check status of async tasks"
-    args_schema: Type[BaseModel] = GetTaskInput
+    args_schema: type[BaseModel] = GetTaskInput
     toolkit: Any = Field(default=None, exclude=True)
 
     def __init__(self, toolkit):
@@ -429,7 +428,7 @@ class StopTaskTool(BaseTool):
 
     name: str = "stop_task"
     description: str = "Stop running tasks"
-    args_schema: Type[BaseModel] = StopTaskInput
+    args_schema: type[BaseModel] = StopTaskInput
     toolkit: Any = Field(default=None, exclude=True)
 
     def __init__(self, toolkit):
@@ -511,15 +510,14 @@ class CodeInterpreterToolkit:
     """
 
     def __init__(self, region: str = "us-west-2"):
-        """
-        Initialize the toolkit
+        """Initialize the toolkit.
 
         Args:
             region: AWS region for the code interpreter
         """
         self.region = region
-        self._code_interpreters: Dict[str, CodeInterpreter] = {}
-        self.tools: List[BaseTool] = []
+        self._code_interpreters: dict[str, CodeInterpreter] = {}
+        self.tools: list[BaseTool] = []
         self._setup_tools()
 
     def _setup_tools(self) -> None:
@@ -561,26 +559,24 @@ class CodeInterpreterToolkit:
         self._code_interpreters[thread_id] = code_interpreter
         return code_interpreter
 
-    def get_tools(self) -> List[BaseTool]:
-        """
-        Get the list of code interpreter tools
+    def get_tools(self) -> list[BaseTool]:
+        """Get the list of code interpreter tools.
 
         Returns:
             List of CrewAI tools
         """
         return self.tools
 
-    def get_tools_by_name(self) -> Dict[str, BaseTool]:
-        """
-        Get a dictionary of tools mapped by their names
+    def get_tools_by_name(self) -> dict[str, BaseTool]:
+        """Get a dictionary of tools mapped by their names.
 
         Returns:
             Dictionary of {tool_name: tool}
         """
         return {tool.name: tool for tool in self.tools}
 
-    async def cleanup(self, thread_id: Optional[str] = None) -> None:
-        """Clean up resources
+    async def cleanup(self, thread_id: str | None = None) -> None:
+        """Clean up resources.
 
         Args:
             thread_id: Optional thread ID to clean up. If None, cleans up all sessions.
@@ -604,7 +600,7 @@ class CodeInterpreterToolkit:
             for tid in thread_ids:
                 try:
                     self._code_interpreters[tid].stop()
-                except Exception as e:
+                except Exception as e:  # noqa: PERF203
                     logger.warning(
                         f"Error stopping code interpreter for thread {tid}: {e}"
                     )
@@ -615,9 +611,8 @@ class CodeInterpreterToolkit:
 
 def create_code_interpreter_toolkit(
     region: str = "us-west-2",
-) -> Tuple[CodeInterpreterToolkit, List[BaseTool]]:
-    """
-    Create a CodeInterpreterToolkit
+) -> tuple[CodeInterpreterToolkit, list[BaseTool]]:
+    """Create a CodeInterpreterToolkit.
 
     Args:
         region: AWS region for code interpreter

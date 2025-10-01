@@ -28,11 +28,11 @@ class PDFLoader(BaseLoader):
             import pypdf
         except ImportError:
             try:
-                import PyPDF2 as pypdf
-            except ImportError:
+                import PyPDF2 as pypdf  # noqa: N813
+            except ImportError as e:
                 raise ImportError(
                     "PDF support requires pypdf or PyPDF2. Install with: uv add pypdf"
-                )
+                ) from e
 
         file_path = source.source
 
@@ -56,7 +56,7 @@ class PDFLoader(BaseLoader):
                     if page_text.strip():
                         text_content.append(f"Page {page_num}:\n{page_text}")
         except Exception as e:
-            raise ValueError(f"Error reading PDF file {file_path}: {e!s}")
+            raise ValueError(f"Error reading PDF file {file_path}: {e!s}") from e
 
         if not text_content:
             content = f"[PDF file with no extractable text: {Path(file_path).name}]"

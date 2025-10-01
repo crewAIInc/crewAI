@@ -1,5 +1,5 @@
 import os
-from typing import Annotated, Any, Dict, List, Optional, Type
+from typing import Annotated, Any
 
 from crewai.tools import BaseTool, EnvVar
 from pydantic import BaseModel, Field
@@ -12,12 +12,12 @@ class ParallelSearchInput(BaseModel):
     At least one of objective or search_queries is required.
     """
 
-    objective: Optional[str] = Field(
+    objective: str | None = Field(
         None,
         description="Natural-language goal for the web research (<=5000 chars)",
         max_length=5000,
     )
-    search_queries: Optional[List[Annotated[str, Field(max_length=200)]]] = Field(
+    search_queries: list[Annotated[str, Field(max_length=200)]] | None = Field(
         default=None,
         description="Optional list of keyword queries (<=5 items, each <=200 chars)",
         min_length=1,
@@ -39,7 +39,7 @@ class ParallelSearchInput(BaseModel):
         ge=100,
         description="Maximum characters per result excerpt (values >30000 not guaranteed)",
     )
-    source_policy: Optional[Dict[str, Any]] = Field(
+    source_policy: dict[str, Any] | None = Field(
         default=None, description="Optional source policy configuration"
     )
 
@@ -50,27 +50,29 @@ class ParallelSearchTool(BaseTool):
         "Search the web using Parallel's Search API (v1beta). Returns ranked results with "
         "compressed excerpts optimized for LLMs."
     )
-    args_schema: Type[BaseModel] = ParallelSearchInput
+    args_schema: type[BaseModel] = ParallelSearchInput
 
-    env_vars: List[EnvVar] = [
-        EnvVar(
-            name="PARALLEL_API_KEY",
-            description="API key for Parallel",
-            required=True,
-        ),
-    ]
-    package_dependencies: List[str] = ["requests"]
+    env_vars: list[EnvVar] = Field(
+        default_factory=lambda: [
+            EnvVar(
+                name="PARALLEL_API_KEY",
+                description="API key for Parallel",
+                required=True,
+            ),
+        ]
+    )
+    package_dependencies: list[str] = Field(default_factory=lambda: ["requests"])
 
     search_url: str = "https://api.parallel.ai/v1beta/search"
 
     def _run(
         self,
-        objective: Optional[str] = None,
-        search_queries: Optional[List[str]] = None,
+        objective: str | None = None,
+        search_queries: list[str] | None = None,
         processor: str = "base",
         max_results: int = 10,
         max_chars_per_result: int = 6000,
-        source_policy: Optional[Dict[str, Any]] = None,
+        source_policy: dict[str, Any] | None = None,
         **_: Any,
     ) -> str:
         api_key = os.environ.get("PARALLEL_API_KEY")
@@ -86,7 +88,7 @@ class ParallelSearchTool(BaseTool):
         }
 
         try:
-            payload: Dict[str, Any] = {
+            payload: dict[str, Any] = {
                 "processor": processor,
                 "max_results": max_results,
                 "max_chars_per_result": max_chars_per_result,
@@ -113,7 +115,7 @@ class ParallelSearchTool(BaseTool):
         except Exception as exc:
             return f"Unexpected error calling Parallel Search API: {exc}"
 
-    def _format_output(self, result: Dict[str, Any]) -> str:
+    def _format_output(self, result: dict[str, Any]) -> str:
         # Return the full JSON payload (search_id + results) as a compact JSON string
         try:
             import json

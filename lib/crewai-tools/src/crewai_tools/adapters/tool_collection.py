@@ -1,4 +1,5 @@
-from typing import Callable, Dict, Generic, List, Optional, TypeVar, Union
+from collections.abc import Callable
+from typing import Generic, TypeVar
 
 from crewai.tools import BaseTool
 
@@ -7,8 +8,7 @@ T = TypeVar("T", bound=BaseTool)
 
 
 class ToolCollection(list, Generic[T]):
-    """
-    A collection of tools that can be accessed by index or name
+    """A collection of tools that can be accessed by index or name.
 
     This class extends the built-in list to provide dictionary-like
     access to tools based on their name property.
@@ -21,15 +21,15 @@ class ToolCollection(list, Generic[T]):
         search_tool = tools["search"]
     """
 
-    def __init__(self, tools: Optional[List[T]] = None):
+    def __init__(self, tools: list[T] | None = None):
         super().__init__(tools or [])
-        self._name_cache: Dict[str, T] = {}
+        self._name_cache: dict[str, T] = {}
         self._build_name_cache()
 
     def _build_name_cache(self) -> None:
         self._name_cache = {tool.name.lower(): tool for tool in self}
 
-    def __getitem__(self, key: Union[int, str]) -> T:
+    def __getitem__(self, key: int | str) -> T:
         if isinstance(key, str):
             return self._name_cache[key.lower()]
         return super().__getitem__(key)
@@ -38,7 +38,7 @@ class ToolCollection(list, Generic[T]):
         super().append(tool)
         self._name_cache[tool.name.lower()] = tool
 
-    def extend(self, tools: List[T]) -> None:
+    def extend(self, tools: list[T]) -> None:
         super().extend(tools)
         self._build_name_cache()
 
@@ -57,7 +57,7 @@ class ToolCollection(list, Generic[T]):
             del self._name_cache[tool.name.lower()]
         return tool
 
-    def filter_by_names(self, names: Optional[List[str]] = None) -> "ToolCollection[T]":
+    def filter_by_names(self, names: list[str] | None = None) -> "ToolCollection[T]":
         if names is None:
             return self
 

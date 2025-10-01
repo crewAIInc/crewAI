@@ -38,7 +38,7 @@ class GithubLoader(BaseLoader):
         try:
             repo = g.get_repo(repo_name)
         except GithubException as e:
-            raise ValueError(f"Unable to access repository {repo_name}: {e}")
+            raise ValueError(f"Unable to access repository {repo_name}: {e}") from e
 
         all_content = []
 
@@ -66,7 +66,7 @@ class GithubLoader(BaseLoader):
                 if isinstance(contents, list):
                     all_content.append("Repository structure:")
                     for content_file in contents[:20]:
-                        all_content.append(
+                        all_content.append(  # noqa: PERF401
                             f"- {content_file.path} ({content_file.type})"
                         )
                     all_content.append("")

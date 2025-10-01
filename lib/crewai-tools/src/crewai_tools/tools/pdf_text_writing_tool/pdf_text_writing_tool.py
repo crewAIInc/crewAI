@@ -1,9 +1,9 @@
 from pathlib import Path
-from typing import Optional, Type
 
-from crewai_tools.tools.rag.rag_tool import RagTool
 from pydantic import BaseModel, Field
 from pypdf import ContentStream, Font, NameObject, PageObject, PdfReader, PdfWriter
+
+from crewai_tools.tools.rag.rag_tool import RagTool
 
 
 class PDFTextWritingToolSchema(BaseModel):
@@ -18,10 +18,10 @@ class PDFTextWritingToolSchema(BaseModel):
     font_color: str = Field(
         default="0 0 0 rg", description="RGB color code for the text"
     )
-    font_name: Optional[str] = Field(
+    font_name: str | None = Field(
         default="F1", description="Font name for standard fonts"
     )
-    font_file: Optional[str] = Field(
+    font_file: str | None = Field(
         None, description="Path to a .ttf font file for custom font usage"
     )
     page_number: int = Field(default=0, description="Page number to add text to")
@@ -32,7 +32,7 @@ class PDFTextWritingTool(RagTool):
 
     name: str = "PDF Text Writing Tool"
     description: str = "A tool that can write text to a specific position in a PDF document, with optional custom font embedding."
-    args_schema: Type[BaseModel] = PDFTextWritingToolSchema
+    args_schema: type[BaseModel] = PDFTextWritingToolSchema
 
     def run(
         self,
@@ -42,7 +42,7 @@ class PDFTextWritingTool(RagTool):
         font_size: int,
         font_color: str,
         font_name: str = "F1",
-        font_file: Optional[str] = None,
+        font_file: str | None = None,
         page_number: int = 0,
     ) -> str:
         reader = PdfReader(pdf_path)
@@ -83,5 +83,4 @@ class PDFTextWritingTool(RagTool):
         """Embeds a TTF font into the PDF and returns the font name."""
         with open(font_file, "rb") as file:
             font = Font.true_type(file.read())
-        font_ref = writer.add_object(font)
-        return font_ref
+        return writer.add_object(font)

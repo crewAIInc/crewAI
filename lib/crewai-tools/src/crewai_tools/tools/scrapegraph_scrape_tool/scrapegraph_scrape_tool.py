@@ -1,5 +1,7 @@
+from __future__ import annotations
+
 import os
-from typing import TYPE_CHECKING, Any, List, Optional, Type
+from typing import TYPE_CHECKING, Any
 from urllib.parse import urlparse
 
 from crewai.tools import BaseTool, EnvVar
@@ -12,11 +14,11 @@ if TYPE_CHECKING:
 
 
 class ScrapegraphError(Exception):
-    """Base exception for Scrapegraph-related errors"""
+    """Base exception for Scrapegraph-related errors."""
 
 
 class RateLimitError(ScrapegraphError):
-    """Raised when API rate limits are exceeded"""
+    """Raised when API rate limits are exceeded."""
 
 
 class FixedScrapegraphScrapeToolSchema(BaseModel):
@@ -33,22 +35,21 @@ class ScrapegraphScrapeToolSchema(FixedScrapegraphScrapeToolSchema):
     )
 
     @field_validator("website_url")
-    def validate_url(cls, v):
-        """Validate URL format"""
+    def validate_url(self, v):
+        """Validate URL format."""
         try:
             result = urlparse(v)
             if not all([result.scheme, result.netloc]):
                 raise ValueError
             return v
-        except Exception:
+        except Exception as e:
             raise ValueError(
                 "Invalid URL format. URL must include scheme (http/https) and domain"
-            )
+            ) from e
 
 
 class ScrapegraphScrapeTool(BaseTool):
-    """
-    A tool that uses Scrapegraph AI to intelligently scrape website content.
+    """A tool that uses Scrapegraph AI to intelligently scrape website content.
 
     Raises:
         ValueError: If API key is missing or URL format is invalid
@@ -62,26 +63,28 @@ class ScrapegraphScrapeTool(BaseTool):
     description: str = (
         "A tool that uses Scrapegraph AI to intelligently scrape website content."
     )
-    args_schema: Type[BaseModel] = ScrapegraphScrapeToolSchema
-    website_url: Optional[str] = None
-    user_prompt: Optional[str] = None
-    api_key: Optional[str] = None
+    args_schema: type[BaseModel] = ScrapegraphScrapeToolSchema
+    website_url: str | None = None
+    user_prompt: str | None = None
+    api_key: str | None = None
     enable_logging: bool = False
-    _client: Optional["Client"] = None
-    package_dependencies: List[str] = ["scrapegraph-py"]
-    env_vars: List[EnvVar] = [
-        EnvVar(
-            name="SCRAPEGRAPH_API_KEY",
-            description="API key for Scrapegraph AI services",
-            required=False,
-        ),
-    ]
+    _client: Client | None = None
+    package_dependencies: list[str] = Field(default_factory=lambda: ["scrapegraph-py"])
+    env_vars: list[EnvVar] = Field(
+        default_factory=lambda: [
+            EnvVar(
+                name="SCRAPEGRAPH_API_KEY",
+                description="API key for Scrapegraph AI services",
+                required=False,
+            ),
+        ]
+    )
 
     def __init__(
         self,
-        website_url: Optional[str] = None,
-        user_prompt: Optional[str] = None,
-        api_key: Optional[str] = None,
+        website_url: str | None = None,
+        user_prompt: str | None = None,
+        api_key: str | None = None,
         enable_logging: bool = False,
         **kwargs,
     ):
@@ -98,14 +101,14 @@ class ScrapegraphScrapeTool(BaseTool):
             ):
                 import subprocess
 
-                subprocess.run(["uv", "add", "scrapegraph-py"], check=True)
+                subprocess.run(["uv", "add", "scrapegraph-py"], check=True)  # noqa: S607
                 from scrapegraph_py import Client
                 from scrapegraph_py.logger import sgai_logger
 
             else:
                 raise ImportError(
                     "`scrapegraph-py` package not found, please run `uv add scrapegraph-py`"
-                )
+                ) from None
 
         self.api_key = api_key or os.getenv("SCRAPEGRAPH_API_KEY")
         self._client = Client(api_key=self.api_key)
@@ -128,18 +131,18 @@ class ScrapegraphScrapeTool(BaseTool):
 
     @staticmethod
     def _validate_url(url: str) -> None:
-        """Validate URL format"""
+        """Validate URL format."""
         try:
             result = urlparse(url)
             if not all([result.scheme, result.netloc]):
                 raise ValueError
-        except Exception:
+        except Exception as e:
             raise ValueError(
                 "Invalid URL format. URL must include scheme (http/https) and domain"
-            )
+            ) from e
 
     def _handle_api_response(self, response: dict) -> str:
-        """Handle and validate API response"""
+        """Handle and validate API response."""
         if not response:
             raise RuntimeError("Empty response from Scrapegraph API")
 
@@ -172,17 +175,15 @@ class ScrapegraphScrapeTool(BaseTool):
 
         try:
             # Make the SmartScraper request
-            response = self._client.smartscraper(
+            return self._client.smartscraper(
                 website_url=website_url,
                 user_prompt=user_prompt,
             )
 
-            return response
-
         except RateLimitError:
             raise  # Re-raise rate limit errors
         except Exception as e:
-            raise RuntimeError(f"Scraping failed: {e!s}")
+            raise RuntimeError(f"Scraping failed: {e!s}") from e
         finally:
             # Always close the client
             self._client.close()

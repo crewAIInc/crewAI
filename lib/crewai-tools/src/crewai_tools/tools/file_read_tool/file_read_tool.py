@@ -1,4 +1,4 @@
-from typing import Any, Optional, Type
+from typing import Any
 
 from crewai.tools import BaseTool
 from pydantic import BaseModel, Field
@@ -8,10 +8,10 @@ class FileReadToolSchema(BaseModel):
     """Input for FileReadTool."""
 
     file_path: str = Field(..., description="Mandatory file full path to read the file")
-    start_line: Optional[int] = Field(
+    start_line: int | None = Field(
         1, description="Line number to start reading from (1-indexed)"
     )
-    line_count: Optional[int] = Field(
+    line_count: int | None = Field(
         None, description="Number of lines to read. If None, reads the entire file"
     )
 
@@ -44,10 +44,10 @@ class FileReadTool(BaseTool):
 
     name: str = "Read a file's content"
     description: str = "A tool that reads the content of a file. To use this tool, provide a 'file_path' parameter with the path to the file you want to read. Optionally, provide 'start_line' to start reading from a specific line and 'line_count' to limit the number of lines read."
-    args_schema: Type[BaseModel] = FileReadToolSchema
-    file_path: Optional[str] = None
+    args_schema: type[BaseModel] = FileReadToolSchema
+    file_path: str | None = None
 
-    def __init__(self, file_path: Optional[str] = None, **kwargs: Any) -> None:
+    def __init__(self, file_path: str | None = None, **kwargs: Any) -> None:
         """Initialize the FileReadTool.
 
         Args:
@@ -65,9 +65,9 @@ class FileReadTool(BaseTool):
 
     def _run(
         self,
-        file_path: Optional[str] = None,
-        start_line: Optional[int] = 1,
-        line_count: Optional[int] = None,
+        file_path: str | None = None,
+        start_line: int | None = 1,
+        line_count: int | None = None,
     ) -> str:
         file_path = file_path or self.file_path
         start_line = start_line or 1

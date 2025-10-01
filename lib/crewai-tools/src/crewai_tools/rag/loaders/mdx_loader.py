@@ -32,7 +32,7 @@ class MDXLoader(BaseLoader):
             response.raise_for_status()
             return response.text
         except Exception as e:
-            raise ValueError(f"Error fetching MDX from URL {url}: {e!s}")
+            raise ValueError(f"Error fetching MDX from URL {url}: {e!s}") from e
 
     def _load_from_file(self, path: str) -> str:
         with open(path, "r", encoding="utf-8") as file:

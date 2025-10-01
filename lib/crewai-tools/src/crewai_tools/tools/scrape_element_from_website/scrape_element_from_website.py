@@ -1,5 +1,5 @@
 import os
-from typing import Any, Optional, Type
+from typing import Any
 
 from crewai.tools import BaseTool
 from pydantic import BaseModel, Field
@@ -31,25 +31,27 @@ class ScrapeElementFromWebsiteToolSchema(FixedScrapeElementFromWebsiteToolSchema
 class ScrapeElementFromWebsiteTool(BaseTool):
     name: str = "Read a website content"
     description: str = "A tool that can be used to read a website content."
-    args_schema: Type[BaseModel] = ScrapeElementFromWebsiteToolSchema
-    website_url: Optional[str] = None
-    cookies: Optional[dict] = None
-    css_element: Optional[str] = None
-    headers: Optional[dict] = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36",
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9",
-        "Accept-Language": "en-US,en;q=0.9",
-        "Referer": "https://www.google.com/",
-        "Connection": "keep-alive",
-        "Upgrade-Insecure-Requests": "1",
-        "Accept-Encoding": "gzip, deflate, br",
-    }
+    args_schema: type[BaseModel] = ScrapeElementFromWebsiteToolSchema
+    website_url: str | None = None
+    cookies: dict | None = None
+    css_element: str | None = None
+    headers: dict | None = Field(
+        default_factory=lambda: {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9",
+            "Accept-Language": "en-US,en;q=0.9",
+            "Referer": "https://www.google.com/",
+            "Connection": "keep-alive",
+            "Upgrade-Insecure-Requests": "1",
+            "Accept-Encoding": "gzip, deflate, br",
+        }
+    )
 
     def __init__(
         self,
-        website_url: Optional[str] = None,
-        cookies: Optional[dict] = None,
-        css_element: Optional[str] = None,
+        website_url: str | None = None,
+        cookies: dict | None = None,
+        css_element: str | None = None,
         **kwargs,
     ):
         super().__init__(**kwargs)
@@ -79,6 +81,7 @@ class ScrapeElementFromWebsiteTool(BaseTool):
             website_url,
             headers=self.headers,
             cookies=self.cookies if self.cookies else {},
+            timeout=30,
         )
         parsed = BeautifulSoup(page.content, "html.parser")
         elements = parsed.select(css_element)

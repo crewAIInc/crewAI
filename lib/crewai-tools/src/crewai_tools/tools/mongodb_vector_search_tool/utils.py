@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from time import monotonic, sleep
-from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional
+from typing import TYPE_CHECKING, Any
 
 
 if TYPE_CHECKING:
@@ -12,9 +13,9 @@ def _vector_search_index_definition(
     dimensions: int,
     path: str,
     similarity: str,
-    filters: Optional[List[str]] = None,
+    filters: list[str] | None = None,
     **kwargs: Any,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     # https://www.mongodb.com/docs/atlas/atlas-vector-search/vector-search-type/
     fields = [
         {
@@ -26,7 +27,7 @@ def _vector_search_index_definition(
     ]
     if filters:
         for field in filters:
-            fields.append({"type": "filter", "path": field})
+            fields.append({"type": "filter", "path": field})  # noqa: PERF401
     definition = {"fields": fields}
     definition.update(kwargs)
     return definition
@@ -38,12 +39,12 @@ def create_vector_search_index(
     dimensions: int,
     path: str,
     similarity: str,
-    filters: Optional[List[str]] = None,
+    filters: list[str] | None = None,
     *,
-    wait_until_complete: Optional[float] = None,
+    wait_until_complete: float | None = None,
     **kwargs: Any,
 ) -> None:
-    """Experimental Utility function to create a vector search index
+    """Experimental Utility function to create a vector search index.
 
     Args:
         collection (Collection): MongoDB Collection
@@ -61,7 +62,7 @@ def create_vector_search_index(
     if collection.name not in collection.database.list_collection_names():
         collection.database.create_collection(collection.name)
 
-    result = collection.create_search_index(
+    collection.create_search_index(
         SearchIndexModel(
             definition=_vector_search_index_definition(
                 dimensions=dimensions,
@@ -85,7 +86,7 @@ def create_vector_search_index(
 
 def _is_index_ready(collection: Collection, index_name: str) -> bool:
     """Check for the index name in the list of available search indexes to see if the
-    specified index is of status READY
+    specified index is of status READY.
 
     Args:
         collection (Collection): MongoDB Collection to for the search indexes
@@ -103,7 +104,7 @@ def _is_index_ready(collection: Collection, index_name: str) -> bool:
 def _wait_for_predicate(
     predicate: Callable, err: str, timeout: float = 120, interval: float = 0.5
 ) -> None:
-    """Generic to block until the predicate returns true
+    """Generic to block until the predicate returns true.
 
     Args:
         predicate (Callable[, bool]): A function that returns a boolean value

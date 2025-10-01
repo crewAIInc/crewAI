@@ -1,7 +1,6 @@
-from typing import Optional, Type
+from pydantic import BaseModel, Field
 
 from crewai_tools.rag.data_types import DataType
-from pydantic import BaseModel, Field
 
 from ..rag.rag_tool import RagTool
 
@@ -26,9 +25,9 @@ class DirectorySearchTool(RagTool):
     description: str = (
         "A tool that can be used to semantic search a query from a directory's content."
     )
-    args_schema: Type[BaseModel] = DirectorySearchToolSchema
+    args_schema: type[BaseModel] = DirectorySearchToolSchema
 
-    def __init__(self, directory: Optional[str] = None, **kwargs):
+    def __init__(self, directory: str | None = None, **kwargs):
         super().__init__(**kwargs)
         if directory is not None:
             self.add(directory)
@@ -42,7 +41,7 @@ class DirectorySearchTool(RagTool):
     def _run(
         self,
         search_query: str,
-        directory: Optional[str] = None,
+        directory: str | None = None,
         similarity_threshold: float | None = None,
         limit: int | None = None,
     ) -> str:

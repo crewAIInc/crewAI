@@ -1,10 +1,10 @@
 import json
 import os
-from typing import Any, List, Literal, Optional, Type, Union
+from typing import Any, Literal
 
 from crewai.tools import BaseTool, EnvVar
 from dotenv import load_dotenv
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 load_dotenv()
@@ -21,21 +21,23 @@ except ImportError:
 class TavilyExtractorToolSchema(BaseModel):
     """Input schema for TavilyExtractorTool."""
 
-    urls: Union[List[str], str] = Field(
+    urls: list[str] | str = Field(
         ...,
         description="The URL(s) to extract data from. Can be a single URL or a list of URLs.",
     )
 
 
 class TavilyExtractorTool(BaseTool):
-    package_dependencies: List[str] = ["tavily-python"]
-    env_vars: List[EnvVar] = [
-        EnvVar(
-            name="TAVILY_API_KEY",
-            description="API key for Tavily extraction service",
-            required=True,
-        ),
-    ]
+    package_dependencies: list[str] = Field(default_factory=lambda: ["tavily-python"])
+    env_vars: list[EnvVar] = Field(
+        default_factory=lambda: [
+            EnvVar(
+                name="TAVILY_API_KEY",
+                description="API key for Tavily extraction service",
+                required=True,
+            ),
+        ]
+    )
     """
     Tool that uses the Tavily API to extract content from web pages.
 
@@ -52,17 +54,17 @@ class TavilyExtractorTool(BaseTool):
         timeout: The timeout for the extraction request in seconds.
     """
 
-    model_config = {"arbitrary_types_allowed": True}
-    client: Optional[TavilyClient] = None
-    async_client: Optional[AsyncTavilyClient] = None
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+    client: TavilyClient | None = None
+    async_client: AsyncTavilyClient | None = None
     name: str = "TavilyExtractorTool"
     description: str = "Extracts content from one or more web pages using the Tavily API. Returns structured data."
-    args_schema: Type[BaseModel] = TavilyExtractorToolSchema
-    api_key: Optional[str] = Field(
+    args_schema: type[BaseModel] = TavilyExtractorToolSchema
+    api_key: str | None = Field(
         default_factory=lambda: os.getenv("TAVILY_API_KEY"),
         description="The Tavily API key. If not provided, it will be loaded from the environment variable TAVILY_API_KEY.",
     )
-    proxies: Optional[dict[str, str]] = Field(
+    proxies: dict[str, str] | None = Field(
         default=None,
         description="Optional proxies to use for the Tavily API requests.",
     )
@@ -80,8 +82,7 @@ class TavilyExtractorTool(BaseTool):
     )
 
     def __init__(self, **kwargs: Any):
-        """
-        Initializes the TavilyExtractorTool.
+        """Initializes the TavilyExtractorTool.
 
         Args:
             **kwargs: Additional keyword arguments.
@@ -101,13 +102,13 @@ class TavilyExtractorTool(BaseTool):
                 raise ImportError(
                     "The 'tavily-python' package is required. 'click' and 'subprocess' are also needed to assist with installation if the package is missing. "
                     "Please install 'tavily-python' manually (e.g., 'uv add tavily-python') and ensure 'click' and 'subprocess' are available."
-                )
+                ) from None
 
             if click.confirm(
                 "You are missing the 'tavily-python' package, which is required for TavilyExtractorTool. Would you like to install it?"
             ):
                 try:
-                    subprocess.run(["pip", "install", "tavily-python"], check=True)
+                    subprocess.run(["uv pip", "install", "tavily-python"], check=True)  # noqa: S607
                     raise ImportError(
                         "'tavily-python' has been installed. Please restart your Python application to use the TavilyExtractorTool."
                     )
@@ -115,7 +116,7 @@ class TavilyExtractorTool(BaseTool):
                     raise ImportError(
                         f"Attempted to install 'tavily-python' but failed: {e}. "
                         f"Please install it manually to use the TavilyExtractorTool."
-                    )
+                    ) from e
             else:
                 raise ImportError(
                     "The 'tavily-python' package is required to use the TavilyExtractorTool. "
@@ -124,10 +125,9 @@ class TavilyExtractorTool(BaseTool):
 
     def _run(
         self,
-        urls: Union[List[str], str],
+        urls: list[str] | str,
     ) -> str:
-        """
-        Synchronously extracts content from the given URL(s).
+        """Synchronously extracts content from the given URL(s).
 
         Args:
             urls: The URL(s) to extract data from.
@@ -152,10 +152,9 @@ class TavilyExtractorTool(BaseTool):
 
     async def _arun(
         self,
-        urls: Union[List[str], str],
+        urls: list[str] | str,
     ) -> str:
-        """
-        Asynchronously extracts content from the given URL(s).
+        """Asynchronously extracts content from the given URL(s).
 
         Args:
             urls: The URL(s) to extract data from.

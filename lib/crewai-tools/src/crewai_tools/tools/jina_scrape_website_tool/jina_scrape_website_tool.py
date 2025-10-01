@@ -1,5 +1,3 @@
-from typing import Optional, Type
-
 from crewai.tools import BaseTool
 from pydantic import BaseModel, Field
 import requests
@@ -14,16 +12,16 @@ class JinaScrapeWebsiteToolInput(BaseModel):
 class JinaScrapeWebsiteTool(BaseTool):
     name: str = "JinaScrapeWebsiteTool"
     description: str = "A tool that can be used to read a website content using Jina.ai reader and return markdown content."
-    args_schema: Type[BaseModel] = JinaScrapeWebsiteToolInput
-    website_url: Optional[str] = None
-    api_key: Optional[str] = None
-    headers: dict = {}
+    args_schema: type[BaseModel] = JinaScrapeWebsiteToolInput
+    website_url: str | None = None
+    api_key: str | None = None
+    headers: dict = Field(default_factory=dict)
 
     def __init__(
         self,
-        website_url: Optional[str] = None,
-        api_key: Optional[str] = None,
-        custom_headers: Optional[dict] = None,
+        website_url: str | None = None,
+        api_key: str | None = None,
+        custom_headers: dict | None = None,
         **kwargs,
     ):
         super().__init__(**kwargs)
@@ -38,7 +36,7 @@ class JinaScrapeWebsiteTool(BaseTool):
         if api_key is not None:
             self.headers["Authorization"] = f"Bearer {api_key}"
 
-    def _run(self, website_url: Optional[str] = None) -> str:
+    def _run(self, website_url: str | None = None) -> str:
         url = website_url or self.website_url
         if not url:
             raise ValueError(
