@@ -31,7 +31,7 @@ from crewai.flow.flow_visualizer import plot_flow
 from crewai.flow.persistence.base import FlowPersistence
 from crewai.flow.types import FlowExecutionData
 from crewai.flow.utils import get_possible_return_constants
-from crewai.utilities.printer import Printer
+from crewai.utilities.printer import Printer, PrinterColor
 
 logger = logging.getLogger(__name__)
 
@@ -1088,7 +1088,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
                     for method_name in self._start_methods:
                         # Check if this start method is triggered by the current trigger
                         if method_name in self._listeners:
-                            condition_type, trigger_methods = self._listeners[
+                            _, trigger_methods = self._listeners[
                                 method_name
                             ]
                             if current_trigger in trigger_methods:
@@ -1220,7 +1220,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
             raise
 
     def _log_flow_event(
-        self, message: str, color: str = "yellow", level: str = "info"
+        self, message: str, color: PrinterColor = "yellow", level: str = "info"
     ) -> None:
         """Centralized logging method for flow events.
 
