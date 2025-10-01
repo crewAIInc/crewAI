@@ -4,6 +4,84 @@ description: "Atualizações de produto, melhorias e correções do CrewAI"
 icon: "clock"
 mode: "wide"
 ---
+<Update label="30 set 2025">
+  ## v1.0.0a1
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.0.0a1)
+
+  ## O que mudou
+
+  ### Melhorias e correções principais
+  - Corrigido o controle de permissões do atributo `actions` na configuração de agentes
+  - Fluxos de CI e publicação atualizados para suportar a nova estrutura de monorepo
+  - Migração para Python 3.13 e atualização do metadado dos pacotes
+
+  ### Novos recursos e melhorias
+  - Novos atributos `apps` e `actions` nos agentes para controles avançados em runtime
+  - Repositório `crewai-tools` incorporado ao workspace principal (monorepo)
+  - Versão incrementada para 1.0.0a1 em todos os pacotes (marco alpha)
+
+  ### Limpeza e infraestrutura
+  - Novo pipeline de CI com versionamento fixo e estratégia de publicação
+  - Unificação do código interno para gerenciar múltiplos pacotes
+
+</Update>
+
+<Update label="26 set 2025">
+  ## v0.201.1
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/0.201.1)
+
+  ## O que mudou
+
+  ### Melhorias e correções principais
+  - Provedor de embeddings Watson renomeado para `watsonx` com prefixos de ambiente atualizados
+  - Compatibilidade do ChromaDB com providers `watsonx` e `voyageai`
+
+  ### Limpeza e descontinuações
+  - Padronização dos prefixos de variáveis de ambiente para todos os providers
+  - Versão do CrewAI atualizada para 0.201.1 com dependências internas revisadas
+
+</Update>
+
+<Update label="24 set 2025">
+  ## v0.201.0
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/0.201.0)
+
+  ## O que mudou
+
+  ### Melhorias e correções principais
+  - Parâmetro `ready` agora é opcional em `_create_reasoning_plan`
+  - Correções no tratamento de configuração aninhada para embedders
+  - Suporte ao parâmetro `batch_size` para evitar limites de tokens
+  - Corrigido o nome do diretório na documentação do Quickstart
+  - Resolvidos problemas de cache da duração de testes e exportação de eventos
+  - Adicionada lógica de fallback nas configurações de crew
+
+  ### Novos recursos e melhorias
+  - Introduzido gerenciamento de contexto da plataforma thread-safe
+  - Adicionado comando `crewai uv` para executar `uv` diretamente via CLI
+  - Possibilidade de marcar traces como falhas para fluxos de observabilidade
+  - Suporte a tipos de embedding personalizados e migração entre providers
+  - ChromaDB atualizado para v1.1.0 com correções de compatibilidade e melhorias de tipagem
+  - Validações compatíveis com Pydantic e reorganização dos grupos de dependências
+
+  ### Documentação e guias
+  - Cobertura do changelog atualizada para os releases 0.193.x
+  - Documentado suporte a metadados de eventos no LLM Guardrail
+  - Orientações adicionais sobre fallback e visibilidade de parâmetros de configuração
+
+  ### Limpeza e descontinuações
+  - Resolvidos problemas de Ruff e MyPy em diversos módulos
+  - Melhorias nas anotações de tipos e consolidação de utilidades
+  - Descontinuação de utilitários antigos em favor de importações compatíveis com Pydantic
+
+  ### Contribuidores
+  - Novo contribuidor: @qizwiz (primeira contribuição)
+
+</Update>
+
 
 <Update label="20 set 2025">
   ## v0.193.2

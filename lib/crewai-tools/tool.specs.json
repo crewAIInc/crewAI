@@ -3195,13 +3195,13 @@
       "env_vars": [
         {
           "default": null,
-          "description": "Personal Access Token for CrewAI Enterprise API",
+          "description": "Personal Access Token for CrewAI AMP API",
           "name": "CREWAI_PERSONAL_ACCESS_TOKEN",
           "required": true
         },
         {
           "default": null,
-          "description": "Base URL for CrewAI Enterprise API",
+          "description": "Base URL for CrewAI AMP API",
           "name": "CREWAI_PLUS_URL",
           "required": false
         }
@@ -3247,7 +3247,7 @@
         },
         "properties": {
           "crewai_enterprise_url": {
-            "description": "The base URL of CrewAI Enterprise. If not provided, it will be loaded from the environment variable CREWAI_PLUS_URL with default https://app.crewai.com.",
+            "description": "The base URL of CrewAI AMP. If not provided, it will be loaded from the environment variable CREWAI_PLUS_URL with default https://app.crewai.com.",
             "title": "Crewai Enterprise Url",
             "type": "string"
           },
@@ -3260,7 +3260,7 @@
                 "type": "null"
               }
             ],
-            "description": "The user's Personal Access Token to access CrewAI Enterprise API. If not provided, it will be loaded from the environment variable CREWAI_PERSONAL_ACCESS_TOKEN.",
+            "description": "The user's Personal Access Token to access CrewAI AMP API. If not provided, it will be loaded from the environment variable CREWAI_PERSONAL_ACCESS_TOKEN.",
             "title": "Personal Access Token"
           }
         },
@@ -3281,7 +3281,7 @@
               }
             ],
             "default": null,
-            "description": "The identifier for the CrewAI Enterprise organization. If not specified, a default organization will be used.",
+            "description": "The identifier for the CrewAI AMP organization. If not specified, a default organization will be used.",
             "title": "Organization Id"
           },
           "prompt": {
