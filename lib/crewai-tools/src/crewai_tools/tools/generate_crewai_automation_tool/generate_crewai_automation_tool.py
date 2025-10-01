@@ -12,7 +12,7 @@ class GenerateCrewaiAutomationToolSchema(BaseModel):
     )
     organization_id: Optional[str] = Field(
         default=None,
-        description="The identifier for the CrewAI Enterprise organization. If not specified, a default organization will be used.",
+        description="The identifier for the CrewAI AMP organization. If not specified, a default organization will be used.",
     )
 
 
@@ -26,21 +26,21 @@ class GenerateCrewaiAutomationTool(BaseTool):
     args_schema: Type[BaseModel] = GenerateCrewaiAutomationToolSchema
     crewai_enterprise_url: str = Field(
         default_factory=lambda: os.getenv("CREWAI_PLUS_URL", "https://app.crewai.com"),
-        description="The base URL of CrewAI Enterprise. If not provided, it will be loaded from the environment variable CREWAI_PLUS_URL with default https://app.crewai.com.",
+        description="The base URL of CrewAI AMP. If not provided, it will be loaded from the environment variable CREWAI_PLUS_URL with default https://app.crewai.com.",
     )
     personal_access_token: Optional[str] = Field(
         default_factory=lambda: os.getenv("CREWAI_PERSONAL_ACCESS_TOKEN"),
-        description="The user's Personal Access Token to access CrewAI Enterprise API. If not provided, it will be loaded from the environment variable CREWAI_PERSONAL_ACCESS_TOKEN.",
+        description="The user's Personal Access Token to access CrewAI AMP API. If not provided, it will be loaded from the environment variable CREWAI_PERSONAL_ACCESS_TOKEN.",
     )
     env_vars: List[EnvVar] = [
         EnvVar(
             name="CREWAI_PERSONAL_ACCESS_TOKEN",
-            description="Personal Access Token for CrewAI Enterprise API",
+            description="Personal Access Token for CrewAI AMP API",
             required=True,
         ),
         EnvVar(
             name="CREWAI_PLUS_URL",
-            description="Base URL for CrewAI Enterprise API",
+            description="Base URL for CrewAI AMP API",
             required=False,
         ),
     ]
