@@ -42,6 +42,15 @@ class LinkedinProfileCrew():
 
 A anotação `@CrewBase` é usada para decorar a classe principal do crew. Esta classe geralmente contém as configurações e métodos para criação de agentes, tarefas e do próprio crew.
 
+<Tip>
+`@CrewBase` faz bem mais do que registrar a classe:
+
+- **Inicialização de configuração:** busca `agents_config` e `tasks_config` (padrões `config/agents.yaml` e `config/tasks.yaml`) ao lado do arquivo da classe, carrega esses YAMLs na inicialização e utiliza dicionários vazios quando os arquivos não existem.
+- **Orquestração de decoradores:** mantém versões memoizadas dos métodos marcados com `@agent`, `@task`, `@before_kickoff` e `@after_kickoff` para que sejam instanciados uma única vez por crew e respeitem a ordem de declaração.
+- **Encadeamento de hooks:** conecta automaticamente os hooks preservados ao objeto `Crew` retornado pelo método `@crew`, garantindo que executem antes e depois de `.kickoff()`.
+- **Integração MCP:** quando a classe define `mcp_server_params`, `get_mcp_tools()` cria sob demanda um adaptador MCP, carrega as ferramentas declaradas e um hook interno pós-kickoff encerra o adaptador. Consulte a [visão geral de MCP](/pt-BR/mcp/overview) para detalhes de configuração.
+</Tip>
+
 ### 2. Definição de Tool
 
 ```python
