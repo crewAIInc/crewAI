@@ -1051,7 +1051,6 @@
                       "ko/tools/cloud-storage/overview",
                       "ko/tools/cloud-storage/s3readertool",
                       "ko/tools/cloud-storage/s3writertool",
-                      "ko/tools/cloud-storage/bedrockinvokeagenttool",
                       "ko/tools/cloud-storage/bedrockkbretriever"
                     ]
                   },
