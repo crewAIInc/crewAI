@@ -289,6 +289,7 @@
                   "en/learn/force-tool-output-as-result",
                   "en/learn/hierarchical-process",
                   "en/learn/human-input-on-execution",
+                  "en/learn/human-in-the-loop",
                   "en/learn/kickoff-async",
                   "en/learn/kickoff-for-each",
                   "en/learn/llm-connections",
@@ -305,7 +306,7 @@
             ]
           },
           {
-            "tab": "Enterprise",
+            "tab": "AMP",
             "icon": "briefcase",
             "groups": [
               {
@@ -698,6 +699,7 @@
                   "pt-BR/learn/force-tool-output-as-result",
                   "pt-BR/learn/hierarchical-process",
                   "pt-BR/learn/human-input-on-execution",
+                  "pt-BR/learn/human-in-the-loop",
                   "pt-BR/learn/kickoff-async",
                   "pt-BR/learn/kickoff-for-each",
                   "pt-BR/learn/llm-connections",
@@ -714,7 +716,7 @@
             ]
           },
           {
-            "tab": "Enterprise",
+            "tab": "AMP",
             "icon": "briefcase",
             "groups": [
               {
@@ -1112,6 +1114,7 @@
                   "ko/learn/force-tool-output-as-result",
                   "ko/learn/hierarchical-process",
                   "ko/learn/human-input-on-execution",
+                  "ko/learn/human-in-the-loop",
                   "ko/learn/kickoff-async",
                   "ko/learn/kickoff-for-each",
                   "ko/learn/llm-connections",
