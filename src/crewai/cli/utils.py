@@ -430,6 +430,10 @@ def build_env_with_tool_repository_credentials(repository_handle: str):
         settings.tool_repository_password or ""
     )
 
+    # Also provide PUBLIC alias to support projects that reference an index named "public"
+    env["UV_INDEX_PUBLIC_USERNAME"] = str(settings.tool_repository_username or "")
+    env["UV_INDEX_PUBLIC_PASSWORD"] = str(settings.tool_repository_password or "")
+
     return env
 
 
