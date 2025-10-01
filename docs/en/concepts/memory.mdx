@@ -873,30 +873,6 @@ agentcore_dict_config = {
     ]
 }
 
-# Using namespace template resolution utility (optional)
-resolved_namespaces = [
-    BedrockAgentCoreStorage.resolve_namespace_template(
-        "/preferences/{actorId}",
-        actor_id="user-123", 
-        session_id="session-456", 
-        strategy_id="strategy-pref-123"
-    ),
-    BedrockAgentCoreStorage.resolve_namespace_template(
-        "/facts/{actorId}/{sessionId}",
-        actor_id="user-123", 
-        session_id="session-456", 
-        strategy_id="strategy-facts-456"
-    )
-]
-
-resolved_config = BedrockAgentCoreConfig(
-    memory_id="your-bedrock-memory-id",
-    actor_id="user-123",
-    session_id="session-456",
-    region_name="us-east-1",
-    namespaces=resolved_namespaces
-)
-
 # Both configuration styles work
 external_memory = ExternalMemory(
     embedder_config={

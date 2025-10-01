@@ -129,49 +129,6 @@ class BedrockAgentCoreStorage(Storage):
                 f"Failed to initialize Bedrock AgentCore clients: {e!s}"
             ) from e
 
-    @staticmethod
-    def resolve_namespace_template(
-        namespace_template: str, actor_id: str, session_id: str, strategy_id: str
-    ) -> str:
-        """
-        Resolve namespace template variables with actual values.
-
-        This utility method handles the substitution of template variables in namespace strings:
-        - {memoryStrategyId} -> strategy ID from config
-        - {actorId} -> actor ID from config
-        - {sessionId} -> session ID from config
-
-        Args:
-            namespace_template: The namespace template string with variables
-            actor_id: The actor ID to substitute
-            session_id: The session ID to substitute
-            strategy_id: The strategy ID to substitute
-
-        Returns:
-            Resolved namespace string with variables substituted
-
-        Examples:
-            AgentCoreStorage.resolve_namespace_template(
-                "/strategies/{memoryStrategyId}/actors/{actorId}/sessions/{sessionId}",
-                "user-456", "session-789", "strategy-123"
-            )
-            -> "/strategies/strategy-123/actors/user-456/sessions/session-789"
-        """
-        substitution_vars = {
-            "actorId": actor_id,
-            "sessionId": session_id,
-            "memoryStrategyId": strategy_id,
-        }
-
-        resolved_namespace = namespace_template.format(**substitution_vars)
-        logger.debug(
-            "Resolved namespace template '%s' -> '%s'",
-            namespace_template,
-            resolved_namespace,
-        )
-
-        return resolved_namespace
-
     def save(self, value: Any, metadata: dict[str, Any]) -> None:
         """
         Save memory item to AWS Bedrock AgentCore.
@@ -392,7 +349,7 @@ class BedrockAgentCoreStorage(Storage):
             len(final_results),
         )
 
-        return final_results
+        return final_results[:limit]
 
     def _safe_truncate_utf8(self, text: str, max_bytes: int = 9000) -> str:
         """
