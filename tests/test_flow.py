@@ -894,3 +894,111 @@ def test_flow_name():
 
     flow = MyFlow()
     assert flow.name == "MyFlow"
+
+
+def test_flow_init_with_required_fields():
+    """Test Flow initialization with Pydantic models having required fields."""
+
+    class RequiredFieldsState(BaseModel):
+        name: str
+        age: int
+
+    class RequiredFieldsFlow(Flow[RequiredFieldsState]):
+        @start()
+        def step_1(self):
+            assert self.state.name == "Alice"
+            assert self.state.age == 30
+
+    flow = RequiredFieldsFlow(name="Alice", age=30)
+    flow.kickoff()
+
+    assert flow.state.name == "Alice"
+    assert flow.state.age == 30
+    assert hasattr(flow.state, "id")
+    assert len(flow.state.id) == 36
+
+
+def test_flow_init_with_required_fields_missing_values():
+    """Test that Flow initialization fails when required fields are missing."""
+
+    class RequiredFieldsState(BaseModel):
+        name: str
+        age: int
+
+    class RequiredFieldsFlow(Flow[RequiredFieldsState]):
+        @start()
+        def step_1(self):
+            pass
+
+    with pytest.raises(Exception):
+        flow = RequiredFieldsFlow()
+
+
+def test_flow_init_with_mixed_required_optional_fields():
+    """Test Flow with both required and optional fields."""
+
+    class MixedFieldsState(BaseModel):
+        name: str
+        age: int = 25
+        city: str | None = None
+
+    class MixedFieldsFlow(Flow[MixedFieldsState]):
+        @start()
+        def step_1(self):
+            assert self.state.name == "Bob"
+            assert self.state.age == 25
+            assert self.state.city is None
+
+    flow = MixedFieldsFlow(name="Bob")
+    flow.kickoff()
+
+    assert flow.state.name == "Bob"
+    assert flow.state.age == 25
+    assert flow.state.city is None
+
+
+def test_flow_init_with_required_fields_and_overrides():
+    """Test that kwargs override default values."""
+
+    class DefaultFieldsState(BaseModel):
+        name: str
+        age: int = 18
+        active: bool = True
+
+    class DefaultFieldsFlow(Flow[DefaultFieldsState]):
+        @start()
+        def step_1(self):
+            assert self.state.name == "Charlie"
+            assert self.state.age == 35
+            assert self.state.active is False
+
+    flow = DefaultFieldsFlow(name="Charlie", age=35, active=False)
+    flow.kickoff()
+
+    assert flow.state.name == "Charlie"
+    assert flow.state.age == 35
+    assert flow.state.active is False
+
+
+def test_flow_init_backward_compatibility_with_flowstate():
+    """Test that existing FlowState subclasses still work."""
+    from crewai.flow.flow import FlowState
+
+    class MyFlowState(FlowState):
+        counter: int = 0
+        message: str = "default"
+
+    class BackwardCompatFlow(Flow[MyFlowState]):
+        @start()
+        def step_1(self):
+            self.state.counter += 1
+
+    flow1 = BackwardCompatFlow()
+    flow1.kickoff()
+    assert flow1.state.counter == 1
+    assert flow1.state.message == "default"
+
+    flow2 = BackwardCompatFlow(counter=10, message="custom")
+    flow2.kickoff()
+    assert flow2.state.counter == 11
+    assert flow2.state.message == "custom"

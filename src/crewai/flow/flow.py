@@ -465,7 +465,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
         self._is_execution_resuming: bool = False
 
         # Initialize state with initial values
-        self._state = self._create_initial_state()
+        self._state = self._create_initial_state(kwargs)
         self.tracing = tracing
         if (
             is_tracing_enabled()
@@ -474,9 +474,6 @@ class Flow(Generic[T], metaclass=FlowMeta):
         ):
             trace_listener = TraceCollectionListener()
             trace_listener.setup_listeners(crewai_event_bus)
-        # Apply any additional kwargs
-        if kwargs:
-            self._initialize_state(kwargs)
 
         crewai_event_bus.emit(
             self,
@@ -502,8 +499,11 @@ class Flow(Generic[T], metaclass=FlowMeta):
                         method = method.__get__(self, self.__class__)
                     self._methods[method_name] = method
 
-    def _create_initial_state(self) -> T:
+    def _create_initial_state(self, kwargs: dict[str, Any] | None = None) -> T:
         """Create and initialize flow state with UUID and default values.
+
+        Args:
+            kwargs: Optional initial values for state fields
 
         Returns:
             New state instance with UUID and default values initialized
@@ -518,7 +518,8 @@ class Flow(Generic[T], metaclass=FlowMeta):
             if isinstance(state_type, type):
                 if issubclass(state_type, FlowState):
                     # Create instance without id, then set it
-                    instance = state_type()
+                    init_kwargs = kwargs or {}
+                    instance = state_type(**init_kwargs)
                     if not hasattr(instance, "id"):
                         instance.id = str(uuid4())
                     return cast(T, instance)
@@ -527,7 +528,8 @@ class Flow(Generic[T], metaclass=FlowMeta):
                     class StateWithId(state_type, FlowState):  # type: ignore
                         pass
 
-                    instance = StateWithId()
+                    init_kwargs = kwargs or {}
+                    instance = StateWithId(**init_kwargs)
                     if not hasattr(instance, "id"):
                         instance.id = str(uuid4())
                     return cast(T, instance)
@@ -541,13 +543,13 @@ class Flow(Generic[T], metaclass=FlowMeta):
         # Handle case where initial_state is a type (class)
         if isinstance(self.initial_state, type):
             if issubclass(self.initial_state, FlowState):
-                return cast(T, self.initial_state())  # Uses model defaults
+                return cast(T, self.initial_state(**(kwargs or {})))
             if issubclass(self.initial_state, BaseModel):
                 # Validate that the model has an id field
                 model_fields = getattr(self.initial_state, "model_fields", None)
                 if not model_fields or "id" not in model_fields:
                     raise ValueError("Flow state model must have an 'id' field")
-                return cast(T, self.initial_state())  # Uses model defaults
+                return cast(T, self.initial_state(**(kwargs or {})))
             if self.initial_state is dict:
                 return cast(T, {"id": str(uuid4())})
 
