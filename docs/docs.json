@@ -248,6 +248,7 @@
                 "pages": [
                   "en/observability/overview",
                   "en/observability/arize-phoenix",
+                  "en/observability/datadog",
                   "en/observability/langdb",
                   "en/observability/langfuse",
                   "en/observability/langtrace",
@@ -259,8 +260,7 @@
                   "en/observability/patronus-evaluation",
                   "en/observability/portkey",
                   "en/observability/weave",
-                  "en/observability/truefoundry",
-                  "en/observability/datadog"
+                  "en/observability/truefoundry"
                 ]
               },
               {
