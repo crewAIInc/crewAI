@@ -20,28 +20,24 @@ import pytest
 # TODO: This test fails without print statement, which makes me think that something is happening asynchronously that we need to eventually fix and dive deeper into at a later date
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_llm_callback_replacement():
-    llm1 = LLM(model="gpt-4o-mini")
-    llm2 = LLM(model="gpt-4o-mini")
+    llm1 = LLM(model="gpt-4o-mini", is_litellm=True)
+    llm2 = LLM(model="gpt-4o-mini", is_litellm=True)
 
     calc_handler_1 = TokenCalcHandler(token_cost_process=TokenProcess())
     calc_handler_2 = TokenCalcHandler(token_cost_process=TokenProcess())
 
-    result1 = llm1.call(
+    llm1.call(
         messages=[{"role": "user", "content": "Hello, world!"}],
         callbacks=[calc_handler_1],
     )
-    print("result1:", result1)
     usage_metrics_1 = calc_handler_1.token_cost_process.get_summary()
-    print("usage_metrics_1:", usage_metrics_1)
 
-    result2 = llm2.call(
+    llm2.call(
         messages=[{"role": "user", "content": "Hello, world from another agent!"}],
         callbacks=[calc_handler_2],
     )
     sleep(5)
-    print("result2:", result2)
     usage_metrics_2 = calc_handler_2.token_cost_process.get_summary()
-    print("usage_metrics_2:", usage_metrics_2)
 
     # The first handler should not have been updated
     assert usage_metrics_1.successful_requests == 1
@@ -61,7 +57,7 @@ def test_llm_call_with_string_input():
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_llm_call_with_string_input_and_callbacks():
-    llm = LLM(model="gpt-4o-mini")
+    llm = LLM(model="gpt-4o-mini", is_litellm=True)
     calc_handler = TokenCalcHandler(token_cost_process=TokenProcess())
 
     # Test the call method with a string input and callbacks
@@ -127,7 +123,7 @@ def test_llm_call_with_tool_and_string_input():
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_llm_call_with_tool_and_message_list():
-    llm = LLM(model="gpt-4o-mini")
+    llm = LLM(model="gpt-4o-mini", is_litellm=True)
 
     def square_number(number: int) -> int:
         """Returns the square of a number."""
@@ -171,6 +167,7 @@ def test_llm_passes_additional_params():
         model="gpt-4o-mini",
         vertex_credentials="test_credentials",
         vertex_project="test_project",
+        is_litellm=True,
     )
 
     messages = [{"role": "user", "content": "Hello, world!"}]
@@ -223,7 +220,7 @@ def test_get_custom_llm_provider_gemini():
 
 
 def test_get_custom_llm_provider_openai():
-    llm = LLM(model="gpt-4")
+    llm = LLM(model="gpt-4", is_litellm=True)
     assert llm._get_custom_llm_provider() is None
 
 
@@ -380,7 +377,7 @@ def test_context_window_exceeded_error_handling():
     )
     from litellm.exceptions import ContextWindowExceededError
 
-    llm = LLM(model="gpt-4")
+    llm = LLM(model="gpt-4", is_litellm=True)
 
     # Test non-streaming response
     with patch("litellm.completion") as mock_completion:
@@ -416,7 +413,7 @@ def test_context_window_exceeded_error_handling():
 @pytest.fixture
 def anthropic_llm():
     """Fixture providing an Anthropic LLM instance."""
-    return LLM(model="anthropic/claude-3-sonnet")
+    return LLM(model="anthropic/claude-3-sonnet", is_litellm=True)
 
 
 @pytest.fixture
@@ -439,8 +436,6 @@ def test_anthropic_message_formatting_edge_cases(anthropic_llm):
 
     # Test empty message list
     formatted_messages, system_msg = anthropic_llm._format_messages_for_anthropic([])
-    print(f"lorenze formatted_messages: {formatted_messages}")
-    print(f"lorenze system_msg: {system_msg}")
     assert len(formatted_messages) == 1
     assert system_msg is None
     assert formatted_messages[0]["role"] == "user"
@@ -465,7 +460,7 @@ def test_anthropic_model_detection():
     ]
 
     for model, expected in models:
-        llm = LLM(model=model)
+        llm = LLM(model=model, is_litellm=True)
         is_anthropic = llm.provider == "anthropic" or llm.provider == "claude"
         assert is_anthropic == expected, f"Failed for model: {model}"
 
@@ -473,7 +468,7 @@ def test_anthropic_model_detection():
 def test_anthropic_message_formatting(anthropic_llm, system_message, user_message):
     """Test Anthropic message formatting with fixtures."""
     # Test when first message is system
-    print(f"lorenze system_message: {system_message}")
+
     formatted_messages, system_msg = anthropic_llm._format_messages_for_anthropic(
         [system_message]
     )
@@ -614,7 +609,7 @@ def test_handle_streaming_tool_calls_with_error(get_weather_tool_schema, mock_em
     def get_weather_error(location):
         raise Exception("Error")
 
-    llm = LLM(model="openai/gpt-4o", stream=True)
+    llm = LLM(model="openai/gpt-4o", stream=True, is_litellm=True)
     response = llm.call(
         messages=[
             {"role": "user", "content": "What is the weather in New York?"},
@@ -638,7 +633,7 @@ def test_handle_streaming_tool_calls_with_error(get_weather_tool_schema, mock_em
 def test_handle_streaming_tool_calls_no_available_functions(
     get_weather_tool_schema, mock_emit
 ):
-    llm = LLM(model="openai/gpt-4o", stream=True)
+    llm = LLM(model="openai/gpt-4o", stream=True, is_litellm=True)
     response = llm.call(
         messages=[
             {"role": "user", "content": "What is the weather in New York?"},
@@ -678,7 +673,7 @@ def test_handle_streaming_tool_calls_no_tools(mock_emit):
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_llm_call_when_stop_is_unsupported(caplog):
-    llm = LLM(model="o1-mini", stop=["stop"])
+    llm = LLM(model="o1-mini", stop=["stop"], is_litellm=True)
     with caplog.at_level(logging.INFO):
         result = llm.call("What is the capital of France?")
         assert "Retrying LLM call without the unsupported 'stop'" in caplog.text
@@ -690,7 +685,12 @@ def test_llm_call_when_stop_is_unsupported(caplog):
 def test_llm_call_when_stop_is_unsupported_when_additional_drop_params_is_provided(
     caplog,
 ):
-    llm = LLM(model="o1-mini", stop=["stop"], additional_drop_params=["another_param"])
+    llm = LLM(
+        model="o1-mini",
+        stop=["stop"],
+        additional_drop_params=["another_param"],
+        is_litellm=True,
+    )
     with caplog.at_level(logging.INFO):
         result = llm.call("What is the capital of France?")
         assert "Retrying LLM call without the unsupported 'stop'" in caplog.text
