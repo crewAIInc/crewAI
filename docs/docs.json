@@ -246,6 +246,7 @@
               {
                 "group": "Observability",
                 "pages": [
+                  "en/observability/tracing",
                   "en/observability/overview",
                   "en/observability/arize-phoenix",
                   "en/observability/braintrust",
