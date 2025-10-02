@@ -10,13 +10,13 @@
   "favicon": "/images/favicon.svg",
   "contextual": {
     "options": [
-      "copy", 
-      "view", 
-      "chatgpt", 
-      "claude", 
-      "perplexity", 
-      "mcp", 
-      "cursor", 
+      "copy",
+      "view",
+      "chatgpt",
+      "claude",
+      "perplexity",
+      "mcp",
+      "cursor",
       "vscode",
       {
         "title": "Request a feature",

@@ -208,7 +208,7 @@ from crewai.tools import BaseTool
 class AsyncCustomTool(BaseTool):
     name: str = "async_custom_tool"
     description: str = "An asynchronous custom tool"
-    
+
     async def _run(self, query: str = "") -> str:
         """Asynchronously run the tool"""
         # Your async implementation here

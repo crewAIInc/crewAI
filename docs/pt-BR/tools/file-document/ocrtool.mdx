@@ -40,13 +40,13 @@ from crewai_tools import OCRTool
 ocr = OCRTool()
 
 agent = Agent(
-    role="OCR", 
-    goal="Extract text", 
+    role="OCR",
+    goal="Extract text",
     tools=[ocr],
 )
 
 task = Task(
-    description="Extract text from https://example.com/invoice.jpg", 
+    description="Extract text from https://example.com/invoice.jpg",
     expected_output="All detected text in plain text",
     agent=agent,
 )
@@ -86,5 +86,3 @@ task = Task(
 crew = Crew(agents=[agent], tasks=[task])
 result = crew.kickoff()
 ```
-
-

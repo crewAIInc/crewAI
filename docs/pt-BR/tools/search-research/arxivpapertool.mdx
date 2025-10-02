@@ -63,7 +63,7 @@ result = crew.kickoff()
 from crewai_tools import ArxivPaperTool
 
 tool = ArxivPaperTool(
-    download_pdfs=True, 
+    download_pdfs=True,
     save_dir="./arxiv_pdfs",
 )
 print(tool.run(search_query="mixture of experts", max_results=3))
@@ -109,5 +109,3 @@ When `download_pdfs=True`, PDFs are saved to disk and the summary mentions saved
 ## Error Handling
 
 - Network issues, invalid XML, and OS errors are handled with informative messages.
-
-
