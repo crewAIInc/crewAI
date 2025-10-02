@@ -40,7 +40,6 @@ class SourceContent:
         If the content is a URL or a local file, returns the source.
         Otherwise, returns the hash of the content.
         """
-
         if self.is_url() or self.path_exists():
             return self.source
 

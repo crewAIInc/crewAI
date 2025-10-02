@@ -11,17 +11,17 @@ from crewai_tools.tools.crewai_platform_tools.crewai_platform_tool_builder impor
 logger = logging.getLogger(__name__)
 
 
-def CrewaiPlatformTools(
+def CrewaiPlatformTools(  # noqa: N802
     apps: list[str],
 ) -> ToolCollection[BaseTool]:
     """Factory function that returns crewai platform tools.
+
     Args:
         apps: List of platform apps to get tools that are available on the platform.
 
     Returns:
         A list of BaseTool instances for platform actions
     """
-
     builder = CrewaiPlatformToolBuilder(apps=apps)
 
     return builder.tools()

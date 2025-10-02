@@ -1,6 +1,5 @@
 import json
 import os
-from typing import Type
 from unittest.mock import MagicMock
 
 from crewai.tools.base_tool import BaseTool
@@ -79,7 +78,7 @@ def oxylabs_api() -> RealtimeClient:
         (OxylabsAmazonProductScraperTool,),
     ],
 )
-def test_tool_initialization(tool_class: Type[BaseTool]):
+def test_tool_initialization(tool_class: type[BaseTool]):
     tool = tool_class(username="username", password="password")
     assert isinstance(tool, tool_class)
 
@@ -93,7 +92,7 @@ def test_tool_initialization(tool_class: Type[BaseTool]):
         (OxylabsAmazonProductScraperTool,),
     ],
 )
-def test_tool_initialization_with_env_vars(tool_class: Type[BaseTool]):
+def test_tool_initialization_with_env_vars(tool_class: type[BaseTool]):
     os.environ["OXYLABS_USERNAME"] = "username"
     os.environ["OXYLABS_PASSWORD"] = "password"
 
@@ -113,7 +112,7 @@ def test_tool_initialization_with_env_vars(tool_class: Type[BaseTool]):
         (OxylabsAmazonProductScraperTool,),
     ],
 )
-def test_tool_initialization_failure(tool_class: Type[BaseTool]):
+def test_tool_initialization_failure(tool_class: type[BaseTool]):
     # making sure env vars are not set
     for key in ["OXYLABS_USERNAME", "OXYLABS_PASSWORD"]:
         if key in os.environ:
@@ -142,7 +141,7 @@ def test_tool_initialization_failure(tool_class: Type[BaseTool]):
     ],
 )
 def test_tool_invocation(
-    tool_class: Type[BaseTool],
+    tool_class: type[BaseTool],
     tool_config: BaseModel,
     oxylabs_api: RealtimeClient,
 ):

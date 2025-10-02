@@ -1,5 +1,3 @@
-from typing import List, Optional, Type
-
 from crewai.tools import BaseTool
 from pydantic import BaseModel, Field
 
@@ -8,11 +6,11 @@ class ContextualAIRerankSchema(BaseModel):
     """Schema for contextual rerank tool."""
 
     query: str = Field(..., description="The search query to rerank documents against")
-    documents: List[str] = Field(..., description="List of document texts to rerank")
-    instruction: Optional[str] = Field(
+    documents: list[str] = Field(..., description="List of document texts to rerank")
+    instruction: str | None = Field(
         default=None, description="Optional instruction for reranking behavior"
     )
-    metadata: Optional[List[str]] = Field(
+    metadata: list[str] | None = Field(
         default=None, description="Optional metadata for each document"
     )
     model: str = Field(
@@ -27,17 +25,19 @@ class ContextualAIRerankTool(BaseTool):
     description: str = (
         "Rerank documents using Contextual AI's instruction-following reranker"
     )
-    args_schema: Type[BaseModel] = ContextualAIRerankSchema
+    args_schema: type[BaseModel] = ContextualAIRerankSchema
 
     api_key: str
-    package_dependencies: List[str] = ["contextual-client"]
+    package_dependencies: list[str] = Field(
+        default_factory=lambda: ["contextual-client"]
+    )
 
     def _run(
         self,
         query: str,
-        documents: List[str],
-        instruction: Optional[str] = None,
-        metadata: Optional[List[str]] = None,
+        documents: list[str],
+        instruction: str | None = None,
+        metadata: list[str] | None = None,
         model: str = "ctxl-rerank-en-v1-instruct",
     ) -> str:
         """Rerank documents using Contextual AI's instruction-following reranker."""
@@ -66,7 +66,9 @@ class ContextualAIRerankTool(BaseTool):
                 payload["metadata"] = metadata
 
             rerank_url = f"{base_url}/rerank"
-            result = requests.post(rerank_url, json=payload, headers=headers)
+            result = requests.post(
+                rerank_url, json=payload, headers=headers, timeout=30
+            )
 
             if result.status_code != 200:
                 raise RuntimeError(

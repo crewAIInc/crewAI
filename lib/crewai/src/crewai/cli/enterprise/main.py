@@ -25,7 +25,7 @@ class EnterpriseConfigureCommand(BaseCommand):
             self._update_oauth_settings(enterprise_url, oauth_config)
 
             console.print(
-                f"✅ Successfully configured CrewAI Enterprise with OAuth2 settings from {enterprise_url}",
+                f"✅ Successfully configured CrewAI AMP with OAuth2 settings from {enterprise_url}",
                 style="bold green",
             )
 

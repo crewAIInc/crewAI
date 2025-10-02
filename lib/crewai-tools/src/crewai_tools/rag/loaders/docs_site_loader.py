@@ -28,7 +28,9 @@ class DocsSiteLoader(BaseLoader):
             response = requests.get(docs_url, timeout=30)
             response.raise_for_status()
         except requests.RequestException as e:
-            raise ValueError(f"Unable to fetch documentation from {docs_url}: {e}")
+            raise ValueError(
+                f"Unable to fetch documentation from {docs_url}: {e}"
+            ) from e
 
         soup = BeautifulSoup(response.text, "html.parser")
 

@@ -2,7 +2,7 @@ from importlib.metadata import version
 import json
 import os
 from platform import architecture, python_version
-from typing import Any, List, Type
+from typing import Any
 
 from crewai.tools import BaseTool, EnvVar
 from pydantic import BaseModel, ConfigDict, Field
@@ -28,9 +28,8 @@ class OxylabsGoogleSearchScraperArgs(BaseModel):
 
 
 class OxylabsGoogleSearchScraperConfig(BaseModel):
-    """
-    Google Search Scraper configuration options:
-    https://developers.oxylabs.io/scraper-apis/web-scraper-api/targets/google/search/search
+    """Google Search Scraper configuration options:
+    https://developers.oxylabs.io/scraper-apis/web-scraper-api/targets/google/search/search.
     """
 
     domain: str | None = Field(
@@ -56,8 +55,7 @@ class OxylabsGoogleSearchScraperConfig(BaseModel):
 
 
 class OxylabsGoogleSearchScraperTool(BaseTool):
-    """
-    Scrape Google Search results with OxylabsGoogleSearchScraperTool.
+    """Scrape Google Search results with OxylabsGoogleSearchScraperTool.
 
     Get Oxylabs account:
     https://dashboard.oxylabs.io/en
@@ -74,26 +72,31 @@ class OxylabsGoogleSearchScraperTool(BaseTool):
     )
     name: str = "Oxylabs Google Search Scraper tool"
     description: str = "Scrape Google Search results with Oxylabs Google Search Scraper"
-    args_schema: Type[BaseModel] = OxylabsGoogleSearchScraperArgs
+    args_schema: type[BaseModel] = OxylabsGoogleSearchScraperArgs
 
     oxylabs_api: RealtimeClient
     config: OxylabsGoogleSearchScraperConfig
-    package_dependencies: List[str] = ["oxylabs"]
-    env_vars: List[EnvVar] = [
-        EnvVar(
-            name="OXYLABS_USERNAME", description="Username for Oxylabs", required=True
-        ),
-        EnvVar(
-            name="OXYLABS_PASSWORD", description="Password for Oxylabs", required=True
-        ),
-    ]
+    package_dependencies: list[str] = Field(default_factory=lambda: ["oxylabs"])
+    env_vars: list[EnvVar] = Field(
+        default_factory=lambda: [
+            EnvVar(
+                name="OXYLABS_USERNAME",
+                description="Username for Oxylabs",
+                required=True,
+            ),
+            EnvVar(
+                name="OXYLABS_PASSWORD",
+                description="Password for Oxylabs",
+                required=True,
+            ),
+        ]
+    )
 
     def __init__(
         self,
         username: str | None = None,
         password: str | None = None,
-        config: OxylabsGoogleSearchScraperConfig
-        | dict = OxylabsGoogleSearchScraperConfig(),
+        config: OxylabsGoogleSearchScraperConfig | dict | None = None,
         **kwargs,
     ):
         bits, _ = architecture()
@@ -124,7 +127,7 @@ class OxylabsGoogleSearchScraperTool(BaseTool):
                 import subprocess
 
                 try:
-                    subprocess.run(["uv", "add", "oxylabs"], check=True)
+                    subprocess.run(["uv", "add", "oxylabs"], check=True)  # noqa: S607
                     from oxylabs import RealtimeClient
 
                     kwargs["oxylabs_api"] = RealtimeClient(
@@ -132,13 +135,15 @@ class OxylabsGoogleSearchScraperTool(BaseTool):
                         password=password,
                         sdk_type=sdk_type,
                     )
-                except subprocess.CalledProcessError:
-                    raise ImportError("Failed to install oxylabs package")
+                except subprocess.CalledProcessError as e:
+                    raise ImportError("Failed to install oxylabs package") from e
             else:
                 raise ImportError(
                     "`oxylabs` package not found, please run `uv add oxylabs`"
                 )
 
+        if config is None:
+            config = OxylabsGoogleSearchScraperConfig()
         super().__init__(config=config, **kwargs)
 
     def _get_credentials_from_env(self) -> tuple[str, str]:

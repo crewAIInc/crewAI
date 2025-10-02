@@ -78,8 +78,8 @@ class BaseAgent(ABC, BaseModel):
         knowledge_sources: Knowledge sources for the agent.
         knowledge_storage: Custom knowledge storage for the agent.
         security_config: Security configuration for the agent, including fingerprinting.
-        apps: List of enterprise applications that the agent can access through CrewAI Enterprise Tools.
-        actions: List of actions that the agent can access through CrewAI Enterprise Tools.
+        apps: List of enterprise applications that the agent can access through CrewAI AMP Tools.
+        actions: List of actions that the agent can access through CrewAI AMP Tools.
 
 
     Methods:

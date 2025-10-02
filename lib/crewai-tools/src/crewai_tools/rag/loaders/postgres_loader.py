@@ -95,6 +95,6 @@ class PostgresLoader(BaseLoader):
             finally:
                 connection.close()
         except psycopg2.Error as e:
-            raise ValueError(f"PostgreSQL database error: {e}")
+            raise ValueError(f"PostgreSQL database error: {e}") from e
         except Exception as e:
-            raise ValueError(f"Failed to load data from PostgreSQL: {e}")
+            raise ValueError(f"Failed to load data from PostgreSQL: {e}") from e

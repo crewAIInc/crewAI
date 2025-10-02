@@ -25,10 +25,10 @@ class YoutubeChannelLoader(BaseLoader):
         """
         try:
             from pytube import Channel
-        except ImportError:
+        except ImportError as e:
             raise ImportError(
                 "YouTube channel support requires pytube. Install with: uv add pytube"
-            )
+            ) from e
 
         channel_url = source.source
 
@@ -93,14 +93,14 @@ class YoutubeChannelLoader(BaseLoader):
 
                             try:
                                 transcript = transcript_list.find_transcript(["en"])
-                            except:
+                            except Exception:
                                 try:
                                     transcript = (
                                         transcript_list.find_generated_transcript(
                                             ["en"]
                                         )
                                     )
-                                except:
+                                except Exception:
                                     transcript = next(iter(transcript_list), None)
 
                             if transcript:
@@ -124,7 +124,7 @@ class YoutubeChannelLoader(BaseLoader):
                                     content_parts.append(
                                         f"   Transcript Preview: {preview}..."
                                     )
-                        except:
+                        except Exception:
                             content_parts.append("   Transcript: Not available")
 
                     except Exception as e:

@@ -1,7 +1,7 @@
 import json
 import os
 import re
-from typing import Any, Dict, List, Literal, Optional, Type, Union, cast, get_origin
+from typing import Any, Literal, Optional, Union, cast, get_origin
 import warnings
 
 from crewai.tools import BaseTool
@@ -25,7 +25,7 @@ class EnterpriseActionTool(BaseTool):
         default="", description="The enterprise action token"
     )
     action_name: str = Field(default="", description="The name of the action")
-    action_schema: Dict[str, Any] = Field(
+    action_schema: dict[str, Any] = Field(
         default={}, description="The schema of the action"
     )
     enterprise_api_base_url: str = Field(
@@ -38,8 +38,8 @@ class EnterpriseActionTool(BaseTool):
         description: str,
         enterprise_action_token: str,
         action_name: str,
-        action_schema: Dict[str, Any],
-        enterprise_api_base_url: Optional[str] = None,
+        action_schema: dict[str, Any],
+        enterprise_api_base_url: str | None = None,
     ):
         self._model_registry = {}
         self._base_name = self._sanitize_name(name)
@@ -56,8 +56,7 @@ class EnterpriseActionTool(BaseTool):
                 field_type = self._process_schema_type(
                     param_details, self._sanitize_name(param_name).title()
                 )
-            except Exception as e:
-                print(f"Warning: Could not process schema for {param_name}: {e}")
+            except Exception:
                 field_type = str
 
             # Create field definition based on requirement
@@ -71,8 +70,7 @@ class EnterpriseActionTool(BaseTool):
                 args_schema = create_model(
                     f"{self._base_name}Schema", **field_definitions
                 )
-            except Exception as e:
-                print(f"Warning: Could not create main schema model: {e}")
+            except Exception:
                 args_schema = create_model(
                     f"{self._base_name}Schema",
                     input_text=(str, Field(description="Input for the action")),
@@ -99,8 +97,8 @@ class EnterpriseActionTool(BaseTool):
         return "".join(word.capitalize() for word in parts if word)
 
     def _extract_schema_info(
-        self, action_schema: Dict[str, Any]
-    ) -> tuple[Dict[str, Any], List[str]]:
+        self, action_schema: dict[str, Any]
+    ) -> tuple[dict[str, Any], list[str]]:
         """Extract schema properties and required fields from action schema."""
         schema_props = (
             action_schema.get("function", {})
@@ -112,7 +110,7 @@ class EnterpriseActionTool(BaseTool):
         )
         return schema_props, required
 
-    def _process_schema_type(self, schema: Dict[str, Any], type_name: str) -> Type[Any]:
+    def _process_schema_type(self, schema: dict[str, Any], type_name: str) -> type[Any]:
         """Process a JSON schema and return appropriate Python type."""
         if "anyOf" in schema:
             any_of_types = schema["anyOf"]
@@ -121,8 +119,8 @@ class EnterpriseActionTool(BaseTool):
 
             if non_null_types:
                 base_type = self._process_schema_type(non_null_types[0], type_name)
-                return Optional[base_type] if is_nullable else base_type
-            return cast(Type[Any], Optional[str])
+                return Optional[base_type] if is_nullable else base_type  # noqa: UP045
+            return cast(type[Any], Optional[str])  # noqa: UP045
 
         if "oneOf" in schema:
             return self._process_schema_type(schema["oneOf"][0], type_name)
@@ -141,7 +139,7 @@ class EnterpriseActionTool(BaseTool):
         if json_type == "array":
             items_schema = schema.get("items", {"type": "string"})
             item_type = self._process_schema_type(items_schema, f"{type_name}Item")
-            return List[item_type]
+            return list[item_type]
 
         if json_type == "object":
             return self._create_nested_model(schema, type_name)
@@ -149,8 +147,8 @@ class EnterpriseActionTool(BaseTool):
         return self._map_json_type_to_python(json_type)
 
     def _create_nested_model(
-        self, schema: Dict[str, Any], model_name: str
-    ) -> Type[Any]:
+        self, schema: dict[str, Any], model_name: str
+    ) -> type[Any]:
         """Create a nested Pydantic model for complex objects."""
         full_model_name = f"{self._base_name}{model_name}"
 
@@ -172,8 +170,7 @@ class EnterpriseActionTool(BaseTool):
                 prop_type = self._process_schema_type(
                     prop_schema, f"{model_name}{self._sanitize_name(prop_name).title()}"
                 )
-            except Exception as e:
-                print(f"Warning: Could not process schema for {prop_name}: {e}")
+            except Exception:
                 prop_type = str
 
             field_definitions[prop_name] = self._create_field_definition(
@@ -184,12 +181,11 @@ class EnterpriseActionTool(BaseTool):
             nested_model = create_model(full_model_name, **field_definitions)
             self._model_registry[full_model_name] = nested_model
             return nested_model
-        except Exception as e:
-            print(f"Warning: Could not create nested model {full_model_name}: {e}")
+        except Exception:
             return dict
 
     def _create_field_definition(
-        self, field_type: Type[Any], is_required: bool, description: str
+        self, field_type: type[Any], is_required: bool, description: str
     ) -> tuple:
         """Create Pydantic field definition based on type and requirement."""
         if is_required:
@@ -197,11 +193,11 @@ class EnterpriseActionTool(BaseTool):
         if get_origin(field_type) is Union:
             return (field_type, Field(default=None, description=description))
         return (
-            Optional[field_type],
+            Optional[field_type],  # noqa: UP045
             Field(default=None, description=description),
         )
 
-    def _map_json_type_to_python(self, json_type: str) -> Type[Any]:
+    def _map_json_type_to_python(self, json_type: str) -> type[Any]:
         """Map basic JSON schema types to Python types."""
         type_mapping = {
             "string": str,
@@ -214,7 +210,7 @@ class EnterpriseActionTool(BaseTool):
         }
         return type_mapping.get(json_type, str)
 
-    def _get_required_nullable_fields(self) -> List[str]:
+    def _get_required_nullable_fields(self) -> list[str]:
         """Get a list of required nullable fields from the action schema."""
         schema_props, required = self._extract_schema_info(self.action_schema)
 
@@ -226,7 +222,7 @@ class EnterpriseActionTool(BaseTool):
 
         return required_nullable_fields
 
-    def _is_nullable_type(self, schema: Dict[str, Any]) -> bool:
+    def _is_nullable_type(self, schema: dict[str, Any]) -> bool:
         """Check if a schema represents a nullable type."""
         if "anyOf" in schema:
             return any(t.get("type") == "null" for t in schema["anyOf"])
@@ -238,7 +234,7 @@ class EnterpriseActionTool(BaseTool):
             cleaned_kwargs = {}
             for key, value in kwargs.items():
                 if value is not None:
-                    cleaned_kwargs[key] = value
+                    cleaned_kwargs[key] = value  # noqa: PERF403
 
             required_nullable_fields = self._get_required_nullable_fields()
 
@@ -276,7 +272,7 @@ class EnterpriseActionKitToolAdapter:
     def __init__(
         self,
         enterprise_action_token: str,
-        enterprise_api_base_url: Optional[str] = None,
+        enterprise_api_base_url: str | None = None,
     ):
         """Initialize the adapter with an enterprise action token."""
         self._set_enterprise_action_token(enterprise_action_token)
@@ -286,7 +282,7 @@ class EnterpriseActionKitToolAdapter:
             enterprise_api_base_url or get_enterprise_api_base_url()
         )
 
-    def tools(self) -> List[BaseTool]:
+    def tools(self) -> list[BaseTool]:
         """Get the list of tools created from enterprise actions."""
         if self._tools is None:
             self._fetch_actions()
@@ -304,13 +300,12 @@ class EnterpriseActionKitToolAdapter:
 
             raw_data = response.json()
             if "actions" not in raw_data:
-                print(f"Unexpected API response structure: {raw_data}")
                 return
 
             parsed_schema = {}
             action_categories = raw_data["actions"]
 
-            for integration_type, action_list in action_categories.items():
+            for action_list in action_categories.values():
                 if isinstance(action_list, list):
                     for action in action_list:
                         action_name = action.get("name")
@@ -328,15 +323,14 @@ class EnterpriseActionKitToolAdapter:
 
             self._actions_schema = parsed_schema
 
-        except Exception as e:
-            print(f"Error fetching actions: {e}")
+        except Exception:
             import traceback
 
             traceback.print_exc()
 
     def _generate_detailed_description(
-        self, schema: Dict[str, Any], indent: int = 0
-    ) -> List[str]:
+        self, schema: dict[str, Any], indent: int = 0
+    ) -> list[str]:
         """Generate detailed description for nested schema structures."""
         descriptions = []
         indent_str = "  " * indent
@@ -413,7 +407,7 @@ class EnterpriseActionKitToolAdapter:
 
         self._tools = tools
 
-    def _set_enterprise_action_token(self, enterprise_action_token: Optional[str]):
+    def _set_enterprise_action_token(self, enterprise_action_token: str | None):
         if enterprise_action_token and not enterprise_action_token.startswith("PK_"):
             warnings.warn(
                 "Legacy token detected, please consider using the new Enterprise Action Auth token. Check out our docs for more information https://docs.crewai.com/en/enterprise/features/integrations.",

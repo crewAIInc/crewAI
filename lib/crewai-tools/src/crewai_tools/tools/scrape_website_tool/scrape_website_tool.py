@@ -1,7 +1,8 @@
 import os
 import re
-from typing import Any, Optional, Type
+from typing import Any
 
+from pydantic import Field
 import requests
 
 
@@ -12,7 +13,7 @@ try:
 except ImportError:
     BEAUTIFULSOUP_AVAILABLE = False
 from crewai.tools import BaseTool
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 
 class FixedScrapeWebsiteToolSchema(BaseModel):
@@ -28,22 +29,24 @@ class ScrapeWebsiteToolSchema(FixedScrapeWebsiteToolSchema):
 class ScrapeWebsiteTool(BaseTool):
     name: str = "Read website content"
     description: str = "A tool that can be used to read a website content."
-    args_schema: Type[BaseModel] = ScrapeWebsiteToolSchema
-    website_url: Optional[str] = None
-    cookies: Optional[dict] = None
-    headers: Optional[dict] = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36",
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9",
-        "Accept-Language": "en-US,en;q=0.9",
-        "Referer": "https://www.google.com/",
-        "Connection": "keep-alive",
-        "Upgrade-Insecure-Requests": "1",
-    }
+    args_schema: type[BaseModel] = ScrapeWebsiteToolSchema
+    website_url: str | None = None
+    cookies: dict | None = None
+    headers: dict | None = Field(
+        default_factory=lambda: {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9",
+            "Accept-Language": "en-US,en;q=0.9",
+            "Referer": "https://www.google.com/",
+            "Connection": "keep-alive",
+            "Upgrade-Insecure-Requests": "1",
+        }
+    )
 
     def __init__(
         self,
-        website_url: Optional[str] = None,
-        cookies: Optional[dict] = None,
+        website_url: str | None = None,
+        cookies: dict | None = None,
         **kwargs,
     ):
         super().__init__(**kwargs)
@@ -80,5 +83,4 @@ class ScrapeWebsiteTool(BaseTool):
         text = "The following text is scraped website content:\n\n"
         text += parsed.get_text(" ")
         text = re.sub("[ \t]+", " ", text)
-        text = re.sub("\\s+\n\\s+", "\n", text)
-        return text
+        return re.sub("\\s+\n\\s+", "\n", text)

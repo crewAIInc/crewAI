@@ -1,7 +1,6 @@
-from typing import Optional, Type
+from pydantic import BaseModel, Field
 
 from crewai_tools.rag.data_types import DataType
-from pydantic import BaseModel, Field
 
 from ..rag.rag_tool import RagTool
 
@@ -26,9 +25,9 @@ class MDXSearchTool(RagTool):
     description: str = (
         "A tool that can be used to semantic search a query from a MDX's content."
     )
-    args_schema: Type[BaseModel] = MDXSearchToolSchema
+    args_schema: type[BaseModel] = MDXSearchToolSchema
 
-    def __init__(self, mdx: Optional[str] = None, **kwargs):
+    def __init__(self, mdx: str | None = None, **kwargs):
         super().__init__(**kwargs)
         if mdx is not None:
             self.add(mdx)
@@ -42,7 +41,7 @@ class MDXSearchTool(RagTool):
     def _run(
         self,
         search_query: str,
-        mdx: Optional[str] = None,
+        mdx: str | None = None,
         similarity_threshold: float | None = None,
         limit: int | None = None,
     ) -> str:

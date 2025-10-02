@@ -1,5 +1,5 @@
 import os
-from typing import TYPE_CHECKING, Any, Dict, List
+from typing import TYPE_CHECKING, Any
 
 from crewai.tools import BaseTool, EnvVar
 from pydantic import Field
@@ -10,13 +10,15 @@ if TYPE_CHECKING:
 
 
 class ApifyActorsTool(BaseTool):
-    env_vars: List[EnvVar] = [
-        EnvVar(
-            name="APIFY_API_TOKEN",
-            description="API token for Apify platform access",
-            required=True,
-        ),
-    ]
+    env_vars: list[EnvVar] = Field(
+        default_factory=lambda: [
+            EnvVar(
+                name="APIFY_API_TOKEN",
+                description="API token for Apify platform access",
+                required=True,
+            ),
+        ]
+    )
     """Tool that runs Apify Actors.
 
        To use, you should have the environment variable `APIFY_API_TOKEN` set
@@ -48,7 +50,7 @@ class ApifyActorsTool(BaseTool):
                 print(f"Content: {result.get('markdown', 'N/A')[:100]}...")
     """
     actor_tool: "_ApifyActorsTool" = Field(description="Apify Actor Tool")
-    package_dependencies: List[str] = ["langchain-apify"]
+    package_dependencies: list[str] = Field(default_factory=lambda: ["langchain-apify"])
 
     def __init__(self, actor_name: str, *args: Any, **kwargs: Any) -> None:
         if not os.environ.get("APIFY_API_TOKEN"):
@@ -61,11 +63,11 @@ class ApifyActorsTool(BaseTool):
 
         try:
             from langchain_apify import ApifyActorsTool as _ApifyActorsTool
-        except ImportError:
+        except ImportError as e:
             raise ImportError(
                 "Could not import langchain_apify python package. "
                 "Please install it with `pip install langchain-apify` or `uv add langchain-apify`."
-            )
+            ) from e
         actor_tool = _ApifyActorsTool(actor_name)
 
         kwargs.update(
@@ -78,7 +80,7 @@ class ApifyActorsTool(BaseTool):
         )
         super().__init__(*args, **kwargs)
 
-    def _run(self, run_input: Dict[str, Any]) -> List[Dict[str, Any]]:
+    def _run(self, run_input: dict[str, Any]) -> list[dict[str, Any]]:
         """Run the Actor tool with the given input.
 
         Returns:

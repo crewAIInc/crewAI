@@ -21,7 +21,7 @@ dev = [
     "pytest-timeout>=2.4.0",
     "pytest-xdist>=3.8.0",
     "pytest-split>=0.10.0",
-#    "types-requests==2.32.*",
+    "types-requests~=2.31.0.6",
     "types-pyyaml==6.0.*",
     "types-regex==2024.11.6.*",
     "types-appdirs==1.4.*",
@@ -33,6 +33,7 @@ exclude = [
     "lib/crewai/src/crewai/cli/templates",
 ]
 fix = true
+target-version = "py310"
 
 [tool.ruff.lint]
 select = [
@@ -44,6 +45,8 @@ select = [
     "N",      # pep8-naming (naming conventions)
     "W",      # pycodestyle warnings
     "I",      # isort (import formatting)
+    "T",      # flake8-print (print statements)
+#    "D",      # pydocstyle (docstring conventions) disabled until
     "PERF",   # performance issues
     "PIE",    # flake8-pie (unnecessary code)
     "ASYNC",  # async/await best practices
@@ -81,8 +84,8 @@ split-on-trailing-comma = true
 convention = "google"
 
 [tool.ruff.lint.per-file-ignores]
-"lib/crewai/tests/**/*.py" = ["S101", "RET504"]  # Allow assert statements and unnecessary assignments before return in tests
-"lib/crewai-tools/tests/**/*.py" = ["S101", "RET504"]  # Allow assert statements and unnecessary assignments before return in tests
+"lib/crewai/tests/**/*.py" = ["S101", "RET504", "S105", "S106"]  # Allow assert statements, unnecessary assignments, and hardcoded passwords in tests
+"lib/crewai-tools/tests/**/*.py" = ["S101", "RET504", "S105", "S106", "RUF012", "N818", "E402", "RUF043", "S110", "B017"]  # Allow various test-specific patterns
 
 
 [tool.mypy]

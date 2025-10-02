@@ -1,6 +1,7 @@
+from collections.abc import Callable
 import json
 import os
-from typing import Any, Callable, List, Optional, Type
+from typing import Any
 
 
 try:
@@ -16,7 +17,7 @@ except ImportError:
     MatchValue = Any
 
 from crewai.tools import BaseTool, EnvVar
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class QdrantToolSchema(BaseModel):
@@ -26,11 +27,11 @@ class QdrantToolSchema(BaseModel):
         ...,
         description="The query to search retrieve relevant information from the Qdrant database. Pass only the query, not the question.",
     )
-    filter_by: Optional[str] = Field(
+    filter_by: str | None = Field(
         default=None,
         description="Filter by properties. Pass only the properties, not the question.",
     )
-    filter_value: Optional[str] = Field(
+    filter_value: str | None = Field(
         default=None,
         description="Filter by value. Pass only the value, not the question.",
     )
@@ -51,33 +52,37 @@ class QdrantVectorSearchTool(BaseTool):
         qdrant_api_key: Authentication key for Qdrant
     """
 
-    model_config = {"arbitrary_types_allowed": True}
+    model_config = ConfigDict(arbitrary_types_allowed=True)
     client: QdrantClient = None
     name: str = "QdrantVectorSearchTool"
     description: str = "A tool to search the Qdrant database for relevant information on internal documents."
-    args_schema: Type[BaseModel] = QdrantToolSchema
-    query: Optional[str] = None
-    filter_by: Optional[str] = None
-    filter_value: Optional[str] = None
-    collection_name: Optional[str] = None
-    limit: Optional[int] = Field(default=3)
+    args_schema: type[BaseModel] = QdrantToolSchema
+    query: str | None = None
+    filter_by: str | None = None
+    filter_value: str | None = None
+    collection_name: str | None = None
+    limit: int | None = Field(default=3)
     score_threshold: float = Field(default=0.35)
     qdrant_url: str = Field(
         ...,
         description="The URL of the Qdrant server",
     )
-    qdrant_api_key: Optional[str] = Field(
+    qdrant_api_key: str | None = Field(
         default=None,
         description="The API key for the Qdrant server",
     )
-    custom_embedding_fn: Optional[Callable] = Field(
+    custom_embedding_fn: Callable | None = Field(
         default=None,
         description="A custom embedding function to use for vectorization. If not provided, the default model will be used.",
     )
-    package_dependencies: List[str] = ["qdrant-client"]
-    env_vars: List[EnvVar] = [
-        EnvVar(name="OPENAI_API_KEY", description="API key for OpenAI", required=True)
-    ]
+    package_dependencies: list[str] = Field(default_factory=lambda: ["qdrant-client"])
+    env_vars: list[EnvVar] = Field(
+        default_factory=lambda: [
+            EnvVar(
+                name="OPENAI_API_KEY", description="API key for OpenAI", required=True
+            )
+        ]
+    )
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -95,7 +100,7 @@ class QdrantVectorSearchTool(BaseTool):
             ):
                 import subprocess
 
-                subprocess.run(["uv", "add", "qdrant-client"], check=True)
+                subprocess.run(["uv", "add", "qdrant-client"], check=True)  # noqa: S607
             else:
                 raise ImportError(
                     "The 'qdrant-client' package is required to use the QdrantVectorSearchTool. "
@@ -105,8 +110,8 @@ class QdrantVectorSearchTool(BaseTool):
     def _run(
         self,
         query: str,
-        filter_by: Optional[str] = None,
-        filter_value: Optional[str] = None,
+        filter_by: str | None = None,
+        filter_value: str | None = None,
     ) -> str:
         """Execute vector similarity search on Qdrant.
 
@@ -122,7 +127,6 @@ class QdrantVectorSearchTool(BaseTool):
             ImportError: If qdrant-client is not installed
             ValueError: If Qdrant credentials are missing
         """
-
         if not self.qdrant_url:
             raise ValueError("QDRANT_URL is not set")
 
@@ -175,7 +179,7 @@ class QdrantVectorSearchTool(BaseTool):
         import openai
 
         client = openai.Client(api_key=os.getenv("OPENAI_API_KEY"))
-        embedding = (
+        return (
             client.embeddings.create(
                 input=[query],
                 model=embedding_model,
@@ -183,4 +187,3 @@ class QdrantVectorSearchTool(BaseTool):
             .data[0]
             .embedding
         )
-        return embedding

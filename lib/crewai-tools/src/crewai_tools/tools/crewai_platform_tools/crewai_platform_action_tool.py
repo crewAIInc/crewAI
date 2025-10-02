@@ -1,14 +1,13 @@
-"""
-Crewai Enterprise Tools
-"""
+"""Crewai Enterprise Tools."""
+
 import json
 import re
 from typing import Any, Optional, Union, cast, get_origin
 
+from crewai.tools import BaseTool
 from pydantic import Field, create_model
 import requests
 
-from crewai.tools import BaseTool
 from crewai_tools.tools.crewai_platform_tools.misc import (
     get_platform_api_base_url,
     get_platform_integration_token,
@@ -20,9 +19,9 @@ class AllOfSchemaAnalyzer:
 
     def __init__(self, schemas: list[dict[str, Any]]):
         self.schemas = schemas
-        self._explicit_types = []
-        self._merged_properties = {}
-        self._merged_required = []
+        self._explicit_types: list[str] = []
+        self._merged_properties: dict[str, Any] = {}
+        self._merged_required: list[str] = []
         self._analyze_schemas()
 
     def _analyze_schemas(self) -> None:
@@ -98,12 +97,12 @@ class CrewAIPlatformActionTool(BaseTool):
         action_name: str,
         action_schema: dict[str, Any],
     ):
-        self._model_registry = {}
+        self._model_registry: dict[str, type[Any]] = {}
         self._base_name = self._sanitize_name(action_name)
 
         schema_props, required = self._extract_schema_info(action_schema)
 
-        field_definitions = {}
+        field_definitions: dict[str, Any] = {}
         for param_name, param_details in schema_props.items():
             param_desc = param_details.get("description", "")
             is_required = param_name in required
@@ -124,8 +123,7 @@ class CrewAIPlatformActionTool(BaseTool):
                 args_schema = create_model(
                     f"{self._base_name}Schema", **field_definitions
                 )
-            except Exception as e:
-                print(f"Warning: Could not create main schema model: {e}")
+            except Exception:
                 args_schema = create_model(
                     f"{self._base_name}Schema",
                     input_text=(str, Field(description="Input for the action")),
@@ -136,18 +134,24 @@ class CrewAIPlatformActionTool(BaseTool):
                 input_text=(str, Field(description="Input for the action")),
             )
 
-        super().__init__(name=action_name.lower().replace(" ", "_"), description=description, args_schema=args_schema)
+        super().__init__(
+            name=action_name.lower().replace(" ", "_"),
+            description=description,
+            args_schema=args_schema,
+        )
         self.action_name = action_name
         self.action_schema = action_schema
 
-    def _sanitize_name(self, name: str) -> str:
+    @staticmethod
+    def _sanitize_name(name: str) -> str:
         name = name.lower().replace(" ", "_")
         sanitized = re.sub(r"[^a-zA-Z0-9_]", "", name)
         parts = sanitized.split("_")
         return "".join(word.capitalize() for word in parts if word)
 
+    @staticmethod
     def _extract_schema_info(
-        self, action_schema: dict[str, Any]
+        action_schema: dict[str, Any],
     ) -> tuple[dict[str, Any], list[str]]:
         schema_props = (
             action_schema.get("function", {})
@@ -172,7 +176,9 @@ class CrewAIPlatformActionTool(BaseTool):
         # Handle primitive types and simple constructs
         return self._process_primitive_schema(schema, type_name)
 
-    def _process_composite_schema(self, schema: dict[str, Any], type_name: str) -> Optional[type[Any]]:
+    def _process_composite_schema(
+        self, schema: dict[str, Any], type_name: str
+    ) -> type[Any] | None:
         """Process composite schema types: anyOf, oneOf, allOf."""
         if "anyOf" in schema:
             return self._process_any_of_schema(schema["anyOf"], type_name)
@@ -182,22 +188,28 @@ class CrewAIPlatformActionTool(BaseTool):
             return self._process_all_of_schema(schema["allOf"], type_name)
         return None
 
-    def _process_any_of_schema(self, any_of_types: list[dict[str, Any]], type_name: str) -> type[Any]:
+    def _process_any_of_schema(
+        self, any_of_types: list[dict[str, Any]], type_name: str
+    ) -> type[Any]:
         """Process anyOf schema - creates Union of possible types."""
         is_nullable = any(t.get("type") == "null" for t in any_of_types)
         non_null_types = [t for t in any_of_types if t.get("type") != "null"]
 
         if not non_null_types:
-            return cast(type[Any], Optional[str])  # fallback for only-null case
+            return cast(
+                type[Any], cast(object, str | None)
+            )  # fallback for only-null case
 
         base_type = (
             self._process_schema_type(non_null_types[0], type_name)
             if len(non_null_types) == 1
             else self._create_union_type(non_null_types, type_name, "AnyOf")
         )
-        return Optional[base_type] if is_nullable else base_type
+        return base_type | None if is_nullable else base_type  # type: ignore[return-value]
 
-    def _process_one_of_schema(self, one_of_types: list[dict[str, Any]], type_name: str) -> type[Any]:
+    def _process_one_of_schema(
+        self, one_of_types: list[dict[str, Any]], type_name: str
+    ) -> type[Any]:
         """Process oneOf schema - creates Union of mutually exclusive types."""
         return (
             self._process_schema_type(one_of_types[0], type_name)
@@ -205,22 +217,28 @@ class CrewAIPlatformActionTool(BaseTool):
             else self._create_union_type(one_of_types, type_name, "OneOf")
         )
 
-    def _process_all_of_schema(self, all_of_schemas: list[dict[str, Any]], type_name: str) -> type[Any]:
+    def _process_all_of_schema(
+        self, all_of_schemas: list[dict[str, Any]], type_name: str
+    ) -> type[Any]:
         """Process allOf schema - merges schemas that must all be satisfied."""
         if len(all_of_schemas) == 1:
             return self._process_schema_type(all_of_schemas[0], type_name)
         return self._merge_all_of_schemas(all_of_schemas, type_name)
 
-    def _create_union_type(self, schemas: list[dict[str, Any]], type_name: str, prefix: str) -> type[Any]:
+    def _create_union_type(
+        self, schemas: list[dict[str, Any]], type_name: str, prefix: str
+    ) -> type[Any]:
         """Create a Union type from multiple schemas."""
-        return Union[
+        return Union[  # type: ignore  # noqa: UP007
             tuple(
                 self._process_schema_type(schema, f"{type_name}{prefix}{i}")
                 for i, schema in enumerate(schemas)
             )
         ]
 
-    def _process_primitive_schema(self, schema: dict[str, Any], type_name: str) -> type[Any]:
+    def _process_primitive_schema(
+        self, schema: dict[str, Any], type_name: str
+    ) -> type[Any]:
         """Process primitive schema types: string, number, array, object, etc."""
         json_type = schema.get("type", "string")
 
@@ -246,12 +264,16 @@ class CrewAIPlatformActionTool(BaseTool):
         # Fall back to the base JSON type for now
         return self._map_json_type_to_python(json_type)
 
-    def _process_array_schema(self, schema: dict[str, Any], type_name: str) -> type[Any]:
+    def _process_array_schema(
+        self, schema: dict[str, Any], type_name: str
+    ) -> type[Any]:
         items_schema = schema.get("items", {"type": "string"})
         item_type = self._process_schema_type(items_schema, f"{type_name}Item")
-        return list[item_type]
+        return list[item_type]  # type: ignore
 
-    def _merge_all_of_schemas(self, schemas: list[dict[str, Any]], type_name: str) -> type[Any]:
+    def _merge_all_of_schemas(
+        self, schemas: list[dict[str, Any]], type_name: str
+    ) -> type[Any]:
         schema_analyzer = AllOfSchemaAnalyzer(schemas)
 
         if schema_analyzer.has_consistent_type():
@@ -261,12 +283,14 @@ class CrewAIPlatformActionTool(BaseTool):
             return self._create_merged_object_model(
                 schema_analyzer.get_merged_properties(),
                 schema_analyzer.get_merged_required_fields(),
-                type_name
+                type_name,
             )
 
         return schema_analyzer.get_fallback_type()
 
-    def _create_merged_object_model(self, properties: dict[str, Any], required: list[str], model_name: str) -> type[Any]:
+    def _create_merged_object_model(
+        self, properties: dict[str, Any], required: list[str], model_name: str
+    ) -> type[Any]:
         full_model_name = f"{self._base_name}{model_name}AllOf"
 
         if full_model_name in self._model_registry:
@@ -275,7 +299,9 @@ class CrewAIPlatformActionTool(BaseTool):
         if not properties:
             return dict
 
-        field_definitions = self._build_field_definitions(properties, required, model_name)
+        field_definitions = self._build_field_definitions(
+            properties, required, model_name
+        )
 
         try:
             merged_model = create_model(full_model_name, **field_definitions)
@@ -284,7 +310,9 @@ class CrewAIPlatformActionTool(BaseTool):
         except Exception:
             return dict
 
-    def _build_field_definitions(self, properties: dict[str, Any], required: list[str], model_name: str) -> dict[str, Any]:
+    def _build_field_definitions(
+        self, properties: dict[str, Any], required: list[str], model_name: str
+    ) -> dict[str, Any]:
         field_definitions = {}
 
         for prop_name, prop_schema in properties.items():
@@ -304,7 +332,9 @@ class CrewAIPlatformActionTool(BaseTool):
 
         return field_definitions
 
-    def _create_nested_model(self, schema: dict[str, Any], model_name: str) -> type[Any]:
+    def _create_nested_model(
+        self, schema: dict[str, Any], model_name: str
+    ) -> type[Any]:
         full_model_name = f"{self._base_name}{model_name}"
 
         if full_model_name in self._model_registry:
@@ -333,11 +363,10 @@ class CrewAIPlatformActionTool(BaseTool):
             )
 
         try:
-            nested_model = create_model(full_model_name, **field_definitions)
+            nested_model = create_model(full_model_name, **field_definitions)  # type: ignore
             self._model_registry[full_model_name] = nested_model
             return nested_model
-        except Exception as e:
-            print(f"Warning: Could not create nested model {full_model_name}: {e}")
+        except Exception:
             return dict
 
     def _create_field_definition(
@@ -348,7 +377,7 @@ class CrewAIPlatformActionTool(BaseTool):
         if get_origin(field_type) is Union:
             return (field_type, Field(default=None, description=description))
         return (
-            Optional[field_type],
+            Optional[field_type],  # noqa: UP045
             Field(default=None, description=description),
         )
 
@@ -382,8 +411,9 @@ class CrewAIPlatformActionTool(BaseTool):
 
     def _run(self, **kwargs) -> str:
         try:
-            cleaned_kwargs = {}
-            cleaned_kwargs = {key: value for key, value in kwargs.items() if value is not None}
+            cleaned_kwargs = {
+                key: value for key, value in kwargs.items() if value is not None
+            }
 
             required_nullable_fields = self._get_required_nullable_fields()
 
@@ -391,8 +421,9 @@ class CrewAIPlatformActionTool(BaseTool):
                 if field_name not in cleaned_kwargs:
                     cleaned_kwargs[field_name] = None
 
-
-            api_url = f"{get_platform_api_base_url()}/actions/{self.action_name}/execute"
+            api_url = (
+                f"{get_platform_api_base_url()}/actions/{self.action_name}/execute"
+            )
             token = get_platform_integration_token()
             headers = {
                 "Authorization": f"Bearer {token}",

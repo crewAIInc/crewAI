@@ -1,13 +1,11 @@
-"""
-Crewai Enterprise Tools
-"""
+"""Crewai Enterprise Tools."""
 
 import json
 import logging
 import os
-import typing as t
 
 from crewai.tools import BaseTool
+
 from crewai_tools.adapters.enterprise_adapter import EnterpriseActionKitToolAdapter
 from crewai_tools.adapters.tool_collection import ToolCollection
 
@@ -15,11 +13,11 @@ from crewai_tools.adapters.tool_collection import ToolCollection
 logger = logging.getLogger(__name__)
 
 
-def CrewaiEnterpriseTools(
-    enterprise_token: t.Optional[str] = None,
-    actions_list: t.Optional[t.List[str]] = None,
-    enterprise_action_kit_project_id: t.Optional[str] = None,
-    enterprise_action_kit_project_url: t.Optional[str] = None,
+def CrewaiEnterpriseTools(  # noqa: N802
+    enterprise_token: str | None = None,
+    actions_list: list[str] | None = None,
+    enterprise_action_kit_project_id: str | None = None,
+    enterprise_action_kit_project_url: str | None = None,
 ) -> ToolCollection[BaseTool]:
     """Factory function that returns crewai enterprise tools.
 
@@ -34,7 +32,6 @@ def CrewaiEnterpriseTools(
     Returns:
         A ToolCollection of BaseTool instances for enterprise actions
     """
-
     import warnings
 
     warnings.warn(
@@ -68,7 +65,7 @@ def CrewaiEnterpriseTools(
 
 
 # ENTERPRISE INJECTION ONLY
-def _parse_actions_list(actions_list: t.Optional[t.List[str]]) -> t.List[str] | None:
+def _parse_actions_list(actions_list: list[str] | None) -> list[str] | None:
     """Parse a string representation of a list of tool names to a list of tool names.
 
     Args:
