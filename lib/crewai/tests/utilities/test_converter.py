@@ -322,7 +322,7 @@ def test_generate_model_description_list_field():
         items: list[int]
 
     description = generate_model_description(ModelWithListField)
-    expected_description = '{\n  "items": list[int]\n}'
+    expected_description = '{\n  "items": List[int]\n}'
     assert description == expected_description
 
 
