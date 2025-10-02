@@ -1,9 +1,6 @@
-import os
 from datetime import datetime
+import os
 from unittest.mock import Mock, patch
-
-import pytest
-from pydantic import Field
 
 from crewai.agent import Agent
 from crewai.agents.crew_agent_executor import CrewAgentExecutor
@@ -49,6 +46,8 @@ from crewai.flow.flow import Flow, listen, start
 from crewai.llm import LLM
 from crewai.task import Task
 from crewai.tools.base_tool import BaseTool
+from pydantic import Field
+import pytest
 
 
 @pytest.fixture(scope="module")
@@ -517,7 +516,6 @@ def test_flow_emits_method_execution_started_event():
 
         @crewai_event_bus.on(MethodExecutionStartedEvent)
         def handle_method_start(source, event):
-            print("event in method name", event.method_name)
             received_events.append(event)
 
         class TestFlow(Flow[dict]):
