@@ -95,6 +95,6 @@ class MySQLLoader(BaseLoader):
             finally:
                 connection.close()
         except pymysql.Error as e:
-            raise ValueError(f"MySQL database error: {e}")
+            raise ValueError(f"MySQL database error: {e}") from e
         except Exception as e:
-            raise ValueError(f"Failed to load data from MySQL: {e}")
+            raise ValueError(f"Failed to load data from MySQL: {e}") from e

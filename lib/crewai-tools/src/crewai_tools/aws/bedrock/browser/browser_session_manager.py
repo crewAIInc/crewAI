@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, Dict, Tuple
+from typing import TYPE_CHECKING
 
 
 if TYPE_CHECKING:
@@ -13,8 +13,7 @@ logger = logging.getLogger(__name__)
 
 
 class BrowserSessionManager:
-    """
-    Manages browser sessions for different threads.
+    """Manages browser sessions for different threads.
 
     This class maintains separate browser sessions for different threads,
     enabling concurrent usage of browsers in multi-threaded environments.
@@ -22,19 +21,17 @@ class BrowserSessionManager:
     """
 
     def __init__(self, region: str = "us-west-2"):
-        """
-        Initialize the browser session manager.
+        """Initialize the browser session manager.
 
         Args:
             region: AWS region for browser client
         """
         self.region = region
-        self._async_sessions: Dict[str, Tuple[BrowserClient, AsyncBrowser]] = {}
-        self._sync_sessions: Dict[str, Tuple[BrowserClient, SyncBrowser]] = {}
+        self._async_sessions: dict[str, tuple[BrowserClient, AsyncBrowser]] = {}
+        self._sync_sessions: dict[str, tuple[BrowserClient, SyncBrowser]] = {}
 
     async def get_async_browser(self, thread_id: str) -> AsyncBrowser:
-        """
-        Get or create an async browser for the specified thread.
+        """Get or create an async browser for the specified thread.
 
         Args:
             thread_id: Unique identifier for the thread requesting the browser
@@ -48,8 +45,7 @@ class BrowserSessionManager:
         return await self._create_async_browser_session(thread_id)
 
     def get_sync_browser(self, thread_id: str) -> SyncBrowser:
-        """
-        Get or create a sync browser for the specified thread.
+        """Get or create a sync browser for the specified thread.
 
         Args:
             thread_id: Unique identifier for the thread requesting the browser
@@ -63,8 +59,7 @@ class BrowserSessionManager:
         return self._create_sync_browser_session(thread_id)
 
     async def _create_async_browser_session(self, thread_id: str) -> AsyncBrowser:
-        """
-        Create a new async browser session for the specified thread.
+        """Create a new async browser session for the specified thread.
 
         Args:
             thread_id: Unique identifier for the thread
@@ -121,8 +116,7 @@ class BrowserSessionManager:
             raise
 
     def _create_sync_browser_session(self, thread_id: str) -> SyncBrowser:
-        """
-        Create a new sync browser session for the specified thread.
+        """Create a new sync browser session for the specified thread.
 
         Args:
             thread_id: Unique identifier for the thread
@@ -179,8 +173,7 @@ class BrowserSessionManager:
             raise
 
     async def close_async_browser(self, thread_id: str) -> None:
-        """
-        Close the async browser session for the specified thread.
+        """Close the async browser session for the specified thread.
 
         Args:
             thread_id: Unique identifier for the thread
@@ -214,8 +207,7 @@ class BrowserSessionManager:
         logger.info(f"Async browser session cleaned up for thread {thread_id}")
 
     def close_sync_browser(self, thread_id: str) -> None:
-        """
-        Close the sync browser session for the specified thread.
+        """Close the sync browser session for the specified thread.
 
         Args:
             thread_id: Unique identifier for the thread

@@ -1,6 +1,6 @@
 import json
 import os
-from typing import Any, Dict, List, Optional, Type
+from typing import Any
 
 from crewai.tools import BaseTool
 from dotenv import load_dotenv
@@ -26,21 +26,21 @@ class BedrockKBRetrieverTool(BaseTool):
     description: str = (
         "Retrieves information from an Amazon Bedrock Knowledge Base given a query"
     )
-    args_schema: Type[BaseModel] = BedrockKBRetrieverToolInput
+    args_schema: type[BaseModel] = BedrockKBRetrieverToolInput
     knowledge_base_id: str = None
-    number_of_results: Optional[int] = 5
-    retrieval_configuration: Optional[Dict[str, Any]] = None
-    guardrail_configuration: Optional[Dict[str, Any]] = None
-    next_token: Optional[str] = None
-    package_dependencies: List[str] = ["boto3"]
+    number_of_results: int | None = 5
+    retrieval_configuration: dict[str, Any] | None = None
+    guardrail_configuration: dict[str, Any] | None = None
+    next_token: str | None = None
+    package_dependencies: list[str] = Field(default_factory=lambda: ["boto3"])
 
     def __init__(
         self,
-        knowledge_base_id: str = None,
-        number_of_results: Optional[int] = 5,
-        retrieval_configuration: Optional[Dict[str, Any]] = None,
-        guardrail_configuration: Optional[Dict[str, Any]] = None,
-        next_token: Optional[str] = None,
+        knowledge_base_id: str | None = None,
+        number_of_results: int | None = 5,
+        retrieval_configuration: dict[str, Any] | None = None,
+        guardrail_configuration: dict[str, Any] | None = None,
+        next_token: str | None = None,
         **kwargs,
     ):
         """Initialize the BedrockKBRetrieverTool with knowledge base configuration.
@@ -72,7 +72,7 @@ class BedrockKBRetrieverTool(BaseTool):
         # Update the description to include the knowledge base details
         self.description = f"Retrieves information from Amazon Bedrock Knowledge Base '{self.knowledge_base_id}' given a query"
 
-    def _build_retrieval_configuration(self) -> Dict[str, Any]:
+    def _build_retrieval_configuration(self) -> dict[str, Any]:
         """Build the retrieval configuration based on provided parameters.
 
         Returns:
@@ -124,9 +124,9 @@ class BedrockKBRetrieverTool(BaseTool):
                     )
 
         except BedrockValidationError as e:
-            raise BedrockValidationError(f"Parameter validation failed: {e!s}")
+            raise BedrockValidationError(f"Parameter validation failed: {e!s}") from e
 
-    def _process_retrieval_result(self, result: Dict[str, Any]) -> Dict[str, Any]:
+    def _process_retrieval_result(self, result: dict[str, Any]) -> dict[str, Any]:
         """Process a single retrieval result from Bedrock Knowledge Base.
 
         Args:
@@ -194,8 +194,10 @@ class BedrockKBRetrieverTool(BaseTool):
         try:
             import boto3
             from botocore.exceptions import ClientError
-        except ImportError:
-            raise ImportError("`boto3` package not found, please run `uv add boto3`")
+        except ImportError as e:
+            raise ImportError(
+                "`boto3` package not found, please run `uv add boto3`"
+            ) from e
 
         try:
             # Initialize the Bedrock Agent Runtime client
@@ -257,6 +259,8 @@ class BedrockKBRetrieverTool(BaseTool):
                 error_code = e.response["Error"].get("Code", "Unknown")
                 error_message = e.response["Error"].get("Message", str(e))
 
-            raise BedrockKnowledgeBaseError(f"Error ({error_code}): {error_message}")
+            raise BedrockKnowledgeBaseError(
+                f"Error ({error_code}): {error_message}"
+            ) from e
         except Exception as e:
-            raise BedrockKnowledgeBaseError(f"Unexpected error: {e!s}")
+            raise BedrockKnowledgeBaseError(f"Unexpected error: {e!s}") from e

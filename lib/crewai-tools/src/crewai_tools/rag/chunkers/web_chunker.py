@@ -1,5 +1,3 @@
-from typing import List, Optional
-
 from crewai_tools.rag.chunkers.base_chunker import BaseChunker
 
 
@@ -8,7 +6,7 @@ class WebsiteChunker(BaseChunker):
         self,
         chunk_size: int = 2500,
         chunk_overlap: int = 250,
-        separators: Optional[List[str]] = None,
+        separators: list[str] | None = None,
         keep_separator: bool = True,
     ):
         if separators is None:

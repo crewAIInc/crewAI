@@ -36,7 +36,7 @@ class JSONLoader(BaseLoader):
                 else json.dumps(response.json(), indent=2)
             )
         except Exception as e:
-            raise ValueError(f"Error fetching JSON from URL {url}: {e!s}")
+            raise ValueError(f"Error fetching JSON from URL {url}: {e!s}") from e
 
     def _is_json_response(self, response) -> bool:
         try:

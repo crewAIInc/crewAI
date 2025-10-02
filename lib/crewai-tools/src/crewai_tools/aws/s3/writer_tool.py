@@ -1,5 +1,4 @@
 import os
-from typing import List, Type
 
 from crewai.tools import BaseTool
 from pydantic import BaseModel, Field
@@ -17,15 +16,17 @@ class S3WriterToolInput(BaseModel):
 class S3WriterTool(BaseTool):
     name: str = "S3 Writer Tool"
     description: str = "Writes content to a file in Amazon S3 given an S3 file path"
-    args_schema: Type[BaseModel] = S3WriterToolInput
-    package_dependencies: List[str] = ["boto3"]
+    args_schema: type[BaseModel] = S3WriterToolInput
+    package_dependencies: list[str] = Field(default_factory=lambda: ["boto3"])
 
     def _run(self, file_path: str, content: str) -> str:
         try:
             import boto3
             from botocore.exceptions import ClientError
-        except ImportError:
-            raise ImportError("`boto3` package not found, please run `uv add boto3`")
+        except ImportError as e:
+            raise ImportError(
+                "`boto3` package not found, please run `uv add boto3`"
+            ) from e
 
         try:
             bucket_name, object_key = self._parse_s3_path(file_path)

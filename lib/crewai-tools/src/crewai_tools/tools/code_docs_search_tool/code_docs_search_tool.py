@@ -1,7 +1,6 @@
-from typing import Optional, Type
+from pydantic import BaseModel, Field
 
 from crewai_tools.rag.data_types import DataType
-from pydantic import BaseModel, Field
 
 from ..rag.rag_tool import RagTool
 
@@ -26,9 +25,9 @@ class CodeDocsSearchTool(RagTool):
     description: str = (
         "A tool that can be used to semantic search a query from a Code Docs content."
     )
-    args_schema: Type[BaseModel] = CodeDocsSearchToolSchema
+    args_schema: type[BaseModel] = CodeDocsSearchToolSchema
 
-    def __init__(self, docs_url: Optional[str] = None, **kwargs):
+    def __init__(self, docs_url: str | None = None, **kwargs):
         super().__init__(**kwargs)
         if docs_url is not None:
             self.add(docs_url)
@@ -42,7 +41,7 @@ class CodeDocsSearchTool(RagTool):
     def _run(
         self,
         search_query: str,
-        docs_url: Optional[str] = None,
+        docs_url: str | None = None,
         similarity_threshold: float | None = None,
         limit: int | None = None,
     ) -> str:

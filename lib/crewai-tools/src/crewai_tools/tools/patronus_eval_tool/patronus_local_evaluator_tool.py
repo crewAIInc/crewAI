@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Any, List, Type
+from typing import TYPE_CHECKING, Any
 
 from crewai.tools import BaseTool
 from pydantic import BaseModel, ConfigDict, Field
@@ -8,7 +8,7 @@ if TYPE_CHECKING:
     from patronus import Client, EvaluationResult
 
 try:
-    import patronus
+    import patronus  # noqa: F401
 
     PYPATRONUS_AVAILABLE = True
 except ImportError:
@@ -34,13 +34,13 @@ class FixedLocalEvaluatorToolSchema(BaseModel):
 class PatronusLocalEvaluatorTool(BaseTool):
     name: str = "Patronus Local Evaluator Tool"
     description: str = "This tool is used to evaluate the model input and output using custom function evaluators."
-    args_schema: Type[BaseModel] = FixedLocalEvaluatorToolSchema
+    args_schema: type[BaseModel] = FixedLocalEvaluatorToolSchema
     client: "Client" = None
     evaluator: str
     evaluated_model_gold_answer: str
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
-    package_dependencies: List[str] = ["patronus"]
+    package_dependencies: list[str] = Field(default_factory=lambda: ["patronus"])
 
     def __init__(
         self,
@@ -59,9 +59,6 @@ class PatronusLocalEvaluatorTool(BaseTool):
             if PYPATRONUS_AVAILABLE:
                 self.client = patronus_client
                 self._generate_description()
-                print(
-                    f"Updating evaluator and gold_answer to: {self.evaluator}, {self.evaluated_model_gold_answer}"
-                )
             else:
                 raise ImportError
         except ImportError:
@@ -73,18 +70,15 @@ class PatronusLocalEvaluatorTool(BaseTool):
                 import subprocess
 
                 try:
-                    subprocess.run(["uv", "add", "patronus"], check=True)
+                    subprocess.run(["uv", "add", "patronus"], check=True)  # noqa: S607
                     self.client = patronus_client
                     self._generate_description()
-                    print(
-                        f"Updating evaluator and gold_answer to: {self.evaluator}, {self.evaluated_model_gold_answer}"
-                    )
-                except subprocess.CalledProcessError:
-                    raise ImportError("Failed to install 'patronus' package")
+                except subprocess.CalledProcessError as e:
+                    raise ImportError("Failed to install 'patronus' package") from e
             else:
                 raise ImportError(
                     "`patronus` package not found, please run `uv add patronus`"
-                )
+                ) from None
 
     def _run(
         self,
@@ -106,8 +100,7 @@ class PatronusLocalEvaluatorTool(BaseTool):
             evaluated_model_gold_answer=evaluated_model_gold_answer,
             tags={},  # Optional metadata, supports arbitrary key-value pairs
         )
-        output = f"Evaluation result: {result.pass_}, Explanation: {result.explanation}"
-        return output
+        return f"Evaluation result: {result.pass_}, Explanation: {result.explanation}"
 
 
 try:
@@ -115,5 +108,5 @@ try:
     if not hasattr(PatronusLocalEvaluatorTool, "_model_rebuilt"):
         PatronusLocalEvaluatorTool.model_rebuild()
         PatronusLocalEvaluatorTool._model_rebuilt = True
-except Exception:
+except Exception:  # noqa: S110
     pass

@@ -1,5 +1,5 @@
 import time
-from typing import Any, Type
+from typing import Any
 
 from crewai.tools import BaseTool
 from pydantic import BaseModel, Field, create_model
@@ -13,8 +13,7 @@ class InvokeCrewAIAutomationInput(BaseModel):
 
 
 class InvokeCrewAIAutomationTool(BaseTool):
-    """
-    A CrewAI tool for invoking external crew/flows APIs.
+    """A CrewAI tool for invoking external crew/flows APIs.
 
     This tool provides CrewAI Platform API integration with external crew services, supporting:
     - Dynamic input schema configuration
@@ -46,7 +45,7 @@ class InvokeCrewAIAutomationTool(BaseTool):
         ...     crew_inputs=custom_inputs,
         ... )
 
-        Example:
+    Example:
         >>> tools = [
         ...     InvokeCrewAIAutomationTool(
         ...         crew_api_url="https://canary-crew-[...].crewai.com",
@@ -64,7 +63,7 @@ class InvokeCrewAIAutomationTool(BaseTool):
 
     name: str = "invoke_amp_automation"
     description: str = "Invokes an CrewAI Platform Automation using API"
-    args_schema: Type[BaseModel] = InvokeCrewAIAutomationInput
+    args_schema: type[BaseModel] = InvokeCrewAIAutomationInput
 
     crew_api_url: str
     crew_bearer_token: str
@@ -77,10 +76,9 @@ class InvokeCrewAIAutomationTool(BaseTool):
         crew_name: str,
         crew_description: str,
         max_polling_time: int = 10 * 60,
-        crew_inputs: dict[str, Any] = None,
+        crew_inputs: dict[str, Any] | None = None,
     ):
-        """
-        Initialize the InvokeCrewAIAutomationTool.
+        """Initialize the InvokeCrewAIAutomationTool.
 
         Args:
             crew_api_url: Base URL of the crew API service
@@ -119,7 +117,7 @@ class InvokeCrewAIAutomationTool(BaseTool):
         )
 
     def _kickoff_crew(self, inputs: dict[str, Any]) -> dict[str, Any]:
-        """Start a new crew task
+        """Start a new crew task.
 
         Args:
             inputs: Dictionary containing the query and other input parameters
@@ -134,12 +132,12 @@ class InvokeCrewAIAutomationTool(BaseTool):
                 "Content-Type": "application/json",
             },
             json={"inputs": inputs},
+            timeout=30,
         )
-        response_json = response.json()
-        return response_json
+        return response.json()
 
     def _get_crew_status(self, crew_id: str) -> dict[str, Any]:
-        """Get the status of a crew task
+        """Get the status of a crew task.
 
         Args:
             crew_id: The ID of the crew task to check
@@ -153,6 +151,7 @@ class InvokeCrewAIAutomationTool(BaseTool):
                 "Authorization": f"Bearer {self.crew_bearer_token}",
                 "Content-Type": "application/json",
             },
+            timeout=30,
         )
         return response.json()
 

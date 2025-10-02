@@ -271,7 +271,7 @@ def update():
 
 @crewai.command()
 def login():
-    """Sign Up/Login to CrewAI Enterprise."""
+    """Sign Up/Login to CrewAI AMP."""
     Settings().clear_user_settings()
     AuthenticationCommand().login()
 
@@ -440,7 +440,7 @@ def enterprise():
 @enterprise.command("configure")
 @click.argument("enterprise_url")
 def enterprise_configure(enterprise_url: str):
-    """Configure CrewAI Enterprise OAuth2 settings from the provided Enterprise URL."""
+    """Configure CrewAI AMP OAuth2 settings from the provided Enterprise URL."""
     enterprise_command = EnterpriseConfigureCommand()
     enterprise_command.configure(enterprise_url)
 

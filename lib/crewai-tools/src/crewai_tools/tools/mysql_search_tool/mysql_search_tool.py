@@ -1,7 +1,8 @@
-from typing import Any, Type
+from typing import Any
+
+from pydantic import BaseModel, Field
 
 from crewai_tools.rag.data_types import DataType
-from pydantic import BaseModel, Field
 
 from ..rag.rag_tool import RagTool
 
@@ -18,7 +19,7 @@ class MySQLSearchToolSchema(BaseModel):
 class MySQLSearchTool(RagTool):
     name: str = "Search a database's table content"
     description: str = "A tool that can be used to semantic search a query from a database table's content."
-    args_schema: Type[BaseModel] = MySQLSearchToolSchema
+    args_schema: type[BaseModel] = MySQLSearchToolSchema
     db_uri: str = Field(..., description="Mandatory database URI")
 
     def __init__(self, table_name: str, **kwargs):
@@ -32,7 +33,7 @@ class MySQLSearchTool(RagTool):
         table_name: str,
         **kwargs: Any,
     ) -> None:
-        super().add(f"SELECT * FROM {table_name};", **kwargs)
+        super().add(f"SELECT * FROM {table_name};", **kwargs)  # noqa: S608
 
     def _run(
         self,

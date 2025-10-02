@@ -1,6 +1,5 @@
 import json
 import os
-from typing import List, Type
 
 from crewai.tools import BaseTool, EnvVar
 from pydantic import BaseModel, Field
@@ -24,14 +23,17 @@ class SerperScrapeWebsiteTool(BaseTool):
         "This tool can extract clean, readable content from any website URL, "
         "optionally including markdown formatting for better structure."
     )
-    args_schema: Type[BaseModel] = SerperScrapeWebsiteInput
-    env_vars: List[EnvVar] = [
-        EnvVar(name="SERPER_API_KEY", description="API key for Serper", required=True),
-    ]
+    args_schema: type[BaseModel] = SerperScrapeWebsiteInput
+    env_vars: list[EnvVar] = Field(
+        default_factory=lambda: [
+            EnvVar(
+                name="SERPER_API_KEY", description="API key for Serper", required=True
+            ),
+        ]
+    )
 
     def _run(self, url: str, include_markdown: bool = True) -> str:
-        """
-        Scrape website content using Serper API.
+        """Scrape website content using Serper API.
 
         Args:
             url: The URL to scrape
@@ -54,7 +56,12 @@ class SerperScrapeWebsiteTool(BaseTool):
             headers = {"X-API-KEY": api_key, "Content-Type": "application/json"}
 
             # Make the API request
-            response = requests.post(api_url, headers=headers, data=payload)
+            response = requests.post(
+                api_url,
+                headers=headers,
+                data=payload,
+                timeout=30,
+            )
 
             # Check if request was successful
             if response.status_code == 200:

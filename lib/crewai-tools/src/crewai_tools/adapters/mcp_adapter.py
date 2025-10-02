@@ -1,17 +1,15 @@
+"""MCPServer for CrewAI."""
+
 from __future__ import annotations
 
 import logging
 from typing import TYPE_CHECKING, Any
 
 from crewai.tools import BaseTool
+
 from crewai_tools.adapters.tool_collection import ToolCollection
 
 
-"""
-MCPServer for CrewAI.
-
-
-"""
 logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
@@ -77,8 +75,8 @@ class MCPServerAdapter:
         serverparams: StdioServerParameters | dict[str, Any],
         *tool_names: str,
         connect_timeout: int = 30,
-    ):
-        """Initialize the MCP Server
+    ) -> None:
+        """Initialize the MCP Server.
 
         Args:
             serverparams: The parameters for the MCP server it supports either a
@@ -88,7 +86,6 @@ class MCPServerAdapter:
             connect_timeout: Connection timeout in seconds to the MCP server (default is 30s).
 
         """
-
         super().__init__()
         self._adapter = None
         self._tools = None
@@ -103,10 +100,10 @@ class MCPServerAdapter:
                 import subprocess
 
                 try:
-                    subprocess.run(["uv", "add", "mcp crewai-tools[mcp]"], check=True)
+                    subprocess.run(["uv", "add", "mcp crewai-tools[mcp]"], check=True)  # noqa: S607
 
-                except subprocess.CalledProcessError:
-                    raise ImportError("Failed to install mcp package")
+                except subprocess.CalledProcessError as e:
+                    raise ImportError("Failed to install mcp package") from e
             else:
                 raise ImportError(
                     "`mcp` package not found, please run `uv add crewai-tools[mcp]`"
@@ -132,7 +129,7 @@ class MCPServerAdapter:
         self._tools = self._adapter.__enter__()
 
     def stop(self):
-        """Stop the MCP server"""
+        """Stop the MCP server."""
         self._adapter.__exit__(None, None, None)
 
     @property
@@ -156,8 +153,7 @@ class MCPServerAdapter:
         return tools_collection
 
     def __enter__(self):
-        """
-        Enter the context manager. Note that `__init__()` already starts the MCP server.
+        """Enter the context manager. Note that `__init__()` already starts the MCP server.
         So tools should already be available.
         """
         return self.tools

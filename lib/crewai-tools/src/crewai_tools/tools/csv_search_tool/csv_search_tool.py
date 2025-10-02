@@ -1,7 +1,6 @@
-from typing import Optional, Type
+from pydantic import BaseModel, Field
 
 from crewai_tools.rag.data_types import DataType
-from pydantic import BaseModel, Field
 
 from ..rag.rag_tool import RagTool
 
@@ -26,9 +25,9 @@ class CSVSearchTool(RagTool):
     description: str = (
         "A tool that can be used to semantic search a query from a CSV's content."
     )
-    args_schema: Type[BaseModel] = CSVSearchToolSchema
+    args_schema: type[BaseModel] = CSVSearchToolSchema
 
-    def __init__(self, csv: Optional[str] = None, **kwargs):
+    def __init__(self, csv: str | None = None, **kwargs):
         super().__init__(**kwargs)
         if csv is not None:
             self.add(csv)
@@ -42,7 +41,7 @@ class CSVSearchTool(RagTool):
     def _run(
         self,
         search_query: str,
-        csv: Optional[str] = None,
+        csv: str | None = None,
         similarity_threshold: float | None = None,
         limit: int | None = None,
     ) -> str:

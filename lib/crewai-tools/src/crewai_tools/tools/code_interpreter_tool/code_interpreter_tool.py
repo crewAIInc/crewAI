@@ -8,14 +8,15 @@ potentially unsafe operations and importing restricted modules.
 import importlib.util
 import os
 from types import ModuleType
-from typing import Any, Dict, List, Optional, Type
+from typing import Any, ClassVar
 
 from crewai.tools import BaseTool
-from crewai_tools.printer import Printer
 from docker import DockerClient, from_env as docker_from_env
 from docker.errors import ImageNotFound, NotFound
 from docker.models.containers import Container
 from pydantic import BaseModel, Field
+
+from crewai_tools.printer import Printer
 
 
 class CodeInterpreterSchema(BaseModel):
@@ -30,7 +31,7 @@ class CodeInterpreterSchema(BaseModel):
         description="Python3 code used to be interpreted in the Docker container. ALWAYS PRINT the final result and the output of the code",
     )
 
-    libraries_used: List[str] = Field(
+    libraries_used: list[str] = Field(
         ...,
         description="List of libraries used in the code with proper installing names separated by commas. Example: numpy,pandas,beautifulsoup4",
     )
@@ -44,7 +45,7 @@ class SandboxPython:
     environment where harmful operations are blocked.
     """
 
-    BLOCKED_MODULES = {
+    BLOCKED_MODULES: ClassVar[set[str]] = {
         "os",
         "sys",
         "subprocess",
@@ -56,7 +57,7 @@ class SandboxPython:
         "builtins",
     }
 
-    UNSAFE_BUILTINS = {
+    UNSAFE_BUILTINS: ClassVar[set[str]] = {
         "exec",
         "eval",
         "open",
@@ -72,9 +73,9 @@ class SandboxPython:
     @staticmethod
     def restricted_import(
         name: str,
-        custom_globals: Optional[Dict[str, Any]] = None,
-        custom_locals: Optional[Dict[str, Any]] = None,
-        fromlist: Optional[List[str]] = None,
+        custom_globals: dict[str, Any] | None = None,
+        custom_locals: dict[str, Any] | None = None,
+        fromlist: list[str] | None = None,
         level: int = 0,
     ) -> ModuleType:
         """A restricted import function that blocks importing of unsafe modules.
@@ -97,7 +98,7 @@ class SandboxPython:
         return __import__(name, custom_globals, custom_locals, fromlist or (), level)
 
     @staticmethod
-    def safe_builtins() -> Dict[str, Any]:
+    def safe_builtins() -> dict[str, Any]:
         """Creates a dictionary of built-in functions with unsafe ones removed.
 
         Returns:
@@ -114,14 +115,14 @@ class SandboxPython:
         return safe_builtins
 
     @staticmethod
-    def exec(code: str, locals: Dict[str, Any]) -> None:
+    def exec(code: str, locals: dict[str, Any]) -> None:
         """Executes Python code in a restricted environment.
 
         Args:
             code: The Python code to execute as a string.
             locals: A dictionary that will be used for local variable storage.
         """
-        exec(code, {"__builtins__": SandboxPython.safe_builtins()}, locals)
+        exec(code, {"__builtins__": SandboxPython.safe_builtins()}, locals)  # noqa: S102
 
 
 class CodeInterpreterTool(BaseTool):
@@ -134,11 +135,11 @@ class CodeInterpreterTool(BaseTool):
 
     name: str = "Code Interpreter"
     description: str = "Interprets Python3 code strings with a final print statement."
-    args_schema: Type[BaseModel] = CodeInterpreterSchema
+    args_schema: type[BaseModel] = CodeInterpreterSchema
     default_image_tag: str = "code-interpreter:latest"
-    code: Optional[str] = None
-    user_dockerfile_path: Optional[str] = None
-    user_docker_base_url: Optional[str] = None
+    code: str | None = None
+    user_dockerfile_path: str | None = None
+    user_docker_base_url: str | None = None
     unsafe_mode: bool = False
 
     @staticmethod
@@ -160,7 +161,6 @@ class CodeInterpreterTool(BaseTool):
         Raises:
             FileNotFoundError: If the Dockerfile cannot be found.
         """
-
         client = (
             docker_from_env()
             if self.user_docker_base_url is None
@@ -181,7 +181,7 @@ class CodeInterpreterTool(BaseTool):
                 if not os.path.exists(dockerfile_path):
                     raise FileNotFoundError(
                         f"Dockerfile not found in {dockerfile_path}"
-                    )
+                    ) from None
 
             client.images.build(
                 path=dockerfile_path,
@@ -205,7 +205,7 @@ class CodeInterpreterTool(BaseTool):
             return self.run_code_unsafe(code, libraries_used)
         return self.run_code_safety(code, libraries_used)
 
-    def _install_libraries(self, container: Container, libraries: List[str]) -> None:
+    def _install_libraries(self, container: Container, libraries: list[str]) -> None:
         """Installs required Python libraries in the Docker container.
 
         Args:
@@ -258,7 +258,7 @@ class CodeInterpreterTool(BaseTool):
 
         try:
             subprocess.run(
-                ["docker", "info"],
+                ["docker", "info"],  # noqa: S607
                 check=True,
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
@@ -275,7 +275,7 @@ class CodeInterpreterTool(BaseTool):
             Printer.print("Docker is not installed", color="bold_purple")
             return False
 
-    def run_code_safety(self, code: str, libraries_used: List[str]) -> str:
+    def run_code_safety(self, code: str, libraries_used: list[str]) -> str:
         """Runs code in the safest available environment.
 
         Attempts to run code in Docker if available, falls back to a restricted
@@ -292,7 +292,7 @@ class CodeInterpreterTool(BaseTool):
             return self.run_code_in_docker(code, libraries_used)
         return self.run_code_in_restricted_sandbox(code)
 
-    def run_code_in_docker(self, code: str, libraries_used: List[str]) -> str:
+    def run_code_in_docker(self, code: str, libraries_used: list[str]) -> str:
         """Runs Python code in a Docker container for safe isolation.
 
         Creates a Docker container, installs the required libraries, executes the code,
@@ -340,7 +340,7 @@ class CodeInterpreterTool(BaseTool):
         except Exception as e:
             return f"An error occurred: {e!s}"
 
-    def run_code_unsafe(self, code: str, libraries_used: List[str]) -> str:
+    def run_code_unsafe(self, code: str, libraries_used: list[str]) -> str:
         """Runs code directly on the host machine without any safety restrictions.
 
         WARNING: This mode is unsafe and should only be used in trusted environments
@@ -354,16 +354,15 @@ class CodeInterpreterTool(BaseTool):
             The value of the 'result' variable from the executed code,
             or an error message if execution failed.
         """
-
         Printer.print("WARNING: Running code in unsafe mode", color="bold_magenta")
         # Install libraries on the host machine
         for library in libraries_used:
-            os.system(f"pip install {library}")
+            os.system(f"pip install {library}")  # noqa: S605
 
         # Execute the code
         try:
             exec_locals = {}
-            exec(code, {}, exec_locals)
+            exec(code, {}, exec_locals)  # noqa: S102
             return exec_locals.get("result", "No result variable found.")
         except Exception as e:
             return f"An error occurred: {e!s}"

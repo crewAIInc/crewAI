@@ -1,5 +1,4 @@
 import json
-from typing import List, Type
 
 from crewai.tools import BaseTool, EnvVar
 from openai import OpenAI
@@ -17,20 +16,22 @@ class ImagePromptSchema(BaseModel):
 class DallETool(BaseTool):
     name: str = "Dall-E Tool"
     description: str = "Generates images using OpenAI's Dall-E model."
-    args_schema: Type[BaseModel] = ImagePromptSchema
+    args_schema: type[BaseModel] = ImagePromptSchema
 
     model: str = "dall-e-3"
     size: str = "1024x1024"
     quality: str = "standard"
     n: int = 1
 
-    env_vars: List[EnvVar] = [
-        EnvVar(
-            name="OPENAI_API_KEY",
-            description="API key for OpenAI services",
-            required=True,
-        ),
-    ]
+    env_vars: list[EnvVar] = Field(
+        default_factory=lambda: [
+            EnvVar(
+                name="OPENAI_API_KEY",
+                description="API key for OpenAI services",
+                required=True,
+            ),
+        ]
+    )
 
     def _run(self, **kwargs) -> str:
         client = OpenAI()
@@ -48,11 +49,9 @@ class DallETool(BaseTool):
             n=self.n,
         )
 
-        image_data = json.dumps(
+        return json.dumps(
             {
                 "image_url": response.data[0].url,
                 "image_description": response.data[0].revised_prompt,
             }
         )
-
-        return image_data

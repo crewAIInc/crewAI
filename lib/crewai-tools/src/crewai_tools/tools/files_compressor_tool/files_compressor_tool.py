@@ -1,6 +1,5 @@
 import os
 import tarfile
-from typing import Optional, Type
 import zipfile
 
 from crewai.tools import BaseTool
@@ -13,7 +12,7 @@ class FileCompressorToolInput(BaseModel):
     input_path: str = Field(
         ..., description="Path to the file or directory to compress."
     )
-    output_path: Optional[str] = Field(
+    output_path: str | None = Field(
         default=None, description="Optional output archive filename."
     )
     overwrite: bool = Field(
@@ -32,12 +31,12 @@ class FileCompressorTool(BaseTool):
         "Compresses a file or directory into an archive (.zip currently supported). "
         "Useful for archiving logs, documents, or backups."
     )
-    args_schema: Type[BaseModel] = FileCompressorToolInput
+    args_schema: type[BaseModel] = FileCompressorToolInput
 
     def _run(
         self,
         input_path: str,
-        output_path: Optional[str] = None,
+        output_path: str | None = None,
         overwrite: bool = False,
         format: str = "zip",
     ) -> str:
@@ -47,7 +46,7 @@ class FileCompressorTool(BaseTool):
         if not output_path:
             output_path = self._generate_output_path(input_path, format)
 
-        FORMAT_EXTENSION = {
+        format_extension = {
             "zip": ".zip",
             "tar": ".tar",
             "tar.gz": ".tar.gz",
@@ -55,10 +54,10 @@ class FileCompressorTool(BaseTool):
             "tar.xz": ".tar.xz",
         }
 
-        if format not in FORMAT_EXTENSION:
-            return f"Compression format '{format}' is not supported. Allowed formats: {', '.join(FORMAT_EXTENSION.keys())}"
-        if not output_path.endswith(FORMAT_EXTENSION[format]):
-            return f"Error: If '{format}' format is chosen, output file must have a '{FORMAT_EXTENSION[format]}' extension."
+        if format not in format_extension:
+            return f"Compression format '{format}' is not supported. Allowed formats: {', '.join(format_extension.keys())}"
+        if not output_path.endswith(format_extension[format]):
+            return f"Error: If '{format}' format is chosen, output file must have a '{format_extension[format]}' extension."
         if not self._prepare_output(output_path, overwrite):
             return (
                 f"Output '{output_path}' already exists and overwrite is set to False."

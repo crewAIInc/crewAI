@@ -1,4 +1,4 @@
-from typing import Any, Type, Union
+from typing import Any
 
 from crewai.tools import BaseTool
 from pydantic import BaseModel, Field
@@ -27,9 +27,9 @@ class NL2SQLTool(BaseTool):
         title="Database URI",
         description="The URI of the database to connect to.",
     )
-    tables: list = []
-    columns: dict = {}
-    args_schema: Type[BaseModel] = NL2SQLToolInput
+    tables: list = Field(default_factory=list)
+    columns: dict = Field(default_factory=dict)
+    args_schema: type[BaseModel] = NL2SQLToolInput
 
     def model_post_init(self, __context: Any) -> None:
         if not SQLALCHEMY_AVAILABLE:
@@ -54,7 +54,7 @@ class NL2SQLTool(BaseTool):
 
     def _fetch_all_available_columns(self, table_name: str):
         return self.execute_sql(
-            f"SELECT column_name, data_type FROM information_schema.columns WHERE table_name = '{table_name}';"
+            f"SELECT column_name, data_type FROM information_schema.columns WHERE table_name = '{table_name}';"  # noqa: S608
         )
 
     def _run(self, sql_query: str):
@@ -69,14 +69,14 @@ class NL2SQLTool(BaseTool):
 
         return data
 
-    def execute_sql(self, sql_query: str) -> Union[list, str]:
+    def execute_sql(self, sql_query: str) -> list | str:
         if not SQLALCHEMY_AVAILABLE:
             raise ImportError(
                 "sqlalchemy is not installed. Please install it with `pip install crewai-tools[sqlalchemy]`"
             )
 
         engine = create_engine(self.db_uri)
-        Session = sessionmaker(bind=engine)
+        Session = sessionmaker(bind=engine)  # noqa: N806
         session = Session()
         try:
             result = session.execute(text(sql_query))
@@ -84,8 +84,9 @@ class NL2SQLTool(BaseTool):
 
             if result.returns_rows:
                 columns = result.keys()
-                data = [dict(zip(columns, row)) for row in result.fetchall()]
-                return data
+                return [
+                    dict(zip(columns, row, strict=False)) for row in result.fetchall()
+                ]
             return f"Query {sql_query} executed successfully"
 
         except Exception as e:

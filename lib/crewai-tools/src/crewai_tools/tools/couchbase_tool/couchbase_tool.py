@@ -1,5 +1,6 @@
+from collections.abc import Callable
 import json
-from typing import Any, Callable, Dict, List, Optional, Type
+from typing import Any
 
 
 try:
@@ -18,7 +19,7 @@ except ImportError:
     VectorSearch = Any
 
 from crewai.tools import BaseTool
-from pydantic import BaseModel, Field, SkipValidation
+from pydantic import BaseModel, ConfigDict, Field, SkipValidation
 
 
 class CouchbaseToolSchema(BaseModel):
@@ -31,35 +32,35 @@ class CouchbaseToolSchema(BaseModel):
 
 
 class CouchbaseFTSVectorSearchTool(BaseTool):
-    """Tool to search the Couchbase database"""
+    """Tool to search the Couchbase database."""
 
-    model_config = {"arbitrary_types_allowed": True}
+    model_config = ConfigDict(arbitrary_types_allowed=True)
     name: str = "CouchbaseFTSVectorSearchTool"
     description: str = "A tool to search the Couchbase database for relevant information on internal documents."
-    args_schema: Type[BaseModel] = CouchbaseToolSchema
-    cluster: SkipValidation[Optional[Cluster]] = None
-    collection_name: Optional[str] = (None,)
-    scope_name: Optional[str] = (None,)
-    bucket_name: Optional[str] = (None,)
-    index_name: Optional[str] = (None,)
-    embedding_key: Optional[str] = Field(
+    args_schema: type[BaseModel] = CouchbaseToolSchema
+    cluster: SkipValidation[Cluster | None] = None
+    collection_name: str | None = (None,)
+    scope_name: str | None = (None,)
+    bucket_name: str | None = (None,)
+    index_name: str | None = (None,)
+    embedding_key: str | None = Field(
         default="embedding",
         description="Name of the field in the search index that stores the vector",
     )
-    scoped_index: Optional[bool] = (
+    scoped_index: bool | None = (
         Field(
             default=True,
             description="Specify whether the index is scoped. Is True by default.",
         ),
     )
-    limit: Optional[int] = Field(default=3)
-    embedding_function: SkipValidation[Callable[[str], List[float]]] = Field(
+    limit: int | None = Field(default=3)
+    embedding_function: SkipValidation[Callable[[str], list[float]]] = Field(
         default=None,
         description="A function that takes a string and returns a list of floats. This is used to embed the query before searching the database.",
     )
 
     def _check_bucket_exists(self) -> bool:
-        """Check if the bucket exists in the linked Couchbase cluster"""
+        """Check if the bucket exists in the linked Couchbase cluster."""
         bucket_manager = self.cluster.buckets()
         try:
             bucket_manager.get_bucket(self.bucket_name)
@@ -69,8 +70,9 @@ class CouchbaseFTSVectorSearchTool(BaseTool):
 
     def _check_scope_and_collection_exists(self) -> bool:
         """Check if the scope and collection exists in the linked Couchbase bucket
-        Raises a ValueError if either is not found"""
-        scope_collection_map: Dict[str, Any] = {}
+        Raises a ValueError if either is not found.
+        """
+        scope_collection_map: dict[str, Any] = {}
 
         # Get a list of all scopes in the bucket
         for scope in self._bucket.collections().get_all_scopes():
@@ -98,7 +100,8 @@ class CouchbaseFTSVectorSearchTool(BaseTool):
 
     def _check_index_exists(self) -> bool:
         """Check if the Search index exists in the linked Couchbase cluster
-        Raises a ValueError if the index does not exist"""
+        Raises a ValueError if the index does not exist.
+        """
         if self.scoped_index:
             all_indexes = [
                 index.name for index in self._scope.search_indexes().get_all_indexes()
@@ -182,7 +185,7 @@ class CouchbaseFTSVectorSearchTool(BaseTool):
             ):
                 import subprocess
 
-                subprocess.run(["uv", "add", "couchbase"], check=True)
+                subprocess.run(["uv", "add", "couchbase"], check=True)  # noqa: S607
             else:
                 raise ImportError(
                     "The 'couchbase' package is required to use the CouchbaseFTSVectorSearchTool. "
@@ -230,7 +233,7 @@ class CouchbaseFTSVectorSearchTool(BaseTool):
             json_response = []
 
             for row in search_iter.rows():
-                json_response.append(row.fields)
+                json_response.append(row.fields)  # noqa: PERF401
         except Exception as e:
             return f"Search failed with error: {e}"
 

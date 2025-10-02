@@ -3,7 +3,7 @@
 import asyncio
 import json
 import logging
-from typing import Any, Dict, List, Tuple, Type
+from typing import Any
 from urllib.parse import urlparse
 
 from crewai.tools import BaseTool
@@ -106,14 +106,12 @@ class BrowserBaseTool(BaseTool):
     async def get_async_page(self, thread_id: str) -> Any:
         """Get or create a page for the specified thread."""
         browser = await self._session_manager.get_async_browser(thread_id)
-        page = await aget_current_page(browser)
-        return page
+        return await aget_current_page(browser)
 
     def get_sync_page(self, thread_id: str) -> Any:
         """Get or create a page for the specified thread."""
         browser = self._session_manager.get_sync_browser(thread_id)
-        page = get_current_page(browser)
-        return page
+        return get_current_page(browser)
 
     def _is_in_asyncio_loop(self) -> bool:
         """Check if we're currently in an asyncio event loop."""
@@ -130,7 +128,7 @@ class NavigateTool(BrowserBaseTool):
 
     name: str = "navigate_browser"
     description: str = "Navigate a browser to the specified URL"
-    args_schema: Type[BaseModel] = NavigateToolInput
+    args_schema: type[BaseModel] = NavigateToolInput
 
     def _run(self, url: str, thread_id: str = "default", **kwargs) -> str:
         """Use the sync tool."""
@@ -174,7 +172,7 @@ class ClickTool(BrowserBaseTool):
 
     name: str = "click_element"
     description: str = "Click on an element with the given CSS selector"
-    args_schema: Type[BaseModel] = ClickToolInput
+    args_schema: type[BaseModel] = ClickToolInput
 
     visible_only: bool = True
     """Whether to consider only visible elements."""
@@ -244,7 +242,7 @@ class NavigateBackTool(BrowserBaseTool):
 
     name: str = "navigate_back"
     description: str = "Navigate back to the previous page"
-    args_schema: Type[BaseModel] = NavigateBackToolInput
+    args_schema: type[BaseModel] = NavigateBackToolInput
 
     def _run(self, thread_id: str = "default", **kwargs) -> str:
         """Use the sync tool."""
@@ -282,7 +280,7 @@ class ExtractTextTool(BrowserBaseTool):
 
     name: str = "extract_text"
     description: str = "Extract all the text on the current webpage"
-    args_schema: Type[BaseModel] = ExtractTextToolInput
+    args_schema: type[BaseModel] = ExtractTextToolInput
 
     def _run(self, thread_id: str = "default", **kwargs) -> str:
         """Use the sync tool."""
@@ -334,7 +332,7 @@ class ExtractHyperlinksTool(BrowserBaseTool):
 
     name: str = "extract_hyperlinks"
     description: str = "Extract all hyperlinks on the current webpage"
-    args_schema: Type[BaseModel] = ExtractHyperlinksToolInput
+    args_schema: type[BaseModel] = ExtractHyperlinksToolInput
 
     def _run(self, thread_id: str = "default", **kwargs) -> str:
         """Use the sync tool."""
@@ -358,7 +356,7 @@ class ExtractHyperlinksTool(BrowserBaseTool):
             for link in soup.find_all("a", href=True):
                 text = link.get_text().strip()
                 href = link["href"]
-                if href.startswith("http") or href.startswith("https"):
+                if href.startswith(("http", "https")):
                     links.append({"text": text, "url": href})
 
             if not links:
@@ -390,7 +388,7 @@ class ExtractHyperlinksTool(BrowserBaseTool):
             for link in soup.find_all("a", href=True):
                 text = link.get_text().strip()
                 href = link["href"]
-                if href.startswith("http") or href.startswith("https"):
+                if href.startswith(("http", "https")):
                     links.append({"text": text, "url": href})
 
             if not links:
@@ -406,7 +404,7 @@ class GetElementsTool(BrowserBaseTool):
 
     name: str = "get_elements"
     description: str = "Get elements from the webpage using a CSS selector"
-    args_schema: Type[BaseModel] = GetElementsToolInput
+    args_schema: type[BaseModel] = GetElementsToolInput
 
     def _run(self, selector: str, thread_id: str = "default", **kwargs) -> str:
         """Use the sync tool."""
@@ -454,7 +452,7 @@ class CurrentWebPageTool(BrowserBaseTool):
 
     name: str = "current_webpage"
     description: str = "Get information about the current webpage"
-    args_schema: Type[BaseModel] = CurrentWebPageToolInput
+    args_schema: type[BaseModel] = CurrentWebPageToolInput
 
     def _run(self, thread_id: str = "default", **kwargs) -> str:
         """Use the sync tool."""
@@ -524,15 +522,14 @@ class BrowserToolkit:
     """
 
     def __init__(self, region: str = "us-west-2"):
-        """
-        Initialize the toolkit
+        """Initialize the toolkit.
 
         Args:
             region: AWS region for the browser client
         """
         self.region = region
         self.session_manager = BrowserSessionManager(region=region)
-        self.tools: List[BaseTool] = []
+        self.tools: list[BaseTool] = []
         self._nest_current_loop()
         self._setup_tools()
 
@@ -562,18 +559,16 @@ class BrowserToolkit:
             CurrentWebPageTool(session_manager=self.session_manager),
         ]
 
-    def get_tools(self) -> List[BaseTool]:
-        """
-        Get the list of browser tools
+    def get_tools(self) -> list[BaseTool]:
+        """Get the list of browser tools.
 
         Returns:
             List of CrewAI tools
         """
         return self.tools
 
-    def get_tools_by_name(self) -> Dict[str, BaseTool]:
-        """
-        Get a dictionary of tools mapped by their names
+    def get_tools_by_name(self) -> dict[str, BaseTool]:
+        """Get a dictionary of tools mapped by their names.
 
         Returns:
             Dictionary of {tool_name: tool}
@@ -581,18 +576,18 @@ class BrowserToolkit:
         return {tool.name: tool for tool in self.tools}
 
     async def cleanup(self) -> None:
-        """Clean up all browser sessions asynchronously"""
+        """Clean up all browser sessions asynchronously."""
         await self.session_manager.close_all_browsers()
         logger.info("All browser sessions cleaned up")
 
     def sync_cleanup(self) -> None:
-        """Clean up all browser sessions from synchronous code"""
+        """Clean up all browser sessions from synchronous code."""
         import asyncio
 
         try:
             loop = asyncio.get_event_loop()
             if loop.is_running():
-                asyncio.create_task(self.cleanup())
+                asyncio.create_task(self.cleanup())  # noqa: RUF006
             else:
                 loop.run_until_complete(self.cleanup())
         except RuntimeError:
@@ -601,9 +596,8 @@ class BrowserToolkit:
 
 def create_browser_toolkit(
     region: str = "us-west-2",
-) -> Tuple[BrowserToolkit, List[BaseTool]]:
-    """
-    Create a BrowserToolkit
+) -> tuple[BrowserToolkit, list[BaseTool]]:
+    """Create a BrowserToolkit.
 
     Args:
         region: AWS region for browser client

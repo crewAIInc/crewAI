@@ -9,10 +9,10 @@ class DOCXLoader(BaseLoader):
     def load(self, source_content: SourceContent, **kwargs) -> LoaderResult:
         try:
             from docx import Document as DocxDocument
-        except ImportError:
+        except ImportError as e:
             raise ImportError(
                 "python-docx is required for DOCX loading. Install with: 'uv pip install python-docx' or pip install crewai-tools[rag]"
-            )
+            ) from e
 
         source_ref = source_content.source_ref
 
@@ -49,10 +49,13 @@ class DOCXLoader(BaseLoader):
                 temp_file.write(response.content)
                 return temp_file.name
         except Exception as e:
-            raise ValueError(f"Error fetching DOCX from URL {url}: {e!s}")
+            raise ValueError(f"Error fetching DOCX from URL {url}: {e!s}") from e
 
     def _load_from_file(
-        self, file_path: str, source_ref: str, DocxDocument
+        self,
+        file_path: str,
+        source_ref: str,
+        DocxDocument,  # noqa: N803
     ) -> LoaderResult:
         try:
             doc = DocxDocument(file_path)
@@ -60,7 +63,7 @@ class DOCXLoader(BaseLoader):
             text_parts = []
             for paragraph in doc.paragraphs:
                 if paragraph.text.strip():
-                    text_parts.append(paragraph.text)
+                    text_parts.append(paragraph.text)  # noqa: PERF401
 
             content = "\n".join(text_parts)
 
@@ -78,4 +81,4 @@ class DOCXLoader(BaseLoader):
             )
 
         except Exception as e:
-            raise ValueError(f"Error loading DOCX file: {e!s}")
+            raise ValueError(f"Error loading DOCX file: {e!s}") from e

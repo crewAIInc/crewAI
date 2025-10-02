@@ -1,7 +1,6 @@
-from typing import Optional, Type
+from pydantic import BaseModel, Field
 
 from crewai_tools.rag.data_types import DataType
-from pydantic import BaseModel, Field
 
 from ..rag.rag_tool import RagTool
 
@@ -25,9 +24,9 @@ class PDFSearchTool(RagTool):
     description: str = (
         "A tool that can be used to semantic search a query from a PDF's content."
     )
-    args_schema: Type[BaseModel] = PDFSearchToolSchema
+    args_schema: type[BaseModel] = PDFSearchToolSchema
 
-    def __init__(self, pdf: Optional[str] = None, **kwargs):
+    def __init__(self, pdf: str | None = None, **kwargs):
         super().__init__(**kwargs)
         if pdf is not None:
             self.add(pdf)
@@ -41,7 +40,7 @@ class PDFSearchTool(RagTool):
     def _run(
         self,
         query: str,
-        pdf: Optional[str] = None,
+        pdf: str | None = None,
         similarity_threshold: float | None = None,
         limit: int | None = None,
     ) -> str:
