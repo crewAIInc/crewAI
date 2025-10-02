@@ -1,10 +1,10 @@
 import ast
 import datetime
-import json
-import time
 from difflib import SequenceMatcher
+import json
 from json import JSONDecodeError
 from textwrap import dedent
+import time
 from typing import TYPE_CHECKING, Any, Union
 
 import json5
@@ -28,6 +28,7 @@ from crewai.utilities.agent_utils import (
     get_tool_names,
     render_text_description_and_args,
 )
+
 
 if TYPE_CHECKING:
     from crewai.agents.agent_builder.base_agent import BaseAgent

@@ -1,16 +1,16 @@
 import asyncio
-import json
-import re
-import uuid
-import warnings
 from collections.abc import Callable
 from concurrent.futures import Future
 from copy import copy as shallow_copy
 from hashlib import md5
+import json
+import re
 from typing import (
     Any,
     cast,
 )
+import uuid
+import warnings
 
 from opentelemetry import baggage
 from opentelemetry.context import attach, detach
@@ -81,6 +81,7 @@ from crewai.utilities.llm_utils import create_llm
 from crewai.utilities.planning_handler import CrewPlanner
 from crewai.utilities.task_output_storage_handler import TaskOutputStorageHandler
 from crewai.utilities.training_handler import CrewTrainingHandler
+
 
 warnings.filterwarnings("ignore", category=SyntaxWarning, module="pysbd")
 

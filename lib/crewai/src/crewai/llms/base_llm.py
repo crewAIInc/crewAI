@@ -4,10 +4,10 @@ This module provides the abstract base class for all LLM implementations
 in CrewAI, including common functionality for native SDK implementations.
 """
 
-import json
-import logging
 from abc import ABC, abstractmethod
 from datetime import datetime
+import json
+import logging
 from typing import Any, Final
 
 from pydantic import BaseModel
@@ -26,6 +26,7 @@ from crewai.events.types.tool_usage_events import (
     ToolUsageStartedEvent,
 )
 from crewai.types.usage_metrics import UsageMetrics
+
 
 DEFAULT_CONTEXT_WINDOW_SIZE: Final[int] = 4096
 DEFAULT_SUPPORTS_STOP_WORDS: Final[bool] = True

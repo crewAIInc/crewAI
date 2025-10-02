@@ -1,14 +1,9 @@
 """Test Agent creation and execution basic functionality."""
 
-# ruff: noqa: S106
 import os
 from unittest import mock
 from unittest.mock import MagicMock, patch
 
-import pytest
-
-from crewai import Agent, Crew, Task
-from crewai.agents.cache import CacheHandler
 from crewai.agents.crew_agent_executor import AgentFinish, CrewAgentExecutor
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.tool_usage_events import ToolUsageFinishedEvent
@@ -19,11 +14,15 @@ from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSourc
 from crewai.llm import LLM
 from crewai.llms.base_llm import BaseLLM
 from crewai.process import Process
-from crewai.tools import tool
 from crewai.tools.tool_calling import InstructorToolCalling
 from crewai.tools.tool_usage import ToolUsage
-from crewai.utilities import RPMController
 from crewai.utilities.errors import AgentRepositoryError
+import pytest
+
+from crewai import Agent, Crew, Task
+from crewai.agents.cache import CacheHandler
+from crewai.tools import tool
+from crewai.utilities import RPMController
 
 
 def test_agent_llm_creation_with_env_vars():
@@ -908,9 +907,8 @@ def test_agent_function_calling_llm():
     crew = Crew(agents=[agent1], tasks=tasks)
     from unittest.mock import patch
 
-    import instructor
-
     from crewai.tools.tool_usage import ToolUsage
+    import instructor
 
     with (
         patch.object(
@@ -2179,9 +2177,8 @@ def test_litellm_auth_error_handling():
 
 def test_crew_agent_executor_litellm_auth_error():
     """Test that CrewAgentExecutor handles LiteLLM authentication errors by raising them."""
-    from litellm.exceptions import AuthenticationError
-
     from crewai.agents.tools_handler import ToolsHandler
+    from litellm.exceptions import AuthenticationError
 
     # Create an agent and executor
     agent = Agent(
