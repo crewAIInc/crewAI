@@ -26,11 +26,11 @@ class YoutubeVideoLoader(BaseLoader):
         """
         try:
             from youtube_transcript_api import YouTubeTranscriptApi
-        except ImportError:
+        except ImportError as e:
             raise ImportError(
                 "YouTube support requires youtube-transcript-api. "
                 "Install with: uv add youtube-transcript-api"
-            )
+            ) from e
 
         video_url = source.source
         video_id = self._extract_video_id(video_url)
@@ -51,10 +51,10 @@ class YoutubeVideoLoader(BaseLoader):
             transcript = None
             try:
                 transcript = transcript_list.find_transcript(["en"])
-            except:
+            except Exception:
                 try:
                     transcript = transcript_list.find_generated_transcript(["en"])
-                except:
+                except Exception:
                     transcript = next(iter(transcript_list))
 
             if transcript:
@@ -84,7 +84,7 @@ class YoutubeVideoLoader(BaseLoader):
 
                     if yt.title:
                         content = f"Title: {yt.title}\n\nAuthor: {yt.author or 'Unknown'}\n\nTranscript:\n{content}"
-                except:
+                except Exception:  # noqa: S110
                     pass
             else:
                 raise ValueError(
@@ -128,7 +128,7 @@ class YoutubeVideoLoader(BaseLoader):
                     query_params = parse_qs(parsed.query)
                     if "v" in query_params:
                         return query_params["v"][0]
-        except:
+        except Exception:  # noqa: S110
             pass
 
         return None

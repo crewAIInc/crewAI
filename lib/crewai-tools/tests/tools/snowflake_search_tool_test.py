@@ -31,7 +31,7 @@ def mock_config():
 
 @pytest.fixture
 def snowflake_tool(mock_config):
-    with patch("snowflake.connector.connect") as mock_connect:
+    with patch("snowflake.connector.connect"):
         tool = SnowflakeSearchTool(config=mock_config)
         yield tool
 

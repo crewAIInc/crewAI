@@ -1,4 +1,4 @@
-from typing import Any, Optional, Type
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -17,7 +17,7 @@ class SerpApiGoogleSearchToolSchema(BaseModel):
     search_query: str = Field(
         ..., description="Mandatory search query you want to use to Google search."
     )
-    location: Optional[str] = Field(
+    location: str | None = Field(
         None, description="Location you want the search to be performed in."
     )
 
@@ -30,7 +30,7 @@ class SerpApiGoogleSearchTool(SerpApiBaseTool):
     description: str = (
         "A tool to perform to perform a Google search with a search_query."
     )
-    args_schema: Type[BaseModel] = SerpApiGoogleSearchToolSchema
+    args_schema: type[BaseModel] = SerpApiGoogleSearchToolSchema
 
     def _run(
         self,

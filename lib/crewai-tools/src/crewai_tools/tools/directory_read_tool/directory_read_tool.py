@@ -1,5 +1,5 @@
 import os
-from typing import Any, Optional, Type
+from typing import Any
 
 from crewai.tools import BaseTool
 from pydantic import BaseModel, Field
@@ -20,10 +20,10 @@ class DirectoryReadTool(BaseTool):
     description: str = (
         "A tool that can be used to recursively list a directory's content."
     )
-    args_schema: Type[BaseModel] = DirectoryReadToolSchema
-    directory: Optional[str] = None
+    args_schema: type[BaseModel] = DirectoryReadToolSchema
+    directory: str | None = None
 
-    def __init__(self, directory: Optional[str] = None, **kwargs):
+    def __init__(self, directory: str | None = None, **kwargs):
         super().__init__(**kwargs)
         if directory is not None:
             self.directory = directory

@@ -9,11 +9,12 @@ from crewai.rag.config.utils import get_rag_client
 from crewai.rag.core.base_client import BaseClient
 from crewai.rag.factory import create_client
 from crewai.rag.types import BaseRecord, SearchResult
+from pydantic import PrivateAttr
+from typing_extensions import Unpack
+
 from crewai_tools.rag.data_types import DataType
 from crewai_tools.rag.misc import sanitize_metadata_for_chromadb
 from crewai_tools.tools.rag.rag_tool import Adapter
-from pydantic import PrivateAttr
-from typing_extensions import Unpack
 
 
 ContentItem: TypeAlias = str | Path | dict[str, Any]
@@ -213,7 +214,7 @@ class CrewAIRagAdapter(Adapter):
                                         ),
                                     }
                                 )
-                        except Exception:
+                        except Exception:  # noqa: S112
                             # Silently skip files that can't be processed
                             continue
             else:

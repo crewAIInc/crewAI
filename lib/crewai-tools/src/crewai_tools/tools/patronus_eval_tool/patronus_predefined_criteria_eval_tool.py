@@ -1,6 +1,6 @@
 import json
 import os
-from typing import Any, Dict, List, Type
+from typing import Any
 
 from crewai.tools import BaseTool
 from pydantic import BaseModel, Field
@@ -8,27 +8,26 @@ import requests
 
 
 class FixedBaseToolSchema(BaseModel):
-    evaluated_model_input: Dict = Field(
+    evaluated_model_input: dict = Field(
         ..., description="The agent's task description in simple text"
     )
-    evaluated_model_output: Dict = Field(
+    evaluated_model_output: dict = Field(
         ..., description="The agent's output of the task"
     )
-    evaluated_model_retrieved_context: Dict = Field(
+    evaluated_model_retrieved_context: dict = Field(
         ..., description="The agent's context"
     )
-    evaluated_model_gold_answer: Dict = Field(
+    evaluated_model_gold_answer: dict = Field(
         ..., description="The agent's gold answer only if available"
     )
-    evaluators: List[Dict[str, str]] = Field(
+    evaluators: list[dict[str, str]] = Field(
         ...,
         description="List of dictionaries containing the evaluator and criteria to evaluate the model input and output. An example input for this field: [{'evaluator': '[evaluator-from-user]', 'criteria': '[criteria-from-user]'}]",
     )
 
 
 class PatronusPredefinedCriteriaEvalTool(BaseTool):
-    """
-    PatronusEvalTool is a tool to automatically evaluate and score agent interactions.
+    """PatronusEvalTool is a tool to automatically evaluate and score agent interactions.
 
     Results are logged to the Patronus platform at app.patronus.ai
     """
@@ -36,16 +35,15 @@ class PatronusPredefinedCriteriaEvalTool(BaseTool):
     name: str = "Call Patronus API tool for evaluation of model inputs and outputs"
     description: str = """This tool calls the Patronus Evaluation API that takes the following arguments:"""
     evaluate_url: str = "https://api.patronus.ai/v1/evaluate"
-    args_schema: Type[BaseModel] = FixedBaseToolSchema
-    evaluators: List[Dict[str, str]] = []
+    args_schema: type[BaseModel] = FixedBaseToolSchema
+    evaluators: list[dict[str, str]] = Field(default_factory=list)
 
-    def __init__(self, evaluators: List[Dict[str, str]], **kwargs: Any):
+    def __init__(self, evaluators: list[dict[str, str]], **kwargs: Any):
         super().__init__(**kwargs)
         if evaluators:
             self.evaluators = evaluators
             self.description = f"This tool calls the Patronus Evaluation API that takes an additional argument in addition to the following new argument:\n evaluators={evaluators}"
             self._generate_description()
-            print(f"Updating judge criteria to: {self.evaluators}")
 
     def _run(
         self,
@@ -94,7 +92,10 @@ class PatronusPredefinedCriteriaEvalTool(BaseTool):
         }
 
         response = requests.post(
-            self.evaluate_url, headers=headers, data=json.dumps(data)
+            self.evaluate_url,
+            headers=headers,
+            data=json.dumps(data),
+            timeout=30,
         )
         if response.status_code != 200:
             raise Exception(

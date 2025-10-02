@@ -1,5 +1,3 @@
-from typing import List, Optional
-
 from crewai_tools.rag.chunkers.base_chunker import BaseChunker
 
 
@@ -8,7 +6,7 @@ class TextChunker(BaseChunker):
         self,
         chunk_size: int = 1500,
         chunk_overlap: int = 150,
-        separators: Optional[List[str]] = None,
+        separators: list[str] | None = None,
         keep_separator: bool = True,
     ):
         if separators is None:
@@ -32,7 +30,7 @@ class DocxChunker(BaseChunker):
         self,
         chunk_size: int = 2500,
         chunk_overlap: int = 250,
-        separators: Optional[List[str]] = None,
+        separators: list[str] | None = None,
         keep_separator: bool = True,
     ):
         if separators is None:
@@ -56,7 +54,7 @@ class MdxChunker(BaseChunker):
         self,
         chunk_size: int = 3000,
         chunk_overlap: int = 300,
-        separators: Optional[List[str]] = None,
+        separators: list[str] | None = None,
         keep_separator: bool = True,
     ):
         if separators is None:

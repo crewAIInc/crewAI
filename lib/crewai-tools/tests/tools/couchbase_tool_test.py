@@ -190,7 +190,7 @@ def test_initialization_success(couchbase_tool, tool_config):
     assert couchbase_tool.embedding_function is not None
     assert couchbase_tool.limit == 5
     assert couchbase_tool.embedding_key == "test_embedding"
-    assert couchbase_tool.scoped_index == True
+    assert couchbase_tool.scoped_index
 
     # Check if helper methods were called during init (via mocks in fixture)
     couchbase_tool.cluster.buckets().get_bucket.assert_called_once_with("test_bucket")

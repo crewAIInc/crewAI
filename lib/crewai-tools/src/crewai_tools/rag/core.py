@@ -1,6 +1,6 @@
 import logging
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any
 from uuid import uuid4
 
 import chromadb
@@ -23,7 +23,7 @@ class EmbeddingService:
         self.model = model
         self.kwargs = kwargs
 
-    def embed_text(self, text: str) -> List[float]:
+    def embed_text(self, text: str) -> list[float]:
         try:
             response = litellm.embedding(model=self.model, input=[text], **self.kwargs)
             return response.data[0]["embedding"]
@@ -31,7 +31,7 @@ class EmbeddingService:
             logger.error(f"Error generating embedding: {e}")
             raise
 
-    def embed_batch(self, texts: List[str]) -> List[List[float]]:
+    def embed_batch(self, texts: list[str]) -> list[list[float]]:
         if not texts:
             return []
 
@@ -46,18 +46,18 @@ class EmbeddingService:
 class Document(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid4()))
     content: str
-    metadata: Dict[str, Any] = Field(default_factory=dict)
+    metadata: dict[str, Any] = Field(default_factory=dict)
     data_type: DataType = DataType.TEXT
-    source: Optional[str] = None
+    source: str | None = None
 
 
 class RAG(Adapter):
     collection_name: str = "crewai_knowledge_base"
-    persist_directory: Optional[str] = None
+    persist_directory: str | None = None
     embedding_model: str = "text-embedding-3-large"
     summarize: bool = False
     top_k: int = 5
-    embedding_config: Dict[str, Any] = Field(default_factory=dict)
+    embedding_config: dict[str, Any] = Field(default_factory=dict)
 
     _client: Any = PrivateAttr()
     _collection: Any = PrivateAttr()
@@ -90,10 +90,10 @@ class RAG(Adapter):
     def add(
         self,
         content: str | Path,
-        data_type: Optional[Union[str, DataType]] = None,
-        metadata: Optional[Dict[str, Any]] = None,
-        loader: Optional[BaseLoader] = None,
-        chunker: Optional[BaseChunker] = None,
+        data_type: str | DataType | None = None,
+        metadata: dict[str, Any] | None = None,
+        loader: BaseLoader | None = None,
+        chunker: BaseChunker | None = None,
         **kwargs: Any,
     ) -> None:
         source_content = SourceContent(content)
@@ -181,7 +181,7 @@ class RAG(Adapter):
         except Exception as e:
             logger.error(f"Failed to add documents to ChromaDB: {e}")
 
-    def query(self, question: str, where: Optional[Dict[str, Any]] = None) -> str:
+    def query(self, question: str, where: dict[str, Any] | None = None) -> str:
         try:
             question_embedding = self._embedding_service.embed_text(question)
 
@@ -228,7 +228,7 @@ class RAG(Adapter):
         except Exception as e:
             logger.error(f"Failed to delete collection: {e}")
 
-    def get_collection_info(self) -> Dict[str, Any]:
+    def get_collection_info(self) -> dict[str, Any]:
         try:
             count = self._collection.count()
             return {
@@ -246,7 +246,7 @@ class RAG(Adapter):
         try:
             if isinstance(data_type, str):
                 return DataType(data_type)
-        except Exception:
+        except Exception:  # noqa: S110
             pass
 
         return content.data_type

@@ -65,7 +65,7 @@ class DataType(str, Enum):
             module = import_module(module_path)
             return getattr(module, class_name)()
         except Exception as e:
-            raise ValueError(f"Error loading chunker for {self}: {e}")
+            raise ValueError(f"Error loading chunker for {self}: {e}") from e
 
     def get_loader(self) -> BaseLoader:
         from importlib import import_module
@@ -100,7 +100,7 @@ class DataType(str, Enum):
             module = import_module(module_path)
             return getattr(module, class_name)()
         except Exception as e:
-            raise ValueError(f"Error loading loader for {self}: {e}")
+            raise ValueError(f"Error loading loader for {self}: {e}") from e
 
 
 class DataTypes:
@@ -117,7 +117,7 @@ class DataTypes:
             try:
                 url = urlparse(content)
                 is_url = (url.scheme and url.netloc) or url.scheme == "file"
-            except Exception:
+            except Exception:  # noqa: S110
                 pass
 
         def get_file_type(path: str) -> DataType | None:

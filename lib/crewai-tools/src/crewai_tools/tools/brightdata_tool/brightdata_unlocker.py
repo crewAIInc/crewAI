@@ -1,5 +1,5 @@
 import os
-from typing import Any, Optional, Type
+from typing import Any
 
 from crewai.tools import BaseTool
 from pydantic import BaseModel, Field
@@ -19,8 +19,7 @@ class BrightDataConfig(BaseModel):
 
 
 class BrightDataUnlockerToolSchema(BaseModel):
-    """
-    Pydantic schema for input parameters used by the BrightDataWebUnlockerTool.
+    """Pydantic schema for input parameters used by the BrightDataWebUnlockerTool.
 
     This schema defines the structure and validation for parameters passed when performing
     a web scraping request using Bright Data's Web Unlocker.
@@ -32,17 +31,16 @@ class BrightDataUnlockerToolSchema(BaseModel):
     """
 
     url: str = Field(..., description="URL to perform the web scraping")
-    format: Optional[str] = Field(
+    format: str | None = Field(
         default="raw", description="Response format (raw is standard)"
     )
-    data_format: Optional[str] = Field(
+    data_format: str | None = Field(
         default="markdown", description="Response data format (html by default)"
     )
 
 
 class BrightDataWebUnlockerTool(BaseTool):
-    """
-    A tool for performing web scraping using the Bright Data Web Unlocker API.
+    """A tool for performing web scraping using the Bright Data Web Unlocker API.
 
     This tool allows automated and programmatic access to web pages by routing requests
     through Bright Data's unlocking and proxy infrastructure, which can bypass bot
@@ -63,17 +61,17 @@ class BrightDataWebUnlockerTool(BaseTool):
 
     name: str = "Bright Data Web Unlocker Scraping"
     description: str = "Tool to perform web scraping using Bright Data Web Unlocker"
-    args_schema: Type[BaseModel] = BrightDataUnlockerToolSchema
+    args_schema: type[BaseModel] = BrightDataUnlockerToolSchema
     _config = BrightDataConfig.from_env()
     base_url: str = ""
     api_key: str = ""
     zone: str = ""
-    url: Optional[str] = None
+    url: str | None = None
     format: str = "raw"
     data_format: str = "markdown"
 
     def __init__(
-        self, url: str = None, format: str = "raw", data_format: str = "markdown"
+        self, url: str | None = None, format: str = "raw", data_format: str = "markdown"
     ):
         super().__init__()
         self.base_url = self._config.API_URL
@@ -90,9 +88,9 @@ class BrightDataWebUnlockerTool(BaseTool):
 
     def _run(
         self,
-        url: str = None,
-        format: str = None,
-        data_format: str = None,
+        url: str | None = None,
+        format: str | None = None,
+        data_format: str | None = None,
         **kwargs: Any,
     ) -> Any:
         url = url or self.url
@@ -122,8 +120,9 @@ class BrightDataWebUnlockerTool(BaseTool):
         }
 
         try:
-            response = requests.post(self.base_url, json=payload, headers=headers)
-            print(f"Status Code: {response.status_code}")
+            response = requests.post(
+                self.base_url, json=payload, headers=headers, timeout=30
+            )
             response.raise_for_status()
 
             return response.text

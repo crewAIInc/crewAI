@@ -1,4 +1,4 @@
-from typing import Any, List, Type
+from typing import Any
 
 from crewai.tools import BaseTool
 from pydantic import BaseModel, Field
@@ -10,7 +10,7 @@ class ContextualAICreateAgentSchema(BaseModel):
     agent_name: str = Field(..., description="Name for the new agent")
     agent_description: str = Field(..., description="Description for the new agent")
     datastore_name: str = Field(..., description="Name for the new datastore")
-    document_paths: List[str] = Field(..., description="List of file paths to upload")
+    document_paths: list[str] = Field(..., description="List of file paths to upload")
 
 
 class ContextualAICreateAgentTool(BaseTool):
@@ -20,11 +20,13 @@ class ContextualAICreateAgentTool(BaseTool):
     description: str = (
         "Create a new Contextual AI RAG agent with documents and datastore"
     )
-    args_schema: Type[BaseModel] = ContextualAICreateAgentSchema
+    args_schema: type[BaseModel] = ContextualAICreateAgentSchema
 
     api_key: str
     contextual_client: Any = None
-    package_dependencies: List[str] = ["contextual-client"]
+    package_dependencies: list[str] = Field(
+        default_factory=lambda: ["contextual-client"]
+    )
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -32,17 +34,17 @@ class ContextualAICreateAgentTool(BaseTool):
             from contextual import ContextualAI
 
             self.contextual_client = ContextualAI(api_key=self.api_key)
-        except ImportError:
+        except ImportError as e:
             raise ImportError(
                 "contextual-client package is required. Install it with: pip install contextual-client"
-            )
+            ) from e
 
     def _run(
         self,
         agent_name: str,
         agent_description: str,
         datastore_name: str,
-        document_paths: List[str],
+        document_paths: list[str],
     ) -> str:
         """Create a complete RAG pipeline with documents."""
         try:

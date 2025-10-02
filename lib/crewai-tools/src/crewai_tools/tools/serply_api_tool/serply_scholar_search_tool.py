@@ -1,5 +1,5 @@
 import os
-from typing import Any, List, Optional, Type
+from typing import Any
 from urllib.parse import urlencode
 
 from crewai.tools import BaseTool, EnvVar
@@ -21,25 +21,26 @@ class SerplyScholarSearchTool(BaseTool):
     description: str = (
         "A tool to perform scholarly literature search with a search_query."
     )
-    args_schema: Type[BaseModel] = SerplyScholarSearchToolSchema
+    args_schema: type[BaseModel] = SerplyScholarSearchToolSchema
     search_url: str = "https://api.serply.io/v1/scholar/"
-    hl: Optional[str] = "us"
-    proxy_location: Optional[str] = "US"
-    headers: Optional[dict] = {}
-    env_vars: List[EnvVar] = [
-        EnvVar(
-            name="SERPLY_API_KEY",
-            description="API key for Serply services",
-            required=True,
-        ),
-    ]
+    hl: str | None = "us"
+    proxy_location: str | None = "US"
+    headers: dict | None = Field(default_factory=dict)
+    env_vars: list[EnvVar] = Field(
+        default_factory=lambda: [
+            EnvVar(
+                name="SERPLY_API_KEY",
+                description="API key for Serply services",
+                required=True,
+            ),
+        ]
+    )
 
-    def __init__(self, hl: str = "us", proxy_location: Optional[str] = "US", **kwargs):
-        """
-        param: hl (str): host Language code to display results in
+    def __init__(self, hl: str = "us", proxy_location: str | None = "US", **kwargs):
+        """param: hl (str): host Language code to display results in
             (reference https://developers.google.com/custom-search/docs/xml_results?hl=en#wsInterfaceLanguages)
         proxy_location: (str): Specify the proxy location for the search, specifically for a specific country results.
-             ['US', 'CA', 'IE', 'GB', 'FR', 'DE', 'SE', 'IN', 'JP', 'KR', 'SG', 'AU', 'BR'] (defaults to US)
+             ['US', 'CA', 'IE', 'GB', 'FR', 'DE', 'SE', 'IN', 'JP', 'KR', 'SG', 'AU', 'BR'] (defaults to US).
         """
         super().__init__(**kwargs)
         self.hl = hl
@@ -64,7 +65,12 @@ class SerplyScholarSearchTool(BaseTool):
         # build the url
         url = f"{self.search_url}{urlencode(query_payload)}"
 
-        response = requests.request("GET", url, headers=self.headers)
+        response = requests.request(
+            "GET",
+            url,
+            headers=self.headers,
+            timeout=30,
+        )
         articles = response.json().get("articles", "")
 
         if not articles:
@@ -90,7 +96,7 @@ class SerplyScholarSearchTool(BaseTool):
                         ]
                     )
                 )
-            except KeyError:
+            except KeyError:  # noqa: PERF203
                 continue
 
         content = "\n".join(string)

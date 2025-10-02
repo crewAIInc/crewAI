@@ -2,7 +2,6 @@ from datetime import datetime, timezone
 import json
 import os
 import time
-from typing import List, Optional, Type
 
 from crewai.tools import BaseTool
 from dotenv import load_dotenv
@@ -24,22 +23,22 @@ class BedrockInvokeAgentToolInput(BaseModel):
 class BedrockInvokeAgentTool(BaseTool):
     name: str = "Bedrock Agent Invoke Tool"
     description: str = "An agent responsible for policy analysis."
-    args_schema: Type[BaseModel] = BedrockInvokeAgentToolInput
+    args_schema: type[BaseModel] = BedrockInvokeAgentToolInput
     agent_id: str = None
     agent_alias_id: str = None
     session_id: str = None
     enable_trace: bool = False
     end_session: bool = False
-    package_dependencies: List[str] = ["boto3"]
+    package_dependencies: list[str] = Field(default_factory=lambda: ["boto3"])
 
     def __init__(
         self,
-        agent_id: str = None,
-        agent_alias_id: str = None,
-        session_id: str = None,
+        agent_id: str | None = None,
+        agent_alias_id: str | None = None,
+        session_id: str | None = None,
         enable_trace: bool = False,
         end_session: bool = False,
-        description: Optional[str] = None,
+        description: str | None = None,
         **kwargs,
     ):
         """Initialize the BedrockInvokeAgentTool with agent configuration.
@@ -90,14 +89,16 @@ class BedrockInvokeAgentTool(BaseTool):
                 raise BedrockValidationError("session_id must be a string")
 
         except BedrockValidationError as e:
-            raise BedrockValidationError(f"Parameter validation failed: {e!s}")
+            raise BedrockValidationError(f"Parameter validation failed: {e!s}") from e
 
     def _run(self, query: str) -> str:
         try:
             import boto3
             from botocore.exceptions import ClientError
-        except ImportError:
-            raise ImportError("`boto3` package not found, please run `uv add boto3`")
+        except ImportError as e:
+            raise ImportError(
+                "`boto3` package not found, please run `uv add boto3`"
+            ) from e
 
         try:
             # Initialize the Bedrock Agent Runtime client
@@ -175,9 +176,9 @@ Below is the users query or task. Complete it and answer it consicely and to the
                 error_code = e.response["Error"].get("Code", "Unknown")
                 error_message = e.response["Error"].get("Message", str(e))
 
-            raise BedrockAgentError(f"Error ({error_code}): {error_message}")
+            raise BedrockAgentError(f"Error ({error_code}): {error_message}") from e
         except BedrockAgentError:
             # Re-raise BedrockAgentError exceptions
             raise
         except Exception as e:
-            raise BedrockAgentError(f"Unexpected error: {e!s}")
+            raise BedrockAgentError(f"Unexpected error: {e!s}") from e

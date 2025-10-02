@@ -1,5 +1,3 @@
-from typing import Optional, Type
-
 from pydantic import BaseModel, Field
 
 from ..rag.rag_tool import RagTool
@@ -25,9 +23,9 @@ class XMLSearchTool(RagTool):
     description: str = (
         "A tool that can be used to semantic search a query from a XML's content."
     )
-    args_schema: Type[BaseModel] = XMLSearchToolSchema
+    args_schema: type[BaseModel] = XMLSearchToolSchema
 
-    def __init__(self, xml: Optional[str] = None, **kwargs):
+    def __init__(self, xml: str | None = None, **kwargs):
         super().__init__(**kwargs)
         if xml is not None:
             self.add(xml)
@@ -38,7 +36,7 @@ class XMLSearchTool(RagTool):
     def _run(
         self,
         search_query: str,
-        xml: Optional[str] = None,
+        xml: str | None = None,
         similarity_threshold: float | None = None,
         limit: int | None = None,
     ) -> str:

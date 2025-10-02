@@ -1,6 +1,5 @@
 import logging
 import os
-from typing import List
 
 from crewai.tools import BaseTool
 from pydantic import Field, create_model
@@ -13,9 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 class ZapierActionTool(BaseTool):
-    """
-    A tool that wraps a Zapier action
-    """
+    """A tool that wraps a Zapier action."""
 
     name: str = Field(description="Tool name")
     description: str = Field(description="Tool description")
@@ -23,7 +20,7 @@ class ZapierActionTool(BaseTool):
     api_key: str = Field(description="Zapier API key")
 
     def _run(self, **kwargs) -> str:
-        """Execute the Zapier action"""
+        """Execute the Zapier action."""
         headers = {"x-api-key": self.api_key, "Content-Type": "application/json"}
 
         instructions = kwargs.pop(
@@ -43,7 +40,11 @@ class ZapierActionTool(BaseTool):
 
         execute_url = f"{ACTIONS_URL}/{self.action_id}/execute/"
         response = requests.request(
-            "POST", execute_url, headers=headers, json=action_params
+            "POST",
+            execute_url,
+            headers=headers,
+            json=action_params,
+            timeout=30,
         )
 
         response.raise_for_status()
@@ -52,13 +53,11 @@ class ZapierActionTool(BaseTool):
 
 
 class ZapierActionsAdapter:
-    """
-    Adapter for Zapier Actions
-    """
+    """Adapter for Zapier Actions."""
 
     api_key: str
 
-    def __init__(self, api_key: str = None):
+    def __init__(self, api_key: str | None = None):
         self.api_key = api_key or os.getenv("ZAPIER_API_KEY")
         if not self.api_key:
             logger.error("Zapier Actions API key is required")
@@ -68,14 +67,18 @@ class ZapierActionsAdapter:
         headers = {
             "x-api-key": self.api_key,
         }
-        response = requests.request("GET", ACTIONS_URL, headers=headers)
+        response = requests.request(
+            "GET",
+            ACTIONS_URL,
+            headers=headers,
+            timeout=30,
+        )
         response.raise_for_status()
 
-        response_json = response.json()
-        return response_json
+        return response.json()
 
-    def tools(self) -> List[BaseTool]:
-        """Convert Zapier actions to BaseTool instances"""
+    def tools(self) -> list[BaseTool]:
+        """Convert Zapier actions to BaseTool instances."""
         actions_response = self.get_zapier_actions()
         tools = []
 

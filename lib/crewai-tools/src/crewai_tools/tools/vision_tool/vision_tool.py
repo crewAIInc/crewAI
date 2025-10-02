@@ -1,10 +1,10 @@
 import base64
 from pathlib import Path
-from typing import List, Optional, Type
+from typing import Any
 
 from crewai import LLM
 from crewai.tools import BaseTool, EnvVar
-from pydantic import BaseModel, PrivateAttr, field_validator
+from pydantic import BaseModel, Field, PrivateAttr, field_validator
 
 
 class ImagePromptSchema(BaseModel):
@@ -13,6 +13,7 @@ class ImagePromptSchema(BaseModel):
     image_path_url: str = "The image path or URL."
 
     @field_validator("image_path_url")
+    @classmethod
     def validate_image_path_url(cls, v: str) -> str:
         if v.startswith("http"):
             return v
@@ -43,19 +44,21 @@ class VisionTool(BaseTool):
     description: str = (
         "This tool uses OpenAI's Vision API to describe the contents of an image."
     )
-    args_schema: Type[BaseModel] = ImagePromptSchema
-    env_vars: List[EnvVar] = [
-        EnvVar(
-            name="OPENAI_API_KEY",
-            description="API key for OpenAI services",
-            required=True,
-        ),
-    ]
+    args_schema: type[BaseModel] = ImagePromptSchema
+    env_vars: list[EnvVar] = Field(
+        default_factory=lambda: [
+            EnvVar(
+                name="OPENAI_API_KEY",
+                description="API key for OpenAI services",
+                required=True,
+            ),
+        ]
+    )
 
     _model: str = PrivateAttr(default="gpt-4o-mini")
-    _llm: Optional[LLM] = PrivateAttr(default=None)
+    _llm: LLM | None = PrivateAttr(default=None)
 
-    def __init__(self, llm: Optional[LLM] = None, model: str = "gpt-4o-mini", **kwargs):
+    def __init__(self, llm: LLM | None = None, model: str = "gpt-4o-mini", **kwargs):
         """Initialize the vision tool.
 
         Args:
@@ -76,7 +79,7 @@ class VisionTool(BaseTool):
     def model(self, value: str) -> None:
         """Set the model identifier and reset LLM if it was auto-created."""
         self._model = value
-        if self._llm is not None and self._llm._model != value:
+        if self._llm is not None and getattr(self._llm, "model", None) != value:
             self._llm = None
 
     @property
@@ -103,21 +106,19 @@ class VisionTool(BaseTool):
                 except Exception as e:
                     return f"Error processing image: {e!s}"
 
-            response = self.llm.call(
-                messages=[
-                    {
-                        "role": "user",
-                        "content": [
-                            {"type": "text", "text": "What's in this image?"},
-                            {
-                                "type": "image_url",
-                                "image_url": {"url": image_data},
-                            },
-                        ],
-                    },
-                ],
-            )
-            return response
+            messages: list[dict[str, Any]] = [
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": "What's in this image?"},
+                        {
+                            "type": "image_url",
+                            "image_url": {"url": image_data},
+                        },
+                    ],
+                },
+            ]
+            return self.llm.call(messages=messages)
         except Exception as e:
             return f"An error occurred: {e!s}"
 

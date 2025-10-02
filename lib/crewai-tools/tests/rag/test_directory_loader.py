@@ -111,7 +111,7 @@ class TestDirectoryLoader:
 
     def test_processing_error_handling(self, temp_directory):
         self._create_file(temp_directory, "valid.txt")
-        error_file = self._create_file(temp_directory, "error.txt")
+        self._create_file(temp_directory, "error.txt")
 
         loader = DirectoryLoader()
         original_method = loader._process_single_file

@@ -1,4 +1,4 @@
-"""CrewAI Platform Tools
+"""CrewAI Platform Tools.
 
 This module provides tools for integrating with various platform applications
 through the CrewAI platform API.

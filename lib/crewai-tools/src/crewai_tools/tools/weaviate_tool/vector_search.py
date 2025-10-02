@@ -1,6 +1,6 @@
 import json
 import os
-from typing import Any, List, Optional, Type
+from typing import Any
 
 
 try:
@@ -30,26 +30,28 @@ class WeaviateToolSchema(BaseModel):
 
 
 class WeaviateVectorSearchTool(BaseTool):
-    """Tool to search the Weaviate database"""
+    """Tool to search the Weaviate database."""
 
-    package_dependencies: List[str] = ["weaviate-client"]
+    package_dependencies: list[str] = Field(default_factory=lambda: ["weaviate-client"])
     name: str = "WeaviateVectorSearchTool"
     description: str = "A tool to search the Weaviate database for relevant information on internal documents."
-    args_schema: Type[BaseModel] = WeaviateToolSchema
-    query: Optional[str] = None
-    vectorizer: Optional[Vectorizers] = None
-    generative_model: Optional[str] = None
-    collection_name: Optional[str] = None
-    limit: Optional[int] = Field(default=3)
-    headers: Optional[dict] = None
-    alpha: Optional[int] = Field(default=0.75)
-    env_vars: List[EnvVar] = [
-        EnvVar(
-            name="OPENAI_API_KEY",
-            description="OpenAI API key for embedding generation and retrieval",
-            required=True,
-        ),
-    ]
+    args_schema: type[BaseModel] = WeaviateToolSchema
+    query: str | None = None
+    vectorizer: Vectorizers | None = None
+    generative_model: str | None = None
+    collection_name: str | None = None
+    limit: int | None = Field(default=3)
+    headers: dict | None = None
+    alpha: int | None = Field(default=0.75)
+    env_vars: list[EnvVar] = Field(
+        default_factory=lambda: [
+            EnvVar(
+                name="OPENAI_API_KEY",
+                description="OpenAI API key for embedding generation and retrieval",
+                required=True,
+            ),
+        ]
+    )
     weaviate_cluster_url: str = Field(
         ...,
         description="The URL of the Weaviate cluster",
@@ -58,7 +60,6 @@ class WeaviateVectorSearchTool(BaseTool):
         ...,
         description="The API key for the Weaviate cluster",
     )
-    package_dependencies: List[str] = ["weaviate-client"]
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -86,7 +87,7 @@ class WeaviateVectorSearchTool(BaseTool):
             ):
                 import subprocess
 
-                subprocess.run(["uv", "pip", "install", "weaviate-client"], check=True)
+                subprocess.run(["uv", "pip", "install", "weaviate-client"], check=True)  # noqa: S607
 
             else:
                 raise ImportError(
