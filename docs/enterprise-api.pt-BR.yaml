@@ -3,38 +3,38 @@ info:
   title: CrewAI AMP API
   description: |
     REST API para interagir com suas crews implantadas no CrewAI AMP.
-    
+
     ## Introdução
-    
+
     1. **Encontre a URL da sua crew**: Obtenha sua URL única no painel do CrewAI AMP
     2. **Copie os exemplos**: Use os exemplos de cada endpoint como modelo
     3. **Substitua os placeholders**: Atualize URLs e tokens com seus valores reais
     4. **Teste com suas ferramentas**: Use cURL, Postman ou seu cliente preferido
-    
+
     ## Autenticação
-    
+
     Todas as requisições exigem um token bearer. Existem dois tipos:
-    
+
     - **Bearer Token**: Token em nível de organização para operações completas
     - **User Bearer Token**: Token com escopo de usuário com permissões limitadas
-    
+
     Você encontra os tokens na aba Status da sua crew no painel do CrewAI AMP.
-    
+
     ## Documentação de Referência
-    
+
     Este documento fornece exemplos completos para cada endpoint:
-    
+
     - **Formatos de requisição** com parâmetros obrigatórios e opcionais
     - **Exemplos de resposta** para sucesso e erro
     - **Amostras de código** em várias linguagens
     - **Padrões de autenticação** com uso correto de Bearer token
-    
+
     Copie os exemplos e personalize com sua URL e tokens reais.
-    
+
     ## Fluxo
-    
+
     1. **Descubra os inputs** usando `GET /inputs`
-    2. **Inicie a execução** usando `POST /kickoff`  
+    2. **Inicie a execução** usando `POST /kickoff`
     3. **Monitore o progresso** usando `GET /status/{kickoff_id}`
   version: 1.0.0
   contact:
@@ -52,7 +52,7 @@ paths:
       summary: Obter Inputs Requeridos
       description: |
         **📋 Exemplo de Referência** - *Mostra o formato da requisição. Para testar com sua crew real, copie o cURL e substitua URL + token.*
-        
+
         Retorna a lista de parâmetros de entrada que sua crew espera.
       operationId: getRequiredInputs
       responses:
@@ -81,7 +81,7 @@ paths:
       summary: Iniciar Execução da Crew
       description: |
         **📋 Exemplo de Referência** - *Mostra o formato da requisição. Para testar com sua crew real, copie o cURL e substitua URL + token.*
-        
+
         Inicia uma nova execução da crew com os inputs fornecidos e retorna um kickoff ID.
       operationId: startCrewExecution
       requestBody:
@@ -102,7 +102,7 @@ paths:
                     interests: "games, tech, ai, relaxing hikes, amazing food"
                     duration: "7 days"
                     age: "35"
-        
+
       responses:
         '200':
           description: Execução iniciada com sucesso
@@ -125,7 +125,7 @@ paths:
       summary: Obter Status da Execução
       description: |
         **📋 Exemplo de Referência** - *Mostra o formato da requisição. Para testar com sua crew real, copie o cURL e substitua URL + token.*
-        
+
         Retorna o status atual e os resultados de uma execução usando o kickoff ID.
       operationId: getExecutionStatus
       parameters:
@@ -180,7 +180,7 @@ components:
             completed_tasks:
               type: integer
             total_tasks:
-              type: integer  
+              type: integer
 
     ExecutionCompleted:
       type: object
@@ -265,4 +265,3 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/Error'
-

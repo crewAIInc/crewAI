@@ -109,7 +109,7 @@ def crew(self) -> Crew:
         process=Process.sequential,
         verbose=True
     )
-``` 
+```
 
 The `@crew` annotation is used to decorate the method that creates and returns the `Crew` object. This method assembles all the components (agents and tasks) into a functional crew.
 
@@ -148,4 +148,4 @@ Note how the `llm` and `tools` in the YAML file correspond to the methods decora
 - **Flexibility**: Design your crew to be flexible by allowing easy addition or removal of agents and tasks.
 - **YAML-Code Correspondence**: Ensure that the names and structures in your YAML files correspond correctly to the decorated methods in your Python code.
 
-By following these guidelines and properly using annotations, you can create well-structured and maintainable crews using the CrewAI framework. 
+By following these guidelines and properly using annotations, you can create well-structured and maintainable crews using the CrewAI framework.

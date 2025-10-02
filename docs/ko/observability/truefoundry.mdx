@@ -7,7 +7,7 @@ mode: "wide"
 TrueFoundry provides an enterprise-ready [AI Gateway](https://www.truefoundry.com/ai-gateway) which can integrate with agentic frameworks like CrewAI and provides governance and observability for your AI Applications. TrueFoundry AI Gateway serves as a unified interface for LLM access, providing:
 
 - **Unified API Access**: Connect to 250+ LLMs (OpenAI, Claude, Gemini, Groq, Mistral) through one API
-- **Low Latency**: Sub-3ms internal latency with intelligent routing and load balancing  
+- **Low Latency**: Sub-3ms internal latency with intelligent routing and load balancing
 - **Enterprise Security**: SOC 2, HIPAA, GDPR compliance with RBAC and audit logging
 - **Quota and cost management**: Token-based quotas, rate limiting, and comprehensive usage tracking
 - **Observability**: Full request/response logging, metrics, and traces with customizable retention
@@ -64,7 +64,7 @@ from crewai import Agent, Task, Crew, LLM
 # Configure LLM with TrueFoundry
 llm = LLM(
     model="openai-main/gpt-4o",
-    base_url="your_truefoundry_gateway_base_url", 
+    base_url="your_truefoundry_gateway_base_url",
     api_key="your_truefoundry_api_key"
 )
 
@@ -78,7 +78,7 @@ researcher = Agent(
 )
 
 writer = Agent(
-    role='Content Writer', 
+    role='Content Writer',
     goal='Create comprehensive reports',
     backstory='Experienced technical writer',
     llm=llm,
@@ -123,8 +123,8 @@ With Truefoundry's AI gateway, you can monitor and analyze:
 
 ## Tracing
 
-For a more detailed understanding on tracing, please see [getting-started-tracing](https://docs.truefoundry.com/docs/tracing/tracing-getting-started).For tracing, you can add the Traceloop SDK: 
-For tracing, you can add the Traceloop SDK: 
+For a more detailed understanding on tracing, please see [getting-started-tracing](https://docs.truefoundry.com/docs/tracing/tracing-getting-started).For tracing, you can add the Traceloop SDK:
+For tracing, you can add the Traceloop SDK:
 
 ```bash
 pip install traceloop-sdk

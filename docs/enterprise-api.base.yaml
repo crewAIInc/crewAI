@@ -3,38 +3,38 @@ info:
   title: CrewAI AMP API
   description: |
     REST API for interacting with your deployed CrewAI crews on CrewAI AMP.
-    
+
     ## Getting Started
-    
+
     1. **Find your crew URL**: Get your unique crew URL from the CrewAI AMP dashboard
     2. **Copy examples**: Use the code examples from each endpoint page as templates
     3. **Replace placeholders**: Update URLs and tokens with your actual values
     4. **Test with your tools**: Use cURL, Postman, or your preferred API client
-    
+
     ## Authentication
-    
+
     All API requests require a bearer token for authentication. There are two types of tokens:
-    
+
     - **Bearer Token**: Organization-level token for full crew operations
     - **User Bearer Token**: User-scoped token for individual access with limited permissions
-    
+
     You can find your bearer tokens in the Status tab of your crew's detail page in the CrewAI AMP dashboard.
-    
+
     ## Reference Documentation
-    
+
     This documentation provides comprehensive examples for each endpoint:
-    
+
     - **Request formats** with all required and optional parameters
     - **Response examples** for success and error scenarios
     - **Code samples** in multiple programming languages
     - **Authentication patterns** with proper Bearer token usage
-    
+
     Copy the examples and customize them with your actual crew URL and authentication tokens.
-    
+
     ## Workflow
-    
+
     1. **Discover inputs** using `GET /inputs`
-    2. **Start execution** using `POST /kickoff`  
+    2. **Start execution** using `POST /kickoff`
     3. **Monitor progress** using `GET /status/{kickoff_id}`
   version: 1.0.0
   contact:
@@ -58,7 +58,7 @@ paths:
       summary: Get Required Inputs
       description: |
         **📋 Reference Example Only** - *This shows the request format. To test with your actual crew, copy the cURL example and replace the URL + token with your real values.*
-        
+
         Retrieves the list of all required input parameters that your crew expects for execution.
         Use this endpoint to discover what inputs you need to provide when starting a crew execution.
       operationId: getRequiredInputs
@@ -82,7 +82,7 @@ paths:
                   value:
                     inputs: ["budget", "interests", "duration", "age"]
                 outreach_crew:
-                  summary: Outreach crew inputs  
+                  summary: Outreach crew inputs
                   value:
                     inputs: ["name", "title", "company", "industry", "our_product", "linkedin_url"]
         '401':
@@ -97,10 +97,10 @@ paths:
       summary: Start Crew Execution
       description: |
         **📋 Reference Example Only** - *This shows the request format. To test with your actual crew, copy the cURL example and replace the URL + token with your real values.*
-        
-        Initiates a new crew execution with the provided inputs. Returns a kickoff ID that can be used 
+
+        Initiates a new crew execution with the provided inputs. Returns a kickoff ID that can be used
         to track the execution progress and retrieve results.
-        
+
         Crew executions can take anywhere from seconds to minutes depending on their complexity.
         Consider using webhooks for real-time notifications or implement polling with the status endpoint.
       operationId: startCrewExecution
@@ -152,7 +152,7 @@ paths:
                   inputs:
                     budget: "1000 USD"
                     interests: "games, tech, ai, relaxing hikes, amazing food"
-                    duration: "7 days" 
+                    duration: "7 days"
                     age: "35"
                   meta:
                     requestId: "travel-req-123"
@@ -204,9 +204,9 @@ paths:
       summary: Get Execution Status
       description: |
         **📋 Reference Example Only** - *This shows the request format. To test with your actual crew, copy the cURL example and replace the URL + token with your real values.*
-        
+
         Retrieves the current status and results of a crew execution using its kickoff ID.
-        
+
         The response structure varies depending on the execution state:
         - **running**: Execution in progress with current task info
         - **completed**: Execution finished with full results
@@ -283,9 +283,9 @@ components:
       scheme: bearer
       description: |
         **📋 Reference Documentation** - *The tokens shown in examples are placeholders for reference only.*
-        
+
         Use your actual Bearer Token or User Bearer Token from the CrewAI AMP dashboard for real API calls.
-        
+
         **Bearer Token**: Organization-level access for full crew operations
         **User Bearer Token**: User-scoped access with limited permissions
 
@@ -309,7 +309,7 @@ components:
               description: Number of completed tasks
               example: 1
             total_tasks:
-              type: integer  
+              type: integer
               description: Total number of tasks in the crew
               example: 3
 
@@ -430,5 +430,5 @@ components:
           schema:
             $ref: '#/components/schemas/Error'
           example:
-            error: "Internal Server Error" 
-            message: "An unexpected error occurred" 
+            error: "Internal Server Error"
+            message: "An unexpected error occurred"

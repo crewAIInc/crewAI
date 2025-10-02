@@ -163,8 +163,8 @@ Second method received: Output from first_method
 </CodeGroup>
 ![Flow Visual image](/images/crewai-flow-2.png)
 
-이 예제에서 `second_method`가 마지막으로 완료된 메서드이므로, 해당 메서드의 결과가 Flow의 최종 출력값이 됩니다.  
-`kickoff()` 메서드는 이 최종 출력값을 반환하며, 이 값은 콘솔에 출력됩니다.  
+이 예제에서 `second_method`가 마지막으로 완료된 메서드이므로, 해당 메서드의 결과가 Flow의 최종 출력값이 됩니다.
+`kickoff()` 메서드는 이 최종 출력값을 반환하며, 이 값은 콘솔에 출력됩니다.
 `plot()` 메서드는 HTML 파일을 생성하며, 이를 통해 flow를 쉽게 이해할 수 있습니다.
 
 #### 상태에 접근하고 업데이트하기
@@ -226,8 +226,8 @@ Flow 실행 과정 전반에 걸쳐 상태를 유지하고 접근하면서도 �
 
 ### 비구조적 상태 관리
 
-비구조적 상태 관리에서는 모든 상태가 `Flow` 클래스의 `state` 속성에 저장됩니다.  
-이 방식은 엄격한 스키마를 정의하지 않고도 개발자가 상태 속성을 즉석에서 추가하거나 수정할 수 있는 유연성을 제공합니다.  
+비구조적 상태 관리에서는 모든 상태가 `Flow` 클래스의 `state` 속성에 저장됩니다.
+이 방식은 엄격한 스키마를 정의하지 않고도 개발자가 상태 속성을 즉석에서 추가하거나 수정할 수 있는 유연성을 제공합니다.
 비구조적 상태에서도 CrewAI Flows는 각 상태 인스턴스에 대한 고유 식별자(UUID)를 자동으로 생성하고 유지합니다.
 
 ```python Code
@@ -460,7 +460,7 @@ Logger: Hello from the second method
 
 ![Flow Visual image](/images/crewai-flow-4.png)
 
-이 Flow를 실행하면, `logger` 메서드는 `start_method` 또는 `second_method`의 출력에 의해 트리거됩니다.  
+이 Flow를 실행하면, `logger` 메서드는 `start_method` 또는 `second_method`의 출력에 의해 트리거됩니다.
 `or_` 함수는 여러 메서드를 감지하고 지정된 메서드 중 하나에서 출력이 발생하면 리스너 메서드를 트리거하는 데 사용됩니다.
 
 ### 조건부 로직: `and`
@@ -501,12 +501,12 @@ flow.kickoff()
 
 ![Flow Visual image](/images/crewai-flow-5.png)
 
-이 Flow를 실행하면, `logger` 메서드는 `start_method`와 `second_method`가 모두 출력을 발생시켰을 때만 트리거됩니다.  
+이 Flow를 실행하면, `logger` 메서드는 `start_method`와 `second_method`가 모두 출력을 발생시켰을 때만 트리거됩니다.
 `and_` 함수는 여러 메서드를 리슨하고, 지정된 모든 메서드가 출력을 발생시킬 때만 리스너 메서드를 트리거하는 데 사용됩니다.
 
 ### Router
 
-Flows의 `@router()` 데코레이터를 사용하면 메서드의 출력값에 따라 조건부 라우팅 로직을 정의할 수 있습니다.  
+Flows의 `@router()` 데코레이터를 사용하면 메서드의 출력값에 따라 조건부 라우팅 로직을 정의할 수 있습니다.
 메서드의 출력에 따라 서로 다른 경로를 지정할 수 있어 실행 흐름을 동적으로 제어할 수 있습니다.
 
 <CodeGroup>
@@ -558,9 +558,9 @@ Fourth method running
 
 ![Flow Visual image](/images/crewai-flow-6.png)
 
-위 예제에서 `start_method`는 랜덤 불리언 값을 생성하여 state에 저장합니다.  
-`second_method`는 `@router()` 데코레이터를 사용해 불리언 값에 따라 조건부 라우팅 로직을 정의합니다.  
-불리언 값이 `True`이면 메서드는 `"success"`를 반환하고, `False`이면 `"failed"`를 반환합니다.  
+위 예제에서 `start_method`는 랜덤 불리언 값을 생성하여 state에 저장합니다.
+`second_method`는 `@router()` 데코레이터를 사용해 불리언 값에 따라 조건부 라우팅 로직을 정의합니다.
+불리언 값이 `True`이면 메서드는 `"success"`를 반환하고, `False`이면 `"failed"`를 반환합니다.
 `third_method`와 `fourth_method`는 `second_method`의 출력값을 기다렸다가 반환된 값에 따라 실행됩니다.
 
 이 Flow를 실행하면, `start_method`에서 생성된 랜덤 불리언 값에 따라 출력값이 달라집니다.

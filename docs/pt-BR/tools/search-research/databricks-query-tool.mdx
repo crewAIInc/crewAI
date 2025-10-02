@@ -21,7 +21,7 @@ uv add crewai-tools[databricks-sdk]
 
 - `DATABRICKS_CONFIG_PROFILE` or (`DATABRICKS_HOST` + `DATABRICKS_TOKEN`)
 
-Create a personal access token and find host details in the Databricks workspace under User Settings → Developer. 
+Create a personal access token and find host details in the Databricks workspace under User Settings → Developer.
 Docs: https://docs.databricks.com/en/dev-tools/auth/pat.html
 
 ## Example
@@ -31,7 +31,7 @@ from crewai import Agent, Task, Crew
 from crewai_tools import DatabricksQueryTool
 
 tool = DatabricksQueryTool(
-    default_catalog="main", 
+    default_catalog="main",
     default_schema="default",
 )
 
@@ -44,12 +44,12 @@ agent = Agent(
 
 task = Task(
     description="SELECT * FROM my_table LIMIT 10",
-    expected_output="10 rows", 
+    expected_output="10 rows",
     agent=agent,
 )
 
 crew = Crew(
-    agents=[agent], 
+    agents=[agent],
     tasks=[task],
     verbose=True,
 )
@@ -77,5 +77,3 @@ print(result)
 - Authentication errors: verify `DATABRICKS_HOST` begins with `https://` and token is valid.
 - Permissions: ensure your SQL warehouse and schema are accessible by your token.
 - Limits: long‑running queries should be avoided in agent loops; add filters/limits.
-
-
