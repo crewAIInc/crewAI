@@ -11,7 +11,7 @@ This guide will demonstrate how to integrate **Datadog** with **CrewAI** using D
 
 ## What is Datadog LLM Observability?
 
-Datadog LLM Observability provides end-to-end tracing of LLM chains and agentic systems with visibility into input-output, errors, latency, and token usage, along with robust quality and security evaluations at each step — including data retrieval, tool calls, and agent-to-agent interactions. By seamlessly correlating LLM traces with APM and utilizing cluster visualization to identify drifts, Datadog LLM Observability enables you to swiftly resolve issues and confidently scale AI applications in production, all while ensuring accuracy, safety, and cost-efficiency.
+[Datadog LLM Observability](https://www.datadoghq.com/product/llm-observability/) helps AI engineers, data scientists, and application developers quickly develop, evaluate, and monitor LLM applications. Confidently improve output quality, performance, costs, and overall risk with structured experiments, end-to-end tracing across AI agents, and evaluations.
 
 ## Getting Started
 
@@ -25,7 +25,7 @@ pip install ddtrace crewai crewai-tools
 
 If you do not have a Datadog API key, you can [create an account](https://www.datadoghq.com/) and [get your API key](https://docs.datadoghq.com/account_management/api-app-keys/#api-keys).
 
-You will also need to specify an ML Application name in the following environment variables. An ML Application is a grouping of LLM Observability traces associated with a specific LLM-based application, separate from the service it is part of. See [ML Application Naming Guidelines](https://docs.datadoghq.com/llm_observability/instrumentation/sdk?tab=python#application-naming-guidelines) for more information on limitations with ML Application names.
+You will also need to specify an ML Application name in the following environment variables. An ML Application is a grouping of LLM Observability traces associated with a specific LLM-based application. See [ML Application Naming Guidelines](https://docs.datadoghq.com/llm_observability/instrumentation/sdk?tab=python#application-naming-guidelines) for more information on limitations with ML Application names.
 
 ```shell
 export DD_API_KEY=<YOUR_DD_API_KEY>
