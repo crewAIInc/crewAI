@@ -9,7 +9,22 @@
   },
   "favicon": "/images/favicon.svg",
   "contextual": {
-    "options": ["copy", "view", "chatgpt", "claude", "perplexity", "mcp", "cursor", "vscode"]
+    "options": [
+      "copy", 
+      "view", 
+      "chatgpt", 
+      "claude", 
+      "perplexity", 
+      "mcp", 
+      "cursor", 
+      "vscode",
+      {
+        "title": "Request a feature",
+        "description": "Join the discussion on GitHub to request a new feature",
+        "icon": "plus",
+        "href": "https://github.com/crewAIInc/crewAI/issues/new/choose"
+      }
+    ]
   },
   "navigation": {
     "languages": [
