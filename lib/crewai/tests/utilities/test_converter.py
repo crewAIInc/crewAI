@@ -331,7 +331,7 @@ def test_generate_model_description_dict_field():
         attributes: dict[str, int]
 
     description = generate_model_description(ModelWithDictField)
-    expected_description = '{\n  "attributes": dict[str, int]\n}'
+    expected_description = '{\n  "attributes": Dict[str, int]\n}'
     assert description == expected_description
 
 
