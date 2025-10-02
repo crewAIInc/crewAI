@@ -7,10 +7,8 @@ from pydantic import Field
 from crewai.agent import Agent
 from crewai.agents.crew_agent_executor import CrewAgentExecutor
 from crewai.crew import Crew
-from crewai.flow.flow import Flow, listen, start
-from crewai.llm import LLM
-from crewai.task import Task
-from crewai.tools.base_tool import BaseTool
+from crewai.events.event_bus import crewai_event_bus
+from crewai.events.event_listener import EventListener
 from crewai.events.types.agent_events import (
     AgentExecutionCompletedEvent,
     AgentExecutionErrorEvent,
@@ -24,9 +22,6 @@ from crewai.events.types.crew_events import (
     CrewTestResultEvent,
     CrewTestStartedEvent,
 )
-from crewai.events.event_bus import crewai_event_bus
-from crewai.events.event_listener import EventListener
-from crewai.events.types.tool_usage_events import ToolUsageFinishedEvent
 from crewai.events.types.flow_events import (
     FlowCreatedEvent,
     FlowFinishedEvent,
@@ -47,7 +42,12 @@ from crewai.events.types.task_events import (
 )
 from crewai.events.types.tool_usage_events import (
     ToolUsageErrorEvent,
+    ToolUsageFinishedEvent,
 )
+from crewai.flow.flow import Flow, listen, start
+from crewai.llm import LLM
+from crewai.task import Task
+from crewai.tools.base_tool import BaseTool
 
 
 @pytest.fixture(scope="module")
@@ -194,7 +194,7 @@ def test_crew_emits_kickoff_failed_event(base_agent, base_task):
             error_message = "Simulated crew kickoff failure"
             mock_execute.side_effect = Exception(error_message)
 
-            with pytest.raises(Exception):
+            with pytest.raises(Exception):  # nosec B017
                 crew.kickoff()
 
         assert len(received_events) == 1
@@ -278,7 +278,7 @@ def test_task_emits_failed_event_on_execution_error(base_agent, base_task):
             agent=agent,
         )
 
-        with pytest.raises(Exception):
+        with pytest.raises(Exception):  # nosec B017
             agent.execute_task(task=task)
 
             assert len(received_events) == 1
@@ -332,7 +332,7 @@ def test_agent_emits_execution_error_event(base_agent, base_task):
     ) as invoke_mock:
         invoke_mock.side_effect = Exception(error_message)
 
-        with pytest.raises(Exception):
+        with pytest.raises(Exception):  # nosec B017
             base_agent.execute_task(
                 task=base_task,
             )
@@ -618,7 +618,7 @@ def test_flow_emits_method_execution_failed_event():
             raise error
 
     flow = TestFlow()
-    with pytest.raises(Exception):
+    with pytest.raises(Exception):  # nosec B017
         flow.kickoff()
 
     assert len(received_events) == 1
@@ -664,7 +664,7 @@ def test_llm_emits_call_failed_event():
     error_message = "Simulated LLM call failure"
     with patch("crewai.llm.litellm.completion", side_effect=Exception(error_message)):
         llm = LLM(model="gpt-4o-mini")
-        with pytest.raises(Exception) as exc_info:
+        with pytest.raises(Exception) as exc_info:  # nosec B017
             llm.call("Hello, how are you?")
 
         assert str(exc_info.value) == error_message
