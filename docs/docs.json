@@ -9,7 +9,22 @@
   },
   "favicon": "/images/favicon.svg",
   "contextual": {
-    "options": ["copy", "view", "chatgpt", "claude"]
+    "options": [
+      "copy",
+      "view",
+      "chatgpt",
+      "claude",
+      "perplexity",
+      "mcp",
+      "cursor",
+      "vscode",
+      {
+        "title": "Request a feature",
+        "description": "Join the discussion on GitHub to request a new feature",
+        "icon": "plus",
+        "href": "https://github.com/crewAIInc/crewAI/issues/new/choose"
+      }
+    ]
   },
   "navigation": {
     "languages": [
@@ -40,6 +55,16 @@
           ]
         },
         "tabs": [
+          {
+            "tab": "Home",
+            "icon": "house",
+            "groups": [
+              {
+                "group": "Welcome",
+                "pages": ["index"]
+              }
+            ]
+          },
           {
             "tab": "Documentation",
             "icon": "book-open",
@@ -225,9 +250,9 @@
                     "group": "Integrations",
                     "icon": "plug",
                     "pages": [
-                      "en/tools/tool-integrations/overview",
-                      "en/tools/tool-integrations/bedrockinvokeagenttool",
-                      "en/tools/tool-integrations/crewaiautomationtool"
+                      "en/tools/integration/overview",
+                      "en/tools/integration/bedrockinvokeagenttool",
+                      "en/tools/integration/crewaiautomationtool"
                     ]
                   },
                   {
@@ -279,6 +304,7 @@
                   "en/learn/force-tool-output-as-result",
                   "en/learn/hierarchical-process",
                   "en/learn/human-input-on-execution",
+                  "en/learn/human-in-the-loop",
                   "en/learn/kickoff-async",
                   "en/learn/kickoff-for-each",
                   "en/learn/llm-connections",
@@ -295,7 +321,7 @@
             ]
           },
           {
-            "tab": "Enterprise",
+            "tab": "AMP",
             "icon": "briefcase",
             "groups": [
               {
@@ -303,15 +329,27 @@
                 "pages": ["en/enterprise/introduction"]
               },
               {
-                "group": "Features",
+                "group": "Build",
                 "pages": [
-                  "en/enterprise/features/rbac",
-                  "en/enterprise/features/tool-repository",
-                  "en/enterprise/features/webhook-streaming",
+                  "en/enterprise/features/automations",
+                  "en/enterprise/features/crew-studio",
+                  "en/enterprise/features/marketplace",
+                  "en/enterprise/features/agent-repositories",
+                  "en/enterprise/features/tools-and-integrations"
+                ]
+              },
+              {
+                "group": "Operate",
+                "pages": [
                   "en/enterprise/features/traces",
-                  "en/enterprise/features/hallucination-guardrail",
-                  "en/enterprise/features/integrations",
-                  "en/enterprise/features/agent-repositories"
+                  "en/enterprise/features/webhook-streaming",
+                  "en/enterprise/features/hallucination-guardrail"
+                ]
+              },
+              {
+                "group": "Manage",
+                "pages": [
+                  "en/enterprise/features/rbac"
                 ]
               },
               {
@@ -336,6 +374,22 @@
                 ]
               },
               {
+                "group": "Triggers",
+                "pages": [
+                  "en/enterprise/guides/automation-triggers",
+                  "en/enterprise/guides/gmail-trigger",
+                  "en/enterprise/guides/google-calendar-trigger",
+                  "en/enterprise/guides/google-drive-trigger",
+                  "en/enterprise/guides/outlook-trigger",
+                  "en/enterprise/guides/onedrive-trigger",
+                  "en/enterprise/guides/microsoft-teams-trigger",
+                  "en/enterprise/guides/slack-trigger",
+                  "en/enterprise/guides/hubspot-trigger",
+                  "en/enterprise/guides/salesforce-trigger",
+                  "en/enterprise/guides/zapier-trigger"
+                ]
+              },
+              {
                 "group": "How-To Guides",
                 "pages": [
                   "en/enterprise/guides/build-crew",
@@ -344,15 +398,11 @@
                   "en/enterprise/guides/update-crew",
                   "en/enterprise/guides/enable-crew-studio",
                   "en/enterprise/guides/azure-openai-setup",
-                  "en/enterprise/guides/automation-triggers",
-                  "en/enterprise/guides/hubspot-trigger",
+                  "en/enterprise/guides/tool-repository",
                   "en/enterprise/guides/react-component-export",
-                  "en/enterprise/guides/salesforce-trigger",
-                  "en/enterprise/guides/slack-trigger",
                   "en/enterprise/guides/team-management",
-                  "en/enterprise/guides/webhook-automation",
                   "en/enterprise/guides/human-in-the-loop",
-                  "en/enterprise/guides/zapier-trigger"
+                  "en/enterprise/guides/webhook-automation"
                 ]
               },
               {
@@ -425,6 +475,16 @@
           ]
         },
         "tabs": [
+          {
+            "tab": "Início",
+            "icon": "house",
+            "groups": [
+              {
+                "group": "Bem-vindo",
+                "pages": ["pt-BR/index"]
+              }
+            ]
+          },
           {
             "tab": "Documentação",
             "icon": "book-open",
@@ -600,12 +660,12 @@
                     ]
                   },
                   {
-                    "group": "Integrações",
+                    "group": "Integrations",
                     "icon": "plug",
                     "pages": [
-                      "pt-BR/tools/tool-integrations/overview",
-                      "pt-BR/tools/tool-integrations/bedrockinvokeagenttool",
-                      "pt-BR/tools/tool-integrations/crewaiautomationtool"
+                      "pt-BR/tools/integration/overview",
+                      "pt-BR/tools/integration/bedrockinvokeagenttool",
+                      "pt-BR/tools/integration/crewaiautomationtool"
                     ]
                   },
                   {
@@ -654,6 +714,7 @@
                   "pt-BR/learn/force-tool-output-as-result",
                   "pt-BR/learn/hierarchical-process",
                   "pt-BR/learn/human-input-on-execution",
+                  "pt-BR/learn/human-in-the-loop",
                   "pt-BR/learn/kickoff-async",
                   "pt-BR/learn/kickoff-for-each",
                   "pt-BR/learn/llm-connections",
@@ -670,7 +731,7 @@
             ]
           },
           {
-            "tab": "Enterprise",
+            "tab": "AMP",
             "icon": "briefcase",
             "groups": [
               {
@@ -678,14 +739,27 @@
                 "pages": ["pt-BR/enterprise/introduction"]
               },
               {
-                "group": "Funcionalidades",
+                "group": "Construir",
                 "pages": [
-                  "pt-BR/enterprise/features/rbac",
-                  "pt-BR/enterprise/features/tool-repository",
-                  "pt-BR/enterprise/features/webhook-streaming",
+                  "pt-BR/enterprise/features/automations",
+                  "pt-BR/enterprise/features/crew-studio",
+                  "pt-BR/enterprise/features/marketplace",
+                  "pt-BR/enterprise/features/agent-repositories",
+                  "pt-BR/enterprise/features/tools-and-integrations"
+                ]
+              },
+              {
+                "group": "Operar",
+                "pages": [
                   "pt-BR/enterprise/features/traces",
-                  "pt-BR/enterprise/features/hallucination-guardrail",
-                  "pt-BR/enterprise/features/integrations"
+                  "pt-BR/enterprise/features/webhook-streaming",
+                  "pt-BR/enterprise/features/hallucination-guardrail"
+                ]
+              },
+              {
+                "group": "Gerenciar",
+                "pages": [
+                  "pt-BR/enterprise/features/rbac"
                 ]
               },
               {
@@ -718,14 +792,20 @@
                   "pt-BR/enterprise/guides/update-crew",
                   "pt-BR/enterprise/guides/enable-crew-studio",
                   "pt-BR/enterprise/guides/azure-openai-setup",
-                  "pt-BR/enterprise/guides/automation-triggers",
-                  "pt-BR/enterprise/guides/hubspot-trigger",
+                  "pt-BR/enterprise/guides/tool-repository",
                   "pt-BR/enterprise/guides/react-component-export",
-                  "pt-BR/enterprise/guides/salesforce-trigger",
-                  "pt-BR/enterprise/guides/slack-trigger",
                   "pt-BR/enterprise/guides/team-management",
-                  "pt-BR/enterprise/guides/webhook-automation",
                   "pt-BR/enterprise/guides/human-in-the-loop",
+                  "pt-BR/enterprise/guides/webhook-automation"
+                ]
+              },
+              {
+                "group": "Triggers",
+                "pages": [
+                  "pt-BR/enterprise/guides/automation-triggers",
+                  "pt-BR/enterprise/guides/slack-trigger",
+                  "pt-BR/enterprise/guides/hubspot-trigger",
+                  "pt-BR/enterprise/guides/salesforce-trigger",
                   "pt-BR/enterprise/guides/zapier-trigger"
                 ]
               },
@@ -801,6 +881,16 @@
           ]
         },
         "tabs": [
+          {
+            "tab": "홈",
+            "icon": "house",
+            "groups": [
+              {
+                "group": "환영합니다",
+                "pages": ["ko/index"]
+              }
+            ]
+          },
           {
             "tab": "기술 문서",
             "icon": "book-open",
@@ -979,17 +1069,16 @@
                       "ko/tools/cloud-storage/overview",
                       "ko/tools/cloud-storage/s3readertool",
                       "ko/tools/cloud-storage/s3writertool",
-                      "ko/tools/cloud-storage/bedrockinvokeagenttool",
                       "ko/tools/cloud-storage/bedrockkbretriever"
                     ]
                   },
                   {
-                    "group": "통합",
+                    "group": "Integrations",
                     "icon": "plug",
                     "pages": [
-                      "ko/tools/tool-integrations/overview",
-                      "ko/tools/tool-integrations/bedrockinvokeagenttool",
-                      "ko/tools/tool-integrations/crewaiautomationtool"
+                      "ko/tools/integration/overview",
+                      "ko/tools/integration/bedrockinvokeagenttool",
+                      "ko/tools/integration/crewaiautomationtool"
                     ]
                   },
                   {
@@ -1039,6 +1128,7 @@
                   "ko/learn/force-tool-output-as-result",
                   "ko/learn/hierarchical-process",
                   "ko/learn/human-input-on-execution",
+                  "ko/learn/human-in-the-loop",
                   "ko/learn/kickoff-async",
                   "ko/learn/kickoff-for-each",
                   "ko/learn/llm-connections",
@@ -1063,15 +1153,27 @@
                 "pages": ["ko/enterprise/introduction"]
               },
               {
-                "group": "특징",
+                "group": "빌드",
                 "pages": [
-                  "ko/enterprise/features/rbac",
-                  "ko/enterprise/features/tool-repository",
-                  "ko/enterprise/features/webhook-streaming",
+                  "ko/enterprise/features/automations",
+                  "ko/enterprise/features/crew-studio",
+                  "ko/enterprise/features/marketplace",
+                  "ko/enterprise/features/agent-repositories",
+                  "ko/enterprise/features/tools-and-integrations"
+                ]
+              },
+              {
+                "group": "운영",
+                "pages": [
                   "ko/enterprise/features/traces",
-                  "ko/enterprise/features/hallucination-guardrail",
-                  "ko/enterprise/features/integrations",
-                  "ko/enterprise/features/agent-repositories"
+                  "ko/enterprise/features/webhook-streaming",
+                  "ko/enterprise/features/hallucination-guardrail"
+                ]
+              },
+              {
+                "group": "관리",
+                "pages": [
+                  "ko/enterprise/features/rbac"
                 ]
               },
               {
@@ -1104,14 +1206,20 @@
                   "ko/enterprise/guides/update-crew",
                   "ko/enterprise/guides/enable-crew-studio",
                   "ko/enterprise/guides/azure-openai-setup",
-                  "ko/enterprise/guides/automation-triggers",
-                  "ko/enterprise/guides/hubspot-trigger",
+                  "ko/enterprise/guides/tool-repository",
                   "ko/enterprise/guides/react-component-export",
-                  "ko/enterprise/guides/salesforce-trigger",
-                  "ko/enterprise/guides/slack-trigger",
                   "ko/enterprise/guides/team-management",
-                  "ko/enterprise/guides/webhook-automation",
                   "ko/enterprise/guides/human-in-the-loop",
+                  "ko/enterprise/guides/webhook-automation"
+                ]
+              },
+              {
+                "group": "트리거",
+                "pages": [
+                  "ko/enterprise/guides/automation-triggers",
+                  "ko/enterprise/guides/slack-trigger",
+                  "ko/enterprise/guides/hubspot-trigger",
+                  "ko/enterprise/guides/salesforce-trigger",
                   "ko/enterprise/guides/zapier-trigger"
                 ]
               },

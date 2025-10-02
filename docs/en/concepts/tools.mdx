@@ -17,7 +17,7 @@ This includes tools from the [CrewAI Toolkit](https://github.com/joaomdmoura/cre
 enabling everything from simple searches to complex interactions and effective teamwork among agents.
 
 <Note type="info" title="Enterprise Enhancement: Tools Repository">
-CrewAI Enterprise provides a comprehensive Tools Repository with pre-built integrations for common business systems and APIs. Deploy agents with enterprise tools in minutes instead of days.
+CrewAI AMP provides a comprehensive Tools Repository with pre-built integrations for common business systems and APIs. Deploy agents with enterprise tools in minutes instead of days.
 
 The Enterprise Tools Repository includes:
 - Pre-built connectors for popular enterprise systems
@@ -208,7 +208,7 @@ from crewai.tools import BaseTool
 class AsyncCustomTool(BaseTool):
     name: str = "async_custom_tool"
     description: str = "An asynchronous custom tool"
-    
+
     async def _run(self, query: str = "") -> str:
         """Asynchronously run the tool"""
         # Your async implementation here
