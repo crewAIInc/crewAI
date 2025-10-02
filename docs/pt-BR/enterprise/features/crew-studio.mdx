@@ -1,0 +1,88 @@
+---
+title: "Crew Studio"
+description: "Crie novas automações com assistência de IA, editor visual e testes integrados."
+icon: "pencil"
+mode: "wide"
+---
+
+## Visão geral
+
+O Crew Studio é um espaço interativo com assistência de IA para criar novas automações do zero usando linguagem natural e um editor visual de fluxo de trabalho.
+
+<Frame>
+  ![Visão Geral do Crew Studio](/images/enterprise/crew-studio-overview.png)
+</Frame>
+
+## Criação baseada em prompts
+
+- Descreva a automação desejada; a IA gera agentes, tarefas e ferramentas.
+- Use entrada por voz pelo ícone de microfone se preferir.
+- Comece com prompts prontos para casos comuns.
+
+<Frame>
+  ![Construtor de Prompt](/images/enterprise/crew-studio-prompt.png)
+</Frame>
+
+## Editor Visual
+
+O canvas reflete o fluxo como nós e arestas com três painéis de suporte que permitem configurar o fluxo sem escrever código ("vibe coding AI Agents"):
+
+- **AI Thoughts (esquerda)**: raciocínio em tempo real enquanto o fluxo é projetado
+- **Canvas (centro)**: agentes e tarefas como nós conectados
+- **Resources (direita)**: componentes de arrastar‑e‑soltar (agentes, tarefas, ferramentas)
+
+Você pode arrastar e soltar agentes, tarefas e ferramentas no canvas ou usar a seção de chat para construir os agentes. Ambos compartilham estado e podem ser usados de forma intercambiável.
+
+<Frame>
+  ![Canvas Visual](/images/enterprise/crew-studio-canvas.png)
+</Frame>
+
+## Execução & Depuração
+
+Alterne para a visão <b>Execution</b> para executar e observar o fluxo:
+
+- Linha do tempo de eventos
+- Logs detalhados (Details, Messages, Raw Data)
+- Execuções locais antes de publicar
+
+<Frame>
+  ![Visão de Execução](/images/enterprise/crew-studio-execution.png)
+</Frame>
+
+## Publicar & Exportar
+
+- <b>Publish</b> para implantar uma automação
+- <b>Download</b> do código‑fonte como ZIP para desenvolvimento local
+
+<Frame>
+  ![Publicar & Download](/images/enterprise/crew-studio-publish.png)
+</Frame>
+
+Após publicar, você pode visualizar os detalhes da automação e usar o menu **Options** para `chat with this crew`, `Export React Component` e `Export as MCP`.
+
+<Frame>
+  ![Automação Publicada](/images/enterprise/crew-studio-published.png)
+</Frame>
+
+## Boas práticas
+
+- Itere rapidamente no Studio; publique apenas quando estiver estável
+- Restrinja permissões das ferramentas ao mínimo necessário
+- Use Traces para validar comportamento e desempenho
+
+## Relacionados
+
+<CardGroup cols={4}>
+  <Card title="Habilitar o Crew Studio" href="/pt-BR/enterprise/guides/enable-crew-studio" icon="palette">
+    Habilite o Crew Studio.
+  </Card>
+  <Card title="Criar um Crew" href="/pt-BR/enterprise/guides/build-crew" icon="paintbrush">
+    Crie um Crew.
+  </Card>
+  <Card title="Implantar um Crew" href="/pt-BR/enterprise/guides/deploy-crew" icon="rocket">
+    Implante um Crew via GitHub ou ZIP.
+  </Card>
+  <Card title="Exportar um Componente React" href="/pt-BR/enterprise/guides/react-component-export" icon="download">
+    Exporte um componente React.
+  </Card>
+</CardGroup>
