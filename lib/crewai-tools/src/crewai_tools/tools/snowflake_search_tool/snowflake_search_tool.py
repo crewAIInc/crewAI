@@ -9,13 +9,18 @@ from pydantic import BaseModel, ConfigDict, Field, SecretStr
 
 if TYPE_CHECKING:
     # Import types for type checking only
-    from snowflake.connector.connection import SnowflakeConnection
-    from snowflake.connector.errors import DatabaseError, OperationalError
+    from snowflake.connector.connection import (  # type: ignore[import-not-found]
+        SnowflakeConnection,
+    )
+    from snowflake.connector.errors import (  # type: ignore[import-not-found]
+        DatabaseError,
+        OperationalError,
+    )
 
 try:
     from cryptography.hazmat.backends import default_backend
     from cryptography.hazmat.primitives import serialization
-    import snowflake.connector
+    import snowflake.connector  # type: ignore[import-not-found]
 
     SNOWFLAKE_AVAILABLE = True
 except ImportError:
@@ -25,7 +30,7 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 # Cache for query results
-_query_cache = {}
+_query_cache: dict[str, list[dict[str, Any]]] = {}
 
 
 class SnowflakeConfig(BaseModel):
@@ -152,6 +157,10 @@ class SnowflakeSearchTool(BaseTool):
 
     async def _get_connection(self) -> "SnowflakeConnection":
         """Get a connection from the pool or create a new one."""
+        if self._pool_lock is None:
+            raise RuntimeError("Pool lock not initialized")
+        if self._connection_pool is None:
+            raise RuntimeError("Connection pool not initialized")
         async with self._pool_lock:
             if not self._connection_pool:
                 conn = await asyncio.get_event_loop().run_in_executor(
@@ -162,7 +171,7 @@ class SnowflakeSearchTool(BaseTool):
 
     def _create_connection(self) -> "SnowflakeConnection":
         """Create a new Snowflake connection."""
-        conn_params = {
+        conn_params: dict[str, Any] = {
             "account": self.config.account,
             "user": self.config.user,
             "warehouse": self.config.warehouse,
@@ -219,15 +228,19 @@ class SnowflakeSearchTool(BaseTool):
                     return results
                 finally:
                     cursor.close()
-                    async with self._pool_lock:
-                        self._connection_pool.append(conn)
+                    if (
+                        self._pool_lock is not None
+                        and self._connection_pool is not None
+                    ):
+                        async with self._pool_lock:
+                            self._connection_pool.append(conn)
             except (DatabaseError, OperationalError) as e:  # noqa: PERF203
                 if attempt == self.max_retries - 1:
                     raise
                 await asyncio.sleep(self.retry_delay * (2**attempt))
                 logger.warning(f"Query failed, attempt {attempt + 1}: {e!s}")
                 continue
-        return None
+        raise RuntimeError("Query failed after all retries")
 
     async def _run(
         self,
