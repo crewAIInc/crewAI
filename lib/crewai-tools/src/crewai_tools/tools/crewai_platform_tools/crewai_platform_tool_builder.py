@@ -1,4 +1,4 @@
-from typing import Any, Dict, List
+from typing import Any
 
 from crewai.tools import BaseTool
 import requests
@@ -64,8 +64,8 @@ class CrewaiPlatformToolBuilder:
                         self._actions_schema[action_name] = action_schema
 
     def _generate_detailed_description(
-        self, schema: Dict[str, Any], indent: int = 0
-    ) -> List[str]:
+        self, schema: dict[str, Any], indent: int = 0
+    ) -> list[str]:
         descriptions = []
         indent_str = "  " * indent
 

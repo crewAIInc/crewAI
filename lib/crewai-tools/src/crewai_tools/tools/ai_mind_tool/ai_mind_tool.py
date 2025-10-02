@@ -1,6 +1,6 @@
 import os
 import secrets
-from typing import Any, Dict, List, Optional, Type
+from typing import Any
 
 from crewai.tools import BaseTool, EnvVar
 from openai import OpenAI
@@ -28,16 +28,20 @@ class AIMindTool(BaseTool):
         "and Google BigQuery. "
         "Input should be a question in natural language."
     )
-    args_schema: Type[BaseModel] = AIMindToolInputSchema
-    api_key: Optional[str] = None
-    datasources: Optional[List[Dict[str, Any]]] = None
-    mind_name: Optional[str] = None
-    package_dependencies: List[str] = ["minds-sdk"]
-    env_vars: List[EnvVar] = [
-        EnvVar(name="MINDS_API_KEY", description="API key for AI-Minds", required=True),
-    ]
+    args_schema: type[BaseModel] = AIMindToolInputSchema
+    api_key: str | None = None
+    datasources: list[dict[str, Any]] | None = None
+    mind_name: str | None = None
+    package_dependencies: list[str] = Field(default_factory=lambda: ["minds-sdk"])
+    env_vars: list[EnvVar] = Field(
+        default_factory=lambda: [
+            EnvVar(
+                name="MINDS_API_KEY", description="API key for AI-Minds", required=True
+            ),
+        ]
+    )
 
-    def __init__(self, api_key: Optional[str] = None, **kwargs):
+    def __init__(self, api_key: str | None = None, **kwargs):
         super().__init__(**kwargs)
         self.api_key = api_key or os.getenv("MINDS_API_KEY")
         if not self.api_key:
@@ -48,10 +52,10 @@ class AIMindTool(BaseTool):
         try:
             from minds.client import Client  # type: ignore
             from minds.datasources import DatabaseConfig  # type: ignore
-        except ImportError:
+        except ImportError as e:
             raise ImportError(
                 "`minds_sdk` package not found, please run `pip install minds-sdk`"
-            )
+            ) from e
 
         minds_client = Client(api_key=self.api_key)
 

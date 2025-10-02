@@ -2,7 +2,7 @@ from importlib.metadata import version
 import json
 import os
 from platform import architecture, python_version
-from typing import Any, List, Type
+from typing import Any
 
 from crewai.tools import BaseTool, EnvVar
 from pydantic import BaseModel, ConfigDict, Field
@@ -27,9 +27,8 @@ class OxylabsUniversalScraperArgs(BaseModel):
 
 
 class OxylabsUniversalScraperConfig(BaseModel):
-    """
-    Universal Scraper configuration options:
-    https://developers.oxylabs.io/scraper-apis/web-scraper-api/other-websites
+    """Universal Scraper configuration options:
+    https://developers.oxylabs.io/scraper-apis/web-scraper-api/other-websites.
     """
 
     geo_location: str | None = Field(None, description="The Deliver to location.")
@@ -47,8 +46,7 @@ class OxylabsUniversalScraperConfig(BaseModel):
 
 
 class OxylabsUniversalScraperTool(BaseTool):
-    """
-    Scrape any website with OxylabsUniversalScraperTool.
+    """Scrape any website with OxylabsUniversalScraperTool.
 
     Get Oxylabs account:
     https://dashboard.oxylabs.io/en
@@ -65,25 +63,31 @@ class OxylabsUniversalScraperTool(BaseTool):
     )
     name: str = "Oxylabs Universal Scraper tool"
     description: str = "Scrape any url with Oxylabs Universal Scraper"
-    args_schema: Type[BaseModel] = OxylabsUniversalScraperArgs
+    args_schema: type[BaseModel] = OxylabsUniversalScraperArgs
 
     oxylabs_api: RealtimeClient
     config: OxylabsUniversalScraperConfig
-    package_dependencies: List[str] = ["oxylabs"]
-    env_vars: List[EnvVar] = [
-        EnvVar(
-            name="OXYLABS_USERNAME", description="Username for Oxylabs", required=True
-        ),
-        EnvVar(
-            name="OXYLABS_PASSWORD", description="Password for Oxylabs", required=True
-        ),
-    ]
+    package_dependencies: list[str] = Field(default_factory=lambda: ["oxylabs"])
+    env_vars: list[EnvVar] = Field(
+        default_factory=lambda: [
+            EnvVar(
+                name="OXYLABS_USERNAME",
+                description="Username for Oxylabs",
+                required=True,
+            ),
+            EnvVar(
+                name="OXYLABS_PASSWORD",
+                description="Password for Oxylabs",
+                required=True,
+            ),
+        ]
+    )
 
     def __init__(
         self,
         username: str | None = None,
         password: str | None = None,
-        config: OxylabsUniversalScraperConfig | dict = OxylabsUniversalScraperConfig(),
+        config: OxylabsUniversalScraperConfig | dict | None = None,
         **kwargs,
     ):
         bits, _ = architecture()
@@ -114,7 +118,7 @@ class OxylabsUniversalScraperTool(BaseTool):
                 import subprocess
 
                 try:
-                    subprocess.run(["uv", "add", "oxylabs"], check=True)
+                    subprocess.run(["uv", "add", "oxylabs"], check=True)  # noqa: S607
                     from oxylabs import RealtimeClient
 
                     kwargs["oxylabs_api"] = RealtimeClient(
@@ -122,13 +126,15 @@ class OxylabsUniversalScraperTool(BaseTool):
                         password=password,
                         sdk_type=sdk_type,
                     )
-                except subprocess.CalledProcessError:
-                    raise ImportError("Failed to install oxylabs package")
+                except subprocess.CalledProcessError as e:
+                    raise ImportError("Failed to install oxylabs package") from e
             else:
                 raise ImportError(
                     "`oxylabs` package not found, please run `uv add oxylabs`"
                 )
 
+        if config is None:
+            config = OxylabsUniversalScraperConfig()
         super().__init__(config=config, **kwargs)
 
     def _get_credentials_from_env(self) -> tuple[str, str]:

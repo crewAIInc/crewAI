@@ -1,6 +1,6 @@
 import re
 import time
-from typing import Any, List, Optional, Type
+from typing import Any
 from urllib.parse import urlparse
 
 from crewai.tools import BaseTool
@@ -24,6 +24,7 @@ class SeleniumScrapingToolSchema(FixedSeleniumScrapingToolSchema):
     )
 
     @field_validator("website_url")
+    @classmethod
     def validate_website_url(cls, v):
         if not v:
             raise ValueError("Website URL cannot be empty")
@@ -39,7 +40,7 @@ class SeleniumScrapingToolSchema(FixedSeleniumScrapingToolSchema):
             if not all([result.scheme, result.netloc]):
                 raise ValueError("Invalid URL format")
         except Exception as e:
-            raise ValueError(f"Invalid URL: {e!s}")
+            raise ValueError(f"Invalid URL: {e!s}") from e
 
         if re.search(r"\s", v):
             raise ValueError("URL cannot contain whitespace")
@@ -50,28 +51,34 @@ class SeleniumScrapingToolSchema(FixedSeleniumScrapingToolSchema):
 class SeleniumScrapingTool(BaseTool):
     name: str = "Read a website content"
     description: str = "A tool that can be used to read a website content."
-    args_schema: Type[BaseModel] = SeleniumScrapingToolSchema
-    website_url: Optional[str] = None
-    driver: Optional[Any] = None
-    cookie: Optional[dict] = None
-    wait_time: Optional[int] = 3
-    css_element: Optional[str] = None
-    return_html: Optional[bool] = False
-    _by: Optional[Any] = None
-    package_dependencies: List[str] = ["selenium", "webdriver-manager"]
+    args_schema: type[BaseModel] = SeleniumScrapingToolSchema
+    website_url: str | None = None
+    driver: Any | None = None
+    cookie: dict | None = None
+    wait_time: int | None = 3
+    css_element: str | None = None
+    return_html: bool | None = False
+    _by: Any | None = None
+    package_dependencies: list[str] = Field(
+        default_factory=lambda: ["selenium", "webdriver-manager"]
+    )
 
     def __init__(
         self,
-        website_url: Optional[str] = None,
-        cookie: Optional[dict] = None,
-        css_element: Optional[str] = None,
+        website_url: str | None = None,
+        cookie: dict | None = None,
+        css_element: str | None = None,
         **kwargs,
     ):
         super().__init__(**kwargs)
         try:
-            from selenium import webdriver
-            from selenium.webdriver.chrome.options import Options
-            from selenium.webdriver.common.by import By
+            from selenium import webdriver  # type: ignore[import-not-found]
+            from selenium.webdriver.chrome.options import (  # type: ignore[import-not-found]
+                Options,
+            )
+            from selenium.webdriver.common.by import (  # type: ignore[import-not-found]
+                By,
+            )
         except ImportError:
             import click
 
@@ -81,16 +88,20 @@ class SeleniumScrapingTool(BaseTool):
                 import subprocess
 
                 subprocess.run(
-                    ["uv", "pip", "install", "selenium", "webdriver-manager"],
+                    ["uv", "pip", "install", "selenium", "webdriver-manager"],  # noqa: S607
                     check=True,
                 )
-                from selenium import webdriver
-                from selenium.webdriver.chrome.options import Options
-                from selenium.webdriver.common.by import By
+                from selenium import webdriver  # type: ignore[import-not-found]
+                from selenium.webdriver.chrome.options import (  # type: ignore[import-not-found]
+                    Options,
+                )
+                from selenium.webdriver.common.by import (  # type: ignore[import-not-found]
+                    By,
+                )
             else:
                 raise ImportError(
                     "`selenium` and `webdriver-manager` package not found, please run `uv add selenium webdriver-manager`"
-                )
+                ) from None
 
         if "driver" not in kwargs:
             if "options" not in kwargs:
@@ -132,7 +143,8 @@ class SeleniumScrapingTool(BaseTool):
         except Exception as e:
             return f"Error scraping website: {e!s}"
         finally:
-            self.driver.close()
+            if self.driver is not None:
+                self.driver.close()
 
     def _get_content(self, css_element, return_html):
         content = []
@@ -160,7 +172,7 @@ class SeleniumScrapingTool(BaseTool):
         elements_content = []
 
         for element in self.driver.find_elements(self._by.CSS_SELECTOR, css_element):
-            elements_content.append(
+            elements_content.append(  # noqa: PERF401
                 element.get_attribute("outerHTML") if return_html else element.text
             )
 

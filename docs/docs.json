@@ -9,7 +9,22 @@
   },
   "favicon": "/images/favicon.svg",
   "contextual": {
-    "options": ["copy", "view", "chatgpt", "claude", "perplexity", "mcp", "cursor", "vscode"]
+    "options": [
+      "copy", 
+      "view", 
+      "chatgpt", 
+      "claude", 
+      "perplexity", 
+      "mcp", 
+      "cursor", 
+      "vscode",
+      {
+        "title": "Request a feature",
+        "description": "Join the discussion on GitHub to request a new feature",
+        "icon": "plus",
+        "href": "https://github.com/crewAIInc/crewAI/issues/new/choose"
+      }
+    ]
   },
   "navigation": {
     "languages": [
@@ -258,6 +273,7 @@
                 "pages": [
                   "en/observability/overview",
                   "en/observability/arize-phoenix",
+                  "en/observability/braintrust",
                   "en/observability/langdb",
                   "en/observability/langfuse",
                   "en/observability/langtrace",
@@ -668,6 +684,7 @@
                 "pages": [
                   "pt-BR/observability/overview",
                   "pt-BR/observability/arize-phoenix",
+                  "pt-BR/observability/braintrust",
                   "pt-BR/observability/langdb",
                   "pt-BR/observability/langfuse",
                   "pt-BR/observability/langtrace",
@@ -1081,6 +1098,7 @@
                 "pages": [
                   "ko/observability/overview",
                   "ko/observability/arize-phoenix",
+                  "ko/observability/braintrust",
                   "ko/observability/langdb",
                   "ko/observability/langfuse",
                   "ko/observability/langtrace",

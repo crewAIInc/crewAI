@@ -1,7 +1,6 @@
-from typing import List, Optional, Type
+from pydantic import BaseModel, Field
 
 from crewai_tools.rag.data_types import DataType
-from pydantic import BaseModel, Field
 
 from ..rag.rag_tool import RagTool
 
@@ -19,7 +18,7 @@ class GithubSearchToolSchema(FixedGithubSearchToolSchema):
     """Input for GithubSearchTool."""
 
     github_repo: str = Field(..., description="Mandatory github you want to search")
-    content_types: List[str] = Field(
+    content_types: list[str] = Field(
         ...,
         description="Mandatory content types you want to be included search, options: [code, repo, pr, issue]",
     )
@@ -30,16 +29,16 @@ class GithubSearchTool(RagTool):
     description: str = "A tool that can be used to semantic search a query from a github repo's content. This is not the GitHub API, but instead a tool that can provide semantic search capabilities."
     summarize: bool = False
     gh_token: str
-    args_schema: Type[BaseModel] = GithubSearchToolSchema
-    content_types: List[str] = Field(
+    args_schema: type[BaseModel] = GithubSearchToolSchema
+    content_types: list[str] = Field(
         default_factory=lambda: ["code", "repo", "pr", "issue"],
         description="Content types you want to be included search, options: [code, repo, pr, issue]",
     )
 
     def __init__(
         self,
-        github_repo: Optional[str] = None,
-        content_types: Optional[List[str]] = None,
+        github_repo: str | None = None,
+        content_types: list[str] | None = None,
         **kwargs,
     ):
         super().__init__(**kwargs)
@@ -53,7 +52,7 @@ class GithubSearchTool(RagTool):
     def add(
         self,
         repo: str,
-        content_types: Optional[List[str]] = None,
+        content_types: list[str] | None = None,
     ) -> None:
         content_types = content_types or self.content_types
         super().add(
@@ -65,8 +64,8 @@ class GithubSearchTool(RagTool):
     def _run(
         self,
         search_query: str,
-        github_repo: Optional[str] = None,
-        content_types: Optional[List[str]] = None,
+        github_repo: str | None = None,
+        content_types: list[str] | None = None,
         similarity_threshold: float | None = None,
         limit: int | None = None,
     ) -> str:

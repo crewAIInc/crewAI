@@ -1,5 +1,5 @@
 import os
-from typing import Any, List
+from typing import Any
 
 from crewai.tools import BaseTool, EnvVar
 
@@ -12,7 +12,7 @@ except ImportError:
     LINKUP_AVAILABLE = False
     LinkupClient = Any  # type placeholder when package is not available
 
-from pydantic import PrivateAttr
+from pydantic import Field, PrivateAttr
 
 
 class LinkupSearchTool(BaseTool):
@@ -21,19 +21,17 @@ class LinkupSearchTool(BaseTool):
         "Performs an API call to Linkup to retrieve contextual information."
     )
     _client: LinkupClient = PrivateAttr()  # type: ignore
-    description: str = (
-        "Performs an API call to Linkup to retrieve contextual information."
+    package_dependencies: list[str] = Field(default_factory=lambda: ["linkup-sdk"])
+    env_vars: list[EnvVar] = Field(
+        default_factory=lambda: [
+            EnvVar(
+                name="LINKUP_API_KEY", description="API key for Linkup", required=True
+            ),
+        ]
     )
-    _client: LinkupClient = PrivateAttr()  # type: ignore
-    package_dependencies: List[str] = ["linkup-sdk"]
-    env_vars: List[EnvVar] = [
-        EnvVar(name="LINKUP_API_KEY", description="API key for Linkup", required=True),
-    ]
 
-    def __init__(self, api_key: str | None = None):
-        """
-        Initialize the tool with an API key.
-        """
+    def __init__(self, api_key: str | None = None) -> None:
+        """Initialize the tool with an API key."""
         super().__init__()
         try:
             from linkup import LinkupClient
@@ -45,21 +43,20 @@ class LinkupSearchTool(BaseTool):
             ):
                 import subprocess
 
-                subprocess.run(["uv", "add", "linkup-sdk"], check=True)
+                subprocess.run(["uv", "add", "linkup-sdk"], check=True)  # noqa: S607
                 from linkup import LinkupClient
 
             else:
                 raise ImportError(
                     "The 'linkup-sdk' package is required to use the LinkupSearchTool. "
                     "Please install it with: uv add linkup-sdk"
-                )
+                ) from None
         self._client = LinkupClient(api_key=api_key or os.getenv("LINKUP_API_KEY"))
 
     def _run(
         self, query: str, depth: str = "standard", output_type: str = "searchResults"
     ) -> dict:
-        """
-        Executes a search using the Linkup API.
+        """Executes a search using the Linkup API.
 
         :param query: The query to search for.
         :param depth: Search depth (default is "standard").

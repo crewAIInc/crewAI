@@ -19,9 +19,7 @@ def test_run_success_html(mock_post):
     mock_post.return_value = mock_response
 
     tool = BrightDataWebUnlockerTool()
-    result = tool._run(url="https://example.com", format="html", save_file=False)
-
-    print(result)
+    tool._run(url="https://example.com", format="html", save_file=False)
 
 
 @patch.dict(

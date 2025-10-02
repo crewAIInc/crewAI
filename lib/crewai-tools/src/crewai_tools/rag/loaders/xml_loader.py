@@ -32,7 +32,7 @@ class XMLLoader(BaseLoader):
             response.raise_for_status()
             return response.text
         except Exception as e:
-            raise ValueError(f"Error fetching XML from URL {url}: {e!s}")
+            raise ValueError(f"Error fetching XML from URL {url}: {e!s}") from e
 
     def _load_from_file(self, path: str) -> str:
         with open(path, "r", encoding="utf-8") as file:
@@ -41,14 +41,14 @@ class XMLLoader(BaseLoader):
     def _parse_xml(self, content: str, source_ref: str) -> LoaderResult:
         try:
             if content.strip().startswith("<"):
-                root = ET.fromstring(content)
+                root = ET.fromstring(content)  # noqa: S314
             else:
-                root = ET.parse(source_ref).getroot()
+                root = ET.parse(source_ref).getroot()  # noqa: S314
 
             text_parts = []
             for text_content in root.itertext():
                 if text_content and text_content.strip():
-                    text_parts.append(text_content.strip())
+                    text_parts.append(text_content.strip())  # noqa: PERF401
 
             text = "\n".join(text_parts)
             metadata = {"format": "xml", "root_tag": root.tag}

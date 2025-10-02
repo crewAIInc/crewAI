@@ -2,7 +2,7 @@ import datetime
 import json
 import logging
 import os
-from typing import Any, List, Optional, Type
+from typing import Any
 
 from crewai.tools import BaseTool, EnvVar
 from pydantic import BaseModel, Field
@@ -38,17 +38,21 @@ class SerperDevTool(BaseTool):
         "A tool that can be used to search the internet with a search_query. "
         "Supports different search types: 'search' (default), 'news'"
     )
-    args_schema: Type[BaseModel] = SerperDevToolSchema
+    args_schema: type[BaseModel] = SerperDevToolSchema
     base_url: str = "https://google.serper.dev"
     n_results: int = 10
     save_file: bool = False
     search_type: str = "search"
-    country: Optional[str] = ""
-    location: Optional[str] = ""
-    locale: Optional[str] = ""
-    env_vars: List[EnvVar] = [
-        EnvVar(name="SERPER_API_KEY", description="API key for Serper", required=True),
-    ]
+    country: str | None = ""
+    location: str | None = ""
+    locale: str | None = ""
+    env_vars: list[EnvVar] = Field(
+        default_factory=lambda: [
+            EnvVar(
+                name="SERPER_API_KEY", description="API key for Serper", required=True
+            ),
+        ]
+    )
 
     def _get_search_url(self, search_type: str) -> str:
         """Get the appropriate endpoint URL based on search type."""
@@ -95,7 +99,7 @@ class SerperDevTool(BaseTool):
                     ]
 
                 processed_results.append(result_data)
-            except KeyError:
+            except KeyError:  # noqa: PERF203
                 logger.warning(f"Skipping malformed organic result: {result}")
                 continue
         return processed_results
@@ -112,7 +116,7 @@ class SerperDevTool(BaseTool):
                     "link": result.get("link", ""),
                 }
                 processed_results.append(result_data)
-            except KeyError:
+            except KeyError:  # noqa: PERF203
                 logger.warning(f"Skipping malformed PAA result: {result}")
                 continue
         return processed_results
@@ -123,7 +127,7 @@ class SerperDevTool(BaseTool):
         for result in related_results[: self.n_results]:
             try:
                 processed_results.append({"query": result["query"]})
-            except KeyError:
+            except KeyError:  # noqa: PERF203
                 logger.warning(f"Skipping malformed related search result: {result}")
                 continue
         return processed_results
@@ -142,7 +146,7 @@ class SerperDevTool(BaseTool):
                     "imageUrl": result.get("imageUrl", ""),
                 }
                 processed_results.append(result_data)
-            except KeyError:
+            except KeyError:  # noqa: PERF203
                 logger.warning(f"Skipping malformed news result: {result}")
                 continue
         return processed_results

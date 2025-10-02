@@ -2,14 +2,14 @@ import logging
 from pathlib import Path
 import re
 import time
-from typing import ClassVar, List, Optional, Type
+from typing import ClassVar
 import urllib.error
 import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
 
 from crewai.tools import BaseTool, EnvVar
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 logger = logging.getLogger(__file__)
@@ -32,10 +32,10 @@ class ArxivPaperTool(BaseTool):
     REQUEST_TIMEOUT: ClassVar[int] = 10
     name: str = "Arxiv Paper Fetcher and Downloader"
     description: str = "Fetches metadata from Arxiv based on a search query and optionally downloads PDFs."
-    args_schema: Type[BaseModel] = ArxivToolInput
-    model_config = {"extra": "allow"}
-    package_dependencies: List[str] = ["pydantic"]
-    env_vars: List[EnvVar] = []
+    args_schema: type[BaseModel] = ArxivToolInput
+    model_config = ConfigDict(extra="allow")
+    package_dependencies: list[str] = Field(default_factory=lambda: ["pydantic"])
+    env_vars: list[EnvVar] = Field(default_factory=list)
 
     def __init__(
         self, download_pdfs=False, save_dir="./arxiv_pdfs", use_title_as_filename=False
@@ -80,12 +80,12 @@ class ArxivPaperTool(BaseTool):
             logger.error(f"ArxivTool Error: {e!s}")
             return f"Failed to fetch or download Arxiv papers: {e!s}"
 
-    def fetch_arxiv_data(self, search_query: str, max_results: int) -> List[dict]:
+    def fetch_arxiv_data(self, search_query: str, max_results: int) -> list[dict]:
         api_url = f"{self.BASE_API_URL}?search_query={urllib.parse.quote(search_query)}&start=0&max_results={max_results}"
         logger.info(f"Fetching data from Arxiv API: {api_url}")
 
         try:
-            with urllib.request.urlopen(
+            with urllib.request.urlopen(  # noqa: S310
                 api_url, timeout=self.REQUEST_TIMEOUT
             ) as response:
                 if response.status != 200:
@@ -95,7 +95,7 @@ class ArxivPaperTool(BaseTool):
             logger.error(f"Error fetching data from Arxiv: {e}")
             raise
 
-        root = ET.fromstring(data)
+        root = ET.fromstring(data)  # noqa: S314
         papers = []
 
         for entry in root.findall(self.ATOM_NAMESPACE + "entry"):
@@ -126,11 +126,11 @@ class ArxivPaperTool(BaseTool):
         return papers
 
     @staticmethod
-    def _get_element_text(entry: ET.Element, element_name: str) -> Optional[str]:
+    def _get_element_text(entry: ET.Element, element_name: str) -> str | None:
         elem = entry.find(f"{ArxivPaperTool.ATOM_NAMESPACE}{element_name}")
         return elem.text.strip() if elem is not None and elem.text else None
 
-    def _extract_pdf_url(self, entry: ET.Element) -> Optional[str]:
+    def _extract_pdf_url(self, entry: ET.Element) -> str | None:
         for link in entry.findall(self.ATOM_NAMESPACE + "link"):
             if link.attrib.get("title", "").lower() == "pdf":
                 return link.attrib.get("href")
@@ -164,7 +164,7 @@ class ArxivPaperTool(BaseTool):
     def download_pdf(self, pdf_url: str, save_path: str):
         try:
             logger.info(f"Downloading PDF from {pdf_url} to {save_path}")
-            urllib.request.urlretrieve(pdf_url, str(save_path))
+            urllib.request.urlretrieve(pdf_url, str(save_path))  # noqa: S310
             logger.info(f"PDF saved: {save_path}")
         except urllib.error.URLError as e:
             logger.error(f"Network error occurred while downloading {pdf_url}: {e}")

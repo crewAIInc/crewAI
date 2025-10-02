@@ -1,5 +1,5 @@
 import os
-from typing import Any, List, Optional, Type
+from typing import Any
 from urllib.parse import urlencode
 
 from crewai.tools import BaseTool, EnvVar
@@ -18,26 +18,27 @@ class SerplyNewsSearchToolSchema(BaseModel):
 class SerplyNewsSearchTool(BaseTool):
     name: str = "News Search"
     description: str = "A tool to perform News article search with a search_query."
-    args_schema: Type[BaseModel] = SerplyNewsSearchToolSchema
+    args_schema: type[BaseModel] = SerplyNewsSearchToolSchema
     search_url: str = "https://api.serply.io/v1/news/"
-    proxy_location: Optional[str] = "US"
-    headers: Optional[dict] = {}
-    limit: Optional[int] = 10
-    env_vars: List[EnvVar] = [
-        EnvVar(
-            name="SERPLY_API_KEY",
-            description="API key for Serply services",
-            required=True,
-        ),
-    ]
+    proxy_location: str | None = "US"
+    headers: dict | None = Field(default_factory=dict)
+    limit: int | None = 10
+    env_vars: list[EnvVar] = Field(
+        default_factory=lambda: [
+            EnvVar(
+                name="SERPLY_API_KEY",
+                description="API key for Serply services",
+                required=True,
+            ),
+        ]
+    )
 
     def __init__(
-        self, limit: Optional[int] = 10, proxy_location: Optional[str] = "US", **kwargs
+        self, limit: int | None = 10, proxy_location: str | None = "US", **kwargs
     ):
-        """
-        param: limit (int): The maximum number of results to return [10-100, defaults to 10]
+        """param: limit (int): The maximum number of results to return [10-100, defaults to 10]
         proxy_location: (str): Where to get news, specifically for a specific country results.
-             ['US', 'CA', 'IE', 'GB', 'FR', 'DE', 'SE', 'IN', 'JP', 'KR', 'SG', 'AU', 'BR'] (defaults to US)
+             ['US', 'CA', 'IE', 'GB', 'FR', 'DE', 'SE', 'IN', 'JP', 'KR', 'SG', 'AU', 'BR'] (defaults to US).
         """
         super().__init__(**kwargs)
         self.limit = limit
@@ -63,7 +64,12 @@ class SerplyNewsSearchTool(BaseTool):
         # build the url
         url = f"{self.search_url}{urlencode(query_payload)}"
 
-        response = requests.request("GET", url, headers=self.headers)
+        response = requests.request(
+            "GET",
+            url,
+            headers=self.headers,
+            timeout=30,
+        )
         results = response.json()
         if "entries" in results:
             results = results["entries"]
@@ -71,7 +77,10 @@ class SerplyNewsSearchTool(BaseTool):
             for result in results[: self.limit]:
                 try:
                     # follow url
-                    r = requests.get(result["link"])
+                    r = requests.get(
+                        result["link"],
+                        timeout=30,
+                    )
                     final_link = r.history[-1].headers["Location"]
                     string.append(
                         "\n".join(
@@ -84,7 +93,7 @@ class SerplyNewsSearchTool(BaseTool):
                             ]
                         )
                     )
-                except KeyError:
+                except KeyError:  # noqa: PERF203
                     continue
 
             content = "\n".join(string)

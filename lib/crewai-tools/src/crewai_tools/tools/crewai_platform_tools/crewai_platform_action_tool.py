@@ -1,10 +1,8 @@
-"""
-Crewai Enterprise Tools
-"""
+"""Crewai Enterprise Tools."""
 
 import json
 import re
-from typing import Any, Dict, List, Literal, Optional, Type, Union, cast, get_origin
+from typing import Any, Literal, Optional, Union, cast, get_origin
 
 from crewai.tools import BaseTool
 from pydantic import Field, create_model
@@ -18,7 +16,7 @@ from crewai_tools.tools.crewai_platform_tools.misc import (
 
 class CrewAIPlatformActionTool(BaseTool):
     action_name: str = Field(default="", description="The name of the action")
-    action_schema: Dict[str, Any] = Field(
+    action_schema: dict[str, Any] = Field(
         default_factory=dict, description="The schema of the action"
     )
 
@@ -26,7 +24,7 @@ class CrewAIPlatformActionTool(BaseTool):
         self,
         description: str,
         action_name: str,
-        action_schema: Dict[str, Any],
+        action_schema: dict[str, Any],
     ):
         self._model_registry = {}
         self._base_name = self._sanitize_name(action_name)
@@ -54,8 +52,7 @@ class CrewAIPlatformActionTool(BaseTool):
                 args_schema = create_model(
                     f"{self._base_name}Schema", **field_definitions
                 )
-            except Exception as e:
-                print(f"Warning: Could not create main schema model: {e}")
+            except Exception:
                 args_schema = create_model(
                     f"{self._base_name}Schema",
                     input_text=(str, Field(description="Input for the action")),
@@ -81,8 +78,8 @@ class CrewAIPlatformActionTool(BaseTool):
         return "".join(word.capitalize() for word in parts if word)
 
     def _extract_schema_info(
-        self, action_schema: Dict[str, Any]
-    ) -> tuple[Dict[str, Any], List[str]]:
+        self, action_schema: dict[str, Any]
+    ) -> tuple[dict[str, Any], list[str]]:
         schema_props = (
             action_schema.get("function", {})
             .get("parameters", {})
@@ -93,7 +90,7 @@ class CrewAIPlatformActionTool(BaseTool):
         )
         return schema_props, required
 
-    def _process_schema_type(self, schema: Dict[str, Any], type_name: str) -> Type[Any]:
+    def _process_schema_type(self, schema: dict[str, Any], type_name: str) -> type[Any]:
         if "anyOf" in schema:
             any_of_types = schema["anyOf"]
             is_nullable = any(t.get("type") == "null" for t in any_of_types)
@@ -101,8 +98,8 @@ class CrewAIPlatformActionTool(BaseTool):
 
             if non_null_types:
                 base_type = self._process_schema_type(non_null_types[0], type_name)
-                return Optional[base_type] if is_nullable else base_type
-            return cast(Type[Any], Optional[str])
+                return Optional[base_type] if is_nullable else base_type  # noqa: UP045
+            return cast(type[Any], Optional[str])  # noqa: UP045
 
         if "oneOf" in schema:
             return self._process_schema_type(schema["oneOf"][0], type_name)
@@ -121,7 +118,7 @@ class CrewAIPlatformActionTool(BaseTool):
         if json_type == "array":
             items_schema = schema.get("items", {"type": "string"})
             item_type = self._process_schema_type(items_schema, f"{type_name}Item")
-            return List[item_type]
+            return list[item_type]
 
         if json_type == "object":
             return self._create_nested_model(schema, type_name)
@@ -129,8 +126,8 @@ class CrewAIPlatformActionTool(BaseTool):
         return self._map_json_type_to_python(json_type)
 
     def _create_nested_model(
-        self, schema: Dict[str, Any], model_name: str
-    ) -> Type[Any]:
+        self, schema: dict[str, Any], model_name: str
+    ) -> type[Any]:
         full_model_name = f"{self._base_name}{model_name}"
 
         if full_model_name in self._model_registry:
@@ -162,23 +159,22 @@ class CrewAIPlatformActionTool(BaseTool):
             nested_model = create_model(full_model_name, **field_definitions)
             self._model_registry[full_model_name] = nested_model
             return nested_model
-        except Exception as e:
-            print(f"Warning: Could not create nested model {full_model_name}: {e}")
+        except Exception:
             return dict
 
     def _create_field_definition(
-        self, field_type: Type[Any], is_required: bool, description: str
+        self, field_type: type[Any], is_required: bool, description: str
     ) -> tuple:
         if is_required:
             return (field_type, Field(description=description))
         if get_origin(field_type) is Union:
             return (field_type, Field(default=None, description=description))
         return (
-            Optional[field_type],
+            Optional[field_type],  # noqa: UP045
             Field(default=None, description=description),
         )
 
-    def _map_json_type_to_python(self, json_type: str) -> Type[Any]:
+    def _map_json_type_to_python(self, json_type: str) -> type[Any]:
         type_mapping = {
             "string": str,
             "integer": int,
@@ -190,7 +186,7 @@ class CrewAIPlatformActionTool(BaseTool):
         }
         return type_mapping.get(json_type, str)
 
-    def _get_required_nullable_fields(self) -> List[str]:
+    def _get_required_nullable_fields(self) -> list[str]:
         schema_props, required = self._extract_schema_info(self.action_schema)
 
         required_nullable_fields = []
@@ -201,7 +197,7 @@ class CrewAIPlatformActionTool(BaseTool):
 
         return required_nullable_fields
 
-    def _is_nullable_type(self, schema: Dict[str, Any]) -> bool:
+    def _is_nullable_type(self, schema: dict[str, Any]) -> bool:
         if "anyOf" in schema:
             return any(t.get("type") == "null" for t in schema["anyOf"])
         return schema.get("type") == "null"
@@ -211,7 +207,7 @@ class CrewAIPlatformActionTool(BaseTool):
             cleaned_kwargs = {}
             for key, value in kwargs.items():
                 if value is not None:
-                    cleaned_kwargs[key] = value
+                    cleaned_kwargs[key] = value  # noqa: PERF403
 
             required_nullable_fields = self._get_required_nullable_fields()
 

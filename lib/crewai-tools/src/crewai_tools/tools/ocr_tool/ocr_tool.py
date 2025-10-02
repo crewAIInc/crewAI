@@ -1,11 +1,9 @@
-"""
-Optical Character Recognition (OCR) Tool
+"""Optical Character Recognition (OCR) Tool.
 
 This tool provides functionality for extracting text from images using supported LLMs. Make sure your model supports the `vision` feature.
 """
 
 import base64
-from typing import Optional, Type
 
 from crewai import LLM
 from crewai.tools.base_tool import BaseTool
@@ -41,9 +39,9 @@ class OCRTool(BaseTool):
 
     name: str = "Optical Character Recognition Tool"
     description: str = "This tool uses an LLM's API to extract text from an image file."
-    _llm: Optional[LLM] = PrivateAttr(default=None)
+    _llm: LLM | None = PrivateAttr(default=None)
 
-    args_schema: Type[BaseModel] = OCRToolSchema
+    args_schema: type[BaseModel] = OCRToolSchema
 
     def __init__(self, llm: LLM = None, **kwargs):
         """Initialize the OCR tool.
@@ -106,8 +104,7 @@ class OCRTool(BaseTool):
             },
         ]
 
-        response = self._llm.call(messages=messages)
-        return response
+        return self._llm.call(messages=messages)
 
     def _encode_image(self, image_path: str):
         """Encode an image file to base64 format.

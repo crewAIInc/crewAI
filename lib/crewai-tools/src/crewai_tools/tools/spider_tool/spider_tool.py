@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Dict, List, Literal, Optional, Type
+from typing import Any, Literal
 from urllib.parse import unquote, urlparse
 
 from crewai.tools import BaseTool, EnvVar
@@ -47,25 +47,29 @@ class SpiderTool(BaseTool):
     description: str = (
         "A tool to scrape or crawl a website and return LLM-ready content."
     )
-    args_schema: Type[BaseModel] = SpiderToolSchema
-    custom_params: Optional[Dict[str, Any]] = None
-    website_url: Optional[str] = None
-    api_key: Optional[str] = None
+    args_schema: type[BaseModel] = SpiderToolSchema
+    custom_params: dict[str, Any] | None = None
+    website_url: str | None = None
+    api_key: str | None = None
     spider: Any = None
     log_failures: bool = True
     config: SpiderToolConfig = SpiderToolConfig()
-    package_dependencies: List[str] = ["spider-client"]
-    env_vars: List[EnvVar] = [
-        EnvVar(
-            name="SPIDER_API_KEY", description="API key for Spider.cloud", required=True
-        ),
-    ]
+    package_dependencies: list[str] = Field(default_factory=lambda: ["spider-client"])
+    env_vars: list[EnvVar] = Field(
+        default_factory=lambda: [
+            EnvVar(
+                name="SPIDER_API_KEY",
+                description="API key for Spider.cloud",
+                required=True,
+            ),
+        ]
+    )
 
     def __init__(
         self,
-        api_key: Optional[str] = None,
-        website_url: Optional[str] = None,
-        custom_params: Optional[Dict[str, Any]] = None,
+        api_key: str | None = None,
+        website_url: str | None = None,
+        custom_params: dict[str, Any] | None = None,
         log_failures: bool = True,
         **kwargs,
     ):
@@ -83,7 +87,6 @@ class SpiderTool(BaseTool):
             ImportError: If spider-client package is not installed.
             RuntimeError: If Spider client initialization fails.
         """
-
         super().__init__(**kwargs)
         if website_url is not None:
             self.website_url = website_url
@@ -102,12 +105,12 @@ class SpiderTool(BaseTool):
             ):
                 import subprocess
 
-                subprocess.run(["uv", "pip", "install", "spider-client"], check=True)
+                subprocess.run(["uv", "pip", "install", "spider-client"], check=True)  # noqa: S607
                 from spider import Spider
             else:
                 raise ImportError(
                     "`spider-client` package not found, please run `uv add spider-client`"
-                )
+                ) from None
         self.spider = Spider(api_key=api_key)
 
     def _validate_url(self, url: str) -> bool:
@@ -138,7 +141,7 @@ class SpiderTool(BaseTool):
         self,
         website_url: str,
         mode: Literal["scrape", "crawl"] = "scrape",
-    ) -> Optional[str]:
+    ) -> str | None:
         """Execute the spider tool to scrape or crawl the specified website.
 
         Args:
@@ -157,7 +160,6 @@ class SpiderTool(BaseTool):
             ConnectionError: If network connection fails while accessing the URL.
             Exception: For other runtime errors.
         """
-
         try:
             params = {}
             url = website_url or self.website_url

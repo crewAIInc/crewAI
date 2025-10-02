@@ -1,6 +1,6 @@
 import asyncio
 import os
-from typing import Any, Dict, List, Optional, Type
+from typing import Any
 
 import aiohttp
 from crewai.tools import BaseTool, EnvVar
@@ -23,7 +23,7 @@ class BrightDataConfig(BaseModel):
         )
 
 
-class BrightDataDatasetToolException(Exception):
+class BrightDataDatasetToolException(Exception):  # noqa: N818
     """Exception raised for custom error in the application."""
 
     def __init__(self, message, error_code):
@@ -36,8 +36,7 @@ class BrightDataDatasetToolException(Exception):
 
 
 class BrightDataDatasetToolSchema(BaseModel):
-    """
-    Schema for validating input parameters for the BrightDataDatasetTool.
+    """Schema for validating input parameters for the BrightDataDatasetTool.
 
     Attributes:
         dataset_type (str): Required Bright Data Dataset Type used to specify which dataset to access.
@@ -48,12 +47,12 @@ class BrightDataDatasetToolSchema(BaseModel):
     """
 
     dataset_type: str = Field(..., description="The Bright Data Dataset Type")
-    format: Optional[str] = Field(
+    format: str | None = Field(
         default="json", description="Response format (json by default)"
     )
     url: str = Field(..., description="The URL to extract data from")
-    zipcode: Optional[str] = Field(default=None, description="Optional zipcode")
-    additional_params: Optional[Dict[str, Any]] = Field(
+    zipcode: str | None = Field(default=None, description="Optional zipcode")
+    additional_params: dict[str, Any] | None = Field(
         default=None, description="Additional params if any"
     )
 
@@ -399,8 +398,7 @@ datasets = [
 
 
 class BrightDataDatasetTool(BaseTool):
-    """
-    CrewAI-compatible tool for scraping structured data using Bright Data Datasets.
+    """CrewAI-compatible tool for scraping structured data using Bright Data Datasets.
 
     Attributes:
         name (str): Tool name displayed in the CrewAI environment.
@@ -410,29 +408,32 @@ class BrightDataDatasetTool(BaseTool):
 
     name: str = "Bright Data Dataset Tool"
     description: str = "Scrapes structured data using Bright Data Dataset API from a URL and optional input parameters"
-    args_schema: Type[BaseModel] = BrightDataDatasetToolSchema
-    dataset_type: Optional[str] = None
-    url: Optional[str] = None
+    args_schema: type[BaseModel] = BrightDataDatasetToolSchema
+    dataset_type: str | None = None
+    url: str | None = None
     format: str = "json"
-    zipcode: Optional[str] = None
-    additional_params: Optional[Dict[str, Any]] = None
-    env_vars: List[EnvVar] = [
-        EnvVar(
-            name="BRIGHT_DATA_API_KEY",
-            description="API key for Bright Data",
-            required=True,
-        ),
-    ]
+    zipcode: str | None = None
+    additional_params: dict[str, Any] | None = None
+    env_vars: list[EnvVar] = Field(
+        default_factory=lambda: [
+            EnvVar(
+                name="BRIGHT_DATA_API_KEY",
+                description="API key for Bright Data",
+                required=True,
+            ),
+        ]
+    )
 
     def __init__(
         self,
-        dataset_type: str = None,
-        url: str = None,
+        dataset_type: str | None = None,
+        url: str | None = None,
         format: str = "json",
-        zipcode: str = None,
-        additional_params: Dict[str, Any] = None,
+        zipcode: str | None = None,
+        additional_params: dict[str, Any] | None = None,
+        **kwargs: Any,
     ):
-        super().__init__()
+        super().__init__(**kwargs)
         self.dataset_type = dataset_type
         self.url = url
         self.format = format
@@ -447,12 +448,11 @@ class BrightDataDatasetTool(BaseTool):
         dataset_type: str,
         output_format: str,
         url: str,
-        zipcode: Optional[str] = None,
-        additional_params: Optional[Dict[str, Any]] = None,
+        zipcode: str | None = None,
+        additional_params: dict[str, Any] | None = None,
         polling_interval: int = 1,
-    ) -> Dict:
-        """
-        Asynchronously trigger and poll Bright Data dataset scraping.
+    ) -> str:
+        """Asynchronously trigger and poll Bright Data dataset scraping.
 
         Args:
             dataset_type (str): Bright Data Dataset Type.
@@ -507,7 +507,6 @@ class BrightDataDatasetTool(BaseTool):
                         trigger_response.status,
                     )
                 trigger_data = await trigger_response.json()
-                print(trigger_data)
                 snapshot_id = trigger_data.get("snapshot_id")
 
             # Step 2: Poll for completion
@@ -527,9 +526,8 @@ class BrightDataDatasetTool(BaseTool):
                         )
                     status_data = await status_response.json()
                     if status_data.get("status") == "ready":
-                        print("Job is ready")
                         break
-                    elif status_data.get("status") == "error":
+                    if status_data.get("status") == "error":
                         raise BrightDataDatasetToolException(
                             f"Job failed: {status_data}", 0
                         )
@@ -552,11 +550,11 @@ class BrightDataDatasetTool(BaseTool):
 
     def _run(
         self,
-        url: str = None,
-        dataset_type: str = None,
-        format: str = None,
-        zipcode: str = None,
-        additional_params: Dict[str, Any] = None,
+        url: str | None = None,
+        dataset_type: str | None = None,
+        format: str | None = None,
+        zipcode: str | None = None,
+        additional_params: dict[str, Any] | None = None,
         **kwargs: Any,
     ) -> Any:
         dataset_type = dataset_type or self.dataset_type
@@ -593,8 +591,10 @@ class BrightDataDatasetTool(BaseTool):
                 )
             )
         except TimeoutError as e:
-            return f"Timeout Exception occured in method : get_dataset_data_async. Details - {str(e)}"
+            return f"Timeout Exception occured in method : get_dataset_data_async. Details - {e!s}"
         except BrightDataDatasetToolException as e:
-            return f"Exception occured in method : get_dataset_data_async. Details - {str(e)}"
+            return (
+                f"Exception occured in method : get_dataset_data_async. Details - {e!s}"
+            )
         except Exception as e:
-            return f"Bright Data API error: {str(e)}"
+            return f"Bright Data API error: {e!s}"

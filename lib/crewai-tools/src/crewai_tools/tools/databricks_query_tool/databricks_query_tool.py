@@ -1,5 +1,5 @@
 import os
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Type
+from typing import TYPE_CHECKING, Any, Optional
 
 from crewai.tools import BaseTool
 from pydantic import BaseModel, Field, model_validator
@@ -15,19 +15,19 @@ class DatabricksQueryToolSchema(BaseModel):
     query: str = Field(
         ..., description="SQL query to execute against the Databricks workspace table"
     )
-    catalog: Optional[str] = Field(
+    catalog: str | None = Field(
         None,
         description="Databricks catalog name (optional, defaults to configured catalog)",
     )
-    db_schema: Optional[str] = Field(
+    db_schema: str | None = Field(
         None,
         description="Databricks schema name (optional, defaults to configured schema)",
     )
-    warehouse_id: Optional[str] = Field(
+    warehouse_id: str | None = Field(
         None,
         description="Databricks SQL warehouse ID (optional, defaults to configured warehouse)",
     )
-    row_limit: Optional[int] = Field(
+    row_limit: int | None = Field(
         1000, description="Maximum number of rows to return (default: 1000)"
     )
 
@@ -46,8 +46,7 @@ class DatabricksQueryToolSchema(BaseModel):
 
 
 class DatabricksQueryTool(BaseTool):
-    """
-    A tool for querying Databricks workspace tables using SQL.
+    """A tool for querying Databricks workspace tables using SQL.
 
     This tool executes SQL queries against Databricks tables and returns the results.
     It requires Databricks authentication credentials to be set as environment variables.
@@ -66,25 +65,24 @@ class DatabricksQueryTool(BaseTool):
         "Execute SQL queries against Databricks workspace tables and return the results."
         " Provide a 'query' parameter with the SQL query to execute."
     )
-    args_schema: Type[BaseModel] = DatabricksQueryToolSchema
+    args_schema: type[BaseModel] = DatabricksQueryToolSchema
 
     # Optional default parameters
-    default_catalog: Optional[str] = None
-    default_schema: Optional[str] = None
-    default_warehouse_id: Optional[str] = None
+    default_catalog: str | None = None
+    default_schema: str | None = None
+    default_warehouse_id: str | None = None
 
     _workspace_client: Optional["WorkspaceClient"] = None
-    package_dependencies: List[str] = ["databricks-sdk"]
+    package_dependencies: list[str] = Field(default_factory=lambda: ["databricks-sdk"])
 
     def __init__(
         self,
-        default_catalog: Optional[str] = None,
-        default_schema: Optional[str] = None,
-        default_warehouse_id: Optional[str] = None,
+        default_catalog: str | None = None,
+        default_schema: str | None = None,
+        default_warehouse_id: str | None = None,
         **kwargs: Any,
     ) -> None:
-        """
-        Initialize the DatabricksQueryTool.
+        """Initialize the DatabricksQueryTool.
 
         Args:
             default_catalog (Optional[str]): Default catalog to use for queries.
@@ -119,13 +117,13 @@ class DatabricksQueryTool(BaseTool):
                 from databricks.sdk import WorkspaceClient
 
                 self._workspace_client = WorkspaceClient()
-            except ImportError:
+            except ImportError as e:
                 raise ImportError(
                     "`databricks-sdk` package not found, please run `uv add databricks-sdk`"
-                )
+                ) from e
         return self._workspace_client
 
-    def _format_results(self, results: List[Dict[str, Any]]) -> str:
+    def _format_results(self, results: list[dict[str, Any]]) -> str:
         """Format query results as a readable string."""
         if not results:
             return "Query returned no results."
@@ -176,8 +174,7 @@ class DatabricksQueryTool(BaseTool):
         self,
         **kwargs: Any,
     ) -> str:
-        """
-        Execute a SQL query against Databricks and return the results.
+        """Execute a SQL query against Databricks and return the results.
 
         Args:
             query (str): SQL query to execute
@@ -337,9 +334,6 @@ class DatabricksQueryTool(BaseTool):
                     if hasattr(result.result, "data_array"):
                         # Add defensive check for None data_array
                         if result.result.data_array is None:
-                            print(
-                                "data_array is None - likely an empty result set or DDL query"
-                            )
                             # Return empty result handling rather than trying to process null data
                             return "Query executed successfully (no data returned)"
 
@@ -418,9 +412,6 @@ class DatabricksQueryTool(BaseTool):
                         "is_likely_incorrect_row_structure" in locals()
                         and is_likely_incorrect_row_structure
                     ):
-                        print(
-                            "Data appears to be malformed - will use special row reconstruction"
-                        )
                         needs_special_string_handling = True
                     else:
                         needs_special_string_handling = False
@@ -431,7 +422,6 @@ class DatabricksQueryTool(BaseTool):
                         and needs_special_string_handling
                     ):
                         # We're dealing with data where the rows may be incorrectly structured
-                        print("Using row reconstruction processing mode")
 
                         # Collect all values into a flat list
                         all_values = []
@@ -568,7 +558,6 @@ class DatabricksQueryTool(BaseTool):
                             )
 
                             if title_idx >= 0:
-                                print("Attempting title reconstruction method")
                                 # Try to detect if title is split across multiple values
                                 i = 0
                                 while i < len(all_values):
@@ -609,7 +598,6 @@ class DatabricksQueryTool(BaseTool):
 
                         # If we still don't have rows, use simple chunking as fallback
                         if not reconstructed_rows:
-                            print("Falling back to basic chunking approach")
                             chunks = [
                                 all_values[i : i + expected_column_count]
                                 for i in range(
@@ -637,7 +625,6 @@ class DatabricksQueryTool(BaseTool):
 
                         # Apply post-processing to fix known issues
                         if reconstructed_rows and "Title" in columns:
-                            print("Applying post-processing to improve data quality")
                             for row in reconstructed_rows:
                                 # Fix titles that might still have issues
                                 if (
@@ -654,7 +641,6 @@ class DatabricksQueryTool(BaseTool):
                         chunk_results = reconstructed_rows
                     else:
                         # Process normal result structure as before
-                        print("Using standard processing mode")
 
                         # Check different result structures
                         if (
@@ -662,7 +648,9 @@ class DatabricksQueryTool(BaseTool):
                             and result.result.data_array
                         ):
                             # Check if data appears to be malformed within chunks
-                            for chunk_idx, chunk in enumerate(result.result.data_array):
+                            for _chunk_idx, chunk in enumerate(
+                                result.result.data_array
+                            ):
                                 # Check if chunk might actually contain individual columns of a single row
                                 # This is another way data might be malformed - check the first few values
                                 if len(chunk) > 0 and len(columns) > 1:
@@ -676,10 +664,6 @@ class DatabricksQueryTool(BaseTool):
                                         if (
                                             len(chunk) > len(columns) * 3
                                         ):  # Heuristic: if chunk has way more items than columns
-                                            print(
-                                                "Chunk appears to contain individual values rather than rows - switching to row reconstruction"
-                                            )
-
                                             # This chunk might actually be values of multiple rows - try to reconstruct
                                             values = chunk  # All values in this chunk
                                             reconstructed_rows = []
@@ -697,7 +681,9 @@ class DatabricksQueryTool(BaseTool):
                                                     row_dict = {
                                                         col: val
                                                         for col, val in zip(
-                                                            columns, row_values
+                                                            columns,
+                                                            row_values,
+                                                            strict=False,
                                                         )
                                                     }
                                                     reconstructed_rows.append(row_dict)
@@ -726,7 +712,9 @@ class DatabricksQueryTool(BaseTool):
                                                 row_dict = {
                                                     col: val
                                                     for col, val in zip(
-                                                        columns, row_values
+                                                        columns,
+                                                        row_values,
+                                                        strict=False,
                                                     )
                                                 }
                                                 chunk_results.append(row_dict)
@@ -735,7 +723,7 @@ class DatabricksQueryTool(BaseTool):
                                         continue
 
                                 # Normal processing for typical row structure
-                                for row_idx, row in enumerate(chunk):
+                                for _row_idx, row in enumerate(chunk):
                                     # Ensure row is actually a collection of values
                                     if not isinstance(row, (list, tuple, dict)):
                                         # This might be a single value; skip it or handle specially
@@ -771,7 +759,7 @@ class DatabricksQueryTool(BaseTool):
                         elif hasattr(result.result, "data") and result.result.data:
                             # Alternative data structure
 
-                            for row_idx, row in enumerate(result.result.data):
+                            for _row_idx, row in enumerate(result.result.data):
                                 # Debug info
 
                                 # Safely create dictionary matching column names to values

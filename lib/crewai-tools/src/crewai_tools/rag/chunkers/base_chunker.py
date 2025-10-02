@@ -1,21 +1,17 @@
 import re
-from typing import List, Optional
 
 
 class RecursiveCharacterTextSplitter:
-    """
-    A text splitter that recursively splits text based on a hierarchy of separators.
-    """
+    """A text splitter that recursively splits text based on a hierarchy of separators."""
 
     def __init__(
         self,
         chunk_size: int = 4000,
         chunk_overlap: int = 200,
-        separators: Optional[List[str]] = None,
+        separators: list[str] | None = None,
         keep_separator: bool = True,
     ):
-        """
-        Initialize the RecursiveCharacterTextSplitter.
+        """Initialize the RecursiveCharacterTextSplitter.
 
         Args:
             chunk_size: Maximum size of each chunk
@@ -39,10 +35,10 @@ class RecursiveCharacterTextSplitter:
             "",
         ]
 
-    def split_text(self, text: str) -> List[str]:
+    def split_text(self, text: str) -> list[str]:
         return self._split_text(text, self._separators)
 
-    def _split_text(self, text: str, separators: List[str]) -> List[str]:
+    def _split_text(self, text: str, separators: list[str]) -> list[str]:
         separator = separators[-1]
         new_separators = []
 
@@ -71,7 +67,7 @@ class RecursiveCharacterTextSplitter:
 
         return self._merge_splits(good_splits, separator)
 
-    def _split_text_with_separator(self, text: str, separator: str) -> List[str]:
+    def _split_text_with_separator(self, text: str, separator: str) -> list[str]:
         if separator == "":
             return list(text)
 
@@ -95,13 +91,13 @@ class RecursiveCharacterTextSplitter:
             return [s for s in splits if s]
         return text.split(separator)
 
-    def _split_by_characters(self, text: str) -> List[str]:
+    def _split_by_characters(self, text: str) -> list[str]:
         chunks = []
         for i in range(0, len(text), self._chunk_size):
-            chunks.append(text[i : i + self._chunk_size])
+            chunks.append(text[i : i + self._chunk_size])  # noqa: PERF401
         return chunks
 
-    def _merge_splits(self, splits: List[str], separator: str) -> List[str]:
+    def _merge_splits(self, splits: list[str], separator: str) -> list[str]:
         """Merge splits into chunks with proper overlap."""
         docs = []
         current_doc = []
@@ -154,11 +150,10 @@ class BaseChunker:
         self,
         chunk_size: int = 1000,
         chunk_overlap: int = 200,
-        separators: Optional[List[str]] = None,
+        separators: list[str] | None = None,
         keep_separator: bool = True,
     ):
-        """
-        Initialize the Chunker
+        """Initialize the Chunker.
 
         Args:
             chunk_size: Maximum size of each chunk
@@ -166,7 +161,6 @@ class BaseChunker:
             separators: List of separators to use for splitting
             keep_separator: Whether to keep separators in the chunks
         """
-
         self._splitter = RecursiveCharacterTextSplitter(
             chunk_size=chunk_size,
             chunk_overlap=chunk_overlap,
@@ -174,7 +168,7 @@ class BaseChunker:
             keep_separator=keep_separator,
         )
 
-    def chunk(self, text: str) -> List[str]:
+    def chunk(self, text: str) -> list[str]:
         if not text or not text.strip():
             return []
 

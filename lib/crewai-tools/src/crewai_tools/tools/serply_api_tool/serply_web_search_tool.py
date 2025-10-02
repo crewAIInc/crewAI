@@ -1,5 +1,5 @@
 import os
-from typing import Any, List, Optional, Type
+from typing import Any
 from urllib.parse import urlencode
 
 from crewai.tools import BaseTool, EnvVar
@@ -18,21 +18,23 @@ class SerplyWebSearchToolSchema(BaseModel):
 class SerplyWebSearchTool(BaseTool):
     name: str = "Google Search"
     description: str = "A tool to perform Google search with a search_query."
-    args_schema: Type[BaseModel] = SerplyWebSearchToolSchema
+    args_schema: type[BaseModel] = SerplyWebSearchToolSchema
     search_url: str = "https://api.serply.io/v1/search/"
-    hl: Optional[str] = "us"
-    limit: Optional[int] = 10
-    device_type: Optional[str] = "desktop"
-    proxy_location: Optional[str] = "US"
-    query_payload: Optional[dict] = {}
-    headers: Optional[dict] = {}
-    env_vars: List[EnvVar] = [
-        EnvVar(
-            name="SERPLY_API_KEY",
-            description="API key for Serply services",
-            required=True,
-        ),
-    ]
+    hl: str | None = "us"
+    limit: int | None = 10
+    device_type: str | None = "desktop"
+    proxy_location: str | None = "US"
+    query_payload: dict | None = Field(default_factory=dict)
+    headers: dict | None = Field(default_factory=dict)
+    env_vars: list[EnvVar] = Field(
+        default_factory=lambda: [
+            EnvVar(
+                name="SERPLY_API_KEY",
+                description="API key for Serply services",
+                required=True,
+            ),
+        ]
+    )
 
     def __init__(
         self,
@@ -42,14 +44,13 @@ class SerplyWebSearchTool(BaseTool):
         proxy_location: str = "US",
         **kwargs,
     ):
-        """
-        param: query (str): The query to search for
+        """param: query (str): The query to search for
         param: hl (str): host Language code to display results in
             (reference https://developers.google.com/custom-search/docs/xml_results?hl=en#wsInterfaceLanguages)
         param: limit (int): The maximum number of results to return [10-100, defaults to 10]
         param: device_type (str): desktop/mobile results (defaults to desktop)
         proxy_location: (str): Where to perform the search, specifically for local/regional results.
-             ['US', 'CA', 'IE', 'GB', 'FR', 'DE', 'SE', 'IN', 'JP', 'KR', 'SG', 'AU', 'BR'] (defaults to US)
+             ['US', 'CA', 'IE', 'GB', 'FR', 'DE', 'SE', 'IN', 'JP', 'KR', 'SG', 'AU', 'BR'] (defaults to US).
         """
         super().__init__(**kwargs)
 
@@ -82,7 +83,12 @@ class SerplyWebSearchTool(BaseTool):
         # build the url
         url = f"{self.search_url}{urlencode(self.query_payload)}"
 
-        response = requests.request("GET", url, headers=self.headers)
+        response = requests.request(
+            "GET",
+            url,
+            headers=self.headers,
+            timeout=30,
+        )
         results = response.json()
         if "results" in results:
             results = results["results"]
@@ -99,7 +105,7 @@ class SerplyWebSearchTool(BaseTool):
                             ]
                         )
                     )
-                except KeyError:
+                except KeyError:  # noqa: PERF203
                     continue
 
             content = "\n".join(string)

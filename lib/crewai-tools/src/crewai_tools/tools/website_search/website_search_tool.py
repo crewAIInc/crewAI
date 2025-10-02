@@ -1,7 +1,6 @@
-from typing import Optional, Type
+from pydantic import BaseModel, Field
 
 from crewai_tools.rag.data_types import DataType
-from pydantic import BaseModel, Field
 
 from ..rag.rag_tool import RagTool
 
@@ -26,9 +25,9 @@ class WebsiteSearchToolSchema(FixedWebsiteSearchToolSchema):
 class WebsiteSearchTool(RagTool):
     name: str = "Search in a specific website"
     description: str = "A tool that can be used to semantic search a query from a specific URL content."
-    args_schema: Type[BaseModel] = WebsiteSearchToolSchema
+    args_schema: type[BaseModel] = WebsiteSearchToolSchema
 
-    def __init__(self, website: Optional[str] = None, **kwargs):
+    def __init__(self, website: str | None = None, **kwargs):
         super().__init__(**kwargs)
         if website is not None:
             self.add(website)
@@ -42,7 +41,7 @@ class WebsiteSearchTool(RagTool):
     def _run(
         self,
         search_query: str,
-        website: Optional[str] = None,
+        website: str | None = None,
         similarity_threshold: float | None = None,
         limit: int | None = None,
     ) -> str:

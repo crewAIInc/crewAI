@@ -1,5 +1,5 @@
 import os
-from typing import Any, Dict, List, Literal, Optional, Type, Union
+from typing import Any, Literal
 
 from crewai.tools import BaseTool, EnvVar
 from pydantic import BaseModel, Field
@@ -10,7 +10,7 @@ class HyperbrowserLoadToolSchema(BaseModel):
     operation: Literal["scrape", "crawl"] = Field(
         description="Operation to perform on the website. Either 'scrape' or 'crawl'"
     )
-    params: Optional[Dict] = Field(
+    params: dict | None = Field(
         description="Optional params for scrape or crawl. For more information on the supported params, visit https://docs.hyperbrowser.ai/reference/sdks/python/scrape#start-scrape-job-and-wait or https://docs.hyperbrowser.ai/reference/sdks/python/crawl#start-crawl-job-and-wait"
     )
 
@@ -28,19 +28,21 @@ class HyperbrowserLoadTool(BaseTool):
 
     name: str = "Hyperbrowser web load tool"
     description: str = "Scrape or crawl a website using Hyperbrowser and return the contents in properly formatted markdown or html"
-    args_schema: Type[BaseModel] = HyperbrowserLoadToolSchema
-    api_key: Optional[str] = None
-    hyperbrowser: Optional[Any] = None
-    package_dependencies: List[str] = ["hyperbrowser"]
-    env_vars: List[EnvVar] = [
-        EnvVar(
-            name="HYPERBROWSER_API_KEY",
-            description="API key for Hyperbrowser services",
-            required=False,
-        ),
-    ]
+    args_schema: type[BaseModel] = HyperbrowserLoadToolSchema
+    api_key: str | None = None
+    hyperbrowser: Any | None = None
+    package_dependencies: list[str] = Field(default_factory=lambda: ["hyperbrowser"])
+    env_vars: list[EnvVar] = Field(
+        default_factory=lambda: [
+            EnvVar(
+                name="HYPERBROWSER_API_KEY",
+                description="API key for Hyperbrowser services",
+                required=False,
+            ),
+        ]
+    )
 
-    def __init__(self, api_key: Optional[str] = None, **kwargs):
+    def __init__(self, api_key: str | None = None, **kwargs):
         super().__init__(**kwargs)
         self.api_key = api_key or os.getenv("HYPERBROWSER_API_KEY")
         if not api_key:
@@ -50,10 +52,10 @@ class HyperbrowserLoadTool(BaseTool):
 
         try:
             from hyperbrowser import Hyperbrowser
-        except ImportError:
+        except ImportError as e:
             raise ImportError(
                 "`hyperbrowser` package not found, please run `pip install hyperbrowser`"
-            )
+            ) from e
 
         if not self.api_key:
             raise ValueError(
@@ -62,15 +64,15 @@ class HyperbrowserLoadTool(BaseTool):
 
         self.hyperbrowser = Hyperbrowser(api_key=self.api_key)
 
-    def _prepare_params(self, params: Dict) -> Dict:
+    def _prepare_params(self, params: dict) -> dict:
         """Prepare session and scrape options parameters."""
         try:
             from hyperbrowser.models.scrape import ScrapeOptions
             from hyperbrowser.models.session import CreateSessionParams
-        except ImportError:
+        except ImportError as e:
             raise ImportError(
                 "`hyperbrowser` package not found, please run `pip install hyperbrowser`"
-            )
+            ) from e
 
         if "scrape_options" in params:
             if "formats" in params["scrape_options"]:
@@ -84,7 +86,7 @@ class HyperbrowserLoadTool(BaseTool):
             params["scrape_options"] = ScrapeOptions(**params["scrape_options"])
         return params
 
-    def _extract_content(self, data: Union[Any, None]):
+    def _extract_content(self, data: Any | None):
         """Extract content from response data."""
         content = ""
         if data:
@@ -95,23 +97,24 @@ class HyperbrowserLoadTool(BaseTool):
         self,
         url: str,
         operation: Literal["scrape", "crawl"] = "scrape",
-        params: Optional[Dict] = {},
+        params: dict | None = None,
     ):
+        if params is None:
+            params = {}
         try:
             from hyperbrowser.models.crawl import StartCrawlJobParams
             from hyperbrowser.models.scrape import StartScrapeJobParams
-        except ImportError:
+        except ImportError as e:
             raise ImportError(
                 "`hyperbrowser` package not found, please run `pip install hyperbrowser`"
-            )
+            ) from e
 
         params = self._prepare_params(params)
 
         if operation == "scrape":
             scrape_params = StartScrapeJobParams(url=url, **params)
             scrape_resp = self.hyperbrowser.scrape.start_and_wait(scrape_params)
-            content = self._extract_content(scrape_resp.data)
-            return content
+            return self._extract_content(scrape_resp.data)
         crawl_params = StartCrawlJobParams(url=url, **params)
         crawl_resp = self.hyperbrowser.crawl.start_and_wait(crawl_params)
         content = ""

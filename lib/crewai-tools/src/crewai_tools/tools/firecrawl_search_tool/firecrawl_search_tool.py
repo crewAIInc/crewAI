@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Any, List, Optional, Type
+from typing import TYPE_CHECKING, Any, Optional
 
 from crewai.tools import BaseTool, EnvVar
 from pydantic import BaseModel, ConfigDict, Field, PrivateAttr
@@ -21,8 +21,7 @@ class FirecrawlSearchToolSchema(BaseModel):
 
 
 class FirecrawlSearchTool(BaseTool):
-    """
-    Tool for searching webpages using Firecrawl. To run this tool, you need to have a Firecrawl API key.
+    """Tool for searching webpages using Firecrawl. To run this tool, you need to have a Firecrawl API key.
 
     Args:
         api_key (str): Your Firecrawl API key.
@@ -40,14 +39,11 @@ class FirecrawlSearchTool(BaseTool):
     model_config = ConfigDict(
         arbitrary_types_allowed=True, validate_assignment=True, frozen=False
     )
-    model_config = ConfigDict(
-        arbitrary_types_allowed=True, validate_assignment=True, frozen=False
-    )
     name: str = "Firecrawl web search tool"
     description: str = "Search webpages using Firecrawl and return the results"
-    args_schema: Type[BaseModel] = FirecrawlSearchToolSchema
-    api_key: Optional[str] = None
-    config: Optional[dict[str, Any]] = Field(
+    args_schema: type[BaseModel] = FirecrawlSearchToolSchema
+    api_key: str | None = None
+    config: dict[str, Any] | None = Field(
         default_factory=lambda: {
             "limit": 5,
             "tbs": None,
@@ -58,16 +54,18 @@ class FirecrawlSearchTool(BaseTool):
         }
     )
     _firecrawl: Optional["FirecrawlApp"] = PrivateAttr(None)
-    package_dependencies: List[str] = ["firecrawl-py"]
-    env_vars: List[EnvVar] = [
-        EnvVar(
-            name="FIRECRAWL_API_KEY",
-            description="API key for Firecrawl services",
-            required=True,
-        ),
-    ]
+    package_dependencies: list[str] = Field(default_factory=lambda: ["firecrawl-py"])
+    env_vars: list[EnvVar] = Field(
+        default_factory=lambda: [
+            EnvVar(
+                name="FIRECRAWL_API_KEY",
+                description="API key for Firecrawl services",
+                required=True,
+            ),
+        ]
+    )
 
-    def __init__(self, api_key: Optional[str] = None, **kwargs):
+    def __init__(self, api_key: str | None = None, **kwargs):
         super().__init__(**kwargs)
         self.api_key = api_key
         self._initialize_firecrawl()
@@ -86,16 +84,16 @@ class FirecrawlSearchTool(BaseTool):
                 import subprocess
 
                 try:
-                    subprocess.run(["uv", "add", "firecrawl-py"], check=True)
+                    subprocess.run(["uv", "add", "firecrawl-py"], check=True)  # noqa: S607
                     from firecrawl import FirecrawlApp
 
                     self._firecrawl = FirecrawlApp(api_key=self.api_key)
-                except subprocess.CalledProcessError:
-                    raise ImportError("Failed to install firecrawl-py package")
+                except subprocess.CalledProcessError as e:
+                    raise ImportError("Failed to install firecrawl-py package") from e
             else:
                 raise ImportError(
                     "`firecrawl-py` package not found, please run `uv add firecrawl-py`"
-                )
+                ) from None
 
     def _run(
         self,

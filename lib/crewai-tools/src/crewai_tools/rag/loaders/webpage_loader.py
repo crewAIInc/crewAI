@@ -51,4 +51,4 @@ class WebPageLoader(BaseLoader):
             )
 
         except Exception as e:
-            raise ValueError(f"Error loading webpage {url}: {e!s}")
+            raise ValueError(f"Error loading webpage {url}: {e!s}") from e
