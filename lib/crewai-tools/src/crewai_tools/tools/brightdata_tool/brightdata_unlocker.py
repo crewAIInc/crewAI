@@ -1,9 +1,9 @@
 import os
-from typing import Any, Optional, Type
+from typing import Any, List, Optional, Type
 
-from crewai.tools import BaseTool
-from pydantic import BaseModel, Field
 import requests
+from crewai.tools import BaseTool, EnvVar
+from pydantic import BaseModel, Field
 
 
 class BrightDataConfig(BaseModel):
@@ -71,6 +71,13 @@ class BrightDataWebUnlockerTool(BaseTool):
     url: Optional[str] = None
     format: str = "raw"
     data_format: str = "markdown"
+    env_vars: List[EnvVar] = [
+        EnvVar(
+            name="BRIGHT_DATA_API_KEY",
+            description="API key for Bright Data",
+            required=True,
+        ),
+    ]
 
     def __init__(
         self, url: str = None, format: str = "raw", data_format: str = "markdown"
@@ -131,4 +138,4 @@ class BrightDataWebUnlockerTool(BaseTool):
         except requests.RequestException as e:
             return f"HTTP Error performing BrightData Web Unlocker Scrape: {e}\nResponse: {getattr(e.response, 'text', '')}"
         except Exception as e:
-            return f"Error fetching results: {e!s}"
+            return f"Error fetching results: {str(e)}"

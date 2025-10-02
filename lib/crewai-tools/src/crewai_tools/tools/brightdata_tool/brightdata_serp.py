@@ -1,10 +1,10 @@
 import os
-from typing import Any, Optional, Type
 import urllib.parse
+from typing import Any, List, Optional, Type
 
-from crewai.tools import BaseTool
-from pydantic import BaseModel, Field
 import requests
+from crewai.tools import BaseTool, EnvVar
+from pydantic import BaseModel, Field
 
 
 class BrightDataConfig(BaseModel):
@@ -91,6 +91,13 @@ class BrightDataSearchTool(BaseTool):
     search_type: Optional[str] = None
     device_type: str = "desktop"
     parse_results: bool = True
+    env_vars: List[EnvVar] = [
+        EnvVar(
+            name="BRIGHT_DATA_API_KEY",
+            description="API key for Bright Data",
+            required=True,
+        ),
+    ]
 
     def __init__(
         self,
@@ -122,7 +129,7 @@ class BrightDataSearchTool(BaseTool):
     def get_search_url(self, engine: str, query: str):
         if engine == "yandex":
             return f"https://yandex.com/search/?text=${query}"
-        if engine == "bing":
+        elif engine == "bing":
             return f"https://www.bing.com/search?q=${query}"
         return f"https://www.google.com/search?q=${query}"
 
@@ -186,7 +193,7 @@ class BrightDataSearchTool(BaseTool):
             params.append(f"num={results_count}")
 
         if parse_results:
-            params.append("brd_json=1")
+            params.append(f"brd_json=1")
 
         if search_type:
             if search_type == "jobs":
@@ -227,6 +234,6 @@ class BrightDataSearchTool(BaseTool):
             return response.text
 
         except requests.RequestException as e:
-            return f"Error performing BrightData search: {e!s}"
+            return f"Error performing BrightData search: {str(e)}"
         except Exception as e:
-            return f"Error fetching results: {e!s}"
+            return f"Error fetching results: {str(e)}"

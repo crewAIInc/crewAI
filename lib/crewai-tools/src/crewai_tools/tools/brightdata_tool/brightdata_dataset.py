@@ -1,9 +1,9 @@
 import asyncio
 import os
-from typing import Any, Dict, Optional, Type
+from typing import Any, Dict, List, Optional, Type
 
 import aiohttp
-from crewai.tools import BaseTool
+from crewai.tools import BaseTool, EnvVar
 from pydantic import BaseModel, Field
 
 
@@ -416,6 +416,13 @@ class BrightDataDatasetTool(BaseTool):
     format: str = "json"
     zipcode: Optional[str] = None
     additional_params: Optional[Dict[str, Any]] = None
+    env_vars: List[EnvVar] = [
+        EnvVar(
+            name="BRIGHT_DATA_API_KEY",
+            description="API key for Bright Data",
+            required=True,
+        ),
+    ]
 
     def __init__(
         self,
@@ -522,7 +529,7 @@ class BrightDataDatasetTool(BaseTool):
                     if status_data.get("status") == "ready":
                         print("Job is ready")
                         break
-                    if status_data.get("status") == "error":
+                    elif status_data.get("status") == "error":
                         raise BrightDataDatasetToolException(
                             f"Job failed: {status_data}", 0
                         )
@@ -586,10 +593,8 @@ class BrightDataDatasetTool(BaseTool):
                 )
             )
         except TimeoutError as e:
-            return f"Timeout Exception occured in method : get_dataset_data_async. Details - {e!s}"
+            return f"Timeout Exception occured in method : get_dataset_data_async. Details - {str(e)}"
         except BrightDataDatasetToolException as e:
-            return (
-                f"Exception occured in method : get_dataset_data_async. Details - {e!s}"
-            )
+            return f"Exception occured in method : get_dataset_data_async. Details - {str(e)}"
         except Exception as e:
-            return f"Bright Data API error: {e!s}"
+            return f"Bright Data API error: {str(e)}"
