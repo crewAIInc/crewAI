@@ -3,7 +3,7 @@ import os
 from typing import Any
 
 import aiohttp
-from crewai.tools import BaseTool
+from crewai.tools import BaseTool, EnvVar
 from pydantic import BaseModel, Field
 
 
@@ -414,6 +414,15 @@ class BrightDataDatasetTool(BaseTool):
     format: str = "json"
     zipcode: str | None = None
     additional_params: dict[str, Any] | None = None
+    env_vars: list[EnvVar] = Field(
+        default_factory=lambda: [
+            EnvVar(
+                name="BRIGHT_DATA_API_KEY",
+                description="API key for Bright Data",
+                required=True,
+            ),
+        ]
+    )
 
     def __init__(
         self,
@@ -422,8 +431,9 @@ class BrightDataDatasetTool(BaseTool):
         format: str = "json",
         zipcode: str | None = None,
         additional_params: dict[str, Any] | None = None,
+        **kwargs: Any,
     ):
-        super().__init__()
+        super().__init__(**kwargs)
         self.dataset_type = dataset_type
         self.url = url
         self.format = format
@@ -441,7 +451,7 @@ class BrightDataDatasetTool(BaseTool):
         zipcode: str | None = None,
         additional_params: dict[str, Any] | None = None,
         polling_interval: int = 1,
-    ) -> dict:
+    ) -> str:
         """Asynchronously trigger and poll Bright Data dataset scraping.
 
         Args:

@@ -2,7 +2,7 @@ import os
 from typing import Any
 import urllib.parse
 
-from crewai.tools import BaseTool
+from crewai.tools import BaseTool, EnvVar
 from pydantic import BaseModel, Field
 import requests
 
@@ -89,6 +89,15 @@ class BrightDataSearchTool(BaseTool):
     search_type: str | None = None
     device_type: str = "desktop"
     parse_results: bool = True
+    env_vars: list[EnvVar] = Field(
+        default_factory=lambda: [
+            EnvVar(
+                name="BRIGHT_DATA_API_KEY",
+                description="API key for Bright Data",
+                required=True,
+            ),
+        ]
+    )
 
     def __init__(
         self,
@@ -99,8 +108,9 @@ class BrightDataSearchTool(BaseTool):
         search_type: str | None = None,
         device_type: str = "desktop",
         parse_results: bool = True,
+        **kwargs: Any,
     ):
-        super().__init__()
+        super().__init__(**kwargs)
         self.base_url = self._config.API_URL
         self.query = query
         self.search_engine = search_engine
@@ -110,8 +120,8 @@ class BrightDataSearchTool(BaseTool):
         self.device_type = device_type
         self.parse_results = parse_results
 
-        self.api_key = os.getenv("BRIGHT_DATA_API_KEY")
-        self.zone = os.getenv("BRIGHT_DATA_ZONE")
+        self.api_key = os.getenv("BRIGHT_DATA_API_KEY") or ""
+        self.zone = os.getenv("BRIGHT_DATA_ZONE") or ""
         if not self.api_key:
             raise ValueError("BRIGHT_DATA_API_KEY environment variable is required.")
         if not self.zone:

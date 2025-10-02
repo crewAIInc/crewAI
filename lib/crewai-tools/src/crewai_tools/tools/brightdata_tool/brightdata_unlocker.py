@@ -1,7 +1,7 @@
 import os
 from typing import Any
 
-from crewai.tools import BaseTool
+from crewai.tools import BaseTool, EnvVar
 from pydantic import BaseModel, Field
 import requests
 
@@ -69,18 +69,31 @@ class BrightDataWebUnlockerTool(BaseTool):
     url: str | None = None
     format: str = "raw"
     data_format: str = "markdown"
+    env_vars: list[EnvVar] = Field(
+        default_factory=lambda: [
+            EnvVar(
+                name="BRIGHT_DATA_API_KEY",
+                description="API key for Bright Data",
+                required=True,
+            ),
+        ]
+    )
 
     def __init__(
-        self, url: str | None = None, format: str = "raw", data_format: str = "markdown"
+        self,
+        url: str | None = None,
+        format: str = "raw",
+        data_format: str = "markdown",
+        **kwargs: Any,
     ):
-        super().__init__()
+        super().__init__(**kwargs)
         self.base_url = self._config.API_URL
         self.url = url
         self.format = format
         self.data_format = data_format
 
-        self.api_key = os.getenv("BRIGHT_DATA_API_KEY")
-        self.zone = os.getenv("BRIGHT_DATA_ZONE")
+        self.api_key = os.getenv("BRIGHT_DATA_API_KEY") or ""
+        self.zone = os.getenv("BRIGHT_DATA_ZONE") or ""
         if not self.api_key:
             raise ValueError("BRIGHT_DATA_API_KEY environment variable is required.")
         if not self.zone:
