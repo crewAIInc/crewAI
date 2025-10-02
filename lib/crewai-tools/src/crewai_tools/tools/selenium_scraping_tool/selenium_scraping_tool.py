@@ -24,7 +24,8 @@ class SeleniumScrapingToolSchema(FixedSeleniumScrapingToolSchema):
     )
 
     @field_validator("website_url")
-    def validate_website_url(self, v):
+    @classmethod
+    def validate_website_url(cls, v):
         if not v:
             raise ValueError("Website URL cannot be empty")
 
@@ -71,9 +72,13 @@ class SeleniumScrapingTool(BaseTool):
     ):
         super().__init__(**kwargs)
         try:
-            from selenium import webdriver
-            from selenium.webdriver.chrome.options import Options
-            from selenium.webdriver.common.by import By
+            from selenium import webdriver  # type: ignore[import-not-found]
+            from selenium.webdriver.chrome.options import (  # type: ignore[import-not-found]
+                Options,
+            )
+            from selenium.webdriver.common.by import (  # type: ignore[import-not-found]
+                By,
+            )
         except ImportError:
             import click
 
@@ -86,9 +91,13 @@ class SeleniumScrapingTool(BaseTool):
                     ["uv", "pip", "install", "selenium", "webdriver-manager"],  # noqa: S607
                     check=True,
                 )
-                from selenium import webdriver
-                from selenium.webdriver.chrome.options import Options
-                from selenium.webdriver.common.by import By
+                from selenium import webdriver  # type: ignore[import-not-found]
+                from selenium.webdriver.chrome.options import (  # type: ignore[import-not-found]
+                    Options,
+                )
+                from selenium.webdriver.common.by import (  # type: ignore[import-not-found]
+                    By,
+                )
             else:
                 raise ImportError(
                     "`selenium` and `webdriver-manager` package not found, please run `uv add selenium webdriver-manager`"
@@ -134,7 +143,8 @@ class SeleniumScrapingTool(BaseTool):
         except Exception as e:
             return f"Error scraping website: {e!s}"
         finally:
-            self.driver.close()
+            if self.driver is not None:
+                self.driver.close()
 
     def _get_content(self, css_element, return_html):
         content = []

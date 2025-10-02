@@ -1,5 +1,6 @@
 import base64
 from pathlib import Path
+from typing import Any
 
 from crewai import LLM
 from crewai.tools import BaseTool, EnvVar
@@ -12,7 +13,8 @@ class ImagePromptSchema(BaseModel):
     image_path_url: str = "The image path or URL."
 
     @field_validator("image_path_url")
-    def validate_image_path_url(self, v: str) -> str:
+    @classmethod
+    def validate_image_path_url(cls, v: str) -> str:
         if v.startswith("http"):
             return v
 
@@ -77,7 +79,7 @@ class VisionTool(BaseTool):
     def model(self, value: str) -> None:
         """Set the model identifier and reset LLM if it was auto-created."""
         self._model = value
-        if self._llm is not None and self._llm._model != value:
+        if self._llm is not None and getattr(self._llm, "model", None) != value:
             self._llm = None
 
     @property
@@ -104,20 +106,19 @@ class VisionTool(BaseTool):
                 except Exception as e:
                     return f"Error processing image: {e!s}"
 
-            return self.llm.call(
-                messages=[
-                    {
-                        "role": "user",
-                        "content": [
-                            {"type": "text", "text": "What's in this image?"},
-                            {
-                                "type": "image_url",
-                                "image_url": {"url": image_data},
-                            },
-                        ],
-                    },
-                ],
-            )
+            messages: list[dict[str, Any]] = [
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": "What's in this image?"},
+                        {
+                            "type": "image_url",
+                            "image_url": {"url": image_data},
+                        },
+                    ],
+                },
+            ]
+            return self.llm.call(messages=messages)
         except Exception as e:
             return f"An error occurred: {e!s}"
 

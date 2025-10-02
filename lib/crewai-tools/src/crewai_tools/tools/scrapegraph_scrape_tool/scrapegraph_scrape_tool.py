@@ -10,7 +10,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 # Type checking import
 if TYPE_CHECKING:
-    from scrapegraph_py import Client
+    from scrapegraph_py import Client  # type: ignore[import-not-found]
 
 
 class ScrapegraphError(Exception):
@@ -35,7 +35,8 @@ class ScrapegraphScrapeToolSchema(FixedScrapegraphScrapeToolSchema):
     )
 
     @field_validator("website_url")
-    def validate_url(self, v):
+    @classmethod
+    def validate_url(cls, v):
         """Validate URL format."""
         try:
             result = urlparse(v)
@@ -90,8 +91,10 @@ class ScrapegraphScrapeTool(BaseTool):
     ):
         super().__init__(**kwargs)
         try:
-            from scrapegraph_py import Client
-            from scrapegraph_py.logger import sgai_logger
+            from scrapegraph_py import Client  # type: ignore[import-not-found]
+            from scrapegraph_py.logger import (  # type: ignore[import-not-found]
+                sgai_logger,
+            )
 
         except ImportError:
             import click
@@ -102,8 +105,10 @@ class ScrapegraphScrapeTool(BaseTool):
                 import subprocess
 
                 subprocess.run(["uv", "add", "scrapegraph-py"], check=True)  # noqa: S607
-                from scrapegraph_py import Client
-                from scrapegraph_py.logger import sgai_logger
+                from scrapegraph_py import Client  # type: ignore[import-not-found]
+                from scrapegraph_py.logger import (  # type: ignore[import-not-found]
+                    sgai_logger,
+                )
 
             else:
                 raise ImportError(
@@ -175,6 +180,8 @@ class ScrapegraphScrapeTool(BaseTool):
 
         try:
             # Make the SmartScraper request
+            if self._client is None:
+                raise RuntimeError("Client not initialized")
             return self._client.smartscraper(
                 website_url=website_url,
                 user_prompt=user_prompt,
@@ -186,4 +193,5 @@ class ScrapegraphScrapeTool(BaseTool):
             raise RuntimeError(f"Scraping failed: {e!s}") from e
         finally:
             # Always close the client
-            self._client.close()
+            if self._client is not None:
+                self._client.close()
