@@ -64,6 +64,10 @@ openpyxl = [
     "openpyxl>=3.1.5",
 ]
 mem0 = ["mem0ai>=0.1.94"]
+agentcore = [
+    "boto3>=1.40.36",
+    "botocore>=1.40.39",
+]
 docling = [
     "docling>=2.12.0",
 ]
@@ -101,6 +105,7 @@ dev = [
     "types-pyyaml==6.0.*",
     "types-regex==2024.11.6.*",
     "types-appdirs==1.4.*",
+    "boto3-stubs[bedrock-agentcore]>=1.40.37",
 ]
 
 [project.scripts]
