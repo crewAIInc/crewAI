@@ -122,10 +122,6 @@ from crewai_tools.tools.patronus_eval_tool.patronus_predefined_criteria_eval_too
     PatronusPredefinedCriteriaEvalTool,
 )
 from crewai_tools.tools.pdf_search_tool.pdf_search_tool import PDFSearchTool
-from crewai_tools.tools.pdf_text_writing_tool.pdf_text_writing_tool import (
-    PDFTextWritingTool,
-)
-from crewai_tools.tools.pg_search_tool.pg_search_tool import PGSearchTool
 from crewai_tools.tools.qdrant_vector_search_tool.qdrant_search_tool import (
     QdrantVectorSearchTool,
 )
@@ -254,8 +250,6 @@ __all__ = [
     "OxylabsGoogleSearchScraperTool",
     "OxylabsUniversalScraperTool",
     "PDFSearchTool",
-    "PDFTextWritingTool",
-    "PGSearchTool",
     "ParallelSearchTool",
     "PatronusEvalTool",
     "PatronusLocalEvaluatorTool",
