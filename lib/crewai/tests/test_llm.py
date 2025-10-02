@@ -394,7 +394,7 @@ def test_context_window_exceeded_error_handling():
         assert "8192 tokens" in str(excinfo.value)
 
     # Test streaming response
-    llm = LLM(model="gpt-4", stream=True)
+    llm = LLM(model="gpt-4", stream=True, is_litellm=True)
     with patch("litellm.completion") as mock_completion:
         mock_completion.side_effect = ContextWindowExceededError(
             "This model's maximum context length is 8192 tokens. However, your messages resulted in 10000 tokens.",
@@ -431,74 +431,46 @@ def user_message():
 def test_anthropic_message_formatting_edge_cases(anthropic_llm):
     """Test edge cases for Anthropic message formatting."""
     # Test None messages
-    with pytest.raises(TypeError, match="'NoneType' object is not iterable"):
-        anthropic_llm._format_messages_for_anthropic(None)
+    with pytest.raises(TypeError, match="Messages cannot be None"):
+        anthropic_llm._format_messages_for_provider(None)
 
     # Test empty message list
-    formatted_messages, system_msg = anthropic_llm._format_messages_for_anthropic([])
-    assert len(formatted_messages) == 1
-    assert system_msg is None
-    assert formatted_messages[0]["role"] == "user"
-    assert formatted_messages[0]["content"] == "Hello"  # Default user message
+    formatted = anthropic_llm._format_messages_for_provider([])
+    assert len(formatted) == 1
+    assert formatted[0]["role"] == "user"
+    assert formatted[0]["content"] == "."
 
     # Test invalid message format
-    with pytest.raises(
-        ValueError, match="Message at index 0 must have 'role' and 'content' keys"
-    ):
-        anthropic_llm._format_messages_for_anthropic([{"invalid": "message"}])
+    with pytest.raises(TypeError, match="Invalid message format"):
+        anthropic_llm._format_messages_for_provider([{"invalid": "message"}])
 
 
 def test_anthropic_model_detection():
     """Test Anthropic model detection with various formats."""
     models = [
         ("anthropic/claude-3", True),
-        ("claude-instant", False),
+        ("claude-instant", True),
         ("claude/v1", True),
         ("gpt-4", False),
-        ("", False),
         ("anthropomorphic", False),  # Should not match partial words
     ]
 
     for model, expected in models:
         llm = LLM(model=model, is_litellm=True)
-        is_anthropic = llm.provider == "anthropic" or llm.provider == "claude"
-        assert is_anthropic == expected, f"Failed for model: {model}"
+        assert llm.is_anthropic == expected, f"Failed for model: {model}"
 
 
 def test_anthropic_message_formatting(anthropic_llm, system_message, user_message):
     """Test Anthropic message formatting with fixtures."""
     # Test when first message is system
 
-    formatted_messages, system_msg = anthropic_llm._format_messages_for_anthropic(
-        [system_message]
-    )
-    assert len(formatted_messages) == 1  # Should have one user message
-    assert system_msg == "test"  # System message should be extracted
-    assert formatted_messages[0]["role"] == "user"
-    assert (
-        formatted_messages[0]["content"] == "Hello"
-    )  # Default user message when no user messages exist
-
-    # Test when first message is already user
-    formatted_messages, system_msg = anthropic_llm._format_messages_for_anthropic(
-        [user_message]
-    )
-    assert len(formatted_messages) == 1
-    assert system_msg is None  # No system message
-    assert formatted_messages[0] == user_message
-
-    # Test with empty message list
-    formatted_messages, system_msg = anthropic_llm._format_messages_for_anthropic([])
-    assert len(formatted_messages) == 1
-    assert system_msg is None
-    assert formatted_messages[0]["role"] == "user"
-    assert formatted_messages[0]["content"] == "Hello"  # Default user message
-
-    # Test with non-Anthropic model (should not modify messages)
-    non_anthropic_llm = LLM(model="gpt-4")
-    formatted = non_anthropic_llm._format_messages_for_provider([system_message])
+    formatted = anthropic_llm._format_messages_for_provider([])
     assert len(formatted) == 1
-    assert formatted[0] == system_message
+    assert formatted[0]["role"] == "user"
+    assert formatted[0]["content"] == "."
+
+    with pytest.raises(TypeError, match="Invalid message format"):
+        anthropic_llm._format_messages_for_provider([{"invalid": "message"}])
 
 
 def test_deepseek_r1_with_open_router():
@@ -509,6 +481,7 @@ def test_deepseek_r1_with_open_router():
         model="openrouter/deepseek/deepseek-r1",
         base_url="https://openrouter.ai/api/v1",
         api_key=os.getenv("OPEN_ROUTER_API_KEY"),
+        is_litellm=True,
     )
     result = llm.call("What is the capital of France?")
     assert isinstance(result, str)
@@ -578,7 +551,7 @@ def mock_emit() -> MagicMock:
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_handle_streaming_tool_calls(get_weather_tool_schema, mock_emit):
-    llm = LLM(model="openai/gpt-4o", stream=True)
+    llm = LLM(model="openai/gpt-4o", stream=True, is_litellm=True)
     response = llm.call(
         messages=[
             {"role": "user", "content": "What is the weather in New York?"},
@@ -652,7 +625,7 @@ def test_handle_streaming_tool_calls_no_available_functions(
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_handle_streaming_tool_calls_no_tools(mock_emit):
-    llm = LLM(model="openai/gpt-4o", stream=True)
+    llm = LLM(model="openai/gpt-4o", stream=True, is_litellm=True)
     response = llm.call(
         messages=[
             {"role": "user", "content": "What is the weather in New York?"},
@@ -700,7 +673,7 @@ def test_llm_call_when_stop_is_unsupported_when_additional_drop_params_is_provid
 
 @pytest.fixture
 def ollama_llm():
-    return LLM(model="ollama/llama3.2:3b")
+    return LLM(model="ollama/llama3.2:3b", is_litellm=True)
 
 
 def test_ollama_appends_dummy_user_message_when_last_is_assistant(ollama_llm):

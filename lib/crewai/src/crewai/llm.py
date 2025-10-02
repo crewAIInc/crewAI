@@ -34,7 +34,6 @@ from crewai.events.types.tool_usage_events import (
     ToolUsageStartedEvent,
 )
 from crewai.llms.base_llm import BaseLLM
-from crewai.llms.providers.openai.completion import OpenAICompletion
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededError,
 )
@@ -301,20 +300,25 @@ class LLM(BaseLLM):
 
     def __new__(cls, model: str, is_litellm: bool = False, **kwargs) -> "LLM":
         """Factory method that routes to native SDK or falls back to LiteLLM."""
+        if not model or not isinstance(model, str):
+            raise ValueError("Model must be a non-empty string")
+
         provider = model.partition("/")[0] if "/" in model else "openai"
 
-        if is_litellm:
-            instance = object.__new__(cls)
-            super(LLM, instance).__init__(model=model, **kwargs)
-            instance.is_litellm = True
-            return instance
-
         native_class = cls._get_native_provider(provider)
-        if native_class:
-            model_string = model.partition("/")[2] if "/" in model else model
-            return native_class(model=model_string, provider=provider, **kwargs)
+        if native_class and not is_litellm:
+            try:
+                model_string = model.partition("/")[2] if "/" in model else model
+                return native_class(model=model_string, provider=provider, **kwargs)
+            except Exception as e:
+                import logging
 
-        # FALLBACK
+                logger = logging.getLogger(__name__)
+                logger.warning(
+                    f"Native SDK failed for {provider}: {e}, falling back to LiteLLM"
+                )
+
+        # FALLBACK to LiteLLM
         if not LITELLM_AVAILABLE:
             raise ImportError(
                 "Please install the required dependencies:\n"
@@ -322,7 +326,7 @@ class LLM(BaseLLM):
             )
 
         instance = object.__new__(cls)
-        super(LLM, instance).__init__(model=model, **kwargs)
+        super(LLM, instance).__init__(model=model, is_litellm=True, **kwargs)
         instance.is_litellm = True
         return instance
 
@@ -331,7 +335,7 @@ class LLM(BaseLLM):
         """Get native provider class if available."""
         if provider == "openai":
             try:
-                # from crewai.llms.providers.openai.completion import OpenAICompletion
+                from crewai.llms.providers.openai.completion import OpenAICompletion
 
                 return OpenAICompletion
             except ImportError:
