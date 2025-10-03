@@ -275,6 +275,7 @@
                   "en/observability/overview",
                   "en/observability/arize-phoenix",
                   "en/observability/braintrust",
+                  "en/observability/datadog",
                   "en/observability/langdb",
                   "en/observability/langfuse",
                   "en/observability/langtrace",
