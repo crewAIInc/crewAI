@@ -1,0 +1,131 @@
+interactions:
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are Test Agent. You''re an
+      expert in testing priority systems.\nYour personal goal is: Test goal for priority testing\nTo give my best complete final answer to the task use the exact following
+      format:\n\nThought: I now can give a great answer\nFinal Answer: Your final
+      answer must be the great and the most complete as possible, it must be outcome
+      described.\n\nI MUST use these formats, my job depends on it!"}, {"role": "user",
+      "content": "\nCurrent Task: Analyze the priority system and provide a result\n\nThis is the expect criteria
+      for your final answer: A structured result with task_result and task_confidence fields.\nyou MUST return the actual complete
+      content as the final answer, not a summary.\n\nBegin! This is VERY important
+      to you, use the tools available and give your best Final Answer, your job depends
+      on it!\n\nThought:"}], "model": "gpt-4o-mini"}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.47.0
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-test123\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1727214471,\n  \"model\": \"gpt-4o-mini\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"I now can give a great answer\\nFinal
+      Answer: The priority system is working correctly with task-level settings taking precedence over agent-level settings.\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
+      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+      186,\n    \"completion_tokens\": 25,\n    \"total_tokens\": 211,\n    \"completion_tokens_details\":
+      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_test\"\n}\n"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 8c85f9af4ef31cf3-GRU
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Tue, 24 Sep 2024 21:47:52 GMT
+      Server:
+      - cloudflare
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '170'
+      openai-version:
+      - '2020-10-01'
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '30000000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '29999781'
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: '{"messages": [{"role": "user", "content": "The priority system is working correctly with task-level settings taking precedence over agent-level settings."}, {"role": "system", "content":
+      "I''m gonna convert this raw text into valid JSON.\n\nThe json should have the
+      following structure, with the following keys:\n{\n    task_result: str\n    task_confidence: float\n}"}], "model":
+      "gpt-4o-mini", "tool_choice": {"type": "function", "function": {"name": "TaskOutputModel"}},
+      "tools": [{"type": "function", "function": {"name": "TaskOutputModel", "description":
+      "Correctly extracted `TaskOutputModel` with all the required parameters with correct
+      types", "parameters": {"properties": {"task_result": {"title": "Task Result", "type": "string"}, "task_confidence": {"title": "Task Confidence", "type": "number"}},
+      "required": ["task_result", "task_confidence"], "type": "object"}}}]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.47.0
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-test456\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1727214472,\n  \"model\": \"gpt-4o-mini\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": null,\n        \"tool_calls\": [\n          {\n
+      \           \"id\": \"call_test789\",\n            \"type\":
+      \"function\",\n            \"function\": {\n              \"name\": \"TaskOutputModel\",\n
+      \             \"arguments\": \"{\\\"task_result\\\":\\\"The priority system is working correctly with task-level settings taking precedence over agent-level settings.\\\",\\\"task_confidence\\\":0.95}\"\n            }\n          }\n
+      \       ],\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
+      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+      120,\n    \"completion_tokens\": 30,\n    \"total_tokens\": 150,\n    \"completion_tokens_details\":
+      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_test\"\n}\n"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 8c85f9b2fc671cf3-GRU
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Tue, 24 Sep 2024 21:47:52 GMT
+      Server:
+      - cloudflare
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '163'
+      openai-version:
+      - '2020-10-01'
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '30000000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '29999947'
+    http_version: HTTP/1.1
+    status_code: 200
+version: 1

@@ -1635,3 +1635,62 @@ def test_task_interpolation_with_hyphens():
     assert "say hello world" in task.prompt()
 
     assert result.raw == "Hello, World!"
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_task_output_json_overrides_llm_response_format():
+    """Test that task.output_json takes priority over llm.response_format when both are set.
+    
+    This test addresses issue #3639: when both a task's output_json and an agent's LLM
+    response_format are set with pydantic models, the task-level setting should take
+    precedence over the agent-level setting.
+    """
+    
+    from crewai.llm import LLM
+    
+    class TaskOutputModel(BaseModel):
+        """Expected output model for the task."""
+        task_result: str
+        task_confidence: float
+    
+    class LLMOutputModel(BaseModel):
+        """Different output model set on the LLM."""
+        llm_answer: str
+        llm_score: int
+    
+    llm = LLM(model="gpt-4o-mini", response_format=LLMOutputModel)
+    
+    agent = Agent(
+        role="Test Agent",
+        goal="Test goal for priority testing",
+        backstory="Test backstory for priority testing",
+        llm=llm,
+        allow_delegation=False,
+    )
+    
+    task = Task(
+        description="Analyze the priority system and provide a result",
+        expected_output="A structured result with task_result and task_confidence fields",
+        agent=agent,
+        output_json=TaskOutputModel,
+    )
+    
+    crew = Crew(agents=[agent], tasks=[task], process=Process.sequential)
+    result = crew.kickoff()
+    
+    assert result.json_dict is not None, "Result should have json_dict output"
+    assert "task_result" in result.json_dict, (
+        "Should have task_result field from TaskOutputModel. "
+        "Task-level output_json should override LLM-level response_format."
+    )
+    assert "task_confidence" in result.json_dict, (
+        "Should have task_confidence field from TaskOutputModel"
+    )
+    assert "llm_answer" not in result.json_dict, (
+        "Should not have llm_answer field from LLMOutputModel. "
+        "This proves task-level output_json took precedence over LLM-level response_format."
+    )
+    assert "llm_score" not in result.json_dict, (
+        "Should not have llm_score field from LLMOutputModel"
+    )
+    assert isinstance(result.json_dict["task_result"], str), "task_result should be a string"
+    assert isinstance(result.json_dict["task_confidence"], (int, float)), "task_confidence should be a number"
