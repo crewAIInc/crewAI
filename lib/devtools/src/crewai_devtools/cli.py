@@ -150,6 +150,47 @@ def update_version_in_file(file_path: Path, new_version: str) -> bool:
     return False
 
 
+def update_pyproject_dependencies(file_path: Path, new_version: str) -> bool:
+    """Update workspace dependency versions in pyproject.toml.
+
+    Args:
+        file_path: Path to pyproject.toml file.
+        new_version: New version string.
+
+    Returns:
+        True if any dependencies were updated, False otherwise.
+    """
+    if not file_path.exists():
+        return False
+
+    content = file_path.read_text()
+    lines = content.splitlines()
+    updated = False
+
+    workspace_packages = ["crewai", "crewai-tools", "crewai-devtools"]
+
+    for i, line in enumerate(lines):
+        for pkg in workspace_packages:
+            if f"{pkg}==" in line:
+                stripped = line.lstrip()
+                indent = line[: len(line) - len(stripped)]
+
+                if '"' in line:
+                    lines[i] = f'{indent}"{pkg}=={new_version}",'
+                elif "'" in line:
+                    lines[i] = f"{indent}'{pkg}=={new_version}',"
+                else:
+                    lines[i] = f"{indent}{pkg}=={new_version},"
+
+                updated = True
+
+    if updated:
+        file_path.write_text("\n".join(lines) + "\n")
+        return True
+
+    return False
+
+
 def find_version_files(base_path: Path) -> list[Path]:
     """Find all __init__.py files that contain __version__.
 
@@ -331,17 +372,30 @@ def bump(version: str, dry_run: bool, no_push: bool) -> None:
                             f"[red]✗[/red] Failed to update: {vfile.relative_to(cwd)}"
                         )
 
+            pyproject = pkg / "pyproject.toml"
+            if pyproject.exists():
+                if dry_run:
+                    console.print(
+                        f"[dim][DRY RUN][/dim] Would update dependencies in: {pyproject.relative_to(cwd)}"
+                    )
+                else:
+                    if update_pyproject_dependencies(pyproject, version):
+                        console.print(
+                            f"[green]✓[/green] Updated dependencies in: {pyproject.relative_to(cwd)}"
+                        )
+                        updated_files.append(pyproject)
+
         if not updated_files and not dry_run:
             console.print(
                 "[yellow]Warning:[/yellow] No __version__ attributes found to update"
             )
 
         if not dry_run:
-            console.print("\nUpdating uv.lock...")
-            run_command(["uv", "lock"])
-            console.print("[green]✓[/green] Lock file updated")
+            console.print("\nSyncing workspace...")
+            run_command(["uv", "sync"])
+            console.print("[green]✓[/green] Workspace synced")
         else:
-            console.print("[dim][DRY RUN][/dim] Would run: uv lock")
+            console.print("[dim][DRY RUN][/dim] Would run: uv sync")
 
         branch_name = f"feat/bump-version-{version}"
         if not dry_run:
