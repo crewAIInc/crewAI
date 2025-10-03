@@ -122,9 +122,11 @@ python_functions = "test_*"
 members = [
     "lib/crewai",
     "lib/crewai-tools",
+    "lib/devtools",
 ]
 
 
 [tool.uv.sources]
 crewai = { workspace = true }
 crewai-tools = { workspace = true }
+crewai-devtools = { workspace = true }
