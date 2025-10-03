@@ -14,6 +14,7 @@ run_crew = "{{folder_name}}.main:run"
 train = "{{folder_name}}.main:train"
 replay = "{{folder_name}}.main:replay"
 test = "{{folder_name}}.main:test"
+run_with_trigger = "{{folder_name}}.main:run_with_trigger"
 
 [build-system]
 requires = ["hatchling"]
