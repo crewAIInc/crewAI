@@ -355,12 +355,14 @@ class LLM(BaseLLM):
         self,
         messages: str | list[dict[str, str]],
         tools: list[dict] | None = None,
+        from_task: Any | None = None,
     ) -> dict[str, Any]:
         """Prepare parameters for the completion call.
 
         Args:
             messages: Input messages for the LLM
             tools: Optional list of tool schemas
+            from_task: Optional task object to check for output settings
 
         Returns:
             Dict[str, Any]: Parameters for the completion call
@@ -370,7 +372,16 @@ class LLM(BaseLLM):
             messages = [{"role": "user", "content": messages}]
         formatted_messages = self._format_messages_for_provider(messages)
 
-        # --- 2) Prepare the parameters for the completion call
+        # Task-level output settings take precedence over LLM-level response_format
+        response_format = self.response_format
+        if from_task and hasattr(from_task, 'output_json') and from_task.output_json:
+            # Task has output_json set, so ignore LLM's response_format
+            response_format = None
+        elif from_task and hasattr(from_task, 'output_pydantic') and from_task.output_pydantic:
+            # Task has output_pydantic set, so ignore LLM's response_format
+            response_format = None
+
+        # --- 3) Prepare the parameters for the completion call
         params = {
             "model": self.model,
             "messages": formatted_messages,
@@ -383,7 +394,7 @@ class LLM(BaseLLM):
             "presence_penalty": self.presence_penalty,
             "frequency_penalty": self.frequency_penalty,
             "logit_bias": self.logit_bias,
-            "response_format": self.response_format,
+            "response_format": response_format,
             "seed": self.seed,
             "logprobs": self.logprobs,
             "top_logprobs": self.top_logprobs,
@@ -1015,7 +1026,7 @@ class LLM(BaseLLM):
                 self.set_callbacks(callbacks)
             try:
                 # --- 6) Prepare parameters for the completion call
-                params = self._prepare_completion_params(messages, tools)
+                params = self._prepare_completion_params(messages, tools, from_task)
                 # --- 7) Make the completion call and handle response
                 if self.stream:
                     return self._handle_streaming_response(
