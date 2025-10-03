@@ -719,7 +719,9 @@ class LLM(BaseLLM):
             # --- 8) If no tool calls or no available functions, return the text response directly
 
             if not tool_calls or not available_functions:
-                # Log token usage if available in streaming mode
+                # Track token usage and log callbacks if available in streaming mode
+                if usage_info:
+                    self._track_token_usage_internal(usage_info)
                 self._handle_streaming_callbacks(callbacks, usage_info, last_chunk)
                 # Emit completion event and return response
                 self._handle_emit_call_events(
@@ -736,7 +738,9 @@ class LLM(BaseLLM):
             if tool_result is not None:
                 return tool_result
 
-            # --- 10) Log token usage if available in streaming mode
+            # --- 10) Track token usage and log callbacks if available in streaming mode
+            if usage_info:
+                self._track_token_usage_internal(usage_info)
             self._handle_streaming_callbacks(callbacks, usage_info, last_chunk)
 
             # --- 11) Emit completion event and return response
@@ -1371,3 +1375,129 @@ class LLM(BaseLLM):
 
                 litellm.success_callback = success_callbacks
                 litellm.failure_callback = failure_callbacks
+
+    def __copy__(self):
+        """Create a shallow copy of the LLM instance."""
+        # Filter out parameters that are already explicitly passed to avoid conflicts
+        filtered_params = {
+            k: v
+            for k, v in self.additional_params.items()
+            if k
+            not in [
+                "model",
+                "is_litellm",
+                "temperature",
+                "top_p",
+                "n",
+                "max_completion_tokens",
+                "max_tokens",
+                "presence_penalty",
+                "frequency_penalty",
+                "logit_bias",
+                "response_format",
+                "seed",
+                "logprobs",
+                "top_logprobs",
+                "base_url",
+                "api_base",
+                "api_version",
+                "api_key",
+                "callbacks",
+                "reasoning_effort",
+                "stream",
+                "stop",
+            ]
+        }
+
+        # Create a new instance with the same parameters
+        return LLM(
+            model=self.model,
+            is_litellm=self.is_litellm,
+            temperature=self.temperature,
+            top_p=self.top_p,
+            n=self.n,
+            max_completion_tokens=self.max_completion_tokens,
+            max_tokens=self.max_tokens,
+            presence_penalty=self.presence_penalty,
+            frequency_penalty=self.frequency_penalty,
+            logit_bias=self.logit_bias,
+            response_format=self.response_format,
+            seed=self.seed,
+            logprobs=self.logprobs,
+            top_logprobs=self.top_logprobs,
+            base_url=self.base_url,
+            api_base=self.api_base,
+            api_version=self.api_version,
+            api_key=self.api_key,
+            callbacks=self.callbacks,
+            reasoning_effort=self.reasoning_effort,
+            stream=self.stream,
+            stop=self.stop,
+            **filtered_params,
+        )
+
+    def __deepcopy__(self, memo):
+        """Create a deep copy of the LLM instance."""
+        import copy
+
+        # Filter out parameters that are already explicitly passed to avoid conflicts
+        filtered_params = {
+            k: copy.deepcopy(v, memo)
+            for k, v in self.additional_params.items()
+            if k
+            not in [
+                "model",
+                "is_litellm",
+                "temperature",
+                "top_p",
+                "n",
+                "max_completion_tokens",
+                "max_tokens",
+                "presence_penalty",
+                "frequency_penalty",
+                "logit_bias",
+                "response_format",
+                "seed",
+                "logprobs",
+                "top_logprobs",
+                "base_url",
+                "api_base",
+                "api_version",
+                "api_key",
+                "callbacks",
+                "reasoning_effort",
+                "stream",
+                "stop",
+            ]
+        }
+
+        # Create a new instance with the same parameters
+        return LLM(
+            model=self.model,
+            is_litellm=self.is_litellm,
+            temperature=self.temperature,
+            top_p=self.top_p,
+            n=self.n,
+            max_completion_tokens=self.max_completion_tokens,
+            max_tokens=self.max_tokens,
+            presence_penalty=self.presence_penalty,
+            frequency_penalty=self.frequency_penalty,
+            logit_bias=copy.deepcopy(self.logit_bias, memo)
+            if self.logit_bias
+            else None,
+            response_format=copy.deepcopy(self.response_format, memo)
+            if self.response_format
+            else None,
+            seed=self.seed,
+            logprobs=self.logprobs,
+            top_logprobs=self.top_logprobs,
+            base_url=self.base_url,
+            api_base=self.api_base,
+            api_version=self.api_version,
+            api_key=self.api_key,
+            callbacks=copy.deepcopy(self.callbacks, memo) if self.callbacks else None,
+            reasoning_effort=self.reasoning_effort,
+            stream=self.stream,
+            stop=copy.deepcopy(self.stop, memo) if self.stop else None,
+            **filtered_params,
+        )

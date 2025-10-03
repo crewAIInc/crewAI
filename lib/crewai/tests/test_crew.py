@@ -1005,7 +1005,7 @@ def test_crew_kickoff_streaming_usage_metrics():
         role="{topic} Researcher",
         goal="Express hot takes on {topic}.",
         backstory="You have a lot of experience with {topic}.",
-        llm=LLM(model="gpt-4o", stream=True),
+        llm=LLM(model="gpt-4o", stream=True, is_litellm=True),
         max_iter=3,
     )
 
