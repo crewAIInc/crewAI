@@ -649,6 +649,34 @@ def tag(dry_run: bool, no_edit: bool) -> None:
                     sys.exit(1)
             console.print(f"[green]✓[/green] Pushed tag {tag_name}")
 
+            is_prerelease = any(
+                indicator in version.lower()
+                for indicator in ["a", "b", "rc", "alpha", "beta", "dev"]
+            )
+
+            with console.status("[cyan]Creating GitHub Release..."):
+                try:
+                    gh_cmd = [
+                        "gh",
+                        "release",
+                        "create",
+                        tag_name,
+                        "--notes",
+                        release_notes,
+                    ]
+                    if is_prerelease:
+                        gh_cmd.append("--prerelease")
+
+                    run_command(gh_cmd)
+                except subprocess.CalledProcessError as e:
+                    console.print(f"[red]✗[/red] Created GitHub Release: {e}")
+                    sys.exit(1)
+
+            release_type = "prerelease" if is_prerelease else "release"
+            console.print(
+                f"[green]✓[/green] Created GitHub {release_type} for {tag_name}"
+            )
+
         console.print(
             f"\n[green]✓[/green] Packages @ [bold]{version}[/bold] tagged successfully!"
         )
