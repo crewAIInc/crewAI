@@ -65,11 +65,19 @@ jobs:
         env:
           UV_PUBLISH_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
         run: |
+          failed=0
           for package in dist/*; do
             if [[ "$package" == *"crewai_devtools"* ]]; then
               echo "Skipping private package: $package"
               continue
             fi
             echo "Publishing $package"
-            uv publish "$package"
+            if ! uv publish "$package"; then
+              echo "Failed to publish $package"
+              failed=1
+            fi
           done
+          if [ $failed -eq 1 ]; then
+            echo "Some packages failed to publish"
+            exit 1
+          fi
