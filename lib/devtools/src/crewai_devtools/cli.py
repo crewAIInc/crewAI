@@ -505,7 +505,7 @@ def tag(dry_run: bool, no_edit: bool) -> None:
 
         version = unique_versions.pop()
         console.print(f"[green]✓[/green] Validated packages @ [bold]{version}[/bold]")
-        tag_name = f"v{version}"
+        tag_name = version
 
         if not dry_run:
             with console.status("[cyan]Checking out release/v1.0.0 branch..."):
@@ -660,6 +660,8 @@ def tag(dry_run: bool, no_edit: bool) -> None:
                         "gh",
                         "release",
                         "create",
+                        tag_name,
+                        "--title",
                         tag_name,
                         "--notes",
                         release_notes,
