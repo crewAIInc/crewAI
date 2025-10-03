@@ -25,7 +25,7 @@ jobs:
 
       - name: Build packages
         run: |
-          uv build --all-packages
+          uv build --prerelease="allow" --all-packages
           rm dist/.gitignore
 
       - name: Upload artifacts
