@@ -6,6 +6,7 @@ from crewai.cli.constants import DEFAULT_LLM_MODEL, ENV_VARS, LITELLM_PARAMS
 from crewai.llm import LLM
 from crewai.llms.base_llm import BaseLLM
 
+
 logger = logging.getLogger(__name__)
 
 
@@ -42,7 +43,7 @@ def create_llm(
             or str(llm_value)
         )
         temperature: float | None = getattr(llm_value, "temperature", None)
-        max_tokens: int | None = getattr(llm_value, "max_tokens", None)
+        max_tokens: float | int | None = getattr(llm_value, "max_tokens", None)
         logprobs: int | None = getattr(llm_value, "logprobs", None)
         timeout: float | None = getattr(llm_value, "timeout", None)
         api_key: str | None = getattr(llm_value, "api_key", None)
@@ -59,6 +60,7 @@ def create_llm(
             base_url=base_url,
             api_base=api_base,
         )
+
     except Exception as e:
         logger.debug(f"Error instantiating LLM from unknown object type: {e}")
         return None
@@ -117,6 +119,7 @@ def _llm_via_environment_or_fallback() -> LLM | None:
     elif api_base and not base_url:
         base_url = api_base
 
+    # Initialize llm_params dictionary
     llm_params: dict[str, Any] = {
         "model": model,
         "temperature": temperature,
@@ -140,6 +143,11 @@ def _llm_via_environment_or_fallback() -> LLM | None:
         "callbacks": callbacks,
     }
 
+    unaccepted_attributes = [
+        "AWS_ACCESS_KEY_ID",
+        "AWS_SECRET_ACCESS_KEY",
+        "AWS_REGION_NAME",
+    ]
     set_provider = model_name.partition("/")[0] if "/" in model_name else "openai"
 
     if set_provider in ENV_VARS:
@@ -147,7 +155,7 @@ def _llm_via_environment_or_fallback() -> LLM | None:
         if isinstance(env_vars_for_provider, (list, tuple)):
             for env_var in env_vars_for_provider:
                 key_name = env_var.get("key_name")
-                if key_name and key_name not in UNACCEPTED_ATTRIBUTES:
+                if key_name and key_name not in unaccepted_attributes:
                     env_value = os.environ.get(key_name)
                     if env_value:
                         # Map environment variable names to recognized parameters

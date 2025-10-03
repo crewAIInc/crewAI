@@ -563,4 +563,439 @@ interactions:
     status:
       code: 200
       message: OK
+- request:
+    body: '{"trace_id": "609bada1-d49d-4a3b-803c-63fe91e1bee0", "execution_type":
+      "crew", "user_identifier": null, "execution_context": {"crew_fingerprint": null,
+      "crew_name": "crew", "flow_name": null, "crewai_version": "1.0.0a2", "privacy_level":
+      "standard"}, "execution_metadata": {"expected_duration_estimate": 300, "agent_count":
+      0, "task_count": 0, "flow_method_count": 0, "execution_started_at": "2025-10-02T22:35:43.865866+00:00"},
+      "ephemeral_trace_id": "609bada1-d49d-4a3b-803c-63fe91e1bee0"}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate, zstd
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '490'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - CrewAI-CLI/1.0.0a2
+      X-Crewai-Version:
+      - 1.0.0a2
+    method: POST
+    uri: https://app.crewai.com/crewai_plus/api/v1/tracing/ephemeral/batches
+  response:
+    body:
+      string: '{"id":"3eed9776-2457-48ba-830b-b848cd1a3216","ephemeral_trace_id":"609bada1-d49d-4a3b-803c-63fe91e1bee0","execution_type":"crew","crew_name":"crew","flow_name":null,"status":"running","duration_ms":null,"crewai_version":"1.0.0a2","total_events":0,"execution_context":{"crew_fingerprint":null,"crew_name":"crew","flow_name":null,"crewai_version":"1.0.0a2","privacy_level":"standard"},"created_at":"2025-10-02T22:35:44.008Z","updated_at":"2025-10-02T22:35:44.008Z","access_code":"TRACE-545be8e2a7","user_identifier":null}'
+    headers:
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '519'
+      Content-Type:
+      - application/json; charset=utf-8
+      Date:
+      - Thu, 02 Oct 2025 22:35:44 GMT
+      cache-control:
+      - max-age=0, private, must-revalidate
+      content-security-policy:
+      - 'default-src ''self'' *.app.crewai.com app.crewai.com; script-src ''self''
+        ''unsafe-inline'' *.app.crewai.com app.crewai.com https://cdn.jsdelivr.net/npm/apexcharts
+        https://www.gstatic.com https://run.pstmn.io https://apis.google.com https://apis.google.com/js/api.js
+        https://accounts.google.com https://accounts.google.com/gsi/client https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css.map
+        https://*.google.com https://docs.google.com https://slides.google.com https://js.hs-scripts.com
+        https://js.sentry-cdn.com https://browser.sentry-cdn.com https://www.googletagmanager.com
+        https://js-na1.hs-scripts.com https://js.hubspot.com http://js-na1.hs-scripts.com
+        https://bat.bing.com https://cdn.amplitude.com https://cdn.segment.com https://d1d3n03t5zntha.cloudfront.net/
+        https://descriptusercontent.com https://edge.fullstory.com https://googleads.g.doubleclick.net
+        https://js.hs-analytics.net https://js.hs-banner.com https://js.hsadspixel.net
+        https://js.hscollectedforms.net https://js.usemessages.com https://snap.licdn.com
+        https://static.cloudflareinsights.com https://static.reo.dev https://www.google-analytics.com
+        https://share.descript.com/; style-src ''self'' ''unsafe-inline'' *.app.crewai.com
+        app.crewai.com https://cdn.jsdelivr.net/npm/apexcharts; img-src ''self'' data:
+        *.app.crewai.com app.crewai.com https://zeus.tools.crewai.com https://dashboard.tools.crewai.com
+        https://cdn.jsdelivr.net https://forms.hsforms.com https://track.hubspot.com
+        https://px.ads.linkedin.com https://px4.ads.linkedin.com https://www.google.com
+        https://www.google.com.br; font-src ''self'' data: *.app.crewai.com app.crewai.com;
+        connect-src ''self'' *.app.crewai.com app.crewai.com https://zeus.tools.crewai.com
+        https://connect.useparagon.com/ https://zeus.useparagon.com/* https://*.useparagon.com/*
+        https://run.pstmn.io https://connect.tools.crewai.com/ https://*.sentry.io
+        https://www.google-analytics.com https://edge.fullstory.com https://rs.fullstory.com
+        https://api.hubspot.com https://forms.hscollectedforms.net https://api.hubapi.com
+        https://px.ads.linkedin.com https://px4.ads.linkedin.com https://google.com/pagead/form-data/16713662509
+        https://google.com/ccm/form-data/16713662509 https://www.google.com/ccm/collect
+        https://worker-actionkit.tools.crewai.com https://api.reo.dev; frame-src ''self''
+        *.app.crewai.com app.crewai.com https://connect.useparagon.com/ https://zeus.tools.crewai.com
+        https://zeus.useparagon.com/* https://connect.tools.crewai.com/ https://docs.google.com
+        https://drive.google.com https://slides.google.com https://accounts.google.com
+        https://*.google.com https://app.hubspot.com/ https://td.doubleclick.net https://www.googletagmanager.com/
+        https://www.youtube.com https://share.descript.com'
+      etag:
+      - W/"84c30f3c2b9a7504e515cabd95c2f63a"
+      permissions-policy:
+      - camera=(), microphone=(self), geolocation=()
+      referrer-policy:
+      - strict-origin-when-cross-origin
+      strict-transport-security:
+      - max-age=63072000; includeSubDomains
+      vary:
+      - Accept
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-permitted-cross-domain-policies:
+      - none
+      x-request-id:
+      - 6b35c911-11d1-434d-9554-565d900df99b
+      x-runtime:
+      - '0.036573'
+      x-xss-protection:
+      - 1; mode=block
+    status:
+      code: 201
+      message: Created
+- request:
+    body: '{"events": [{"event_id": "01bf719e-a48b-4da9-8973-9e95e35a1a84", "timestamp":
+      "2025-10-02T22:35:44.008064+00:00", "type": "crew_kickoff_started", "event_data":
+      {"timestamp": "2025-10-02T22:35:43.864566+00:00", "type": "crew_kickoff_started",
+      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
+      "task_id": null, "task_name": null, "agent_id": null, "agent_role": null, "crew_name":
+      "crew", "crew": null, "inputs": null}}, {"event_id": "13569a4d-8779-4152-825f-c274e6b2777c",
+      "timestamp": "2025-10-02T22:35:44.009941+00:00", "type": "task_started", "event_data":
+      {"task_description": "Test task description", "expected_output": "Expected test
+      output", "task_name": "Test task description", "context": "", "agent_role":
+      "Test Agent", "task_id": "21108ec4-317a-45ff-a0f7-a6775932e217"}}, {"event_id":
+      "6439aa16-a21f-40fd-8010-a3b3fc817ed0", "timestamp": "2025-10-02T22:35:44.010267+00:00",
+      "type": "agent_execution_started", "event_data": {"agent_role": "Test Agent",
+      "agent_goal": "Complete test tasks successfully", "agent_backstory": "An agent
+      created for testing purposes"}}, {"event_id": "1fea588b-e284-4b99-bdb9-477307528516",
+      "timestamp": "2025-10-02T22:35:44.010359+00:00", "type": "llm_call_started",
+      "event_data": {"timestamp": "2025-10-02T22:35:44.010332+00:00", "type": "llm_call_started",
+      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
+      "task_id": "21108ec4-317a-45ff-a0f7-a6775932e217", "task_name": "Test task description",
+      "agent_id": "c060e134-ed6a-4c9e-a3f8-667fc1d98b58", "agent_role": "Test Agent",
+      "from_task": null, "from_agent": null, "model": "gpt-4o-mini", "messages": [{"role":
+      "system", "content": "You are Test Agent. An agent created for testing purposes\nYour
+      personal goal is: Complete test tasks successfully\nTo give my best complete
+      final answer to the task respond using the exact following format:\n\nThought:
+      I now can give a great answer\nFinal Answer: Your final answer must be the great
+      and the most complete as possible, it must be outcome described.\n\nI MUST use
+      these formats, my job depends on it!"}, {"role": "user", "content": "\nCurrent
+      Task: Test task description\n\nThis is the expected criteria for your final
+      answer: Expected test output\nyou MUST return the actual complete content as
+      the final answer, not a summary.\n\nBegin! This is VERY important to you, use
+      the tools available and give your best Final Answer, your job depends on it!\n\nThought:"}],
+      "tools": null, "callbacks": ["<crewai.utilities.token_counter_callback.TokenCalcHandler
+      object at 0x36733fbc0>"], "available_functions": null}}, {"event_id": "575b9771-af2c-43f1-a44c-9d80b51eeaf8",
+      "timestamp": "2025-10-02T22:35:44.011966+00:00", "type": "llm_call_completed",
+      "event_data": {"timestamp": "2025-10-02T22:35:44.011934+00:00", "type": "llm_call_completed",
+      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
+      "task_id": "21108ec4-317a-45ff-a0f7-a6775932e217", "task_name": "Test task description",
+      "agent_id": "c060e134-ed6a-4c9e-a3f8-667fc1d98b58", "agent_role": "Test Agent",
+      "from_task": null, "from_agent": null, "messages": [{"role": "system", "content":
+      "You are Test Agent. An agent created for testing purposes\nYour personal goal
+      is: Complete test tasks successfully\nTo give my best complete final answer
+      to the task respond using the exact following format:\n\nThought: I now can
+      give a great answer\nFinal Answer: Your final answer must be the great and the
+      most complete as possible, it must be outcome described.\n\nI MUST use these
+      formats, my job depends on it!"}, {"role": "user", "content": "\nCurrent Task:
+      Test task description\n\nThis is the expected criteria for your final answer:
+      Expected test output\nyou MUST return the actual complete content as the final
+      answer, not a summary.\n\nBegin! This is VERY important to you, use the tools
+      available and give your best Final Answer, your job depends on it!\n\nThought:"}],
+      "response": "I now can give a great answer  \nFinal Answer: The expected test
+      output is a comprehensive document that outlines the specific parameters and
+      criteria that define success for the task at hand. It should include detailed
+      descriptions of the tasks, the goals that need to be achieved, and any specific
+      formatting or structural requirements necessary for the output. Each component
+      of the task must be analyzed and addressed, providing context as well as examples
+      where applicable. Additionally, any tools or methodologies that are relevant
+      to executing the tasks successfully should be outlined, including any potential
+      risks or challenges that may arise during the process. This document serves
+      as a guiding framework to ensure that all aspects of the task are thoroughly
+      considered and executed to meet the high standards expected.", "call_type":
+      "<LLMCallType.LLM_CALL: ''llm_call''>", "model": "gpt-4o-mini"}}, {"event_id":
+      "f1c07a05-7926-4e83-ad14-4ce52ba6acb6", "timestamp": "2025-10-02T22:35:44.012094+00:00",
+      "type": "agent_execution_completed", "event_data": {"agent_role": "Test Agent",
+      "agent_goal": "Complete test tasks successfully", "agent_backstory": "An agent
+      created for testing purposes"}}, {"event_id": "a0193698-7046-4f92-95b2-a53d8a85c39d",
+      "timestamp": "2025-10-02T22:35:44.012155+00:00", "type": "task_completed", "event_data":
+      {"task_description": "Test task description", "task_name": "Test task description",
+      "task_id": "21108ec4-317a-45ff-a0f7-a6775932e217", "output_raw": "The expected
+      test output is a comprehensive document that outlines the specific parameters
+      and criteria that define success for the task at hand. It should include detailed
+      descriptions of the tasks, the goals that need to be achieved, and any specific
+      formatting or structural requirements necessary for the output. Each component
+      of the task must be analyzed and addressed, providing context as well as examples
+      where applicable. Additionally, any tools or methodologies that are relevant
+      to executing the tasks successfully should be outlined, including any potential
+      risks or challenges that may arise during the process. This document serves
+      as a guiding framework to ensure that all aspects of the task are thoroughly
+      considered and executed to meet the high standards expected.", "output_format":
+      "OutputFormat.RAW", "agent_role": "Test Agent"}}, {"event_id": "53ff8415-c15d-43d6-be26-9a148ec4f50f",
+      "timestamp": "2025-10-02T22:35:44.012270+00:00", "type": "llm_call_started",
+      "event_data": {"timestamp": "2025-10-02T22:35:44.012255+00:00", "type": "llm_call_started",
+      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
+      "task_id": null, "task_name": null, "agent_id": null, "agent_role": null, "from_task":
+      null, "from_agent": null, "model": "gpt-4o-mini", "messages": [{"role": "system",
+      "content": "You are an expert evaluator assessing how well an AI agent''s output
+      aligns with its assigned task goal.\n\nScore the agent''s goal alignment on
+      a scale from 0-10 where:\n- 0: Complete misalignment, agent did not understand
+      or attempt the task goal\n- 5: Partial alignment, agent attempted the task but
+      missed key requirements\n- 10: Perfect alignment, agent fully satisfied all
+      task requirements\n\nConsider:\n1. Did the agent correctly interpret the task
+      goal?\n2. Did the final output directly address the requirements?\n3. Did the
+      agent focus on relevant aspects of the task?\n4. Did the agent provide all requested
+      information or deliverables?\n\nReturn your evaluation as JSON with fields ''score''
+      (number) and ''feedback'' (string).\n"}, {"role": "user", "content": "\nAgent
+      role: Test Agent\nAgent goal: Complete test tasks successfully\nTask description:
+      Test task description\nExpected output: Expected test output\n\n\nAgent''s final
+      output:\nThe expected test output is a comprehensive document that outlines
+      the specific parameters and criteria that define success for the task at hand.
+      It should include detailed descriptions of the tasks, the goals that need to
+      be achieved, and any specific formatting or structural requirements necessary
+      for the output. Each component of the task must be analyzed and addressed, providing
+      context as well as examples where applicable. Additionally, any tools or methodologies
+      that are relevant to executing the tasks successfully should be outlined, including
+      any potential risks or challenges that may arise during the process. This document
+      serves as a guiding framework to ensure that all aspects of the task are thoroughly
+      considered and executed to meet the high standards expected.\n\nEvaluate how
+      well the agent''s output aligns with the assigned task goal.\n"}], "tools":
+      null, "callbacks": null, "available_functions": null}}, {"event_id": "f71b2560-c092-45a7-aac1-e514d5d896d6",
+      "timestamp": "2025-10-02T22:35:44.013401+00:00", "type": "llm_call_completed",
+      "event_data": {"timestamp": "2025-10-02T22:35:44.013384+00:00", "type": "llm_call_completed",
+      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
+      "task_id": null, "task_name": null, "agent_id": null, "agent_role": null, "from_task":
+      null, "from_agent": null, "messages": [{"role": "system", "content": "You are
+      an expert evaluator assessing how well an AI agent''s output aligns with its
+      assigned task goal.\n\nScore the agent''s goal alignment on a scale from 0-10
+      where:\n- 0: Complete misalignment, agent did not understand or attempt the
+      task goal\n- 5: Partial alignment, agent attempted the task but missed key requirements\n-
+      10: Perfect alignment, agent fully satisfied all task requirements\n\nConsider:\n1.
+      Did the agent correctly interpret the task goal?\n2. Did the final output directly
+      address the requirements?\n3. Did the agent focus on relevant aspects of the
+      task?\n4. Did the agent provide all requested information or deliverables?\n\nReturn
+      your evaluation as JSON with fields ''score'' (number) and ''feedback'' (string).\n"},
+      {"role": "user", "content": "\nAgent role: Test Agent\nAgent goal: Complete
+      test tasks successfully\nTask description: Test task description\nExpected output:
+      Expected test output\n\n\nAgent''s final output:\nThe expected test output is
+      a comprehensive document that outlines the specific parameters and criteria
+      that define success for the task at hand. It should include detailed descriptions
+      of the tasks, the goals that need to be achieved, and any specific formatting
+      or structural requirements necessary for the output. Each component of the task
+      must be analyzed and addressed, providing context as well as examples where
+      applicable. Additionally, any tools or methodologies that are relevant to executing
+      the tasks successfully should be outlined, including any potential risks or
+      challenges that may arise during the process. This document serves as a guiding
+      framework to ensure that all aspects of the task are thoroughly considered and
+      executed to meet the high standards expected.\n\nEvaluate how well the agent''s
+      output aligns with the assigned task goal.\n"}], "response": "{\n  \"score\":
+      5,\n  \"feedback\": \"The agent''s output demonstrates an understanding of the
+      need for a comprehensive document outlining task parameters and success criteria.
+      However, it does not explicitly provide the expected test output or directly
+      address the specific test tasks as described in the task definition. The agent
+      missed delivering the precise expected output and did not include clear examples
+      or structure that align with the task at hand.\"\n}", "call_type": "<LLMCallType.LLM_CALL:
+      ''llm_call''>", "model": "gpt-4o-mini"}}, {"event_id": "e0f84358-9115-4010-a78c-3022a2266f1d",
+      "timestamp": "2025-10-02T22:35:44.014372+00:00", "type": "crew_kickoff_completed",
+      "event_data": {"timestamp": "2025-10-02T22:35:44.014351+00:00", "type": "crew_kickoff_completed",
+      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
+      "task_id": null, "task_name": null, "agent_id": null, "agent_role": null, "crew_name":
+      "crew", "crew": null, "output": {"description": "Test task description", "name":
+      "Test task description", "expected_output": "Expected test output", "summary":
+      "Test task description...", "raw": "The expected test output is a comprehensive
+      document that outlines the specific parameters and criteria that define success
+      for the task at hand. It should include detailed descriptions of the tasks,
+      the goals that need to be achieved, and any specific formatting or structural
+      requirements necessary for the output. Each component of the task must be analyzed
+      and addressed, providing context as well as examples where applicable. Additionally,
+      any tools or methodologies that are relevant to executing the tasks successfully
+      should be outlined, including any potential risks or challenges that may arise
+      during the process. This document serves as a guiding framework to ensure that
+      all aspects of the task are thoroughly considered and executed to meet the high
+      standards expected.", "pydantic": null, "json_dict": null, "agent": "Test Agent",
+      "output_format": "raw"}, "total_tokens": 303}}], "batch_metadata": {"events_count":
+      10, "batch_sequence": 1, "is_final_batch": false}}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate, zstd
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '13085'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - CrewAI-CLI/1.0.0a2
+      X-Crewai-Version:
+      - 1.0.0a2
+    method: POST
+    uri: https://app.crewai.com/crewai_plus/api/v1/tracing/ephemeral/batches/609bada1-d49d-4a3b-803c-63fe91e1bee0/events
+  response:
+    body:
+      string: '{"events_created":10,"ephemeral_trace_batch_id":"3eed9776-2457-48ba-830b-b848cd1a3216"}'
+    headers:
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '87'
+      Content-Type:
+      - application/json; charset=utf-8
+      Date:
+      - Thu, 02 Oct 2025 22:35:44 GMT
+      cache-control:
+      - max-age=0, private, must-revalidate
+      content-security-policy:
+      - 'default-src ''self'' *.app.crewai.com app.crewai.com; script-src ''self''
+        ''unsafe-inline'' *.app.crewai.com app.crewai.com https://cdn.jsdelivr.net/npm/apexcharts
+        https://www.gstatic.com https://run.pstmn.io https://apis.google.com https://apis.google.com/js/api.js
+        https://accounts.google.com https://accounts.google.com/gsi/client https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css.map
+        https://*.google.com https://docs.google.com https://slides.google.com https://js.hs-scripts.com
+        https://js.sentry-cdn.com https://browser.sentry-cdn.com https://www.googletagmanager.com
+        https://js-na1.hs-scripts.com https://js.hubspot.com http://js-na1.hs-scripts.com
+        https://bat.bing.com https://cdn.amplitude.com https://cdn.segment.com https://d1d3n03t5zntha.cloudfront.net/
+        https://descriptusercontent.com https://edge.fullstory.com https://googleads.g.doubleclick.net
+        https://js.hs-analytics.net https://js.hs-banner.com https://js.hsadspixel.net
+        https://js.hscollectedforms.net https://js.usemessages.com https://snap.licdn.com
+        https://static.cloudflareinsights.com https://static.reo.dev https://www.google-analytics.com
+        https://share.descript.com/; style-src ''self'' ''unsafe-inline'' *.app.crewai.com
+        app.crewai.com https://cdn.jsdelivr.net/npm/apexcharts; img-src ''self'' data:
+        *.app.crewai.com app.crewai.com https://zeus.tools.crewai.com https://dashboard.tools.crewai.com
+        https://cdn.jsdelivr.net https://forms.hsforms.com https://track.hubspot.com
+        https://px.ads.linkedin.com https://px4.ads.linkedin.com https://www.google.com
+        https://www.google.com.br; font-src ''self'' data: *.app.crewai.com app.crewai.com;
+        connect-src ''self'' *.app.crewai.com app.crewai.com https://zeus.tools.crewai.com
+        https://connect.useparagon.com/ https://zeus.useparagon.com/* https://*.useparagon.com/*
+        https://run.pstmn.io https://connect.tools.crewai.com/ https://*.sentry.io
+        https://www.google-analytics.com https://edge.fullstory.com https://rs.fullstory.com
+        https://api.hubspot.com https://forms.hscollectedforms.net https://api.hubapi.com
+        https://px.ads.linkedin.com https://px4.ads.linkedin.com https://google.com/pagead/form-data/16713662509
+        https://google.com/ccm/form-data/16713662509 https://www.google.com/ccm/collect
+        https://worker-actionkit.tools.crewai.com https://api.reo.dev; frame-src ''self''
+        *.app.crewai.com app.crewai.com https://connect.useparagon.com/ https://zeus.tools.crewai.com
+        https://zeus.useparagon.com/* https://connect.tools.crewai.com/ https://docs.google.com
+        https://drive.google.com https://slides.google.com https://accounts.google.com
+        https://*.google.com https://app.hubspot.com/ https://td.doubleclick.net https://www.googletagmanager.com/
+        https://www.youtube.com https://share.descript.com'
+      etag:
+      - W/"3d36a4dbc7b91f72f57c091c19274a3e"
+      permissions-policy:
+      - camera=(), microphone=(self), geolocation=()
+      referrer-policy:
+      - strict-origin-when-cross-origin
+      strict-transport-security:
+      - max-age=63072000; includeSubDomains
+      vary:
+      - Accept
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-permitted-cross-domain-policies:
+      - none
+      x-request-id:
+      - 67c88698-7d5e-4d55-a363-ffea5e08ccff
+      x-runtime:
+      - '0.079326'
+      x-xss-protection:
+      - 1; mode=block
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"status": "completed", "duration_ms": 343, "final_event_count": 10}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate, zstd
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '68'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - CrewAI-CLI/1.0.0a2
+      X-Crewai-Version:
+      - 1.0.0a2
+    method: PATCH
+    uri: https://app.crewai.com/crewai_plus/api/v1/tracing/ephemeral/batches/609bada1-d49d-4a3b-803c-63fe91e1bee0/finalize
+  response:
+    body:
+      string: '{"id":"3eed9776-2457-48ba-830b-b848cd1a3216","ephemeral_trace_id":"609bada1-d49d-4a3b-803c-63fe91e1bee0","execution_type":"crew","crew_name":"crew","flow_name":null,"status":"completed","duration_ms":343,"crewai_version":"1.0.0a2","total_events":10,"execution_context":{"crew_name":"crew","flow_name":null,"privacy_level":"standard","crewai_version":"1.0.0a2","crew_fingerprint":null},"created_at":"2025-10-02T22:35:44.008Z","updated_at":"2025-10-02T22:35:44.367Z","access_code":"TRACE-545be8e2a7","user_identifier":null}'
+    headers:
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '521'
+      Content-Type:
+      - application/json; charset=utf-8
+      Date:
+      - Thu, 02 Oct 2025 22:35:44 GMT
+      cache-control:
+      - max-age=0, private, must-revalidate
+      content-security-policy:
+      - 'default-src ''self'' *.app.crewai.com app.crewai.com; script-src ''self''
+        ''unsafe-inline'' *.app.crewai.com app.crewai.com https://cdn.jsdelivr.net/npm/apexcharts
+        https://www.gstatic.com https://run.pstmn.io https://apis.google.com https://apis.google.com/js/api.js
+        https://accounts.google.com https://accounts.google.com/gsi/client https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css.map
+        https://*.google.com https://docs.google.com https://slides.google.com https://js.hs-scripts.com
+        https://js.sentry-cdn.com https://browser.sentry-cdn.com https://www.googletagmanager.com
+        https://js-na1.hs-scripts.com https://js.hubspot.com http://js-na1.hs-scripts.com
+        https://bat.bing.com https://cdn.amplitude.com https://cdn.segment.com https://d1d3n03t5zntha.cloudfront.net/
+        https://descriptusercontent.com https://edge.fullstory.com https://googleads.g.doubleclick.net
+        https://js.hs-analytics.net https://js.hs-banner.com https://js.hsadspixel.net
+        https://js.hscollectedforms.net https://js.usemessages.com https://snap.licdn.com
+        https://static.cloudflareinsights.com https://static.reo.dev https://www.google-analytics.com
+        https://share.descript.com/; style-src ''self'' ''unsafe-inline'' *.app.crewai.com
+        app.crewai.com https://cdn.jsdelivr.net/npm/apexcharts; img-src ''self'' data:
+        *.app.crewai.com app.crewai.com https://zeus.tools.crewai.com https://dashboard.tools.crewai.com
+        https://cdn.jsdelivr.net https://forms.hsforms.com https://track.hubspot.com
+        https://px.ads.linkedin.com https://px4.ads.linkedin.com https://www.google.com
+        https://www.google.com.br; font-src ''self'' data: *.app.crewai.com app.crewai.com;
+        connect-src ''self'' *.app.crewai.com app.crewai.com https://zeus.tools.crewai.com
+        https://connect.useparagon.com/ https://zeus.useparagon.com/* https://*.useparagon.com/*
+        https://run.pstmn.io https://connect.tools.crewai.com/ https://*.sentry.io
+        https://www.google-analytics.com https://edge.fullstory.com https://rs.fullstory.com
+        https://api.hubspot.com https://forms.hscollectedforms.net https://api.hubapi.com
+        https://px.ads.linkedin.com https://px4.ads.linkedin.com https://google.com/pagead/form-data/16713662509
+        https://google.com/ccm/form-data/16713662509 https://www.google.com/ccm/collect
+        https://worker-actionkit.tools.crewai.com https://api.reo.dev; frame-src ''self''
+        *.app.crewai.com app.crewai.com https://connect.useparagon.com/ https://zeus.tools.crewai.com
+        https://zeus.useparagon.com/* https://connect.tools.crewai.com/ https://docs.google.com
+        https://drive.google.com https://slides.google.com https://accounts.google.com
+        https://*.google.com https://app.hubspot.com/ https://td.doubleclick.net https://www.googletagmanager.com/
+        https://www.youtube.com https://share.descript.com'
+      etag:
+      - W/"6a66e9798df25531dc3e42879681f419"
+      permissions-policy:
+      - camera=(), microphone=(self), geolocation=()
+      referrer-policy:
+      - strict-origin-when-cross-origin
+      strict-transport-security:
+      - max-age=63072000; includeSubDomains
+      vary:
+      - Accept
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-permitted-cross-domain-policies:
+      - none
+      x-request-id:
+      - e3e6a9c6-62b1-4001-9f75-50e9c1e1db09
+      x-runtime:
+      - '0.027665'
+      x-xss-protection:
+      - 1; mode=block
+    status:
+      code: 200
+      message: OK
 version: 1

@@ -1,16 +1,16 @@
 import asyncio
-import json
-import re
-import uuid
-import warnings
 from collections.abc import Callable
 from concurrent.futures import Future
 from copy import copy as shallow_copy
 from hashlib import md5
+import json
+import re
 from typing import (
     Any,
     cast,
 )
+import uuid
+import warnings
 
 from opentelemetry import baggage
 from opentelemetry.context import attach, detach
@@ -81,6 +81,7 @@ from crewai.utilities.llm_utils import create_llm
 from crewai.utilities.planning_handler import CrewPlanner
 from crewai.utilities.task_output_storage_handler import TaskOutputStorageHandler
 from crewai.utilities.training_handler import CrewTrainingHandler
+
 
 warnings.filterwarnings("ignore", category=SyntaxWarning, module="pysbd")
 
@@ -1353,13 +1354,34 @@ class Crew(FlowTrackable, BaseModel):
     def calculate_usage_metrics(self) -> UsageMetrics:
         """Calculates and returns the usage metrics."""
         total_usage_metrics = UsageMetrics()
+
         for agent in self.agents:
-            if hasattr(agent, "_token_process"):
-                token_sum = agent._token_process.get_summary()
-                total_usage_metrics.add_usage_metrics(token_sum)
+            if isinstance(agent.llm, BaseLLM):
+                llm_usage = agent.llm.get_token_usage_summary()
+
+                total_usage_metrics.add_usage_metrics(llm_usage)
+            else:
+                # fallback litellm
+                if hasattr(agent, "_token_process"):
+                    token_sum = agent._token_process.get_summary()
+                    total_usage_metrics.add_usage_metrics(token_sum)
+
         if self.manager_agent and hasattr(self.manager_agent, "_token_process"):
             token_sum = self.manager_agent._token_process.get_summary()
             total_usage_metrics.add_usage_metrics(token_sum)
+
+        if (
+            self.manager_agent
+            and hasattr(self.manager_agent, "llm")
+            and hasattr(self.manager_agent.llm, "get_token_usage_summary")
+        ):
+            if isinstance(self.manager_agent.llm, BaseLLM):
+                llm_usage = self.manager_agent.llm.get_token_usage_summary()
+            else:
+                llm_usage = self.manager_agent.llm._token_process.get_summary()
+
+            total_usage_metrics.add_usage_metrics(llm_usage)
+
         self.usage_metrics = total_usage_metrics
         return total_usage_metrics
 

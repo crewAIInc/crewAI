@@ -1,16 +1,14 @@
 """Test Agent creation and execution basic functionality."""
 
-import json
 from collections import defaultdict
 from concurrent.futures import Future
 from hashlib import md5
+import json
+import re
 from unittest import mock
 from unittest.mock import ANY, MagicMock, patch
 
-import pydantic_core
-import pytest
 from crewai.agent import Agent
-from crewai.agents import CacheHandler
 from crewai.crew import Crew
 from crewai.crews.crew_output import CrewOutput
 from crewai.events.event_bus import crewai_event_bus
@@ -30,7 +28,6 @@ from crewai.events.types.memory_events import (
     MemorySaveFailedEvent,
     MemorySaveStartedEvent,
 )
-from crewai.flow import Flow, start
 from crewai.knowledge.knowledge import Knowledge
 from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
 from crewai.llm import LLM
@@ -46,6 +43,11 @@ from crewai.tasks.task_output import TaskOutput
 from crewai.types.usage_metrics import UsageMetrics
 from crewai.utilities.rpm_controller import RPMController
 from crewai.utilities.task_output_storage_handler import TaskOutputStorageHandler
+import pydantic_core
+import pytest
+
+from crewai.agents import CacheHandler
+from crewai.flow import Flow, start
 
 
 @pytest.fixture
@@ -199,7 +201,9 @@ def test_async_task_cannot_include_sequential_async_tasks_in_context(
     # This should raise an error because task2 is async and has task1 in its context without a sync task in between
     with pytest.raises(
         ValueError,
-        match="Task 'Task 2' is asynchronous and cannot include other sequential asynchronous tasks in its context.",
+        match=re.escape(
+            "Task 'Task 2' is asynchronous and cannot include other sequential asynchronous tasks in its context."
+        ),
     ):
         Crew(tasks=[task1, task2, task3, task4, task5], agents=[researcher, writer])
 
@@ -237,7 +241,9 @@ def test_context_no_future_tasks(researcher, writer):
     # This should raise an error because task1 has a context dependency on a future task (task4)
     with pytest.raises(
         ValueError,
-        match="Task 'Task 1' has a context dependency on a future task 'Task 4', which is not allowed.",
+        match=re.escape(
+            "Task 'Task 1' has a context dependency on a future task 'Task 4', which is not allowed."
+        ),
     ):
         Crew(tasks=[task1, task2, task3, task4], agents=[researcher, writer])
 
@@ -568,8 +574,9 @@ def test_crew_with_delegating_agents(ceo, writer):
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_crew_with_delegating_agents_should_not_override_task_tools(ceo, writer):
-    from crewai.tools import BaseTool
     from pydantic import BaseModel, Field
+
+    from crewai.tools import BaseTool
 
     class TestToolInput(BaseModel):
         """Input schema for TestTool."""
@@ -627,8 +634,9 @@ def test_crew_with_delegating_agents_should_not_override_task_tools(ceo, writer)
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_crew_with_delegating_agents_should_not_override_agent_tools(ceo, writer):
-    from crewai.tools import BaseTool
     from pydantic import BaseModel, Field
+
+    from crewai.tools import BaseTool
 
     class TestToolInput(BaseModel):
         """Input schema for TestTool."""
@@ -688,8 +696,9 @@ def test_crew_with_delegating_agents_should_not_override_agent_tools(ceo, writer
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_task_tools_override_agent_tools(researcher):
-    from crewai.tools import BaseTool
     from pydantic import BaseModel, Field
+
+    from crewai.tools import BaseTool
 
     class TestToolInput(BaseModel):
         """Input schema for TestTool."""
@@ -744,8 +753,9 @@ def test_task_tools_override_agent_tools_with_allow_delegation(researcher, write
     Test that task tools override agent tools while preserving delegation tools when allow_delegation=True
     """
 
-    from crewai.tools import BaseTool
     from pydantic import BaseModel, Field
+
+    from crewai.tools import BaseTool
 
     class TestToolInput(BaseModel):
         query: str = Field(..., description="Query to process")
@@ -1005,7 +1015,7 @@ def test_crew_kickoff_streaming_usage_metrics():
         role="{topic} Researcher",
         goal="Express hot takes on {topic}.",
         backstory="You have a lot of experience with {topic}.",
-        llm=LLM(model="gpt-4o", stream=True),
+        llm=LLM(model="gpt-4o", stream=True, is_litellm=True),
         max_iter=3,
     )
 
@@ -1773,7 +1783,7 @@ def test_hierarchical_kickoff_usage_metrics_include_manager(researcher):
         agent=researcher,  # *regular* agent
     )
 
-    # ── 2.  Stub out each agent's _token_process.get_summary() ───────────────────
+    # ── 2.  Stub out each agent's token usage methods ───────────────────
     researcher_metrics = UsageMetrics(
         total_tokens=120, prompt_tokens=80, completion_tokens=40, successful_requests=2
     )
@@ -1781,10 +1791,10 @@ def test_hierarchical_kickoff_usage_metrics_include_manager(researcher):
         total_tokens=30, prompt_tokens=20, completion_tokens=10, successful_requests=1
     )
 
-    # Replace the internal _token_process objects with simple mocks
-    researcher._token_process = MagicMock(
-        get_summary=MagicMock(return_value=researcher_metrics)
-    )
+    # Mock the LLM's get_token_usage_summary method for the researcher
+    researcher.llm.get_token_usage_summary = MagicMock(return_value=researcher_metrics)
+
+    # Mock the manager's _token_process since it uses the fallback path
     manager._token_process = MagicMock(
         get_summary=MagicMock(return_value=manager_metrics)
     )
@@ -3334,7 +3344,9 @@ def test_replay_with_invalid_task_id():
     ):
         with pytest.raises(
             ValueError,
-            match="Task with id bf5b09c9-69bd-4eb8-be12-f9e5bae31c2d not found in the crew's tasks.",
+            match=re.escape(
+                "Task with id bf5b09c9-69bd-4eb8-be12-f9e5bae31c2d not found in the crew's tasks."
+            ),
         ):
             crew.replay("bf5b09c9-69bd-4eb8-be12-f9e5bae31c2d")
 
@@ -3813,9 +3825,10 @@ def test_task_tools_preserve_code_execution_tools():
     """
     Test that task tools don't override code execution tools when allow_code_execution=True
     """
-    from crewai.tools import BaseTool
     from crewai_tools import CodeInterpreterTool
     from pydantic import BaseModel, Field
+
+    from crewai.tools import BaseTool
 
     class TestToolInput(BaseModel):
         """Input schema for TestTool."""

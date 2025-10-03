@@ -102,21 +102,18 @@ class AgentReasoning:
         try:
             output = self.__handle_agent_reasoning()
 
-            # Emit reasoning completed event
-            try:
-                crewai_event_bus.emit(
-                    self.agent,
-                    AgentReasoningCompletedEvent(
-                        agent_role=self.agent.role,
-                        task_id=str(self.task.id),
-                        plan=output.plan.plan,
-                        ready=output.plan.ready,
-                        attempt=1,
-                        from_task=self.task,
-                    ),
-                )
-            except Exception:  # noqa: S110
-                pass
+            crewai_event_bus.emit(
+                self.agent,
+                AgentReasoningCompletedEvent(
+                    agent_role=self.agent.role,
+                    task_id=str(self.task.id),
+                    plan=output.plan.plan,
+                    ready=output.plan.ready,
+                    attempt=1,
+                    from_task=self.task,
+                    from_agent=self.agent,
+                ),
+            )
 
             return output
         except Exception as e:
@@ -130,10 +127,11 @@ class AgentReasoning:
                         error=str(e),
                         attempt=1,
                         from_task=self.task,
+                        from_agent=self.agent,
                     ),
                 )
-            except Exception:  # noqa: S110
-                pass
+            except Exception as e:
+                logging.error(f"Error emitting reasoning failed event: {e}")
 
             raise
 

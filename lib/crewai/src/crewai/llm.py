@@ -1,13 +1,14 @@
+from collections import defaultdict
+from collections.abc import Callable
+from datetime import datetime
 import io
 import json
 import logging
 import os
 import sys
 import threading
-from collections import defaultdict
-from collections.abc import Callable
-from datetime import datetime
 from typing import (
+    TYPE_CHECKING,
     Any,
     Final,
     Literal,
@@ -17,7 +18,6 @@ from typing import (
 )
 
 from dotenv import load_dotenv
-from litellm.types.utils import ChatCompletionDeltaToolCall
 from pydantic import BaseModel, Field
 
 from crewai.events.event_bus import crewai_event_bus
@@ -39,19 +39,42 @@ from crewai.utilities.exceptions.context_window_exceeding_exception import (
 )
 from crewai.utilities.logger_utils import suppress_warnings
 
-with suppress_warnings():
+
+if TYPE_CHECKING:
+    from litellm import Choices
+    from litellm.exceptions import ContextWindowExceededError
+    from litellm.litellm_core_utils.get_supported_openai_params import (
+        get_supported_openai_params,
+    )
+    from litellm.types.utils import ChatCompletionDeltaToolCall, ModelResponse
+    from litellm.utils import supports_response_schema
+
+try:
     import litellm
     from litellm import Choices, CustomLogger
     from litellm.exceptions import ContextWindowExceededError
     from litellm.litellm_core_utils.get_supported_openai_params import (
         get_supported_openai_params,
     )
-    from litellm.types.utils import ModelResponse
+    from litellm.types.utils import ChatCompletionDeltaToolCall, ModelResponse
     from litellm.utils import supports_response_schema
+
+    LITELLM_AVAILABLE = True
+except ImportError:
+    LITELLM_AVAILABLE = False
+    litellm = None  # type: ignore
+    Choices = None  # type: ignore
+    ContextWindowExceededError = Exception  # type: ignore
+    get_supported_openai_params = None  # type: ignore
+    ChatCompletionDeltaToolCall = None  # type: ignore
+    ModelResponse = None  # type: ignore
+    supports_response_schema = None  # type: ignore
+
 
 load_dotenv()
 
-litellm.suppress_debug_info = True
+if LITELLM_AVAILABLE:
+    litellm.suppress_debug_info = True
 
 
 class FilteredStream(io.TextIOBase):
@@ -275,6 +298,77 @@ class AccumulatedToolArgs(BaseModel):
 class LLM(BaseLLM):
     completion_cost: float | None = None
 
+    def __new__(cls, model: str, is_litellm: bool = False, **kwargs) -> "LLM":
+        """Factory method that routes to native SDK or falls back to LiteLLM."""
+        if not model or not isinstance(model, str):
+            raise ValueError("Model must be a non-empty string")
+
+        provider = model.partition("/")[0] if "/" in model else "openai"
+
+        native_class = cls._get_native_provider(provider)
+        if native_class and not is_litellm:
+            try:
+                model_string = model.partition("/")[2] if "/" in model else model
+                return native_class(model=model_string, provider=provider, **kwargs)
+            except Exception as e:
+                import logging
+
+                logger = logging.getLogger(__name__)
+                logger.warning(
+                    f"Native SDK failed for {provider}: {e}, falling back to LiteLLM"
+                )
+
+        # FALLBACK to LiteLLM
+        if not LITELLM_AVAILABLE:
+            raise ImportError(
+                "Please install the required dependencies:\n"
+                "- For LiteLLM: uv add litellm"
+            )
+
+        instance = object.__new__(cls)
+        super(LLM, instance).__init__(model=model, is_litellm=True, **kwargs)
+        instance.is_litellm = True
+        return instance
+
+    @classmethod
+    def _get_native_provider(cls, provider: str) -> type | None:
+        """Get native provider class if available."""
+        if provider == "openai":
+            try:
+                from crewai.llms.providers.openai.completion import OpenAICompletion
+
+                return OpenAICompletion
+            except ImportError:
+                return None
+
+        elif provider == "anthropic" or provider == "claude":
+            try:
+                from crewai.llms.providers.anthropic.completion import (
+                    AnthropicCompletion,
+                )
+
+                return AnthropicCompletion
+            except ImportError:
+                return None
+
+        elif provider == "azure":
+            try:
+                from crewai.llms.providers.azure.completion import AzureCompletion
+
+                return AzureCompletion
+            except ImportError:
+                return None
+
+        elif provider == "google" or provider == "gemini":
+            try:
+                from crewai.llms.providers.gemini.completion import GeminiCompletion
+
+                return GeminiCompletion
+            except ImportError:
+                return None
+
+        return None
+
     def __init__(
         self,
         model: str,
@@ -284,7 +378,7 @@ class LLM(BaseLLM):
         n: int | None = None,
         stop: str | list[str] | None = None,
         max_completion_tokens: int | None = None,
-        max_tokens: int | None = None,
+        max_tokens: int | float | None = None,
         presence_penalty: float | None = None,
         frequency_penalty: float | None = None,
         logit_bias: dict[int, float] | None = None,
@@ -301,6 +395,11 @@ class LLM(BaseLLM):
         stream: bool = False,
         **kwargs,
     ):
+        """Initialize LLM instance.
+
+        Note: This __init__ method is only called for fallback instances.
+        Native provider instances handle their own initialization in their respective classes.
+        """
         self.model = model
         self.timeout = timeout
         self.temperature = temperature
@@ -328,7 +427,7 @@ class LLM(BaseLLM):
 
         litellm.drop_params = True
 
-        # Normalize self.stop to always be a List[str]
+        # Normalize self.stop to always be a list[str]
         if stop is None:
             self.stop: list[str] = []
         elif isinstance(stop, str):
@@ -349,7 +448,8 @@ class LLM(BaseLLM):
         Returns:
             bool: True if the model is from Anthropic, False otherwise.
         """
-        return any(prefix in model.lower() for prefix in ANTHROPIC_PREFIXES)
+        anthropic_prefixes = ("anthropic/", "claude-", "claude/")
+        return any(prefix in model.lower() for prefix in anthropic_prefixes)
 
     def _prepare_completion_params(
         self,
@@ -514,10 +614,6 @@ class LLM(BaseLLM):
                     # Add the chunk content to the full response
                     full_response += chunk_content
 
-                    # Emit the chunk event
-                    if not hasattr(crewai_event_bus, "emit"):
-                        raise Exception("crewai_event_bus must have an `emit` method")
-
                     crewai_event_bus.emit(
                         self,
                         event=LLMStreamChunkEvent(
@@ -623,7 +719,9 @@ class LLM(BaseLLM):
             # --- 8) If no tool calls or no available functions, return the text response directly
 
             if not tool_calls or not available_functions:
-                # Log token usage if available in streaming mode
+                # Track token usage and log callbacks if available in streaming mode
+                if usage_info:
+                    self._track_token_usage_internal(usage_info)
                 self._handle_streaming_callbacks(callbacks, usage_info, last_chunk)
                 # Emit completion event and return response
                 self._handle_emit_call_events(
@@ -640,7 +738,9 @@ class LLM(BaseLLM):
             if tool_result is not None:
                 return tool_result
 
-            # --- 10) Log token usage if available in streaming mode
+            # --- 10) Track token usage and log callbacks if available in streaming mode
+            if usage_info:
+                self._track_token_usage_internal(usage_info)
             self._handle_streaming_callbacks(callbacks, usage_info, last_chunk)
 
             # --- 11) Emit completion event and return response
@@ -671,11 +771,6 @@ class LLM(BaseLLM):
                 )
                 return full_response
 
-            # Emit failed event and re-raise the exception
-            if not hasattr(crewai_event_bus, "emit"):
-                raise AttributeError(
-                    "crewai_event_bus must have an 'emit' method"
-                ) from e
             crewai_event_bus.emit(
                 self,
                 event=LLMCallFailedEvent(
@@ -702,8 +797,7 @@ class LLM(BaseLLM):
                 current_tool_accumulator.function.arguments += (
                     tool_call.function.arguments
                 )
-            if not hasattr(crewai_event_bus, "emit"):
-                raise AttributeError("crewai_event_bus must have an 'emit' method")
+
             crewai_event_bus.emit(
                 self,
                 event=LLMStreamChunkEvent(
@@ -832,6 +926,7 @@ class LLM(BaseLLM):
                 messages=params["messages"],
             )
             return text_response
+
         # --- 6) If there is no text response, no available functions, but there are tool calls, return the tool calls
         if tool_calls and not available_functions and not text_response:
             return tool_calls
@@ -886,9 +981,6 @@ class LLM(BaseLLM):
                 function_args = json.loads(tool_call.function.arguments)
                 fn = available_functions[function_name]
 
-                # --- 3.2) Execute function
-                if not hasattr(crewai_event_bus, "emit"):
-                    raise AttributeError("crewai_event_bus must have an 'emit' method")
                 started_at = datetime.now()
                 crewai_event_bus.emit(
                     self,
@@ -928,10 +1020,6 @@ class LLM(BaseLLM):
                     function_name, lambda: None
                 )  # Ensure fn is always a callable
                 logging.error(f"Error executing function '{function_name}': {e}")
-                if not hasattr(crewai_event_bus, "emit"):
-                    raise AttributeError(
-                        "crewai_event_bus must have an 'emit' method"
-                    ) from e
                 crewai_event_bus.emit(
                     self,
                     event=LLMCallFailedEvent(error=f"Tool execution error: {e!s}"),
@@ -982,9 +1070,6 @@ class LLM(BaseLLM):
             ValueError: If response format is not supported
             LLMContextLengthExceededError: If input exceeds model's context limit
         """
-        # --- 1) Emit call started event
-        if not hasattr(crewai_event_bus, "emit"):
-            raise AttributeError("crewai_event_bus must have an 'emit' method")
         crewai_event_bus.emit(
             self,
             event=LLMCallStartedEvent(
@@ -1021,10 +1106,10 @@ class LLM(BaseLLM):
                     return self._handle_streaming_response(
                         params, callbacks, available_functions, from_task, from_agent
                     )
+
                 return self._handle_non_streaming_response(
                     params, callbacks, available_functions, from_task, from_agent
                 )
-
             except LLMContextLengthExceededError:
                 # Re-raise LLMContextLengthExceededError as it should be handled
                 # by the CrewAgentExecutor._invoke_loop method, which can then decide
@@ -1057,10 +1142,6 @@ class LLM(BaseLLM):
                         from_agent=from_agent,
                     )
 
-                if not hasattr(crewai_event_bus, "emit"):
-                    raise AttributeError(
-                        "crewai_event_bus must have an 'emit' method"
-                    ) from e
                 crewai_event_bus.emit(
                     self,
                     event=LLMCallFailedEvent(
@@ -1086,8 +1167,6 @@ class LLM(BaseLLM):
             from_agent: Optional agent object
             messages: Optional messages object
         """
-        if not hasattr(crewai_event_bus, "emit"):
-            raise AttributeError("crewai_event_bus must have an 'emit' method")
         crewai_event_bus.emit(
             self,
             event=LLMCallCompletedEvent(
@@ -1225,11 +1304,14 @@ class LLM(BaseLLM):
         if self.context_window_size != 0:
             return self.context_window_size
 
+        min_context = 1024
+        max_context = 2097152  # Current max from gemini-1.5-pro
+
         # Validate all context window sizes
         for key, value in LLM_CONTEXT_WINDOW_SIZES.items():
-            if value < MIN_CONTEXT or value > MAX_CONTEXT:
+            if value < min_context or value > max_context:
                 raise ValueError(
-                    f"Context window for {key} must be between {MIN_CONTEXT} and {MAX_CONTEXT}"
+                    f"Context window for {key} must be between {min_context} and {max_context}"
                 )
 
         self.context_window_size = int(
@@ -1293,3 +1375,129 @@ class LLM(BaseLLM):
 
                 litellm.success_callback = success_callbacks
                 litellm.failure_callback = failure_callbacks
+
+    def __copy__(self):
+        """Create a shallow copy of the LLM instance."""
+        # Filter out parameters that are already explicitly passed to avoid conflicts
+        filtered_params = {
+            k: v
+            for k, v in self.additional_params.items()
+            if k
+            not in [
+                "model",
+                "is_litellm",
+                "temperature",
+                "top_p",
+                "n",
+                "max_completion_tokens",
+                "max_tokens",
+                "presence_penalty",
+                "frequency_penalty",
+                "logit_bias",
+                "response_format",
+                "seed",
+                "logprobs",
+                "top_logprobs",
+                "base_url",
+                "api_base",
+                "api_version",
+                "api_key",
+                "callbacks",
+                "reasoning_effort",
+                "stream",
+                "stop",
+            ]
+        }
+
+        # Create a new instance with the same parameters
+        return LLM(
+            model=self.model,
+            is_litellm=self.is_litellm,
+            temperature=self.temperature,
+            top_p=self.top_p,
+            n=self.n,
+            max_completion_tokens=self.max_completion_tokens,
+            max_tokens=self.max_tokens,
+            presence_penalty=self.presence_penalty,
+            frequency_penalty=self.frequency_penalty,
+            logit_bias=self.logit_bias,
+            response_format=self.response_format,
+            seed=self.seed,
+            logprobs=self.logprobs,
+            top_logprobs=self.top_logprobs,
+            base_url=self.base_url,
+            api_base=self.api_base,
+            api_version=self.api_version,
+            api_key=self.api_key,
+            callbacks=self.callbacks,
+            reasoning_effort=self.reasoning_effort,
+            stream=self.stream,
+            stop=self.stop,
+            **filtered_params,
+        )
+
+    def __deepcopy__(self, memo):
+        """Create a deep copy of the LLM instance."""
+        import copy
+
+        # Filter out parameters that are already explicitly passed to avoid conflicts
+        filtered_params = {
+            k: copy.deepcopy(v, memo)
+            for k, v in self.additional_params.items()
+            if k
+            not in [
+                "model",
+                "is_litellm",
+                "temperature",
+                "top_p",
+                "n",
+                "max_completion_tokens",
+                "max_tokens",
+                "presence_penalty",
+                "frequency_penalty",
+                "logit_bias",
+                "response_format",
+                "seed",
+                "logprobs",
+                "top_logprobs",
+                "base_url",
+                "api_base",
+                "api_version",
+                "api_key",
+                "callbacks",
+                "reasoning_effort",
+                "stream",
+                "stop",
+            ]
+        }
+
+        # Create a new instance with the same parameters
+        return LLM(
+            model=self.model,
+            is_litellm=self.is_litellm,
+            temperature=self.temperature,
+            top_p=self.top_p,
+            n=self.n,
+            max_completion_tokens=self.max_completion_tokens,
+            max_tokens=self.max_tokens,
+            presence_penalty=self.presence_penalty,
+            frequency_penalty=self.frequency_penalty,
+            logit_bias=copy.deepcopy(self.logit_bias, memo)
+            if self.logit_bias
+            else None,
+            response_format=copy.deepcopy(self.response_format, memo)
+            if self.response_format
+            else None,
+            seed=self.seed,
+            logprobs=self.logprobs,
+            top_logprobs=self.top_logprobs,
+            base_url=self.base_url,
+            api_base=self.api_base,
+            api_version=self.api_version,
+            api_key=self.api_key,
+            callbacks=copy.deepcopy(self.callbacks, memo) if self.callbacks else None,
+            reasoning_effort=self.reasoning_effort,
+            stream=self.stream,
+            stop=copy.deepcopy(self.stop, memo) if self.stop else None,
+            **filtered_params,
+        )

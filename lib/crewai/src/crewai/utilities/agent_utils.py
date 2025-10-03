@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+from collections.abc import Callable, Sequence
 import json
 import re
-from collections.abc import Callable, Sequence
 from typing import TYPE_CHECKING, Any, Final, Literal, TypedDict
 
 from rich.console import Console
@@ -15,7 +15,6 @@ from crewai.agents.parser import (
     parse,
 )
 from crewai.cli.config import Settings
-from crewai.llm import LLM
 from crewai.llms.base_llm import BaseLLM
 from crewai.tools import BaseTool as CrewAITool
 from crewai.tools.base_tool import BaseTool
@@ -29,9 +28,12 @@ from crewai.utilities.i18n import I18N
 from crewai.utilities.printer import ColoredText, Printer
 from crewai.utilities.types import LLMMessage
 
+
 if TYPE_CHECKING:
     from crewai.agent import Agent
+    from crewai.llm import LLM
     from crewai.task import Task
+
 
 
 class SummaryContent(TypedDict):
@@ -392,8 +394,10 @@ def is_context_length_exceeded(exception: Exception) -> bool:
     Returns:
         bool: True if the exception is due to context length exceeding
     """
-    return LLMContextLengthExceededError(str(exception))._is_context_limit_error(
-        str(exception)
+    return (
+        LLMContextLengthExceededError(str(exception))
+        ._is_context_limit_error(str(exception))
+        ._is_context_limit_error(str(exception))
     )
 
 

@@ -1,17 +1,12 @@
-import os
 from datetime import datetime
+import os
 from unittest.mock import Mock, patch
-
-import pytest
-from pydantic import Field
 
 from crewai.agent import Agent
 from crewai.agents.crew_agent_executor import CrewAgentExecutor
 from crewai.crew import Crew
-from crewai.flow.flow import Flow, listen, start
-from crewai.llm import LLM
-from crewai.task import Task
-from crewai.tools.base_tool import BaseTool
+from crewai.events.event_bus import crewai_event_bus
+from crewai.events.event_listener import EventListener
 from crewai.events.types.agent_events import (
     AgentExecutionCompletedEvent,
     AgentExecutionErrorEvent,
@@ -25,9 +20,6 @@ from crewai.events.types.crew_events import (
     CrewTestResultEvent,
     CrewTestStartedEvent,
 )
-from crewai.events.event_bus import crewai_event_bus
-from crewai.events.event_listener import EventListener
-from crewai.events.types.tool_usage_events import ToolUsageFinishedEvent
 from crewai.events.types.flow_events import (
     FlowCreatedEvent,
     FlowFinishedEvent,
@@ -48,7 +40,14 @@ from crewai.events.types.task_events import (
 )
 from crewai.events.types.tool_usage_events import (
     ToolUsageErrorEvent,
+    ToolUsageFinishedEvent,
 )
+from crewai.flow.flow import Flow, listen, start
+from crewai.llm import LLM
+from crewai.task import Task
+from crewai.tools.base_tool import BaseTool
+from pydantic import Field
+import pytest
 
 
 @pytest.fixture(scope="module")
@@ -195,7 +194,7 @@ def test_crew_emits_kickoff_failed_event(base_agent, base_task):
             error_message = "Simulated crew kickoff failure"
             mock_execute.side_effect = Exception(error_message)
 
-            with pytest.raises(Exception):
+            with pytest.raises(Exception):  # noqa: B017
                 crew.kickoff()
 
         assert len(received_events) == 1
@@ -279,7 +278,7 @@ def test_task_emits_failed_event_on_execution_error(base_agent, base_task):
             agent=agent,
         )
 
-        with pytest.raises(Exception):
+        with pytest.raises(Exception):  # noqa: B017
             agent.execute_task(task=task)
 
             assert len(received_events) == 1
@@ -333,7 +332,7 @@ def test_agent_emits_execution_error_event(base_agent, base_task):
     ) as invoke_mock:
         invoke_mock.side_effect = Exception(error_message)
 
-        with pytest.raises(Exception):
+        with pytest.raises(Exception):  # noqa: B017
             base_agent.execute_task(
                 task=base_task,
             )
@@ -517,7 +516,6 @@ def test_flow_emits_method_execution_started_event():
 
         @crewai_event_bus.on(MethodExecutionStartedEvent)
         def handle_method_start(source, event):
-            print("event in method name", event.method_name)
             received_events.append(event)
 
         class TestFlow(Flow[dict]):
@@ -619,7 +617,7 @@ def test_flow_emits_method_execution_failed_event():
             raise error
 
     flow = TestFlow()
-    with pytest.raises(Exception):
+    with pytest.raises(Exception):  # noqa: B017
         flow.kickoff()
 
     assert len(received_events) == 1
@@ -655,6 +653,7 @@ def test_llm_emits_call_started_event():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.isolated
 def test_llm_emits_call_failed_event():
     received_events = []
 
@@ -662,13 +661,18 @@ def test_llm_emits_call_failed_event():
     def handle_llm_call_failed(source, event):
         received_events.append(event)
 
-    error_message = "Simulated LLM call failure"
-    with patch("crewai.llm.litellm.completion", side_effect=Exception(error_message)):
+    error_message = "OpenAI API call failed: Simulated API failure"
+
+    with patch(
+        "crewai.llms.providers.openai.completion.OpenAICompletion._handle_completion"
+    ) as mock_handle_completion:
+        mock_handle_completion.side_effect = Exception("Simulated API failure")
+
         llm = LLM(model="gpt-4o-mini")
         with pytest.raises(Exception) as exc_info:
             llm.call("Hello, how are you?")
 
-        assert str(exc_info.value) == error_message
+        assert str(exc_info.value) == "Simulated API failure"
         assert len(received_events) == 1
         assert received_events[0].type == "llm_call_failed"
         assert received_events[0].error == error_message
@@ -884,8 +888,8 @@ def test_stream_llm_emits_event_with_task_and_agent_info():
     assert len(all_task_name) == 14
 
     assert set(all_agent_roles) == {agent.role}
-    assert set(all_agent_id) == {agent.id}
-    assert set(all_task_id) == {task.id}
+    assert set(all_agent_id) == {str(agent.id)}
+    assert set(all_task_id) == {str(task.id)}
     assert set(all_task_name) == {task.name or task.description}
 
 
@@ -935,8 +939,8 @@ def test_llm_emits_event_with_task_and_agent_info(base_agent, base_task):
     assert len(all_task_name) == 2
 
     assert set(all_agent_roles) == {base_agent.role}
-    assert set(all_agent_id) == {base_agent.id}
-    assert set(all_task_id) == {base_task.id}
+    assert set(all_agent_id) == {str(base_agent.id)}
+    assert set(all_task_id) == {str(base_task.id)}
     assert set(all_task_name) == {base_task.name or base_task.description}
 
 
@@ -991,4 +995,4 @@ def test_llm_emits_event_with_lite_agent():
     assert len(all_task_name) == 0
 
     assert set(all_agent_roles) == {agent.role}
-    assert set(all_agent_id) == {agent.id}
+    assert set(all_agent_id) == {str(agent.id)}

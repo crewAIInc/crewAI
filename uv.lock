@@ -993,7 +993,6 @@ dependencies = [
     { name = "json-repair" },
     { name = "json5" },
     { name = "jsonref" },
-    { name = "litellm" },
     { name = "openai" },
     { name = "openpyxl" },
     { name = "opentelemetry-api" },
@@ -1025,6 +1024,9 @@ docling = [
 ]
 embeddings = [
     { name = "tiktoken" },
+]
+litellm = [
+    { name = "litellm" },
 ]
 mem0 = [
     { name = "mem0ai" },
@@ -1066,7 +1068,7 @@ requires-dist = [
     { name = "json-repair", specifier = "==0.25.2" },
     { name = "json5", specifier = ">=0.10.0" },
     { name = "jsonref", specifier = ">=1.1.0" },
-    { name = "litellm", specifier = "==1.74.9" },
+    { name = "litellm", marker = "extra == 'litellm'", specifier = ">=1.74.9" },
     { name = "mem0ai", marker = "extra == 'mem0'", specifier = ">=0.1.94" },
     { name = "openai", specifier = ">=1.13.3" },
     { name = "openpyxl", specifier = ">=3.1.5" },
@@ -1092,7 +1094,7 @@ requires-dist = [
     { name = "uv", specifier = ">=0.4.25" },
     { name = "voyageai", marker = "extra == 'voyageai'", specifier = ">=0.3.5" },
 ]
-provides-extras = ["aisuite", "aws", "docling", "embeddings", "mem0", "openpyxl", "pandas", "pdfplumber", "qdrant", "tools", "voyageai", "watson"]
+provides-extras = ["aisuite", "aws", "docling", "embeddings", "litellm", "mem0", "openpyxl", "pandas", "pdfplumber", "qdrant", "tools", "voyageai", "watson"]
 
 [[package]]
 name = "crewai-tools"

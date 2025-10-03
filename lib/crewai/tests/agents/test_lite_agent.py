@@ -3,16 +3,17 @@ from collections import defaultdict
 from typing import cast
 from unittest.mock import Mock, patch
 
-import pytest
-from crewai import LLM, Agent
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.agent_events import LiteAgentExecutionStartedEvent
 from crewai.events.types.tool_usage_events import ToolUsageStartedEvent
-from crewai.flow import Flow, start
 from crewai.lite_agent import LiteAgent, LiteAgentOutput
 from crewai.llms.base_llm import BaseLLM
-from crewai.tools import BaseTool
 from pydantic import BaseModel, Field
+import pytest
+
+from crewai import LLM, Agent
+from crewai.flow import Flow, start
+from crewai.tools import BaseTool
 
 
 # A simple test tool
@@ -197,10 +198,6 @@ def test_lite_agent_structured_output():
         response_format=SimpleOutput,
     )
 
-    print(f"\n=== Agent Result Type: {type(result)}")
-    print(f"=== Agent Result: {result}")
-    print(f"=== Pydantic: {result.pydantic}")
-
     assert result.pydantic is not None, "Should return a Pydantic model"
 
     output = cast(SimpleOutput, result.pydantic)
@@ -294,6 +291,17 @@ def test_sets_parent_flow_when_inside_flow():
     mock_llm = Mock(spec=LLM)
     mock_llm.call.return_value = "Test response"
     mock_llm.stop = []
+
+    from crewai.types.usage_metrics import UsageMetrics
+
+    mock_usage_metrics = UsageMetrics(
+        total_tokens=100,
+        prompt_tokens=50,
+        completion_tokens=50,
+        cached_prompt_tokens=0,
+        successful_requests=1,
+    )
+    mock_llm.get_token_usage_summary.return_value = mock_usage_metrics
 
     class MyFlow(Flow):
         @start()

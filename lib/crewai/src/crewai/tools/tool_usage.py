@@ -1,10 +1,10 @@
 import ast
 import datetime
-import json
-import time
 from difflib import SequenceMatcher
+import json
 from json import JSONDecodeError
 from textwrap import dedent
+import time
 from typing import TYPE_CHECKING, Any, Union
 
 import json5
@@ -28,6 +28,7 @@ from crewai.utilities.agent_utils import (
     get_tool_names,
     render_text_description_and_args,
 )
+
 
 if TYPE_CHECKING:
     from crewai.agents.agent_builder.base_agent import BaseAgent
@@ -587,7 +588,23 @@ class ToolUsage:
         e: Exception,
     ) -> None:
         event_data = self._prepare_event_data(tool, tool_calling)
-        crewai_event_bus.emit(self, ToolUsageErrorEvent(**{**event_data, "error": e}))
+        event_data.update(
+            {
+                "task_id": str(self.task.id) if self.task else None,
+                "task_name": self.task.name or self.task.description
+                if self.task
+                else None,
+            }
+        )
+        crewai_event_bus.emit(
+            self,
+            ToolUsageErrorEvent(
+                **{
+                    **event_data,
+                    "error": e,
+                }
+            ),
+        )
 
     def on_tool_use_finished(
         self,

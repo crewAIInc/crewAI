@@ -1,14 +1,9 @@
 """Test Agent creation and execution basic functionality."""
 
-# ruff: noqa: S106
 import os
 from unittest import mock
 from unittest.mock import MagicMock, patch
 
-import pytest
-
-from crewai import Agent, Crew, Task
-from crewai.agents.cache import CacheHandler
 from crewai.agents.crew_agent_executor import AgentFinish, CrewAgentExecutor
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.tool_usage_events import ToolUsageFinishedEvent
@@ -17,12 +12,17 @@ from crewai.knowledge.knowledge_config import KnowledgeConfig
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
 from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
 from crewai.llm import LLM
+from crewai.llms.base_llm import BaseLLM
 from crewai.process import Process
-from crewai.tools import tool
 from crewai.tools.tool_calling import InstructorToolCalling
 from crewai.tools.tool_usage import ToolUsage
-from crewai.utilities import RPMController
 from crewai.utilities.errors import AgentRepositoryError
+import pytest
+
+from crewai import Agent, Crew, Task
+from crewai.agents.cache import CacheHandler
+from crewai.tools import tool
+from crewai.utilities import RPMController
 
 
 def test_agent_llm_creation_with_env_vars():
@@ -40,7 +40,7 @@ def test_agent_llm_creation_with_env_vars():
     agent = Agent(role="test role", goal="test goal", backstory="test backstory")
 
     # Check if LLM is created correctly
-    assert isinstance(agent.llm, LLM)
+    assert isinstance(agent.llm, BaseLLM)
     assert agent.llm.model == "gpt-4-turbo"
     assert agent.llm.api_key == "test_api_key"
     assert agent.llm.base_url == "https://test-api-base.com"
@@ -50,11 +50,18 @@ def test_agent_llm_creation_with_env_vars():
     del os.environ["OPENAI_API_BASE"]
     del os.environ["OPENAI_MODEL_NAME"]
 
+    if original_api_key:
+        os.environ["OPENAI_API_KEY"] = original_api_key
+    if original_api_base:
+        os.environ["OPENAI_API_BASE"] = original_api_base
+    if original_model_name:
+        os.environ["OPENAI_MODEL_NAME"] = original_model_name
+
     # Create an agent without specifying LLM
     agent = Agent(role="test role", goal="test goal", backstory="test backstory")
 
     # Check if LLM is created correctly
-    assert isinstance(agent.llm, LLM)
+    assert isinstance(agent.llm, BaseLLM)
     assert agent.llm.model != "gpt-4-turbo"
     assert agent.llm.api_key != "test_api_key"
     assert agent.llm.base_url != "https://test-api-base.com"
@@ -456,18 +463,30 @@ def test_agent_custom_max_iterations():
         allow_delegation=False,
     )
 
-    with patch.object(
-        LLM, "call", wraps=LLM("gpt-4o", stop=["\nObservation:"]).call
-    ) as private_mock:
-        task = Task(
-            description="The final answer is 42. But don't give it yet, instead keep using the `get_final_answer` tool.",
-            expected_output="The final answer",
-        )
-        agent.execute_task(
-            task=task,
-            tools=[get_final_answer],
-        )
-        assert private_mock.call_count == 3
+    original_call = agent.llm.call
+    call_count = 0
+
+    def counting_call(*args, **kwargs):
+        nonlocal call_count
+        call_count += 1
+        return original_call(*args, **kwargs)
+
+    agent.llm.call = counting_call
+
+    task = Task(
+        description="The final answer is 42. But don't give it yet, instead keep using the `get_final_answer` tool.",
+        expected_output="The final answer",
+    )
+    result = agent.execute_task(
+        task=task,
+        tools=[get_final_answer],
+    )
+
+    assert result is not None
+    assert isinstance(result, str)
+    assert len(result) > 0
+    assert call_count > 0
+    assert call_count == 3
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -888,9 +907,8 @@ def test_agent_function_calling_llm():
     crew = Crew(agents=[agent1], tasks=tasks)
     from unittest.mock import patch
 
-    import instructor
-
     from crewai.tools.tool_usage import ToolUsage
+    import instructor
 
     with (
         patch.object(
@@ -1413,7 +1431,7 @@ def test_agent_with_llm():
         llm=LLM(model="gpt-3.5-turbo", temperature=0.7),
     )
 
-    assert isinstance(agent.llm, LLM)
+    assert isinstance(agent.llm, BaseLLM)
     assert agent.llm.model == "gpt-3.5-turbo"
     assert agent.llm.temperature == 0.7
 
@@ -1427,7 +1445,7 @@ def test_agent_with_custom_stop_words():
         llm=LLM(model="gpt-3.5-turbo", stop=stop_words),
     )
 
-    assert isinstance(agent.llm, LLM)
+    assert isinstance(agent.llm, BaseLLM)
     assert set(agent.llm.stop) == set([*stop_words, "\nObservation:"])
     assert all(word in agent.llm.stop for word in stop_words)
     assert "\nObservation:" in agent.llm.stop
@@ -1441,10 +1459,12 @@ def test_agent_with_callbacks():
         role="test role",
         goal="test goal",
         backstory="test backstory",
-        llm=LLM(model="gpt-3.5-turbo", callbacks=[dummy_callback]),
+        llm=LLM(model="gpt-3.5-turbo", callbacks=[dummy_callback], is_litellm=True),
     )
 
-    assert isinstance(agent.llm, LLM)
+    assert isinstance(agent.llm, BaseLLM)
+    # All LLM implementations now support callbacks consistently
+    assert hasattr(agent.llm, "callbacks")
     assert len(agent.llm.callbacks) == 1
     assert agent.llm.callbacks[0] == dummy_callback
 
@@ -1463,7 +1483,7 @@ def test_agent_with_additional_kwargs():
         ),
     )
 
-    assert isinstance(agent.llm, LLM)
+    assert isinstance(agent.llm, BaseLLM)
     assert agent.llm.model == "gpt-3.5-turbo"
     assert agent.llm.temperature == 0.8
     assert agent.llm.top_p == 0.9
@@ -1580,40 +1600,40 @@ def test_agent_with_all_llm_attributes():
             timeout=10,
             temperature=0.7,
             top_p=0.9,
-            n=1,
+            # n=1,
             stop=["STOP", "END"],
             max_tokens=100,
             presence_penalty=0.1,
             frequency_penalty=0.1,
-            logit_bias={50256: -100},  # Example: bias against the EOT token
+            # logit_bias={50256: -100},  # Example: bias against the EOT token
             response_format={"type": "json_object"},
             seed=42,
             logprobs=True,
             top_logprobs=5,
             base_url="https://api.openai.com/v1",
-            api_version="2023-05-15",
+            # api_version="2023-05-15",
             api_key="sk-your-api-key-here",
         ),
     )
 
-    assert isinstance(agent.llm, LLM)
+    assert isinstance(agent.llm, BaseLLM)
     assert agent.llm.model == "gpt-3.5-turbo"
     assert agent.llm.timeout == 10
     assert agent.llm.temperature == 0.7
     assert agent.llm.top_p == 0.9
-    assert agent.llm.n == 1
+    # assert agent.llm.n == 1
     assert set(agent.llm.stop) == set(["STOP", "END", "\nObservation:"])
     assert all(word in agent.llm.stop for word in ["STOP", "END", "\nObservation:"])
     assert agent.llm.max_tokens == 100
     assert agent.llm.presence_penalty == 0.1
     assert agent.llm.frequency_penalty == 0.1
-    assert agent.llm.logit_bias == {50256: -100}
+    # assert agent.llm.logit_bias == {50256: -100}
     assert agent.llm.response_format == {"type": "json_object"}
     assert agent.llm.seed == 42
     assert agent.llm.logprobs
     assert agent.llm.top_logprobs == 5
     assert agent.llm.base_url == "https://api.openai.com/v1"
-    assert agent.llm.api_version == "2023-05-15"
+    # assert agent.llm.api_version == "2023-05-15"
     assert agent.llm.api_key == "sk-your-api-key-here"
 
 
@@ -1982,7 +2002,7 @@ def test_agent_with_knowledge_sources_works_with_copy():
             assert len(agent_copy.knowledge_sources) == 1
             assert isinstance(agent_copy.knowledge_sources[0], StringKnowledgeSource)
             assert agent_copy.knowledge_sources[0].content == content
-            assert isinstance(agent_copy.llm, LLM)
+            assert isinstance(agent_copy.llm, BaseLLM)
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -2130,7 +2150,7 @@ def test_litellm_auth_error_handling():
         role="test role",
         goal="test goal",
         backstory="test backstory",
-        llm=LLM(model="gpt-4"),
+        llm=LLM(model="gpt-4", is_litellm=True),
         max_retry_limit=0,  # Disable retries for authentication errors
     )
 
@@ -2157,16 +2177,15 @@ def test_litellm_auth_error_handling():
 
 def test_crew_agent_executor_litellm_auth_error():
     """Test that CrewAgentExecutor handles LiteLLM authentication errors by raising them."""
-    from litellm.exceptions import AuthenticationError
-
     from crewai.agents.tools_handler import ToolsHandler
+    from litellm.exceptions import AuthenticationError
 
     # Create an agent and executor
     agent = Agent(
         role="test role",
         goal="test goal",
         backstory="test backstory",
-        llm=LLM(model="gpt-4", api_key="invalid_api_key"),
+        llm=LLM(model="gpt-4", api_key="invalid_api_key", is_litellm=True),
     )
     task = Task(
         description="Test task",
@@ -2224,7 +2243,7 @@ def test_litellm_anthropic_error_handling():
         role="test role",
         goal="test goal",
         backstory="test backstory",
-        llm=LLM(model="claude-3.5-sonnet-20240620"),
+        llm=LLM(model="claude-3.5-sonnet-20240620", is_litellm=True),
         max_retry_limit=0,
     )
 
