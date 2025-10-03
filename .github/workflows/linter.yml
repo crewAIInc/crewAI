@@ -52,10 +52,10 @@ jobs:
       - name: Run Ruff on Changed Files
         if: ${{ steps.changed-files.outputs.files != '' }}
         run: |
-          echo "${{ steps.changed-files.outputs.files }}" \
-            | tr ' ' '\n' \
-            | grep -v 'src/crewai/cli/templates/' \
-            | xargs -I{} uv run ruff check "{}"
+         echo "${{ steps.changed-files.outputs.files }}" \
+           | tr ' ' '\n' \
+           | grep -v 'src/crewai/cli/templates/' \
+           | xargs -I{} uv run ruff check "{}"
 
       - name: Save uv caches
         if: steps.cache-restore.outputs.cache-hit != 'true'

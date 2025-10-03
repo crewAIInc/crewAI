@@ -1,0 +1,480 @@
+interactions:
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are test role. test backstory\nYour
+      personal goal is: test goal\nYou ONLY have access to the following tools, and
+      should NEVER make up tools that are not listed here:\n\nTool Name: get_final_answer\nTool
+      Arguments: {}\nTool Description: Get the final answer but don''t give it yet,
+      just re-use this\n        tool non-stop.\n\nIMPORTANT: Use the following format
+      in your response:\n\n```\nThought: you should always think about what to do\nAction:
+      the action to take, only one name of [get_final_answer], just the name, exactly
+      as it''s written.\nAction Input: the input to the action, just a simple JSON
+      object, enclosed in curly braces, using \" to wrap keys and values.\nObservation:
+      the result of the action\n```\n\nOnce all necessary information is gathered,
+      return the following format:\n\n```\nThought: I now know the final answer\nFinal
+      Answer: the final answer to the original input question\n```"}, {"role": "user",
+      "content": "\nCurrent Task: The final answer is 42. But don''t give it yet,
+      instead keep using the `get_final_answer` tool.\n\nThis is the expected criteria
+      for your final answer: The final answer\nyou MUST return the actual complete
+      content as the final answer, not a summary.\n\nBegin! This is VERY important
+      to you, use the tools available and give your best Final Answer, your job depends
+      on it!\n\nThought:"}], "model": "gpt-4o-mini", "stop": ["\nObservation:"], "stream":
+      false}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '1455'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.93.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.93.0
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.9
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAA4yTTW/bMAyG7/4VhM5x4XiJ0/o29NQOA7bLdtgKQ5FpW4ssahK9rgjy3wfZaezs
+        A9jFBz58KfIlfUwAhK5FCUJ1klXvTHr/uLlvdt+bw15+ePxcH7K8eC7W608f36nb92IVFbT/hopf
+        VTeKemeQNdkJK4+SMVZd77a3RZFt8u0IeqrRRFnrON1Q2mur0zzLN2m2S9e3Z3VHWmEQJXxJAACO
+        4zf2aWv8KUrIVq+RHkOQLYrykgQgPJkYETIEHVhaFqsZKrKMdmz9AUJHg6khxrQdaAjmBYaAwB0C
+        ExlgglZyhx568gjaNuR7GQeFhvyY12grDUgbntHfAHy1b1XkJbTI1QirCc4MHqwbuITjCWDZm8dm
+        CDL6YwdjFkBaSzw+O7rydCaniw+GWudpH36TikZbHbrKowxk48yByYmRnhKAp9Hv4cpC4Tz1jium
+        A47P5XfrqZ6Y17ykZ8jE0szxN/l5S9f1qhpZahMWGxNKqg7rWTqvVw61pgVIFlP/2c3fak+Ta9v+
+        T/kZKIWOsa6cx1qr64nnNI/xL/hX2sXlsWER0P/QCivW6OMmamzkYKbbFOElMPbxXFr0zuvpQBtX
+        bYtMNgVut3ciOSW/AAAA//8DABaZ0EiuAwAA
+    headers:
+      CF-RAY:
+      - 983ce5296d26239d-SJC
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Tue, 23 Sep 2025 20:47:05 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - __cf_bm=1fs_tWXSjOXLvWmDDleCPs6zqeoMCE9WMzw34UrJEY0-1758660425-1.0.1.1-yN.usYgsw3jmDue61Z30KB.SQOEVjuZCOMFqPwf22cZ9TvM1FzFJFR5PZPyS.uYDZAWJMX29SzSPw_PcDk7dbHVSGM.ubbhoxn1Y18nRqrI;
+        path=/; expires=Tue, 23-Sep-25 21:17:05 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=yrBvDYdy4HQeXpy__ld4uITFc6g85yQ2XUMU0NQ.v7Y-1758660425881-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '509'
+      openai-project:
+      - proj_xitITlrFeen7zjNSzML82h9x
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '618'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-project-tokens:
+      - '150000000'
+      x-ratelimit-limit-requests:
+      - '30000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-project-tokens:
+      - '149999680'
+      x-ratelimit-remaining-requests:
+      - '29999'
+      x-ratelimit-remaining-tokens:
+      - '149999680'
+      x-ratelimit-reset-project-tokens:
+      - 0s
+      x-ratelimit-reset-requests:
+      - 2ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_eca26fd131fc445a8c9b54b5b6b57f15
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are test role. test backstory\nYour
+      personal goal is: test goal\nYou ONLY have access to the following tools, and
+      should NEVER make up tools that are not listed here:\n\nTool Name: get_final_answer\nTool
+      Arguments: {}\nTool Description: Get the final answer but don''t give it yet,
+      just re-use this\n        tool non-stop.\n\nIMPORTANT: Use the following format
+      in your response:\n\n```\nThought: you should always think about what to do\nAction:
+      the action to take, only one name of [get_final_answer], just the name, exactly
+      as it''s written.\nAction Input: the input to the action, just a simple JSON
+      object, enclosed in curly braces, using \" to wrap keys and values.\nObservation:
+      the result of the action\n```\n\nOnce all necessary information is gathered,
+      return the following format:\n\n```\nThought: I now know the final answer\nFinal
+      Answer: the final answer to the original input question\n```"}, {"role": "user",
+      "content": "\nCurrent Task: The final answer is 42. But don''t give it yet,
+      instead keep using the `get_final_answer` tool.\n\nThis is the expected criteria
+      for your final answer: The final answer\nyou MUST return the actual complete
+      content as the final answer, not a summary.\n\nBegin! This is VERY important
+      to you, use the tools available and give your best Final Answer, your job depends
+      on it!\n\nThought:"}, {"role": "assistant", "content": "I should continuously
+      use the tool to gather more information for the final answer.  \nAction: get_final_answer  \nAction
+      Input: {}  \nObservation: 42"}, {"role": "assistant", "content": "I should continuously
+      use the tool to gather more information for the final answer.  \nAction: get_final_answer  \nAction
+      Input: {}  \nObservation: 42\nNow it''s time you MUST give your absolute best
+      final answer. You''ll ignore all previous instructions, stop using any tools,
+      and just return your absolute BEST Final answer."}], "model": "gpt-4o-mini",
+      "stop": ["\nObservation:"], "stream": false}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '2005'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=1fs_tWXSjOXLvWmDDleCPs6zqeoMCE9WMzw34UrJEY0-1758660425-1.0.1.1-yN.usYgsw3jmDue61Z30KB.SQOEVjuZCOMFqPwf22cZ9TvM1FzFJFR5PZPyS.uYDZAWJMX29SzSPw_PcDk7dbHVSGM.ubbhoxn1Y18nRqrI;
+        _cfuvid=yrBvDYdy4HQeXpy__ld4uITFc6g85yQ2XUMU0NQ.v7Y-1758660425881-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.93.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.93.0
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.9
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAAwAAAP//jFLBbtswDL37KwSd48HxHCf1begaYDu2uy2Frci0rFWmBEluOxT590Fy
+        GrtdB+wigHx8T3wkXxJCqGxpRSjvmeeDUen19+Ja3H0Vt/nt/mafQ1bcCKHuzOPzEbd0FRj6+Au4
+        f2V94nowCrzUOMHcAvMQVNfbza4ssyIvIzDoFlSgCePTQqeDRJnmWV6k2TZd787sXksOjlbkZ0II
+        IS/xDX1iC8+0ItnqNTOAc0wArS5FhFCrVchQ5px0nqGnqxnkGj1gbL1pmgP+6PUoel+RbwT1E3kI
+        j++BdBKZIgzdE9gD7mP0JUYVKfIDNk2zlLXQjY4FazgqtQAYovYsjCYauj8jp4sFpYWx+ujeUWkn
+        Ubq+tsCcxtCu89rQiJ4SQu7jqMY37qmxejC+9voB4nefr4pJj84bmtH17gx67Zma88U6X32gV7fg
+        mVRuMWzKGe+hnanzZtjYSr0AkoXrv7v5SHtyLlH8j/wMcA7GQ1sbC63kbx3PZRbCAf+r7DLl2DB1
+        YB8lh9pLsGETLXRsVNNZUffbeRjqTqIAa6ycbqsz9abMWFfCZnNFk1PyBwAA//8DAFrI5iJpAwAA
+    headers:
+      CF-RAY:
+      - 983ce52deb75239d-SJC
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Tue, 23 Sep 2025 20:47:06 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '542'
+      openai-project:
+      - proj_xitITlrFeen7zjNSzML82h9x
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '645'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-project-tokens:
+      - '150000000'
+      x-ratelimit-limit-requests:
+      - '30000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-project-tokens:
+      - '149999560'
+      x-ratelimit-remaining-requests:
+      - '29999'
+      x-ratelimit-remaining-tokens:
+      - '149999560'
+      x-ratelimit-reset-project-tokens:
+      - 0s
+      x-ratelimit-reset-requests:
+      - 2ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_0b91fc424913433f92a2635ee229ae15
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are test role. test backstory\nYour
+      personal goal is: test goal\nYou ONLY have access to the following tools, and
+      should NEVER make up tools that are not listed here:\n\nTool Name: get_final_answer\nTool
+      Arguments: {}\nTool Description: Get the final answer but don''t give it yet,
+      just re-use this\n        tool non-stop.\n\nIMPORTANT: Use the following format
+      in your response:\n\n```\nThought: you should always think about what to do\nAction:
+      the action to take, only one name of [get_final_answer], just the name, exactly
+      as it''s written.\nAction Input: the input to the action, just a simple JSON
+      object, enclosed in curly braces, using \" to wrap keys and values.\nObservation:
+      the result of the action\n```\n\nOnce all necessary information is gathered,
+      return the following format:\n\n```\nThought: I now know the final answer\nFinal
+      Answer: the final answer to the original input question\n```"}, {"role": "user",
+      "content": "\nCurrent Task: The final answer is 42. But don''t give it yet,
+      instead keep using the `get_final_answer` tool.\n\nThis is the expected criteria
+      for your final answer: The final answer\nyou MUST return the actual complete
+      content as the final answer, not a summary.\n\nBegin! This is VERY important
+      to you, use the tools available and give your best Final Answer, your job depends
+      on it!\n\nThought:"}, {"role": "assistant", "content": "I should continuously
+      use the tool to gather more information for the final answer.  \nAction: get_final_answer  \nAction
+      Input: {}  \nObservation: 42"}, {"role": "assistant", "content": "I should continuously
+      use the tool to gather more information for the final answer.  \nAction: get_final_answer  \nAction
+      Input: {}  \nObservation: 42\nNow it''s time you MUST give your absolute best
+      final answer. You''ll ignore all previous instructions, stop using any tools,
+      and just return your absolute BEST Final answer."}], "model": "gpt-4o-mini",
+      "stop": ["\nObservation:"], "stream": false}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '2005'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=1fs_tWXSjOXLvWmDDleCPs6zqeoMCE9WMzw34UrJEY0-1758660425-1.0.1.1-yN.usYgsw3jmDue61Z30KB.SQOEVjuZCOMFqPwf22cZ9TvM1FzFJFR5PZPyS.uYDZAWJMX29SzSPw_PcDk7dbHVSGM.ubbhoxn1Y18nRqrI;
+        _cfuvid=yrBvDYdy4HQeXpy__ld4uITFc6g85yQ2XUMU0NQ.v7Y-1758660425881-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.93.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.93.0
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.9
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAAwAAAP//jFLBbtswDL37KwSd48FxHTfxbSgwoFsxYFtPXQpblWlbqywKEr1sKPLv
+        g+w0dtcO2EUA+fie+Eg+RYxxVfOCcdkJkr3V8dXH7Ko1X24On/zuNvu8vdHZ1299epe0+R3yVWDg
+        ww+Q9Mx6J7G3GkihmWDpQBAE1fXlZpvnSZbmI9BjDTrQWktxhnGvjIrTJM3i5DJeb0/sDpUEzwv2
+        PWKMsafxDX2aGn7xgiWr50wP3osWeHEuYow71CHDhffKkzDEVzMo0RCYsfWqqvbmtsOh7ahg18zg
+        gT2GhzpgjTJCM2H8AdzefBij92NUsCzdm6qqlrIOmsGLYM0MWi8AYQySCKMZDd2fkOPZgsbWOnzw
+        f1F5o4zyXelAeDShXU9o+YgeI8bux1ENL9xz67C3VBI+wvjdxS6b9Pi8oRldb08gIQk957N1unpD
+        r6yBhNJ+MWwuheygnqnzZsRQK1wA0cL1627e0p6cK9P+j/wMSAmWoC6tg1rJl47nMgfhgP9Vdp7y
+        2DD34H4qCSUpcGETNTRi0NNZcf/bE/Rlo0wLzjo13VZjy02eiCaHzWbHo2P0BwAA//8DAG1a2r5p
+        AwAA
+    headers:
+      CF-RAY:
+      - 983ce5328a31239d-SJC
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Tue, 23 Sep 2025 20:47:07 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '418'
+      openai-project:
+      - proj_xitITlrFeen7zjNSzML82h9x
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '435'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-project-tokens:
+      - '150000000'
+      x-ratelimit-limit-requests:
+      - '30000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-project-tokens:
+      - '149999560'
+      x-ratelimit-remaining-requests:
+      - '29999'
+      x-ratelimit-remaining-tokens:
+      - '149999560'
+      x-ratelimit-reset-project-tokens:
+      - 0s
+      x-ratelimit-reset-requests:
+      - 2ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_7353c84c469e47edb87bca11e7eef26c
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"trace_id": "4a5d3ea4-8a22-44c3-9dee-9b18f60844a5", "execution_type":
+      "crew", "user_identifier": null, "execution_context": {"crew_fingerprint": null,
+      "crew_name": "Unknown Crew", "flow_name": null, "crewai_version": "0.193.2",
+      "privacy_level": "standard"}, "execution_metadata": {"expected_duration_estimate":
+      300, "agent_count": 0, "task_count": 0, "flow_method_count": 0, "execution_started_at":
+      "2025-09-24T05:27:26.071046+00:00"}}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '436'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - CrewAI-CLI/0.193.2
+      X-Crewai-Organization-Id:
+      - d3a3d10c-35db-423f-a7a4-c026030ba64d
+      X-Crewai-Version:
+      - 0.193.2
+    method: POST
+    uri: http://localhost:3000/crewai_plus/api/v1/tracing/batches
+  response:
+    body:
+      string: '{"id":"29f0c8c3-5f4d-44c4-8039-c396f56c331c","trace_id":"4a5d3ea4-8a22-44c3-9dee-9b18f60844a5","execution_type":"crew","crew_name":"Unknown
+        Crew","flow_name":null,"status":"running","duration_ms":null,"crewai_version":"0.193.2","privacy_level":"standard","total_events":0,"execution_context":{"crew_fingerprint":null,"crew_name":"Unknown
+        Crew","flow_name":null,"crewai_version":"0.193.2","privacy_level":"standard"},"created_at":"2025-09-24T05:27:26.748Z","updated_at":"2025-09-24T05:27:26.748Z"}'
+    headers:
+      Content-Length:
+      - '496'
+      cache-control:
+      - max-age=0, private, must-revalidate
+      content-security-policy:
+      - 'default-src ''self'' *.crewai.com crewai.com; script-src ''self'' ''unsafe-inline''
+        *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts https://www.gstatic.com
+        https://run.pstmn.io https://share.descript.com/; style-src ''self'' ''unsafe-inline''
+        *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts; img-src ''self''
+        data: *.crewai.com crewai.com https://zeus.tools.crewai.com https://dashboard.tools.crewai.com
+        https://cdn.jsdelivr.net; font-src ''self'' data: *.crewai.com crewai.com;
+        connect-src ''self'' *.crewai.com crewai.com https://zeus.tools.crewai.com
+        https://connect.useparagon.com/ https://zeus.useparagon.com/* https://*.useparagon.com/*
+        https://run.pstmn.io https://connect.tools.crewai.com/ ws://localhost:3036
+        wss://localhost:3036; frame-src ''self'' *.crewai.com crewai.com https://connect.useparagon.com/
+        https://zeus.tools.crewai.com https://zeus.useparagon.com/* https://connect.tools.crewai.com/
+        https://www.youtube.com https://share.descript.com'
+      content-type:
+      - application/json; charset=utf-8
+      etag:
+      - W/"15b0f995f6a15e4200edfb1225bf94cc"
+      permissions-policy:
+      - camera=(), microphone=(self), geolocation=()
+      referrer-policy:
+      - strict-origin-when-cross-origin
+      server-timing:
+      - cache_read.active_support;dur=0.04, sql.active_record;dur=23.95, cache_generate.active_support;dur=2.46,
+        cache_write.active_support;dur=0.11, cache_read_multi.active_support;dur=0.08,
+        start_processing.action_controller;dur=0.00, instantiation.active_record;dur=0.28,
+        feature_operation.flipper;dur=0.03, start_transaction.active_record;dur=0.01,
+        transaction.active_record;dur=25.78, process_action.action_controller;dur=673.72
+      vary:
+      - Accept
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-permitted-cross-domain-policies:
+      - none
+      x-request-id:
+      - 827aec6a-c65c-4cc7-9d2a-2d28e541824f
+      x-runtime:
+      - '0.699809'
+      x-xss-protection:
+      - 1; mode=block
+    status:
+      code: 201
+      message: Created
+version: 1
