@@ -16,9 +16,16 @@ class PoemState(BaseModel):
 class PoemFlow(Flow[PoemState]):
 
     @start()
-    def generate_sentence_count(self):
+    def generate_sentence_count(self, crewai_trigger_payload: dict = None):
         print("Generating sentence count")
-        self.state.sentence_count = randint(1, 5)
+
+        # Use trigger payload if available
+        if crewai_trigger_payload:
+            # Example: use trigger data to influence sentence count
+            self.state.sentence_count = crewai_trigger_payload.get('sentence_count', randint(1, 5))
+            print(f"Using trigger payload: {crewai_trigger_payload}")
+        else:
+            self.state.sentence_count = randint(1, 5)
 
     @listen(generate_sentence_count)
     def generate_poem(self):
@@ -47,6 +54,33 @@ def kickoff():
 def plot():
     poem_flow = PoemFlow()
     poem_flow.plot()
+
+
+def run_with_trigger():
+    """
+    Run the flow with trigger payload.
+    """
+    import json
+    import sys
+
+    # Get trigger payload from command line argument
+    if len(sys.argv) < 2:
+        raise Exception("No trigger payload provided. Please provide JSON payload as argument.")
+
+    try:
+        trigger_payload = json.loads(sys.argv[1])
+    except json.JSONDecodeError:
+        raise Exception("Invalid JSON payload provided as argument")
+
+    # Create flow and kickoff with trigger payload
+    # The @start() methods will automatically receive crewai_trigger_payload parameter
+    poem_flow = PoemFlow()
+
+    try:
+        result = poem_flow.kickoff({"crewai_trigger_payload": trigger_payload})
+        return result
+    except Exception as e:
+        raise Exception(f"An error occurred while running the flow with trigger: {e}")
 
 
 if __name__ == "__main__":

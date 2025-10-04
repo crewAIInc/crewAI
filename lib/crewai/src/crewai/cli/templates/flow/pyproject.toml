@@ -12,6 +12,7 @@ dependencies = [
 kickoff = "{{folder_name}}.main:kickoff"
 run_crew = "{{folder_name}}.main:kickoff"
 plot = "{{folder_name}}.main:plot"
+run_with_trigger = "{{folder_name}}.main:run_with_trigger"
 
 [build-system]
 requires = ["hatchling"]
