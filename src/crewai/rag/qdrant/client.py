@@ -6,8 +6,8 @@ from typing_extensions import Unpack
 
 from crewai.rag.core.base_client import (
     BaseClient,
-    BaseCollectionParams,
     BaseCollectionAddParams,
+    BaseCollectionParams,
     BaseCollectionSearchParams,
 )
 from crewai.rag.core.exceptions import ClientMethodMismatchError
@@ -18,11 +18,11 @@ from crewai.rag.qdrant.types import (
     QdrantCollectionCreateParams,
 )
 from crewai.rag.qdrant.utils import (
+    _create_point_from_document,
+    _get_collection_params,
     _is_async_client,
     _is_async_embedding_function,
     _is_sync_client,
-    _create_point_from_document,
-    _get_collection_params,
     _prepare_search_params,
     _process_search_results,
 )
@@ -38,21 +38,32 @@ class QdrantClient(BaseClient):
     Attributes:
         client: Qdrant client instance (QdrantClient or AsyncQdrantClient).
         embedding_function: Function to generate embeddings for documents.
+        default_limit: Default number of results to return in searches.
+        default_score_threshold: Default minimum score for search results.
     """
 
     def __init__(
         self,
         client: QdrantClientType,
         embedding_function: EmbeddingFunction | AsyncEmbeddingFunction,
+        default_limit: int = 5,
+        default_score_threshold: float = 0.6,
+        default_batch_size: int = 100,
     ) -> None:
         """Initialize QdrantClient with client and embedding function.
 
         Args:
             client: Pre-configured Qdrant client instance.
             embedding_function: Embedding function for text to vector conversion.
+            default_limit: Default number of results to return in searches.
+            default_score_threshold: Default minimum score for search results.
+            default_batch_size: Default batch size for adding documents.
         """
         self.client = client
         self.embedding_function = embedding_function
+        self.default_limit = default_limit
+        self.default_score_threshold = default_score_threshold
+        self.default_batch_size = default_batch_size
 
     def create_collection(self, **kwargs: Unpack[QdrantCollectionCreateParams]) -> None:
         """Create a new collection in Qdrant.
@@ -226,6 +237,7 @@ class QdrantClient(BaseClient):
         Keyword Args:
             collection_name: The name of the collection to add documents to.
             documents: List of BaseRecord dicts containing document data.
+            batch_size: Optional batch size for processing documents (default: 100)
 
         Raises:
             ValueError: If collection doesn't exist or documents list is empty.
@@ -241,6 +253,7 @@ class QdrantClient(BaseClient):
 
         collection_name = kwargs["collection_name"]
         documents = kwargs["documents"]
+        batch_size = kwargs.get("batch_size", self.default_batch_size)
 
         if not documents:
             raise ValueError("Documents list cannot be empty")
@@ -248,19 +261,20 @@ class QdrantClient(BaseClient):
         if not self.client.collection_exists(collection_name):
             raise ValueError(f"Collection '{collection_name}' does not exist")
 
-        points = []
-        for doc in documents:
-            if _is_async_embedding_function(self.embedding_function):
-                raise TypeError(
-                    "Async embedding function cannot be used with sync add_documents. "
-                    "Use aadd_documents instead."
-                )
-            sync_fn = cast(EmbeddingFunction, self.embedding_function)
-            embedding = sync_fn(doc["content"])
-            point = _create_point_from_document(doc, embedding)
-            points.append(point)
-
-        self.client.upsert(collection_name=collection_name, points=points)
+        for i in range(0, len(documents), batch_size):
+            batch_docs = documents[i : min(i + batch_size, len(documents))]
+            points = []
+            for doc in batch_docs:
+                if _is_async_embedding_function(self.embedding_function):
+                    raise TypeError(
+                        "Async embedding function cannot be used with sync add_documents. "
+                        "Use aadd_documents instead."
+                    )
+                sync_fn = cast(EmbeddingFunction, self.embedding_function)
+                embedding = sync_fn(doc["content"])
+                point = _create_point_from_document(doc, embedding)
+                points.append(point)
+            self.client.upsert(collection_name=collection_name, points=points)
 
     async def aadd_documents(self, **kwargs: Unpack[BaseCollectionAddParams]) -> None:
         """Add documents with their embeddings to a collection asynchronously.
@@ -268,6 +282,7 @@ class QdrantClient(BaseClient):
         Keyword Args:
             collection_name: The name of the collection to add documents to.
             documents: List of BaseRecord dicts containing document data.
+            batch_size: Optional batch size for processing documents (default: 100)
 
         Raises:
             ValueError: If collection doesn't exist or documents list is empty.
@@ -283,6 +298,7 @@ class QdrantClient(BaseClient):
 
         collection_name = kwargs["collection_name"]
         documents = kwargs["documents"]
+        batch_size = kwargs.get("batch_size", self.default_batch_size)
 
         if not documents:
             raise ValueError("Documents list cannot be empty")
@@ -290,18 +306,19 @@ class QdrantClient(BaseClient):
         if not await self.client.collection_exists(collection_name):
             raise ValueError(f"Collection '{collection_name}' does not exist")
 
-        points = []
-        for doc in documents:
-            if _is_async_embedding_function(self.embedding_function):
-                async_fn = cast(AsyncEmbeddingFunction, self.embedding_function)
-                embedding = await async_fn(doc["content"])
-            else:
-                sync_fn = cast(EmbeddingFunction, self.embedding_function)
-                embedding = sync_fn(doc["content"])
-            point = _create_point_from_document(doc, embedding)
-            points.append(point)
-
-        await self.client.upsert(collection_name=collection_name, points=points)
+        for i in range(0, len(documents), batch_size):
+            batch_docs = documents[i : min(i + batch_size, len(documents))]
+            points = []
+            for doc in batch_docs:
+                if _is_async_embedding_function(self.embedding_function):
+                    async_fn = cast(AsyncEmbeddingFunction, self.embedding_function)
+                    embedding = await async_fn(doc["content"])
+                else:
+                    sync_fn = cast(EmbeddingFunction, self.embedding_function)
+                    embedding = sync_fn(doc["content"])
+                point = _create_point_from_document(doc, embedding)
+                points.append(point)
+            await self.client.upsert(collection_name=collection_name, points=points)
 
     def search(
         self, **kwargs: Unpack[BaseCollectionSearchParams]
@@ -332,9 +349,9 @@ class QdrantClient(BaseClient):
 
         collection_name = kwargs["collection_name"]
         query = kwargs["query"]
-        limit = kwargs.get("limit", 10)
+        limit = kwargs.get("limit", self.default_limit)
         metadata_filter = kwargs.get("metadata_filter")
-        score_threshold = kwargs.get("score_threshold")
+        score_threshold = kwargs.get("score_threshold", self.default_score_threshold)
 
         if not self.client.collection_exists(collection_name):
             raise ValueError(f"Collection '{collection_name}' does not exist")
@@ -387,9 +404,9 @@ class QdrantClient(BaseClient):
 
         collection_name = kwargs["collection_name"]
         query = kwargs["query"]
-        limit = kwargs.get("limit", 10)
+        limit = kwargs.get("limit", self.default_limit)
         metadata_filter = kwargs.get("metadata_filter")
-        score_threshold = kwargs.get("score_threshold")
+        score_threshold = kwargs.get("score_threshold", self.default_score_threshold)
 
         if not await self.client.collection_exists(collection_name):
             raise ValueError(f"Collection '{collection_name}' does not exist")

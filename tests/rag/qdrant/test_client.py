@@ -3,7 +3,8 @@
 from unittest.mock import AsyncMock, Mock
 
 import pytest
-from qdrant_client import AsyncQdrantClient, QdrantClient as SyncQdrantClient
+from qdrant_client import AsyncQdrantClient
+from qdrant_client import QdrantClient as SyncQdrantClient
 
 from crewai.rag.core.exceptions import ClientMethodMismatchError
 from crewai.rag.qdrant.client import QdrantClient
@@ -435,7 +436,7 @@ class TestQdrantClient:
         call_args = mock_qdrant_client.query_points.call_args
         assert call_args.kwargs["collection_name"] == "test_collection"
         assert call_args.kwargs["query"] == [0.1, 0.2, 0.3]
-        assert call_args.kwargs["limit"] == 10
+        assert call_args.kwargs["limit"] == 5
         assert call_args.kwargs["with_payload"] is True
         assert call_args.kwargs["with_vectors"] is False
 
@@ -540,7 +541,7 @@ class TestQdrantClient:
         call_args = mock_async_qdrant_client.query_points.call_args
         assert call_args.kwargs["collection_name"] == "test_collection"
         assert call_args.kwargs["query"] == [0.1, 0.2, 0.3]
-        assert call_args.kwargs["limit"] == 10
+        assert call_args.kwargs["limit"] == 5
         assert call_args.kwargs["with_payload"] is True
         assert call_args.kwargs["with_vectors"] is False
 

@@ -1,17 +1,17 @@
 import pytest
+
 from crewai.cli.authentication.main import Oauth2Settings
 from crewai.cli.authentication.providers.okta import OktaProvider
 
 
 class TestOktaProvider:
-
     @pytest.fixture(autouse=True)
     def setup_method(self):
         self.valid_settings = Oauth2Settings(
             provider="okta",
             domain="test-domain.okta.com",
             client_id="test-client-id",
-            audience="test-audience"
+            audience="test-audience",
         )
         self.provider = OktaProvider(self.valid_settings)
 
@@ -32,7 +32,7 @@ class TestOktaProvider:
             provider="okta",
             domain="my-company.okta.com",
             client_id="test-client",
-            audience="test-audience"
+            audience="test-audience",
         )
         provider = OktaProvider(settings)
         expected_url = "https://my-company.okta.com/oauth2/default/v1/device/authorize"
@@ -47,7 +47,7 @@ class TestOktaProvider:
             provider="okta",
             domain="another-domain.okta.com",
             client_id="test-client",
-            audience="test-audience"
+            audience="test-audience",
         )
         provider = OktaProvider(settings)
         expected_url = "https://another-domain.okta.com/oauth2/default/v1/token"
@@ -62,7 +62,7 @@ class TestOktaProvider:
             provider="okta",
             domain="dev.okta.com",
             client_id="test-client",
-            audience="test-audience"
+            audience="test-audience",
         )
         provider = OktaProvider(settings)
         expected_url = "https://dev.okta.com/oauth2/default/v1/keys"
@@ -77,7 +77,7 @@ class TestOktaProvider:
             provider="okta",
             domain="prod.okta.com",
             client_id="test-client",
-            audience="test-audience"
+            audience="test-audience",
         )
         provider = OktaProvider(settings)
         expected_issuer = "https://prod.okta.com/oauth2/default"
@@ -91,11 +91,11 @@ class TestOktaProvider:
             provider="okta",
             domain="test-domain.okta.com",
             client_id="test-client-id",
-            audience=None
+            audience=None,
         )
         provider = OktaProvider(settings)
 
-        with pytest.raises(AssertionError):
+        with pytest.raises(ValueError, match="Audience is required"):
             provider.get_audience()
 
     def test_get_client_id(self):

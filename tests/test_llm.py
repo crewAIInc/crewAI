@@ -7,15 +7,14 @@ import pytest
 from pydantic import BaseModel
 
 from crewai.agents.agent_builder.utilities.base_token_process import TokenProcess
-from crewai.llm import CONTEXT_WINDOW_USAGE_RATIO, LLM
 from crewai.events.event_types import (
     LLMCallCompletedEvent,
     LLMStreamChunkEvent,
-    ToolUsageStartedEvent,
-    ToolUsageFinishedEvent,
     ToolUsageErrorEvent,
+    ToolUsageFinishedEvent,
+    ToolUsageStartedEvent,
 )
-
+from crewai.llm import CONTEXT_WINDOW_USAGE_RATIO, LLM
 from crewai.utilities.token_counter_callback import TokenCalcHandler
 
 
@@ -376,11 +375,11 @@ def get_weather_tool_schema():
 
 
 def test_context_window_exceeded_error_handling():
-    """Test that litellm.ContextWindowExceededError is converted to LLMContextLengthExceededException."""
+    """Test that litellm.ContextWindowExceededError is converted to LLMContextLengthExceededError."""
     from litellm.exceptions import ContextWindowExceededError
 
     from crewai.utilities.exceptions.context_window_exceeding_exception import (
-        LLMContextLengthExceededException,
+        LLMContextLengthExceededError,
     )
 
     llm = LLM(model="gpt-4")
@@ -393,7 +392,7 @@ def test_context_window_exceeded_error_handling():
             llm_provider="openai",
         )
 
-        with pytest.raises(LLMContextLengthExceededException) as excinfo:
+        with pytest.raises(LLMContextLengthExceededError) as excinfo:
             llm.call("This is a test message")
 
         assert "context length exceeded" in str(excinfo.value).lower()
@@ -408,7 +407,7 @@ def test_context_window_exceeded_error_handling():
             llm_provider="openai",
         )
 
-        with pytest.raises(LLMContextLengthExceededException) as excinfo:
+        with pytest.raises(LLMContextLengthExceededError) as excinfo:
             llm.call("This is a test message")
 
         assert "context length exceeded" in str(excinfo.value).lower()

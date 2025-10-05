@@ -2,8 +2,8 @@ openapi: 3.0.3
 info:
   title: CrewAI 엔터프라이즈 API
   description: |
-    CrewAI Enterprise에 배포된 crew와 상호작용하기 위한 REST API입니다.
-    
+    CrewAI AMP에 배포된 crew와 상호작용하기 위한 REST API입니다.
+
     ## 시작하기
     1. **Crew URL 확인**: 대시보드에서 고유한 crew URL을 확인하세요
     2. **예제 복사**: 각 엔드포인트의 예제를 템플릿으로 사용하세요
@@ -25,7 +25,7 @@ paths:
       summary: 필요 입력값 조회
       description: |
         **📋 참조 예제만 제공** - *요청 형식을 보여줍니다. 실제 호출은 cURL 예제를 복사해 URL과 토큰을 교체하세요.*
-        
+
         실행에 필요한 입력 파라미터 목록을 반환합니다.
       operationId: getRequiredInputs
       responses:
@@ -52,7 +52,7 @@ paths:
       summary: Crew 실행 시작
       description: |
         **📋 참조 예제만 제공** - *요청 형식을 보여줍니다. 실제 호출은 cURL 예제를 복사해 URL과 토큰을 교체하세요.*
-        
+
         제공된 입력으로 새로운 실행을 시작하고 kickoff ID를 반환합니다.
       operationId: startCrewExecution
       requestBody:
@@ -89,7 +89,7 @@ paths:
       summary: 실행 상태 조회
       description: |
         **📋 참조 예제만 제공** - *요청 형식을 보여줍니다. 실제 호출은 cURL 예제를 복사해 URL과 토큰을 교체하세요.*
-        
+
         kickoff ID로 실행 상태와 결과를 조회합니다.
       operationId: getExecutionStatus
       parameters:
@@ -228,4 +228,3 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/Error'
-

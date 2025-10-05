@@ -1,7 +1,7 @@
 """Type definitions for RAG (Retrieval-Augmented Generation) systems."""
 
 from collections.abc import Callable, Mapping
-from typing import TypeAlias, Any
+from typing import Any, TypeAlias
 
 from typing_extensions import Required, TypedDict
 
@@ -24,8 +24,7 @@ class BaseRecord(TypedDict, total=False):
     )
 
 
-DenseVector: TypeAlias = list[float]
-IntVector: TypeAlias = list[int]
+Embeddings: TypeAlias = list[list[float]]
 
 EmbeddingFunction: TypeAlias = Callable[..., Any]
 

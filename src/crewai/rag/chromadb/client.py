@@ -4,8 +4,9 @@ import logging
 from typing import Any
 
 from chromadb.api.types import (
-    Embeddable,
     EmbeddingFunction as ChromaEmbeddingFunction,
+)
+from chromadb.api.types import (
     QueryResult,
 )
 from typing_extensions import Unpack
@@ -16,6 +17,7 @@ from crewai.rag.chromadb.types import (
     ChromaDBCollectionSearchParams,
 )
 from crewai.rag.chromadb.utils import (
+    _create_batch_slice,
     _extract_search_params,
     _is_async_client,
     _is_sync_client,
@@ -23,13 +25,13 @@ from crewai.rag.chromadb.utils import (
     _process_query_results,
     _sanitize_collection_name,
 )
-from crewai.utilities.logger_utils import suppress_logging
 from crewai.rag.core.base_client import (
     BaseClient,
-    BaseCollectionParams,
     BaseCollectionAddParams,
+    BaseCollectionParams,
 )
 from crewai.rag.types import SearchResult
+from crewai.utilities.logger_utils import suppress_logging
 
 
 class ChromaDBClient(BaseClient):
@@ -41,21 +43,32 @@ class ChromaDBClient(BaseClient):
     Attributes:
         client: ChromaDB client instance (ClientAPI or AsyncClientAPI).
         embedding_function: Function to generate embeddings for documents.
+        default_limit: Default number of results to return in searches.
+        default_score_threshold: Default minimum score for search results.
     """
 
     def __init__(
         self,
         client: ChromaDBClientType,
-        embedding_function: ChromaEmbeddingFunction[Embeddable],
+        embedding_function: ChromaEmbeddingFunction,
+        default_limit: int = 5,
+        default_score_threshold: float = 0.6,
+        default_batch_size: int = 100,
     ) -> None:
         """Initialize ChromaDBClient with client and embedding function.
 
         Args:
             client: Pre-configured ChromaDB client instance.
             embedding_function: Embedding function for text to vector conversion.
+            default_limit: Default number of results to return in searches.
+            default_score_threshold: Default minimum score for search results.
+            default_batch_size: Default batch size for adding documents.
         """
         self.client = client
         self.embedding_function = embedding_function
+        self.default_limit = default_limit
+        self.default_score_threshold = default_score_threshold
+        self.default_batch_size = default_batch_size
 
     def create_collection(
         self, **kwargs: Unpack[ChromaDBCollectionCreateParams]
@@ -282,6 +295,7 @@ class ChromaDBClient(BaseClient):
                 - content: The text content (required)
                 - doc_id: Optional unique identifier (auto-generated if missing)
                 - metadata: Optional metadata dictionary
+            batch_size: Optional batch size for processing documents (default: 100)
 
         Raises:
             TypeError: If AsyncClientAPI is used instead of ClientAPI for sync operations.
@@ -296,21 +310,28 @@ class ChromaDBClient(BaseClient):
 
         collection_name = kwargs["collection_name"]
         documents = kwargs["documents"]
+        batch_size = kwargs.get("batch_size", self.default_batch_size)
 
         if not documents:
             raise ValueError("Documents list cannot be empty")
 
-        collection = self.client.get_collection(
+        collection = self.client.get_or_create_collection(
             name=_sanitize_collection_name(collection_name),
             embedding_function=self.embedding_function,
         )
 
         prepared = _prepare_documents_for_chromadb(documents)
-        collection.upsert(
-            ids=prepared.ids,
-            documents=prepared.texts,
-            metadatas=prepared.metadatas,
-        )
+
+        for i in range(0, len(prepared.ids), batch_size):
+            batch_ids, batch_texts, batch_metadatas = _create_batch_slice(
+                prepared=prepared, start_index=i, batch_size=batch_size
+            )
+
+            collection.upsert(
+                ids=batch_ids,
+                documents=batch_texts,
+                metadatas=batch_metadatas,
+            )
 
     async def aadd_documents(self, **kwargs: Unpack[BaseCollectionAddParams]) -> None:
         """Add documents with their embeddings to a collection asynchronously.
@@ -324,6 +345,7 @@ class ChromaDBClient(BaseClient):
                 - content: The text content (required)
                 - doc_id: Optional unique identifier (auto-generated if missing)
                 - metadata: Optional metadata dictionary
+            batch_size: Optional batch size for processing documents (default: 100)
 
         Raises:
             TypeError: If ClientAPI is used instead of AsyncClientAPI for async operations.
@@ -338,20 +360,27 @@ class ChromaDBClient(BaseClient):
 
         collection_name = kwargs["collection_name"]
         documents = kwargs["documents"]
+        batch_size = kwargs.get("batch_size", self.default_batch_size)
 
         if not documents:
             raise ValueError("Documents list cannot be empty")
 
-        collection = await self.client.get_collection(
+        collection = await self.client.get_or_create_collection(
             name=_sanitize_collection_name(collection_name),
             embedding_function=self.embedding_function,
         )
         prepared = _prepare_documents_for_chromadb(documents)
-        await collection.upsert(
-            ids=prepared.ids,
-            documents=prepared.texts,
-            metadatas=prepared.metadatas,
-        )
+
+        for i in range(0, len(prepared.ids), batch_size):
+            batch_ids, batch_texts, batch_metadatas = _create_batch_slice(
+                prepared=prepared, start_index=i, batch_size=batch_size
+            )
+
+            await collection.upsert(
+                ids=batch_ids,
+                documents=batch_texts,
+                metadatas=batch_metadatas,
+            )
 
     def search(
         self, **kwargs: Unpack[ChromaDBCollectionSearchParams]
@@ -385,9 +414,14 @@ class ChromaDBClient(BaseClient):
                 "Use asearch() for AsyncClientAPI."
             )
 
+        if "limit" not in kwargs:
+            kwargs["limit"] = self.default_limit
+        if "score_threshold" not in kwargs:
+            kwargs["score_threshold"] = self.default_score_threshold
+
         params = _extract_search_params(kwargs)
 
-        collection = self.client.get_collection(
+        collection = self.client.get_or_create_collection(
             name=_sanitize_collection_name(params.collection_name),
             embedding_function=self.embedding_function,
         )
@@ -443,9 +477,14 @@ class ChromaDBClient(BaseClient):
                 "Use search() for ClientAPI."
             )
 
+        if "limit" not in kwargs:
+            kwargs["limit"] = self.default_limit
+        if "score_threshold" not in kwargs:
+            kwargs["score_threshold"] = self.default_score_threshold
+
         params = _extract_search_params(kwargs)
 
-        collection = await self.client.get_collection(
+        collection = await self.client.get_or_create_collection(
             name=_sanitize_collection_name(params.collection_name),
             embedding_function=self.embedding_function,
         )

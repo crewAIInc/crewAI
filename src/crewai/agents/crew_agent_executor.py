@@ -12,7 +12,7 @@ from crewai.agents.agent_builder.base_agent_executor_mixin import CrewAgentExecu
 from crewai.agents.parser import (
     AgentAction,
     AgentFinish,
-    OutputParserException,
+    OutputParserError,
 )
 from crewai.agents.tools_handler import ToolsHandler
 from crewai.events.event_bus import crewai_event_bus
@@ -228,7 +228,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                 self._invoke_step_callback(formatted_answer)
                 self._append_message(formatted_answer.text)
 
-            except OutputParserException as e:
+            except OutputParserError as e:  # noqa: PERF203
                 formatted_answer = handle_output_parser_exception(
                     e=e,
                     messages=self.messages,
@@ -251,17 +251,20 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                         i18n=self._i18n,
                     )
                     continue
-                else:
-                    handle_unknown_error(self._printer, e)
-                    raise e
+                handle_unknown_error(self._printer, e)
+                raise e
             finally:
                 self.iterations += 1
 
         # During the invoke loop, formatted_answer alternates between AgentAction
         # (when the agent is using tools) and eventually becomes AgentFinish
-        # (when the agent reaches a final answer). This assertion confirms we've
+        # (when the agent reaches a final answer). This check confirms we've
         # reached a final answer and helps type checking understand this transition.
-        assert isinstance(formatted_answer, AgentFinish)
+        if not isinstance(formatted_answer, AgentFinish):
+            raise RuntimeError(
+                "Agent execution ended without reaching a final answer. "
+                f"Got {type(formatted_answer).__name__} instead of AgentFinish."
+            )
         self._show_logs(formatted_answer)
         return formatted_answer
 
@@ -324,9 +327,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             self.agent,
             AgentLogsStartedEvent(
                 agent_role=self.agent.role,
-                task_description=(
-                    getattr(self.task, "description") if self.task else "Not Found"
-                ),
+                task_description=(self.task.description if self.task else "Not Found"),
                 verbose=self.agent.verbose
                 or (hasattr(self, "crew") and getattr(self.crew, "verbose", False)),
             ),
@@ -415,8 +416,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         """
         prompt = prompt.replace("{input}", inputs["input"])
         prompt = prompt.replace("{tool_names}", inputs["tool_names"])
-        prompt = prompt.replace("{tools}", inputs["tools"])
-        return prompt
+        return prompt.replace("{tools}", inputs["tools"])
 
     def _handle_human_feedback(self, formatted_answer: AgentFinish) -> AgentFinish:
         """Process human feedback.

@@ -4,13 +4,13 @@ This module provides a callback handler that tracks token usage
 for LLM API calls through the litellm library.
 """
 
-import warnings
 from typing import Any
 
 from litellm.integrations.custom_logger import CustomLogger
 from litellm.types.utils import Usage
 
 from crewai.agents.agent_builder.utilities.base_token_process import TokenProcess
+from crewai.utilities.logger_utils import suppress_warnings
 
 
 class TokenCalcHandler(CustomLogger):
@@ -23,12 +23,13 @@ class TokenCalcHandler(CustomLogger):
         token_cost_process: The token process tracker to accumulate usage metrics.
     """
 
-    def __init__(self, token_cost_process: TokenProcess | None) -> None:
+    def __init__(self, token_cost_process: TokenProcess | None, **kwargs: Any) -> None:
         """Initialize the token calculation handler.
 
         Args:
             token_cost_process: Optional token process tracker for accumulating metrics.
         """
+        super().__init__(**kwargs)
         self.token_cost_process = token_cost_process
 
     def log_success_event(
@@ -49,8 +50,7 @@ class TokenCalcHandler(CustomLogger):
         if self.token_cost_process is None:
             return
 
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore", UserWarning)
+        with suppress_warnings():
             if isinstance(response_obj, dict) and "usage" in response_obj:
                 usage: Usage = response_obj["usage"]
                 if usage:
