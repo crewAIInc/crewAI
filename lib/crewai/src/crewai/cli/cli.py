@@ -1,6 +1,6 @@
+from importlib.metadata import version as get_version
 import os
 import subprocess
-from importlib.metadata import version as get_version
 
 import click
 
@@ -28,6 +28,7 @@ from .reset_memories_command import reset_memories_command
 from .run_crew import run_crew
 from .tools.main import ToolCommand
 from .train_crew import train_crew
+from .triggers.main import TriggersCommand
 from .update_crew import update_crew
 
 
@@ -390,6 +391,26 @@ def flow_add_crew(crew_name):
     """Add a crew to an existing flow."""
     click.echo(f"Adding crew {crew_name} to the flow")
     add_crew_to_flow(crew_name)
+
+
+@crewai.group()
+def triggers():
+    """Trigger related commands. Use 'crewai triggers list' to see available triggers, or 'crewai triggers run app_slug/trigger_slug' to execute."""
+
+
+@triggers.command(name="list")
+def triggers_list():
+    """List all available triggers from integrations."""
+    triggers_cmd = TriggersCommand()
+    triggers_cmd.list_triggers()
+
+
+@triggers.command(name="run")
+@click.argument("trigger_path")
+def triggers_run(trigger_path: str):
+    """Execute crew with trigger payload. Format: app_slug/trigger_slug"""
+    triggers_cmd = TriggersCommand()
+    triggers_cmd.execute_with_trigger(trigger_path)
 
 
 @crewai.command()

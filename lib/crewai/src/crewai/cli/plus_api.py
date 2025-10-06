@@ -18,6 +18,7 @@ class PlusAPI:
     AGENTS_RESOURCE = "/crewai_plus/api/v1/agents"
     TRACING_RESOURCE = "/crewai_plus/api/v1/tracing"
     EPHEMERAL_TRACING_RESOURCE = "/crewai_plus/api/v1/tracing/ephemeral"
+    INTEGRATIONS_RESOURCE = "/crewai_plus/api/v1/integrations"
 
     def __init__(self, api_key: str) -> None:
         self.api_key = api_key
@@ -175,4 +176,14 @@ class PlusAPI:
             f"{self.TRACING_RESOURCE}/batches/{trace_batch_id}",
             json={"status": "failed", "failure_reason": error_message},
             timeout=30,
+        )
+
+    def get_triggers(self) -> requests.Response:
+        """Get all available triggers from integrations."""
+        return self._make_request("GET", f"{self.INTEGRATIONS_RESOURCE}/apps")
+
+    def get_trigger_payload(self, app_slug: str, trigger_slug: str) -> requests.Response:
+        """Get sample payload for a specific trigger."""
+        return self._make_request(
+            "GET", f"{self.INTEGRATIONS_RESOURCE}/{app_slug}/{trigger_slug}/payload"
         )
