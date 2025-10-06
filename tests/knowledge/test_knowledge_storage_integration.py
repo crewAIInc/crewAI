@@ -11,7 +11,7 @@ from crewai.knowledge.storage.knowledge_storage import (  # type: ignore[import-
 
 @patch("crewai.knowledge.storage.knowledge_storage.get_rag_client")
 @patch("crewai.knowledge.storage.knowledge_storage.create_client")
-@patch("crewai.knowledge.storage.knowledge_storage.get_embedding_function")
+@patch("crewai.knowledge.storage.knowledge_storage.build_embedder")
 def test_knowledge_storage_uses_rag_client(
     mock_get_embedding: MagicMock,
     mock_create_client: MagicMock,
@@ -122,7 +122,7 @@ def test_search_error_handling(mock_get_client: MagicMock) -> None:
 
 
 @patch("crewai.knowledge.storage.knowledge_storage.get_rag_client")
-@patch("crewai.knowledge.storage.knowledge_storage.get_embedding_function")
+@patch("crewai.knowledge.storage.knowledge_storage.build_embedder")
 def test_embedding_configuration_flow(
     mock_get_embedding: MagicMock, mock_get_client: MagicMock
 ) -> None:

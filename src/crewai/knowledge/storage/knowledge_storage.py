@@ -8,7 +8,9 @@ from crewai.rag.chromadb.config import ChromaDBConfig
 from crewai.rag.chromadb.types import ChromaEmbeddingFunctionWrapper
 from crewai.rag.config.utils import get_rag_client
 from crewai.rag.core.base_client import BaseClient
-from crewai.rag.embeddings.factory import get_embedding_function
+from crewai.rag.core.base_embeddings_provider import BaseEmbeddingsProvider
+from crewai.rag.embeddings.factory import build_embedder
+from crewai.rag.embeddings.types import ProviderSpec
 from crewai.rag.factory import create_client
 from crewai.rag.types import BaseRecord, SearchResult
 from crewai.utilities.logger import Logger
@@ -22,7 +24,10 @@ class KnowledgeStorage(BaseKnowledgeStorage):
 
     def __init__(
         self,
-        embedder: dict[str, Any] | None = None,
+        embedder: ProviderSpec
+        | BaseEmbeddingsProvider
+        | type[BaseEmbeddingsProvider]
+        | None = None,
         collection_name: str | None = None,
     ) -> None:
         self.collection_name = collection_name
@@ -35,7 +40,7 @@ class KnowledgeStorage(BaseKnowledgeStorage):
         )
 
         if embedder:
-            embedding_function = get_embedding_function(embedder)
+            embedding_function = build_embedder(embedder)  # type: ignore[arg-type]
             config = ChromaDBConfig(
                 embedding_function=cast(
                     ChromaEmbeddingFunctionWrapper, embedding_function

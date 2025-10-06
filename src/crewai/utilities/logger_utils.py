@@ -47,10 +47,12 @@ def suppress_warnings() -> Generator[None, None, None]:
         None during the context execution.
 
     Note:
-        There is a similar implementation in src/crewai/llm.py that also
-        suppresses a specific deprecation warning. That version may be
-        consolidated here in the future.
+        This implementation consolidates warning suppression used throughout
+        the codebase, including specific deprecation warnings from dependencies.
     """
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore")
+        warnings.filterwarnings(
+            "ignore", message="open_text is deprecated*", category=DeprecationWarning
+        )
         yield

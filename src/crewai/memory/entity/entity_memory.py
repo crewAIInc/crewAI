@@ -27,7 +27,10 @@ class EntityMemory(Memory):
     _memory_provider: str | None = PrivateAttr()
 
     def __init__(self, crew=None, embedder_config=None, storage=None, path=None):
-        memory_provider = embedder_config.get("provider") if embedder_config else None
+        memory_provider = None
+        if embedder_config and isinstance(embedder_config, dict):
+            memory_provider = embedder_config.get("provider")
+
         if memory_provider == "mem0":
             try:
                 from crewai.memory.storage.mem0_storage import Mem0Storage
@@ -35,7 +38,11 @@ class EntityMemory(Memory):
                 raise ImportError(
                     "Mem0 is not installed. Please install it with `pip install mem0ai`."
                 ) from e
-            config = embedder_config.get("config") if embedder_config else None
+            config = (
+                embedder_config.get("config")
+                if embedder_config and isinstance(embedder_config, dict)
+                else None
+            )
             storage = Mem0Storage(type="short_term", crew=crew, config=config)
         else:
             storage = (

@@ -1,6 +1,7 @@
 """Utility functions for ChromaDB client implementation."""
 
 import hashlib
+import json
 from collections.abc import Mapping
 from typing import Literal, TypeGuard, cast
 
@@ -9,7 +10,6 @@ from chromadb.api.models.AsyncCollection import AsyncCollection
 from chromadb.api.models.Collection import Collection
 from chromadb.api.types import (
     Include,
-    IncludeEnum,
     QueryResult,
 )
 
@@ -72,7 +72,15 @@ def _prepare_documents_for_chromadb(
         if "doc_id" in doc:
             ids.append(doc["doc_id"])
         else:
-            content_hash = hashlib.sha256(doc["content"].encode()).hexdigest()[:16]
+            content_for_hash = doc["content"]
+            metadata = doc.get("metadata")
+            if metadata:
+                metadata_str = json.dumps(metadata, sort_keys=True)
+                content_for_hash = f"{content_for_hash}|{metadata_str}"
+
+            content_hash = hashlib.blake2b(
+                content_for_hash.encode(), digest_size=32
+            ).hexdigest()
             ids.append(content_hash)
 
         texts.append(doc["content"])
@@ -86,6 +94,32 @@ def _prepare_documents_for_chromadb(
             metadatas.append({})
 
     return PreparedDocuments(ids, texts, metadatas)
+
+
+def _create_batch_slice(
+    prepared: PreparedDocuments, start_index: int, batch_size: int
+) -> tuple[list[str], list[str], list[Mapping[str, str | int | float | bool]] | None]:
+    """Create a batch slice from prepared documents.
+
+    Args:
+        prepared: PreparedDocuments containing ids, texts, and metadatas.
+        start_index: Starting index for the batch.
+        batch_size: Size of the batch.
+
+    Returns:
+        Tuple of (batch_ids, batch_texts, batch_metadatas).
+    """
+    batch_end = min(start_index + batch_size, len(prepared.ids))
+    batch_ids = prepared.ids[start_index:batch_end]
+    batch_texts = prepared.texts[start_index:batch_end]
+    batch_metadatas = (
+        prepared.metadatas[start_index:batch_end] if prepared.metadatas else None
+    )
+
+    if batch_metadatas and not any(m for m in batch_metadatas):
+        batch_metadatas = None
+
+    return batch_ids, batch_texts, batch_metadatas
 
 
 def _extract_search_params(
@@ -107,9 +141,12 @@ def _extract_search_params(
         score_threshold=kwargs.get("score_threshold"),
         where=kwargs.get("where"),
         where_document=kwargs.get("where_document"),
-        include=kwargs.get(
-            "include",
-            [IncludeEnum.metadatas, IncludeEnum.documents, IncludeEnum.distances],
+        include=cast(
+            Include,
+            kwargs.get(
+                "include",
+                ["metadatas", "documents", "distances"],
+            ),
         ),
     )
 
@@ -158,7 +195,7 @@ def _convert_chromadb_results_to_search_results(
     """
     search_results: list[SearchResult] = []
 
-    include_strings = [item.value for item in include] if include else []
+    include_strings = list(include) if include else []
 
     ids = results["ids"][0] if results.get("ids") else []
 
