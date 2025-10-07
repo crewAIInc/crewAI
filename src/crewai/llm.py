@@ -1155,11 +1155,13 @@ class LLM(BaseLLM):
         ):
             return messages + [{"role": "user", "content": ""}]
         
-       # Gemini: ensure at least one user turn (Vertex requires contents)
+       # Gemini chat endpoints require a conversational content turn from the user. 
+       # A system-only or assistant-only opening causes a schema/validation error. 
+       # Appending a minimal user turn is the least invasive way to satisfy Gemini without altering semantics for other providers.
         if "gemini" in self.model.lower():
             if not any(m.get("role") == "user" for m in messages):
                 # Append a minimal user turn; do not reorder/replace earlier messages
-               return [*messages, {"role": "user", "content": "Okay."}]
+               return [*messages, {"role": "user", "content": "Ok."}]
             return messages
         
         # Handle Anthropic models
