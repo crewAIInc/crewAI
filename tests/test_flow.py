@@ -369,7 +369,7 @@ def test_flow_with_flow_state_subclass():
     with pytest.raises(ValidationError) as exc_info:
         flow = TestFlow()
 
-    assert "field_1" in str(exc_info.value) in str(exc_info.value)
+    assert "field_1" in str(exc_info.value)
 
 
 def test_flow_without_initial_state():
@@ -801,11 +801,11 @@ def test_structured_flow_event_emission():
     assert isinstance(received_events[3], MethodExecutionStartedEvent)
     assert received_events[3].method_name == "send_welcome_message"
     assert received_events[3].params == {}
-    assert received_events[3].state.sent is False
+    assert getattr(received_events[3].state, "sent") is False  # noqa: B009
 
     assert isinstance(received_events[4], MethodExecutionFinishedEvent)
     assert received_events[4].method_name == "send_welcome_message"
-    assert received_events[4].state.sent is True
+    assert getattr(received_events[4].state, "sent") is True  # noqa: B009
     assert received_events[4].result == "Welcome, Anakin!"
 
     assert isinstance(received_events[5], FlowFinishedEvent)
