@@ -1,17 +1,17 @@
 ---
 title: "Webhook Automation"
-description: "Automate CrewAI Enterprise workflows using webhooks with platforms like ActivePieces, Zapier, and Make.com"
+description: "Automate CrewAI AMP workflows using webhooks with platforms like ActivePieces, Zapier, and Make.com"
 icon: "webhook"
 mode: "wide"
 ---
 
-CrewAI Enterprise allows you to automate your workflow using webhooks. This article will guide you through the process of setting up and using webhooks to kickoff your crew execution, with a focus on integration with ActivePieces, a workflow automation platform similar to Zapier and Make.com.
+CrewAI AMP allows you to automate your workflow using webhooks. This article will guide you through the process of setting up and using webhooks to kickoff your crew execution, with a focus on integration with ActivePieces, a workflow automation platform similar to Zapier and Make.com.
 
 ## Setting Up Webhooks
 
 <Steps>
     <Step title="Accessing the Kickoff Interface">
-        - Navigate to the CrewAI Enterprise dashboard
+        - Navigate to the CrewAI AMP dashboard
         - Look for the `/kickoff` section, which is used to start the crew execution
             <Frame>
                 <img src="/images/enterprise/kickoff-interface.png" alt="Kickoff Interface" />
@@ -44,7 +44,7 @@ CrewAI Enterprise allows you to automate your workflow using webhooks. This arti
         3. Add an HTTP action step
             - Set the action to `Send HTTP request`
             - Use `POST` as the method
-            - Set the URL to your CrewAI Enterprise kickoff endpoint
+            - Set the URL to your CrewAI AMP kickoff endpoint
             - Add necessary headers (e.g., `Bearer Token`)
                 <Frame>
                     <img src="/images/enterprise/activepieces-headers.png" alt="ActivePieces Headers" />
@@ -59,7 +59,7 @@ CrewAI Enterprise allows you to automate your workflow using webhooks. This arti
     </Step>
 
     <Step title="Setting Up the Webhook">
-        1. Create a new flow in ActivePieces and name it 
+        1. Create a new flow in ActivePieces and name it
             <Frame>
                 <img src="/images/enterprise/activepieces-flow.png" alt="ActivePieces Flow" />
             </Frame>
@@ -152,4 +152,4 @@ CrewAI Enterprise allows you to automate your workflow using webhooks. This arti
         }
         ```
     </Tab>
-</Tabs> 
+</Tabs>

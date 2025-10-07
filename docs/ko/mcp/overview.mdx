@@ -21,14 +21,12 @@ mode: "wide"
 CrewAI와 MCP 통합에 대한 종합적인 안내를 위해 이 비디오 튜토리얼을 시청하세요:
 
 <iframe
-  width="100%"
-  height="400"
+  className="w-full aspect-video rounded-xl"
   src="https://www.youtube.com/embed/TpQ45lAZh48"
   title="CrewAI MCP Integration Guide"
-  frameborder="0"
-  style={{ borderRadius: '10px' }}
+  frameBorder="0"
   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-  allowfullscreen
+  allowFullScreen
 ></iframe>
 
 ## 설치
@@ -174,6 +172,16 @@ class CrewWithMCP:
 
     # ... 나머지 crew 설정 ...
 ```
+
+<Tip>
+`@CrewBase`로 데코레이션된 클래스에서는 어댑터 수명 주기가 자동으로 관리됩니다.
+
+- `get_mcp_tools()`가 처음 호출될 때 공유 `MCPServerAdapter`가 지연 생성되며 crew 내 모든 에이전트가 이를 재사용합니다.
+- `.kickoff()`가 끝나면 `@CrewBase`가 주입한 after-kickoff 훅이 어댑터를 종료하므로 별도의 정리 코드가 필요 없습니다.
+- `mcp_server_params`를 지정하지 않으면 `get_mcp_tools()`는 빈 리스트를 반환하여 MCP 설정 여부와 상관없이 동일한 코드 경로를 사용할 수 있습니다.
+
+따라서 여러 에이전트에서 `get_mcp_tools()`를 호출하거나 환경에 따라 MCP 사용을 토글하더라도 안전하게 동작합니다.
+</Tip>
 
 ### 연결 타임아웃 구성
 

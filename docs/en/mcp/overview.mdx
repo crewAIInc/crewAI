@@ -21,14 +21,12 @@ We currently support the following transport mechanisms:
 Watch this video tutorial for a comprehensive guide on MCP integration with CrewAI:
 
 <iframe
-  width="100%"
-  height="400"
+  className="w-full aspect-video rounded-xl"
   src="https://www.youtube.com/embed/TpQ45lAZh48"
   title="CrewAI MCP Integration Guide"
-  frameborder="0"
-  style={{ borderRadius: '10px' }}
+  frameBorder="0"
   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-  allowfullscreen
+  allowFullScreen
 ></iframe>
 
 ## Installation
@@ -174,6 +172,16 @@ class CrewWithMCP:
 
     # ... rest of your crew setup ...
 ```
+
+<Tip>
+When a crew class is decorated with `@CrewBase`, the adapter lifecycle is managed for you:
+
+- The first call to `get_mcp_tools()` lazily creates a shared `MCPServerAdapter` that is reused by every agent in the crew.
+- The adapter automatically shuts down after `.kickoff()` completes thanks to an implicit after-kickoff hook injected by `@CrewBase`, so no manual cleanup is required.
+- If `mcp_server_params` is not defined, `get_mcp_tools()` simply returns an empty list, allowing the same code paths to run with or without MCP configured.
+
+This makes it safe to call `get_mcp_tools()` from multiple agent methods or selectively enable MCP per environment.
+</Tip>
 
 ### Connection Timeout Configuration
 
