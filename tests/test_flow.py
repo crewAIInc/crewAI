@@ -4,17 +4,17 @@ import asyncio
 from datetime import datetime
 
 import pytest
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 
-from crewai.flow.flow import Flow, and_, listen, or_, router, start
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.flow_events import (
     FlowFinishedEvent,
-    FlowStartedEvent,
     FlowPlotEvent,
+    FlowStartedEvent,
     MethodExecutionFinishedEvent,
     MethodExecutionStartedEvent,
 )
+from crewai.flow.flow import Flow, FlowState, and_, listen, or_, router, start
 
 
 def test_simple_sequential_flow():
@@ -272,6 +272,128 @@ def test_flow_with_custom_state():
 
     flow = StateFlow()
     flow.kickoff()
+    assert flow.counter == 2
+
+
+def test_flow_with_required_pydantic_fields():
+    """Test a flow with required Pydantic fields passed as kwargs."""
+
+    class TestState(BaseModel):
+        field_1: str
+        field_2: int
+
+    class TestFlow(Flow[TestState]):
+        def __init__(self, **kwargs):
+            super().__init__(**kwargs)
+            self.counter = 0
+
+        @start()
+        def step_1(self):
+            self.counter += 1
+
+        @listen(step_1)
+        def step_2(self):
+            self.counter *= 2
+            assert self.counter == 2
+
+    flow = TestFlow(field_1="ABC", field_2=1)
+    flow.kickoff()
+
+    assert flow.state.field_1 == "ABC"
+    assert flow.state.field_2 == 1
+    assert flow.counter == 2
+
+    with pytest.raises(ValidationError) as exc_info:
+        flow = TestFlow()
+
+    assert "field_1" in str(exc_info.value) and "field_2" in str(exc_info.value)
+
+
+def test_flow_with_required_pydantic_fields_and_kickoff_inputs():
+    """Test flow with required fields in __init__ and additional inputs in kickoff."""
+
+    class TestState(BaseModel):
+        field_1: str = "ABC"
+        field_2: int
+
+    class TestFlow(Flow[TestState]):
+        def __init__(self, **kwargs):
+            super().__init__(**kwargs)
+            self.counter = 0
+
+        @start()
+        def step_1(self):
+            self.counter += 1
+
+        @listen(step_1)
+        def step_2(self):
+            self.counter *= 2
+            assert self.counter == 2
+
+    flow = TestFlow(field_2=1)
+    assert flow.state.field_1 == "ABC"
+
+    flow.kickoff(inputs={"field_1": "CBA"})
+
+    assert flow.state.field_1 == "CBA"
+    assert flow.state.field_2 == 1
+    assert flow.counter == 2
+
+
+def test_flow_with_flow_state_subclass():
+    """Test a flow with FlowState subclass and required fields passed as kwargs."""
+
+    class TestState(FlowState):
+        field_1: str
+
+    class TestFlow(Flow[TestState]):
+        def __init__(self, **kwargs):
+            super().__init__(**kwargs)
+            self.counter = 0
+
+        @start()
+        def step_1(self):
+            self.counter += 1
+
+        @listen(step_1)
+        def step_2(self):
+            self.counter *= 2
+            assert self.counter == 2
+
+    flow = TestFlow(field_1="ABC")
+    flow.kickoff()
+
+    assert flow.state.field_1 == "ABC"
+    assert flow.counter == 2
+
+    with pytest.raises(ValidationError) as exc_info:
+        flow = TestFlow()
+
+    assert "field_1" in str(exc_info.value) in str(exc_info.value)
+
+
+def test_flow_without_initial_state():
+    """Test a flow init with state fields passed as kwargs."""
+
+    class TestFlow(Flow):
+        def __init__(self, **kwargs):
+            super().__init__(**kwargs)
+            self.counter = 0
+
+        @start()
+        def step_1(self):
+            self.counter += 1
+
+        @listen(step_1)
+        def step_2(self):
+            self.counter *= 2
+            assert self.counter == 2
+
+    flow = TestFlow(field_1="ABC")
+    flow.kickoff()
+
+    assert isinstance(flow.state, dict)
+    assert flow.state.get("field_1") == "ABC"
     assert flow.counter == 2
 
 
@@ -679,11 +801,11 @@ def test_structured_flow_event_emission():
     assert isinstance(received_events[3], MethodExecutionStartedEvent)
     assert received_events[3].method_name == "send_welcome_message"
     assert received_events[3].params == {}
-    assert getattr(received_events[3].state, "sent") is False
+    assert received_events[3].state.sent is False
 
     assert isinstance(received_events[4], MethodExecutionFinishedEvent)
     assert received_events[4].method_name == "send_welcome_message"
-    assert getattr(received_events[4].state, "sent") is True
+    assert received_events[4].state.sent is True
     assert received_events[4].result == "Welcome, Anakin!"
 
     assert isinstance(received_events[5], FlowFinishedEvent)
