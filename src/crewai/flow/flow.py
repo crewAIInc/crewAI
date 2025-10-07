@@ -504,13 +504,15 @@ class Flow(Generic[T], metaclass=FlowMeta):
         If kwargs are provided, use them to initialize the state.
 
         Args:
-            kwargs: Dictionary of state values to set/update
+            kwargs: Dictionary of state values to set/update (id field is ignored if present)
 
         Raises:
             ValueError: If structured state model lacks 'id' field
             TypeError: If state is neither BaseModel nor dictionary
         """
         kwargs = kwargs or {}
+        # prevent overriding the auto-generated ID
+        kwargs.pop("id", None)
 
         # Handle case where initial_state is None but we have a type parameter
         if self.initial_state is None and hasattr(self, "_initial_state_t"):

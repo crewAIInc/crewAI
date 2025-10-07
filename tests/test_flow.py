@@ -372,6 +372,34 @@ def test_flow_with_flow_state_subclass():
     assert "field_1" in str(exc_info.value)
 
 
+def test_flow_ignore_id():
+    """Test a flow where initial id value is ignored when passed as kwarg."""
+
+    class TestState(FlowState):
+        field_1: str
+
+    class TestFlow(Flow[TestState]):
+        def __init__(self, **kwargs):
+            super().__init__(**kwargs)
+            self.counter = 0
+
+        @start()
+        def step_1(self):
+            self.counter += 1
+
+        @listen(step_1)
+        def step_2(self):
+            self.counter *= 2
+            assert self.counter == 2
+
+    flow = TestFlow(id="test_id", field_1="ABC")
+    flow.kickoff()
+
+    assert flow.state.id != "test_id"
+    assert flow.state.field_1 == "ABC"
+    assert flow.counter == 2
+
+
 def test_flow_without_initial_state():
     """Test a flow init with state fields passed as kwargs."""
 
