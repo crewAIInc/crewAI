@@ -447,6 +447,7 @@ class CrewAIEventsBus:
 
         loop.call_soon_threadsafe(loop.stop)
         self._loop_thread.join()
+        loop.close()
         self._sync_executor.shutdown(wait=wait)
 
 

@@ -1,3 +1,4 @@
+import threading
 from unittest.mock import Mock, patch
 
 import pytest
@@ -11,7 +12,6 @@ from crewai.llm import LLM
 from crewai.tasks.hallucination_guardrail import HallucinationGuardrail
 from crewai.tasks.llm_guardrail import LLMGuardrail
 from crewai.tasks.task_output import TaskOutput
-from tests.utils import wait_for_event_handlers
 
 
 def test_task_without_guardrail():
@@ -176,79 +176,92 @@ def test_task_guardrail_process_output(task_output):
 def test_guardrail_emits_events(sample_agent):
     started_guardrail = []
     completed_guardrail = []
+    all_events_received = threading.Event()
+    expected_started = 3  # 2 from first task, 1 from second
+    expected_completed = 3  # 2 from first task, 1 from second
 
-    task = Task(
+    task1 = Task(
         description="Gather information about available books on the First World War",
         agent=sample_agent,
         expected_output="A list of available books on the First World War",
         guardrail="Ensure the authors are from Italy",
     )
 
-    with crewai_event_bus.scoped_handlers():
-
-        @crewai_event_bus.on(LLMGuardrailStartedEvent)
-        def handle_guardrail_started(source, event):
-            assert source == task
-            started_guardrail.append(
-                {"guardrail": event.guardrail, "retry_count": event.retry_count}
-            )
-
-        @crewai_event_bus.on(LLMGuardrailCompletedEvent)
-        def handle_guardrail_completed(source, event):
-            assert source == task
-            completed_guardrail.append(
-                {
-                    "success": event.success,
-                    "result": event.result,
-                    "error": event.error,
-                    "retry_count": event.retry_count,
-                }
-            )
-
-        result = task.execute_sync(agent=sample_agent)
-
-        def custom_guardrail(result: TaskOutput):
-            return (True, "good result from callable function")
-
-        task = Task(
-            description="Test task",
-            expected_output="Output",
-            guardrail=custom_guardrail,
+    @crewai_event_bus.on(LLMGuardrailStartedEvent)
+    def handle_guardrail_started(source, event):
+        started_guardrail.append(
+            {"guardrail": event.guardrail, "retry_count": event.retry_count}
         )
+        if (
+            len(started_guardrail) >= expected_started
+            and len(completed_guardrail) >= expected_completed
+        ):
+            all_events_received.set()
 
-        task.execute_sync(agent=sample_agent)
-        wait_for_event_handlers()
+    @crewai_event_bus.on(LLMGuardrailCompletedEvent)
+    def handle_guardrail_completed(source, event):
+        completed_guardrail.append(
+            {
+                "success": event.success,
+                "result": event.result,
+                "error": event.error,
+                "retry_count": event.retry_count,
+            }
+        )
+        if (
+            len(started_guardrail) >= expected_started
+            and len(completed_guardrail) >= expected_completed
+        ):
+            all_events_received.set()
 
-        expected_started_events = [
-            {"guardrail": "Ensure the authors are from Italy", "retry_count": 0},
-            {"guardrail": "Ensure the authors are from Italy", "retry_count": 1},
-            {
-                "guardrail": """def custom_guardrail(result: TaskOutput):
-            return (True, "good result from callable function")""",
-                "retry_count": 0,
-            },
-        ]
+    result = task1.execute_sync(agent=sample_agent)
 
-        expected_completed_events = [
-            {
-                "success": False,
-                "result": None,
-                "error": "The task result does not comply with the guardrail because none of "
-                "the listed authors are from Italy. All authors mentioned are from "
-                "different countries, including Germany, the UK, the USA, and others, "
-                "which violates the requirement that authors must be Italian.",
-                "retry_count": 0,
-            },
-            {"success": True, "result": result.raw, "error": None, "retry_count": 1},
-            {
-                "success": True,
-                "result": "good result from callable function",
-                "error": None,
-                "retry_count": 0,
-            },
-        ]
-        assert started_guardrail == expected_started_events
-        assert completed_guardrail == expected_completed_events
+    def custom_guardrail(result: TaskOutput):
+        return (True, "good result from callable function")
+
+    task2 = Task(
+        description="Test task",
+        expected_output="Output",
+        guardrail=custom_guardrail,
+    )
+
+    task2.execute_sync(agent=sample_agent)
+
+    # Wait for all events to be received
+    assert all_events_received.wait(timeout=10), (
+        "Timeout waiting for all guardrail events"
+    )
+
+    expected_started_events = [
+        {"guardrail": "Ensure the authors are from Italy", "retry_count": 0},
+        {"guardrail": "Ensure the authors are from Italy", "retry_count": 1},
+        {
+            "guardrail": """def custom_guardrail(result: TaskOutput):
+        return (True, "good result from callable function")""",
+            "retry_count": 0,
+        },
+    ]
+
+    expected_completed_events = [
+        {
+            "success": False,
+            "result": None,
+            "error": "The task result does not comply with the guardrail because none of "
+            "the listed authors are from Italy. All authors mentioned are from "
+            "different countries, including Germany, the UK, the USA, and others, "
+            "which violates the requirement that authors must be Italian.",
+            "retry_count": 0,
+        },
+        {"success": True, "result": result.raw, "error": None, "retry_count": 1},
+        {
+            "success": True,
+            "result": "good result from callable function",
+            "error": None,
+            "retry_count": 0,
+        },
+    ]
+    assert started_guardrail == expected_started_events
+    assert completed_guardrail == expected_completed_events
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])

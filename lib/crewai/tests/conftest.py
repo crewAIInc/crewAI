@@ -167,17 +167,19 @@ def clear_event_bus_handlers():
     after the test completes.
     """
     from crewai.events.event_bus import crewai_event_bus
-    from tests.utils import wait_for_event_handlers
+    from crewai.experimental.evaluation.evaluation_listener import (
+        EvaluationTraceCallback,
+    )
 
     yield
 
-    # Wait for all handlers to complete before cleanup
-    wait_for_event_handlers()
+    crewai_event_bus.shutdown(wait=True)
+    crewai_event_bus._initialize()
 
-    # Clear all handlers after test completes
-    with crewai_event_bus._rwlock.w_locked():
-        crewai_event_bus._sync_handlers = {}
-        crewai_event_bus._async_handlers = {}
+    callback = EvaluationTraceCallback()
+    callback.traces.clear()
+    callback.current_agent_id = None
+    callback.current_task_id = None
 
 
 @pytest.fixture(scope="module")
