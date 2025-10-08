@@ -53,6 +53,7 @@ from crewai.utilities.converter import generate_model_description
 from crewai.utilities.llm_utils import create_llm
 from crewai.utilities.token_counter_callback import TokenCalcHandler
 from crewai.utilities.training_handler import CrewTrainingHandler
+from crewai.utilities.types import LLMMessage
 
 
 class Agent(BaseAgent):
@@ -792,7 +793,7 @@ class Agent(BaseAgent):
 
     def kickoff(
         self,
-        messages: str | list[dict[str, str]],
+        messages: str | list[LLMMessage],
         response_format: type[Any] | None = None,
     ) -> LiteAgentOutput:
         """
@@ -832,7 +833,7 @@ class Agent(BaseAgent):
 
     async def kickoff_async(
         self,
-        messages: str | list[dict[str, str]],
+        messages: str | list[LLMMessage],
         response_format: type[Any] | None = None,
     ) -> LiteAgentOutput:
         """
@@ -862,6 +863,7 @@ class Agent(BaseAgent):
             response_format=response_format,
             i18n=self.i18n,
             original_agent=self,
+            guardrail=self.guardrail,
         )
 
         return await lite_agent.kickoff_async(messages)

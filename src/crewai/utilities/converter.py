@@ -14,6 +14,7 @@ from crewai.utilities.pydantic_schema_parser import PydanticSchemaParser
 
 if TYPE_CHECKING:
     from crewai.agent import Agent
+    from crewai.agents.agent_builder.base_agent import BaseAgent
     from crewai.llm import LLM
     from crewai.llms.base_llm import BaseLLM
 
@@ -143,7 +144,7 @@ def convert_to_model(
     result: str,
     output_pydantic: type[BaseModel] | None,
     output_json: type[BaseModel] | None,
-    agent: Agent | None = None,
+    agent: Agent | BaseAgent | None = None,
     converter_cls: type[Converter] | None = None,
 ) -> dict[str, Any] | BaseModel | str:
     """Convert a result string to a Pydantic model or JSON.
@@ -215,7 +216,7 @@ def handle_partial_json(
     result: str,
     model: type[BaseModel],
     is_json_output: bool,
-    agent: Agent | None,
+    agent: Agent | BaseAgent | None,
     converter_cls: type[Converter] | None = None,
 ) -> dict[str, Any] | BaseModel | str:
     """Handle partial JSON in a result string and convert to Pydantic model or dict.
@@ -260,7 +261,7 @@ def convert_with_instructions(
     result: str,
     model: type[BaseModel],
     is_json_output: bool,
-    agent: Agent | None,
+    agent: Agent | BaseAgent | None,
     converter_cls: type[Converter] | None = None,
 ) -> dict | BaseModel | str:
     """Convert a result string to a Pydantic model or JSON using instructions.
@@ -283,7 +284,11 @@ def convert_with_instructions(
     """
     if agent is None:
         raise TypeError("Agent must be provided if converter_cls is not specified.")
-    llm = agent.function_calling_llm or agent.llm
+    llm = agent.function_calling_llm if isinstance(agent, Agent) else agent.llm
+
+    if llm is None:
+        raise ValueError("Agent must have a valid LLM instance for conversion")
+
     instructions = get_conversion_instructions(model=model, llm=llm)
     converter = create_converter(
         agent=agent,
@@ -308,7 +313,7 @@ def convert_with_instructions(
 
 
 def get_conversion_instructions(
-    model: type[BaseModel], llm: BaseLLM | LLM | str
+    model: type[BaseModel], llm: BaseLLM | LLM | str | Any
 ) -> str:
     """Generate conversion instructions based on the model and LLM capabilities.
 
@@ -357,7 +362,7 @@ class CreateConverterKwargs(TypedDict, total=False):
 
 
 def create_converter(
-    agent: Agent | None = None,
+    agent: Agent | BaseAgent | None = None,
     converter_cls: type[Converter] | None = None,
     *args: Any,
     **kwargs: Unpack[CreateConverterKwargs],
