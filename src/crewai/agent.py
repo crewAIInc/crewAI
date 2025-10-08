@@ -347,15 +347,17 @@ class Agent(BaseAgent):
         )
 
         if self.knowledge or (self.crew and self.crew.knowledge):
-            crewai_event_bus.emit(
-                self,
-                event=KnowledgeRetrievalStartedEvent(
-                    agent=self,
-                ),
-            )
             try:
                 self.knowledge_search_query = self._get_knowledge_search_query(
-                    task_prompt
+                    task_prompt, task
+                )
+                crewai_event_bus.emit(
+                    self,
+                    event=KnowledgeRetrievalStartedEvent(
+                        task_id=str(task.id) if task else None,
+                        from_task=task,
+                        from_agent=self,
+                    ),
                 )
                 if self.knowledge_search_query:
                     # Quering agent specific knowledge
@@ -385,7 +387,9 @@ class Agent(BaseAgent):
                         self,
                         event=KnowledgeRetrievalCompletedEvent(
                             query=self.knowledge_search_query,
-                            agent=self,
+                            from_task=task,
+                            from_agent=self,
+                            task_id=str(task.id) if task else None,
                             retrieved_knowledge=(
                                 (self.agent_knowledge_context or "")
                                 + (
@@ -403,8 +407,10 @@ class Agent(BaseAgent):
                     self,
                     event=KnowledgeSearchQueryFailedEvent(
                         query=self.knowledge_search_query or "",
-                        agent=self,
                         error=str(e),
+                        task_id=str(task.id) if task else None,
+                        from_task=task,
+                        from_agent=self,
                     ),
                 )
 
@@ -728,13 +734,15 @@ class Agent(BaseAgent):
     def set_fingerprint(self, fingerprint: Fingerprint):
         self.security_config.fingerprint = fingerprint
 
-    def _get_knowledge_search_query(self, task_prompt: str) -> str | None:
+    def _get_knowledge_search_query(self, task_prompt: str, task: Task) -> str | None:
         """Generate a search query for the knowledge base based on the task description."""
         crewai_event_bus.emit(
             self,
             event=KnowledgeQueryStartedEvent(
                 task_prompt=task_prompt,
-                agent=self,
+                task_id=str(task.id) if task else None,
+                from_task=task,
+                from_agent=self,
             ),
         )
         query = self.i18n.slice("knowledge_search_query").format(
@@ -749,8 +757,10 @@ class Agent(BaseAgent):
             crewai_event_bus.emit(
                 self,
                 event=KnowledgeQueryFailedEvent(
-                    agent=self,
                     error="LLM is not compatible with knowledge search queries",
+                    task_id=str(task.id) if task else None,
+                    from_task=task,
+                    from_agent=self,
                 ),
             )
             return None
@@ -769,7 +779,9 @@ class Agent(BaseAgent):
                 self,
                 event=KnowledgeQueryCompletedEvent(
                     query=query,
-                    agent=self,
+                    task_id=str(task.id) if task else None,
+                    from_task=task,
+                    from_agent=self,
                 ),
             )
             return rewritten_query
@@ -777,8 +789,10 @@ class Agent(BaseAgent):
             crewai_event_bus.emit(
                 self,
                 event=KnowledgeQueryFailedEvent(
-                    agent=self,
                     error=str(e),
+                    task_id=str(task.id) if task else None,
+                    from_task=task,
+                    from_agent=self,
                 ),
             )
             return None
