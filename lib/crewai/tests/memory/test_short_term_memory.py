@@ -14,6 +14,7 @@ from crewai.events.types.memory_events import (
 from crewai.memory.short_term.short_term_memory import ShortTermMemory
 from crewai.memory.short_term.short_term_memory_item import ShortTermMemoryItem
 from crewai.task import Task
+from tests.utils import wait_for_event_handlers
 
 
 @pytest.fixture
@@ -55,6 +56,7 @@ def test_short_term_memory_search_events(short_term_memory):
                 limit=3,
                 score_threshold=0.35,
             )
+            wait_for_event_handlers()
 
     assert len(events["MemoryQueryStartedEvent"]) == 1
     assert len(events["MemoryQueryCompletedEvent"]) == 1

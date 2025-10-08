@@ -14,6 +14,7 @@ import pytest
 from crewai import LLM, Agent
 from crewai.flow import Flow, start
 from crewai.tools import BaseTool
+from tests.utils import wait_for_event_handlers
 
 
 # A simple test tool
@@ -357,6 +358,7 @@ def test_guardrail_is_called_using_string():
             guardrail_events["completed"].append(event)
 
         result = agent.kickoff(messages="Top 10 best players in the world?")
+        wait_for_event_handlers()
 
         assert len(guardrail_events["started"]) == 2
         assert len(guardrail_events["completed"]) == 2
@@ -394,6 +396,7 @@ def test_guardrail_is_called_using_callable():
         )
 
         result = agent.kickoff(messages="Top 1 best players in the world?")
+        wait_for_event_handlers()
 
         assert len(guardrail_events["started"]) == 1
         assert len(guardrail_events["completed"]) == 1

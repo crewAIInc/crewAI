@@ -11,6 +11,7 @@ from crewai.llm import LLM
 from crewai.tasks.hallucination_guardrail import HallucinationGuardrail
 from crewai.tasks.llm_guardrail import LLMGuardrail
 from crewai.tasks.task_output import TaskOutput
+from tests.utils import wait_for_event_handlers
 
 
 def test_task_without_guardrail():
@@ -216,6 +217,7 @@ def test_guardrail_emits_events(sample_agent):
         )
 
         task.execute_sync(agent=sample_agent)
+        wait_for_event_handlers()
 
         expected_started_events = [
             {"guardrail": "Ensure the authors are from Italy", "retry_count": 0},
