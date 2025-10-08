@@ -284,10 +284,8 @@ def convert_with_instructions(
     """
     if agent is None:
         raise TypeError("Agent must be provided if converter_cls is not specified.")
-    llm = agent.function_calling_llm if isinstance(agent, Agent) else agent.llm
 
-    if llm is None:
-        raise ValueError("Agent must have a valid LLM instance for conversion")
+    llm = getattr(agent, "function_calling_llm", agent.llm)
 
     instructions = get_conversion_instructions(model=model, llm=llm)
     converter = create_converter(
