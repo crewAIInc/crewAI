@@ -49,6 +49,8 @@ from crewai.tools.base_tool import BaseTool
 from pydantic import Field
 import pytest
 
+from ..utils import wait_for_event_handlers
+
 
 @pytest.fixture(scope="module")
 def vcr_config(request) -> dict:
@@ -118,6 +120,7 @@ def test_crew_emits_start_kickoff_event(
         # Now when Crew creates EventListener, it will use our mocked telemetry
         crew = Crew(agents=[base_agent], tasks=[base_task], name="TestCrew")
         crew.kickoff()
+    wait_for_event_handlers()
 
     mock_telemetry.crew_execution_span.assert_called_once_with(crew, None)
     mock_telemetry.end_crew.assert_called_once_with(crew, "hi")
@@ -165,6 +168,7 @@ def test_crew_emits_test_kickoff_type_event(base_agent, base_task):
     eval_llm = LLM(model="gpt-4o-mini")
     crew = Crew(agents=[base_agent], tasks=[base_task], name="TestCrew")
     crew.test(n_iterations=1, eval_llm=eval_llm)
+    wait_for_event_handlers()
 
     assert len(received_events) == 3
     assert received_events[0].crew_name == "TestCrew"
@@ -641,6 +645,7 @@ def test_llm_emits_call_started_event():
 
     llm = LLM(model="gpt-4o-mini")
     llm.call("Hello, how are you?")
+    wait_for_event_handlers()
 
     assert len(received_events) == 2
     assert received_events[0].type == "llm_call_started"
@@ -767,6 +772,7 @@ def test_streaming_fallback_to_non_streaming():
         try:
             # Call the LLM
             response = llm.call("Tell me a short joke")
+            wait_for_event_handlers()
 
             # Verify that we received some chunks
             assert len(received_chunks) == 2

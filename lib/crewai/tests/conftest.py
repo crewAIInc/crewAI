@@ -33,7 +33,7 @@ def setup_test_environment():
         except (OSError, IOError) as e:
             raise RuntimeError(
                 f"Test storage directory {storage_dir} is not writable: {e}"
-            )
+            ) from e
 
         os.environ["CREWAI_STORAGE_DIR"] = str(storage_dir)
         os.environ["CREWAI_TESTING"] = "true"
@@ -157,6 +157,27 @@ def mock_opentelemetry_components():
             "attach": mock_attach,
             "detach": mock_detach,
         }
+
+
+@pytest.fixture(autouse=True)
+def clear_event_bus_handlers():
+    """Clear event bus handlers before and after each test for isolation."""
+    from crewai.events.event_bus import crewai_event_bus
+    from tests.utils import wait_for_event_handlers
+
+    with crewai_event_bus._rwlock.w_locked():
+        original_sync = dict(crewai_event_bus._sync_handlers)
+        original_async = dict(crewai_event_bus._async_handlers)
+        crewai_event_bus._sync_handlers = {}
+        crewai_event_bus._async_handlers = {}
+
+    yield
+
+    wait_for_event_handlers()
+
+    with crewai_event_bus._rwlock.w_locked():
+        crewai_event_bus._sync_handlers = original_sync
+        crewai_event_bus._async_handlers = original_async
 
 
 @pytest.fixture(scope="module")

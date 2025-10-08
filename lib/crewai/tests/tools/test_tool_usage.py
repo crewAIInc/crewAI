@@ -32,7 +32,7 @@ class RandomNumberTool(BaseTool):
     args_schema: type[BaseModel] = RandomNumberToolInput
 
     def _run(self, min_value: int, max_value: int) -> int:
-        return random.randint(min_value, max_value)
+        return random.randint(min_value, max_value)  # noqa: S311
 
 
 # Example agent and task
@@ -469,38 +469,39 @@ def test_tool_selection_error_event_direct():
         action=MagicMock(),
     )
 
-    received_events = []
+    with crewai_event_bus.scoped_handlers():
+        received_events = []
 
-    @crewai_event_bus.on(ToolSelectionErrorEvent)
-    def event_handler(source, event):
-        received_events.append(event)
+        @crewai_event_bus.on(ToolSelectionErrorEvent)
+        def event_handler(source, event):
+            received_events.append(event)
 
-    with pytest.raises(Exception):
-        tool_usage._select_tool("Non Existent Tool")
-    assert len(received_events) == 1
-    event = received_events[0]
-    assert isinstance(event, ToolSelectionErrorEvent)
-    assert event.agent_key == "test_key"
-    assert event.agent_role == "test_role"
-    assert event.tool_name == "Non Existent Tool"
-    assert event.tool_args == {}
-    assert "Tool Name: Test Tool" in event.tool_class
-    assert "A test tool" in event.tool_class
-    assert "don't exist" in event.error
+        with pytest.raises(Exception):  # noqa: B017
+            tool_usage._select_tool("Non Existent Tool")
+        assert len(received_events) == 1
+        event = received_events[0]
+        assert isinstance(event, ToolSelectionErrorEvent)
+        assert event.agent_key == "test_key"
+        assert event.agent_role == "test_role"
+        assert event.tool_name == "Non Existent Tool"
+        assert event.tool_args == {}
+        assert "Tool Name: Test Tool" in event.tool_class
+        assert "A test tool" in event.tool_class
+        assert "don't exist" in event.error
 
-    received_events.clear()
-    with pytest.raises(Exception):
-        tool_usage._select_tool("")
+        received_events.clear()
+        with pytest.raises(Exception):  # noqa: B017
+            tool_usage._select_tool("")
 
-    assert len(received_events) == 1
-    event = received_events[0]
-    assert isinstance(event, ToolSelectionErrorEvent)
-    assert event.agent_key == "test_key"
-    assert event.agent_role == "test_role"
-    assert event.tool_name == ""
-    assert event.tool_args == {}
-    assert "Test Tool" in event.tool_class
-    assert "forgot the Action name" in event.error
+        assert len(received_events) == 1
+        event = received_events[0]
+        assert isinstance(event, ToolSelectionErrorEvent)
+        assert event.agent_key == "test_key"
+        assert event.agent_role == "test_role"
+        assert event.tool_name == ""
+        assert event.tool_args == {}
+        assert "Test Tool" in event.tool_class
+        assert "forgot the Action name" in event.error
 
 
 def test_tool_validate_input_error_event():
@@ -562,7 +563,7 @@ def test_tool_validate_input_error_event():
 
         # Test invalid input
         invalid_input = "invalid json {[}"
-        with pytest.raises(Exception):
+        with pytest.raises(Exception):  # noqa: B017
             tool_usage._validate_tool_input(invalid_input)
 
         # Verify event was emitted
@@ -616,42 +617,43 @@ def test_tool_usage_finished_event_with_result():
         action=MagicMock(),
     )
 
-    # Track received events
-    received_events = []
+    with crewai_event_bus.scoped_handlers():
+        # Track received events
+        received_events = []
 
-    @crewai_event_bus.on(ToolUsageFinishedEvent)
-    def event_handler(source, event):
-        received_events.append(event)
+        @crewai_event_bus.on(ToolUsageFinishedEvent)
+        def event_handler(source, event):
+            received_events.append(event)
 
-    # Call on_tool_use_finished with test data
-    started_at = time.time()
-    result = "test output result"
-    tool_usage.on_tool_use_finished(
-        tool=test_tool,
-        tool_calling=mock_tool_calling,
-        from_cache=False,
-        started_at=started_at,
-        result=result,
-    )
+        # Call on_tool_use_finished with test data
+        started_at = time.time()
+        result = "test output result"
+        tool_usage.on_tool_use_finished(
+            tool=test_tool,
+            tool_calling=mock_tool_calling,
+            from_cache=False,
+            started_at=started_at,
+            result=result,
+        )
 
-    # Verify event was emitted
-    assert len(received_events) == 1, "Expected one event to be emitted"
-    event = received_events[0]
-    assert isinstance(event, ToolUsageFinishedEvent)
+        # Verify event was emitted
+        assert len(received_events) == 1, "Expected one event to be emitted"
+        event = received_events[0]
+        assert isinstance(event, ToolUsageFinishedEvent)
 
-    # Verify event attributes
-    assert event.agent_key == "test_agent_key"
-    assert event.agent_role == "test_agent_role"
-    assert event.tool_name == "Test Tool"
-    assert event.tool_args == {"arg1": "value1"}
-    assert event.tool_class == "TestTool"
-    assert event.run_attempts == 1  # Default value from ToolUsage
-    assert event.delegations == 0
-    assert event.from_cache is False
-    assert event.output == "test output result"
-    assert isinstance(event.started_at, datetime.datetime)
-    assert isinstance(event.finished_at, datetime.datetime)
-    assert event.type == "tool_usage_finished"
+        # Verify event attributes
+        assert event.agent_key == "test_agent_key"
+        assert event.agent_role == "test_agent_role"
+        assert event.tool_name == "Test Tool"
+        assert event.tool_args == {"arg1": "value1"}
+        assert event.tool_class == "TestTool"
+        assert event.run_attempts == 1  # Default value from ToolUsage
+        assert event.delegations == 0
+        assert event.from_cache is False
+        assert event.output == "test output result"
+        assert isinstance(event.started_at, datetime.datetime)
+        assert isinstance(event.finished_at, datetime.datetime)
+        assert event.type == "tool_usage_finished"
 
 
 def test_tool_usage_finished_event_with_cached_result():
@@ -695,39 +697,40 @@ def test_tool_usage_finished_event_with_cached_result():
         action=MagicMock(),
     )
 
-    # Track received events
-    received_events = []
+    with crewai_event_bus.scoped_handlers():
+        # Track received events
+        received_events = []
 
-    @crewai_event_bus.on(ToolUsageFinishedEvent)
-    def event_handler(source, event):
-        received_events.append(event)
+        @crewai_event_bus.on(ToolUsageFinishedEvent)
+        def event_handler(source, event):
+            received_events.append(event)
 
-    # Call on_tool_use_finished with test data and from_cache=True
-    started_at = time.time()
-    result = "cached test output result"
-    tool_usage.on_tool_use_finished(
-        tool=test_tool,
-        tool_calling=mock_tool_calling,
-        from_cache=True,
-        started_at=started_at,
-        result=result,
-    )
+        # Call on_tool_use_finished with test data and from_cache=True
+        started_at = time.time()
+        result = "cached test output result"
+        tool_usage.on_tool_use_finished(
+            tool=test_tool,
+            tool_calling=mock_tool_calling,
+            from_cache=True,
+            started_at=started_at,
+            result=result,
+        )
 
-    # Verify event was emitted
-    assert len(received_events) == 1, "Expected one event to be emitted"
-    event = received_events[0]
-    assert isinstance(event, ToolUsageFinishedEvent)
+        # Verify event was emitted
+        assert len(received_events) == 1, "Expected one event to be emitted"
+        event = received_events[0]
+        assert isinstance(event, ToolUsageFinishedEvent)
 
-    # Verify event attributes
-    assert event.agent_key == "test_agent_key"
-    assert event.agent_role == "test_agent_role"
-    assert event.tool_name == "Test Tool"
-    assert event.tool_args == {"arg1": "value1"}
-    assert event.tool_class == "TestTool"
-    assert event.run_attempts == 1  # Default value from ToolUsage
-    assert event.delegations == 0
-    assert event.from_cache is True
-    assert event.output == "cached test output result"
-    assert isinstance(event.started_at, datetime.datetime)
-    assert isinstance(event.finished_at, datetime.datetime)
-    assert event.type == "tool_usage_finished"
+        # Verify event attributes
+        assert event.agent_key == "test_agent_key"
+        assert event.agent_role == "test_agent_role"
+        assert event.tool_name == "Test Tool"
+        assert event.tool_args == {"arg1": "value1"}
+        assert event.tool_class == "TestTool"
+        assert event.run_attempts == 1  # Default value from ToolUsage
+        assert event.delegations == 0
+        assert event.from_cache is True
+        assert event.output == "cached test output result"
+        assert isinstance(event.started_at, datetime.datetime)
+        assert isinstance(event.finished_at, datetime.datetime)
+        assert event.type == "tool_usage_finished"

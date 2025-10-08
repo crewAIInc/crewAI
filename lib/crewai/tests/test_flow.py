@@ -4,6 +4,8 @@ import asyncio
 from datetime import datetime
 
 import pytest
+from pydantic import BaseModel
+
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.flow_events import (
     FlowFinishedEvent,
@@ -13,7 +15,6 @@ from crewai.events.types.flow_events import (
     MethodExecutionStartedEvent,
 )
 from crewai.flow.flow import Flow, and_, listen, or_, router, start
-from pydantic import BaseModel
 
 
 def test_simple_sequential_flow():
@@ -440,19 +441,21 @@ def test_unstructured_flow_event_emission():
     flow = PoemFlow()
     received_events = []
 
-    @crewai_event_bus.on(FlowStartedEvent)
-    def handle_flow_start(source, event):
-        received_events.append(event)
+    with crewai_event_bus.scoped_handlers():
 
-    @crewai_event_bus.on(MethodExecutionStartedEvent)
-    def handle_method_start(source, event):
-        received_events.append(event)
+        @crewai_event_bus.on(FlowStartedEvent)
+        def handle_flow_start(source, event):
+            received_events.append(event)
 
-    @crewai_event_bus.on(FlowFinishedEvent)
-    def handle_flow_end(source, event):
-        received_events.append(event)
+        @crewai_event_bus.on(MethodExecutionStartedEvent)
+        def handle_method_start(source, event):
+            received_events.append(event)
 
-    flow.kickoff(inputs={"separator": ", "})
+        @crewai_event_bus.on(FlowFinishedEvent)
+        def handle_flow_end(source, event):
+            received_events.append(event)
+
+        flow.kickoff(inputs={"separator": ", "})
     assert isinstance(received_events[0], FlowStartedEvent)
     assert received_events[0].flow_name == "PoemFlow"
     assert received_events[0].inputs == {"separator": ", "}
@@ -642,27 +645,28 @@ def test_structured_flow_event_emission():
             return f"Welcome, {self.state.name}!"
 
     flow = OnboardingFlow()
-    flow.kickoff(inputs={"name": "Anakin"})
 
     received_events = []
 
-    @crewai_event_bus.on(FlowStartedEvent)
-    def handle_flow_start(source, event):
-        received_events.append(event)
+    with crewai_event_bus.scoped_handlers():
 
-    @crewai_event_bus.on(MethodExecutionStartedEvent)
-    def handle_method_start(source, event):
-        received_events.append(event)
+        @crewai_event_bus.on(FlowStartedEvent)
+        def handle_flow_start(source, event):
+            received_events.append(event)
 
-    @crewai_event_bus.on(MethodExecutionFinishedEvent)
-    def handle_method_end(source, event):
-        received_events.append(event)
+        @crewai_event_bus.on(MethodExecutionStartedEvent)
+        def handle_method_start(source, event):
+            received_events.append(event)
 
-    @crewai_event_bus.on(FlowFinishedEvent)
-    def handle_flow_end(source, event):
-        received_events.append(event)
+        @crewai_event_bus.on(MethodExecutionFinishedEvent)
+        def handle_method_end(source, event):
+            received_events.append(event)
 
-    flow.kickoff(inputs={"name": "Anakin"})
+        @crewai_event_bus.on(FlowFinishedEvent)
+        def handle_flow_end(source, event):
+            received_events.append(event)
+
+        flow.kickoff(inputs={"name": "Anakin"})
 
     assert isinstance(received_events[0], FlowStartedEvent)
     assert received_events[0].flow_name == "OnboardingFlow"
@@ -712,23 +716,25 @@ def test_stateless_flow_event_emission():
     flow = StatelessFlow()
     received_events = []
 
-    @crewai_event_bus.on(FlowStartedEvent)
-    def handle_flow_start(source, event):
-        received_events.append(event)
+    with crewai_event_bus.scoped_handlers():
 
-    @crewai_event_bus.on(MethodExecutionStartedEvent)
-    def handle_method_start(source, event):
-        received_events.append(event)
+        @crewai_event_bus.on(FlowStartedEvent)
+        def handle_flow_start(source, event):
+            received_events.append(event)
 
-    @crewai_event_bus.on(MethodExecutionFinishedEvent)
-    def handle_method_end(source, event):
-        received_events.append(event)
+        @crewai_event_bus.on(MethodExecutionStartedEvent)
+        def handle_method_start(source, event):
+            received_events.append(event)
 
-    @crewai_event_bus.on(FlowFinishedEvent)
-    def handle_flow_end(source, event):
-        received_events.append(event)
+        @crewai_event_bus.on(MethodExecutionFinishedEvent)
+        def handle_method_end(source, event):
+            received_events.append(event)
 
-    flow.kickoff()
+        @crewai_event_bus.on(FlowFinishedEvent)
+        def handle_flow_end(source, event):
+            received_events.append(event)
+
+        flow.kickoff()
 
     assert isinstance(received_events[0], FlowStartedEvent)
     assert received_events[0].flow_name == "StatelessFlow"
@@ -770,16 +776,18 @@ def test_flow_plotting():
     flow.kickoff()
     received_events = []
 
-    @crewai_event_bus.on(FlowPlotEvent)
-    def handle_flow_plot(source, event):
-        received_events.append(event)
+    with crewai_event_bus.scoped_handlers():
 
-    flow.plot("test_flow")
+        @crewai_event_bus.on(FlowPlotEvent)
+        def handle_flow_plot(source, event):
+            received_events.append(event)
 
-    assert len(received_events) == 1
-    assert isinstance(received_events[0], FlowPlotEvent)
-    assert received_events[0].flow_name == "StatelessFlow"
-    assert isinstance(received_events[0].timestamp, datetime)
+        flow.plot("test_flow")
+
+        assert len(received_events) == 1
+        assert isinstance(received_events[0], FlowPlotEvent)
+        assert received_events[0].flow_name == "StatelessFlow"
+        assert isinstance(received_events[0].timestamp, datetime)
 
 
 def test_multiple_routers_from_same_trigger():

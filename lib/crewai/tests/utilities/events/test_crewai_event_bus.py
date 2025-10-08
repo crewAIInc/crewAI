@@ -2,6 +2,7 @@ from unittest.mock import Mock
 
 from crewai.events.base_events import BaseEvent
 from crewai.events.event_bus import crewai_event_bus
+from tests.utils import wait_for_event_handlers
 
 
 class TestEvent(BaseEvent):
@@ -17,6 +18,7 @@ def test_specific_event_handler():
 
     event = TestEvent(type="test_event")
     crewai_event_bus.emit("source_object", event)
+    wait_for_event_handlers()
 
     mock_handler.assert_called_once_with("source_object", event)
 
@@ -30,6 +32,7 @@ def test_wildcard_event_handler():
 
     event = TestEvent(type="test_event")
     crewai_event_bus.emit("source_object", event)
+    wait_for_event_handlers()
 
     mock_handler.assert_called_once_with("source_object", event)
 
@@ -41,7 +44,8 @@ def test_event_bus_error_handling(capfd):
 
     event = TestEvent(type="test_event")
     crewai_event_bus.emit("source_object", event)
+    wait_for_event_handlers()
 
-    out, err = capfd.readouterr()
+    out, _ = capfd.readouterr()
     assert "Simulated handler failure" in out
     assert "Handler 'broken_handler' failed" in out
