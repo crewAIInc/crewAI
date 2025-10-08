@@ -160,11 +160,8 @@ def mock_opentelemetry_components():
 
 
 @pytest.fixture(autouse=True)
-def clear_event_bus_handlers(monkeypatch):
-    """Clear event bus handlers before and after each test for isolation.
-
-    Also patches emit() to automatically wait for handlers after emission.
-    """
+def clear_event_bus_handlers():
+    """Clear event bus handlers before and after each test for isolation."""
     from crewai.events.event_bus import crewai_event_bus
     from tests.utils import wait_for_event_handlers
 
@@ -174,17 +171,9 @@ def clear_event_bus_handlers(monkeypatch):
         crewai_event_bus._sync_handlers = {}
         crewai_event_bus._async_handlers = {}
 
-    # Patch emit to wait for handlers in tests
-    original_emit = crewai_event_bus.emit
-
-    def emit_and_wait(source, event):
-        result = original_emit(source, event)
-        wait_for_event_handlers(timeout=0.5)
-        return result
-
-    monkeypatch.setattr(crewai_event_bus, "emit", emit_and_wait)
-
     yield
+
+    wait_for_event_handlers()
 
     with crewai_event_bus._rwlock.w_locked():
         crewai_event_bus._sync_handlers = original_sync
