@@ -702,10 +702,7 @@ class Agent(BaseAgent):
                 current_date = datetime.now().strftime(self.date_format)
                 task.description += f"\n\nCurrent Date: {current_date}"
             except Exception as e:
-                if hasattr(self, "_logger"):
-                    self._logger.log("warning", f"Failed to inject date: {e!s}")
-                else:
-                    print(f"Warning: Failed to inject date: {e!s}")
+                self._logger.log("warning", f"Failed to inject date: {e!s}")
 
     def _validate_docker_installation(self) -> None:
         """Check if Docker is installed and running."""

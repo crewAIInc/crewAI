@@ -45,7 +45,7 @@ class CrewAgentExecutorMixin:
                         },
                     )
             except Exception as e:
-                print(f"Failed to add to short term memory: {e}")
+                self.agent._logger.log("error", f"Failed to add to short term memory: {e}")
 
     def _create_external_memory(self, output) -> None:
         """Create and save a external-term memory item if conditions are met."""
@@ -65,7 +65,7 @@ class CrewAgentExecutorMixin:
                     },
                 )
             except Exception as e:
-                print(f"Failed to add to external memory: {e}")
+                self.agent._logger.log("error", f"Failed to add to external memory: {e}")
 
     def _create_long_term_memory(self, output) -> None:
         """Create and save long-term and entity memory items based on evaluation."""
@@ -110,9 +110,9 @@ class CrewAgentExecutorMixin:
                 if entity_memories:
                     self.crew._entity_memory.save(entity_memories)
             except AttributeError as e:
-                print(f"Missing attributes for long term memory: {e}")
+                self.agent._logger.log("error", f"Missing attributes for long term memory: {e}")
             except Exception as e:
-                print(f"Failed to add to long term memory: {e}")
+                self.agent._logger.log("error", f"Failed to add to long term memory: {e}")
         elif (
             self.crew
             and self.crew._long_term_memory
