@@ -2299,10 +2299,10 @@ def test_get_knowledge_search_query():
         crew = Crew(agents=[agent], tasks=[task])
         crew.kickoff()
 
-        mock_get_query.assert_called_once_with(task_prompt)
+        mock_get_query.assert_called_once_with(task_prompt, task)
 
     with patch.object(agent.llm, "call") as mock_llm_call:
-        agent._get_knowledge_search_query(task_prompt)
+        agent._get_knowledge_search_query(task_prompt, task)
 
         mock_llm_call.assert_called_once_with(
             [
