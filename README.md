@@ -155,6 +155,24 @@ The true power of CrewAI emerges when combining Crews and Flows. This synergy al
 - Handle sophisticated real-world scenarios
 - Maintain clean, maintainable code structure
 
+
+#### Here’s how data and control flow between Crews and Flows:
+
+```mermaid
+flowchart TD
+    A[Flow Start] --> B[Task 1: Collect Data]
+    B --> C{{Crew of Agents}}
+    C -->|Research| C1[Research Agent]
+    C -->|Write| C2[Writer Agent]
+    C -->|Review| C3[Reviewer Agent]
+    C1 --> D[Flow Task 2: Generate Insights]
+    C2 --> D
+    C3 --> D
+    D --> E[Final Output]
+    style C fill:#dbeafe,stroke:#2563eb,stroke-width:2px
+    style A fill:#bbf7d0,stroke:#16a34a
+    style E fill:#fef08a,stroke:#ca8a04
+
 ### Getting Started with Installation
 
 To get started with CrewAI, follow these simple steps:
