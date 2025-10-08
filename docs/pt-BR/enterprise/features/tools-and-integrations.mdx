@@ -43,7 +43,7 @@ Ferramentas & Integrações é o hub central para conectar aplicações de terce
   1. Acesse <Link href="https://app.crewai.com/crewai_plus/connectors">Integrações</Link>
   2. Clique em <b>Conectar</b> no serviço desejado
   3. Conclua o fluxo OAuth e conceda os escopos
-  4. Copie seu Token Enterprise na aba <b>Integração</b>
+  4. Copie seu Token Enterprise em <Link href="https://app.crewai.com/crewai_plus/settings/integrations">Configurações de Integração</Link>
 
   <Frame>
     ![Token Enterprise](/images/enterprise/enterprise_action_auth_token.png)
@@ -60,23 +60,18 @@ Ferramentas & Integrações é o hub central para conectar aplicações de terce
   ### Exemplo de uso
 
   <Tip>
-    Todos os serviços autenticados ficam disponíveis como ferramentas. Adicione `CrewaiEnterpriseTools` ao agente e pronto.
+    Use a nova abordagem simplificada para integrar aplicativos empresariais. Simplesmente especifique o aplicativo e suas ações diretamente na configuração do Agent.
   </Tip>
 
   ```python
   from crewai import Agent, Task, Crew
-  from crewai_tools import CrewaiEnterpriseTools
 
-  enterprise_tools = CrewaiEnterpriseTools(
-      enterprise_token="seu_enterprise_token"
-  )
-  print(enterprise_tools)
-
+  # Crie um agente com capacidades do Gmail
   email_agent = Agent(
       role="Gerente de Email",
       goal="Gerenciar e organizar comunicações por email",
       backstory="Assistente de IA especializado em gestão de emails",
-      tools=enterprise_tools
+      apps=['gmail', 'gmail/send_email']  # Usando nome canônico 'gmail'
   )
 
   email_task = Task(
@@ -92,19 +87,14 @@ Ferramentas & Integrações é o hub central para conectar aplicações de terce
   ### Filtrando ferramentas
 
   ```python
-  from crewai_tools import CrewaiEnterpriseTools
+  from crewai import Agent, Task, Crew
 
-  enterprise_tools = CrewaiEnterpriseTools(
-      actions_list=["gmail_find_email"]
-  )
-
-  gmail_tool = enterprise_tools["gmail_find_email"]
-
+  # Crie agente com ações específicas do Gmail apenas
   gmail_agent = Agent(
       role="Gerente de Gmail",
       goal="Gerenciar comunicações e notificações no Gmail",
       backstory="Assistente de IA para coordenação de emails",
-      tools=[gmail_tool]
+      apps=['gmail/fetch_emails']  # Usando nome canônico com ação específica
   )
 
   notification_task = Task(
