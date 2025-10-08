@@ -161,23 +161,23 @@ def mock_opentelemetry_components():
 
 @pytest.fixture(autouse=True)
 def clear_event_bus_handlers():
-    """Clear event bus handlers before and after each test for isolation."""
+    """Clear event bus handlers after each test for isolation.
+
+    Handlers registered during the test are allowed to run, then cleaned up
+    after the test completes.
+    """
     from crewai.events.event_bus import crewai_event_bus
     from tests.utils import wait_for_event_handlers
 
-    with crewai_event_bus._rwlock.w_locked():
-        original_sync = dict(crewai_event_bus._sync_handlers)
-        original_async = dict(crewai_event_bus._async_handlers)
-        crewai_event_bus._sync_handlers = {}
-        crewai_event_bus._async_handlers = {}
-
     yield
 
+    # Wait for all handlers to complete before cleanup
     wait_for_event_handlers()
 
+    # Clear all handlers after test completes
     with crewai_event_bus._rwlock.w_locked():
-        crewai_event_bus._sync_handlers = original_sync
-        crewai_event_bus._async_handlers = original_async
+        crewai_event_bus._sync_handlers = {}
+        crewai_event_bus._async_handlers = {}
 
 
 @pytest.fixture(scope="module")
