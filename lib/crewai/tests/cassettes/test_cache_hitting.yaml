@@ -1021,17 +1021,17 @@ interactions:
     http_version: HTTP/1.1
     status_code: 200
 - request:
-    body: '{"trace_id": "536873bc-0594-4704-8cb8-b472646588d7", "execution_type":
+    body: '{"trace_id": "6aa59ffd-5c0f-4f55-ad5c-97bb5d893ed1", "execution_type":
       "crew", "user_identifier": null, "execution_context": {"crew_fingerprint": null,
-      "crew_name": "Unknown Crew", "flow_name": null, "crewai_version": "0.193.2",
+      "crew_name": "Unknown Crew", "flow_name": null, "crewai_version": "0.201.1",
       "privacy_level": "standard"}, "execution_metadata": {"expected_duration_estimate":
       300, "agent_count": 0, "task_count": 0, "flow_method_count": 0, "execution_started_at":
-      "2025-09-23T17:28:26.633211+00:00"}}'
+      "2025-10-08T18:16:45.561840+00:00"}}'
     headers:
       Accept:
       - '*/*'
       Accept-Encoding:
-      - gzip, deflate
+      - gzip, deflate, zstd
       Connection:
       - keep-alive
       Content-Length:
@@ -1039,42 +1039,60 @@ interactions:
       Content-Type:
       - application/json
       User-Agent:
-      - CrewAI-CLI/0.193.2
+      - CrewAI-CLI/0.201.1
+      X-Crewai-Organization-Id:
+      - d3a3d10c-35db-423f-a7a4-c026030ba64d
       X-Crewai-Version:
-      - 0.193.2
+      - 0.201.1
     method: POST
     uri: http://localhost:3000/crewai_plus/api/v1/tracing/batches
   response:
     body:
-      string: '{"error":"bad_credentials","message":"Bad credentials"}'
+      string: '{"id":"9d9c5be4-2612-4721-b7d4-df616fb7dc65","trace_id":"6aa59ffd-5c0f-4f55-ad5c-97bb5d893ed1","execution_type":"crew","crew_name":"Unknown
+        Crew","flow_name":null,"status":"running","duration_ms":null,"crewai_version":"0.201.1","privacy_level":"standard","total_events":0,"execution_context":{"crew_fingerprint":null,"crew_name":"Unknown
+        Crew","flow_name":null,"crewai_version":"0.201.1","privacy_level":"standard"},"created_at":"2025-10-08T18:16:45.966Z","updated_at":"2025-10-08T18:16:45.966Z"}'
     headers:
       Content-Length:
-      - '55'
+      - '496'
       cache-control:
-      - no-cache
+      - no-store
       content-security-policy:
       - 'default-src ''self'' *.crewai.com crewai.com; script-src ''self'' ''unsafe-inline''
         *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts https://www.gstatic.com
-        https://run.pstmn.io https://share.descript.com/; style-src ''self'' ''unsafe-inline''
-        *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts; img-src ''self''
-        data: *.crewai.com crewai.com https://zeus.tools.crewai.com https://dashboard.tools.crewai.com
-        https://cdn.jsdelivr.net; font-src ''self'' data: *.crewai.com crewai.com;
-        connect-src ''self'' *.crewai.com crewai.com https://zeus.tools.crewai.com
-        https://connect.useparagon.com/ https://zeus.useparagon.com/* https://*.useparagon.com/*
-        https://run.pstmn.io https://connect.tools.crewai.com/ ws://localhost:3036
-        wss://localhost:3036; frame-src ''self'' *.crewai.com crewai.com https://connect.useparagon.com/
+        https://run.pstmn.io https://apis.google.com https://apis.google.com/js/api.js
+        https://accounts.google.com https://accounts.google.com/gsi/client https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css.map
+        https://*.google.com https://docs.google.com https://slides.google.com https://js.hs-scripts.com
+        https://js.sentry-cdn.com https://browser.sentry-cdn.com https://www.googletagmanager.com
+        https://js-na1.hs-scripts.com https://share.descript.com/; style-src ''self''
+        ''unsafe-inline'' *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts;
+        img-src ''self'' data: *.crewai.com crewai.com https://zeus.tools.crewai.com
+        https://dashboard.tools.crewai.com https://cdn.jsdelivr.net; font-src ''self''
+        data: *.crewai.com crewai.com; connect-src ''self'' *.crewai.com crewai.com
+        https://zeus.tools.crewai.com https://connect.useparagon.com/ https://zeus.useparagon.com/*
+        https://*.useparagon.com/* https://run.pstmn.io https://connect.tools.crewai.com/
+        https://*.sentry.io https://www.google-analytics.com ws://localhost:3036 wss://localhost:3036;
+        frame-src ''self'' *.crewai.com crewai.com https://connect.useparagon.com/
         https://zeus.tools.crewai.com https://zeus.useparagon.com/* https://connect.tools.crewai.com/
-        https://www.youtube.com https://share.descript.com'
+        https://docs.google.com https://drive.google.com https://slides.google.com
+        https://accounts.google.com https://*.google.com https://www.youtube.com https://share.descript.com'
       content-type:
       - application/json; charset=utf-8
+      etag:
+      - W/"fabe87dad5d5b75ee1a722775d110c28"
+      expires:
+      - '0'
       permissions-policy:
       - camera=(), microphone=(self), geolocation=()
+      pragma:
+      - no-cache
       referrer-policy:
       - strict-origin-when-cross-origin
       server-timing:
-      - cache_read.active_support;dur=1.37, sql.active_record;dur=84.33, cache_generate.active_support;dur=79.11,
-        cache_write.active_support;dur=0.37, cache_read_multi.active_support;dur=0.72,
-        start_processing.action_controller;dur=0.01, process_action.action_controller;dur=3.98
+      - cache_read.active_support;dur=0.06, sql.active_record;dur=20.50, cache_generate.active_support;dur=2.72,
+        cache_write.active_support;dur=0.16, cache_read_multi.active_support;dur=0.12,
+        start_processing.action_controller;dur=0.00, instantiation.active_record;dur=0.34,
+        feature_operation.flipper;dur=0.05, start_transaction.active_record;dur=0.01,
+        transaction.active_record;dur=10.38, process_action.action_controller;dur=357.12
       vary:
       - Accept
       x-content-type-options:
@@ -1084,12 +1102,12 @@ interactions:
       x-permitted-cross-domain-policies:
       - none
       x-request-id:
-      - 9f97e8a2-2b71-443a-9097-ba9f2da1d11d
+      - 7acd0c51-080b-40ac-90df-b74125aaaa95
       x-runtime:
-      - '0.211463'
+      - '0.409345'
       x-xss-protection:
       - 1; mode=block
     status:
-      code: 401
-      message: Unauthorized
+      code: 201
+      message: Created
 version: 1

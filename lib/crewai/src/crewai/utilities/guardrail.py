@@ -7,7 +7,9 @@ from pydantic import BaseModel, Field, field_validator
 from typing_extensions import Self
 
 if TYPE_CHECKING:
-    from crewai.lite_agent import LiteAgentOutput
+    from crewai.agents.agent_builder.base_agent import BaseAgent
+    from crewai.lite_agent import LiteAgent, LiteAgentOutput
+    from crewai.task import Task
     from crewai.tasks.task_output import TaskOutput
 
 
@@ -79,6 +81,8 @@ def process_guardrail(
     guardrail: Callable[[Any], tuple[bool, Any | str]],
     retry_count: int,
     event_source: Any | None = None,
+    from_agent: BaseAgent | LiteAgent | None = None,
+    from_task: Task | None = None,
 ) -> GuardrailResult:
     """Process the guardrail for the agent output.
 
@@ -111,7 +115,12 @@ def process_guardrail(
 
     crewai_event_bus.emit(
         event_source,
-        LLMGuardrailStartedEvent(guardrail=guardrail, retry_count=retry_count),
+        LLMGuardrailStartedEvent(
+            guardrail=guardrail,
+            retry_count=retry_count,
+            from_agent=from_agent,
+            from_task=from_task,
+        ),
     )
 
     result = guardrail(output)
@@ -124,6 +133,8 @@ def process_guardrail(
             result=guardrail_result.result,
             error=guardrail_result.error,
             retry_count=retry_count,
+            from_agent=from_agent,
+            from_task=from_task,
         ),
     )
 

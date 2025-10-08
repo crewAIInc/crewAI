@@ -3,6 +3,7 @@ from collections.abc import Callable
 import inspect
 from typing import (
     Any,
+    Literal,
     cast,
     get_args,
     get_origin,
@@ -62,6 +63,7 @@ from crewai.utilities.llm_utils import create_llm
 from crewai.utilities.printer import Printer
 from crewai.utilities.token_counter_callback import TokenCalcHandler
 from crewai.utilities.tool_utils import execute_tool_and_check_finality
+from crewai.utilities.types import LLMMessage
 
 
 class LiteAgentOutput(BaseModel):
@@ -180,7 +182,7 @@ class LiteAgent(FlowTrackable, BaseModel):
     _token_process: TokenProcess = PrivateAttr(default_factory=TokenProcess)
     _cache_handler: CacheHandler = PrivateAttr(default_factory=CacheHandler)
     _key: str = PrivateAttr(default_factory=lambda: str(uuid.uuid4()))
-    _messages: list[dict[str, str]] = PrivateAttr(default_factory=list)
+    _messages: list[LLMMessage] = PrivateAttr(default_factory=list)
     _iterations: int = PrivateAttr(default=0)
     _printer: Printer = PrivateAttr(default_factory=Printer)
     _guardrail: Callable | None = PrivateAttr(default=None)
@@ -219,7 +221,6 @@ class LiteAgent(FlowTrackable, BaseModel):
                 raise TypeError(
                     f"Guardrail requires LLM instance of type BaseLLM, got {type(self.llm).__name__}"
                 )
-
             self._guardrail = LLMGuardrail(description=self.guardrail, llm=self.llm)
 
         return self
@@ -276,7 +277,7 @@ class LiteAgent(FlowTrackable, BaseModel):
         """Return the original role for compatibility with tool interfaces."""
         return self.role
 
-    def kickoff(self, messages: str | list[dict[str, str]]) -> LiteAgentOutput:
+    def kickoff(self, messages: str | list[LLMMessage]) -> LiteAgentOutput:
         """
         Execute the agent with the given messages.
 
@@ -371,6 +372,7 @@ class LiteAgent(FlowTrackable, BaseModel):
                 guardrail=self._guardrail,
                 retry_count=self._guardrail_retry_count,
                 event_source=self,
+                from_agent=self,
             )
 
             if not guardrail_result.success:
@@ -420,9 +422,7 @@ class LiteAgent(FlowTrackable, BaseModel):
 
         return output
 
-    async def kickoff_async(
-        self, messages: str | list[dict[str, str]]
-    ) -> LiteAgentOutput:
+    async def kickoff_async(self, messages: str | list[LLMMessage]) -> LiteAgentOutput:
         """
         Execute the agent asynchronously with the given messages.
 
@@ -467,9 +467,7 @@ class LiteAgent(FlowTrackable, BaseModel):
 
         return base_prompt
 
-    def _format_messages(
-        self, messages: str | list[dict[str, str]]
-    ) -> list[dict[str, str]]:
+    def _format_messages(self, messages: str | list[LLMMessage]) -> list[LLMMessage]:
         """Format messages for the LLM."""
         if isinstance(messages, str):
             messages = [{"role": "user", "content": messages}]
@@ -477,7 +475,9 @@ class LiteAgent(FlowTrackable, BaseModel):
         system_prompt = self._get_default_system_prompt()
 
         # Add system message at the beginning
-        formatted_messages = [{"role": "system", "content": system_prompt}]
+        formatted_messages: list[LLMMessage] = [
+            {"role": "system", "content": system_prompt}
+        ]
 
         # Add the rest of the messages
         formatted_messages.extend(messages)
@@ -589,6 +589,8 @@ class LiteAgent(FlowTrackable, BaseModel):
             ),
         )
 
-    def _append_message(self, text: str, role: str = "assistant") -> None:
+    def _append_message(
+        self, text: str, role: Literal["user", "assistant", "system"] = "assistant"
+    ) -> None:
         """Append a message to the message list with the given role."""
-        self._messages.append(format_message_for_llm(text, role=role))
+        self._messages.append(cast(LLMMessage, format_message_for_llm(text, role=role)))
