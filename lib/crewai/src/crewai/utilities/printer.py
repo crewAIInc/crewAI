@@ -64,7 +64,7 @@ class Printer:
         """
         if isinstance(content, str):
             content = [ColoredText(content, color)]
-        print(
+        print(  # noqa: T201
             "".join(
                 f"{_COLOR_CODES[c.color] if c.color else ''}{c.text}{RESET}"
                 for c in content
