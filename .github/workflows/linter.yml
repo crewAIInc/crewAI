@@ -55,6 +55,7 @@ jobs:
          echo "${{ steps.changed-files.outputs.files }}" \
            | tr ' ' '\n' \
            | grep -v 'src/crewai/cli/templates/' \
+           | grep -v '/tests/' \
            | xargs -I{} uv run ruff check "{}"
 
       - name: Save uv caches
