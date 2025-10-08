@@ -156,7 +156,10 @@ The true power of CrewAI emerges when combining Crews and Flows. This synergy al
 - Maintain clean, maintainable code structure
 
 
-#### Here’s how data and control flow between Crews and Flows:
+### Understanding Data Flow Between Crews and Flows
+
+CrewAI combines *Crews* (autonomous multi-agent collaboration) and *Flows* (structured, production-grade orchestration).  
+This diagram shows how data moves between them:
 
 ```mermaid
 flowchart TD
@@ -172,6 +175,7 @@ flowchart TD
     style C fill:#dbeafe,stroke:#2563eb,stroke-width:2px
     style A fill:#bbf7d0,stroke:#16a34a
     style E fill:#fef08a,stroke:#ca8a04
+
 
 ### Getting Started with Installation
 
