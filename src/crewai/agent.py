@@ -354,7 +354,6 @@ class Agent(BaseAgent):
                 crewai_event_bus.emit(
                     self,
                     event=KnowledgeRetrievalStartedEvent(
-                        task_id=str(task.id) if task else None,
                         from_task=task,
                         from_agent=self,
                     ),
@@ -389,7 +388,6 @@ class Agent(BaseAgent):
                             query=self.knowledge_search_query,
                             from_task=task,
                             from_agent=self,
-                            task_id=str(task.id) if task else None,
                             retrieved_knowledge=(
                                 (self.agent_knowledge_context or "")
                                 + (
@@ -408,7 +406,6 @@ class Agent(BaseAgent):
                     event=KnowledgeSearchQueryFailedEvent(
                         query=self.knowledge_search_query or "",
                         error=str(e),
-                        task_id=str(task.id) if task else None,
                         from_task=task,
                         from_agent=self,
                     ),
@@ -740,7 +737,6 @@ class Agent(BaseAgent):
             self,
             event=KnowledgeQueryStartedEvent(
                 task_prompt=task_prompt,
-                task_id=str(task.id) if task else None,
                 from_task=task,
                 from_agent=self,
             ),
@@ -758,7 +754,6 @@ class Agent(BaseAgent):
                 self,
                 event=KnowledgeQueryFailedEvent(
                     error="LLM is not compatible with knowledge search queries",
-                    task_id=str(task.id) if task else None,
                     from_task=task,
                     from_agent=self,
                 ),
@@ -779,7 +774,6 @@ class Agent(BaseAgent):
                 self,
                 event=KnowledgeQueryCompletedEvent(
                     query=query,
-                    task_id=str(task.id) if task else None,
                     from_task=task,
                     from_agent=self,
                 ),
@@ -790,7 +784,6 @@ class Agent(BaseAgent):
                 self,
                 event=KnowledgeQueryFailedEvent(
                     error=str(e),
-                    task_id=str(task.id) if task else None,
                     from_task=task,
                     from_agent=self,
                 ),
