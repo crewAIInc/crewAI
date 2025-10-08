@@ -162,6 +162,7 @@ CrewAI combines *Crews* (autonomous multi-agent collaboration) and *Flows* (stru
 This diagram shows how data moves between them:
 
 ```mermaid
+
 flowchart TD
     A[Flow Start] --> B[Task 1: Collect Data]
     B --> C{{Crew of Agents}}
