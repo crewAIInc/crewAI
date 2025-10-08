@@ -31,7 +31,10 @@ dev = [
 [tool.ruff]
 exclude = [
     "lib/crewai/src/crewai/cli/templates",
+    "lib/crewai/tests/",
+    "lib/crewai-tools/tests/",
 ]
+force-exclude = true
 fix = true
 target-version = "py310"
 
