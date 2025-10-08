@@ -177,6 +177,7 @@ flowchart TD
     style A fill:#bbf7d0,stroke:#16a34a
     style E fill:#fef08a,stroke:#ca8a04
 
+```
 
 ### Getting Started with Installation
 
