@@ -58,6 +58,7 @@ def _default_embedding_function() -> ChromaEmbeddingFunctionWrapper:
         OpenAIEmbeddingFunction(
             api_key=os.getenv("OPENAI_API_KEY"),
             model_name="text-embedding-3-small",
+            api_key_env_var="OPENAI_API_KEY",
         ),
     )
 
