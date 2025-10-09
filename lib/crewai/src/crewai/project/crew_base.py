@@ -8,9 +8,11 @@ import yaml
 from dotenv import load_dotenv
 
 from crewai.tools import BaseTool
+from crewai.utilities.printer import Printer
 
 load_dotenv()
 
+_printer = Printer()
 T = TypeVar("T", bound=type)
 
 """Base decorator for creating crew classes with configuration and function management."""
@@ -148,7 +150,7 @@ def CrewBase(cls: T) -> T:  # noqa: N802
                 with open(config_path, "r", encoding="utf-8") as file:
                     return yaml.safe_load(file)
             except FileNotFoundError:
-                print(f"File not found: {config_path}")
+                _printer.print(f"File not found: {config_path}", color="red")
                 raise
 
         def _get_all_functions(self):

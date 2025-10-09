@@ -14,6 +14,9 @@ from crewai.flow.visualization_utils import (
     add_nodes_to_network,
     compute_positions,
 )
+from crewai.utilities.printer import Printer
+
+_printer = Printer()
 
 
 class FlowPlot:
@@ -128,7 +131,7 @@ class FlowPlot:
             try:
                 with open(f"{filename}.html", "w", encoding="utf-8") as f:
                     f.write(final_html_content)
-                print(f"Plot saved as {filename}.html")
+                _printer.print(f"Plot saved as {filename}.html", color="green")
             except IOError as e:
                 raise IOError(
                     f"Failed to save flow visualization to {filename}.html: {e!s}"
@@ -204,9 +207,9 @@ class FlowPlot:
 
                 shutil.rmtree(lib_folder)
         except ValueError as e:
-            print(f"Error validating lib folder path: {e}")
+            _printer.print(f"Error validating lib folder path: {e}", color="red")
         except Exception as e:
-            print(f"Error cleaning up lib folder: {e}")
+            _printer.print(f"Error cleaning up lib folder: {e}", color="red")
 
 
 def plot_flow(flow, filename="flow_plot"):

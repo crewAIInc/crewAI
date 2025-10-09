@@ -1,8 +1,11 @@
 import random
 
+from patronus import Client, EvaluationResult  # type: ignore[import-not-found]
+from patronus_local_evaluator_tool import (  # type: ignore[import-not-found]
+    PatronusLocalEvaluatorTool,
+)
+
 from crewai import Agent, Crew, Task
-from patronus import Client, EvaluationResult
-from patronus_local_evaluator_tool import PatronusLocalEvaluatorTool
 
 
 # Test the PatronusLocalEvaluatorTool where agent uses the local evaluator
@@ -12,7 +15,7 @@ client = Client()
 # Example of an evaluator that returns a random pass/fail result
 @client.register_local_evaluator("random_evaluator")
 def random_evaluator(**kwargs):
-    score = random.random()
+    score = random.random()  # noqa: S311
     return EvaluationResult(
         score_raw=score,
         pass_=score >= 0.5,

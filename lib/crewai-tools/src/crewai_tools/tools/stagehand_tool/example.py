@@ -17,11 +17,15 @@ Usage:
 
 import os
 
-from crewai import Agent, Crew, Process, Task
+from crewai.utilities.printer import Printer
 from dotenv import load_dotenv
-from stagehand.schemas import AvailableModel
+from stagehand.schemas import AvailableModel  # type: ignore[import-untyped]
 
+from crewai import Agent, Crew, Process, Task
 from crewai_tools import StagehandTool
+
+
+_printer = Printer()
 
 
 # Load environment variables from .env file
@@ -111,7 +115,7 @@ with StagehandTool(
     # Run the crew and get the result
     result = crew.kickoff()
 
-    print("\n==== RESULTS ====\n")
-    print(result)
+    _printer.print("\n==== RESULTS ====\n", color="cyan")
+    _printer.print(str(result))
 
 # Resources are automatically cleaned up when exiting the context manager

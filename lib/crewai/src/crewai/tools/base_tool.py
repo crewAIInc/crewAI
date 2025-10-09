@@ -14,6 +14,9 @@ from pydantic import (
 from pydantic import BaseModel as PydanticBaseModel
 
 from crewai.tools.structured_tool import CrewStructuredTool
+from crewai.utilities.printer import Printer
+
+_printer = Printer()
 
 
 class EnvVar(BaseModel):
@@ -85,7 +88,7 @@ class BaseTool(BaseModel, ABC):
         *args: Any,
         **kwargs: Any,
     ) -> Any:
-        print(f"Using Tool: {self.name}")
+        _printer.print(f"Using Tool: {self.name}", color="cyan")
         result = self._run(*args, **kwargs)
 
         # If _run is async, we safely run it

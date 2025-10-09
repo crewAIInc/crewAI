@@ -53,6 +53,7 @@ from crewai.task import Task
 from crewai.telemetry.telemetry import Telemetry
 from crewai.utilities import Logger
 from crewai.utilities.constants import EMITTER_COLOR
+from crewai.utilities.printer import Printer
 
 from .listeners.memory_listener import MemoryListener
 from .types.flow_events import (
@@ -74,6 +75,8 @@ from .types.tool_usage_events import (
     ToolUsageFinishedEvent,
     ToolUsageStartedEvent,
 )
+
+_printer = Printer()
 
 
 class EventListener(BaseEventListener):
@@ -383,7 +386,7 @@ class EventListener(BaseEventListener):
 
             # Read from the in-memory stream
             content = self.text_stream.read()
-            print(content, end="", flush=True)
+            _printer.print(content, end="", flush=True)
             self.next_chunk = self.text_stream.tell()
 
         # ----------- LLM GUARDRAIL EVENTS -----------

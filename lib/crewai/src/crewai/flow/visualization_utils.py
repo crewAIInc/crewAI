@@ -19,12 +19,16 @@ import ast
 import inspect
 from typing import Any
 
+from crewai.utilities.printer import Printer
+
 from .utils import (
     build_ancestor_dict,
     build_parent_children_dict,
     get_child_index,
     is_ancestor,
 )
+
+_printer = Printer()
 
 
 def method_calls_crew(method: Any) -> bool:
@@ -51,7 +55,7 @@ def method_calls_crew(method: Any) -> bool:
         source = inspect.cleandoc(source)
         tree = ast.parse(source)
     except Exception as e:
-        print(f"Could not parse method {method.__name__}: {e}")
+        _printer.print(f"Could not parse method {method.__name__}: {e}", color="red")
         return False
 
     class CrewCallVisitor(ast.NodeVisitor):
@@ -263,8 +267,9 @@ def add_edges(
                 # If it's a known router edge and the method is known, don't warn.
                 # This means the path is legitimate, just not reflected as nodes here.
                 if not (is_router_edge and method_known):
-                    print(
-                        f"Warning: No node found for '{trigger}' or '{method_name}'. Skipping edge."
+                    _printer.print(
+                        f"Warning: No node found for '{trigger}' or '{method_name}'. Skipping edge.",
+                        color="yellow",
                     )
 
     # Edges for router return paths
@@ -318,6 +323,7 @@ def add_edges(
                         # Same check here: known router edge and known method?
                         method_known = listener_name in flow._methods
                         if not method_known:
-                            print(
-                                f"Warning: No node found for '{router_method_name}' or '{listener_name}'. Skipping edge."
+                            _printer.print(
+                                f"Warning: No node found for '{router_method_name}' or '{listener_name}'. Skipping edge.",
+                                color="yellow",
                             )

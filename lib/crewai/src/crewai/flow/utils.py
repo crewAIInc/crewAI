@@ -19,6 +19,10 @@ import textwrap
 from collections import defaultdict, deque
 from typing import Any
 
+from crewai.utilities.printer import Printer
+
+_printer = Printer()
+
 
 def get_possible_return_constants(function: Any) -> list[str] | None:
     try:
@@ -27,7 +31,7 @@ def get_possible_return_constants(function: Any) -> list[str] | None:
         # Can't get source code
         return None
     except Exception as e:
-        print(f"Error retrieving source code for function {function.__name__}: {e}")
+        _printer.print(f"Error retrieving source code for function {function.__name__}: {e}", color="red")
         return None
 
     try:
@@ -36,16 +40,16 @@ def get_possible_return_constants(function: Any) -> list[str] | None:
         # Parse the source code into an AST
         code_ast = ast.parse(source)
     except IndentationError as e:
-        print(f"IndentationError while parsing source code of {function.__name__}: {e}")
-        print(f"Source code:\n{source}")
+        _printer.print(f"IndentationError while parsing source code of {function.__name__}: {e}", color="red")
+        _printer.print(f"Source code:\n{source}", color="yellow")
         return None
     except SyntaxError as e:
-        print(f"SyntaxError while parsing source code of {function.__name__}: {e}")
-        print(f"Source code:\n{source}")
+        _printer.print(f"SyntaxError while parsing source code of {function.__name__}: {e}", color="red")
+        _printer.print(f"Source code:\n{source}", color="yellow")
         return None
     except Exception as e:
-        print(f"Unexpected error while parsing source code of {function.__name__}: {e}")
-        print(f"Source code:\n{source}")
+        _printer.print(f"Unexpected error while parsing source code of {function.__name__}: {e}", color="red")
+        _printer.print(f"Source code:\n{source}", color="yellow")
         return None
 
     return_values = set()

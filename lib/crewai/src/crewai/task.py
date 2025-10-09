@@ -47,6 +47,8 @@ from crewai.utilities.i18n import I18N
 from crewai.utilities.printer import Printer
 from crewai.utilities.string_utils import interpolate_only
 
+_printer = Printer()
+
 
 class Task(BaseModel):
     """Class that represents a task to be executed.
@@ -626,7 +628,7 @@ Follow these guidelines:
             try:
                 crew_chat_messages = json.loads(crew_chat_messages_json)
             except json.JSONDecodeError as e:
-                print("An error occurred while parsing crew chat messages:", e)
+                _printer.print(f"An error occurred while parsing crew chat messages: {e}", color="red")
                 raise
 
             conversation_history = "\n".join(

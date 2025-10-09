@@ -33,7 +33,7 @@ class EnterpriseConfigureCommand(BaseCommand):
             console.print(
                 f"❌ Failed to configure Enterprise settings: {e!s}", style="bold red"
             )
-            raise SystemExit(1)
+            raise SystemExit(1) from e
 
     def _fetch_oauth_config(self, enterprise_url: str) -> Dict[str, Any]:
         oauth_endpoint = f"{enterprise_url}/auth/parameters"
@@ -50,8 +50,8 @@ class EnterpriseConfigureCommand(BaseCommand):
 
             try:
                 oauth_config = response.json()
-            except JSONDecodeError:
-                raise ValueError(f"Invalid JSON response from {oauth_endpoint}")
+            except JSONDecodeError as e:
+                raise ValueError(f"Invalid JSON response from {oauth_endpoint}") from e
 
             required_fields = [
                 "audience",

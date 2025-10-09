@@ -27,7 +27,7 @@ class PlusAPIMixin:
                 style="bold red",
             )
             console.print("Run 'crewai login' to sign up/login.", style="bold green")
-            raise SystemExit
+            raise SystemExit from None
 
     def _validate_response(self, response: requests.Response) -> None:
         """
@@ -45,7 +45,7 @@ class PlusAPIMixin:
             )
             console.print(f"Status Code: {response.status_code}")
             console.print(f"Response:\n{response.content}")
-            raise SystemExit
+            raise SystemExit from None
 
         if response.status_code == 422:
             console.print(

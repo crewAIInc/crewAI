@@ -17,6 +17,9 @@ from crewai.crew import Crew
 from crewai.llm import LLM, BaseLLM
 from crewai.types.crew_chat import ChatInputField, ChatInputs
 from crewai.utilities.llm_utils import create_llm
+from crewai.utilities.printer import Printer
+
+_printer = Printer()
 
 MIN_REQUIRED_VERSION = "0.98.0"
 
@@ -111,9 +114,9 @@ def run_chat():
 def show_loading(event: threading.Event):
     """Display animated loading dots while processing."""
     while not event.is_set():
-        print(".", end="", flush=True)
+        _printer.print(".", end="", flush=True)
         time.sleep(1)
-    print()
+    _printer.print()
 
 
 def initialize_chat_llm(crew: Crew) -> LLM | BaseLLM | None:
