@@ -110,19 +110,49 @@ CrewAI AMP 트리거는 팀이 이미 사용하고 있는 도구의 실시간 �
 - `allow_crewai_trigger_context` 옵션으로 컨텍스트 자동 주입 여부를 결정했나요?
 - 웹훅 로그, CrewAI 실행 기록, 외부 알림 등 모니터링을 준비했나요?
 
-### Payload & Crew 예제 저장소
+### CLI로 로컬에서 트리거 테스트
 
-| 통합 | 동작 시점 | Payload 예제 | Crew 예제 |
-| :-- | :-- | :-- | :-- |
-| Gmail | 신규 메일, 스레드 업데이트 | [Gmail payload](https://github.com/crewAIInc/crewai-enterprise-trigger-examples/tree/main/gmail) | [`new-email-crew.py`, `gmail-alert-crew.py`](https://github.com/crewAIInc/crewai-enterprise-trigger-examples/tree/main/gmail) |
-| Google Calendar | 이벤트 생성/수정/시작/종료/취소 | [Calendar payload](https://github.com/crewAIInc/crewai-enterprise-trigger-examples/tree/main/google_calendar) | [`calendar-event-crew.py`, `calendar-meeting-crew.py`, `calendar-working-location-crew.py`](https://github.com/crewAIInc/crewai-enterprise-trigger-examples/tree/main/google_calendar) |
-| Google Drive | 파일 생성/수정/삭제 | [Drive payload](https://github.com/crewAIInc/crewai-enterprise-trigger-examples/tree/main/google_drive) | [`drive-file-crew.py`, `drive-file-deletion-crew.py`](https://github.com/crewAIInc/crewai-enterprise-trigger-examples/tree/main/google_drive) |
-| Outlook | 새 이메일, 이벤트 제거 | [Outlook payload](https://github.com/crewAIInc/crewai-enterprise-trigger-examples/tree/main/outlook) | [`outlook-message-crew.py`, `outlook-event-removal-crew.py`](https://github.com/crewAIInc/crewai-enterprise-trigger-examples/tree/main/outlook) |
-| OneDrive | 파일 작업(생성, 수정, 공유, 삭제) | [OneDrive payload](https://github.com/crewAIInc/crewai-enterprise-trigger-examples/tree/main/onedrive) | [`onedrive-file-crew.py`](https://github.com/crewAIInc/crewai-enterprise-trigger-examples/tree/main/onedrive) |
-| HubSpot | 레코드 생성/업데이트(연락처, 회사, 딜) | [HubSpot payload](https://github.com/crewAIInc/crewai-enterprise-trigger-examples/tree/main/hubspot) | [`hubspot-company-crew.py`, `hubspot-contact-crew.py`, `hubspot-record-crew.py`](https://github.com/crewAIInc/crewai-enterprise-trigger-examples/tree/main/hubspot) |
-| Microsoft Teams | 채팅 생성 | [Teams payload](https://github.com/crewAIInc/crewai-enterprise-trigger-examples/tree/main/microsoft-teams) | [`teams-chat-created-crew.py`](https://github.com/crewAIInc/crewai-enterprise-trigger-examples/tree/main/microsoft-teams) |
+CrewAI CLI는 프로덕션에 배포하기 전에 트리거 기반 자동화를 개발하고 테스트할 수 있는 강력한 명령을 제공합니다.
 
-예제 payload를 참고해 파싱 로직을 검증하고, 제공되는 crew를 복사해 실제 데이터로 교체하세요.
+#### 사용 가능한 트리거 목록 보기
+
+연결된 통합에 사용 가능한 모든 트리거를 확인하세요:
+
+```bash
+crewai triggers list
+```
+
+이 명령은 연결된 통합을 기반으로 사용 가능한 모든 트리거를 표시합니다:
+- 통합 이름 및 연결 상태
+- 사용 가능한 트리거 유형
+- 트리거 이름 및 설명
+
+#### 트리거 실행 시뮬레이션
+
+배포 전에 실제 트리거 payload로 크루를 테스트하세요:
+
+```bash
+crewai triggers run <트리거_이름>
+```
+
+예시:
+
+```bash
+crewai triggers run microsoft_onedrive/file_changed
+```
+
+이 명령은:
+- 로컬에서 크루를 실행합니다
+- 완전하고 실제적인 트리거 payload를 전달합니다
+- 프로덕션에서 크루가 호출되는 방식을 정확히 시뮬레이션합니다
+
+<Warning>
+  **중요한 개발 노트:**
+  - 개발 중 트리거 실행을 시뮬레이션하려면 `crewai triggers run <trigger>`를 사용하세요
+  - `crewai run`을 사용하면 트리거 호출을 시뮬레이션하지 않으며 트리거 payload를 전달하지 않습니다
+  - 배포 후에는 실제 트리거 payload로 크루가 실행됩니다
+  - 크루가 트리거 payload에 없는 매개변수를 기대하면 실행이 실패할 수 있습니다
+</Warning>
 
 ### 트리거와 Crew 연동
 
@@ -191,17 +221,20 @@ def delegate_to_crew(self, crewai_trigger_payload: dict = None):
 ## 문제 해결
 
 **트리거가 실행되지 않나요?**
-- 트리거가 활성 상태인지 확인하세요.
-- 통합 연결 상태를 확인하세요.
+- 배포의 Triggers 탭에서 트리거가 활성화되어 있는지 확인하세요
+- Tools & Integrations에서 통합 연결 상태를 확인하세요
+- 필요한 모든 환경 변수가 올바르게 구성되어 있는지 확인하세요
 
 **실행 중 오류가 발생하나요?**
-- 실행 로그에서 오류 메시지를 확인하세요.
-- 개발 중이라면 `crewai_trigger_payload`가 올바른 데이터로 전달되고 있는지 확인하세요.
+- 실행 로그에서 오류 세부 정보를 확인하세요
+- `crewai triggers run <트리거_이름>`을 사용하여 로컬에서 테스트하고 정확한 payload 구조를 확인하세요
+- 크루가 `crewai_trigger_payload` 매개변수를 처리할 수 있는지 확인하세요
+- 크루가 트리거 payload에 포함되지 않은 매개변수를 기대하지 않는지 확인하세요
+
+**개발 문제:**
+- 배포하기 전에 항상 `crewai triggers run <trigger>`로 테스트하여 전체 payload를 확인하세요
+- `crewai run`은 트리거 호출을 시뮬레이션하지 않으므로 `crewai triggers run`을 대신 사용하세요
+- `crewai triggers list`를 사용하여 연결된 통합에 사용 가능한 트리거를 확인하세요
+- 배포 후 크루는 실제 트리거 payload를 받으므로 먼저 로컬에서 철저히 테스트하세요
 
 트리거를 활용하면 CrewAI 자동화를 이벤트 기반 시스템으로 전환하여 기존 비즈니스 프로세스와 도구에 자연스럽게 녹여낼 수 있습니다.
-
-<Callout icon="github" title="예제 저장소">
-  <a href="https://github.com/crewAIInc/crewai-enterprise-trigger-examples">
-    CrewAI AMP Trigger Examples
-  </a>
-</Callout>
