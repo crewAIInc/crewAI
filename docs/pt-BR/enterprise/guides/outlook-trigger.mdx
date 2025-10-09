@@ -36,17 +36,28 @@ crew.kickoff({
 
 The crew extracts sender details, subject, body preview, and attachments before generating a structured response.
 
-## Sample payloads & crews
+## Testando Localmente
 
-Review the [Outlook examples](https://github.com/crewAIInc/crewai-enterprise-trigger-examples/tree/main/outlook) for two common scenarios:
+Teste sua integração de trigger do Outlook localmente usando a CLI da CrewAI:
 
-- `new-message.json` → new mail notifications parsed by `outlook-message-crew.py`
-- `event-removed.json` → calendar cleanup handled by `outlook-event-removal-crew.py`
+```bash
+# Visualize todos os triggers disponíveis
+crewai triggers list
 
-Each crew demonstrates how to handle Microsoft Graph payloads, normalize headers, and keep humans in-the-loop with concise summaries.
+# Simule um trigger do Outlook com payload realista
+crewai triggers run microsoft_outlook/email_received
+```
+
+O comando `crewai triggers run` executará sua crew com um payload completo do Outlook, permitindo que você teste sua lógica de parsing antes do deployment.
+
+<Warning>
+  Use `crewai triggers run microsoft_outlook/email_received` (não `crewai run`) para simular execução de trigger durante o desenvolvimento. Após o deployment, sua crew receberá automaticamente o payload do trigger.
+</Warning>
 
 ## Troubleshooting
 
 - Verify the Outlook connector is still authorized; the subscription must be renewed periodically
+- Teste localmente com `crewai triggers run microsoft_outlook/email_received` para ver a estrutura exata do payload
 - If attachments are missing, confirm the webhook subscription includes the `includeResourceData` flag
 - Review execution logs when events fail to match—cancellation payloads lack attendee lists by design and the crew should account for that
+- Lembre-se: use `crewai triggers run` (não `crewai run`) para simular execução de trigger
