@@ -57,6 +57,22 @@ Tools & Integrations is the central hub for connecting third‑party apps and ma
   uv add crewai-tools
   ```
 
+  ### Environment Variable Setup
+
+  <Note>
+    To use integrations with `Agent(apps=[])`, you must set the `CREWAI_PLATFORM_INTEGRATION_TOKEN` environment variable with your Enterprise Token.
+  </Note>
+
+  ```bash
+  export CREWAI_PLATFORM_INTEGRATION_TOKEN="your_enterprise_token"
+  ```
+
+  Or add it to your `.env` file:
+
+  ```
+  CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
+  ```
+
   ### Usage Example
 
   <Tip>
