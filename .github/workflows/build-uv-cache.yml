@@ -8,7 +8,7 @@ on:
       - "uv.lock"
       - "pyproject.toml"
   schedule:
-    - cron: "0 0 1,6,11,16,21,26 * *"  # Run every 5 days at midnight UTC to prevent cache expiration
+    - cron: "0 0 */5 * *"  # Run every 5 days at midnight UTC to prevent cache expiration
   workflow_dispatch:
 
 permissions:
