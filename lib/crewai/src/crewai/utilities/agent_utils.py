@@ -398,7 +398,6 @@ def is_context_length_exceeded(exception: Exception) -> bool:
     return (
         LLMContextLengthExceededError(str(exception))
         ._is_context_limit_error(str(exception))
-        ._is_context_limit_error(str(exception))
     )
 
 
