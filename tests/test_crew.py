@@ -3814,6 +3814,46 @@ def test_fetch_inputs():
     )
 
 
+def test_hierarchical_crew_does_not_propagate_agent_tools_to_manager():
+    """
+    Test that in hierarchical crews, manager agent doesn't inherit task agents' tools.
+    This verifies that the check_tools validator doesn't pollute task.tools at creation time.
+    Fixes issue #3679: https://github.com/crewAIInc/crewAI/issues/3679
+    """
+    from crewai.tools import tool
+
+    @tool
+    def agent_specific_tool() -> str:
+        """A tool that should only be available to the specific agent."""
+        return "agent specific result"
+
+    agent_with_tools = Agent(
+        role="Specialist",
+        goal="Do specialized work with custom tools",
+        backstory="You are a specialist with specific tools",
+        tools=[agent_specific_tool],
+        allow_delegation=False,
+    )
+
+    # Create a task with an agent that has tools, but don't assign tools to the task
+    task = Task(
+        description="Perform a specialized task",
+        expected_output="Task result",
+        agent=agent_with_tools,
+    )
+
+    crew = Crew(
+        agents=[agent_with_tools],
+        tasks=[task],
+        process=Process.hierarchical,
+        manager_llm="gpt-4o",
+    )
+
+    # Verify that task.tools is empty (not populated with agent's tools)
+    assert task.tools == []
+    assert len(task.tools) == 0
+
+
 def test_task_tools_preserve_code_execution_tools():
     """
     Test that task tools don't override code execution tools when allow_code_execution=True

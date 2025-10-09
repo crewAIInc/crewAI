@@ -336,12 +336,6 @@ class Task(BaseModel):
                 setattr(self, key, value)
         return self
 
-    @model_validator(mode="after")
-    def check_tools(self):
-        """Check if the tools are set."""
-        if not self.tools and self.agent and self.agent.tools:
-            self.tools.extend(self.agent.tools)
-        return self
 
     @model_validator(mode="after")
     def check_output(self):
