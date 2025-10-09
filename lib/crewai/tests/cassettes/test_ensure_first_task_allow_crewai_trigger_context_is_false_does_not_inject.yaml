@@ -1,0 +1,1292 @@
+interactions:
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are First Agent. First
+      backstory\nYour personal goal is: First goal\nTo give my best complete final
+      answer to the task respond using the exact following format:\n\nThought: I now
+      can give a great answer\nFinal Answer: Your final answer must be the great and
+      the most complete as possible, it must be outcome described.\n\nI MUST use these
+      formats, my job depends on it!"}, {"role": "user", "content": "\nCurrent Task:
+      Process initial data\n\nThis is the expected criteria for your final answer:
+      Initial analysis\nyou MUST return the actual complete content as the final answer,
+      not a summary.\n\nBegin! This is VERY important to you, use the tools available
+      and give your best Final Answer, your job depends on it!\n\nThought:"}], "model":
+      "gpt-4o-mini", "stop": ["\nObservation:"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate, zstd
+      connection:
+      - keep-alive
+      content-length:
+      - '831'
+      content-type:
+      - application/json
+      cookie:
+      - _cfuvid=PslIVDqXn7jd_NXBGdSU5kVFvzwCchKPRVe9LpQVdQA-1736351415895-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.93.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.93.0
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-read-timeout:
+      - '600.0'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.12
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAAwAAAP//jFVNbxw3DL37VxBzyWV3YTtZ2/EtLerCQNH2kCAFmmDBlTgzjDXURKR2
+        vQny3wtpNp7Nx6EXr0eUqPceH6nPZwAN++YWGtejuWEMy1+vLm6Gi93rF9f4x+/h7V26/zi8fPv3
+        xT/34c1vzaKciNsP5OzrqZWLwxjIOMoUdonQqGS9uF6v1+vz5zc3NTBET6Ec60ZbvojLgYWXl+eX
+        L5bn18uLm+PpPrIjbW7h3zMAgM/1b8Epnh6bWzhffF0ZSBU7am6fNgE0KYay0qAqq6FYs5iDLoqR
+        VOj3IHEPDgU63hEgdAU2oOieEsA7uWPBAK/q9y287glY2BgDoGA4KCvEFqwn8GgILLsYdqSgtKOE
+        AVxiY4cB1GjUFdxxUlvAnmDIasCexLg91Awac3L0TcIFkGhOLB1Yj1bWD4CJIFFg3AYCFF8+aIdi
+        YLGenErDuznXmGJZWsFf4ugEroKLIZAz8hXUSKmNaQCEsdwwsGA6AD1i+a8Ut1zhenIP0MYE6FxO
+        6A4VxdEBJKS6gBDjQ4Fdt8kBBlYt3zsMueBK4FldohHFMenqnbyTP+lx0sahURcTfzrFKhZhIBSW
+        rs0BlLqBxHQBOI7hUHJvUdmBGhrrpPpA1kevBbXmYcCa8oEO0BJaTqVQ2fWAWjMvYCDP5bfwKUZd
+        weuetci3Y08KLMpdbzqhqdhYLfE2V3GqDCRWKm8kniq304JWnq+857IfQzgsYMeaMfCnqu8MqGe1
+        2CUcdAHb+AhjiIVsTKAOzShNK9UNx2YrNLdUY1k8peL86o4pdc+jVohjPS8Ke7aeZQZXDK50RATI
+        XqGnMALLk1OrFROJL1iyBaakk15jLF1VWyMRVtYuiqMklfRdTtZTGmKiWmNUJdW5vsUobApZccuB
+        7VBuRe8TTcapHTKS45YdfMykk1xo0KP47xuFDTBwd+R42gPPFLqIQVfwy9R2JH6qEOsPzV2R7jkE
+        6LHOBxcIE8QdpR3T/rSyzxS0CNNZP6m8J3wovUC6gC6zL9hyseIek1coQgDL0tNofRkchVF3NEFp
+        Gv8hq1WLgxB58lWiNhffTpIde5ejrOBNMB7QqDiqUmljFo+TzeZhpWST5mrY0WnGumXqmjFFV4FX
+        Hp4cK0dZDlg7etKojpfV6VhN1GbFMtolh3ASQJFoE7Ey0N8fI1+eRniI3ZjiVr872rQsrP2muClK
+        GddqcWxq9MsZwPv6VORvpn8zpjiMtrH4QPW6i/V6ytfML9QcvXx+fYxaNAxz4PnLy8VPEm48GXLQ
+        k9emceh68vPR+WnC7DmeBM5OaP8I52e5J+os3f9JPweco9HIb8ZEnt23lOdtiT7Uyf/zbU8yV8CN
+        Fsc72hhTKqXw1GIO07va6EGNhk3L0lEaE0+Paztu1lfn2F7Rev2yOfty9h8AAAD//wMAaw+BEmoI
+        AAA=
+    headers:
+      CF-RAY:
+      - 97144c8758cd1abc-GRU
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Mon, 18 Aug 2025 20:53:12 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - __cf_bm=VDTNVbhdzLyVi3fpAyOvoFppI0NEm6YkT9eWIm1wnrs-1755550392-1.0.1.1-vfYBbcAz.yp6ATfVycTWX6tFDJ.1yb_ghwed7t5GOMhNlsFeYYNGz4uupfWMnhc4QLK4UNXIeZGeGKJ.me4S240xKk6FUEu3F5tEAvhPnCM;
+        path=/; expires=Mon, 18-Aug-25 21:23:12 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=FFe5KuJ6P4BUXOoz57aqNdKwRoz64NOw_EhuSGirJWc-1755550392539-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '4008'
+      openai-project:
+      - proj_xitITlrFeen7zjNSzML82h9x
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '4027'
+      x-ratelimit-limit-project-tokens:
+      - '150000000'
+      x-ratelimit-limit-requests:
+      - '30000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-project-tokens:
+      - '149999825'
+      x-ratelimit-remaining-requests:
+      - '29999'
+      x-ratelimit-remaining-tokens:
+      - '149999825'
+      x-ratelimit-reset-project-tokens:
+      - 0s
+      x-ratelimit-reset-requests:
+      - 2ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_f287350aa2ac4662b9a5e01e85cc221f
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are Second Agent. Second
+      backstory\nYour personal goal is: Second goal\nTo give my best complete final
+      answer to the task respond using the exact following format:\n\nThought: I now
+      can give a great answer\nFinal Answer: Your final answer must be the great and
+      the most complete as possible, it must be outcome described.\n\nI MUST use these
+      formats, my job depends on it!"}, {"role": "user", "content": "\nCurrent Task:
+      Process secondary data\n\nTrigger Payload: Context data\n\nThis is the expected
+      criteria for your final answer: Secondary analysis\nyou MUST return the actual
+      complete content as the final answer, not a summary.\n\nThis is the context
+      you''re working with:\nThe initial analysis of the data involves several critical
+      steps. First, we must identify the sources of the data, ensuring that they are
+      reliable and relevant to the objectives of the project. Once the data is collected,
+      we perform a preliminary examination to check for accuracy and completeness,
+      looking for any missing values or discrepancies.\n\nNext, we categorize the
+      data into meaningful segments, applying basic statistical methods to summarize
+      key features such as mean, median, and mode. This provides insights into the
+      distribution and central tendencies of the data.\n\nAdditionally, visualizations
+      such as histograms, box plots, or scatter plots are created to better understand
+      relationships and patterns within the data. These visual aids help in identifying
+      trends, outliers, and potential areas of concern.\n\nFurthermore, we assess
+      the data for its usability in addressing the specific questions at hand, ensuring
+      that it aligns with the project''s goals. By the end of this initial analysis,
+      we will have a clear overview of the data''s strengths and weaknesses, guiding
+      us towards more in-depth investigations or adjustments needed for future data
+      collection. Ultimately, this foundational analysis sets the stage for future
+      analytical processes and decision-making initiatives.\n\nBegin! This is VERY
+      important to you, use the tools available and give your best Final Answer, your
+      job depends on it!\n\nThought:"}], "model": "gpt-4o-mini", "stop": ["\nObservation:"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate, zstd
+      connection:
+      - keep-alive
+      content-length:
+      - '2214'
+      content-type:
+      - application/json
+      cookie:
+      - _cfuvid=FFe5KuJ6P4BUXOoz57aqNdKwRoz64NOw_EhuSGirJWc-1755550392539-0.0.1.1-604800000;
+        __cf_bm=VDTNVbhdzLyVi3fpAyOvoFppI0NEm6YkT9eWIm1wnrs-1755550392-1.0.1.1-vfYBbcAz.yp6ATfVycTWX6tFDJ.1yb_ghwed7t5GOMhNlsFeYYNGz4uupfWMnhc4QLK4UNXIeZGeGKJ.me4S240xKk6FUEu3F5tEAvhPnCM
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.93.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.93.0
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-read-timeout:
+      - '600.0'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.12
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAAwAAAP//jFZNbxw5Dr37VxB9yaVt2JlpO/EtM0Awe5hd7GIWGGAzMGiJVcVYJSmk
+        1O3OIP99QKn6w94c5lLoFiWKfHx84p8XACv2q3tYuQmLm3O4/Pn25t2XX/9T7z7+evP77vdNdP++
+        peH6brz95W1ere1EevxMrhxOXbk050CFU+xmJ4SFzOvN3Waz2Vz/8P5tM8zJU7BjYy6XP6bLmSNf
+        vr1+++Pl9d3lzbvl9JTYka7u4X8XAAB/tq/FGT09r+7hen1YmUkVR1rdHzcBrCQFW1mhKmvBWFbr
+        k9GlWCi20P8BMe3AYYSRtwQIo4UNGHVHAvApfuSIAT60//fw20TAkQtjAIwY9soKaYAyEXgsCBy3
+        KWxJQWlLggGccGGHAbRQ1iv4yKJlDTuCuWoB9hQLD/vmQVMVRy8croGiVuE4Qpmw2PoeUAiEAuNj
+        IMDo7Q9tMRYoqZ3speHtyVeWZEtX8NvEehalk1o48td+AYET8vzIgcvejhK6aQlrDahKqoedM5Up
+        +RTSyKRQlTwMSToKLoVgAaS4bvG5FAeW+VUWgccIOy5T8yekhOImQJ716lP8FP8VHZ0hqwe35Bt+
+        mWRIMgNCNjBmjih7oGe0X3a3oeEmck8tMHSuCrr9ElAjK0VSXTCZCaN9C7saUtWwh5DSk8Xcjsc9
+        zNzT32KopGvwNQd2WAgoFmFbMgRYnVDG6AyYlq9LNXjQJ9pZmjUUvYKfA2E8gNkybMCwghYcqeUr
+        1RnT7P4jDTgWGsXqwxFSlYWH1DH7Jz13dllYYxL+eg5hLKnlyXEcagClcaZY1KLeojQ+LREbxTJJ
+        4UidVnbTsURfKqkhfMBucdRRxxDSTlvQdjPmDpKZ0gCPqOwsxcLaG6MTSe0SrfOMLeYn2sNAWKqQ
+        XsFPe3AYXA1YTvTDuIaZPONCMtOVlvqIHFuNWn9wVB6noj37hgVrEX6sPVpjg5UPAxSKnnrZXrTg
+        bmJrAxJrGVRAGFKNvudkec5JaOHU88t6fPCebRuGsO91abIIW9aKgb82HwpajfgKE2tJo+Csa3hM
+        z5BDKtrTU4elkPQlA4tCdezNWW+f0H1NnLUdyG1/1NZiHI/5WM1IDyEAslfIAfeAsOWCAUw7jVwH
+        bWqQC0Vv/K4lMMkSU06mo00MhbCh5lJ0JFYSo4EdrS1ao61koXKiY0ONY6lsUhX2DbCPVcpEYraG
+        Vxed46E3JjW4CBRHQO/lTJQ0k+OB3Ymh1lUTRv9a+ZowHJvbpMgYfJKjRTDfKIwJQ0f0TFYNf+tI
+        ajEKQeoAi3HNoJ+u4EOXjJPzuRmFvlQWWnARokbVctanx3dAIPM2lRed3psGc5aEbmqY/dSfD7IQ
+        h64hrx+phuWOQ4AJ2ztnbBWaKKq9e2lLsmXanfP+jSmRUBzL1NPfET6ZYNKh7Wv0JPa6egOyeR8r
+        +yW1HYrXQ5EvPeUyGfxWl3GhvUHvP1ctXYYikV+ekaFa679+TYCGIYmp539D4RkLWVe1hE8def40
+        K5XOna6pZ57PsMySXEurZenJsXKKlzM+db01JFvV10BzTjuShdaNLFauwB4GwZl2SZ6sqo+Vg4ea
+        TWDUoPcUtvalTNKVyApKzzkkOWrjsUPPhxWhoSrawBRrCGcGjDF1yW1j0h+L5dtxMAppzJIe9dXR
+        1cCRdXqwjk3RhiAtKa+a9dsFwB9tAKsvZqpVljTn8lDSE7Xrfni/6f5Wp7nvzPrudrGWVDCcDHfv
+        btbfcfjgqSAHPZvhVg7dRP509DTwYfWczgwXZ2n/fzjf891T5zj+Hfcng3OUC/mHbEOSe5nyaZvQ
+        5zakfH/bEeYW8MoeFXb0UJjESuFpwBr6tLrSvRaaHwaOo2kn95F1yA+b22scbmmzeb+6+HbxFwAA
+        AP//AwAAHGphwAsAAA==
+    headers:
+      CF-RAY:
+      - 97144ca1b97b1abc-GRU
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Mon, 18 Aug 2025 20:53:21 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '8604'
+      openai-project:
+      - proj_xitITlrFeen7zjNSzML82h9x
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '8628'
+      x-ratelimit-limit-project-tokens:
+      - '150000000'
+      x-ratelimit-limit-requests:
+      - '30000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-project-tokens:
+      - '149999482'
+      x-ratelimit-remaining-requests:
+      - '29999'
+      x-ratelimit-remaining-tokens:
+      - '149999485'
+      x-ratelimit-reset-project-tokens:
+      - 0s
+      x-ratelimit-reset-requests:
+      - 2ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_545a8ffcdf954433b9059a5b35dddf20
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"trace_id": "1dacac35-9cdd-41e7-b5af-cc009bf0c975", "execution_type":
+      "crew", "user_identifier": null, "execution_context": {"crew_fingerprint": null,
+      "crew_name": "crew", "flow_name": null, "crewai_version": "0.193.2", "privacy_level":
+      "standard"}, "execution_metadata": {"expected_duration_estimate": 300, "agent_count":
+      0, "task_count": 0, "flow_method_count": 0, "execution_started_at": "2025-09-23T22:00:07.443831+00:00"},
+      "ephemeral_trace_id": "1dacac35-9cdd-41e7-b5af-cc009bf0c975"}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '490'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - CrewAI-CLI/0.193.2
+      X-Crewai-Version:
+      - 0.193.2
+    method: POST
+    uri: http://localhost:3000/crewai_plus/api/v1/tracing/ephemeral/batches
+  response:
+    body:
+      string: '{"id":"1855f828-57ba-4da3-946f-768e4eb0a507","ephemeral_trace_id":"1dacac35-9cdd-41e7-b5af-cc009bf0c975","execution_type":"crew","crew_name":"crew","flow_name":null,"status":"running","duration_ms":null,"crewai_version":"0.193.2","total_events":0,"execution_context":{"crew_fingerprint":null,"crew_name":"crew","flow_name":null,"crewai_version":"0.193.2","privacy_level":"standard"},"created_at":"2025-09-23T22:00:07.538Z","updated_at":"2025-09-23T22:00:07.538Z","access_code":"TRACE-f66c33ab7d","user_identifier":null}'
+    headers:
+      Content-Length:
+      - '519'
+      cache-control:
+      - max-age=0, private, must-revalidate
+      content-security-policy:
+      - 'default-src ''self'' *.crewai.com crewai.com; script-src ''self'' ''unsafe-inline''
+        *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts https://www.gstatic.com
+        https://run.pstmn.io https://share.descript.com/; style-src ''self'' ''unsafe-inline''
+        *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts; img-src ''self''
+        data: *.crewai.com crewai.com https://zeus.tools.crewai.com https://dashboard.tools.crewai.com
+        https://cdn.jsdelivr.net; font-src ''self'' data: *.crewai.com crewai.com;
+        connect-src ''self'' *.crewai.com crewai.com https://zeus.tools.crewai.com
+        https://connect.useparagon.com/ https://zeus.useparagon.com/* https://*.useparagon.com/*
+        https://run.pstmn.io https://connect.tools.crewai.com/ ws://localhost:3036
+        wss://localhost:3036; frame-src ''self'' *.crewai.com crewai.com https://connect.useparagon.com/
+        https://zeus.tools.crewai.com https://zeus.useparagon.com/* https://connect.tools.crewai.com/
+        https://www.youtube.com https://share.descript.com'
+      content-type:
+      - application/json; charset=utf-8
+      etag:
+      - W/"a143616f1b502d3e7e6be5782288ec71"
+      permissions-policy:
+      - camera=(), microphone=(self), geolocation=()
+      referrer-policy:
+      - strict-origin-when-cross-origin
+      server-timing:
+      - cache_read.active_support;dur=0.22, sql.active_record;dur=21.89, cache_generate.active_support;dur=9.18,
+        cache_write.active_support;dur=0.25, cache_read_multi.active_support;dur=0.37,
+        start_processing.action_controller;dur=0.00, start_transaction.active_record;dur=0.00,
+        transaction.active_record;dur=20.84, process_action.action_controller;dur=27.95
+      vary:
+      - Accept
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-permitted-cross-domain-policies:
+      - none
+      x-request-id:
+      - 08071667-0fa8-4790-90ae-eba73bc53c7d
+      x-runtime:
+      - '0.094713'
+      x-xss-protection:
+      - 1; mode=block
+    status:
+      code: 201
+      message: Created
+- request:
+    body: '{"events": [{"event_id": "8e4443c3-f2cf-481f-9700-84b14e06de9a", "timestamp":
+      "2025-09-23T22:00:07.555480+00:00", "type": "crew_kickoff_started", "event_data":
+      {"timestamp": "2025-09-23T22:00:07.443120+00:00", "type": "crew_kickoff_started",
+      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
+      "task_id": null, "task_name": null, "agent_id": null, "agent_role": null, "crew_name":
+      "crew", "crew": null, "inputs": {"crewai_trigger_payload": "Context data"}}},
+      {"event_id": "9569adf2-2e35-43d4-ae7c-9e93cd58f240", "timestamp": "2025-09-23T22:00:07.559567+00:00",
+      "type": "task_started", "event_data": {"task_description": "Process initial
+      data", "expected_output": "Initial analysis", "task_name": "Process initial
+      data", "context": "", "agent_role": "First Agent", "task_id": "ee87de4a-7ca7-4975-bbfa-f912b91782c1"}},
+      {"event_id": "391766e2-0e66-4278-ae1c-43090e8a1224", "timestamp": "2025-09-23T22:00:07.560038+00:00",
+      "type": "agent_execution_started", "event_data": {"agent_role": "First Agent",
+      "agent_goal": "First goal", "agent_backstory": "First backstory"}}, {"event_id":
+      "735e3b7e-1a22-4ef9-b55c-330e90a266bd", "timestamp": "2025-09-23T22:00:07.560139+00:00",
+      "type": "llm_call_started", "event_data": {"timestamp": "2025-09-23T22:00:07.560113+00:00",
+      "type": "llm_call_started", "source_fingerprint": null, "source_type": null,
+      "fingerprint_metadata": null, "task_id": "ee87de4a-7ca7-4975-bbfa-f912b91782c1",
+      "task_name": "Process initial data", "agent_id": "da4a5069-d3a6-454d-b448-f226050e056a",
+      "agent_role": "First Agent", "from_task": null, "from_agent": null, "model":
+      "gpt-4o-mini", "messages": [{"role": "system", "content": "You are First Agent.
+      First backstory\nYour personal goal is: First goal\nTo give my best complete
+      final answer to the task respond using the exact following format:\n\nThought:
+      I now can give a great answer\nFinal Answer: Your final answer must be the great
+      and the most complete as possible, it must be outcome described.\n\nI MUST use
+      these formats, my job depends on it!"}, {"role": "user", "content": "\nCurrent
+      Task: Process initial data\n\nThis is the expected criteria for your final answer:
+      Initial analysis\nyou MUST return the actual complete content as the final answer,
+      not a summary.\n\nBegin! This is VERY important to you, use the tools available
+      and give your best Final Answer, your job depends on it!\n\nThought:"}], "tools":
+      null, "callbacks": ["<crewai.utilities.token_counter_callback.TokenCalcHandler
+      object at 0x100ddcf80>"], "available_functions": null}}, {"event_id": "9395fabd-03bd-4afd-829b-af52cc80eefe",
+      "timestamp": "2025-09-23T22:00:07.563015+00:00", "type": "llm_call_completed",
+      "event_data": {"timestamp": "2025-09-23T22:00:07.562984+00:00", "type": "llm_call_completed",
+      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
+      "task_id": "ee87de4a-7ca7-4975-bbfa-f912b91782c1", "task_name": "Process initial
+      data", "agent_id": "da4a5069-d3a6-454d-b448-f226050e056a", "agent_role": "First
+      Agent", "from_task": null, "from_agent": null, "messages": [{"role": "system",
+      "content": "You are First Agent. First backstory\nYour personal goal is: First
+      goal\nTo give my best complete final answer to the task respond using the exact
+      following format:\n\nThought: I now can give a great answer\nFinal Answer: Your
+      final answer must be the great and the most complete as possible, it must be
+      outcome described.\n\nI MUST use these formats, my job depends on it!"}, {"role":
+      "user", "content": "\nCurrent Task: Process initial data\n\nThis is the expected
+      criteria for your final answer: Initial analysis\nyou MUST return the actual
+      complete content as the final answer, not a summary.\n\nBegin! This is VERY
+      important to you, use the tools available and give your best Final Answer, your
+      job depends on it!\n\nThought:"}], "response": "I now can give a great answer  \nFinal
+      Answer: The initial analysis of the data involves several critical steps. First,
+      we must identify the sources of the data, ensuring that they are reliable and
+      relevant to the objectives of the project. Once the data is collected, we perform
+      a preliminary examination to check for accuracy and completeness, looking for
+      any missing values or discrepancies.\n\nNext, we categorize the data into meaningful
+      segments, applying basic statistical methods to summarize key features such
+      as mean, median, and mode. This provides insights into the distribution and
+      central tendencies of the data.\n\nAdditionally, visualizations such as histograms,
+      box plots, or scatter plots are created to better understand relationships and
+      patterns within the data. These visual aids help in identifying trends, outliers,
+      and potential areas of concern.\n\nFurthermore, we assess the data for its usability
+      in addressing the specific questions at hand, ensuring that it aligns with the
+      project''s goals. By the end of this initial analysis, we will have a clear
+      overview of the data''s strengths and weaknesses, guiding us towards more in-depth
+      investigations or adjustments needed for future data collection. Ultimately,
+      this foundational analysis sets the stage for future analytical processes and
+      decision-making initiatives.", "call_type": "<LLMCallType.LLM_CALL: ''llm_call''>",
+      "model": "gpt-4o-mini"}}, {"event_id": "8aca773f-5097-4576-811d-d0599488dd71",
+      "timestamp": "2025-09-23T22:00:07.563151+00:00", "type": "agent_execution_completed",
+      "event_data": {"agent_role": "First Agent", "agent_goal": "First goal", "agent_backstory":
+      "First backstory"}}, {"event_id": "714cb37d-2808-4102-a920-7957894f7e40", "timestamp":
+      "2025-09-23T22:00:07.563233+00:00", "type": "task_completed", "event_data":
+      {"task_description": "Process initial data", "task_name": "Process initial data",
+      "task_id": "ee87de4a-7ca7-4975-bbfa-f912b91782c1", "output_raw": "The initial
+      analysis of the data involves several critical steps. First, we must identify
+      the sources of the data, ensuring that they are reliable and relevant to the
+      objectives of the project. Once the data is collected, we perform a preliminary
+      examination to check for accuracy and completeness, looking for any missing
+      values or discrepancies.\n\nNext, we categorize the data into meaningful segments,
+      applying basic statistical methods to summarize key features such as mean, median,
+      and mode. This provides insights into the distribution and central tendencies
+      of the data.\n\nAdditionally, visualizations such as histograms, box plots,
+      or scatter plots are created to better understand relationships and patterns
+      within the data. These visual aids help in identifying trends, outliers, and
+      potential areas of concern.\n\nFurthermore, we assess the data for its usability
+      in addressing the specific questions at hand, ensuring that it aligns with the
+      project''s goals. By the end of this initial analysis, we will have a clear
+      overview of the data''s strengths and weaknesses, guiding us towards more in-depth
+      investigations or adjustments needed for future data collection. Ultimately,
+      this foundational analysis sets the stage for future analytical processes and
+      decision-making initiatives.", "output_format": "OutputFormat.RAW", "agent_role":
+      "First Agent"}}, {"event_id": "0fb29ebd-cef1-48fd-ac13-ab996da535f6", "timestamp":
+      "2025-09-23T22:00:07.564381+00:00", "type": "task_started", "event_data": {"task_description":
+      "Process secondary data", "expected_output": "Secondary analysis", "task_name":
+      "Process secondary data", "context": "The initial analysis of the data involves
+      several critical steps. First, we must identify the sources of the data, ensuring
+      that they are reliable and relevant to the objectives of the project. Once the
+      data is collected, we perform a preliminary examination to check for accuracy
+      and completeness, looking for any missing values or discrepancies.\n\nNext,
+      we categorize the data into meaningful segments, applying basic statistical
+      methods to summarize key features such as mean, median, and mode. This provides
+      insights into the distribution and central tendencies of the data.\n\nAdditionally,
+      visualizations such as histograms, box plots, or scatter plots are created to
+      better understand relationships and patterns within the data. These visual aids
+      help in identifying trends, outliers, and potential areas of concern.\n\nFurthermore,
+      we assess the data for its usability in addressing the specific questions at
+      hand, ensuring that it aligns with the project''s goals. By the end of this
+      initial analysis, we will have a clear overview of the data''s strengths and
+      weaknesses, guiding us towards more in-depth investigations or adjustments needed
+      for future data collection. Ultimately, this foundational analysis sets the
+      stage for future analytical processes and decision-making initiatives.", "agent_role":
+      "Second Agent", "task_id": "e85359de-fc01-4c2e-80cb-c725c690acf2"}}, {"event_id":
+      "8edd4404-b0ee-48ea-97c1-a58b2afb9c6e", "timestamp": "2025-09-23T22:00:07.564729+00:00",
+      "type": "agent_execution_started", "event_data": {"agent_role": "Second Agent",
+      "agent_goal": "Second goal", "agent_backstory": "Second backstory"}}, {"event_id":
+      "b800ba83-52e0-4521-afcc-16b17863049d", "timestamp": "2025-09-23T22:00:07.564793+00:00",
+      "type": "llm_call_started", "event_data": {"timestamp": "2025-09-23T22:00:07.564775+00:00",
+      "type": "llm_call_started", "source_fingerprint": null, "source_type": null,
+      "fingerprint_metadata": null, "task_id": "e85359de-fc01-4c2e-80cb-c725c690acf2",
+      "task_name": "Process secondary data", "agent_id": "3c257d6c-a2ff-4be9-8203-c78dcf2cca37",
+      "agent_role": "Second Agent", "from_task": null, "from_agent": null, "model":
+      "gpt-4o-mini", "messages": [{"role": "system", "content": "You are Second Agent.
+      Second backstory\nYour personal goal is: Second goal\nTo give my best complete
+      final answer to the task respond using the exact following format:\n\nThought:
+      I now can give a great answer\nFinal Answer: Your final answer must be the great
+      and the most complete as possible, it must be outcome described.\n\nI MUST use
+      these formats, my job depends on it!"}, {"role": "user", "content": "\nCurrent
+      Task: Process secondary data\n\nTrigger Payload: Context data\n\nThis is the
+      expected criteria for your final answer: Secondary analysis\nyou MUST return
+      the actual complete content as the final answer, not a summary.\n\nThis is the
+      context you''re working with:\nThe initial analysis of the data involves several
+      critical steps. First, we must identify the sources of the data, ensuring that
+      they are reliable and relevant to the objectives of the project. Once the data
+      is collected, we perform a preliminary examination to check for accuracy and
+      completeness, looking for any missing values or discrepancies.\n\nNext, we categorize
+      the data into meaningful segments, applying basic statistical methods to summarize
+      key features such as mean, median, and mode. This provides insights into the
+      distribution and central tendencies of the data.\n\nAdditionally, visualizations
+      such as histograms, box plots, or scatter plots are created to better understand
+      relationships and patterns within the data. These visual aids help in identifying
+      trends, outliers, and potential areas of concern.\n\nFurthermore, we assess
+      the data for its usability in addressing the specific questions at hand, ensuring
+      that it aligns with the project''s goals. By the end of this initial analysis,
+      we will have a clear overview of the data''s strengths and weaknesses, guiding
+      us towards more in-depth investigations or adjustments needed for future data
+      collection. Ultimately, this foundational analysis sets the stage for future
+      analytical processes and decision-making initiatives.\n\nBegin! This is VERY
+      important to you, use the tools available and give your best Final Answer, your
+      job depends on it!\n\nThought:"}], "tools": null, "callbacks": ["<crewai.utilities.token_counter_callback.TokenCalcHandler
+      object at 0x125df3860>"], "available_functions": null}}, {"event_id": "24540569-e0cc-41a7-a5a5-2a5a3a832718",
+      "timestamp": "2025-09-23T22:00:07.565849+00:00", "type": "llm_call_completed",
+      "event_data": {"timestamp": "2025-09-23T22:00:07.565829+00:00", "type": "llm_call_completed",
+      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
+      "task_id": "e85359de-fc01-4c2e-80cb-c725c690acf2", "task_name": "Process secondary
+      data", "agent_id": "3c257d6c-a2ff-4be9-8203-c78dcf2cca37", "agent_role": "Second
+      Agent", "from_task": null, "from_agent": null, "messages": [{"role": "system",
+      "content": "You are Second Agent. Second backstory\nYour personal goal is: Second
+      goal\nTo give my best complete final answer to the task respond using the exact
+      following format:\n\nThought: I now can give a great answer\nFinal Answer: Your
+      final answer must be the great and the most complete as possible, it must be
+      outcome described.\n\nI MUST use these formats, my job depends on it!"}, {"role":
+      "user", "content": "\nCurrent Task: Process secondary data\n\nTrigger Payload:
+      Context data\n\nThis is the expected criteria for your final answer: Secondary
+      analysis\nyou MUST return the actual complete content as the final answer, not
+      a summary.\n\nThis is the context you''re working with:\nThe initial analysis
+      of the data involves several critical steps. First, we must identify the sources
+      of the data, ensuring that they are reliable and relevant to the objectives
+      of the project. Once the data is collected, we perform a preliminary examination
+      to check for accuracy and completeness, looking for any missing values or discrepancies.\n\nNext,
+      we categorize the data into meaningful segments, applying basic statistical
+      methods to summarize key features such as mean, median, and mode. This provides
+      insights into the distribution and central tendencies of the data.\n\nAdditionally,
+      visualizations such as histograms, box plots, or scatter plots are created to
+      better understand relationships and patterns within the data. These visual aids
+      help in identifying trends, outliers, and potential areas of concern.\n\nFurthermore,
+      we assess the data for its usability in addressing the specific questions at
+      hand, ensuring that it aligns with the project''s goals. By the end of this
+      initial analysis, we will have a clear overview of the data''s strengths and
+      weaknesses, guiding us towards more in-depth investigations or adjustments needed
+      for future data collection. Ultimately, this foundational analysis sets the
+      stage for future analytical processes and decision-making initiatives.\n\nBegin!
+      This is VERY important to you, use the tools available and give your best Final
+      Answer, your job depends on it!\n\nThought:"}], "response": "I now can give
+      a great answer  \nFinal Answer: The initial analysis of the data involves several
+      critical steps. First, we must identify the sources of the data, ensuring that
+      they are reliable and relevant to the objectives of the project. This involves
+      scrutinizing the credibility of each source, assessing the methodologies used
+      for data collection, and confirming that they align with the research aims.\n\nOnce
+      the data is collected, we perform a preliminary examination to check for accuracy
+      and completeness. This means meticulously looking for any missing values, duplicate
+      entries, or discrepancies that could skew results. Cleaning the data at this
+      stage is crucial for ensuring integrity in our analyses.\n\nNext, we categorize
+      the data into meaningful segments or variables that are pertinent to our research
+      questions. This segmentation allows for the application of basic statistical
+      methods to summarize key features. By calculating the mean, median, and mode,
+      we gain valuable insights into the distribution and central tendencies of the
+      data, which serves as a foundation for more complex analyses.\n\nAdditionally,
+      we create visualizations such as histograms, box plots, and scatter plots to
+      elucidate the relationships and patterns within the data. These visual aids
+      play a vital role in identifying trends, outliers, and potential areas of concern,
+      allowing us to interpret the data more intuitively.\n\nFurthermore, we assess
+      the data''s usability in addressing the specific questions at hand. This involves
+      checking for alignment with the project''s goals and objectives to ensure we
+      are on the right path. Any misalignment might require us to reevaluate the data
+      sources or pivot in our analytical approach.\n\nBy the end of this initial analysis,
+      we will have a comprehensive overview of the data''s strengths and weaknesses.
+      This understanding will guide us towards more in-depth investigations or adjustments
+      needed for future data collection efforts. Ultimately, this foundational analysis
+      sets the stage for future analytical processes and decision-making initiatives,
+      empowering us with a solid framework to build upon as we delve deeper into our
+      exploration of the data.", "call_type": "<LLMCallType.LLM_CALL: ''llm_call''>",
+      "model": "gpt-4o-mini"}}, {"event_id": "5bfb36c7-7c73-45c1-8c8f-ec1b7f4110c6",
+      "timestamp": "2025-09-23T22:00:07.565944+00:00", "type": "agent_execution_completed",
+      "event_data": {"agent_role": "Second Agent", "agent_goal": "Second goal", "agent_backstory":
+      "Second backstory"}}, {"event_id": "b8b875cb-4623-49db-bd63-c114d52e7b1a", "timestamp":
+      "2025-09-23T22:00:07.565985+00:00", "type": "task_completed", "event_data":
+      {"task_description": "Process secondary data", "task_name": "Process secondary
+      data", "task_id": "e85359de-fc01-4c2e-80cb-c725c690acf2", "output_raw": "The
+      initial analysis of the data involves several critical steps. First, we must
+      identify the sources of the data, ensuring that they are reliable and relevant
+      to the objectives of the project. This involves scrutinizing the credibility
+      of each source, assessing the methodologies used for data collection, and confirming
+      that they align with the research aims.\n\nOnce the data is collected, we perform
+      a preliminary examination to check for accuracy and completeness. This means
+      meticulously looking for any missing values, duplicate entries, or discrepancies
+      that could skew results. Cleaning the data at this stage is crucial for ensuring
+      integrity in our analyses.\n\nNext, we categorize the data into meaningful segments
+      or variables that are pertinent to our research questions. This segmentation
+      allows for the application of basic statistical methods to summarize key features.
+      By calculating the mean, median, and mode, we gain valuable insights into the
+      distribution and central tendencies of the data, which serves as a foundation
+      for more complex analyses.\n\nAdditionally, we create visualizations such as
+      histograms, box plots, and scatter plots to elucidate the relationships and
+      patterns within the data. These visual aids play a vital role in identifying
+      trends, outliers, and potential areas of concern, allowing us to interpret the
+      data more intuitively.\n\nFurthermore, we assess the data''s usability in addressing
+      the specific questions at hand. This involves checking for alignment with the
+      project''s goals and objectives to ensure we are on the right path. Any misalignment
+      might require us to reevaluate the data sources or pivot in our analytical approach.\n\nBy
+      the end of this initial analysis, we will have a comprehensive overview of the
+      data''s strengths and weaknesses. This understanding will guide us towards more
+      in-depth investigations or adjustments needed for future data collection efforts.
+      Ultimately, this foundational analysis sets the stage for future analytical
+      processes and decision-making initiatives, empowering us with a solid framework
+      to build upon as we delve deeper into our exploration of the data.", "output_format":
+      "OutputFormat.RAW", "agent_role": "Second Agent"}}, {"event_id": "09bd90c7-a35e-4d3c-9e9b-9c3a48ec7f2b",
+      "timestamp": "2025-09-23T22:00:07.566922+00:00", "type": "crew_kickoff_completed",
+      "event_data": {"timestamp": "2025-09-23T22:00:07.566892+00:00", "type": "crew_kickoff_completed",
+      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
+      "task_id": null, "task_name": null, "agent_id": null, "agent_role": null, "crew_name":
+      "crew", "crew": null, "output": {"description": "Process secondary data", "name":
+      "Process secondary data", "expected_output": "Secondary analysis", "summary":
+      "Process secondary data...", "raw": "The initial analysis of the data involves
+      several critical steps. First, we must identify the sources of the data, ensuring
+      that they are reliable and relevant to the objectives of the project. This involves
+      scrutinizing the credibility of each source, assessing the methodologies used
+      for data collection, and confirming that they align with the research aims.\n\nOnce
+      the data is collected, we perform a preliminary examination to check for accuracy
+      and completeness. This means meticulously looking for any missing values, duplicate
+      entries, or discrepancies that could skew results. Cleaning the data at this
+      stage is crucial for ensuring integrity in our analyses.\n\nNext, we categorize
+      the data into meaningful segments or variables that are pertinent to our research
+      questions. This segmentation allows for the application of basic statistical
+      methods to summarize key features. By calculating the mean, median, and mode,
+      we gain valuable insights into the distribution and central tendencies of the
+      data, which serves as a foundation for more complex analyses.\n\nAdditionally,
+      we create visualizations such as histograms, box plots, and scatter plots to
+      elucidate the relationships and patterns within the data. These visual aids
+      play a vital role in identifying trends, outliers, and potential areas of concern,
+      allowing us to interpret the data more intuitively.\n\nFurthermore, we assess
+      the data''s usability in addressing the specific questions at hand. This involves
+      checking for alignment with the project''s goals and objectives to ensure we
+      are on the right path. Any misalignment might require us to reevaluate the data
+      sources or pivot in our analytical approach.\n\nBy the end of this initial analysis,
+      we will have a comprehensive overview of the data''s strengths and weaknesses.
+      This understanding will guide us towards more in-depth investigations or adjustments
+      needed for future data collection efforts. Ultimately, this foundational analysis
+      sets the stage for future analytical processes and decision-making initiatives,
+      empowering us with a solid framework to build upon as we delve deeper into our
+      exploration of the data.", "pydantic": null, "json_dict": null, "agent": "Second
+      Agent", "output_format": "raw"}, "total_tokens": 1173}}], "batch_metadata":
+      {"events_count": 14, "batch_sequence": 1, "is_final_batch": false}}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '22633'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - CrewAI-CLI/0.193.2
+      X-Crewai-Version:
+      - 0.193.2
+    method: POST
+    uri: http://localhost:3000/crewai_plus/api/v1/tracing/ephemeral/batches/1dacac35-9cdd-41e7-b5af-cc009bf0c975/events
+  response:
+    body:
+      string: '{"events_created":14,"ephemeral_trace_batch_id":"1855f828-57ba-4da3-946f-768e4eb0a507"}'
+    headers:
+      Content-Length:
+      - '87'
+      cache-control:
+      - max-age=0, private, must-revalidate
+      content-security-policy:
+      - 'default-src ''self'' *.crewai.com crewai.com; script-src ''self'' ''unsafe-inline''
+        *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts https://www.gstatic.com
+        https://run.pstmn.io https://share.descript.com/; style-src ''self'' ''unsafe-inline''
+        *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts; img-src ''self''
+        data: *.crewai.com crewai.com https://zeus.tools.crewai.com https://dashboard.tools.crewai.com
+        https://cdn.jsdelivr.net; font-src ''self'' data: *.crewai.com crewai.com;
+        connect-src ''self'' *.crewai.com crewai.com https://zeus.tools.crewai.com
+        https://connect.useparagon.com/ https://zeus.useparagon.com/* https://*.useparagon.com/*
+        https://run.pstmn.io https://connect.tools.crewai.com/ ws://localhost:3036
+        wss://localhost:3036; frame-src ''self'' *.crewai.com crewai.com https://connect.useparagon.com/
+        https://zeus.tools.crewai.com https://zeus.useparagon.com/* https://connect.tools.crewai.com/
+        https://www.youtube.com https://share.descript.com'
+      content-type:
+      - application/json; charset=utf-8
+      etag:
+      - W/"ba6f07032f39e17c129529b474c26df9"
+      permissions-policy:
+      - camera=(), microphone=(self), geolocation=()
+      referrer-policy:
+      - strict-origin-when-cross-origin
+      server-timing:
+      - cache_read.active_support;dur=0.06, sql.active_record;dur=32.15, cache_generate.active_support;dur=1.96,
+        cache_write.active_support;dur=2.53, cache_read_multi.active_support;dur=0.19,
+        start_processing.action_controller;dur=0.00, instantiation.active_record;dur=0.07,
+        start_transaction.active_record;dur=0.00, transaction.active_record;dur=58.09,
+        process_action.action_controller;dur=66.95
+      vary:
+      - Accept
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-permitted-cross-domain-policies:
+      - none
+      x-request-id:
+      - e3a4f7de-b8ba-4aa7-ad9c-f075bb4df030
+      x-runtime:
+      - '0.101479'
+      x-xss-protection:
+      - 1; mode=block
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"status": "completed", "duration_ms": 234, "final_event_count": 14}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '68'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - CrewAI-CLI/0.193.2
+      X-Crewai-Version:
+      - 0.193.2
+    method: PATCH
+    uri: http://localhost:3000/crewai_plus/api/v1/tracing/ephemeral/batches/1dacac35-9cdd-41e7-b5af-cc009bf0c975/finalize
+  response:
+    body:
+      string: '{"id":"1855f828-57ba-4da3-946f-768e4eb0a507","ephemeral_trace_id":"1dacac35-9cdd-41e7-b5af-cc009bf0c975","execution_type":"crew","crew_name":"crew","flow_name":null,"status":"completed","duration_ms":234,"crewai_version":"0.193.2","total_events":14,"execution_context":{"crew_name":"crew","flow_name":null,"privacy_level":"standard","crewai_version":"0.193.2","crew_fingerprint":null},"created_at":"2025-09-23T22:00:07.538Z","updated_at":"2025-09-23T22:00:07.751Z","access_code":"TRACE-f66c33ab7d","user_identifier":null}'
+    headers:
+      Content-Length:
+      - '521'
+      cache-control:
+      - max-age=0, private, must-revalidate
+      content-security-policy:
+      - 'default-src ''self'' *.crewai.com crewai.com; script-src ''self'' ''unsafe-inline''
+        *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts https://www.gstatic.com
+        https://run.pstmn.io https://share.descript.com/; style-src ''self'' ''unsafe-inline''
+        *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts; img-src ''self''
+        data: *.crewai.com crewai.com https://zeus.tools.crewai.com https://dashboard.tools.crewai.com
+        https://cdn.jsdelivr.net; font-src ''self'' data: *.crewai.com crewai.com;
+        connect-src ''self'' *.crewai.com crewai.com https://zeus.tools.crewai.com
+        https://connect.useparagon.com/ https://zeus.useparagon.com/* https://*.useparagon.com/*
+        https://run.pstmn.io https://connect.tools.crewai.com/ ws://localhost:3036
+        wss://localhost:3036; frame-src ''self'' *.crewai.com crewai.com https://connect.useparagon.com/
+        https://zeus.tools.crewai.com https://zeus.useparagon.com/* https://connect.tools.crewai.com/
+        https://www.youtube.com https://share.descript.com'
+      content-type:
+      - application/json; charset=utf-8
+      etag:
+      - W/"c40a1cc8aa5e247eae772119dacea312"
+      permissions-policy:
+      - camera=(), microphone=(self), geolocation=()
+      referrer-policy:
+      - strict-origin-when-cross-origin
+      server-timing:
+      - cache_read.active_support;dur=0.41, sql.active_record;dur=11.64, cache_generate.active_support;dur=3.80,
+        cache_write.active_support;dur=0.79, cache_read_multi.active_support;dur=3.31,
+        start_processing.action_controller;dur=0.00, instantiation.active_record;dur=0.03,
+        unpermitted_parameters.action_controller;dur=0.00, start_transaction.active_record;dur=0.00,
+        transaction.active_record;dur=5.80, process_action.action_controller;dur=18.64
+      vary:
+      - Accept
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-permitted-cross-domain-policies:
+      - none
+      x-request-id:
+      - 7234f91f-d048-4e5e-b810-7607dedd02cb
+      x-runtime:
+      - '0.076428'
+      x-xss-protection:
+      - 1; mode=block
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"trace_id": "5e42c81e-e43b-4a74-b889-f116f094597b", "execution_type":
+      "crew", "user_identifier": null, "execution_context": {"crew_fingerprint": null,
+      "crew_name": "crew", "flow_name": null, "crewai_version": "0.193.2", "privacy_level":
+      "standard"}, "execution_metadata": {"expected_duration_estimate": 300, "agent_count":
+      0, "task_count": 0, "flow_method_count": 0, "execution_started_at": "2025-09-24T05:27:24.323589+00:00"}}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '428'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - CrewAI-CLI/0.193.2
+      X-Crewai-Organization-Id:
+      - d3a3d10c-35db-423f-a7a4-c026030ba64d
+      X-Crewai-Version:
+      - 0.193.2
+    method: POST
+    uri: http://localhost:3000/crewai_plus/api/v1/tracing/batches
+  response:
+    body:
+      string: '{"id":"3ac2458f-6604-411f-a8ba-6d150f0d9bf4","trace_id":"5e42c81e-e43b-4a74-b889-f116f094597b","execution_type":"crew","crew_name":"crew","flow_name":null,"status":"running","duration_ms":null,"crewai_version":"0.193.2","privacy_level":"standard","total_events":0,"execution_context":{"crew_fingerprint":null,"crew_name":"crew","flow_name":null,"crewai_version":"0.193.2","privacy_level":"standard"},"created_at":"2025-09-24T05:27:25.037Z","updated_at":"2025-09-24T05:27:25.037Z"}'
+    headers:
+      Content-Length:
+      - '480'
+      cache-control:
+      - max-age=0, private, must-revalidate
+      content-security-policy:
+      - 'default-src ''self'' *.crewai.com crewai.com; script-src ''self'' ''unsafe-inline''
+        *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts https://www.gstatic.com
+        https://run.pstmn.io https://share.descript.com/; style-src ''self'' ''unsafe-inline''
+        *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts; img-src ''self''
+        data: *.crewai.com crewai.com https://zeus.tools.crewai.com https://dashboard.tools.crewai.com
+        https://cdn.jsdelivr.net; font-src ''self'' data: *.crewai.com crewai.com;
+        connect-src ''self'' *.crewai.com crewai.com https://zeus.tools.crewai.com
+        https://connect.useparagon.com/ https://zeus.useparagon.com/* https://*.useparagon.com/*
+        https://run.pstmn.io https://connect.tools.crewai.com/ ws://localhost:3036
+        wss://localhost:3036; frame-src ''self'' *.crewai.com crewai.com https://connect.useparagon.com/
+        https://zeus.tools.crewai.com https://zeus.useparagon.com/* https://connect.tools.crewai.com/
+        https://www.youtube.com https://share.descript.com'
+      content-type:
+      - application/json; charset=utf-8
+      etag:
+      - W/"6a4b10e2325137068b39ed4bcd475426"
+      permissions-policy:
+      - camera=(), microphone=(self), geolocation=()
+      referrer-policy:
+      - strict-origin-when-cross-origin
+      server-timing:
+      - cache_read.active_support;dur=0.18, sql.active_record;dur=22.95, cache_generate.active_support;dur=6.78,
+        cache_write.active_support;dur=0.17, cache_read_multi.active_support;dur=0.23,
+        start_processing.action_controller;dur=0.00, instantiation.active_record;dur=1.26,
+        feature_operation.flipper;dur=0.12, start_transaction.active_record;dur=0.01,
+        transaction.active_record;dur=9.05, process_action.action_controller;dur=635.89
+      vary:
+      - Accept
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-permitted-cross-domain-policies:
+      - none
+      x-request-id:
+      - 602b6399-47b0-4176-b15c-9dad6c5de823
+      x-runtime:
+      - '0.714872'
+      x-xss-protection:
+      - 1; mode=block
+    status:
+      code: 201
+      message: Created
+- request:
+    body: '{"events": [{"event_id": "133be553-803e-441f-865a-08f48a5a828e", "timestamp":
+      "2025-09-24T05:27:25.046647+00:00", "type": "crew_kickoff_started", "event_data":
+      {"timestamp": "2025-09-24T05:27:24.322543+00:00", "type": "crew_kickoff_started",
+      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
+      "task_id": null, "task_name": null, "agent_id": null, "agent_role": null, "crew_name":
+      "crew", "crew": null, "inputs": {"crewai_trigger_payload": "Context data"}}},
+      {"event_id": "3a28d714-793f-4555-a63a-e49bc1344214", "timestamp": "2025-09-24T05:27:25.050451+00:00",
+      "type": "task_started", "event_data": {"task_description": "Process initial
+      data", "expected_output": "Initial analysis", "task_name": "Process initial
+      data", "context": "", "agent_role": "First Agent", "task_id": "86c6001a-f95d-407b-8c10-8748358ba4ef"}},
+      {"event_id": "c06603a0-ce23-4efc-b2f4-3567b6e2bde1", "timestamp": "2025-09-24T05:27:25.051325+00:00",
+      "type": "agent_execution_started", "event_data": {"agent_role": "First Agent",
+      "agent_goal": "First goal", "agent_backstory": "First backstory"}}, {"event_id":
+      "4590829f-88f2-4810-9ef0-85e99a6eaf7b", "timestamp": "2025-09-24T05:27:25.051477+00:00",
+      "type": "llm_call_started", "event_data": {"timestamp": "2025-09-24T05:27:25.051438+00:00",
+      "type": "llm_call_started", "source_fingerprint": null, "source_type": null,
+      "fingerprint_metadata": null, "task_id": "86c6001a-f95d-407b-8c10-8748358ba4ef",
+      "task_name": "Process initial data", "agent_id": "a558571e-1f32-417c-a324-75ff5838216a",
+      "agent_role": "First Agent", "from_task": null, "from_agent": null, "model":
+      "gpt-4o-mini", "messages": [{"role": "system", "content": "You are First Agent.
+      First backstory\nYour personal goal is: First goal\nTo give my best complete
+      final answer to the task respond using the exact following format:\n\nThought:
+      I now can give a great answer\nFinal Answer: Your final answer must be the great
+      and the most complete as possible, it must be outcome described.\n\nI MUST use
+      these formats, my job depends on it!"}, {"role": "user", "content": "\nCurrent
+      Task: Process initial data\n\nThis is the expected criteria for your final answer:
+      Initial analysis\nyou MUST return the actual complete content as the final answer,
+      not a summary.\n\nBegin! This is VERY important to you, use the tools available
+      and give your best Final Answer, your job depends on it!\n\nThought:"}], "tools":
+      null, "callbacks": ["<crewai.utilities.token_counter_callback.TokenCalcHandler
+      object at 0x162aeb5f0>"], "available_functions": null}}, {"event_id": "98a28143-0733-48c7-bdbe-c6371d8a2414",
+      "timestamp": "2025-09-24T05:27:25.054273+00:00", "type": "llm_call_completed",
+      "event_data": {"timestamp": "2025-09-24T05:27:25.054231+00:00", "type": "llm_call_completed",
+      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
+      "task_id": "86c6001a-f95d-407b-8c10-8748358ba4ef", "task_name": "Process initial
+      data", "agent_id": "a558571e-1f32-417c-a324-75ff5838216a", "agent_role": "First
+      Agent", "from_task": null, "from_agent": null, "messages": [{"role": "system",
+      "content": "You are First Agent. First backstory\nYour personal goal is: First
+      goal\nTo give my best complete final answer to the task respond using the exact
+      following format:\n\nThought: I now can give a great answer\nFinal Answer: Your
+      final answer must be the great and the most complete as possible, it must be
+      outcome described.\n\nI MUST use these formats, my job depends on it!"}, {"role":
+      "user", "content": "\nCurrent Task: Process initial data\n\nThis is the expected
+      criteria for your final answer: Initial analysis\nyou MUST return the actual
+      complete content as the final answer, not a summary.\n\nBegin! This is VERY
+      important to you, use the tools available and give your best Final Answer, your
+      job depends on it!\n\nThought:"}], "response": "I now can give a great answer  \nFinal
+      Answer: The initial analysis of the data involves several critical steps. First,
+      we must identify the sources of the data, ensuring that they are reliable and
+      relevant to the objectives of the project. Once the data is collected, we perform
+      a preliminary examination to check for accuracy and completeness, looking for
+      any missing values or discrepancies.\n\nNext, we categorize the data into meaningful
+      segments, applying basic statistical methods to summarize key features such
+      as mean, median, and mode. This provides insights into the distribution and
+      central tendencies of the data.\n\nAdditionally, visualizations such as histograms,
+      box plots, or scatter plots are created to better understand relationships and
+      patterns within the data. These visual aids help in identifying trends, outliers,
+      and potential areas of concern.\n\nFurthermore, we assess the data for its usability
+      in addressing the specific questions at hand, ensuring that it aligns with the
+      project''s goals. By the end of this initial analysis, we will have a clear
+      overview of the data''s strengths and weaknesses, guiding us towards more in-depth
+      investigations or adjustments needed for future data collection. Ultimately,
+      this foundational analysis sets the stage for future analytical processes and
+      decision-making initiatives.", "call_type": "<LLMCallType.LLM_CALL: ''llm_call''>",
+      "model": "gpt-4o-mini"}}, {"event_id": "abc2718a-94cf-474d-bf06-0a0f4fab6dd4",
+      "timestamp": "2025-09-24T05:27:25.054451+00:00", "type": "agent_execution_completed",
+      "event_data": {"agent_role": "First Agent", "agent_goal": "First goal", "agent_backstory":
+      "First backstory"}}, {"event_id": "41e19261-bf0f-4878-9c0a-5f84868f0203", "timestamp":
+      "2025-09-24T05:27:25.054501+00:00", "type": "task_completed", "event_data":
+      {"task_description": "Process initial data", "task_name": "Process initial data",
+      "task_id": "86c6001a-f95d-407b-8c10-8748358ba4ef", "output_raw": "The initial
+      analysis of the data involves several critical steps. First, we must identify
+      the sources of the data, ensuring that they are reliable and relevant to the
+      objectives of the project. Once the data is collected, we perform a preliminary
+      examination to check for accuracy and completeness, looking for any missing
+      values or discrepancies.\n\nNext, we categorize the data into meaningful segments,
+      applying basic statistical methods to summarize key features such as mean, median,
+      and mode. This provides insights into the distribution and central tendencies
+      of the data.\n\nAdditionally, visualizations such as histograms, box plots,
+      or scatter plots are created to better understand relationships and patterns
+      within the data. These visual aids help in identifying trends, outliers, and
+      potential areas of concern.\n\nFurthermore, we assess the data for its usability
+      in addressing the specific questions at hand, ensuring that it aligns with the
+      project''s goals. By the end of this initial analysis, we will have a clear
+      overview of the data''s strengths and weaknesses, guiding us towards more in-depth
+      investigations or adjustments needed for future data collection. Ultimately,
+      this foundational analysis sets the stage for future analytical processes and
+      decision-making initiatives.", "output_format": "OutputFormat.RAW", "agent_role":
+      "First Agent"}}, {"event_id": "012f92ef-4e69-45d0-aeb6-406d986956cd", "timestamp":
+      "2025-09-24T05:27:25.055673+00:00", "type": "task_started", "event_data": {"task_description":
+      "Process secondary data", "expected_output": "Secondary analysis", "task_name":
+      "Process secondary data", "context": "The initial analysis of the data involves
+      several critical steps. First, we must identify the sources of the data, ensuring
+      that they are reliable and relevant to the objectives of the project. Once the
+      data is collected, we perform a preliminary examination to check for accuracy
+      and completeness, looking for any missing values or discrepancies.\n\nNext,
+      we categorize the data into meaningful segments, applying basic statistical
+      methods to summarize key features such as mean, median, and mode. This provides
+      insights into the distribution and central tendencies of the data.\n\nAdditionally,
+      visualizations such as histograms, box plots, or scatter plots are created to
+      better understand relationships and patterns within the data. These visual aids
+      help in identifying trends, outliers, and potential areas of concern.\n\nFurthermore,
+      we assess the data for its usability in addressing the specific questions at
+      hand, ensuring that it aligns with the project''s goals. By the end of this
+      initial analysis, we will have a clear overview of the data''s strengths and
+      weaknesses, guiding us towards more in-depth investigations or adjustments needed
+      for future data collection. Ultimately, this foundational analysis sets the
+      stage for future analytical processes and decision-making initiatives.", "agent_role":
+      "Second Agent", "task_id": "30bf5263-4388-401a-bba1-590af32be7be"}}, {"event_id":
+      "2c3e069d-cf6c-4270-b4ba-e57f7e3f524e", "timestamp": "2025-09-24T05:27:25.056090+00:00",
+      "type": "agent_execution_started", "event_data": {"agent_role": "Second Agent",
+      "agent_goal": "Second goal", "agent_backstory": "Second backstory"}}, {"event_id":
+      "fae94e6d-9a3e-4261-b247-8813b5c978b2", "timestamp": "2025-09-24T05:27:25.056164+00:00",
+      "type": "llm_call_started", "event_data": {"timestamp": "2025-09-24T05:27:25.056144+00:00",
+      "type": "llm_call_started", "source_fingerprint": null, "source_type": null,
+      "fingerprint_metadata": null, "task_id": "30bf5263-4388-401a-bba1-590af32be7be",
+      "task_name": "Process secondary data", "agent_id": "45d82ce6-b836-4f64-94ce-501941e1b6b0",
+      "agent_role": "Second Agent", "from_task": null, "from_agent": null, "model":
+      "gpt-4o-mini", "messages": [{"role": "system", "content": "You are Second Agent.
+      Second backstory\nYour personal goal is: Second goal\nTo give my best complete
+      final answer to the task respond using the exact following format:\n\nThought:
+      I now can give a great answer\nFinal Answer: Your final answer must be the great
+      and the most complete as possible, it must be outcome described.\n\nI MUST use
+      these formats, my job depends on it!"}, {"role": "user", "content": "\nCurrent
+      Task: Process secondary data\n\nTrigger Payload: Context data\n\nThis is the
+      expected criteria for your final answer: Secondary analysis\nyou MUST return
+      the actual complete content as the final answer, not a summary.\n\nThis is the
+      context you''re working with:\nThe initial analysis of the data involves several
+      critical steps. First, we must identify the sources of the data, ensuring that
+      they are reliable and relevant to the objectives of the project. Once the data
+      is collected, we perform a preliminary examination to check for accuracy and
+      completeness, looking for any missing values or discrepancies.\n\nNext, we categorize
+      the data into meaningful segments, applying basic statistical methods to summarize
+      key features such as mean, median, and mode. This provides insights into the
+      distribution and central tendencies of the data.\n\nAdditionally, visualizations
+      such as histograms, box plots, or scatter plots are created to better understand
+      relationships and patterns within the data. These visual aids help in identifying
+      trends, outliers, and potential areas of concern.\n\nFurthermore, we assess
+      the data for its usability in addressing the specific questions at hand, ensuring
+      that it aligns with the project''s goals. By the end of this initial analysis,
+      we will have a clear overview of the data''s strengths and weaknesses, guiding
+      us towards more in-depth investigations or adjustments needed for future data
+      collection. Ultimately, this foundational analysis sets the stage for future
+      analytical processes and decision-making initiatives.\n\nBegin! This is VERY
+      important to you, use the tools available and give your best Final Answer, your
+      job depends on it!\n\nThought:"}], "tools": null, "callbacks": ["<crewai.utilities.token_counter_callback.TokenCalcHandler
+      object at 0x162b03230>"], "available_functions": null}}, {"event_id": "cededa1f-b309-49be-9d03-9fbe743ea681",
+      "timestamp": "2025-09-24T05:27:25.057546+00:00", "type": "llm_call_completed",
+      "event_data": {"timestamp": "2025-09-24T05:27:25.057525+00:00", "type": "llm_call_completed",
+      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
+      "task_id": "30bf5263-4388-401a-bba1-590af32be7be", "task_name": "Process secondary
+      data", "agent_id": "45d82ce6-b836-4f64-94ce-501941e1b6b0", "agent_role": "Second
+      Agent", "from_task": null, "from_agent": null, "messages": [{"role": "system",
+      "content": "You are Second Agent. Second backstory\nYour personal goal is: Second
+      goal\nTo give my best complete final answer to the task respond using the exact
+      following format:\n\nThought: I now can give a great answer\nFinal Answer: Your
+      final answer must be the great and the most complete as possible, it must be
+      outcome described.\n\nI MUST use these formats, my job depends on it!"}, {"role":
+      "user", "content": "\nCurrent Task: Process secondary data\n\nTrigger Payload:
+      Context data\n\nThis is the expected criteria for your final answer: Secondary
+      analysis\nyou MUST return the actual complete content as the final answer, not
+      a summary.\n\nThis is the context you''re working with:\nThe initial analysis
+      of the data involves several critical steps. First, we must identify the sources
+      of the data, ensuring that they are reliable and relevant to the objectives
+      of the project. Once the data is collected, we perform a preliminary examination
+      to check for accuracy and completeness, looking for any missing values or discrepancies.\n\nNext,
+      we categorize the data into meaningful segments, applying basic statistical
+      methods to summarize key features such as mean, median, and mode. This provides
+      insights into the distribution and central tendencies of the data.\n\nAdditionally,
+      visualizations such as histograms, box plots, or scatter plots are created to
+      better understand relationships and patterns within the data. These visual aids
+      help in identifying trends, outliers, and potential areas of concern.\n\nFurthermore,
+      we assess the data for its usability in addressing the specific questions at
+      hand, ensuring that it aligns with the project''s goals. By the end of this
+      initial analysis, we will have a clear overview of the data''s strengths and
+      weaknesses, guiding us towards more in-depth investigations or adjustments needed
+      for future data collection. Ultimately, this foundational analysis sets the
+      stage for future analytical processes and decision-making initiatives.\n\nBegin!
+      This is VERY important to you, use the tools available and give your best Final
+      Answer, your job depends on it!\n\nThought:"}], "response": "I now can give
+      a great answer  \nFinal Answer: The initial analysis of the data involves several
+      critical steps. First, we must identify the sources of the data, ensuring that
+      they are reliable and relevant to the objectives of the project. This involves
+      scrutinizing the credibility of each source, assessing the methodologies used
+      for data collection, and confirming that they align with the research aims.\n\nOnce
+      the data is collected, we perform a preliminary examination to check for accuracy
+      and completeness. This means meticulously looking for any missing values, duplicate
+      entries, or discrepancies that could skew results. Cleaning the data at this
+      stage is crucial for ensuring integrity in our analyses.\n\nNext, we categorize
+      the data into meaningful segments or variables that are pertinent to our research
+      questions. This segmentation allows for the application of basic statistical
+      methods to summarize key features. By calculating the mean, median, and mode,
+      we gain valuable insights into the distribution and central tendencies of the
+      data, which serves as a foundation for more complex analyses.\n\nAdditionally,
+      we create visualizations such as histograms, box plots, and scatter plots to
+      elucidate the relationships and patterns within the data. These visual aids
+      play a vital role in identifying trends, outliers, and potential areas of concern,
+      allowing us to interpret the data more intuitively.\n\nFurthermore, we assess
+      the data''s usability in addressing the specific questions at hand. This involves
+      checking for alignment with the project''s goals and objectives to ensure we
+      are on the right path. Any misalignment might require us to reevaluate the data
+      sources or pivot in our analytical approach.\n\nBy the end of this initial analysis,
+      we will have a comprehensive overview of the data''s strengths and weaknesses.
+      This understanding will guide us towards more in-depth investigations or adjustments
+      needed for future data collection efforts. Ultimately, this foundational analysis
+      sets the stage for future analytical processes and decision-making initiatives,
+      empowering us with a solid framework to build upon as we delve deeper into our
+      exploration of the data.", "call_type": "<LLMCallType.LLM_CALL: ''llm_call''>",
+      "model": "gpt-4o-mini"}}, {"event_id": "df35d37a-eb69-423d-ab9f-73194e4753f6",
+      "timestamp": "2025-09-24T05:27:25.057685+00:00", "type": "agent_execution_completed",
+      "event_data": {"agent_role": "Second Agent", "agent_goal": "Second goal", "agent_backstory":
+      "Second backstory"}}, {"event_id": "f6197b91-7b6c-4cc5-9b3f-c4531ea89ff4", "timestamp":
+      "2025-09-24T05:27:25.057726+00:00", "type": "task_completed", "event_data":
+      {"task_description": "Process secondary data", "task_name": "Process secondary
+      data", "task_id": "30bf5263-4388-401a-bba1-590af32be7be", "output_raw": "The
+      initial analysis of the data involves several critical steps. First, we must
+      identify the sources of the data, ensuring that they are reliable and relevant
+      to the objectives of the project. This involves scrutinizing the credibility
+      of each source, assessing the methodologies used for data collection, and confirming
+      that they align with the research aims.\n\nOnce the data is collected, we perform
+      a preliminary examination to check for accuracy and completeness. This means
+      meticulously looking for any missing values, duplicate entries, or discrepancies
+      that could skew results. Cleaning the data at this stage is crucial for ensuring
+      integrity in our analyses.\n\nNext, we categorize the data into meaningful segments
+      or variables that are pertinent to our research questions. This segmentation
+      allows for the application of basic statistical methods to summarize key features.
+      By calculating the mean, median, and mode, we gain valuable insights into the
+      distribution and central tendencies of the data, which serves as a foundation
+      for more complex analyses.\n\nAdditionally, we create visualizations such as
+      histograms, box plots, and scatter plots to elucidate the relationships and
+      patterns within the data. These visual aids play a vital role in identifying
+      trends, outliers, and potential areas of concern, allowing us to interpret the
+      data more intuitively.\n\nFurthermore, we assess the data''s usability in addressing
+      the specific questions at hand. This involves checking for alignment with the
+      project''s goals and objectives to ensure we are on the right path. Any misalignment
+      might require us to reevaluate the data sources or pivot in our analytical approach.\n\nBy
+      the end of this initial analysis, we will have a comprehensive overview of the
+      data''s strengths and weaknesses. This understanding will guide us towards more
+      in-depth investigations or adjustments needed for future data collection efforts.
+      Ultimately, this foundational analysis sets the stage for future analytical
+      processes and decision-making initiatives, empowering us with a solid framework
+      to build upon as we delve deeper into our exploration of the data.", "output_format":
+      "OutputFormat.RAW", "agent_role": "Second Agent"}}, {"event_id": "ff9fd1ff-61bf-4893-85da-a2a64559e34d",
+      "timestamp": "2025-09-24T05:27:25.058754+00:00", "type": "crew_kickoff_completed",
+      "event_data": {"timestamp": "2025-09-24T05:27:25.058735+00:00", "type": "crew_kickoff_completed",
+      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
+      "task_id": null, "task_name": null, "agent_id": null, "agent_role": null, "crew_name":
+      "crew", "crew": null, "output": {"description": "Process secondary data", "name":
+      "Process secondary data", "expected_output": "Secondary analysis", "summary":
+      "Process secondary data...", "raw": "The initial analysis of the data involves
+      several critical steps. First, we must identify the sources of the data, ensuring
+      that they are reliable and relevant to the objectives of the project. This involves
+      scrutinizing the credibility of each source, assessing the methodologies used
+      for data collection, and confirming that they align with the research aims.\n\nOnce
+      the data is collected, we perform a preliminary examination to check for accuracy
+      and completeness. This means meticulously looking for any missing values, duplicate
+      entries, or discrepancies that could skew results. Cleaning the data at this
+      stage is crucial for ensuring integrity in our analyses.\n\nNext, we categorize
+      the data into meaningful segments or variables that are pertinent to our research
+      questions. This segmentation allows for the application of basic statistical
+      methods to summarize key features. By calculating the mean, median, and mode,
+      we gain valuable insights into the distribution and central tendencies of the
+      data, which serves as a foundation for more complex analyses.\n\nAdditionally,
+      we create visualizations such as histograms, box plots, and scatter plots to
+      elucidate the relationships and patterns within the data. These visual aids
+      play a vital role in identifying trends, outliers, and potential areas of concern,
+      allowing us to interpret the data more intuitively.\n\nFurthermore, we assess
+      the data''s usability in addressing the specific questions at hand. This involves
+      checking for alignment with the project''s goals and objectives to ensure we
+      are on the right path. Any misalignment might require us to reevaluate the data
+      sources or pivot in our analytical approach.\n\nBy the end of this initial analysis,
+      we will have a comprehensive overview of the data''s strengths and weaknesses.
+      This understanding will guide us towards more in-depth investigations or adjustments
+      needed for future data collection efforts. Ultimately, this foundational analysis
+      sets the stage for future analytical processes and decision-making initiatives,
+      empowering us with a solid framework to build upon as we delve deeper into our
+      exploration of the data.", "pydantic": null, "json_dict": null, "agent": "Second
+      Agent", "output_format": "raw"}, "total_tokens": 1173}}], "batch_metadata":
+      {"events_count": 14, "batch_sequence": 1, "is_final_batch": false}}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '22633'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - CrewAI-CLI/0.193.2
+      X-Crewai-Organization-Id:
+      - d3a3d10c-35db-423f-a7a4-c026030ba64d
+      X-Crewai-Version:
+      - 0.193.2
+    method: POST
+    uri: http://localhost:3000/crewai_plus/api/v1/tracing/batches/5e42c81e-e43b-4a74-b889-f116f094597b/events
+  response:
+    body:
+      string: '{"events_created":14,"trace_batch_id":"3ac2458f-6604-411f-a8ba-6d150f0d9bf4"}'
+    headers:
+      Content-Length:
+      - '77'
+      cache-control:
+      - max-age=0, private, must-revalidate
+      content-security-policy:
+      - 'default-src ''self'' *.crewai.com crewai.com; script-src ''self'' ''unsafe-inline''
+        *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts https://www.gstatic.com
+        https://run.pstmn.io https://share.descript.com/; style-src ''self'' ''unsafe-inline''
+        *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts; img-src ''self''
+        data: *.crewai.com crewai.com https://zeus.tools.crewai.com https://dashboard.tools.crewai.com
+        https://cdn.jsdelivr.net; font-src ''self'' data: *.crewai.com crewai.com;
+        connect-src ''self'' *.crewai.com crewai.com https://zeus.tools.crewai.com
+        https://connect.useparagon.com/ https://zeus.useparagon.com/* https://*.useparagon.com/*
+        https://run.pstmn.io https://connect.tools.crewai.com/ ws://localhost:3036
+        wss://localhost:3036; frame-src ''self'' *.crewai.com crewai.com https://connect.useparagon.com/
+        https://zeus.tools.crewai.com https://zeus.useparagon.com/* https://connect.tools.crewai.com/
+        https://www.youtube.com https://share.descript.com'
+      content-type:
+      - application/json; charset=utf-8
+      etag:
+      - W/"5db9e3a7cf5b320a85fa20a8dcb3a71e"
+      permissions-policy:
+      - camera=(), microphone=(self), geolocation=()
+      referrer-policy:
+      - strict-origin-when-cross-origin
+      server-timing:
+      - cache_read.active_support;dur=0.06, sql.active_record;dur=55.25, cache_generate.active_support;dur=2.01,
+        cache_write.active_support;dur=0.13, cache_read_multi.active_support;dur=0.08,
+        start_processing.action_controller;dur=0.00, instantiation.active_record;dur=3.88,
+        start_transaction.active_record;dur=0.00, transaction.active_record;dur=77.50,
+        process_action.action_controller;dur=413.56
+      vary:
+      - Accept
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-permitted-cross-domain-policies:
+      - none
+      x-request-id:
+      - 726e3803-39c0-468c-8bf3-8d00815405df
+      x-runtime:
+      - '0.441008'
+      x-xss-protection:
+      - 1; mode=block
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"status": "completed", "duration_ms": 1186, "final_event_count": 14}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '69'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - CrewAI-CLI/0.193.2
+      X-Crewai-Organization-Id:
+      - d3a3d10c-35db-423f-a7a4-c026030ba64d
+      X-Crewai-Version:
+      - 0.193.2
+    method: PATCH
+    uri: http://localhost:3000/crewai_plus/api/v1/tracing/batches/5e42c81e-e43b-4a74-b889-f116f094597b/finalize
+  response:
+    body:
+      string: '{"id":"3ac2458f-6604-411f-a8ba-6d150f0d9bf4","trace_id":"5e42c81e-e43b-4a74-b889-f116f094597b","execution_type":"crew","crew_name":"crew","flow_name":null,"status":"completed","duration_ms":1186,"crewai_version":"0.193.2","privacy_level":"standard","total_events":14,"execution_context":{"crew_name":"crew","flow_name":null,"privacy_level":"standard","crewai_version":"0.193.2","crew_fingerprint":null},"created_at":"2025-09-24T05:27:25.037Z","updated_at":"2025-09-24T05:27:26.013Z"}'
+    headers:
+      Content-Length:
+      - '483'
+      cache-control:
+      - max-age=0, private, must-revalidate
+      content-security-policy:
+      - 'default-src ''self'' *.crewai.com crewai.com; script-src ''self'' ''unsafe-inline''
+        *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts https://www.gstatic.com
+        https://run.pstmn.io https://share.descript.com/; style-src ''self'' ''unsafe-inline''
+        *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts; img-src ''self''
+        data: *.crewai.com crewai.com https://zeus.tools.crewai.com https://dashboard.tools.crewai.com
+        https://cdn.jsdelivr.net; font-src ''self'' data: *.crewai.com crewai.com;
+        connect-src ''self'' *.crewai.com crewai.com https://zeus.tools.crewai.com
+        https://connect.useparagon.com/ https://zeus.useparagon.com/* https://*.useparagon.com/*
+        https://run.pstmn.io https://connect.tools.crewai.com/ ws://localhost:3036
+        wss://localhost:3036; frame-src ''self'' *.crewai.com crewai.com https://connect.useparagon.com/
+        https://zeus.tools.crewai.com https://zeus.useparagon.com/* https://connect.tools.crewai.com/
+        https://www.youtube.com https://share.descript.com'
+      content-type:
+      - application/json; charset=utf-8
+      etag:
+      - W/"f045dc56998093405450053b243d65cf"
+      permissions-policy:
+      - camera=(), microphone=(self), geolocation=()
+      referrer-policy:
+      - strict-origin-when-cross-origin
+      server-timing:
+      - cache_read.active_support;dur=0.06, sql.active_record;dur=27.36, cache_generate.active_support;dur=7.82,
+        cache_write.active_support;dur=0.12, cache_read_multi.active_support;dur=0.10,
+        start_processing.action_controller;dur=0.00, instantiation.active_record;dur=0.50,
+        unpermitted_parameters.action_controller;dur=0.01, start_transaction.active_record;dur=0.00,
+        transaction.active_record;dur=2.93, process_action.action_controller;dur=468.16
+      vary:
+      - Accept
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-permitted-cross-domain-policies:
+      - none
+      x-request-id:
+      - 8fabe254-db5f-4c57-9b50-e6d75392bfa9
+      x-runtime:
+      - '0.501421'
+      x-xss-protection:
+      - 1; mode=block
+    status:
+      code: 200
+      message: OK
+version: 1

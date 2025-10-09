@@ -1,0 +1,723 @@
+interactions:
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are Data Scientist. You
+      work with data and AI\nYour personal goal is: Product amazing resports on AI\nYou
+      ONLY have access to the following tools, and should NEVER make up tools that
+      are not listed here:\n\nTool Name: Get Greetings() -> str\nTool Description:
+      Get Greetings() - Get a random greeting back \nTool Arguments: {}\n\nUse the
+      following format:\n\nThought: you should always think about what to do\nAction:
+      the action to take, only one name of [Get Greetings], just the name, exactly
+      as it''s written.\nAction Input: the input to the action, just a simple python
+      dictionary, enclosed in curly braces, using \" to wrap keys and values.\nObservation:
+      the result of the action\n\nOnce all necessary information is gathered:\n\nThought:
+      I now know the final answer\nFinal Answer: the final answer to the original
+      input question\n"}, {"role": "user", "content": "\nCurrent Task: Write and then
+      review an small paragraph on AI until it''s AMAZING. But first use the `Get
+      Greetings` tool to get a greeting.\n\nThis is the expect criteria for your final
+      answer: The final paragraph with the full review on AI and no greeting.\nyou
+      MUST return the actual complete content as the final answer, not a summary.\n\nBegin!
+      This is VERY important to you, use the tools available and give your best Final
+      Answer, your job depends on it!\n\nThought:"}], "model": "gpt-4o"}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '1412'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=rb61BZH2ejzD5YPmLaEJqI7km71QqyNJGTVdNxBq6qk-1727213194-1.0.1.1-pJ49onmgX9IugEMuYQMralzD7oj_6W.CHbSu4Su1z3NyjTGYg.rhgJZWng8feFYah._oSnoYlkTjpK1Wd2C9FA;
+        _cfuvid=lbRdAddVWV6W3f5Dm9SaOPWDUOxqtZBSPr_fTW26nEA-1727213194587-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.47.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.47.0
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.7
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-AB7WF40CXhA3hdWFV0w1Py8m9X6E5\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1727213875,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"Thought: I should start by using the
+      Get Greetings tool to get a random greeting.\\n\\nAction: Get Greetings\\nAction
+      Input: {}\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
+      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+      284,\n    \"completion_tokens\": 26,\n    \"total_tokens\": 310,\n    \"completion_tokens_details\":
+      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 8c85eb23cd701cf3-GRU
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Tue, 24 Sep 2024 21:37:56 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '521'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '30000000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '29999661'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_d0737c9b1f07bfb15487d0d04284f260
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: !!binary |
+      CqgMCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkS/wsKEgoQY3Jld2FpLnRl
+      bGVtZXRyeRKQAgoQEm+HPIG0bZY/UytlpKjeURIIzbGEu+Oo+tMqDlRhc2sgRXhlY3V0aW9uMAE5
+      eJfTNW1L+BdBeD5dZt5L+BdKLgoIY3Jld19rZXkSIgogNDk0ZjM2NTcyMzdhZDhhMzAzNWIyZjFi
+      ZWVjZGM2NzdKMQoHY3Jld19pZBImCiQ0Mzg4MzMyNS1hYjEwLTQxYjYtODI1Ny1lODVjYTk1ZWNj
+      NzJKLgoIdGFza19rZXkSIgogZjI1OTdjNzg2N2ZiZTMyNGRjNjVkYzA4ZGZkYmZjNmNKMQoHdGFz
+      a19pZBImCiRjYTFmMzYwNy0wZjg0LTRlYjUtYTQ4Yy1lYmFjMzAxMGM2ZWJ6AhgBhQEAAQAAEsQH
+      ChC3lq21iz10UM0bo/m4yEnHEgjfYn8uhj036ioMQ3JldyBDcmVhdGVkMAE5uLY5bd5L+BdBINs+
+      bd5L+BdKGgoOY3Jld2FpX3ZlcnNpb24SCAoGMC42MS4wShoKDnB5dGhvbl92ZXJzaW9uEggKBjMu
+      MTEuN0ouCghjcmV3X2tleRIiCiA3ZTY2MDg5ODk4NTlhNjdlZWM4OGVlZjdmY2U4NTIyNUoxCgdj
+      cmV3X2lkEiYKJDFhMjIxMWNmLTAyOWQtNDUwMy1hMDIxLTQzMjVmOTQ5OWQ3YkocCgxjcmV3X3By
+      b2Nlc3MSDAoKc2VxdWVudGlhbEoRCgtjcmV3X21lbW9yeRICEABKGgoUY3Jld19udW1iZXJfb2Zf
+      dGFza3MSAhgBShsKFWNyZXdfbnVtYmVyX29mX2FnZW50cxICGAFK3wIKC2NyZXdfYWdlbnRzEs8C
+      CswCW3sia2V5IjogIjIyYWNkNjExZTQ0ZWY1ZmFjMDViNTMzZDc1ZTg4OTNiIiwgImlkIjogImIx
+      ZGQ3MDRjLTczMDAtNGVhZS04ZmYzLTIyYzE0NTc5NzQ2ZSIsICJyb2xlIjogIkRhdGEgU2NpZW50
+      aXN0IiwgInZlcmJvc2U/IjogZmFsc2UsICJtYXhfaXRlciI6IDE1LCAibWF4X3JwbSI6IG51bGws
+      ICJmdW5jdGlvbl9jYWxsaW5nX2xsbSI6ICIiLCAibGxtIjogImdwdC00byIsICJkZWxlZ2F0aW9u
+      X2VuYWJsZWQ/IjogZmFsc2UsICJhbGxvd19jb2RlX2V4ZWN1dGlvbj8iOiBmYWxzZSwgIm1heF9y
+      ZXRyeV9saW1pdCI6IDIsICJ0b29sc19uYW1lcyI6IFsiZ2V0IGdyZWV0aW5ncyJdfV1KkgIKCmNy
+      ZXdfdGFza3MSgwIKgAJbeyJrZXkiOiAiYTI3N2IzNGIyYzE0NmYwYzU2YzVlMTM1NmU4ZjhhNTci
+      LCAiaWQiOiAiZDc5OTFlOGQtNzI0Zi00ZGQ1LWI1ZWUtNDAxNGVmMmEyMDgxIiwgImFzeW5jX2V4
+      ZWN1dGlvbj8iOiBmYWxzZSwgImh1bWFuX2lucHV0PyI6IGZhbHNlLCAiYWdlbnRfcm9sZSI6ICJE
+      YXRhIFNjaWVudGlzdCIsICJhZ2VudF9rZXkiOiAiMjJhY2Q2MTFlNDRlZjVmYWMwNWI1MzNkNzVl
+      ODg5M2IiLCAidG9vbHNfbmFtZXMiOiBbImdldCBncmVldGluZ3MiXX1degIYAYUBAAEAABKOAgoQ
+      Ipnb+wuVyO/6K2F+fu2ZARIIXxLM6dFgtCMqDFRhc2sgQ3JlYXRlZDABOXAaVW3eS/gXQdCHVW3e
+      S/gXSi4KCGNyZXdfa2V5EiIKIDdlNjYwODk4OTg1OWE2N2VlYzg4ZWVmN2ZjZTg1MjI1SjEKB2Ny
+      ZXdfaWQSJgokMWEyMjExY2YtMDI5ZC00NTAzLWEwMjEtNDMyNWY5NDk5ZDdiSi4KCHRhc2tfa2V5
+      EiIKIGEyNzdiMzRiMmMxNDZmMGM1NmM1ZTEzNTZlOGY4YTU3SjEKB3Rhc2tfaWQSJgokZDc5OTFl
+      OGQtNzI0Zi00ZGQ1LWI1ZWUtNDAxNGVmMmEyMDgxegIYAYUBAAEAAA==
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '1579'
+      Content-Type:
+      - application/x-protobuf
+      User-Agent:
+      - OTel-OTLP-Exporter-Python/1.27.0
+    method: POST
+    uri: https://telemetry.crewai.com:4319/v1/traces
+  response:
+    body:
+      string: "\n\0"
+    headers:
+      Content-Length:
+      - '2'
+      Content-Type:
+      - application/x-protobuf
+      Date:
+      - Tue, 24 Sep 2024 21:37:56 GMT
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are Data Scientist. You
+      work with data and AI\nYour personal goal is: Product amazing resports on AI\nYou
+      ONLY have access to the following tools, and should NEVER make up tools that
+      are not listed here:\n\nTool Name: Get Greetings() -> str\nTool Description:
+      Get Greetings() - Get a random greeting back \nTool Arguments: {}\n\nUse the
+      following format:\n\nThought: you should always think about what to do\nAction:
+      the action to take, only one name of [Get Greetings], just the name, exactly
+      as it''s written.\nAction Input: the input to the action, just a simple python
+      dictionary, enclosed in curly braces, using \" to wrap keys and values.\nObservation:
+      the result of the action\n\nOnce all necessary information is gathered:\n\nThought:
+      I now know the final answer\nFinal Answer: the final answer to the original
+      input question\n"}, {"role": "user", "content": "\nCurrent Task: Write and then
+      review an small paragraph on AI until it''s AMAZING. But first use the `Get
+      Greetings` tool to get a greeting.\n\nThis is the expect criteria for your final
+      answer: The final paragraph with the full review on AI and no greeting.\nyou
+      MUST return the actual complete content as the final answer, not a summary.\n\nBegin!
+      This is VERY important to you, use the tools available and give your best Final
+      Answer, your job depends on it!\n\nThought:"}, {"role": "assistant", "content":
+      "Thought: I should start by using the Get Greetings tool to get a random greeting.\n\nAction:
+      Get Greetings\nAction Input: {}\nObservation: Howdy!"}], "model": "gpt-4o"}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '1595'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=rb61BZH2ejzD5YPmLaEJqI7km71QqyNJGTVdNxBq6qk-1727213194-1.0.1.1-pJ49onmgX9IugEMuYQMralzD7oj_6W.CHbSu4Su1z3NyjTGYg.rhgJZWng8feFYah._oSnoYlkTjpK1Wd2C9FA;
+        _cfuvid=lbRdAddVWV6W3f5Dm9SaOPWDUOxqtZBSPr_fTW26nEA-1727213194587-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.47.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.47.0
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.7
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-AB7WGcsBd3iW1colmI280lUeERSVO\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1727213876,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"Thought: I now have a greeting and can
+      focus on writing and reviewing a small paragraph about AI until it is amazing.\\n\\nArtificial
+      Intelligence (AI) represents one of the most transformative technologies of
+      our time, promising to redefine industries and enhance human capabilities in
+      unprecedented ways. From machine learning algorithms that predict consumer behavior
+      to autonomous systems that drive cars and diagnose diseases, the potential applications
+      of AI are vast and varied. By enabling machines to learn from data, make decisions,
+      and even improve over time, AI is not only increasing efficiency but also opening
+      new avenues for innovation. However, the ethical considerations and challenges
+      associated with AI, such as ensuring privacy and preventing bias, underscore
+      the importance of responsible development and deployment. In embracing AI\u2019s
+      potential, we stand on the brink of a new era where intelligent systems enrich
+      our lives while fostering sustainable progress.\\n\\nFinal Answer: Artificial
+      Intelligence (AI) represents one of the most transformative technologies of
+      our time, promising to redefine industries and enhance human capabilities in
+      unprecedented ways. From machine learning algorithms that predict consumer behavior
+      to autonomous systems that drive cars and diagnose diseases, the potential applications
+      of AI are vast and varied. By enabling machines to learn from data, make decisions,
+      and even improve over time, AI is not only increasing efficiency but also opening
+      new avenues for innovation. However, the ethical considerations and challenges
+      associated with AI, such as ensuring privacy and preventing bias, underscore
+      the importance of responsible development and deployment. In embracing AI\u2019s
+      potential, we stand on the brink of a new era where intelligent systems enrich
+      our lives while fostering sustainable progress.\",\n        \"refusal\": null\n
+      \     },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n
+      \ ],\n  \"usage\": {\n    \"prompt_tokens\": 319,\n    \"completion_tokens\":
+      309,\n    \"total_tokens\": 628,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 8c85eb28db581cf3-GRU
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Tue, 24 Sep 2024 21:38:01 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '4477'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '30000000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '29999625'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_bbfe512aa3a05220da4bd4537796bc59
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: '{"trace_id": "498b7dba-2799-4c47-a8d8-5cb7fda3955d", "execution_type":
+      "crew", "user_identifier": null, "execution_context": {"crew_fingerprint": null,
+      "crew_name": "crew", "flow_name": null, "crewai_version": "0.193.2", "privacy_level":
+      "standard"}, "execution_metadata": {"expected_duration_estimate": 300, "agent_count":
+      0, "task_count": 0, "flow_method_count": 0, "execution_started_at": "2025-09-24T05:25:56.197221+00:00"}}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '428'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - CrewAI-CLI/0.193.2
+      X-Crewai-Organization-Id:
+      - d3a3d10c-35db-423f-a7a4-c026030ba64d
+      X-Crewai-Version:
+      - 0.193.2
+    method: POST
+    uri: http://localhost:3000/crewai_plus/api/v1/tracing/batches
+  response:
+    body:
+      string: '{"id":"9fd23842-a778-4e3d-bcff-20d5f83626fc","trace_id":"498b7dba-2799-4c47-a8d8-5cb7fda3955d","execution_type":"crew","crew_name":"crew","flow_name":null,"status":"running","duration_ms":null,"crewai_version":"0.193.2","privacy_level":"standard","total_events":0,"execution_context":{"crew_fingerprint":null,"crew_name":"crew","flow_name":null,"crewai_version":"0.193.2","privacy_level":"standard"},"created_at":"2025-09-24T05:25:57.083Z","updated_at":"2025-09-24T05:25:57.083Z"}'
+    headers:
+      Content-Length:
+      - '480'
+      cache-control:
+      - max-age=0, private, must-revalidate
+      content-security-policy:
+      - 'default-src ''self'' *.crewai.com crewai.com; script-src ''self'' ''unsafe-inline''
+        *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts https://www.gstatic.com
+        https://run.pstmn.io https://share.descript.com/; style-src ''self'' ''unsafe-inline''
+        *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts; img-src ''self''
+        data: *.crewai.com crewai.com https://zeus.tools.crewai.com https://dashboard.tools.crewai.com
+        https://cdn.jsdelivr.net; font-src ''self'' data: *.crewai.com crewai.com;
+        connect-src ''self'' *.crewai.com crewai.com https://zeus.tools.crewai.com
+        https://connect.useparagon.com/ https://zeus.useparagon.com/* https://*.useparagon.com/*
+        https://run.pstmn.io https://connect.tools.crewai.com/ ws://localhost:3036
+        wss://localhost:3036; frame-src ''self'' *.crewai.com crewai.com https://connect.useparagon.com/
+        https://zeus.tools.crewai.com https://zeus.useparagon.com/* https://connect.tools.crewai.com/
+        https://www.youtube.com https://share.descript.com'
+      content-type:
+      - application/json; charset=utf-8
+      etag:
+      - W/"8aa7e71e580993355909255400755370"
+      permissions-policy:
+      - camera=(), microphone=(self), geolocation=()
+      referrer-policy:
+      - strict-origin-when-cross-origin
+      server-timing:
+      - cache_read.active_support;dur=0.08, sql.active_record;dur=26.33, cache_generate.active_support;dur=2.62,
+        cache_write.active_support;dur=0.10, cache_read_multi.active_support;dur=0.14,
+        start_processing.action_controller;dur=0.00, instantiation.active_record;dur=0.54,
+        feature_operation.flipper;dur=0.02, start_transaction.active_record;dur=0.00,
+        transaction.active_record;dur=8.06, process_action.action_controller;dur=862.87
+      vary:
+      - Accept
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-permitted-cross-domain-policies:
+      - none
+      x-request-id:
+      - 054ac736-e552-4c98-9e3e-86ed87607359
+      x-runtime:
+      - '0.891150'
+      x-xss-protection:
+      - 1; mode=block
+    status:
+      code: 201
+      message: Created
+- request:
+    body: '{"events": [{"event_id": "58dc496d-2b39-467a-9e26-a07ae720deb7", "timestamp":
+      "2025-09-24T05:25:57.091992+00:00", "type": "crew_kickoff_started", "event_data":
+      {"timestamp": "2025-09-24T05:25:56.195619+00:00", "type": "crew_kickoff_started",
+      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
+      "task_id": null, "task_name": null, "agent_id": null, "agent_role": null, "crew_name":
+      "crew", "crew": null, "inputs": null}}, {"event_id": "da7c6316-ae58-4e54-be39-f3285ccc6e93",
+      "timestamp": "2025-09-24T05:25:57.093888+00:00", "type": "task_started", "event_data":
+      {"task_description": "Write and then review an small paragraph on AI until it''s
+      AMAZING. But first use the `Get Greetings` tool to get a greeting.", "expected_output":
+      "The final paragraph with the full review on AI and no greeting.", "task_name":
+      "Write and then review an small paragraph on AI until it''s AMAZING. But first
+      use the `Get Greetings` tool to get a greeting.", "context": "", "agent_role":
+      "Data Scientist", "task_id": "c36512dc-eff7-4d46-9d00-ae71b6f90016"}}, {"event_id":
+      "446167f9-20e7-4a25-874d-5809fc2eb7da", "timestamp": "2025-09-24T05:25:57.094375+00:00",
+      "type": "agent_execution_started", "event_data": {"agent_role": "Data Scientist",
+      "agent_goal": "Product amazing resports on AI", "agent_backstory": "You work
+      with data and AI"}}, {"event_id": "9454f456-5c55-4bc9-a5ec-702fe2eecfb9", "timestamp":
+      "2025-09-24T05:25:57.094481+00:00", "type": "llm_call_started", "event_data":
+      {"timestamp": "2025-09-24T05:25:57.094453+00:00", "type": "llm_call_started",
+      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
+      "task_id": "c36512dc-eff7-4d46-9d00-ae71b6f90016", "task_name": "Write and then
+      review an small paragraph on AI until it''s AMAZING. But first use the `Get
+      Greetings` tool to get a greeting.", "agent_id": "63eb7ced-43bd-4750-88ff-2ee2fbe01b9f",
+      "agent_role": "Data Scientist", "from_task": null, "from_agent": null, "model":
+      "gpt-4o-mini", "messages": [{"role": "system", "content": "You are Data Scientist.
+      You work with data and AI\nYour personal goal is: Product amazing resports on
+      AI\nYou ONLY have access to the following tools, and should NEVER make up tools
+      that are not listed here:\n\nTool Name: Get Greetings\nTool Arguments: {}\nTool
+      Description: Get a random greeting back\n\nIMPORTANT: Use the following format
+      in your response:\n\n```\nThought: you should always think about what to do\nAction:
+      the action to take, only one name of [Get Greetings], just the name, exactly
+      as it''s written.\nAction Input: the input to the action, just a simple JSON
+      object, enclosed in curly braces, using \" to wrap keys and values.\nObservation:
+      the result of the action\n```\n\nOnce all necessary information is gathered,
+      return the following format:\n\n```\nThought: I now know the final answer\nFinal
+      Answer: the final answer to the original input question\n```"}, {"role": "user",
+      "content": "\nCurrent Task: Write and then review an small paragraph on AI until
+      it''s AMAZING. But first use the `Get Greetings` tool to get a greeting.\n\nThis
+      is the expected criteria for your final answer: The final paragraph with the
+      full review on AI and no greeting.\nyou MUST return the actual complete content
+      as the final answer, not a summary.\n\nBegin! This is VERY important to you,
+      use the tools available and give your best Final Answer, your job depends on
+      it!\n\nThought:"}], "tools": null, "callbacks": ["<crewai.utilities.token_counter_callback.TokenCalcHandler
+      object at 0x13ab2f170>"], "available_functions": null}}, {"event_id": "b8e3692f-9055-4718-911f-e20c1a7d317b",
+      "timestamp": "2025-09-24T05:25:57.096240+00:00", "type": "llm_call_completed",
+      "event_data": {"timestamp": "2025-09-24T05:25:57.096207+00:00", "type": "llm_call_completed",
+      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
+      "task_id": "c36512dc-eff7-4d46-9d00-ae71b6f90016", "task_name": "Write and then
+      review an small paragraph on AI until it''s AMAZING. But first use the `Get
+      Greetings` tool to get a greeting.", "agent_id": "63eb7ced-43bd-4750-88ff-2ee2fbe01b9f",
+      "agent_role": "Data Scientist", "from_task": null, "from_agent": null, "messages":
+      [{"role": "system", "content": "You are Data Scientist. You work with data and
+      AI\nYour personal goal is: Product amazing resports on AI\nYou ONLY have access
+      to the following tools, and should NEVER make up tools that are not listed here:\n\nTool
+      Name: Get Greetings\nTool Arguments: {}\nTool Description: Get a random greeting
+      back\n\nIMPORTANT: Use the following format in your response:\n\n```\nThought:
+      you should always think about what to do\nAction: the action to take, only one
+      name of [Get Greetings], just the name, exactly as it''s written.\nAction Input:
+      the input to the action, just a simple JSON object, enclosed in curly braces,
+      using \" to wrap keys and values.\nObservation: the result of the action\n```\n\nOnce
+      all necessary information is gathered, return the following format:\n\n```\nThought:
+      I now know the final answer\nFinal Answer: the final answer to the original
+      input question\n```"}, {"role": "user", "content": "\nCurrent Task: Write and
+      then review an small paragraph on AI until it''s AMAZING. But first use the
+      `Get Greetings` tool to get a greeting.\n\nThis is the expected criteria for
+      your final answer: The final paragraph with the full review on AI and no greeting.\nyou
+      MUST return the actual complete content as the final answer, not a summary.\n\nBegin!
+      This is VERY important to you, use the tools available and give your best Final
+      Answer, your job depends on it!\n\nThought:"}], "response": "Thought: I should
+      start by using the Get Greetings tool to get a random greeting.\n\nAction: Get
+      Greetings\nAction Input: {}", "call_type": "<LLMCallType.LLM_CALL: ''llm_call''>",
+      "model": "gpt-4o-mini"}}, {"event_id": "16076ac0-0c6b-4d17-8dec-aba0b8811fdd",
+      "timestamp": "2025-09-24T05:25:57.096550+00:00", "type": "tool_usage_started",
+      "event_data": {"timestamp": "2025-09-24T05:25:57.096517+00:00", "type": "tool_usage_started",
+      "source_fingerprint": "87ab7778-1c6e-4a46-a286-ee26f0f1a8e2", "source_type":
+      "agent", "fingerprint_metadata": null, "task_id": "c36512dc-eff7-4d46-9d00-ae71b6f90016",
+      "task_name": "Write and then review an small paragraph on AI until it''s AMAZING.
+      But first use the `Get Greetings` tool to get a greeting.", "agent_id": null,
+      "agent_role": "Data Scientist", "agent_key": "22acd611e44ef5fac05b533d75e8893b",
+      "tool_name": "Get Greetings", "tool_args": "{}", "tool_class": "Get Greetings",
+      "run_attempts": null, "delegations": null, "agent": {"id": "63eb7ced-43bd-4750-88ff-2ee2fbe01b9f",
+      "role": "Data Scientist", "goal": "Product amazing resports on AI", "backstory":
+      "You work with data and AI", "cache": true, "verbose": false, "max_rpm": null,
+      "allow_delegation": false, "tools": [{"name": "''Get Greetings''", "description":
+      "''Tool Name: Get Greetings\\nTool Arguments: {}\\nTool Description: Get a random
+      greeting back''", "env_vars": "[]", "args_schema": "<class ''abc.MyCustomToolSchema''>",
+      "description_updated": "False", "cache_function": "<function BaseTool.<lambda>
+      at 0x107ff9440>", "result_as_answer": "True", "max_usage_count": "None", "current_usage_count":
+      "0"}], "max_iter": 25, "agent_executor": "<crewai.agents.crew_agent_executor.CrewAgentExecutor
+      object at 0x13ab2e030>", "llm": "<crewai.llms.providers.openai.completion.OpenAICompletion
+      object at 0x13ab2e5d0>", "crew": {"parent_flow": null, "name": "crew", "cache":
+      true, "tasks": ["{''used_tools'': 0, ''tools_errors'': 0, ''delegations'': 0,
+      ''i18n'': {''prompt_file'': None}, ''name'': None, ''prompt_context'': '''',
+      ''description'': \"Write and then review an small paragraph on AI until it''s
+      AMAZING. But first use the `Get Greetings` tool to get a greeting.\", ''expected_output'':
+      ''The final paragraph with the full review on AI and no greeting.'', ''config'':
+      None, ''callback'': None, ''agent'': {''id'': UUID(''63eb7ced-43bd-4750-88ff-2ee2fbe01b9f''),
+      ''role'': ''Data Scientist'', ''goal'': ''Product amazing resports on AI'',
+      ''backstory'': ''You work with data and AI'', ''cache'': True, ''verbose'':
+      False, ''max_rpm'': None, ''allow_delegation'': False, ''tools'': [{''name'':
+      ''Get Greetings'', ''description'': ''Tool Name: Get Greetings\\nTool Arguments:
+      {}\\nTool Description: Get a random greeting back'', ''env_vars'': [], ''args_schema'':
+      <class ''abc.MyCustomToolSchema''>, ''description_updated'': False, ''cache_function'':
+      <function BaseTool.<lambda> at 0x107ff9440>, ''result_as_answer'': True, ''max_usage_count'':
+      None, ''current_usage_count'': 0}], ''max_iter'': 25, ''agent_executor'': <crewai.agents.crew_agent_executor.CrewAgentExecutor
+      object at 0x13ab2e030>, ''llm'': <crewai.llms.providers.openai.completion.OpenAICompletion
+      object at 0x13ab2e5d0>, ''crew'': Crew(id=f74956dd-60d0-402a-a703-2cc3d767397f,
+      process=Process.sequential, number_of_agents=1, number_of_tasks=1), ''i18n'':
+      {''prompt_file'': None}, ''cache_handler'': {}, ''tools_handler'': <crewai.agents.tools_handler.ToolsHandler
+      object at 0x13ab2e990>, ''tools_results'': [], ''max_tokens'': None, ''knowledge'':
+      None, ''knowledge_sources'': None, ''knowledge_storage'': None, ''security_config'':
+      {''fingerprint'': {''metadata'': {}}}, ''callbacks'': [], ''adapted_agent'':
+      False, ''knowledge_config'': None}, ''context'': NOT_SPECIFIED, ''async_execution'':
+      False, ''output_json'': None, ''output_pydantic'': None, ''output_file'': None,
+      ''create_directory'': True, ''output'': None, ''tools'': [{''name'': ''Get Greetings'',
+      ''description'': ''Tool Name: Get Greetings\\nTool Arguments: {}\\nTool Description:
+      Get a random greeting back'', ''env_vars'': [], ''args_schema'': <class ''abc.MyCustomToolSchema''>,
+      ''description_updated'': False, ''cache_function'': <function BaseTool.<lambda>
+      at 0x107ff9440>, ''result_as_answer'': True, ''max_usage_count'': None, ''current_usage_count'':
+      0}], ''security_config'': {''fingerprint'': {''metadata'': {}}}, ''id'': UUID(''c36512dc-eff7-4d46-9d00-ae71b6f90016''),
+      ''human_input'': False, ''markdown'': False, ''converter_cls'': None, ''processed_by_agents'':
+      {''Data Scientist''}, ''guardrail'': None, ''max_retries'': None, ''guardrail_max_retries'':
+      3, ''retry_count'': 0, ''start_time'': datetime.datetime(2025, 9, 23, 22, 25,
+      57, 93823), ''end_time'': None, ''allow_crewai_trigger_context'': None}"], "agents":
+      ["{''id'': UUID(''63eb7ced-43bd-4750-88ff-2ee2fbe01b9f''), ''role'': ''Data
+      Scientist'', ''goal'': ''Product amazing resports on AI'', ''backstory'': ''You
+      work with data and AI'', ''cache'': True, ''verbose'': False, ''max_rpm'': None,
+      ''allow_delegation'': False, ''tools'': [{''name'': ''Get Greetings'', ''description'':
+      ''Tool Name: Get Greetings\\nTool Arguments: {}\\nTool Description: Get a random
+      greeting back'', ''env_vars'': [], ''args_schema'': <class ''abc.MyCustomToolSchema''>,
+      ''description_updated'': False, ''cache_function'': <function BaseTool.<lambda>
+      at 0x107ff9440>, ''result_as_answer'': True, ''max_usage_count'': None, ''current_usage_count'':
+      0}], ''max_iter'': 25, ''agent_executor'': <crewai.agents.crew_agent_executor.CrewAgentExecutor
+      object at 0x13ab2e030>, ''llm'': <crewai.llms.providers.openai.completion.OpenAICompletion
+      object at 0x13ab2e5d0>, ''crew'': Crew(id=f74956dd-60d0-402a-a703-2cc3d767397f,
+      process=Process.sequential, number_of_agents=1, number_of_tasks=1), ''i18n'':
+      {''prompt_file'': None}, ''cache_handler'': {}, ''tools_handler'': <crewai.agents.tools_handler.ToolsHandler
+      object at 0x13ab2e990>, ''tools_results'': [], ''max_tokens'': None, ''knowledge'':
+      None, ''knowledge_sources'': None, ''knowledge_storage'': None, ''security_config'':
+      {''fingerprint'': {''metadata'': {}}}, ''callbacks'': [], ''adapted_agent'':
+      False, ''knowledge_config'': None}"], "process": "sequential", "verbose": false,
+      "memory": false, "short_term_memory": null, "long_term_memory": null, "entity_memory":
+      null, "external_memory": null, "embedder": null, "usage_metrics": null, "manager_llm":
+      null, "manager_agent": null, "function_calling_llm": null, "config": null, "id":
+      "f74956dd-60d0-402a-a703-2cc3d767397f", "share_crew": false, "step_callback":
+      null, "task_callback": null, "before_kickoff_callbacks": [], "after_kickoff_callbacks":
+      [], "max_rpm": null, "prompt_file": null, "output_log_file": null, "planning":
+      false, "planning_llm": null, "task_execution_output_json_files": null, "execution_logs":
+      [], "knowledge_sources": null, "chat_llm": null, "knowledge": null, "security_config":
+      {"fingerprint": "{''metadata'': {}}"}, "token_usage": null, "tracing": false},
+      "i18n": {"prompt_file": null}, "cache_handler": {}, "tools_handler": "<crewai.agents.tools_handler.ToolsHandler
+      object at 0x13ab2e990>", "tools_results": [], "max_tokens": null, "knowledge":
+      null, "knowledge_sources": null, "knowledge_storage": null, "security_config":
+      {"fingerprint": {"metadata": "{}"}}, "callbacks": [], "adapted_agent": false,
+      "knowledge_config": null, "max_execution_time": null, "agent_ops_agent_name":
+      "Data Scientist", "agent_ops_agent_id": null, "step_callback": null, "use_system_prompt":
+      true, "function_calling_llm": null, "system_template": null, "prompt_template":
+      null, "response_template": null, "allow_code_execution": false, "respect_context_window":
+      true, "max_retry_limit": 2, "multimodal": false, "inject_date": false, "date_format":
+      "%Y-%m-%d", "code_execution_mode": "safe", "reasoning": false, "max_reasoning_attempts":
+      null, "embedder": null, "agent_knowledge_context": null, "crew_knowledge_context":
+      null, "knowledge_search_query": null, "from_repository": null, "guardrail":
+      null, "guardrail_max_retries": 3}, "from_task": null, "from_agent": null}},
+      {"event_id": "43ef8fe5-80bc-4631-a25e-9b8085985f50", "timestamp": "2025-09-24T05:25:57.097125+00:00",
+      "type": "tool_usage_finished", "event_data": {"timestamp": "2025-09-24T05:25:57.097096+00:00",
+      "type": "tool_usage_finished", "source_fingerprint": null, "source_type": null,
+      "fingerprint_metadata": null, "task_id": "c36512dc-eff7-4d46-9d00-ae71b6f90016",
+      "task_name": "Write and then review an small paragraph on AI until it''s AMAZING.
+      But first use the `Get Greetings` tool to get a greeting.", "agent_id": null,
+      "agent_role": "Data Scientist", "agent_key": "22acd611e44ef5fac05b533d75e8893b",
+      "tool_name": "Get Greetings", "tool_args": {}, "tool_class": "CrewStructuredTool",
+      "run_attempts": 1, "delegations": 0, "agent": null, "from_task": null, "from_agent":
+      null, "started_at": "2025-09-23T22:25:57.096982", "finished_at": "2025-09-23T22:25:57.097074",
+      "from_cache": false, "output": "Howdy!"}}, {"event_id": "b83077e3-0f28-40af-8130-2b2e21b0532d",
+      "timestamp": "2025-09-24T05:25:57.097261+00:00", "type": "agent_execution_completed",
+      "event_data": {"agent_role": "Data Scientist", "agent_goal": "Product amazing
+      resports on AI", "agent_backstory": "You work with data and AI"}}, {"event_id":
+      "4fbce67c-8c06-4c72-acd4-1f26eecfe48c", "timestamp": "2025-09-24T05:25:57.097326+00:00",
+      "type": "task_completed", "event_data": {"task_description": "Write and then
+      review an small paragraph on AI until it''s AMAZING. But first use the `Get
+      Greetings` tool to get a greeting.", "task_name": "Write and then review an
+      small paragraph on AI until it''s AMAZING. But first use the `Get Greetings`
+      tool to get a greeting.", "task_id": "c36512dc-eff7-4d46-9d00-ae71b6f90016",
+      "output_raw": "Howdy!", "output_format": "OutputFormat.RAW", "agent_role": "Data
+      Scientist"}}, {"event_id": "e6b652b2-bcf0-4399-9bee-0a815a6f6065", "timestamp":
+      "2025-09-24T05:25:57.098533+00:00", "type": "crew_kickoff_completed", "event_data":
+      {"timestamp": "2025-09-24T05:25:57.098513+00:00", "type": "crew_kickoff_completed",
+      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
+      "task_id": null, "task_name": null, "agent_id": null, "agent_role": null, "crew_name":
+      "crew", "crew": null, "output": {"description": "Write and then review an small
+      paragraph on AI until it''s AMAZING. But first use the `Get Greetings` tool
+      to get a greeting.", "name": "Write and then review an small paragraph on AI
+      until it''s AMAZING. But first use the `Get Greetings` tool to get a greeting.",
+      "expected_output": "The final paragraph with the full review on AI and no greeting.",
+      "summary": "Write and then review an small paragraph on AI until...", "raw":
+      "Howdy!", "pydantic": null, "json_dict": null, "agent": "Data Scientist", "output_format":
+      "raw"}, "total_tokens": 310}}], "batch_metadata": {"events_count": 10, "batch_sequence":
+      1, "is_final_batch": false}}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '16270'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - CrewAI-CLI/0.193.2
+      X-Crewai-Organization-Id:
+      - d3a3d10c-35db-423f-a7a4-c026030ba64d
+      X-Crewai-Version:
+      - 0.193.2
+    method: POST
+    uri: http://localhost:3000/crewai_plus/api/v1/tracing/batches/498b7dba-2799-4c47-a8d8-5cb7fda3955d/events
+  response:
+    body:
+      string: '{"events_created":10,"trace_batch_id":"9fd23842-a778-4e3d-bcff-20d5f83626fc"}'
+    headers:
+      Content-Length:
+      - '77'
+      cache-control:
+      - max-age=0, private, must-revalidate
+      content-security-policy:
+      - 'default-src ''self'' *.crewai.com crewai.com; script-src ''self'' ''unsafe-inline''
+        *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts https://www.gstatic.com
+        https://run.pstmn.io https://share.descript.com/; style-src ''self'' ''unsafe-inline''
+        *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts; img-src ''self''
+        data: *.crewai.com crewai.com https://zeus.tools.crewai.com https://dashboard.tools.crewai.com
+        https://cdn.jsdelivr.net; font-src ''self'' data: *.crewai.com crewai.com;
+        connect-src ''self'' *.crewai.com crewai.com https://zeus.tools.crewai.com
+        https://connect.useparagon.com/ https://zeus.useparagon.com/* https://*.useparagon.com/*
+        https://run.pstmn.io https://connect.tools.crewai.com/ ws://localhost:3036
+        wss://localhost:3036; frame-src ''self'' *.crewai.com crewai.com https://connect.useparagon.com/
+        https://zeus.tools.crewai.com https://zeus.useparagon.com/* https://connect.tools.crewai.com/
+        https://www.youtube.com https://share.descript.com'
+      content-type:
+      - application/json; charset=utf-8
+      etag:
+      - W/"c7bd74d9719eaee1f0ba69d5fe29ccc7"
+      permissions-policy:
+      - camera=(), microphone=(self), geolocation=()
+      referrer-policy:
+      - strict-origin-when-cross-origin
+      server-timing:
+      - cache_read.active_support;dur=0.04, cache_fetch_hit.active_support;dur=0.00,
+        cache_read_multi.active_support;dur=0.07, start_processing.action_controller;dur=0.00,
+        sql.active_record;dur=43.90, instantiation.active_record;dur=2.03, start_transaction.active_record;dur=0.01,
+        transaction.active_record;dur=46.09, process_action.action_controller;dur=526.93
+      vary:
+      - Accept
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-permitted-cross-domain-policies:
+      - none
+      x-request-id:
+      - b421c477-c8c6-4757-aaaa-449e43633ccb
+      x-runtime:
+      - '0.548449'
+      x-xss-protection:
+      - 1; mode=block
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"status": "completed", "duration_ms": 1459, "final_event_count": 10}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '69'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - CrewAI-CLI/0.193.2
+      X-Crewai-Organization-Id:
+      - d3a3d10c-35db-423f-a7a4-c026030ba64d
+      X-Crewai-Version:
+      - 0.193.2
+    method: PATCH
+    uri: http://localhost:3000/crewai_plus/api/v1/tracing/batches/498b7dba-2799-4c47-a8d8-5cb7fda3955d/finalize
+  response:
+    body:
+      string: '{"id":"9fd23842-a778-4e3d-bcff-20d5f83626fc","trace_id":"498b7dba-2799-4c47-a8d8-5cb7fda3955d","execution_type":"crew","crew_name":"crew","flow_name":null,"status":"completed","duration_ms":1459,"crewai_version":"0.193.2","privacy_level":"standard","total_events":10,"execution_context":{"crew_name":"crew","flow_name":null,"privacy_level":"standard","crewai_version":"0.193.2","crew_fingerprint":null},"created_at":"2025-09-24T05:25:57.083Z","updated_at":"2025-09-24T05:25:58.024Z"}'
+    headers:
+      Content-Length:
+      - '483'
+      cache-control:
+      - max-age=0, private, must-revalidate
+      content-security-policy:
+      - 'default-src ''self'' *.crewai.com crewai.com; script-src ''self'' ''unsafe-inline''
+        *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts https://www.gstatic.com
+        https://run.pstmn.io https://share.descript.com/; style-src ''self'' ''unsafe-inline''
+        *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts; img-src ''self''
+        data: *.crewai.com crewai.com https://zeus.tools.crewai.com https://dashboard.tools.crewai.com
+        https://cdn.jsdelivr.net; font-src ''self'' data: *.crewai.com crewai.com;
+        connect-src ''self'' *.crewai.com crewai.com https://zeus.tools.crewai.com
+        https://connect.useparagon.com/ https://zeus.useparagon.com/* https://*.useparagon.com/*
+        https://run.pstmn.io https://connect.tools.crewai.com/ ws://localhost:3036
+        wss://localhost:3036; frame-src ''self'' *.crewai.com crewai.com https://connect.useparagon.com/
+        https://zeus.tools.crewai.com https://zeus.useparagon.com/* https://connect.tools.crewai.com/
+        https://www.youtube.com https://share.descript.com'
+      content-type:
+      - application/json; charset=utf-8
+      etag:
+      - W/"9eb2a9f858821856065c69e0c609dc6f"
+      permissions-policy:
+      - camera=(), microphone=(self), geolocation=()
+      referrer-policy:
+      - strict-origin-when-cross-origin
+      server-timing:
+      - cache_read.active_support;dur=0.03, cache_fetch_hit.active_support;dur=0.00,
+        cache_read_multi.active_support;dur=0.06, start_processing.action_controller;dur=0.00,
+        sql.active_record;dur=14.56, instantiation.active_record;dur=0.58, unpermitted_parameters.action_controller;dur=0.00,
+        start_transaction.active_record;dur=0.01, transaction.active_record;dur=3.44,
+        process_action.action_controller;dur=349.23
+      vary:
+      - Accept
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-permitted-cross-domain-policies:
+      - none
+      x-request-id:
+      - 4d4b6908-1da5-440e-864a-2653c56f35b6
+      x-runtime:
+      - '0.364349'
+      x-xss-protection:
+      - 1; mode=block
+    status:
+      code: 200
+      message: OK
+version: 1

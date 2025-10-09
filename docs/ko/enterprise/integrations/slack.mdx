@@ -22,21 +22,21 @@ Slack 통합을 사용하기 전에 다음을 확인하십시오:
 ### **사용자 관리**
 
 <AccordionGroup>
-  <Accordion title="SLACK_LIST_MEMBERS">
+  <Accordion title="slack/list_members">
     **설명:** Slack 채널의 모든 멤버를 나열합니다.
 
     **파라미터:**
     - 파라미터 없음 - 모든 채널 멤버를 조회합니다
   </Accordion>
 
-  <Accordion title="SLACK_GET_USER_BY_EMAIL">
+  <Accordion title="slack/get_user_by_email">
     **설명:** 이메일 주소로 Slack 워크스페이스에서 사용자를 찾습니다.
 
     **파라미터:**
     - `email` (string, 필수): 워크스페이스 내 사용자의 이메일 주소
   </Accordion>
 
-  <Accordion title="SLACK_GET_USERS_BY_NAME">
+  <Accordion title="slack/get_users_by_name">
     **설명:** 이름 또는 표시 이름으로 사용자를 검색합니다.
 
     **파라미터:**
@@ -50,7 +50,7 @@ Slack 통합을 사용하기 전에 다음을 확인하십시오:
 ### **채널 관리**
 
 <AccordionGroup>
-  <Accordion title="SLACK_LIST_CHANNELS">
+  <Accordion title="slack/list_channels">
     **설명:** Slack 워크스페이스의 모든 채널을 나열합니다.
 
     **파라미터:**
@@ -61,7 +61,7 @@ Slack 통합을 사용하기 전에 다음을 확인하십시오:
 ### **메시징**
 
 <AccordionGroup>
-  <Accordion title="SLACK_SEND_MESSAGE">
+  <Accordion title="slack/send_message">
     **설명:** Slack 채널에 메시지를 전송합니다.
 
     **파라미터:**
@@ -73,7 +73,7 @@ Slack 통합을 사용하기 전에 다음을 확인하십시오:
     - `authenticatedUser` (boolean, 선택): true이면 메시지가 애플리케이션이 아니라 인증된 Slack 사용자로부터 보낸 것처럼 표시됩니다(기본값은 false)
   </Accordion>
 
-  <Accordion title="SLACK_SEND_DIRECT_MESSAGE">
+  <Accordion title="slack/send_direct_message">
     **설명:** Slack에서 특정 사용자에게 다이렉트 메시지를 전송합니다.
 
     **파라미터:**
@@ -89,7 +89,7 @@ Slack 통합을 사용하기 전에 다음을 확인하십시오:
 ### **검색 및 탐색**
 
 <AccordionGroup>
-  <Accordion title="SLACK_SEARCH_MESSAGES">
+  <Accordion title="slack/search_messages">
     **설명:** Slack 워크스페이스 전체에서 메시지를 검색합니다.
 
     **매개변수:**
@@ -150,19 +150,13 @@ Slack의 Block Kit을 사용하면 풍부하고 상호작용이 가능한 메시
 
 ```python
 from crewai import Agent, Task, Crew
-from crewai_tools import CrewaiEnterpriseTools
-
-# Get enterprise tools (Slack tools will be included)
-enterprise_tools = CrewaiEnterpriseTools(
-    enterprise_token="your_enterprise_token"
-)
 
 # Create an agent with Slack capabilities
 slack_agent = Agent(
     role="Team Communication Manager",
     goal="Facilitate team communication and coordinate collaboration efficiently",
     backstory="An AI assistant specialized in team communication and workspace coordination.",
-    tools=[enterprise_tools]
+    apps=['slack']
 )
 
 # Task to send project updates
@@ -184,19 +178,12 @@ crew.kickoff()
 ### 특정 Slack 도구 필터링
 
 ```python
-from crewai_tools import CrewaiEnterpriseTools
-
-# Get only specific Slack tools
-enterprise_tools = CrewaiEnterpriseTools(
-    enterprise_token="your_enterprise_token",
-    actions_list=["slack_send_message", "slack_send_direct_message", "slack_search_messages"]
-)
 
 communication_manager = Agent(
     role="Communication Coordinator",
     goal="Manage team communications and ensure important messages reach the right people",
     backstory="An experienced communication coordinator who handles team messaging and notifications.",
-    tools=enterprise_tools
+    apps=['slack']
 )
 
 # Task to coordinate team communication
@@ -218,17 +205,12 @@ crew.kickoff()
 
 ```python
 from crewai import Agent, Task, Crew
-from crewai_tools import CrewaiEnterpriseTools
-
-enterprise_tools = CrewaiEnterpriseTools(
-    enterprise_token="your_enterprise_token"
-)
 
 notification_agent = Agent(
     role="Notification Manager",
     goal="Create rich, interactive notifications and manage workspace communication",
     backstory="An AI assistant that specializes in creating engaging team notifications and updates.",
-    tools=[enterprise_tools]
+    apps=['slack']
 )
 
 # Task to send rich notifications
@@ -254,17 +236,12 @@ crew.kickoff()
 
 ```python
 from crewai import Agent, Task, Crew
-from crewai_tools import CrewaiEnterpriseTools
-
-enterprise_tools = CrewaiEnterpriseTools(
-    enterprise_token="your_enterprise_token"
-)
 
 analytics_agent = Agent(
     role="Communication Analyst",
     goal="Analyze team communication patterns and extract insights from conversations",
     backstory="An analytical AI that excels at understanding team dynamics through communication data.",
-    tools=[enterprise_tools]
+    apps=['slack']
 )
 
 # Complex task involving search and analysis

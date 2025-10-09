@@ -6,14 +6,16 @@ repos:
         entry: uv run ruff check
         language: system
         types: [python]
+        exclude: ^lib/crewai/
       - id: ruff-format
         name: ruff-format
         entry: uv run ruff format
         language: system
         types: [python]
+        exclude: ^lib/crewai/
       - id: mypy
         name: mypy
         entry: uv run mypy
         language: system
         types: [python]
-        exclude: ^tests/
+        exclude: ^lib/crewai/
