@@ -1222,7 +1222,7 @@ def test_create_directory_false():
     assert not resolved_dir.exists()
 
     with pytest.raises(
-        RuntimeError, match="Directory .* does not exist and create_directory is False"
+        RuntimeError, match=r"Directory .* does not exist and create_directory is False"
     ):
         task._save_file("test content")
 
