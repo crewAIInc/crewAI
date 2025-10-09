@@ -1,22 +1,72 @@
 ---
-title: "Automation Triggers"
-description: "Automatically execute your CrewAI workflows when specific events occur in connected integrations"
-icon: "bolt"
+title: "Triggers Overview"
+description: "Understand how CrewAI AMP triggers work, how to manage them, and where to find integration-specific playbooks"
+icon: "face-smile"
 mode: "wide"
 ---
 
-Automation triggers enable you to automatically run your CrewAI deployments when specific events occur in your connected integrations, creating powerful event-driven workflows that respond to real-time changes in your business systems.
+CrewAI AMP triggers connect your automations to real-time events across the tools your teams already use. Instead of polling systems or relying on manual kickoffs, triggers listen for changes—new emails, calendar updates, CRM status changes—and immediately launch the crew or flow you specify.
 
-## Overview
+<Frame>
+  ![Automation Triggers Overview](/images/enterprise/crew_connectors.png)
+</Frame>
 
-With automation triggers, you can:
+### Integration Playbooks
+
+Deep-dive guides walk through setup and sample workflows for each integration:
+
+<CardGroup cols={2}>
+  <Card title="Gmail Trigger" icon="envelope">
+    <a href="/en/enterprise/guides/gmail-trigger">Enable crews when emails arrive or threads update.</a>
+  </Card>
+
+  <Card title="Google Calendar Trigger" icon="calendar-days">
+    <a href="/en/enterprise/guides/google-calendar-trigger">React to calendar events as they are created, updated, or cancelled.</a>
+  </Card>
+
+  <Card title="Google Drive Trigger" icon="folder-open">
+    <a href="/en/enterprise/guides/google-drive-trigger">Handle Drive file uploads, edits, and deletions.</a>
+  </Card>
+
+  <Card title="Outlook Trigger" icon="envelope-open">
+    <a href="/en/enterprise/guides/outlook-trigger">Automate responses to new Outlook messages and calendar updates.</a>
+  </Card>
+
+  <Card title="OneDrive Trigger" icon="cloud">
+    <a href="/en/enterprise/guides/onedrive-trigger">Audit file activity and sharing changes in OneDrive.</a>
+  </Card>
+
+  <Card title="Microsoft Teams Trigger" icon="comments">
+    <a href="/en/enterprise/guides/microsoft-teams-trigger">Kick off workflows when new Teams chats start.</a>
+  </Card>
+
+  <Card title="HubSpot Trigger" icon="hubspot">
+    <a href="/en/enterprise/guides/hubspot-trigger">Launch automations from HubSpot workflows and lifecycle events.</a>
+  </Card>
+
+  <Card title="Salesforce Trigger" icon="salesforce">
+    <a href="/en/enterprise/guides/salesforce-trigger">Connect Salesforce processes to CrewAI for CRM automation.</a>
+  </Card>
+
+  <Card title="Slack Trigger" icon="slack">
+    <a href="/en/enterprise/guides/slack-trigger">Start crews directly from Slack slash commands.</a>
+  </Card>
+
+  <Card title="Zapier Trigger" icon="bolt">
+    <a href="/en/enterprise/guides/zapier-trigger">Bridge CrewAI with thousands of Zapier-supported apps.</a>
+  </Card>
+</CardGroup>
+
+## Trigger Capabilities
+
+With triggers, you can:
 
 - **Respond to real-time events** - Automatically execute workflows when specific conditions are met
 - **Integrate with external systems** - Connect with platforms like Gmail, Outlook, OneDrive, JIRA, Slack, Stripe and more
 - **Scale your automation** - Handle high-volume events without manual intervention
 - **Maintain context** - Access trigger data within your crews and flows
 
-## Managing Automation Triggers
+## Managing Triggers
 
 ### Viewing Available Triggers
 
@@ -25,7 +75,7 @@ To access and manage your automation triggers:
 1. Navigate to your deployment in the CrewAI dashboard
 2. Click on the **Triggers** tab to view all available trigger integrations
 
-<Frame>
+<Frame caption="Example of available automation triggers for a Gmail deployment">
   <img src="/images/enterprise/list-available-triggers.png" alt="List of available automation triggers" />
 </Frame>
 
@@ -35,7 +85,7 @@ This view shows all the trigger integrations available for your deployment, alon
 
 Each trigger can be easily enabled or disabled using the toggle switch:
 
-<Frame>
+<Frame caption="Enable or disable triggers with toggle">
   <img src="/images/enterprise/trigger-selected.png" alt="Enable or disable triggers with toggle" />
 </Frame>
 
@@ -48,24 +98,46 @@ Simply click the toggle to change the trigger state. Changes take effect immedia
 
 Track the performance and history of your triggered executions:
 
-<Frame>
+<Frame caption="List of executions triggered by automation">
   <img src="/images/enterprise/list-executions.png" alt="List of executions triggered by automation" />
 </Frame>
 
-## Building Automation
+## Building Trigger-Driven Automations
 
 Before building your automation, it's helpful to understand the structure of trigger payloads that your crews and flows will receive.
 
-### Payload Samples Repository
+### Trigger Setup Checklist
 
-We maintain a comprehensive repository with sample payloads from various trigger sources to help you build and test your automations:
+Before wiring a trigger into production, make sure you:
 
-**🔗 [CrewAI Enterprise Trigger Payload Samples](https://github.com/crewAIInc/crewai-enterprise-trigger-payload-samples)**
+- Connect the integration under **Tools & Integrations** and complete any OAuth or API key steps
+- Enable the trigger toggle on the deployment that should respond to events
+- Provide any required environment variables (API tokens, tenant IDs, shared secrets)
+- Create or update tasks that can parse the incoming payload within the first crew task or flow step
+- Decide whether to pass trigger context automatically using `allow_crewai_trigger_context`
+- Set up monitoring—webhook logs, CrewAI execution history, and optional external alerting
+
+### Payload & Crew Examples Repository
+
+We maintain a comprehensive repository with end-to-end trigger examples to help you build and test your automations:
 
 This repository contains:
 
-- **Real payload examples** from different trigger sources (Gmail, Google Drive, etc.)
-- **Payload structure documentation** showing the format and available fields
+- **Realistic payload samples** for every supported trigger integration
+- **Ready-to-run crew implementations** that parse each payload and turn it into a business workflow
+- **Multiple scenarios per integration** (e.g., new events, updates, deletions) so you can match the shape of your data
+
+| Integration | When it fires | Payload Samples | Crew Examples |
+| :-- | :-- | :-- | :-- |
+| Gmail | New messages, thread updates | [New alerts, thread updates](https://github.com/crewAIInc/crewai-enterprise-trigger-examples/tree/main/gmail) | [`new-email-crew.py`, `gmail-alert-crew.py`](https://github.com/crewAIInc/crewai-enterprise-trigger-examples/tree/main/gmail) |
+| Google Calendar | Event created / updated / started / ended / cancelled | [Event lifecycle payloads](https://github.com/crewAIInc/crewai-enterprise-trigger-examples/tree/main/google_calendar) | [`calendar-event-crew.py`, `calendar-meeting-crew.py`, `calendar-working-location-crew.py`](https://github.com/crewAIInc/crewai-enterprise-trigger-examples/tree/main/google_calendar) |
+| Google Drive | File created / updated / deleted | [File lifecycle payloads](https://github.com/crewAIInc/crewai-enterprise-trigger-examples/tree/main/google_drive) | [`drive-file-crew.py`, `drive-file-deletion-crew.py`](https://github.com/crewAIInc/crewai-enterprise-trigger-examples/tree/main/google_drive) |
+| Outlook | New email, calendar event removed | [Outlook payloads](https://github.com/crewAIInc/crewai-enterprise-trigger-examples/tree/main/outlook) | [`outlook-message-crew.py`, `outlook-event-removal-crew.py`](https://github.com/crewAIInc/crewai-enterprise-trigger-examples/tree/main/outlook) |
+| OneDrive | File operations (create, update, share, delete) | [OneDrive payloads](https://github.com/crewAIInc/crewai-enterprise-trigger-examples/tree/main/onedrive) | [`onedrive-file-crew.py`](https://github.com/crewAIInc/crewai-enterprise-trigger-examples/tree/main/onedrive) |
+| HubSpot | Record created / updated (contacts, companies, deals) | [HubSpot payloads](https://github.com/crewAIInc/crewai-enterprise-trigger-examples/tree/main/hubspot) | [`hubspot-company-crew.py`, `hubspot-contact-crew.py`, `hubspot-record-crew.py`](https://github.com/crewAIInc/crewai-enterprise-trigger-examples/tree/main/hubspot) |
+| Microsoft Teams | Chat thread created | [Teams chat payload](https://github.com/crewAIInc/crewai-enterprise-trigger-examples/tree/main/microsoft-teams) | [`teams-chat-created-crew.py`](https://github.com/crewAIInc/crewai-enterprise-trigger-examples/tree/main/microsoft-teams) |
+
+Use these samples to understand payload shape, copy the matching crew, and then replace the test payload with your live trigger data.
 
 ### Triggers with Crew
 
@@ -177,3 +249,7 @@ def delegate_to_crew(self, crewai_trigger_payload: dict = None):
 - If you are developing, make sure the inputs include the `crewai_trigger_payload` parameter with the correct payload
 
 Automation triggers transform your CrewAI deployments into responsive, event-driven systems that can seamlessly integrate with your existing business processes and tools.
+
+<Card title="CrewAI AMP Trigger Examples" href="https://github.com/crewAIInc/crewai-enterprise-trigger-examples" icon="github">
+    Check them out on GitHub!
+</Card>

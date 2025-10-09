@@ -1,51 +1,60 @@
-from crewai.agents.agent_builder.base_agent import BaseAgent
+from typing import Any
+
 from crewai.events.base_events import BaseEvent
 
 
-class KnowledgeRetrievalStartedEvent(BaseEvent):
+class KnowledgeEventBase(BaseEvent):
+    task_id: str | None = None
+    task_name: str | None = None
+    from_task: Any | None = None
+    from_agent: Any | None = None
+    agent_role: str | None = None
+    agent_id: str | None = None
+
+    def __init__(self, **data):
+        super().__init__(**data)
+        self._set_agent_params(data)
+        self._set_task_params(data)
+
+
+class KnowledgeRetrievalStartedEvent(KnowledgeEventBase):
     """Event emitted when a knowledge retrieval is started."""
 
     type: str = "knowledge_search_query_started"
-    agent: BaseAgent
 
 
-class KnowledgeRetrievalCompletedEvent(BaseEvent):
+class KnowledgeRetrievalCompletedEvent(KnowledgeEventBase):
     """Event emitted when a knowledge retrieval is completed."""
 
     query: str
     type: str = "knowledge_search_query_completed"
-    agent: BaseAgent
     retrieved_knowledge: str
 
 
-class KnowledgeQueryStartedEvent(BaseEvent):
+class KnowledgeQueryStartedEvent(KnowledgeEventBase):
     """Event emitted when a knowledge query is started."""
 
     task_prompt: str
     type: str = "knowledge_query_started"
-    agent: BaseAgent
 
 
-class KnowledgeQueryFailedEvent(BaseEvent):
+class KnowledgeQueryFailedEvent(KnowledgeEventBase):
     """Event emitted when a knowledge query fails."""
 
     type: str = "knowledge_query_failed"
-    agent: BaseAgent
     error: str
 
 
-class KnowledgeQueryCompletedEvent(BaseEvent):
+class KnowledgeQueryCompletedEvent(KnowledgeEventBase):
     """Event emitted when a knowledge query is completed."""
 
     query: str
     type: str = "knowledge_query_completed"
-    agent: BaseAgent
 
 
-class KnowledgeSearchQueryFailedEvent(BaseEvent):
+class KnowledgeSearchQueryFailedEvent(KnowledgeEventBase):
     """Event emitted when a knowledge search query fails."""
 
     query: str
     type: str = "knowledge_search_query_failed"
-    agent: BaseAgent
     error: str

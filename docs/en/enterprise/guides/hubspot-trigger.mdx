@@ -5,22 +5,22 @@ icon: "hubspot"
 mode: "wide"
 ---
 
-This guide provides a step-by-step process to set up HubSpot triggers for CrewAI Enterprise, enabling you to initiate crews directly from HubSpot Workflows.
+This guide provides a step-by-step process to set up HubSpot triggers for CrewAI AMP, enabling you to initiate crews directly from HubSpot Workflows.
 
 ## Prerequisites
 
-- A CrewAI Enterprise account
+- A CrewAI AMP account
 - A HubSpot account with the [HubSpot Workflows](https://knowledge.hubspot.com/workflows/create-workflows) feature
 
 ## Setup Steps
 
 <Steps>
-    <Step title="Connect your HubSpot account with CrewAI Enterprise">
-        - Log in to your `CrewAI Enterprise account > Triggers`
+    <Step title="Connect your HubSpot account with CrewAI AMP">
+        - Log in to your `CrewAI AMP account > Triggers`
         - Select `HubSpot` from the list of available triggers
-        - Choose the HubSpot account you want to connect with CrewAI Enterprise
-        - Follow the on-screen prompts to authorize CrewAI Enterprise access to your HubSpot account
-        - A confirmation message will appear once HubSpot is successfully connected with CrewAI Enterprise
+        - Choose the HubSpot account you want to connect with CrewAI AMP
+        - Follow the on-screen prompts to authorize CrewAI AMP access to your HubSpot account
+        - A confirmation message will appear once HubSpot is successfully connected with CrewAI AMP
     </Step>
     <Step title="Create a HubSpot Workflow">
         - Log in to your `HubSpot account > Automations > Workflows > New workflow`
@@ -51,4 +51,14 @@ This guide provides a step-by-step process to set up HubSpot triggers for CrewAI
 
 ## Additional Resources
 
-For more detailed information on available actions and customization options, refer to the [HubSpot Workflows Documentation](https://knowledge.hubspot.com/workflows/create-workflows). 
+### Sample payloads & crews
+
+You can jump-start development with the [HubSpot examples in the trigger repository](https://github.com/crewAIInc/crewai-enterprise-trigger-examples/tree/main/hubspot):
+
+- `record-created-contact.json`, `record-updated-contact.json` → contact lifecycle events handled by `hubspot-contact-crew.py`
+- `record-created-company.json`, `record-updated-company.json` → company enrichment flows in `hubspot-company-crew.py`
+- `record-created-deals.json`, `record-updated-deals.json` → deal pipeline automation in `hubspot-record-crew.py`
+
+Each crew demonstrates how to parse HubSpot record fields, enrich context, and return structured insights.
+
+For more detailed information on available actions and customization options, refer to the [HubSpot Workflows Documentation](https://knowledge.hubspot.com/workflows/create-workflows).

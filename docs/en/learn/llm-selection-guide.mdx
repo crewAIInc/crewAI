@@ -44,7 +44,7 @@ The most critical step in LLM selection is understanding what your task actually
 
     - **Creative Tasks** demand a different type of cognitive capability focused on generating novel, engaging, and contextually appropriate content. This includes storytelling, marketing copy creation, and creative problem-solving. The model needs to understand nuance, tone, and audience while producing content that feels authentic and engaging rather than formulaic.
   </Tab>
-  
+
   <Tab title="Output Requirements">
     - **Structured Data** tasks require precision and consistency in format adherence. When working with JSON, XML, or database formats, the model must reliably produce syntactically correct output that can be programmatically processed. These tasks often have strict validation requirements and little tolerance for format errors, making reliability more important than creativity.
 
@@ -52,7 +52,7 @@ The most critical step in LLM selection is understanding what your task actually
 
     - **Technical Content** sits between structured data and creative content, requiring both precision and clarity. Documentation, code generation, and technical analysis need to be accurate and comprehensive while remaining accessible to the intended audience. The model must understand complex technical concepts and communicate them effectively.
   </Tab>
-  
+
   <Tab title="Context Needs">
     - **Short Context** scenarios involve focused, immediate tasks where the model needs to process limited information quickly. These are often transactional interactions where speed and efficiency matter more than deep understanding. The model doesn't need to maintain extensive conversation history or process large documents.
 
@@ -74,7 +74,7 @@ Understanding model capabilities requires looking beyond marketing claims and be
 
     However, reasoning models often come with trade-offs in terms of speed and cost. They may also be less suitable for creative tasks or simple operations where their sophisticated reasoning capabilities aren't needed. Consider these models when your tasks involve genuine complexity that benefits from systematic, step-by-step analysis.
   </Accordion>
-  
+
   <Accordion title="General Purpose Models" icon="microchip">
     General purpose models offer the most balanced approach to LLM selection, providing solid performance across a wide range of tasks without extreme specialization in any particular area. These models are trained on diverse datasets and optimized for versatility rather than peak performance in specific domains.
 
@@ -82,7 +82,7 @@ Understanding model capabilities requires looking beyond marketing claims and be
 
     While general purpose models may not achieve the peak performance of specialized alternatives in specific domains, they offer operational simplicity and reduced complexity in model management. They're often the best starting point for new projects, allowing teams to understand their specific needs before potentially optimizing with more specialized models.
   </Accordion>
-  
+
   <Accordion title="Fast & Efficient Models" icon="bolt">
     Fast and efficient models prioritize speed, cost-effectiveness, and resource efficiency over sophisticated reasoning capabilities. These models are optimized for high-throughput scenarios where quick responses and low operational costs are more important than nuanced understanding or complex reasoning.
 
@@ -90,7 +90,7 @@ Understanding model capabilities requires looking beyond marketing claims and be
 
     The key consideration with efficient models is ensuring that their capabilities align with your task requirements. While they can handle many routine operations effectively, they may struggle with tasks requiring nuanced understanding, complex reasoning, or sophisticated content generation. They're best used for well-defined, routine operations where speed and cost matter more than sophistication.
   </Accordion>
-  
+
   <Accordion title="Creative Models" icon="pen">
     Creative models are specifically optimized for content generation, writing quality, and creative thinking tasks. These models typically excel at understanding nuance, tone, and style while producing engaging, contextually appropriate content that feels natural and authentic.
 
@@ -98,7 +98,7 @@ Understanding model capabilities requires looking beyond marketing claims and be
 
     When selecting creative models, consider not just their ability to generate text, but their understanding of audience, context, and purpose. The best creative models can adapt their output to match specific brand voices, target different audience segments, and maintain consistency across extended content pieces.
   </Accordion>
-  
+
   <Accordion title="Open Source Models" icon="code">
     Open source models offer unique advantages in terms of cost control, customization potential, data privacy, and deployment flexibility. These models can be run locally or on private infrastructure, providing complete control over data handling and model behavior.
 
@@ -151,7 +151,7 @@ content_writer = Agent(
 )
 
 data_processor = Agent(
-    role="Data Analysis Specialist", 
+    role="Data Analysis Specialist",
     goal="Extract and organize key data points from research sources",
     backstory="Detail-oriented analyst focused on accuracy and efficiency",
     llm=processing_llm,  # Fast, cost-effective model for routine tasks
@@ -178,7 +178,7 @@ The key to successful multi-model implementation is understanding how different 
 
     Cost considerations are particularly important for manager LLMs since they're involved in every operation. The model needs to provide sufficient capability for effective coordination while remaining cost-effective for frequent use. This often means finding models that offer good reasoning capabilities without the premium pricing of the most sophisticated options.
   </Tab>
-  
+
   <Tab title="Function Calling LLM">
     Function calling LLMs handle tool usage across all agents, making them critical for crews that rely heavily on external tools and APIs. These models need to excel at understanding tool capabilities, extracting parameters accurately, and handling tool responses effectively.
 
@@ -186,7 +186,7 @@ The key to successful multi-model implementation is understanding how different 
 
     Many teams find that specialized function calling models or general purpose models with strong tool support work better than creative or reasoning-focused models for this role. The key is ensuring that the model can reliably bridge the gap between natural language instructions and structured tool calls.
   </Tab>
-  
+
   <Tab title="Agent-Specific Overrides">
     Individual agents can override crew-level LLM settings when their specific needs differ significantly from the general crew requirements. This capability allows for fine-tuned optimization while maintaining operational simplicity for most agents.
 
@@ -210,7 +210,7 @@ Effective task definition is often more important than model selection in determ
 
     Common mistakes include being too vague about objectives, failing to provide necessary context, setting unclear success criteria, or combining multiple unrelated tasks into a single description. The goal is to provide enough information for the agent to succeed while maintaining focus on a single, clear objective.
   </Accordion>
-  
+
   <Accordion title="Expected Output Guidelines" icon="bullseye">
     Expected output guidelines serve as a contract between the task definition and the agent, clearly specifying what the deliverable should look like and how it will be evaluated. These guidelines should describe both the format and structure needed, as well as the key elements that must be included for the output to be considered complete.
 
@@ -230,7 +230,7 @@ Effective task definition is often more important than model selection in determ
 
     Sequential dependencies work best when there's a clear logical progression from one task to another and when the output of one task genuinely improves the quality or feasibility of subsequent tasks. However, they can create bottlenecks if not managed carefully, so it's important to identify which dependencies are truly necessary versus those that are merely convenient.
   </Tab>
-  
+
   <Tab title="Parallel Execution">
     Parallel execution becomes valuable when tasks are independent of each other, time efficiency is important, or different expertise areas are involved that don't require coordination. This approach can significantly reduce overall execution time while allowing specialized agents to work on their areas of strength simultaneously.
 
@@ -286,10 +286,10 @@ domain_expert = Agent(
     role="B2B SaaS Marketing Strategist",
     goal="Develop comprehensive go-to-market strategies for enterprise software",
     backstory="""
-    You have 10+ years of experience scaling B2B SaaS companies from Series A to IPO. 
-    You understand the nuances of enterprise sales cycles, the importance of product-market 
-    fit in different verticals, and how to balance growth metrics with unit economics. 
-    You've worked with companies like Salesforce, HubSpot, and emerging unicorns, giving 
+    You have 10+ years of experience scaling B2B SaaS companies from Series A to IPO.
+    You understand the nuances of enterprise sales cycles, the importance of product-market
+    fit in different verticals, and how to balance growth metrics with unit economics.
+    You've worked with companies like Salesforce, HubSpot, and emerging unicorns, giving
     you perspective on both established and disruptive go-to-market strategies.
     """,
     llm=LLM(model="claude-3-5-sonnet", temperature=0.3)  # Balanced creativity with domain knowledge
@@ -317,9 +317,9 @@ tech_writer = Agent(
     role="API Documentation Specialist",  # Specific role for clear LLM requirements
     goal="Create comprehensive, developer-friendly API documentation",
     backstory="""
-    You're a technical writer with 8+ years documenting REST APIs, GraphQL endpoints, 
-    and SDK integration guides. You've worked with developer tools companies and 
-    understand what developers need: clear examples, comprehensive error handling, 
+    You're a technical writer with 8+ years documenting REST APIs, GraphQL endpoints,
+    and SDK integration guides. You've worked with developer tools companies and
+    understand what developers need: clear examples, comprehensive error handling,
     and practical use cases. You prioritize accuracy and usability over marketing fluff.
     """,
     llm=LLM(
@@ -327,13 +327,13 @@ tech_writer = Agent(
         temperature=0.1  # Low temperature for accuracy
     ),
     tools=[code_analyzer_tool, api_scanner_tool],
-    verbose=True 
+    verbose=True
 )
 ```
 
 **Alignment Checklist:**
 - ✅ **Role Specificity**: Clear domain and responsibilities
-- ✅ **LLM Match**: Model strengths align with role requirements 
+- ✅ **LLM Match**: Model strengths align with role requirements
 - ✅ **Backstory Depth**: Provides domain context the LLM can leverage
 - ✅ **Tool Integration**: Tools support the agent's specialized function
 - ✅ **Parameter Tuning**: Temperature and settings optimize for role needs
@@ -351,26 +351,26 @@ Rather than repeating the strategic framework, here's a tactical checklist for i
     - Which agents handle the most complex reasoning tasks?
     - Which agents primarily do data processing or formatting?
     - Are any agents heavily tool-dependent?
-    
+
     **Action**: Document current agent roles and identify optimization opportunities.
   </Step>
-  
+
   <Step title="Implement Crew-Level Strategy" icon="users-gear">
     **Set Your Baseline:**
     ```python
     # Start with a reliable default for the crew
     default_crew_llm = LLM(model="gpt-4o-mini")  # Cost-effective baseline
-    
+
     crew = Crew(
         agents=[...],
         tasks=[...],
         memory=True
     )
     ```
-    
+
     **Action**: Establish your crew's default LLM before optimizing individual agents.
   </Step>
-  
+
   <Step title="Optimize High-Impact Agents" icon="star">
     **Identify and Upgrade Key Agents:**
     ```python
@@ -380,25 +380,25 @@ Rather than repeating the strategic framework, here's a tactical checklist for i
         llm=LLM(model="gemini-2.5-flash-preview-05-20"),  # Premium for coordination
         # ... rest of config
     )
-    
-    # Creative or customer-facing agents  
+
+    # Creative or customer-facing agents
     content_agent = Agent(
         role="Content Creator",
         llm=LLM(model="claude-3-5-sonnet"),  # Best for writing
         # ... rest of config
     )
     ```
-    
+
     **Action**: Upgrade 20% of your agents that handle 80% of the complexity.
   </Step>
-  
+
   <Step title="Validate with Enterprise Testing" icon="test-tube">
     **Once you deploy your agents to production:**
-    - Use [CrewAI Enterprise platform](https://app.crewai.com) to A/B test your model selections
+    - Use [CrewAI AMP platform](https://app.crewai.com) to A/B test your model selections
     - Run multiple iterations with real inputs to measure consistency and performance
     - Compare cost vs. performance across your optimized setup
     - Share results with your team for collaborative decision-making
-    
+
     **Action**: Replace guesswork with data-driven validation using the testing platform.
   </Step>
 </Steps>
@@ -413,7 +413,7 @@ Rather than repeating the strategic framework, here's a tactical checklist for i
 
     However, reasoning models often come with higher costs and slower response times, so they're best reserved for tasks where their sophisticated capabilities provide genuine value rather than being used for simple operations that don't require complex reasoning.
   </Tab>
-  
+
   <Tab title="Creative Models">
     Creative models become valuable when content generation is the primary output and the quality, style, and engagement level of that content directly impact success. These models excel when writing quality and style matter significantly, creative ideation or brainstorming is needed, or brand voice and tone are important considerations.
 
@@ -421,7 +421,7 @@ Rather than repeating the strategic framework, here's a tactical checklist for i
 
     Creative models may be less suitable for technical or analytical tasks where precision and factual accuracy are more important than engagement and style. They're best used when the creative and communicative aspects of the output are primary success factors.
   </Tab>
-  
+
   <Tab title="Efficient Models">
     Efficient models are ideal for high-frequency, routine operations where speed and cost optimization are priorities. These models work best when tasks have clear, well-defined parameters and don't require sophisticated reasoning or creative capabilities.
 
@@ -429,7 +429,7 @@ Rather than repeating the strategic framework, here's a tactical checklist for i
 
     The key with efficient models is ensuring that their capabilities align with task requirements. They can handle many routine operations effectively but may struggle with tasks requiring nuanced understanding, complex reasoning, or sophisticated content generation.
   </Tab>
-  
+
   <Tab title="Open Source Models">
     Open source models become attractive when budget constraints are significant, data privacy requirements exist, customization needs are important, or local deployment is required for operational or compliance reasons.
 
@@ -451,12 +451,12 @@ Rather than repeating the strategic framework, here's a tactical checklist for i
     ```python
     # Strategic agent gets premium model
     manager = Agent(role="Strategy Manager", llm=LLM(model="gpt-4o"))
-    
-    # Processing agent gets efficient model  
+
+    # Processing agent gets efficient model
     processor = Agent(role="Data Processor", llm=LLM(model="gpt-4o-mini"))
     ```
   </Accordion>
-  
+
   <Accordion title="Ignoring Crew-Level vs Agent-Level LLM Hierarchy" icon="shuffle">
     **The Problem**: Not understanding how CrewAI's LLM hierarchy works - crew LLM, manager LLM, and agent LLM settings can conflict or be poorly coordinated.
 
@@ -470,12 +470,12 @@ Rather than repeating the strategic framework, here's a tactical checklist for i
         manager_llm=LLM(model="gpt-4o"),  # For crew coordination
         process=Process.hierarchical  # When using manager_llm
     )
-    
+
     # Agents inherit crew LLM unless specifically overridden
     agent1 = Agent(llm=LLM(model="claude-3-5-sonnet"))  # Override for specific needs
     ```
   </Accordion>
-  
+
   <Accordion title="Function Calling Model Mismatch" icon="screwdriver-wrench">
     **The Problem**: Choosing models based on general capabilities while ignoring function calling performance for tool-heavy CrewAI workflows.
 
@@ -493,7 +493,7 @@ Rather than repeating the strategic framework, here's a tactical checklist for i
     )
     ```
   </Accordion>
-  
+
   <Accordion title="Premature Optimization Without Testing" icon="gear">
     **The Problem**: Making complex model selection decisions based on theoretical performance without validating with actual CrewAI workflows and tasks.
 
@@ -503,7 +503,7 @@ Rather than repeating the strategic framework, here's a tactical checklist for i
     ```python
     # Start with this
     crew = Crew(agents=[...], tasks=[...], llm=LLM(model="gpt-4o-mini"))
-    
+
     # Test performance, then optimize specific agents as needed
     # Use Enterprise platform testing to validate improvements
     ```
@@ -541,7 +541,7 @@ Focus on understanding your requirements first, then select models that best mat
 
 ### Enterprise-Grade Model Validation
 
-For teams serious about optimizing their LLM selection, the **CrewAI Enterprise platform** provides sophisticated testing capabilities that go far beyond basic CLI testing. The platform enables comprehensive model evaluation that helps you make data-driven decisions about your LLM strategy.
+For teams serious about optimizing their LLM selection, the **CrewAI AMP platform** provides sophisticated testing capabilities that go far beyond basic CLI testing. The platform enables comprehensive model evaluation that helps you make data-driven decisions about your LLM strategy.
 
 <Frame>
   ![Enterprise Testing Interface](/images/enterprise/enterprise-testing.png)
@@ -571,23 +571,23 @@ The Enterprise platform transforms model selection from guesswork into a data-dr
   <Card title="Task-Driven Selection" icon="bullseye">
     Choose models based on what the task actually requires, not theoretical capabilities or general reputation.
   </Card>
-  
+
   <Card title="Capability Matching" icon="puzzle-piece">
     Align model strengths with agent roles and responsibilities for optimal performance.
   </Card>
-  
+
   <Card title="Strategic Consistency" icon="link">
     Maintain coherent model selection strategy across related components and workflows.
   </Card>
-  
+
   <Card title="Practical Testing" icon="flask">
     Validate choices through real-world usage rather than benchmarks alone.
   </Card>
-  
+
   <Card title="Iterative Improvement" icon="arrow-up">
     Start simple and optimize based on actual performance and needs.
   </Card>
-  
+
   <Card title="Operational Balance" icon="scale-balanced">
     Balance performance requirements with cost and complexity constraints.
   </Card>
@@ -614,7 +614,7 @@ These tables/metrics showcase selected leading models in each category and are n
 <Tabs>
   <Tab title="Reasoning & Planning">
     **Best for Manager LLMs and Complex Analysis**
-    
+
     | Model | Intelligence Score | Cost ($/M tokens) | Speed | Best Use in CrewAI |
     |:------|:------------------|:------------------|:------|:------------------|
     | **o3** | 70 | $17.50 | Fast | Manager LLM for complex multi-agent coordination |
@@ -625,10 +625,10 @@ These tables/metrics showcase selected leading models in each category and are n
 
     These models excel at multi-step reasoning and are ideal for agents that need to develop strategies, coordinate other agents, or analyze complex information.
   </Tab>
-  
+
   <Tab title="Coding & Technical">
     **Best for Development and Tool-Heavy Workflows**
-    
+
     | Model | Coding Performance | Tool Use Score | Cost ($/M tokens) | Best Use in CrewAI |
     |:------|:------------------|:---------------|:------------------|:------------------|
     | **Claude 4 Sonnet** | Excellent | 72.7% | $6.00 | Primary coding agent, technical documentation |
@@ -639,10 +639,10 @@ These tables/metrics showcase selected leading models in each category and are n
 
     These models are optimized for code generation, debugging, and technical problem-solving, making them ideal for development-focused crews.
   </Tab>
-  
+
   <Tab title="Speed & Efficiency">
     **Best for High-Throughput and Real-Time Applications**
-    
+
     | Model | Speed (tokens/s) | Latency (TTFT) | Cost ($/M tokens) | Best Use in CrewAI |
     |:------|:-----------------|:---------------|:------------------|:------------------|
     | **Llama 4 Scout** | 2,600 | 0.33s | $0.27 | High-volume processing agents |
@@ -653,10 +653,10 @@ These tables/metrics showcase selected leading models in each category and are n
 
     These models prioritize speed and efficiency, perfect for agents handling routine operations or requiring quick responses. **Pro tip**: Pairing these models with fast inference providers like Groq can achieve even better performance, especially for open-source models like Llama.
   </Tab>
-  
+
   <Tab title="Balanced Performance">
     **Best All-Around Models for General Crews**
-    
+
     | Model | Overall Score | Versatility | Cost ($/M tokens) | Best Use in CrewAI |
     |:------|:--------------|:------------|:------------------|:------------------|
     | **GPT-4.1** | 53 | Excellent | $3.50 | General-purpose crew LLM |
@@ -677,19 +677,19 @@ These tables/metrics showcase selected leading models in each category and are n
 
     **Strategy**: Implement a multi-model approach where premium models handle strategic thinking while efficient models handle routine operations.
   </Accordion>
-  
+
   <Accordion title="Cost-Conscious Crews" icon="dollar-sign">
     **When budget is a primary constraint**: Focus on models like **DeepSeek R1**, **Llama 4 Scout**, or **Gemini 2.0 Flash**. These provide strong performance at significantly lower costs.
 
     **Strategy**: Use cost-effective models for most agents, reserving premium models only for the most critical decision-making roles.
   </Accordion>
-  
+
   <Accordion title="Specialized Workflows" icon="screwdriver-wrench">
     **For specific domain expertise**: Choose models optimized for your primary use case. **Claude 4** series for coding, **Gemini 2.5 Pro** for research, **Llama 405B** for function calling.
 
     **Strategy**: Select models based on your crew's primary function, ensuring the core capability aligns with model strengths.
   </Accordion>
-  
+
   <Accordion title="Enterprise & Privacy" icon="shield">
     **For data-sensitive operations**: Consider open-source models like **Llama 4** series, **DeepSeek V3**, or **Qwen3** that can be deployed locally while maintaining competitive performance.
 
@@ -715,16 +715,16 @@ These tables/metrics showcase selected leading models in each category and are n
   <Step title="Start with Proven Models">
     Begin with well-established models like **GPT-4.1**, **Claude 3.7 Sonnet**, or **Gemini 2.0 Flash** that offer good performance across multiple dimensions and have extensive real-world validation.
   </Step>
-  
+
   <Step title="Identify Specialized Needs">
     Determine if your crew has specific requirements (coding, reasoning, speed) that would benefit from specialized models like **Claude 4 Sonnet** for development or **o3** for complex analysis. For speed-critical applications, consider fast inference providers like **Groq** alongside model selection.
   </Step>
-  
+
   <Step title="Implement Multi-Model Strategy">
     Use different models for different agents based on their roles. High-capability models for managers and complex tasks, efficient models for routine operations.
   </Step>
-  
+
   <Step title="Monitor and Optimize">
     Track performance metrics relevant to your use case and be prepared to adjust model selections as new models are released or pricing changes.
   </Step>
-</Steps> 
+</Steps>

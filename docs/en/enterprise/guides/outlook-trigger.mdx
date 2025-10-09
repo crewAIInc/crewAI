@@ -1,0 +1,52 @@
+---
+title: "Outlook Trigger"
+description: "Launch automations from Outlook emails and calendar updates"
+icon: "microsoft"
+mode: "wide"
+---
+
+## Overview
+
+Automate responses when Outlook delivers a new message or when an event is removed from the calendar. Teams commonly route escalations, file tickets, or alert attendees of cancellations.
+
+<Tip>
+  Connect Outlook in **Tools & Integrations** and ensure the trigger is enabled for your deployment.
+</Tip>
+
+## Enabling the Outlook Trigger
+
+1. Open your deployment in CrewAI AMP
+2. Go to the **Triggers** tab
+3. Locate **Outlook** and switch the toggle to enable
+
+<Frame caption="Microsoft Outlook trigger connection">
+  <img src="/images/enterprise/outlook-trigger.png" alt="Enable or disable triggers with toggle" />
+</Frame>
+
+## Example: Summarize a new email
+
+```python
+from outlook_message_crew import OutlookMessageTrigger
+
+crew = OutlookMessageTrigger().crew()
+crew.kickoff({
+    "crewai_trigger_payload": outlook_payload,
+})
+```
+
+The crew extracts sender details, subject, body preview, and attachments before generating a structured response.
+
+## Sample payloads & crews
+
+Review the [Outlook examples](https://github.com/crewAIInc/crewai-enterprise-trigger-examples/tree/main/outlook) for two common scenarios:
+
+- `new-message.json` → new mail notifications parsed by `outlook-message-crew.py`
+- `event-removed.json` → calendar cleanup handled by `outlook-event-removal-crew.py`
+
+Each crew demonstrates how to handle Microsoft Graph payloads, normalize headers, and keep humans in-the-loop with concise summaries.
+
+## Troubleshooting
+
+- Verify the Outlook connector is still authorized; the subscription must be renewed periodically
+- If attachments are missing, confirm the webhook subscription includes the `includeResourceData` flag
+- Review execution logs when events fail to match—cancellation payloads lack attendee lists by design and the crew should account for that

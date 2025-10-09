@@ -62,9 +62,9 @@
 With over 100,000 developers certified through our community courses at [learn.crewai.com](https://learn.crewai.com), CrewAI is rapidly becoming the
 standard for enterprise-ready AI automation.
 
-# CrewAI Enterprise Suite
+# CrewAI AMP Suite
 
-CrewAI Enterprise Suite is a comprehensive bundle tailored for organizations that require secure, scalable, and easy-to-manage agent-driven automation.
+CrewAI AMP Suite is a comprehensive bundle tailored for organizations that require secure, scalable, and easy-to-manage agent-driven automation.
 
 You can try one part of the suite the [Crew Control Plane for free](https://app.crewai.com)
 
@@ -76,9 +76,9 @@ You can try one part of the suite the [Crew Control Plane for free](https://app.
 - **Advanced Security**: Built-in robust security and compliance measures ensuring safe deployment and management.
 - **Actionable Insights**: Real-time analytics and reporting to optimize performance and decision-making.
 - **24/7 Support**: Dedicated enterprise support to ensure uninterrupted operation and quick resolution of issues.
-- **On-premise and Cloud Deployment Options**: Deploy CrewAI Enterprise on-premise or in the cloud, depending on your security and compliance requirements.
+- **On-premise and Cloud Deployment Options**: Deploy CrewAI AMP on-premise or in the cloud, depending on your security and compliance requirements.
 
-CrewAI Enterprise is designed for enterprises seeking a powerful, reliable solution to transform complex business processes into efficient,
+CrewAI AMP is designed for enterprises seeking a powerful, reliable solution to transform complex business processes into efficient,
 intelligent automations.
 
 ## Table of contents
@@ -674,9 +674,9 @@ CrewAI is released under the [MIT License](https://github.com/crewAIInc/crewAI/b
 
 ### Enterprise Features
 
-- [What additional features does CrewAI Enterprise offer?](#q-what-additional-features-does-crewai-enterprise-offer)
-- [Is CrewAI Enterprise available for cloud and on-premise deployments?](#q-is-crewai-enterprise-available-for-cloud-and-on-premise-deployments)
-- [Can I try CrewAI Enterprise for free?](#q-can-i-try-crewai-enterprise-for-free)
+- [What additional features does CrewAI AMP offer?](#q-what-additional-features-does-crewai-amp-offer)
+- [Is CrewAI AMP available for cloud and on-premise deployments?](#q-is-crewai-amp-available-for-cloud-and-on-premise-deployments)
+- [Can I try CrewAI AMP for free?](#q-can-i-try-crewai-amp-for-free)
 
 ### Q: What exactly is CrewAI?
 
@@ -732,17 +732,17 @@ A: Check out practical examples in the [CrewAI-examples repository](https://gith
 
 A: Contributions are warmly welcomed! Fork the repository, create your branch, implement your changes, and submit a pull request. See the Contribution section of the README for detailed guidelines.
 
-### Q: What additional features does CrewAI Enterprise offer?
+### Q: What additional features does CrewAI AMP offer?
 
-A: CrewAI Enterprise provides advanced features such as a unified control plane, real-time observability, secure integrations, advanced security, actionable insights, and dedicated 24/7 enterprise support.
+A: CrewAI AMP provides advanced features such as a unified control plane, real-time observability, secure integrations, advanced security, actionable insights, and dedicated 24/7 enterprise support.
 
-### Q: Is CrewAI Enterprise available for cloud and on-premise deployments?
+### Q: Is CrewAI AMP available for cloud and on-premise deployments?
 
-A: Yes, CrewAI Enterprise supports both cloud-based and on-premise deployment options, allowing enterprises to meet their specific security and compliance requirements.
+A: Yes, CrewAI AMP supports both cloud-based and on-premise deployment options, allowing enterprises to meet their specific security and compliance requirements.
 
-### Q: Can I try CrewAI Enterprise for free?
+### Q: Can I try CrewAI AMP for free?
 
-A: Yes, you can explore part of the CrewAI Enterprise Suite by accessing the [Crew Control Plane](https://app.crewai.com) for free.
+A: Yes, you can explore part of the CrewAI AMP Suite by accessing the [Crew Control Plane](https://app.crewai.com) for free.
 
 ### Q: Does CrewAI support fine-tuning or training custom models?
 
@@ -762,7 +762,7 @@ A: CrewAI is highly scalable, supporting simple automations and large-scale ente
 
 ### Q: Does CrewAI offer debugging and monitoring tools?
 
-A: Yes, CrewAI Enterprise includes advanced debugging, tracing, and real-time observability features, simplifying the management and troubleshooting of your automations.
+A: Yes, CrewAI AMP includes advanced debugging, tracing, and real-time observability features, simplifying the management and troubleshooting of your automations.
 
 ### Q: What programming languages does CrewAI support?
 

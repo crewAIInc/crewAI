@@ -223,4 +223,323 @@ interactions:
     status:
       code: 200
       message: OK
+- request:
+    body: '{"trace_id": "874c2616-847c-47e7-a0d1-25839021e790", "execution_type":
+      "crew", "user_identifier": null, "execution_context": {"crew_fingerprint": null,
+      "crew_name": "crew", "flow_name": null, "crewai_version": "0.201.1", "privacy_level":
+      "standard"}, "execution_metadata": {"expected_duration_estimate": 300, "agent_count":
+      0, "task_count": 0, "flow_method_count": 0, "execution_started_at": "2025-10-08T18:18:05.331888+00:00"}}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate, zstd
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '428'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - CrewAI-CLI/0.201.1
+      X-Crewai-Organization-Id:
+      - d3a3d10c-35db-423f-a7a4-c026030ba64d
+      X-Crewai-Version:
+      - 0.201.1
+    method: POST
+    uri: http://localhost:3000/crewai_plus/api/v1/tracing/batches
+  response:
+    body:
+      string: '{"id":"07db44f2-cd05-4a41-9e95-868bba731607","trace_id":"874c2616-847c-47e7-a0d1-25839021e790","execution_type":"crew","crew_name":"crew","flow_name":null,"status":"running","duration_ms":null,"crewai_version":"0.201.1","privacy_level":"standard","total_events":0,"execution_context":{"crew_fingerprint":null,"crew_name":"crew","flow_name":null,"crewai_version":"0.201.1","privacy_level":"standard"},"created_at":"2025-10-08T18:18:05.666Z","updated_at":"2025-10-08T18:18:05.666Z"}'
+    headers:
+      Content-Length:
+      - '480'
+      cache-control:
+      - no-store
+      content-security-policy:
+      - 'default-src ''self'' *.crewai.com crewai.com; script-src ''self'' ''unsafe-inline''
+        *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts https://www.gstatic.com
+        https://run.pstmn.io https://apis.google.com https://apis.google.com/js/api.js
+        https://accounts.google.com https://accounts.google.com/gsi/client https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css.map
+        https://*.google.com https://docs.google.com https://slides.google.com https://js.hs-scripts.com
+        https://js.sentry-cdn.com https://browser.sentry-cdn.com https://www.googletagmanager.com
+        https://js-na1.hs-scripts.com https://share.descript.com/; style-src ''self''
+        ''unsafe-inline'' *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts;
+        img-src ''self'' data: *.crewai.com crewai.com https://zeus.tools.crewai.com
+        https://dashboard.tools.crewai.com https://cdn.jsdelivr.net; font-src ''self''
+        data: *.crewai.com crewai.com; connect-src ''self'' *.crewai.com crewai.com
+        https://zeus.tools.crewai.com https://connect.useparagon.com/ https://zeus.useparagon.com/*
+        https://*.useparagon.com/* https://run.pstmn.io https://connect.tools.crewai.com/
+        https://*.sentry.io https://www.google-analytics.com ws://localhost:3036 wss://localhost:3036;
+        frame-src ''self'' *.crewai.com crewai.com https://connect.useparagon.com/
+        https://zeus.tools.crewai.com https://zeus.useparagon.com/* https://connect.tools.crewai.com/
+        https://docs.google.com https://drive.google.com https://slides.google.com
+        https://accounts.google.com https://*.google.com https://www.youtube.com https://share.descript.com'
+      content-type:
+      - application/json; charset=utf-8
+      etag:
+      - W/"450d644658ec3acfa9dac33ff0433b7e"
+      expires:
+      - '0'
+      permissions-policy:
+      - camera=(), microphone=(self), geolocation=()
+      pragma:
+      - no-cache
+      referrer-policy:
+      - strict-origin-when-cross-origin
+      server-timing:
+      - cache_read.active_support;dur=0.06, sql.active_record;dur=19.50, cache_generate.active_support;dur=2.40,
+        cache_write.active_support;dur=0.20, cache_read_multi.active_support;dur=0.12,
+        start_processing.action_controller;dur=0.00, instantiation.active_record;dur=0.29,
+        feature_operation.flipper;dur=0.07, start_transaction.active_record;dur=0.01,
+        transaction.active_record;dur=9.28, process_action.action_controller;dur=288.29
+      vary:
+      - Accept
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-permitted-cross-domain-policies:
+      - none
+      x-request-id:
+      - dfe4369a-6a01-4886-87d0-5d502c805544
+      x-runtime:
+      - '0.343051'
+      x-xss-protection:
+      - 1; mode=block
+    status:
+      code: 201
+      message: Created
+- request:
+    body: '{"events": [{"event_id": "9fd0722d-4e6d-49f0-9e9e-fa10c53b9928", "timestamp":
+      "2025-10-08T18:18:05.680854+00:00", "type": "crew_kickoff_started", "event_data":
+      {"timestamp": "2025-10-08T18:18:05.329875+00:00", "type": "crew_kickoff_started",
+      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
+      "crew_name": "crew", "crew": null, "inputs": null}}, {"event_id": "0bb97dd4-8283-4565-ab46-18e88b13be21",
+      "timestamp": "2025-10-08T18:18:05.685253+00:00", "type": "task_started", "event_data":
+      {"task_description": "What is the date today?", "expected_output": "The date
+      today.", "task_name": "What is the date today?", "context": "", "agent_role":
+      "Reporter", "task_id": "53a9cb6d-b44a-4138-90d8-b283b96896b1"}}, {"event_id":
+      "aa67e454-ba0b-421a-8346-413f3bd8cc7f", "timestamp": "2025-10-08T18:18:05.686194+00:00",
+      "type": "agent_execution_started", "event_data": {"agent_role": "Reporter",
+      "agent_goal": "Report the date", "agent_backstory": "You''re an expert reporter,
+      specialized in reporting the date."}}, {"event_id": "b243d48b-fed4-402d-843c-bb445fd8ac63",
+      "timestamp": "2025-10-08T18:18:05.686395+00:00", "type": "llm_call_started",
+      "event_data": {"timestamp": "2025-10-08T18:18:05.686341+00:00", "type": "llm_call_started",
+      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
+      "task_name": "What is the date today?", "task_id": "53a9cb6d-b44a-4138-90d8-b283b96896b1",
+      "agent_id": "5c8b5b64-b13b-4328-9ddf-b640eeffc921", "agent_role": "Reporter",
+      "from_task": null, "from_agent": null, "model": "gpt-4o-mini", "messages": [{"role":
+      "system", "content": "You are Reporter. You''re an expert reporter, specialized
+      in reporting the date.\nYour personal goal is: Report the date\nTo give my best
+      complete final answer to the task respond using the exact following format:\n\nThought:
+      I now can give a great answer\nFinal Answer: Your final answer must be the great
+      and the most complete as possible, it must be outcome described.\n\nI MUST use
+      these formats, my job depends on it!"}, {"role": "user", "content": "\nCurrent
+      Task: What is the date today?\n\nThis is the expected criteria for your final
+      answer: The date today.\nyou MUST return the actual complete content as the
+      final answer, not a summary.\n\nBegin! This is VERY important to you, use the
+      tools available and give your best Final Answer, your job depends on it!\n\nThought:"}],
+      "tools": null, "callbacks": ["<crewai.utilities.token_counter_callback.TokenCalcHandler
+      object at 0x134650250>"], "available_functions": null}}, {"event_id": "03c60039-86fb-46fb-8f8d-5e3f6360f3d6",
+      "timestamp": "2025-10-08T18:18:05.692055+00:00", "type": "llm_call_completed",
+      "event_data": {"timestamp": "2025-10-08T18:18:05.691978+00:00", "type": "llm_call_completed",
+      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
+      "task_name": "What is the date today?", "task_id": "53a9cb6d-b44a-4138-90d8-b283b96896b1",
+      "agent_id": "5c8b5b64-b13b-4328-9ddf-b640eeffc921", "agent_role": "Reporter",
+      "from_task": null, "from_agent": null, "messages": [{"role": "system", "content":
+      "You are Reporter. You''re an expert reporter, specialized in reporting the
+      date.\nYour personal goal is: Report the date\nTo give my best complete final
+      answer to the task respond using the exact following format:\n\nThought: I now
+      can give a great answer\nFinal Answer: Your final answer must be the great and
+      the most complete as possible, it must be outcome described.\n\nI MUST use these
+      formats, my job depends on it!"}, {"role": "user", "content": "\nCurrent Task:
+      What is the date today?\n\nThis is the expected criteria for your final answer:
+      The date today.\nyou MUST return the actual complete content as the final answer,
+      not a summary.\n\nBegin! This is VERY important to you, use the tools available
+      and give your best Final Answer, your job depends on it!\n\nThought:"}], "response":
+      "I now can give a great answer  \nFinal Answer: The date today is October 10,
+      2023.", "call_type": "<LLMCallType.LLM_CALL: ''llm_call''>", "model": "gpt-4o-mini"}},
+      {"event_id": "59a036ae-406e-4a7a-b3d8-56bf519f5146", "timestamp": "2025-10-08T18:18:05.692309+00:00",
+      "type": "agent_execution_completed", "event_data": {"agent_role": "Reporter",
+      "agent_goal": "Report the date", "agent_backstory": "You''re an expert reporter,
+      specialized in reporting the date."}}, {"event_id": "6c6475ff-f07b-4bc0-b754-c8b42c44d74d",
+      "timestamp": "2025-10-08T18:18:05.692392+00:00", "type": "task_completed", "event_data":
+      {"task_description": "What is the date today?", "task_name": "What is the date
+      today?", "task_id": "53a9cb6d-b44a-4138-90d8-b283b96896b1", "output_raw": "The
+      date today is October 10, 2023.", "output_format": "OutputFormat.RAW", "agent_role":
+      "Reporter"}}, {"event_id": "a72161b7-a226-40ae-b80d-ba30bb9cfd9a", "timestamp":
+      "2025-10-08T18:18:05.694941+00:00", "type": "crew_kickoff_completed", "event_data":
+      {"timestamp": "2025-10-08T18:18:05.694898+00:00", "type": "crew_kickoff_completed",
+      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
+      "crew_name": "crew", "crew": null, "output": {"description": "What is the date
+      today?", "name": "What is the date today?", "expected_output": "The date today.",
+      "summary": "What is the date today?...", "raw": "The date today is October 10,
+      2023.", "pydantic": null, "json_dict": null, "agent": "Reporter", "output_format":
+      "raw"}, "total_tokens": 188}}], "batch_metadata": {"events_count": 8, "batch_sequence":
+      1, "is_final_batch": false}}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate, zstd
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '5505'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - CrewAI-CLI/0.201.1
+      X-Crewai-Organization-Id:
+      - d3a3d10c-35db-423f-a7a4-c026030ba64d
+      X-Crewai-Version:
+      - 0.201.1
+    method: POST
+    uri: http://localhost:3000/crewai_plus/api/v1/tracing/batches/874c2616-847c-47e7-a0d1-25839021e790/events
+  response:
+    body:
+      string: '{"events_created":8,"trace_batch_id":"07db44f2-cd05-4a41-9e95-868bba731607"}'
+    headers:
+      Content-Length:
+      - '76'
+      cache-control:
+      - no-store
+      content-security-policy:
+      - 'default-src ''self'' *.crewai.com crewai.com; script-src ''self'' ''unsafe-inline''
+        *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts https://www.gstatic.com
+        https://run.pstmn.io https://apis.google.com https://apis.google.com/js/api.js
+        https://accounts.google.com https://accounts.google.com/gsi/client https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css.map
+        https://*.google.com https://docs.google.com https://slides.google.com https://js.hs-scripts.com
+        https://js.sentry-cdn.com https://browser.sentry-cdn.com https://www.googletagmanager.com
+        https://js-na1.hs-scripts.com https://share.descript.com/; style-src ''self''
+        ''unsafe-inline'' *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts;
+        img-src ''self'' data: *.crewai.com crewai.com https://zeus.tools.crewai.com
+        https://dashboard.tools.crewai.com https://cdn.jsdelivr.net; font-src ''self''
+        data: *.crewai.com crewai.com; connect-src ''self'' *.crewai.com crewai.com
+        https://zeus.tools.crewai.com https://connect.useparagon.com/ https://zeus.useparagon.com/*
+        https://*.useparagon.com/* https://run.pstmn.io https://connect.tools.crewai.com/
+        https://*.sentry.io https://www.google-analytics.com ws://localhost:3036 wss://localhost:3036;
+        frame-src ''self'' *.crewai.com crewai.com https://connect.useparagon.com/
+        https://zeus.tools.crewai.com https://zeus.useparagon.com/* https://connect.tools.crewai.com/
+        https://docs.google.com https://drive.google.com https://slides.google.com
+        https://accounts.google.com https://*.google.com https://www.youtube.com https://share.descript.com'
+      content-type:
+      - application/json; charset=utf-8
+      etag:
+      - W/"f02a02802518030657a73ce20468cad2"
+      expires:
+      - '0'
+      permissions-policy:
+      - camera=(), microphone=(self), geolocation=()
+      pragma:
+      - no-cache
+      referrer-policy:
+      - strict-origin-when-cross-origin
+      server-timing:
+      - cache_read.active_support;dur=0.10, sql.active_record;dur=48.31, cache_generate.active_support;dur=5.45,
+        cache_write.active_support;dur=0.12, cache_read_multi.active_support;dur=0.16,
+        start_processing.action_controller;dur=0.00, instantiation.active_record;dur=0.37,
+        start_transaction.active_record;dur=0.01, transaction.active_record;dur=87.31,
+        process_action.action_controller;dur=407.46
+      vary:
+      - Accept
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-permitted-cross-domain-policies:
+      - none
+      x-request-id:
+      - 4abba833-f6ab-480d-aee6-c19971dfd2ac
+      x-runtime:
+      - '0.468998'
+      x-xss-protection:
+      - 1; mode=block
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"status": "completed", "duration_ms": 845, "final_event_count": 8}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate, zstd
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '67'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - CrewAI-CLI/0.201.1
+      X-Crewai-Organization-Id:
+      - d3a3d10c-35db-423f-a7a4-c026030ba64d
+      X-Crewai-Version:
+      - 0.201.1
+    method: PATCH
+    uri: http://localhost:3000/crewai_plus/api/v1/tracing/batches/874c2616-847c-47e7-a0d1-25839021e790/finalize
+  response:
+    body:
+      string: '{"id":"07db44f2-cd05-4a41-9e95-868bba731607","trace_id":"874c2616-847c-47e7-a0d1-25839021e790","execution_type":"crew","crew_name":"crew","flow_name":null,"status":"completed","duration_ms":845,"crewai_version":"0.201.1","privacy_level":"standard","total_events":8,"execution_context":{"crew_name":"crew","flow_name":null,"privacy_level":"standard","crewai_version":"0.201.1","crew_fingerprint":null},"created_at":"2025-10-08T18:18:05.666Z","updated_at":"2025-10-08T18:18:06.849Z"}'
+    headers:
+      Content-Length:
+      - '481'
+      cache-control:
+      - no-store
+      content-security-policy:
+      - 'default-src ''self'' *.crewai.com crewai.com; script-src ''self'' ''unsafe-inline''
+        *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts https://www.gstatic.com
+        https://run.pstmn.io https://apis.google.com https://apis.google.com/js/api.js
+        https://accounts.google.com https://accounts.google.com/gsi/client https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css.map
+        https://*.google.com https://docs.google.com https://slides.google.com https://js.hs-scripts.com
+        https://js.sentry-cdn.com https://browser.sentry-cdn.com https://www.googletagmanager.com
+        https://js-na1.hs-scripts.com https://share.descript.com/; style-src ''self''
+        ''unsafe-inline'' *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts;
+        img-src ''self'' data: *.crewai.com crewai.com https://zeus.tools.crewai.com
+        https://dashboard.tools.crewai.com https://cdn.jsdelivr.net; font-src ''self''
+        data: *.crewai.com crewai.com; connect-src ''self'' *.crewai.com crewai.com
+        https://zeus.tools.crewai.com https://connect.useparagon.com/ https://zeus.useparagon.com/*
+        https://*.useparagon.com/* https://run.pstmn.io https://connect.tools.crewai.com/
+        https://*.sentry.io https://www.google-analytics.com ws://localhost:3036 wss://localhost:3036;
+        frame-src ''self'' *.crewai.com crewai.com https://connect.useparagon.com/
+        https://zeus.tools.crewai.com https://zeus.useparagon.com/* https://connect.tools.crewai.com/
+        https://docs.google.com https://drive.google.com https://slides.google.com
+        https://accounts.google.com https://*.google.com https://www.youtube.com https://share.descript.com'
+      content-type:
+      - application/json; charset=utf-8
+      etag:
+      - W/"33272f2ea7a679a4a8cb8ca15423ff59"
+      expires:
+      - '0'
+      permissions-policy:
+      - camera=(), microphone=(self), geolocation=()
+      pragma:
+      - no-cache
+      referrer-policy:
+      - strict-origin-when-cross-origin
+      server-timing:
+      - cache_read.active_support;dur=0.06, cache_fetch_hit.active_support;dur=0.00,
+        cache_read_multi.active_support;dur=0.10, start_processing.action_controller;dur=0.01,
+        sql.active_record;dur=7.11, instantiation.active_record;dur=0.58, unpermitted_parameters.action_controller;dur=0.01,
+        start_transaction.active_record;dur=0.01, transaction.active_record;dur=3.43,
+        process_action.action_controller;dur=623.53
+      vary:
+      - Accept
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-permitted-cross-domain-policies:
+      - none
+      x-request-id:
+      - ed67c930-a05c-4dd3-91e0-268003ad8dc0
+      x-runtime:
+      - '0.669194'
+      x-xss-protection:
+      - 1; mode=block
+    status:
+      code: 200
+      message: OK
 version: 1
