@@ -548,4 +548,430 @@ interactions:
     status:
       code: 200
       message: OK
+- request:
+    body: '{"trace_id": "04c7604e-e454-49eb-aef8-0f70652cdf97", "execution_type":
+      "crew", "user_identifier": null, "execution_context": {"crew_fingerprint": null,
+      "crew_name": "crew", "flow_name": null, "crewai_version": "0.201.1", "privacy_level":
+      "standard"}, "execution_metadata": {"expected_duration_estimate": 300, "agent_count":
+      0, "task_count": 0, "flow_method_count": 0, "execution_started_at": "2025-10-08T18:09:42.470383+00:00"}}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate, zstd
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '428'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - CrewAI-CLI/0.201.1
+      X-Crewai-Organization-Id:
+      - d3a3d10c-35db-423f-a7a4-c026030ba64d
+      X-Crewai-Version:
+      - 0.201.1
+    method: POST
+    uri: http://localhost:3000/crewai_plus/api/v1/tracing/batches
+  response:
+    body:
+      string: '{"id":"37925b6c-8b18-4170-8400-8866a3049741","trace_id":"04c7604e-e454-49eb-aef8-0f70652cdf97","execution_type":"crew","crew_name":"crew","flow_name":null,"status":"running","duration_ms":null,"crewai_version":"0.201.1","privacy_level":"standard","total_events":0,"execution_context":{"crew_fingerprint":null,"crew_name":"crew","flow_name":null,"crewai_version":"0.201.1","privacy_level":"standard"},"created_at":"2025-10-08T18:09:43.416Z","updated_at":"2025-10-08T18:09:43.416Z"}'
+    headers:
+      Content-Length:
+      - '480'
+      cache-control:
+      - no-store
+      content-security-policy:
+      - 'default-src ''self'' *.crewai.com crewai.com; script-src ''self'' ''unsafe-inline''
+        *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts https://www.gstatic.com
+        https://run.pstmn.io https://apis.google.com https://apis.google.com/js/api.js
+        https://accounts.google.com https://accounts.google.com/gsi/client https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css.map
+        https://*.google.com https://docs.google.com https://slides.google.com https://js.hs-scripts.com
+        https://js.sentry-cdn.com https://browser.sentry-cdn.com https://www.googletagmanager.com
+        https://js-na1.hs-scripts.com https://share.descript.com/; style-src ''self''
+        ''unsafe-inline'' *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts;
+        img-src ''self'' data: *.crewai.com crewai.com https://zeus.tools.crewai.com
+        https://dashboard.tools.crewai.com https://cdn.jsdelivr.net; font-src ''self''
+        data: *.crewai.com crewai.com; connect-src ''self'' *.crewai.com crewai.com
+        https://zeus.tools.crewai.com https://connect.useparagon.com/ https://zeus.useparagon.com/*
+        https://*.useparagon.com/* https://run.pstmn.io https://connect.tools.crewai.com/
+        https://*.sentry.io https://www.google-analytics.com ws://localhost:3036 wss://localhost:3036;
+        frame-src ''self'' *.crewai.com crewai.com https://connect.useparagon.com/
+        https://zeus.tools.crewai.com https://zeus.useparagon.com/* https://connect.tools.crewai.com/
+        https://docs.google.com https://drive.google.com https://slides.google.com
+        https://accounts.google.com https://*.google.com https://www.youtube.com https://share.descript.com'
+      content-type:
+      - application/json; charset=utf-8
+      etag:
+      - W/"9d64cf64405d10b8b399880dbbfe0303"
+      expires:
+      - '0'
+      permissions-policy:
+      - camera=(), microphone=(self), geolocation=()
+      pragma:
+      - no-cache
+      referrer-policy:
+      - strict-origin-when-cross-origin
+      server-timing:
+      - cache_read.active_support;dur=0.19, sql.active_record;dur=256.13, cache_generate.active_support;dur=188.47,
+        cache_write.active_support;dur=3.00, cache_read_multi.active_support;dur=4.24,
+        start_processing.action_controller;dur=0.01, instantiation.active_record;dur=1.56,
+        feature_operation.flipper;dur=0.09, start_transaction.active_record;dur=0.01,
+        transaction.active_record;dur=21.63, process_action.action_controller;dur=665.44
+      vary:
+      - Accept
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-permitted-cross-domain-policies:
+      - none
+      x-request-id:
+      - 1a8ff7c6-a105-4dbe-ac7f-9a53594313da
+      x-runtime:
+      - '0.952194'
+      x-xss-protection:
+      - 1; mode=block
+    status:
+      code: 201
+      message: Created
+- request:
+    body: '{"events": [{"event_id": "2a81ef7c-99e0-4abb-b42d-bd7c234bf73f", "timestamp":
+      "2025-10-08T18:09:43.437174+00:00", "type": "crew_kickoff_started", "event_data":
+      {"timestamp": "2025-10-08T18:09:42.469578+00:00", "type": "crew_kickoff_started",
+      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
+      "crew_name": "crew", "crew": null, "inputs": null}}, {"event_id": "ff3d4d33-1080-4401-9829-fc1940f330a3",
+      "timestamp": "2025-10-08T18:09:43.526001+00:00", "type": "task_started", "event_data":
+      {"task_description": "What is the capital of France?", "expected_output": "The
+      capital of France is Paris.", "task_name": "What is the capital of France?",
+      "context": "", "agent_role": "Information Agent", "task_id": "0ff5a428-9832-4e36-b952-d7abdceb6c81"}},
+      {"event_id": "ca7200a3-f0a9-46c1-a71b-955aa27f4dec", "timestamp": "2025-10-08T18:09:43.526133+00:00",
+      "type": "knowledge_retrieval_started", "event_data": {"timestamp": "2025-10-08T18:09:43.526092+00:00",
+      "type": "knowledge_search_query_started", "source_fingerprint": null, "source_type":
+      null, "fingerprint_metadata": null, "task_id": "0ff5a428-9832-4e36-b952-d7abdceb6c81",
+      "task_name": "What is the capital of France?", "from_task": null, "from_agent":
+      null, "agent_role": "Information Agent", "agent_id": "6dcd58f3-16f6-423e-9c5d-572908eec4dd"}},
+      {"event_id": "bf1f4ed4-c16c-4974-b7c2-e5437bffb688", "timestamp": "2025-10-08T18:09:43.526435+00:00",
+      "type": "knowledge_retrieval_completed", "event_data": {"timestamp": "2025-10-08T18:09:43.526390+00:00",
+      "type": "knowledge_search_query_completed", "source_fingerprint": null, "source_type":
+      null, "fingerprint_metadata": null, "task_id": "0ff5a428-9832-4e36-b952-d7abdceb6c81",
+      "task_name": "What is the capital of France?", "from_task": null, "from_agent":
+      null, "agent_role": "Information Agent", "agent_id": "6dcd58f3-16f6-423e-9c5d-572908eec4dd",
+      "query": "Capital of France", "retrieved_knowledge": ""}}, {"event_id": "670a0ab5-d71b-4949-b515-7af58fd6f280",
+      "timestamp": "2025-10-08T18:09:43.527093+00:00", "type": "agent_execution_started",
+      "event_data": {"agent_role": "Information Agent", "agent_goal": "Provide information
+      based on knowledge sources", "agent_backstory": "I have access to knowledge
+      sources"}}, {"event_id": "7de3d47e-489e-4d83-a498-c4d2d184260f", "timestamp":
+      "2025-10-08T18:09:43.527264+00:00", "type": "llm_call_started", "event_data":
+      {"timestamp": "2025-10-08T18:09:43.527199+00:00", "type": "llm_call_started",
+      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
+      "task_name": "What is the capital of France?", "task_id": "0ff5a428-9832-4e36-b952-d7abdceb6c81",
+      "agent_id": "6dcd58f3-16f6-423e-9c5d-572908eec4dd", "agent_role": "Information
+      Agent", "from_task": null, "from_agent": null, "model": "gpt-4", "messages":
+      [{"role": "system", "content": "You are Information Agent. I have access to
+      knowledge sources\nYour personal goal is: Provide information based on knowledge
+      sources\nTo give my best complete final answer to the task respond using the
+      exact following format:\n\nThought: I now can give a great answer\nFinal Answer:
+      Your final answer must be the great and the most complete as possible, it must
+      be outcome described.\n\nI MUST use these formats, my job depends on it!"},
+      {"role": "user", "content": "\nCurrent Task: What is the capital of France?\n\nThis
+      is the expected criteria for your final answer: The capital of France is Paris.\nyou
+      MUST return the actual complete content as the final answer, not a summary.\n\nBegin!
+      This is VERY important to you, use the tools available and give your best Final
+      Answer, your job depends on it!\n\nThought:"}], "tools": null, "callbacks":
+      ["<crewai.utilities.token_counter_callback.TokenCalcHandler object at 0x14c18d940>"],
+      "available_functions": null}}, {"event_id": "1834c053-e2fd-4c86-a398-b8438b0eb196",
+      "timestamp": "2025-10-08T18:09:43.654600+00:00", "type": "llm_call_completed",
+      "event_data": {"timestamp": "2025-10-08T18:09:43.654212+00:00", "type": "llm_call_completed",
+      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
+      "task_name": "What is the capital of France?", "task_id": "0ff5a428-9832-4e36-b952-d7abdceb6c81",
+      "agent_id": "6dcd58f3-16f6-423e-9c5d-572908eec4dd", "agent_role": "Information
+      Agent", "from_task": null, "from_agent": null, "messages": [{"role": "system",
+      "content": "You are Information Agent. I have access to knowledge sources\nYour
+      personal goal is: Provide information based on knowledge sources\nTo give my
+      best complete final answer to the task respond using the exact following format:\n\nThought:
+      I now can give a great answer\nFinal Answer: Your final answer must be the great
+      and the most complete as possible, it must be outcome described.\n\nI MUST use
+      these formats, my job depends on it!"}, {"role": "user", "content": "\nCurrent
+      Task: What is the capital of France?\n\nThis is the expected criteria for your
+      final answer: The capital of France is Paris.\nyou MUST return the actual complete
+      content as the final answer, not a summary.\n\nBegin! This is VERY important
+      to you, use the tools available and give your best Final Answer, your job depends
+      on it!\n\nThought:"}], "response": "I cannot provide any other information as
+      the task clearly states the expected final answer and doesn''t require additional
+      information. I should provide the exact answer required.\n\nFinal Answer: The
+      capital of France is Paris.", "call_type": "<LLMCallType.LLM_CALL: ''llm_call''>",
+      "model": "gpt-4"}}, {"event_id": "4d6487a6-a292-4649-a163-9d26d166a213", "timestamp":
+      "2025-10-08T18:09:43.655025+00:00", "type": "agent_execution_completed", "event_data":
+      {"agent_role": "Information Agent", "agent_goal": "Provide information based
+      on knowledge sources", "agent_backstory": "I have access to knowledge sources"}},
+      {"event_id": "7b164066-65d9-46ad-a393-7978682cb012", "timestamp": "2025-10-08T18:09:43.655121+00:00",
+      "type": "task_completed", "event_data": {"task_description": "What is the capital
+      of France?", "task_name": "What is the capital of France?", "task_id": "0ff5a428-9832-4e36-b952-d7abdceb6c81",
+      "output_raw": "The capital of France is Paris.", "output_format": "OutputFormat.RAW",
+      "agent_role": "Information Agent"}}, {"event_id": "783e8702-2beb-476b-8f30-faff0685efa0",
+      "timestamp": "2025-10-08T18:09:43.656056+00:00", "type": "crew_kickoff_completed",
+      "event_data": {"timestamp": "2025-10-08T18:09:43.656037+00:00", "type": "crew_kickoff_completed",
+      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
+      "crew_name": "crew", "crew": null, "output": {"description": "What is the capital
+      of France?", "name": "What is the capital of France?", "expected_output": "The
+      capital of France is Paris.", "summary": "What is the capital of France?...",
+      "raw": "The capital of France is Paris.", "pydantic": null, "json_dict": null,
+      "agent": "Information Agent", "output_format": "raw"}, "total_tokens": 210}}],
+      "batch_metadata": {"events_count": 10, "batch_sequence": 1, "is_final_batch":
+      false}}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate, zstd
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '7035'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - CrewAI-CLI/0.201.1
+      X-Crewai-Organization-Id:
+      - d3a3d10c-35db-423f-a7a4-c026030ba64d
+      X-Crewai-Version:
+      - 0.201.1
+    method: POST
+    uri: http://localhost:3000/crewai_plus/api/v1/tracing/batches/04c7604e-e454-49eb-aef8-0f70652cdf97/events
+  response:
+    body:
+      string: '{"events_created":10,"trace_batch_id":"37925b6c-8b18-4170-8400-8866a3049741"}'
+    headers:
+      Content-Length:
+      - '77'
+      cache-control:
+      - no-store
+      content-security-policy:
+      - 'default-src ''self'' *.crewai.com crewai.com; script-src ''self'' ''unsafe-inline''
+        *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts https://www.gstatic.com
+        https://run.pstmn.io https://apis.google.com https://apis.google.com/js/api.js
+        https://accounts.google.com https://accounts.google.com/gsi/client https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css.map
+        https://*.google.com https://docs.google.com https://slides.google.com https://js.hs-scripts.com
+        https://js.sentry-cdn.com https://browser.sentry-cdn.com https://www.googletagmanager.com
+        https://js-na1.hs-scripts.com https://share.descript.com/; style-src ''self''
+        ''unsafe-inline'' *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts;
+        img-src ''self'' data: *.crewai.com crewai.com https://zeus.tools.crewai.com
+        https://dashboard.tools.crewai.com https://cdn.jsdelivr.net; font-src ''self''
+        data: *.crewai.com crewai.com; connect-src ''self'' *.crewai.com crewai.com
+        https://zeus.tools.crewai.com https://connect.useparagon.com/ https://zeus.useparagon.com/*
+        https://*.useparagon.com/* https://run.pstmn.io https://connect.tools.crewai.com/
+        https://*.sentry.io https://www.google-analytics.com ws://localhost:3036 wss://localhost:3036;
+        frame-src ''self'' *.crewai.com crewai.com https://connect.useparagon.com/
+        https://zeus.tools.crewai.com https://zeus.useparagon.com/* https://connect.tools.crewai.com/
+        https://docs.google.com https://drive.google.com https://slides.google.com
+        https://accounts.google.com https://*.google.com https://www.youtube.com https://share.descript.com'
+      content-type:
+      - application/json; charset=utf-8
+      etag:
+      - W/"08f66b5b040010c55ab131162a175762"
+      expires:
+      - '0'
+      permissions-policy:
+      - camera=(), microphone=(self), geolocation=()
+      pragma:
+      - no-cache
+      referrer-policy:
+      - strict-origin-when-cross-origin
+      server-timing:
+      - cache_read.active_support;dur=0.08, sql.active_record;dur=61.09, cache_generate.active_support;dur=3.16,
+        cache_write.active_support;dur=0.20, cache_read_multi.active_support;dur=0.19,
+        start_processing.action_controller;dur=0.00, instantiation.active_record;dur=0.68,
+        start_transaction.active_record;dur=0.01, transaction.active_record;dur=134.05,
+        process_action.action_controller;dur=789.11
+      vary:
+      - Accept
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-permitted-cross-domain-policies:
+      - none
+      x-request-id:
+      - 071cd7cd-6d07-4ed6-ad3e-aad1a04afd2d
+      x-runtime:
+      - '0.844586'
+      x-xss-protection:
+      - 1; mode=block
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"status": "completed", "duration_ms": 2034, "final_event_count": 10}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate, zstd
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '69'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - CrewAI-CLI/0.201.1
+      X-Crewai-Organization-Id:
+      - d3a3d10c-35db-423f-a7a4-c026030ba64d
+      X-Crewai-Version:
+      - 0.201.1
+    method: PATCH
+    uri: http://localhost:3000/crewai_plus/api/v1/tracing/batches/04c7604e-e454-49eb-aef8-0f70652cdf97/finalize
+  response:
+    body:
+      string: '{"id":"37925b6c-8b18-4170-8400-8866a3049741","trace_id":"04c7604e-e454-49eb-aef8-0f70652cdf97","execution_type":"crew","crew_name":"crew","flow_name":null,"status":"completed","duration_ms":2034,"crewai_version":"0.201.1","privacy_level":"standard","total_events":10,"execution_context":{"crew_name":"crew","flow_name":null,"privacy_level":"standard","crewai_version":"0.201.1","crew_fingerprint":null},"created_at":"2025-10-08T18:09:43.416Z","updated_at":"2025-10-08T18:09:45.276Z"}'
+    headers:
+      Content-Length:
+      - '483'
+      cache-control:
+      - no-store
+      content-security-policy:
+      - 'default-src ''self'' *.crewai.com crewai.com; script-src ''self'' ''unsafe-inline''
+        *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts https://www.gstatic.com
+        https://run.pstmn.io https://apis.google.com https://apis.google.com/js/api.js
+        https://accounts.google.com https://accounts.google.com/gsi/client https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css.map
+        https://*.google.com https://docs.google.com https://slides.google.com https://js.hs-scripts.com
+        https://js.sentry-cdn.com https://browser.sentry-cdn.com https://www.googletagmanager.com
+        https://js-na1.hs-scripts.com https://share.descript.com/; style-src ''self''
+        ''unsafe-inline'' *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts;
+        img-src ''self'' data: *.crewai.com crewai.com https://zeus.tools.crewai.com
+        https://dashboard.tools.crewai.com https://cdn.jsdelivr.net; font-src ''self''
+        data: *.crewai.com crewai.com; connect-src ''self'' *.crewai.com crewai.com
+        https://zeus.tools.crewai.com https://connect.useparagon.com/ https://zeus.useparagon.com/*
+        https://*.useparagon.com/* https://run.pstmn.io https://connect.tools.crewai.com/
+        https://*.sentry.io https://www.google-analytics.com ws://localhost:3036 wss://localhost:3036;
+        frame-src ''self'' *.crewai.com crewai.com https://connect.useparagon.com/
+        https://zeus.tools.crewai.com https://zeus.useparagon.com/* https://connect.tools.crewai.com/
+        https://docs.google.com https://drive.google.com https://slides.google.com
+        https://accounts.google.com https://*.google.com https://www.youtube.com https://share.descript.com'
+      content-type:
+      - application/json; charset=utf-8
+      etag:
+      - W/"866ee3e519ca13b55eb604b470e6a8f6"
+      expires:
+      - '0'
+      permissions-policy:
+      - camera=(), microphone=(self), geolocation=()
+      pragma:
+      - no-cache
+      referrer-policy:
+      - strict-origin-when-cross-origin
+      server-timing:
+      - cache_read.active_support;dur=0.08, sql.active_record;dur=15.55, cache_generate.active_support;dur=3.43,
+        cache_write.active_support;dur=0.18, cache_read_multi.active_support;dur=0.29,
+        start_processing.action_controller;dur=0.00, instantiation.active_record;dur=0.85,
+        unpermitted_parameters.action_controller;dur=0.01, start_transaction.active_record;dur=0.01,
+        transaction.active_record;dur=3.36, process_action.action_controller;dur=694.52
+      vary:
+      - Accept
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-permitted-cross-domain-policies:
+      - none
+      x-request-id:
+      - a4800ec1-3149-496b-bdac-ae3b18233262
+      x-runtime:
+      - '0.774062'
+      x-xss-protection:
+      - 1; mode=block
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"trace_id": "0be1e00c-9655-42f8-ac6c-17bb6cb3fe74", "execution_type":
+      "crew", "user_identifier": null, "execution_context": {"crew_fingerprint": null,
+      "crew_name": "Unknown Crew", "flow_name": null, "crewai_version": "0.201.1",
+      "privacy_level": "standard"}, "execution_metadata": {"expected_duration_estimate":
+      300, "agent_count": 0, "task_count": 0, "flow_method_count": 0, "execution_started_at":
+      "2025-10-08T18:11:17.411157+00:00"}}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate, zstd
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '436'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - CrewAI-CLI/0.201.1
+      X-Crewai-Organization-Id:
+      - d3a3d10c-35db-423f-a7a4-c026030ba64d
+      X-Crewai-Version:
+      - 0.201.1
+    method: POST
+    uri: http://localhost:3000/crewai_plus/api/v1/tracing/batches
+  response:
+    body:
+      string: '{"id":"21a388a9-840f-4439-bcda-42b8ed450205","trace_id":"0be1e00c-9655-42f8-ac6c-17bb6cb3fe74","execution_type":"crew","crew_name":"Unknown
+        Crew","flow_name":null,"status":"running","duration_ms":null,"crewai_version":"0.201.1","privacy_level":"standard","total_events":0,"execution_context":{"crew_fingerprint":null,"crew_name":"Unknown
+        Crew","flow_name":null,"crewai_version":"0.201.1","privacy_level":"standard"},"created_at":"2025-10-08T18:11:17.863Z","updated_at":"2025-10-08T18:11:17.863Z"}'
+    headers:
+      Content-Length:
+      - '496'
+      cache-control:
+      - no-store
+      content-security-policy:
+      - 'default-src ''self'' *.crewai.com crewai.com; script-src ''self'' ''unsafe-inline''
+        *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts https://www.gstatic.com
+        https://run.pstmn.io https://apis.google.com https://apis.google.com/js/api.js
+        https://accounts.google.com https://accounts.google.com/gsi/client https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css.map
+        https://*.google.com https://docs.google.com https://slides.google.com https://js.hs-scripts.com
+        https://js.sentry-cdn.com https://browser.sentry-cdn.com https://www.googletagmanager.com
+        https://js-na1.hs-scripts.com https://share.descript.com/; style-src ''self''
+        ''unsafe-inline'' *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts;
+        img-src ''self'' data: *.crewai.com crewai.com https://zeus.tools.crewai.com
+        https://dashboard.tools.crewai.com https://cdn.jsdelivr.net; font-src ''self''
+        data: *.crewai.com crewai.com; connect-src ''self'' *.crewai.com crewai.com
+        https://zeus.tools.crewai.com https://connect.useparagon.com/ https://zeus.useparagon.com/*
+        https://*.useparagon.com/* https://run.pstmn.io https://connect.tools.crewai.com/
+        https://*.sentry.io https://www.google-analytics.com ws://localhost:3036 wss://localhost:3036;
+        frame-src ''self'' *.crewai.com crewai.com https://connect.useparagon.com/
+        https://zeus.tools.crewai.com https://zeus.useparagon.com/* https://connect.tools.crewai.com/
+        https://docs.google.com https://drive.google.com https://slides.google.com
+        https://accounts.google.com https://*.google.com https://www.youtube.com https://share.descript.com'
+      content-type:
+      - application/json; charset=utf-8
+      etag:
+      - W/"153768807d32f26c16c848c06a291813"
+      expires:
+      - '0'
+      permissions-policy:
+      - camera=(), microphone=(self), geolocation=()
+      pragma:
+      - no-cache
+      referrer-policy:
+      - strict-origin-when-cross-origin
+      server-timing:
+      - cache_read.active_support;dur=0.19, sql.active_record;dur=49.81, cache_generate.active_support;dur=7.43,
+        cache_write.active_support;dur=1.22, cache_read_multi.active_support;dur=3.62,
+        start_processing.action_controller;dur=0.00, instantiation.active_record;dur=1.13,
+        feature_operation.flipper;dur=0.13, start_transaction.active_record;dur=0.00,
+        transaction.active_record;dur=6.97, process_action.action_controller;dur=360.59
+      vary:
+      - Accept
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-permitted-cross-domain-policies:
+      - none
+      x-request-id:
+      - bcb4ecff-6a0c-4fc0-b1b5-9cc86c7532f2
+      x-runtime:
+      - '0.442980'
+      x-xss-protection:
+      - 1; mode=block
+    status:
+      code: 201
+      message: Created
 version: 1

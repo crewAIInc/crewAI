@@ -397,6 +397,7 @@
                   "en/enterprise/guides/kickoff-crew",
                   "en/enterprise/guides/update-crew",
                   "en/enterprise/guides/enable-crew-studio",
+                  "en/enterprise/guides/capture_telemetry_logs",
                   "en/enterprise/guides/azure-openai-setup",
                   "en/enterprise/guides/tool-repository",
                   "en/enterprise/guides/react-component-export",
@@ -421,6 +422,7 @@
                   "en/api-reference/introduction",
                   "en/api-reference/inputs",
                   "en/api-reference/kickoff",
+                  "en/api-reference/resume",
                   "en/api-reference/status"
                 ]
               }
@@ -827,6 +829,7 @@
                   "pt-BR/api-reference/introduction",
                   "pt-BR/api-reference/inputs",
                   "pt-BR/api-reference/kickoff",
+                  "pt-BR/api-reference/resume",
                   "pt-BR/api-reference/status"
                 ]
               }
@@ -1239,6 +1242,7 @@
                   "ko/api-reference/introduction",
                   "ko/api-reference/inputs",
                   "ko/api-reference/kickoff",
+                  "ko/api-reference/resume",
                   "ko/api-reference/status"
                 ]
               }
