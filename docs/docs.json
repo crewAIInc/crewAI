@@ -422,6 +422,7 @@
                   "en/api-reference/introduction",
                   "en/api-reference/inputs",
                   "en/api-reference/kickoff",
+                  "en/api-reference/resume",
                   "en/api-reference/status"
                 ]
               }
@@ -829,6 +830,7 @@
                   "pt-BR/api-reference/introduction",
                   "pt-BR/api-reference/inputs",
                   "pt-BR/api-reference/kickoff",
+                  "pt-BR/api-reference/resume",
                   "pt-BR/api-reference/status"
                 ]
               }
@@ -1242,6 +1244,7 @@
                   "ko/api-reference/introduction",
                   "ko/api-reference/inputs",
                   "ko/api-reference/kickoff",
+                  "ko/api-reference/resume",
                   "ko/api-reference/status"
                 ]
               }
