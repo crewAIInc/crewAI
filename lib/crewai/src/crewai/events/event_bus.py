@@ -8,42 +8,28 @@ event handlers.
 import asyncio
 import atexit
 import threading
-from collections.abc import Callable, Coroutine, Generator
+from collections.abc import Callable, Generator
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
-from typing import Any, Final, ParamSpec, TypeVar, cast
+from typing import Any, Final, ParamSpec, TypeVar
 
 from blinker import Signal as Signal_
 from typing_extensions import Self
 
 from crewai.events.base_events import BaseEvent
+from crewai.events.types.event_bus_types import (
+    AsyncHandler,
+    AsyncHandlerSet,
+    SyncHandler,
+    SyncHandlerSet,
+)
+from crewai.events.types.llm_events import LLMStreamChunkEvent
 from crewai.events.utils.console_formatter import ConsoleFormatter
+from crewai.events.utils.handlers import _is_async_handler, _is_call_handler_safe
 from crewai.events.utils.rw_lock import RWLock
 
 P = ParamSpec("P")
 R = TypeVar("R")
-
-
-def _call_handler_safe(
-    handler: Callable[[Any, BaseEvent], None],
-    source: Any,
-    event: BaseEvent,
-) -> Exception | None:
-    """Safely call a single handler and return any exception.
-
-    Args:
-        handler: The handler function to call
-        source: The object that emitted the event
-        event: The event instance
-
-    Returns:
-        Exception if handler raised one, None otherwise
-    """
-    try:
-        handler(source, event)
-        return None
-    except Exception as e:
-        return e
 
 
 class Signal(Signal_):
@@ -94,7 +80,8 @@ class Signal(Signal_):
         with self._lock:
             if self.is_muted:
                 return
-            receivers = list(self.receivers_for(kwargs.get("sender")))
+            sender = kwargs.get("sender", args[0] if args else None)
+            receivers = list(self.receivers_for(sender))
 
         tasks: list[asyncio.Task[Any]] = []
         for receiver in receivers:
@@ -132,11 +119,8 @@ class CrewAIEventsBus:
     _instance: Self | None = None
     _instance_lock: threading.RLock = threading.RLock()
     _rwlock: RWLock
-    _sync_handlers: dict[type[BaseEvent], frozenset[Callable[[Any, BaseEvent], None]]]
-    _async_handlers: dict[
-        type[BaseEvent],
-        frozenset[Callable[[Any, BaseEvent], Coroutine[Any, Any, None]]],
-    ]
+    _sync_handlers: dict[type[BaseEvent], SyncHandlerSet]
+    _async_handlers: dict[type[BaseEvent], AsyncHandlerSet]
     _console: ConsoleFormatter
     _shutting_down: bool
 
@@ -162,13 +146,8 @@ class CrewAIEventsBus:
         self._shutting_down = False
         self._signal: Signal = Signal("crewai_event_bus")
         self._rwlock = RWLock()
-        self._sync_handlers: dict[
-            type[BaseEvent], frozenset[Callable[[Any, BaseEvent], None]]
-        ] = {}
-        self._async_handlers: dict[
-            type[BaseEvent],
-            frozenset[Callable[[Any, BaseEvent], Coroutine[Any, Any, None]]],
-        ] = {}
+        self._sync_handlers: dict[type[BaseEvent], SyncHandlerSet] = {}
+        self._async_handlers: dict[type[BaseEvent], AsyncHandlerSet] = {}
         self._sync_executor = ThreadPoolExecutor(
             max_workers=10,
             thread_name_prefix="CrewAISyncHandler",
@@ -200,22 +179,12 @@ class CrewAIEventsBus:
             handler: The handler function to register
         """
         with self._rwlock.w_locked():
-            if asyncio.iscoroutinefunction(handler):
-                async_handler = cast(
-                    Callable[[Any, BaseEvent], Coroutine[Any, Any, None]], handler
-                )
-                existing: frozenset[
-                    Callable[[Any, BaseEvent], Coroutine[Any, Any, None]]
-                ] = self._async_handlers.get(event_type, frozenset())
-                new_handlers = frozenset(existing | {async_handler})
-                self._async_handlers[event_type] = new_handlers
+            if _is_async_handler(handler):
+                existing_async = self._async_handlers.get(event_type, frozenset())
+                self._async_handlers[event_type] = existing_async | {handler}
             else:
-                sync_handler = cast(Callable[[Any, BaseEvent], None], handler)
-                existing_sync: frozenset[Callable[[Any, BaseEvent], None]] = (
-                    self._sync_handlers.get(event_type, frozenset())
-                )
-                new_handlers_sync = frozenset(existing_sync | {sync_handler})
-                self._sync_handlers[event_type] = new_handlers_sync
+                existing_sync = self._sync_handlers.get(event_type, frozenset())
+                self._sync_handlers[event_type] = existing_sync | {handler}
 
     def on(
         self, event_type: type[BaseEvent]
@@ -255,20 +224,19 @@ class CrewAIEventsBus:
         self,
         source: Any,
         event: BaseEvent,
-        handlers: set[Callable[[Any, BaseEvent], None]]
-        | frozenset[Callable[[Any, BaseEvent], None]],
+        handlers: SyncHandlerSet,
     ) -> None:
         """Call provided synchronous handlers and send sync signal.
 
         Args:
             source: The object that emitted the event
             event: The event instance
-            handlers: Set or frozenset of sync handlers to call
+            handlers: Frozenset of sync handlers to call
         """
-        errors: list[tuple[Callable[[Any, BaseEvent], None], Exception]] = [
+        errors: list[tuple[SyncHandler, Exception]] = [
             (handler, error)
             for handler in handlers
-            if (error := _call_handler_safe(handler, source, event)) is not None
+            if (error := _is_call_handler_safe(handler, source, event)) is not None
         ]
 
         if errors:
@@ -283,19 +251,23 @@ class CrewAIEventsBus:
         self,
         source: Any,
         event: BaseEvent,
-        handlers: set[Callable[[Any, BaseEvent], Coroutine[Any, Any, None]]]
-        | frozenset[Callable[[Any, BaseEvent], Coroutine[Any, Any, None]]],
+        handlers: AsyncHandlerSet,
     ) -> None:
         """Asynchronously call provided async handlers.
 
         Args:
             source: The object that emitted the event
             event: The event instance
-            handlers: Set or frozenset of async handlers to call
+            handlers: Frozenset of async handlers to call
         """
         coros = [handler(source, event) for handler in handlers]
         coros.append(self._signal.send_async(source, event=event))
-        await asyncio.gather(*coros, return_exceptions=True)
+        results = await asyncio.gather(*coros, return_exceptions=True)
+        for h, res in zip([*handlers, self._signal.send_async], results, strict=False):
+            if isinstance(res, Exception):
+                self._console.print(
+                    f"[CrewAIEventsBus] Async handler error in {getattr(h, '__name__', h)}: {res}"
+                )
 
     def emit(self, source: Any, event: BaseEvent) -> None:
         """Emit an event to all registered handlers.
@@ -316,22 +288,20 @@ class CrewAIEventsBus:
                     "[CrewAIEventsBus] Warning: Attempted to emit event during shutdown. Ignoring."
                 )
                 return
-            sync_handlers = set(self._sync_handlers.get(event_type, frozenset()))
-            async_handlers = set(self._async_handlers.get(event_type, frozenset()))
-
-        from crewai.events.types.llm_events import LLMStreamChunkEvent
+            sync_handlers = self._sync_handlers.get(event_type, frozenset())
+            async_handlers = self._async_handlers.get(event_type, frozenset())
 
         if sync_handlers:
-            if event_type == LLMStreamChunkEvent:
-                self._call_handlers(source, event, frozenset(sync_handlers))
+            if event_type is LLMStreamChunkEvent:
+                self._call_handlers(source, event, sync_handlers)
             else:
                 self._sync_executor.submit(
-                    self._call_handlers, source, event, frozenset(sync_handlers)
+                    self._call_handlers, source, event, sync_handlers
                 )
 
         if async_handlers:
             asyncio.run_coroutine_threadsafe(
-                self._acall_handlers(source, event, frozenset(async_handlers)),
+                self._acall_handlers(source, event, async_handlers),
                 self._loop,
             )
 
@@ -352,18 +322,17 @@ class CrewAIEventsBus:
                     "[CrewAIEventsBus] Warning: Attempted to emit event during shutdown. Ignoring."
                 )
                 return
-            async_handlers = set(self._async_handlers.get(event_type, frozenset()))
+            async_handlers = self._async_handlers.get(event_type, frozenset())
 
         if async_handlers:
-            await self._acall_handlers(source, event, frozenset(async_handlers))
+            await self._acall_handlers(source, event, async_handlers)
         else:
             await self._signal.send_async(source, event=event)
 
     def register_handler(
         self,
         event_type: type[BaseEvent],
-        handler: Callable[[Any, BaseEvent], None]
-        | Callable[[Any, BaseEvent], Coroutine[Any, Any, None]],
+        handler: SyncHandler | AsyncHandler,
     ) -> None:
         """Register an event handler for a specific event type.
 
@@ -391,12 +360,6 @@ class CrewAIEventsBus:
             ...     # Do stuff...
             ... # Handlers are cleared after the context
         """
-        prev_sync: dict[type[BaseEvent], frozenset[Callable[[Any, BaseEvent], None]]]
-        prev_async: dict[
-            type[BaseEvent],
-            frozenset[Callable[[Any, BaseEvent], Coroutine[Any, Any, None]]],
-        ]
-
         with self._rwlock.w_locked():
             prev_sync = self._sync_handlers
             prev_async = self._async_handlers
@@ -453,6 +416,10 @@ class CrewAIEventsBus:
         self._loop_thread.join()
         loop.close()
         self._sync_executor.shutdown(wait=wait)
+
+        with self._rwlock.w_locked():
+            self._sync_handlers.clear()
+            self._async_handlers.clear()
 
 
 crewai_event_bus: Final[CrewAIEventsBus] = CrewAIEventsBus()
