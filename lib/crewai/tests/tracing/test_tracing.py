@@ -580,6 +580,7 @@ class TestTraceListenerSetup:
     @pytest.mark.vcr(filter_headers=["authorization"])
     def test_first_time_user_trace_consolidation_logic(self, mock_plus_api_calls):
         """Test the consolidation logic for first-time users vs regular tracing"""
+        import threading
 
         with (
             patch.dict(os.environ, {"CREWAI_TRACING_ENABLED": "false"}),
@@ -618,9 +619,21 @@ class TestTraceListenerSetup:
             )
             crew = Crew(agents=[agent], tasks=[task])
 
+            events_collected = threading.Event()
+
+            # Listen for crew completion event to know when async handlers finished
+            from crewai.events.types.crew_events import CrewKickoffCompletedEvent
+
+            @crewai_event_bus.on(CrewKickoffCompletedEvent)
+            def on_completion(source, event):
+                events_collected.set()
+
             with patch.object(TraceBatchManager, "initialize_batch") as mock_initialize:
                 result = crew.kickoff()
 
+                assert events_collected.wait(timeout=5), (
+                    "Timeout waiting for crew completion event"
+                )
                 assert mock_initialize.call_count >= 1
                 assert mock_initialize.call_args_list[0][1]["use_ephemeral"] is True
                 assert result is not None

@@ -300,10 +300,9 @@ class CrewAIEventsBus:
     def emit(self, source: Any, event: BaseEvent) -> None:
         """Emit an event to all registered handlers.
 
-        Synchronous handlers are executed in a thread pool executor to ensure
-        they complete before program exit. Asynchronous handlers are scheduled in
-        the dedicated background event loop. This method returns immediately without
-        waiting for handlers to complete.
+        Stream chunk events execute synchronously to preserve ordering.
+        Other synchronous handlers execute in a thread pool. Asynchronous
+        handlers are scheduled in the background event loop.
 
         Args:
             source: The object emitting the event
@@ -320,10 +319,15 @@ class CrewAIEventsBus:
             sync_handlers = set(self._sync_handlers.get(event_type, frozenset()))
             async_handlers = set(self._async_handlers.get(event_type, frozenset()))
 
+        from crewai.events.types.llm_events import LLMStreamChunkEvent
+
         if sync_handlers:
-            self._sync_executor.submit(
-                self._call_handlers, source, event, frozenset(sync_handlers)
-            )
+            if event_type == LLMStreamChunkEvent:
+                self._call_handlers(source, event, frozenset(sync_handlers))
+            else:
+                self._sync_executor.submit(
+                    self._call_handlers, source, event, frozenset(sync_handlers)
+                )
 
         if async_handlers:
             asyncio.run_coroutine_threadsafe(

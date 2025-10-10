@@ -1,17 +1,19 @@
-from unittest.mock import MagicMock, patch, ANY
+import threading
 from collections import defaultdict
-from crewai.events.event_bus import crewai_event_bus
-from crewai.events.types.memory_events import (
-    MemorySaveStartedEvent,
-    MemorySaveCompletedEvent,
-    MemoryQueryStartedEvent,
-    MemoryQueryCompletedEvent,
-)
+from unittest.mock import ANY, MagicMock, patch
+
 import pytest
 from mem0.memory.main import Memory
 
 from crewai.agent import Agent
 from crewai.crew import Crew, Process
+from crewai.events.event_bus import crewai_event_bus
+from crewai.events.types.memory_events import (
+    MemoryQueryCompletedEvent,
+    MemoryQueryStartedEvent,
+    MemorySaveCompletedEvent,
+    MemorySaveStartedEvent,
+)
 from crewai.memory.external.external_memory import ExternalMemory
 from crewai.memory.external.external_memory_item import ExternalMemoryItem
 from crewai.memory.storage.interface import Storage
@@ -238,24 +240,26 @@ def test_external_memory_search_events(
     custom_storage, external_memory_with_mocked_config
 ):
     events = defaultdict(list)
+    event_received = threading.Event()
 
     external_memory_with_mocked_config.storage = custom_storage
-    with crewai_event_bus.scoped_handlers():
 
-        @crewai_event_bus.on(MemoryQueryStartedEvent)
-        def on_search_started(source, event):
-            events["MemoryQueryStartedEvent"].append(event)
+    @crewai_event_bus.on(MemoryQueryStartedEvent)
+    def on_search_started(source, event):
+        events["MemoryQueryStartedEvent"].append(event)
 
-        @crewai_event_bus.on(MemoryQueryCompletedEvent)
-        def on_search_completed(source, event):
-            events["MemoryQueryCompletedEvent"].append(event)
+    @crewai_event_bus.on(MemoryQueryCompletedEvent)
+    def on_search_completed(source, event):
+        events["MemoryQueryCompletedEvent"].append(event)
+        event_received.set()
 
-        external_memory_with_mocked_config.search(
-            query="test value",
-            limit=3,
-            score_threshold=0.35,
-        )
+    external_memory_with_mocked_config.search(
+        query="test value",
+        limit=3,
+        score_threshold=0.35,
+    )
 
+    assert event_received.wait(timeout=5), "Timeout waiting for search events"
     assert len(events["MemoryQueryStartedEvent"]) == 1
     assert len(events["MemoryQueryCompletedEvent"]) == 1
 
@@ -300,24 +304,25 @@ def test_external_memory_save_events(
     custom_storage, external_memory_with_mocked_config
 ):
     events = defaultdict(list)
+    event_received = threading.Event()
 
     external_memory_with_mocked_config.storage = custom_storage
 
-    with crewai_event_bus.scoped_handlers():
+    @crewai_event_bus.on(MemorySaveStartedEvent)
+    def on_save_started(source, event):
+        events["MemorySaveStartedEvent"].append(event)
 
-        @crewai_event_bus.on(MemorySaveStartedEvent)
-        def on_save_started(source, event):
-            events["MemorySaveStartedEvent"].append(event)
+    @crewai_event_bus.on(MemorySaveCompletedEvent)
+    def on_save_completed(source, event):
+        events["MemorySaveCompletedEvent"].append(event)
+        event_received.set()
 
-        @crewai_event_bus.on(MemorySaveCompletedEvent)
-        def on_save_completed(source, event):
-            events["MemorySaveCompletedEvent"].append(event)
+    external_memory_with_mocked_config.save(
+        value="saving value",
+        metadata={"task": "test_task"},
+    )
 
-        external_memory_with_mocked_config.save(
-            value="saving value",
-            metadata={"task": "test_task"},
-        )
-
+    assert event_received.wait(timeout=5), "Timeout waiting for save events"
     assert len(events["MemorySaveStartedEvent"]) == 1
     assert len(events["MemorySaveCompletedEvent"]) == 1
 

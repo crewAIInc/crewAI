@@ -53,11 +53,24 @@ class TestAgentEvaluator:
 
     @pytest.mark.vcr(filter_headers=["authorization"])
     def test_evaluate_current_iteration(self, mock_crew):
+        from crewai.events.types.task_events import TaskCompletedEvent
+
         agent_evaluator = AgentEvaluator(
             agents=mock_crew.agents, evaluators=[GoalAlignmentEvaluator()]
         )
 
+        task_completed_event = threading.Event()
+
+        @crewai_event_bus.on(TaskCompletedEvent)
+        async def on_task_completed(source, event):
+            # TaskCompletedEvent fires AFTER evaluation results are stored
+            task_completed_event.set()
+
         mock_crew.kickoff()
+
+        assert task_completed_event.wait(timeout=5), (
+            "Timeout waiting for task completion"
+        )
 
         results = agent_evaluator.get_evaluation_results()
 
@@ -107,6 +120,8 @@ class TestAgentEvaluator:
 
     @pytest.mark.vcr(filter_headers=["authorization"])
     def test_eval_lite_agent(self):
+        from crewai.events.types.agent_events import LiteAgentExecutionCompletedEvent
+
         agent = Agent(
             role="Test Agent",
             goal="Complete test tasks successfully",
@@ -116,14 +131,19 @@ class TestAgentEvaluator:
         events = {}
         started_event = threading.Event()
         completed_event = threading.Event()
+        results_stored_event = threading.Event()
+
+        agent_evaluator = AgentEvaluator(
+            agents=[agent], evaluators=[GoalAlignmentEvaluator()]
+        )
 
         @crewai_event_bus.on(AgentEvaluationStartedEvent)
-        def capture_started(source, event):
+        async def capture_started(source, event):
             events["started"] = event
             started_event.set()
 
         @crewai_event_bus.on(AgentEvaluationCompletedEvent)
-        def capture_completed(source, event):
+        async def capture_completed(source, event):
             events["completed"] = event
             completed_event.set()
 
@@ -131,14 +151,17 @@ class TestAgentEvaluator:
         def capture_failed(source, event):
             events["failed"] = event
 
-        agent_evaluator = AgentEvaluator(
-            agents=[agent], evaluators=[GoalAlignmentEvaluator()]
-        )
+        @crewai_event_bus.on(LiteAgentExecutionCompletedEvent)
+        def on_lite_agent_completed(source, event):
+            results_stored_event.set()
 
         agent.kickoff(messages="Complete this task successfully")
 
         assert started_event.wait(timeout=5), "Timeout waiting for started event"
         assert completed_event.wait(timeout=5), "Timeout waiting for completed event"
+        assert results_stored_event.wait(timeout=5), (
+            "Timeout waiting for results to be stored"
+        )
 
         assert events.keys() == {"started", "completed"}
         assert events["started"].agent_id == str(agent.id)
@@ -175,6 +198,8 @@ class TestAgentEvaluator:
 
     @pytest.mark.vcr(filter_headers=["authorization"])
     def test_eval_specific_agents_from_crew(self, mock_crew):
+        from crewai.events.types.task_events import TaskCompletedEvent
+
         agent = Agent(
             role="Test Agent Eval",
             goal="Complete test tasks successfully",
@@ -191,28 +216,41 @@ class TestAgentEvaluator:
         events = {}
         started_event = threading.Event()
         completed_event = threading.Event()
+        task_completed_event = threading.Event()
+
+        agent_evaluator = AgentEvaluator(
+            agents=[agent], evaluators=[GoalAlignmentEvaluator()]
+        )
 
         @crewai_event_bus.on(AgentEvaluationStartedEvent)
-        def capture_started(source, event):
-            events["started"] = event
-            started_event.set()
+        async def capture_started(source, event):
+            if event.agent_id == str(agent.id):
+                events["started"] = event
+                started_event.set()
 
         @crewai_event_bus.on(AgentEvaluationCompletedEvent)
-        def capture_completed(source, event):
-            events["completed"] = event
-            completed_event.set()
+        async def capture_completed(source, event):
+            if event.agent_id == str(agent.id):
+                events["completed"] = event
+                completed_event.set()
 
         @crewai_event_bus.on(AgentEvaluationFailedEvent)
         def capture_failed(source, event):
             events["failed"] = event
 
-        agent_evaluator = AgentEvaluator(
-            agents=[agent], evaluators=[GoalAlignmentEvaluator()]
-        )
+        @crewai_event_bus.on(TaskCompletedEvent)
+        async def on_task_completed(source, event):
+            # TaskCompletedEvent fires AFTER evaluation results are stored
+            if event.task and event.task.id == task.id:
+                task_completed_event.set()
+
         mock_crew.kickoff()
 
         assert started_event.wait(timeout=5), "Timeout waiting for started event"
         assert completed_event.wait(timeout=5), "Timeout waiting for completed event"
+        assert task_completed_event.wait(timeout=5), (
+            "Timeout waiting for task completion"
+        )
 
         assert events.keys() == {"started", "completed"}
         assert events["started"].agent_id == str(agent.id)
