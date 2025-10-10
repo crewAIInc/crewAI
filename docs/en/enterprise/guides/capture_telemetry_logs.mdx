@@ -1,0 +1,35 @@
+---
+title: "Open Telemetry Logs"
+description: "Understand how to capture telemetry logs from your CrewAI AMP deployments"
+icon: "magnifying-glass-chart"
+mode: "wide"
+---
+
+CrewAI AMP provides a powerful way to capture telemetry logs from your deployments. This allows you to monitor the performance of your agents and workflows, and to debug issues that may arise.
+
+## Prerequisites
+
+<CardGroup cols={2}>
+  <Card title="ENTERPRISE OTEL SETUP enabled" icon="users">
+    Your organization should have ENTERPRISE OTEL SETUP enabled
+  </Card>
+  <Card title="OTEL collector setup" icon="server">
+    Your organization should have an OTEL collector setup or a provider like Datadog log intake setup
+  </Card>
+</CardGroup>
+
+
+## How to capture telemetry logs
+
+1. Go to settings/organization tab
+2. Configure your OTEL collector setup
+3. Save
+
+
+
+Example to setup OTEL log collection capture to Datadog.
+
+
+<Frame>
+  ![Capture Telemetry Logs](/images/crewai-otel-export.png)
+</Frame>
