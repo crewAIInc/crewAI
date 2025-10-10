@@ -1,10 +1,11 @@
+import os
 import subprocess
 from enum import Enum
 
 import click
 from packaging import version
 
-from crewai.cli.utils import read_toml
+from crewai.cli.utils import build_env_with_tool_repository_credentials, read_toml
 from crewai.cli.version import get_crewai_version
 
 
@@ -55,8 +56,22 @@ def execute_command(crew_type: CrewType) -> None:
     """
     command = ["uv", "run", "kickoff" if crew_type == CrewType.FLOW else "run_crew"]
 
+    env = os.environ.copy()
     try:
-        subprocess.run(command, capture_output=False, text=True, check=True)  # noqa: S603
+        pyproject_data = read_toml()
+        sources = pyproject_data.get("tool", {}).get("uv", {}).get("sources", {})
+
+        for source_config in sources.values():
+            if isinstance(source_config, dict):
+                index = source_config.get("index")
+                if index:
+                    index_env = build_env_with_tool_repository_credentials(index)
+                    env.update(index_env)
+    except Exception:  # noqa: S110
+        pass
+
+    try:
+        subprocess.run(command, capture_output=False, text=True, check=True, env=env)  # noqa: S603
 
     except subprocess.CalledProcessError as e:
         handle_error(e, crew_type)
