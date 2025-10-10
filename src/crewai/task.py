@@ -671,6 +671,7 @@ Follow these guidelines:
         copied_data = self.model_dump(exclude=exclude)
         copied_data = {k: v for k, v in copied_data.items() if v is not None}
 
+        cloned_context: list["Task"] | None | _NotSpecified
         if self.context is NOT_SPECIFIED:
             cloned_context = self.context
         else:
