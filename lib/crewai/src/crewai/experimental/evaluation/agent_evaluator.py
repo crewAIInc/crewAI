@@ -52,18 +52,13 @@ class AgentEvaluator:
         self.console_formatter = ConsoleFormatter()
         self.display_formatter = EvaluationDisplayFormatter()
 
-        self._thread_local: threading.local = threading.local()
+        self._execution_state = ExecutionState()
+        self._state_lock = threading.Lock()
 
         for agent in self.agents:
             self._execution_state.agent_evaluators[str(agent.id)] = self.evaluators
 
         self._subscribe_to_events()
-
-    @property
-    def _execution_state(self) -> ExecutionState:
-        if not hasattr(self._thread_local, "execution_state"):
-            self._thread_local.execution_state = ExecutionState()
-        return self._thread_local.execution_state
 
     def _subscribe_to_events(self) -> None:
         from typing import cast
@@ -112,21 +107,22 @@ class AgentEvaluator:
                 state=state,
             )
 
-            current_iteration = self._execution_state.iteration
-            if current_iteration not in self._execution_state.iterations_results:
-                self._execution_state.iterations_results[current_iteration] = {}
+            with self._state_lock:
+                current_iteration = self._execution_state.iteration
+                if current_iteration not in self._execution_state.iterations_results:
+                    self._execution_state.iterations_results[current_iteration] = {}
 
-            if (
-                agent.role
-                not in self._execution_state.iterations_results[current_iteration]
-            ):
+                if (
+                    agent.role
+                    not in self._execution_state.iterations_results[current_iteration]
+                ):
+                    self._execution_state.iterations_results[current_iteration][
+                        agent.role
+                    ] = []
+
                 self._execution_state.iterations_results[current_iteration][
                     agent.role
-                ] = []
-
-            self._execution_state.iterations_results[current_iteration][
-                agent.role
-            ].append(result)
+                ].append(result)
 
     def _handle_lite_agent_completed(
         self, source: object, event: LiteAgentExecutionCompletedEvent
@@ -164,22 +160,23 @@ class AgentEvaluator:
                 state=state,
             )
 
-            current_iteration = self._execution_state.iteration
-            if current_iteration not in self._execution_state.iterations_results:
-                self._execution_state.iterations_results[current_iteration] = {}
+            with self._state_lock:
+                current_iteration = self._execution_state.iteration
+                if current_iteration not in self._execution_state.iterations_results:
+                    self._execution_state.iterations_results[current_iteration] = {}
 
-            agent_role = target_agent.role
-            if (
-                agent_role
-                not in self._execution_state.iterations_results[current_iteration]
-            ):
+                agent_role = target_agent.role
+                if (
+                    agent_role
+                    not in self._execution_state.iterations_results[current_iteration]
+                ):
+                    self._execution_state.iterations_results[current_iteration][
+                        agent_role
+                    ] = []
+
                 self._execution_state.iterations_results[current_iteration][
                     agent_role
-                ] = []
-
-            self._execution_state.iterations_results[current_iteration][
-                agent_role
-            ].append(result)
+                ].append(result)
 
     def set_iteration(self, iteration: int) -> None:
         self._execution_state.iteration = iteration

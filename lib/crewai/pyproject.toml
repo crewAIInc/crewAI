@@ -35,7 +35,6 @@ dependencies = [
     "uv>=0.4.25",
     "tomli-w>=1.1.0",
     "tomli>=2.0.2",
-    "blinker>=1.9.0",
     "json5>=0.10.0",
     "portalocker==2.7.0",
     "pydantic-settings>=2.10.1",

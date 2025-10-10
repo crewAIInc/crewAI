@@ -1,4 +1,5 @@
 # mypy: ignore-errors
+import threading
 from collections import defaultdict
 from typing import cast
 from unittest.mock import Mock, patch
@@ -156,14 +157,17 @@ def test_lite_agent_with_tools():
     )
 
     received_events = []
+    event_received = threading.Event()
 
     @crewai_event_bus.on(ToolUsageStartedEvent)
     def event_handler(source, event):
         received_events.append(event)
+        event_received.set()
 
     agent.kickoff("What are the effects of climate change on coral reefs?")
 
     # Verify tool usage events were emitted
+    assert event_received.wait(timeout=5), "Timeout waiting for tool usage events"
     assert len(received_events) > 0, "Tool usage events should be emitted"
     event = received_events[0]
     assert isinstance(event, ToolUsageStartedEvent)
@@ -316,15 +320,18 @@ def test_sets_parent_flow_when_inside_flow():
             return agent.kickoff("Test query")
 
     flow = MyFlow()
-    with crewai_event_bus.scoped_handlers():
+    event_received = threading.Event()
 
-        @crewai_event_bus.on(LiteAgentExecutionStartedEvent)
-        def capture_agent(source, event):
-            nonlocal captured_agent
-            captured_agent = source
+    @crewai_event_bus.on(LiteAgentExecutionStartedEvent)
+    def capture_agent(source, event):
+        nonlocal captured_agent
+        captured_agent = source
+        event_received.set()
 
-        flow.kickoff()
-        assert captured_agent.parent_flow is flow
+    flow.kickoff()
+
+    assert event_received.wait(timeout=5), "Timeout waiting for agent execution event"
+    assert captured_agent.parent_flow is flow
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -342,30 +349,43 @@ def test_guardrail_is_called_using_string():
         guardrail="""Only include Brazilian players, both women and men""",
     )
 
-    with crewai_event_bus.scoped_handlers():
+    all_events_received = threading.Event()
 
-        @crewai_event_bus.on(LLMGuardrailStartedEvent)
-        def capture_guardrail_started(source, event):
-            assert isinstance(source, LiteAgent)
-            assert source.original_agent == agent
-            guardrail_events["started"].append(event)
+    @crewai_event_bus.on(LLMGuardrailStartedEvent)
+    def capture_guardrail_started(source, event):
+        assert isinstance(source, LiteAgent)
+        assert source.original_agent == agent
+        guardrail_events["started"].append(event)
+        if (
+            len(guardrail_events["started"]) == 2
+            and len(guardrail_events["completed"]) == 2
+        ):
+            all_events_received.set()
 
-        @crewai_event_bus.on(LLMGuardrailCompletedEvent)
-        def capture_guardrail_completed(source, event):
-            assert isinstance(source, LiteAgent)
-            assert source.original_agent == agent
-            guardrail_events["completed"].append(event)
+    @crewai_event_bus.on(LLMGuardrailCompletedEvent)
+    def capture_guardrail_completed(source, event):
+        assert isinstance(source, LiteAgent)
+        assert source.original_agent == agent
+        guardrail_events["completed"].append(event)
+        if (
+            len(guardrail_events["started"]) == 2
+            and len(guardrail_events["completed"]) == 2
+        ):
+            all_events_received.set()
 
-        result = agent.kickoff(messages="Top 10 best players in the world?")
+    result = agent.kickoff(messages="Top 10 best players in the world?")
 
-        assert len(guardrail_events["started"]) == 2
-        assert len(guardrail_events["completed"]) == 2
-        assert not guardrail_events["completed"][0].success
-        assert guardrail_events["completed"][1].success
-        assert (
-            "Here are the top 10 best soccer players in the world, focusing exclusively on Brazilian players"
-            in result.raw
-        )
+    assert all_events_received.wait(timeout=10), (
+        "Timeout waiting for all guardrail events"
+    )
+    assert len(guardrail_events["started"]) == 2
+    assert len(guardrail_events["completed"]) == 2
+    assert not guardrail_events["completed"][0].success
+    assert guardrail_events["completed"][1].success
+    assert (
+        "Here are the top 10 best soccer players in the world, focusing exclusively on Brazilian players"
+        in result.raw
+    )
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -376,29 +396,42 @@ def test_guardrail_is_called_using_callable():
         LLMGuardrailStartedEvent,
     )
 
-    with crewai_event_bus.scoped_handlers():
+    all_events_received = threading.Event()
 
-        @crewai_event_bus.on(LLMGuardrailStartedEvent)
-        def capture_guardrail_started(source, event):
-            guardrail_events["started"].append(event)
+    @crewai_event_bus.on(LLMGuardrailStartedEvent)
+    def capture_guardrail_started(source, event):
+        guardrail_events["started"].append(event)
+        if (
+            len(guardrail_events["started"]) == 1
+            and len(guardrail_events["completed"]) == 1
+        ):
+            all_events_received.set()
 
-        @crewai_event_bus.on(LLMGuardrailCompletedEvent)
-        def capture_guardrail_completed(source, event):
-            guardrail_events["completed"].append(event)
+    @crewai_event_bus.on(LLMGuardrailCompletedEvent)
+    def capture_guardrail_completed(source, event):
+        guardrail_events["completed"].append(event)
+        if (
+            len(guardrail_events["started"]) == 1
+            and len(guardrail_events["completed"]) == 1
+        ):
+            all_events_received.set()
 
-        agent = Agent(
-            role="Sports Analyst",
-            goal="Gather information about the best soccer players",
-            backstory="""You are an expert at gathering and organizing information. You carefully collect details and present them in a structured way.""",
-            guardrail=lambda output: (True, "Pelé - Santos, 1958"),
-        )
+    agent = Agent(
+        role="Sports Analyst",
+        goal="Gather information about the best soccer players",
+        backstory="""You are an expert at gathering and organizing information. You carefully collect details and present them in a structured way.""",
+        guardrail=lambda output: (True, "Pelé - Santos, 1958"),
+    )
 
-        result = agent.kickoff(messages="Top 1 best players in the world?")
+    result = agent.kickoff(messages="Top 1 best players in the world?")
 
-        assert len(guardrail_events["started"]) == 1
-        assert len(guardrail_events["completed"]) == 1
-        assert guardrail_events["completed"][0].success
-        assert "Pelé - Santos, 1958" in result.raw
+    assert all_events_received.wait(timeout=10), (
+        "Timeout waiting for all guardrail events"
+    )
+    assert len(guardrail_events["started"]) == 1
+    assert len(guardrail_events["completed"]) == 1
+    assert guardrail_events["completed"][0].success
+    assert "Pelé - Santos, 1958" in result.raw
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -409,37 +442,50 @@ def test_guardrail_reached_attempt_limit():
         LLMGuardrailStartedEvent,
     )
 
-    with crewai_event_bus.scoped_handlers():
+    all_events_received = threading.Event()
 
-        @crewai_event_bus.on(LLMGuardrailStartedEvent)
-        def capture_guardrail_started(source, event):
-            guardrail_events["started"].append(event)
-
-        @crewai_event_bus.on(LLMGuardrailCompletedEvent)
-        def capture_guardrail_completed(source, event):
-            guardrail_events["completed"].append(event)
-
-        agent = Agent(
-            role="Sports Analyst",
-            goal="Gather information about the best soccer players",
-            backstory="""You are an expert at gathering and organizing information. You carefully collect details and present them in a structured way.""",
-            guardrail=lambda output: (
-                False,
-                "You are not allowed to include Brazilian players",
-            ),
-            guardrail_max_retries=2,
-        )
-
-        with pytest.raises(
-            Exception, match="Agent's guardrail failed validation after 2 retries"
+    @crewai_event_bus.on(LLMGuardrailStartedEvent)
+    def capture_guardrail_started(source, event):
+        guardrail_events["started"].append(event)
+        if (
+            len(guardrail_events["started"]) == 3
+            and len(guardrail_events["completed"]) == 3
         ):
-            agent.kickoff(messages="Top 10 best players in the world?")
+            all_events_received.set()
 
-        assert len(guardrail_events["started"]) == 3  # 2 retries + 1 initial call
-        assert len(guardrail_events["completed"]) == 3  # 2 retries + 1 initial call
-        assert not guardrail_events["completed"][0].success
-        assert not guardrail_events["completed"][1].success
-        assert not guardrail_events["completed"][2].success
+    @crewai_event_bus.on(LLMGuardrailCompletedEvent)
+    def capture_guardrail_completed(source, event):
+        guardrail_events["completed"].append(event)
+        if (
+            len(guardrail_events["started"]) == 3
+            and len(guardrail_events["completed"]) == 3
+        ):
+            all_events_received.set()
+
+    agent = Agent(
+        role="Sports Analyst",
+        goal="Gather information about the best soccer players",
+        backstory="""You are an expert at gathering and organizing information. You carefully collect details and present them in a structured way.""",
+        guardrail=lambda output: (
+            False,
+            "You are not allowed to include Brazilian players",
+        ),
+        guardrail_max_retries=2,
+    )
+
+    with pytest.raises(
+        Exception, match="Agent's guardrail failed validation after 2 retries"
+    ):
+        agent.kickoff(messages="Top 10 best players in the world?")
+
+    assert all_events_received.wait(timeout=10), (
+        "Timeout waiting for all guardrail events"
+    )
+    assert len(guardrail_events["started"]) == 3  # 2 retries + 1 initial call
+    assert len(guardrail_events["completed"]) == 3  # 2 retries + 1 initial call
+    assert not guardrail_events["completed"][0].success
+    assert not guardrail_events["completed"][1].success
+    assert not guardrail_events["completed"][2].success
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])

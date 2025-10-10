@@ -1,9 +1,12 @@
 """Test Flow creation and execution basic functionality."""
 
 import asyncio
+import threading
 from datetime import datetime
 
 import pytest
+from pydantic import BaseModel
+
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.flow_events import (
     FlowFinishedEvent,
@@ -13,7 +16,6 @@ from crewai.events.types.flow_events import (
     MethodExecutionStartedEvent,
 )
 from crewai.flow.flow import Flow, and_, listen, or_, router, start
-from pydantic import BaseModel
 
 
 def test_simple_sequential_flow():
@@ -439,20 +441,42 @@ def test_unstructured_flow_event_emission():
 
     flow = PoemFlow()
     received_events = []
+    lock = threading.Lock()
+    all_events_received = threading.Event()
+    expected_event_count = (
+        7  # 1 FlowStarted + 5 MethodExecutionStarted + 1 FlowFinished
+    )
 
     @crewai_event_bus.on(FlowStartedEvent)
     def handle_flow_start(source, event):
-        received_events.append(event)
+        with lock:
+            received_events.append(event)
+            if len(received_events) == expected_event_count:
+                all_events_received.set()
 
     @crewai_event_bus.on(MethodExecutionStartedEvent)
     def handle_method_start(source, event):
-        received_events.append(event)
+        with lock:
+            received_events.append(event)
+            if len(received_events) == expected_event_count:
+                all_events_received.set()
 
     @crewai_event_bus.on(FlowFinishedEvent)
     def handle_flow_end(source, event):
-        received_events.append(event)
+        with lock:
+            received_events.append(event)
+            if len(received_events) == expected_event_count:
+                all_events_received.set()
 
     flow.kickoff(inputs={"separator": ", "})
+
+    assert all_events_received.wait(timeout=5), "Timeout waiting for all flow events"
+
+    # Sort events by timestamp to ensure deterministic order
+    # (async handlers may append out of order)
+    with lock:
+        received_events.sort(key=lambda e: e.timestamp)
+
     assert isinstance(received_events[0], FlowStartedEvent)
     assert received_events[0].flow_name == "PoemFlow"
     assert received_events[0].inputs == {"separator": ", "}
@@ -642,27 +666,47 @@ def test_structured_flow_event_emission():
             return f"Welcome, {self.state.name}!"
 
     flow = OnboardingFlow()
-    flow.kickoff(inputs={"name": "Anakin"})
 
     received_events = []
+    lock = threading.Lock()
+    all_events_received = threading.Event()
+    expected_event_count = 6  # 1 FlowStarted + 2 MethodExecutionStarted + 2 MethodExecutionFinished + 1 FlowFinished
 
     @crewai_event_bus.on(FlowStartedEvent)
     def handle_flow_start(source, event):
-        received_events.append(event)
+        with lock:
+            received_events.append(event)
+            if len(received_events) == expected_event_count:
+                all_events_received.set()
 
     @crewai_event_bus.on(MethodExecutionStartedEvent)
     def handle_method_start(source, event):
-        received_events.append(event)
+        with lock:
+            received_events.append(event)
+            if len(received_events) == expected_event_count:
+                all_events_received.set()
 
     @crewai_event_bus.on(MethodExecutionFinishedEvent)
     def handle_method_end(source, event):
-        received_events.append(event)
+        with lock:
+            received_events.append(event)
+            if len(received_events) == expected_event_count:
+                all_events_received.set()
 
     @crewai_event_bus.on(FlowFinishedEvent)
     def handle_flow_end(source, event):
-        received_events.append(event)
+        with lock:
+            received_events.append(event)
+            if len(received_events) == expected_event_count:
+                all_events_received.set()
 
     flow.kickoff(inputs={"name": "Anakin"})
+
+    assert all_events_received.wait(timeout=5), "Timeout waiting for all flow events"
+
+    # Sort events by timestamp to ensure deterministic order
+    with lock:
+        received_events.sort(key=lambda e: e.timestamp)
 
     assert isinstance(received_events[0], FlowStartedEvent)
     assert received_events[0].flow_name == "OnboardingFlow"
@@ -711,24 +755,45 @@ def test_stateless_flow_event_emission():
 
     flow = StatelessFlow()
     received_events = []
+    lock = threading.Lock()
+    all_events_received = threading.Event()
+    expected_event_count = 6  # 1 FlowStarted + 2 MethodExecutionStarted + 2 MethodExecutionFinished + 1 FlowFinished
 
     @crewai_event_bus.on(FlowStartedEvent)
     def handle_flow_start(source, event):
-        received_events.append(event)
+        with lock:
+            received_events.append(event)
+            if len(received_events) == expected_event_count:
+                all_events_received.set()
 
     @crewai_event_bus.on(MethodExecutionStartedEvent)
     def handle_method_start(source, event):
-        received_events.append(event)
+        with lock:
+            received_events.append(event)
+            if len(received_events) == expected_event_count:
+                all_events_received.set()
 
     @crewai_event_bus.on(MethodExecutionFinishedEvent)
     def handle_method_end(source, event):
-        received_events.append(event)
+        with lock:
+            received_events.append(event)
+            if len(received_events) == expected_event_count:
+                all_events_received.set()
 
     @crewai_event_bus.on(FlowFinishedEvent)
     def handle_flow_end(source, event):
-        received_events.append(event)
+        with lock:
+            received_events.append(event)
+            if len(received_events) == expected_event_count:
+                all_events_received.set()
 
     flow.kickoff()
+
+    assert all_events_received.wait(timeout=5), "Timeout waiting for all flow events"
+
+    # Sort events by timestamp to ensure deterministic order
+    with lock:
+        received_events.sort(key=lambda e: e.timestamp)
 
     assert isinstance(received_events[0], FlowStartedEvent)
     assert received_events[0].flow_name == "StatelessFlow"
@@ -769,13 +834,16 @@ def test_flow_plotting():
     flow = StatelessFlow()
     flow.kickoff()
     received_events = []
+    event_received = threading.Event()
 
     @crewai_event_bus.on(FlowPlotEvent)
     def handle_flow_plot(source, event):
         received_events.append(event)
+        event_received.set()
 
     flow.plot("test_flow")
 
+    assert event_received.wait(timeout=5), "Timeout waiting for plot event"
     assert len(received_events) == 1
     assert isinstance(received_events[0], FlowPlotEvent)
     assert received_events[0].flow_name == "StatelessFlow"
