@@ -1,0 +1,89 @@
+interactions:
+- request:
+    body: '{"model": "gpt-4.1", "input": [{"role": "user", "content": [{"type": "input_text",
+      "text": "Analyze and describe the content of the image"}, {"type": "input_image",
+      "image_url": "https://images.unsplash.com/photo-1554866585-cd94860890b7?q=80&w=1065&auto=format"}]}]}'
+    headers:
+      accept:
+      - '*/*'
+      accept-encoding:
+      - gzip, deflate
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '266'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      user-agent:
+      - litellm/1.74.1
+    method: POST
+    uri: https://api.openai.com/v1/responses
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAA3RVy47jOAy891cQvuwladh5J9f5hb0NFgYt0bamZdGQ6GSyg/73heRHkp2eS5Cw
+        yCJZIplfbwCZ0dkFMk+hLw+n42ajTudjnp9OxTlHdd4fTpvioE67ekvnvK43+2Ox3R2qfXFEna0i
+        AVc/SMlMwi7QaFeeUEiXGLHiuN9si835cE5YEJQhxBjFXW9JaCKrUH00ngcXq6rRBkpm8p59dgE3
+        WJsMxs2BpSZBY8MrGsQPSgy7F3uHP0sepB+kFP6g30FhtqVC+0rXsSYbi216We/ei/Um3+zX+W5d
+        7CYJEmd2ge9vAAC/0ueibReaWVo8FuddlPa8RTrXerPFfVVU292X0iYOufeUWCgEbOgB/EnDBCp2
+        Qu5R0nNZL7SzHPRTlujkgM6x4Czh939eQMtN77n6AklEF8j+bglMhw1BTSiDpwAIwbjGEih0wDV8
+        Y4Xrb2wReouKNAy9N00rgA3GF4wBbI0GTxoeg/EOkTtymADSEtTYGWvQJz/Flj3cjLQJUxZDMApu
+        rRF6ymi5Ybh5I0IOjAM1+GCuBEF508sjBfY9oQ8gDBVFcr0CTGk9AXqCqwmmsgTac3yDEBtT7DS5
+        kMQDdmAkQBh8jYpGZss38kC6oeguj3Y81ZaUxH7J8g2MrMA4bRSKcQ1IiwJGouckGTtAaCyHcAf2
+        c3zq5DkhX8mjtZM6QbXUUWTR3BmHKd8dQouaUgNRSHR6VG0FHX6M2ecnvZowoLV3COJNwqI3dX2L
+        wfw7+1Yenf4rgFHsjJqkRKfoPVsm5nP6tgxR5tmmwYzvFgSdjM7RMTllPcZWyL4uq/hhPBW9p6vh
+        IZTzNSrTFi7L7AkDO+Oa7DJtREZ1zV6enOJ2DV2H/j4Z3wA+x8NF/moUlWIo3qNMU42DHVcnC8Ke
+        nmsR6nryafzjDXzPJ2takSl5zb7Dx++n1Ux+S/Nj/rHnlo0aRRqEswV4rGMm3JdPS5ovxv65ED84
+        laY0tWICVnY+xEM6NkuVxr0czeMpX/0OPJ3ipRmFqiX9iMzHhqbo/x/jIt9/hXxFvLzjn7iFBe0D
+        PJ32i4pDoJd/k44ENQpG/s+3z/8AAAD//wMAylVtyxgHAAA=
+    headers:
+      CF-RAY:
+      - 95df8df6db783c01-BLR
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Sat, 12 Jul 2025 09:36:13 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - __cf_bm=TOjaYG85jF5oY9MZtFP.jm9Vo5ZHKzc5UDtDz0GkH_k-1752312973-1.0.1.1-YdYmcQMjCOKwP_sFFjPBlPcrWkvPtv9HtKcLjKtrrLd_N6hcNZcCAjF2D5VJtd9ekz7PBkYfohrK0XMXBsBh7vbybrNuU0VPxYih9lehyIw;
+        path=/; expires=Sat, 12-Jul-25 10:06:13 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=A7kGO2.tIzNsTgPaRzy4ZVpprmSgmMakSVtaYxY_wxk-1752312973011-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - rendernet-6deszp
+      openai-processing-ms:
+      - '3463'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-request-id:
+      - req_a659d27719c7e141b2664b88124fb531
+    status:
+      code: 200
+      message: OK
+version: 1
