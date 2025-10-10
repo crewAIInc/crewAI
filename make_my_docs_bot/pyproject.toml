@@ -1,0 +1,23 @@
+[project]
+name = "make_my_docs_bot"
+version = "0.1.0"
+description = "make-my-docs-bot using crewAI"
+authors = [{ name = "Your Name", email = "you@example.com" }]
+requires-python = ">=3.10,<3.14"
+dependencies = [
+    "crewai[tools]>=0.201.1,<1.0.0"
+]
+
+[project.scripts]
+make_my_docs_bot = "make_my_docs_bot.main:run"
+run_crew = "make_my_docs_bot.main:run"
+train = "make_my_docs_bot.main:train"
+replay = "make_my_docs_bot.main:replay"
+test = "make_my_docs_bot.main:test"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.crewai]
+type = "crew"
