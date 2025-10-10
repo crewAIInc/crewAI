@@ -367,6 +367,14 @@ class LLM(BaseLLM):
             except ImportError:
                 return None
 
+        elif provider == "bedrock":
+            try:
+                from crewai.llms.providers.bedrock.completion import BedrockCompletion
+
+                return BedrockCompletion
+            except ImportError:
+                return None
+
         return None
 
     def __init__(
