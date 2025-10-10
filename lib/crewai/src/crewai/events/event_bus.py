@@ -7,13 +7,12 @@ event handlers.
 
 import asyncio
 import atexit
-import threading
 from collections.abc import Callable, Generator
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
+import threading
 from typing import Any, Final, ParamSpec, TypeVar
 
-from blinker import Signal as Signal_
 from typing_extensions import Self
 
 from crewai.events.base_events import BaseEvent
@@ -28,76 +27,17 @@ from crewai.events.utils.console_formatter import ConsoleFormatter
 from crewai.events.utils.handlers import _is_async_handler, _is_call_handler_safe
 from crewai.events.utils.rw_lock import RWLock
 
+
 P = ParamSpec("P")
 R = TypeVar("R")
-
-
-class Signal(Signal_):
-    """Thread-safe Blinker signal with async support.
-
-    Extends the blinker Signal class to add thread-safe sending operations
-    for both synchronous and asynchronous receivers.
-    """
-
-    def __init__(self, *args: Any, **kwargs: Any) -> None:
-        """Initialize the thread-safe signal.
-
-        Args:
-            *args: Positional arguments passed to parent Signal
-            **kwargs: Keyword arguments passed to parent Signal
-        """
-        super().__init__(*args, **kwargs)
-        self._lock = threading.RLock()
-
-    def send(self, *args: Any, **kwargs: Any) -> list[tuple[Callable[..., Any], Any]]:
-        """Thread-safe synchronous send to all connected receivers.
-
-        Args:
-            *args: Positional arguments passed to receivers
-            **kwargs: Keyword arguments passed to receivers
-
-        Returns:
-            List of tuples containing (receiver function, return value)
-        """
-        with self._lock:
-            return super().send(*args, **kwargs)
-
-    async def send_async(  # type: ignore[override]
-        self, *args: Any, **kwargs: Any
-    ) -> None:
-        """Thread-safe asynchronous send to all connected receivers.
-
-        Executes all receivers and awaits any coroutines returned. Receivers
-        are called outside the lock to avoid deadlocks if they emit events.
-
-        Notes:
-            - Possible race condition under the is_muted check, but not critical right now imo.
-
-        Args:
-            *args: Positional arguments passed to receivers
-            **kwargs: Keyword arguments passed to receivers
-        """
-        with self._lock:
-            if self.is_muted:
-                return
-            sender = kwargs.get("sender", args[0] if args else None)
-            receivers = list(self.receivers_for(sender))
-
-        tasks: list[asyncio.Task[Any]] = []
-        for receiver in receivers:
-            result = receiver(*args, **kwargs)
-            if asyncio.iscoroutine(result):
-                tasks.append(asyncio.create_task(result))
-        if tasks:
-            await asyncio.gather(*tasks, return_exceptions=True)
 
 
 class CrewAIEventsBus:
     """Singleton event bus for handling events in CrewAI.
 
-    This class manages event registration and emission using the blinker library.
-    It supports both synchronous and asynchronous event handlers, automatically
-    scheduling async handlers in a dedicated background event loop.
+    This class manages event registration and emission for both synchronous
+    and asynchronous event handlers, automatically scheduling async handlers
+    in a dedicated background event loop.
 
     Synchronous handlers execute in a thread pool executor to ensure completion
     before program exit. Asynchronous handlers execute in a dedicated event loop
@@ -107,7 +47,6 @@ class CrewAIEventsBus:
         _instance: Singleton instance of the event bus
         _instance_lock: Reentrant lock for singleton initialization (class-level)
         _rwlock: Read-write lock for handler registration and access (instance-level)
-        _signal: Thread-safe Blinker signal for broadcasting events
         _sync_handlers: Mapping of event types to registered synchronous handlers
         _async_handlers: Mapping of event types to registered asynchronous handlers
         _sync_executor: Thread pool executor for running synchronous handlers
@@ -140,11 +79,10 @@ class CrewAIEventsBus:
     def _initialize(self) -> None:
         """Initialize the event bus internal state.
 
-        Creates the signal, handler dictionaries, and starts a dedicated
-        background event loop for async handler execution.
+        Creates handler dictionaries and starts a dedicated background
+        event loop for async handler execution.
         """
         self._shutting_down = False
-        self._signal: Signal = Signal("crewai_event_bus")
         self._rwlock = RWLock()
         self._sync_handlers: dict[type[BaseEvent], SyncHandlerSet] = {}
         self._async_handlers: dict[type[BaseEvent], AsyncHandlerSet] = {}
@@ -200,7 +138,6 @@ class CrewAIEventsBus:
         Example:
             >>> from crewai.events.event_bus import crewai_event_bus
             >>> from crewai.events.event_types import AgentExecutionCompletedEvent
-            ...
             >>> @crewai_event_bus.on(AgentExecutionCompletedEvent)
             >>> def on_agent_execution_completed(source, event) -> None:
             ...     print(f'Agent "{event.agent}" completed task')
@@ -226,7 +163,7 @@ class CrewAIEventsBus:
         event: BaseEvent,
         handlers: SyncHandlerSet,
     ) -> None:
-        """Call provided synchronous handlers and send sync signal.
+        """Call provided synchronous handlers.
 
         Args:
             source: The object that emitted the event
@@ -245,8 +182,6 @@ class CrewAIEventsBus:
                     f"[CrewAIEventsBus] Sync handler error in {handler.__name__}: {error}"
                 )
 
-        self._signal.send(source, event=event)
-
     async def _acall_handlers(
         self,
         source: Any,
@@ -261,12 +196,11 @@ class CrewAIEventsBus:
             handlers: Frozenset of async handlers to call
         """
         coros = [handler(source, event) for handler in handlers]
-        coros.append(self._signal.send_async(source, event=event))
         results = await asyncio.gather(*coros, return_exceptions=True)
-        for h, res in zip([*handlers, self._signal.send_async], results, strict=False):
-            if isinstance(res, Exception):
+        for handler, result in zip(handlers, results, strict=False):
+            if isinstance(result, Exception):
                 self._console.print(
-                    f"[CrewAIEventsBus] Async handler error in {getattr(h, '__name__', h)}: {res}"
+                    f"[CrewAIEventsBus] Async handler error in {getattr(handler, '__name__', handler)}: {result}"
                 )
 
     def emit(self, source: Any, event: BaseEvent) -> None:
@@ -326,8 +260,6 @@ class CrewAIEventsBus:
 
         if async_handlers:
             await self._acall_handlers(source, event, async_handlers)
-        else:
-            await self._signal.send_async(source, event=event)
 
     def register_handler(
         self,
@@ -352,11 +284,12 @@ class CrewAIEventsBus:
         Example:
             >>> from crewai.events.event_bus import crewai_event_bus
             >>> from crewai.events.event_types import CrewKickoffStartedEvent
-            ...
             >>> with crewai_event_bus.scoped_handlers():
+            ...
             ...     @crewai_event_bus.on(CrewKickoffStartedEvent)
             ...     def temp_handler(source, event):
             ...         print("Temporary handler")
+            ...
             ...     # Do stuff...
             ... # Handlers are cleared after the context
         """
