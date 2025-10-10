@@ -900,6 +900,59 @@ def test_conditional_task_copy_preserves_type():
     assert isinstance(copied_conditional_task, ConditionalTask)
 
 
+def test_task_copy_preserves_not_specified_context():
+    """Test that copying a task preserves NOT_SPECIFIED context value."""
+    from crewai.utilities.constants import NOT_SPECIFIED
+
+    task = Task(
+        description="Test task",
+        expected_output="Test output"
+    )
+
+    assert task.context is NOT_SPECIFIED
+
+    copied_task = task.copy(agents=[], task_mapping={})
+
+    assert copied_task.context is NOT_SPECIFIED
+    assert copied_task.context is not None
+
+
+def test_task_copy_with_list_context():
+    """Test that copying a task with list context works correctly."""
+    task1 = Task(
+        description="Task 1",
+        expected_output="Output 1"
+    )
+    task2 = Task(
+        description="Task 2",
+        expected_output="Output 2",
+        context=[task1]
+    )
+
+    task_mapping = {task1.key: task1}
+
+    copied_task2 = task2.copy(agents=[], task_mapping=task_mapping)
+
+    assert isinstance(copied_task2.context, list)
+    assert len(copied_task2.context) == 1
+    assert copied_task2.context[0] is task1
+
+
+def test_task_copy_with_none_context():
+    """Test that copying a task with None context works correctly."""
+    task = Task(
+        description="Test task",
+        expected_output="Test output",
+        context=None
+    )
+
+    assert task.context is None
+
+    copied_task = task.copy(agents=[], task_mapping={})
+
+    assert copied_task.context is None
+
+
 def test_interpolate_inputs(tmp_path):
     task = Task(
         description="Give me a list of 5 interesting ideas about {topic} to explore for an article, what makes them unique and interesting.",
