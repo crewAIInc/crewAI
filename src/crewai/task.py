@@ -672,13 +672,12 @@ Follow these guidelines:
         copied_data = {k: v for k, v in copied_data.items() if v is not None}
 
         cloned_context = (
-            [task_mapping[context_task.key] for context_task in self.context]
+            self.context
+            if self.context is NOT_SPECIFIED
+            else [task_mapping[context_task.key] for context_task in self.context]
             if isinstance(self.context, list)
             else None
         )
-
-        if self.context is NOT_SPECIFIED:
-            cloned_context = self.context
 
         def get_agent_by_role(role: str) -> Union["BaseAgent", None]:
             return next((agent for agent in agents if agent.role == role), None)
