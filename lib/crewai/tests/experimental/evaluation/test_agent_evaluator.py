@@ -21,7 +21,10 @@ from crewai.experimental.evaluation import (
     create_default_evaluator,
 )
 from crewai.experimental.evaluation.agent_evaluator import AgentEvaluator
-from crewai.experimental.evaluation.base_evaluator import AgentEvaluationResult
+from crewai.experimental.evaluation.base_evaluator import (
+    AgentEvaluationResult,
+    BaseEvaluator,
+)
 from crewai.task import Task
 
 
