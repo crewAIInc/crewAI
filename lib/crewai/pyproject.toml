@@ -85,6 +85,9 @@ voyageai = [
 litellm = [
     "litellm>=1.74.9",
 ]
+boto3 = [
+    "boto3>=1.40.45",
+]
 
 
 [project.scripts]
