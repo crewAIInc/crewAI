@@ -1635,3 +1635,48 @@ def test_task_interpolation_with_hyphens():
     assert "say hello world" in task.prompt()
 
     assert result.raw == "Hello, World!"
+
+
+def test_task_copy_with_none_context():
+    original_task = Task(
+        description="Test task",
+        expected_output="Test output",
+        context=None
+    )
+
+    new_task = original_task.copy(agents=[], task_mapping={})
+    assert original_task.context is None
+    assert new_task.context is None
+
+
+def test_task_copy_with_not_specified_context():
+    from crewai.utilities.constants import NOT_SPECIFIED
+    original_task = Task(
+        description="Test task",
+        expected_output="Test output",
+    )
+
+    new_task = original_task.copy(agents=[], task_mapping={})
+    assert original_task.context is NOT_SPECIFIED
+    assert new_task.context is NOT_SPECIFIED
+
+
+def test_task_copy_with_list_context():
+    """Test that copying a task with list context works correctly."""
+    task1 = Task(
+        description="Task 1",
+        expected_output="Output 1"
+    )
+    task2 = Task(
+        description="Task 2",
+        expected_output="Output 2",
+        context=[task1]
+    )
+
+    task_mapping = {task1.key: task1}
+
+    copied_task2 = task2.copy(agents=[], task_mapping=task_mapping)
+
+    assert isinstance(copied_task2.context, list)
+    assert len(copied_task2.context) == 1
+    assert copied_task2.context[0] is task1
