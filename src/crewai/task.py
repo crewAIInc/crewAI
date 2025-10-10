@@ -7,7 +7,7 @@ import uuid
 import warnings
 from collections.abc import Callable
 from concurrent.futures import Future
-from copy import copy
+from copy import copy as shallow_copy
 from hashlib import md5
 from pathlib import Path
 from typing import (
@@ -677,11 +677,14 @@ Follow these guidelines:
             else None
         )
 
+        if self.context is NOT_SPECIFIED:
+            cloned_context = self.context
+
         def get_agent_by_role(role: str) -> Union["BaseAgent", None]:
             return next((agent for agent in agents if agent.role == role), None)
 
         cloned_agent = get_agent_by_role(self.agent.role) if self.agent else None
-        cloned_tools = copy(self.tools) if self.tools else []
+        cloned_tools = shallow_copy(self.tools) if self.tools else []
 
         return self.__class__(
             **copied_data,
