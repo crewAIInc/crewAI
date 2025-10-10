@@ -20,11 +20,13 @@ from crewai.utilities.string_utils import interpolate_only
 
 
 def test_task_tool_reflect_agent_tools():
+    """Test that agent tools are available during task execution via crew fallback logic."""
     from crewai.tools import tool
 
     @tool
-    def fake_tool() -> None:
+    def fake_tool() -> str:
         "Fake tool"
+        return "result"
 
     researcher = Agent(
         role="Researcher",
@@ -40,7 +42,9 @@ def test_task_tool_reflect_agent_tools():
         agent=researcher,
     )
 
-    assert task.tools == [fake_tool]
+    assert task.tools == []
+    
+    assert researcher.tools == [fake_tool]
 
 
 def test_task_tool_takes_precedence_over_agent_tools():
@@ -1218,7 +1222,7 @@ def test_create_directory_false():
     assert not resolved_dir.exists()
 
     with pytest.raises(
-        RuntimeError, match="Directory .* does not exist and create_directory is False"
+        RuntimeError, match=r"Directory .* does not exist and create_directory is False"
     ):
         task._save_file("test content")
 
