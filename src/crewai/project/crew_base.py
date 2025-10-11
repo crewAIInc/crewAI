@@ -259,10 +259,14 @@ def CrewBase(cls: T) -> T:  # noqa: N802
             callback_functions: dict[str, Callable],
             output_pydantic_functions: dict[str, Callable],
         ) -> None:
+            
             if context_list := task_info.get("context"):
-                self.tasks_config[task_name]["context"] = [
-                    tasks[context_task_name]() for context_task_name in context_list
-                ]
+                if isinstance(context_list, list):
+                    self.tasks_config[task_name]["context"] = [
+                        tasks[context_task_name]() for context_task_name in context_list
+                    ]
+                elif isinstance(context_list,str) and context_list == 'None':
+                    self.tasks_config[task_name]["context"] = None
 
             if tools := task_info.get("tools"):
                 self.tasks_config[task_name]["tools"] = [
