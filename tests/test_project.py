@@ -108,7 +108,7 @@ class InternalCrewWithMCP(InternalCrew):
 
 
 @CrewBase
-class Crew_With_Task_Context_None:
+class CrewWithTaskContextNone:
     agents_config = "config/agents.yaml"
     tasks_config = "config/tasks_with_none_context.yaml"
 
@@ -153,7 +153,7 @@ class Crew_With_Task_Context_None:
     @crew
     def crew(self):
         return Crew(agents=self.agents, tasks=self.tasks, verbose=True)
-    
+
 
 def test_agent_memoization():
     crew = SimpleCrew()
@@ -338,7 +338,7 @@ def test_internal_crew_with_mcp():
 
 
 def test_crew_with_task_context_none():
-    crew = Crew_With_Task_Context_None()
+    crew = CrewWithTaskContextNone()
     task_with_context_none = crew.reporting_task()
 
     assert task_with_context_none.context is None
