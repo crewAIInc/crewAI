@@ -287,3 +287,38 @@ def test_internal_crew_with_mcp():
     adapter_mock.assert_called_once_with(
         {"host": "localhost", "port": 8000}, connect_timeout=120
     )
+
+
+def test_task_with_none_context_from_yaml():
+    @CrewBase
+    class CrewWithNoneContext:
+        agents_config = "config_none_context/agents.yaml"
+        tasks_config = "config_none_context/tasks.yaml"
+
+        agents: list[BaseAgent]
+        tasks: list[Task]
+
+        @agent
+        def test_agent(self):
+            return Agent(config=self.agents_config["test_agent"])
+
+        @task
+        def task_with_none_context(self):
+            return Task(config=self.tasks_config["task_with_none_context"])
+
+        @task
+        def task_with_valid_context(self):
+            return Task(config=self.tasks_config["task_with_valid_context"])
+
+        @crew
+        def crew(self):
+            return Crew(agents=self.agents, tasks=self.tasks, verbose=True)
+
+    crew_instance = CrewWithNoneContext()
+
+    task_none = crew_instance.task_with_none_context()
+    assert task_none is not None
+
+    task_valid = crew_instance.task_with_valid_context()
+    assert task_valid.context is not None
+    assert len(task_valid.context) == 1
