@@ -1,0 +1,11 @@
+task_with_none_context:
+  description: A test task with None context
+  expected_output: Some output
+  agent: test_agent
+  context: None
+
+task_with_valid_context:
+  description: A test task with valid context
+  expected_output: Some output
+  agent: test_agent
+  context: [task_with_none_context]
