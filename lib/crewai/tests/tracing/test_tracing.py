@@ -413,6 +413,8 @@ class TestTraceListenerSetup:
         with crewai_event_bus._rwlock.w_locked():
             crewai_event_bus._sync_handlers = {}
             crewai_event_bus._async_handlers = {}
+            crewai_event_bus._handler_dependencies = {}
+            crewai_event_bus._execution_plan_cache = {}
 
     @classmethod
     def teardown_class(cls):
@@ -422,6 +424,8 @@ class TestTraceListenerSetup:
         with crewai_event_bus._rwlock.w_locked():
             crewai_event_bus._sync_handlers = {}
             crewai_event_bus._async_handlers = {}
+            crewai_event_bus._handler_dependencies = {}
+            crewai_event_bus._execution_plan_cache = {}
 
     @pytest.mark.vcr(filter_headers=["authorization"])
     def test_first_time_user_trace_collection_with_timeout(self, mock_plus_api_calls):
