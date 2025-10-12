@@ -418,23 +418,33 @@ class TestTraceListenerSetup:
     def teardown_method(self):
         """Cleanup after each test method"""
         from crewai.events.event_bus import crewai_event_bus
+        from crewai.events.event_listener import EventListener
 
         with crewai_event_bus._rwlock.w_locked():
             crewai_event_bus._sync_handlers = {}
             crewai_event_bus._async_handlers = {}
             crewai_event_bus._handler_dependencies = {}
             crewai_event_bus._execution_plan_cache = {}
+
+        # Reset EventListener singleton
+        if hasattr(EventListener, "_instance"):
+            EventListener._instance = None
 
     @classmethod
     def teardown_class(cls):
         """Final cleanup after all tests in this class"""
         from crewai.events.event_bus import crewai_event_bus
+        from crewai.events.event_listener import EventListener
 
         with crewai_event_bus._rwlock.w_locked():
             crewai_event_bus._sync_handlers = {}
             crewai_event_bus._async_handlers = {}
             crewai_event_bus._handler_dependencies = {}
             crewai_event_bus._execution_plan_cache = {}
+
+        # Reset EventListener singleton
+        if hasattr(EventListener, "_instance"):
+            EventListener._instance = None
 
     @pytest.mark.vcr(filter_headers=["authorization"])
     def test_first_time_user_trace_collection_with_timeout(self, mock_plus_api_calls):
