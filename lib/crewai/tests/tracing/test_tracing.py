@@ -43,10 +43,16 @@ class TestTraceListenerSetup:
     @pytest.fixture(autouse=True)
     def reset_tracing_singletons(self):
         """Reset tracing singleton instances between tests"""
+        from crewai.events.event_listener import EventListener
+
         # Reset TraceCollectionListener singleton
         if hasattr(TraceCollectionListener, "_instance"):
             TraceCollectionListener._instance = None
             TraceCollectionListener._initialized = False
+
+        # Reset EventListener singleton
+        if hasattr(EventListener, "_instance"):
+            EventListener._instance = None
 
         yield
 
@@ -54,6 +60,9 @@ class TestTraceListenerSetup:
         if hasattr(TraceCollectionListener, "_instance"):
             TraceCollectionListener._instance = None
             TraceCollectionListener._initialized = False
+
+        if hasattr(EventListener, "_instance"):
+            EventListener._instance = None
 
     @pytest.fixture(autouse=True)
     def mock_plus_api_calls(self):
