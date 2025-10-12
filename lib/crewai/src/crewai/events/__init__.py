@@ -5,10 +5,13 @@ This module provides the event infrastructure that allows users to:
 - Track memory operations and performance
 - Build custom logging and analytics
 - Extend CrewAI with custom event handlers
+- Declare handler dependencies for ordered execution
 """
 
 from crewai.events.base_event_listener import BaseEventListener
+from crewai.events.depends import Depends
 from crewai.events.event_bus import crewai_event_bus
+from crewai.events.handler_graph import CircularDependencyError
 from crewai.events.types.agent_events import (
     AgentEvaluationCompletedEvent,
     AgentEvaluationFailedEvent,
@@ -109,6 +112,7 @@ __all__ = [
     "AgentReasoningFailedEvent",
     "AgentReasoningStartedEvent",
     "BaseEventListener",
+    "CircularDependencyError",
     "CrewKickoffCompletedEvent",
     "CrewKickoffFailedEvent",
     "CrewKickoffStartedEvent",
@@ -119,6 +123,7 @@ __all__ = [
     "CrewTrainCompletedEvent",
     "CrewTrainFailedEvent",
     "CrewTrainStartedEvent",
+    "Depends",
     "FlowCreatedEvent",
     "FlowEvent",
     "FlowFinishedEvent",

@@ -10,7 +10,7 @@ from crewai.events.base_events import BaseEvent
 from crewai.events.types.event_bus_types import AsyncHandler, SyncHandler
 
 
-def _is_async_handler(
+def is_async_handler(
     handler: Any,
 ) -> TypeIs[AsyncHandler]:
     """Type guard to check if handler is an async handler.
@@ -37,7 +37,7 @@ def _is_async_handler(
     return False
 
 
-def _is_call_handler_safe(
+def is_call_handler_safe(
     handler: SyncHandler,
     source: Any,
     event: BaseEvent,
