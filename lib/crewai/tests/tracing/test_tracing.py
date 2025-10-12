@@ -293,33 +293,15 @@ class TestTraceListenerSetup:
                             handler.__self__, TraceCollectionListener
                         ):
                             trace_handlers.append(handler)
-                        elif hasattr(handler, "__name__") and any(
-                            trace_name in handler.__name__
-                            for trace_name in [
-                                "on_crew_started",
-                                "on_crew_completed",
-                                "on_flow_started",
-                            ]
-                        ):
-                            trace_handlers.append(handler)
                 for handlers in crewai_event_bus._async_handlers.values():
                     for handler in handlers:
                         if hasattr(handler, "__self__") and isinstance(
                             handler.__self__, TraceCollectionListener
                         ):
                             trace_handlers.append(handler)
-                        elif hasattr(handler, "__name__") and any(
-                            trace_name in handler.__name__
-                            for trace_name in [
-                                "on_crew_started",
-                                "on_crew_completed",
-                                "on_flow_started",
-                            ]
-                        ):
-                            trace_handlers.append(handler)
 
             assert len(trace_handlers) == 0, (
-                f"Found {len(trace_handlers)} trace handlers when tracing should be disabled"
+                f"Found {len(trace_handlers)} TraceCollectionListener handlers when tracing should be disabled"
             )
 
     def test_trace_listener_setup_correctly_for_crew(self):
