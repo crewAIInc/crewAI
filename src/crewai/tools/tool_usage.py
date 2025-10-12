@@ -1,6 +1,6 @@
-import ast
 import datetime
 import json
+import re
 import time
 from difflib import SequenceMatcher
 from json import JSONDecodeError
@@ -42,6 +42,183 @@ OPENAI_BIGGER_MODELS = [
     "o3",
     "o3-mini",
 ]
+
+
+def _safe_literal_parse(input_str: str) -> Any:
+    """
+    Safely parse a limited subset of Python literal syntax without using ast.literal_eval.
+    Only supports: strings (single/double quotes), numbers, booleans, None, lists, dicts.
+    Rejects any input that could lead to code execution.
+    
+    Args:
+        input_str: String to parse
+        
+    Returns:
+        Parsed Python object
+        
+    Raises:
+        ValueError: If input contains unsafe or unsupported syntax
+    """
+    if not isinstance(input_str, str):
+        raise ValueError("Input must be a string")
+    
+    stripped = input_str.strip()
+    if not stripped:
+        raise ValueError("Input cannot be empty")
+    
+    # Check for potentially dangerous patterns
+    dangerous_patterns = [
+        r'__.*__',  # dunder methods
+        r'import\b',  # import statements
+        r'exec\b',  # exec function
+        r'eval\b',  # eval function
+        r'lambda\b',  # lambda functions
+        r'def\b',  # function definitions
+        r'class\b',  # class definitions
+        r'@\w+',  # decorators
+        r'\.\.\.',  # ellipsis (could be used in slicing)
+        r'->[^\]]*\]',  # type hints in lists
+    ]
+    
+    for pattern in dangerous_patterns:
+        if re.search(pattern, stripped, re.IGNORECASE):
+            raise ValueError(f"Potentially dangerous pattern detected: {pattern}")
+    
+    # Only allow specific characters
+    allowed_chars = r'[\s\w\.\-\+\*/\(\)\[\]\{\}:\'"<>!=,!=\?%&|~^`]'
+    if not re.fullmatch(f'{allowed_chars}*', stripped):
+        raise ValueError("Input contains unsupported characters")
+    
+    # Try JSON parsing first (safest)
+    try:
+        return json.loads(stripped)
+    except (json.JSONDecodeError, TypeError):
+        pass
+    
+    # Manual parsing for simple Python literals (JSON with single quotes, etc.)
+    try:
+        return _parse_python_literal_safe(stripped)
+    except Exception as e:
+        raise ValueError(f"Failed to parse input safely: {e}")
+
+
+def _parse_python_literal_safe(input_str: str) -> Any:
+    """
+    Parse a limited subset of Python literals safely.
+    
+    Args:
+        input_str: String to parse
+        
+    Returns:
+        Parsed Python object
+    """
+    # Handle None
+    if input_str == 'None':
+        return None
+    
+    # Handle booleans
+    if input_str == 'True':
+        return True
+    if input_str == 'False':
+        return False
+    
+    # Handle numbers
+    if re.fullmatch(r'-?\d+$', input_str):
+        return int(input_str)
+    if re.fullmatch(r'-?\d+\.\d+$', input_str):
+        return float(input_str)
+    
+    # Handle strings with single quotes (convert to JSON format)
+    if (input_str.startswith("'") and input_str.endswith("'")) or \
+       (input_str.startswith('"') and input_str.endswith('"')):
+        # Simple string - just remove quotes and escape common sequences
+        inner = input_str[1:-1]
+        # Handle common escape sequences safely
+        inner = inner.replace("\\'", "'").replace('\\"', '"').replace("\\\\", "\\")
+        return inner
+    
+    # Handle lists
+    if input_str.startswith('[') and input_str.endswith(']'):
+        inner = input_str[1:-1].strip()
+        if not inner:
+            return []
+        
+        items = _split_items_safe(inner)
+        return [_parse_python_literal_safe(item.strip()) for item in items]
+    
+    # Handle dictionaries
+    if input_str.startswith('{') and input_str.endswith('}'):
+        inner = input_str[1:-1].strip()
+        if not inner:
+            return {}
+        
+        pairs = _split_items_safe(inner)
+        result = {}
+        for pair in pairs:
+            if ':' not in pair:
+                raise ValueError(f"Invalid dict pair: {pair}")
+            
+            key_str, value_str = pair.split(':', 1)
+            key = _parse_python_literal_safe(key_str.strip())
+            value = _parse_python_literal_safe(value_str.strip())
+            if not isinstance(key, str):
+                raise ValueError(f"Dict keys must be strings, got {type(key)}")
+            result[key] = value
+        
+        return result
+    
+    raise ValueError(f"Unsupported literal format: {input_str}")
+
+
+def _split_items_safe(input_str: str, delimiter: str = ',') -> list[str]:
+    """
+    Split a list or dict string into items, respecting nested structures.
+    
+    Args:
+        input_str: String to split
+        delimiter: Delimiter to split on
+        
+    Returns:
+        List of item strings
+    """
+    items = []
+    current = []
+    depth = 0
+    in_string = False
+    string_char = None
+    i = 0
+    
+    while i < len(input_str):
+        char = input_str[i]
+        
+        # Handle string literals
+        if char in ('"', "'") and (i == 0 or input_str[i-1] != '\\'):
+            if not in_string:
+                in_string = True
+                string_char = char
+            elif char == string_char:
+                in_string = False
+                string_char = None
+        
+        # Track nesting depth when not in strings
+        elif not in_string:
+            if char in ('[', '(', '{'):
+                depth += 1
+            elif char in (']', ')', '}'):
+                depth -= 1
+            elif char == delimiter and depth == 0:
+                items.append(''.join(current).strip())
+                current = []
+                i += 1
+                continue
+        
+        current.append(char)
+        i += 1
+    
+    if current:
+        items.append(''.join(current).strip())
+    
+    return items
 
 
 class ToolUsageError(Exception):
@@ -524,14 +701,14 @@ class ToolUsage:
         except (JSONDecodeError, TypeError):
             pass  # Continue to the next parsing attempt
 
-        # Attempt 2: Parse as Python literal
+        # Attempt 2: Parse as Python literal (safe alternative to ast.literal_eval)
         try:
-            arguments = ast.literal_eval(tool_input)
+            arguments = _safe_literal_parse(tool_input)
             if isinstance(arguments, dict):
                 return arguments
-        except (ValueError, SyntaxError):
-            repaired_input = repair_json(tool_input)
+        except ValueError:
             # Continue to the next parsing attempt
+            pass
 
         # Attempt 3: Parse as JSON5
         try:
