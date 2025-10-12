@@ -43,7 +43,15 @@ class TestTraceListenerSetup:
     @pytest.fixture(autouse=True)
     def reset_tracing_singletons(self):
         """Reset tracing singleton instances between tests"""
+        from crewai.events.event_bus import crewai_event_bus
         from crewai.events.event_listener import EventListener
+
+        # Clear event bus handlers BEFORE creating any new singletons
+        with crewai_event_bus._rwlock.w_locked():
+            crewai_event_bus._sync_handlers = {}
+            crewai_event_bus._async_handlers = {}
+            crewai_event_bus._handler_dependencies = {}
+            crewai_event_bus._execution_plan_cache = {}
 
         # Reset TraceCollectionListener singleton
         if hasattr(TraceCollectionListener, "_instance"):
@@ -57,6 +65,12 @@ class TestTraceListenerSetup:
         yield
 
         # Clean up after test
+        with crewai_event_bus._rwlock.w_locked():
+            crewai_event_bus._sync_handlers = {}
+            crewai_event_bus._async_handlers = {}
+            crewai_event_bus._handler_dependencies = {}
+            crewai_event_bus._execution_plan_cache = {}
+
         if hasattr(TraceCollectionListener, "_instance"):
             TraceCollectionListener._instance = None
             TraceCollectionListener._initialized = False
