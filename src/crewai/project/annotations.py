@@ -6,77 +6,154 @@ from typing import Any, Concatenate, ParamSpec, TypeVar
 
 from crewai import Crew
 from crewai.project.utils import memoize
+from crewai.project.wrappers import (
+    AfterKickoffMethod,
+    AgentMethod,
+    BeforeKickoffMethod,
+    CacheHandlerMethod,
+    CallbackMethod,
+    LLMMethod,
+    TaskMethod,
+    TaskResultT,
+    ToolMethod,
+)
 
 P = ParamSpec("P")
 R = TypeVar("R")
 
 
-def before_kickoff(meth):
-    """Marks a method to execute before crew kickoff."""
-    meth.is_before_kickoff = True
-    return meth
+def before_kickoff(meth: Callable[P, R]) -> BeforeKickoffMethod[P, R]:
+    """Marks a method to execute before crew kickoff.
+
+    Args:
+        meth: The method to mark.
+
+    Returns:
+        A wrapped method marked for before kickoff execution.
+    """
+    return BeforeKickoffMethod(meth)
 
 
-def after_kickoff(meth):
-    """Marks a method to execute after crew kickoff."""
-    meth.is_after_kickoff = True
-    return meth
+def after_kickoff(meth: Callable[P, R]) -> AfterKickoffMethod[P, R]:
+    """Marks a method to execute after crew kickoff.
+
+    Args:
+        meth: The method to mark.
+
+    Returns:
+        A wrapped method marked for after kickoff execution.
+    """
+    return AfterKickoffMethod(meth)
 
 
-def task(meth):
-    """Marks a method as a crew task."""
-    meth.is_task = True
+def task(meth: Callable[P, TaskResultT]) -> TaskMethod[P, TaskResultT]:
+    """Marks a method as a crew task.
 
-    @wraps(meth)
-    def wrapper(*args, **kwargs):
-        result = meth(*args, **kwargs)
-        if not result.name:
-            result.name = meth.__name__
-        return result
+    Args:
+        meth: The method to mark.
 
-    return memoize(wrapper)
-
-
-def agent(meth):
-    """Marks a method as a crew agent."""
-    meth.is_agent = True
-    return memoize(meth)
+    Returns:
+        A wrapped method marked as a task with memoization.
+    """
+    wrapped = TaskMethod(meth)
+    wrapped._wrapped = memoize(wrapped._meth)
+    return wrapped
 
 
-def llm(meth):
-    """Marks a method as an LLM provider."""
-    meth.is_llm = True
-    return memoize(meth)
+def agent(meth: Callable[P, R]) -> AgentMethod[P, R]:
+    """Marks a method as a crew agent.
+
+    Args:
+        meth: The method to mark.
+
+    Returns:
+        A wrapped method marked as an agent with memoization.
+    """
+    wrapped = AgentMethod(meth)
+    wrapped._wrapped = memoize(wrapped._meth)
+    return wrapped
+
+
+def llm(meth: Callable[P, R]) -> LLMMethod[P, R]:
+    """Marks a method as an LLM provider.
+
+    Args:
+        meth: The method to mark.
+
+    Returns:
+        A wrapped method marked as an LLM provider with memoization.
+    """
+    wrapped = LLMMethod(meth)
+    wrapped._wrapped = memoize(wrapped._meth)
+    return wrapped
 
 
 def output_json(cls):
-    """Marks a class as JSON output format."""
+    """Marks a class as JSON output format.
+
+    Args:
+        cls: The class to mark.
+
+    Returns:
+        The class with is_output_json attribute set.
+    """
     cls.is_output_json = True
     return cls
 
 
 def output_pydantic(cls):
-    """Marks a class as Pydantic output format."""
+    """Marks a class as Pydantic output format.
+
+    Args:
+        cls: The class to mark.
+
+    Returns:
+        The class with is_output_pydantic attribute set.
+    """
     cls.is_output_pydantic = True
     return cls
 
 
-def tool(meth):
-    """Marks a method as a crew tool."""
-    meth.is_tool = True
-    return memoize(meth)
+def tool(meth: Callable[P, R]) -> ToolMethod[P, R]:
+    """Marks a method as a crew tool.
+
+    Args:
+        meth: The method to mark.
+
+    Returns:
+        A wrapped method marked as a tool with memoization.
+    """
+    wrapped = ToolMethod(meth)
+    wrapped._wrapped = memoize(wrapped._meth)
+    return wrapped
 
 
-def callback(meth):
-    """Marks a method as a crew callback."""
-    meth.is_callback = True
-    return memoize(meth)
+def callback(meth: Callable[P, R]) -> CallbackMethod[P, R]:
+    """Marks a method as a crew callback.
+
+    Args:
+        meth: The method to mark.
+
+    Returns:
+        A wrapped method marked as a callback with memoization.
+    """
+    wrapped = CallbackMethod(meth)
+    wrapped._wrapped = memoize(wrapped._meth)
+    return wrapped
 
 
-def cache_handler(meth):
-    """Marks a method as a cache handler."""
-    meth.is_cache_handler = True
-    return memoize(meth)
+def cache_handler(meth: Callable[P, R]) -> CacheHandlerMethod[P, R]:
+    """Marks a method as a cache handler.
+
+    Args:
+        meth: The method to mark.
+
+    Returns:
+        A wrapped method marked as a cache handler with memoization.
+    """
+    wrapped = CacheHandlerMethod(meth)
+    wrapped._wrapped = memoize(wrapped._meth)
+    return wrapped
 
 
 def crew(meth) -> Callable[..., Crew]:
