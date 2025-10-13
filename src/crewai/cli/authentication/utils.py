@@ -30,6 +30,7 @@ def validate_jwt_token(
             algorithms=["RS256"],
             audience=audience,
             issuer=issuer,
+            leeway=10.0,
             options={
                 "verify_signature": True,
                 "verify_exp": True,

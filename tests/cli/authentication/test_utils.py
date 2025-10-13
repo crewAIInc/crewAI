@@ -30,6 +30,7 @@ class TestUtils(unittest.TestCase):
             algorithms=["RS256"],
             audience="app_id_xxxx",
             issuer="https://mock_issuer",
+            leeway=10.0,
             options={
                 "verify_signature": True,
                 "verify_exp": True,
