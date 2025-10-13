@@ -2,7 +2,10 @@
 
 from collections.abc import Callable
 from functools import wraps
-from typing import Any, Generic, ParamSpec, Protocol, Self, TypeVar
+from typing import TYPE_CHECKING, Any, Generic, ParamSpec, Protocol, Self, TypeVar
+
+if TYPE_CHECKING:
+    from crewai import Agent, Task
 
 P = ParamSpec("P")
 R = TypeVar("R")
@@ -18,27 +21,15 @@ class TaskResult(Protocol):
 TaskResultT = TypeVar("TaskResultT", bound=TaskResult)
 
 
-class AgentInstance(Protocol):
-    """Protocol for agent instances."""
-
-    role: str
-
-
-class TaskInstance(Protocol):
-    """Protocol for task instances."""
-
-    agent: AgentInstance | None
-
-
 class CrewInstance(Protocol):
     """Protocol for crew class instances with required attributes."""
 
-    _original_tasks: dict[str, Callable[[Self], TaskInstance]]
-    _original_agents: dict[str, Callable[[Self], AgentInstance]]
+    _original_tasks: dict[str, Callable[[Self], Task]]
+    _original_agents: dict[str, Callable[[Self], Agent]]
     _before_kickoff: dict[str, Callable[..., Any]]
     _after_kickoff: dict[str, Callable[..., Any]]
-    agents: list[AgentInstance]
-    tasks: list[TaskInstance]
+    agents: list[Agent]
+    tasks: list[Task]
 
 
 class DecoratedMethod(Generic[P, R]):

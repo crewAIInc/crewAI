@@ -2,13 +2,14 @@
 
 from collections.abc import Callable
 from functools import wraps
-from typing import Concatenate, ParamSpec, TypeVar
+from typing import TYPE_CHECKING, Concatenate, ParamSpec, TypeVar
 
-from crewai import Crew
 from crewai.project.utils import memoize
+
+if TYPE_CHECKING:
+    from crewai import Agent, Crew, Task
 from crewai.project.wrappers import (
     AfterKickoffMethod,
-    AgentInstance,
     AgentMethod,
     BeforeKickoffMethod,
     CacheHandlerMethod,
@@ -17,7 +18,6 @@ from crewai.project.wrappers import (
     LLMMethod,
     OutputJsonClass,
     OutputPydanticClass,
-    TaskInstance,
     TaskMethod,
     TaskResultT,
     ToolMethod,
@@ -174,8 +174,8 @@ def crew(
         Returns:
             The configured Crew instance with callbacks attached.
         """
-        instantiated_tasks: list[TaskInstance] = []
-        instantiated_agents: list[AgentInstance] = []
+        instantiated_tasks: list[Task] = []
+        instantiated_agents: list[Agent] = []
         agent_roles: set[str] = set()
 
         # Use the preserved task and agent information
