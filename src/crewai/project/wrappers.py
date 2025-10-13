@@ -2,24 +2,17 @@
 
 from collections.abc import Callable
 from functools import wraps
-from typing import Any, Generic, ParamSpec, Protocol, TypeVar
+from typing import Any, Generic, ParamSpec, Protocol, Self, TypeVar
 
 P = ParamSpec("P")
 R = TypeVar("R")
+T = TypeVar("T")
 
 
 class TaskResult(Protocol):
-    """Protocol for task objects that have a name property."""
+    """Protocol for task objects that have a name attribute."""
 
-    @property
-    def name(self) -> str | None:
-        """Get the task name."""
-        ...
-
-    @name.setter
-    def name(self, value: str) -> None:
-        """Set the task name."""
-        ...
+    name: str | None
 
 
 TaskResultT = TypeVar("TaskResultT", bound=TaskResult)
@@ -40,8 +33,8 @@ class TaskInstance(Protocol):
 class CrewInstance(Protocol):
     """Protocol for crew class instances with required attributes."""
 
-    _original_tasks: dict[str, Callable[..., Any]]
-    _original_agents: dict[str, Callable[..., Any]]
+    _original_tasks: dict[str, Callable[[Self], TaskInstance]]
+    _original_agents: dict[str, Callable[[Self], AgentInstance]]
     _before_kickoff: dict[str, Callable[..., Any]]
     _after_kickoff: dict[str, Callable[..., Any]]
     agents: list[AgentInstance]
@@ -183,9 +176,6 @@ class CrewMethod(DecoratedMethod[P, R]):
     is_crew: bool = True
 
 
-T = TypeVar("T")
-
-
 class OutputJsonClass(Generic[T]):
     """Wrapper for classes marked as JSON output format."""
 
@@ -204,7 +194,7 @@ class OutputJsonClass(Generic[T]):
         self.__module__ = cls.__module__
         self.__doc__ = cls.__doc__
 
-    def __call__(self, *args, **kwargs) -> T:
+    def __call__(self, *args: Any, **kwargs: Any) -> T:
         """Create an instance of the wrapped class.
 
         Args:
@@ -216,7 +206,7 @@ class OutputJsonClass(Generic[T]):
         """
         return self._cls(*args, **kwargs)
 
-    def __getattr__(self, name: str):
+    def __getattr__(self, name: str) -> Any:
         """Delegate attribute access to the wrapped class.
 
         Args:
@@ -246,7 +236,7 @@ class OutputPydanticClass(Generic[T]):
         self.__module__ = cls.__module__
         self.__doc__ = cls.__doc__
 
-    def __call__(self, *args, **kwargs) -> T:
+    def __call__(self, *args: Any, **kwargs: Any) -> T:
         """Create an instance of the wrapped class.
 
         Args:
@@ -258,7 +248,7 @@ class OutputPydanticClass(Generic[T]):
         """
         return self._cls(*args, **kwargs)
 
-    def __getattr__(self, name: str):
+    def __getattr__(self, name: str) -> Any:
         """Delegate attribute access to the wrapped class.
 
         Args:
