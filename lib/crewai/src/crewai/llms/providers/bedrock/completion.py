@@ -1,4 +1,3 @@
-import json
 import logging
 import os
 from typing import Any
@@ -168,11 +167,6 @@ class BedrockCompletion(BaseLLM):
     ) -> str:
         """Handle non-streaming converse API call following AWS best practices."""
         try:
-            # Debug logging
-            print(f"Calling Bedrock converse with model: {self.model_id}")
-            print(f"Messages count: {len(messages)}")
-            print(f"Last message role: {messages[-1]['role'] if messages else 'None'}")
-
             # Validate messages format before API call
             if not messages:
                 raise ValueError("Messages cannot be empty")
@@ -190,8 +184,6 @@ class BedrockCompletion(BaseLLM):
             response = self.client.converse(
                 modelId=self.model_id, messages=messages, **body
             )
-
-            print(f"Bedrock response received successfully")
 
             # Track token usage according to AWS response format
             if "usage" in response:
@@ -238,8 +230,6 @@ class BedrockCompletion(BaseLLM):
             if not text_content or text_content.strip() == "":
                 logging.warning("Extracted empty text content from Bedrock response")
                 text_content = "I apologize, but I couldn't generate a proper response. Please try again."
-
-            print(f"Successfully extracted {len(text_content)} characters")
 
             self._emit_call_completed_event(
                 response=text_content,
