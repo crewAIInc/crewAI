@@ -12,7 +12,8 @@ from crewai.utilities.exceptions.context_window_exceeding_exception import (
 
 
 try:
-    import boto3
+    from boto3.session import Session
+    from botocore.config import Config
     from botocore.exceptions import BotoCoreError, ClientError
 except ImportError:
     raise ImportError(
@@ -21,16 +22,15 @@ except ImportError:
 
 
 class BedrockCompletion(BaseLLM):
-    """AWS Bedrock native completion implementation.
+    """AWS Bedrock native completion implementation using the Converse API.
 
-    This class provides direct integration with AWS Bedrock,
-    supporting both Text Completion and Messages APIs for Anthropic Claude models,
-    as well as other Bedrock-supported models.
+    This class provides direct integration with AWS Bedrock using the modern
+    Converse API, which provides a unified interface across all Bedrock models.
     """
 
     def __init__(
         self,
-        model: str = "anthropic.claude-3-7-sonnet-20250219-v1:0",
+        model: str = "anthropic.claude-3-5-sonnet-20241022-v2:0",
         aws_access_key_id: str | None = None,
         aws_secret_access_key: str | None = None,
         aws_session_token: str | None = None,
@@ -41,36 +41,22 @@ class BedrockCompletion(BaseLLM):
         top_k: int | None = None,
         stop_sequences: list[str] | None = None,
         stream: bool = False,
-        api_type: str = "messages",  # "messages" or "text_completion"
         **kwargs,
     ):
-        """Initialize AWS Bedrock completion client.
-
-        Args:
-            model: Bedrock model ID (e.g., 'anthropic.claude-3-5-sonnet-20241022-v2:0')
-            aws_access_key_id: AWS access key ID (defaults to AWS_ACCESS_KEY_ID env var)
-            aws_secret_access_key: AWS secret access key (defaults to AWS_SECRET_ACCESS_KEY env var)
-            aws_session_token: AWS session token (defaults to AWS_SESSION_TOKEN env var)
-            region_name: AWS region name (defaults to us-east-1)
-            temperature: Sampling temperature (0-1)
-            max_tokens: Maximum tokens in response
-            top_p: Nucleus sampling parameter
-            top_k: Top-k sampling parameter (for Claude models)
-            stop_sequences: Stop sequences
-            stream: Enable streaming responses
-            api_type: API type to use ("messages" or "text_completion")
-            **kwargs: Additional parameters
-        """
+        """Initialize AWS Bedrock completion client."""
+        # Extract provider from kwargs to avoid duplicate argument
+        kwargs.pop("provider", None)
 
         super().__init__(
             model=model,
             temperature=temperature,
             stop=stop_sequences or [],
+            provider="bedrock",
             **kwargs,
         )
 
-        # Initialize Bedrock client
-        session = boto3.Session(
+        # Initialize Bedrock client with proper configuration
+        session = Session(
             aws_access_key_id=aws_access_key_id or os.getenv("AWS_ACCESS_KEY_ID"),
             aws_secret_access_key=aws_secret_access_key
             or os.getenv("AWS_SECRET_ACCESS_KEY"),
@@ -78,7 +64,18 @@ class BedrockCompletion(BaseLLM):
             region_name=region_name,
         )
 
-        self.client = session.client("bedrock-runtime")
+        # Configure client with timeouts and retries following AWS best practices
+        config = Config(
+            connect_timeout=60,
+            read_timeout=300,
+            retries={
+                "max_attempts": 3,
+                "mode": "adaptive",
+            },
+            tcp_keepalive=True,
+        )
+
+        self.client = session.client("bedrock-runtime", config=config)
         self.region_name = region_name
 
         # Store completion parameters
@@ -87,23 +84,14 @@ class BedrockCompletion(BaseLLM):
         self.top_k = top_k
         self.stream = stream
         self.stop_sequences = stop_sequences or []
-        self.api_type = api_type
 
         # Model-specific settings
         self.is_claude_model = "claude" in model.lower()
-        self.is_claude_3_plus = any(
-            v in model.lower() for v in ["claude-3", "claude-3-5"]
-        )
-        self.supports_tools = self.is_claude_3_plus and api_type == "messages"
+        self.supports_tools = True  # Converse API supports tools for most models
         self.supports_streaming = True
 
-        # Handle inference profiles for newer Claude models
+        # Handle inference profiles for newer models
         self.model_id = self._get_model_or_inference_profile(model)
-
-        # Determine max tokens based on model if not specified
-        if self.max_tokens == 4096 and self.is_claude_model:
-            # Claude models can handle more tokens
-            self.max_tokens = 4000  # Stay within Bedrock limits
 
     def call(
         self,
@@ -114,19 +102,7 @@ class BedrockCompletion(BaseLLM):
         from_task: Any | None = None,
         from_agent: Any | None = None,
     ) -> str | Any:
-        """Call AWS Bedrock API.
-
-        Args:
-            messages: Input messages for the completion
-            tools: List of tool/function definitions
-            callbacks: Callback functions (not used in native implementation)
-            available_functions: Available functions for tool calling
-            from_task: Task that initiated the call
-            from_agent: Agent that initiated the call
-
-        Returns:
-            Completion response or tool call result
-        """
+        """Call AWS Bedrock Converse API."""
         try:
             # Emit call started event
             self._emit_call_started_event(
@@ -138,16 +114,43 @@ class BedrockCompletion(BaseLLM):
                 from_agent=from_agent,
             )
 
-            # Choose API based on model and configuration
-            if self.api_type == "text_completion" or not self.is_claude_3_plus:
-                return self._handle_text_completion_api(
-                    messages, tools, available_functions, from_task, from_agent
+            # Format messages for Converse API
+            formatted_messages, system_message = self._format_messages_for_converse(
+                messages
+            )
+
+            # Prepare tool configuration
+            tool_config = None
+            if tools:
+                tool_config = {"tools": self._format_tools_for_converse(tools)}
+
+            # Prepare request body
+            body = {
+                "inferenceConfig": self._get_inference_config(),
+            }
+
+            # Add system message if present
+            if system_message:
+                body["system"] = [{"text": system_message}]
+
+            # Add tool config if present
+            if tool_config:
+                body["toolConfig"] = tool_config
+
+            if self.stream:
+                return self._handle_streaming_converse(
+                    formatted_messages, body, available_functions, from_task, from_agent
                 )
-            return self._handle_messages_api(
-                messages, tools, available_functions, from_task, from_agent
+
+            return self._handle_converse(
+                formatted_messages, body, available_functions, from_task, from_agent
             )
 
         except Exception as e:
+            if is_context_length_exceeded(e):
+                logging.error(f"Context window exceeded: {e}")
+                raise LLMContextLengthExceededError(str(e)) from e
+
             error_msg = f"AWS Bedrock API call failed: {e!s}"
             logging.error(error_msg)
             self._emit_call_failed_event(
@@ -155,242 +158,199 @@ class BedrockCompletion(BaseLLM):
             )
             raise
 
-    def _handle_text_completion_api(
+    def _handle_converse(
         self,
-        messages: str | list[dict[str, str]],
-        tools: list[dict] | None = None,
-        available_functions: dict[str, Any] | None = None,
-        from_task: Any | None = None,
-        from_agent: Any | None = None,
-    ) -> str:
-        """Handle Text Completion API for Claude models."""
-        # Format messages for text completion
-        prompt = self._format_messages_for_text_completion(messages)
-
-        # Prepare request body
-        body = {
-            "prompt": prompt,
-            "max_tokens_to_sample": self.max_tokens,
-        }
-
-        if self.temperature is not None:
-            body["temperature"] = self.temperature
-        if self.top_p is not None:
-            body["top_p"] = self.top_p
-        if self.top_k is not None:
-            body["top_k"] = self.top_k
-        if self.stop_sequences:
-            body["stop_sequences"] = self.stop_sequences
-
-        try:
-            if self.stream:
-                return self._handle_streaming_text_completion(
-                    body, available_functions, from_task, from_agent
-                )
-            return self._handle_text_completion(
-                body, available_functions, from_task, from_agent
-            )
-        except Exception as e:
-            if is_context_length_exceeded(e):
-                logging.error(f"Context window exceeded: {e}")
-                raise LLMContextLengthExceededError(str(e)) from e
-            raise
-
-    def _handle_messages_api(
-        self,
-        messages: str | list[dict[str, str]],
-        tools: list[dict] | None = None,
-        available_functions: dict[str, Any] | None = None,
-        from_task: Any | None = None,
-        from_agent: Any | None = None,
-    ) -> str | Any:
-        """Handle Messages API for Claude 3+ models."""
-        # Format messages for Messages API
-        formatted_messages, system_message = self._format_messages_for_messages_api(
-            messages
-        )
-
-        # Prepare request body
-        body = {
-            "messages": formatted_messages,
-            "max_tokens": self.max_tokens,
-            "anthropic_version": "bedrock-2023-05-31",
-        }
-
-        if system_message:
-            body["system"] = system_message
-        if self.temperature is not None:
-            body["temperature"] = self.temperature
-        if self.top_p is not None:
-            body["top_p"] = self.top_p
-        if self.top_k is not None:
-            body["top_k"] = self.top_k
-        if self.stop_sequences:
-            body["stop_sequences"] = self.stop_sequences
-
-        # Add tools if provided and supported
-        if tools and self.supports_tools:
-            body["tools"] = self._convert_tools_for_interference(tools)
-
-        try:
-            if self.stream:
-                return self._handle_streaming_messages(
-                    body, available_functions, from_task, from_agent
-                )
-            return self._handle_messages_completion(
-                body, available_functions, from_task, from_agent
-            )
-        except Exception as e:
-            if is_context_length_exceeded(e):
-                logging.error(f"Context window exceeded: {e}")
-                raise LLMContextLengthExceededError(str(e)) from e
-            raise
-
-    def _handle_text_completion(
-        self,
+        messages: list[dict[str, Any]],
         body: dict[str, Any],
         available_functions: dict[str, Any] | None = None,
         from_task: Any | None = None,
         from_agent: Any | None = None,
     ) -> str:
-        """Handle non-streaming text completion."""
+        """Handle non-streaming converse API call following AWS best practices."""
         try:
-            response = self.client.invoke_model(
-                modelId=self.model_id,
-                body=json.dumps(body),
-                accept="application/json",
-                contentType="application/json",
+            # Debug logging
+            print(f"Calling Bedrock converse with model: {self.model_id}")
+            print(f"Messages count: {len(messages)}")
+            print(f"Last message role: {messages[-1]['role'] if messages else 'None'}")
+
+            # Validate messages format before API call
+            if not messages:
+                raise ValueError("Messages cannot be empty")
+
+            # Ensure we have valid message structure
+            for i, msg in enumerate(messages):
+                if (
+                    not isinstance(msg, dict)
+                    or "role" not in msg
+                    or "content" not in msg
+                ):
+                    raise ValueError(f"Invalid message format at index {i}")
+
+            # Call Bedrock Converse API with proper error handling
+            response = self.client.converse(
+                modelId=self.model_id, messages=messages, **body
             )
 
-            response_body = json.loads(response["body"].read())
-            content = response_body.get("completion", "")
+            print(f"Bedrock response received successfully")
 
-            # Apply stop words
-            content = self._apply_stop_words(content)
+            # Track token usage according to AWS response format
+            if "usage" in response:
+                self._track_token_usage_internal(response["usage"])
 
-            # Track token usage if available
-            if "usage" in response_body:
-                self._track_token_usage_internal(response_body["usage"])
+            # Extract content following AWS response structure
+            output = response.get("output", {})
+            message = output.get("message", {})
+            content = message.get("content", [])
+
+            if not content:
+                logging.warning("No content in Bedrock response")
+                return (
+                    "I apologize, but I received an empty response. Please try again."
+                )
+
+            # Extract text content from response
+            text_content = ""
+            for content_block in content:
+                # Handle different content block types as per AWS documentation
+                if "text" in content_block:
+                    text_content += content_block["text"]
+                elif content_block.get("type") == "toolUse" and available_functions:
+                    # Handle tool use according to AWS format
+                    tool_use = content_block["toolUse"]
+                    function_name = tool_use.get("name")
+                    function_args = tool_use.get("input", {})
+
+                    result = self._handle_tool_execution(
+                        function_name=function_name,
+                        function_args=function_args,
+                        available_functions=available_functions,
+                        from_task=from_task,
+                        from_agent=from_agent,
+                    )
+
+                    if result is not None:
+                        return result
+
+            # Apply stop sequences if configured
+            text_content = self._apply_stop_words(text_content)
+
+            # Validate final response
+            if not text_content or text_content.strip() == "":
+                logging.warning("Extracted empty text content from Bedrock response")
+                text_content = "I apologize, but I couldn't generate a proper response. Please try again."
+
+            print(f"Successfully extracted {len(text_content)} characters")
 
             self._emit_call_completed_event(
-                response=content,
+                response=text_content,
                 call_type=LLMCallType.LLM_CALL,
                 from_task=from_task,
                 from_agent=from_agent,
-                messages=body.get("prompt", ""),
+                messages=messages,
             )
 
-            return content
+            return text_content
 
-        except (ClientError, BotoCoreError) as e:
-            error_msg = f"Bedrock text completion failed: {e}"
+        except ClientError as e:
+            # Handle all AWS ClientError exceptions as per documentation
+            error_code = e.response.get("Error", {}).get("Code", "Unknown")
+            error_msg = e.response.get("Error", {}).get("Message", str(e))
+
+            # Log the specific error for debugging
+            logging.error(f"AWS Bedrock ClientError ({error_code}): {error_msg}")
+
+            # Handle specific error codes as documented
+            if error_code == "ValidationException":
+                # This is the error we're seeing with Cohere
+                if "last turn" in error_msg and "user message" in error_msg:
+                    raise ValueError(
+                        f"Conversation format error: {error_msg}. Check message alternation."
+                    )
+                else:
+                    raise ValueError(f"Request validation failed: {error_msg}")
+            elif error_code == "AccessDeniedException":
+                raise PermissionError(
+                    f"Access denied to model {self.model_id}: {error_msg}"
+                )
+            elif error_code == "ResourceNotFoundException":
+                raise ValueError(f"Model {self.model_id} not found: {error_msg}")
+            elif error_code == "ThrottlingException":
+                raise RuntimeError(f"API throttled, please retry later: {error_msg}")
+            elif error_code == "ModelTimeoutException":
+                raise TimeoutError(f"Model request timed out: {error_msg}")
+            elif error_code == "ServiceQuotaExceededException":
+                raise RuntimeError(f"Service quota exceeded: {error_msg}")
+            elif error_code == "ModelNotReadyException":
+                raise RuntimeError(f"Model {self.model_id} not ready: {error_msg}")
+            elif error_code == "ModelErrorException":
+                raise RuntimeError(f"Model error: {error_msg}")
+            elif error_code == "InternalServerException":
+                raise RuntimeError(f"Internal server error: {error_msg}")
+            elif error_code == "ServiceUnavailableException":
+                raise RuntimeError(f"Service unavailable: {error_msg}")
+            else:
+                raise RuntimeError(f"Bedrock API error ({error_code}): {error_msg}")
+
+        except BotoCoreError as e:
+            error_msg = f"Bedrock connection error: {e}"
+            logging.error(error_msg)
+            raise ConnectionError(error_msg) from e
+        except Exception as e:
+            # Catch any other unexpected errors
+            error_msg = f"Unexpected error in Bedrock converse call: {e}"
             logging.error(error_msg)
             raise RuntimeError(error_msg) from e
 
-    def _handle_messages_completion(
+    def _handle_streaming_converse(
         self,
-        body: dict[str, Any],
-        available_functions: dict[str, Any] | None = None,
-        from_task: Any | None = None,
-        from_agent: Any | None = None,
-    ) -> str | Any:
-        """Handle non-streaming messages completion."""
-        try:
-            response = self.client.invoke_model(
-                modelId=self.model_id,
-                body=json.dumps(body),
-                accept="application/json",
-                contentType="application/json",
-            )
-
-            response_body = json.loads(response["body"].read())
-
-            # Track token usage if available
-            if "usage" in response_body:
-                self._track_token_usage_internal(response_body["usage"])
-
-            # Handle tool use
-            if "content" in response_body and available_functions:
-                for content_block in response_body["content"]:
-                    if content_block.get("type") == "tool_use":
-                        function_name = content_block.get("name")
-                        function_args = content_block.get("input", {})
-
-                        result = self._handle_tool_execution(
-                            function_name=function_name,
-                            function_args=function_args,
-                            available_functions=available_functions,
-                            from_task=from_task,
-                            from_agent=from_agent,
-                        )
-
-                        if result is not None:
-                            return result
-
-            # Extract text content
-            content = ""
-            if "content" in response_body:
-                for content_block in response_body["content"]:
-                    if content_block.get("type") == "text":
-                        content += content_block.get("text", "")
-
-            content = self._apply_stop_words(content)
-
-            self._emit_call_completed_event(
-                response=content,
-                call_type=LLMCallType.LLM_CALL,
-                from_task=from_task,
-                from_agent=from_agent,
-                messages=body.get("messages", []),
-            )
-
-            return content
-
-        except (ClientError, BotoCoreError) as e:
-            error_msg = f"Bedrock messages completion failed: {e}"
-            logging.error(error_msg)
-            raise RuntimeError(error_msg) from e
-
-    def _handle_streaming_text_completion(
-        self,
+        messages: list[dict[str, Any]],
         body: dict[str, Any],
         available_functions: dict[str, Any] | None = None,
         from_task: Any | None = None,
         from_agent: Any | None = None,
     ) -> str:
-        """Handle streaming text completion."""
+        """Handle streaming converse API call."""
         full_response = ""
 
         try:
-            response = self.client.invoke_model_with_response_stream(
-                modelId=self.model_id,
-                body=json.dumps(body),
-                accept="application/json",
-                contentType="application/json",
+            response = self.client.converse_stream(
+                modelId=self.model_id, messages=messages, **body
             )
 
-            stream = response.get("body")
+            stream = response.get("stream")
             if stream:
                 for event in stream:
-                    chunk = event.get("chunk")
-                    if chunk:
-                        chunk_data = json.loads(chunk.get("bytes").decode())
-                        if "completion" in chunk_data:
-                            text_chunk = chunk_data["completion"]
+                    if "contentBlockDelta" in event:
+                        delta = event["contentBlockDelta"]["delta"]
+                        if "text" in delta:
+                            text_chunk = delta["text"]
                             full_response += text_chunk
                             self._emit_stream_chunk_event(
                                 chunk=text_chunk,
                                 from_task=from_task,
                                 from_agent=from_agent,
                             )
+                    elif "messageStop" in event:
+                        # Handle end of message
+                        break
 
-        except (ClientError, BotoCoreError) as e:
-            error_msg = f"Bedrock streaming text completion failed: {e}"
+        except ClientError as e:
+            error_msg = self._handle_client_error(e)
+            raise RuntimeError(error_msg)
+        except BotoCoreError as e:
+            error_msg = f"Bedrock streaming connection error: {e}"
             logging.error(error_msg)
-            raise RuntimeError(error_msg) from e
+            raise ConnectionError(error_msg) from e
 
         # Apply stop words to full response
         full_response = self._apply_stop_words(full_response)
+
+        # Ensure we don't return empty content
+        if not full_response or full_response.strip() == "":
+            logging.warning("Bedrock streaming returned empty content, using fallback")
+            full_response = (
+                "I apologize, but I couldn't generate a response. Please try again."
+            )
 
         # Emit completion event
         self._emit_call_completed_event(
@@ -398,178 +358,146 @@ class BedrockCompletion(BaseLLM):
             call_type=LLMCallType.LLM_CALL,
             from_task=from_task,
             from_agent=from_agent,
-            messages=body.get("prompt", ""),
+            messages=messages,
         )
 
         return full_response
 
-    def _handle_streaming_messages(
-        self,
-        body: dict[str, Any],
-        available_functions: dict[str, Any] | None = None,
-        from_task: Any | None = None,
-        from_agent: Any | None = None,
-    ) -> str:
-        """Handle streaming messages completion."""
-        full_response = ""
-
-        try:
-            response = self.client.invoke_model_with_response_stream(
-                modelId=self.model_id,
-                body=json.dumps(body),
-                accept="application/json",
-                contentType="application/json",
-            )
-
-            stream = response.get("body")
-            if stream:
-                for event in stream:
-                    chunk = event.get("chunk")
-                    if chunk:
-                        chunk_data = json.loads(chunk.get("bytes").decode())
-
-                        # Handle content delta
-                        if "delta" in chunk_data and "text" in chunk_data["delta"]:
-                            text_chunk = chunk_data["delta"]["text"]
-                            full_response += text_chunk
-                            self._emit_stream_chunk_event(
-                                chunk=text_chunk,
-                                from_task=from_task,
-                                from_agent=from_agent,
-                            )
-
-                        # Handle tool use streaming (if supported)
-                        elif "content_block_delta" in chunk_data:
-                            delta = chunk_data["content_block_delta"]
-                            if delta.get("type") == "tool_use":
-                                # Handle tool use streaming
-                                pass  # Implementation depends on Bedrock streaming format
-
-        except (ClientError, BotoCoreError) as e:
-            error_msg = f"Bedrock streaming messages failed: {e}"
-            logging.error(error_msg)
-            raise RuntimeError(error_msg) from e
-
-        # Apply stop words to full response
-        full_response = self._apply_stop_words(full_response)
-
-        # Emit completion event
-        self._emit_call_completed_event(
-            response=full_response,
-            call_type=LLMCallType.LLM_CALL,
-            from_task=from_task,
-            from_agent=from_agent,
-            messages=body.get("messages", []),
-        )
-
-        return full_response
-
-    def _format_messages_for_text_completion(
+    def _format_messages_for_converse(
         self, messages: str | list[dict[str, str]]
-    ) -> str:
-        """Format messages for Claude Text Completion API.
-
-        Text Completion API expects a single prompt string with Human/Assistant format.
-        """
-        if isinstance(messages, str):
-            return f"\n\nHuman: {messages}\n\nAssistant:"
-
-        # Convert message list to Claude text completion format
-        formatted_messages = super()._format_messages(messages)
-        prompt_parts = []
-
-        for message in formatted_messages:
-            role = message.get("role", "user")
-            content = message.get("content", "")
-
-            if role == "system":
-                # System messages go at the beginning
-                prompt_parts.insert(0, content)
-            elif role == "user":
-                prompt_parts.append(f"\n\nHuman: {content}")
-            elif role == "assistant":
-                prompt_parts.append(f"\n\nAssistant: {content}")
-
-        # Ensure prompt ends with Assistant prompt
-        prompt = "".join(prompt_parts)
-        if not prompt.endswith("\n\nAssistant:"):
-            prompt += "\n\nAssistant:"
-
-        return prompt
-
-    def _format_messages_for_messages_api(
-        self, messages: str | list[dict[str, str]]
-    ) -> tuple[list[dict[str, str]], str | None]:
-        """Format messages for Claude Messages API.
-
-        Similar to Anthropic's format but adapted for Bedrock.
-        """
+    ) -> tuple[list[dict[str, Any]], str | None]:
+        """Format messages for Converse API following AWS documentation."""
         # Use base class formatting first
-        base_formatted = super()._format_messages(messages)
+        formatted_messages = self._format_messages(messages)
 
-        formatted_messages = []
+        converse_messages = []
         system_message = None
 
-        for message in base_formatted:
+        for message in formatted_messages:
             role = message.get("role")
             content = message.get("content", "")
 
             if role == "system":
-                # Extract system message - Bedrock handles it separately
+                # Extract system message - Converse API handles it separately
                 if system_message:
                     system_message += f"\n\n{content}"
                 else:
                     system_message = content
             else:
-                # Add user/assistant messages
-                role_str = role if role is not None else "user"
-                content_str = content if content is not None else ""
-                formatted_messages.append({"role": role_str, "content": content_str})
+                # Convert to Converse API format with proper content structure
+                converse_messages.append({"role": role, "content": [{"text": content}]})
 
-        # Ensure first message is from user (Claude requirement)
-        if not formatted_messages:
-            formatted_messages.append({"role": "user", "content": "Hello"})
-        elif formatted_messages[0]["role"] != "user":
-            formatted_messages.insert(0, {"role": "user", "content": "Hello"})
+        # CRITICAL: Handle model-specific conversation requirements
+        # Cohere and some other models require conversation to end with user message
+        if converse_messages:
+            last_message = converse_messages[-1]
+            if last_message["role"] == "assistant":
+                # For Cohere models, add a continuation user message
+                if "cohere" in self.model.lower():
+                    converse_messages.append(
+                        {
+                            "role": "user",
+                            "content": [
+                                {
+                                    "text": "Please continue and provide your final answer."
+                                }
+                            ],
+                        }
+                    )
+                # For other models that might have similar requirements
+                elif any(
+                    model_family in self.model.lower()
+                    for model_family in ["command", "coral"]
+                ):
+                    converse_messages.append(
+                        {
+                            "role": "user",
+                            "content": [{"text": "Continue your response."}],
+                        }
+                    )
 
-        return formatted_messages, system_message
+        # Ensure first message is from user (required by Converse API)
+        if not converse_messages:
+            converse_messages.append(
+                {
+                    "role": "user",
+                    "content": [{"text": "Hello, please help me with my request."}],
+                }
+            )
+        elif converse_messages[0]["role"] != "user":
+            converse_messages.insert(
+                0,
+                {
+                    "role": "user",
+                    "content": [{"text": "Hello, please help me with my request."}],
+                },
+            )
 
-    def _convert_tools_for_interference(self, tools: list[dict]) -> list[dict]:
-        """Convert CrewAI tool format to Bedrock tool format."""
+        return converse_messages, system_message
+
+    def _format_tools_for_converse(self, tools: list[dict]) -> list[dict]:
+        """Convert CrewAI tools to Converse API format following AWS specification."""
         from crewai.llms.providers.utils.common import safe_tool_conversion
 
-        bedrock_tools = []
+        converse_tools = []
 
         for tool in tools:
-            name, description, parameters = safe_tool_conversion(tool, "Bedrock")
+            try:
+                name, description, parameters = safe_tool_conversion(tool, "Bedrock")
 
-            bedrock_tool = {
-                "name": name,
-                "description": description,
-            }
+                # Follow AWS Converse API tool specification
+                converse_tool = {
+                    "toolSpec": {
+                        "name": name,
+                        "description": description,
+                    }
+                }
 
-            if parameters and isinstance(parameters, dict):
-                bedrock_tool["input_schema"] = parameters
+                # Add input schema if parameters exist
+                if parameters and isinstance(parameters, dict):
+                    converse_tool["toolSpec"]["inputSchema"] = {"json": parameters}
 
-            bedrock_tools.append(bedrock_tool)
+                converse_tools.append(converse_tool)
 
-        return bedrock_tools
+            except Exception as e:
+                logging.warning(
+                    f"Failed to convert tool {tool.get('name', 'unknown')}: {e}"
+                )
+                continue
+
+        return converse_tools
+
+    def _get_inference_config(self) -> dict[str, Any]:
+        """Get inference configuration following AWS Converse API specification."""
+        config = {}
+
+        # maxTokens is required for most models
+        if self.max_tokens:
+            config["maxTokens"] = self.max_tokens
+
+        # Optional parameters - only add if specified
+        if self.temperature is not None:
+            config["temperature"] = float(self.temperature)
+        if self.top_p is not None:
+            config["topP"] = float(self.top_p)
+        if self.stop_sequences:
+            config["stopSequences"] = self.stop_sequences
+
+        # Model-specific parameters
+        if self.is_claude_model and self.top_k is not None:
+            # top_k is supported by Claude models
+            config["topK"] = int(self.top_k)
+
+        return config
 
     def _get_model_or_inference_profile(self, model: str) -> str:
-        """Get the appropriate model ID or inference profile for Bedrock invocation.
-
-        Newer Claude models require inference profiles instead of direct model IDs
-        when using on-demand throughput.
-        """
-        # Mapping of newer Claude models to their inference profiles
+        """Get the appropriate model ID or inference profile for Bedrock invocation."""
+        # Mapping of newer models to their inference profiles
         inference_profile_mapping = {
-            # Claude 3.7 Sonnet (2025) - requires inference profile
             "anthropic.claude-3-7-sonnet-20250219-v1:0": "us.anthropic.claude-3-7-sonnet-20250219-v1:0",
-            # Add other newer models that require inference profiles here
-            # Format: "model_id": "inference_profile_id"
+            "deepseek.r1-v1:0": "us.deepseek.r1-v1:0",
         }
 
-        # Check if this model requires an inference profile
         if model in inference_profile_mapping:
             inference_profile = inference_profile_mapping[model]
             logging.info(
@@ -577,8 +505,41 @@ class BedrockCompletion(BaseLLM):
             )
             return inference_profile
 
-        # For older models or models that don't require inference profiles, use the model ID directly
         return model
+
+    def _handle_client_error(self, e: ClientError) -> str:
+        """Handle AWS ClientError with specific error codes and return error message."""
+        error_code = e.response.get("Error", {}).get("Code", "Unknown")
+        error_msg = e.response.get("Error", {}).get("Message", str(e))
+
+        error_mapping = {
+            "AccessDeniedException": f"Access denied to model {self.model_id}: {error_msg}",
+            "ResourceNotFoundException": f"Model {self.model_id} not found: {error_msg}",
+            "ThrottlingException": f"API throttled, please retry later: {error_msg}",
+            "ValidationException": f"Invalid request: {error_msg}",
+            "ModelTimeoutException": f"Model request timed out: {error_msg}",
+            "ServiceQuotaExceededException": f"Service quota exceeded: {error_msg}",
+            "ModelNotReadyException": f"Model {self.model_id} not ready: {error_msg}",
+            "ModelErrorException": f"Model error: {error_msg}",
+        }
+
+        full_error_msg = error_mapping.get(
+            error_code, f"Bedrock API error: {error_msg}"
+        )
+        logging.error(f"Bedrock client error ({error_code}): {full_error_msg}")
+
+        return full_error_msg
+
+    def _track_token_usage_internal(self, usage: dict[str, Any]) -> None:
+        """Track token usage from Bedrock response."""
+        input_tokens = usage.get("inputTokens", 0)
+        output_tokens = usage.get("outputTokens", 0)
+        total_tokens = usage.get("totalTokens", input_tokens + output_tokens)
+
+        self._token_usage["prompt_tokens"] += input_tokens
+        self._token_usage["completion_tokens"] += output_tokens
+        self._token_usage["total_tokens"] += total_tokens
+        self._token_usage["successful_requests"] += 1
 
     def supports_function_calling(self) -> bool:
         """Check if the model supports function calling."""
@@ -586,7 +547,7 @@ class BedrockCompletion(BaseLLM):
 
     def supports_stop_words(self) -> bool:
         """Check if the model supports stop words."""
-        return True  # Most Bedrock models support stop sequences
+        return True
 
     def get_context_window_size(self) -> int:
         """Get the context window size for the model."""
@@ -594,27 +555,20 @@ class BedrockCompletion(BaseLLM):
 
         # Context window sizes for common Bedrock models
         context_windows = {
-            # Anthropic Claude models
             "anthropic.claude-3-5-sonnet": 200000,
             "anthropic.claude-3-5-haiku": 200000,
             "anthropic.claude-3-opus": 200000,
             "anthropic.claude-3-sonnet": 200000,
             "anthropic.claude-3-haiku": 200000,
+            "anthropic.claude-3-7-sonnet": 200000,
             "anthropic.claude-v2": 100000,
-            "anthropic.claude-v2:1": 200000,
-            "anthropic.claude-instant": 100000,
-            # Amazon Titan models
             "amazon.titan-text-express": 8000,
-            "amazon.titan-text-lite": 4000,
-            # AI21 Jurassic models
             "ai21.j2-ultra": 8192,
-            "ai21.j2-mid": 8192,
-            # Cohere Command models
             "cohere.command-text": 4096,
-            "cohere.command-light-text": 4096,
-            # Meta Llama models
             "meta.llama2-13b-chat": 4096,
             "meta.llama2-70b-chat": 4096,
+            "meta.llama3-70b-instruct": 128000,
+            "deepseek.r1": 32768,
         }
 
         # Find the best match for the model name
@@ -624,34 +578,3 @@ class BedrockCompletion(BaseLLM):
 
         # Default context window size
         return int(8192 * CONTEXT_WINDOW_USAGE_RATIO)
-
-    def _extract_bedrock_token_usage(
-        self, response_body: dict[str, Any]
-    ) -> dict[str, Any]:
-        """Extract token usage from Bedrock response."""
-        usage = response_body.get("usage", {})
-
-        # Handle different response formats
-        if "input_tokens" in usage and "output_tokens" in usage:
-            # Messages API format
-            input_tokens = usage.get("input_tokens", 0)
-            output_tokens = usage.get("output_tokens", 0)
-            return {
-                "prompt_tokens": input_tokens,
-                "completion_tokens": output_tokens,
-                "total_tokens": input_tokens + output_tokens,
-            }
-        if (
-            "prompt_token_count" in response_body
-            and "generation_token_count" in response_body
-        ):
-            # Text completion format
-            prompt_tokens = response_body.get("prompt_token_count", 0)
-            completion_tokens = response_body.get("generation_token_count", 0)
-            return {
-                "prompt_tokens": prompt_tokens,
-                "completion_tokens": completion_tokens,
-                "total_tokens": prompt_tokens + completion_tokens,
-            }
-
-        return {"total_tokens": 0}
