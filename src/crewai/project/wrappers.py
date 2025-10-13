@@ -39,7 +39,6 @@ class DecoratedMethod(Generic[P, R]):
             meth: The method to wrap.
         """
         self._meth = meth
-        self._wrapped: Callable[P, R] | None = None
         # Preserve function metadata
         wraps(meth)(self)
 
@@ -58,8 +57,6 @@ class DecoratedMethod(Generic[P, R]):
         Returns:
             The result of calling the wrapped method.
         """
-        if self._wrapped:
-            return self._wrapped(*args, **kwargs)
         return self._meth(*args, **kwargs)
 
     def unwrap(self) -> Callable[P, R]:
@@ -95,7 +92,6 @@ class TaskMethod(Generic[P, TaskResultT]):
             meth: The method to wrap.
         """
         self._meth = meth
-        self._wrapped: Callable[P, TaskResultT] | None = None
         # Preserve function metadata
         wraps(meth)(self)
 
@@ -114,11 +110,7 @@ class TaskMethod(Generic[P, TaskResultT]):
         Returns:
             The task instance with name set if not already provided.
         """
-        if self._wrapped:
-            result = self._wrapped(*args, **kwargs)
-        else:
-            result = self._meth(*args, **kwargs)
-
+        result = self._meth(*args, **kwargs)
         if not result.name:
             result.name = self._meth.__name__
         return result
@@ -166,3 +158,90 @@ class CrewMethod(DecoratedMethod[P, R]):
     """Wrapper for methods marked as the main crew execution point."""
 
     is_crew: bool = True
+
+
+T = TypeVar("T")
+
+
+class OutputJsonClass(Generic[T]):
+    """Wrapper for classes marked as JSON output format."""
+
+    is_output_json: bool = True
+
+    def __init__(self, cls: type[T]) -> None:
+        """Initialize the output JSON class wrapper.
+
+        Args:
+            cls: The class to wrap.
+        """
+        self._cls = cls
+        # Copy class attributes
+        self.__name__ = cls.__name__
+        self.__qualname__ = cls.__qualname__
+        self.__module__ = cls.__module__
+        self.__doc__ = cls.__doc__
+
+    def __call__(self, *args, **kwargs) -> T:
+        """Create an instance of the wrapped class.
+
+        Args:
+            *args: Positional arguments for the class constructor.
+            **kwargs: Keyword arguments for the class constructor.
+
+        Returns:
+            An instance of the wrapped class.
+        """
+        return self._cls(*args, **kwargs)
+
+    def __getattr__(self, name: str):
+        """Delegate attribute access to the wrapped class.
+
+        Args:
+            name: The attribute name.
+
+        Returns:
+            The attribute from the wrapped class.
+        """
+        return getattr(self._cls, name)
+
+
+class OutputPydanticClass(Generic[T]):
+    """Wrapper for classes marked as Pydantic output format."""
+
+    is_output_pydantic: bool = True
+
+    def __init__(self, cls: type[T]) -> None:
+        """Initialize the output Pydantic class wrapper.
+
+        Args:
+            cls: The class to wrap.
+        """
+        self._cls = cls
+        # Copy class attributes
+        self.__name__ = cls.__name__
+        self.__qualname__ = cls.__qualname__
+        self.__module__ = cls.__module__
+        self.__doc__ = cls.__doc__
+
+    def __call__(self, *args, **kwargs) -> T:
+        """Create an instance of the wrapped class.
+
+        Args:
+            *args: Positional arguments for the class constructor.
+            **kwargs: Keyword arguments for the class constructor.
+
+        Returns:
+            An instance of the wrapped class.
+        """
+        return self._cls(*args, **kwargs)
+
+    def __getattr__(self, name: str):
+        """Delegate attribute access to the wrapped class.
+
+        Args:
+            name: The attribute name.
+
+        Returns:
+            The attribute from the wrapped class.
+        """
+        return getattr(self._cls, name)

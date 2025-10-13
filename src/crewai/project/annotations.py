@@ -13,6 +13,8 @@ from crewai.project.wrappers import (
     CacheHandlerMethod,
     CallbackMethod,
     LLMMethod,
+    OutputJsonClass,
+    OutputPydanticClass,
     TaskMethod,
     TaskResultT,
     ToolMethod,
@@ -20,6 +22,7 @@ from crewai.project.wrappers import (
 
 P = ParamSpec("P")
 R = TypeVar("R")
+T = TypeVar("T")
 
 
 def before_kickoff(meth: Callable[P, R]) -> BeforeKickoffMethod[P, R]:
@@ -55,9 +58,7 @@ def task(meth: Callable[P, TaskResultT]) -> TaskMethod[P, TaskResultT]:
     Returns:
         A wrapped method marked as a task with memoization.
     """
-    wrapped = TaskMethod(meth)
-    wrapped._wrapped = memoize(wrapped._meth)
-    return wrapped
+    return TaskMethod(memoize(meth))
 
 
 def agent(meth: Callable[P, R]) -> AgentMethod[P, R]:
@@ -69,9 +70,7 @@ def agent(meth: Callable[P, R]) -> AgentMethod[P, R]:
     Returns:
         A wrapped method marked as an agent with memoization.
     """
-    wrapped = AgentMethod(meth)
-    wrapped._wrapped = memoize(wrapped._meth)
-    return wrapped
+    return AgentMethod(memoize(meth))
 
 
 def llm(meth: Callable[P, R]) -> LLMMethod[P, R]:
@@ -83,35 +82,31 @@ def llm(meth: Callable[P, R]) -> LLMMethod[P, R]:
     Returns:
         A wrapped method marked as an LLM provider with memoization.
     """
-    wrapped = LLMMethod(meth)
-    wrapped._wrapped = memoize(wrapped._meth)
-    return wrapped
+    return LLMMethod(memoize(meth))
 
 
-def output_json(cls):
+def output_json(cls: type[T]) -> OutputJsonClass[T]:
     """Marks a class as JSON output format.
 
     Args:
         cls: The class to mark.
 
     Returns:
-        The class with is_output_json attribute set.
+        A wrapped class marked as JSON output format.
     """
-    cls.is_output_json = True
-    return cls
+    return OutputJsonClass(cls)
 
 
-def output_pydantic(cls):
+def output_pydantic(cls: type[T]) -> OutputPydanticClass[T]:
     """Marks a class as Pydantic output format.
 
     Args:
         cls: The class to mark.
 
     Returns:
-        The class with is_output_pydantic attribute set.
+        A wrapped class marked as Pydantic output format.
     """
-    cls.is_output_pydantic = True
-    return cls
+    return OutputPydanticClass(cls)
 
 
 def tool(meth: Callable[P, R]) -> ToolMethod[P, R]:
@@ -123,9 +118,7 @@ def tool(meth: Callable[P, R]) -> ToolMethod[P, R]:
     Returns:
         A wrapped method marked as a tool with memoization.
     """
-    wrapped = ToolMethod(meth)
-    wrapped._wrapped = memoize(wrapped._meth)
-    return wrapped
+    return ToolMethod(memoize(meth))
 
 
 def callback(meth: Callable[P, R]) -> CallbackMethod[P, R]:
@@ -137,9 +130,7 @@ def callback(meth: Callable[P, R]) -> CallbackMethod[P, R]:
     Returns:
         A wrapped method marked as a callback with memoization.
     """
-    wrapped = CallbackMethod(meth)
-    wrapped._wrapped = memoize(wrapped._meth)
-    return wrapped
+    return CallbackMethod(memoize(meth))
 
 
 def cache_handler(meth: Callable[P, R]) -> CacheHandlerMethod[P, R]:
@@ -151,9 +142,7 @@ def cache_handler(meth: Callable[P, R]) -> CacheHandlerMethod[P, R]:
     Returns:
         A wrapped method marked as a cache handler with memoization.
     """
-    wrapped = CacheHandlerMethod(meth)
-    wrapped._wrapped = memoize(wrapped._meth)
-    return wrapped
+    return CacheHandlerMethod(memoize(meth))
 
 
 def crew(meth) -> Callable[..., Crew]:
