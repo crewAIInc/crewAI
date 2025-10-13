@@ -462,6 +462,8 @@ class Task(BaseModel):
                     guardrail=self._guardrail,
                     retry_count=self.retry_count,
                     event_source=self,
+                    from_task=self,
+                    from_agent=agent,
                 )
                 if not guardrail_result.success:
                     if self.retry_count >= self.guardrail_max_retries:

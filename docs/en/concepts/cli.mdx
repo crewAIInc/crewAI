@@ -5,7 +5,7 @@ icon: terminal
 mode: "wide"
 ---
 
-<Warning>Since release 0.140.0, CrewAI Enterprise started a process of migrating their login provider. As such, the authentication flow via CLI was updated. Users that use Google to login, or that created their account after July 3rd, 2025 will be unable to log in with older versions of the `crewai` library.</Warning>
+<Warning>Since release 0.140.0, CrewAI AMP started a process of migrating their login provider. As such, the authentication flow via CLI was updated. Users that use Google to login, or that created their account after July 3rd, 2025 will be unable to log in with older versions of the `crewai` library.</Warning>
 
 ## Overview
 
@@ -186,9 +186,9 @@ def crew(self) -> Crew:
 
 ### 10. Deploy
 
-Deploy the crew or flow to [CrewAI Enterprise](https://app.crewai.com).
+Deploy the crew or flow to [CrewAI AMP](https://app.crewai.com).
 
-- **Authentication**: You need to be authenticated to deploy to CrewAI Enterprise.
+- **Authentication**: You need to be authenticated to deploy to CrewAI AMP.
     You can login or create an account with:
     ```shell Terminal
     crewai login
@@ -203,7 +203,7 @@ Deploy the crew or flow to [CrewAI Enterprise](https://app.crewai.com).
 
 ### 11. Organization Management
 
-Manage your CrewAI Enterprise organizations.
+Manage your CrewAI AMP organizations.
 
 ```shell Terminal
 crewai org [COMMAND] [OPTIONS]
@@ -227,17 +227,17 @@ crewai org switch <organization_id>
 ```
 
 <Note>
-You must be authenticated to CrewAI Enterprise to use these organization management commands.
+You must be authenticated to CrewAI AMP to use these organization management commands.
 </Note>
 
 - **Create a deployment** (continued):
     - Links the deployment to the corresponding remote GitHub repository (it usually detects this automatically).
 
-- **Deploy the Crew**: Once you are authenticated, you can deploy your crew or flow to CrewAI Enterprise.
+- **Deploy the Crew**: Once you are authenticated, you can deploy your crew or flow to CrewAI AMP.
     ```shell Terminal
     crewai deploy push
     ```
-    - Initiates the deployment process on the CrewAI Enterprise platform.
+    - Initiates the deployment process on the CrewAI AMP platform.
     - Upon successful initiation, it will output the Deployment created successfully! message along with the Deployment Name and a unique Deployment ID (UUID).
 
 - **Deployment Status**: You can check the status of your deployment with:
@@ -262,7 +262,7 @@ You must be authenticated to CrewAI Enterprise to use these organization managem
     ```shell Terminal
     crewai deploy remove
     ```
-    This deletes the deployment from the CrewAI Enterprise platform.
+    This deletes the deployment from the CrewAI AMP platform.
 
 - **Help Command**: You can get help with the CLI with:
     ```shell Terminal
@@ -270,22 +270,20 @@ You must be authenticated to CrewAI Enterprise to use these organization managem
     ```
     This shows the help message for the CrewAI Deploy CLI.
 
-Watch this video tutorial for a step-by-step demonstration of deploying your crew to [CrewAI Enterprise](http://app.crewai.com) using the CLI.
+Watch this video tutorial for a step-by-step demonstration of deploying your crew to [CrewAI AMP](http://app.crewai.com) using the CLI.
 
 <iframe
-  width="100%"
-  height="400"
+  className="w-full aspect-video rounded-xl"
   src="https://www.youtube.com/embed/3EqSV-CYDZA"
   title="CrewAI Deployment Guide"
-  frameborder="0"
-  style={{ borderRadius: '10px' }}
+  frameBorder="0"
   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-  allowfullscreen
+  allowFullScreen
 ></iframe>
 
 ### 11. Login
 
-Authenticate with CrewAI Enterprise using a secure device code flow (no email entry required).
+Authenticate with CrewAI AMP using a secure device code flow (no email entry required).
 
 ```shell Terminal
 crewai login
@@ -356,7 +354,7 @@ crewai config reset
 
 #### Available Configuration Parameters
 
-- `enterprise_base_url`: Base URL of the CrewAI Enterprise instance
+- `enterprise_base_url`: Base URL of the CrewAI AMP instance
 - `oauth2_provider`: OAuth2 provider used for authentication (e.g., workos, okta, auth0)
 - `oauth2_audience`: OAuth2 audience value, typically used to identify the target API or resource
 - `oauth2_client_id`: OAuth2 client ID issued by the provider, used during authentication requests
@@ -372,7 +370,7 @@ crewai config list
 Example output:
 | Setting             | Value                    | Description                                                 |
 | :------------------ | :----------------------- | :---------------------------------------------------------- |
-| enterprise_base_url | https://app.crewai.com   | Base URL of the CrewAI Enterprise instance                  |
+| enterprise_base_url | https://app.crewai.com   | Base URL of the CrewAI AMP instance                  |
 | org_name            | Not set                  | Name of the currently active organization                   |
 | org_uuid            | Not set                  | UUID of the currently active organization                   |
 | oauth2_provider     | workos                   | OAuth2 provider (e.g., workos, okta, auth0)                 |

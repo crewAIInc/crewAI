@@ -40,6 +40,28 @@ Human-in-the-Loop (HITL) é uma abordagem poderosa que combina a inteligência a
         <Frame>
             <img src="/images/enterprise/crew-resume-endpoint.png" alt="Endpoint de Retomada Crew" />
         </Frame>
+
+        <Warning>
+            **Crítico: URLs de Webhook Devem Ser Fornecidas Novamente**:
+            Você **deve** fornecer as mesmas URLs de webhook (`taskWebhookUrl`, `stepWebhookUrl`, `crewWebhookUrl`) na chamada de resume que você usou na chamada de kickoff. As configurações de webhook **NÃO** são automaticamente transferidas do kickoff - elas devem ser explicitamente incluídas na solicitação de resume para continuar recebendo notificações de conclusão de tarefa, etapas do agente e conclusão do crew.
+        </Warning>
+
+        Exemplo de chamada resume com webhooks:
+        ```bash
+        curl -X POST {BASE_URL}/resume \
+          -H "Authorization: Bearer YOUR_API_TOKEN" \
+          -H "Content-Type: application/json" \
+          -d '{
+            "execution_id": "abcd1234-5678-90ef-ghij-klmnopqrstuv",
+            "task_id": "research_task",
+            "human_feedback": "Ótimo trabalho! Por favor, adicione mais detalhes.",
+            "is_approve": true,
+            "taskWebhookUrl": "https://your-server.com/webhooks/task",
+            "stepWebhookUrl": "https://your-server.com/webhooks/step",
+            "crewWebhookUrl": "https://your-server.com/webhooks/crew"
+          }'
+        ```
+
         <Warning>
             **Impacto do Feedback na Execução da Tarefa**:
             É fundamental ter cuidado ao fornecer feedback, pois todo o conteúdo do feedback será incorporado como contexto adicional para execuções futuras da tarefa.

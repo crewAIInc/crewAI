@@ -13,6 +13,7 @@ from crewai.events.types.memory_events import (
 from crewai.memory.external.external_memory_item import ExternalMemoryItem
 from crewai.memory.memory import Memory
 from crewai.memory.storage.interface import Storage
+from crewai.rag.embeddings.types import ProviderSpec
 
 if TYPE_CHECKING:
     from crewai.memory.storage.mem0_storage import Mem0Storage
@@ -35,7 +36,9 @@ class ExternalMemory(Memory):
         }
 
     @staticmethod
-    def create_storage(crew: Any, embedder_config: dict[str, Any] | None) -> Storage:
+    def create_storage(
+        crew: Any, embedder_config: dict[str, Any] | ProviderSpec | None
+    ) -> Storage:
         if not embedder_config:
             raise ValueError("embedder_config is required")
 
@@ -159,6 +162,6 @@ class ExternalMemory(Memory):
         super().set_crew(crew)
 
         if not self.storage:
-            self.storage = self.create_storage(crew, self.embedder_config)
+            self.storage = self.create_storage(crew, self.embedder_config)  # type: ignore[arg-type]
 
         return self

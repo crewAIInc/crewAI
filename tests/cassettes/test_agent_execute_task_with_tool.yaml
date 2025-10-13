@@ -237,4 +237,94 @@ interactions:
       - req_cdc7b25a3877bb9a7cb7c6d2645ff447
     http_version: HTTP/1.1
     status_code: 200
+- request:
+    body: '{"trace_id": "1581aff1-2567-43f4-a1f2-a2816533eb7d", "execution_type":
+      "crew", "user_identifier": null, "execution_context": {"crew_fingerprint": null,
+      "crew_name": "Unknown Crew", "flow_name": null, "crewai_version": "0.201.1",
+      "privacy_level": "standard"}, "execution_metadata": {"expected_duration_estimate":
+      300, "agent_count": 0, "task_count": 0, "flow_method_count": 0, "execution_started_at":
+      "2025-10-08T18:11:28.008595+00:00"}}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate, zstd
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '436'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - CrewAI-CLI/0.201.1
+      X-Crewai-Organization-Id:
+      - d3a3d10c-35db-423f-a7a4-c026030ba64d
+      X-Crewai-Version:
+      - 0.201.1
+    method: POST
+    uri: http://localhost:3000/crewai_plus/api/v1/tracing/batches
+  response:
+    body:
+      string: '{"id":"30844ebe-8ac6-4f67-939a-7a072d792654","trace_id":"1581aff1-2567-43f4-a1f2-a2816533eb7d","execution_type":"crew","crew_name":"Unknown
+        Crew","flow_name":null,"status":"running","duration_ms":null,"crewai_version":"0.201.1","privacy_level":"standard","total_events":0,"execution_context":{"crew_fingerprint":null,"crew_name":"Unknown
+        Crew","flow_name":null,"crewai_version":"0.201.1","privacy_level":"standard"},"created_at":"2025-10-08T18:11:28.353Z","updated_at":"2025-10-08T18:11:28.353Z"}'
+    headers:
+      Content-Length:
+      - '496'
+      cache-control:
+      - no-store
+      content-security-policy:
+      - 'default-src ''self'' *.crewai.com crewai.com; script-src ''self'' ''unsafe-inline''
+        *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts https://www.gstatic.com
+        https://run.pstmn.io https://apis.google.com https://apis.google.com/js/api.js
+        https://accounts.google.com https://accounts.google.com/gsi/client https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css.map
+        https://*.google.com https://docs.google.com https://slides.google.com https://js.hs-scripts.com
+        https://js.sentry-cdn.com https://browser.sentry-cdn.com https://www.googletagmanager.com
+        https://js-na1.hs-scripts.com https://share.descript.com/; style-src ''self''
+        ''unsafe-inline'' *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts;
+        img-src ''self'' data: *.crewai.com crewai.com https://zeus.tools.crewai.com
+        https://dashboard.tools.crewai.com https://cdn.jsdelivr.net; font-src ''self''
+        data: *.crewai.com crewai.com; connect-src ''self'' *.crewai.com crewai.com
+        https://zeus.tools.crewai.com https://connect.useparagon.com/ https://zeus.useparagon.com/*
+        https://*.useparagon.com/* https://run.pstmn.io https://connect.tools.crewai.com/
+        https://*.sentry.io https://www.google-analytics.com ws://localhost:3036 wss://localhost:3036;
+        frame-src ''self'' *.crewai.com crewai.com https://connect.useparagon.com/
+        https://zeus.tools.crewai.com https://zeus.useparagon.com/* https://connect.tools.crewai.com/
+        https://docs.google.com https://drive.google.com https://slides.google.com
+        https://accounts.google.com https://*.google.com https://www.youtube.com https://share.descript.com'
+      content-type:
+      - application/json; charset=utf-8
+      etag:
+      - W/"a548892c6a8a52833595a42b35b10009"
+      expires:
+      - '0'
+      permissions-policy:
+      - camera=(), microphone=(self), geolocation=()
+      pragma:
+      - no-cache
+      referrer-policy:
+      - strict-origin-when-cross-origin
+      server-timing:
+      - cache_read.active_support;dur=0.05, cache_fetch_hit.active_support;dur=0.00,
+        cache_read_multi.active_support;dur=0.12, start_processing.action_controller;dur=0.00,
+        sql.active_record;dur=30.46, instantiation.active_record;dur=0.38, feature_operation.flipper;dur=0.03,
+        start_transaction.active_record;dur=0.01, transaction.active_record;dur=16.78,
+        process_action.action_controller;dur=309.67
+      vary:
+      - Accept
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-permitted-cross-domain-policies:
+      - none
+      x-request-id:
+      - 7ec132be-e871-4b0a-93f7-81f8d7c0ccae
+      x-runtime:
+      - '0.358533'
+      x-xss-protection:
+      - 1; mode=block
+    status:
+      code: 201
+      message: Created
 version: 1

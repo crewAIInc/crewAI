@@ -1,7 +1,7 @@
-import jwt
 import unittest
 from unittest.mock import MagicMock, patch
 
+import jwt
 
 from crewai.cli.authentication.utils import validate_jwt_token
 
@@ -17,19 +17,22 @@ class TestUtils(unittest.TestCase):
             key="mock_signing_key"
         )
 
+        jwt_token = "aaaaa.bbbbbb.cccccc"  # noqa: S105
+
         decoded_token = validate_jwt_token(
-            jwt_token="aaaaa.bbbbbb.cccccc",
+            jwt_token=jwt_token,
             jwks_url="https://mock_jwks_url",
             issuer="https://mock_issuer",
             audience="app_id_xxxx",
         )
 
         mock_jwt.decode.assert_called_with(
-            "aaaaa.bbbbbb.cccccc",
+            jwt_token,
             "mock_signing_key",
             algorithms=["RS256"],
             audience="app_id_xxxx",
             issuer="https://mock_issuer",
+            leeway=10.0,
             options={
                 "verify_signature": True,
                 "verify_exp": True,
@@ -43,9 +46,9 @@ class TestUtils(unittest.TestCase):
 
     def test_validate_jwt_token_expired(self, mock_jwt, mock_pyjwkclient):
         mock_jwt.decode.side_effect = jwt.ExpiredSignatureError
-        with self.assertRaises(Exception):
+        with self.assertRaises(Exception):  # noqa: B017
             validate_jwt_token(
-                jwt_token="aaaaa.bbbbbb.cccccc",
+                jwt_token="aaaaa.bbbbbb.cccccc",  # noqa: S106
                 jwks_url="https://mock_jwks_url",
                 issuer="https://mock_issuer",
                 audience="app_id_xxxx",
@@ -53,9 +56,9 @@ class TestUtils(unittest.TestCase):
 
     def test_validate_jwt_token_invalid_audience(self, mock_jwt, mock_pyjwkclient):
         mock_jwt.decode.side_effect = jwt.InvalidAudienceError
-        with self.assertRaises(Exception):
+        with self.assertRaises(Exception):  # noqa: B017
             validate_jwt_token(
-                jwt_token="aaaaa.bbbbbb.cccccc",
+                jwt_token="aaaaa.bbbbbb.cccccc",  # noqa: S106
                 jwks_url="https://mock_jwks_url",
                 issuer="https://mock_issuer",
                 audience="app_id_xxxx",
@@ -63,9 +66,9 @@ class TestUtils(unittest.TestCase):
 
     def test_validate_jwt_token_invalid_issuer(self, mock_jwt, mock_pyjwkclient):
         mock_jwt.decode.side_effect = jwt.InvalidIssuerError
-        with self.assertRaises(Exception):
+        with self.assertRaises(Exception):  # noqa: B017
             validate_jwt_token(
-                jwt_token="aaaaa.bbbbbb.cccccc",
+                jwt_token="aaaaa.bbbbbb.cccccc",  # noqa: S106
                 jwks_url="https://mock_jwks_url",
                 issuer="https://mock_issuer",
                 audience="app_id_xxxx",
@@ -75,9 +78,9 @@ class TestUtils(unittest.TestCase):
         self, mock_jwt, mock_pyjwkclient
     ):
         mock_jwt.decode.side_effect = jwt.MissingRequiredClaimError
-        with self.assertRaises(Exception):
+        with self.assertRaises(Exception):  # noqa: B017
             validate_jwt_token(
-                jwt_token="aaaaa.bbbbbb.cccccc",
+                jwt_token="aaaaa.bbbbbb.cccccc",  # noqa: S106
                 jwks_url="https://mock_jwks_url",
                 issuer="https://mock_issuer",
                 audience="app_id_xxxx",
@@ -85,9 +88,9 @@ class TestUtils(unittest.TestCase):
 
     def test_validate_jwt_token_jwks_error(self, mock_jwt, mock_pyjwkclient):
         mock_jwt.decode.side_effect = jwt.exceptions.PyJWKClientError
-        with self.assertRaises(Exception):
+        with self.assertRaises(Exception):  # noqa: B017
             validate_jwt_token(
-                jwt_token="aaaaa.bbbbbb.cccccc",
+                jwt_token="aaaaa.bbbbbb.cccccc",  # noqa: S106
                 jwks_url="https://mock_jwks_url",
                 issuer="https://mock_issuer",
                 audience="app_id_xxxx",
@@ -95,9 +98,9 @@ class TestUtils(unittest.TestCase):
 
     def test_validate_jwt_token_invalid_token(self, mock_jwt, mock_pyjwkclient):
         mock_jwt.decode.side_effect = jwt.InvalidTokenError
-        with self.assertRaises(Exception):
+        with self.assertRaises(Exception):  # noqa: B017
             validate_jwt_token(
-                jwt_token="aaaaa.bbbbbb.cccccc",
+                jwt_token="aaaaa.bbbbbb.cccccc",  # noqa: S106
                 jwks_url="https://mock_jwks_url",
                 issuer="https://mock_issuer",
                 audience="app_id_xxxx",

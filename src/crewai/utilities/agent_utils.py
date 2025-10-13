@@ -31,6 +31,7 @@ from crewai.utilities.types import LLMMessage
 
 if TYPE_CHECKING:
     from crewai.agent import Agent
+    from crewai.lite_agent import LiteAgent
     from crewai.task import Task
 
 
@@ -222,7 +223,7 @@ def get_llm_response(
     callbacks: list[Callable[..., Any]],
     printer: Printer,
     from_task: Task | None = None,
-    from_agent: Agent | None = None,
+    from_agent: Agent | LiteAgent | None = None,
 ) -> str:
     """Call the LLM and return the response, handling any invalid responses.
 

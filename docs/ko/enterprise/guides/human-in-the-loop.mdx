@@ -40,6 +40,28 @@ mode: "wide"
         <Frame>
             <img src="/images/enterprise/crew-resume-endpoint.png" alt="Crew Resume Endpoint" />
         </Frame>
+
+        <Warning>
+            **중요: Webhook URL을 다시 제공해야 합니다**:
+            kickoff 호출에서 사용한 것과 동일한 webhook URL(`taskWebhookUrl`, `stepWebhookUrl`, `crewWebhookUrl`)을 resume 호출에서 **반드시** 제공해야 합니다. Webhook 설정은 kickoff에서 자동으로 전달되지 **않으므로**, 작업 완료, 에이전트 단계, crew 완료에 대한 알림을 계속 받으려면 resume 요청에 명시적으로 포함해야 합니다.
+        </Warning>
+
+        Webhook을 포함한 resume 호출 예시:
+        ```bash
+        curl -X POST {BASE_URL}/resume \
+          -H "Authorization: Bearer YOUR_API_TOKEN" \
+          -H "Content-Type: application/json" \
+          -d '{
+            "execution_id": "abcd1234-5678-90ef-ghij-klmnopqrstuv",
+            "task_id": "research_task",
+            "human_feedback": "훌륭한 작업입니다! 더 자세한 내용을 추가해주세요.",
+            "is_approve": true,
+            "taskWebhookUrl": "https://your-server.com/webhooks/task",
+            "stepWebhookUrl": "https://your-server.com/webhooks/step",
+            "crewWebhookUrl": "https://your-server.com/webhooks/crew"
+          }'
+        ```
+
         <Warning>
             **피드백이 작업 실행에 미치는 영향**:
             피드백 전체 내용이 이후 작업 실행을 위한 추가 컨텍스트로 통합되므로 피드백 제공 시 신중함이 매우 중요합니다.

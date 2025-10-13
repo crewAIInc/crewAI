@@ -1,0 +1,103 @@
+---
+title: "Automações"
+description: "Gerencie, implante e monitore seus crews (automações) em um só lugar."
+icon: "rocket"
+mode: "wide"
+---
+
+## Visão geral
+
+Automações é o hub operacional para seus crews implantados. Use para implantar via GitHub ou arquivo ZIP, gerenciar variáveis de ambiente, reimplantar quando necessário e monitorar o status de cada automação.
+
+<Frame>
+  ![Visão Geral de Automações](/images/enterprise/automations-overview.png)
+</Frame>
+
+## Métodos de implantação
+
+### Implantar via GitHub
+
+Use para projetos versionados e implantação contínua.
+
+<Steps>
+  <Step title="Conectar GitHub">
+    Clique em <b>Configure GitHub</b> e autorize o acesso.
+  </Step>
+  <Step title="Selecionar Repositório & Branch">
+    Escolha o <b>Repositório</b> e a <b>Branch</b> que deseja implantar.
+  </Step>
+  <Step title="Ativar Auto‑deploy (opcional)">
+    Ative <b>Automatically deploy new commits</b> para publicar a cada push.
+  </Step>
+  <Step title="Adicionar Variáveis de Ambiente">
+    Adicione segredos individualmente ou use <b>Bulk View</b> para múltiplas variáveis.
+  </Step>
+  <Step title="Implantar">
+    Clique em <b>Deploy</b> para criar sua automação.
+  </Step>
+</Steps>
+
+<Frame>
+  ![Implantação via GitHub](/images/enterprise/deploy-from-github.png)
+</Frame>
+
+### Implantar via ZIP
+
+Envie rapidamente sem Git — faça upload de um pacote ZIP do projeto.
+
+<Steps>
+  <Step title="Escolher arquivo">
+    Selecione o arquivo ZIP do seu computador.
+  </Step>
+  <Step title="Adicionar Variáveis de Ambiente">
+    Informe as variáveis necessárias.
+  </Step>
+  <Step title="Implantar">
+    Clique em <b>Deploy</b> para criar sua automação.
+  </Step>
+</Steps>
+
+<Frame>
+  ![Implantação via ZIP](/images/enterprise/deploy-from-zip.png)
+</Frame>
+
+## Painel de Automações
+
+A tabela lista todas as automações com detalhes chave:
+
+- **CREW**: Nome da automação
+- **STATUS**: Online / Failed / In Progress
+- **URL**: Endpoint para kickoff/status
+- **TOKEN**: Token da automação
+- **ACTIONS**: Re‑deploy, delete e outros
+
+Use os controles no canto superior direito para filtrar e pesquisar:
+
+- Pesquisar por nome
+- Filtrar por <b>Status</b>
+- Filtrar por <b>Source</b> (GitHub / Studio / ZIP)
+
+Após implantar, você pode ver os detalhes da automação e usar o menu **Options** para `chat with this crew`, `Export React Component` e `Export as MCP`.
+
+<Frame>
+  ![Tabela de Automações](/images/enterprise/automations-table.png)
+</Frame>
+
+## Boas práticas
+
+- Prefira implantações via GitHub para controle de versão e CI/CD
+- Use re‑deploy para avançar após mudanças de código/config ou habilite auto‑deploy a cada push
+
+## Relacionados
+
+<CardGroup cols={3}>
+  <Card title="Implantar um Crew" href="/pt-BR/enterprise/guides/deploy-crew" icon="rocket">
+    Implante um Crew via GitHub ou arquivo ZIP.
+  </Card>
+  <Card title="Gatilhos de Automação" href="/pt-BR/enterprise/guides/automation-triggers" icon="trigger">
+    Dispare automações por webhooks ou API.
+  </Card>
+  <Card title="Automação com Webhook" href="/pt-BR/enterprise/guides/webhook-automation" icon="webhook">
+    Transmita eventos e atualizações em tempo real.
+  </Card>
+</CardGroup>

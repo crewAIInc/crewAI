@@ -1,11 +1,15 @@
 ---
 title: 'Agent Repositories'
 description: 'Learn how to use Agent Repositories to share and reuse your agents across teams and projects'
-icon: 'database'
+icon: 'people-group'
 mode: "wide"
 ---
 
 Agent Repositories allow enterprise users to store, share, and reuse agent definitions across teams and projects. This feature enables organizations to maintain a centralized library of standardized agents, promoting consistency and reducing duplication of effort.
+
+<Frame>
+  ![Agent Repositories](/images/enterprise/agent-repositories.png)
+</Frame>
 
 ## Benefits of Agent Repositories
 
@@ -14,25 +18,21 @@ Agent Repositories allow enterprise users to store, share, and reuse agent defin
 - **Governance**: Implement organization-wide policies for agent configurations
 - **Collaboration**: Enable teams to share and build upon each other's work
 
-## Using Agent Repositories
-
-### Prerequisites
+## Creating and Use Agent Repositories
 
 1. You must have an account at CrewAI, try the [free plan](https://app.crewai.com).
-2. You need to be authenticated using the CrewAI CLI.
-3. If you have more than one organization, make sure you are switched to the correct organization using the CLI command:
+2. Create agents with specific roles and goals for your workflows.
+3. Configure tools and capabilities for each specialized assistant.
+4. Deploy agents across projects via visual interface or API integration.
 
-```bash
-crewai org switch <org_id>
-```
+<Frame>
+  ![Agent Repositories](/images/enterprise/create-agent-repository.png)
+</Frame>
 
-### Creating and Managing Agents in Repositories
-
-To create and manage agents in repositories,Enterprise Dashboard.
 
 ### Loading Agents from Repositories
 
-You can load agents from repositories in your code using the `from_repository` parameter:
+You can load agents from repositories in your code using the `from_repository` parameter to run locally:
 
 ```python
 from crewai import Agent
@@ -42,7 +42,6 @@ from crewai import Agent
 researcher = Agent(
     from_repository="market-research-agent"
 )
-
 ```
 
 ### Overriding Repository Settings

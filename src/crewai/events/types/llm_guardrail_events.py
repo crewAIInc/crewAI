@@ -5,7 +5,21 @@ from typing import Any
 from crewai.events.base_events import BaseEvent
 
 
-class LLMGuardrailStartedEvent(BaseEvent):
+class LLMGuardrailBaseEvent(BaseEvent):
+    task_id: str | None = None
+    task_name: str | None = None
+    from_task: Any | None = None
+    from_agent: Any | None = None
+    agent_role: str | None = None
+    agent_id: str | None = None
+
+    def __init__(self, **data):
+        super().__init__(**data)
+        self._set_agent_params(data)
+        self._set_task_params(data)
+
+
+class LLMGuardrailStartedEvent(LLMGuardrailBaseEvent):
     """Event emitted when a guardrail task starts
 
     Attributes:
@@ -29,7 +43,7 @@ class LLMGuardrailStartedEvent(BaseEvent):
             self.guardrail = getsource(self.guardrail).strip()
 
 
-class LLMGuardrailCompletedEvent(BaseEvent):
+class LLMGuardrailCompletedEvent(LLMGuardrailBaseEvent):
     """Event emitted when a guardrail task completes
 
     Attributes:
@@ -43,4 +57,17 @@ class LLMGuardrailCompletedEvent(BaseEvent):
     success: bool
     result: Any
     error: str | None = None
+    retry_count: int
+
+
+class LLMGuardrailFailedEvent(LLMGuardrailBaseEvent):
+    """Event emitted when a guardrail task fails
+
+    Attributes:
+        error: The error message
+        retry_count: The number of times the guardrail has been retried
+    """
+
+    type: str = "llm_guardrail_failed"
+    error: str
     retry_count: int
