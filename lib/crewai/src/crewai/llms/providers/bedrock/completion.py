@@ -36,7 +36,7 @@ class BedrockCompletion(BaseLLM):
         aws_session_token: str | None = None,
         region_name: str = "us-east-1",
         temperature: float | None = None,
-        max_tokens: int = 4096,
+        max_tokens: int | None = None,
         top_p: float | None = None,
         top_k: int | None = None,
         stop_sequences: Sequence[str] | None = None,
@@ -91,7 +91,7 @@ class BedrockCompletion(BaseLLM):
         self.supports_streaming = True
 
         # Handle inference profiles for newer models
-        self.model_id = self._get_model_or_inference_profile(model)
+        self.model_id = model
 
     def call(
         self,
@@ -440,7 +440,6 @@ class BedrockCompletion(BaseLLM):
             try:
                 name, description, parameters = safe_tool_conversion(tool, "Bedrock")
 
-                # Follow AWS Converse API tool specification
                 converse_tool = {
                     "toolSpec": {
                         "name": name,
@@ -448,7 +447,6 @@ class BedrockCompletion(BaseLLM):
                     }
                 }
 
-                # Add input schema if parameters exist
                 if parameters and isinstance(parameters, dict):
                     converse_tool["toolSpec"]["inputSchema"] = {"json": parameters}
 
@@ -466,11 +464,9 @@ class BedrockCompletion(BaseLLM):
         """Get inference configuration following AWS Converse API specification."""
         config = {}
 
-        # maxTokens is required for most models
         if self.max_tokens:
             config["maxTokens"] = self.max_tokens
 
-        # Optional parameters - only add if specified
         if self.temperature is not None:
             config["temperature"] = float(self.temperature)
         if self.top_p is not None:
@@ -478,29 +474,11 @@ class BedrockCompletion(BaseLLM):
         if self.stop_sequences:
             config["stopSequences"] = self.stop_sequences
 
-        # Model-specific parameters
         if self.is_claude_model and self.top_k is not None:
             # top_k is supported by Claude models
             config["topK"] = int(self.top_k)
 
         return config
-
-    def _get_model_or_inference_profile(self, model: str) -> str:
-        """Get the appropriate model ID or inference profile for Bedrock invocation."""
-        # Mapping of newer models to their inference profiles
-        inference_profile_mapping = {
-            "anthropic.claude-3-7-sonnet-20250219-v1:0": "us.anthropic.claude-3-7-sonnet-20250219-v1:0",
-            "deepseek.r1-v1:0": "us.deepseek.r1-v1:0",
-        }
-
-        if model in inference_profile_mapping:
-            inference_profile = inference_profile_mapping[model]
-            logging.info(
-                f"Using inference profile {inference_profile} for model {model}"
-            )
-            return inference_profile
-
-        return model
 
     def _handle_client_error(self, e: ClientError) -> str:
         """Handle AWS ClientError with specific error codes and return error message."""
