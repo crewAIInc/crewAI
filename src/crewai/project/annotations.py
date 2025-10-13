@@ -1,50 +1,52 @@
+"""Decorators for defining crew components and their behaviors."""
+
+from collections.abc import Callable
 from functools import wraps
-from typing import Callable
+from typing import Any, Concatenate, ParamSpec, TypeVar
 
 from crewai import Crew
 from crewai.project.utils import memoize
 
-"""Decorators for defining crew components and their behaviors."""
+P = ParamSpec("P")
+R = TypeVar("R")
 
 
-def before_kickoff(func):
+def before_kickoff(meth):
     """Marks a method to execute before crew kickoff."""
-    func.is_before_kickoff = True
-    return func
+    meth.is_before_kickoff = True
+    return meth
 
 
-def after_kickoff(func):
+def after_kickoff(meth):
     """Marks a method to execute after crew kickoff."""
-    func.is_after_kickoff = True
-    return func
+    meth.is_after_kickoff = True
+    return meth
 
 
-def task(func):
+def task(meth):
     """Marks a method as a crew task."""
-    func.is_task = True
+    meth.is_task = True
 
-    @wraps(func)
+    @wraps(meth)
     def wrapper(*args, **kwargs):
-        result = func(*args, **kwargs)
+        result = meth(*args, **kwargs)
         if not result.name:
-            result.name = func.__name__
+            result.name = meth.__name__
         return result
 
     return memoize(wrapper)
 
 
-def agent(func):
+def agent(meth):
     """Marks a method as a crew agent."""
-    func.is_agent = True
-    func = memoize(func)
-    return func
+    meth.is_agent = True
+    return memoize(meth)
 
 
-def llm(func):
+def llm(meth):
     """Marks a method as an LLM provider."""
-    func.is_llm = True
-    func = memoize(func)
-    return func
+    meth.is_llm = True
+    return memoize(meth)
 
 
 def output_json(cls):
@@ -59,28 +61,28 @@ def output_pydantic(cls):
     return cls
 
 
-def tool(func):
+def tool(meth):
     """Marks a method as a crew tool."""
-    func.is_tool = True
-    return memoize(func)
+    meth.is_tool = True
+    return memoize(meth)
 
 
-def callback(func):
+def callback(meth):
     """Marks a method as a crew callback."""
-    func.is_callback = True
-    return memoize(func)
+    meth.is_callback = True
+    return memoize(meth)
 
 
-def cache_handler(func):
+def cache_handler(meth):
     """Marks a method as a cache handler."""
-    func.is_cache_handler = True
-    return memoize(func)
+    meth.is_cache_handler = True
+    return memoize(meth)
 
 
-def crew(func) -> Callable[..., Crew]:
+def crew(meth) -> Callable[..., Crew]:
     """Marks a method as the main crew execution point."""
 
-    @wraps(func)
+    @wraps(meth)
     def wrapper(self, *args, **kwargs) -> Crew:
         instantiated_tasks = []
         instantiated_agents = []
@@ -91,7 +93,7 @@ def crew(func) -> Callable[..., Crew]:
         agents = self._original_agents.items()
 
         # Instantiate tasks in order
-        for task_name, task_method in tasks:
+        for _, task_method in tasks:
             task_instance = task_method(self)
             instantiated_tasks.append(task_instance)
             agent_instance = getattr(task_instance, "agent", None)
@@ -100,7 +102,7 @@ def crew(func) -> Callable[..., Crew]:
                 agent_roles.add(agent_instance.role)
 
         # Instantiate agents not included by tasks
-        for agent_name, agent_method in agents:
+        for _, agent_method in agents:
             agent_instance = agent_method(self)
             if agent_instance.role not in agent_roles:
                 instantiated_agents.append(agent_instance)
@@ -109,19 +111,25 @@ def crew(func) -> Callable[..., Crew]:
         self.agents = instantiated_agents
         self.tasks = instantiated_tasks
 
-        crew = func(self, *args, **kwargs)
+        crew_instance = meth(self, *args, **kwargs)
 
-        def callback_wrapper(callback, instance):
-            def wrapper(*args, **kwargs):
-                return callback(instance, *args, **kwargs)
+        def callback_wrapper(
+            hook: Callable[Concatenate[Any, P], R], instance: Any
+        ) -> Callable[P, R]:
+            def bound_callback(*cb_args: P.args, **cb_kwargs: P.kwargs) -> R:
+                return hook(instance, *cb_args, **cb_kwargs)
 
-            return wrapper
+            return bound_callback
 
-        for _, callback in self._before_kickoff.items():
-            crew.before_kickoff_callbacks.append(callback_wrapper(callback, self))
-        for _, callback in self._after_kickoff.items():
-            crew.after_kickoff_callbacks.append(callback_wrapper(callback, self))
+        for hook_callback in self._before_kickoff.values():
+            crew_instance.before_kickoff_callbacks.append(
+                callback_wrapper(hook_callback, self)
+            )
+        for hook_callback in self._after_kickoff.values():
+            crew_instance.after_kickoff_callbacks.append(
+                callback_wrapper(hook_callback, self)
+            )
 
-        return crew
+        return crew_instance
 
     return memoize(wrapper)

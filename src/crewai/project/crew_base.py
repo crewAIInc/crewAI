@@ -1,3 +1,5 @@
+"""Base decorator for creating crew classes with configuration and function management."""
+
 import inspect
 import logging
 from collections.abc import Callable
@@ -12,8 +14,6 @@ from crewai.tools import BaseTool
 load_dotenv()
 
 T = TypeVar("T", bound=type)
-
-"""Base decorator for creating crew classes with configuration and function management."""
 
 
 def CrewBase(cls: T) -> T:  # noqa: N802
@@ -72,11 +72,11 @@ def CrewBase(cls: T) -> T:  # noqa: N802
 
             # Add close mcp server method to after kickoff
             bound_method = self._create_close_mcp_server_method()
-            self._after_kickoff['_close_mcp_server'] = bound_method
+            self._after_kickoff["_close_mcp_server"] = bound_method
 
         def _create_close_mcp_server_method(self):
             def _close_mcp_server(self, instance, outputs):
-                adapter = getattr(self, '_mcp_server_adapter', None)
+                adapter = getattr(self, "_mcp_server_adapter", None)
                 if adapter is not None:
                     try:
                         adapter.stop()
@@ -87,6 +87,7 @@ def CrewBase(cls: T) -> T:  # noqa: N802
             _close_mcp_server.is_after_kickoff = True
 
             import types
+
             return types.MethodType(_close_mcp_server, self)
 
         def get_mcp_tools(self, *tool_names: list[str]) -> list[BaseTool]:
@@ -95,15 +96,13 @@ def CrewBase(cls: T) -> T:  # noqa: N802
 
             from crewai_tools import MCPServerAdapter  # type: ignore[import-untyped]
 
-            adapter = getattr(self, '_mcp_server_adapter', None)
+            adapter = getattr(self, "_mcp_server_adapter", None)
             if not adapter:
                 self._mcp_server_adapter = MCPServerAdapter(
-                    self.mcp_server_params,
-                    connect_timeout=self.mcp_connect_timeout
+                    self.mcp_server_params, connect_timeout=self.mcp_connect_timeout
                 )
 
             return self._mcp_server_adapter.tools.filter_by_names(tool_names or None)
-
 
         def load_configurations(self):
             """Load agent and task configurations from YAML files."""
@@ -209,9 +208,13 @@ def CrewBase(cls: T) -> T:  # noqa: N802
 
             if function_calling_llm := agent_info.get("function_calling_llm"):
                 try:
-                    self.agents_config[agent_name]["function_calling_llm"] = llms[function_calling_llm]()
+                    self.agents_config[agent_name]["function_calling_llm"] = llms[
+                        function_calling_llm
+                    ]()
                 except KeyError:
-                    self.agents_config[agent_name]["function_calling_llm"] = function_calling_llm
+                    self.agents_config[agent_name]["function_calling_llm"] = (
+                        function_calling_llm
+                    )
 
             if step_callback := agent_info.get("step_callback"):
                 self.agents_config[agent_name]["step_callback"] = callbacks[
