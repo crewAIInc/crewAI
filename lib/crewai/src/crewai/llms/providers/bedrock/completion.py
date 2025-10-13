@@ -1,3 +1,4 @@
+from collections.abc import Mapping, Sequence
 import logging
 import os
 from typing import Any
@@ -38,7 +39,7 @@ class BedrockCompletion(BaseLLM):
         max_tokens: int = 4096,
         top_p: float | None = None,
         top_k: int | None = None,
-        stop_sequences: list[str] | None = None,
+        stop_sequences: Sequence[str] | None = None,
         stream: bool = False,
         **kwargs,
     ):
@@ -95,7 +96,7 @@ class BedrockCompletion(BaseLLM):
     def call(
         self,
         messages: str | list[dict[str, str]],
-        tools: list[dict] | None = None,
+        tools: Sequence[Mapping[str, Any]] | None = None,
         callbacks: list[Any] | None = None,
         available_functions: dict[str, Any] | None = None,
         from_task: Any | None = None,
@@ -161,7 +162,7 @@ class BedrockCompletion(BaseLLM):
         self,
         messages: list[dict[str, Any]],
         body: dict[str, Any],
-        available_functions: dict[str, Any] | None = None,
+        available_functions: Mapping[str, Any] | None = None,
         from_task: Any | None = None,
         from_agent: Any | None = None,
     ) -> str:
@@ -255,31 +256,34 @@ class BedrockCompletion(BaseLLM):
                 if "last turn" in error_msg and "user message" in error_msg:
                     raise ValueError(
                         f"Conversation format error: {error_msg}. Check message alternation."
-                    )
-                else:
-                    raise ValueError(f"Request validation failed: {error_msg}")
-            elif error_code == "AccessDeniedException":
+                    ) from e
+                raise ValueError(f"Request validation failed: {error_msg}") from e
+            if error_code == "AccessDeniedException":
                 raise PermissionError(
                     f"Access denied to model {self.model_id}: {error_msg}"
-                )
-            elif error_code == "ResourceNotFoundException":
-                raise ValueError(f"Model {self.model_id} not found: {error_msg}")
-            elif error_code == "ThrottlingException":
-                raise RuntimeError(f"API throttled, please retry later: {error_msg}")
-            elif error_code == "ModelTimeoutException":
-                raise TimeoutError(f"Model request timed out: {error_msg}")
-            elif error_code == "ServiceQuotaExceededException":
-                raise RuntimeError(f"Service quota exceeded: {error_msg}")
-            elif error_code == "ModelNotReadyException":
-                raise RuntimeError(f"Model {self.model_id} not ready: {error_msg}")
-            elif error_code == "ModelErrorException":
-                raise RuntimeError(f"Model error: {error_msg}")
-            elif error_code == "InternalServerException":
-                raise RuntimeError(f"Internal server error: {error_msg}")
-            elif error_code == "ServiceUnavailableException":
-                raise RuntimeError(f"Service unavailable: {error_msg}")
-            else:
-                raise RuntimeError(f"Bedrock API error ({error_code}): {error_msg}")
+                ) from e
+            if error_code == "ResourceNotFoundException":
+                raise ValueError(f"Model {self.model_id} not found: {error_msg}") from e
+            if error_code == "ThrottlingException":
+                raise RuntimeError(
+                    f"API throttled, please retry later: {error_msg}"
+                ) from e
+            if error_code == "ModelTimeoutException":
+                raise TimeoutError(f"Model request timed out: {error_msg}") from e
+            if error_code == "ServiceQuotaExceededException":
+                raise RuntimeError(f"Service quota exceeded: {error_msg}") from e
+            if error_code == "ModelNotReadyException":
+                raise RuntimeError(
+                    f"Model {self.model_id} not ready: {error_msg}"
+                ) from e
+            if error_code == "ModelErrorException":
+                raise RuntimeError(f"Model error: {error_msg}") from e
+            if error_code == "InternalServerException":
+                raise RuntimeError(f"Internal server error: {error_msg}") from e
+            if error_code == "ServiceUnavailableException":
+                raise RuntimeError(f"Service unavailable: {error_msg}") from e
+
+            raise RuntimeError(f"Bedrock API error ({error_code}): {error_msg}") from e
 
         except BotoCoreError as e:
             error_msg = f"Bedrock connection error: {e}"
@@ -314,6 +318,7 @@ class BedrockCompletion(BaseLLM):
                         delta = event["contentBlockDelta"]["delta"]
                         if "text" in delta:
                             text_chunk = delta["text"]
+                            logging.debug(f"Streaming text chunk: {text_chunk[:50]}...")
                             full_response += text_chunk
                             self._emit_stream_chunk_event(
                                 chunk=text_chunk,
@@ -326,7 +331,7 @@ class BedrockCompletion(BaseLLM):
 
         except ClientError as e:
             error_msg = self._handle_client_error(e)
-            raise RuntimeError(error_msg)
+            raise RuntimeError(error_msg) from e
         except BotoCoreError as e:
             error_msg = f"Bedrock streaming connection error: {e}"
             logging.error(error_msg)
@@ -449,7 +454,7 @@ class BedrockCompletion(BaseLLM):
 
                 converse_tools.append(converse_tool)
 
-            except Exception as e:
+            except Exception as e:  # noqa: PERF203
                 logging.warning(
                     f"Failed to convert tool {tool.get('name', 'unknown')}: {e}"
                 )
