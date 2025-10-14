@@ -9,6 +9,7 @@ class BaseEventListener(ABC):
     def __init__(self):
         super().__init__()
         self.setup_listeners(crewai_event_bus)
+        crewai_event_bus.validate_dependencies()
 
     @abstractmethod
     def setup_listeners(self, crewai_event_bus: CrewAIEventsBus):

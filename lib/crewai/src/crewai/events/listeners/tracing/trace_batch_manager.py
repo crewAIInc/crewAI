@@ -1,8 +1,9 @@
-import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from logging import getLogger
+from threading import Condition, Lock
 from typing import Any
+import uuid
 
 from rich.console import Console
 from rich.panel import Panel
@@ -13,6 +14,7 @@ from crewai.cli.version import get_crewai_version
 from crewai.events.listeners.tracing.types import TraceEvent
 from crewai.events.listeners.tracing.utils import should_auto_collect_first_time_traces
 from crewai.utilities.constants import CREWAI_BASE_URL
+
 
 logger = getLogger(__name__)
 
@@ -41,6 +43,11 @@ class TraceBatchManager:
     """Single responsibility: Manage batches and event buffering"""
 
     def __init__(self):
+        self._init_lock = Lock()
+        self._pending_events_lock = Lock()
+        self._pending_events_cv = Condition(self._pending_events_lock)
+        self._pending_events_count = 0
+
         self.is_current_batch_ephemeral: bool = False
         self.trace_batch_id: str | None = None
         self.current_batch: TraceBatch | None = None
@@ -64,24 +71,28 @@ class TraceBatchManager:
         execution_metadata: dict[str, Any],
         use_ephemeral: bool = False,
     ) -> TraceBatch:
-        """Initialize a new trace batch"""
-        self.current_batch = TraceBatch(
-            user_context=user_context, execution_metadata=execution_metadata
-        )
-        self.event_buffer.clear()
-        self.is_current_batch_ephemeral = use_ephemeral
+        """Initialize a new trace batch (thread-safe)"""
+        with self._init_lock:
+            if self.current_batch is not None:
+                logger.debug("Batch already initialized, skipping duplicate initialization")
+                return self.current_batch
 
-        self.record_start_time("execution")
-
-        if should_auto_collect_first_time_traces():
-            self.trace_batch_id = self.current_batch.batch_id
-        else:
-            self._initialize_backend_batch(
-                user_context, execution_metadata, use_ephemeral
+            self.current_batch = TraceBatch(
+                user_context=user_context, execution_metadata=execution_metadata
             )
-            self.backend_initialized = True
+            self.is_current_batch_ephemeral = use_ephemeral
 
-        return self.current_batch
+            self.record_start_time("execution")
+
+            if should_auto_collect_first_time_traces():
+                self.trace_batch_id = self.current_batch.batch_id
+            else:
+                self._initialize_backend_batch(
+                    user_context, execution_metadata, use_ephemeral
+                )
+                self.backend_initialized = True
+
+            return self.current_batch
 
     def _initialize_backend_batch(
         self,
@@ -148,6 +159,38 @@ class TraceBatchManager:
                 f"Error initializing trace batch: {e}. Continuing without tracing."
             )
 
+    def begin_event_processing(self):
+        """Mark that an event handler started processing (for synchronization)"""
+        with self._pending_events_lock:
+            self._pending_events_count += 1
+
+    def end_event_processing(self):
+        """Mark that an event handler finished processing (for synchronization)"""
+        with self._pending_events_cv:
+            self._pending_events_count -= 1
+            if self._pending_events_count == 0:
+                self._pending_events_cv.notify_all()
+
+    def wait_for_pending_events(self, timeout: float = 2.0) -> bool:
+        """Wait for all pending event handlers to finish processing
+
+        Args:
+            timeout: Maximum time to wait in seconds (default: 2.0)
+
+        Returns:
+            True if all handlers completed, False if timeout occurred
+        """
+        with self._pending_events_cv:
+            if self._pending_events_count > 0:
+                logger.debug(f"Waiting for {self._pending_events_count} pending event handlers...")
+                self._pending_events_cv.wait(timeout)
+                if self._pending_events_count > 0:
+                    logger.error(
+                        f"Timeout waiting for event handlers. {self._pending_events_count} still pending. Events may be incomplete!"
+                    )
+                    return False
+        return True
+
     def add_event(self, trace_event: TraceEvent):
         """Add event to buffer"""
         self.event_buffer.append(trace_event)
@@ -180,8 +223,8 @@ class TraceBatchManager:
                 self.event_buffer.clear()
                 return 200
 
-            logger.warning(
-                f"Failed to send events: {response.status_code}. Events will be lost."
+            logger.error(
+                f"Failed to send events: {response.status_code}. Response: {response.text}. Events will be lost."
             )
             return 500
 
@@ -196,15 +239,33 @@ class TraceBatchManager:
         if not self.current_batch:
             return None
 
-        self.current_batch.events = self.event_buffer.copy()
-        if self.event_buffer:
+        all_handlers_completed = self.wait_for_pending_events(timeout=2.0)
+
+        if not all_handlers_completed:
+            logger.error("Event handler timeout - marking batch as failed due to incomplete events")
+            self.plus_api.mark_trace_batch_as_failed(
+                self.trace_batch_id, "Timeout waiting for event handlers - events incomplete"
+            )
+            return None
+
+        sorted_events = sorted(
+            self.event_buffer,
+            key=lambda e: e.timestamp if hasattr(e, 'timestamp') and e.timestamp else ''
+        )
+
+        self.current_batch.events = sorted_events
+        events_sent_count = len(sorted_events)
+        if sorted_events:
+            original_buffer = self.event_buffer
+            self.event_buffer = sorted_events
             events_sent_to_backend_status = self._send_events_to_backend()
+            self.event_buffer = original_buffer
             if events_sent_to_backend_status == 500:
                 self.plus_api.mark_trace_batch_as_failed(
                     self.trace_batch_id, "Error sending events to backend"
                 )
                 return None
-        self._finalize_backend_batch()
+        self._finalize_backend_batch(events_sent_count)
 
         finalized_batch = self.current_batch
 
@@ -220,18 +281,20 @@ class TraceBatchManager:
 
         return finalized_batch
 
-    def _finalize_backend_batch(self):
-        """Send batch finalization to backend"""
+    def _finalize_backend_batch(self, events_count: int = 0):
+        """Send batch finalization to backend
+
+        Args:
+            events_count: Number of events that were successfully sent
+        """
         if not self.plus_api or not self.trace_batch_id:
             return
 
         try:
-            total_events = len(self.current_batch.events) if self.current_batch else 0
-
             payload = {
                 "status": "completed",
                 "duration_ms": self.calculate_duration("execution"),
-                "final_event_count": total_events,
+                "final_event_count": events_count,
             }
 
             response = (
