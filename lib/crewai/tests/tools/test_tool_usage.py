@@ -1,6 +1,7 @@
 import datetime
 import json
 import random
+import threading
 import time
 from unittest.mock import MagicMock, patch
 
@@ -32,7 +33,7 @@ class RandomNumberTool(BaseTool):
     args_schema: type[BaseModel] = RandomNumberToolInput
 
     def _run(self, min_value: int, max_value: int) -> int:
-        return random.randint(min_value, max_value)
+        return random.randint(min_value, max_value)  # noqa: S311
 
 
 # Example agent and task
@@ -470,13 +471,21 @@ def test_tool_selection_error_event_direct():
     )
 
     received_events = []
+    first_event_received = threading.Event()
+    second_event_received = threading.Event()
 
     @crewai_event_bus.on(ToolSelectionErrorEvent)
     def event_handler(source, event):
         received_events.append(event)
+        if event.tool_name == "Non Existent Tool":
+            first_event_received.set()
+        elif event.tool_name == "":
+            second_event_received.set()
 
-    with pytest.raises(Exception):
+    with pytest.raises(Exception):  # noqa: B017
         tool_usage._select_tool("Non Existent Tool")
+
+    assert first_event_received.wait(timeout=5), "Timeout waiting for first event"
     assert len(received_events) == 1
     event = received_events[0]
     assert isinstance(event, ToolSelectionErrorEvent)
@@ -488,12 +497,12 @@ def test_tool_selection_error_event_direct():
     assert "A test tool" in event.tool_class
     assert "don't exist" in event.error
 
-    received_events.clear()
-    with pytest.raises(Exception):
+    with pytest.raises(Exception):  # noqa: B017
         tool_usage._select_tool("")
 
-    assert len(received_events) == 1
-    event = received_events[0]
+    assert second_event_received.wait(timeout=5), "Timeout waiting for second event"
+    assert len(received_events) == 2
+    event = received_events[1]
     assert isinstance(event, ToolSelectionErrorEvent)
     assert event.agent_key == "test_key"
     assert event.agent_role == "test_role"
@@ -562,7 +571,7 @@ def test_tool_validate_input_error_event():
 
         # Test invalid input
         invalid_input = "invalid json {[}"
-        with pytest.raises(Exception):
+        with pytest.raises(Exception):  # noqa: B017
             tool_usage._validate_tool_input(invalid_input)
 
         # Verify event was emitted
@@ -616,12 +625,13 @@ def test_tool_usage_finished_event_with_result():
         action=MagicMock(),
     )
 
-    # Track received events
     received_events = []
+    event_received = threading.Event()
 
     @crewai_event_bus.on(ToolUsageFinishedEvent)
     def event_handler(source, event):
         received_events.append(event)
+        event_received.set()
 
     # Call on_tool_use_finished with test data
     started_at = time.time()
@@ -634,7 +644,7 @@ def test_tool_usage_finished_event_with_result():
         result=result,
     )
 
-    # Verify event was emitted
+    assert event_received.wait(timeout=5), "Timeout waiting for event"
     assert len(received_events) == 1, "Expected one event to be emitted"
     event = received_events[0]
     assert isinstance(event, ToolUsageFinishedEvent)
@@ -695,12 +705,13 @@ def test_tool_usage_finished_event_with_cached_result():
         action=MagicMock(),
     )
 
-    # Track received events
     received_events = []
+    event_received = threading.Event()
 
     @crewai_event_bus.on(ToolUsageFinishedEvent)
     def event_handler(source, event):
         received_events.append(event)
+        event_received.set()
 
     # Call on_tool_use_finished with test data and from_cache=True
     started_at = time.time()
@@ -713,7 +724,7 @@ def test_tool_usage_finished_event_with_cached_result():
         result=result,
     )
 
-    # Verify event was emitted
+    assert event_received.wait(timeout=5), "Timeout waiting for event"
     assert len(received_events) == 1, "Expected one event to be emitted"
     event = received_events[0]
     assert isinstance(event, ToolUsageFinishedEvent)

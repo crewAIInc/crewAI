@@ -3,6 +3,7 @@ import copy
 import inspect
 import logging
 from collections.abc import Callable
+from concurrent.futures import Future
 from typing import Any, ClassVar, Generic, TypeVar, cast
 from uuid import uuid4
 
@@ -463,6 +464,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
         self._completed_methods: set[str] = set()  # Track completed methods for reload
         self._persistence: FlowPersistence | None = persistence
         self._is_execution_resuming: bool = False
+        self._event_futures: list[Future[None]] = []
 
         # Initialize state with initial values
         self._state = self._create_initial_state()
@@ -855,7 +857,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
                     self._initialize_state(filtered_inputs)
 
             # Emit FlowStartedEvent and log the start of the flow.
-            crewai_event_bus.emit(
+            future = crewai_event_bus.emit(
                 self,
                 FlowStartedEvent(
                     type="flow_started",
@@ -863,6 +865,8 @@ class Flow(Generic[T], metaclass=FlowMeta):
                     inputs=inputs,
                 ),
             )
+            if future:
+                self._event_futures.append(future)
             self._log_flow_event(
                 f"Flow started with ID: {self.flow_id}", color="bold_magenta"
             )
@@ -881,7 +885,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
 
             final_output = self._method_outputs[-1] if self._method_outputs else None
 
-            crewai_event_bus.emit(
+            future = crewai_event_bus.emit(
                 self,
                 FlowFinishedEvent(
                     type="flow_finished",
@@ -889,6 +893,25 @@ class Flow(Generic[T], metaclass=FlowMeta):
                     result=final_output,
                 ),
             )
+            if future:
+                self._event_futures.append(future)
+
+            if self._event_futures:
+                await asyncio.gather(*[asyncio.wrap_future(f) for f in self._event_futures])
+                self._event_futures.clear()
+
+            if (
+                is_tracing_enabled()
+                or self.tracing
+                or should_auto_collect_first_time_traces()
+            ):
+                trace_listener = TraceCollectionListener()
+                if trace_listener.batch_manager.batch_owner_type == "flow":
+                    if trace_listener.first_time_handler.is_first_time:
+                        trace_listener.first_time_handler.mark_events_collected()
+                        trace_listener.first_time_handler.handle_execution_completion()
+                    else:
+                        trace_listener.batch_manager.finalize_batch()
 
             return final_output
         finally:
@@ -971,7 +994,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
             dumped_params = {f"_{i}": arg for i, arg in enumerate(args)} | (
                 kwargs or {}
             )
-            crewai_event_bus.emit(
+            future = crewai_event_bus.emit(
                 self,
                 MethodExecutionStartedEvent(
                     type="method_execution_started",
@@ -981,6 +1004,8 @@ class Flow(Generic[T], metaclass=FlowMeta):
                     state=self._copy_state(),
                 ),
             )
+            if future:
+                self._event_futures.append(future)
 
             result = (
                 await method(*args, **kwargs)
@@ -994,7 +1019,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
             )
 
             self._completed_methods.add(method_name)
-            crewai_event_bus.emit(
+            future = crewai_event_bus.emit(
                 self,
                 MethodExecutionFinishedEvent(
                     type="method_execution_finished",
@@ -1004,10 +1029,12 @@ class Flow(Generic[T], metaclass=FlowMeta):
                     result=result,
                 ),
             )
+            if future:
+                self._event_futures.append(future)
 
             return result
         except Exception as e:
-            crewai_event_bus.emit(
+            future = crewai_event_bus.emit(
                 self,
                 MethodExecutionFailedEvent(
                     type="method_execution_failed",
@@ -1016,6 +1043,8 @@ class Flow(Generic[T], metaclass=FlowMeta):
                     error=e,
                 ),
             )
+            if future:
+                self._event_futures.append(future)
             raise e
 
     async def _execute_listeners(self, trigger_method: str, result: Any) -> None:
