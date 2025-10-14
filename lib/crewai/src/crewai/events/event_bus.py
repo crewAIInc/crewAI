@@ -310,8 +310,11 @@ class CrewAIEventsBus:
             event: The event instance to emit
 
         Returns:
-            Future that completes when async handlers finish, or None if only
-            sync handlers or no handlers. Tests can await this to avoid sleep().
+            Future that completes when handlers finish. Returns:
+            - Future for sync-only handlers (ThreadPoolExecutor future)
+            - Future for async handlers or mixed handlers (asyncio future)
+            - Future for dependency-managed handlers (asyncio future)
+            - None if no handlers or sync stream chunk events
 
         Example:
             >>> future = crewai_event_bus.emit(source, event)
@@ -341,9 +344,11 @@ class CrewAIEventsBus:
             if event_type is LLMStreamChunkEvent:
                 self._call_handlers(source, event, sync_handlers)
             else:
-                self._sync_executor.submit(
+                sync_future = self._sync_executor.submit(
                     self._call_handlers, source, event, sync_handlers
                 )
+                if not async_handlers:
+                    return sync_future
 
         if async_handlers:
             return asyncio.run_coroutine_threadsafe(
@@ -387,6 +392,27 @@ class CrewAIEventsBus:
             handler: The handler function to register
         """
         self._register_handler(event_type, handler)
+
+    def validate_dependencies(self) -> None:
+        """Validate all registered handler dependencies.
+
+        Attempts to build execution plans for all event types with dependencies.
+        This detects circular dependencies and cross-event-type dependencies
+        before events are emitted.
+
+        Raises:
+            CircularDependencyError: If circular dependencies or unresolved
+                dependencies (e.g., cross-event-type) are detected
+        """
+        with self._rwlock.r_locked():
+            for event_type in self._handler_dependencies:
+                sync_handlers = self._sync_handlers.get(event_type, frozenset())
+                async_handlers = self._async_handlers.get(event_type, frozenset())
+                dependencies = dict(self._handler_dependencies.get(event_type, {}))
+                all_handlers = list(sync_handlers | async_handlers)
+
+                if all_handlers and dependencies:
+                    build_execution_plan(all_handlers, dependencies)
 
     @contextmanager
     def scoped_handlers(self) -> Generator[None, Any, None]:

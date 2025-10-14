@@ -170,14 +170,6 @@ class TraceCollectionListener(BaseEventListener):
         def on_flow_finished(source, event):
             self._handle_trace_event("flow_finished", source, event)
 
-            if self.batch_manager.batch_owner_type == "flow":
-                if self.first_time_handler.is_first_time:
-                    self.first_time_handler.mark_events_collected()
-                    self.first_time_handler.handle_execution_completion()
-                else:
-                    # Normal flow finalization
-                    self.batch_manager.finalize_batch()
-
         @event_bus.on(FlowPlotEvent)
         def on_flow_plot(source, event):
             self._handle_action_event("flow_plot", source, event)
@@ -383,10 +375,12 @@ class TraceCollectionListener(BaseEventListener):
 
     def _handle_trace_event(self, event_type: str, source: Any, event: Any):
         """Generic handler for context end events"""
-
-        trace_event = self._create_trace_event(event_type, source, event)
-
-        self.batch_manager.add_event(trace_event)
+        self.batch_manager.begin_event_processing()
+        try:
+            trace_event = self._create_trace_event(event_type, source, event)
+            self.batch_manager.add_event(trace_event)
+        finally:
+            self.batch_manager.end_event_processing()
 
     def _handle_action_event(self, event_type: str, source: Any, event: Any):
         """Generic handler for action events (LLM calls, tool usage)"""
@@ -399,18 +393,29 @@ class TraceCollectionListener(BaseEventListener):
             }
             self.batch_manager.initialize_batch(user_context, execution_metadata)
 
-        trace_event = self._create_trace_event(event_type, source, event)
-        self.batch_manager.add_event(trace_event)
+        self.batch_manager.begin_event_processing()
+        try:
+            trace_event = self._create_trace_event(event_type, source, event)
+            self.batch_manager.add_event(trace_event)
+        finally:
+            self.batch_manager.end_event_processing()
 
     def _create_trace_event(
         self, event_type: str, source: Any, event: Any
     ) -> TraceEvent:
         """Create a trace event"""
-        trace_event = TraceEvent(
-            type=event_type,
-        )
+        if hasattr(event, 'timestamp') and event.timestamp:
+            trace_event = TraceEvent(
+                type=event_type,
+                timestamp=event.timestamp.isoformat(),
+            )
+        else:
+            trace_event = TraceEvent(
+                type=event_type,
+            )
 
         trace_event.event_data = self._build_event_data(event_type, event, source)
+
         return trace_event
 
     def _build_event_data(
