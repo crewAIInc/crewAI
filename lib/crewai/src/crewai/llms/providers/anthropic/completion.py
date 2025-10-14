@@ -124,7 +124,6 @@ class AnthropicCompletion(BaseLLM):
             Chat completion response or tool call result
         """
         try:
-            print("we are calling", messages)
             # Emit call started event
             self._emit_call_started_event(
                 messages=messages,
@@ -144,7 +143,6 @@ class AnthropicCompletion(BaseLLM):
             completion_params = self._prepare_completion_params(
                 formatted_messages, system_message, tools
             )
-            print("completion_params", completion_params)
 
             # Handle streaming vs non-streaming
             if self.stream:
@@ -300,7 +298,6 @@ class AnthropicCompletion(BaseLLM):
     ) -> str | Any:
         """Handle non-streaming message completion."""
         try:
-            print("params", params)
             response: Message = self.client.messages.create(**params)
 
         except Exception as e:
