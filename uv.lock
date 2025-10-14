@@ -1010,6 +1010,9 @@ aisuite = [
 aws = [
     { name = "boto3" },
 ]
+boto3 = [
+    { name = "boto3" },
+]
 docling = [
     { name = "docling" },
 ]
@@ -1049,6 +1052,7 @@ requires-dist = [
     { name = "aisuite", marker = "extra == 'aisuite'", specifier = ">=0.1.10" },
     { name = "appdirs", specifier = ">=1.4.4" },
     { name = "boto3", marker = "extra == 'aws'", specifier = ">=1.40.38" },
+    { name = "boto3", marker = "extra == 'boto3'", specifier = ">=1.40.45" },
     { name = "chromadb", specifier = "~=1.1.0" },
     { name = "click", specifier = ">=8.1.7" },
     { name = "crewai-tools", marker = "extra == 'tools'", editable = "lib/crewai-tools" },
@@ -1084,7 +1088,7 @@ requires-dist = [
     { name = "uv", specifier = ">=0.4.25" },
     { name = "voyageai", marker = "extra == 'voyageai'", specifier = ">=0.3.5" },
 ]
-provides-extras = ["aisuite", "aws", "docling", "embeddings", "litellm", "mem0", "openpyxl", "pandas", "pdfplumber", "qdrant", "tools", "voyageai", "watson"]
+provides-extras = ["aisuite", "aws", "boto3", "docling", "embeddings", "litellm", "mem0", "openpyxl", "pandas", "pdfplumber", "qdrant", "tools", "voyageai", "watson"]
 
 [[package]]
 name = "crewai-devtools"
