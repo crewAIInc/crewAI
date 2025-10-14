@@ -3,6 +3,7 @@ import copy
 import inspect
 import logging
 from collections.abc import Callable
+from concurrent.futures import Future
 from typing import Any, ClassVar, Generic, TypeVar, cast
 from uuid import uuid4
 
