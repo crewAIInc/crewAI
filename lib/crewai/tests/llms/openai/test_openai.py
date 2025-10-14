@@ -334,8 +334,8 @@ def test_openai_raises_error_when_model_not_supported():
     """
     Test that OpenAICompletion raises an error when the model is not supported
     """
+    llm = LLM(model="openai/model-doesnt-exist")
     with pytest.raises(openai.NotFoundError):
-        llm = LLM(model="openai/model-doesnt-exist")
         llm.call("Hello")
 
 def test_openai_client_setup_with_extra_arguments():
