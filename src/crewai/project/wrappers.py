@@ -1,7 +1,9 @@
 """Wrapper classes for decorated methods with type-safe metadata."""
 
+from __future__ import annotations
+
 from collections.abc import Callable
-from functools import wraps
+from functools import partial
 from typing import TYPE_CHECKING, Any, Generic, ParamSpec, Protocol, Self, TypeVar
 
 if TYPE_CHECKING:
@@ -19,6 +21,17 @@ class TaskResult(Protocol):
 
 
 TaskResultT = TypeVar("TaskResultT", bound=TaskResult)
+
+
+def _copy_function_metadata(wrapper: Any, func: Callable[..., Any]) -> None:
+    """Copy function metadata to a wrapper object.
+
+    Args:
+        wrapper: The wrapper object to update.
+        func: The function to copy metadata from.
+    """
+    wrapper.__name__ = func.__name__
+    wrapper.__doc__ = func.__doc__
 
 
 class CrewInstance(Protocol):
@@ -46,13 +59,36 @@ class DecoratedMethod(Generic[P, R]):
             meth: The method to wrap.
         """
         self._meth = meth
-        # Preserve function metadata
-        wraps(meth)(self)
+        _copy_function_metadata(self, meth)
 
-    @property
-    def __name__(self) -> str:
-        """Get the name of the wrapped method."""
-        return self._meth.__name__
+    def __get__(
+        self, obj: Any, objtype: type[Any] | None = None
+    ) -> Self | Callable[..., R]:
+        """Support instance methods by implementing the descriptor protocol.
+
+        Args:
+            obj: The instance that the method is accessed through.
+            objtype: The type of the instance.
+
+        Returns:
+            Self when accessed through class, bound method when accessed through instance.
+        """
+        if obj is None:
+            return self
+        bound = partial(self._meth, obj)
+        for attr in (
+            "is_agent",
+            "is_llm",
+            "is_tool",
+            "is_callback",
+            "is_cache_handler",
+            "is_before_kickoff",
+            "is_after_kickoff",
+            "is_crew",
+        ):
+            if hasattr(self, attr):
+                setattr(bound, attr, getattr(self, attr))
+        return bound
 
     def __call__(self, *args: P.args, **kwargs: P.kwargs) -> R:
         """Call the wrapped method.
@@ -87,6 +123,35 @@ class AfterKickoffMethod(DecoratedMethod[P, R]):
     is_after_kickoff: bool = True
 
 
+class BoundTaskMethod(Generic[TaskResultT]):
+    """Bound task method with task marker attribute."""
+
+    is_task: bool = True
+
+    def __init__(self, task_method: TaskMethod[Any, TaskResultT], obj: Any) -> None:
+        """Initialize the bound task method.
+
+        Args:
+            task_method: The TaskMethod descriptor instance.
+            obj: The instance to bind to.
+        """
+        self._task_method = task_method
+        self._obj = obj
+
+    def __call__(self, *args: Any, **kwargs: Any) -> TaskResultT:
+        """Execute the bound task method.
+
+        Args:
+            *args: Positional arguments.
+            **kwargs: Keyword arguments.
+
+        Returns:
+            The task result with name ensured.
+        """
+        result = self._task_method._meth(self._obj, *args, **kwargs)
+        return self._task_method._ensure_task_name(result)
+
+
 class TaskMethod(Generic[P, TaskResultT]):
     """Wrapper for methods marked as crew tasks."""
 
@@ -99,13 +164,36 @@ class TaskMethod(Generic[P, TaskResultT]):
             meth: The method to wrap.
         """
         self._meth = meth
-        # Preserve function metadata
-        wraps(meth)(self)
+        _copy_function_metadata(self, meth)
 
-    @property
-    def __name__(self) -> str:
-        """Get the name of the wrapped method."""
-        return self._meth.__name__
+    def _ensure_task_name(self, result: TaskResultT) -> TaskResultT:
+        """Ensure task result has a name set.
+
+        Args:
+            result: The task result to check.
+
+        Returns:
+            The task result with name ensured.
+        """
+        if not result.name:
+            result.name = self._meth.__name__
+        return result
+
+    def __get__(
+        self, obj: Any, objtype: type[Any] | None = None
+    ) -> Self | BoundTaskMethod[TaskResultT]:
+        """Support instance methods by implementing the descriptor protocol.
+
+        Args:
+            obj: The instance that the method is accessed through.
+            objtype: The type of the instance.
+
+        Returns:
+            Self when accessed through class, bound method when accessed through instance.
+        """
+        if obj is None:
+            return self
+        return BoundTaskMethod(self, obj)
 
     def __call__(self, *args: P.args, **kwargs: P.kwargs) -> TaskResultT:
         """Call the wrapped method and set task name if not provided.
@@ -117,10 +205,7 @@ class TaskMethod(Generic[P, TaskResultT]):
         Returns:
             The task instance with name set if not already provided.
         """
-        result = self._meth(*args, **kwargs)
-        if not result.name:
-            result.name = self._meth.__name__
-        return result
+        return self._ensure_task_name(self._meth(*args, **kwargs))
 
     def unwrap(self) -> Callable[P, TaskResultT]:
         """Get the original unwrapped method.
@@ -167,85 +252,52 @@ class CrewMethod(DecoratedMethod[P, R]):
     is_crew: bool = True
 
 
-class OutputJsonClass(Generic[T]):
+class OutputClass(Generic[T]):
+    """Base wrapper for classes marked as output format."""
+
+    def __init__(self, cls: type[T]) -> None:
+        """Initialize the output class wrapper.
+
+        Args:
+            cls: The class to wrap.
+        """
+        self._cls = cls
+        self.__name__ = cls.__name__
+        self.__qualname__ = cls.__qualname__
+        self.__module__ = cls.__module__
+        self.__doc__ = cls.__doc__
+
+    def __call__(self, *args: Any, **kwargs: Any) -> T:
+        """Create an instance of the wrapped class.
+
+        Args:
+            *args: Positional arguments for the class constructor.
+            **kwargs: Keyword arguments for the class constructor.
+
+        Returns:
+            An instance of the wrapped class.
+        """
+        return self._cls(*args, **kwargs)
+
+    def __getattr__(self, name: str) -> Any:
+        """Delegate attribute access to the wrapped class.
+
+        Args:
+            name: The attribute name.
+
+        Returns:
+            The attribute from the wrapped class.
+        """
+        return getattr(self._cls, name)
+
+
+class OutputJsonClass(OutputClass[T]):
     """Wrapper for classes marked as JSON output format."""
 
     is_output_json: bool = True
 
-    def __init__(self, cls: type[T]) -> None:
-        """Initialize the output JSON class wrapper.
 
-        Args:
-            cls: The class to wrap.
-        """
-        self._cls = cls
-        # Copy class attributes
-        self.__name__ = cls.__name__
-        self.__qualname__ = cls.__qualname__
-        self.__module__ = cls.__module__
-        self.__doc__ = cls.__doc__
-
-    def __call__(self, *args: Any, **kwargs: Any) -> T:
-        """Create an instance of the wrapped class.
-
-        Args:
-            *args: Positional arguments for the class constructor.
-            **kwargs: Keyword arguments for the class constructor.
-
-        Returns:
-            An instance of the wrapped class.
-        """
-        return self._cls(*args, **kwargs)
-
-    def __getattr__(self, name: str) -> Any:
-        """Delegate attribute access to the wrapped class.
-
-        Args:
-            name: The attribute name.
-
-        Returns:
-            The attribute from the wrapped class.
-        """
-        return getattr(self._cls, name)
-
-
-class OutputPydanticClass(Generic[T]):
+class OutputPydanticClass(OutputClass[T]):
     """Wrapper for classes marked as Pydantic output format."""
 
     is_output_pydantic: bool = True
-
-    def __init__(self, cls: type[T]) -> None:
-        """Initialize the output Pydantic class wrapper.
-
-        Args:
-            cls: The class to wrap.
-        """
-        self._cls = cls
-        # Copy class attributes
-        self.__name__ = cls.__name__
-        self.__qualname__ = cls.__qualname__
-        self.__module__ = cls.__module__
-        self.__doc__ = cls.__doc__
-
-    def __call__(self, *args: Any, **kwargs: Any) -> T:
-        """Create an instance of the wrapped class.
-
-        Args:
-            *args: Positional arguments for the class constructor.
-            **kwargs: Keyword arguments for the class constructor.
-
-        Returns:
-            An instance of the wrapped class.
-        """
-        return self._cls(*args, **kwargs)
-
-    def __getattr__(self, name: str) -> Any:
-        """Delegate attribute access to the wrapped class.
-
-        Args:
-            name: The attribute name.
-
-        Returns:
-            The attribute from the wrapped class.
-        """
-        return getattr(self._cls, name)
