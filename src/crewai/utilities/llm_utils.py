@@ -41,6 +41,10 @@ def create_llm(
             or getattr(llm_value, "deployment_name", None)
             or str(llm_value)
         )
+        
+        if isinstance(model, str) and model.startswith("models/"):
+            model = model[len("models/"):]
+        
         temperature: float | None = getattr(llm_value, "temperature", None)
         max_tokens: int | None = getattr(llm_value, "max_tokens", None)
         logprobs: int | None = getattr(llm_value, "logprobs", None)
