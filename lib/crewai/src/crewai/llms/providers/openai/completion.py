@@ -33,6 +33,9 @@ class OpenAICompletion(BaseLLM):
         project: str | None = None,
         timeout: float | None = None,
         max_retries: int = 2,
+        default_headers: dict[str, str] | None = None,
+        default_query: dict[str, Any] | None = None,
+        client_params: dict[str, Any] | None = None,
         temperature: float | None = None,
         top_p: float | None = None,
         frequency_penalty: float | None = None,
@@ -44,14 +47,24 @@ class OpenAICompletion(BaseLLM):
         response_format: dict[str, Any] | type[BaseModel] | None = None,
         logprobs: bool | None = None,
         top_logprobs: int | None = None,
-        reasoning_effort: str | None = None,  # For o1 models
-        provider: str | None = None,  # Add provider parameter
+        reasoning_effort: str | None = None,
+        provider: str | None = None,
         **kwargs,
     ):
         """Initialize OpenAI chat completion client."""
 
         if provider is None:
             provider = kwargs.pop("provider", "openai")
+
+        # Client configuration attributes
+        self.organization = organization
+        self.project = project
+        self.max_retries = max_retries
+        self.default_headers = default_headers
+        self.default_query = default_query
+        self.client_params = client_params
+        self.timeout = timeout
+        self.base_url = base_url
 
         super().__init__(
             model=model,
@@ -63,15 +76,10 @@ class OpenAICompletion(BaseLLM):
             **kwargs,
         )
 
-        self.client = OpenAI(
-            api_key=api_key or os.getenv("OPENAI_API_KEY"),
-            base_url=base_url,
-            organization=organization,
-            project=project,
-            timeout=timeout,
-            max_retries=max_retries,
-        )
+        client_config = self._get_client_params()
+        self.client = OpenAI(**client_config)
 
+        # Completion parameters
         self.top_p = top_p
         self.frequency_penalty = frequency_penalty
         self.presence_penalty = presence_penalty
@@ -83,9 +91,34 @@ class OpenAICompletion(BaseLLM):
         self.logprobs = logprobs
         self.top_logprobs = top_logprobs
         self.reasoning_effort = reasoning_effort
-        self.timeout = timeout
         self.is_o1_model = "o1" in model.lower()
         self.is_gpt4_model = "gpt-4" in model.lower()
+
+    def _get_client_params(self) -> dict[str, Any]:
+        """Get OpenAI client parameters."""
+
+        if self.api_key is None:
+            self.api_key = os.getenv("OPENAI_API_KEY")
+            if self.api_key is None:
+                raise ValueError("OPENAI_API_KEY is required")
+
+        base_params = {
+            "api_key": self.api_key,
+            "organization": self.organization,
+            "project": self.project,
+            "base_url": self.base_url,
+            "timeout": self.timeout,
+            "max_retries": self.max_retries,
+            "default_headers": self.default_headers,
+            "default_query": self.default_query,
+        }
+
+        client_params = {k: v for k, v in base_params.items() if v is not None}
+
+        if self.client_params:
+            client_params.update(self.client_params)
+
+        return client_params
 
     def call(
         self,
@@ -207,7 +240,6 @@ class OpenAICompletion(BaseLLM):
             "api_key",
             "base_url",
             "timeout",
-            "max_retries",
         }
 
         return {k: v for k, v in params.items() if k not in crewai_specific_params}
