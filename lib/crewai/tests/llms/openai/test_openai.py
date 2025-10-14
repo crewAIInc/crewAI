@@ -332,14 +332,18 @@ def test_openai_completion_call_returns_usage_metrics():
 
 def test_openai_raises_error_when_model_not_supported():
     """Test that OpenAICompletion raises ValueError when model not supported"""
-    llm = LLM(model="openai/model-doesnt-exist")
 
-    with patch.object(llm.client.chat.completions, 'create') as mock_create:
-        mock_create.side_effect = openai.NotFoundError(
+    with patch('crewai.llms.providers.openai.completion.OpenAI') as mock_openai_class:
+        mock_client = MagicMock()
+        mock_openai_class.return_value = mock_client
+
+        mock_client.chat.completions.create.side_effect = openai.NotFoundError(
             message="The model `model-doesnt-exist` does not exist",
             response=MagicMock(),
             body={}
         )
+
+        llm = LLM(model="openai/model-doesnt-exist")
 
         with pytest.raises(ValueError, match="Model.*not found"):
             llm.call("Hello")
