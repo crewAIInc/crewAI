@@ -40,6 +40,7 @@ class AnthropicCompletion(BaseLLM):
         top_p: float | None = None,
         stop_sequences: list[str] | None = None,
         stream: bool = False,
+        client_params: dict[str, Any] | None = None,
         **kwargs,
     ):
         """Initialize Anthropic chat completion client.
@@ -55,19 +56,20 @@ class AnthropicCompletion(BaseLLM):
             top_p: Nucleus sampling parameter
             stop_sequences: Stop sequences (Anthropic uses stop_sequences, not stop)
             stream: Enable streaming responses
+            client_params: Additional parameters for the Anthropic client
             **kwargs: Additional parameters
         """
         super().__init__(
             model=model, temperature=temperature, stop=stop_sequences or [], **kwargs
         )
 
-        # Initialize Anthropic client
-        self.client = Anthropic(
-            api_key=api_key or os.getenv("ANTHROPIC_API_KEY"),
-            base_url=base_url,
-            timeout=timeout,
-            max_retries=max_retries,
-        )
+        # Client params
+        self.client_params = client_params
+        self.base_url = base_url
+        self.timeout = timeout
+        self.max_retries = max_retries
+
+        self.client = Anthropic(**self._get_client_params())
 
         # Store completion parameters
         self.max_tokens = max_tokens
@@ -78,6 +80,26 @@ class AnthropicCompletion(BaseLLM):
         # Model-specific settings
         self.is_claude_3 = "claude-3" in model.lower()
         self.supports_tools = self.is_claude_3  # Claude 3+ supports tool use
+
+    def _get_client_params(self) -> dict[str, Any]:
+        """Get client parameters."""
+
+        if self.api_key is None:
+            self.api_key = os.getenv("ANTHROPIC_API_KEY")
+            if self.api_key is None:
+                raise ValueError("ANTHROPIC_API_KEY is required")
+
+        client_params = {
+            "api_key": self.api_key,
+            "base_url": self.base_url,
+            "timeout": self.timeout,
+            "max_retries": self.max_retries,
+        }
+
+        if self.client_params:
+            client_params.update(self.client_params)
+
+        return client_params
 
     def call(
         self,
@@ -102,6 +124,7 @@ class AnthropicCompletion(BaseLLM):
             Chat completion response or tool call result
         """
         try:
+            print("we are calling", messages)
             # Emit call started event
             self._emit_call_started_event(
                 messages=messages,
@@ -121,6 +144,7 @@ class AnthropicCompletion(BaseLLM):
             completion_params = self._prepare_completion_params(
                 formatted_messages, system_message, tools
             )
+            print("completion_params", completion_params)
 
             # Handle streaming vs non-streaming
             if self.stream:
@@ -183,12 +207,25 @@ class AnthropicCompletion(BaseLLM):
 
     def _convert_tools_for_interference(self, tools: list[dict]) -> list[dict]:
         """Convert CrewAI tool format to Anthropic tool use format."""
-        from crewai.llms.providers.utils.common import safe_tool_conversion
-
         anthropic_tools = []
 
         for tool in tools:
-            name, description, parameters = safe_tool_conversion(tool, "Anthropic")
+            if "input_schema" in tool and "name" in tool and "description" in tool:
+                anthropic_tools.append(tool)
+                continue
+
+            try:
+                from crewai.llms.providers.utils.common import safe_tool_conversion
+
+                name, description, parameters = safe_tool_conversion(tool, "Anthropic")
+            except (ImportError, Exception):
+                name = tool.get("name", "unknown_tool")
+                description = tool.get("description", "A tool function")
+                parameters = (
+                    tool.get("input_schema")
+                    or tool.get("parameters")
+                    or tool.get("schema")
+                )
 
             anthropic_tool = {
                 "name": name,
@@ -196,7 +233,13 @@ class AnthropicCompletion(BaseLLM):
             }
 
             if parameters and isinstance(parameters, dict):
-                anthropic_tool["input_schema"] = parameters  # type: ignore
+                anthropic_tool["input_schema"] = parameters
+            else:
+                anthropic_tool["input_schema"] = {
+                    "type": "object",
+                    "properties": {},
+                    "required": [],
+                }
 
             anthropic_tools.append(anthropic_tool)
 
@@ -229,13 +272,11 @@ class AnthropicCompletion(BaseLLM):
             content = message.get("content", "")
 
             if role == "system":
-                # Extract system message - Anthropic handles it separately
                 if system_message:
                     system_message += f"\n\n{content}"
                 else:
                     system_message = content
             else:
-                # Add user/assistant messages - ensure both role and content are str, not None
                 role_str = role if role is not None else "user"
                 content_str = content if content is not None else ""
                 formatted_messages.append({"role": role_str, "content": content_str})
@@ -259,6 +300,7 @@ class AnthropicCompletion(BaseLLM):
     ) -> str | Any:
         """Handle non-streaming message completion."""
         try:
+            print("params", params)
             response: Message = self.client.messages.create(**params)
 
         except Exception as e:
@@ -270,22 +312,22 @@ class AnthropicCompletion(BaseLLM):
         usage = self._extract_anthropic_token_usage(response)
         self._track_token_usage_internal(usage)
 
+        # Check if Claude wants to use tools
         if response.content and available_functions:
-            for content_block in response.content:
-                if isinstance(content_block, ToolUseBlock):
-                    function_name = content_block.name
-                    function_args = content_block.input
+            tool_uses = [
+                block for block in response.content if isinstance(block, ToolUseBlock)
+            ]
 
-                    result = self._handle_tool_execution(
-                        function_name=function_name,
-                        function_args=function_args,  # type: ignore
-                        available_functions=available_functions,
-                        from_task=from_task,
-                        from_agent=from_agent,
-                    )
-
-                    if result is not None:
-                        return result
+            if tool_uses:
+                # Handle tool use conversation flow
+                return self._handle_tool_use_conversation(
+                    response,
+                    tool_uses,
+                    params,
+                    available_functions,
+                    from_task,
+                    from_agent,
+                )
 
         # Extract text content
         content = ""
@@ -350,26 +392,54 @@ class AnthropicCompletion(BaseLLM):
 
         # Handle completed tool uses
         if tool_uses and available_functions:
-            for tool_data in tool_uses.values():
-                function_name = tool_data["name"]
-
+            # Convert streamed tool uses to ToolUseBlock-like objects for consistency
+            tool_use_blocks = []
+            for tool_id, tool_data in tool_uses.items():
                 try:
                     function_args = json.loads(tool_data["input"])
                 except json.JSONDecodeError as e:
                     logging.error(f"Failed to parse streamed tool arguments: {e}")
                     continue
 
-                # Execute tool
-                result = self._handle_tool_execution(
-                    function_name=function_name,
-                    function_args=function_args,
-                    available_functions=available_functions,
-                    from_task=from_task,
-                    from_agent=from_agent,
+                # Create a mock ToolUseBlock-like object
+                class MockToolUse:
+                    def __init__(self, tool_id: str, name: str, input_args: dict):
+                        self.id = tool_id
+                        self.name = name
+                        self.input = input_args
+
+                tool_use_blocks.append(
+                    MockToolUse(tool_id, tool_data["name"], function_args)
                 )
 
-                if result is not None:
-                    return result
+            if tool_use_blocks:
+                # Create a mock response object for the tool conversation flow
+                class MockResponse:
+                    def __init__(self, content_blocks):
+                        self.content = content_blocks
+
+                # Combine text content and tool uses in the response
+                response_content = []
+                if full_response.strip():  # Add text content if any
+
+                    class MockTextBlock:
+                        def __init__(self, text: str):
+                            self.text = text
+
+                    response_content.append(MockTextBlock(full_response))
+
+                response_content.extend(tool_use_blocks)
+                mock_response = MockResponse(response_content)
+
+                # Handle tool use conversation flow
+                return self._handle_tool_use_conversation(
+                    mock_response,
+                    tool_use_blocks,
+                    params,
+                    available_functions,
+                    from_task,
+                    from_agent,
+                )
 
         # Apply stop words to full response
         full_response = self._apply_stop_words(full_response)
@@ -384,6 +454,115 @@ class AnthropicCompletion(BaseLLM):
         )
 
         return full_response
+
+    def _handle_tool_use_conversation(
+        self,
+        initial_response: Message
+        | Any,  # Can be Message or mock response from streaming
+        tool_uses: list[ToolUseBlock]
+        | list[Any],  # Can be ToolUseBlock or mock objects
+        params: dict[str, Any],
+        available_functions: dict[str, Any],
+        from_task: Any | None = None,
+        from_agent: Any | None = None,
+    ) -> str:
+        """Handle the complete tool use conversation flow.
+
+        This implements the proper Anthropic tool use pattern:
+        1. Claude requests tool use
+        2. We execute the tools
+        3. We send tool results back to Claude
+        4. Claude processes results and generates final response
+        """
+        # Execute all requested tools and collect results
+        tool_results = []
+
+        for tool_use in tool_uses:
+            function_name = tool_use.name
+            function_args = tool_use.input
+
+            # Execute the tool
+            result = self._handle_tool_execution(
+                function_name=function_name,
+                function_args=function_args,  # type: ignore
+                available_functions=available_functions,
+                from_task=from_task,
+                from_agent=from_agent,
+            )
+
+            # Create tool result in Anthropic format
+            tool_result = {
+                "type": "tool_result",
+                "tool_use_id": tool_use.id,
+                "content": str(result)
+                if result is not None
+                else "Tool execution completed",
+            }
+            tool_results.append(tool_result)
+
+        # Prepare follow-up conversation with tool results
+        follow_up_params = params.copy()
+
+        # Add Claude's tool use response to conversation
+        assistant_message = {"role": "assistant", "content": initial_response.content}
+
+        # Add user message with tool results
+        user_message = {"role": "user", "content": tool_results}
+
+        # Update messages for follow-up call
+        follow_up_params["messages"] = params["messages"] + [
+            assistant_message,
+            user_message,
+        ]
+
+        try:
+            # Send tool results back to Claude for final response
+            final_response: Message = self.client.messages.create(**follow_up_params)
+
+            # Track token usage for follow-up call
+            follow_up_usage = self._extract_anthropic_token_usage(final_response)
+            self._track_token_usage_internal(follow_up_usage)
+
+            # Extract final text content
+            final_content = ""
+            if final_response.content:
+                for content_block in final_response.content:
+                    if hasattr(content_block, "text"):
+                        final_content += content_block.text
+
+            final_content = self._apply_stop_words(final_content)
+
+            # Emit completion event for the final response
+            self._emit_call_completed_event(
+                response=final_content,
+                call_type=LLMCallType.LLM_CALL,
+                from_task=from_task,
+                from_agent=from_agent,
+                messages=follow_up_params["messages"],
+            )
+
+            # Log combined token usage
+            total_usage = {
+                "input_tokens": follow_up_usage.get("input_tokens", 0),
+                "output_tokens": follow_up_usage.get("output_tokens", 0),
+                "total_tokens": follow_up_usage.get("total_tokens", 0),
+            }
+
+            if total_usage.get("total_tokens", 0) > 0:
+                logging.info(f"Anthropic API tool conversation usage: {total_usage}")
+
+            return final_content
+
+        except Exception as e:
+            if is_context_length_exceeded(e):
+                logging.error(f"Context window exceeded in tool follow-up: {e}")
+                raise LLMContextLengthExceededError(str(e)) from e
+
+            logging.error(f"Tool follow-up conversation failed: {e}")
+            # Fallback: return the first tool result if follow-up fails
+            if tool_results:
+                return tool_results[0]["content"]
+            raise e
 
     def supports_function_calling(self) -> bool:
         """Check if the model supports function calling."""
