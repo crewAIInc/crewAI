@@ -32,6 +32,13 @@ from crewai.events.types.flow_events import (
     MethodExecutionFinishedEvent,
     MethodExecutionStartedEvent,
 )
+from crewai.events.types.knowledge_events import (
+    KnowledgeQueryCompletedEvent,
+    KnowledgeQueryFailedEvent,
+    KnowledgeQueryStartedEvent,
+    KnowledgeRetrievalCompletedEvent,
+    KnowledgeRetrievalStartedEvent,
+)
 from crewai.events.types.llm_events import (
     LLMCallCompletedEvent,
     LLMCallFailedEvent,
@@ -309,6 +316,26 @@ class TraceCollectionListener(BaseEventListener):
         @event_bus.on(AgentReasoningFailedEvent)
         def on_agent_reasoning_failed(source, event):
             self._handle_action_event("agent_reasoning_failed", source, event)
+
+        @event_bus.on(KnowledgeRetrievalStartedEvent)
+        def on_knowledge_retrieval_started(source, event):
+            self._handle_action_event("knowledge_retrieval_started", source, event)
+
+        @event_bus.on(KnowledgeRetrievalCompletedEvent)
+        def on_knowledge_retrieval_completed(source, event):
+            self._handle_action_event("knowledge_retrieval_completed", source, event)
+
+        @event_bus.on(KnowledgeQueryStartedEvent)
+        def on_knowledge_query_started(source, event):
+            self._handle_action_event("knowledge_query_started", source, event)
+
+        @event_bus.on(KnowledgeQueryCompletedEvent)
+        def on_knowledge_query_completed(source, event):
+            self._handle_action_event("knowledge_query_completed", source, event)
+
+        @event_bus.on(KnowledgeQueryFailedEvent)
+        def on_knowledge_query_failed(source, event):
+            self._handle_action_event("knowledge_query_failed", source, event)
 
     def _initialize_crew_batch(self, source: Any, event: Any):
         """Initialize trace batch"""
