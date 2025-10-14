@@ -1,0 +1,129 @@
+interactions:
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are Research Assistant.
+      You are a helpful research assistant.\nYour personal goal is: Find information
+      about the population of Tokyo\nTo give my best complete final answer to the
+      task respond using the exact following format:\n\nThought: I now can give a
+      great answer\nFinal Answer: Your final answer must be the great and the most
+      complete as possible, it must be outcome described.\n\nI MUST use these formats,
+      my job depends on it!"}, {"role": "user", "content": "\nCurrent Task: Find information
+      about the population of Tokyo\n\nThis is the expected criteria for your final
+      answer: The population of Tokyo is 10 million\nyou MUST return the actual complete
+      content as the final answer, not a summary.\n\nBegin! This is VERY important
+      to you, use the tools available and give your best Final Answer, your job depends
+      on it!\n\nThought:"}], "model": "gpt-4o", "stream": false}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '927'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.109.1
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.109.1
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.3
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAAwAAAP//jFTbahsxEH33Vwx6Xgdf0sT2Wwi09AKlkFJoG8xYmt2dRqtRJa0dN+Tf
+        i2Qndi6Fvixoz5yjc0Yj3Q0AFBu1AKVbTLrzdnj55RNtPm7N+s+cv9t6Mp/dXpL99vXz5fbig6oy
+        Q1a/SKcH1omWzltKLG4H60CYKKuOz89G0/mb2WRSgE4M2UxrfBqeynAympwOR7Ph6GxPbIU1RbWA
+        HwMAgLvyzRadoVu1gFH18KejGLEhtXgsAlBBbP6jMEaOCV1S1QHU4hK54vqqlb5p0wLeg5MNaHTQ
+        8JoAocnWAV3cUAD46d6yQwsXZb2Aq5bAi+8t5rAgNVzJzVYqYKdtb9g1sJLUAqcIHaUgXiwndICB
+        ENAZSC3BZArRk2a0sMFgIqQWE3R4Q9D7UqHJpYAWNKdtBRwhcuO4Zo0u2S1YDA2FTHMwHkHH1rK4
+        E7iI2VIW6CQmCJR1wGDCamc0S4mjJ1Ulj/Qxb8YUgV3BNhKsqWDDqS3rd+VMw17nIudpcZ0T47OW
+        yJoCTM8fbIEn8ZaqHDCXc3pl75fNOrZxUhr/om2H9m9a1m3mFQ797nmNNmeXGnDfxRbLAWvpVuzI
+        HJsu/adbTWQizJ8ZPzmeoUB1HzGPsOutPQLQOUlFrUzv9R65f5xXK40PsorPqKpmx7FdBsIoLs9m
+        TOJVQe8HANflXvRPRl35IJ1PyyQ3VLYbn093eupwE4/Q8dkeTZLQHoDJbF69Irg0lJBtPLpaSqNu
+        yRyoh3uIvWE5AgZHsV/aeU17F51d8z/yB0Br8onM0gcyrJ9GPpQFyi/Vv8oe21wMq0hhzZqWiSnk
+        ozBUY293j4iK25ioW9bsGgo+8O4lqf2SVlM91avZqVGD+8FfAAAA//8DAFlnuIlSBQAA
+    headers:
+      CF-RAY:
+      - 98e26542adbbce40-SJC
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Mon, 13 Oct 2025 22:50:26 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - __cf_bm=ZOY3aTF4ZQGyq1Ai5bME5tI2L4FUKjdaM76hKUktVgg-1760395826-1.0.1.1-6MNmhofBsqJxHCGxkDDtTbJUi9JDiJwdeBOsfQEvrMTovTmf8eAYxjskKbAxY0ZicvPhqx2bOD64cOAPUfREUiFdzz1oh3uKuy4_AL9Vma0;
+        path=/; expires=Mon, 13-Oct-25 23:20:26 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=ETABAP9icJoaIxhFazEUuSnHhwqlBentj3YJUS501.w-1760395826352-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '3572'
+      openai-project:
+      - proj_xitITlrFeen7zjNSzML82h9x
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '3756'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-project-requests:
+      - '10000'
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '30000000'
+      x-ratelimit-remaining-project-requests:
+      - '9999'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '29999798'
+      x-ratelimit-reset-project-requests:
+      - 6ms
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_3676b4edd10244929526ceb64a623a88
+    status:
+      code: 200
+      message: OK
+version: 1
