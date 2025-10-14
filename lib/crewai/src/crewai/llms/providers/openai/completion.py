@@ -10,7 +10,7 @@ from crewai.utilities.agent_utils import is_context_length_exceeded
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededError,
 )
-from openai import OpenAI
+from openai import APIConnectionError, NotFoundError, OpenAI
 from openai.types.chat import ChatCompletion, ChatCompletionChunk
 from openai.types.chat.chat_completion import Choice
 from openai.types.chat.chat_completion_chunk import ChoiceDelta
@@ -338,10 +338,31 @@ class OpenAICompletion(BaseLLM):
 
             if usage.get("total_tokens", 0) > 0:
                 logging.info(f"OpenAI API usage: {usage}")
+        except NotFoundError as e:
+            error_msg = f"Model {self.model} not found: {e}"
+            logging.error(error_msg)
+            self._emit_call_failed_event(
+                error=error_msg, from_task=from_task, from_agent=from_agent
+            )
+            raise ValueError(error_msg) from e
+        except APIConnectionError as e:
+            error_msg = f"Failed to connect to OpenAI API: {e}"
+            logging.error(error_msg)
+            self._emit_call_failed_event(
+                error=error_msg, from_task=from_task, from_agent=from_agent
+            )
+            raise ConnectionError(error_msg) from e
         except Exception as e:
+            # Handle context length exceeded and other errors
             if is_context_length_exceeded(e):
                 logging.error(f"Context window exceeded: {e}")
                 raise LLMContextLengthExceededError(str(e)) from e
+
+            error_msg = f"OpenAI API call failed: {e!s}"
+            logging.error(error_msg)
+            self._emit_call_failed_event(
+                error=error_msg, from_task=from_task, from_agent=from_agent
+            )
             raise e from e
 
         return content
