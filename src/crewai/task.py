@@ -280,10 +280,12 @@ class Task(BaseModel):
     @model_validator(mode="after")
     def ensure_guardrails_is_list_of_callables(self) -> "Task":
         guardrails = []
-        if self.agent is None:
-            raise ValueError("Agent is required to use guardrails")
+        if self.guardrails is not None and (
+            not isinstance(self.guardrails, (list, tuple)) or len(self.guardrails) > 0
+        ):
+            if self.agent is None:
+                raise ValueError("Agent is required to use guardrails")
 
-        if self.guardrails is not None:
             if callable(self.guardrails):
                 guardrails.append(self.guardrails)
             elif isinstance(self.guardrails, str):
