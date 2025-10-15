@@ -5,7 +5,7 @@ import logging
 import threading
 import uuid
 import warnings
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from concurrent.futures import Future
 from copy import copy as shallow_copy
 from hashlib import md5
@@ -153,7 +153,7 @@ class Task(BaseModel):
         description="Function or string description of a guardrail to validate task output before proceeding to next task",
     )
     guardrails: (
-        list[Callable[[TaskOutput], tuple[bool, Any]] | str]
+        Sequence[Callable[[TaskOutput], tuple[bool, Any]] | str]
         | Callable[[TaskOutput], tuple[bool, Any]]
         | str
         | None
