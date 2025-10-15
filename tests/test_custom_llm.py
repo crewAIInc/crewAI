@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Optional, Union
+from typing import Any
 
 import pytest
 
@@ -159,11 +159,11 @@ class JWTAuthLLM(BaseLLM):
 
     def call(
         self,
-        messages: Union[str, List[Dict[str, str]]],
-        tools: Optional[List[dict]] = None,
-        callbacks: Optional[List[Any]] = None,
-        available_functions: Optional[Dict[str, Any]] = None,
-    ) -> Union[str, Any]:
+        messages: str | list[dict[str, str]],
+        tools: list[dict] | None = None,
+        callbacks: list[Any] | None = None,
+        available_functions: dict[str, Any] | None = None,
+    ) -> str | Any:
         """Record the call and return a predefined response."""
         self.calls.append(
             {
@@ -192,7 +192,7 @@ class JWTAuthLLM(BaseLLM):
 
 def test_custom_llm_with_jwt_auth():
     """Test a custom LLM implementation with JWT authentication."""
-    jwt_llm = JWTAuthLLM(jwt_token="example.jwt.token")
+    jwt_llm = JWTAuthLLM(jwt_token="example.jwt.token")  # noqa: S106
 
     # Test that create_llm returns the JWT-authenticated LLM instance directly
     result_llm = create_llm(jwt_llm)
@@ -238,11 +238,11 @@ class TimeoutHandlingLLM(BaseLLM):
 
     def call(
         self,
-        messages: Union[str, List[Dict[str, str]]],
-        tools: Optional[List[dict]] = None,
-        callbacks: Optional[List[Any]] = None,
-        available_functions: Optional[Dict[str, Any]] = None,
-    ) -> Union[str, Any]:
+        messages: str | list[dict[str, str]],
+        tools: list[dict] | None = None,
+        callbacks: list[Any] | None = None,
+        available_functions: dict[str, Any] | None = None,
+    ) -> str | Any:
         """Simulate API calls with timeout handling and retry logic.
 
         Args:
@@ -282,35 +282,34 @@ class TimeoutHandlingLLM(BaseLLM):
                         )
                     # Otherwise, continue to the next attempt (simulating backoff)
                     continue
-                else:
-                    # Success on first attempt
-                    return "First attempt response"
-            else:
-                # This is a retry attempt (attempt > 0)
-                # Always record retry attempts
-                self.calls.append(
-                    {
-                        "retry_attempt": attempt,
-                        "messages": messages,
-                        "tools": tools,
-                        "callbacks": callbacks,
-                        "available_functions": available_functions,
-                    }
-                )
+                # Success on first attempt
+                return "First attempt response"
+            # This is a retry attempt (attempt > 0)
+            # Always record retry attempts
+            self.calls.append(
+                {
+                    "retry_attempt": attempt,
+                    "messages": messages,
+                    "tools": tools,
+                    "callbacks": callbacks,
+                    "available_functions": available_functions,
+                }
+            )
 
-                # Simulate a failure if fail_count > 0
-                if self.fail_count > 0:
-                    self.fail_count -= 1
-                    # If we've used all retries, raise an error
-                    if attempt == self.max_retries - 1:
-                        raise TimeoutError(
-                            f"LLM request failed after {self.max_retries} attempts"
-                        )
-                    # Otherwise, continue to the next attempt (simulating backoff)
-                    continue
-                else:
-                    # Success on retry
-                    return "Response after retry"
+            # Simulate a failure if fail_count > 0
+            if self.fail_count > 0:
+                self.fail_count -= 1
+                # If we've used all retries, raise an error
+                if attempt == self.max_retries - 1:
+                    raise TimeoutError(
+                        f"LLM request failed after {self.max_retries} attempts"
+                    )
+                # Otherwise, continue to the next attempt (simulating backoff)
+                continue
+            # Success on retry
+            return "Response after retry"
+
+        return "Response after retry"
 
     def supports_function_calling(self) -> bool:
         """Return True to indicate that function calling is supported.
@@ -368,11 +367,11 @@ class MinimalCustomLLM(BaseLLM):
 
     def call(
         self,
-        messages: Union[str, List[Dict[str, str]]],
-        tools: Optional[List[dict]] = None,
-        callbacks: Optional[List[Any]] = None,
-        available_functions: Optional[Dict[str, Any]] = None,
-    ) -> Union[str, Any]:
+        messages: str | list[dict[str, str]],
+        tools: list[dict] | None = None,
+        callbacks: list[Any] | None = None,
+        available_functions: dict[str, Any] | None = None,
+    ) -> str | Any:
         return "Minimal response"
 
 
