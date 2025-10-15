@@ -40,6 +40,20 @@ class EmbeddingService:
     - voyageai: Voyage AI embeddings (voyage-2, voyage-large-2, etc.)
     - cohere: Cohere embeddings (embed-english-v3.0, embed-multilingual-v3.0, etc.)
     - google-generativeai: Google Gemini embeddings (models/embedding-001, etc.)
+    - google-vertex: Google Vertex embeddings (models/embedding-001, etc.)
+    - huggingface: Hugging Face embeddings (sentence-transformers/all-MiniLM-L6-v2, etc.)
+    - jina: Jina embeddings (jina-embeddings-v2-base-en, etc.)
+    - ollama: Ollama embeddings (nomic-embed-text, etc.)
+    - openai: OpenAI embeddings (text-embedding-3-small, text-embedding-3-large, etc.)
+    - roboflow: Roboflow embeddings (roboflow-embeddings-v2-base-en, etc.)
+    - voyageai: Voyage AI embeddings (voyage-2, voyage-large-2, etc.)
+    - watsonx: Watson X embeddings (ibm/slate-125m-english-rtrvr, etc.)
+    - custom: Custom embeddings (embedding_callable, etc.)
+    - sentence-transformer: Sentence Transformers embeddings (all-MiniLM-L6-v2, etc.)
+    - text2vec: Text2Vec embeddings (text2vec-base-en, etc.)
+    - openclip: OpenClip embeddings (openclip-large-v2, etc.)
+    - instructor: Instructor embeddings (hkunlp/instructor-large, etc.)
+    - onnx: ONNX embeddings (onnx-large-v2, etc.)
     """
 
     def __init__(
