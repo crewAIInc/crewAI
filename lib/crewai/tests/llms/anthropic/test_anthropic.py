@@ -5,11 +5,16 @@ from unittest.mock import patch, MagicMock
 import pytest
 
 from crewai.llm import LLM
-from crewai.llms.providers.anthropic.completion import AnthropicCompletion
 from crewai.crew import Crew
 from crewai.agent import Agent
 from crewai.task import Task
-from crewai.cli.constants import DEFAULT_LLM_MODEL
+
+
+@pytest.fixture(autouse=True)
+def mock_anthropic_api_key():
+    """Automatically mock ANTHROPIC_API_KEY for all tests in this module."""
+    with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"}):
+        yield
 
 
 def test_anthropic_completion_is_used_when_anthropic_provider():
