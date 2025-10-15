@@ -864,6 +864,7 @@ class Agent(BaseAgent):
             i18n=self.i18n,
             original_agent=self,
             guardrail=self.guardrail,
+            guardrail_max_retries=self.guardrail_max_retries,
         )
 
         return await lite_agent.kickoff_async(messages)
