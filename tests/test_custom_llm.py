@@ -358,3 +358,25 @@ def test_timeout_handling_llm():
     with pytest.raises(TimeoutError, match="LLM request failed after 2 attempts"):
         llm.call("Test message")
     assert len(llm.calls) == 2  # Initial call + failed retry attempt
+
+
+class MinimalCustomLLM(BaseLLM):
+    """Minimal custom LLM implementation that doesn't override supports_function_calling."""
+
+    def __init__(self):
+        super().__init__(model="minimal-model")
+
+    def call(
+        self,
+        messages: Union[str, List[Dict[str, str]]],
+        tools: Optional[List[dict]] = None,
+        callbacks: Optional[List[Any]] = None,
+        available_functions: Optional[Dict[str, Any]] = None,
+    ) -> Union[str, Any]:
+        return "Minimal response"
+
+
+def test_base_llm_supports_function_calling_default():
+    """Test that BaseLLM supports function calling by default."""
+    llm = MinimalCustomLLM()
+    assert llm.supports_function_calling() is True

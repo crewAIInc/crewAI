@@ -711,3 +711,18 @@ def test_ollama_does_not_modify_when_last_is_user(ollama_llm):
     formatted = ollama_llm._format_messages_for_provider(original_messages)
 
     assert formatted == original_messages
+
+
+def test_supports_function_calling_with_override_true():
+    llm = LLM(model="custom-model/my-model", supports_function_calling=True)
+    assert llm.supports_function_calling() is True
+
+
+def test_supports_function_calling_with_override_false():
+    llm = LLM(model="gpt-4o-mini", supports_function_calling=False)
+    assert llm.supports_function_calling() is False
+
+
+def test_supports_function_calling_without_override():
+    llm = LLM(model="gpt-4o-mini")
+    assert llm.supports_function_calling() is True
