@@ -334,36 +334,119 @@ def load_crew_and_name() -> tuple[Crew, str]:
 
     # Get the project name from the 'project' section
     project_name = pyproject_data["project"]["name"]
-    folder_name = project_name
 
-    # Derive the crew class name from the project name
-    # E.g., if project_name is 'my_project', crew_class_name is 'MyProject'
-    crew_class_name = project_name.replace("_", " ").title().replace(" ", "")
+    # Normalize project name for module import and class name
+    from .utils import normalize_project_name
 
-    # Add the 'src' directory to sys.path
+    folder_name, crew_class_name = normalize_project_name(project_name)
+
+    # Add both current directory and 'src' directory to sys.path
+    current_path = str(cwd)
     src_path = cwd / "src"
-    if str(src_path) not in sys.path:
-        sys.path.insert(0, str(src_path))
 
-    # Import the crew module
+    for path in [current_path, str(src_path)]:
+        if path not in sys.path:
+            sys.path.insert(0, path)
+
+    # Try multiple import strategies
+    import_errors = []
+    crew_module = None
+
+    # Strategy 1: Try importing from src/{folder_name}/crew
     crew_module_name = f"{folder_name}.crew"
     try:
         crew_module = __import__(crew_module_name, fromlist=[crew_class_name])
     except ImportError as e:
-        raise ImportError(
-            f"Failed to import crew module {crew_module_name}: {e}"
-        ) from e
+        import_errors.append(f"Strategy 1 ({crew_module_name}): {e}")
+
+        # Strategy 2: Try direct import from crew.py in current directory
+        try:
+            import importlib.util
+
+            crew_file_path = cwd / "crew.py"
+            if crew_file_path.exists():
+                spec = importlib.util.spec_from_file_location(
+                    "crew_module", crew_file_path
+                )
+                if spec and spec.loader:
+                    crew_module = importlib.util.module_from_spec(spec)
+                    sys.modules["crew_module"] = crew_module
+                    spec.loader.exec_module(crew_module)
+                else:
+                    raise ImportError("Could not create module spec")
+            else:
+                raise ImportError("crew.py not found in current directory")
+        except ImportError as e2:
+            import_errors.append(f"Strategy 2 (direct crew.py): {e2}")
+
+            # Strategy 3: Try importing from src/{folder_name}/crew.py directly
+            try:
+                crew_file_path = src_path / folder_name / "crew.py"
+                if crew_file_path.exists():
+                    spec = importlib.util.spec_from_file_location(
+                        "crew_module", crew_file_path
+                    )
+                    if spec and spec.loader:
+                        crew_module = importlib.util.module_from_spec(spec)
+                        sys.modules["crew_module"] = crew_module
+                        spec.loader.exec_module(crew_module)
+                    else:
+                        raise ImportError("Could not create module spec")
+                else:
+                    raise ImportError(f"crew.py not found at {crew_file_path}")
+            except ImportError as e3:
+                import_errors.append(f"Strategy 3 (src/{folder_name}/crew.py): {e3}")
+
+                # All strategies failed
+                error_details = "\n".join([f"  - {err}" for err in import_errors])
+                raise ImportError(
+                    f"Failed to import crew module using all strategies:\n{error_details}\n\n"
+                    f"Debug info:\n"
+                    f"  - Project name: {project_name}\n"
+                    f"  - Folder name: {folder_name}\n"
+                    f"  - Expected crew class: {crew_class_name}\n"
+                    f"  - Current directory: {cwd}\n"
+                    f"  - Src directory exists: {src_path.exists()}\n"
+                    f"  - crew.py in current dir: {(cwd / 'crew.py').exists()}\n"
+                    f"  - crew.py in src/{folder_name}: {(src_path / folder_name / 'crew.py').exists()}"
+                ) from e3
+
+    if crew_module is None:
+        raise ImportError("No crew module could be loaded")
 
     # Get the crew class from the module
     try:
         crew_class = getattr(crew_module, crew_class_name)
     except AttributeError as e:
-        raise AttributeError(
-            f"Crew class {crew_class_name} not found in module {crew_module_name}"
-        ) from e
+        # Try to find any class that looks like a crew class
+        available_classes = []
+        for attr_name in dir(crew_module):
+            attr = getattr(crew_module, attr_name)
+            if (
+                isinstance(attr, type)
+                and hasattr(attr, "is_crew_class")
+                and getattr(attr, "is_crew_class", False)
+            ):
+                available_classes.append(attr_name)
+
+        if available_classes:
+            # Use the first available crew class
+            crew_class_name = available_classes[0]
+            crew_class = getattr(crew_module, crew_class_name)
+        else:
+            raise AttributeError(
+                f"Crew class {crew_class_name} not found in module. "
+                f"Available attributes: {[attr for attr in dir(crew_module) if not attr.startswith('_')]}"
+            ) from e
 
     # Instantiate the crew
-    crew_instance = crew_class().crew()
+    try:
+        crew_instance = crew_class().crew()
+    except Exception as e:
+        raise RuntimeError(
+            f"Failed to instantiate crew class {crew_class_name}: {e}"
+        ) from e
+
     return crew_instance, crew_class_name
 
 
