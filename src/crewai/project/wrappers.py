@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any, Generic, ParamSpec, Protocol, Self, TypeV
 
 if TYPE_CHECKING:
     from crewai import Agent, Task
+    from crewai.crews.crew_output import CrewOutput
 
 P = ParamSpec("P")
 R = TypeVar("R")
@@ -37,12 +38,21 @@ def _copy_function_metadata(wrapper: Any, func: Callable[..., Any]) -> None:
 class CrewInstance(Protocol):
     """Protocol for crew class instances with required attributes."""
 
+    _mcp_server_adapter: Any
+    _all_functions: dict[str, Callable[..., Any]]
+    _original_functions: dict[str, Callable[..., Any]]
     _original_tasks: dict[str, Callable[[Self], Task]]
     _original_agents: dict[str, Callable[[Self], Agent]]
     _before_kickoff: dict[str, Callable[..., Any]]
     _after_kickoff: dict[str, Callable[..., Any]]
+    _kickoff: dict[str, Callable[..., Any]]
     agents: list[Agent]
     tasks: list[Task]
+
+    def load_configurations(self) -> None: ...
+    def map_all_agent_variables(self) -> None: ...
+    def map_all_task_variables(self) -> None: ...
+    def _close_mcp_server(self, instance: Self, outputs: CrewOutput) -> CrewOutput: ...
 
 
 class DecoratedMethod(Generic[P, R]):
