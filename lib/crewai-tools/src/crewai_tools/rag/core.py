@@ -4,43 +4,18 @@ from typing import Any
 from uuid import uuid4
 
 import chromadb
-import litellm
 from pydantic import BaseModel, Field, PrivateAttr
 
 from crewai_tools.rag.base_loader import BaseLoader
 from crewai_tools.rag.chunkers.base_chunker import BaseChunker
 from crewai_tools.rag.data_types import DataType
+from crewai_tools.rag.embedding_service import EmbeddingService
 from crewai_tools.rag.misc import compute_sha256
 from crewai_tools.rag.source_content import SourceContent
 from crewai_tools.tools.rag.rag_tool import Adapter
 
 
 logger = logging.getLogger(__name__)
-
-
-class EmbeddingService:
-    def __init__(self, model: str = "text-embedding-3-small", **kwargs):
-        self.model = model
-        self.kwargs = kwargs
-
-    def embed_text(self, text: str) -> list[float]:
-        try:
-            response = litellm.embedding(model=self.model, input=[text], **self.kwargs)
-            return response.data[0]["embedding"]
-        except Exception as e:
-            logger.error(f"Error generating embedding: {e}")
-            raise
-
-    def embed_batch(self, texts: list[str]) -> list[list[float]]:
-        if not texts:
-            return []
-
-        try:
-            response = litellm.embedding(model=self.model, input=texts, **self.kwargs)
-            return [data["embedding"] for data in response.data]
-        except Exception as e:
-            logger.error(f"Error generating batch embeddings: {e}")
-            raise
 
 
 class Document(BaseModel):
@@ -54,6 +29,7 @@ class Document(BaseModel):
 class RAG(Adapter):
     collection_name: str = "crewai_knowledge_base"
     persist_directory: str | None = None
+    embedding_provider: str = "openai"
     embedding_model: str = "text-embedding-3-large"
     summarize: bool = False
     top_k: int = 5
@@ -79,7 +55,9 @@ class RAG(Adapter):
             )
 
             self._embedding_service = EmbeddingService(
-                model=self.embedding_model, **self.embedding_config
+                provider=self.embedding_provider,
+                model=self.embedding_model,
+                **self.embedding_config,
             )
         except Exception as e:
             logger.error(f"Failed to initialize ChromaDB: {e}")
@@ -181,7 +159,7 @@ class RAG(Adapter):
         except Exception as e:
             logger.error(f"Failed to add documents to ChromaDB: {e}")
 
-    def query(self, question: str, where: dict[str, Any] | None = None) -> str:
+    def query(self, question: str, where: dict[str, Any] | None = None) -> str:  # type: ignore
         try:
             question_embedding = self._embedding_service.embed_text(question)
 
