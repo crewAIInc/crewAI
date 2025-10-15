@@ -1,8 +1,8 @@
 """Adapter for CrewAI's native RAG system."""
 
-import hashlib
 from pathlib import Path
 from typing import Any, TypeAlias, TypedDict
+from uuid import uuid4
 
 from crewai.rag.config.types import RagConfigType
 from crewai.rag.config.utils import get_rag_client
@@ -52,7 +52,10 @@ class CrewAIRagAdapter(Adapter):
             self._client = create_client(self.config)
         else:
             self._client = get_rag_client()
-        self._client.get_or_create_collection(collection_name=self.collection_name)
+        collection_params = {"collection_name": self.collection_name}
+        if hasattr(self.config, "vectors_config") and self.config.vectors_config:  # type: ignore
+            collection_params["vectors_config"] = self.config.vectors_config  # type: ignore
+        self._client.get_or_create_collection(**collection_params)
 
     def query(
         self,
@@ -76,6 +79,8 @@ class CrewAIRagAdapter(Adapter):
             if similarity_threshold is not None
             else self.similarity_threshold
         )
+        if self._client is None:
+            raise ValueError("Client is not initialized")
 
         results: list[SearchResult] = self._client.search(
             collection_name=self.collection_name,
@@ -201,9 +206,7 @@ class CrewAIRagAdapter(Adapter):
                                 if isinstance(arg, dict):
                                     file_metadata.update(arg.get("metadata", {}))
 
-                                chunk_id = hashlib.sha256(
-                                    f"{file_result.doc_id}_{chunk_idx}_{file_chunk}".encode()
-                                ).hexdigest()
+                                chunk_id = str(uuid4())
 
                                 documents.append(
                                     {
@@ -251,9 +254,7 @@ class CrewAIRagAdapter(Adapter):
                     if isinstance(arg, dict):
                         chunk_metadata.update(arg.get("metadata", {}))
 
-                    chunk_id = hashlib.sha256(
-                        f"{loader_result.doc_id}_{i}_{chunk}".encode()
-                    ).hexdigest()
+                    chunk_id = str(uuid4())
 
                     documents.append(
                         {
@@ -264,6 +265,8 @@ class CrewAIRagAdapter(Adapter):
                     )
 
         if documents:
+            if self._client is None:
+                raise ValueError("Client is not initialized")
             self._client.add_documents(
                 collection_name=self.collection_name, documents=documents
             )

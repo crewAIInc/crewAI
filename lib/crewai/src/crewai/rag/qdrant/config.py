@@ -4,6 +4,7 @@ from dataclasses import field
 from typing import Literal, cast
 
 from pydantic.dataclasses import dataclass as pyd_dataclass
+from qdrant_client.models import VectorParams
 
 from crewai.rag.config.base import BaseRagConfig
 from crewai.rag.qdrant.constants import DEFAULT_EMBEDDING_MODEL, DEFAULT_STORAGE_PATH
@@ -53,3 +54,4 @@ class QdrantConfig(BaseRagConfig):
     embedding_function: QdrantEmbeddingFunctionWrapper = field(
         default_factory=_default_embedding_function
     )
+    vectors_config: VectorParams | None = field(default=None)
