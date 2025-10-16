@@ -1,24 +1,23 @@
 """Test nested or_() conditions in Flow execution (Issue #3719)."""
 
-import pytest
 
-from crewai.flow.flow import Flow, listen, or_, router, start
+from crewai.flow.flow import Flow, listen, or_, start
 
 
 def test_nested_or_condition_triggers_once():
     """Test that nested or_() conditions only trigger listeners once.
-    
+
     This test addresses issue #3719 where nested or_() conditions would
     cause listeners to execute multiple times instead of once.
-    
+
     Setup:
         method_5 listens to or_(method_1, or_(method_2, method_3))
         method_7 listens to or_(method_5, method_6)
-    
+
     Expected behavior:
         - method_5 should execute exactly once (triggered by first matching condition)
         - method_7 should execute exactly once (triggered by first matching condition)
-    
+
     Bug behavior (before fix):
         - method_5 executed 3 times (once for method_1, method_2, and method_3)
         - method_7 executed 4 times (once for each method_5 execution + method_6)
@@ -65,7 +64,7 @@ def test_nested_or_condition_triggers_once():
     assert execution_order.count("method_7") == 1, (
         f"method_7 should execute exactly once, but executed {execution_order.count('method_7')} times"
     )
-    
+
     assert "method_1" in execution_order
     assert "method_2" in execution_order
     assert "method_3" in execution_order
@@ -76,7 +75,7 @@ def test_nested_or_condition_triggers_once():
 
 def test_simple_or_condition_triggers_once():
     """Test that simple or_() conditions only trigger once.
-    
+
     Even without nesting, an OR condition should only trigger a listener once,
     not multiple times for each method in the OR list.
     """
@@ -211,7 +210,7 @@ def test_deeply_nested_or_conditions():
 
 def test_or_condition_execution_order():
     """Test that OR listener executes after first matching condition.
-    
+
     The listener should trigger as soon as any one of the OR conditions is met,
     not wait for all of them.
     """
@@ -238,7 +237,7 @@ def test_or_condition_execution_order():
     flow.kickoff()
 
     method_4_index = execution_order.index("method_4")
-    
+
     assert "method_2" in execution_order[:method_4_index] or "method_3" in execution_order[:method_4_index], (
         "method_4 should execute after at least one of method_2 or method_3"
     )
@@ -266,7 +265,7 @@ def test_or_condition_with_single_method():
 
 def test_cyclic_flow_with_or_condition():
     """Test that OR conditions work correctly in cyclic flows.
-    
+
     Within a single flow execution, an OR listener should only trigger once
     even if multiple methods in the OR condition complete.
     """
