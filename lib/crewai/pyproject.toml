@@ -90,6 +90,9 @@ boto3 = [
 google-genai = [
     "google-genai>=1.2.0",
 ]
+azure-ai-inference = [
+    "azure-ai-inference>=1.0.0b9",
+]
 
 
 [project.scripts]
