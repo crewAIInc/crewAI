@@ -459,6 +459,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
         self._methods: dict[str, Callable] = {}
         self._method_execution_counts: dict[str, int] = {}
         self._pending_and_listeners: dict[str, set[str]] = {}
+        self._triggered_or_listeners: set[str] = set()  # Track OR listeners that have already triggered
         self._method_outputs: list[Any] = []  # list to store all method outputs
         self._completed_methods: set[str] = set()  # Track completed methods for reload
         self._persistence: FlowPersistence | None = persistence
@@ -822,6 +823,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 # Clear completed methods and outputs for a fresh start
                 self._completed_methods.clear()
                 self._method_outputs.clear()
+                self._triggered_or_listeners.clear()
             else:
                 # We're restoring from persistence, set the flag
                 self._is_execution_resuming = True
@@ -922,6 +924,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 return
             # For cyclic flows, clear from completed to allow re-execution
             self._completed_methods.discard(start_method_name)
+            self._triggered_or_listeners.clear()
 
         method = self._methods[start_method_name]
         enhanced_method = self._inject_trigger_payload_for_start_method(method)
@@ -1124,9 +1127,10 @@ class Flow(Generic[T], metaclass=FlowMeta):
         Notes
         -----
         - Handles both OR and AND conditions:
-          * OR: Triggers if any condition is met
+          * OR: Triggers if any condition is met (but only once per listener)
           * AND: Triggers only when all conditions are met
         - Maintains state for AND conditions using _pending_and_listeners
+        - Tracks OR listeners to prevent multiple triggers from the same condition
         - Separates router and normal listener evaluation
         """
         triggered = []
@@ -1140,9 +1144,15 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 continue
 
             if condition_type == "OR":
+                # Check if this OR listener has already been triggered
+                if listener_name in self._triggered_or_listeners:
+                    # Skip this listener as it has already been triggered by another method in the OR condition
+                    continue
+                
                 # If the trigger_method matches any in methods, run this
                 if trigger_method in methods:
                     triggered.append(listener_name)
+                    self._triggered_or_listeners.add(listener_name)
             elif condition_type == "AND":
                 # Initialize pending methods for this listener if not already done
                 if listener_name not in self._pending_and_listeners:
@@ -1195,6 +1205,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 return
             # For cyclic flows, clear from completed to allow re-execution
             self._completed_methods.discard(listener_name)
+            self._triggered_or_listeners.discard(listener_name)
 
         try:
             method = self._methods[listener_name]
