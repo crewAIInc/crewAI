@@ -378,11 +378,8 @@ class EventListener(BaseEventListener):
         @crewai_event_bus.on(LLMStreamChunkEvent)
         def on_llm_stream_chunk(source, event: LLMStreamChunkEvent):
             self.text_stream.write(event.chunk)
-
             self.text_stream.seek(self.next_chunk)
-
-            # Read from the in-memory stream
-            content = self.text_stream.read()
+            self.text_stream.read()
             self.next_chunk = self.text_stream.tell()
 
         # ----------- LLM GUARDRAIL EVENTS -----------
