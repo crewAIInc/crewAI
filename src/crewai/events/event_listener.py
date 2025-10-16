@@ -383,7 +383,6 @@ class EventListener(BaseEventListener):
 
             # Read from the in-memory stream
             content = self.text_stream.read()
-            print(content, end="", flush=True)
             self.next_chunk = self.text_stream.tell()
 
         # ----------- LLM GUARDRAIL EVENTS -----------

@@ -991,3 +991,39 @@ def test_llm_emits_event_with_lite_agent():
 
     assert set(all_agent_roles) == {agent.role}
     assert set(all_agent_id) == {agent.id}
+
+def test_llm_stream_chunks_do_not_print_to_stdout(capsys):
+    """Test that LLM streaming chunks are not printed to stdout.
+    
+    This test verifies the fix for issue #3715 where LLM stream chunks
+    were being printed directly to stdout via print() statement.
+    """
+    received_chunks = []
+
+    with crewai_event_bus.scoped_handlers():
+
+        @crewai_event_bus.on(LLMStreamChunkEvent)
+        def handle_stream_chunk(source, event):
+            received_chunks.append(event.chunk)
+
+        # Manually emit stream chunk events to simulate streaming
+        llm = LLM(model="gpt-4o", stream=True)
+        
+        test_chunks = ["Hello", " ", "world", "!"]
+        for chunk in test_chunks:
+            crewai_event_bus.emit(llm, event=LLMStreamChunkEvent(chunk=chunk))
+
+        # Capture stdout
+        captured = capsys.readouterr()
+
+        # Verify that we received chunks
+        assert len(received_chunks) == len(test_chunks), "Should receive all streaming chunks"
+        assert received_chunks == test_chunks, "Chunks should match what was emitted"
+
+        # Verify that chunks were NOT printed to stdout
+        # The bug was that all chunks were being printed via print()
+        for chunk in test_chunks:
+            assert chunk not in captured.out, (
+                f"Chunk '{chunk}' should not be printed to stdout. "
+                "This indicates the bug in event_listener.py is not fixed."
+            )
