@@ -1,4 +1,3 @@
-import json
 import logging
 import os
 from typing import Any
@@ -357,12 +356,14 @@ class AnthropicCompletion(BaseLLM):
     ) -> str:
         """Handle streaming message completion."""
         full_response = ""
-        tool_uses = {}
+
+        # Remove 'stream' parameter as messages.stream() doesn't accept it
+        # (the SDK sets it internally)
+        stream_params = {k: v for k, v in params.items() if k != "stream"}
 
         # Make streaming API call
-        with self.client.messages.stream(**params) as stream:
+        with self.client.messages.stream(**stream_params) as stream:
             for event in stream:
-                # Handle content delta events
                 if hasattr(event, "delta") and hasattr(event.delta, "text"):
                     text_delta = event.delta.text
                     full_response += text_delta
@@ -372,66 +373,23 @@ class AnthropicCompletion(BaseLLM):
                         from_agent=from_agent,
                     )
 
-                # Handle tool use events
-                elif hasattr(event, "delta") and hasattr(event.delta, "partial_json"):
-                    # Tool use streaming - accumulate JSON
-                    tool_id = getattr(event, "index", "default")
-                    if tool_id not in tool_uses:
-                        tool_uses[tool_id] = {
-                            "name": "",
-                            "input": "",
-                        }
+            final_message: Message = stream.get_final_message()
 
-                    if hasattr(event.delta, "name"):
-                        tool_uses[tool_id]["name"] = event.delta.name
-                    if hasattr(event.delta, "partial_json"):
-                        tool_uses[tool_id]["input"] += event.delta.partial_json
+        usage = self._extract_anthropic_token_usage(final_message)
+        self._track_token_usage_internal(usage)
 
-        # Handle completed tool uses
-        if tool_uses and available_functions:
-            # Convert streamed tool uses to ToolUseBlock-like objects for consistency
-            tool_use_blocks = []
-            for tool_id, tool_data in tool_uses.items():
-                try:
-                    function_args = json.loads(tool_data["input"])
-                except json.JSONDecodeError as e:
-                    logging.error(f"Failed to parse streamed tool arguments: {e}")
-                    continue
+        if final_message.content and available_functions:
+            tool_uses = [
+                block
+                for block in final_message.content
+                if isinstance(block, ToolUseBlock)
+            ]
 
-                # Create a mock ToolUseBlock-like object
-                class MockToolUse:
-                    def __init__(self, tool_id: str, name: str, input_args: dict):
-                        self.id = tool_id
-                        self.name = name
-                        self.input = input_args
-
-                tool_use_blocks.append(
-                    MockToolUse(tool_id, tool_data["name"], function_args)
-                )
-
-            if tool_use_blocks:
-                # Create a mock response object for the tool conversation flow
-                class MockResponse:
-                    def __init__(self, content_blocks):
-                        self.content = content_blocks
-
-                # Combine text content and tool uses in the response
-                response_content = []
-                if full_response.strip():  # Add text content if any
-
-                    class MockTextBlock:
-                        def __init__(self, text: str):
-                            self.text = text
-
-                    response_content.append(MockTextBlock(full_response))
-
-                response_content.extend(tool_use_blocks)
-                mock_response = MockResponse(response_content)
-
+            if tool_uses:
                 # Handle tool use conversation flow
                 return self._handle_tool_use_conversation(
-                    mock_response,
-                    tool_use_blocks,
+                    final_message,
+                    tool_uses,
                     params,
                     available_functions,
                     from_task,
@@ -454,10 +412,8 @@ class AnthropicCompletion(BaseLLM):
 
     def _handle_tool_use_conversation(
         self,
-        initial_response: Message
-        | Any,  # Can be Message or mock response from streaming
-        tool_uses: list[ToolUseBlock]
-        | list[Any],  # Can be ToolUseBlock or mock objects
+        initial_response: Message,
+        tool_uses: list[ToolUseBlock],
         params: dict[str, Any],
         available_functions: dict[str, Any],
         from_task: Any | None = None,
