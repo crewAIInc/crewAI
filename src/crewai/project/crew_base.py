@@ -33,11 +33,61 @@ class AgentConfig(TypedDict, total=False):
     Fields can be either string references (from YAML) or actual instances (after processing).
     """
 
+    # Core agent attributes (from BaseAgent)
+    role: str
+    goal: str
+    backstory: str
+    cache: bool
+    verbose: bool
+    max_rpm: int
+    allow_delegation: bool
+    max_iter: int
+    max_tokens: int
+    callbacks: list[str]
+
+    # LLM configuration
     llm: str
-    tools: list[str] | list[BaseTool]
     function_calling_llm: str
+    use_system_prompt: bool
+
+    # Template configuration
+    system_template: str
+    prompt_template: str
+    response_template: str
+
+    # Tools and handlers (can be string references or instances)
+    tools: list[str] | list[BaseTool]
     step_callback: str
     cache_handler: str | CacheHandler
+
+    # Code execution
+    allow_code_execution: bool
+    code_execution_mode: Literal["safe", "unsafe"]
+
+    # Context and performance
+    respect_context_window: bool
+    max_retry_limit: int
+
+    # Multimodal and reasoning
+    multimodal: bool
+    reasoning: bool
+    max_reasoning_attempts: int
+
+    # Knowledge configuration
+    knowledge_sources: list[str] | list[Any]
+    knowledge_storage: str | Any
+    knowledge_config: dict[str, Any]
+    embedder: dict[str, Any]
+    agent_knowledge_context: str
+    crew_knowledge_context: str
+    knowledge_search_query: str
+
+    # Misc configuration
+    inject_date: bool
+    date_format: str
+    from_repository: str
+    guardrail: Callable[[Any], tuple[bool, Any]] | str
+    guardrail_max_retries: int
 
 
 class TaskConfig(TypedDict, total=False):
@@ -47,13 +97,37 @@ class TaskConfig(TypedDict, total=False):
     Fields can be either string references (from YAML) or actual instances (after processing).
     """
 
-    context: list[str]
-    tools: list[str] | list[BaseTool]
+    # Core task attributes
+    name: str
+    description: str
+    expected_output: str
+
+    # Agent and context
     agent: str
+    context: list[str]
+
+    # Tools and callbacks (can be string references or instances)
+    tools: list[str] | list[BaseTool]
+    callback: str
+    callbacks: list[str]
+
+    # Output configuration
     output_json: str
     output_pydantic: str
-    callbacks: list[str]
+    output_file: str
+    create_directory: bool
+
+    # Execution configuration
+    async_execution: bool
+    human_input: bool
+    markdown: bool
+
+    # Guardrail configuration
     guardrail: Callable[[TaskOutput], tuple[bool, Any]] | str
+    guardrail_max_retries: int
+
+    # Misc configuration
+    allow_crewai_trigger_context: bool
 
 
 load_dotenv()
@@ -199,7 +273,7 @@ class CrewBaseMeta(type):
         }
 
         after_kickoff_callbacks = _filter_methods(original_methods, "is_after_kickoff")
-        after_kickoff_callbacks["_close_mcp_server"] = instance._close_mcp_server
+        after_kickoff_callbacks["close_mcp_server"] = instance.close_mcp_server
 
         instance.__crew_metadata__ = CrewMetadata(
             original_methods=original_methods,
@@ -211,7 +285,7 @@ class CrewBaseMeta(type):
         )
 
 
-def _close_mcp_server(
+def close_mcp_server(
     self: CrewInstance, _instance: CrewInstance, outputs: CrewOutput
 ) -> CrewOutput:
     """Stop MCP server adapter and return outputs.
@@ -508,7 +582,7 @@ _CLASS_SETUP_FUNCTIONS: tuple[Callable[[type[CrewClass]], None], ...] = (
 )
 
 _METHODS_TO_INJECT = (
-    _close_mcp_server,
+    close_mcp_server,
     get_mcp_tools,
     _load_config,
     load_configurations,

@@ -12,10 +12,11 @@ from typing import (
     Literal,
     ParamSpec,
     Protocol,
-    Self,
     TypedDict,
     TypeVar,
 )
+
+from typing_extensions import Self
 
 if TYPE_CHECKING:
     from crewai import Agent, Task
@@ -81,7 +82,7 @@ class CrewInstance(Protocol):
     def load_configurations(self) -> None: ...
     def map_all_agent_variables(self) -> None: ...
     def map_all_task_variables(self) -> None: ...
-    def _close_mcp_server(self, instance: Self, outputs: CrewOutput) -> CrewOutput: ...
+    def close_mcp_server(self, instance: Self, outputs: CrewOutput) -> CrewOutput: ...
     def _load_config(
         self, config_path: str | None, config_type: Literal["agent", "task"]
     ) -> dict[str, Any]: ...
@@ -118,7 +119,7 @@ class CrewClass(Protocol):
     original_tasks_config_path: str
     mcp_server_params: Any
     mcp_connect_timeout: int
-    _close_mcp_server: Callable[..., Any]
+    close_mcp_server: Callable[..., Any]
     get_mcp_tools: Callable[..., list[BaseTool]]
     _load_config: Callable[..., dict[str, Any]]
     load_configurations: Callable[..., None]
