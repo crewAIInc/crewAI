@@ -10,6 +10,7 @@ from crewai.project.utils import memoize
 
 if TYPE_CHECKING:
     from crewai import Agent, Crew, Task
+
 from crewai.project.wrappers import (
     AfterKickoffMethod,
     AgentMethod,
@@ -181,8 +182,8 @@ def crew(
         agent_roles: set[str] = set()
 
         # Use the preserved task and agent information
-        tasks = self._original_tasks.items()
-        agents = self._original_agents.items()
+        tasks = self.__crew_metadata__["original_tasks"].items()
+        agents = self.__crew_metadata__["original_agents"].items()
 
         # Instantiate tasks in order
         for _, task_method in tasks:
@@ -232,11 +233,11 @@ def crew(
 
             return bound_callback
 
-        for hook_callback in self._before_kickoff.values():
+        for hook_callback in self.__crew_metadata__["before_kickoff"].values():
             crew_instance.before_kickoff_callbacks.append(
                 callback_wrapper(hook_callback, self)
             )
-        for hook_callback in self._after_kickoff.values():
+        for hook_callback in self.__crew_metadata__["after_kickoff"].values():
             crew_instance.after_kickoff_callbacks.append(
                 callback_wrapper(hook_callback, self)
             )

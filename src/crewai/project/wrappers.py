@@ -4,11 +4,38 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from functools import partial
-from typing import TYPE_CHECKING, Any, Generic, ParamSpec, Protocol, Self, TypeVar
+from pathlib import Path
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Generic,
+    Literal,
+    ParamSpec,
+    Protocol,
+    Self,
+    TypedDict,
+    TypeVar,
+)
 
 if TYPE_CHECKING:
     from crewai import Agent, Task
     from crewai.crews.crew_output import CrewOutput
+    from crewai.tools import BaseTool
+
+
+class CrewMetadata(TypedDict):
+    """Type definition for crew metadata dictionary.
+
+    Stores framework-injected metadata about decorated methods and callbacks.
+    """
+
+    original_methods: dict[str, Callable[..., Any]]
+    original_tasks: dict[str, Callable[..., Task]]
+    original_agents: dict[str, Callable[..., Agent]]
+    before_kickoff: dict[str, Callable[..., Any]]
+    after_kickoff: dict[str, Callable[..., Any]]
+    kickoff: dict[str, Callable[..., Any]]
+
 
 P = ParamSpec("P")
 R = TypeVar("R")
@@ -24,35 +51,82 @@ class TaskResult(Protocol):
 TaskResultT = TypeVar("TaskResultT", bound=TaskResult)
 
 
-def _copy_function_metadata(wrapper: Any, func: Callable[..., Any]) -> None:
-    """Copy function metadata to a wrapper object.
+def _copy_method_metadata(wrapper: Any, meth: Callable[..., Any]) -> None:
+    """Copy method metadata to a wrapper object.
 
     Args:
         wrapper: The wrapper object to update.
-        func: The function to copy metadata from.
+        meth: The method to copy metadata from.
     """
-    wrapper.__name__ = func.__name__
-    wrapper.__doc__ = func.__doc__
+    wrapper.__name__ = meth.__name__
+    wrapper.__doc__ = meth.__doc__
 
 
 class CrewInstance(Protocol):
     """Protocol for crew class instances with required attributes."""
 
+    __crew_metadata__: CrewMetadata
     _mcp_server_adapter: Any
-    _all_functions: dict[str, Callable[..., Any]]
-    _original_functions: dict[str, Callable[..., Any]]
-    _original_tasks: dict[str, Callable[[Self], Task]]
-    _original_agents: dict[str, Callable[[Self], Agent]]
-    _before_kickoff: dict[str, Callable[..., Any]]
-    _after_kickoff: dict[str, Callable[..., Any]]
-    _kickoff: dict[str, Callable[..., Any]]
+    _all_methods: dict[str, Callable[..., Any]]
     agents: list[Agent]
     tasks: list[Task]
+    base_directory: Path
+    original_agents_config_path: str
+    original_tasks_config_path: str
+    agents_config: dict[str, Any]
+    tasks_config: dict[str, Any]
+    mcp_server_params: Any
+    mcp_connect_timeout: int
 
     def load_configurations(self) -> None: ...
     def map_all_agent_variables(self) -> None: ...
     def map_all_task_variables(self) -> None: ...
     def _close_mcp_server(self, instance: Self, outputs: CrewOutput) -> CrewOutput: ...
+    def _load_config(
+        self, config_path: str | None, config_type: Literal["agent", "task"]
+    ) -> dict[str, Any]: ...
+    def _map_agent_variables(
+        self,
+        agent_name: str,
+        agent_info: dict[str, Any],
+        llms: dict[str, Callable[..., Any]],
+        tool_functions: dict[str, Callable[..., Any]],
+        cache_handler_functions: dict[str, Callable[..., Any]],
+        callbacks: dict[str, Callable[..., Any]],
+    ) -> None: ...
+    def _map_task_variables(
+        self,
+        task_name: str,
+        task_info: dict[str, Any],
+        agents: dict[str, Callable[..., Any]],
+        tasks: dict[str, Callable[..., Any]],
+        output_json_functions: dict[str, Callable[..., Any]],
+        tool_functions: dict[str, Callable[..., Any]],
+        callback_functions: dict[str, Callable[..., Any]],
+        output_pydantic_functions: dict[str, Callable[..., Any]],
+    ) -> None: ...
+    def load_yaml(self, config_path: Path) -> dict[str, Any]: ...
+
+
+class CrewClass(Protocol):
+    """Protocol describing class attributes injected by CrewBaseMeta."""
+
+    is_crew_class: bool
+    _crew_name: str
+    base_directory: Path
+    original_agents_config_path: str
+    original_tasks_config_path: str
+    mcp_server_params: Any
+    mcp_connect_timeout: int
+    _close_mcp_server: Callable[..., Any]
+    get_mcp_tools: Callable[..., list[BaseTool]]
+    _load_config: Callable[..., dict[str, Any]]
+    load_configurations: Callable[..., None]
+    load_yaml: staticmethod
+    map_all_agent_variables: Callable[..., None]
+    _map_agent_variables: Callable[..., None]
+    map_all_task_variables: Callable[..., None]
+    _map_task_variables: Callable[..., None]
 
 
 class DecoratedMethod(Generic[P, R]):
@@ -69,7 +143,7 @@ class DecoratedMethod(Generic[P, R]):
             meth: The method to wrap.
         """
         self._meth = meth
-        _copy_function_metadata(self, meth)
+        _copy_method_metadata(self, meth)
 
     def __get__(
         self, obj: Any, objtype: type[Any] | None = None
@@ -158,8 +232,8 @@ class BoundTaskMethod(Generic[TaskResultT]):
         Returns:
             The task result with name ensured.
         """
-        result = self._task_method._meth(self._obj, *args, **kwargs)
-        return self._task_method._ensure_task_name(result)
+        result = self._task_method.unwrap()(self._obj, *args, **kwargs)
+        return self._task_method.ensure_task_name(result)
 
 
 class TaskMethod(Generic[P, TaskResultT]):
@@ -174,9 +248,9 @@ class TaskMethod(Generic[P, TaskResultT]):
             meth: The method to wrap.
         """
         self._meth = meth
-        _copy_function_metadata(self, meth)
+        _copy_method_metadata(self, meth)
 
-    def _ensure_task_name(self, result: TaskResultT) -> TaskResultT:
+    def ensure_task_name(self, result: TaskResultT) -> TaskResultT:
         """Ensure task result has a name set.
 
         Args:
@@ -215,7 +289,7 @@ class TaskMethod(Generic[P, TaskResultT]):
         Returns:
             The task instance with name set if not already provided.
         """
-        return self._ensure_task_name(self._meth(*args, **kwargs))
+        return self.ensure_task_name(self._meth(*args, **kwargs))
 
     def unwrap(self) -> Callable[P, TaskResultT]:
         """Get the original unwrapped method.
