@@ -11,9 +11,9 @@ from crewai.task import Task
 
 
 @pytest.fixture(autouse=True)
-def mock_anthropic_api_key():
-    """Automatically mock ANTHROPIC_API_KEY for all tests in this module."""
-    with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"}):
+def mock_google_api_key():
+    """Automatically mock GOOGLE_API_KEY for all tests in this module."""
+    with patch.dict(os.environ, {"GOOGLE_API_KEY": "test-key"}):
         yield
 
 
