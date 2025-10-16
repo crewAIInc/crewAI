@@ -1089,7 +1089,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
                     for method_name in self._start_methods:
                         # Check if this start method is triggered by the current trigger
                         if method_name in self._listeners:
-                            condition_type, trigger_methods = self._listeners[
+                            _, trigger_methods = self._listeners[
                                 method_name
                             ]
                             if current_trigger in trigger_methods:
@@ -1148,7 +1148,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 if listener_name in self._triggered_or_listeners:
                     # Skip this listener as it has already been triggered by another method in the OR condition
                     continue
-                
+
                 # If the trigger_method matches any in methods, run this
                 if trigger_method in methods:
                     triggered.append(listener_name)
