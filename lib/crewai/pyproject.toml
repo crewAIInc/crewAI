@@ -87,6 +87,9 @@ litellm = [
 boto3 = [
     "boto3>=1.40.45",
 ]
+google-genai = [
+    "google-genai>=1.2.0",
+]
 
 
 [project.scripts]
