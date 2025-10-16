@@ -10,14 +10,14 @@ from crewai.utilities.exceptions.context_window_exceeding_exception import (
 
 
 try:
-    from azure.ai.inference import ChatCompletionsClient  # type: ignore
-    from azure.ai.inference.models import (  # type: ignore
+    from azure.ai.inference import ChatCompletionsClient
+    from azure.ai.inference.models import (
         ChatCompletions,
         ChatCompletionsToolCall,
         StreamingChatCompletionsUpdate,
     )
-    from azure.core.credentials import AzureKeyCredential  # type: ignore
-    from azure.core.exceptions import HttpResponseError  # type: ignore
+    from azure.core.credentials import AzureKeyCredential
+    from azure.core.exceptions import HttpResponseError
     from crewai.events.types.llm_events import LLMCallType
     from crewai.llms.base_llm import BaseLLM
 
@@ -80,7 +80,9 @@ class AzureCompletion(BaseLLM):
             or os.getenv("AZURE_OPENAI_ENDPOINT")
             or os.getenv("AZURE_API_BASE")
         )
-        self.api_version = api_version or os.getenv("AZURE_API_VERSION") or "2024-02-01"
+        self.api_version = api_version or os.getenv("AZURE_API_VERSION") or "2024-06-01"
+        self.timeout = timeout
+        self.max_retries = max_retries
 
         if not self.api_key:
             raise ValueError(
@@ -91,10 +93,20 @@ class AzureCompletion(BaseLLM):
                 "Azure endpoint is required. Set AZURE_ENDPOINT environment variable or pass endpoint parameter."
             )
 
-        self.client = ChatCompletionsClient(
-            endpoint=self.endpoint,
-            credential=AzureKeyCredential(self.api_key),
-        )
+        # Validate and potentially fix Azure OpenAI endpoint URL
+        self.endpoint = self._validate_and_fix_endpoint(self.endpoint, model)
+
+        # Build client kwargs
+        client_kwargs = {
+            "endpoint": self.endpoint,
+            "credential": AzureKeyCredential(self.api_key),
+        }
+
+        # Add api_version if specified (primarily for Azure OpenAI endpoints)
+        if self.api_version:
+            client_kwargs["api_version"] = self.api_version
+
+        self.client = ChatCompletionsClient(**client_kwargs)
 
         self.top_p = top_p
         self.frequency_penalty = frequency_penalty
@@ -105,6 +117,34 @@ class AzureCompletion(BaseLLM):
         self.is_openai_model = any(
             prefix in model.lower() for prefix in ["gpt-", "o1-", "text-"]
         )
+
+        self.is_azure_openai_endpoint = (
+            "openai.azure.com" in self.endpoint
+            and "/openai/deployments/" in self.endpoint
+        )
+
+    def _validate_and_fix_endpoint(self, endpoint: str, model: str) -> str:
+        """Validate and fix Azure endpoint URL format.
+
+        Azure OpenAI endpoints should be in the format:
+        https://<resource-name>.openai.azure.com/openai/deployments/<deployment-name>
+
+        Args:
+            endpoint: The endpoint URL
+            model: The model/deployment name
+
+        Returns:
+            Validated and potentially corrected endpoint URL
+        """
+        if "openai.azure.com" in endpoint and "/openai/deployments/" not in endpoint:
+            endpoint = endpoint.rstrip("/")
+
+            if not endpoint.endswith("/openai/deployments"):
+                deployment_name = model.replace("azure/", "")
+                endpoint = f"{endpoint}/openai/deployments/{deployment_name}"
+                logging.info(f"Constructed Azure OpenAI endpoint URL: {endpoint}")
+
+        return endpoint
 
     def call(
         self,
@@ -158,7 +198,17 @@ class AzureCompletion(BaseLLM):
             )
 
         except HttpResponseError as e:
-            error_msg = f"Azure API HTTP error: {e.status_code} - {e.message}"
+            if e.status_code == 401:
+                error_msg = "Azure authentication failed. Check your API key."
+            elif e.status_code == 404:
+                error_msg = (
+                    f"Azure endpoint not found. Check endpoint URL: {self.endpoint}"
+                )
+            elif e.status_code == 429:
+                error_msg = "Azure API rate limit exceeded. Please retry later."
+            else:
+                error_msg = f"Azure API HTTP error: {e.status_code} - {e.message}"
+
             logging.error(error_msg)
             self._emit_call_failed_event(
                 error=error_msg, from_task=from_task, from_agent=from_agent
@@ -187,10 +237,14 @@ class AzureCompletion(BaseLLM):
             Parameters dictionary for Azure API
         """
         params = {
-            "model": self.model,
             "messages": messages,
             "stream": self.stream,
         }
+
+        # Only include model parameter for non-Azure OpenAI endpoints
+        # Azure OpenAI endpoints have the deployment name in the URL
+        if not self.is_azure_openai_endpoint:
+            params["model"] = self.model
 
         # Add optional parameters if set
         if self.temperature is not None:
@@ -250,7 +304,7 @@ class AzureCompletion(BaseLLM):
             messages: Input messages
 
         Returns:
-            List of dict objects
+            List of dict objects with 'role' and 'content' keys
         """
         # Use base class formatting first
         base_formatted = super()._format_messages(messages)
@@ -258,18 +312,11 @@ class AzureCompletion(BaseLLM):
         azure_messages = []
 
         for message in base_formatted:
-            role = message.get("role")
+            role = message.get("role", "user")  # Default to user if no role
             content = message.get("content", "")
 
-            if role == "system":
-                azure_messages.append(dict(content=content))
-            elif role == "user":
-                azure_messages.append(dict(content=content))
-            elif role == "assistant":
-                azure_messages.append(dict(content=content))
-            else:
-                # Default to user message for unknown roles
-                azure_messages.append(dict(content=content))
+            # Azure AI Inference requires both 'role' and 'content'
+            azure_messages.append({"role": role, "content": content})
 
         return azure_messages
 
@@ -338,6 +385,13 @@ class AzureCompletion(BaseLLM):
             if is_context_length_exceeded(e):
                 logging.error(f"Context window exceeded: {e}")
                 raise LLMContextLengthExceededError(str(e)) from e
+
+            error_msg = f"Azure API call failed: {e!s}"
+            logging.error(error_msg)
+            self._emit_call_failed_event(
+                error=error_msg, from_task=from_task, from_agent=from_agent
+            )
+            raise e
 
         return content
 
@@ -454,7 +508,9 @@ class AzureCompletion(BaseLLM):
         }
 
         # Find the best match for the model name
-        for model_prefix, size in context_windows.items():
+        for model_prefix, size in sorted(
+            context_windows.items(), key=lambda x: len(x[0]), reverse=True
+        ):
             if self.model.startswith(model_prefix):
                 return int(size * CONTEXT_WINDOW_USAGE_RATIO)
 

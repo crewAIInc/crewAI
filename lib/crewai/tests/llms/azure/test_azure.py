@@ -401,7 +401,7 @@ def test_azure_endpoint_configuration():
 
         from crewai.llms.providers.azure.completion import AzureCompletion
         assert isinstance(llm, AzureCompletion)
-        assert llm.endpoint == "https://test1.openai.azure.com"
+        assert llm.endpoint == "https://test1.openai.azure.com/openai/deployments/gpt-4"
 
     # Test with AZURE_OPENAI_ENDPOINT
     with patch.dict(os.environ, {
@@ -411,7 +411,8 @@ def test_azure_endpoint_configuration():
         llm = LLM(model="azure/gpt-4")
 
         assert isinstance(llm, AzureCompletion)
-        assert llm.endpoint == "https://test2.openai.azure.com"
+        # Endpoint should be auto-constructed for Azure OpenAI
+        assert llm.endpoint == "https://test2.openai.azure.com/openai/deployments/gpt-4"
 
 
 def test_azure_api_key_configuration():
@@ -451,29 +452,31 @@ def test_azure_completion_params_preparation():
     """
     Test that completion parameters are properly prepared
     """
-    llm = LLM(
-        model="azure/gpt-4",
-        temperature=0.7,
-        top_p=0.9,
-        frequency_penalty=0.5,
-        presence_penalty=0.3,
-        max_tokens=1000
-    )
+    with patch.dict(os.environ, {
+        "AZURE_API_KEY": "test-key",
+        "AZURE_ENDPOINT": "https://models.inference.ai.azure.com"
+    }):
+        llm = LLM(
+            model="azure/gpt-4",
+            temperature=0.7,
+            top_p=0.9,
+            frequency_penalty=0.5,
+            presence_penalty=0.3,
+            max_tokens=1000
+        )
 
-    from crewai.llms.providers.azure.completion import AzureCompletion
-    assert isinstance(llm, AzureCompletion)
+        from crewai.llms.providers.azure.completion import AzureCompletion
+        assert isinstance(llm, AzureCompletion)
 
-    # Test params preparation
-    messages = [{"role": "user", "content": "Hello"}]
-    params = llm._prepare_completion_params(messages)
+        messages = [{"role": "user", "content": "Hello"}]
+        params = llm._prepare_completion_params(messages)
 
-    # Verify params have the expected parameters
-    assert params["model"] == "gpt-4"
-    assert params["temperature"] == 0.7
-    assert params["top_p"] == 0.9
-    assert params["frequency_penalty"] == 0.5
-    assert params["presence_penalty"] == 0.3
-    assert params["max_tokens"] == 1000
+        assert params["model"] == "gpt-4"
+        assert params["temperature"] == 0.7
+        assert params["top_p"] == 0.9
+        assert params["frequency_penalty"] == 0.5
+        assert params["presence_penalty"] == 0.3
+        assert params["max_tokens"] == 1000
 
 
 def test_azure_model_detection():
@@ -599,7 +602,7 @@ def test_azure_environment_variable_endpoint():
         llm = LLM(model="azure/gpt-4")
 
         assert llm.client is not None
-        assert llm.endpoint == "https://test.openai.azure.com"
+        assert llm.endpoint == "https://test.openai.azure.com/openai/deployments/gpt-4"
 
 
 def test_azure_token_usage_tracking():
@@ -711,3 +714,374 @@ def test_azure_function_calling_support():
     # Test with GPT-3.5 (supports function calling)
     llm_gpt35 = LLM(model="azure/gpt-35-turbo")
     assert llm_gpt35.supports_function_calling() == True
+
+
+def test_azure_openai_endpoint_url_construction():
+    """
+    Test that Azure OpenAI endpoint URLs are automatically constructed correctly
+    """
+    from crewai.llms.providers.azure.completion import AzureCompletion
+
+    with patch.dict(os.environ, {
+        "AZURE_API_KEY": "test-key",
+        "AZURE_ENDPOINT": "https://test-resource.openai.azure.com"
+    }):
+        llm = LLM(model="azure/gpt-4o-mini")
+
+        assert "/openai/deployments/gpt-4o-mini" in llm.endpoint
+        assert llm.endpoint == "https://test-resource.openai.azure.com/openai/deployments/gpt-4o-mini"
+        assert llm.is_azure_openai_endpoint == True
+
+
+def test_azure_openai_endpoint_url_with_trailing_slash():
+    """
+    Test that trailing slashes are handled correctly in endpoint URLs
+    """
+    from crewai.llms.providers.azure.completion import AzureCompletion
+
+    with patch.dict(os.environ, {
+        "AZURE_API_KEY": "test-key",
+        "AZURE_ENDPOINT": "https://test-resource.openai.azure.com/"  # trailing slash
+    }):
+        llm = LLM(model="azure/gpt-4o")
+
+        assert llm.endpoint == "https://test-resource.openai.azure.com/openai/deployments/gpt-4o"
+        assert not llm.endpoint.endswith("//")
+
+
+def test_azure_openai_endpoint_already_complete():
+    """
+    Test that already complete Azure OpenAI endpoint URLs are not modified
+    """
+    with patch.dict(os.environ, {
+        "AZURE_API_KEY": "test-key",
+        "AZURE_ENDPOINT": "https://test-resource.openai.azure.com/openai/deployments/my-deployment"
+    }):
+        llm = LLM(model="azure/gpt-4")
+
+        assert llm.endpoint == "https://test-resource.openai.azure.com/openai/deployments/my-deployment"
+        assert llm.is_azure_openai_endpoint == True
+
+
+def test_non_azure_openai_endpoint_unchanged():
+    """
+    Test that non-Azure OpenAI endpoints are not modified
+    """
+    with patch.dict(os.environ, {
+        "AZURE_API_KEY": "test-key",
+        "AZURE_ENDPOINT": "https://models.inference.ai.azure.com"
+    }):
+        llm = LLM(model="azure/mistral-large")
+
+        assert llm.endpoint == "https://models.inference.ai.azure.com"
+        assert llm.is_azure_openai_endpoint == False
+
+
+def test_azure_openai_model_parameter_excluded():
+    """
+    Test that model parameter is NOT included for Azure OpenAI endpoints
+    """
+
+    with patch.dict(os.environ, {
+        "AZURE_API_KEY": "test-key",
+        "AZURE_ENDPOINT": "https://test.openai.azure.com/openai/deployments/gpt-4"
+    }):
+        llm = LLM(model="azure/gpt-4")
+
+        # Prepare params to check model parameter handling
+        params = llm._prepare_completion_params(
+            messages=[{"role": "user", "content": "test"}]
+        )
+
+        # Model parameter should NOT be included for Azure OpenAI endpoints
+        assert "model" not in params
+        assert "messages" in params
+        assert params["stream"] == False
+
+
+def test_non_azure_openai_model_parameter_included():
+    """
+    Test that model parameter IS included for non-Azure OpenAI endpoints
+    """
+    from crewai.llms.providers.azure.completion import AzureCompletion
+
+    with patch.dict(os.environ, {
+        "AZURE_API_KEY": "test-key",
+        "AZURE_ENDPOINT": "https://models.inference.ai.azure.com"
+    }):
+        llm = LLM(model="azure/mistral-large")
+
+        params = llm._prepare_completion_params(
+            messages=[{"role": "user", "content": "test"}]
+        )
+
+        assert "model" in params
+        assert params["model"] == "mistral-large"
+
+
+def test_azure_message_formatting_with_role():
+    """
+    Test that messages are formatted with both 'role' and 'content' fields
+    """
+    from crewai.llms.providers.azure.completion import AzureCompletion
+
+    llm = LLM(model="azure/gpt-4")
+
+    # Test with string message
+    formatted = llm._format_messages_for_azure("Hello world")
+    assert isinstance(formatted, list)
+    assert len(formatted) > 0
+    assert "role" in formatted[0]
+    assert "content" in formatted[0]
+
+    messages = [
+        {"role": "system", "content": "You are helpful"},
+        {"role": "user", "content": "Hello"},
+        {"role": "assistant", "content": "Hi there"}
+    ]
+    formatted = llm._format_messages_for_azure(messages)
+
+    for msg in formatted:
+        assert "role" in msg
+        assert "content" in msg
+        assert msg["role"] in ["system", "user", "assistant"]
+
+
+def test_azure_message_formatting_default_role():
+    """
+    Test that messages without a role default to 'user'
+    """
+
+    llm = LLM(model="azure/gpt-4")
+
+    # Test with message that has role but tests default behavior
+    messages = [{"role": "user", "content": "test message"}]
+    formatted = llm._format_messages_for_azure(messages)
+
+    assert formatted[0]["role"] == "user"
+    assert formatted[0]["content"] == "test message"
+
+
+def test_azure_endpoint_detection_flags():
+    """
+    Test that is_azure_openai_endpoint flag is set correctly
+    """
+    with patch.dict(os.environ, {
+        "AZURE_API_KEY": "test-key",
+        "AZURE_ENDPOINT": "https://test.openai.azure.com/openai/deployments/gpt-4"
+    }):
+        llm_openai = LLM(model="azure/gpt-4")
+        assert llm_openai.is_azure_openai_endpoint == True
+
+    with patch.dict(os.environ, {
+        "AZURE_API_KEY": "test-key",
+        "AZURE_ENDPOINT": "https://models.inference.ai.azure.com"
+    }):
+        llm_other = LLM(model="azure/mistral-large")
+        assert llm_other.is_azure_openai_endpoint == False
+
+
+def test_azure_improved_error_messages():
+    """
+    Test that improved error messages are provided for common HTTP errors
+    """
+    from crewai.llms.providers.azure.completion import AzureCompletion
+    from azure.core.exceptions import HttpResponseError
+
+    llm = LLM(model="azure/gpt-4")
+
+    with patch.object(llm.client, 'complete') as mock_complete:
+        error_401 = HttpResponseError(message="Unauthorized")
+        error_401.status_code = 401
+        mock_complete.side_effect = error_401
+
+        with pytest.raises(HttpResponseError):
+            llm.call("test")
+
+        error_404 = HttpResponseError(message="Not Found")
+        error_404.status_code = 404
+        mock_complete.side_effect = error_404
+
+        with pytest.raises(HttpResponseError):
+            llm.call("test")
+
+        error_429 = HttpResponseError(message="Rate Limited")
+        error_429.status_code = 429
+        mock_complete.side_effect = error_429
+
+        with pytest.raises(HttpResponseError):
+            llm.call("test")
+
+
+def test_azure_api_version_properly_passed():
+    """
+    Test that api_version is properly passed to the client
+    """
+    from crewai.llms.providers.azure.completion import AzureCompletion
+
+    with patch.dict(os.environ, {
+        "AZURE_API_KEY": "test-key",
+        "AZURE_ENDPOINT": "https://test.openai.azure.com",
+        "AZURE_API_VERSION": ""  # Clear env var to test default
+    }, clear=False):
+        llm = LLM(model="azure/gpt-4", api_version="2024-08-01")
+        assert llm.api_version == "2024-08-01"
+
+    with patch.dict(os.environ, {
+        "AZURE_API_KEY": "test-key",
+        "AZURE_ENDPOINT": "https://test.openai.azure.com"
+    }, clear=True):
+        llm_default = LLM(model="azure/gpt-4")
+        assert llm_default.api_version == "2024-06-01"  # Current default
+
+
+def test_azure_timeout_and_max_retries_stored():
+    """
+    Test that timeout and max_retries parameters are stored
+    """
+    from crewai.llms.providers.azure.completion import AzureCompletion
+
+    with patch.dict(os.environ, {
+        "AZURE_API_KEY": "test-key",
+        "AZURE_ENDPOINT": "https://test.openai.azure.com"
+    }):
+        llm = LLM(
+            model="azure/gpt-4",
+            timeout=60.0,
+            max_retries=5
+        )
+
+        assert llm.timeout == 60.0
+        assert llm.max_retries == 5
+
+
+def test_azure_complete_params_include_optional_params():
+    """
+    Test that optional parameters are included in completion params when set
+    """
+    from crewai.llms.providers.azure.completion import AzureCompletion
+
+    with patch.dict(os.environ, {
+        "AZURE_API_KEY": "test-key",
+        "AZURE_ENDPOINT": "https://models.inference.ai.azure.com"
+    }):
+        llm = LLM(
+            model="azure/gpt-4",
+            temperature=0.7,
+            top_p=0.9,
+            frequency_penalty=0.5,
+            presence_penalty=0.3,
+            max_tokens=1000,
+            stop=["STOP", "END"]
+        )
+
+        params = llm._prepare_completion_params(
+            messages=[{"role": "user", "content": "test"}]
+        )
+
+        assert params["temperature"] == 0.7
+        assert params["top_p"] == 0.9
+        assert params["frequency_penalty"] == 0.5
+        assert params["presence_penalty"] == 0.3
+        assert params["max_tokens"] == 1000
+        assert params["stop"] == ["STOP", "END"]
+
+
+def test_azure_endpoint_validation_with_azure_prefix():
+    """
+    Test that 'azure/' prefix is properly stripped when constructing endpoint
+    """
+    from crewai.llms.providers.azure.completion import AzureCompletion
+
+    with patch.dict(os.environ, {
+        "AZURE_API_KEY": "test-key",
+        "AZURE_ENDPOINT": "https://test.openai.azure.com"
+    }):
+        llm = LLM(model="azure/gpt-4o-mini")
+
+        # Should strip 'azure/' prefix and use 'gpt-4o-mini' as deployment name
+        assert "gpt-4o-mini" in llm.endpoint
+        assert "azure/gpt-4o-mini" not in llm.endpoint
+
+
+def test_azure_message_formatting_preserves_all_roles():
+    """
+    Test that all message roles (system, user, assistant) are preserved correctly
+    """
+    from crewai.llms.providers.azure.completion import AzureCompletion
+
+    llm = LLM(model="azure/gpt-4")
+
+    messages = [
+        {"role": "system", "content": "System message"},
+        {"role": "user", "content": "User message"},
+        {"role": "assistant", "content": "Assistant message"},
+        {"role": "user", "content": "Another user message"}
+    ]
+
+    formatted = llm._format_messages_for_azure(messages)
+
+    assert formatted[0]["role"] == "system"
+    assert formatted[0]["content"] == "System message"
+    assert formatted[1]["role"] == "user"
+    assert formatted[1]["content"] == "User message"
+    assert formatted[2]["role"] == "assistant"
+    assert formatted[2]["content"] == "Assistant message"
+    assert formatted[3]["role"] == "user"
+    assert formatted[3]["content"] == "Another user message"
+
+
+def test_azure_deepseek_model_support():
+    """
+    Test that DeepSeek and other non-OpenAI models work correctly with Azure AI Inference
+    """
+    with patch.dict(os.environ, {
+        "AZURE_API_KEY": "test-key",
+        "AZURE_ENDPOINT": "https://models.inference.ai.azure.com"
+    }):
+        # Test DeepSeek model
+        llm_deepseek = LLM(model="azure/deepseek-chat")
+
+        # Endpoint should not be modified for non-OpenAI endpoints
+        assert llm_deepseek.endpoint == "https://models.inference.ai.azure.com"
+        assert llm_deepseek.is_azure_openai_endpoint == False
+
+        # Model parameter should be included in completion params
+        params = llm_deepseek._prepare_completion_params(
+            messages=[{"role": "user", "content": "test"}]
+        )
+        assert "model" in params
+        assert params["model"] == "deepseek-chat"
+
+        # Should not be detected as OpenAI model (no function calling)
+        assert llm_deepseek.is_openai_model == False
+        assert llm_deepseek.supports_function_calling() == False
+
+
+def test_azure_mistral_and_other_models():
+    """
+    Test that various non-OpenAI models (Mistral, Llama, etc.) work with Azure AI Inference
+    """
+    test_models = [
+        "mistral-large-latest",
+        "llama-3-70b-instruct",
+        "cohere-command-r-plus"
+    ]
+
+    for model_name in test_models:
+        with patch.dict(os.environ, {
+            "AZURE_API_KEY": "test-key",
+            "AZURE_ENDPOINT": "https://models.inference.ai.azure.com"
+        }):
+            llm = LLM(model=f"azure/{model_name}")
+
+            # Verify endpoint is not modified
+            assert llm.endpoint == "https://models.inference.ai.azure.com"
+            assert llm.is_azure_openai_endpoint == False
+
+            # Verify model parameter is included
+            params = llm._prepare_completion_params(
+                messages=[{"role": "user", "content": "test"}]
+            )
+            assert "model" in params
+            assert params["model"] == model_name
