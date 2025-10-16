@@ -215,14 +215,9 @@ class AnthropicCompletion(BaseLLM):
                 from crewai.llms.providers.utils.common import safe_tool_conversion
 
                 name, description, parameters = safe_tool_conversion(tool, "Anthropic")
-            except (ImportError, Exception):
-                name = tool.get("name", "unknown_tool")
-                description = tool.get("description", "A tool function")
-                parameters = (
-                    tool.get("input_schema")
-                    or tool.get("parameters")
-                    or tool.get("schema")
-                )
+            except (ImportError, KeyError, ValueError) as e:
+                logging.error(f"Error converting tool to Anthropic format: {e}")
+                raise e
 
             anthropic_tool = {
                 "name": name,
