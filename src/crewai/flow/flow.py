@@ -31,7 +31,7 @@ from crewai.flow.flow_visualizer import plot_flow
 from crewai.flow.persistence.base import FlowPersistence
 from crewai.flow.types import FlowExecutionData
 from crewai.flow.utils import get_possible_return_constants
-from crewai.utilities.printer import Printer
+from crewai.utilities.printer import Printer, PrinterColor
 
 logger = logging.getLogger(__name__)
 
@@ -1229,7 +1229,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
             raise
 
     def _log_flow_event(
-        self, message: str, color: str = "yellow", level: str = "info"
+        self, message: str, color: PrinterColor = "yellow", level: str = "info"
     ) -> None:
         """Centralized logging method for flow events.
 
