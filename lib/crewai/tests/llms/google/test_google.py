@@ -381,18 +381,19 @@ def test_gemini_raises_error_when_model_not_supported():
         mock_client = MagicMock()
         mock_genai.Client.return_value = mock_client
 
-        # Mock the error that Google would raise for unsupported models
         from google.genai.errors import ClientError  # type: ignore
-        mock_client.models.generate_content.side_effect = ClientError(
-            code=404,
-            response_json={
-                'error': {
-                    'code': 404,
-                    'message': 'models/model-doesnt-exist is not found for API version v1beta, or is not supported for generateContent.',
-                    'status': 'NOT_FOUND'
-                }
+
+        mock_response = MagicMock()
+        mock_response.body_segments = [{
+            'error': {
+                'code': 404,
+                'message': 'models/model-doesnt-exist is not found for API version v1beta, or is not supported for generateContent.',
+                'status': 'NOT_FOUND'
             }
-        )
+        }]
+        mock_response.status_code = 404
+
+        mock_client.models.generate_content.side_effect = ClientError(404, mock_response)
 
         llm = LLM(model="google/model-doesnt-exist")
 
