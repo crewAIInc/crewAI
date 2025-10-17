@@ -351,7 +351,7 @@ class LLM(BaseLLM):
             except ImportError:
                 return None
 
-        elif provider == "azure":
+        elif provider == "azure" or provider == "azure_openai":
             try:
                 from crewai.llms.providers.azure.completion import AzureCompletion
 
