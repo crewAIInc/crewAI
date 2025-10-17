@@ -25,6 +25,7 @@ dev = [
     "types-pyyaml==6.0.*",
     "types-regex==2024.11.6.*",
     "types-appdirs==1.4.*",
+    "boto3-stubs[bedrock-runtime]>=1.40.54",
 ]
 
 
