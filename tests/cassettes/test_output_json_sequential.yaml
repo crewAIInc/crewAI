@@ -314,4 +314,337 @@ interactions:
     status:
       code: 200
       message: OK
+- request:
+    body: '{"trace_id": "77d64f31-0de2-472d-b80d-7400ebbd3709", "execution_type":
+      "crew", "user_identifier": null, "execution_context": {"crew_fingerprint": null,
+      "crew_name": "crew", "flow_name": null, "crewai_version": "0.201.1", "privacy_level":
+      "standard"}, "execution_metadata": {"expected_duration_estimate": 300, "agent_count":
+      0, "task_count": 0, "flow_method_count": 0, "execution_started_at": "2025-10-08T18:18:06.867975+00:00"}}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate, zstd
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '428'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - CrewAI-CLI/0.201.1
+      X-Crewai-Organization-Id:
+      - d3a3d10c-35db-423f-a7a4-c026030ba64d
+      X-Crewai-Version:
+      - 0.201.1
+    method: POST
+    uri: http://localhost:3000/crewai_plus/api/v1/tracing/batches
+  response:
+    body:
+      string: '{"id":"5caa2120-b693-4668-900f-78485fdb4d74","trace_id":"77d64f31-0de2-472d-b80d-7400ebbd3709","execution_type":"crew","crew_name":"crew","flow_name":null,"status":"running","duration_ms":null,"crewai_version":"0.201.1","privacy_level":"standard","total_events":0,"execution_context":{"crew_fingerprint":null,"crew_name":"crew","flow_name":null,"crewai_version":"0.201.1","privacy_level":"standard"},"created_at":"2025-10-08T18:18:07.166Z","updated_at":"2025-10-08T18:18:07.166Z"}'
+    headers:
+      Content-Length:
+      - '480'
+      cache-control:
+      - no-store
+      content-security-policy:
+      - 'default-src ''self'' *.crewai.com crewai.com; script-src ''self'' ''unsafe-inline''
+        *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts https://www.gstatic.com
+        https://run.pstmn.io https://apis.google.com https://apis.google.com/js/api.js
+        https://accounts.google.com https://accounts.google.com/gsi/client https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css.map
+        https://*.google.com https://docs.google.com https://slides.google.com https://js.hs-scripts.com
+        https://js.sentry-cdn.com https://browser.sentry-cdn.com https://www.googletagmanager.com
+        https://js-na1.hs-scripts.com https://share.descript.com/; style-src ''self''
+        ''unsafe-inline'' *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts;
+        img-src ''self'' data: *.crewai.com crewai.com https://zeus.tools.crewai.com
+        https://dashboard.tools.crewai.com https://cdn.jsdelivr.net; font-src ''self''
+        data: *.crewai.com crewai.com; connect-src ''self'' *.crewai.com crewai.com
+        https://zeus.tools.crewai.com https://connect.useparagon.com/ https://zeus.useparagon.com/*
+        https://*.useparagon.com/* https://run.pstmn.io https://connect.tools.crewai.com/
+        https://*.sentry.io https://www.google-analytics.com ws://localhost:3036 wss://localhost:3036;
+        frame-src ''self'' *.crewai.com crewai.com https://connect.useparagon.com/
+        https://zeus.tools.crewai.com https://zeus.useparagon.com/* https://connect.tools.crewai.com/
+        https://docs.google.com https://drive.google.com https://slides.google.com
+        https://accounts.google.com https://*.google.com https://www.youtube.com https://share.descript.com'
+      content-type:
+      - application/json; charset=utf-8
+      etag:
+      - W/"7146973b561e6245f81e2463c808e03d"
+      expires:
+      - '0'
+      permissions-policy:
+      - camera=(), microphone=(self), geolocation=()
+      pragma:
+      - no-cache
+      referrer-policy:
+      - strict-origin-when-cross-origin
+      server-timing:
+      - cache_read.active_support;dur=0.04, cache_fetch_hit.active_support;dur=0.00,
+        cache_read_multi.active_support;dur=0.08, start_processing.action_controller;dur=0.01,
+        sql.active_record;dur=29.54, instantiation.active_record;dur=0.44, feature_operation.flipper;dur=0.13,
+        start_transaction.active_record;dur=0.01, transaction.active_record;dur=23.27,
+        process_action.action_controller;dur=276.52
+      vary:
+      - Accept
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-permitted-cross-domain-policies:
+      - none
+      x-request-id:
+      - bcebabb0-34bd-4df1-b4bd-2ac70fc8d1d3
+      x-runtime:
+      - '0.320530'
+      x-xss-protection:
+      - 1; mode=block
+    status:
+      code: 201
+      message: Created
+- request:
+    body: '{"events": [{"event_id": "82d4cc27-145e-478c-a91b-62ba3ee35fe6", "timestamp":
+      "2025-10-08T18:18:07.198191+00:00", "type": "crew_kickoff_started", "event_data":
+      {"timestamp": "2025-10-08T18:18:06.866899+00:00", "type": "crew_kickoff_started",
+      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
+      "crew_name": "crew", "crew": null, "inputs": null}}, {"event_id": "ca22514b-58ee-43b6-bdf9-02f2e73f4db2",
+      "timestamp": "2025-10-08T18:18:07.202897+00:00", "type": "task_started", "event_data":
+      {"task_description": "Give me an integer score between 1-5 for the following
+      title: ''The impact of AI in the future of work''", "expected_output": "The
+      score of the title.", "task_name": "Give me an integer score between 1-5 for
+      the following title: ''The impact of AI in the future of work''", "context":
+      "", "agent_role": "Scorer", "task_id": "d4b3624f-bea6-49e9-be04-7acb6e17ff14"}},
+      {"event_id": "1fce41eb-f584-4233-8550-d1e12d50d449", "timestamp": "2025-10-08T18:18:07.203668+00:00",
+      "type": "agent_execution_started", "event_data": {"agent_role": "Scorer", "agent_goal":
+      "Score the title", "agent_backstory": "You''re an expert scorer, specialized
+      in scoring titles."}}, {"event_id": "11cb4350-9d66-42f8-ac83-8a5b36dbe501",
+      "timestamp": "2025-10-08T18:18:07.203818+00:00", "type": "llm_call_started",
+      "event_data": {"timestamp": "2025-10-08T18:18:07.203767+00:00", "type": "llm_call_started",
+      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
+      "task_name": "Give me an integer score between 1-5 for the following title:
+      ''The impact of AI in the future of work''", "task_id": "d4b3624f-bea6-49e9-be04-7acb6e17ff14",
+      "agent_id": "80b90b31-64c1-47ad-a942-6786a833743f", "agent_role": "Scorer",
+      "from_task": null, "from_agent": null, "model": "gpt-4o-mini", "messages": [{"role":
+      "system", "content": "You are Scorer. You''re an expert scorer, specialized
+      in scoring titles.\nYour personal goal is: Score the title\nTo give my best
+      complete final answer to the task respond using the exact following format:\n\nThought:
+      I now can give a great answer\nFinal Answer: Your final answer must be the great
+      and the most complete as possible, it must be outcome described.\n\nI MUST use
+      these formats, my job depends on it!"}, {"role": "user", "content": "\nCurrent
+      Task: Give me an integer score between 1-5 for the following title: ''The impact
+      of AI in the future of work''\n\nThis is the expected criteria for your final
+      answer: The score of the title.\nyou MUST return the actual complete content
+      as the final answer, not a summary.\nEnsure your final answer contains only
+      the content in the following format: {\n  \"score\": int\n}\n\nEnsure the final
+      output does not include any code block markers like ```json or ```python.\n\nBegin!
+      This is VERY important to you, use the tools available and give your best Final
+      Answer, your job depends on it!\n\nThought:"}], "tools": null, "callbacks":
+      ["<crewai.utilities.token_counter_callback.TokenCalcHandler object at 0x1346d3850>"],
+      "available_functions": null}}, {"event_id": "b325b1bb-c517-46fe-8667-6e95b1f14ff7",
+      "timestamp": "2025-10-08T18:18:07.208686+00:00", "type": "llm_call_completed",
+      "event_data": {"timestamp": "2025-10-08T18:18:07.208630+00:00", "type": "llm_call_completed",
+      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
+      "task_name": "Give me an integer score between 1-5 for the following title:
+      ''The impact of AI in the future of work''", "task_id": "d4b3624f-bea6-49e9-be04-7acb6e17ff14",
+      "agent_id": "80b90b31-64c1-47ad-a942-6786a833743f", "agent_role": "Scorer",
+      "from_task": null, "from_agent": null, "messages": [{"role": "system", "content":
+      "You are Scorer. You''re an expert scorer, specialized in scoring titles.\nYour
+      personal goal is: Score the title\nTo give my best complete final answer to
+      the task respond using the exact following format:\n\nThought: I now can give
+      a great answer\nFinal Answer: Your final answer must be the great and the most
+      complete as possible, it must be outcome described.\n\nI MUST use these formats,
+      my job depends on it!"}, {"role": "user", "content": "\nCurrent Task: Give me
+      an integer score between 1-5 for the following title: ''The impact of AI in
+      the future of work''\n\nThis is the expected criteria for your final answer:
+      The score of the title.\nyou MUST return the actual complete content as the
+      final answer, not a summary.\nEnsure your final answer contains only the content
+      in the following format: {\n  \"score\": int\n}\n\nEnsure the final output does
+      not include any code block markers like ```json or ```python.\n\nBegin! This
+      is VERY important to you, use the tools available and give your best Final Answer,
+      your job depends on it!\n\nThought:"}], "response": "I now can give a great
+      answer\nFinal Answer: 4", "call_type": "<LLMCallType.LLM_CALL: ''llm_call''>",
+      "model": "gpt-4o-mini"}}, {"event_id": "e674f9a3-5f11-4856-8782-7ab914a14b2f",
+      "timestamp": "2025-10-08T18:18:07.208869+00:00", "type": "agent_execution_completed",
+      "event_data": {"agent_role": "Scorer", "agent_goal": "Score the title", "agent_backstory":
+      "You''re an expert scorer, specialized in scoring titles."}}, {"event_id": "74e84e30-07c2-4b64-aaa3-5e6b199a40c6",
+      "timestamp": "2025-10-08T18:18:07.341942+00:00", "type": "task_completed", "event_data":
+      {"task_description": "Give me an integer score between 1-5 for the following
+      title: ''The impact of AI in the future of work''", "task_name": "Give me an
+      integer score between 1-5 for the following title: ''The impact of AI in the
+      future of work''", "task_id": "d4b3624f-bea6-49e9-be04-7acb6e17ff14", "output_raw":
+      "4", "output_format": "OutputFormat.JSON", "agent_role": "Scorer"}}, {"event_id":
+      "c4f5fdbe-922c-4033-9a6a-fc029936d9a3", "timestamp": "2025-10-08T18:18:07.342602+00:00",
+      "type": "crew_kickoff_completed", "event_data": {"timestamp": "2025-10-08T18:18:07.342591+00:00",
+      "type": "crew_kickoff_completed", "source_fingerprint": null, "source_type":
+      null, "fingerprint_metadata": null, "crew_name": "crew", "crew": null, "output":
+      {"description": "Give me an integer score between 1-5 for the following title:
+      ''The impact of AI in the future of work''", "name": "Give me an integer score
+      between 1-5 for the following title: ''The impact of AI in the future of work''",
+      "expected_output": "The score of the title.", "summary": "Give me an integer
+      score between 1-5 for the following...", "raw": "4", "pydantic": null, "json_dict":
+      {"score": 4}, "agent": "Scorer", "output_format": "json"}, "total_tokens": 199}}],
+      "batch_metadata": {"events_count": 8, "batch_sequence": 1, "is_final_batch":
+      false}}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate, zstd
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '6610'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - CrewAI-CLI/0.201.1
+      X-Crewai-Organization-Id:
+      - d3a3d10c-35db-423f-a7a4-c026030ba64d
+      X-Crewai-Version:
+      - 0.201.1
+    method: POST
+    uri: http://localhost:3000/crewai_plus/api/v1/tracing/batches/77d64f31-0de2-472d-b80d-7400ebbd3709/events
+  response:
+    body:
+      string: '{"events_created":8,"trace_batch_id":"5caa2120-b693-4668-900f-78485fdb4d74"}'
+    headers:
+      Content-Length:
+      - '76'
+      cache-control:
+      - no-store
+      content-security-policy:
+      - 'default-src ''self'' *.crewai.com crewai.com; script-src ''self'' ''unsafe-inline''
+        *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts https://www.gstatic.com
+        https://run.pstmn.io https://apis.google.com https://apis.google.com/js/api.js
+        https://accounts.google.com https://accounts.google.com/gsi/client https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css.map
+        https://*.google.com https://docs.google.com https://slides.google.com https://js.hs-scripts.com
+        https://js.sentry-cdn.com https://browser.sentry-cdn.com https://www.googletagmanager.com
+        https://js-na1.hs-scripts.com https://share.descript.com/; style-src ''self''
+        ''unsafe-inline'' *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts;
+        img-src ''self'' data: *.crewai.com crewai.com https://zeus.tools.crewai.com
+        https://dashboard.tools.crewai.com https://cdn.jsdelivr.net; font-src ''self''
+        data: *.crewai.com crewai.com; connect-src ''self'' *.crewai.com crewai.com
+        https://zeus.tools.crewai.com https://connect.useparagon.com/ https://zeus.useparagon.com/*
+        https://*.useparagon.com/* https://run.pstmn.io https://connect.tools.crewai.com/
+        https://*.sentry.io https://www.google-analytics.com ws://localhost:3036 wss://localhost:3036;
+        frame-src ''self'' *.crewai.com crewai.com https://connect.useparagon.com/
+        https://zeus.tools.crewai.com https://zeus.useparagon.com/* https://connect.tools.crewai.com/
+        https://docs.google.com https://drive.google.com https://slides.google.com
+        https://accounts.google.com https://*.google.com https://www.youtube.com https://share.descript.com'
+      content-type:
+      - application/json; charset=utf-8
+      etag:
+      - W/"9d89046203ab7b5d06c53813e05b7e27"
+      expires:
+      - '0'
+      permissions-policy:
+      - camera=(), microphone=(self), geolocation=()
+      pragma:
+      - no-cache
+      referrer-policy:
+      - strict-origin-when-cross-origin
+      server-timing:
+      - cache_read.active_support;dur=0.04, cache_fetch_hit.active_support;dur=0.00,
+        cache_read_multi.active_support;dur=0.08, start_processing.action_controller;dur=0.00,
+        sql.active_record;dur=33.94, instantiation.active_record;dur=0.64, start_transaction.active_record;dur=0.01,
+        transaction.active_record;dur=77.16, process_action.action_controller;dur=464.62
+      vary:
+      - Accept
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-permitted-cross-domain-policies:
+      - none
+      x-request-id:
+      - 3d03b2fc-b9f9-437f-934f-d996c24b90e0
+      x-runtime:
+      - '0.511861'
+      x-xss-protection:
+      - 1; mode=block
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"status": "completed", "duration_ms": 997, "final_event_count": 8}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate, zstd
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '67'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - CrewAI-CLI/0.201.1
+      X-Crewai-Organization-Id:
+      - d3a3d10c-35db-423f-a7a4-c026030ba64d
+      X-Crewai-Version:
+      - 0.201.1
+    method: PATCH
+    uri: http://localhost:3000/crewai_plus/api/v1/tracing/batches/77d64f31-0de2-472d-b80d-7400ebbd3709/finalize
+  response:
+    body:
+      string: '{"id":"5caa2120-b693-4668-900f-78485fdb4d74","trace_id":"77d64f31-0de2-472d-b80d-7400ebbd3709","execution_type":"crew","crew_name":"crew","flow_name":null,"status":"completed","duration_ms":997,"crewai_version":"0.201.1","privacy_level":"standard","total_events":8,"execution_context":{"crew_name":"crew","flow_name":null,"privacy_level":"standard","crewai_version":"0.201.1","crew_fingerprint":null},"created_at":"2025-10-08T18:18:07.166Z","updated_at":"2025-10-08T18:18:08.136Z"}'
+    headers:
+      Content-Length:
+      - '481'
+      cache-control:
+      - no-store
+      content-security-policy:
+      - 'default-src ''self'' *.crewai.com crewai.com; script-src ''self'' ''unsafe-inline''
+        *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts https://www.gstatic.com
+        https://run.pstmn.io https://apis.google.com https://apis.google.com/js/api.js
+        https://accounts.google.com https://accounts.google.com/gsi/client https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css.map
+        https://*.google.com https://docs.google.com https://slides.google.com https://js.hs-scripts.com
+        https://js.sentry-cdn.com https://browser.sentry-cdn.com https://www.googletagmanager.com
+        https://js-na1.hs-scripts.com https://share.descript.com/; style-src ''self''
+        ''unsafe-inline'' *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts;
+        img-src ''self'' data: *.crewai.com crewai.com https://zeus.tools.crewai.com
+        https://dashboard.tools.crewai.com https://cdn.jsdelivr.net; font-src ''self''
+        data: *.crewai.com crewai.com; connect-src ''self'' *.crewai.com crewai.com
+        https://zeus.tools.crewai.com https://connect.useparagon.com/ https://zeus.useparagon.com/*
+        https://*.useparagon.com/* https://run.pstmn.io https://connect.tools.crewai.com/
+        https://*.sentry.io https://www.google-analytics.com ws://localhost:3036 wss://localhost:3036;
+        frame-src ''self'' *.crewai.com crewai.com https://connect.useparagon.com/
+        https://zeus.tools.crewai.com https://zeus.useparagon.com/* https://connect.tools.crewai.com/
+        https://docs.google.com https://drive.google.com https://slides.google.com
+        https://accounts.google.com https://*.google.com https://www.youtube.com https://share.descript.com'
+      content-type:
+      - application/json; charset=utf-8
+      etag:
+      - W/"989e5693780f5ae4a31631e25033a9e6"
+      expires:
+      - '0'
+      permissions-policy:
+      - camera=(), microphone=(self), geolocation=()
+      pragma:
+      - no-cache
+      referrer-policy:
+      - strict-origin-when-cross-origin
+      server-timing:
+      - cache_read.active_support;dur=0.04, cache_fetch_hit.active_support;dur=0.00,
+        cache_read_multi.active_support;dur=0.07, start_processing.action_controller;dur=0.00,
+        sql.active_record;dur=13.35, instantiation.active_record;dur=0.44, unpermitted_parameters.action_controller;dur=0.01,
+        start_transaction.active_record;dur=0.01, transaction.active_record;dur=4.31,
+        process_action.action_controller;dur=237.59
+      vary:
+      - Accept
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-permitted-cross-domain-policies:
+      - none
+      x-request-id:
+      - 2cf10183-0a81-4d75-bf5b-90d37c13575e
+      x-runtime:
+      - '0.271205'
+      x-xss-protection:
+      - 1; mode=block
+    status:
+      code: 200
+      message: OK
 version: 1

@@ -7,7 +7,7 @@ import uuid
 import warnings
 from collections.abc import Callable
 from concurrent.futures import Future
-from copy import copy
+from copy import copy as shallow_copy
 from hashlib import md5
 from pathlib import Path
 from typing import (
@@ -462,6 +462,8 @@ class Task(BaseModel):
                     guardrail=self._guardrail,
                     retry_count=self.retry_count,
                     event_source=self,
+                    from_task=self,
+                    from_agent=agent,
                 )
                 if not guardrail_result.success:
                     if self.retry_count >= self.guardrail_max_retries:
@@ -670,7 +672,9 @@ Follow these guidelines:
         copied_data = {k: v for k, v in copied_data.items() if v is not None}
 
         cloned_context = (
-            [task_mapping[context_task.key] for context_task in self.context]
+            self.context
+            if self.context is NOT_SPECIFIED
+            else [task_mapping[context_task.key] for context_task in self.context]
             if isinstance(self.context, list)
             else None
         )
@@ -679,7 +683,7 @@ Follow these guidelines:
             return next((agent for agent in agents if agent.role == role), None)
 
         cloned_agent = get_agent_by_role(self.agent.role) if self.agent else None
-        cloned_tools = copy(self.tools) if self.tools else []
+        cloned_tools = shallow_copy(self.tools) if self.tools else []
 
         return self.__class__(
             **copied_data,

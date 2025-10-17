@@ -397,6 +397,7 @@
                   "en/enterprise/guides/kickoff-crew",
                   "en/enterprise/guides/update-crew",
                   "en/enterprise/guides/enable-crew-studio",
+                  "en/enterprise/guides/capture_telemetry_logs",
                   "en/enterprise/guides/azure-openai-setup",
                   "en/enterprise/guides/tool-repository",
                   "en/enterprise/guides/react-component-export",
