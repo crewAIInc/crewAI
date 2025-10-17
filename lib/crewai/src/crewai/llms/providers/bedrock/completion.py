@@ -3,7 +3,9 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 import logging
 import os
-from typing import TYPE_CHECKING, Any, Required, TypedDict, cast
+from typing import TYPE_CHECKING, Any, TypedDict, cast
+
+from typing_extensions import Required
 
 from crewai.events.types.llm_events import LLMCallType
 from crewai.llms.base_llm import BaseLLM
