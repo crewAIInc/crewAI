@@ -79,6 +79,7 @@ class LiteAgentOutput(BaseModel):
     usage_metrics: dict[str, Any] | None = Field(
         description="Token usage metrics for this execution", default=None
     )
+    messages: list[LLMMessage] = Field(description="Messages of the agent", default=[])
 
     def to_dict(self) -> dict[str, Any]:
         """Convert pydantic_output to a dictionary."""
@@ -360,6 +361,7 @@ class LiteAgent(FlowTrackable, BaseModel):
             pydantic=formatted_result,
             agent_role=self.role,
             usage_metrics=usage_metrics.model_dump() if usage_metrics else None,
+            messages=self._messages,
         )
 
         # Process guardrail if set
