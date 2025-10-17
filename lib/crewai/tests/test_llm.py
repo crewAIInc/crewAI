@@ -215,7 +215,7 @@ def test_get_custom_llm_provider_openrouter():
 
 
 def test_get_custom_llm_provider_gemini():
-    llm = LLM(model="gemini/gemini-1.5-pro")
+    llm = LLM(model="gemini/gemini-1.5-pro", is_litellm=True)
     assert llm._get_custom_llm_provider() == "gemini"
 
 
@@ -243,7 +243,7 @@ def test_validate_call_params_not_supported():
 
     # Patch supports_response_schema to simulate an unsupported model.
     with patch("crewai.llm.supports_response_schema", return_value=False):
-        llm = LLM(model="gemini/gemini-1.5-pro", response_format=DummyResponse)
+        llm = LLM(model="gemini/gemini-1.5-pro", response_format=DummyResponse, is_litellm=True)
         with pytest.raises(ValueError) as excinfo:
             llm._validate_call_params()
         assert "does not support response_format" in str(excinfo.value)
@@ -251,7 +251,7 @@ def test_validate_call_params_not_supported():
 
 def test_validate_call_params_no_response_format():
     # When no response_format is provided, no validation error should occur.
-    llm = LLM(model="gemini/gemini-1.5-pro", response_format=None)
+    llm = LLM(model="gemini/gemini-1.5-pro", response_format=None, is_litellm=True)
     llm._validate_call_params()
 
 
@@ -267,7 +267,8 @@ def test_validate_call_params_no_response_format():
     ],
 )
 def test_gemini_models(model):
-    llm = LLM(model=model)
+    # Use LiteLLM for VCR compatibility (VCR can intercept HTTP calls but not native SDK calls)
+    llm = LLM(model=model, is_litellm=True)
     result = llm.call("What is the capital of France?")
     assert isinstance(result, str)
     assert "Paris" in result
@@ -281,7 +282,8 @@ def test_gemini_models(model):
     ],
 )
 def test_gemma3(model):
-    llm = LLM(model=model)
+    # Use LiteLLM for VCR compatibility (VCR can intercept HTTP calls but not native SDK calls)
+    llm = LLM(model=model, is_litellm=True)
     result = llm.call("What is the capital of France?")
     assert isinstance(result, str)
     assert "Paris" in result
