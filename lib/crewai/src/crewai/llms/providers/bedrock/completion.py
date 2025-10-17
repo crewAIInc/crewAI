@@ -1,7 +1,9 @@
+from __future__ import annotations
+
 from collections.abc import Mapping, Sequence
 import logging
 import os
-from typing import Any
+from typing import TYPE_CHECKING, Any, Required, TypedDict, cast
 
 from crewai.events.types.llm_events import LLMCallType
 from crewai.llms.base_llm import BaseLLM
@@ -9,6 +11,20 @@ from crewai.utilities.agent_utils import is_context_length_exceeded
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededError,
 )
+
+
+if TYPE_CHECKING:
+    from mypy_boto3_bedrock_runtime.type_defs import (
+        GuardrailConfigurationTypeDef,
+        GuardrailStreamConfigurationTypeDef,
+        InferenceConfigurationTypeDef,
+        MessageOutputTypeDef,
+        MessageTypeDef,
+        SystemContentBlockTypeDef,
+        TokenUsageTypeDef,
+        ToolConfigurationTypeDef,
+        ToolTypeDef,
+    )
 
 
 try:
@@ -19,6 +35,83 @@ except ImportError:
     raise ImportError(
         "AWS Bedrock native provider not available, to install: `uv add boto3`"
     ) from None
+
+
+if TYPE_CHECKING:
+
+    class EnhancedInferenceConfigurationTypeDef(
+        InferenceConfigurationTypeDef, total=False
+    ):
+        """Extended InferenceConfigurationTypeDef with topK support.
+
+        AWS Bedrock supports topK for Claude models, but it's not in the boto3 type stubs.
+        This extends the base type to include topK while maintaining all other fields.
+        """
+
+        topK: int  # noqa: N815 - AWS API uses topK naming
+
+else:
+
+    class EnhancedInferenceConfigurationTypeDef(TypedDict, total=False):
+        """Extended InferenceConfigurationTypeDef with topK support.
+
+        AWS Bedrock supports topK for Claude models, but it's not in the boto3 type stubs.
+        This extends the base type to include topK while maintaining all other fields.
+        """
+
+        maxTokens: int
+        temperature: float
+        topP: float  # noqa: N815 - AWS API uses topP naming
+        stopSequences: list[str]
+        topK: int  # noqa: N815 - AWS API uses topK naming
+
+
+class ToolInputSchema(TypedDict):
+    """Type definition for tool input schema in Converse API."""
+
+    json: dict[str, Any]
+
+
+class ToolSpec(TypedDict, total=False):
+    """Type definition for tool specification in Converse API."""
+
+    name: Required[str]
+    description: Required[str]
+    inputSchema: ToolInputSchema
+
+
+class ConverseToolTypeDef(TypedDict):
+    """Type definition for a Converse API tool."""
+
+    toolSpec: ToolSpec
+
+
+class BedrockConverseRequestBody(TypedDict, total=False):
+    """Type definition for AWS Bedrock Converse API request body.
+
+    Based on AWS Bedrock Converse API specification.
+    """
+
+    inferenceConfig: Required[EnhancedInferenceConfigurationTypeDef]
+    system: list[SystemContentBlockTypeDef]
+    toolConfig: ToolConfigurationTypeDef
+    guardrailConfig: GuardrailConfigurationTypeDef
+    additionalModelRequestFields: dict[str, Any]
+    additionalModelResponseFieldPaths: list[str]
+
+
+class BedrockConverseStreamRequestBody(TypedDict, total=False):
+    """Type definition for AWS Bedrock Converse Stream API request body.
+
+    Based on AWS Bedrock Converse Stream API specification.
+    """
+
+    inferenceConfig: Required[EnhancedInferenceConfigurationTypeDef]
+    system: list[SystemContentBlockTypeDef]
+    toolConfig: ToolConfigurationTypeDef
+    guardrailConfig: GuardrailStreamConfigurationTypeDef
+    additionalModelRequestFields: dict[str, Any]
+    additionalModelResponseFieldPaths: list[str]
 
 
 class BedrockCompletion(BaseLLM):
@@ -103,7 +196,6 @@ class BedrockCompletion(BaseLLM):
 
         # Configure client with timeouts and retries following AWS best practices
         config = Config(
-            connect_timeout=60,
             read_timeout=300,
             retries={
                 "max_attempts": 3,
@@ -140,7 +232,7 @@ class BedrockCompletion(BaseLLM):
     def call(
         self,
         messages: str | list[dict[str, str]],
-        tools: Sequence[Mapping[str, Any]] | None = None,
+        tools: list[dict[Any, Any]] | None = None,
         callbacks: list[Any] | None = None,
         available_functions: dict[str, Any] | None = None,
         from_task: Any | None = None,
@@ -163,27 +255,34 @@ class BedrockCompletion(BaseLLM):
                 messages
             )
 
-            # Prepare tool configuration
-            tool_config = None
-            if tools:
-                tool_config = {"tools": self._format_tools_for_converse(tools)}
-
             # Prepare request body
-            body = {
+            body: BedrockConverseRequestBody = {
                 "inferenceConfig": self._get_inference_config(),
             }
 
             # Add system message if present
             if system_message:
-                body["system"] = [{"text": system_message}]
+                body["system"] = cast(
+                    "list[SystemContentBlockTypeDef]",
+                    cast(object, [{"text": system_message}]),
+                )
 
             # Add tool config if present
-            if tool_config:
+            if tools:
+                tool_config: ToolConfigurationTypeDef = {
+                    "tools": cast(
+                        "Sequence[ToolTypeDef]",
+                        cast(object, self._format_tools_for_converse(tools)),
+                    )
+                }
                 body["toolConfig"] = tool_config
 
             # Add optional advanced features if configured
             if self.guardrail_config:
-                body["guardrailConfig"] = self.guardrail_config
+                guardrail_config: GuardrailConfigurationTypeDef = cast(
+                    "GuardrailConfigurationTypeDef", cast(object, self.guardrail_config)
+                )
+                body["guardrailConfig"] = guardrail_config
 
             if self.additional_model_request_fields:
                 body["additionalModelRequestFields"] = (
@@ -219,7 +318,7 @@ class BedrockCompletion(BaseLLM):
     def _handle_converse(
         self,
         messages: list[dict[str, Any]],
-        body: dict[str, Any],
+        body: BedrockConverseRequestBody,
         available_functions: Mapping[str, Any] | None = None,
         from_task: Any | None = None,
         from_agent: Any | None = None,
@@ -241,7 +340,12 @@ class BedrockCompletion(BaseLLM):
 
             # Call Bedrock Converse API with proper error handling
             response = self.client.converse(
-                modelId=self.model_id, messages=messages, **body
+                modelId=self.model_id,
+                messages=cast(
+                    "Sequence[MessageTypeDef | MessageOutputTypeDef]",
+                    cast(object, messages),
+                ),
+                **body,
             )
 
             # Track token usage according to AWS response format
@@ -269,7 +373,6 @@ class BedrockCompletion(BaseLLM):
 
             # Process content blocks and handle tool use correctly
             text_content = ""
-            tool_use_block = None
 
             for content_block in content:
                 # Handle text content
@@ -280,7 +383,7 @@ class BedrockCompletion(BaseLLM):
                 elif "toolUse" in content_block and available_functions:
                     tool_use_block = content_block["toolUse"]
                     tool_use_id = tool_use_block.get("toolUseId")
-                    function_name = tool_use_block.get("name")
+                    function_name = tool_use_block["name"]
                     function_args = tool_use_block.get("input", {})
 
                     logging.debug(
@@ -291,7 +394,7 @@ class BedrockCompletion(BaseLLM):
                     tool_result = self._handle_tool_execution(
                         function_name=function_name,
                         function_args=function_args,
-                        available_functions=available_functions,
+                        available_functions=dict(available_functions),
                         from_task=from_task,
                         from_agent=from_agent,
                     )
@@ -396,7 +499,7 @@ class BedrockCompletion(BaseLLM):
     def _handle_streaming_converse(
         self,
         messages: list[dict[str, Any]],
-        body: dict[str, Any],
+        body: BedrockConverseRequestBody,
         available_functions: dict[str, Any] | None = None,
         from_task: Any | None = None,
         from_agent: Any | None = None,
@@ -405,12 +508,15 @@ class BedrockCompletion(BaseLLM):
         full_response = ""
         current_tool_use = None
         tool_use_id = None
-        stop_reason = None
-        usage_metrics = {}
 
         try:
             response = self.client.converse_stream(
-                modelId=self.model_id, messages=messages, **body
+                modelId=self.model_id,
+                messages=cast(
+                    "Sequence[MessageTypeDef | MessageOutputTypeDef]",
+                    cast(object, messages),
+                ),
+                **body,  # type: ignore[arg-type]
             )
 
             stream = response.get("stream")
@@ -450,8 +556,10 @@ class BedrockCompletion(BaseLLM):
                         logging.debug("Content block stopped in stream")
                         # If we were accumulating a tool use, it's now complete
                         if current_tool_use and available_functions:
-                            function_name = current_tool_use.get("name")
-                            function_args = current_tool_use.get("input", {})
+                            function_name = current_tool_use["name"]
+                            function_args = cast(
+                                dict[str, Any], current_tool_use.get("input", {})
+                            )
 
                             # Execute tool
                             tool_result = self._handle_tool_execution(
@@ -626,25 +734,27 @@ class BedrockCompletion(BaseLLM):
 
         return converse_messages, system_message
 
-    def _format_tools_for_converse(self, tools: list[dict]) -> list[dict]:
+    @staticmethod
+    def _format_tools_for_converse(tools: list[dict]) -> list[ConverseToolTypeDef]:
         """Convert CrewAI tools to Converse API format following AWS specification."""
         from crewai.llms.providers.utils.common import safe_tool_conversion
 
-        converse_tools = []
+        converse_tools: list[ConverseToolTypeDef] = []
 
         for tool in tools:
             try:
                 name, description, parameters = safe_tool_conversion(tool, "Bedrock")
 
-                converse_tool = {
-                    "toolSpec": {
-                        "name": name,
-                        "description": description,
-                    }
+                tool_spec: ToolSpec = {
+                    "name": name,
+                    "description": description,
                 }
 
                 if parameters and isinstance(parameters, dict):
-                    converse_tool["toolSpec"]["inputSchema"] = {"json": parameters}
+                    input_schema: ToolInputSchema = {"json": parameters}
+                    tool_spec["inputSchema"] = input_schema
+
+                converse_tool: ConverseToolTypeDef = {"toolSpec": tool_spec}
 
                 converse_tools.append(converse_tool)
 
@@ -656,9 +766,9 @@ class BedrockCompletion(BaseLLM):
 
         return converse_tools
 
-    def _get_inference_config(self) -> dict[str, Any]:
+    def _get_inference_config(self) -> EnhancedInferenceConfigurationTypeDef:
         """Get inference configuration following AWS Converse API specification."""
-        config = {}
+        config: EnhancedInferenceConfigurationTypeDef = {}
 
         if self.max_tokens:
             config["maxTokens"] = self.max_tokens
@@ -699,7 +809,7 @@ class BedrockCompletion(BaseLLM):
 
         return full_error_msg
 
-    def _track_token_usage_internal(self, usage: dict[str, Any]) -> None:
+    def _track_token_usage_internal(self, usage: TokenUsageTypeDef) -> None:  # type: ignore[override]
         """Track token usage from Bedrock response."""
         input_tokens = usage.get("inputTokens", 0)
         output_tokens = usage.get("outputTokens", 0)
