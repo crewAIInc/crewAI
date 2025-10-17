@@ -200,7 +200,7 @@ def test_async_task_cannot_include_sequential_async_tasks_in_context(
     # This should raise an error because task2 is async and has task1 in its context without a sync task in between
     with pytest.raises(
         ValueError,
-        match="Task 'Task 2' is asynchronous and cannot include other sequential asynchronous tasks in its context.",
+        match=r"Task 'Task 2' is asynchronous and cannot include other sequential asynchronous tasks in its context.",
     ):
         Crew(tasks=[task1, task2, task3, task4, task5], agents=[researcher, writer])
 
@@ -238,7 +238,7 @@ def test_context_no_future_tasks(researcher, writer):
     # This should raise an error because task1 has a context dependency on a future task (task4)
     with pytest.raises(
         ValueError,
-        match="Task 'Task 1' has a context dependency on a future task 'Task 4', which is not allowed.",
+        match=r"Task 'Task 1' has a context dependency on a future task 'Task 4', which is not allowed.",
     ):
         Crew(tasks=[task1, task2, task3, task4], agents=[researcher, writer])
 
@@ -3339,7 +3339,7 @@ def test_replay_with_invalid_task_id():
     ):
         with pytest.raises(
             ValueError,
-            match="Task with id bf5b09c9-69bd-4eb8-be12-f9e5bae31c2d not found in the crew's tasks.",
+            match=r"Task with id bf5b09c9-69bd-4eb8-be12-f9e5bae31c2d not found in the crew's tasks.",
         ):
             crew.replay("bf5b09c9-69bd-4eb8-be12-f9e5bae31c2d")
 
@@ -3812,6 +3812,46 @@ def test_fetch_inputs():
     assert actual_placeholders == expected_placeholders, (
         f"Expected {expected_placeholders}, but got {actual_placeholders}"
     )
+
+
+def test_hierarchical_crew_does_not_propagate_agent_tools_to_manager():
+    """
+    Test that in hierarchical crews, manager agent doesn't inherit task agents' tools.
+    This verifies that the check_tools validator doesn't pollute task.tools at creation time.
+    Fixes issue #3679: https://github.com/crewAIInc/crewAI/issues/3679
+    """
+    from crewai.tools import tool
+
+    @tool
+    def agent_specific_tool() -> str:
+        """A tool that should only be available to the specific agent."""
+        return "agent specific result"
+
+    agent_with_tools = Agent(
+        role="Specialist",
+        goal="Do specialized work with custom tools",
+        backstory="You are a specialist with specific tools",
+        tools=[agent_specific_tool],
+        allow_delegation=False,
+    )
+
+    # Create a task with an agent that has tools, but don't assign tools to the task
+    task = Task(
+        description="Perform a specialized task",
+        expected_output="Task result",
+        agent=agent_with_tools,
+    )
+
+    Crew(
+        agents=[agent_with_tools],
+        tasks=[task],
+        process=Process.hierarchical,
+        manager_llm="gpt-4o",
+    )
+
+    # Verify that task.tools is empty (not populated with agent's tools)
+    assert task.tools == []
+    assert len(task.tools) == 0
 
 
 def test_task_tools_preserve_code_execution_tools():
