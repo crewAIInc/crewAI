@@ -94,3 +94,49 @@ def test_create_llm_with_invalid_type():
     with pytest.raises(BadRequestError, match="LLM Provider NOT provided"):
         llm = create_llm(llm_value=42)
         llm.call(messages=[{"role": "user", "content": "Hello, world!"}])
+
+
+def test_create_llm_strips_models_prefix_from_model_attribute():
+    """Test that 'models/' prefix is stripped from langchain model names."""
+    class LangChainLikeModel:
+        model = "models/gemini/gemini-pro"
+        temperature = 0.7
+
+    obj = LangChainLikeModel()
+    llm = create_llm(llm_value=obj)
+    assert isinstance(llm, LLM)
+    assert llm.model == "gemini/gemini-pro"  # 'models/' prefix should be stripped
+    assert llm.temperature == 0.7
+
+
+def test_create_llm_strips_models_prefix_from_model_name_attribute():
+    """Test that 'models/' prefix is stripped from model_name attribute."""
+    class LangChainLikeModelWithModelName:
+        model_name = "models/gemini/gemini-2.0-flash"
+
+    obj = LangChainLikeModelWithModelName()
+    llm = create_llm(llm_value=obj)
+    assert isinstance(llm, LLM)
+    assert llm.model == "gemini/gemini-2.0-flash"  # 'models/' prefix should be stripped
+
+
+def test_create_llm_handles_model_without_prefix():
+    """Test that models without 'models/' prefix are handled correctly."""
+    class RegularModel:
+        model = "gemini/gemini-pro"
+
+    obj = RegularModel()
+    llm = create_llm(llm_value=obj)
+    assert isinstance(llm, LLM)
+    assert llm.model == "gemini/gemini-pro"  # No change when prefix not present
+
+
+def test_create_llm_strips_models_prefix_case_sensitive():
+    """Test that only lowercase 'models/' prefix is stripped."""
+    class UpperCaseModel:
+        model = "Models/gemini/gemini-pro"  # Uppercase M
+
+    obj = UpperCaseModel()
+    llm = create_llm(llm_value=obj)
+    assert isinstance(llm, LLM)
+    assert llm.model == "Models/gemini/gemini-pro"
