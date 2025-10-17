@@ -78,6 +78,7 @@ class OpenAICompletion(BaseLLM):
         )
 
         client_config = self._get_client_params()
+        print(f"Client config: {client_config}")
         self.client = OpenAI(**client_config)
 
         # Completion parameters
@@ -107,7 +108,10 @@ class OpenAICompletion(BaseLLM):
             "api_key": self.api_key,
             "organization": self.organization,
             "project": self.project,
-            "base_url": self.base_url or self.api_base or os.getenv("OPENAI_BASE_URL"),
+            "base_url": self.base_url
+            or self.api_base
+            or os.getenv("OPENAI_BASE_URL")
+            or None,
             "timeout": self.timeout,
             "max_retries": self.max_retries,
             "default_headers": self.default_headers,
