@@ -106,7 +106,7 @@ class OpenAICompletion(BaseLLM):
             "api_key": self.api_key,
             "organization": self.organization,
             "project": self.project,
-            "base_url": self.base_url,
+            "base_url": self.base_url or self.api_base or os.getenv("OPENAI_BASE_URL"),
             "timeout": self.timeout,
             "max_retries": self.max_retries,
             "default_headers": self.default_headers,
@@ -239,6 +239,7 @@ class OpenAICompletion(BaseLLM):
             "provider",
             "api_key",
             "base_url",
+            "api_base",
             "timeout",
         }
 
