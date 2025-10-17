@@ -78,7 +78,6 @@ class OpenAICompletion(BaseLLM):
         )
 
         client_config = self._get_client_params()
-        print(f"Client config: {client_config}")
         self.client = OpenAI(**client_config)
 
         # Completion parameters
