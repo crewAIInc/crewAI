@@ -122,7 +122,11 @@ def test_gemini_completion_module_is_imported():
 
 def test_fallback_to_litellm_when_native_gemini_fails():
     """
-    Test that LLM falls back to LiteLLM when native Gemini completion fails
+    Test that LLM raises ImportError when native Gemini completion fails.
+
+    With the new behavior, when a native provider is in SUPPORTED_NATIVE_PROVIDERS
+    but fails to instantiate, we raise an ImportError instead of silently falling back.
+    This provides clearer error messages to users about missing dependencies.
     """
     # Mock the _get_native_provider to return a failing class
     with patch('crewai.llm.LLM._get_native_provider') as mock_get_provider:
@@ -133,12 +137,13 @@ def test_fallback_to_litellm_when_native_gemini_fails():
 
         mock_get_provider.return_value = FailingCompletion
 
-        # This should fall back to LiteLLM
-        llm = LLM(model="google/gemini-2.0-flash-001")
+        # This should raise ImportError with clear message
+        with pytest.raises(ImportError) as excinfo:
+            LLM(model="google/gemini-2.0-flash-001")
 
-        # Check that it's using LiteLLM
-        assert hasattr(llm, 'is_litellm')
-        assert llm.is_litellm == True
+        # Verify the error message is helpful
+        assert "Error importing native provider" in str(excinfo.value)
+        assert "Native Google Gen AI SDK failed" in str(excinfo.value)
 
 
 def test_gemini_completion_initialization_parameters():
