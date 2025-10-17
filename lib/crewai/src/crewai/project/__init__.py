@@ -1,4 +1,6 @@
-from .annotations import (
+"""Project package for CrewAI."""
+
+from crewai.project.annotations import (
     after_kickoff,
     agent,
     before_kickoff,
@@ -11,7 +13,8 @@ from .annotations import (
     task,
     tool,
 )
-from .crew_base import CrewBase
+from crewai.project.crew_base import CrewBase
+
 
 __all__ = [
     "CrewBase",
