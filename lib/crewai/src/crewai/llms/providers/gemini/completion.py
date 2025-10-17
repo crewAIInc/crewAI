@@ -16,7 +16,7 @@ try:
     from google.genai.errors import APIError
 except ImportError:
     raise ImportError(
-        "Google Gen AI native provider not available, to install: `uv add google-genai`"
+        'Google Gen AI native provider not available, to install: uv add "crewai[google-genai]"'
     ) from None
 
 

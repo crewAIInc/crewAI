@@ -72,7 +72,7 @@ except ImportError:
 
 
 load_dotenv()
-
+logger = logging.getLogger(__name__)
 if LITELLM_AVAILABLE:
     litellm.suppress_debug_info = True
 
@@ -273,6 +273,17 @@ LLM_CONTEXT_WINDOW_SIZES: Final[dict[str, int]] = {
 
 DEFAULT_CONTEXT_WINDOW_SIZE: Final[int] = 8192
 CONTEXT_WINDOW_USAGE_RATIO: Final[float] = 0.85
+SUPPORTED_NATIVE_PROVIDERS: Final[list[str]] = [
+    "openai",
+    "anthropic",
+    "claude",
+    "azure",
+    "azure_openai",
+    "google",
+    "gemini",
+    "bedrock",
+    "aws",
+]
 
 
 class Delta(TypedDict):
@@ -306,24 +317,17 @@ class LLM(BaseLLM):
         provider = model.partition("/")[0] if "/" in model else "openai"
 
         native_class = cls._get_native_provider(provider)
-        if native_class and not is_litellm:
+        if native_class and not is_litellm and provider in SUPPORTED_NATIVE_PROVIDERS:
             try:
                 model_string = model.partition("/")[2] if "/" in model else model
                 return native_class(model=model_string, provider=provider, **kwargs)
             except Exception as e:
-                import logging
-
-                logger = logging.getLogger(__name__)
-                logger.warning(
-                    f"Native SDK failed for {provider}: {e}, falling back to LiteLLM"
-                )
+                raise ImportError(f"Error importing native provider: {e}") from e
 
         # FALLBACK to LiteLLM
         if not LITELLM_AVAILABLE:
-            raise ImportError(
-                "Please install the required dependencies:\n"
-                "- For LiteLLM: uv add litellm"
-            )
+            logger.error("LiteLLM is not available, falling back to LiteLLM")
+            raise ImportError("Fallback to LiteLLM is not available") from None
 
         instance = object.__new__(cls)
         super(LLM, instance).__init__(model=model, is_litellm=True, **kwargs)
@@ -334,46 +338,31 @@ class LLM(BaseLLM):
     def _get_native_provider(cls, provider: str) -> type | None:
         """Get native provider class if available."""
         if provider == "openai":
-            try:
-                from crewai.llms.providers.openai.completion import OpenAICompletion
+            from crewai.llms.providers.openai.completion import OpenAICompletion
 
-                return OpenAICompletion
-            except ImportError:
-                return None
+            return OpenAICompletion
 
-        elif provider == "anthropic" or provider == "claude":
-            try:
-                from crewai.llms.providers.anthropic.completion import (
-                    AnthropicCompletion,
-                )
+        if provider == "anthropic" or provider == "claude":
+            from crewai.llms.providers.anthropic.completion import (
+                AnthropicCompletion,
+            )
 
-                return AnthropicCompletion
-            except ImportError:
-                return None
+            return AnthropicCompletion
 
-        elif provider == "azure" or provider == "azure_openai":
-            try:
-                from crewai.llms.providers.azure.completion import AzureCompletion
+        if provider == "azure" or provider == "azure_openai":
+            from crewai.llms.providers.azure.completion import AzureCompletion
 
-                return AzureCompletion
-            except ImportError:
-                return None
+            return AzureCompletion
 
-        elif provider == "google" or provider == "gemini":
-            try:
-                from crewai.llms.providers.gemini.completion import GeminiCompletion
+        if provider == "google" or provider == "gemini":
+            from crewai.llms.providers.gemini.completion import GeminiCompletion
 
-                return GeminiCompletion
-            except ImportError:
-                return None
+            return GeminiCompletion
 
-        elif provider == "bedrock":
-            try:
-                from crewai.llms.providers.bedrock.completion import BedrockCompletion
+        if provider == "bedrock":
+            from crewai.llms.providers.bedrock.completion import BedrockCompletion
 
-                return BedrockCompletion
-            except ImportError:
-                return None
+            return BedrockCompletion
 
         return None
 

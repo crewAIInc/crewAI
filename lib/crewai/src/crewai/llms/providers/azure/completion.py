@@ -23,7 +23,7 @@ try:
 
 except ImportError:
     raise ImportError(
-        "Azure AI Inference native provider not available, to install: `uv add azure-ai-inference`"
+        'Azure AI Inference native provider not available, to install: uv add "crewai[azure-ai-inference]"'
     ) from None
 
 

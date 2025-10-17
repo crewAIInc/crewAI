@@ -123,9 +123,10 @@ def test_azure_completion_module_is_imported():
     assert hasattr(completion_mod, 'AzureCompletion')
 
 
-def test_fallback_to_litellm_when_native_azure_fails():
+def test_native_azure_raises_error_when_initialization_fails():
     """
-    Test that LLM falls back to LiteLLM when native Azure completion fails
+    Test that LLM raises ImportError when native Azure completion fails to initialize.
+    This ensures we don't silently fall back when there's a configuration issue.
     """
     # Mock the _get_native_provider to return a failing class
     with patch('crewai.llm.LLM._get_native_provider') as mock_get_provider:
@@ -136,12 +137,12 @@ def test_fallback_to_litellm_when_native_azure_fails():
 
         mock_get_provider.return_value = FailingCompletion
 
-        # This should fall back to LiteLLM
-        llm = LLM(model="azure/gpt-4")
+        # This should raise ImportError, not fall back to LiteLLM
+        with pytest.raises(ImportError) as excinfo:
+            LLM(model="azure/gpt-4")
 
-        # Check that it's using LiteLLM
-        assert hasattr(llm, 'is_litellm')
-        assert llm.is_litellm == True
+        assert "Error importing native provider" in str(excinfo.value)
+        assert "Native Azure AI Inference SDK failed" in str(excinfo.value)
 
 
 def test_azure_completion_initialization_parameters():
