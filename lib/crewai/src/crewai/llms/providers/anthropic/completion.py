@@ -16,7 +16,7 @@ try:
     from anthropic.types.tool_use_block import ToolUseBlock
 except ImportError:
     raise ImportError(
-        "Anthropic native provider not available, to install: `uv add anthropic`"
+        'Anthropic native provider not available, to install: uv add "crewai[anthropic]"'
     ) from None
 
 

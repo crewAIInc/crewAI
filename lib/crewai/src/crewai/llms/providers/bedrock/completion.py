@@ -35,7 +35,7 @@ try:
     from botocore.exceptions import BotoCoreError, ClientError
 except ImportError:
     raise ImportError(
-        "AWS Bedrock native provider not available, to install: `uv add boto3`"
+        'AWS Bedrock native provider not available, to install: uv add "crewai[bedrock]"'
     ) from None
 
 

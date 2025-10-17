@@ -1066,6 +1066,9 @@ dependencies = [
 aisuite = [
     { name = "aisuite" },
 ]
+anthropic = [
+    { name = "anthropic" },
+]
 aws = [
     { name = "boto3" },
 ]
@@ -1115,6 +1118,7 @@ watson = [
 [package.metadata]
 requires-dist = [
     { name = "aisuite", marker = "extra == 'aisuite'", specifier = ">=0.1.10" },
+    { name = "anthropic", marker = "extra == 'anthropic'", specifier = ">=0.69.0" },
     { name = "appdirs", specifier = ">=1.4.4" },
     { name = "azure-ai-inference", marker = "extra == 'azure-ai-inference'", specifier = ">=1.0.0b9" },
     { name = "boto3", marker = "extra == 'aws'", specifier = ">=1.40.38" },
@@ -1155,7 +1159,7 @@ requires-dist = [
     { name = "uv", specifier = ">=0.4.25" },
     { name = "voyageai", marker = "extra == 'voyageai'", specifier = ">=0.3.5" },
 ]
-provides-extras = ["aisuite", "aws", "azure-ai-inference", "boto3", "docling", "embeddings", "google-genai", "litellm", "mem0", "openpyxl", "pandas", "pdfplumber", "qdrant", "tools", "voyageai", "watson"]
+provides-extras = ["aisuite", "anthropic", "aws", "azure-ai-inference", "boto3", "docling", "embeddings", "google-genai", "litellm", "mem0", "openpyxl", "pandas", "pdfplumber", "qdrant", "tools", "voyageai", "watson"]
 
 [[package]]
 name = "crewai-devtools"

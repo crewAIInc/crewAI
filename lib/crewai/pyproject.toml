@@ -84,7 +84,7 @@ voyageai = [
 litellm = [
     "litellm>=1.74.9",
 ]
-boto3 = [
+bedrock = [
     "boto3>=1.40.45",
 ]
 google-genai = [
@@ -92,6 +92,9 @@ google-genai = [
 ]
 azure-ai-inference = [
     "azure-ai-inference>=1.0.0b9",
+]
+anthropic = [
+    "anthropic>=0.69.0",
 ]
 
 

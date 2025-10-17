@@ -72,7 +72,7 @@ except ImportError:
 
 
 load_dotenv()
-
+logger = logging.getLogger(__name__)
 if LITELLM_AVAILABLE:
     litellm.suppress_debug_info = True
 
@@ -311,19 +311,14 @@ class LLM(BaseLLM):
                 model_string = model.partition("/")[2] if "/" in model else model
                 return native_class(model=model_string, provider=provider, **kwargs)
             except Exception as e:
-                import logging
-
-                logger = logging.getLogger(__name__)
-                logger.warning(
+                logger.error(
                     f"Native SDK failed for {provider}: {e}, falling back to LiteLLM"
                 )
 
         # FALLBACK to LiteLLM
         if not LITELLM_AVAILABLE:
-            raise ImportError(
-                "Please install the required dependencies:\n"
-                "- For LiteLLM: uv add litellm"
-            )
+            logger.error("LiteLLM is not available, falling back to LiteLLM")
+            raise ImportError("Fallback to LiteLLM is not available") from None
 
         instance = object.__new__(cls)
         super(LLM, instance).__init__(model=model, is_litellm=True, **kwargs)
@@ -348,7 +343,8 @@ class LLM(BaseLLM):
                 )
 
                 return AnthropicCompletion
-            except ImportError:
+            except ImportError as e:
+                logger.error(f"Error importing Anthropic native provider: {e}")
                 return None
 
         elif provider == "azure" or provider == "azure_openai":
@@ -356,7 +352,8 @@ class LLM(BaseLLM):
                 from crewai.llms.providers.azure.completion import AzureCompletion
 
                 return AzureCompletion
-            except ImportError:
+            except ImportError as e:
+                logger.error(f"Error importing Azure native provider: {e}")
                 return None
 
         elif provider == "google" or provider == "gemini":
@@ -364,7 +361,8 @@ class LLM(BaseLLM):
                 from crewai.llms.providers.gemini.completion import GeminiCompletion
 
                 return GeminiCompletion
-            except ImportError:
+            except ImportError as e:
+                logger.error(f"Error importing Gemini native provider: {e}")
                 return None
 
         elif provider == "bedrock":
@@ -372,7 +370,8 @@ class LLM(BaseLLM):
                 from crewai.llms.providers.bedrock.completion import BedrockCompletion
 
                 return BedrockCompletion
-            except ImportError:
+            except ImportError as e:
+                logger.error(f"Error importing Bedrock native provider: {e}")
                 return None
 
         return None
