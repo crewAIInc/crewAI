@@ -697,3 +697,29 @@ def test_ollama_does_not_modify_when_last_is_user(ollama_llm):
     formatted = ollama_llm._format_messages_for_provider(original_messages)
 
     assert formatted == original_messages
+
+def test_native_provider_raises_error_when_supported_but_fails():
+    """Test that when a native provider is in SUPPORTED_NATIVE_PROVIDERS but fails to instantiate, we raise the error."""
+    with patch("crewai.llm.SUPPORTED_NATIVE_PROVIDERS", ["openai"]):
+        with patch("crewai.llm.LLM._get_native_provider") as mock_get_native:
+            # Mock that provider exists but throws an error when instantiated
+            mock_provider = MagicMock()
+            mock_provider.side_effect = ValueError("Native provider initialization failed")
+            mock_get_native.return_value = mock_provider
+
+            with pytest.raises(ImportError) as excinfo:
+                LLM(model="openai/gpt-4", is_litellm=False)
+
+            assert "Error importing native provider" in str(excinfo.value)
+            assert "Native provider initialization failed" in str(excinfo.value)
+
+
+def test_native_provider_falls_back_to_litellm_when_not_in_supported_list():
+    """Test that when a provider is not in SUPPORTED_NATIVE_PROVIDERS, we fall back to LiteLLM."""
+    with patch("crewai.llm.SUPPORTED_NATIVE_PROVIDERS", ["openai", "anthropic"]):
+        # Using a provider not in the supported list
+        llm = LLM(model="groq/llama-3.1-70b-versatile", is_litellm=False)
+
+        # Should fall back to LiteLLM
+        assert llm.is_litellm is True
+        assert llm.model == "groq/llama-3.1-70b-versatile"
