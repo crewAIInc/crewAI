@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.agents.parser import AgentAction
 from crewai.agents.tools_handler import ToolsHandler
 from crewai.security.fingerprint import Fingerprint

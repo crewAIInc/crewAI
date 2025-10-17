@@ -5,7 +5,7 @@ and memory management.
 """
 
 from collections.abc import Callable
-from typing import Any
+from typing import Any, Literal
 
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.agents.agent_builder.base_agent_executor_mixin import CrewAgentExecutorMixin
@@ -40,6 +40,7 @@ from crewai.utilities.agent_utils import (
 from crewai.utilities.constants import TRAINING_DATA_FILE
 from crewai.utilities.tool_utils import execute_tool_and_check_finality
 from crewai.utilities.training_handler import CrewTrainingHandler
+from crewai.utilities.types import LLMMessage
 
 
 class CrewAgentExecutor(CrewAgentExecutorMixin):
@@ -111,7 +112,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         self.respect_context_window = respect_context_window
         self.request_within_rpm_limit = request_within_rpm_limit
         self.ask_for_human_input = False
-        self.messages: list[dict[str, str]] = []
+        self.messages: list[LLMMessage] = []
         self.iterations = 0
         self.log_error_after = 3
         existing_stop = self.llm.stop or []
@@ -241,7 +242,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                 if e.__class__.__module__.startswith("litellm"):
                     # Do not retry on litellm errors
                     raise e
-                if is_context_length_exceeded(e):
+                if is_context_length_exceeded(exception=e, messages=self.messages, llm=self.llm):
                     handle_context_length(
                         respect_context_window=self.respect_context_window,
                         printer=self._printer,
@@ -309,7 +310,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         if self.step_callback:
             self.step_callback(formatted_answer)
 
-    def _append_message(self, text: str, role: str = "assistant") -> None:
+    def _append_message(self, text: str, role: Literal["user", "assistant", "system"] = "assistant") -> None:
         """Add message to conversation history.
 
         Args:
