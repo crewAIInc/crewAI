@@ -299,6 +299,7 @@ class LLM(BaseLLM):
         callbacks: list[Any] | None = None,
         reasoning_effort: Literal["none", "low", "medium", "high"] | None = None,
         stream: bool = False,
+        supports_function_calling: bool | None = None,
         **kwargs,
     ):
         self.model = model
@@ -325,6 +326,7 @@ class LLM(BaseLLM):
         self.additional_params = kwargs
         self.is_anthropic = self._is_anthropic_model(model)
         self.stream = stream
+        self._supports_function_calling_override = supports_function_calling
 
         litellm.drop_params = True
 
@@ -1197,6 +1199,9 @@ class LLM(BaseLLM):
             )
 
     def supports_function_calling(self) -> bool:
+        if self._supports_function_calling_override is not None:
+            return self._supports_function_calling_override
+        
         try:
             provider = self._get_custom_llm_provider()
             return litellm.utils.supports_function_calling(

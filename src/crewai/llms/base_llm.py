@@ -9,6 +9,7 @@ from typing import Any, Final
 
 DEFAULT_CONTEXT_WINDOW_SIZE: Final[int] = 4096
 DEFAULT_SUPPORTS_STOP_WORDS: Final[bool] = True
+DEFAULT_SUPPORTS_FUNCTION_CALLING: Final[bool] = True
 
 
 class BaseLLM(ABC):
@@ -81,6 +82,14 @@ class BaseLLM(ABC):
             TimeoutError: If the LLM request times out.
             RuntimeError: If the LLM request fails for other reasons.
         """
+
+    def supports_function_calling(self) -> bool:
+        """Check if the LLM supports function calling.
+
+        Returns:
+            True if the LLM supports function calling, False otherwise.
+        """
+        return DEFAULT_SUPPORTS_FUNCTION_CALLING
 
     def supports_stop_words(self) -> bool:
         """Check if the LLM supports stop words.
