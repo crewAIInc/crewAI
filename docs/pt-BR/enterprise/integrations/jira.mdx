@@ -25,7 +25,7 @@ Antes de usar a integração com o Jira, certifique-se de ter:
 2. Encontre **Jira** na seção de Integrações de Autenticação
 3. Clique em **Conectar** e complete o fluxo do OAuth
 4. Conceda as permissões necessárias para gestão de issues e projetos
-5. Copie seu Token Enterprise em [Configurações da Conta](https://app.crewai.com/crewai_plus/settings/account)
+5. Copie seu Token Enterprise em [Configurações de Integração](https://app.crewai.com/crewai_plus/settings/integrations)
 
 ### 2. Instalar o Pacote Necessário
 
@@ -36,7 +36,7 @@ uv add crewai-tools
 ## Ações Disponíveis
 
 <AccordionGroup>
-  <Accordion title="JIRA_CREATE_ISSUE">
+  <Accordion title="jira/create_issue">
     **Descrição:** Cria uma issue no Jira.
 
     **Parâmetros:**
@@ -56,7 +56,7 @@ uv add crewai-tools
       ```
   </Accordion>
 
-  <Accordion title="JIRA_UPDATE_ISSUE">
+  <Accordion title="jira/update_issue">
     **Descrição:** Atualiza uma issue no Jira.
 
     **Parâmetros:**
@@ -71,14 +71,14 @@ uv add crewai-tools
     - `additionalFields` (string, opcional): Campos Adicionais - Especifique outros campos em formato JSON.
   </Accordion>
 
-  <Accordion title="JIRA_GET_ISSUE_BY_KEY">
+  <Accordion title="jira/get_issue_by_key">
     **Descrição:** Obtém uma issue pelo identificador no Jira.
 
     **Parâmetros:**
     - `issueKey` (string, obrigatório): Chave da Issue (exemplo: "TEST-1234").
   </Accordion>
 
-  <Accordion title="JIRA_FILTER_ISSUES">
+  <Accordion title="jira/filter_issues">
     **Descrição:** Busca issues no Jira usando filtros.
 
     **Parâmetros:**
@@ -104,7 +104,7 @@ uv add crewai-tools
     - `limit` (string, opcional): Limitar resultados - Limite máximo de issues retornados. Padrão para 10 se estiver em branco.
   </Accordion>
 
-  <Accordion title="JIRA_SEARCH_BY_JQL">
+  <Accordion title="jira/search_by_jql">
     **Descrição:** Busca issues no Jira utilizando JQL.
 
     **Parâmetros:**
@@ -117,13 +117,13 @@ uv add crewai-tools
       ```
   </Accordion>
 
-  <Accordion title="JIRA_UPDATE_ISSUE_ANY">
+  <Accordion title="jira/update_issue_any">
     **Descrição:** Atualiza qualquer issue no Jira. Use DESCRIBE_ACTION_SCHEMA para obter o schema de propriedades dessa função.
 
     **Parâmetros:** Nenhum parâmetro específico - use JIRA_DESCRIBE_ACTION_SCHEMA primeiro para obter o schema esperado.
   </Accordion>
 
-  <Accordion title="JIRA_DESCRIBE_ACTION_SCHEMA">
+  <Accordion title="jira/describe_action_schema">
     **Descrição:** Obtém o schema esperado para um tipo de issue. Use esta função caso nenhuma outra função atenda ao tipo de issue que deseja operar.
 
     **Parâmetros:**
@@ -132,7 +132,7 @@ uv add crewai-tools
     - `operation` (string, obrigatório): Tipo de Operação, por exemplo CREATE_ISSUE ou UPDATE_ISSUE.
   </Accordion>
 
-  <Accordion title="JIRA_GET_PROJECTS">
+  <Accordion title="jira/get_projects">
     **Descrição:** Obtém os projetos no Jira.
 
     **Parâmetros:**
@@ -144,27 +144,27 @@ uv add crewai-tools
       ```
   </Accordion>
 
-  <Accordion title="JIRA_GET_ISSUE_TYPES_BY_PROJECT">
+  <Accordion title="jira/get_issue_types_by_project">
     **Descrição:** Obtém os tipos de issues por projeto no Jira.
 
     **Parâmetros:**
     - `project` (string, obrigatório): Chave do projeto.
   </Accordion>
 
-  <Accordion title="JIRA_GET_ISSUE_TYPES">
+  <Accordion title="jira/get_issue_types">
     **Descrição:** Obtém todos os tipos de issues no Jira.
 
     **Parâmetros:** Nenhum obrigatório.
   </Accordion>
 
-  <Accordion title="JIRA_GET_ISSUE_STATUS_BY_PROJECT">
+  <Accordion title="jira/get_issue_status_by_project">
     **Descrição:** Obtém os status das issues de um projeto específico.
 
     **Parâmetros:**
     - `project` (string, obrigatório): Chave do projeto.
   </Accordion>
 
-  <Accordion title="JIRA_GET_ALL_ASSIGNEES_BY_PROJECT">
+  <Accordion title="jira/get_all_assignees_by_project">
     **Descrição:** Obtém os responsáveis por um projeto específico.
 
     **Parâmetros:**
@@ -178,19 +178,15 @@ uv add crewai-tools
 
 ```python
 from crewai import Agent, Task, Crew
-from crewai_tools import CrewaiEnterpriseTools
 
 # Obtenha as ferramentas enterprise (incluirá ferramentas do Jira)
-enterprise_tools = CrewaiEnterpriseTools(
-    enterprise_token="your_enterprise_token"
-)
 
 # Criação de um agente com capacidades Jira
 jira_agent = Agent(
     role="Issue Manager",
     goal="Gerenciar issues do Jira e acompanhar o progresso do projeto de forma eficiente",
     backstory="Um assistente de IA especializado em rastreamento de issues e gestão de projetos.",
-    tools=[enterprise_tools]
+    apps=['jira']
 )
 
 # Tarefa para criar um relatório de bug
@@ -212,19 +208,16 @@ crew.kickoff()
 ### Filtrando Ferramentas Jira Específicas
 
 ```python
-from crewai_tools import CrewaiEnterpriseTools
 
 # Obtenha apenas ferramentas Jira específicas
-enterprise_tools = CrewaiEnterpriseTools(
-    enterprise_token="your_enterprise_token",
-    actions_list=["jira_create_issue", "jira_update_issue", "jira_search_by_jql"]
+    actions_list=["jira/create_issue", "jira/update_issue", "jira/search_by_jql"]
 )
 
 issue_coordinator = Agent(
     role="Issue Coordinator",
     goal="Criar e gerenciar issues Jira de forma eficiente",
     backstory="Um assistente de IA focado na criação e gestão de issues.",
-    tools=enterprise_tools
+    apps=['jira']
 )
 
 # Tarefa para gerenciar workflow de issues
@@ -246,17 +239,12 @@ crew.kickoff()
 
 ```python
 from crewai import Agent, Task, Crew
-from crewai_tools import CrewaiEnterpriseTools
-
-enterprise_tools = CrewaiEnterpriseTools(
-    enterprise_token="your_enterprise_token"
-)
 
 project_analyst = Agent(
     role="Project Analyst",
     goal="Analisar dados de projetos e gerar insights a partir do Jira",
     backstory="Um analista de projetos experiente que extrai insights de dados de gestão de projetos.",
-    tools=[enterprise_tools]
+    apps=['jira']
 )
 
 # Tarefa para analisar status do projeto
@@ -283,17 +271,12 @@ crew.kickoff()
 
 ```python
 from crewai import Agent, Task, Crew
-from crewai_tools import CrewaiEnterpriseTools
-
-enterprise_tools = CrewaiEnterpriseTools(
-    enterprise_token="your_enterprise_token"
-)
 
 automation_manager = Agent(
     role="Automation Manager",
     goal="Automatizar gestão de issues e processos de workflow",
     backstory="Um assistente de IA que automatiza tarefas repetitivas de gestão de issues.",
-    tools=[enterprise_tools]
+    apps=['jira']
 )
 
 # Tarefa para automatizar gestão de issues
@@ -321,17 +304,12 @@ crew.kickoff()
 
 ```python
 from crewai import Agent, Task, Crew
-from crewai_tools import CrewaiEnterpriseTools
-
-enterprise_tools = CrewaiEnterpriseTools(
-    enterprise_token="your_enterprise_token"
-)
 
 schema_specialist = Agent(
     role="Schema Specialist",
     goal="Executar operações complexas no Jira usando schemas dinâmicos",
     backstory="Um assistente de IA que manipula schemas dinâmicos e tipos de issues customizadas do Jira.",
-    tools=[enterprise_tools]
+    apps=['jira']
 )
 
 # Tarefa usando operações baseadas em schema

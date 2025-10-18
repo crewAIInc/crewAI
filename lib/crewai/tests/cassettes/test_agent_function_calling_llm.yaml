@@ -1,0 +1,1392 @@
+interactions:
+- request:
+    body: !!binary |
+      Cv4MCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkS1QwKEgoQY3Jld2FpLnRl
+      bGVtZXRyeRK7CAoQoZHzwzzqT//MOge9CaeNnhIIPhrIWGCJs1IqDENyZXcgQ3JlYXRlZDABOXAF
+      wn/PBjIYQeDOzn/PBjIYShsKDmNyZXdhaV92ZXJzaW9uEgkKBzAuMTA4LjBKGgoOcHl0aG9uX3Zl
+      cnNpb24SCAoGMy4xMi44Si4KCGNyZXdfa2V5EiIKIDQ5NGYzNjU3MjM3YWQ4YTMwMzViMmYxYmVl
+      Y2RjNjc3SjEKB2NyZXdfaWQSJgokZjc5OWM3ZGUtOTkzOC00N2ZlLWJjZDMtOWJkY2FiZjNkZjlh
+      ShwKDGNyZXdfcHJvY2VzcxIMCgpzZXF1ZW50aWFsShEKC2NyZXdfbWVtb3J5EgIQAEoaChRjcmV3
+      X251bWJlcl9vZl90YXNrcxICGAFKGwoVY3Jld19udW1iZXJfb2ZfYWdlbnRzEgIYAUo6ChBjcmV3
+      X2ZpbmdlcnByaW50EiYKJDY4NzBhYjc3LWE5MmQtNGVmMy1hYjU2LWRlNTFlZGM3MDY2MUo7Chtj
+      cmV3X2ZpbmdlcnByaW50X2NyZWF0ZWRfYXQSHAoaMjAyNS0wMy0zMVQxNjoyNDo1My43NDUzNzRK
+      4AIKC2NyZXdfYWdlbnRzEtACCs0CW3sia2V5IjogImUxNDhlNTMyMDI5MzQ5OWY4Y2ViZWE4MjZl
+      NzI1ODJiIiwgImlkIjogIjUyZTk4MWIyLTBmNWUtNDQwZC1iMjc3LWQwYzlhOWQzZjg1ZCIsICJy
+      b2xlIjogInRlc3Qgcm9sZSIsICJ2ZXJib3NlPyI6IGZhbHNlLCAibWF4X2l0ZXIiOiAyLCAibWF4
+      X3JwbSI6IG51bGwsICJmdW5jdGlvbl9jYWxsaW5nX2xsbSI6ICJncHQtNG8iLCAibGxtIjogImdw
+      dC00byIsICJkZWxlZ2F0aW9uX2VuYWJsZWQ/IjogZmFsc2UsICJhbGxvd19jb2RlX2V4ZWN1dGlv
+      bj8iOiBmYWxzZSwgIm1heF9yZXRyeV9saW1pdCI6IDIsICJ0b29sc19uYW1lcyI6IFsibGVhcm5f
+      YWJvdXRfYWkiXX1dSo4CCgpjcmV3X3Rhc2tzEv8BCvwBW3sia2V5IjogImYyNTk3Yzc4NjdmYmUz
+      MjRkYzY1ZGMwOGRmZGJmYzZjIiwgImlkIjogImMxYzFmNWZkLTM3Y2ItNDdjNC04NmY0LWUzYTJh
+      MTQyOGY4OSIsICJhc3luY19leGVjdXRpb24/IjogZmFsc2UsICJodW1hbl9pbnB1dD8iOiBmYWxz
+      ZSwgImFnZW50X3JvbGUiOiAidGVzdCByb2xlIiwgImFnZW50X2tleSI6ICJlMTQ4ZTUzMjAyOTM0
+      OTlmOGNlYmVhODI2ZTcyNTgyYiIsICJ0b29sc19uYW1lcyI6IFsibGVhcm5fYWJvdXRfYWkiXX1d
+      egIYAYUBAAEAABKABAoQOqy1VdqH3blm7jGGk44O8hIIXVB00yaxmDcqDFRhc2sgQ3JlYXRlZDAB
+      OaAr5H/PBjIYQbDP5H/PBjIYSi4KCGNyZXdfa2V5EiIKIDQ5NGYzNjU3MjM3YWQ4YTMwMzViMmYx
+      YmVlY2RjNjc3SjEKB2NyZXdfaWQSJgokZjc5OWM3ZGUtOTkzOC00N2ZlLWJjZDMtOWJkY2FiZjNk
+      ZjlhSi4KCHRhc2tfa2V5EiIKIGYyNTk3Yzc4NjdmYmUzMjRkYzY1ZGMwOGRmZGJmYzZjSjEKB3Rh
+      c2tfaWQSJgokYzFjMWY1ZmQtMzdjYi00N2M0LTg2ZjQtZTNhMmExNDI4Zjg5SjoKEGNyZXdfZmlu
+      Z2VycHJpbnQSJgokNjg3MGFiNzctYTkyZC00ZWYzLWFiNTYtZGU1MWVkYzcwNjYxSjoKEHRhc2tf
+      ZmluZ2VycHJpbnQSJgokOWM3MDIxY2UtNjU2OC00OGY2LWI4ZGMtNmNlY2M5ODcwMDhkSjsKG3Rh
+      c2tfZmluZ2VycHJpbnRfY3JlYXRlZF9hdBIcChoyMDI1LTAzLTMxVDE2OjI0OjUzLjc0NTMzMUo7
+      ChFhZ2VudF9maW5nZXJwcmludBImCiRhYjY1ZDE5Yi0yNmIwLTRiMGMtYTg0My01ZjU3MThkZjdi
+      Y2Z6AhgBhQEAAQAA
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate, zstd
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '1665'
+      Content-Type:
+      - application/x-protobuf
+      User-Agent:
+      - OTel-OTLP-Exporter-Python/1.31.1
+    method: POST
+    uri: https://telemetry.crewai.com:4319/v1/traces
+  response:
+    body:
+      string: "\n\0"
+    headers:
+      Content-Length:
+      - '2'
+      Content-Type:
+      - application/x-protobuf
+      Date:
+      - Mon, 31 Mar 2025 23:24:57 GMT
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are test role. test backstory\nYour
+      personal goal is: test goal\nYou ONLY have access to the following tools, and
+      should NEVER make up tools that are not listed here:\n\nTool Name: learn_about_AI\nTool
+      Arguments: {}\nTool Description: Useful for when you need to learn about AI
+      to write an paragraph about it.\n\nIMPORTANT: Use the following format in your
+      response:\n\n```\nThought: you should always think about what to do\nAction:
+      the action to take, only one name of [learn_about_AI], just the name, exactly
+      as it''s written.\nAction Input: the input to the action, just a simple JSON
+      object, enclosed in curly braces, using \" to wrap keys and values.\nObservation:
+      the result of the action\n```\n\nOnce all necessary information is gathered,
+      return the following format:\n\n```\nThought: I now know the final answer\nFinal
+      Answer: the final answer to the original input question\n```"}, {"role": "user",
+      "content": "\nCurrent Task: Write and then review an small paragraph on AI until
+      it''s AMAZING\n\nThis is the expected criteria for your final answer: The final
+      paragraph.\nyou MUST return the actual complete content as the final answer,
+      not a summary.\n\nBegin! This is VERY important to you, use the tools available
+      and give your best Final Answer, your job depends on it!\n\nThought:"}], "model":
+      "gpt-4o", "stop": ["\nObservation:"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate, zstd
+      connection:
+      - keep-alive
+      content-length:
+      - '1394'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.68.2
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.68.2
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-read-timeout:
+      - '600.0'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.8
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-BHImuG3FAgbOcTLxgpZthhEmVg7hf\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1743463496,\n  \"model\": \"gpt-4o-2024-08-06\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"```\\nThought: To write an amazing paragraph
+      on AI, I need to gather detailed information about it first.\\nAction: learn_about_AI\\nAction
+      Input: {}\",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n
+      \     \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n
+      \ \"usage\": {\n    \"prompt_tokens\": 276,\n    \"completion_tokens\": 32,\n
+      \   \"total_tokens\": 308,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
+      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+      \"default\",\n  \"system_fingerprint\": \"fp_6dd05565ef\"\n}\n"
+    headers:
+      CF-RAY:
+      - 92939a567c9a67c4-SJC
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Mon, 31 Mar 2025 23:24:58 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - __cf_bm=wwI79dE5g__fUSqelLdMoCMOwubFvm.hJGS3Ewpb3uw-1743463498-1.0.1.1-xvVXLCgoJPzbAg4AmSjLnM1YbzRk5qmuEPsRgzfid0J39zmNxiLOXAFeAz_4VHmYpT5tUBxfComgXCPkg9MCrMZr7aGLOuoPu4pj_dvah0o;
+        path=/; expires=Mon, 31-Mar-25 23:54:58 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=wu1mwFBixM_Cn8wLLh.nRacWi8OMVBrEyBNuF_Htz6I-1743463498282-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '1700'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '50000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-requests:
+      - '49999'
+      x-ratelimit-remaining-tokens:
+      - '149999688'
+      x-ratelimit-reset-requests:
+      - 1ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_944eb951995f00b65dfc691a0e529c0c
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: '{"messages": [{"role": "user", "content": "Only tools available:\n###\nTool
+      Name: learn_about_AI\nTool Arguments: {}\nTool Description: Useful for when
+      you need to learn about AI to write an paragraph about it.\n\nReturn a valid
+      schema for the tool, the tool name must be exactly equal one of the options,
+      use this text to inform the valid output schema:\n\n### TEXT \n```\nThought:
+      To write an amazing paragraph on AI, I need to gather detailed information about
+      it first.\nAction: learn_about_AI\nAction Input: {}"}], "model": "gpt-4o", "tool_choice":
+      {"type": "function", "function": {"name": "InstructorToolCalling"}}, "tools":
+      [{"type": "function", "function": {"name": "InstructorToolCalling", "description":
+      "Correctly extracted `InstructorToolCalling` with all the required parameters
+      with correct types", "parameters": {"properties": {"tool_name": {"description":
+      "The name of the tool to be called.", "title": "Tool Name", "type": "string"},
+      "arguments": {"anyOf": [{"type": "object"}, {"type": "null"}], "description":
+      "A dictionary of arguments to be passed to the tool.", "title": "Arguments"}},
+      "required": ["arguments", "tool_name"], "type": "object"}}}]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate, zstd
+      connection:
+      - keep-alive
+      content-length:
+      - '1170'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=wwI79dE5g__fUSqelLdMoCMOwubFvm.hJGS3Ewpb3uw-1743463498-1.0.1.1-xvVXLCgoJPzbAg4AmSjLnM1YbzRk5qmuEPsRgzfid0J39zmNxiLOXAFeAz_4VHmYpT5tUBxfComgXCPkg9MCrMZr7aGLOuoPu4pj_dvah0o;
+        _cfuvid=wu1mwFBixM_Cn8wLLh.nRacWi8OMVBrEyBNuF_Htz6I-1743463498282-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.68.2
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.68.2
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-read-timeout:
+      - '600.0'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.8
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-BHImw7lLFFPaIqe3NQubFNJDgghnU\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1743463498,\n  \"model\": \"gpt-4o-2024-08-06\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": null,\n        \"tool_calls\": [\n          {\n
+      \           \"id\": \"call_NIY8OTJapOBOwYmnfHo6SigC\",\n            \"type\":
+      \"function\",\n            \"function\": {\n              \"name\": \"InstructorToolCalling\",\n
+      \             \"arguments\": \"{\\\"tool_name\\\":\\\"learn_about_AI\\\",\\\"arguments\\\":null}\"\n
+      \           }\n          }\n        ],\n        \"refusal\": null,\n        \"annotations\":
+      []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
+      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 199,\n    \"completion_tokens\":
+      13,\n    \"total_tokens\": 212,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
+      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+      \"default\",\n  \"system_fingerprint\": \"fp_898ac29719\"\n}\n"
+    headers:
+      CF-RAY:
+      - 92939a70fda567c4-SJC
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Mon, 31 Mar 2025 23:24:59 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '533'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '50000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-requests:
+      - '49999'
+      x-ratelimit-remaining-tokens:
+      - '149999882'
+      x-ratelimit-reset-requests:
+      - 1ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_6c3a0db9bc035c18e8f7fee439a28668
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are test role. test backstory\nYour
+      personal goal is: test goal\nYou ONLY have access to the following tools, and
+      should NEVER make up tools that are not listed here:\n\nTool Name: learn_about_AI\nTool
+      Arguments: {}\nTool Description: Useful for when you need to learn about AI
+      to write an paragraph about it.\n\nIMPORTANT: Use the following format in your
+      response:\n\n```\nThought: you should always think about what to do\nAction:
+      the action to take, only one name of [learn_about_AI], just the name, exactly
+      as it''s written.\nAction Input: the input to the action, just a simple JSON
+      object, enclosed in curly braces, using \" to wrap keys and values.\nObservation:
+      the result of the action\n```\n\nOnce all necessary information is gathered,
+      return the following format:\n\n```\nThought: I now know the final answer\nFinal
+      Answer: the final answer to the original input question\n```"}, {"role": "user",
+      "content": "\nCurrent Task: Write and then review an small paragraph on AI until
+      it''s AMAZING\n\nThis is the expected criteria for your final answer: The final
+      paragraph.\nyou MUST return the actual complete content as the final answer,
+      not a summary.\n\nBegin! This is VERY important to you, use the tools available
+      and give your best Final Answer, your job depends on it!\n\nThought:"}, {"role":
+      "assistant", "content": "AI is a very broad field."}, {"role": "assistant",
+      "content": "```\nThought: To write an amazing paragraph on AI, I need to gather
+      detailed information about it first.\nAction: learn_about_AI\nAction Input:
+      {}\nObservation: AI is a very broad field."}], "model": "gpt-4o", "stop": ["\nObservation:"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate, zstd
+      connection:
+      - keep-alive
+      content-length:
+      - '1681'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=wwI79dE5g__fUSqelLdMoCMOwubFvm.hJGS3Ewpb3uw-1743463498-1.0.1.1-xvVXLCgoJPzbAg4AmSjLnM1YbzRk5qmuEPsRgzfid0J39zmNxiLOXAFeAz_4VHmYpT5tUBxfComgXCPkg9MCrMZr7aGLOuoPu4pj_dvah0o;
+        _cfuvid=wu1mwFBixM_Cn8wLLh.nRacWi8OMVBrEyBNuF_Htz6I-1743463498282-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.68.2
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.68.2
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-read-timeout:
+      - '600.0'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.8
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-BHImxQG4CPqO2OFhN7ZIwXtotTwwP\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1743463499,\n  \"model\": \"gpt-4o-2024-08-06\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"```\\nThought: I now have the necessary
+      information to craft a comprehensive and compelling paragraph about AI.\\nFinal
+      Answer: Artificial Intelligence (AI) is a transformative force in today's world,
+      dramatically reshaping industries from healthcare to automotive. By leveraging
+      complex algorithms and large datasets, AI systems can perform tasks that typically
+      require human intelligence, such as understanding natural language, recognizing
+      patterns, and making decisions. The potential of AI extends beyond automation;
+      it is a catalyst for innovation, enabling breakthroughs in personalized medicine,
+      autonomous vehicles, and more. As AI continues to evolve, it promises to enhance
+      efficiency, drive economic growth, and unlock new levels of problem-solving
+      capabilities, cementing its role as a cornerstone of technological progress.\\n```\",\n
+      \       \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\":
+      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+      332,\n    \"completion_tokens\": 142,\n    \"total_tokens\": 474,\n    \"prompt_tokens_details\":
+      {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+      {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+      \"default\",\n  \"system_fingerprint\": \"fp_6dd05565ef\"\n}\n"
+    headers:
+      CF-RAY:
+      - 92939a75b95d67c4-SJC
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Mon, 31 Mar 2025 23:25:01 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '1869'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '50000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-requests:
+      - '49999'
+      x-ratelimit-remaining-tokens:
+      - '149999633'
+      x-ratelimit-reset-requests:
+      - 1ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_3f7dc3979b7fa55a9002ef66916059f5
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: '{"trace_id": "64022169-f1fe-4722-8c1f-1f0d365703f2", "execution_type":
+      "crew", "user_identifier": null, "execution_context": {"crew_fingerprint": null,
+      "crew_name": "crew", "flow_name": null, "crewai_version": "0.193.2", "privacy_level":
+      "standard"}, "execution_metadata": {"expected_duration_estimate": 300, "agent_count":
+      0, "task_count": 0, "flow_method_count": 0, "execution_started_at": "2025-09-23T21:57:19.788738+00:00"},
+      "ephemeral_trace_id": "64022169-f1fe-4722-8c1f-1f0d365703f2"}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '490'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - CrewAI-CLI/0.193.2
+      X-Crewai-Version:
+      - 0.193.2
+    method: POST
+    uri: http://localhost:3000/crewai_plus/api/v1/tracing/ephemeral/batches
+  response:
+    body:
+      string: '{"id":"09a43e14-1eec-4b11-86ec-45b7d1ad0237","ephemeral_trace_id":"64022169-f1fe-4722-8c1f-1f0d365703f2","execution_type":"crew","crew_name":"crew","flow_name":null,"status":"running","duration_ms":null,"crewai_version":"0.193.2","total_events":0,"execution_context":{"crew_fingerprint":null,"crew_name":"crew","flow_name":null,"crewai_version":"0.193.2","privacy_level":"standard"},"created_at":"2025-09-23T21:57:19.997Z","updated_at":"2025-09-23T21:57:19.997Z","access_code":"TRACE-9759d5723a","user_identifier":null}'
+    headers:
+      Content-Length:
+      - '519'
+      cache-control:
+      - max-age=0, private, must-revalidate
+      content-security-policy:
+      - 'default-src ''self'' *.crewai.com crewai.com; script-src ''self'' ''unsafe-inline''
+        *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts https://www.gstatic.com
+        https://run.pstmn.io https://share.descript.com/; style-src ''self'' ''unsafe-inline''
+        *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts; img-src ''self''
+        data: *.crewai.com crewai.com https://zeus.tools.crewai.com https://dashboard.tools.crewai.com
+        https://cdn.jsdelivr.net; font-src ''self'' data: *.crewai.com crewai.com;
+        connect-src ''self'' *.crewai.com crewai.com https://zeus.tools.crewai.com
+        https://connect.useparagon.com/ https://zeus.useparagon.com/* https://*.useparagon.com/*
+        https://run.pstmn.io https://connect.tools.crewai.com/ ws://localhost:3036
+        wss://localhost:3036; frame-src ''self'' *.crewai.com crewai.com https://connect.useparagon.com/
+        https://zeus.tools.crewai.com https://zeus.useparagon.com/* https://connect.tools.crewai.com/
+        https://www.youtube.com https://share.descript.com'
+      content-type:
+      - application/json; charset=utf-8
+      etag:
+      - W/"92fa72cd73e3d7b2828f6483d80aa0f7"
+      permissions-policy:
+      - camera=(), microphone=(self), geolocation=()
+      referrer-policy:
+      - strict-origin-when-cross-origin
+      server-timing:
+      - cache_read.active_support;dur=0.37, sql.active_record;dur=118.88, cache_generate.active_support;dur=108.22,
+        cache_write.active_support;dur=0.21, cache_read_multi.active_support;dur=0.28,
+        start_processing.action_controller;dur=0.00, start_transaction.active_record;dur=0.00,
+        transaction.active_record;dur=7.18, process_action.action_controller;dur=15.35
+      vary:
+      - Accept
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-permitted-cross-domain-policies:
+      - none
+      x-request-id:
+      - 262e2896-255d-4ab1-919e-0925dbb92509
+      x-runtime:
+      - '0.197619'
+      x-xss-protection:
+      - 1; mode=block
+    status:
+      code: 201
+      message: Created
+- request:
+    body: '{"events": [{"event_id": "1a65eb44-fa38-46f9-9c7f-09b110ccef2c", "timestamp":
+      "2025-09-23T21:57:20.005351+00:00", "type": "crew_kickoff_started", "event_data":
+      {"timestamp": "2025-09-23T21:57:19.787762+00:00", "type": "crew_kickoff_started",
+      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
+      "task_id": null, "task_name": null, "agent_id": null, "agent_role": null, "crew_name":
+      "crew", "crew": null, "inputs": null}}, {"event_id": "01725690-7f21-4e4c-9e4c-08956025fdc3",
+      "timestamp": "2025-09-23T21:57:20.007273+00:00", "type": "task_started", "event_data":
+      {"task_description": "Write and then review an small paragraph on AI until it''s
+      AMAZING", "expected_output": "The final paragraph.", "task_name": "Write and
+      then review an small paragraph on AI until it''s AMAZING", "context": "", "agent_role":
+      "test role", "task_id": "cb31604f-26ce-4486-bb4e-047a68b6874a"}}, {"event_id":
+      "1d8e66f1-02ea-46fe-a57a-b779f2770e2e", "timestamp": "2025-09-23T21:57:20.007694+00:00",
+      "type": "agent_execution_started", "event_data": {"agent_role": "test role",
+      "agent_goal": "test goal", "agent_backstory": "test backstory"}}, {"event_id":
+      "9916d183-53ec-4584-94fd-6e4ecd2f15ec", "timestamp": "2025-09-23T21:57:20.007784+00:00",
+      "type": "llm_call_started", "event_data": {"timestamp": "2025-09-23T21:57:20.007761+00:00",
+      "type": "llm_call_started", "source_fingerprint": null, "source_type": null,
+      "fingerprint_metadata": null, "task_id": "cb31604f-26ce-4486-bb4e-047a68b6874a",
+      "task_name": "Write and then review an small paragraph on AI until it''s AMAZING",
+      "agent_id": "796ea5f2-01d0-4f2b-9e18-daa2257ac0e0", "agent_role": "test role",
+      "from_task": null, "from_agent": null, "model": "gpt-4o", "messages": [{"role":
+      "system", "content": "You are test role. test backstory\nYour personal goal
+      is: test goal\nYou ONLY have access to the following tools, and should NEVER
+      make up tools that are not listed here:\n\nTool Name: learn_about_ai\nTool Arguments:
+      {}\nTool Description: Useful for when you need to learn about AI to write an
+      paragraph about it.\n\nIMPORTANT: Use the following format in your response:\n\n```\nThought:
+      you should always think about what to do\nAction: the action to take, only one
+      name of [learn_about_ai], just the name, exactly as it''s written.\nAction Input:
+      the input to the action, just a simple JSON object, enclosed in curly braces,
+      using \" to wrap keys and values.\nObservation: the result of the action\n```\n\nOnce
+      all necessary information is gathered, return the following format:\n\n```\nThought:
+      I now know the final answer\nFinal Answer: the final answer to the original
+      input question\n```"}, {"role": "user", "content": "\nCurrent Task: Write and
+      then review an small paragraph on AI until it''s AMAZING\n\nThis is the expected
+      criteria for your final answer: The final paragraph.\nyou MUST return the actual
+      complete content as the final answer, not a summary.\n\nBegin! This is VERY
+      important to you, use the tools available and give your best Final Answer, your
+      job depends on it!\n\nThought:"}], "tools": null, "callbacks": ["<crewai.utilities.token_counter_callback.TokenCalcHandler
+      object at 0x131198770>"], "available_functions": null}}, {"event_id": "ea98d9df-39cb-4ff3-a4d5-a0e5b1e90adc",
+      "timestamp": "2025-09-23T21:57:20.009557+00:00", "type": "llm_call_completed",
+      "event_data": {"timestamp": "2025-09-23T21:57:20.009520+00:00", "type": "llm_call_completed",
+      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
+      "task_id": "cb31604f-26ce-4486-bb4e-047a68b6874a", "task_name": "Write and then
+      review an small paragraph on AI until it''s AMAZING", "agent_id": "796ea5f2-01d0-4f2b-9e18-daa2257ac0e0",
+      "agent_role": "test role", "from_task": null, "from_agent": null, "messages":
+      [{"role": "system", "content": "You are test role. test backstory\nYour personal
+      goal is: test goal\nYou ONLY have access to the following tools, and should
+      NEVER make up tools that are not listed here:\n\nTool Name: learn_about_ai\nTool
+      Arguments: {}\nTool Description: Useful for when you need to learn about AI
+      to write an paragraph about it.\n\nIMPORTANT: Use the following format in your
+      response:\n\n```\nThought: you should always think about what to do\nAction:
+      the action to take, only one name of [learn_about_ai], just the name, exactly
+      as it''s written.\nAction Input: the input to the action, just a simple JSON
+      object, enclosed in curly braces, using \" to wrap keys and values.\nObservation:
+      the result of the action\n```\n\nOnce all necessary information is gathered,
+      return the following format:\n\n```\nThought: I now know the final answer\nFinal
+      Answer: the final answer to the original input question\n```"}, {"role": "user",
+      "content": "\nCurrent Task: Write and then review an small paragraph on AI until
+      it''s AMAZING\n\nThis is the expected criteria for your final answer: The final
+      paragraph.\nyou MUST return the actual complete content as the final answer,
+      not a summary.\n\nBegin! This is VERY important to you, use the tools available
+      and give your best Final Answer, your job depends on it!\n\nThought:"}], "response":
+      "```\nThought: To write an amazing paragraph on AI, I need to gather detailed
+      information about it first.\nAction: learn_about_AI\nAction Input: {}", "call_type":
+      "<LLMCallType.LLM_CALL: ''llm_call''>", "model": "gpt-4o"}}, {"event_id": "088c666a-dc6a-4f8c-a842-03d038ed475e",
+      "timestamp": "2025-09-23T21:57:20.034905+00:00", "type": "tool_usage_started",
+      "event_data": {"timestamp": "2025-09-23T21:57:20.034833+00:00", "type": "tool_usage_started",
+      "source_fingerprint": "3e5a4ff6-0a97-4685-93da-62a0a4bf967d", "source_type":
+      "agent", "fingerprint_metadata": null, "task_id": "cb31604f-26ce-4486-bb4e-047a68b6874a",
+      "task_name": "Write and then review an small paragraph on AI until it''s AMAZING",
+      "agent_id": null, "agent_role": "test role", "agent_key": "e148e5320293499f8cebea826e72582b",
+      "tool_name": "learn_about_AI", "tool_args": "{}", "tool_class": "learn_about_AI",
+      "run_attempts": null, "delegations": null, "agent": {"id": "796ea5f2-01d0-4f2b-9e18-daa2257ac0e0",
+      "role": "test role", "goal": "test goal", "backstory": "test backstory", "cache":
+      true, "verbose": false, "max_rpm": null, "allow_delegation": false, "tools":
+      [{"name": "''learn_about_ai''", "description": "''Tool Name: learn_about_ai\\nTool
+      Arguments: {}\\nTool Description: Useful for when you need to learn about AI
+      to write an paragraph about it.''", "env_vars": "[]", "args_schema": "<class
+      ''abc.Learn_About_Ai''>", "description_updated": "False", "cache_function":
+      "<function BaseTool.<lambda> at 0x107389260>", "result_as_answer": "False",
+      "max_usage_count": "None", "current_usage_count": "0"}], "max_iter": 2, "agent_executor":
+      "<crewai.agents.crew_agent_executor.CrewAgentExecutor object at 0x130de6540>",
+      "llm": "<crewai.llms.providers.openai.completion.OpenAICompletion object at
+      0x130db6de0>", "crew": {"parent_flow": null, "name": "crew", "cache": true,
+      "tasks": ["{''used_tools'': 0, ''tools_errors'': 0, ''delegations'': 0, ''i18n'':
+      {''prompt_file'': None}, ''name'': None, ''prompt_context'': '''', ''description'':
+      \"Write and then review an small paragraph on AI until it''s AMAZING\", ''expected_output'':
+      ''The final paragraph.'', ''config'': None, ''callback'': None, ''agent'': {''id'':
+      UUID(''796ea5f2-01d0-4f2b-9e18-daa2257ac0e0''), ''role'': ''test role'', ''goal'':
+      ''test goal'', ''backstory'': ''test backstory'', ''cache'': True, ''verbose'':
+      False, ''max_rpm'': None, ''allow_delegation'': False, ''tools'': [{''name'':
+      ''learn_about_ai'', ''description'': ''Tool Name: learn_about_ai\\nTool Arguments:
+      {}\\nTool Description: Useful for when you need to learn about AI to write an
+      paragraph about it.'', ''env_vars'': [], ''args_schema'': <class ''abc.Learn_About_Ai''>,
+      ''description_updated'': False, ''cache_function'': <function BaseTool.<lambda>
+      at 0x107389260>, ''result_as_answer'': False, ''max_usage_count'': None, ''current_usage_count'':
+      0}], ''max_iter'': 2, ''agent_executor'': <crewai.agents.crew_agent_executor.CrewAgentExecutor
+      object at 0x130de6540>, ''llm'': <crewai.llms.providers.openai.completion.OpenAICompletion
+      object at 0x130db6de0>, ''crew'': Crew(id=991ac83f-9a29-411f-b0a0-0a335c7a2d0e,
+      process=Process.sequential, number_of_agents=1, number_of_tasks=1), ''i18n'':
+      {''prompt_file'': None}, ''cache_handler'': {}, ''tools_handler'': <crewai.agents.tools_handler.ToolsHandler
+      object at 0x130de4650>, ''tools_results'': [], ''max_tokens'': None, ''knowledge'':
+      None, ''knowledge_sources'': None, ''knowledge_storage'': None, ''security_config'':
+      {''fingerprint'': {''metadata'': {}}}, ''callbacks'': [], ''adapted_agent'':
+      False, ''knowledge_config'': None}, ''context'': NOT_SPECIFIED, ''async_execution'':
+      False, ''output_json'': None, ''output_pydantic'': None, ''output_file'': None,
+      ''create_directory'': True, ''output'': None, ''tools'': [{''name'': ''learn_about_ai'',
+      ''description'': ''Tool Name: learn_about_ai\\nTool Arguments: {}\\nTool Description:
+      Useful for when you need to learn about AI to write an paragraph about it.'',
+      ''env_vars'': [], ''args_schema'': <class ''abc.Learn_About_Ai''>, ''description_updated'':
+      False, ''cache_function'': <function BaseTool.<lambda> at 0x107389260>, ''result_as_answer'':
+      False, ''max_usage_count'': None, ''current_usage_count'': 0}], ''security_config'':
+      {''fingerprint'': {''metadata'': {}}}, ''id'': UUID(''cb31604f-26ce-4486-bb4e-047a68b6874a''),
+      ''human_input'': False, ''markdown'': False, ''converter_cls'': None, ''processed_by_agents'':
+      {''test role''}, ''guardrail'': None, ''max_retries'': None, ''guardrail_max_retries'':
+      3, ''retry_count'': 0, ''start_time'': datetime.datetime(2025, 9, 23, 14, 57,
+      20, 7194), ''end_time'': None, ''allow_crewai_trigger_context'': None}"], "agents":
+      ["{''id'': UUID(''796ea5f2-01d0-4f2b-9e18-daa2257ac0e0''), ''role'': ''test
+      role'', ''goal'': ''test goal'', ''backstory'': ''test backstory'', ''cache'':
+      True, ''verbose'': False, ''max_rpm'': None, ''allow_delegation'': False, ''tools'':
+      [{''name'': ''learn_about_ai'', ''description'': ''Tool Name: learn_about_ai\\nTool
+      Arguments: {}\\nTool Description: Useful for when you need to learn about AI
+      to write an paragraph about it.'', ''env_vars'': [], ''args_schema'': <class
+      ''abc.Learn_About_Ai''>, ''description_updated'': False, ''cache_function'':
+      <function BaseTool.<lambda> at 0x107389260>, ''result_as_answer'': False, ''max_usage_count'':
+      None, ''current_usage_count'': 0}], ''max_iter'': 2, ''agent_executor'': <crewai.agents.crew_agent_executor.CrewAgentExecutor
+      object at 0x130de6540>, ''llm'': <crewai.llms.providers.openai.completion.OpenAICompletion
+      object at 0x130db6de0>, ''crew'': Crew(id=991ac83f-9a29-411f-b0a0-0a335c7a2d0e,
+      process=Process.sequential, number_of_agents=1, number_of_tasks=1), ''i18n'':
+      {''prompt_file'': None}, ''cache_handler'': {}, ''tools_handler'': <crewai.agents.tools_handler.ToolsHandler
+      object at 0x130de4650>, ''tools_results'': [], ''max_tokens'': None, ''knowledge'':
+      None, ''knowledge_sources'': None, ''knowledge_storage'': None, ''security_config'':
+      {''fingerprint'': {''metadata'': {}}}, ''callbacks'': [], ''adapted_agent'':
+      False, ''knowledge_config'': None}"], "process": "sequential", "verbose": false,
+      "memory": false, "short_term_memory": null, "long_term_memory": null, "entity_memory":
+      null, "external_memory": null, "embedder": null, "usage_metrics": null, "manager_llm":
+      null, "manager_agent": null, "function_calling_llm": null, "config": null, "id":
+      "991ac83f-9a29-411f-b0a0-0a335c7a2d0e", "share_crew": false, "step_callback":
+      null, "task_callback": null, "before_kickoff_callbacks": [], "after_kickoff_callbacks":
+      [], "max_rpm": null, "prompt_file": null, "output_log_file": null, "planning":
+      false, "planning_llm": null, "task_execution_output_json_files": null, "execution_logs":
+      [], "knowledge_sources": null, "chat_llm": null, "knowledge": null, "security_config":
+      {"fingerprint": "{''metadata'': {}}"}, "token_usage": null, "tracing": false},
+      "i18n": {"prompt_file": null}, "cache_handler": {}, "tools_handler": "<crewai.agents.tools_handler.ToolsHandler
+      object at 0x130de4650>", "tools_results": [], "max_tokens": null, "knowledge":
+      null, "knowledge_sources": null, "knowledge_storage": null, "security_config":
+      {"fingerprint": {"metadata": "{}"}}, "callbacks": [], "adapted_agent": false,
+      "knowledge_config": null, "max_execution_time": null, "agent_ops_agent_name":
+      "test role", "agent_ops_agent_id": null, "step_callback": null, "use_system_prompt":
+      true, "function_calling_llm": "<crewai.llms.providers.openai.completion.OpenAICompletion
+      object at 0x130db7020>", "system_template": null, "prompt_template": null, "response_template":
+      null, "allow_code_execution": false, "respect_context_window": true, "max_retry_limit":
+      2, "multimodal": false, "inject_date": false, "date_format": "%Y-%m-%d", "code_execution_mode":
+      "safe", "reasoning": false, "max_reasoning_attempts": null, "embedder": null,
+      "agent_knowledge_context": null, "crew_knowledge_context": null, "knowledge_search_query":
+      null, "from_repository": null, "guardrail": null, "guardrail_max_retries": 3},
+      "from_task": null, "from_agent": null}}, {"event_id": "e2dd7c26-5d0b-4c6a-819a-3b1023856b53",
+      "timestamp": "2025-09-23T21:57:20.036475+00:00", "type": "agent_execution_started",
+      "event_data": {"agent_role": "test role", "agent_goal": "test goal", "agent_backstory":
+      "test backstory"}}, {"event_id": "4bd14aea-1d77-4e88-a776-fedbef256094", "timestamp":
+      "2025-09-23T21:57:20.036542+00:00", "type": "llm_call_started", "event_data":
+      {"timestamp": "2025-09-23T21:57:20.036525+00:00", "type": "llm_call_started",
+      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
+      "task_id": "cb31604f-26ce-4486-bb4e-047a68b6874a", "task_name": "Write and then
+      review an small paragraph on AI until it''s AMAZING", "agent_id": "796ea5f2-01d0-4f2b-9e18-daa2257ac0e0",
+      "agent_role": "test role", "from_task": null, "from_agent": null, "model": "gpt-4o",
+      "messages": [{"role": "system", "content": "You are test role. test backstory\nYour
+      personal goal is: test goal\nYou ONLY have access to the following tools, and
+      should NEVER make up tools that are not listed here:\n\nTool Name: learn_about_ai\nTool
+      Arguments: {}\nTool Description: Useful for when you need to learn about AI
+      to write an paragraph about it.\n\nIMPORTANT: Use the following format in your
+      response:\n\n```\nThought: you should always think about what to do\nAction:
+      the action to take, only one name of [learn_about_ai], just the name, exactly
+      as it''s written.\nAction Input: the input to the action, just a simple JSON
+      object, enclosed in curly braces, using \" to wrap keys and values.\nObservation:
+      the result of the action\n```\n\nOnce all necessary information is gathered,
+      return the following format:\n\n```\nThought: I now know the final answer\nFinal
+      Answer: the final answer to the original input question\n```"}, {"role": "user",
+      "content": "\nCurrent Task: Write and then review an small paragraph on AI until
+      it''s AMAZING\n\nThis is the expected criteria for your final answer: The final
+      paragraph.\nyou MUST return the actual complete content as the final answer,
+      not a summary.\n\nBegin! This is VERY important to you, use the tools available
+      and give your best Final Answer, your job depends on it!\n\nThought:"}], "tools":
+      null, "callbacks": ["<crewai.utilities.token_counter_callback.TokenCalcHandler
+      object at 0x1312d2060>"], "available_functions": null}}, {"event_id": "46a0f3b8-2d8a-49c7-b898-fe9e1bc2f925",
+      "timestamp": "2025-09-23T21:57:20.037678+00:00", "type": "llm_call_completed",
+      "event_data": {"timestamp": "2025-09-23T21:57:20.037655+00:00", "type": "llm_call_completed",
+      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
+      "task_id": "cb31604f-26ce-4486-bb4e-047a68b6874a", "task_name": "Write and then
+      review an small paragraph on AI until it''s AMAZING", "agent_id": "796ea5f2-01d0-4f2b-9e18-daa2257ac0e0",
+      "agent_role": "test role", "from_task": null, "from_agent": null, "messages":
+      [{"role": "system", "content": "You are test role. test backstory\nYour personal
+      goal is: test goal\nYou ONLY have access to the following tools, and should
+      NEVER make up tools that are not listed here:\n\nTool Name: learn_about_ai\nTool
+      Arguments: {}\nTool Description: Useful for when you need to learn about AI
+      to write an paragraph about it.\n\nIMPORTANT: Use the following format in your
+      response:\n\n```\nThought: you should always think about what to do\nAction:
+      the action to take, only one name of [learn_about_ai], just the name, exactly
+      as it''s written.\nAction Input: the input to the action, just a simple JSON
+      object, enclosed in curly braces, using \" to wrap keys and values.\nObservation:
+      the result of the action\n```\n\nOnce all necessary information is gathered,
+      return the following format:\n\n```\nThought: I now know the final answer\nFinal
+      Answer: the final answer to the original input question\n```"}, {"role": "user",
+      "content": "\nCurrent Task: Write and then review an small paragraph on AI until
+      it''s AMAZING\n\nThis is the expected criteria for your final answer: The final
+      paragraph.\nyou MUST return the actual complete content as the final answer,
+      not a summary.\n\nBegin! This is VERY important to you, use the tools available
+      and give your best Final Answer, your job depends on it!\n\nThought:"}], "response":
+      "```\nThought: I now have the necessary information to craft a comprehensive
+      and compelling paragraph about AI.\nFinal Answer: Artificial Intelligence (AI)
+      is a transformative force in today''s world, dramatically reshaping industries
+      from healthcare to automotive. By leveraging complex algorithms and large datasets,
+      AI systems can perform tasks that typically require human intelligence, such
+      as understanding natural language, recognizing patterns, and making decisions.
+      The potential of AI extends beyond automation; it is a catalyst for innovation,
+      enabling breakthroughs in personalized medicine, autonomous vehicles, and more.
+      As AI continues to evolve, it promises to enhance efficiency, drive economic
+      growth, and unlock new levels of problem-solving capabilities, cementing its
+      role as a cornerstone of technological progress.\n```", "call_type": "<LLMCallType.LLM_CALL:
+      ''llm_call''>", "model": "gpt-4o"}}, {"event_id": "1bc0cced-72e2-4213-820b-dfa0732be145",
+      "timestamp": "2025-09-23T21:57:20.037779+00:00", "type": "agent_execution_completed",
+      "event_data": {"agent_role": "test role", "agent_goal": "test goal", "agent_backstory":
+      "test backstory"}}, {"event_id": "2434a83a-2d7d-45ba-9346-85e7759b7ef6", "timestamp":
+      "2025-09-23T21:57:20.037811+00:00", "type": "agent_execution_completed", "event_data":
+      {"agent_role": "test role", "agent_goal": "test goal", "agent_backstory": "test
+      backstory"}}, {"event_id": "953d2d3b-8c79-4317-b500-21621a79c7b2", "timestamp":
+      "2025-09-23T21:57:20.037852+00:00", "type": "task_completed", "event_data":
+      {"task_description": "Write and then review an small paragraph on AI until it''s
+      AMAZING", "task_name": "Write and then review an small paragraph on AI until
+      it''s AMAZING", "task_id": "cb31604f-26ce-4486-bb4e-047a68b6874a", "output_raw":
+      "Artificial Intelligence (AI) is a transformative force in today''s world, dramatically
+      reshaping industries from healthcare to automotive. By leveraging complex algorithms
+      and large datasets, AI systems can perform tasks that typically require human
+      intelligence, such as understanding natural language, recognizing patterns,
+      and making decisions. The potential of AI extends beyond automation; it is a
+      catalyst for innovation, enabling breakthroughs in personalized medicine, autonomous
+      vehicles, and more. As AI continues to evolve, it promises to enhance efficiency,
+      drive economic growth, and unlock new levels of problem-solving capabilities,
+      cementing its role as a cornerstone of technological progress.", "output_format":
+      "OutputFormat.RAW", "agent_role": "test role"}}, {"event_id": "71b3d653-f445-4752-b7a3-9d505805f401",
+      "timestamp": "2025-09-23T21:57:20.038851+00:00", "type": "crew_kickoff_completed",
+      "event_data": {"timestamp": "2025-09-23T21:57:20.038828+00:00", "type": "crew_kickoff_completed",
+      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
+      "task_id": null, "task_name": null, "agent_id": null, "agent_role": null, "crew_name":
+      "crew", "crew": null, "output": {"description": "Write and then review an small
+      paragraph on AI until it''s AMAZING", "name": "Write and then review an small
+      paragraph on AI until it''s AMAZING", "expected_output": "The final paragraph.",
+      "summary": "Write and then review an small paragraph on AI until...", "raw":
+      "Artificial Intelligence (AI) is a transformative force in today''s world, dramatically
+      reshaping industries from healthcare to automotive. By leveraging complex algorithms
+      and large datasets, AI systems can perform tasks that typically require human
+      intelligence, such as understanding natural language, recognizing patterns,
+      and making decisions. The potential of AI extends beyond automation; it is a
+      catalyst for innovation, enabling breakthroughs in personalized medicine, autonomous
+      vehicles, and more. As AI continues to evolve, it promises to enhance efficiency,
+      drive economic growth, and unlock new levels of problem-solving capabilities,
+      cementing its role as a cornerstone of technological progress.", "pydantic":
+      null, "json_dict": null, "agent": "test role", "output_format": "raw"}, "total_tokens":
+      782}}], "batch_metadata": {"events_count": 13, "batch_sequence": 1, "is_final_batch":
+      false}}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '21312'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - CrewAI-CLI/0.193.2
+      X-Crewai-Version:
+      - 0.193.2
+    method: POST
+    uri: http://localhost:3000/crewai_plus/api/v1/tracing/ephemeral/batches/64022169-f1fe-4722-8c1f-1f0d365703f2/events
+  response:
+    body:
+      string: '{"events_created":13,"ephemeral_trace_batch_id":"09a43e14-1eec-4b11-86ec-45b7d1ad0237"}'
+    headers:
+      Content-Length:
+      - '87'
+      cache-control:
+      - max-age=0, private, must-revalidate
+      content-security-policy:
+      - 'default-src ''self'' *.crewai.com crewai.com; script-src ''self'' ''unsafe-inline''
+        *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts https://www.gstatic.com
+        https://run.pstmn.io https://share.descript.com/; style-src ''self'' ''unsafe-inline''
+        *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts; img-src ''self''
+        data: *.crewai.com crewai.com https://zeus.tools.crewai.com https://dashboard.tools.crewai.com
+        https://cdn.jsdelivr.net; font-src ''self'' data: *.crewai.com crewai.com;
+        connect-src ''self'' *.crewai.com crewai.com https://zeus.tools.crewai.com
+        https://connect.useparagon.com/ https://zeus.useparagon.com/* https://*.useparagon.com/*
+        https://run.pstmn.io https://connect.tools.crewai.com/ ws://localhost:3036
+        wss://localhost:3036; frame-src ''self'' *.crewai.com crewai.com https://connect.useparagon.com/
+        https://zeus.tools.crewai.com https://zeus.useparagon.com/* https://connect.tools.crewai.com/
+        https://www.youtube.com https://share.descript.com'
+      content-type:
+      - application/json; charset=utf-8
+      etag:
+      - W/"456bce88c5a0a2348e6d16d7c4320aec"
+      permissions-policy:
+      - camera=(), microphone=(self), geolocation=()
+      referrer-policy:
+      - strict-origin-when-cross-origin
+      server-timing:
+      - cache_read.active_support;dur=0.05, sql.active_record;dur=49.08, cache_generate.active_support;dur=3.62,
+        cache_write.active_support;dur=0.19, cache_read_multi.active_support;dur=2.00,
+        start_processing.action_controller;dur=0.00, instantiation.active_record;dur=0.05,
+        start_transaction.active_record;dur=0.00, transaction.active_record;dur=65.76,
+        process_action.action_controller;dur=71.90
+      vary:
+      - Accept
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-permitted-cross-domain-policies:
+      - none
+      x-request-id:
+      - 92dab941-1fc9-4e42-8280-1e343f81825a
+      x-runtime:
+      - '0.108831'
+      x-xss-protection:
+      - 1; mode=block
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"status": "completed", "duration_ms": 371, "final_event_count": 13}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '68'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - CrewAI-CLI/0.193.2
+      X-Crewai-Version:
+      - 0.193.2
+    method: PATCH
+    uri: http://localhost:3000/crewai_plus/api/v1/tracing/ephemeral/batches/64022169-f1fe-4722-8c1f-1f0d365703f2/finalize
+  response:
+    body:
+      string: '{"id":"09a43e14-1eec-4b11-86ec-45b7d1ad0237","ephemeral_trace_id":"64022169-f1fe-4722-8c1f-1f0d365703f2","execution_type":"crew","crew_name":"crew","flow_name":null,"status":"completed","duration_ms":371,"crewai_version":"0.193.2","total_events":13,"execution_context":{"crew_name":"crew","flow_name":null,"privacy_level":"standard","crewai_version":"0.193.2","crew_fingerprint":null},"created_at":"2025-09-23T21:57:19.997Z","updated_at":"2025-09-23T21:57:20.208Z","access_code":"TRACE-9759d5723a","user_identifier":null}'
+    headers:
+      Content-Length:
+      - '521'
+      cache-control:
+      - max-age=0, private, must-revalidate
+      content-security-policy:
+      - 'default-src ''self'' *.crewai.com crewai.com; script-src ''self'' ''unsafe-inline''
+        *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts https://www.gstatic.com
+        https://run.pstmn.io https://share.descript.com/; style-src ''self'' ''unsafe-inline''
+        *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts; img-src ''self''
+        data: *.crewai.com crewai.com https://zeus.tools.crewai.com https://dashboard.tools.crewai.com
+        https://cdn.jsdelivr.net; font-src ''self'' data: *.crewai.com crewai.com;
+        connect-src ''self'' *.crewai.com crewai.com https://zeus.tools.crewai.com
+        https://connect.useparagon.com/ https://zeus.useparagon.com/* https://*.useparagon.com/*
+        https://run.pstmn.io https://connect.tools.crewai.com/ ws://localhost:3036
+        wss://localhost:3036; frame-src ''self'' *.crewai.com crewai.com https://connect.useparagon.com/
+        https://zeus.tools.crewai.com https://zeus.useparagon.com/* https://connect.tools.crewai.com/
+        https://www.youtube.com https://share.descript.com'
+      content-type:
+      - application/json; charset=utf-8
+      etag:
+      - W/"76d70327aaf5612e2a91688cdd67a74d"
+      permissions-policy:
+      - camera=(), microphone=(self), geolocation=()
+      referrer-policy:
+      - strict-origin-when-cross-origin
+      server-timing:
+      - cache_read.active_support;dur=0.10, sql.active_record;dur=16.57, cache_generate.active_support;dur=3.76,
+        cache_write.active_support;dur=0.11, cache_read_multi.active_support;dur=0.21,
+        start_processing.action_controller;dur=0.00, instantiation.active_record;dur=0.03,
+        unpermitted_parameters.action_controller;dur=0.00, start_transaction.active_record;dur=0.00,
+        transaction.active_record;dur=7.98, process_action.action_controller;dur=15.07
+      vary:
+      - Accept
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-permitted-cross-domain-policies:
+      - none
+      x-request-id:
+      - 5e0ff83c-eb03-4447-b735-b01ece0370ce
+      x-runtime:
+      - '0.049100'
+      x-xss-protection:
+      - 1; mode=block
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"trace_id": "1f3a4201-cacd-4a36-a518-bb6662e06f33", "execution_type":
+      "crew", "user_identifier": null, "execution_context": {"crew_fingerprint": null,
+      "crew_name": "crew", "flow_name": null, "crewai_version": "0.193.2", "privacy_level":
+      "standard"}, "execution_metadata": {"expected_duration_estimate": 300, "agent_count":
+      0, "task_count": 0, "flow_method_count": 0, "execution_started_at": "2025-09-24T05:24:14.892619+00:00"}}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '428'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - CrewAI-CLI/0.193.2
+      X-Crewai-Organization-Id:
+      - d3a3d10c-35db-423f-a7a4-c026030ba64d
+      X-Crewai-Version:
+      - 0.193.2
+    method: POST
+    uri: http://localhost:3000/crewai_plus/api/v1/tracing/batches
+  response:
+    body:
+      string: '{"id":"7382f59a-2ad0-40cf-b68b-2041893f67a6","trace_id":"1f3a4201-cacd-4a36-a518-bb6662e06f33","execution_type":"crew","crew_name":"crew","flow_name":null,"status":"running","duration_ms":null,"crewai_version":"0.193.2","privacy_level":"standard","total_events":0,"execution_context":{"crew_fingerprint":null,"crew_name":"crew","flow_name":null,"crewai_version":"0.193.2","privacy_level":"standard"},"created_at":"2025-09-24T05:24:15.219Z","updated_at":"2025-09-24T05:24:15.219Z"}'
+    headers:
+      Content-Length:
+      - '480'
+      cache-control:
+      - max-age=0, private, must-revalidate
+      content-security-policy:
+      - 'default-src ''self'' *.crewai.com crewai.com; script-src ''self'' ''unsafe-inline''
+        *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts https://www.gstatic.com
+        https://run.pstmn.io https://share.descript.com/; style-src ''self'' ''unsafe-inline''
+        *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts; img-src ''self''
+        data: *.crewai.com crewai.com https://zeus.tools.crewai.com https://dashboard.tools.crewai.com
+        https://cdn.jsdelivr.net; font-src ''self'' data: *.crewai.com crewai.com;
+        connect-src ''self'' *.crewai.com crewai.com https://zeus.tools.crewai.com
+        https://connect.useparagon.com/ https://zeus.useparagon.com/* https://*.useparagon.com/*
+        https://run.pstmn.io https://connect.tools.crewai.com/ ws://localhost:3036
+        wss://localhost:3036; frame-src ''self'' *.crewai.com crewai.com https://connect.useparagon.com/
+        https://zeus.tools.crewai.com https://zeus.useparagon.com/* https://connect.tools.crewai.com/
+        https://www.youtube.com https://share.descript.com'
+      content-type:
+      - application/json; charset=utf-8
+      etag:
+      - W/"493de49e25e50c249d98c0099de0fb82"
+      permissions-policy:
+      - camera=(), microphone=(self), geolocation=()
+      referrer-policy:
+      - strict-origin-when-cross-origin
+      server-timing:
+      - cache_read.active_support;dur=0.05, cache_fetch_hit.active_support;dur=0.00,
+        cache_read_multi.active_support;dur=0.11, start_processing.action_controller;dur=0.00,
+        sql.active_record;dur=20.34, instantiation.active_record;dur=0.32, feature_operation.flipper;dur=0.05,
+        start_transaction.active_record;dur=0.01, transaction.active_record;dur=5.82,
+        process_action.action_controller;dur=290.85
+      vary:
+      - Accept
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-permitted-cross-domain-policies:
+      - none
+      x-request-id:
+      - adba8dd8-bac1-409f-a444-7edd75856b87
+      x-runtime:
+      - '0.329593'
+      x-xss-protection:
+      - 1; mode=block
+    status:
+      code: 201
+      message: Created
+- request:
+    body: '{"events": [{"event_id": "da229069-0ed6-45ae-bd65-07292bda885c", "timestamp":
+      "2025-09-24T05:24:15.225096+00:00", "type": "crew_kickoff_started", "event_data":
+      {"timestamp": "2025-09-24T05:24:14.891304+00:00", "type": "crew_kickoff_started",
+      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
+      "task_id": null, "task_name": null, "agent_id": null, "agent_role": null, "crew_name":
+      "crew", "crew": null, "inputs": null}}, {"event_id": "a5ffef80-e7c3-4d35-9a6f-8a86a40b0e01",
+      "timestamp": "2025-09-24T05:24:15.226402+00:00", "type": "task_started", "event_data":
+      {"task_description": "Write and then review an small paragraph on AI until it''s
+      AMAZING", "expected_output": "The final paragraph.", "task_name": "Write and
+      then review an small paragraph on AI until it''s AMAZING", "context": "", "agent_role":
+      "test role", "task_id": "60ccb050-4300-4bcb-8785-6e47b42e4c3a"}}, {"event_id":
+      "3c61cd20-a55b-4538-a3d9-35e740484f3c", "timestamp": "2025-09-24T05:24:15.226705+00:00",
+      "type": "agent_execution_started", "event_data": {"agent_role": "test role",
+      "agent_goal": "test goal", "agent_backstory": "test backstory"}}, {"event_id":
+      "bff89bba-387a-4b96-81e4-9d02a47e8c33", "timestamp": "2025-09-24T05:24:15.226770+00:00",
+      "type": "llm_call_started", "event_data": {"timestamp": "2025-09-24T05:24:15.226752+00:00",
+      "type": "llm_call_started", "source_fingerprint": null, "source_type": null,
+      "fingerprint_metadata": null, "task_id": "60ccb050-4300-4bcb-8785-6e47b42e4c3a",
+      "task_name": "Write and then review an small paragraph on AI until it''s AMAZING",
+      "agent_id": "acc5999d-b6d2-4359-b567-a55f071a5aa8", "agent_role": "test role",
+      "from_task": null, "from_agent": null, "model": "gpt-4o", "messages": [{"role":
+      "system", "content": "You are test role. test backstory\nYour personal goal
+      is: test goal\nYou ONLY have access to the following tools, and should NEVER
+      make up tools that are not listed here:\n\nTool Name: learn_about_ai\nTool Arguments:
+      {}\nTool Description: Useful for when you need to learn about AI to write an
+      paragraph about it.\n\nIMPORTANT: Use the following format in your response:\n\n```\nThought:
+      you should always think about what to do\nAction: the action to take, only one
+      name of [learn_about_ai], just the name, exactly as it''s written.\nAction Input:
+      the input to the action, just a simple JSON object, enclosed in curly braces,
+      using \" to wrap keys and values.\nObservation: the result of the action\n```\n\nOnce
+      all necessary information is gathered, return the following format:\n\n```\nThought:
+      I now know the final answer\nFinal Answer: the final answer to the original
+      input question\n```"}, {"role": "user", "content": "\nCurrent Task: Write and
+      then review an small paragraph on AI until it''s AMAZING\n\nThis is the expected
+      criteria for your final answer: The final paragraph.\nyou MUST return the actual
+      complete content as the final answer, not a summary.\n\nBegin! This is VERY
+      important to you, use the tools available and give your best Final Answer, your
+      job depends on it!\n\nThought:"}], "tools": null, "callbacks": ["<crewai.utilities.token_counter_callback.TokenCalcHandler
+      object at 0x13b37f140>"], "available_functions": null}}, {"event_id": "b9fe93c7-21cf-4a3d-b7a8-2d42f8b6a98e",
+      "timestamp": "2025-09-24T05:24:15.227924+00:00", "type": "llm_call_completed",
+      "event_data": {"timestamp": "2025-09-24T05:24:15.227903+00:00", "type": "llm_call_completed",
+      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
+      "task_id": "60ccb050-4300-4bcb-8785-6e47b42e4c3a", "task_name": "Write and then
+      review an small paragraph on AI until it''s AMAZING", "agent_id": "acc5999d-b6d2-4359-b567-a55f071a5aa8",
+      "agent_role": "test role", "from_task": null, "from_agent": null, "messages":
+      [{"role": "system", "content": "You are test role. test backstory\nYour personal
+      goal is: test goal\nYou ONLY have access to the following tools, and should
+      NEVER make up tools that are not listed here:\n\nTool Name: learn_about_ai\nTool
+      Arguments: {}\nTool Description: Useful for when you need to learn about AI
+      to write an paragraph about it.\n\nIMPORTANT: Use the following format in your
+      response:\n\n```\nThought: you should always think about what to do\nAction:
+      the action to take, only one name of [learn_about_ai], just the name, exactly
+      as it''s written.\nAction Input: the input to the action, just a simple JSON
+      object, enclosed in curly braces, using \" to wrap keys and values.\nObservation:
+      the result of the action\n```\n\nOnce all necessary information is gathered,
+      return the following format:\n\n```\nThought: I now know the final answer\nFinal
+      Answer: the final answer to the original input question\n```"}, {"role": "user",
+      "content": "\nCurrent Task: Write and then review an small paragraph on AI until
+      it''s AMAZING\n\nThis is the expected criteria for your final answer: The final
+      paragraph.\nyou MUST return the actual complete content as the final answer,
+      not a summary.\n\nBegin! This is VERY important to you, use the tools available
+      and give your best Final Answer, your job depends on it!\n\nThought:"}], "response":
+      "```\nThought: To write an amazing paragraph on AI, I need to gather detailed
+      information about it first.\nAction: learn_about_AI\nAction Input: {}", "call_type":
+      "<LLMCallType.LLM_CALL: ''llm_call''>", "model": "gpt-4o"}}, {"event_id": "e4de7bf4-2c01-423d-aa65-53fc1ea255b8",
+      "timestamp": "2025-09-24T05:24:15.249978+00:00", "type": "tool_usage_started",
+      "event_data": {"timestamp": "2025-09-24T05:24:15.249940+00:00", "type": "tool_usage_started",
+      "source_fingerprint": "89b993a5-65e4-4471-bccb-269545370586", "source_type":
+      "agent", "fingerprint_metadata": null, "task_id": "60ccb050-4300-4bcb-8785-6e47b42e4c3a",
+      "task_name": "Write and then review an small paragraph on AI until it''s AMAZING",
+      "agent_id": null, "agent_role": "test role", "agent_key": "e148e5320293499f8cebea826e72582b",
+      "tool_name": "learn_about_AI", "tool_args": "{}", "tool_class": "learn_about_AI",
+      "run_attempts": null, "delegations": null, "agent": {"id": "acc5999d-b6d2-4359-b567-a55f071a5aa8",
+      "role": "test role", "goal": "test goal", "backstory": "test backstory", "cache":
+      true, "verbose": false, "max_rpm": null, "allow_delegation": false, "tools":
+      [{"name": "''learn_about_ai''", "description": "''Tool Name: learn_about_ai\\nTool
+      Arguments: {}\\nTool Description: Useful for when you need to learn about AI
+      to write an paragraph about it.''", "env_vars": "[]", "args_schema": "<class
+      ''abc.Learn_About_Ai''>", "description_updated": "False", "cache_function":
+      "<function BaseTool.<lambda> at 0x107e394e0>", "result_as_answer": "False",
+      "max_usage_count": "None", "current_usage_count": "0"}], "max_iter": 2, "agent_executor":
+      "<crewai.agents.crew_agent_executor.CrewAgentExecutor object at 0x13b37c980>",
+      "llm": "<crewai.llms.providers.openai.completion.OpenAICompletion object at
+      0x13b7563c0>", "crew": {"parent_flow": null, "name": "crew", "cache": true,
+      "tasks": ["{''used_tools'': 0, ''tools_errors'': 0, ''delegations'': 0, ''i18n'':
+      {''prompt_file'': None}, ''name'': None, ''prompt_context'': '''', ''description'':
+      \"Write and then review an small paragraph on AI until it''s AMAZING\", ''expected_output'':
+      ''The final paragraph.'', ''config'': None, ''callback'': None, ''agent'': {''id'':
+      UUID(''acc5999d-b6d2-4359-b567-a55f071a5aa8''), ''role'': ''test role'', ''goal'':
+      ''test goal'', ''backstory'': ''test backstory'', ''cache'': True, ''verbose'':
+      False, ''max_rpm'': None, ''allow_delegation'': False, ''tools'': [{''name'':
+      ''learn_about_ai'', ''description'': ''Tool Name: learn_about_ai\\nTool Arguments:
+      {}\\nTool Description: Useful for when you need to learn about AI to write an
+      paragraph about it.'', ''env_vars'': [], ''args_schema'': <class ''abc.Learn_About_Ai''>,
+      ''description_updated'': False, ''cache_function'': <function BaseTool.<lambda>
+      at 0x107e394e0>, ''result_as_answer'': False, ''max_usage_count'': None, ''current_usage_count'':
+      0}], ''max_iter'': 2, ''agent_executor'': <crewai.agents.crew_agent_executor.CrewAgentExecutor
+      object at 0x13b37c980>, ''llm'': <crewai.llms.providers.openai.completion.OpenAICompletion
+      object at 0x13b7563c0>, ''crew'': Crew(id=f38365e9-3206-45b6-8754-950cb03fe57e,
+      process=Process.sequential, number_of_agents=1, number_of_tasks=1), ''i18n'':
+      {''prompt_file'': None}, ''cache_handler'': {}, ''tools_handler'': <crewai.agents.tools_handler.ToolsHandler
+      object at 0x13b757ce0>, ''tools_results'': [], ''max_tokens'': None, ''knowledge'':
+      None, ''knowledge_sources'': None, ''knowledge_storage'': None, ''security_config'':
+      {''fingerprint'': {''metadata'': {}}}, ''callbacks'': [], ''adapted_agent'':
+      False, ''knowledge_config'': None}, ''context'': NOT_SPECIFIED, ''async_execution'':
+      False, ''output_json'': None, ''output_pydantic'': None, ''output_file'': None,
+      ''create_directory'': True, ''output'': None, ''tools'': [{''name'': ''learn_about_ai'',
+      ''description'': ''Tool Name: learn_about_ai\\nTool Arguments: {}\\nTool Description:
+      Useful for when you need to learn about AI to write an paragraph about it.'',
+      ''env_vars'': [], ''args_schema'': <class ''abc.Learn_About_Ai''>, ''description_updated'':
+      False, ''cache_function'': <function BaseTool.<lambda> at 0x107e394e0>, ''result_as_answer'':
+      False, ''max_usage_count'': None, ''current_usage_count'': 0}], ''security_config'':
+      {''fingerprint'': {''metadata'': {}}}, ''id'': UUID(''60ccb050-4300-4bcb-8785-6e47b42e4c3a''),
+      ''human_input'': False, ''markdown'': False, ''converter_cls'': None, ''processed_by_agents'':
+      {''test role''}, ''guardrail'': None, ''max_retries'': None, ''guardrail_max_retries'':
+      3, ''retry_count'': 0, ''start_time'': datetime.datetime(2025, 9, 23, 22, 24,
+      15, 226357), ''end_time'': None, ''allow_crewai_trigger_context'': None}"],
+      "agents": ["{''id'': UUID(''acc5999d-b6d2-4359-b567-a55f071a5aa8''), ''role'':
+      ''test role'', ''goal'': ''test goal'', ''backstory'': ''test backstory'', ''cache'':
+      True, ''verbose'': False, ''max_rpm'': None, ''allow_delegation'': False, ''tools'':
+      [{''name'': ''learn_about_ai'', ''description'': ''Tool Name: learn_about_ai\\nTool
+      Arguments: {}\\nTool Description: Useful for when you need to learn about AI
+      to write an paragraph about it.'', ''env_vars'': [], ''args_schema'': <class
+      ''abc.Learn_About_Ai''>, ''description_updated'': False, ''cache_function'':
+      <function BaseTool.<lambda> at 0x107e394e0>, ''result_as_answer'': False, ''max_usage_count'':
+      None, ''current_usage_count'': 0}], ''max_iter'': 2, ''agent_executor'': <crewai.agents.crew_agent_executor.CrewAgentExecutor
+      object at 0x13b37c980>, ''llm'': <crewai.llms.providers.openai.completion.OpenAICompletion
+      object at 0x13b7563c0>, ''crew'': Crew(id=f38365e9-3206-45b6-8754-950cb03fe57e,
+      process=Process.sequential, number_of_agents=1, number_of_tasks=1), ''i18n'':
+      {''prompt_file'': None}, ''cache_handler'': {}, ''tools_handler'': <crewai.agents.tools_handler.ToolsHandler
+      object at 0x13b757ce0>, ''tools_results'': [], ''max_tokens'': None, ''knowledge'':
+      None, ''knowledge_sources'': None, ''knowledge_storage'': None, ''security_config'':
+      {''fingerprint'': {''metadata'': {}}}, ''callbacks'': [], ''adapted_agent'':
+      False, ''knowledge_config'': None}"], "process": "sequential", "verbose": false,
+      "memory": false, "short_term_memory": null, "long_term_memory": null, "entity_memory":
+      null, "external_memory": null, "embedder": null, "usage_metrics": null, "manager_llm":
+      null, "manager_agent": null, "function_calling_llm": null, "config": null, "id":
+      "f38365e9-3206-45b6-8754-950cb03fe57e", "share_crew": false, "step_callback":
+      null, "task_callback": null, "before_kickoff_callbacks": [], "after_kickoff_callbacks":
+      [], "max_rpm": null, "prompt_file": null, "output_log_file": null, "planning":
+      false, "planning_llm": null, "task_execution_output_json_files": null, "execution_logs":
+      [], "knowledge_sources": null, "chat_llm": null, "knowledge": null, "security_config":
+      {"fingerprint": "{''metadata'': {}}"}, "token_usage": null, "tracing": false},
+      "i18n": {"prompt_file": null}, "cache_handler": {}, "tools_handler": "<crewai.agents.tools_handler.ToolsHandler
+      object at 0x13b757ce0>", "tools_results": [], "max_tokens": null, "knowledge":
+      null, "knowledge_sources": null, "knowledge_storage": null, "security_config":
+      {"fingerprint": {"metadata": "{}"}}, "callbacks": [], "adapted_agent": false,
+      "knowledge_config": null, "max_execution_time": null, "agent_ops_agent_name":
+      "test role", "agent_ops_agent_id": null, "step_callback": null, "use_system_prompt":
+      true, "function_calling_llm": "<crewai.llms.providers.openai.completion.OpenAICompletion
+      object at 0x13b756690>", "system_template": null, "prompt_template": null, "response_template":
+      null, "allow_code_execution": false, "respect_context_window": true, "max_retry_limit":
+      2, "multimodal": false, "inject_date": false, "date_format": "%Y-%m-%d", "code_execution_mode":
+      "safe", "reasoning": false, "max_reasoning_attempts": null, "embedder": null,
+      "agent_knowledge_context": null, "crew_knowledge_context": null, "knowledge_search_query":
+      null, "from_repository": null, "guardrail": null, "guardrail_max_retries": 3},
+      "from_task": null, "from_agent": null}}, {"event_id": "914499b5-5197-48c1-9987-8322dd525a35",
+      "timestamp": "2025-09-24T05:24:15.250674+00:00", "type": "agent_execution_started",
+      "event_data": {"agent_role": "test role", "agent_goal": "test goal", "agent_backstory":
+      "test backstory"}}, {"event_id": "8171d27e-5521-49a4-89ad-1510e966f84c", "timestamp":
+      "2025-09-24T05:24:15.250731+00:00", "type": "llm_call_started", "event_data":
+      {"timestamp": "2025-09-24T05:24:15.250715+00:00", "type": "llm_call_started",
+      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
+      "task_id": "60ccb050-4300-4bcb-8785-6e47b42e4c3a", "task_name": "Write and then
+      review an small paragraph on AI until it''s AMAZING", "agent_id": "acc5999d-b6d2-4359-b567-a55f071a5aa8",
+      "agent_role": "test role", "from_task": null, "from_agent": null, "model": "gpt-4o",
+      "messages": [{"role": "system", "content": "You are test role. test backstory\nYour
+      personal goal is: test goal\nYou ONLY have access to the following tools, and
+      should NEVER make up tools that are not listed here:\n\nTool Name: learn_about_ai\nTool
+      Arguments: {}\nTool Description: Useful for when you need to learn about AI
+      to write an paragraph about it.\n\nIMPORTANT: Use the following format in your
+      response:\n\n```\nThought: you should always think about what to do\nAction:
+      the action to take, only one name of [learn_about_ai], just the name, exactly
+      as it''s written.\nAction Input: the input to the action, just a simple JSON
+      object, enclosed in curly braces, using \" to wrap keys and values.\nObservation:
+      the result of the action\n```\n\nOnce all necessary information is gathered,
+      return the following format:\n\n```\nThought: I now know the final answer\nFinal
+      Answer: the final answer to the original input question\n```"}, {"role": "user",
+      "content": "\nCurrent Task: Write and then review an small paragraph on AI until
+      it''s AMAZING\n\nThis is the expected criteria for your final answer: The final
+      paragraph.\nyou MUST return the actual complete content as the final answer,
+      not a summary.\n\nBegin! This is VERY important to you, use the tools available
+      and give your best Final Answer, your job depends on it!\n\nThought:"}], "tools":
+      null, "callbacks": ["<crewai.utilities.token_counter_callback.TokenCalcHandler
+      object at 0x10bcded50>"], "available_functions": null}}, {"event_id": "a7df5395-2972-4936-9259-1ec72ed97bc1",
+      "timestamp": "2025-09-24T05:24:15.251657+00:00", "type": "llm_call_completed",
+      "event_data": {"timestamp": "2025-09-24T05:24:15.251641+00:00", "type": "llm_call_completed",
+      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
+      "task_id": "60ccb050-4300-4bcb-8785-6e47b42e4c3a", "task_name": "Write and then
+      review an small paragraph on AI until it''s AMAZING", "agent_id": "acc5999d-b6d2-4359-b567-a55f071a5aa8",
+      "agent_role": "test role", "from_task": null, "from_agent": null, "messages":
+      [{"role": "system", "content": "You are test role. test backstory\nYour personal
+      goal is: test goal\nYou ONLY have access to the following tools, and should
+      NEVER make up tools that are not listed here:\n\nTool Name: learn_about_ai\nTool
+      Arguments: {}\nTool Description: Useful for when you need to learn about AI
+      to write an paragraph about it.\n\nIMPORTANT: Use the following format in your
+      response:\n\n```\nThought: you should always think about what to do\nAction:
+      the action to take, only one name of [learn_about_ai], just the name, exactly
+      as it''s written.\nAction Input: the input to the action, just a simple JSON
+      object, enclosed in curly braces, using \" to wrap keys and values.\nObservation:
+      the result of the action\n```\n\nOnce all necessary information is gathered,
+      return the following format:\n\n```\nThought: I now know the final answer\nFinal
+      Answer: the final answer to the original input question\n```"}, {"role": "user",
+      "content": "\nCurrent Task: Write and then review an small paragraph on AI until
+      it''s AMAZING\n\nThis is the expected criteria for your final answer: The final
+      paragraph.\nyou MUST return the actual complete content as the final answer,
+      not a summary.\n\nBegin! This is VERY important to you, use the tools available
+      and give your best Final Answer, your job depends on it!\n\nThought:"}], "response":
+      "```\nThought: I now have the necessary information to craft a comprehensive
+      and compelling paragraph about AI.\nFinal Answer: Artificial Intelligence (AI)
+      is a transformative force in today''s world, dramatically reshaping industries
+      from healthcare to automotive. By leveraging complex algorithms and large datasets,
+      AI systems can perform tasks that typically require human intelligence, such
+      as understanding natural language, recognizing patterns, and making decisions.
+      The potential of AI extends beyond automation; it is a catalyst for innovation,
+      enabling breakthroughs in personalized medicine, autonomous vehicles, and more.
+      As AI continues to evolve, it promises to enhance efficiency, drive economic
+      growth, and unlock new levels of problem-solving capabilities, cementing its
+      role as a cornerstone of technological progress.\n```", "call_type": "<LLMCallType.LLM_CALL:
+      ''llm_call''>", "model": "gpt-4o"}}, {"event_id": "5d70fb17-8f2e-4bc0-addd-37e0c824aeaa",
+      "timestamp": "2025-09-24T05:24:15.251765+00:00", "type": "agent_execution_completed",
+      "event_data": {"agent_role": "test role", "agent_goal": "test goal", "agent_backstory":
+      "test backstory"}}, {"event_id": "eff530b4-3197-4819-9998-10f8e865c894", "timestamp":
+      "2025-09-24T05:24:15.251790+00:00", "type": "agent_execution_completed", "event_data":
+      {"agent_role": "test role", "agent_goal": "test goal", "agent_backstory": "test
+      backstory"}}, {"event_id": "aee267bf-7b29-4106-bb05-921b6c2c544f", "timestamp":
+      "2025-09-24T05:24:15.251823+00:00", "type": "task_completed", "event_data":
+      {"task_description": "Write and then review an small paragraph on AI until it''s
+      AMAZING", "task_name": "Write and then review an small paragraph on AI until
+      it''s AMAZING", "task_id": "60ccb050-4300-4bcb-8785-6e47b42e4c3a", "output_raw":
+      "Artificial Intelligence (AI) is a transformative force in today''s world, dramatically
+      reshaping industries from healthcare to automotive. By leveraging complex algorithms
+      and large datasets, AI systems can perform tasks that typically require human
+      intelligence, such as understanding natural language, recognizing patterns,
+      and making decisions. The potential of AI extends beyond automation; it is a
+      catalyst for innovation, enabling breakthroughs in personalized medicine, autonomous
+      vehicles, and more. As AI continues to evolve, it promises to enhance efficiency,
+      drive economic growth, and unlock new levels of problem-solving capabilities,
+      cementing its role as a cornerstone of technological progress.", "output_format":
+      "OutputFormat.RAW", "agent_role": "test role"}}, {"event_id": "1acc71ae-b4c3-48cc-9020-75b1df9a395e",
+      "timestamp": "2025-09-24T05:24:15.252666+00:00", "type": "crew_kickoff_completed",
+      "event_data": {"timestamp": "2025-09-24T05:24:15.252651+00:00", "type": "crew_kickoff_completed",
+      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
+      "task_id": null, "task_name": null, "agent_id": null, "agent_role": null, "crew_name":
+      "crew", "crew": null, "output": {"description": "Write and then review an small
+      paragraph on AI until it''s AMAZING", "name": "Write and then review an small
+      paragraph on AI until it''s AMAZING", "expected_output": "The final paragraph.",
+      "summary": "Write and then review an small paragraph on AI until...", "raw":
+      "Artificial Intelligence (AI) is a transformative force in today''s world, dramatically
+      reshaping industries from healthcare to automotive. By leveraging complex algorithms
+      and large datasets, AI systems can perform tasks that typically require human
+      intelligence, such as understanding natural language, recognizing patterns,
+      and making decisions. The potential of AI extends beyond automation; it is a
+      catalyst for innovation, enabling breakthroughs in personalized medicine, autonomous
+      vehicles, and more. As AI continues to evolve, it promises to enhance efficiency,
+      drive economic growth, and unlock new levels of problem-solving capabilities,
+      cementing its role as a cornerstone of technological progress.", "pydantic":
+      null, "json_dict": null, "agent": "test role", "output_format": "raw"}, "total_tokens":
+      782}}], "batch_metadata": {"events_count": 13, "batch_sequence": 1, "is_final_batch":
+      false}}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '21314'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - CrewAI-CLI/0.193.2
+      X-Crewai-Organization-Id:
+      - d3a3d10c-35db-423f-a7a4-c026030ba64d
+      X-Crewai-Version:
+      - 0.193.2
+    method: POST
+    uri: http://localhost:3000/crewai_plus/api/v1/tracing/batches/1f3a4201-cacd-4a36-a518-bb6662e06f33/events
+  response:
+    body:
+      string: '{"events_created":13,"trace_batch_id":"7382f59a-2ad0-40cf-b68b-2041893f67a6"}'
+    headers:
+      Content-Length:
+      - '77'
+      cache-control:
+      - max-age=0, private, must-revalidate
+      content-security-policy:
+      - 'default-src ''self'' *.crewai.com crewai.com; script-src ''self'' ''unsafe-inline''
+        *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts https://www.gstatic.com
+        https://run.pstmn.io https://share.descript.com/; style-src ''self'' ''unsafe-inline''
+        *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts; img-src ''self''
+        data: *.crewai.com crewai.com https://zeus.tools.crewai.com https://dashboard.tools.crewai.com
+        https://cdn.jsdelivr.net; font-src ''self'' data: *.crewai.com crewai.com;
+        connect-src ''self'' *.crewai.com crewai.com https://zeus.tools.crewai.com
+        https://connect.useparagon.com/ https://zeus.useparagon.com/* https://*.useparagon.com/*
+        https://run.pstmn.io https://connect.tools.crewai.com/ ws://localhost:3036
+        wss://localhost:3036; frame-src ''self'' *.crewai.com crewai.com https://connect.useparagon.com/
+        https://zeus.tools.crewai.com https://zeus.useparagon.com/* https://connect.tools.crewai.com/
+        https://www.youtube.com https://share.descript.com'
+      content-type:
+      - application/json; charset=utf-8
+      etag:
+      - W/"67daf372aa7ef29cc601744e1d0423e0"
+      permissions-policy:
+      - camera=(), microphone=(self), geolocation=()
+      referrer-policy:
+      - strict-origin-when-cross-origin
+      server-timing:
+      - cache_read.active_support;dur=0.04, cache_fetch_hit.active_support;dur=0.00,
+        cache_read_multi.active_support;dur=0.05, start_processing.action_controller;dur=0.00,
+        sql.active_record;dur=60.98, instantiation.active_record;dur=0.86, start_transaction.active_record;dur=0.02,
+        transaction.active_record;dur=76.94, process_action.action_controller;dur=811.04
+      vary:
+      - Accept
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-permitted-cross-domain-policies:
+      - none
+      x-request-id:
+      - 987801fb-ae43-4fd8-987b-03358574a99a
+      x-runtime:
+      - '0.833076'
+      x-xss-protection:
+      - 1; mode=block
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"status": "completed", "duration_ms": 1202, "final_event_count": 13}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '69'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - CrewAI-CLI/0.193.2
+      X-Crewai-Organization-Id:
+      - d3a3d10c-35db-423f-a7a4-c026030ba64d
+      X-Crewai-Version:
+      - 0.193.2
+    method: PATCH
+    uri: http://localhost:3000/crewai_plus/api/v1/tracing/batches/1f3a4201-cacd-4a36-a518-bb6662e06f33/finalize
+  response:
+    body:
+      string: '{"id":"7382f59a-2ad0-40cf-b68b-2041893f67a6","trace_id":"1f3a4201-cacd-4a36-a518-bb6662e06f33","execution_type":"crew","crew_name":"crew","flow_name":null,"status":"completed","duration_ms":1202,"crewai_version":"0.193.2","privacy_level":"standard","total_events":13,"execution_context":{"crew_name":"crew","flow_name":null,"privacy_level":"standard","crewai_version":"0.193.2","crew_fingerprint":null},"created_at":"2025-09-24T05:24:15.219Z","updated_at":"2025-09-24T05:24:16.450Z"}'
+    headers:
+      Content-Length:
+      - '483'
+      cache-control:
+      - max-age=0, private, must-revalidate
+      content-security-policy:
+      - 'default-src ''self'' *.crewai.com crewai.com; script-src ''self'' ''unsafe-inline''
+        *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts https://www.gstatic.com
+        https://run.pstmn.io https://share.descript.com/; style-src ''self'' ''unsafe-inline''
+        *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts; img-src ''self''
+        data: *.crewai.com crewai.com https://zeus.tools.crewai.com https://dashboard.tools.crewai.com
+        https://cdn.jsdelivr.net; font-src ''self'' data: *.crewai.com crewai.com;
+        connect-src ''self'' *.crewai.com crewai.com https://zeus.tools.crewai.com
+        https://connect.useparagon.com/ https://zeus.useparagon.com/* https://*.useparagon.com/*
+        https://run.pstmn.io https://connect.tools.crewai.com/ ws://localhost:3036
+        wss://localhost:3036; frame-src ''self'' *.crewai.com crewai.com https://connect.useparagon.com/
+        https://zeus.tools.crewai.com https://zeus.useparagon.com/* https://connect.tools.crewai.com/
+        https://www.youtube.com https://share.descript.com'
+      content-type:
+      - application/json; charset=utf-8
+      etag:
+      - W/"42f5f54b7105461e0a04f5a07a8c156b"
+      permissions-policy:
+      - camera=(), microphone=(self), geolocation=()
+      referrer-policy:
+      - strict-origin-when-cross-origin
+      server-timing:
+      - cache_read.active_support;dur=0.03, cache_fetch_hit.active_support;dur=0.00,
+        cache_read_multi.active_support;dur=0.05, start_processing.action_controller;dur=0.00,
+        sql.active_record;dur=27.64, instantiation.active_record;dur=0.46, unpermitted_parameters.action_controller;dur=0.00,
+        start_transaction.active_record;dur=0.00, transaction.active_record;dur=2.03,
+        process_action.action_controller;dur=333.55
+      vary:
+      - Accept
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-permitted-cross-domain-policies:
+      - none
+      x-request-id:
+      - 388926ac-a364-4e49-bca8-6c2f7fe9d248
+      x-runtime:
+      - '0.350879'
+      x-xss-protection:
+      - 1; mode=block
+    status:
+      code: 200
+      message: OK
+version: 1

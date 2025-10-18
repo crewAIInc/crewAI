@@ -25,7 +25,7 @@ Before using the Asana integration, ensure you have:
 2. Find **Asana** in the Authentication Integrations section
 3. Click **Connect** and complete the OAuth flow
 4. Grant the necessary permissions for task and project management
-5. Copy your Enterprise Token from [Account Settings](https://app.crewai.com/crewai_plus/settings/account)
+5. Copy your Enterprise Token from [Integration Settings](https://app.crewai.com/crewai_plus/settings/integrations)
 
 ### 2. Install Required Package
 
@@ -36,7 +36,7 @@ uv add crewai-tools
 ## Available Actions
 
 <AccordionGroup>
-  <Accordion title="ASANA_CREATE_COMMENT">
+  <Accordion title="asana/create_comment">
     **Description:** Create a comment in Asana.
 
     **Parameters:**
@@ -44,7 +44,7 @@ uv add crewai-tools
     - `text` (string, required): Text (example: "This is a comment.").
   </Accordion>
 
-  <Accordion title="ASANA_CREATE_PROJECT">
+  <Accordion title="asana/create_project">
     **Description:** Create a project in Asana.
 
     **Parameters:**
@@ -54,7 +54,7 @@ uv add crewai-tools
     - `notes` (string, optional): Notes (example: "These are things we need to purchase.").
   </Accordion>
 
-  <Accordion title="ASANA_GET_PROJECTS">
+  <Accordion title="asana/get_projects">
     **Description:** Get a list of projects in Asana.
 
     **Parameters:**
@@ -62,14 +62,14 @@ uv add crewai-tools
       - Options: `default`, `true`, `false`
   </Accordion>
 
-  <Accordion title="ASANA_GET_PROJECT_BY_ID">
+  <Accordion title="asana/get_project_by_id">
     **Description:** Get a project by ID in Asana.
 
     **Parameters:**
     - `projectFilterId` (string, required): Project ID.
   </Accordion>
 
-  <Accordion title="ASANA_CREATE_TASK">
+  <Accordion title="asana/create_task">
     **Description:** Create a task in Asana.
 
     **Parameters:**
@@ -83,7 +83,7 @@ uv add crewai-tools
     - `gid` (string, optional): External ID - An ID from your application to associate this task with. You can use this ID to sync updates to this task later.
   </Accordion>
 
-  <Accordion title="ASANA_UPDATE_TASK">
+  <Accordion title="asana/update_task">
     **Description:** Update a task in Asana.
 
     **Parameters:**
@@ -98,7 +98,7 @@ uv add crewai-tools
     - `gid` (string, optional): External ID - An ID from your application to associate this task with. You can use this ID to sync updates to this task later.
   </Accordion>
 
-  <Accordion title="ASANA_GET_TASKS">
+  <Accordion title="asana/get_tasks">
     **Description:** Get a list of tasks in Asana.
 
     **Parameters:**
@@ -108,21 +108,21 @@ uv add crewai-tools
     - `completedSince` (string, optional): Completed since - Only return tasks that are either incomplete or that have been completed since this time (ISO or Unix timestamp). (example: "2014-04-25T16:15:47-04:00").
   </Accordion>
 
-  <Accordion title="ASANA_GET_TASKS_BY_ID">
+  <Accordion title="asana/get_tasks_by_id">
     **Description:** Get a list of tasks by ID in Asana.
 
     **Parameters:**
     - `taskId` (string, required): Task ID.
   </Accordion>
 
-  <Accordion title="ASANA_GET_TASK_BY_EXTERNAL_ID">
+  <Accordion title="asana/get_task_by_external_id">
     **Description:** Get a task by external ID in Asana.
 
     **Parameters:**
     - `gid` (string, required): External ID - The ID that this task is associated or synced with, from your application.
   </Accordion>
 
-  <Accordion title="ASANA_ADD_TASK_TO_SECTION">
+  <Accordion title="asana/add_task_to_section">
     **Description:** Add a task to a section in Asana.
 
     **Parameters:**
@@ -132,14 +132,14 @@ uv add crewai-tools
     - `afterTaskId` (string, optional): After Task ID - The ID of a task in this section that this task will be inserted after. Cannot be used with Before Task ID. (example: "1204619611402340").
   </Accordion>
 
-  <Accordion title="ASANA_GET_TEAMS">
+  <Accordion title="asana/get_teams">
     **Description:** Get a list of teams in Asana.
 
     **Parameters:**
     - `workspace` (string, required): Workspace - Returns the teams in this workspace visible to the authorized user.
   </Accordion>
 
-  <Accordion title="ASANA_GET_WORKSPACES">
+  <Accordion title="asana/get_workspaces">
     **Description:** Get a list of workspaces in Asana.
 
     **Parameters:** None required.
@@ -152,19 +152,13 @@ uv add crewai-tools
 
 ```python
 from crewai import Agent, Task, Crew
-from crewai_tools import CrewaiEnterpriseTools
-
-# Get enterprise tools (Asana tools will be included)
-enterprise_tools = CrewaiEnterpriseTools(
-    enterprise_token="your_enterprise_token"
-)
 
 # Create an agent with Asana capabilities
 asana_agent = Agent(
     role="Project Manager",
     goal="Manage tasks and projects in Asana efficiently",
     backstory="An AI assistant specialized in project management and task coordination.",
-    tools=[enterprise_tools]
+    apps=['asana']  # All Asana actions will be available
 )
 
 # Task to create a new project
@@ -186,19 +180,18 @@ crew.kickoff()
 ### Filtering Specific Asana Tools
 
 ```python
-from crewai_tools import CrewaiEnterpriseTools
+from crewai import Agent, Task, Crew
 
-# Get only specific Asana tools
-enterprise_tools = CrewaiEnterpriseTools(
-    enterprise_token="your_enterprise_token",
-    actions_list=["asana_create_task", "asana_update_task", "asana_get_tasks"]
-)
-
+# Create agent with specific Asana actions only
 task_manager_agent = Agent(
     role="Task Manager",
     goal="Create and manage tasks efficiently",
     backstory="An AI assistant that focuses on task creation and management.",
-    tools=enterprise_tools
+    apps=[
+        'asana/create_task',
+        'asana/update_task',
+        'asana/get_tasks'
+    ]  # Specific Asana actions
 )
 
 # Task to create and assign a task
@@ -220,17 +213,12 @@ crew.kickoff()
 
 ```python
 from crewai import Agent, Task, Crew
-from crewai_tools import CrewaiEnterpriseTools
-
-enterprise_tools = CrewaiEnterpriseTools(
-    enterprise_token="your_enterprise_token"
-)
 
 project_coordinator = Agent(
     role="Project Coordinator",
     goal="Coordinate project activities and track progress",
     backstory="An experienced project coordinator who ensures projects run smoothly.",
-    tools=[enterprise_tools]
+    apps=['asana']
 )
 
 # Complex task involving multiple Asana operations

@@ -39,16 +39,23 @@ print(result.raw)
 
 Use `crewai_trigger_payload` exactly as it is delivered by the trigger so the crew can extract the proper fields.
 
-## Sample payloads & crews
+## Testing Locally
 
-The [Google Calendar examples](https://github.com/crewAIInc/crewai-enterprise-trigger-examples/tree/main/google_calendar) show how to handle multiple event types:
+Test your Google Calendar trigger integration locally using the CrewAI CLI:
 
-- `new-event.json` → standard event creation handled by `calendar-event-crew.py`
-- `event-updated.json` / `event-started.json` / `event-ended.json` → in-flight updates processed by `calendar-meeting-crew.py`
-- `event-canceled.json` → cancellation workflow that alerts attendees via `calendar-meeting-crew.py`
-- Working location events use `calendar-working-location-crew.py` to extract on-site schedules
+```bash
+# View all available triggers
+crewai triggers list
 
-Each crew transforms raw event metadata (attendees, rooms, working locations) into the summaries your teams need.
+# Simulate a Google Calendar trigger with realistic payload
+crewai triggers run google_calendar/event_changed
+```
+
+The `crewai triggers run` command will execute your crew with a complete Calendar payload, allowing you to test your parsing logic before deployment.
+
+<Warning>
+  Use `crewai triggers run google_calendar/event_changed` (not `crewai run`) to simulate trigger execution during development. After deployment, your crew will automatically receive the trigger payload.
+</Warning>
 
 ## Monitoring Executions
 
@@ -61,5 +68,7 @@ The **Executions** list in the deployment dashboard tracks every triggered run a
 ## Troubleshooting
 
 - Ensure the correct Google account is connected and the trigger is enabled
+- Test locally with `crewai triggers run google_calendar/event_changed` to see the exact payload structure
 - Confirm your workflow handles all-day events (payloads use `start.date` and `end.date` instead of timestamps)
 - Check execution logs if reminders or attendee arrays are missing—calendar permissions can limit fields in the payload
+- Remember: use `crewai triggers run` (not `crewai run`) to simulate trigger execution
