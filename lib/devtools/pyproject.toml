@@ -1,0 +1,32 @@
+[project]
+name = "crewai-devtools"
+dynamic = ["version"]
+description = "Development tools for version bumping and git automation"
+readme = "README.md"
+authors = [
+    { name = "Greyson R. LaLonde", email = "greyson@crewai.com" },
+]
+requires-python = ">=3.10, <3.14"
+classifiers = ["Private :: Do Not Upload"]
+private = true
+dependencies = [
+    "click>=8.3.0",
+    "toml>=0.10.2",
+    "openai>=1.0.0",
+    "python-dotenv>=1.1.1",
+    "pygithub>=1.59.1",
+    "rich>=13.9.4",
+]
+
+[project.scripts]
+bump-version = "crewai_devtools.cli:bump"
+tag = "crewai_devtools.cli:tag"
+devtools = "crewai_devtools.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.version]
+path = "src/crewai_devtools/__init__.py"
+

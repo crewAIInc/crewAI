@@ -36,18 +36,28 @@ crew.kickoff({
 
 The crew inspects file metadata, user activity, and permission changes to produce a compliance-friendly summary.
 
-## Sample payloads & crews
+## Testando Localmente
 
-The [OneDrive examples](https://github.com/crewAIInc/crewai-enterprise-trigger-examples/tree/main/onedrive) showcase how to:
+Teste sua integração de trigger do OneDrive localmente usando a CLI da CrewAI:
 
-- Parse file metadata, size, and folder paths
-- Track who created and last modified the file
-- Highlight permission and external sharing changes
+```bash
+# Visualize todos os triggers disponíveis
+crewai triggers list
 
-`onedrive-file-crew.py` bundles the analysis and summarization tasks so you can add remediation steps as needed.
+# Simule um trigger do OneDrive com payload realista
+crewai triggers run microsoft_onedrive/file_changed
+```
+
+O comando `crewai triggers run` executará sua crew com um payload completo do OneDrive, permitindo que você teste sua lógica de parsing antes do deployment.
+
+<Warning>
+  Use `crewai triggers run microsoft_onedrive/file_changed` (não `crewai run`) para simular execução de trigger durante o desenvolvimento. Após o deployment, sua crew receberá automaticamente o payload do trigger.
+</Warning>
 
 ## Troubleshooting
 
 - Ensure the connected account has permission to read the file metadata included in the webhook
+- Teste localmente com `crewai triggers run microsoft_onedrive/file_changed` para ver a estrutura exata do payload
 - If the trigger fires but the payload is missing `permissions`, confirm the site-level sharing settings allow Graph to return this field
 - For large tenants, filter notifications upstream so the crew only runs on relevant directories
+- Lembre-se: use `crewai triggers run` (não `crewai run`) para simular execução de trigger

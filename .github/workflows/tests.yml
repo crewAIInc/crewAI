@@ -8,6 +8,14 @@ permissions:
 env:
   OPENAI_API_KEY: fake-api-key
   PYTHONUNBUFFERED: 1
+  BRAVE_API_KEY: fake-brave-key
+  SNOWFLAKE_USER: fake-snowflake-user
+  SNOWFLAKE_PASSWORD: fake-snowflake-password
+  SNOWFLAKE_ACCOUNT: fake-snowflake-account
+  SNOWFLAKE_WAREHOUSE: fake-snowflake-warehouse
+  SNOWFLAKE_DATABASE: fake-snowflake-database
+  SNOWFLAKE_SCHEMA: fake-snowflake-schema
+  EMBEDCHAIN_DB_URI: sqlite:///test.db
 
 jobs:
   tests:
@@ -56,13 +64,13 @@ jobs:
       - name: Run tests (group ${{ matrix.group }} of 8)
         run: |
           PYTHON_VERSION_SAFE=$(echo "${{ matrix.python-version }}" | tr '.' '_')
-          DURATION_FILE=".test_durations_py${PYTHON_VERSION_SAFE}"
-          
+          DURATION_FILE="../../.test_durations_py${PYTHON_VERSION_SAFE}"
+
           # Temporarily always skip cached durations to fix test splitting
           # When durations don't match, pytest-split runs duplicate tests instead of splitting
           echo "Using even test splitting (duration cache disabled until fix merged)"
           DURATIONS_ARG=""
-          
+
           # Original logic (disabled temporarily):
           # if [ ! -f "$DURATION_FILE" ]; then
           #   echo "No cached durations found, tests will be split evenly"
@@ -74,8 +82,8 @@ jobs:
           #   echo "No test changes detected, using cached test durations for optimal splitting"
           #   DURATIONS_ARG="--durations-path=${DURATION_FILE}"
           # fi
-          
-          uv run pytest \
+
+          cd lib/crewai && uv run pytest \
             --block-network \
             --timeout=30 \
             -vv \
@@ -85,6 +93,19 @@ jobs:
             --durations=10 \
             -n auto \
             --maxfail=3
+
+      - name: Run tool tests (group ${{ matrix.group }} of 8)
+        run: |
+          cd lib/crewai-tools && uv run pytest \
+            --block-network \
+            --timeout=30 \
+            -vv \
+            --splits 8 \
+            --group ${{ matrix.group }} \
+            --durations=10 \
+            -n auto \
+            --maxfail=3
+
 
       - name: Save uv caches
         if: steps.cache-restore.outputs.cache-hit != 'true'

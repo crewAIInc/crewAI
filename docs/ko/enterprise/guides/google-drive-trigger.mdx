@@ -36,15 +36,23 @@ crew.kickoff({
 })
 ```
 
-## Sample payloads & crews
+## 로컬에서 테스트
 
-Explore the [Google Drive examples](https://github.com/crewAIInc/crewai-enterprise-trigger-examples/tree/main/google_drive) to cover different operations:
+CrewAI CLI를 사용하여 Google Drive 트리거 통합을 로컬에서 테스트하세요:
 
-- `new-file.json` → new uploads processed by `drive-file-crew.py`
-- `updated-file.json` → file edits and metadata changes handled by `drive-file-crew.py`
-- `deleted-file.json` → deletion events routed through `drive-file-deletion-crew.py`
+```bash
+# 사용 가능한 모든 트리거 보기
+crewai triggers list
 
-Each crew highlights the file name, operation type, owner, permissions, and security considerations so downstream systems can respond appropriately.
+# 실제 payload로 Google Drive 트리거 시뮬레이션
+crewai triggers run google_drive/file_changed
+```
+
+`crewai triggers run` 명령은 완전한 Drive payload로 크루를 실행하여 배포 전에 파싱 로직을 테스트할 수 있게 해줍니다.
+
+<Warning>
+  개발 중에는 `crewai triggers run google_drive/file_changed`를 사용하세요 (`crewai run`이 아님). 배포 후에는 크루가 자동으로 트리거 payload를 받습니다.
+</Warning>
 
 ## Monitoring Executions
 
@@ -57,5 +65,7 @@ Track history and performance of triggered runs with the **Executions** list in 
 ## Troubleshooting
 
 - Verify Google Drive is connected and the trigger toggle is enabled
+- `crewai triggers run google_drive/file_changed`로 로컬 테스트하여 정확한 payload 구조를 확인하세요
 - If a payload is missing permission data, ensure the connected account has access to the file or folder
 - The trigger sends file IDs only; use the Drive API if you need to fetch binary content during the crew run
+- 주의: 트리거 실행을 시뮬레이션하려면 `crewai triggers run`을 사용하세요 (`crewai run`이 아님)

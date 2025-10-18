@@ -36,15 +36,23 @@ crew.kickoff({
 })
 ```
 
-## Sample payloads & crews
+## Testing Locally
 
-Explore the [Google Drive examples](https://github.com/crewAIInc/crewai-enterprise-trigger-examples/tree/main/google_drive) to cover different operations:
+Test your Google Drive trigger integration locally using the CrewAI CLI:
 
-- `new-file.json` → new uploads processed by `drive-file-crew.py`
-- `updated-file.json` → file edits and metadata changes handled by `drive-file-crew.py`
-- `deleted-file.json` → deletion events routed through `drive-file-deletion-crew.py`
+```bash
+# View all available triggers
+crewai triggers list
 
-Each crew highlights the file name, operation type, owner, permissions, and security considerations so downstream systems can respond appropriately.
+# Simulate a Google Drive trigger with realistic payload
+crewai triggers run google_drive/file_changed
+```
+
+The `crewai triggers run` command will execute your crew with a complete Drive payload, allowing you to test your parsing logic before deployment.
+
+<Warning>
+  Use `crewai triggers run google_drive/file_changed` (not `crewai run`) to simulate trigger execution during development. After deployment, your crew will automatically receive the trigger payload.
+</Warning>
 
 ## Monitoring Executions
 
@@ -57,5 +65,7 @@ Track history and performance of triggered runs with the **Executions** list in 
 ## Troubleshooting
 
 - Verify Google Drive is connected and the trigger toggle is enabled
+- Test locally with `crewai triggers run google_drive/file_changed` to see the exact payload structure
 - If a payload is missing permission data, ensure the connected account has access to the file or folder
 - The trigger sends file IDs only; use the Drive API if you need to fetch binary content during the crew run
+- Remember: use `crewai triggers run` (not `crewai run`) to simulate trigger execution

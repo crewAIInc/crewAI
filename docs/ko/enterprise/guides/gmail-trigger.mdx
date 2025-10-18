@@ -51,16 +51,25 @@ class GmailProcessingCrew:
         )
 ```
 
-The Gmail payload will be available via the standard context mechanisms. See the payload samples repository for structure and fields.
+The Gmail payload will be available via the standard context mechanisms.
 
-### Sample payloads & crews
+### 로컬에서 테스트
 
-The [CrewAI AMP Trigger Examples repository](https://github.com/crewAIInc/crewai-enterprise-trigger-examples/tree/main/gmail) includes:
+CrewAI CLI를 사용하여 Gmail 트리거 통합을 로컬에서 테스트하세요:
 
-- `new-email-payload-1.json` / `new-email-payload-2.json` — production-style new message alerts with matching crews in `new-email-crew.py`
-- `thread-updated-sample-1.json` — follow-up messages on an existing thread, processed by `gmail-alert-crew.py`
+```bash
+# 사용 가능한 모든 트리거 보기
+crewai triggers list
 
-Use these samples to validate your parsing logic locally before wiring the trigger to your live Gmail accounts.
+# 실제 payload로 Gmail 트리거 시뮬레이션
+crewai triggers run gmail/new_email
+```
+
+`crewai triggers run` 명령은 완전한 Gmail payload로 크루를 실행하여 배포 전에 파싱 로직을 테스트할 수 있게 해줍니다.
+
+<Warning>
+  개발 중에는 `crewai triggers run gmail/new_email`을 사용하세요 (`crewai run`이 아님). 배포 후에는 크루가 자동으로 트리거 payload를 받습니다.
+</Warning>
 
 ## Monitoring Executions
 
@@ -70,16 +79,10 @@ Track history and performance of triggered runs:
   <img src="/images/enterprise/list-executions.png" alt="List of executions triggered by automation" />
 </Frame>
 
-## Payload Reference
-
-See the sample payloads and field descriptions:
-
-<Card title="Gmail samples in Trigger Examples Repo" href="https://github.com/crewAIInc/crewai-enterprise-trigger-examples/tree/main/gmail" icon="envelopes-bulk">
-    Gmail samples in Trigger Examples Repo
-</Card>
-
 ## Troubleshooting
 
 - Ensure Gmail is connected in Tools & Integrations
 - Verify the Gmail Trigger is enabled on the Triggers tab
+- `crewai triggers run gmail/new_email`로 로컬 테스트하여 정확한 payload 구조를 확인하세요
 - Check the execution logs and confirm the payload is passed as `crewai_trigger_payload`
+- 주의: 트리거 실행을 시뮬레이션하려면 `crewai triggers run`을 사용하세요 (`crewai run`이 아님)

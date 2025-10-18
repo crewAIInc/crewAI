@@ -25,7 +25,7 @@ Antes de usar a integração com o Gmail, certifique-se de que você possui:
 2. Encontre **Gmail** na seção de Integrações de Autenticação
 3. Clique em **Conectar** e conclua o fluxo OAuth
 4. Conceda as permissões necessárias para o gerenciamento de e-mail e contato
-5. Copie seu Token Empresarial em [Configurações de Conta](https://app.crewai.com/crewai_plus/settings/account)
+5. Copie seu Token Empresarial em [Configurações de Integração](https://app.crewai.com/crewai_plus/settings/integrations)
 
 ### 2. Instale o Pacote Necessário
 
@@ -36,7 +36,7 @@ uv add crewai-tools
 ## Ações Disponíveis
 
 <AccordionGroup>
-  <Accordion title="GMAIL_SEND_EMAIL">
+  <Accordion title="gmail/send_email">
     **Descrição:** Envia um e-mail pelo Gmail.
 
     **Parâmetros:**
@@ -59,7 +59,7 @@ uv add crewai-tools
       ```
   </Accordion>
 
-  <Accordion title="GMAIL_GET_EMAIL_BY_ID">
+  <Accordion title="gmail/get_email_by_id">
     **Descrição:** Obtém um e-mail pelo ID no Gmail.
 
     **Parâmetros:**
@@ -67,7 +67,7 @@ uv add crewai-tools
     - `messageId` (string, obrigatório): ID da Mensagem - Especifique o ID da mensagem a ser recuperada.
   </Accordion>
 
-  <Accordion title="GMAIL_SEARCH_FOR_EMAIL">
+  <Accordion title="gmail/fetch_emails">
     **Descrição:** Pesquisa e-mails no Gmail usando filtros avançados.
 
     **Parâmetros:**
@@ -98,7 +98,7 @@ uv add crewai-tools
       ```
   </Accordion>
 
-  <Accordion title="GMAIL_DELETE_EMAIL">
+  <Accordion title="gmail/delete_email">
     **Descrição:** Exclui um e-mail no Gmail.
 
     **Parâmetros:**
@@ -106,7 +106,7 @@ uv add crewai-tools
     - `messageId` (string, obrigatório): ID da Mensagem - Especifique o ID da mensagem para enviar para a lixeira.
   </Accordion>
 
-  <Accordion title="GMAIL_CREATE_A_CONTACT">
+  <Accordion title="gmail/create_a_contact">
     **Descrição:** Cria um contato no Gmail.
 
     **Parâmetros:**
@@ -126,28 +126,28 @@ uv add crewai-tools
       ```
   </Accordion>
 
-  <Accordion title="GMAIL_GET_CONTACT_BY_RESOURCE_NAME">
+  <Accordion title="gmail/get_contact_by_resource_name">
     **Descrição:** Obtém um contato pelo nome do recurso no Gmail.
 
     **Parâmetros:**
     - `resourceName` (string, obrigatório): Nome do Recurso - Especifique o nome do recurso do contato a ser buscado.
   </Accordion>
 
-  <Accordion title="GMAIL_SEARCH_FOR_CONTACT">
+  <Accordion title="gmail/search_for_contact">
     **Descrição:** Pesquisa um contato no Gmail.
 
     **Parâmetros:**
     - `searchTerm` (string, obrigatório): Termo - Especifique um termo para buscar correspondências aproximadas ou exatas nos campos nome, apelido, endereços de e-mail, números de telefone ou organizações do contato.
   </Accordion>
 
-  <Accordion title="GMAIL_DELETE_CONTACT">
+  <Accordion title="gmail/delete_contact">
     **Descrição:** Exclui um contato no Gmail.
 
     **Parâmetros:**
     - `resourceName` (string, obrigatório): Nome do Recurso - Especifique o nome do recurso do contato a ser excluído.
   </Accordion>
 
-  <Accordion title="GMAIL_CREATE_DRAFT">
+  <Accordion title="gmail/create_draft">
     **Descrição:** Cria um rascunho no Gmail.
 
     **Parâmetros:**
@@ -177,19 +177,13 @@ uv add crewai-tools
 
 ```python
 from crewai import Agent, Task, Crew
-from crewai_tools import CrewaiEnterpriseTools
-
-# Get enterprise tools (Gmail tools will be included)
-enterprise_tools = CrewaiEnterpriseTools(
-    enterprise_token="your_enterprise_token"
-)
 
 # Create an agent with Gmail capabilities
 gmail_agent = Agent(
     role="Email Manager",
     goal="Manage email communications and contacts efficiently",
     backstory="An AI assistant specialized in email management and communication.",
-    tools=[enterprise_tools]
+    apps=['gmail']
 )
 
 # Task to send a follow-up email
@@ -211,19 +205,12 @@ crew.kickoff()
 ### Filtrando Ferramentas Específicas do Gmail
 
 ```python
-from crewai_tools import CrewaiEnterpriseTools
-
-# Get only specific Gmail tools
-enterprise_tools = CrewaiEnterpriseTools(
-    enterprise_token="your_enterprise_token",
-    actions_list=["gmail_send_email", "gmail_search_for_email", "gmail_create_draft"]
-)
 
 email_coordinator = Agent(
     role="Email Coordinator",
     goal="Coordinate email communications and manage drafts",
     backstory="An AI assistant that focuses on email coordination and draft management.",
-    tools=enterprise_tools
+    apps=['gmail']
 )
 
 # Task to prepare and send emails
@@ -245,17 +232,12 @@ crew.kickoff()
 
 ```python
 from crewai import Agent, Task, Crew
-from crewai_tools import CrewaiEnterpriseTools
-
-enterprise_tools = CrewaiEnterpriseTools(
-    enterprise_token="your_enterprise_token"
-)
 
 contact_manager = Agent(
     role="Contact Manager",
     goal="Manage and organize email contacts efficiently",
     backstory="An experienced contact manager who maintains organized contact databases.",
-    tools=[enterprise_tools]
+    apps=['gmail']
 )
 
 # Task to manage contacts
@@ -281,17 +263,12 @@ crew.kickoff()
 
 ```python
 from crewai import Agent, Task, Crew
-from crewai_tools import CrewaiEnterpriseTools
-
-enterprise_tools = CrewaiEnterpriseTools(
-    enterprise_token="your_enterprise_token"
-)
 
 email_analyst = Agent(
     role="Email Analyst",
     goal="Analyze email patterns and provide insights",
     backstory="An AI assistant that analyzes email data to provide actionable insights.",
-    tools=[enterprise_tools]
+    apps=['gmail']
 )
 
 # Task to analyze email patterns
@@ -317,17 +294,12 @@ crew.kickoff()
 
 ```python
 from crewai import Agent, Task, Crew
-from crewai_tools import CrewaiEnterpriseTools
-
-enterprise_tools = CrewaiEnterpriseTools(
-    enterprise_token="your_enterprise_token"
-)
 
 workflow_manager = Agent(
     role="Email Workflow Manager",
     goal="Automate email workflows and responses",
     backstory="An AI assistant that manages automated email workflows and responses.",
-    tools=[enterprise_tools]
+    apps=['gmail']
 )
 
 # Complex task involving multiple Gmail operations

@@ -26,7 +26,7 @@ Antes de utilizar a integração com o Google Sheets, certifique-se de que você
 2. Localize **Google Sheets** na seção Integrações de Autenticação
 3. Clique em **Conectar** e conclua o fluxo OAuth
 4. Conceda as permissões necessárias para acesso à planilha
-5. Copie seu Token Enterprise em [Configurações da Conta](https://app.crewai.com/crewai_plus/settings/account)
+5. Copie seu Token Enterprise em [Configurações de Integração](https://app.crewai.com/crewai_plus/settings/integrations)
 
 ### 2. Instale o Pacote Necessário
 
@@ -37,7 +37,7 @@ uv add crewai-tools
 ## Ações Disponíveis
 
 <AccordionGroup>
-  <Accordion title="GOOGLE_SHEETS_GET_ROW">
+  <Accordion title="google_sheets/get_values">
     **Descrição:** Obtém linhas de uma planilha Google Sheets.
 
     **Parâmetros:**
@@ -45,7 +45,7 @@ uv add crewai-tools
     - `limit` (string, opcional): Limite de linhas - Limita o número máximo de linhas retornadas.
   </Accordion>
 
-  <Accordion title="GOOGLE_SHEETS_CREATE_ROW">
+  <Accordion title="google_sheets/append_values">
     **Descrição:** Cria uma nova linha em uma planilha Google Sheets.
 
     **Parâmetros:**
@@ -62,7 +62,7 @@ uv add crewai-tools
       ```
   </Accordion>
 
-  <Accordion title="GOOGLE_SHEETS_UPDATE_ROW">
+  <Accordion title="google_sheets/update_values">
     **Descrição:** Atualiza linhas existentes em uma planilha Google Sheets.
 
     **Parâmetros:**
@@ -105,19 +105,15 @@ uv add crewai-tools
 
 ```python
 from crewai import Agent, Task, Crew
-from crewai_tools import CrewaiEnterpriseTools
 
 # Obtenha as ferramentas enterprise (ferramentas Google Sheets incluídas)
-enterprise_tools = CrewaiEnterpriseTools(
-    enterprise_token="your_enterprise_token"
-)
 
 # Crie um agente com capacidades para Google Sheets
 sheets_agent = Agent(
     role="Data Manager",
     goal="Gerenciar dados de planilha e rastrear informações de maneira eficiente",
     backstory="Um assistente de IA especializado em gestão de dados e operações em planilhas.",
-    tools=[enterprise_tools]
+    apps=['google_sheets']
 )
 
 # Tarefa para adicionar novos dados a uma planilha
@@ -139,19 +135,16 @@ crew.kickoff()
 ### Filtrando Ferramentas Específicas do Google Sheets
 
 ```python
-from crewai_tools import CrewaiEnterpriseTools
 
 # Obtenha apenas ferramentas específicas do Google Sheets
-enterprise_tools = CrewaiEnterpriseTools(
-    enterprise_token="your_enterprise_token",
-    actions_list=["google_sheets_get_row", "google_sheets_create_row"]
+    actions_list=["google_sheets/get_values", "google_sheets/update_values"]
 )
 
 data_collector = Agent(
     role="Data Collector",
     goal="Coletar e organizar dados em planilhas",
     backstory="Um assistente de IA dedicado à coleta e organização de dados.",
-    tools=enterprise_tools
+    apps=['google_sheets']
 )
 
 # Tarefa para coletar e organizar dados
@@ -173,17 +166,12 @@ crew.kickoff()
 
 ```python
 from crewai import Agent, Task, Crew
-from crewai_tools import CrewaiEnterpriseTools
-
-enterprise_tools = CrewaiEnterpriseTools(
-    enterprise_token="your_enterprise_token"
-)
 
 data_analyst = Agent(
     role="Data Analyst",
     goal="Analisar dados de planilhas e gerar insights",
     backstory="Um analista de dados experiente que extrai insights dos dados de planilhas.",
-    tools=[enterprise_tools]
+    apps=['google_sheets']
 )
 
 # Tarefa para analisar dados e criar relatórios
@@ -209,17 +197,12 @@ crew.kickoff()
 
 ```python
 from crewai import Agent, Task, Crew
-from crewai_tools import CrewaiEnterpriseTools
-
-enterprise_tools = CrewaiEnterpriseTools(
-    enterprise_token="your_enterprise_token"
-)
 
 data_updater = Agent(
     role="Data Updater",
     goal="Atualizar e manter dados de planilhas automaticamente",
     backstory="Um assistente de IA que mantém a precisão dos dados e atualiza registros automaticamente.",
-    tools=[enterprise_tools]
+    apps=['google_sheets']
 )
 
 # Tarefa para atualizar dados com base em condições
@@ -246,17 +229,12 @@ crew.kickoff()
 
 ```python
 from crewai import Agent, Task, Crew
-from crewai_tools import CrewaiEnterpriseTools
-
-enterprise_tools = CrewaiEnterpriseTools(
-    enterprise_token="your_enterprise_token"
-)
 
 workflow_manager = Agent(
     role="Data Workflow Manager",
     goal="Gerenciar fluxos de dados complexos entre várias planilhas",
     backstory="Um assistente de IA que orquestra operações complexas de dados entre várias planilhas.",
-    tools=[enterprise_tools]
+    apps=['google_sheets']
 )
 
 # Tarefa de workflow complexa

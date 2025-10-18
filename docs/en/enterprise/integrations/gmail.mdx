@@ -25,7 +25,7 @@ Before using the Gmail integration, ensure you have:
 2. Find **Gmail** in the Authentication Integrations section
 3. Click **Connect** and complete the OAuth flow
 4. Grant the necessary permissions for email and contact management
-5. Copy your Enterprise Token from [Account Settings](https://app.crewai.com/crewai_plus/settings/account)
+5. Copy your Enterprise Token from [Integration Settings](https://app.crewai.com/crewai_plus/settings/integrations)
 
 ### 2. Install Required Package
 
@@ -36,138 +36,103 @@ uv add crewai-tools
 ## Available Actions
 
 <AccordionGroup>
-  <Accordion title="GMAIL_SEND_EMAIL">
-    **Description:** Send an email in Gmail.
+  <Accordion title="gmail/fetch_emails">
+    **Description:** Retrieve a list of messages.
 
     **Parameters:**
-    - `toRecipients` (array, required): To - Specify the recipients as either a single string or a JSON array.
-      ```json
-      [
-        "recipient1@domain.com",
-        "recipient2@domain.com"
-      ]
-      ```
-    - `from` (string, required): From - Specify the email of the sender.
-    - `subject` (string, required): Subject - Specify the subject of the message.
-    - `messageContent` (string, required): Message Content - Specify the content of the email message as plain text or HTML.
-    - `attachments` (string, optional): Attachments - Accepts either a single file object or a JSON array of file objects.
-    - `additionalHeaders` (object, optional): Additional Headers - Specify any additional header fields here.
-      ```json
-      {
-        "reply-to": "Sender Name <sender@domain.com>"
-      }
-      ```
+    - `userId` (string, required): The user's email address or 'me' for the authenticated user. (default: "me")
+    - `q` (string, optional): Search query to filter messages (e.g., 'from:someone@example.com is:unread').
+    - `maxResults` (integer, optional): Maximum number of messages to return (1-500). (default: 100)
+    - `pageToken` (string, optional): Page token to retrieve a specific page of results.
+    - `labelIds` (array, optional): Only return messages with labels that match all of the specified label IDs.
+    - `includeSpamTrash` (boolean, optional): Include messages from SPAM and TRASH in the results. (default: false)
   </Accordion>
 
-  <Accordion title="GMAIL_GET_EMAIL_BY_ID">
-    **Description:** Get an email by ID in Gmail.
+  <Accordion title="gmail/send_email">
+    **Description:** Send an email.
 
     **Parameters:**
-    - `userId` (string, required): User ID - Specify the user's email address. (example: "user@domain.com").
-    - `messageId` (string, required): Message ID - Specify the ID of the message to retrieve.
+    - `to` (string, required): Recipient email address.
+    - `subject` (string, required): Email subject line.
+    - `body` (string, required): Email message content.
+    - `userId` (string, optional): The user's email address or 'me' for the authenticated user. (default: "me")
+    - `cc` (string, optional): CC email addresses (comma-separated).
+    - `bcc` (string, optional): BCC email addresses (comma-separated).
+    - `from` (string, optional): Sender email address (if different from authenticated user).
+    - `replyTo` (string, optional): Reply-to email address.
+    - `threadId` (string, optional): Thread ID if replying to an existing conversation.
   </Accordion>
 
-  <Accordion title="GMAIL_SEARCH_FOR_EMAIL">
-    **Description:** Search for emails in Gmail using advanced filters.
+  <Accordion title="gmail/delete_email">
+    **Description:** Delete an email by ID.
 
     **Parameters:**
-    - `emailFilterFormula` (object, optional): A filter in disjunctive normal form - OR of AND groups of single conditions.
-      ```json
-      {
-        "operator": "OR",
-        "conditions": [
-          {
-            "operator": "AND",
-            "conditions": [
-              {
-                "field": "from",
-                "operator": "$stringContains",
-                "value": "example@domain.com"
-              }
-            ]
-          }
-        ]
-      }
-      ```
-      Available fields: `from`, `to`, `date`, `label`, `subject`, `cc`, `bcc`, `category`, `deliveredto:`, `size`, `filename`, `older_than`, `newer_than`, `list`, `is:important`, `is:unread`, `is:snoozed`, `is:starred`, `is:read`, `has:drive`, `has:document`, `has:spreadsheet`, `has:presentation`, `has:attachment`, `has:youtube`, `has:userlabels`
-    - `paginationParameters` (object, optional): Pagination Parameters.
-      ```json
-      {
-        "pageCursor": "page_cursor_string"
-      }
-      ```
+    - `userId` (string, required): The user's email address or 'me' for the authenticated user.
+    - `id` (string, required): The ID of the message to delete.
   </Accordion>
 
-  <Accordion title="GMAIL_DELETE_EMAIL">
-    **Description:** Delete an email in Gmail.
+  <Accordion title="gmail/create_draft">
+    **Description:** Create a new draft email.
 
     **Parameters:**
-    - `userId` (string, required): User ID - Specify the user's email address. (example: "user@domain.com").
-    - `messageId` (string, required): Message ID - Specify the ID of the message to trash.
+    - `userId` (string, required): The user's email address or 'me' for the authenticated user.
+    - `message` (object, required): Message object containing the draft content.
+      - `raw` (string, required): Base64url encoded email message.
   </Accordion>
 
-  <Accordion title="GMAIL_CREATE_A_CONTACT">
-    **Description:** Create a contact in Gmail.
+  <Accordion title="gmail/get_message">
+    **Description:** Retrieve a specific message by ID.
 
     **Parameters:**
-    - `givenName` (string, required): Given Name - Specify the Given Name of the Contact to create. (example: "John").
-    - `familyName` (string, required): Family Name - Specify the Family Name of the Contact to create. (example: "Doe").
-    - `email` (string, required): Email - Specify the Email Address of the Contact to create.
-    - `additionalFields` (object, optional): Additional Fields - Additional contact information.
-      ```json
-      {
-        "addresses": [
-          {
-            "streetAddress": "1000 North St.",
-            "city": "Los Angeles"
-          }
-        ]
-      }
-      ```
+    - `userId` (string, required): The user's email address or 'me' for the authenticated user. (default: "me")
+    - `id` (string, required): The ID of the message to retrieve.
+    - `format` (string, optional): The format to return the message in. Options: "full", "metadata", "minimal", "raw". (default: "full")
+    - `metadataHeaders` (array, optional): When given and format is METADATA, only include headers specified.
   </Accordion>
 
-  <Accordion title="GMAIL_GET_CONTACT_BY_RESOURCE_NAME">
-    **Description:** Get a contact by resource name in Gmail.
+  <Accordion title="gmail/get_attachment">
+    **Description:** Retrieve a message attachment.
 
     **Parameters:**
-    - `resourceName` (string, required): Resource Name - Specify the resource name of the contact to fetch.
+    - `userId` (string, required): The user's email address or 'me' for the authenticated user. (default: "me")
+    - `messageId` (string, required): The ID of the message containing the attachment.
+    - `id` (string, required): The ID of the attachment to retrieve.
   </Accordion>
 
-  <Accordion title="GMAIL_SEARCH_FOR_CONTACT">
-    **Description:** Search for a contact in Gmail.
+  <Accordion title="gmail/fetch_thread">
+    **Description:** Retrieve a specific email thread by ID.
 
     **Parameters:**
-    - `searchTerm` (string, required): Term - Specify a search term to search for near or exact matches on the names, nickNames, emailAddresses, phoneNumbers, or organizations Contact properties.
+    - `userId` (string, required): The user's email address or 'me' for the authenticated user. (default: "me")
+    - `id` (string, required): The ID of the thread to retrieve.
+    - `format` (string, optional): The format to return the messages in. Options: "full", "metadata", "minimal". (default: "full")
+    - `metadataHeaders` (array, optional): When given and format is METADATA, only include headers specified.
   </Accordion>
 
-  <Accordion title="GMAIL_DELETE_CONTACT">
-    **Description:** Delete a contact in Gmail.
+  <Accordion title="gmail/modify_thread">
+    **Description:** Modify the labels applied to a thread.
 
     **Parameters:**
-    - `resourceName` (string, required): Resource Name - Specify the resource name of the contact to delete.
+    - `userId` (string, required): The user's email address or 'me' for the authenticated user. (default: "me")
+    - `id` (string, required): The ID of the thread to modify.
+    - `addLabelIds` (array, optional): A list of IDs of labels to add to this thread.
+    - `removeLabelIds` (array, optional): A list of IDs of labels to remove from this thread.
   </Accordion>
 
-  <Accordion title="GMAIL_CREATE_DRAFT">
-    **Description:** Create a draft in Gmail.
+  <Accordion title="gmail/trash_thread">
+    **Description:** Move a thread to the trash.
 
     **Parameters:**
-    - `toRecipients` (array, optional): To - Specify the recipients as either a single string or a JSON array.
-      ```json
-      [
-        "recipient1@domain.com",
-        "recipient2@domain.com"
-      ]
-      ```
-    - `from` (string, optional): From - Specify the email of the sender.
-    - `subject` (string, optional): Subject - Specify the subject of the message.
-    - `messageContent` (string, optional): Message Content - Specify the content of the email message as plain text or HTML.
-    - `attachments` (string, optional): Attachments - Accepts either a single file object or a JSON array of file objects.
-    - `additionalHeaders` (object, optional): Additional Headers - Specify any additional header fields here.
-      ```json
-      {
-        "reply-to": "Sender Name <sender@domain.com>"
-      }
-      ```
+    - `userId` (string, required): The user's email address or 'me' for the authenticated user. (default: "me")
+    - `id` (string, required): The ID of the thread to trash.
+  </Accordion>
+
+  <Accordion title="gmail/untrash_thread">
+    **Description:** Remove a thread from the trash.
+
+    **Parameters:**
+    - `userId` (string, required): The user's email address or 'me' for the authenticated user. (default: "me")
+    - `id` (string, required): The ID of the thread to untrash.
   </Accordion>
 </AccordionGroup>
 
@@ -177,19 +142,13 @@ uv add crewai-tools
 
 ```python
 from crewai import Agent, Task, Crew
-from crewai_tools import CrewaiEnterpriseTools
-
-# Get enterprise tools (Gmail tools will be included)
-enterprise_tools = CrewaiEnterpriseTools(
-    enterprise_token="your_enterprise_token"
-)
 
 # Create an agent with Gmail capabilities
 gmail_agent = Agent(
     role="Email Manager",
-    goal="Manage email communications and contacts efficiently",
+    goal="Manage email communications and messages efficiently",
     backstory="An AI assistant specialized in email management and communication.",
-    tools=[enterprise_tools]
+    apps=['gmail']  # All Gmail actions will be available
 )
 
 # Task to send a follow-up email
@@ -211,19 +170,18 @@ crew.kickoff()
 ### Filtering Specific Gmail Tools
 
 ```python
-from crewai_tools import CrewaiEnterpriseTools
+from crewai import Agent, Task, Crew
 
-# Get only specific Gmail tools
-enterprise_tools = CrewaiEnterpriseTools(
-    enterprise_token="your_enterprise_token",
-    actions_list=["gmail_send_email", "gmail_search_for_email", "gmail_create_draft"]
-)
-
+# Create agent with specific Gmail actions only
 email_coordinator = Agent(
     role="Email Coordinator",
     goal="Coordinate email communications and manage drafts",
     backstory="An AI assistant that focuses on email coordination and draft management.",
-    tools=enterprise_tools
+    apps=[
+        'gmail/send_email',
+        'gmail/fetch_emails',
+        'gmail/create_draft'
+    ]
 )
 
 # Task to prepare and send emails
@@ -241,57 +199,17 @@ crew = Crew(
 crew.kickoff()
 ```
 
-### Contact Management
-
-```python
-from crewai import Agent, Task, Crew
-from crewai_tools import CrewaiEnterpriseTools
-
-enterprise_tools = CrewaiEnterpriseTools(
-    enterprise_token="your_enterprise_token"
-)
-
-contact_manager = Agent(
-    role="Contact Manager",
-    goal="Manage and organize email contacts efficiently",
-    backstory="An experienced contact manager who maintains organized contact databases.",
-    tools=[enterprise_tools]
-)
-
-# Task to manage contacts
-contact_task = Task(
-    description="""
-    1. Search for contacts from the 'example.com' domain
-    2. Create new contacts for recent email senders not in the contact list
-    3. Update contact information with recent interaction data
-    """,
-    agent=contact_manager,
-    expected_output="Contact database updated with new contacts and recent interactions"
-)
-
-crew = Crew(
-    agents=[contact_manager],
-    tasks=[contact_task]
-)
-
-crew.kickoff()
-```
-
 ### Email Search and Analysis
 
 ```python
 from crewai import Agent, Task, Crew
-from crewai_tools import CrewaiEnterpriseTools
 
-enterprise_tools = CrewaiEnterpriseTools(
-    enterprise_token="your_enterprise_token"
-)
-
+# Create agent with Gmail search and analysis capabilities
 email_analyst = Agent(
     role="Email Analyst",
     goal="Analyze email patterns and provide insights",
     backstory="An AI assistant that analyzes email data to provide actionable insights.",
-    tools=[enterprise_tools]
+    apps=['gmail/fetch_emails', 'gmail/get_message']  # Specific actions for email analysis
 )
 
 # Task to analyze email patterns
@@ -313,38 +231,37 @@ crew = Crew(
 crew.kickoff()
 ```
 
-### Automated Email Workflows
+### Thread Management
 
 ```python
 from crewai import Agent, Task, Crew
-from crewai_tools import CrewaiEnterpriseTools
 
-enterprise_tools = CrewaiEnterpriseTools(
-    enterprise_token="your_enterprise_token"
+# Create agent with Gmail thread management capabilities
+thread_manager = Agent(
+    role="Thread Manager",
+    goal="Organize and manage email threads efficiently",
+    backstory="An AI assistant that specializes in email thread organization and management.",
+    apps=[
+        'gmail/fetch_thread',
+        'gmail/modify_thread',
+        'gmail/trash_thread'
+    ]
 )
 
-workflow_manager = Agent(
-    role="Email Workflow Manager",
-    goal="Automate email workflows and responses",
-    backstory="An AI assistant that manages automated email workflows and responses.",
-    tools=[enterprise_tools]
-)
-
-# Complex task involving multiple Gmail operations
-workflow_task = Task(
+# Task to organize email threads
+thread_task = Task(
     description="""
-    1. Search for emails with 'urgent' in the subject from the last 24 hours
-    2. Create draft responses for each urgent email
-    3. Send automated acknowledgment emails to senders
-    4. Create a summary report of urgent items requiring attention
+    1. Fetch all threads from the last month
+    2. Apply appropriate labels to organize threads by project
+    3. Archive or trash threads that are no longer relevant
     """,
-    agent=workflow_manager,
-    expected_output="Urgent emails processed with automated responses and summary report"
+    agent=thread_manager,
+    expected_output="Email threads organized with appropriate labels and cleanup completed"
 )
 
 crew = Crew(
-    agents=[workflow_manager],
-    tasks=[workflow_task]
+    agents=[thread_manager],
+    tasks=[thread_task]
 )
 
 crew.kickoff()
