@@ -1,6 +1,11 @@
 """Utility for colored console output."""
 
-from typing import Final, Literal, NamedTuple
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Final, Literal, NamedTuple
+
+if TYPE_CHECKING:
+    from _typeshed import SupportsWrite
 
 PrinterColor = Literal[
     "purple",
@@ -54,13 +59,22 @@ class Printer:
 
     @staticmethod
     def print(
-        content: str | list[ColoredText], color: PrinterColor | None = None
+        content: str | list[ColoredText],
+        color: PrinterColor | None = None,
+        sep: str | None = " ",
+        end: str | None = "\n",
+        file: SupportsWrite[str] | None = None,
+        flush: Literal[False] = False,
     ) -> None:
         """Prints content to the console with optional color formatting.
 
         Args:
             content: Either a string or a list of ColoredText objects for multicolor output.
             color: Optional color for the text when content is a string. Ignored when content is a list.
+            sep: Separator to use between the text and color.
+            end: String appended after the last value.
+            file: A file-like object (stream); defaults to the current sys.stdout.
+            flush: Whether to forcibly flush the stream.
         """
         if isinstance(content, str):
             content = [ColoredText(content, color)]
@@ -68,5 +82,9 @@ class Printer:
             "".join(
                 f"{_COLOR_CODES[c.color] if c.color else ''}{c.text}{RESET}"
                 for c in content
-            )
+            ),
+            sep=sep,
+            end=end,
+            file=file,
+            flush=flush,
         )
