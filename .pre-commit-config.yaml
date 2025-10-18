@@ -4,18 +4,22 @@ repos:
       - id: ruff
         name: ruff
         entry: uv run ruff check
+        args: ["--config", "pyproject.toml", "."]
         language: system
+        pass_filenames: false
         types: [python]
-        exclude: ^lib/crewai/
       - id: ruff-format
         name: ruff-format
         entry: uv run ruff format
+        args: ["--config", "pyproject.toml", "."]
         language: system
+        pass_filenames: false
         types: [python]
-        exclude: ^lib/crewai/
       - id: mypy
         name: mypy
         entry: uv run mypy
+        args: ["--config-file", "pyproject.toml", "."]
         language: system
+        pass_filenames: false
         types: [python]
-        exclude: ^lib/crewai/
+
