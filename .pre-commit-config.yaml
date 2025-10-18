@@ -22,4 +22,8 @@ repos:
         language: system
         pass_filenames: false
         types: [python]
+  - repo: https://github.com/astral-sh/uv-pre-commit
+    rev: 0.9.3
+    hooks:
+      - id: uv-lock
 
