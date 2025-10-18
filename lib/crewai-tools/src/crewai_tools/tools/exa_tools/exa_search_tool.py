@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from builtins import type as type_
 import os
 from typing import Any
 
@@ -33,7 +34,7 @@ class EXASearchTool(BaseTool):
     model_config = ConfigDict(arbitrary_types_allowed=True)
     name: str = "EXASearchTool"
     description: str = "Search the internet using Exa"
-    args_schema: type[BaseModel] = EXABaseToolSchema
+    args_schema: type_[BaseModel] = EXABaseToolSchema
     client: Exa | None = None
     content: bool | None = False
     summary: bool | None = False
