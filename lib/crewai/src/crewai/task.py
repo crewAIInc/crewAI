@@ -1,15 +1,13 @@
+from collections.abc import Callable, Sequence
+from concurrent.futures import Future
+from copy import copy as shallow_copy
 import datetime
+from hashlib import md5
 import inspect
 import json
 import logging
-import threading
-import uuid
-import warnings
-from collections.abc import Callable
-from concurrent.futures import Future
-from copy import copy as shallow_copy
-from hashlib import md5
 from pathlib import Path
+import threading
 from typing import (
     Any,
     ClassVar,
@@ -17,6 +15,8 @@ from typing import (
     get_args,
     get_origin,
 )
+import uuid
+import warnings
 
 from pydantic import (
     UUID4,
@@ -46,6 +46,7 @@ from crewai.utilities.guardrail import process_guardrail
 from crewai.utilities.i18n import I18N
 from crewai.utilities.printer import Printer
 from crewai.utilities.string_utils import interpolate_only
+
 
 _printer = Printer()
 
@@ -154,6 +155,16 @@ class Task(BaseModel):
         default=None,
         description="Function or string description of a guardrail to validate task output before proceeding to next task",
     )
+    guardrails: (
+        Sequence[Callable[[TaskOutput], tuple[bool, Any]] | str]
+        | Callable[[TaskOutput], tuple[bool, Any]]
+        | str
+        | None
+    ) = Field(
+        default=None,
+        description="List of guardrails to validate task output before proceeding to next task. Also supports a single guardrail function or string description of a guardrail to validate task output before proceeding to next task",
+    )
+
     max_retries: int | None = Field(
         default=None,
         description="[DEPRECATED] Maximum number of retries when guardrail fails. Use guardrail_max_retries instead. Will be removed in v1.0.0",
@@ -234,6 +245,9 @@ class Task(BaseModel):
         return v
 
     _guardrail: Callable | None = PrivateAttr(default=None)
+    _guardrails: list[Callable[[TaskOutput], tuple[bool, Any]] | str] = PrivateAttr(
+        default=[]
+    )
     _original_description: str | None = PrivateAttr(default=None)
     _original_expected_output: str | None = PrivateAttr(default=None)
     _original_output_file: str | None = PrivateAttr(default=None)
@@ -267,6 +281,46 @@ class Task(BaseModel):
             self._guardrail = LLMGuardrail(
                 description=self.guardrail, llm=self.agent.llm
             )
+
+        return self
+
+    @model_validator(mode="after")
+    def ensure_guardrails_is_list_of_callables(self) -> "Task":
+        guardrails = []
+        if self.guardrails is not None and (
+            not isinstance(self.guardrails, (list, tuple)) or len(self.guardrails) > 0
+        ):
+            if callable(self.guardrails):
+                guardrails.append(self.guardrails)
+            elif isinstance(self.guardrails, str):
+                from crewai.tasks.llm_guardrail import LLMGuardrail
+
+                if self.agent is None:
+                    raise ValueError(
+                        "Agent is required to use non-programmatic guardrails"
+                    )
+
+                guardrails.append(
+                    LLMGuardrail(description=self.guardrails, llm=self.agent.llm)
+                )
+
+            if isinstance(self.guardrails, list):
+                for guardrail in self.guardrails:
+                    if callable(guardrail):
+                        guardrails.append(guardrail)
+                    elif isinstance(guardrail, str):
+                        from crewai.tasks.llm_guardrail import LLMGuardrail
+
+                        guardrails.append(
+                            LLMGuardrail(description=guardrail, llm=self.agent.llm)
+                        )
+                    else:
+                        raise ValueError("Guardrail must be a callable or a string")
+
+        self._guardrails = guardrails
+        if self._guardrails:
+            self.guardrail = None
+            self._guardrail = None
 
         return self
 
@@ -458,48 +512,23 @@ class Task(BaseModel):
                 output_format=self._get_output_format(),
             )
 
+            if self._guardrails:
+                for guardrail in self._guardrails:
+                    task_output = self._invoke_guardrail_function(
+                        task_output=task_output,
+                        agent=agent,
+                        tools=tools,
+                        guardrail=guardrail,
+                    )
+
+            # backwards support
             if self._guardrail:
-                guardrail_result = process_guardrail(
-                    output=task_output,
+                task_output = self._invoke_guardrail_function(
+                    task_output=task_output,
+                    agent=agent,
+                    tools=tools,
                     guardrail=self._guardrail,
-                    retry_count=self.retry_count,
-                    event_source=self,
-                    from_task=self,
-                    from_agent=agent,
                 )
-                if not guardrail_result.success:
-                    if self.retry_count >= self.guardrail_max_retries:
-                        raise Exception(
-                            f"Task failed guardrail validation after {self.guardrail_max_retries} retries. "
-                            f"Last error: {guardrail_result.error}"
-                        )
-
-                    self.retry_count += 1
-                    context = self.i18n.errors("validation_error").format(
-                        guardrail_result_error=guardrail_result.error,
-                        task_output=task_output.raw,
-                    )
-                    printer = Printer()
-                    printer.print(
-                        content=f"Guardrail blocked, retrying, due to: {guardrail_result.error}\n",
-                        color="yellow",
-                    )
-                    return self._execute_core(agent, context, tools)
-
-                if guardrail_result.result is None:
-                    raise Exception(
-                        "Task guardrail returned None as result. This is not allowed."
-                    )
-
-                if isinstance(guardrail_result.result, str):
-                    task_output.raw = guardrail_result.result
-                    pydantic_output, json_output = self._export_output(
-                        guardrail_result.result
-                    )
-                    task_output.pydantic = pydantic_output
-                    task_output.json_dict = json_output
-                elif isinstance(guardrail_result.result, TaskOutput):
-                    task_output = guardrail_result.result
 
             self.output = task_output
             self.end_time = datetime.datetime.now()
@@ -628,7 +657,10 @@ Follow these guidelines:
             try:
                 crew_chat_messages = json.loads(crew_chat_messages_json)
             except json.JSONDecodeError as e:
-                _printer.print(f"An error occurred while parsing crew chat messages: {e}", color="red")
+                _printer.print(
+                    f"An error occurred while parsing crew chat messages: {e}",
+                    color="red",
+                )
                 raise
 
             conversation_history = "\n".join(
@@ -791,3 +823,55 @@ Follow these guidelines:
             Fingerprint: The fingerprint of the task
         """
         return self.security_config.fingerprint
+
+    def _invoke_guardrail_function(
+        self,
+        task_output: TaskOutput,
+        agent: BaseAgent,
+        tools: list[BaseTool],
+        guardrail: Callable | None,
+    ) -> TaskOutput:
+        if guardrail:
+            guardrail_result = process_guardrail(
+                output=task_output,
+                guardrail=guardrail,
+                retry_count=self.retry_count,
+                event_source=self,
+                from_task=self,
+                from_agent=agent,
+            )
+            if not guardrail_result.success:
+                if self.retry_count >= self.guardrail_max_retries:
+                    raise Exception(
+                        f"Task failed guardrail validation after {self.guardrail_max_retries} retries. "
+                        f"Last error: {guardrail_result.error}"
+                    )
+
+                self.retry_count += 1
+                context = self.i18n.errors("validation_error").format(
+                    guardrail_result_error=guardrail_result.error,
+                    task_output=task_output.raw,
+                )
+                printer = Printer()
+                printer.print(
+                    content=f"Guardrail blocked, retrying, due to: {guardrail_result.error}\n",
+                    color="yellow",
+                )
+                return self._execute_core(agent, context, tools)
+
+            if guardrail_result.result is None:
+                raise Exception(
+                    "Task guardrail returned None as result. This is not allowed."
+                )
+
+            if isinstance(guardrail_result.result, str):
+                task_output.raw = guardrail_result.result
+                pydantic_output, json_output = self._export_output(
+                    guardrail_result.result
+                )
+                task_output.pydantic = pydantic_output
+                task_output.json_dict = json_output
+            elif isinstance(guardrail_result.result, TaskOutput):
+                task_output = guardrail_result.result
+
+        return task_output
