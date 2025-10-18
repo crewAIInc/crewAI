@@ -1,4 +1,6 @@
-from typing import TYPE_CHECKING, Any, Optional
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
 
 from crewai.tools import BaseTool, EnvVar
 from pydantic import BaseModel, ConfigDict, Field, PrivateAttr
@@ -53,7 +55,7 @@ class FirecrawlSearchTool(BaseTool):
             "timeout": 60000,
         }
     )
-    _firecrawl: Optional["FirecrawlApp"] = PrivateAttr(None)
+    _firecrawl: FirecrawlApp | None = PrivateAttr(None)
     package_dependencies: list[str] = Field(default_factory=lambda: ["firecrawl-py"])
     env_vars: list[EnvVar] = Field(
         default_factory=lambda: [

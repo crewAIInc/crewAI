@@ -208,13 +208,13 @@ class BaseClient(Protocol):
             >>> records: list[BaseRecord] = [
             ...     {
             ...         "content": "Machine learning basics",
-            ...         "metadata": {"source": "file3", "topic": "ML"}
+            ...         "metadata": {"source": "file3", "topic": "ML"},
             ...     },
             ...     {
             ...         "doc_id": "custom_id",
             ...         "content": "Deep learning fundamentals",
-            ...         "metadata": {"source": "file4", "topic": "DL"}
-            ...     }
+            ...         "metadata": {"source": "file4", "topic": "DL"},
+            ...     },
             ... ]
             >>> client.add_documents(collection_name="my_docs", documents=records)
             >>>
@@ -222,10 +222,12 @@ class BaseClient(Protocol):
             ...     {
             ...         "doc_id": "nlp_001",
             ...         "content": "Advanced NLP techniques",
-            ...         "metadata": {"source": "file5", "topic": "NLP"}
+            ...         "metadata": {"source": "file5", "topic": "NLP"},
             ...     }
             ... ]
-            >>> client.add_documents(collection_name="my_docs", documents=records_with_id)
+            >>> client.add_documents(
+            ...     collection_name="my_docs", documents=records_with_id
+            ... )
         """
         ...
 
@@ -261,11 +263,12 @@ class BaseClient(Protocol):
             ...         {
             ...             "doc_id": "doc2",
             ...             "content": "Async operations in Python",
-            ...             "metadata": {"source": "file2", "topic": "async"}
+            ...             "metadata": {"source": "file2", "topic": "async"},
             ...         }
             ...     ]
-            ...     await client.aadd_documents(collection_name="my_docs", documents=records)
-            ...
+            ...     await client.aadd_documents(
+            ...         collection_name="my_docs", documents=records
+            ...     )
             >>> asyncio.run(add_documents())
         """
         ...
@@ -312,7 +315,7 @@ class BaseClient(Protocol):
             ...     query="What is machine learning?",
             ...     limit=5,
             ...     metadata_filter={"source": "file1"},
-            ...     score_threshold=0.7
+            ...     score_threshold=0.7,
             ... )
             >>> for result in results:
             ...     print(f"{result['id']}: {result['score']:.2f}")
@@ -351,11 +354,10 @@ class BaseClient(Protocol):
             ...         query="Python programming best practices",
             ...         limit=5,
             ...         metadata_filter={"source": "file1"},
-            ...         score_threshold=0.7
+            ...         score_threshold=0.7,
             ...     )
             ...     for result in results:
             ...         print(f"{result['id']}: {result['score']:.2f}")
-            ...
             >>> asyncio.run(search_documents())
         """
         ...
@@ -401,7 +403,6 @@ class BaseClient(Protocol):
             ...     client = ChromaDBClient()
             ...     await client.adelete_collection(collection_name="old_docs")
             ...     print("Collection 'old_docs' deleted successfully")
-            ...
             >>> asyncio.run(delete_old_collection())
         """
         ...
@@ -442,7 +443,6 @@ class BaseClient(Protocol):
             ...     client = ChromaDBClient()
             ...     await client.areset()
             ...     print("Vector database completely reset - all data deleted")
-            ...
             >>> asyncio.run(reset_database())
         """
         ...

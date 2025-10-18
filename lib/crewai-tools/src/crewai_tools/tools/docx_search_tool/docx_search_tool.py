@@ -3,8 +3,7 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 from crewai_tools.rag.data_types import DataType
-
-from ..rag.rag_tool import RagTool
+from crewai_tools.tools.rag.rag_tool import RagTool
 
 
 class FixedDOCXSearchToolSchema(BaseModel):

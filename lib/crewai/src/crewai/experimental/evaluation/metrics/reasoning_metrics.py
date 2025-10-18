@@ -6,10 +6,10 @@ This module provides evaluator implementations for:
 - Thinking-to-action ratio
 """
 
-import logging
-import re
 from collections.abc import Sequence
 from enum import Enum
+import logging
+import re
 from typing import Any
 
 import numpy as np

@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Any
 from pydantic import BaseModel, Field, field_validator
 from typing_extensions import Self
 
+
 if TYPE_CHECKING:
     from crewai.agents.agent_builder.base_agent import BaseAgent
     from crewai.lite_agent import LiteAgent, LiteAgentOutput

@@ -15,10 +15,8 @@ from crewai.agents.agent_adapters.openai_agents.openai_agent_tool_adapter import
 )
 from crewai.agents.agent_adapters.openai_agents.protocols import (
     AgentKwargs,
-    OpenAIAgentsModule,
-)
-from crewai.agents.agent_adapters.openai_agents.protocols import (
     OpenAIAgent as OpenAIAgentProtocol,
+    OpenAIAgentsModule,
 )
 from crewai.agents.agent_adapters.openai_agents.structured_output_converter import (
     OpenAIConverterAdapter,
@@ -34,6 +32,7 @@ from crewai.tools import BaseTool
 from crewai.tools.agent_tools.agent_tools import AgentTools
 from crewai.utilities import Logger
 from crewai.utilities.import_utils import require
+
 
 openai_agents_module = cast(
     OpenAIAgentsModule,

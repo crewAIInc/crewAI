@@ -6,6 +6,7 @@ from crewai.rag.embeddings.providers.cohere.types import (
     CohereProviderSpec,
 )
 
+
 __all__ = [
     "CohereProvider",
     "CohereProviderConfig",

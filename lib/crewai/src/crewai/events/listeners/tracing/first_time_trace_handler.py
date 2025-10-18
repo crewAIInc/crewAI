@@ -1,7 +1,7 @@
 import logging
+from pathlib import Path
 import uuid
 import webbrowser
-from pathlib import Path
 
 from rich.console import Console
 from rich.panel import Panel
@@ -12,6 +12,7 @@ from crewai.events.listeners.tracing.utils import (
     prompt_user_for_trace_viewing,
     should_auto_collect_first_time_traces,
 )
+
 
 logger = logging.getLogger(__name__)
 

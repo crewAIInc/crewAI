@@ -1,4 +1,4 @@
-from .snowflake_search_tool import (
+from crewai_tools.tools.snowflake_search_tool.snowflake_search_tool import (
     SnowflakeConfig,
     SnowflakeSearchTool,
     SnowflakeSearchToolInput,

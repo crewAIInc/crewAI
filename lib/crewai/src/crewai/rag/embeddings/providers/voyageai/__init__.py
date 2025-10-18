@@ -8,6 +8,7 @@ from crewai.rag.embeddings.providers.voyageai.voyageai_provider import (
     VoyageAIProvider,
 )
 
+
 __all__ = [
     "VoyageAIProvider",
     "VoyageAIProviderConfig",

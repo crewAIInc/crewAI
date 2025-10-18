@@ -92,7 +92,9 @@ class CrewAIEventsBus:
         self._rwlock = RWLock()
         self._sync_handlers: dict[type[BaseEvent], SyncHandlerSet] = {}
         self._async_handlers: dict[type[BaseEvent], AsyncHandlerSet] = {}
-        self._handler_dependencies: dict[type[BaseEvent], dict[Handler, list[Depends]]] = {}
+        self._handler_dependencies: dict[
+            type[BaseEvent], dict[Handler, list[Depends]]
+        ] = {}
         self._execution_plan_cache: dict[type[BaseEvent], ExecutionPlan] = {}
         self._sync_executor = ThreadPoolExecutor(
             max_workers=10,

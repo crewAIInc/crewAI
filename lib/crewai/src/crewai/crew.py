@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 from collections.abc import Callable
 from concurrent.futures import Future
@@ -298,7 +300,7 @@ class Crew(FlowTrackable, BaseModel):
         return json.loads(v) if isinstance(v, Json) else v  # type: ignore
 
     @model_validator(mode="after")
-    def set_private_attrs(self) -> "Crew":
+    def set_private_attrs(self) -> Crew:
         """set private attributes."""
 
         self._cache_handler = CacheHandler()
@@ -333,7 +335,7 @@ class Crew(FlowTrackable, BaseModel):
         )
 
     @model_validator(mode="after")
-    def create_crew_memory(self) -> "Crew":
+    def create_crew_memory(self) -> Crew:
         """Initialize private memory attributes."""
         self._external_memory = (
             # External memory does not support a default value since it was
@@ -351,7 +353,7 @@ class Crew(FlowTrackable, BaseModel):
         return self
 
     @model_validator(mode="after")
-    def create_crew_knowledge(self) -> "Crew":
+    def create_crew_knowledge(self) -> Crew:
         """Create the knowledge for the crew."""
         if self.knowledge_sources:
             try:
@@ -455,7 +457,7 @@ class Crew(FlowTrackable, BaseModel):
         return self
 
     @model_validator(mode="after")
-    def validate_must_have_non_conditional_task(self) -> "Crew":
+    def validate_must_have_non_conditional_task(self) -> Crew:
         """Ensure that a crew has at least one non-conditional task."""
         if not self.tasks:
             return self
@@ -471,7 +473,7 @@ class Crew(FlowTrackable, BaseModel):
         return self
 
     @model_validator(mode="after")
-    def validate_first_task(self) -> "Crew":
+    def validate_first_task(self) -> Crew:
         """Ensure the first task is not a ConditionalTask."""
         if self.tasks and isinstance(self.tasks[0], ConditionalTask):
             raise PydanticCustomError(
@@ -482,7 +484,7 @@ class Crew(FlowTrackable, BaseModel):
         return self
 
     @model_validator(mode="after")
-    def validate_async_tasks_not_async(self) -> "Crew":
+    def validate_async_tasks_not_async(self) -> Crew:
         """Ensure that ConditionalTask is not async."""
         for task in self.tasks:
             if task.async_execution and isinstance(task, ConditionalTask):

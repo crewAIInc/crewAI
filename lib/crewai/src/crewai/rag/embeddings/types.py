@@ -29,6 +29,7 @@ from crewai.rag.embeddings.providers.sentence_transformer.types import (
 from crewai.rag.embeddings.providers.text2vec.types import Text2VecProviderSpec
 from crewai.rag.embeddings.providers.voyageai.types import VoyageAIProviderSpec
 
+
 ProviderSpec = (
     AzureProviderSpec
     | BedrockProviderSpec

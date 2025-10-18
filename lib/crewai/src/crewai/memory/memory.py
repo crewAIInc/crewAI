@@ -1,8 +1,11 @@
+from __future__ import annotations
+
 from typing import TYPE_CHECKING, Any, Optional
 
 from pydantic import BaseModel
 
 from crewai.rag.embeddings.types import EmbedderConfig
+
 
 if TYPE_CHECKING:
     from crewai.agent import Agent
@@ -25,22 +28,22 @@ class Memory(BaseModel):
         super().__init__(storage=storage, **data)
 
     @property
-    def task(self) -> Optional["Task"]:
+    def task(self) -> Task | None:
         """Get the current task associated with this memory."""
         return self._task
 
     @task.setter
-    def task(self, task: Optional["Task"]) -> None:
+    def task(self, task: Task | None) -> None:
         """Set the current task associated with this memory."""
         self._task = task
 
     @property
-    def agent(self) -> Optional["Agent"]:
+    def agent(self) -> Agent | None:
         """Get the current agent associated with this memory."""
         return self._agent
 
     @agent.setter
-    def agent(self, agent: Optional["Agent"]) -> None:
+    def agent(self, agent: Agent | None) -> None:
         """Set the current agent associated with this memory."""
         self._agent = agent
 
@@ -63,6 +66,6 @@ class Memory(BaseModel):
             query=query, limit=limit, score_threshold=score_threshold
         )
 
-    def set_crew(self, crew: Any) -> "Memory":
+    def set_crew(self, crew: Any) -> Memory:
         self.crew = crew
         return self

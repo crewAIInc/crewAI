@@ -1,5 +1,7 @@
+from __future__ import annotations
+
 import os
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any
 
 from crewai.tools import BaseTool
 from pydantic import BaseModel, Field, model_validator
@@ -32,7 +34,7 @@ class DatabricksQueryToolSchema(BaseModel):
     )
 
     @model_validator(mode="after")
-    def validate_input(self) -> "DatabricksQueryToolSchema":
+    def validate_input(self) -> DatabricksQueryToolSchema:
         """Validate the input parameters."""
         # Ensure the query is not empty
         if not self.query or not self.query.strip():
@@ -72,7 +74,7 @@ class DatabricksQueryTool(BaseTool):
     default_schema: str | None = None
     default_warehouse_id: str | None = None
 
-    _workspace_client: Optional["WorkspaceClient"] = None
+    _workspace_client: WorkspaceClient | None = None
     package_dependencies: list[str] = Field(default_factory=lambda: ["databricks-sdk"])
 
     def __init__(
@@ -110,7 +112,7 @@ class DatabricksQueryTool(BaseTool):
             )
 
     @property
-    def workspace_client(self) -> "WorkspaceClient":
+    def workspace_client(self) -> WorkspaceClient:
         """Get or create a Databricks WorkspaceClient instance."""
         if self._workspace_client is None:
             try:

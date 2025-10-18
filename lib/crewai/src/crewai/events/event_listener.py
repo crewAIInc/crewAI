@@ -6,6 +6,7 @@ from typing import Any
 from pydantic import Field, PrivateAttr
 
 from crewai.events.base_event_listener import BaseEventListener
+from crewai.events.listeners.memory_listener import MemoryListener
 from crewai.events.types.agent_events import (
     AgentExecutionCompletedEvent,
     AgentExecutionStartedEvent,
@@ -24,6 +25,14 @@ from crewai.events.types.crew_events import (
     CrewTrainCompletedEvent,
     CrewTrainFailedEvent,
     CrewTrainStartedEvent,
+)
+from crewai.events.types.flow_events import (
+    FlowCreatedEvent,
+    FlowFinishedEvent,
+    FlowStartedEvent,
+    MethodExecutionFailedEvent,
+    MethodExecutionFinishedEvent,
+    MethodExecutionStartedEvent,
 )
 from crewai.events.types.knowledge_events import (
     KnowledgeQueryCompletedEvent,
@@ -47,33 +56,27 @@ from crewai.events.types.logging_events import (
     AgentLogsExecutionEvent,
     AgentLogsStartedEvent,
 )
+from crewai.events.types.reasoning_events import (
+    AgentReasoningCompletedEvent,
+    AgentReasoningFailedEvent,
+    AgentReasoningStartedEvent,
+)
+from crewai.events.types.task_events import (
+    TaskCompletedEvent,
+    TaskFailedEvent,
+    TaskStartedEvent,
+)
+from crewai.events.types.tool_usage_events import (
+    ToolUsageErrorEvent,
+    ToolUsageFinishedEvent,
+    ToolUsageStartedEvent,
+)
 from crewai.events.utils.console_formatter import ConsoleFormatter
 from crewai.llm import LLM
 from crewai.task import Task
 from crewai.telemetry.telemetry import Telemetry
 from crewai.utilities import Logger
 from crewai.utilities.constants import EMITTER_COLOR
-
-from .listeners.memory_listener import MemoryListener
-from .types.flow_events import (
-    FlowCreatedEvent,
-    FlowFinishedEvent,
-    FlowStartedEvent,
-    MethodExecutionFailedEvent,
-    MethodExecutionFinishedEvent,
-    MethodExecutionStartedEvent,
-)
-from .types.reasoning_events import (
-    AgentReasoningCompletedEvent,
-    AgentReasoningFailedEvent,
-    AgentReasoningStartedEvent,
-)
-from .types.task_events import TaskCompletedEvent, TaskFailedEvent, TaskStartedEvent
-from .types.tool_usage_events import (
-    ToolUsageErrorEvent,
-    ToolUsageFinishedEvent,
-    ToolUsageStartedEvent,
-)
 
 
 class EventListener(BaseEventListener):

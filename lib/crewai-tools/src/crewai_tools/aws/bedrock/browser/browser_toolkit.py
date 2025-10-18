@@ -9,8 +9,10 @@ from urllib.parse import urlparse
 from crewai.tools import BaseTool
 from pydantic import BaseModel, Field
 
-from .browser_session_manager import BrowserSessionManager
-from .utils import aget_current_page, get_current_page
+from crewai_tools.aws.bedrock.browser.browser_session_manager import (
+    BrowserSessionManager,
+)
+from crewai_tools.aws.bedrock.browser.utils import aget_current_page, get_current_page
 
 
 logger = logging.getLogger(__name__)

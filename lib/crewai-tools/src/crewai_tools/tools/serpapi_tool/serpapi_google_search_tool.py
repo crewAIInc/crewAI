@@ -2,7 +2,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from .serpapi_base_tool import SerpApiBaseTool
+from crewai_tools.tools.serpapi_tool.serpapi_base_tool import SerpApiBaseTool
 
 
 try:

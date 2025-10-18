@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
 import logging
@@ -99,7 +101,7 @@ class SnowflakeSearchTool(BaseTool):
         arbitrary_types_allowed=True, validate_assignment=True, frozen=False
     )
 
-    _connection_pool: list["SnowflakeConnection"] | None = None
+    _connection_pool: list[SnowflakeConnection] | None = None
     _pool_lock: asyncio.Lock | None = None
     _thread_pool: ThreadPoolExecutor | None = None
     _model_rebuilt: bool = False
@@ -155,7 +157,7 @@ class SnowflakeSearchTool(BaseTool):
                     "`uv add cryptography snowflake-connector-python snowflake-sqlalchemy`"
                 ) from None
 
-    async def _get_connection(self) -> "SnowflakeConnection":
+    async def _get_connection(self) -> SnowflakeConnection:
         """Get a connection from the pool or create a new one."""
         if self._pool_lock is None:
             raise RuntimeError("Pool lock not initialized")
@@ -169,7 +171,7 @@ class SnowflakeSearchTool(BaseTool):
                 self._connection_pool.append(conn)
             return self._connection_pool.pop()
 
-    def _create_connection(self) -> "SnowflakeConnection":
+    def _create_connection(self) -> SnowflakeConnection:
         """Create a new Snowflake connection."""
         conn_params: dict[str, Any] = {
             "account": self.config.account,
