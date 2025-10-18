@@ -97,7 +97,7 @@ class AgentEvaluator:
             )
 
             if not trace:
-                return
+                trace = {}
 
             result = self.evaluate(
                 agent=agent,
@@ -151,7 +151,7 @@ class AgentEvaluator:
             )
 
             if not trace:
-                return
+                trace = {}
 
             result = self.evaluate(
                 agent=target_agent,
