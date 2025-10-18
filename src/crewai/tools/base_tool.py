@@ -14,6 +14,7 @@ from pydantic import (
 from pydantic import BaseModel as PydanticBaseModel
 
 from crewai.tools.structured_tool import CrewStructuredTool
+from crewai.utilities.asyncio_utils import run_coroutine_sync
 
 
 class EnvVar(BaseModel):
@@ -90,7 +91,7 @@ class BaseTool(BaseModel, ABC):
 
         # If _run is async, we safely run it
         if asyncio.iscoroutine(result):
-            result = asyncio.run(result)
+            result = run_coroutine_sync(result)
 
         self.current_usage_count += 1
 
