@@ -1,7 +1,7 @@
 import json
-import tempfile
 from logging import getLogger
 from pathlib import Path
+import tempfile
 
 from pydantic import BaseModel, Field
 
@@ -13,6 +13,7 @@ from crewai.cli.constants import (
     DEFAULT_CREWAI_ENTERPRISE_URL,
 )
 from crewai.cli.shared.token_manager import TokenManager
+
 
 logger = getLogger(__name__)
 

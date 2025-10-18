@@ -1,11 +1,13 @@
+from requests import HTTPError
 from rich.console import Console
 from rich.table import Table
 
-from requests import HTTPError
 from crewai.cli.command import BaseCommand, PlusAPIMixin
 from crewai.cli.config import Settings
 
+
 console = Console()
+
 
 class OrganizationCommand(BaseCommand, PlusAPIMixin):
     def __init__(self):
@@ -19,7 +21,9 @@ class OrganizationCommand(BaseCommand, PlusAPIMixin):
             orgs = response.json()
 
             if not orgs:
-                console.print("You don't belong to any organizations yet.", style="yellow")
+                console.print(
+                    "You don't belong to any organizations yet.", style="yellow"
+                )
                 return
 
             table = Table(title="Your Organizations")
@@ -31,13 +35,20 @@ class OrganizationCommand(BaseCommand, PlusAPIMixin):
             console.print(table)
         except HTTPError as e:
             if e.response.status_code == 401:
-                console.print("You are not logged in to any organization. Use 'crewai login' to login.", style="bold red")
+                console.print(
+                    "You are not logged in to any organization. Use 'crewai login' to login.",
+                    style="bold red",
+                )
                 return
-            console.print(f"Failed to retrieve organization list: {str(e)}", style="bold red")
-            raise SystemExit(1)
+            console.print(
+                f"Failed to retrieve organization list: {e!s}", style="bold red"
+            )
+            raise SystemExit(1) from e
         except Exception as e:
-            console.print(f"Failed to retrieve organization list: {str(e)}", style="bold red")
-            raise SystemExit(1)
+            console.print(
+                f"Failed to retrieve organization list: {e!s}", style="bold red"
+            )
+            raise SystemExit(1) from e
 
     def switch(self, org_id):
         try:
@@ -47,7 +58,9 @@ class OrganizationCommand(BaseCommand, PlusAPIMixin):
 
             org = next((o for o in orgs if o["uuid"] == org_id), None)
             if not org:
-                console.print(f"Organization with id '{org_id}' not found.", style="bold red")
+                console.print(
+                    f"Organization with id '{org_id}' not found.", style="bold red"
+                )
                 return
 
             settings = Settings()
@@ -55,22 +68,40 @@ class OrganizationCommand(BaseCommand, PlusAPIMixin):
             settings.org_uuid = org["uuid"]
             settings.dump()
 
-            console.print(f"Successfully switched to {org['name']} ({org['uuid']})", style="bold green")
+            console.print(
+                f"Successfully switched to {org['name']} ({org['uuid']})",
+                style="bold green",
+            )
         except HTTPError as e:
             if e.response.status_code == 401:
-                console.print("You are not logged in to any organization. Use 'crewai login' to login.", style="bold red")
+                console.print(
+                    "You are not logged in to any organization. Use 'crewai login' to login.",
+                    style="bold red",
+                )
                 return
-            console.print(f"Failed to retrieve organization list: {str(e)}", style="bold red")
-            raise SystemExit(1)
+            console.print(
+                f"Failed to retrieve organization list: {e!s}", style="bold red"
+            )
+            raise SystemExit(1) from e
         except Exception as e:
-            console.print(f"Failed to switch organization: {str(e)}", style="bold red")
-            raise SystemExit(1)
+            console.print(f"Failed to switch organization: {e!s}", style="bold red")
+            raise SystemExit(1) from e
 
     def current(self):
         settings = Settings()
         if settings.org_uuid:
-            console.print(f"Currently logged in to organization {settings.org_name} ({settings.org_uuid})", style="bold green")
+            console.print(
+                f"Currently logged in to organization {settings.org_name} ({settings.org_uuid})",
+                style="bold green",
+            )
         else:
-            console.print("You're not currently logged in to any organization.", style="yellow")
-            console.print("Use 'crewai org list' to see available organizations.", style="yellow")
-            console.print("Use 'crewai org switch <id>' to switch to an organization.", style="yellow")
+            console.print(
+                "You're not currently logged in to any organization.", style="yellow"
+            )
+            console.print(
+                "Use 'crewai org list' to see available organizations.", style="yellow"
+            )
+            console.print(
+                "Use 'crewai org switch <id>' to switch to an organization.",
+                style="yellow",
+            )

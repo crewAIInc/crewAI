@@ -1,6 +1,7 @@
 import re
 from typing import Any, Final
 
+
 _VARIABLE_PATTERN: Final[re.Pattern[str]] = re.compile(r"\{([A-Za-z_][A-Za-z0-9_\-]*)}")
 
 

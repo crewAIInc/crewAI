@@ -46,12 +46,16 @@ class TriggersCommand(BaseCommand, PlusAPIMixin):
 
             app_slug, trigger_slug = trigger_path.split("/", 1)
 
-            console.print(f"[bold blue]Fetching trigger payload for {app_slug}/{trigger_slug}...[/bold blue]")
+            console.print(
+                f"[bold blue]Fetching trigger payload for {app_slug}/{trigger_slug}...[/bold blue]"
+            )
             response = self.plus_api_client.get_trigger_payload(app_slug, trigger_slug)
 
             if response.status_code == 404:
                 error_data = response.json()
-                console.print(f"[bold red]Error: {error_data.get('error', 'Trigger not found')}[/bold red]")
+                console.print(
+                    f"[bold red]Error: {error_data.get('error', 'Trigger not found')}[/bold red]"
+                )
                 raise SystemExit(1)
 
             self._validate_response(response)
@@ -63,7 +67,9 @@ class TriggersCommand(BaseCommand, PlusAPIMixin):
             self._run_crew_with_payload(trigger_data.get("sample_payload", {}))
 
         except Exception as e:
-            console.print(f"[bold red]Error executing crew with trigger: {e}[/bold red]")
+            console.print(
+                f"[bold red]Error executing crew with trigger: {e}[/bold red]"
+            )
             raise SystemExit(1) from e
 
     def _display_triggers(self, triggers_data: dict[str, Any]) -> None:
@@ -78,10 +84,18 @@ class TriggersCommand(BaseCommand, PlusAPIMixin):
             app_name = app.get("name", "Unknown App")
             app_slug = app.get("slug", "unknown")
             is_connected = app.get("is_connected", False)
-            connection_status = "[green]✓ Connected[/green]" if is_connected else "[red]✗ Not Connected[/red]"
+            connection_status = (
+                "[green]✓ Connected[/green]"
+                if is_connected
+                else "[red]✗ Not Connected[/red]"
+            )
 
-            console.print(f"\n[bold cyan]{app_name}[/bold cyan] ({app_slug}) - {connection_status}")
-            console.print(f"[dim]{app.get('description', 'No description available')}[/dim]")
+            console.print(
+                f"\n[bold cyan]{app_name}[/bold cyan] ({app_slug}) - {connection_status}"
+            )
+            console.print(
+                f"[dim]{app.get('description', 'No description available')}[/dim]"
+            )
 
             triggers = app.get("triggers", [])
             if triggers:
@@ -95,7 +109,7 @@ class TriggersCommand(BaseCommand, PlusAPIMixin):
                     table.add_row(
                         trigger_path,
                         trigger.get("name", "Unknown"),
-                        trigger.get("description", "No description")
+                        trigger.get("description", "No description"),
                     )
 
                 console.print(table)
@@ -112,11 +126,11 @@ class TriggersCommand(BaseCommand, PlusAPIMixin):
     def _run_crew_with_payload(self, payload: dict[str, Any]) -> None:
         """Run the crew with the trigger payload using the run_with_trigger method."""
         try:
-            subprocess.run( # noqa: S603
-                ["uv", "run", "run_with_trigger", json.dumps(payload)], # noqa: S607
+            subprocess.run(  # noqa: S603
+                ["uv", "run", "run_with_trigger", json.dumps(payload)],  # noqa: S607
                 capture_output=False,
                 text=True,
-                check=True
+                check=True,
             )
 
         except Exception as e:

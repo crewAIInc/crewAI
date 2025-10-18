@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import os
 from typing import TYPE_CHECKING, Any
 
@@ -49,7 +51,7 @@ class ApifyActorsTool(BaseTool):
                 print(f"URL: {result['metadata']['url']}")
                 print(f"Content: {result.get('markdown', 'N/A')[:100]}...")
     """
-    actor_tool: "_ApifyActorsTool" = Field(description="Apify Actor Tool")
+    actor_tool: _ApifyActorsTool = Field(description="Apify Actor Tool")
     package_dependencies: list[str] = Field(default_factory=lambda: ["langchain-apify"])
 
     def __init__(self, actor_name: str, *args: Any, **kwargs: Any) -> None:

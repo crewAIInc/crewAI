@@ -1,4 +1,4 @@
-from typing import Any, Dict
+from typing import Any
 
 import requests
 from requests.exceptions import JSONDecodeError, RequestException
@@ -7,6 +7,7 @@ from rich.console import Console
 from crewai.cli.command import BaseCommand
 from crewai.cli.settings.main import SettingsCommand
 from crewai.cli.version import get_crewai_version
+
 
 console = Console()
 
@@ -35,7 +36,7 @@ class EnterpriseConfigureCommand(BaseCommand):
             )
             raise SystemExit(1) from e
 
-    def _fetch_oauth_config(self, enterprise_url: str) -> Dict[str, Any]:
+    def _fetch_oauth_config(self, enterprise_url: str) -> dict[str, Any]:
         oauth_endpoint = f"{enterprise_url}/auth/parameters"
 
         try:
@@ -74,12 +75,12 @@ class EnterpriseConfigureCommand(BaseCommand):
             return oauth_config
 
         except RequestException as e:
-            raise ValueError(f"Failed to connect to enterprise URL: {e!s}")
+            raise ValueError(f"Failed to connect to enterprise URL: {e!s}") from e
         except Exception as e:
-            raise ValueError(f"Error fetching OAuth2 configuration: {e!s}")
+            raise ValueError(f"Error fetching OAuth2 configuration: {e!s}") from e
 
     def _update_oauth_settings(
-        self, enterprise_url: str, oauth_config: Dict[str, Any]
+        self, enterprise_url: str, oauth_config: dict[str, Any]
     ) -> None:
         try:
             config_mapping = {
@@ -97,4 +98,4 @@ class EnterpriseConfigureCommand(BaseCommand):
                 console.print(f"  ✓ Set {key}: {value}", style="dim")
 
         except Exception as e:
-            raise ValueError(f"Failed to update OAuth2 settings: {e!s}")
+            raise ValueError(f"Failed to update OAuth2 settings: {e!s}") from e

@@ -1,7 +1,7 @@
 import logging
 import traceback
-import warnings
 from typing import Any, cast
+import warnings
 
 from crewai.rag.chromadb.config import ChromaDBConfig
 from crewai.rag.chromadb.types import ChromaEmbeddingFunctionWrapper

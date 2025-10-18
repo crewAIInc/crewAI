@@ -1,4 +1,4 @@
-from .vector_search import (
+from crewai_tools.tools.mongodb_vector_search_tool.vector_search import (
     MongoDBToolSchema,
     MongoDBVectorSearchConfig,
     MongoDBVectorSearchTool,

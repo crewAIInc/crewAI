@@ -7,6 +7,7 @@ from crewai.knowledge.storage.knowledge_storage import KnowledgeStorage
 from crewai.rag.embeddings.types import EmbedderConfig
 from crewai.rag.types import SearchResult
 
+
 os.environ["TOKENIZERS_PARALLELISM"] = "false"  # removes logging from fastembed
 
 

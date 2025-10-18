@@ -99,6 +99,7 @@ from crewai.events.types.tool_usage_events import (
     ToolValidateInputErrorEvent,
 )
 
+
 __all__ = [
     "AgentEvaluationCompletedEvent",
     "AgentEvaluationFailedEvent",

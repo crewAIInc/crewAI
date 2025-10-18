@@ -1,9 +1,8 @@
 from crewai.agents.agent_builder.base_agent import BaseAgent
+from crewai.tools.agent_tools.ask_question_tool import AskQuestionTool
+from crewai.tools.agent_tools.delegate_work_tool import DelegateWorkTool
 from crewai.tools.base_tool import BaseTool
 from crewai.utilities import I18N
-
-from .ask_question_tool import AskQuestionTool
-from .delegate_work_tool import DelegateWorkTool
 
 
 class AgentTools:

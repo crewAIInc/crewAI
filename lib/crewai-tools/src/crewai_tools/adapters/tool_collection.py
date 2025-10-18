@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from collections.abc import Callable
 from typing import Generic, TypeVar
 
@@ -57,7 +59,7 @@ class ToolCollection(list, Generic[T]):
             del self._name_cache[tool.name.lower()]
         return tool
 
-    def filter_by_names(self, names: list[str] | None = None) -> "ToolCollection[T]":
+    def filter_by_names(self, names: list[str] | None = None) -> ToolCollection[T]:
         if names is None:
             return self
 
@@ -69,7 +71,7 @@ class ToolCollection(list, Generic[T]):
             ]
         )
 
-    def filter_where(self, func: Callable[[T], bool]) -> "ToolCollection[T]":
+    def filter_where(self, func: Callable[[T], bool]) -> ToolCollection[T]:
         return ToolCollection([tool for tool in self if func(tool)])
 
     def clear(self) -> None:

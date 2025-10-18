@@ -63,9 +63,9 @@ else:
 
         maxTokens: int
         temperature: float
-        topP: float  # noqa: N815 - AWS API uses topP naming
+        topP: float
         stopSequences: list[str]
-        topK: int  # noqa: N815 - AWS API uses topK naming
+        topK: int
 
 
 class ToolInputSchema(TypedDict):

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import ast
 import datetime
 from difflib import SequenceMatcher
@@ -5,7 +7,7 @@ import json
 from json import JSONDecodeError
 from textwrap import dedent
 import time
-from typing import TYPE_CHECKING, Any, Union
+from typing import TYPE_CHECKING, Any
 
 import json5
 from json_repair import repair_json  # type: ignore[import-untyped,import-error]
@@ -72,7 +74,7 @@ class ToolUsage:
         tools: list[CrewStructuredTool],
         task: Task | None,
         function_calling_llm: Any,
-        agent: Union["BaseAgent", "LiteAgent"] | None = None,
+        agent: BaseAgent | LiteAgent | None = None,
         action: Any = None,
         fingerprint_context: dict[str, str] | None = None,
     ) -> None:

@@ -13,8 +13,7 @@ class ChatInputField(BaseModel):
     Example:
         ```python
         field = ChatInputField(
-            name="topic",
-            description="The topic to focus on for the conversation"
+            name="topic", description="The topic to focus on for the conversation"
         )
         ```
     """
@@ -34,7 +33,7 @@ class ChatInputs(BaseModel):
             inputs=[
                 ChatInputField(name="topic", description="The topic to focus on"),
                 ChatInputField(name="username", description="Name of the user"),
-            ]
+            ],
         )
         ```
     """

@@ -6,6 +6,7 @@ from rich.table import Table
 from crewai.cli.command import BaseCommand
 from crewai.cli.config import HIDDEN_SETTINGS_KEYS, READONLY_SETTINGS_KEYS, Settings
 
+
 console = Console()
 
 

@@ -10,7 +10,7 @@ def kickoff_flow() -> None:
     command = ["uv", "run", "kickoff"]
 
     try:
-        result = subprocess.run(command, capture_output=False, text=True, check=True)
+        result = subprocess.run(command, capture_output=False, text=True, check=True)  # noqa: S603
 
         if result.stderr:
             click.echo(result.stderr, err=True)

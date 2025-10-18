@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import inspect
 
 from pydantic import BaseModel, Field, InstanceOf, model_validator
@@ -19,7 +21,7 @@ class FlowTrackable(BaseModel):
     )
 
     @model_validator(mode="after")
-    def _set_parent_flow(self) -> "FlowTrackable":
+    def _set_parent_flow(self) -> FlowTrackable:
         max_depth = 5
         frame = inspect.currentframe()
 

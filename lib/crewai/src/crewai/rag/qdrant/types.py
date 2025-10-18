@@ -6,8 +6,8 @@ from typing import Annotated, Any, Protocol, TypeAlias
 import numpy as np
 from pydantic import GetCoreSchemaHandler
 from pydantic_core import CoreSchema, core_schema
-from qdrant_client import AsyncQdrantClient  # type: ignore[import-not-found]
 from qdrant_client import (
+    AsyncQdrantClient,  # type: ignore[import-not-found]
     QdrantClient as SyncQdrantClient,  # type: ignore[import-not-found]
 )
 from qdrant_client.models import (  # type: ignore[import-not-found]
@@ -30,6 +30,7 @@ from qdrant_client.models import (  # type: ignore[import-not-found]
 from typing_extensions import NotRequired, TypedDict
 
 from crewai.rag.core.base_client import BaseCollectionParams
+
 
 QdrantClientType = SyncQdrantClient | AsyncQdrantClient
 

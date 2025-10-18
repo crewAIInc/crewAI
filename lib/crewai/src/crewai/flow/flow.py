@@ -1,9 +1,11 @@
+from __future__ import annotations
+
 import asyncio
+from collections.abc import Callable
+from concurrent.futures import Future
 import copy
 import inspect
 import logging
-from collections.abc import Callable
-from concurrent.futures import Future
 from typing import Any, ClassVar, Generic, TypeVar, cast
 from uuid import uuid4
 
@@ -33,6 +35,7 @@ from crewai.flow.persistence.base import FlowPersistence
 from crewai.flow.types import FlowExecutionData
 from crewai.flow.utils import get_possible_return_constants
 from crewai.utilities.printer import Printer, PrinterColor
+
 
 logger = logging.getLogger(__name__)
 
@@ -499,7 +502,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
     name: str | None = None
     tracing: bool | None = False
 
-    def __class_getitem__(cls: type["Flow"], item: type[T]) -> type["Flow"]:
+    def __class_getitem__(cls: type[Flow], item: type[T]) -> type[Flow]:
         class _FlowGeneric(cls):  # type: ignore
             _initial_state_t = item  # type: ignore
 
@@ -960,7 +963,9 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 self._event_futures.append(future)
 
             if self._event_futures:
-                await asyncio.gather(*[asyncio.wrap_future(f) for f in self._event_futures])
+                await asyncio.gather(
+                    *[asyncio.wrap_future(f) for f in self._event_futures]
+                )
                 self._event_futures.clear()
 
             if (

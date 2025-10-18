@@ -13,6 +13,7 @@ from crewai.rag.embeddings.providers.google.vertex import (
     VertexAIProvider,
 )
 
+
 __all__ = [
     "GenerativeAiProvider",
     "GenerativeAiProviderConfig",

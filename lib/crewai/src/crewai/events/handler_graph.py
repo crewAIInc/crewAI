@@ -24,9 +24,7 @@ class CircularDependencyError(Exception):
         Args:
             handlers: The handlers involved in the circular dependency
         """
-        handler_names = ", ".join(
-            getattr(h, "__name__", repr(h)) for h in handlers[:5]
-        )
+        handler_names = ", ".join(getattr(h, "__name__", repr(h)) for h in handlers[:5])
         message = f"Circular dependency detected in event handlers: {handler_names}"
         super().__init__(message)
         self.handlers = handlers
@@ -71,9 +69,7 @@ class HandlerGraph:
             for dep in deps:
                 dependents[dep.handler].add(handler)
 
-        queue: deque[Handler] = deque(
-            [h for h, deg in in_degree.items() if deg == 0]
-        )
+        queue: deque[Handler] = deque([h for h, deg in in_degree.items() if deg == 0])
 
         while queue:
             current_level: set[Handler] = set()

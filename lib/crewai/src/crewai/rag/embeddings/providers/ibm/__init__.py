@@ -9,6 +9,7 @@ from crewai.rag.embeddings.providers.ibm.watsonx import (
     WatsonXProvider,
 )
 
+
 __all__ = [
     "WatsonProviderSpec",
     "WatsonXProvider",

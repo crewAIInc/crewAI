@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import time
 from typing import TYPE_CHECKING
 
@@ -9,6 +11,7 @@ from crewai.utilities.converter import ConverterError
 from crewai.utilities.evaluators.task_evaluator import TaskEvaluator
 from crewai.utilities.printer import Printer
 
+
 if TYPE_CHECKING:
     from crewai.agents.agent_builder.base_agent import BaseAgent
     from crewai.crew import Crew
@@ -16,9 +19,9 @@ if TYPE_CHECKING:
 
 
 class CrewAgentExecutorMixin:
-    crew: "Crew"
-    agent: "BaseAgent"
-    task: "Task"
+    crew: Crew
+    agent: BaseAgent
+    task: Task
     iterations: int
     max_iter: int
     messages: list[dict[str, str]]
@@ -45,7 +48,9 @@ class CrewAgentExecutorMixin:
                         },
                     )
             except Exception as e:
-                self.agent._logger.log("error", f"Failed to add to short term memory: {e}")
+                self.agent._logger.log(
+                    "error", f"Failed to add to short term memory: {e}"
+                )
 
     def _create_external_memory(self, output) -> None:
         """Create and save a external-term memory item if conditions are met."""
@@ -65,7 +70,9 @@ class CrewAgentExecutorMixin:
                     },
                 )
             except Exception as e:
-                self.agent._logger.log("error", f"Failed to add to external memory: {e}")
+                self.agent._logger.log(
+                    "error", f"Failed to add to external memory: {e}"
+                )
 
     def _create_long_term_memory(self, output) -> None:
         """Create and save long-term and entity memory items based on evaluation."""
@@ -110,9 +117,13 @@ class CrewAgentExecutorMixin:
                 if entity_memories:
                     self.crew._entity_memory.save(entity_memories)
             except AttributeError as e:
-                self.agent._logger.log("error", f"Missing attributes for long term memory: {e}")
+                self.agent._logger.log(
+                    "error", f"Missing attributes for long term memory: {e}"
+                )
             except Exception as e:
-                self.agent._logger.log("error", f"Failed to add to long term memory: {e}")
+                self.agent._logger.log(
+                    "error", f"Failed to add to long term memory: {e}"
+                )
         elif (
             self.crew
             and self.crew._long_term_memory

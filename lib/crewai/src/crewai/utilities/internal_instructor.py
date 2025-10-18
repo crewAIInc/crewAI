@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING, Any, Generic, TypeGuard, TypeVar
 
 from pydantic import BaseModel
 
+
 if TYPE_CHECKING:
     from crewai.agent import Agent
     from crewai.llm import LLM
@@ -11,6 +12,7 @@ if TYPE_CHECKING:
 
 from crewai.utilities.logger_utils import suppress_warnings
 from crewai.utilities.types import LLMMessage
+
 
 T = TypeVar("T", bound=BaseModel)
 

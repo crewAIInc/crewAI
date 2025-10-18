@@ -17,7 +17,7 @@ def evaluate_crew(n_iterations: int, model: str) -> None:
         if n_iterations <= 0:
             raise ValueError("The number of iterations must be a positive integer.")
 
-        result = subprocess.run(command, capture_output=False, text=True, check=True)
+        result = subprocess.run(command, capture_output=False, text=True, check=True)  # noqa: S603
 
         if result.stderr:
             click.echo(result.stderr, err=True)

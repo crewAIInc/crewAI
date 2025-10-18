@@ -1,10 +1,11 @@
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from rich.console import Console
 
 from crewai.cli import git
 from crewai.cli.command import BaseCommand, PlusAPIMixin
 from crewai.cli.utils import fetch_and_json_env_file, get_project_name
+
 
 console = Console()
 
@@ -32,7 +33,7 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
             style="bold red",
         )
 
-    def _display_deployment_info(self, json_response: Dict[str, Any]) -> None:
+    def _display_deployment_info(self, json_response: dict[str, Any]) -> None:
         """
         Display deployment information.
 
@@ -47,7 +48,7 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
         console.print(" or")
         console.print(f'crewai deploy status --uuid "{json_response["uuid"]}"')
 
-    def _display_logs(self, log_messages: List[Dict[str, Any]]) -> None:
+    def _display_logs(self, log_messages: list[dict[str, Any]]) -> None:
         """
         Display log messages.
 
@@ -59,7 +60,7 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
                 f"{log_message['timestamp']} - {log_message['level']}: {log_message['message']}"
             )
 
-    def deploy(self, uuid: Optional[str] = None) -> None:
+    def deploy(self, uuid: str | None = None) -> None:
         """
         Deploy a crew using either UUID or project name.
 
@@ -110,7 +111,7 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
         self._display_creation_success(response.json())
 
     def _confirm_input(
-        self, env_vars: Dict[str, str], remote_repo_url: str, confirm: bool
+        self, env_vars: dict[str, str], remote_repo_url: str, confirm: bool
     ) -> None:
         """
         Confirm input parameters with the user.
@@ -128,9 +129,9 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
 
     def _create_payload(
         self,
-        env_vars: Dict[str, str],
+        env_vars: dict[str, str],
         remote_repo_url: str,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Create the payload for crew creation.
 
@@ -149,7 +150,7 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
             }
         }
 
-    def _display_creation_success(self, json_response: Dict[str, Any]) -> None:
+    def _display_creation_success(self, json_response: dict[str, Any]) -> None:
         """
         Display success message after crew creation.
 
@@ -179,7 +180,7 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
         else:
             self._display_no_crews_message()
 
-    def _display_crews(self, crews_data: List[Dict[str, Any]]) -> None:
+    def _display_crews(self, crews_data: list[dict[str, Any]]) -> None:
         """
         Display the list of crews.
 
@@ -198,7 +199,7 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
         console.print("You don't have any Crews yet. Let's create one!", style="yellow")
         console.print("  crewai create crew <crew_name>", style="green")
 
-    def get_crew_status(self, uuid: Optional[str] = None) -> None:
+    def get_crew_status(self, uuid: str | None = None) -> None:
         """
         Get the status of a crew.
 
@@ -217,7 +218,7 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
         self._validate_response(response)
         self._display_crew_status(response.json())
 
-    def _display_crew_status(self, status_data: Dict[str, str]) -> None:
+    def _display_crew_status(self, status_data: dict[str, str]) -> None:
         """
         Display the status of a crew.
 
@@ -227,7 +228,7 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
         console.print(f"Name:\t {status_data['name']}")
         console.print(f"Status:\t {status_data['status']}")
 
-    def get_crew_logs(self, uuid: Optional[str], log_type: str = "deployment") -> None:
+    def get_crew_logs(self, uuid: str | None, log_type: str = "deployment") -> None:
         """
         Get logs for a crew.
 
@@ -249,7 +250,7 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
         self._validate_response(response)
         self._display_logs(response.json())
 
-    def remove_crew(self, uuid: Optional[str]) -> None:
+    def remove_crew(self, uuid: str | None) -> None:
         """
         Remove a crew deployment.
 

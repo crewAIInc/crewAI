@@ -1,5 +1,5 @@
-import threading
 from collections.abc import Sequence
+import threading
 from typing import Any
 
 from crewai.agent import Agent

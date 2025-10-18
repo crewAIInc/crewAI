@@ -11,6 +11,7 @@ from crewai.rag.core.types import (
     PyEmbedding,
 )
 
+
 T = TypeVar("T")
 D = TypeVar("D", bound=Embeddable, contravariant=True)
 

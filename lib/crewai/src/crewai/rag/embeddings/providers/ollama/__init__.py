@@ -8,6 +8,7 @@ from crewai.rag.embeddings.providers.ollama.types import (
     OllamaProviderSpec,
 )
 
+
 __all__ = [
     "OllamaProvider",
     "OllamaProviderConfig",

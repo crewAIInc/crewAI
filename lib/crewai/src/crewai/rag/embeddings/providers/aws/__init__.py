@@ -6,6 +6,7 @@ from crewai.rag.embeddings.providers.aws.types import (
     BedrockProviderSpec,
 )
 
+
 __all__ = [
     "BedrockProvider",
     "BedrockProviderConfig",

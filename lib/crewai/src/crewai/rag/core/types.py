@@ -7,6 +7,7 @@ import numpy as np
 from numpy import floating, integer, number
 from numpy.typing import NDArray
 
+
 T = TypeVar("T")
 
 PyEmbedding = Sequence[float] | Sequence[int]

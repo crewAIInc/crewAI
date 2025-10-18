@@ -1,15 +1,16 @@
 """Backwards compatibility - this module has moved to crewai.events."""
 
-import warnings
 from abc import ABC
 from collections.abc import Callable
 from typing import Any, TypeVar
+import warnings
 
 from typing_extensions import deprecated
 
 import crewai.events as new_events
 from crewai.events.base_events import BaseEvent
 from crewai.events.event_types import EventTypes
+
 
 EventT = TypeVar("EventT", bound=BaseEvent)
 

@@ -1,10 +1,10 @@
 """Logging and warning utility functions for CrewAI."""
 
+from collections.abc import Generator
 import contextlib
 import io
 import logging
 import warnings
-from collections.abc import Generator
 
 
 @contextlib.contextmanager

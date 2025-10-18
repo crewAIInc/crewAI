@@ -1,5 +1,5 @@
-import subprocess
 from functools import lru_cache
+import subprocess
 
 
 class Repository:

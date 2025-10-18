@@ -5,31 +5,30 @@ import subprocess
 import click
 
 from crewai.cli.add_crew_to_flow import add_crew_to_flow
+from crewai.cli.authentication.main import AuthenticationCommand
 from crewai.cli.config import Settings
 from crewai.cli.create_crew import create_crew
 from crewai.cli.create_flow import create_flow
 from crewai.cli.crew_chat import run_chat
+from crewai.cli.deploy.main import DeployCommand
+from crewai.cli.enterprise.main import EnterpriseConfigureCommand
+from crewai.cli.evaluate_crew import evaluate_crew
+from crewai.cli.install_crew import install_crew
+from crewai.cli.kickoff_flow import kickoff_flow
+from crewai.cli.organization.main import OrganizationCommand
+from crewai.cli.plot_flow import plot_flow
+from crewai.cli.replay_from_task import replay_task_command
+from crewai.cli.reset_memories_command import reset_memories_command
+from crewai.cli.run_crew import run_crew
 from crewai.cli.settings.main import SettingsCommand
+from crewai.cli.tools.main import ToolCommand
+from crewai.cli.train_crew import train_crew
+from crewai.cli.triggers.main import TriggersCommand
+from crewai.cli.update_crew import update_crew
 from crewai.cli.utils import build_env_with_tool_repository_credentials, read_toml
 from crewai.memory.storage.kickoff_task_outputs_storage import (
     KickoffTaskOutputsSQLiteStorage,
 )
-
-from .authentication.main import AuthenticationCommand
-from .deploy.main import DeployCommand
-from .enterprise.main import EnterpriseConfigureCommand
-from .evaluate_crew import evaluate_crew
-from .install_crew import install_crew
-from .kickoff_flow import kickoff_flow
-from .organization.main import OrganizationCommand
-from .plot_flow import plot_flow
-from .replay_from_task import replay_task_command
-from .reset_memories_command import reset_memories_command
-from .run_crew import run_crew
-from .tools.main import ToolCommand
-from .train_crew import train_crew
-from .triggers.main import TriggersCommand
-from .update_crew import update_crew
 
 
 @click.group()

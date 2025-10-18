@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from collections import defaultdict
 from collections.abc import Callable
 from datetime import datetime
@@ -309,7 +311,7 @@ class AccumulatedToolArgs(BaseModel):
 class LLM(BaseLLM):
     completion_cost: float | None = None
 
-    def __new__(cls, model: str, is_litellm: bool = False, **kwargs) -> "LLM":
+    def __new__(cls, model: str, is_litellm: bool = False, **kwargs) -> LLM:
         """Factory method that routes to native SDK or falls back to LiteLLM."""
         if not model or not isinstance(model, str):
             raise ValueError("Model must be a non-empty string")

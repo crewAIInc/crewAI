@@ -1,10 +1,10 @@
-from .bedrock import (
+from crewai_tools.aws.bedrock import (
     BedrockInvokeAgentTool,
     BedrockKBRetrieverTool,
     create_browser_toolkit,
     create_code_interpreter_toolkit,
 )
-from .s3 import S3ReaderTool, S3WriterTool
+from crewai_tools.aws.s3 import S3ReaderTool, S3WriterTool
 
 
 __all__ = [

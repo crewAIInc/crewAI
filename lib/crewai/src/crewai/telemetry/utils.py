@@ -3,10 +3,13 @@
 This module provides utility functions for telemetry operations.
 """
 
+from __future__ import annotations
+
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
 from opentelemetry.trace import Span, Status, StatusCode
+
 
 if TYPE_CHECKING:
     from crewai.crew import Crew
@@ -42,7 +45,7 @@ def add_agent_fingerprint_to_span(
 
 def add_crew_attributes(
     span: Span,
-    crew: "Crew",
+    crew: Crew,
     add_attribute_fn: Callable[[Span, str, Any], None],
     include_fingerprint: bool = True,
 ) -> None:
@@ -63,7 +66,7 @@ def add_crew_attributes(
 
 def add_task_attributes(
     span: Span,
-    task: "Task",
+    task: Task,
     add_attribute_fn: Callable[[Span, str, Any], None],
     include_fingerprint: bool = True,
 ) -> None:
@@ -84,8 +87,8 @@ def add_task_attributes(
 
 def add_crew_and_task_attributes(
     span: Span,
-    crew: "Crew",
-    task: "Task",
+    crew: Crew,
+    task: Task,
     add_attribute_fn: Callable[[Span, str, Any], None],
     include_fingerprints: bool = True,
 ) -> None:

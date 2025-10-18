@@ -7,7 +7,10 @@ from crewai.tools import BaseTool
 from dotenv import load_dotenv
 from pydantic import BaseModel, Field
 
-from ..exceptions import BedrockAgentError, BedrockValidationError
+from crewai_tools.aws.bedrock.exceptions import (
+    BedrockAgentError,
+    BedrockValidationError,
+)
 
 
 # Load environment variables from .env file

@@ -9,6 +9,7 @@ Notes:
 from typing import Annotated
 from uuid import UUID
 
+
 CREW_AI_NAMESPACE: Annotated[
     UUID,
     "Create a deterministic UUID using v5 (SHA-1). Custom namespace for CrewAI to enhance security.",

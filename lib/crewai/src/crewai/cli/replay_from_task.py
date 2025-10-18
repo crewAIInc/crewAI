@@ -13,7 +13,7 @@ def replay_task_command(task_id: str) -> None:
     command = ["uv", "run", "replay", task_id]
 
     try:
-        result = subprocess.run(command, capture_output=False, text=True, check=True)
+        result = subprocess.run(command, capture_output=False, text=True, check=True)  # noqa: S603
         if result.stderr:
             click.echo(result.stderr, err=True)
 

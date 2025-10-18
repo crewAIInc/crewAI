@@ -1,9 +1,9 @@
 """JSON encoder for handling CrewAI specific types."""
 
-import json
 from datetime import date, datetime
 from decimal import Decimal
 from enum import Enum
+import json
 from typing import Any
 from uuid import UUID
 

@@ -1,15 +1,15 @@
 import time
+from typing import Any
 import webbrowser
-from typing import Any, Dict, Optional
 
-import requests
 from pydantic import BaseModel, Field
+import requests
 from rich.console import Console
 
+from crewai.cli.authentication.utils import validate_jwt_token
 from crewai.cli.config import Settings
 from crewai.cli.shared.token_manager import TokenManager
 
-from .utils import validate_jwt_token
 
 console = Console()
 
@@ -24,7 +24,7 @@ class Oauth2Settings(BaseModel):
     domain: str = Field(
         description="OAuth2 provider's domain (e.g., your-org.auth0.com) used for issuing tokens."
     )
-    audience: Optional[str] = Field(
+    audience: str | None = Field(
         description="OAuth2 audience value, typically used to identify the target API or resource.",
         default=None,
     )
@@ -43,7 +43,7 @@ class Oauth2Settings(BaseModel):
 
 class ProviderFactory:
     @classmethod
-    def from_settings(cls, settings: Optional[Oauth2Settings] = None):
+    def from_settings(cls, settings: Oauth2Settings | None = None):
         settings = settings or Oauth2Settings.from_settings()
 
         import importlib
@@ -70,7 +70,7 @@ class AuthenticationCommand:
 
         return self._poll_for_token(device_code_data)
 
-    def _get_device_code(self) -> Dict[str, Any]:
+    def _get_device_code(self) -> dict[str, Any]:
         """Get the device code to authenticate the user."""
 
         device_code_payload = {
@@ -86,13 +86,13 @@ class AuthenticationCommand:
         response.raise_for_status()
         return response.json()
 
-    def _display_auth_instructions(self, device_code_data: Dict[str, str]) -> None:
+    def _display_auth_instructions(self, device_code_data: dict[str, str]) -> None:
         """Display the authentication instructions to the user."""
         console.print("1. Navigate to: ", device_code_data["verification_uri_complete"])
         console.print("2. Enter the following code: ", device_code_data["user_code"])
         webbrowser.open(device_code_data["verification_uri_complete"])
 
-    def _poll_for_token(self, device_code_data: Dict[str, Any]) -> None:
+    def _poll_for_token(self, device_code_data: dict[str, Any]) -> None:
         """Polls the server for the token until it is received, or max attempts are reached."""
 
         token_payload = {
@@ -120,9 +120,7 @@ class AuthenticationCommand:
 
                 self._login_to_tool_repository()
 
-                console.print(
-                    "\n[bold green]Welcome to CrewAI AMP![/bold green]\n"
-                )
+                console.print("\n[bold green]Welcome to CrewAI AMP![/bold green]\n")
                 return
 
             if token_data["error"] not in ("authorization_pending", "slow_down"):
@@ -135,7 +133,7 @@ class AuthenticationCommand:
             "Timeout: Failed to get the token. Please try again.", style="bold red"
         )
 
-    def _validate_and_save_token(self, token_data: Dict[str, Any]) -> None:
+    def _validate_and_save_token(self, token_data: dict[str, Any]) -> None:
         """Validates the JWT token and saves the token to the token manager."""
 
         jwt_token = token_data["access_token"]

@@ -182,7 +182,9 @@ class PlusAPI:
         """Get all available triggers from integrations."""
         return self._make_request("GET", f"{self.INTEGRATIONS_RESOURCE}/apps")
 
-    def get_trigger_payload(self, app_slug: str, trigger_slug: str) -> requests.Response:
+    def get_trigger_payload(
+        self, app_slug: str, trigger_slug: str
+    ) -> requests.Response:
         """Get sample payload for a specific trigger."""
         return self._make_request(
             "GET", f"{self.INTEGRATIONS_RESOURCE}/{app_slug}/{trigger_slug}/payload"

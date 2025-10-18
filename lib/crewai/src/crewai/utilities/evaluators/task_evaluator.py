@@ -11,6 +11,7 @@ from crewai.utilities.converter import Converter
 from crewai.utilities.pydantic_schema_parser import PydanticSchemaParser
 from crewai.utilities.training_converter import TrainingConverter
 
+
 if TYPE_CHECKING:
     from crewai.agent import Agent
     from crewai.task import Task

@@ -4,8 +4,8 @@ This module contains the LangGraphToolAdapter class that converts CrewAI tools
 to LangGraph-compatible format using langchain_core.tools.
 """
 
-import inspect
 from collections.abc import Awaitable
+import inspect
 from typing import Any
 
 from crewai.agents.agent_adapters.base_tool_adapter import BaseToolAdapter
@@ -38,8 +38,7 @@ class LangGraphToolAdapter(BaseToolAdapter):
         Args:
             tools: List of CrewAI tools to convert.
         """
-        from langchain_core.tools import BaseTool as LangChainBaseTool
-        from langchain_core.tools import StructuredTool
+        from langchain_core.tools import BaseTool as LangChainBaseTool, StructuredTool
 
         converted_tools: list[Any] = []
         if self.original_tools:

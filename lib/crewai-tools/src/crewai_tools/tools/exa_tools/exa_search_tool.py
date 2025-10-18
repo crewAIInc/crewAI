@@ -1,5 +1,7 @@
+from __future__ import annotations
+
 import os
-from typing import Any, Optional
+from typing import Any
 
 from crewai.tools import BaseTool, EnvVar
 from pydantic import BaseModel, ConfigDict, Field
@@ -32,7 +34,7 @@ class EXASearchTool(BaseTool):
     name: str = "EXASearchTool"
     description: str = "Search the internet using Exa"
     args_schema: type[BaseModel] = EXABaseToolSchema
-    client: Optional["Exa"] = None
+    client: Exa | None = None
     content: bool | None = False
     summary: bool | None = False
     type: str | None = "auto"

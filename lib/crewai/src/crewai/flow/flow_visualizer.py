@@ -16,6 +16,7 @@ from crewai.flow.visualization_utils import (
 )
 from crewai.utilities.printer import Printer
 
+
 _printer = Printer()
 
 

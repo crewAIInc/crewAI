@@ -4,10 +4,10 @@ This module contains the OpenAIAgentToolAdapter class that converts CrewAI tools
 to OpenAI Assistant-compatible format using the agents library.
 """
 
+from collections.abc import Awaitable
 import inspect
 import json
 import re
-from collections.abc import Awaitable
 from typing import Any, cast
 
 from crewai.agents.agent_adapters.base_tool_adapter import BaseToolAdapter
@@ -17,6 +17,7 @@ from crewai.agents.agent_adapters.openai_agents.protocols import (
 )
 from crewai.tools import BaseTool
 from crewai.utilities.import_utils import require
+
 
 agents_module = cast(
     Any,

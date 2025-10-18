@@ -1,14 +1,15 @@
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Callable
 import inspect
 import textwrap
-from collections.abc import Callable
 from typing import TYPE_CHECKING, Any, get_type_hints
 
 from pydantic import BaseModel, Field, create_model
 
 from crewai.utilities.logger import Logger
+
 
 if TYPE_CHECKING:
     from crewai.tools.base_tool import BaseTool

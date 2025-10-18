@@ -1,20 +1,23 @@
-import asyncio
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
+import asyncio
 from collections.abc import Callable
 from inspect import signature
 from typing import Any, get_args, get_origin
 
 from pydantic import (
     BaseModel,
+    BaseModel as PydanticBaseModel,
     ConfigDict,
     Field,
     create_model,
     field_validator,
 )
-from pydantic import BaseModel as PydanticBaseModel
 
 from crewai.tools.structured_tool import CrewStructuredTool
 from crewai.utilities.printer import Printer
+
 
 _printer = Printer()
 
@@ -127,7 +130,7 @@ class BaseTool(BaseModel, ABC):
         return structured_tool
 
     @classmethod
-    def from_langchain(cls, tool: Any) -> "BaseTool":
+    def from_langchain(cls, tool: Any) -> BaseTool:
         """Create a Tool instance from a CrewStructuredTool.
 
         This method takes a CrewStructuredTool object and converts it into a
@@ -226,7 +229,7 @@ class Tool(BaseTool):
         return self.func(*args, **kwargs)
 
     @classmethod
-    def from_langchain(cls, tool: Any) -> "Tool":
+    def from_langchain(cls, tool: Any) -> Tool:
         """Create a Tool instance from a CrewStructuredTool.
 
         This method takes a CrewStructuredTool object and converts it into a

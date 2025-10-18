@@ -1,8 +1,8 @@
 import base64
 import os
+from pathlib import Path
 import subprocess
 import tempfile
-from pathlib import Path
 from typing import Any
 
 import click
@@ -20,6 +20,7 @@ from crewai.cli.utils import (
     tree_copy,
     tree_find_and_replace,
 )
+
 
 console = Console()
 

@@ -5,8 +5,6 @@ from typing import Any
 
 from chromadb.api.types import (
     EmbeddingFunction as ChromaEmbeddingFunction,
-)
-from chromadb.api.types import (
     QueryResult,
 )
 from typing_extensions import Unpack
@@ -99,7 +97,7 @@ class ChromaDBClient(BaseClient):
             >>> client.create_collection(
             ...     collection_name="documents",
             ...     metadata={"description": "Product documentation"},
-            ...     get_or_create=True
+            ...     get_or_create=True,
             ... )
         """
         if not _is_sync_client(self.client):
@@ -155,7 +153,7 @@ class ChromaDBClient(BaseClient):
             ...     await client.acreate_collection(
             ...         collection_name="documents",
             ...         metadata={"description": "Product documentation"},
-            ...         get_or_create=True
+            ...         get_or_create=True,
             ...     )
             >>> asyncio.run(main())
         """
@@ -207,7 +205,7 @@ class ChromaDBClient(BaseClient):
             >>> client = ChromaDBClient()
             >>> collection = client.get_or_create_collection(
             ...     collection_name="documents",
-            ...     metadata={"description": "Product documentation"}
+            ...     metadata={"description": "Product documentation"},
             ... )
         """
         if not _is_sync_client(self.client):
@@ -259,7 +257,7 @@ class ChromaDBClient(BaseClient):
             ...     client = ChromaDBClient()
             ...     collection = await client.aget_or_create_collection(
             ...         collection_name="documents",
-            ...         metadata={"description": "Product documentation"}
+            ...         metadata={"description": "Product documentation"},
             ...     )
             >>> asyncio.run(main())
         """

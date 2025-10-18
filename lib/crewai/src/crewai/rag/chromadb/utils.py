@@ -1,8 +1,8 @@
 """Utility functions for ChromaDB client implementation."""
 
+from collections.abc import Mapping
 import hashlib
 import json
-from collections.abc import Mapping
 from typing import Literal, TypeGuard, cast
 
 from chromadb.api import AsyncClientAPI, ClientAPI

@@ -1,6 +1,9 @@
+from __future__ import annotations
+
 from collections.abc import Iterator
 from pathlib import Path
 from urllib.parse import urlparse
+
 
 try:
     from docling.datamodel.base_models import (  # type: ignore[import-not-found]
@@ -47,8 +50,8 @@ class CrewDoclingSource(BaseKnowledgeSource):
     file_paths: list[Path | str] = Field(default_factory=list)
     chunks: list[str] = Field(default_factory=list)
     safe_file_paths: list[Path | str] = Field(default_factory=list)
-    content: list["DoclingDocument"] = Field(default_factory=list)
-    document_converter: "DocumentConverter" = Field(
+    content: list[DoclingDocument] = Field(default_factory=list)
+    document_converter: DocumentConverter = Field(
         default_factory=lambda: DocumentConverter(
             allowed_formats=[
                 InputFormat.MD,
@@ -74,7 +77,7 @@ class CrewDoclingSource(BaseKnowledgeSource):
         self.safe_file_paths = self.validate_content()
         self.content = self._load_content()
 
-    def _load_content(self) -> list["DoclingDocument"]:
+    def _load_content(self) -> list[DoclingDocument]:
         try:
             return self._convert_source_to_docling_documents()
         except ConversionError as e:
@@ -96,11 +99,11 @@ class CrewDoclingSource(BaseKnowledgeSource):
             self.chunks.extend(list(new_chunks_iterable))
         self._save_documents()
 
-    def _convert_source_to_docling_documents(self) -> list["DoclingDocument"]:
+    def _convert_source_to_docling_documents(self) -> list[DoclingDocument]:
         conv_results_iter = self.document_converter.convert_all(self.safe_file_paths)
         return [result.document for result in conv_results_iter]
 
-    def _chunk_doc(self, doc: "DoclingDocument") -> Iterator[str]:
+    def _chunk_doc(self, doc: DoclingDocument) -> Iterator[str]:
         chunker = HierarchicalChunker()
         for chunk in chunker.chunk(doc):
             yield chunk.text

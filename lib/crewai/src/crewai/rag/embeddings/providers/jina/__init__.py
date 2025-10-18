@@ -6,6 +6,7 @@ from crewai.rag.embeddings.providers.jina.types import (
     JinaProviderSpec,
 )
 
+
 __all__ = [
     "JinaProvider",
     "JinaProviderConfig",

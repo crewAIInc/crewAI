@@ -8,6 +8,7 @@ from typing import Any
 from crewai.rag.config.types import RagConfigType
 from crewai.rag.config.utils import set_rag_config
 
+
 _module_path = __path__
 _module_file = __file__
 

@@ -6,6 +6,7 @@ from pydantic import BaseModel, ValidationError
 
 from crewai.utilities.converter import Converter, ConverterError
 
+
 _FLOAT_PATTERN: Final[re.Pattern[str]] = re.compile(r"(\d+(?:\.\d+)?)")
 
 

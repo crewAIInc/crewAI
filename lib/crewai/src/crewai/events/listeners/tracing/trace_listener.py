@@ -1,6 +1,6 @@
 import os
-import uuid
 from typing import Any, ClassVar
+import uuid
 
 from crewai.cli.authentication.token import AuthError, get_auth_token
 from crewai.cli.version import get_crewai_version
@@ -8,6 +8,7 @@ from crewai.events.base_event_listener import BaseEventListener
 from crewai.events.listeners.tracing.first_time_trace_handler import (
     FirstTimeTraceHandler,
 )
+from crewai.events.listeners.tracing.trace_batch_manager import TraceBatchManager
 from crewai.events.listeners.tracing.types import TraceEvent
 from crewai.events.listeners.tracing.utils import safe_serialize_to_dict
 from crewai.events.types.agent_events import (
@@ -71,8 +72,6 @@ from crewai.events.types.tool_usage_events import (
     ToolUsageFinishedEvent,
     ToolUsageStartedEvent,
 )
-
-from .trace_batch_manager import TraceBatchManager
 
 
 class TraceCollectionListener(BaseEventListener):
@@ -404,7 +403,7 @@ class TraceCollectionListener(BaseEventListener):
         self, event_type: str, source: Any, event: Any
     ) -> TraceEvent:
         """Create a trace event"""
-        if hasattr(event, 'timestamp') and event.timestamp:
+        if hasattr(event, "timestamp") and event.timestamp:
             trace_event = TraceEvent(
                 type=event_type,
                 timestamp=event.timestamp.isoformat(),

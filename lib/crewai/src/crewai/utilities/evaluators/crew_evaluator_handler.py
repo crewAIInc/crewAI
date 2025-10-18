@@ -15,6 +15,7 @@ from crewai.llms.base_llm import BaseLLM
 from crewai.task import Task
 from crewai.tasks.task_output import TaskOutput
 
+
 if TYPE_CHECKING:
     from crewai.crew import Crew
 

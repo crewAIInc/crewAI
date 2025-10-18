@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from functools import cached_property
 import os
 from pathlib import Path
@@ -28,7 +30,7 @@ class SourceContent:
         return os.path.exists(self.source)
 
     @cached_property
-    def data_type(self) -> "DataType":
+    def data_type(self) -> DataType:
         from crewai_tools.rag.data_types import DataTypes
 
         return DataTypes.from_content(self.source)

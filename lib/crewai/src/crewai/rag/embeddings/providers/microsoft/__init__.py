@@ -8,6 +8,7 @@ from crewai.rag.embeddings.providers.microsoft.types import (
     AzureProviderSpec,
 )
 
+
 __all__ = [
     "AzureProvider",
     "AzureProviderConfig",

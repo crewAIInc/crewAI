@@ -19,14 +19,14 @@ import ast
 import inspect
 from typing import Any
 
-from crewai.utilities.printer import Printer
-
-from .utils import (
+from crewai.flow.utils import (
     build_ancestor_dict,
     build_parent_children_dict,
     get_child_index,
     is_ancestor,
 )
+from crewai.utilities.printer import Printer
+
 
 _printer = Printer()
 

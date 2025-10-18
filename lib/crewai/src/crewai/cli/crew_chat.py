@@ -1,15 +1,15 @@
 import json
+from pathlib import Path
 import platform
 import re
 import sys
 import threading
 import time
-from pathlib import Path
 from typing import Any
 
 import click
-import tomli
 from packaging import version
+import tomli
 
 from crewai.cli.utils import read_toml
 from crewai.cli.version import get_crewai_version
@@ -18,6 +18,7 @@ from crewai.llm import LLM, BaseLLM
 from crewai.types.crew_chat import ChatInputField, ChatInputs
 from crewai.utilities.llm_utils import create_llm
 from crewai.utilities.printer import Printer
+
 
 _printer = Printer()
 

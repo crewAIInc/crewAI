@@ -2,6 +2,7 @@ from typing import Annotated, Final
 
 from crewai.utilities.printer import PrinterColor
 
+
 TRAINING_DATA_FILE: Final[str] = "training_data.pkl"
 TRAINED_AGENTS_DATA_FILE: Final[str] = "trained_agents_data.pkl"
 KNOWLEDGE_DIRECTORY: Final[str] = "knowledge"

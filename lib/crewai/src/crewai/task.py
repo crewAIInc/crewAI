@@ -1,22 +1,23 @@
-import datetime
-import inspect
-import json
-import logging
-import threading
-import uuid
-import warnings
+from __future__ import annotations
+
 from collections.abc import Callable
 from concurrent.futures import Future
 from copy import copy as shallow_copy
+import datetime
 from hashlib import md5
+import inspect
+import json
+import logging
 from pathlib import Path
+import threading
 from typing import (
     Any,
     ClassVar,
-    Union,
     get_args,
     get_origin,
 )
+import uuid
+import warnings
 
 from pydantic import (
     UUID4,
@@ -46,6 +47,7 @@ from crewai.utilities.guardrail import process_guardrail
 from crewai.utilities.i18n import I18N
 from crewai.utilities.printer import Printer
 from crewai.utilities.string_utils import interpolate_only
+
 
 _printer = Printer()
 
@@ -255,7 +257,7 @@ class Task(BaseModel):
         return self
 
     @model_validator(mode="after")
-    def ensure_guardrail_is_callable(self) -> "Task":
+    def ensure_guardrail_is_callable(self) -> Task:
         if callable(self.guardrail):
             self._guardrail = self.guardrail
         elif isinstance(self.guardrail, str):
@@ -331,7 +333,7 @@ class Task(BaseModel):
         return value
 
     @model_validator(mode="after")
-    def set_attributes_based_on_config(self) -> "Task":
+    def set_attributes_based_on_config(self) -> Task:
         """Set attributes based on the agent configuration."""
         if self.config:
             for key, value in self.config.items():
@@ -628,7 +630,10 @@ Follow these guidelines:
             try:
                 crew_chat_messages = json.loads(crew_chat_messages_json)
             except json.JSONDecodeError as e:
-                _printer.print(f"An error occurred while parsing crew chat messages: {e}", color="red")
+                _printer.print(
+                    f"An error occurred while parsing crew chat messages: {e}",
+                    color="red",
+                )
                 raise
 
             conversation_history = "\n".join(
@@ -652,8 +657,8 @@ Follow these guidelines:
         self.delegations += 1
 
     def copy(  # type: ignore
-        self, agents: list["BaseAgent"], task_mapping: dict[str, "Task"]
-    ) -> "Task":
+        self, agents: list[BaseAgent], task_mapping: dict[str, Task]
+    ) -> Task:
         """Creates a deep copy of the Task while preserving its original class type.
 
         Args:
@@ -681,7 +686,7 @@ Follow these guidelines:
             else None
         )
 
-        def get_agent_by_role(role: str) -> Union["BaseAgent", None]:
+        def get_agent_by_role(role: str) -> BaseAgent | None:
             return next((agent for agent in agents if agent.role == role), None)
 
         cloned_agent = get_agent_by_role(self.agent.role) if self.agent else None

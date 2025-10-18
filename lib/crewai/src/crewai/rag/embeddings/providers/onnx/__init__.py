@@ -6,6 +6,7 @@ from crewai.rag.embeddings.providers.onnx.types import (
     ONNXProviderSpec,
 )
 
+
 __all__ = [
     "ONNXProvider",
     "ONNXProviderConfig",
