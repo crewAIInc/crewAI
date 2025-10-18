@@ -358,7 +358,8 @@ def prompt_user_for_trace_viewing(timeout_seconds: int = 20) -> bool:
             try:
                 response = input().strip().lower()
                 result[0] = response in ["y", "yes"]
-            except (EOFError, KeyboardInterrupt):
+            except (EOFError, KeyboardInterrupt, OSError, LookupError):
+                # Handle all input-related errors silently
                 result[0] = False
 
         input_thread = threading.Thread(target=get_input, daemon=True)
@@ -371,6 +372,7 @@ def prompt_user_for_trace_viewing(timeout_seconds: int = 20) -> bool:
         return result[0]
 
     except Exception:
+        # Suppress any warnings or errors and assume "no"
         return False
 
 

@@ -6,15 +6,15 @@ from datetime import datetime
 import pytest
 from pydantic import BaseModel
 
-from crewai.flow.flow import Flow, and_, listen, or_, router, start
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.flow_events import (
     FlowFinishedEvent,
-    FlowStartedEvent,
     FlowPlotEvent,
+    FlowStartedEvent,
     MethodExecutionFinishedEvent,
     MethodExecutionStartedEvent,
 )
+from crewai.flow.flow import Flow, and_, listen, or_, router, start
 
 
 def test_simple_sequential_flow():
@@ -679,11 +679,11 @@ def test_structured_flow_event_emission():
     assert isinstance(received_events[3], MethodExecutionStartedEvent)
     assert received_events[3].method_name == "send_welcome_message"
     assert received_events[3].params == {}
-    assert getattr(received_events[3].state, "sent") is False
+    assert received_events[3].state.sent is False
 
     assert isinstance(received_events[4], MethodExecutionFinishedEvent)
     assert received_events[4].method_name == "send_welcome_message"
-    assert getattr(received_events[4].state, "sent") is True
+    assert received_events[4].state.sent is True
     assert received_events[4].result == "Welcome, Anakin!"
 
     assert isinstance(received_events[5], FlowFinishedEvent)
@@ -894,3 +894,75 @@ def test_flow_name():
 
     flow = MyFlow()
     assert flow.name == "MyFlow"
+
+
+def test_nested_and_or_conditions():
+    """Test nested conditions like or_(and_(A, B), and_(C, D)).
+
+    Reproduces bug from issue #3719 where nested conditions are flattened,
+    causing premature execution.
+    """
+    execution_order = []
+
+    class NestedConditionFlow(Flow):
+        @start()
+        def method_1(self):
+            execution_order.append("method_1")
+
+        @listen(method_1)
+        def method_2(self):
+            execution_order.append("method_2")
+
+        @router(method_2)
+        def method_3(self):
+            execution_order.append("method_3")
+            # Choose b_condition path
+            return "b_condition"
+
+        @listen("b_condition")
+        def method_5(self):
+            execution_order.append("method_5")
+
+        @listen(method_5)
+        async def method_4(self):
+            execution_order.append("method_4")
+
+        @listen(or_("a_condition", "b_condition"))
+        async def method_6(self):
+            execution_order.append("method_6")
+
+        @listen(
+            or_(
+                and_("a_condition", method_6),
+                and_(method_6, method_4),
+            )
+        )
+        def method_7(self):
+            execution_order.append("method_7")
+
+        @listen(method_7)
+        async def method_8(self):
+            execution_order.append("method_8")
+
+    flow = NestedConditionFlow()
+    flow.kickoff()
+
+    # Verify execution happened
+    assert "method_1" in execution_order
+    assert "method_2" in execution_order
+    assert "method_3" in execution_order
+    assert "method_5" in execution_order
+    assert "method_4" in execution_order
+    assert "method_6" in execution_order
+    assert "method_7" in execution_order
+    assert "method_8" in execution_order
+
+    # Critical assertion: method_7 should only execute AFTER both method_6 AND method_4
+    # Since b_condition was returned, method_6 triggers on b_condition
+    # method_7 requires: (a_condition AND method_6) OR (method_6 AND method_4)
+    # The second condition (method_6 AND method_4) should be the one that triggers
+    assert execution_order.index("method_7") > execution_order.index("method_6")
+    assert execution_order.index("method_7") > execution_order.index("method_4")
+
+    # method_8 should execute after method_7
+    assert execution_order.index("method_8") > execution_order.index("method_7")
