@@ -405,7 +405,7 @@ def test_multiple_guardrails_with_validation_failure():
     result = task.execute_sync(agent=agent)
     # The second call should be processed through all guardrails
     assert result.raw == "Formatted: this is a longer text that meets requirements"
-    assert task.retry_count == 1
+    assert task._guardrail_retry_counts.get(0, 0) == 1
 
 
 def test_multiple_guardrails_with_mixed_string_and_taskoutput():
@@ -481,11 +481,11 @@ def test_multiple_guardrails_with_retry_on_middle_guardrail():
     )
 
     result = task.execute_sync(agent=agent)
-    # Based on the test output, the behavior is different than expected
-    # The guardrails are called multiple times, so let's verify the retry happened
-    assert task.retry_count == 1
-    # Verify that the second guardrail eventually succeeded
-    assert "Second(2)" in result.raw or call_count["second"] >= 2
+    assert task._guardrail_retry_counts.get(1, 0) == 1
+    assert call_count["first"] == 1
+    assert call_count["second"] == 2
+    assert call_count["third"] == 1
+    assert "Second(2)" in result.raw
 
 
 def test_multiple_guardrails_with_max_retries_exceeded():
@@ -514,9 +514,9 @@ def test_multiple_guardrails_with_max_retries_exceeded():
     with pytest.raises(Exception) as exc_info:
         task.execute_sync(agent=agent)
 
-    assert "Task failed guardrail validation after 1 retries" in str(exc_info.value)
+    assert "Task failed guardrail 1 validation after 1 retries" in str(exc_info.value)
     assert "This guardrail always fails" in str(exc_info.value)
-    assert task.retry_count == 1
+    assert task._guardrail_retry_counts.get(1, 0) == 1
 
 
 def test_multiple_guardrails_empty_list():
@@ -673,3 +673,52 @@ def test_guardrails_vs_single_guardrail_mutual_exclusion():
     # Should only use the guardrails list, not the single guardrail
     assert result.raw == "List: test"
     assert task._guardrail is None  # Single guardrail should be nullified
+
+
+def test_per_guardrail_independent_retry_tracking():
+    """Test that each guardrail has independent retry tracking."""
+
+    call_counts = {"g1": 0, "g2": 0, "g3": 0}
+
+    def guardrail_1(result: TaskOutput) -> tuple[bool, str]:
+        """Fails twice, then succeeds."""
+        call_counts["g1"] += 1
+        if call_counts["g1"] <= 2:
+            return (False, "Guardrail 1 not ready yet")
+        return (True, f"G1({call_counts['g1']}): {result.raw}")
+
+    def guardrail_2(result: TaskOutput) -> tuple[bool, str]:
+        """Fails once, then succeeds."""
+        call_counts["g2"] += 1
+        if call_counts["g2"] == 1:
+            return (False, "Guardrail 2 not ready yet")
+        return (True, f"G2({call_counts['g2']}): {result.raw}")
+
+    def guardrail_3(result: TaskOutput) -> tuple[bool, str]:
+        """Always succeeds."""
+        call_counts["g3"] += 1
+        return (True, f"G3({call_counts['g3']}): {result.raw}")
+
+    agent = Mock()
+    agent.role = "independent_retry_agent"
+    agent.execute_task.return_value = "base"
+    agent.crew = None
+
+    task = create_smart_task(
+        description="Test independent retry tracking",
+        expected_output="Independent retries",
+        guardrails=[guardrail_1, guardrail_2, guardrail_3],
+        guardrail_max_retries=3,
+    )
+
+    result = task.execute_sync(agent=agent)
+
+    assert task._guardrail_retry_counts.get(0, 0) == 2
+    assert task._guardrail_retry_counts.get(1, 0) == 1
+    assert task._guardrail_retry_counts.get(2, 0) == 0
+
+    assert call_counts["g1"] == 3
+    assert call_counts["g2"] == 2
+    assert call_counts["g3"] == 1
+
+    assert "G3(1)" in result.raw

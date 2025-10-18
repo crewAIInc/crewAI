@@ -247,6 +247,9 @@ class Task(BaseModel):
     _guardrails: list[Callable[[TaskOutput], tuple[bool, Any]] | str] = PrivateAttr(
         default=[]
     )
+    _guardrail_retry_counts: dict[int, int] = PrivateAttr(
+        default_factory=dict,
+    )
     _original_description: str | None = PrivateAttr(default=None)
     _original_expected_output: str | None = PrivateAttr(default=None)
     _original_output_file: str | None = PrivateAttr(default=None)
@@ -516,12 +519,13 @@ class Task(BaseModel):
             )
 
             if self._guardrails:
-                for guardrail in self._guardrails:
+                for idx, guardrail in enumerate(self._guardrails):
                     task_output = self._invoke_guardrail_function(
                         task_output=task_output,
                         agent=agent,
                         tools=tools,
                         guardrail=guardrail,
+                        guardrail_index=idx,
                     )
 
             # backwards support
@@ -833,48 +837,94 @@ Follow these guidelines:
         agent: BaseAgent,
         tools: list[BaseTool],
         guardrail: Callable | None,
+        guardrail_index: int | None = None,
     ) -> TaskOutput:
-        if guardrail:
+        if not guardrail:
+            return task_output
+
+        if guardrail_index is not None:
+            current_retry_count = self._guardrail_retry_counts.get(guardrail_index, 0)
+        else:
+            current_retry_count = self.retry_count
+
+        max_attempts = self.guardrail_max_retries + 1
+
+        for attempt in range(max_attempts):
             guardrail_result = process_guardrail(
                 output=task_output,
                 guardrail=guardrail,
-                retry_count=self.retry_count,
+                retry_count=current_retry_count,
                 event_source=self,
                 from_task=self,
                 from_agent=agent,
             )
-            if not guardrail_result.success:
-                if self.retry_count >= self.guardrail_max_retries:
+
+            if guardrail_result.success:
+                # Guardrail passed
+                if guardrail_result.result is None:
                     raise Exception(
-                        f"Task failed guardrail validation after {self.guardrail_max_retries} retries. "
-                        f"Last error: {guardrail_result.error}"
+                        "Task guardrail returned None as result. This is not allowed."
                     )
 
-                self.retry_count += 1
-                context = self.i18n.errors("validation_error").format(
-                    guardrail_result_error=guardrail_result.error,
-                    task_output=task_output.raw,
-                )
-                printer = Printer()
-                printer.print(
-                    content=f"Guardrail blocked, retrying, due to: {guardrail_result.error}\n",
-                    color="yellow",
-                )
-                return self._execute_core(agent, context, tools)
+                if isinstance(guardrail_result.result, str):
+                    task_output.raw = guardrail_result.result
+                    pydantic_output, json_output = self._export_output(
+                        guardrail_result.result
+                    )
+                    task_output.pydantic = pydantic_output
+                    task_output.json_dict = json_output
+                elif isinstance(guardrail_result.result, TaskOutput):
+                    task_output = guardrail_result.result
 
-            if guardrail_result.result is None:
+                return task_output
+
+            # Guardrail failed
+            if attempt >= self.guardrail_max_retries:
+                # Max retries reached
+                guardrail_name = (
+                    f"guardrail {guardrail_index}"
+                    if guardrail_index is not None
+                    else "guardrail"
+                )
                 raise Exception(
-                    "Task guardrail returned None as result. This is not allowed."
+                    f"Task failed {guardrail_name} validation after {self.guardrail_max_retries} retries. "
+                    f"Last error: {guardrail_result.error}"
                 )
 
-            if isinstance(guardrail_result.result, str):
-                task_output.raw = guardrail_result.result
-                pydantic_output, json_output = self._export_output(
-                    guardrail_result.result
-                )
-                task_output.pydantic = pydantic_output
-                task_output.json_dict = json_output
-            elif isinstance(guardrail_result.result, TaskOutput):
-                task_output = guardrail_result.result
+            if guardrail_index is not None:
+                current_retry_count += 1
+                self._guardrail_retry_counts[guardrail_index] = current_retry_count
+            else:
+                self.retry_count += 1
+                current_retry_count = self.retry_count
+
+            context = self.i18n.errors("validation_error").format(
+                guardrail_result_error=guardrail_result.error,
+                task_output=task_output.raw,
+            )
+            printer = Printer()
+            printer.print(
+                content=f"Guardrail {guardrail_index if guardrail_index is not None else ''} blocked (attempt {attempt + 1}/{max_attempts}), retrying due to: {guardrail_result.error}\n",
+                color="yellow",
+            )
+
+            # Regenerate output from agent
+            result = agent.execute_task(
+                task=self,
+                context=context,
+                tools=tools,
+            )
+
+            pydantic_output, json_output = self._export_output(result)
+            task_output = TaskOutput(
+                name=self.name or self.description,
+                description=self.description,
+                expected_output=self.expected_output,
+                raw=result,
+                pydantic=pydantic_output,
+                json_dict=json_output,
+                agent=agent.role,
+                output_format=self._get_output_format(),
+            )
 
         return task_output
