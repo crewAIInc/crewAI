@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any, get_type_hints
 
 from pydantic import BaseModel, Field, create_model
 
+from crewai.utilities.asyncio_utils import run_coroutine_sync
 from crewai.utilities.logger import Logger
 
 if TYPE_CHECKING:
@@ -269,12 +270,12 @@ class CrewStructuredTool:
         self._increment_usage_count()
 
         if inspect.iscoroutinefunction(self.func):
-            return asyncio.run(self.func(**parsed_args, **kwargs))
+            return run_coroutine_sync(self.func(**parsed_args, **kwargs))
 
         result = self.func(**parsed_args, **kwargs)
 
         if asyncio.iscoroutine(result):
-            return asyncio.run(result)
+            return run_coroutine_sync(result)
 
         return result
 
