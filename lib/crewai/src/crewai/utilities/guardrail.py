@@ -1,16 +1,21 @@
 from __future__ import annotations
 
-from collections.abc import Callable
-from typing import TYPE_CHECKING, Any
+from collections.abc import Callable, Sequence
+from typing import TYPE_CHECKING, Any, TypeAlias
 
 from pydantic import BaseModel, Field, field_validator
 from typing_extensions import Self
+
 
 if TYPE_CHECKING:
     from crewai.agents.agent_builder.base_agent import BaseAgent
     from crewai.lite_agent import LiteAgent, LiteAgentOutput
     from crewai.task import Task
     from crewai.tasks.task_output import TaskOutput
+
+GuardrailType: TypeAlias = Callable[["TaskOutput"], tuple[bool, Any]] | str | None
+
+GuardrailsType: TypeAlias = Sequence[GuardrailType] | GuardrailType
 
 
 class GuardrailResult(BaseModel):

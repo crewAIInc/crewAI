@@ -1,4 +1,4 @@
-from collections.abc import Callable, Sequence
+from collections.abc import Callable
 from concurrent.futures import Future
 from copy import copy as shallow_copy
 import datetime
@@ -42,7 +42,11 @@ from crewai.tools.base_tool import BaseTool
 from crewai.utilities.config import process_config
 from crewai.utilities.constants import NOT_SPECIFIED, _NotSpecified
 from crewai.utilities.converter import Converter, convert_to_model
-from crewai.utilities.guardrail import process_guardrail
+from crewai.utilities.guardrail import (
+    GuardrailType,
+    GuardrailsType,
+    process_guardrail,
+)
 from crewai.utilities.i18n import I18N
 from crewai.utilities.printer import Printer
 from crewai.utilities.string_utils import interpolate_only
@@ -151,16 +155,11 @@ class Task(BaseModel):
         default=None,
     )
     processed_by_agents: set[str] = Field(default_factory=set)
-    guardrail: Callable[[TaskOutput], tuple[bool, Any]] | str | None = Field(
+    guardrail: GuardrailType = Field(
         default=None,
         description="Function or string description of a guardrail to validate task output before proceeding to next task",
     )
-    guardrails: (
-        Sequence[Callable[[TaskOutput], tuple[bool, Any]] | str]
-        | Callable[[TaskOutput], tuple[bool, Any]]
-        | str
-        | None
-    ) = Field(
+    guardrails: GuardrailsType = Field(
         default=None,
         description="List of guardrails to validate task output before proceeding to next task. Also supports a single guardrail function or string description of a guardrail to validate task output before proceeding to next task",
     )
@@ -287,35 +286,39 @@ class Task(BaseModel):
     @model_validator(mode="after")
     def ensure_guardrails_is_list_of_callables(self) -> "Task":
         guardrails = []
-        if self.guardrails is not None and (
-            not isinstance(self.guardrails, (list, tuple)) or len(self.guardrails) > 0
-        ):
-            if callable(self.guardrails):
-                guardrails.append(self.guardrails)
-            elif isinstance(self.guardrails, str):
-                from crewai.tasks.llm_guardrail import LLMGuardrail
+        if self.guardrails is not None:
+            if isinstance(self.guardrails, (list, tuple)):
+                if len(self.guardrails) > 0:
+                    for guardrail in self.guardrails:
+                        if callable(guardrail):
+                            guardrails.append(guardrail)
+                        elif isinstance(guardrail, str):
+                            if self.agent is None:
+                                raise ValueError(
+                                    "Agent is required to use non-programmatic guardrails"
+                                )
+                            from crewai.tasks.llm_guardrail import LLMGuardrail
 
-                if self.agent is None:
-                    raise ValueError(
-                        "Agent is required to use non-programmatic guardrails"
-                    )
-
-                guardrails.append(
-                    LLMGuardrail(description=self.guardrails, llm=self.agent.llm)
-                )
-
-            if isinstance(self.guardrails, list):
-                for guardrail in self.guardrails:
-                    if callable(guardrail):
-                        guardrails.append(guardrail)
-                    elif isinstance(guardrail, str):
-                        from crewai.tasks.llm_guardrail import LLMGuardrail
-
-                        guardrails.append(
-                            LLMGuardrail(description=guardrail, llm=self.agent.llm)
+                            guardrails.append(
+                                LLMGuardrail(description=guardrail, llm=self.agent.llm)
+                            )
+                        else:
+                            raise ValueError("Guardrail must be a callable or a string")
+            else:
+                if callable(self.guardrails):
+                    guardrails.append(self.guardrails)
+                elif isinstance(self.guardrails, str):
+                    if self.agent is None:
+                        raise ValueError(
+                            "Agent is required to use non-programmatic guardrails"
                         )
-                    else:
-                        raise ValueError("Guardrail must be a callable or a string")
+                    from crewai.tasks.llm_guardrail import LLMGuardrail
+
+                    guardrails.append(
+                        LLMGuardrail(description=self.guardrails, llm=self.agent.llm)
+                    )
+                else:
+                    raise ValueError("Guardrail must be a callable or a string")
 
         self._guardrails = guardrails
         if self._guardrails:
