@@ -60,7 +60,7 @@ class InternalInstructor(Generic[T]):
         self.llm = llm or (agent.function_calling_llm or agent.llm if agent else None)
 
         with suppress_warnings():
-            import instructor
+            import instructor  # type: ignore[import-untyped]
             from litellm import completion
 
             self._client = instructor.from_litellm(completion)

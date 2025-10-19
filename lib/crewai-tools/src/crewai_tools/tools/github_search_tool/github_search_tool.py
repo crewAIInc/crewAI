@@ -60,7 +60,7 @@ class GithubSearchTool(RagTool):
             metadata={"content_types": content_types, "gh_token": self.gh_token},
         )
 
-    def _run(
+    def _run(  # type: ignore[override]
         self,
         search_query: str,
         github_repo: str | None = None,

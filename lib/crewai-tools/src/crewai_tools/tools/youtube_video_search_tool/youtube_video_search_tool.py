@@ -37,7 +37,7 @@ class YoutubeVideoSearchTool(RagTool):
     def add(self, youtube_video_url: str) -> None:
         super().add(youtube_video_url, data_type=DataType.YOUTUBE_VIDEO)
 
-    def _run(
+    def _run(  # type: ignore[override]
         self,
         search_query: str,
         youtube_video_url: str | None = None,

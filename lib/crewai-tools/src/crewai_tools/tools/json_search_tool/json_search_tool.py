@@ -35,7 +35,7 @@ class JSONSearchTool(RagTool):
             self.args_schema = FixedJSONSearchToolSchema
             self._generate_description()
 
-    def _run(
+    def _run(  # type: ignore[override]
         self,
         search_query: str,
         json_path: str | None = None,

@@ -10,7 +10,7 @@ from crewai_tools.rag.source_content import SourceContent
 class YoutubeChannelLoader(BaseLoader):
     """Loader for YouTube channels."""
 
-    def load(self, source: SourceContent, **kwargs) -> LoaderResult:
+    def load(self, source: SourceContent, **kwargs) -> LoaderResult:  # type: ignore[override]
         """Load and extract content from a YouTube channel.
 
         Args:
@@ -24,7 +24,7 @@ class YoutubeChannelLoader(BaseLoader):
             ValueError: If the URL is not a valid YouTube channel URL
         """
         try:
-            from pytube import Channel
+            from pytube import Channel  # type: ignore[import-untyped]
         except ImportError as e:
             raise ImportError(
                 "YouTube channel support requires pytube. Install with: uv add pytube"
@@ -89,7 +89,6 @@ class YoutubeChannelLoader(BaseLoader):
                         try:
                             api = YouTubeTranscriptApi()
                             transcript_list = api.list(video_id)
-                            transcript = None
 
                             try:
                                 transcript = transcript_list.find_transcript(["en"])
@@ -101,7 +100,7 @@ class YoutubeChannelLoader(BaseLoader):
                                         )
                                     )
                                 except Exception:
-                                    transcript = next(iter(transcript_list), None)
+                                    transcript = next(iter(transcript_list))
 
                             if transcript:
                                 transcript_data = transcript.fetch()
@@ -148,7 +147,8 @@ class YoutubeChannelLoader(BaseLoader):
             doc_id=self.generate_doc_id(source_ref=channel_url, content=content),
         )
 
-    def _extract_video_id(self, url: str) -> str | None:
+    @staticmethod
+    def _extract_video_id(url: str) -> str | None:
         """Extract video ID from YouTube URL."""
         patterns = [
             r"(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/v\/)([^&\n?#]+)",

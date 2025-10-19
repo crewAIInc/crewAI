@@ -37,7 +37,7 @@ class CSVSearchTool(RagTool):
     def add(self, csv: str) -> None:
         super().add(csv, data_type=DataType.CSV)
 
-    def _run(
+    def _run(  # type: ignore[override]
         self,
         search_query: str,
         csv: str | None = None,

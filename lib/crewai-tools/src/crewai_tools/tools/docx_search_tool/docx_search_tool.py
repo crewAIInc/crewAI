@@ -45,7 +45,7 @@ class DOCXSearchTool(RagTool):
     def add(self, docx: str) -> None:
         super().add(docx, data_type=DataType.DOCX)
 
-    def _run(
+    def _run(  # type: ignore[override]
         self,
         search_query: str,
         docx: str | None = None,

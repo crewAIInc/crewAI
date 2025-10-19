@@ -27,7 +27,7 @@ class RAGAdapter(Adapter):
             embedding_config=embedding_config,
         )
 
-    def query(self, question: str) -> str:
+    def query(self, question: str) -> str:  # type: ignore[override]
         return self._adapter.query(question)
 
     def add(

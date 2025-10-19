@@ -31,11 +31,11 @@ class AISuiteLLM(BaseLLM):
             stop: Optional list of stop sequences for generation.
             **kwargs: Additional keyword arguments passed to the AI Suite client.
         """
-        super().__init__(model, temperature, stop)
+        super().__init__(model=model, temperature=temperature, stop=stop)
         self.client = ai.Client()
         self.kwargs = kwargs
 
-    def call(
+    def call(  # type: ignore[override]
         self,
         messages: str | list[dict[str, str]],
         tools: list[dict] | None = None,
@@ -89,7 +89,8 @@ class AISuiteLLM(BaseLLM):
 
         return params
 
-    def supports_function_calling(self) -> bool:
+    @staticmethod
+    def supports_function_calling() -> bool:
         """Check if the LLM supports function calling.
 
         Returns:

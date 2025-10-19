@@ -6,11 +6,11 @@ from crewai_tools.rag.source_content import SourceContent
 
 
 class DirectoryLoader(BaseLoader):
-    def load(self, source_content: SourceContent, **kwargs) -> LoaderResult:
+    def load(self, source_content: SourceContent, **kwargs) -> LoaderResult:  # type: ignore[override]
         """Load and process all files from a directory recursively.
 
         Args:
-            source: Directory path or URL to a directory listing
+            source_content: Directory path or URL to a directory listing
             **kwargs: Additional options:
                 - recursive: bool (default True) - Whether to search recursively
                 - include_extensions: list - Only include files with these extensions
@@ -33,16 +33,16 @@ class DirectoryLoader(BaseLoader):
         return self._process_directory(source_ref, kwargs)
 
     def _process_directory(self, dir_path: str, kwargs: dict) -> LoaderResult:
-        recursive = kwargs.get("recursive", True)
-        include_extensions = kwargs.get("include_extensions", None)
-        exclude_extensions = kwargs.get("exclude_extensions", None)
-        max_files = kwargs.get("max_files", None)
+        recursive: bool = kwargs.get("recursive", True)
+        include_extensions: list[str] | None = kwargs.get("include_extensions", None)
+        exclude_extensions: list[str] | None = kwargs.get("exclude_extensions", None)
+        max_files: int | None = kwargs.get("max_files", None)
 
         files = self._find_files(
             dir_path, recursive, include_extensions, exclude_extensions
         )
 
-        if max_files and len(files) > max_files:
+        if max_files is not None and len(files) > max_files:
             files = files[:max_files]
 
         all_contents = []
@@ -115,8 +115,8 @@ class DirectoryLoader(BaseLoader):
 
         return sorted(files)
 
+    @staticmethod
     def _should_include_file(
-        self,
         filename: str,
         include_ext: list[str] | None = None,
         exclude_ext: list[str] | None = None,
@@ -141,7 +141,8 @@ class DirectoryLoader(BaseLoader):
 
         return True
 
-    def _process_single_file(self, file_path: str) -> LoaderResult:
+    @staticmethod
+    def _process_single_file(file_path: str) -> LoaderResult:
         from crewai_tools.rag.data_types import DataTypes
 
         data_type = DataTypes.from_content(Path(file_path))

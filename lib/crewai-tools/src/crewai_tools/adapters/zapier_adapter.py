@@ -1,12 +1,15 @@
 import logging
 import os
+from typing import Final, Literal
 
 from crewai.tools import BaseTool
 from pydantic import Field, create_model
 import requests
 
 
-ACTIONS_URL = "https://actions.zapier.com/api/v2/ai-actions"
+ACTIONS_URL: Final[Literal["https://actions.zapier.com/api/v2/ai-actions"]] = (
+    "https://actions.zapier.com/api/v2/ai-actions"
+)
 
 logger = logging.getLogger(__name__)
 
@@ -55,8 +58,6 @@ class ZapierActionTool(BaseTool):
 class ZapierActionsAdapter:
     """Adapter for Zapier Actions."""
 
-    api_key: str
-
     def __init__(self, api_key: str | None = None):
         self.api_key = api_key or os.getenv("ZAPIER_API_KEY")
         if not self.api_key:
@@ -77,7 +78,7 @@ class ZapierActionsAdapter:
 
         return response.json()
 
-    def tools(self) -> list[BaseTool]:
+    def tools(self) -> list[ZapierActionTool]:
         """Convert Zapier actions to BaseTool instances."""
         actions_response = self.get_zapier_actions()
         tools = []
@@ -91,12 +92,12 @@ class ZapierActionsAdapter:
             )
 
             params = action.get("params", {})
-            args_fields = {}
-
-            args_fields["instructions"] = (
-                str,
-                Field(description="Instructions for how to execute this action"),
-            )
+            args_fields = {
+                "instructions": (
+                    str,
+                    Field(description="Instructions for how to execute this action"),
+                )
+            }
 
             for param_name, param_info in params.items():
                 field_type = (
@@ -112,7 +113,7 @@ class ZapierActionsAdapter:
                     Field(description=field_description),
                 )
 
-            args_schema = create_model(f"{tool_name.title()}Schema", **args_fields)
+            args_schema = create_model(f"{tool_name.title()}Schema", **args_fields)  # type: ignore[call-overload]
 
             tool = ZapierActionTool(
                 name=tool_name,

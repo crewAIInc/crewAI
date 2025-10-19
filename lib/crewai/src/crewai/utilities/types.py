@@ -1,6 +1,6 @@
 """Types for CrewAI utilities."""
 
-from typing import Literal, TypedDict
+from typing import Any, Literal, TypedDict
 
 
 class LLMMessage(TypedDict):
@@ -12,4 +12,4 @@ class LLMMessage(TypedDict):
     """
 
     role: Literal["user", "assistant", "system"]
-    content: str
+    content: str | list[dict[str, Any]]

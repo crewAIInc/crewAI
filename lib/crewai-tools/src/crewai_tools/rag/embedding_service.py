@@ -84,7 +84,8 @@ class EmbeddingService:
         self._embedding_function = None
         self._initialize_embedding_function()
 
-    def _get_default_api_key(self, provider: str) -> str | None:
+    @staticmethod
+    def _get_default_api_key(provider: str) -> str | None:
         """Get default API key from environment variables."""
         env_key_map = {
             "azure": "AZURE_OPENAI_API_KEY",

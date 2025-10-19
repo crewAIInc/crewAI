@@ -56,7 +56,7 @@ def CrewaiEnterpriseTools(  # noqa: N802
             enterprise_action_kit_project_url
         )
 
-    adapter = EnterpriseActionKitToolAdapter(**adapter_kwargs)
+    adapter = EnterpriseActionKitToolAdapter(**adapter_kwargs)  # type: ignore[arg-type]
     all_tools = adapter.tools()
     parsed_actions_list = _parse_actions_list(actions_list)
 

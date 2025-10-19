@@ -24,4 +24,4 @@ def CrewaiPlatformTools(  # noqa: N802
     """
     builder = CrewaiPlatformToolBuilder(apps=apps)
 
-    return builder.tools()
+    return builder.tools()  # type: ignore

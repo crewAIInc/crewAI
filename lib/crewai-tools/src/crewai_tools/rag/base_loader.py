@@ -17,14 +17,15 @@ class LoaderResult(BaseModel):
 
 
 class BaseLoader(ABC):
-    def __init__(self, config: dict[str, Any] | None = None):
+    def __init__(self, config: dict[str, Any] | None = None) -> None:
         self.config = config or {}
 
     @abstractmethod
     def load(self, content: SourceContent, **kwargs) -> LoaderResult: ...
 
+    @staticmethod
     def generate_doc_id(
-        self, source_ref: str | None = None, content: str | None = None
+        source_ref: str | None = None, content: str | None = None
     ) -> str:
         """Generate a unique document id based on the source reference and content.
         If the source reference is not provided, the content is used as the source reference.

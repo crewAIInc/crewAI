@@ -36,7 +36,7 @@ class PDFSearchTool(RagTool):
     def add(self, pdf: str) -> None:
         super().add(pdf, data_type=DataType.PDF_FILE)
 
-    def _run(
+    def _run(  # type: ignore[override]
         self,
         query: str,
         pdf: str | None = None,

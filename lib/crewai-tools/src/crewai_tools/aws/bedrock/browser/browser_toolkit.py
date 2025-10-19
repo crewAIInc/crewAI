@@ -82,9 +82,9 @@ class CurrentWebPageToolInput(BaseModel):
 class BrowserBaseTool(BaseTool):
     """Base class for browser tools."""
 
-    def __init__(self, session_manager: BrowserSessionManager):
+    def __init__(self, session_manager: BrowserSessionManager):  # type: ignore[call-arg]
         """Initialize with a session manager."""
-        super().__init__()
+        super().__init__()  # type: ignore[call-arg]
         self._session_manager = session_manager
 
         if self._is_in_asyncio_loop() and hasattr(self, "_arun"):
@@ -93,7 +93,7 @@ class BrowserBaseTool(BaseTool):
             # Override _run to use _arun when in an asyncio loop
             def patched_run(*args, **kwargs):
                 try:
-                    import nest_asyncio
+                    import nest_asyncio  # type: ignore[import-untyped]
 
                     loop = asyncio.get_event_loop()
                     nest_asyncio.apply(loop)
@@ -103,7 +103,7 @@ class BrowserBaseTool(BaseTool):
                 except Exception as e:
                     return f"Error in patched _run: {e!s}"
 
-            self._run = patched_run
+            self._run = patched_run  # type: ignore[method-assign]
 
     async def get_async_page(self, thread_id: str) -> Any:
         """Get or create a page for the specified thread."""
@@ -358,7 +358,7 @@ class ExtractHyperlinksTool(BrowserBaseTool):
             for link in soup.find_all("a", href=True):
                 text = link.get_text().strip()
                 href = link["href"]
-                if href.startswith(("http", "https")):
+                if href.startswith(("http", "https")):  # type: ignore[union-attr]
                     links.append({"text": text, "url": href})
 
             if not links:
@@ -390,7 +390,7 @@ class ExtractHyperlinksTool(BrowserBaseTool):
             for link in soup.find_all("a", href=True):
                 text = link.get_text().strip()
                 href = link["href"]
-                if href.startswith(("http", "https")):
+                if href.startswith(("http", "https")):  # type: ignore[union-attr]
                     links.append({"text": text, "url": href})
 
             if not links:

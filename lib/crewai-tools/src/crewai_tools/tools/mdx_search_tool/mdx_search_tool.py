@@ -37,7 +37,7 @@ class MDXSearchTool(RagTool):
     def add(self, mdx: str) -> None:
         super().add(mdx, data_type=DataType.MDX)
 
-    def _run(
+    def _run(  # type: ignore[override]
         self,
         search_query: str,
         mdx: str | None = None,

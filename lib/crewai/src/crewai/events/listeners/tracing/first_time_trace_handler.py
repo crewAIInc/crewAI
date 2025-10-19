@@ -61,9 +61,9 @@ def _update_or_create_env_file():
 class FirstTimeTraceHandler:
     """Handles the first-time user trace collection and display flow."""
 
-    def __init__(self):
-        self.is_first_time: bool = False
-        self.collected_events: bool = False
+    def __init__(self) -> None:
+        self.is_first_time = False
+        self.collected_events = False
         self.trace_batch_id: str | None = None
         self.ephemeral_url: str | None = None
         self.batch_manager: TraceBatchManager | None = None
@@ -87,7 +87,7 @@ class FirstTimeTraceHandler:
             return
 
         try:
-            user_wants_traces = prompt_user_for_trace_viewing(timeout_seconds=20)
+            user_wants_traces = prompt_user_for_trace_viewing()
 
             if user_wants_traces:
                 self._initialize_backend_and_send_events()

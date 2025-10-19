@@ -42,7 +42,7 @@ class YoutubeChannelSearchTool(RagTool):
             youtube_channel_handle = f"@{youtube_channel_handle}"
         super().add(youtube_channel_handle, data_type=DataType.YOUTUBE_CHANNEL)
 
-    def _run(
+    def _run(  # type: ignore[override]
         self,
         search_query: str,
         youtube_channel_handle: str | None = None,

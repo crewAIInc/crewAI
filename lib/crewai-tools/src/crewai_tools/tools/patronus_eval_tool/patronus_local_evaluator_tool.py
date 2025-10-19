@@ -7,7 +7,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 
 if TYPE_CHECKING:
-    from patronus import Client, EvaluationResult
+    from patronus import Client, EvaluationResult  # type: ignore[import-untyped]
 
 try:
     import patronus  # noqa: F401
@@ -109,6 +109,6 @@ try:
     # Only rebuild if the class hasn't been initialized yet
     if not hasattr(PatronusLocalEvaluatorTool, "_model_rebuilt"):
         PatronusLocalEvaluatorTool.model_rebuild()
-        PatronusLocalEvaluatorTool._model_rebuilt = True
+        PatronusLocalEvaluatorTool._model_rebuilt = True  # type: ignore[attr-defined]
 except Exception:  # noqa: S110
     pass

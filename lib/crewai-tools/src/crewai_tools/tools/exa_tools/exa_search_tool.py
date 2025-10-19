@@ -2,19 +2,20 @@ from __future__ import annotations
 
 from builtins import type as type_
 import os
-from typing import Any
+from typing import Any, TypedDict
 
 from crewai.tools import BaseTool, EnvVar
 from pydantic import BaseModel, ConfigDict, Field
+from typing_extensions import Required
 
 
-try:
-    from exa_py import Exa
+class SearchParams(TypedDict, total=False):
+    """Parameters for Exa search API."""
 
-    EXA_INSTALLED = True
-except ImportError:
-    Exa = Any
-    EXA_INSTALLED = False
+    type: Required[str | None]
+    start_published_date: str
+    end_published_date: str
+    include_domains: list[str]
 
 
 class EXABaseToolSchema(BaseModel):
@@ -35,7 +36,7 @@ class EXASearchTool(BaseTool):
     name: str = "EXASearchTool"
     description: str = "Search the internet using Exa"
     args_schema: type_[BaseModel] = EXABaseToolSchema
-    client: Exa | None = None
+    client: Any | None = None
     content: bool | None = False
     summary: bool | None = False
     type: str | None = "auto"
@@ -75,7 +76,9 @@ class EXASearchTool(BaseTool):
         super().__init__(
             **kwargs,
         )
-        if not EXA_INSTALLED:
+        try:
+            from exa_py import Exa
+        except ImportError as e:
             import click
 
             if click.confirm(
@@ -85,11 +88,16 @@ class EXASearchTool(BaseTool):
 
                 subprocess.run(["uv", "add", "exa_py"], check=True)  # noqa: S607
 
+                # Re-import after installation
+                from exa_py import Exa
             else:
                 raise ImportError(
                     "You are missing the 'exa_py' package. Would you like to install it?"
-                )
-        client_kwargs = {"api_key": self.api_key}
+                ) from e
+
+        client_kwargs: dict[str, str] = {}
+        if self.api_key:
+            client_kwargs["api_key"] = self.api_key
         if self.base_url:
             client_kwargs["base_url"] = self.base_url
         self.client = Exa(**client_kwargs)
@@ -107,7 +115,7 @@ class EXASearchTool(BaseTool):
         if self.client is None:
             raise ValueError("Client not initialized")
 
-        search_params = {
+        search_params: SearchParams = {
             "type": self.type,
         }
 

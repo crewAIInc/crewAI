@@ -6,7 +6,7 @@ from crewai_tools.tools.serpapi_tool.serpapi_base_tool import SerpApiBaseTool
 
 
 try:
-    from serpapi import HTTPError
+    from serpapi import HTTPError  # type: ignore[import-untyped]
 except ImportError:
     HTTPError = Any
 
@@ -37,7 +37,7 @@ class SerpApiGoogleShoppingTool(SerpApiBaseTool):
         **kwargs: Any,
     ) -> Any:
         try:
-            results = self.client.search(
+            results = self.client.search(  # type: ignore[union-attr]
                 {
                     "engine": "google_shopping",
                     "q": kwargs.get("search_query"),

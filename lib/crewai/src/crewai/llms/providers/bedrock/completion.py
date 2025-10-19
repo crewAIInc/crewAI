@@ -13,6 +13,7 @@ from crewai.utilities.agent_utils import is_context_length_exceeded
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededError,
 )
+from crewai.utilities.types import LLMMessage
 
 
 if TYPE_CHECKING:
@@ -233,7 +234,7 @@ class BedrockCompletion(BaseLLM):
 
     def call(
         self,
-        messages: str | list[dict[str, str]],
+        messages: str | list[LLMMessage],
         tools: list[dict[Any, Any]] | None = None,
         callbacks: list[Any] | None = None,
         available_functions: dict[str, Any] | None = None,
@@ -244,7 +245,7 @@ class BedrockCompletion(BaseLLM):
         try:
             # Emit call started event
             self._emit_call_started_event(
-                messages=messages,
+                messages=messages,  # type: ignore[arg-type]
                 tools=tools,
                 callbacks=callbacks,
                 available_functions=available_functions,
@@ -254,7 +255,7 @@ class BedrockCompletion(BaseLLM):
 
             # Format messages for Converse API
             formatted_messages, system_message = self._format_messages_for_converse(
-                messages
+                messages  # type: ignore[arg-type]
             )
 
             # Prepare request body
@@ -669,10 +670,10 @@ class BedrockCompletion(BaseLLM):
     ) -> tuple[list[dict[str, Any]], str | None]:
         """Format messages for Converse API following AWS documentation."""
         # Use base class formatting first
-        formatted_messages = self._format_messages(messages)
+        formatted_messages = self._format_messages(messages)  # type: ignore[arg-type]
 
         converse_messages = []
-        system_message = None
+        system_message: str | None = None
 
         for message in formatted_messages:
             role = message.get("role")
@@ -683,7 +684,7 @@ class BedrockCompletion(BaseLLM):
                 if system_message:
                     system_message += f"\n\n{content}"
                 else:
-                    system_message = content
+                    system_message = cast(str, content)
             else:
                 # Convert to Converse API format with proper content structure
                 converse_messages.append({"role": role, "content": [{"text": content}]})

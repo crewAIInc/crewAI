@@ -10,7 +10,7 @@ class RecursiveCharacterTextSplitter:
         chunk_overlap: int = 200,
         separators: list[str] | None = None,
         keep_separator: bool = True,
-    ):
+    ) -> None:
         """Initialize the RecursiveCharacterTextSplitter.
 
         Args:
@@ -36,6 +36,14 @@ class RecursiveCharacterTextSplitter:
         ]
 
     def split_text(self, text: str) -> list[str]:
+        """Split the input text into chunks.
+
+        Args:
+            text: The text to split.
+
+        Returns:
+            A list of text chunks.
+        """
         return self._split_text(text, self._separators)
 
     def _split_text(self, text: str, separators: list[str]) -> list[str]:
@@ -99,8 +107,8 @@ class RecursiveCharacterTextSplitter:
 
     def _merge_splits(self, splits: list[str], separator: str) -> list[str]:
         """Merge splits into chunks with proper overlap."""
-        docs = []
-        current_doc = []
+        docs: list[str] = []
+        current_doc: list[str] = []
         total = 0
 
         for split in splits:
@@ -152,7 +160,7 @@ class BaseChunker:
         chunk_overlap: int = 200,
         separators: list[str] | None = None,
         keep_separator: bool = True,
-    ):
+    ) -> None:
         """Initialize the Chunker.
 
         Args:
@@ -169,6 +177,14 @@ class BaseChunker:
         )
 
     def chunk(self, text: str) -> list[str]:
+        """Chunk the input text into smaller pieces.
+
+        Args:
+            text: The text to chunk.
+
+        Returns:
+            A list of text chunks.
+        """
         if not text or not text.strip():
             return []
 

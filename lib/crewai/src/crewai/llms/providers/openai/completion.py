@@ -10,6 +10,7 @@ from crewai.utilities.agent_utils import is_context_length_exceeded
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededError,
 )
+from crewai.utilities.types import LLMMessage
 from openai import APIConnectionError, NotFoundError, OpenAI
 from openai.types.chat import ChatCompletion, ChatCompletionChunk
 from openai.types.chat.chat_completion import Choice
@@ -126,7 +127,7 @@ class OpenAICompletion(BaseLLM):
 
     def call(
         self,
-        messages: str | list[dict[str, str]],
+        messages: str | list[LLMMessage],
         tools: list[dict] | None = None,
         callbacks: list[Any] | None = None,
         available_functions: dict[str, Any] | None = None,
@@ -148,7 +149,7 @@ class OpenAICompletion(BaseLLM):
         """
         try:
             self._emit_call_started_event(
-                messages=messages,
+                messages=messages,  # type: ignore[arg-type]
                 tools=tools,
                 callbacks=callbacks,
                 available_functions=available_functions,
@@ -156,7 +157,7 @@ class OpenAICompletion(BaseLLM):
                 from_agent=from_agent,
             )
 
-            formatted_messages = self._format_messages(messages)
+            formatted_messages = self._format_messages(messages)  # type: ignore[arg-type]
 
             completion_params = self._prepare_completion_params(
                 formatted_messages, tools
@@ -180,7 +181,7 @@ class OpenAICompletion(BaseLLM):
             raise
 
     def _prepare_completion_params(
-        self, messages: list[dict[str, str]], tools: list[dict] | None = None
+        self, messages: list[LLMMessage], tools: list[dict] | None = None
     ) -> dict[str, Any]:
         """Prepare parameters for OpenAI chat completion."""
         params = {
@@ -295,10 +296,10 @@ class OpenAICompletion(BaseLLM):
 
             if message.tool_calls and available_functions:
                 tool_call = message.tool_calls[0]
-                function_name = tool_call.function.name
+                function_name = tool_call.function.name  # type: ignore[union-attr]
 
                 try:
-                    function_args = json.loads(tool_call.function.arguments)
+                    function_args = json.loads(tool_call.function.arguments)  # type: ignore[union-attr]
                 except json.JSONDecodeError as e:
                     logging.error(f"Failed to parse tool arguments: {e}")
                     function_args = {}
@@ -521,15 +522,15 @@ class OpenAICompletion(BaseLLM):
             }
         return {"total_tokens": 0}
 
-    def _format_messages(
-        self, messages: str | list[dict[str, str]]
-    ) -> list[dict[str, str]]:
+    def _format_messages(  # type: ignore[override]
+        self, messages: str | list[LLMMessage]
+    ) -> list[LLMMessage]:
         """Format messages for OpenAI API."""
         # Use base class formatting first
-        base_formatted = super()._format_messages(messages)
+        base_formatted = super()._format_messages(messages)  # type: ignore[arg-type]
 
         # Apply OpenAI-specific formatting
-        formatted_messages = []
+        formatted_messages: list[LLMMessage] = []
 
         for message in base_formatted:
             if self.is_o1_model and message.get("role") == "system":

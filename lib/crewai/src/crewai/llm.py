@@ -40,6 +40,7 @@ from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededError,
 )
 from crewai.utilities.logger_utils import suppress_warnings
+from crewai.utilities.types import LLMMessage
 
 
 if TYPE_CHECKING:
@@ -452,7 +453,7 @@ class LLM(BaseLLM):
 
     def _prepare_completion_params(
         self,
-        messages: str | list[dict[str, str]],
+        messages: str | list[LLMMessage],
         tools: list[dict] | None = None,
     ) -> dict[str, Any]:
         """Prepare parameters for the completion call.
@@ -1037,7 +1038,7 @@ class LLM(BaseLLM):
 
     def call(
         self,
-        messages: str | list[dict[str, str]],
+        messages: str | list[LLMMessage],
         tools: list[dict] | None = None,
         callbacks: list[Any] | None = None,
         available_functions: dict[str, Any] | None = None,
@@ -1092,7 +1093,8 @@ class LLM(BaseLLM):
         if "o1" in self.model.lower():
             for message in messages:
                 if message.get("role") == "system":
-                    message["role"] = "assistant"
+                    msg_role: Literal["assistant"] = "assistant"
+                    message["role"] = msg_role
         # --- 5) Set up callbacks if provided
         with suppress_warnings():
             if callbacks and len(callbacks) > 0:
@@ -1179,7 +1181,7 @@ class LLM(BaseLLM):
         )
 
     def _format_messages_for_provider(
-        self, messages: list[dict[str, str]]
+        self, messages: list[LLMMessage]
     ) -> list[dict[str, str]]:
         """Format messages according to provider requirements.
 
@@ -1214,15 +1216,15 @@ class LLM(BaseLLM):
                         {"role": "assistant", "content": msg["content"]}
                     )
                 else:
-                    formatted_messages.append(msg)
-            return formatted_messages
+                    formatted_messages.append(msg)  # type: ignore[arg-type]
+            return formatted_messages  # type: ignore[return-value]
 
         # Handle Mistral models - they require the last message to have a role of 'user' or 'tool'
         if "mistral" in self.model.lower():
             # Check if the last message has a role of 'assistant'
             if messages and messages[-1]["role"] == "assistant":
-                return [*messages, {"role": "user", "content": "Please continue."}]
-            return messages
+                return [*messages, {"role": "user", "content": "Please continue."}]  # type: ignore[list-item]
+            return messages  # type: ignore[return-value]
 
         # TODO: Remove this code after merging PR https://github.com/BerriAI/litellm/pull/10917
         # Ollama doesn't supports last message to be 'assistant'
@@ -1231,18 +1233,18 @@ class LLM(BaseLLM):
             and messages
             and messages[-1]["role"] == "assistant"
         ):
-            return [*messages, {"role": "user", "content": ""}]
+            return [*messages, {"role": "user", "content": ""}]  # type: ignore[list-item]
 
         # Handle Anthropic models
         if not self.is_anthropic:
-            return messages
+            return messages  # type: ignore[return-value]
 
         # Anthropic requires messages to start with 'user' role
         if not messages or messages[0]["role"] == "system":
             # If first message is system or empty, add a placeholder user message
-            return [{"role": "user", "content": "."}, *messages]
+            return [{"role": "user", "content": "."}, *messages]  # type: ignore[list-item]
 
-        return messages
+        return messages  # type: ignore[return-value]
 
     def _get_custom_llm_provider(self) -> str | None:
         """

@@ -37,7 +37,7 @@ class DirectorySearchTool(RagTool):
     def add(self, directory: str) -> None:
         super().add(directory, data_type=DataType.DIRECTORY)
 
-    def _run(
+    def _run(  # type: ignore[override]
         self,
         search_query: str,
         directory: str | None = None,

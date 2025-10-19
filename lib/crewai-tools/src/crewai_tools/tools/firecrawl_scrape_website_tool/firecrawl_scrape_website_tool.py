@@ -7,10 +7,10 @@ from pydantic import BaseModel, ConfigDict, Field, PrivateAttr
 
 
 if TYPE_CHECKING:
-    from firecrawl import FirecrawlApp
+    from firecrawl import FirecrawlApp  # type: ignore[import-untyped]
 
 try:
-    from firecrawl import FirecrawlApp
+    from firecrawl import FirecrawlApp  # type: ignore[import-untyped]
 
     FIRECRAWL_AVAILABLE = True
 except ImportError:
@@ -104,7 +104,7 @@ try:
     # Must rebuild model after class is defined
     if not hasattr(FirecrawlScrapeWebsiteTool, "_model_rebuilt"):
         FirecrawlScrapeWebsiteTool.model_rebuild()
-        FirecrawlScrapeWebsiteTool._model_rebuilt = True
+        FirecrawlScrapeWebsiteTool._model_rebuilt = True  # type: ignore[attr-defined]
 except ImportError:
     """
     When this tool is not used, then exception can be ignored.

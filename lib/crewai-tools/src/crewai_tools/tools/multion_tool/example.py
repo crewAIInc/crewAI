@@ -1,7 +1,7 @@
 import os
 
 from crewai import Agent, Crew, Task
-from multion_tool import MultiOnTool
+from multion_tool import MultiOnTool # type: ignore[import-not-found]
 
 
 os.environ["OPENAI_API_KEY"] = "Your Key"

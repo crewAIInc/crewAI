@@ -34,7 +34,7 @@ class MySQLSearchTool(RagTool):
     ) -> None:
         super().add(f"SELECT * FROM {table_name};", **kwargs)  # noqa: S608
 
-    def _run(
+    def _run(  # type: ignore[override]
         self,
         search_query: str,
         similarity_threshold: float | None = None,

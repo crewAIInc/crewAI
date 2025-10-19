@@ -288,7 +288,7 @@ def process_llm_response(
 def handle_agent_action_core(
     formatted_answer: AgentAction,
     tool_result: ToolResult,
-    messages: list[dict[str, str]] | None = None,
+    messages: list[LLMMessage] | None = None,
     step_callback: Callable | None = None,
     show_logs: Callable | None = None,
 ) -> AgentAction | AgentFinish:
@@ -450,7 +450,7 @@ def summarize_messages(
         callbacks: List of callbacks for LLM
         i18n: I18N instance for messages
     """
-    messages_string = " ".join([message["content"] for message in messages])
+    messages_string = " ".join([message["content"] for message in messages])  # type: ignore[misc]
     cut_size = llm.get_context_window_size()
 
     messages_groups = [

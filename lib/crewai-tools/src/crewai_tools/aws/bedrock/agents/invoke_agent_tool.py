@@ -27,9 +27,9 @@ class BedrockInvokeAgentTool(BaseTool):
     name: str = "Bedrock Agent Invoke Tool"
     description: str = "An agent responsible for policy analysis."
     args_schema: type[BaseModel] = BedrockInvokeAgentToolInput
-    agent_id: str = None
-    agent_alias_id: str = None
-    session_id: str = None
+    agent_id: str | None = None
+    agent_alias_id: str | None = None
+    session_id: str | None = None
     enable_trace: bool = False
     end_session: bool = False
     package_dependencies: list[str] = Field(default_factory=lambda: ["boto3"])

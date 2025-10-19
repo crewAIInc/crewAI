@@ -33,7 +33,7 @@ class TXTSearchTool(RagTool):
             self.args_schema = FixedTXTSearchToolSchema
             self._generate_description()
 
-    def _run(
+    def _run(  # type: ignore[override]
         self,
         search_query: str,
         txt: str | None = None,

@@ -37,7 +37,7 @@ class CodeDocsSearchTool(RagTool):
     def add(self, docs_url: str) -> None:
         super().add(docs_url, data_type=DataType.DOCS_SITE)
 
-    def _run(
+    def _run(  # type: ignore[override]
         self,
         search_query: str,
         docs_url: str | None = None,
