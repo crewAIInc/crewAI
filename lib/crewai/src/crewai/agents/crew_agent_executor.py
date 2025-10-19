@@ -4,26 +4,25 @@ Handles agent execution flow including LLM interactions, tool execution,
 and memory management.
 """
 
-from collections.abc import Callable
-from typing import Any, Literal
+from __future__ import annotations
 
-from crewai.agent import Agent
+from collections.abc import Callable
+from typing import TYPE_CHECKING, Any, Literal, cast
+
+from pydantic import GetCoreSchemaHandler
+from pydantic_core import CoreSchema, core_schema
+
 from crewai.agents.agent_builder.base_agent_executor_mixin import CrewAgentExecutorMixin
 from crewai.agents.parser import (
     AgentAction,
     AgentFinish,
     OutputParserError,
 )
-from crewai.agents.tools_handler import ToolsHandler
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.logging_events import (
     AgentLogsExecutionEvent,
     AgentLogsStartedEvent,
 )
-from crewai.llms.base_llm import BaseLLM
-from crewai.tools.structured_tool import CrewStructuredTool
-from crewai.tools.tool_types import ToolResult
-from crewai.utilities import I18N, Printer
 from crewai.utilities.agent_utils import (
     enforce_rpm_limit,
     format_message_for_llm,
@@ -38,9 +37,23 @@ from crewai.utilities.agent_utils import (
     process_llm_response,
 )
 from crewai.utilities.constants import TRAINING_DATA_FILE
+from crewai.utilities.i18n import I18N
+from crewai.utilities.printer import Printer
 from crewai.utilities.tool_utils import execute_tool_and_check_finality
 from crewai.utilities.training_handler import CrewTrainingHandler
-from crewai.utilities.types import LLMMessage
+
+
+if TYPE_CHECKING:
+    from crewai.agent import Agent
+    from crewai.agents.tools_handler import ToolsHandler
+    from crewai.crew import Crew
+    from crewai.llms.base_llm import BaseLLM
+    from crewai.task import Task
+    from crewai.tools.base_tool import BaseTool
+    from crewai.tools.structured_tool import CrewStructuredTool
+    from crewai.tools.tool_types import ToolResult
+    from crewai.utilities.prompts import StandardPromptResult, SystemPromptResult
+    from crewai.utilities.types import LLMMessage
 
 
 class CrewAgentExecutor(CrewAgentExecutorMixin):
@@ -52,11 +65,11 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
 
     def __init__(
         self,
-        llm: Any,
-        task: Any,
-        crew: Any,
+        llm: BaseLLM | Any,
+        task: Task,
+        crew: Crew,
         agent: Agent,
-        prompt: dict[str, str],
+        prompt: SystemPromptResult | StandardPromptResult,
         max_iter: int,
         tools: list[CrewStructuredTool],
         tools_names: str,
@@ -64,8 +77,8 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         tools_description: str,
         tools_handler: ToolsHandler,
         step_callback: Any = None,
-        original_tools: list[Any] | None = None,
-        function_calling_llm: Any = None,
+        original_tools: list[BaseTool] | None = None,
+        function_calling_llm: BaseLLM | Any | None = None,
         respect_context_window: bool = False,
         request_within_rpm_limit: Callable[[], bool] | None = None,
         callbacks: list[Any] | None = None,
@@ -92,7 +105,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             callbacks: Optional callbacks list.
         """
         self._i18n: I18N = I18N()
-        self.llm: BaseLLM = llm
+        self.llm = llm
         self.task = task
         self.agent = agent
         self.crew = crew
@@ -124,7 +137,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             )
         )
 
-    def invoke(self, inputs: dict[str, str]) -> dict[str, Any]:
+    def invoke(self, inputs: dict[str, Any]) -> dict[str, Any]:
         """Execute the agent with given inputs.
 
         Args:
@@ -134,8 +147,12 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             Dictionary with agent output.
         """
         if "system" in self.prompt:
-            system_prompt = self._format_prompt(self.prompt.get("system", ""), inputs)
-            user_prompt = self._format_prompt(self.prompt.get("user", ""), inputs)
+            system_prompt = self._format_prompt(
+                cast(str, self.prompt.get("system", "")), inputs
+            )
+            user_prompt = self._format_prompt(
+                cast(str, self.prompt.get("user", "")), inputs
+            )
             self.messages.append(format_message_for_llm(system_prompt, role="system"))
             self.messages.append(format_message_for_llm(user_prompt))
         else:
@@ -509,3 +526,14 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             )
         )
         return self._invoke_loop()
+
+    @classmethod
+    def __get_pydantic_core_schema__(
+        cls, _source_type: Any, _handler: GetCoreSchemaHandler
+    ) -> CoreSchema:
+        """Generate Pydantic core schema for BaseClient Protocol.
+
+        This allows the Protocol to be used in Pydantic models without
+        requiring arbitrary_types_allowed=True.
+        """
+        return core_schema.any_schema()

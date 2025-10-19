@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 import asyncio
 from collections.abc import Callable
 from inspect import signature
-from typing import Any, get_args, get_origin
+from typing import Any, cast, get_args, get_origin
 
 from pydantic import (
     BaseModel,
@@ -35,26 +35,42 @@ class BaseTool(BaseModel, ABC):
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    name: str
-    """The unique name of the tool that clearly communicates its purpose."""
-    description: str
-    """Used to tell the model how/when/why to use the tool."""
-    env_vars: list[EnvVar] = []
-    """List of environment variables used by the tool."""
-    args_schema: type[PydanticBaseModel] = Field(
-        default=_ArgsSchemaPlaceholder, validate_default=True
+    name: str = Field(
+        description="The unique name of the tool that clearly communicates its purpose."
     )
-    """The schema for the arguments that the tool accepts."""
-    description_updated: bool = False
-    """Flag to check if the description has been updated."""
-    cache_function: Callable = lambda _args=None, _result=None: True
-    """Function that will be used to determine if the tool should be cached, should return a boolean. If None, the tool will be cached."""
-    result_as_answer: bool = False
-    """Flag to check if the tool should be the final agent answer."""
-    max_usage_count: int | None = None
-    """Maximum number of times this tool can be used. None means unlimited usage."""
-    current_usage_count: int = 0
-    """Current number of times this tool has been used."""
+    description: str = Field(
+        description="Used to tell the model how/when/why to use the tool."
+    )
+    env_vars: list[EnvVar] = Field(
+        default_factory=list,
+        description="List of environment variables used by the tool.",
+    )
+    args_schema: type[PydanticBaseModel] = Field(
+        default=_ArgsSchemaPlaceholder,
+        validate_default=True,
+        description="The schema for the arguments that the tool accepts.",
+    )
+
+    description_updated: bool = Field(
+        default=False, description="Flag to check if the description has been updated."
+    )
+
+    cache_function: Callable = Field(
+        default=lambda _args=None, _result=None: True,
+        description="Function that will be used to determine if the tool should be cached, should return a boolean. If None, the tool will be cached.",
+    )
+    result_as_answer: bool = Field(
+        default=False,
+        description="Flag to check if the tool should be the final agent answer.",
+    )
+    max_usage_count: int | None = Field(
+        default=None,
+        description="Maximum number of times this tool can be used. None means unlimited usage.",
+    )
+    current_usage_count: int = Field(
+        default=0,
+        description="Current number of times this tool has been used.",
+    )
 
     @field_validator("args_schema", mode="before")
     @classmethod
@@ -64,14 +80,19 @@ class BaseTool(BaseModel, ABC):
         if v != cls._ArgsSchemaPlaceholder:
             return v
 
-        return type(
-            f"{cls.__name__}Schema",
-            (PydanticBaseModel,),
-            {
-                "__annotations__": {
-                    k: v for k, v in cls._run.__annotations__.items() if k != "return"
+        return cast(
+            type[PydanticBaseModel],
+            type(
+                f"{cls.__name__}Schema",
+                (PydanticBaseModel,),
+                {
+                    "__annotations__": {
+                        k: v
+                        for k, v in cls._run.__annotations__.items()
+                        if k != "return"
+                    },
                 },
-            },
+            ),
         )
 
     @field_validator("max_usage_count", mode="before")
@@ -172,22 +193,25 @@ class BaseTool(BaseModel, ABC):
             args_schema=args_schema,
         )
 
-    def _set_args_schema(self):
+    def _set_args_schema(self) -> None:
         if self.args_schema is None:
             class_name = f"{self.__class__.__name__}Schema"
-            self.args_schema = type(
-                class_name,
-                (PydanticBaseModel,),
-                {
-                    "__annotations__": {
-                        k: v
-                        for k, v in self._run.__annotations__.items()
-                        if k != "return"
+            self.args_schema = cast(
+                type[PydanticBaseModel],
+                type(
+                    class_name,
+                    (PydanticBaseModel,),
+                    {
+                        "__annotations__": {
+                            k: v
+                            for k, v in self._run.__annotations__.items()
+                            if k != "return"
+                        },
                     },
-                },
+                ),
             )
 
-    def _generate_description(self):
+    def _generate_description(self) -> None:
         args_schema = {
             name: {
                 "description": field.description,
@@ -307,14 +331,17 @@ def tool(
                 raise ValueError("Function must have type annotations")
 
             class_name = "".join(tool_name.split()).title()
-            args_schema = type(
-                class_name,
-                (PydanticBaseModel,),
-                {
-                    "__annotations__": {
-                        k: v for k, v in f.__annotations__.items() if k != "return"
+            args_schema = cast(
+                type[PydanticBaseModel],
+                type(
+                    class_name,
+                    (PydanticBaseModel,),
+                    {
+                        "__annotations__": {
+                            k: v for k, v in f.__annotations__.items() if k != "return"
+                        },
                     },
-                },
+                ),
             )
 
             return Tool(

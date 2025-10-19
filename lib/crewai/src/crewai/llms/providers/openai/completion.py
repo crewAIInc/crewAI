@@ -4,6 +4,12 @@ import logging
 import os
 from typing import Any
 
+from openai import APIConnectionError, NotFoundError, OpenAI
+from openai.types.chat import ChatCompletion, ChatCompletionChunk
+from openai.types.chat.chat_completion import Choice
+from openai.types.chat.chat_completion_chunk import ChoiceDelta
+from pydantic import BaseModel
+
 from crewai.events.types.llm_events import LLMCallType
 from crewai.llms.base_llm import BaseLLM
 from crewai.utilities.agent_utils import is_context_length_exceeded
@@ -11,11 +17,6 @@ from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededError,
 )
 from crewai.utilities.types import LLMMessage
-from openai import APIConnectionError, NotFoundError, OpenAI
-from openai.types.chat import ChatCompletion, ChatCompletionChunk
-from openai.types.chat.chat_completion import Choice
-from openai.types.chat.chat_completion_chunk import ChoiceDelta
-from pydantic import BaseModel
 
 
 class OpenAICompletion(BaseLLM):

@@ -22,15 +22,13 @@ Example:
     ```
 """
 
+from __future__ import annotations
+
 import asyncio
 from collections.abc import Callable
 import functools
 import logging
-from typing import (
-    Any,
-    TypeVar,
-    cast,
-)
+from typing import TYPE_CHECKING, Any, ClassVar, Final, TypeVar, cast
 
 from pydantic import BaseModel
 
@@ -39,11 +37,15 @@ from crewai.flow.persistence.sqlite import SQLiteFlowPersistence
 from crewai.utilities.printer import Printer
 
 
+if TYPE_CHECKING:
+    from crewai.flow.flow import Flow
+
+
 logger = logging.getLogger(__name__)
 T = TypeVar("T")
 
 # Constants for log messages
-LOG_MESSAGES = {
+LOG_MESSAGES: Final[dict[str, str]] = {
     "save_state": "Saving flow state to memory for ID: {}",
     "save_error": "Failed to persist state for method {}: {}",
     "state_missing": "Flow instance has no state",
@@ -54,12 +56,12 @@ LOG_MESSAGES = {
 class PersistenceDecorator:
     """Class to handle flow state persistence with consistent logging."""
 
-    _printer = Printer()  # Class-level printer instance
+    _printer: ClassVar[Printer] = Printer()
 
     @classmethod
     def persist_state(
         cls,
-        flow_instance: Any,
+        flow_instance: Flow,
         method_name: str,
         persistence_instance: FlowPersistence,
         verbose: bool = False,

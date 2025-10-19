@@ -25,6 +25,7 @@ try:
     from azure.core.exceptions import (  # type: ignore[import-not-found]
         HttpResponseError,
     )
+
     from crewai.events.types.llm_events import LLMCallType
     from crewai.llms.base_llm import BaseLLM
 

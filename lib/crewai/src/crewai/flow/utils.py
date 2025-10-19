@@ -19,6 +19,15 @@ import inspect
 import textwrap
 from typing import Any
 
+from typing_extensions import TypeIs
+
+from crewai.flow.flow_wrappers import (
+    FlowCondition,
+    FlowConditions,
+    FlowMethod,
+    SimpleFlowCondition,
+)
+from crewai.flow.types import FlowMethodCallable, FlowMethodName
 from crewai.utilities.printer import Printer
 
 
@@ -391,3 +400,120 @@ def process_router_paths(flow, current, current_level, levels, queue):
                     ):
                         levels[listener_name] = current_level + 1
                         queue.append(listener_name)
+
+
+def is_flow_method_name(obj: Any) -> TypeIs[FlowMethodName]:
+    """Check if the object is a valid flow method name.
+
+    Args:
+        obj: The object to check.
+    Returns:
+        True if the object is a valid flow method name, False otherwise.
+    """
+    return isinstance(obj, str)
+
+
+def is_flow_method_callable(obj: Any) -> TypeIs[FlowMethodCallable]:
+    """Check if the object is a callable flow method.
+
+    Args:
+        obj: The object to check.
+
+    Returns:
+        True if the object is a callable, False otherwise.
+    """
+    return callable(obj) and hasattr(obj, "__name__")
+
+
+def is_flow_condition_list(obj: Any) -> TypeIs[FlowConditions]:
+    """Check if the object is a list of FlowCondition dictionaries.
+
+    Args:
+        obj: The object to check.
+
+    Returns:
+        True if the object is a list of FlowCondition dictionaries, False otherwise.
+    """
+    if not isinstance(obj, list):
+        return False
+
+    for item in obj:
+        if not (is_flow_method_name(item) or is_flow_condition_dict(item)):
+            return False
+
+    return True
+
+
+def is_simple_flow_condition(obj: Any) -> TypeIs[SimpleFlowCondition]:
+    """Check if the object is a simple flow condition tuple.
+
+    Args:
+        obj: The object to check.
+
+    Returns:
+        True if the object is a (condition_type, methods) tuple, False otherwise.
+    """
+    return (
+        isinstance(obj, tuple)
+        and len(obj) == 2
+        and isinstance(obj[0], str)
+        and isinstance(obj[1], list)
+    )
+
+
+def is_flow_method(obj: Any) -> TypeIs[FlowMethod[Any, Any]]:
+    """Check if the object is a flow method wrapper.
+
+    Checks for attributes added by @start, @listen, or @router decorators.
+
+    Args:
+        obj: The object to check.
+
+    Returns:
+        True if the object is a FlowMethod subclass (StartMethod, ListenMethod, or RouterMethod).
+    """
+    return (
+        hasattr(obj, "__is_flow_method__")
+        or hasattr(obj, "__is_start_method__")
+        or hasattr(obj, "__trigger_methods__")
+        or hasattr(obj, "__is_router__")
+    )
+
+
+def is_flow_condition_dict(obj: Any) -> TypeIs[FlowCondition]:
+    """Check if the object matches the FlowCondition structure.
+
+    Args:
+        obj: The object to check.
+
+    Returns:
+        True if the object is a valid FlowCondition dictionary, False otherwise.
+    """
+    if not isinstance(obj, dict):
+        return False
+
+    type_value = obj.get("type")
+    if type_value not in ("AND", "OR"):
+        return False
+
+    if "conditions" in obj:
+        conditions = obj["conditions"]
+        if not isinstance(conditions, list):
+            return False
+        for cond in conditions:
+            if not (
+                isinstance(cond, str)
+                or (isinstance(cond, dict) and is_flow_condition_dict(cond))
+            ):
+                return False
+
+    if "methods" in obj:
+        methods = obj["methods"]
+        if not (isinstance(methods, list) and all(isinstance(m, str) for m in methods)):
+            return False
+
+    allowed_keys = {"type", "conditions", "methods"}
+    if not set(obj).issubset(allowed_keys):
+        return False
+
+    return True

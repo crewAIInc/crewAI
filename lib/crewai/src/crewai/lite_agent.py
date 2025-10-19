@@ -23,7 +23,7 @@ from typing_extensions import Self
 
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.agents.agent_builder.utilities.base_token_process import TokenProcess
-from crewai.agents.cache import CacheHandler
+from crewai.agents.cache.cache_handler import CacheHandler
 from crewai.agents.parser import (
     AgentAction,
     AgentFinish,
@@ -37,10 +37,11 @@ from crewai.events.types.agent_events import (
 )
 from crewai.events.types.logging_events import AgentLogsExecutionEvent
 from crewai.flow.flow_trackable import FlowTrackable
-from crewai.llm import LLM, BaseLLM
+from crewai.lite_agent_output import LiteAgentOutput
+from crewai.llm import LLM
+from crewai.llms.base_llm import BaseLLM
 from crewai.tools.base_tool import BaseTool
 from crewai.tools.structured_tool import CrewStructuredTool
-from crewai.utilities import I18N
 from crewai.utilities.agent_utils import (
     enforce_rpm_limit,
     format_message_for_llm,
@@ -59,38 +60,13 @@ from crewai.utilities.agent_utils import (
 )
 from crewai.utilities.converter import generate_model_description
 from crewai.utilities.guardrail import process_guardrail
+from crewai.utilities.guardrail_types import GuardrailCallable, GuardrailType
+from crewai.utilities.i18n import I18N
 from crewai.utilities.llm_utils import create_llm
 from crewai.utilities.printer import Printer
 from crewai.utilities.token_counter_callback import TokenCalcHandler
 from crewai.utilities.tool_utils import execute_tool_and_check_finality
 from crewai.utilities.types import LLMMessage
-
-
-class LiteAgentOutput(BaseModel):
-    """Class that represents the result of a LiteAgent execution."""
-
-    model_config = {"arbitrary_types_allowed": True}
-
-    raw: str = Field(description="Raw output of the agent", default="")
-    pydantic: BaseModel | None = Field(
-        description="Pydantic output of the agent", default=None
-    )
-    agent_role: str = Field(description="Role of the agent that produced this output")
-    usage_metrics: dict[str, Any] | None = Field(
-        description="Token usage metrics for this execution", default=None
-    )
-
-    def to_dict(self) -> dict[str, Any]:
-        """Convert pydantic_output to a dictionary."""
-        if self.pydantic:
-            return self.pydantic.model_dump()
-        return {}
-
-    def __str__(self) -> str:
-        """String representation of the output."""
-        if self.pydantic:
-            return str(self.pydantic)
-        return self.raw
 
 
 class LiteAgent(FlowTrackable, BaseModel):
@@ -146,7 +122,9 @@ class LiteAgent(FlowTrackable, BaseModel):
         default=None,
         description="Callback to check if the request is within the RPM limit",
     )
-    i18n: I18N = Field(default=I18N(), description="Internationalization settings.")
+    i18n: I18N = Field(
+        default_factory=I18N, description="Internationalization settings."
+    )
 
     # Output and Formatting Properties
     response_format: type[BaseModel] | None = Field(
@@ -156,11 +134,11 @@ class LiteAgent(FlowTrackable, BaseModel):
         default=False, description="Whether to print execution details"
     )
     callbacks: list[Callable] = Field(
-        default=[], description="Callbacks to be used for the agent"
+        default_factory=list, description="Callbacks to be used for the agent"
     )
 
     # Guardrail Properties
-    guardrail: Callable[[LiteAgentOutput], tuple[bool, Any]] | str | None = Field(
+    guardrail: GuardrailType | None = Field(
         default=None,
         description="Function or string description of a guardrail to validate agent output",
     )
@@ -170,7 +148,7 @@ class LiteAgent(FlowTrackable, BaseModel):
 
     # State and Results
     tools_results: list[dict[str, Any]] = Field(
-        default=[], description="Results of the tools used by the agent."
+        default_factory=list, description="Results of the tools used by the agent."
     )
 
     # Reference of Agent
@@ -185,11 +163,11 @@ class LiteAgent(FlowTrackable, BaseModel):
     _messages: list[LLMMessage] = PrivateAttr(default_factory=list)
     _iterations: int = PrivateAttr(default=0)
     _printer: Printer = PrivateAttr(default_factory=Printer)
-    _guardrail: Callable | None = PrivateAttr(default=None)
+    _guardrail: GuardrailCallable | None = PrivateAttr(default=None)
     _guardrail_retry_count: int = PrivateAttr(default=0)
 
     @model_validator(mode="after")
-    def setup_llm(self):
+    def setup_llm(self) -> Self:
         """Set up the LLM and other components after initialization."""
         self.llm = create_llm(self.llm)
         if not isinstance(self.llm, BaseLLM):
@@ -221,7 +199,10 @@ class LiteAgent(FlowTrackable, BaseModel):
                 raise TypeError(
                     f"Guardrail requires LLM instance of type BaseLLM, got {type(self.llm).__name__}"
                 )
-            self._guardrail = LLMGuardrail(description=self.guardrail, llm=self.llm)
+            self._guardrail = cast(
+                GuardrailCallable,
+                LLMGuardrail(description=self.guardrail, llm=self.llm),
+            )
 
         return self
 

@@ -1,12 +1,20 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Callable
+from collections.abc import Callable, Coroutine
 from concurrent.futures import Future
 import copy
 import inspect
 import logging
-from typing import Any, ClassVar, Generic, TypeVar, cast
+from typing import (
+    Any,
+    ClassVar,
+    Generic,
+    Literal,
+    ParamSpec,
+    TypeVar,
+    cast,
+)
 from uuid import uuid4
 
 from opentelemetry import baggage
@@ -31,9 +39,26 @@ from crewai.events.types.flow_events import (
     MethodExecutionStartedEvent,
 )
 from crewai.flow.flow_visualizer import plot_flow
+from crewai.flow.flow_wrappers import (
+    FlowCondition,
+    FlowConditions,
+    FlowMethod,
+    ListenMethod,
+    RouterMethod,
+    SimpleFlowCondition,
+    StartMethod,
+)
 from crewai.flow.persistence.base import FlowPersistence
-from crewai.flow.types import FlowExecutionData
-from crewai.flow.utils import get_possible_return_constants
+from crewai.flow.types import FlowExecutionData, FlowMethodName, PendingListenerKey
+from crewai.flow.utils import (
+    get_possible_return_constants,
+    is_flow_condition_dict,
+    is_flow_condition_list,
+    is_flow_method,
+    is_flow_method_callable,
+    is_flow_method_name,
+    is_simple_flow_condition,
+)
 from crewai.utilities.printer import Printer, PrinterColor
 
 
@@ -54,6 +79,9 @@ T = TypeVar("T", bound=dict[str, Any] | BaseModel)  # Generic flow state type pa
 StateT = TypeVar(
     "StateT", bound=dict[str, Any] | BaseModel
 )  # State validation type parameter
+P = ParamSpec("P")  # ParamSpec for preserving function signatures in decorators
+R = TypeVar("R")  # Generic return type for decorated methods
+F = TypeVar("F", bound=Callable[..., Any])  # Function type for decorator preservation
 
 
 def ensure_state_type(state: Any, expected_type: type[StateT]) -> StateT:
@@ -83,7 +111,9 @@ def ensure_state_type(state: Any, expected_type: type[StateT]) -> StateT:
     raise TypeError(f"Invalid expected_type: {expected_type}")
 
 
-def start(condition: str | dict | Callable | None = None) -> Callable:
+def start(
+    condition: str | FlowCondition | Callable[..., Any] | None = None,
+) -> Callable[[Callable[P, R]], StartMethod[P, R]]:
     """
     Marks a method as a flow's starting point.
 
@@ -93,17 +123,18 @@ def start(condition: str | dict | Callable | None = None) -> Callable:
 
     Parameters
     ----------
-    condition : Optional[Union[str, dict, Callable]], optional
+    condition : Optional[Union[str, FlowCondition, Callable[..., Any]]], optional
         Defines when the start method should execute. Can be:
         - str: Name of a method that triggers this start
-        - dict: Result from or_() or and_(), including nested conditions
-        - Callable: A method reference that triggers this start
+        - FlowCondition: Result from or_() or and_(), including nested conditions
+        - Callable[..., Any]: A method reference that triggers this start
         Default is None, meaning unconditional start.
 
     Returns
     -------
-    Callable
-        A decorator function that marks the method as a flow start point.
+    Callable[[Callable[P, R]], StartMethod[P, R]]
+        A decorator function that wraps the method as a flow start point
+        and preserves its signature.
 
     Raises
     ------
@@ -125,37 +156,40 @@ def start(condition: str | dict | Callable | None = None) -> Callable:
     ...     pass
     """
 
-    def decorator(func):
-        func.__is_start_method__ = True
+    def decorator(func: Callable[P, R]) -> StartMethod[P, R]:
+        wrapper = StartMethod(func)
+
         if condition is not None:
-            if isinstance(condition, str):
-                func.__trigger_methods__ = [condition]
-                func.__condition_type__ = "OR"
-            elif isinstance(condition, dict) and "type" in condition:
+            if is_flow_method_name(condition):
+                wrapper.__trigger_methods__ = [condition]
+                wrapper.__condition_type__ = "OR"
+            elif is_flow_condition_dict(condition):
                 if "conditions" in condition:
-                    func.__trigger_condition__ = condition
-                    func.__trigger_methods__ = _extract_all_methods(condition)
-                    func.__condition_type__ = condition["type"]
+                    wrapper.__trigger_condition__ = condition
+                    wrapper.__trigger_methods__ = _extract_all_methods(condition)
+                    wrapper.__condition_type__ = condition["type"]
                 elif "methods" in condition:
-                    func.__trigger_methods__ = condition["methods"]
-                    func.__condition_type__ = condition["type"]
+                    wrapper.__trigger_methods__ = condition["methods"]
+                    wrapper.__condition_type__ = condition["type"]
                 else:
                     raise ValueError(
                         "Condition dict must contain 'conditions' or 'methods'"
                     )
-            elif callable(condition) and hasattr(condition, "__name__"):
-                func.__trigger_methods__ = [condition.__name__]
-                func.__condition_type__ = "OR"
+            elif is_flow_method_callable(condition):
+                wrapper.__trigger_methods__ = [condition.__name__]
+                wrapper.__condition_type__ = "OR"
             else:
                 raise ValueError(
                     "Condition must be a method, string, or a result of or_() or and_()"
                 )
-        return func
+        return wrapper
 
     return decorator
 
 
-def listen(condition: str | dict | Callable) -> Callable:
+def listen(
+    condition: str | FlowCondition | Callable[..., Any],
+) -> Callable[[Callable[P, R]], ListenMethod[P, R]]:
     """
     Creates a listener that executes when specified conditions are met.
 
@@ -165,16 +199,17 @@ def listen(condition: str | dict | Callable) -> Callable:
 
     Parameters
     ----------
-    condition : Union[str, dict, Callable]
+    condition : Union[str, FlowCondition, Callable[..., Any]]
         Specifies when the listener should execute. Can be:
         - str: Name of a method that triggers this listener
-        - dict: Result from or_() or and_(), including nested conditions
-        - Callable: A method reference that triggers this listener
+        - FlowCondition: Result from or_() or and_(), including nested conditions
+        - Callable[..., Any]: A method reference that triggers this listener
 
     Returns
     -------
-    Callable
-        A decorator function that sets up the method as a listener.
+    Callable[[Callable[P, R]], ListenMethod[P, R]]
+        A decorator function that wraps the method as a listener
+        and preserves its signature.
 
     Raises
     ------
@@ -192,35 +227,39 @@ def listen(condition: str | dict | Callable) -> Callable:
     ...     pass
     """
 
-    def decorator(func):
-        if isinstance(condition, str):
-            func.__trigger_methods__ = [condition]
-            func.__condition_type__ = "OR"
-        elif isinstance(condition, dict) and "type" in condition:
+    def decorator(func: Callable[P, R]) -> ListenMethod[P, R]:
+        wrapper = ListenMethod(func)
+
+        if is_flow_method_name(condition):
+            wrapper.__trigger_methods__ = [condition]
+            wrapper.__condition_type__ = "OR"
+        elif is_flow_condition_dict(condition):
             if "conditions" in condition:
-                func.__trigger_condition__ = condition
-                func.__trigger_methods__ = _extract_all_methods(condition)
-                func.__condition_type__ = condition["type"]
+                wrapper.__trigger_condition__ = condition
+                wrapper.__trigger_methods__ = _extract_all_methods(condition)
+                wrapper.__condition_type__ = condition["type"]
             elif "methods" in condition:
-                func.__trigger_methods__ = condition["methods"]
-                func.__condition_type__ = condition["type"]
+                wrapper.__trigger_methods__ = condition["methods"]
+                wrapper.__condition_type__ = condition["type"]
             else:
                 raise ValueError(
                     "Condition dict must contain 'conditions' or 'methods'"
                 )
-        elif callable(condition) and hasattr(condition, "__name__"):
-            func.__trigger_methods__ = [condition.__name__]
-            func.__condition_type__ = "OR"
+        elif is_flow_method_callable(condition):
+            wrapper.__trigger_methods__ = [condition.__name__]
+            wrapper.__condition_type__ = "OR"
         else:
             raise ValueError(
                 "Condition must be a method, string, or a result of or_() or and_()"
             )
-        return func
+        return wrapper
 
     return decorator
 
 
-def router(condition: str | dict | Callable) -> Callable:
+def router(
+    condition: str | FlowCondition | Callable[..., Any],
+) -> Callable[[Callable[P, R]], RouterMethod[P, R]]:
     """
     Creates a routing method that directs flow execution based on conditions.
 
@@ -231,16 +270,17 @@ def router(condition: str | dict | Callable) -> Callable:
 
     Parameters
     ----------
-    condition : Union[str, dict, Callable]
+    condition : Union[str, FlowCondition, Callable[..., Any]]
         Specifies when the router should execute. Can be:
         - str: Name of a method that triggers this router
-        - dict: Result from or_() or and_(), including nested conditions
-        - Callable: A method reference that triggers this router
+        - FlowCondition: Result from or_() or and_(), including nested conditions
+        - Callable[..., Any]: A method reference that triggers this router
 
     Returns
     -------
-    Callable
-        A decorator function that sets up the method as a router.
+    Callable[[Callable[P, R]], RouterMethod[P, R]]
+        A decorator function that wraps the method as a router
+        and preserves its signature.
 
     Raises
     ------
@@ -262,36 +302,37 @@ def router(condition: str | dict | Callable) -> Callable:
     ...     return STOP
     """
 
-    def decorator(func):
-        func.__is_router__ = True
-        if isinstance(condition, str):
-            func.__trigger_methods__ = [condition]
-            func.__condition_type__ = "OR"
-        elif isinstance(condition, dict) and "type" in condition:
+    def decorator(func: Callable[P, R]) -> RouterMethod[P, R]:
+        wrapper = RouterMethod(func)
+
+        if is_flow_method_name(condition):
+            wrapper.__trigger_methods__ = [condition]
+            wrapper.__condition_type__ = "OR"
+        elif is_flow_condition_dict(condition):
             if "conditions" in condition:
-                func.__trigger_condition__ = condition
-                func.__trigger_methods__ = _extract_all_methods(condition)
-                func.__condition_type__ = condition["type"]
+                wrapper.__trigger_condition__ = condition
+                wrapper.__trigger_methods__ = _extract_all_methods(condition)
+                wrapper.__condition_type__ = condition["type"]
             elif "methods" in condition:
-                func.__trigger_methods__ = condition["methods"]
-                func.__condition_type__ = condition["type"]
+                wrapper.__trigger_methods__ = condition["methods"]
+                wrapper.__condition_type__ = condition["type"]
             else:
                 raise ValueError(
                     "Condition dict must contain 'conditions' or 'methods'"
                 )
-        elif callable(condition) and hasattr(condition, "__name__"):
-            func.__trigger_methods__ = [condition.__name__]
-            func.__condition_type__ = "OR"
+        elif is_flow_method_callable(condition):
+            wrapper.__trigger_methods__ = [condition.__name__]
+            wrapper.__condition_type__ = "OR"
         else:
             raise ValueError(
                 "Condition must be a method, string, or a result of or_() or and_()"
             )
-        return func
+        return wrapper
 
     return decorator
 
 
-def or_(*conditions: str | dict | Callable) -> dict:
+def or_(*conditions: str | FlowCondition | Callable[..., Any]) -> FlowCondition:
     """
     Combines multiple conditions with OR logic for flow control.
 
@@ -301,15 +342,15 @@ def or_(*conditions: str | dict | Callable) -> dict:
 
     Parameters
     ----------
-    *conditions : Union[str, dict, Callable]
+    *conditions : Union[str, dict[str, Any], Callable[..., Any]]
         Variable number of conditions that can be:
         - str: Method names
-        - dict: Existing condition dictionaries (nested conditions)
-        - Callable: Method references
+        - dict[str, Any]: Existing condition dictionaries (nested conditions)
+        - Callable[..., Any]: Method references
 
     Returns
     -------
-    dict
+    dict[str, Any]
         A condition dictionary with format:
         {"type": "OR", "conditions": list_of_conditions}
         where each condition can be a string (method name) or a nested dict
@@ -329,20 +370,20 @@ def or_(*conditions: str | dict | Callable) -> dict:
     >>> def handle_nested(self):
     ...     pass
     """
-    processed_conditions: list[str | dict[str, Any]] = []
+    processed_conditions: FlowConditions = []
     for condition in conditions:
-        if isinstance(condition, dict):
+        if is_flow_condition_dict(condition):
             processed_conditions.append(condition)
-        elif isinstance(condition, str):
+        elif is_flow_method_name(condition):
             processed_conditions.append(condition)
-        elif callable(condition):
-            processed_conditions.append(getattr(condition, "__name__", repr(condition)))
+        elif is_flow_method_callable(condition):
+            processed_conditions.append(condition.__name__)
         else:
             raise ValueError("Invalid condition in or_()")
     return {"type": "OR", "conditions": processed_conditions}
 
 
-def and_(*conditions: str | dict | Callable) -> dict:
+def and_(*conditions: str | FlowCondition | Callable[..., Any]) -> FlowCondition:
     """
     Combines multiple conditions with AND logic for flow control.
 
@@ -352,15 +393,15 @@ def and_(*conditions: str | dict | Callable) -> dict:
 
     Parameters
     ----------
-    *conditions : Union[str, dict, Callable]
+    *conditions : Union[str, dict[str, Any], Callable[..., Any]]
         Variable number of conditions that can be:
         - str: Method names
-        - dict: Existing condition dictionaries (nested conditions)
-        - Callable: Method references
+        - dict[str, Any]: Existing condition dictionaries (nested conditions)
+        - Callable[..., Any]: Method references
 
     Returns
     -------
-    dict
+    dict[str, Any]
         A condition dictionary with format:
         {"type": "AND", "conditions": list_of_conditions}
         where each condition can be a string (method name) or a nested dict
@@ -380,20 +421,22 @@ def and_(*conditions: str | dict | Callable) -> dict:
     >>> def handle_nested(self):
     ...     pass
     """
-    processed_conditions: list[str | dict[str, Any]] = []
+    processed_conditions: FlowConditions = []
     for condition in conditions:
-        if isinstance(condition, dict):
+        if is_flow_condition_dict(condition):
             processed_conditions.append(condition)
-        elif isinstance(condition, str):
+        elif is_flow_method_name(condition):
             processed_conditions.append(condition)
-        elif callable(condition):
-            processed_conditions.append(getattr(condition, "__name__", repr(condition)))
+        elif is_flow_method_callable(condition):
+            processed_conditions.append(condition.__name__)
         else:
             raise ValueError("Invalid condition in and_()")
     return {"type": "AND", "conditions": processed_conditions}
 
 
-def _normalize_condition(condition: str | dict | list) -> dict:
+def _normalize_condition(
+    condition: FlowConditions | FlowCondition | FlowMethodName,
+) -> FlowCondition:
     """Normalize a condition to standard format with 'conditions' key.
 
     Args:
@@ -402,20 +445,23 @@ def _normalize_condition(condition: str | dict | list) -> dict:
     Returns:
         Normalized dict with 'type' and 'conditions' keys
     """
-    if isinstance(condition, str):
+    if is_flow_method_name(condition):
         return {"type": "OR", "conditions": [condition]}
-    if isinstance(condition, dict):
+    if is_flow_condition_dict(condition):
         if "conditions" in condition:
             return condition
         if "methods" in condition:
             return {"type": condition["type"], "conditions": condition["methods"]}
         return condition
-    if isinstance(condition, list):
+    if is_flow_condition_list(condition):
         return {"type": "OR", "conditions": condition}
-    return {"type": "OR", "conditions": [condition]}
+
+    raise ValueError(f"Cannot normalize condition: {condition}")
 
 
-def _extract_all_methods(condition: str | dict | list) -> list[str]:
+def _extract_all_methods(
+    condition: str | FlowCondition | dict[str, Any] | list[Any],
+) -> list[FlowMethodName]:
     """Extract all method names from a condition (including nested).
 
     Args:
@@ -424,9 +470,9 @@ def _extract_all_methods(condition: str | dict | list) -> list[str]:
     Returns:
         List of all method names in the condition tree
     """
-    if isinstance(condition, str):
+    if is_flow_method_name(condition):
         return [condition]
-    if isinstance(condition, dict):
+    if is_flow_condition_dict(condition):
         normalized = _normalize_condition(condition)
         methods = []
         for sub_cond in normalized.get("conditions", []):
@@ -441,15 +487,21 @@ def _extract_all_methods(condition: str | dict | list) -> list[str]:
 
 
 class FlowMeta(type):
-    def __new__(mcs, name, bases, dct):
-        cls = super().__new__(mcs, name, bases, dct)
+    def __new__(
+        mcs,
+        name: str,
+        bases: tuple[type, ...],
+        namespace: dict[str, Any],
+        **kwargs: Any,
+    ) -> type:
+        cls = super().__new__(mcs, name, bases, namespace)
 
         start_methods = []
         listeners = {}
         router_paths = {}
         routers = set()
 
-        for attr_name, attr_value in dct.items():
+        for attr_name, attr_value in namespace.items():
             # Check for any flow-related attributes
             if (
                 hasattr(attr_value, "__is_flow_method__")
@@ -462,10 +514,16 @@ class FlowMeta(type):
                     start_methods.append(attr_name)
 
                 # Register listeners and routers
-                if hasattr(attr_value, "__trigger_methods__"):
+                if (
+                    hasattr(attr_value, "__trigger_methods__")
+                    and attr_value.__trigger_methods__ is not None
+                ):
                     methods = attr_value.__trigger_methods__
                     condition_type = getattr(attr_value, "__condition_type__", "OR")
-                    if hasattr(attr_value, "__trigger_condition__"):
+                    if (
+                        hasattr(attr_value, "__trigger_condition__")
+                        and attr_value.__trigger_condition__ is not None
+                    ):
                         listeners[attr_name] = attr_value.__trigger_condition__
                     else:
                         listeners[attr_name] = (condition_type, methods)
@@ -479,10 +537,10 @@ class FlowMeta(type):
                         if possible_returns:
                             router_paths[attr_name] = possible_returns
 
-        cls._start_methods = start_methods
-        cls._listeners = listeners
-        cls._routers = routers
-        cls._router_paths = router_paths
+        cls._start_methods = start_methods  # type: ignore[attr-defined]
+        cls._listeners = listeners  # type: ignore[attr-defined]
+        cls._routers = routers  # type: ignore[attr-defined]
+        cls._router_paths = router_paths  # type: ignore[attr-defined]
 
         return cls
 
@@ -492,12 +550,12 @@ class Flow(Generic[T], metaclass=FlowMeta):
 
     type parameter T must be either dict[str, Any] or a subclass of BaseModel."""
 
-    _printer = Printer()
+    _printer: ClassVar[Printer] = Printer()
 
-    _start_methods: ClassVar[list[str]] = []
-    _listeners: ClassVar[dict[str, tuple[str, list[str]]]] = {}
-    _routers: ClassVar[set[str]] = set()
-    _router_paths: ClassVar[dict[str, list[str]]] = {}
+    _start_methods: ClassVar[list[FlowMethodName]] = []
+    _listeners: ClassVar[dict[FlowMethodName, SimpleFlowCondition | FlowCondition]] = {}
+    _routers: ClassVar[set[FlowMethodName]] = set()
+    _router_paths: ClassVar[dict[FlowMethodName, list[FlowMethodName]]] = {}
     initial_state: type[T] | T | None = None
     name: str | None = None
     tracing: bool | None = False
@@ -522,11 +580,13 @@ class Flow(Generic[T], metaclass=FlowMeta):
             **kwargs: Additional state values to initialize or override
         """
         # Initialize basic instance attributes
-        self._methods: dict[str, Callable] = {}
-        self._method_execution_counts: dict[str, int] = {}
-        self._pending_and_listeners: dict[str, set[str]] = {}
+        self._methods: dict[FlowMethodName, FlowMethod[Any, Any]] = {}
+        self._method_execution_counts: dict[FlowMethodName, int] = {}
+        self._pending_and_listeners: dict[PendingListenerKey, set[FlowMethodName]] = {}
         self._method_outputs: list[Any] = []  # list to store all method outputs
-        self._completed_methods: set[str] = set()  # Track completed methods for reload
+        self._completed_methods: set[FlowMethodName] = (
+            set()
+        )  # Track completed methods for reload
         self._persistence: FlowPersistence | None = persistence
         self._is_execution_resuming: bool = False
         self._event_futures: list[Future[None]] = []
@@ -557,17 +617,11 @@ class Flow(Generic[T], metaclass=FlowMeta):
         for method_name in dir(self):
             if not method_name.startswith("_"):
                 method = getattr(self, method_name)
-                # Check for any flow-related attributes
-                if (
-                    hasattr(method, "__is_flow_method__")
-                    or hasattr(method, "__is_start_method__")
-                    or hasattr(method, "__trigger_methods__")
-                    or hasattr(method, "__is_router__")
-                ):
+                if is_flow_method(method):
                     # Ensure method is bound to this instance
                     if not hasattr(method, "__self__"):
                         method = method.__get__(self, self.__class__)
-                    self._methods[method_name] = method
+                    self._methods[method.__name__] = method
 
     def _create_initial_state(self) -> T:
         """Create and initialize flow state with UUID and default values.
@@ -802,7 +856,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
             self._update_state_field("id", flow_id)
 
         self._completed_methods = {
-            name
+            cast(FlowMethodName, name)
             for method_data in execution_data.get("completed_methods", [])
             if (name := method_data.get("flow_method", {}).get("name")) is not None
         }
@@ -831,7 +885,9 @@ class Flow(Generic[T], metaclass=FlowMeta):
             self._apply_state_updates(state_to_apply)
 
         for method in sorted_methods[:-1]:
-            method_name = method.get("flow_method", {}).get("name")
+            method_name = cast(
+                FlowMethodName | None, method.get("flow_method", {}).get("name")
+            )
             if method_name:
                 self._completed_methods.add(method_name)
 
@@ -859,10 +915,10 @@ class Flow(Generic[T], metaclass=FlowMeta):
         emission is handled in the asynchronous method.
         """
 
-        async def run_flow():
+        async def _run_flow() -> Coroutine[Any, Any, Any]:
             return await self.kickoff_async(inputs)
 
-        return asyncio.run(run_flow())
+        return asyncio.run(_run_flow())
 
     async def kickoff_async(self, inputs: dict[str, Any] | None = None) -> Any:
         """
@@ -908,8 +964,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
                     stored_state = self._persistence.load_state(restore_uuid)
                     if stored_state:
                         self._log_flow_event(
-                            f"Loading flow state from memory for UUID: {restore_uuid}",
-                            color="yellow",
+                            f"Loading flow state from memory for UUID: {restore_uuid}"
                         )
                         self._restore_state(stored_state)
                     else:
@@ -985,7 +1040,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
         finally:
             detach(flow_token)
 
-    async def _execute_start_method(self, start_method_name: str) -> None:
+    async def _execute_start_method(self, start_method_name: FlowMethodName) -> None:
         """
         Executes a flow's start method and its triggered listeners.
 
@@ -1034,8 +1089,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 kwargs["crewai_trigger_payload"] = trigger_payload
             elif trigger_payload is not None:
                 self._log_flow_event(
-                    f"Trigger payload available but {original_method.__name__} doesn't accept crewai_trigger_payload parameter",
-                    color="yellow",
+                    f"Trigger payload available but {original_method.__name__} doesn't accept crewai_trigger_payload parameter"
                 )
             return args, kwargs
 
@@ -1056,7 +1110,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
         return enhanced_method
 
     async def _execute_method(
-        self, method_name: str, method: Callable, *args: Any, **kwargs: Any
+        self, method_name: FlowMethodName, method: Callable, *args: Any, **kwargs: Any
     ) -> Any:
         try:
             dumped_params = {f"_{i}": arg for i, arg in enumerate(args)} | (
@@ -1115,7 +1169,9 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 self._event_futures.append(future)
             raise e
 
-    async def _execute_listeners(self, trigger_method: str, result: Any) -> None:
+    async def _execute_listeners(
+        self, trigger_method: FlowMethodName, result: Any
+    ) -> None:
         """
         Executes all listeners and routers triggered by a method completion.
 
@@ -1158,9 +1214,9 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 if router_result:  # Only add non-None results
                     router_results.append(router_result)
                 current_trigger = (
-                    str(router_result)
+                    FlowMethodName(str(router_result))
                     if router_result is not None
-                    else ""  # Update for next iteration of router chain
+                    else FlowMethodName("")  # Update for next iteration of router chain
                 )
 
         # Now execute normal listeners for all router results and the original trigger
@@ -1185,7 +1241,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
                         if method_name in self._listeners:
                             condition_data = self._listeners[method_name]
                             should_trigger = False
-                            if isinstance(condition_data, tuple):
+                            if is_simple_flow_condition(condition_data):
                                 _, trigger_methods = condition_data
                                 should_trigger = current_trigger in trigger_methods
                             elif isinstance(condition_data, dict):
@@ -1203,7 +1259,10 @@ class Flow(Generic[T], metaclass=FlowMeta):
                                     self._is_execution_resuming = was_resuming
 
     def _evaluate_condition(
-        self, condition: str | dict, trigger_method: str, listener_name: str
+        self,
+        condition: FlowMethodName | FlowCondition,
+        trigger_method: FlowMethodName,
+        listener_name: FlowMethodName,
     ) -> bool:
         """Recursively evaluate a condition (simple or nested).
 
@@ -1215,10 +1274,10 @@ class Flow(Generic[T], metaclass=FlowMeta):
         Returns:
             True if the condition is satisfied, False otherwise
         """
-        if isinstance(condition, str):
+        if is_flow_method_name(condition):
             return condition == trigger_method
 
-        if isinstance(condition, dict):
+        if is_flow_condition_dict(condition):
             normalized = _normalize_condition(condition)
             cond_type = normalized.get("type", "OR")
             sub_conditions = normalized.get("conditions", [])
@@ -1230,7 +1289,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 )
 
             if cond_type == "AND":
-                pending_key = f"{listener_name}:{id(condition)}"
+                pending_key = PendingListenerKey(f"{listener_name}:{id(condition)}")
 
                 if pending_key not in self._pending_and_listeners:
                     all_methods = set(_extract_all_methods(condition))
@@ -1248,8 +1307,8 @@ class Flow(Generic[T], metaclass=FlowMeta):
         return False
 
     def _find_triggered_methods(
-        self, trigger_method: str, router_only: bool
-    ) -> list[str]:
+        self, trigger_method: FlowMethodName, router_only: bool
+    ) -> list[FlowMethodName]:
         """
         Finds all methods that should be triggered based on conditions.
 
@@ -1275,7 +1334,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
         - Maintains state for AND conditions using _pending_and_listeners
         - Separates router and normal listener evaluation
         """
-        triggered = []
+        triggered: list[FlowMethodName] = []
 
         for listener_name, condition_data in self._listeners.items():
             is_router = listener_name in self._routers
@@ -1286,25 +1345,24 @@ class Flow(Generic[T], metaclass=FlowMeta):
             if not router_only and listener_name in self._start_methods:
                 continue
 
-            if isinstance(condition_data, tuple):
+            if is_simple_flow_condition(condition_data):
                 condition_type, methods = condition_data
 
                 if condition_type == "OR":
                     if trigger_method in methods:
                         triggered.append(listener_name)
                 elif condition_type == "AND":
-                    if listener_name not in self._pending_and_listeners:
-                        self._pending_and_listeners[listener_name] = set(methods)
-                    if trigger_method in self._pending_and_listeners[listener_name]:
-                        self._pending_and_listeners[listener_name].discard(
-                            trigger_method
-                        )
+                    pending_key = PendingListenerKey(listener_name)
+                    if pending_key not in self._pending_and_listeners:
+                        self._pending_and_listeners[pending_key] = set(methods)
+                    if trigger_method in self._pending_and_listeners[pending_key]:
+                        self._pending_and_listeners[pending_key].discard(trigger_method)
 
-                    if not self._pending_and_listeners[listener_name]:
+                    if not self._pending_and_listeners[pending_key]:
                         triggered.append(listener_name)
-                        self._pending_and_listeners.pop(listener_name, None)
+                        self._pending_and_listeners.pop(pending_key, None)
 
-            elif isinstance(condition_data, dict):
+            elif is_flow_condition_dict(condition_data):
                 if self._evaluate_condition(
                     condition_data, trigger_method, listener_name
                 ):
@@ -1312,7 +1370,9 @@ class Flow(Generic[T], metaclass=FlowMeta):
 
         return triggered
 
-    async def _execute_single_listener(self, listener_name: str, result: Any) -> None:
+    async def _execute_single_listener(
+        self, listener_name: FlowMethodName, result: Any
+    ) -> None:
         """
         Executes a single listener method with proper event handling.
 
@@ -1371,7 +1431,10 @@ class Flow(Generic[T], metaclass=FlowMeta):
             raise
 
     def _log_flow_event(
-        self, message: str, color: PrinterColor | None = "yellow", level: str = "info"
+        self,
+        message: str,
+        color: PrinterColor = "yellow",
+        level: Literal["info", "warning"] = "info",
     ) -> None:
         """Centralized logging method for flow events.
 
@@ -1393,8 +1456,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
         self._printer.print(message, color=color)
         if level == "info":
             logger.info(message)
-        elif level == "warning":
-            logger.warning(message)
+        logger.warning(message)
 
     def plot(self, filename: str = "crewai_flow") -> None:
         crewai_event_bus.emit(

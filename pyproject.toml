@@ -107,6 +107,15 @@ ignore-decorators = ["typing.overload"]
 
 
 [tool.mypy]
+strict = true
+disallow_untyped_defs = true
+disallow_any_unimported = true
+no_implicit_optional = true
+check_untyped_defs = true
+warn_return_any = true
+show_error_codes = true
+warn_unused_ignores = true
+python_version = "3.12"
 exclude = [
     "lib/crewai/src/crewai/cli/templates",
     "lib/crewai/tests/",

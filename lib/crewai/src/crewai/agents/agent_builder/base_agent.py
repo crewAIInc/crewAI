@@ -4,19 +4,19 @@ from abc import ABC, abstractmethod
 from collections.abc import Callable
 from copy import copy as shallow_copy
 from hashlib import md5
-from typing import Any, Literal, TypeVar
+from typing import Any, Literal
 import uuid
 
 from pydantic import (
     UUID4,
     BaseModel,
     Field,
-    InstanceOf,
     PrivateAttr,
     field_validator,
     model_validator,
 )
 from pydantic_core import PydanticCustomError
+from typing_extensions import Self
 
 from crewai.agents.agent_builder.utilities.base_token_process import TokenProcess
 from crewai.agents.cache.cache_handler import CacheHandler
@@ -27,12 +27,12 @@ from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
 from crewai.rag.embeddings.types import EmbedderConfig
 from crewai.security.security_config import SecurityConfig
 from crewai.tools.base_tool import BaseTool, Tool
-from crewai.utilities import I18N, Logger, RPMController
 from crewai.utilities.config import process_config
+from crewai.utilities.i18n import I18N
+from crewai.utilities.logger import Logger
+from crewai.utilities.rpm_controller import RPMController
 from crewai.utilities.string_utils import interpolate_only
 
-
-T = TypeVar("T", bound="BaseAgent")
 
 PlatformApp = Literal[
     "asana",
@@ -56,7 +56,7 @@ PlatformApp = Literal[
 PlatformAppOrAction = PlatformApp | str
 
 
-class BaseAgent(ABC, BaseModel):
+class BaseAgent(BaseModel, ABC):
     """Abstract Base Class for all third party agents compatible with CrewAI.
 
     Attributes:
@@ -71,19 +71,17 @@ class BaseAgent(ABC, BaseModel):
         allow_delegation (bool): Allow delegation of tasks to agents.
         tools (list[Any] | None): Tools at the agent's disposal.
         max_iter (int): Maximum iterations for an agent to execute a task.
-        agent_executor (InstanceOf): An instance of the CrewAgentExecutor class.
+        agent_executor: An instance of the CrewAgentExecutor class.
         llm (Any): Language model that will run the agent.
         crew (Any): Crew to which the agent belongs.
         i18n (I18N): Internationalization settings.
-        cache_handler (InstanceOf[CacheHandler]): An instance of the CacheHandler class.
-        tools_handler (InstanceOf[ToolsHandler]): An instance of the ToolsHandler class.
+        cache_handler ([CacheHandler]): An instance of the CacheHandler class.
+        tools_handler ([ToolsHandler]): An instance of the ToolsHandler class.
         max_tokens: Maximum number of tokens for the agent to generate in a response.
         knowledge_sources: Knowledge sources for the agent.
         knowledge_storage: Custom knowledge storage for the agent.
         security_config: Security configuration for the agent, including fingerprinting.
         apps: List of enterprise applications that the agent can access through CrewAI AMP Tools.
-        actions: List of actions that the agent can access through CrewAI AMP Tools.
-
 
     Methods:
         execute_task(task: Any, context: str | None = None, tools: list[BaseTool] | None = None) -> str:
@@ -143,18 +141,20 @@ class BaseAgent(ABC, BaseModel):
     max_iter: int = Field(
         default=25, description="Maximum iterations for an agent to execute a task"
     )
-    agent_executor: InstanceOf = Field(
+    agent_executor: Any = Field(
         default=None, description="An instance of the CrewAgentExecutor class."
     )
     llm: Any = Field(
         default=None, description="Language model that will run the agent."
     )
     crew: Any = Field(default=None, description="Crew to which the agent belongs.")
-    i18n: I18N = Field(default=I18N(), description="Internationalization settings.")
-    cache_handler: InstanceOf[CacheHandler] | None = Field(
+    i18n: I18N = Field(
+        default_factory=I18N, description="Internationalization settings."
+    )
+    cache_handler: CacheHandler | None = Field(
         default=None, description="An instance of the CacheHandler class."
     )
-    tools_handler: InstanceOf[ToolsHandler] = Field(
+    tools_handler: ToolsHandler = Field(
         default_factory=ToolsHandler,
         description="An instance of the ToolsHandler class.",
     )
@@ -320,7 +320,7 @@ class BaseAgent(ABC, BaseModel):
     def get_platform_tools(self, apps: list[PlatformAppOrAction]) -> list[BaseTool]:
         """Get platform tools for the specified list of applications and/or application/action combinations."""
 
-    def copy(self: T) -> T:  # type: ignore # Signature of "copy" incompatible with supertype "BaseModel"
+    def copy(self) -> Self:  # type: ignore # Signature of "copy" incompatible with supertype "BaseModel"
         """Create a deep copy of the Agent."""
         exclude = {
             "id",

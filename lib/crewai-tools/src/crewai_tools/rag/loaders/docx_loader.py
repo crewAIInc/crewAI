@@ -51,7 +51,7 @@ class DOCXLoader(BaseLoader):
                 temp_file.write(response.content)
                 return temp_file.name
         except Exception as e:
-            raise ValueError(f"Error fetching DOCX from URL {url}: {e!s}") from e
+            raise ValueError(f"Error fetching content from URL {url}: {e!s}") from e
 
     def _load_from_file(
         self,

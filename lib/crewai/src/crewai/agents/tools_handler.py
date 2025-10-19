@@ -1,10 +1,19 @@
 """Tools handler for managing tool execution and caching."""
 
-import json
+from __future__ import annotations
 
-from crewai.agents.cache.cache_handler import CacheHandler
+import json
+from typing import TYPE_CHECKING, Any
+
+from pydantic import GetCoreSchemaHandler
+from pydantic_core import CoreSchema, core_schema
+
 from crewai.tools.cache_tools.cache_tools import CacheTools
-from crewai.tools.tool_calling import InstructorToolCalling, ToolCalling
+
+
+if TYPE_CHECKING:
+    from crewai.agents.cache.cache_handler import CacheHandler
+    from crewai.tools.tool_calling import InstructorToolCalling, ToolCalling
 
 
 class ToolsHandler:
@@ -52,3 +61,14 @@ class ToolsHandler:
                 input=input_str,
                 output=output,
             )
+
+    @classmethod
+    def __get_pydantic_core_schema__(
+        cls, _source_type: Any, _handler: GetCoreSchemaHandler
+    ) -> CoreSchema:
+        """Generate Pydantic core schema for BaseClient Protocol.
+
+        This allows the Protocol to be used in Pydantic models without
+        requiring arbitrary_types_allowed=True.
+        """
+        return core_schema.any_schema()

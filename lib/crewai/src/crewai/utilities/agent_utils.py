@@ -26,6 +26,7 @@ from crewai.utilities.exceptions.context_window_exceeding_exception import (
 )
 from crewai.utilities.i18n import I18N
 from crewai.utilities.printer import ColoredText, Printer
+from crewai.utilities.token_counter_callback import TokenCalcHandler
 from crewai.utilities.types import LLMMessage
 
 
@@ -124,7 +125,7 @@ def handle_max_iterations_exceeded(
     i18n: I18N,
     messages: list[LLMMessage],
     llm: LLM | BaseLLM,
-    callbacks: list[Callable[..., Any]],
+    callbacks: list[TokenCalcHandler],
 ) -> AgentAction | AgentFinish:
     """Handles the case when the maximum number of iterations is exceeded. Performs one more LLM call to get the final answer.
 
@@ -221,7 +222,7 @@ def enforce_rpm_limit(
 def get_llm_response(
     llm: LLM | BaseLLM,
     messages: list[LLMMessage],
-    callbacks: list[Callable[..., Any]],
+    callbacks: list[TokenCalcHandler],
     printer: Printer,
     from_task: Task | None = None,
     from_agent: Agent | LiteAgent | None = None,
@@ -404,7 +405,7 @@ def handle_context_length(
     printer: Printer,
     messages: list[LLMMessage],
     llm: LLM | BaseLLM,
-    callbacks: list[Callable[..., Any]],
+    callbacks: list[TokenCalcHandler],
     i18n: I18N,
 ) -> None:
     """Handle context length exceeded by either summarizing or raising an error.
@@ -439,7 +440,7 @@ def handle_context_length(
 def summarize_messages(
     messages: list[LLMMessage],
     llm: LLM | BaseLLM,
-    callbacks: list[Callable[..., Any]],
+    callbacks: list[TokenCalcHandler],
     i18n: I18N,
 ) -> None:
     """Summarize messages to fit within context window.

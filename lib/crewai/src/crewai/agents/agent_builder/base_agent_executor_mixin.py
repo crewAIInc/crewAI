@@ -6,17 +6,17 @@ from typing import TYPE_CHECKING
 from crewai.events.event_listener import event_listener
 from crewai.memory.entity.entity_memory_item import EntityMemoryItem
 from crewai.memory.long_term.long_term_memory_item import LongTermMemoryItem
-from crewai.utilities import I18N
 from crewai.utilities.converter import ConverterError
 from crewai.utilities.evaluators.task_evaluator import TaskEvaluator
 from crewai.utilities.printer import Printer
-from crewai.utilities.types import LLMMessage
 
 
 if TYPE_CHECKING:
     from crewai.agent import Agent
     from crewai.crew import Crew
     from crewai.task import Task
+    from crewai.utilities.i18n import I18N
+    from crewai.utilities.types import LLMMessage
 
 
 class CrewAgentExecutorMixin:

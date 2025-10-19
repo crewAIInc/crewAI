@@ -164,7 +164,7 @@ Final content.
     @patch("requests.get")
     def test_mdx_url_fetch_error(self, mock_get):
         mock_get.side_effect = Exception("Network error")
-        with pytest.raises(ValueError, match="Error fetching MDX from URL"):
+        with pytest.raises(ValueError, match="Error fetching content from URL https://example.com: Network error"):
             MDXLoader().load(SourceContent("https://example.com"))
 
     def test_load_inline_mdx_text(self):

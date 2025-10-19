@@ -1,7 +1,11 @@
-from abc import ABC, abstractmethod
-from typing import Any
+from __future__ import annotations
 
-from crewai.tools.base_tool import BaseTool
+from abc import ABC, abstractmethod
+from typing import TYPE_CHECKING, Any
+
+
+if TYPE_CHECKING:
+    from crewai.tools.base_tool import BaseTool
 
 
 class BaseToolAdapter(ABC):
@@ -12,12 +16,9 @@ class BaseToolAdapter(ABC):
     different frameworks and platforms.
     """
 
-    original_tools: list[BaseTool]
-    converted_tools: list[Any]
-
     def __init__(self, tools: list[BaseTool] | None = None):
         self.original_tools = tools or []
-        self.converted_tools = []
+        self.converted_tools: list[Any] = []
 
     @abstractmethod
     def configure_tools(self, tools: list[BaseTool]) -> None:
@@ -31,6 +32,7 @@ class BaseToolAdapter(ABC):
         """Return all converted tools."""
         return self.converted_tools
 
-    def sanitize_tool_name(self, tool_name: str) -> str:
+    @staticmethod
+    def sanitize_tool_name(tool_name: str) -> str:
         """Sanitize tool name for API compatibility."""
         return tool_name.replace(" ", "_")

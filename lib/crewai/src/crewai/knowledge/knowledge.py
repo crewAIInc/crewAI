@@ -62,7 +62,7 @@ class Knowledge(BaseModel):
             score_threshold=score_threshold,
         )
 
-    def add_sources(self):
+    def add_sources(self) -> None:
         try:
             for source in self.sources:
                 source.storage = self.storage

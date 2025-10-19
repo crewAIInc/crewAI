@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel
 
@@ -21,8 +21,8 @@ class Memory(BaseModel):
     crew: Any | None = None
 
     storage: Any
-    _agent: Optional["Agent"] = None
-    _task: Optional["Task"] = None
+    _agent: Agent | None = None
+    _task: Task | None = None
 
     def __init__(self, storage: Any, **data: Any):
         super().__init__(storage=storage, **data)

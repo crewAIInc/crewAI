@@ -144,6 +144,9 @@ class OpenAIAgentAdapter(BaseAgentAdapter):
                     task=task,
                 ),
             )
+            if not self.agent_executor or not isinstance(self.agent_executor, Runner):
+                raise ValueError("Agent executor is not configured.")
+
             result: Any = self.agent_executor.run_sync(self._openai_agent, task_prompt)
             final_answer: str = self.handle_execution_result(result)
             crewai_event_bus.emit(

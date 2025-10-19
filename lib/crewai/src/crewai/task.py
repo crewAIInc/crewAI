@@ -13,6 +13,7 @@ import threading
 from typing import (
     Any,
     ClassVar,
+    cast,
     get_args,
     get_origin,
 )
@@ -44,9 +45,12 @@ from crewai.utilities.config import process_config
 from crewai.utilities.constants import NOT_SPECIFIED, _NotSpecified
 from crewai.utilities.converter import Converter, convert_to_model
 from crewai.utilities.guardrail import (
+    process_guardrail,
+)
+from crewai.utilities.guardrail_types import (
+    GuardrailCallable,
     GuardrailType,
     GuardrailsType,
-    process_guardrail,
 )
 from crewai.utilities.i18n import I18N
 from crewai.utilities.printer import Printer
@@ -81,12 +85,12 @@ class Task(BaseModel):
                               False: Never inject trigger payload, even for first task.
     """
 
-    __hash__ = object.__hash__  # type: ignore
+    __hash__ = object.__hash__
     logger: ClassVar[logging.Logger] = logging.getLogger(__name__)
     used_tools: int = 0
     tools_errors: int = 0
     delegations: int = 0
-    i18n: I18N = I18N()
+    i18n: I18N = Field(default_factory=I18N)
     name: str | None = Field(default=None)
     prompt_context: str | None = None
     description: str = Field(description="Description of the actual task.")
@@ -138,7 +142,7 @@ class Task(BaseModel):
         default_factory=SecurityConfig,
         description="Security configuration for the task.",
     )
-    id: UUID4 = Field(
+    id: uuid.UUID = Field(
         default_factory=uuid.uuid4,
         frozen=True,
         description="Unique identifier for the object, not set by user.",
@@ -156,11 +160,11 @@ class Task(BaseModel):
         default=None,
     )
     processed_by_agents: set[str] = Field(default_factory=set)
-    guardrail: GuardrailType = Field(
+    guardrail: GuardrailType | None = Field(
         default=None,
         description="Function or string description of a guardrail to validate task output before proceeding to next task",
     )
-    guardrails: GuardrailsType = Field(
+    guardrails: GuardrailsType | None = Field(
         default=None,
         description="List of guardrails to validate task output before proceeding to next task. Also supports a single guardrail function or string description of a guardrail to validate task output before proceeding to next task",
     )
@@ -183,8 +187,8 @@ class Task(BaseModel):
         default=None,
         description="Whether this task should append 'Trigger Payload: {crewai_trigger_payload}' to the task description when crewai_trigger_payload exists in crew inputs.",
     )
-    _guardrail: GuardrailType = PrivateAttr(default=None)
-    _guardrails: list[GuardrailType] = PrivateAttr(
+    _guardrail: GuardrailCallable | None = PrivateAttr(default=None)
+    _guardrails: list[GuardrailCallable] = PrivateAttr(
         default_factory=list,
     )
     _guardrail_retry_counts: dict[int, int] = PrivateAttr(
@@ -280,8 +284,9 @@ class Task(BaseModel):
             if self.agent is None:
                 raise ValueError("Agent is required to use LLMGuardrail")
 
-            self._guardrail = LLMGuardrail(
-                description=self.guardrail, llm=self.agent.llm
+            self._guardrail = cast(
+                GuardrailCallable,
+                LLMGuardrail(description=self.guardrail, llm=self.agent.llm),
             )
 
         return self
@@ -303,7 +308,12 @@ class Task(BaseModel):
                             from crewai.tasks.llm_guardrail import LLMGuardrail
 
                             guardrails.append(
-                                LLMGuardrail(description=guardrail, llm=self.agent.llm)
+                                cast(
+                                    GuardrailCallable,
+                                    LLMGuardrail(
+                                        description=guardrail, llm=self.agent.llm
+                                    ),
+                                )
                             )
                         else:
                             raise ValueError("Guardrail must be a callable or a string")
@@ -318,7 +328,12 @@ class Task(BaseModel):
                     from crewai.tasks.llm_guardrail import LLMGuardrail
 
                     guardrails.append(
-                        LLMGuardrail(description=self.guardrails, llm=self.agent.llm)
+                        cast(
+                            GuardrailCallable,
+                            LLMGuardrail(
+                                description=self.guardrails, llm=self.agent.llm
+                            ),
+                        )
                     )
                 else:
                     raise ValueError("Guardrail must be a callable or a string")
@@ -836,7 +851,7 @@ Follow these guidelines:
         task_output: TaskOutput,
         agent: BaseAgent,
         tools: list[BaseTool],
-        guardrail: GuardrailType,
+        guardrail: GuardrailCallable | None,
         guardrail_index: int | None = None,
     ) -> TaskOutput:
         if not guardrail:

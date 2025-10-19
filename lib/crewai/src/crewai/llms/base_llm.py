@@ -4,11 +4,13 @@ This module provides the abstract base class for all LLM implementations
 in CrewAI, including common functionality for native SDK implementations.
 """
 
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
 from datetime import datetime
 import json
 import logging
-from typing import Any, Final
+from typing import TYPE_CHECKING, Any, Final
 
 from pydantic import BaseModel
 
@@ -26,7 +28,10 @@ from crewai.events.types.tool_usage_events import (
     ToolUsageStartedEvent,
 )
 from crewai.types.usage_metrics import UsageMetrics
-from crewai.utilities.types import LLMMessage
+
+
+if TYPE_CHECKING:
+    from crewai.utilities.types import LLMMessage
 
 
 DEFAULT_CONTEXT_WINDOW_SIZE: Final[int] = 4096

@@ -1,16 +1,19 @@
-from collections.abc import Callable, Sequence
+from __future__ import annotations
+
+from collections.abc import Sequence
 import shutil
 import subprocess
 import time
 from typing import (
+    TYPE_CHECKING,
     Any,
     Literal,
 )
 
 from pydantic import Field, InstanceOf, PrivateAttr, model_validator
 
-from crewai.agents import CacheHandler
-from crewai.agents.agent_builder.base_agent import BaseAgent, PlatformAppOrAction
+from crewai.agents.agent_builder.base_agent import BaseAgent
+from crewai.agents.cache.cache_handler import CacheHandler
 from crewai.agents.crew_agent_executor import CrewAgentExecutor
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.agent_events import (
@@ -33,15 +36,12 @@ from crewai.events.types.memory_events import (
 from crewai.knowledge.knowledge import Knowledge
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
 from crewai.knowledge.utils.knowledge_utils import extract_knowledge_context
-from crewai.lite_agent import LiteAgent, LiteAgentOutput
-from crewai.llm import BaseLLM
+from crewai.lite_agent import LiteAgent
+from crewai.llms.base_llm import BaseLLM
 from crewai.memory.contextual.contextual_memory import ContextualMemory
 from crewai.rag.embeddings.types import EmbedderConfig
-from crewai.security import Fingerprint
-from crewai.task import Task
-from crewai.tools import BaseTool
+from crewai.security.fingerprint import Fingerprint
 from crewai.tools.agent_tools.agent_tools import AgentTools
-from crewai.utilities import Converter, Prompts
 from crewai.utilities.agent_utils import (
     get_tool_names,
     load_agent_from_repository,
@@ -49,11 +49,20 @@ from crewai.utilities.agent_utils import (
     render_text_description_and_args,
 )
 from crewai.utilities.constants import TRAINED_AGENTS_DATA_FILE, TRAINING_DATA_FILE
-from crewai.utilities.converter import generate_model_description
+from crewai.utilities.converter import Converter, generate_model_description
+from crewai.utilities.guardrail_types import GuardrailType
 from crewai.utilities.llm_utils import create_llm
+from crewai.utilities.prompts import Prompts
 from crewai.utilities.token_counter_callback import TokenCalcHandler
 from crewai.utilities.training_handler import CrewTrainingHandler
-from crewai.utilities.types import LLMMessage
+
+
+if TYPE_CHECKING:
+    from crewai.agents.agent_builder.base_agent import PlatformAppOrAction
+    from crewai.lite_agent_output import LiteAgentOutput
+    from crewai.task import Task
+    from crewai.tools.base_tool import BaseTool
+    from crewai.utilities.types import LLMMessage
 
 
 class Agent(BaseAgent):
@@ -167,7 +176,7 @@ class Agent(BaseAgent):
         default=None,
         description="The Agent's role to be used from your repository.",
     )
-    guardrail: Callable[[Any], tuple[bool, Any]] | str | None = Field(
+    guardrail: GuardrailType | None = Field(
         default=None,
         description="Function or string description of a guardrail to validate agent output",
     )
@@ -537,6 +546,9 @@ class Agent(BaseAgent):
         Returns:
             The output of the agent.
         """
+        if not self.agent_executor:
+            raise RuntimeError("Agent executor is not initialized.")
+
         return self.agent_executor.invoke(
             {
                 "input": task_prompt,
@@ -580,7 +592,7 @@ class Agent(BaseAgent):
             agent=self,
             crew=self.crew,
             tools=parsed_tools,
-            prompt=prompt,  # type: ignore[arg-type]
+            prompt=prompt,
             original_tools=raw_tools,
             stop_words=stop_words,
             max_iter=self.max_iter,
