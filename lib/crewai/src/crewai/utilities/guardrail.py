@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from collections.abc import Callable
-from typing import TYPE_CHECKING, Any
+from collections.abc import Callable, Sequence
+from typing import TYPE_CHECKING, Any, TypeAlias
 
 from pydantic import BaseModel, Field, field_validator
 from typing_extensions import Self
@@ -12,6 +12,12 @@ if TYPE_CHECKING:
     from crewai.lite_agent import LiteAgent, LiteAgentOutput
     from crewai.task import Task
     from crewai.tasks.task_output import TaskOutput
+
+GuardrailType: TypeAlias = (
+    Callable[[TaskOutput | LiteAgentOutput], tuple[bool, Any]] | None
+)
+
+GuardrailsType: TypeAlias = Sequence[GuardrailType] | GuardrailType
 
 
 class GuardrailResult(BaseModel):
@@ -79,7 +85,7 @@ class GuardrailResult(BaseModel):
 
 def process_guardrail(
     output: TaskOutput | LiteAgentOutput,
-    guardrail: Callable[[Any], tuple[bool, Any | str]],
+    guardrail: GuardrailType,
     retry_count: int,
     event_source: Any | None = None,
     from_agent: BaseAgent | LiteAgent | None = None,
