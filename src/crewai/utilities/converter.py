@@ -2,10 +2,17 @@ from __future__ import annotations
 
 import json
 import re
+import sys
 from typing import TYPE_CHECKING, Any, Final, TypedDict, Union, get_args, get_origin
 
 from pydantic import BaseModel, ValidationError
 from typing_extensions import Unpack
+
+if sys.version_info >= (3, 10):
+    import types
+    UnionTypes = (Union, types.UnionType)
+else:
+    UnionTypes = (Union,)
 
 from crewai.agents.agent_builder.utilities.base_output_converter import OutputConverter
 from crewai.utilities.internal_instructor import InternalInstructor
@@ -428,12 +435,21 @@ def generate_model_description(model: type[BaseModel]) -> str:
         origin = get_origin(field_type)
         args = get_args(field_type)
 
-        if origin is Union or (origin is None and len(args) > 0):
+        if origin in UnionTypes or (origin is None and len(args) > 0):
             # Handle both Union and the new '|' syntax
             non_none_args = [arg for arg in args if arg is not type(None)]
-            if len(non_none_args) == 1:
-                return f"Optional[{describe_field(non_none_args[0])}]"
-            return f"Optional[Union[{', '.join(describe_field(arg) for arg in non_none_args)}]]"
+            has_none = type(None) in args
+            
+            if has_none:
+                # It's an Optional type
+                if len(non_none_args) == 1:
+                    return f"Optional[{describe_field(non_none_args[0])}]"
+                # Union with None and multiple other types
+                return f"Optional[Union[{', '.join(describe_field(arg) for arg in non_none_args)}]]"
+            else:
+                if len(non_none_args) == 1:
+                    return describe_field(non_none_args[0])
+                return f"Union[{', '.join(describe_field(arg) for arg in args)}]"
         if origin is list:
             return f"List[{describe_field(args[0])}]"
         if origin is dict:

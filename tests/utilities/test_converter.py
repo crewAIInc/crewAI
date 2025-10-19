@@ -596,5 +596,5 @@ def test_generate_model_description_union_field():
         field: int | str | None
 
     description = generate_model_description(UnionModel)
-    expected_description = '{\n  "field": int | str | None\n}'
+    expected_description = '{\n  "field": Optional[Union[int, str]]\n}'
     assert description == expected_description
