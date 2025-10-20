@@ -58,8 +58,8 @@ class QdrantVectorSearchTool(BaseTool):
     description: str = "A tool to search the Qdrant database for relevant information on internal documents."
     args_schema: type[BaseModel] = QdrantToolSchema
     query: str | None = None
-    filter_by: str | None = None
-    filter_value: str | None = None
+    filter_conditions: list[tuple[str, Any]] = Field(default_factory=list)
+    search_filter: Filter | None = None
     collection_name: str | None = None
     limit: int | None = Field(default=3)
     score_threshold: float = Field(default=0.35)
@@ -106,6 +106,26 @@ class QdrantVectorSearchTool(BaseTool):
                     "The 'qdrant-client' package is required to use the QdrantVectorSearchTool. "
                     "Please install it with: uv add qdrant-client"
                 )
+        if self.filter_conditions:
+            must_conditions = []
+            for filter_condition in self.filter_conditions:
+                if (
+                    not isinstance(filter_condition, (tuple, list))
+                    or len(filter_condition) < 2
+                ):
+                    raise ValueError(
+                        f"Each filter condition must be a tuple or list with at least 2 elements (key, value). "
+                        f"Got: {filter_condition}"
+                    )
+                must_conditions.append(
+                    FieldCondition(
+                        key=filter_condition[0],
+                        match=MatchValue(value=filter_condition[1]),
+                    )
+                )
+            self.search_filter = Filter(must=must_conditions)
+        else:
+            self.search_filter = None
 
     def _run(
         self,
@@ -130,14 +150,26 @@ class QdrantVectorSearchTool(BaseTool):
         if not self.qdrant_url:
             raise ValueError("QDRANT_URL is not set")
 
-        # Create filter if filter parameters are provided
-        search_filter = None
+        # If filter_by and filter_value are provided, add them to the search filter
+        # without modifying the original search filter
+        search_filter = self.search_filter.copy() if self.search_filter else None
         if filter_by and filter_value:
-            search_filter = Filter(
-                must=[
+            if (
+                search_filter
+                and hasattr(search_filter, "must")
+                and isinstance(search_filter.must, list)
+            ):
+                search_filter.must.append(
                     FieldCondition(key=filter_by, match=MatchValue(value=filter_value))
-                ]
-            )
+                )
+            else:
+                search_filter = Filter(
+                    must=[
+                        FieldCondition(
+                            key=filter_by, match=MatchValue(value=filter_value)
+                        )
+                    ]
+                )
 
         # Search in Qdrant using the built-in query method
         query_vector = (
@@ -155,12 +187,11 @@ class QdrantVectorSearchTool(BaseTool):
 
         # Format results similar to storage implementation
         results = []
-        # Extract the list of ScoredPoint objects from the tuple
-        for point in search_results:
+        for point in search_results.points:
             result = {
-                "metadata": point[1][0].payload.get("metadata", {}),
-                "context": point[1][0].payload.get("text", ""),
-                "distance": point[1][0].score,
+                "distance": point.score,
+                "metadata": point.payload.get("metadata", {}),
+                "context": point.payload.get("text", ""),
             }
             results.append(result)
 
