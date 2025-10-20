@@ -19,7 +19,6 @@ from pydantic import (
     BaseModel,
     Field,
     InstanceOf,
-    Json,
     PrivateAttr,
     field_validator,
     model_validator,
@@ -186,7 +185,7 @@ class Crew(FlowTrackable, BaseModel):
     function_calling_llm: str | InstanceOf[LLM] | Any | None = Field(
         description="Language model that will run the agent.", default=None
     )
-    config: Json | dict[str, Any] | None = Field(default=None)
+    config: dict[str, Any] | None = Field(default=None)
     id: UUID4 = Field(default_factory=uuid.uuid4, frozen=True)
     share_crew: bool | None = Field(default=False)
     step_callback: Any | None = Field(
@@ -285,16 +284,14 @@ class Crew(FlowTrackable, BaseModel):
 
     @field_validator("config", mode="before")
     @classmethod
-    def check_config_type(cls, v: Json | dict[str, Any]) -> Json | dict[str, Any]:
+    def check_config_type(cls, v: str | dict[str, Any]) -> dict[str, Any]:
         """Validates that the config is a valid type.
         Args:
             v: The config to be validated.
         Returns:
-            The config if it is valid.
+            The config as a dictionary.
         """
-
-        # TODO: Improve typing
-        return json.loads(v) if isinstance(v, Json) else v  # type: ignore
+        return json.loads(v) if isinstance(v, str) else v
 
     @model_validator(mode="after")
     def set_private_attrs(self) -> "Crew":
