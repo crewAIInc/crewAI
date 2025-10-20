@@ -5,9 +5,8 @@ import asyncio
 from crewai.tools import BaseTool
 
 
-# MCP Connection timeout constants (in seconds)
-MCP_CONNECTION_TIMEOUT = 10
-MCP_TOOL_EXECUTION_TIMEOUT = 30
+MCP_CONNECTION_TIMEOUT = 15
+MCP_TOOL_EXECUTION_TIMEOUT = 60
 MCP_DISCOVERY_TIMEOUT = 15
 MCP_MAX_RETRIES = 3
 
@@ -87,7 +86,9 @@ class MCPToolWrapper(BaseTool):
 
     async def _run_async(self, **kwargs) -> str:
         """Async implementation of MCP tool execution with timeouts and retry logic."""
-        return await self._retry_with_exponential_backoff(self._execute_tool_with_timeout, **kwargs)
+        return await self._retry_with_exponential_backoff(
+            self._execute_tool_with_timeout, **kwargs
+        )
 
     async def _retry_with_exponential_backoff(self, operation_func, **kwargs) -> str:
         """Retry operation with exponential backoff, avoiding try-except in loop for performance."""
@@ -95,7 +96,9 @@ class MCPToolWrapper(BaseTool):
 
         for attempt in range(MCP_MAX_RETRIES):
             # Execute single attempt outside try-except loop structure
-            result, error, should_retry = await self._execute_single_attempt(operation_func, **kwargs)
+            result, error, should_retry = await self._execute_single_attempt(
+                operation_func, **kwargs
+            )
 
             # Success case - return immediately
             if result is not None:
@@ -108,42 +111,57 @@ class MCPToolWrapper(BaseTool):
             # Retryable error - continue with backoff
             last_error = error
             if attempt < MCP_MAX_RETRIES - 1:
-                wait_time = 2 ** attempt  # Exponential backoff
+                wait_time = 2**attempt  # Exponential backoff
                 await asyncio.sleep(wait_time)
 
-        return f"MCP tool execution failed after {MCP_MAX_RETRIES} attempts: {last_error}"
+        return (
+            f"MCP tool execution failed after {MCP_MAX_RETRIES} attempts: {last_error}"
+        )
 
-    async def _execute_single_attempt(self, operation_func, **kwargs) -> tuple[str | None, str, bool]:
+    async def _execute_single_attempt(
+        self, operation_func, **kwargs
+    ) -> tuple[str | None, str, bool]:
         """Execute single operation attempt and return (result, error_message, should_retry)."""
         try:
             result = await operation_func(**kwargs)
             return result, "", False
 
         except ImportError:
-            return None, "MCP library not available. Please install with: pip install mcp", False
+            return (
+                None,
+                "MCP library not available. Please install with: pip install mcp",
+                False,
+            )
 
         except asyncio.TimeoutError:
-            return None, f"Connection timed out after {MCP_TOOL_EXECUTION_TIMEOUT} seconds", True
+            return (
+                None,
+                f"Connection timed out after {MCP_TOOL_EXECUTION_TIMEOUT} seconds",
+                True,
+            )
 
         except Exception as e:
             error_str = str(e).lower()
 
             # Classify errors as retryable or non-retryable
-            if 'authentication' in error_str or 'unauthorized' in error_str:
+            if "authentication" in error_str or "unauthorized" in error_str:
                 return None, f"Authentication failed for MCP server: {e!s}", False
-            if 'not found' in error_str:
-                return None, f"Tool '{self.original_tool_name}' not found on MCP server", False
-            if 'connection' in error_str or 'network' in error_str:
+            if "not found" in error_str:
+                return (
+                    None,
+                    f"Tool '{self.original_tool_name}' not found on MCP server",
+                    False,
+                )
+            if "connection" in error_str or "network" in error_str:
                 return None, f"Network connection failed: {e!s}", True
-            if 'json' in error_str or 'parsing' in error_str:
+            if "json" in error_str or "parsing" in error_str:
                 return None, f"Server response parsing error: {e!s}", True
             return None, f"MCP execution error: {e!s}", False
 
     async def _execute_tool_with_timeout(self, **kwargs) -> str:
         """Execute tool with timeout wrapper."""
         return await asyncio.wait_for(
-            self._execute_tool(**kwargs),
-            timeout=MCP_TOOL_EXECUTION_TIMEOUT
+            self._execute_tool(**kwargs), timeout=MCP_TOOL_EXECUTION_TIMEOUT
         )
 
     async def _execute_tool(self, **kwargs) -> str:
@@ -153,27 +171,43 @@ class MCPToolWrapper(BaseTool):
 
         server_url = self.mcp_server_params["url"]
 
-        # Connect to MCP server with timeout
-        async with streamablehttp_client(server_url) as (read, write, _):
-            async with ClientSession(read, write) as session:
-                # Initialize the connection with timeout
-                await asyncio.wait_for(
-                    session.initialize(),
-                    timeout=MCP_CONNECTION_TIMEOUT
-                )
+        try:
+            # Wrap entire operation with single timeout
+            async def _do_mcp_call():
+                async with streamablehttp_client(
+                    server_url, terminate_on_close=True
+                ) as (read, write, _):
+                    async with ClientSession(read, write) as session:
+                        await session.initialize()
+                        result = await session.call_tool(
+                            self.original_tool_name, kwargs
+                        )
 
-                # Call the specific tool with timeout
-                result = await asyncio.wait_for(
-                    session.call_tool(self.original_tool_name, kwargs),
-                    timeout=MCP_TOOL_EXECUTION_TIMEOUT - MCP_CONNECTION_TIMEOUT
-                )
+                        # Extract the result content
+                        if hasattr(result, "content") and result.content:
+                            if (
+                                isinstance(result.content, list)
+                                and len(result.content) > 0
+                            ):
+                                content_item = result.content[0]
+                                if hasattr(content_item, "text"):
+                                    return str(content_item.text)
+                                return str(content_item)
+                            return str(result.content)
+                        return str(result)
 
-                # Extract the result content
-                if hasattr(result, 'content') and result.content:
-                    if isinstance(result.content, list) and len(result.content) > 0:
-                        content_item = result.content[0]
-                        if hasattr(content_item, 'text'):
-                            return str(content_item.text)
-                        return str(content_item)
-                    return str(result.content)
-                return str(result)
+            return await asyncio.wait_for(
+                _do_mcp_call(), timeout=MCP_TOOL_EXECUTION_TIMEOUT
+            )
+
+        except asyncio.CancelledError as e:
+            raise asyncio.TimeoutError("MCP operation was cancelled") from e
+        except Exception as e:
+            if hasattr(e, "__cause__") and e.__cause__:
+                raise asyncio.TimeoutError(
+                    f"MCP connection error: {e.__cause__}"
+                ) from e.__cause__
+
+            if "TaskGroup" in str(e) or "unhandled errors" in str(e):
+                raise asyncio.TimeoutError(f"MCP connection error: {e}") from e
+            raise
