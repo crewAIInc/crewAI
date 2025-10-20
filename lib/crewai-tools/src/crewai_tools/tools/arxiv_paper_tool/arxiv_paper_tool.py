@@ -36,14 +36,9 @@ class ArxivPaperTool(BaseTool):
     model_config = ConfigDict(extra="allow")
     package_dependencies: list[str] = Field(default_factory=lambda: ["pydantic"])
     env_vars: list[EnvVar] = Field(default_factory=list)
-
-    def __init__(
-        self, download_pdfs=False, save_dir="./arxiv_pdfs", use_title_as_filename=False
-    ):
-        super().__init__()
-        self.download_pdfs = download_pdfs
-        self.save_dir = save_dir
-        self.use_title_as_filename = use_title_as_filename
+    download_pdfs: bool = False
+    save_dir: str = "./arxiv_pdfs"
+    use_title_as_filename: bool = False
 
     def _run(self, search_query: str, max_results: int = 5) -> str:
         try:
@@ -70,7 +65,7 @@ class ArxivPaperTool(BaseTool):
                         filename = f"{filename_base[:500]}.pdf"
                         save_path = Path(save_dir) / filename
 
-                        self.download_pdf(paper["pdf_url"], save_path)
+                        self.download_pdf(paper["pdf_url"], save_path)  # type: ignore[arg-type]
                         time.sleep(self.SLEEP_DURATION)
 
             results = [self._format_paper_result(p) for p in papers]

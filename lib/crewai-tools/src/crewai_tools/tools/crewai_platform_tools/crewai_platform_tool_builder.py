@@ -18,7 +18,7 @@ class CrewaiPlatformToolBuilder:
         apps: list[str],
     ):
         self._apps = apps
-        self._actions_schema = {}
+        self._actions_schema = {}  # type: ignore[var-annotated]
         self._tools = None
 
     def tools(self) -> list[BaseTool]:

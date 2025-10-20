@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field
 
-from ..rag.rag_tool import RagTool
+from crewai_tools.tools.rag.rag_tool import RagTool
 
 
 class FixedXMLSearchToolSchema(BaseModel):
@@ -33,7 +33,7 @@ class XMLSearchTool(RagTool):
             self.args_schema = FixedXMLSearchToolSchema
             self._generate_description()
 
-    def _run(
+    def _run(  # type: ignore[override]
         self,
         search_query: str,
         xml: str | None = None,

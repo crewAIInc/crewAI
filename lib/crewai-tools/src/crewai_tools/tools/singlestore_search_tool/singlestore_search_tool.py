@@ -274,10 +274,10 @@ class SingleStoreSearchTool(BaseTool):
 
         # Initialize connection pool for efficient connection management
         self.connection_pool = QueuePool(
-            creator=self._create_connection,
-            pool_size=pool_size,
-            max_overflow=max_overflow,
-            timeout=timeout,
+            creator=self._create_connection,  # type: ignore[arg-type]
+            pool_size=pool_size or 5,
+            max_overflow=max_overflow or 10,
+            timeout=timeout or 30.0,
         )
 
         # Validate database schema and initialize table information
@@ -308,7 +308,7 @@ class SingleStoreSearchTool(BaseTool):
 
                 # Use all tables if none specified
                 if not tables or len(tables) == 0:
-                    tables = existing_tables
+                    tables = list(existing_tables)
 
                 # Build table definitions for description
                 table_definitions = []
@@ -335,7 +335,7 @@ class SingleStoreSearchTool(BaseTool):
         )
         self._generate_description()
 
-    def _get_connection(self) -> Any | None:
+    def _get_connection(self) -> Any:
         """Get a connection from the connection pool.
 
         Returns:
@@ -345,12 +345,12 @@ class SingleStoreSearchTool(BaseTool):
             Exception: If connection cannot be established
         """
         try:
-            return self.connection_pool.connect()
+            return self.connection_pool.connect()  # type: ignore[union-attr]
         except Exception:
             # Re-raise the exception to be handled by the caller
             raise
 
-    def _create_connection(self) -> Any | None:
+    def _create_connection(self) -> Any:
         """Create a new SingleStore connection.
 
         This method is used by the connection pool to create new connections

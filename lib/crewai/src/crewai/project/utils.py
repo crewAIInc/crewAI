@@ -1,8 +1,8 @@
 """Utility functions for the crewai project module."""
 
 from collections.abc import Callable
-from functools import wraps
-from typing import Any, ParamSpec, TypeVar
+from functools import lru_cache
+from typing import ParamSpec, TypeVar, cast
 
 
 P = ParamSpec("P")
@@ -17,26 +17,5 @@ def memoize(meth: Callable[P, R]) -> Callable[P, R]:
 
     Returns:
         A memoized version of the method that caches results.
-
-    Notes:
-        - TODO: Need to make this thread-safe for concurrent access, prevent memory leaks.
     """
-    cache: dict[Any, R] = {}
-
-    @wraps(meth)
-    def memoized_func(*args: P.args, **kwargs: P.kwargs) -> R:
-        """Memoized wrapper method.
-
-        Args:
-            *args: Positional arguments to pass to the method.
-            **kwargs: Keyword arguments to pass to the method.
-
-        Returns:
-            The cached or computed result of the method.
-        """
-        key = (args, tuple(kwargs.items()))
-        if key not in cache:
-            cache[key] = meth(*args, **kwargs)
-        return cache[key]
-
-    return memoized_func
+    return cast(Callable[P, R], lru_cache(typed=True)(meth))

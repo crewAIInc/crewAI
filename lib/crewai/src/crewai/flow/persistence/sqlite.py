@@ -2,15 +2,16 @@
 SQLite-based implementation of flow state persistence.
 """
 
-import json
-import sqlite3
 from datetime import datetime, timezone
+import json
 from pathlib import Path
+import sqlite3
 from typing import Any
 
 from pydantic import BaseModel
 
 from crewai.flow.persistence.base import FlowPersistence
+from crewai.utilities.paths import db_storage_path
 
 
 class SQLiteFlowPersistence(FlowPersistence):
@@ -21,9 +22,7 @@ class SQLiteFlowPersistence(FlowPersistence):
     moderate performance requirements.
     """
 
-    db_path: str
-
-    def __init__(self, db_path: str | None = None):
+    def __init__(self, db_path: str | None = None) -> None:
         """Initialize SQLite persistence.
 
         Args:
@@ -33,7 +32,6 @@ class SQLiteFlowPersistence(FlowPersistence):
         Raises:
             ValueError: If db_path is invalid
         """
-        from crewai.utilities.paths import db_storage_path
 
         # Get path from argument or default location
         path = db_path or str(Path(db_storage_path()) / "flow_states.db")

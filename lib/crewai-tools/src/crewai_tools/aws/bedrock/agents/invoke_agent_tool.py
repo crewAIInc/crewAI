@@ -7,7 +7,10 @@ from crewai.tools import BaseTool
 from dotenv import load_dotenv
 from pydantic import BaseModel, Field
 
-from ..exceptions import BedrockAgentError, BedrockValidationError
+from crewai_tools.aws.bedrock.exceptions import (
+    BedrockAgentError,
+    BedrockValidationError,
+)
 
 
 # Load environment variables from .env file
@@ -24,9 +27,9 @@ class BedrockInvokeAgentTool(BaseTool):
     name: str = "Bedrock Agent Invoke Tool"
     description: str = "An agent responsible for policy analysis."
     args_schema: type[BaseModel] = BedrockInvokeAgentToolInput
-    agent_id: str = None
-    agent_alias_id: str = None
-    session_id: str = None
+    agent_id: str | None = None
+    agent_alias_id: str | None = None
+    session_id: str | None = None
     enable_trace: bool = False
     end_session: bool = False
     package_dependencies: list[str] = Field(default_factory=lambda: ["boto3"])

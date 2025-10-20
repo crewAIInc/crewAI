@@ -8,6 +8,7 @@ from crewai.rag.embeddings.providers.instructor.types import (
     InstructorProviderSpec,
 )
 
+
 __all__ = [
     "InstructorProvider",
     "InstructorProviderConfig",

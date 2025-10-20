@@ -117,7 +117,7 @@ class TestCSVLoader:
         mock_get.side_effect = Exception("Network error")
         loader = CSVLoader()
 
-        with pytest.raises(ValueError, match="Error fetching CSV from URL"):
+        with pytest.raises(ValueError, match="Error fetching content from URL"):
             loader.load(SourceContent("https://example.com/data.csv"))
 
     @patch("requests.get")
@@ -126,5 +126,5 @@ class TestCSVLoader:
         mock_get.return_value.raise_for_status.side_effect = Exception("404 Not Found")
         loader = CSVLoader()
 
-        with pytest.raises(ValueError, match="Error fetching CSV from URL"):
+        with pytest.raises(ValueError, match="Error fetching content from URL"):
             loader.load(SourceContent("https://example.com/notfound.csv"))

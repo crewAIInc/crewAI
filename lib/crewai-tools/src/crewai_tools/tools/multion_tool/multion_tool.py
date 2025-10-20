@@ -1,6 +1,7 @@
 """Multion tool spec."""
 
 import os
+import subprocess
 from typing import Any
 
 from crewai.tools import BaseTool, EnvVar
@@ -30,8 +31,6 @@ class MultiOnTool(BaseTool):
     def __init__(
         self,
         api_key: str | None = None,
-        local: bool = False,
-        max_steps: int = 3,
         **kwargs,
     ):
         super().__init__(**kwargs)
@@ -43,8 +42,6 @@ class MultiOnTool(BaseTool):
             if click.confirm(
                 "You are missing the 'multion' package. Would you like to install it?"
             ):
-                import subprocess
-
                 subprocess.run(["uv", "add", "multion"], check=True)  # noqa: S607
                 from multion.client import MultiOn
             else:
@@ -52,9 +49,7 @@ class MultiOnTool(BaseTool):
                     "`multion` package not found, please run `uv add multion`"
                 ) from None
         self.session_id = None
-        self.local = local
         self.multion = MultiOn(api_key=api_key or os.getenv("MULTION_API_KEY"))
-        self.max_steps = max_steps
 
     def _run(
         self,
@@ -70,6 +65,9 @@ class MultiOnTool(BaseTool):
             *args (Any): Additional arguments to pass to the Multion client
             **kwargs (Any): Additional keyword arguments to pass to the Multion client
         """
+        if self.multion is None:
+            raise ValueError("Multion client is not initialized.")
+
         browse = self.multion.browse(
             cmd=cmd,
             session_id=self.session_id,

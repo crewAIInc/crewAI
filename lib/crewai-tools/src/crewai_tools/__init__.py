@@ -43,9 +43,6 @@ from crewai_tools.tools.contextualai_rerank_tool.contextual_rerank_tool import (
 from crewai_tools.tools.couchbase_tool.couchbase_tool import (
     CouchbaseFTSVectorSearchTool,
 )
-from crewai_tools.tools.crewai_enterprise_tools.crewai_enterprise_tools import (
-    CrewaiEnterpriseTools,
-)
 from crewai_tools.tools.crewai_platform_tools.crewai_platform_tools import (
     CrewaiPlatformTools,
 )
@@ -214,7 +211,6 @@ __all__ = [
     "ContextualAIQueryTool",
     "ContextualAIRerankTool",
     "CouchbaseFTSVectorSearchTool",
-    "CrewaiEnterpriseTools",
     "CrewaiPlatformTools",
     "DOCXSearchTool",
     "DallETool",

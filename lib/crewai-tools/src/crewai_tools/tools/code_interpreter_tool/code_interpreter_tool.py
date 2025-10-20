@@ -7,16 +7,28 @@ potentially unsafe operations and importing restricted modules.
 
 import importlib.util
 import os
+import subprocess
 from types import ModuleType
-from typing import Any, ClassVar
+from typing import Any, ClassVar, TypedDict
 
 from crewai.tools import BaseTool
-from docker import DockerClient, from_env as docker_from_env
-from docker.errors import ImageNotFound, NotFound
-from docker.models.containers import Container
+from docker import (  # type: ignore[import-untyped]
+    DockerClient,
+    from_env as docker_from_env,
+)
+from docker.errors import ImageNotFound, NotFound  # type: ignore[import-untyped]
+from docker.models.containers import Container  # type: ignore[import-untyped]
 from pydantic import BaseModel, Field
+from typing_extensions import Unpack
 
 from crewai_tools.printer import Printer
+
+
+class RunKwargs(TypedDict, total=False):
+    """Keyword arguments for the _run method."""
+
+    code: str
+    libraries_used: list[str]
 
 
 class CodeInterpreterSchema(BaseModel):
@@ -115,14 +127,14 @@ class SandboxPython:
         return safe_builtins
 
     @staticmethod
-    def exec(code: str, locals: dict[str, Any]) -> None:
+    def exec(code: str, locals_: dict[str, Any]) -> None:
         """Executes Python code in a restricted environment.
 
         Args:
             code: The Python code to execute as a string.
-            locals: A dictionary that will be used for local variable storage.
+            locals_: A dictionary that will be used for local variable storage.
         """
-        exec(code, {"__builtins__": SandboxPython.safe_builtins()}, locals)  # noqa: S102
+        exec(code, {"__builtins__": SandboxPython.safe_builtins()}, locals_)  # noqa: S102
 
 
 class CodeInterpreterTool(BaseTool):
@@ -148,8 +160,13 @@ class CodeInterpreterTool(BaseTool):
 
         Returns:
             The directory path where the package is installed.
+
+        Raises:
+            RuntimeError: If the package cannot be found.
         """
         spec = importlib.util.find_spec("crewai_tools")
+        if spec is None or spec.origin is None:
+            raise RuntimeError("Cannot find crewai_tools package installation path")
         return os.path.dirname(spec.origin)
 
     def _verify_docker_image(self) -> None:
@@ -189,7 +206,7 @@ class CodeInterpreterTool(BaseTool):
                 rm=True,
             )
 
-    def _run(self, **kwargs) -> str:
+    def _run(self, **kwargs: Unpack[RunKwargs]) -> str:
         """Runs the code interpreter tool with the provided arguments.
 
         Args:
@@ -198,14 +215,18 @@ class CodeInterpreterTool(BaseTool):
         Returns:
             The output of the executed code as a string.
         """
-        code = kwargs.get("code", self.code)
-        libraries_used = kwargs.get("libraries_used", [])
+        code: str | None = kwargs.get("code", self.code)
+        libraries_used: list[str] = kwargs.get("libraries_used", [])
+
+        if not code:
+            return "No code provided to execute."
 
         if self.unsafe_mode:
             return self.run_code_unsafe(code, libraries_used)
         return self.run_code_safety(code, libraries_used)
 
-    def _install_libraries(self, container: Container, libraries: list[str]) -> None:
+    @staticmethod
+    def _install_libraries(container: Container, libraries: list[str]) -> None:
         """Installs required Python libraries in the Docker container.
 
         Args:
@@ -245,7 +266,8 @@ class CodeInterpreterTool(BaseTool):
             volumes={current_path: {"bind": "/workspace", "mode": "rw"}},  # type: ignore
         )
 
-    def _check_docker_available(self) -> bool:
+    @staticmethod
+    def _check_docker_available() -> bool:
         """Checks if Docker is available and running on the system.
 
         Attempts to run the 'docker info' command to verify Docker availability.
@@ -254,7 +276,6 @@ class CodeInterpreterTool(BaseTool):
         Returns:
             True if Docker is available and running, False otherwise.
         """
-        import subprocess
 
         try:
             subprocess.run(
@@ -319,7 +340,8 @@ class CodeInterpreterTool(BaseTool):
             return f"Something went wrong while running the code: \n{exec_result.output.decode('utf-8')}"
         return exec_result.output.decode("utf-8")
 
-    def run_code_in_restricted_sandbox(self, code: str) -> str:
+    @staticmethod
+    def run_code_in_restricted_sandbox(code: str) -> str:
         """Runs Python code in a restricted sandbox environment.
 
         Executes the code with restricted access to potentially dangerous modules and
@@ -333,14 +355,15 @@ class CodeInterpreterTool(BaseTool):
             or an error message if execution failed.
         """
         Printer.print("Running code in restricted sandbox", color="yellow")
-        exec_locals = {}
+        exec_locals: dict[str, Any] = {}
         try:
-            SandboxPython.exec(code=code, locals=exec_locals)
+            SandboxPython.exec(code=code, locals_=exec_locals)
             return exec_locals.get("result", "No result variable found.")
         except Exception as e:
             return f"An error occurred: {e!s}"
 
-    def run_code_unsafe(self, code: str, libraries_used: list[str]) -> str:
+    @staticmethod
+    def run_code_unsafe(code: str, libraries_used: list[str]) -> str:
         """Runs code directly on the host machine without any safety restrictions.
 
         WARNING: This mode is unsafe and should only be used in trusted environments
@@ -361,7 +384,7 @@ class CodeInterpreterTool(BaseTool):
 
         # Execute the code
         try:
-            exec_locals = {}
+            exec_locals: dict[str, Any] = {}
             exec(code, {}, exec_locals)  # noqa: S102
             return exec_locals.get("result", "No result variable found.")
         except Exception as e:

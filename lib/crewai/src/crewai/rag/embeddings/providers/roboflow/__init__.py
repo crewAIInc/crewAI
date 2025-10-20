@@ -8,6 +8,7 @@ from crewai.rag.embeddings.providers.roboflow.types import (
     RoboflowProviderSpec,
 )
 
+
 __all__ = [
     "RoboflowProvider",
     "RoboflowProviderConfig",

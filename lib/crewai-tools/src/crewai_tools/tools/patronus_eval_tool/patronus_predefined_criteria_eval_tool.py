@@ -67,22 +67,22 @@ class PatronusPredefinedCriteriaEvalTool(BaseTool):
             "evaluated_model_input": (
                 evaluated_model_input
                 if isinstance(evaluated_model_input, str)
-                else evaluated_model_input.get("description")
+                else evaluated_model_input.get("description")  # type: ignore[union-attr]
             ),
             "evaluated_model_output": (
                 evaluated_model_output
                 if isinstance(evaluated_model_output, str)
-                else evaluated_model_output.get("description")
+                else evaluated_model_output.get("description")  # type: ignore[union-attr]
             ),
             "evaluated_model_retrieved_context": (
                 evaluated_model_retrieved_context
                 if isinstance(evaluated_model_retrieved_context, str)
-                else evaluated_model_retrieved_context.get("description")
+                else evaluated_model_retrieved_context.get("description")  # type: ignore[union-attr]
             ),
             "evaluated_model_gold_answer": (
                 evaluated_model_gold_answer
                 if isinstance(evaluated_model_gold_answer, str)
-                else evaluated_model_gold_answer.get("description")
+                else evaluated_model_gold_answer.get("description")  # type: ignore[union-attr]
             ),
             "evaluators": (
                 evaluators

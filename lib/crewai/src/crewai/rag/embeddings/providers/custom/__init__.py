@@ -6,6 +6,7 @@ from crewai.rag.embeddings.providers.custom.types import (
     CustomProviderSpec,
 )
 
+
 __all__ = [
     "CustomProvider",
     "CustomProviderConfig",

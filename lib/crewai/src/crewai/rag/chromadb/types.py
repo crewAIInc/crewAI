@@ -8,18 +8,17 @@ from chromadb.api.configuration import CollectionConfigurationInterface
 from chromadb.api.types import (
     CollectionMetadata,
     DataLoader,
+    EmbeddingFunction as ChromaEmbeddingFunction,
     Include,
     Loadable,
     Where,
     WhereDocument,
 )
-from chromadb.api.types import (
-    EmbeddingFunction as ChromaEmbeddingFunction,
-)
 from pydantic import GetCoreSchemaHandler
 from pydantic_core import CoreSchema, core_schema
 
 from crewai.rag.core.base_client import BaseCollectionParams, BaseCollectionSearchParams
+
 
 ChromaDBClientType = ClientAPI | AsyncClientAPI
 

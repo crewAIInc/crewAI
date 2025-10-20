@@ -1,9 +1,7 @@
 import logging
 import os
 
-from crewai.tools import BaseTool
-
-from crewai_tools.adapters.zapier_adapter import ZapierActionsAdapter
+from crewai_tools.adapters.zapier_adapter import ZapierActionTool, ZapierActionsAdapter
 
 
 logger = logging.getLogger(__name__)
@@ -11,7 +9,7 @@ logger = logging.getLogger(__name__)
 
 def ZapierActionTools(  # noqa: N802
     zapier_api_key: str | None = None, action_list: list[str] | None = None
-) -> list[BaseTool]:
+) -> list[ZapierActionTool]:
     """Factory function that returns Zapier action tools.
 
     Args:

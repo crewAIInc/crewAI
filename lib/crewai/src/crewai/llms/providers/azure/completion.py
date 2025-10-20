@@ -7,17 +7,25 @@ from crewai.utilities.agent_utils import is_context_length_exceeded
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededError,
 )
+from crewai.utilities.types import LLMMessage
 
 
 try:
-    from azure.ai.inference import ChatCompletionsClient
-    from azure.ai.inference.models import (
+    from azure.ai.inference import (  # type: ignore[import-not-found]
+        ChatCompletionsClient,
+    )
+    from azure.ai.inference.models import (  # type: ignore[import-not-found]
         ChatCompletions,
         ChatCompletionsToolCall,
         StreamingChatCompletionsUpdate,
     )
-    from azure.core.credentials import AzureKeyCredential
-    from azure.core.exceptions import HttpResponseError
+    from azure.core.credentials import (  # type: ignore[import-not-found]
+        AzureKeyCredential,
+    )
+    from azure.core.exceptions import (  # type: ignore[import-not-found]
+        HttpResponseError,
+    )
+
     from crewai.events.types.llm_events import LLMCallType
     from crewai.llms.base_llm import BaseLLM
 
@@ -148,7 +156,7 @@ class AzureCompletion(BaseLLM):
 
     def call(
         self,
-        messages: str | list[dict[str, str]],
+        messages: str | list[LLMMessage],
         tools: list[dict] | None = None,
         callbacks: list[Any] | None = None,
         available_functions: dict[str, Any] | None = None,
@@ -224,7 +232,7 @@ class AzureCompletion(BaseLLM):
 
     def _prepare_completion_params(
         self,
-        messages: list[dict[str, str]],
+        messages: list[LLMMessage],
         tools: list[dict] | None = None,
     ) -> dict[str, Any]:
         """Prepare parameters for Azure AI Inference chat completion.
@@ -296,8 +304,8 @@ class AzureCompletion(BaseLLM):
         return azure_tools
 
     def _format_messages_for_azure(
-        self, messages: str | list[dict[str, str]]
-    ) -> list[dict[str, str]]:
+        self, messages: str | list[LLMMessage]
+    ) -> list[LLMMessage]:
         """Format messages for Azure AI Inference API.
 
         Args:
@@ -309,7 +317,7 @@ class AzureCompletion(BaseLLM):
         # Use base class formatting first
         base_formatted = super()._format_messages(messages)
 
-        azure_messages = []
+        azure_messages: list[LLMMessage] = []
 
         for message in base_formatted:
             role = message.get("role", "user")  # Default to user if no role

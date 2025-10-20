@@ -5,9 +5,10 @@ This tool provides functionality for extracting text from images using supported
 
 import base64
 
-from crewai import LLM
+from crewai.llm import LLM
 from crewai.tools.base_tool import BaseTool
-from pydantic import BaseModel, PrivateAttr
+from crewai.utilities.types import LLMMessage
+from pydantic import BaseModel, Field
 
 
 class OCRToolSchema(BaseModel):
@@ -19,7 +20,7 @@ class OCRToolSchema(BaseModel):
             For remote images, provide the complete URL starting with 'http' or 'https'.
     """
 
-    image_path_url: str = "The image path or URL."
+    image_path_url: str = Field(description="The image path or URL.")
 
 
 class OCRTool(BaseTool):
@@ -39,28 +40,8 @@ class OCRTool(BaseTool):
 
     name: str = "Optical Character Recognition Tool"
     description: str = "This tool uses an LLM's API to extract text from an image file."
-    _llm: LLM | None = PrivateAttr(default=None)
-
+    llm: LLM = Field(default_factory=lambda: LLM(model="gpt-4o", temperature=0.7))
     args_schema: type[BaseModel] = OCRToolSchema
-
-    def __init__(self, llm: LLM = None, **kwargs):
-        """Initialize the OCR tool.
-
-        Args:
-            llm (LLM, optional): Language model instance to use for API calls.
-                If not provided, a default LLM with gpt-4o model will be used.
-            **kwargs: Additional arguments passed to the parent class.
-        """
-        super().__init__(**kwargs)
-
-        if llm is None:
-            # Use the default LLM
-            llm = LLM(
-                model="gpt-4o",
-                temperature=0.7,
-            )
-
-        self._llm = llm
 
     def _run(self, **kwargs) -> str:
         """Execute the OCR operation on the provided image.
@@ -88,7 +69,7 @@ class OCRTool(BaseTool):
             base64_image = self._encode_image(image_path_url)
             image_data = f"data:image/jpeg;base64,{base64_image}"
 
-        messages = [
+        messages: list[LLMMessage] = [
             {
                 "role": "system",
                 "content": "You are an expert OCR specialist. Extract complete text from the provided image. Provide the result as a raw text.",
@@ -104,9 +85,10 @@ class OCRTool(BaseTool):
             },
         ]
 
-        return self._llm.call(messages=messages)
+        return self.llm.call(messages=messages)
 
-    def _encode_image(self, image_path: str):
+    @staticmethod
+    def _encode_image(image_path: str):
         """Encode an image file to base64 format.
 
         Args:
@@ -116,4 +98,4 @@ class OCRTool(BaseTool):
             str: Base64-encoded image data as a UTF-8 string.
         """
         with open(image_path, "rb") as image_file:
-            return base64.b64encode(image_file.read()).decode("utf-8")
+            return base64.b64encode(image_file.read()).decode()

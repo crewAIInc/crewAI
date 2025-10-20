@@ -2,8 +2,11 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
-from lancedb import DBConnection as LanceDBConnection, connect as lancedb_connect
-from lancedb.table import Table as LanceDBTable
+from lancedb import (  # type: ignore[import-untyped]
+    DBConnection as LanceDBConnection,
+    connect as lancedb_connect,
+)
+from lancedb.table import Table as LanceDBTable  # type: ignore[import-untyped]
 from openai import Client as OpenAIClient
 from pydantic import Field, PrivateAttr
 
@@ -37,7 +40,7 @@ class LanceDBAdapter(Adapter):
 
         super().model_post_init(__context)
 
-    def query(self, question: str) -> str:
+    def query(self, question: str) -> str:  # type: ignore[override]
         query = self.embedding_function([question])[0]
         results = (
             self._table.search(query, vector_column_name=self.vector_column_name)

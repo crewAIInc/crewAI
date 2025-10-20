@@ -4,6 +4,7 @@ from typing import Any
 
 from crewai.tools import BaseTool, EnvVar
 from openai import OpenAI
+from openai.types.chat import ChatCompletion
 from pydantic import BaseModel, Field
 
 
@@ -30,7 +31,7 @@ class AIMindTool(BaseTool):
     )
     args_schema: type[BaseModel] = AIMindToolInputSchema
     api_key: str | None = None
-    datasources: list[dict[str, Any]] | None = None
+    datasources: list[dict[str, Any]] = Field(default_factory=list)
     mind_name: str | None = None
     package_dependencies: list[str] = Field(default_factory=lambda: ["minds-sdk"])
     env_vars: list[EnvVar] = Field(
@@ -87,10 +88,15 @@ class AIMindTool(BaseTool):
             base_url=AIMindToolConstants.MINDS_API_BASE_URL, api_key=self.api_key
         )
 
+        if self.mind_name is None:
+            raise ValueError("Mind name is not set.")
+
         completion = openai_client.chat.completions.create(
             model=self.mind_name,
             messages=[{"role": "user", "content": query}],
             stream=False,
         )
+        if not isinstance(completion, ChatCompletion):
+            raise ValueError("Invalid response from AI-Mind")
 
         return completion.choices[0].message.content

@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-import json
-import uuid
 from datetime import date, datetime
+import json
 from typing import Any, TypeAlias
+import uuid
 
 from pydantic import BaseModel
+
 
 SerializablePrimitive: TypeAlias = str | int | float | bool | None
 Serializable: TypeAlias = (

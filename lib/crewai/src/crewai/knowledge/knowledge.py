@@ -7,6 +7,7 @@ from crewai.knowledge.storage.knowledge_storage import KnowledgeStorage
 from crewai.rag.embeddings.types import EmbedderConfig
 from crewai.rag.types import SearchResult
 
+
 os.environ["TOKENIZERS_PARALLELISM"] = "false"  # removes logging from fastembed
 
 
@@ -61,7 +62,7 @@ class Knowledge(BaseModel):
             score_threshold=score_threshold,
         )
 
-    def add_sources(self):
+    def add_sources(self) -> None:
         try:
             for source in self.sources:
                 source.storage = self.storage

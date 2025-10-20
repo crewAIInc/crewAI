@@ -1,5 +1,5 @@
 import os
-from typing import Any
+from typing import Any, Literal
 
 from crewai.tools import BaseTool, EnvVar
 
@@ -10,7 +10,7 @@ try:
     LINKUP_AVAILABLE = True
 except ImportError:
     LINKUP_AVAILABLE = False
-    LinkupClient = Any  # type placeholder when package is not available
+    LinkupClient = Any  # type: ignore[misc,assignment]  # type placeholder when package is not available
 
 from pydantic import Field, PrivateAttr
 
@@ -32,7 +32,7 @@ class LinkupSearchTool(BaseTool):
 
     def __init__(self, api_key: str | None = None) -> None:
         """Initialize the tool with an API key."""
-        super().__init__()
+        super().__init__()  # type: ignore[call-arg]
         try:
             from linkup import LinkupClient
         except ImportError:
@@ -54,7 +54,12 @@ class LinkupSearchTool(BaseTool):
         self._client = LinkupClient(api_key=api_key or os.getenv("LINKUP_API_KEY"))
 
     def _run(
-        self, query: str, depth: str = "standard", output_type: str = "searchResults"
+        self,
+        query: str,
+        depth: Literal["standard", "deep"] = "standard",
+        output_type: Literal[
+            "searchResults", "sourcedAnswer", "structured"
+        ] = "searchResults",
     ) -> dict:
         """Executes a search using the Linkup API.
 

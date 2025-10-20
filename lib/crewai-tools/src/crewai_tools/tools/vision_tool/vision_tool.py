@@ -1,9 +1,9 @@
 import base64
 from pathlib import Path
-from typing import Any
 
 from crewai import LLM
 from crewai.tools import BaseTool, EnvVar
+from crewai.utilities.types import LLMMessage
 from pydantic import BaseModel, Field, PrivateAttr, field_validator
 
 
@@ -106,7 +106,7 @@ class VisionTool(BaseTool):
                 except Exception as e:
                     return f"Error processing image: {e!s}"
 
-            messages: list[dict[str, Any]] = [
+            messages: list[LLMMessage] = [
                 {
                     "role": "user",
                     "content": [
@@ -122,7 +122,8 @@ class VisionTool(BaseTool):
         except Exception as e:
             return f"An error occurred: {e!s}"
 
-    def _encode_image(self, image_path: str) -> str:
+    @staticmethod
+    def _encode_image(image_path: str) -> str:
         """Encode an image file as base64.
 
         Args:
@@ -132,4 +133,4 @@ class VisionTool(BaseTool):
             Base64-encoded image data
         """
         with open(image_path, "rb") as image_file:
-            return base64.b64encode(image_file.read()).decode("utf-8")
+            return base64.b64encode(image_file.read()).decode()

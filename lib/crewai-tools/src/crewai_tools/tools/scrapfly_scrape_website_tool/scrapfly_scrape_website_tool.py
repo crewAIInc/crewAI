@@ -28,7 +28,7 @@ class ScrapflyScrapeWebsiteTool(BaseTool):
         "Scrape a webpage url using Scrapfly and return its content as markdown or text"
     )
     args_schema: type[BaseModel] = ScrapflyScrapeWebsiteToolSchema
-    api_key: str = None
+    api_key: str | None = None
     scrapfly: Any | None = None
     package_dependencies: list[str] = Field(default_factory=lambda: ["scrapfly-sdk"])
     env_vars: list[EnvVar] = Field(
@@ -42,9 +42,12 @@ class ScrapflyScrapeWebsiteTool(BaseTool):
     )
 
     def __init__(self, api_key: str):
-        super().__init__()
+        super().__init__(
+            name="Scrapfly web scraping API tool",
+            description="Scrape a webpage url using Scrapfly and return its content as markdown or text",
+        )
         try:
-            from scrapfly import ScrapflyClient
+            from scrapfly import ScrapflyClient  # type: ignore[import-untyped]
         except ImportError:
             import click
 
@@ -71,7 +74,7 @@ class ScrapflyScrapeWebsiteTool(BaseTool):
 
         scrape_config = scrape_config if scrape_config is not None else {}
         try:
-            response: ScrapeApiResponse = self.scrapfly.scrape(
+            response: ScrapeApiResponse = self.scrapfly.scrape(  # type: ignore[union-attr]
                 ScrapeConfig(url, format=scrape_format, **scrape_config)
             )
             return response.scrape_result["content"]

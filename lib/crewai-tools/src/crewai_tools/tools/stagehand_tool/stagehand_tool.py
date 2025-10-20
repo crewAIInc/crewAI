@@ -12,8 +12,13 @@ from pydantic import BaseModel, Field
 _HAS_STAGEHAND = False
 
 try:
-    from stagehand import Stagehand, StagehandConfig, StagehandPage, configure_logging
-    from stagehand.schemas import (
+    from stagehand import (  # type: ignore[import-untyped]
+        Stagehand,
+        StagehandConfig,
+        StagehandPage,
+        configure_logging,
+    )
+    from stagehand.schemas import (  # type: ignore[import-untyped]
         ActOptions,
         AvailableModel,
         ExtractOptions,
@@ -35,7 +40,7 @@ except ImportError:
         pass
 
     # Define only what's needed for class defaults
-    class AvailableModel:
+    class AvailableModel:  # type: ignore[no-redef]
         CLAUDE_3_7_SONNET_LATEST = "anthropic.claude-3-7-sonnet-20240607"
 
 
@@ -394,9 +399,15 @@ class StagehandTool(BaseTool):
             else:
                 instruction = "Perform the requested action"
 
-        # For testing mode, use parent implementation
+        # For testing mode, return mock result directly without calling parent
         if self._testing:
-            return await super()._async_run(instruction, url, command_type)
+            mock_data = {
+                "message": f"Mock {command_type} completed successfully",
+                "instruction": instruction,
+            }
+            if url:
+                mock_data["url"] = url
+            return self._format_result(True, mock_data)
 
         try:
             _, page = await self._setup_stagehand(self._session_id)

@@ -26,6 +26,7 @@ from crewai.utilities.exceptions.context_window_exceeding_exception import (
 )
 from crewai.utilities.i18n import I18N
 from crewai.utilities.printer import ColoredText, Printer
+from crewai.utilities.token_counter_callback import TokenCalcHandler
 from crewai.utilities.types import LLMMessage
 
 
@@ -34,7 +35,6 @@ if TYPE_CHECKING:
     from crewai.lite_agent import LiteAgent
     from crewai.llm import LLM
     from crewai.task import Task
-
 
 
 class SummaryContent(TypedDict):
@@ -125,7 +125,7 @@ def handle_max_iterations_exceeded(
     i18n: I18N,
     messages: list[LLMMessage],
     llm: LLM | BaseLLM,
-    callbacks: list[Callable[..., Any]],
+    callbacks: list[TokenCalcHandler],
 ) -> AgentAction | AgentFinish:
     """Handles the case when the maximum number of iterations is exceeded. Performs one more LLM call to get the final answer.
 
@@ -222,7 +222,7 @@ def enforce_rpm_limit(
 def get_llm_response(
     llm: LLM | BaseLLM,
     messages: list[LLMMessage],
-    callbacks: list[Callable[..., Any]],
+    callbacks: list[TokenCalcHandler],
     printer: Printer,
     from_task: Task | None = None,
     from_agent: Agent | LiteAgent | None = None,
@@ -289,7 +289,7 @@ def process_llm_response(
 def handle_agent_action_core(
     formatted_answer: AgentAction,
     tool_result: ToolResult,
-    messages: list[dict[str, str]] | None = None,
+    messages: list[LLMMessage] | None = None,
     step_callback: Callable | None = None,
     show_logs: Callable | None = None,
 ) -> AgentAction | AgentFinish:
@@ -395,9 +395,8 @@ def is_context_length_exceeded(exception: Exception) -> bool:
     Returns:
         bool: True if the exception is due to context length exceeding
     """
-    return (
-        LLMContextLengthExceededError(str(exception))
-        ._is_context_limit_error(str(exception))
+    return LLMContextLengthExceededError(str(exception))._is_context_limit_error(
+        str(exception)
     )
 
 
@@ -406,7 +405,7 @@ def handle_context_length(
     printer: Printer,
     messages: list[LLMMessage],
     llm: LLM | BaseLLM,
-    callbacks: list[Callable[..., Any]],
+    callbacks: list[TokenCalcHandler],
     i18n: I18N,
 ) -> None:
     """Handle context length exceeded by either summarizing or raising an error.
@@ -441,7 +440,7 @@ def handle_context_length(
 def summarize_messages(
     messages: list[LLMMessage],
     llm: LLM | BaseLLM,
-    callbacks: list[Callable[..., Any]],
+    callbacks: list[TokenCalcHandler],
     i18n: I18N,
 ) -> None:
     """Summarize messages to fit within context window.
@@ -452,7 +451,7 @@ def summarize_messages(
         callbacks: List of callbacks for LLM
         i18n: I18N instance for messages
     """
-    messages_string = " ".join([message["content"] for message in messages])
+    messages_string = " ".join([message["content"] for message in messages])  # type: ignore[misc]
     cut_size = llm.get_context_window_size()
 
     messages_groups = [

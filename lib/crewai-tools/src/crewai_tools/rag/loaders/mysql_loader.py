@@ -1,8 +1,10 @@
 """MySQL database loader."""
 
+from typing import Any
 from urllib.parse import urlparse
 
-import pymysql
+from pymysql import Error, connect
+from pymysql.cursors import DictCursor
 
 from crewai_tools.rag.base_loader import BaseLoader, LoaderResult
 from crewai_tools.rag.source_content import SourceContent
@@ -11,7 +13,7 @@ from crewai_tools.rag.source_content import SourceContent
 class MySQLLoader(BaseLoader):
     """Loader for MySQL database content."""
 
-    def load(self, source: SourceContent, **kwargs) -> LoaderResult:
+    def load(self, source: SourceContent, **kwargs: Any) -> LoaderResult:  # type: ignore[override]
         """Load content from a MySQL database table.
 
         Args:
@@ -40,14 +42,14 @@ class MySQLLoader(BaseLoader):
             "password": parsed.password,
             "database": parsed.path.lstrip("/") if parsed.path else None,
             "charset": "utf8mb4",
-            "cursorclass": pymysql.cursors.DictCursor,
+            "cursorclass": DictCursor,
         }
 
         if not connection_params["database"]:
             raise ValueError("Database name is required in the URI")
 
         try:
-            connection = pymysql.connect(**connection_params)
+            connection = connect(**connection_params)
             try:
                 with connection.cursor() as cursor:
                     cursor.execute(query)
@@ -94,7 +96,7 @@ class MySQLLoader(BaseLoader):
                     )
             finally:
                 connection.close()
-        except pymysql.Error as e:
+        except Error as e:
             raise ValueError(f"MySQL database error: {e}") from e
         except Exception as e:
             raise ValueError(f"Failed to load data from MySQL: {e}") from e

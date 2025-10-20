@@ -9,6 +9,7 @@ from crewai.experimental.evaluation.base_evaluator import (
 )
 from crewai.experimental.evaluation.json_parser import extract_json_from_llm_response
 from crewai.task import Task
+from crewai.utilities.types import LLMMessage
 
 
 class GoalAlignmentEvaluator(BaseEvaluator):
@@ -27,7 +28,7 @@ class GoalAlignmentEvaluator(BaseEvaluator):
         if task is not None:
             task_context = f"Task description: {task.description}\nExpected output: {task.expected_output}\n"
 
-        prompt = [
+        prompt: list[LLMMessage] = [
             {
                 "role": "system",
                 "content": """You are an expert evaluator assessing how well an AI agent's output aligns with its assigned task goal.
@@ -62,7 +63,7 @@ Evaluate how well the agent's output aligns with the assigned task goal.
         ]
         if self.llm is None:
             raise ValueError("LLM must be initialized")
-        response = self.llm.call(prompt)
+        response = self.llm.call(prompt)  # type: ignore[arg-type]
 
         try:
             evaluation_data: dict[str, Any] = extract_json_from_llm_response(response)

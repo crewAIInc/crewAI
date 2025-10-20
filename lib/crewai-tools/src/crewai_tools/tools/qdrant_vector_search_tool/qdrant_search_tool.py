@@ -11,10 +11,10 @@ try:
     QDRANT_AVAILABLE = True
 except ImportError:
     QDRANT_AVAILABLE = False
-    QdrantClient = Any  # type placeholder
-    Filter = Any
-    FieldCondition = Any
-    MatchValue = Any
+    QdrantClient = Any  # type: ignore[assignment,misc]  # type placeholder
+    Filter = Any  # type: ignore[assignment,misc]
+    FieldCondition = Any  # type: ignore[assignment,misc]
+    MatchValue = Any  # type: ignore[assignment,misc]
 
 from crewai.tools import BaseTool, EnvVar
 from pydantic import BaseModel, ConfigDict, Field
@@ -53,7 +53,7 @@ class QdrantVectorSearchTool(BaseTool):
     """
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
-    client: QdrantClient = None
+    client: QdrantClient = None  # type: ignore[assignment]
     name: str = "QdrantVectorSearchTool"
     description: str = "A tool to search the Qdrant database for relevant information on internal documents."
     args_schema: type[BaseModel] = QdrantToolSchema
@@ -146,10 +146,10 @@ class QdrantVectorSearchTool(BaseTool):
             else self.custom_embedding_fn(query)
         )
         search_results = self.client.query_points(
-            collection_name=self.collection_name,
+            collection_name=self.collection_name,  # type: ignore[arg-type]
             query=query_vector,
             query_filter=search_filter,
-            limit=self.limit,
+            limit=self.limit,  # type: ignore[arg-type]
             score_threshold=self.score_threshold,
         )
 

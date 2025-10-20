@@ -82,7 +82,7 @@ class ContextualAIQueryTool(BaseTool):
                 if loop and loop.is_running():
                     # Already inside an event loop
                     try:
-                        import nest_asyncio
+                        import nest_asyncio  # type: ignore[import-untyped]
 
                         nest_asyncio.apply(loop)
                         loop.run_until_complete(

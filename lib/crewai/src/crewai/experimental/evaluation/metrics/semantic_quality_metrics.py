@@ -9,6 +9,7 @@ from crewai.experimental.evaluation.base_evaluator import (
 )
 from crewai.experimental.evaluation.json_parser import extract_json_from_llm_response
 from crewai.task import Task
+from crewai.utilities.types import LLMMessage
 
 
 class SemanticQualityEvaluator(BaseEvaluator):
@@ -26,7 +27,7 @@ class SemanticQualityEvaluator(BaseEvaluator):
         task_context = ""
         if task is not None:
             task_context = f"Task description: {task.description}"
-        prompt = [
+        prompt: list[LLMMessage] = [
             {
                 "role": "system",
                 "content": """You are an expert evaluator assessing the semantic quality of an AI agent's output.

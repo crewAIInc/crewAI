@@ -26,6 +26,8 @@ dev = [
     "types-regex==2024.11.6.*",
     "types-appdirs==1.4.*",
     "boto3-stubs[bedrock-runtime]>=1.40.54",
+    "types-psycopg2>=2.9.21.20251012",
+    "types-pymysql>=1.1.0.20250916",
 ]
 
 
@@ -36,12 +38,17 @@ extend-exclude = [
     "lib/crewai/tests/",
     "lib/crewai-tools/tests/",
 ]
+respect-gitignore = true
 force-exclude = true
 fix = true
 target-version = "py310"
 
+[tool.ruff.format]
+docstring-code-format = true
+
 [tool.ruff.lint]
-select = [
+future-annotations = true
+extend-select = [
     "E",      # pycodestyle errors (style issues)
     "F",      # Pyflakes (code errors)
     "B",      # flake8-bugbear (bug prevention)
@@ -54,6 +61,7 @@ select = [
 #    "D",      # pydocstyle (docstring conventions) disabled until
     "PERF",   # performance issues
     "PIE",    # flake8-pie (unnecessary code)
+    "TID",    # flake8-tidy-imports (import best practices)
     "ASYNC",  # async/await best practices
     "RET",    # flake8-return (return improvements)
     "UP006",  # use collections.abc
@@ -72,10 +80,14 @@ select = [
 ]
 ignore = ["E501"]  # ignore line too long globally
 
-[tool.ruff.format]
-docstring-code-format = true
+[tool.ruff.lint.flake8-tidy-imports]
+ban-relative-imports = "all"
+
+[tool.ruff.lint.flake8-type-checking]
+runtime-evaluated-base-classes = ["pydantic.BaseModel"]
 
 [tool.ruff.lint.isort]
+no-sections = false
 case-sensitive = true
 combine-as-imports = true
 force-single-line = false
@@ -87,6 +99,7 @@ split-on-trailing-comma = true
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
+ignore-decorators = ["typing.overload"]
 
 [tool.ruff.lint.per-file-ignores]
 "lib/crewai/tests/**/*.py" = ["S101", "RET504", "S105", "S106"]  # Allow assert statements, unnecessary assignments, and hardcoded passwords in tests
@@ -94,6 +107,15 @@ convention = "google"
 
 
 [tool.mypy]
+strict = true
+disallow_untyped_defs = true
+disallow_any_unimported = true
+no_implicit_optional = true
+check_untyped_defs = true
+warn_return_any = true
+show_error_codes = true
+warn_unused_ignores = true
+python_version = "3.12"
 exclude = [
     "lib/crewai/src/crewai/cli/templates",
     "lib/crewai/tests/",
