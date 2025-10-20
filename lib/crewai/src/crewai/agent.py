@@ -877,11 +877,93 @@ class Agent(BaseAgent):
 
                 schemas = {}
                 for tool in tools_result.tools:
+                    args_schema = None
+                    if hasattr(tool, "inputSchema") and tool.inputSchema:
+                        args_schema = self._json_schema_to_pydantic(
+                            tool.name, tool.inputSchema
+                        )
+
                     schemas[tool.name] = {
                         "description": getattr(tool, "description", ""),
-                        "args_schema": None,  # Keep simple for now
+                        "args_schema": args_schema,
                     }
                 return schemas
+
+    def _json_schema_to_pydantic(self, tool_name: str, json_schema: dict) -> type:
+        """Convert JSON Schema to Pydantic model for tool arguments.
+
+        Args:
+            tool_name: Name of the tool (used for model naming)
+            json_schema: JSON Schema dict with 'properties', 'required', etc.
+
+        Returns:
+            Pydantic BaseModel class
+        """
+        from pydantic import Field, create_model
+
+        properties = json_schema.get("properties", {})
+        required_fields = json_schema.get("required", [])
+
+        field_definitions = {}
+
+        for field_name, field_schema in properties.items():
+            field_type = self._json_type_to_python(field_schema)
+            field_description = field_schema.get("description", "")
+
+            is_required = field_name in required_fields
+
+            if is_required:
+                field_definitions[field_name] = (
+                    field_type,
+                    Field(..., description=field_description),
+                )
+            else:
+                field_definitions[field_name] = (
+                    field_type | None,
+                    Field(default=None, description=field_description),
+                )
+
+        model_name = f"{tool_name.replace('-', '_').replace(' ', '_')}Schema"
+        return create_model(model_name, **field_definitions)
+
+    def _json_type_to_python(self, field_schema: dict) -> type:
+        """Convert JSON Schema type to Python type.
+
+        Args:
+            field_schema: JSON Schema field definition
+
+        Returns:
+            Python type
+        """
+        from typing import Any
+
+        json_type = field_schema.get("type")
+
+        if "anyOf" in field_schema:
+            types = []
+            for option in field_schema["anyOf"]:
+                if "const" in option:
+                    types.append(str)
+                else:
+                    types.append(self._json_type_to_python(option))
+            unique_types = list(set(types))
+            if len(unique_types) > 1:
+                result = unique_types[0]
+                for t in unique_types[1:]:
+                    result = result | t
+                return result
+            return unique_types[0]
+
+        type_mapping = {
+            "string": str,
+            "number": float,
+            "integer": int,
+            "boolean": bool,
+            "array": list,
+            "object": dict,
+        }
+
+        return type_mapping.get(json_type, Any)
 
     def _fetch_amp_mcp_servers(self, mcp_name: str) -> list[dict]:
         """Fetch MCP server configurations from CrewAI AMP API."""
