@@ -34,6 +34,7 @@ dev = [
 [tool.ruff]
 src = ["lib/*"]
 extend-exclude = [
+    "lib/crewai/src/crewai/experimental/a2a",
     "lib/crewai/src/crewai/cli/templates",
     "lib/crewai/tests/",
     "lib/crewai-tools/tests/",
@@ -120,7 +121,8 @@ exclude = [
     "lib/crewai/src/crewai/cli/templates",
     "lib/crewai/tests/",
     # crewai-tools
-    "lib/crewai-tools/tests/"
+    "lib/crewai-tools/tests/",
+    "lib/crewai/src/crewai/experimental/a2a"
 ]
 plugins = ["pydantic.mypy"]
 
