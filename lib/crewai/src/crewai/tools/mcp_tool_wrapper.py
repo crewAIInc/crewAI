@@ -87,49 +87,64 @@ class MCPToolWrapper(BaseTool):
 
     async def _run_async(self, **kwargs) -> str:
         """Async implementation of MCP tool execution with timeouts and retry logic."""
+        return await self._retry_with_exponential_backoff(self._execute_tool_with_timeout, **kwargs)
+
+    async def _retry_with_exponential_backoff(self, operation_func, **kwargs) -> str:
+        """Retry operation with exponential backoff, avoiding try-except in loop for performance."""
         last_error = None
 
         for attempt in range(MCP_MAX_RETRIES):
-            try:  # noqa: PERF203 - Intentional retry logic requires try-except in loop
-                return await asyncio.wait_for(
-                    self._execute_tool(**kwargs),
-                    timeout=MCP_TOOL_EXECUTION_TIMEOUT
-                )
+            # Execute single attempt outside try-except loop structure
+            result, error, should_retry = await self._execute_single_attempt(operation_func, **kwargs)
 
-            except asyncio.TimeoutError:
-                last_error = f"Connection timed out after {MCP_TOOL_EXECUTION_TIMEOUT} seconds"
-                if attempt < MCP_MAX_RETRIES - 1:
-                    wait_time = 2 ** attempt  # Exponential backoff
-                    await asyncio.sleep(wait_time)
-                    continue
-                break
+            # Success case - return immediately
+            if result is not None:
+                return result
 
-            except ImportError:
-                return "MCP library not available. Please install with: pip install mcp"
+            # Non-retryable error - return immediately
+            if not should_retry:
+                return error
 
-            except Exception as e:
-                error_str = str(e).lower()
-
-                # Handle specific error types
-                if 'connection' in error_str or 'network' in error_str:
-                    last_error = f"Network connection failed: {e!s}"
-                elif 'authentication' in error_str or 'unauthorized' in error_str:
-                    return f"Authentication failed for MCP server: {e!s}"
-                elif 'json' in error_str or 'parsing' in error_str:
-                    last_error = f"Server response parsing error: {e!s}"
-                elif 'not found' in error_str:
-                    return f"Tool '{self.original_tool_name}' not found on MCP server"
-                else:
-                    last_error = f"MCP execution error: {e!s}"
-
-                # Retry for transient errors
-                if attempt < MCP_MAX_RETRIES - 1 and ('connection' in error_str or 'network' in error_str or 'json' in error_str):
-                    wait_time = 2 ** attempt  # Exponential backoff
-                    await asyncio.sleep(wait_time)
-                    continue
-                break
+            # Retryable error - continue with backoff
+            last_error = error
+            if attempt < MCP_MAX_RETRIES - 1:
+                wait_time = 2 ** attempt  # Exponential backoff
+                await asyncio.sleep(wait_time)
 
         return f"MCP tool execution failed after {MCP_MAX_RETRIES} attempts: {last_error}"
+
+    async def _execute_single_attempt(self, operation_func, **kwargs) -> tuple[str | None, str, bool]:
+        """Execute single operation attempt and return (result, error_message, should_retry)."""
+        try:
+            result = await operation_func(**kwargs)
+            return result, "", False
+
+        except ImportError:
+            return None, "MCP library not available. Please install with: pip install mcp", False
+
+        except asyncio.TimeoutError:
+            return None, f"Connection timed out after {MCP_TOOL_EXECUTION_TIMEOUT} seconds", True
+
+        except Exception as e:
+            error_str = str(e).lower()
+
+            # Classify errors as retryable or non-retryable
+            if 'authentication' in error_str or 'unauthorized' in error_str:
+                return None, f"Authentication failed for MCP server: {e!s}", False
+            if 'not found' in error_str:
+                return None, f"Tool '{self.original_tool_name}' not found on MCP server", False
+            if 'connection' in error_str or 'network' in error_str:
+                return None, f"Network connection failed: {e!s}", True
+            if 'json' in error_str or 'parsing' in error_str:
+                return None, f"Server response parsing error: {e!s}", True
+            return None, f"MCP execution error: {e!s}", False
+
+    async def _execute_tool_with_timeout(self, **kwargs) -> str:
+        """Execute tool with timeout wrapper."""
+        return await asyncio.wait_for(
+            self._execute_tool(**kwargs),
+            timeout=MCP_TOOL_EXECUTION_TIMEOUT
+        )
 
     async def _execute_tool(self, **kwargs) -> str:
         """Execute the actual MCP tool call."""

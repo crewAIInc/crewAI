@@ -753,48 +753,62 @@ class Agent(BaseAgent):
     async def _get_mcp_tool_schemas_async(self, server_params: dict) -> dict[str, dict]:
         """Async implementation of MCP tool schema retrieval with timeouts and retries."""
         server_url = server_params["url"]
+        return await self._retry_mcp_discovery(self._discover_mcp_tools_with_timeout, server_url)
+
+    async def _retry_mcp_discovery(self, operation_func, server_url: str) -> dict[str, dict]:
+        """Retry MCP discovery operation with exponential backoff, avoiding try-except in loop."""
         last_error = None
 
         for attempt in range(MCP_MAX_RETRIES):
-            try:  # noqa: PERF203 - Intentional retry logic requires try-except in loop
-                # Wrap entire operation in timeout
-                return await asyncio.wait_for(
-                    self._discover_mcp_tools(server_url),
-                    timeout=MCP_DISCOVERY_TIMEOUT
-                )
+            # Execute single attempt outside try-except loop structure
+            result, error, should_retry = await self._attempt_mcp_discovery(operation_func, server_url)
 
-            except asyncio.TimeoutError:
-                last_error = f"MCP discovery timed out after {MCP_DISCOVERY_TIMEOUT} seconds"
-                if attempt < MCP_MAX_RETRIES - 1:
-                    wait_time = 2 ** attempt  # Exponential backoff
-                    await asyncio.sleep(wait_time)
-                    continue
-                break
+            # Success case - return immediately
+            if result is not None:
+                return result
 
-            except ImportError as e:
-                raise RuntimeError("MCP library not available. Please install with: pip install mcp") from e
+            # Non-retryable error - raise immediately
+            if not should_retry:
+                raise RuntimeError(error)
 
-            except Exception as e:
-                error_str = str(e).lower()
-
-                # Handle specific error types
-                if 'connection' in error_str or 'network' in error_str:
-                    last_error = f"Network connection failed: {e!s}"
-                elif 'authentication' in error_str or 'unauthorized' in error_str:
-                    raise RuntimeError(f"Authentication failed for MCP server: {e!s}") from e
-                elif 'json' in error_str or 'parsing' in error_str:
-                    last_error = f"Server response parsing error: {e!s}"
-                else:
-                    last_error = f"MCP discovery error: {e!s}"
-
-                # Retry for transient errors
-                if attempt < MCP_MAX_RETRIES - 1 and ('connection' in error_str or 'network' in error_str or 'json' in error_str):
-                    wait_time = 2 ** attempt  # Exponential backoff
-                    await asyncio.sleep(wait_time)
-                    continue
-                break
+            # Retryable error - continue with backoff
+            last_error = error
+            if attempt < MCP_MAX_RETRIES - 1:
+                wait_time = 2 ** attempt  # Exponential backoff
+                await asyncio.sleep(wait_time)
 
         raise RuntimeError(f"Failed to discover MCP tools after {MCP_MAX_RETRIES} attempts: {last_error}")
+
+    async def _attempt_mcp_discovery(self, operation_func, server_url: str) -> tuple[dict[str, dict] | None, str, bool]:
+        """Attempt single MCP discovery operation and return (result, error_message, should_retry)."""
+        try:
+            result = await operation_func(server_url)
+            return result, "", False
+
+        except ImportError:
+            return None, "MCP library not available. Please install with: pip install mcp", False
+
+        except asyncio.TimeoutError:
+            return None, f"MCP discovery timed out after {MCP_DISCOVERY_TIMEOUT} seconds", True
+
+        except Exception as e:
+            error_str = str(e).lower()
+
+            # Classify errors as retryable or non-retryable
+            if 'authentication' in error_str or 'unauthorized' in error_str:
+                return None, f"Authentication failed for MCP server: {e!s}", False
+            if 'connection' in error_str or 'network' in error_str:
+                return None, f"Network connection failed: {e!s}", True
+            if 'json' in error_str or 'parsing' in error_str:
+                return None, f"Server response parsing error: {e!s}", True
+            return None, f"MCP discovery error: {e!s}", False
+
+    async def _discover_mcp_tools_with_timeout(self, server_url: str) -> dict[str, dict]:
+        """Discover MCP tools with timeout wrapper."""
+        return await asyncio.wait_for(
+            self._discover_mcp_tools(server_url),
+            timeout=MCP_DISCOVERY_TIMEOUT
+        )
 
     async def _discover_mcp_tools(self, server_url: str) -> dict[str, dict]:
         """Discover tools from MCP server with proper timeout handling."""
