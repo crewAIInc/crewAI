@@ -8,6 +8,7 @@ from crewai.rag.embeddings.providers.sentence_transformer.types import (
     SentenceTransformerProviderSpec,
 )
 
+
 __all__ = [
     "SentenceTransformerProvider",
     "SentenceTransformerProviderConfig",

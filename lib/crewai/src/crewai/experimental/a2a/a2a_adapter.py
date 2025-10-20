@@ -13,17 +13,15 @@ import uuid
 
 from a2a.client import A2ACardResolver, ClientConfig, ClientFactory
 from a2a.types import (
-    CancelTaskRequest,
-    DeleteTaskPushNotificationConfigRequest,
-    GetTaskPushNotificationConfigRequest,
-    GetTaskRequest,
+    GetTaskPushNotificationConfigParams,
     Message,
     Part,
     PushNotificationAuthenticationInfo,
     PushNotificationConfig,
     Role,
-    SetTaskPushNotificationConfigRequest,
-    TaskResubscriptionRequest,
+    TaskIdParams,
+    TaskPushNotificationConfig,
+    TaskQueryParams,
     TaskState,
     TextPart,
     TransportProtocol,
@@ -31,7 +29,9 @@ from a2a.types import (
 import httpx
 from pydantic import Field, PrivateAttr
 
-from crewai.agents.agent_adapters.a2a.exceptions import (
+from crewai.agents.agent_builder.base_agent import BaseAgent
+from crewai.experimental.a2a.auth import AuthScheme, BearerTokenAuth
+from crewai.experimental.a2a.exceptions import (
     A2AAuthenticationError,
     A2AConfigurationError,
     A2AConnectionError,
@@ -39,7 +39,6 @@ from crewai.agents.agent_adapters.a2a.exceptions import (
     A2ATaskCanceledError,
     A2ATaskFailedError,
 )
-from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.tools.base_tool import BaseTool
 
 
@@ -72,7 +71,7 @@ class A2AAgentAdapter(BaseAgent):
     Example:
         ```python
         from crewai import Agent, Task, Crew
-        from crewai.agents.agent_adapters.a2a import A2AAgentAdapter
+        from crewai.experimental.a2a import A2AAgentAdapter
 
         servicenow_agent = A2AAgentAdapter(
             agent_card_url="https://servicenow.example.com/.well-known/agent-card.json",
@@ -95,7 +94,7 @@ class A2AAgentAdapter(BaseAgent):
     Note:
         Requires a2a-sdk to be installed:
         ```bash
-        pip install 'crewai[a2a]'
+        uv add 'crewai[a2a]'
         ```
     """
 
@@ -103,7 +102,12 @@ class A2AAgentAdapter(BaseAgent):
         description="URL to the A2A AgentCard (supports .well-known/agent-card.json)"
     )
     auth_token: str | None = Field(
-        default=None, description="Bearer token for authentication"
+        default=None,
+        description="Bearer token for authentication (deprecated: use auth_scheme)",
+    )
+    auth_scheme: AuthScheme | None = Field(
+        default=None,
+        description="Authentication scheme (Bearer, OAuth2, API Key, HTTP Basic/Digest)",
     )
     timeout: int = Field(default=120, description="Request timeout in seconds")
     preferred_transport: Literal["JSONRPC", "GRPC", "HTTP+JSON", "HTTP_JSON"] = Field(
@@ -140,8 +144,8 @@ class A2AAgentAdapter(BaseAgent):
             self._a2a_sdk_available = True
         except ImportError as e:
             msg = (
-                "A2A SDK not installed. Install with: pip install 'crewai[a2a]' "
-                "or pip install 'a2a-sdk>=0.1.0'"
+                "A2A SDK not installed. Install with: uv add 'crewai[a2a]' "
+                "or uv add 'a2a-sdk>=0.1.0'"
             )
             raise ImportError(msg) from e
 
@@ -165,8 +169,9 @@ class A2AAgentAdapter(BaseAgent):
             msg = "A2A SDK not available. Install with: pip install 'crewai[a2a]'"
             raise ImportError(msg)
 
-        if self.auth_token:
-            self._headers["Authorization"] = f"Bearer {self.auth_token}"
+        # Handle backward compatibility: auth_token -> auth_scheme
+        if self.auth_token and not self.auth_scheme:
+            self.auth_scheme = BearerTokenAuth(token=self.auth_token)
 
         transport_map = {
             "JSONRPC": TransportProtocol.jsonrpc,
@@ -193,6 +198,14 @@ class A2AAgentAdapter(BaseAgent):
             async with httpx.AsyncClient(
                 timeout=self.timeout, headers=self._headers
             ) as httpx_client:
+                # Configure authentication on the client
+                if self.auth_scheme:
+                    self.auth_scheme.configure_client(httpx_client)
+                    # Apply auth to headers
+                    self._headers = await self.auth_scheme.apply_auth(
+                        httpx_client, self._headers
+                    )
+
                 resolver = A2ACardResolver(
                     httpx_client=httpx_client,
                     base_url=base_url,
@@ -288,7 +301,9 @@ class A2AAgentAdapter(BaseAgent):
         """
         streaming_supported = (
             self._agent_card.capabilities.streaming
-            if self._agent_card.capabilities.streaming is not None
+            if self._agent_card
+            and self._agent_card.capabilities
+            and self._agent_card.capabilities.streaming is not None
             else True
         )
 
@@ -458,6 +473,10 @@ class A2AAgentAdapter(BaseAgent):
 
         message_text = "".join(content_parts)
 
+        if not self._agent_card:
+            msg = "Agent card not initialized"
+            raise A2AConfigurationError(msg)
+
         message = Message(
             role=Role.user,
             message_id=str(uuid.uuid4()),
@@ -468,12 +487,16 @@ class A2AAgentAdapter(BaseAgent):
             "info", f"Sending task to A2A agent (streaming): {self._agent_card.name}"
         )
 
+        if not self._transport_protocol:
+            msg = "Transport protocol not configured"
+            raise A2AConfigurationError(msg)
+
         async with httpx.AsyncClient(
             timeout=self.timeout, headers=self._headers
         ) as httpx_client:
             config = ClientConfig(
                 httpx_client=httpx_client,
-                supported_transports=[self._transport_protocol],
+                supported_transports=[str(self._transport_protocol.value)],
                 streaming=self.enable_streaming,
             )
 
@@ -486,10 +509,11 @@ class A2AAgentAdapter(BaseAgent):
                 self._logger.log(
                     "info", f"Resubscribing to task: {resubscribe_task_id}"
                 )
-                resubscribe_request = TaskResubscriptionRequest(id=resubscribe_task_id)
-                event_stream = client.resubscribe(resubscribe_request)
+                params = TaskIdParams(id=resubscribe_task_id)
+                event_stream = client.resubscribe(params)
             else:
-                event_stream = client.send_message(message)
+                # send_message returns Message | tuple, so we can't type-narrow event_stream
+                event_stream = client.send_message(message)  # type: ignore[assignment]
 
             async for event in event_stream:
                 if isinstance(event, Message):
@@ -515,9 +539,9 @@ class A2AAgentAdapter(BaseAgent):
 
                     if a2a_task.status.state == TaskState.completed:
                         if a2a_task.history:
-                            for msg in reversed(a2a_task.history):
-                                if msg.role == Role.agent:
-                                    for part in msg.parts:
+                            for history_msg in reversed(a2a_task.history):
+                                if history_msg.role == Role.agent:
+                                    for part in history_msg.parts:
                                         if part.root.kind == "text":
                                             result_parts.append(part.root.text)
                                     break
@@ -535,40 +559,40 @@ class A2AAgentAdapter(BaseAgent):
                         TaskState.failed,
                         TaskState.rejected,
                     ]:
-                        error_msg = (
-                            a2a_task.status.message.parts[0].root.text
-                            if a2a_task.status.message
-                            else "Task failed without error message"
-                        )
+                        error_msg = "Task failed without error message"
+                        if a2a_task.status.message and a2a_task.status.message.parts:
+                            first_part = a2a_task.status.message.parts[0]
+                            if first_part.root.kind == "text":
+                                error_msg = first_part.root.text
                         self._logger.log("error", f"Task failed: {error_msg}")
                         raise A2ATaskFailedError(error_msg)
 
                     if a2a_task.status.state == TaskState.input_required:
-                        error_msg = (
-                            a2a_task.status.message.parts[0].root.text
-                            if a2a_task.status.message
-                            else "Additional input required"
-                        )
+                        error_msg = "Additional input required"
+                        if a2a_task.status.message and a2a_task.status.message.parts:
+                            first_part = a2a_task.status.message.parts[0]
+                            if first_part.root.kind == "text":
+                                error_msg = first_part.root.text
                         self._logger.log("warning", f"Task requires input: {error_msg}")
                         raise A2AInputRequiredError(error_msg)
 
                     if a2a_task.status.state == TaskState.auth_required:
-                        error_msg = (
-                            a2a_task.status.message.parts[0].root.text
-                            if a2a_task.status.message
-                            else "Authentication required to continue"
-                        )
+                        error_msg = "Authentication required to continue"
+                        if a2a_task.status.message and a2a_task.status.message.parts:
+                            first_part = a2a_task.status.message.parts[0]
+                            if first_part.root.kind == "text":
+                                error_msg = first_part.root.text
                         self._logger.log(
                             "error", f"Task requires authentication: {error_msg}"
                         )
                         raise A2AAuthenticationError(error_msg)
 
                     if a2a_task.status.state == TaskState.canceled:
-                        error_msg = (
-                            a2a_task.status.message.parts[0].root.text
-                            if a2a_task.status.message
-                            else "Task was canceled"
-                        )
+                        error_msg = "Task was canceled"
+                        if a2a_task.status.message and a2a_task.status.message.parts:
+                            first_part = a2a_task.status.message.parts[0]
+                            if first_part.root.kind == "text":
+                                error_msg = first_part.root.text
                         self._logger.log("warning", f"Task canceled: {error_msg}")
                         raise A2ATaskCanceledError(error_msg)
 
@@ -631,6 +655,14 @@ class A2AAgentAdapter(BaseAgent):
             parts=[Part(root=TextPart(text=message_text))],
         )
 
+        if not self._agent_card:
+            msg = "Agent card not initialized"
+            raise A2AConfigurationError(msg)
+
+        if not self._transport_protocol:
+            msg = "Transport protocol not configured"
+            raise A2AConfigurationError(msg)
+
         self._logger.log(
             "info", f"Sending task to A2A agent (polling): {self._agent_card.name}"
         )
@@ -640,7 +672,7 @@ class A2AAgentAdapter(BaseAgent):
         ) as httpx_client:
             config = ClientConfig(
                 httpx_client=httpx_client,
-                supported_transports=[self._transport_protocol],
+                supported_transports=[str(self._transport_protocol.value)],
                 streaming=False,
             )
 
@@ -672,9 +704,8 @@ class A2AAgentAdapter(BaseAgent):
                 poll_count += 1
                 await asyncio.sleep(poll_interval)
 
-                request = GetTaskRequest(id=task_id)
-                response = await client.get_task(request)
-                a2a_task = response.task
+                params = TaskQueryParams(id=task_id)
+                a2a_task = await client.get_task(params)
 
                 self._logger.log(
                     "debug", f"Poll {poll_count}: Task state = {a2a_task.status.state}"
@@ -685,9 +716,9 @@ class A2AAgentAdapter(BaseAgent):
 
                     result_parts = []
                     if a2a_task.history:
-                        for msg in reversed(a2a_task.history):
-                            if msg.role == Role.agent:
-                                for part in msg.parts:
+                        for history_msg in reversed(a2a_task.history):
+                            if history_msg.role == Role.agent:
+                                for part in history_msg.parts:
                                     if part.root.kind == "text":
                                         result_parts.append(part.root.text)
                                 break
@@ -713,31 +744,31 @@ class A2AAgentAdapter(BaseAgent):
                     return result
 
                 if a2a_task.status.state in [TaskState.failed, TaskState.rejected]:
-                    error_msg = (
-                        a2a_task.status.message.parts[0].root.text
-                        if a2a_task.status.message and a2a_task.status.message.parts
-                        else "Task failed without error message"
-                    )
+                    error_msg = "Task failed without error message"
+                    if a2a_task.status.message and a2a_task.status.message.parts:
+                        first_part = a2a_task.status.message.parts[0]
+                        if first_part.root.kind == "text":
+                            error_msg = first_part.root.text
                     self._logger.log("error", f"Task failed: {error_msg}")
                     self._current_task_id = None
                     raise A2ATaskFailedError(error_msg)
 
                 if a2a_task.status.state == TaskState.input_required:
-                    error_msg = (
-                        a2a_task.status.message.parts[0].root.text
-                        if a2a_task.status.message and a2a_task.status.message.parts
-                        else "Additional input required"
-                    )
+                    error_msg = "Additional input required"
+                    if a2a_task.status.message and a2a_task.status.message.parts:
+                        first_part = a2a_task.status.message.parts[0]
+                        if first_part.root.kind == "text":
+                            error_msg = first_part.root.text
                     self._logger.log("warning", f"Task requires input: {error_msg}")
                     self._current_task_id = None
                     raise A2AInputRequiredError(error_msg)
 
                 if a2a_task.status.state == TaskState.auth_required:
-                    error_msg = (
-                        a2a_task.status.message.parts[0].root.text
-                        if a2a_task.status.message and a2a_task.status.message.parts
-                        else "Authentication required to continue"
-                    )
+                    error_msg = "Authentication required to continue"
+                    if a2a_task.status.message and a2a_task.status.message.parts:
+                        first_part = a2a_task.status.message.parts[0]
+                        if first_part.root.kind == "text":
+                            error_msg = first_part.root.text
                     self._logger.log(
                         "error", f"Task requires authentication: {error_msg}"
                     )
@@ -745,11 +776,11 @@ class A2AAgentAdapter(BaseAgent):
                     raise A2AAuthenticationError(error_msg)
 
                 if a2a_task.status.state == TaskState.canceled:
-                    error_msg = (
-                        a2a_task.status.message.parts[0].root.text
-                        if a2a_task.status.message and a2a_task.status.message.parts
-                        else "Task was canceled"
-                    )
+                    error_msg = "Task was canceled"
+                    if a2a_task.status.message and a2a_task.status.message.parts:
+                        first_part = a2a_task.status.message.parts[0]
+                        if first_part.root.kind == "text":
+                            error_msg = first_part.root.text
                     self._logger.log("warning", f"Task canceled: {error_msg}")
                     self._current_task_id = None
                     raise A2ATaskCanceledError(error_msg)
@@ -820,17 +851,25 @@ class A2AAgentAdapter(BaseAgent):
             async with httpx.AsyncClient(
                 timeout=self.timeout, headers=self._headers
             ) as httpx_client:
+                if not self._agent_card:
+                    msg = "Agent card not initialized"
+                    raise A2AConfigurationError(msg)
+
+                if not self._transport_protocol:
+                    msg = "Transport protocol not configured"
+                    raise A2AConfigurationError(msg)
+
                 config = ClientConfig(
                     httpx_client=httpx_client,
-                    supported_transports=[self._transport_protocol],
+                    supported_transports=[str(self._transport_protocol.value)],
                     streaming=self.enable_streaming,
                 )
 
                 factory = ClientFactory(config)
                 client = factory.create(self._agent_card)
 
-                request = CancelTaskRequest(id=task_id)
-                await client.cancel_task(request)
+                params = TaskIdParams(id=task_id)
+                await client.cancel_task(params)
 
                 self._logger.log("info", f"Task {task_id} canceled successfully")
 
@@ -904,22 +943,28 @@ class A2AAgentAdapter(BaseAgent):
             async with httpx.AsyncClient(
                 timeout=self.timeout, headers=self._headers
             ) as httpx_client:
+                if not self._agent_card:
+                    msg = "Agent card not initialized"
+                    raise A2AConfigurationError(msg)
+
+                if not self._transport_protocol:
+                    msg = "Transport protocol not configured"
+                    raise A2AConfigurationError(msg)
+
                 config = ClientConfig(
                     httpx_client=httpx_client,
-                    supported_transports=[self._transport_protocol],
+                    supported_transports=[str(self._transport_protocol.value)],
                     streaming=self.enable_streaming,
                 )
 
                 factory = ClientFactory(config)
                 client = factory.create(self._agent_card)
 
-                request = GetTaskRequest(id=task_id)
-                response = await client.get_task(request)
+                params = TaskQueryParams(id=task_id)
+                a2a_task = await client.get_task(params)
 
-                a2a_task = response.task
-
-                task_info = {
-                    "task_id": a2a_task.task_id,
+                task_info: dict[str, Any] = {
+                    "task_id": a2a_task.id,
                     "state": str(a2a_task.status.state),
                     "result": None,
                     "error": None,
@@ -928,10 +973,10 @@ class A2AAgentAdapter(BaseAgent):
                 }
 
                 if a2a_task.history:
-                    for msg in reversed(a2a_task.history):
-                        if msg.role == Role.agent:
+                    for history_msg in reversed(a2a_task.history):
+                        if history_msg.role == Role.agent:
                             text_parts = []
-                            for part in msg.parts:
+                            for part in history_msg.parts:
                                 if part.root.kind == "text":
                                     text_parts.append(part.root.text)
                             if text_parts:
@@ -940,17 +985,18 @@ class A2AAgentAdapter(BaseAgent):
 
                     task_info["history"] = [
                         {
-                            "role": str(msg.role),
+                            "role": str(history_msg.role),
                             "content": [
                                 part.root.text
-                                for part in msg.parts
+                                for part in history_msg.parts
                                 if part.root.kind == "text"
                             ],
                         }
-                        for msg in a2a_task.history
+                        for history_msg in a2a_task.history
                     ]
 
                 if a2a_task.artifacts:
+                    artifact_list: list[dict[str, Any]] = []
                     for artifact in a2a_task.artifacts:
                         artifact_data = {
                             "id": artifact.artifact_id,
@@ -962,14 +1008,13 @@ class A2AAgentAdapter(BaseAgent):
                                 if part.root.kind == "text"
                             ],
                         }
-                        task_info["artifacts"].append(artifact_data)
+                        artifact_list.append(artifact_data)
+                    task_info["artifacts"] = artifact_list
 
-                if a2a_task.status.message:
-                    task_info["error"] = (
-                        a2a_task.status.message.parts[0].root.text
-                        if a2a_task.status.message.parts
-                        else None
-                    )
+                if a2a_task.status.message and a2a_task.status.message.parts:
+                    first_part = a2a_task.status.message.parts[0]
+                    if first_part.root.kind == "text":
+                        task_info["error"] = first_part.root.text
 
                 self._logger.log(
                     "info", f"Retrieved task {task_id}: state={task_info['state']}"
@@ -1057,9 +1102,17 @@ class A2AAgentAdapter(BaseAgent):
             async with httpx.AsyncClient(
                 timeout=self.timeout, headers=self._headers
             ) as httpx_client:
+                if not self._agent_card:
+                    msg = "Agent card not initialized"
+                    raise A2AConfigurationError(msg)
+
+                if not self._transport_protocol:
+                    msg = "Transport protocol not configured"
+                    raise A2AConfigurationError(msg)
+
                 config = ClientConfig(
                     httpx_client=httpx_client,
-                    supported_transports=[self._transport_protocol],
+                    supported_transports=[str(self._transport_protocol.value)],
                     streaming=self.enable_streaming,
                 )
 
@@ -1071,25 +1124,25 @@ class A2AAgentAdapter(BaseAgent):
                     token=auth_token,
                     authentication=(
                         PushNotificationAuthenticationInfo(
-                            type="bearer",
-                            token=auth_token,
+                            schemes=["bearer"],
+                            credentials={"token": auth_token} if auth_token else {},
                         )
                         if auth_token
                         else None
                     ),
                 )
 
-                request = SetTaskPushNotificationConfigRequest(
-                    id=task_id,
-                    config=push_config,
+                callback_config = TaskPushNotificationConfig(
+                    task_id=task_id,
+                    push_notification_config=push_config,
                 )
-                response = await client.set_task_callback(request)
+                response = await client.set_task_callback(callback_config)
 
                 result = {
-                    "config_id": response.config.id
-                    if hasattr(response.config, "id")
+                    "config_id": response.task_id,
+                    "url": response.push_notification_config.url
+                    if response.push_notification_config
                     else None,
-                    "url": response.config.url,
                     "task_id": task_id,
                 }
 
@@ -1159,29 +1212,35 @@ class A2AAgentAdapter(BaseAgent):
             async with httpx.AsyncClient(
                 timeout=self.timeout, headers=self._headers
             ) as httpx_client:
+                if not self._agent_card:
+                    msg = "Agent card not initialized"
+                    raise A2AConfigurationError(msg)
+
+                if not self._transport_protocol:
+                    msg = "Transport protocol not configured"
+                    raise A2AConfigurationError(msg)
+
                 config = ClientConfig(
                     httpx_client=httpx_client,
-                    supported_transports=[self._transport_protocol],
+                    supported_transports=[str(self._transport_protocol.value)],
                     streaming=self.enable_streaming,
                 )
 
                 factory = ClientFactory(config)
                 client = factory.create(self._agent_card)
 
-                request = GetTaskPushNotificationConfigRequest(id=task_id)
-                response = await client.get_task_callback(request)
+                params = GetTaskPushNotificationConfigParams(id=task_id)
+                response = await client.get_task_callback(params)
 
-                if not response.config:
+                if not response.push_notification_config:
                     self._logger.log(
                         "info", f"No webhook configured for task {task_id}"
                     )
                     return None
 
                 result = {
-                    "config_id": response.config.id
-                    if hasattr(response.config, "id")
-                    else None,
-                    "url": response.config.url,
+                    "config_id": response.task_id,
+                    "url": response.push_notification_config.url,
                     "task_id": task_id,
                 }
 
@@ -1248,33 +1307,11 @@ class A2AAgentAdapter(BaseAgent):
         Raises:
             A2AConnectionError: If connection to agent fails.
         """
-        try:
-            async with httpx.AsyncClient(
-                timeout=self.timeout, headers=self._headers
-            ) as httpx_client:
-                config = ClientConfig(
-                    httpx_client=httpx_client,
-                    supported_transports=[self._transport_protocol],
-                    streaming=self.enable_streaming,
-                )
-
-                factory = ClientFactory(config)
-                client = factory.create(self._agent_card)
-
-                request = DeleteTaskPushNotificationConfigRequest(
-                    id=task_id,
-                    config_id=config_id,
-                )
-                await client.delete_task_callback(request)
-
-                self._logger.log("info", f"Webhook config deleted for task {task_id}")
-                return True
-
-        except Exception as e:
-            self._logger.log(
-                "error", f"Failed to delete webhook config for task {task_id}: {e}"
-            )
-            raise A2AConnectionError(f"Failed to delete webhook config: {e}") from e
+        # Note: delete_task_callback is not yet available in current a2a-sdk versions
+        # This method is provided for future compatibility
+        msg = "delete_task_callback is not yet supported in current a2a-sdk version"
+        self._logger.log("warning", msg)
+        raise NotImplementedError(msg)
 
     def _check_io_mode_compatibility(self) -> None:
         """Check input/output mode compatibility and log warnings.
@@ -1324,5 +1361,15 @@ class A2AAgentAdapter(BaseAgent):
 
         Returns:
             Empty list (A2A agents handle their own delegation).
+        """
+        return []
+
+    def get_platform_tools(self) -> list[BaseTool]:
+        """Get platform-specific tools for A2A agents.
+
+        Currently, no platform-specific tools are provided for A2A agents.
+
+        Returns:
+            Empty list (no platform-specific tools for A2A agents).
         """
         return []

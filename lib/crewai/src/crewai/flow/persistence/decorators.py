@@ -6,6 +6,7 @@ Example:
     from crewai.flow.flow import Flow, start
     from crewai.flow.persistence import persist, SQLiteFlowPersistence
 
+
     class MyFlow(Flow):
         @start()
         @persist(SQLiteFlowPersistence())
@@ -22,9 +23,9 @@ Example:
 """
 
 import asyncio
+from collections.abc import Callable
 import functools
 import logging
-from collections.abc import Callable
 from typing import (
     Any,
     TypeVar,
@@ -36,6 +37,7 @@ from pydantic import BaseModel
 from crewai.flow.persistence.base import FlowPersistence
 from crewai.flow.persistence.sqlite import SQLiteFlowPersistence
 from crewai.utilities.printer import Printer
+
 
 logger = logging.getLogger(__name__)
 T = TypeVar("T")

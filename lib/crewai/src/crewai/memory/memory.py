@@ -4,6 +4,7 @@ from pydantic import BaseModel
 
 from crewai.rag.embeddings.types import EmbedderConfig
 
+
 if TYPE_CHECKING:
     from crewai.agent import Agent
     from crewai.task import Task

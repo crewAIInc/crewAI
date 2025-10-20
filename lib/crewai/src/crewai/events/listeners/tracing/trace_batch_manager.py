@@ -74,7 +74,9 @@ class TraceBatchManager:
         """Initialize a new trace batch (thread-safe)"""
         with self._init_lock:
             if self.current_batch is not None:
-                logger.debug("Batch already initialized, skipping duplicate initialization")
+                logger.debug(
+                    "Batch already initialized, skipping duplicate initialization"
+                )
                 return self.current_batch
 
             self.current_batch = TraceBatch(
@@ -182,7 +184,9 @@ class TraceBatchManager:
         """
         with self._pending_events_cv:
             if self._pending_events_count > 0:
-                logger.debug(f"Waiting for {self._pending_events_count} pending event handlers...")
+                logger.debug(
+                    f"Waiting for {self._pending_events_count} pending event handlers..."
+                )
                 self._pending_events_cv.wait(timeout)
                 if self._pending_events_count > 0:
                     logger.error(
@@ -242,15 +246,20 @@ class TraceBatchManager:
         all_handlers_completed = self.wait_for_pending_events(timeout=2.0)
 
         if not all_handlers_completed:
-            logger.error("Event handler timeout - marking batch as failed due to incomplete events")
+            logger.error(
+                "Event handler timeout - marking batch as failed due to incomplete events"
+            )
             self.plus_api.mark_trace_batch_as_failed(
-                self.trace_batch_id, "Timeout waiting for event handlers - events incomplete"
+                self.trace_batch_id,
+                "Timeout waiting for event handlers - events incomplete",
             )
             return None
 
         sorted_events = sorted(
             self.event_buffer,
-            key=lambda e: e.timestamp if hasattr(e, 'timestamp') and e.timestamp else ''
+            key=lambda e: e.timestamp
+            if hasattr(e, "timestamp") and e.timestamp
+            else "",
         )
 
         self.current_batch.events = sorted_events

@@ -188,7 +188,9 @@ class BaseLLM(ABC):
 
         Example:
             >>> llm = MyNativeLLM(stop=["Observation:", "Final Answer:"])
-            >>> response = "I need to search.\\n\\nAction: search\\nObservation: Found results"
+            >>> response = (
+            ...     "I need to search.\\n\\nAction: search\\nObservation: Found results"
+            ... )
             >>> llm._apply_stop_words(response)
             "I need to search.\\n\\nAction: search"
         """

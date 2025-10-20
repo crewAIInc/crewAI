@@ -9,6 +9,7 @@ from crewai.memory import (
     ShortTermMemory,
 )
 
+
 if TYPE_CHECKING:
     from crewai.agent import Agent
     from crewai.task import Task

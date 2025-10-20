@@ -1,5 +1,6 @@
 from typing import Final
 
+
 CONTEXT_LIMIT_ERRORS: Final[list[str]] = [
     "expected a string with maximum length",
     "maximum context length",

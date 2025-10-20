@@ -1,15 +1,15 @@
+from datetime import datetime
 import getpass
 import hashlib
 import json
 import logging
 import os
+from pathlib import Path
 import platform
 import re
 import subprocess
-import uuid
-from datetime import datetime
-from pathlib import Path
 from typing import Any
+import uuid
 
 import click
 from rich.console import Console
@@ -18,6 +18,7 @@ from rich.text import Text
 
 from crewai.utilities.paths import db_storage_path
 from crewai.utilities.serialization import to_serializable
+
 
 logger = logging.getLogger(__name__)
 

@@ -8,6 +8,7 @@ from typing_extensions import Unpack
 from crewai.rag.embeddings.providers.ibm.types import WatsonXProviderConfig
 from crewai.utilities.printer import Printer
 
+
 _printer = Printer()
 
 
@@ -38,10 +39,10 @@ class WatsonXEmbeddingFunction(EmbeddingFunction[Documents]):
             List of embedding vectors.
         """
         try:
-            import ibm_watsonx_ai.foundation_models as watson_models  # type: ignore[import-not-found, import-untyped]
             from ibm_watsonx_ai import (
                 Credentials,  # type: ignore[import-not-found, import-untyped]
             )
+            import ibm_watsonx_ai.foundation_models as watson_models  # type: ignore[import-not-found, import-untyped]
             from ibm_watsonx_ai.metanames import (  # type: ignore[import-not-found, import-untyped]
                 EmbedTextParamsMetaNames as EmbedParams,
             )

@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any
 
 from opentelemetry.trace import Span, Status, StatusCode
 
+
 if TYPE_CHECKING:
     from crewai.crew import Crew
     from crewai.task import Task

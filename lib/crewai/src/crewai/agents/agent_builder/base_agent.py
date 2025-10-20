@@ -1,9 +1,9 @@
-import uuid
 from abc import ABC, abstractmethod
 from collections.abc import Callable
 from copy import copy as shallow_copy
 from hashlib import md5
 from typing import Any, Literal, TypeVar
+import uuid
 
 from pydantic import (
     UUID4,
@@ -28,6 +28,7 @@ from crewai.tools.base_tool import BaseTool, Tool
 from crewai.utilities import I18N, Logger, RPMController
 from crewai.utilities.config import process_config
 from crewai.utilities.string_utils import interpolate_only
+
 
 T = TypeVar("T", bound="BaseAgent")
 

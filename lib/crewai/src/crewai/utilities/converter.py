@@ -12,6 +12,7 @@ from crewai.utilities.internal_instructor import InternalInstructor
 from crewai.utilities.printer import Printer
 from crewai.utilities.pydantic_schema_parser import PydanticSchemaParser
 
+
 if TYPE_CHECKING:
     from crewai.agent import Agent
     from crewai.agents.agent_builder.base_agent import BaseAgent

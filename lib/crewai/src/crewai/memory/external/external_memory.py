@@ -15,6 +15,7 @@ from crewai.memory.memory import Memory
 from crewai.memory.storage.interface import Storage
 from crewai.rag.embeddings.types import ProviderSpec
 
+
 if TYPE_CHECKING:
     from crewai.memory.storage.mem0_storage import Mem0Storage
 

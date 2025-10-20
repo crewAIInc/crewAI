@@ -1,20 +1,21 @@
-import asyncio
 from abc import ABC, abstractmethod
+import asyncio
 from collections.abc import Callable
 from inspect import signature
 from typing import Any, get_args, get_origin
 
 from pydantic import (
     BaseModel,
+    BaseModel as PydanticBaseModel,
     ConfigDict,
     Field,
     create_model,
     field_validator,
 )
-from pydantic import BaseModel as PydanticBaseModel
 
 from crewai.tools.structured_tool import CrewStructuredTool
 from crewai.utilities.printer import Printer
+
 
 _printer = Printer()
 

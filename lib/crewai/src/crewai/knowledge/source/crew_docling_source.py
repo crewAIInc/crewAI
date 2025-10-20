@@ -2,6 +2,7 @@ from collections.abc import Iterator
 from pathlib import Path
 from urllib.parse import urlparse
 
+
 try:
     from docling.datamodel.base_models import (  # type: ignore[import-not-found]
         InputFormat,

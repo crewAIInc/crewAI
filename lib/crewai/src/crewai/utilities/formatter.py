@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING, Final
 
 from crewai.utilities.constants import _NotSpecified
 
+
 if TYPE_CHECKING:
     from crewai.task import Task
     from crewai.tasks.task_output import TaskOutput

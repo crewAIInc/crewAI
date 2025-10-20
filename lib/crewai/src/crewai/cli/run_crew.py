@@ -1,6 +1,6 @@
+from enum import Enum
 import os
 import subprocess
-from enum import Enum
 
 import click
 from packaging import version

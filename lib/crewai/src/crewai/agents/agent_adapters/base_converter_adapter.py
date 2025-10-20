@@ -5,6 +5,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
+
 if TYPE_CHECKING:
     from crewai.agents.agent_adapters.base_agent_adapter import BaseAgentAdapter
     from crewai.task import Task

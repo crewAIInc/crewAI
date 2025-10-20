@@ -3,6 +3,7 @@ from .external.external_memory import ExternalMemory
 from .long_term.long_term_memory import LongTermMemory
 from .short_term.short_term_memory import ShortTermMemory
 
+
 __all__ = [
     "EntityMemory",
     "ExternalMemory",

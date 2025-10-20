@@ -1,6 +1,6 @@
 import os
-import uuid
 from typing import Any, ClassVar
+import uuid
 
 from crewai.cli.authentication.token import AuthError, get_auth_token
 from crewai.cli.version import get_crewai_version
@@ -404,7 +404,7 @@ class TraceCollectionListener(BaseEventListener):
         self, event_type: str, source: Any, event: Any
     ) -> TraceEvent:
         """Create a trace event"""
-        if hasattr(event, 'timestamp') and event.timestamp:
+        if hasattr(event, "timestamp") and event.timestamp:
             trace_event = TraceEvent(
                 type=event_type,
                 timestamp=event.timestamp.isoformat(),

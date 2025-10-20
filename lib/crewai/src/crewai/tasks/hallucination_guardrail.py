@@ -26,21 +26,21 @@ class HallucinationGuardrail:
         >>> # Basic usage with default verdict logic
         >>> guardrail = HallucinationGuardrail(
         ...     context="AI helps with various tasks including analysis and generation.",
-        ...     llm=agent.llm
+        ...     llm=agent.llm,
         ... )
 
         >>> # With custom threshold for stricter validation
         >>> strict_guardrail = HallucinationGuardrail(
         ...     context="Quantum computing uses qubits in superposition.",
         ...     llm=agent.llm,
-        ...     threshold=8.0  # Would require score >= 8 to pass in enterprise version
+        ...     threshold=8.0,  # Would require score >= 8 to pass in enterprise version
         ... )
 
         >>> # With tool response for additional context
         >>> guardrail_with_tools = HallucinationGuardrail(
         ...     context="The current weather data",
         ...     llm=agent.llm,
-        ...     tool_response="Weather API returned: Temperature 22°C, Humidity 65%"
+        ...     tool_response="Weather API returned: Temperature 22°C, Humidity 65%",
         ... )
     """
 

@@ -6,6 +6,7 @@ from crewai.cli.authentication.token import get_auth_token
 from crewai.cli.plus_api import PlusAPI
 from crewai.telemetry.telemetry import Telemetry
 
+
 console = Console()
 
 
