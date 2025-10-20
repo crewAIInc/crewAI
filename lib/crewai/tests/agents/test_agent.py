@@ -2390,7 +2390,7 @@ def test_agent_from_repository(mock_get_agent, mock_get_auth_token):
     assert agent.role == "test role"
     assert agent.goal == "test goal"
     assert agent.backstory == "test backstory"
-    assert len(agent.tools) == 3
+    assert len(agent.tools) == 2
 
     assert isinstance(agent.tools[0], SerperDevTool)
     assert agent.tools[0].n_results == 30

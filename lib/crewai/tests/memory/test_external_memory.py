@@ -22,8 +22,17 @@ from crewai.task import Task
 
 @pytest.fixture(autouse=True)
 def cleanup_event_handlers():
-    """Cleanup event handlers after each test"""
+    """Cleanup event handlers before and after each test"""
+    # Cleanup before test
+    with crewai_event_bus._rwlock.w_locked():
+        crewai_event_bus._sync_handlers = {}
+        crewai_event_bus._async_handlers = {}
+        crewai_event_bus._handler_dependencies = {}
+        crewai_event_bus._execution_plan_cache = {}
+
     yield
+
+    # Cleanup after test
     with crewai_event_bus._rwlock.w_locked():
         crewai_event_bus._sync_handlers = {}
         crewai_event_bus._async_handlers = {}
