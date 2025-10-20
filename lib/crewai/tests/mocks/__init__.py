@@ -1,0 +1,1 @@
+"""Mock infrastructure for testing."""

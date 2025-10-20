@@ -10,7 +10,7 @@ mode: "wide"
 In the CrewAI framework, an `Agent` is an autonomous unit that can:
 - Perform specific tasks
 - Make decisions based on its role and goal
-- Use tools to accomplish objectives
+- Use apps, tools and MCP Servers to accomplish objectives
 - Communicate and collaborate with other agents
 - Maintain memory of interactions
 - Delegate tasks when allowed
@@ -40,6 +40,7 @@ The Visual Agent Builder enables:
 | **Backstory**                           | `backstory`              | `str`                         | Provides context and personality to the agent, enriching interactions.                                                |
 | **LLM** _(optional)_                    | `llm`                    | `Union[str, LLM, Any]`        | Language model that powers the agent. Defaults to the model specified in `OPENAI_MODEL_NAME` or "gpt-4".              |
 | **Tools** _(optional)_                  | `tools`                  | `List[BaseTool]`              | Capabilities or functions available to the agent. Defaults to an empty list.                                          |
+| **MCP Servers** _(optional)_            | `mcps`                   | `Optional[List[str]]`         | MCP server references for automatic tool integration. Supports HTTPS URLs and CrewAI AMP marketplace references.      |
 | **Function Calling LLM** _(optional)_   | `function_calling_llm`   | `Optional[Any]`               | Language model for tool calling, overrides crew's LLM if specified.                                                   |
 | **Max Iterations** _(optional)_         | `max_iter`               | `int`                         | Maximum iterations before the agent must provide its best answer. Default is 20.                                      |
 | **Max RPM** _(optional)_                | `max_rpm`                | `Optional[int]`               | Maximum requests per minute to avoid rate limits.                                                                     |
@@ -193,6 +194,25 @@ research_agent = Agent(
     verbose=True  # Enable logging for debugging
 )
 ```
+
+#### Research Agent with MCP Integration
+```python Code
+mcp_research_agent = Agent(
+    role="Advanced Research Analyst",
+    goal="Conduct comprehensive research using multiple data sources",
+    backstory="Expert researcher with access to web search, academic papers, and real-time data",
+    mcps=[
+        "https://mcp.exa.ai/mcp?api_key=your_key&profile=research",
+        "crewai-amp:academic-research#pubmed_search", # CrewAI AMP Router for specific action in an MCP Server
+        "crewai-amp:market-intelligence" # CrewAI AMP Router for a specific MCP server
+    ],
+    verbose=True
+)
+```
+
+<Note>
+The `mcps` field automatically discovers and integrates tools from MCP servers. Tools are cached for performance and connections are made on-demand. See [MCP DSL Integration](/en/mcp/dsl-integration) for detailed usage.
+</Note>
 
 #### Code Development Agent
 ```python Code
