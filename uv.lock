@@ -1,5 +1,5 @@
 version = 1
-revision = 3
+revision = 2
 requires-python = ">=3.10, <3.14"
 resolution-markers = [
     "python_full_version >= '3.13' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin'",
@@ -1043,6 +1043,7 @@ dependencies = [
     { name = "json-repair" },
     { name = "json5" },
     { name = "jsonref" },
+    { name = "mcp" },
     { name = "openai" },
     { name = "openpyxl" },
     { name = "opentelemetry-api" },
@@ -1134,6 +1135,7 @@ requires-dist = [
     { name = "json5", specifier = ">=0.10.0" },
     { name = "jsonref", specifier = ">=1.1.0" },
     { name = "litellm", marker = "extra == 'litellm'", specifier = ">=1.74.9" },
+    { name = "mcp", specifier = ">=1.16.0" },
     { name = "mem0ai", marker = "extra == 'mem0'", specifier = ">=0.1.94" },
     { name = "openai", specifier = ">=1.13.3" },
     { name = "openpyxl", specifier = ">=3.1.5" },
