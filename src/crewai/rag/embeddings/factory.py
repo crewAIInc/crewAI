@@ -228,13 +228,23 @@ def build_embedder_from_dict(spec):
     """Build an embedding function instance from a dictionary specification.
 
     Args:
-        spec: A dictionary with 'provider' and 'config' keys.
-              Example: {
+        spec: A dictionary with 'provider' and optionally 'config' keys.
+              Supports two formats:
+              
+              Nested format (recommended):
+              {
                   "provider": "openai",
                   "config": {
                       "api_key": "sk-...",
                       "model_name": "text-embedding-3-small"
                   }
+              }
+              
+              Flat format (for backward compatibility):
+              {
+                  "provider": "openai",
+                  "api_key": "sk-...",
+                  "model_name": "text-embedding-3-small"
               }
 
     Returns:
@@ -266,7 +276,10 @@ def build_embedder_from_dict(spec):
     except (ImportError, AttributeError, ValueError) as e:
         raise ImportError(f"Failed to import provider {provider_name}: {e}") from e
 
-    provider_config = spec.get("config", {})
+    if "config" in spec:
+        provider_config = spec["config"]
+    else:
+        provider_config = {k: v for k, v in spec.items() if k != "provider"}
 
     if provider_name == "custom" and "embedding_callable" not in provider_config:
         raise ValueError("Custom provider requires 'embedding_callable' in config")

@@ -13,10 +13,10 @@ class GenerativeAiProviderConfig(TypedDict, total=False):
     task_type: Annotated[str, "RETRIEVAL_DOCUMENT"]
 
 
-class GenerativeAiProviderSpec(TypedDict):
+class GenerativeAiProviderSpec(TypedDict, total=False):
     """Google Generative AI provider specification."""
 
-    provider: Literal["google-generativeai"]
+    provider: Required[Literal["google-generativeai"]]
     config: GenerativeAiProviderConfig
 
 

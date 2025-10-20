@@ -283,6 +283,30 @@ class Crew(FlowTrackable, BaseModel):
                 "may_not_set_field", "The 'id' field cannot be set by the user.", {}
             )
 
+    @field_validator("embedder", mode="before")
+    @classmethod
+    def normalize_embedder_config(
+        cls, v: dict[str, Any] | None
+    ) -> dict[str, Any] | None:
+        """Normalize embedder config to support both flat and nested formats.
+        
+        Args:
+            v: The embedder config to be normalized.
+            
+        Returns:
+            The normalized embedder config with nested structure.
+        """
+        if v is None or not isinstance(v, dict):
+            return v
+            
+        if "provider" in v and "config" not in v:
+            provider = v["provider"]
+            config_fields = {k: val for k, val in v.items() if k != "provider"}
+            if config_fields:
+                return {"provider": provider, "config": config_fields}
+        
+        return v
+
     @field_validator("config", mode="before")
     @classmethod
     def check_config_type(cls, v: Json | dict[str, Any]) -> Json | dict[str, Any]:

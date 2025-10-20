@@ -242,3 +242,61 @@ class TestEmbeddingFactory:
         mock_build_from_provider.assert_called_once_with(mock_provider)
         assert result == mock_embedding_function
         mock_import.assert_not_called()
+
+    @patch("crewai.rag.embeddings.factory.import_and_validate_definition")
+    def test_build_embedder_google_generativeai_nested_config(self, mock_import):
+        """Test building Google Generative AI embedder with nested config format."""
+        mock_provider_class = MagicMock()
+        mock_provider_instance = MagicMock()
+        mock_embedding_function = MagicMock()
+
+        mock_import.return_value = mock_provider_class
+        mock_provider_class.return_value = mock_provider_instance
+        mock_provider_instance.embedding_callable.return_value = mock_embedding_function
+
+        config = {
+            "provider": "google-generativeai",
+            "config": {
+                "api_key": "test-gemini-key",
+                "model_name": "models/text-embedding-004",
+            },
+        }
+
+        build_embedder(config)
+
+        mock_import.assert_called_once_with(
+            "crewai.rag.embeddings.providers.google.generative_ai.GenerativeAiProvider"
+        )
+        mock_provider_class.assert_called_once()
+
+        call_kwargs = mock_provider_class.call_args.kwargs
+        assert call_kwargs["api_key"] == "test-gemini-key"
+        assert call_kwargs["model_name"] == "models/text-embedding-004"
+
+    @patch("crewai.rag.embeddings.factory.import_and_validate_definition")
+    def test_build_embedder_google_generativeai_flat_config(self, mock_import):
+        """Test building Google Generative AI embedder with flat config format (issue #3741)."""
+        mock_provider_class = MagicMock()
+        mock_provider_instance = MagicMock()
+        mock_embedding_function = MagicMock()
+
+        mock_import.return_value = mock_provider_class
+        mock_provider_class.return_value = mock_provider_instance
+        mock_provider_instance.embedding_callable.return_value = mock_embedding_function
+
+        config = {
+            "provider": "google-generativeai",
+            "api_key": "test-gemini-key",
+            "model_name": "models/text-embedding-004",
+        }
+
+        build_embedder(config)
+
+        mock_import.assert_called_once_with(
+            "crewai.rag.embeddings.providers.google.generative_ai.GenerativeAiProvider"
+        )
+        mock_provider_class.assert_called_once()
+
+        call_kwargs = mock_provider_class.call_args.kwargs
+        assert call_kwargs["api_key"] == "test-gemini-key"
+        assert call_kwargs["model_name"] == "models/text-embedding-004"
