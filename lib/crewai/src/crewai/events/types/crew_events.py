@@ -2,6 +2,7 @@ from typing import TYPE_CHECKING, Any
 
 from crewai.events.base_events import BaseEvent
 
+
 if TYPE_CHECKING:
     from crewai.crew import Crew
 else:

@@ -218,8 +218,9 @@ class RAG(Adapter):
             logger.error(f"Failed to get collection info: {e}")
             return {"error": str(e)}
 
+    @staticmethod
     def _get_data_type(
-        self, content: SourceContent, data_type: str | DataType | None = None
+        content: SourceContent, data_type: str | DataType | None = None
     ) -> DataType:
         try:
             if isinstance(data_type, str):

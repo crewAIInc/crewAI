@@ -6,6 +6,7 @@ from pydantic import Field
 
 from crewai.rag.config.constants import DISCRIMINATOR
 
+
 # Linter freaks out on conditional imports, assigning in the type checking fixes it
 if TYPE_CHECKING:
     from crewai.rag.chromadb.config import ChromaDBConfig as ChromaDBConfig_

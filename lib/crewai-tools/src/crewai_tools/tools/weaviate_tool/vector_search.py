@@ -1,6 +1,9 @@
 import json
 import os
+import subprocess
 from typing import Any
+
+import click
 
 
 try:
@@ -11,10 +14,10 @@ try:
     WEAVIATE_AVAILABLE = True
 except ImportError:
     WEAVIATE_AVAILABLE = False
-    weaviate = Any  # type placeholder
-    Configure = Any
-    Vectorizers = Any
-    Auth = Any
+    weaviate = Any  # type: ignore[assignment,misc]  # type placeholder
+    Configure = Any  # type: ignore[assignment,misc]
+    Vectorizers = Any  # type: ignore[assignment,misc]
+    Auth = Any  # type: ignore[assignment,misc]
 
 from crewai.tools import BaseTool, EnvVar
 from pydantic import BaseModel, Field
@@ -29,6 +32,24 @@ class WeaviateToolSchema(BaseModel):
     )
 
 
+def _set_generative_model() -> Any:
+    """Set the generative model based on the provided model name."""
+    from weaviate.classes.config import Configure
+
+    return Configure.Generative.openai(
+        model="gpt-4o",
+    )
+
+
+def _set_vectorizer() -> Any:
+    """Set the vectorizer based on the provided model name."""
+    from weaviate.classes.config import Configure
+
+    return Configure.Vectorizer.text2vec_openai(
+        model="nomic-embed-text",
+    )
+
+
 class WeaviateVectorSearchTool(BaseTool):
     """Tool to search the Weaviate database."""
 
@@ -37,12 +58,14 @@ class WeaviateVectorSearchTool(BaseTool):
     description: str = "A tool to search the Weaviate database for relevant information on internal documents."
     args_schema: type[BaseModel] = WeaviateToolSchema
     query: str | None = None
-    vectorizer: Vectorizers | None = None
-    generative_model: str | None = None
-    collection_name: str | None = None
+    vectorizer: Any = Field(default_factory=_set_vectorizer)
+    generative_model: Any = Field(default_factory=_set_generative_model)
+    collection_name: str = Field(
+        description="The name of the Weaviate collection to search",
+    )
     limit: int | None = Field(default=3)
     headers: dict | None = None
-    alpha: int | None = Field(default=0.75)
+    alpha: float = Field(default=0.75)
     env_vars: list[EnvVar] = Field(
         default_factory=lambda: [
             EnvVar(
@@ -61,7 +84,7 @@ class WeaviateVectorSearchTool(BaseTool):
         description="The API key for the Weaviate cluster",
     )
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         if WEAVIATE_AVAILABLE:
             openai_api_key = os.environ.get("OPENAI_API_KEY")
@@ -70,23 +93,10 @@ class WeaviateVectorSearchTool(BaseTool):
                     "OPENAI_API_KEY environment variable is required for WeaviateVectorSearchTool and it is mandatory to use the tool."
                 )
             self.headers = {"X-OpenAI-Api-Key": openai_api_key}
-            self.vectorizer = self.vectorizer or Configure.Vectorizer.text2vec_openai(
-                model="nomic-embed-text",
-            )
-            self.generative_model = (
-                self.generative_model
-                or Configure.Generative.openai(
-                    model="gpt-4o",
-                )
-            )
         else:
-            import click
-
             if click.confirm(
                 "You are missing the 'weaviate-client' package. Would you like to install it?"
             ):
-                import subprocess
-
                 subprocess.run(["uv", "pip", "install", "weaviate-client"], check=True)  # noqa: S607
 
             else:
@@ -113,7 +123,7 @@ class WeaviateVectorSearchTool(BaseTool):
         if not internal_docs:
             internal_docs = client.collections.create(
                 name=self.collection_name,
-                vectorizer_config=self.vectorizer,
+                vectorizer_config=self.vectorizer,  # type: ignore
                 generative_config=self.generative_model,
             )
 

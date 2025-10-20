@@ -11,7 +11,7 @@ from crewai_tools.rag.source_content import SourceContent
 class PDFLoader(BaseLoader):
     """Loader for PDF files."""
 
-    def load(self, source: SourceContent, **kwargs) -> LoaderResult:
+    def load(self, source: SourceContent, **kwargs) -> LoaderResult:  # type: ignore[override]
         """Load and extract text from a PDF file.
 
         Args:
@@ -28,7 +28,7 @@ class PDFLoader(BaseLoader):
             import pypdf
         except ImportError:
             try:
-                import PyPDF2 as pypdf  # noqa: N813
+                import PyPDF2 as pypdf  # type: ignore[import-not-found,no-redef]  # noqa: N813
             except ImportError as e:
                 raise ImportError(
                     "PDF support requires pypdf or PyPDF2. Install with: uv add pypdf"

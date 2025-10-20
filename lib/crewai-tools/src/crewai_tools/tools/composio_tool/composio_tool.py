@@ -124,5 +124,5 @@ class ComposioTool(BaseTool):
 
         return [
             cls.from_action(action=action, **kwargs)
-            for action in toolset.find_actions_by_tags(*apps, tags=tags)
+            for action in toolset.find_actions_by_tags(*apps, tags=tags)  # type: ignore[arg-type]
         ]

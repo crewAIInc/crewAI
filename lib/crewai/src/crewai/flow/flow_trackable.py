@@ -1,8 +1,9 @@
 import inspect
 
 from pydantic import BaseModel, Field, InstanceOf, model_validator
+from typing_extensions import Self
 
-from crewai.flow import Flow
+from crewai.flow.flow import Flow
 
 
 class FlowTrackable(BaseModel):
@@ -19,7 +20,7 @@ class FlowTrackable(BaseModel):
     )
 
     @model_validator(mode="after")
-    def _set_parent_flow(self) -> "FlowTrackable":
+    def _set_parent_flow(self) -> Self:
         max_depth = 5
         frame = inspect.currentframe()
 

@@ -3,8 +3,7 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 from crewai_tools.rag.data_types import DataType
-
-from ..rag.rag_tool import RagTool
+from crewai_tools.tools.rag.rag_tool import RagTool
 
 
 class MySQLSearchToolSchema(BaseModel):
@@ -35,7 +34,7 @@ class MySQLSearchTool(RagTool):
     ) -> None:
         super().add(f"SELECT * FROM {table_name};", **kwargs)  # noqa: S608
 
-    def _run(
+    def _run(  # type: ignore[override]
         self,
         search_query: str,
         similarity_threshold: float | None = None,

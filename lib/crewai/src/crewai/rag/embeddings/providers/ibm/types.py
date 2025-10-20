@@ -2,7 +2,7 @@
 
 from typing import Annotated, Any, Literal
 
-from typing_extensions import Required, TypedDict, deprecated
+from typing_extensions import Required, TypedDict
 
 
 class WatsonXProviderConfig(TypedDict, total=False):
@@ -34,25 +34,11 @@ class WatsonXProviderConfig(TypedDict, total=False):
     version: str
     bedrock_url: str
     platform_url: str
-    proxies: dict
+    proxies: dict[str, Any]
 
 
 class WatsonXProviderSpec(TypedDict, total=False):
     """WatsonX provider specification."""
 
     provider: Required[Literal["watsonx"]]
-    config: WatsonXProviderConfig
-
-
-@deprecated(
-    'The "WatsonProviderSpec" provider spec is deprecated and will be removed in v1.0.0. Use "WatsonXProviderSpec" instead.'
-)
-class WatsonProviderSpec(TypedDict, total=False):
-    """Watson provider specification (deprecated).
-
-    Notes:
-        - This is deprecated. Use WatsonXProviderSpec with provider="watsonx" instead.
-    """
-
-    provider: Required[Literal["watson"]]
     config: WatsonXProviderConfig

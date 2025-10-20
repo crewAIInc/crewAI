@@ -1,7 +1,7 @@
 import json
 import os
 import re
-from typing import Any, Literal, Optional, Union, cast, get_origin
+from typing import Any, Literal, Optional, Union, _SpecialForm, cast, get_origin
 import warnings
 
 from crewai.tools import BaseTool
@@ -41,7 +41,7 @@ class EnterpriseActionTool(BaseTool):
         action_schema: dict[str, Any],
         enterprise_api_base_url: str | None = None,
     ):
-        self._model_registry = {}
+        self._model_registry = {}  # type: ignore[var-annotated]
         self._base_name = self._sanitize_name(name)
 
         schema_props, required = self._extract_schema_info(action_schema)
@@ -67,7 +67,7 @@ class EnterpriseActionTool(BaseTool):
         # Create the model
         if field_definitions:
             try:
-                args_schema = create_model(
+                args_schema = create_model(  # type: ignore[call-overload]
                     f"{self._base_name}Schema", **field_definitions
                 )
             except Exception:
@@ -110,7 +110,9 @@ class EnterpriseActionTool(BaseTool):
         )
         return schema_props, required
 
-    def _process_schema_type(self, schema: dict[str, Any], type_name: str) -> type[Any]:
+    def _process_schema_type(
+        self, schema: dict[str, Any], type_name: str
+    ) -> type[Any] | _SpecialForm:
         """Process a JSON schema and return appropriate Python type."""
         if "anyOf" in schema:
             any_of_types = schema["anyOf"]
@@ -139,7 +141,7 @@ class EnterpriseActionTool(BaseTool):
         if json_type == "array":
             items_schema = schema.get("items", {"type": "string"})
             item_type = self._process_schema_type(items_schema, f"{type_name}Item")
-            return list[item_type]
+            return list[item_type]  # type: ignore[valid-type]
 
         if json_type == "object":
             return self._create_nested_model(schema, type_name)
@@ -174,18 +176,20 @@ class EnterpriseActionTool(BaseTool):
                 prop_type = str
 
             field_definitions[prop_name] = self._create_field_definition(
-                prop_type, is_required, prop_desc
+                prop_type,
+                is_required,
+                prop_desc,  # type: ignore[arg-type]
             )
 
         try:
-            nested_model = create_model(full_model_name, **field_definitions)
+            nested_model = create_model(full_model_name, **field_definitions)  # type: ignore[call-overload]
             self._model_registry[full_model_name] = nested_model
             return nested_model
         except Exception:
             return dict
 
     def _create_field_definition(
-        self, field_type: type[Any], is_required: bool, description: str
+        self, field_type: type[Any] | _SpecialForm, is_required: bool, description: str
     ) -> tuple:
         """Create Pydantic field definition based on type and requirement."""
         if is_required:
@@ -276,7 +280,7 @@ class EnterpriseActionKitToolAdapter:
     ):
         """Initialize the adapter with an enterprise action token."""
         self._set_enterprise_action_token(enterprise_action_token)
-        self._actions_schema = {}
+        self._actions_schema = {}  # type: ignore[var-annotated]
         self._tools = None
         self.enterprise_api_base_url = (
             enterprise_api_base_url or get_enterprise_api_base_url()

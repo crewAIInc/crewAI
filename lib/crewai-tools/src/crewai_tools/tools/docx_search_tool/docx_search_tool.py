@@ -3,8 +3,7 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 from crewai_tools.rag.data_types import DataType
-
-from ..rag.rag_tool import RagTool
+from crewai_tools.tools.rag.rag_tool import RagTool
 
 
 class FixedDOCXSearchToolSchema(BaseModel):
@@ -46,7 +45,7 @@ class DOCXSearchTool(RagTool):
     def add(self, docx: str) -> None:
         super().add(docx, data_type=DataType.DOCX)
 
-    def _run(
+    def _run(  # type: ignore[override]
         self,
         search_query: str,
         docx: str | None = None,

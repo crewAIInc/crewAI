@@ -1,8 +1,7 @@
 from pydantic import BaseModel, Field
 
 from crewai_tools.rag.data_types import DataType
-
-from ..rag.rag_tool import RagTool
+from crewai_tools.tools.rag.rag_tool import RagTool
 
 
 class FixedCSVSearchToolSchema(BaseModel):
@@ -38,7 +37,7 @@ class CSVSearchTool(RagTool):
     def add(self, csv: str) -> None:
         super().add(csv, data_type=DataType.CSV)
 
-    def _run(
+    def _run(  # type: ignore[override]
         self,
         search_query: str,
         csv: str | None = None,

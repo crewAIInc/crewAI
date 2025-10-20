@@ -197,7 +197,6 @@ class MongoDBVectorSearchTool(BaseTool):
 
         _metadatas = metadatas or [{} for _ in texts]
         ids = [str(ObjectId()) for _ in range(len(list(texts)))]
-        metadatas_batch = _metadatas
 
         result_ids = []
         texts_batch = []
@@ -285,7 +284,7 @@ class MongoDBVectorSearchTool(BaseTool):
                 "index": self.vector_index_name,
                 "path": self.embedding_key,
                 "queryVector": query_vector,
-                "numCandidates": limit * oversampling_factor,
+                "numCandidates": limit * oversampling_factor,  # type: ignore[operator]
                 "limit": limit,
             }
             if pre_filter:

@@ -2,7 +2,7 @@
 
 from urllib.parse import urlparse
 
-import psycopg2
+from psycopg2 import Error, connect
 from psycopg2.extras import RealDictCursor
 
 from crewai_tools.rag.base_loader import BaseLoader, LoaderResult
@@ -12,7 +12,7 @@ from crewai_tools.rag.source_content import SourceContent
 class PostgresLoader(BaseLoader):
     """Loader for PostgreSQL database content."""
 
-    def load(self, source: SourceContent, **kwargs) -> LoaderResult:
+    def load(self, source: SourceContent, **kwargs) -> LoaderResult:  # type: ignore[override]
         """Load content from a PostgreSQL database table.
 
         Args:
@@ -47,7 +47,7 @@ class PostgresLoader(BaseLoader):
             raise ValueError("Database name is required in the URI")
 
         try:
-            connection = psycopg2.connect(**connection_params)
+            connection = connect(**connection_params)
             try:
                 with connection.cursor() as cursor:
                     cursor.execute(query)
@@ -94,7 +94,7 @@ class PostgresLoader(BaseLoader):
                     )
             finally:
                 connection.close()
-        except psycopg2.Error as e:
+        except Error as e:
             raise ValueError(f"PostgreSQL database error: {e}") from e
         except Exception as e:
             raise ValueError(f"Failed to load data from PostgreSQL: {e}") from e

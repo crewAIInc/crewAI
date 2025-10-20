@@ -2,7 +2,7 @@ import datetime
 import json
 import logging
 import os
-from typing import Any
+from typing import Any, TypedDict
 
 from crewai.tools import BaseTool, EnvVar
 from pydantic import BaseModel, Field
@@ -10,6 +10,81 @@ import requests
 
 
 logger = logging.getLogger(__name__)
+
+
+class KnowledgeGraph(TypedDict, total=False):
+    """Knowledge graph data from search results."""
+
+    title: str
+    type: str
+    website: str
+    imageUrl: str
+    description: str
+    descriptionSource: str
+    descriptionLink: str
+    attributes: dict[str, Any]
+
+
+class Sitelink(TypedDict):
+    """Sitelink data for organic search results."""
+
+    title: str
+    link: str
+
+
+class OrganicResult(TypedDict, total=False):
+    """Organic search result data."""
+
+    title: str
+    link: str
+    snippet: str
+    position: int | None
+    sitelinks: list[Sitelink]
+
+
+class PeopleAlsoAskResult(TypedDict):
+    """People Also Ask result data."""
+
+    question: str
+    snippet: str
+    title: str
+    link: str
+
+
+class RelatedSearchResult(TypedDict):
+    """Related search result data."""
+
+    query: str
+
+
+class NewsResult(TypedDict):
+    """News search result data."""
+
+    title: str
+    link: str
+    snippet: str
+    date: str
+    source: str
+    imageUrl: str
+
+
+class SearchParameters(TypedDict, total=False):
+    """Search parameters used for the query."""
+
+    q: str
+    type: str
+
+
+class FormattedResults(TypedDict, total=False):
+    """Formatted search results from Serper API."""
+
+    searchParameters: SearchParameters
+    knowledgeGraph: KnowledgeGraph
+    organic: list[OrganicResult]
+    peopleAlsoAsk: list[PeopleAlsoAskResult]
+    relatedSearches: list[RelatedSearchResult]
+    news: list[NewsResult]
+    credits: int
 
 
 def _save_results_to_file(content: str) -> None:
@@ -64,7 +139,8 @@ class SerperDevTool(BaseTool):
             )
         return f"{self.base_url}/{search_type}"
 
-    def _process_knowledge_graph(self, kg: dict) -> dict:
+    @staticmethod
+    def _process_knowledge_graph(kg: dict[str, Any]) -> KnowledgeGraph:
         """Process knowledge graph data from search results."""
         return {
             "title": kg.get("title", ""),
@@ -77,12 +153,14 @@ class SerperDevTool(BaseTool):
             "attributes": kg.get("attributes", {}),
         }
 
-    def _process_organic_results(self, organic_results: list) -> list:
+    def _process_organic_results(
+        self, organic_results: list[dict[str, Any]]
+    ) -> list[OrganicResult]:
         """Process organic search results."""
-        processed_results = []
+        processed_results: list[OrganicResult] = []
         for result in organic_results[: self.n_results]:
             try:
-                result_data = {
+                result_data: OrganicResult = {  # type: ignore[typeddict-item]
                     "title": result["title"],
                     "link": result["link"],
                     "snippet": result.get("snippet", ""),
@@ -90,7 +168,7 @@ class SerperDevTool(BaseTool):
                 }
 
                 if "sitelinks" in result:
-                    result_data["sitelinks"] = [
+                    result_data["sitelinks"] = [  # type: ignore[typeddict-unknown-key]
                         {
                             "title": sitelink.get("title", ""),
                             "link": sitelink.get("link", ""),
@@ -102,14 +180,16 @@ class SerperDevTool(BaseTool):
             except KeyError:  # noqa: PERF203
                 logger.warning(f"Skipping malformed organic result: {result}")
                 continue
-        return processed_results
+        return processed_results  # type: ignore[return-value]
 
-    def _process_people_also_ask(self, paa_results: list) -> list:
+    def _process_people_also_ask(
+        self, paa_results: list[dict[str, Any]]
+    ) -> list[PeopleAlsoAskResult]:
         """Process 'People Also Ask' results."""
-        processed_results = []
+        processed_results: list[PeopleAlsoAskResult] = []
         for result in paa_results[: self.n_results]:
             try:
-                result_data = {
+                result_data: PeopleAlsoAskResult = {  # type: ignore[typeddict-item]
                     "question": result["question"],
                     "snippet": result.get("snippet", ""),
                     "title": result.get("title", ""),
@@ -119,25 +199,29 @@ class SerperDevTool(BaseTool):
             except KeyError:  # noqa: PERF203
                 logger.warning(f"Skipping malformed PAA result: {result}")
                 continue
-        return processed_results
+        return processed_results  # type: ignore[return-value]
 
-    def _process_related_searches(self, related_results: list) -> list:
+    def _process_related_searches(
+        self, related_results: list[dict[str, Any]]
+    ) -> list[RelatedSearchResult]:
         """Process related search results."""
-        processed_results = []
+        processed_results: list[RelatedSearchResult] = []
         for result in related_results[: self.n_results]:
             try:
-                processed_results.append({"query": result["query"]})
+                processed_results.append({"query": result["query"]})  # type: ignore[typeddict-item]
             except KeyError:  # noqa: PERF203
                 logger.warning(f"Skipping malformed related search result: {result}")
                 continue
-        return processed_results
+        return processed_results  # type: ignore[return-value]
 
-    def _process_news_results(self, news_results: list) -> list:
+    def _process_news_results(
+        self, news_results: list[dict[str, Any]]
+    ) -> list[NewsResult]:
         """Process news search results."""
-        processed_results = []
+        processed_results: list[NewsResult] = []
         for result in news_results[: self.n_results]:
             try:
-                result_data = {
+                result_data: NewsResult = {  # type: ignore[typeddict-item]
                     "title": result["title"],
                     "link": result["link"],
                     "snippet": result.get("snippet", ""),
@@ -149,9 +233,9 @@ class SerperDevTool(BaseTool):
             except KeyError:  # noqa: PERF203
                 logger.warning(f"Skipping malformed news result: {result}")
                 continue
-        return processed_results
+        return processed_results  # type: ignore[return-value]
 
-    def _make_api_request(self, search_query: str, search_type: str) -> dict:
+    def _make_api_request(self, search_query: str, search_type: str) -> dict[str, Any]:
         """Make API request to Serper."""
         search_url = self._get_search_url(search_type)
         payload = {"q": search_query, "num": self.n_results}
@@ -167,12 +251,11 @@ class SerperDevTool(BaseTool):
             "X-API-KEY": os.environ["SERPER_API_KEY"],
             "content-type": "application/json",
         }
-        payload = json.dumps(payload)
 
         response = None
         try:
             response = requests.post(
-                search_url, headers=headers, json=json.loads(payload), timeout=10
+                search_url, headers=headers, json=payload, timeout=10
             )
             response.raise_for_status()
             results = response.json()
@@ -183,22 +266,26 @@ class SerperDevTool(BaseTool):
         except requests.exceptions.RequestException as e:
             error_msg = f"Error making request to Serper API: {e}"
             if response is not None and hasattr(response, "content"):
-                error_msg += f"\nResponse content: {response.content}"
+                error_msg += f"\nResponse content: {response.content.decode('utf-8', errors='replace')}"
             logger.error(error_msg)
             raise
         except json.JSONDecodeError as e:
             if response is not None and hasattr(response, "content"):
                 logger.error(f"Error decoding JSON response: {e}")
-                logger.error(f"Response content: {response.content}")
+                logger.error(
+                    f"Response content: {response.content.decode('utf-8', errors='replace')}"
+                )
             else:
                 logger.error(
                     f"Error decoding JSON response: {e} (No response content available)"
                 )
             raise
 
-    def _process_search_results(self, results: dict, search_type: str) -> dict:
+    def _process_search_results(
+        self, results: dict[str, Any], search_type: str
+    ) -> dict[str, Any]:
         """Process search results based on search type."""
-        formatted_results = {}
+        formatted_results: dict[str, Any] = {}
 
         if search_type == "search":
             if "knowledgeGraph" in results:
@@ -227,11 +314,14 @@ class SerperDevTool(BaseTool):
 
         return formatted_results
 
-    def _run(self, **kwargs: Any) -> Any:
+    def _run(self, **kwargs: Any) -> FormattedResults:
         """Execute the search operation."""
-        search_query = kwargs.get("search_query") or kwargs.get("query")
-        search_type = kwargs.get("search_type", self.search_type)
+        search_query: str | None = kwargs.get("search_query") or kwargs.get("query")
+        search_type: str = kwargs.get("search_type", self.search_type)
         save_file = kwargs.get("save_file", self.save_file)
+
+        if not search_query:
+            raise ValueError("search_query is required")
 
         results = self._make_api_request(search_query, search_type)
 
@@ -249,4 +339,4 @@ class SerperDevTool(BaseTool):
         if save_file:
             _save_results_to_file(json.dumps(formatted_results, indent=2))
 
-        return formatted_results
+        return formatted_results  # type: ignore[return-value]

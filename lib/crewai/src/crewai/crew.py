@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 from collections.abc import Callable
 from concurrent.futures import Future
@@ -28,7 +30,7 @@ from pydantic_core import PydanticCustomError
 
 from crewai.agent import Agent
 from crewai.agents.agent_builder.base_agent import BaseAgent
-from crewai.agents.cache import CacheHandler
+from crewai.agents.cache.cache_handler import CacheHandler
 from crewai.crews.crew_output import CrewOutput
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.event_listener import EventListener
@@ -53,7 +55,8 @@ from crewai.events.types.crew_events import (
 from crewai.flow.flow_trackable import FlowTrackable
 from crewai.knowledge.knowledge import Knowledge
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
-from crewai.llm import LLM, BaseLLM
+from crewai.llm import LLM
+from crewai.llms.base_llm import BaseLLM
 from crewai.memory.entity.entity_memory import EntityMemory
 from crewai.memory.external.external_memory import ExternalMemory
 from crewai.memory.long_term.long_term_memory import LongTermMemory
@@ -61,24 +64,29 @@ from crewai.memory.short_term.short_term_memory import ShortTermMemory
 from crewai.process import Process
 from crewai.rag.embeddings.types import EmbedderConfig
 from crewai.rag.types import SearchResult
-from crewai.security import Fingerprint, SecurityConfig
+from crewai.security.fingerprint import Fingerprint
+from crewai.security.security_config import SecurityConfig
 from crewai.task import Task
 from crewai.tasks.conditional_task import ConditionalTask
 from crewai.tasks.task_output import TaskOutput
 from crewai.tools.agent_tools.agent_tools import AgentTools
 from crewai.tools.base_tool import BaseTool, Tool
 from crewai.types.usage_metrics import UsageMetrics
-from crewai.utilities import I18N, FileHandler, Logger, RPMController
 from crewai.utilities.constants import NOT_SPECIFIED, TRAINING_DATA_FILE
 from crewai.utilities.crew.models import CrewContext
 from crewai.utilities.evaluators.crew_evaluator_handler import CrewEvaluator
 from crewai.utilities.evaluators.task_evaluator import TaskEvaluator
+from crewai.utilities.file_handler import FileHandler
 from crewai.utilities.formatter import (
     aggregate_raw_outputs_from_task_outputs,
     aggregate_raw_outputs_from_tasks,
 )
+from crewai.utilities.i18n import I18N
 from crewai.utilities.llm_utils import create_llm
+from crewai.utilities.logger import Logger
 from crewai.utilities.planning_handler import CrewPlanner
+from crewai.utilities.printer import PrinterColor
+from crewai.utilities.rpm_controller import RPMController
 from crewai.utilities.task_output_storage_handler import TaskOutputStorageHandler
 from crewai.utilities.training_handler import CrewTrainingHandler
 
@@ -124,12 +132,12 @@ class Crew(FlowTrackable, BaseModel):
             fingerprinting.
     """
 
-    __hash__ = object.__hash__  # type: ignore
+    __hash__ = object.__hash__
     _execution_span: Any = PrivateAttr()
     _rpm_controller: RPMController = PrivateAttr()
     _logger: Logger = PrivateAttr()
     _file_handler: FileHandler = PrivateAttr()
-    _cache_handler: InstanceOf[CacheHandler] = PrivateAttr(default=CacheHandler())
+    _cache_handler: InstanceOf[CacheHandler] = PrivateAttr(default_factory=CacheHandler)
     _short_term_memory: InstanceOf[ShortTermMemory] | None = PrivateAttr()
     _long_term_memory: InstanceOf[LongTermMemory] | None = PrivateAttr()
     _entity_memory: InstanceOf[EntityMemory] | None = PrivateAttr()
@@ -137,7 +145,7 @@ class Crew(FlowTrackable, BaseModel):
     _train: bool | None = PrivateAttr(default=False)
     _train_iteration: int | None = PrivateAttr()
     _inputs: dict[str, Any] | None = PrivateAttr(default=None)
-    _logging_color: str = PrivateAttr(
+    _logging_color: PrinterColor = PrivateAttr(
         default="bold_purple",
     )
     _task_output_handler: TaskOutputStorageHandler = PrivateAttr(
@@ -298,7 +306,7 @@ class Crew(FlowTrackable, BaseModel):
         return json.loads(v) if isinstance(v, Json) else v  # type: ignore
 
     @model_validator(mode="after")
-    def set_private_attrs(self) -> "Crew":
+    def set_private_attrs(self) -> Crew:
         """set private attributes."""
 
         self._cache_handler = CacheHandler()
@@ -333,7 +341,7 @@ class Crew(FlowTrackable, BaseModel):
         )
 
     @model_validator(mode="after")
-    def create_crew_memory(self) -> "Crew":
+    def create_crew_memory(self) -> Crew:
         """Initialize private memory attributes."""
         self._external_memory = (
             # External memory does not support a default value since it was
@@ -351,7 +359,7 @@ class Crew(FlowTrackable, BaseModel):
         return self
 
     @model_validator(mode="after")
-    def create_crew_knowledge(self) -> "Crew":
+    def create_crew_knowledge(self) -> Crew:
         """Create the knowledge for the crew."""
         if self.knowledge_sources:
             try:
@@ -455,7 +463,7 @@ class Crew(FlowTrackable, BaseModel):
         return self
 
     @model_validator(mode="after")
-    def validate_must_have_non_conditional_task(self) -> "Crew":
+    def validate_must_have_non_conditional_task(self) -> Crew:
         """Ensure that a crew has at least one non-conditional task."""
         if not self.tasks:
             return self
@@ -471,7 +479,7 @@ class Crew(FlowTrackable, BaseModel):
         return self
 
     @model_validator(mode="after")
-    def validate_first_task(self) -> "Crew":
+    def validate_first_task(self) -> Crew:
         """Ensure the first task is not a ConditionalTask."""
         if self.tasks and isinstance(self.tasks[0], ConditionalTask):
             raise PydanticCustomError(
@@ -482,7 +490,7 @@ class Crew(FlowTrackable, BaseModel):
         return self
 
     @model_validator(mode="after")
-    def validate_async_tasks_not_async(self) -> "Crew":
+    def validate_async_tasks_not_async(self) -> Crew:
         """Ensure that ConditionalTask is not async."""
         for task in self.tasks:
             if task.async_execution and isinstance(task, ConditionalTask):

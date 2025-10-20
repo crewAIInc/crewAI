@@ -1,6 +1,6 @@
 import logging
 import os
-from typing import Any
+from typing import Any, cast
 
 from crewai.events.types.llm_events import LLMCallType
 from crewai.llms.base_llm import BaseLLM
@@ -8,6 +8,7 @@ from crewai.utilities.agent_utils import is_context_length_exceeded
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededError,
 )
+from crewai.utilities.types import LLMMessage
 
 
 try:
@@ -102,7 +103,7 @@ class AnthropicCompletion(BaseLLM):
 
     def call(
         self,
-        messages: str | list[dict[str, str]],
+        messages: str | list[LLMMessage],
         tools: list[dict] | None = None,
         callbacks: list[Any] | None = None,
         available_functions: dict[str, Any] | None = None,
@@ -125,7 +126,7 @@ class AnthropicCompletion(BaseLLM):
         try:
             # Emit call started event
             self._emit_call_started_event(
-                messages=messages,
+                messages=messages,  # type: ignore[arg-type]
                 tools=tools,
                 callbacks=callbacks,
                 available_functions=available_functions,
@@ -135,7 +136,7 @@ class AnthropicCompletion(BaseLLM):
 
             # Format messages for Anthropic
             formatted_messages, system_message = self._format_messages_for_anthropic(
-                messages
+                messages  # type: ignore[arg-type]
             )
 
             # Prepare completion parameters
@@ -163,7 +164,7 @@ class AnthropicCompletion(BaseLLM):
 
     def _prepare_completion_params(
         self,
-        messages: list[dict[str, str]],
+        messages: list[LLMMessage],
         system_message: str | None = None,
         tools: list[dict] | None = None,
     ) -> dict[str, Any]:
@@ -225,9 +226,9 @@ class AnthropicCompletion(BaseLLM):
             }
 
             if parameters and isinstance(parameters, dict):
-                anthropic_tool["input_schema"] = parameters
+                anthropic_tool["input_schema"] = parameters  # type: ignore[assignment]
             else:
-                anthropic_tool["input_schema"] = {
+                anthropic_tool["input_schema"] = {  # type: ignore[assignment]
                     "type": "object",
                     "properties": {},
                     "required": [],
@@ -238,8 +239,8 @@ class AnthropicCompletion(BaseLLM):
         return anthropic_tools
 
     def _format_messages_for_anthropic(
-        self, messages: str | list[dict[str, str]]
-    ) -> tuple[list[dict[str, str]], str | None]:
+        self, messages: str | list[LLMMessage]
+    ) -> tuple[list[LLMMessage], str | None]:
         """Format messages for Anthropic API.
 
         Anthropic has specific requirements:
@@ -256,8 +257,8 @@ class AnthropicCompletion(BaseLLM):
         # Use base class formatting first
         base_formatted = super()._format_messages(messages)
 
-        formatted_messages = []
-        system_message = None
+        formatted_messages: list[LLMMessage] = []
+        system_message: str | None = None
 
         for message in base_formatted:
             role = message.get("role")
@@ -267,7 +268,7 @@ class AnthropicCompletion(BaseLLM):
                 if system_message:
                     system_message += f"\n\n{content}"
                 else:
-                    system_message = content
+                    system_message = cast(str, content)
             else:
                 role_str = role if role is not None else "user"
                 content_str = content if content is not None else ""

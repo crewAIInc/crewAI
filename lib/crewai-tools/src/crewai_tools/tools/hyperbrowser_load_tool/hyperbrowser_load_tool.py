@@ -51,7 +51,7 @@ class HyperbrowserLoadTool(BaseTool):
             )
 
         try:
-            from hyperbrowser import Hyperbrowser
+            from hyperbrowser import Hyperbrowser  # type: ignore[import-untyped]
         except ImportError as e:
             raise ImportError(
                 "`hyperbrowser` package not found, please run `pip install hyperbrowser`"
@@ -64,11 +64,16 @@ class HyperbrowserLoadTool(BaseTool):
 
         self.hyperbrowser = Hyperbrowser(api_key=self.api_key)
 
-    def _prepare_params(self, params: dict) -> dict:
+    @staticmethod
+    def _prepare_params(params: dict) -> dict:
         """Prepare session and scrape options parameters."""
         try:
-            from hyperbrowser.models.scrape import ScrapeOptions
-            from hyperbrowser.models.session import CreateSessionParams
+            from hyperbrowser.models.scrape import (  # type: ignore[import-untyped]
+                ScrapeOptions,
+            )
+            from hyperbrowser.models.session import (  # type: ignore[import-untyped]
+                CreateSessionParams,
+            )
         except ImportError as e:
             raise ImportError(
                 "`hyperbrowser` package not found, please run `pip install hyperbrowser`"
@@ -102,8 +107,12 @@ class HyperbrowserLoadTool(BaseTool):
         if params is None:
             params = {}
         try:
-            from hyperbrowser.models.crawl import StartCrawlJobParams
-            from hyperbrowser.models.scrape import StartScrapeJobParams
+            from hyperbrowser.models.crawl import (  # type: ignore[import-untyped]
+                StartCrawlJobParams,
+            )
+            from hyperbrowser.models.scrape import (  # type: ignore[import-untyped]
+                StartScrapeJobParams,
+            )
         except ImportError as e:
             raise ImportError(
                 "`hyperbrowser` package not found, please run `pip install hyperbrowser`"
@@ -113,10 +122,10 @@ class HyperbrowserLoadTool(BaseTool):
 
         if operation == "scrape":
             scrape_params = StartScrapeJobParams(url=url, **params)
-            scrape_resp = self.hyperbrowser.scrape.start_and_wait(scrape_params)
+            scrape_resp = self.hyperbrowser.scrape.start_and_wait(scrape_params)  # type: ignore[union-attr]
             return self._extract_content(scrape_resp.data)
         crawl_params = StartCrawlJobParams(url=url, **params)
-        crawl_resp = self.hyperbrowser.crawl.start_and_wait(crawl_params)
+        crawl_resp = self.hyperbrowser.crawl.start_and_wait(crawl_params)  # type: ignore[union-attr]
         content = ""
         if crawl_resp.data:
             for page in crawl_resp.data:

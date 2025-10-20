@@ -1,8 +1,7 @@
 from pydantic import BaseModel, Field
 
 from crewai_tools.rag.data_types import DataType
-
-from ..rag.rag_tool import RagTool
+from crewai_tools.tools.rag.rag_tool import RagTool
 
 
 class FixedMDXSearchToolSchema(BaseModel):
@@ -38,7 +37,7 @@ class MDXSearchTool(RagTool):
     def add(self, mdx: str) -> None:
         super().add(mdx, data_type=DataType.MDX)
 
-    def _run(
+    def _run(  # type: ignore[override]
         self,
         search_query: str,
         mdx: str | None = None,

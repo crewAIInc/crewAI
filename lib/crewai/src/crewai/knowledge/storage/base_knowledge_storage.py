@@ -1,7 +1,11 @@
-from abc import ABC, abstractmethod
-from typing import Any
+from __future__ import annotations
 
-from crewai.rag.types import SearchResult
+from abc import ABC, abstractmethod
+from typing import TYPE_CHECKING, Any
+
+
+if TYPE_CHECKING:
+    from crewai.rag.types import SearchResult
 
 
 class BaseKnowledgeStorage(ABC):

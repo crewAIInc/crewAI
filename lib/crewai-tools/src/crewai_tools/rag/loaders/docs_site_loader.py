@@ -12,7 +12,7 @@ from crewai_tools.rag.source_content import SourceContent
 class DocsSiteLoader(BaseLoader):
     """Loader for documentation websites."""
 
-    def load(self, source: SourceContent, **kwargs) -> LoaderResult:
+    def load(self, source: SourceContent, **kwargs) -> LoaderResult:  # type: ignore[override]
         """Load content from a documentation site.
 
         Args:
@@ -40,7 +40,6 @@ class DocsSiteLoader(BaseLoader):
         title = soup.find("title")
         title_text = title.get_text(strip=True) if title else "Documentation"
 
-        main_content = None
         for selector in [
             "main",
             "article",
@@ -82,8 +81,10 @@ class DocsSiteLoader(BaseLoader):
             if nav:
                 links = nav.find_all("a", href=True)
                 for link in links[:20]:
-                    href = link["href"]
-                    if not href.startswith(("http://", "https://", "mailto:", "#")):
+                    href = link.get("href", "")
+                    if isinstance(href, str) and not href.startswith(
+                        ("http://", "https://", "mailto:", "#")
+                    ):
                         full_url = urljoin(docs_url, href)
                         nav_links.append(f"- {link.get_text(strip=True)}: {full_url}")
 

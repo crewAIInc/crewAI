@@ -10,7 +10,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 # Type checking import
 if TYPE_CHECKING:
-    from scrapegraph_py import Client  # type: ignore[import-not-found]
+    from scrapegraph_py import Client  # type: ignore[import-untyped]
 
 
 class ScrapegraphError(Exception):
@@ -105,8 +105,8 @@ class ScrapegraphScrapeTool(BaseTool):
                 import subprocess
 
                 subprocess.run(["uv", "add", "scrapegraph-py"], check=True)  # noqa: S607
-                from scrapegraph_py import Client  # type: ignore[import-not-found]
-                from scrapegraph_py.logger import (  # type: ignore[import-not-found]
+                from scrapegraph_py import Client  # type: ignore[import-untyped]
+                from scrapegraph_py.logger import (  # type: ignore[import-untyped]
                     sgai_logger,
                 )
 

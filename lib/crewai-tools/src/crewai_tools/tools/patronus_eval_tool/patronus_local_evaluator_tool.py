@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import TYPE_CHECKING, Any
 
 from crewai.tools import BaseTool
@@ -5,7 +7,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 
 if TYPE_CHECKING:
-    from patronus import Client, EvaluationResult
+    from patronus import Client, EvaluationResult  # type: ignore[import-untyped]
 
 try:
     import patronus  # noqa: F401
@@ -35,7 +37,7 @@ class PatronusLocalEvaluatorTool(BaseTool):
     name: str = "Patronus Local Evaluator Tool"
     description: str = "This tool is used to evaluate the model input and output using custom function evaluators."
     args_schema: type[BaseModel] = FixedLocalEvaluatorToolSchema
-    client: "Client" = None
+    client: Client = None
     evaluator: str
     evaluated_model_gold_answer: str
 
@@ -44,7 +46,7 @@ class PatronusLocalEvaluatorTool(BaseTool):
 
     def __init__(
         self,
-        patronus_client: "Client" = None,
+        patronus_client: Client = None,
         evaluator: str = "",
         evaluated_model_gold_answer: str = "",
         **kwargs: Any,
@@ -54,7 +56,7 @@ class PatronusLocalEvaluatorTool(BaseTool):
         self.evaluated_model_gold_answer = evaluated_model_gold_answer
         self._initialize_patronus(patronus_client)
 
-    def _initialize_patronus(self, patronus_client: "Client") -> None:
+    def _initialize_patronus(self, patronus_client: Client) -> None:
         try:
             if PYPATRONUS_AVAILABLE:
                 self.client = patronus_client
@@ -107,6 +109,6 @@ try:
     # Only rebuild if the class hasn't been initialized yet
     if not hasattr(PatronusLocalEvaluatorTool, "_model_rebuilt"):
         PatronusLocalEvaluatorTool.model_rebuild()
-        PatronusLocalEvaluatorTool._model_rebuilt = True
+        PatronusLocalEvaluatorTool._model_rebuilt = True  # type: ignore[attr-defined]
 except Exception:  # noqa: S110
     pass

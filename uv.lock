@@ -51,6 +51,8 @@ dev = [
     { name = "pytest-xdist", specifier = ">=3.8.0" },
     { name = "ruff", specifier = ">=0.13.1" },
     { name = "types-appdirs", specifier = "==1.4.*" },
+    { name = "types-psycopg2", specifier = ">=2.9.21.20251012" },
+    { name = "types-pymysql", specifier = ">=1.1.0.20250916" },
     { name = "types-pyyaml", specifier = "==6.0.*" },
     { name = "types-regex", specifier = "==2024.11.6.*" },
     { name = "types-requests", specifier = "~=2.31.0.6" },
@@ -8276,6 +8278,24 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/60/19/a3a6377c9e2e389c1421c033a1830c29cac08f2e1e05a082ea84eb22c75f/types_awscrt-0.28.1.tar.gz", hash = "sha256:66d77ec283e1dc907526a44511a12624118723a396c36d3f3dd9855cb614ce14", size = 17410, upload-time = "2025-10-11T21:55:07.443Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/ea/c7/0266b797d19b82aebe0e177efe35de7aabdc192bc1605ce3309331f0a505/types_awscrt-0.28.1-py3-none-any.whl", hash = "sha256:d88f43ef779f90b841ba99badb72fe153077225a4e426ae79e943184827b4443", size = 41851, upload-time = "2025-10-11T21:55:06.235Z" },
+]
+
+[[package]]
+name = "types-psycopg2"
+version = "2.9.21.20251012"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/9b/b3/2d09eaf35a084cffd329c584970a3fa07101ca465c13cad1576d7c392587/types_psycopg2-2.9.21.20251012.tar.gz", hash = "sha256:4cdafd38927da0cfde49804f39ab85afd9c6e9c492800e42f1f0c1a1b0312935", size = 26710, upload-time = "2025-10-12T02:55:39.5Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/ec/0c/05feaf8cb51159f2c0af04b871dab7e98a2f83a3622f5f216331d2dd924c/types_psycopg2-2.9.21.20251012-py3-none-any.whl", hash = "sha256:712bad5c423fe979e357edbf40a07ca40ef775d74043de72bd4544ca328cc57e", size = 24883, upload-time = "2025-10-12T02:55:38.439Z" },
+]
+
+[[package]]
+name = "types-pymysql"
+version = "1.1.0.20250916"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/1f/12/bda1d977c07e0e47502bede1c44a986dd45946494d89e005e04cdeb0f8de/types_pymysql-1.1.0.20250916.tar.gz", hash = "sha256:98d75731795fcc06723a192786662bdfa760e1e00f22809c104fbb47bac5e29b", size = 22131, upload-time = "2025-09-16T02:49:22.039Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/21/eb/a225e32a6e7b196af67ab2f1b07363595f63255374cc3b88bfdab53b4ee8/types_pymysql-1.1.0.20250916-py3-none-any.whl", hash = "sha256:873eb9836bb5e3de4368cc7010ca72775f86e9692a5c7810f8c7f48da082e55b", size = 23063, upload-time = "2025-09-16T02:49:20.933Z" },
 ]
 
 [[package]]

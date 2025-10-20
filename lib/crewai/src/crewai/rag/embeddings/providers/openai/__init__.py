@@ -8,6 +8,7 @@ from crewai.rag.embeddings.providers.openai.types import (
     OpenAIProviderSpec,
 )
 
+
 __all__ = [
     "OpenAIProvider",
     "OpenAIProviderConfig",

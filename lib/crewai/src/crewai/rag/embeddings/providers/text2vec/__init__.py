@@ -8,6 +8,7 @@ from crewai.rag.embeddings.providers.text2vec.types import (
     Text2VecProviderSpec,
 )
 
+
 __all__ = [
     "Text2VecProvider",
     "Text2VecProviderConfig",

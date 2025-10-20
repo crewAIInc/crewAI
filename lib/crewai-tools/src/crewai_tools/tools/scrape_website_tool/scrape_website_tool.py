@@ -69,7 +69,10 @@ class ScrapeWebsiteTool(BaseTool):
         self,
         **kwargs: Any,
     ) -> Any:
-        website_url = kwargs.get("website_url", self.website_url)
+        website_url: str | None = kwargs.get("website_url", self.website_url)
+        if website_url is None:
+            raise ValueError("Website URL must be provided.")
+
         page = requests.get(
             website_url,
             timeout=15,

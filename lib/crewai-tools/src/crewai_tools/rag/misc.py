@@ -3,7 +3,15 @@ from typing import Any
 
 
 def compute_sha256(content: str) -> str:
-    return hashlib.sha256(content.encode("utf-8")).hexdigest()
+    """Compute the SHA-256 hash of the given content.
+
+    Args:
+      content: The content to hash.
+
+    Returns:
+      The SHA-256 hash of the content as a hexadecimal string.
+    """
+    return hashlib.sha256(content.encode()).hexdigest()
 
 
 def sanitize_metadata_for_chromadb(metadata: dict[str, Any]) -> dict[str, Any]:

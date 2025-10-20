@@ -1,8 +1,8 @@
+from collections import defaultdict
 import json
 import os
-import time
-from collections import defaultdict
 from pathlib import Path
+import time
 
 import certifi
 import click

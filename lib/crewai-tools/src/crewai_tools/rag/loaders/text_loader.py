@@ -3,14 +3,14 @@ from crewai_tools.rag.source_content import SourceContent
 
 
 class TextFileLoader(BaseLoader):
-    def load(self, source_content: SourceContent, **kwargs) -> LoaderResult:
+    def load(self, source_content: SourceContent, **kwargs) -> LoaderResult:  # type: ignore[override]
         source_ref = source_content.source_ref
         if not source_content.path_exists():
             raise FileNotFoundError(
                 f"The following file does not exist: {source_content.source}"
             )
 
-        with open(source_content.source, "r", encoding="utf-8") as file:
+        with open(source_content.source, encoding="utf-8") as file:
             content = file.read()
 
         return LoaderResult(
@@ -21,7 +21,7 @@ class TextFileLoader(BaseLoader):
 
 
 class TextLoader(BaseLoader):
-    def load(self, source_content: SourceContent, **kwargs) -> LoaderResult:
+    def load(self, source_content: SourceContent, **kwargs) -> LoaderResult:  # type: ignore[override]
         return LoaderResult(
             content=source_content.source,
             source=source_content.source_ref,

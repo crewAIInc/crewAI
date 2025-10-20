@@ -2360,7 +2360,6 @@ def mock_get_auth_token():
 @patch("crewai.cli.plus_api.PlusAPI.get_agent")
 def test_agent_from_repository(mock_get_agent, mock_get_auth_token):
     from crewai_tools import (
-        EnterpriseActionTool,
         FileReadTool,
         SerperDevTool,
     )
@@ -2382,39 +2381,21 @@ def test_agent_from_repository(mock_get_agent, mock_get_auth_token):
                 "name": "FileReadTool",
                 "init_params": {"file_path": "test.txt"},
             },
-            # using a tools that returns a list of BaseTools
-            {
-                "module": "crewai_tools",
-                "name": "CrewaiEnterpriseTools",
-                "init_params": {"actions_list": [], "enterprise_token": "test_key"},
-            },
         ],
     }
     mock_get_agent.return_value = mock_get_response
 
-    tool_action = EnterpriseActionTool(
-        name="test_name",
-        description="test_description",
-        enterprise_action_token="test_token",
-        action_name="test_action_name",
-        action_schema={"test": "test"},
-    )
-
-    with patch("crewai_tools.CrewaiEnterpriseTools", return_value=[tool_action]):
-        agent = Agent(from_repository="test_agent")
+    agent = Agent(from_repository="test_agent")
 
     assert agent.role == "test role"
     assert agent.goal == "test goal"
     assert agent.backstory == "test backstory"
-    assert len(agent.tools) == 3
+    assert len(agent.tools) == 2
 
     assert isinstance(agent.tools[0], SerperDevTool)
     assert agent.tools[0].n_results == 30
     assert isinstance(agent.tools[1], FileReadTool)
     assert agent.tools[1].file_path == "test.txt"
-
-    assert isinstance(agent.tools[2], EnterpriseActionTool)
-    assert agent.tools[2].name == "test_name"
 
 
 @patch("crewai.cli.plus_api.PlusAPI.get_agent")

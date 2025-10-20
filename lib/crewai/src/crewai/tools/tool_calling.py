@@ -1,8 +1,11 @@
 from typing import Any
 
-from pydantic import BaseModel, Field
-from pydantic import BaseModel as PydanticBaseModel
-from pydantic import Field as PydanticField
+from pydantic import (
+    BaseModel,
+    BaseModel as PydanticBaseModel,
+    Field,
+    Field as PydanticField,
+)
 
 
 class ToolCalling(BaseModel):
