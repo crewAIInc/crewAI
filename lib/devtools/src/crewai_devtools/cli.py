@@ -428,7 +428,7 @@ def bump(version: str, dry_run: bool, no_push: bool) -> None:
                     "pr",
                     "create",
                     "--base",
-                    "release/v1.0.0",
+                    "main",
                     "--title",
                     f"feat: bump versions to {version}",
                     "--body",
@@ -508,15 +508,13 @@ def tag(dry_run: bool, no_edit: bool) -> None:
         tag_name = version
 
         if not dry_run:
-            with console.status("[cyan]Checking out release/v1.0.0 branch..."):
+            with console.status("[cyan]Checking out main branch..."):
                 try:
-                    run_command(["git", "checkout", "release/v1.0.0"])
+                    run_command(["git", "checkout", "main"])
                 except subprocess.CalledProcessError as e:
-                    console.print(
-                        f"[red]✗[/red] Checked out release/v1.0.0 branch: {e}"
-                    )
+                    console.print(f"[red]✗[/red] Checked out main branch: {e}")
                     sys.exit(1)
-            console.print("[green]✓[/green] On release/v1.0.0 branch")
+            console.print("[green]✓[/green] On main branch")
 
             with console.status("[cyan]Pulling latest changes..."):
                 try:
@@ -524,7 +522,7 @@ def tag(dry_run: bool, no_edit: bool) -> None:
                 except subprocess.CalledProcessError as e:
                     console.print(f"[red]✗[/red] Pulled latest changes: {e}")
                     sys.exit(1)
-            console.print("[green]✓[/green] release/v1.0.0 branch up to date")
+            console.print("[green]✓[/green] main branch up to date")
 
         release_notes = f"Release {version}"
         commits = ""
