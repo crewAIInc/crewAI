@@ -15,6 +15,7 @@ from crewai.memory.storage.kickoff_task_outputs_storage import (
     KickoffTaskOutputsSQLiteStorage,
 )
 
+from .agentsmd.main import AgentsMDCommand
 from .authentication.main import AuthenticationCommand
 from .deploy.main import DeployCommand
 from .enterprise.main import EnterpriseConfigureCommand
@@ -492,6 +493,19 @@ def config_reset():
     """Reset all CLI configuration parameters to default values."""
     config_command = SettingsCommand()
     config_command.reset_all_settings()
+
+
+@crewai.group()
+def agentsmd():
+    """Agents.md related commands for IDE integration."""
+
+
+@agentsmd.command(name="install")
+@click.argument("ide_name", type=click.Choice(["cursor", "windsurf", "claude-code", "gemini-cli"]))
+def agentsmd_install(ide_name: str):
+    """Install agents.md file to the specified IDE's rules directory."""
+    agentsmd_cmd = AgentsMDCommand()
+    agentsmd_cmd.install(ide_name)
 
 
 if __name__ == "__main__":
