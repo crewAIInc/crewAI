@@ -15,10 +15,8 @@ from crewai.agents.agent_adapters.openai_agents.openai_agent_tool_adapter import
 )
 from crewai.agents.agent_adapters.openai_agents.protocols import (
     AgentKwargs,
-    OpenAIAgentsModule,
-)
-from crewai.agents.agent_adapters.openai_agents.protocols import (
     OpenAIAgent as OpenAIAgentProtocol,
+    OpenAIAgentsModule,
 )
 from crewai.agents.agent_adapters.openai_agents.structured_output_converter import (
     OpenAIConverterAdapter,
@@ -34,6 +32,7 @@ from crewai.tools import BaseTool
 from crewai.tools.agent_tools.agent_tools import AgentTools
 from crewai.utilities import Logger
 from crewai.utilities.import_utils import require
+
 
 openai_agents_module = cast(
     OpenAIAgentsModule,
@@ -145,6 +144,9 @@ class OpenAIAgentAdapter(BaseAgentAdapter):
                     task=task,
                 ),
             )
+            if not self.agent_executor or not isinstance(self.agent_executor, Runner):
+                raise ValueError("Agent executor is not configured.")
+
             result: Any = self.agent_executor.run_sync(self._openai_agent, task_prompt)
             final_answer: str = self.handle_execution_result(result)
             crewai_event_bus.emit(

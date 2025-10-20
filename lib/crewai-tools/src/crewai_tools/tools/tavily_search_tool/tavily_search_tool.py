@@ -10,7 +10,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 load_dotenv()
 try:
-    from tavily import AsyncTavilyClient, TavilyClient
+    from tavily import AsyncTavilyClient, TavilyClient  # type: ignore[import-untyped]
 
     TAVILY_AVAILABLE = True
 except ImportError:

@@ -5,7 +5,8 @@ from pydantic import Field
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.task import Task
 from crewai.tools.base_tool import BaseTool
-from crewai.utilities import I18N
+from crewai.utilities.i18n import I18N
+
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +38,8 @@ class BaseAgentTool(BaseTool):
         # Remove quotes and convert to lowercase
         return normalized.replace('"', "").casefold()
 
-    def _get_coworker(self, coworker: str | None, **kwargs) -> str | None:
+    @staticmethod
+    def _get_coworker(coworker: str | None, **kwargs) -> str | None:
         coworker = coworker or kwargs.get("co_worker") or kwargs.get("coworker")
         if coworker:
             is_list = coworker.startswith("[") and coworker.endswith("]")

@@ -29,7 +29,6 @@ class PatronusEvalTool(BaseTool):
         temp_evaluators, temp_criteria = self._init_run()
         self.evaluators = temp_evaluators
         self.criteria = temp_criteria
-        self.description = self._generate_description()
         warnings.warn(
             "You are allowing the agent to select the best evaluator and criteria when you use the `PatronusEvalTool`. If this is not intended then please use `PatronusPredefinedCriteriaEvalTool` instead.",
             stacklevel=2,
@@ -100,9 +99,9 @@ class PatronusEvalTool(BaseTool):
 
         return evaluators, criteria
 
-    def _generate_description(self) -> str:
+    def _generate_description(self) -> None:
         criteria = "\n".join([json.dumps(i) for i in self.criteria])
-        return f"""This tool calls the Patronus Evaluation API that takes the following arguments:
+        self.description = f"""This tool calls the Patronus Evaluation API that takes the following arguments:
         1. evaluated_model_input: str: The agent's task description in simple text
         2. evaluated_model_output: str: The agent's output of the task
         3. evaluated_model_retrieved_context: str: The agent's context

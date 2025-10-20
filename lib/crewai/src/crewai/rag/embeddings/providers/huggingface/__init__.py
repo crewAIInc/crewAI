@@ -8,6 +8,7 @@ from crewai.rag.embeddings.providers.huggingface.types import (
     HuggingFaceProviderSpec,
 )
 
+
 __all__ = [
     "HuggingFaceProvider",
     "HuggingFaceProviderConfig",

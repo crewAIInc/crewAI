@@ -1,4 +1,5 @@
 import os
+from typing import Any, Literal
 
 from crewai.tools import EnvVar
 from pydantic import BaseModel, Field
@@ -21,8 +22,15 @@ class SerplyWebpageToMarkdownTool(RagTool):
     description: str = "A tool to perform convert a webpage to markdown to make it easier for LLMs to understand"
     args_schema: type[BaseModel] = SerplyWebpageToMarkdownToolSchema
     request_url: str = "https://api.serply.io/v1/request"
-    proxy_location: str | None = "US"
-    headers: dict | None = Field(default_factory=dict)
+    proxy_location: Literal[
+        "US", "CA", "IE", "GB", "FR", "DE", "SE", "IN", "JP", "KR", "SG", "AU", "BR"
+    ] = "US"
+    headers: dict[str, Any] = Field(
+        default_factory=lambda: {
+            "X-API-KEY": os.environ["SERPLY_API_KEY"],
+            "User-Agent": "crew-tools",
+        }
+    )
     env_vars: list[EnvVar] = Field(
         default_factory=lambda: [
             EnvVar(
@@ -33,22 +41,13 @@ class SerplyWebpageToMarkdownTool(RagTool):
         ]
     )
 
-    def __init__(self, proxy_location: str | None = "US", **kwargs):
-        """proxy_location: (str): Where to perform the search, specifically for a specific country results.
-        ['US', 'CA', 'IE', 'GB', 'FR', 'DE', 'SE', 'IN', 'JP', 'KR', 'SG', 'AU', 'BR'] (defaults to US).
-        """
-        super().__init__(**kwargs)
-        self.proxy_location = proxy_location
-        self.headers = {
-            "X-API-KEY": os.environ["SERPLY_API_KEY"],
-            "User-Agent": "crew-tools",
-            "X-Proxy-Location": proxy_location,
-        }
-
-    def _run(
+    def _run(  # type: ignore[override]
         self,
         url: str,
     ) -> str:
+        if self.proxy_location and not self.headers.get("X-Proxy-Location"):
+            self.headers["X-Proxy-Location"] = self.proxy_location
+
         data = {"url": url, "method": "GET", "response_type": "markdown"}
         response = requests.request(
             "POST",

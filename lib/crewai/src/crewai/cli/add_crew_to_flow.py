@@ -5,6 +5,7 @@ import click
 from crewai.cli.utils import copy_template
 from crewai.utilities.printer import Printer
 
+
 _printer = Printer()
 
 
@@ -12,7 +13,9 @@ def add_crew_to_flow(crew_name: str) -> None:
     """Add a new crew to the current flow."""
     # Check if pyproject.toml exists in the current directory
     if not Path("pyproject.toml").exists():
-        _printer.print("This command must be run from the root of a flow project.", color="red")
+        _printer.print(
+            "This command must be run from the root of a flow project.", color="red"
+        )
         raise click.ClickException(
             "This command must be run from the root of a flow project."
         )

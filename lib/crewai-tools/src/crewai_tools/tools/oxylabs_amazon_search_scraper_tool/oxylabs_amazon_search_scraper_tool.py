@@ -9,8 +9,10 @@ from pydantic import BaseModel, ConfigDict, Field
 
 
 try:
-    from oxylabs import RealtimeClient
-    from oxylabs.sources.response import Response as OxylabsResponse
+    from oxylabs import RealtimeClient  # type: ignore[import-untyped]
+    from oxylabs.sources.response import (  # type: ignore[import-untyped]
+        Response as OxylabsResponse,
+    )
 
     OXYLABS_AVAILABLE = True
 except ImportError:

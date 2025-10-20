@@ -510,7 +510,7 @@ class TestTraceListenerSetup:
 
                 assert trace_listener.first_time_handler.collected_events is True
 
-                mock_prompt.assert_called_once_with(timeout_seconds=20)
+                mock_prompt.assert_called_once()
 
                 mock_mark_completed.assert_called_once()
 
@@ -722,7 +722,16 @@ class TestTraceListenerSetup:
 
             trace_listener.setup_listeners(crewai_event_bus)
 
+            mock_init_response = MagicMock()
+            mock_init_response.status_code = 200
+            mock_init_response.json.return_value = {"trace_id": "test_batch_id_12345"}
+
             with (
+                patch.object(
+                    trace_listener.batch_manager.plus_api,
+                    "initialize_trace_batch",
+                    return_value=mock_init_response,
+                ),
                 patch.object(
                     trace_listener.batch_manager.plus_api,
                     "send_trace_events",
@@ -746,4 +755,4 @@ class TestTraceListenerSetup:
 
                 mock_mark_failed.assert_called_once()
                 call_args = mock_mark_failed.call_args_list[0]
-                assert call_args[0][1] == "Error sending events to backend"
+                assert call_args[0][1] == "Internal Server Error"

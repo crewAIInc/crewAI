@@ -8,6 +8,7 @@ from crewai.rag.embeddings.providers.openclip.types import (
     OpenCLIPProviderSpec,
 )
 
+
 __all__ = [
     "OpenCLIPProvider",
     "OpenCLIPProviderConfig",

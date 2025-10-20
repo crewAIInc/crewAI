@@ -36,7 +36,7 @@ class SerpApiBaseTool(BaseTool):
                 import subprocess
 
                 subprocess.run(["uv", "add", "serpapi"], check=True)  # noqa: S607
-                from serpapi import Client
+                from serpapi import Client  # type: ignore[import-untyped]
             else:
                 raise ImportError(
                     "`serpapi` package not found, please install with `uv add serpapi`"

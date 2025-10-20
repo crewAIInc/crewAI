@@ -2,14 +2,12 @@
 
 from __future__ import annotations
 
-import warnings
-from typing import TYPE_CHECKING, TypeVar, overload
-
-from typing_extensions import deprecated
+from typing import TYPE_CHECKING, Any, TypeVar, overload
 
 from crewai.rag.core.base_embeddings_callable import EmbeddingFunction
 from crewai.rag.core.base_embeddings_provider import BaseEmbeddingsProvider
 from crewai.utilities.import_utils import import_and_validate_definition
+
 
 if TYPE_CHECKING:
     from chromadb.utils.embedding_functions.amazon_bedrock_embedding_function import (
@@ -65,7 +63,6 @@ if TYPE_CHECKING:
         WatsonXEmbeddingFunction,
     )
     from crewai.rag.embeddings.providers.ibm.types import (
-        WatsonProviderSpec,
         WatsonXProviderSpec,
     )
     from crewai.rag.embeddings.providers.instructor.types import InstructorProviderSpec
@@ -85,7 +82,7 @@ if TYPE_CHECKING:
     )
     from crewai.rag.embeddings.providers.voyageai.types import VoyageAIProviderSpec
 
-T = TypeVar("T", bound=EmbeddingFunction)
+T = TypeVar("T", bound=EmbeddingFunction[Any])
 
 
 PROVIDER_PATHS = {
@@ -106,7 +103,6 @@ PROVIDER_PATHS = {
     "sentence-transformer": "crewai.rag.embeddings.providers.sentence_transformer.sentence_transformer_provider.SentenceTransformerProvider",
     "text2vec": "crewai.rag.embeddings.providers.text2vec.text2vec_provider.Text2VecProvider",
     "voyageai": "crewai.rag.embeddings.providers.voyageai.voyageai_provider.VoyageAIProvider",
-    "watson": "crewai.rag.embeddings.providers.ibm.watsonx.WatsonXProvider",  # Deprecated alias
     "watsonx": "crewai.rag.embeddings.providers.ibm.watsonx.WatsonXProvider",
 }
 
@@ -140,7 +136,7 @@ def build_embedder_from_dict(spec: CohereProviderSpec) -> CohereEmbeddingFunctio
 
 
 @overload
-def build_embedder_from_dict(spec: CustomProviderSpec) -> EmbeddingFunction: ...
+def build_embedder_from_dict(spec: CustomProviderSpec) -> EmbeddingFunction[Any]: ...
 
 
 @overload
@@ -177,13 +173,6 @@ def build_embedder_from_dict(
 
 @overload
 def build_embedder_from_dict(spec: WatsonXProviderSpec) -> WatsonXEmbeddingFunction: ...
-
-
-@overload
-@deprecated(
-    'The "WatsonProviderSpec" provider spec is deprecated and will be removed in v1.0.0. Use "WatsonXProviderSpec" instead.'
-)
-def build_embedder_from_dict(spec: WatsonProviderSpec) -> WatsonXEmbeddingFunction: ...
 
 
 @overload
@@ -224,7 +213,7 @@ def build_embedder_from_dict(
 def build_embedder_from_dict(spec: ONNXProviderSpec) -> ONNXMiniLM_L6_V2: ...
 
 
-def build_embedder_from_dict(spec):
+def build_embedder_from_dict(spec):  # type: ignore[no-untyped-def]
     """Build an embedding function instance from a dictionary specification.
 
     Args:
@@ -246,14 +235,6 @@ def build_embedder_from_dict(spec):
     provider_name = spec["provider"]
     if not provider_name:
         raise ValueError("Missing 'provider' key in specification")
-
-    if provider_name == "watson":
-        warnings.warn(
-            'The "watson" provider key is deprecated and will be removed in v1.0.0. '
-            'Use "watsonx" instead.',
-            DeprecationWarning,
-            stacklevel=2,
-        )
 
     if provider_name not in PROVIDER_PATHS:
         raise ValueError(
@@ -292,7 +273,7 @@ def build_embedder(spec: CohereProviderSpec) -> CohereEmbeddingFunction: ...
 
 
 @overload
-def build_embedder(spec: CustomProviderSpec) -> EmbeddingFunction: ...
+def build_embedder(spec: CustomProviderSpec) -> EmbeddingFunction[Any]: ...
 
 
 @overload
@@ -326,13 +307,6 @@ def build_embedder(spec: WatsonXProviderSpec) -> WatsonXEmbeddingFunction: ...
 
 
 @overload
-@deprecated(
-    'The "WatsonProviderSpec" provider spec is deprecated and will be removed in v1.0.0. Use "WatsonXProviderSpec" instead.'
-)
-def build_embedder(spec: WatsonProviderSpec) -> WatsonXEmbeddingFunction: ...
-
-
-@overload
 def build_embedder(
     spec: SentenceTransformerProviderSpec,
 ) -> SentenceTransformerEmbeddingFunction: ...
@@ -362,7 +336,7 @@ def build_embedder(spec: Text2VecProviderSpec) -> Text2VecEmbeddingFunction: ...
 def build_embedder(spec: ONNXProviderSpec) -> ONNXMiniLM_L6_V2: ...
 
 
-def build_embedder(spec):
+def build_embedder(spec):  # type: ignore[no-untyped-def]
     """Build an embedding function from either a provider spec or a provider instance.
 
     Args:

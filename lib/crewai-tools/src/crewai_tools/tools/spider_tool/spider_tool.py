@@ -1,4 +1,5 @@
 import logging
+import subprocess
 from typing import Any, Literal
 from urllib.parse import unquote, urlparse
 
@@ -103,10 +104,8 @@ class SpiderTool(BaseTool):
             if click.confirm(
                 "You are missing the 'spider-client' package. Would you like to install it?"
             ):
-                import subprocess
-
                 subprocess.run(["uv", "pip", "install", "spider-client"], check=True)  # noqa: S607
-                from spider import Spider
+                from spider import Spider  # type: ignore[import-untyped]
             else:
                 raise ImportError(
                     "`spider-client` package not found, please run `uv add spider-client`"

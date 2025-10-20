@@ -1,14 +1,16 @@
-from typing import TYPE_CHECKING, Any, Optional
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
 
 from crewai.tools import BaseTool, EnvVar
 from pydantic import BaseModel, ConfigDict, Field, PrivateAttr
 
 
 if TYPE_CHECKING:
-    from firecrawl import FirecrawlApp
+    from firecrawl import FirecrawlApp  # type: ignore[import-untyped]
 
 try:
-    from firecrawl import FirecrawlApp
+    from firecrawl import FirecrawlApp  # type: ignore[import-untyped]
 
     FIRECRAWL_AVAILABLE = True
 except ImportError:
@@ -54,7 +56,7 @@ class FirecrawlScrapeWebsiteTool(BaseTool):
         }
     )
 
-    _firecrawl: Optional["FirecrawlApp"] = PrivateAttr(None)
+    _firecrawl: FirecrawlApp | None = PrivateAttr(None)
     package_dependencies: list[str] = Field(default_factory=lambda: ["firecrawl-py"])
     env_vars: list[EnvVar] = Field(
         default_factory=lambda: [
@@ -102,7 +104,7 @@ try:
     # Must rebuild model after class is defined
     if not hasattr(FirecrawlScrapeWebsiteTool, "_model_rebuilt"):
         FirecrawlScrapeWebsiteTool.model_rebuild()
-        FirecrawlScrapeWebsiteTool._model_rebuilt = True
+        FirecrawlScrapeWebsiteTool._model_rebuilt = True  # type: ignore[attr-defined]
 except ImportError:
     """
     When this tool is not used, then exception can be ignored.

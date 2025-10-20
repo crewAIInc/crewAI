@@ -3,7 +3,7 @@ from typing import Any
 import pytest
 from crewai.agent import BaseAgent
 from crewai.agents.agent_adapters.base_agent_adapter import BaseAgentAdapter
-from crewai.tools import BaseTool
+from crewai.tools.base_tool import BaseTool
 from crewai.utilities.token_counter_callback import TokenProcess
 from pydantic import BaseModel
 

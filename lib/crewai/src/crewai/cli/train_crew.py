@@ -19,7 +19,7 @@ def train_crew(n_iterations: int, filename: str) -> None:
         if not filename.endswith(".pkl"):
             raise ValueError("The filename must not end with .pkl")
 
-        result = subprocess.run(command, capture_output=False, text=True, check=True)
+        result = subprocess.run(command, capture_output=False, text=True, check=True)  # noqa: S603
 
         if result.stderr:
             click.echo(result.stderr, err=True)

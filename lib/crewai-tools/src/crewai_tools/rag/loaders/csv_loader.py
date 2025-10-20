@@ -2,41 +2,30 @@ import csv
 from io import StringIO
 
 from crewai_tools.rag.base_loader import BaseLoader, LoaderResult
+from crewai_tools.rag.loaders.utils import load_from_url
 from crewai_tools.rag.source_content import SourceContent
 
 
 class CSVLoader(BaseLoader):
-    def load(self, source_content: SourceContent, **kwargs) -> LoaderResult:
+    def load(self, source_content: SourceContent, **kwargs) -> LoaderResult:  # type: ignore[override]
         source_ref = source_content.source_ref
 
         content_str = source_content.source
         if source_content.is_url():
-            content_str = self._load_from_url(content_str, kwargs)
+            content_str = load_from_url(
+                content_str,
+                kwargs,
+                accept_header="text/csv, application/csv, text/plain",
+                loader_name="CSVLoader",
+            )
         elif source_content.path_exists():
             content_str = self._load_from_file(content_str)
 
         return self._parse_csv(content_str, source_ref)
 
-    def _load_from_url(self, url: str, kwargs: dict) -> str:
-        import requests
-
-        headers = kwargs.get(
-            "headers",
-            {
-                "Accept": "text/csv, application/csv, text/plain",
-                "User-Agent": "Mozilla/5.0 (compatible; crewai-tools CSVLoader)",
-            },
-        )
-
-        try:
-            response = requests.get(url, headers=headers, timeout=30)
-            response.raise_for_status()
-            return response.text
-        except Exception as e:
-            raise ValueError(f"Error fetching CSV from URL {url}: {e!s}") from e
-
-    def _load_from_file(self, path: str) -> str:
-        with open(path, "r", encoding="utf-8") as file:
+    @staticmethod
+    def _load_from_file(path: str) -> str:
+        with open(path, encoding="utf-8") as file:
             return file.read()
 
     def _parse_csv(self, content: str, source_ref: str) -> LoaderResult:

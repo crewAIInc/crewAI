@@ -1,52 +1,30 @@
 import json
 
 from crewai_tools.rag.base_loader import BaseLoader, LoaderResult
+from crewai_tools.rag.loaders.utils import load_from_url
 from crewai_tools.rag.source_content import SourceContent
 
 
 class JSONLoader(BaseLoader):
-    def load(self, source_content: SourceContent, **kwargs) -> LoaderResult:
+    def load(self, source_content: SourceContent, **kwargs) -> LoaderResult:  # type: ignore[override]
         source_ref = source_content.source_ref
         content = source_content.source
 
         if source_content.is_url():
-            content = self._load_from_url(source_ref, kwargs)
+            content = load_from_url(
+                source_ref,
+                kwargs,
+                accept_header="application/json",
+                loader_name="JSONLoader",
+            )
         elif source_content.path_exists():
             content = self._load_from_file(source_ref)
 
         return self._parse_json(content, source_ref)
 
-    def _load_from_url(self, url: str, kwargs: dict) -> str:
-        import requests
-
-        headers = kwargs.get(
-            "headers",
-            {
-                "Accept": "application/json",
-                "User-Agent": "Mozilla/5.0 (compatible; crewai-tools JSONLoader)",
-            },
-        )
-
-        try:
-            response = requests.get(url, headers=headers, timeout=30)
-            response.raise_for_status()
-            return (
-                response.text
-                if not self._is_json_response(response)
-                else json.dumps(response.json(), indent=2)
-            )
-        except Exception as e:
-            raise ValueError(f"Error fetching JSON from URL {url}: {e!s}") from e
-
-    def _is_json_response(self, response) -> bool:
-        try:
-            response.json()
-            return True
-        except ValueError:
-            return False
-
-    def _load_from_file(self, path: str) -> str:
-        with open(path, "r", encoding="utf-8") as file:
+    @staticmethod
+    def _load_from_file(path: str) -> str:
+        with open(path, encoding="utf-8") as file:
             return file.read()
 
     def _parse_json(self, content: str, source_ref: str) -> LoaderResult:

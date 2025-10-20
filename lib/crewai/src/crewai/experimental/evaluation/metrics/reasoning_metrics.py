@@ -6,10 +6,10 @@ This module provides evaluator implementations for:
 - Thinking-to-action ratio
 """
 
-import logging
-import re
 from collections.abc import Sequence
 from enum import Enum
+import logging
+import re
 from typing import Any
 
 import numpy as np
@@ -24,6 +24,7 @@ from crewai.experimental.evaluation.base_evaluator import (
 from crewai.experimental.evaluation.json_parser import extract_json_from_llm_response
 from crewai.task import Task
 from crewai.tasks.task_output import TaskOutput
+from crewai.utilities.types import LLMMessage
 
 
 class ReasoningPatternType(Enum):
@@ -105,7 +106,7 @@ class ReasoningEfficiencyEvaluator(BaseEvaluator):
             final_output.raw if isinstance(final_output, TaskOutput) else final_output
         )
 
-        prompt = [
+        prompt: list[LLMMessage] = [
             {
                 "role": "system",
                 "content": """You are an expert evaluator assessing the reasoning efficiency of an AI agent's thought process.

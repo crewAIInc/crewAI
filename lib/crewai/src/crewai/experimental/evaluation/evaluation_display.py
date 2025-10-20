@@ -14,6 +14,7 @@ from crewai.experimental.evaluation.base_evaluator import (
     MetricCategory,
 )
 from crewai.utilities.llm_utils import create_llm
+from crewai.utilities.types import LLMMessage
 
 
 class EvaluationDisplayFormatter:
@@ -339,7 +340,7 @@ class EvaluationDisplayFormatter:
             else:
                 strategy_guidance = "Provide a balanced analysis of strengths and weaknesses across all tasks."
 
-            prompt = [
+            prompt: list[LLMMessage] = [
                 {
                     "role": "system",
                     "content": f"""You are an expert evaluator creating a comprehensive summary of agent performance feedback.

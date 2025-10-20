@@ -77,6 +77,10 @@ class ScrapeElementFromWebsiteTool(BaseTool):
 
         website_url = kwargs.get("website_url", self.website_url)
         css_element = kwargs.get("css_element", self.css_element)
+
+        if website_url is None or css_element is None:
+            raise ValueError("Both website_url and css_element must be provided.")
+
         page = requests.get(
             website_url,
             headers=self.headers,

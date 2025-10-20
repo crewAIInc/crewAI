@@ -1,8 +1,8 @@
+from datetime import datetime
 import json
 import os
-import sys
-from datetime import datetime
 from pathlib import Path
+import sys
 
 from cryptography.fernet import Fernet
 

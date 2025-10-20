@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field
 
-from ..rag.rag_tool import RagTool
+from crewai_tools.tools.rag.rag_tool import RagTool
 
 
 class FixedJSONSearchToolSchema(BaseModel):
@@ -35,7 +35,7 @@ class JSONSearchTool(RagTool):
             self.args_schema = FixedJSONSearchToolSchema
             self._generate_description()
 
-    def _run(
+    def _run(  # type: ignore[override]
         self,
         search_query: str,
         json_path: str | None = None,

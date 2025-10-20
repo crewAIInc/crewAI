@@ -72,9 +72,9 @@ class FileCompressorTool(BaseTool):
                 "tar.xz": self._compress_tar,
             }
             if format == "zip":
-                format_compression[format](input_path, output_path)
+                format_compression[format](input_path, output_path)  # type: ignore[operator]
             else:
-                format_compression[format](input_path, output_path, format)
+                format_compression[format](input_path, output_path, format)  # type: ignore[operator]
 
             return f"Successfully compressed '{input_path}' into '{output_path}'"
         except FileNotFoundError:
@@ -84,7 +84,8 @@ class FileCompressorTool(BaseTool):
         except Exception as e:
             return f"An unexpected error occurred during compression: {e!s}"
 
-    def _generate_output_path(self, input_path: str, format: str) -> str:
+    @staticmethod
+    def _generate_output_path(input_path: str, format: str) -> str:
         """Generates output path based on input path and format."""
         if os.path.isfile(input_path):
             base_name = os.path.splitext(os.path.basename(input_path))[
@@ -94,7 +95,8 @@ class FileCompressorTool(BaseTool):
             base_name = os.path.basename(os.path.normpath(input_path))  # Directory name
         return os.path.join(os.getcwd(), f"{base_name}.{format}")
 
-    def _prepare_output(self, output_path: str, overwrite: bool) -> bool:
+    @staticmethod
+    def _prepare_output(output_path: str, overwrite: bool) -> bool:
         """Ensures output path is ready for writing."""
         output_dir = os.path.dirname(output_path)
         if output_dir and not os.path.exists(output_dir):
@@ -103,7 +105,8 @@ class FileCompressorTool(BaseTool):
             return False
         return True
 
-    def _compress_zip(self, input_path: str, output_path: str):
+    @staticmethod
+    def _compress_zip(input_path: str, output_path: str):
         """Compresses input into a zip archive."""
         with zipfile.ZipFile(output_path, "w", zipfile.ZIP_DEFLATED) as zipf:
             if os.path.isfile(input_path):
@@ -115,7 +118,8 @@ class FileCompressorTool(BaseTool):
                         arcname = os.path.relpath(full_path, start=input_path)
                         zipf.write(full_path, arcname)
 
-    def _compress_tar(self, input_path: str, output_path: str, format: str):
+    @staticmethod
+    def _compress_tar(input_path: str, output_path: str, format: str):
         """Compresses input into a tar archive with the given format."""
         format_mode = {
             "tar": "w",
@@ -129,6 +133,6 @@ class FileCompressorTool(BaseTool):
 
         mode = format_mode[format]
 
-        with tarfile.open(output_path, mode) as tarf:
+        with tarfile.open(output_path, mode) as tarf:  # type: ignore[call-overload]
             arcname = os.path.basename(input_path)
             tarf.add(input_path, arcname=arcname)

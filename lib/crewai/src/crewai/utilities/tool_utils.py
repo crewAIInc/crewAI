@@ -10,6 +10,7 @@ from crewai.tools.tool_types import ToolResult
 from crewai.tools.tool_usage import ToolUsage, ToolUsageError
 from crewai.utilities.i18n import I18N
 
+
 if TYPE_CHECKING:
     from crewai.agent import Agent
     from crewai.agents.agent_builder.base_agent import BaseAgent
@@ -64,7 +65,7 @@ def execute_tool_and_check_finality(
     tool_usage = ToolUsage(
         tools_handler=tools_handler,
         tools=tools,
-        function_calling_llm=function_calling_llm,
+        function_calling_llm=function_calling_llm,  # type: ignore[arg-type]
         task=task,
         agent=agent,
         action=agent_action,

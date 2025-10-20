@@ -1,14 +1,16 @@
 from __future__ import annotations
 
 import asyncio
-import inspect
-import textwrap
 from collections.abc import Callable
+import inspect
+import json
+import textwrap
 from typing import TYPE_CHECKING, Any, get_type_hints
 
 from pydantic import BaseModel, Field, create_model
 
 from crewai.utilities.logger import Logger
+
 
 if TYPE_CHECKING:
     from crewai.tools.base_tool import BaseTool
@@ -24,8 +26,6 @@ class CrewStructuredTool:
     This tool intends to replace StructuredTool with a custom implementation
     that integrates better with CrewAI's ecosystem.
     """
-
-    _original_tool: BaseTool | None = None
 
     def __init__(
         self,
@@ -56,7 +56,7 @@ class CrewStructuredTool:
         self.result_as_answer = result_as_answer
         self.max_usage_count = max_usage_count
         self.current_usage_count = current_usage_count
-        self._original_tool = None
+        self._original_tool: BaseTool | None = None
 
         # Validate the function signature matches the schema
         self._validate_function_signature()
@@ -199,8 +199,6 @@ class CrewStructuredTool:
         """
         if isinstance(raw_args, str):
             try:
-                import json
-
                 raw_args = json.loads(raw_args)
             except json.JSONDecodeError as e:
                 raise ValueError(f"Failed to parse arguments as JSON: {e}") from e

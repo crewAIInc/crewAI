@@ -17,7 +17,9 @@ class LlamaIndexTool(BaseTool):
         **kwargs: Any,
     ) -> Any:
         """Run tool."""
-        from llama_index.core.tools import BaseTool as LlamaBaseTool
+        from llama_index.core.tools import (  # type: ignore[import-not-found]
+            BaseTool as LlamaBaseTool,
+        )
 
         tool = cast(LlamaBaseTool, self.llama_index_tool)
 
@@ -28,7 +30,9 @@ class LlamaIndexTool(BaseTool):
 
     @classmethod
     def from_tool(cls, tool: Any, **kwargs: Any) -> LlamaIndexTool:
-        from llama_index.core.tools import BaseTool as LlamaBaseTool
+        from llama_index.core.tools import (  # type: ignore[import-not-found]
+            BaseTool as LlamaBaseTool,
+        )
 
         if not isinstance(tool, LlamaBaseTool):
             raise ValueError(f"Expected a LlamaBaseTool, got {type(tool)}")
@@ -57,8 +61,12 @@ class LlamaIndexTool(BaseTool):
         return_direct: bool = False,
         **kwargs: Any,
     ) -> LlamaIndexTool:
-        from llama_index.core.query_engine import BaseQueryEngine
-        from llama_index.core.tools import QueryEngineTool
+        from llama_index.core.query_engine import (  # type: ignore[import-not-found]
+            BaseQueryEngine,
+        )
+        from llama_index.core.tools import (  # type: ignore[import-not-found]
+            QueryEngineTool,
+        )
 
         if not isinstance(query_engine, BaseQueryEngine):
             raise ValueError(f"Expected a BaseQueryEngine, got {type(query_engine)}")

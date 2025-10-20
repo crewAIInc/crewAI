@@ -76,12 +76,12 @@ class SerplyWebSearchTool(BaseTool):
         **kwargs: Any,
     ) -> Any:
         if "query" in kwargs:
-            self.query_payload["q"] = kwargs["query"]
+            self.query_payload["q"] = kwargs["query"]  # type: ignore[index]
         elif "search_query" in kwargs:
-            self.query_payload["q"] = kwargs["search_query"]
+            self.query_payload["q"] = kwargs["search_query"]  # type: ignore[index]
 
         # build the url
-        url = f"{self.search_url}{urlencode(self.query_payload)}"
+        url = f"{self.search_url}{urlencode(self.query_payload)}"  # type: ignore[arg-type]
 
         response = requests.request(
             "GET",

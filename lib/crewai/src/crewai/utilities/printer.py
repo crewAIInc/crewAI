@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Final, Literal, NamedTuple
 
+
 if TYPE_CHECKING:
     from _typeshed import SupportsWrite
 
@@ -78,7 +79,7 @@ class Printer:
         """
         if isinstance(content, str):
             content = [ColoredText(content, color)]
-        print(  # noqa: T201
+        print(
             "".join(
                 f"{_COLOR_CODES[c.color] if c.color else ''}{c.text}{RESET}"
                 for c in content

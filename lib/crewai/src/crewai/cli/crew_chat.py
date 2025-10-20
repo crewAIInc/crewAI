@@ -1,15 +1,15 @@
 import json
+from pathlib import Path
 import platform
 import re
 import sys
 import threading
 import time
-from pathlib import Path
-from typing import Any
+from typing import Any, Final, Literal
 
 import click
-import tomli
 from packaging import version
+import tomli
 
 from crewai.cli.utils import read_toml
 from crewai.cli.version import get_crewai_version
@@ -18,10 +18,12 @@ from crewai.llm import LLM, BaseLLM
 from crewai.types.crew_chat import ChatInputField, ChatInputs
 from crewai.utilities.llm_utils import create_llm
 from crewai.utilities.printer import Printer
+from crewai.utilities.types import LLMMessage
+
 
 _printer = Printer()
 
-MIN_REQUIRED_VERSION = "0.98.0"
+MIN_REQUIRED_VERSION: Final[Literal["0.98.0"]] = "0.98.0"
 
 
 def check_conversational_crews_version(
@@ -114,9 +116,9 @@ def run_chat():
 def show_loading(event: threading.Event):
     """Display animated loading dots while processing."""
     while not event.is_set():
-        _printer.print(".", end="", flush=True)
+        _printer.print(".", end="")
         time.sleep(1)
-    _printer.print()
+    _printer.print("")
 
 
 def initialize_chat_llm(crew: Crew) -> LLM | BaseLLM | None:
@@ -224,7 +226,7 @@ def get_user_input() -> str:
 def handle_user_input(
     user_input: str,
     chat_llm: LLM,
-    messages: list[dict[str, str]],
+    messages: list[LLMMessage],
     crew_tool_schema: dict[str, Any],
     available_functions: dict[str, Any],
 ) -> None:
@@ -400,8 +402,7 @@ def generate_crew_chat_inputs(crew: Crew, crew_name: str, chat_llm) -> ChatInput
 
 
 def fetch_required_inputs(crew: Crew) -> set[str]:
-    """
-    Extracts placeholders from the crew's tasks and agents.
+    """Extracts placeholders from the crew's tasks and agents.
 
     Args:
         crew (Crew): The crew object.

@@ -9,13 +9,13 @@ data is collected. Users can opt-in to share more complete data using the
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Callable
+from importlib.metadata import version
 import json
 import logging
 import os
 import platform
 import threading
-from collections.abc import Callable
-from importlib.metadata import version
 from typing import TYPE_CHECKING, Any
 
 from opentelemetry import trace
@@ -41,6 +41,7 @@ from crewai.telemetry.utils import (
     close_span,
 )
 from crewai.utilities.logger_utils import suppress_warnings
+
 
 logger = logging.getLogger(__name__)
 

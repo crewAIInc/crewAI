@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from collections.abc import Callable
 from typing import Generic, TypeVar
 
@@ -29,7 +31,7 @@ class ToolCollection(list, Generic[T]):
     def _build_name_cache(self) -> None:
         self._name_cache = {tool.name.lower(): tool for tool in self}
 
-    def __getitem__(self, key: int | str) -> T:
+    def __getitem__(self, key: int | str) -> T:  # type: ignore[override]
         if isinstance(key, str):
             return self._name_cache[key.lower()]
         return super().__getitem__(key)
@@ -38,11 +40,11 @@ class ToolCollection(list, Generic[T]):
         super().append(tool)
         self._name_cache[tool.name.lower()] = tool
 
-    def extend(self, tools: list[T]) -> None:
+    def extend(self, tools: list[T]) -> None:  # type: ignore[override]
         super().extend(tools)
         self._build_name_cache()
 
-    def insert(self, index: int, tool: T) -> None:
+    def insert(self, index: int, tool: T) -> None:  # type: ignore[override]
         super().insert(index, tool)
         self._name_cache[tool.name.lower()] = tool
 
@@ -51,13 +53,13 @@ class ToolCollection(list, Generic[T]):
         if tool.name.lower() in self._name_cache:
             del self._name_cache[tool.name.lower()]
 
-    def pop(self, index: int = -1) -> T:
+    def pop(self, index: int = -1) -> T:  # type: ignore[override]
         tool = super().pop(index)
         if tool.name.lower() in self._name_cache:
             del self._name_cache[tool.name.lower()]
         return tool
 
-    def filter_by_names(self, names: list[str] | None = None) -> "ToolCollection[T]":
+    def filter_by_names(self, names: list[str] | None = None) -> ToolCollection[T]:
         if names is None:
             return self
 
@@ -69,7 +71,7 @@ class ToolCollection(list, Generic[T]):
             ]
         )
 
-    def filter_where(self, func: Callable[[T], bool]) -> "ToolCollection[T]":
+    def filter_where(self, func: Callable[[T], bool]) -> ToolCollection[T]:
         return ToolCollection([tool for tool in self if func(tool)])
 
     def clear(self) -> None:

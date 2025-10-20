@@ -1,8 +1,7 @@
 from pydantic import BaseModel, Field
 
 from crewai_tools.rag.data_types import DataType
-
-from ..rag.rag_tool import RagTool
+from crewai_tools.tools.rag.rag_tool import RagTool
 
 
 class FixedGithubSearchToolSchema(BaseModel):
@@ -61,7 +60,7 @@ class GithubSearchTool(RagTool):
             metadata={"content_types": content_types, "gh_token": self.gh_token},
         )
 
-    def _run(
+    def _run(  # type: ignore[override]
         self,
         search_query: str,
         github_repo: str | None = None,

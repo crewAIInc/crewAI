@@ -48,7 +48,7 @@ class SerplyJobSearchTool(RagTool):
             "X-Proxy-Location": self.proxy_location,
         }
 
-    def _run(
+    def _run(  # type: ignore[override]
         self,
         query: str | None = None,
         search_query: str | None = None,

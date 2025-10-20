@@ -100,7 +100,7 @@ class TestDOCXLoader:
         mock_get.side_effect = Exception("Network error")
 
         loader = DOCXLoader()
-        with pytest.raises(ValueError, match="Error fetching DOCX from URL"):
+        with pytest.raises(ValueError, match="Error fetching content from URL"):
             loader.load(SourceContent("https://example.com/test.docx"))
 
     @patch("requests.get")
@@ -110,7 +110,7 @@ class TestDOCXLoader:
         )
 
         loader = DOCXLoader()
-        with pytest.raises(ValueError, match="Error fetching DOCX from URL"):
+        with pytest.raises(ValueError, match="Error fetching content from URL"):
             loader.load(SourceContent("https://example.com/notfound.docx"))
 
     def test_load_docx_invalid_source(self):

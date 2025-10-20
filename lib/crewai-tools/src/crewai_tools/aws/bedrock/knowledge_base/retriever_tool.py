@@ -6,7 +6,10 @@ from crewai.tools import BaseTool
 from dotenv import load_dotenv
 from pydantic import BaseModel, Field
 
-from ..exceptions import BedrockKnowledgeBaseError, BedrockValidationError
+from crewai_tools.aws.bedrock.exceptions import (
+    BedrockKnowledgeBaseError,
+    BedrockValidationError,
+)
 
 
 # Load environment variables from .env file
@@ -27,7 +30,7 @@ class BedrockKBRetrieverTool(BaseTool):
         "Retrieves information from an Amazon Bedrock Knowledge Base given a query"
     )
     args_schema: type[BaseModel] = BedrockKBRetrieverToolInput
-    knowledge_base_id: str = None
+    knowledge_base_id: str = None  # type: ignore[assignment]
     number_of_results: int | None = 5
     retrieval_configuration: dict[str, Any] | None = None
     guardrail_configuration: dict[str, Any] | None = None
@@ -55,7 +58,7 @@ class BedrockKBRetrieverTool(BaseTool):
         super().__init__(**kwargs)
 
         # Get knowledge_base_id from environment variable if not provided
-        self.knowledge_base_id = knowledge_base_id or os.getenv("BEDROCK_KB_ID")
+        self.knowledge_base_id = knowledge_base_id or os.getenv("BEDROCK_KB_ID")  # type: ignore[assignment]
         self.number_of_results = number_of_results
         self.guardrail_configuration = guardrail_configuration
         self.next_token = next_token
@@ -239,7 +242,7 @@ class BedrockKBRetrieverTool(BaseTool):
             if results:
                 response_object["results"] = results
             else:
-                response_object["message"] = "No results found for the given query."
+                response_object["message"] = "No results found for the given query."  # type: ignore[assignment]
 
             if "nextToken" in response:
                 response_object["nextToken"] = response["nextToken"]
