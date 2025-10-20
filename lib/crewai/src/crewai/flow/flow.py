@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Callable, Coroutine
+from collections.abc import Callable
 from concurrent.futures import Future
 import copy
 import inspect
@@ -107,7 +107,7 @@ def ensure_state_type(state: Any, expected_type: type[StateT]) -> StateT:
             raise TypeError(
                 f"Expected {expected_type.__name__}, got {type(state).__name__}"
             )
-        return cast(StateT, state)
+        return state
     raise TypeError(f"Invalid expected_type: {expected_type}")
 
 
@@ -372,9 +372,7 @@ def or_(*conditions: str | FlowCondition | Callable[..., Any]) -> FlowCondition:
     """
     processed_conditions: FlowConditions = []
     for condition in conditions:
-        if is_flow_condition_dict(condition):
-            processed_conditions.append(condition)
-        elif is_flow_method_name(condition):
+        if is_flow_condition_dict(condition) or is_flow_method_name(condition):
             processed_conditions.append(condition)
         elif is_flow_method_callable(condition):
             processed_conditions.append(condition.__name__)
@@ -423,9 +421,7 @@ def and_(*conditions: str | FlowCondition | Callable[..., Any]) -> FlowCondition
     """
     processed_conditions: FlowConditions = []
     for condition in conditions:
-        if is_flow_condition_dict(condition):
-            processed_conditions.append(condition)
-        elif is_flow_method_name(condition):
+        if is_flow_condition_dict(condition) or is_flow_method_name(condition):
             processed_conditions.append(condition)
         elif is_flow_method_callable(condition):
             processed_conditions.append(condition.__name__)
@@ -560,9 +556,9 @@ class Flow(Generic[T], metaclass=FlowMeta):
     name: str | None = None
     tracing: bool | None = False
 
-    def __class_getitem__(cls: type[Flow], item: type[T]) -> type[Flow]:
+    def __class_getitem__(cls: type[Flow[StateT]], item: type[T]) -> type[Flow[StateT]]:
         class _FlowGeneric(cls):  # type: ignore
-            _initial_state_t = item  # type: ignore
+            _initial_state_t = item
 
         _FlowGeneric.__name__ = f"{cls.__name__}[{item.__name__}]"
         return _FlowGeneric
@@ -600,7 +596,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
             or should_auto_collect_first_time_traces()
         ):
             trace_listener = TraceCollectionListener()
-            trace_listener.setup_listeners(crewai_event_bus)
+            trace_listener.setup_listeners(crewai_event_bus)  # type: ignore[no-untyped-call]
         # Apply any additional kwargs
         if kwargs:
             self._initialize_state(kwargs)
@@ -662,13 +658,13 @@ class Flow(Generic[T], metaclass=FlowMeta):
         # Handle case where initial_state is a type (class)
         if isinstance(self.initial_state, type):
             if issubclass(self.initial_state, FlowState):
-                return cast(T, self.initial_state())  # Uses model defaults
+                return self.initial_state()  # Uses model defaults
             if issubclass(self.initial_state, BaseModel):
                 # Validate that the model has an id field
                 model_fields = getattr(self.initial_state, "model_fields", None)
                 if not model_fields or "id" not in model_fields:
                     raise ValueError("Flow state model must have an 'id' field")
-                return cast(T, self.initial_state())  # Uses model defaults
+                return self.initial_state()  # Uses model defaults
             if self.initial_state is dict:
                 return cast(T, {"id": str(uuid4())})
 
@@ -915,7 +911,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
         emission is handled in the asynchronous method.
         """
 
-        async def _run_flow() -> Coroutine[Any, Any, Any]:
+        async def _run_flow() -> Any:
             return await self.kickoff_async(inputs)
 
         return asyncio.run(_run_flow())
@@ -1031,8 +1027,8 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 trace_listener = TraceCollectionListener()
                 if trace_listener.batch_manager.batch_owner_type == "flow":
                     if trace_listener.first_time_handler.is_first_time:
-                        trace_listener.first_time_handler.mark_events_collected()
-                        trace_listener.first_time_handler.handle_execution_completion()
+                        trace_listener.first_time_handler.mark_events_collected()  # type: ignore[no-untyped-call]
+                        trace_listener.first_time_handler.handle_execution_completion()  # type: ignore[no-untyped-call]
                     else:
                         trace_listener.batch_manager.finalize_batch()
 
@@ -1076,10 +1072,12 @@ class Flow(Generic[T], metaclass=FlowMeta):
         await self._execute_listeners(start_method_name, result)
 
     def _inject_trigger_payload_for_start_method(
-        self, original_method: Callable
-    ) -> Callable:
-        def prepare_kwargs(*args, **kwargs):
-            inputs = baggage.get_baggage("flow_inputs") or {}
+        self, original_method: Callable[..., Any]
+    ) -> Callable[..., Any]:
+        def prepare_kwargs(
+            *args: Any, **kwargs: Any
+        ) -> tuple[tuple[Any, ...], dict[str, Any]]:
+            inputs = cast(dict[str, Any], baggage.get_baggage("flow_inputs") or {})
             trigger_payload = inputs.get("crewai_trigger_payload")
 
             sig = inspect.signature(original_method)
@@ -1095,12 +1093,12 @@ class Flow(Generic[T], metaclass=FlowMeta):
 
         if asyncio.iscoroutinefunction(original_method):
 
-            async def enhanced_method(*args, **kwargs):
+            async def enhanced_method(*args: Any, **kwargs: Any) -> Any:
                 args, kwargs = prepare_kwargs(*args, **kwargs)
                 return await original_method(*args, **kwargs)
         else:
 
-            def enhanced_method(*args, **kwargs):
+            def enhanced_method(*args: Any, **kwargs: Any) -> Any:  # type: ignore[misc]
                 args, kwargs = prepare_kwargs(*args, **kwargs)
                 return original_method(*args, **kwargs)
 
@@ -1110,7 +1108,11 @@ class Flow(Generic[T], metaclass=FlowMeta):
         return enhanced_method
 
     async def _execute_method(
-        self, method_name: FlowMethodName, method: Callable, *args: Any, **kwargs: Any
+        self,
+        method_name: FlowMethodName,
+        method: Callable[..., Any],
+        *args: Any,
+        **kwargs: Any,
     ) -> Any:
         try:
             dumped_params = {f"_{i}": arg for i, arg in enumerate(args)} | (
