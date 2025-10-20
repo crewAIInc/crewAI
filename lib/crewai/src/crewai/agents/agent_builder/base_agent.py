@@ -190,6 +190,10 @@ class BaseAgent(ABC, BaseModel):
         default=None,
         description="List of applications or application/action combinations that the agent can access through CrewAI Platform. Can contain app names (e.g., 'gmail') or specific actions (e.g., 'gmail/send_email')",
     )
+    mcps: list[str] | None = Field(
+        default=None,
+        description="List of MCP server references. Supports 'https://server.com/path' for external servers and 'crewai-amp:mcp-name' for AMP marketplace. Use '#tool_name' suffix for specific tools.",
+    )
 
     @model_validator(mode="before")
     @classmethod
@@ -242,6 +246,21 @@ class BaseAgent(ABC, BaseModel):
             validated_apps.append(app)
 
         return list(set(validated_apps))
+
+    @field_validator("mcps")
+    @classmethod
+    def validate_mcps(cls, mcps: list[str] | None) -> list[str] | None:
+        if not mcps:
+            return mcps
+
+        validated_mcps = []
+        for mcp in mcps:
+            if mcp.startswith('https://') or mcp.startswith('crewai-amp:'):
+                validated_mcps.append(mcp)
+            else:
+                raise ValueError(f"Invalid MCP reference: {mcp}. Must start with 'https://' or 'crewai-amp:'")
+
+        return list(set(validated_mcps))
 
     @model_validator(mode="after")
     def validate_and_set_attributes(self):
@@ -317,6 +336,10 @@ class BaseAgent(ABC, BaseModel):
     def get_platform_tools(self, apps: list[PlatformAppOrAction]) -> list[BaseTool]:
         """Get platform tools for the specified list of applications and/or application/action combinations."""
 
+    @abstractmethod
+    def get_mcp_tools(self, mcps: list[str]) -> list[BaseTool]:
+        """Get MCP tools for the specified list of MCP server references."""
+
     def copy(self: T) -> T:  # type: ignore # Signature of "copy" incompatible with supertype "BaseModel"
         """Create a deep copy of the Agent."""
         exclude = {
@@ -334,6 +357,7 @@ class BaseAgent(ABC, BaseModel):
             "knowledge_storage",
             "knowledge",
             "apps",
+            "mcps",
             "actions",
         }
 
