@@ -792,7 +792,7 @@ class Crew(FlowTrackable, BaseModel):
                 def event_generator():
                     for event in crew.kickoff_stream(inputs={"topic": "AI"}):
                         yield f"data: {json.dumps(event)}\\n\\n"
-                
+
                 return StreamingResponse(
                     event_generator(),
                     media_type="text/event-stream"
@@ -868,15 +868,13 @@ class Crew(FlowTrackable, BaseModel):
         
         try:
             while not completion_event.is_set() or not event_queue.empty():
-                try:
-                    event = event_queue.get(timeout=0.1)
+                event = event_queue.get(timeout=0.1) if not event_queue.empty() else None
+                if event is not None:
                     yield event
-                except queue.Empty:
-                    continue
-            
+
             if exception_holder["exception"]:
                 raise exception_holder["exception"]
-                
+
         finally:
             thread.join(timeout=1)
 

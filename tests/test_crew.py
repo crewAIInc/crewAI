@@ -4757,9 +4757,7 @@ def test_crew_kickoff_stream(researcher):
 
     crew = Crew(agents=[researcher], tasks=[task])
 
-    events = []
-    for event in crew.kickoff_stream():
-        events.append(event)
+    events = list(crew.kickoff_stream())
 
     assert len(events) > 0
 
@@ -4784,9 +4782,7 @@ def test_crew_kickoff_stream_with_inputs(researcher):
 
     crew = Crew(agents=[researcher], tasks=[task])
 
-    events = []
-    for event in crew.kickoff_stream(inputs={"topic": "machine learning"}):
-        events.append(event)
+    events = list(crew.kickoff_stream(inputs={"topic": "machine learning"}))
 
     assert len(events) > 0
 
@@ -4806,9 +4802,7 @@ def test_crew_kickoff_stream_includes_llm_chunks(researcher):
 
     crew = Crew(agents=[researcher], tasks=[task])
 
-    events = []
-    for event in crew.kickoff_stream():
-        events.append(event)
+    events = list(crew.kickoff_stream())
 
     event_types = [event["type"] for event in events]
 
