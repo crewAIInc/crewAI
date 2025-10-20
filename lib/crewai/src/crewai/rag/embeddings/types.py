@@ -1,6 +1,6 @@
 """Type definitions for the embeddings module."""
 
-from typing import Literal, TypeAlias
+from typing import Any, Literal, TypeAlias
 
 from crewai.rag.core.base_embeddings_provider import BaseEmbeddingsProvider
 from crewai.rag.embeddings.providers.aws.types import BedrockProviderSpec
@@ -12,7 +12,6 @@ from crewai.rag.embeddings.providers.google.types import (
 )
 from crewai.rag.embeddings.providers.huggingface.types import HuggingFaceProviderSpec
 from crewai.rag.embeddings.providers.ibm.types import (
-    WatsonProviderSpec,
     WatsonXProviderSpec,
 )
 from crewai.rag.embeddings.providers.instructor.types import InstructorProviderSpec
@@ -48,7 +47,6 @@ ProviderSpec = (
     | Text2VecProviderSpec
     | VertexAIProviderSpec
     | VoyageAIProviderSpec
-    | WatsonProviderSpec  # Deprecated, use WatsonXProviderSpec
     | WatsonXProviderSpec
 )
 
@@ -71,9 +69,8 @@ AllowedEmbeddingProviders = Literal[
     "text2vec",
     "voyageai",
     "watsonx",
-    "watson",  # for backward compatibility until v1.0.0
 ]
 
 EmbedderConfig: TypeAlias = (
-    ProviderSpec | BaseEmbeddingsProvider | type[BaseEmbeddingsProvider]
+    ProviderSpec | BaseEmbeddingsProvider[Any] | type[BaseEmbeddingsProvider[Any]]
 )
