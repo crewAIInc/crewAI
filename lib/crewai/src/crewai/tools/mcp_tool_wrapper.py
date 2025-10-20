@@ -1,10 +1,9 @@
 """MCP Tool Wrapper for on-demand MCP server connections."""
 
 import asyncio
-import time
-from typing import Any
 
 from crewai.tools import BaseTool
+
 
 # MCP Connection timeout constants (in seconds)
 MCP_CONNECTION_TIMEOUT = 10
@@ -84,7 +83,7 @@ class MCPToolWrapper(BaseTool):
         except asyncio.TimeoutError:
             return f"MCP tool '{self.original_tool_name}' timed out after {MCP_TOOL_EXECUTION_TIMEOUT} seconds"
         except Exception as e:
-            return f"Error executing MCP tool {self.original_tool_name}: {str(e)}"
+            return f"Error executing MCP tool {self.original_tool_name}: {e!s}"
 
     async def _run_async(self, **kwargs) -> str:
         """Async implementation of MCP tool execution with timeouts and retry logic."""
@@ -104,8 +103,7 @@ class MCPToolWrapper(BaseTool):
                     wait_time = 2 ** attempt  # Exponential backoff
                     await asyncio.sleep(wait_time)
                     continue
-                else:
-                    break
+                break
 
             except ImportError:
                 return "MCP library not available. Please install with: pip install mcp"
@@ -115,23 +113,22 @@ class MCPToolWrapper(BaseTool):
 
                 # Handle specific error types
                 if 'connection' in error_str or 'network' in error_str:
-                    last_error = f"Network connection failed: {str(e)}"
+                    last_error = f"Network connection failed: {e!s}"
                 elif 'authentication' in error_str or 'unauthorized' in error_str:
-                    return f"Authentication failed for MCP server: {str(e)}"
+                    return f"Authentication failed for MCP server: {e!s}"
                 elif 'json' in error_str or 'parsing' in error_str:
-                    last_error = f"Server response parsing error: {str(e)}"
+                    last_error = f"Server response parsing error: {e!s}"
                 elif 'not found' in error_str:
                     return f"Tool '{self.original_tool_name}' not found on MCP server"
                 else:
-                    last_error = f"MCP execution error: {str(e)}"
+                    last_error = f"MCP execution error: {e!s}"
 
                 # Retry for transient errors
                 if attempt < MCP_MAX_RETRIES - 1 and ('connection' in error_str or 'network' in error_str or 'json' in error_str):
                     wait_time = 2 ** attempt  # Exponential backoff
                     await asyncio.sleep(wait_time)
                     continue
-                else:
-                    break
+                break
 
         return f"MCP tool execution failed after {MCP_MAX_RETRIES} attempts: {last_error}"
 
@@ -163,9 +160,6 @@ class MCPToolWrapper(BaseTool):
                         content_item = result.content[0]
                         if hasattr(content_item, 'text'):
                             return str(content_item.text)
-                        else:
-                            return str(content_item)
-                    else:
-                        return str(result.content)
-                else:
-                    return str(result)
+                        return str(content_item)
+                    return str(result.content)
+                return str(result)

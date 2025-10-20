@@ -1,5 +1,5 @@
-from collections.abc import Callable, Sequence
 import asyncio
+from collections.abc import Callable, Sequence
 import shutil
 import subprocess
 import time
@@ -55,6 +55,7 @@ from crewai.utilities.llm_utils import create_llm
 from crewai.utilities.token_counter_callback import TokenCalcHandler
 from crewai.utilities.training_handler import CrewTrainingHandler
 from crewai.utilities.types import LLMMessage
+
 
 # MCP Connection timeout constants (in seconds)
 MCP_CONNECTION_TIMEOUT = 10
@@ -769,8 +770,7 @@ class Agent(BaseAgent):
                     wait_time = 2 ** attempt  # Exponential backoff
                     await asyncio.sleep(wait_time)
                     continue
-                else:
-                    break
+                break
 
             except ImportError:
                 raise RuntimeError("MCP library not available. Please install with: pip install mcp")
@@ -780,21 +780,20 @@ class Agent(BaseAgent):
 
                 # Handle specific error types
                 if 'connection' in error_str or 'network' in error_str:
-                    last_error = f"Network connection failed: {str(e)}"
+                    last_error = f"Network connection failed: {e!s}"
                 elif 'authentication' in error_str or 'unauthorized' in error_str:
-                    raise RuntimeError(f"Authentication failed for MCP server: {str(e)}")
+                    raise RuntimeError(f"Authentication failed for MCP server: {e!s}")
                 elif 'json' in error_str or 'parsing' in error_str:
-                    last_error = f"Server response parsing error: {str(e)}"
+                    last_error = f"Server response parsing error: {e!s}"
                 else:
-                    last_error = f"MCP discovery error: {str(e)}"
+                    last_error = f"MCP discovery error: {e!s}"
 
                 # Retry for transient errors
                 if attempt < MCP_MAX_RETRIES - 1 and ('connection' in error_str or 'network' in error_str or 'json' in error_str):
                     wait_time = 2 ** attempt  # Exponential backoff
                     await asyncio.sleep(wait_time)
                     continue
-                else:
-                    break
+                break
 
         raise RuntimeError(f"Failed to discover MCP tools after {MCP_MAX_RETRIES} attempts: {last_error}")
 
