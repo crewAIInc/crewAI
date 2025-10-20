@@ -72,38 +72,44 @@ def CrewBase(cls: T) -> T:  # noqa: N802
 
             # Add close mcp server method to after kickoff
             bound_method = self._create_close_mcp_server_method()
-            self._after_kickoff['_close_mcp_server'] = bound_method
+            self._after_kickoff["_close_mcp_server"] = bound_method
 
         def _create_close_mcp_server_method(self):
-            def _close_mcp_server(self, instance, outputs):
-                adapter = getattr(self, '_mcp_server_adapter', None)
-                if adapter is not None:
-                    try:
-                        adapter.stop()
-                    except Exception as e:
-                        logging.warning(f"Error stopping MCP server: {e}")
+            import weakref
+
+            def _close_mcp_server(instance_ref, outputs):
+                # Use weak reference to avoid circular reference
+                instance = instance_ref()
+                if instance is not None:
+                    adapter = getattr(instance, "_mcp_server_adapter", None)
+                    if adapter is not None:
+                        try:
+                            adapter.stop()
+                        except Exception as e:
+                            logging.warning(f"Error stopping MCP server: {e}")
                 return outputs
 
             _close_mcp_server.is_after_kickoff = True
 
-            import types
-            return types.MethodType(_close_mcp_server, self)
+            # Create a partial function with weak reference instead of bound method
+            import functools
+
+            instance_ref = weakref.ref(self)
+            return functools.partial(_close_mcp_server, instance_ref)
 
         def get_mcp_tools(self, *tool_names: list[str]) -> list[BaseTool]:
             if not self.mcp_server_params:
                 return []
 
-            from crewai_tools import MCPServerAdapter  # type: ignore[import-untyped]
+            from crewai_tools import MCPServerAdapter  # type: ignore[import-not-found]
 
-            adapter = getattr(self, '_mcp_server_adapter', None)
+            adapter = getattr(self, "_mcp_server_adapter", None)
             if not adapter:
                 self._mcp_server_adapter = MCPServerAdapter(
-                    self.mcp_server_params,
-                    connect_timeout=self.mcp_connect_timeout
+                    self.mcp_server_params, connect_timeout=self.mcp_connect_timeout
                 )
 
             return self._mcp_server_adapter.tools.filter_by_names(tool_names or None)
-
 
         def load_configurations(self):
             """Load agent and task configurations from YAML files."""
@@ -209,9 +215,13 @@ def CrewBase(cls: T) -> T:  # noqa: N802
 
             if function_calling_llm := agent_info.get("function_calling_llm"):
                 try:
-                    self.agents_config[agent_name]["function_calling_llm"] = llms[function_calling_llm]()
+                    self.agents_config[agent_name]["function_calling_llm"] = llms[
+                        function_calling_llm
+                    ]()
                 except KeyError:
-                    self.agents_config[agent_name]["function_calling_llm"] = function_calling_llm
+                    self.agents_config[agent_name]["function_calling_llm"] = (
+                        function_calling_llm
+                    )
 
             if step_callback := agent_info.get("step_callback"):
                 self.agents_config[agent_name]["step_callback"] = callbacks[
@@ -289,6 +299,48 @@ def CrewBase(cls: T) -> T:  # noqa: N802
 
             if guardrail := task_info.get("guardrail"):
                 self.tasks_config[task_name]["guardrail"] = guardrail
+
+        def __del__(self):
+            """Cleanup method to help with garbage collection."""
+            try:
+                # Clear any cached references
+                if hasattr(self, "_original_functions"):
+                    self._original_functions.clear()
+                if hasattr(self, "_original_tasks"):
+                    self._original_tasks.clear()
+                if hasattr(self, "_original_agents"):
+                    self._original_agents.clear()
+                if hasattr(self, "_before_kickoff"):
+                    self._before_kickoff.clear()
+                if hasattr(self, "_after_kickoff"):
+                    self._after_kickoff.clear()
+                if hasattr(self, "_kickoff"):
+                    self._kickoff.clear()
+
+                # Close MCP server adapter if it exists
+                if hasattr(self, "_mcp_server_adapter") and self._mcp_server_adapter:
+                    try:
+                        self._mcp_server_adapter.stop()
+                    except Exception:  # noqa: S110
+                        pass  # Ignore errors during cleanup
+                    self._mcp_server_adapter = None
+
+            except Exception:  # noqa: S110
+                # Ignore any errors during cleanup to prevent issues in garbage collection
+                pass
+
+        def cleanup(self):
+            """Explicit cleanup method that users can call to release resources."""
+            # Clear memoization caches for all decorated methods
+            for method in self._original_functions.values():
+                if hasattr(method, "clear_cache"):
+                    try:
+                        method.clear_cache()
+                    except Exception:  # noqa: S110
+                        pass  # Ignore errors during cleanup
+
+            # Call the __del__ method to perform cleanup
+            self.__del__()
 
     # Include base class (qual)name in the wrapper class (qual)name.
     WrappedClass.__name__ = CrewBase.__name__ + "(" + cls.__name__ + ")"
