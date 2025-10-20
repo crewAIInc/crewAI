@@ -1,5 +1,5 @@
 version = 1
-revision = 2
+revision = 3
 requires-python = ">=3.10, <3.14"
 resolution-markers = [
     "python_full_version >= '3.13' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin'",
@@ -27,10 +27,6 @@ resolution-markers = [
     "python_full_version < '3.11' and platform_machine == 'aarch64' and platform_python_implementation == 'PyPy' and sys_platform == 'linux'",
     "(python_full_version < '3.11' and platform_machine != 'aarch64' and platform_python_implementation == 'PyPy' and sys_platform == 'linux') or (python_full_version < '3.11' and platform_python_implementation == 'PyPy' and sys_platform != 'darwin' and sys_platform != 'linux')",
 ]
-conflicts = [[
-    { package = "crewai", extra = "a2a" },
-    { package = "crewai", extra = "aisuite" },
-]]
 
 [manifest]
 members = [
@@ -64,29 +60,13 @@ dev = [
 ]
 
 [[package]]
-name = "a2a-sdk"
-version = "0.3.9"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "google-api-core" },
-    { name = "httpx", version = "0.28.1", source = { registry = "https://pypi.org/simple" } },
-    { name = "httpx-sse" },
-    { name = "protobuf" },
-    { name = "pydantic" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/65/0b/80671e784f61b55ac4c340d125d121ba91eba58ad7ba0f03b53b3831cd32/a2a_sdk-0.3.9.tar.gz", hash = "sha256:1dff7b5b1cab0b221519d0faed50176e200a1a87a8de8b64308d876505cc7c77", size = 224528, upload-time = "2025-10-15T17:35:28.299Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/34/ee/53b2da6d2768b136f996b8c6ab00ebcc44852f9a33816a64deaca6b279fe/a2a_sdk-0.3.9-py3-none-any.whl", hash = "sha256:7ed03a915bae98def46ea0313786da0a7a488346c3dc8af88407bb0b2a763926", size = 139027, upload-time = "2025-10-15T17:35:26.628Z" },
-]
-
-[[package]]
 name = "accelerate"
 version = "1.11.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "huggingface-hub" },
-    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "numpy", version = "2.3.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
+    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "numpy", version = "2.3.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "packaging" },
     { name = "psutil" },
     { name = "pyyaml" },
@@ -123,7 +103,7 @@ source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiohappyeyeballs" },
     { name = "aiosignal" },
-    { name = "async-timeout", marker = "python_full_version < '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
+    { name = "async-timeout", marker = "python_full_version < '3.11'" },
     { name = "attrs" },
     { name = "frozenlist" },
     { name = "multidict" },
@@ -217,7 +197,7 @@ version = "1.4.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "frozenlist" },
-    { name = "typing-extensions", marker = "python_full_version < '3.13' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
+    { name = "typing-extensions", marker = "python_full_version < '3.13'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/61/62/06741b579156360248d1ec624842ad0edf697050bbaf7c3e46394e106ad1/aiosignal-1.4.0.tar.gz", hash = "sha256:f47eecd9468083c2029cc99945502cb7708b082c232f9aca65da147157b251c7", size = 25007, upload-time = "2025-07-03T22:54:43.528Z" }
 wheels = [
@@ -229,7 +209,7 @@ name = "aisuite"
 version = "0.1.11"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "httpx", version = "0.27.2", source = { registry = "https://pypi.org/simple" } },
+    { name = "httpx" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/17/07/129a68a6f74a80fc1d189064a2f576a84a1a05f14f211fde9352668d1c25/aisuite-0.1.11.tar.gz", hash = "sha256:27260075f8502b9cb40ef476cae29544e39316bbf4b4318464eb4c728e72146a", size = 27533, upload-time = "2025-03-26T12:04:44.068Z" }
 wheels = [
@@ -253,8 +233,7 @@ dependencies = [
     { name = "anyio" },
     { name = "distro" },
     { name = "docstring-parser" },
-    { name = "httpx", version = "0.27.2", source = { registry = "https://pypi.org/simple" }, marker = "extra == 'extra-6-crewai-aisuite'" },
-    { name = "httpx", version = "0.28.1", source = { registry = "https://pypi.org/simple" }, marker = "extra == 'extra-6-crewai-a2a' or extra != 'extra-6-crewai-aisuite'" },
+    { name = "httpx" },
     { name = "jiter" },
     { name = "pydantic" },
     { name = "sniffio" },
@@ -276,10 +255,10 @@ name = "anyio"
 version = "4.11.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "exceptiongroup", marker = "python_full_version < '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
+    { name = "exceptiongroup", marker = "python_full_version < '3.11'" },
     { name = "idna" },
     { name = "sniffio" },
-    { name = "typing-extensions", marker = "python_full_version < '3.13' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
+    { name = "typing-extensions", marker = "python_full_version < '3.13'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/c6/78/7d432127c41b50bccba979505f272c16cbcadcc33645d5fa3a738110ae75/anyio-4.11.0.tar.gz", hash = "sha256:82a8d0b81e318cc5ce71a5f1f8b5c4e63619620b63141ef8c995fa0db95a57c4", size = 219094, upload-time = "2025-09-23T09:19:12.58Z" }
 wheels = [
@@ -293,8 +272,7 @@ source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "apify-shared" },
     { name = "colorama" },
-    { name = "httpx", version = "0.27.2", source = { registry = "https://pypi.org/simple" }, marker = "extra == 'extra-6-crewai-aisuite'" },
-    { name = "httpx", version = "0.28.1", source = { registry = "https://pypi.org/simple" }, marker = "extra == 'extra-6-crewai-a2a' or extra != 'extra-6-crewai-aisuite'" },
+    { name = "httpx" },
     { name = "more-itertools" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/33/cf/610171fc8f95a6dfe719f9a8b1208cbba4c24b04502ecd169143fcd1596e/apify_client-1.12.2.tar.gz", hash = "sha256:666c908f3aa82142fe95e14444590d9abcaf2bbcae97d10e77bae64448f3466c", size = 355631, upload-time = "2025-08-08T13:20:26.36Z" }
@@ -418,7 +396,7 @@ name = "bandit"
 version = "1.8.6"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "colorama", marker = "sys_platform == 'win32' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
+    { name = "colorama", marker = "sys_platform == 'win32'" },
     { name = "pyyaml" },
     { name = "rich" },
     { name = "stevedore" },
@@ -508,8 +486,8 @@ dependencies = [
     { name = "pydantic" },
     { name = "starlette" },
     { name = "typing-extensions" },
-    { name = "urllib3", version = "1.26.20", source = { registry = "https://pypi.org/simple" }, marker = "platform_python_implementation == 'PyPy' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "urllib3", version = "2.5.0", source = { registry = "https://pypi.org/simple" }, marker = "platform_python_implementation != 'PyPy' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
+    { name = "urllib3", version = "1.26.20", source = { registry = "https://pypi.org/simple" }, marker = "platform_python_implementation == 'PyPy'" },
+    { name = "urllib3", version = "2.5.0", source = { registry = "https://pypi.org/simple" }, marker = "platform_python_implementation != 'PyPy'" },
     { name = "uvicorn" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/72/57/eee3388b8e6e38c5d667f54053df9718ad1be456ce5885865c8074d726b4/bedrock_agentcore-1.0.3.tar.gz", hash = "sha256:67dcc3a47815d36f368fc3f51636b9ee6a0e0ca8a908868d5bafd4a88efcad93", size = 267907, upload-time = "2025-10-16T18:26:30.062Z" }
@@ -538,7 +516,7 @@ source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "botocore-stubs" },
     { name = "types-s3transfer" },
-    { name = "typing-extensions", marker = "python_full_version < '3.12' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
+    { name = "typing-extensions", marker = "python_full_version < '3.12'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/8f/a2/7e6198f3ae0e1d68b19f51927c33c4080091ecd891077abdf2924fb2c515/boto3_stubs-1.40.55.tar.gz", hash = "sha256:a11adaf8eac77c4ed4c1b7bf7241b0cd9ad023dc1c17c49b45f35adf4c21b7ff", size = 100910, upload-time = "2025-10-17T19:48:19.307Z" }
 wheels = [
@@ -557,8 +535,8 @@ source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "jmespath" },
     { name = "python-dateutil" },
-    { name = "urllib3", version = "1.26.20", source = { registry = "https://pypi.org/simple" }, marker = "platform_python_implementation == 'PyPy' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "urllib3", version = "2.5.0", source = { registry = "https://pypi.org/simple" }, marker = "platform_python_implementation != 'PyPy' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
+    { name = "urllib3", version = "1.26.20", source = { registry = "https://pypi.org/simple" }, marker = "platform_python_implementation == 'PyPy'" },
+    { name = "urllib3", version = "2.5.0", source = { registry = "https://pypi.org/simple" }, marker = "platform_python_implementation != 'PyPy'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/a4/92/dce4842b2e215d213d34b064fcdd13c6a782c43344e77336bcde586e9229/botocore-1.40.55.tar.gz", hash = "sha256:79b6472e2de92b3519d44fc1eec8c5feced7f99a0d10fdea6dc93133426057c1", size = 14446917, upload-time = "2025-10-17T19:34:47.44Z" }
 wheels = [
@@ -584,8 +562,7 @@ source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "anyio" },
     { name = "distro" },
-    { name = "httpx", version = "0.27.2", source = { registry = "https://pypi.org/simple" }, marker = "extra == 'extra-6-crewai-aisuite'" },
-    { name = "httpx", version = "0.28.1", source = { registry = "https://pypi.org/simple" }, marker = "extra == 'extra-6-crewai-a2a' or extra != 'extra-6-crewai-aisuite'" },
+    { name = "httpx" },
     { name = "pydantic" },
     { name = "sniffio" },
     { name = "typing-extensions" },
@@ -600,11 +577,11 @@ name = "build"
 version = "1.3.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "colorama", marker = "(os_name == 'nt' and platform_machine != 'aarch64' and sys_platform == 'linux') or (os_name == 'nt' and sys_platform != 'darwin' and sys_platform != 'linux') or (os_name != 'nt' and extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite') or (platform_machine == 'aarch64' and sys_platform == 'linux' and extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite') or (sys_platform == 'darwin' and extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "importlib-metadata", marker = "python_full_version < '3.10.2' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
+    { name = "colorama", marker = "(os_name == 'nt' and platform_machine != 'aarch64' and sys_platform == 'linux') or (os_name == 'nt' and sys_platform != 'darwin' and sys_platform != 'linux')" },
+    { name = "importlib-metadata", marker = "python_full_version < '3.10.2'" },
     { name = "packaging" },
     { name = "pyproject-hooks" },
-    { name = "tomli", marker = "python_full_version < '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
+    { name = "tomli", marker = "python_full_version < '3.11'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/25/1c/23e33405a7c9eac261dff640926b8b5adaed6a6eb3e1767d441ed611d0c0/build-1.3.0.tar.gz", hash = "sha256:698edd0ea270bde950f53aed21f3a0135672206f3911e0176261a31e0e07b397", size = 48544, upload-time = "2025-08-01T21:27:09.268Z" }
 wheels = [
@@ -776,14 +753,13 @@ dependencies = [
     { name = "bcrypt" },
     { name = "build" },
     { name = "grpcio" },
-    { name = "httpx", version = "0.27.2", source = { registry = "https://pypi.org/simple" }, marker = "extra == 'extra-6-crewai-aisuite'" },
-    { name = "httpx", version = "0.28.1", source = { registry = "https://pypi.org/simple" }, marker = "extra == 'extra-6-crewai-a2a' or extra != 'extra-6-crewai-aisuite'" },
+    { name = "httpx" },
     { name = "importlib-resources" },
     { name = "jsonschema" },
     { name = "kubernetes" },
     { name = "mmh3" },
-    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "numpy", version = "2.3.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
+    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "numpy", version = "2.3.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "onnxruntime" },
     { name = "opentelemetry-api" },
     { name = "opentelemetry-exporter-otlp-proto-grpc" },
@@ -817,7 +793,7 @@ name = "click"
 version = "8.3.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "colorama", marker = "sys_platform == 'win32' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
+    { name = "colorama", marker = "sys_platform == 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/46/61/de6cd827efad202d7057d93e0fed9294b96952e188f7384832791c7b2254/click-8.3.0.tar.gz", hash = "sha256:e7b8232224eba16f4ebe410c25ced9f7875cb5f3263ffc93cc3e8da705e229c4", size = 276943, upload-time = "2025-09-18T17:32:23.696Z" }
 wheels = [
@@ -850,7 +826,7 @@ name = "colorlog"
 version = "6.10.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "colorama", marker = "sys_platform == 'win32' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
+    { name = "colorama", marker = "sys_platform == 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/a2/61/f083b5ac52e505dfc1c624eafbf8c7589a0d7f32daa398d2e7590efa5fda/colorlog-6.10.1.tar.gz", hash = "sha256:eb4ae5cb65fe7fec7773c2306061a8e63e02efc2c72eba9d27b0fa23c94f1321", size = 17162, upload-time = "2025-10-16T16:14:11.978Z" }
 wheels = [
@@ -893,8 +869,7 @@ source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "anyio" },
     { name = "distro" },
-    { name = "httpx", version = "0.27.2", source = { registry = "https://pypi.org/simple" }, marker = "extra == 'extra-6-crewai-aisuite'" },
-    { name = "httpx", version = "0.28.1", source = { registry = "https://pypi.org/simple" }, marker = "extra == 'extra-6-crewai-a2a' or extra != 'extra-6-crewai-aisuite'" },
+    { name = "httpx" },
     { name = "pydantic" },
     { name = "sniffio" },
     { name = "typing-extensions" },
@@ -917,7 +892,7 @@ resolution-markers = [
     "(python_full_version < '3.11' and platform_machine != 'aarch64' and platform_python_implementation == 'PyPy' and sys_platform == 'linux') or (python_full_version < '3.11' and platform_python_implementation == 'PyPy' and sys_platform != 'darwin' and sys_platform != 'linux')",
 ]
 dependencies = [
-    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
+    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/66/54/eb9bfc647b19f2009dd5c7f5ec51c4e6ca831725f1aea7a993034f483147/contourpy-1.3.2.tar.gz", hash = "sha256:b6945942715a034c671b7fc54f9588126b0b8bf23db2696e3ca8328f3ff0ab54", size = 13466130, upload-time = "2025-04-15T17:47:53.79Z" }
 wheels = [
@@ -1004,7 +979,7 @@ resolution-markers = [
     "(python_full_version == '3.11.*' and platform_machine != 'aarch64' and platform_python_implementation == 'PyPy' and sys_platform == 'linux') or (python_full_version == '3.11.*' and platform_python_implementation == 'PyPy' and sys_platform != 'darwin' and sys_platform != 'linux')",
 ]
 dependencies = [
-    { name = "numpy", version = "2.3.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
+    { name = "numpy", version = "2.3.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/58/01/1253e6698a07380cd31a736d248a3f2a50a7c88779a1813da27503cadc2a/contourpy-1.3.3.tar.gz", hash = "sha256:083e12155b210502d0bca491432bb04d56dc3432f95a979b429f2848c3dbe880", size = 13466174, upload-time = "2025-07-26T12:03:12.549Z" }
 wheels = [
@@ -1123,10 +1098,6 @@ dependencies = [
 ]
 
 [package.optional-dependencies]
-a2a = [
-    { name = "a2a-sdk" },
-    { name = "httpx-sse" },
-]
 aisuite = [
     { name = "aisuite" },
 ]
@@ -1176,13 +1147,12 @@ voyageai = [
     { name = "voyageai" },
 ]
 watson = [
-    { name = "ibm-watsonx-ai", version = "1.3.42", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "ibm-watsonx-ai", version = "1.4.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
+    { name = "ibm-watsonx-ai", version = "1.3.42", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "ibm-watsonx-ai", version = "1.4.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
 ]
 
 [package.metadata]
 requires-dist = [
-    { name = "a2a-sdk", marker = "extra == 'a2a'", specifier = "~=0.3.9" },
     { name = "aisuite", marker = "extra == 'aisuite'", specifier = ">=0.1.11" },
     { name = "anthropic", marker = "extra == 'anthropic'", specifier = ">=0.69.0" },
     { name = "appdirs", specifier = ">=1.4.4" },
@@ -1194,7 +1164,6 @@ requires-dist = [
     { name = "crewai-tools", marker = "extra == 'tools'", editable = "lib/crewai-tools" },
     { name = "docling", marker = "extra == 'docling'", specifier = ">=2.12.0" },
     { name = "google-genai", marker = "extra == 'google-genai'", specifier = ">=1.2.0" },
-    { name = "httpx-sse", marker = "extra == 'a2a'", specifier = ">=0.4.0" },
     { name = "ibm-watsonx-ai", marker = "extra == 'watson'", specifier = ">=1.3.39" },
     { name = "instructor", specifier = ">=1.3.3" },
     { name = "json-repair", specifier = "==0.25.2" },
@@ -1227,7 +1196,7 @@ requires-dist = [
     { name = "uv", specifier = ">=0.4.25" },
     { name = "voyageai", marker = "extra == 'voyageai'", specifier = ">=0.3.5" },
 ]
-provides-extras = ["a2a", "aisuite", "anthropic", "aws", "azure-ai-inference", "bedrock", "docling", "embeddings", "google-genai", "litellm", "mem0", "openpyxl", "pandas", "pdfplumber", "qdrant", "tools", "voyageai", "watson"]
+provides-extras = ["aisuite", "anthropic", "aws", "azure-ai-inference", "bedrock", "docling", "embeddings", "google-genai", "litellm", "mem0", "openpyxl", "pandas", "pdfplumber", "qdrant", "tools", "voyageai", "watson"]
 
 [[package]]
 name = "crewai-devtools"
@@ -1348,15 +1317,15 @@ scrapfly-sdk = [
     { name = "scrapfly-sdk" },
 ]
 selenium = [
-    { name = "selenium", version = "4.32.0", source = { registry = "https://pypi.org/simple" }, marker = "platform_python_implementation == 'PyPy' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "selenium", version = "4.37.0", source = { registry = "https://pypi.org/simple" }, marker = "platform_python_implementation != 'PyPy' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
+    { name = "selenium", version = "4.32.0", source = { registry = "https://pypi.org/simple" }, marker = "platform_python_implementation == 'PyPy'" },
+    { name = "selenium", version = "4.37.0", source = { registry = "https://pypi.org/simple" }, marker = "platform_python_implementation != 'PyPy'" },
 ]
 serpapi = [
     { name = "serpapi" },
 ]
 singlestore = [
-    { name = "singlestoredb", version = "1.12.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "singlestoredb", version = "1.15.8", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
+    { name = "singlestoredb", version = "1.12.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "singlestoredb", version = "1.15.8", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "sqlalchemy" },
 ]
 snowflake = [
@@ -1447,8 +1416,8 @@ name = "cryptography"
 version = "46.0.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "cffi", marker = "platform_python_implementation != 'PyPy' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "typing-extensions", marker = "python_full_version < '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
+    { name = "cffi", marker = "platform_python_implementation != 'PyPy'" },
+    { name = "typing-extensions", marker = "python_full_version < '3.11'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/80/ee/04cd4314db26ffc951c1ea90bde30dd226880ab9343759d7abbecef377ee/cryptography-46.0.0.tar.gz", hash = "sha256:99f64a6d15f19f3afd78720ad2978f6d8d4c68cd4eb600fab82ab1a7c2071dca", size = 749158, upload-time = "2025-09-16T21:07:49.091Z" }
 wheels = [
@@ -1621,10 +1590,10 @@ name = "docker"
 version = "7.1.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "pywin32", marker = "sys_platform == 'win32' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
+    { name = "pywin32", marker = "sys_platform == 'win32'" },
     { name = "requests" },
-    { name = "urllib3", version = "1.26.20", source = { registry = "https://pypi.org/simple" }, marker = "platform_python_implementation == 'PyPy' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "urllib3", version = "2.5.0", source = { registry = "https://pypi.org/simple" }, marker = "platform_python_implementation != 'PyPy' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
+    { name = "urllib3", version = "1.26.20", source = { registry = "https://pypi.org/simple" }, marker = "platform_python_implementation == 'PyPy'" },
+    { name = "urllib3", version = "2.5.0", source = { registry = "https://pypi.org/simple" }, marker = "platform_python_implementation != 'PyPy'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/91/9b/4a2ea29aeba62471211598dac5d96825bb49348fa07e906ea930394a83ce/docker-7.1.0.tar.gz", hash = "sha256:ad8c70e6e3f8926cb8a92619b832b4ea5299e2831c14284663184e200546fa6c", size = 117834, upload-time = "2024-05-23T11:13:57.216Z" }
 wheels = [
@@ -1646,7 +1615,7 @@ dependencies = [
     { name = "huggingface-hub" },
     { name = "lxml" },
     { name = "marko" },
-    { name = "ocrmac", marker = "sys_platform == 'darwin' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
+    { name = "ocrmac", marker = "sys_platform == 'darwin'" },
     { name = "openpyxl" },
     { name = "pandas" },
     { name = "pillow" },
@@ -1661,8 +1630,8 @@ dependencies = [
     { name = "rapidocr" },
     { name = "requests" },
     { name = "rtree" },
-    { name = "scipy", version = "1.15.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "scipy", version = "1.16.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
+    { name = "scipy", version = "1.15.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "scipy", version = "1.16.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "tqdm" },
     { name = "typer" },
 ]
@@ -1707,8 +1676,8 @@ dependencies = [
     { name = "docling-core" },
     { name = "huggingface-hub" },
     { name = "jsonlines" },
-    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "numpy", version = "2.3.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
+    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "numpy", version = "2.3.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "pillow" },
     { name = "pydantic" },
     { name = "rtree" },
@@ -1731,7 +1700,7 @@ dependencies = [
     { name = "docling-core" },
     { name = "pillow" },
     { name = "pydantic" },
-    { name = "pywin32", marker = "sys_platform == 'win32' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
+    { name = "pywin32", marker = "sys_platform == 'win32'" },
     { name = "tabulate" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/00/27/667d4e150d5131ca5a85a57bce908d434ca73d459e961fb1201bdd56e7e4/docling_parse-4.7.0.tar.gz", hash = "sha256:ba533b90b8032a3fceee7b603243fb2b5e3438e710c75c58a61491c185f2ca0c", size = 66486859, upload-time = "2025-10-20T13:45:45.557Z" }
@@ -1841,7 +1810,7 @@ name = "exceptiongroup"
 version = "1.3.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "typing-extensions", marker = "python_full_version < '3.13' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
+    { name = "typing-extensions", marker = "python_full_version < '3.13'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/0b/9f/a65090624ecf468cdca03533906e7c69ed7588582240cfe7cc9e770b50eb/exceptiongroup-1.3.0.tar.gz", hash = "sha256:b241f5885f560bc56a59ee63ca4c6a8bfa46ae4ad651af316d4e81817bb9fd88", size = 29749, upload-time = "2025-05-10T17:42:51.123Z" }
 wheels = [
@@ -1900,8 +1869,8 @@ dependencies = [
     { name = "huggingface-hub" },
     { name = "loguru" },
     { name = "mmh3" },
-    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "numpy", version = "2.3.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
+    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "numpy", version = "2.3.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "onnxruntime" },
     { name = "pillow" },
     { name = "py-rust-stemmers" },
@@ -1990,8 +1959,7 @@ version = "4.5.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiohttp" },
-    { name = "httpx", version = "0.27.2", source = { registry = "https://pypi.org/simple" }, marker = "extra == 'extra-6-crewai-aisuite'" },
-    { name = "httpx", version = "0.28.1", source = { registry = "https://pypi.org/simple" }, marker = "extra == 'extra-6-crewai-a2a' or extra != 'extra-6-crewai-aisuite'" },
+    { name = "httpx" },
     { name = "nest-asyncio" },
     { name = "pydantic" },
     { name = "python-dotenv" },
@@ -2475,38 +2443,12 @@ wheels = [
 name = "httpx"
 version = "0.27.2"
 source = { registry = "https://pypi.org/simple" }
-resolution-markers = [
-    "python_full_version >= '3.13' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin'",
-    "python_full_version >= '3.13' and platform_machine == 'aarch64' and platform_python_implementation != 'PyPy' and sys_platform == 'linux'",
-    "(python_full_version >= '3.13' and platform_machine != 'aarch64' and platform_python_implementation != 'PyPy' and sys_platform == 'linux') or (python_full_version >= '3.13' and platform_python_implementation != 'PyPy' and sys_platform != 'darwin' and sys_platform != 'linux')",
-    "python_full_version == '3.12.*' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin'",
-    "python_full_version == '3.12.*' and platform_machine == 'aarch64' and platform_python_implementation != 'PyPy' and sys_platform == 'linux'",
-    "(python_full_version == '3.12.*' and platform_machine != 'aarch64' and platform_python_implementation != 'PyPy' and sys_platform == 'linux') or (python_full_version == '3.12.*' and platform_python_implementation != 'PyPy' and sys_platform != 'darwin' and sys_platform != 'linux')",
-    "python_full_version == '3.11.*' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin'",
-    "python_full_version == '3.11.*' and platform_machine == 'aarch64' and platform_python_implementation != 'PyPy' and sys_platform == 'linux'",
-    "(python_full_version == '3.11.*' and platform_machine != 'aarch64' and platform_python_implementation != 'PyPy' and sys_platform == 'linux') or (python_full_version == '3.11.*' and platform_python_implementation != 'PyPy' and sys_platform != 'darwin' and sys_platform != 'linux')",
-    "python_full_version < '3.11' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin'",
-    "python_full_version < '3.11' and platform_machine == 'aarch64' and platform_python_implementation != 'PyPy' and sys_platform == 'linux'",
-    "(python_full_version < '3.11' and platform_machine != 'aarch64' and platform_python_implementation != 'PyPy' and sys_platform == 'linux') or (python_full_version < '3.11' and platform_python_implementation != 'PyPy' and sys_platform != 'darwin' and sys_platform != 'linux')",
-    "python_full_version >= '3.13' and platform_python_implementation == 'PyPy' and sys_platform == 'darwin'",
-    "python_full_version >= '3.13' and platform_machine == 'aarch64' and platform_python_implementation == 'PyPy' and sys_platform == 'linux'",
-    "(python_full_version >= '3.13' and platform_machine != 'aarch64' and platform_python_implementation == 'PyPy' and sys_platform == 'linux') or (python_full_version >= '3.13' and platform_python_implementation == 'PyPy' and sys_platform != 'darwin' and sys_platform != 'linux')",
-    "python_full_version == '3.12.*' and platform_python_implementation == 'PyPy' and sys_platform == 'darwin'",
-    "python_full_version == '3.12.*' and platform_machine == 'aarch64' and platform_python_implementation == 'PyPy' and sys_platform == 'linux'",
-    "(python_full_version == '3.12.*' and platform_machine != 'aarch64' and platform_python_implementation == 'PyPy' and sys_platform == 'linux') or (python_full_version == '3.12.*' and platform_python_implementation == 'PyPy' and sys_platform != 'darwin' and sys_platform != 'linux')",
-    "python_full_version == '3.11.*' and platform_python_implementation == 'PyPy' and sys_platform == 'darwin'",
-    "python_full_version == '3.11.*' and platform_machine == 'aarch64' and platform_python_implementation == 'PyPy' and sys_platform == 'linux'",
-    "(python_full_version == '3.11.*' and platform_machine != 'aarch64' and platform_python_implementation == 'PyPy' and sys_platform == 'linux') or (python_full_version == '3.11.*' and platform_python_implementation == 'PyPy' and sys_platform != 'darwin' and sys_platform != 'linux')",
-    "python_full_version < '3.11' and platform_python_implementation == 'PyPy' and sys_platform == 'darwin'",
-    "python_full_version < '3.11' and platform_machine == 'aarch64' and platform_python_implementation == 'PyPy' and sys_platform == 'linux'",
-    "(python_full_version < '3.11' and platform_machine != 'aarch64' and platform_python_implementation == 'PyPy' and sys_platform == 'linux') or (python_full_version < '3.11' and platform_python_implementation == 'PyPy' and sys_platform != 'darwin' and sys_platform != 'linux')",
-]
 dependencies = [
-    { name = "anyio", marker = "extra == 'extra-6-crewai-aisuite'" },
-    { name = "certifi", marker = "extra == 'extra-6-crewai-aisuite'" },
-    { name = "httpcore", marker = "extra == 'extra-6-crewai-aisuite'" },
-    { name = "idna", marker = "extra == 'extra-6-crewai-aisuite'" },
-    { name = "sniffio", marker = "extra == 'extra-6-crewai-aisuite'" },
+    { name = "anyio" },
+    { name = "certifi" },
+    { name = "httpcore" },
+    { name = "idna" },
+    { name = "sniffio" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/78/82/08f8c936781f67d9e6b9eeb8a0c8b4e406136ea4c3d1f89a5db71d42e0e6/httpx-0.27.2.tar.gz", hash = "sha256:f7c2be1d2f3c3c3160d441802406b206c2b76f5947b11115e6df10c6c65e66c2", size = 144189, upload-time = "2024-08-27T12:54:01.334Z" }
 wheels = [
@@ -2515,53 +2457,7 @@ wheels = [
 
 [package.optional-dependencies]
 http2 = [
-    { name = "h2", marker = "extra == 'extra-6-crewai-aisuite'" },
-]
-
-[[package]]
-name = "httpx"
-version = "0.28.1"
-source = { registry = "https://pypi.org/simple" }
-resolution-markers = [
-    "python_full_version >= '3.13' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin'",
-    "python_full_version >= '3.13' and platform_machine == 'aarch64' and platform_python_implementation != 'PyPy' and sys_platform == 'linux'",
-    "(python_full_version >= '3.13' and platform_machine != 'aarch64' and platform_python_implementation != 'PyPy' and sys_platform == 'linux') or (python_full_version >= '3.13' and platform_python_implementation != 'PyPy' and sys_platform != 'darwin' and sys_platform != 'linux')",
-    "python_full_version == '3.12.*' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin'",
-    "python_full_version == '3.12.*' and platform_machine == 'aarch64' and platform_python_implementation != 'PyPy' and sys_platform == 'linux'",
-    "(python_full_version == '3.12.*' and platform_machine != 'aarch64' and platform_python_implementation != 'PyPy' and sys_platform == 'linux') or (python_full_version == '3.12.*' and platform_python_implementation != 'PyPy' and sys_platform != 'darwin' and sys_platform != 'linux')",
-    "python_full_version == '3.11.*' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin'",
-    "python_full_version == '3.11.*' and platform_machine == 'aarch64' and platform_python_implementation != 'PyPy' and sys_platform == 'linux'",
-    "(python_full_version == '3.11.*' and platform_machine != 'aarch64' and platform_python_implementation != 'PyPy' and sys_platform == 'linux') or (python_full_version == '3.11.*' and platform_python_implementation != 'PyPy' and sys_platform != 'darwin' and sys_platform != 'linux')",
-    "python_full_version < '3.11' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin'",
-    "python_full_version < '3.11' and platform_machine == 'aarch64' and platform_python_implementation != 'PyPy' and sys_platform == 'linux'",
-    "(python_full_version < '3.11' and platform_machine != 'aarch64' and platform_python_implementation != 'PyPy' and sys_platform == 'linux') or (python_full_version < '3.11' and platform_python_implementation != 'PyPy' and sys_platform != 'darwin' and sys_platform != 'linux')",
-    "python_full_version >= '3.13' and platform_python_implementation == 'PyPy' and sys_platform == 'darwin'",
-    "python_full_version >= '3.13' and platform_machine == 'aarch64' and platform_python_implementation == 'PyPy' and sys_platform == 'linux'",
-    "(python_full_version >= '3.13' and platform_machine != 'aarch64' and platform_python_implementation == 'PyPy' and sys_platform == 'linux') or (python_full_version >= '3.13' and platform_python_implementation == 'PyPy' and sys_platform != 'darwin' and sys_platform != 'linux')",
-    "python_full_version == '3.12.*' and platform_python_implementation == 'PyPy' and sys_platform == 'darwin'",
-    "python_full_version == '3.12.*' and platform_machine == 'aarch64' and platform_python_implementation == 'PyPy' and sys_platform == 'linux'",
-    "(python_full_version == '3.12.*' and platform_machine != 'aarch64' and platform_python_implementation == 'PyPy' and sys_platform == 'linux') or (python_full_version == '3.12.*' and platform_python_implementation == 'PyPy' and sys_platform != 'darwin' and sys_platform != 'linux')",
-    "python_full_version == '3.11.*' and platform_python_implementation == 'PyPy' and sys_platform == 'darwin'",
-    "python_full_version == '3.11.*' and platform_machine == 'aarch64' and platform_python_implementation == 'PyPy' and sys_platform == 'linux'",
-    "(python_full_version == '3.11.*' and platform_machine != 'aarch64' and platform_python_implementation == 'PyPy' and sys_platform == 'linux') or (python_full_version == '3.11.*' and platform_python_implementation == 'PyPy' and sys_platform != 'darwin' and sys_platform != 'linux')",
-    "python_full_version < '3.11' and platform_python_implementation == 'PyPy' and sys_platform == 'darwin'",
-    "python_full_version < '3.11' and platform_machine == 'aarch64' and platform_python_implementation == 'PyPy' and sys_platform == 'linux'",
-    "(python_full_version < '3.11' and platform_machine != 'aarch64' and platform_python_implementation == 'PyPy' and sys_platform == 'linux') or (python_full_version < '3.11' and platform_python_implementation == 'PyPy' and sys_platform != 'darwin' and sys_platform != 'linux')",
-]
-dependencies = [
-    { name = "anyio", marker = "extra == 'extra-6-crewai-a2a' or extra != 'extra-6-crewai-aisuite'" },
-    { name = "certifi", marker = "extra == 'extra-6-crewai-a2a' or extra != 'extra-6-crewai-aisuite'" },
-    { name = "httpcore", marker = "extra == 'extra-6-crewai-a2a' or extra != 'extra-6-crewai-aisuite'" },
-    { name = "idna", marker = "extra == 'extra-6-crewai-a2a' or extra != 'extra-6-crewai-aisuite'" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/b1/df/48c586a5fe32a0f01324ee087459e112ebb7224f646c0b5023f5e79e9956/httpx-0.28.1.tar.gz", hash = "sha256:75e98c5f16b0f35b567856f597f06ff2270a374470a5c2392242528e3e3e42fc", size = 141406, upload-time = "2024-12-06T15:37:23.222Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/2a/39/e50c7c3a983047577ee07d2a9e53faf5a69493943ec3f6a384bdc792deb2/httpx-0.28.1-py3-none-any.whl", hash = "sha256:d909fcccc110f8c7faf814ca82a9a4d816bc5a6dbfea25d6591d6985b8ba59ad", size = 73517, upload-time = "2024-12-06T15:37:21.509Z" },
-]
-
-[package.optional-dependencies]
-http2 = [
-    { name = "h2", marker = "extra == 'extra-6-crewai-a2a' or extra != 'extra-6-crewai-aisuite'" },
+    { name = "h2" },
 ]
 
 [[package]]
@@ -2580,7 +2476,7 @@ source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "filelock" },
     { name = "fsspec" },
-    { name = "hf-xet", marker = "platform_machine == 'aarch64' or platform_machine == 'amd64' or platform_machine == 'arm64' or platform_machine == 'x86_64' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
+    { name = "hf-xet", marker = "platform_machine == 'aarch64' or platform_machine == 'amd64' or platform_machine == 'arm64' or platform_machine == 'x86_64'" },
     { name = "packaging" },
     { name = "pyyaml" },
     { name = "requests" },
@@ -2597,7 +2493,7 @@ name = "humanfriendly"
 version = "10.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "pyreadline3", marker = "sys_platform == 'win32' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
+    { name = "pyreadline3", marker = "sys_platform == 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/cc/3f/2c29224acb2e2df4d2046e4c73ee2662023c58ff5b113c4c1adac0886c43/humanfriendly-10.0.tar.gz", hash = "sha256:6b0b831ce8f15f7300721aa49829fc4e83921a9a301cc7f606be6686a2288ddc", size = 360702, upload-time = "2021-09-17T21:40:43.31Z" }
 wheels = [
@@ -2609,8 +2505,7 @@ name = "hyperbrowser"
 version = "0.67.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "httpx", version = "0.27.2", source = { registry = "https://pypi.org/simple" }, marker = "extra == 'extra-6-crewai-aisuite'" },
-    { name = "httpx", version = "0.28.1", source = { registry = "https://pypi.org/simple" }, marker = "extra == 'extra-6-crewai-a2a' or extra != 'extra-6-crewai-aisuite'" },
+    { name = "httpx" },
     { name = "jsonref" },
     { name = "pydantic" },
 ]
@@ -2647,9 +2542,9 @@ resolution-markers = [
     "(python_full_version < '3.11' and platform_machine != 'aarch64' and platform_python_implementation == 'PyPy' and sys_platform == 'linux') or (python_full_version < '3.11' and platform_python_implementation == 'PyPy' and sys_platform != 'darwin' and sys_platform != 'linux')",
 ]
 dependencies = [
-    { name = "ibm-cos-sdk-core", version = "2.14.2", source = { registry = "https://pypi.org/simple" }, marker = "platform_python_implementation == 'PyPy' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "ibm-cos-sdk-s3transfer", version = "2.14.2", source = { registry = "https://pypi.org/simple" }, marker = "platform_python_implementation == 'PyPy' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "jmespath", marker = "platform_python_implementation == 'PyPy' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
+    { name = "ibm-cos-sdk-core", version = "2.14.2", source = { registry = "https://pypi.org/simple" }, marker = "platform_python_implementation == 'PyPy'" },
+    { name = "ibm-cos-sdk-s3transfer", version = "2.14.2", source = { registry = "https://pypi.org/simple" }, marker = "platform_python_implementation == 'PyPy'" },
+    { name = "jmespath", marker = "platform_python_implementation == 'PyPy'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/08/0f/976e187ba09f5efee94a371f0d65edca82714975de7e71bf6ad8d30f20a7/ibm_cos_sdk-2.14.2.tar.gz", hash = "sha256:d859422c1dfd03e52cd66acbb2b45b4c944a390725c3a91d4a8e003f0cfc4e4b", size = 58847, upload-time = "2025-06-18T05:04:01.193Z" }
 
@@ -2672,9 +2567,9 @@ resolution-markers = [
     "(python_full_version < '3.11' and platform_machine != 'aarch64' and platform_python_implementation != 'PyPy' and sys_platform == 'linux') or (python_full_version < '3.11' and platform_python_implementation != 'PyPy' and sys_platform != 'darwin' and sys_platform != 'linux')",
 ]
 dependencies = [
-    { name = "ibm-cos-sdk-core", version = "2.14.3", source = { registry = "https://pypi.org/simple" }, marker = "platform_python_implementation != 'PyPy' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "ibm-cos-sdk-s3transfer", version = "2.14.3", source = { registry = "https://pypi.org/simple" }, marker = "platform_python_implementation != 'PyPy' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "jmespath", marker = "platform_python_implementation != 'PyPy' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
+    { name = "ibm-cos-sdk-core", version = "2.14.3", source = { registry = "https://pypi.org/simple" }, marker = "platform_python_implementation != 'PyPy'" },
+    { name = "ibm-cos-sdk-s3transfer", version = "2.14.3", source = { registry = "https://pypi.org/simple" }, marker = "platform_python_implementation != 'PyPy'" },
+    { name = "jmespath", marker = "platform_python_implementation != 'PyPy'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/98/b8/b99f17ece72d4bccd7e75539b9a294d0f73ace5c6c475d8f2631afd6f65b/ibm_cos_sdk-2.14.3.tar.gz", hash = "sha256:643b6f2aa1683adad7f432df23407d11ae5adb9d9ad01214115bee77dc64364a", size = 58831, upload-time = "2025-08-01T06:35:51.722Z" }
 
@@ -2697,10 +2592,10 @@ resolution-markers = [
     "(python_full_version < '3.11' and platform_machine != 'aarch64' and platform_python_implementation == 'PyPy' and sys_platform == 'linux') or (python_full_version < '3.11' and platform_python_implementation == 'PyPy' and sys_platform != 'darwin' and sys_platform != 'linux')",
 ]
 dependencies = [
-    { name = "jmespath", marker = "platform_python_implementation == 'PyPy' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "python-dateutil", marker = "platform_python_implementation == 'PyPy' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "requests", marker = "platform_python_implementation == 'PyPy' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "urllib3", version = "1.26.20", source = { registry = "https://pypi.org/simple" }, marker = "platform_python_implementation == 'PyPy' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
+    { name = "jmespath", marker = "platform_python_implementation == 'PyPy'" },
+    { name = "python-dateutil", marker = "platform_python_implementation == 'PyPy'" },
+    { name = "requests", marker = "platform_python_implementation == 'PyPy'" },
+    { name = "urllib3", version = "1.26.20", source = { registry = "https://pypi.org/simple" }, marker = "platform_python_implementation == 'PyPy'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/a5/db/e913f210d66c2ad09521925f29754fb9b7240da11238a29a0186ebad4ffa/ibm_cos_sdk_core-2.14.2.tar.gz", hash = "sha256:d594b2af58f70e892aa3b0f6ae4b0fa5d412422c05beeba083d4561b5fad91b4", size = 1103504, upload-time = "2025-06-18T05:03:42.969Z" }
 
@@ -2723,10 +2618,10 @@ resolution-markers = [
     "(python_full_version < '3.11' and platform_machine != 'aarch64' and platform_python_implementation != 'PyPy' and sys_platform == 'linux') or (python_full_version < '3.11' and platform_python_implementation != 'PyPy' and sys_platform != 'darwin' and sys_platform != 'linux')",
 ]
 dependencies = [
-    { name = "jmespath", marker = "platform_python_implementation != 'PyPy' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "python-dateutil", marker = "platform_python_implementation != 'PyPy' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "requests", marker = "platform_python_implementation != 'PyPy' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "urllib3", version = "2.5.0", source = { registry = "https://pypi.org/simple" }, marker = "platform_python_implementation != 'PyPy' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
+    { name = "jmespath", marker = "platform_python_implementation != 'PyPy'" },
+    { name = "python-dateutil", marker = "platform_python_implementation != 'PyPy'" },
+    { name = "requests", marker = "platform_python_implementation != 'PyPy'" },
+    { name = "urllib3", version = "2.5.0", source = { registry = "https://pypi.org/simple" }, marker = "platform_python_implementation != 'PyPy'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/7e/45/80c23aa1e13175a9deefe43cbf8e853a3d3bfc8dfa8b6d6fe83e5785fe21/ibm_cos_sdk_core-2.14.3.tar.gz", hash = "sha256:85dee7790c92e8db69bf39dae4c02cac211e3c1d81bb86e64fa2d1e929674623", size = 1103637, upload-time = "2025-08-01T06:35:41.645Z" }
 
@@ -2749,7 +2644,7 @@ resolution-markers = [
     "(python_full_version < '3.11' and platform_machine != 'aarch64' and platform_python_implementation == 'PyPy' and sys_platform == 'linux') or (python_full_version < '3.11' and platform_python_implementation == 'PyPy' and sys_platform != 'darwin' and sys_platform != 'linux')",
 ]
 dependencies = [
-    { name = "ibm-cos-sdk-core", version = "2.14.2", source = { registry = "https://pypi.org/simple" }, marker = "platform_python_implementation == 'PyPy' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
+    { name = "ibm-cos-sdk-core", version = "2.14.2", source = { registry = "https://pypi.org/simple" }, marker = "platform_python_implementation == 'PyPy'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/8e/ca/3c4c48c2a180e3410d08b400435b72648e6630c2d556beb126b7a21a78d7/ibm_cos_sdk_s3transfer-2.14.2.tar.gz", hash = "sha256:01d1cb14c0decaeef273979da7a13f7a874f1d4c542ff3ae0a186c7b090569bc", size = 139579, upload-time = "2025-06-18T05:03:48.841Z" }
 
@@ -2772,7 +2667,7 @@ resolution-markers = [
     "(python_full_version < '3.11' and platform_machine != 'aarch64' and platform_python_implementation != 'PyPy' and sys_platform == 'linux') or (python_full_version < '3.11' and platform_python_implementation != 'PyPy' and sys_platform != 'darwin' and sys_platform != 'linux')",
 ]
 dependencies = [
-    { name = "ibm-cos-sdk-core", version = "2.14.3", source = { registry = "https://pypi.org/simple" }, marker = "platform_python_implementation != 'PyPy' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
+    { name = "ibm-cos-sdk-core", version = "2.14.3", source = { registry = "https://pypi.org/simple" }, marker = "platform_python_implementation != 'PyPy'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/f3/ff/c9baf0997266d398ae08347951a2970e5e96ed6232ed0252f649f2b9a7eb/ibm_cos_sdk_s3transfer-2.14.3.tar.gz", hash = "sha256:2251ebfc4a46144401e431f4a5d9f04c262a0d6f95c88a8e71071da056e55f72", size = 139594, upload-time = "2025-08-01T06:35:46.403Z" }
 
@@ -2789,19 +2684,18 @@ resolution-markers = [
     "(python_full_version < '3.11' and platform_machine != 'aarch64' and platform_python_implementation == 'PyPy' and sys_platform == 'linux') or (python_full_version < '3.11' and platform_python_implementation == 'PyPy' and sys_platform != 'darwin' and sys_platform != 'linux')",
 ]
 dependencies = [
-    { name = "cachetools", marker = "python_full_version < '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "certifi", marker = "python_full_version < '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "httpx", version = "0.27.2", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version < '3.11' and extra == 'extra-6-crewai-aisuite') or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "httpx", version = "0.28.1", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version < '3.11' and extra == 'extra-6-crewai-a2a') or (python_full_version < '3.11' and extra != 'extra-6-crewai-aisuite') or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "ibm-cos-sdk", version = "2.14.2", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version < '3.11' and platform_python_implementation == 'PyPy') or (python_full_version >= '3.11' and extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite') or (platform_python_implementation != 'PyPy' and extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "ibm-cos-sdk", version = "2.14.3", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version < '3.11' and platform_python_implementation != 'PyPy') or (python_full_version >= '3.11' and extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite') or (platform_python_implementation == 'PyPy' and extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "lomond", marker = "python_full_version < '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "packaging", marker = "python_full_version < '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "pandas", marker = "python_full_version < '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "requests", marker = "python_full_version < '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "tabulate", marker = "python_full_version < '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "urllib3", version = "1.26.20", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version < '3.11' and platform_python_implementation == 'PyPy') or (python_full_version >= '3.11' and extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite') or (platform_python_implementation != 'PyPy' and extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "urllib3", version = "2.5.0", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version < '3.11' and platform_python_implementation != 'PyPy') or (python_full_version >= '3.11' and extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite') or (platform_python_implementation == 'PyPy' and extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
+    { name = "cachetools", marker = "python_full_version < '3.11'" },
+    { name = "certifi", marker = "python_full_version < '3.11'" },
+    { name = "httpx", marker = "python_full_version < '3.11'" },
+    { name = "ibm-cos-sdk", version = "2.14.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11' and platform_python_implementation == 'PyPy'" },
+    { name = "ibm-cos-sdk", version = "2.14.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11' and platform_python_implementation != 'PyPy'" },
+    { name = "lomond", marker = "python_full_version < '3.11'" },
+    { name = "packaging", marker = "python_full_version < '3.11'" },
+    { name = "pandas", marker = "python_full_version < '3.11'" },
+    { name = "requests", marker = "python_full_version < '3.11'" },
+    { name = "tabulate", marker = "python_full_version < '3.11'" },
+    { name = "urllib3", version = "1.26.20", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11' and platform_python_implementation == 'PyPy'" },
+    { name = "urllib3", version = "2.5.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11' and platform_python_implementation != 'PyPy'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/c7/56/2e3df38a1f13062095d7bde23c87a92f3898982993a15186b1bfecbd206f/ibm_watsonx_ai-1.3.42.tar.gz", hash = "sha256:ee5be59009004245d957ce97d1227355516df95a2640189749487614fef674ff", size = 688651, upload-time = "2025-10-01T13:35:41.527Z" }
 wheels = [
@@ -2833,19 +2727,18 @@ resolution-markers = [
     "(python_full_version == '3.11.*' and platform_machine != 'aarch64' and platform_python_implementation == 'PyPy' and sys_platform == 'linux') or (python_full_version == '3.11.*' and platform_python_implementation == 'PyPy' and sys_platform != 'darwin' and sys_platform != 'linux')",
 ]
 dependencies = [
-    { name = "cachetools", marker = "python_full_version >= '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "certifi", marker = "python_full_version >= '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "httpx", version = "0.27.2", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.11' and extra == 'extra-6-crewai-aisuite') or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "httpx", version = "0.28.1", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.11' and extra == 'extra-6-crewai-a2a') or (python_full_version >= '3.11' and extra != 'extra-6-crewai-aisuite') or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "ibm-cos-sdk", version = "2.14.2", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.11' and platform_python_implementation == 'PyPy') or (python_full_version < '3.11' and extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite') or (platform_python_implementation != 'PyPy' and extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "ibm-cos-sdk", version = "2.14.3", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.11' and platform_python_implementation != 'PyPy') or (python_full_version < '3.11' and extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite') or (platform_python_implementation == 'PyPy' and extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "lomond", marker = "python_full_version >= '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "packaging", marker = "python_full_version >= '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "pandas", marker = "python_full_version >= '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "requests", marker = "python_full_version >= '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "tabulate", marker = "python_full_version >= '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "urllib3", version = "1.26.20", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.11' and platform_python_implementation == 'PyPy') or (python_full_version < '3.11' and extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite') or (platform_python_implementation != 'PyPy' and extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "urllib3", version = "2.5.0", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.11' and platform_python_implementation != 'PyPy') or (python_full_version < '3.11' and extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite') or (platform_python_implementation == 'PyPy' and extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
+    { name = "cachetools", marker = "python_full_version >= '3.11'" },
+    { name = "certifi", marker = "python_full_version >= '3.11'" },
+    { name = "httpx", marker = "python_full_version >= '3.11'" },
+    { name = "ibm-cos-sdk", version = "2.14.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11' and platform_python_implementation == 'PyPy'" },
+    { name = "ibm-cos-sdk", version = "2.14.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11' and platform_python_implementation != 'PyPy'" },
+    { name = "lomond", marker = "python_full_version >= '3.11'" },
+    { name = "packaging", marker = "python_full_version >= '3.11'" },
+    { name = "pandas", marker = "python_full_version >= '3.11'" },
+    { name = "requests", marker = "python_full_version >= '3.11'" },
+    { name = "tabulate", marker = "python_full_version >= '3.11'" },
+    { name = "urllib3", version = "1.26.20", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11' and platform_python_implementation == 'PyPy'" },
+    { name = "urllib3", version = "2.5.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11' and platform_python_implementation != 'PyPy'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/e5/1a/c587f82831a18a363d997c452572600098873ada17f46a0627ec98adc0f3/ibm_watsonx_ai-1.4.1.tar.gz", hash = "sha256:58f0e4ce994f52020cc436b26859fe83b92efd4257830c2b924e13990b134297", size = 690598, upload-time = "2025-10-15T12:33:59.162Z" }
 wheels = [
@@ -3023,17 +2916,17 @@ resolution-markers = [
     "(python_full_version < '3.11' and platform_machine != 'aarch64' and platform_python_implementation == 'PyPy' and sys_platform == 'linux') or (python_full_version < '3.11' and platform_python_implementation == 'PyPy' and sys_platform != 'darwin' and sys_platform != 'linux')",
 ]
 dependencies = [
-    { name = "colorama", marker = "(python_full_version < '3.11' and sys_platform == 'win32') or (python_full_version >= '3.11' and extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite') or (sys_platform != 'win32' and extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "decorator", marker = "python_full_version < '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "exceptiongroup", marker = "python_full_version < '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "jedi", marker = "python_full_version < '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "matplotlib-inline", marker = "python_full_version < '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "pexpect", marker = "(python_full_version < '3.11' and sys_platform != 'emscripten' and sys_platform != 'win32') or (python_full_version >= '3.11' and extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite') or (sys_platform == 'emscripten' and extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite') or (sys_platform == 'win32' and extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "prompt-toolkit", marker = "python_full_version < '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "pygments", marker = "python_full_version < '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "stack-data", marker = "python_full_version < '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "traitlets", marker = "python_full_version < '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "typing-extensions", marker = "python_full_version < '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
+    { name = "colorama", marker = "python_full_version < '3.11' and sys_platform == 'win32'" },
+    { name = "decorator", marker = "python_full_version < '3.11'" },
+    { name = "exceptiongroup", marker = "python_full_version < '3.11'" },
+    { name = "jedi", marker = "python_full_version < '3.11'" },
+    { name = "matplotlib-inline", marker = "python_full_version < '3.11'" },
+    { name = "pexpect", marker = "python_full_version < '3.11' and sys_platform != 'emscripten' and sys_platform != 'win32'" },
+    { name = "prompt-toolkit", marker = "python_full_version < '3.11'" },
+    { name = "pygments", marker = "python_full_version < '3.11'" },
+    { name = "stack-data", marker = "python_full_version < '3.11'" },
+    { name = "traitlets", marker = "python_full_version < '3.11'" },
+    { name = "typing-extensions", marker = "python_full_version < '3.11'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/85/31/10ac88f3357fc276dc8a64e8880c82e80e7459326ae1d0a211b40abf6665/ipython-8.37.0.tar.gz", hash = "sha256:ca815841e1a41a1e6b73a0b08f3038af9b2252564d01fc405356d34033012216", size = 5606088, upload-time = "2025-05-31T16:39:09.613Z" }
 wheels = [
@@ -3065,17 +2958,17 @@ resolution-markers = [
     "(python_full_version == '3.11.*' and platform_machine != 'aarch64' and platform_python_implementation == 'PyPy' and sys_platform == 'linux') or (python_full_version == '3.11.*' and platform_python_implementation == 'PyPy' and sys_platform != 'darwin' and sys_platform != 'linux')",
 ]
 dependencies = [
-    { name = "colorama", marker = "(python_full_version >= '3.11' and sys_platform == 'win32') or (python_full_version < '3.11' and extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite') or (sys_platform != 'win32' and extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "decorator", marker = "python_full_version >= '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "ipython-pygments-lexers", marker = "python_full_version >= '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "jedi", marker = "python_full_version >= '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "matplotlib-inline", marker = "python_full_version >= '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "pexpect", marker = "(python_full_version >= '3.11' and sys_platform != 'emscripten' and sys_platform != 'win32') or (python_full_version < '3.11' and extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite') or (sys_platform == 'emscripten' and extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite') or (sys_platform == 'win32' and extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "prompt-toolkit", marker = "python_full_version >= '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "pygments", marker = "python_full_version >= '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "stack-data", marker = "python_full_version >= '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "traitlets", marker = "python_full_version >= '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "typing-extensions", marker = "python_full_version == '3.11.*' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
+    { name = "colorama", marker = "python_full_version >= '3.11' and sys_platform == 'win32'" },
+    { name = "decorator", marker = "python_full_version >= '3.11'" },
+    { name = "ipython-pygments-lexers", marker = "python_full_version >= '3.11'" },
+    { name = "jedi", marker = "python_full_version >= '3.11'" },
+    { name = "matplotlib-inline", marker = "python_full_version >= '3.11'" },
+    { name = "pexpect", marker = "python_full_version >= '3.11' and sys_platform != 'emscripten' and sys_platform != 'win32'" },
+    { name = "prompt-toolkit", marker = "python_full_version >= '3.11'" },
+    { name = "pygments", marker = "python_full_version >= '3.11'" },
+    { name = "stack-data", marker = "python_full_version >= '3.11'" },
+    { name = "traitlets", marker = "python_full_version >= '3.11'" },
+    { name = "typing-extensions", marker = "python_full_version == '3.11.*'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/2a/34/29b18c62e39ee2f7a6a3bba7efd952729d8aadd45ca17efc34453b717665/ipython-9.6.0.tar.gz", hash = "sha256:5603d6d5d356378be5043e69441a072b50a5b33b4503428c77b04cb8ce7bc731", size = 4396932, upload-time = "2025-09-29T10:55:53.948Z" }
 wheels = [
@@ -3087,7 +2980,7 @@ name = "ipython-pygments-lexers"
 version = "1.1.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "pygments", marker = "python_full_version >= '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
+    { name = "pygments", marker = "python_full_version >= '3.11'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/ef/4c/5dd1d8af08107f88c7f741ead7a40854b8ac24ddf9ae850afbcf698aa552/ipython_pygments_lexers-1.1.1.tar.gz", hash = "sha256:09c0138009e56b6854f9535736f4171d855c8c08a563a0dcd8022f78355c7e81", size = 8393, upload-time = "2025-01-17T11:24:34.505Z" }
 wheels = [
@@ -3396,8 +3289,8 @@ dependencies = [
     { name = "requests" },
     { name = "requests-oauthlib" },
     { name = "six" },
-    { name = "urllib3", version = "1.26.20", source = { registry = "https://pypi.org/simple" }, marker = "platform_python_implementation == 'PyPy' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "urllib3", version = "2.5.0", source = { registry = "https://pypi.org/simple" }, marker = "platform_python_implementation != 'PyPy' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
+    { name = "urllib3", version = "1.26.20", source = { registry = "https://pypi.org/simple" }, marker = "platform_python_implementation == 'PyPy'" },
+    { name = "urllib3", version = "2.5.0", source = { registry = "https://pypi.org/simple" }, marker = "platform_python_implementation != 'PyPy'" },
     { name = "websocket-client" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/ae/52/19ebe8004c243fdfa78268a96727c71e08f00ff6fe69a301d0b7fcbce3c2/kubernetes-33.1.0.tar.gz", hash = "sha256:f64d829843a54c251061a8e7a14523b521f2dc5c896cf6d65ccf348648a88993", size = 1036779, upload-time = "2025-06-09T21:57:58.521Z" }
@@ -3428,8 +3321,8 @@ dependencies = [
     { name = "pydantic" },
     { name = "python-dateutil" },
     { name = "typing-extensions" },
-    { name = "urllib3", version = "1.26.20", source = { registry = "https://pypi.org/simple" }, marker = "platform_python_implementation == 'PyPy' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "urllib3", version = "2.5.0", source = { registry = "https://pypi.org/simple" }, marker = "platform_python_implementation != 'PyPy' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
+    { name = "urllib3", version = "1.26.20", source = { registry = "https://pypi.org/simple" }, marker = "platform_python_implementation == 'PyPy'" },
+    { name = "urllib3", version = "2.5.0", source = { registry = "https://pypi.org/simple" }, marker = "platform_python_implementation != 'PyPy'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/ca/3b/edcf1f0c826f69c940ab2673ec4738edfd2e97f8cd2648f41793d8ca8ef4/lance_namespace_urllib3_client-0.0.18.tar.gz", hash = "sha256:c5e9e3ed4981d3d7172b077b896264fc7f1515c850b0e40f6a8bc5aeecc3e4c7", size = 134499, upload-time = "2025-10-08T06:07:08.979Z" }
 wheels = [
@@ -3443,9 +3336,9 @@ source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "deprecation" },
     { name = "lance-namespace" },
-    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "numpy", version = "2.3.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "overrides", marker = "python_full_version < '3.12' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
+    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "numpy", version = "2.3.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "overrides", marker = "python_full_version < '3.12'" },
     { name = "packaging" },
     { name = "pyarrow" },
     { name = "pydantic" },
@@ -3519,9 +3412,8 @@ name = "langsmith"
 version = "0.4.37"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "httpx", version = "0.27.2", source = { registry = "https://pypi.org/simple" }, marker = "extra == 'extra-6-crewai-aisuite'" },
-    { name = "httpx", version = "0.28.1", source = { registry = "https://pypi.org/simple" }, marker = "extra == 'extra-6-crewai-a2a' or extra != 'extra-6-crewai-aisuite'" },
-    { name = "orjson", marker = "platform_python_implementation != 'PyPy' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
+    { name = "httpx" },
+    { name = "orjson", marker = "platform_python_implementation != 'PyPy'" },
     { name = "packaging" },
     { name = "pydantic" },
     { name = "requests" },
@@ -3547,8 +3439,7 @@ name = "linkup-sdk"
 version = "0.6.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "httpx", version = "0.27.2", source = { registry = "https://pypi.org/simple" }, marker = "extra == 'extra-6-crewai-aisuite'" },
-    { name = "httpx", version = "0.28.1", source = { registry = "https://pypi.org/simple" }, marker = "extra == 'extra-6-crewai-a2a' or extra != 'extra-6-crewai-aisuite'" },
+    { name = "httpx" },
     { name = "pydantic" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/26/7c/915bf52100c98268274f2c1690716f8c6896b1ce2d7a87dfb515b5d23457/linkup_sdk-0.6.0.tar.gz", hash = "sha256:f612ad7b1afd321f12e6a32331ac0fec338fee34fd8564073202277155f00e86", size = 58424, upload-time = "2025-09-22T15:50:16.973Z" }
@@ -3564,8 +3455,7 @@ dependencies = [
     { name = "aiohttp" },
     { name = "click" },
     { name = "fastuuid" },
-    { name = "httpx", version = "0.27.2", source = { registry = "https://pypi.org/simple" }, marker = "extra == 'extra-6-crewai-aisuite'" },
-    { name = "httpx", version = "0.28.1", source = { registry = "https://pypi.org/simple" }, marker = "extra == 'extra-6-crewai-a2a' or extra != 'extra-6-crewai-aisuite'" },
+    { name = "httpx" },
     { name = "importlib-metadata" },
     { name = "jinja2" },
     { name = "jsonschema" },
@@ -3585,8 +3475,8 @@ name = "loguru"
 version = "0.7.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "colorama", marker = "sys_platform == 'win32' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "win32-setctime", marker = "sys_platform == 'win32' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
+    { name = "colorama", marker = "sys_platform == 'win32'" },
+    { name = "win32-setctime", marker = "sys_platform == 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/3a/05/a1dae3dffd1116099471c643b8924f5aa6524411dc6c63fdae648c4f1aca/loguru-0.7.3.tar.gz", hash = "sha256:19480589e77d47b8d85b2c827ad95d49bf31b0dcde16593892eb51dd18706eb6", size = 63559, upload-time = "2024-12-06T11:20:56.608Z" }
 wheels = [
@@ -3797,13 +3687,13 @@ name = "matplotlib"
 version = "3.10.7"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "contourpy", version = "1.3.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "contourpy", version = "1.3.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
+    { name = "contourpy", version = "1.3.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "contourpy", version = "1.3.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "cycler" },
     { name = "fonttools" },
     { name = "kiwisolver" },
-    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "numpy", version = "2.3.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
+    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "numpy", version = "2.3.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "packaging" },
     { name = "pillow" },
     { name = "pyparsing" },
@@ -3871,17 +3761,16 @@ version = "1.18.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "anyio" },
-    { name = "httpx", version = "0.27.2", source = { registry = "https://pypi.org/simple" }, marker = "extra == 'extra-6-crewai-aisuite'" },
-    { name = "httpx", version = "0.28.1", source = { registry = "https://pypi.org/simple" }, marker = "extra == 'extra-6-crewai-a2a' or extra != 'extra-6-crewai-aisuite'" },
+    { name = "httpx" },
     { name = "httpx-sse" },
     { name = "jsonschema" },
     { name = "pydantic" },
     { name = "pydantic-settings" },
     { name = "python-multipart" },
-    { name = "pywin32", marker = "sys_platform == 'win32' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
+    { name = "pywin32", marker = "sys_platform == 'win32'" },
     { name = "sse-starlette" },
     { name = "starlette" },
-    { name = "uvicorn", marker = "sys_platform != 'emscripten' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
+    { name = "uvicorn", marker = "sys_platform != 'emscripten'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/1a/e0/fe34ce16ea2bacce489ab859abd1b47ae28b438c3ef60b9c5eee6c02592f/mcp-1.18.0.tar.gz", hash = "sha256:aa278c44b1efc0a297f53b68df865b988e52dd08182d702019edcf33a8e109f6", size = 482926, upload-time = "2025-10-16T19:19:55.125Z" }
 wheels = [
@@ -3935,8 +3824,8 @@ name = "ml-dtypes"
 version = "0.5.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "numpy", version = "2.3.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
+    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "numpy", version = "2.3.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/78/a7/aad060393123cfb383956dca68402aff3db1e1caffd5764887ed5153f41b/ml_dtypes-0.5.3.tar.gz", hash = "sha256:95ce33057ba4d05df50b1f3cfefab22e351868a843b3b15a46c65836283670c9", size = 692316, upload-time = "2025-07-29T18:39:19.454Z" }
 wheels = [
@@ -4056,7 +3945,7 @@ version = "2.10.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "pygments" },
-    { name = "pywin32", marker = "sys_platform == 'win32' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
+    { name = "pywin32", marker = "sys_platform == 'win32'" },
     { name = "tqdm" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/3a/93/80ac75c20ce54c785648b4ed363c88f148bf22637e10c9863db4fbe73e74/mpire-2.10.2.tar.gz", hash = "sha256:f66a321e93fadff34585a4bfa05e95bd946cf714b442f51c529038eb45773d97", size = 271270, upload-time = "2024-05-07T14:00:31.815Z" }
@@ -4096,7 +3985,7 @@ name = "multidict"
 version = "6.7.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "typing-extensions", marker = "python_full_version < '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
+    { name = "typing-extensions", marker = "python_full_version < '3.11'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/80/1e/5492c365f222f907de1039b91f922b93fa4f764c713ee858d235495d8f50/multidict-6.7.0.tar.gz", hash = "sha256:c6e99d9a65ca282e578dfea819cfa9c0a62b2499d8677392e09feaf305e9e6f5", size = 101834, upload-time = "2025-10-06T14:52:30.657Z" }
 wheels = [
@@ -4198,8 +4087,7 @@ name = "multion"
 version = "1.1.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "httpx", version = "0.27.2", source = { registry = "https://pypi.org/simple" }, marker = "extra == 'extra-6-crewai-aisuite'" },
-    { name = "httpx", version = "0.28.1", source = { registry = "https://pypi.org/simple" }, marker = "extra == 'extra-6-crewai-a2a' or extra != 'extra-6-crewai-aisuite'" },
+    { name = "httpx" },
     { name = "httpx-sse" },
     { name = "pydantic" },
     { name = "typing-extensions" },
@@ -4239,7 +4127,7 @@ source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "mypy-extensions" },
     { name = "pathspec" },
-    { name = "tomli", marker = "python_full_version < '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
+    { name = "tomli", marker = "python_full_version < '3.11'" },
     { name = "typing-extensions" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/c0/77/8f0d0001ffad290cef2f7f216f96c814866248a0b92a722365ed54648e7e/mypy-1.18.2.tar.gz", hash = "sha256:06a398102a5f203d7477b2923dda3634c36727fa5c237d8f859ef90c42a9924b", size = 3448846, upload-time = "2025-09-19T00:11:10.519Z" }
@@ -4276,7 +4164,7 @@ name = "mypy-boto3-bedrock-runtime"
 version = "1.40.41"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "typing-extensions", marker = "python_full_version < '3.12' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
+    { name = "typing-extensions", marker = "python_full_version < '3.12'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/c7/38/79989f7bce998776ed1a01c17f3f58e7bc6f5fc2bcbdff929701526fa2f1/mypy_boto3_bedrock_runtime-1.40.41.tar.gz", hash = "sha256:ee9bda6d6d478c8d0995e84e884bdf1798e150d437974ae27c175774a58ffaa5", size = 28333, upload-time = "2025-09-29T19:26:04.804Z" }
 wheels = [
@@ -4525,9 +4413,7 @@ name = "nvidia-cublas-cu12"
 version = "12.8.4.1"
 source = { registry = "https://pypi.org/simple" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/29/99/db44d685f0e257ff0e213ade1964fc459b4a690a73293220e98feb3307cf/nvidia_cublas_cu12-12.8.4.1-py3-none-manylinux_2_27_aarch64.whl", hash = "sha256:b86f6dd8935884615a0683b663891d43781b819ac4f2ba2b0c9604676af346d0", size = 590537124, upload-time = "2025-03-07T01:43:53.556Z" },
     { url = "https://files.pythonhosted.org/packages/dc/61/e24b560ab2e2eaeb3c839129175fb330dfcfc29e5203196e5541a4c44682/nvidia_cublas_cu12-12.8.4.1-py3-none-manylinux_2_27_x86_64.whl", hash = "sha256:8ac4e771d5a348c551b2a426eda6193c19aa630236b418086020df5ba9667142", size = 594346921, upload-time = "2025-03-07T01:44:31.254Z" },
-    { url = "https://files.pythonhosted.org/packages/70/61/7d7b3c70186fb651d0fbd35b01dbfc8e755f69fd58f817f3d0f642df20c3/nvidia_cublas_cu12-12.8.4.1-py3-none-win_amd64.whl", hash = "sha256:47e9b82132fa8d2b4944e708049229601448aaad7e6f296f630f2d1a32de35af", size = 567544208, upload-time = "2025-03-07T01:53:30.535Z" },
 ]
 
 [[package]]
@@ -4535,9 +4421,7 @@ name = "nvidia-cuda-cupti-cu12"
 version = "12.8.90"
 source = { registry = "https://pypi.org/simple" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/d5/1f/b3bd73445e5cb342727fd24fe1f7b748f690b460acadc27ea22f904502c8/nvidia_cuda_cupti_cu12-12.8.90-py3-none-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:4412396548808ddfed3f17a467b104ba7751e6b58678a4b840675c56d21cf7ed", size = 9533318, upload-time = "2025-03-07T01:40:10.421Z" },
     { url = "https://files.pythonhosted.org/packages/f8/02/2adcaa145158bf1a8295d83591d22e4103dbfd821bcaf6f3f53151ca4ffa/nvidia_cuda_cupti_cu12-12.8.90-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:ea0cb07ebda26bb9b29ba82cda34849e73c166c18162d3913575b0c9db9a6182", size = 10248621, upload-time = "2025-03-07T01:40:21.213Z" },
-    { url = "https://files.pythonhosted.org/packages/41/bc/83f5426095d93694ae39fe1311431b5d5a9bb82e48bf0dd8e19be2765942/nvidia_cuda_cupti_cu12-12.8.90-py3-none-win_amd64.whl", hash = "sha256:bb479dcdf7e6d4f8b0b01b115260399bf34154a1a2e9fe11c85c517d87efd98e", size = 7015759, upload-time = "2025-03-07T01:51:11.355Z" },
 ]
 
 [[package]]
@@ -4546,8 +4430,6 @@ version = "12.8.93"
 source = { registry = "https://pypi.org/simple" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/05/6b/32f747947df2da6994e999492ab306a903659555dddc0fbdeb9d71f75e52/nvidia_cuda_nvrtc_cu12-12.8.93-py3-none-manylinux2010_x86_64.manylinux_2_12_x86_64.whl", hash = "sha256:a7756528852ef889772a84c6cd89d41dfa74667e24cca16bb31f8f061e3e9994", size = 88040029, upload-time = "2025-03-07T01:42:13.562Z" },
-    { url = "https://files.pythonhosted.org/packages/eb/d1/e50d0acaab360482034b84b6e27ee83c6738f7d32182b987f9c7a4e32962/nvidia_cuda_nvrtc_cu12-12.8.93-py3-none-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:fc1fec1e1637854b4c0a65fb9a8346b51dd9ee69e61ebaccc82058441f15bce8", size = 43106076, upload-time = "2025-03-07T01:41:59.817Z" },
-    { url = "https://files.pythonhosted.org/packages/45/51/52a3d84baa2136cc8df15500ad731d74d3a1114d4c123e043cb608d4a32b/nvidia_cuda_nvrtc_cu12-12.8.93-py3-none-win_amd64.whl", hash = "sha256:7a4b6b2904850fe78e0bd179c4b655c404d4bb799ef03ddc60804247099ae909", size = 73586838, upload-time = "2025-03-07T01:52:13.483Z" },
 ]
 
 [[package]]
@@ -4555,9 +4437,7 @@ name = "nvidia-cuda-runtime-cu12"
 version = "12.8.90"
 source = { registry = "https://pypi.org/simple" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/7c/75/f865a3b236e4647605ea34cc450900854ba123834a5f1598e160b9530c3a/nvidia_cuda_runtime_cu12-12.8.90-py3-none-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:52bf7bbee900262ffefe5e9d5a2a69a30d97e2bc5bb6cc866688caa976966e3d", size = 965265, upload-time = "2025-03-07T01:39:43.533Z" },
     { url = "https://files.pythonhosted.org/packages/0d/9b/a997b638fcd068ad6e4d53b8551a7d30fe8b404d6f1804abf1df69838932/nvidia_cuda_runtime_cu12-12.8.90-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:adade8dcbd0edf427b7204d480d6066d33902cab2a4707dcfc48a2d0fd44ab90", size = 954765, upload-time = "2025-03-07T01:40:01.615Z" },
-    { url = "https://files.pythonhosted.org/packages/30/a5/a515b7600ad361ea14bfa13fb4d6687abf500adc270f19e89849c0590492/nvidia_cuda_runtime_cu12-12.8.90-py3-none-win_amd64.whl", hash = "sha256:c0c6027f01505bfed6c3b21ec546f69c687689aad5f1a377554bc6ca4aa993a8", size = 944318, upload-time = "2025-03-07T01:51:01.794Z" },
 ]
 
 [[package]]
@@ -4568,9 +4448,7 @@ dependencies = [
     { name = "nvidia-cublas-cu12" },
 ]
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/fa/41/e79269ce215c857c935fd86bcfe91a451a584dfc27f1e068f568b9ad1ab7/nvidia_cudnn_cu12-9.10.2.21-py3-none-manylinux_2_27_aarch64.whl", hash = "sha256:c9132cc3f8958447b4910a1720036d9eff5928cc3179b0a51fb6d167c6cc87d8", size = 705026878, upload-time = "2025-06-06T21:52:51.348Z" },
     { url = "https://files.pythonhosted.org/packages/ba/51/e123d997aa098c61d029f76663dedbfb9bc8dcf8c60cbd6adbe42f76d049/nvidia_cudnn_cu12-9.10.2.21-py3-none-manylinux_2_27_x86_64.whl", hash = "sha256:949452be657fa16687d0930933f032835951ef0892b37d2d53824d1a84dc97a8", size = 706758467, upload-time = "2025-06-06T21:54:08.597Z" },
-    { url = "https://files.pythonhosted.org/packages/3d/90/0bd6e586701b3a890fd38aa71c387dab4883d619d6e5ad912ccbd05bfd67/nvidia_cudnn_cu12-9.10.2.21-py3-none-win_amd64.whl", hash = "sha256:c6288de7d63e6cf62988f0923f96dc339cea362decb1bf5b3141883392a7d65e", size = 692992268, upload-time = "2025-06-06T21:55:18.114Z" },
 ]
 
 [[package]]
@@ -4581,9 +4459,7 @@ dependencies = [
     { name = "nvidia-nvjitlink-cu12" },
 ]
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/60/bc/7771846d3a0272026c416fbb7e5f4c1f146d6d80704534d0b187dd6f4800/nvidia_cufft_cu12-11.3.3.83-py3-none-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:848ef7224d6305cdb2a4df928759dca7b1201874787083b6e7550dd6765ce69a", size = 193109211, upload-time = "2025-03-07T01:44:56.873Z" },
     { url = "https://files.pythonhosted.org/packages/1f/13/ee4e00f30e676b66ae65b4f08cb5bcbb8392c03f54f2d5413ea99a5d1c80/nvidia_cufft_cu12-11.3.3.83-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:4d2dd21ec0b88cf61b62e6b43564355e5222e4a3fb394cac0db101f2dd0d4f74", size = 193118695, upload-time = "2025-03-07T01:45:27.821Z" },
-    { url = "https://files.pythonhosted.org/packages/7d/ec/ce1629f1e478bb5ccd208986b5f9e0316a78538dd6ab1d0484f012f8e2a1/nvidia_cufft_cu12-11.3.3.83-py3-none-win_amd64.whl", hash = "sha256:7a64a98ef2a7c47f905aaf8931b69a3a43f27c55530c698bb2ed7c75c0b42cb7", size = 192216559, upload-time = "2025-03-07T01:53:57.106Z" },
 ]
 
 [[package]]
@@ -4592,7 +4468,6 @@ version = "1.13.1.3"
 source = { registry = "https://pypi.org/simple" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/bb/fe/1bcba1dfbfb8d01be8d93f07bfc502c93fa23afa6fd5ab3fc7c1df71038a/nvidia_cufile_cu12-1.13.1.3-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:1d069003be650e131b21c932ec3d8969c1715379251f8d23a1860554b1cb24fc", size = 1197834, upload-time = "2025-03-07T01:45:50.723Z" },
-    { url = "https://files.pythonhosted.org/packages/1e/f5/5607710447a6fe9fd9b3283956fceeee8a06cda1d2f56ce31371f595db2a/nvidia_cufile_cu12-1.13.1.3-py3-none-manylinux_2_27_aarch64.whl", hash = "sha256:4beb6d4cce47c1a0f1013d72e02b0994730359e17801d395bdcbf20cfb3bb00a", size = 1120705, upload-time = "2025-03-07T01:45:41.434Z" },
 ]
 
 [[package]]
@@ -4600,9 +4475,7 @@ name = "nvidia-curand-cu12"
 version = "10.3.9.90"
 source = { registry = "https://pypi.org/simple" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/45/5e/92aa15eca622a388b80fbf8375d4760738df6285b1e92c43d37390a33a9a/nvidia_curand_cu12-10.3.9.90-py3-none-manylinux_2_27_aarch64.whl", hash = "sha256:dfab99248034673b779bc6decafdc3404a8a6f502462201f2f31f11354204acd", size = 63625754, upload-time = "2025-03-07T01:46:10.735Z" },
     { url = "https://files.pythonhosted.org/packages/fb/aa/6584b56dc84ebe9cf93226a5cde4d99080c8e90ab40f0c27bda7a0f29aa1/nvidia_curand_cu12-10.3.9.90-py3-none-manylinux_2_27_x86_64.whl", hash = "sha256:b32331d4f4df5d6eefa0554c565b626c7216f87a06a4f56fab27c3b68a830ec9", size = 63619976, upload-time = "2025-03-07T01:46:23.323Z" },
-    { url = "https://files.pythonhosted.org/packages/b9/75/70c05b2f3ed5be3bb30b7102b6eb78e100da4bbf6944fd6725c012831cab/nvidia_curand_cu12-10.3.9.90-py3-none-win_amd64.whl", hash = "sha256:f149a8ca457277da854f89cf282d6ef43176861926c7ac85b2a0fbd237c587ec", size = 62765309, upload-time = "2025-03-07T01:54:20.478Z" },
 ]
 
 [[package]]
@@ -4615,9 +4488,7 @@ dependencies = [
     { name = "nvidia-nvjitlink-cu12" },
 ]
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/c8/32/f7cd6ce8a7690544d084ea21c26e910a97e077c9b7f07bf5de623ee19981/nvidia_cusolver_cu12-11.7.3.90-py3-none-manylinux_2_27_aarch64.whl", hash = "sha256:db9ed69dbef9715071232caa9b69c52ac7de3a95773c2db65bdba85916e4e5c0", size = 267229841, upload-time = "2025-03-07T01:46:54.356Z" },
     { url = "https://files.pythonhosted.org/packages/85/48/9a13d2975803e8cf2777d5ed57b87a0b6ca2cc795f9a4f59796a910bfb80/nvidia_cusolver_cu12-11.7.3.90-py3-none-manylinux_2_27_x86_64.whl", hash = "sha256:4376c11ad263152bd50ea295c05370360776f8c3427b30991df774f9fb26c450", size = 267506905, upload-time = "2025-03-07T01:47:16.273Z" },
-    { url = "https://files.pythonhosted.org/packages/13/c0/76ca8551b8a84146ffa189fec81c26d04adba4bc0dbe09cd6e6fd9b7de04/nvidia_cusolver_cu12-11.7.3.90-py3-none-win_amd64.whl", hash = "sha256:4a550db115fcabc4d495eb7d39ac8b58d4ab5d8e63274d3754df1c0ad6a22d34", size = 256720438, upload-time = "2025-03-07T01:54:39.898Z" },
 ]
 
 [[package]]
@@ -4628,9 +4499,7 @@ dependencies = [
     { name = "nvidia-nvjitlink-cu12" },
 ]
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/bc/f7/cd777c4109681367721b00a106f491e0d0d15cfa1fd59672ce580ce42a97/nvidia_cusparse_cu12-12.5.8.93-py3-none-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:9b6c161cb130be1a07a27ea6923df8141f3c295852f4b260c65f18f3e0a091dc", size = 288117129, upload-time = "2025-03-07T01:47:40.407Z" },
     { url = "https://files.pythonhosted.org/packages/c2/f5/e1854cb2f2bcd4280c44736c93550cc300ff4b8c95ebe370d0aa7d2b473d/nvidia_cusparse_cu12-12.5.8.93-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:1ec05d76bbbd8b61b06a80e1eaf8cf4959c3d4ce8e711b65ebd0443bb0ebb13b", size = 288216466, upload-time = "2025-03-07T01:48:13.779Z" },
-    { url = "https://files.pythonhosted.org/packages/62/07/f3b2ad63f8e3d257a599f422ae34eb565e70c41031aecefa3d18b62cabd1/nvidia_cusparse_cu12-12.5.8.93-py3-none-win_amd64.whl", hash = "sha256:9a33604331cb2cac199f2e7f5104dfbb8a5a898c367a53dfda9ff2acb6b6b4dd", size = 284937404, upload-time = "2025-03-07T01:55:07.742Z" },
 ]
 
 [[package]]
@@ -4638,9 +4507,7 @@ name = "nvidia-cusparselt-cu12"
 version = "0.7.1"
 source = { registry = "https://pypi.org/simple" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/73/b9/598f6ff36faaece4b3c50d26f50e38661499ff34346f00e057760b35cc9d/nvidia_cusparselt_cu12-0.7.1-py3-none-manylinux2014_aarch64.whl", hash = "sha256:8878dce784d0fac90131b6817b607e803c36e629ba34dc5b433471382196b6a5", size = 283835557, upload-time = "2025-02-26T00:16:54.265Z" },
     { url = "https://files.pythonhosted.org/packages/56/79/12978b96bd44274fe38b5dde5cfb660b1d114f70a65ef962bcbbed99b549/nvidia_cusparselt_cu12-0.7.1-py3-none-manylinux2014_x86_64.whl", hash = "sha256:f1bb701d6b930d5a7cea44c19ceb973311500847f81b634d802b7b539dc55623", size = 287193691, upload-time = "2025-02-26T00:15:44.104Z" },
-    { url = "https://files.pythonhosted.org/packages/2f/d8/a6b0d0d0c2435e9310f3e2bb0d9c9dd4c33daef86aa5f30b3681defd37ea/nvidia_cusparselt_cu12-0.7.1-py3-none-win_amd64.whl", hash = "sha256:f67fbb5831940ec829c9117b7f33807db9f9678dc2a617fbe781cac17b4e1075", size = 271020911, upload-time = "2025-02-26T00:14:47.204Z" },
 ]
 
 [[package]]
@@ -4648,7 +4515,6 @@ name = "nvidia-nccl-cu12"
 version = "2.27.5"
 source = { registry = "https://pypi.org/simple" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/bb/1c/857979db0ef194ca5e21478a0612bcdbbe59458d7694361882279947b349/nvidia_nccl_cu12-2.27.5-py3-none-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:31432ad4d1fb1004eb0c56203dc9bc2178a1ba69d1d9e02d64a6938ab5e40e7a", size = 322400625, upload-time = "2025-06-26T04:11:04.496Z" },
     { url = "https://files.pythonhosted.org/packages/6e/89/f7a07dc961b60645dbbf42e80f2bc85ade7feb9a491b11a1e973aa00071f/nvidia_nccl_cu12-2.27.5-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:ad730cf15cb5d25fe849c6e6ca9eb5b76db16a80f13f425ac68d8e2e55624457", size = 322348229, upload-time = "2025-06-26T04:11:28.385Z" },
 ]
 
@@ -4658,8 +4524,6 @@ version = "12.8.93"
 source = { registry = "https://pypi.org/simple" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/f6/74/86a07f1d0f42998ca31312f998bd3b9a7eff7f52378f4f270c8679c77fb9/nvidia_nvjitlink_cu12-12.8.93-py3-none-manylinux2010_x86_64.manylinux_2_12_x86_64.whl", hash = "sha256:81ff63371a7ebd6e6451970684f916be2eab07321b73c9d244dc2b4da7f73b88", size = 39254836, upload-time = "2025-03-07T01:49:55.661Z" },
-    { url = "https://files.pythonhosted.org/packages/2a/a2/8cee5da30d13430e87bf99bb33455d2724d0a4a9cb5d7926d80ccb96d008/nvidia_nvjitlink_cu12-12.8.93-py3-none-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:adccd7161ace7261e01bb91e44e88da350895c270d23f744f0820c818b7229e7", size = 38386204, upload-time = "2025-03-07T01:49:43.612Z" },
-    { url = "https://files.pythonhosted.org/packages/ed/d7/34f02dad2e30c31b10a51f6b04e025e5dd60e5f936af9045a9b858a05383/nvidia_nvjitlink_cu12-12.8.93-py3-none-win_amd64.whl", hash = "sha256:bd93fbeeee850917903583587f4fc3a4eafa022e34572251368238ab5e6bd67f", size = 268553710, upload-time = "2025-03-07T01:56:24.13Z" },
 ]
 
 [[package]]
@@ -4667,7 +4531,6 @@ name = "nvidia-nvshmem-cu12"
 version = "3.3.20"
 source = { registry = "https://pypi.org/simple" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/92/9d/3dd98852568fb845ec1f7902c90a22b240fe1cbabda411ccedf2fd737b7b/nvidia_nvshmem_cu12-3.3.20-py3-none-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:0b0b960da3842212758e4fa4696b94f129090b30e5122fea3c5345916545cff0", size = 124484616, upload-time = "2025-08-04T20:24:59.172Z" },
     { url = "https://files.pythonhosted.org/packages/3b/6c/99acb2f9eb85c29fc6f3a7ac4dccfd992e22666dd08a642b303311326a97/nvidia_nvshmem_cu12-3.3.20-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:d00f26d3f9b2e3c3065be895e3059d6479ea5c638a3f38c9fec49b1b9dd7c1e5", size = 124657145, upload-time = "2025-08-04T20:25:19.995Z" },
 ]
 
@@ -4676,9 +4539,7 @@ name = "nvidia-nvtx-cu12"
 version = "12.8.90"
 source = { registry = "https://pypi.org/simple" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/10/c0/1b303feea90d296f6176f32a2a70b5ef230f9bdeb3a72bddb0dc922dc137/nvidia_nvtx_cu12-12.8.90-py3-none-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:d7ad891da111ebafbf7e015d34879f7112832fc239ff0d7d776b6cb685274615", size = 91161, upload-time = "2025-03-07T01:42:23.922Z" },
     { url = "https://files.pythonhosted.org/packages/a2/eb/86626c1bbc2edb86323022371c39aa48df6fd8b0a1647bc274577f72e90b/nvidia_nvtx_cu12-12.8.90-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:5b17e2001cc0d751a5bc2c6ec6d26ad95913324a4adb86788c944f8ce9ba441f", size = 89954, upload-time = "2025-03-07T01:42:44.131Z" },
-    { url = "https://files.pythonhosted.org/packages/9f/99/4c9c0c329bf9fc125008c3b54c7c94c0023518d06fc025ae36431375e1fe/nvidia_nvtx_cu12-12.8.90-py3-none-win_amd64.whl", hash = "sha256:619c8304aedc69f02ea82dd244541a83c3d9d40993381b3b590f1adaed3db41e", size = 56492, upload-time = "2025-03-07T01:52:24.69Z" },
 ]
 
 [[package]]
@@ -4732,8 +4593,8 @@ version = "1.19.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "ml-dtypes" },
-    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "numpy", version = "2.3.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
+    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "numpy", version = "2.3.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "protobuf" },
     { name = "typing-extensions" },
 ]
@@ -4775,8 +4636,8 @@ source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "coloredlogs" },
     { name = "flatbuffers" },
-    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "numpy", version = "2.3.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
+    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "numpy", version = "2.3.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "packaging" },
     { name = "protobuf" },
     { name = "sympy" },
@@ -4813,8 +4674,7 @@ source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "anyio" },
     { name = "distro" },
-    { name = "httpx", version = "0.27.2", source = { registry = "https://pypi.org/simple" }, marker = "extra == 'extra-6-crewai-aisuite'" },
-    { name = "httpx", version = "0.28.1", source = { registry = "https://pypi.org/simple" }, marker = "extra == 'extra-6-crewai-a2a' or extra != 'extra-6-crewai-aisuite'" },
+    { name = "httpx" },
     { name = "jiter" },
     { name = "pydantic" },
     { name = "sniffio" },
@@ -4831,8 +4691,8 @@ name = "opencv-python"
 version = "4.11.0.86"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "numpy", version = "2.3.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
+    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "numpy", version = "2.3.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/17/06/68c27a523103dad5837dc5b87e71285280c4f098c60e4fe8a8db6486ab09/opencv-python-4.11.0.86.tar.gz", hash = "sha256:03d60ccae62304860d232272e4a4fda93c39d595780cb40b161b310244b736a4", size = 95171956, upload-time = "2025-01-16T13:52:24.737Z" }
 wheels = [
@@ -5083,8 +4943,8 @@ name = "pandas"
 version = "2.2.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "numpy", version = "2.3.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
+    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "numpy", version = "2.3.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "python-dateutil" },
     { name = "pytz" },
     { name = "tzdata" },
@@ -5177,8 +5037,7 @@ name = "patronus"
 version = "0.1.24"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "httpx", version = "0.27.2", source = { registry = "https://pypi.org/simple" }, marker = "extra == 'extra-6-crewai-aisuite'" },
-    { name = "httpx", version = "0.28.1", source = { registry = "https://pypi.org/simple" }, marker = "extra == 'extra-6-crewai-a2a' or extra != 'extra-6-crewai-aisuite'" },
+    { name = "httpx" },
     { name = "opentelemetry-api" },
     { name = "opentelemetry-exporter-otlp" },
     { name = "opentelemetry-sdk" },
@@ -5201,8 +5060,7 @@ source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "anyio" },
     { name = "distro" },
-    { name = "httpx", version = "0.27.2", source = { registry = "https://pypi.org/simple" }, marker = "extra == 'extra-6-crewai-aisuite'" },
-    { name = "httpx", version = "0.28.1", source = { registry = "https://pypi.org/simple" }, marker = "extra == 'extra-6-crewai-a2a' or extra != 'extra-6-crewai-aisuite'" },
+    { name = "httpx" },
     { name = "pydantic" },
     { name = "sniffio" },
     { name = "typing-extensions" },
@@ -5463,7 +5321,7 @@ name = "portalocker"
 version = "2.7.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "pywin32", marker = "sys_platform == 'win32' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
+    { name = "pywin32", marker = "sys_platform == 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/1f/f8/969e6f280201b40b31bcb62843c619f343dcc351dff83a5891530c9dd60e/portalocker-2.7.0.tar.gz", hash = "sha256:032e81d534a88ec1736d03f780ba073f047a06c478b06e2937486f334e955c51", size = 20183, upload-time = "2023-01-18T23:36:14.436Z" }
 wheels = [
@@ -5980,8 +5838,8 @@ name = "pycocotools"
 version = "2.0.10"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "numpy", version = "2.3.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
+    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "numpy", version = "2.3.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/35/a6/694fd661f0feb5e91f7049a202ea12de312ca9010c33bd9d9f0c63046c01/pycocotools-2.0.10.tar.gz", hash = "sha256:7a47609cdefc95e5e151313c7d93a61cf06e15d42c7ba99b601e3bc0f9ece2e1", size = 25389, upload-time = "2025-06-04T23:37:47.879Z" }
 wheels = [
@@ -6203,8 +6061,8 @@ name = "pylance"
 version = "0.38.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "numpy", version = "2.3.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
+    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "numpy", version = "2.3.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "pyarrow" },
 ]
 wheels = [
@@ -6287,7 +6145,7 @@ name = "pynacl"
 version = "1.6.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "cffi", marker = "platform_python_implementation != 'PyPy' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
+    { name = "cffi", marker = "platform_python_implementation != 'PyPy'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/06/c6/a3124dee667a423f2c637cfd262a54d67d8ccf3e160f3c50f622a85b7723/pynacl-1.6.0.tar.gz", hash = "sha256:cb36deafe6e2bce3b286e5d1f3e1c246e0ccdb8808ddb4550bb2792f2df298f2", size = 3505641, upload-time = "2025-09-10T23:39:22.308Z" }
 wheels = [
@@ -6395,7 +6253,7 @@ version = "25.3.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "cryptography" },
-    { name = "typing-extensions", marker = "python_full_version < '3.13' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
+    { name = "typing-extensions", marker = "python_full_version < '3.13'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/80/be/97b83a464498a79103036bc74d1038df4a7ef0e402cfaf4d5e113fb14759/pyopenssl-25.3.0.tar.gz", hash = "sha256:c981cb0a3fd84e8602d7afc209522773b94c1c2446a3c710a75b06fe1beae329", size = 184073, upload-time = "2025-09-17T00:32:21.037Z" }
 wheels = [
@@ -6425,7 +6283,7 @@ name = "pypdf"
 version = "6.1.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "typing-extensions", marker = "python_full_version < '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
+    { name = "typing-extensions", marker = "python_full_version < '3.11'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/ee/5e/44d36a8d42687076af98e415b02c1f1c99dcaa794212e01a3f50cd289e38/pypdf-6.1.2.tar.gz", hash = "sha256:ba49efa39c9c5d14cb84efc4b7be75fca92d7ed1d1d74546db95c2dad99ed5d3", size = 5075141, upload-time = "2025-10-19T13:45:47.266Z" }
 wheels = [
@@ -6509,13 +6367,13 @@ name = "pytest"
 version = "8.4.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "colorama", marker = "sys_platform == 'win32' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "exceptiongroup", marker = "python_full_version < '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
+    { name = "colorama", marker = "sys_platform == 'win32'" },
+    { name = "exceptiongroup", marker = "python_full_version < '3.11'" },
     { name = "iniconfig" },
     { name = "packaging" },
     { name = "pluggy" },
     { name = "pygments" },
-    { name = "tomli", marker = "python_full_version < '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
+    { name = "tomli", marker = "python_full_version < '3.11'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/a3/5c/00a0e072241553e1a7496d638deababa67c5058571567b92a7eaa258397c/pytest-8.4.2.tar.gz", hash = "sha256:86c0d0b93306b961d58d62a4db4879f27fe25513d4b969df351abdddb3c30e01", size = 1519618, upload-time = "2025-09-04T14:34:22.711Z" }
 wheels = [
@@ -6527,9 +6385,9 @@ name = "pytest-asyncio"
 version = "1.2.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "backports-asyncio-runner", marker = "python_full_version < '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
+    { name = "backports-asyncio-runner", marker = "python_full_version < '3.11'" },
     { name = "pytest" },
-    { name = "typing-extensions", marker = "python_full_version < '3.13' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
+    { name = "typing-extensions", marker = "python_full_version < '3.13'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/42/86/9e3c5f48f7b7b638b216e4b9e645f54d199d7abbbab7a64a13b4e12ba10f/pytest_asyncio-1.2.0.tar.gz", hash = "sha256:c609a64a2a8768462d0c99811ddb8bd2583c33fd33cf7f21af1c142e824ffb57", size = 50119, upload-time = "2025-09-12T07:33:53.816Z" }
 wheels = [
@@ -6735,12 +6593,12 @@ name = "pyvis"
 version = "0.3.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "ipython", version = "8.37.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "ipython", version = "9.6.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
+    { name = "ipython", version = "8.37.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "ipython", version = "9.6.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "jinja2" },
     { name = "jsonpickle" },
-    { name = "networkx", version = "3.4.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "networkx", version = "3.5", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
+    { name = "networkx", version = "3.4.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "networkx", version = "3.5", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
 ]
 wheels = [
     { url = "https://files.pythonhosted.org/packages/ab/4b/e37e4e5d5ee1179694917b445768bdbfb084f5a59ecd38089d3413d4c70f/pyvis-0.3.2-py3-none-any.whl", hash = "sha256:5720c4ca8161dc5d9ab352015723abb7a8bb8fb443edeb07f7a322db34a97555", size = 756038, upload-time = "2023-02-24T20:29:46.758Z" },
@@ -6817,15 +6675,14 @@ version = "1.15.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "grpcio" },
-    { name = "httpx", version = "0.27.2", source = { registry = "https://pypi.org/simple" }, extra = ["http2"], marker = "extra == 'extra-6-crewai-aisuite'" },
-    { name = "httpx", version = "0.28.1", source = { registry = "https://pypi.org/simple" }, extra = ["http2"], marker = "extra == 'extra-6-crewai-a2a' or extra != 'extra-6-crewai-aisuite'" },
-    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "numpy", version = "2.3.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
+    { name = "httpx", extra = ["http2"] },
+    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "numpy", version = "2.3.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "portalocker" },
     { name = "protobuf" },
     { name = "pydantic" },
-    { name = "urllib3", version = "1.26.20", source = { registry = "https://pypi.org/simple" }, marker = "platform_python_implementation == 'PyPy' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "urllib3", version = "2.5.0", source = { registry = "https://pypi.org/simple" }, marker = "platform_python_implementation != 'PyPy' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
+    { name = "urllib3", version = "1.26.20", source = { registry = "https://pypi.org/simple" }, marker = "platform_python_implementation == 'PyPy'" },
+    { name = "urllib3", version = "2.5.0", source = { registry = "https://pypi.org/simple" }, marker = "platform_python_implementation != 'PyPy'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/79/8b/76c7d325e11d97cb8eb5e261c3759e9ed6664735afbf32fdded5b580690c/qdrant_client-1.15.1.tar.gz", hash = "sha256:631f1f3caebfad0fd0c1fba98f41be81d9962b7bf3ca653bed3b727c0e0cbe0e", size = 295297, upload-time = "2025-07-31T19:35:19.627Z" }
 wheels = [
@@ -6922,8 +6779,8 @@ version = "3.4.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "colorlog" },
-    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "numpy", version = "2.3.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
+    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "numpy", version = "2.3.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "omegaconf" },
     { name = "opencv-python" },
     { name = "pillow" },
@@ -6945,7 +6802,7 @@ source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "attrs" },
     { name = "rpds-py" },
-    { name = "typing-extensions", marker = "python_full_version < '3.13' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
+    { name = "typing-extensions", marker = "python_full_version < '3.13'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/22/f5/df4e9027acead3ecc63e50fe1e36aca1523e1719559c499951bb4b53188f/referencing-0.37.0.tar.gz", hash = "sha256:44aefc3142c5b842538163acb373e24cce6632bd54bdb01b21ad5863489f50d8", size = 78036, upload-time = "2025-10-13T15:30:48.871Z" }
 wheels = [
@@ -7039,8 +6896,8 @@ dependencies = [
     { name = "certifi" },
     { name = "charset-normalizer" },
     { name = "idna" },
-    { name = "urllib3", version = "1.26.20", source = { registry = "https://pypi.org/simple" }, marker = "platform_python_implementation == 'PyPy' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "urllib3", version = "2.5.0", source = { registry = "https://pypi.org/simple" }, marker = "platform_python_implementation != 'PyPy' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
+    { name = "urllib3", version = "1.26.20", source = { registry = "https://pypi.org/simple" }, marker = "platform_python_implementation == 'PyPy'" },
+    { name = "urllib3", version = "2.5.0", source = { registry = "https://pypi.org/simple" }, marker = "platform_python_implementation != 'PyPy'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/c9/74/b3ff8e6c8446842c3f5c837e9c3dfcfe2018ea6ecef224c710c85ef728f4/requests-2.32.5.tar.gz", hash = "sha256:dbba0bac56e100853db0ea71b82b4dfd5fe2bf6d3754a8893c3af500cec7d7cf", size = 134517, upload-time = "2025-08-18T20:46:02.573Z" }
 wheels = [
@@ -7079,7 +6936,7 @@ source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "markdown-it-py" },
     { name = "pygments" },
-    { name = "typing-extensions", marker = "python_full_version < '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
+    { name = "typing-extensions", marker = "python_full_version < '3.11'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/ab/3a/0316b28d0761c6734d6bc14e770d85506c986c85ffb239e688eeaab2c2bc/rich-13.9.4.tar.gz", hash = "sha256:439594978a49a09530cff7ebc4b5c7103ef57baf48d5ea3184f21d9a2befa098", size = 223149, upload-time = "2024-11-01T16:43:57.873Z" }
 wheels = [
@@ -7282,8 +7139,8 @@ wheels = [
 
 [package.optional-dependencies]
 torch = [
-    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "numpy", version = "2.3.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
+    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "numpy", version = "2.3.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "torch" },
 ]
 
@@ -7300,7 +7157,7 @@ resolution-markers = [
     "(python_full_version < '3.11' and platform_machine != 'aarch64' and platform_python_implementation == 'PyPy' and sys_platform == 'linux') or (python_full_version < '3.11' and platform_python_implementation == 'PyPy' and sys_platform != 'darwin' and sys_platform != 'linux')",
 ]
 dependencies = [
-    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
+    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/0f/37/6964b830433e654ec7485e45a00fc9a27cf868d622838f6b6d9c5ec0d532/scipy-1.15.3.tar.gz", hash = "sha256:eae3cf522bc7df64b42cad3925c876e1b0b6c35c1337c93e12c0f366f55b0eaf", size = 59419214, upload-time = "2025-05-08T16:13:05.955Z" }
 wheels = [
@@ -7376,7 +7233,7 @@ resolution-markers = [
     "(python_full_version == '3.11.*' and platform_machine != 'aarch64' and platform_python_implementation == 'PyPy' and sys_platform == 'linux') or (python_full_version == '3.11.*' and platform_python_implementation == 'PyPy' and sys_platform != 'darwin' and sys_platform != 'linux')",
 ]
 dependencies = [
-    { name = "numpy", version = "2.3.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
+    { name = "numpy", version = "2.3.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/4c/3b/546a6f0bfe791bbb7f8d591613454d15097e53f906308ec6f7c1ce588e8e/scipy-1.16.2.tar.gz", hash = "sha256:af029b153d243a80afb6eabe40b0a07f8e35c9adc269c019f364ad747f826a6b", size = 30580599, upload-time = "2025-09-11T17:48:08.271Z" }
 wheels = [
@@ -7448,8 +7305,8 @@ dependencies = [
     { name = "loguru" },
     { name = "python-dateutil" },
     { name = "requests" },
-    { name = "urllib3", version = "1.26.20", source = { registry = "https://pypi.org/simple" }, marker = "platform_python_implementation == 'PyPy' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "urllib3", version = "2.5.0", source = { registry = "https://pypi.org/simple" }, marker = "platform_python_implementation != 'PyPy' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
+    { name = "urllib3", version = "1.26.20", source = { registry = "https://pypi.org/simple" }, marker = "platform_python_implementation == 'PyPy'" },
+    { name = "urllib3", version = "2.5.0", source = { registry = "https://pypi.org/simple" }, marker = "platform_python_implementation != 'PyPy'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/4c/e7/f6ed9d4259e78874dcfcc7a2f4aeb86b3035844ea73ddc430bfa0b9baab0/scrapfly_sdk-0.8.23.tar.gz", hash = "sha256:2668f7a82bf3a6b240be2f1e4090cf140d74181de57bb46543719554fbed55ae", size = 42258, upload-time = "2025-04-29T18:34:32.714Z" }
 wheels = [
@@ -7475,12 +7332,12 @@ resolution-markers = [
     "(python_full_version < '3.11' and platform_machine != 'aarch64' and platform_python_implementation == 'PyPy' and sys_platform == 'linux') or (python_full_version < '3.11' and platform_python_implementation == 'PyPy' and sys_platform != 'darwin' and sys_platform != 'linux')",
 ]
 dependencies = [
-    { name = "certifi", marker = "platform_python_implementation == 'PyPy' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "trio", marker = "platform_python_implementation == 'PyPy' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "trio-websocket", marker = "platform_python_implementation == 'PyPy' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "typing-extensions", marker = "platform_python_implementation == 'PyPy' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "urllib3", version = "1.26.20", source = { registry = "https://pypi.org/simple" }, extra = ["socks"], marker = "platform_python_implementation == 'PyPy' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "websocket-client", marker = "platform_python_implementation == 'PyPy' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
+    { name = "certifi", marker = "platform_python_implementation == 'PyPy'" },
+    { name = "trio", marker = "platform_python_implementation == 'PyPy'" },
+    { name = "trio-websocket", marker = "platform_python_implementation == 'PyPy'" },
+    { name = "typing-extensions", marker = "platform_python_implementation == 'PyPy'" },
+    { name = "urllib3", version = "1.26.20", source = { registry = "https://pypi.org/simple" }, extra = ["socks"], marker = "platform_python_implementation == 'PyPy'" },
+    { name = "websocket-client", marker = "platform_python_implementation == 'PyPy'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/54/2d/fafffe946099033ccf22bf89e12eede14c1d3c5936110c5f6f2b9830722c/selenium-4.32.0.tar.gz", hash = "sha256:b9509bef4056f4083772abb1ae19ff57247d617a29255384b26be6956615b206", size = 870997, upload-time = "2025-05-02T20:35:27.325Z" }
 wheels = [
@@ -7506,12 +7363,12 @@ resolution-markers = [
     "(python_full_version < '3.11' and platform_machine != 'aarch64' and platform_python_implementation != 'PyPy' and sys_platform == 'linux') or (python_full_version < '3.11' and platform_python_implementation != 'PyPy' and sys_platform != 'darwin' and sys_platform != 'linux')",
 ]
 dependencies = [
-    { name = "certifi", marker = "platform_python_implementation != 'PyPy' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "trio", marker = "platform_python_implementation != 'PyPy' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "trio-websocket", marker = "platform_python_implementation != 'PyPy' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "typing-extensions", marker = "platform_python_implementation != 'PyPy' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "urllib3", version = "2.5.0", source = { registry = "https://pypi.org/simple" }, extra = ["socks"], marker = "platform_python_implementation != 'PyPy' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "websocket-client", marker = "platform_python_implementation != 'PyPy' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
+    { name = "certifi", marker = "platform_python_implementation != 'PyPy'" },
+    { name = "trio", marker = "platform_python_implementation != 'PyPy'" },
+    { name = "trio-websocket", marker = "platform_python_implementation != 'PyPy'" },
+    { name = "typing-extensions", marker = "platform_python_implementation != 'PyPy'" },
+    { name = "urllib3", version = "2.5.0", source = { registry = "https://pypi.org/simple" }, extra = ["socks"], marker = "platform_python_implementation != 'PyPy'" },
+    { name = "websocket-client", marker = "platform_python_implementation != 'PyPy'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/fd/0d/2c5b09b56a749f1b43a8dcb9875b3edf81dda69b3a3348c8d90e3ce01555/selenium-4.37.0.tar.gz", hash = "sha256:a5f312fe659fc373a194484c6667b920278493ac98bca1b38e239c1b8bb3a05c", size = 918689, upload-time = "2025-10-17T21:11:03.351Z" }
 wheels = [
@@ -7546,8 +7403,8 @@ version = "2.42.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "certifi" },
-    { name = "urllib3", version = "1.26.20", source = { registry = "https://pypi.org/simple" }, marker = "platform_python_implementation == 'PyPy' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "urllib3", version = "2.5.0", source = { registry = "https://pypi.org/simple" }, marker = "platform_python_implementation != 'PyPy' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
+    { name = "urllib3", version = "1.26.20", source = { registry = "https://pypi.org/simple" }, marker = "platform_python_implementation == 'PyPy'" },
+    { name = "urllib3", version = "2.5.0", source = { registry = "https://pypi.org/simple" }, marker = "platform_python_implementation != 'PyPy'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/31/04/ec8c1dd9250847303d98516e917978cb1c7083024770d86d657d2ccb5a70/sentry_sdk-2.42.1.tar.gz", hash = "sha256:8598cc6edcfe74cb8074ba6a7c15338cdee93d63d3eb9b9943b4b568354ad5b6", size = 354839, upload-time = "2025-10-20T12:38:40.45Z" }
 wheels = [
@@ -7580,8 +7437,8 @@ name = "shapely"
 version = "2.1.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "numpy", version = "2.3.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
+    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "numpy", version = "2.3.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/4d/bc/0989043118a27cccb4e906a46b7565ce36ca7b57f5a18b78f4f1b0f72d9d/shapely-2.1.2.tar.gz", hash = "sha256:2ed4ecb28320a433db18a5bf029986aa8afcfd740745e78847e330d5d94922a9", size = 315489, upload-time = "2025-09-24T13:51:41.432Z" }
 wheels = [
@@ -7649,14 +7506,14 @@ resolution-markers = [
     "(python_full_version < '3.11' and platform_machine != 'aarch64' and platform_python_implementation == 'PyPy' and sys_platform == 'linux') or (python_full_version < '3.11' and platform_python_implementation == 'PyPy' and sys_platform != 'darwin' and sys_platform != 'linux')",
 ]
 dependencies = [
-    { name = "build", marker = "python_full_version < '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "parsimonious", marker = "python_full_version < '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "pyjwt", marker = "python_full_version < '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "requests", marker = "python_full_version < '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "setuptools", marker = "python_full_version < '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "sqlparams", marker = "python_full_version < '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "tomli", marker = "python_full_version < '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "wheel", marker = "python_full_version < '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
+    { name = "build", marker = "python_full_version < '3.11'" },
+    { name = "parsimonious", marker = "python_full_version < '3.11'" },
+    { name = "pyjwt", marker = "python_full_version < '3.11'" },
+    { name = "requests", marker = "python_full_version < '3.11'" },
+    { name = "setuptools", marker = "python_full_version < '3.11'" },
+    { name = "sqlparams", marker = "python_full_version < '3.11'" },
+    { name = "tomli", marker = "python_full_version < '3.11'" },
+    { name = "wheel", marker = "python_full_version < '3.11'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/29/6e/8278a773383ccd0adcceaefd767fd48021fedd271d22778add7c7f4b6dca/singlestoredb-1.12.4.tar.gz", hash = "sha256:b64e3a71b5c0a5375af79dc6523a14d6744798f5a2ec884cbbf5613d6672e56a", size = 306450, upload-time = "2025-04-02T18:14:10.115Z" }
 wheels = [
@@ -7693,13 +7550,13 @@ resolution-markers = [
     "(python_full_version == '3.11.*' and platform_machine != 'aarch64' and platform_python_implementation == 'PyPy' and sys_platform == 'linux') or (python_full_version == '3.11.*' and platform_python_implementation == 'PyPy' and sys_platform != 'darwin' and sys_platform != 'linux')",
 ]
 dependencies = [
-    { name = "build", marker = "python_full_version >= '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "parsimonious", marker = "python_full_version >= '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "pyjwt", marker = "python_full_version >= '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "requests", marker = "python_full_version >= '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "setuptools", marker = "python_full_version >= '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "sqlparams", marker = "python_full_version >= '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "wheel", marker = "python_full_version >= '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
+    { name = "build", marker = "python_full_version >= '3.11'" },
+    { name = "parsimonious", marker = "python_full_version >= '3.11'" },
+    { name = "pyjwt", marker = "python_full_version >= '3.11'" },
+    { name = "requests", marker = "python_full_version >= '3.11'" },
+    { name = "setuptools", marker = "python_full_version >= '3.11'" },
+    { name = "sqlparams", marker = "python_full_version >= '3.11'" },
+    { name = "wheel", marker = "python_full_version >= '3.11'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/cd/53/332fb7c54c56ea962c8c11c88a2ddf3ca7dd621bc1ccb8f4f07f57302113/singlestoredb-1.15.8.tar.gz", hash = "sha256:114a8401e62862c224b1bf3b6a9f0700573cf4ad7a94f7c848e981019eec01fc", size = 363704, upload-time = "2025-09-26T13:55:05.731Z" }
 wheels = [
@@ -7837,7 +7694,7 @@ name = "sqlalchemy"
 version = "2.0.44"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "greenlet", marker = "platform_machine == 'AMD64' or platform_machine == 'WIN32' or platform_machine == 'aarch64' or platform_machine == 'amd64' or platform_machine == 'ppc64le' or platform_machine == 'win32' or platform_machine == 'x86_64' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
+    { name = "greenlet", marker = "platform_machine == 'AMD64' or platform_machine == 'WIN32' or platform_machine == 'aarch64' or platform_machine == 'amd64' or platform_machine == 'ppc64le' or platform_machine == 'win32' or platform_machine == 'x86_64'" },
     { name = "typing-extensions" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/f0/f2/840d7b9496825333f532d2e3976b8eadbf52034178aac53630d09fe6e1ef/sqlalchemy-2.0.44.tar.gz", hash = "sha256:0ae7454e1ab1d780aee69fd2aae7d6b8670a581d8847f2d1e0f7ddfbf47e5a22", size = 9819830, upload-time = "2025-10-10T14:39:12.935Z" }
@@ -7919,8 +7776,7 @@ source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "anthropic" },
     { name = "browserbase" },
-    { name = "httpx", version = "0.27.2", source = { registry = "https://pypi.org/simple" }, marker = "extra == 'extra-6-crewai-aisuite'" },
-    { name = "httpx", version = "0.28.1", source = { registry = "https://pypi.org/simple" }, marker = "extra == 'extra-6-crewai-a2a' or extra != 'extra-6-crewai-aisuite'" },
+    { name = "httpx" },
     { name = "litellm" },
     { name = "openai" },
     { name = "playwright" },
@@ -7940,7 +7796,7 @@ version = "0.48.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "anyio" },
-    { name = "typing-extensions", marker = "python_full_version < '3.13' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
+    { name = "typing-extensions", marker = "python_full_version < '3.13'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/a7/a5/d6f429d43394057b67a6b5bbe6eae2f77a6bf7459d961fdb224bf206eee6/starlette-0.48.0.tar.gz", hash = "sha256:7e8cee469a8ab2352911528110ce9088fdc6a37d9876926e73da7ce4aa4c7a46", size = 2652949, upload-time = "2025-09-13T08:41:05.699Z" }
 wheels = [
@@ -7982,8 +7838,7 @@ name = "tavily-python"
 version = "0.7.12"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "httpx", version = "0.27.2", source = { registry = "https://pypi.org/simple" }, marker = "extra == 'extra-6-crewai-aisuite'" },
-    { name = "httpx", version = "0.28.1", source = { registry = "https://pypi.org/simple" }, marker = "extra == 'extra-6-crewai-a2a' or extra != 'extra-6-crewai-aisuite'" },
+    { name = "httpx" },
     { name = "requests" },
     { name = "tiktoken" },
 ]
@@ -8146,26 +8001,26 @@ dependencies = [
     { name = "filelock" },
     { name = "fsspec" },
     { name = "jinja2" },
-    { name = "networkx", version = "3.4.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "networkx", version = "3.5", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "nvidia-cublas-cu12", marker = "(platform_machine == 'x86_64' and sys_platform == 'linux') or (platform_machine != 'x86_64' and extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite') or (sys_platform != 'linux' and extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "nvidia-cuda-cupti-cu12", marker = "(platform_machine == 'x86_64' and sys_platform == 'linux') or (platform_machine != 'x86_64' and extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite') or (sys_platform != 'linux' and extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "nvidia-cuda-nvrtc-cu12", marker = "(platform_machine == 'x86_64' and sys_platform == 'linux') or (platform_machine != 'x86_64' and extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite') or (sys_platform != 'linux' and extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "nvidia-cuda-runtime-cu12", marker = "(platform_machine == 'x86_64' and sys_platform == 'linux') or (platform_machine != 'x86_64' and extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite') or (sys_platform != 'linux' and extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "nvidia-cudnn-cu12", marker = "(platform_machine == 'x86_64' and sys_platform == 'linux') or (platform_machine != 'x86_64' and extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite') or (sys_platform != 'linux' and extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "nvidia-cufft-cu12", marker = "(platform_machine == 'x86_64' and sys_platform == 'linux') or (platform_machine != 'x86_64' and extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite') or (sys_platform != 'linux' and extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "nvidia-cufile-cu12", marker = "(platform_machine == 'x86_64' and sys_platform == 'linux') or (platform_machine != 'x86_64' and extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite') or (sys_platform != 'linux' and extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "nvidia-curand-cu12", marker = "(platform_machine == 'x86_64' and sys_platform == 'linux') or (platform_machine != 'x86_64' and extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite') or (sys_platform != 'linux' and extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "nvidia-cusolver-cu12", marker = "(platform_machine == 'x86_64' and sys_platform == 'linux') or (platform_machine != 'x86_64' and extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite') or (sys_platform != 'linux' and extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "nvidia-cusparse-cu12", marker = "(platform_machine == 'x86_64' and sys_platform == 'linux') or (platform_machine != 'x86_64' and extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite') or (sys_platform != 'linux' and extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "nvidia-cusparselt-cu12", marker = "(platform_machine == 'x86_64' and sys_platform == 'linux') or (platform_machine != 'x86_64' and extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite') or (sys_platform != 'linux' and extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "nvidia-nccl-cu12", marker = "(platform_machine == 'x86_64' and sys_platform == 'linux') or (platform_machine != 'x86_64' and extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite') or (sys_platform != 'linux' and extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "nvidia-nvjitlink-cu12", marker = "(platform_machine == 'x86_64' and sys_platform == 'linux') or (platform_machine != 'x86_64' and extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite') or (sys_platform != 'linux' and extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "nvidia-nvshmem-cu12", marker = "(platform_machine == 'x86_64' and sys_platform == 'linux') or (platform_machine != 'x86_64' and extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite') or (sys_platform != 'linux' and extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "nvidia-nvtx-cu12", marker = "(platform_machine == 'x86_64' and sys_platform == 'linux') or (platform_machine != 'x86_64' and extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite') or (sys_platform != 'linux' and extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "setuptools", marker = "python_full_version >= '3.12' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
+    { name = "networkx", version = "3.4.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "networkx", version = "3.5", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "nvidia-cublas-cu12", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "nvidia-cuda-cupti-cu12", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "nvidia-cuda-nvrtc-cu12", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "nvidia-cuda-runtime-cu12", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "nvidia-cudnn-cu12", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "nvidia-cufft-cu12", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "nvidia-cufile-cu12", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "nvidia-curand-cu12", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "nvidia-cusolver-cu12", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "nvidia-cusparse-cu12", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "nvidia-cusparselt-cu12", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "nvidia-nccl-cu12", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "nvidia-nvjitlink-cu12", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "nvidia-nvshmem-cu12", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "nvidia-nvtx-cu12", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "setuptools", marker = "python_full_version >= '3.12'" },
     { name = "sympy" },
-    { name = "triton", marker = "(platform_machine == 'x86_64' and sys_platform == 'linux') or (platform_machine != 'x86_64' and extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite') or (sys_platform != 'linux' and extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
+    { name = "triton", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
     { name = "typing-extensions" },
 ]
 wheels = [
@@ -8196,8 +8051,8 @@ name = "torchvision"
 version = "0.24.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "numpy", version = "2.3.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
+    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "numpy", version = "2.3.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "pillow" },
     { name = "torch" },
 ]
@@ -8229,7 +8084,7 @@ name = "tqdm"
 version = "4.67.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "colorama", marker = "sys_platform == 'win32' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
+    { name = "colorama", marker = "sys_platform == 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/a8/4b/29b4ef32e036bb34e4ab51796dd745cdba7ed47ad142a9f4a1eb8e0c744d/tqdm-4.67.1.tar.gz", hash = "sha256:f8aef9c52c08c13a65f30ea34f4e5aac3fd1a34959879d7e59e63027286627f2", size = 169737, upload-time = "2024-11-24T20:12:22.481Z" }
 wheels = [
@@ -8252,8 +8107,8 @@ source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "filelock" },
     { name = "huggingface-hub" },
-    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "numpy", version = "2.3.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
+    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "numpy", version = "2.3.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "packaging" },
     { name = "pyyaml" },
     { name = "regex" },
@@ -8273,8 +8128,8 @@ version = "0.31.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "attrs" },
-    { name = "cffi", marker = "(implementation_name != 'pypy' and os_name == 'nt' and platform_machine != 'aarch64' and sys_platform == 'linux') or (implementation_name != 'pypy' and os_name == 'nt' and sys_platform != 'darwin' and sys_platform != 'linux') or (implementation_name == 'pypy' and platform_machine != 'aarch64' and sys_platform == 'linux' and extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite') or (implementation_name == 'pypy' and sys_platform != 'darwin' and sys_platform != 'linux' and extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite') or (os_name != 'nt' and extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite') or (platform_machine == 'aarch64' and sys_platform == 'linux' and extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite') or (sys_platform == 'darwin' and extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "exceptiongroup", marker = "python_full_version < '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
+    { name = "cffi", marker = "(implementation_name != 'pypy' and os_name == 'nt' and platform_machine != 'aarch64' and sys_platform == 'linux') or (implementation_name != 'pypy' and os_name == 'nt' and sys_platform != 'darwin' and sys_platform != 'linux')" },
+    { name = "exceptiongroup", marker = "python_full_version < '3.11'" },
     { name = "idna" },
     { name = "outcome" },
     { name = "sniffio" },
@@ -8290,7 +8145,7 @@ name = "trio-websocket"
 version = "0.12.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "exceptiongroup", marker = "python_full_version < '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
+    { name = "exceptiongroup", marker = "python_full_version < '3.11'" },
     { name = "outcome" },
     { name = "trio" },
     { name = "wsproto" },
@@ -8305,15 +8160,10 @@ name = "triton"
 version = "3.5.0"
 source = { registry = "https://pypi.org/simple" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/dd/22/507b6f58a35e05e84381630b2dc2a3cee1a7a2a7eaf4cba857c638a18a24/triton-3.5.0-cp310-cp310-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:6f90de6a6566bb619b4c0adc9855729e1b1b5e26533fca1bf6206e96b6d277a3", size = 159827599, upload-time = "2025-10-15T19:15:43.87Z" },
     { url = "https://files.pythonhosted.org/packages/0b/eb/09e31d107a5d00eb281aa7e6635ca463e9bca86515944e399480eadb71f8/triton-3.5.0-cp310-cp310-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:d5d3b3d480debf24eaa739623c9a42446b0b77f95593d30eb1f64cd2278cc1f0", size = 170333110, upload-time = "2025-10-13T16:37:49.588Z" },
-    { url = "https://files.pythonhosted.org/packages/79/f9/b6f60f978397c616fd8dacca2305759fe4f80d397b20ef72534803244bd5/triton-3.5.0-cp311-cp311-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:8457b22148defefdcb7fa8144b05ce211b9faefad650a1ce85b23df488d5549c", size = 159926731, upload-time = "2025-10-15T19:15:49.682Z" },
     { url = "https://files.pythonhosted.org/packages/3d/78/949a04391c21956c816523678f0e5fa308eb5b1e7622d88c4e4ef5fceca0/triton-3.5.0-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:f34bfa21c5b3a203c0f0eab28dcc1e49bd1f67d22724e77fb6665a659200a4ec", size = 170433488, upload-time = "2025-10-13T16:37:57.132Z" },
-    { url = "https://files.pythonhosted.org/packages/87/9b/30988039e1e84df7554fba24e6a734d2d0e847af33cabdf9b532b3c51456/triton-3.5.0-cp312-cp312-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:7da21fccceafc163e3a5e857abe34351ef76345af06cabf9637a914742671f0b", size = 159946647, upload-time = "2025-10-15T19:15:56.325Z" },
     { url = "https://files.pythonhosted.org/packages/f5/3a/e991574f3102147b642e49637e0281e9bb7c4ba254edb2bab78247c85e01/triton-3.5.0-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:c9e71db82261c4ffa3921cd050cd5faa18322d2d405c30eb56084afaff3b0833", size = 170476535, upload-time = "2025-10-13T16:38:05.18Z" },
-    { url = "https://files.pythonhosted.org/packages/cd/85/e37f1197acb04c8f3d83851d23d5d6ed5060ef74580668b112e23fdfa203/triton-3.5.0-cp313-cp313-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:188da5b81fa2f8322c27fec1627703eac24cb9bb7ab0dfbe9925973bc1b070d3", size = 159958970, upload-time = "2025-10-15T19:16:01.717Z" },
     { url = "https://files.pythonhosted.org/packages/6c/29/10728de8a6e932e517c10773486b8e99f85d1b1d9dd87d9a9616e1fef4a1/triton-3.5.0-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:e6bb9aa5519c084a333acdba443789e50012a4b851cd486c54f0b8dc2a8d3a12", size = 170487289, upload-time = "2025-10-13T16:38:11.662Z" },
-    { url = "https://files.pythonhosted.org/packages/b8/1d/38258f05010ac17a7b058c022911c9cae6526e149b7397134a048cf5a6c2/triton-3.5.0-cp313-cp313t-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:03127d9b33aaf979c856676b394bc059ec1d68cb6da68ae03f62dd8ad77a04ae", size = 160073012, upload-time = "2025-10-15T19:16:07.477Z" },
     { url = "https://files.pythonhosted.org/packages/5c/38/db80e48b9220c9bce872b0f616ad0446cdf554a40b85c7865cbca99ab3c2/triton-3.5.0-cp313-cp313t-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:c83f2343e1a220a716c7b3ab9fccfcbe3ad4020d189549200e2d2e8d5868bed9", size = 170577179, upload-time = "2025-10-13T16:38:17.865Z" },
 ]
 
@@ -8405,7 +8255,7 @@ resolution-markers = [
     "(python_full_version < '3.11' and platform_machine != 'aarch64' and platform_python_implementation == 'PyPy' and sys_platform == 'linux') or (python_full_version < '3.11' and platform_python_implementation == 'PyPy' and sys_platform != 'darwin' and sys_platform != 'linux')",
 ]
 dependencies = [
-    { name = "types-urllib3", marker = "platform_python_implementation == 'PyPy' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
+    { name = "types-urllib3", marker = "platform_python_implementation == 'PyPy'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/f9/b8/c1e8d39996b4929b918aba10dba5de07a8b3f4c8487bb61bb79882544e69/types-requests-2.31.0.6.tar.gz", hash = "sha256:cd74ce3b53c461f1228a9b783929ac73a666658f223e28ed29753771477b3bd0", size = 15535, upload-time = "2023-09-27T06:19:38.443Z" }
 wheels = [
@@ -8431,7 +8281,7 @@ resolution-markers = [
     "(python_full_version < '3.11' and platform_machine != 'aarch64' and platform_python_implementation != 'PyPy' and sys_platform == 'linux') or (python_full_version < '3.11' and platform_python_implementation != 'PyPy' and sys_platform != 'darwin' and sys_platform != 'linux')",
 ]
 dependencies = [
-    { name = "urllib3", version = "2.5.0", source = { registry = "https://pypi.org/simple" }, marker = "platform_python_implementation != 'PyPy' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
+    { name = "urllib3", version = "2.5.0", source = { registry = "https://pypi.org/simple" }, marker = "platform_python_implementation != 'PyPy'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/b4/40/66afbb030f4a800c08a9312a0653a7aec06ce0bd633d83215eb0f83c0f46/types-requests-2.31.0.20240406.tar.gz", hash = "sha256:4428df33c5503945c74b3f42e82b181e86ec7b724620419a2966e2de604ce1a1", size = 17134, upload-time = "2024-04-06T02:13:39.267Z" }
 wheels = [
@@ -8514,8 +8364,8 @@ dependencies = [
     { name = "langdetect" },
     { name = "lxml" },
     { name = "nltk" },
-    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "numpy", version = "2.3.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
+    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "numpy", version = "2.3.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "psutil" },
     { name = "python-iso639" },
     { name = "python-magic" },
@@ -8538,8 +8388,8 @@ all-docs = [
     { name = "google-cloud-vision" },
     { name = "markdown" },
     { name = "msoffcrypto-tool" },
-    { name = "networkx", version = "3.4.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "networkx", version = "3.5", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
+    { name = "networkx", version = "3.4.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "networkx", version = "3.5", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "onnx" },
     { name = "onnxruntime" },
     { name = "openpyxl" },
@@ -8561,8 +8411,8 @@ local-inference = [
     { name = "google-cloud-vision" },
     { name = "markdown" },
     { name = "msoffcrypto-tool" },
-    { name = "networkx", version = "3.4.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "networkx", version = "3.5", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
+    { name = "networkx", version = "3.4.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "networkx", version = "3.5", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "onnx" },
     { name = "onnxruntime" },
     { name = "openpyxl" },
@@ -8588,8 +8438,7 @@ dependencies = [
     { name = "aiofiles" },
     { name = "cryptography" },
     { name = "httpcore" },
-    { name = "httpx", version = "0.27.2", source = { registry = "https://pypi.org/simple" }, marker = "extra == 'extra-6-crewai-aisuite'" },
-    { name = "httpx", version = "0.28.1", source = { registry = "https://pypi.org/simple" }, marker = "extra == 'extra-6-crewai-a2a' or extra != 'extra-6-crewai-aisuite'" },
+    { name = "httpx" },
     { name = "pydantic" },
     { name = "pypdf" },
     { name = "requests-toolbelt" },
@@ -8607,8 +8456,8 @@ dependencies = [
     { name = "accelerate" },
     { name = "huggingface-hub" },
     { name = "matplotlib" },
-    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "numpy", version = "2.3.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
+    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "numpy", version = "2.3.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "onnx" },
     { name = "onnxruntime" },
     { name = "opencv-python" },
@@ -8617,8 +8466,8 @@ dependencies = [
     { name = "pypdfium2" },
     { name = "python-multipart" },
     { name = "rapidfuzz" },
-    { name = "scipy", version = "1.15.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "scipy", version = "1.16.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
+    { name = "scipy", version = "1.15.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "scipy", version = "1.16.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "timm" },
     { name = "torch" },
     { name = "transformers" },
@@ -8666,7 +8515,7 @@ wheels = [
 
 [package.optional-dependencies]
 socks = [
-    { name = "pysocks", marker = "platform_python_implementation == 'PyPy' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
+    { name = "pysocks", marker = "platform_python_implementation == 'PyPy'" },
 ]
 
 [[package]]
@@ -8694,7 +8543,7 @@ wheels = [
 
 [package.optional-dependencies]
 socks = [
-    { name = "pysocks", marker = "platform_python_implementation != 'PyPy' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
+    { name = "pysocks", marker = "platform_python_implementation != 'PyPy'" },
 ]
 
 [[package]]
@@ -8730,7 +8579,7 @@ source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "click" },
     { name = "h11" },
-    { name = "typing-extensions", marker = "python_full_version < '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
+    { name = "typing-extensions", marker = "python_full_version < '3.11'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/cb/ce/f06b84e2697fef4688ca63bdb2fdf113ca0a3be33f94488f2cadb690b0cf/uvicorn-0.38.0.tar.gz", hash = "sha256:fd97093bdd120a2609fc0d3afe931d4d4ad688b6e75f0f929fde1bc36fe0e91d", size = 80605, upload-time = "2025-10-18T13:46:44.63Z" }
 wheels = [
@@ -8739,11 +8588,11 @@ wheels = [
 
 [package.optional-dependencies]
 standard = [
-    { name = "colorama", marker = "sys_platform == 'win32' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
+    { name = "colorama", marker = "sys_platform == 'win32'" },
     { name = "httptools" },
     { name = "python-dotenv" },
     { name = "pyyaml" },
-    { name = "uvloop", marker = "(platform_python_implementation != 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32') or (platform_python_implementation == 'PyPy' and extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite') or (sys_platform == 'cygwin' and extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite') or (sys_platform == 'win32' and extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
+    { name = "uvloop", marker = "platform_python_implementation != 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32'" },
     { name = "watchfiles" },
     { name = "websockets" },
 ]
@@ -8795,8 +8644,8 @@ version = "7.0.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "pyyaml" },
-    { name = "urllib3", version = "1.26.20", source = { registry = "https://pypi.org/simple" }, marker = "platform_python_implementation == 'PyPy' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "urllib3", version = "2.5.0", source = { registry = "https://pypi.org/simple" }, marker = "platform_python_implementation != 'PyPy' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
+    { name = "urllib3", version = "1.26.20", source = { registry = "https://pypi.org/simple" }, marker = "platform_python_implementation == 'PyPy'" },
+    { name = "urllib3", version = "2.5.0", source = { registry = "https://pypi.org/simple" }, marker = "platform_python_implementation != 'PyPy'" },
     { name = "wrapt" },
     { name = "yarl" },
 ]
@@ -8813,7 +8662,7 @@ dependencies = [
     { name = "distlib" },
     { name = "filelock" },
     { name = "platformdirs" },
-    { name = "typing-extensions", marker = "python_full_version < '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
+    { name = "typing-extensions", marker = "python_full_version < '3.11'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/a4/d5/b0ccd381d55c8f45d46f77df6ae59fbc23d19e901e2d523395598e5f4c93/virtualenv-20.35.3.tar.gz", hash = "sha256:4f1a845d131133bdff10590489610c98c168ff99dc75d6c96853801f7f67af44", size = 6002907, upload-time = "2025-10-10T21:23:33.178Z" }
 wheels = [
@@ -8828,8 +8677,8 @@ dependencies = [
     { name = "aiohttp" },
     { name = "aiolimiter" },
     { name = "langchain-text-splitters" },
-    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
-    { name = "numpy", version = "2.3.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11' or (extra == 'extra-6-crewai-a2a' and extra == 'extra-6-crewai-aisuite')" },
+    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "numpy", version = "2.3.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "pillow" },
     { name = "pydantic" },
     { name = "requests" },
@@ -8938,8 +8787,7 @@ dependencies = [
     { name = "authlib" },
     { name = "deprecation" },
     { name = "grpcio" },
-    { name = "httpx", version = "0.27.2", source = { registry = "https://pypi.org/simple" }, marker = "extra == 'extra-6-crewai-aisuite'" },
-    { name = "httpx", version = "0.28.1", source = { registry = "https://pypi.org/simple" }, marker = "extra == 'extra-6-crewai-a2a' or extra != 'extra-6-crewai-aisuite'" },
+    { name = "httpx" },
     { name = "protobuf" },
     { name = "pydantic" },
     { name = "validators" },
