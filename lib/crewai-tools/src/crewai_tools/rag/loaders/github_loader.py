@@ -9,7 +9,7 @@ from crewai_tools.rag.source_content import SourceContent
 class GithubLoader(BaseLoader):
     """Loader for GitHub repository content."""
 
-    def load(self, source: SourceContent, **kwargs) -> LoaderResult:
+    def load(self, source: SourceContent, **kwargs) -> LoaderResult:  # type: ignore[override]
         """Load content from a GitHub repository.
 
         Args:
@@ -54,9 +54,7 @@ class GithubLoader(BaseLoader):
             try:
                 readme = repo.get_readme()
                 all_content.append("README:")
-                all_content.append(
-                    readme.decoded_content.decode("utf-8", errors="ignore")
-                )
+                all_content.append(readme.decoded_content.decode(errors="ignore"))
                 all_content.append("")
             except GithubException:
                 pass

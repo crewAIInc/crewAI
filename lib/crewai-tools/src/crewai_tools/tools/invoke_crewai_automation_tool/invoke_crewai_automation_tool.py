@@ -102,7 +102,7 @@ class InvokeCrewAIAutomationTool(BaseTool):
                     fields[field_name] = (str, field_def)
 
             # Create dynamic model
-            args_schema = create_model("DynamicInvokeCrewAIAutomationInput", **fields)
+            args_schema = create_model("DynamicInvokeCrewAIAutomationInput", **fields)  # type: ignore[call-overload]
         else:
             args_schema = InvokeCrewAIAutomationInput
 
@@ -162,11 +162,10 @@ class InvokeCrewAIAutomationTool(BaseTool):
 
         # Start the crew
         response = self._kickoff_crew(inputs=kwargs)
+        kickoff_id: str | None = response.get("kickoff_id")
 
-        if response.get("kickoff_id") is None:
+        if kickoff_id is None:
             return f"Error: Failed to kickoff crew. Response: {response}"
-
-        kickoff_id = response.get("kickoff_id")
 
         # Poll for completion
         for i in range(self.max_polling_time):

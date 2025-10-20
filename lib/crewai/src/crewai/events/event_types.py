@@ -4,8 +4,7 @@ from crewai.events.types.agent_events import (
     AgentExecutionStartedEvent,
     LiteAgentExecutionCompletedEvent,
 )
-
-from .types.crew_events import (
+from crewai.events.types.crew_events import (
     CrewKickoffCompletedEvent,
     CrewKickoffFailedEvent,
     CrewKickoffStartedEvent,
@@ -16,14 +15,14 @@ from .types.crew_events import (
     CrewTrainFailedEvent,
     CrewTrainStartedEvent,
 )
-from .types.flow_events import (
+from crewai.events.types.flow_events import (
     FlowFinishedEvent,
     FlowStartedEvent,
     MethodExecutionFailedEvent,
     MethodExecutionFinishedEvent,
     MethodExecutionStartedEvent,
 )
-from .types.knowledge_events import (
+from crewai.events.types.knowledge_events import (
     KnowledgeQueryCompletedEvent,
     KnowledgeQueryFailedEvent,
     KnowledgeQueryStartedEvent,
@@ -31,17 +30,17 @@ from .types.knowledge_events import (
     KnowledgeRetrievalStartedEvent,
     KnowledgeSearchQueryFailedEvent,
 )
-from .types.llm_events import (
+from crewai.events.types.llm_events import (
     LLMCallCompletedEvent,
     LLMCallFailedEvent,
     LLMCallStartedEvent,
     LLMStreamChunkEvent,
 )
-from .types.llm_guardrail_events import (
+from crewai.events.types.llm_guardrail_events import (
     LLMGuardrailCompletedEvent,
     LLMGuardrailStartedEvent,
 )
-from .types.memory_events import (
+from crewai.events.types.memory_events import (
     MemoryQueryCompletedEvent,
     MemoryQueryFailedEvent,
     MemoryQueryStartedEvent,
@@ -51,17 +50,17 @@ from .types.memory_events import (
     MemorySaveFailedEvent,
     MemorySaveStartedEvent,
 )
-from .types.reasoning_events import (
+from crewai.events.types.reasoning_events import (
     AgentReasoningCompletedEvent,
     AgentReasoningFailedEvent,
     AgentReasoningStartedEvent,
 )
-from .types.task_events import (
+from crewai.events.types.task_events import (
     TaskCompletedEvent,
     TaskFailedEvent,
     TaskStartedEvent,
 )
-from .types.tool_usage_events import (
+from crewai.events.types.tool_usage_events import (
     ToolUsageErrorEvent,
     ToolUsageFinishedEvent,
     ToolUsageStartedEvent,

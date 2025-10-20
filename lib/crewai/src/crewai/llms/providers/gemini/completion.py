@@ -1,6 +1,6 @@
 import logging
 import os
-from typing import Any
+from typing import Any, cast
 
 from crewai.events.types.llm_events import LLMCallType
 from crewai.llms.base_llm import BaseLLM
@@ -8,12 +8,13 @@ from crewai.utilities.agent_utils import is_context_length_exceeded
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededError,
 )
+from crewai.utilities.types import LLMMessage
 
 
 try:
-    from google import genai
-    from google.genai import types
-    from google.genai.errors import APIError
+    from google import genai  # type: ignore[import-untyped]
+    from google.genai import types  # type: ignore[import-untyped]
+    from google.genai.errors import APIError  # type: ignore[import-untyped]
 except ImportError:
     raise ImportError(
         'Google Gen AI native provider not available, to install: uv add "crewai[google-genai]"'
@@ -166,7 +167,7 @@ class GeminiCompletion(BaseLLM):
 
     def call(
         self,
-        messages: str | list[dict[str, str]],
+        messages: str | list[LLMMessage],
         tools: list[dict] | None = None,
         callbacks: list[Any] | None = None,
         available_functions: dict[str, Any] | None = None,
@@ -188,7 +189,7 @@ class GeminiCompletion(BaseLLM):
         """
         try:
             self._emit_call_started_event(
-                messages=messages,
+                messages=messages,  # type: ignore[arg-type]
                 tools=tools,
                 callbacks=callbacks,
                 available_functions=available_functions,
@@ -198,7 +199,7 @@ class GeminiCompletion(BaseLLM):
             self.tools = tools
 
             formatted_content, system_instruction = self._format_messages_for_gemini(
-                messages
+                messages  # type: ignore[arg-type]
             )
 
             config = self._prepare_generation_config(system_instruction, tools)
@@ -306,7 +307,7 @@ class GeminiCompletion(BaseLLM):
         return gemini_tools
 
     def _format_messages_for_gemini(
-        self, messages: str | list[dict[str, str]]
+        self, messages: str | list[LLMMessage]
     ) -> tuple[list[types.Content], str | None]:
         """Format messages for Gemini API.
 
@@ -325,7 +326,7 @@ class GeminiCompletion(BaseLLM):
         base_formatted = super()._format_messages(messages)
 
         contents = []
-        system_instruction = None
+        system_instruction: str | None = None
 
         for message in base_formatted:
             role = message.get("role")
@@ -336,7 +337,7 @@ class GeminiCompletion(BaseLLM):
                 if system_instruction:
                     system_instruction += f"\n\n{content}"
                 else:
-                    system_instruction = content
+                    system_instruction = cast(str, content)
             else:
                 # Convert role for Gemini (assistant -> model)
                 gemini_role = "model" if role == "assistant" else "user"

@@ -1,21 +1,19 @@
 from __future__ import annotations
 
-from collections.abc import Callable, Sequence
-from typing import TYPE_CHECKING, Any, TypeAlias
+from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field, field_validator
 from typing_extensions import Self
 
+from crewai.utilities.guardrail_types import GuardrailCallable
+
 
 if TYPE_CHECKING:
     from crewai.agents.agent_builder.base_agent import BaseAgent
-    from crewai.lite_agent import LiteAgent, LiteAgentOutput
+    from crewai.lite_agent import LiteAgent
+    from crewai.lite_agent_output import LiteAgentOutput
     from crewai.task import Task
     from crewai.tasks.task_output import TaskOutput
-
-GuardrailType: TypeAlias = Callable[["TaskOutput"], tuple[bool, Any]] | str | None
-
-GuardrailsType: TypeAlias = Sequence[GuardrailType] | GuardrailType
 
 
 class GuardrailResult(BaseModel):
@@ -83,7 +81,7 @@ class GuardrailResult(BaseModel):
 
 def process_guardrail(
     output: TaskOutput | LiteAgentOutput,
-    guardrail: Callable[[Any], tuple[bool, Any | str]],
+    guardrail: GuardrailCallable,
     retry_count: int,
     event_source: Any | None = None,
     from_agent: BaseAgent | LiteAgent | None = None,
@@ -96,6 +94,8 @@ def process_guardrail(
         guardrail: The guardrail to validate the output with
         retry_count: The number of times the guardrail has been retried
         event_source: The source of the guardrail to be sent in events
+        from_agent: The agent that produced the output
+        from_task: The task that produced the output
 
     Returns:
         GuardrailResult: The result of the guardrail validation
@@ -104,7 +104,7 @@ def process_guardrail(
         TypeError: If output is not a TaskOutput or LiteAgentOutput
         ValueError: If guardrail is None
     """
-    from crewai.lite_agent import LiteAgentOutput
+    from crewai.lite_agent_output import LiteAgentOutput
     from crewai.tasks.task_output import TaskOutput
 
     if not isinstance(output, (TaskOutput, LiteAgentOutput)):

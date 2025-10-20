@@ -11,7 +11,7 @@ from crewai_tools.rag.source_content import SourceContent
 class YoutubeVideoLoader(BaseLoader):
     """Loader for YouTube videos."""
 
-    def load(self, source: SourceContent, **kwargs) -> LoaderResult:
+    def load(self, source: SourceContent, **kwargs) -> LoaderResult:  # type: ignore[override]
         """Load and extract transcript from a YouTube video.
 
         Args:
@@ -48,7 +48,6 @@ class YoutubeVideoLoader(BaseLoader):
             api = YouTubeTranscriptApi()
             transcript_list = api.list(video_id)
 
-            transcript = None
             try:
                 transcript = transcript_list.find_transcript(["en"])
             except Exception:
@@ -72,7 +71,7 @@ class YoutubeVideoLoader(BaseLoader):
                 content = " ".join(text_content)
 
                 try:
-                    from pytube import YouTube
+                    from pytube import YouTube  # type: ignore[import-untyped]
 
                     yt = YouTube(video_url)
                     metadata["title"] = yt.title
@@ -103,7 +102,8 @@ class YoutubeVideoLoader(BaseLoader):
             doc_id=self.generate_doc_id(source_ref=video_url, content=content),
         )
 
-    def _extract_video_id(self, url: str) -> str | None:
+    @staticmethod
+    def _extract_video_id(url: str) -> str | None:
         """Extract video ID from various YouTube URL formats."""
         patterns = [
             r"(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/v\/)([^&\n?#]+)",

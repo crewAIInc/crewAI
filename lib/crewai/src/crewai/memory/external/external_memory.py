@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import time
 from typing import TYPE_CHECKING, Any
 
@@ -25,7 +27,7 @@ class ExternalMemory(Memory):
         super().__init__(storage=storage, **data)
 
     @staticmethod
-    def _configure_mem0(crew: Any, config: dict[str, Any]) -> "Mem0Storage":
+    def _configure_mem0(crew: Any, config: dict[str, Any]) -> Mem0Storage:
         from crewai.memory.storage.mem0_storage import Mem0Storage
 
         return Mem0Storage(type="external", crew=crew, config=config)
@@ -159,7 +161,7 @@ class ExternalMemory(Memory):
     def reset(self) -> None:
         self.storage.reset()
 
-    def set_crew(self, crew: Any) -> "ExternalMemory":
+    def set_crew(self, crew: Any) -> ExternalMemory:
         super().set_crew(crew)
 
         if not self.storage:

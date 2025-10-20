@@ -1,16 +1,21 @@
-from collections.abc import Callable, Sequence
+from __future__ import annotations
+
+import asyncio
+from collections.abc import Sequence
 import shutil
 import subprocess
 import time
 from typing import (
+    TYPE_CHECKING,
     Any,
     Literal,
 )
 
-from pydantic import Field, InstanceOf, PrivateAttr, model_validator
+from pydantic import BaseModel, Field, InstanceOf, PrivateAttr, model_validator
+from typing_extensions import Self
 
-from crewai.agents import CacheHandler
-from crewai.agents.agent_builder.base_agent import BaseAgent, PlatformAppOrAction
+from crewai.agents.agent_builder.base_agent import BaseAgent
+from crewai.agents.cache.cache_handler import CacheHandler
 from crewai.agents.crew_agent_executor import CrewAgentExecutor
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.agent_events import (
@@ -33,15 +38,12 @@ from crewai.events.types.memory_events import (
 from crewai.knowledge.knowledge import Knowledge
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
 from crewai.knowledge.utils.knowledge_utils import extract_knowledge_context
-from crewai.lite_agent import LiteAgent, LiteAgentOutput
-from crewai.llm import BaseLLM
+from crewai.lite_agent import LiteAgent
+from crewai.llms.base_llm import BaseLLM
 from crewai.memory.contextual.contextual_memory import ContextualMemory
 from crewai.rag.embeddings.types import EmbedderConfig
-from crewai.security import Fingerprint
-from crewai.task import Task
-from crewai.tools import BaseTool
+from crewai.security.fingerprint import Fingerprint
 from crewai.tools.agent_tools.agent_tools import AgentTools
-from crewai.utilities import Converter, Prompts
 from crewai.utilities.agent_utils import (
     get_tool_names,
     load_agent_from_repository,
@@ -49,11 +51,33 @@ from crewai.utilities.agent_utils import (
     render_text_description_and_args,
 )
 from crewai.utilities.constants import TRAINED_AGENTS_DATA_FILE, TRAINING_DATA_FILE
-from crewai.utilities.converter import generate_model_description
+from crewai.utilities.converter import Converter, generate_model_description
+from crewai.utilities.guardrail_types import GuardrailType
 from crewai.utilities.llm_utils import create_llm
+from crewai.utilities.prompts import Prompts
 from crewai.utilities.token_counter_callback import TokenCalcHandler
 from crewai.utilities.training_handler import CrewTrainingHandler
-from crewai.utilities.types import LLMMessage
+
+
+if TYPE_CHECKING:
+    from crewai_tools import CodeInterpreterTool
+
+    from crewai.agents.agent_builder.base_agent import PlatformAppOrAction
+    from crewai.lite_agent_output import LiteAgentOutput
+    from crewai.task import Task
+    from crewai.tools.base_tool import BaseTool
+    from crewai.utilities.types import LLMMessage
+
+
+# MCP Connection timeout constants (in seconds)
+MCP_CONNECTION_TIMEOUT = 10
+MCP_TOOL_EXECUTION_TIMEOUT = 30
+MCP_DISCOVERY_TIMEOUT = 15
+MCP_MAX_RETRIES = 3
+
+# Simple in-memory cache for MCP tool schemas (duration: 5 minutes)
+_mcp_schema_cache = {}
+_cache_ttl = 300  # 5 minutes
 
 
 class Agent(BaseAgent):
@@ -80,6 +104,7 @@ class Agent(BaseAgent):
             knowledge_sources: Knowledge sources for the agent.
             embedder: Embedder configuration for the agent.
             apps: List of applications that the agent can access through CrewAI Platform.
+            mcps: List of MCP server references for tool integration.
     """
 
     _times_executed: int = PrivateAttr(default=0)
@@ -87,8 +112,6 @@ class Agent(BaseAgent):
         default=None,
         description="Maximum execution time for an agent to execute a task",
     )
-    agent_ops_agent_name: str = None  # type: ignore # Incompatible types in assignment (expression has type "None", variable has type "str")
-    agent_ops_agent_id: str = None  # type: ignore # Incompatible types in assignment (expression has type "None", variable has type "str")
     step_callback: Any | None = Field(
         default=None,
         description="Callback to be executed after each step of the agent execution.",
@@ -167,7 +190,7 @@ class Agent(BaseAgent):
         default=None,
         description="The Agent's role to be used from your repository.",
     )
-    guardrail: Callable[[Any], tuple[bool, Any]] | str | None = Field(
+    guardrail: GuardrailType | None = Field(
         default=None,
         description="Function or string description of a guardrail to validate agent output",
     )
@@ -176,15 +199,13 @@ class Agent(BaseAgent):
     )
 
     @model_validator(mode="before")
-    def validate_from_repository(cls, v):  # noqa: N805
+    def validate_from_repository(cls, v: Any) -> dict[str, Any] | None | Any:  # noqa: N805
         if v is not None and (from_repository := v.get("from_repository")):
             return load_agent_from_repository(from_repository) | v
         return v
 
     @model_validator(mode="after")
-    def post_init_setup(self):
-        self.agent_ops_agent_name = self.role
-
+    def post_init_setup(self) -> Self:
         self.llm = create_llm(self.llm)
         if self.function_calling_llm and not isinstance(
             self.function_calling_llm, BaseLLM
@@ -199,12 +220,12 @@ class Agent(BaseAgent):
 
         return self
 
-    def _setup_agent_executor(self):
+    def _setup_agent_executor(self) -> None:
         if not self.cache_handler:
             self.cache_handler = CacheHandler()
         self.set_cache_handler(self.cache_handler)
 
-    def set_knowledge(self, crew_embedder: EmbedderConfig | None = None):
+    def set_knowledge(self, crew_embedder: EmbedderConfig | None = None) -> None:
         try:
             if self.embedder is None and crew_embedder:
                 self.embedder = crew_embedder
@@ -242,7 +263,7 @@ class Agent(BaseAgent):
         task: Task,
         context: str | None = None,
         tools: list[BaseTool] | None = None,
-    ) -> str:
+    ) -> Any:
         """Execute a task with the agent.
 
         Args:
@@ -485,7 +506,7 @@ class Agent(BaseAgent):
         # If there was any tool in self.tools_results that had result_as_answer
         # set to True, return the results of the last tool that had
         # result_as_answer set to True
-        for tool_result in self.tools_results:  # type: ignore # Item "None" of "list[Any] | None" has no attribute "__iter__" (not iterable)
+        for tool_result in self.tools_results:
             if tool_result.get("result_as_answer", False):
                 result = tool_result["result"]
         crewai_event_bus.emit(
@@ -494,7 +515,7 @@ class Agent(BaseAgent):
         )
         return result
 
-    def _execute_with_timeout(self, task_prompt: str, task: Task, timeout: int) -> str:
+    def _execute_with_timeout(self, task_prompt: str, task: Task, timeout: int) -> Any:
         """Execute a task with a timeout.
 
         Args:
@@ -527,7 +548,7 @@ class Agent(BaseAgent):
                 future.cancel()
                 raise RuntimeError(f"Task execution failed: {e!s}") from e
 
-    def _execute_without_timeout(self, task_prompt: str, task: Task) -> str:
+    def _execute_without_timeout(self, task_prompt: str, task: Task) -> Any:
         """Execute a task without a timeout.
 
         Args:
@@ -537,6 +558,9 @@ class Agent(BaseAgent):
         Returns:
             The output of the agent.
         """
+        if not self.agent_executor:
+            raise RuntimeError("Agent executor is not initialized.")
+
         return self.agent_executor.invoke(
             {
                 "input": task_prompt,
@@ -547,7 +571,7 @@ class Agent(BaseAgent):
         )["output"]
 
     def create_agent_executor(
-        self, tools: list[BaseTool] | None = None, task=None
+        self, tools: list[BaseTool] | None = None, task: Task | None = None
     ) -> None:
         """Create an agent executor for the agent.
 
@@ -576,11 +600,11 @@ class Agent(BaseAgent):
 
         self.agent_executor = CrewAgentExecutor(
             llm=self.llm,
-            task=task,
+            task=task,  # type: ignore[arg-type]
             agent=self,
             crew=self.crew,
             tools=parsed_tools,
-            prompt=prompt,  # type: ignore[arg-type]
+            prompt=prompt,
             original_tools=raw_tools,
             stop_words=stop_words,
             max_iter=self.max_iter,
@@ -596,14 +620,14 @@ class Agent(BaseAgent):
             callbacks=[TokenCalcHandler(self._token_process)],
         )
 
-    def get_delegation_tools(self, agents: list[BaseAgent]):
+    def get_delegation_tools(self, agents: list[BaseAgent]) -> list[BaseTool]:
         agent_tools = AgentTools(agents=agents)
         return agent_tools.tools()
 
     def get_platform_tools(self, apps: list[PlatformAppOrAction]) -> list[BaseTool]:
         try:
-            from crewai_tools import (  # type: ignore[import-not-found]
-                CrewaiPlatformTools,  # type: ignore[import-untyped]
+            from crewai_tools import (
+                CrewaiPlatformTools,
             )
 
             return CrewaiPlatformTools(apps=apps)
@@ -611,14 +635,350 @@ class Agent(BaseAgent):
             self._logger.log("error", f"Error getting platform tools: {e!s}")
             return []
 
+    def get_mcp_tools(self, mcps: list[str]) -> list[BaseTool]:
+        """Convert MCP server references to CrewAI tools."""
+        all_tools = []
+
+        for mcp_ref in mcps:
+            try:
+                if mcp_ref.startswith("crewai-amp:"):
+                    tools = self._get_amp_mcp_tools(mcp_ref)
+                elif mcp_ref.startswith("https://"):
+                    tools = self._get_external_mcp_tools(mcp_ref)
+                else:
+                    continue
+
+                all_tools.extend(tools)
+                self._logger.log(
+                    "info", f"Successfully loaded {len(tools)} tools from {mcp_ref}"
+                )
+
+            except Exception as e:
+                self._logger.log("warning", f"Skipping MCP {mcp_ref} due to error: {e}")
+                continue
+
+        return all_tools
+
+    def _get_external_mcp_tools(self, mcp_ref: str) -> list[BaseTool]:
+        """Get tools from external HTTPS MCP server with graceful error handling."""
+        from crewai.tools.mcp_tool_wrapper import MCPToolWrapper
+
+        # Parse server URL and optional tool name
+        if "#" in mcp_ref:
+            server_url, specific_tool = mcp_ref.split("#", 1)
+        else:
+            server_url, specific_tool = mcp_ref, None
+
+        server_params = {"url": server_url}
+        server_name = self._extract_server_name(server_url)
+
+        try:
+            # Get tool schemas with timeout and error handling
+            tool_schemas = self._get_mcp_tool_schemas(server_params)
+
+            if not tool_schemas:
+                self._logger.log(
+                    "warning", f"No tools discovered from MCP server: {server_url}"
+                )
+                return []
+
+            tools = []
+            for tool_name, schema in tool_schemas.items():
+                # Skip if specific tool requested and this isn't it
+                if specific_tool and tool_name != specific_tool:
+                    continue
+
+                try:
+                    wrapper = MCPToolWrapper(
+                        mcp_server_params=server_params,
+                        tool_name=tool_name,
+                        tool_schema=schema,
+                        server_name=server_name,
+                    )
+                    tools.append(wrapper)
+                except Exception as e:
+                    self._logger.log(
+                        "warning",
+                        f"Failed to create MCP tool wrapper for {tool_name}: {e}",
+                    )
+                    continue
+
+            if specific_tool and not tools:
+                self._logger.log(
+                    "warning",
+                    f"Specific tool '{specific_tool}' not found on MCP server: {server_url}",
+                )
+
+            return tools
+
+        except Exception as e:
+            self._logger.log(
+                "warning", f"Failed to connect to MCP server {server_url}: {e}"
+            )
+            return []
+
+    def _get_amp_mcp_tools(self, amp_ref: str) -> list[BaseTool]:
+        """Get tools from CrewAI AMP MCP marketplace."""
+        # Parse: "crewai-amp:mcp-name" or "crewai-amp:mcp-name#tool_name"
+        amp_part = amp_ref.replace("crewai-amp:", "")
+        if "#" in amp_part:
+            mcp_name, specific_tool = amp_part.split("#", 1)
+        else:
+            mcp_name, specific_tool = amp_part, None
+
+        # Call AMP API to get MCP server URLs
+        mcp_servers = self._fetch_amp_mcp_servers(mcp_name)
+
+        tools = []
+        for server_config in mcp_servers:
+            server_ref = server_config["url"]
+            if specific_tool:
+                server_ref += f"#{specific_tool}"
+            server_tools = self._get_external_mcp_tools(server_ref)
+            tools.extend(server_tools)
+
+        return tools
+
+    def _extract_server_name(self, server_url: str) -> str:
+        """Extract clean server name from URL for tool prefixing."""
+        from urllib.parse import urlparse
+
+        parsed = urlparse(server_url)
+        domain = parsed.netloc.replace(".", "_")
+        path = parsed.path.replace("/", "_").strip("_")
+        return f"{domain}_{path}" if path else domain
+
+    def _get_mcp_tool_schemas(self, server_params: dict) -> dict[str, dict]:
+        """Get tool schemas from MCP server for wrapper creation with caching."""
+        server_url = server_params["url"]
+
+        # Check cache first
+        cache_key = server_url
+        current_time = time.time()
+
+        if cache_key in _mcp_schema_cache:
+            cached_data, cache_time = _mcp_schema_cache[cache_key]
+            if current_time - cache_time < _cache_ttl:
+                self._logger.log(
+                    "debug", f"Using cached MCP tool schemas for {server_url}"
+                )
+                return cached_data
+
+        try:
+            schemas = asyncio.run(self._get_mcp_tool_schemas_async(server_params))
+
+            # Cache successful results
+            _mcp_schema_cache[cache_key] = (schemas, current_time)
+
+            return schemas
+        except Exception as e:
+            # Log warning but don't raise - this allows graceful degradation
+            self._logger.log(
+                "warning", f"Failed to get MCP tool schemas from {server_url}: {e}"
+            )
+            return {}
+
+    async def _get_mcp_tool_schemas_async(self, server_params: dict) -> dict[str, dict]:
+        """Async implementation of MCP tool schema retrieval with timeouts and retries."""
+        server_url = server_params["url"]
+        return await self._retry_mcp_discovery(
+            self._discover_mcp_tools_with_timeout, server_url
+        )
+
+    async def _retry_mcp_discovery(
+        self, operation_func, server_url: str
+    ) -> dict[str, dict]:
+        """Retry MCP discovery operation with exponential backoff, avoiding try-except in loop."""
+        last_error = None
+
+        for attempt in range(MCP_MAX_RETRIES):
+            # Execute single attempt outside try-except loop structure
+            result, error, should_retry = await self._attempt_mcp_discovery(
+                operation_func, server_url
+            )
+
+            # Success case - return immediately
+            if result is not None:
+                return result
+
+            # Non-retryable error - raise immediately
+            if not should_retry:
+                raise RuntimeError(error)
+
+            # Retryable error - continue with backoff
+            last_error = error
+            if attempt < MCP_MAX_RETRIES - 1:
+                wait_time = 2**attempt  # Exponential backoff
+                await asyncio.sleep(wait_time)
+
+        raise RuntimeError(
+            f"Failed to discover MCP tools after {MCP_MAX_RETRIES} attempts: {last_error}"
+        )
+
+    async def _attempt_mcp_discovery(
+        self, operation_func, server_url: str
+    ) -> tuple[dict[str, dict] | None, str, bool]:
+        """Attempt single MCP discovery operation and return (result, error_message, should_retry)."""
+        try:
+            result = await operation_func(server_url)
+            return result, "", False
+
+        except ImportError:
+            return (
+                None,
+                "MCP library not available. Please install with: pip install mcp",
+                False,
+            )
+
+        except asyncio.TimeoutError:
+            return (
+                None,
+                f"MCP discovery timed out after {MCP_DISCOVERY_TIMEOUT} seconds",
+                True,
+            )
+
+        except Exception as e:
+            error_str = str(e).lower()
+
+            # Classify errors as retryable or non-retryable
+            if "authentication" in error_str or "unauthorized" in error_str:
+                return None, f"Authentication failed for MCP server: {e!s}", False
+            if "connection" in error_str or "network" in error_str:
+                return None, f"Network connection failed: {e!s}", True
+            if "json" in error_str or "parsing" in error_str:
+                return None, f"Server response parsing error: {e!s}", True
+            return None, f"MCP discovery error: {e!s}", False
+
+    async def _discover_mcp_tools_with_timeout(
+        self, server_url: str
+    ) -> dict[str, dict]:
+        """Discover MCP tools with timeout wrapper."""
+        return await asyncio.wait_for(
+            self._discover_mcp_tools(server_url), timeout=MCP_DISCOVERY_TIMEOUT
+        )
+
+    async def _discover_mcp_tools(self, server_url: str) -> dict[str, dict]:
+        """Discover tools from MCP server with proper timeout handling."""
+        from mcp import ClientSession
+        from mcp.client.streamable_http import streamablehttp_client
+
+        async with streamablehttp_client(server_url) as (read, write, _):
+            async with ClientSession(read, write) as session:
+                # Initialize the connection with timeout
+                await asyncio.wait_for(
+                    session.initialize(), timeout=MCP_CONNECTION_TIMEOUT
+                )
+
+                # List available tools with timeout
+                tools_result = await asyncio.wait_for(
+                    session.list_tools(),
+                    timeout=MCP_DISCOVERY_TIMEOUT - MCP_CONNECTION_TIMEOUT,
+                )
+
+                schemas = {}
+                for tool in tools_result.tools:
+                    args_schema = None
+                    if hasattr(tool, "inputSchema") and tool.inputSchema:
+                        args_schema = self._json_schema_to_pydantic(
+                            tool.name, tool.inputSchema
+                        )
+
+                    schemas[tool.name] = {
+                        "description": getattr(tool, "description", ""),
+                        "args_schema": args_schema,
+                    }
+                return schemas
+
+    def _json_schema_to_pydantic(self, tool_name: str, json_schema: dict) -> type:
+        """Convert JSON Schema to Pydantic model for tool arguments.
+
+        Args:
+            tool_name: Name of the tool (used for model naming)
+            json_schema: JSON Schema dict with 'properties', 'required', etc.
+
+        Returns:
+            Pydantic BaseModel class
+        """
+        from pydantic import Field, create_model
+
+        properties = json_schema.get("properties", {})
+        required_fields = json_schema.get("required", [])
+
+        field_definitions = {}
+
+        for field_name, field_schema in properties.items():
+            field_type = self._json_type_to_python(field_schema)
+            field_description = field_schema.get("description", "")
+
+            is_required = field_name in required_fields
+
+            if is_required:
+                field_definitions[field_name] = (
+                    field_type,
+                    Field(..., description=field_description),
+                )
+            else:
+                field_definitions[field_name] = (
+                    field_type | None,
+                    Field(default=None, description=field_description),
+                )
+
+        model_name = f"{tool_name.replace('-', '_').replace(' ', '_')}Schema"
+        return create_model(model_name, **field_definitions)
+
+    def _json_type_to_python(self, field_schema: dict) -> type:
+        """Convert JSON Schema type to Python type.
+
+        Args:
+            field_schema: JSON Schema field definition
+
+        Returns:
+            Python type
+        """
+        from typing import Any
+
+        json_type = field_schema.get("type")
+
+        if "anyOf" in field_schema:
+            types = []
+            for option in field_schema["anyOf"]:
+                if "const" in option:
+                    types.append(str)
+                else:
+                    types.append(self._json_type_to_python(option))
+            unique_types = list(set(types))
+            if len(unique_types) > 1:
+                result = unique_types[0]
+                for t in unique_types[1:]:
+                    result = result | t
+                return result
+            return unique_types[0]
+
+        type_mapping = {
+            "string": str,
+            "number": float,
+            "integer": int,
+            "boolean": bool,
+            "array": list,
+            "object": dict,
+        }
+
+        return type_mapping.get(json_type, Any)
+
+    def _fetch_amp_mcp_servers(self, mcp_name: str) -> list[dict]:
+        """Fetch MCP server configurations from CrewAI AMP API."""
+        # TODO: Implement AMP API call to "integrations/mcps" endpoint
+        # Should return list of server configs with URLs
+        return []
+
     def get_multimodal_tools(self) -> Sequence[BaseTool]:
         from crewai.tools.agent_tools.add_image_tool import AddImageTool
 
         return [AddImageTool()]
 
-    def get_code_execution_tools(self):
+    def get_code_execution_tools(self) -> list[CodeInterpreterTool]:
         try:
-            from crewai_tools import (  # type: ignore[import-not-found]
+            from crewai_tools import (
                 CodeInterpreterTool,
             )
 
@@ -629,8 +989,11 @@ class Agent(BaseAgent):
             self._logger.log(
                 "info", "Coding tools not available. Install crewai_tools. "
             )
+            return []
 
-    def get_output_converter(self, llm, text, model, instructions):
+    def get_output_converter(
+        self, llm: BaseLLM, text: str, model: type[BaseModel], instructions: str
+    ) -> Converter:
         return Converter(llm=llm, text=text, model=model, instructions=instructions)
 
     def _training_handler(self, task_prompt: str) -> str:
@@ -676,7 +1039,7 @@ class Agent(BaseAgent):
             ]
         )
 
-    def _inject_date_to_task(self, task):
+    def _inject_date_to_task(self, task: Task) -> None:
         """Inject the current date into the task description if inject_date is enabled."""
         if self.inject_date:
             from datetime import datetime
@@ -728,7 +1091,7 @@ class Agent(BaseAgent):
                 f"Docker command timed out. Please check your Docker installation for agent: {self.role}"
             ) from e
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"Agent(role={self.role}, goal={self.goal}, backstory={self.backstory})"
 
     @property
@@ -741,7 +1104,7 @@ class Agent(BaseAgent):
         """
         return self.security_config.fingerprint
 
-    def set_fingerprint(self, fingerprint: Fingerprint):
+    def set_fingerprint(self, fingerprint: Fingerprint) -> None:
         self.security_config.fingerprint = fingerprint
 
     def _get_knowledge_search_query(self, task_prompt: str, task: Task) -> str | None:

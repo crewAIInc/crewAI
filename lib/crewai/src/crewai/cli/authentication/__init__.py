@@ -1,4 +1,5 @@
-from .main import AuthenticationCommand
+from crewai.cli.authentication.main import AuthenticationCommand
+
 
 
 __all__ = ["AuthenticationCommand"]

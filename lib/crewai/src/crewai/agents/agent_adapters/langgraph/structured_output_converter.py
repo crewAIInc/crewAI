@@ -4,12 +4,9 @@ This module contains the LangGraphConverterAdapter class that handles structured
 output conversion for LangGraph agents, supporting JSON and Pydantic model formats.
 """
 
-import json
-import re
-from typing import Any, Literal
+from typing import Any
 
 from crewai.agents.agent_adapters.base_converter_adapter import BaseConverterAdapter
-from crewai.utilities.converter import generate_model_description
 
 
 class LangGraphConverterAdapter(BaseConverterAdapter):
@@ -17,6 +14,9 @@ class LangGraphConverterAdapter(BaseConverterAdapter):
 
     Converts task output requirements into system prompt modifications and
     post-processing logic to ensure agents return properly structured outputs.
+
+    Attributes:
+        _system_prompt_appendix: Cached system prompt instructions for structured output.
     """
 
     def __init__(self, agent_adapter: Any) -> None:
@@ -27,8 +27,6 @@ class LangGraphConverterAdapter(BaseConverterAdapter):
         """
         super().__init__(agent_adapter=agent_adapter)
         self.agent_adapter: Any = agent_adapter
-        self._output_format: Literal["json", "pydantic"] | None = None
-        self._schema: str | None = None
         self._system_prompt_appendix: str | None = None
 
     def configure_structured_output(self, task: Any) -> None:
@@ -40,19 +38,7 @@ class LangGraphConverterAdapter(BaseConverterAdapter):
         Args:
             task: The task object containing output format specifications.
         """
-        if not (task.output_json or task.output_pydantic):
-            self._output_format = None
-            self._schema = None
-            self._system_prompt_appendix = None
-            return
-
-        if task.output_json:
-            self._output_format = "json"
-            self._schema = generate_model_description(task.output_json)
-        elif task.output_pydantic:
-            self._output_format = "pydantic"
-            self._schema = generate_model_description(task.output_pydantic)
-
+        self._output_format, self._schema = self._configure_format_from_task(task)
         self._system_prompt_appendix = self._generate_system_prompt_appendix()
 
     def _generate_system_prompt_appendix(self) -> str:
@@ -89,40 +75,3 @@ The output should be raw JSON that exactly matches the specified schema.
             return original_prompt
 
         return f"{original_prompt}\n{self._system_prompt_appendix}"
-
-    def post_process_result(self, result: str) -> str:
-        """Post-process the result to ensure it matches the expected format.
-
-        Attempts to extract and validate JSON content from agent responses,
-        handling cases where JSON may be wrapped in markdown or other formatting.
-
-        Args:
-            result: The raw result string from the agent.
-
-        Returns:
-            Processed result string, ideally in valid JSON format.
-        """
-        if not self._output_format:
-            return result
-
-        # Try to extract valid JSON if it's wrapped in code blocks or other text
-        if self._output_format in ["json", "pydantic"]:
-            try:
-                # First, try to parse as is
-                json.loads(result)
-                return result
-            except json.JSONDecodeError:
-                # Try to extract JSON from the text
-                json_match: re.Match[str] | None = re.search(
-                    r"(\{.*})", result, re.DOTALL
-                )
-                if json_match:
-                    try:
-                        extracted: str = json_match.group(1)
-                        # Validate it's proper JSON
-                        json.loads(extracted)
-                        return extracted
-                    except json.JSONDecodeError:
-                        pass
-
-        return result

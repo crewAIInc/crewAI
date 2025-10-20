@@ -1,4 +1,5 @@
-from .crew_output import CrewOutput
+from crewai.crews.crew_output import CrewOutput
+
 
 
 __all__ = ["CrewOutput"]

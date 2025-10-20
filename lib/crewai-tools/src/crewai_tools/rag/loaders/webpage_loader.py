@@ -1,4 +1,5 @@
 import re
+from typing import Final
 
 from bs4 import BeautifulSoup
 import requests
@@ -7,8 +8,12 @@ from crewai_tools.rag.base_loader import BaseLoader, LoaderResult
 from crewai_tools.rag.source_content import SourceContent
 
 
+_SPACES_PATTERN: Final[re.Pattern[str]] = re.compile(r"[ \t]+")
+_NEWLINE_PATTERN: Final[re.Pattern[str]] = re.compile(r"\s+\n\s+")
+
+
 class WebPageLoader(BaseLoader):
-    def load(self, source_content: SourceContent, **kwargs) -> LoaderResult:
+    def load(self, source_content: SourceContent, **kwargs) -> LoaderResult:  # type: ignore[override]
         url = source_content.source
         headers = kwargs.get(
             "headers",
@@ -29,8 +34,8 @@ class WebPageLoader(BaseLoader):
                 script.decompose()
 
             text = soup.get_text(" ")
-            text = re.sub("[ \t]+", " ", text)
-            text = re.sub("\\s+\n\\s+", "\n", text)
+            text = _SPACES_PATTERN.sub(" ", text)
+            text = _NEWLINE_PATTERN.sub("\n", text)
             text = text.strip()
 
             title = (

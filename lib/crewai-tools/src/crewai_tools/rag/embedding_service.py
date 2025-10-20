@@ -3,6 +3,8 @@ Enhanced embedding service that leverages CrewAI's existing embedding providers.
 This replaces the litellm-based EmbeddingService with a more flexible architecture.
 """
 
+from __future__ import annotations
+
 import logging
 import os
 from typing import Any
@@ -82,7 +84,8 @@ class EmbeddingService:
         self._embedding_function = None
         self._initialize_embedding_function()
 
-    def _get_default_api_key(self, provider: str) -> str | None:
+    @staticmethod
+    def _get_default_api_key(provider: str) -> str | None:
         """Get default API key from environment variables."""
         env_key_map = {
             "azure": "AZURE_OPENAI_API_KEY",
@@ -383,14 +386,14 @@ class EmbeddingService:
         model: str = "text-embedding-3-small",
         api_key: str | None = None,
         **kwargs: Any,
-    ) -> "EmbeddingService":
+    ) -> EmbeddingService:
         """Create an OpenAI embedding service."""
         return cls(provider="openai", model=model, api_key=api_key, **kwargs)
 
     @classmethod
     def create_voyage_service(
         cls, model: str = "voyage-2", api_key: str | None = None, **kwargs: Any
-    ) -> "EmbeddingService":
+    ) -> EmbeddingService:
         """Create a Voyage AI embedding service."""
         return cls(provider="voyageai", model=model, api_key=api_key, **kwargs)
 
@@ -400,7 +403,7 @@ class EmbeddingService:
         model: str = "embed-english-v3.0",
         api_key: str | None = None,
         **kwargs: Any,
-    ) -> "EmbeddingService":
+    ) -> EmbeddingService:
         """Create a Cohere embedding service."""
         return cls(provider="cohere", model=model, api_key=api_key, **kwargs)
 
@@ -410,7 +413,7 @@ class EmbeddingService:
         model: str = "models/embedding-001",
         api_key: str | None = None,
         **kwargs: Any,
-    ) -> "EmbeddingService":
+    ) -> EmbeddingService:
         """Create a Google Gemini embedding service."""
         return cls(
             provider="google-generativeai", model=model, api_key=api_key, **kwargs
@@ -422,7 +425,7 @@ class EmbeddingService:
         model: str = "text-embedding-ada-002",
         api_key: str | None = None,
         **kwargs: Any,
-    ) -> "EmbeddingService":
+    ) -> EmbeddingService:
         """Create an Azure OpenAI embedding service."""
         return cls(provider="azure", model=model, api_key=api_key, **kwargs)
 
@@ -432,7 +435,7 @@ class EmbeddingService:
         model: str = "amazon.titan-embed-text-v1",
         api_key: str | None = None,
         **kwargs: Any,
-    ) -> "EmbeddingService":
+    ) -> EmbeddingService:
         """Create an Amazon Bedrock embedding service."""
         return cls(provider="amazon-bedrock", model=model, api_key=api_key, **kwargs)
 
@@ -442,7 +445,7 @@ class EmbeddingService:
         model: str = "sentence-transformers/all-MiniLM-L6-v2",
         api_key: str | None = None,
         **kwargs: Any,
-    ) -> "EmbeddingService":
+    ) -> EmbeddingService:
         """Create a Hugging Face embedding service."""
         return cls(provider="huggingface", model=model, api_key=api_key, **kwargs)
 
@@ -451,7 +454,7 @@ class EmbeddingService:
         cls,
         model: str = "all-MiniLM-L6-v2",
         **kwargs: Any,
-    ) -> "EmbeddingService":
+    ) -> EmbeddingService:
         """Create a Sentence Transformers embedding service (local)."""
         return cls(provider="sentence-transformer", model=model, **kwargs)
 
@@ -460,7 +463,7 @@ class EmbeddingService:
         cls,
         model: str = "nomic-embed-text",
         **kwargs: Any,
-    ) -> "EmbeddingService":
+    ) -> EmbeddingService:
         """Create an Ollama embedding service (local)."""
         return cls(provider="ollama", model=model, **kwargs)
 
@@ -470,7 +473,7 @@ class EmbeddingService:
         model: str = "jina-embeddings-v2-base-en",
         api_key: str | None = None,
         **kwargs: Any,
-    ) -> "EmbeddingService":
+    ) -> EmbeddingService:
         """Create a Jina AI embedding service."""
         return cls(provider="jina", model=model, api_key=api_key, **kwargs)
 
@@ -479,7 +482,7 @@ class EmbeddingService:
         cls,
         model: str = "hkunlp/instructor-large",
         **kwargs: Any,
-    ) -> "EmbeddingService":
+    ) -> EmbeddingService:
         """Create an Instructor embedding service."""
         return cls(provider="instructor", model=model, **kwargs)
 
@@ -489,7 +492,7 @@ class EmbeddingService:
         model: str = "ibm/slate-125m-english-rtrvr",
         api_key: str | None = None,
         **kwargs: Any,
-    ) -> "EmbeddingService":
+    ) -> EmbeddingService:
         """Create a Watson X embedding service."""
         return cls(provider="watsonx", model=model, api_key=api_key, **kwargs)
 
@@ -498,7 +501,7 @@ class EmbeddingService:
         cls,
         embedding_callable: Any,
         **kwargs: Any,
-    ) -> "EmbeddingService":
+    ) -> EmbeddingService:
         """Create a custom embedding service with your own embedding function."""
         return cls(
             provider="custom",

@@ -10,6 +10,7 @@ from crewai.experimental.evaluation.base_evaluator import (
 )
 from crewai.experimental.evaluation.json_parser import extract_json_from_llm_response
 from crewai.task import Task
+from crewai.utilities.types import LLMMessage
 
 
 class ToolSelectionEvaluator(BaseEvaluator):
@@ -54,7 +55,7 @@ class ToolSelectionEvaluator(BaseEvaluator):
         for tool_type in sorted(unique_tool_types):
             tool_types_summary += f"- {tool_type}\n"
 
-        prompt = [
+        prompt: list[LLMMessage] = [
             {
                 "role": "system",
                 "content": """You are an expert evaluator assessing if an AI agent selected the most appropriate tools for a given task.
@@ -211,7 +212,7 @@ class ParameterExtractionEvaluator(BaseEvaluator):
                     f"\n...and {len(validation_errors) - 3} more validation errors."
                 )
         param_samples_text = "\n\n".join(param_samples)
-        prompt = [
+        prompt: list[LLMMessage] = [
             {
                 "role": "system",
                 "content": """You are an expert evaluator assessing how well an AI agent extracts and formats PARAMETER VALUES for tool calls.
@@ -362,7 +363,7 @@ class ToolInvocationEvaluator(BaseEvaluator):
                 error_type_summary += f"- {error_type}: {count} occurrences ({(count / tool_count):.1%})\n"
 
         invocation_samples_text = "\n\n".join(invocation_samples)
-        prompt = [
+        prompt: list[LLMMessage] = [
             {
                 "role": "system",
                 "content": """You are an expert evaluator assessing how correctly an AI agent's tool invocations are STRUCTURED.

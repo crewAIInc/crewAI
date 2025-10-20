@@ -1,10 +1,12 @@
 # flow_visualizer.py
+from __future__ import annotations
 
 import os
+from typing import TYPE_CHECKING
 
 from pyvis.network import Network  # type: ignore[import-untyped]
 
-from crewai.flow.config import COLORS, NODE_STYLES
+from crewai.flow.config import COLORS, NODE_STYLES, NodeStyles
 from crewai.flow.html_template_handler import HTMLTemplateHandler
 from crewai.flow.legend_generator import generate_legend_items_html, get_legend_items
 from crewai.flow.path_utils import safe_path_join
@@ -17,13 +19,17 @@ from crewai.flow.visualization_utils import (
 from crewai.utilities.printer import Printer
 
 
+if TYPE_CHECKING:
+    from crewai.flow.flow import Flow
+
+
 _printer = Printer()
 
 
 class FlowPlot:
     """Handles the creation and rendering of flow visualization diagrams."""
 
-    def __init__(self, flow):
+    def __init__(self, flow: Flow) -> None:
         """
         Initialize FlowPlot with a flow object.
 
@@ -37,18 +43,11 @@ class FlowPlot:
         ValueError
             If flow object is invalid or missing required attributes.
         """
-        if not hasattr(flow, "_methods"):
-            raise ValueError("Invalid flow object: missing '_methods' attribute")
-        if not hasattr(flow, "_listeners"):
-            raise ValueError("Invalid flow object: missing '_listeners' attribute")
-        if not hasattr(flow, "_start_methods"):
-            raise ValueError("Invalid flow object: missing '_start_methods' attribute")
-
         self.flow = flow
         self.colors = COLORS
-        self.node_styles = NODE_STYLES
+        self.node_styles: NodeStyles = NODE_STYLES
 
-    def plot(self, filename):
+    def plot(self, filename: str) -> None:
         """
         Generate and save an HTML visualization of the flow.
 
@@ -66,18 +65,10 @@ class FlowPlot:
         RuntimeError
             If network visualization generation fails.
         """
-        if not filename or not isinstance(filename, str):
-            raise ValueError("Filename must be a non-empty string")
 
         try:
             # Initialize network
-            net = Network(
-                directed=True,
-                height="750px",
-                width="100%",
-                bgcolor=self.colors["bg"],
-                layout=None,
-            )
+            net = Network(directed=True, height="750px", bgcolor=self.colors["bg"])
 
             # Set options to disable physics
             net.set_options(
@@ -147,7 +138,7 @@ class FlowPlot:
         finally:
             self._cleanup_pyvis_lib()
 
-    def _generate_final_html(self, network_html):
+    def _generate_final_html(self, network_html: str) -> str:
         """
         Generate the final HTML content with network visualization and legend.
 
@@ -194,7 +185,8 @@ class FlowPlot:
         except Exception as e:
             raise IOError(f"Failed to generate visualization HTML: {e!s}") from e
 
-    def _cleanup_pyvis_lib(self):
+    @staticmethod
+    def _cleanup_pyvis_lib() -> None:
         """
         Clean up the generated lib folder from pyvis.
 
@@ -213,7 +205,7 @@ class FlowPlot:
             _printer.print(f"Error cleaning up lib folder: {e}", color="red")
 
 
-def plot_flow(flow, filename="flow_plot"):
+def plot_flow(flow: Flow, filename: str = "flow_plot") -> None:
     """
     Convenience function to create and save a flow visualization.
 

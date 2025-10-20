@@ -1,8 +1,7 @@
 from pydantic import BaseModel, Field
 
 from crewai_tools.rag.data_types import DataType
-
-from ..rag.rag_tool import RagTool
+from crewai_tools.tools.rag.rag_tool import RagTool
 
 
 class FixedWebsiteSearchToolSchema(BaseModel):
@@ -38,7 +37,7 @@ class WebsiteSearchTool(RagTool):
     def add(self, website: str) -> None:
         super().add(website, data_type=DataType.WEBSITE)
 
-    def _run(
+    def _run(  # type: ignore[override]
         self,
         search_query: str,
         website: str | None = None,

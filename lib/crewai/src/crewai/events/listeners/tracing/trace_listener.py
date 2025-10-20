@@ -8,6 +8,7 @@ from crewai.events.base_event_listener import BaseEventListener
 from crewai.events.listeners.tracing.first_time_trace_handler import (
     FirstTimeTraceHandler,
 )
+from crewai.events.listeners.tracing.trace_batch_manager import TraceBatchManager
 from crewai.events.listeners.tracing.types import TraceEvent
 from crewai.events.listeners.tracing.utils import safe_serialize_to_dict
 from crewai.events.types.agent_events import (
@@ -71,8 +72,6 @@ from crewai.events.types.tool_usage_events import (
     ToolUsageFinishedEvent,
     ToolUsageStartedEvent,
 )
-
-from .trace_batch_manager import TraceBatchManager
 
 
 class TraceCollectionListener(BaseEventListener):

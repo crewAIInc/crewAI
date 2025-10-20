@@ -29,7 +29,7 @@ from crewai.events.types.event_bus_types import (
 from crewai.events.types.llm_events import LLMStreamChunkEvent
 from crewai.events.utils.console_formatter import ConsoleFormatter
 from crewai.events.utils.handlers import is_async_handler, is_call_handler_safe
-from crewai.events.utils.rw_lock import RWLock
+from crewai.utilities.rw_lock import RWLock
 
 
 P = ParamSpec("P")
@@ -64,7 +64,7 @@ class CrewAIEventsBus:
     _rwlock: RWLock
     _sync_handlers: dict[type[BaseEvent], SyncHandlerSet]
     _async_handlers: dict[type[BaseEvent], AsyncHandlerSet]
-    _handler_dependencies: dict[type[BaseEvent], dict[Handler, list[Depends]]]
+    _handler_dependencies: dict[type[BaseEvent], dict[Handler, list[Depends[Any]]]]
     _execution_plan_cache: dict[type[BaseEvent], ExecutionPlan]
     _console: ConsoleFormatter
     _shutting_down: bool
@@ -93,7 +93,7 @@ class CrewAIEventsBus:
         self._sync_handlers: dict[type[BaseEvent], SyncHandlerSet] = {}
         self._async_handlers: dict[type[BaseEvent], AsyncHandlerSet] = {}
         self._handler_dependencies: dict[
-            type[BaseEvent], dict[Handler, list[Depends]]
+            type[BaseEvent], dict[Handler, list[Depends[Any]]]
         ] = {}
         self._execution_plan_cache: dict[type[BaseEvent], ExecutionPlan] = {}
         self._sync_executor = ThreadPoolExecutor(
@@ -119,7 +119,7 @@ class CrewAIEventsBus:
         self,
         event_type: type[BaseEvent],
         handler: Callable[..., Any],
-        dependencies: list[Depends] | None = None,
+        dependencies: list[Depends[Any]] | None = None,
     ) -> None:
         """Register a handler for the given event type.
 
@@ -146,7 +146,7 @@ class CrewAIEventsBus:
     def on(
         self,
         event_type: type[BaseEvent],
-        depends_on: Depends | list[Depends] | None = None,
+        depends_on: Depends[Any] | list[Depends[Any]] | None = None,
     ) -> Callable[[Callable[P, R]], Callable[P, R]]:
         """Decorator to register an event handler for a specific event type.
 

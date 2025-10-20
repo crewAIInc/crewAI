@@ -4,9 +4,35 @@ This module contains TypedDict definitions and type aliases used throughout
 the Flow system.
 """
 
-from typing import Any, TypedDict
+from typing import (
+    Annotated,
+    Any,
+    NewType,
+    ParamSpec,
+    Protocol,
+    TypeVar,
+    TypedDict,
+)
 
 from typing_extensions import NotRequired, Required
+
+
+P = ParamSpec("P")
+R = TypeVar("R", covariant=True)
+
+FlowMethodName = NewType("FlowMethodName", str)
+PendingListenerKey = NewType(
+    "PendingListenerKey",
+    Annotated[str, "nested flow conditions use 'listener_name:object_id'"],
+)
+
+
+class FlowMethodCallable(Protocol[P, R]):
+    """A callable that can be used as a flow method reference."""
+
+    __name__: FlowMethodName
+
+    def __call__(self, *args: P.args, **kwargs: P.kwargs) -> R: ...
 
 
 class FlowMethodData(TypedDict):

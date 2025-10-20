@@ -1,28 +1,31 @@
+from __future__ import annotations
+
 import time
 from typing import TYPE_CHECKING
 
 from crewai.events.event_listener import event_listener
 from crewai.memory.entity.entity_memory_item import EntityMemoryItem
 from crewai.memory.long_term.long_term_memory_item import LongTermMemoryItem
-from crewai.utilities import I18N
 from crewai.utilities.converter import ConverterError
 from crewai.utilities.evaluators.task_evaluator import TaskEvaluator
 from crewai.utilities.printer import Printer
 
 
 if TYPE_CHECKING:
-    from crewai.agents.agent_builder.base_agent import BaseAgent
+    from crewai.agent import Agent
     from crewai.crew import Crew
     from crewai.task import Task
+    from crewai.utilities.i18n import I18N
+    from crewai.utilities.types import LLMMessage
 
 
 class CrewAgentExecutorMixin:
-    crew: "Crew"
-    agent: "BaseAgent"
-    task: "Task"
+    crew: Crew
+    agent: Agent
+    task: Task
     iterations: int
     max_iter: int
-    messages: list[dict[str, str]]
+    messages: list[LLMMessage]
     _i18n: I18N
     _printer: Printer = Printer()
 

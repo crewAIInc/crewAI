@@ -1,12 +1,15 @@
 import os
 import tempfile
+from typing import Any
+
+import requests
 
 from crewai_tools.rag.base_loader import BaseLoader, LoaderResult
 from crewai_tools.rag.source_content import SourceContent
 
 
 class DOCXLoader(BaseLoader):
-    def load(self, source_content: SourceContent, **kwargs) -> LoaderResult:
+    def load(self, source_content: SourceContent, **kwargs) -> LoaderResult:  # type: ignore[override]
         try:
             from docx import Document as DocxDocument
         except ImportError as e:
@@ -29,9 +32,8 @@ class DOCXLoader(BaseLoader):
                 f"Source must be a valid file path or URL, got: {source_content.source}"
             )
 
-    def _download_from_url(self, url: str, kwargs: dict) -> str:
-        import requests
-
+    @staticmethod
+    def _download_from_url(url: str, kwargs: dict) -> str:
         headers = kwargs.get(
             "headers",
             {
@@ -49,13 +51,13 @@ class DOCXLoader(BaseLoader):
                 temp_file.write(response.content)
                 return temp_file.name
         except Exception as e:
-            raise ValueError(f"Error fetching DOCX from URL {url}: {e!s}") from e
+            raise ValueError(f"Error fetching content from URL {url}: {e!s}") from e
 
     def _load_from_file(
         self,
         file_path: str,
         source_ref: str,
-        DocxDocument,  # noqa: N803
+        DocxDocument: Any,  # noqa: N803
     ) -> LoaderResult:
         try:
             doc = DocxDocument(file_path)

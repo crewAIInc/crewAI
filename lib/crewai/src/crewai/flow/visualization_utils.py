@@ -19,14 +19,22 @@ import ast
 import inspect
 from typing import Any
 
-from crewai.utilities.printer import Printer
-
-from .utils import (
+from crewai.flow.config import (
+    CrewNodeStyle,
+    FlowColors,
+    MethodNodeStyle,
+    NodeStyles,
+    RouterNodeStyle,
+    StartNodeStyle,
+)
+from crewai.flow.utils import (
     build_ancestor_dict,
     build_parent_children_dict,
     get_child_index,
     is_ancestor,
 )
+from crewai.utilities.printer import Printer
+
 
 
 _printer = Printer()
@@ -80,7 +88,7 @@ def add_nodes_to_network(
     net: Any,
     flow: Any,
     node_positions: dict[str, tuple[float, float]],
-    node_styles: dict[str, dict[str, Any]],
+    node_styles: NodeStyles,
 ) -> None:
     """
     Add nodes to the network visualization with appropriate styling.
@@ -108,6 +116,9 @@ def add_nodes_to_network(
     def human_friendly_label(method_name):
         return method_name.replace("_", " ").title()
 
+    node_style: (
+        StartNodeStyle | RouterNodeStyle | CrewNodeStyle | MethodNodeStyle | None
+    )
     for method_name, (x, y) in node_positions.items():
         method = flow._methods.get(method_name)
         if hasattr(method, "__is_start_method__"):
@@ -188,7 +199,7 @@ def add_edges(
     net: Any,
     flow: Any,
     node_positions: dict[str, tuple[float, float]],
-    colors: dict[str, str],
+    colors: FlowColors,
 ) -> None:
     edge_smooth: dict[str, str | float] = {"type": "continuous"}  # Default value
     """

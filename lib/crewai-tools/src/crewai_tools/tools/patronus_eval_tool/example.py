@@ -1,11 +1,13 @@
 import random
 
-from patronus import Client, EvaluationResult  # type: ignore[import-not-found]
-from patronus_local_evaluator_tool import (  # type: ignore[import-not-found]
+from crewai import Agent, Crew, Task
+from patronus import (  # type: ignore[import-not-found,import-untyped]
+    Client,
+    EvaluationResult,
+)
+from patronus_local_evaluator_tool import (  # type: ignore[import-not-found,import-untyped]
     PatronusLocalEvaluatorTool,
 )
-
-from crewai import Agent, Crew, Task
 
 
 # Test the PatronusLocalEvaluatorTool where agent uses the local evaluator

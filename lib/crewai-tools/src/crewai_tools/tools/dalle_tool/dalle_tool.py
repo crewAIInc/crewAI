@@ -1,7 +1,8 @@
 import json
+from typing import Literal
 
 from crewai.tools import BaseTool, EnvVar
-from openai import OpenAI
+from openai import Omit, OpenAI
 from pydantic import BaseModel, Field
 
 
@@ -19,8 +20,22 @@ class DallETool(BaseTool):
     args_schema: type[BaseModel] = ImagePromptSchema
 
     model: str = "dall-e-3"
-    size: str = "1024x1024"
-    quality: str = "standard"
+    size: (
+        Literal[
+            "auto",
+            "1024x1024",
+            "1536x1024",
+            "1024x1536",
+            "256x256",
+            "512x512",
+            "1792x1024",
+            "1024x1792",
+        ]
+        | None
+    ) = "1024x1024"
+    quality: (
+        Literal["standard", "hd", "low", "medium", "high", "auto"] | None | Omit
+    ) = "standard"
     n: int = 1
 
     env_vars: list[EnvVar] = Field(
@@ -48,6 +63,9 @@ class DallETool(BaseTool):
             quality=self.quality,
             n=self.n,
         )
+
+        if not response or not response.data:
+            return "Failed to generate image."
 
         return json.dumps(
             {

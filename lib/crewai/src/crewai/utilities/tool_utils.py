@@ -65,7 +65,7 @@ def execute_tool_and_check_finality(
     tool_usage = ToolUsage(
         tools_handler=tools_handler,
         tools=tools,
-        function_calling_llm=function_calling_llm,
+        function_calling_llm=function_calling_llm,  # type: ignore[arg-type]
         task=task,
         agent=agent,
         action=agent_action,

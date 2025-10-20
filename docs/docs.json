@@ -134,6 +134,7 @@
                 "group": "MCP Integration",
                 "pages": [
                   "en/mcp/overview",
+                  "en/mcp/dsl-integration",
                   "en/mcp/stdio",
                   "en/mcp/sse",
                   "en/mcp/streamable-http",
@@ -570,6 +571,7 @@
                 "group": "Integração MCP",
                 "pages": [
                   "pt-BR/mcp/overview",
+                  "pt-BR/mcp/dsl-integration",
                   "pt-BR/mcp/stdio",
                   "pt-BR/mcp/sse",
                   "pt-BR/mcp/streamable-http",
@@ -989,6 +991,7 @@
                 "group": "MCP 통합",
                 "pages": [
                   "ko/mcp/overview",
+                  "ko/mcp/dsl-integration",
                   "ko/mcp/stdio",
                   "ko/mcp/sse",
                   "ko/mcp/streamable-http",

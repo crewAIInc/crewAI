@@ -1,8 +1,7 @@
 from pydantic import BaseModel, Field
 
 from crewai_tools.rag.data_types import DataType
-
-from ..rag.rag_tool import RagTool
+from crewai_tools.tools.rag.rag_tool import RagTool
 
 
 class FixedYoutubeChannelSearchToolSchema(BaseModel):
@@ -43,7 +42,7 @@ class YoutubeChannelSearchTool(RagTool):
             youtube_channel_handle = f"@{youtube_channel_handle}"
         super().add(youtube_channel_handle, data_type=DataType.YOUTUBE_CHANNEL)
 
-    def _run(
+    def _run(  # type: ignore[override]
         self,
         search_query: str,
         youtube_channel_handle: str | None = None,

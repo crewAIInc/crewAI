@@ -2,11 +2,11 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from .serpapi_base_tool import SerpApiBaseTool
+from crewai_tools.tools.serpapi_tool.serpapi_base_tool import SerpApiBaseTool
 
 
 try:
-    from serpapi import HTTPError
+    from serpapi import HTTPError  # type: ignore[import-untyped]
 except ImportError:
     HTTPError = Any
 
@@ -37,7 +37,7 @@ class SerpApiGoogleSearchTool(SerpApiBaseTool):
         **kwargs: Any,
     ) -> Any:
         try:
-            results = self.client.search(
+            results = self.client.search(  # type: ignore[union-attr]
                 {
                     "q": kwargs.get("search_query"),
                     "location": kwargs.get("location"),

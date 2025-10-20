@@ -82,7 +82,7 @@ class NL2SQLTool(BaseTool):
             result = session.execute(text(sql_query))
             session.commit()
 
-            if result.returns_rows:
+            if result.returns_rows:  # type: ignore[attr-defined]
                 columns = result.keys()
                 return [
                     dict(zip(columns, row, strict=False)) for row in result.fetchall()

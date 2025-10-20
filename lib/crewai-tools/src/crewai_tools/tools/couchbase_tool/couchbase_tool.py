@@ -4,10 +4,13 @@ from typing import Any
 
 
 try:
-    from couchbase.cluster import Cluster
-    from couchbase.options import SearchOptions
-    import couchbase.search as search
-    from couchbase.vector_search import VectorQuery, VectorSearch
+    from couchbase.cluster import Cluster  # type: ignore[import-untyped]
+    from couchbase.options import SearchOptions  # type: ignore[import-untyped]
+    import couchbase.search as search  # type: ignore[import-untyped]
+    from couchbase.vector_search import (  # type: ignore[import-untyped]
+        VectorQuery,
+        VectorSearch,
+    )
 
     COUCHBASE_AVAILABLE = True
 except ImportError:
@@ -38,24 +41,31 @@ class CouchbaseFTSVectorSearchTool(BaseTool):
     name: str = "CouchbaseFTSVectorSearchTool"
     description: str = "A tool to search the Couchbase database for relevant information on internal documents."
     args_schema: type[BaseModel] = CouchbaseToolSchema
-    cluster: SkipValidation[Cluster | None] = None
-    collection_name: str | None = (None,)
-    scope_name: str | None = (None,)
-    bucket_name: str | None = (None,)
-    index_name: str | None = (None,)
+    cluster: SkipValidation[Cluster] = Field(
+        description="An instance of the Couchbase Cluster connected to the desired Couchbase server.",
+    )
+    collection_name: str = Field(
+        description="The name of the Couchbase collection to search",
+    )
+    scope_name: str = Field(
+        description="The name of the Couchbase scope containing the collection to search.",
+    )
+    bucket_name: str = Field(
+        description="The name of the Couchbase bucket to search",
+    )
+    index_name: str = Field(
+        description="The name of the Couchbase index to search",
+    )
     embedding_key: str | None = Field(
         default="embedding",
         description="Name of the field in the search index that stores the vector",
     )
-    scoped_index: bool | None = (
-        Field(
-            default=True,
-            description="Specify whether the index is scoped. Is True by default.",
-        ),
+    scoped_index: bool = Field(
+        default=True,
+        description="Specify whether the index is scoped. Is True by default.",
     )
     limit: int | None = Field(default=3)
     embedding_function: SkipValidation[Callable[[str], list[float]]] = Field(
-        default=None,
         description="A function that takes a string and returns a list of floats. This is used to embed the query before searching the database.",
     )
 
@@ -112,6 +122,9 @@ class CouchbaseFTSVectorSearchTool(BaseTool):
                     " Please create the index before searching."
                 )
         else:
+            if not self.cluster:
+                raise ValueError("Cluster instance must be provided")
+
             all_indexes = [
                 index.name for index in self.cluster.search_indexes().get_all_indexes()
             ]
@@ -140,24 +153,6 @@ class CouchbaseFTSVectorSearchTool(BaseTool):
         super().__init__(**kwargs)
         if COUCHBASE_AVAILABLE:
             try:
-                if not self.cluster:
-                    raise ValueError("Cluster instance must be provided")
-
-                if not self.bucket_name:
-                    raise ValueError("Bucket name must be provided")
-
-                if not self.scope_name:
-                    raise ValueError("Scope name must be provided")
-
-                if not self.collection_name:
-                    raise ValueError("Collection name must be provided")
-
-                if not self.index_name:
-                    raise ValueError("Index name must be provided")
-
-                if not self.embedding_function:
-                    raise ValueError("Embedding function must be provided")
-
                 self._bucket = self.cluster.bucket(self.bucket_name)
                 self._scope = self._bucket.scope(self.scope_name)
                 self._collection = self._scope.collection(self.collection_name)

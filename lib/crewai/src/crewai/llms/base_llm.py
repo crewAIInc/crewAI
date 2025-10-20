@@ -4,11 +4,13 @@ This module provides the abstract base class for all LLM implementations
 in CrewAI, including common functionality for native SDK implementations.
 """
 
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
 from datetime import datetime
 import json
 import logging
-from typing import Any, Final
+from typing import TYPE_CHECKING, Any, Final
 
 from pydantic import BaseModel
 
@@ -26,6 +28,10 @@ from crewai.events.types.tool_usage_events import (
     ToolUsageStartedEvent,
 )
 from crewai.types.usage_metrics import UsageMetrics
+
+
+if TYPE_CHECKING:
+    from crewai.utilities.types import LLMMessage
 
 
 DEFAULT_CONTEXT_WINDOW_SIZE: Final[int] = 4096
@@ -111,7 +117,7 @@ class BaseLLM(ABC):
     @abstractmethod
     def call(
         self,
-        messages: str | list[dict[str, str]],
+        messages: str | list[LLMMessage],
         tools: list[dict] | None = None,
         callbacks: list[Any] | None = None,
         available_functions: dict[str, Any] | None = None,
@@ -230,7 +236,7 @@ class BaseLLM(ABC):
 
     def _emit_call_started_event(
         self,
-        messages: str | list[dict[str, str]],
+        messages: str | list[LLMMessage],
         tools: list[dict] | None = None,
         callbacks: list[Any] | None = None,
         available_functions: dict[str, Any] | None = None,
@@ -413,9 +419,7 @@ class BaseLLM(ABC):
 
             return None
 
-    def _format_messages(
-        self, messages: str | list[dict[str, str]]
-    ) -> list[dict[str, str]]:
+    def _format_messages(self, messages: str | list[LLMMessage]) -> list[LLMMessage]:
         """Convert messages to standard format.
 
         Args:
@@ -439,7 +443,7 @@ class BaseLLM(ABC):
                     f"Message at index {i} must have 'role' and 'content' keys"
                 )
 
-        return messages
+        return messages  # type: ignore[return-value]
 
     def _validate_structured_output(
         self,

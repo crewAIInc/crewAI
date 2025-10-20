@@ -35,7 +35,10 @@ class DirectoryReadTool(BaseTool):
         self,
         **kwargs: Any,
     ) -> Any:
-        directory = kwargs.get("directory", self.directory)
+        directory: str | None = kwargs.get("directory", self.directory)
+        if directory is None:
+            raise ValueError("Directory must be provided.")
+
         if directory[-1] == "/":
             directory = directory[:-1]
         files_list = [

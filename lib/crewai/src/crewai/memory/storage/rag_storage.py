@@ -1,20 +1,25 @@
+from __future__ import annotations
+
 import logging
 import traceback
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 import warnings
 
 from crewai.rag.chromadb.config import ChromaDBConfig
 from crewai.rag.chromadb.types import ChromaEmbeddingFunctionWrapper
 from crewai.rag.config.utils import get_rag_client
-from crewai.rag.core.base_client import BaseClient
-from crewai.rag.core.base_embeddings_provider import BaseEmbeddingsProvider
 from crewai.rag.embeddings.factory import build_embedder
-from crewai.rag.embeddings.types import ProviderSpec
 from crewai.rag.factory import create_client
 from crewai.rag.storage.base_rag_storage import BaseRAGStorage
-from crewai.rag.types import BaseRecord
 from crewai.utilities.constants import MAX_FILE_NAME_LENGTH
 from crewai.utilities.paths import db_storage_path
+
+
+if TYPE_CHECKING:
+    from crewai.rag.core.base_client import BaseClient
+    from crewai.rag.core.base_embeddings_provider import BaseEmbeddingsProvider
+    from crewai.rag.embeddings.types import ProviderSpec
+    from crewai.rag.types import BaseRecord
 
 
 class RAGStorage(BaseRAGStorage):
@@ -103,7 +108,8 @@ class RAGStorage(BaseRAGStorage):
         """
         return role.replace("\n", "").replace(" ", "_").replace("/", "_")
 
-    def _build_storage_file_name(self, type: str, file_name: str) -> str:
+    @staticmethod
+    def _build_storage_file_name(type: str, file_name: str) -> str:
         """
         Ensures file name does not exceed max allowed by OS
         """

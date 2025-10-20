@@ -130,10 +130,10 @@ class RagTool(BaseTool):
                 factory_config["api_key"] = api_key
 
         if provider == "chromadb":
-            return get_embedding_function(factory_config)
+            return get_embedding_function(factory_config)  # type: ignore[call-overload]
 
         if provider == "qdrant":
-            chromadb_func = get_embedding_function(factory_config)
+            chromadb_func = get_embedding_function(factory_config)  # type: ignore[call-overload]
 
             def qdrant_embed_fn(text: str) -> list[float]:
                 """Embed text using ChromaDB function and convert to list of floats for Qdrant.

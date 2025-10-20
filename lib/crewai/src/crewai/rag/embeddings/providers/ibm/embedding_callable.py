@@ -39,11 +39,11 @@ class WatsonXEmbeddingFunction(EmbeddingFunction[Documents]):
             List of embedding vectors.
         """
         try:
-            from ibm_watsonx_ai import (
-                Credentials,  # type: ignore[import-not-found, import-untyped]
+            from ibm_watsonx_ai import (  # type: ignore[import-untyped]
+                Credentials,
             )
-            import ibm_watsonx_ai.foundation_models as watson_models  # type: ignore[import-not-found, import-untyped]
-            from ibm_watsonx_ai.metanames import (  # type: ignore[import-not-found, import-untyped]
+            import ibm_watsonx_ai.foundation_models as watson_models  # type: ignore[import-untyped]
+            from ibm_watsonx_ai.metanames import (  # type: ignore[import-untyped]
                 EmbedTextParamsMetaNames as EmbedParams,
             )
 

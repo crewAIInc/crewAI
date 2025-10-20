@@ -72,6 +72,6 @@ class BrowserbaseLoadTool(BaseTool):
         self.proxy = proxy
 
     def _run(self, url: str):
-        return self.browserbase.load_url(
+        return self.browserbase.load_url(  # type: ignore[union-attr]
             url, self.text_content, self.session_id, self.proxy
         )

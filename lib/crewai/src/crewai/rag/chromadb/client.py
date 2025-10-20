@@ -112,7 +112,7 @@ class ChromaDBClient(BaseClient):
 
         self.client.create_collection(
             name=_sanitize_collection_name(kwargs["collection_name"]),
-            configuration=kwargs.get("configuration"),
+            configuration=kwargs.get("configuration"),  # type: ignore[arg-type]
             metadata=metadata,
             embedding_function=kwargs.get(
                 "embedding_function", self.embedding_function
@@ -169,7 +169,7 @@ class ChromaDBClient(BaseClient):
 
         await self.client.create_collection(
             name=_sanitize_collection_name(kwargs["collection_name"]),
-            configuration=kwargs.get("configuration"),
+            configuration=kwargs.get("configuration"),  # type: ignore[arg-type]
             metadata=metadata,
             embedding_function=kwargs.get(
                 "embedding_function", self.embedding_function
@@ -220,7 +220,7 @@ class ChromaDBClient(BaseClient):
 
         return self.client.get_or_create_collection(
             name=_sanitize_collection_name(kwargs["collection_name"]),
-            configuration=kwargs.get("configuration"),
+            configuration=kwargs.get("configuration"),  # type: ignore[arg-type]
             metadata=metadata,
             embedding_function=kwargs.get(
                 "embedding_function", self.embedding_function
@@ -273,7 +273,7 @@ class ChromaDBClient(BaseClient):
 
         return await self.client.get_or_create_collection(
             name=_sanitize_collection_name(kwargs["collection_name"]),
-            configuration=kwargs.get("configuration"),
+            configuration=kwargs.get("configuration") or None,  # type: ignore[arg-type]
             metadata=metadata,
             embedding_function=kwargs.get(
                 "embedding_function", self.embedding_function
@@ -328,7 +328,7 @@ class ChromaDBClient(BaseClient):
             collection.upsert(
                 ids=batch_ids,
                 documents=batch_texts,
-                metadatas=batch_metadatas,
+                metadatas=batch_metadatas,  # type: ignore[arg-type]
             )
 
     async def aadd_documents(self, **kwargs: Unpack[BaseCollectionAddParams]) -> None:
@@ -377,7 +377,7 @@ class ChromaDBClient(BaseClient):
             await collection.upsert(
                 ids=batch_ids,
                 documents=batch_texts,
-                metadatas=batch_metadatas,
+                metadatas=batch_metadatas,  # type: ignore[arg-type]
             )
 
     def search(

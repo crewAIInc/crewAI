@@ -1,10 +1,15 @@
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from pydantic import ConfigDict, PrivateAttr
 
-from crewai.agent import BaseAgent
-from crewai.tools import BaseTool
+from crewai.agents.agent_builder.base_agent import BaseAgent
+
+
+if TYPE_CHECKING:
+    from crewai.tools.base_tool import BaseTool
 
 
 class BaseAgentAdapter(BaseAgent, ABC):

@@ -176,7 +176,7 @@ class TestJSONLoader:
     def test_url_network_failure(self, mock_get):
         mock_get.side_effect = Exception("Network error")
         loader = JSONLoader()
-        with pytest.raises(ValueError, match="Error fetching JSON from URL"):
+        with pytest.raises(ValueError, match="Error fetching content from URL"):
             loader.load(SourceContent("https://api.example.com/data.json"))
 
     @patch("requests.get")
@@ -185,5 +185,5 @@ class TestJSONLoader:
             raise_for_status=Mock(side_effect=Exception("404"))
         )
         loader = JSONLoader()
-        with pytest.raises(ValueError, match="Error fetching JSON from URL"):
+        with pytest.raises(ValueError, match="Error fetching content from URL"):
             loader.load(SourceContent("https://api.example.com/404.json"))

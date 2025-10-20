@@ -1,4 +1,5 @@
-from .cache_handler import CacheHandler
+from crewai.agents.cache.cache_handler import CacheHandler
+
 
 
 __all__ = ["CacheHandler"]

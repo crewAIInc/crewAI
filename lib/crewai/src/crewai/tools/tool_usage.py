@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import ast
 import datetime
 from difflib import SequenceMatcher
@@ -5,12 +7,11 @@ import json
 from json import JSONDecodeError
 from textwrap import dedent
 import time
-from typing import TYPE_CHECKING, Any, Union
+from typing import TYPE_CHECKING, Any
 
 import json5
 from json_repair import repair_json  # type: ignore[import-untyped,import-error]
 
-from crewai.agents.tools_handler import ToolsHandler
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.tool_usage_events import (
     ToolSelectionErrorEvent,
@@ -19,20 +20,24 @@ from crewai.events.types.tool_usage_events import (
     ToolUsageStartedEvent,
     ToolValidateInputErrorEvent,
 )
-from crewai.task import Task
-from crewai.telemetry import Telemetry
+from crewai.telemetry.telemetry import Telemetry
 from crewai.tools.structured_tool import CrewStructuredTool
 from crewai.tools.tool_calling import InstructorToolCalling, ToolCalling
-from crewai.utilities import I18N, Converter, Printer
 from crewai.utilities.agent_utils import (
     get_tool_names,
     render_text_description_and_args,
 )
+from crewai.utilities.converter import Converter
+from crewai.utilities.i18n import I18N
+from crewai.utilities.printer import Printer
 
 
 if TYPE_CHECKING:
     from crewai.agents.agent_builder.base_agent import BaseAgent
+    from crewai.agents.tools_handler import ToolsHandler
     from crewai.lite_agent import LiteAgent
+    from crewai.llm import LLM
+    from crewai.task import Task
 
 OPENAI_BIGGER_MODELS = [
     "gpt-4",
@@ -71,8 +76,8 @@ class ToolUsage:
         tools_handler: ToolsHandler | None,
         tools: list[CrewStructuredTool],
         task: Task | None,
-        function_calling_llm: Any,
-        agent: Union["BaseAgent", "LiteAgent"] | None = None,
+        function_calling_llm: LLM,
+        agent: BaseAgent | LiteAgent | None = None,
         action: Any = None,
         fingerprint_context: dict[str, str] | None = None,
     ) -> None:
