@@ -230,7 +230,7 @@ def build_embedder_from_dict(spec):
     Args:
         spec: A dictionary with 'provider' and optionally 'config' keys.
               Supports two formats:
-              
+
               Nested format (recommended):
               {
                   "provider": "openai",
@@ -239,7 +239,7 @@ def build_embedder_from_dict(spec):
                       "model_name": "text-embedding-3-small"
                   }
               }
-              
+
               Flat format (for backward compatibility):
               {
                   "provider": "openai",

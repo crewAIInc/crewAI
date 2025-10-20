@@ -289,22 +289,22 @@ class Crew(FlowTrackable, BaseModel):
         cls, v: dict[str, Any] | None
     ) -> dict[str, Any] | None:
         """Normalize embedder config to support both flat and nested formats.
-        
+
         Args:
             v: The embedder config to be normalized.
-            
+
         Returns:
             The normalized embedder config with nested structure.
         """
         if v is None or not isinstance(v, dict):
             return v
-            
+
         if "provider" in v and "config" not in v:
             provider = v["provider"]
             config_fields = {k: val for k, val in v.items() if k != "provider"}
             if config_fields:
                 return {"provider": provider, "config": config_fields}
-        
+
         return v
 
     @field_validator("config", mode="before")
