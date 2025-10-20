@@ -68,7 +68,9 @@ docling = [
     "docling>=2.12.0",
 ]
 aisuite = [
-    "aisuite>=0.1.10",
+    "aisuite>=0.1.11",
+
+
 ]
 qdrant = [
     "qdrant-client[fastembed]>=1.14.3",
@@ -97,6 +99,10 @@ azure-ai-inference = [
 anthropic = [
     "anthropic>=0.69.0",
 ]
+# a2a = [
+#     "a2a-sdk~=0.3.9",
+#     "httpx-sse>=0.4.0",
+# ]
 
 
 [project.scripts]
@@ -131,3 +137,13 @@ build-backend = "hatchling.build"
 
 [tool.hatch.version]
 path = "src/crewai/__init__.py"
+
+# Declare mutually exclusive extras due to conflicting httpx requirements
+# a2a requires httpx>=0.28.1, while aisuite requires httpx>=0.27.0,<0.28.0
+# [tool.uv]
+# conflicts = [
+#   [
+#     { extra = "a2a" },
+#     { extra = "aisuite" },
+#   ],
+# ]
