@@ -7,7 +7,6 @@ on:
 
 jobs:
   build:
-    if: github.event.release.prerelease == true
     name: Build packages
     runs-on: ubuntu-latest
     permissions:
@@ -25,7 +24,7 @@ jobs:
 
       - name: Build packages
         run: |
-          uv build --prerelease="allow" --all-packages
+          uv build --all-packages
           rm dist/.gitignore
 
       - name: Upload artifacts
@@ -35,7 +34,6 @@ jobs:
           path: dist/
 
   publish:
-    if: github.event.release.prerelease == true
     name: Publish to PyPI
     needs: build
     runs-on: ubuntu-latest
