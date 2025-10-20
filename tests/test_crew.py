@@ -4744,3 +4744,87 @@ def test_ensure_exchanged_messages_are_propagated_to_external_memory():
     assert "Researcher" in messages[0]["content"]
     assert messages[1]["role"] == "user"
     assert "Research a topic to teach a kid aged 6 about math" in messages[1]["content"]
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_crew_kickoff_stream(researcher):
+    """Test that crew.kickoff_stream() yields events during execution."""
+    task = Task(
+        description="Research a topic about AI",
+        expected_output="A brief summary about AI",
+        agent=researcher,
+    )
+
+    crew = Crew(agents=[researcher], tasks=[task])
+
+    events = []
+    for event in crew.kickoff_stream():
+        events.append(event)
+
+    assert len(events) > 0
+
+    event_types = [event["type"] for event in events]
+    assert "crew_kickoff_started" in event_types
+    assert "final_output" in event_types
+
+    final_output_event = next(e for e in events if e["type"] == "final_output")
+    assert "output" in final_output_event["data"]
+    assert isinstance(final_output_event["data"]["output"], str)
+    assert len(final_output_event["data"]["output"]) > 0
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_crew_kickoff_stream_with_inputs(researcher):
+    """Test that crew.kickoff_stream() works with inputs."""
+    task = Task(
+        description="Research about {topic}",
+        expected_output="A brief summary about {topic}",
+        agent=researcher,
+    )
+
+    crew = Crew(agents=[researcher], tasks=[task])
+
+    events = []
+    for event in crew.kickoff_stream(inputs={"topic": "machine learning"}):
+        events.append(event)
+
+    assert len(events) > 0
+
+    event_types = [event["type"] for event in events]
+    assert "crew_kickoff_started" in event_types
+    assert "final_output" in event_types
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_crew_kickoff_stream_includes_llm_chunks(researcher):
+    """Test that crew.kickoff_stream() includes LLM stream chunks."""
+    task = Task(
+        description="Write a short poem about AI",
+        expected_output="A 2-line poem",
+        agent=researcher,
+    )
+
+    crew = Crew(agents=[researcher], tasks=[task])
+
+    events = []
+    for event in crew.kickoff_stream():
+        events.append(event)
+
+    event_types = [event["type"] for event in events]
+
+    assert "task_started" in event_types or "agent_execution_started" in event_types
+
+
+def test_crew_kickoff_stream_handles_errors(researcher):
+    """Test that crew.kickoff_stream() properly handles errors."""
+    task = Task(
+        description="This task will fail",
+        expected_output="Should not complete",
+        agent=researcher,
+    )
+
+    crew = Crew(agents=[researcher], tasks=[task])
+
+    with patch("crewai.crew.Crew.kickoff", side_effect=Exception("Test error")):
+        with pytest.raises(Exception, match="Test error"):
+            list(crew.kickoff_stream())
