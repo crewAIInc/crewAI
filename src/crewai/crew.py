@@ -769,16 +769,16 @@ class Crew(FlowTrackable, BaseModel):
     def kickoff_stream(self, inputs: dict[str, Any] | None = None):
         """
         Stream crew execution events in real-time.
-        
+
         This method yields events as they occur during crew execution, making it
         easy to integrate with streaming frameworks like FastAPI's StreamingResponse.
-        
+
         Args:
             inputs: Optional dictionary of inputs for the crew execution
-            
+
         Yields:
             dict: Event dictionaries containing event type and data
-            
+
         Example:
             ```python
             from fastapi import FastAPI
