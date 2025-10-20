@@ -1051,23 +1051,6 @@ class Crew(FlowTrackable, BaseModel):
         task_agent: BaseAgent,
     ) -> list[BaseTool]:
         mcps = getattr(task_agent, "mcps", None) or []
-
-        # Early check: if MCP servers are configured, validate library is available
-        if mcps and len(mcps) > 0:
-            try:
-                import mcp  # noqa: F401
-                from mcp import ClientSession  # noqa: F401
-                from mcp.client.streamable_http import (
-                    streamablehttp_client,  # noqa: F401
-                )
-            except ImportError as e:
-                error_msg = (
-                    "MCP library not installed but MCP servers are configured. "
-                    "Install with: uv add 'mcp[cli]'"
-                )
-                self._logger.log("error", error_msg, color="red")
-                raise ImportError(error_msg) from e
-
         if hasattr(task_agent, "get_mcp_tools") and mcps:
             mcp_tools = task_agent.get_mcp_tools(mcps=mcps)
             return self._merge_tools(tools, cast(list[BaseTool], mcp_tools))
