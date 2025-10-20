@@ -10,7 +10,8 @@ from typing import (
     Literal,
 )
 
-from pydantic import Field, InstanceOf, PrivateAttr, model_validator
+from pydantic import BaseModel, Field, InstanceOf, PrivateAttr, model_validator
+from typing_extensions import Self
 
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.agents.cache.cache_handler import CacheHandler
@@ -58,6 +59,8 @@ from crewai.utilities.training_handler import CrewTrainingHandler
 
 
 if TYPE_CHECKING:
+    from crewai_tools import CodeInterpreterTool
+
     from crewai.agents.agent_builder.base_agent import PlatformAppOrAction
     from crewai.lite_agent_output import LiteAgentOutput
     from crewai.task import Task
@@ -96,8 +99,6 @@ class Agent(BaseAgent):
         default=None,
         description="Maximum execution time for an agent to execute a task",
     )
-    agent_ops_agent_name: str = None  # type: ignore # Incompatible types in assignment (expression has type "None", variable has type "str")
-    agent_ops_agent_id: str = None  # type: ignore # Incompatible types in assignment (expression has type "None", variable has type "str")
     step_callback: Any | None = Field(
         default=None,
         description="Callback to be executed after each step of the agent execution.",
@@ -185,15 +186,13 @@ class Agent(BaseAgent):
     )
 
     @model_validator(mode="before")
-    def validate_from_repository(cls, v):  # noqa: N805
+    def validate_from_repository(cls, v: Any) -> dict[str, Any] | None | Any:  # noqa: N805
         if v is not None and (from_repository := v.get("from_repository")):
             return load_agent_from_repository(from_repository) | v
         return v
 
     @model_validator(mode="after")
-    def post_init_setup(self):
-        self.agent_ops_agent_name = self.role
-
+    def post_init_setup(self) -> Self:
         self.llm = create_llm(self.llm)
         if self.function_calling_llm and not isinstance(
             self.function_calling_llm, BaseLLM
@@ -208,12 +207,12 @@ class Agent(BaseAgent):
 
         return self
 
-    def _setup_agent_executor(self):
+    def _setup_agent_executor(self) -> None:
         if not self.cache_handler:
             self.cache_handler = CacheHandler()
         self.set_cache_handler(self.cache_handler)
 
-    def set_knowledge(self, crew_embedder: EmbedderConfig | None = None):
+    def set_knowledge(self, crew_embedder: EmbedderConfig | None = None) -> None:
         try:
             if self.embedder is None and crew_embedder:
                 self.embedder = crew_embedder
@@ -251,7 +250,7 @@ class Agent(BaseAgent):
         task: Task,
         context: str | None = None,
         tools: list[BaseTool] | None = None,
-    ) -> str:
+    ) -> Any:
         """Execute a task with the agent.
 
         Args:
@@ -494,7 +493,7 @@ class Agent(BaseAgent):
         # If there was any tool in self.tools_results that had result_as_answer
         # set to True, return the results of the last tool that had
         # result_as_answer set to True
-        for tool_result in self.tools_results:  # type: ignore # Item "None" of "list[Any] | None" has no attribute "__iter__" (not iterable)
+        for tool_result in self.tools_results:
             if tool_result.get("result_as_answer", False):
                 result = tool_result["result"]
         crewai_event_bus.emit(
@@ -503,7 +502,7 @@ class Agent(BaseAgent):
         )
         return result
 
-    def _execute_with_timeout(self, task_prompt: str, task: Task, timeout: int) -> str:
+    def _execute_with_timeout(self, task_prompt: str, task: Task, timeout: int) -> Any:
         """Execute a task with a timeout.
 
         Args:
@@ -536,7 +535,7 @@ class Agent(BaseAgent):
                 future.cancel()
                 raise RuntimeError(f"Task execution failed: {e!s}") from e
 
-    def _execute_without_timeout(self, task_prompt: str, task: Task) -> str:
+    def _execute_without_timeout(self, task_prompt: str, task: Task) -> Any:
         """Execute a task without a timeout.
 
         Args:
@@ -559,7 +558,7 @@ class Agent(BaseAgent):
         )["output"]
 
     def create_agent_executor(
-        self, tools: list[BaseTool] | None = None, task=None
+        self, tools: list[BaseTool] | None = None, task: Task | None = None
     ) -> None:
         """Create an agent executor for the agent.
 
@@ -588,7 +587,7 @@ class Agent(BaseAgent):
 
         self.agent_executor = CrewAgentExecutor(
             llm=self.llm,
-            task=task,
+            task=task,  # type: ignore[arg-type]
             agent=self,
             crew=self.crew,
             tools=parsed_tools,
@@ -608,14 +607,14 @@ class Agent(BaseAgent):
             callbacks=[TokenCalcHandler(self._token_process)],
         )
 
-    def get_delegation_tools(self, agents: list[BaseAgent]):
+    def get_delegation_tools(self, agents: list[BaseAgent]) -> list[BaseTool]:
         agent_tools = AgentTools(agents=agents)
         return agent_tools.tools()
 
     def get_platform_tools(self, apps: list[PlatformAppOrAction]) -> list[BaseTool]:
         try:
-            from crewai_tools import (  # type: ignore[import-not-found]
-                CrewaiPlatformTools,  # type: ignore[import-untyped]
+            from crewai_tools import (
+                CrewaiPlatformTools,
             )
 
             return CrewaiPlatformTools(apps=apps)
@@ -628,9 +627,9 @@ class Agent(BaseAgent):
 
         return [AddImageTool()]
 
-    def get_code_execution_tools(self):
+    def get_code_execution_tools(self) -> list[CodeInterpreterTool]:
         try:
-            from crewai_tools import (  # type: ignore[import-not-found]
+            from crewai_tools import (
                 CodeInterpreterTool,
             )
 
@@ -641,8 +640,11 @@ class Agent(BaseAgent):
             self._logger.log(
                 "info", "Coding tools not available. Install crewai_tools. "
             )
+            return []
 
-    def get_output_converter(self, llm, text, model, instructions):
+    def get_output_converter(
+        self, llm: BaseLLM, text: str, model: type[BaseModel], instructions: str
+    ) -> Converter:
         return Converter(llm=llm, text=text, model=model, instructions=instructions)
 
     def _training_handler(self, task_prompt: str) -> str:
@@ -688,7 +690,7 @@ class Agent(BaseAgent):
             ]
         )
 
-    def _inject_date_to_task(self, task):
+    def _inject_date_to_task(self, task: Task) -> None:
         """Inject the current date into the task description if inject_date is enabled."""
         if self.inject_date:
             from datetime import datetime
@@ -740,7 +742,7 @@ class Agent(BaseAgent):
                 f"Docker command timed out. Please check your Docker installation for agent: {self.role}"
             ) from e
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"Agent(role={self.role}, goal={self.goal}, backstory={self.backstory})"
 
     @property
@@ -753,7 +755,7 @@ class Agent(BaseAgent):
         """
         return self.security_config.fingerprint
 
-    def set_fingerprint(self, fingerprint: Fingerprint):
+    def set_fingerprint(self, fingerprint: Fingerprint) -> None:
         self.security_config.fingerprint = fingerprint
 
     def _get_knowledge_search_query(self, task_prompt: str, task: Task) -> str | None:
