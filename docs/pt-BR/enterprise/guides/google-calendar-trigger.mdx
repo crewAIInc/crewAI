@@ -39,16 +39,23 @@ print(result.raw)
 
 Use `crewai_trigger_payload` exactly as it is delivered by the trigger so the crew can extract the proper fields.
 
-## Sample payloads & crews
+## Testando Localmente
 
-The [Google Calendar examples](https://github.com/crewAIInc/crewai-enterprise-trigger-examples/tree/main/google_calendar) show how to handle multiple event types:
+Teste sua integração de trigger do Google Calendar localmente usando a CLI da CrewAI:
 
-- `new-event.json` → standard event creation handled by `calendar-event-crew.py`
-- `event-updated.json` / `event-started.json` / `event-ended.json` → in-flight updates processed by `calendar-meeting-crew.py`
-- `event-canceled.json` → cancellation workflow that alerts attendees via `calendar-meeting-crew.py`
-- Working location events use `calendar-working-location-crew.py` to extract on-site schedules
+```bash
+# Visualize todos os triggers disponíveis
+crewai triggers list
 
-Each crew transforms raw event metadata (attendees, rooms, working locations) into the summaries your teams need.
+# Simule um trigger do Google Calendar com payload realista
+crewai triggers run google_calendar/event_changed
+```
+
+O comando `crewai triggers run` executará sua crew com um payload completo do Calendar, permitindo que você teste sua lógica de parsing antes do deployment.
+
+<Warning>
+  Use `crewai triggers run google_calendar/event_changed` (não `crewai run`) para simular execução de trigger durante o desenvolvimento. Após o deployment, sua crew receberá automaticamente o payload do trigger.
+</Warning>
 
 ## Monitoring Executions
 
@@ -61,5 +68,7 @@ The **Executions** list in the deployment dashboard tracks every triggered run a
 ## Troubleshooting
 
 - Ensure the correct Google account is connected and the trigger is enabled
+- Teste localmente com `crewai triggers run google_calendar/event_changed` para ver a estrutura exata do payload
 - Confirm your workflow handles all-day events (payloads use `start.date` and `end.date` instead of timestamps)
 - Check execution logs if reminders or attendee arrays are missing—calendar permissions can limit fields in the payload
+- Lembre-se: use `crewai triggers run` (não `crewai run`) para simular execução de trigger

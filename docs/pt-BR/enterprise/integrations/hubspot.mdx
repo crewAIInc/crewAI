@@ -25,7 +25,7 @@ Antes de utilizar a integração com o HubSpot, certifique-se de que você possu
 2. Encontre **HubSpot** na seção de Integrações de Autenticação.
 3. Clique em **Conectar** e complete o fluxo OAuth.
 4. Conceda as permissões necessárias para gerenciamento de empresas e contatos.
-5. Copie o seu Token Enterprise nas [Configurações da Conta](https://app.crewai.com/crewai_plus/settings/account).
+5. Copie o seu Token Enterprise nas [Configurações de Integração](https://app.crewai.com/crewai_plus/settings/integrations)
 
 ### 2. Instale o Pacote Necessário
 
@@ -36,7 +36,7 @@ uv add crewai-tools
 ## Ações Disponíveis
 
 <AccordionGroup>
-  <Accordion title="HUBSPOT_CREATE_RECORD_COMPANIES">
+  <Accordion title="hubspot/create_company">
     **Descrição:** Crie um novo registro de empresa no HubSpot.
 
     **Parâmetros:**
@@ -101,7 +101,7 @@ uv add crewai-tools
     - `founded_year` (string, opcional): Ano de fundação.
   </Accordion>
 
-  <Accordion title="HUBSPOT_CREATE_RECORD_CONTACTS">
+  <Accordion title="hubspot/create_contact">
     **Descrição:** Crie um novo registro de contato no HubSpot.
 
     **Parâmetros:**
@@ -200,7 +200,7 @@ uv add crewai-tools
     - `hs_googleplusid` (string, opcional): googleplus ID.
   </Accordion>
 
-  <Accordion title="HUBSPOT_CREATE_RECORD_DEALS">
+  <Accordion title="hubspot/create_deal">
     **Descrição:** Crie um novo registro de negócio (deal) no HubSpot.
 
     **Parâmetros:**
@@ -215,7 +215,7 @@ uv add crewai-tools
     - `hs_priority` (string, opcional): Prioridade do negócio. Valores disponíveis: `low`, `medium`, `high`.
   </Accordion>
 
-  <Accordion title="HUBSPOT_CREATE_RECORD_ENGAGEMENTS">
+  <Accordion title="hubspot/create_record_engagements">
     **Descrição:** Crie um novo engajamento (ex: nota, e-mail, ligação, reunião, tarefa) no HubSpot.
 
     **Parâmetros:**
@@ -232,7 +232,7 @@ uv add crewai-tools
     - `hs_meeting_end_time` (string, opcional): Horário de término da reunião. (Utilizado para `MEETING`)
   </Accordion>
 
-  <Accordion title="HUBSPOT_UPDATE_RECORD_COMPANIES">
+  <Accordion title="hubspot/update_company">
     **Descrição:** Atualize um registro de empresa existente no HubSpot.
 
     **Parâmetros:**
@@ -249,7 +249,7 @@ uv add crewai-tools
     - `description` (string, opcional): Descrição.
   </Accordion>
 
-  <Accordion title="HUBSPOT_CREATE_RECORD_ANY">
+  <Accordion title="hubspot/create_record_any">
     **Descrição:** Crie um registro para um tipo de objeto especificado no HubSpot.
 
     **Parâmetros:**
@@ -257,7 +257,7 @@ uv add crewai-tools
     - Parâmetros adicionais dependem do esquema do objeto personalizado.
   </Accordion>
 
-  <Accordion title="HUBSPOT_UPDATE_RECORD_CONTACTS">
+  <Accordion title="hubspot/update_contact">
     **Descrição:** Atualize um registro de contato existente no HubSpot.
 
     **Parâmetros:**
@@ -271,7 +271,7 @@ uv add crewai-tools
     - `lifecyclestage` (string, opcional): Estágio no ciclo de vida.
   </Accordion>
 
-  <Accordion title="HUBSPOT_UPDATE_RECORD_DEALS">
+  <Accordion title="hubspot/update_deal">
     **Descrição:** Atualize um registro de negócio existente no HubSpot.
 
     **Parâmetros:**
@@ -284,7 +284,7 @@ uv add crewai-tools
     - `dealtype` (string, opcional): Tipo de negócio.
   </Accordion>
 
-  <Accordion title="HUBSPOT_UPDATE_RECORD_ENGAGEMENTS">
+  <Accordion title="hubspot/update_record_engagements">
     **Descrição:** Atualize um engajamento existente no HubSpot.
 
     **Parâmetros:**
@@ -295,7 +295,7 @@ uv add crewai-tools
     - `hs_task_status` (string, opcional): Status da tarefa.
   </Accordion>
 
-  <Accordion title="HUBSPOT_UPDATE_RECORD_ANY">
+  <Accordion title="hubspot/update_record_any">
     **Descrição:** Atualize um registro para um tipo de objeto especificado no HubSpot.
 
     **Parâmetros:**
@@ -304,28 +304,28 @@ uv add crewai-tools
     - Parâmetros adicionais dependem do esquema do objeto personalizado.
   </Accordion>
 
-  <Accordion title="HUBSPOT_GET_RECORDS_COMPANIES">
+  <Accordion title="hubspot/list_companies">
     **Descrição:** Obtenha uma lista de registros de empresas do HubSpot.
 
     **Parâmetros:**
     - `paginationParameters` (object, opcional): Use `pageCursor` para buscar páginas subsequentes.
   </Accordion>
 
-  <Accordion title="HUBSPOT_GET_RECORDS_CONTACTS">
+  <Accordion title="hubspot/list_contacts">
     **Descrição:** Obtenha uma lista de registros de contatos do HubSpot.
 
     **Parâmetros:**
     - `paginationParameters` (object, opcional): Use `pageCursor` para buscar páginas subsequentes.
   </Accordion>
 
-  <Accordion title="HUBSPOT_GET_RECORDS_DEALS">
+  <Accordion title="hubspot/list_deals">
     **Descrição:** Obtenha uma lista de registros de negócios do HubSpot.
 
     **Parâmetros:**
     - `paginationParameters` (object, opcional): Use `pageCursor` para buscar páginas subsequentes.
   </Accordion>
 
-  <Accordion title="HUBSPOT_GET_RECORDS_ENGAGEMENTS">
+  <Accordion title="hubspot/get_records_engagements">
     **Descrição:** Obtenha uma lista de registros de engajamentos do HubSpot.
 
     **Parâmetros:**
@@ -333,7 +333,7 @@ uv add crewai-tools
     - `paginationParameters` (object, opcional): Use `pageCursor` para buscar páginas subsequentes.
   </Accordion>
 
-  <Accordion title="HUBSPOT_GET_RECORDS_ANY">
+  <Accordion title="hubspot/get_records_any">
     **Descrição:** Obtenha uma lista de registros de qualquer tipo de objeto no HubSpot.
 
     **Parâmetros:**
@@ -341,35 +341,35 @@ uv add crewai-tools
     - `paginationParameters` (object, opcional): Use `pageCursor` para buscar páginas subsequentes.
   </Accordion>
 
-  <Accordion title="HUBSPOT_GET_RECORD_BY_ID_COMPANIES">
+  <Accordion title="hubspot/get_company">
     **Descrição:** Obtenha um registro de empresa pelo seu ID.
 
     **Parâmetros:**
     - `recordId` (string, obrigatório): ID da empresa a ser consultada.
   </Accordion>
 
-  <Accordion title="HUBSPOT_GET_RECORD_BY_ID_CONTACTS">
+  <Accordion title="hubspot/get_contact">
     **Descrição:** Obtenha um registro de contato pelo seu ID.
 
     **Parâmetros:**
     - `recordId` (string, obrigatório): ID do contato a ser consultado.
   </Accordion>
 
-  <Accordion title="HUBSPOT_GET_RECORD_BY_ID_DEALS">
+  <Accordion title="hubspot/get_deal">
     **Descrição:** Obtenha um registro de negócio pelo seu ID.
 
     **Parâmetros:**
     - `recordId` (string, obrigatório): ID do negócio a ser consultado.
   </Accordion>
 
-  <Accordion title="HUBSPOT_GET_RECORD_BY_ID_ENGAGEMENTS">
+  <Accordion title="hubspot/get_record_by_id_engagements">
     **Descrição:** Obtenha um registro de engajamento pelo seu ID.
 
     **Parâmetros:**
     - `recordId` (string, obrigatório): ID do engajamento a ser consultado.
   </Accordion>
 
-  <Accordion title="HUBSPOT_GET_RECORD_BY_ID_ANY">
+  <Accordion title="hubspot/get_record_by_id_any">
     **Descrição:** Obtenha um registro de qualquer tipo de objeto especificado pelo seu ID.
 
     **Parâmetros:**
@@ -377,7 +377,7 @@ uv add crewai-tools
     - `recordId` (string, obrigatório): ID do registro a ser consultado.
   </Accordion>
 
-  <Accordion title="HUBSPOT_SEARCH_RECORDS_COMPANIES">
+  <Accordion title="hubspot/search_companies">
     **Descrição:** Pesquise registros de empresas no HubSpot utilizando uma fórmula de filtro.
 
     **Parâmetros:**
@@ -385,7 +385,7 @@ uv add crewai-tools
     - `paginationParameters` (object, opcional): Use `pageCursor` para buscar páginas subsequentes.
   </Accordion>
 
-  <Accordion title="HUBSPOT_SEARCH_RECORDS_CONTACTS">
+  <Accordion title="hubspot/search_contacts">
     **Descrição:** Pesquise registros de contatos no HubSpot utilizando uma fórmula de filtro.
 
     **Parâmetros:**
@@ -393,7 +393,7 @@ uv add crewai-tools
     - `paginationParameters` (object, opcional): Use `pageCursor` para buscar páginas subsequentes.
   </Accordion>
 
-  <Accordion title="HUBSPOT_SEARCH_RECORDS_DEALS">
+  <Accordion title="hubspot/search_deals">
     **Descrição:** Pesquise registros de negócios no HubSpot utilizando uma fórmula de filtro.
 
     **Parâmetros:**
@@ -401,7 +401,7 @@ uv add crewai-tools
     - `paginationParameters` (object, opcional): Use `pageCursor` para buscar páginas subsequentes.
   </Accordion>
 
-  <Accordion title="HUBSPOT_SEARCH_RECORDS_ENGAGEMENTS">
+  <Accordion title="hubspot/search_records_engagements">
     **Descrição:** Pesquise registros de engajamento no HubSpot utilizando uma fórmula de filtro.
 
     **Parâmetros:**
@@ -409,7 +409,7 @@ uv add crewai-tools
     - `paginationParameters` (object, opcional): Use `pageCursor` para buscar páginas subsequentes.
   </Accordion>
 
-  <Accordion title="HUBSPOT_SEARCH_RECORDS_ANY">
+  <Accordion title="hubspot/search_records_any">
     **Descrição:** Pesquise registros de qualquer tipo de objeto no HubSpot.
 
     **Parâmetros:**
@@ -418,35 +418,35 @@ uv add crewai-tools
     - `paginationParameters` (object, opcional): Use `pageCursor` para buscar páginas subsequentes.
   </Accordion>
 
-  <Accordion title="HUBSPOT_DELETE_RECORD_COMPANIES">
+  <Accordion title="hubspot/delete_record_companies">
     **Descrição:** Exclua um registro de empresa pelo seu ID.
 
     **Parâmetros:**
     - `recordId` (string, obrigatório): ID da empresa a ser excluída.
   </Accordion>
 
-  <Accordion title="HUBSPOT_DELETE_RECORD_CONTACTS">
+  <Accordion title="hubspot/delete_record_contacts">
     **Descrição:** Exclua um registro de contato pelo seu ID.
 
     **Parâmetros:**
     - `recordId` (string, obrigatório): ID do contato a ser excluído.
   </Accordion>
 
-  <Accordion title="HUBSPOT_DELETE_RECORD_DEALS">
+  <Accordion title="hubspot/delete_record_deals">
     **Descrição:** Exclua um registro de negócio pelo seu ID.
 
     **Parâmetros:**
     - `recordId` (string, obrigatório): ID do negócio a ser excluído.
   </Accordion>
 
-  <Accordion title="HUBSPOT_DELETE_RECORD_ENGAGEMENTS">
+  <Accordion title="hubspot/delete_record_engagements">
     **Descrição:** Exclua um registro de engajamento pelo seu ID.
 
     **Parâmetros:**
     - `recordId` (string, obrigatório): ID do engajamento a ser excluído.
   </Accordion>
 
-  <Accordion title="HUBSPOT_DELETE_RECORD_ANY">
+  <Accordion title="hubspot/delete_record_any">
     **Descrição:** Exclua um registro de qualquer tipo de objeto especificado pelo seu ID.
 
     **Parâmetros:**
@@ -454,7 +454,7 @@ uv add crewai-tools
     - `recordId` (string, obrigatório): ID do registro a ser excluído.
   </Accordion>
 
-  <Accordion title="HUBSPOT_GET_CONTACTS_BY_LIST_ID">
+  <Accordion title="hubspot/get_contacts_by_list_id">
     **Descrição:** Obtenha contatos de uma lista específica pelo seu ID.
 
     **Parâmetros:**
@@ -462,7 +462,7 @@ uv add crewai-tools
     - `paginationParameters` (object, opcional): Use `pageCursor` para páginas subsequentes.
   </Accordion>
 
-  <Accordion title="HUBSPOT_DESCRIBE_ACTION_SCHEMA">
+  <Accordion title="hubspot/describe_action_schema">
     **Descrição:** Obtenha o esquema esperado para um dado tipo de objeto e operação.
 
     **Parâmetros:**
@@ -477,19 +477,15 @@ uv add crewai-tools
 
 ```python
 from crewai import Agent, Task, Crew
-from crewai_tools import CrewaiEnterpriseTools
 
 # Obtenha as ferramentas enterprise (ferramentas HubSpot incluídas)
-enterprise_tools = CrewaiEnterpriseTools(
-    enterprise_token="your_enterprise_token"
-)
 
 # Crie um agente com capacidades HubSpot
 hubspot_agent = Agent(
     role="CRM Manager",
     goal="Manage company and contact records in HubSpot",
     backstory="An AI assistant specialized in CRM management.",
-    tools=[enterprise_tools]
+    apps=['hubspot']
 )
 
 # Task para criar nova empresa
@@ -511,19 +507,16 @@ crew.kickoff()
 ### Filtrando Ferramentas HubSpot Específicas
 
 ```python
-from crewai_tools import CrewaiEnterpriseTools
 
 # Obtenha somente a ferramenta para criar contatos
-enterprise_tools = CrewaiEnterpriseTools(
-    enterprise_token="your_enterprise_token",
-    actions_list=["hubspot_create_record_contacts"]
+    actions_list=["hubspot/create_contact"]
 )
 
 contact_creator = Agent(
     role="Contact Creator",
     goal="Create new contacts in HubSpot",
     backstory="An AI assistant that focuses on creating new contact entries in the CRM.",
-    tools=[enterprise_tools]
+    apps=['hubspot']
 )
 
 # Task para criar contato
@@ -545,17 +538,12 @@ crew.kickoff()
 
 ```python
 from crewai import Agent, Task, Crew
-from crewai_tools import CrewaiEnterpriseTools
-
-enterprise_tools = CrewaiEnterpriseTools(
-    enterprise_token="your_enterprise_token"
-)
 
 crm_manager = Agent(
     role="CRM Manager",
     goal="Manage and organize HubSpot contacts efficiently.",
     backstory="An experienced CRM manager who maintains an organized contact database.",
-    tools=[enterprise_tools]
+    apps=['hubspot']
 )
 
 # Task para gerenciar contatos

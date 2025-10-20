@@ -1,0 +1,113 @@
+import os
+from typing import Any
+from urllib.parse import urlencode
+
+from crewai.tools import BaseTool, EnvVar
+from pydantic import BaseModel, Field
+import requests
+
+
+class SerplyWebSearchToolSchema(BaseModel):
+    """Input for Serply Web Search."""
+
+    search_query: str = Field(
+        ..., description="Mandatory search query you want to use to Google search"
+    )
+
+
+class SerplyWebSearchTool(BaseTool):
+    name: str = "Google Search"
+    description: str = "A tool to perform Google search with a search_query."
+    args_schema: type[BaseModel] = SerplyWebSearchToolSchema
+    search_url: str = "https://api.serply.io/v1/search/"
+    hl: str | None = "us"
+    limit: int | None = 10
+    device_type: str | None = "desktop"
+    proxy_location: str | None = "US"
+    query_payload: dict | None = Field(default_factory=dict)
+    headers: dict | None = Field(default_factory=dict)
+    env_vars: list[EnvVar] = Field(
+        default_factory=lambda: [
+            EnvVar(
+                name="SERPLY_API_KEY",
+                description="API key for Serply services",
+                required=True,
+            ),
+        ]
+    )
+
+    def __init__(
+        self,
+        hl: str = "us",
+        limit: int = 10,
+        device_type: str = "desktop",
+        proxy_location: str = "US",
+        **kwargs,
+    ):
+        """param: query (str): The query to search for
+        param: hl (str): host Language code to display results in
+            (reference https://developers.google.com/custom-search/docs/xml_results?hl=en#wsInterfaceLanguages)
+        param: limit (int): The maximum number of results to return [10-100, defaults to 10]
+        param: device_type (str): desktop/mobile results (defaults to desktop)
+        proxy_location: (str): Where to perform the search, specifically for local/regional results.
+             ['US', 'CA', 'IE', 'GB', 'FR', 'DE', 'SE', 'IN', 'JP', 'KR', 'SG', 'AU', 'BR'] (defaults to US).
+        """
+        super().__init__(**kwargs)
+
+        self.limit = limit
+        self.device_type = device_type
+        self.proxy_location = proxy_location
+
+        # build query parameters
+        self.query_payload = {
+            "num": limit,
+            "gl": proxy_location.upper(),
+            "hl": hl.lower(),
+        }
+        self.headers = {
+            "X-API-KEY": os.environ["SERPLY_API_KEY"],
+            "X-User-Agent": device_type,
+            "User-Agent": "crew-tools",
+            "X-Proxy-Location": proxy_location,
+        }
+
+    def _run(
+        self,
+        **kwargs: Any,
+    ) -> Any:
+        if "query" in kwargs:
+            self.query_payload["q"] = kwargs["query"]  # type: ignore[index]
+        elif "search_query" in kwargs:
+            self.query_payload["q"] = kwargs["search_query"]  # type: ignore[index]
+
+        # build the url
+        url = f"{self.search_url}{urlencode(self.query_payload)}"  # type: ignore[arg-type]
+
+        response = requests.request(
+            "GET",
+            url,
+            headers=self.headers,
+            timeout=30,
+        )
+        results = response.json()
+        if "results" in results:
+            results = results["results"]
+            string = []
+            for result in results:
+                try:
+                    string.append(
+                        "\n".join(
+                            [
+                                f"Title: {result['title']}",
+                                f"Link: {result['link']}",
+                                f"Description: {result['description'].strip()}",
+                                "---",
+                            ]
+                        )
+                    )
+                except KeyError:  # noqa: PERF203
+                    continue
+
+            content = "\n".join(string)
+            return f"\nSearch results: {content}\n"
+        return results

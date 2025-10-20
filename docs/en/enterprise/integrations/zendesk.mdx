@@ -22,7 +22,7 @@ Before using the Zendesk integration, ensure you have:
 ### **Ticket Management**
 
 <AccordionGroup>
-  <Accordion title="ZENDESK_CREATE_TICKET">
+  <Accordion title="zendesk/create_ticket">
     **Description:** Create a new support ticket in Zendesk.
 
     **Parameters:**
@@ -40,7 +40,7 @@ Before using the Zendesk integration, ensure you have:
     - `ticketCustomFields` (object, optional): Custom field values in JSON format
   </Accordion>
 
-  <Accordion title="ZENDESK_UPDATE_TICKET">
+  <Accordion title="zendesk/update_ticket">
     **Description:** Update an existing support ticket in Zendesk.
 
     **Parameters:**
@@ -58,14 +58,14 @@ Before using the Zendesk integration, ensure you have:
     - `ticketCustomFields` (object, optional): Updated custom field values
   </Accordion>
 
-  <Accordion title="ZENDESK_GET_TICKET_BY_ID">
+  <Accordion title="zendesk/get_ticket_by_id">
     **Description:** Retrieve a specific ticket by its ID.
 
     **Parameters:**
     - `ticketId` (string, required): The ticket ID to retrieve (e.g., "35436")
   </Accordion>
 
-  <Accordion title="ZENDESK_ADD_COMMENT_TO_TICKET">
+  <Accordion title="zendesk/add_comment_to_ticket">
     **Description:** Add a comment or internal note to an existing ticket.
 
     **Parameters:**
@@ -75,7 +75,7 @@ Before using the Zendesk integration, ensure you have:
     - `isPublic` (boolean, optional): True for public comments, false for internal notes
   </Accordion>
 
-  <Accordion title="ZENDESK_SEARCH_TICKETS">
+  <Accordion title="zendesk/search_tickets">
     **Description:** Search for tickets using various filters and criteria.
 
     **Parameters:**
@@ -100,7 +100,7 @@ Before using the Zendesk integration, ensure you have:
 ### **User Management**
 
 <AccordionGroup>
-  <Accordion title="ZENDESK_CREATE_USER">
+  <Accordion title="zendesk/create_user">
     **Description:** Create a new user in Zendesk.
 
     **Parameters:**
@@ -113,7 +113,7 @@ Before using the Zendesk integration, ensure you have:
     - `notes` (string, optional): Internal notes about the user
   </Accordion>
 
-  <Accordion title="ZENDESK_UPDATE_USER">
+  <Accordion title="zendesk/update_user">
     **Description:** Update an existing user's information.
 
     **Parameters:**
@@ -127,14 +127,14 @@ Before using the Zendesk integration, ensure you have:
     - `notes` (string, optional): Updated internal notes
   </Accordion>
 
-  <Accordion title="ZENDESK_GET_USER_BY_ID">
+  <Accordion title="zendesk/get_user_by_id">
     **Description:** Retrieve a specific user by their ID.
 
     **Parameters:**
     - `userId` (string, required): The user ID to retrieve
   </Accordion>
 
-  <Accordion title="ZENDESK_SEARCH_USERS">
+  <Accordion title="zendesk/search_users">
     **Description:** Search for users using various criteria.
 
     **Parameters:**
@@ -150,7 +150,7 @@ Before using the Zendesk integration, ensure you have:
 ### **Administrative Tools**
 
 <AccordionGroup>
-  <Accordion title="ZENDESK_GET_TICKET_FIELDS">
+  <Accordion title="zendesk/get_ticket_fields">
     **Description:** Retrieve all standard and custom fields available for tickets.
 
     **Parameters:**
@@ -158,7 +158,7 @@ Before using the Zendesk integration, ensure you have:
       - `pageCursor` (string, optional): Page cursor for pagination
   </Accordion>
 
-  <Accordion title="ZENDESK_GET_TICKET_AUDITS">
+  <Accordion title="zendesk/get_ticket_audits">
     **Description:** Get audit records (read-only history) for tickets.
 
     **Parameters:**
@@ -205,19 +205,14 @@ Standard ticket status progression:
 
 ```python
 from crewai import Agent, Task, Crew
-from crewai_tools import CrewaiEnterpriseTools
-
-# Get enterprise tools (Zendesk tools will be included)
-enterprise_tools = CrewaiEnterpriseTools(
-    enterprise_token="your_enterprise_token"
-)
+from crewai import Agent, Task, Crew
 
 # Create an agent with Zendesk capabilities
 zendesk_agent = Agent(
     role="Support Manager",
     goal="Manage customer support tickets and provide excellent customer service",
     backstory="An AI assistant specialized in customer support operations and ticket management.",
-    tools=[enterprise_tools]
+    apps=['zendesk']  # All Zendesk actions will be available
 )
 
 # Task to create a new support ticket
@@ -239,19 +234,14 @@ crew.kickoff()
 ### Filtering Specific Zendesk Tools
 
 ```python
-from crewai_tools import CrewaiEnterpriseTools
+from crewai import Agent, Task, Crew
 
-# Get only specific Zendesk tools
-enterprise_tools = CrewaiEnterpriseTools(
-    enterprise_token="your_enterprise_token",
-    actions_list=["zendesk_create_ticket", "zendesk_update_ticket", "zendesk_add_comment_to_ticket"]
-)
-
+# Create agent with specific Zendesk actions only
 support_agent = Agent(
     role="Customer Support Agent",
     goal="Handle customer inquiries and resolve support issues efficiently",
     backstory="An experienced support agent who specializes in ticket resolution and customer communication.",
-    tools=enterprise_tools
+    apps=['zendesk/create_ticket']  # Specific Zendesk actions
 )
 
 # Task to manage support workflow
@@ -273,17 +263,12 @@ crew.kickoff()
 
 ```python
 from crewai import Agent, Task, Crew
-from crewai_tools import CrewaiEnterpriseTools
-
-enterprise_tools = CrewaiEnterpriseTools(
-    enterprise_token="your_enterprise_token"
-)
 
 ticket_manager = Agent(
     role="Ticket Manager",
     goal="Manage support ticket workflows and ensure timely resolution",
     backstory="An AI assistant that specializes in support ticket triage and workflow optimization.",
-    tools=[enterprise_tools]
+    apps=['zendesk']
 )
 
 # Task to manage ticket lifecycle
@@ -310,17 +295,12 @@ crew.kickoff()
 
 ```python
 from crewai import Agent, Task, Crew
-from crewai_tools import CrewaiEnterpriseTools
-
-enterprise_tools = CrewaiEnterpriseTools(
-    enterprise_token="your_enterprise_token"
-)
 
 support_analyst = Agent(
     role="Support Analyst",
     goal="Analyze support metrics and generate insights for team performance",
     backstory="An analytical AI that excels at extracting insights from support data and ticket patterns.",
-    tools=[enterprise_tools]
+    apps=['zendesk']
 )
 
 # Complex task involving analytics and reporting

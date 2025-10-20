@@ -22,7 +22,7 @@ Antes de usar a integração com o Stripe, certifique-se de que você tem:
 ### **Gerenciamento de Clientes**
 
 <AccordionGroup>
-  <Accordion title="STRIPE_CREATE_CUSTOMER">
+  <Accordion title="stripe/create_customer">
     **Descrição:** Crie um novo cliente em sua conta Stripe.
 
     **Parâmetros:**
@@ -32,14 +32,14 @@ Antes de usar a integração com o Stripe, certifique-se de que você tem:
     - `metadataCreateCustomer` (objeto, opcional): Metadados adicionais como pares chave-valor (exemplo: `{"field1": 1, "field2": 2}`)
   </Accordion>
 
-  <Accordion title="STRIPE_GET_CUSTOMER_BY_ID">
+  <Accordion title="stripe/get_customer_by_id">
     **Descrição:** Recupera um cliente específico pelo ID do cliente Stripe.
 
     **Parâmetros:**
     - `idGetCustomer` (string, obrigatório): O ID do cliente Stripe a ser recuperado
   </Accordion>
 
-  <Accordion title="STRIPE_GET_CUSTOMERS">
+  <Accordion title="stripe/get_customers">
     **Descrição:** Recupera uma lista de clientes com filtragem opcional.
 
     **Parâmetros:**
@@ -49,7 +49,7 @@ Antes de usar a integração com o Stripe, certifique-se de que você tem:
     - `limitGetCustomers` (string, opcional): Número máximo de clientes a retornar (padrão: 10)
   </Accordion>
 
-  <Accordion title="STRIPE_UPDATE_CUSTOMER">
+  <Accordion title="stripe/update_customer">
     **Descrição:** Atualiza as informações de um cliente existente.
 
     **Parâmetros:**
@@ -64,7 +64,7 @@ Antes de usar a integração com o Stripe, certifique-se de que você tem:
 ### **Gerenciamento de Assinaturas**
 
 <AccordionGroup>
-  <Accordion title="STRIPE_CREATE_SUBSCRIPTION">
+  <Accordion title="stripe/create_subscription">
     **Descrição:** Cria uma nova assinatura para um cliente.
 
     **Parâmetros:**
@@ -73,7 +73,7 @@ Antes de usar a integração com o Stripe, certifique-se de que você tem:
     - `metadataCreateSubscription` (objeto, opcional): Metadados adicionais para a assinatura
   </Accordion>
 
-  <Accordion title="STRIPE_GET_SUBSCRIPTIONS">
+  <Accordion title="stripe/get_subscriptions">
     **Descrição:** Recupera assinaturas com filtragem opcional.
 
     **Parâmetros:**
@@ -86,7 +86,7 @@ Antes de usar a integração com o Stripe, certifique-se de que você tem:
 ### **Gerenciamento de Produtos**
 
 <AccordionGroup>
-  <Accordion title="STRIPE_CREATE_PRODUCT">
+  <Accordion title="stripe/create_product">
     **Descrição:** Cria um novo produto no seu catálogo Stripe.
 
     **Parâmetros:**
@@ -95,14 +95,14 @@ Antes de usar a integração com o Stripe, certifique-se de que você tem:
     - `metadataProduct` (objeto, opcional): Metadados adicionais do produto como pares chave-valor
   </Accordion>
 
-  <Accordion title="STRIPE_GET_PRODUCT_BY_ID">
+  <Accordion title="stripe/get_product_by_id">
     **Descrição:** Recupera um produto específico pelo ID do produto Stripe.
 
     **Parâmetros:**
     - `productId` (string, obrigatório): O ID do produto Stripe a ser recuperado
   </Accordion>
 
-  <Accordion title="STRIPE_GET_PRODUCTS">
+  <Accordion title="stripe/get_products">
     **Descrição:** Recupera uma lista de produtos com filtragem opcional.
 
     **Parâmetros:**
@@ -115,7 +115,7 @@ Antes de usar a integração com o Stripe, certifique-se de que você tem:
 ### **Operações Financeiras**
 
 <AccordionGroup>
-  <Accordion title="STRIPE_GET_BALANCE_TRANSACTIONS">
+  <Accordion title="stripe/get_balance_transactions">
     **Descrição:** Recupera transações de saldo da sua conta Stripe.
 
     **Parâmetros:**
@@ -124,7 +124,7 @@ Antes de usar a integração com o Stripe, certifique-se de que você tem:
       - `pageCursor` (string, opcional): Cursor da página para paginação
   </Accordion>
 
-  <Accordion title="STRIPE_GET_PLANS">
+  <Accordion title="stripe/get_plans">
     **Descrição:** Recupera planos de assinatura da sua conta Stripe.
 
     **Parâmetros:**
@@ -140,19 +140,13 @@ Antes de usar a integração com o Stripe, certifique-se de que você tem:
 
 ```python
 from crewai import Agent, Task, Crew
-from crewai_tools import CrewaiEnterpriseTools
-
-# Get enterprise tools (Stripe tools will be included)
-enterprise_tools = CrewaiEnterpriseTools(
-    enterprise_token="your_enterprise_token"
-)
 
 # Create an agent with Stripe capabilities
 stripe_agent = Agent(
     role="Payment Manager",
     goal="Manage customer payments, subscriptions, and billing operations efficiently",
     backstory="An AI assistant specialized in payment processing and subscription management.",
-    tools=[enterprise_tools]
+    apps=['stripe']
 )
 
 # Task to create a new customer
@@ -174,19 +168,12 @@ crew.kickoff()
 ### Filtrando Ferramentas Stripe Específicas
 
 ```python
-from crewai_tools import CrewaiEnterpriseTools
-
-# Get only specific Stripe tools
-enterprise_tools = CrewaiEnterpriseTools(
-    enterprise_token="your_enterprise_token",
-    actions_list=["stripe_create_customer", "stripe_create_subscription", "stripe_get_balance_transactions"]
-)
 
 billing_manager = Agent(
     role="Billing Manager",
     goal="Handle customer billing, subscriptions, and payment processing",
     backstory="An experienced billing manager who handles subscription lifecycle and payment operations.",
-    tools=enterprise_tools
+    apps=['stripe']
 )
 
 # Task to manage billing operations
@@ -208,17 +195,12 @@ crew.kickoff()
 
 ```python
 from crewai import Agent, Task, Crew
-from crewai_tools import CrewaiEnterpriseTools
-
-enterprise_tools = CrewaiEnterpriseTools(
-    enterprise_token="your_enterprise_token"
-)
 
 subscription_manager = Agent(
     role="Subscription Manager",
     goal="Manage customer subscriptions and optimize recurring revenue",
     backstory="An AI assistant that specializes in subscription lifecycle management and customer retention.",
-    tools=[enterprise_tools]
+    apps=['stripe']
 )
 
 # Task to manage subscription operations
@@ -245,17 +227,12 @@ crew.kickoff()
 
 ```python
 from crewai import Agent, Task, Crew
-from crewai_tools import CrewaiEnterpriseTools
-
-enterprise_tools = CrewaiEnterpriseTools(
-    enterprise_token="your_enterprise_token"
-)
 
 financial_analyst = Agent(
     role="Financial Analyst",
     goal="Analyze payment data and generate financial insights",
     backstory="An analytical AI that excels at extracting insights from payment and subscription data.",
-    tools=[enterprise_tools]
+    apps=['stripe']
 )
 
 # Complex task involving financial analysis
