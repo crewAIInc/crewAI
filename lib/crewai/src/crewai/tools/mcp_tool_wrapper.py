@@ -90,12 +90,11 @@ class MCPToolWrapper(BaseTool):
         last_error = None
 
         for attempt in range(MCP_MAX_RETRIES):
-            try:
-                result = await asyncio.wait_for(
+            try:  # noqa: PERF203 - Intentional retry logic requires try-except in loop
+                return await asyncio.wait_for(
                     self._execute_tool(**kwargs),
                     timeout=MCP_TOOL_EXECUTION_TIMEOUT
                 )
-                return result
 
             except asyncio.TimeoutError:
                 last_error = f"Connection timed out after {MCP_TOOL_EXECUTION_TIMEOUT} seconds"

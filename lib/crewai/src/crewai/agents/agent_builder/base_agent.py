@@ -256,7 +256,7 @@ class BaseAgent(ABC, BaseModel):
 
         validated_mcps = []
         for mcp in mcps:
-            if mcp.startswith('https://') or mcp.startswith('crewai-amp:'):
+            if mcp.startswith(('https://', 'crewai-amp:')):
                 validated_mcps.append(mcp)
             else:
                 raise ValueError(f"Invalid MCP reference: {mcp}. Must start with 'https://' or 'crewai-amp:'")

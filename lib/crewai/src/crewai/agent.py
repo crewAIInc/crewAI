@@ -756,13 +756,12 @@ class Agent(BaseAgent):
         last_error = None
 
         for attempt in range(MCP_MAX_RETRIES):
-            try:
+            try:  # noqa: PERF203 - Intentional retry logic requires try-except in loop
                 # Wrap entire operation in timeout
-                schemas = await asyncio.wait_for(
+                return await asyncio.wait_for(
                     self._discover_mcp_tools(server_url),
                     timeout=MCP_DISCOVERY_TIMEOUT
                 )
-                return schemas
 
             except asyncio.TimeoutError:
                 last_error = f"MCP discovery timed out after {MCP_DISCOVERY_TIMEOUT} seconds"
@@ -772,8 +771,8 @@ class Agent(BaseAgent):
                     continue
                 break
 
-            except ImportError:
-                raise RuntimeError("MCP library not available. Please install with: pip install mcp")
+            except ImportError as e:
+                raise RuntimeError("MCP library not available. Please install with: pip install mcp") from e
 
             except Exception as e:
                 error_str = str(e).lower()
@@ -782,7 +781,7 @@ class Agent(BaseAgent):
                 if 'connection' in error_str or 'network' in error_str:
                     last_error = f"Network connection failed: {e!s}"
                 elif 'authentication' in error_str or 'unauthorized' in error_str:
-                    raise RuntimeError(f"Authentication failed for MCP server: {e!s}")
+                    raise RuntimeError(f"Authentication failed for MCP server: {e!s}") from e
                 elif 'json' in error_str or 'parsing' in error_str:
                     last_error = f"Server response parsing error: {e!s}"
                 else:
