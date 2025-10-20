@@ -47,6 +47,10 @@ class ConcreteAgentAdapter(BaseAgentAdapter):
         # Dummy implementation
         return []
 
+    def get_mcp_tools(self, mcps: list[str]) -> list[BaseTool]:
+        # Dummy implementation for MCP tools
+        return []
+
 
 def test_base_agent_adapter_initialization():
     """Test initialization of the concrete agent adapter."""

@@ -998,6 +998,9 @@ class Crew(FlowTrackable, BaseModel):
         if agent and (hasattr(agent, "apps") and getattr(agent, "apps", None)):
             tools = self._add_platform_tools(task, tools)
 
+        if agent and (hasattr(agent, "mcps") and getattr(agent, "mcps", None)):
+            tools = self._add_mcp_tools(task, tools)
+
         # Return a list[BaseTool] compatible with Task.execute_sync and execute_async
         return cast(list[BaseTool], tools)
 
@@ -1050,6 +1053,17 @@ class Crew(FlowTrackable, BaseModel):
             return self._merge_tools(tools, cast(list[BaseTool], platform_tools))
         return cast(list[BaseTool], tools)
 
+    def _inject_mcp_tools(
+        self,
+        tools: list[Tool] | list[BaseTool],
+        task_agent: BaseAgent,
+    ) -> list[BaseTool]:
+        mcps = getattr(task_agent, "mcps", None) or []
+        if hasattr(task_agent, "get_mcp_tools") and mcps:
+            mcp_tools = task_agent.get_mcp_tools(mcps=mcps)
+            return self._merge_tools(tools, cast(list[BaseTool], mcp_tools))
+        return cast(list[BaseTool], tools)
+
     def _add_multimodal_tools(
         self, agent: BaseAgent, tools: list[Tool] | list[BaseTool]
     ) -> list[BaseTool]:
@@ -1085,6 +1099,14 @@ class Crew(FlowTrackable, BaseModel):
     ) -> list[BaseTool]:
         if task.agent:
             tools = self._inject_platform_tools(tools, task.agent)
+
+        return cast(list[BaseTool], tools or [])
+
+    def _add_mcp_tools(
+        self, task: Task, tools: list[Tool] | list[BaseTool]
+    ) -> list[BaseTool]:
+        if task.agent:
+            tools = self._inject_mcp_tools(tools, task.agent)
 
         return cast(list[BaseTool], tools or [])
 

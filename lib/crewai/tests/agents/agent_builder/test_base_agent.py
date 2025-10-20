@@ -22,6 +22,9 @@ class MockAgent(BaseAgent):
 
     def get_platform_tools(self, apps: list[Any]): ...
 
+    def get_mcp_tools(self, mcps: list[str]) -> list[BaseTool]:
+        return []
+
     def get_output_converter(
         self, llm: Any, text: str, model: type[BaseModel] | None, instructions: str
     ): ...
