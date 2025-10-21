@@ -8,12 +8,37 @@ mode: "wide"
 ## 개요
 
 [Model Context Protocol](https://modelcontextprotocol.io/introduction) (MCP)는 AI 에이전트가 MCP 서버로 알려진 외부 서비스와 통신함으로써 LLM에 컨텍스트를 제공할 수 있도록 표준화된 방식을 제공합니다.
-`crewai-tools` 라이브러리는 CrewAI의 기능을 확장하여, 이러한 MCP 서버에서 제공하는 툴을 에이전트에 원활하게 통합할 수 있도록 해줍니다.
-이를 통해 여러분의 crew는 방대한 기능 에코시스템에 접근할 수 있습니다.
+
+CrewAI는 MCP 통합을 위한 **두 가지 접근 방식**을 제공합니다:
+
+### 🚀 **새로운 기능: 간단한 DSL 통합** (권장)
+
+에이전트에 `mcps` 필드를 직접 사용하여 완벽한 MCP 도구 통합을 구현하세요:
+
+```python
+from crewai import Agent
+
+agent = Agent(
+    role="연구 분석가",
+    goal="정보를 연구하고 분석",
+    backstory="외부 도구에 접근할 수 있는 전문가 연구원",
+    mcps=[
+        "https://mcp.exa.ai/mcp?api_key=your_key",           # 외부 MCP 서버
+        "https://api.weather.com/mcp#get_forecast",          # 서버의 특정 도구
+        "crewai-amp:financial-data",                         # CrewAI AMP 마켓플레이스
+        "crewai-amp:research-tools#pubmed_search"            # 특정 AMP 도구
+    ]
+)
+# MCP 도구들이 이제 자동으로 에이전트에서 사용 가능합니다!
+```
+
+### 🔧 **고급: MCPServerAdapter** (복잡한 시나리오용)
+
+수동 연결 관리가 필요한 고급 사용 사례의 경우 `crewai-tools` 라이브러리는 `MCPServerAdapter` 클래스를 제공합니다.
 
 현재 다음과 같은 전송 메커니즘을 지원합니다:
 
-- **Stdio**: 로컬 서버용 (동일 머신 내 프로세스 간 표준 입력/출력을 통한 통신)
+- **HTTPS**: 원격 서버용 (HTTPS를 통한 보안 통신)
 - **Server-Sent Events (SSE)**: 원격 서버용 (서버에서 클라이언트로의 일방향, 실시간 데이터 스트리밍, HTTP 기반)
 - **Streamable HTTP**: 원격 서버용 (유연하며 잠재적으로 양방향 통신이 가능, 주로 SSE를 활용한 서버-클라이언트 스트림 제공, HTTP 기반)
 

@@ -1,0 +1,203 @@
+interactions:
+- request:
+    body: '{"messages": [{"role": "user", "content": "Return the name of a random
+      city in the world."}], "model": "gpt-4o-mini"}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '117'
+      content-type:
+      - application/json
+      cookie:
+      - _cfuvid=3UeEmz_rnmsoZxrVUv32u35gJOi766GDWNe5_RTjiPk-1736537376739-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.59.6
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.59.6
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.7
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-AsZ6UtbaNSMpNU9VJKxvn52t5eJTq\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1737568014,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"How about \\\"Lisbon\\\"? It\u2019s the
+      capital city of Portugal, known for its rich history and vibrant culture.\",\n
+      \       \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
+      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 18,\n    \"completion_tokens\":
+      24,\n    \"total_tokens\": 42,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
+      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+      \"default\",\n  \"system_fingerprint\": \"fp_72ed7ab54c\"\n}\n"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 90615dbcaefb5cb1-RDU
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Wed, 22 Jan 2025 17:46:55 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - __cf_bm=pKr3NwXmTZN9rMSlKvEX40VPKbrxF93QwDNHunL2v8Y-1737568015-1.0.1.1-nR0EA7hYIwWpIBYUI53d9xQrUnl5iML6lgz4AGJW4ZGPBDxFma3PZ2cBhlr_hE7wKa5fV3r32eMu_rNWMXD.eA;
+        path=/; expires=Wed, 22-Jan-25 18:16:55 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=8NrWEBP3dDmc8p2.csR.EdsSwS8zFvzWI1kPICaK_fM-1737568015338-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '449'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '30000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-requests:
+      - '29999'
+      x-ratelimit-remaining-tokens:
+      - '149999971'
+      x-ratelimit-reset-requests:
+      - 2ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_898373758d2eae3cd84814050b2588e3
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: '{"trace_id": "2385a92f-f0dd-4d3a-91ec-66c82f15befe", "execution_type":
+      "crew", "user_identifier": null, "execution_context": {"crew_fingerprint": null,
+      "crew_name": "Unknown Crew", "flow_name": null, "crewai_version": "1.0.0a2",
+      "privacy_level": "standard"}, "execution_metadata": {"expected_duration_estimate":
+      300, "agent_count": 0, "task_count": 0, "flow_method_count": 0, "execution_started_at":
+      "2025-10-02T22:35:18.611862+00:00"}}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate, zstd
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '436'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - CrewAI-CLI/1.0.0a2
+      X-Crewai-Organization-Id:
+      - 3433f0ee-8a94-4aa4-822b-2ac71aa38b18
+      X-Crewai-Version:
+      - 1.0.0a2
+    method: POST
+    uri: https://app.crewai.com/crewai_plus/api/v1/tracing/batches
+  response:
+    body:
+      string: '{"error":"bad_credentials","message":"Bad credentials"}'
+    headers:
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '55'
+      Content-Type:
+      - application/json; charset=utf-8
+      Date:
+      - Thu, 02 Oct 2025 22:35:18 GMT
+      cache-control:
+      - no-cache
+      content-security-policy:
+      - 'default-src ''self'' *.app.crewai.com app.crewai.com; script-src ''self''
+        ''unsafe-inline'' *.app.crewai.com app.crewai.com https://cdn.jsdelivr.net/npm/apexcharts
+        https://www.gstatic.com https://run.pstmn.io https://apis.google.com https://apis.google.com/js/api.js
+        https://accounts.google.com https://accounts.google.com/gsi/client https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css.map
+        https://*.google.com https://docs.google.com https://slides.google.com https://js.hs-scripts.com
+        https://js.sentry-cdn.com https://browser.sentry-cdn.com https://www.googletagmanager.com
+        https://js-na1.hs-scripts.com https://js.hubspot.com http://js-na1.hs-scripts.com
+        https://bat.bing.com https://cdn.amplitude.com https://cdn.segment.com https://d1d3n03t5zntha.cloudfront.net/
+        https://descriptusercontent.com https://edge.fullstory.com https://googleads.g.doubleclick.net
+        https://js.hs-analytics.net https://js.hs-banner.com https://js.hsadspixel.net
+        https://js.hscollectedforms.net https://js.usemessages.com https://snap.licdn.com
+        https://static.cloudflareinsights.com https://static.reo.dev https://www.google-analytics.com
+        https://share.descript.com/; style-src ''self'' ''unsafe-inline'' *.app.crewai.com
+        app.crewai.com https://cdn.jsdelivr.net/npm/apexcharts; img-src ''self'' data:
+        *.app.crewai.com app.crewai.com https://zeus.tools.crewai.com https://dashboard.tools.crewai.com
+        https://cdn.jsdelivr.net https://forms.hsforms.com https://track.hubspot.com
+        https://px.ads.linkedin.com https://px4.ads.linkedin.com https://www.google.com
+        https://www.google.com.br; font-src ''self'' data: *.app.crewai.com app.crewai.com;
+        connect-src ''self'' *.app.crewai.com app.crewai.com https://zeus.tools.crewai.com
+        https://connect.useparagon.com/ https://zeus.useparagon.com/* https://*.useparagon.com/*
+        https://run.pstmn.io https://connect.tools.crewai.com/ https://*.sentry.io
+        https://www.google-analytics.com https://edge.fullstory.com https://rs.fullstory.com
+        https://api.hubspot.com https://forms.hscollectedforms.net https://api.hubapi.com
+        https://px.ads.linkedin.com https://px4.ads.linkedin.com https://google.com/pagead/form-data/16713662509
+        https://google.com/ccm/form-data/16713662509 https://www.google.com/ccm/collect
+        https://worker-actionkit.tools.crewai.com https://api.reo.dev; frame-src ''self''
+        *.app.crewai.com app.crewai.com https://connect.useparagon.com/ https://zeus.tools.crewai.com
+        https://zeus.useparagon.com/* https://connect.tools.crewai.com/ https://docs.google.com
+        https://drive.google.com https://slides.google.com https://accounts.google.com
+        https://*.google.com https://app.hubspot.com/ https://td.doubleclick.net https://www.googletagmanager.com/
+        https://www.youtube.com https://share.descript.com'
+      permissions-policy:
+      - camera=(), microphone=(self), geolocation=()
+      referrer-policy:
+      - strict-origin-when-cross-origin
+      strict-transport-security:
+      - max-age=63072000; includeSubDomains
+      vary:
+      - Accept
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-permitted-cross-domain-policies:
+      - none
+      x-request-id:
+      - 46d87308-59c7-4dd2-aecb-b8d8d14712ba
+      x-runtime:
+      - '0.035265'
+      x-xss-protection:
+      - 1; mode=block
+    status:
+      code: 401
+      message: Unauthorized
+version: 1

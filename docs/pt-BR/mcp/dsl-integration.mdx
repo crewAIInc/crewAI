@@ -1,0 +1,232 @@
+---
+title: Integração DSL MCP
+description: Aprenda a usar a sintaxe DSL simples do CrewAI para integrar servidores MCP diretamente com seus agentes usando o campo mcps.
+icon: code
+mode: "wide"
+---
+
+## Visão Geral
+
+A integração DSL (Domain Specific Language) MCP do CrewAI oferece a **forma mais simples** de conectar seus agentes aos servidores MCP (Model Context Protocol). Basta adicionar um campo `mcps` ao seu agente e o CrewAI cuida de toda a complexidade automaticamente.
+
+<Info>
+Esta é a **abordagem recomendada** para a maioria dos casos de uso de MCP. Para cenários avançados que requerem gerenciamento manual de conexão, veja [MCPServerAdapter](/pt-BR/mcp/overview#advanced-mcpserveradapter).
+</Info>
+
+## Uso Básico
+
+Adicione servidores MCP ao seu agente usando o campo `mcps`:
+
+```python
+from crewai import Agent
+
+agent = Agent(
+    role="Assistente de Pesquisa",
+    goal="Ajudar com tarefas de pesquisa e análise",
+    backstory="Assistente especialista com acesso a ferramentas avançadas de pesquisa",
+    mcps=[
+        "https://mcp.exa.ai/mcp?api_key=sua_chave&profile=pesquisa"
+    ]
+)
+
+# As ferramentas MCP agora estão automaticamente disponíveis!
+# Não é necessário gerenciamento manual de conexão ou configuração de ferramentas
+```
+
+## Formatos de Referência Suportados
+
+### Servidores MCP Remotos Externos
+
+```python
+# Servidor HTTPS básico
+"https://api.example.com/mcp"
+
+# Servidor com autenticação
+"https://mcp.exa.ai/mcp?api_key=sua_chave&profile=seu_perfil"
+
+# Servidor com caminho personalizado
+"https://services.company.com/api/v1/mcp"
+```
+
+### Seleção de Ferramentas Específicas
+
+Use a sintaxe `#` para selecionar ferramentas específicas de um servidor:
+
+```python
+# Obter apenas a ferramenta de previsão do servidor meteorológico
+"https://weather.api.com/mcp#get_forecast"
+
+# Obter apenas a ferramenta de busca do Exa
+"https://mcp.exa.ai/mcp?api_key=sua_chave#web_search_exa"
+```
+
+### Marketplace CrewAI AMP
+
+Acesse ferramentas do marketplace CrewAI AMP:
+
+```python
+# Serviço completo com todas as ferramentas
+"crewai-amp:financial-data"
+
+# Ferramenta específica do serviço AMP
+"crewai-amp:research-tools#pubmed_search"
+
+# Múltiplos serviços AMP
+mcps=[
+    "crewai-amp:weather-insights",
+    "crewai-amp:market-analysis",
+    "crewai-amp:social-media-monitoring"
+]
+```
+
+## Exemplo Completo
+
+Aqui está um exemplo completo usando múltiplos servidores MCP:
+
+```python
+from crewai import Agent, Task, Crew, Process
+
+# Criar agente com múltiplas fontes MCP
+agente_multi_fonte = Agent(
+    role="Analista de Pesquisa Multi-Fonte",
+    goal="Conduzir pesquisa abrangente usando múltiplas fontes de dados",
+    backstory="""Pesquisador especialista com acesso a busca web, dados meteorológicos,
+    informações financeiras e ferramentas de pesquisa acadêmica""",
+    mcps=[
+        # Servidores MCP externos
+        "https://mcp.exa.ai/mcp?api_key=sua_chave_exa&profile=pesquisa",
+        "https://weather.api.com/mcp#get_current_conditions",
+
+        # Marketplace CrewAI AMP
+        "crewai-amp:financial-insights",
+        "crewai-amp:academic-research#pubmed_search",
+        "crewai-amp:market-intelligence#competitor_analysis"
+    ]
+)
+
+# Criar tarefa de pesquisa abrangente
+tarefa_pesquisa = Task(
+    description="""Pesquisar o impacto dos agentes de IA na produtividade empresarial.
+    Incluir impactos climáticos atuais no trabalho remoto, tendências do mercado financeiro,
+    e publicações acadêmicas recentes sobre frameworks de agentes de IA.""",
+    expected_output="""Relatório abrangente cobrindo:
+    1. Análise do impacto dos agentes de IA nos negócios
+    2. Considerações climáticas para trabalho remoto
+    3. Tendências do mercado financeiro relacionadas à IA
+    4. Citações e insights de pesquisa acadêmica
+    5. Análise do cenário competitivo""",
+    agent=agente_multi_fonte
+)
+
+# Criar e executar crew
+crew_pesquisa = Crew(
+    agents=[agente_multi_fonte],
+    tasks=[tarefa_pesquisa],
+    process=Process.sequential,
+    verbose=True
+)
+
+resultado = crew_pesquisa.kickoff()
+print(f"Pesquisa concluída com {len(agente_multi_fonte.mcps)} fontes de dados MCP")
+```
+
+## Recursos Principais
+
+- 🔄 **Descoberta Automática de Ferramentas**: Ferramentas são descobertas e integradas automaticamente
+- 🏷️ **Prevenção de Colisão de Nomes**: Nomes de servidor são prefixados aos nomes das ferramentas
+- ⚡ **Otimizado para Performance**: Conexões sob demanda com cache de esquemas
+- 🛡️ **Resiliência a Erros**: Tratamento gracioso de servidores indisponíveis
+- ⏱️ **Proteção por Timeout**: Timeouts integrados previnem conexões travadas
+- 📊 **Integração Transparente**: Funciona perfeitamente com recursos existentes do CrewAI
+
+## Tratamento de Erros
+
+A integração DSL MCP é projetada para ser resiliente:
+
+```python
+agente = Agent(
+    role="Agente Resiliente",
+    goal="Continuar trabalhando apesar de problemas no servidor",
+    backstory="Agente que lida graciosamente com falhas",
+    mcps=[
+        "https://servidor-confiavel.com/mcp",        # Vai funcionar
+        "https://servidor-inalcancavel.com/mcp",     # Será ignorado graciosamente
+        "https://servidor-lento.com/mcp",            # Timeout gracioso
+        "crewai-amp:servico-funcionando"             # Vai funcionar
+    ]
+)
+# O agente usará ferramentas de servidores funcionais e registrará avisos para os que falharem
+```
+
+## Recursos de Performance
+
+### Cache Automático
+
+Esquemas de ferramentas são cacheados por 5 minutos para melhorar a performance:
+
+```python
+# Primeira criação de agente - descobre ferramentas do servidor
+agente1 = Agent(role="Primeiro", goal="Teste", backstory="Teste",
+               mcps=["https://api.example.com/mcp"])
+
+# Segunda criação de agente (dentro de 5 minutos) - usa esquemas cacheados
+agente2 = Agent(role="Segundo", goal="Teste", backstory="Teste",
+               mcps=["https://api.example.com/mcp"])  # Muito mais rápido!
+```
+
+### Conexões Sob Demanda
+
+Conexões de ferramentas são estabelecidas apenas quando as ferramentas são realmente usadas:
+
+```python
+# Criação do agente é rápida - nenhuma conexão MCP feita ainda
+agente = Agent(
+    role="Agente Sob Demanda",
+    goal="Usar ferramentas eficientemente",
+    backstory="Agente eficiente que conecta apenas quando necessário",
+    mcps=["https://api.example.com/mcp"]
+)
+
+# Conexão MCP é feita apenas quando uma ferramenta é realmente executada
+# Isso minimiza o overhead de conexão e melhora a performance de inicialização
+```
+
+## Melhores Práticas
+
+### 1. Use Ferramentas Específicas Quando Possível
+
+```python
+# Bom - obter apenas as ferramentas necessárias
+mcps=["https://weather.api.com/mcp#get_forecast"]
+
+# Menos eficiente - obter todas as ferramentas do servidor
+mcps=["https://weather.api.com/mcp"]
+```
+
+### 2. Lidar com Autenticação de Forma Segura
+
+```python
+import os
+
+# Armazenar chaves API em variáveis de ambiente
+exa_key = os.getenv("EXA_API_KEY")
+exa_profile = os.getenv("EXA_PROFILE")
+
+agente = Agent(
+    role="Agente Seguro",
+    goal="Usar ferramentas MCP com segurança",
+    backstory="Agente consciente da segurança",
+    mcps=[f"https://mcp.exa.ai/mcp?api_key={exa_key}&profile={exa_profile}"]
+)
+```
+
+### 3. Planejar para Falhas de Servidor
+
+```python
+# Sempre incluir opções de backup
+mcps=[
+    "https://api-principal.com/mcp",       # Escolha principal
+    "https://api-backup.com/mcp",          # Opção de backup
+    "crewai-amp:servico-confiavel"         # Fallback AMP
+]
+```
