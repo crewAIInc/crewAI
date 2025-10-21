@@ -305,6 +305,121 @@ class Crew(FlowTrackable, BaseModel):
         # TODO: Improve typing
         return json.loads(v) if isinstance(v, Json) else v  # type: ignore
 
+    @field_validator("embedder", mode="before")
+    @classmethod
+    def validate_embedder_config(cls, v: Any) -> Any:
+        """Validates embedder configuration and provides clear error messages.
+        
+        Args:
+            v: The embedder configuration to be validated.
+            
+        Returns:
+            The embedder config if it is valid.
+            
+        Raises:
+            PydanticCustomError: If the embedder configuration is invalid,
+                with a clear, helpful error message.
+        """
+        if v is None:
+            return v
+            
+        if not isinstance(v, dict):
+            return v
+            
+        provider = v.get("provider")
+        if not provider:
+            return v
+            
+        valid_providers = [
+            "azure",
+            "amazon-bedrock",
+            "cohere",
+            "custom",
+            "google-generativeai",
+            "google-vertex",
+            "huggingface",
+            "instructor",
+            "jina",
+            "ollama",
+            "onnx",
+            "openai",
+            "openclip",
+            "roboflow",
+            "sentence-transformer",
+            "text2vec",
+            "voyageai",
+            "watsonx",
+        ]
+        
+        if provider not in valid_providers:
+            raise PydanticCustomError(
+                "invalid_embedder_provider",
+                (
+                    f"Invalid embedder provider: '{provider}'. "
+                    f"Valid providers are: {', '.join(valid_providers)}. "
+                    "Please check the documentation for the correct provider name."
+                ),
+                {},
+            )
+        
+        providers_requiring_config = [
+            "google-generativeai",
+            "google-vertex",
+            "openclip",
+            "roboflow",
+            "sentence-transformer",
+            "text2vec",
+            "voyageai",
+        ]
+        
+        if provider in providers_requiring_config and "config" not in v:
+            example_config = {}
+            if provider == "google-generativeai":
+                example_config = {
+                    "provider": "google-generativeai",
+                    "config": {
+                        "api_key": "your_api_key",
+                        "model_name": "models/embedding-001",
+                    }
+                }
+            elif provider == "google-vertex":
+                example_config = {
+                    "provider": "google-vertex",
+                    "config": {
+                        "api_key": "your_api_key",
+                        "model_name": "textembedding-gecko",
+                        "project_id": "your_project_id",
+                        "region": "us-central1",
+                    }
+                }
+            elif provider == "openai":
+                example_config = {
+                    "provider": "openai",
+                    "api_key": "your_api_key",
+                    "model": "text-embedding-3-small",
+                }
+            else:
+                example_config = {
+                    "provider": provider,
+                    "config": {
+                        "api_key": "your_api_key",
+                        "model_name": "your_model_name",
+                    }
+                }
+            
+            raise PydanticCustomError(
+                "invalid_embedder_config_structure",
+                (
+                    f"Invalid embedder configuration for provider '{provider}'. "
+                    f"The configuration is missing the required 'config' field. "
+                    f"Expected structure:\n{json.dumps(example_config, indent=2)}\n"
+                    f"But received:\n{json.dumps(v, indent=2)}"
+                ),
+                {},
+            )
+        
+        return v
+
     @model_validator(mode="after")
     def set_private_attrs(self) -> Crew:
         """set private attributes."""
