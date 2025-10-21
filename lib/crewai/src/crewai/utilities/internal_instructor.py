@@ -4,15 +4,14 @@ from typing import TYPE_CHECKING, Any, Generic, TypeGuard, TypeVar
 
 from pydantic import BaseModel
 
+from crewai.utilities.logger_utils import suppress_warnings
+
 
 if TYPE_CHECKING:
     from crewai.agent import Agent
     from crewai.llm import LLM
     from crewai.llms.base_llm import BaseLLM
     from crewai.utilities.types import LLMMessage
-
-from crewai.utilities.logger_utils import suppress_warnings
-
 
 
 T = TypeVar("T", bound=BaseModel)
@@ -62,9 +61,59 @@ class InternalInstructor(Generic[T]):
 
         with suppress_warnings():
             import instructor  # type: ignore[import-untyped]
-            from litellm import completion
 
-            self._client = instructor.from_litellm(completion)
+            if (
+                self.llm is not None
+                and hasattr(self.llm, "is_litellm")
+                and self.llm.is_litellm
+            ):
+                from litellm import completion
+
+                self._client = instructor.from_litellm(completion)
+            else:
+                self._client = self._create_instructor_client()
+
+    def _create_instructor_client(self) -> Any:
+        """Create instructor client using the modern from_provider pattern.
+
+        Returns:
+            Instructor client configured for the LLM provider
+
+        Raises:
+            ValueError: If the provider is not supported
+        """
+        import instructor
+
+        if isinstance(self.llm, str):
+            model_string = self.llm
+        elif self.llm is not None and hasattr(self.llm, "model"):
+            model_string = self.llm.model
+        else:
+            raise ValueError("LLM must be a string or have a model attribute")
+
+        if isinstance(self.llm, str):
+            provider = self._extract_provider()
+        elif self.llm is not None and hasattr(self.llm, "provider"):
+            provider = self.llm.provider
+        else:
+            provider = "openai"  # Default fallback
+
+        return instructor.from_provider(f"{provider}/{model_string}")
+
+    def _extract_provider(self) -> str:
+        """Extract provider from LLM model name.
+
+        Returns:
+            Provider name (e.g., 'openai', 'anthropic', etc.)
+        """
+        if self.llm is not None and hasattr(self.llm, "provider") and self.llm.provider:
+            return self.llm.provider
+
+        if isinstance(self.llm, str):
+            return self.llm.partition("/")[0] or "openai"
+        if self.llm is not None and hasattr(self.llm, "model"):
+            return self.llm.model.partition("/")[0] or "openai"
+        return "openai"
 
     def to_json(self) -> str:
         """Convert the structured output to JSON format.
@@ -96,6 +145,6 @@ class InternalInstructor(Generic[T]):
         else:
             model_name = self.llm.model
 
-        return self._client.chat.completions.create(
+        return self._client.chat.completions.create(  # type: ignore[no-any-return]
             model=model_name, response_model=self.model, messages=messages
         )
