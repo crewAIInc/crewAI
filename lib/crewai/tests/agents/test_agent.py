@@ -902,7 +902,8 @@ def test_agent_step_callback():
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_agent_function_calling_llm():
-    llm = "gpt-4o"
+    from crewai.llm import LLM
+    llm = LLM(model="gpt-4o", is_litellm=True)
 
     @tool
     def learn_about_ai() -> str:
