@@ -1632,7 +1632,7 @@ class Crew(FlowTrackable, BaseModel):
 
     def reset_knowledge(self, knowledges: list[Knowledge]) -> None:
         """Reset crew and agent knowledge storage."""
-        for ks in knowledges:
+        def _reset_single_knowledge(ks: Knowledge) -> None:
             try:
                 ks.reset()
             except Exception as e:
@@ -1643,6 +1643,9 @@ class Crew(FlowTrackable, BaseModel):
                     pass
                 else:
                     raise
+
+        for ks in knowledges:
+            _reset_single_knowledge(ks)
 
     def _set_allow_crewai_trigger_context_for_first_task(self):
         crewai_trigger_payload = self._inputs and self._inputs.get(
