@@ -448,7 +448,6 @@ class Telemetry:
         if not self._should_execute_telemetry():
             return None
 
-        self._safe_telemetry_operation(_operation)
         return _operation()
 
     def task_ended(self, span: Span, task: Task, crew: Crew) -> None:
