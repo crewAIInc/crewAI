@@ -309,27 +309,27 @@ class Crew(FlowTrackable, BaseModel):
     @classmethod
     def validate_embedder_config(cls, v: Any) -> Any:
         """Validates embedder configuration and provides clear error messages.
-        
+
         Args:
             v: The embedder configuration to be validated.
-            
+
         Returns:
             The embedder config if it is valid.
-            
+
         Raises:
             PydanticCustomError: If the embedder configuration is invalid,
                 with a clear, helpful error message.
         """
         if v is None:
             return v
-            
+
         if not isinstance(v, dict):
             return v
-            
+
         provider = v.get("provider")
         if not provider:
             return v
-            
+
         valid_providers = [
             "azure",
             "amazon-bedrock",
@@ -350,7 +350,7 @@ class Crew(FlowTrackable, BaseModel):
             "voyageai",
             "watsonx",
         ]
-        
+
         if provider not in valid_providers:
             raise PydanticCustomError(
                 "invalid_embedder_provider",
@@ -361,7 +361,7 @@ class Crew(FlowTrackable, BaseModel):
                 ),
                 {},
             )
-        
+
         providers_requiring_config = [
             "google-generativeai",
             "google-vertex",
@@ -371,7 +371,7 @@ class Crew(FlowTrackable, BaseModel):
             "text2vec",
             "voyageai",
         ]
-        
+
         if provider in providers_requiring_config and "config" not in v:
             example_config = {}
             if provider == "google-generativeai":
@@ -406,7 +406,7 @@ class Crew(FlowTrackable, BaseModel):
                         "model_name": "your_model_name",
                     }
                 }
-            
+
             raise PydanticCustomError(
                 "invalid_embedder_config_structure",
                 (
@@ -417,7 +417,7 @@ class Crew(FlowTrackable, BaseModel):
                 ),
                 {},
             )
-        
+
         return v
 
     @model_validator(mode="after")
