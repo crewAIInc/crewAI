@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from functools import wraps
-from typing import TYPE_CHECKING, Concatenate, ParamSpec, TypeVar
+from typing import TYPE_CHECKING, Any, Concatenate, ParamSpec, TypeVar, overload
 
 from crewai.project.utils import memoize
 
@@ -33,6 +33,7 @@ P2 = ParamSpec("P2")
 R = TypeVar("R")
 R2 = TypeVar("R2")
 T = TypeVar("T")
+SelfT = TypeVar("SelfT")
 
 
 def before_kickoff(meth: Callable[P, R]) -> BeforeKickoffMethod[P, R]:
@@ -155,9 +156,17 @@ def cache_handler(meth: Callable[P, R]) -> CacheHandlerMethod[P, R]:
     return CacheHandlerMethod(memoize(meth))
 
 
+@overload
+def crew(
+    meth: Callable[Concatenate[SelfT, P], Crew],
+) -> Callable[Concatenate[SelfT, P], Crew]: ...
+@overload
 def crew(
     meth: Callable[Concatenate[CrewInstance, P], Crew],
-) -> Callable[Concatenate[CrewInstance, P], Crew]:
+) -> Callable[Concatenate[CrewInstance, P], Crew]: ...
+def crew(
+    meth: Callable[..., Crew],
+) -> Callable[..., Crew]:
     """Marks a method as the main crew execution point.
 
     Args:
@@ -168,7 +177,7 @@ def crew(
     """
 
     @wraps(meth)
-    def wrapper(self: CrewInstance, *args: P.args, **kwargs: P.kwargs) -> Crew:
+    def wrapper(self: CrewInstance, *args: Any, **kwargs: Any) -> Crew:
         """Wrapper that sets up crew before calling the decorated method.
 
         Args:
