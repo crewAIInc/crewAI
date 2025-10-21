@@ -13,6 +13,15 @@ if TYPE_CHECKING:
 
 from crewai.utilities.logger_utils import suppress_warnings
 
+try:
+    import instructor  # type: ignore[import-untyped]
+    from litellm import completion
+
+    LITELLM_AVAILABLE = True
+except ImportError:
+    LITELLM_AVAILABLE = False
+    instructor = None  # type: ignore
+    completion = None  # type: ignore
 
 
 T = TypeVar("T", bound=BaseModel)
@@ -60,10 +69,13 @@ class InternalInstructor(Generic[T]):
         self.model = model
         self.llm = llm or (agent.function_calling_llm or agent.llm if agent else None)
 
-        with suppress_warnings():
-            import instructor  # type: ignore[import-untyped]
-            from litellm import completion
+        if not LITELLM_AVAILABLE:
+            raise ImportError(
+                "The 'litellm' package is required for structured output generation with InternalInstructor. "
+                "Please install it using: pip install 'crewai[litellm]' or pip install litellm"
+            )
 
+        with suppress_warnings():
             self._client = instructor.from_litellm(completion)
 
     def to_json(self) -> str:
