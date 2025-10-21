@@ -124,7 +124,7 @@ class CrewClass(Protocol):
     get_mcp_tools: Callable[..., list[BaseTool]]
     _load_config: Callable[..., dict[str, Any]]
     load_configurations: Callable[..., None]
-    load_yaml: staticmethod
+    load_yaml: Callable[..., dict[str, Any]]
     map_all_agent_variables: Callable[..., None]
     _map_agent_variables: Callable[..., None]
     map_all_task_variables: Callable[..., None]
