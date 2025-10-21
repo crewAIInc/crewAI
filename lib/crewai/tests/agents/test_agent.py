@@ -186,17 +186,24 @@ def test_agent_execution_with_tools():
         expected_output="The result of the multiplication.",
     )
     received_events = []
-    event_received = threading.Event()
+    condition = threading.Condition()
+    event_handled = False
 
     @crewai_event_bus.on(ToolUsageFinishedEvent)
     def handle_tool_end(source, event):
+        nonlocal event_handled
         received_events.append(event)
-        event_received.set()
+        with condition:
+            event_handled = True
+            condition.notify()
 
     output = agent.execute_task(task)
     assert output == "The result of the multiplication is 12."
 
-    assert event_received.wait(timeout=5), "Timeout waiting for tool usage event"
+    with condition:
+        if not event_handled:
+            condition.wait(timeout=5)
+    assert event_handled, "Timeout waiting for tool usage event"
     assert len(received_events) == 1
     assert isinstance(received_events[0], ToolUsageFinishedEvent)
     assert received_events[0].tool_name == "multiplier"
@@ -288,12 +295,16 @@ def test_cache_hitting():
         'multiplier-{"first_number": 12, "second_number": 3}': 36,
     }
     received_events = []
-    event_received = threading.Event()
+    condition = threading.Condition()
+    event_handled = False
 
     @crewai_event_bus.on(ToolUsageFinishedEvent)
     def handle_tool_end(source, event):
+        nonlocal event_handled
         received_events.append(event)
-        event_received.set()
+        with condition:
+            event_handled = True
+            condition.notify()
 
     with (
         patch.object(CacheHandler, "read") as read,
@@ -309,7 +320,10 @@ def test_cache_hitting():
         read.assert_called_with(
             tool="multiplier", input='{"first_number": 2, "second_number": 6}'
         )
-        assert event_received.wait(timeout=5), "Timeout waiting for tool usage event"
+        with condition:
+            if not event_handled:
+                condition.wait(timeout=5)
+        assert event_handled, "Timeout waiting for tool usage event"
         assert len(received_events) == 1
         assert isinstance(received_events[0], ToolUsageFinishedEvent)
         assert received_events[0].from_cache
