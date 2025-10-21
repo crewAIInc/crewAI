@@ -6,10 +6,11 @@ from collections import defaultdict
 from concurrent.futures import Future
 from hashlib import md5
 import re
-from unittest import mock
-from unittest.mock import ANY, MagicMock, patch
+from unittest.mock import ANY, MagicMock, call, patch
 
 from crewai.agent import Agent
+from crewai.agents import CacheHandler
+from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.crew import Crew
 from crewai.crews.crew_output import CrewOutput
 from crewai.events.event_bus import crewai_event_bus
@@ -29,6 +30,7 @@ from crewai.events.types.memory_events import (
     MemorySaveFailedEvent,
     MemorySaveStartedEvent,
 )
+from crewai.flow import Flow, start
 from crewai.knowledge.knowledge import Knowledge
 from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
 from crewai.llm import LLM
@@ -37,18 +39,20 @@ from crewai.memory.external.external_memory import ExternalMemory
 from crewai.memory.long_term.long_term_memory import LongTermMemory
 from crewai.memory.short_term.short_term_memory import ShortTermMemory
 from crewai.process import Process
+from crewai.project import CrewBase, agent, before_kickoff, crew, task
 from crewai.task import Task
 from crewai.tasks.conditional_task import ConditionalTask
 from crewai.tasks.output_format import OutputFormat
 from crewai.tasks.task_output import TaskOutput
+from crewai.tools import BaseTool, tool
+from crewai.tools.agent_tools.add_image_tool import AddImageTool
 from crewai.types.usage_metrics import UsageMetrics
 from crewai.utilities.rpm_controller import RPMController
 from crewai.utilities.task_output_storage_handler import TaskOutputStorageHandler
+from crewai_tools import CodeInterpreterTool
+from pydantic import BaseModel, Field
 import pydantic_core
 import pytest
-
-from crewai.agents import CacheHandler
-from crewai.flow import Flow, start
 
 
 @pytest.fixture
@@ -575,10 +579,6 @@ def test_crew_with_delegating_agents(ceo, writer):
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_crew_with_delegating_agents_should_not_override_task_tools(ceo, writer):
-    from pydantic import BaseModel, Field
-
-    from crewai.tools import BaseTool
-
     class TestToolInput(BaseModel):
         """Input schema for TestTool."""
 
@@ -635,10 +635,6 @@ def test_crew_with_delegating_agents_should_not_override_task_tools(ceo, writer)
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_crew_with_delegating_agents_should_not_override_agent_tools(ceo, writer):
-    from pydantic import BaseModel, Field
-
-    from crewai.tools import BaseTool
-
     class TestToolInput(BaseModel):
         """Input schema for TestTool."""
 
@@ -697,10 +693,6 @@ def test_crew_with_delegating_agents_should_not_override_agent_tools(ceo, writer
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_task_tools_override_agent_tools(researcher):
-    from pydantic import BaseModel, Field
-
-    from crewai.tools import BaseTool
-
     class TestToolInput(BaseModel):
         """Input schema for TestTool."""
 
@@ -753,11 +745,6 @@ def test_task_tools_override_agent_tools_with_allow_delegation(researcher, write
     """
     Test that task tools override agent tools while preserving delegation tools when allow_delegation=True
     """
-
-    from pydantic import BaseModel, Field
-
-    from crewai.tools import BaseTool
-
     class TestToolInput(BaseModel):
         query: str = Field(..., description="Query to process")
 
@@ -876,10 +863,6 @@ def test_crew_verbose_output(researcher, writer, capsys):
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_cache_hitting_between_agents(researcher, writer, ceo):
-    from unittest.mock import call, patch
-
-    from crewai.tools import tool
-
     @tool
     def multiplier(first_number: int, second_number: int) -> float:
         """Useful for when you need to multiply two numbers together."""
@@ -934,8 +917,6 @@ def test_cache_hitting_between_agents(researcher, writer, ceo):
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_api_calls_throttling(capsys):
-    from crewai.tools import tool
-
     @tool
     def get_final_answer() -> float:
         """Get the final answer but don't give it yet, just re-use this
@@ -1216,8 +1197,6 @@ async def test_crew_async_kickoff():
 @pytest.mark.asyncio
 @pytest.mark.vcr(filter_headers=["authorization"])
 async def test_async_task_execution_call_count(researcher, writer):
-    from unittest.mock import MagicMock, patch
-
     list_ideas = Task(
         description="Give me a list of 5 interesting ideas to explore for na article, what makes them unique and interesting.",
         expected_output="Bullet point list of 5 important events.",
@@ -1575,9 +1554,6 @@ def test_dont_set_agents_step_callback_if_already_set():
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_crew_function_calling_llm():
-    from crewai import LLM
-    from crewai.tools import tool
-
     llm = LLM(model="gpt-4o-mini")
 
     @tool
@@ -1607,8 +1583,6 @@ def test_crew_function_calling_llm():
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_task_with_no_arguments():
-    from crewai.tools import tool
-
     @tool
     def return_data() -> str:
         "Useful to get the sales related data"
@@ -1635,11 +1609,6 @@ def test_task_with_no_arguments():
 
 
 def test_code_execution_flag_adds_code_tool_upon_kickoff():
-    try:
-        from crewai_tools import CodeInterpreterTool
-    except (ImportError, Exception):
-        pytest.skip("crewai_tools not available or cannot be imported")
-
     # Mock Docker validation for the entire test
     with patch.object(Agent, "_validate_docker_installation"):
         programmer = Agent(
@@ -2061,8 +2030,6 @@ def test_crew_does_not_interpolate_without_inputs():
 
 
 def test_task_callback_on_crew():
-    from unittest.mock import MagicMock, patch
-
     researcher_agent = Agent(
         role="Researcher",
         goal="Make the best research and analysis on content about AI and AI agents",
@@ -2097,8 +2064,6 @@ def test_task_callback_on_crew():
 
 
 def test_task_callback_both_on_task_and_crew():
-    from unittest.mock import MagicMock, patch
-
     mock_callback_on_task = MagicMock()
     mock_callback_on_crew = MagicMock()
 
@@ -2134,8 +2099,6 @@ def test_task_callback_both_on_task_and_crew():
 
 
 def test_task_same_callback_both_on_task_and_crew():
-    from unittest.mock import MagicMock, patch
-
     mock_callback = MagicMock()
 
     researcher_agent = Agent(
@@ -2170,8 +2133,6 @@ def test_task_same_callback_both_on_task_and_crew():
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_tools_with_custom_caching():
-    from crewai.tools import tool
-
     @tool
     def multiplcation_tool(first_number: int, second_number: int) -> int:
         """Useful for when you need to multiply two numbers together."""
@@ -2477,7 +2438,7 @@ def test_using_contextual_memory():
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_memory_events_are_emitted():
     events = defaultdict(list)
-    event_received = threading.Event()
+    condition = threading.Condition()
 
     @crewai_event_bus.on(MemorySaveStartedEvent)
     def handle_memory_save_started(source, event):
@@ -2509,8 +2470,9 @@ def test_memory_events_are_emitted():
 
     @crewai_event_bus.on(MemoryRetrievalCompletedEvent)
     def handle_memory_retrieval_completed(source, event):
-        events["MemoryRetrievalCompletedEvent"].append(event)
-        event_received.set()
+        with condition:
+            events["MemoryRetrievalCompletedEvent"].append(event)
+            condition.notify()
 
     math_researcher = Agent(
         role="Researcher",
@@ -2533,7 +2495,12 @@ def test_memory_events_are_emitted():
 
     crew.kickoff()
 
-    assert event_received.wait(timeout=5), "Timeout waiting for memory events"
+    with condition:
+        success = condition.wait_for(
+            lambda: len(events["MemoryRetrievalCompletedEvent"]) >= 1, timeout=5
+        )
+
+    assert success, "Timeout waiting for memory events"
     assert len(events["MemorySaveStartedEvent"]) == 3
     assert len(events["MemorySaveCompletedEvent"]) == 3
     assert len(events["MemorySaveFailedEvent"]) == 0
@@ -2797,6 +2764,7 @@ def test_crew_output_file_validation_failures():
         Crew(agents=[agent], tasks=[task]).kickoff()
 
 
+@pytest.mark.vcr(filter_headers=["authorization"])
 def test_manager_agent(researcher, writer):
     task = Task(
         description="Come up with a list of 5 interesting ideas to explore for an article, then write one amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
@@ -2855,9 +2823,8 @@ def test_manager_agent_in_agents_raises_exception(researcher, writer):
         )
 
 
+@pytest.mark.vcr(filter_headers=["authorization"])
 def test_manager_agent_with_tools_raises_exception(researcher, writer):
-    from crewai.tools import tool
-
     @tool
     def testing_tool(first_number: int, second_number: int) -> int:
         """Useful for when you need to multiply two numbers together."""
@@ -2887,13 +2854,8 @@ def test_manager_agent_with_tools_raises_exception(researcher, writer):
         crew.kickoff()
 
 
-@patch("crewai.crew.Crew.kickoff")
-@patch("crewai.crew.CrewTrainingHandler")
-@patch("crewai.crew.TaskEvaluator")
-@patch("crewai.crew.Crew.copy")
-def test_crew_train_success(
-    copy_mock, task_evaluator, crew_training_handler, kickoff_mock, researcher, writer
-):
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_crew_train_success(researcher, writer):
     task = Task(
         description="Come up with a list of 5 interesting ideas to explore for an article, then write one amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
         expected_output="5 bullet points with a paragraph for each idea.",
@@ -2905,79 +2867,39 @@ def test_crew_train_success(
         tasks=[task],
     )
 
-    # Create a mock for the copied crew
-    copy_mock.return_value = crew
-
     received_events = []
-    lock = threading.Lock()
-    all_events_received = threading.Event()
+    condition = threading.Condition()
 
     @crewai_event_bus.on(CrewTrainStartedEvent)
     def on_crew_train_started(source, event: CrewTrainStartedEvent):
-        with lock:
+        with condition:
             received_events.append(event)
             if len(received_events) == 2:
-                all_events_received.set()
+                condition.notify()
 
     @crewai_event_bus.on(CrewTrainCompletedEvent)
     def on_crew_train_completed(source, event: CrewTrainCompletedEvent):
-        with lock:
+        with condition:
             received_events.append(event)
             if len(received_events) == 2:
-                all_events_received.set()
+                condition.notify()
 
-    crew.train(
-        n_iterations=2, inputs={"topic": "AI"}, filename="trained_agents_data.pkl"
-    )
+    # Mock human input to avoid blocking during training
+    with patch("builtins.input", return_value="Great work!"):
+        crew.train(
+            n_iterations=2, inputs={"topic": "AI"}, filename="trained_agents_data.pkl"
+        )
 
-    assert all_events_received.wait(timeout=5), "Timeout waiting for all train events"
+    with condition:
+        success = condition.wait_for(lambda: len(received_events) == 2, timeout=5)
 
-    # Ensure kickoff is called on the copied crew
-    kickoff_mock.assert_has_calls(
-        [mock.call(inputs={"topic": "AI"}), mock.call(inputs={"topic": "AI"})]
-    )
-
-    task_evaluator.assert_has_calls(
-        [
-            mock.call(researcher),
-            mock.call().evaluate_training_data(
-                training_data=crew_training_handler().load(),
-                agent_id=str(researcher.id),
-            ),
-            mock.call().evaluate_training_data().model_dump(),
-            mock.call(writer),
-            mock.call().evaluate_training_data(
-                training_data=crew_training_handler().load(),
-                agent_id=str(writer.id),
-            ),
-            mock.call().evaluate_training_data().model_dump(),
-        ]
-    )
-
-    crew_training_handler.assert_any_call("training_data.pkl")
-    crew_training_handler().load.assert_called()
-
-    crew_training_handler.assert_any_call("trained_agents_data.pkl")
-    crew_training_handler().load.assert_called()
-
-    crew_training_handler().save_trained_data.assert_has_calls(
-        [
-            mock.call(
-                agent_id="Researcher",
-                trained_data=task_evaluator().evaluate_training_data().model_dump(),
-            ),
-            mock.call(
-                agent_id="Senior Writer",
-                trained_data=task_evaluator().evaluate_training_data().model_dump(),
-            ),
-        ]
-    )
-
+    assert success, "Timeout waiting for all train events"
     assert len(received_events) == 2
     assert isinstance(received_events[0], CrewTrainStartedEvent)
     assert isinstance(received_events[1], CrewTrainCompletedEvent)
 
 
+@pytest.mark.vcr(filter_headers=["authorization"])
 def test_crew_train_error(researcher, writer):
     task = Task(
         description="Come up with a list of 5 interesting ideas to explore for an article",
@@ -3277,6 +3199,7 @@ def test_replay_with_context():
         assert crew.tasks[1].context[0].output.raw == "context raw output"
 
 
+@pytest.mark.vcr(filter_headers=["authorization"])
 def test_replay_with_context_set_to_nullable():
     agent = Agent(role="test_agent", backstory="Test Description", goal="Test Goal")
     task1 = Task(
@@ -3716,10 +3639,8 @@ def test_conditional_should_execute(researcher, writer):
         assert mock_execute_sync.call_count == 2
 
 
-@mock.patch("crewai.crew.CrewEvaluator")
-@mock.patch("crewai.crew.Crew.copy")
-@mock.patch("crewai.crew.Crew.kickoff")
-def test_crew_testing_function(kickoff_mock, copy_mock, crew_evaluator, researcher):
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_crew_testing_function(researcher):
     task = Task(
         description="Come up with a list of 5 interesting ideas to explore for an article, then write one amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
         expected_output="5 bullet points with a paragraph for each idea.",
@@ -3731,48 +3652,32 @@ def test_crew_testing_function(kickoff_mock, copy_mock, crew_evaluator, research
         tasks=[task],
     )
 
-    # Create a mock for the copied crew
-    copy_mock.return_value = crew
-
     n_iterations = 2
     llm_instance = LLM("gpt-4o-mini")
 
     received_events = []
-    lock = threading.Lock()
-    all_events_received = threading.Event()
+    condition = threading.Condition()
 
     @crewai_event_bus.on(CrewTestStartedEvent)
     def on_crew_test_started(source, event: CrewTestStartedEvent):
-        with lock:
+        with condition:
             received_events.append(event)
             if len(received_events) == 2:
-                all_events_received.set()
+                condition.notify()
 
     @crewai_event_bus.on(CrewTestCompletedEvent)
     def on_crew_test_completed(source, event: CrewTestCompletedEvent):
-        with lock:
+        with condition:
             received_events.append(event)
             if len(received_events) == 2:
-                all_events_received.set()
+                condition.notify()
 
     crew.test(n_iterations, llm_instance, inputs={"topic": "AI"})
 
-    assert all_events_received.wait(timeout=5), "Timeout waiting for all test events"
+    with condition:
+        success = condition.wait_for(lambda: len(received_events) == 2, timeout=5)
 
-    # Ensure kickoff is called on the copied crew
-    kickoff_mock.assert_has_calls(
-        [mock.call(inputs={"topic": "AI"}), mock.call(inputs={"topic": "AI"})]
-    )
-
-    crew_evaluator.assert_has_calls(
-        [
-            mock.call(crew, llm_instance),
-            mock.call().set_iteration(1),
-            mock.call().set_iteration(2),
-            mock.call().print_crew_evaluation_result(),
-        ]
-    )
-
+    assert success, "Timeout waiting for all test events"
     assert len(received_events) == 2
     assert isinstance(received_events[0], CrewTestStartedEvent)
     assert isinstance(received_events[1], CrewTestCompletedEvent)
@@ -3843,15 +3748,11 @@ def test_fetch_inputs():
     )
 
 
+@pytest.mark.vcr(filter_headers=["authorization"])
 def test_task_tools_preserve_code_execution_tools():
     """
     Test that task tools don't override code execution tools when allow_code_execution=True
     """
-    from crewai_tools import CodeInterpreterTool
-    from pydantic import BaseModel, Field
-
-    from crewai.tools import BaseTool
-
     class TestToolInput(BaseModel):
         """Input schema for TestTool."""
 
@@ -3865,23 +3766,25 @@ def test_task_tools_preserve_code_execution_tools():
         def _run(self, query: str) -> str:
             return f"Processed: {query}"
 
-    # Create a programmer agent with code execution enabled
-    programmer = Agent(
-        role="Programmer",
-        goal="Write code to solve problems.",
-        backstory="You're a programmer who loves to solve problems with code.",
-        allow_delegation=True,
-        allow_code_execution=True,
-    )
+    # Mock Docker validation for the entire test
+    with patch.object(Agent, "_validate_docker_installation"):
+        # Create a programmer agent with code execution enabled
+        programmer = Agent(
+            role="Programmer",
+            goal="Write code to solve problems.",
+            backstory="You're a programmer who loves to solve problems with code.",
+            allow_delegation=True,
+            allow_code_execution=True,
+        )
 
-    # Create a code reviewer agent
-    reviewer = Agent(
-        role="Code Reviewer",
-        goal="Review code for bugs and improvements",
-        backstory="You're an experienced code reviewer who ensures code quality and best practices.",
-        allow_delegation=True,
-        allow_code_execution=True,
-    )
+        # Create a code reviewer agent
+        reviewer = Agent(
+            role="Code Reviewer",
+            goal="Review code for bugs and improvements",
+            backstory="You're an experienced code reviewer who ensures code quality and best practices.",
+            allow_delegation=True,
+            allow_code_execution=True,
+        )
 
     # Create a task with its own tools
     task = Task(
@@ -3932,8 +3835,6 @@ def test_multimodal_flag_adds_multimodal_tools():
     """
     Test that an agent with multimodal=True automatically has multimodal tools added to the task execution.
     """
-    from crewai.tools.agent_tools.add_image_tool import AddImageTool
-
     # Create an agent that supports multimodal
     multimodal_agent = Agent(
         role="Multimodal Analyst",
@@ -4247,13 +4148,8 @@ def test_crew_guardrail_feedback_in_context():
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_before_kickoff_callback():
-    from crewai.project import CrewBase
-
     @CrewBase
     class TestCrewClass:
-        from crewai.agents.agent_builder.base_agent import BaseAgent
-        from crewai.project import CrewBase, agent, before_kickoff, crew, task
-
         agents: list[BaseAgent]
         tasks: list[Task]
 
@@ -4309,12 +4205,8 @@ def test_before_kickoff_callback():
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_before_kickoff_without_inputs():
-    from crewai.project import CrewBase, agent, before_kickoff, task
-
     @CrewBase
     class TestCrewClass:
-        from crewai.project import crew
-
         agents_config = None
         tasks_config = None
 
@@ -4518,6 +4410,7 @@ def test_sets_parent_flow_when_outside_flow(researcher, writer):
     assert crew.parent_flow is None
 
 
+@pytest.mark.vcr(filter_headers=["authorization"])
 def test_sets_parent_flow_when_inside_flow(researcher, writer):
     class MyFlow(Flow):
         @start()

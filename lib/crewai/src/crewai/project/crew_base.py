@@ -6,7 +6,15 @@ from collections.abc import Callable
 import inspect
 import logging
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Literal, TypeGuard, TypeVar, TypedDict, cast
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Literal,
+    TypeGuard,
+    TypeVar,
+    TypedDict,
+    cast,
+)
 
 from dotenv import load_dotenv
 import yaml
@@ -320,14 +328,17 @@ def get_mcp_tools(self: CrewInstance, *tool_names: str) -> list[BaseTool]:
     if not self.mcp_server_params:
         return []
 
-    from crewai_tools import MCPServerAdapter  # type: ignore[import-untyped]
+    from crewai_tools import MCPServerAdapter
 
     if self._mcp_server_adapter is None:
         self._mcp_server_adapter = MCPServerAdapter(
             self.mcp_server_params, connect_timeout=self.mcp_connect_timeout
         )
 
-    return self._mcp_server_adapter.tools.filter_by_names(tool_names or None)
+    return cast(
+        list[BaseTool],
+        self._mcp_server_adapter.tools.filter_by_names(tool_names or None),
+    )
 
 
 def _load_config(
@@ -630,3 +641,17 @@ class CrewBase(metaclass=_CrewBaseType):
     Note:
         Reference: https://stackoverflow.com/questions/11091609/setting-a-class-metaclass-using-a-decorator
     """
+
+    # e
+    if TYPE_CHECKING:
+
+        def __init__(self, *args: Any, **kwargs: Any) -> None:
+            """Type stub for decorator usage.
+
+            Args:
+                decorated_cls: Class to transform with CrewBaseMeta metaclass.
+
+            Returns:
+                New class with CrewBaseMeta metaclass applied.
+            """
+            ...
