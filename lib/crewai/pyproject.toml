@@ -67,11 +67,6 @@ mem0 = ["mem0ai>=0.1.94"]
 docling = [
     "docling>=2.12.0",
 ]
-aisuite = [
-    "aisuite>=0.1.11",
-
-
-]
 qdrant = [
     "qdrant-client[fastembed]>=1.14.3",
 ]
@@ -137,13 +132,3 @@ build-backend = "hatchling.build"
 
 [tool.hatch.version]
 path = "src/crewai/__init__.py"
-
-# Declare mutually exclusive extras due to conflicting httpx requirements
-# a2a requires httpx>=0.28.1, while aisuite requires httpx>=0.27.0,<0.28.0
-# [tool.uv]
-# conflicts = [
-#   [
-#     { extra = "a2a" },
-#     { extra = "aisuite" },
-#   ],
-# ]
