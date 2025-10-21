@@ -124,7 +124,7 @@ exclude = [
     "lib/crewai-tools/tests/",
     "lib/crewai/src/crewai/experimental/a2a"
 ]
-plugins = ["pydantic.mypy"]
+plugins = ["pydantic.mypy", "crewai.mypy"]
 
 
 [tool.bandit]
