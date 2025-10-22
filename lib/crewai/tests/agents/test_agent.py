@@ -18,6 +18,9 @@ from crewai.process import Process
 from crewai.tools.tool_calling import InstructorToolCalling
 from crewai.tools.tool_usage import ToolUsage
 from crewai.utilities.errors import AgentRepositoryError
+from crewai.utilities.exceptions.context_window_exceeding_exception import (
+    LLMContextLengthExceededError,
+)
 import pytest
 
 from crewai import Agent, Crew, Task

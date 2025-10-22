@@ -419,7 +419,7 @@ def handle_context_length(
         i18n: I18N instance for messages
 
     Raises:
-        SystemExit: If context length is exceeded and user opts not to summarize
+        LLMContextLengthExceededError: If context length is exceeded and user opts not to summarize
     """
     if respect_context_window:
         printer.print(
@@ -432,7 +432,7 @@ def handle_context_length(
             content="Context length exceeded. Consider using smaller text or RAG tools from crewai_tools.",
             color="red",
         )
-        raise SystemExit(
+        raise LLMContextLengthExceededError(
             "Context length exceeded and user opted not to summarize. Consider using smaller text or RAG tools from crewai_tools."
         )
 
