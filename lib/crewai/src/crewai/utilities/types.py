@@ -3,6 +3,9 @@
 from typing import Any, Literal, TypedDict
 
 
+MessageRole = Literal["user", "assistant", "system"]
+
+
 class LLMMessage(TypedDict):
     """Type for formatted LLM messages.
 
@@ -11,5 +14,5 @@ class LLMMessage(TypedDict):
           instead of str | list[dict[str, str]]
     """
 
-    role: Literal["user", "assistant", "system"]
+    role: MessageRole
     content: str | list[dict[str, Any]]
