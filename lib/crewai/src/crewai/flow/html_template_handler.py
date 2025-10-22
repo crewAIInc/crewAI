@@ -1,5 +1,8 @@
+"""HTML template processing and generation for flow visualization diagrams."""
+
 import base64
 import re
+from typing import Any
 
 from crewai.flow.path_utils import validate_path_exists
 
@@ -7,7 +10,7 @@ from crewai.flow.path_utils import validate_path_exists
 class HTMLTemplateHandler:
     """Handles HTML template processing and generation for flow visualization diagrams."""
 
-    def __init__(self, template_path, logo_path):
+    def __init__(self, template_path: str, logo_path: str) -> None:
         """
         Initialize HTMLTemplateHandler with validated template and logo paths.
 
@@ -29,23 +32,23 @@ class HTMLTemplateHandler:
         except ValueError as e:
             raise ValueError(f"Invalid template or logo path: {e}") from e
 
-    def read_template(self):
+    def read_template(self) -> str:
         """Read and return the HTML template file contents."""
         with open(self.template_path, "r", encoding="utf-8") as f:
             return f.read()
 
-    def encode_logo(self):
+    def encode_logo(self) -> str:
         """Convert the logo SVG file to base64 encoded string."""
         with open(self.logo_path, "rb") as logo_file:
             logo_svg_data = logo_file.read()
             return base64.b64encode(logo_svg_data).decode("utf-8")
 
-    def extract_body_content(self, html):
+    def extract_body_content(self, html: str) -> str:
         """Extract and return content between body tags from HTML string."""
         match = re.search("<body.*?>(.*?)</body>", html, re.DOTALL)
         return match.group(1) if match else ""
 
-    def generate_legend_items_html(self, legend_items):
+    def generate_legend_items_html(self, legend_items: list[dict[str, Any]]) -> str:
         """Generate HTML markup for the legend items."""
         legend_items_html = ""
         for item in legend_items:
@@ -73,7 +76,9 @@ class HTMLTemplateHandler:
                 """
         return legend_items_html
 
-    def generate_final_html(self, network_body, legend_items_html, title="Flow Plot"):
+    def generate_final_html(
+        self, network_body: str, legend_items_html: str, title: str = "Flow Plot"
+    ) -> str:
         """Combine all components into final HTML document with network visualization."""
         html_template = self.read_template()
         logo_svg_base64 = self.encode_logo()
