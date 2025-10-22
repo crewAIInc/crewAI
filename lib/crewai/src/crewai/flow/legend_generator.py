@@ -1,4 +1,23 @@
-def get_legend_items(colors):
+"""Legend generation for flow visualization diagrams."""
+
+from typing import Any
+
+from crewai.flow.config import FlowColors
+
+
+def get_legend_items(colors: FlowColors) -> list[dict[str, Any]]:
+    """Generate legend items based on flow colors.
+
+    Parameters
+    ----------
+    colors : FlowColors
+        Dictionary containing color definitions for flow elements.
+
+    Returns
+    -------
+    list[dict[str, Any]]
+        List of legend item dictionaries with labels and styling.
+    """
     return [
         {"label": "Start Method", "color": colors["start"]},
         {"label": "Method", "color": colors["method"]},
@@ -24,7 +43,19 @@ def get_legend_items(colors):
     ]
 
 
-def generate_legend_items_html(legend_items):
+def generate_legend_items_html(legend_items: list[dict[str, Any]]) -> str:
+    """Generate HTML markup for legend items.
+
+    Parameters
+    ----------
+    legend_items : list[dict[str, Any]]
+        List of legend item dictionaries containing labels and styling.
+
+    Returns
+    -------
+    str
+        HTML string containing formatted legend items.
+    """
     legend_items_html = ""
     for item in legend_items:
         if "border" in item:
