@@ -293,7 +293,7 @@ __version__ = "1.1.0"
 def __getattr__(name: str):
     """
     Catch common typos and provide helpful error messages.
-    
+
     This function is called when an attribute is not found in the module.
     It helps users who make common typos when importing tools.
     """
@@ -302,7 +302,7 @@ def __getattr__(name: str):
             f"'{name}' is currently under development and not yet available. "
             f"Please check the CrewAI documentation for updates on when this tool will be released."
         )
-    
+
     if name.endswith("tool") and not name.endswith("Tool"):
         correct_name = name[:-4] + "Tool"
         if correct_name in __all__ or correct_name == "PGSearchTool":
@@ -311,5 +311,5 @@ def __getattr__(name: str):
                 f"Did you mean '{correct_name}'? "
                 f"Note: Tool names use capital 'T' in 'Tool'."
             )
-    
+
     raise AttributeError(f"module 'crewai_tools' has no attribute '{name}'")
