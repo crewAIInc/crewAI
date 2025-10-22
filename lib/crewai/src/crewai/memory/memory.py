@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from pydantic import BaseModel
 
@@ -23,9 +23,6 @@ class Memory(BaseModel):
     storage: Any
     _agent: Agent | None = None
     _task: Task | None = None
-
-    def __init__(self, storage: Any, **data: Any):
-        super().__init__(storage=storage, **data)
 
     @property
     def task(self) -> Task | None:
@@ -62,8 +59,11 @@ class Memory(BaseModel):
         limit: int = 5,
         score_threshold: float = 0.6,
     ) -> list[Any]:
-        return self.storage.search(
-            query=query, limit=limit, score_threshold=score_threshold
+        return cast(
+            list[Any],
+            self.storage.search(
+                query=query, limit=limit, score_threshold=score_threshold
+            ),
         )
 
     def set_crew(self, crew: Any) -> Memory:
