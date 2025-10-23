@@ -37,19 +37,25 @@ class CrewPlanner:
     Attributes:
         tasks: List of tasks to be planned.
         planning_agent_llm: Optional LLM model for the planning agent.
+        crew: Optional reference to the crew instance.
     """
 
     def __init__(
-        self, tasks: list[Task], planning_agent_llm: str | BaseLLM | None = None
+        self,
+        tasks: list[Task],
+        planning_agent_llm: str | BaseLLM | None = None,
+        crew: "Any" = None,
     ) -> None:
         """Initialize CrewPlanner with tasks and optional planning agent LLM.
 
         Args:
             tasks: List of tasks to be planned.
             planning_agent_llm: Optional LLM model for the planning agent. Defaults to None.
+            crew: Optional reference to the crew instance. Defaults to None.
         """
         self.tasks = tasks
         self.planning_agent_llm = planning_agent_llm or "gpt-4o-mini"
+        self.crew = crew
 
     def _handle_crew_planning(self) -> PlannerTaskPydanticOutput:
         """Handles the Crew planning by creating detailed step-by-step plans for each task.
@@ -80,7 +86,7 @@ class CrewPlanner:
         Returns:
             An Agent instance configured for planning tasks.
         """
-        return Agent(
+        planning_agent = Agent(
             role="Task Execution Planner",
             goal=(
                 "Your goal is to create an extremely detailed, step-by-step plan based on the tasks and tools "
@@ -89,6 +95,9 @@ class CrewPlanner:
             backstory="Planner agent for crew planning",
             llm=self.planning_agent_llm,
         )
+        if self.crew:
+            planning_agent.crew = self.crew
+        return planning_agent
 
     @staticmethod
     def _create_planner_task(planning_agent: Agent, tasks_summary: str) -> Task:
