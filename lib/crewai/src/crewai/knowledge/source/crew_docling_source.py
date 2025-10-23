@@ -52,6 +52,7 @@ class CrewDoclingSource(BaseKnowledgeSource):
     chunks: list[dict[str, Any]] = Field(default_factory=list)
     safe_file_paths: list[Path | str] = Field(default_factory=list)
     content: list[Any] = Field(default_factory=list)
+    _aligned_paths: list[Path | str] = Field(default_factory=list, repr=False)
     document_converter: Any = Field(default=None)
 
     def model_post_init(self, __context: Any) -> None:
@@ -123,7 +124,7 @@ class CrewDoclingSource(BaseKnowledgeSource):
         if not self.content:
             return
 
-        for filepath, doc in zip(self.safe_file_paths, self.content, strict=False):
+        for filepath, doc in zip(self._aligned_paths, self.content, strict=True):
             chunk_idx = 0
             for chunk in self._chunk_doc(doc):
                 self.chunks.append(
@@ -140,9 +141,47 @@ class CrewDoclingSource(BaseKnowledgeSource):
 
         self._save_documents()
 
+    def _convert_one(self, fp: Path | str) -> tuple[Any, Path | str] | None:
+        """Convert a single file; on failure, log and return None."""
+        try:
+            result = self.document_converter.convert(fp)
+            return result.document, fp
+        except DoclingConversionError as e:
+            self._logger.log(
+                "warning",
+                f"Skipping {fp!s}: conversion failed with {e!s}",
+                color="yellow",
+            )
+            return None
+        except Exception as e:
+            self._logger.log(
+                "warning",
+                f"Skipping {fp!s}: unexpected error during conversion {e!s}",
+                color="yellow",
+            )
+            return None
+
     def _convert_source_to_docling_documents(self) -> list[Any]:
-        conv_results_iter = self.document_converter.convert_all(self.safe_file_paths)
-        return [result.document for result in conv_results_iter]
+        """
+        Convert files one-by-one to preserve (filepath, document) alignment.
+
+        Any file that fails conversion is skipped (with a warning). For all successful
+        conversions, we maintain a parallel list of source paths so the add() step can
+        attach correct per-chunk filepath metadata without relying on zip truncation.
+        """
+        aligned_docs: list[Any] = []
+        aligned_paths: list[Path | str] = []
+
+        for fp in self.safe_file_paths:
+            item = self._convert_one(fp)
+            if item is None:
+                continue
+            doc, aligned_fp = item
+            aligned_docs.append(doc)
+            aligned_paths.append(aligned_fp)
+
+        self._aligned_paths = aligned_paths
+        return aligned_docs
 
     def _chunk_doc(self, doc: Any) -> Iterator[str]:
         chunker = HierarchicalChunker()

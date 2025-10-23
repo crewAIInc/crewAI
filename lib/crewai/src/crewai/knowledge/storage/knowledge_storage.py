@@ -23,30 +23,61 @@ def _coerce_to_records(documents: Sequence[Any]) -> list[BaseRecord]:
         if isinstance(d, str):
             records.append({"content": d})
         elif isinstance(d, Mapping):
-            content = d.get("content")
-            if not content:
+            # Only process dict-like inputs that explicitly provide "content"
+            if "content" not in d:
                 continue
-            metadata_raw = d.get("metadata", {})
-            metadata: Any = {}
-            if isinstance(metadata_raw, Mapping):
-                metadata = {str(k): v for k, v in metadata_raw.items()}
-            elif isinstance(metadata_raw, list):
-                metadata = [
-                    {str(k): v for k, v in m.items()}
-                    for m in metadata_raw
-                    if isinstance(m, Mapping)
-                ]
-            else:
-                metadata = {}
 
-            rec: BaseRecord = {"content": cast(str, content)}
-            if metadata:
-                rec["metadata"] = metadata
+            raw_content = d.get("content", "")
+            # Coerce to str to satisfy BaseRecord; None -> "", others -> str(value)
+            content_str: str = "" if raw_content is None else str(raw_content)
+
+            metadata_raw = d.get("metadata", {})
+
+            # Prepare metadata in one of the two shapes allowed by BaseRecord:
+            # Mapping[str, str|int|float|bool]  OR  list[Mapping[str, str|int|float|bool]]
+            meta_m: Mapping[str, str | int | float | bool] | None = None
+            meta_l: list[Mapping[str, str | int | float | bool]] | None = None
+
+            if isinstance(metadata_raw, Mapping):
+                sanitized = {
+                    str(k): (
+                        v
+                        if isinstance(v, (str, int, float, bool))
+                        else ("" if v is None else str(v))
+                    )
+                    for k, v in metadata_raw.items()
+                }
+                meta_m = cast(Mapping[str, str | int | float | bool], sanitized)
+
+            elif isinstance(metadata_raw, list):
+                sanitized_list: list[Mapping[str, str | int | float | bool]] = []
+                for m in metadata_raw:
+                    if isinstance(m, Mapping):
+                        sanitized_m = {
+                            str(k): (
+                                v
+                                if isinstance(v, (str, int, float, bool))
+                                else ("" if v is None else str(v))
+                            )
+                            for k, v in m.items()
+                        }
+                        sanitized_list.append(
+                            cast(Mapping[str, str | int | float | bool], sanitized_m)
+                        )
+                meta_l = sanitized_list
+
+            rec: BaseRecord = {"content": content_str}
+            if meta_m is not None:
+                rec["metadata"] = meta_m
+            elif meta_l is not None:
+                rec["metadata"] = meta_l
 
             if "doc_id" in d and isinstance(d["doc_id"], str):
                 rec["doc_id"] = d["doc_id"]
+
             records.append(rec)
         else:
+            # Ignore unsupported shapes
             continue
     return records
 
