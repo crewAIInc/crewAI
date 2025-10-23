@@ -1,3 +1,4 @@
+from collections.abc import Mapping, Sequence
 import logging
 import traceback
 from typing import Any, cast
@@ -16,6 +17,40 @@ from crewai.rag.types import BaseRecord, SearchResult
 from crewai.utilities.logger import Logger
 
 
+def _coerce_to_records(documents: Sequence[Any]) -> list[BaseRecord]:
+    records: list[BaseRecord] = []
+    for d in documents:
+        if isinstance(d, str):
+            records.append({"content": d})
+        elif isinstance(d, Mapping):
+            content = d.get("content")
+            if not content:
+                continue
+            metadata_raw = d.get("metadata", {})
+            metadata: Any = {}
+            if isinstance(metadata_raw, Mapping):
+                metadata = {str(k): v for k, v in metadata_raw.items()}
+            elif isinstance(metadata_raw, list):
+                metadata = [
+                    {str(k): v for k, v in m.items()}
+                    for m in metadata_raw
+                    if isinstance(m, Mapping)
+                ]
+            else:
+                metadata = {}
+
+            rec: BaseRecord = {"content": cast(str, content)}
+            if metadata:
+                rec["metadata"] = metadata
+
+            if "doc_id" in d and isinstance(d["doc_id"], str):
+                rec["doc_id"] = d["doc_id"]
+            records.append(rec)
+        else:
+            continue
+    return records
+
+
 class KnowledgeStorage(BaseKnowledgeStorage):
     """
     Extends Storage to handle embeddings for memory entries, improving
@@ -25,8 +60,8 @@ class KnowledgeStorage(BaseKnowledgeStorage):
     def __init__(
         self,
         embedder: ProviderSpec
-        | BaseEmbeddingsProvider
-        | type[BaseEmbeddingsProvider]
+        | BaseEmbeddingsProvider[Any]
+        | type[BaseEmbeddingsProvider[Any]]
         | None = None,
         collection_name: str | None = None,
     ) -> None:
@@ -98,7 +133,7 @@ class KnowledgeStorage(BaseKnowledgeStorage):
                 f"Error during knowledge reset: {e!s}\n{traceback.format_exc()}"
             )
 
-    def save(self, documents: list[str]) -> None:
+    def save(self, documents: list[Any]) -> None:
         try:
             client = self._get_client()
             collection_name = (
@@ -108,8 +143,8 @@ class KnowledgeStorage(BaseKnowledgeStorage):
             )
             client.get_or_create_collection(collection_name=collection_name)
 
-            rag_documents: list[BaseRecord] = [{"content": doc} for doc in documents]
-
+            # Accept both old (list[str]) and new (list[dict]) chunk formats
+            rag_documents: list[BaseRecord] = _coerce_to_records(documents)
             client.add_documents(
                 collection_name=collection_name, documents=rag_documents
             )

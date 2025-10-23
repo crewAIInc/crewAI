@@ -1,29 +1,26 @@
 from __future__ import annotations
 
 from collections.abc import Iterator
+import importlib
 from pathlib import Path
+from typing import Any
 from urllib.parse import urlparse
 
 
+# --- third-party/optional imports (OK to keep in try/except) ---
 try:
     from docling.datamodel.base_models import (  # type: ignore[import-not-found]
         InputFormat,
     )
-    from docling.document_converter import (  # type: ignore[import-not-found]
-        DocumentConverter,
-    )
-    from docling.exceptions import ConversionError  # type: ignore[import-not-found]
     from docling_core.transforms.chunker.hierarchical_chunker import (  # type: ignore[import-not-found]
         HierarchicalChunker,
-    )
-    from docling_core.types.doc.document import (  # type: ignore[import-not-found]
-        DoclingDocument,
     )
 
     DOCLING_AVAILABLE = True
 except ImportError:
     DOCLING_AVAILABLE = False
 
+# --- regular imports must stay together, before any non-import statements ---
 from pydantic import Field
 
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
@@ -31,12 +28,16 @@ from crewai.utilities.constants import KNOWLEDGE_DIRECTORY
 from crewai.utilities.logger import Logger
 
 
+# Safe default; will be overwritten at runtime if docling is present
+DoclingConversionError: type[Exception] = Exception
+
+
 class CrewDoclingSource(BaseKnowledgeSource):
     """Default Source class for converting documents to markdown or json
     This will auto support PDF, DOCX, and TXT, XLSX, Images, and HTML files without any additional dependencies and follows the docling package as the source of truth.
     """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         if not DOCLING_AVAILABLE:
             raise ImportError(
                 "The docling package is required to use CrewDoclingSource. "
@@ -48,11 +49,48 @@ class CrewDoclingSource(BaseKnowledgeSource):
 
     file_path: list[Path | str] | None = Field(default=None)
     file_paths: list[Path | str] = Field(default_factory=list)
-    chunks: list[str] = Field(default_factory=list)
+    chunks: list[dict[str, Any]] = Field(default_factory=list)
     safe_file_paths: list[Path | str] = Field(default_factory=list)
-    content: list[DoclingDocument] = Field(default_factory=list)
-    document_converter: DocumentConverter = Field(
-        default_factory=lambda: DocumentConverter(
+    content: list[Any] = Field(default_factory=list)
+    document_converter: Any = Field(default=None)
+
+    def model_post_init(self, __context: Any) -> None:
+        if self.file_path:
+            self._logger.log(
+                "warning",
+                "The 'file_path' attribute is deprecated and will be removed in a future version. Please use 'file_paths' instead.",
+                color="yellow",
+            )
+            self.file_paths = self.file_path
+
+        self.safe_file_paths = self.validate_content()
+
+        # Import docling pieces dynamically to avoid mypy missing-import issues.
+        docling_mod = importlib.import_module("docling.document_converter")
+        document_converter_cls = docling_mod.DocumentConverter
+
+        # Resolve ConversionError dynamically (no static import)
+        try:
+            exc_mod = importlib.import_module("docling.exceptions")
+            exc_cls = getattr(exc_mod, "ConversionError", Exception)
+            if isinstance(exc_cls, type) and issubclass(exc_cls, Exception):
+                global DoclingConversionError
+                DoclingConversionError = exc_cls
+            else:
+                self._logger.log(
+                    "warning",
+                    "docling.exceptions.ConversionError not a subclass of Exception; using Exception fallback.",
+                    color="yellow",
+                )
+        except Exception as err:
+            # Log instead of bare `pass` to satisfy ruff S110
+            self._logger.log(
+                "warning",
+                f"docling.exceptions not available ({err!s}); using Exception fallback.",
+                color="yellow",
+            )
+
+        self.document_converter = document_converter_cls(
             allowed_formats=[
                 InputFormat.MD,
                 InputFormat.ASCIIDOC,
@@ -64,46 +102,49 @@ class CrewDoclingSource(BaseKnowledgeSource):
                 InputFormat.PPTX,
             ]
         )
-    )
-
-    def model_post_init(self, _) -> None:
-        if self.file_path:
-            self._logger.log(
-                "warning",
-                "The 'file_path' attribute is deprecated and will be removed in a future version. Please use 'file_paths' instead.",
-                color="yellow",
-            )
-            self.file_paths = self.file_path
-        self.safe_file_paths = self.validate_content()
         self.content = self._load_content()
 
-    def _load_content(self) -> list[DoclingDocument]:
+    def _load_content(self) -> list[Any]:
         try:
             return self._convert_source_to_docling_documents()
-        except ConversionError as e:
+        except DoclingConversionError as e:
             self._logger.log(
                 "error",
                 f"Error loading content: {e}. Supported formats: {self.document_converter.allowed_formats}",
                 "red",
             )
-            raise e
+            raise
         except Exception as e:
             self._logger.log("error", f"Error loading content: {e}")
-            raise e
+            raise
 
     def add(self) -> None:
-        if self.content is None:
+        """Convert each document to chunks, attach filepath metadata, and persist."""
+        if not self.content:
             return
-        for doc in self.content:
-            new_chunks_iterable = self._chunk_doc(doc)
-            self.chunks.extend(list(new_chunks_iterable))
+
+        for filepath, doc in zip(self.safe_file_paths, self.content, strict=False):
+            chunk_idx = 0
+            for chunk in self._chunk_doc(doc):
+                self.chunks.append(
+                    {
+                        "content": chunk,
+                        "metadata": {
+                            "filepath": str(filepath),
+                            "chunk_index": chunk_idx,
+                            "source_type": "docling",
+                        },
+                    }
+                )
+                chunk_idx += 1
+
         self._save_documents()
 
-    def _convert_source_to_docling_documents(self) -> list[DoclingDocument]:
+    def _convert_source_to_docling_documents(self) -> list[Any]:
         conv_results_iter = self.document_converter.convert_all(self.safe_file_paths)
         return [result.document for result in conv_results_iter]
 
-    def _chunk_doc(self, doc: DoclingDocument) -> Iterator[str]:
+    def _chunk_doc(self, doc: Any) -> Iterator[str]:
         chunker = HierarchicalChunker()
         for chunk in chunker.chunk(doc):
             yield chunk.text
@@ -127,7 +168,6 @@ class CrewDoclingSource(BaseKnowledgeSource):
                     else:
                         raise FileNotFoundError(f"File not found: {local_path}")
             else:
-                # this is an instance of Path
                 processed_paths.append(path)
         return processed_paths
 
@@ -138,7 +178,7 @@ class CrewDoclingSource(BaseKnowledgeSource):
                 [
                     result.scheme in ("http", "https"),
                     result.netloc,
-                    len(result.netloc.split(".")) >= 2,  # Ensure domain has TLD
+                    len(result.netloc.split(".")) >= 2,
                 ]
             )
         except Exception:

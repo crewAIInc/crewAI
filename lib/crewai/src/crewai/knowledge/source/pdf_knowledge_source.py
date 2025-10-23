@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Any
 
 from crewai.knowledge.source.base_file_knowledge_source import BaseFileKnowledgeSource
 
@@ -23,7 +24,7 @@ class PDFKnowledgeSource(BaseFileKnowledgeSource):
             content[path] = text
         return content
 
-    def _import_pdfplumber(self):
+    def _import_pdfplumber(self) -> Any:
         """Dynamically import pdfplumber."""
         try:
             import pdfplumber
@@ -36,13 +37,24 @@ class PDFKnowledgeSource(BaseFileKnowledgeSource):
 
     def add(self) -> None:
         """
-        Add PDF file content to the knowledge source, chunk it, compute embeddings,
+        Add PDF file content to the knowledge source, chunk it, add metadata, compute embeddings,
         and save the embeddings.
         """
-        for text in self.content.values():
-            new_chunks = self._chunk_text(text)
-            self.chunks.extend(new_chunks)
-        self._save_documents()
+        for filepath, text in self.content.items():
+            chunk_idx = 0
+            for chunk in self._chunk_text(text):
+                self.chunks.append(
+                    {
+                        "content": chunk,
+                        "metadata": {
+                            "filepath": str(filepath),
+                            "chunk_index": chunk_idx,
+                            "source_type": "pdf",
+                        },
+                    }
+                )
+                chunk_idx += 1
+        self._save_documents()  # type: ignore[no-untyped-call]
 
     def _chunk_text(self, text: str) -> list[str]:
         """Utility method to split text into chunks."""
