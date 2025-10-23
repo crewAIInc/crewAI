@@ -239,7 +239,6 @@ class Agent(BaseAgent):
                         embedder=self.embedder,
                         collection_name=self.role,
                     )
-                    self.knowledge.add_sources()
         except (TypeError, ValueError) as e:
             raise ValueError(f"Invalid Knowledge Configuration: {e!s}") from e
 

@@ -371,7 +371,6 @@ class Crew(FlowTrackable, BaseModel):
                         embedder=self.embedder,
                         collection_name="crew",
                     )
-                    self.knowledge.add_sources()
 
             except Exception as e:
                 self._logger.log(

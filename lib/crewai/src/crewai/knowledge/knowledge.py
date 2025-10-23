@@ -1,6 +1,6 @@
 import os
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, PrivateAttr
 
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
 from crewai.knowledge.storage.knowledge_storage import KnowledgeStorage
@@ -25,6 +25,7 @@ class Knowledge(BaseModel):
     storage: KnowledgeStorage | None = Field(default=None)
     embedder: EmbedderConfig | None = None
     collection_name: str | None = None
+    _sources_loaded: bool = PrivateAttr(default=False)
 
     def __init__(
         self,
@@ -56,6 +57,10 @@ class Knowledge(BaseModel):
         if self.storage is None:
             raise ValueError("Storage is not initialized.")
 
+        if not self._sources_loaded:
+            self.add_sources()
+            self._sources_loaded = True
+
         return self.storage.search(
             query,
             limit=results_limit,
@@ -67,6 +72,7 @@ class Knowledge(BaseModel):
             for source in self.sources:
                 source.storage = self.storage
                 source.add()
+            self._sources_loaded = True
         except Exception as e:
             raise e
 
