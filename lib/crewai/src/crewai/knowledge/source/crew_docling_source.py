@@ -21,7 +21,7 @@ except ImportError:
     DOCLING_AVAILABLE = False
 
 # --- regular imports must stay together, before any non-import statements ---
-from pydantic import Field
+from pydantic import Field, PrivateAttr
 
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
 from crewai.utilities.constants import KNOWLEDGE_DIRECTORY
@@ -52,7 +52,7 @@ class CrewDoclingSource(BaseKnowledgeSource):
     chunks: list[dict[str, Any]] = Field(default_factory=list)
     safe_file_paths: list[Path | str] = Field(default_factory=list)
     content: list[Any] = Field(default_factory=list)
-    _aligned_paths: list[Path | str] = Field(default_factory=list, repr=False)
+    _aligned_paths: list[Path | str] = PrivateAttr(default_factory=list)
     document_converter: Any = Field(default=None)
 
     def model_post_init(self, __context: Any) -> None:
