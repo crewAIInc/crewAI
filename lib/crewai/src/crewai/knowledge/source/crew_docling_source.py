@@ -20,6 +20,13 @@ try:
 except ImportError:
     DOCLING_AVAILABLE = False
 
+# Ensure the converter module is present too; otherwise the flag is misleading.
+if DOCLING_AVAILABLE:
+    import importlib.util as _ilu
+
+    if _ilu.find_spec("docling.document_converter") is None:
+        DOCLING_AVAILABLE = False
+
 # --- regular imports must stay together, before any non-import statements ---
 from pydantic import Field, PrivateAttr
 
@@ -67,7 +74,13 @@ class CrewDoclingSource(BaseKnowledgeSource):
         self.safe_file_paths = self.validate_content()
 
         # Import docling pieces dynamically to avoid mypy missing-import issues.
-        docling_mod = importlib.import_module("docling.document_converter")
+        try:
+            docling_mod = importlib.import_module("docling.document_converter")
+        except Exception as e:
+            raise ImportError(
+                "docling is partially installed: 'docling.document_converter' not found."
+                "Please install/upgrade docling: `uv add docling` ."
+            ) from e
         document_converter_cls = docling_mod.DocumentConverter
 
         # Resolve ConversionError dynamically (no static import)
