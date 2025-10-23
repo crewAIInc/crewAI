@@ -135,7 +135,7 @@ def test_agent_with_missing_response_template():
 
 def test_agent_default_values():
     agent = Agent(role="test role", goal="test goal", backstory="test backstory")
-    assert agent.llm.model == "gpt-4o-mini"
+    assert agent.llm.model == "gpt-4.1-mini"
     assert agent.allow_delegation is False
 
 
