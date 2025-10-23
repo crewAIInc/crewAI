@@ -142,6 +142,7 @@ class CrewDoclingSource(BaseKnowledgeSource):
 
         for filepath, doc in zip(self._aligned_paths, self.content, strict=True):
             chunk_idx = 0
+            added_any = False
             for chunk in self._chunk_doc(doc):
                 self.chunks.append(
                     {
@@ -154,6 +155,22 @@ class CrewDoclingSource(BaseKnowledgeSource):
                     }
                 )
                 chunk_idx += 1
+                added_any = True
+
+            # If conversion+chunking yielded no text (e.g., image without OCR),
+            # add a small stub so the file is still indexed.
+            if not added_any:
+                self.chunks.append(
+                    {
+                        "content": Path(str(filepath)).name,
+                        "metadata": {
+                            "filepath": str(filepath),
+                            "chunk_index": 0,
+                            "source_type": "docling",
+                            "note": "no_text_extracted_stub",
+                        },
+                    }
+                )
 
         self._save_documents()
 
