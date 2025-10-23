@@ -2,6 +2,7 @@ import os
 from typing import Any
 from unittest.mock import patch
 
+from crewai.cli.constants import DEFAULT_LLM_MODEL
 from crewai.llm import LLM
 from crewai.llms.base_llm import BaseLLM
 from crewai.utilities.llm_utils import create_llm
@@ -50,10 +51,10 @@ def test_create_llm_with_unknown_object_missing_attributes() -> None:
 
 def test_create_llm_with_none_uses_default_model() -> None:
     with patch.dict(os.environ, {"OPENAI_API_KEY": "fake-key"}, clear=True):
-        with patch("crewai.utilities.llm_utils.DEFAULT_LLM_MODEL", "gpt-4o-mini"):
+        with patch("crewai.utilities.llm_utils.DEFAULT_LLM_MODEL", DEFAULT_LLM_MODEL):
             llm = create_llm(llm_value=None)
             assert isinstance(llm, BaseLLM)
-            assert llm.model == "gpt-4o-mini"
+            assert llm.model == DEFAULT_LLM_MODEL
 
 
 def test_create_llm_with_unknown_object() -> None:
