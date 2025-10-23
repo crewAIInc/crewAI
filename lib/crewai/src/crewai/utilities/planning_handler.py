@@ -1,12 +1,17 @@
 """Handles planning and coordination of crew tasks."""
 
 import logging
+from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field
 
 from crewai.agent import Agent
 from crewai.llms.base_llm import BaseLLM
 from crewai.task import Task
+
+
+if TYPE_CHECKING:
+    pass
 
 
 logger = logging.getLogger(__name__)
@@ -44,7 +49,7 @@ class CrewPlanner:
         self,
         tasks: list[Task],
         planning_agent_llm: str | BaseLLM | None = None,
-        crew: "Any" = None,
+        crew: Any = None,
     ) -> None:
         """Initialize CrewPlanner with tasks and optional planning agent LLM.
 
