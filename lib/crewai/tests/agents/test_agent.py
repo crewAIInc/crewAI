@@ -6,6 +6,7 @@ from unittest import mock
 from unittest.mock import MagicMock, patch
 
 from crewai.agents.crew_agent_executor import AgentFinish, CrewAgentExecutor
+from crewai.cli.constants import DEFAULT_LLM_MODEL
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.tool_usage_events import ToolUsageFinishedEvent
 from crewai.knowledge.knowledge import Knowledge
@@ -135,7 +136,7 @@ def test_agent_with_missing_response_template():
 
 def test_agent_default_values():
     agent = Agent(role="test role", goal="test goal", backstory="test backstory")
-    assert agent.llm.model == "gpt-4.1-mini"
+    assert agent.llm.model == DEFAULT_LLM_MODEL
     assert agent.allow_delegation is False
 
 
@@ -225,7 +226,7 @@ def test_logging_tool_usage():
         verbose=True,
     )
 
-    assert agent.llm.model == "gpt-4o-mini"
+    assert agent.llm.model == DEFAULT_LLM_MODEL
     assert agent.tools_handler.last_used_tool is None
     task = Task(
         description="What is 3 times 4?",
