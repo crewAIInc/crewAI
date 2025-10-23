@@ -24,7 +24,10 @@ except ImportError:
 if DOCLING_AVAILABLE:
     import importlib.util as _ilu
 
-    if _ilu.find_spec("docling.document_converter") is None:
+    if (
+        _ilu.find_spec("docling.document_converter") is None
+        or _ilu.find_spec("docling.exceptions") is None
+    ):
         DOCLING_AVAILABLE = False
 
 # --- regular imports must stay together, before any non-import statements ---
