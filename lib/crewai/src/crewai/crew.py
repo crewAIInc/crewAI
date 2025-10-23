@@ -1632,8 +1632,20 @@ class Crew(FlowTrackable, BaseModel):
 
     def reset_knowledge(self, knowledges: list[Knowledge]) -> None:
         """Reset crew and agent knowledge storage."""
+        def _reset_single_knowledge(ks: Knowledge) -> None:
+            try:
+                ks.reset()
+            except Exception as e:
+                if "attempt to write a readonly database" in str(
+                    e
+                ) or "does not exist" in str(e):
+                    # Ignore readonly database and collection not found errors (already reset)
+                    pass
+                else:
+                    raise
+
         for ks in knowledges:
-            ks.reset()
+            _reset_single_knowledge(ks)
 
     def _set_allow_crewai_trigger_context_for_first_task(self):
         crewai_trigger_payload = self._inputs and self._inputs.get(

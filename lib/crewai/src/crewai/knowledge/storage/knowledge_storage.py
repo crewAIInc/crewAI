@@ -94,9 +94,16 @@ class KnowledgeStorage(BaseKnowledgeStorage):
             )
             client.delete_collection(collection_name=collection_name)
         except Exception as e:
-            logging.error(
-                f"Error during knowledge reset: {e!s}\n{traceback.format_exc()}"
-            )
+            if "attempt to write a readonly database" in str(
+                e
+            ) or "does not exist" in str(e):
+                # Ignore readonly database and collection not found errors (already reset)
+                pass
+            else:
+                logging.error(
+                    f"Error during knowledge reset: {e!s}\n{traceback.format_exc()}"
+                )
+                raise
 
     def save(self, documents: list[str]) -> None:
         try:
