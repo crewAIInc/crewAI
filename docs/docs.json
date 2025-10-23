@@ -274,6 +274,7 @@
                 "pages": [
                   "en/observability/tracing",
                   "en/observability/overview",
+                  "en/observability/agentops",
                   "en/observability/arize-phoenix",
                   "en/observability/braintrust",
                   "en/observability/langdb",
@@ -698,6 +699,7 @@
                 "group": "Observabilidade",
                 "pages": [
                   "pt-BR/observability/overview",
+                  "pt-BR/observability/agentops",
                   "pt-BR/observability/arize-phoenix",
                   "pt-BR/observability/braintrust",
                   "pt-BR/observability/langdb",
@@ -1130,6 +1132,7 @@
                 "group": "Observability",
                 "pages": [
                   "ko/observability/overview",
+                  "ko/observability/agentops",
                   "ko/observability/arize-phoenix",
                   "ko/observability/braintrust",
                   "ko/observability/langdb",
