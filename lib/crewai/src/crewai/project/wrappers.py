@@ -20,7 +20,7 @@ from typing_extensions import Self
 
 
 if TYPE_CHECKING:
-    from crewai import Agent, Task
+    from crewai import Agent, Crew, Task
     from crewai.crews.crew_output import CrewOutput
     from crewai.tools import BaseTool
 
@@ -129,6 +129,7 @@ class CrewClass(Protocol):
     _map_agent_variables: Callable[..., None]
     map_all_task_variables: Callable[..., None]
     _map_task_variables: Callable[..., None]
+    crew: Callable[..., Crew]
 
 
 class DecoratedMethod(Generic[P, R]):
