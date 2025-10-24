@@ -5,6 +5,7 @@ import json
 import re
 from typing import TYPE_CHECKING, Any, Final, Literal, TypedDict
 
+from pydantic import BaseModel
 from rich.console import Console
 
 from crewai.agents.constants import FINAL_ANSWER_AND_PARSABLE_ACTION_ERROR_MESSAGE
@@ -226,6 +227,7 @@ def get_llm_response(
     printer: Printer,
     from_task: Task | None = None,
     from_agent: Agent | LiteAgent | None = None,
+    response_model: type[BaseModel] | None = None,
 ) -> str:
     """Call the LLM and return the response, handling any invalid responses.
 
@@ -236,6 +238,7 @@ def get_llm_response(
         printer: Printer instance for output
         from_task: Optional task context for the LLM call
         from_agent: Optional agent context for the LLM call
+        response_model: Optional Pydantic model for structured outputs
 
     Returns:
         The response from the LLM as a string
@@ -250,6 +253,7 @@ def get_llm_response(
             callbacks=callbacks,
             from_task=from_task,
             from_agent=from_agent,
+            response_model=response_model,
         )
     except Exception as e:
         raise e

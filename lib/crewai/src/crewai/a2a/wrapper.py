@@ -200,7 +200,9 @@ def _augment_prompt_with_a2a(
     agents_text = ""
     if len(a2a_agents) == 1:
         agent_id, config = next(iter(a2a_agents.items()))
-        agents_text = f"A2A Agent Available:\n  ID: {agent_id}\n  Endpoint: {config.endpoint}"
+        agents_text = (
+            f"A2A Agent Available:\n  ID: {agent_id}\n  Endpoint: {config.endpoint}"
+        )
 
         if agent_card:
             if hasattr(agent_card, "name") and agent_card.name:
@@ -233,9 +235,7 @@ def _augment_prompt_with_a2a(
                     if text:
                         text_parts.append(text)
             message_text = (
-                " ".join(text_parts)
-                if text_parts
-                else "[No text content in message]"
+                " ".join(text_parts) if text_parts else "[No text content in message]"
             )
             history_text += f"{role_name}: {message_text}\n"
     turn_info = ""
@@ -317,7 +317,9 @@ def _delegate_to_a2a(
         agent_id = next(iter(a2a_agents.keys()))
         current_request = agent_response.model_dump_json()
     else:
-        raise TypeError(f"Expected AgentResponseProtocol or BaseModel, got {type(agent_response)}")
+        raise TypeError(
+            f"Expected AgentResponseProtocol or BaseModel, got {type(agent_response)}"
+        )
 
     if agent_id not in a2a_agents:
         raise ValueError(f"Unknown A2A agent ID: {agent_id}")
