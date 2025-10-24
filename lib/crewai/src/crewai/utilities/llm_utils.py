@@ -29,8 +29,8 @@ def create_llm(
         try:
             return LLM(model=llm_value)
         except Exception as e:
-            logger.debug(f"Failed to instantiate LLM with model='{llm_value}': {e}")
-            return None
+            logger.error(f"Error instantiating LLM from string: {e}")
+            raise e
 
     if llm_value is None:
         return _llm_via_environment_or_fallback()
@@ -62,8 +62,8 @@ def create_llm(
         )
 
     except Exception as e:
-        logger.debug(f"Error instantiating LLM from unknown object type: {e}")
-        return None
+        logger.error(f"Error instantiating LLM from unknown object type: {e}")
+        raise e
 
 
 UNACCEPTED_ATTRIBUTES: Final[list[str]] = [
@@ -176,10 +176,10 @@ def _llm_via_environment_or_fallback() -> LLM | None:
     try:
         return LLM(**llm_params)
     except Exception as e:
-        logger.debug(
+        logger.error(
             f"Error instantiating LLM from environment/fallback: {type(e).__name__}: {e}"
         )
-        return None
+        raise e
 
 
 def _normalize_key_name(key_name: str) -> str:
