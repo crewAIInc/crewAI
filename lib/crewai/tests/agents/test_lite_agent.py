@@ -591,3 +591,79 @@ def test_lite_agent_with_invalid_llm():
                 llm="invalid-model",
             )
         assert "Expected LLM instance of type BaseLLM" in str(exc_info.value)
+
+
+@patch.dict("os.environ", {"CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token"})
+@patch("crewai_tools.tools.crewai_platform_tools.crewai_platform_tool_builder.requests.get")
+def test_agent_kickoff_with_platform_tools(mock_get):
+    """Test that Agent.kickoff() properly integrates platform tools with LiteAgent"""
+    mock_response = Mock()
+    mock_response.raise_for_status.return_value = None
+    mock_response.json.return_value = {
+        "actions": {
+            "github": [
+                {
+                    "name": "create_issue",
+                    "description": "Create a GitHub issue",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "title": {"type": "string", "description": "Issue title"},
+                            "body": {"type": "string", "description": "Issue body"},
+                        },
+                        "required": ["title"],
+                    },
+                }
+            ]
+        }
+    }
+    mock_get.return_value = mock_response
+
+    agent = Agent(
+        role="Test Agent",
+        goal="Test goal",
+        backstory="Test backstory",
+        llm=LLM(model="gpt-3.5-turbo"),
+        apps=["github"],
+        verbose=True
+    )
+
+    result = agent.kickoff("Create a GitHub issue")
+
+    assert isinstance(result, LiteAgentOutput)
+    assert result.raw is not None
+
+
+@patch.dict("os.environ", {"EXA_API_KEY": "test_exa_key"})
+@patch("crewai.agent.Agent._get_external_mcp_tools")
+def test_agent_kickoff_with_mcp_tools(mock_get_mcp_tools):
+    """Test that Agent.kickoff() properly integrates MCP tools with LiteAgent"""
+    # Setup mock MCP tools - create a proper BaseTool instance
+    class MockMCPTool(BaseTool):
+        name: str = "exa_search"
+        description: str = "Search the web using Exa"
+
+        def _run(self, query: str) -> str:
+            return f"Mock search results for: {query}"
+
+    mock_get_mcp_tools.return_value = [MockMCPTool()]
+
+    # Create agent with MCP servers
+    agent = Agent(
+        role="Test Agent",
+        goal="Test goal",
+        backstory="Test backstory",
+        llm=LLM(model="gpt-3.5-turbo"),
+        mcps=["https://mcp.exa.ai/mcp?api_key=test_exa_key&profile=research"],
+        verbose=True
+    )
+
+    # Execute kickoff
+    result = agent.kickoff("Search for information about AI")
+
+    # Verify the result is a LiteAgentOutput
+    assert isinstance(result, LiteAgentOutput)
+    assert result.raw is not None
+
+    # Verify MCP tools were retrieved
+    mock_get_mcp_tools.assert_called_once_with("https://mcp.exa.ai/mcp?api_key=test_exa_key&profile=research")
