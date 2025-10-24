@@ -94,10 +94,10 @@ azure-ai-inference = [
 anthropic = [
     "anthropic>=0.69.0",
 ]
-# a2a = [
-#     "a2a-sdk~=0.3.9",
-#     "httpx-sse>=0.4.0",
-# ]
+ a2a = [
+     "a2a-sdk~=0.3.10",
+     "httpx-sse>=0.4.0",
+ ]
 
 
 [project.scripts]
