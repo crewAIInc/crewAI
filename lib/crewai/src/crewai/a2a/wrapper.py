@@ -8,6 +8,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 
+from a2a.types import Role
 from pydantic import BaseModel
 
 from crewai.a2a.utils import (
@@ -223,8 +224,6 @@ def _augment_prompt_with_a2a(
 
     history_text = ""
     if conversation_history:
-        from a2a.types import Role
-
         history_text = "\n\nPrevious A2A Conversation:\n"
         for msg in conversation_history:
             role_name = "You" if msg.role == Role.user else "A2A Agent"
@@ -240,7 +239,10 @@ def _augment_prompt_with_a2a(
             history_text += f"{role_name}: {message_text}\n"
     turn_info = ""
     if max_turns is not None and conversation_history:
-        turn_count = (len(conversation_history) + 1) // 2
+        user_message_count = sum(
+            1 for msg in conversation_history if msg.role == Role.user
+        )
+        turn_count = user_message_count
         turn_info = f"\n\nConversation Progress: Turn {turn_count} of {max_turns}\n"
         if turn_count >= max_turns:
             turn_info += "⚠️ CRITICAL: This is the FINAL turn. You MUST conclude the conversation now.\n"
@@ -365,13 +367,67 @@ def _delegate_to_a2a(
                 response_model=task.response_model,
                 turn_number=turn_num + 1,
             )
-            conversation_history.extend(a2a_result["history"])
+            conversation_history = a2a_result["history"]
 
             if agent_card_obj is None and "agent_card" in a2a_result:
                 agent_card_obj = a2a_result["agent_card"]
 
             if a2a_result["status"] == "completed":
-                return str(a2a_result["result"])
+                result_text = str(a2a_result["result"])
+
+                task.description = _augment_prompt_with_a2a(
+                    self,
+                    a2a_agents,
+                    original_task_description,
+                    conversation_history,
+                    turn_num,
+                    max_turns,
+                    agent_card_obj,
+                )
+                task.output_pydantic = model
+                raw_result = original_fn(self, task, context, tools)
+                llm_response = _parse_agent_response(self, raw_result, model)
+
+                if isinstance(llm_response, AgentResponseProtocol):
+                    if not llm_response.is_a2a:
+                        final_turn_number = turn_num + 1
+                        from crewai.events.types.a2a_events import A2AMessageSentEvent
+
+                        crewai_event_bus.emit(
+                            None,
+                            A2AMessageSentEvent(
+                                message=str(llm_response.message),
+                                turn_number=final_turn_number,
+                                is_multiturn=True,
+                                agent_role=self.role,
+                            ),
+                        )
+                        crewai_event_bus.emit(
+                            None,
+                            A2AConversationCompletedEvent(
+                                status="completed",
+                                final_result=str(llm_response.message),
+                                error=None,
+                                total_turns=final_turn_number,
+                            ),
+                        )
+                        return str(llm_response.message)
+                    current_request = str(llm_response.message)
+                elif isinstance(llm_response, BaseModel):
+                    final_result = llm_response.model_dump_json()
+                    final_turn_number = turn_num + 1
+                    crewai_event_bus.emit(
+                        None,
+                        A2AConversationCompletedEvent(
+                            status="completed",
+                            final_result=final_result,
+                            error=None,
+                            total_turns=final_turn_number,
+                        ),
+                    )
+                    return final_result
+                continue
+
             if a2a_result["status"] == "input_required":
                 task.description = _augment_prompt_with_a2a(
                     self,
@@ -436,6 +492,27 @@ def _delegate_to_a2a(
                 ),
             )
             raise Exception(f"A2A delegation failed: {error_msg}")
+
+        if conversation_history:
+            for msg in reversed(conversation_history):
+                if msg.role == Role.agent:
+                    text_parts = [
+                        part.root.text for part in msg.parts if part.root.kind == "text"
+                    ]
+                    final_message = (
+                        " ".join(text_parts) if text_parts else "Conversation completed"
+                    )
+                    crewai_event_bus.emit(
+                        None,
+                        A2AConversationCompletedEvent(
+                            status="completed",
+                            final_result=final_message,
+                            error=None,
+                            total_turns=max_turns,
+                        ),
+                    )
+                    return final_message
+
         crewai_event_bus.emit(
             None,
             A2AConversationCompletedEvent(

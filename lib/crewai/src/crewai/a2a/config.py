@@ -9,12 +9,14 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
+from crewai.a2a.auth.schemas import AuthScheme
+
 
 class A2AConfig(BaseModel):
     """Configuration for A2A protocol integration."""
 
     endpoint: str = Field(description="A2A agent endpoint URL")
-    auth: Any = Field(
+    auth: AuthScheme | None = Field(
         default=None,
         description="Authentication scheme (Bearer, OAuth2, API Key, HTTP Basic/Digest)",
     )
