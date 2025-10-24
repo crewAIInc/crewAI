@@ -117,6 +117,7 @@ class CrewDoclingSource(BaseKnowledgeSource):
                 InputFormat.IMAGE,
                 InputFormat.XLSX,
                 InputFormat.PPTX,
+                InputFormat.CSV,
             ]
         )
         self.content = self._load_content()
