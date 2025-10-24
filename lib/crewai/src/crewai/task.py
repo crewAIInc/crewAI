@@ -87,6 +87,7 @@ class Task(BaseModel):
 
     __hash__ = object.__hash__
     logger: ClassVar[logging.Logger] = logging.getLogger(__name__)
+    metadata: dict[str, Any] | None = Field(default=None, description="Metadata for the task.")
     used_tools: int = 0
     tools_errors: int = 0
     delegations: int = 0

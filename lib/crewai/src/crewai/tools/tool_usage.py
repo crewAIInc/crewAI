@@ -249,16 +249,16 @@ class ToolUsage:
                         }
                         # Add fingerprint metadata if available
                         arguments = self._add_fingerprint_metadata(arguments)
-                        result = tool.invoke(input=arguments)
+                        result = tool.invoke(input=arguments, metadata=self.task.metadata)
                     except Exception:
                         arguments = calling.arguments
                         # Add fingerprint metadata if available
                         arguments = self._add_fingerprint_metadata(arguments)
-                        result = tool.invoke(input=arguments)
+                        result = tool.invoke(input=arguments, metadata=self.task.metadata)
                 else:
                     # Add fingerprint metadata even to empty arguments
                     arguments = self._add_fingerprint_metadata({})
-                    result = tool.invoke(input=arguments)
+                    result = tool.invoke(input=arguments, metadata=self.task.metadata)
             except Exception as e:
                 self.on_tool_error(tool=tool, tool_calling=calling, e=e)
                 self._run_attempts += 1
