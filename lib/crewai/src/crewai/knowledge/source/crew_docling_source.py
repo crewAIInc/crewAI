@@ -39,7 +39,7 @@ from crewai.utilities.logger import Logger
 
 
 # Safe default; will be overwritten at runtime if docling is present
-DoclingConversionError: type[Exception] = Exception
+DoclingConversionError: type[BaseException] | None = None
 
 
 class CrewDoclingSource(BaseKnowledgeSource):
@@ -89,23 +89,25 @@ class CrewDoclingSource(BaseKnowledgeSource):
         # Resolve ConversionError dynamically (no static import)
         try:
             exc_mod = importlib.import_module("docling.exceptions")
-            exc_cls = getattr(exc_mod, "ConversionError", Exception)
-            if isinstance(exc_cls, type) and issubclass(exc_cls, Exception):
+            exc_cls = getattr(exc_mod, "ConversionError", None)
+            if isinstance(exc_cls, type) and issubclass(exc_cls, BaseException):
                 global DoclingConversionError
                 DoclingConversionError = exc_cls
             else:
                 self._logger.log(
                     "warning",
-                    "docling.exceptions.ConversionError not a subclass of Exception; using Exception fallback.",
+                    "docling.exceptions.ConversionError not found or invalid; using generic handling.",
                     color="yellow",
                 )
+                DoclingConversionError = None
         except Exception as err:
             # Log instead of bare `pass` to satisfy ruff S110
             self._logger.log(
                 "warning",
-                f"docling.exceptions not available ({err!s}); using Exception fallback.",
+                f"docling.exceptions not available ({err!s}); using generic handling.",
                 color="yellow",
             )
+            DoclingConversionError = None
 
         self.document_converter = document_converter_cls(
             allowed_formats=[
@@ -125,15 +127,17 @@ class CrewDoclingSource(BaseKnowledgeSource):
     def _load_content(self) -> list[Any]:
         try:
             return self._convert_source_to_docling_documents()
-        except DoclingConversionError as e:
-            self._logger.log(
-                "error",
-                f"Error loading content: {e}. Supported formats: {self.document_converter.allowed_formats}",
-                "red",
-            )
-            raise
         except Exception as e:
-            self._logger.log("error", f"Error loading content: {e}")
+            if DoclingConversionError is not None and isinstance(
+                e, DoclingConversionError
+            ):
+                self._logger.log(
+                    "error",
+                    f"Error loading content: {e}. Supported formats: {self.document_converter.allowed_formats}",
+                    "red",
+                )
+            else:
+                self._logger.log("error", f"Error loading content: {e}")
             raise
 
     def add(self) -> None:
@@ -163,19 +167,21 @@ class CrewDoclingSource(BaseKnowledgeSource):
         try:
             result = self.document_converter.convert(fp)
             return result.document, fp
-        except DoclingConversionError as e:
-            self._logger.log(
-                "warning",
-                f"Skipping {fp!s}: conversion failed with {e!s}",
-                color="yellow",
-            )
-            return None
         except Exception as e:
-            self._logger.log(
-                "warning",
-                f"Skipping {fp!s}: unexpected error during conversion {e!s}",
-                color="yellow",
-            )
+            if DoclingConversionError is not None and isinstance(
+                e, DoclingConversionError
+            ):
+                self._logger.log(
+                    "warning",
+                    f"Skipping {fp!s}: conversion failed with {e!s}",
+                    color="yellow",
+                )
+            else:
+                self._logger.log(
+                    "warning",
+                    f"Skipping {fp!s}: unexpected error during conversion {e!s}",
+                    color="yellow",
+                )
             return None
 
     def _convert_source_to_docling_documents(self) -> list[Any]:
