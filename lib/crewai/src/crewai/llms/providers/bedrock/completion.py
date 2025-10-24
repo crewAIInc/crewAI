@@ -240,6 +240,7 @@ class BedrockCompletion(BaseLLM):
         available_functions: dict[str, Any] | None = None,
         from_task: Any | None = None,
         from_agent: Any | None = None,
+        response_model: type[BaseModel] | None = None,
     ) -> str | Any:
         """Call AWS Bedrock Converse API."""
         try:

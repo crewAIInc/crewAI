@@ -32,7 +32,7 @@ from pydantic_core import PydanticCustomError
 
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.events.event_bus import crewai_event_bus
-from crewai.events.event_types import (
+from crewai.events.types.task_events import (
     TaskCompletedEvent,
     TaskFailedEvent,
     TaskStartedEvent,
@@ -121,6 +121,10 @@ class Task(BaseModel):
     )
     output_pydantic: type[BaseModel] | None = Field(
         description="A Pydantic model to be used to create a Pydantic output.",
+        default=None,
+    )
+    response_model: type[BaseModel] | None = Field(
+        description="A Pydantic model for structured LLM outputs using native provider features.",
         default=None,
     )
     output_file: str | None = Field(

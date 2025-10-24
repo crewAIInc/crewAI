@@ -2,7 +2,7 @@ from collections.abc import Sequence
 import threading
 from typing import Any
 
-from crewai.agent import Agent
+from crewai.agent.core import Agent
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.agent_events import (

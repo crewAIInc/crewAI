@@ -18,6 +18,7 @@ from pydantic import (
 from pydantic_core import PydanticCustomError
 from typing_extensions import Self
 
+from crewai.agent.internal.meta import AgentMeta
 from crewai.agents.agent_builder.utilities.base_token_process import TokenProcess
 from crewai.agents.cache.cache_handler import CacheHandler
 from crewai.agents.tools_handler import ToolsHandler
@@ -56,7 +57,7 @@ PlatformApp = Literal[
 PlatformAppOrAction = PlatformApp | str
 
 
-class BaseAgent(BaseModel, ABC):
+class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
     """Abstract Base Class for all third party agents compatible with CrewAI.
 
     Attributes:
