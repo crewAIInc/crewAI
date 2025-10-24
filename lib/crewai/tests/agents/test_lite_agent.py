@@ -595,6 +595,7 @@ def test_lite_agent_with_invalid_llm():
 
 @patch.dict("os.environ", {"CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token"})
 @patch("crewai_tools.tools.crewai_platform_tools.crewai_platform_tool_builder.requests.get")
+@pytest.mark.vcr(filter_headers=["authorization"])
 def test_agent_kickoff_with_platform_tools(mock_get):
     """Test that Agent.kickoff() properly integrates platform tools with LiteAgent"""
     mock_response = Mock()
@@ -636,6 +637,7 @@ def test_agent_kickoff_with_platform_tools(mock_get):
 
 @patch.dict("os.environ", {"EXA_API_KEY": "test_exa_key"})
 @patch("crewai.agent.Agent._get_external_mcp_tools")
+@pytest.mark.vcr(filter_headers=["authorization"])
 def test_agent_kickoff_with_mcp_tools(mock_get_mcp_tools):
     """Test that Agent.kickoff() properly integrates MCP tools with LiteAgent"""
     # Setup mock MCP tools - create a proper BaseTool instance
