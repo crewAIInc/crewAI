@@ -311,6 +311,11 @@ def should_auto_collect_first_time_traces() -> bool:
     """True if we should auto-collect traces for first-time user."""
     if _is_test_environment():
         return False
+    
+    env_value = os.getenv("CREWAI_TRACING_ENABLED", "").lower()
+    if env_value == "false":
+        return False
+    
     return is_first_execution()
 
 

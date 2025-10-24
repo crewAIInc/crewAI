@@ -447,7 +447,6 @@ class TestTraceListenerSetup:
         """Test first-time user trace collection logic with timeout behavior"""
 
         with (
-            patch.dict(os.environ, {"CREWAI_TRACING_ENABLED": "false"}),
             patch(
                 "crewai.events.listeners.tracing.utils._is_test_environment",
                 return_value=False,
@@ -519,7 +518,6 @@ class TestTraceListenerSetup:
         """Test first-time user trace collection when user accepts viewing traces"""
 
         with (
-            patch.dict(os.environ, {"CREWAI_TRACING_ENABLED": "false"}),
             patch(
                 "crewai.events.listeners.tracing.utils._is_test_environment",
                 return_value=False,
@@ -600,7 +598,6 @@ class TestTraceListenerSetup:
     def test_first_time_user_trace_consolidation_logic(self, mock_plus_api_calls):
         """Test the consolidation logic for first-time users vs regular tracing"""
         with (
-            patch.dict(os.environ, {"CREWAI_TRACING_ENABLED": "false"}),
             patch(
                 "crewai.events.listeners.tracing.utils._is_test_environment",
                 return_value=False,
@@ -756,3 +753,105 @@ class TestTraceListenerSetup:
                 mock_mark_failed.assert_called_once()
                 call_args = mock_mark_failed.call_args_list[0]
                 assert call_args[0][1] == "Internal Server Error"
+
+    def test_no_tracing_prompt_when_explicitly_disabled(self):
+        """Test for issue #3789: No tracing prompt when CREWAI_TRACING_ENABLED=false"""
+        with (
+            patch.dict(os.environ, {"CREWAI_TRACING_ENABLED": "false"}),
+            patch(
+                "crewai.events.listeners.tracing.utils._is_test_environment",
+                return_value=False,
+            ),
+            patch(
+                "crewai.events.listeners.tracing.utils.is_first_execution",
+                return_value=True,
+            ),
+        ):
+            from crewai.events.listeners.tracing.utils import (
+                should_auto_collect_first_time_traces,
+            )
+
+            result = should_auto_collect_first_time_traces()
+            assert result is False, (
+                "should_auto_collect_first_time_traces should return False "
+                "when CREWAI_TRACING_ENABLED=false, even for first-time users"
+            )
+
+    def test_no_trace_listener_when_tracing_disabled_and_first_time(self):
+        """Test for issue #3789: TraceCollectionListener not instantiated when tracing disabled"""
+        with (
+            patch.dict(os.environ, {"CREWAI_TRACING_ENABLED": "false"}),
+            patch(
+                "crewai.events.listeners.tracing.utils._is_test_environment",
+                return_value=False,
+            ),
+            patch(
+                "crewai.events.listeners.tracing.utils.is_first_execution",
+                return_value=True,
+            ),
+        ):
+            agent = Agent(
+                role="Test Agent",
+                goal="Test goal",
+                backstory="Test backstory",
+                llm="gpt-4o-mini",
+            )
+            task = Task(
+                description="Say hello",
+                expected_output="hello",
+                agent=agent,
+            )
+            crew = Crew(agents=[agent], tasks=[task], tracing=False)
+
+            from crewai.events.event_bus import crewai_event_bus
+
+            trace_handlers = []
+            with crewai_event_bus._rwlock.r_locked():
+                for handlers in crewai_event_bus._sync_handlers.values():
+                    for handler in handlers:
+                        if hasattr(handler, "__self__") and isinstance(
+                            handler.__self__, TraceCollectionListener
+                        ):
+                            trace_handlers.append(handler)
+
+            assert len(trace_handlers) == 0, (
+                f"TraceCollectionListener should not be instantiated when "
+                f"CREWAI_TRACING_ENABLED=false and tracing=False, "
+                f"but found {len(trace_handlers)} handlers"
+            )
+
+    def test_no_prompt_during_execution_when_tracing_disabled(self, mock_plus_api_calls):
+        """Test for issue #3789: No prompt during execution when tracing disabled"""
+        with (
+            patch.dict(os.environ, {"CREWAI_TRACING_ENABLED": "false"}),
+            patch(
+                "crewai.events.listeners.tracing.utils._is_test_environment",
+                return_value=False,
+            ),
+            patch(
+                "crewai.events.listeners.tracing.utils.is_first_execution",
+                return_value=True,
+            ),
+            patch(
+                "crewai.events.listeners.tracing.first_time_trace_handler.prompt_user_for_trace_viewing"
+            ) as mock_prompt,
+        ):
+            from crewai.events.event_bus import crewai_event_bus
+
+            trace_handlers = []
+            with crewai_event_bus._rwlock.r_locked():
+                for handlers in crewai_event_bus._sync_handlers.values():
+                    for handler in handlers:
+                        if hasattr(handler, "__self__") and isinstance(
+                            handler.__self__, TraceCollectionListener
+                        ):
+                            trace_handlers.append(handler)
+
+            assert len(trace_handlers) == 0, (
+                "TraceCollectionListener should not be instantiated"
+            )
+
+            mock_prompt.assert_not_called(), (
+                "prompt_user_for_trace_viewing should not be called when "
+                "CREWAI_TRACING_ENABLED=false and tracing=False"
+            )
