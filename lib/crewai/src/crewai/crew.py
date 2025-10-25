@@ -779,7 +779,7 @@ class Crew(FlowTrackable, BaseModel):
         """Handles the Crew planning."""
         self._logger.log("info", "Planning the crew execution")
         result = CrewPlanner(
-            tasks=self.tasks, planning_agent_llm=self.planning_llm
+            tasks=self.tasks, planning_agent_llm=self.planning_llm, crew=self
         )._handle_crew_planning()
 
         for task, step_plan in zip(

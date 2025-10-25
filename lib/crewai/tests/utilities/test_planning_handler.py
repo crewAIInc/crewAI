@@ -13,7 +13,7 @@ from crewai.utilities.planning_handler import (
 )
 
 
-class InternalCrewPlanner:
+class TestCrewPlanner:
     @pytest.fixture
     def crew_planner(self):
         tasks = [
@@ -177,3 +177,25 @@ class InternalCrewPlanner:
                 crew_planner_different_llm.tasks
             )
             execute.assert_called_once()
+
+    def test_planning_agent_has_crew_attribute(self):
+        """Test that planning agent has crew attribute set to avoid EventBus errors."""
+        from crewai.crew import Crew
+
+        # Create a crew with planning enabled
+        agent = Agent(role="Test Agent", goal="Test Goal", backstory="Test Backstory")
+        task = Task(
+            description="Test task",
+            expected_output="Test output",
+            agent=agent,
+        )
+        crew = Crew(agents=[agent], tasks=[task], planning=True)
+
+        planner = CrewPlanner(tasks=[task], planning_agent_llm="gpt-4o-mini", crew=crew)
+        planning_agent = planner._create_planning_agent()
+
+        # Verify the planning agent has crew attribute set
+        assert planning_agent.crew is not None
+        assert planning_agent.crew == crew
+        # Verify that accessing agent.crew.key doesn't raise an error
+        assert planning_agent.crew.key is not None
