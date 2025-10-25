@@ -5,6 +5,7 @@ import subprocess
 import click
 
 from crewai.cli.add_crew_to_flow import add_crew_to_flow
+from crewai.cli.agentsmd.main import AgentsMDCommand
 from crewai.cli.authentication.main import AuthenticationCommand
 from crewai.cli.config import Settings
 from crewai.cli.create_crew import create_crew
@@ -29,7 +30,6 @@ from crewai.cli.utils import build_env_with_tool_repository_credentials, read_to
 from crewai.memory.storage.kickoff_task_outputs_storage import (
     KickoffTaskOutputsSQLiteStorage,
 )
-
 
 @click.group()
 @click.version_option(get_version("crewai"))
@@ -491,6 +491,19 @@ def config_reset():
     """Reset all CLI configuration parameters to default values."""
     config_command = SettingsCommand()
     config_command.reset_all_settings()
+
+
+@crewai.group()
+def agentsmd():
+    """Agents.md related commands for IDE integration."""
+
+
+@agentsmd.command(name="install")
+@click.argument("ide_name", type=click.Choice(["cursor", "windsurf", "claude-code", "gemini-cli"]))
+def agentsmd_install(ide_name: str):
+    """Install agents.md file to the specified IDE's rules directory."""
+    agentsmd_cmd = AgentsMDCommand()
+    agentsmd_cmd.install(ide_name)
 
 
 if __name__ == "__main__":
