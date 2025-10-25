@@ -233,6 +233,10 @@ class Crew(FlowTrackable, BaseModel):
         default=None,
         description="Path to the prompt json file to be used for the crew.",
     )
+    language: str | None = Field(
+        default=None,
+        description="Language code for the crew's prompts (e.g., 'en', 'es', 'pt'). If not set, defaults to 'en'.",
+    )
     output_log_file: bool | str | None = Field(
         default=None,
         description="Path to the log file to be saved",
@@ -684,7 +688,10 @@ class Crew(FlowTrackable, BaseModel):
             self._set_tasks_callbacks()
             self._set_allow_crewai_trigger_context_for_first_task()
 
-            i18n = I18N(prompt_file=self.prompt_file)
+            i18n = I18N(
+                prompt_file=self.prompt_file,
+                language=self.language if self.language else "en",
+            )
 
             for agent in self.agents:
                 agent.i18n = i18n
@@ -826,7 +833,10 @@ class Crew(FlowTrackable, BaseModel):
         return self._execute_tasks(self.tasks)
 
     def _create_manager_agent(self):
-        i18n = I18N(prompt_file=self.prompt_file)
+        i18n = I18N(
+            prompt_file=self.prompt_file,
+            language=self.language if self.language else "en",
+        )
         if self.manager_agent is not None:
             self.manager_agent.allow_delegation = True
             manager = self.manager_agent

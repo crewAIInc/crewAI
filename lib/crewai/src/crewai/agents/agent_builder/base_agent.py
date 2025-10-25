@@ -148,6 +148,10 @@ class BaseAgent(BaseModel, ABC):
         default=None, description="Language model that will run the agent."
     )
     crew: Any = Field(default=None, description="Crew to which the agent belongs.")
+    language: str | None = Field(
+        default=None,
+        description="Language code for the agent's prompts (e.g., 'en', 'es', 'pt'). If not set, defaults to 'en'.",
+    )
     i18n: I18N = Field(
         default_factory=I18N, description="Internationalization settings."
     )
@@ -288,6 +292,10 @@ class BaseAgent(BaseModel, ABC):
         # Initialize security_config if not provided
         if self.security_config is None:
             self.security_config = SecurityConfig()
+
+        # Initialize i18n with language if provided
+        if self.language:
+            self.i18n = I18N(language=self.language)
 
         return self
 
