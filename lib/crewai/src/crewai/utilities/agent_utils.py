@@ -196,10 +196,17 @@ def format_answer(answer: str) -> AgentAction | AgentFinish:
 
     Returns:
         Either an AgentAction or AgentFinish
+
+    Raises:
+        OutputParserError: If the LLM response format is invalid, allowing
+            the retry logic in _invoke_loop() to handle it.
     """
     try:
         return parse(answer)
+    except OutputParserError:
+        raise
     except Exception:
+        # For unexpected errors, return a default AgentFinish
         return AgentFinish(
             thought="Failed to parse LLM response",
             output=answer,
