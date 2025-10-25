@@ -1,0 +1,19 @@
+# Core CrewAI dependencies
+crewai>=0.28.0
+crewai-tools>=0.1.0
+
+# LLM and AI
+openai>=1.0.0
+
+# Optional: Enhanced research tools
+# Uncomment these if you want to use additional research capabilities
+# serper-python>=0.1.0
+# tavily-python>=0.3.0
+
+# Utilities
+python-dotenv>=1.0.0
+pydantic>=2.0.0
+
+# Optional: For advanced features
+# langchain>=0.1.0
+# chromadb>=0.4.0

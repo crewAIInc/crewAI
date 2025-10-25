@@ -1,0 +1,131 @@
+plan_content:
+  description: >
+    Create a comprehensive content plan and outline for an article about {topic}.
+    The plan should include:
+    - Target audience analysis
+    - Main article angle and hook
+    - Detailed outline with sections and subsections
+    - Key points to cover in each section
+    - Suggested content format (how-to, listicle, guide, etc.)
+    - Estimated word count for each section
+
+    Consider the content goal: {content_goal}
+  expected_output: >
+    A detailed content plan with a complete outline, including:
+    - Article title (3-5 options)
+    - Target audience definition
+    - Main sections with subsections
+    - Key talking points for each section
+    - Content structure and flow
+    - Total estimated word count
+  agent: content_planner
+
+research_topic:
+  description: >
+    Conduct comprehensive research on {topic} to support the content plan.
+    Find and compile:
+    - Latest statistics and data points (with sources)
+    - Expert opinions and quotes
+    - Real-world examples and case studies
+    - Common questions and pain points
+    - Trending subtopics and angles
+    - Credible sources and references
+
+    Focus on information that aligns with: {content_goal}
+  expected_output: >
+    A well-organized research report containing:
+    - 10-15 key statistics with sources
+    - 5-7 expert insights or quotes
+    - 3-5 relevant examples or case studies
+    - List of common questions about the topic
+    - Bibliography of credible sources
+    All information must be accurate, recent (preferably within last 2 years), and properly cited.
+  agent: researcher
+
+write_article:
+  description: >
+    Write a comprehensive, engaging article about {topic} based on the content plan and research.
+
+    Requirements:
+    - Follow the approved content outline
+    - Incorporate research findings naturally
+    - Write in an engaging, conversational tone
+    - Use clear, simple language
+    - Include relevant examples and data
+    - Add subheadings for better readability
+    - Aim for {word_count} words
+    - Include a compelling introduction and strong conclusion
+    - Focus on providing actionable value to readers
+
+    Align the content with: {content_goal}
+  expected_output: >
+    A complete article in markdown format with:
+    - Compelling headline
+    - Engaging introduction (150-200 words)
+    - Well-structured body sections with subheadings
+    - Data and examples integrated throughout
+    - Actionable takeaways
+    - Strong conclusion with call-to-action
+    - Approximately {word_count} words total
+    - Proper markdown formatting
+  agent: content_writer
+  output_file: output/draft_article.md
+
+optimize_seo:
+  description: >
+    Optimize the written article for search engines while maintaining quality and readability.
+
+    Tasks:
+    - Identify primary and secondary keywords related to {topic}
+    - Optimize the headline for SEO and click-through rate
+    - Ensure keyword density is natural (1-2% for primary keyword)
+    - Add meta description (150-160 characters)
+    - Optimize subheadings with keywords
+    - Suggest internal and external linking opportunities
+    - Ensure content answers common search queries
+    - Verify content structure is SEO-friendly
+    - Check readability score (aim for 60+ on Flesch Reading Ease)
+  expected_output: >
+    SEO optimization report including:
+    - Primary keyword and 3-5 secondary keywords
+    - SEO-optimized headline (2-3 options)
+    - Meta description (150-160 characters, 2 options)
+    - List of subheadings with keyword integration
+    - 5-7 internal linking suggestions
+    - 3-5 authoritative external linking opportunities
+    - Keyword placement recommendations
+    - Readability assessment and suggestions
+  agent: seo_specialist
+
+edit_and_polish:
+  description: >
+    Review and edit the article to ensure it meets the highest quality standards.
+
+    Review for:
+    - Grammar, spelling, and punctuation
+    - Clarity and flow
+    - Factual accuracy
+    - Consistency in tone and style
+    - Proper implementation of SEO recommendations
+    - Value delivery and reader engagement
+    - Call-to-action effectiveness
+    - Overall structure and organization
+
+    Make necessary improvements while preserving the writer's voice.
+  expected_output: >
+    The final, polished article in markdown format with:
+    - All grammar and spelling errors corrected
+    - Improved clarity and flow
+    - SEO elements properly integrated
+    - Enhanced readability
+    - Fact-checked content
+    - Optimized headlines and subheadings
+    - Meta description included at the top
+    - Ready for publication
+
+    Also include a brief editor's note highlighting:
+    - Major changes made
+    - Strengths of the article
+    - Any recommendations for promotion or distribution
+  agent: editor
+  output_file: output/final_article.md
