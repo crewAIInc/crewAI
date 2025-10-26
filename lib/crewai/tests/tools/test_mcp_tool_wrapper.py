@@ -1,6 +1,8 @@
 """Tests for MCPToolWrapper progress and headers support."""
 
 import asyncio
+import sys
+import types
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
@@ -8,6 +10,33 @@ import pytest
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.tool_usage_events import MCPToolProgressEvent
 from crewai.tools.mcp_tool_wrapper import MCPToolWrapper
+
+
+@pytest.fixture(autouse=True)
+def stub_mcp_modules(monkeypatch):
+    """Stub the mcp modules in sys.modules to avoid import errors in CI."""
+    mcp = types.ModuleType("mcp")
+    mcp_client = types.ModuleType("mcp.client")
+    mcp_streamable_http = types.ModuleType("mcp.client.streamable_http")
+    
+    mcp.ClientSession = MagicMock()
+    
+    async def fake_streamablehttp_client(*args, **kwargs):
+        """Mock streamablehttp_client context manager."""
+        class MockContextManager:
+            async def __aenter__(self):
+                return (AsyncMock(), AsyncMock(), AsyncMock())
+            
+            async def __aexit__(self, *exc):
+                pass
+        
+        return MockContextManager()
+    
+    mcp_streamable_http.streamablehttp_client = fake_streamablehttp_client
+    
+    monkeypatch.setitem(sys.modules, "mcp", mcp)
+    monkeypatch.setitem(sys.modules, "mcp.client", mcp_client)
+    monkeypatch.setitem(sys.modules, "mcp.client.streamable_http", mcp_streamable_http)
 
 
 @pytest.fixture
@@ -119,8 +148,8 @@ class TestMCPToolWrapperProgress:
         mock_result = Mock()
         mock_result.content = [Mock(text="Test result")]
         
-        with patch("mcp.client.streamable_http.streamablehttp_client") as mock_client, \
-             patch("mcp.ClientSession") as mock_session_class:
+        with patch("crewai.tools.mcp_tool_wrapper.streamablehttp_client") as mock_client, \
+             patch("crewai.tools.mcp_tool_wrapper.ClientSession") as mock_session_class:
             
             mock_session = AsyncMock()
             mock_session.initialize = AsyncMock()
@@ -243,8 +272,8 @@ class TestMCPToolWrapperHeaders:
         mock_result = Mock()
         mock_result.content = [Mock(text="Test result")]
         
-        with patch("mcp.client.streamable_http.streamablehttp_client") as mock_client, \
-             patch("mcp.ClientSession") as mock_session_class:
+        with patch("crewai.tools.mcp_tool_wrapper.streamablehttp_client") as mock_client, \
+             patch("crewai.tools.mcp_tool_wrapper.ClientSession") as mock_session_class:
             
             mock_session = AsyncMock()
             mock_session.initialize = AsyncMock()
@@ -277,8 +306,8 @@ class TestMCPToolWrapperHeaders:
         mock_result = Mock()
         mock_result.content = [Mock(text="Test result")]
         
-        with patch("mcp.client.streamable_http.streamablehttp_client") as mock_client, \
-             patch("mcp.ClientSession") as mock_session_class:
+        with patch("crewai.tools.mcp_tool_wrapper.streamablehttp_client") as mock_client, \
+             patch("crewai.tools.mcp_tool_wrapper.ClientSession") as mock_session_class:
             
             mock_session = AsyncMock()
             mock_session.initialize = AsyncMock()
@@ -326,8 +355,8 @@ class TestMCPToolWrapperIntegration:
         mock_result = Mock()
         mock_result.content = [Mock(text="Test result")]
         
-        with patch("mcp.client.streamable_http.streamablehttp_client") as mock_client, \
-             patch("mcp.ClientSession") as mock_session_class:
+        with patch("crewai.tools.mcp_tool_wrapper.streamablehttp_client") as mock_client, \
+             patch("crewai.tools.mcp_tool_wrapper.ClientSession") as mock_session_class:
             
             mock_session = AsyncMock()
             mock_session.initialize = AsyncMock()
