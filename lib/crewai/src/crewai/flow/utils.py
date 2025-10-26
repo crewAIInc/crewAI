@@ -74,11 +74,22 @@ def get_possible_return_constants(function: Any) -> list[str] | None:
         _printer.print(f"Source code:\n{source}", color="yellow")
         return None
 
-    return_values = set()
-    dict_definitions = {}
+    return_values: set[str] = set()
+    dict_definitions: dict[str, list[str]] = {}
+    variable_values: dict[str, list[str]] = {}
 
-    class DictionaryAssignmentVisitor(ast.NodeVisitor):
-        def visit_Assign(self, node):
+    def extract_string_constants(node: ast.expr) -> list[str]:
+        """Recursively extract all string constants from an AST node."""
+        strings: list[str] = []
+        if isinstance(node, ast.Constant) and isinstance(node.value, str):
+            strings.append(node.value)
+        elif isinstance(node, ast.IfExp):
+            strings.extend(extract_string_constants(node.body))
+            strings.extend(extract_string_constants(node.orelse))
+        return strings
+
+    class VariableAssignmentVisitor(ast.NodeVisitor):
+        def visit_Assign(self, node: ast.Assign) -> None:
             # Check if this assignment is assigning a dictionary literal to a variable
             if isinstance(node.value, ast.Dict) and len(node.targets) == 1:
                 target = node.targets[0]
@@ -92,29 +103,50 @@ def get_possible_return_constants(function: Any) -> list[str] | None:
                     ]
                     if dict_values:
                         dict_definitions[var_name] = dict_values
+
+            if len(node.targets) == 1:
+                target = node.targets[0]
+                var_name_alt: str | None = None
+                if isinstance(target, ast.Name):
+                    var_name_alt = target.id
+                elif isinstance(target, ast.Attribute):
+                    var_name_alt = f"{target.value.id if isinstance(target.value, ast.Name) else '_'}.{target.attr}"
+
+                if var_name_alt:
+                    strings = extract_string_constants(node.value)
+                    if strings:
+                        variable_values[var_name_alt] = strings
+
             self.generic_visit(node)
 
     class ReturnVisitor(ast.NodeVisitor):
-        def visit_Return(self, node):
-            # Direct string return
-            if isinstance(node.value, ast.Constant) and isinstance(
-                node.value.value, str
+        def visit_Return(self, node: ast.Return) -> None:
+            if (
+                node.value
+                and isinstance(node.value, ast.Constant)
+                and isinstance(node.value.value, str)
             ):
                 return_values.add(node.value.value)
-            # Dictionary-based return, like return paths[result]
-            elif isinstance(node.value, ast.Subscript):
-                # Check if we're subscripting a known dictionary variable
+            elif node.value and isinstance(node.value, ast.Subscript):
                 if isinstance(node.value.value, ast.Name):
-                    var_name = node.value.value.id
-                    if var_name in dict_definitions:
-                        # Add all possible dictionary values
-                        for v in dict_definitions[var_name]:
+                    var_name_dict = node.value.value.id
+                    if var_name_dict in dict_definitions:
+                        for v in dict_definitions[var_name_dict]:
                             return_values.add(v)
+            elif node.value:
+                var_name_ret: str | None = None
+                if isinstance(node.value, ast.Name):
+                    var_name_ret = node.value.id
+                elif isinstance(node.value, ast.Attribute):
+                    var_name_ret = f"{node.value.value.id if isinstance(node.value.value, ast.Name) else '_'}.{node.value.attr}"
+
+                if var_name_ret and var_name_ret in variable_values:
+                    for v in variable_values[var_name_ret]:
+                        return_values.add(v)
+
             self.generic_visit(node)
 
-    # First pass: identify dictionary assignments
-    DictionaryAssignmentVisitor().visit(code_ast)
-    # Second pass: identify returns
+    VariableAssignmentVisitor().visit(code_ast)
     ReturnVisitor().visit(code_ast)
 
     return list(return_values) if return_values else None
@@ -158,7 +190,17 @@ def calculate_node_levels(flow: Any) -> dict[str, int]:
     # Precompute listener dependencies
     or_listeners = defaultdict(list)
     and_listeners = defaultdict(set)
-    for listener_name, (condition_type, trigger_methods) in flow._listeners.items():
+    for listener_name, condition_data in flow._listeners.items():
+        if isinstance(condition_data, tuple):
+            condition_type, trigger_methods = condition_data
+        elif isinstance(condition_data, dict):
+            from crewai.flow.flow import _extract_all_methods_recursive
+
+            trigger_methods = _extract_all_methods_recursive(condition_data, flow)
+            condition_type = condition_data.get("type", "OR")
+        else:
+            continue
+
         if condition_type == "OR":
             for method in trigger_methods:
                 or_listeners[method].append(listener_name)
@@ -192,8 +234,12 @@ def calculate_node_levels(flow: Any) -> dict[str, int]:
                         if listener_name not in visited:
                             queue.append(listener_name)
 
-        # Handle router connections
         process_router_paths(flow, current, current_level, levels, queue)
+
+    max_level = max(levels.values()) if levels else 0
+    for method_name in flow._methods:
+        if method_name not in levels:
+            levels[method_name] = max_level + 1
 
     return levels
 
@@ -215,8 +261,16 @@ def count_outgoing_edges(flow: Any) -> dict[str, int]:
     counts = {}
     for method_name in flow._methods:
         counts[method_name] = 0
-    for method_name in flow._listeners:
-        _, trigger_methods = flow._listeners[method_name]
+    for condition_data in flow._listeners.values():
+        if isinstance(condition_data, tuple):
+            _, trigger_methods = condition_data
+        elif isinstance(condition_data, dict):
+            from crewai.flow.flow import _extract_all_methods_recursive
+
+            trigger_methods = _extract_all_methods_recursive(condition_data, flow)
+        else:
+            continue
+
         for trigger in trigger_methods:
             if trigger in flow._methods:
                 counts[trigger] += 1
@@ -271,21 +325,38 @@ def dfs_ancestors(
         return
     visited.add(node)
 
-    # Handle regular listeners
-    for listener_name, (_, trigger_methods) in flow._listeners.items():
+    for listener_name, condition_data in flow._listeners.items():
+        if isinstance(condition_data, tuple):
+            _, trigger_methods = condition_data
+        elif isinstance(condition_data, dict):
+            from crewai.flow.flow import _extract_all_methods_recursive
+
+            trigger_methods = _extract_all_methods_recursive(condition_data, flow)
+        else:
+            continue
+
         if node in trigger_methods:
             ancestors[listener_name].add(node)
             ancestors[listener_name].update(ancestors[node])
             dfs_ancestors(listener_name, ancestors, visited, flow)
 
-    # Handle router methods separately
     if node in flow._routers:
         router_method_name = node
         paths = flow._router_paths.get(router_method_name, [])
         for path in paths:
-            for listener_name, (_, trigger_methods) in flow._listeners.items():
+            for listener_name, condition_data in flow._listeners.items():
+                if isinstance(condition_data, tuple):
+                    _, trigger_methods = condition_data
+                elif isinstance(condition_data, dict):
+                    from crewai.flow.flow import _extract_all_methods_recursive
+
+                    trigger_methods = _extract_all_methods_recursive(
+                        condition_data, flow
+                    )
+                else:
+                    continue
+
                 if path in trigger_methods:
-                    # Only propagate the ancestors of the router method, not the router method itself
                     ancestors[listener_name].update(ancestors[node])
                     dfs_ancestors(listener_name, ancestors, visited, flow)
 
@@ -335,19 +406,36 @@ def build_parent_children_dict(flow: Any) -> dict[str, list[str]]:
     """
     parent_children: dict[str, list[str]] = {}
 
-    # Map listeners to their trigger methods
-    for listener_name, (_, trigger_methods) in flow._listeners.items():
+    for listener_name, condition_data in flow._listeners.items():
+        if isinstance(condition_data, tuple):
+            _, trigger_methods = condition_data
+        elif isinstance(condition_data, dict):
+            from crewai.flow.flow import _extract_all_methods_recursive
+
+            trigger_methods = _extract_all_methods_recursive(condition_data, flow)
+        else:
+            continue
+
         for trigger in trigger_methods:
             if trigger not in parent_children:
                 parent_children[trigger] = []
             if listener_name not in parent_children[trigger]:
                 parent_children[trigger].append(listener_name)
 
-    # Map router methods to their paths and to listeners
     for router_method_name, paths in flow._router_paths.items():
         for path in paths:
-            # Map router method to listeners of each path
-            for listener_name, (_, trigger_methods) in flow._listeners.items():
+            for listener_name, condition_data in flow._listeners.items():
+                if isinstance(condition_data, tuple):
+                    _, trigger_methods = condition_data
+                elif isinstance(condition_data, dict):
+                    from crewai.flow.flow import _extract_all_methods_recursive
+
+                    trigger_methods = _extract_all_methods_recursive(
+                        condition_data, flow
+                    )
+                else:
+                    continue
+
                 if path in trigger_methods:
                     if router_method_name not in parent_children:
                         parent_children[router_method_name] = []
@@ -382,17 +470,29 @@ def get_child_index(
     return children.index(child)
 
 
-def process_router_paths(flow, current, current_level, levels, queue):
-    """
-    Handle the router connections for the current node.
-    """
+def process_router_paths(
+    flow: Any,
+    current: str,
+    current_level: int,
+    levels: dict[str, int],
+    queue: deque[str],
+) -> None:
+    """Handle the router connections for the current node."""
     if current in flow._routers:
         paths = flow._router_paths.get(current, [])
         for path in paths:
-            for listener_name, (
-                _condition_type,
-                trigger_methods,
-            ) in flow._listeners.items():
+            for listener_name, condition_data in flow._listeners.items():
+                if isinstance(condition_data, tuple):
+                    _condition_type, trigger_methods = condition_data
+                elif isinstance(condition_data, dict):
+                    from crewai.flow.flow import _extract_all_methods_recursive
+
+                    trigger_methods = _extract_all_methods_recursive(
+                        condition_data, flow
+                    )
+                else:
+                    continue
+
                 if path in trigger_methods:
                     if (
                         listener_name not in levels
@@ -413,7 +513,7 @@ def is_flow_method_name(obj: Any) -> TypeIs[FlowMethodName]:
     return isinstance(obj, str)
 
 
-def is_flow_method_callable(obj: Any) -> TypeIs[FlowMethodCallable]:
+def is_flow_method_callable(obj: Any) -> TypeIs[FlowMethodCallable[..., Any]]:
     """Check if the object is a callable flow method.
 
     Args:
