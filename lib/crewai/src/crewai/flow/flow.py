@@ -459,15 +459,14 @@ def _extract_all_methods(
     if is_flow_condition_dict(condition):
         normalized = _normalize_condition(condition)
         cond_type = normalized.get("type", OR_CONDITION)
-        methods = []
 
         if cond_type == AND_CONDITION:
-            for sub_cond in normalized.get("conditions", []):
-                if is_flow_method_name(sub_cond):
-                    methods.append(sub_cond)
-                elif is_flow_condition_dict(sub_cond):
-                    pass
-        return methods
+            return [
+                sub_cond
+                for sub_cond in normalized.get("conditions", [])
+                if is_flow_method_name(sub_cond)
+            ]
+        return []
     if isinstance(condition, list):
         methods = []
         for item in condition:
