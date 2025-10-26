@@ -90,6 +90,7 @@ from crewai.events.types.task_events import (
     TaskStartedEvent,
 )
 from crewai.events.types.tool_usage_events import (
+    MCPToolProgressEvent,
     ToolExecutionErrorEvent,
     ToolSelectionErrorEvent,
     ToolUsageErrorEvent,
@@ -156,6 +157,7 @@ __all__ = [
     "MethodExecutionFailedEvent",
     "MethodExecutionFinishedEvent",
     "MethodExecutionStartedEvent",
+    "MCPToolProgressEvent",
     "ReasoningEvent",
     "TaskCompletedEvent",
     "TaskEvaluationEvent",
