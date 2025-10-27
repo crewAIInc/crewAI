@@ -4,7 +4,7 @@ This module defines events emitted during A2A protocol delegation,
 including both single-turn and multiturn conversation flows.
 """
 
-from typing import Any
+from typing import Any, Literal
 
 from crewai.events.base_events import BaseEvent
 
@@ -135,7 +135,7 @@ class A2AConversationCompletedEvent(A2AEventBase):
     """
 
     type: str = "a2a_conversation_completed"
-    status: str
+    status: Literal["completed", "failed"]
     final_result: str | None = None
     error: str | None = None
     total_turns: int

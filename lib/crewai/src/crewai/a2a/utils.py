@@ -295,6 +295,7 @@ async def _execute_a2a_delegation_async(
     Returns:
         Dictionary with status, result/error, and new history
     """
+    print(f"@_execute_a2a_delegation_async: endpoint={endpoint}")
     if "/.well-known/agent-card.json" in endpoint:
         base_url = endpoint.replace("/.well-known/agent-card.json", "")
         agent_card_path = "/.well-known/agent-card.json"
@@ -374,25 +375,21 @@ async def _execute_a2a_delegation_async(
         ):
             task_id = conversation_history[0].task_id
 
+    parts = {"text": message_text}
     if response_model:
-        parts: list[Part] = [
-            Part(
-                root=TextPart(
-                    text=message_text,
-                    metadata={
-                        "mimeType": "application/json",
-                        "schema": response_model.model_json_schema(),
-                    },
-                )
-            )
-        ]
-    else:
-        parts: list[Part] = [Part(root=TextPart(text=message_text))]
+        parts.update(
+            {
+                "metadata": {
+                    "mimeType": "application/json",
+                    "schema": response_model.model_json_schema(),
+                }
+            }
+        )
 
     message = Message(
         role=Role.user,
         message_id=str(uuid.uuid4()),
-        parts=parts,
+        parts=[Part(root=TextPart(**parts))],
         context_id=context_id,
         task_id=task_id,
         reference_task_ids=reference_task_ids,
@@ -722,8 +719,8 @@ def create_agent_response_model(agent_ids: tuple[str, ...]) -> type[BaseModel]:
 
 
 def extract_a2a_agent_ids_from_config(
-    a2a_config: dict[str, A2AConfig] | A2AConfig | None,
-) -> tuple[dict[str, A2AConfig], tuple[str, ...]]:
+    a2a_config: list[A2AConfig] | A2AConfig | None,
+) -> tuple[list[A2AConfig], tuple[str, ...]]:
     """Extract A2A agent IDs from A2A configuration.
 
     Args:
@@ -733,19 +730,18 @@ def extract_a2a_agent_ids_from_config(
         List of A2A agent IDs
     """
     if a2a_config is None:
-        return {}, ()
+        return [], ()
 
-    a2a_agents: dict[str, A2AConfig]
-    if isinstance(a2a_config, dict):
-        a2a_agents = a2a_config
+    if isinstance(a2a_config, A2AConfig):
+        a2a_agents = [a2a_config]
     else:
-        a2a_agents = {a2a_config.endpoint: a2a_config}
-    return a2a_agents, tuple(a2a_agents.keys())
+        a2a_agents = a2a_config
+    return a2a_agents, tuple(config.endpoint for config in a2a_agents)
 
 
 def get_a2a_agents_and_response_model(
-    a2a_config: dict[str, A2AConfig] | A2AConfig | None,
-) -> tuple[dict[str, A2AConfig], type[BaseModel]]:
+    a2a_config: list[A2AConfig] | A2AConfig | None,
+) -> tuple[list[A2AConfig], type[BaseModel]]:
     """Get A2A agent IDs and response model.
 
     Args:

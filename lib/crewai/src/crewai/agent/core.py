@@ -8,6 +8,7 @@ import time
 from typing import (
     TYPE_CHECKING,
     Any,
+    Final,
     Literal,
     cast,
 )
@@ -68,14 +69,14 @@ if TYPE_CHECKING:
 
 
 # MCP Connection timeout constants (in seconds)
-MCP_CONNECTION_TIMEOUT = 10
-MCP_TOOL_EXECUTION_TIMEOUT = 30
-MCP_DISCOVERY_TIMEOUT = 15
-MCP_MAX_RETRIES = 3
+MCP_CONNECTION_TIMEOUT: Final[int] = 10
+MCP_TOOL_EXECUTION_TIMEOUT: Final[int] = 30
+MCP_DISCOVERY_TIMEOUT: Final[int] = 15
+MCP_MAX_RETRIES: Final[int] = 3
 
 # Simple in-memory cache for MCP tool schemas (duration: 5 minutes)
-_mcp_schema_cache = {}
-_cache_ttl = 300  # 5 minutes
+_mcp_schema_cache: dict[str, Any] = {}
+_cache_ttl: Final[int] = 300  # 5 minutes
 
 
 class Agent(BaseAgent):
@@ -195,7 +196,7 @@ class Agent(BaseAgent):
     guardrail_max_retries: int = Field(
         default=3, description="Maximum number of retries when guardrail fails"
     )
-    a2a: dict[str, A2AConfig] | A2AConfig | None = Field(
+    a2a: list[A2AConfig] | A2AConfig | None = Field(
         default=None,
         description="A2A (Agent-to-Agent) configuration for delegating tasks to remote agents. Can be a single A2AConfig or a dict mapping agent IDs to configs.",
     )

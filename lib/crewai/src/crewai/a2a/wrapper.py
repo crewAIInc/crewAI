@@ -6,11 +6,16 @@ Wraps agent classes with A2A delegation capabilities.
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Any, Protocol, cast, runtime_checkable
 
 from a2a.types import Role
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 
+from crewai.a2a.config import A2AConfig
+from crewai.a2a.templates import (
+    AVAILABLE_AGENTS_TEMPLATE,
+    PREVIOUS_A2A_CONVERSATION_TEMPLATE,
+)
 from crewai.a2a.utils import (
     create_agent_response_model,
     execute_a2a_delegation,
@@ -22,7 +27,6 @@ from crewai.a2a.utils import (
 if TYPE_CHECKING:
     from a2a.types import AgentCard, Message
 
-    from crewai.a2a.config import A2AConfig
     from crewai.agent.core import Agent
     from crewai.task import Task
     from crewai.tools.base_tool import BaseTool
@@ -74,19 +78,17 @@ def wrap_agent_with_a2a(
         if not self.a2a:
             return original_execute_task(self, task, context, tools)
 
-        a2a_agents: dict[str, A2AConfig]
-        if isinstance(self.a2a, dict):
-            a2a_agents = self.a2a
-        else:
-            a2a_agents = {self.a2a.endpoint: self.a2a}
-        agent_ids = tuple(a2a_agents.keys())
-        model: type[BaseModel] = create_agent_response_model(agent_ids)
+        a2a_configs: list[A2AConfig] = [self.a2a] if isinstance(self.a2a, A2AConfig) else self.a2a
+
+        agent_ids = tuple(config.endpoint for config in a2a_configs)
+        agent_response_model: type[BaseModel] = create_agent_response_model(agent_ids)
+
         return _execute_task_with_a2a(
             self=self,
-            a2a_agents=a2a_agents,
+            a2a_agents=a2a_configs,
             original_fn=original_execute_task,
             task=task,
-            model=model,
+            agent_response_model=agent_response_model,
             context=context,
             tools=tools,
         )
@@ -125,10 +127,10 @@ def _find_execute_task(
 
 def _execute_task_with_a2a(
     self: Agent,
-    a2a_agents: dict[str, A2AConfig],
+    a2a_agents: list[A2AConfig],
     original_fn: Callable[..., str],
     task: Task,
-    model: type[BaseModel],
+    agent_response_model: type[BaseModel],
     context: str | None,
     tools: list[BaseTool] | None,
 ) -> str:
@@ -139,9 +141,9 @@ def _execute_task_with_a2a(
         a2a_agents: Dictionary of A2A agent configurations
         original_fn: The original execute_task method
         task: The task to execute
-        model: The agent response model
         context: Optional context for task execution
         tools: Optional tools available to the agent
+        agent_response_model: Optional agent response model
 
     Returns:
         Task execution result (either from LLM or A2A agent)
@@ -151,41 +153,33 @@ def _execute_task_with_a2a(
     original_output_pydantic = task.output_pydantic
     original_response_model = task.response_model
 
-    agent_ids = tuple(a2a_agents.keys())
-
     agent_cards: dict[str, AgentCard] = {}
-    for agent_id, config in a2a_agents.items():
+    for config in a2a_agents:
         try:
-            agent_cards[agent_id] = fetch_agent_card(
+            agent_cards[config.endpoint] = fetch_agent_card(
                 endpoint=config.endpoint,
                 auth=config.auth,
                 timeout=config.timeout,
             )
-        except Exception:
-            pass
+        except Exception as e:  # noqa: PERF203
+            print(e)
 
-    agent_response_model = create_agent_response_model(agent_ids)
-    task.description = _augment_prompt_with_a2a(
-        self,
-        a2a_agents,
-        original_description,
-        conversation_history=None,
-        agent_cards=agent_cards,
-    )
+    task.description = _augment_prompt_with_a2a(self, a2a_agents=a2a_agents, task_description=original_description, agent_cards=agent_cards)
     task.response_model = agent_response_model
 
     try:
         raw_result = original_fn(self, task, context, tools)
-        agent_response = _parse_agent_response(self, raw_result, model)
-        if isinstance(agent_response, AgentResponseProtocol):
+        agent_response = _parse_agent_response(self, raw_result=raw_result, agent_response_model=agent_response_model)
+        print(agent_response)
+        if isinstance(agent_response, BaseModel) and isinstance(agent_response, AgentResponseProtocol):
             if agent_response.is_a2a:
+                print("delegating to a2a")
                 return _delegate_to_a2a(
-                    self, agent_response, task, original_fn, context, tools
+                    self, agent_response=agent_response, task=task, original_fn=original_fn, context=context, tools=tools, agent_cards=agent_cards, original_task_description=original_description
                 )
             return str(agent_response.message)
-        if isinstance(agent_response, BaseModel):
-            return agent_response.model_dump_json()
-        raise TypeError(f"Unexpected response type: {type(agent_response)}")
+        print("return raw result, no delegation")
+        return raw_result
     finally:
         task.description = original_description
         task.output_pydantic = original_output_pydantic
@@ -194,12 +188,12 @@ def _execute_task_with_a2a(
 
 def _augment_prompt_with_a2a(
     self: Agent,
-    a2a_agents: dict[str, A2AConfig],
+    a2a_agents: list[A2AConfig],
     task_description: str,
+    agent_cards: dict[str, AgentCard],
     conversation_history: list[Message] | None = None,
     turn_num: int = 0,
     max_turns: int | None = None,
-    agent_cards: dict[str, AgentCard] | None = None,
 ) -> str:
     """Add A2A delegation instructions to prompt.
 
@@ -207,50 +201,38 @@ def _augment_prompt_with_a2a(
         self: The agent instance
         a2a_agents: Dictionary of A2A agent configurations
         task_description: Original task description
+        agent_cards: dictionary mapping agent IDs to AgentCards
         conversation_history: Previous A2A Messages from conversation
         turn_num: Current turn number (0-indexed)
         max_turns: Maximum allowed turns (from config)
-        agent_cards: Optional dictionary mapping agent IDs to AgentCards
 
     Returns:
         Augmented task description with A2A instructions
     """
 
-    cards: dict[str, AgentCard] = agent_cards or {}
+    if not agent_cards:
+        agent_cards = {}
 
-    agents_text = "A2A Agents Available:\n"
+    agents_text = ""
 
-    for agent_id, config in a2a_agents.items():
-        agents_text += f"ID: {agent_id}\nEndpoint: {config.endpoint}\n"
-        card = cards.get(agent_id)
-        if card and card.skills:
-            agents_text += "\nSkills:\n"
-            for skill in card.skills:
-                agents_text += f"- {skill.model_dump_json(indent=2)}\n"
-        agents_text += "\n\n"
+    for config in a2a_agents:
+        card = agent_cards[config.endpoint]
+        agents_text += f"\n{card.model_dump_json(indent=2, exclude_none=True)}\n"
+
+
+    agents_text = AVAILABLE_AGENTS_TEMPLATE.substitute(available_a2a_agents=agents_text)
 
     history_text = ""
     if conversation_history:
-        history_text = "\n\nPrevious A2A Conversation:\n"
         for msg in conversation_history:
-            role_name = "You" if msg.role == Role.user else "A2A Agent"
-            text_parts = []
-            for part in msg.parts:
-                if part.root.kind == "text":
-                    text = getattr(part.root, "text", None)
-                    if text:
-                        text_parts.append(text)
-            message_text = (
-                " ".join(text_parts) if text_parts else "[No text content in message]"
-            )
-            history_text += f"{role_name}: {message_text}\n"
+            history_text += f"\n{msg.model_dump_json(indent=2, exclude_none=True)}\n"
+
+    history_text = PREVIOUS_A2A_CONVERSATION_TEMPLATE.substitute(previous_a2a_conversation=history_text)
     turn_info = ""
 
     if max_turns is not None and conversation_history:
-        user_message_count = sum(
-            1 for msg in conversation_history if msg.role == Role.user
-        )
-        turn_count = user_message_count
+        # Use the passed turn_num (0-indexed) and convert to 1-indexed for display
+        turn_count = turn_num + 1
         turn_info = f"\n\nConversation Progress: Turn {turn_count} of {max_turns}\n"
         if turn_count >= max_turns:
             turn_info += "⚠️ CRITICAL: This is the FINAL turn. You MUST conclude the conversation now.\n"
@@ -270,26 +252,29 @@ IMPORTANT: You have the ability to delegate this task to remote A2A agents.
 
 
 def _parse_agent_response(
-    self: Agent, raw_result: Any, model: type[BaseModel]
-) -> BaseModel:
-    """Parse LLM output as AgentResponse.
+    self: Agent,
+    raw_result: str | dict[str, Any],
+    agent_response_model: type[BaseModel]
+) -> BaseModel | str:
+    """Parse LLM output as AgentResponse or return raw agent response.
 
     Args:
         self: The agent instance
         raw_result: Raw output from LLM
-        model: The agent response model
+        agent_response_model: The agent response model
 
     Returns:
-        Parsed AgentResponse or fallback response
+        Parsed AgentResponse or string
     """
-    try:
-        if isinstance(raw_result, str):
-            return model.model_validate_json(raw_result)
-        if isinstance(raw_result, dict):
-            return model.model_validate(raw_result)
-        raise ValueError(f"Unexpected raw_result type: {type(raw_result)}")
-    except Exception as ex:
-        raise ex
+    if agent_response_model:
+        try:
+            if isinstance(raw_result, str):
+                return agent_response_model.model_validate_json(raw_result)
+            if isinstance(raw_result, dict):
+                return agent_response_model.model_validate(raw_result)
+        except ValidationError:
+            return cast(str, raw_result)
+    return cast(str, raw_result)
 
 
 def _delegate_to_a2a(
@@ -299,6 +284,8 @@ def _delegate_to_a2a(
     original_fn: Callable[..., str],
     context: str | None,
     tools: list[BaseTool] | None,
+    agent_cards: dict[str, AgentCard] | None = None,
+    original_task_description: str | None = None,
 ) -> str:
     """Delegate to A2A agent with multi-turn conversation support.
 
@@ -309,6 +296,8 @@ def _delegate_to_a2a(
         original_fn: The original execute_task method for follow-ups
         context: Optional context for task execution
         tools: Optional tools available to the agent
+        agent_cards: Pre-fetched agent cards from _execute_task_with_a2a
+        original_task_description: The original task description before A2A augmentation
 
     Returns:
         Result from A2A agent
@@ -316,35 +305,31 @@ def _delegate_to_a2a(
     Raises:
         ImportError: If a2a-sdk is not installed
     """
-    a2a_agents, model = get_a2a_agents_and_response_model(self.a2a)
-    if isinstance(agent_response, AgentResponseProtocol):
-        if not agent_response.a2a_ids:
-            agent_id = next(iter(a2a_agents.keys()))
-        else:
-            agent_id = agent_response.a2a_ids[0]
-        current_request = str(agent_response.message)
-    elif isinstance(agent_response, BaseModel):
-        agent_id = next(iter(a2a_agents.keys()))
-        current_request = agent_response.model_dump_json()
-    else:
-        raise TypeError(
-            f"Expected AgentResponseProtocol or BaseModel, got {type(agent_response)}"
-        )
+    a2a_agents, agent_response_model = get_a2a_agents_and_response_model(self.a2a)
+    agent_ids = (config.endpoint for config in a2a_agents)
+    current_request = str(agent_response.message)
+    agent_id = agent_response.a2a_ids[0]
 
-    if agent_id not in a2a_agents:
-        raise ValueError(f"Unknown A2A agent ID: {agent_id}")
+    if agent_id not in agent_ids:
+        raise ValueError(f"Unknown A2A agent ID(s): {agent_response.a2a_ids} not in {agent_ids}")
 
-    agent_config = a2a_agents[agent_id]
+    agent_config = next(filter(lambda x: x.endpoint == agent_id, a2a_agents))
     task_config = task.config or {}
     context_id = task_config.get("context_id")
     task_id_config = task_config.get("task_id")
     reference_task_ids = task_config.get("reference_task_ids")
     metadata = task_config.get("metadata")
     extensions = task_config.get("extensions")
-    original_task_description = task.description
+    # Use the passed original_task_description if available, otherwise fall back to task.description
+    if original_task_description is None:
+        original_task_description = task.description
     conversation_history: list[Message] = []
     max_turns = agent_config.max_turns
+
+    # Use the pre-fetched agent card if available
     agent_card_obj: AgentCard | None = None
+    if agent_cards and agent_id in agent_cards:
+        agent_card_obj = agent_cards[agent_id]
 
     try:
         from crewai.events.event_bus import crewai_event_bus
@@ -370,9 +355,9 @@ def _delegate_to_a2a(
                 extensions=extensions,
                 conversation_history=conversation_history,
                 agent_id=agent_id,
-                agent_role=self.role,  # type: ignore[arg-type]
+                agent_role=cast(Role, self.role),
                 agent_branch=agent_branch,
-                response_model=task.response_model,
+                response_model=self.a2a.response_model,
                 turn_number=turn_num + 1,
             )
             conversation_history = a2a_result["history"]
@@ -383,25 +368,26 @@ def _delegate_to_a2a(
             if a2a_result["status"] == "completed":
                 result_text = str(a2a_result["result"])
 
-                agent_cards_dict = {agent_id: agent_card_obj} if agent_card_obj else {}
+                # Use passed agent_cards or create a new dict with the current card
+                agent_cards_dict = agent_cards if agent_cards else ({agent_id: agent_card_obj} if agent_card_obj else {})
                 task.description = _augment_prompt_with_a2a(
                     self,
-                    a2a_agents,
-                    original_task_description,
-                    conversation_history,
-                    turn_num,
-                    max_turns,
-                    agent_cards_dict,
+                    a2a_agents=a2a_agents,
+                    task_description=original_task_description,
+                    conversation_history=conversation_history,
+                    turn_num=turn_num,
+                    max_turns=max_turns,
+                    agent_cards=agent_cards_dict,
                 )
-                task.output_pydantic = model
                 raw_result = original_fn(self, task, context, tools)
-                llm_response = _parse_agent_response(self, raw_result, model)
+                llm_response = _parse_agent_response(self, raw_result=raw_result, agent_response_model=agent_response_model)
 
-                if isinstance(llm_response, AgentResponseProtocol):
+                if isinstance(llm_response, BaseModel) and isinstance(llm_response, AgentResponseProtocol):
+                    current_request = str(llm_response.message)
                     if not llm_response.is_a2a:
-                        final_turn_number = turn_num + 1
                         from crewai.events.types.a2a_events import A2AMessageSentEvent
 
+                        final_turn_number = turn_num + 1
                         crewai_event_bus.emit(
                             None,
                             A2AMessageSentEvent(
@@ -421,37 +407,23 @@ def _delegate_to_a2a(
                             ),
                         )
                         return str(llm_response.message)
-                    current_request = str(llm_response.message)
-                elif isinstance(llm_response, BaseModel):
-                    final_result = llm_response.model_dump_json()
-                    final_turn_number = turn_num + 1
-                    crewai_event_bus.emit(
-                        None,
-                        A2AConversationCompletedEvent(
-                            status="completed",
-                            final_result=final_result,
-                            error=None,
-                            total_turns=final_turn_number,
-                        ),
-                    )
-                    return final_result
                 continue
 
             if a2a_result["status"] == "input_required":
-                agent_cards_dict = {agent_id: agent_card_obj} if agent_card_obj else {}
+                # Use passed agent_cards or create a new dict with the current card
+                agent_cards_dict = agent_cards if agent_cards else ({agent_id: agent_card_obj} if agent_card_obj else {})
                 task.description = _augment_prompt_with_a2a(
                     self,
-                    a2a_agents,
-                    original_task_description,
-                    conversation_history,
-                    turn_num,
-                    max_turns,
-                    agent_cards_dict,
+                    a2a_agents=a2a_agents,
+                    task_description=original_task_description,
+                    conversation_history=conversation_history,
+                    turn_num=turn_num,
+                    max_turns=max_turns,
+                    agent_cards=agent_cards_dict,
                 )
-                task.output_pydantic = model
                 raw_result = original_fn(self, task, context, tools)
-                llm_response = _parse_agent_response(self, raw_result, model)
-                if isinstance(llm_response, AgentResponseProtocol):
+                llm_response = _parse_agent_response(self, raw_result=raw_result, agent_response_model=agent_response_model)
+                if isinstance(llm_response, BaseModel) and isinstance(llm_response, AgentResponseProtocol):
                     if not llm_response.is_a2a:
                         final_turn_number = turn_num + 1
                         from crewai.events.types.a2a_events import A2AMessageSentEvent
@@ -476,19 +448,6 @@ def _delegate_to_a2a(
                         )
                         return str(llm_response.message)
                     current_request = str(llm_response.message)
-                elif isinstance(llm_response, BaseModel):
-                    final_result = llm_response.model_dump_json()
-                    final_turn_number = turn_num + 1
-                    crewai_event_bus.emit(
-                        None,
-                        A2AConversationCompletedEvent(
-                            status="completed",
-                            final_result=final_result,
-                            error=None,
-                            total_turns=final_turn_number,
-                        ),
-                    )
-                    return final_result
                 continue
 
             error_msg = a2a_result.get("error", "Unknown error")
