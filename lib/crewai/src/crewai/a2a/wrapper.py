@@ -20,7 +20,7 @@ from crewai.a2a.utils import (
 
 
 if TYPE_CHECKING:
-    from a2a.types import Message
+    from a2a.types import AgentCard, Message
 
     from crewai.a2a.config import A2AConfig
     from crewai.agent.core import Agent
@@ -146,17 +146,17 @@ def _execute_task_with_a2a(
     Returns:
         Task execution result (either from LLM or A2A agent)
     """
+
     original_description: str = task.description
     original_output_pydantic = task.output_pydantic
     original_response_model = task.response_model
 
     agent_ids = tuple(a2a_agents.keys())
 
-    agent_card_obj: Any | None = None
-    if len(a2a_agents) == 1:
-        _, config = next(iter(a2a_agents.items()))
+    agent_cards: dict[str, AgentCard] = {}
+    for agent_id, config in a2a_agents.items():
         try:
-            agent_card_obj = fetch_agent_card(
+            agent_cards[agent_id] = fetch_agent_card(
                 endpoint=config.endpoint,
                 auth=config.auth,
                 timeout=config.timeout,
@@ -168,9 +168,9 @@ def _execute_task_with_a2a(
     task.description = _augment_prompt_with_a2a(
         self,
         a2a_agents,
-        task.description,
+        original_description,
         conversation_history=None,
-        agent_card=agent_card_obj,
+        agent_cards=agent_cards,
     )
     task.response_model = agent_response_model
 
@@ -199,7 +199,7 @@ def _augment_prompt_with_a2a(
     conversation_history: list[Message] | None = None,
     turn_num: int = 0,
     max_turns: int | None = None,
-    agent_card: Any | None = None,
+    agent_cards: dict[str, AgentCard] | None = None,
 ) -> str:
     """Add A2A delegation instructions to prompt.
 
@@ -210,34 +210,31 @@ def _augment_prompt_with_a2a(
         conversation_history: Previous A2A Messages from conversation
         turn_num: Current turn number (0-indexed)
         max_turns: Maximum allowed turns (from config)
-        agent_card: Optional A2A AgentCard with skills and capabilities
+        agent_cards: Optional dictionary mapping agent IDs to AgentCards
 
     Returns:
         Augmented task description with A2A instructions
     """
-    agents_text = ""
+
+    cards: dict[str, AgentCard] = agent_cards or {}
+
     if len(a2a_agents) == 1:
         agent_id, config = next(iter(a2a_agents.items()))
         agents_text = (
             f"A2A Agent Available:\n  ID: {agent_id}\n  Endpoint: {config.endpoint}"
         )
 
-        if agent_card:
-            if hasattr(agent_card, "name") and agent_card.name:
-                agents_text += f"\n  Name: {agent_card.name}"
-            if hasattr(agent_card, "description") and agent_card.description:
-                agents_text += f"\n  Description: {agent_card.description}"
-
-            if hasattr(agent_card, "skills") and agent_card.skills:
-                agents_text += "\n\n  Available Skills:"
-                for skill in agent_card.skills:
-                    skill_name = getattr(skill, "name", "Unknown")
-                    skill_desc = getattr(skill, "description", "No description")
-                    agents_text += f"\n    - {skill_name}: {skill_desc}"
+        card = cards.get(agent_id)
+        if card:
+            agents_text += card.model_dump_json(indent=2)
     else:
         agents_text = "A2A Agents Available:\n"
         for agent_id, config in a2a_agents.items():
             agents_text += f"  - ID: {agent_id}\n    Endpoint: {config.endpoint}\n"
+            card = cards.get(agent_id)
+            if card:
+                agents_text += card.model_dump_json(indent=2)
+            agents_text += "\n"
 
     history_text = ""
     if conversation_history:
@@ -353,7 +350,7 @@ def _delegate_to_a2a(
     original_task_description = task.description
     conversation_history: list[Message] = []
     max_turns = agent_config.max_turns
-    agent_card_obj: Any | None = None
+    agent_card_obj: AgentCard | None = None
 
     try:
         from crewai.events.event_bus import crewai_event_bus
@@ -392,6 +389,7 @@ def _delegate_to_a2a(
             if a2a_result["status"] == "completed":
                 result_text = str(a2a_result["result"])
 
+                agent_cards_dict = {agent_id: agent_card_obj} if agent_card_obj else {}
                 task.description = _augment_prompt_with_a2a(
                     self,
                     a2a_agents,
@@ -399,7 +397,7 @@ def _delegate_to_a2a(
                     conversation_history,
                     turn_num,
                     max_turns,
-                    agent_card_obj,
+                    agent_cards_dict,
                 )
                 task.output_pydantic = model
                 raw_result = original_fn(self, task, context, tools)
@@ -446,6 +444,7 @@ def _delegate_to_a2a(
                 continue
 
             if a2a_result["status"] == "input_required":
+                agent_cards_dict = {agent_id: agent_card_obj} if agent_card_obj else {}
                 task.description = _augment_prompt_with_a2a(
                     self,
                     a2a_agents,
@@ -453,7 +452,7 @@ def _delegate_to_a2a(
                     conversation_history,
                     turn_num,
                     max_turns,
-                    agent_card_obj,
+                    agent_cards_dict,
                 )
                 task.output_pydantic = model
                 raw_result = original_fn(self, task, context, tools)
