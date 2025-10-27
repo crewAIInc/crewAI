@@ -14,6 +14,7 @@ from pydantic import BaseModel
 from crewai.a2a.utils import (
     create_agent_response_model,
     execute_a2a_delegation,
+    fetch_agent_card,
     get_a2a_agents_and_response_model,
 )
 
@@ -151,9 +152,25 @@ def _execute_task_with_a2a(
 
     agent_ids = tuple(a2a_agents.keys())
 
+    agent_card_obj: Any | None = None
+    if len(a2a_agents) == 1:
+        _, config = next(iter(a2a_agents.items()))
+        try:
+            agent_card_obj = fetch_agent_card(
+                endpoint=config.endpoint,
+                auth=config.auth,
+                timeout=config.timeout,
+            )
+        except Exception:
+            pass
+
     agent_response_model = create_agent_response_model(agent_ids)
     task.description = _augment_prompt_with_a2a(
-        self, a2a_agents, task.description, conversation_history=None
+        self,
+        a2a_agents,
+        task.description,
+        conversation_history=None,
+        agent_card=agent_card_obj,
     )
     task.response_model = agent_response_model
 
