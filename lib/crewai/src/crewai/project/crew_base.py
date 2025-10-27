@@ -52,11 +52,11 @@ class AgentConfig(TypedDict, total=False):
     allow_delegation: bool
     max_iter: int
     max_tokens: int
-    callbacks: list[str]
+    callbacks: list[str] | list[Any]
 
-    # LLM configuration
-    llm: str
-    function_calling_llm: str
+    # LLM configuration (can be string references or resolved instances)
+    llm: str | Any
+    function_calling_llm: str | Any
     use_system_prompt: bool
 
     # Template configuration
@@ -66,7 +66,7 @@ class AgentConfig(TypedDict, total=False):
 
     # Tools and handlers (can be string references or instances)
     tools: list[str] | list[BaseTool]
-    step_callback: str
+    step_callback: str | Any
     cache_handler: str | CacheHandler
 
     # Code execution
@@ -111,18 +111,18 @@ class TaskConfig(TypedDict, total=False):
     description: str
     expected_output: str
 
-    # Agent and context
-    agent: str
-    context: list[str]
+    # Agent and context (can be string references or resolved instances)
+    agent: str | Any
+    context: list[str] | list[Any]
 
     # Tools and callbacks (can be string references or instances)
     tools: list[str] | list[BaseTool]
-    callback: str
-    callbacks: list[str]
+    callback: str | Any
+    callbacks: list[str] | list[Any]
 
-    # Output configuration
-    output_json: str
-    output_pydantic: str
+    # Output configuration (can be string references or resolved class wrappers)
+    output_json: str | Any
+    output_pydantic: str | Any
     output_file: str
     create_directory: bool
 
@@ -137,6 +137,10 @@ class TaskConfig(TypedDict, total=False):
 
     # Misc configuration
     allow_crewai_trigger_context: bool
+
+
+AgentsConfigDict = dict[str, AgentConfig]
+TasksConfigDict = dict[str, TaskConfig]
 
 
 load_dotenv()
@@ -378,8 +382,14 @@ def load_configurations(self: CrewInstance) -> None:
     Args:
         self: Crew instance with configuration paths.
     """
-    self.agents_config = self._load_config(self.original_agents_config_path, "agent")
-    self.tasks_config = self._load_config(self.original_tasks_config_path, "task")
+    self.agents_config = cast(
+        AgentsConfigDict,
+        self._load_config(self.original_agents_config_path, "agent"),
+    )
+    self.tasks_config = cast(
+        TasksConfigDict,
+        self._load_config(self.original_tasks_config_path, "task"),
+    )
 
 
 def load_yaml(config_path: Path) -> dict[str, Any]:

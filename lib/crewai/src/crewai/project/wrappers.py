@@ -22,6 +22,12 @@ from typing_extensions import Self
 if TYPE_CHECKING:
     from crewai import Agent, Crew, Task
     from crewai.crews.crew_output import CrewOutput
+    from crewai.project.crew_base import (
+        AgentConfig,
+        AgentsConfigDict,
+        TaskConfig,
+        TasksConfigDict,
+    )
     from crewai.tools import BaseTool
 
 
@@ -75,8 +81,8 @@ class CrewInstance(Protocol):
     base_directory: Path
     original_agents_config_path: str
     original_tasks_config_path: str
-    agents_config: dict[str, Any]
-    tasks_config: dict[str, Any]
+    agents_config: AgentsConfigDict
+    tasks_config: TasksConfigDict
     mcp_server_params: Any
     mcp_connect_timeout: int
 
@@ -90,7 +96,7 @@ class CrewInstance(Protocol):
     def _map_agent_variables(
         self,
         agent_name: str,
-        agent_info: dict[str, Any],
+        agent_info: AgentConfig,
         llms: dict[str, Callable[..., Any]],
         tool_functions: dict[str, Callable[..., Any]],
         cache_handler_functions: dict[str, Callable[..., Any]],
@@ -99,7 +105,7 @@ class CrewInstance(Protocol):
     def _map_task_variables(
         self,
         task_name: str,
-        task_info: dict[str, Any],
+        task_info: TaskConfig,
         agents: dict[str, Callable[..., Any]],
         tasks: dict[str, Callable[..., Any]],
         output_json_functions: dict[str, Callable[..., Any]],

@@ -13,11 +13,21 @@ from crewai.project.annotations import (
     task,
     tool,
 )
-from crewai.project.crew_base import CrewBase
+from crewai.project.crew_base import (
+    AgentConfig,
+    AgentsConfigDict,
+    CrewBase,
+    TaskConfig,
+    TasksConfigDict,
+)
 
 
 __all__ = [
+    "AgentConfig",
+    "AgentsConfigDict",
     "CrewBase",
+    "TaskConfig",
+    "TasksConfigDict",
     "after_kickoff",
     "agent",
     "before_kickoff",
