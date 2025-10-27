@@ -8,6 +8,7 @@ from typing_extensions import Unpack
 
 from crewai.rag.embeddings.providers.voyageai.types import VoyageAIProviderConfig
 
+
 # Token limits for different VoyageAI models
 VOYAGE_TOTAL_TOKEN_LIMITS = {
     "voyage-context-3": 32_000,
@@ -42,7 +43,7 @@ class VoyageAIEmbeddingFunction(EmbeddingFunction[Documents]):
             **kwargs: Configuration parameters for VoyageAI.
         """
         try:
-            import voyageai  # type: ignore[import-not-found]
+            import voyageai
 
         except ImportError as e:
             raise ImportError(
@@ -50,7 +51,7 @@ class VoyageAIEmbeddingFunction(EmbeddingFunction[Documents]):
                 "Install it with: uv add voyageai"
             ) from e
         self._config = kwargs
-        self._client = voyageai.Client(
+        self._client = voyageai.Client(  # type: ignore[attr-defined]
             api_key=kwargs["api_key"],
             max_retries=kwargs.get("max_retries", 0),
             timeout=kwargs.get("timeout"),
@@ -136,6 +137,7 @@ class VoyageAIEmbeddingFunction(EmbeddingFunction[Documents]):
                     model=model_name,
                     input_type=self._config.get("input_type"),
                     output_dimension=self._config.get("output_dimension"),
+                    output_dtype=self._config.get("output_dtype"),
                 )
                 return [list(emb) for emb in result.results[0].embeddings]
 
@@ -148,6 +150,7 @@ class VoyageAIEmbeddingFunction(EmbeddingFunction[Documents]):
                 input_type=self._config.get("input_type"),
                 truncation=self._config.get("truncation", True),
                 output_dimension=self._config.get("output_dimension"),
+                output_dtype=self._config.get("output_dtype"),
             )
             return [list(emb) for emb in result.embeddings]
 
