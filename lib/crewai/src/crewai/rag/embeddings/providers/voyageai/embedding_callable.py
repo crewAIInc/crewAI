@@ -73,10 +73,6 @@ class VoyageAIEmbeddingFunction(EmbeddingFunction[Documents]):
         if isinstance(input, str):
             input = [input]
 
-        # Early return for empty input
-        if not input:
-            return []
-
         # Use unified batching for all text inputs
         embeddings = self._embed_with_batching(list(input))
 
