@@ -85,41 +85,10 @@ class FlowState(BaseModel):
     )
 
 
-# type variables with explicit bounds
-T = TypeVar("T", bound=dict[str, Any] | BaseModel)  # Generic flow state type parameter
-StateT = TypeVar(
-    "StateT", bound=dict[str, Any] | BaseModel
-)  # State validation type parameter
-P = ParamSpec("P")  # ParamSpec for preserving function signatures in decorators
-R = TypeVar("R")  # Generic return type for decorated methods
-F = TypeVar("F", bound=Callable[..., Any])  # Function type for decorator preservation
-
-
-def ensure_state_type(state: Any, expected_type: type[StateT]) -> StateT:
-    """Ensure state matches expected type with proper validation.
-
-    Args:
-        state: State instance to validate
-        expected_type: Expected type for the state
-
-    Returns:
-        Validated state instance
-
-    Raises:
-        TypeError: If state doesn't match expected type
-        ValueError: If state validation fails
-    """
-    if expected_type is dict:
-        if not isinstance(state, dict):
-            raise TypeError(f"Expected dict, got {type(state).__name__}")
-        return cast(StateT, state)
-    if isinstance(expected_type, type) and issubclass(expected_type, BaseModel):
-        if not isinstance(state, expected_type):
-            raise TypeError(
-                f"Expected {expected_type.__name__}, got {type(state).__name__}"
-            )
-        return state
-    raise TypeError(f"Invalid expected_type: {expected_type}")
+T = TypeVar("T", bound=dict[str, Any] | BaseModel)
+P = ParamSpec("P")
+R = TypeVar("R")
+F = TypeVar("F", bound=Callable[..., Any])
 
 
 def start(
@@ -590,7 +559,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
     name: str | None = None
     tracing: bool | None = False
 
-    def __class_getitem__(cls: type[Flow[StateT]], item: type[T]) -> type[Flow[StateT]]:
+    def __class_getitem__(cls: type[Flow[T]], item: type[T]) -> type[Flow[T]]:
         class _FlowGeneric(cls):  # type: ignore
             _initial_state_t = item
 
