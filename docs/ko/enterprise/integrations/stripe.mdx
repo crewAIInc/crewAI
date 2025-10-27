@@ -17,6 +17,38 @@ Stripe 통합을 사용하기 전에 다음 사항을 확인하세요:
 - 적절한 API 권한이 있는 Stripe 계정
 - [통합 페이지](https://app.crewai.com/integrations)를 통해 Stripe 계정 연결
 
+## Stripe 통합 설정
+
+### 1. Stripe 계정 연결
+
+1. [CrewAI AMP 통합](https://app.crewai.com/crewai_plus/connectors)으로 이동합니다.
+2. 인증 통합 섹션에서 **Stripe**를 찾습니다.
+3. **연결**을 클릭하고 OAuth 과정을 완료합니다.
+4. 결제 처리에 필요한 권한을 부여합니다.
+5. [통합 설정](https://app.crewai.com/crewai_plus/settings/integrations)에서 Enterprise Token을 복사합니다.
+
+### 2. 필수 패키지 설치
+
+```bash
+uv add crewai-tools
+```
+
+### 3. 환경 변수 설정
+
+<Note>
+  `Agent(apps=[])`와 함께 통합을 사용하려면 Enterprise Token으로 `CREWAI_PLATFORM_INTEGRATION_TOKEN` 환경 변수를 설정해야 합니다.
+</Note>
+
+```bash
+export CREWAI_PLATFORM_INTEGRATION_TOKEN="your_enterprise_token"
+```
+
+또는 `.env` 파일에 추가하세요:
+
+```
+CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
+```
+
 ## 사용 가능한 도구
 
 ### **고객 관리**
