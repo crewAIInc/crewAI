@@ -218,23 +218,16 @@ def _augment_prompt_with_a2a(
 
     cards: dict[str, AgentCard] = agent_cards or {}
 
-    if len(a2a_agents) == 1:
-        agent_id, config = next(iter(a2a_agents.items()))
-        agents_text = (
-            f"A2A Agent Available:\n  ID: {agent_id}\n  Endpoint: {config.endpoint}"
-        )
+    agents_text = "A2A Agents Available:\n"
 
+    for agent_id, config in a2a_agents.items():
+        agents_text += f"ID: {agent_id}\nEndpoint: {config.endpoint}\n"
         card = cards.get(agent_id)
-        if card:
-            agents_text += card.model_dump_json(indent=2)
-    else:
-        agents_text = "A2A Agents Available:\n"
-        for agent_id, config in a2a_agents.items():
-            agents_text += f"  - ID: {agent_id}\n    Endpoint: {config.endpoint}\n"
-            card = cards.get(agent_id)
-            if card:
-                agents_text += card.model_dump_json(indent=2)
-            agents_text += "\n"
+        if card and card.skills:
+            agents_text += "\nSkills:\n"
+            for skill in card.skills:
+                agents_text += f"- {skill.model_dump_json(indent=2)}\n"
+        agents_text += "\n\n"
 
     history_text = ""
     if conversation_history:
@@ -252,6 +245,7 @@ def _augment_prompt_with_a2a(
             )
             history_text += f"{role_name}: {message_text}\n"
     turn_info = ""
+
     if max_turns is not None and conversation_history:
         user_message_count = sum(
             1 for msg in conversation_history if msg.role == Role.user
