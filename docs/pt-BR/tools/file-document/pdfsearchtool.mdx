@@ -45,28 +45,60 @@ tool = PDFSearchTool(pdf='path/to/your/document.pdf')
 
 ## Modelo e embeddings personalizados
 
-Por padrão, a ferramenta utiliza OpenAI tanto para embeddings quanto para sumarização. Para personalizar o modelo, você pode usar um dicionário de configuração como no exemplo abaixo:
+Por padrão, a ferramenta utiliza OpenAI para embeddings e sumarização. Para personalizar, use um dicionário de configuração conforme abaixo. Observação: um banco vetorial (vectordb) é necessário, pois os embeddings gerados precisam ser armazenados e consultados.
 
 ```python Code
+from crewai_tools import PDFSearchTool
+from chromadb.config import Settings  # Persistência no Chroma
+
 tool = PDFSearchTool(
-    config=dict(
-        llm=dict(
-            provider="ollama", # ou google, openai, anthropic, llama2, ...
-            config=dict(
-                model="llama2",
-                # temperature=0.5,
-                # top_p=1,
-                # stream=true,
-            ),
-        ),
-        embedder=dict(
-            provider="google", # ou openai, ollama, ...
-            config=dict(
-                model="models/embedding-001",
-                task_type="retrieval_document",
-                # title="Embeddings",
-            ),
-        ),
-    )
+    config={
+        # Obrigatório: provedor de embeddings + configuração
+        "embedding_model": {
+            # Provedores suportados: "openai", "azure", "google-generativeai", "google-vertex",
+            # "voyageai", "cohere", "huggingface", "jina", "sentence-transformer",
+            # "text2vec", "ollama", "openclip", "instructor", "onnx", "roboflow", "watsonx", "custom"
+            "provider": "openai",
+            "config": {
+                # "model" é mapeado internamente para "model_name".
+                "model": "text-embedding-3-small",
+                # Opcional: chave da API (se ausente, usa variáveis de ambiente do provedor)
+                # "api_key": "sk-...",
+
+                # Exemplos específicos por provedor
+                # --- Google ---
+                # (defina provider="google-generativeai")
+                # "model": "models/embedding-001",
+                # "task_type": "retrieval_document",
+
+                # --- Cohere ---
+                # (defina provider="cohere")
+                # "model": "embed-english-v3.0",
+
+                # --- Ollama (local) ---
+                # (defina provider="ollama")
+                # "model": "nomic-embed-text",
+            },
+        },
+
+        # Obrigatório: configuração do banco vetorial
+        "vectordb": {
+            "provider": "chromadb",  # ou "qdrant"
+            "config": {
+                # Exemplo Chroma:
+                # "settings": Settings(
+                #     persist_directory="/content/chroma",
+                #     allow_reset=True,
+                #     is_persistent=True,
+                # ),
+
+                # Exemplo Qdrant:
+                # from qdrant_client.models import VectorParams, Distance
+                # "vectors_config": VectorParams(size=384, distance=Distance.COSINE),
+
+                # Observação: o nome da coleção é controlado pela ferramenta (padrão: "rag_tool_collection").
+            }
+        },
+    }
 )
 ```

@@ -322,7 +322,7 @@ MODELS = {
     ],
 }
 
-DEFAULT_LLM_MODEL = "gpt-4o-mini"
+DEFAULT_LLM_MODEL = "gpt-4.1-mini"
 
 JSON_URL = "https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json"
 

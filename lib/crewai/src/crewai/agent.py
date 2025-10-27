@@ -1186,6 +1186,15 @@ class Agent(BaseAgent):
         Returns:
             LiteAgentOutput: The result of the agent execution.
         """
+        if self.apps:
+            platform_tools = self.get_platform_tools(self.apps)
+            if platform_tools:
+                self.tools.extend(platform_tools)
+        if self.mcps:
+            mcps = self.get_mcp_tools(self.mcps)
+            if mcps:
+                self.tools.extend(mcps)
+
         lite_agent = LiteAgent(
             id=self.id,
             role=self.role,

@@ -36,28 +36,29 @@ from crewai.flow.utils import (
 from crewai.utilities.printer import Printer
 
 
-
 _printer = Printer()
 
 
 def method_calls_crew(method: Any) -> bool:
     """
-    Check if the method contains a call to `.crew()`.
+    Check if the method contains a call to `.crew()`, `.kickoff()`, or `.kickoff_async()`.
 
     Parameters
     ----------
     method : Any
-        The method to analyze for crew() calls.
+        The method to analyze for crew or agent execution calls.
 
     Returns
     -------
     bool
-        True if the method calls .crew(), False otherwise.
+        True if the method calls .crew(), .kickoff(), or .kickoff_async(), False otherwise.
 
     Notes
     -----
     Uses AST analysis to detect method calls, specifically looking for
-    attribute access of 'crew'.
+    attribute access of 'crew', 'kickoff', or 'kickoff_async'.
+    This includes both traditional Crew execution (.crew()) and Agent/LiteAgent
+    execution (.kickoff() or .kickoff_async()).
     """
     try:
         source = inspect.getsource(method)
@@ -68,14 +69,14 @@ def method_calls_crew(method: Any) -> bool:
         return False
 
     class CrewCallVisitor(ast.NodeVisitor):
-        """AST visitor to detect .crew() method calls."""
+        """AST visitor to detect .crew(), .kickoff(), or .kickoff_async() method calls."""
 
-        def __init__(self):
+        def __init__(self) -> None:
             self.found = False
 
-        def visit_Call(self, node):
+        def visit_Call(self, node: ast.Call) -> None:
             if isinstance(node.func, ast.Attribute):
-                if node.func.attr == "crew":
+                if node.func.attr in ("crew", "kickoff", "kickoff_async"):
                     self.found = True
             self.generic_visit(node)
 
@@ -113,7 +114,7 @@ def add_nodes_to_network(
     - Regular methods
     """
 
-    def human_friendly_label(method_name):
+    def human_friendly_label(method_name: str) -> str:
         return method_name.replace("_", " ").title()
 
     node_style: (

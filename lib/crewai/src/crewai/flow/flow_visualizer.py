@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import os
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from pyvis.network import Network  # type: ignore[import-untyped]
 
@@ -29,7 +29,7 @@ _printer = Printer()
 class FlowPlot:
     """Handles the creation and rendering of flow visualization diagrams."""
 
-    def __init__(self, flow: Flow) -> None:
+    def __init__(self, flow: Flow[Any]) -> None:
         """
         Initialize FlowPlot with a flow object.
 
@@ -136,7 +136,7 @@ class FlowPlot:
                 f"Unexpected error during flow visualization: {e!s}"
             ) from e
         finally:
-            self._cleanup_pyvis_lib()
+            self._cleanup_pyvis_lib(filename)
 
     def _generate_final_html(self, network_html: str) -> str:
         """
@@ -186,26 +186,33 @@ class FlowPlot:
             raise IOError(f"Failed to generate visualization HTML: {e!s}") from e
 
     @staticmethod
-    def _cleanup_pyvis_lib() -> None:
+    def _cleanup_pyvis_lib(filename: str) -> None:
         """
         Clean up the generated lib folder from pyvis.
 
         This method safely removes the temporary lib directory created by pyvis
-        during network visualization generation.
+        during network visualization generation. The lib folder is created in the
+        same directory as the output HTML file.
+
+        Parameters
+        ----------
+        filename : str
+            The output filename (without .html extension) used for the visualization.
         """
         try:
-            lib_folder = safe_path_join("lib", root=os.getcwd())
-            if os.path.exists(lib_folder) and os.path.isdir(lib_folder):
-                import shutil
+            import shutil
 
-                shutil.rmtree(lib_folder)
-        except ValueError as e:
-            _printer.print(f"Error validating lib folder path: {e}", color="red")
+            output_dir = os.path.dirname(os.path.abspath(filename)) or os.getcwd()
+            lib_folder = os.path.join(output_dir, "lib")
+            if os.path.exists(lib_folder) and os.path.isdir(lib_folder):
+                vis_js = os.path.join(lib_folder, "vis-network.min.js")
+                if os.path.exists(vis_js):
+                    shutil.rmtree(lib_folder)
         except Exception as e:
             _printer.print(f"Error cleaning up lib folder: {e}", color="red")
 
 
-def plot_flow(flow: Flow, filename: str = "flow_plot") -> None:
+def plot_flow(flow: Flow[Any], filename: str = "flow_plot") -> None:
     """
     Convenience function to create and save a flow visualization.
 
