@@ -21,7 +21,12 @@ from crewai.a2a.auth.schemas import AuthScheme
 
 http_url_adapter = TypeAdapter(HttpUrl)
 
-Url = Annotated[str, BeforeValidator(lambda value: str(http_url_adapter.validate_python(value, strict=True)))]
+Url = Annotated[
+    str,
+    BeforeValidator(
+        lambda value: str(http_url_adapter.validate_python(value, strict=True))
+    ),
+]
 
 
 class A2AConfig(BaseModel):
@@ -39,4 +44,8 @@ class A2AConfig(BaseModel):
     response_model: type[BaseModel] | None = Field(
         default=None,
         description="Optional Pydantic model for structured A2A agent responses. When specified, the A2A agent is expected to return JSON matching this schema.",
+    )
+    fail_fast: bool = Field(
+        default=True,
+        description="If True, raise an error immediately when the A2A agent is unreachable. If False, skip the A2A agent and continue execution.",
     )

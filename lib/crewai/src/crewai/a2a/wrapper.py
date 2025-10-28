@@ -6,6 +6,7 @@ Wraps agent classes with A2A delegation capabilities.
 from __future__ import annotations
 
 from collections.abc import Callable
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import TYPE_CHECKING, Any, Protocol, cast, runtime_checkable
 
 from a2a.types import Role
@@ -14,7 +15,9 @@ from pydantic import BaseModel, ValidationError
 from crewai.a2a.config import A2AConfig
 from crewai.a2a.templates import (
     AVAILABLE_AGENTS_TEMPLATE,
+    CONVERSATION_TURN_INFO_TEMPLATE,
     PREVIOUS_A2A_CONVERSATION_TEMPLATE,
+    UNAVAILABLE_AGENTS_NOTICE_TEMPLATE,
 )
 from crewai.a2a.utils import (
     execute_a2a_delegation,
@@ -110,11 +113,69 @@ def _find_execute_task(
 
     if not original_execute_task:
         for base in bases:
-            if hasattr(base, "execute_task"):
-                original_execute_task = base.execute_task
+            try:
+                original_execute_task = base.execute_task  # type: ignore[attr-defined]
                 break
+            except AttributeError:
+                continue
 
     return original_execute_task
+
+
+def _fetch_card_from_config(
+    config: A2AConfig,
+) -> tuple[A2AConfig, AgentCard | Exception]:
+    """Fetch agent card from A2A config.
+
+    Args:
+        config: A2A configuration
+
+    Returns:
+        Tuple of (config, card or exception)
+    """
+    try:
+        card = fetch_agent_card(
+            endpoint=config.endpoint,
+            auth=config.auth,
+            timeout=config.timeout,
+        )
+        return config, card
+    except Exception as e:
+        return config, e
+
+
+def _fetch_agent_cards_concurrently(
+    a2a_agents: list[A2AConfig],
+) -> tuple[dict[str, AgentCard], dict[str, str]]:
+    """Fetch agent cards concurrently for multiple A2A agents.
+
+    Args:
+        a2a_agents: List of A2A agent configurations
+
+    Returns:
+        Tuple of (agent_cards dict, failed_agents dict mapping endpoint to error message)
+    """
+    agent_cards: dict[str, AgentCard] = {}
+    failed_agents: dict[str, str] = {}
+
+    with ThreadPoolExecutor(max_workers=len(a2a_agents)) as executor:
+        futures = {
+            executor.submit(_fetch_card_from_config, config): config
+            for config in a2a_agents
+        }
+        for future in as_completed(futures):
+            config, result = future.result()
+            if isinstance(result, Exception):
+                if config.fail_fast:
+                    raise RuntimeError(
+                        f"Failed to fetch agent card from {config.endpoint}. "
+                        f"Ensure the A2A agent is running and accessible. Error: {result}"
+                    ) from result
+                failed_agents[config.endpoint] = str(result)
+            else:
+                agent_cards[config.endpoint] = result
+
+    return agent_cards, failed_agents
 
 
 def _execute_task_with_a2a(
@@ -144,21 +205,28 @@ def _execute_task_with_a2a(
     original_output_pydantic = task.output_pydantic
     original_response_model = task.response_model
 
-    agent_cards: dict[str, AgentCard] = {}
-    for config in a2a_agents:
+    agent_cards, failed_agents = _fetch_agent_cards_concurrently(a2a_agents)
+
+    if not agent_cards and a2a_agents and failed_agents:
+        unavailable_agents_text = ""
+        for endpoint, error in failed_agents.items():
+            unavailable_agents_text += f"  - {endpoint}: {error}\n"
+
+        notice = UNAVAILABLE_AGENTS_NOTICE_TEMPLATE.substitute(
+            unavailable_agents=unavailable_agents_text
+        )
+        task.description = f"{original_description}{notice}"
+
         try:
-            agent_cards[config.endpoint] = fetch_agent_card(
-                endpoint=config.endpoint,
-                auth=config.auth,
-                timeout=config.timeout,
-            )
-        except Exception:  # noqa: PERF203, S110
-            pass
+            return original_fn(self, task, context, tools)
+        finally:
+            task.description = original_description
 
     task.description = _augment_prompt_with_a2a(
         a2a_agents=a2a_agents,
         task_description=original_description,
         agent_cards=agent_cards,
+        failed_agents=failed_agents,
     )
     task.response_model = agent_response_model
 
@@ -198,6 +266,7 @@ def _augment_prompt_with_a2a(
     conversation_history: list[Message] | None = None,
     turn_num: int = 0,
     max_turns: int | None = None,
+    failed_agents: dict[str, str] | None = None,
 ) -> str:
     """Add A2A delegation instructions to prompt.
 
@@ -208,19 +277,27 @@ def _augment_prompt_with_a2a(
         conversation_history: Previous A2A Messages from conversation
         turn_num: Current turn number (0-indexed)
         max_turns: Maximum allowed turns (from config)
+        failed_agents: Dictionary mapping failed agent endpoints to error messages
 
     Returns:
         Augmented task description with A2A instructions
     """
 
     if not agent_cards:
-        agent_cards = {}
+        return task_description
 
     agents_text = ""
 
     for config in a2a_agents:
-        card = agent_cards[config.endpoint]
-        agents_text += f"\n{card.model_dump_json(indent=2, exclude_none=True)}\n"
+        if config.endpoint in agent_cards:
+            card = agent_cards[config.endpoint]
+            agents_text += f"\n{card.model_dump_json(indent=2, exclude_none=True)}\n"
+
+    failed_agents = failed_agents or {}
+    if failed_agents:
+        agents_text += "\n<!-- Unavailable Agents -->\n"
+        for endpoint, error in failed_agents.items():
+            agents_text += f"\n<!-- Agent: {endpoint}\n     Status: Unavailable\n     Error: {error} -->\n"
 
     agents_text = AVAILABLE_AGENTS_TEMPLATE.substitute(available_a2a_agents=agents_text)
 
@@ -236,12 +313,20 @@ def _augment_prompt_with_a2a(
 
     if max_turns is not None and conversation_history:
         turn_count = turn_num + 1
-        turn_info = f"\n\nConversation Progress: Turn {turn_count} of {max_turns}\n"
+        warning = ""
         if turn_count >= max_turns:
-            turn_info += "⚠️ CRITICAL: This is the FINAL turn. You MUST conclude the conversation now.\n"
-            turn_info += "Set is_a2a=false and provide your final response to complete the task.\n"
+            warning = (
+                "CRITICAL: This is the FINAL turn. You MUST conclude the conversation now.\n"
+                "Set is_a2a=false and provide your final response to complete the task."
+            )
         elif turn_count == max_turns - 1:
-            turn_info += "⚠️ WARNING: Next turn will be the last. Consider wrapping up the conversation.\n"
+            warning = "WARNING: Next turn will be the last. Consider wrapping up the conversation."
+
+        turn_info = CONVERSATION_TURN_INFO_TEMPLATE.substitute(
+            turn_count=turn_count,
+            max_turns=max_turns,
+            warning=warning,
+        )
 
     return f"""{task_description}
 
@@ -418,7 +503,6 @@ def _delegate_to_a2a(
     metadata = task_config.get("metadata")
     extensions = task_config.get("extensions")
 
-    # Use the passed original_task_description if available, otherwise fall back to task.description
     if original_task_description is None:
         original_task_description = task.description
 
@@ -449,9 +533,7 @@ def _delegate_to_a2a(
                 agent_id=agent_id,
                 agent_role=cast(Role, self.role),
                 agent_branch=agent_branch,
-                response_model=agent_config.response_model
-                if hasattr(agent_config, "response_model")
-                else None,
+                response_model=agent_config.response_model,
                 turn_number=turn_num + 1,
             )
 

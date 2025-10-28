@@ -74,6 +74,10 @@ The `A2AConfig` class accepts the following parameters:
   Maximum number of conversation turns with the A2A agent
 </ParamField>
 
+<ParamField path="fail_fast" type="bool" default="True">
+  Whether to raise an error immediately if agent connection fails. When `False`, the agent continues with available agents and informs the LLM about unavailable ones.
+</ParamField>
+
 ## Authentication
 
 For A2A agents that require authentication, use one of the provided auth schemes:
@@ -197,6 +201,49 @@ agent = Agent(
 
 The LLM will automatically choose which A2A agent to delegate to based on the task requirements.
 
+## Error Handling
+
+Control how agent connection failures are handled using the `fail_fast` parameter:
+
+```python Code
+from crewai.a2a.config import A2AConfig
+
+# Fail immediately on connection errors (default)
+agent = Agent(
+    role="Research Coordinator",
+    goal="Coordinate research tasks",
+    backstory="Expert at delegation",
+    llm="gpt-4o",
+    a2a=A2AConfig(
+        endpoint="https://research.example.com/.well-known/agent-card.json",
+        fail_fast=True
+    )
+)
+
+# Continue with available agents
+agent = Agent(
+    role="Multi-Agent Coordinator",
+    goal="Coordinate with multiple agents",
+    backstory="Expert at working with available resources",
+    llm="gpt-4o",
+    a2a=[
+        A2AConfig(
+            endpoint="https://primary.example.com/.well-known/agent-card.json",
+            fail_fast=False
+        ),
+        A2AConfig(
+            endpoint="https://backup.example.com/.well-known/agent-card.json",
+            fail_fast=False
+        )
+    ]
+)
+```
+
+When `fail_fast=False`:
+- If some agents fail, the LLM is informed which agents are unavailable and can delegate to working agents
+- If all agents fail, the LLM receives a notice about unavailable agents and handles the task directly
+- Connection errors are captured and included in the context for better decision-making
+
 ## Best Practices
 
 <CardGroup cols={2}>
@@ -206,6 +253,10 @@ The LLM will automatically choose which A2A agent to delegate to based on the ta
 
   <Card title="Limit Conversation Turns" icon="comments">
     Use `max_turns` to prevent excessive back-and-forth. The agent will automatically conclude conversations before hitting the limit.
+  </Card>
+
+  <Card title="Use Resilient Error Handling" icon="shield-check">
+    Set `fail_fast=False` for production environments with multiple agents to gracefully handle connection failures and maintain workflow continuity.
   </Card>
 
   <Card title="Secure Your Credentials" icon="lock">
