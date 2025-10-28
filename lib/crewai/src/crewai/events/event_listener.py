@@ -88,6 +88,7 @@ class EventListener(BaseEventListener):
     text_stream = StringIO()
     knowledge_retrieval_in_progress = False
     knowledge_query_in_progress = False
+    method_branches: dict[str, Any] = Field(default_factory=dict)
 
     def __new__(cls):
         if cls._instance is None:
@@ -101,6 +102,7 @@ class EventListener(BaseEventListener):
             self._telemetry = Telemetry()
             self._telemetry.set_tracer()
             self.execution_spans = {}
+            self.method_branches = {}
             self._initialized = True
             self.formatter = ConsoleFormatter(verbose=True)
 
@@ -263,7 +265,8 @@ class EventListener(BaseEventListener):
         @crewai_event_bus.on(FlowCreatedEvent)
         def on_flow_created(source, event: FlowCreatedEvent):
             self._telemetry.flow_creation_span(event.flow_name)
-            self.formatter.create_flow_tree(event.flow_name, str(source.flow_id))
+            tree = self.formatter.create_flow_tree(event.flow_name, str(source.flow_id))
+            self.formatter.current_flow_tree = tree
 
         @crewai_event_bus.on(FlowStartedEvent)
         def on_flow_started(source, event: FlowStartedEvent):
@@ -280,30 +283,36 @@ class EventListener(BaseEventListener):
 
         @crewai_event_bus.on(MethodExecutionStartedEvent)
         def on_method_execution_started(source, event: MethodExecutionStartedEvent):
-            self.formatter.update_method_status(
-                self.formatter.current_method_branch,
+            method_branch = self.method_branches.get(event.method_name)
+            updated_branch = self.formatter.update_method_status(
+                method_branch,
                 self.formatter.current_flow_tree,
                 event.method_name,
                 "running",
             )
+            self.method_branches[event.method_name] = updated_branch
 
         @crewai_event_bus.on(MethodExecutionFinishedEvent)
         def on_method_execution_finished(source, event: MethodExecutionFinishedEvent):
-            self.formatter.update_method_status(
-                self.formatter.current_method_branch,
+            method_branch = self.method_branches.get(event.method_name)
+            updated_branch = self.formatter.update_method_status(
+                method_branch,
                 self.formatter.current_flow_tree,
                 event.method_name,
                 "completed",
             )
+            self.method_branches[event.method_name] = updated_branch
 
         @crewai_event_bus.on(MethodExecutionFailedEvent)
         def on_method_execution_failed(source, event: MethodExecutionFailedEvent):
-            self.formatter.update_method_status(
-                self.formatter.current_method_branch,
+            method_branch = self.method_branches.get(event.method_name)
+            updated_branch = self.formatter.update_method_status(
+                method_branch,
                 self.formatter.current_flow_tree,
                 event.method_name,
                 "failed",
             )
+            self.method_branches[event.method_name] = updated_branch
 
         # ----------- TOOL USAGE EVENTS -----------
 
