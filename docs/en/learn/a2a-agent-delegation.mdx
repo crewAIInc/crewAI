@@ -170,7 +170,7 @@ For A2A agents that require authentication, use one of the provided auth schemes
 
 ## Multiple A2A Agents
 
-Configure multiple A2A agents for delegation by passing a dictionary:
+Configure multiple A2A agents for delegation by passing a list:
 
 ```python Code
 from crewai.a2a.config import A2AConfig
@@ -181,17 +181,17 @@ agent = Agent(
     goal="Coordinate with multiple specialized agents",
     backstory="Expert at delegating to the right specialist",
     llm="gpt-4o",
-    a2a={
-        "research_agent": A2AConfig(
+    a2a=[
+        A2AConfig(
             endpoint="https://research.example.com/.well-known/agent-card.json",
             timeout=120
         ),
-        "data_agent": A2AConfig(
+        A2AConfig(
             endpoint="https://data.example.com/.well-known/agent-card.json",
             auth=BearerTokenAuth(token="data-token"),
             timeout=90
         )
-    }
+    ]
 )
 ```
 
