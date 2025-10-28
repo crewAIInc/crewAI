@@ -65,15 +65,15 @@ from crewai.flow.utils import (
     is_flow_method_callable,
     is_flow_method_name,
     is_simple_flow_condition,
+    _extract_all_methods,
+    _extract_all_methods_recursive,
+    _normalize_condition,
 )
+from crewai.flow.constants import AND_CONDITION, OR_CONDITION
 from crewai.utilities.printer import Printer, PrinterColor
 
 
 logger = logging.getLogger(__name__)
-
-
-AND_CONDITION: Final[Literal["AND"]] = "AND"
-OR_CONDITION: Final[Literal["OR"]] = "OR"
 
 
 class FlowState(BaseModel):
@@ -377,110 +377,6 @@ def and_(*conditions: str | FlowCondition | Callable[..., Any]) -> FlowCondition
         else:
             raise ValueError("Invalid condition in and_()")
     return {"type": AND_CONDITION, "conditions": processed_conditions}
-
-
-def _normalize_condition(
-    condition: FlowConditions | FlowCondition | FlowMethodName,
-) -> FlowCondition:
-    """Normalize a condition to standard format with 'conditions' key.
-
-    Args:
-        condition: Can be a string (method name), dict (condition), or list
-
-    Returns:
-        Normalized dict with 'type' and 'conditions' keys
-    """
-    if is_flow_method_name(condition):
-        return {"type": OR_CONDITION, "conditions": [condition]}
-    if is_flow_condition_dict(condition):
-        if "conditions" in condition:
-            return condition
-        if "methods" in condition:
-            return {"type": condition["type"], "conditions": condition["methods"]}
-        return condition
-    if is_flow_condition_list(condition):
-        return {"type": OR_CONDITION, "conditions": condition}
-
-    raise ValueError(f"Cannot normalize condition: {condition}")
-
-
-def _extract_all_methods(
-    condition: str | FlowCondition | dict[str, Any] | list[Any],
-) -> list[FlowMethodName]:
-    """Extract all method names from a condition (including nested).
-
-    For AND conditions, this extracts methods that must ALL complete.
-    For OR conditions nested inside AND, we don't extract their methods
-    since only one branch of the OR needs to trigger, not all methods.
-
-    This function is used for runtime execution logic, where we need to know
-    which methods must complete for AND conditions. For visualization purposes,
-    use _extract_all_methods_recursive() instead.
-
-    Args:
-        condition: Can be a string, dict, or list
-
-    Returns:
-        List of all method names in the condition tree that must complete
-    """
-    if is_flow_method_name(condition):
-        return [condition]
-    if is_flow_condition_dict(condition):
-        normalized = _normalize_condition(condition)
-        cond_type = normalized.get("type", OR_CONDITION)
-
-        if cond_type == AND_CONDITION:
-            return [
-                sub_cond
-                for sub_cond in normalized.get("conditions", [])
-                if is_flow_method_name(sub_cond)
-            ]
-        return []
-    if isinstance(condition, list):
-        methods = []
-        for item in condition:
-            methods.extend(_extract_all_methods(item))
-        return methods
-    return []
-
-
-def _extract_all_methods_recursive(
-    condition: str | FlowCondition | dict[str, Any] | list[Any],
-    flow: Flow[Any] | None = None,
-) -> list[FlowMethodName]:
-    """Extract ALL method names from a condition tree recursively.
-
-    This function recursively extracts every method name from the entire
-    condition tree, regardless of nesting. Used for visualization and debugging.
-
-    Note: Only extracts actual method names, not router output strings.
-    If flow is provided, it will filter out strings that are not in flow._methods.
-
-    Args:
-        condition: Can be a string, dict, or list
-        flow: Optional flow instance to filter out non-method strings
-
-    Returns:
-        List of all method names found in the condition tree
-    """
-    if is_flow_method_name(condition):
-        if flow is not None:
-            if condition in flow._methods:
-                return [condition]
-            return []
-        return [condition]
-    if is_flow_condition_dict(condition):
-        normalized = _normalize_condition(condition)
-        methods = []
-        for sub_cond in normalized.get("conditions", []):
-            methods.extend(_extract_all_methods_recursive(sub_cond, flow))
-        return methods
-    if isinstance(condition, list):
-        methods = []
-        for item in condition:
-            methods.extend(_extract_all_methods_recursive(item, flow))
-        return methods
-    return []
 
 
 class FlowMeta(type):
@@ -1274,16 +1170,16 @@ class Flow(Generic[T], metaclass=FlowMeta):
 
         if is_flow_condition_dict(condition):
             normalized = _normalize_condition(condition)
-            cond_type = normalized.get("type", "OR")
+            cond_type = normalized.get("type", OR_CONDITION)
             sub_conditions = normalized.get("conditions", [])
 
-            if cond_type == "OR":
+            if cond_type == OR_CONDITION:
                 return any(
                     self._evaluate_condition(sub_cond, trigger_method, listener_name)
                     for sub_cond in sub_conditions
                 )
 
-            if cond_type == "AND":
+            if cond_type == AND_CONDITION:
                 pending_key = PendingListenerKey(f"{listener_name}:{id(condition)}")
 
                 if pending_key not in self._pending_and_listeners:
@@ -1348,10 +1244,10 @@ class Flow(Generic[T], metaclass=FlowMeta):
             if is_simple_flow_condition(condition_data):
                 condition_type, methods = condition_data
 
-                if condition_type == "OR":
+                if condition_type == OR_CONDITION:
                     if trigger_method in methods:
                         triggered.append(listener_name)
-                elif condition_type == "AND":
+                elif condition_type == AND_CONDITION:
                     pending_key = PendingListenerKey(listener_name)
                     if pending_key not in self._pending_and_listeners:
                         self._pending_and_listeners[pending_key] = set(methods)

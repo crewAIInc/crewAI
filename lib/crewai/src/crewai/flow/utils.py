@@ -13,14 +13,17 @@ Example
 >>> ancestors = build_ancestor_dict(flow)
 """
 
+from __future__ import annotations
+
 import ast
 from collections import defaultdict, deque
 import inspect
 import textwrap
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from typing_extensions import TypeIs
 
+from crewai.flow.constants import OR_CONDITION, AND_CONDITION
 from crewai.flow.flow_wrappers import (
     FlowCondition,
     FlowConditions,
@@ -29,8 +32,9 @@ from crewai.flow.flow_wrappers import (
 )
 from crewai.flow.types import FlowMethodCallable, FlowMethodName
 from crewai.utilities.printer import Printer
-from crewai.flow.flow import _extract_all_methods_recursive
 
+if TYPE_CHECKING:
+    from crewai.flow.flow import Flow
 
 _printer = Printer()
 
@@ -604,3 +608,107 @@ def is_flow_condition_dict(obj: Any) -> TypeIs[FlowCondition]:
         return False
 
     return True
+
+
+def _extract_all_methods_recursive(
+    condition: str | FlowCondition | dict[str, Any] | list[Any],
+    flow: Flow[Any] | None = None,
+) -> list[FlowMethodName]:
+    """Extract ALL method names from a condition tree recursively.
+
+    This function recursively extracts every method name from the entire
+    condition tree, regardless of nesting. Used for visualization and debugging.
+
+    Note: Only extracts actual method names, not router output strings.
+    If flow is provided, it will filter out strings that are not in flow._methods.
+
+    Args:
+        condition: Can be a string, dict, or list
+        flow: Optional flow instance to filter out non-method strings
+
+    Returns:
+        List of all method names found in the condition tree
+    """
+    if is_flow_method_name(condition):
+        if flow is not None:
+            if condition in flow._methods:
+                return [condition]
+            return []
+        return [condition]
+    if is_flow_condition_dict(condition):
+        normalized = _normalize_condition(condition)
+        methods = []
+        for sub_cond in normalized.get("conditions", []):
+            methods.extend(_extract_all_methods_recursive(sub_cond, flow))
+        return methods
+    if isinstance(condition, list):
+        methods = []
+        for item in condition:
+            methods.extend(_extract_all_methods_recursive(item, flow))
+        return methods
+    return []
+
+
+def _normalize_condition(
+    condition: FlowConditions | FlowCondition | FlowMethodName,
+) -> FlowCondition:
+    """Normalize a condition to standard format with 'conditions' key.
+
+    Args:
+        condition: Can be a string (method name), dict (condition), or list
+
+    Returns:
+        Normalized dict with 'type' and 'conditions' keys
+    """
+    if is_flow_method_name(condition):
+        return {"type": OR_CONDITION, "conditions": [condition]}
+    if is_flow_condition_dict(condition):
+        if "conditions" in condition:
+            return condition
+        if "methods" in condition:
+            return {"type": condition["type"], "conditions": condition["methods"]}
+        return condition
+    if is_flow_condition_list(condition):
+        return {"type": OR_CONDITION, "conditions": condition}
+
+    raise ValueError(f"Cannot normalize condition: {condition}")
+
+
+def _extract_all_methods(
+    condition: str | FlowCondition | dict[str, Any] | list[Any],
+) -> list[FlowMethodName]:
+    """Extract all method names from a condition (including nested).
+
+    For AND conditions, this extracts methods that must ALL complete.
+    For OR conditions nested inside AND, we don't extract their methods
+    since only one branch of the OR needs to trigger, not all methods.
+
+    This function is used for runtime execution logic, where we need to know
+    which methods must complete for AND conditions. For visualization purposes,
+    use _extract_all_methods_recursive() instead.
+
+    Args:
+        condition: Can be a string, dict, or list
+
+    Returns:
+        List of all method names in the condition tree that must complete
+    """
+    if is_flow_method_name(condition):
+        return [condition]
+    if is_flow_condition_dict(condition):
+        normalized = _normalize_condition(condition)
+        cond_type = normalized.get("type", OR_CONDITION)
+
+        if cond_type == AND_CONDITION:
+            return [
+                sub_cond
+                for sub_cond in normalized.get("conditions", [])
+                if is_flow_method_name(sub_cond)
+            ]
+        return []
+    if isinstance(condition, list):
+        methods = []
+        for item in condition:
+            methods.extend(_extract_all_methods(item))
+        return methods
+    return []
