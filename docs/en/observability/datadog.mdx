@@ -1,0 +1,109 @@
+---
+title: Datadog Integration
+description: Learn how to integrate Datadog with CrewAI to submit LLM Observability traces to Datadog.
+icon: dog
+mode: "wide"
+---
+
+# Integrate Datadog with CrewAI
+
+This guide will demonstrate how to integrate **[Datadog LLM Observability](https://docs.datadoghq.com/llm_observability/)** with **CrewAI** using [Datadog auto-instrumentation](https://docs.datadoghq.com/llm_observability/instrumentation/auto_instrumentation?tab=python). By the end of this guide, you will be able to submit LLM Observability traces to Datadog and view your CrewAI agent runs in Datadog LLM Observability's [Agentic Execution View](https://docs.datadoghq.com/llm_observability/monitoring/agent_monitoring).
+
+## What is Datadog LLM Observability?
+
+[Datadog LLM Observability](https://www.datadoghq.com/product/llm-observability/) helps AI engineers, data scientists, and application developers quickly develop, evaluate, and monitor LLM applications. Confidently improve output quality, performance, costs, and overall risk with structured experiments, end-to-end tracing across AI agents, and evaluations.
+
+## Getting Started
+
+### Install Dependencies
+
+```shell
+pip install ddtrace crewai crewai-tools
+```
+
+### Set Environment Variables
+
+If you do not have a Datadog API key, you can [create an account](https://www.datadoghq.com/) and [get your API key](https://docs.datadoghq.com/account_management/api-app-keys/#api-keys).
+
+You will also need to specify an ML Application name in the following environment variables. An ML Application is a grouping of LLM Observability traces associated with a specific LLM-based application. See [ML Application Naming Guidelines](https://docs.datadoghq.com/llm_observability/instrumentation/sdk?tab=python#application-naming-guidelines) for more information on limitations with ML Application names.
+
+```shell
+export DD_API_KEY=<YOUR_DD_API_KEY>
+export DD_SITE=<YOUR_DD_SITE>
+export DD_LLMOBS_ENABLED=true
+export DD_LLMOBS_ML_APP=<YOUR_ML_APP_NAME>
+export DD_LLMOBS_AGENTLESS_ENABLED=true
+export DD_APM_TRACING_ENABLED=false
+```
+
+Additionally, configure any LLM provider API keys
+
+```shell
+export OPENAI_API_KEY=<YOUR_OPENAI_API_KEY>
+export ANTHROPIC_API_KEY=<YOUR_ANTHROPIC_API_KEY>
+export GEMINI_API_KEY=<YOUR_GEMINI_API_KEY>
+...
+```
+
+### Create a CrewAI Agent Application
+
+```python
+# crewai_agent.py
+from crewai import Agent, Task, Crew
+
+from crewai_tools import (
+    WebsiteSearchTool
+)
+
+web_rag_tool = WebsiteSearchTool()
+
+writer = Agent(
+    role="Writer",
+    goal="You make math engaging and understandable for young children through poetry",
+    backstory="You're an expert in writing haikus but you know nothing of math.",
+    tools=[web_rag_tool],
+)
+
+task = Task(
+    description=("What is {multiplication}?"),
+    expected_output=("Compose a haiku that includes the answer."),
+    agent=writer
+)
+
+crew = Crew(
+    agents=[writer],
+    tasks=[task],
+    share_crew=False
+)
+
+output = crew.kickoff(dict(multiplication="2 * 2"))
+```
+
+### Run the Application with Datadog Auto-Instrumentation
+
+With the [environment variables](#set-environment-variables) set, you can now run the application with Datadog auto-instrumentation.
+
+```shell
+ddtrace-run python crewai_agent.py
+```
+
+### View the Traces in Datadog
+
+After running the application, you can view the traces in [Datadog LLM Observability's Traces View](https://app.datadoghq.com/llm/traces), selecting the ML Application name you chose from the top-left dropdown.
+
+Clicking on a trace will show you the details of the trace, including total tokens used, number of LLM calls, models used, and estimated cost. Clicking into a specific span will narrow down these details, and show related input, output, and metadata.
+
+<Frame>
+<img src="/images/datadog-llm-observability-1.png" alt="Datadog LLM Observability Trace View" />
+</Frame>
+
+Additionally, you can view the execution graph view of the trace, which shows the control and data flow of the trace, which will scale with larger agents to show handoffs and relationships between LLM calls, tool calls, and agent interactions.
+
+<Frame>
+<img src="/images/datadog-llm-observability-2.png" alt="Datadog LLM Observability Agent Execution Flow View" />
+</Frame>
+
+## References
+
+- [Datadog LLM Observability](https://www.datadoghq.com/product/llm-observability/)
+- [Datadog LLM Observability CrewAI Auto-Instrumentation](https://docs.datadoghq.com/llm_observability/instrumentation/auto_instrumentation?tab=python#crew-ai)
