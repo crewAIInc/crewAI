@@ -29,6 +29,7 @@ from crewai.flow.flow_wrappers import (
 )
 from crewai.flow.types import FlowMethodCallable, FlowMethodName
 from crewai.utilities.printer import Printer
+from crewai.flow.flow import _extract_all_methods_recursive
 
 
 _printer = Printer()
@@ -194,8 +195,6 @@ def calculate_node_levels(flow: Any) -> dict[str, int]:
         if isinstance(condition_data, tuple):
             condition_type, trigger_methods = condition_data
         elif isinstance(condition_data, dict):
-            from crewai.flow.flow import _extract_all_methods_recursive
-
             trigger_methods = _extract_all_methods_recursive(condition_data, flow)
             condition_type = condition_data.get("type", "OR")
         else:
@@ -265,8 +264,6 @@ def count_outgoing_edges(flow: Any) -> dict[str, int]:
         if isinstance(condition_data, tuple):
             _, trigger_methods = condition_data
         elif isinstance(condition_data, dict):
-            from crewai.flow.flow import _extract_all_methods_recursive
-
             trigger_methods = _extract_all_methods_recursive(condition_data, flow)
         else:
             continue
@@ -329,8 +326,6 @@ def dfs_ancestors(
         if isinstance(condition_data, tuple):
             _, trigger_methods = condition_data
         elif isinstance(condition_data, dict):
-            from crewai.flow.flow import _extract_all_methods_recursive
-
             trigger_methods = _extract_all_methods_recursive(condition_data, flow)
         else:
             continue
@@ -348,8 +343,6 @@ def dfs_ancestors(
                 if isinstance(condition_data, tuple):
                     _, trigger_methods = condition_data
                 elif isinstance(condition_data, dict):
-                    from crewai.flow.flow import _extract_all_methods_recursive
-
                     trigger_methods = _extract_all_methods_recursive(
                         condition_data, flow
                     )
@@ -410,8 +403,6 @@ def build_parent_children_dict(flow: Any) -> dict[str, list[str]]:
         if isinstance(condition_data, tuple):
             _, trigger_methods = condition_data
         elif isinstance(condition_data, dict):
-            from crewai.flow.flow import _extract_all_methods_recursive
-
             trigger_methods = _extract_all_methods_recursive(condition_data, flow)
         else:
             continue
@@ -428,8 +419,6 @@ def build_parent_children_dict(flow: Any) -> dict[str, list[str]]:
                 if isinstance(condition_data, tuple):
                     _, trigger_methods = condition_data
                 elif isinstance(condition_data, dict):
-                    from crewai.flow.flow import _extract_all_methods_recursive
-
                     trigger_methods = _extract_all_methods_recursive(
                         condition_data, flow
                     )
@@ -485,8 +474,6 @@ def process_router_paths(
                 if isinstance(condition_data, tuple):
                     _condition_type, trigger_methods = condition_data
                 elif isinstance(condition_data, dict):
-                    from crewai.flow.flow import _extract_all_methods_recursive
-
                     trigger_methods = _extract_all_methods_recursive(
                         condition_data, flow
                     )
