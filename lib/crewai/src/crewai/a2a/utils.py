@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import asyncio
+import time
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from functools import lru_cache
 from typing import TYPE_CHECKING, Any
 import uuid
 
@@ -48,17 +50,54 @@ if TYPE_CHECKING:
     from crewai.a2a.auth.schemas import AuthScheme
 
 
+_auth_store: dict[int, AuthScheme | None] = {}
+
+
+@lru_cache(maxsize=128)
+def _fetch_agent_card_cached(
+    endpoint: str,
+    auth_hash: int,
+    timeout: int,
+    ttl_hash: int,
+) -> AgentCard:
+    """Cached version of fetch_agent_card with auth support.
+
+    Args:
+        endpoint: A2A agent endpoint URL
+        auth_hash: Hash of the auth object
+        timeout: Request timeout
+        ttl_hash: Time-based hash for TTL
+
+    Returns:
+        Cached AgentCard
+    """
+    auth = _auth_store.get(auth_hash)
+
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    try:
+        return loop.run_until_complete(
+            _fetch_agent_card_async(endpoint=endpoint, auth=auth, timeout=timeout)
+        )
+    finally:
+        loop.close()
+
+
 def fetch_agent_card(
     endpoint: str,
     auth: AuthScheme | None = None,
     timeout: int = 30,
+    use_cache: bool = True,
+    cache_ttl: int = 300,
 ) -> AgentCard:
-    """Fetch AgentCard from an A2A endpoint.
+    """Fetch AgentCard from an A2A endpoint with optional caching.
 
     Args:
         endpoint: A2A agent endpoint URL (AgentCard URL)
         auth: Optional AuthScheme for authentication
         timeout: Request timeout in seconds
+        use_cache: Whether to use caching (default True)
+        cache_ttl: Cache TTL in seconds (default 300 = 5 minutes)
 
     Returns:
         AgentCard object with agent capabilities and skills
@@ -67,6 +106,12 @@ def fetch_agent_card(
         httpx.HTTPStatusError: If the request fails
         A2AClientHTTPError: If authentication fails
     """
+    if use_cache:
+        auth_hash = hash((type(auth).__name__, id(auth))) if auth else 0
+        _auth_store[auth_hash] = auth
+        ttl_hash = int(time.time() // cache_ttl)
+        return _fetch_agent_card_cached(endpoint, auth_hash, timeout, ttl_hash)
+
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     try:
@@ -295,14 +340,9 @@ async def _execute_a2a_delegation_async(
     Returns:
         Dictionary with status, result/error, and new history
     """
-    print(f"@_execute_a2a_delegation_async: endpoint={endpoint}")
-    if "/.well-known/agent-card.json" in endpoint:
-        base_url = endpoint.replace("/.well-known/agent-card.json", "")
-        agent_card_path = "/.well-known/agent-card.json"
-    else:
-        url_parts = endpoint.split("/", 3)
-        base_url = f"{url_parts[0]}//{url_parts[2]}"
-        agent_card_path = f"/{url_parts[3]}" if len(url_parts) > 3 else "/"
+    agent_card = await _fetch_agent_card_async(endpoint, auth, timeout)
+
+    validate_auth_against_agent_card(agent_card, auth)
 
     headers: dict[str, str] = {}
     if auth:
@@ -310,41 +350,6 @@ async def _execute_a2a_delegation_async(
             if isinstance(auth, (HTTPDigestAuth, APIKeyAuth)):
                 configure_auth_client(auth, temp_auth_client)
             headers = await auth.apply_auth(temp_auth_client, {})
-
-    async with httpx.AsyncClient(timeout=timeout, headers=headers) as temp_client:
-        if auth and isinstance(auth, (HTTPDigestAuth, APIKeyAuth)):
-            configure_auth_client(auth, temp_client)
-
-        agent_card_url = f"{base_url}{agent_card_path}"
-
-        async def _fetch_agent_card_request() -> httpx.Response:
-            return await temp_client.get(agent_card_url)
-
-        try:
-            response = await retry_on_401(
-                request_func=_fetch_agent_card_request,
-                auth_scheme=auth,
-                client=temp_client,
-                headers=temp_client.headers,
-                max_retries=2,
-            )
-            response.raise_for_status()
-
-            agent_card = AgentCard.model_validate(response.json())
-
-        except httpx.HTTPStatusError as e:
-            if e.response.status_code == 401:
-                error_details = ["Authentication failed"]
-                www_auth = e.response.headers.get("WWW-Authenticate")
-                if www_auth:
-                    error_details.append(f"WWW-Authenticate: {www_auth}")
-                if not auth:
-                    error_details.append("No auth scheme provided")
-                msg = " | ".join(error_details)
-                raise A2AClientHTTPError(401, msg) from e
-            raise
-
-    validate_auth_against_agent_card(agent_card, auth)
 
     a2a_agent_name = None
     if hasattr(agent_card, "name") and agent_card.name:
