@@ -13,7 +13,7 @@ mode: "wide"
 
 Linear 통합을 사용하기 전에 다음을 확인하세요:
 
-- 활성 구독이 있는 [CrewAI Enterprise](https://app.crewai.com) 계정
+- 활성 구독이 있는 [CrewAI AMP](https://app.crewai.com) 계정
 - 적절한 워크스페이스 권한이 있는 Linear 계정
 - [통합 페이지](https://app.crewai.com/crewai_plus/connectors)에서 Linear 계정 연결
 
@@ -21,11 +21,11 @@ Linear 통합을 사용하기 전에 다음을 확인하세요:
 
 ### 1. Linear 계정 연결하기
 
-1. [CrewAI Enterprise Integrations](https://app.crewai.com/crewai_plus/connectors)로 이동합니다.
+1. [CrewAI AMP Integrations](https://app.crewai.com/crewai_plus/connectors)로 이동합니다.
 2. 인증 통합( Authentication Integrations ) 섹션에서 **Linear**를 찾습니다.
 3. **Connect**를 클릭하고 OAuth 절차를 완료합니다.
 4. 이슈 및 프로젝트 관리를 위한 필수 권한을 부여합니다.
-5. [계정 설정](https://app.crewai.com/crewai_plus/settings/account)에서 Enterprise Token을 복사합니다.
+5. [통합 설정](https://app.crewai.com/crewai_plus/settings/integrations)에서 Enterprise Token을 복사합니다.
 
 ### 2. 필수 패키지 설치
 
@@ -33,10 +33,26 @@ Linear 통합을 사용하기 전에 다음을 확인하세요:
 uv add crewai-tools
 ```
 
+### 3. 환경 변수 설정
+
+<Note>
+  `Agent(apps=[])`와 함께 통합을 사용하려면 Enterprise Token으로 `CREWAI_PLATFORM_INTEGRATION_TOKEN` 환경 변수를 설정해야 합니다.
+</Note>
+
+```bash
+export CREWAI_PLATFORM_INTEGRATION_TOKEN="your_enterprise_token"
+```
+
+또는 `.env` 파일에 추가하세요:
+
+```
+CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
+```
+
 ## 사용 가능한 작업
 
 <AccordionGroup>
-  <Accordion title="LINEAR_CREATE_ISSUE">
+  <Accordion title="linear/create_issue">
     **설명:** Linear에서 새로운 이슈를 생성합니다.
 
     **파라미터:**
@@ -56,7 +72,7 @@ uv add crewai-tools
       ```
   </Accordion>
 
-  <Accordion title="LINEAR_UPDATE_ISSUE">
+  <Accordion title="linear/update_issue">
     **설명:** Linear에서 이슈를 업데이트합니다.
 
     **파라미터:**
@@ -76,21 +92,21 @@ uv add crewai-tools
       ```
   </Accordion>
 
-  <Accordion title="LINEAR_GET_ISSUE_BY_ID">
+  <Accordion title="linear/get_issue_by_id">
     **설명:** Linear에서 ID로 이슈를 가져옵니다.
 
     **파라미터:**
     - `issueId` (string, 필수): 이슈 ID - 가져올 이슈의 레코드 ID를 지정합니다. (예: "90fbc706-18cd-42c9-ae66-6bd344cc8977").
   </Accordion>
 
-  <Accordion title="LINEAR_GET_ISSUE_BY_ISSUE_IDENTIFIER">
+  <Accordion title="linear/get_issue_by_issue_identifier">
     **설명:** Linear에서 이슈 식별자로 이슈를 가져옵니다.
 
     **파라미터:**
     - `externalId` (string, 필수): 외부 ID - 가져올 이슈의 사람이 읽을 수 있는 이슈 식별자를 지정합니다. (예: "ABC-1").
   </Accordion>
 
-  <Accordion title="LINEAR_SEARCH_ISSUE">
+  <Accordion title="linear/search_issue">
     **설명:** Linear에서 이슈를 검색합니다.
 
     **파라미터:**
@@ -117,21 +133,21 @@ uv add crewai-tools
       사용 가능한 연산자: `$stringExactlyMatches`, `$stringDoesNotExactlyMatch`, `$stringIsIn`, `$stringIsNotIn`, `$stringStartsWith`, `$stringDoesNotStartWith`, `$stringEndsWith`, `$stringDoesNotEndWith`, `$stringContains`, `$stringDoesNotContain`, `$stringGreaterThan`, `$stringLessThan`, `$numberGreaterThanOrEqualTo`, `$numberLessThanOrEqualTo`, `$numberGreaterThan`, `$numberLessThan`, `$dateTimeAfter`, `$dateTimeBefore`
   </Accordion>
 
-  <Accordion title="LINEAR_DELETE_ISSUE">
+  <Accordion title="linear/delete_issue">
     **설명:** Linear에서 이슈를 삭제합니다.
 
     **파라미터:**
     - `issueId` (string, 필수): 이슈 ID - 삭제할 이슈의 레코드 ID를 지정합니다. (예: "90fbc706-18cd-42c9-ae66-6bd344cc8977").
   </Accordion>
 
-  <Accordion title="LINEAR_ARCHIVE_ISSUE">
+  <Accordion title="linear/archive_issue">
     **설명:** Linear에서 이슈를 아카이브합니다.
 
     **파라미터:**
     - `issueId` (string, 필수): 이슈 ID - 아카이브할 이슈의 레코드 ID를 지정합니다. (예: "90fbc706-18cd-42c9-ae66-6bd344cc8977").
   </Accordion>
 
-  <Accordion title="LINEAR_CREATE_SUB_ISSUE">
+  <Accordion title="linear/create_sub_issue">
     **설명:** Linear에서 하위 이슈를 생성합니다.
 
     **파라미터:**
@@ -147,7 +163,7 @@ uv add crewai-tools
       ```
   </Accordion>
 
-  <Accordion title="LINEAR_CREATE_PROJECT">
+  <Accordion title="linear/create_project">
     **설명:** Linear에서 새로운 프로젝트를 생성합니다.
 
     **파라미터:**
@@ -169,7 +185,7 @@ uv add crewai-tools
       ```
   </Accordion>
 
-  <Accordion title="LINEAR_UPDATE_PROJECT">
+  <Accordion title="linear/update_project">
     **설명:** Linear에서 프로젝트를 업데이트합니다.
 
     **파라미터:**
@@ -185,21 +201,21 @@ uv add crewai-tools
       ```
   </Accordion>
 
-  <Accordion title="LINEAR_GET_PROJECT_BY_ID">
+  <Accordion title="linear/get_project_by_id">
     **설명:** Linear에서 ID로 프로젝트를 가져옵니다.
 
     **파라미터:**
     - `projectId` (string, 필수): 프로젝트 ID - 가져올 프로젝트의 프로젝트 ID를 지정합니다. (예: "a6634484-6061-4ac7-9739-7dc5e52c796b").
   </Accordion>
 
-  <Accordion title="LINEAR_DELETE_PROJECT">
+  <Accordion title="linear/delete_project">
     **설명:** Linear에서 프로젝트를 삭제합니다.
 
     **파라미터:**
     - `projectId` (string, 필수): 프로젝트 ID - 삭제할 프로젝트의 프로젝트 ID를 지정합니다. (예: "a6634484-6061-4ac7-9739-7dc5e52c796b").
   </Accordion>
 
-  <Accordion title="LINEAR_SEARCH_TEAMS">
+  <Accordion title="linear/search_teams">
     **설명:** Linear에서 팀을 검색합니다.
 
     **파라미터:**
@@ -231,19 +247,13 @@ uv add crewai-tools
 
 ```python
 from crewai import Agent, Task, Crew
-from crewai_tools import CrewaiEnterpriseTools
-
-# Get enterprise tools (Linear tools will be included)
-enterprise_tools = CrewaiEnterpriseTools(
-    enterprise_token="your_enterprise_token"
-)
 
 # Create an agent with Linear capabilities
 linear_agent = Agent(
     role="Development Manager",
     goal="Manage Linear issues and track development progress efficiently",
     backstory="An AI assistant specialized in software development project management.",
-    tools=[enterprise_tools]
+    apps=['linear']
 )
 
 # Task to create a bug report
@@ -265,19 +275,12 @@ crew.kickoff()
 ### 특정 Linear 도구 필터링
 
 ```python
-from crewai_tools import CrewaiEnterpriseTools
-
-# Get only specific Linear tools
-enterprise_tools = CrewaiEnterpriseTools(
-    enterprise_token="your_enterprise_token",
-    actions_list=["linear_create_issue", "linear_update_issue", "linear_search_issue"]
-)
 
 issue_manager = Agent(
     role="Issue Manager",
     goal="Create and manage Linear issues efficiently",
     backstory="An AI assistant that focuses on issue creation and lifecycle management.",
-    tools=enterprise_tools
+    apps=['linear']
 )
 
 # Task to manage issue workflow
@@ -299,17 +302,12 @@ crew.kickoff()
 
 ```python
 from crewai import Agent, Task, Crew
-from crewai_tools import CrewaiEnterpriseTools
-
-enterprise_tools = CrewaiEnterpriseTools(
-    enterprise_token="your_enterprise_token"
-)
 
 project_coordinator = Agent(
     role="Project Coordinator",
     goal="Coordinate projects and teams in Linear efficiently",
     backstory="An experienced project coordinator who manages development cycles and team workflows.",
-    tools=[enterprise_tools]
+    apps=['linear']
 )
 
 # Task to coordinate project setup
@@ -336,17 +334,12 @@ crew.kickoff()
 
 ```python
 from crewai import Agent, Task, Crew
-from crewai_tools import CrewaiEnterpriseTools
-
-enterprise_tools = CrewaiEnterpriseTools(
-    enterprise_token="your_enterprise_token"
-)
 
 task_organizer = Agent(
     role="Task Organizer",
     goal="Organize complex issues into manageable sub-tasks",
     backstory="An AI assistant that breaks down complex development work into organized sub-tasks.",
-    tools=[enterprise_tools]
+    apps=['linear']
 )
 
 # Task to create issue hierarchy
@@ -373,17 +366,12 @@ crew.kickoff()
 
 ```python
 from crewai import Agent, Task, Crew
-from crewai_tools import CrewaiEnterpriseTools
-
-enterprise_tools = CrewaiEnterpriseTools(
-    enterprise_token="your_enterprise_token"
-)
 
 workflow_automator = Agent(
     role="Workflow Automator",
     goal="Automate development workflow processes in Linear",
     backstory="An AI assistant that automates repetitive development workflow tasks.",
-    tools=[enterprise_tools]
+    apps=['linear']
 )
 
 # Complex workflow automation task

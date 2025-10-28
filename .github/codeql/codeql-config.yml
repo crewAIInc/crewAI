@@ -1,0 +1,28 @@
+name: "CodeQL Config"
+
+paths-ignore:
+  # Ignore template files - these are boilerplate code that shouldn't be analyzed
+  - "lib/crewai/src/crewai/cli/templates/**"
+  # Ignore test cassettes - these are test fixtures/recordings
+  - "lib/crewai/tests/cassettes/**"
+  - "lib/crewai-tools/tests/cassettes/**"
+  # Ignore cache and build artifacts
+  - ".cache/**"
+  # Ignore documentation build artifacts
+  - "docs/.cache/**"
+  # Ignore experimental code
+  - "lib/crewai/src/crewai/experimental/a2a/**"
+
+paths:
+  # Include all Python source code from workspace packages
+  - "lib/crewai/src/**"
+  - "lib/crewai-tools/src/**"
+  - "lib/devtools/src/**"
+  # Include tests (but exclude cassettes via paths-ignore)
+  - "lib/crewai/tests/**"
+  - "lib/crewai-tools/tests/**"
+  - "lib/devtools/tests/**"
+
+# Configure specific queries or packs if needed
+# queries:
+#   - uses: security-and-quality

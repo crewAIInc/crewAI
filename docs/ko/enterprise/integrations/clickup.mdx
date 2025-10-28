@@ -13,7 +13,7 @@ mode: "wide"
 
 ClickUp 통합을 사용하기 전에 다음을 준비해야 합니다:
 
-- 활성 구독이 있는 [CrewAI Enterprise](https://app.crewai.com) 계정
+- 활성 구독이 있는 [CrewAI AMP](https://app.crewai.com) 계정
 - 적절한 권한이 있는 ClickUp 계정
 - [통합 페이지](https://app.crewai.com/crewai_plus/connectors)를 통해 ClickUp 계정 연결
 
@@ -21,11 +21,11 @@ ClickUp 통합을 사용하기 전에 다음을 준비해야 합니다:
 
 ### 1. ClickUp 계정 연결하기
 
-1. [CrewAI Enterprise Integrations](https://app.crewai.com/crewai_plus/connectors)로 이동합니다.
+1. [CrewAI AMP Integrations](https://app.crewai.com/crewai_plus/connectors)로 이동합니다.
 2. 인증 통합 섹션에서 **ClickUp**을 찾습니다.
 3. **Connect**를 클릭하고 OAuth 과정을 완료합니다.
 4. 작업 및 프로젝트 관리에 필요한 권한을 부여합니다.
-5. [계정 설정](https://app.crewai.com/crewai_plus/settings/account)에서 Enterprise Token을 복사합니다.
+5. [통합 설정](https://app.crewai.com/crewai_plus/settings/integrations)에서 Enterprise Token을 복사합니다.
 
 ### 2. 필수 패키지 설치
 
@@ -33,10 +33,26 @@ ClickUp 통합을 사용하기 전에 다음을 준비해야 합니다:
 uv add crewai-tools
 ```
 
+### 3. 환경 변수 설정
+
+<Note>
+  `Agent(apps=[])`와 함께 통합을 사용하려면 Enterprise Token으로 `CREWAI_PLATFORM_INTEGRATION_TOKEN` 환경 변수를 설정해야 합니다.
+</Note>
+
+```bash
+export CREWAI_PLATFORM_INTEGRATION_TOKEN="your_enterprise_token"
+```
+
+또는 `.env` 파일에 추가하세요:
+
+```
+CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
+```
+
 ## 사용 가능한 동작
 
 <AccordionGroup>
-  <Accordion title="CLICKUP_SEARCH_TASKS">
+  <Accordion title="clickup/search_tasks">
     **설명:** 고급 필터를 사용하여 ClickUp에서 작업을 검색합니다.
 
     **파라미터:**
@@ -61,7 +77,7 @@ uv add crewai-tools
       사용 가능한 필드: `space_ids%5B%5D`, `project_ids%5B%5D`, `list_ids%5B%5D`, `statuses%5B%5D`, `include_closed`, `assignees%5B%5D`, `tags%5B%5D`, `due_date_gt`, `due_date_lt`, `date_created_gt`, `date_created_lt`, `date_updated_gt`, `date_updated_lt`
   </Accordion>
 
-  <Accordion title="CLICKUP_GET_TASK_IN_LIST">
+  <Accordion title="clickup/get_task_in_list">
     **설명:** ClickUp의 특정 목록에서 작업을 가져옵니다.
 
     **파라미터:**
@@ -69,7 +85,7 @@ uv add crewai-tools
     - `taskFilterFormula` (string, 선택): 지정된 필터와 일치하는 작업을 검색합니다. 예: name=task1.
   </Accordion>
 
-  <Accordion title="CLICKUP_CREATE_TASK">
+  <Accordion title="clickup/create_task">
     **설명:** ClickUp에 작업을 생성합니다.
 
     **파라미터:**
@@ -82,7 +98,7 @@ uv add crewai-tools
     - `additionalFields` (string, 선택): 추가 필드 - 이 작업에 포함할 추가 필드를 JSON으로 지정합니다.
   </Accordion>
 
-  <Accordion title="CLICKUP_UPDATE_TASK">
+  <Accordion title="clickup/update_task">
     **설명:** ClickUp의 작업을 업데이트합니다.
 
     **파라미터:**
@@ -96,49 +112,49 @@ uv add crewai-tools
     - `additionalFields` (string, 선택): 추가 필드 - 이 작업에 포함할 추가 필드를 JSON으로 지정합니다.
   </Accordion>
 
-  <Accordion title="CLICKUP_DELETE_TASK">
+  <Accordion title="clickup/delete_task">
     **설명:** ClickUp에서 작업을 삭제합니다.
 
     **파라미터:**
     - `taskId` (string, 필수): 작업 ID - 삭제할 작업의 ID입니다.
   </Accordion>
 
-  <Accordion title="CLICKUP_GET_LIST">
+  <Accordion title="clickup/get_list">
     **설명:** ClickUp에서 목록 정보를 가져옵니다.
 
     **파라미터:**
     - `spaceId` (string, 필수): 스페이스 ID - 목록이 포함된 스페이스의 ID입니다.
   </Accordion>
 
-  <Accordion title="CLICKUP_GET_CUSTOM_FIELDS_IN_LIST">
+  <Accordion title="clickup/get_custom_fields_in_list">
     **설명:** ClickUp에서 목록의 사용자 정의 필드를 가져옵니다.
 
     **파라미터:**
     - `listId` (string, 필수): 목록 ID - 사용자 정의 필드를 가져올 목록의 ID입니다.
   </Accordion>
 
-  <Accordion title="CLICKUP_GET_ALL_FIELDS_IN_LIST">
+  <Accordion title="clickup/get_all_fields_in_list">
     **설명:** ClickUp에서 목록의 모든 필드를 가져옵니다.
 
     **파라미터:**
     - `listId` (string, 필수): 목록 ID - 모든 필드를 가져올 목록의 ID입니다.
   </Accordion>
 
-  <Accordion title="CLICKUP_GET_SPACE">
+  <Accordion title="clickup/get_space">
     **설명:** ClickUp에서 스페이스 정보를 가져옵니다.
 
     **파라미터:**
     - `spaceId` (string, 선택): 스페이스 ID - 조회할 스페이스의 ID입니다.
   </Accordion>
 
-  <Accordion title="CLICKUP_GET_FOLDERS">
+  <Accordion title="clickup/get_folders">
     **설명:** ClickUp에서 폴더를 가져옵니다.
 
     **파라미터:**
     - `spaceId` (string, 필수): 스페이스 ID - 폴더가 포함된 스페이스의 ID입니다.
   </Accordion>
 
-  <Accordion title="CLICKUP_GET_MEMBER">
+  <Accordion title="clickup/get_member">
     **설명:** ClickUp에서 멤버 정보를 가져옵니다.
 
     **파라미터:** 필요 없음.
@@ -151,19 +167,13 @@ uv add crewai-tools
 
 ```python
 from crewai import Agent, Task, Crew
-from crewai_tools import CrewaiEnterpriseTools
-
-# Get enterprise tools (ClickUp tools will be included)
-enterprise_tools = CrewaiEnterpriseTools(
-    enterprise_token="your_enterprise_token"
-)
 
 # Create an agent with ClickUp capabilities
 clickup_agent = Agent(
     role="Task Manager",
     goal="Manage tasks and projects in ClickUp efficiently",
     backstory="An AI assistant specialized in task management and productivity coordination.",
-    tools=[enterprise_tools]
+    apps=['clickup']
 )
 
 # Task to create a new task
@@ -185,19 +195,12 @@ crew.kickoff()
 ### 특정 ClickUp 도구 필터링
 
 ```python
-from crewai_tools import CrewaiEnterpriseTools
-
-# Get only specific ClickUp tools
-enterprise_tools = CrewaiEnterpriseTools(
-    enterprise_token="your_enterprise_token",
-    actions_list=["clickup_create_task", "clickup_update_task", "clickup_search_tasks"]
-)
 
 task_coordinator = Agent(
     role="Task Coordinator",
     goal="Create and manage tasks efficiently",
     backstory="An AI assistant that focuses on task creation and status management.",
-    tools=enterprise_tools
+    apps=['clickup']
 )
 
 # Task to manage task workflow
@@ -219,17 +222,12 @@ crew.kickoff()
 
 ```python
 from crewai import Agent, Task, Crew
-from crewai_tools import CrewaiEnterpriseTools
-
-enterprise_tools = CrewaiEnterpriseTools(
-    enterprise_token="your_enterprise_token"
-)
 
 project_manager = Agent(
     role="Project Manager",
     goal="Coordinate project activities and track team productivity",
     backstory="An experienced project manager who ensures projects are delivered on time.",
-    tools=[enterprise_tools]
+    apps=['clickup']
 )
 
 # Complex task involving multiple ClickUp operations
@@ -256,17 +254,12 @@ crew.kickoff()
 
 ```python
 from crewai import Agent, Task, Crew
-from crewai_tools import CrewaiEnterpriseTools
-
-enterprise_tools = CrewaiEnterpriseTools(
-    enterprise_token="your_enterprise_token"
-)
 
 task_analyst = Agent(
     role="Task Analyst",
     goal="Analyze task patterns and optimize team productivity",
     backstory="An AI assistant that analyzes task data to improve team efficiency.",
-    tools=[enterprise_tools]
+    apps=['clickup']
 )
 
 # Task to analyze and optimize task distribution

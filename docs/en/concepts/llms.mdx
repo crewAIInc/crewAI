@@ -7,7 +7,7 @@ mode: "wide"
 
 ## Overview
 
-CrewAI integrates with multiple LLM providers through LiteLLM, giving you the flexibility to choose the right model for your specific use case. This guide will help you understand how to configure and use different LLM providers in your CrewAI projects.
+CrewAI integrates with multiple LLM providers through providers native sdks, giving you the flexibility to choose the right model for your specific use case. This guide will help you understand how to configure and use different LLM providers in your CrewAI projects.
 
 
 ## What are LLMs?
@@ -113,44 +113,104 @@ In this section, you'll find detailed examples that help you select, configure, 
 
 <AccordionGroup>
   <Accordion title="OpenAI">
-    Set the following environment variables in your `.env` file:
+    CrewAI provides native integration with OpenAI through the OpenAI Python SDK.
 
     ```toml Code
     # Required
     OPENAI_API_KEY=sk-...
 
     # Optional
-    OPENAI_API_BASE=<custom-base-url>
-    OPENAI_ORGANIZATION=<your-org-id>
+    OPENAI_BASE_URL=<custom-base-url>
     ```
 
-    Example usage in your CrewAI project:
+    **Basic Usage:**
     ```python Code
     from crewai import LLM
 
     llm = LLM(
-        model="openai/gpt-4", # call model by provider/model_name
-        temperature=0.8,
-        max_tokens=150,
+        model="openai/gpt-4o",
+        api_key="your-api-key",  # Or set OPENAI_API_KEY
+        temperature=0.7,
+        max_tokens=4000
+    )
+    ```
+
+    **Advanced Configuration:**
+    ```python Code
+    from crewai import LLM
+
+    llm = LLM(
+        model="openai/gpt-4o",
+        api_key="your-api-key",
+        base_url="https://api.openai.com/v1",  # Optional custom endpoint
+        organization="org-...",  # Optional organization ID
+        project="proj_...",  # Optional project ID
+        temperature=0.7,
+        max_tokens=4000,
+        max_completion_tokens=4000,  # For newer models
         top_p=0.9,
         frequency_penalty=0.1,
         presence_penalty=0.1,
         stop=["END"],
-        seed=42
+        seed=42,  # For reproducible outputs
+        stream=True,  # Enable streaming
+        timeout=60.0,  # Request timeout in seconds
+        max_retries=3,  # Maximum retry attempts
+        logprobs=True,  # Return log probabilities
+        top_logprobs=5,  # Number of most likely tokens
+        reasoning_effort="medium"  # For o1 models: low, medium, high
     )
     ```
 
-    OpenAI is one of the leading providers of LLMs with a wide range of models and features.
+    **Structured Outputs:**
+    ```python Code
+    from pydantic import BaseModel
+    from crewai import LLM
+
+    class ResponseFormat(BaseModel):
+        name: str
+        age: int
+        summary: str
+
+    llm = LLM(
+        model="openai/gpt-4o",
+    )
+    ```
+
+    **Supported Environment Variables:**
+    - `OPENAI_API_KEY`: Your OpenAI API key (required)
+    - `OPENAI_BASE_URL`: Custom base URL for OpenAI API (optional)
+
+    **Features:**
+    - Native function calling support (except o1 models)
+    - Structured outputs with JSON schema
+    - Streaming support for real-time responses
+    - Token usage tracking
+    - Stop sequences support (except o1 models)
+    - Log probabilities for token-level insights
+    - Reasoning effort control for o1 models
+
+    **Supported Models:**
 
     | Model               | Context Window   | Best For                                      |
     |---------------------|------------------|-----------------------------------------------|
-    | GPT-4               | 8,192 tokens     | High-accuracy tasks, complex reasoning        |
-    | GPT-4 Turbo         | 128,000 tokens   | Long-form content, document analysis          |
-    | GPT-4o & GPT-4o-mini  | 128,000 tokens  | Cost-effective large context processing       |
-    | o3-mini             | 200,000 tokens   | Fast reasoning, complex reasoning             |
-    | o1-mini             | 128,000 tokens   | Fast reasoning, complex reasoning             |
-    | o1-preview          | 128,000 tokens   | Fast reasoning, complex reasoning             |
-    | o1                  | 200,000 tokens   | Fast reasoning, complex reasoning             |
+    | gpt-4.1             | 1M tokens        | Latest model with enhanced capabilities       |
+    | gpt-4.1-mini        | 1M tokens        | Efficient version with large context          |
+    | gpt-4.1-nano        | 1M tokens        | Ultra-efficient variant                       |
+    | gpt-4o              | 128,000 tokens   | Optimized for speed and intelligence          |
+    | gpt-4o-mini         | 200,000 tokens   | Cost-effective with large context             |
+    | gpt-4-turbo         | 128,000 tokens   | Long-form content, document analysis          |
+    | gpt-4               | 8,192 tokens     | High-accuracy tasks, complex reasoning        |
+    | o1                  | 200,000 tokens   | Advanced reasoning, complex problem-solving   |
+    | o1-preview          | 128,000 tokens   | Preview of reasoning capabilities             |
+    | o1-mini             | 128,000 tokens   | Efficient reasoning model                     |
+    | o3-mini             | 200,000 tokens   | Lightweight reasoning model                   |
+    | o4-mini             | 200,000 tokens   | Next-gen efficient reasoning                  |
+
+    **Note:** To use OpenAI, install the required dependencies:
+    ```bash
+    uv add "crewai[openai]"
+    ```
   </Accordion>
 
   <Accordion title="Meta-Llama">
@@ -187,69 +247,186 @@ In this section, you'll find detailed examples that help you select, configure, 
   </Accordion>
 
   <Accordion title="Anthropic">
+    CrewAI provides native integration with Anthropic through the Anthropic Python SDK.
+
     ```toml Code
     # Required
     ANTHROPIC_API_KEY=sk-ant-...
-
-    # Optional
-    ANTHROPIC_API_BASE=<custom-base-url>
     ```
 
-    Example usage in your CrewAI project:
+    **Basic Usage:**
     ```python Code
+    from crewai import LLM
+
     llm = LLM(
-        model="anthropic/claude-3-sonnet-20240229-v1:0",
-        temperature=0.7
+        model="anthropic/claude-3-5-sonnet-20241022",
+        api_key="your-api-key",  # Or set ANTHROPIC_API_KEY
+        max_tokens=4096  # Required for Anthropic
     )
+    ```
+
+    **Advanced Configuration:**
+    ```python Code
+    from crewai import LLM
+
+    llm = LLM(
+        model="anthropic/claude-3-5-sonnet-20241022",
+        api_key="your-api-key",
+        base_url="https://api.anthropic.com",  # Optional custom endpoint
+        temperature=0.7,
+        max_tokens=4096,  # Required parameter
+        top_p=0.9,
+        stop_sequences=["END", "STOP"],  # Anthropic uses stop_sequences
+        stream=True,  # Enable streaming
+        timeout=60.0,  # Request timeout in seconds
+        max_retries=3  # Maximum retry attempts
+    )
+    ```
+
+    **Supported Environment Variables:**
+    - `ANTHROPIC_API_KEY`: Your Anthropic API key (required)
+
+    **Features:**
+    - Native tool use support for Claude 3+ models
+    - Streaming support for real-time responses
+    - Automatic system message handling
+    - Stop sequences for controlled output
+    - Token usage tracking
+    - Multi-turn tool use conversations
+
+    **Important Notes:**
+    - `max_tokens` is a **required** parameter for all Anthropic models
+    - Claude uses `stop_sequences` instead of `stop`
+    - System messages are handled separately from conversation messages
+    - First message must be from the user (automatically handled)
+    - Messages must alternate between user and assistant
+
+    **Supported Models:**
+
+    | Model                        | Context Window | Best For                                      |
+    |------------------------------|----------------|-----------------------------------------------|
+    | claude-3-7-sonnet            | 200,000 tokens | Advanced reasoning and agentic tasks          |
+    | claude-3-5-sonnet-20241022   | 200,000 tokens | Latest Sonnet with best performance           |
+    | claude-3-5-haiku             | 200,000 tokens | Fast, compact model for quick responses       |
+    | claude-3-opus                | 200,000 tokens | Most capable for complex tasks                |
+    | claude-3-sonnet              | 200,000 tokens | Balanced intelligence and speed               |
+    | claude-3-haiku               | 200,000 tokens | Fastest for simple tasks                      |
+    | claude-2.1                   | 200,000 tokens | Extended context, reduced hallucinations      |
+    | claude-2                     | 100,000 tokens | Versatile model for various tasks             |
+    | claude-instant               | 100,000 tokens | Fast, cost-effective for everyday tasks       |
+
+    **Note:** To use Anthropic, install the required dependencies:
+    ```bash
+    uv add "crewai[anthropic]"
     ```
   </Accordion>
 
   <Accordion title="Google (Gemini API)">
-    Set your API key in your `.env` file. If you need a key, or need to find an
-    existing key, check [AI Studio](https://aistudio.google.com/apikey).
+    CrewAI provides native integration with Google Gemini through the Google Gen AI Python SDK.
+
+    Set your API key in your `.env` file. If you need a key, check [AI Studio](https://aistudio.google.com/apikey).
 
     ```toml .env
-    # https://ai.google.dev/gemini-api/docs/api-key
+    # Required (one of the following)
+    GOOGLE_API_KEY=<your-api-key>
     GEMINI_API_KEY=<your-api-key>
+
+    # Optional - for Vertex AI
+    GOOGLE_CLOUD_PROJECT=<your-project-id>
+    GOOGLE_CLOUD_LOCATION=<location>  # Defaults to us-central1
+    GOOGLE_GENAI_USE_VERTEXAI=true  # Set to use Vertex AI
     ```
 
-    Example usage in your CrewAI project:
+    **Basic Usage:**
     ```python Code
     from crewai import LLM
 
     llm = LLM(
         model="gemini/gemini-2.0-flash",
-        temperature=0.7,
+        api_key="your-api-key",  # Or set GOOGLE_API_KEY/GEMINI_API_KEY
+        temperature=0.7
     )
     ```
 
-    ### Gemini models
+    **Advanced Configuration:**
+    ```python Code
+    from crewai import LLM
+
+    llm = LLM(
+        model="gemini/gemini-2.5-flash",
+        api_key="your-api-key",
+        temperature=0.7,
+        top_p=0.9,
+        top_k=40,  # Top-k sampling parameter
+        max_output_tokens=8192,
+        stop_sequences=["END", "STOP"],
+        stream=True,  # Enable streaming
+        safety_settings={
+            "HARM_CATEGORY_HARASSMENT": "BLOCK_NONE",
+            "HARM_CATEGORY_HATE_SPEECH": "BLOCK_NONE"
+        }
+    )
+    ```
+
+    **Vertex AI Configuration:**
+    ```python Code
+    from crewai import LLM
+
+    llm = LLM(
+        model="gemini/gemini-1.5-pro",
+        project="your-gcp-project-id",
+        location="us-central1"  # GCP region
+    )
+    ```
+
+    **Supported Environment Variables:**
+    - `GOOGLE_API_KEY` or `GEMINI_API_KEY`: Your Google API key (required for Gemini API)
+    - `GOOGLE_CLOUD_PROJECT`: Google Cloud project ID (for Vertex AI)
+    - `GOOGLE_CLOUD_LOCATION`: GCP location (defaults to `us-central1`)
+    - `GOOGLE_GENAI_USE_VERTEXAI`: Set to `true` to use Vertex AI
+
+    **Features:**
+    - Native function calling support for Gemini 1.5+ and 2.x models
+    - Streaming support for real-time responses
+    - Multimodal capabilities (text, images, video)
+    - Safety settings configuration
+    - Support for both Gemini API and Vertex AI
+    - Automatic system instruction handling
+    - Token usage tracking
+
+    **Gemini Models:**
 
     Google offers a range of powerful models optimized for different use cases.
 
     | Model                          | Context Window | Best For                                                          |
     |--------------------------------|----------------|-------------------------------------------------------------------|
-    | gemini-2.5-flash-preview-04-17 | 1M tokens      | Adaptive thinking, cost efficiency                                |
-    | gemini-2.5-pro-preview-05-06   | 1M tokens      | Enhanced thinking and reasoning, multimodal understanding, advanced coding, and more |
-    | gemini-2.0-flash               | 1M tokens      | Next generation features, speed, thinking, and realtime streaming |
+    | gemini-2.5-flash               | 1M tokens      | Adaptive thinking, cost efficiency                                |
+    | gemini-2.5-pro                 | 1M tokens      | Enhanced thinking and reasoning, multimodal understanding         |
+    | gemini-2.0-flash               | 1M tokens      | Next generation features, speed, thinking                         |
+    | gemini-2.0-flash-thinking      | 32,768 tokens  | Advanced reasoning with thinking process                          |
     | gemini-2.0-flash-lite          | 1M tokens      | Cost efficiency and low latency                                   |
+    | gemini-1.5-pro                 | 2M tokens      | Best performing, logical reasoning, coding                        |
     | gemini-1.5-flash               | 1M tokens      | Balanced multimodal model, good for most tasks                    |
-    | gemini-1.5-flash-8B            | 1M tokens      | Fastest, most cost-efficient, good for high-frequency tasks       |
-    | gemini-1.5-pro                 | 2M tokens      | Best performing, wide variety of reasoning tasks including logical reasoning, coding, and creative collaboration |
+    | gemini-1.5-flash-8b            | 1M tokens      | Fastest, most cost-efficient                                      |
+    | gemini-1.0-pro                 | 32,768 tokens  | Earlier generation model                                          |
+
+    **Gemma Models:**
+
+    The Gemini API also supports [Gemma models](https://ai.google.dev/gemma/docs) hosted on Google infrastructure.
+
+    | Model          | Context Window | Best For                           |
+    |----------------|----------------|------------------------------------|
+    | gemma-3-1b     | 32,000 tokens  | Ultra-lightweight tasks            |
+    | gemma-3-4b     | 128,000 tokens | Efficient general-purpose tasks    |
+    | gemma-3-12b    | 128,000 tokens | Balanced performance and efficiency|
+    | gemma-3-27b    | 128,000 tokens | High-performance tasks             |
+
+    **Note:** To use Google Gemini, install the required dependencies:
+    ```bash
+    uv add "crewai[google-genai]"
+    ```
 
     The full list of models is available in the [Gemini model docs](https://ai.google.dev/gemini-api/docs/models).
-
-    ### Gemma
-
-    The Gemini API also allows you to use your API key to access [Gemma models](https://ai.google.dev/gemma/docs) hosted on Google infrastructure.
-
-    | Model          | Context Window |
-    |----------------|----------------|
-    | gemma-3-1b-it  | 32k tokens     |
-    | gemma-3-4b-it  | 32k tokens     |
-    | gemma-3-12b-it | 32k tokens     |
-    | gemma-3-27b-it | 128k tokens    |
-
   </Accordion>
   <Accordion title="Google (Vertex AI)">
     Get credentials from your Google Cloud Console and save it to a JSON file, then load it with the following code:
@@ -291,43 +468,146 @@ In this section, you'll find detailed examples that help you select, configure, 
   </Accordion>
 
   <Accordion title="Azure">
+    CrewAI provides native integration with Azure AI Inference and Azure OpenAI through the Azure AI Inference Python SDK.
+
     ```toml Code
     # Required
     AZURE_API_KEY=<your-api-key>
-    AZURE_API_BASE=<your-resource-url>
-    AZURE_API_VERSION=<api-version>
+    AZURE_ENDPOINT=<your-endpoint-url>
 
     # Optional
-    AZURE_AD_TOKEN=<your-azure-ad-token>
-    AZURE_API_TYPE=<your-azure-api-type>
+    AZURE_API_VERSION=<api-version>  # Defaults to 2024-06-01
     ```
 
-    Example usage in your CrewAI project:
+    **Endpoint URL Formats:**
+
+    For Azure OpenAI deployments:
+    ```
+    https://<resource-name>.openai.azure.com/openai/deployments/<deployment-name>
+    ```
+
+    For Azure AI Inference endpoints:
+    ```
+    https://<resource-name>.inference.azure.com
+    ```
+
+    **Basic Usage:**
     ```python Code
     llm = LLM(
         model="azure/gpt-4",
-        api_version="2023-05-15"
+        api_key="<your-api-key>",  # Or set AZURE_API_KEY
+        endpoint="<your-endpoint-url>",
+        api_version="2024-06-01"
     )
+    ```
+
+    **Advanced Configuration:**
+    ```python Code
+    llm = LLM(
+        model="azure/gpt-4o",
+        temperature=0.7,
+        max_tokens=4000,
+        top_p=0.9,
+        frequency_penalty=0.0,
+        presence_penalty=0.0,
+        stop=["END"],
+        stream=True,
+        timeout=60.0,
+        max_retries=3
+    )
+    ```
+
+    **Supported Environment Variables:**
+    - `AZURE_API_KEY`: Your Azure API key (required)
+    - `AZURE_ENDPOINT`: Your Azure endpoint URL (required, also checks `AZURE_OPENAI_ENDPOINT` and `AZURE_API_BASE`)
+    - `AZURE_API_VERSION`: API version (optional, defaults to `2024-06-01`)
+
+    **Features:**
+    - Native function calling support for Azure OpenAI models (gpt-4, gpt-4o, gpt-3.5-turbo, etc.)
+    - Streaming support for real-time responses
+    - Automatic endpoint URL validation and correction
+    - Comprehensive error handling with retry logic
+    - Token usage tracking
+
+    **Note:** To use Azure AI Inference, install the required dependencies:
+    ```bash
+    uv add "crewai[azure-ai-inference]"
     ```
   </Accordion>
 
   <Accordion title="AWS Bedrock">
+    CrewAI provides native integration with AWS Bedrock through the boto3 SDK using the Converse API.
+
     ```toml Code
+    # Required
     AWS_ACCESS_KEY_ID=<your-access-key>
     AWS_SECRET_ACCESS_KEY=<your-secret-key>
-    AWS_DEFAULT_REGION=<your-region>
+
+    # Optional
+    AWS_SESSION_TOKEN=<your-session-token>  # For temporary credentials
+    AWS_DEFAULT_REGION=<your-region>  # Defaults to us-east-1
     ```
 
-    Example usage in your CrewAI project:
+    **Basic Usage:**
     ```python Code
+    from crewai import LLM
+
     llm = LLM(
-        model="bedrock/anthropic.claude-3-sonnet-20240229-v1:0"
+        model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0",
+        region_name="us-east-1"
     )
     ```
 
-    Before using Amazon Bedrock, make sure you have boto3 installed in your environment
+    **Advanced Configuration:**
+    ```python Code
+    from crewai import LLM
 
-    [Amazon Bedrock](https://docs.aws.amazon.com/bedrock/latest/userguide/models-regions.html) is a managed service that provides access to multiple foundation models from top AI companies through a unified API, enabling secure and responsible AI application development.
+    llm = LLM(
+        model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0",
+        aws_access_key_id="your-access-key",  # Or set AWS_ACCESS_KEY_ID
+        aws_secret_access_key="your-secret-key",  # Or set AWS_SECRET_ACCESS_KEY
+        aws_session_token="your-session-token",  # For temporary credentials
+        region_name="us-east-1",
+        temperature=0.7,
+        max_tokens=4096,
+        top_p=0.9,
+        top_k=250,  # For Claude models
+        stop_sequences=["END", "STOP"],
+        stream=True,  # Enable streaming
+        guardrail_config={  # Optional content filtering
+            "guardrailIdentifier": "your-guardrail-id",
+            "guardrailVersion": "1"
+        },
+        additional_model_request_fields={  # Model-specific parameters
+            "top_k": 250
+        }
+    )
+    ```
+
+    **Supported Environment Variables:**
+    - `AWS_ACCESS_KEY_ID`: AWS access key (required)
+    - `AWS_SECRET_ACCESS_KEY`: AWS secret key (required)
+    - `AWS_SESSION_TOKEN`: AWS session token for temporary credentials (optional)
+    - `AWS_DEFAULT_REGION`: AWS region (defaults to `us-east-1`)
+
+    **Features:**
+    - Native tool calling support via Converse API
+    - Streaming and non-streaming responses
+    - Comprehensive error handling with retry logic
+    - Guardrail configuration for content filtering
+    - Model-specific parameters via `additional_model_request_fields`
+    - Token usage tracking and stop reason logging
+    - Support for all Bedrock foundation models
+    - Automatic conversation format handling
+
+    **Important Notes:**
+    - Uses the modern Converse API for unified model access
+    - Automatic handling of model-specific conversation requirements
+    - System messages are handled separately from conversation
+    - First message must be from user (automatically handled)
+    - Some models (like Cohere) require conversation to end with user message
+
+    [Amazon Bedrock](https://docs.aws.amazon.com/bedrock/latest/userguide/models-regions.html) is a managed service that provides access to multiple foundation models from top AI companies through a unified API.
 
     | Model                   | Context Window       | Best For                                                          |
     |-------------------------|----------------------|-------------------------------------------------------------------|
@@ -357,7 +637,12 @@ In this section, you'll find detailed examples that help you select, configure, 
     | Jamba-Instruct          | Up to 256k tokens    | Model with extended context window optimized for cost-effective text generation, summarization, and Q&A. |
     | Mistral 7B Instruct     | Up to 32k tokens     | This LLM follows instructions, completes requests, and generates creative text. |
     | Mistral 8x7B Instruct   | Up to 32k tokens     | An MOE LLM that follows instructions, completes requests, and generates creative text. |
+    | DeepSeek R1             | 32,768 tokens        | Advanced reasoning model                                                       |
 
+    **Note:** To use AWS Bedrock, install the required dependencies:
+    ```bash
+    uv add "crewai[bedrock]"
+    ```
   </Accordion>
 
   <Accordion title="Amazon SageMaker">
@@ -899,7 +1184,7 @@ Learn how to get the most out of your LLM configuration:
   </Accordion>
 
   <Accordion title="Drop Additional Parameters">
-    CrewAI internally uses Litellm for LLM calls, which allows you to drop additional parameters that are not needed for your specific use case. This can help simplify your code and reduce the complexity of your LLM configuration.
+    CrewAI internally uses native sdks for LLM calls, which allows you to drop additional parameters that are not needed for your specific use case. This can help simplify your code and reduce the complexity of your LLM configuration.
     For example, if you don't need to send the <code>stop</code> parameter, you can simply omit it from your LLM call:
 
     ```python

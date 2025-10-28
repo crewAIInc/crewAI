@@ -46,23 +46,25 @@ tool = DirectorySearchTool(directory='/path/to/directory')
 The DirectorySearchTool uses OpenAI for embeddings and summarization by default. Customization options for these settings include changing the model provider and configuration, enhancing flexibility for advanced users.
 
 ```python Code
+from chromadb.config import Settings
+
 tool = DirectorySearchTool(
-    config=dict(
-        llm=dict(
-            provider="ollama", # Options include ollama, google, anthropic, llama2, and more
-            config=dict(
-                model="llama2",
-                # Additional configurations here
-            ),
-        ),
-        embedder=dict(
-            provider="google", # or openai, ollama, ...
-            config=dict(
-                model="models/embedding-001",
-                task_type="retrieval_document",
-                # title="Embeddings",
-            ),
-        ),
-    )
+    config={
+        "embedding_model": {
+            "provider": "openai",
+            "config": {
+                "model": "text-embedding-3-small",
+                # "api_key": "sk-...",
+            },
+        },
+        "vectordb": {
+            "provider": "chromadb",  # or "qdrant"
+            "config": {
+                # "settings": Settings(persist_directory="/content/chroma", allow_reset=True, is_persistent=True),
+                # from qdrant_client.models import VectorParams, Distance
+                # "vectors_config": VectorParams(size=384, distance=Distance.COSINE),
+            }
+        },
+    }
 )
 ```

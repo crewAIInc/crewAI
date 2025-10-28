@@ -1,0 +1,63 @@
+---
+title: "OneDrive Trigger"
+description: "Automate responses to OneDrive file activity"
+icon: "cloud"
+mode: "wide"
+---
+
+## Overview
+
+Start automations when files change inside OneDrive. You can generate audit summaries, notify security teams about external sharing, or update downstream line-of-business systems with new document metadata.
+
+<Tip>
+  Connect OneDrive in **Tools & Integrations** and toggle the trigger on for your deployment.
+</Tip>
+
+## Enabling the OneDrive Trigger
+
+1. Open your deployment in CrewAI AMP
+2. Go to the **Triggers** tab
+3. Locate **OneDrive** and switch the toggle to enable
+
+<Frame caption="Microsoft OneDrive trigger connection">
+  <img src="/images/enterprise/onedrive-trigger.png" alt="Enable or disable triggers with toggle" />
+</Frame>
+
+## Example: Audit file permissions
+
+```python
+from onedrive_file_crew import OneDriveFileTrigger
+
+crew = OneDriveFileTrigger().crew()
+crew.kickoff({
+    "crewai_trigger_payload": onedrive_payload,
+})
+```
+
+The crew inspects file metadata, user activity, and permission changes to produce a compliance-friendly summary.
+
+## Testando Localmente
+
+Teste sua integração de trigger do OneDrive localmente usando a CLI da CrewAI:
+
+```bash
+# Visualize todos os triggers disponíveis
+crewai triggers list
+
+# Simule um trigger do OneDrive com payload realista
+crewai triggers run microsoft_onedrive/file_changed
+```
+
+O comando `crewai triggers run` executará sua crew com um payload completo do OneDrive, permitindo que você teste sua lógica de parsing antes do deployment.
+
+<Warning>
+  Use `crewai triggers run microsoft_onedrive/file_changed` (não `crewai run`) para simular execução de trigger durante o desenvolvimento. Após o deployment, sua crew receberá automaticamente o payload do trigger.
+</Warning>
+
+## Troubleshooting
+
+- Ensure the connected account has permission to read the file metadata included in the webhook
+- Teste localmente com `crewai triggers run microsoft_onedrive/file_changed` para ver a estrutura exata do payload
+- If the trigger fires but the payload is missing `permissions`, confirm the site-level sharing settings allow Graph to return this field
+- For large tenants, filter notifications upstream so the crew only runs on relevant directories
+- Lembre-se: use `crewai triggers run` (não `crewai run`) para simular execução de trigger

@@ -1,0 +1,81 @@
+name: Publish to PyPI
+
+on:
+  release:
+    types: [ published ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build packages
+    runs-on: ubuntu-latest
+    permissions:
+        contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+
+      - name: Build packages
+        run: |
+          uv build --all-packages
+          rm dist/.gitignore
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  publish:
+    name: Publish to PyPI
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/crewai
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.8.4"
+          python-version: "3.12"
+          enable-cache: false
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist
+
+      - name: Publish to PyPI
+        env:
+          UV_PUBLISH_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
+        run: |
+          failed=0
+          for package in dist/*; do
+            if [[ "$package" == *"crewai_devtools"* ]]; then
+              echo "Skipping private package: $package"
+              continue
+            fi
+            echo "Publishing $package"
+            if ! uv publish "$package"; then
+              echo "Failed to publish $package"
+              failed=1
+            fi
+          done
+          if [ $failed -eq 1 ]; then
+            echo "Some packages failed to publish"
+            exit 1
+          fi

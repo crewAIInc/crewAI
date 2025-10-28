@@ -13,7 +13,7 @@ mode: "wide"
 
 Notion 통합을 사용하기 전에 다음을 확인하세요:
 
-- 활성 구독이 있는 [CrewAI Enterprise](https://app.crewai.com) 계정
+- 활성 구독이 있는 [CrewAI AMP](https://app.crewai.com) 계정
 - 적절한 워크스페이스 권한이 있는 Notion 계정
 - [통합 페이지](https://app.crewai.com/crewai_plus/connectors)를 통해 Notion 계정을 연결함
 
@@ -21,11 +21,11 @@ Notion 통합을 사용하기 전에 다음을 확인하세요:
 
 ### 1. Notion 계정 연결하기
 
-1. [CrewAI Enterprise Integrations](https://app.crewai.com/crewai_plus/connectors)로 이동합니다.
+1. [CrewAI AMP Integrations](https://app.crewai.com/crewai_plus/connectors)로 이동합니다.
 2. 인증 통합(Auhtentication Integrations) 섹션에서 **Notion**을(를) 찾습니다.
 3. **Connect**를 클릭하고 OAuth 플로우를 완료합니다.
 4. 페이지 및 데이터베이스 관리를 위한 필요한 권한을 부여합니다.
-5. [Account Settings](https://app.crewai.com/crewai_plus/settings/account)에서 Enterprise Token을 복사합니다.
+5. [통합 설정](https://app.crewai.com/crewai_plus/settings/integrations)에서 Enterprise Token을 복사합니다.
 
 ### 2. 필수 패키지 설치
 
@@ -33,10 +33,26 @@ Notion 통합을 사용하기 전에 다음을 확인하세요:
 uv add crewai-tools
 ```
 
+### 3. 환경 변수 설정
+
+<Note>
+  `Agent(apps=[])`와 함께 통합을 사용하려면 Enterprise Token으로 `CREWAI_PLATFORM_INTEGRATION_TOKEN` 환경 변수를 설정해야 합니다.
+</Note>
+
+```bash
+export CREWAI_PLATFORM_INTEGRATION_TOKEN="your_enterprise_token"
+```
+
+또는 `.env` 파일에 추가하세요:
+
+```
+CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
+```
+
 ## 사용 가능한 액션
 
 <AccordionGroup>
-  <Accordion title="NOTION_CREATE_PAGE">
+  <Accordion title="notion/create_page">
     **설명:** Notion에서 페이지를 생성합니다.
 
     **파라미터:**
@@ -93,7 +109,7 @@ uv add crewai-tools
       ```
   </Accordion>
 
-  <Accordion title="NOTION_UPDATE_PAGE">
+  <Accordion title="notion/update_page">
     **설명:** Notion에서 페이지를 업데이트합니다.
 
     **파라미터:**
@@ -127,21 +143,21 @@ uv add crewai-tools
       ```
   </Accordion>
 
-  <Accordion title="NOTION_GET_PAGE_BY_ID">
+  <Accordion title="notion/get_page_by_id">
     **설명:** Notion에서 ID로 페이지를 가져옵니다.
 
     **파라미터:**
     - `pageId` (string, 필수): 페이지 ID - 가져올 페이지의 ID를 지정합니다. (예: "59833787-2cf9-4fdf-8782-e53db20768a5").
   </Accordion>
 
-  <Accordion title="NOTION_ARCHIVE_PAGE">
+  <Accordion title="notion/archive_page">
     **설명:** Notion에서 페이지를 보관합니다.
 
     **파라미터:**
     - `pageId` (string, 필수): 페이지 ID - 보관할 페이지의 ID를 지정합니다. (예: "59833787-2cf9-4fdf-8782-e53db20768a5").
   </Accordion>
 
-  <Accordion title="NOTION_SEARCH_PAGES">
+  <Accordion title="notion/search_pages">
     **설명:** 필터를 사용하여 Notion에서 페이지를 검색합니다.
 
     **파라미터:**
@@ -166,14 +182,14 @@ uv add crewai-tools
       사용 가능한 필드: `query`, `filter.value`, `direction`, `page_size`
   </Accordion>
 
-  <Accordion title="NOTION_GET_PAGE_CONTENT">
+  <Accordion title="notion/get_page_content">
     **설명:** Notion에서 페이지 콘텐츠(블록)를 가져옵니다.
 
     **파라미터:**
     - `blockId` (string, 필수): 페이지 ID - 해당 블록이나 페이지의 모든 자식 블록을 순서대로 가져오기 위해 Block 또는 Page ID를 지정합니다. (예: "59833787-2cf9-4fdf-8782-e53db20768a5").
   </Accordion>
 
-  <Accordion title="NOTION_UPDATE_BLOCK">
+  <Accordion title="notion/update_block">
     **설명:** Notion에서 블록을 업데이트합니다.
 
     **파라미터:**
@@ -260,14 +276,14 @@ uv add crewai-tools
       ```
   </Accordion>
 
-  <Accordion title="NOTION_GET_BLOCK_BY_ID">
+  <Accordion title="notion/get_block_by_id">
     **설명:** Notion에서 ID로 블록을 가져옵니다.
 
     **파라미터:**
     - `blockId` (string, 필수): 블록 ID - 가져올 블록의 ID를 지정합니다. (예: "9bc30ad4-9373-46a5-84ab-0a7845ee52e6").
   </Accordion>
 
-  <Accordion title="NOTION_DELETE_BLOCK">
+  <Accordion title="notion/delete_block">
     **설명:** Notion에서 블록을 삭제합니다.
 
     **파라미터:**
@@ -281,19 +297,13 @@ uv add crewai-tools
 
 ```python
 from crewai import Agent, Task, Crew
-from crewai_tools import CrewaiEnterpriseTools
-
-# Get enterprise tools (Notion tools will be included)
-enterprise_tools = CrewaiEnterpriseTools(
-    enterprise_token="your_enterprise_token"
-)
 
 # Create an agent with Notion capabilities
 notion_agent = Agent(
     role="Documentation Manager",
     goal="Manage documentation and knowledge base in Notion efficiently",
     backstory="An AI assistant specialized in content management and documentation.",
-    tools=[enterprise_tools]
+    apps=['notion']
 )
 
 # Task to create a meeting notes page
@@ -315,19 +325,12 @@ crew.kickoff()
 ### 특정 Notion 도구 필터링
 
 ```python
-from crewai_tools import CrewaiEnterpriseTools
-
-# Get only specific Notion tools
-enterprise_tools = CrewaiEnterpriseTools(
-    enterprise_token="your_enterprise_token",
-    actions_list=["notion_create_page", "notion_update_block", "notion_search_pages"]
-)
 
 content_manager = Agent(
     role="Content Manager",
     goal="Create and manage content pages efficiently",
     backstory="An AI assistant that focuses on content creation and management.",
-    tools=enterprise_tools
+    apps=['notion']
 )
 
 # Task to manage content workflow
@@ -349,17 +352,12 @@ crew.kickoff()
 
 ```python
 from crewai import Agent, Task, Crew
-from crewai_tools import CrewaiEnterpriseTools
-
-enterprise_tools = CrewaiEnterpriseTools(
-    enterprise_token="your_enterprise_token"
-)
 
 knowledge_curator = Agent(
     role="Knowledge Curator",
     goal="Curate and organize knowledge base content in Notion",
     backstory="An experienced knowledge manager who organizes and maintains comprehensive documentation.",
-    tools=[enterprise_tools]
+    apps=['notion']
 )
 
 # Task to curate knowledge base
@@ -386,17 +384,12 @@ crew.kickoff()
 
 ```python
 from crewai import Agent, Task, Crew
-from crewai_tools import CrewaiEnterpriseTools
-
-enterprise_tools = CrewaiEnterpriseTools(
-    enterprise_token="your_enterprise_token"
-)
 
 content_organizer = Agent(
     role="Content Organizer",
     goal="Organize and structure content blocks for optimal readability",
     backstory="An AI assistant that specializes in content structure and user experience.",
-    tools=[enterprise_tools]
+    apps=['notion']
 )
 
 # Task to organize content structure
@@ -424,17 +417,12 @@ crew.kickoff()
 
 ```python
 from crewai import Agent, Task, Crew
-from crewai_tools import CrewaiEnterpriseTools
-
-enterprise_tools = CrewaiEnterpriseTools(
-    enterprise_token="your_enterprise_token"
-)
 
 doc_automator = Agent(
     role="Documentation Automator",
     goal="Automate documentation workflows and maintenance",
     backstory="An AI assistant that automates repetitive documentation tasks.",
-    tools=[enterprise_tools]
+    apps=['notion']
 )
 
 # Complex documentation automation task

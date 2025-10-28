@@ -1,0 +1,302 @@
+---
+title: Integração Google Contacts
+description: "Gerenciamento de contatos e diretório com integração Google Contacts para CrewAI."
+icon: "address-book"
+mode: "wide"
+---
+
+## Visão Geral
+
+Permita que seus agentes gerenciem informações de contatos e diretório através do Google Contacts. Acesse contatos pessoais, pesquise pessoas no diretório, crie e atualize informações de contato, e gerencie grupos de contatos com automação alimentada por IA.
+
+## Pré-requisitos
+
+Antes de usar a integração Google Contacts, certifique-se de ter:
+
+- Uma conta [CrewAI AMP](https://app.crewai.com) com assinatura ativa
+- Uma conta Google com acesso ao Google Contacts
+- Conectado sua conta Google através da [página de Integrações](https://app.crewai.com/crewai_plus/connectors)
+
+## Configurando a Integração Google Contacts
+
+### 1. Conecte sua Conta Google
+
+1. Navegue para [Integrações CrewAI AMP](https://app.crewai.com/crewai_plus/connectors)
+2. Encontre **Google Contacts** na seção de Integrações de Autenticação
+3. Clique em **Conectar** e complete o fluxo OAuth
+4. Conceda as permissões necessárias para acesso a contatos e diretório
+5. Copie seu Token Enterprise das [Configurações de Integração](https://app.crewai.com/crewai_plus/settings/integrations)
+
+### 2. Instale o Pacote Necessário
+
+```bash
+uv add crewai-tools
+```
+
+### 3. Configuração de variável de ambiente
+
+<Note>
+  Para usar integrações com `Agent(apps=[])`, você deve definir a variável de ambiente `CREWAI_PLATFORM_INTEGRATION_TOKEN` com seu Enterprise Token.
+</Note>
+
+```bash
+export CREWAI_PLATFORM_INTEGRATION_TOKEN="seu_enterprise_token"
+```
+
+Ou adicione ao seu arquivo `.env`:
+
+```
+CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
+```
+
+## Ações Disponíveis
+
+<AccordionGroup>
+  <Accordion title="google_contacts/get_contacts">
+    **Descrição:** Recuperar contatos do usuário do Google Contacts.
+
+    **Parâmetros:**
+    - `pageSize` (integer, opcional): Número de contatos a retornar (máx 1000). Mínimo: 1, Máximo: 1000
+    - `pageToken` (string, opcional): O token da página a recuperar.
+    - `personFields` (string, opcional): Campos a incluir (ex: 'names,emailAddresses,phoneNumbers'). Padrão: names,emailAddresses,phoneNumbers
+    - `requestSyncToken` (boolean, opcional): Se a resposta deve incluir um token de sincronização. Padrão: false
+    - `sortOrder` (string, opcional): A ordem na qual as conexões devem ser classificadas. Opções: LAST_MODIFIED_ASCENDING, LAST_MODIFIED_DESCENDING, FIRST_NAME_ASCENDING, LAST_NAME_ASCENDING
+  </Accordion>
+
+  <Accordion title="google_contacts/search_contacts">
+    **Descrição:** Pesquisar por contatos usando uma string de consulta.
+
+    **Parâmetros:**
+    - `query` (string, obrigatório): String de consulta de pesquisa
+    - `readMask` (string, obrigatório): Campos a ler (ex: 'names,emailAddresses,phoneNumbers')
+    - `pageSize` (integer, opcional): Número de resultados a retornar. Mínimo: 1, Máximo: 30
+    - `pageToken` (string, opcional): Token especificando qual página de resultado retornar.
+    - `sources` (array, opcional): As fontes para pesquisar. Opções: READ_SOURCE_TYPE_CONTACT, READ_SOURCE_TYPE_PROFILE. Padrão: READ_SOURCE_TYPE_CONTACT
+  </Accordion>
+
+  <Accordion title="google_contacts/list_directory_people">
+    **Descrição:** Listar pessoas no diretório do usuário autenticado.
+
+    **Parâmetros:**
+    - `sources` (array, obrigatório): Fontes de diretório para pesquisar. Opções: DIRECTORY_SOURCE_TYPE_DOMAIN_PROFILE, DIRECTORY_SOURCE_TYPE_DOMAIN_CONTACT. Padrão: DIRECTORY_SOURCE_TYPE_DOMAIN_PROFILE
+    - `pageSize` (integer, opcional): Número de pessoas a retornar. Mínimo: 1, Máximo: 1000
+    - `pageToken` (string, opcional): Token especificando qual página de resultado retornar.
+    - `readMask` (string, opcional): Campos a ler (ex: 'names,emailAddresses')
+    - `requestSyncToken` (boolean, opcional): Se a resposta deve incluir um token de sincronização. Padrão: false
+    - `mergeSources` (array, opcional): Dados adicionais para mesclar nas respostas de pessoas do diretório. Opções: CONTACT
+  </Accordion>
+
+  <Accordion title="google_contacts/search_directory_people">
+    **Descrição:** Pesquisar por pessoas no diretório.
+
+    **Parâmetros:**
+    - `query` (string, obrigatório): Consulta de pesquisa
+    - `sources` (string, obrigatório): Fontes de diretório (use 'DIRECTORY_SOURCE_TYPE_DOMAIN_PROFILE')
+    - `pageSize` (integer, opcional): Número de resultados a retornar
+    - `readMask` (string, opcional): Campos a ler
+  </Accordion>
+
+  <Accordion title="google_contacts/list_other_contacts">
+    **Descrição:** Listar outros contatos (não nos contatos pessoais do usuário).
+
+    **Parâmetros:**
+    - `pageSize` (integer, opcional): Número de contatos a retornar. Mínimo: 1, Máximo: 1000
+    - `pageToken` (string, opcional): Token especificando qual página de resultado retornar.
+    - `readMask` (string, opcional): Campos a ler
+    - `requestSyncToken` (boolean, opcional): Se a resposta deve incluir um token de sincronização. Padrão: false
+  </Accordion>
+
+  <Accordion title="google_contacts/search_other_contacts">
+    **Descrição:** Pesquisar outros contatos.
+
+    **Parâmetros:**
+    - `query` (string, obrigatório): Consulta de pesquisa
+    - `readMask` (string, obrigatório): Campos a ler (ex: 'names,emailAddresses')
+    - `pageSize` (integer, opcional): Número de resultados
+  </Accordion>
+
+  <Accordion title="google_contacts/get_person">
+    **Descrição:** Obter informações de contato de uma única pessoa por nome do recurso.
+
+    **Parâmetros:**
+    - `resourceName` (string, obrigatório): O nome do recurso da pessoa a obter (ex: 'people/c123456789')
+    - `personFields` (string, opcional): Campos a incluir (ex: 'names,emailAddresses,phoneNumbers'). Padrão: names,emailAddresses,phoneNumbers
+  </Accordion>
+
+  <Accordion title="google_contacts/create_contact">
+    **Descrição:** Criar um novo contato no catálogo de endereços do usuário.
+
+    **Parâmetros:**
+    - `names` (array, opcional): Nomes da pessoa. Cada item é um objeto com `givenName` (string), `familyName` (string), `displayName` (string).
+    - `emailAddresses` (array, opcional): Endereços de email. Cada item é um objeto com `value` (string, endereço de email) e `type` (string, 'home', 'work', 'other', padrão 'other').
+    - `phoneNumbers` (array, opcional): Números de telefone. Cada item é um objeto com `value` (string, número de telefone) e `type` (string, 'home', 'work', 'mobile', 'other', padrão 'other').
+    - `addresses` (array, opcional): Endereços postais. Cada item é um objeto com `formattedValue` (string, endereço formatado) e `type` (string, 'home', 'work', 'other', padrão 'other').
+    - `organizations` (array, opcional): Organizações/empresas. Cada item é um objeto com `name` (string, nome da organização), `title` (string, cargo) e `type` (string, 'work', 'other', padrão 'work').
+  </Accordion>
+
+  <Accordion title="google_contacts/update_contact">
+    **Descrição:** Atualizar informações de um contato existente.
+
+    **Parâmetros:**
+    - `resourceName` (string, obrigatório): O nome do recurso da pessoa a atualizar (ex: 'people/c123456789').
+    - `updatePersonFields` (string, obrigatório): Campos a atualizar (ex: 'names,emailAddresses,phoneNumbers').
+    - `names` (array, opcional): Nomes da pessoa. Cada item é um objeto com `givenName` (string), `familyName` (string), `displayName` (string).
+    - `emailAddresses` (array, opcional): Endereços de email. Cada item é um objeto com `value` (string, endereço de email) e `type` (string, 'home', 'work', 'other').
+    - `phoneNumbers` (array, opcional): Números de telefone. Cada item é um objeto com `value` (string, número de telefone) e `type` (string, 'home', 'work', 'mobile', 'other').
+  </Accordion>
+
+  <Accordion title="google_contacts/delete_contact">
+    **Descrição:** Excluir um contato do catálogo de endereços do usuário.
+
+    **Parâmetros:**
+    - `resourceName` (string, obrigatório): O nome do recurso da pessoa a excluir (ex: 'people/c123456789').
+  </Accordion>
+
+  <Accordion title="google_contacts/batch_get_people">
+    **Descrição:** Obter informações sobre várias pessoas em uma única solicitação.
+
+    **Parâmetros:**
+    - `resourceNames` (array, obrigatório): Nomes de recursos das pessoas a obter (máx 200 itens).
+    - `personFields` (string, opcional): Campos a incluir (ex: 'names,emailAddresses,phoneNumbers'). Padrão: names,emailAddresses,phoneNumbers
+  </Accordion>
+
+  <Accordion title="google_contacts/list_contact_groups">
+    **Descrição:** Listar os grupos de contatos (rótulos) do usuário.
+
+    **Parâmetros:**
+    - `pageSize` (integer, opcional): Número de grupos de contatos a retornar. Mínimo: 1, Máximo: 1000
+    - `pageToken` (string, opcional): Token especificando qual página de resultado retornar.
+    - `groupFields` (string, opcional): Campos a incluir (ex: 'name,memberCount,clientData'). Padrão: name,memberCount
+  </Accordion>
+
+  <Accordion title="google_contacts/get_contact_group">
+    **Descrição:** Obter um grupo de contatos específico por nome do recurso.
+
+    **Parâmetros:**
+    - `resourceName` (string, obrigatório): O nome do recurso do grupo de contatos (ex: 'contactGroups/myContactGroup').
+    - `maxMembers` (integer, opcional): Número máximo de membros a incluir. Mínimo: 0, Máximo: 20000
+    - `groupFields` (string, opcional): Campos a incluir (ex: 'name,memberCount,clientData'). Padrão: name,memberCount
+  </Accordion>
+
+  <Accordion title="google_contacts/create_contact_group">
+    **Descrição:** Criar um novo grupo de contatos (rótulo).
+
+    **Parâmetros:**
+    - `name` (string, obrigatório): O nome do grupo de contatos.
+    - `clientData` (array, opcional): Dados específicos do cliente. Cada item é um objeto com `key` (string) e `value` (string).
+  </Accordion>
+</AccordionGroup>
+
+## Exemplos de Uso
+
+### Configuração Básica do Agente Google Contacts
+
+```python
+from crewai import Agent, Task, Crew
+
+# Crie um agente com capacidades do Google Contacts
+contacts_agent = Agent(
+    role="Gerenciador de Contatos",
+    goal="Gerenciar Google Contacts de forma eficiente",
+    backstory="Um assistente IA especializado em gerenciamento e organização de contatos.",
+    apps=['google_contacts']  # Todas as ações do Google Contacts estarão disponíveis
+)
+
+# Tarefa para criar um novo contato
+create_contact_task = Task(
+    description="Criar um novo contato chamado 'João Silva' com email 'joao.silva@exemplo.com' e telefone '11-98765-4321'",
+    agent=contacts_agent,
+    expected_output="Novo contato criado com sucesso"
+)
+
+# Execute a tarefa
+crew = Crew(
+    agents=[contacts_agent],
+    tasks=[create_contact_task]
+)
+
+crew.kickoff()
+```
+
+### Pesquisando e Listando Contatos
+
+```python
+from crewai import Agent, Task, Crew
+
+# Crie um agente focado em pesquisar contatos
+search_agent = Agent(
+    role="Pesquisador de Contatos",
+    goal="Encontrar e recuperar informações de contato",
+    backstory="Um assistente IA habilidoso em pesquisar e listar contatos.",
+    apps=['google_contacts/search_contacts', 'google_contacts/get_contacts']
+)
+
+# Tarefa para pesquisar contatos
+search_task = Task(
+    description="Pesquisar por contatos chamados 'Maria' e listar seus endereços de email e números de telefone.",
+    agent=search_agent,
+    expected_output="Lista de contatos correspondentes a 'Maria' com seus detalhes de email e telefone."
+)
+
+crew = Crew(
+    agents=[search_agent],
+    tasks=[search_task]
+)
+
+crew.kickoff()
+```
+
+### Gerenciando Grupos de Contatos
+
+```python
+from crewai import Agent, Task, Crew
+
+# Crie um agente para gerenciar grupos de contatos
+group_manager = Agent(
+    role="Organizador de Grupos de Contatos",
+    goal="Organizar contatos em grupos e gerenciar membros dos grupos",
+    backstory="Um assistente IA especializado em criar e gerenciar grupos do Google Contacts.",
+    apps=['google_contacts/create_contact_group', 'google_contacts/list_contact_groups']
+)
+
+# Tarefa para criar um novo grupo de contatos
+create_group_task = Task(
+    description="Criar um novo grupo de contatos chamado 'Equipe de Marketing' e listar todos os grupos existentes.",
+    agent=group_manager,
+    expected_output="Novo grupo de contatos 'Equipe de Marketing' criado e lista de todos os grupos retornada."
+)
+
+crew = Crew(
+    agents=[group_manager],
+    tasks=[create_group_task]
+)
+
+crew.kickoff()
+```
+
+## Solução de Problemas
+
+### Problemas Comuns
+
+**Erros de Autenticação**
+- Certifique-se de que sua conta Google tenha as permissões necessárias para acesso a contatos e diretório.
+- Verifique se a conexão OAuth inclui todos os escopos necessários para a API Google People.
+
+**Problemas de Criação/Atualização de Contatos**
+- Certifique-se de que campos obrigatórios como `email` sejam fornecidos para criação de contatos.
+- Verifique se o `resourceName` está correto ao atualizar ou excluir contatos.
+- Confirme se o formato dos dados para `names`, `emailAddresses`, `phoneNumbers`, etc., corresponde às especificações da API.
+
+**Problemas de Pesquisa e Filtro**
+- Certifique-se de que os parâmetros de `query` e `readMask` estejam especificados corretamente para `search_contacts` e `search_other_contacts`.
+- Para pesquisas de diretório, certifique-se de que `sources` esteja definido corretamente (ex: 'DIRECTORY_SOURCE_TYPE_DOMAIN_PROFILE').
+
+**Gerenciamento de Grupos de Contatos**
+- Ao criar um grupo de contatos, certifique-se de que o `name` seja fornecido.
+- Para `get_contact_group`, certifique-se de que o `resourceName` esteja correto.
+
+### Obtendo Ajuda
+
+<Card title="Precisa de Ajuda?" icon="headset" href="mailto:support@crewai.com">
+  Entre em contato com nossa equipe de suporte para assistência com configuração ou solução de problemas da integração Google Contacts.
+</Card>

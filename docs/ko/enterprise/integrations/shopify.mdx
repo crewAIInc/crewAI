@@ -13,16 +13,48 @@ mode: "wide"
 
 Shopify 연동을 사용하기 전에 다음을 확인하세요:
 
-- 활성 구독이 있는 [CrewAI Enterprise](https://app.crewai.com) 계정
+- 활성 구독이 있는 [CrewAI AMP](https://app.crewai.com) 계정
 - 적절한 관리자 권한이 있는 Shopify 스토어
 - [통합 페이지](https://app.crewai.com/integrations)를 통해 Shopify 스토어 연결
+
+## Shopify 통합 설정
+
+### 1. Shopify 스토어 연결
+
+1. [CrewAI AMP 통합](https://app.crewai.com/crewai_plus/connectors)으로 이동합니다.
+2. 인증 통합 섹션에서 **Shopify**를 찾습니다.
+3. **연결**을 클릭하고 OAuth 과정을 완료합니다.
+4. 스토어 및 제품 관리에 필요한 권한을 부여합니다.
+5. [통합 설정](https://app.crewai.com/crewai_plus/settings/integrations)에서 Enterprise Token을 복사합니다.
+
+### 2. 필수 패키지 설치
+
+```bash
+uv add crewai-tools
+```
+
+### 3. 환경 변수 설정
+
+<Note>
+  `Agent(apps=[])`와 함께 통합을 사용하려면 Enterprise Token으로 `CREWAI_PLATFORM_INTEGRATION_TOKEN` 환경 변수를 설정해야 합니다.
+</Note>
+
+```bash
+export CREWAI_PLATFORM_INTEGRATION_TOKEN="your_enterprise_token"
+```
+
+또는 `.env` 파일에 추가하세요:
+
+```
+CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
+```
 
 ## 사용 가능한 도구
 
 ### **고객 관리**
 
 <AccordionGroup>
-  <Accordion title="SHOPIFY_GET_CUSTOMERS">
+  <Accordion title="shopify/get_customers">
     **설명:** Shopify 스토어에서 고객 목록을 조회합니다.
 
     **파라미터:**
@@ -34,7 +66,7 @@ Shopify 연동을 사용하기 전에 다음을 확인하세요:
     - `limit` (string, 선택): 반환할 최대 고객 수 (기본값 250)
   </Accordion>
 
-  <Accordion title="SHOPIFY_SEARCH_CUSTOMERS">
+  <Accordion title="shopify/search_customers">
     **설명:** 고급 필터링 기준을 사용하여 고객을 검색합니다.
 
     **파라미터:**
@@ -42,7 +74,7 @@ Shopify 연동을 사용하기 전에 다음을 확인하세요:
     - `limit` (string, 선택): 반환할 최대 고객 수 (기본값 250)
   </Accordion>
 
-  <Accordion title="SHOPIFY_CREATE_CUSTOMER">
+  <Accordion title="shopify/create_customer">
     **설명:** Shopify 스토어에 새로운 고객을 생성합니다.
 
     **파라미터:**
@@ -63,7 +95,7 @@ Shopify 연동을 사용하기 전에 다음을 확인하세요:
     - `metafields` (object, 선택): 추가 메타필드(JSON 형식)
   </Accordion>
 
-  <Accordion title="SHOPIFY_UPDATE_CUSTOMER">
+  <Accordion title="shopify/update_customer">
     **설명:** Shopify 스토어에 기존 고객을 업데이트합니다.
 
     **파라미터:**
@@ -89,7 +121,7 @@ Shopify 연동을 사용하기 전에 다음을 확인하세요:
 ### **주문 관리**
 
 <AccordionGroup>
-  <Accordion title="SHOPIFY_GET_ORDERS">
+  <Accordion title="shopify/get_orders">
     **설명:** Shopify 스토어에서 주문 목록을 조회합니다.
 
     **파라미터:**
@@ -101,7 +133,7 @@ Shopify 연동을 사용하기 전에 다음을 확인하세요:
     - `limit` (string, optional): 반환할 주문의 최대 개수 (기본값: 250)
   </Accordion>
 
-  <Accordion title="SHOPIFY_CREATE_ORDER">
+  <Accordion title="shopify/create_order">
     **설명:** Shopify 스토어에 새 주문을 생성합니다.
 
     **파라미터:**
@@ -114,7 +146,7 @@ Shopify 연동을 사용하기 전에 다음을 확인하세요:
     - `note` (string, optional): 주문 메모
   </Accordion>
 
-  <Accordion title="SHOPIFY_UPDATE_ORDER">
+  <Accordion title="shopify/update_order">
     **설명:** Shopify 스토어에서 기존 주문을 업데이트합니다.
 
     **파라미터:**
@@ -128,7 +160,7 @@ Shopify 연동을 사용하기 전에 다음을 확인하세요:
     - `note` (string, optional): 주문 메모
   </Accordion>
 
-  <Accordion title="SHOPIFY_GET_ABANDONED_CARTS">
+  <Accordion title="shopify/get_abandoned_carts">
     **설명:** Shopify 스토어에서 방치된 장바구니를 조회합니다.
 
     **파라미터:**
@@ -144,7 +176,7 @@ Shopify 연동을 사용하기 전에 다음을 확인하세요:
 ### **제품 관리 (REST API)**
 
 <AccordionGroup>
-  <Accordion title="SHOPIFY_GET_PRODUCTS">
+  <Accordion title="shopify/get_products">
     **설명:** REST API를 사용하여 Shopify 스토어에서 제품 목록을 조회합니다.
 
     **파라미터:**
@@ -160,7 +192,7 @@ Shopify 연동을 사용하기 전에 다음을 확인하세요:
     - `limit` (string, optional): 반환할 최대 제품 수 (기본값: 250)
   </Accordion>
 
-  <Accordion title="SHOPIFY_CREATE_PRODUCT">
+  <Accordion title="shopify/create_product">
     **설명:** REST API를 사용하여 Shopify 스토어에 새로운 제품을 생성합니다.
 
     **파라미터:**
@@ -176,7 +208,7 @@ Shopify 연동을 사용하기 전에 다음을 확인하세요:
     - `publishToPointToSale` (boolean, optional): 포인트 오브 세일(Point of Sale)에 공개 여부
   </Accordion>
 
-  <Accordion title="SHOPIFY_UPDATE_PRODUCT">
+  <Accordion title="shopify/update_product">
     **설명:** REST API를 사용하여 Shopify 스토어의 기존 제품을 업데이트합니다.
 
     **파라미터:**
@@ -197,14 +229,14 @@ Shopify 연동을 사용하기 전에 다음을 확인하세요:
 ### **제품 관리 (GraphQL)**
 
 <AccordionGroup>
-  <Accordion title="SHOPIFY_GET_PRODUCTS_GRAPHQL">
+  <Accordion title="shopify/get_products_graphql">
     **설명:** 고급 GraphQL 필터링 기능을 사용하여 제품을 조회합니다.
 
     **파라미터:**
     - `productFilterFormula` (object, 선택): id, title, vendor, status, handle, tag, created_at, updated_at, published_at와 같은 필드를 지원하는 불리언 정규합형(DNF) 기반의 고급 필터
   </Accordion>
 
-  <Accordion title="SHOPIFY_CREATE_PRODUCT_GRAPHQL">
+  <Accordion title="shopify/create_product_graphql">
     **설명:** 미디어 지원이 강화된 GraphQL API를 사용하여 새 제품을 생성합니다.
 
     **파라미터:**
@@ -217,7 +249,7 @@ Shopify 연동을 사용하기 전에 다음을 확인하세요:
     - `additionalFields` (object, 선택): status, requiresSellingPlan, giftCard와 같은 추가 제품 필드
   </Accordion>
 
-  <Accordion title="SHOPIFY_UPDATE_PRODUCT_GRAPHQL">
+  <Accordion title="shopify/update_product_graphql">
     **설명:** 미디어 지원이 강화된 GraphQL API를 사용하여 기존 제품을 업데이트합니다.
 
     **파라미터:**
@@ -238,19 +270,13 @@ Shopify 연동을 사용하기 전에 다음을 확인하세요:
 
 ```python
 from crewai import Agent, Task, Crew
-from crewai_tools import CrewaiEnterpriseTools
-
-# Get enterprise tools (Shopify tools will be included)
-enterprise_tools = CrewaiEnterpriseTools(
-    enterprise_token="your_enterprise_token"
-)
 
 # Create an agent with Shopify capabilities
 shopify_agent = Agent(
     role="E-commerce Manager",
     goal="Manage online store operations and customer relationships efficiently",
     backstory="An AI assistant specialized in e-commerce operations and online store management.",
-    tools=[enterprise_tools]
+    apps=['shopify']
 )
 
 # Task to create a new customer
@@ -272,19 +298,12 @@ crew.kickoff()
 ### 특정 Shopify 도구 필터링
 
 ```python
-from crewai_tools import CrewaiEnterpriseTools
-
-# Get only specific Shopify tools
-enterprise_tools = CrewaiEnterpriseTools(
-    enterprise_token="your_enterprise_token",
-    actions_list=["shopify_create_customer", "shopify_create_order", "shopify_get_products"]
-)
 
 store_manager = Agent(
     role="Store Manager",
     goal="Manage customer orders and product catalog",
     backstory="An experienced store manager who handles customer relationships and inventory management.",
-    tools=enterprise_tools
+    apps=['shopify']
 )
 
 # Task to manage store operations
@@ -306,17 +325,12 @@ crew.kickoff()
 
 ```python
 from crewai import Agent, Task, Crew
-from crewai_tools import CrewaiEnterpriseTools
-
-enterprise_tools = CrewaiEnterpriseTools(
-    enterprise_token="your_enterprise_token"
-)
 
 product_manager = Agent(
     role="Product Manager",
     goal="Manage product catalog and inventory with advanced GraphQL capabilities",
     backstory="An AI assistant that specializes in product management and catalog optimization.",
-    tools=[enterprise_tools]
+    apps=['shopify']
 )
 
 # Task to manage product catalog
@@ -343,17 +357,12 @@ crew.kickoff()
 
 ```python
 from crewai import Agent, Task, Crew
-from crewai_tools import CrewaiEnterpriseTools
-
-enterprise_tools = CrewaiEnterpriseTools(
-    enterprise_token="your_enterprise_token"
-)
 
 analytics_agent = Agent(
     role="E-commerce Analyst",
     goal="Analyze customer behavior and order patterns to optimize store performance",
     backstory="An analytical AI that excels at extracting insights from e-commerce data.",
-    tools=[enterprise_tools]
+    apps=['shopify']
 )
 
 # Complex task involving multiple operations

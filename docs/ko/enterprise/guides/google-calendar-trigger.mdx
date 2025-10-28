@@ -1,0 +1,74 @@
+---
+title: "Google Calendar Trigger"
+description: "Kick off crews when Google Calendar events are created, updated, or cancelled"
+icon: "calendar"
+mode: "wide"
+---
+
+## Overview
+
+Use the Google Calendar trigger to launch automations whenever calendar events change. Common use cases include briefing a team before a meeting, notifying stakeholders when a critical event is cancelled, or summarizing daily schedules.
+
+<Tip>
+  Make sure Google Calendar is connected in **Tools & Integrations** and enabled for the deployment you want to automate.
+</Tip>
+
+## Enabling the Google Calendar Trigger
+
+1. Open your deployment in CrewAI AMP
+2. Go to the **Triggers** tab
+3. Locate **Google Calendar** and switch the toggle to enable
+
+<Frame>
+  <img src="/images/enterprise/calendar-trigger.png" alt="Enable or disable triggers with toggle" />
+</Frame>
+
+## Example: Summarize meeting details
+
+The snippet below mirrors the `calendar-event-crew.py` example in the trigger repository. It parses the payload, analyses the attendees and timing, and produces a meeting brief for downstream tools.
+
+```python
+from calendar_event_crew import GoogleCalendarEventTrigger
+
+crew = GoogleCalendarEventTrigger().crew()
+result = crew.kickoff({
+    "crewai_trigger_payload": calendar_payload,
+})
+print(result.raw)
+```
+
+Use `crewai_trigger_payload` exactly as it is delivered by the trigger so the crew can extract the proper fields.
+
+## 로컬에서 테스트
+
+CrewAI CLI를 사용하여 Google Calendar 트리거 통합을 로컬에서 테스트하세요:
+
+```bash
+# 사용 가능한 모든 트리거 보기
+crewai triggers list
+
+# 실제 payload로 Google Calendar 트리거 시뮬레이션
+crewai triggers run google_calendar/event_changed
+```
+
+`crewai triggers run` 명령은 완전한 Calendar payload로 크루를 실행하여 배포 전에 파싱 로직을 테스트할 수 있게 해줍니다.
+
+<Warning>
+  개발 중에는 `crewai triggers run google_calendar/event_changed`를 사용하세요 (`crewai run`이 아님). 배포 후에는 크루가 자동으로 트리거 payload를 받습니다.
+</Warning>
+
+## Monitoring Executions
+
+The **Executions** list in the deployment dashboard tracks every triggered run and surfaces payload metadata, output summaries, and errors.
+
+<Frame>
+  <img src="/images/enterprise/list-executions.png" alt="List of executions triggered by automation" />
+</Frame>
+
+## Troubleshooting
+
+- Ensure the correct Google account is connected and the trigger is enabled
+- `crewai triggers run google_calendar/event_changed`로 로컬 테스트하여 정확한 payload 구조를 확인하세요
+- Confirm your workflow handles all-day events (payloads use `start.date` and `end.date` instead of timestamps)
+- Check execution logs if reminders or attendee arrays are missing—calendar permissions can limit fields in the payload
+- 주의: 트리거 실행을 시뮬레이션하려면 `crewai triggers run`을 사용하세요 (`crewai run`이 아님)

@@ -1,0 +1,143 @@
+---
+title: Microsoft Word 통합
+description: "CrewAI를 위한 Microsoft Word 통합으로 문서 생성 및 관리."
+icon: "file-word"
+mode: "wide"
+---
+
+## 개요
+
+에이전트가 OneDrive 또는 SharePoint에서 Word 문서와 텍스트 파일을 생성, 읽기 및 관리할 수 있도록 합니다. AI 기반 자동화로 문서 생성을 자동화하고, 콘텐츠를 검색하고, 문서 속성을 관리하며, 문서 워크플로를 간소화합니다.
+
+## 전제 조건
+
+Microsoft Word 통합을 사용하기 전에 다음 사항을 확인하세요:
+
+- 활성 구독이 있는 [CrewAI AMP](https://app.crewai.com) 계정
+- Word 및 OneDrive/SharePoint 액세스 권한이 있는 Microsoft 계정
+- [통합 페이지](https://app.crewai.com/crewai_plus/connectors)를 통해 Microsoft 계정 연결
+
+## Microsoft Word 통합 설정
+
+### 1. Microsoft 계정 연결
+
+1. [CrewAI AMP 통합](https://app.crewai.com/crewai_plus/connectors)으로 이동
+2. 인증 통합 섹션에서 **Microsoft Word** 찾기
+3. **연결**을 클릭하고 OAuth 플로우 완료
+4. 파일 액세스에 필요한 권한 부여
+5. [통합 설정](https://app.crewai.com/crewai_plus/settings/integrations)에서 Enterprise Token 복사
+
+### 2. 필요한 패키지 설치
+
+```bash
+uv add crewai-tools
+```
+
+### 3. 환경 변수 설정
+
+<Note>
+  `Agent(apps=[])`와 함께 통합을 사용하려면 Enterprise Token으로 `CREWAI_PLATFORM_INTEGRATION_TOKEN` 환경 변수를 설정해야 합니다.
+</Note>
+
+```bash
+export CREWAI_PLATFORM_INTEGRATION_TOKEN="your_enterprise_token"
+```
+
+또는 `.env` 파일에 추가하세요:
+
+```
+CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
+```
+
+## 사용 가능한 작업
+
+<AccordionGroup>
+  <Accordion title="microsoft_word/get_documents">
+    **설명:** OneDrive 또는 SharePoint에서 모든 Word 문서를 가져옵니다.
+
+    **매개변수:**
+    - `select` (string, 선택사항): 반환할 특정 속성 선택.
+    - `filter` (string, 선택사항): OData 구문을 사용하여 결과 필터링.
+    - `expand` (string, 선택사항): 관련 리소스를 인라인으로 확장.
+    - `top` (integer, 선택사항): 반환할 항목 수 (최소 1, 최대 999).
+    - `orderby` (string, 선택사항): 지정된 속성으로 결과 정렬.
+  </Accordion>
+
+  <Accordion title="microsoft_word/create_text_document">
+    **설명:** 내용이 있는 텍스트 문서(.txt)를 만듭니다. 읽기 가능하고 편집 가능해야 하는 프로그래밍 방식 콘텐츠 생성에 권장됩니다.
+
+    **매개변수:**
+    - `file_name` (string, 필수): 텍스트 문서의 이름 (.txt로 끝나야 함).
+    - `content` (string, 선택사항): 문서의 텍스트 내용. 기본값: "API를 통해 생성된 새 텍스트 문서입니다."
+  </Accordion>
+
+  <Accordion title="microsoft_word/get_document_content">
+    **설명:** 문서의 내용을 가져옵니다 (텍스트 파일에서 가장 잘 작동).
+
+    **매개변수:**
+    - `file_id` (string, 필수): 문서의 ID.
+  </Accordion>
+
+  <Accordion title="microsoft_word/get_document_properties">
+    **설명:** 문서의 속성과 메타데이터를 가져옵니다.
+
+    **매개변수:**
+    - `file_id` (string, 필수): 문서의 ID.
+  </Accordion>
+
+  <Accordion title="microsoft_word/delete_document">
+    **설명:** 문서를 삭제합니다.
+
+    **매개변수:**
+    - `file_id` (string, 필수): 삭제할 문서의 ID.
+  </Accordion>
+</AccordionGroup>
+
+## 사용 예제
+
+### 기본 Microsoft Word 에이전트 설정
+
+```python
+from crewai import Agent, Task, Crew
+
+# Microsoft Word 기능을 가진 에이전트 생성
+word_agent = Agent(
+    role="문서 관리자",
+    goal="Word 문서와 텍스트 파일을 효율적으로 관리",
+    backstory="Microsoft Word 문서 작업 및 콘텐츠 관리 전문 AI 어시스턴트.",
+    apps=['microsoft_word']  # 모든 Word 작업을 사용할 수 있습니다
+)
+
+# 새 텍스트 문서 생성 작업
+create_doc_task = Task(
+    description="'회의노트.txt'라는 새 텍스트 문서를 만들고 내용은 '2024년 1월 회의 노트: 주요 토론 사항 및 실행 항목.'으로 하세요",
+    agent=word_agent,
+    expected_output="새 텍스트 문서 '회의노트.txt'가 성공적으로 생성됨."
+)
+
+# 작업 실행
+crew = Crew(
+    agents=[word_agent],
+    tasks=[create_doc_task]
+)
+
+crew.kickoff()
+```
+
+## 문제 해결
+
+### 일반적인 문제
+
+**인증 오류**
+- Microsoft 계정이 파일 액세스에 필요한 권한을 가지고 있는지 확인하세요 (예: `Files.Read.All`, `Files.ReadWrite.All`).
+- OAuth 연결이 필요한 모든 범위를 포함하는지 확인하세요.
+
+**파일 생성 문제**
+- 텍스트 문서를 만들 때 `file_name`이 `.txt` 확장자로 끝나는지 확인하세요.
+- 대상 위치(OneDrive/SharePoint)에 쓰기 권한이 있는지 확인하세요.
+
+### 도움 받기
+
+<Card title="도움이 필요하신가요?" icon="headset" href="mailto:support@crewai.com">
+  Microsoft Word 통합 설정 또는 문제 해결에 대한 지원이 필요하시면 지원팀에 문의하세요.
+</Card>

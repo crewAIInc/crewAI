@@ -8,42 +8,173 @@ mode: "wide"
 ## Overview
 
 The [Model Context Protocol](https://modelcontextprotocol.io/introduction) (MCP) provides a standardized way for AI agents to provide context to LLMs by communicating with external services, known as MCP Servers.
-The `crewai-tools` library extends CrewAI's capabilities by allowing you to seamlessly integrate tools from these MCP servers into your agents.
-This gives your crews access to a vast ecosystem of functionalities.
+
+CrewAI offers **two approaches** for MCP integration:
+
+### Simple DSL Integration** (Recommended)
+
+Use the `mcps` field directly on agents for seamless MCP tool integration:
+
+```python
+from crewai import Agent
+
+agent = Agent(
+    role="Research Analyst",
+    goal="Research and analyze information",
+    backstory="Expert researcher with access to external tools",
+    mcps=[
+        "https://mcp.exa.ai/mcp?api_key=your_key",           # External MCP server
+        "https://api.weather.com/mcp#get_forecast",          # Specific tool from server
+        "crewai-amp:financial-data",                         # CrewAI AMP marketplace
+        "crewai-amp:research-tools#pubmed_search"            # Specific AMP tool
+    ]
+)
+# MCP tools are now automatically available to your agent!
+```
+
+### 🔧 **Advanced: MCPServerAdapter** (For Complex Scenarios)
+
+For advanced use cases requiring manual connection management, the `crewai-tools` library provides the `MCPServerAdapter` class.
 
 We currently support the following transport mechanisms:
 
 - **Stdio**: for local servers (communication via standard input/output between processes on the same machine)
 - **Server-Sent Events (SSE)**: for remote servers (unidirectional, real-time data streaming from server to client over HTTP)
-- **Streamable HTTP**: for remote servers (flexible, potentially bi-directional communication over HTTP, often utilizing SSE for server-to-client streams)
+- **Streamable HTTPS**: for remote servers (flexible, potentially bi-directional communication over HTTPS, often utilizing SSE for server-to-client streams)
 
 ## Video Tutorial
 Watch this video tutorial for a comprehensive guide on MCP integration with CrewAI:
 
 <iframe
-  width="100%"
-  height="400"
+  className="w-full aspect-video rounded-xl"
   src="https://www.youtube.com/embed/TpQ45lAZh48"
   title="CrewAI MCP Integration Guide"
-  frameborder="0"
-  style={{ borderRadius: '10px' }}
+  frameBorder="0"
   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-  allowfullscreen
+  allowFullScreen
 ></iframe>
 
 ## Installation
 
-Before you start using MCP with `crewai-tools`, you need to install the `mcp` extra `crewai-tools` dependency with the following command:
+CrewAI MCP integration requires the `mcp` library:
 
 ```shell
+# For Simple DSL Integration (Recommended)
+uv add mcp
+
+# For Advanced MCPServerAdapter usage
 uv pip install 'crewai-tools[mcp]'
 ```
 
-## Key Concepts & Getting Started
+## Quick Start: Simple DSL Integration
 
-The `MCPServerAdapter` class from `crewai-tools` is the primary way to connect to an MCP server and make its tools available to your CrewAI agents. It supports different transport mechanisms and simplifies connection management.
+The easiest way to integrate MCP servers is using the `mcps` field on your agents:
 
-Using a Python context manager (`with` statement) is the **recommended approach** for `MCPServerAdapter`. It automatically handles starting and stopping the connection to the MCP server.
+```python
+from crewai import Agent, Task, Crew
+
+# Create agent with MCP tools
+research_agent = Agent(
+    role="Research Analyst",
+    goal="Find and analyze information using advanced search tools",
+    backstory="Expert researcher with access to multiple data sources",
+    mcps=[
+        "https://mcp.exa.ai/mcp?api_key=your_key&profile=your_profile",
+        "crewai-amp:weather-service#current_conditions"
+    ]
+)
+
+# Create task
+research_task = Task(
+    description="Research the latest developments in AI agent frameworks",
+    expected_output="Comprehensive research report with citations",
+    agent=research_agent
+)
+
+# Create and run crew
+crew = Crew(agents=[research_agent], tasks=[research_task])
+result = crew.kickoff()
+```
+
+That's it! The MCP tools are automatically discovered and available to your agent.
+
+## MCP Reference Formats
+
+The `mcps` field supports various reference formats for maximum flexibility:
+
+### External MCP Servers
+
+```python
+mcps=[
+    # Full server - get all available tools
+    "https://mcp.example.com/api",
+
+    # Specific tool from server using # syntax
+    "https://api.weather.com/mcp#get_current_weather",
+
+    # Server with authentication parameters
+    "https://mcp.exa.ai/mcp?api_key=your_key&profile=your_profile"
+]
+```
+
+### CrewAI AMP Marketplace
+
+```python
+mcps=[
+    # Full AMP MCP service - get all available tools
+    "crewai-amp:financial-data",
+
+    # Specific tool from AMP service using # syntax
+    "crewai-amp:research-tools#pubmed_search",
+
+    # Multiple AMP services
+    "crewai-amp:weather-service",
+    "crewai-amp:market-analysis"
+]
+```
+
+### Mixed References
+
+```python
+mcps=[
+    "https://external-api.com/mcp",              # External server
+    "https://weather.service.com/mcp#forecast",  # Specific external tool
+    "crewai-amp:financial-insights",             # AMP service
+    "crewai-amp:data-analysis#sentiment_tool"    # Specific AMP tool
+]
+```
+
+## Key Features
+
+- 🔄 **Automatic Tool Discovery**: Tools are automatically discovered and integrated
+- 🏷️ **Name Collision Prevention**: Server names are prefixed to tool names
+- ⚡ **Performance Optimized**: On-demand connections with schema caching
+- 🛡️ **Error Resilience**: Graceful handling of unavailable servers
+- ⏱️ **Timeout Protection**: Built-in timeouts prevent hanging connections
+- 📊 **Transparent Integration**: Works seamlessly with existing CrewAI features
+
+## Error Handling
+
+The MCP DSL integration is designed to be resilient:
+
+```python
+agent = Agent(
+    role="Resilient Agent",
+    goal="Continue working despite server issues",
+    backstory="Agent that handles failures gracefully",
+    mcps=[
+        "https://reliable-server.com/mcp",        # Will work
+        "https://unreachable-server.com/mcp",     # Will be skipped gracefully
+        "https://slow-server.com/mcp",            # Will timeout gracefully
+        "crewai-amp:working-service"              # Will work
+    ]
+)
+# Agent will use tools from working servers and log warnings for failing ones
+```
+
+## Advanced: MCPServerAdapter
+
+For complex scenarios requiring manual connection management, use the `MCPServerAdapter` class from `crewai-tools`. Using a Python context manager (`with` statement) is the recommended approach as it automatically handles starting and stopping the connection to the MCP server.
 
 ## Connection Configuration
 
@@ -175,6 +306,16 @@ class CrewWithMCP:
     # ... rest of your crew setup ...
 ```
 
+<Tip>
+When a crew class is decorated with `@CrewBase`, the adapter lifecycle is managed for you:
+
+- The first call to `get_mcp_tools()` lazily creates a shared `MCPServerAdapter` that is reused by every agent in the crew.
+- The adapter automatically shuts down after `.kickoff()` completes thanks to an implicit after-kickoff hook injected by `@CrewBase`, so no manual cleanup is required.
+- If `mcp_server_params` is not defined, `get_mcp_tools()` simply returns an empty list, allowing the same code paths to run with or without MCP configured.
+
+This makes it safe to call `get_mcp_tools()` from multiple agent methods or selectively enable MCP per environment.
+</Tip>
+
 ### Connection Timeout Configuration
 
 You can configure the connection timeout for MCP servers by setting the `mcp_connect_timeout` class attribute. If no timeout is specified, it defaults to 30 seconds.
@@ -234,10 +375,18 @@ class CrewWithCustomTimeout:
 
 <CardGroup cols={2}>
   <Card
+    title="Simple DSL Integration"
+    icon="code"
+    href="/en/mcp/dsl-integration"
+    color="#3B82F6"
+  >
+    **Recommended**: Use the simple `mcps=[]` field syntax for effortless MCP integration.
+  </Card>
+  <Card
     title="Stdio Transport"
     icon="server"
     href="/en/mcp/stdio"
-    color="#3B82F6"
+    color="#10B981"
   >
     Connect to local MCP servers via standard input/output. Ideal for scripts and local executables.
   </Card>
@@ -245,7 +394,7 @@ class CrewWithCustomTimeout:
     title="SSE Transport"
     icon="wifi"
     href="/en/mcp/sse"
-    color="#10B981"
+    color="#F59E0B"
   >
     Integrate with remote MCP servers using Server-Sent Events for real-time data streaming.
   </Card>
@@ -253,7 +402,7 @@ class CrewWithCustomTimeout:
     title="Streamable HTTP Transport"
     icon="globe"
     href="/en/mcp/streamable-http"
-    color="#F59E0B"
+    color="#8B5CF6"
   >
     Utilize flexible Streamable HTTP for robust communication with remote MCP servers.
   </Card>
@@ -261,7 +410,7 @@ class CrewWithCustomTimeout:
     title="Connecting to Multiple Servers"
     icon="layer-group"
     href="/en/mcp/multiple-servers"
-    color="#8B5CF6"
+    color="#EF4444"
   >
     Aggregate tools from several MCP servers simultaneously using a single adapter.
   </Card>
@@ -269,7 +418,7 @@ class CrewWithCustomTimeout:
     title="Security Considerations"
     icon="lock"
     href="/en/mcp/security"
-    color="#EF4444"
+    color="#DC2626"
   >
     Review important security best practices for MCP integration to keep your agents safe.
   </Card>

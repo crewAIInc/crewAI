@@ -1,22 +1,72 @@
 ---
-title: "Automation Triggers"
-description: "Automatically execute your CrewAI workflows when specific events occur in connected integrations"
-icon: "bolt"
+title: "Triggers Overview"
+description: "Understand how CrewAI AMP triggers work, how to manage them, and where to find integration-specific playbooks"
+icon: "face-smile"
 mode: "wide"
 ---
 
-Automation triggers enable you to automatically run your CrewAI deployments when specific events occur in your connected integrations, creating powerful event-driven workflows that respond to real-time changes in your business systems.
+CrewAI AMP triggers connect your automations to real-time events across the tools your teams already use. Instead of polling systems or relying on manual kickoffs, triggers listen for changes—new emails, calendar updates, CRM status changes—and immediately launch the crew or flow you specify.
 
-## Overview
+<Frame>
+  ![Automation Triggers Overview](/images/enterprise/crew_connectors.png)
+</Frame>
 
-With automation triggers, you can:
+### Integration Playbooks
+
+Deep-dive guides walk through setup and sample workflows for each integration:
+
+<CardGroup cols={2}>
+  <Card title="Gmail Trigger" icon="envelope">
+    <a href="/en/enterprise/guides/gmail-trigger">Enable crews when emails arrive or threads update.</a>
+  </Card>
+
+  <Card title="Google Calendar Trigger" icon="calendar-days">
+    <a href="/en/enterprise/guides/google-calendar-trigger">React to calendar events as they are created, updated, or cancelled.</a>
+  </Card>
+
+  <Card title="Google Drive Trigger" icon="folder-open">
+    <a href="/en/enterprise/guides/google-drive-trigger">Handle Drive file uploads, edits, and deletions.</a>
+  </Card>
+
+  <Card title="Outlook Trigger" icon="envelope-open">
+    <a href="/en/enterprise/guides/outlook-trigger">Automate responses to new Outlook messages and calendar updates.</a>
+  </Card>
+
+  <Card title="OneDrive Trigger" icon="cloud">
+    <a href="/en/enterprise/guides/onedrive-trigger">Audit file activity and sharing changes in OneDrive.</a>
+  </Card>
+
+  <Card title="Microsoft Teams Trigger" icon="comments">
+    <a href="/en/enterprise/guides/microsoft-teams-trigger">Kick off workflows when new Teams chats start.</a>
+  </Card>
+
+  <Card title="HubSpot Trigger" icon="hubspot">
+    <a href="/en/enterprise/guides/hubspot-trigger">Launch automations from HubSpot workflows and lifecycle events.</a>
+  </Card>
+
+  <Card title="Salesforce Trigger" icon="salesforce">
+    <a href="/en/enterprise/guides/salesforce-trigger">Connect Salesforce processes to CrewAI for CRM automation.</a>
+  </Card>
+
+  <Card title="Slack Trigger" icon="slack">
+    <a href="/en/enterprise/guides/slack-trigger">Start crews directly from Slack slash commands.</a>
+  </Card>
+
+  <Card title="Zapier Trigger" icon="bolt">
+    <a href="/en/enterprise/guides/zapier-trigger">Bridge CrewAI with thousands of Zapier-supported apps.</a>
+  </Card>
+</CardGroup>
+
+## Trigger Capabilities
+
+With triggers, you can:
 
 - **Respond to real-time events** - Automatically execute workflows when specific conditions are met
 - **Integrate with external systems** - Connect with platforms like Gmail, Outlook, OneDrive, JIRA, Slack, Stripe and more
 - **Scale your automation** - Handle high-volume events without manual intervention
 - **Maintain context** - Access trigger data within your crews and flows
 
-## Managing Automation Triggers
+## Managing Triggers
 
 ### Viewing Available Triggers
 
@@ -25,7 +75,7 @@ To access and manage your automation triggers:
 1. Navigate to your deployment in the CrewAI dashboard
 2. Click on the **Triggers** tab to view all available trigger integrations
 
-<Frame>
+<Frame caption="Example of available automation triggers for a Gmail deployment">
   <img src="/images/enterprise/list-available-triggers.png" alt="List of available automation triggers" />
 </Frame>
 
@@ -35,7 +85,7 @@ This view shows all the trigger integrations available for your deployment, alon
 
 Each trigger can be easily enabled or disabled using the toggle switch:
 
-<Frame>
+<Frame caption="Enable or disable triggers with toggle">
   <img src="/images/enterprise/trigger-selected.png" alt="Enable or disable triggers with toggle" />
 </Frame>
 
@@ -48,24 +98,69 @@ Simply click the toggle to change the trigger state. Changes take effect immedia
 
 Track the performance and history of your triggered executions:
 
-<Frame>
+<Frame caption="List of executions triggered by automation">
   <img src="/images/enterprise/list-executions.png" alt="List of executions triggered by automation" />
 </Frame>
 
-## Building Automation
+## Building Trigger-Driven Automations
 
 Before building your automation, it's helpful to understand the structure of trigger payloads that your crews and flows will receive.
 
-### Payload Samples Repository
+### Trigger Setup Checklist
 
-We maintain a comprehensive repository with sample payloads from various trigger sources to help you build and test your automations:
+Before wiring a trigger into production, make sure you:
 
-**🔗 [CrewAI Enterprise Trigger Payload Samples](https://github.com/crewAIInc/crewai-enterprise-trigger-payload-samples)**
+- Connect the integration under **Tools & Integrations** and complete any OAuth or API key steps
+- Enable the trigger toggle on the deployment that should respond to events
+- Provide any required environment variables (API tokens, tenant IDs, shared secrets)
+- Create or update tasks that can parse the incoming payload within the first crew task or flow step
+- Decide whether to pass trigger context automatically using `allow_crewai_trigger_context`
+- Set up monitoring—webhook logs, CrewAI execution history, and optional external alerting
 
-This repository contains:
+### Testing Triggers Locally with CLI
 
-- **Real payload examples** from different trigger sources (Gmail, Google Drive, etc.)
-- **Payload structure documentation** showing the format and available fields
+The CrewAI CLI provides powerful commands to help you develop and test trigger-driven automations without deploying to production.
+
+#### List Available Triggers
+
+View all available triggers for your connected integrations:
+
+```bash
+crewai triggers list
+```
+
+This command displays all triggers available based on your connected integrations, showing:
+- Integration name and connection status
+- Available trigger types
+- Trigger names and descriptions
+
+#### Simulate Trigger Execution
+
+Test your crew with realistic trigger payloads before deployment:
+
+```bash
+crewai triggers run <trigger_name>
+```
+
+For example:
+
+```bash
+crewai triggers run microsoft_onedrive/file_changed
+```
+
+This command:
+- Executes your crew locally
+- Passes a complete, realistic trigger payload
+- Simulates exactly how your crew will be called in production
+
+<Warning>
+  **Important Development Notes:**
+  - Use `crewai triggers run <trigger>` to simulate trigger execution during development
+  - Using `crewai run` will NOT simulate trigger calls and won't pass the trigger payload
+  - After deployment, your crew will be executed with the actual trigger payload
+  - If your crew expects parameters that aren't in the trigger payload, execution may fail
+</Warning>
+
 
 ### Triggers with Crew
 
@@ -169,11 +264,20 @@ def delegate_to_crew(self, crewai_trigger_payload: dict = None):
 ## Troubleshooting
 
 **Trigger not firing:**
-- Verify the trigger is enabled
-- Check integration connection status
+- Verify the trigger is enabled in your deployment's Triggers tab
+- Check integration connection status under Tools & Integrations
+- Ensure all required environment variables are properly configured
 
 **Execution failures:**
 - Check the execution logs for error details
-- If you are developing, make sure the inputs include the `crewai_trigger_payload` parameter with the correct payload
+- Use `crewai triggers run <trigger_name>` to test locally and see the exact payload structure
+- Verify your crew can handle the `crewai_trigger_payload` parameter
+- Ensure your crew doesn't expect parameters that aren't included in the trigger payload
+
+**Development issues:**
+- Always test with `crewai triggers run <trigger>` before deploying to see the complete payload
+- Remember that `crewai run` does NOT simulate trigger calls—use `crewai triggers run` instead
+- Use `crewai triggers list` to verify which triggers are available for your connected integrations
+- After deployment, your crew will receive the actual trigger payload, so test thoroughly locally first
 
 Automation triggers transform your CrewAI deployments into responsive, event-driven systems that can seamlessly integrate with your existing business processes and tools.

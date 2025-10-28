@@ -1,0 +1,201 @@
+---
+title: Microsoft SharePoint 통합
+description: "CrewAI를 위한 Microsoft SharePoint 통합으로 사이트, 목록 및 문서 관리."
+icon: "folder-tree"
+mode: "wide"
+---
+
+## 개요
+
+에이전트가 SharePoint 사이트, 목록 및 문서 라이브러리에 액세스하고 관리할 수 있도록 합니다. AI 기반 자동화로 사이트 정보를 검색하고, 목록 항목을 관리하고, 파일을 업로드 및 구성하며, SharePoint 워크플로를 간소화합니다.
+
+## 전제 조건
+
+Microsoft SharePoint 통합을 사용하기 전에 다음 사항을 확인하세요:
+
+- 활성 구독이 있는 [CrewAI AMP](https://app.crewai.com) 계정
+- SharePoint 액세스 권한이 있는 Microsoft 계정
+- [통합 페이지](https://app.crewai.com/crewai_plus/connectors)를 통해 Microsoft 계정 연결
+
+## Microsoft SharePoint 통합 설정
+
+### 1. Microsoft 계정 연결
+
+1. [CrewAI AMP 통합](https://app.crewai.com/crewai_plus/connectors)으로 이동
+2. 인증 통합 섹션에서 **Microsoft SharePoint** 찾기
+3. **연결**을 클릭하고 OAuth 플로우 완료
+4. SharePoint 사이트 및 파일 액세스에 필요한 권한 부여
+5. [통합 설정](https://app.crewai.com/crewai_plus/settings/integrations)에서 Enterprise Token 복사
+
+### 2. 필요한 패키지 설치
+
+```bash
+uv add crewai-tools
+```
+
+### 3. 환경 변수 설정
+
+<Note>
+  `Agent(apps=[])`와 함께 통합을 사용하려면 Enterprise Token으로 `CREWAI_PLATFORM_INTEGRATION_TOKEN` 환경 변수를 설정해야 합니다.
+</Note>
+
+```bash
+export CREWAI_PLATFORM_INTEGRATION_TOKEN="your_enterprise_token"
+```
+
+또는 `.env` 파일에 추가하세요:
+
+```
+CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
+```
+
+## 사용 가능한 작업
+
+<AccordionGroup>
+  <Accordion title="microsoft_sharepoint/get_sites">
+    **설명:** 사용자가 액세스할 수 있는 모든 SharePoint 사이트를 가져옵니다.
+
+    **매개변수:**
+    - `search` (string, 선택사항): 사이트를 필터링하기 위한 검색 쿼리.
+    - `select` (string, 선택사항): 반환할 특정 속성 선택 (예: 'displayName,id,webUrl').
+    - `filter` (string, 선택사항): OData 구문을 사용하여 결과 필터링.
+    - `expand` (string, 선택사항): 관련 리소스를 인라인으로 확장.
+    - `top` (integer, 선택사항): 반환할 항목 수 (최소 1, 최대 999).
+    - `skip` (integer, 선택사항): 건너뛸 항목 수 (최소 0).
+    - `orderby` (string, 선택사항): 지정된 속성으로 결과 정렬 (예: 'displayName desc').
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/get_site">
+    **설명:** 특정 SharePoint 사이트에 대한 정보를 가져옵니다.
+
+    **매개변수:**
+    - `site_id` (string, 필수): SharePoint 사이트의 ID.
+    - `select` (string, 선택사항): 반환할 특정 속성 선택 (예: 'displayName,id,webUrl,drives').
+    - `expand` (string, 선택사항): 관련 리소스를 인라인으로 확장 (예: 'drives,lists').
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/get_site_lists">
+    **설명:** SharePoint 사이트의 모든 목록을 가져옵니다.
+
+    **매개변수:**
+    - `site_id` (string, 필수): SharePoint 사이트의 ID.
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/get_list">
+    **설명:** 특정 목록에 대한 정보를 가져옵니다.
+
+    **매개변수:**
+    - `site_id` (string, 필수): SharePoint 사이트의 ID.
+    - `list_id` (string, 필수): 목록의 ID.
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/get_list_items">
+    **설명:** SharePoint 목록에서 항목을 가져옵니다.
+
+    **매개변수:**
+    - `site_id` (string, 필수): SharePoint 사이트의 ID.
+    - `list_id` (string, 필수): 목록의 ID.
+    - `expand` (string, 선택사항): 관련 데이터 확장 (예: 'fields').
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/create_list_item">
+    **설명:** SharePoint 목록에 새 항목을 만듭니다.
+
+    **매개변수:**
+    - `site_id` (string, 필수): SharePoint 사이트의 ID.
+    - `list_id` (string, 필수): 목록의 ID.
+    - `fields` (object, 필수): 새 항목의 필드 값.
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/update_list_item">
+    **설명:** SharePoint 목록의 항목을 업데이트합니다.
+
+    **매개변수:**
+    - `site_id` (string, 필수): SharePoint 사이트의 ID.
+    - `list_id` (string, 필수): 목록의 ID.
+    - `item_id` (string, 필수): 업데이트할 항목의 ID.
+    - `fields` (object, 필수): 업데이트할 필드 값.
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/delete_list_item">
+    **설명:** SharePoint 목록에서 항목을 삭제합니다.
+
+    **매개변수:**
+    - `site_id` (string, 필수): SharePoint 사이트의 ID.
+    - `list_id` (string, 필수): 목록의 ID.
+    - `item_id` (string, 필수): 삭제할 항목의 ID.
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/upload_file_to_library">
+    **설명:** SharePoint 문서 라이브러리에 파일을 업로드합니다.
+
+    **매개변수:**
+    - `site_id` (string, 필수): SharePoint 사이트의 ID.
+    - `file_path` (string, 필수): 파일을 업로드할 경로 (예: 'folder/fileName.txt').
+    - `content` (string, 필수): 업로드할 파일의 내용.
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/get_drive_items">
+    **설명:** SharePoint 문서 라이브러리에서 파일과 폴더를 가져옵니다.
+
+    **매개변수:**
+    - `site_id` (string, 필수): SharePoint 사이트의 ID.
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/delete_drive_item">
+    **설명:** SharePoint 문서 라이브러리에서 파일 또는 폴더를 삭제합니다.
+
+    **매개변수:**
+    - `site_id` (string, 필수): SharePoint 사이트의 ID.
+    - `item_id` (string, 필수): 삭제할 파일 또는 폴더의 ID.
+  </Accordion>
+</AccordionGroup>
+
+## 사용 예제
+
+### 기본 Microsoft SharePoint 에이전트 설정
+
+```python
+from crewai import Agent, Task, Crew
+
+# Microsoft SharePoint 기능을 가진 에이전트 생성
+sharepoint_agent = Agent(
+    role="SharePoint 관리자",
+    goal="SharePoint 사이트, 목록 및 문서를 효율적으로 관리",
+    backstory="Microsoft SharePoint 관리 및 콘텐츠 관리 전문 AI 어시스턴트.",
+    apps=['microsoft_sharepoint']  # 모든 SharePoint 작업을 사용할 수 있습니다
+)
+
+# 모든 사이트 가져오기 작업
+get_sites_task = Task(
+    description="액세스할 수 있는 모든 SharePoint 사이트를 나열하세요.",
+    agent=sharepoint_agent,
+    expected_output="표시 이름과 URL이 포함된 SharePoint 사이트 목록."
+)
+
+# 작업 실행
+crew = Crew(
+    agents=[sharepoint_agent],
+    tasks=[get_sites_task]
+)
+
+crew.kickoff()
+```
+
+## 문제 해결
+
+### 일반적인 문제
+
+**인증 오류**
+- Microsoft 계정이 SharePoint 액세스에 필요한 권한을 가지고 있는지 확인하세요 (예: `Sites.Read.All`, `Sites.ReadWrite.All`).
+- OAuth 연결이 필요한 모든 범위를 포함하는지 확인하세요.
+
+**사이트/목록/항목 ID 문제**
+- 사이트, 목록, 항목 ID가 올바른지 다시 확인하세요.
+- 참조된 리소스가 존재하고 액세스할 수 있는지 확인하세요.
+
+### 도움 받기
+
+<Card title="도움이 필요하신가요?" icon="headset" href="mailto:support@crewai.com">
+  Microsoft SharePoint 통합 설정 또는 문제 해결에 대한 지원이 필요하시면 지원팀에 문의하세요.
+</Card>

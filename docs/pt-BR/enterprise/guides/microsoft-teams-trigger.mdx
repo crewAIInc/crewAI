@@ -1,0 +1,64 @@
+---
+title: "Microsoft Teams Trigger"
+description: "Kick off crews from Microsoft Teams chat activity"
+icon: "microsoft"
+mode: "wide"
+---
+
+## Overview
+
+Use the Microsoft Teams trigger to start automations whenever a new chat is created. Common patterns include summarizing inbound requests, routing urgent messages to support teams, or creating follow-up tasks in other systems.
+
+<Tip>
+  Confirm Microsoft Teams is connected under **Tools & Integrations** and enabled in the **Triggers** tab for your deployment.
+</Tip>
+
+## Enabling the Microsoft Teams Trigger
+
+1. Open your deployment in CrewAI AMP
+2. Go to the **Triggers** tab
+3. Locate **Microsoft Teams** and switch the toggle to enable
+
+<Frame caption="Microsoft Teams trigger connection">
+  <img src="/images/enterprise/msteams-trigger.png" alt="Enable or disable triggers with toggle" />
+</Frame>
+
+## Example: Summarize a new chat thread
+
+```python
+from teams_chat_created_crew import MicrosoftTeamsChatTrigger
+
+crew = MicrosoftTeamsChatTrigger().crew()
+result = crew.kickoff({
+    "crewai_trigger_payload": teams_payload,
+})
+print(result.raw)
+```
+
+The crew parses thread metadata (subject, created time, roster) and generates an action plan for the receiving team.
+
+## Testando Localmente
+
+Teste sua integração de trigger do Microsoft Teams localmente usando a CLI da CrewAI:
+
+```bash
+# Visualize todos os triggers disponíveis
+crewai triggers list
+
+# Simule um trigger do Microsoft Teams com payload realista
+crewai triggers run microsoft_teams/teams_message_created
+```
+
+O comando `crewai triggers run` executará sua crew com um payload completo do Teams, permitindo que você teste sua lógica de parsing antes do deployment.
+
+<Warning>
+  Use `crewai triggers run microsoft_teams/teams_message_created` (não `crewai run`) para simular execução de trigger durante o desenvolvimento. Após o deployment, sua crew receberá automaticamente o payload do trigger.
+</Warning>
+
+## Troubleshooting
+
+- Ensure the Teams connection is active; it must be refreshed if the tenant revokes permissions
+- Teste localmente com `crewai triggers run microsoft_teams/teams_message_created` para ver a estrutura exata do payload
+- Confirm the webhook subscription in Microsoft 365 is still valid if payloads stop arriving
+- Review execution logs for payload shape mismatches—Graph notifications may omit fields when a chat is private or restricted
+- Lembre-se: use `crewai triggers run` (não `crewai run`) para simular execução de trigger

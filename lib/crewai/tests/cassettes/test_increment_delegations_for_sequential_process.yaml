@@ -1,0 +1,1260 @@
+interactions:
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are Manager. You''re great
+      at delegating work about scoring.\nYour personal goal is: Coordinate scoring
+      processes\nYou ONLY have access to the following tools, and should NEVER make
+      up tools that are not listed here:\n\nTool Name: Delegate work to coworker(task:
+      str, context: str, coworker: Optional[str] = None, **kwargs)\nTool Description:
+      Delegate a specific task to one of the following coworkers: Scorer\nThe input
+      to this tool should be the coworker, the task you want them to do, and ALL necessary
+      context to execute the task, they know nothing about the task, so share absolute
+      everything you know, don''t reference things but instead explain them.\nTool
+      Arguments: {''task'': {''title'': ''Task'', ''type'': ''string''}, ''context'':
+      {''title'': ''Context'', ''type'': ''string''}, ''coworker'': {''title'': ''Coworker'',
+      ''type'': ''string''}, ''kwargs'': {''title'': ''Kwargs'', ''type'': ''object''}}\nTool
+      Name: Ask question to coworker(question: str, context: str, coworker: Optional[str]
+      = None, **kwargs)\nTool Description: Ask a specific question to one of the following
+      coworkers: Scorer\nThe input to this tool should be the coworker, the question
+      you have for them, and ALL necessary context to ask the question properly, they
+      know nothing about the question, so share absolute everything you know, don''t
+      reference things but instead explain them.\nTool Arguments: {''question'': {''title'':
+      ''Question'', ''type'': ''string''}, ''context'': {''title'': ''Context'', ''type'':
+      ''string''}, ''coworker'': {''title'': ''Coworker'', ''type'': ''string''},
+      ''kwargs'': {''title'': ''Kwargs'', ''type'': ''object''}}\n\nUse the following
+      format:\n\nThought: you should always think about what to do\nAction: the action
+      to take, only one name of [Delegate work to coworker, Ask question to coworker],
+      just the name, exactly as it''s written.\nAction Input: the input to the action,
+      just a simple python dictionary, enclosed in curly braces, using \" to wrap
+      keys and values.\nObservation: the result of the action\n\nOnce all necessary
+      information is gathered:\n\nThought: I now know the final answer\nFinal Answer:
+      the final answer to the original input question\n"}, {"role": "user", "content":
+      "\nCurrent Task: Give me an integer score between 1-5 for the following title:
+      ''The impact of AI in the future of work''\n\nThis is the expect criteria for
+      your final answer: The score of the title.\nyou MUST return the actual complete
+      content as the final answer, not a summary.\n\nBegin! This is VERY important
+      to you, use the tools available and give your best Final Answer, your job depends
+      on it!\n\nThought:"}], "model": "gpt-4o"}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '2613'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=9.8sBYBkvBR8R1K_bVF7xgU..80XKlEIg3N2OBbTSCU-1727214102-1.0.1.1-.qiTLXbPamYUMSuyNsOEB9jhGu.jOifujOrx9E2JZvStbIZ9RTIiE44xKKNfLPxQkOi6qAT3h6htK8lPDGV_5g;
+        _cfuvid=lbRdAddVWV6W3f5Dm9SaOPWDUOxqtZBSPr_fTW26nEA-1727213194587-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.47.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.47.0
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.7
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-AB7gSk1Z1rcVo96hskKeiE3yki3Kn\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1727214508,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"Thought: To provide an accurate score
+      for the title \\\"The impact of AI in the future of work,\\\" I need to delegate
+      the task of scoring it to the Scorer, who is specialized in this activity.\\n\\nAction:
+      Delegate work to coworker\\nAction Input: {\\\"coworker\\\": \\\"Scorer\\\",
+      \\\"task\\\": \\\"Give me an integer score between 1-5 for the following title:
+      'The impact of AI in the future of work'\\\", \\\"context\\\": \\\"Your task
+      is to evaluate the provided title on a scale from 1 to 5 based on criteria such
+      as relevance, clarity, and intrigue.\\\"}\\n\\nObservation: The scorer has received
+      the task to score the title 'The impact of AI in the future of work'.\",\n        \"refusal\":
+      null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
+      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 584,\n    \"completion_tokens\":
+      149,\n    \"total_tokens\": 733,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 8c85fa95dfaf1cf3-GRU
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Tue, 24 Sep 2024 21:48:31 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '2017'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '30000000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '29999362'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 1ms
+      x-request-id:
+      - req_c7823a91a290312f8047ade2fdcd5aa2
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: !!binary |
+      Cs0PCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkSpA8KEgoQY3Jld2FpLnRl
+      bGVtZXRyeRKbAQoQ7367K9U97eyRi7bbPe59GhIIWkx0YIhfwgMqClRvb2wgVXNhZ2UwATmIeAh+
+      cUz4F0EYtA9+cUz4F0oaCg5jcmV3YWlfdmVyc2lvbhIICgYwLjYxLjBKJwoJdG9vbF9uYW1lEhoK
+      GEFzayBxdWVzdGlvbiB0byBjb3dvcmtlckoOCghhdHRlbXB0cxICGAF6AhgBhQEAAQAAEpACChA3
+      ZEUD8bm3GCD8YO06mrD1EghNOH69zXvzMyoOVGFzayBFeGVjdXRpb24wATnAGCK1cEz4F0FoTL65
+      cUz4F0ouCghjcmV3X2tleRIiCiA1ZTZlZmZlNjgwYTVkOTdkYzM4NzNiMTQ4MjVjY2ZhM0oxCgdj
+      cmV3X2lkEiYKJGY1OWQ2YjEwLTM4ODEtNDRiYy05OTgwLTdmMTIwMjhiMDdkY0ouCgh0YXNrX2tl
+      eRIiCiAyN2VmMzhjYzk5ZGE0YThkZWQ3MGVkNDA2ZTQ0YWI4NkoxCgd0YXNrX2lkEiYKJGU2Mzdh
+      ODM1LTZiZjMtNDk5NC1iMjczLWU5ZjYzOWEwYmE5NXoCGAGFAQABAAASywkKEAwM1HgGpiGyl6rQ
+      LeVsYFsSCJN0H+EImgQNKgxDcmV3IENyZWF0ZWQwATmwCsG6cUz4F0HYksW6cUz4F0oaCg5jcmV3
+      YWlfdmVyc2lvbhIICgYwLjYxLjBKGgoOcHl0aG9uX3ZlcnNpb24SCAoGMy4xMS43Si4KCGNyZXdf
+      a2V5EiIKIDc0Mjc1NzMxMmVmN2JiNGVlMGIwNjYyZDFjMmUyMTc5SjEKB2NyZXdfaWQSJgokNzEw
+      YjdjNDMtMTJiYS00NmM3LWI5ZWMtY2QzYzE4OThjYWFkShwKDGNyZXdfcHJvY2VzcxIMCgpzZXF1
+      ZW50aWFsShEKC2NyZXdfbWVtb3J5EgIQAEoaChRjcmV3X251bWJlcl9vZl90YXNrcxICGAFKGwoV
+      Y3Jld19udW1iZXJfb2ZfYWdlbnRzEgIYAkr8BAoLY3Jld19hZ2VudHMS7AQK6QRbeyJrZXkiOiAi
+      ODljZjMxMWI0OGI1MjE2OWQ0MmYzOTI1YzViZTFjNWEiLCAiaWQiOiAiMWVlMTRiZDYtNzU5My00
+      ODE3LWFjOGYtZmE3ZmJiYTI2NTQxIiwgInJvbGUiOiAiTWFuYWdlciIsICJ2ZXJib3NlPyI6IGZh
+      bHNlLCAibWF4X2l0ZXIiOiAxNSwgIm1heF9ycG0iOiBudWxsLCAiZnVuY3Rpb25fY2FsbGluZ19s
+      bG0iOiAiIiwgImxsbSI6ICJncHQtNG8iLCAiZGVsZWdhdGlvbl9lbmFibGVkPyI6IHRydWUsICJh
+      bGxvd19jb2RlX2V4ZWN1dGlvbj8iOiBmYWxzZSwgIm1heF9yZXRyeV9saW1pdCI6IDIsICJ0b29s
+      c19uYW1lcyI6IFtdfSwgeyJrZXkiOiAiOTJlN2ViMTkxNjY0YzkzNTc4NWVkN2Q0MjQwYTI5NGQi
+      LCAiaWQiOiAiMzZmNmIyYmQtZmFkMi00NTRmLTkwMmEtZWMyYmQzMmVhM2YyIiwgInJvbGUiOiAi
+      U2NvcmVyIiwgInZlcmJvc2U/IjogZmFsc2UsICJtYXhfaXRlciI6IDE1LCAibWF4X3JwbSI6IG51
+      bGwsICJmdW5jdGlvbl9jYWxsaW5nX2xsbSI6ICIiLCAibGxtIjogImdwdC00byIsICJkZWxlZ2F0
+      aW9uX2VuYWJsZWQ/IjogdHJ1ZSwgImFsbG93X2NvZGVfZXhlY3V0aW9uPyI6IGZhbHNlLCAibWF4
+      X3JldHJ5X2xpbWl0IjogMiwgInRvb2xzX25hbWVzIjogW119XUr8AQoKY3Jld190YXNrcxLtAQrq
+      AVt7ImtleSI6ICIyN2VmMzhjYzk5ZGE0YThkZWQ3MGVkNDA2ZTQ0YWI4NiIsICJpZCI6ICI1YjY4
+      MzlmMC1jZTdmLTQ1MjUtOTA0MS0yNDA3OGY4ODQyYjAiLCAiYXN5bmNfZXhlY3V0aW9uPyI6IGZh
+      bHNlLCAiaHVtYW5faW5wdXQ/IjogZmFsc2UsICJhZ2VudF9yb2xlIjogIk1hbmFnZXIiLCAiYWdl
+      bnRfa2V5IjogIjg5Y2YzMTFiNDhiNTIxNjlkNDJmMzkyNWM1YmUxYzVhIiwgInRvb2xzX25hbWVz
+      IjogW119XXoCGAGFAQABAAASjgIKENITRuTzJvz4egiwtMnZ6vcSCPj1izbtPyMQKgxUYXNrIENy
+      ZWF0ZWQwATlAzIK7cUz4F0EQzoO7cUz4F0ouCghjcmV3X2tleRIiCiA3NDI3NTczMTJlZjdiYjRl
+      ZTBiMDY2MmQxYzJlMjE3OUoxCgdjcmV3X2lkEiYKJDcxMGI3YzQzLTEyYmEtNDZjNy1iOWVjLWNk
+      M2MxODk4Y2FhZEouCgh0YXNrX2tleRIiCiAyN2VmMzhjYzk5ZGE0YThkZWQ3MGVkNDA2ZTQ0YWI4
+      NkoxCgd0YXNrX2lkEiYKJDViNjgzOWYwLWNlN2YtNDUyNS05MDQxLTI0MDc4Zjg4NDJiMHoCGAGF
+      AQABAAA=
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '2000'
+      Content-Type:
+      - application/x-protobuf
+      User-Agent:
+      - OTel-OTLP-Exporter-Python/1.27.0
+    method: POST
+    uri: https://telemetry.crewai.com:4319/v1/traces
+  response:
+    body:
+      string: "\n\0"
+    headers:
+      Content-Length:
+      - '2'
+      Content-Type:
+      - application/x-protobuf
+      Date:
+      - Tue, 24 Sep 2024 21:48:32 GMT
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are Scorer. You''re an
+      expert scorer, specialized in scoring titles.\nYour personal goal is: Score
+      the title\nTo give my best complete final answer to the task use the exact following
+      format:\n\nThought: I now can give a great answer\nFinal Answer: Your final
+      answer must be the great and the most complete as possible, it must be outcome
+      described.\n\nI MUST use these formats, my job depends on it!"}, {"role": "user",
+      "content": "\nCurrent Task: Give me an integer score between 1-5 for the following
+      title: ''The impact of AI in the future of work''\n\nThis is the expect criteria
+      for your final answer: Your best answer to your coworker asking you this, accounting
+      for the context shared.\nyou MUST return the actual complete content as the
+      final answer, not a summary.\n\nThis is the context you''re working with:\nYour
+      task is to evaluate the provided title on a scale from 1 to 5 based on criteria
+      such as relevance, clarity, and intrigue.\n\nBegin! This is VERY important to
+      you, use the tools available and give your best Final Answer, your job depends
+      on it!\n\nThought:"}], "model": "gpt-4o"}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '1149'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=9.8sBYBkvBR8R1K_bVF7xgU..80XKlEIg3N2OBbTSCU-1727214102-1.0.1.1-.qiTLXbPamYUMSuyNsOEB9jhGu.jOifujOrx9E2JZvStbIZ9RTIiE44xKKNfLPxQkOi6qAT3h6htK8lPDGV_5g;
+        _cfuvid=lbRdAddVWV6W3f5Dm9SaOPWDUOxqtZBSPr_fTW26nEA-1727213194587-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.47.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.47.0
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.7
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-AB7gVWj6JmMibt7mwANbQBq91qey2\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1727214511,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"Thought: I now can give a great answer\\nFinal
+      Answer: 4. The title 'The impact of AI in the future of work' is clear and directly
+      addresses a highly relevant and intriguing topic. It captures the essence of
+      how AI could shape the job market, which is a subject of significant interest.
+      However, it could be more specific or detailed to achieve a perfect score.\",\n
+      \       \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
+      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 234,\n    \"completion_tokens\":
+      77,\n    \"total_tokens\": 311,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      0\n    }\n  },\n  \"system_fingerprint\": \"fp_52a7f40b0b\"\n}\n"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 8c85faa6cfcd1cf3-GRU
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Tue, 24 Sep 2024 21:48:32 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '643'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '30000000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '29999723'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_133da93827bffd651411aa405d650b76
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are Manager. You''re great
+      at delegating work about scoring.\nYour personal goal is: Coordinate scoring
+      processes\nYou ONLY have access to the following tools, and should NEVER make
+      up tools that are not listed here:\n\nTool Name: Delegate work to coworker(task:
+      str, context: str, coworker: Optional[str] = None, **kwargs)\nTool Description:
+      Delegate a specific task to one of the following coworkers: Scorer\nThe input
+      to this tool should be the coworker, the task you want them to do, and ALL necessary
+      context to execute the task, they know nothing about the task, so share absolute
+      everything you know, don''t reference things but instead explain them.\nTool
+      Arguments: {''task'': {''title'': ''Task'', ''type'': ''string''}, ''context'':
+      {''title'': ''Context'', ''type'': ''string''}, ''coworker'': {''title'': ''Coworker'',
+      ''type'': ''string''}, ''kwargs'': {''title'': ''Kwargs'', ''type'': ''object''}}\nTool
+      Name: Ask question to coworker(question: str, context: str, coworker: Optional[str]
+      = None, **kwargs)\nTool Description: Ask a specific question to one of the following
+      coworkers: Scorer\nThe input to this tool should be the coworker, the question
+      you have for them, and ALL necessary context to ask the question properly, they
+      know nothing about the question, so share absolute everything you know, don''t
+      reference things but instead explain them.\nTool Arguments: {''question'': {''title'':
+      ''Question'', ''type'': ''string''}, ''context'': {''title'': ''Context'', ''type'':
+      ''string''}, ''coworker'': {''title'': ''Coworker'', ''type'': ''string''},
+      ''kwargs'': {''title'': ''Kwargs'', ''type'': ''object''}}\n\nUse the following
+      format:\n\nThought: you should always think about what to do\nAction: the action
+      to take, only one name of [Delegate work to coworker, Ask question to coworker],
+      just the name, exactly as it''s written.\nAction Input: the input to the action,
+      just a simple python dictionary, enclosed in curly braces, using \" to wrap
+      keys and values.\nObservation: the result of the action\n\nOnce all necessary
+      information is gathered:\n\nThought: I now know the final answer\nFinal Answer:
+      the final answer to the original input question\n"}, {"role": "user", "content":
+      "\nCurrent Task: Give me an integer score between 1-5 for the following title:
+      ''The impact of AI in the future of work''\n\nThis is the expect criteria for
+      your final answer: The score of the title.\nyou MUST return the actual complete
+      content as the final answer, not a summary.\n\nBegin! This is VERY important
+      to you, use the tools available and give your best Final Answer, your job depends
+      on it!\n\nThought:"}, {"role": "assistant", "content": "Thought: To provide
+      an accurate score for the title \"The impact of AI in the future of work,\"
+      I need to delegate the task of scoring it to the Scorer, who is specialized
+      in this activity.\n\nAction: Delegate work to coworker\nAction Input: {\"coworker\":
+      \"Scorer\", \"task\": \"Give me an integer score between 1-5 for the following
+      title: ''The impact of AI in the future of work''\", \"context\": \"Your task
+      is to evaluate the provided title on a scale from 1 to 5 based on criteria such
+      as relevance, clarity, and intrigue.\"}\n\nObservation: The scorer has received
+      the task to score the title ''The impact of AI in the future of work''.\nObservation:
+      4. The title ''The impact of AI in the future of work'' is clear and directly
+      addresses a highly relevant and intriguing topic. It captures the essence of
+      how AI could shape the job market, which is a subject of significant interest.
+      However, it could be more specific or detailed to achieve a perfect score."}],
+      "model": "gpt-4o"}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '3613'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=9.8sBYBkvBR8R1K_bVF7xgU..80XKlEIg3N2OBbTSCU-1727214102-1.0.1.1-.qiTLXbPamYUMSuyNsOEB9jhGu.jOifujOrx9E2JZvStbIZ9RTIiE44xKKNfLPxQkOi6qAT3h6htK8lPDGV_5g;
+        _cfuvid=lbRdAddVWV6W3f5Dm9SaOPWDUOxqtZBSPr_fTW26nEA-1727213194587-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.47.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.47.0
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.7
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-AB7gWvoNTNn6C1ZVbf5LEjk6zmRlG\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1727214512,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"Thought: I now know the final answer
+      as the Scorer has provided the score for the title based on the given criteria.\\n\\nFinal
+      Answer: 4\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
+      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+      803,\n    \"completion_tokens\": 30,\n    \"total_tokens\": 833,\n    \"completion_tokens_details\":
+      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 8c85faad48021cf3-GRU
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Tue, 24 Sep 2024 21:48:33 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '454'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '30000000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '29999125'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 1ms
+      x-request-id:
+      - req_32907c02e96c6932e9424220bb24bb7a
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are Manager. You''re great
+      at delegating work about scoring.\nYour personal goal is: Coordinate scoring
+      processes\nYou ONLY have access to the following tools, and should NEVER make
+      up tools that are not listed here:\n\nTool Name: Delegate work to coworker\nTool
+      Arguments: {''task'': {''description'': ''The task to delegate'', ''type'':
+      ''str''}, ''context'': {''description'': ''The context for the task'', ''type'':
+      ''str''}, ''coworker'': {''description'': ''The role/name of the coworker to
+      delegate to'', ''type'': ''str''}}\nTool Description: Delegate a specific task
+      to one of the following coworkers: Scorer\nThe input to this tool should be
+      the coworker, the task you want them to do, and ALL necessary context to execute
+      the task, they know nothing about the task, so share absolutely everything you
+      know, don''t reference things but instead explain them.\nTool Name: Ask question
+      to coworker\nTool Arguments: {''question'': {''description'': ''The question
+      to ask'', ''type'': ''str''}, ''context'': {''description'': ''The context for
+      the question'', ''type'': ''str''}, ''coworker'': {''description'': ''The role/name
+      of the coworker to ask'', ''type'': ''str''}}\nTool Description: Ask a specific
+      question to one of the following coworkers: Scorer\nThe input to this tool should
+      be the coworker, the question you have for them, and ALL necessary context to
+      ask the question properly, they know nothing about the question, so share absolutely
+      everything you know, don''t reference things but instead explain them.\n\nIMPORTANT:
+      Use the following format in your response:\n\n```\nThought: you should always
+      think about what to do\nAction: the action to take, only one name of [Delegate
+      work to coworker, Ask question to coworker], just the name, exactly as it''s
+      written.\nAction Input: the input to the action, just a simple JSON object,
+      enclosed in curly braces, using \" to wrap keys and values.\nObservation: the
+      result of the action\n```\n\nOnce all necessary information is gathered, return
+      the following format:\n\n```\nThought: I now know the final answer\nFinal Answer:
+      the final answer to the original input question\n```"}, {"role": "user", "content":
+      "\nCurrent Task: Give me an integer score between 1-5 for the following title:
+      ''The impact of AI in the future of work''\n\nThis is the expected criteria
+      for your final answer: The score of the title.\nyou MUST return the actual complete
+      content as the final answer, not a summary.\n\nBegin! This is VERY important
+      to you, use the tools available and give your best Final Answer, your job depends
+      on it!\n\nThought:"}, {"role": "assistant", "content": "Thought: To provide
+      an accurate score for the title \"The impact of AI in the future of work,\"
+      I need to delegate the task of scoring it to the Scorer, who is specialized
+      in this activity.\n\nAction: Delegate work to coworker\nAction Input: {\"coworker\":
+      \"Scorer\", \"task\": \"Give me an integer score between 1-5 for the following
+      title: ''The impact of AI in the future of work''\", \"context\": \"Your task
+      is to evaluate the provided title on a scale from 1 to 5 based on criteria such
+      as relevance, clarity, and intrigue.\"}\n\nObservation: The scorer has received
+      the task to score the title ''The impact of AI in the future of work''.\nObservation:
+      4"}], "model": "gpt-4o", "stop": ["\nObservation:"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate, zstd
+      connection:
+      - keep-alive
+      content-length:
+      - '3322'
+      content-type:
+      - application/json
+      cookie:
+      - _cfuvid=CW_cKQGYWY3cL.S6Xo5z0cmkmWHy5Q50OA_KjPEijNk-1735926034530-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.93.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.93.0
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-read-timeout:
+      - '600.0'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.9
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAA4xSTWvcMBC9+1cMOq+Dvd/1LTQt5NJLP6C0wWjlsa1G1ghpnLSE/e9F2uzaaVPo
+        RSC9eU/vzcxTBiB0IyoQqpesBmfyt/vDSpvbDx+97L+gftjhzVdX3rzT1/3nrVhEBh1+oOIz60rR
+        4AyyJnuClUfJGFXL3WZbbjdluU7AQA2aSOsc52vKl8VynRf7vHjWVT1phUFU8C0DAHhKZ7RoG/wp
+        KigW55cBQ5AdiupSBCA8mfgiZAg6sLQsFhOoyDLa5PpTT2PXcwW3YOkR7uPBPUKrrTQgbXhEf/Xd
+        vk/X63StYD0X89iOQcYsdjRmBkhriWXsRYpx94wcL8YNdc7TIfxBFa22OvS1RxnIRpOByYmEHjOA
+        u9Sg8UVm4TwNjmume0zf7U59TmHPI5nQC8jE0sxYy/3iFb26QZbahFmLhZKqx2aiTvOQY6NpBmSz
+        1H+7eU37lFzb7n/kJ0ApdIxN7Tw2Wr1MPJV5jBv7r7JLl5NhEdA/aIU1a/RxEg22cjSnZRLhV2Ac
+        6lbbDr3z+rRRrav3xZvNdrNaqYPIjtlvAAAA//8DAAsTiaNaAwAA
+    headers:
+      CF-RAY:
+      - 974eec7c4d438486-SJC
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Mon, 25 Aug 2025 23:38:35 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - __cf_bm=ULOCzvd5MabFyMl9eSNQ3Sk_hNbVH25aTAfkSaYM6Cw-1756165115-1.0.1.1-jeyMlIwg.jml3h9XQDOYQXVxEFP44CSbUCENlr4W6RpdsZg08M.fWUD5kBWDNcupp2skTxNh5gCYFNop3HIrWq5pzgrydiA3FuSe7U15X1Y;
+        path=/; expires=Tue, 26-Aug-25 00:08:35 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=e_81pnlfj.JohLmFm8gTRISqkPCT6GwCVpOdPsECI.s-1756165115098-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '680'
+      openai-project:
+      - proj_xitITlrFeen7zjNSzML82h9x
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '715'
+      x-ratelimit-limit-project-requests:
+      - '10000'
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '30000000'
+      x-ratelimit-remaining-project-requests:
+      - '9999'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '29999221'
+      x-ratelimit-reset-project-requests:
+      - 6ms
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 1ms
+      x-request-id:
+      - req_4006f3362c434ea2a39b9901f3f2e5cb
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"trace_id": "be6be8ca-f4e4-44f1-9ac5-a28ab976b1a5", "execution_type":
+      "crew", "user_identifier": null, "execution_context": {"crew_fingerprint": null,
+      "crew_name": "crew", "flow_name": null, "crewai_version": "0.201.1", "privacy_level":
+      "standard"}, "execution_metadata": {"expected_duration_estimate": 300, "agent_count":
+      0, "task_count": 0, "flow_method_count": 0, "execution_started_at": "2025-10-08T18:18:09.548632+00:00"}}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate, zstd
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '428'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - CrewAI-CLI/0.201.1
+      X-Crewai-Organization-Id:
+      - d3a3d10c-35db-423f-a7a4-c026030ba64d
+      X-Crewai-Version:
+      - 0.201.1
+    method: POST
+    uri: http://localhost:3000/crewai_plus/api/v1/tracing/batches
+  response:
+    body:
+      string: '{"id":"75171e87-f189-49fe-a59f-01306ea262c7","trace_id":"be6be8ca-f4e4-44f1-9ac5-a28ab976b1a5","execution_type":"crew","crew_name":"crew","flow_name":null,"status":"running","duration_ms":null,"crewai_version":"0.201.1","privacy_level":"standard","total_events":0,"execution_context":{"crew_fingerprint":null,"crew_name":"crew","flow_name":null,"crewai_version":"0.201.1","privacy_level":"standard"},"created_at":"2025-10-08T18:18:09.870Z","updated_at":"2025-10-08T18:18:09.870Z"}'
+    headers:
+      Content-Length:
+      - '480'
+      cache-control:
+      - no-store
+      content-security-policy:
+      - 'default-src ''self'' *.crewai.com crewai.com; script-src ''self'' ''unsafe-inline''
+        *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts https://www.gstatic.com
+        https://run.pstmn.io https://apis.google.com https://apis.google.com/js/api.js
+        https://accounts.google.com https://accounts.google.com/gsi/client https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css.map
+        https://*.google.com https://docs.google.com https://slides.google.com https://js.hs-scripts.com
+        https://js.sentry-cdn.com https://browser.sentry-cdn.com https://www.googletagmanager.com
+        https://js-na1.hs-scripts.com https://share.descript.com/; style-src ''self''
+        ''unsafe-inline'' *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts;
+        img-src ''self'' data: *.crewai.com crewai.com https://zeus.tools.crewai.com
+        https://dashboard.tools.crewai.com https://cdn.jsdelivr.net; font-src ''self''
+        data: *.crewai.com crewai.com; connect-src ''self'' *.crewai.com crewai.com
+        https://zeus.tools.crewai.com https://connect.useparagon.com/ https://zeus.useparagon.com/*
+        https://*.useparagon.com/* https://run.pstmn.io https://connect.tools.crewai.com/
+        https://*.sentry.io https://www.google-analytics.com ws://localhost:3036 wss://localhost:3036;
+        frame-src ''self'' *.crewai.com crewai.com https://connect.useparagon.com/
+        https://zeus.tools.crewai.com https://zeus.useparagon.com/* https://connect.tools.crewai.com/
+        https://docs.google.com https://drive.google.com https://slides.google.com
+        https://accounts.google.com https://*.google.com https://www.youtube.com https://share.descript.com'
+      content-type:
+      - application/json; charset=utf-8
+      etag:
+      - W/"2a4b9bd1c0d5e221c9300487fef6ca7c"
+      expires:
+      - '0'
+      permissions-policy:
+      - camera=(), microphone=(self), geolocation=()
+      pragma:
+      - no-cache
+      referrer-policy:
+      - strict-origin-when-cross-origin
+      server-timing:
+      - cache_read.active_support;dur=0.05, cache_fetch_hit.active_support;dur=0.00,
+        cache_read_multi.active_support;dur=0.12, start_processing.action_controller;dur=0.00,
+        sql.active_record;dur=10.20, instantiation.active_record;dur=0.39, feature_operation.flipper;dur=0.05,
+        start_transaction.active_record;dur=0.01, transaction.active_record;dur=9.99,
+        process_action.action_controller;dur=280.27
+      vary:
+      - Accept
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-permitted-cross-domain-policies:
+      - none
+      x-request-id:
+      - 76e62b7b-1a83-4c14-9cd7-32e12c964853
+      x-runtime:
+      - '0.327578'
+      x-xss-protection:
+      - 1; mode=block
+    status:
+      code: 201
+      message: Created
+- request:
+    body: '{"events": [{"event_id": "af21ca34-1bf9-43bb-bb2f-6ed4ec4b1731", "timestamp":
+      "2025-10-08T18:18:09.880380+00:00", "type": "crew_kickoff_started", "event_data":
+      {"timestamp": "2025-10-08T18:18:09.547458+00:00", "type": "crew_kickoff_started",
+      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
+      "crew_name": "crew", "crew": null, "inputs": null}}, {"event_id": "336951e8-e15f-46a2-a073-bd1d5d9c7dc0",
+      "timestamp": "2025-10-08T18:18:09.882849+00:00", "type": "task_started", "event_data":
+      {"task_description": "Give me an integer score between 1-5 for the following
+      title: ''The impact of AI in the future of work''", "expected_output": "The
+      score of the title.", "task_name": "Give me an integer score between 1-5 for
+      the following title: ''The impact of AI in the future of work''", "context":
+      "", "agent_role": "Manager", "task_id": "6b4c0d0e-1758-4dff-ac12-8464b155edb3"}},
+      {"event_id": "b2737882-18f6-432f-afc6-fb709817223d", "timestamp": "2025-10-08T18:18:09.883466+00:00",
+      "type": "agent_execution_started", "event_data": {"agent_role": "Manager", "agent_goal":
+      "Coordinate scoring processes", "agent_backstory": "You''re great at delegating
+      work about scoring."}}, {"event_id": "5e8d70f1-c6bd-4f38-add1-ee84e272c35c",
+      "timestamp": "2025-10-08T18:18:09.883587+00:00", "type": "llm_call_started",
+      "event_data": {"timestamp": "2025-10-08T18:18:09.883547+00:00", "type": "llm_call_started",
+      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
+      "task_name": "Give me an integer score between 1-5 for the following title:
+      ''The impact of AI in the future of work''", "task_id": "6b4c0d0e-1758-4dff-ac12-8464b155edb3",
+      "agent_id": "7aaa26da-9c22-494d-95cd-bd0a8b650e43", "agent_role": "Manager",
+      "from_task": null, "from_agent": null, "model": "gpt-4o-mini", "messages": [{"role":
+      "system", "content": "You are Manager. You''re great at delegating work about
+      scoring.\nYour personal goal is: Coordinate scoring processes\nYou ONLY have
+      access to the following tools, and should NEVER make up tools that are not listed
+      here:\n\nTool Name: Delegate work to coworker\nTool Arguments: {''task'': {''description'':
+      ''The task to delegate'', ''type'': ''str''}, ''context'': {''description'':
+      ''The context for the task'', ''type'': ''str''}, ''coworker'': {''description'':
+      ''The role/name of the coworker to delegate to'', ''type'': ''str''}}\nTool
+      Description: Delegate a specific task to one of the following coworkers: Scorer\nThe
+      input to this tool should be the coworker, the task you want them to do, and
+      ALL necessary context to execute the task, they know nothing about the task,
+      so share absolutely everything you know, don''t reference things but instead
+      explain them.\nTool Name: Ask question to coworker\nTool Arguments: {''question'':
+      {''description'': ''The question to ask'', ''type'': ''str''}, ''context'':
+      {''description'': ''The context for the question'', ''type'': ''str''}, ''coworker'':
+      {''description'': ''The role/name of the coworker to ask'', ''type'': ''str''}}\nTool
+      Description: Ask a specific question to one of the following coworkers: Scorer\nThe
+      input to this tool should be the coworker, the question you have for them, and
+      ALL necessary context to ask the question properly, they know nothing about
+      the question, so share absolutely everything you know, don''t reference things
+      but instead explain them.\n\nIMPORTANT: Use the following format in your response:\n\n```\nThought:
+      you should always think about what to do\nAction: the action to take, only one
+      name of [Delegate work to coworker, Ask question to coworker], just the name,
+      exactly as it''s written.\nAction Input: the input to the action, just a simple
+      JSON object, enclosed in curly braces, using \" to wrap keys and values.\nObservation:
+      the result of the action\n```\n\nOnce all necessary information is gathered,
+      return the following format:\n\n```\nThought: I now know the final answer\nFinal
+      Answer: the final answer to the original input question\n```"}, {"role": "user",
+      "content": "\nCurrent Task: Give me an integer score between 1-5 for the following
+      title: ''The impact of AI in the future of work''\n\nThis is the expected criteria
+      for your final answer: The score of the title.\nyou MUST return the actual complete
+      content as the final answer, not a summary.\n\nBegin! This is VERY important
+      to you, use the tools available and give your best Final Answer, your job depends
+      on it!\n\nThought:"}], "tools": null, "callbacks": ["<crewai.utilities.token_counter_callback.TokenCalcHandler
+      object at 0x136d6d550>"], "available_functions": null}}, {"event_id": "b9a161b1-b991-40c4-82c9-ad0206df36ae",
+      "timestamp": "2025-10-08T18:18:09.887047+00:00", "type": "llm_call_completed",
+      "event_data": {"timestamp": "2025-10-08T18:18:09.887005+00:00", "type": "llm_call_completed",
+      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
+      "task_name": "Give me an integer score between 1-5 for the following title:
+      ''The impact of AI in the future of work''", "task_id": "6b4c0d0e-1758-4dff-ac12-8464b155edb3",
+      "agent_id": "7aaa26da-9c22-494d-95cd-bd0a8b650e43", "agent_role": "Manager",
+      "from_task": null, "from_agent": null, "messages": [{"role": "system", "content":
+      "You are Manager. You''re great at delegating work about scoring.\nYour personal
+      goal is: Coordinate scoring processes\nYou ONLY have access to the following
+      tools, and should NEVER make up tools that are not listed here:\n\nTool Name:
+      Delegate work to coworker\nTool Arguments: {''task'': {''description'': ''The
+      task to delegate'', ''type'': ''str''}, ''context'': {''description'': ''The
+      context for the task'', ''type'': ''str''}, ''coworker'': {''description'':
+      ''The role/name of the coworker to delegate to'', ''type'': ''str''}}\nTool
+      Description: Delegate a specific task to one of the following coworkers: Scorer\nThe
+      input to this tool should be the coworker, the task you want them to do, and
+      ALL necessary context to execute the task, they know nothing about the task,
+      so share absolutely everything you know, don''t reference things but instead
+      explain them.\nTool Name: Ask question to coworker\nTool Arguments: {''question'':
+      {''description'': ''The question to ask'', ''type'': ''str''}, ''context'':
+      {''description'': ''The context for the question'', ''type'': ''str''}, ''coworker'':
+      {''description'': ''The role/name of the coworker to ask'', ''type'': ''str''}}\nTool
+      Description: Ask a specific question to one of the following coworkers: Scorer\nThe
+      input to this tool should be the coworker, the question you have for them, and
+      ALL necessary context to ask the question properly, they know nothing about
+      the question, so share absolutely everything you know, don''t reference things
+      but instead explain them.\n\nIMPORTANT: Use the following format in your response:\n\n```\nThought:
+      you should always think about what to do\nAction: the action to take, only one
+      name of [Delegate work to coworker, Ask question to coworker], just the name,
+      exactly as it''s written.\nAction Input: the input to the action, just a simple
+      JSON object, enclosed in curly braces, using \" to wrap keys and values.\nObservation:
+      the result of the action\n```\n\nOnce all necessary information is gathered,
+      return the following format:\n\n```\nThought: I now know the final answer\nFinal
+      Answer: the final answer to the original input question\n```"}, {"role": "user",
+      "content": "\nCurrent Task: Give me an integer score between 1-5 for the following
+      title: ''The impact of AI in the future of work''\n\nThis is the expected criteria
+      for your final answer: The score of the title.\nyou MUST return the actual complete
+      content as the final answer, not a summary.\n\nBegin! This is VERY important
+      to you, use the tools available and give your best Final Answer, your job depends
+      on it!\n\nThought:"}], "response": "Thought: To provide an accurate score for
+      the title \"The impact of AI in the future of work,\" I need to delegate the
+      task of scoring it to the Scorer, who is specialized in this activity.\n\nAction:
+      Delegate work to coworker\nAction Input: {\"coworker\": \"Scorer\", \"task\":
+      \"Give me an integer score between 1-5 for the following title: ''The impact
+      of AI in the future of work''\", \"context\": \"Your task is to evaluate the
+      provided title on a scale from 1 to 5 based on criteria such as relevance, clarity,
+      and intrigue.\"}\n\nObservation: The scorer has received the task to score the
+      title ''The impact of AI in the future of work''.", "call_type": "<LLMCallType.LLM_CALL:
+      ''llm_call''>", "model": "gpt-4o-mini"}}, {"event_id": "7d7aec22-3674-46ef-b79f-a6dca2285d76",
+      "timestamp": "2025-10-08T18:18:09.887545+00:00", "type": "tool_usage_started",
+      "event_data": {"timestamp": "2025-10-08T18:18:09.887507+00:00", "type": "tool_usage_started",
+      "source_fingerprint": "003eb0d4-ed9a-4677-a8d3-dbd99803cd6c", "source_type":
+      "agent", "fingerprint_metadata": null, "agent_key": "89cf311b48b52169d42f3925c5be1c5a",
+      "agent_role": "Manager", "agent_id": null, "tool_name": "Delegate work to coworker",
+      "tool_args": "{\"coworker\": \"Scorer\", \"task\": \"Give me an integer score
+      between 1-5 for the following title: ''The impact of AI in the future of work''\",
+      \"context\": \"Your task is to evaluate the provided title on a scale from 1
+      to 5 based on criteria such as relevance, clarity, and intrigue.\"}", "tool_class":
+      "Delegate work to coworker", "run_attempts": null, "delegations": null, "agent":
+      {"id": "7aaa26da-9c22-494d-95cd-bd0a8b650e43", "role": "Manager", "goal": "Coordinate
+      scoring processes", "backstory": "You''re great at delegating work about scoring.",
+      "cache": true, "verbose": false, "max_rpm": null, "allow_delegation": true,
+      "tools": [], "max_iter": 25, "agent_executor": "<crewai.agents.crew_agent_executor.CrewAgentExecutor
+      object at 0x136ce2210>", "llm": "<crewai.llm.LLM object at 0x136d04770>", "crew":
+      {"parent_flow": null, "name": "crew", "cache": true, "tasks": ["{''used_tools'':
+      0, ''tools_errors'': 0, ''delegations'': 0, ''i18n'': {''prompt_file'': None},
+      ''name'': None, ''prompt_context'': '''', ''description'': \"Give me an integer
+      score between 1-5 for the following title: ''The impact of AI in the future
+      of work''\", ''expected_output'': ''The score of the title.'', ''config'': None,
+      ''callback'': None, ''agent'': {''id'': UUID(''7aaa26da-9c22-494d-95cd-bd0a8b650e43''),
+      ''role'': ''Manager'', ''goal'': ''Coordinate scoring processes'', ''backstory'':
+      \"You''re great at delegating work about scoring.\", ''cache'': True, ''verbose'':
+      False, ''max_rpm'': None, ''allow_delegation'': True, ''tools'': [], ''max_iter'':
+      25, ''agent_executor'': <crewai.agents.crew_agent_executor.CrewAgentExecutor
+      object at 0x136ce2210>, ''llm'': <crewai.llm.LLM object at 0x136d04770>, ''crew'':
+      Crew(id=61013208-0775-4375-a8db-a71cb4726895, process=Process.sequential, number_of_agents=2,
+      number_of_tasks=1), ''i18n'': {''prompt_file'': None}, ''cache_handler'': {},
+      ''tools_handler'': <crewai.agents.tools_handler.ToolsHandler object at 0x136d46e40>,
+      ''tools_results'': [], ''max_tokens'': None, ''knowledge'': None, ''knowledge_sources'':
+      None, ''knowledge_storage'': None, ''security_config'': {''fingerprint'': {''metadata'':
+      {}}}, ''callbacks'': [], ''adapted_agent'': False, ''knowledge_config'': None},
+      ''context'': NOT_SPECIFIED, ''async_execution'': False, ''output_json'': None,
+      ''output_pydantic'': None, ''output_file'': None, ''create_directory'': True,
+      ''output'': None, ''tools'': [], ''security_config'': {''fingerprint'': {''metadata'':
+      {}}}, ''id'': UUID(''6b4c0d0e-1758-4dff-ac12-8464b155edb3''), ''human_input'':
+      False, ''markdown'': False, ''converter_cls'': None, ''processed_by_agents'':
+      {''Manager''}, ''guardrail'': None, ''max_retries'': None, ''guardrail_max_retries'':
+      3, ''retry_count'': 0, ''start_time'': datetime.datetime(2025, 10, 8, 11, 18,
+      9, 882798), ''end_time'': None, ''allow_crewai_trigger_context'': None}"], "agents":
+      ["{''id'': UUID(''7aaa26da-9c22-494d-95cd-bd0a8b650e43''), ''role'': ''Manager'',
+      ''goal'': ''Coordinate scoring processes'', ''backstory'': \"You''re great at
+      delegating work about scoring.\", ''cache'': True, ''verbose'': False, ''max_rpm'':
+      None, ''allow_delegation'': True, ''tools'': [], ''max_iter'': 25, ''agent_executor'':
+      <crewai.agents.crew_agent_executor.CrewAgentExecutor object at 0x136ce2210>,
+      ''llm'': <crewai.llm.LLM object at 0x136d04770>, ''crew'': Crew(id=61013208-0775-4375-a8db-a71cb4726895,
+      process=Process.sequential, number_of_agents=2, number_of_tasks=1), ''i18n'':
+      {''prompt_file'': None}, ''cache_handler'': {}, ''tools_handler'': <crewai.agents.tools_handler.ToolsHandler
+      object at 0x136d46e40>, ''tools_results'': [], ''max_tokens'': None, ''knowledge'':
+      None, ''knowledge_sources'': None, ''knowledge_storage'': None, ''security_config'':
+      {''fingerprint'': {''metadata'': {}}}, ''callbacks'': [], ''adapted_agent'':
+      False, ''knowledge_config'': None}", "{''id'': UUID(''6ce24ea1-6163-460b-bc95-fafba4c85116''),
+      ''role'': ''Scorer'', ''goal'': ''Score the title'', ''backstory'': \"You''re
+      an expert scorer, specialized in scoring titles.\", ''cache'': True, ''verbose'':
+      False, ''max_rpm'': None, ''allow_delegation'': True, ''tools'': [], ''max_iter'':
+      25, ''agent_executor'': <crewai.agents.crew_agent_executor.CrewAgentExecutor
+      object at 0x136ce1d90>, ''llm'': <crewai.llm.LLM object at 0x136d043e0>, ''crew'':
+      Crew(id=61013208-0775-4375-a8db-a71cb4726895, process=Process.sequential, number_of_agents=2,
+      number_of_tasks=1), ''i18n'': {''prompt_file'': None}, ''cache_handler'': {},
+      ''tools_handler'': <crewai.agents.tools_handler.ToolsHandler object at 0x136d46820>,
+      ''tools_results'': [], ''max_tokens'': None, ''knowledge'': None, ''knowledge_sources'':
+      None, ''knowledge_storage'': None, ''security_config'': {''fingerprint'': {''metadata'':
+      {}}}, ''callbacks'': [], ''adapted_agent'': False, ''knowledge_config'': None}"],
+      "process": "sequential", "verbose": false, "memory": false, "short_term_memory":
+      null, "long_term_memory": null, "entity_memory": null, "external_memory": null,
+      "embedder": null, "usage_metrics": null, "manager_llm": null, "manager_agent":
+      null, "function_calling_llm": null, "config": null, "id": "61013208-0775-4375-a8db-a71cb4726895",
+      "share_crew": false, "step_callback": null, "task_callback": null, "before_kickoff_callbacks":
+      [], "after_kickoff_callbacks": [], "max_rpm": null, "prompt_file": null, "output_log_file":
+      null, "planning": false, "planning_llm": null, "task_execution_output_json_files":
+      null, "execution_logs": [], "knowledge_sources": null, "chat_llm": null, "knowledge":
+      null, "security_config": {"fingerprint": "{''metadata'': {}}"}, "token_usage":
+      null, "tracing": false}, "i18n": {"prompt_file": null}, "cache_handler": {},
+      "tools_handler": "<crewai.agents.tools_handler.ToolsHandler object at 0x136d46e40>",
+      "tools_results": [], "max_tokens": null, "knowledge": null, "knowledge_sources":
+      null, "knowledge_storage": null, "security_config": {"fingerprint": {"metadata":
+      "{}"}}, "callbacks": [], "adapted_agent": false, "knowledge_config": null, "max_execution_time":
+      null, "agent_ops_agent_name": "Manager", "agent_ops_agent_id": null, "step_callback":
+      null, "use_system_prompt": true, "function_calling_llm": null, "system_template":
+      null, "prompt_template": null, "response_template": null, "allow_code_execution":
+      false, "respect_context_window": true, "max_retry_limit": 2, "multimodal": false,
+      "inject_date": false, "date_format": "%Y-%m-%d", "code_execution_mode": "safe",
+      "reasoning": false, "max_reasoning_attempts": null, "embedder": null, "agent_knowledge_context":
+      null, "crew_knowledge_context": null, "knowledge_search_query": null, "from_repository":
+      null, "guardrail": null, "guardrail_max_retries": 3}, "task_name": "Give me
+      an integer score between 1-5 for the following title: ''The impact of AI in
+      the future of work''", "task_id": "6b4c0d0e-1758-4dff-ac12-8464b155edb3", "from_task":
+      null, "from_agent": null}}, {"event_id": "265ae762-db20-4236-895b-07794490f475",
+      "timestamp": "2025-10-08T18:18:09.889221+00:00", "type": "agent_execution_started",
+      "event_data": {"agent_role": "Scorer", "agent_goal": "Score the title", "agent_backstory":
+      "You''re an expert scorer, specialized in scoring titles."}}, {"event_id": "0a5c9402-cafb-40e6-b6bf-6c280ebe6e50",
+      "timestamp": "2025-10-08T18:18:09.889307+00:00", "type": "llm_call_started",
+      "event_data": {"timestamp": "2025-10-08T18:18:09.889280+00:00", "type": "llm_call_started",
+      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
+      "task_name": "Give me an integer score between 1-5 for the following title:
+      ''The impact of AI in the future of work''", "task_id": "9343e3fa-e7dc-48d8-8a02-26e743e7c6bf",
+      "agent_id": "6ce24ea1-6163-460b-bc95-fafba4c85116", "agent_role": "Scorer",
+      "from_task": null, "from_agent": null, "model": "gpt-4o-mini", "messages": [{"role":
+      "system", "content": "You are Scorer. You''re an expert scorer, specialized
+      in scoring titles.\nYour personal goal is: Score the title\nTo give my best
+      complete final answer to the task respond using the exact following format:\n\nThought:
+      I now can give a great answer\nFinal Answer: Your final answer must be the great
+      and the most complete as possible, it must be outcome described.\n\nI MUST use
+      these formats, my job depends on it!"}, {"role": "user", "content": "\nCurrent
+      Task: Give me an integer score between 1-5 for the following title: ''The impact
+      of AI in the future of work''\n\nThis is the expected criteria for your final
+      answer: Your best answer to your coworker asking you this, accounting for the
+      context shared.\nyou MUST return the actual complete content as the final answer,
+      not a summary.\n\nThis is the context you''re working with:\nYour task is to
+      evaluate the provided title on a scale from 1 to 5 based on criteria such as
+      relevance, clarity, and intrigue.\n\nBegin! This is VERY important to you, use
+      the tools available and give your best Final Answer, your job depends on it!\n\nThought:"}],
+      "tools": null, "callbacks": ["<crewai.utilities.token_counter_callback.TokenCalcHandler
+      object at 0x136d7ddf0>"], "available_functions": null}}, {"event_id": "b2cb8835-f3b5-4eb2-8a55-becac0899578",
+      "timestamp": "2025-10-08T18:18:09.893785+00:00", "type": "llm_call_completed",
+      "event_data": {"timestamp": "2025-10-08T18:18:09.893752+00:00", "type": "llm_call_completed",
+      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
+      "task_name": "Give me an integer score between 1-5 for the following title:
+      ''The impact of AI in the future of work''", "task_id": "9343e3fa-e7dc-48d8-8a02-26e743e7c6bf",
+      "agent_id": "6ce24ea1-6163-460b-bc95-fafba4c85116", "agent_role": "Scorer",
+      "from_task": null, "from_agent": null, "messages": [{"role": "system", "content":
+      "You are Scorer. You''re an expert scorer, specialized in scoring titles.\nYour
+      personal goal is: Score the title\nTo give my best complete final answer to
+      the task respond using the exact following format:\n\nThought: I now can give
+      a great answer\nFinal Answer: Your final answer must be the great and the most
+      complete as possible, it must be outcome described.\n\nI MUST use these formats,
+      my job depends on it!"}, {"role": "user", "content": "\nCurrent Task: Give me
+      an integer score between 1-5 for the following title: ''The impact of AI in
+      the future of work''\n\nThis is the expected criteria for your final answer:
+      Your best answer to your coworker asking you this, accounting for the context
+      shared.\nyou MUST return the actual complete content as the final answer, not
+      a summary.\n\nThis is the context you''re working with:\nYour task is to evaluate
+      the provided title on a scale from 1 to 5 based on criteria such as relevance,
+      clarity, and intrigue.\n\nBegin! This is VERY important to you, use the tools
+      available and give your best Final Answer, your job depends on it!\n\nThought:"}],
+      "response": "Thought: I now can give a great answer\nFinal Answer: 4. The title
+      ''The impact of AI in the future of work'' is clear and directly addresses a
+      highly relevant and intriguing topic. It captures the essence of how AI could
+      shape the job market, which is a subject of significant interest. However, it
+      could be more specific or detailed to achieve a perfect score.", "call_type":
+      "<LLMCallType.LLM_CALL: ''llm_call''>", "model": "gpt-4o-mini"}}, {"event_id":
+      "935cc6c4-edbb-42bd-82a5-b904c7b14e5e", "timestamp": "2025-10-08T18:18:09.893917+00:00",
+      "type": "agent_execution_completed", "event_data": {"agent_role": "Scorer",
+      "agent_goal": "Score the title", "agent_backstory": "You''re an expert scorer,
+      specialized in scoring titles."}}, {"event_id": "80aef20e-1284-41c7-814b-f1c1609eb0b9",
+      "timestamp": "2025-10-08T18:18:09.894037+00:00", "type": "tool_usage_finished",
+      "event_data": {"timestamp": "2025-10-08T18:18:09.894006+00:00", "type": "tool_usage_finished",
+      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
+      "agent_key": "89cf311b48b52169d42f3925c5be1c5a", "agent_role": "Manager", "agent_id":
+      null, "tool_name": "Delegate work to coworker", "tool_args": {"coworker": "Scorer",
+      "task": "Give me an integer score between 1-5 for the following title: ''The
+      impact of AI in the future of work''", "context": "Your task is to evaluate
+      the provided title on a scale from 1 to 5 based on criteria such as relevance,
+      clarity, and intrigue."}, "tool_class": "CrewStructuredTool", "run_attempts":
+      1, "delegations": 0, "agent": null, "task_name": "Give me an integer score between
+      1-5 for the following title: ''The impact of AI in the future of work''", "task_id":
+      "6b4c0d0e-1758-4dff-ac12-8464b155edb3", "from_task": null, "from_agent": null,
+      "started_at": "2025-10-08T11:18:09.887804", "finished_at": "2025-10-08T11:18:09.893985",
+      "from_cache": false, "output": "4. The title ''The impact of AI in the future
+      of work'' is clear and directly addresses a highly relevant and intriguing topic.
+      It captures the essence of how AI could shape the job market, which is a subject
+      of significant interest. However, it could be more specific or detailed to achieve
+      a perfect score."}}, {"event_id": "2920d8bc-28f9-46cf-87df-113da77a6c34", "timestamp":
+      "2025-10-08T18:18:09.894139+00:00", "type": "llm_call_started", "event_data":
+      {"timestamp": "2025-10-08T18:18:09.894115+00:00", "type": "llm_call_started",
+      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
+      "task_name": "Give me an integer score between 1-5 for the following title:
+      ''The impact of AI in the future of work''", "task_id": "6b4c0d0e-1758-4dff-ac12-8464b155edb3",
+      "agent_id": "7aaa26da-9c22-494d-95cd-bd0a8b650e43", "agent_role": "Manager",
+      "from_task": null, "from_agent": null, "model": "gpt-4o-mini", "messages": [{"role":
+      "system", "content": "You are Manager. You''re great at delegating work about
+      scoring.\nYour personal goal is: Coordinate scoring processes\nYou ONLY have
+      access to the following tools, and should NEVER make up tools that are not listed
+      here:\n\nTool Name: Delegate work to coworker\nTool Arguments: {''task'': {''description'':
+      ''The task to delegate'', ''type'': ''str''}, ''context'': {''description'':
+      ''The context for the task'', ''type'': ''str''}, ''coworker'': {''description'':
+      ''The role/name of the coworker to delegate to'', ''type'': ''str''}}\nTool
+      Description: Delegate a specific task to one of the following coworkers: Scorer\nThe
+      input to this tool should be the coworker, the task you want them to do, and
+      ALL necessary context to execute the task, they know nothing about the task,
+      so share absolutely everything you know, don''t reference things but instead
+      explain them.\nTool Name: Ask question to coworker\nTool Arguments: {''question'':
+      {''description'': ''The question to ask'', ''type'': ''str''}, ''context'':
+      {''description'': ''The context for the question'', ''type'': ''str''}, ''coworker'':
+      {''description'': ''The role/name of the coworker to ask'', ''type'': ''str''}}\nTool
+      Description: Ask a specific question to one of the following coworkers: Scorer\nThe
+      input to this tool should be the coworker, the question you have for them, and
+      ALL necessary context to ask the question properly, they know nothing about
+      the question, so share absolutely everything you know, don''t reference things
+      but instead explain them.\n\nIMPORTANT: Use the following format in your response:\n\n```\nThought:
+      you should always think about what to do\nAction: the action to take, only one
+      name of [Delegate work to coworker, Ask question to coworker], just the name,
+      exactly as it''s written.\nAction Input: the input to the action, just a simple
+      JSON object, enclosed in curly braces, using \" to wrap keys and values.\nObservation:
+      the result of the action\n```\n\nOnce all necessary information is gathered,
+      return the following format:\n\n```\nThought: I now know the final answer\nFinal
+      Answer: the final answer to the original input question\n```"}, {"role": "user",
+      "content": "\nCurrent Task: Give me an integer score between 1-5 for the following
+      title: ''The impact of AI in the future of work''\n\nThis is the expected criteria
+      for your final answer: The score of the title.\nyou MUST return the actual complete
+      content as the final answer, not a summary.\n\nBegin! This is VERY important
+      to you, use the tools available and give your best Final Answer, your job depends
+      on it!\n\nThought:"}, {"role": "assistant", "content": "Thought: To provide
+      an accurate score for the title \"The impact of AI in the future of work,\"
+      I need to delegate the task of scoring it to the Scorer, who is specialized
+      in this activity.\n\nAction: Delegate work to coworker\nAction Input: {\"coworker\":
+      \"Scorer\", \"task\": \"Give me an integer score between 1-5 for the following
+      title: ''The impact of AI in the future of work''\", \"context\": \"Your task
+      is to evaluate the provided title on a scale from 1 to 5 based on criteria such
+      as relevance, clarity, and intrigue.\"}\n\nObservation: The scorer has received
+      the task to score the title ''The impact of AI in the future of work''.\nObservation:
+      4. The title ''The impact of AI in the future of work'' is clear and directly
+      addresses a highly relevant and intriguing topic. It captures the essence of
+      how AI could shape the job market, which is a subject of significant interest.
+      However, it could be more specific or detailed to achieve a perfect score."}],
+      "tools": null, "callbacks": ["<crewai.utilities.token_counter_callback.TokenCalcHandler
+      object at 0x136d6d550>"], "available_functions": null}}, {"event_id": "c1561925-8100-4045-bfde-56c42bf1edab",
+      "timestamp": "2025-10-08T18:18:09.896686+00:00", "type": "llm_call_completed",
+      "event_data": {"timestamp": "2025-10-08T18:18:09.896654+00:00", "type": "llm_call_completed",
+      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
+      "task_name": "Give me an integer score between 1-5 for the following title:
+      ''The impact of AI in the future of work''", "task_id": "6b4c0d0e-1758-4dff-ac12-8464b155edb3",
+      "agent_id": "7aaa26da-9c22-494d-95cd-bd0a8b650e43", "agent_role": "Manager",
+      "from_task": null, "from_agent": null, "messages": [{"role": "system", "content":
+      "You are Manager. You''re great at delegating work about scoring.\nYour personal
+      goal is: Coordinate scoring processes\nYou ONLY have access to the following
+      tools, and should NEVER make up tools that are not listed here:\n\nTool Name:
+      Delegate work to coworker\nTool Arguments: {''task'': {''description'': ''The
+      task to delegate'', ''type'': ''str''}, ''context'': {''description'': ''The
+      context for the task'', ''type'': ''str''}, ''coworker'': {''description'':
+      ''The role/name of the coworker to delegate to'', ''type'': ''str''}}\nTool
+      Description: Delegate a specific task to one of the following coworkers: Scorer\nThe
+      input to this tool should be the coworker, the task you want them to do, and
+      ALL necessary context to execute the task, they know nothing about the task,
+      so share absolutely everything you know, don''t reference things but instead
+      explain them.\nTool Name: Ask question to coworker\nTool Arguments: {''question'':
+      {''description'': ''The question to ask'', ''type'': ''str''}, ''context'':
+      {''description'': ''The context for the question'', ''type'': ''str''}, ''coworker'':
+      {''description'': ''The role/name of the coworker to ask'', ''type'': ''str''}}\nTool
+      Description: Ask a specific question to one of the following coworkers: Scorer\nThe
+      input to this tool should be the coworker, the question you have for them, and
+      ALL necessary context to ask the question properly, they know nothing about
+      the question, so share absolutely everything you know, don''t reference things
+      but instead explain them.\n\nIMPORTANT: Use the following format in your response:\n\n```\nThought:
+      you should always think about what to do\nAction: the action to take, only one
+      name of [Delegate work to coworker, Ask question to coworker], just the name,
+      exactly as it''s written.\nAction Input: the input to the action, just a simple
+      JSON object, enclosed in curly braces, using \" to wrap keys and values.\nObservation:
+      the result of the action\n```\n\nOnce all necessary information is gathered,
+      return the following format:\n\n```\nThought: I now know the final answer\nFinal
+      Answer: the final answer to the original input question\n```"}, {"role": "user",
+      "content": "\nCurrent Task: Give me an integer score between 1-5 for the following
+      title: ''The impact of AI in the future of work''\n\nThis is the expected criteria
+      for your final answer: The score of the title.\nyou MUST return the actual complete
+      content as the final answer, not a summary.\n\nBegin! This is VERY important
+      to you, use the tools available and give your best Final Answer, your job depends
+      on it!\n\nThought:"}, {"role": "assistant", "content": "Thought: To provide
+      an accurate score for the title \"The impact of AI in the future of work,\"
+      I need to delegate the task of scoring it to the Scorer, who is specialized
+      in this activity.\n\nAction: Delegate work to coworker\nAction Input: {\"coworker\":
+      \"Scorer\", \"task\": \"Give me an integer score between 1-5 for the following
+      title: ''The impact of AI in the future of work''\", \"context\": \"Your task
+      is to evaluate the provided title on a scale from 1 to 5 based on criteria such
+      as relevance, clarity, and intrigue.\"}\n\nObservation: The scorer has received
+      the task to score the title ''The impact of AI in the future of work''.\nObservation:
+      4. The title ''The impact of AI in the future of work'' is clear and directly
+      addresses a highly relevant and intriguing topic. It captures the essence of
+      how AI could shape the job market, which is a subject of significant interest.
+      However, it could be more specific or detailed to achieve a perfect score."}],
+      "response": "Thought: I now know the final answer as the Scorer has provided
+      the score for the title based on the given criteria.\n\nFinal Answer: 4", "call_type":
+      "<LLMCallType.LLM_CALL: ''llm_call''>", "model": "gpt-4o-mini"}}, {"event_id":
+      "59b15482-befa-4430-8fd6-be9bd08cc5db", "timestamp": "2025-10-08T18:18:09.896803+00:00",
+      "type": "agent_execution_completed", "event_data": {"agent_role": "Manager",
+      "agent_goal": "Coordinate scoring processes", "agent_backstory": "You''re great
+      at delegating work about scoring."}}, {"event_id": "ee08a9e6-f8d1-4ec3-b8ce-8db5cae003d5",
+      "timestamp": "2025-10-08T18:18:09.896864+00:00", "type": "task_completed", "event_data":
+      {"task_description": "Give me an integer score between 1-5 for the following
+      title: ''The impact of AI in the future of work''", "task_name": "Give me an
+      integer score between 1-5 for the following title: ''The impact of AI in the
+      future of work''", "task_id": "6b4c0d0e-1758-4dff-ac12-8464b155edb3", "output_raw":
+      "4", "output_format": "OutputFormat.RAW", "agent_role": "Manager"}}, {"event_id":
+      "b42a5428-c309-48d3-9b4d-d2c677dfd00f", "timestamp": "2025-10-08T18:18:09.898429+00:00",
+      "type": "crew_kickoff_completed", "event_data": {"timestamp": "2025-10-08T18:18:09.898415+00:00",
+      "type": "crew_kickoff_completed", "source_fingerprint": null, "source_type":
+      null, "fingerprint_metadata": null, "crew_name": "crew", "crew": null, "output":
+      {"description": "Give me an integer score between 1-5 for the following title:
+      ''The impact of AI in the future of work''", "name": "Give me an integer score
+      between 1-5 for the following title: ''The impact of AI in the future of work''",
+      "expected_output": "The score of the title.", "summary": "Give me an integer
+      score between 1-5 for the following...", "raw": "4", "pydantic": null, "json_dict":
+      null, "agent": "Manager", "output_format": "raw"}, "total_tokens": 1877}}],
+      "batch_metadata": {"events_count": 16, "batch_sequence": 1, "is_final_batch":
+      false}}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate, zstd
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '32137'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - CrewAI-CLI/0.201.1
+      X-Crewai-Organization-Id:
+      - d3a3d10c-35db-423f-a7a4-c026030ba64d
+      X-Crewai-Version:
+      - 0.201.1
+    method: POST
+    uri: http://localhost:3000/crewai_plus/api/v1/tracing/batches/be6be8ca-f4e4-44f1-9ac5-a28ab976b1a5/events
+  response:
+    body:
+      string: '{"events_created":16,"trace_batch_id":"75171e87-f189-49fe-a59f-01306ea262c7"}'
+    headers:
+      Content-Length:
+      - '77'
+      cache-control:
+      - no-store
+      content-security-policy:
+      - 'default-src ''self'' *.crewai.com crewai.com; script-src ''self'' ''unsafe-inline''
+        *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts https://www.gstatic.com
+        https://run.pstmn.io https://apis.google.com https://apis.google.com/js/api.js
+        https://accounts.google.com https://accounts.google.com/gsi/client https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css.map
+        https://*.google.com https://docs.google.com https://slides.google.com https://js.hs-scripts.com
+        https://js.sentry-cdn.com https://browser.sentry-cdn.com https://www.googletagmanager.com
+        https://js-na1.hs-scripts.com https://share.descript.com/; style-src ''self''
+        ''unsafe-inline'' *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts;
+        img-src ''self'' data: *.crewai.com crewai.com https://zeus.tools.crewai.com
+        https://dashboard.tools.crewai.com https://cdn.jsdelivr.net; font-src ''self''
+        data: *.crewai.com crewai.com; connect-src ''self'' *.crewai.com crewai.com
+        https://zeus.tools.crewai.com https://connect.useparagon.com/ https://zeus.useparagon.com/*
+        https://*.useparagon.com/* https://run.pstmn.io https://connect.tools.crewai.com/
+        https://*.sentry.io https://www.google-analytics.com ws://localhost:3036 wss://localhost:3036;
+        frame-src ''self'' *.crewai.com crewai.com https://connect.useparagon.com/
+        https://zeus.tools.crewai.com https://zeus.useparagon.com/* https://connect.tools.crewai.com/
+        https://docs.google.com https://drive.google.com https://slides.google.com
+        https://accounts.google.com https://*.google.com https://www.youtube.com https://share.descript.com'
+      content-type:
+      - application/json; charset=utf-8
+      etag:
+      - W/"b165f8dea88d11f83754c72f73b8efb6"
+      expires:
+      - '0'
+      permissions-policy:
+      - camera=(), microphone=(self), geolocation=()
+      pragma:
+      - no-cache
+      referrer-policy:
+      - strict-origin-when-cross-origin
+      server-timing:
+      - cache_read.active_support;dur=0.06, cache_fetch_hit.active_support;dur=0.00,
+        cache_read_multi.active_support;dur=0.12, start_processing.action_controller;dur=0.00,
+        sql.active_record;dur=82.18, instantiation.active_record;dur=0.74, start_transaction.active_record;dur=0.01,
+        transaction.active_record;dur=171.97, process_action.action_controller;dur=511.20
+      vary:
+      - Accept
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-permitted-cross-domain-policies:
+      - none
+      x-request-id:
+      - e21e9c74-f4df-4485-8d92-775ee5b972c6
+      x-runtime:
+      - '0.559510'
+      x-xss-protection:
+      - 1; mode=block
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"status": "completed", "duration_ms": 919, "final_event_count": 16}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate, zstd
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '68'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - CrewAI-CLI/0.201.1
+      X-Crewai-Organization-Id:
+      - d3a3d10c-35db-423f-a7a4-c026030ba64d
+      X-Crewai-Version:
+      - 0.201.1
+    method: PATCH
+    uri: http://localhost:3000/crewai_plus/api/v1/tracing/batches/be6be8ca-f4e4-44f1-9ac5-a28ab976b1a5/finalize
+  response:
+    body:
+      string: '{"id":"75171e87-f189-49fe-a59f-01306ea262c7","trace_id":"be6be8ca-f4e4-44f1-9ac5-a28ab976b1a5","execution_type":"crew","crew_name":"crew","flow_name":null,"status":"completed","duration_ms":919,"crewai_version":"0.201.1","privacy_level":"standard","total_events":16,"execution_context":{"crew_name":"crew","flow_name":null,"privacy_level":"standard","crewai_version":"0.201.1","crew_fingerprint":null},"created_at":"2025-10-08T18:18:09.870Z","updated_at":"2025-10-08T18:18:10.961Z"}'
+    headers:
+      Content-Length:
+      - '482'
+      cache-control:
+      - no-store
+      content-security-policy:
+      - 'default-src ''self'' *.crewai.com crewai.com; script-src ''self'' ''unsafe-inline''
+        *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts https://www.gstatic.com
+        https://run.pstmn.io https://apis.google.com https://apis.google.com/js/api.js
+        https://accounts.google.com https://accounts.google.com/gsi/client https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css.map
+        https://*.google.com https://docs.google.com https://slides.google.com https://js.hs-scripts.com
+        https://js.sentry-cdn.com https://browser.sentry-cdn.com https://www.googletagmanager.com
+        https://js-na1.hs-scripts.com https://share.descript.com/; style-src ''self''
+        ''unsafe-inline'' *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts;
+        img-src ''self'' data: *.crewai.com crewai.com https://zeus.tools.crewai.com
+        https://dashboard.tools.crewai.com https://cdn.jsdelivr.net; font-src ''self''
+        data: *.crewai.com crewai.com; connect-src ''self'' *.crewai.com crewai.com
+        https://zeus.tools.crewai.com https://connect.useparagon.com/ https://zeus.useparagon.com/*
+        https://*.useparagon.com/* https://run.pstmn.io https://connect.tools.crewai.com/
+        https://*.sentry.io https://www.google-analytics.com ws://localhost:3036 wss://localhost:3036;
+        frame-src ''self'' *.crewai.com crewai.com https://connect.useparagon.com/
+        https://zeus.tools.crewai.com https://zeus.useparagon.com/* https://connect.tools.crewai.com/
+        https://docs.google.com https://drive.google.com https://slides.google.com
+        https://accounts.google.com https://*.google.com https://www.youtube.com https://share.descript.com'
+      content-type:
+      - application/json; charset=utf-8
+      etag:
+      - W/"b67654c67df1179eac2a9a79bbdf737f"
+      expires:
+      - '0'
+      permissions-policy:
+      - camera=(), microphone=(self), geolocation=()
+      pragma:
+      - no-cache
+      referrer-policy:
+      - strict-origin-when-cross-origin
+      server-timing:
+      - cache_read.active_support;dur=0.05, cache_fetch_hit.active_support;dur=0.00,
+        cache_read_multi.active_support;dur=0.08, start_processing.action_controller;dur=0.00,
+        sql.active_record;dur=20.84, instantiation.active_record;dur=0.67, unpermitted_parameters.action_controller;dur=0.01,
+        start_transaction.active_record;dur=0.01, transaction.active_record;dur=5.48,
+        process_action.action_controller;dur=452.72
+      vary:
+      - Accept
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-permitted-cross-domain-policies:
+      - none
+      x-request-id:
+      - 6ad8ee19-55a0-467c-a2ff-c82f2dac7cd1
+      x-runtime:
+      - '0.493951'
+      x-xss-protection:
+      - 1; mode=block
+    status:
+      code: 200
+      message: OK
+version: 1

@@ -1,0 +1,453 @@
+interactions:
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are Researcher. You''re
+      an expert researcher, specialized in technology, software engineering, AI and
+      startups. You work as a freelancer and is now working on doing research and
+      analysis for a new customer.\nYour personal goal is: be an assistant that responds
+      with say hello world\nTo give my best complete final answer to the task respond
+      using the exact following format:\n\nThought: I now can give a great answer\nFinal
+      Answer: Your final answer must be the great and the most complete as possible,
+      it must be outcome described.\n\nI MUST use these formats, my job depends on
+      it!"}, {"role": "user", "content": "\nCurrent Task: be an assistant that responds
+      with say hello world\n\nThis is the expected criteria for your final answer:
+      The response should be addressing: say hello world\nyou MUST return the actual
+      complete content as the final answer, not a summary.\n\nBegin! This is VERY
+      important to you, use the tools available and give your best Final Answer, your
+      job depends on it!\n\nThought:"}], "model": "gpt-4o-mini", "stop": ["\nObservation:"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate, zstd
+      connection:
+      - keep-alive
+      content-length:
+      - '1108'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.68.2
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.68.2
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-read-timeout:
+      - '600.0'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.9
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAA4xSTW/UMBC951cMPicoScMu3RuIooUDcOOrVeS1J4mp4zG2sy2q9r9XTrqbtBSJ
+        iyX7zXt+b2buEgCmJNsAEx0Porc6e/vt4nf3xVxweVZ+3v/Q17fF9+pjs92+O//0iqWRQbtfKMKR
+        9VJQbzUGRWaChUMeMKoW62pdropVfjYCPUnUkdbakFWU9cqorMzLKsvXWfH6gd2REujZBn4mAAB3
+        4xl9Gom3bAN5enzp0XveItucigCYIx1fGPde+cBNYOkMCjIBzWj9Axi6AcENtGqPwKGNtoEbf4MO
+        4NK8V4ZreDPeN7BFrSmFr+S0fLGUdNgMnsdYZtB6AXBjKPDYljHM1QNyONnX1FpHO/+EyhpllO9q
+        h9yTiVZ9IMtG9JAAXI1tGh4lZ9ZRb0Md6BrH78p8NemxeTozWhzBQIHrBass02f0aomBK+0XjWaC
+        iw7lTJ2nwgepaAEki9R/u3lOe0quTPs/8jMgBNqAsrYOpRKPE89lDuPy/qvs1OXRMPPo9kpgHRS6
+        OAmJDR/0tFLM//EB+7pRpkVnnZr2qrH1utjl5bo6bzhLDsk9AAAA//8DAAxaM/dlAwAA
+    headers:
+      CF-RAY:
+      - 93fdd19cdbfb6428-SJC
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Wed, 14 May 2025 22:26:43 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - __cf_bm=eCtOgOCsKt_ybdNPdtFAocCmuQbNltR52chaHVe7Y_Q-1747261603-1.0.1.1-827eoA7wHS5SOkTsTqoMq6OSioi0VznQBVjvmabNSVX1bf5PpWZvblw58iggZ_wyKDB0EuVoeLKFspgBJa0kuQYR17hu43Y2C14sgdvOXIE;
+        path=/; expires=Wed, 14-May-25 22:56:43 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=QUa5MnypdaVxO826bwdQaN4G6CBEV8HYVV.7OLF.qvQ-1747261603742-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '307'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-envoy-upstream-service-time:
+      - '309'
+      x-ratelimit-limit-requests:
+      - '30000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-requests:
+      - '29999'
+      x-ratelimit-remaining-tokens:
+      - '149999757'
+      x-ratelimit-reset-requests:
+      - 2ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_61d9066e0258b7095517f9f9c01d38e9
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"trace_id": "783f3548-b39a-46f3-967c-8a49271a073b", "execution_type":
+      "crew", "user_identifier": null, "execution_context": {"crew_fingerprint": null,
+      "crew_name": "crew", "flow_name": null, "crewai_version": "0.201.1", "privacy_level":
+      "standard"}, "execution_metadata": {"expected_duration_estimate": 300, "agent_count":
+      0, "task_count": 0, "flow_method_count": 0, "execution_started_at": "2025-10-08T18:18:03.278174+00:00"}}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate, zstd
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '428'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - CrewAI-CLI/0.201.1
+      X-Crewai-Organization-Id:
+      - d3a3d10c-35db-423f-a7a4-c026030ba64d
+      X-Crewai-Version:
+      - 0.201.1
+    method: POST
+    uri: http://localhost:3000/crewai_plus/api/v1/tracing/batches
+  response:
+    body:
+      string: '{"id":"13407e3f-4b02-4365-ad81-6aa0ccbd287e","trace_id":"783f3548-b39a-46f3-967c-8a49271a073b","execution_type":"crew","crew_name":"crew","flow_name":null,"status":"running","duration_ms":null,"crewai_version":"0.201.1","privacy_level":"standard","total_events":0,"execution_context":{"crew_fingerprint":null,"crew_name":"crew","flow_name":null,"crewai_version":"0.201.1","privacy_level":"standard"},"created_at":"2025-10-08T18:18:03.689Z","updated_at":"2025-10-08T18:18:03.689Z"}'
+    headers:
+      Content-Length:
+      - '480'
+      cache-control:
+      - no-store
+      content-security-policy:
+      - 'default-src ''self'' *.crewai.com crewai.com; script-src ''self'' ''unsafe-inline''
+        *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts https://www.gstatic.com
+        https://run.pstmn.io https://apis.google.com https://apis.google.com/js/api.js
+        https://accounts.google.com https://accounts.google.com/gsi/client https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css.map
+        https://*.google.com https://docs.google.com https://slides.google.com https://js.hs-scripts.com
+        https://js.sentry-cdn.com https://browser.sentry-cdn.com https://www.googletagmanager.com
+        https://js-na1.hs-scripts.com https://share.descript.com/; style-src ''self''
+        ''unsafe-inline'' *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts;
+        img-src ''self'' data: *.crewai.com crewai.com https://zeus.tools.crewai.com
+        https://dashboard.tools.crewai.com https://cdn.jsdelivr.net; font-src ''self''
+        data: *.crewai.com crewai.com; connect-src ''self'' *.crewai.com crewai.com
+        https://zeus.tools.crewai.com https://connect.useparagon.com/ https://zeus.useparagon.com/*
+        https://*.useparagon.com/* https://run.pstmn.io https://connect.tools.crewai.com/
+        https://*.sentry.io https://www.google-analytics.com ws://localhost:3036 wss://localhost:3036;
+        frame-src ''self'' *.crewai.com crewai.com https://connect.useparagon.com/
+        https://zeus.tools.crewai.com https://zeus.useparagon.com/* https://connect.tools.crewai.com/
+        https://docs.google.com https://drive.google.com https://slides.google.com
+        https://accounts.google.com https://*.google.com https://www.youtube.com https://share.descript.com'
+      content-type:
+      - application/json; charset=utf-8
+      etag:
+      - W/"0449979f2920ad0c340833a7ba334b29"
+      expires:
+      - '0'
+      permissions-policy:
+      - camera=(), microphone=(self), geolocation=()
+      pragma:
+      - no-cache
+      referrer-policy:
+      - strict-origin-when-cross-origin
+      server-timing:
+      - cache_read.active_support;dur=0.14, sql.active_record;dur=32.12, cache_generate.active_support;dur=8.31,
+        cache_write.active_support;dur=0.34, cache_read_multi.active_support;dur=0.97,
+        start_processing.action_controller;dur=0.00, instantiation.active_record;dur=1.25,
+        feature_operation.flipper;dur=0.09, start_transaction.active_record;dur=0.01,
+        transaction.active_record;dur=32.23, process_action.action_controller;dur=364.39
+      vary:
+      - Accept
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-permitted-cross-domain-policies:
+      - none
+      x-request-id:
+      - 7fa23b35-b230-4221-b8f4-70f4f84f4998
+      x-runtime:
+      - '0.422034'
+      x-xss-protection:
+      - 1; mode=block
+    status:
+      code: 201
+      message: Created
+- request:
+    body: '{"events": [{"event_id": "6ab09342-74f0-4097-a913-4a60dc4a6697", "timestamp":
+      "2025-10-08T18:18:03.712608+00:00", "type": "crew_kickoff_started", "event_data":
+      {"timestamp": "2025-10-08T18:18:03.276956+00:00", "type": "crew_kickoff_started",
+      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
+      "crew_name": "crew", "crew": null, "inputs": {"interpolation-with-hyphens":
+      "say hello world"}}}, {"event_id": "c52570c1-dc30-4148-84b3-f0bf086c61a9", "timestamp":
+      "2025-10-08T18:18:03.715371+00:00", "type": "task_started", "event_data": {"task_description":
+      "be an assistant that responds with say hello world", "expected_output": "The
+      response should be addressing: say hello world", "task_name": "be an assistant
+      that responds with say hello world", "context": "", "agent_role": "Researcher",
+      "task_id": "eaa5b070-507b-4b00-9aca-ccd487687f61"}}, {"event_id": "221413c4-2f35-4bed-bdd0-f35b8697c5a5",
+      "timestamp": "2025-10-08T18:18:03.716134+00:00", "type": "agent_execution_started",
+      "event_data": {"agent_role": "Researcher", "agent_goal": "be an assistant that
+      responds with say hello world", "agent_backstory": "You''re an expert researcher,
+      specialized in technology, software engineering, AI and startups. You work as
+      a freelancer and is now working on doing research and analysis for a new customer."}},
+      {"event_id": "e2b8c611-92bb-4127-b25f-8084f9f640db", "timestamp": "2025-10-08T18:18:03.718050+00:00",
+      "type": "llm_call_started", "event_data": {"timestamp": "2025-10-08T18:18:03.717826+00:00",
+      "type": "llm_call_started", "source_fingerprint": null, "source_type": null,
+      "fingerprint_metadata": null, "task_name": "be an assistant that responds with
+      say hello world", "task_id": "eaa5b070-507b-4b00-9aca-ccd487687f61", "agent_id":
+      "33a8cc2e-03b0-4da0-8978-60b1e8c46b8d", "agent_role": "Researcher", "from_task":
+      null, "from_agent": null, "model": "gpt-4o-mini", "messages": [{"role": "system",
+      "content": "You are Researcher. You''re an expert researcher, specialized in
+      technology, software engineering, AI and startups. You work as a freelancer
+      and is now working on doing research and analysis for a new customer.\nYour
+      personal goal is: be an assistant that responds with say hello world\nTo give
+      my best complete final answer to the task respond using the exact following
+      format:\n\nThought: I now can give a great answer\nFinal Answer: Your final
+      answer must be the great and the most complete as possible, it must be outcome
+      described.\n\nI MUST use these formats, my job depends on it!"}, {"role": "user",
+      "content": "\nCurrent Task: be an assistant that responds with say hello world\n\nThis
+      is the expected criteria for your final answer: The response should be addressing:
+      say hello world\nyou MUST return the actual complete content as the final answer,
+      not a summary.\n\nBegin! This is VERY important to you, use the tools available
+      and give your best Final Answer, your job depends on it!\n\nThought:"}], "tools":
+      null, "callbacks": ["<crewai.utilities.token_counter_callback.TokenCalcHandler
+      object at 0x1340643b0>"], "available_functions": null}}, {"event_id": "e002108c-4230-4d83-ab7c-3cb7c5203320",
+      "timestamp": "2025-10-08T18:18:03.841317+00:00", "type": "llm_call_completed",
+      "event_data": {"timestamp": "2025-10-08T18:18:03.840679+00:00", "type": "llm_call_completed",
+      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
+      "task_name": "be an assistant that responds with say hello world", "task_id":
+      "eaa5b070-507b-4b00-9aca-ccd487687f61", "agent_id": "33a8cc2e-03b0-4da0-8978-60b1e8c46b8d",
+      "agent_role": "Researcher", "from_task": null, "from_agent": null, "messages":
+      [{"role": "system", "content": "You are Researcher. You''re an expert researcher,
+      specialized in technology, software engineering, AI and startups. You work as
+      a freelancer and is now working on doing research and analysis for a new customer.\nYour
+      personal goal is: be an assistant that responds with say hello world\nTo give
+      my best complete final answer to the task respond using the exact following
+      format:\n\nThought: I now can give a great answer\nFinal Answer: Your final
+      answer must be the great and the most complete as possible, it must be outcome
+      described.\n\nI MUST use these formats, my job depends on it!"}, {"role": "user",
+      "content": "\nCurrent Task: be an assistant that responds with say hello world\n\nThis
+      is the expected criteria for your final answer: The response should be addressing:
+      say hello world\nyou MUST return the actual complete content as the final answer,
+      not a summary.\n\nBegin! This is VERY important to you, use the tools available
+      and give your best Final Answer, your job depends on it!\n\nThought:"}], "response":
+      "I now can give a great answer  \nFinal Answer: Hello, World!", "call_type":
+      "<LLMCallType.LLM_CALL: ''llm_call''>", "model": "gpt-4o-mini"}}, {"event_id":
+      "97285515-f662-4b5a-88b8-8ad872010870", "timestamp": "2025-10-08T18:18:03.847572+00:00",
+      "type": "agent_execution_completed", "event_data": {"agent_role": "Researcher",
+      "agent_goal": "be an assistant that responds with say hello world", "agent_backstory":
+      "You''re an expert researcher, specialized in technology, software engineering,
+      AI and startups. You work as a freelancer and is now working on doing research
+      and analysis for a new customer."}}, {"event_id": "1b2b48e2-9d07-467a-a25c-c437e006ea9d",
+      "timestamp": "2025-10-08T18:18:03.851138+00:00", "type": "task_completed", "event_data":
+      {"task_description": "be an assistant that responds with say hello world", "task_name":
+      "be an assistant that responds with say hello world", "task_id": "eaa5b070-507b-4b00-9aca-ccd487687f61",
+      "output_raw": "Hello, World!", "output_format": "OutputFormat.RAW", "agent_role":
+      "Researcher"}}, {"event_id": "7f279156-41a3-4577-8977-2b7c8647308e", "timestamp":
+      "2025-10-08T18:18:03.854601+00:00", "type": "crew_kickoff_completed", "event_data":
+      {"timestamp": "2025-10-08T18:18:03.854273+00:00", "type": "crew_kickoff_completed",
+      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
+      "crew_name": "crew", "crew": null, "output": {"description": "be an assistant
+      that responds with say hello world", "name": "be an assistant that responds
+      with say hello world", "expected_output": "The response should be addressing:
+      say hello world", "summary": "be an assistant that responds with say hello world...",
+      "raw": "Hello, World!", "pydantic": null, "json_dict": null, "agent": "Researcher",
+      "output_format": "raw"}, "total_tokens": 222}}], "batch_metadata": {"events_count":
+      8, "batch_sequence": 1, "is_final_batch": false}}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate, zstd
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '6591'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - CrewAI-CLI/0.201.1
+      X-Crewai-Organization-Id:
+      - d3a3d10c-35db-423f-a7a4-c026030ba64d
+      X-Crewai-Version:
+      - 0.201.1
+    method: POST
+    uri: http://localhost:3000/crewai_plus/api/v1/tracing/batches/783f3548-b39a-46f3-967c-8a49271a073b/events
+  response:
+    body:
+      string: '{"events_created":8,"trace_batch_id":"13407e3f-4b02-4365-ad81-6aa0ccbd287e"}'
+    headers:
+      Content-Length:
+      - '76'
+      cache-control:
+      - no-store
+      content-security-policy:
+      - 'default-src ''self'' *.crewai.com crewai.com; script-src ''self'' ''unsafe-inline''
+        *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts https://www.gstatic.com
+        https://run.pstmn.io https://apis.google.com https://apis.google.com/js/api.js
+        https://accounts.google.com https://accounts.google.com/gsi/client https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css.map
+        https://*.google.com https://docs.google.com https://slides.google.com https://js.hs-scripts.com
+        https://js.sentry-cdn.com https://browser.sentry-cdn.com https://www.googletagmanager.com
+        https://js-na1.hs-scripts.com https://share.descript.com/; style-src ''self''
+        ''unsafe-inline'' *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts;
+        img-src ''self'' data: *.crewai.com crewai.com https://zeus.tools.crewai.com
+        https://dashboard.tools.crewai.com https://cdn.jsdelivr.net; font-src ''self''
+        data: *.crewai.com crewai.com; connect-src ''self'' *.crewai.com crewai.com
+        https://zeus.tools.crewai.com https://connect.useparagon.com/ https://zeus.useparagon.com/*
+        https://*.useparagon.com/* https://run.pstmn.io https://connect.tools.crewai.com/
+        https://*.sentry.io https://www.google-analytics.com ws://localhost:3036 wss://localhost:3036;
+        frame-src ''self'' *.crewai.com crewai.com https://connect.useparagon.com/
+        https://zeus.tools.crewai.com https://zeus.useparagon.com/* https://connect.tools.crewai.com/
+        https://docs.google.com https://drive.google.com https://slides.google.com
+        https://accounts.google.com https://*.google.com https://www.youtube.com https://share.descript.com'
+      content-type:
+      - application/json; charset=utf-8
+      etag:
+      - W/"59a09593073037c65f8c96640f9cfa82"
+      expires:
+      - '0'
+      permissions-policy:
+      - camera=(), microphone=(self), geolocation=()
+      pragma:
+      - no-cache
+      referrer-policy:
+      - strict-origin-when-cross-origin
+      server-timing:
+      - cache_read.active_support;dur=0.10, sql.active_record;dur=104.59, cache_generate.active_support;dur=3.02,
+        cache_write.active_support;dur=0.25, cache_read_multi.active_support;dur=0.19,
+        start_processing.action_controller;dur=0.00, instantiation.active_record;dur=1.33,
+        start_transaction.active_record;dur=0.01, transaction.active_record;dur=61.18,
+        process_action.action_controller;dur=825.32
+      vary:
+      - Accept
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-permitted-cross-domain-policies:
+      - none
+      x-request-id:
+      - f39bd4ea-01eb-40ce-a2b0-a3206fefb715
+      x-runtime:
+      - '0.878157'
+      x-xss-protection:
+      - 1; mode=block
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"status": "completed", "duration_ms": 1468, "final_event_count": 8}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate, zstd
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '68'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - CrewAI-CLI/0.201.1
+      X-Crewai-Organization-Id:
+      - d3a3d10c-35db-423f-a7a4-c026030ba64d
+      X-Crewai-Version:
+      - 0.201.1
+    method: PATCH
+    uri: http://localhost:3000/crewai_plus/api/v1/tracing/batches/783f3548-b39a-46f3-967c-8a49271a073b/finalize
+  response:
+    body:
+      string: '{"id":"13407e3f-4b02-4365-ad81-6aa0ccbd287e","trace_id":"783f3548-b39a-46f3-967c-8a49271a073b","execution_type":"crew","crew_name":"crew","flow_name":null,"status":"completed","duration_ms":1468,"crewai_version":"0.201.1","privacy_level":"standard","total_events":8,"execution_context":{"crew_name":"crew","flow_name":null,"privacy_level":"standard","crewai_version":"0.201.1","crew_fingerprint":null},"created_at":"2025-10-08T18:18:03.689Z","updated_at":"2025-10-08T18:18:05.302Z"}'
+    headers:
+      Content-Length:
+      - '482'
+      cache-control:
+      - no-store
+      content-security-policy:
+      - 'default-src ''self'' *.crewai.com crewai.com; script-src ''self'' ''unsafe-inline''
+        *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts https://www.gstatic.com
+        https://run.pstmn.io https://apis.google.com https://apis.google.com/js/api.js
+        https://accounts.google.com https://accounts.google.com/gsi/client https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css.map
+        https://*.google.com https://docs.google.com https://slides.google.com https://js.hs-scripts.com
+        https://js.sentry-cdn.com https://browser.sentry-cdn.com https://www.googletagmanager.com
+        https://js-na1.hs-scripts.com https://share.descript.com/; style-src ''self''
+        ''unsafe-inline'' *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts;
+        img-src ''self'' data: *.crewai.com crewai.com https://zeus.tools.crewai.com
+        https://dashboard.tools.crewai.com https://cdn.jsdelivr.net; font-src ''self''
+        data: *.crewai.com crewai.com; connect-src ''self'' *.crewai.com crewai.com
+        https://zeus.tools.crewai.com https://connect.useparagon.com/ https://zeus.useparagon.com/*
+        https://*.useparagon.com/* https://run.pstmn.io https://connect.tools.crewai.com/
+        https://*.sentry.io https://www.google-analytics.com ws://localhost:3036 wss://localhost:3036;
+        frame-src ''self'' *.crewai.com crewai.com https://connect.useparagon.com/
+        https://zeus.tools.crewai.com https://zeus.useparagon.com/* https://connect.tools.crewai.com/
+        https://docs.google.com https://drive.google.com https://slides.google.com
+        https://accounts.google.com https://*.google.com https://www.youtube.com https://share.descript.com'
+      content-type:
+      - application/json; charset=utf-8
+      etag:
+      - W/"45e1b9780d2dfad67d3d01e51da9fccb"
+      expires:
+      - '0'
+      permissions-policy:
+      - camera=(), microphone=(self), geolocation=()
+      pragma:
+      - no-cache
+      referrer-policy:
+      - strict-origin-when-cross-origin
+      server-timing:
+      - cache_read.active_support;dur=0.06, sql.active_record;dur=20.66, cache_generate.active_support;dur=3.44,
+        cache_write.active_support;dur=0.20, cache_read_multi.active_support;dur=0.12,
+        start_processing.action_controller;dur=0.00, instantiation.active_record;dur=0.45,
+        unpermitted_parameters.action_controller;dur=0.01, start_transaction.active_record;dur=0.01,
+        transaction.active_record;dur=5.67, process_action.action_controller;dur=516.09
+      vary:
+      - Accept
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-permitted-cross-domain-policies:
+      - none
+      x-request-id:
+      - 91cc9e1b-40a4-43ea-ba02-76cec061eda1
+      x-runtime:
+      - '0.557447'
+      x-xss-protection:
+      - 1; mode=block
+    status:
+      code: 200
+      message: OK
+version: 1

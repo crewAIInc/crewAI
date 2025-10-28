@@ -13,7 +13,7 @@ mode: "wide"
 
 HubSpot 통합을 사용하기 전에 다음을 확인하세요.
 
-- 활성 구독이 있는 [CrewAI Enterprise](https://app.crewai.com) 계정
+- 활성 구독이 있는 [CrewAI AMP](https://app.crewai.com) 계정
 - 적절한 권한이 있는 HubSpot 계정
 - [통합 페이지](https://app.crewai.com/crewai_plus/connectors)를 통해 HubSpot 계정이 연결되어 있음
 
@@ -21,11 +21,11 @@ HubSpot 통합을 사용하기 전에 다음을 확인하세요.
 
 ### 1. HubSpot 계정 연결하기
 
-1. [CrewAI Enterprise Integrations](https://app.crewai.com/crewai_plus/connectors)로 이동합니다.
+1. [CrewAI AMP Integrations](https://app.crewai.com/crewai_plus/connectors)로 이동합니다.
 2. 인증 통합 섹션에서 **HubSpot**을 찾습니다.
 3. **Connect**를 클릭하고 OAuth 플로우를 완료합니다.
 4. 회사 및 연락처 관리를 위한 필요한 권한을 부여합니다.
-5. [계정 설정](https://app.crewai.com/crewai_plus/settings/account)에서 Enterprise Token을 복사합니다.
+5. [통합 설정](https://app.crewai.com/crewai_plus/settings/integrations)에서 Enterprise Token을 복사합니다.
 
 ### 2. 필수 패키지 설치
 
@@ -33,10 +33,26 @@ HubSpot 통합을 사용하기 전에 다음을 확인하세요.
 uv add crewai-tools
 ```
 
+### 3. 환경 변수 설정
+
+<Note>
+  `Agent(apps=[])`와 함께 통합을 사용하려면 Enterprise Token으로 `CREWAI_PLATFORM_INTEGRATION_TOKEN` 환경 변수를 설정해야 합니다.
+</Note>
+
+```bash
+export CREWAI_PLATFORM_INTEGRATION_TOKEN="your_enterprise_token"
+```
+
+또는 `.env` 파일에 추가하세요:
+
+```
+CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
+```
+
 ## 사용 가능한 액션
 
 <AccordionGroup>
-  <Accordion title="HUBSPOT_CREATE_RECORD_COMPANIES">
+  <Accordion title="hubspot/create_company">
     **설명:** HubSpot에서 새로운 회사 레코드를 생성합니다.
 
     **파라미터:**
@@ -101,7 +117,7 @@ uv add crewai-tools
     - `founded_year` (string, 선택): 설립 연도.
   </Accordion>
 
-  <Accordion title="HUBSPOT_CREATE_RECORD_CONTACTS">
+  <Accordion title="hubspot/create_contact">
     **설명:** HubSpot에서 새로운 연락처 레코드를 생성합니다.
 
     **파라미터:**
@@ -200,7 +216,7 @@ uv add crewai-tools
     - `hs_googleplusid` (string, 선택): googleplus ID.
   </Accordion>
 
-  <Accordion title="HUBSPOT_CREATE_RECORD_DEALS">
+  <Accordion title="hubspot/create_deal">
     **설명:** HubSpot에서 새로운 거래(deal) 레코드를 생성합니다.
 
     **파라미터:**
@@ -215,7 +231,7 @@ uv add crewai-tools
     - `hs_priority` (string, 선택): 거래 우선순위. 사용 가능한 값: `low`, `medium`, `high`.
   </Accordion>
 
-  <Accordion title="HUBSPOT_CREATE_RECORD_ENGAGEMENTS">
+  <Accordion title="hubspot/create_record_engagements">
     **설명:** HubSpot에서 새로운 참여(예: 노트, 이메일, 통화, 미팅, 작업)를 생성합니다.
 
     **파라미터:**
@@ -232,7 +248,7 @@ uv add crewai-tools
     - `hs_meeting_end_time` (string, 선택): 미팅 종료 시간. (`MEETING`에서 사용)
   </Accordion>
 
-  <Accordion title="HUBSPOT_UPDATE_RECORD_COMPANIES">
+  <Accordion title="hubspot/update_company">
     **설명:** HubSpot에서 기존 회사 레코드를 업데이트합니다.
 
     **파라미터:**
@@ -249,7 +265,7 @@ uv add crewai-tools
     - `description` (string, 선택): 설명.
   </Accordion>
 
-  <Accordion title="HUBSPOT_CREATE_RECORD_ANY">
+  <Accordion title="hubspot/create_record_any">
     **설명:** HubSpot에서 지정된 오브젝트 타입의 레코드를 생성합니다.
 
     **파라미터:**
@@ -257,7 +273,7 @@ uv add crewai-tools
     - 추가 파라미터는 커스텀 오브젝트의 스키마에 따라 다릅니다.
   </Accordion>
 
-  <Accordion title="HUBSPOT_UPDATE_RECORD_CONTACTS">
+  <Accordion title="hubspot/update_contact">
     **설명:** HubSpot에서 기존 연락처 레코드를 업데이트합니다.
 
     **파라미터:**
@@ -271,7 +287,7 @@ uv add crewai-tools
     - `lifecyclestage` (string, 선택): 라이프사이클 단계.
   </Accordion>
 
-  <Accordion title="HUBSPOT_UPDATE_RECORD_DEALS">
+  <Accordion title="hubspot/update_deal">
     **설명:** HubSpot에서 기존 거래 레코드를 업데이트합니다.
 
     **파라미터:**
@@ -284,7 +300,7 @@ uv add crewai-tools
     - `dealtype` (string, 선택): 거래 유형.
   </Accordion>
 
-  <Accordion title="HUBSPOT_UPDATE_RECORD_ENGAGEMENTS">
+  <Accordion title="hubspot/update_record_engagements">
     **설명:** HubSpot에서 기존 참여(engagement)를 업데이트합니다.
 
     **파라미터:**
@@ -295,7 +311,7 @@ uv add crewai-tools
     - `hs_task_status` (string, 선택): 작업 상태.
   </Accordion>
 
-  <Accordion title="HUBSPOT_UPDATE_RECORD_ANY">
+  <Accordion title="hubspot/update_record_any">
     **설명:** HubSpot에서 지정된 오브젝트 타입의 레코드를 업데이트합니다.
 
     **파라미터:**
@@ -304,28 +320,28 @@ uv add crewai-tools
     - 추가 파라미터는 커스텀 오브젝트의 스키마에 따라 다릅니다.
   </Accordion>
 
-  <Accordion title="HUBSPOT_GET_RECORDS_COMPANIES">
+  <Accordion title="hubspot/list_companies">
     **설명:** HubSpot에서 회사 레코드 목록을 가져옵니다.
 
     **파라미터:**
     - `paginationParameters` (object, 선택): 다음 페이지를 가져오려면 `pageCursor`를 사용하세요.
   </Accordion>
 
-  <Accordion title="HUBSPOT_GET_RECORDS_CONTACTS">
+  <Accordion title="hubspot/list_contacts">
     **설명:** HubSpot에서 연락처 레코드 목록을 가져옵니다.
 
     **파라미터:**
     - `paginationParameters` (object, 선택): 다음 페이지를 가져오려면 `pageCursor`를 사용하세요.
   </Accordion>
 
-  <Accordion title="HUBSPOT_GET_RECORDS_DEALS">
+  <Accordion title="hubspot/list_deals">
     **설명:** HubSpot에서 거래 레코드 목록을 가져옵니다.
 
     **파라미터:**
     - `paginationParameters` (object, 선택): 다음 페이지를 가져오려면 `pageCursor`를 사용하세요.
   </Accordion>
 
-  <Accordion title="HUBSPOT_GET_RECORDS_ENGAGEMENTS">
+  <Accordion title="hubspot/get_records_engagements">
     **설명:** HubSpot에서 참여(engagement) 레코드 목록을 가져옵니다.
 
     **파라미터:**
@@ -333,7 +349,7 @@ uv add crewai-tools
     - `paginationParameters` (object, 선택): 다음 페이지를 가져오려면 `pageCursor`를 사용하세요.
   </Accordion>
 
-  <Accordion title="HUBSPOT_GET_RECORDS_ANY">
+  <Accordion title="hubspot/get_records_any">
     **설명:** HubSpot에서 지정된 오브젝트 타입의 레코드 목록을 가져옵니다.
 
     **파라미터:**
@@ -341,35 +357,35 @@ uv add crewai-tools
     - `paginationParameters` (object, 선택): 다음 페이지를 가져오려면 `pageCursor`를 사용하세요.
   </Accordion>
 
-  <Accordion title="HUBSPOT_GET_RECORD_BY_ID_COMPANIES">
+  <Accordion title="hubspot/get_company">
     **설명:** ID로 단일 회사 레코드를 가져옵니다.
 
     **파라미터:**
     - `recordId` (string, 필수): 가져올 회사의 ID.
   </Accordion>
 
-  <Accordion title="HUBSPOT_GET_RECORD_BY_ID_CONTACTS">
+  <Accordion title="hubspot/get_contact">
     **설명:** ID로 단일 연락처 레코드를 가져옵니다.
 
     **파라미터:**
     - `recordId` (string, 필수): 가져올 연락처의 ID.
   </Accordion>
 
-  <Accordion title="HUBSPOT_GET_RECORD_BY_ID_DEALS">
+  <Accordion title="hubspot/get_deal">
     **설명:** ID로 단일 거래 레코드를 가져옵니다.
 
     **파라미터:**
     - `recordId` (string, 필수): 가져올 거래의 ID.
   </Accordion>
 
-  <Accordion title="HUBSPOT_GET_RECORD_BY_ID_ENGAGEMENTS">
+  <Accordion title="hubspot/get_record_by_id_engagements">
     **설명:** ID로 단일 참여(engagement) 레코드를 가져옵니다.
 
     **파라미터:**
     - `recordId` (string, 필수): 가져올 참여의 ID.
   </Accordion>
 
-  <Accordion title="HUBSPOT_GET_RECORD_BY_ID_ANY">
+  <Accordion title="hubspot/get_record_by_id_any">
     **설명:** 지정된 오브젝트 타입의 단일 레코드를 ID로 가져옵니다.
 
     **파라미터:**
@@ -377,7 +393,7 @@ uv add crewai-tools
     - `recordId` (string, 필수): 가져올 레코드의 ID.
   </Accordion>
 
-  <Accordion title="HUBSPOT_SEARCH_RECORDS_COMPANIES">
+  <Accordion title="hubspot/search_companies">
     **설명:** 필터 수식을 사용해 HubSpot에서 회사 레코드를 검색합니다.
 
     **파라미터:**
@@ -385,7 +401,7 @@ uv add crewai-tools
     - `paginationParameters` (object, 선택): 다음 페이지를 가져오려면 `pageCursor`를 사용하세요.
   </Accordion>
 
-  <Accordion title="HUBSPOT_SEARCH_RECORDS_CONTACTS">
+  <Accordion title="hubspot/search_contacts">
     **설명:** 필터 수식을 사용해 HubSpot에서 연락처 레코드를 검색합니다.
 
     **파라미터:**
@@ -393,7 +409,7 @@ uv add crewai-tools
     - `paginationParameters` (object, 선택): 다음 페이지를 가져오려면 `pageCursor`를 사용하세요.
   </Accordion>
 
-  <Accordion title="HUBSPOT_SEARCH_RECORDS_DEALS">
+  <Accordion title="hubspot/search_deals">
     **설명:** 필터 수식을 사용해 HubSpot에서 거래 레코드를 검색합니다.
 
     **파라미터:**
@@ -401,7 +417,7 @@ uv add crewai-tools
     - `paginationParameters` (object, 선택): 다음 페이지를 가져오려면 `pageCursor`를 사용하세요.
   </Accordion>
 
-  <Accordion title="HUBSPOT_SEARCH_RECORDS_ENGAGEMENTS">
+  <Accordion title="hubspot/search_records_engagements">
     **설명:** 필터 수식을 사용해 HubSpot에서 참여(engagement) 레코드를 검색합니다.
 
     **파라미터:**
@@ -409,7 +425,7 @@ uv add crewai-tools
     - `paginationParameters` (object, 선택): 다음 페이지를 가져오려면 `pageCursor`를 사용하세요.
   </Accordion>
 
-  <Accordion title="HUBSPOT_SEARCH_RECORDS_ANY">
+  <Accordion title="hubspot/search_records_any">
     **설명:** HubSpot에서 지정된 오브젝트 타입의 레코드를 검색합니다.
 
     **파라미터:**
@@ -418,35 +434,35 @@ uv add crewai-tools
     - `paginationParameters` (object, 선택): 다음 페이지를 가져오려면 `pageCursor`를 사용하세요.
   </Accordion>
 
-  <Accordion title="HUBSPOT_DELETE_RECORD_COMPANIES">
+  <Accordion title="hubspot/delete_record_companies">
     **설명:** ID로 회사 레코드를 삭제합니다.
 
     **파라미터:**
     - `recordId` (string, 필수): 삭제할 회사의 ID.
   </Accordion>
 
-  <Accordion title="HUBSPOT_DELETE_RECORD_CONTACTS">
+  <Accordion title="hubspot/delete_record_contacts">
     **설명:** ID로 연락처 레코드를 삭제합니다.
 
     **파라미터:**
     - `recordId` (string, 필수): 삭제할 연락처의 ID.
   </Accordion>
 
-  <Accordion title="HUBSPOT_DELETE_RECORD_DEALS">
+  <Accordion title="hubspot/delete_record_deals">
     **설명:** ID로 거래 레코드를 삭제합니다.
 
     **파라미터:**
     - `recordId` (string, 필수): 삭제할 거래의 ID.
   </Accordion>
 
-  <Accordion title="HUBSPOT_DELETE_RECORD_ENGAGEMENTS">
+  <Accordion title="hubspot/delete_record_engagements">
     **설명:** ID로 참여(engagement) 레코드를 삭제합니다.
 
     **파라미터:**
     - `recordId` (string, 필수): 삭제할 참여의 ID.
   </Accordion>
 
-  <Accordion title="HUBSPOT_DELETE_RECORD_ANY">
+  <Accordion title="hubspot/delete_record_any">
     **설명:** 지정된 오브젝트 타입의 레코드를 ID로 삭제합니다.
 
     **파라미터:**
@@ -454,7 +470,7 @@ uv add crewai-tools
     - `recordId` (string, 필수): 삭제할 레코드의 ID.
   </Accordion>
 
-  <Accordion title="HUBSPOT_GET_CONTACTS_BY_LIST_ID">
+  <Accordion title="hubspot/get_contacts_by_list_id">
     **설명:** 지정된 리스트 ID로부터 연락처 목록을 가져옵니다.
 
     **파라미터:**
@@ -462,7 +478,7 @@ uv add crewai-tools
     - `paginationParameters` (object, 선택): 이후 페이지를 위해 `pageCursor` 사용.
   </Accordion>
 
-  <Accordion title="HUBSPOT_DESCRIBE_ACTION_SCHEMA">
+  <Accordion title="hubspot/describe_action_schema">
     **설명:** 특정 오브젝트 타입 및 작업에 대한 예상 스키마를 가져옵니다.
 
     **파라미터:**
@@ -477,19 +493,13 @@ uv add crewai-tools
 
 ```python
 from crewai import Agent, Task, Crew
-from crewai_tools import CrewaiEnterpriseTools
-
-# Get enterprise tools (HubSpot tools will be included)
-enterprise_tools = CrewaiEnterpriseTools(
-    enterprise_token="your_enterprise_token"
-)
 
 # Create an agent with HubSpot capabilities
 hubspot_agent = Agent(
     role="CRM Manager",
     goal="Manage company and contact records in HubSpot",
     backstory="An AI assistant specialized in CRM management.",
-    tools=[enterprise_tools]
+    apps=['hubspot']
 )
 
 # Task to create a new company
@@ -511,19 +521,16 @@ crew.kickoff()
 ### 특정 HubSpot 도구 필터링
 
 ```python
-from crewai_tools import CrewaiEnterpriseTools
 
 # Get only the tool to create contacts
-enterprise_tools = CrewaiEnterpriseTools(
-    enterprise_token="your_enterprise_token",
-    actions_list=["hubspot_create_record_contacts"]
+    actions_list=["hubspot/create_contact"]
 )
 
 contact_creator = Agent(
     role="Contact Creator",
     goal="Create new contacts in HubSpot",
     backstory="An AI assistant that focuses on creating new contact entries in the CRM.",
-    tools=[enterprise_tools]
+    apps=['hubspot']
 )
 
 # Task to create a contact
@@ -545,17 +552,12 @@ crew.kickoff()
 
 ```python
 from crewai import Agent, Task, Crew
-from crewai_tools import CrewaiEnterpriseTools
-
-enterprise_tools = CrewaiEnterpriseTools(
-    enterprise_token="your_enterprise_token"
-)
 
 crm_manager = Agent(
     role="CRM Manager",
     goal="Manage and organize HubSpot contacts efficiently.",
     backstory="An experienced CRM manager who maintains an organized contact database.",
-    tools=[enterprise_tools]
+    apps=['hubspot']
 )
 
 # Task to manage contacts

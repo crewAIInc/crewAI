@@ -1,0 +1,62 @@
+---
+title: Google Drive 통합
+description: "CrewAI를 위한 Google Drive 통합으로 파일 및 폴더 관리."
+icon: "google"
+mode: "wide"
+---
+
+## 개요
+
+에이전트가 Google Drive의 파일과 폴더에 액세스하고 관리할 수 있도록 합니다. AI 기반 자동화로 파일을 업로드, 다운로드, 콘텐츠 구성, 공유 링크 생성 및 클라우드 스토리지 워크플로를 간소화합니다.
+
+## 전제 조건
+
+Google Drive 통합을 사용하기 전에 다음 사항을 확인하세요:
+
+- 활성 구독이 있는 [CrewAI AMP](https://app.crewai.com) 계정
+- Google Drive 액세스 권한이 있는 Google 계정
+- [통합 페이지](https://app.crewai.com/crewai_plus/connectors)를 통해 Google 계정 연결
+
+## Google Drive 통합 설정
+
+### 1. Google 계정 연결
+
+1. [CrewAI AMP 통합](https://app.crewai.com/crewai_plus/connectors)으로 이동합니다.
+2. 인증 통합 섹션에서 **Google Drive**를 찾습니다.
+3. **연결**을 클릭하고 OAuth 과정을 완료합니다.
+4. 파일 및 폴더 관리에 필요한 권한을 부여합니다.
+5. [통합 설정](https://app.crewai.com/crewai_plus/settings/integrations)에서 Enterprise Token을 복사합니다.
+
+### 2. 필수 패키지 설치
+
+```bash
+uv add crewai-tools
+```
+
+### 3. 환경 변수 설정
+
+<Note>
+  `Agent(apps=[])`와 함께 통합을 사용하려면 Enterprise Token으로 `CREWAI_PLATFORM_INTEGRATION_TOKEN` 환경 변수를 설정해야 합니다.
+</Note>
+
+```bash
+export CREWAI_PLATFORM_INTEGRATION_TOKEN="your_enterprise_token"
+```
+
+또는 `.env` 파일에 추가하세요:
+
+```
+CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
+```
+
+## 사용 가능한 작업
+
+자세한 매개변수 및 사용법은 [영어 문서](../../../en/enterprise/integrations/google_drive)를 참조하세요.
+
+## 문제 해결
+
+### 도움 받기
+
+<Card title="도움이 필요하신가요?" icon="headset" href="mailto:support@crewai.com">
+  Google Drive 통합 설정 또는 문제 해결에 대한 지원이 필요하시면 지원팀에 문의하세요.
+</Card>

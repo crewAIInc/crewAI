@@ -1,0 +1,71 @@
+---
+title: "Google Drive Trigger"
+description: "Respond to Google Drive file events with automated crews"
+icon: "folder"
+mode: "wide"
+---
+
+## Overview
+
+Trigger your automations when files are created, updated, or removed in Google Drive. Typical workflows include summarizing newly uploaded content, enforcing sharing policies, or notifying owners when critical files change.
+
+<Tip>
+  Connect Google Drive in **Tools & Integrations** and confirm the trigger is enabled for the automation you want to monitor.
+</Tip>
+
+## Enabling the Google Drive Trigger
+
+1. Open your deployment in CrewAI AMP
+2. Go to the **Triggers** tab
+3. Locate **Google Drive** and switch the toggle to enable
+
+<Frame>
+  <img src="/images/enterprise/gdrive-trigger.png" alt="Enable or disable triggers with toggle" />
+</Frame>
+
+## Example: Summarize file activity
+
+The drive example crews parse the payload to extract file metadata, evaluate permissions, and publish a summary.
+
+```python
+from drive_file_crew import GoogleDriveFileTrigger
+
+crew = GoogleDriveFileTrigger().crew()
+crew.kickoff({
+    "crewai_trigger_payload": drive_payload,
+})
+```
+
+## 로컬에서 테스트
+
+CrewAI CLI를 사용하여 Google Drive 트리거 통합을 로컬에서 테스트하세요:
+
+```bash
+# 사용 가능한 모든 트리거 보기
+crewai triggers list
+
+# 실제 payload로 Google Drive 트리거 시뮬레이션
+crewai triggers run google_drive/file_changed
+```
+
+`crewai triggers run` 명령은 완전한 Drive payload로 크루를 실행하여 배포 전에 파싱 로직을 테스트할 수 있게 해줍니다.
+
+<Warning>
+  개발 중에는 `crewai triggers run google_drive/file_changed`를 사용하세요 (`crewai run`이 아님). 배포 후에는 크루가 자동으로 트리거 payload를 받습니다.
+</Warning>
+
+## Monitoring Executions
+
+Track history and performance of triggered runs with the **Executions** list in the deployment dashboard.
+
+<Frame>
+  <img src="/images/enterprise/list-executions.png" alt="List of executions triggered by automation" />
+</Frame>
+
+## Troubleshooting
+
+- Verify Google Drive is connected and the trigger toggle is enabled
+- `crewai triggers run google_drive/file_changed`로 로컬 테스트하여 정확한 payload 구조를 확인하세요
+- If a payload is missing permission data, ensure the connected account has access to the file or folder
+- The trigger sends file IDs only; use the Drive API if you need to fetch binary content during the crew run
+- 주의: 트리거 실행을 시뮬레이션하려면 `crewai triggers run`을 사용하세요 (`crewai run`이 아님)

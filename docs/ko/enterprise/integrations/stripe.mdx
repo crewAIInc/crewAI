@@ -13,16 +13,48 @@ mode: "wide"
 
 Stripe 통합을 사용하기 전에 다음 사항을 확인하세요:
 
-- 활성 구독이 있는 [CrewAI Enterprise](https://app.crewai.com) 계정
+- 활성 구독이 있는 [CrewAI AMP](https://app.crewai.com) 계정
 - 적절한 API 권한이 있는 Stripe 계정
 - [통합 페이지](https://app.crewai.com/integrations)를 통해 Stripe 계정 연결
+
+## Stripe 통합 설정
+
+### 1. Stripe 계정 연결
+
+1. [CrewAI AMP 통합](https://app.crewai.com/crewai_plus/connectors)으로 이동합니다.
+2. 인증 통합 섹션에서 **Stripe**를 찾습니다.
+3. **연결**을 클릭하고 OAuth 과정을 완료합니다.
+4. 결제 처리에 필요한 권한을 부여합니다.
+5. [통합 설정](https://app.crewai.com/crewai_plus/settings/integrations)에서 Enterprise Token을 복사합니다.
+
+### 2. 필수 패키지 설치
+
+```bash
+uv add crewai-tools
+```
+
+### 3. 환경 변수 설정
+
+<Note>
+  `Agent(apps=[])`와 함께 통합을 사용하려면 Enterprise Token으로 `CREWAI_PLATFORM_INTEGRATION_TOKEN` 환경 변수를 설정해야 합니다.
+</Note>
+
+```bash
+export CREWAI_PLATFORM_INTEGRATION_TOKEN="your_enterprise_token"
+```
+
+또는 `.env` 파일에 추가하세요:
+
+```
+CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
+```
 
 ## 사용 가능한 도구
 
 ### **고객 관리**
 
 <AccordionGroup>
-  <Accordion title="STRIPE_CREATE_CUSTOMER">
+  <Accordion title="stripe/create_customer">
     **설명:** Stripe 계정에 새로운 고객을 생성합니다.
 
     **파라미터:**
@@ -32,14 +64,14 @@ Stripe 통합을 사용하기 전에 다음 사항을 확인하세요:
     - `metadataCreateCustomer` (object, 선택): 추가 메타데이터를 key-value 쌍으로 입력 (예: `{"field1": 1, "field2": 2}`)
   </Accordion>
 
-  <Accordion title="STRIPE_GET_CUSTOMER_BY_ID">
+  <Accordion title="stripe/get_customer_by_id">
     **설명:** Stripe 고객 ID로 특정 고객을 조회합니다.
 
     **파라미터:**
     - `idGetCustomer` (string, 필수): 조회할 Stripe 고객 ID
   </Accordion>
 
-  <Accordion title="STRIPE_GET_CUSTOMERS">
+  <Accordion title="stripe/get_customers">
     **설명:** 필터링 옵션과 함께 고객 리스트를 조회합니다.
 
     **파라미터:**
@@ -49,7 +81,7 @@ Stripe 통합을 사용하기 전에 다음 사항을 확인하세요:
     - `limitGetCustomers` (string, 선택): 반환할 최대 고객 수 (기본값 10)
   </Accordion>
 
-  <Accordion title="STRIPE_UPDATE_CUSTOMER">
+  <Accordion title="stripe/update_customer">
     **설명:** 기존 고객의 정보를 업데이트합니다.
 
     **파라미터:**
@@ -64,7 +96,7 @@ Stripe 통합을 사용하기 전에 다음 사항을 확인하세요:
 ### **구독 관리**
 
 <AccordionGroup>
-  <Accordion title="STRIPE_CREATE_SUBSCRIPTION">
+  <Accordion title="stripe/create_subscription">
     **설명:** 고객을 위한 새로운 구독을 생성합니다.
 
     **파라미터:**
@@ -73,7 +105,7 @@ Stripe 통합을 사용하기 전에 다음 사항을 확인하세요:
     - `metadataCreateSubscription` (object, 선택): 구독에 대한 추가 메타데이터
   </Accordion>
 
-  <Accordion title="STRIPE_GET_SUBSCRIPTIONS">
+  <Accordion title="stripe/get_subscriptions">
     **설명:** 선택적 필터링으로 구독을 조회합니다.
 
     **파라미터:**
@@ -86,7 +118,7 @@ Stripe 통합을 사용하기 전에 다음 사항을 확인하세요:
 ### **제품 관리**
 
 <AccordionGroup>
-  <Accordion title="STRIPE_CREATE_PRODUCT">
+  <Accordion title="stripe/create_product">
     **설명:** Stripe 카탈로그에 새 제품을 생성합니다.
 
     **파라미터:**
@@ -95,14 +127,14 @@ Stripe 통합을 사용하기 전에 다음 사항을 확인하세요:
     - `metadataProduct` (object, 선택): 키-값 쌍으로 구성된 추가 제품 메타데이터
   </Accordion>
 
-  <Accordion title="STRIPE_GET_PRODUCT_BY_ID">
+  <Accordion title="stripe/get_product_by_id">
     **설명:** Stripe 제품 ID로 특정 제품을 조회합니다.
 
     **파라미터:**
     - `productId` (string, 필수): 조회할 Stripe 제품 ID
   </Accordion>
 
-  <Accordion title="STRIPE_GET_PRODUCTS">
+  <Accordion title="stripe/get_products">
     **설명:** 선택적 필터링을 통해 제품 목록을 조회합니다.
 
     **파라미터:**
@@ -115,7 +147,7 @@ Stripe 통합을 사용하기 전에 다음 사항을 확인하세요:
 ### **금융 운영**
 
 <AccordionGroup>
-  <Accordion title="STRIPE_GET_BALANCE_TRANSACTIONS">
+  <Accordion title="stripe/get_balance_transactions">
     **설명:** Stripe 계정에서 잔액 거래를 조회합니다.
 
     **매개변수:**
@@ -124,7 +156,7 @@ Stripe 통합을 사용하기 전에 다음 사항을 확인하세요:
       - `pageCursor` (string, 선택 사항): 페이지네이션을 위한 페이지 커서
   </Accordion>
 
-  <Accordion title="STRIPE_GET_PLANS">
+  <Accordion title="stripe/get_plans">
     **설명:** Stripe 계정에서 구독 플랜을 조회합니다.
 
     **매개변수:**
@@ -140,19 +172,13 @@ Stripe 통합을 사용하기 전에 다음 사항을 확인하세요:
 
 ```python
 from crewai import Agent, Task, Crew
-from crewai_tools import CrewaiEnterpriseTools
-
-# Get enterprise tools (Stripe tools will be included)
-enterprise_tools = CrewaiEnterpriseTools(
-    enterprise_token="your_enterprise_token"
-)
 
 # Create an agent with Stripe capabilities
 stripe_agent = Agent(
     role="Payment Manager",
     goal="Manage customer payments, subscriptions, and billing operations efficiently",
     backstory="An AI assistant specialized in payment processing and subscription management.",
-    tools=[enterprise_tools]
+    apps=['stripe']
 )
 
 # Task to create a new customer
@@ -174,19 +200,12 @@ crew.kickoff()
 ### 특정 Stripe 도구 필터링
 
 ```python
-from crewai_tools import CrewaiEnterpriseTools
-
-# Get only specific Stripe tools
-enterprise_tools = CrewaiEnterpriseTools(
-    enterprise_token="your_enterprise_token",
-    actions_list=["stripe_create_customer", "stripe_create_subscription", "stripe_get_balance_transactions"]
-)
 
 billing_manager = Agent(
     role="Billing Manager",
     goal="Handle customer billing, subscriptions, and payment processing",
     backstory="An experienced billing manager who handles subscription lifecycle and payment operations.",
-    tools=enterprise_tools
+    apps=['stripe']
 )
 
 # Task to manage billing operations
@@ -208,17 +227,12 @@ crew.kickoff()
 
 ```python
 from crewai import Agent, Task, Crew
-from crewai_tools import CrewaiEnterpriseTools
-
-enterprise_tools = CrewaiEnterpriseTools(
-    enterprise_token="your_enterprise_token"
-)
 
 subscription_manager = Agent(
     role="Subscription Manager",
     goal="Manage customer subscriptions and optimize recurring revenue",
     backstory="An AI assistant that specializes in subscription lifecycle management and customer retention.",
-    tools=[enterprise_tools]
+    apps=['stripe']
 )
 
 # Task to manage subscription operations
@@ -245,17 +259,12 @@ crew.kickoff()
 
 ```python
 from crewai import Agent, Task, Crew
-from crewai_tools import CrewaiEnterpriseTools
-
-enterprise_tools = CrewaiEnterpriseTools(
-    enterprise_token="your_enterprise_token"
-)
 
 financial_analyst = Agent(
     role="Financial Analyst",
     goal="Analyze payment data and generate financial insights",
     backstory="An analytical AI that excels at extracting insights from payment and subscription data.",
-    tools=[enterprise_tools]
+    apps=['stripe']
 )
 
 # Complex task involving financial analysis

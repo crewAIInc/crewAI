@@ -1,0 +1,152 @@
+---
+title: Microsoft Teams 통합
+description: "CrewAI를 위한 Microsoft Teams 통합으로 팀 협업 및 커뮤니케이션."
+icon: "users"
+mode: "wide"
+---
+
+## 개요
+
+에이전트가 Teams 데이터에 액세스하고, 메시지를 보내고, 회의를 만들고, 채널을 관리할 수 있도록 합니다. AI 기반 자동화로 팀 커뮤니케이션을 자동화하고, 회의를 예약하고, 메시지를 검색하며, 협업 워크플로를 간소화합니다.
+
+## 전제 조건
+
+Microsoft Teams 통합을 사용하기 전에 다음 사항을 확인하세요:
+
+- 활성 구독이 있는 [CrewAI AMP](https://app.crewai.com) 계정
+- Teams 액세스 권한이 있는 Microsoft 계정
+- [통합 페이지](https://app.crewai.com/crewai_plus/connectors)를 통해 Microsoft 계정 연결
+
+## Microsoft Teams 통합 설정
+
+### 1. Microsoft 계정 연결
+
+1. [CrewAI AMP 통합](https://app.crewai.com/crewai_plus/connectors)으로 이동
+2. 인증 통합 섹션에서 **Microsoft Teams** 찾기
+3. **연결**을 클릭하고 OAuth 플로우 완료
+4. Teams 액세스에 필요한 권한 부여
+5. [통합 설정](https://app.crewai.com/crewai_plus/settings/integrations)에서 Enterprise Token 복사
+
+### 2. 필요한 패키지 설치
+
+```bash
+uv add crewai-tools
+```
+
+### 3. 환경 변수 설정
+
+<Note>
+  `Agent(apps=[])`와 함께 통합을 사용하려면 Enterprise Token으로 `CREWAI_PLATFORM_INTEGRATION_TOKEN` 환경 변수를 설정해야 합니다.
+</Note>
+
+```bash
+export CREWAI_PLATFORM_INTEGRATION_TOKEN="your_enterprise_token"
+```
+
+또는 `.env` 파일에 추가하세요:
+
+```
+CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
+```
+
+## 사용 가능한 작업
+
+<AccordionGroup>
+  <Accordion title="microsoft_teams/get_teams">
+    **설명:** 사용자가 멤버인 모든 팀을 가져옵니다.
+
+    **매개변수:**
+    - 매개변수가 필요하지 않습니다.
+  </Accordion>
+
+  <Accordion title="microsoft_teams/get_channels">
+    **설명:** 특정 팀의 채널을 가져옵니다.
+
+    **매개변수:**
+    - `team_id` (string, 필수): 팀의 ID.
+  </Accordion>
+
+  <Accordion title="microsoft_teams/send_message">
+    **설명:** Teams 채널에 메시지를 보냅니다.
+
+    **매개변수:**
+    - `team_id` (string, 필수): 팀의 ID.
+    - `channel_id` (string, 필수): 채널의 ID.
+    - `message` (string, 필수): 메시지 내용.
+    - `content_type` (string, 선택사항): 콘텐츠 유형 (html 또는 text). 옵션: html, text. 기본값: text.
+  </Accordion>
+
+  <Accordion title="microsoft_teams/get_messages">
+    **설명:** Teams 채널에서 메시지를 가져옵니다.
+
+    **매개변수:**
+    - `team_id` (string, 필수): 팀의 ID.
+    - `channel_id` (string, 필수): 채널의 ID.
+    - `top` (integer, 선택사항): 검색할 메시지 수 (최대 50). 기본값: 20.
+  </Accordion>
+
+  <Accordion title="microsoft_teams/create_meeting">
+    **설명:** Teams 회의를 만듭니다.
+
+    **매개변수:**
+    - `subject` (string, 필수): 회의 제목/제목.
+    - `startDateTime` (string, 필수): 회의 시작 시간 (시간대가 포함된 ISO 8601 형식).
+    - `endDateTime` (string, 필수): 회의 종료 시간 (시간대가 포함된 ISO 8601 형식).
+  </Accordion>
+
+  <Accordion title="microsoft_teams/search_online_meetings_by_join_url">
+    **설명:** 웹 참가 URL로 온라인 회의를 검색합니다.
+
+    **매개변수:**
+    - `join_web_url` (string, 필수): 검색할 회의의 웹 참가 URL.
+  </Accordion>
+</AccordionGroup>
+
+## 사용 예제
+
+### 기본 Microsoft Teams 에이전트 설정
+
+```python
+from crewai import Agent, Task, Crew
+
+# Microsoft Teams 기능을 가진 에이전트 생성
+teams_agent = Agent(
+    role="Teams 코디네이터",
+    goal="Teams 커뮤니케이션 및 회의를 효율적으로 관리",
+    backstory="Microsoft Teams 작업 및 팀 협업 전문 AI 어시스턴트.",
+    apps=['microsoft_teams']  # 모든 Teams 작업을 사용할 수 있습니다
+)
+
+# 팀 및 채널 탐색 작업
+explore_teams_task = Task(
+    description="내가 멤버인 모든 팀을 나열한 다음 첫 번째 팀의 채널을 가져오세요.",
+    agent=teams_agent,
+    expected_output="팀 및 채널 목록이 표시됨."
+)
+
+# 작업 실행
+crew = Crew(
+    agents=[teams_agent],
+    tasks=[explore_teams_task]
+)
+
+crew.kickoff()
+```
+
+## 문제 해결
+
+### 일반적인 문제
+
+**인증 오류**
+- Microsoft 계정이 Teams 액세스에 필요한 권한을 가지고 있는지 확인하세요.
+- 필요한 범위: `Team.ReadBasic.All`, `Channel.ReadBasic.All`, `ChannelMessage.Send`, `ChannelMessage.Read.All`, `OnlineMeetings.ReadWrite`, `OnlineMeetings.Read`.
+
+**팀 및 채널 액세스**
+- 액세스하려는 팀의 멤버인지 확인하세요.
+- 팀 및 채널 ID가 올바른지 다시 확인하세요.
+
+### 도움 받기
+
+<Card title="도움이 필요하신가요?" icon="headset" href="mailto:support@crewai.com">
+  Microsoft Teams 통합 설정 또는 문제 해결에 대한 지원이 필요하시면 지원팀에 문의하세요.
+</Card>

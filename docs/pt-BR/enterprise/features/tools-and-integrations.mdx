@@ -1,0 +1,240 @@
+---
+title: "Ferramentas & Integrações"
+description: "Conecte apps externos e gerencie ferramentas internas que seus agentes podem usar."
+icon: "wrench"
+mode: "wide"
+---
+
+## Visão geral
+
+Ferramentas & Integrações é o hub central para conectar aplicações de terceiros e gerenciar ferramentas internas que seus agentes podem usar em tempo de execução.
+
+<Frame>
+  ![Ferramentas & Integrações](/images/enterprise/crew_connectors.png)
+</Frame>
+
+## Explorar
+
+<Tabs>
+  <Tab title="Integrações" icon="plug">
+
+  ## Aplicativos para Agentes (Integrações)
+
+  Conecte aplicações empresariais (por exemplo, Gmail, Google Drive, HubSpot, Slack) via OAuth para habilitar ações de agentes.
+
+  <Steps>
+    <Step title="Conectar">
+      Clique em <b>Conectar</b> no app desejado e conclua o OAuth.
+    </Step>
+    <Step title="Configurar">
+      Ajuste escopos, gatilhos e ações disponíveis conforme necessário.
+    </Step>
+    <Step title="Usar em Agentes">
+      Os serviços conectados ficam disponíveis como ferramentas para seus agentes.
+    </Step>
+  </Steps>
+
+  <Frame>
+    ![Aplicativos](/images/enterprise/agent-apps.png)
+  </Frame>
+
+  ### Conectar sua conta
+
+  1. Acesse <Link href="https://app.crewai.com/crewai_plus/connectors">Integrações</Link>
+  2. Clique em <b>Conectar</b> no serviço desejado
+  3. Conclua o fluxo OAuth e conceda os escopos
+  4. Copie seu Token Enterprise em <Link href="https://app.crewai.com/crewai_plus/settings/integrations">Configurações de Integração</Link>
+
+  <Frame>
+    ![Token Enterprise](/images/enterprise/enterprise_action_auth_token.png)
+  </Frame>
+
+  ### Instalar ferramentas de integração
+
+  Para usar as integrações localmente, instale a versão mais recente do pacote `crewai-tools`.
+
+  ```bash
+  uv add crewai-tools
+  ```
+
+  ### Configuração de variável de ambiente
+
+  <Note>
+    Para usar integrações com `Agent(apps=[])`, você deve definir a variável de ambiente `CREWAI_PLATFORM_INTEGRATION_TOKEN` com seu Enterprise Token.
+  </Note>
+
+  ```bash
+  export CREWAI_PLATFORM_INTEGRATION_TOKEN="seu_enterprise_token"
+  ```
+
+  Ou adicione ao seu arquivo `.env`:
+
+  ```
+  CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
+  ```
+
+  ### Exemplo de uso
+
+  <Tip>
+    Use a nova abordagem simplificada para integrar aplicativos empresariais. Simplesmente especifique o aplicativo e suas ações diretamente na configuração do Agent.
+  </Tip>
+
+  ```python
+  from crewai import Agent, Task, Crew
+
+  # Crie um agente com capacidades do Gmail
+  email_agent = Agent(
+      role="Gerente de Email",
+      goal="Gerenciar e organizar comunicações por email",
+      backstory="Assistente de IA especializado em gestão de emails",
+      apps=['gmail', 'gmail/send_email']  # Usando nome canônico 'gmail'
+  )
+
+  email_task = Task(
+      description="Criar e enviar follow-up para john@example.com sobre a atualização do projeto",
+      agent=email_agent,
+      expected_output="Confirmação de envio do email com sucesso"
+  )
+
+  crew = Crew(agents=[email_agent], tasks=[email_task])
+  crew.kickoff()
+  ```
+
+  ### Filtrando ferramentas
+
+  ```python
+  from crewai import Agent, Task, Crew
+
+  # Crie agente com ações específicas do Gmail apenas
+  gmail_agent = Agent(
+      role="Gerente de Gmail",
+      goal="Gerenciar comunicações e notificações no Gmail",
+      backstory="Assistente de IA para coordenação de emails",
+      apps=['gmail/fetch_emails']  # Usando nome canônico com ação específica
+  )
+
+  notification_task = Task(
+      description="Encontrar o email de john@example.com",
+      agent=gmail_agent,
+      expected_output="Email encontrado de john@example.com"
+  )
+
+  crew = Crew(agents=[gmail_agent], tasks=[notification_task])
+  ```
+
+  Em um crew implantado, você pode especificar quais ações ficam disponíveis em cada integração na página de configurações do serviço.
+
+  <Frame>
+    ![Filtrar Ações](/images/enterprise/filtering_enterprise_action_tools.png)
+  </Frame>
+
+  ### Implantações com escopo (organizações multiusuário)
+
+  Você pode escopar cada integração para um usuário específico (por exemplo, usar a conta Gmail de um usuário).
+
+  <Tip>
+    Útil quando diferentes equipes/usuários precisam manter o acesso a dados isolado.
+  </Tip>
+
+  Use `user_bearer_token` para escopar a autenticação ao usuário solicitante. Se o usuário não estiver logado, o crew não usará integrações conectadas; caso contrário, usa o token padrão configurado na implantação.
+
+  <Frame>
+    ![Token de Usuário](/images/enterprise/user_bearer_token.png)
+  </Frame>
+
+  <div id="catalog"></div>
+  ### Catálogo
+
+  #### Comunicação & Colaboração
+  - Gmail — Gerenciamento de emails e rascunhos
+  - Slack — Notificações e alertas do workspace
+  - Microsoft — Integração com Office 365 e Teams
+
+  #### Gestão de Projetos
+  - Jira — Rastreamento de issues e projetos
+  - ClickUp — Gestão de tarefas e produtividade
+  - Asana — Coordenação de tarefas de equipe
+  - Notion — Páginas e bancos de dados
+  - Linear — Gestão de bugs e projetos de software
+  - GitHub — Repositórios e issues
+
+  #### CRM
+  - Salesforce — Contas e oportunidades
+  - HubSpot — Pipeline de vendas e contatos
+  - Zendesk — Tickets de suporte
+
+  #### Negócios & Finanças
+  - Stripe — Pagamentos e clientes
+  - Shopify — E‑commerce e produtos
+
+  #### Produtividade & Armazenamento
+  - Google Sheets — Sincronização de planilhas
+  - Google Calendar — Eventos e agenda
+  - Box — Armazenamento de arquivos
+
+  …e mais por vir!
+
+  </Tab>
+  <Tab title="Ferramentas Internas" icon="toolbox">
+
+  ## Ferramentas Internas
+
+  Crie ferramentas localmente, publique no Repositório de Ferramentas da CrewAI AMP e use nos seus agentes.
+
+  <Tip>
+  Antes de executar os comandos abaixo, faça login na sua conta CrewAI AMP:
+    ```bash
+    crewai login
+    ```
+  </Tip>
+
+  <Frame>
+    ![Ferramenta Interna](/images/enterprise/tools-integrations-internal.png)
+  </Frame>
+
+  <Steps>
+    <Step title="Criar">
+      Criar uma nova ferramenta localmente.
+      ```bash
+      crewai tool create your-tool
+      ```
+    </Step>
+    <Step title="Publicar">
+      Publicar a ferramenta no Repositório de Ferramentas.
+      ```bash
+      crewai tool publish
+      ```
+    </Step>
+    <Step title="Instalar">
+      Instalar a ferramenta do Repositório de Ferramentas.
+      ```bash
+      crewai tool install your-tool
+      ```
+    </Step>
+  </Steps>
+
+  Gerenciar:
+
+  - Nome e descrição
+  - Visibilidade (Privado / Público)
+  - Variáveis de ambiente necessárias
+  - Histórico de versões e downloads
+  - Acesso por equipe e função
+
+  <Frame>
+    ![Configurações de Ferramenta](/images/enterprise/tool-configs.png)
+  </Frame>
+
+  </Tab>
+</Tabs>
+
+## Relacionados
+
+<CardGroup cols={2}>
+  <Card title="Repositório de Ferramentas" href="/pt-BR/enterprise/features/tool-repository" icon="toolbox">
+    Publique e instale ferramentas para ampliar as capacidades dos seus crews.
+  </Card>
+  <Card title="Automação com Webhook" href="/pt-BR/enterprise/guides/webhook-automation" icon="bolt">
+    Automatize fluxos e integre com plataformas e serviços externos.
+  </Card>
+</CardGroup>
