@@ -24,6 +24,11 @@ from crewai.a2a.utils import (
     fetch_agent_card,
     get_a2a_agents_and_response_model,
 )
+from crewai.events.event_bus import crewai_event_bus
+from crewai.events.types.a2a_events import (
+    A2AConversationCompletedEvent,
+    A2AMessageSentEvent,
+)
 
 
 if TYPE_CHECKING:
@@ -401,12 +406,6 @@ def _handle_agent_response_and_continue(
         - final_result is not None if conversation should end
         - current_request is the next message to send if continuing
     """
-    from crewai.events.event_bus import crewai_event_bus
-    from crewai.events.types.a2a_events import (
-        A2AConversationCompletedEvent,
-        A2AMessageSentEvent,
-    )
-
     agent_cards_dict = agent_cards or {}
     if "agent_card" in a2a_result and agent_id not in agent_cards_dict:
         agent_cards_dict[agent_id] = a2a_result["agent_card"]
@@ -482,9 +481,6 @@ def _delegate_to_a2a(
     Raises:
         ImportError: If a2a-sdk is not installed
     """
-    from crewai.events.event_bus import crewai_event_bus
-    from crewai.events.types.a2a_events import A2AConversationCompletedEvent
-
     a2a_agents, agent_response_model = get_a2a_agents_and_response_model(self.a2a)
     agent_ids = tuple(config.endpoint for config in a2a_agents)
     current_request = str(agent_response.message)
