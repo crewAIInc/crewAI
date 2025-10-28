@@ -81,89 +81,89 @@ For A2A agents that require authentication, use one of the provided auth schemes
 <Tabs>
   <Tab title="Bearer Token">
     ```python Code
-    from crewai.a2a.auth.schemas import BearerTokenAuth
-    from crewai.a2a.config import A2AConfig
+from crewai.a2a.auth.schemas import BearerTokenAuth
+from crewai.a2a.config import A2AConfig
 
-    agent = Agent(
-        role="Secure Coordinator",
-        goal="Coordinate tasks with secured agents",
-        backstory="Manages secure agent communications",
-        llm="gpt-4o",
-        a2a=A2AConfig(
-            endpoint="https://secure-agent.example.com/.well-known/agent-card.json",
-            auth=BearerTokenAuth(token="your-bearer-token"),
-            timeout=120
-        )
+agent = Agent(
+    role="Secure Coordinator",
+    goal="Coordinate tasks with secured agents",
+    backstory="Manages secure agent communications",
+    llm="gpt-4o",
+    a2a=A2AConfig(
+        endpoint="https://secure-agent.example.com/.well-known/agent-card.json",
+        auth=BearerTokenAuth(token="your-bearer-token"),
+        timeout=120
     )
+)
     ```
   </Tab>
 
   <Tab title="API Key">
     ```python Code
-    from crewai.a2a.auth.schemas import APIKeyAuth
-    from crewai.a2a.config import A2AConfig
+from crewai.a2a.auth.schemas import APIKeyAuth
+from crewai.a2a.config import A2AConfig
 
-    agent = Agent(
-        role="API Coordinator",
-        goal="Coordinate with API-based agents",
-        backstory="Manages API-authenticated communications",
-        llm="gpt-4o",
-        a2a=A2AConfig(
-            endpoint="https://api-agent.example.com/.well-known/agent-card.json",
-            auth=APIKeyAuth(
-                api_key="your-api-key",
-                location="header",  # or "query" or "cookie"
-                name="X-API-Key"
-            ),
-            timeout=120
-        )
+agent = Agent(
+    role="API Coordinator",
+    goal="Coordinate with API-based agents",
+    backstory="Manages API-authenticated communications",
+    llm="gpt-4o",
+    a2a=A2AConfig(
+        endpoint="https://api-agent.example.com/.well-known/agent-card.json",
+        auth=APIKeyAuth(
+            api_key="your-api-key",
+            location="header",  # or "query" or "cookie"
+            name="X-API-Key"
+        ),
+        timeout=120
     )
+)
     ```
   </Tab>
 
   <Tab title="OAuth2">
     ```python Code
-    from crewai.a2a.auth.schemas import OAuth2ClientCredentials
-    from crewai.a2a.config import A2AConfig
+from crewai.a2a.auth.schemas import OAuth2ClientCredentials
+from crewai.a2a.config import A2AConfig
 
-    agent = Agent(
-        role="OAuth Coordinator",
-        goal="Coordinate with OAuth-secured agents",
-        backstory="Manages OAuth-authenticated communications",
-        llm="gpt-4o",
-        a2a=A2AConfig(
-            endpoint="https://oauth-agent.example.com/.well-known/agent-card.json",
-            auth=OAuth2ClientCredentials(
-                token_url="https://auth.example.com/oauth/token",
-                client_id="your-client-id",
-                client_secret="your-client-secret",
-                scopes=["read", "write"]
-            ),
-            timeout=120
-        )
+agent = Agent(
+    role="OAuth Coordinator",
+    goal="Coordinate with OAuth-secured agents",
+    backstory="Manages OAuth-authenticated communications",
+    llm="gpt-4o",
+    a2a=A2AConfig(
+        endpoint="https://oauth-agent.example.com/.well-known/agent-card.json",
+        auth=OAuth2ClientCredentials(
+            token_url="https://auth.example.com/oauth/token",
+            client_id="your-client-id",
+            client_secret="your-client-secret",
+            scopes=["read", "write"]
+        ),
+        timeout=120
     )
+)
     ```
   </Tab>
 
   <Tab title="HTTP Basic">
     ```python Code
-    from crewai.a2a.auth.schemas import HTTPBasicAuth
-    from crewai.a2a.config import A2AConfig
+from crewai.a2a.auth.schemas import HTTPBasicAuth
+from crewai.a2a.config import A2AConfig
 
-    agent = Agent(
-        role="Basic Auth Coordinator",
-        goal="Coordinate with basic auth agents",
-        backstory="Manages basic authentication communications",
-        llm="gpt-4o",
-        a2a=A2AConfig(
-            endpoint="https://basic-agent.example.com/.well-known/agent-card.json",
-            auth=HTTPBasicAuth(
-                username="your-username",
-                password="your-password"
-            ),
-            timeout=120
-        )
+agent = Agent(
+    role="Basic Auth Coordinator",
+    goal="Coordinate with basic auth agents",
+    backstory="Manages basic authentication communications",
+    llm="gpt-4o",
+    a2a=A2AConfig(
+        endpoint="https://basic-agent.example.com/.well-known/agent-card.json",
+        auth=HTTPBasicAuth(
+            username="your-username",
+            password="your-password"
+        ),
+        timeout=120
     )
+)
     ```
   </Tab>
 </Tabs>
