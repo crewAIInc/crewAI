@@ -1104,6 +1104,7 @@ dependencies = [
 [package.optional-dependencies]
 a2a = [
     { name = "a2a-sdk" },
+    { name = "httpx-auth" },
     { name = "httpx-sse" },
 ]
 anthropic = [
@@ -1169,6 +1170,7 @@ requires-dist = [
     { name = "crewai-tools", marker = "extra == 'tools'", editable = "lib/crewai-tools" },
     { name = "docling", marker = "extra == 'docling'", specifier = ">=2.12.0" },
     { name = "google-genai", marker = "extra == 'google-genai'", specifier = ">=1.2.0" },
+    { name = "httpx-auth", marker = "extra == 'a2a'", specifier = ">=0.23.1" },
     { name = "httpx-sse", marker = "extra == 'a2a'", specifier = ">=0.4.0" },
     { name = "ibm-watsonx-ai", marker = "extra == 'watson'", specifier = ">=1.3.39" },
     { name = "instructor", specifier = ">=1.3.3" },
@@ -2463,6 +2465,18 @@ wheels = [
 [package.optional-dependencies]
 http2 = [
     { name = "h2" },
+]
+
+[[package]]
+name = "httpx-auth"
+version = "0.23.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "httpx" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/a8/d4/6bd616f89d1ce43f602b62ec274e33beee6c2bce3d68396e692daafdb57d/httpx_auth-0.23.1.tar.gz", hash = "sha256:27b5a6022ad1b41a303b8737fa2e3e4bce6bbbe7ab67fed0b261359be62e0434", size = 121418, upload-time = "2025-01-07T18:47:20.05Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/2f/23/a72f91bea596b522ac297b948ffee6decdedb535c034fca8062bd72981ce/httpx_auth-0.23.1-py3-none-any.whl", hash = "sha256:04f8bd0824efe3d9fb79690cc670b0da98ea809babb7aea04a72f334d4fd5ec5", size = 45328, upload-time = "2025-01-07T18:47:18.694Z" },
 ]
 
 [[package]]
