@@ -23,19 +23,24 @@ class FirecrawlSearchToolSchema(BaseModel):
 
 
 class FirecrawlSearchTool(BaseTool):
-    """Tool for searching webpages using Firecrawl. To run this tool, you need to have a Firecrawl API key.
+    """Tool for searching webpages using Firecrawl v2 API. To run this tool, you need to have a Firecrawl API key.
 
     Args:
         api_key (str): Your Firecrawl API key.
-        config (dict): Optional. It contains Firecrawl API parameters.
+        config (dict): Optional. It contains Firecrawl v2 API parameters.
 
-    Default configuration options:
-        limit (int): Maximum number of pages to crawl. Default: 5
-        tbs (str): Time before search. Default: None
-        lang (str): Language. Default: "en"
-        country (str): Country. Default: "us"
-        location (str): Location. Default: None
-        timeout (int): Timeout in milliseconds. Default: 60000
+    Default configuration options (Firecrawl v2 API):
+        limit (int): Maximum number of search results to return. Default: 5
+        tbs (str): Time-based search filter (e.g., "qdr:d" for past day). Default: None
+        location (str): Location for search results. Default: None
+        timeout (int): Request timeout in milliseconds. Default: None
+        scrape_options (dict): Options for scraping the search results. Default: {"formats": ["markdown"]}
+            - formats (list[str]): Content formats to return. Default: ["markdown"]
+            - only_main_content (bool): Only return main content. Default: True
+            - include_tags (list[str]): Tags to include. Default: []
+            - exclude_tags (list[str]): Tags to exclude. Default: []
+            - wait_for (int): Delay before fetching content in ms. Default: 0
+            - timeout (int): Request timeout in milliseconds. Default: None
     """
 
     model_config = ConfigDict(
@@ -49,10 +54,15 @@ class FirecrawlSearchTool(BaseTool):
         default_factory=lambda: {
             "limit": 5,
             "tbs": None,
-            "lang": "en",
-            "country": "us",
             "location": None,
-            "timeout": 60000,
+            "timeout": None,
+            "scrape_options": {
+                "formats": ["markdown"],
+                "only_main_content": True,
+                "include_tags": [],
+                "exclude_tags": [],
+                "wait_for": 0,
+            },
         }
     )
     _firecrawl: FirecrawlApp | None = PrivateAttr(None)
@@ -106,7 +116,7 @@ class FirecrawlSearchTool(BaseTool):
 
         return self._firecrawl.search(
             query=query,
-            params=self.config,
+            **self.config,
         )
 
 
