@@ -30,7 +30,7 @@ Configure an agent for A2A delegation by setting the `a2a` parameter:
 
 ```python Code
 from crewai import Agent, Crew, Task
-from crewai.a2a.config import A2AConfig
+from crewai.a2a import A2AConfig
 
 agent = Agent(
     role="Research Coordinator",
@@ -74,6 +74,11 @@ The `A2AConfig` class accepts the following parameters:
   Maximum number of conversation turns with the A2A agent
 </ParamField>
 
+<ParamField path="response_model" type="type[BaseModel]" default="None">
+  Optional Pydantic model for requesting structured output from an A2A agent. A2A protocol does not
+  enforce this, so an A2A agent does not need to honor this request.
+</ParamField>
+
 <ParamField path="fail_fast" type="bool" default="True">
   Whether to raise an error immediately if agent connection fails. When `False`, the agent continues with available agents and informs the LLM about unavailable ones.
 </ParamField>
@@ -85,8 +90,8 @@ For A2A agents that require authentication, use one of the provided auth schemes
 <Tabs>
   <Tab title="Bearer Token">
     ```python Code
-from crewai.a2a.auth.schemas import BearerTokenAuth
-from crewai.a2a.config import A2AConfig
+from crewai.a2a import A2AConfig
+from crewai.a2a.auth import BearerTokenAuth
 
 agent = Agent(
     role="Secure Coordinator",
@@ -104,8 +109,8 @@ agent = Agent(
 
   <Tab title="API Key">
     ```python Code
-from crewai.a2a.auth.schemas import APIKeyAuth
-from crewai.a2a.config import A2AConfig
+from crewai.a2a import A2AConfig
+from crewai.a2a.auth import APIKeyAuth
 
 agent = Agent(
     role="API Coordinator",
@@ -127,8 +132,8 @@ agent = Agent(
 
   <Tab title="OAuth2">
     ```python Code
-from crewai.a2a.auth.schemas import OAuth2ClientCredentials
-from crewai.a2a.config import A2AConfig
+from crewai.a2a import A2AConfig
+from crewai.a2a.auth import OAuth2ClientCredentials
 
 agent = Agent(
     role="OAuth Coordinator",
@@ -151,8 +156,8 @@ agent = Agent(
 
   <Tab title="HTTP Basic">
     ```python Code
-from crewai.a2a.auth.schemas import HTTPBasicAuth
-from crewai.a2a.config import A2AConfig
+from crewai.a2a import A2AConfig
+from crewai.a2a.auth import HTTPBasicAuth
 
 agent = Agent(
     role="Basic Auth Coordinator",
@@ -177,8 +182,8 @@ agent = Agent(
 Configure multiple A2A agents for delegation by passing a list:
 
 ```python Code
-from crewai.a2a.config import A2AConfig
-from crewai.a2a.auth.schemas import BearerTokenAuth
+from crewai.a2a import A2AConfig
+from crewai.a2a.auth import BearerTokenAuth
 
 agent = Agent(
     role="Multi-Agent Coordinator",
@@ -206,7 +211,7 @@ The LLM will automatically choose which A2A agent to delegate to based on the ta
 Control how agent connection failures are handled using the `fail_fast` parameter:
 
 ```python Code
-from crewai.a2a.config import A2AConfig
+from crewai.a2a import A2AConfig
 
 # Fail immediately on connection errors (default)
 agent = Agent(
