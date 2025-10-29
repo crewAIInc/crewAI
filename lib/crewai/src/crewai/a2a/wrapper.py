@@ -288,7 +288,7 @@ def _augment_prompt_with_a2a(
     for config in a2a_agents:
         if config.endpoint in agent_cards:
             card = agent_cards[config.endpoint]
-            agents_text += f"\n{card.model_dump_json(indent=2, exclude_none=True)}\n"
+            agents_text += f"\n{card.model_dump_json(indent=2, exclude_none=True, include={'description', 'url', 'skills'})}\n"
 
     failed_agents = failed_agents or {}
     if failed_agents:
