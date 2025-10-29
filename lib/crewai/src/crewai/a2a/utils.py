@@ -374,11 +374,8 @@ async def _execute_a2a_delegation_async(
     message_text = "".join(message_parts)
 
     if is_multiturn and conversation_history and not task_id:
-        if (
-            hasattr(conversation_history[0], "task_id")
-            and conversation_history[0].task_id
-        ):
-            task_id = conversation_history[0].task_id
+        if first_task_id := conversation_history[0].task_id:
+            task_id = first_task_id
 
     parts = {"text": message_text}
     if response_model:
