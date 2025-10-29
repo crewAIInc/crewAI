@@ -22,20 +22,27 @@ class FirecrawlScrapeWebsiteToolSchema(BaseModel):
 
 
 class FirecrawlScrapeWebsiteTool(BaseTool):
-    """Tool for scraping webpages using Firecrawl. To run this tool, you need to have a Firecrawl API key.
+    """Tool for scraping webpages using Firecrawl v2 API. To run this tool, you need to have a Firecrawl API key.
 
     Args:
         api_key (str): Your Firecrawl API key.
-        config (dict): Optional. It contains Firecrawl API parameters.
+        config (dict): Optional. It contains Firecrawl v2 API parameters.
 
-    Default configuration options:
+    Default configuration options (Firecrawl v2 API):
         formats (list[str]): Content formats to return. Default: ["markdown"]
-        onlyMainContent (bool): Only return main content. Default: True
-        includeTags (list[str]): Tags to include. Default: []
-        excludeTags (list[str]): Tags to exclude. Default: []
-        headers (dict): Headers to include. Default: {}
-        waitFor (int): Time to wait for page to load in ms. Default: 0
-        json_options (dict): Options for JSON extraction. Default: None
+        only_main_content (bool): Only return main content excluding headers, navs, footers, etc. Default: True
+        include_tags (list[str]): Tags to include in the output. Default: []
+        exclude_tags (list[str]): Tags to exclude from the output. Default: []
+        max_age (int): Returns cached version if younger than this age in milliseconds. Default: 172800000 (2 days)
+        headers (dict): Headers to send with the request (e.g., cookies, user-agent). Default: {}
+        wait_for (int): Delay in milliseconds before fetching content. Default: 0
+        mobile (bool): Emulate scraping from a mobile device. Default: False
+        skip_tls_verification (bool): Skip TLS certificate verification. Default: True
+        timeout (int): Request timeout in milliseconds. Default: None
+        remove_base64_images (bool): Remove base64 images from output. Default: True
+        block_ads (bool): Enable ad-blocking and cookie popup blocking. Default: True
+        proxy (str): Proxy type ("basic", "stealth", "auto"). Default: "auto"
+        store_in_cache (bool): Store page in Firecrawl index and cache. Default: True
     """
 
     model_config = ConfigDict(
@@ -48,11 +55,18 @@ class FirecrawlScrapeWebsiteTool(BaseTool):
     config: dict[str, Any] = Field(
         default_factory=lambda: {
             "formats": ["markdown"],
-            "onlyMainContent": True,
-            "includeTags": [],
-            "excludeTags": [],
+            "only_main_content": True,
+            "include_tags": [],
+            "exclude_tags": [],
+            "max_age": 172800000,  # 2 days cache
             "headers": {},
-            "waitFor": 0,
+            "wait_for": 0,
+            "mobile": False,
+            "skip_tls_verification": True,
+            "remove_base64_images": True,
+            "block_ads": True,
+            "proxy": "auto",
+            "store_in_cache": True,
         }
     )
 
@@ -95,7 +109,7 @@ class FirecrawlScrapeWebsiteTool(BaseTool):
         if not self._firecrawl:
             raise RuntimeError("FirecrawlApp not properly initialized")
 
-        return self._firecrawl.scrape_url(url, params=self.config)
+        return self._firecrawl.scrape(url=url, **self.config)
 
 
 try:
