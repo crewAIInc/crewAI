@@ -1,6 +1,15 @@
+"""Authentication utilities for A2A protocol agent communication.
+
+Provides validation and retry logic for various authentication schemes including
+OAuth2, API keys, and HTTP authentication methods.
+"""
+
 import asyncio
 from collections.abc import Awaitable, Callable, MutableMapping
+import re
+from typing import Final
 
+from a2a.client.errors import A2AClientHTTPError
 from a2a.types import (
     APIKeySecurityScheme,
     AgentCard,
@@ -20,6 +29,87 @@ from crewai.a2a.auth.schemas import (
 )
 
 
+_auth_store: dict[int, AuthScheme | None] = {}
+
+_SCHEME_PATTERN: Final[re.Pattern[str]] = re.compile(r"(\w+)\s+(.+?)(?=,\s*\w+\s+|$)")
+_PARAM_PATTERN: Final[re.Pattern[str]] = re.compile(r'(\w+)=(?:"([^"]*)"|([^\s,]+))')
+
+_SCHEME_AUTH_MAPPING: Final[dict[type, tuple[type[AuthScheme], ...]]] = {
+    OAuth2SecurityScheme: (
+        OAuth2ClientCredentials,
+        OAuth2AuthorizationCode,
+        BearerTokenAuth,
+    ),
+    APIKeySecurityScheme: (APIKeyAuth,),
+}
+
+_HTTP_SCHEME_MAPPING: Final[dict[str, type[AuthScheme]]] = {
+    "basic": HTTPBasicAuth,
+    "digest": HTTPDigestAuth,
+    "bearer": BearerTokenAuth,
+}
+
+
+def _raise_auth_mismatch(
+    expected_classes: type[AuthScheme] | tuple[type[AuthScheme], ...],
+    provided_auth: AuthScheme,
+) -> None:
+    """Raise authentication mismatch error.
+
+    Args:
+        expected_classes: Expected authentication class or tuple of classes.
+        provided_auth: Actually provided authentication instance.
+
+    Raises:
+        A2AClientHTTPError: Always raises with 401 status code.
+    """
+    if isinstance(expected_classes, tuple):
+        if len(expected_classes) == 1:
+            required = expected_classes[0].__name__
+        else:
+            names = [cls.__name__ for cls in expected_classes]
+            required = f"one of ({', '.join(names)})"
+    else:
+        required = expected_classes.__name__
+
+    msg = (
+        f"AgentCard requires {required} authentication, "
+        f"but {type(provided_auth).__name__} was provided"
+    )
+    raise A2AClientHTTPError(401, msg)
+
+
+def parse_www_authenticate(header_value: str) -> dict[str, dict[str, str]]:
+    """Parse WWW-Authenticate header into auth challenges.
+
+    Args:
+        header_value: The WWW-Authenticate header value.
+
+    Returns:
+        Dictionary mapping auth scheme to its parameters.
+        Example: {"Bearer": {"realm": "api", "scope": "read write"}}
+    """
+    if not header_value:
+        return {}
+
+    challenges: dict[str, dict[str, str]] = {}
+
+    for match in _SCHEME_PATTERN.finditer(header_value):
+        scheme = match.group(1)
+        params_str = match.group(2)
+
+        params: dict[str, str] = {}
+
+        for param_match in _PARAM_PATTERN.finditer(params_str):
+            key = param_match.group(1)
+            value = param_match.group(2) or param_match.group(3)
+            params[key] = value
+
+        challenges[scheme] = params
+
+    return challenges
+
+
 def validate_auth_against_agent_card(
     agent_card: AgentCard, auth: AuthScheme | None
 ) -> None:
@@ -32,7 +122,6 @@ def validate_auth_against_agent_card(
     Raises:
         A2AClientHTTPError: If auth doesn't match AgentCard requirements (status_code=401).
     """
-    from a2a.client.errors import A2AClientHTTPError
 
     if not agent_card.security or not agent_card.security_schemes:
         return
@@ -50,36 +139,15 @@ def validate_auth_against_agent_card(
 
         scheme = security_scheme_wrapper.root
 
-        if isinstance(scheme, OAuth2SecurityScheme):
-            if not isinstance(
-                auth,
-                (OAuth2ClientCredentials, OAuth2AuthorizationCode, BearerTokenAuth),
-            ):
-                msg = f"AgentCard requires OAuth2 authentication, but {type(auth).__name__} was provided"
-                raise A2AClientHTTPError(401, msg)
-            return
-
-        if isinstance(scheme, APIKeySecurityScheme):
-            if not isinstance(auth, APIKeyAuth):
-                msg = f"AgentCard requires API Key authentication, but {type(auth).__name__} was provided"
-                raise A2AClientHTTPError(401, msg)
+        if allowed_classes := _SCHEME_AUTH_MAPPING.get(type(scheme)):
+            if not isinstance(auth, allowed_classes):
+                _raise_auth_mismatch(allowed_classes, auth)
             return
 
         if isinstance(scheme, HTTPAuthSecurityScheme):
-            http_scheme_lower = scheme.scheme.lower()
-
-            if http_scheme_lower == "basic" and not isinstance(auth, HTTPBasicAuth):
-                msg = f"AgentCard requires HTTP Basic authentication, but {type(auth).__name__} was provided"
-                raise A2AClientHTTPError(401, msg)
-
-            if http_scheme_lower == "digest" and not isinstance(auth, HTTPDigestAuth):
-                msg = f"AgentCard requires HTTP Digest authentication, but {type(auth).__name__} was provided"
-                raise A2AClientHTTPError(401, msg)
-
-            if http_scheme_lower == "bearer" and not isinstance(auth, BearerTokenAuth):
-                msg = f"AgentCard requires Bearer token authentication, but {type(auth).__name__} was provided"
-                raise A2AClientHTTPError(401, msg)
-
+            if required_class := _HTTP_SCHEME_MAPPING.get(scheme.scheme.lower()):
+                if not isinstance(auth, required_class):
+                    _raise_auth_mismatch(required_class, auth)
             return
 
     msg = "Could not validate auth against AgentCard security requirements"
@@ -114,6 +182,7 @@ async def retry_on_401(
         httpx.HTTPStatusError: If retries are exhausted or auth scheme is None.
     """
     last_response: Response | None = None
+    last_challenges: dict[str, dict[str, str]] = {}
 
     for attempt in range(max_retries):
         response = await request_func()
@@ -128,6 +197,8 @@ async def retry_on_401(
             return response
 
         www_authenticate = response.headers.get("WWW-Authenticate", "")
+        challenges = parse_www_authenticate(www_authenticate)
+        last_challenges = challenges
 
         if attempt >= max_retries - 1:
             break
@@ -142,6 +213,12 @@ async def retry_on_401(
         return last_response
 
     msg = "retry_on_401 failed without making any requests"
+    if last_challenges:
+        challenge_info = ", ".join(
+            f"{scheme} (realm={params.get('realm', 'N/A')})"
+            for scheme, params in last_challenges.items()
+        )
+        msg = f"{msg}. Server challenges: {challenge_info}"
     raise RuntimeError(msg)
 
 

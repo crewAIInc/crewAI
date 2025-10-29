@@ -8,7 +8,6 @@ from __future__ import annotations
 from typing import Annotated
 
 from pydantic import (
-    AfterValidator,
     BaseModel,
     BeforeValidator,
     Field,
@@ -30,7 +29,16 @@ Url = Annotated[
 
 
 class A2AConfig(BaseModel):
-    """Configuration for A2A protocol integration."""
+    """Configuration for A2A protocol integration.
+
+    Attributes:
+        endpoint: A2A agent endpoint URL.
+        auth: Authentication scheme (Bearer, OAuth2, API Key, HTTP Basic/Digest).
+        timeout: Request timeout in seconds (default: 120).
+        max_turns: Maximum conversation turns with A2A agent (default: 10).
+        response_model: Optional Pydantic model for structured A2A agent responses.
+        fail_fast: If True, raise error when agent unreachable; if False, skip and continue (default: True).
+    """
 
     endpoint: Url = Field(description="A2A agent endpoint URL")
     auth: AuthScheme | None = Field(

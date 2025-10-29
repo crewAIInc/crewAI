@@ -12,13 +12,14 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 import base64
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, MutableMapping
 import time
 from typing import Literal
 import urllib.parse
 
 import httpx
-from pydantic import BaseModel, Field
+from httpx import DigestAuth
+from pydantic import BaseModel, Field, PrivateAttr
 
 
 class AuthScheme(ABC, BaseModel):
@@ -26,8 +27,8 @@ class AuthScheme(ABC, BaseModel):
 
     @abstractmethod
     async def apply_auth(
-        self, client: httpx.AsyncClient, headers: dict[str, str]
-    ) -> dict[str, str]:
+        self, client: httpx.AsyncClient, headers: MutableMapping[str, str]
+    ) -> MutableMapping[str, str]:
         """Apply authentication to request headers.
 
         Args:
@@ -41,28 +42,53 @@ class AuthScheme(ABC, BaseModel):
 
 
 class BearerTokenAuth(AuthScheme):
-    """Bearer token authentication (Authorization: Bearer <token>)."""
+    """Bearer token authentication (Authorization: Bearer <token>).
+
+    Attributes:
+        token: Bearer token for authentication.
+    """
 
     token: str = Field(description="Bearer token")
 
     async def apply_auth(
-        self, client: httpx.AsyncClient, headers: dict[str, str]
-    ) -> dict[str, str]:
-        """Apply Bearer token to Authorization header."""
+        self, client: httpx.AsyncClient, headers: MutableMapping[str, str]
+    ) -> MutableMapping[str, str]:
+        """Apply Bearer token to Authorization header.
+
+        Args:
+            client: HTTP client for making auth requests.
+            headers: Current request headers.
+
+        Returns:
+            Updated headers with Bearer token in Authorization header.
+        """
         headers["Authorization"] = f"Bearer {self.token}"
         return headers
 
 
 class HTTPBasicAuth(AuthScheme):
-    """HTTP Basic authentication."""
+    """HTTP Basic authentication.
+
+    Attributes:
+        username: Username for Basic authentication.
+        password: Password for Basic authentication.
+    """
 
     username: str = Field(description="Username")
     password: str = Field(description="Password")
 
     async def apply_auth(
-        self, client: httpx.AsyncClient, headers: dict[str, str]
-    ) -> dict[str, str]:
-        """Apply HTTP Basic authentication."""
+        self, client: httpx.AsyncClient, headers: MutableMapping[str, str]
+    ) -> MutableMapping[str, str]:
+        """Apply HTTP Basic authentication.
+
+        Args:
+            client: HTTP client for making auth requests.
+            headers: Current request headers.
+
+        Returns:
+            Updated headers with Basic auth in Authorization header.
+        """
         credentials = f"{self.username}:{self.password}"
         encoded = base64.b64encode(credentials.encode()).decode()
         headers["Authorization"] = f"Basic {encoded}"
@@ -73,30 +99,46 @@ class HTTPDigestAuth(AuthScheme):
     """HTTP Digest authentication.
 
     Note: Uses httpx-auth library for digest implementation.
+
+    Attributes:
+        username: Username for Digest authentication.
+        password: Password for Digest authentication.
     """
 
     username: str = Field(description="Username")
     password: str = Field(description="Password")
 
     async def apply_auth(
-        self, client: httpx.AsyncClient, headers: dict[str, str]
-    ) -> dict[str, str]:
-        """Digest auth is handled by httpx auth flow, not headers."""
+        self, client: httpx.AsyncClient, headers: MutableMapping[str, str]
+    ) -> MutableMapping[str, str]:
+        """Digest auth is handled by httpx auth flow, not headers.
+
+        Args:
+            client: HTTP client for making auth requests.
+            headers: Current request headers.
+
+        Returns:
+            Unchanged headers (Digest auth handled by httpx auth flow).
+        """
         return headers
 
     def configure_client(self, client: httpx.AsyncClient) -> None:
-        """Configure client with Digest auth."""
-        try:
-            from httpx_auth import DigestAuth  # type: ignore[import-not-found]
+        """Configure client with Digest auth.
 
-            client.auth = DigestAuth(self.username, self.password)
-        except ImportError as e:
-            msg = "httpx-auth required for Digest authentication. Install with: pip install httpx-auth"
-            raise ImportError(msg) from e
+        Args:
+            client: HTTP client to configure with Digest authentication.
+        """
+        client.auth = DigestAuth(self.username, self.password)
 
 
 class APIKeyAuth(AuthScheme):
-    """API Key authentication (header, query, or cookie)."""
+    """API Key authentication (header, query, or cookie).
+
+    Attributes:
+        api_key: API key value for authentication.
+        location: Where to send the API key (header, query, or cookie).
+        name: Parameter name for the API key (default: X-API-Key).
+    """
 
     api_key: str = Field(description="API key value")
     location: Literal["header", "query", "cookie"] = Field(
@@ -105,9 +147,17 @@ class APIKeyAuth(AuthScheme):
     name: str = Field(default="X-API-Key", description="Parameter name for the API key")
 
     async def apply_auth(
-        self, client: httpx.AsyncClient, headers: dict[str, str]
-    ) -> dict[str, str]:
-        """Apply API key authentication."""
+        self, client: httpx.AsyncClient, headers: MutableMapping[str, str]
+    ) -> MutableMapping[str, str]:
+        """Apply API key authentication.
+
+        Args:
+            client: HTTP client for making auth requests.
+            headers: Current request headers.
+
+        Returns:
+            Updated headers with API key (for header/cookie locations).
+        """
         if self.location == "header":
             headers[self.name] = self.api_key
         elif self.location == "cookie":
@@ -115,7 +165,11 @@ class APIKeyAuth(AuthScheme):
         return headers
 
     def configure_client(self, client: httpx.AsyncClient) -> None:
-        """Configure client for query param API keys."""
+        """Configure client for query param API keys.
+
+        Args:
+            client: HTTP client to configure with query param API key hook.
+        """
         if self.location == "query":
 
             async def _add_api_key_param(request: httpx.Request) -> None:
@@ -126,7 +180,14 @@ class APIKeyAuth(AuthScheme):
 
 
 class OAuth2ClientCredentials(AuthScheme):
-    """OAuth2 Client Credentials flow authentication."""
+    """OAuth2 Client Credentials flow authentication.
+
+    Attributes:
+        token_url: OAuth2 token endpoint URL.
+        client_id: OAuth2 client identifier.
+        client_secret: OAuth2 client secret.
+        scopes: List of required OAuth2 scopes.
+    """
 
     token_url: str = Field(description="OAuth2 token endpoint")
     client_id: str = Field(description="OAuth2 client ID")
@@ -135,13 +196,21 @@ class OAuth2ClientCredentials(AuthScheme):
         default_factory=list, description="Required OAuth2 scopes"
     )
 
-    _access_token: str | None = None
-    _token_expires_at: float | None = None
+    _access_token: str | None = PrivateAttr(default=None)
+    _token_expires_at: float | None = PrivateAttr(default=None)
 
     async def apply_auth(
-        self, client: httpx.AsyncClient, headers: dict[str, str]
-    ) -> dict[str, str]:
-        """Apply OAuth2 access token to Authorization header."""
+        self, client: httpx.AsyncClient, headers: MutableMapping[str, str]
+    ) -> MutableMapping[str, str]:
+        """Apply OAuth2 access token to Authorization header.
+
+        Args:
+            client: HTTP client for making token requests.
+            headers: Current request headers.
+
+        Returns:
+            Updated headers with OAuth2 access token in Authorization header.
+        """
         if (
             self._access_token is None
             or self._token_expires_at is None
@@ -155,7 +224,14 @@ class OAuth2ClientCredentials(AuthScheme):
         return headers
 
     async def _fetch_token(self, client: httpx.AsyncClient) -> None:
-        """Fetch OAuth2 access token using client credentials flow."""
+        """Fetch OAuth2 access token using client credentials flow.
+
+        Args:
+            client: HTTP client for making token request.
+
+        Raises:
+            httpx.HTTPStatusError: If token request fails.
+        """
         data = {
             "grant_type": "client_credentials",
             "client_id": self.client_id,
@@ -178,6 +254,14 @@ class OAuth2AuthorizationCode(AuthScheme):
     """OAuth2 Authorization Code flow authentication.
 
     Note: Requires interactive authorization.
+
+    Attributes:
+        authorization_url: OAuth2 authorization endpoint URL.
+        token_url: OAuth2 token endpoint URL.
+        client_id: OAuth2 client identifier.
+        client_secret: OAuth2 client secret.
+        redirect_uri: OAuth2 redirect URI for callback.
+        scopes: List of required OAuth2 scopes.
     """
 
     authorization_url: str = Field(description="OAuth2 authorization endpoint")
@@ -189,26 +273,38 @@ class OAuth2AuthorizationCode(AuthScheme):
         default_factory=list, description="Required OAuth2 scopes"
     )
 
-    _access_token: str | None = None
-    _refresh_token: str | None = None
-    _token_expires_at: float | None = None
-    _authorization_callback: Callable[[str], Awaitable[str]] | None = None
+    _access_token: str | None = PrivateAttr(default=None)
+    _refresh_token: str | None = PrivateAttr(default=None)
+    _token_expires_at: float | None = PrivateAttr(default=None)
+    _authorization_callback: Callable[[str], Awaitable[str]] | None = PrivateAttr(
+        default=None
+    )
 
     def set_authorization_callback(
         self, callback: Callable[[str], Awaitable[str]] | None
     ) -> None:
         """Set callback to handle authorization URL.
 
-        The callback receives the authorization URL and should return
-        the authorization code after user completes the flow.
+        Args:
+            callback: Async function that receives authorization URL and returns auth code.
         """
         self._authorization_callback = callback
 
     async def apply_auth(
-        self, client: httpx.AsyncClient, headers: dict[str, str]
-    ) -> dict[str, str]:
-        """Apply OAuth2 access token to Authorization header."""
-        import time
+        self, client: httpx.AsyncClient, headers: MutableMapping[str, str]
+    ) -> MutableMapping[str, str]:
+        """Apply OAuth2 access token to Authorization header.
+
+        Args:
+            client: HTTP client for making token requests.
+            headers: Current request headers.
+
+        Returns:
+            Updated headers with OAuth2 access token in Authorization header.
+
+        Raises:
+            ValueError: If authorization callback is not set.
+        """
 
         if self._access_token is None:
             if self._authorization_callback is None:
@@ -224,7 +320,15 @@ class OAuth2AuthorizationCode(AuthScheme):
         return headers
 
     async def _fetch_initial_token(self, client: httpx.AsyncClient) -> None:
-        """Fetch initial access token using authorization code flow."""
+        """Fetch initial access token using authorization code flow.
+
+        Args:
+            client: HTTP client for making token request.
+
+        Raises:
+            ValueError: If authorization callback is not set.
+            httpx.HTTPStatusError: If token request fails.
+        """
         params = {
             "response_type": "code",
             "client_id": self.client_id,
@@ -257,7 +361,14 @@ class OAuth2AuthorizationCode(AuthScheme):
         self._token_expires_at = time.time() + expires_in - 60
 
     async def _refresh_access_token(self, client: httpx.AsyncClient) -> None:
-        """Refresh the access token using refresh token."""
+        """Refresh the access token using refresh token.
+
+        Args:
+            client: HTTP client for making token request.
+
+        Raises:
+            httpx.HTTPStatusError: If token refresh request fails.
+        """
         if not self._refresh_token:
             await self._fetch_initial_token(client)
             return

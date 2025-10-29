@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from typing import TYPE_CHECKING, Any, Protocol, cast, runtime_checkable
+from typing import TYPE_CHECKING, Any, cast
 
 from a2a.types import Role
 from pydantic import BaseModel, ValidationError
@@ -19,6 +19,7 @@ from crewai.a2a.templates import (
     PREVIOUS_A2A_CONVERSATION_TEMPLATE,
     UNAVAILABLE_AGENTS_NOTICE_TEMPLATE,
 )
+from crewai.a2a.types import AgentResponseProtocol
 from crewai.a2a.utils import (
     execute_a2a_delegation,
     fetch_agent_card,
@@ -37,15 +38,6 @@ if TYPE_CHECKING:
     from crewai.agent.core import Agent
     from crewai.task import Task
     from crewai.tools.base_tool import BaseTool
-
-
-@runtime_checkable
-class AgentResponseProtocol(Protocol):
-    """Protocol for the dynamically created AgentResponse model."""
-
-    a2a_ids: tuple[str, ...]
-    message: str
-    is_a2a: bool
 
 
 def wrap_agent_with_a2a(
@@ -519,7 +511,6 @@ def _delegate_to_a2a(
                 auth=agent_config.auth,
                 timeout=agent_config.timeout,
                 task_description=current_request,
-                context=None,
                 context_id=context_id,
                 task_id=task_id_config,
                 reference_task_ids=reference_task_ids,

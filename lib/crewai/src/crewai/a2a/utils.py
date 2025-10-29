@@ -3,14 +3,14 @@
 from __future__ import annotations
 
 import asyncio
-import time
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, MutableMapping
 from contextlib import asynccontextmanager
 from functools import lru_cache
+import time
 from typing import TYPE_CHECKING, Any
 import uuid
 
-from a2a.client import ClientConfig, ClientFactory
+from a2a.client import Client, ClientConfig, ClientFactory
 from a2a.client.errors import A2AClientHTTPError
 from a2a.types import (
     AgentCard,
@@ -28,11 +28,13 @@ from pydantic import BaseModel, Field, create_model
 
 from crewai.a2a.auth.schemas import APIKeyAuth, HTTPDigestAuth
 from crewai.a2a.auth.utils import (
+    _auth_store,
     configure_auth_client,
     retry_on_401,
     validate_auth_against_agent_card,
 )
 from crewai.a2a.config import A2AConfig
+from crewai.a2a.types import PartsDict, PartsMetadataDict
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.a2a_events import (
     A2AConversationStartedEvent,
@@ -50,15 +52,12 @@ if TYPE_CHECKING:
     from crewai.a2a.auth.schemas import AuthScheme
 
 
-_auth_store: dict[int, AuthScheme | None] = {}
-
-
-@lru_cache(maxsize=128)
+@lru_cache()
 def _fetch_agent_card_cached(
     endpoint: str,
     auth_hash: int,
     timeout: int,
-    ttl_hash: int,
+    _ttl_hash: int,
 ) -> AgentCard:
     """Cached version of fetch_agent_card with auth support.
 
@@ -66,7 +65,7 @@ def _fetch_agent_card_cached(
         endpoint: A2A agent endpoint URL
         auth_hash: Hash of the auth object
         timeout: Request timeout
-        ttl_hash: Time-based hash for TTL
+        _ttl_hash: Time-based hash for cache invalidation (unused in body)
 
     Returns:
         Cached AgentCard
@@ -145,7 +144,7 @@ async def _fetch_agent_card_async(
         base_url = f"{url_parts[0]}//{url_parts[2]}"
         agent_card_path = f"/{url_parts[3]}" if len(url_parts) > 3 else "/"
 
-    headers: dict[str, str] = {}
+    headers: MutableMapping[str, str] = {}
     if auth:
         async with httpx.AsyncClient(timeout=timeout) as temp_auth_client:
             if isinstance(auth, (HTTPDigestAuth, APIKeyAuth)):
@@ -344,7 +343,7 @@ async def _execute_a2a_delegation_async(
 
     validate_auth_against_agent_card(agent_card, auth)
 
-    headers: dict[str, str] = {}
+    headers: MutableMapping[str, str] = {}
     if auth:
         async with httpx.AsyncClient(timeout=timeout) as temp_auth_client:
             if isinstance(auth, (HTTPDigestAuth, APIKeyAuth)):
@@ -352,7 +351,7 @@ async def _execute_a2a_delegation_async(
             headers = await auth.apply_auth(temp_auth_client, {})
 
     a2a_agent_name = None
-    if hasattr(agent_card, "name") and agent_card.name:
+    if agent_card.name:
         a2a_agent_name = agent_card.name
 
     if turn_number == 1:
@@ -377,14 +376,14 @@ async def _execute_a2a_delegation_async(
         if first_task_id := conversation_history[0].task_id:
             task_id = first_task_id
 
-    parts = {"text": message_text}
+    parts: PartsDict = {"text": message_text}
     if response_model:
         parts.update(
             {
-                "metadata": {
-                    "mimeType": "application/json",
-                    "schema": response_model.model_json_schema(),
-                }
+                "metadata": PartsMetadataDict(
+                    mimeType="application/json",
+                    schema=response_model.model_json_schema(),
+                )
             }
         )
 
@@ -557,7 +556,7 @@ async def _execute_a2a_delegation_async(
                         }
                         break
         except Exception as e:
-            current_exception = e
+            current_exception: Exception | BaseException | None = e
             while current_exception:
                 if hasattr(current_exception, "response"):
                     response = current_exception.response
@@ -582,13 +581,13 @@ async def _execute_a2a_delegation_async(
 
 @asynccontextmanager
 async def _create_a2a_client(
-    agent_card: Any,
-    transport_protocol: Any,
+    agent_card: AgentCard,
+    transport_protocol: TransportProtocol,
     timeout: int,
-    headers: dict[str, str],
+    headers: MutableMapping[str, str],
     streaming: bool,
     auth: AuthScheme | None = None,
-) -> AsyncIterator[Any]:
+) -> AsyncIterator[Client]:
     """Create and configure an A2A client.
 
     Args:
@@ -667,7 +666,7 @@ def _extract_error_message(a2a_task: A2ATask, default: str) -> str:
     """
     if a2a_task.status and a2a_task.status.message:
         msg = a2a_task.status.message
-        if hasattr(msg, "parts"):
+        if msg:
             for part in msg.parts:
                 if part.root.kind == "text":
                     return str(part.root.text)
@@ -692,12 +691,12 @@ def create_agent_response_model(agent_ids: tuple[str, ...]) -> type[BaseModel]:
         Dynamically created Pydantic model with Literal-constrained a2a_ids field
     """
 
-    DynamicLiteral = create_literals_from_strings(agent_ids)
+    DynamicLiteral = create_literals_from_strings(agent_ids)  # noqa: N806
 
     return create_model(
         "AgentResponse",
         a2a_ids=(
-            tuple[DynamicLiteral, ...],
+            tuple[DynamicLiteral, ...],  # type: ignore[valid-type]
             Field(
                 default_factory=tuple,
                 max_length=len(agent_ids),
