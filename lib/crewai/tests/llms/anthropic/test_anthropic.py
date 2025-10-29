@@ -664,3 +664,105 @@ def test_anthropic_token_usage_tracking():
         assert usage["input_tokens"] == 50
         assert usage["output_tokens"] == 25
         assert usage["total_tokens"] == 75
+
+
+def test_anthropic_max_tokens_explicit():
+    """
+    Test that explicit max_tokens is passed through to the API
+    """
+    llm = LLM(model="anthropic/claude-3-5-sonnet-20241022", max_tokens=4096)
+
+    with patch.object(llm.client.messages, 'create') as mock_create:
+        mock_response = MagicMock()
+        mock_response.content = [MagicMock(text="test response")]
+        mock_response.usage = MagicMock(input_tokens=10, output_tokens=20)
+        mock_create.return_value = mock_response
+
+        llm.call("Hello")
+
+        call_kwargs = mock_create.call_args[1]
+        assert call_kwargs["max_tokens"] == 4096
+
+
+def test_anthropic_max_tokens_default_computed():
+    """
+    Test that max_tokens is computed dynamically when not explicitly set
+    """
+    llm = LLM(model="anthropic/claude-3-5-sonnet-20241022")
+
+    with patch.object(llm.client.messages, 'create') as mock_create:
+        mock_response = MagicMock()
+        mock_response.content = [MagicMock(text="test response")]
+        mock_response.usage = MagicMock(input_tokens=10, output_tokens=20)
+        mock_create.return_value = mock_response
+
+        llm.call("Hello")
+
+        call_kwargs = mock_create.call_args[1]
+        assert "max_tokens" in call_kwargs
+        assert call_kwargs["max_tokens"] is not None
+        assert call_kwargs["max_tokens"] < 4096
+
+
+def test_anthropic_max_tokens_none_uses_dynamic_default():
+    """
+    Test that max_tokens=None results in dynamic computation
+    """
+    llm = LLM(model="anthropic/claude-3-5-sonnet-20241022", max_tokens=None)
+
+    assert llm.max_tokens is None
+
+    with patch.object(llm.client.messages, 'create') as mock_create:
+        mock_response = MagicMock()
+        mock_response.content = [MagicMock(text="test response")]
+        mock_response.usage = MagicMock(input_tokens=10, output_tokens=20)
+        mock_create.return_value = mock_response
+
+        llm.call("Hello")
+
+        call_kwargs = mock_create.call_args[1]
+        assert "max_tokens" in call_kwargs
+        assert call_kwargs["max_tokens"] is not None
+        assert call_kwargs["max_tokens"] < 4096
+
+
+def test_anthropic_max_tokens_dynamic_for_large_context():
+    """
+    Test that dynamic max_tokens is larger for models with large context windows
+    """
+    llm = LLM(model="anthropic/claude-3-5-sonnet-20241022")
+
+    with patch.object(llm.client.messages, 'create') as mock_create:
+        mock_response = MagicMock()
+        mock_response.content = [MagicMock(text="test response")]
+        mock_response.usage = MagicMock(input_tokens=10, output_tokens=20)
+        mock_create.return_value = mock_response
+
+        llm.call("Hello")
+
+        call_kwargs = mock_create.call_args[1]
+        computed_max_tokens = call_kwargs["max_tokens"]
+        
+        assert computed_max_tokens >= 1024
+        assert computed_max_tokens <= 2048
+
+
+def test_anthropic_max_tokens_respects_user_value():
+    """
+    Test that user-provided max_tokens is always respected
+    """
+    test_values = [512, 1024, 2048, 4096, 8192]
+    
+    for max_tokens_value in test_values:
+        llm = LLM(model="anthropic/claude-3-5-sonnet-20241022", max_tokens=max_tokens_value)
+
+        with patch.object(llm.client.messages, 'create') as mock_create:
+            mock_response = MagicMock()
+            mock_response.content = [MagicMock(text="test response")]
+            mock_response.usage = MagicMock(input_tokens=10, output_tokens=20)
+            mock_create.return_value = mock_response
+
+            llm.call("Hello")
+
+            call_kwargs = mock_create.call_args[1]
+            assert call_kwargs["max_tokens"] == max_tokens_value

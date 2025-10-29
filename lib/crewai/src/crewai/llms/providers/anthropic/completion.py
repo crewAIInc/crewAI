@@ -36,7 +36,7 @@ class AnthropicCompletion(BaseLLM):
         timeout: float | None = None,
         max_retries: int = 2,
         temperature: float | None = None,
-        max_tokens: int = 4096,  # Required for Anthropic
+        max_tokens: int | None = None,  # Optional, computed dynamically if not set
         top_p: float | None = None,
         stop_sequences: list[str] | None = None,
         stream: bool = False,
@@ -52,7 +52,8 @@ class AnthropicCompletion(BaseLLM):
             timeout: Request timeout in seconds
             max_retries: Maximum number of retries
             temperature: Sampling temperature (0-1)
-            max_tokens: Maximum tokens in response (required for Anthropic)
+            max_tokens: Maximum tokens in response. If not set, will be computed
+                dynamically based on context window size (recommended for most use cases)
             top_p: Nucleus sampling parameter
             stop_sequences: Stop sequences (Anthropic uses stop_sequences, not stop)
             stream: Enable streaming responses
@@ -72,7 +73,7 @@ class AnthropicCompletion(BaseLLM):
         self.client = Anthropic(**self._get_client_params())
 
         # Store completion parameters
-        self.max_tokens = max_tokens
+        self.max_tokens = max_tokens  # Can be None, will be computed dynamically
         self.top_p = top_p
         self.stream = stream
         self.stop_sequences = stop_sequences or []
@@ -178,10 +179,19 @@ class AnthropicCompletion(BaseLLM):
         Returns:
             Parameters dictionary for Anthropic API
         """
+        max_tokens = self.max_tokens
+        if max_tokens is None:
+            # while still allowing enough tokens for most responses
+            max_tokens = 1024
+
+            context_window = self.get_context_window_size()
+            if context_window > 100000:  # For Claude models with 200k+ context
+                max_tokens = 2048
+
         params = {
             "model": self.model,
             "messages": messages,
-            "max_tokens": self.max_tokens,
+            "max_tokens": max_tokens,
             "stream": self.stream,
         }
 
