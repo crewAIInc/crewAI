@@ -15,7 +15,6 @@ from pydantic import BaseModel
 from crewai.events.types.llm_events import LLMCallType
 from crewai.llms.base_llm import BaseLLM
 from crewai.utilities.agent_utils import is_context_length_exceeded
-from crewai.utilities.converter import generate_model_description
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededError,
 )
@@ -60,8 +59,8 @@ class OpenAICompletion(BaseLLM):
         top_logprobs: int | None = None,
         reasoning_effort: str | None = None,
         provider: str | None = None,
-        **kwargs,
-    ):
+        **kwargs: Any,
+    ) -> None:
         """Initialize OpenAI chat completion client."""
 
         if provider is None:
@@ -204,7 +203,7 @@ class OpenAICompletion(BaseLLM):
         self, messages: list[LLMMessage], tools: list[dict[str, BaseTool]] | None = None
     ) -> dict[str, Any]:
         """Prepare parameters for OpenAI chat completion."""
-        params = {
+        params: dict[str, Any] = {
             "model": self.model,
             "messages": messages,
         }
@@ -294,7 +293,6 @@ class OpenAICompletion(BaseLLM):
         """Handle non-streaming chat completion."""
         try:
             if response_model:
-                schema = generate_model_description(response_model)
                 parsed_response = self.client.beta.chat.completions.parse(
                     **params,
                     response_format=response_model,
@@ -420,46 +418,49 @@ class OpenAICompletion(BaseLLM):
         tool_calls = {}
 
         if response_model:
-            stream_params = {
-                "model": params["model"],
-                "input": params["messages"],
-                "text_format": response_model,
-            }
+            completion_stream: Iterator[ChatCompletionChunk] = (
+                self.client.chat.completions.create(**params)
+            )
 
-            if "temperature" in params:
-                stream_params["temperature"] = params["temperature"]
-            if "max_tokens" in params:
-                stream_params["max_tokens"] = params["max_tokens"]
-            if "top_p" in params:
-                stream_params["top_p"] = params["top_p"]
+            accumulated_content = ""
+            for chunk in completion_stream:
+                if not chunk.choices:
+                    continue
 
-            with self.client.responses.stream(**stream_params) as stream:
-                for event in stream:
-                    if event.type == "response.output_text.delta":
-                        full_response += event.delta
-                        self._emit_stream_chunk_event(
-                            chunk=event.delta,
-                            from_task=from_task,
-                            from_agent=from_agent,
-                        )
-                    elif event.type == "response.error":
-                        logging.error(f"OpenAI streaming error: {event.error}")
+                choice = chunk.choices[0]
+                delta: ChoiceDelta = choice.delta
 
-                final_response = stream.get_final_response()
-                if final_response and hasattr(final_response, "output"):
-                    parsed_object = final_response.output
-                    if isinstance(parsed_object, BaseModel):
-                        structured_json = parsed_object.model_dump_json()
+                if delta.content:
+                    accumulated_content += delta.content
+                    self._emit_stream_chunk_event(
+                        chunk=delta.content,
+                        from_task=from_task,
+                        from_agent=from_agent,
+                    )
 
-                        self._emit_call_completed_event(
-                            response=structured_json,
-                            call_type=LLMCallType.LLM_CALL,
-                            from_task=from_task,
-                            from_agent=from_agent,
-                            messages=params["messages"],
-                        )
+            try:
+                parsed_object = response_model.model_validate_json(accumulated_content)
+                structured_json = parsed_object.model_dump_json()
 
-                        return structured_json
+                self._emit_call_completed_event(
+                    response=structured_json,
+                    call_type=LLMCallType.LLM_CALL,
+                    from_task=from_task,
+                    from_agent=from_agent,
+                    messages=params["messages"],
+                )
+
+                return structured_json
+            except Exception as e:
+                logging.error(f"Failed to parse structured output from stream: {e}")
+                self._emit_call_completed_event(
+                    response=accumulated_content,
+                    call_type=LLMCallType.LLM_CALL,
+                    from_task=from_task,
+                    from_agent=from_agent,
+                    messages=params["messages"],
+                )
+                return accumulated_content
 
         stream: Iterator[ChatCompletionChunk] = self.client.chat.completions.create(
             **params
@@ -470,20 +471,18 @@ class OpenAICompletion(BaseLLM):
                 continue
 
             choice = chunk.choices[0]
-            delta: ChoiceDelta = choice.delta
+            chunk_delta: ChoiceDelta = choice.delta
 
-            # Handle content streaming
-            if delta.content:
-                full_response += delta.content
+            if chunk_delta.content:
+                full_response += chunk_delta.content
                 self._emit_stream_chunk_event(
-                    chunk=delta.content,
+                    chunk=chunk_delta.content,
                     from_task=from_task,
                     from_agent=from_agent,
                 )
 
-            # Handle tool call streaming
-            if delta.tool_calls:
-                for tool_call in delta.tool_calls:
+            if chunk_delta.tool_calls:
+                for tool_call in chunk_delta.tool_calls:
                     call_id = tool_call.id or "default"
                     if call_id not in tool_calls:
                         tool_calls[call_id] = {
@@ -529,10 +528,8 @@ class OpenAICompletion(BaseLLM):
                 if result is not None:
                     return result
 
-        # Apply stop words to full response
         full_response = self._apply_stop_words(full_response)
 
-        # Emit completion event and return full response
         self._emit_call_completed_event(
             response=full_response,
             call_type=LLMCallType.LLM_CALL,
@@ -598,12 +595,9 @@ class OpenAICompletion(BaseLLM):
             }
         return {"total_tokens": 0}
 
-    def _format_messages(  # type: ignore[override]
-        self, messages: str | list[LLMMessage]
-    ) -> list[LLMMessage]:
+    def _format_messages(self, messages: str | list[LLMMessage]) -> list[LLMMessage]:
         """Format messages for OpenAI API."""
-        # Use base class formatting first
-        base_formatted = super()._format_messages(messages)  # type: ignore[arg-type]
+        base_formatted = super()._format_messages(messages)
 
         # Apply OpenAI-specific formatting
         formatted_messages: list[LLMMessage] = []
