@@ -1589,14 +1589,14 @@ def test_handle_context_length_exceeds_no_response():
     mock_agent_finish = MagicMock(spec=AgentFinish)
     mock_agent_finish.output = "This is the final answer"
 
-    llm = LLM(model="gpt-4o-mini",context_window_size = 2)
+    llm = LLM(model="gpt-4o-mini",context_window_size = 2, api_key = "DUMMY")
     llm.context_window_size = 2 # Manually overriding it to be 2 
 
     exception_to_be_raised =  ValueError("Invalid response from LLM call - None or empty.")
 
     with patch("crewai.agents.crew_agent_executor.handle_max_iterations_exceeded", return_value = mock_agent_finish) as mock_handle_max_iterations_exceeded:
         with patch("crewai.agents.crew_agent_executor.get_llm_response") as mock_get_llm_response:
-            with patch("crewai.utilities.agent_utils.is_null_response_because_context_length_exceeded",return_value = True) as mock_is_null_response_because_context_length_exceeded:
+            with patch("crewai.agents.crew_agent_executor.is_null_response_because_context_length_exceeded", return_value = True) as mock_is_null_response_because_context_length_exceeded:
                 with patch("crewai.utilities.agent_utils.summarize_messages") as mock_summarize_messages:
                     mock_get_llm_response.side_effect = exception_to_be_raised
 
