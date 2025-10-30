@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import MagicMock
-from crewai.utilities.agent_utils import is_null_response_because_context_length_exceeded
+from src.crewai.utilities.agent_utils import is_null_response_because_context_length_exceeded
 
 def test_is_null_response_because_context_length_exceeded_true():
     """
