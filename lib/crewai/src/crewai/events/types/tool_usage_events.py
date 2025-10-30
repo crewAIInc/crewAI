@@ -110,3 +110,18 @@ class ToolExecutionErrorEvent(BaseEvent):
                 and self.agent.fingerprint.metadata
             ):
                 self.fingerprint_metadata = self.agent.fingerprint.metadata
+
+
+class MCPToolProgressEvent(BaseEvent):
+    """Event emitted when an MCP tool reports progress during execution"""
+
+    type: str = "mcp_tool_progress"
+    tool_name: str
+    server_name: str
+    progress: float
+    total: float | None = None
+    message: str | None = None
+    agent_id: str | None = None
+    agent_role: str | None = None
+    task_id: str | None = None
+    task_name: str | None = None

@@ -1,6 +1,8 @@
 """MCP Tool Wrapper for on-demand MCP server connections."""
 
 import asyncio
+from collections.abc import Callable
+from typing import Any
 
 from crewai.tools import BaseTool
 
@@ -20,6 +22,9 @@ class MCPToolWrapper(BaseTool):
         tool_name: str,
         tool_schema: dict,
         server_name: str,
+        progress_callback: Callable[[float, float | None, str | None], None] | None = None,
+        agent: Any | None = None,
+        task: Any | None = None,
     ):
         """Initialize the MCP tool wrapper.
 
@@ -28,6 +33,9 @@ class MCPToolWrapper(BaseTool):
             tool_name: Original name of the tool on the MCP server
             tool_schema: Schema information for the tool
             server_name: Name of the MCP server for prefixing
+            progress_callback: Optional callback for progress notifications (progress, total, message)
+            agent: Optional agent context for event emission
+            task: Optional task context for event emission
         """
         # Create tool name with server prefix to avoid conflicts
         prefixed_name = f"{server_name}_{tool_name}"
@@ -52,6 +60,9 @@ class MCPToolWrapper(BaseTool):
         self._mcp_server_params = mcp_server_params
         self._original_tool_name = tool_name
         self._server_name = server_name
+        self._progress_callback = progress_callback
+        self._agent = agent
+        self._task = task
 
     @property
     def mcp_server_params(self) -> dict:
@@ -165,20 +176,40 @@ class MCPToolWrapper(BaseTool):
         )
 
     async def _execute_tool(self, **kwargs) -> str:
-        """Execute the actual MCP tool call."""
+        """Execute the actual MCP tool call with progress support."""
         from mcp import ClientSession
         from mcp.client.streamable_http import streamablehttp_client
 
         server_url = self.mcp_server_params["url"]
+        headers = self.mcp_server_params.get("headers")
 
         try:
             # Wrap entire operation with single timeout
             async def _do_mcp_call():
+                client_kwargs = {"terminate_on_close": True}
+                if headers:
+                    client_kwargs["headers"] = headers
+
                 async with streamablehttp_client(
-                    server_url, terminate_on_close=True
+                    server_url, **client_kwargs
                 ) as (read, write, _):
                     async with ClientSession(read, write) as session:
                         await session.initialize()
+
+                        # Register progress handler if callback is provided
+                        if self._progress_callback:
+                            def progress_handler(progress_notification):
+                                """Handle progress notifications from MCP server."""
+                                progress = progress_notification.progress
+                                total = getattr(progress_notification, "total", None)
+                                message = getattr(progress_notification, "message", None)
+                                
+                                self._progress_callback(progress, total, message)
+                                
+                                self._emit_progress_event(progress, total, message)
+
+                            session.on_progress = progress_handler
+
                         result = await session.call_tool(
                             self.original_tool_name, kwargs
                         )
@@ -211,3 +242,29 @@ class MCPToolWrapper(BaseTool):
             if "TaskGroup" in str(e) or "unhandled errors" in str(e):
                 raise asyncio.TimeoutError(f"MCP connection error: {e}") from e
             raise
+
+    def _emit_progress_event(
+        self, progress: float, total: float | None, message: str | None
+    ) -> None:
+        """Emit MCPToolProgressEvent to CrewAI event bus."""
+        from crewai.events.event_bus import crewai_event_bus
+        from crewai.events.types.tool_usage_events import MCPToolProgressEvent
+
+        event_data = {
+            "tool_name": self.original_tool_name,
+            "server_name": self.server_name,
+            "progress": progress,
+            "total": total,
+            "message": message,
+        }
+
+        if self._agent:
+            event_data["agent_id"] = str(self._agent.id) if hasattr(self._agent, "id") else None
+            event_data["agent_role"] = getattr(self._agent, "role", None)
+
+        if self._task:
+            event_data["task_id"] = str(self._task.id) if hasattr(self._task, "id") else None
+            event_data["task_name"] = getattr(self._task, "name", None) or getattr(self._task, "description", None)
+
+        event = MCPToolProgressEvent(**event_data)
+        crewai_event_bus.emit(self, event)

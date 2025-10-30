@@ -659,7 +659,7 @@ class Agent(BaseAgent):
 
         return all_tools
 
-    def _get_external_mcp_tools(self, mcp_ref: str) -> list[BaseTool]:
+    def _get_external_mcp_tools(self, mcp_ref: str, task: Task | None = None) -> list[BaseTool]:
         """Get tools from external HTTPS MCP server with graceful error handling."""
         from crewai.tools.mcp_tool_wrapper import MCPToolWrapper
 
@@ -670,6 +670,10 @@ class Agent(BaseAgent):
             server_url, specific_tool = mcp_ref, None
 
         server_params = {"url": server_url}
+        
+        if self.mcp_server_headers:
+            server_params["headers"] = self.mcp_server_headers
+        
         server_name = self._extract_server_name(server_url)
 
         try:
@@ -689,11 +693,25 @@ class Agent(BaseAgent):
                     continue
 
                 try:
+                    progress_callback = None
+                    if self.mcp_progress_enabled:
+                        def make_progress_callback(tool_name_ref: str):
+                            def callback(progress: float, total: float | None, message: str | None):
+                                self._logger.log(
+                                    "debug",
+                                    f"MCP tool {tool_name_ref} progress: {progress}/{total or '?'} - {message or 'no message'}"
+                                )
+                            return callback
+                        progress_callback = make_progress_callback(tool_name)
+                    
                     wrapper = MCPToolWrapper(
                         mcp_server_params=server_params,
                         tool_name=tool_name,
                         tool_schema=schema,
                         server_name=server_name,
+                        progress_callback=progress_callback,
+                        agent=self,
+                        task=task,
                     )
                     tools.append(wrapper)
                 except Exception as e:

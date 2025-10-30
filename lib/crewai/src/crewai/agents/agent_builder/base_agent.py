@@ -197,6 +197,14 @@ class BaseAgent(BaseModel, ABC):
         default=None,
         description="List of MCP server references. Supports 'https://server.com/path' for external servers and 'crewai-amp:mcp-name' for AMP marketplace. Use '#tool_name' suffix for specific tools.",
     )
+    mcp_progress_enabled: bool = Field(
+        default=False,
+        description="Enable progress notifications from MCP servers. When enabled, MCPToolProgressEvent will be emitted to the event bus during long-running MCP tool executions.",
+    )
+    mcp_server_headers: dict[str, str] | None = Field(
+        default=None,
+        description="HTTP headers to pass to MCP servers for middleware support (e.g., authentication tokens, client-id). Applied to all MCP server connections.",
+    )
 
     @model_validator(mode="before")
     @classmethod
