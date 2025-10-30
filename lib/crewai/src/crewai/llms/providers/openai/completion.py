@@ -251,9 +251,7 @@ class OpenAICompletion(BaseLLM):
 
         params = {k: v for k, v in params.items() if k not in crewai_specific_params}
 
-        params = self._apply_additional_drop_params(params)
-
-        return params
+        return self._apply_additional_drop_params(params)
 
     def _convert_tools_for_interference(self, tools: list[dict]) -> list[dict]:
         """Convert CrewAI tool format to OpenAI function calling format."""

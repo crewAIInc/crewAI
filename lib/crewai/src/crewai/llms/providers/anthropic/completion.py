@@ -201,9 +201,7 @@ class AnthropicCompletion(BaseLLM):
         if tools and self.supports_tools:
             params["tools"] = self._convert_tools_for_interference(tools)
 
-        params = self._apply_additional_drop_params(params)
-
-        return params
+        return self._apply_additional_drop_params(params)
 
     def _convert_tools_for_interference(self, tools: list[dict]) -> list[dict]:
         """Convert CrewAI tool format to Anthropic tool use format."""
