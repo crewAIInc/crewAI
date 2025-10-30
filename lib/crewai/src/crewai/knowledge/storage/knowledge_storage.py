@@ -1,6 +1,6 @@
+from collections.abc import Mapping, Sequence
 import logging
 import traceback
-from collections.abc import Mapping, Sequence
 from typing import Any, cast
 import warnings
 
@@ -19,34 +19,34 @@ from crewai.utilities.logger import Logger
 
 def _coerce_to_records(documents: Sequence[Any]) -> list[BaseRecord]:
     """Convert various document formats to BaseRecord format.
-    
+
     Supports:
     - str: Simple string content
     - dict: With 'content' key and optional 'metadata' and 'doc_id'
-    
+
     Args:
         documents: Sequence of documents in various formats
-        
+
     Returns:
         List of BaseRecord dictionaries with content and optional metadata
     """
     records: list[BaseRecord] = []
-    
+
     for d in documents:
         if isinstance(d, str):
             records.append({"content": d})
         elif isinstance(d, Mapping):
             if "content" not in d:
                 continue
-            
+
             content = d["content"]
             if content is None or (isinstance(content, str) and not content):
                 continue
-            
+
             content_str = str(content)
-            
+
             rec: BaseRecord = {"content": content_str}
-            
+
             if "metadata" in d:
                 metadata_raw = d["metadata"]
                 if isinstance(metadata_raw, Mapping):
@@ -74,12 +74,12 @@ def _coerce_to_records(documents: Sequence[Any]) -> list[BaseRecord]:
                             sanitized_list.append(sanitized_item)
                     if sanitized_list:
                         rec["metadata"] = sanitized_list
-            
+
             if "doc_id" in d and isinstance(d["doc_id"], str):
                 rec["doc_id"] = d["doc_id"]
-            
+
             records.append(rec)
-    
+
     return records
 
 
