@@ -407,10 +407,7 @@ def is_context_length_exceeded(
     exceeded_error = LLMContextLengthExceededError(str(exception))._is_context_limit_error(
         str(exception)
     )
-    null_response = is_null_response_because_context_length_exceeded(
-        exception=exception, messages=messages, llm=llm
-    )
-    return exceeded_error or null_response
+    return exceeded_error
 
 
 def is_null_response_because_context_length_exceeded(
