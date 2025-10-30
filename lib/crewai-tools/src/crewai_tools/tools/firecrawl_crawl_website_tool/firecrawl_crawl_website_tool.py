@@ -22,22 +22,23 @@ class FirecrawlCrawlWebsiteToolSchema(BaseModel):
 
 
 class FirecrawlCrawlWebsiteTool(BaseTool):
-    """Tool for crawling websites using Firecrawl. To run this tool, you need to have a Firecrawl API key.
+    """Tool for crawling websites using Firecrawl v2 API. To run this tool, you need to have a Firecrawl API key.
 
     Args:
         api_key (str): Your Firecrawl API key.
-        config (dict): Optional. It contains Firecrawl API parameters.
+        config (dict): Optional. It contains Firecrawl v2 API parameters.
 
-    Default configuration options:
-        max_depth (int): Maximum depth to crawl. Default: 2
+    Default configuration options (Firecrawl v2 API):
+        max_discovery_depth (int): Maximum depth for discovering pages. Default: 2
         ignore_sitemap (bool): Whether to ignore sitemap. Default: True
-        limit (int): Maximum number of pages to crawl. Default: 100
-        allow_backward_links (bool): Allow crawling backward links. Default: False
+        limit (int): Maximum number of pages to crawl. Default: 10
         allow_external_links (bool): Allow crawling external links. Default: False
-        scrape_options (ScrapeOptions): Options for scraping content
-            - formats (list[str]): Content formats to return. Default: ["markdown", "screenshot", "links"]
+        allow_subdomains (bool): Allow crawling subdomains. Default: False
+        delay (int): Delay between requests in milliseconds. Default: None
+        scrape_options (dict): Options for scraping content
+            - formats (list[str]): Content formats to return. Default: ["markdown"]
             - only_main_content (bool): Only return main content. Default: True
-            - timeout (int): Timeout in milliseconds. Default: 30000
+            - timeout (int): Timeout in milliseconds. Default: 10000
     """
 
     model_config = ConfigDict(
@@ -49,14 +50,15 @@ class FirecrawlCrawlWebsiteTool(BaseTool):
     api_key: str | None = None
     config: dict[str, Any] | None = Field(
         default_factory=lambda: {
-            "maxDepth": 2,
-            "ignoreSitemap": True,
+            "max_discovery_depth": 2,
+            "ignore_sitemap": True,
             "limit": 10,
-            "allowBackwardLinks": False,
-            "allowExternalLinks": False,
-            "scrapeOptions": {
-                "formats": ["markdown", "screenshot", "links"],
-                "onlyMainContent": True,
+            "allow_external_links": False,
+            "allow_subdomains": False,
+            "delay": None,
+            "scrape_options": {
+                "formats": ["markdown"],
+                "only_main_content": True,
                 "timeout": 10000,
             },
         }
@@ -107,7 +109,7 @@ class FirecrawlCrawlWebsiteTool(BaseTool):
         if not self._firecrawl:
             raise RuntimeError("FirecrawlApp not properly initialized")
 
-        return self._firecrawl.crawl_url(url, poll_interval=2, params=self.config)
+        return self._firecrawl.crawl(url=url, poll_interval=2, **self.config)
 
 
 try:
