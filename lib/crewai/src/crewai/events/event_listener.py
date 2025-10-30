@@ -174,7 +174,6 @@ class EventListener(BaseEventListener):
                 self.formatter.current_crew_tree,
                 source.id,
                 task_name,
-                event.attempt_number,
             )
 
         @crewai_event_bus.on(TaskCompletedEvent)
@@ -193,7 +192,6 @@ class EventListener(BaseEventListener):
                 source.agent.role,
                 "completed",
                 task_name,
-                event.attempt_number,
             )
 
         @crewai_event_bus.on(TaskFailedEvent)
@@ -212,7 +210,6 @@ class EventListener(BaseEventListener):
                 source.agent.role,
                 "failed",
                 task_name,
-                event.attempt_number,
             )
 
         # ----------- AGENT EVENTS -----------
