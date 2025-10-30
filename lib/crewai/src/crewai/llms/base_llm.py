@@ -223,6 +223,49 @@ class BaseLLM(ABC):
 
         return content
 
+    def _apply_additional_drop_params(self, params: dict[str, Any]) -> dict[str, Any]:
+        """Apply additional_drop_params filtering to remove unwanted parameters.
+
+        This method provides consistent parameter filtering across all LLM providers.
+        It should be called after building the final params dict and before making
+        the provider API call.
+
+        Args:
+            params: The parameters dictionary to filter
+
+        Returns:
+            Filtered parameters dictionary with specified params removed
+
+        Example:
+            >>> llm = LLM(model="o1-mini", additional_drop_params=["stop"])
+            >>> params = {"model": "o1-mini", "messages": [...], "stop": ["\\n"]}
+            >>> filtered = llm._apply_additional_drop_params(params)
+            >>> "stop" in filtered
+            False
+        """
+        drop_params = (
+            self.additional_params.get("additional_drop_params")
+            or self.additional_params.get("drop_additionnal_params")
+            or []
+        )
+
+        if not drop_params:
+            return params
+
+        filtered_params = params.copy()
+
+        for param_name in drop_params:
+            if param_name in filtered_params:
+                logging.debug(
+                    f"Dropping parameter '{param_name}' as specified in additional_drop_params"
+                )
+                filtered_params.pop(param_name)
+
+        filtered_params.pop("additional_drop_params", None)
+        filtered_params.pop("drop_additionnal_params", None)
+
+        return filtered_params
+
     def get_context_window_size(self) -> int:
         """Get the context window size for the LLM.
 

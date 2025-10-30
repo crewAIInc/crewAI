@@ -498,7 +498,11 @@ class LLM(BaseLLM):
         }
 
         # Remove None values from params
-        return {k: v for k, v in params.items() if v is not None}
+        params = {k: v for k, v in params.items() if v is not None}
+
+        params = self._apply_additional_drop_params(params)
+
+        return params
 
     def _handle_streaming_response(
         self,

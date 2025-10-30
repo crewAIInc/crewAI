@@ -725,3 +725,108 @@ def test_native_provider_falls_back_to_litellm_when_not_in_supported_list():
         # Should fall back to LiteLLM
         assert llm.is_litellm is True
         assert llm.model == "groq/llama-3.1-70b-versatile"
+
+
+def test_additional_drop_params_filters_parameters_in_litellm():
+    """Test that additional_drop_params correctly filters out specified parameters in LiteLLM path."""
+    with patch("crewai.llm.LITELLM_AVAILABLE", True), patch("crewai.llm.litellm"):
+        llm = LLM(
+            model="o1-mini",
+            stop=["stop_sequence"],
+            additional_drop_params=["stop"],
+            is_litellm=True,
+        )
+
+        messages = [{"role": "user", "content": "Hello"}]
+        params = llm._prepare_completion_params(messages)
+
+        assert "stop" not in params
+        assert "additional_drop_params" not in params
+        assert params["model"] == "o1-mini"
+
+
+def test_additional_drop_params_with_agent():
+    """Test that additional_drop_params works when LLM is used with an Agent."""
+    from unittest.mock import patch, MagicMock
+    from crewai import Agent, Task, Crew
+
+    with patch("crewai.llm.LITELLM_AVAILABLE", True), patch("crewai.llm.litellm") as mock_litellm:
+        llm = LLM(
+            model="o1-mini",
+            stop=["stop_sequence"],
+            additional_drop_params=["stop"],
+            is_litellm=True,
+        )
+
+        agent = Agent(
+            role="Test Agent",
+            goal="Test the LLM response format functionality.",
+            backstory="An AI developer testing LLM integrations.",
+            llm=llm,
+        )
+
+        task = Task(
+            description="Say hello",
+            expected_output="A greeting",
+            agent=agent,
+        )
+
+        mock_response = MagicMock()
+        mock_response.choices = [MagicMock()]
+        mock_response.choices[0].message.content = "Hello!"
+        mock_response.choices[0].message.tool_calls = None
+        mock_response.usage = MagicMock()
+        mock_response.usage.prompt_tokens = 10
+        mock_response.usage.completion_tokens = 5
+        mock_response.usage.total_tokens = 15
+        mock_litellm.completion.return_value = mock_response
+
+        crew = Crew(agents=[agent], tasks=[task], verbose=False)
+        crew.kickoff()
+
+        # Verify that litellm.completion was called
+        assert mock_litellm.completion.called
+
+        # Get the kwargs passed to litellm.completion
+        call_kwargs = mock_litellm.completion.call_args[1]
+
+        assert "stop" not in call_kwargs
+        assert "additional_drop_params" not in call_kwargs
+
+
+def test_additional_drop_params_supports_misspelled_variant():
+    """Test that drop_additionnal_params (misspelled) is also supported for backwards compatibility."""
+    with patch("crewai.llm.LITELLM_AVAILABLE", True), patch("crewai.llm.litellm"):
+        llm = LLM(
+            model="o1-mini",
+            stop=["stop_sequence"],
+            drop_additionnal_params=["stop"],
+            is_litellm=True,
+        )
+
+        messages = [{"role": "user", "content": "Hello"}]
+        params = llm._prepare_completion_params(messages)
+
+        assert "stop" not in params
+        assert "drop_additionnal_params" not in params
+        assert params["model"] == "o1-mini"
+
+
+def test_additional_drop_params_filters_multiple_parameters():
+    """Test that additional_drop_params can filter multiple parameters."""
+    with patch("crewai.llm.LITELLM_AVAILABLE", True), patch("crewai.llm.litellm"):
+        llm = LLM(
+            model="o1-mini",
+            stop=["stop_sequence"],
+            temperature=0.7,
+            additional_drop_params=["stop", "temperature"],
+            is_litellm=True,
+        )
+
+        messages = [{"role": "user", "content": "Hello"}]
+        params = llm._prepare_completion_params(messages)
+
+        assert "stop" not in params
+        assert "temperature" not in params
+        assert "additional_drop_params" not in params
+        assert params["model"] == "o1-mini"

@@ -273,6 +273,8 @@ class AzureCompletion(BaseLLM):
             params["tools"] = self._convert_tools_for_interference(tools)
             params["tool_choice"] = "auto"
 
+        params = self._apply_additional_drop_params(params)
+
         return params
 
     def _convert_tools_for_interference(self, tools: list[dict]) -> list[dict]:

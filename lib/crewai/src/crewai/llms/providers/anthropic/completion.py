@@ -201,6 +201,8 @@ class AnthropicCompletion(BaseLLM):
         if tools and self.supports_tools:
             params["tools"] = self._convert_tools_for_interference(tools)
 
+        params = self._apply_additional_drop_params(params)
+
         return params
 
     def _convert_tools_for_interference(self, tools: list[dict]) -> list[dict]:
