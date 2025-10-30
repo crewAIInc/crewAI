@@ -398,3 +398,80 @@ class TestBackwardCompatibility:
             assert len(saved_docs) == 2
             assert all("content" in doc for doc in saved_docs)
             assert all("metadata" in doc for doc in saved_docs)
+
+
+class TestCrewDoclingSourceMetadata:
+    """Test CrewDoclingSource metadata with conversion failures."""
+
+    @pytest.mark.skipif(
+        not hasattr(pytest, "importorskip") or pytest.importorskip("docling", reason="docling not available") is None,
+        reason="docling not available"
+    )
+    def test_docling_filepath_metadata_with_conversion_failure(self, tmp_path):
+        """Test that filepath metadata is correct even when some files fail conversion."""
+        try:
+            from pathlib import Path
+            from unittest.mock import MagicMock, Mock
+            from crewai.knowledge.source.crew_docling_source import CrewDoclingSource
+            from crewai.knowledge.storage.knowledge_storage import KnowledgeStorage
+            
+            file1 = tmp_path / "file1.txt"
+            file2 = tmp_path / "file2.txt"
+            file3 = tmp_path / "file3.txt"
+            
+            file1.write_text("Content from file 1")
+            file2.write_text("Content from file 2")
+            file3.write_text("Content from file 3")
+            
+            mock_doc1 = MagicMock()
+            mock_doc3 = MagicMock()
+            
+            mock_result1 = MagicMock()
+            mock_result1.document = mock_doc1
+            mock_result1.input.file = file1
+            
+            mock_result3 = MagicMock()
+            mock_result3.document = mock_doc3
+            mock_result3.input.file = file3
+            
+            with patch("crewai.knowledge.source.crew_docling_source.DocumentConverter") as mock_converter_class:
+                mock_converter = MagicMock()
+                mock_converter_class.return_value = mock_converter
+                mock_converter.convert_all.return_value = iter([mock_result1, mock_result3])
+                mock_converter.allowed_formats = []
+                
+                with patch.object(KnowledgeStorage, 'save') as mock_save:
+                    with patch("crewai.knowledge.source.crew_docling_source.CrewDoclingSource._chunk_doc") as mock_chunk:
+                        mock_chunk.side_effect = [
+                            iter(["Chunk 1 from file1", "Chunk 2 from file1"]),
+                            iter(["Chunk 1 from file3", "Chunk 2 from file3"])
+                        ]
+                        
+                        storage = KnowledgeStorage()
+                        source = CrewDoclingSource(
+                            file_paths=[file1, file2, file3],
+                            storage=storage
+                        )
+                        
+                        source.add()
+                        
+                        assert len(source.chunks) == 4
+                        
+                        assert source.chunks[0]["metadata"]["filepath"] == str(file1)
+                        assert source.chunks[0]["metadata"]["source_type"] == "docling"
+                        assert source.chunks[0]["metadata"]["chunk_index"] == 0
+                        
+                        assert source.chunks[1]["metadata"]["filepath"] == str(file1)
+                        assert source.chunks[1]["metadata"]["chunk_index"] == 1
+                        
+                        assert source.chunks[2]["metadata"]["filepath"] == str(file3)
+                        assert source.chunks[2]["metadata"]["source_type"] == "docling"
+                        assert source.chunks[2]["metadata"]["chunk_index"] == 0
+                        
+                        assert source.chunks[3]["metadata"]["filepath"] == str(file3)
+                        assert source.chunks[3]["metadata"]["chunk_index"] == 1
+                        
+                        for chunk in source.chunks:
+                            assert chunk["metadata"]["filepath"] != str(file2)
+        except ImportError:
+            pytest.skip("docling not available")

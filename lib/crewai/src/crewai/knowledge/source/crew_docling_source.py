@@ -51,6 +51,7 @@ class CrewDoclingSource(BaseKnowledgeSource):
     chunks: list[str] = Field(default_factory=list)
     safe_file_paths: list[Path | str] = Field(default_factory=list)
     content: list[DoclingDocument] = Field(default_factory=list)
+    content_paths: list[Path | str] = Field(default_factory=list)
     document_converter: DocumentConverter = Field(
         default_factory=lambda: DocumentConverter(
             allowed_formats=[
@@ -95,7 +96,7 @@ class CrewDoclingSource(BaseKnowledgeSource):
         if self.content is None:
             return
         for doc_index, doc in enumerate(self.content):
-            filepath = self.safe_file_paths[doc_index] if doc_index < len(self.safe_file_paths) else "unknown"
+            filepath = self.content_paths[doc_index] if doc_index < len(self.content_paths) else "unknown"
             chunk_index = 0
             for chunk_text in self._chunk_doc(doc):
                 self.chunks.append({
@@ -111,7 +112,12 @@ class CrewDoclingSource(BaseKnowledgeSource):
 
     def _convert_source_to_docling_documents(self) -> list[DoclingDocument]:
         conv_results_iter = self.document_converter.convert_all(self.safe_file_paths)
-        return [result.document for result in conv_results_iter]
+        documents = []
+        self.content_paths = []
+        for result in conv_results_iter:
+            documents.append(result.document)
+            self.content_paths.append(result.input.file)
+        return documents
 
     def _chunk_doc(self, doc: DoclingDocument) -> Iterator[str]:
         chunker = HierarchicalChunker()
