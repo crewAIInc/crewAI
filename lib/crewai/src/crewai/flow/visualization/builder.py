@@ -1,0 +1,348 @@
+"""Flow structure builder for analyzing Flow execution."""
+
+from __future__ import annotations
+from collections import defaultdict
+import inspect
+from typing import TYPE_CHECKING, Any
+
+from crewai.flow.constants import OR_CONDITION
+from crewai.flow.types import FlowMethodName
+from crewai.flow.utils import (
+    _extract_all_methods_recursive,
+    is_flow_condition_dict,
+    is_simple_flow_condition,
+)
+from crewai.flow.visualization.schema import extract_method_signature
+from crewai.flow.visualization.types import FlowStructure, NodeMetadata, StructureEdge
+
+
+if TYPE_CHECKING:
+    from crewai.flow.flow import Flow
+
+
+def build_flow_structure(flow: Flow[Any]) -> FlowStructure:  # noqa: UP037
+    """Build a structure representation of a Flow's execution.
+
+    Args:
+        flow: Flow instance to analyze.
+
+    Returns:
+        Dictionary with nodes, edges, start_methods, and router_methods.
+    """
+    nodes: dict[str, NodeMetadata] = {}
+    edges: list[StructureEdge] = []
+    start_methods: list[str] = []
+    router_methods: list[str] = []
+
+    for method_name, method in flow._methods.items():
+        node_metadata: NodeMetadata = {"type": "listen"}
+
+        if hasattr(method, "__is_start_method__") and method.__is_start_method__:
+            node_metadata["type"] = "start"
+            start_methods.append(method_name)
+
+        if hasattr(method, "__is_router__") and method.__is_router__:
+            node_metadata["is_router"] = True
+            node_metadata["type"] = "router"
+            router_methods.append(method_name)
+
+            node_metadata["condition_type"] = "IF"
+
+            if method_name in flow._router_paths:
+                node_metadata["router_paths"] = [
+                    str(p) for p in flow._router_paths[method_name]
+                ]
+
+        if hasattr(method, "__trigger_methods__") and method.__trigger_methods__:
+            node_metadata["trigger_methods"] = [
+                str(m) for m in method.__trigger_methods__
+            ]
+
+        if hasattr(method, "__condition_type__") and method.__condition_type__:
+            if "condition_type" not in node_metadata:
+                node_metadata["condition_type"] = method.__condition_type__
+
+        if (
+            hasattr(method, "__trigger_condition__")
+            and method.__trigger_condition__ is not None
+        ):
+            node_metadata["trigger_condition"] = method.__trigger_condition__
+
+        node_metadata["method_signature"] = extract_method_signature(
+            method, method_name
+        )
+
+        try:
+            source_code = inspect.getsource(method)
+            node_metadata["source_code"] = source_code
+
+            try:
+                source_lines, start_line = inspect.getsourcelines(method)
+                node_metadata["source_lines"] = source_lines
+                node_metadata["source_start_line"] = start_line
+            except (OSError, TypeError):
+                pass
+
+            try:
+                source_file = inspect.getsourcefile(method)
+                if source_file:
+                    node_metadata["source_file"] = source_file
+            except (OSError, TypeError):
+                try:
+                    class_file = inspect.getsourcefile(flow.__class__)
+                    if class_file:
+                        node_metadata["source_file"] = class_file
+                except (OSError, TypeError):
+                    pass
+        except (OSError, TypeError):
+            pass
+
+        try:
+            class_obj = flow.__class__
+
+            if class_obj:
+                class_name = class_obj.__name__
+
+                bases = class_obj.__bases__
+                if bases:
+                    base_strs = []
+                    for base in bases:
+                        if hasattr(base, "__name__"):
+                            if hasattr(base, "__origin__"):
+                                base_strs.append(str(base))
+                            else:
+                                base_strs.append(base.__name__)
+                        else:
+                            base_strs.append(str(base))
+
+                    try:
+                        source_lines = inspect.getsource(class_obj).split("\n")
+                        _, class_start_line = inspect.getsourcelines(class_obj)
+
+                        for idx, line in enumerate(source_lines):
+                            stripped = line.strip()
+                            if stripped.startswith("class ") and class_name in stripped:
+                                class_signature = stripped.rstrip(":")
+                                node_metadata["class_signature"] = class_signature
+                                node_metadata["class_line_number"] = (
+                                    class_start_line + idx
+                                )
+                                break
+                    except (OSError, TypeError):
+                        class_signature = f"class {class_name}({', '.join(base_strs)})"
+                        node_metadata["class_signature"] = class_signature
+                else:
+                    class_signature = f"class {class_name}"
+                    node_metadata["class_signature"] = class_signature
+
+                node_metadata["class_name"] = class_name
+        except (OSError, TypeError, AttributeError):
+            pass
+
+        nodes[method_name] = node_metadata
+
+    for listener_name, condition_data in flow._listeners.items():
+        condition_type: str | None = None
+        trigger_methods_list: list[str] = []
+
+        if is_simple_flow_condition(condition_data):
+            cond_type, methods = condition_data
+            condition_type = cond_type
+            trigger_methods_list = [str(m) for m in methods]
+        elif is_flow_condition_dict(condition_data):
+            condition_type = condition_data.get("type", OR_CONDITION)
+            methods_recursive = _extract_all_methods_recursive(condition_data, flow)
+            trigger_methods_list = [str(m) for m in methods_recursive]
+
+        edges.extend(
+            StructureEdge(
+                source=str(trigger_method),
+                target=str(listener_name),
+                condition_type=condition_type,
+                is_router_path=False,
+            )
+            for trigger_method in trigger_methods_list
+            if trigger_method in nodes
+        )
+
+    for router_method_name in router_methods:
+        if router_method_name not in flow._router_paths:
+            continue
+
+        router_paths = flow._router_paths[FlowMethodName(router_method_name)]
+
+        for path in router_paths:
+            for listener_name, condition_data in flow._listeners.items():
+                trigger_methods_from_cond: list[str] = []
+
+                if is_simple_flow_condition(condition_data):
+                    _, methods = condition_data
+                    trigger_methods_from_cond = [str(m) for m in methods]
+                elif is_flow_condition_dict(condition_data):
+                    methods_recursive = _extract_all_methods_recursive(
+                        condition_data, flow
+                    )
+                    trigger_methods_from_cond = [str(m) for m in methods_recursive]
+
+                if str(path) in trigger_methods_from_cond:
+                    edges.append(
+                        StructureEdge(
+                            source=router_method_name,
+                            target=str(listener_name),
+                            condition_type=None,
+                            is_router_path=True,
+                        )
+                    )
+
+    for start_method in flow._start_methods:
+        if start_method not in nodes and start_method in flow._methods:
+            method = flow._methods[start_method]
+            nodes[str(start_method)] = NodeMetadata(type="start")
+
+            if hasattr(method, "__trigger_methods__") and method.__trigger_methods__:
+                nodes[str(start_method)]["trigger_methods"] = [
+                    str(m) for m in method.__trigger_methods__
+                ]
+            if hasattr(method, "__condition_type__") and method.__condition_type__:
+                nodes[str(start_method)]["condition_type"] = method.__condition_type__
+
+    return FlowStructure(
+        nodes=nodes,
+        edges=edges,
+        start_methods=start_methods,
+        router_methods=router_methods,
+    )
+
+
+def structure_to_dict(structure: FlowStructure) -> dict[str, Any]:
+    """Convert FlowStructure to plain dictionary for serialization.
+
+    Args:
+        structure: FlowStructure to convert.
+
+    Returns:
+        Plain dictionary representation.
+    """
+    return {
+        "nodes": dict(structure["nodes"]),
+        "edges": list(structure["edges"]),
+        "start_methods": list(structure["start_methods"]),
+        "router_methods": list(structure["router_methods"]),
+    }
+
+
+def print_structure_summary(structure: FlowStructure) -> str:
+    """Generate human-readable summary of Flow structure.
+
+    Args:
+        structure: FlowStructure to summarize.
+
+    Returns:
+        Formatted string summary.
+    """
+    lines: list[str] = []
+    lines.append("Flow Execution Structure")
+    lines.append("=" * 50)
+    lines.append(f"Total nodes: {len(structure['nodes'])}")
+    lines.append(f"Total edges: {len(structure['edges'])}")
+    lines.append(f"Start methods: {len(structure['start_methods'])}")
+    lines.append(f"Router methods: {len(structure['router_methods'])}")
+    lines.append("")
+
+    if structure["start_methods"]:
+        lines.append("Start Methods:")
+        for method_name in structure["start_methods"]:
+            node = structure["nodes"][method_name]
+            lines.append(f"  - {method_name}")
+            if node.get("condition_type"):
+                lines.append(f"    Condition: {node['condition_type']}")
+            if node.get("trigger_methods"):
+                lines.append(f"    Triggers on: {', '.join(node['trigger_methods'])}")
+        lines.append("")
+
+    if structure["router_methods"]:
+        lines.append("Router Methods:")
+        for method_name in structure["router_methods"]:
+            node = structure["nodes"][method_name]
+            lines.append(f"  - {method_name}")
+            if node.get("router_paths"):
+                lines.append(f"    Paths: {', '.join(node['router_paths'])}")
+        lines.append("")
+
+    if structure["edges"]:
+        lines.append("Connections:")
+        for edge in structure["edges"]:
+            edge_type = ""
+            if edge["is_router_path"]:
+                edge_type = " [Router Path]"
+            elif edge["condition_type"]:
+                edge_type = f" [{edge['condition_type']}]"
+
+            lines.append(f"  {edge['source']} -> {edge['target']}{edge_type}")
+        lines.append("")
+
+    return "\n".join(lines)
+
+
+def calculate_execution_paths(structure: FlowStructure) -> int:
+    """Calculate number of possible execution paths through the flow.
+
+    Args:
+        structure: FlowStructure to analyze.
+
+    Returns:
+        Number of possible execution paths.
+    """
+    graph = defaultdict(list)
+    for edge in structure["edges"]:
+        graph[edge["source"]].append(
+            {
+                "target": edge["target"],
+                "is_router": edge["is_router_path"],
+                "condition": edge["condition_type"],
+            }
+        )
+
+    all_nodes = set(structure["nodes"].keys())
+    nodes_with_outgoing = set(edge["source"] for edge in structure["edges"])
+    terminal_nodes = all_nodes - nodes_with_outgoing
+
+    if not structure["start_methods"] or not terminal_nodes:
+        return 0
+
+    def count_paths_from(node: str, visited: set[str]) -> int:
+        """Count paths from a node to terminal nodes using DFS."""
+        if node in terminal_nodes:
+            return 1
+
+        if node in visited:
+            return 0
+
+        visited.add(node)
+
+        outgoing = graph[node]
+        if not outgoing:
+            visited.remove(node)
+            return 1
+
+        if node in structure["router_methods"]:
+            total = 0
+            for edge_info in outgoing:
+                target = str(edge_info["target"])
+                total += count_paths_from(target, visited.copy())
+            visited.remove(node)
+            return total
+
+        total = 0
+        for edge_info in outgoing:
+            target = str(edge_info["target"])
+            total += count_paths_from(target, visited.copy())
+
+        visited.remove(node)
+        return total if total > 0 else 1
+
+    total_paths = 0
+    for start in structure["start_methods"]:
+        total_paths += count_paths_from(start, set())
+
+    return max(total_paths, 1)
