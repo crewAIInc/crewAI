@@ -25,7 +25,7 @@ class ConsoleFormatter:
     _pending_a2a_message: str | None = None
     _pending_a2a_agent_role: str | None = None
     _pending_a2a_turn_number: int | None = None
-    _a2a_turn_branches: dict[int, Tree] = {}
+    _a2a_turn_branches: ClassVar[dict[int, Tree]] = {}
     _current_a2a_agent_name: str | None = None
 
     def __init__(self, verbose: bool = False):

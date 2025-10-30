@@ -548,7 +548,7 @@ def convert_oneof_to_anyof(schema: dict[str, Any]) -> dict[str, Any]:
         if "oneOf" in schema:
             schema["anyOf"] = schema.pop("oneOf")
 
-        for key, value in schema.items():
+        for value in schema.values():
             if isinstance(value, dict):
                 convert_oneof_to_anyof(value)
             elif isinstance(value, list):
@@ -578,7 +578,7 @@ def ensure_all_properties_required(schema: dict[str, Any]) -> dict[str, Any]:
             if properties:
                 schema["required"] = list(properties.keys())
 
-        for key, value in schema.items():
+        for value in schema.values():
             if isinstance(value, dict):
                 ensure_all_properties_required(value)
             elif isinstance(value, list):

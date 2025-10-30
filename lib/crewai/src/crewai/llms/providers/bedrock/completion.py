@@ -5,6 +5,7 @@ import logging
 import os
 from typing import TYPE_CHECKING, Any, TypedDict, cast
 
+from pydantic import BaseModel
 from typing_extensions import Required
 
 from crewai.events.types.llm_events import LLMCallType
