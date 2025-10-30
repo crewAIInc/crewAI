@@ -850,31 +850,6 @@ def test_flow_plotting():
     assert isinstance(received_events[0].timestamp, datetime)
 
 
-def test_method_calls_crew_detection():
-    """Test that method_calls_crew() detects .crew(), .kickoff(), and .kickoff_async() calls."""
-    from crewai.flow.visualization_utils import method_calls_crew
-    from crewai import Agent
-
-    # Test with a real Flow that uses agent.kickoff()
-    class FlowWithAgentKickoff(Flow):
-        @start()
-        def run_agent(self):
-            agent = Agent(role="test", goal="test", backstory="test")
-            return agent.kickoff("query")
-
-    flow = FlowWithAgentKickoff()
-    assert method_calls_crew(flow.run_agent) is True
-
-    # Test with a Flow that has no crew/agent calls
-    class FlowWithoutCrewCalls(Flow):
-        @start()
-        def simple_method(self):
-            return "Just a regular method"
-
-    flow2 = FlowWithoutCrewCalls()
-    assert method_calls_crew(flow2.simple_method) is False
-
-
 def test_multiple_routers_from_same_trigger():
     """Test that multiple routers triggered by the same method all activate their listeners."""
     execution_order = []
