@@ -151,6 +151,9 @@ def get_possible_return_constants(function: Any) -> list[str] | None:
 
             self.generic_visit(node)
 
+        def visit_If(self, node: ast.If) -> None:
+            self.generic_visit(node)
+
     VariableAssignmentVisitor().visit(code_ast)
     ReturnVisitor().visit(code_ast)
 
