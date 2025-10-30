@@ -220,11 +220,35 @@ class ConsoleFormatter:
         return tree
 
     def create_task_branch(
-        self, crew_tree: Tree | None, task_id: str, task_name: str | None = None
+        self, crew_tree: Tree | None, task_id: str, task_name: str | None = None, attempt_number: int | None = None
     ) -> Tree | None:
         """Create and initialize a task branch."""
         if not self.verbose:
             return None
+
+        # Check if this is a retry (attempt > 1) and we have an existing branch
+        if attempt_number and attempt_number > 1 and crew_tree:
+            # Look for existing task branch to update instead of creating new one
+            for branch in crew_tree.children:
+                if str(task_id) in str(branch.label):
+                    # Update existing branch label with attempt number
+                    task_content = Text()
+                    if task_name:
+                        task_content.append("📋 Task: ", style="yellow bold")
+                        task_content.append(f"{task_name}", style="yellow bold")
+                        task_content.append(f" [Attempt {attempt_number}]", style="yellow dim italic")
+                        task_content.append(f" (ID: {task_id})", style="yellow dim")
+                    else:
+                        task_content.append(f"📋 Task: {task_id}", style="yellow bold")
+                        task_content.append(f" [Attempt {attempt_number}]", style="yellow dim italic")
+
+                    task_content.append("\nStatus: ", style="white")
+                    task_content.append("Executing Task...", style="yellow dim")
+                    branch.label = task_content
+                    self.print(crew_tree)
+                    self.print()
+                    self.current_task_branch = branch
+                    return branch
 
         task_content = Text()
 
@@ -232,9 +256,15 @@ class ConsoleFormatter:
         if task_name:
             task_content.append("📋 Task: ", style="yellow bold")
             task_content.append(f"{task_name}", style="yellow bold")
+            # Only show attempt number for retries (attempt > 1)
+            if attempt_number and attempt_number > 1:
+                task_content.append(f" [Attempt {attempt_number}]", style="yellow dim italic")
             task_content.append(f" (ID: {task_id})", style="yellow dim")
         else:
             task_content.append(f"📋 Task: {task_id}", style="yellow bold")
+            # Only show attempt number for retries (attempt > 1)
+            if attempt_number and attempt_number > 1:
+                task_content.append(f" [Attempt {attempt_number}]", style="yellow dim italic")
 
         task_content.append("\nStatus: ", style="white")
         task_content.append("Executing Task...", style="yellow dim")
@@ -260,6 +290,7 @@ class ConsoleFormatter:
         agent_role: str,
         status: str = "completed",
         task_name: str | None = None,
+        attempt_number: int | None = None,
     ) -> None:
         """Update task status in the tree."""
         if not self.verbose or crew_tree is None:
@@ -283,9 +314,15 @@ class ConsoleFormatter:
                 if task_name:
                     task_content.append("📋 Task: ", style=f"{style} bold")
                     task_content.append(f"{task_name}", style=f"{style} bold")
+                    # Only show attempt number for retries (attempt > 1)
+                    if attempt_number and attempt_number > 1:
+                        task_content.append(f" [Attempt {attempt_number}]", style=f"{style} dim italic")
                     task_content.append(f" (ID: {task_id})", style=f"{style} dim")
                 else:
                     task_content.append(f"📋 Task: {task_id}", style=f"{style} bold")
+                    # Only show attempt number for retries (attempt > 1)
+                    if attempt_number and attempt_number > 1:
+                        task_content.append(f" [Attempt {attempt_number}]", style=f"{style} dim italic")
 
                 # Second line: Assigned to
                 task_content.append("\nAssigned to: ", style="white")

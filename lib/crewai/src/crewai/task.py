@@ -514,7 +514,9 @@ class Task(BaseModel):
             tools = tools or self.tools or []
 
             self.processed_by_agents.add(agent.role)
-            crewai_event_bus.emit(self, TaskStartedEvent(context=context, task=self))
+            crewai_event_bus.emit(
+                self, TaskStartedEvent(context=context, task=self, attempt_number=self.retry_count + 1)
+            )
             result = agent.execute_task(
                 task=self,
                 context=context,
@@ -572,12 +574,12 @@ class Task(BaseModel):
                 )
                 self._save_file(content)
             crewai_event_bus.emit(
-                self, TaskCompletedEvent(output=task_output, task=self)
+                self, TaskCompletedEvent(output=task_output, task=self, attempt_number=self.retry_count + 1)
             )
             return task_output
         except Exception as e:
             self.end_time = datetime.datetime.now()
-            crewai_event_bus.emit(self, TaskFailedEvent(error=str(e), task=self))
+            crewai_event_bus.emit(self, TaskFailedEvent(error=str(e), task=self, attempt_number=self.retry_count + 1))
             raise e  # Re-raise the exception after emitting the event
 
     def prompt(self) -> str:
