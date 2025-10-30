@@ -19,9 +19,16 @@ class StringKnowledgeSource(BaseKnowledgeSource):
             raise ValueError("StringKnowledgeSource only accepts string content")
 
     def add(self) -> None:
-        """Add string content to the knowledge source, chunk it, compute embeddings, and save them."""
-        new_chunks = self._chunk_text(self.content)
-        self.chunks.extend(new_chunks)
+        """Add string content to the knowledge source, chunk it with metadata, and save them."""
+        text_chunks = self._chunk_text(self.content)
+        for chunk_index, chunk in enumerate(text_chunks):
+            self.chunks.append({
+                "content": chunk,
+                "metadata": {
+                    "chunk_index": chunk_index,
+                    "source_type": "string",
+                }
+            })
         self._save_documents()
 
     def _chunk_text(self, text: str) -> list[str]:

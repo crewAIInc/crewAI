@@ -94,9 +94,19 @@ class CrewDoclingSource(BaseKnowledgeSource):
     def add(self) -> None:
         if self.content is None:
             return
-        for doc in self.content:
-            new_chunks_iterable = self._chunk_doc(doc)
-            self.chunks.extend(list(new_chunks_iterable))
+        for doc_index, doc in enumerate(self.content):
+            filepath = self.safe_file_paths[doc_index] if doc_index < len(self.safe_file_paths) else "unknown"
+            chunk_index = 0
+            for chunk_text in self._chunk_doc(doc):
+                self.chunks.append({
+                    "content": chunk_text,
+                    "metadata": {
+                        "filepath": str(filepath),
+                        "chunk_index": chunk_index,
+                        "source_type": "docling",
+                    }
+                })
+                chunk_index += 1
         self._save_documents()
 
     def _convert_source_to_docling_documents(self) -> list[DoclingDocument]:

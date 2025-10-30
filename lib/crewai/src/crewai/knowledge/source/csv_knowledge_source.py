@@ -21,14 +21,20 @@ class CSVKnowledgeSource(BaseFileKnowledgeSource):
 
     def add(self) -> None:
         """
-        Add CSV file content to the knowledge source, chunk it, compute embeddings,
+        Add CSV file content to the knowledge source, chunk it with metadata,
         and save the embeddings.
         """
-        content_str = (
-            str(self.content) if isinstance(self.content, dict) else self.content
-        )
-        new_chunks = self._chunk_text(content_str)
-        self.chunks.extend(new_chunks)
+        for filepath, text in self.content.items():
+            text_chunks = self._chunk_text(text)
+            for chunk_index, chunk in enumerate(text_chunks):
+                self.chunks.append({
+                    "content": chunk,
+                    "metadata": {
+                        "filepath": str(filepath),
+                        "chunk_index": chunk_index,
+                        "source_type": "csv",
+                    }
+                })
         self._save_documents()
 
     def _chunk_text(self, text: str) -> list[str]:

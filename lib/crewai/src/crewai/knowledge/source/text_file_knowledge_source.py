@@ -17,12 +17,20 @@ class TextFileKnowledgeSource(BaseFileKnowledgeSource):
 
     def add(self) -> None:
         """
-        Add text file content to the knowledge source, chunk it, compute embeddings,
+        Add text file content to the knowledge source, chunk it with metadata,
         and save the embeddings.
         """
-        for text in self.content.values():
-            new_chunks = self._chunk_text(text)
-            self.chunks.extend(new_chunks)
+        for filepath, text in self.content.items():
+            text_chunks = self._chunk_text(text)
+            for chunk_index, chunk in enumerate(text_chunks):
+                self.chunks.append({
+                    "content": chunk,
+                    "metadata": {
+                        "filepath": str(filepath),
+                        "chunk_index": chunk_index,
+                        "source_type": "text_file",
+                    }
+                })
         self._save_documents()
 
     def _chunk_text(self, text: str) -> list[str]:

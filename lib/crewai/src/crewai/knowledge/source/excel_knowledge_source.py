@@ -142,21 +142,34 @@ class ExcelKnowledgeSource(BaseKnowledgeSource):
 
     def add(self) -> None:
         """
-        Add Excel file content to the knowledge source, chunk it, compute embeddings,
+        Add Excel file content to the knowledge source, chunk it with metadata,
         and save the embeddings.
         """
-        # Convert dictionary values to a single string if content is a dictionary
-        # Updated to account for .xlsx workbooks with multiple tabs/sheets
-        content_str = ""
-        for value in self.content.values():
-            if isinstance(value, dict):
-                for sheet_value in value.values():
-                    content_str += str(sheet_value) + "\n"
+        for filepath, sheets in self.content.items():
+            if isinstance(sheets, dict):
+                for sheet_name, sheet_content in sheets.items():
+                    text_chunks = self._chunk_text(str(sheet_content))
+                    for chunk_index, chunk in enumerate(text_chunks):
+                        self.chunks.append({
+                            "content": chunk,
+                            "metadata": {
+                                "filepath": str(filepath),
+                                "sheet_name": sheet_name,
+                                "chunk_index": chunk_index,
+                                "source_type": "excel",
+                            }
+                        })
             else:
-                content_str += str(value) + "\n"
-
-        new_chunks = self._chunk_text(content_str)
-        self.chunks.extend(new_chunks)
+                text_chunks = self._chunk_text(str(sheets))
+                for chunk_index, chunk in enumerate(text_chunks):
+                    self.chunks.append({
+                        "content": chunk,
+                        "metadata": {
+                            "filepath": str(filepath),
+                            "chunk_index": chunk_index,
+                            "source_type": "excel",
+                        }
+                    })
         self._save_documents()
 
     def _chunk_text(self, text: str) -> list[str]:

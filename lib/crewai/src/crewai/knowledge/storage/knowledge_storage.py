@@ -1,5 +1,6 @@
 import logging
 import traceback
+from collections.abc import Mapping, Sequence
 from typing import Any, cast
 import warnings
 
@@ -14,6 +15,72 @@ from crewai.rag.embeddings.types import ProviderSpec
 from crewai.rag.factory import create_client
 from crewai.rag.types import BaseRecord, SearchResult
 from crewai.utilities.logger import Logger
+
+
+def _coerce_to_records(documents: Sequence[Any]) -> list[BaseRecord]:
+    """Convert various document formats to BaseRecord format.
+    
+    Supports:
+    - str: Simple string content
+    - dict: With 'content' key and optional 'metadata' and 'doc_id'
+    
+    Args:
+        documents: Sequence of documents in various formats
+        
+    Returns:
+        List of BaseRecord dictionaries with content and optional metadata
+    """
+    records: list[BaseRecord] = []
+    
+    for d in documents:
+        if isinstance(d, str):
+            records.append({"content": d})
+        elif isinstance(d, Mapping):
+            if "content" not in d:
+                continue
+            
+            content = d["content"]
+            if content is None or (isinstance(content, str) and not content):
+                continue
+            
+            content_str = str(content)
+            
+            rec: BaseRecord = {"content": content_str}
+            
+            if "metadata" in d:
+                metadata_raw = d["metadata"]
+                if isinstance(metadata_raw, Mapping):
+                    sanitized_metadata: dict[str, str | int | float | bool] = {}
+                    for k, v in metadata_raw.items():
+                        if isinstance(v, (str, int, float, bool)):
+                            sanitized_metadata[str(k)] = v
+                        elif v is None:
+                            sanitized_metadata[str(k)] = ""
+                        else:
+                            sanitized_metadata[str(k)] = str(v)
+                    rec["metadata"] = sanitized_metadata
+                elif isinstance(metadata_raw, list):
+                    sanitized_list: list[Mapping[str, str | int | float | bool]] = []
+                    for item in metadata_raw:
+                        if isinstance(item, Mapping):
+                            sanitized_item: dict[str, str | int | float | bool] = {}
+                            for k, v in item.items():
+                                if isinstance(v, (str, int, float, bool)):
+                                    sanitized_item[str(k)] = v
+                                elif v is None:
+                                    sanitized_item[str(k)] = ""
+                                else:
+                                    sanitized_item[str(k)] = str(v)
+                            sanitized_list.append(sanitized_item)
+                    if sanitized_list:
+                        rec["metadata"] = sanitized_list
+            
+            if "doc_id" in d and isinstance(d["doc_id"], str):
+                rec["doc_id"] = d["doc_id"]
+            
+            records.append(rec)
+    
+    return records
 
 
 class KnowledgeStorage(BaseKnowledgeStorage):
@@ -98,7 +165,7 @@ class KnowledgeStorage(BaseKnowledgeStorage):
                 f"Error during knowledge reset: {e!s}\n{traceback.format_exc()}"
             )
 
-    def save(self, documents: list[str]) -> None:
+    def save(self, documents: list[str] | list[dict[str, Any]]) -> None:
         try:
             client = self._get_client()
             collection_name = (
@@ -108,7 +175,7 @@ class KnowledgeStorage(BaseKnowledgeStorage):
             )
             client.get_or_create_collection(collection_name=collection_name)
 
-            rag_documents: list[BaseRecord] = [{"content": doc} for doc in documents]
+            rag_documents: list[BaseRecord] = _coerce_to_records(documents)
 
             client.add_documents(
                 collection_name=collection_name, documents=rag_documents
