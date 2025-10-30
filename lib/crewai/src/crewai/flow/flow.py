@@ -45,7 +45,7 @@ from crewai.events.types.flow_events import (
     MethodExecutionFinishedEvent,
     MethodExecutionStartedEvent,
 )
-from crewai.flow.flow_visualizer import plot_flow
+from crewai.flow.visualization import build_flow_structure, render_interactive
 from crewai.flow.flow_wrappers import (
     FlowCondition,
     FlowConditions,
@@ -1344,7 +1344,16 @@ class Flow(Generic[T], metaclass=FlowMeta):
             logger.info(message)
         logger.warning(message)
 
-    def plot(self, filename: str = "crewai_flow") -> None:
+    def plot(self, filename: str = "crewai_flow.html", show: bool = True) -> str:
+        """Create interactive HTML visualization of Flow structure.
+
+        Args:
+            filename: Output HTML filename (default: "crewai_flow.html").
+            show: Whether to open in browser (default: True).
+
+        Returns:
+            Absolute path to generated HTML file.
+        """
         crewai_event_bus.emit(
             self,
             FlowPlotEvent(
@@ -1352,4 +1361,5 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 flow_name=self.name or self.__class__.__name__,
             ),
         )
-        plot_flow(self, filename)
+        structure = build_flow_structure(self)
+        return render_interactive(structure, filename=filename, show=show)
