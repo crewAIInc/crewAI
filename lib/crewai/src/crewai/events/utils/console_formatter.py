@@ -220,7 +220,11 @@ class ConsoleFormatter:
         return tree
 
     def create_task_branch(
-        self, crew_tree: Tree | None, task_id: str, task_name: str | None = None, attempt_number: int | None = None
+        self,
+        crew_tree: Tree | None,
+        task_id: str,
+        task_name: str | None = None,
+        attempt_number: int | None = None,
     ) -> Tree | None:
         """Create and initialize a task branch."""
         if not self.verbose:
@@ -236,11 +240,15 @@ class ConsoleFormatter:
                     if task_name:
                         task_content.append("📋 Task: ", style="yellow bold")
                         task_content.append(f"{task_name}", style="yellow bold")
-                        task_content.append(f" [Attempt {attempt_number}]", style="yellow dim italic")
+                        task_content.append(
+                            f" [Attempt {attempt_number}]", style="yellow dim italic"
+                        )
                         task_content.append(f" (ID: {task_id})", style="yellow dim")
                     else:
                         task_content.append(f"📋 Task: {task_id}", style="yellow bold")
-                        task_content.append(f" [Attempt {attempt_number}]", style="yellow dim italic")
+                        task_content.append(
+                            f" [Attempt {attempt_number}]", style="yellow dim italic"
+                        )
 
                     task_content.append("\nStatus: ", style="white")
                     task_content.append("Executing Task...", style="yellow dim")
@@ -258,13 +266,17 @@ class ConsoleFormatter:
             task_content.append(f"{task_name}", style="yellow bold")
             # Only show attempt number for retries (attempt > 1)
             if attempt_number and attempt_number > 1:
-                task_content.append(f" [Attempt {attempt_number}]", style="yellow dim italic")
+                task_content.append(
+                    f" [Attempt {attempt_number}]", style="yellow dim italic"
+                )
             task_content.append(f" (ID: {task_id})", style="yellow dim")
         else:
             task_content.append(f"📋 Task: {task_id}", style="yellow bold")
             # Only show attempt number for retries (attempt > 1)
             if attempt_number and attempt_number > 1:
-                task_content.append(f" [Attempt {attempt_number}]", style="yellow dim italic")
+                task_content.append(
+                    f" [Attempt {attempt_number}]", style="yellow dim italic"
+                )
 
         task_content.append("\nStatus: ", style="white")
         task_content.append("Executing Task...", style="yellow dim")
@@ -316,13 +328,17 @@ class ConsoleFormatter:
                     task_content.append(f"{task_name}", style=f"{style} bold")
                     # Only show attempt number for retries (attempt > 1)
                     if attempt_number and attempt_number > 1:
-                        task_content.append(f" [Attempt {attempt_number}]", style=f"{style} dim italic")
+                        task_content.append(
+                            f" [Attempt {attempt_number}]", style=f"{style} dim italic"
+                        )
                     task_content.append(f" (ID: {task_id})", style=f"{style} dim")
                 else:
                     task_content.append(f"📋 Task: {task_id}", style=f"{style} bold")
                     # Only show attempt number for retries (attempt > 1)
                     if attempt_number and attempt_number > 1:
-                        task_content.append(f" [Attempt {attempt_number}]", style=f"{style} dim italic")
+                        task_content.append(
+                            f" [Attempt {attempt_number}]", style=f"{style} dim italic"
+                        )
 
                 # Second line: Assigned to
                 task_content.append("\nAssigned to: ", style="white")
