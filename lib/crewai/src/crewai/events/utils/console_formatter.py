@@ -271,7 +271,7 @@ class ConsoleFormatter:
 
         # Find the current task branch and update its label to show attempt number
         for branch in self.current_crew_tree.children:
-            if branch == self.current_task_branch:
+            if branch is self.current_task_branch:
                 # Extract task info from current label
                 current_label = str(branch.label)
 
@@ -282,9 +282,19 @@ class ConsoleFormatter:
                 if "📋 Task: " in current_label:
                     # Extract task name and ID from the current label
                     label_parts = current_label.split("📋 Task: ")[1].split("\n")[0]
+
                     # Remove any existing attempt number from the label
                     if " [Attempt " in label_parts:
-                        label_parts = label_parts.split(" [Attempt ")[0]
+                        # Split and rejoin to remove attempt number but preserve ID
+                        parts = label_parts.split(" [Attempt ")
+                        before_attempt = parts[0]
+                        after_attempt = parts[1]
+                        # Find the closing bracket and get everything after it
+                        if "]" in after_attempt:
+                            after_bracket = after_attempt.split("]", 1)[1]
+                            label_parts = before_attempt + after_bracket
+                        else:
+                            label_parts = before_attempt
 
                     if " (ID: " in label_parts:
                         task_name = label_parts.split(" (ID: ")[0]
