@@ -241,8 +241,12 @@ def test_get_conversion_instructions_non_gpt() -> None:
     llm = LLM(model="ollama/llama3.1", base_url="http://localhost:11434")
     with patch.object(LLM, "supports_function_calling", return_value=False):
         instructions = get_conversion_instructions(SimpleModel, llm)
-        assert '"name": str' in instructions
-        assert '"age": int' in instructions
+        # Check that the JSON schema dict string representation is in instructions
+        assert "Please convert the following text into valid JSON" in instructions
+        assert "Output ONLY the valid JSON and nothing else" in instructions
+        assert "The JSON must follow this format exactly" in instructions
+        # The dict gets stringified when concatenated, so check for dict structure
+        assert "'type': 'json_schema'" in instructions or '"type": "json_schema"' in instructions
 
 
 # Tests for is_gpt
@@ -295,16 +299,24 @@ def test_create_converter_fails_without_agent_or_converter_cls() -> None:
 
 def test_generate_model_description_simple_model() -> None:
     description = generate_model_description(SimpleModel)
-    expected_description = '{\n  "name": str,\n  "age": int\n}'
-    assert description == expected_description
+    # generate_model_description now returns a JSON schema dict
+    assert isinstance(description, dict)
+    assert description["type"] == "json_schema"
+    assert description["json_schema"]["name"] == "SimpleModel"
+    assert description["json_schema"]["strict"] is True
+    assert "name" in description["json_schema"]["schema"]["properties"]
+    assert "age" in description["json_schema"]["schema"]["properties"]
 
 
 def test_generate_model_description_nested_model() -> None:
     description = generate_model_description(NestedModel)
-    expected_description = (
-        '{\n  "id": int,\n  "data": {\n  "name": str,\n  "age": int\n}\n}'
-    )
-    assert description == expected_description
+    # generate_model_description now returns a JSON schema dict
+    assert isinstance(description, dict)
+    assert description["type"] == "json_schema"
+    assert description["json_schema"]["name"] == "NestedModel"
+    assert description["json_schema"]["strict"] is True
+    assert "id" in description["json_schema"]["schema"]["properties"]
+    assert "data" in description["json_schema"]["schema"]["properties"]
 
 
 def test_generate_model_description_optional_field() -> None:
@@ -313,8 +325,11 @@ def test_generate_model_description_optional_field() -> None:
         age: int | None
 
     description = generate_model_description(ModelWithOptionalField)
-    expected_description = '{\n  "name": str,\n  "age": int | None\n}'
-    assert description == expected_description
+    # generate_model_description now returns a JSON schema dict
+    assert isinstance(description, dict)
+    assert description["type"] == "json_schema"
+    assert description["json_schema"]["name"] == "ModelWithOptionalField"
+    assert description["json_schema"]["strict"] is True
 
 
 def test_generate_model_description_list_field() -> None:
@@ -322,8 +337,11 @@ def test_generate_model_description_list_field() -> None:
         items: list[int]
 
     description = generate_model_description(ModelWithListField)
-    expected_description = '{\n  "items": List[int]\n}'
-    assert description == expected_description
+    # generate_model_description now returns a JSON schema dict
+    assert isinstance(description, dict)
+    assert description["type"] == "json_schema"
+    assert description["json_schema"]["name"] == "ModelWithListField"
+    assert description["json_schema"]["strict"] is True
 
 
 def test_generate_model_description_dict_field() -> None:
@@ -331,8 +349,11 @@ def test_generate_model_description_dict_field() -> None:
         attributes: dict[str, int]
 
     description = generate_model_description(ModelWithDictField)
-    expected_description = '{\n  "attributes": Dict[str, int]\n}'
-    assert description == expected_description
+    # generate_model_description now returns a JSON schema dict
+    assert isinstance(description, dict)
+    assert description["type"] == "json_schema"
+    assert description["json_schema"]["name"] == "ModelWithDictField"
+    assert description["json_schema"]["strict"] is True
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -595,8 +616,11 @@ def test_generate_model_description_union_field() -> None:
         field: int | str | None
 
     description = generate_model_description(UnionModel)
-    expected_description = '{\n  "field": int | str | None\n}'
-    assert description == expected_description
+    # generate_model_description now returns a JSON schema dict
+    assert isinstance(description, dict)
+    assert description["type"] == "json_schema"
+    assert description["json_schema"]["name"] == "UnionModel"
+    assert description["json_schema"]["strict"] is True
 
 def test_internal_instructor_with_openai_provider() -> None:
     """Test InternalInstructor with OpenAI provider using registry pattern."""
