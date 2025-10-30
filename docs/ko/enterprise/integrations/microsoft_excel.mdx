@@ -1,0 +1,250 @@
+---
+title: Microsoft Excel 통합
+description: "CrewAI를 위한 Microsoft Excel 통합으로 통합 문서 및 데이터 관리."
+icon: "table"
+mode: "wide"
+---
+
+## 개요
+
+에이전트가 OneDrive 또는 SharePoint에서 Excel 통합 문서, 워크시트, 테이블 및 차트를 생성하고 관리할 수 있도록 합니다. AI 기반 자동화로 데이터 범위를 조작하고, 시각화를 생성하고, 테이블을 관리하며, 스프레드시트 워크플로를 간소화합니다.
+
+## 전제 조건
+
+Microsoft Excel 통합을 사용하기 전에 다음 사항을 확인하세요:
+
+- 활성 구독이 있는 [CrewAI AMP](https://app.crewai.com) 계정
+- Excel 및 OneDrive/SharePoint 액세스 권한이 있는 Microsoft 365 계정
+- [통합 페이지](https://app.crewai.com/crewai_plus/connectors)를 통해 Microsoft 계정 연결
+
+## Microsoft Excel 통합 설정
+
+### 1. Microsoft 계정 연결
+
+1. [CrewAI AMP 통합](https://app.crewai.com/crewai_plus/connectors)으로 이동
+2. 인증 통합 섹션에서 **Microsoft Excel** 찾기
+3. **연결**을 클릭하고 OAuth 플로우 완료
+4. 파일 및 Excel 통합 문서 액세스에 필요한 권한 부여
+5. [통합 설정](https://app.crewai.com/crewai_plus/settings/integrations)에서 Enterprise Token 복사
+
+### 2. 필요한 패키지 설치
+
+```bash
+uv add crewai-tools
+```
+
+### 3. 환경 변수 설정
+
+<Note>
+  `Agent(apps=[])`와 함께 통합을 사용하려면 Enterprise Token으로 `CREWAI_PLATFORM_INTEGRATION_TOKEN` 환경 변수를 설정해야 합니다.
+</Note>
+
+```bash
+export CREWAI_PLATFORM_INTEGRATION_TOKEN="your_enterprise_token"
+```
+
+또는 `.env` 파일에 추가하세요:
+
+```
+CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
+```
+
+## 사용 가능한 작업
+
+<AccordionGroup>
+  <Accordion title="microsoft_excel/create_workbook">
+    **설명:** OneDrive 또는 SharePoint에 새 Excel 통합 문서를 만듭니다.
+
+    **매개변수:**
+    - `file_path` (string, 필수): 통합 문서를 만들 경로 (예: 'MyWorkbook.xlsx')
+    - `worksheets` (array, 선택사항): 만들 초기 워크시트들. 각 항목은 `name` (string, 워크시트 이름)이 있는 객체.
+  </Accordion>
+
+  <Accordion title="microsoft_excel/get_workbooks">
+    **설명:** OneDrive 또는 SharePoint에서 모든 Excel 통합 문서를 가져옵니다.
+
+    **매개변수:**
+    - `select` (string, 선택사항): 반환할 특정 속성 선택.
+    - `filter` (string, 선택사항): OData 구문을 사용하여 결과 필터링.
+    - `expand` (string, 선택사항): 관련 리소스를 인라인으로 확장.
+    - `top` (integer, 선택사항): 반환할 항목 수 (최소 1, 최대 999).
+    - `orderby` (string, 선택사항): 지정된 속성으로 결과 정렬.
+  </Accordion>
+
+  <Accordion title="microsoft_excel/get_worksheets">
+    **설명:** Excel 통합 문서의 모든 워크시트를 가져옵니다.
+
+    **매개변수:**
+    - `file_id` (string, 필수): Excel 파일의 ID.
+    - `select` (string, 선택사항): 반환할 특정 속성 선택 (예: 'id,name,position').
+    - `filter` (string, 선택사항): OData 구문을 사용하여 결과 필터링.
+    - `expand` (string, 선택사항): 관련 리소스를 인라인으로 확장.
+    - `top` (integer, 선택사항): 반환할 항목 수 (최소 1, 최대 999).
+    - `orderby` (string, 선택사항): 지정된 속성으로 결과 정렬.
+  </Accordion>
+
+  <Accordion title="microsoft_excel/create_worksheet">
+    **설명:** Excel 통합 문서에 새 워크시트를 만듭니다.
+
+    **매개변수:**
+    - `file_id` (string, 필수): Excel 파일의 ID.
+    - `name` (string, 필수): 새 워크시트의 이름.
+  </Accordion>
+
+  <Accordion title="microsoft_excel/get_range_data">
+    **설명:** Excel 워크시트의 특정 범위에서 데이터를 가져옵니다.
+
+    **매개변수:**
+    - `file_id` (string, 필수): Excel 파일의 ID.
+    - `worksheet_name` (string, 필수): 워크시트의 이름.
+    - `range` (string, 필수): 범위 주소 (예: 'A1:C10').
+  </Accordion>
+
+  <Accordion title="microsoft_excel/update_range_data">
+    **설명:** Excel 워크시트의 특정 범위에서 데이터를 업데이트합니다.
+
+    **매개변수:**
+    - `file_id` (string, 필수): Excel 파일의 ID.
+    - `worksheet_name` (string, 필수): 워크시트의 이름.
+    - `range` (string, 필수): 범위 주소 (예: 'A1:C10').
+    - `values` (array, 필수): 범위에 설정할 값들의 2D 배열. 각 내부 배열은 행을 나타내며, 요소는 string, number 또는 integer일 수 있음.
+  </Accordion>
+
+  <Accordion title="microsoft_excel/add_table">
+    **설명:** Excel 워크시트에 테이블을 만듭니다.
+
+    **매개변수:**
+    - `file_id` (string, 필수): Excel 파일의 ID.
+    - `worksheet_name` (string, 필수): 워크시트의 이름.
+    - `range` (string, 필수): 테이블의 범위 (예: 'A1:D10').
+    - `has_headers` (boolean, 선택사항): 첫 번째 행이 헤더를 포함하는지 여부. 기본값: true.
+  </Accordion>
+
+  <Accordion title="microsoft_excel/get_tables">
+    **설명:** Excel 워크시트의 모든 테이블을 가져옵니다.
+
+    **매개변수:**
+    - `file_id` (string, 필수): Excel 파일의 ID.
+    - `worksheet_name` (string, 필수): 워크시트의 이름.
+  </Accordion>
+
+  <Accordion title="microsoft_excel/add_table_row">
+    **설명:** Excel 테이블에 새 행을 추가합니다.
+
+    **매개변수:**
+    - `file_id` (string, 필수): Excel 파일의 ID.
+    - `worksheet_name` (string, 필수): 워크시트의 이름.
+    - `table_name` (string, 필수): 테이블의 이름.
+    - `values` (array, 필수): 새 행의 값들 배열. 요소는 string, number 또는 integer일 수 있음.
+  </Accordion>
+
+  <Accordion title="microsoft_excel/create_chart">
+    **설명:** Excel 워크시트에 차트를 만듭니다.
+
+    **매개변수:**
+    - `file_id` (string, 필수): Excel 파일의 ID.
+    - `worksheet_name` (string, 필수): 워크시트의 이름.
+    - `chart_type` (string, 필수): 차트 유형 (예: 'ColumnClustered', 'Line', 'Pie').
+    - `source_data` (string, 필수): 차트의 데이터 범위 (예: 'A1:B10').
+    - `series_by` (string, 선택사항): 데이터 해석 방법 ('Auto', 'Columns' 또는 'Rows'). 기본값: 'Auto'.
+  </Accordion>
+
+  <Accordion title="microsoft_excel/get_cell">
+    **설명:** Excel 워크시트의 단일 셀 값을 가져옵니다.
+
+    **매개변수:**
+    - `file_id` (string, 필수): Excel 파일의 ID.
+    - `worksheet_name` (string, 필수): 워크시트의 이름.
+    - `row` (integer, 필수): 행 번호 (0 기반).
+    - `column` (integer, 필수): 열 번호 (0 기반).
+  </Accordion>
+
+  <Accordion title="microsoft_excel/get_used_range">
+    **설명:** Excel 워크시트의 사용된 범위를 가져옵니다 (모든 데이터를 포함).
+
+    **매개변수:**
+    - `file_id` (string, 필수): Excel 파일의 ID.
+    - `worksheet_name` (string, 필수): 워크시트의 이름.
+  </Accordion>
+
+  <Accordion title="microsoft_excel/list_charts">
+    **설명:** Excel 워크시트의 모든 차트를 가져옵니다.
+
+    **매개변수:**
+    - `file_id` (string, 필수): Excel 파일의 ID.
+    - `worksheet_name` (string, 필수): 워크시트의 이름.
+  </Accordion>
+
+  <Accordion title="microsoft_excel/delete_worksheet">
+    **설명:** Excel 통합 문서에서 워크시트를 삭제합니다.
+
+    **매개변수:**
+    - `file_id` (string, 필수): Excel 파일의 ID.
+    - `worksheet_name` (string, 필수): 삭제할 워크시트의 이름.
+  </Accordion>
+
+  <Accordion title="microsoft_excel/delete_table">
+    **설명:** Excel 워크시트에서 테이블을 삭제합니다.
+
+    **매개변수:**
+    - `file_id` (string, 필수): Excel 파일의 ID.
+    - `worksheet_name` (string, 필수): 워크시트의 이름.
+    - `table_name` (string, 필수): 삭제할 테이블의 이름.
+  </Accordion>
+
+  <Accordion title="microsoft_excel/list_names">
+    **설명:** Excel 통합 문서의 모든 명명된 범위를 가져옵니다.
+
+    **매개변수:**
+    - `file_id` (string, 필수): Excel 파일의 ID.
+  </Accordion>
+</AccordionGroup>
+
+## 사용 예제
+
+### 기본 Microsoft Excel 에이전트 설정
+
+```python
+from crewai import Agent, Task, Crew
+
+# Microsoft Excel 기능을 가진 에이전트 생성
+excel_agent = Agent(
+    role="Excel 데이터 관리자",
+    goal="Excel 통합 문서와 데이터를 효율적으로 관리",
+    backstory="Microsoft Excel 작업 및 데이터 조작 전문 AI 어시스턴트.",
+    apps=['microsoft_excel']  # 모든 Excel 작업을 사용할 수 있습니다
+)
+
+# 새 통합 문서 생성 작업
+create_workbook_task = Task(
+    description="'월간보고서.xlsx'라는 이름으로 새 Excel 통합 문서를 만들고 '매출데이터'라는 초기 워크시트를 포함하세요.",
+    agent=excel_agent,
+    expected_output="새 통합 문서 '월간보고서.xlsx'가 '매출데이터' 워크시트와 함께 생성됨."
+)
+
+# 작업 실행
+crew = Crew(
+    agents=[excel_agent],
+    tasks=[create_workbook_task]
+)
+
+crew.kickoff()
+```
+
+## 문제 해결
+
+### 일반적인 문제
+
+**인증 오류**
+- Microsoft 계정이 파일 액세스에 필요한 권한을 가지고 있는지 확인하세요 (예: `Files.Read.All`, `Files.ReadWrite.All`).
+- OAuth 연결이 필요한 모든 범위를 포함하는지 확인하세요.
+
+**파일 생성 문제**
+- 통합 문서를 만들 때 `file_path`가 `.xlsx` 확장자로 끝나는지 확인하세요.
+- 대상 위치(OneDrive/SharePoint)에 쓰기 권한이 있는지 확인하세요.
+
+### 도움 받기
+
+<Card title="도움이 필요하신가요?" icon="headset" href="mailto:support@crewai.com">
+  Microsoft Excel 통합 설정 또는 문제 해결에 대한 지원이 필요하시면 지원팀에 문의하세요.
+</Card>

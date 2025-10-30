@@ -1,0 +1,174 @@
+---
+title: Google Docs 통합
+description: "CrewAI를 위한 Google Docs 통합으로 문서 생성 및 편집."
+icon: "file-lines"
+mode: "wide"
+---
+
+## 개요
+
+에이전트가 텍스트 조작 및 서식을 사용하여 Google Docs 문서를 생성, 편집 및 관리할 수 있도록 합니다. AI 기반 자동화로 문서 생성을 자동화하고, 텍스트를 삽입 및 교체하고, 콘텐츠 범위를 관리하며, 문서 워크플로를 간소화합니다.
+
+## 전제 조건
+
+Google Docs 통합을 사용하기 전에 다음 사항을 확인하세요:
+
+- 활성 구독이 있는 [CrewAI AMP](https://app.crewai.com) 계정
+- Google Docs 액세스 권한이 있는 Google 계정
+- [통합 페이지](https://app.crewai.com/crewai_plus/connectors)를 통해 Google 계정 연결
+
+## Google Docs 통합 설정
+
+### 1. Google 계정 연결
+
+1. [CrewAI AMP 통합](https://app.crewai.com/crewai_plus/connectors)으로 이동
+2. 인증 통합 섹션에서 **Google Docs** 찾기
+3. **연결**을 클릭하고 OAuth 플로우 완료
+4. 문서 액세스에 필요한 권한 부여
+5. [통합 설정](https://app.crewai.com/crewai_plus/settings/integrations)에서 Enterprise Token 복사
+
+### 2. 필요한 패키지 설치
+
+```bash
+uv add crewai-tools
+```
+
+### 3. 환경 변수 설정
+
+<Note>
+  `Agent(apps=[])`와 함께 통합을 사용하려면 Enterprise Token으로 `CREWAI_PLATFORM_INTEGRATION_TOKEN` 환경 변수를 설정해야 합니다.
+</Note>
+
+```bash
+export CREWAI_PLATFORM_INTEGRATION_TOKEN="your_enterprise_token"
+```
+
+또는 `.env` 파일에 추가하세요:
+
+```
+CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
+```
+
+## 사용 가능한 작업
+
+<AccordionGroup>
+  <Accordion title="google_docs/create_document">
+    **설명:** 새 Google 문서를 만듭니다.
+
+    **매개변수:**
+    - `title` (string, 선택사항): 새 문서의 제목.
+  </Accordion>
+
+  <Accordion title="google_docs/get_document">
+    **설명:** Google 문서의 내용과 메타데이터를 가져옵니다.
+
+    **매개변수:**
+    - `documentId` (string, 필수): 검색할 문서의 ID.
+    - `includeTabsContent` (boolean, 선택사항): 탭 내용을 포함할지 여부. 기본값: false
+    - `suggestionsViewMode` (string, 선택사항): 문서에 적용할 제안 보기 모드. 옵션: DEFAULT_FOR_CURRENT_ACCESS, PREVIEW_SUGGESTIONS_ACCEPTED, PREVIEW_WITHOUT_SUGGESTIONS. 기본값: DEFAULT_FOR_CURRENT_ACCESS
+  </Accordion>
+
+  <Accordion title="google_docs/batch_update">
+    **설명:** Google 문서에 하나 이상의 업데이트를 적용합니다.
+
+    **매개변수:**
+    - `documentId` (string, 필수): 업데이트할 문서의 ID.
+    - `requests` (array, 필수): 문서에 적용할 업데이트 목록. 각 항목은 요청을 나타내는 객체.
+    - `writeControl` (object, 선택사항): 쓰기 요청이 실행되는 방식을 제어합니다. `requiredRevisionId` (string)와 `targetRevisionId` (string)를 포함.
+  </Accordion>
+
+  <Accordion title="google_docs/insert_text">
+    **설명:** Google 문서의 특정 위치에 텍스트를 삽입합니다.
+
+    **매개변수:**
+    - `documentId` (string, 필수): 업데이트할 문서의 ID.
+    - `text` (string, 필수): 삽입할 텍스트.
+    - `index` (integer, 선택사항): 텍스트를 삽입할 0 기반 인덱스. 기본값: 1
+  </Accordion>
+
+  <Accordion title="google_docs/replace_text">
+    **설명:** Google 문서에서 텍스트의 모든 인스턴스를 교체합니다.
+
+    **매개변수:**
+    - `documentId` (string, 필수): 업데이트할 문서의 ID.
+    - `containsText` (string, 필수): 찾아서 교체할 텍스트.
+    - `replaceText` (string, 필수): 교체할 텍스트.
+    - `matchCase` (boolean, 선택사항): 검색이 대소문자를 구분할지 여부. 기본값: false
+  </Accordion>
+
+  <Accordion title="google_docs/delete_content_range">
+    **설명:** Google 문서의 특정 범위에서 내용을 삭제합니다.
+
+    **매개변수:**
+    - `documentId` (string, 필수): 업데이트할 문서의 ID.
+    - `startIndex` (integer, 필수): 삭제할 범위의 시작 인덱스.
+    - `endIndex` (integer, 필수): 삭제할 범위의 끝 인덱스.
+  </Accordion>
+
+  <Accordion title="google_docs/insert_page_break">
+    **설명:** Google 문서의 특정 위치에 페이지 나누기를 삽입합니다.
+
+    **매개변수:**
+    - `documentId` (string, 필수): 업데이트할 문서의 ID.
+    - `index` (integer, 선택사항): 페이지 나누기를 삽입할 0 기반 인덱스. 기본값: 1
+  </Accordion>
+
+  <Accordion title="google_docs/create_named_range">
+    **설명:** Google 문서에 명명된 범위를 만듭니다.
+
+    **매개변수:**
+    - `documentId` (string, 필수): 업데이트할 문서의 ID.
+    - `name` (string, 필수): 명명된 범위의 이름.
+    - `startIndex` (integer, 필수): 범위의 시작 인덱스.
+    - `endIndex` (integer, 필수): 범위의 끝 인덱스.
+  </Accordion>
+</AccordionGroup>
+
+## 사용 예제
+
+### 기본 Google Docs 에이전트 설정
+
+```python
+from crewai import Agent, Task, Crew
+
+# Google Docs 기능을 가진 에이전트 생성
+docs_agent = Agent(
+    role="문서 작성자",
+    goal="Google Docs 문서를 효율적으로 생성하고 관리",
+    backstory="Google Docs 문서 생성 및 편집 전문 AI 어시스턴트.",
+    apps=['google_docs']  # 모든 Google Docs 작업을 사용할 수 있습니다
+)
+
+# 새 문서 생성 작업
+create_doc_task = Task(
+    description="'프로젝트 상태 보고서'라는 제목으로 새 Google 문서를 만드세요",
+    agent=docs_agent,
+    expected_output="새 Google 문서 '프로젝트 상태 보고서'가 성공적으로 생성됨"
+)
+
+# 작업 실행
+crew = Crew(
+    agents=[docs_agent],
+    tasks=[create_doc_task]
+)
+
+crew.kickoff()
+```
+
+## 문제 해결
+
+### 일반적인 문제
+
+**인증 오류**
+- Google 계정이 Google Docs 액세스에 필요한 권한을 가지고 있는지 확인하세요.
+- OAuth 연결이 필요한 모든 범위(`https://www.googleapis.com/auth/documents`)를 포함하는지 확인하세요.
+
+**문서 ID 문제**
+- 문서 ID가 올바른지 다시 확인하세요.
+- 문서가 존재하고 계정에서 액세스할 수 있는지 확인하세요.
+
+### 도움 받기
+
+<Card title="도움이 필요하신가요?" icon="headset" href="mailto:support@crewai.com">
+  Google Docs 통합 설정 또는 문제 해결에 대한 지원이 필요하시면 지원팀에 문의하세요.
+</Card>

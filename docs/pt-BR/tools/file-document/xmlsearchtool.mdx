@@ -54,25 +54,25 @@ Este parâmetro é opcional durante a inicialização da ferramenta, mas deve se
 Por padrão, a ferramenta utiliza a OpenAI tanto para embeddings quanto para sumarização. Para personalizar o modelo, você pode usar um dicionário de configuração conforme o exemplo a seguir:
 
 ```python Code  
+from chromadb.config import Settings
+
 tool = XMLSearchTool(
-    config=dict(
-        llm=dict(
-            provider="ollama", # ou google, openai, anthropic, llama2, ...
-            config=dict(
-                model="llama2",
-                # temperature=0.5,
-                # top_p=1,
-                # stream=true,
-            ),
-        ),
-        embedder=dict(
-            provider="google", # ou openai, ollama, ...
-            config=dict(
-                model="models/embedding-001",
-                task_type="retrieval_document",
-                # title="Embeddings",
-            ),
-        ),
-    )
+    config={
+        "embedding_model": {
+            "provider": "openai",
+            "config": {
+                "model": "text-embedding-3-small",
+                # "api_key": "sk-...",
+            },
+        },
+        "vectordb": {
+            "provider": "chromadb",  # ou "qdrant"
+            "config": {
+                # "settings": Settings(persist_directory="/content/chroma", allow_reset=True, is_persistent=True),
+                # from qdrant_client.models import VectorParams, Distance
+                # "vectors_config": VectorParams(size=384, distance=Distance.COSINE),
+            }
+        },
+    }
 )
 ```

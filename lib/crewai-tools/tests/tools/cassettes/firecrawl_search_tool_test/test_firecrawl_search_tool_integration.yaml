@@ -1,0 +1,937 @@
+interactions:
+- request:
+    body: '{"query": "firecrawl", "limit": 5, "scrapeOptions": {"includeTags": [],
+      "excludeTags": [], "onlyMainContent": true, "waitFor": 0, "skipTlsVerification":
+      true, "removeBase64Images": true, "fastMode": false, "blockAds": true, "storeInCache":
+      true, "maxAge": 14400000, "formats": ["markdown"], "mobile": false}, "origin":
+      "python-sdk@4.5.0"}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate, zstd
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '338'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - python-requests/2.32.5
+    method: POST
+    uri: https://api.firecrawl.dev/v2/search
+  response:
+    body:
+      string: "{\"success\":true,\"data\":{\"web\":[{\"url\":\"https://www.firecrawl.dev/\",\"title\":\"Firecrawl
+        - The Web Data API for AI\",\"description\":\"The web crawling, scraping,
+        and search API for AI. Built for scale. Firecrawl delivers the entire internet
+        to AI agents and builders.\",\"position\":1,\"markdown\":\"We just raised
+        our Series A and shipped Firecrawl /v2 \U0001F389. [Read the blog.](https://www.firecrawl.dev/blog/firecrawl-v2-series-a-announcement)\\n\\n[2
+        Months Free \u2014 Annually](https://www.firecrawl.dev/pricing)\\n\\n# Turn
+        websites into   LLM-ready data\\n\\nPower your AI apps with clean web data\\n\\nfrom
+        any website. [It's also open source.](https://github.com/firecrawl/firecrawl)\\n\\nScrape\\n\\nSearch\\nNew\\n\\nMap\\n\\nCrawl\\n\\nScrape\\n\\nLogo\\n\\nNavigation\\n\\nButton\\n\\nH1
+        Title\\n\\nDescription\\n\\nCTA Button\\n\\n\\\\[ .JSON \\\\]\\n\\n```json\\n1[\\\\\\n2
+        \ {\\\\\\n3    \\\"url\\\": \\\"https://example.com\\\",\\\\\\n4    \\\"markdown\\\":
+        \\\"# Getting Started...\\\",\\\\\\n5    \\\"json\\\": { \\\"title\\\": \\\"Guide\\\",
+        \\\"docs\\\": \\\"...\\\" },\\\\\\n6    \\\"screenshot\\\": \\\"https://example.com/hero.png\\\"\\\\\\n7
+        \ }\\\\\\n8]\\n```\\n\\nScrape Completed\\n\\nTrusted by5000+\\n\\ncompaniesof
+        all sizes\\n\\n![Logo 17](https://www.firecrawl.dev/assets-original/logocloud/17.png)\\n\\n![Logo
+        18](https://www.firecrawl.dev/assets-original/logocloud/18.png)\\n\\n![Logo
+        1](https://www.firecrawl.dev/assets-original/logocloud/1.png)\\n\\n![Logo
+        2](https://www.firecrawl.dev/assets-original/logocloud/2.png)\\n\\n![Logo
+        3](https://www.firecrawl.dev/assets-original/logocloud/3.png)\\n\\n![Logo
+        4](https://www.firecrawl.dev/assets-original/logocloud/4.png)\\n\\n![Logo
+        5](https://www.firecrawl.dev/assets-original/logocloud/5.png)\\n\\n![Logo
+        6](https://www.firecrawl.dev/assets-original/logocloud/6.png)\\n\\n![Logo
+        7](https://www.firecrawl.dev/assets-original/logocloud/7.png)\\n\\n![Logo
+        8](https://www.firecrawl.dev/assets-original/logocloud/8.png)\\n\\n![Logo
+        9](https://www.firecrawl.dev/assets-original/logocloud/9.png)\\n\\n![Logo
+        10](https://www.firecrawl.dev/assets-original/logocloud/10.png)\\n\\n![Logo
+        11](https://www.firecrawl.dev/assets-original/logocloud/11.png)\\n\\n![Logo
+        12](https://www.firecrawl.dev/assets-original/logocloud/12.png)\\n\\n![Logo
+        13](https://www.firecrawl.dev/assets-original/logocloud/13.png)\\n\\n![Logo
+        14](https://www.firecrawl.dev/assets-original/logocloud/14.png)\\n\\n![Logo
+        15](https://www.firecrawl.dev/assets-original/logocloud/15.png)\\n\\n![Logo
+        16](https://www.firecrawl.dev/assets-original/logocloud/16.png)\\n\\n![Logo
+        17](https://www.firecrawl.dev/assets-original/logocloud/17.png)\\n\\n![Logo
+        18](https://www.firecrawl.dev/assets-original/logocloud/18.png)\\n\\n![Logo
+        19](https://www.firecrawl.dev/assets-original/logocloud/19.png)\\n\\n![Logo
+        20](https://www.firecrawl.dev/assets-original/logocloud/20.png)\\n\\n![Logo
+        21](https://www.firecrawl.dev/assets-original/logocloud/21.png)\\n\\n![Logo
+        17](https://www.firecrawl.dev/assets-original/logocloud/17.png)\\n\\n![Logo
+        18](https://www.firecrawl.dev/assets-original/logocloud/18.png)\\n\\n![Logo
+        1](https://www.firecrawl.dev/assets-original/logocloud/1.png)\\n\\n![Logo
+        2](https://www.firecrawl.dev/assets-original/logocloud/2.png)\\n\\n![Logo
+        3](https://www.firecrawl.dev/assets-original/logocloud/3.png)\\n\\n![Logo
+        4](https://www.firecrawl.dev/assets-original/logocloud/4.png)\\n\\n![Logo
+        5](https://www.firecrawl.dev/assets-original/logocloud/5.png)\\n\\n![Logo
+        6](https://www.firecrawl.dev/assets-original/logocloud/6.png)\\n\\n![Logo
+        7](https://www.firecrawl.dev/assets-original/logocloud/7.png)\\n\\n![Logo
+        8](https://www.firecrawl.dev/assets-original/logocloud/8.png)\\n\\n![Logo
+        9](https://www.firecrawl.dev/assets-original/logocloud/9.png)\\n\\n![Logo
+        10](https://www.firecrawl.dev/assets-original/logocloud/10.png)\\n\\n![Logo
+        11](https://www.firecrawl.dev/assets-original/logocloud/11.png)\\n\\n![Logo
+        12](https://www.firecrawl.dev/assets-original/logocloud/12.png)\\n\\n![Logo
+        13](https://www.firecrawl.dev/assets-original/logocloud/13.png)\\n\\n![Logo
+        14](https://www.firecrawl.dev/assets-original/logocloud/14.png)\\n\\n![Logo
+        15](https://www.firecrawl.dev/assets-original/logocloud/15.png)\\n\\n![Logo
+        16](https://www.firecrawl.dev/assets-original/logocloud/16.png)\\n\\n![Logo
+        17](https://www.firecrawl.dev/assets-original/logocloud/17.png)\\n\\n![Logo
+        18](https://www.firecrawl.dev/assets-original/logocloud/18.png)\\n\\n![Logo
+        19](https://www.firecrawl.dev/assets-original/logocloud/19.png)\\n\\n![Logo
+        20](https://www.firecrawl.dev/assets-original/logocloud/20.png)\\n\\n![Logo
+        21](https://www.firecrawl.dev/assets-original/logocloud/21.png)\\n\\n\\\\[01/
+        07 \\\\]\\n\\n\xB7\\n\\nMain Features\\n\\n//\\n\\nDeveloper First\\n\\n//\\n\\n##
+        Startscraping   today\\n\\nEnhance your apps with industry leading web scraping
+        and crawling capabilities.\\n\\nScrape\\n\\nGet llm-ready data from websites.
+        Markdown, JSON, screenshot, etc.\\n\\nSearch\\n\\nNew\\n\\nSearch the web
+        and get full content from results.\\n\\nCrawl\\n\\nCrawl all the pages on
+        a website and get data for each page.\\n\\nPython\\n\\nNode.js\\n\\nCurl\\n\\nCopy
+        code\\n\\n```python\\n1# pip install firecrawl-py\\n2from firecrawl import
+        Firecrawl\\n3\\n4app = Firecrawl(api_key=\\\"fc-YOUR_API_KEY\\\")\\n5\\n6#
+        Scrape a website:\\n7app.scrape('firecrawl.dev')\\n8\\n9\\n10\\n```\\n\\n\\\\[
+        .MD \\\\]\\n\\n```markdown\\n1# Firecrawl\\n2\\n3Firecrawl is a powerful web
+        scraping\\n4library that makes it easy to extract\\n5data from websites.\\n6\\n7##
+        Installation\\n8\\n9To install Firecrawl, run:\\n10\\n11\\n```\\n\\n![developer-1](https://www.firecrawl.dev/assets/developer/1.png)\\n\\n![developer-2](https://www.firecrawl.dev/assets/developer/2.png)\\n\\n![developer-3](https://www.firecrawl.dev/assets/developer/3.png)\\n\\n![developer-4](https://www.firecrawl.dev/assets/developer/4.png)\\n\\n![developer-5](https://www.firecrawl.dev/assets/developer/5.png)\\n\\n![developer-6](https://www.firecrawl.dev/assets/developer/6.png)\\n\\n![developer-7](https://www.firecrawl.dev/assets/developer/7.png)\\n\\n![developer-8](https://www.firecrawl.dev/assets/developer/8.png)\\n\\n![developer-9](https://www.firecrawl.dev/assets/developer/1.png)\\n\\n![developer-10](https://www.firecrawl.dev/assets/developer/2.png)\\n\\n![developer-11](https://www.firecrawl.dev/assets/developer/3.png)\\n\\n![developer-12](https://www.firecrawl.dev/assets/developer/4.png)\\n\\n![developer-13](https://www.firecrawl.dev/assets/developer/5.png)\\n\\n![developer-14](https://www.firecrawl.dev/assets/developer/6.png)\\n\\n![developer-15](https://www.firecrawl.dev/assets/developer/7.png)\\n\\n![developer-16](https://www.firecrawl.dev/assets/developer/8.png)\\n\\n![developer-17](https://www.firecrawl.dev/assets/developer/1.png)\\n\\n![developer-18](https://www.firecrawl.dev/assets/developer/2.png)\\n\\n![developer-19](https://www.firecrawl.dev/assets/developer/3.png)\\n\\n![developer-20](https://www.firecrawl.dev/assets/developer/4.png)\\n\\n![developer-21](https://www.firecrawl.dev/assets/developer/5.png)\\n\\n![developer-22](https://www.firecrawl.dev/assets/developer/6.png)\\n\\n![developer-23](https://www.firecrawl.dev/assets/developer/7.png)\\n\\n![developer-24](https://www.firecrawl.dev/assets/developer/8.png)\\n\\nIntegrations\\n\\n###
+        Use well-known tools\\n\\nAlready fully integrated with the greatest existing
+        tools and workflows.\\n\\n[See all integrations](https://www.firecrawl.dev/app)\\n\\n![Firecrawl
+        icon (blueprint)](https://www.firecrawl.dev/assets-original/developer-os-icon.png)\\n\\nmendableai/firecrawl\\n\\nPublic\\n\\nStar\\n\\n65.3K\\n\\n\\\\[python-SDK\\\\]
+        improvs/async\\n\\n#1337\\n\\n\xB7\\n\\nApr 18, 2025\\n\\n\xB7\\n\\n![rafaelsideguide](https://www.firecrawl.dev/_next/image?url=https%3A%2F%2Favatars.githubusercontent.com%2Fu%2F150964962%3Fv%3D4&w=48&q=75&dpl=dpl_7RqvseQXNVYetFdhTKj6RntohhL1)\\n\\nrafaelsideguide\\n\\nfeat(extract):
+        cost limit\\n\\n#1473\\n\\n\xB7\\n\\nApr 17, 2025\\n\\n\xB7\\n\\n![mogery](https://www.firecrawl.dev/_next/image?url=https%3A%2F%2Favatars.githubusercontent.com%2Fu%2F66118807%3Fv%3D4&w=48&q=75&dpl=dpl_7RqvseQXNVYetFdhTKj6RntohhL1)\\n\\nmogery\\n\\nfeat(scrape):
+        get job result from GCS, avoid Redis\\n\\n#1461\\n\\n\xB7\\n\\nApr 15, 2025\\n\\n\xB7\\n\\n![mogery](https://www.firecrawl.dev/_next/image?url=https%3A%2F%2Favatars.githubusercontent.com%2Fu%2F66118807%3Fv%3D4&w=48&q=75&dpl=dpl_7RqvseQXNVYetFdhTKj6RntohhL1)\\n\\nmogery\\n\\nExtract
+        v2/rerank improvs\\n\\n#1437\\n\\n\xB7\\n\\nApr 11, 2025\\n\\n\xB7\\n\\n![rafaelsideguide](https://www.firecrawl.dev/_next/image?url=https%3A%2F%2Favatars.githubusercontent.com%2Fu%2F150964962%3Fv%3D4&w=48&q=75&dpl=dpl_7RqvseQXNVYetFdhTKj6RntohhL1)\\n\\nrafaelsideguide\\n\\n![https://avatars.githubusercontent.com/u/150964962?v=4](https://www.firecrawl.dev/_next/image?url=https%3A%2F%2Favatars.githubusercontent.com%2Fu%2F150964962%3Fv%3D4&w=96&q=75&dpl=dpl_7RqvseQXNVYetFdhTKj6RntohhL1)\\n\\n![https://avatars.githubusercontent.com/u/66118807?v=4](https://www.firecrawl.dev/_next/image?url=https%3A%2F%2Favatars.githubusercontent.com%2Fu%2F66118807%3Fv%3D4&w=96&q=75&dpl=dpl_7RqvseQXNVYetFdhTKj6RntohhL1)\\n\\n+90\\n\\nOpen
+        Source\\n\\n### Code you can trust\\n\\nDeveloped transparently and collaboratively.
+        Join our community of contributors.\\n\\n[Check out our repo](https://github.com/firecrawl/firecrawl)\\n\\n\\\\[02/
+        07 \\\\]\\n\\n\xB7\\n\\nCore\\n\\n//\\n\\nBuilt to outperform\\n\\n//\\n\\n##
+        Core principles,    provenperformance\\n\\nBuilt from the ground up to outperform
+        traditional scrapers.\\n\\nNo proxy headaches\\n\\nReliable.Covers 96% of
+        the web,\\n\\nincluding JS-heavy and protected pages. No proxies, no puppets,
+        just clean data.\\n\\nFirecrawl\\n\\n96%\\n\\n![Puppeteer icon](https://www.firecrawl.dev/assets/puppeteer.png)\\n\\nPuppeteer\\n\\n79%\\n\\ncURL\\n\\n75%\\n\\nSpeed
+        that feels invisible\\n\\nBlazingly fast.Delivers results in less than 1 second,
+        fast for real-time agents\\n\\nand dynamic apps.\\n\\nURL\\n\\nCrawl\\n\\nScrape\\n\\nfirecrawl.dev/docs\\n\\n50ms\\n\\n51ms\\n\\nfirecrawl.dev/templates\\n\\n52ms\\n\\n50ms\\n\\nfirecrawl.dev/changelog\\n\\n49ms\\n\\n52ms\\n\\nfirecrawl.dev/about\\n\\n52ms\\n\\n50ms\\n\\nfirecrawl.dev/changelog\\n\\n50ms\\n\\n52ms\\n\\nfirecrawl.dev/playground\\n\\n51ms\\n\\n49ms\\n\\n\\\\[
+        CTA \\\\]\\n\\n\\\\[ CRAWL \\\\]\\n\\n\\\\[ SCRAPE \\\\]\\n\\n\\\\[ CTA \\\\]\\n\\n//\\n\\nGet
+        started\\n\\n//\\n\\nReady to build?\\n\\nStart getting Web Data for free
+        and scale seamlessly as your project expands. No credit card needed.\\n\\n[Start
+        for free](https://www.firecrawl.dev/signin) [See our plans](https://www.firecrawl.dev/pricing)\\n\\n\\\\[03/
+        07 \\\\]\\n\\n\xB7\\n\\nFeatures\\n\\n//\\n\\nZero configuration\\n\\n//\\n\\n##
+        We handle the hard stuff\\n\\nRotating proxies, orchestration, rate limits,
+        js-blocked content and more.\\n\\nDocs to data\\n\\nMedia parsing.Firecrawl
+        can parse and output content from web hosted pdfs, docx, and more.\\n\\nhttps://example.com/docs/report.pdf\\n\\nhttps://example.com/files/brief.docx\\n\\nhttps://example.com/docs/guide.html\\n\\ndocx\\n\\nParsing...\\n\\nKnows
+        the moment\\n\\nSmart wait.Firecrawl intelligently waits for content to load,
+        making scraping faster and more reliable.\\n\\nhttps://example-spa.com\\n\\nRequest
+        Sent\\n\\nScrapes the real thing\\n\\nCached, when you need it.Selective caching,
+        you choose your caching patterns, growing web index.\\n\\n![User](https://www.firecrawl.dev/_next/image?url=%2Fassets-original%2Ffeatures%2Fcached-user.png&w=256&q=75&dpl=dpl_7RqvseQXNVYetFdhTKj6RntohhL1)\\n\\nUser\\n\\nFirecrawl\\n\\nCache\\n\\nInvisible
+        access\\n\\nStealth mode.Crawls the web without\\n\\nbeing blocked, mimics
+        real users to access protected or dynamic content.\\n\\nInteractive scraping\\n\\nActions.Click,
+        scroll, write, wait, press and more before extracting content.\\n\\nhttps://example.com\\n\\nNavigate\\n\\nClick\\n\\nType\\n\\nWait\\n\\nScroll\\n\\nPress\\n\\nScreenshot\\n\\nScrape\\n\\n\\\\[04/
+        07 \\\\]\\n\\n\xB7\\n\\nPricing\\n\\n//\\n\\nTransparent\\n\\n//\\n\\n## Flexible
+        pricing\\n\\nExplore transparent pricing built for real-world scraping.  Start
+        for free, then scale as you grow.\\n\\n\U0001F1FA\U0001F1F8USD\\n\\nFree Plan\\n\\nA
+        lightweight way to try scraping.\\n\\nNo cost, no card, no hassle.\\n\\n500
+        credits\\n\\n$0123456789\\n\\none-time\\n\\nGet started\\n\\nScrape 500 pages\\n\\n2
+        concurrent requests\\n\\nLow rate limits\\n\\nHobby\\n\\nGreat for side projects
+        and small tools.\\n\\nFast, simple, no overkill.\\n\\n3,000 credits\\n\\n$01234567890123456789\\n\\n/monthly\\n\\nBilled
+        yearly\\n\\n2 months free\\n\\nSubscribe\\n\\nScrape 3,000 pages\\n\\n5 concurrent
+        requests\\n\\nBasic support\\n\\n$9 per extra 1k credits\\n\\nStandard\\n\\nMost
+        popular\\n\\nPerfect for scaling with less effort.\\n\\nSimple, solid, dependable.\\n\\n100,000
+        credits\\n\\n$01234567890123456789\\n\\n/monthly\\n\\nBilled yearly\\n\\n2
+        months free\\n\\nSubscribe\\n\\nScrape 100,000 pages\\n\\n50 concurrent requests\\n\\nStandard
+        support\\n\\n$47 per extra 35k credits\\n\\nGrowth\\n\\nBuilt for high volume
+        and speed.\\n\\nFirecrawl at full force.\\n\\n500,000 credits\\n\\n$012345678901234567890123456789\\n\\n/monthly\\n\\nBilled
+        yearly\\n\\n2 months free\\n\\nSubscribe\\n\\nScrape 500,000 pages\\n\\n100
+        concurrent requests\\n\\nPriority support\\n\\n$177 per extra 175k credits\\n\\nExtra
+        credits are available via auto-recharge packs. [Enable](https://www.firecrawl.dev/signin/signup)\\n\\nEnterprise\\n\\nPower
+        at your pace\\n\\nUnlimited credits. Custom RPMs.\\n\\n[Contact sales](https://fk4bvu0n5qp.typeform.com/to/Ej6oydlg)
+        [More details](https://www.firecrawl.dev/enterprise)\\n\\nBulk discounts\\n\\nTop
+        priority support\\n\\nCustom concurrency limits\\n\\nImproved stealth proxies\\n\\nSLAs\\n\\nAdvanced
+        security & controls\\n\\n\\\\[05/ 07 \\\\]\\n\\n\xB7\\n\\nTestimonials\\n\\n//\\n\\nCommunity\\n\\n//\\n\\n##
+        People love    building withFirecrawl\\n\\nDiscover why developers choose
+        Firecrawl every day.\\n\\n[![Morgan Linton](https://www.firecrawl.dev/assets/testimonials/morgan-linton.png)Morgan
+        Linton@morganlinton\\\"If you're coding with AI, and haven't discovered @firecrawl\\\\_dev
+        yet, prepare to have your mind blown \U0001F92F\\\"](https://x.com/morganlinton/status/1839454165703204955)
+        [![Chris DeWeese](https://www.firecrawl.dev/assets/testimonials/chris-deweese.png)Chris
+        DeWeese@chrisdeweese\\\\_\\\"Started using @firecrawl\\\\_dev for a project,
+        I wish I used this sooner.\\\"](https://x.com/chrisdeweese_/status/1853587120406876601)
+        [![Alex Reibman](https://www.firecrawl.dev/assets/testimonials/alex-reibman.png)Alex
+        Reibman@AlexReibman\\\"Moved our internal agent's web scraping tool from Apify
+        to Firecrawl because it benchmarked 50x faster with AgentOps.\\\"](https://x.com/AlexReibman/status/1780299595484131836)
+        [![Tom - Morpho](https://www.firecrawl.dev/assets/testimonials/tom-morpho.png)Tom
+        - Morpho@TomReppelin\\\"I found gold today. Thank you @firecrawl\\\\_dev\\\"](https://x.com/TomReppelin/status/1844382491014201613)\\n\\n[![Morgan
+        Linton](https://www.firecrawl.dev/assets/testimonials/morgan-linton.png)Morgan
+        Linton@morganlinton\\\"If you're coding with AI, and haven't discovered @firecrawl\\\\_dev
+        yet, prepare to have your mind blown \U0001F92F\\\"](https://x.com/morganlinton/status/1839454165703204955)
+        [![Chris DeWeese](https://www.firecrawl.dev/assets/testimonials/chris-deweese.png)Chris
+        DeWeese@chrisdeweese\\\\_\\\"Started using @firecrawl\\\\_dev for a project,
+        I wish I used this sooner.\\\"](https://x.com/chrisdeweese_/status/1853587120406876601)
+        [![Alex Reibman](https://www.firecrawl.dev/assets/testimonials/alex-reibman.png)Alex
+        Reibman@AlexReibman\\\"Moved our internal agent's web scraping tool from Apify
+        to Firecrawl because it benchmarked 50x faster with AgentOps.\\\"](https://x.com/AlexReibman/status/1780299595484131836)
+        [![Tom - Morpho](https://www.firecrawl.dev/assets/testimonials/tom-morpho.png)Tom
+        - Morpho@TomReppelin\\\"I found gold today. Thank you @firecrawl\\\\_dev\\\"](https://x.com/TomReppelin/status/1844382491014201613)\\n\\n[![Bardia](https://www.firecrawl.dev/assets/testimonials/bardia.png)Bardia@thepericulum\\\"The
+        Firecrawl team ships. I wanted types for their node SDK, and less than an
+        hour later, I got them.\\\"](https://x.com/thepericulum/status/1781397799487078874)
+        [![Matt Busigin](https://www.firecrawl.dev/assets/testimonials/matt-busigin.png)Matt
+        Busigin@mbusigin\\\"Firecrawl is dope. Congrats guys \U0001F44F\\\"](https://x.com/mbusigin/status/1836065372010656069)
+        [![Sumanth](https://www.firecrawl.dev/assets/testimonials/sumanth.png)Sumanth@Sumanth\\\\_077\\\"Web
+        scraping will never be the same!\\\\\\\\\\n\\\\\\\\\\nFirecrawl is an open-source
+        framework that takes a URL, crawls it, and conver...\\\"](https://x.com/Sumanth_077/status/1940049003074478511)
+        [![Steven Tey](https://www.firecrawl.dev/assets/testimonials/steven-tey.png)Steven
+        Tey@steventey\\\"Open-source Clay alternative just dropped\\\\\\\\\\n\\\\\\\\\\nUpload
+        a CSV of emails and...\\\"](https://x.com/steventey/status/1932945651761098889)\\n\\n[![Bardia](https://www.firecrawl.dev/assets/testimonials/bardia.png)Bardia@thepericulum\\\"The
+        Firecrawl team ships. I wanted types for their node SDK, and less than an
+        hour later, I got them.\\\"](https://x.com/thepericulum/status/1781397799487078874)
+        [![Matt Busigin](https://www.firecrawl.dev/assets/testimonials/matt-busigin.png)Matt
+        Busigin@mbusigin\\\"Firecrawl is dope. Congrats guys \U0001F44F\\\"](https://x.com/mbusigin/status/1836065372010656069)
+        [![Sumanth](https://www.firecrawl.dev/assets/testimonials/sumanth.png)Sumanth@Sumanth\\\\_077\\\"Web
+        scraping will never be the same!\\\\\\\\\\n\\\\\\\\\\nFirecrawl is an open-source
+        framework that takes a URL, crawls it, and conver...\\\"](https://x.com/Sumanth_077/status/1940049003074478511)
+        [![Steven Tey](https://www.firecrawl.dev/assets/testimonials/steven-tey.png)Steven
+        Tey@steventey\\\"Open-source Clay alternative just dropped\\\\\\\\\\n\\\\\\\\\\nUpload
+        a CSV of emails and...\\\"](https://x.com/steventey/status/1932945651761098889)\\n\\n\\\\[06/
+        07 \\\\]\\n\\n\xB7\\n\\nUse Cases\\n\\n//\\n\\nUse cases\\n\\n//\\n\\n## Transform
+        \   web data into  AI-powered solutions\\n\\nDiscover how Firecrawl customers
+        are getting the most out of our API.\\n\\n[View all use cases](https://docs.firecrawl.dev/use-cases/overview)\\n\\nChat
+        with context\\n\\nSmarter AI chats\\n\\nPower your AI assistants with real-time,
+        accurate web content.\\n\\n[View docs](https://docs.firecrawl.dev/introduction)\\n\\n![AI
+        Assistant](https://www.firecrawl.dev/assets/ai/bot.png)\\n\\nAI Assistant\\n\\nwithFirecrawl\\n\\nReal-time\xB7Updated
+        2 min ago\\n\\nAsk anything...\\n\\nKnow your leads\\n\\nLead enrichment\\n\\nEnhance
+        your sales data with\\n\\nweb information.\\n\\n[Check out Extract](https://www.firecrawl.dev/extract)\\n\\nExtracting
+        leads from directory...\\n\\nTech startups\\n\\nWith contact info\\n\\nDecision
+        makers\\n\\nFunding stage\\n\\nReady to engage\\n\\n![Emily Tran](https://www.firecrawl.dev/assets/ai/leads-1.png)\\n\\n![James
+        Carter](https://www.firecrawl.dev/assets/ai/leads-2.png)\\n\\n![Sophia Kim](https://www.firecrawl.dev/assets/ai/leads-3.png)\\n\\n![Michael
+        Rivera](https://www.firecrawl.dev/assets/ai/leads-4.png)\\n\\nKnow your leads\\n\\nMCPs\\n\\nAdd
+        powerful scraping to your\\n\\ncode editors.\\n\\n[Get started](https://docs.firecrawl.dev/mcp-server)\\n\\n![Claude
+        Code](https://www.firecrawl.dev/assets/ai/mcps-claude.png)\\n\\nClaude Code\\n\\n![Cursor](https://www.firecrawl.dev/assets/ai/mcps-cursor.png)\\n\\nCursor\\n\\n![Windsurf](https://www.firecrawl.dev/assets/ai/mcps-windsurf.png)\\n\\nWindsurf\\n\\n\u273B\\n\\nWelcome
+        to Claude Code!\\n\\n/help for help, /status for your current setup\\n\\n>Try
+        \\\"how do I log an error?\\\"\\n\\nBuild with context\\n\\nAI platforms\\n\\nLet
+        your customers build AI apps\\n\\nwith web data.\\n\\n[Check out Map](https://docs.firecrawl.dev/features/map)\\n\\n![Logo
+        1](https://www.firecrawl.dev/assets/ai/platforms-1.png)\\n\\n![Logo 2](https://www.firecrawl.dev/assets/ai/platforms-2.png)\\n\\n![Logo
+        4](https://www.firecrawl.dev/assets/ai/platforms-4.png)\\n\\n![Logo 3](https://www.firecrawl.dev/assets/ai/platforms-3.png)\\n\\nExtracting
+        text...\\n\\nNo insight missed\\n\\nDeep research\\n\\nExtract comprehensive
+        information for\\n\\nin-depth research.\\n\\n[Build your own with Search](https://docs.firecrawl.dev/features/search)\\n\\nDeep
+        research in progress...\\n\\nAcademic papers\\n\\n0 found\\n\\nNews articles\\n\\n0
+        found\\n\\nExpert opinions\\n\\n0 found\\n\\nResearch reports\\n\\n0 found\\n\\nIndustry
+        data\\n\\n0 found\\n\\nAsk anything...\\n\\n\\\\[ CTA \\\\]\\n\\n\\\\[ CRAWL
+        \\\\]\\n\\n\\\\[ SCRAPE \\\\]\\n\\n\\\\[ CTA \\\\]\\n\\n//\\n\\nGet started\\n\\n//\\n\\nReady
+        to build?\\n\\nStart getting Web Data for free and scale seamlessly as your
+        project expands. No credit card needed.\\n\\n[Start for free](https://www.firecrawl.dev/signin)
+        [See our plans](https://www.firecrawl.dev/pricing)\\n\\n\\\\[07/ 07 \\\\]\\n\\n\xB7\\n\\nFAQ\\n\\n//\\n\\nFAQ\\n\\n//\\n\\n##
+        Frequently    askedquestions\\n\\nEverything you need to know about Firecrawl.\\n\\nGeneral\\n\\nWhat
+        is Firecrawl?\\n\\nWhat sites work?\\n\\nWho can benefit from using Firecrawl?\\n\\nIs
+        Firecrawl open-source?\\n\\nWhat is the difference between Firecrawl and other
+        web scrapers?\\n\\nWhat is the difference between the open-source version
+        and the hosted version?\\n\\nScraping & Crawling\\n\\nHow does Firecrawl handle
+        dynamic content on websites?\\n\\nWhy is it not crawling all the pages?\\n\\nCan
+        Firecrawl crawl websites without a sitemap?\\n\\nWhat formats can Firecrawl
+        convert web data into?\\n\\nHow does Firecrawl ensure the cleanliness of the
+        data?\\n\\nIs Firecrawl suitable for large-scale data scraping projects?\\n\\nDoes
+        it respect robots.txt?\\n\\nWhat measures does Firecrawl take to handle web
+        scraping challenges like rate limits and caching?\\n\\nDoes Firecrawl handle
+        captcha or authentication?\\n\\nAPI Related\\n\\nWhere can I find my API key?\\n\\nBilling\\n\\nIs
+        Firecrawl free?\\n\\nIs there a pay-per-use plan instead of monthly?\\n\\nDo
+        credits roll over to the next month?\\n\\nHow many credits do scraping and
+        crawling cost?\\n\\nDo you charge for failed requests?\\n\\nWhat payment methods
+        do you accept?\\n\\nFOOTER\\n\\nThe easiest way to extract\\n\\ndata from
+        the web\\n\\nBacked by\\n\\nY Combinator\\n\\n[Linkedin](https://www.linkedin.com/company/firecrawl)
+        [Github](https://github.com/firecrawl/firecrawl)\\n\\nSOC II \xB7 Type 2\\n\\nAICPA\\n\\nSOC
+        2\\n\\n[X (Twitter)](https://x.com/firecrawl_dev) [Discord](https://discord.gg/gSmWdAkdwd)\\n\\nProducts\\n\\n[Playground](https://www.firecrawl.dev/playground)
+        [Extract](https://www.firecrawl.dev/extract) [Pricing](https://www.firecrawl.dev/pricing)
+        [Templates](https://www.firecrawl.dev/templates) [Changelog](https://www.firecrawl.dev/changelog)\\n\\nUse
+        Cases\\n\\n[AI Platforms](https://docs.firecrawl.dev/use-cases/ai-platforms)
+        [Lead Enrichment](https://docs.firecrawl.dev/use-cases/lead-enrichment) [SEO
+        Platforms](https://docs.firecrawl.dev/use-cases/seo-platforms) [Deep Research](https://docs.firecrawl.dev/use-cases/deep-research)\\n\\nDocumentation\\n\\n[Getting
+        started](https://docs.firecrawl.dev/introduction) [API Reference](https://docs.firecrawl.dev/api-reference/introduction)
+        [Integrations](https://www.firecrawl.dev/app) [Examples](https://docs.firecrawl.dev/use-cases/overview)
+        [SDKs](https://docs.firecrawl.dev/sdks/overview)\\n\\nCompany\\n\\n[Blog](https://www.firecrawl.dev/blog)
+        [Careers](https://www.firecrawl.dev/careers) [Creator & OSS program](https://www.firecrawl.dev/creator-oss-program)
+        [Student program](https://www.firecrawl.dev/student-program)\\n\\n\xA9 2025
+        Firecrawl\\n\\n[Terms of Service](https://www.firecrawl.dev/terms-of-service)
+        [Privacy Policy](https://www.firecrawl.dev/privacy-policy) [Report Abuse](mailto:help@firecrawl.com?subject=Issue:)\\n\\n[All
+        systems normal](https://status.firecrawl.dev/)\\n\\nStripeM-Inner\",\"metadata\":{\"favicon\":\"https://www.firecrawl.dev/favicon.png\",\"ogUrl\":\"https://www.firecrawl.dev\",\"ogImage\":\"https://www.firecrawl.dev/og.png\",\"referrer\":\"origin-when-cross-origin\",\"ogDescription\":\"The
+        web crawling, scraping, and search API for AI. Built for scale. Firecrawl
+        delivers the entire internet to AI agents and builders. Clean, structured,
+        and ready to reason with.\",\"robots\":\"follow, index\",\"twitter:card\":\"summary_large_image\",\"og:site_name\":\"Firecrawl
+        - The Web Data API for AI\",\"twitter:title\":\"Firecrawl - The Web Data API
+        for AI\",\"og:image\":\"https://www.firecrawl.dev/og.png\",\"title\":\"Firecrawl
+        - The Web Data API for AI\",\"og:description\":\"The web crawling, scraping,
+        and search API for AI. Built for scale. Firecrawl delivers the entire internet
+        to AI agents and builders. Clean, structured, and ready to reason with.\",\"twitter:image\":\"https://www.firecrawl.dev/og.png\",\"viewport\":\"width=device-width,
+        initial-scale=1, maximum-scale=1, user-scalable=no\",\"ogSiteName\":\"Firecrawl
+        - The Web Data API for AI\",\"keywords\":\"Firecrawl,Markdown,Data,Mendable,Langchain\",\"author\":\"Firecrawl\",\"og:title\":\"Firecrawl
+        - The Web Data API for AI\",\"twitter:description\":\"The web crawling, scraping,
+        and search API for AI. Built for scale. Firecrawl delivers the entire internet
+        to AI agents and builders. Clean, structured, and ready to reason with.\",\"description\":\"The
+        web crawling, scraping, and search API for AI. Built for scale. Firecrawl
+        delivers the entire internet to AI agents and builders. Clean, structured,
+        and ready to reason with.\",\"twitter:site\":\"@Vercel\",\"og:url\":\"https://www.firecrawl.dev\",\"og:type\":\"website\",\"ogTitle\":\"Firecrawl
+        - The Web Data API for AI\",\"language\":\"en\",\"creator\":\"Firecrawl\",\"publisher\":\"Firecrawl\",\"twitter:creator\":\"@Vercel\",\"scrapeId\":\"57b0586f-36e8-4923-aaa2-88ff58c03999\",\"sourceURL\":\"https://www.firecrawl.dev/\",\"url\":\"https://www.firecrawl.dev/\",\"statusCode\":200,\"contentType\":\"text/html;
+        charset=utf-8\",\"proxyUsed\":\"basic\",\"cacheState\":\"hit\",\"cachedAt\":\"2025-10-29T13:09:07.713Z\"}},{\"url\":\"https://github.com/firecrawl/firecrawl\",\"title\":\"firecrawl/firecrawl:
+        The Web Data API for AI - Turn entire ... - GitHub\",\"description\":\"Firecrawl
+        is an API service that takes a URL, crawls it, and converts it into clean
+        markdown or structured data. We crawl all accessible subpages and give you
+        ...\",\"position\":2,\"category\":\"github\",\"markdown\":\"[Skip to content](https://github.com/firecrawl/firecrawl#start-of-content)\\n\\nYou
+        signed in with another tab or window. [Reload](https://github.com/firecrawl/firecrawl)
+        to refresh your session.You signed out in another tab or window. [Reload](https://github.com/firecrawl/firecrawl)
+        to refresh your session.You switched accounts on another tab or window. [Reload](https://github.com/firecrawl/firecrawl)
+        to refresh your session.Dismiss alert\\n\\n{{ message }}\\n\\n[firecrawl](https://github.com/firecrawl)/
+        **[firecrawl](https://github.com/firecrawl/firecrawl)** Public\\n\\n- Couldn't
+        load subscription status.\\nRetry\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n### Uh
+        oh!\\n\\n\\n\\n\\n\\n\\n\\nThere was an error while loading. [Please reload
+        this page](https://github.com/firecrawl/firecrawl).\\n\\n- [Fork\\\\\\\\\\n5.1k](https://github.com/login?return_to=%2Ffirecrawl%2Ffirecrawl)\\n-
+        [Star\\\\\\\\\\n65.2k](https://github.com/login?return_to=%2Ffirecrawl%2Ffirecrawl)\\n\\n\\n\U0001F525
+        The Web Data API for AI - Turn entire websites into LLM-ready markdown or
+        structured data\\n\\n\\n[firecrawl.dev](https://firecrawl.dev/ \\\"https://firecrawl.dev\\\")\\n\\n###
+        License\\n\\n[AGPL-3.0 license](https://github.com/firecrawl/firecrawl/blob/main/LICENSE)\\n\\n[65.2k\\\\\\\\\\nstars](https://github.com/firecrawl/firecrawl/stargazers)
+        [5.1k\\\\\\\\\\nforks](https://github.com/firecrawl/firecrawl/forks) [Branches](https://github.com/firecrawl/firecrawl/branches)
+        [Tags](https://github.com/firecrawl/firecrawl/tags) [Activity](https://github.com/firecrawl/firecrawl/activity)\\n\\n[Star](https://github.com/login?return_to=%2Ffirecrawl%2Ffirecrawl)\\n\\nCouldn't
+        load subscription status.\\nRetry\\n\\n### Uh oh!\\n\\nThere was an error
+        while loading. [Please reload this page](https://github.com/firecrawl/firecrawl).\\n\\n#
+        firecrawl/firecrawl\\n\\nmain\\n\\n[**887** Branches](https://github.com/firecrawl/firecrawl/branches)
+        [**28** Tags](https://github.com/firecrawl/firecrawl/tags)\\n\\n[Go to Branches
+        page](https://github.com/firecrawl/firecrawl/branches)[Go to Tags page](https://github.com/firecrawl/firecrawl/tags)\\n\\nGo
+        to file\\n\\nCode\\n\\nOpen more actions menu\\n\\n## Folders and files\\n\\n|
+        Name | Name | Last commit message | Last commit date |\\n| --- | --- | ---
+        | --- |\\n| ## Latest commit<br>[![amplitudesxd](https://avatars.githubusercontent.com/u/62763456?v=4&size=40)](https://github.com/amplitudesxd)[amplitudesxd](https://github.com/firecrawl/firecrawl/commits?author=amplitudesxd)<br>[chore:
+        update last scrape rpc (](https://github.com/firecrawl/firecrawl/commit/37de2877fab4bae2de297e37bad3c9bcd49a64bc)
+        [#2339](https://github.com/firecrawl/firecrawl/pull/2339) [)](https://github.com/firecrawl/firecrawl/commit/37de2877fab4bae2de297e37bad3c9bcd49a64bc)<br>success<br>20
+        hours agoOct 27, 2025<br>[37de287](https://github.com/firecrawl/firecrawl/commit/37de2877fab4bae2de297e37bad3c9bcd49a64bc)\_\xB7\_20
+        hours agoOct 27, 2025<br>## History<br>[4,487 Commits](https://github.com/firecrawl/firecrawl/commits/main/)
+        <br>Open commit details<br>[View commit history for this file.](https://github.com/firecrawl/firecrawl/commits/main/)
+        |\\n| [.github](https://github.com/firecrawl/firecrawl/tree/main/.github \\\".github\\\")
+        | [.github](https://github.com/firecrawl/firecrawl/tree/main/.github \\\".github\\\")
+        | [fix(ci): temp disabled prod env tests](https://github.com/firecrawl/firecrawl/commit/42fc149c1ab738da0e15e772817774aa35273f8e
+        \\\"fix(ci): temp disabled prod env tests\\\") | 5 days agoOct 23, 2025 |\\n|
+        [apps](https://github.com/firecrawl/firecrawl/tree/main/apps \\\"apps\\\")
+        | [apps](https://github.com/firecrawl/firecrawl/tree/main/apps \\\"apps\\\")
+        | [chore: update last scrape rpc (](https://github.com/firecrawl/firecrawl/commit/37de2877fab4bae2de297e37bad3c9bcd49a64bc
+        \\\"chore: update last scrape rpc (#2339)\\\") [#2339](https://github.com/firecrawl/firecrawl/pull/2339)
+        [)](https://github.com/firecrawl/firecrawl/commit/37de2877fab4bae2de297e37bad3c9bcd49a64bc
+        \\\"chore: update last scrape rpc (#2339)\\\") | 20 hours agoOct 27, 2025
+        |\\n| [examples](https://github.com/firecrawl/firecrawl/tree/main/examples
+        \\\"examples\\\") | [examples](https://github.com/firecrawl/firecrawl/tree/main/examples
+        \\\"examples\\\") | [Merge pull request](https://github.com/firecrawl/firecrawl/commit/7ad57003b4ad8b230ba8252129e52bafa62dfae9
+        \\\"Merge pull request #2172 from MAVRICK-1/firecrawl-gemini-screenshot-editor
+        \ feat: Add Firecrawl + Gemini 2.5 Flash Image CLI Editor\\\") [#2172](https://github.com/firecrawl/firecrawl/pull/2172)
+        [from MAVRICK-1/firecrawl-gemini-screenshot-e\u2026](https://github.com/firecrawl/firecrawl/commit/7ad57003b4ad8b230ba8252129e52bafa62dfae9
+        \\\"Merge pull request #2172 from MAVRICK-1/firecrawl-gemini-screenshot-editor
+        \ feat: Add Firecrawl + Gemini 2.5 Flash Image CLI Editor\\\") | last monthSep
+        23, 2025 |\\n| [img](https://github.com/firecrawl/firecrawl/tree/main/img
+        \\\"img\\\") | [img](https://github.com/firecrawl/firecrawl/tree/main/img
+        \\\"img\\\") | [updated readme](https://github.com/firecrawl/firecrawl/commit/4f904e774831dc598681d3e998d0e5e15abcec27
+        \\\"updated readme\\\") | 2 months agoAug 18, 2025 |\\n| [.gitattributes](https://github.com/firecrawl/firecrawl/blob/main/.gitattributes
+        \\\".gitattributes\\\") | [.gitattributes](https://github.com/firecrawl/firecrawl/blob/main/.gitattributes
+        \\\".gitattributes\\\") | [Initial commit](https://github.com/firecrawl/firecrawl/commit/a6c2a878119321a196f720cce4195e086f1c6b46
+        \\\"Initial commit\\\") | last yearApr 15, 2024 |\\n| [.gitignore](https://github.com/firecrawl/firecrawl/blob/main/.gitignore
+        \\\".gitignore\\\") | [.gitignore](https://github.com/firecrawl/firecrawl/blob/main/.gitignore
+        \\\".gitignore\\\") | [Nick: init](https://github.com/firecrawl/firecrawl/commit/ab3fa4838458c8303a67dd30fdd75a16b89cc20b
+        \\\"Nick: init\\\") | 3 weeks agoOct 10, 2025 |\\n| [.gitmodules](https://github.com/firecrawl/firecrawl/blob/main/.gitmodules
+        \\\".gitmodules\\\") | [.gitmodules](https://github.com/firecrawl/firecrawl/blob/main/.gitmodules
+        \\\".gitmodules\\\") | [mendableai -> firecrawl](https://github.com/firecrawl/firecrawl/commit/2f3bc4e7a7b1a67a29c06df629f79402ee1aad1b
+        \\\"mendableai -> firecrawl\\\") | 2 months agoAug 18, 2025 |\\n| [CLAUDE.md](https://github.com/firecrawl/firecrawl/blob/main/CLAUDE.md
+        \\\"CLAUDE.md\\\") | [CLAUDE.md](https://github.com/firecrawl/firecrawl/blob/main/CLAUDE.md
+        \\\"CLAUDE.md\\\") | [add claude file](https://github.com/firecrawl/firecrawl/commit/3f0873c788823258a7d9f55d1c8772aed4e1a8de
+        \\\"add claude file\\\") | 2 months agoAug 6, 2025 |\\n| [CONTRIBUTING.md](https://github.com/firecrawl/firecrawl/blob/main/CONTRIBUTING.md
+        \\\"CONTRIBUTING.md\\\") | [CONTRIBUTING.md](https://github.com/firecrawl/firecrawl/blob/main/CONTRIBUTING.md
+        \\\"CONTRIBUTING.md\\\") | [Add Rust to CONTRIBUTING (](https://github.com/firecrawl/firecrawl/commit/f396cb20b54c3c2d7e64882642c5df6310a01002
+        \\\"Add Rust to CONTRIBUTING (#2180)\\\") [#2180](https://github.com/firecrawl/firecrawl/pull/2180)
+        [)](https://github.com/firecrawl/firecrawl/commit/f396cb20b54c3c2d7e64882642c5df6310a01002
+        \\\"Add Rust to CONTRIBUTING (#2180)\\\") | last monthSep 18, 2025 |\\n| [LICENSE](https://github.com/firecrawl/firecrawl/blob/main/LICENSE
+        \\\"LICENSE\\\") | [LICENSE](https://github.com/firecrawl/firecrawl/blob/main/LICENSE
+        \\\"LICENSE\\\") | [Update SDKs to MIT license](https://github.com/firecrawl/firecrawl/commit/afb49e21e7cff595ebad9ce0b7aba13b88f39cf8
+        \\\"Update SDKs to MIT license\\\") | last yearJul 8, 2024 |\\n| [README.md](https://github.com/firecrawl/firecrawl/blob/main/README.md
+        \\\"README.md\\\") | [README.md](https://github.com/firecrawl/firecrawl/blob/main/README.md
+        \\\"README.md\\\") | [Update README.md](https://github.com/firecrawl/firecrawl/commit/a21430e97818d95099bb365be711d9227bd75590
+        \\\"Update README.md\\\") | 3 weeks agoOct 6, 2025 |\\n| [SELF\\\\_HOST.md](https://github.com/firecrawl/firecrawl/blob/main/SELF_HOST.md
+        \\\"SELF_HOST.md\\\") | [SELF\\\\_HOST.md](https://github.com/firecrawl/firecrawl/blob/main/SELF_HOST.md
+        \\\"SELF_HOST.md\\\") | [Allow self-hosted webhook delivery to private IP
+        addresses (](https://github.com/firecrawl/firecrawl/commit/5756b834884d481382ce1f5674836a56b7fee33d
+        \\\"Allow self-hosted webhook delivery to private IP addresses (#2232)\\\")
+        [#2232](https://github.com/firecrawl/firecrawl/pull/2232) [)](https://github.com/firecrawl/firecrawl/commit/5756b834884d481382ce1f5674836a56b7fee33d
+        \\\"Allow self-hosted webhook delivery to private IP addresses (#2232)\\\")
+        | 27 days agoOct 1, 2025 |\\n| [docker-compose.yaml](https://github.com/firecrawl/firecrawl/blob/main/docker-compose.yaml
+        \\\"docker-compose.yaml\\\") | [docker-compose.yaml](https://github.com/firecrawl/firecrawl/blob/main/docker-compose.yaml
+        \\\"docker-compose.yaml\\\") | [Fix a self-hosted docker-compose.yaml bug
+        caused by a recent firecraw\u2026](https://github.com/firecrawl/firecrawl/commit/7d4100b274889977fa1ba26344532d9d8747494c
+        \\\"Fix a self-hosted docker-compose.yaml bug caused by a recent firecrawl
+        change (#2252)  Add EXTRACT_WORKER_PORT to docker-compose environment\\\")
+        | 3 weeks agoOct 4, 2025 |\\n| View all files |\\n\\n## Repository files navigation\\n\\n###
+        [![](https://raw.githubusercontent.com/firecrawl/firecrawl/main/img/firecrawl_logo.png)](https://raw.githubusercontent.com/firecrawl/firecrawl/main/img/firecrawl_logo.png)\\n\\n[Permalink:
+        ](https://github.com/firecrawl/firecrawl#----)\\n\\n[![License](https://camo.githubusercontent.com/d8ec6c81115d21c81bc26f2c80f8987a4d2a72e538b88afaa738fad5cd6289ff/68747470733a2f2f696d672e736869656c64732e696f2f6769746875622f6c6963656e73652f66697265637261776c2f66697265637261776c)](https://github.com/firecrawl/firecrawl/blob/main/LICENSE)[![Downloads](https://camo.githubusercontent.com/9d76afe428b4085c8b7103f2f4e31da110ee154ad7320bace4348d92ac0c2450/68747470733a2f2f7374617469632e706570792e746563682f62616467652f66697265637261776c2d7079)](https://pepy.tech/project/firecrawl-py)[![GitHub
+        Contributors](https://camo.githubusercontent.com/a9eabcb95ba00300afa51ce546660540c1f65764492cb2ba8fb67fe541c7e97f/68747470733a2f2f696d672e736869656c64732e696f2f6769746875622f636f6e7472696275746f72732f66697265637261776c2f66697265637261776c2e737667)](https://github.com/firecrawl/firecrawl/graphs/contributors)[![Visit
+        firecrawl.dev](https://camo.githubusercontent.com/3576b8cb0e77344c001cc8456d28c830691cb96480d4b65be90f8a4c99dead56/68747470733a2f2f696d672e736869656c64732e696f2f62616467652f56697369742d66697265637261776c2e6465762d6f72616e6765)](https://firecrawl.dev/)\\n\\n[![Follow
+        on X](https://camo.githubusercontent.com/610127222e603752676f0275682f12398f8e434706861d577c1f6688d999191c/68747470733a2f2f696d672e736869656c64732e696f2f62616467652f466f6c6c6f772532306f6e253230582d3030303030303f7374796c653d666f722d7468652d6261646765266c6f676f3d78266c6f676f436f6c6f723d7768697465)](https://twitter.com/firecrawl_dev)[![Follow
+        on LinkedIn](https://camo.githubusercontent.com/8741d51bb8e1c8ae576ac05e875f826bcf80e8711dcf9225935bb78d5bb03802/68747470733a2f2f696d672e736869656c64732e696f2f62616467652f466f6c6c6f772532306f6e2532304c696e6b6564496e2d3030373742353f7374796c653d666f722d7468652d6261646765266c6f676f3d6c696e6b6564696e266c6f676f436f6c6f723d7768697465)](https://www.linkedin.com/company/104100957)[![Join
+        our Discord](https://camo.githubusercontent.com/886138c89a84dc2ad74d06900f364d736ccf753b2732d59fbd4106f6310f3616/68747470733a2f2f696d672e736869656c64732e696f2f62616467652f4a6f696e2532306f7572253230446973636f72642d3538363546323f7374796c653d666f722d7468652d6261646765266c6f676f3d646973636f7264266c6f676f436f6c6f723d7768697465)](https://discord.com/invite/gSmWdAkdwd)\\n\\n#
+        \U0001F525 Firecrawl\\n\\n[Permalink: \U0001F525 Firecrawl](https://github.com/firecrawl/firecrawl#-firecrawl)\\n\\nEmpower
+        your AI apps with clean data from any website. Featuring advanced scraping,
+        crawling, and data extraction capabilities.\\n\\n_This repository is in development,
+        and we\u2019re still integrating custom modules into the mono repo. It's not
+        fully ready for self-hosted deployment yet, but you can run it locally._\\n\\n##
+        What is Firecrawl?\\n\\n[Permalink: What is Firecrawl?](https://github.com/firecrawl/firecrawl#what-is-firecrawl)\\n\\n[Firecrawl](https://firecrawl.dev/?ref=github)
+        is an API service that takes a URL, crawls it, and converts it into clean
+        markdown or structured data. We crawl all accessible subpages and give you
+        clean data for each. No sitemap required. Check out our [documentation](https://docs.firecrawl.dev/).\\n\\nLooking
+        for our MCP? Check out the [repo here](https://github.com/firecrawl/firecrawl-mcp-server).\\n\\n_Pst.
+        hey, you, join our stargazers :)_\\n\\n[![GitHub stars](https://camo.githubusercontent.com/11f7ce76e9f1608b3470b3a23a1db3a7d9ec083ee18f2d826862f420bac800dc/68747470733a2f2f696d672e736869656c64732e696f2f6769746875622f73746172732f66697265637261776c2f66697265637261776c2e7376673f7374796c653d736f6369616c266c6162656c3d53746172266d61784167653d32353932303030)](https://github.com/firecrawl/firecrawl)\\n\\n##
+        How to use it?\\n\\n[Permalink: How to use it?](https://github.com/firecrawl/firecrawl#how-to-use-it)\\n\\nWe
+        provide an easy to use API with our hosted version. You can find the playground
+        and documentation [here](https://firecrawl.dev/playground). You can also self
+        host the backend if you'd like.\\n\\nCheck out the following resources to
+        get started:\\n\\n- [x] **API**: [Documentation](https://docs.firecrawl.dev/api-reference/introduction)\\n-
+        [x] **SDKs**: [Python](https://docs.firecrawl.dev/sdks/python), [Node](https://docs.firecrawl.dev/sdks/node)\\n-
+        [x] **LLM Frameworks**: [Langchain (python)](https://python.langchain.com/docs/integrations/document_loaders/firecrawl/),
+        [Langchain (js)](https://js.langchain.com/docs/integrations/document_loaders/web_loaders/firecrawl),
+        [Llama Index](https://docs.llamaindex.ai/en/latest/examples/data_connectors/WebPageDemo/#using-firecrawl-reader),
+        [Crew.ai](https://docs.crewai.com/), [Composio](https://composio.dev/tools/firecrawl/all),
+        [PraisonAI](https://docs.praison.ai/firecrawl/), [Superinterface](https://superinterface.ai/docs/assistants/functions/firecrawl),
+        [Vectorize](https://docs.vectorize.io/integrations/source-connectors/firecrawl)\\n-
+        [x] **Low-code Frameworks**: [Dify](https://dify.ai/blog/dify-ai-blog-integrated-with-firecrawl),
+        [Langflow](https://docs.langflow.org/), [Flowise AI](https://docs.flowiseai.com/integrations/langchain/document-loaders/firecrawl),
+        [Cargo](https://docs.getcargo.io/integration/firecrawl), [Pipedream](https://pipedream.com/apps/firecrawl/)\\n-
+        [x] **Community SDKs**: [Go](https://docs.firecrawl.dev/sdks/go), [Rust](https://docs.firecrawl.dev/sdks/rust)\\n-
+        [x] **Others**: [Zapier](https://zapier.com/apps/firecrawl/integrations),
+        [Pabbly Connect](https://www.pabbly.com/connect/integrations/firecrawl/)\\n-
+        [ ]  Want an SDK or Integration? Let us know by opening an issue.\\n\\nTo
+        run locally, refer to guide [here](https://github.com/firecrawl/firecrawl/blob/main/CONTRIBUTING.md).\\n\\n###
+        API Key\\n\\n[Permalink: API Key](https://github.com/firecrawl/firecrawl#api-key)\\n\\nTo
+        use the API, you need to sign up on [Firecrawl](https://firecrawl.dev/) and
+        get an API key.\\n\\n### Features\\n\\n[Permalink: Features](https://github.com/firecrawl/firecrawl#features)\\n\\n-
+        [**Scrape**](https://github.com/firecrawl/firecrawl#scraping): scrapes a URL
+        and get its content in LLM-ready format (markdown, structured data via [LLM
+        Extract](https://github.com/firecrawl/firecrawl#llm-extraction-beta), screenshot,
+        html)\\n- [**Crawl**](https://github.com/firecrawl/firecrawl#crawling): scrapes
+        all the URLs of a web page and return content in LLM-ready format\\n- [**Map**](https://github.com/firecrawl/firecrawl#map):
+        input a website and get all the website urls - extremely fast\\n- [**Search**](https://github.com/firecrawl/firecrawl#search):
+        search the web and get full content from results\\n- [**Extract**](https://github.com/firecrawl/firecrawl#extract):
+        get structured data from single page, multiple pages or entire websites with
+        AI.\\n\\n### Powerful Capabilities\\n\\n[Permalink: Powerful Capabilities](https://github.com/firecrawl/firecrawl#powerful-capabilities)\\n\\n-
+        **LLM-ready formats**: markdown, structured data, screenshot, HTML, links,
+        metadata\\n- **The hard stuff**: proxies, anti-bot mechanisms, dynamic content
+        (js-rendered), output parsing, orchestration\\n- **Customizability**: exclude
+        tags, crawl behind auth walls with custom headers, max crawl depth, etc...\\n-
+        **Media parsing**: pdfs, docx, images\\n- **Reliability first**: designed
+        to get the data you need - no matter how hard it is\\n- **Actions**: click,
+        scroll, input, wait and more before extracting data\\n- **Batching**: scrape
+        thousands of URLs at the same time with a new async endpoint\\n- **Change
+        Tracking**: monitor and detect changes in website content over time\\n\\nYou
+        can find all of Firecrawl's capabilities and how to use them in our [documentation](https://docs.firecrawl.dev/)\\n\\n###
+        Crawling\\n\\n[Permalink: Crawling](https://github.com/firecrawl/firecrawl#crawling)\\n\\nUsed
+        to crawl a URL and all accessible subpages. This submits a crawl job and returns
+        a job ID to check the status of the crawl.\\n\\n```\\ncurl -X POST https://api.firecrawl.dev/v2/crawl
+        \\\\\\n    -H 'Content-Type: application/json' \\\\\\n    -H 'Authorization:
+        Bearer fc-YOUR_API_KEY' \\\\\\n    -d '{\\n      \\\"url\\\": \\\"https://docs.firecrawl.dev\\\",\\n
+        \     \\\"limit\\\": 10,\\n      \\\"scrapeOptions\\\": {\\n        \\\"formats\\\":
+        [\\\"markdown\\\", \\\"html\\\"]\\n      }\\n    }'\\n```\\n\\nReturns a crawl
+        job id and the url to check the status of the crawl.\\n\\n```\\n{\\n  \\\"success\\\":
+        true,\\n  \\\"id\\\": \\\"123-456-789\\\",\\n  \\\"url\\\": \\\"https://api.firecrawl.dev/v2/crawl/123-456-789\\\"\\n}\\n```\\n\\n###
+        Check Crawl Job\\n\\n[Permalink: Check Crawl Job](https://github.com/firecrawl/firecrawl#check-crawl-job)\\n\\nUsed
+        to check the status of a crawl job and get its result.\\n\\n```\\ncurl -X
+        GET https://api.firecrawl.dev/v2/crawl/123-456-789 \\\\\\n  -H 'Content-Type:
+        application/json' \\\\\\n  -H 'Authorization: Bearer YOUR_API_KEY'\\n```\\n\\n```\\n{\\n
+        \ \\\"status\\\": \\\"completed\\\",\\n  \\\"total\\\": 36,\\n  \\\"creditsUsed\\\":
+        36,\\n  \\\"expiresAt\\\": \\\"2024-00-00T00:00:00.000Z\\\",\\n  \\\"data\\\":
+        [\\\\\\n    {\\\\\\n      \\\"markdown\\\": \\\"[Firecrawl Docs home page![light
+        logo](https://mintlify.s3-us-west-1.amazonaws.com/firecrawl/logo/light.svg)!...\\\",\\\\\\n
+        \     \\\"html\\\": \\\"<!DOCTYPE html><html lang=\\\\\\\"en\\\\\\\" class=\\\\\\\"js-focus-visible
+        lg:[--scroll-mt:9.5rem]\\\\\\\" data-js-focus-visible=\\\\\\\"\\\\\\\">...\\\",\\\\\\n
+        \     \\\"metadata\\\": {\\\\\\n        \\\"title\\\": \\\"Build a 'Chat with
+        website' using Groq Llama 3 | Firecrawl\\\",\\\\\\n        \\\"language\\\":
+        \\\"en\\\",\\\\\\n        \\\"sourceURL\\\": \\\"https://docs.firecrawl.dev/learn/rag-llama3\\\",\\\\\\n
+        \       \\\"description\\\": \\\"Learn how to use Firecrawl, Groq Llama 3,
+        and Langchain to build a 'Chat with your website' bot.\\\",\\\\\\n        \\\"ogLocaleAlternate\\\":
+        [],\\\\\\n        \\\"statusCode\\\": 200\\\\\\n      }\\\\\\n    }\\\\\\n
+        \ ]\\\\\\n}\\\\\\n```\\\\\\n\\\\\\n### Scraping\\\\\\n\\\\\\n[Permalink: Scraping](https://github.com/firecrawl/firecrawl#scraping)\\\\\\n\\\\\\nUsed
+        to scrape a URL and get its content in the specified formats.\\\\\\n\\\\\\n```\\\\\\ncurl
+        -X POST https://api.firecrawl.dev/v2/scrape \\\\\\\\\\n    -H 'Content-Type:
+        application/json' \\\\\\\\\\n    -H 'Authorization: Bearer YOUR_API_KEY' \\\\\\\\\\n
+        \   -d '{\\\\\\n      \\\"url\\\": \\\"https://docs.firecrawl.dev\\\",\\\\\\n
+        \     \\\"formats\\\" : [\\\"markdown\\\", \\\"html\\\"]\\\\\\n    }'\\\\\\n```\\\\\\n\\\\\\nResponse:\\\\\\n\\\\\\n```\\\\\\n{\\\\\\n
+        \ \\\"success\\\": true,\\\\\\n  \\\"data\\\": {\\\\\\n    \\\"markdown\\\":
+        \\\"Launch Week I is here! [See our Day 2 Release \U0001F680](https://www.firecrawl.dev/blog/launch-week-i-day-2-doubled-rate-limits)[\U0001F4A5
+        Get 2 months free...\\\",\\\\\\n    \\\"html\\\": \\\"<!DOCTYPE html><html
+        lang=\\\\\\\"en\\\\\\\" class=\\\\\\\"light\\\\\\\" style=\\\\\\\"color-scheme:
+        light;\\\\\\\"><body class=\\\\\\\"__variable_36bd41 __variable_d7dc5d font-inter
+        ...\\\",\\\\\\n    \\\"metadata\\\": {\\\\\\n      \\\"title\\\": \\\"Home
+        - Firecrawl\\\",\\\\\\n      \\\"description\\\": \\\"Firecrawl crawls and
+        converts any website into clean markdown.\\\",\\\\\\n      \\\"language\\\":
+        \\\"en\\\",\\\\\\n      \\\"keywords\\\": \\\"Firecrawl,Markdown,Data,Mendable,Langchain\\\",\\\\\\n
+        \     \\\"robots\\\": \\\"follow, index\\\",\\\\\\n      \\\"ogTitle\\\":
+        \\\"Firecrawl\\\",\\\\\\n      \\\"ogDescription\\\": \\\"Turn any website
+        into LLM-ready data.\\\",\\\\\\n      \\\"ogUrl\\\": \\\"https://www.firecrawl.dev/\\\",\\\\\\n
+        \     \\\"ogImage\\\": \\\"https://www.firecrawl.dev/og.png?123\\\",\\\\\\n
+        \     \\\"ogLocaleAlternate\\\": [],\\\\\\n      \\\"ogSiteName\\\": \\\"Firecrawl\\\",\\\\\\n
+        \     \\\"sourceURL\\\": \\\"https://firecrawl.dev\\\",\\\\\\n      \\\"statusCode\\\":
+        200\\\\\\n    }\\\\\\n  }\\\\\\n}\\\\\\n```\\\\\\n\\\\\\n### Map\\\\\\n\\\\\\n[Permalink:
+        Map](https://github.com/firecrawl/firecrawl#map)\\\\\\n\\\\\\nUsed to map
+        a URL and get urls of the website. This returns most links present on the
+        website.\\\\\\n\\\\\\n```\\\\\\ncurl -X POST https://api.firecrawl.dev/v2/map
+        \\\\\\\\\\n    -H 'Content-Type: application/json' \\\\\\\\\\n    -H 'Authorization:
+        Bearer YOUR_API_KEY' \\\\\\\\\\n    -d '{\\\\\\n      \\\"url\\\": \\\"https://firecrawl.dev\\\"\\\\\\n
+        \   }'\\\\\\n```\\\\\\n\\\\\\nResponse:\\\\\\n\\\\\\n```\\\\\\n{\\\\\\n  \\\"success\\\":
+        true,\\\\\\n  \\\"links\\\": [\\\\\\n    { \\\"url\\\": \\\"https://firecrawl.dev\\\",
+        \\\"title\\\": \\\"Firecrawl\\\", \\\"description\\\": \\\"Firecrawl is a
+        tool that allows you to crawl a website and get the data you need.\\\" },\\\\\\n
+        \   { \\\"url\\\": \\\"https://www.firecrawl.dev/pricing\\\", \\\"title\\\":
+        \\\"Firecrawl Pricing\\\", \\\"description\\\": \\\"Firecrawl Pricing\\\"
+        },\\\\\\n    { \\\"url\\\": \\\"https://www.firecrawl.dev/blog\\\", \\\"title\\\":
+        \\\"Firecrawl Blog\\\", \\\"description\\\": \\\"Firecrawl Blog\\\" },\\\\\\n
+        \   { \\\"url\\\": \\\"https://www.firecrawl.dev/playground\\\", \\\"title\\\":
+        \\\"Firecrawl Playground\\\", \\\"description\\\": \\\"Firecrawl Playground\\\"
+        },\\\\\\n    { \\\"url\\\": \\\"https://www.firecrawl.dev/smart-crawl\\\",
+        \\\"title\\\": \\\"Firecrawl Smart Crawl\\\", \\\"description\\\": \\\"Firecrawl
+        Smart Crawl\\\" }\\\\\\n  ]\\\\\\n}\\\\\\n```\\\\\\n\\\\\\n#### Map with search\\\\\\n\\\\\\n[Permalink:
+        Map with search](https://github.com/firecrawl/firecrawl#map-with-search)\\\\\\n\\\\\\nMap
+        with `search` param allows you to search for specific urls inside a website.\\\\\\n\\\\\\n```\\\\\\ncurl
+        -X POST https://api.firecrawl.dev/v2/map \\\\\\\\\\n    -H 'Content-Type:
+        application/json' \\\\\\\\\\n    -H 'Authorization: Bearer YOUR_API_KEY' \\\\\\\\\\n
+        \   -d '{\\\\\\n      \\\"url\\\": \\\"https://firecrawl.dev\\\",\\\\\\n      \\\"search\\\":
+        \\\"docs\\\"\\\\\\n    }'\\\\\\n```\\\\\\n\\\\\\nResponse will be an ordered
+        list from the most relevant to the least relevant.\\\\\\n\\\\\\n```\\\\\\n{\\\\\\n
+        \ \\\"success\\\": true,\\\\\\n  \\\"links\\\": [\\\\\\n    { \\\"url\\\":
+        \\\"https://docs.firecrawl.dev\\\", \\\"title\\\": \\\"Firecrawl Docs\\\",
+        \\\"description\\\": \\\"Firecrawl Docs\\\" },\\\\\\n    { \\\"url\\\": \\\"https://docs.firecrawl.dev/sdks/python\\\",
+        \\\"title\\\": \\\"Firecrawl Python SDK\\\", \\\"description\\\": \\\"Firecrawl
+        Python SDK\\\" },\\\\\\n    { \\\"url\\\": \\\"https://docs.firecrawl.dev/learn/rag-llama3\\\",
+        \\\"title\\\": \\\"Firecrawl RAG Llama 3\\\", \\\"description\\\": \\\"Firecrawl
+        RAG Llama 3\\\" }\\\\\\n  ]\\\\\\n}\\\\\\n```\\\\\\n\\\\\\n### Search\\\\\\n\\\\\\n[Permalink:
+        Search](https://github.com/firecrawl/firecrawl#search)\\\\\\n\\\\\\nSearch
+        the web and get full content from results\\\\\\n\\\\\\nFirecrawl\u2019s search
+        API allows you to perform web searches and optionally scrape the search results
+        in one operation.\\\\\\n\\\\\\n- Choose specific output formats (markdown,
+        HTML, links, screenshots)\\\\\\n- Search the web with customizable parameters
+        (language, country, etc.)\\\\\\n- Optionally retrieve content from search
+        results in various formats\\\\\\n- Control the number of results and set timeouts\\\\\\n\\\\\\n```\\\\\\ncurl
+        -X POST https://api.firecrawl.dev/v2/search \\\\\\\\\\n  -H \\\"Content-Type:
+        application/json\\\" \\\\\\\\\\n  -H \\\"Authorization: Bearer fc-YOUR_API_KEY\\\"
+        \\\\\\\\\\n  -d '{\\\\\\n    \\\"query\\\": \\\"what is firecrawl?\\\",\\\\\\n
+        \   \\\"limit\\\": 5\\\\\\n  }'\\\\\\n```\\\\\\n\\\\\\n#### Response\\\\\\n\\\\\\n[Permalink:
+        Response](https://github.com/firecrawl/firecrawl#response)\\\\\\n\\\\\\n```\\\\\\n{\\\\\\n
+        \ \\\"success\\\": true,\\\\\\n  \\\"data\\\": [\\\\\\n    {\\\\\\n      \\\"url\\\":
+        \\\"https://firecrawl.dev\\\",\\\\\\n      \\\"title\\\": \\\"Firecrawl |
+        Home Page\\\",\\\\\\n      \\\"description\\\": \\\"Turn websites into LLM-ready
+        data with Firecrawl\\\"\\\\\\n    },\\\\\\n    {\\\\\\n      \\\"url\\\":
+        \\\"https://docs.firecrawl.dev\\\",\\\\\\n      \\\"title\\\": \\\"Documentation
+        | Firecrawl\\\",\\\\\\n      \\\"description\\\": \\\"Learn how to use Firecrawl
+        in your own applications\\\"\\\\\\n    }\\\\\\n  ]\\\\\\n}\\\\\\n```\\\\\\n\\\\\\n####
+        With content scraping\\\\\\n\\\\\\n[Permalink: With content scraping](https://github.com/firecrawl/firecrawl#with-content-scraping)\\\\\\n\\\\\\n```\\\\\\ncurl
+        -X POST https://api.firecrawl.dev/v2/search \\\\\\\\\\n  -H \\\"Content-Type:
+        application/json\\\" \\\\\\\\\\n  -H \\\"Authorization: Bearer fc-YOUR_API_KEY\\\"
+        \\\\\\\\\\n  -d '{\\\\\\n    \\\"query\\\": \\\"what is firecrawl?\\\",\\\\\\n
+        \   \\\"limit\\\": 5,\\\\\\n    \\\"scrapeOptions\\\": {\\\\\\n      \\\"formats\\\":
+        [\\\"markdown\\\", \\\"links\\\"]\\\\\\n    }\\\\\\n  }'\\\\\\n```\\\\\\n\\\\\\n###
+        Extract (Beta)\\\\\\n\\\\\\n[Permalink: Extract (Beta)](https://github.com/firecrawl/firecrawl#extract-beta)\\\\\\n\\\\\\nGet
+        structured data from entire websites with a prompt and/or a schema.\\\\\\n\\\\\\nYou
+        can extract structured data from one or multiple URLs, including wildcards:\\\\\\n\\\\\\nSingle
+        Page:\\\\\\nExample: [https://firecrawl.dev/some-page](https://firecrawl.dev/some-page)\\\\\\n\\\\\\nMultiple
+        Pages / Full Domain\\\\\\nExample: [https://firecrawl.dev/](https://firecrawl.dev/)\\\\*\\\\\\n\\\\\\nWhen
+        you use /\\\\*, Firecrawl will automatically crawl and parse all URLs it can
+        discover in that domain, then extract the requested data.\\\\\\n\\\\\\n```\\\\\\ncurl
+        -X POST https://api.firecrawl.dev/v2/extract \\\\\\\\\\n    -H 'Content-Type:
+        application/json' \\\\\\\\\\n    -H 'Authorization: Bearer YOUR_API_KEY' \\\\\\\\\\n
+        \   -d '{\\\\\\n      \\\"urls\\\": [\\\\\\n        \\\"https://firecrawl.dev/*\\\",\\\\\\n
+        \       \\\"https://docs.firecrawl.dev/\\\",\\\\\\n        \\\"https://www.ycombinator.com/companies\\\"\\\\\\n
+        \     ],\\\\\\n      \\\"prompt\\\": \\\"Extract the company mission, whether
+        it is open source, and whether it is in Y Combinator from the page.\\\",\\\\\\n
+        \     \\\"schema\\\": {\\\\\\n        \\\"type\\\": \\\"object\\\",\\\\\\n
+        \       \\\"properties\\\": {\\\\\\n          \\\"company_mission\\\": {\\\\\\n
+        \           \\\"type\\\": \\\"string\\\"\\\\\\n          },\\\\\\n          \\\"is_open_source\\\":
+        {\\\\\\n            \\\"type\\\": \\\"boolean\\\"\\\\\\n          },\\\\\\n
+        \         \\\"is_in_yc\\\": {\\\\\\n            \\\"type\\\": \\\"boolean\\\"\\\\\\n
+        \         }\\\\\\n        },\\\\\\n        \\\"required\\\": [\\\\\\n          \\\"company_mission\\\",\\\\\\n
+        \         \\\"is_open_source\\\",\\\\\\n          \\\"is_in_yc\\\"\\\\\\n
+        \       ]\\\\\\n      }\\\\\\n    }'\\\\\\n```\\\\\\n\\\\\\n```\\\\\\n{\\\\\\n
+        \ \\\"success\\\": true,\\\\\\n  \\\"id\\\": \\\"44aa536d-f1cb-4706-ab87-ed0386685740\\\",\\\\\\n
+        \ \\\"urlTrace\\\": []\\\\\\n}\\\\\\n```\\\\\\n\\\\\\nIf you are using the
+        sdks, it will auto pull the response for you:\\\\\\n\\\\\\n```\\\\\\n{\\\\\\n
+        \ \\\"success\\\": true,\\\\\\n  \\\"data\\\": {\\\\\\n    \\\"company_mission\\\":
+        \\\"Firecrawl is the easiest way to extract data from the web. Developers
+        use us to reliably convert URLs into LLM-ready markdown or structured data
+        with a single API call.\\\",\\\\\\n    \\\"supports_sso\\\": false,\\\\\\n
+        \   \\\"is_open_source\\\": true,\\\\\\n    \\\"is_in_yc\\\": true\\\\\\n
+        \ }\\\\\\n}\\\\\\n```\\\\\\n\\\\\\n### LLM Extraction (Beta)\\\\\\n\\\\\\n[Permalink:
+        LLM Extraction (Beta)](https://github.com/firecrawl/firecrawl#llm-extraction-beta)\\\\\\n\\\\\\nUsed
+        to extract structured data from scraped pages.\\\\\\n\\\\\\n```\\\\\\ncurl
+        -X POST https://api.firecrawl.dev/v2/scrape \\\\\\\\\\n  -H 'Content-Type:
+        application/json' \\\\\\\\\\n  -H 'Authorization: Bearer YOUR_API_KEY' \\\\\\\\\\n
+        \ -d '{\\\\\\n    \\\"url\\\": \\\"https://www.mendable.ai/\\\",\\\\\\n    \\\"formats\\\":
+        [\\\\\\n      {\\\\\\n        \\\"type\\\": \\\"json\\\",\\\\\\n        \\\"schema\\\":
+        {\\\\\\n          \\\"type\\\": \\\"object\\\",\\\\\\n          \\\"properties\\\":
+        {\\\\\\n            \\\"company_mission\\\": { \\\"type\\\": \\\"string\\\"
+        },\\\\\\n            \\\"supports_sso\\\": { \\\"type\\\": \\\"boolean\\\"
+        },\\\\\\n            \\\"is_open_source\\\": { \\\"type\\\": \\\"boolean\\\"
+        },\\\\\\n            \\\"is_in_yc\\\": { \\\"type\\\": \\\"boolean\\\" }\\\\\\n
+        \         }\\\\\\n        }\\\\\\n      }\\\\\\n    ]\\\\\\n  }'\\\\\\n```\\\\\\n\\\\\\n```\\\\\\n{\\\\\\n
+        \ \\\"success\\\": true,\\\\\\n  \\\"data\\\": {\\\\\\n    \\\"content\\\":
+        \\\"Raw Content\\\",\\\\\\n    \\\"metadata\\\": {\\\\\\n      \\\"title\\\":
+        \\\"Mendable\\\",\\\\\\n      \\\"description\\\": \\\"Mendable allows you
+        to easily build AI chat applications. Ingest, customize, then deploy with
+        one line of code anywhere you want. Brought to you by SideGuide\\\",\\\\\\n
+        \     \\\"robots\\\": \\\"follow, index\\\",\\\\\\n      \\\"ogTitle\\\":
+        \\\"Mendable\\\",\\\\\\n      \\\"ogDescription\\\": \\\"Mendable allows you
+        to easily build AI chat applications. Ingest, customize, then deploy with
+        one line of code anywhere you want. Brought to you by SideGuide\\\",\\\\\\n
+        \     \\\"ogUrl\\\": \\\"https://mendable.ai/\\\",\\\\\\n      \\\"ogImage\\\":
+        \\\"https://mendable.ai/mendable_new_og1.png\\\",\\\\\\n      \\\"ogLocaleAlternate\\\":
+        [],\\\\\\n      \\\"ogSiteName\\\": \\\"Mendable\\\",\\\\\\n      \\\"sourceURL\\\":
+        \\\"https://mendable.ai/\\\"\\\\\\n    },\\\\\\n    \\\"json\\\": {\\\\\\n
+        \     \\\"company_mission\\\": \\\"Train a secure AI on your technical resources
+        that answers customer and employee questions so your team doesn't have to\\\",\\\\\\n
+        \     \\\"supports_sso\\\": true,\\\\\\n      \\\"is_open_source\\\": false,\\\\\\n
+        \     \\\"is_in_yc\\\": true\\\\\\n    }\\\\\\n  }\\\\\\n}\\\\\\n```\\\\\\n\\\\\\n###
+        Extracting without a schema (New)\\\\\\n\\\\\\n[Permalink: Extracting without
+        a schema (New)](https://github.com/firecrawl/firecrawl#extracting-without-a-schema-new)\\\\\\n\\\\\\nYou
+        can now extract without a schema by just passing a `prompt` to the endpoint.
+        The llm chooses the structure of the data.\\\\\\n\\\\\\n```\\\\\\ncurl -X
+        POST https://api.firecrawl.dev/v2/scrape \\\\\\\\\\n    -H 'Content-Type:
+        application/json' \\\\\\\\\\n    -H 'Authorization: Bearer YOUR_API_KEY' \\\\\\\\\\n
+        \   -d '{\\\\\\n      \\\"url\\\": \\\"https://docs.firecrawl.dev/\\\",\\\\\\n
+        \     \\\"formats\\\": [\\\\\\n        {\\\\\\n          \\\"type\\\": \\\"json\\\",\\\\\\n
+        \         \\\"prompt\\\": \\\"Extract the company mission from the page.\\\"\\\\\\n
+        \       }\\\\\\n      ]\\\\\\n    }'\\\\\\n```\\\\\\n\\\\\\n### Interacting
+        with the page with Actions (Cloud-only)\\\\\\n\\\\\\n[Permalink: Interacting
+        with the page with Actions (Cloud-only)](https://github.com/firecrawl/firecrawl#interacting-with-the-page-with-actions-cloud-only)\\\\\\n\\\\\\nFirecrawl
+        allows you to perform various actions on a web page before scraping its content.
+        This is particularly useful for interacting with dynamic content, navigating
+        through pages, or accessing content that requires user interaction.\\\\\\n\\\\\\nHere
+        is an example of how to use actions to navigate to google.com, search for
+        Firecrawl, click on the first result, and take a screenshot.\\\\\\n\\\\\\n```\\\\\\ncurl
+        -X POST https://api.firecrawl.dev/v2/scrape \\\\\\\\\\n    -H 'Content-Type:
+        application/json' \\\\\\\\\\n    -H 'Authorization: Bearer YOUR_API_KEY' \\\\\\\\\\n
+        \   -d '{\\\\\\n        \\\"url\\\": \\\"google.com\\\",\\\\\\n        \\\"formats\\\":
+        [\\\"markdown\\\"],\\\\\\n        \\\"actions\\\": [\\\\\\n            {\\\"type\\\":
+        \\\"wait\\\", \\\"milliseconds\\\": 2000},\\\\\\n            {\\\"type\\\":
+        \\\"click\\\", \\\"selector\\\": \\\"textarea[title=\\\\\\\"Search\\\\\\\"]\\\"},\\\\\\n
+        \           {\\\"type\\\": \\\"wait\\\", \\\"milliseconds\\\": 2000},\\\\\\n
+        \           {\\\"type\\\": \\\"write\\\", \\\"text\\\": \\\"firecrawl\\\"},\\\\\\n
+        \           {\\\"type\\\": \\\"wait\\\", \\\"milliseconds\\\": 2000},\\\\\\n
+        \           {\\\"type\\\": \\\"press\\\", \\\"key\\\": \\\"ENTER\\\"},\\\\\\n
+        \           {\\\"type\\\": \\\"wait\\\", \\\"milliseconds\\\": 3000},\\\\\\n
+        \           {\\\"type\\\": \\\"click\\\", \\\"selector\\\": \\\"h3\\\"},\\\\\\n
+        \           {\\\"type\\\": \\\"wait\\\", \\\"milliseconds\\\": 3000},\\\\\\n
+        \           {\\\"type\\\": \\\"screenshot\\\"}\\\\\\n        ]\\\\\\n    }'\\\\\\n```\\\\\\n\\\\\\n###
+        Batch Scraping Multiple URLs (New)\\\\\\n\\\\\\n[Permalink: Batch Scraping
+        Multiple URLs (New)](https://github.com/firecrawl/firecrawl#batch-scraping-multiple-urls-new)\\\\\\n\\\\\\nYou
+        can now batch scrape multiple URLs at the same time. It is very similar to
+        how the /crawl endpoint works. It submits a batch scrape job and returns a
+        job ID to check the status of the batch scrape.\\\\\\n\\\\\\n```\\\\\\ncurl
+        -X POST https://api.firecrawl.dev/v2/batch/scrape \\\\\\\\\\n    -H 'Content-Type:
+        application/json' \\\\\\\\\\n    -H 'Authorization: Bearer YOUR_API_KEY' \\\\\\\\\\n
+        \   -d '{\\\\\\n      \\\"urls\\\": [\\\"https://docs.firecrawl.dev\\\", \\\"https://docs.firecrawl.dev/sdks/overview\\\"],\\\\\\n
+        \     \\\"formats\\\" : [\\\"markdown\\\", \\\"html\\\"]\\\\\\n    }'\\\\\\n```\\\\\\n\\\\\\n##
+        Using Python SDK\\\\\\n\\\\\\n[Permalink: Using Python SDK](https://github.com/firecrawl/firecrawl#using-python-sdk)\\\\\\n\\\\\\n###
+        Installing Python SDK\\\\\\n\\\\\\n[Permalink: Installing Python SDK](https://github.com/firecrawl/firecrawl#installing-python-sdk)\\\\\\n\\\\\\n```\\\\\\npip
+        install firecrawl-py\\\\\\n```\\\\\\n\\\\\\n### Crawl a website\\\\\\n\\\\\\n[Permalink:
+        Crawl a website](https://github.com/firecrawl/firecrawl#crawl-a-website)\\\\\\n\\\\\\n```\\\\\\nfrom
+        firecrawl import Firecrawl\\\\\\n\\\\\\nfirecrawl = Firecrawl(api_key=\\\"fc-YOUR_API_KEY\\\")\\\\\\n\\\\\\n#
+        Scrape a website (returns a Document)\\\\\\ndoc = firecrawl.scrape(\\\\\\n
+        \   \\\"https://firecrawl.dev\\\",\\\\\\n    formats=[\\\"markdown\\\", \\\"html\\\"],\\\\\\n)\\\\\\nprint(doc.markdown)\\\\\\n\\\\\\n#
+        Crawl a website\\\\\\nresponse = firecrawl.crawl(\\\\\\n    \\\"https://firecrawl.dev\\\",\\\\\\n
+        \   limit=100,\\\\\\n    scrape_options={\\\"formats\\\": [\\\"markdown\\\",
+        \\\"html\\\"]},\\\\\\n    poll_interval=30,\\\\\\n)\\\\\\nprint(response)\\\\\\n```\\\\\\n\\\\\\n###
+        Extracting structured data from a URL\\\\\\n\\\\\\n[Permalink: Extracting
+        structured data from a URL](https://github.com/firecrawl/firecrawl#extracting-structured-data-from-a-url)\\\\\\n\\\\\\nWith
+        LLM extraction, you can easily extract structured data from any URL. We support
+        pydantic schemas to make it easier for you too. Here is how you to use it:\\\\\\n\\\\\\n```\\\\\\nfrom
+        pydantic import BaseModel, Field\\\\\\nfrom typing import List\\\\\\n\\\\\\nclass
+        Article(BaseModel):\\\\\\n    title: str\\\\\\n    points: int\\\\\\n    by:
+        str\\\\\\n    commentsURL: str\\\\\\n\\\\\\nclass TopArticles(BaseModel):\\\\\\n
+        \   top: List[Article] = Field(..., description=\\\"Top 5 stories\\\")\\\\\\n\\\\\\n#
+        Use JSON format with a Pydantic schema\\\\\\ndoc = firecrawl.scrape(\\\\\\n
+        \   \\\"https://news.ycombinator.com\\\",\\\\\\n    formats=[{\\\"type\\\":
+        \\\"json\\\", \\\"schema\\\": TopArticles}],\\\\\\n)\\\\\\nprint(doc.json)\\\\\\n```\\\\\\n\\\\\\n##
+        Using the Node SDK\\\\\\n\\\\\\n[Permalink: Using the Node SDK](https://github.com/firecrawl/firecrawl#using-the-node-sdk)\\\\\\n\\\\\\n###
+        Installation\\\\\\n\\\\\\n[Permalink: Installation](https://github.com/firecrawl/firecrawl#installation)\\\\\\n\\\\\\nTo
+        install the Firecrawl Node SDK, you can use npm:\\\\\\n\\\\\\n```\\\\\\nnpm
+        install @mendable/firecrawl-js\\\\\\n```\\\\\\n\\\\\\n### Usage\\\\\\n\\\\\\n[Permalink:
+        Usage](https://github.com/firecrawl/firecrawl#usage)\\\\\\n\\\\\\n1. Get an
+        API key from [firecrawl.dev](https://firecrawl.dev/)\\\\\\n2. Set the API
+        key as an environment variable named `FIRECRAWL_API_KEY` or pass it as a parameter
+        to the `Firecrawl` class.\\\\\\n\\\\\\n```\\\\\\nimport Firecrawl from '@mendable/firecrawl-js';\\\\\\n\\\\\\nconst
+        firecrawl = new Firecrawl({ apiKey: 'fc-YOUR_API_KEY' });\\\\\\n\\\\\\n//
+        Scrape a website\\\\\\nconst doc = await firecrawl.scrape('https://firecrawl.dev',
+        {\\\\\\n  formats: ['markdown', 'html'],\\\\\\n});\\\\\\nconsole.log(doc);\\\\\\n\\\\\\n//
+        Crawl a website\\\\\\nconst response = await firecrawl.crawl('https://firecrawl.dev',
+        {\\\\\\n  limit: 100,\\\\\\n  scrapeOptions: { formats: ['markdown', 'html']
+        },\\\\\\n});\\\\\\nconsole.log(response);\\\\\\n```\\\\\\n\\\\\\n### Extracting
+        structured data from a URL\\\\\\n\\\\\\n[Permalink: Extracting structured
+        data from a URL](https://github.com/firecrawl/firecrawl#extracting-structured-data-from-a-url-1)\\\\\\n\\\\\\nWith
+        LLM extraction, you can easily extract structured data from any URL. We support
+        zod schema to make it easier for you too. Here is how to use it:\\\\\\n\\\\\\n```\\\\\\nimport
+        Firecrawl from '@mendable/firecrawl-js';\\\\\\nimport { z } from 'zod';\\\\\\n\\\\\\nconst
+        firecrawl = new Firecrawl({ apiKey: 'fc-YOUR_API_KEY' });\\\\\\n\\\\\\n//
+        Define schema to extract contents into\\\\\\nconst schema = z.object({\\\\\\n
+        \ top: z\\\\\\n    .array(\\\\\\n      z.object({\\\\\\n        title: z.string(),\\\\\\n
+        \       points: z.number(),\\\\\\n        by: z.string(),\\\\\\n        commentsURL:
+        z.string(),\\\\\\n      })\\\\\\n    )\\\\\\n    .length(5)\\\\\\n    .describe('Top
+        5 stories on Hacker News'),\\\\\\n});\\\\\\n\\\\\\n// Use the v2 extract API
+        with direct Zod schema support\\\\\\nconst extractRes = await firecrawl.extract({\\\\\\n
+        \ urls: ['https://news.ycombinator.com'],\\\\\\n  schema,\\\\\\n  prompt:
+        'Extract the top 5 stories',\\\\\\n});\\\\\\n\\\\\\nconsole.log(extractRes);\\\\\\n```\\\\\\n\\\\\\n##
+        Open Source vs Cloud Offering\\\\\\n\\\\\\n[Permalink: Open Source vs Cloud
+        Offering](https://github.com/firecrawl/firecrawl#open-source-vs-cloud-offering)\\\\\\n\\\\\\nFirecrawl
+        is open source available under the AGPL-3.0 license.\\\\\\n\\\\\\nTo deliver
+        the best possible product, we offer a hosted version of Firecrawl alongside
+        our open-source offering. The cloud solution allows us to continuously innovate
+        and maintain a high-quality, sustainable service for all users.\\\\\\n\\\\\\nFirecrawl
+        Cloud is available at [firecrawl.dev](https://firecrawl.dev/) and offers a
+        range of features that are not available in the open source version:\\\\\\n\\\\\\n[![Open
+        Source vs Cloud Offering](https://raw.githubusercontent.com/firecrawl/firecrawl/main/img/open-source-cloud.png)](https://raw.githubusercontent.com/firecrawl/firecrawl/main/img/open-source-cloud.png)\\\\\\n\\\\\\n##
+        Contributing\\\\\\n\\\\\\n[Permalink: Contributing](https://github.com/firecrawl/firecrawl#contributing)\\\\\\n\\\\\\nWe
+        love contributions! Please read our [contributing guide](https://github.com/firecrawl/firecrawl/blob/main/CONTRIBUTING.md)
+        before submitting a pull request. If you'd like to self-host, refer to the
+        [self-hosting guide](https://github.com/firecrawl/firecrawl/blob/main/SELF_HOST.md).\\\\\\n\\\\\\n_It
+        is the sole responsibility of the end users to respect websites' policies
+        when scraping, searching and crawling with Firecrawl. Users are advised to
+        adhere to the applicable privacy policies and terms of use of the websites
+        prior to initiating any scraping activities. By default, Firecrawl respects
+        the directives specified in the websites' robots.txt files when crawling.
+        By utilizing Firecrawl, you expressly agree to comply with these conditions._\\\\\\n\\\\\\n##
+        Contributors\\\\\\n\\\\\\n[Permalink: Contributors](https://github.com/firecrawl/firecrawl#contributors)\\\\\\n\\\\\\n[![contributors](https://camo.githubusercontent.com/e3b2e7ad4c1f76e68fc11ede158c87a0f039052f649002a1ff855d13fb9294fb/68747470733a2f2f636f6e747269622e726f636b732f696d6167653f7265706f3d66697265637261776c2f66697265637261776c)](https://github.com/firecrawl/firecrawl/graphs/contributors)\\\\\\n\\\\\\n##
+        License Disclaimer\\\\\\n\\\\\\n[Permalink: License Disclaimer](https://github.com/firecrawl/firecrawl#license-disclaimer)\\\\\\n\\\\\\nThis
+        project is primarily licensed under the GNU Affero General Public License
+        v3.0 (AGPL-3.0), as specified in the LICENSE file in the root directory of
+        this repository. However, certain components of this project are licensed
+        under the MIT License. Refer to the LICENSE files in these specific directories
+        for details.\\\\\\n\\\\\\nPlease note:\\\\\\n\\\\\\n- The AGPL-3.0 license
+        applies to all parts of the project unless otherwise specified.\\\\\\n- The
+        SDKs and some UI components are licensed under the MIT License. Refer to the
+        LICENSE files in these specific directories for details.\\\\\\n- When using
+        or contributing to this project, ensure you comply with the appropriate license
+        terms for the specific component you are working with.\\\\\\n\\\\\\nFor more
+        details on the licensing of specific components, please refer to the LICENSE
+        files in the respective directories or contact the project maintainers.\\\\\\n\\\\\\n[\u2191
+        Back to Top \u2191](https://github.com/firecrawl/firecrawl#readme-top)\\\\\\n\\\\\\n##
+        About\\\\\\n\\\\\\n\U0001F525 The Web Data API for AI - Turn entire websites
+        into LLM-ready markdown or structured data\\\\\\n\\\\\\n\\\\\\n[firecrawl.dev](https://firecrawl.dev/
+        \\\"https://firecrawl.dev\\\")\\\\\\n\\\\\\n### Topics\\\\\\n\\\\\\n[markdown](https://github.com/topics/markdown
+        \\\"Topic: markdown\\\") [crawler](https://github.com/topics/crawler \\\"Topic:
+        crawler\\\") [scraper](https://github.com/topics/scraper \\\"Topic: scraper\\\")
+        [ai](https://github.com/topics/ai \\\"Topic: ai\\\") [html-to-markdown](https://github.com/topics/html-to-markdown
+        \\\"Topic: html-to-markdown\\\") [web-crawler](https://github.com/topics/web-crawler
+        \\\"Topic: web-crawler\\\") [scraping](https://github.com/topics/scraping
+        \\\"Topic: scraping\\\") [web-scraper](https://github.com/topics/web-scraper
+        \\\"Topic: web-scraper\\\") [web-scraping](https://github.com/topics/web-scraping
+        \\\"Topic: web-scraping\\\") [data-extraction](https://github.com/topics/data-extraction
+        \\\"Topic: data-extraction\\\") [webscraping](https://github.com/topics/webscraping
+        \\\"Topic: webscraping\\\") [web-data-extraction](https://github.com/topics/web-data-extraction
+        \\\"Topic: web-data-extraction\\\") [ai-agents](https://github.com/topics/ai-agents
+        \\\"Topic: ai-agents\\\") [web-search](https://github.com/topics/web-search
+        \\\"Topic: web-search\\\") [ai-search](https://github.com/topics/ai-search
+        \\\"Topic: ai-search\\\") [web-data](https://github.com/topics/web-data \\\"Topic:
+        web-data\\\") [llm](https://github.com/topics/llm \\\"Topic: llm\\\") [ai-crawler](https://github.com/topics/ai-crawler
+        \\\"Topic: ai-crawler\\\") [ai-scraping](https://github.com/topics/ai-scraping
+        \\\"Topic: ai-scraping\\\")\\\\\\n\\\\\\n### Resources\\\\\\n\\\\\\n[Readme](https://github.com/firecrawl/firecrawl#readme-ov-file)\\\\\\n\\\\\\n###
+        License\\\\\\n\\\\\\n[AGPL-3.0 license](https://github.com/firecrawl/firecrawl#AGPL-3.0-1-ov-file)\\\\\\n\\\\\\n###
+        Contributing\\\\\\n\\\\\\n[Contributing](https://github.com/firecrawl/firecrawl#contributing-ov-file)\\\\\\n\\\\\\n###
+        Uh oh!\\\\\\n\\\\\\nThere was an error while loading. [Please reload this
+        page](https://github.com/firecrawl/firecrawl).\\\\\\n\\\\\\n[Activity](https://github.com/firecrawl/firecrawl/activity)\\\\\\n\\\\\\n[Custom
+        properties](https://github.com/firecrawl/firecrawl/custom-properties)\\\\\\n\\\\\\n###
+        Stars\\\\\\n\\\\\\n[**65.2k**\\\\\\\\\\nstars](https://github.com/firecrawl/firecrawl/stargazers)\\\\\\n\\\\\\n###
+        Watchers\\\\\\n\\\\\\n[**256**\\\\\\\\\\nwatching](https://github.com/firecrawl/firecrawl/watchers)\\\\\\n\\\\\\n###
+        Forks\\\\\\n\\\\\\n[**5.1k**\\\\\\\\\\nforks](https://github.com/firecrawl/firecrawl/forks)\\\\\\n\\\\\\n[Report
+        repository](https://github.com/contact/report-content?content_url=https%3A%2F%2Fgithub.com%2Ffirecrawl%2Ffirecrawl&report=firecrawl+%28user%29)\\\\\\n\\\\\\n##
+        [Releases\\\\  28](https://github.com/firecrawl/firecrawl/releases)\\\\\\n\\\\\\n[v2.4.0\\\\\\\\\\nLatest\\\\\\\\\\n\\\\\\\\\\n2
+        weeks agoOct 13, 2025](https://github.com/firecrawl/firecrawl/releases/tag/v2.4.0)\\\\\\n\\\\\\n[\\\\+
+        27 releases](https://github.com/firecrawl/firecrawl/releases)\\\\\\n\\\\\\n##
+        [Packages\\\\  3](https://github.com/orgs/firecrawl/packages?repo_name=firecrawl)\\\\\\n\\\\\\n-
+        [firecrawl](https://github.com/orgs/firecrawl/packages/container/package/firecrawl)\\\\\\n-
+        [playwright-service](https://github.com/orgs/firecrawl/packages/container/package/playwright-service)\\\\\\n-
+        [nuq-postgres](https://github.com/orgs/firecrawl/packages/container/package/nuq-postgres)\\\\\\n\\\\\\n##
+        [Contributors\\\\  121](https://github.com/firecrawl/firecrawl/graphs/contributors)\\\\\\n\\\\\\n[\\\\+
+        107 contributors](https://github.com/firecrawl/firecrawl/graphs/contributors)\\\\\\n\\\\\\n##
+        Languages\\\\\\n\\\\\\n- [TypeScript73.5%](https://github.com/firecrawl/firecrawl/search?l=typescript)\\\\\\n-
+        [Python18.9%](https://github.com/firecrawl/firecrawl/search?l=python)\\\\\\n-
+        [Rust6.0%](https://github.com/firecrawl/firecrawl/search?l=rust)\\\\\\n- [Astro0.6%](https://github.com/firecrawl/firecrawl/search?l=astro)\\\\\\n-
+        [JavaScript0.3%](https://github.com/firecrawl/firecrawl/search?l=javascript)\\\\\\n-
+        [Jupyter Notebook0.2%](https://github.com/firecrawl/firecrawl/search?l=jupyter-notebook)\\\\\\n-
+        Other0.5%\",\"metadata\":{\"octolytics-dimension-repository_network_root_id\":\"787076358\",\"visitor-hmac\":\"163b2538b2335f7d4000a770785477e15881e1101708ca5ff1e8c021095f6ca1\",\"og:type\":\"object\",\"language\":\"en\",\"route-action\":\"disambiguate\",\"og:title\":\"GitHub
+        - firecrawl/firecrawl: \U0001F525 The Web Data API for AI - Turn entire websites
+        into LLM-ready markdown or structured data\",\"octolytics-dimension-repository_public\":\"true\",\"octolytics-dimension-repository_network_root_nwo\":\"firecrawl/firecrawl\",\"browser-errors-url\":\"https://api.github.com/_private/browser/errors\",\"browser-stats-url\":\"https://api.github.com/_private/browser/stats\",\"twitter:title\":\"GitHub
+        - firecrawl/firecrawl: \U0001F525 The Web Data API for AI - Turn entire websites
+        into LLM-ready markdown or structured data\",\"ui-target\":\"full\",\"og:image\":\"https://repository-images.githubusercontent.com/787076358/f9616c09-3701-41ef-b5a6-fdf912ffb15b\",\"google-site-verification\":\"Apib7-x98H0j5cPqHWwSMm6dNU4GmODRoqxLiDzdx9I\",\"ogSiteName\":\"GitHub\",\"route-pattern\":\"/:user_id/:repository\",\"visitor-payload\":\"eyJyZWZlcnJlciI6IiIsInJlcXVlc3RfaWQiOiJBMTVGOjE3OUI0RDo2MzdFQUREOjg3MzEwOTM6NjkwMTE4MjUiLCJ2aXNpdG9yX2lkIjoiNDkyNzk2MzExNjg5OTIxMTMwMSIsInJlZ2lvbl9lZGdlIjoiaWFkIiwicmVnaW9uX3JlbmRlciI6ImlhZCJ9\",\"og:description\":\"\U0001F525
+        The Web Data API for AI - Turn entire websites into LLM-ready markdown or
+        structured data - firecrawl/firecrawl\",\"expected-hostname\":\"github.com\",\"release\":\"66136a30a16cc69206f1249b6ba072daa2174535\",\"title\":\"GitHub
+        - firecrawl/firecrawl: \U0001F525 The Web Data API for AI - Turn entire websites
+        into LLM-ready markdown or structured data\",\"ogDescription\":\"\U0001F525
+        The Web Data API for AI - Turn entire websites into LLM-ready markdown or
+        structured data - firecrawl/firecrawl\",\"twitter:card\":\"summary_large_image\",\"fb:app_id\":\"1401488693436528\",\"color-scheme\":\"light
+        dark\",\"twitter:description\":\"\U0001F525 The Web Data API for AI - Turn
+        entire websites into LLM-ready markdown or structured data - firecrawl/firecrawl\",\"favicon\":\"https://github.githubassets.com/favicons/favicon.svg\",\"viewport\":\"width=device-width\",\"twitter:image\":\"https://repository-images.githubusercontent.com/787076358/f9616c09-3701-41ef-b5a6-fdf912ffb15b\",\"user-login\":\"\",\"description\":\"\U0001F525
+        The Web Data API for AI - Turn entire websites into LLM-ready markdown or
+        structured data - firecrawl/firecrawl\",\"octolytics-dimension-repository_nwo\":\"firecrawl/firecrawl\",\"octolytics-dimension-user_id\":\"135057108\",\"twitter:site\":\"@github\",\"og:url\":\"https://github.com/firecrawl/firecrawl\",\"octolytics-dimension-user_login\":\"firecrawl\",\"hostname\":\"github.com\",\"current-catalog-service-hash\":\"f3abb0cc802f3d7b95fc8762b94bdcb13bf39634c40c357301c4aa1d67a256fb\",\"html-safe-nonce\":\"e5653da3800db7de2c8b4a64ff6367242043a9e452608e9a6941a1c9e8346cfc\",\"apple-itunes-app\":\"app-id=1477376905,
+        app-argument=https://github.com/firecrawl/firecrawl\",\"turbo-cache-control\":\"no-preview\",\"og:site_name\":\"GitHub\",\"request-id\":\"A15F:179B4D:637EADD:8731093:69011825\",\"octolytics-url\":\"https://collector.github.com/github/collect\",\"octolytics-dimension-repository_is_fork\":\"false\",\"fetch-nonce\":\"v2:bc80e85b-edaf-e746-9f2c-ffdc75854b07\",\"og:image:alt\":\"\U0001F525
+        The Web Data API for AI - Turn entire websites into LLM-ready markdown or
+        structured data - firecrawl/firecrawl\",\"github-keyboard-shortcuts\":\"repository,copilot\",\"ogTitle\":\"GitHub
+        - firecrawl/firecrawl: \U0001F525 The Web Data API for AI - Turn entire websites
+        into LLM-ready markdown or structured data\",\"ogImage\":\"https://repository-images.githubusercontent.com/787076358/f9616c09-3701-41ef-b5a6-fdf912ffb15b\",\"analytics-location\":\"/<user-name>/<repo-name>\",\"route-controller\":\"files\",\"octolytics-dimension-repository_id\":\"787076358\",\"ogUrl\":\"https://github.com/firecrawl/firecrawl\",\"go-import\":\"github.com/firecrawl/firecrawl
+        git https://github.com/firecrawl/firecrawl.git\",\"hovercard-subject-tag\":\"repository:787076358\",\"theme-color\":\"#1e2327\",\"turbo-body-classes\":\"logged-out
+        env-production page-responsive\",\"scrapeId\":\"ec4d99a0-4c4f-4d1a-9fd2-08b8f891f883\",\"sourceURL\":\"https://github.com/firecrawl/firecrawl\",\"url\":\"https://github.com/firecrawl/firecrawl\",\"statusCode\":200,\"contentType\":\"text/html;
+        charset=utf-8\",\"proxyUsed\":\"basic\",\"cacheState\":\"hit\",\"cachedAt\":\"2025-10-28T19:23:20.106Z\"}},{\"url\":\"https://x.com/firecrawl_dev?lang=en\",\"title\":\"Firecrawl
+        (@firecrawl_dev) / Posts / X\",\"description\":\"Firecrawl (@firecrawl_dev)
+        - Posts - Turn websites into LLM-ready data. Built by @mendableai team Open
+        source: | X (formerly Twitter)\",\"position\":3},{\"url\":\"https://github.com/firecrawl\",\"title\":\"Firecrawl
+        - GitHub\",\"description\":\"Building AI applications? You need clean, structured
+        data from the web. Firecrawl handles the complexity of modern web scraping
+        so you can focus on building ...\",\"position\":4,\"category\":\"github\",\"markdown\":\"[Skip
+        to content](https://github.com/firecrawl#start-of-content)\\n\\nYou signed
+        in with another tab or window. [Reload](https://github.com/firecrawl) to refresh
+        your session.You signed out in another tab or window. [Reload](https://github.com/firecrawl)
+        to refresh your session.You switched accounts on another tab or window. [Reload](https://github.com/firecrawl)
+        to refresh your session.Dismiss alert\\n\\n{{ message }}\\n\\n[README.md](https://github.com/firecrawl/.github/tree/main/profile/README.md)\\n\\n#
+        \U0001F525 Firecrawl\\n\\n[Permalink: \U0001F525 Firecrawl](https://github.com/firecrawl#-firecrawl)\\n\\n[![Firecrawl
+        Logo](https://raw.githubusercontent.com/mendableai/firecrawl/main/img/firecrawl_logo.png)](https://raw.githubusercontent.com/mendableai/firecrawl/main/img/firecrawl_logo.png)\\n\\n###
+        Transform any website into LLM-ready data\\n\\n[Permalink: Transform any website
+        into LLM-ready data](https://github.com/firecrawl#transform-any-website-into-llm-ready-data)\\n\\nAdvanced
+        web scraping, crawling, and data extraction infrastructure for AI applications\\n\\n[![Get
+        Started](https://camo.githubusercontent.com/85b729c7fb201b60a98279ddc4e70268281fc6df999e110276f798cf5c050126/68747470733a2f2f696d672e736869656c64732e696f2f62616467652ff09f9a805f4765745f537461727465642d4646364233353f7374796c653d666f722d7468652d6261646765)](https://firecrawl.dev/)
+        [![Documentation](https://camo.githubusercontent.com/f7531cb91d3d3dcac76ac7c2ba9d36c1a74728016c64d942cfaf954f5ae4a238/68747470733a2f2f696d672e736869656c64732e696f2f62616467652ff09f939a5f446f63756d656e746174696f6e2d3441393045323f7374796c653d666f722d7468652d6261646765)](https://docs.firecrawl.dev/)
+        [![Discord](https://camo.githubusercontent.com/8c2d9f948c1d79b69e26d25add89a17a734b48cc6fd6fc0040f34f31c6a11774/68747470733a2f2f696d672e736869656c64732e696f2f62616467652ff09f92ac5f4a6f696e5f446973636f72642d3538363546323f7374796c653d666f722d7468652d6261646765)](https://discord.com/invite/gSmWdAkdwd)\\n\\n[![License](https://camo.githubusercontent.com/a6f4431b80529dbeaa43c3c5fbcf4649f6b4ebbeb82d5a58abeb39ca3eeca8be/68747470733a2f2f696d672e736869656c64732e696f2f6769746875622f6c6963656e73652f6d656e6461626c6561692f66697265637261776c)](https://github.com/mendableai/firecrawl/blob/main/LICENSE)[![GitHub
+        Stars](https://camo.githubusercontent.com/f42ce9a4d46d07baa67b74b49277e72ed33877743358deebfa774e17532eb4ff/68747470733a2f2f696d672e736869656c64732e696f2f6769746875622f73746172732f6d656e6461626c6561692f66697265637261776c3f7374796c653d736f6369616c)](https://github.com/mendableai/firecrawl/stargazers)[![Python
+        Downloads](https://camo.githubusercontent.com/9d76afe428b4085c8b7103f2f4e31da110ee154ad7320bace4348d92ac0c2450/68747470733a2f2f7374617469632e706570792e746563682f62616467652f66697265637261776c2d7079)](https://pepy.tech/project/firecrawl-py)[![Follow
+        on X](https://camo.githubusercontent.com/e32f3aece18eaab32ee100cadb592843d985aa1171a8da08ae047626363d65ae/68747470733a2f2f696d672e736869656c64732e696f2f747769747465722f666f6c6c6f772f66697265637261776c5f6465763f7374796c653d736f6369616c)](https://x.com/firecrawl_dev)\\n\\n*
+        * *\\n\\n## Why Firecrawl?\\n\\n[Permalink: Why Firecrawl?](https://github.com/firecrawl#why-firecrawl)\\n\\n**Building
+        AI applications?** You need clean, structured data from the web. Firecrawl
+        handles the complexity of modern web scraping so you can focus on building
+        great products.\\n\\n## Our Core Ecosystem\\n\\n[Permalink: Our Core Ecosystem](https://github.com/firecrawl#our-core-ecosystem)\\n\\n###
+        Main Repository\\n\\n[Permalink: Main Repository](https://github.com/firecrawl#main-repository)\\n\\n[![](https://camo.githubusercontent.com/97aa9741f2773cb2d192c516c7689f4e2bbab89403aa868d842487551743626a/68747470733a2f2f6769746875622d726561646d652d73746174732e76657263656c2e6170702f6170692f70696e2f3f757365726e616d653d6d656e6461626c656169267265706f3d66697265637261776c267468656d653d6c69676874)](https://github.com/mendableai/firecrawl)\\n\\n**[firecrawl](https://github.com/mendableai/firecrawl)**
+        \\\\- Core API & SDK\\n\\nTurn entire websites into LLM-ready markdown or
+        structured data. Our flagship product with 40k+ stars.\\n\\n### Cloud API\\n\\n[Permalink:
+        Cloud API](https://github.com/firecrawl#cloud-api)\\n\\n[![Cloud API](https://camo.githubusercontent.com/6ad9773ed98c84d54b1546ffbf8b0fbb085be0c60580ae5a1ead2d23ddf1b121/68747470733a2f2f696d672e736869656c64732e696f2f62616467652f436c6f75645f4150492d4646364233353f7374796c653d666f722d7468652d6261646765266c6f676f3d636c6f7564266c6f676f436f6c6f723d7768697465)](https://firecrawl.dev/)\\n\\n**[Firecrawl](https://firecrawl.dev/)**
+        \\\\- Hosted API Service\\n\\nProduction-ready web scraping without infrastructure
+        management. Get your API key and start scraping in minutes with our reliable,
+        scalable cloud service.\\n\\n### MCP Integration\\n\\n[Permalink: MCP Integration](https://github.com/firecrawl#mcp-integration)\\n\\n[![MCP
+        Server](https://camo.githubusercontent.com/ea9cbd6a754e0932d17ae393ff53566bfb681492abddd08704dbe04b122dfaa1/68747470733a2f2f696d672e736869656c64732e696f2f62616467652f4d43505f5365727665722d3441393045323f7374796c653d666f722d7468652d6261646765266c6f676f3d736572766572266c6f676f436f6c6f723d7768697465)](https://github.com/mendableai/firecrawl-mcp-server)\\n\\n**[firecrawl-mcp-server](https://github.com/mendableai/firecrawl-mcp-server)**
+        \\\\- Model Context Protocol Server\\n\\nAdd powerful web scraping capabilities
+        to Claude, Cursor, and any MCP-compatible LLM client.\\n\\n## Community &
+        Support\\n\\n[Permalink: Community & Support](https://github.com/firecrawl#community--support)\\n\\n[![Discord](https://camo.githubusercontent.com/62d3d35241760cf174631c4e6b5f4503c0a6b34640fd306e36a829ab5ec47b14/68747470733a2f2f696d672e736869656c64732e696f2f62616467652f446973636f72642d3538363546323f7374796c653d666f722d7468652d6261646765266c6f676f3d646973636f7264266c6f676f436f6c6f723d7768697465)](https://discord.com/invite/gSmWdAkdwd)[![X](https://camo.githubusercontent.com/8c709aaebc7feee6050eba44984b294d9da3ace3353bd5eed8b499dd04af3c06/68747470733a2f2f696d672e736869656c64732e696f2f62616467652f582d3030303030303f7374796c653d666f722d7468652d6261646765266c6f676f3d78266c6f676f436f6c6f723d7768697465)](https://x.com/firecrawl_dev)[![LinkedIn](https://camo.githubusercontent.com/8c0692475a5bfc1d9e7361074bdb648e567cae7b5b40ffd32adae31180b0d7b6/68747470733a2f2f696d672e736869656c64732e696f2f62616467652f4c696e6b6564496e2d3030373742353f7374796c653d666f722d7468652d6261646765266c6f676f3d6c696e6b6564696e266c6f676f436f6c6f723d7768697465)](https://www.linkedin.com/company/104100957/)[![Discussions](https://camo.githubusercontent.com/9403fd9d6d54f5a23a79f9a8a6a256ae82159fb626710fd56c2495fff1257d62/68747470733a2f2f696d672e736869656c64732e696f2f62616467652f4769744875625f44697363757373696f6e732d3138313731373f7374796c653d666f722d7468652d6261646765266c6f676f3d676974687562266c6f676f436f6c6f723d7768697465)](https://github.com/mendableai/firecrawl/discussions)[![Documentation](https://camo.githubusercontent.com/9d518c9da8018ae3524a2580522bd1ef591f343cc4df7983b4476e117fa70bba/68747470733a2f2f696d672e736869656c64732e696f2f62616467652f446f63756d656e746174696f6e2d3441393045323f7374796c653d666f722d7468652d6261646765266c6f676f3d626f6f6b266c6f676f436f6c6f723d7768697465)](https://docs.firecrawl.dev/)\\n\\n##
+        Built By Mendable\\n\\n[Permalink: Built By Mendable](https://github.com/firecrawl#built-by-mendable)\\n\\nWe're
+        the team behind [Mendable.ai](https://mendable.ai/), passionate about making
+        web data accessible for AI applications. Firecrawl powers thousands of AI
+        products worldwide.\\n\\n* * *\\n\\n**Ready to build something amazing?**\\n\\n[Get
+        your API key](https://firecrawl.dev/) and start scraping in minutes\\n\\n\\n[Star
+        our main repo](https://github.com/mendableai/firecrawl) \u2022\\n[Try the
+        playground](https://firecrawl.dev/playground) \u2022\\n[Read the docs](https://docs.firecrawl.dev/)\\n\\n##
+        Pinned   Loading\\n\\n1. [firecrawl](https://github.com/firecrawl/firecrawl)
+        firecrawlPublic\\n\\n\\n\\n\\n\\n\\n\U0001F525 The Web Data API for AI - Turn
+        entire websites into LLM-ready markdown or structured data\\n\\n\\n\\n\\nTypeScript[64.9k](https://github.com/firecrawl/firecrawl/stargazers)
+        [5.1k](https://github.com/firecrawl/firecrawl/forks)\\n\\n2. [mendable-nextjs-chatbot](https://github.com/firecrawl/mendable-nextjs-chatbot)
+        mendable-nextjs-chatbotPublic template\\n\\n\\n\\n\\n\\n\\nNext.js Starter
+        Template for building chatbots with Mendable\\n\\n\\n\\n\\nTypeScript[256](https://github.com/firecrawl/mendable-nextjs-chatbot/stargazers)
+        [52](https://github.com/firecrawl/mendable-nextjs-chatbot/forks)\\n\\n3. [rag-arena](https://github.com/firecrawl/rag-arena)
+        rag-arenaPublic\\n\\n\\n\\n\\n\\n\\nOpen-source RAG evaluation through users'
+        feedback\\n\\n\\n\\n\\nTypeScript[206](https://github.com/firecrawl/rag-arena/stargazers)
+        [32](https://github.com/firecrawl/rag-arena/forks)\\n\\n4. [QA\\\\_clustering](https://github.com/firecrawl/QA_clustering)
+        QA\\\\_clusteringPublic\\n\\n\\n\\n\\n\\n\\nAnalyzing chat interactions w/
+        LLMs to improve \U0001F99C\U0001F517 Langchain docs\\n\\n\\n\\n\\nJupyter
+        Notebook[80](https://github.com/firecrawl/QA_clustering/stargazers) [12](https://github.com/firecrawl/QA_clustering/forks)\\n\\n5.
+        [data-connectors](https://github.com/firecrawl/data-connectors) data-connectorsPublic\\n\\n\\n\\n\\n\\n\\nLLM-ready
+        data connectors\\n\\n\\n\\n\\nTypeScript[95](https://github.com/firecrawl/data-connectors/stargazers)
+        [23](https://github.com/firecrawl/data-connectors/forks)\\n\\n6. [mendable-py](https://github.com/firecrawl/mendable-py)
+        mendable-pyPublic\\n\\n\\n\\n\\n\\n\\nBuild Production Ready LLM Chat Apps
+        in Minutes\\n\\n\\n\\n\\nPython[33](https://github.com/firecrawl/mendable-py/stargazers)
+        [7](https://github.com/firecrawl/mendable-py/forks)\\n\\n\\n### Repositories\\n\\nLoading\\n\\nType\\n\\nAllPublicSourcesForksArchivedMirrorsTemplates\\n\\nLanguage\\n\\nAllCSSGoJavaJavaScriptJupyter
+        NotebookMDXPythonRustTypeScript\\n\\nSort\\n\\nLast updatedNameStars\\n\\nShowing
+        10 of 61 repositories\\n\\n- [firecrawl](https://github.com/firecrawl/firecrawl)\\nPublic\\n\\n\\n\\n\U0001F525
+        The Web Data API for AI - Turn entire websites into LLM-ready markdown or
+        structured data\\n\\n\\n\\n\\n\\n\\nfirecrawl/firecrawl\u2019s past year of
+        commit activity\\n\\n\\n\\nTypeScript[64,949](https://github.com/firecrawl/firecrawl/stargazers)AGPL-3.0\\n[5,132](https://github.com/firecrawl/firecrawl/forks)
+        [27](https://github.com/firecrawl/firecrawl/issues) [(2 issues need help)](https://github.com/firecrawl/firecrawl/issues?q=label%3A%22good+first+issue%22+is%3Aissue+is%3Aopen)
+        [85](https://github.com/firecrawl/firecrawl/pulls)\\nUpdated 2 hours agoOct
+        27, 2025\\n\\n- [firecrawl-docs](https://github.com/firecrawl/firecrawl-docs)\\nPublic\\n\\n\\n\\nDocumentation
+        for Firecrawl.\\n\\n\\n\\n\\n\\n\\nfirecrawl/firecrawl-docs\u2019s past year
+        of commit activity\\n\\n\\n\\nMDX[17](https://github.com/firecrawl/firecrawl-docs/stargazers)
+        [35](https://github.com/firecrawl/firecrawl-docs/forks) [10](https://github.com/firecrawl/firecrawl-docs/issues)
+        [5](https://github.com/firecrawl/firecrawl-docs/pulls)\\nUpdated 20 hours
+        agoOct 26, 2025\\n\\n- [open-agent-builder](https://github.com/firecrawl/open-agent-builder)\\nPublic\\n\\n\\n\\n\U0001F525
+        Visual workflow builder for AI agents powered by Firecrawl - drag-and-drop
+        web scraping pipelines with real-time execution\\n\\n\\n\\n\\n\\n\\nfirecrawl/open-agent-builder\u2019s
+        past year of commit activity\\n\\n\\n\\nTypeScript[1,673](https://github.com/firecrawl/open-agent-builder/stargazers)
+        [274](https://github.com/firecrawl/open-agent-builder/forks) [4](https://github.com/firecrawl/open-agent-builder/issues)
+        [2](https://github.com/firecrawl/open-agent-builder/pulls)\\nUpdated last
+        weekOct 20, 2025\\n\\n- [firecrawl-mcp-server](https://github.com/firecrawl/firecrawl-mcp-server)\\nPublic\\n\\n\\n\\n\U0001F525
+        Official Firecrawl MCP Server - Adds powerful web scraping and search to Cursor,
+        Claude and any other LLM clients.\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n[**Uh
+        oh!**](https://github.com/firecrawl/firecrawl-mcp-server/graphs/commit-activity)\\n\\n[There
+        was an error while loading.](https://github.com/firecrawl/firecrawl-mcp-server/graphs/commit-activity)
+        [Please reload this page](https://github.com/firecrawl).\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\nfirecrawl/firecrawl-mcp-server\u2019s
+        past year of commit activity\\n\\n\\n\\nJavaScript[4,794](https://github.com/firecrawl/firecrawl-mcp-server/stargazers)MIT\\n[519](https://github.com/firecrawl/firecrawl-mcp-server/forks)
+        [44](https://github.com/firecrawl/firecrawl-mcp-server/issues) [17](https://github.com/firecrawl/firecrawl-mcp-server/pulls)\\nUpdated
+        last weekOct 19, 2025\\n\\n- [n8n-nodes-firecrawl](https://github.com/firecrawl/n8n-nodes-firecrawl)\\nPublic\\n\\n\\n\\nn8n
+        node to interact with Firecrawl\\n\\n\\n\\n\\n\\n\\nfirecrawl/n8n-nodes-firecrawl\u2019s
+        past year of commit activity\\n\\n\\n\\nTypeScript[21](https://github.com/firecrawl/n8n-nodes-firecrawl/stargazers)MIT\\n[13](https://github.com/firecrawl/n8n-nodes-firecrawl/forks)
+        [3](https://github.com/firecrawl/n8n-nodes-firecrawl/issues) [0](https://github.com/firecrawl/n8n-nodes-firecrawl/pulls)\\nUpdated
+        2 weeks agoOct 17, 2025\\n\\n- [.github](https://github.com/firecrawl/.github)\\nPublic\\n\\n\\n\\n\\nfirecrawl/.github\u2019s
+        past year of commit activity\\n\\n\\n\\n0\\n[1](https://github.com/firecrawl/.github/forks)
+        [0](https://github.com/firecrawl/.github/issues) [0](https://github.com/firecrawl/.github/pulls)\\nUpdated
+        2 weeks agoOct 12, 2025\\n\\n- [fire-enrich](https://github.com/firecrawl/fire-enrich)\\nPublic\\n\\n\\n\\n\U0001F525
+        AI-powered data enrichment tool that transforms emails into rich datasets
+        with company profiles, funding data, tech stacks, and more using Firecrawl
+        and multi-agent AI\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n[**Uh oh!**](https://github.com/firecrawl/fire-enrich/graphs/commit-activity)\\n\\n[There
+        was an error while loading.](https://github.com/firecrawl/fire-enrich/graphs/commit-activity)
+        [Please reload this page](https://github.com/firecrawl).\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\nfirecrawl/fire-enrich\u2019s
+        past year of commit activity\\n\\n\\n\\nTypeScript[953](https://github.com/firecrawl/fire-enrich/stargazers)MIT\\n[239](https://github.com/firecrawl/fire-enrich/forks)
+        [12](https://github.com/firecrawl/fire-enrich/issues) [3](https://github.com/firecrawl/fire-enrich/pulls)\\nUpdated
+        3 weeks agoOct 8, 2025\\n\\n- [firecrawl-java-sdk](https://github.com/firecrawl/firecrawl-java-sdk)\\nPublic\\n\\n\\n\\n\\nfirecrawl/firecrawl-java-sdk\u2019s
+        past year of commit activity\\n\\n\\n\\nJava[11](https://github.com/firecrawl/firecrawl-java-sdk/stargazers)MIT\\n[4](https://github.com/firecrawl/firecrawl-java-sdk/forks)
+        [0](https://github.com/firecrawl/firecrawl-java-sdk/issues) [0](https://github.com/firecrawl/firecrawl-java-sdk/pulls)\\nUpdated
+        last monthSep 28, 2025\\n\\n- [open-lovable](https://github.com/firecrawl/open-lovable)\\nPublic\\n\\n\\n\\n\U0001F525
+        Clone and recreate any website as a modern React app in seconds\\n\\n\\n\\n\\n\\n\\nfirecrawl/open-lovable\u2019s
+        past year of commit activity\\n\\n\\n\\nTypeScript[21,320](https://github.com/firecrawl/open-lovable/stargazers)MIT\\n[3,986](https://github.com/firecrawl/open-lovable/forks)
+        [70](https://github.com/firecrawl/open-lovable/issues) [33](https://github.com/firecrawl/open-lovable/pulls)\\nUpdated
+        last monthSep 27, 2025\\n\\n- [mineru-api](https://github.com/firecrawl/mineru-api)\\nPublic\\n\\n\\n\\n\\nfirecrawl/mineru-api\u2019s
+        past year of commit activity\\n\\n\\n\\nPython[12](https://github.com/firecrawl/mineru-api/stargazers)AGPL-3.0\\n[2](https://github.com/firecrawl/mineru-api/forks)
+        [1](https://github.com/firecrawl/mineru-api/issues) [1](https://github.com/firecrawl/mineru-api/pulls)\\nUpdated
+        on Sep 26Sep 26, 2025\\n\\n\\n[View all repositories](https://github.com/orgs/firecrawl/repositories?type=all)\\n\\n[**People**](https://github.com/orgs/firecrawl/people)\\n\\n[![@alexnucci](https://avatars.githubusercontent.com/u/1919849?s=70&v=4)](https://github.com/alexnucci)[![@micahstairs](https://avatars.githubusercontent.com/u/7231485?s=70&v=4)](https://github.com/micahstairs)[![@nickscamara](https://avatars.githubusercontent.com/u/20311743?s=70&v=4)](https://github.com/nickscamara)[![@mogery](https://avatars.githubusercontent.com/u/66118807?s=70&v=4)](https://github.com/mogery)[![@developersdigest](https://avatars.githubusercontent.com/u/124798203?s=70&v=4)](https://github.com/developersdigest)\\n\\n####
+        Top languages\\n\\n[TypeScript](https://github.com/orgs/firecrawl/repositories?language=typescript&type=all)
+        [Python](https://github.com/orgs/firecrawl/repositories?language=python&type=all)
+        [JavaScript](https://github.com/orgs/firecrawl/repositories?language=javascript&type=all)
+        [Go](https://github.com/orgs/firecrawl/repositories?language=go&type=all)
+        [MDX](https://github.com/orgs/firecrawl/repositories?language=mdx&type=all)\\n\\n####
+        Most used topics\\n\\n[ai](https://github.com/search?q=topic%3Aai+org%3Afirecrawl+fork%3Atrue&type=repositories
+        \\\"Topic: ai\\\") [firecrawl](https://github.com/search?q=topic%3Afirecrawl+org%3Afirecrawl+fork%3Atrue&type=repositories
+        \\\"Topic: firecrawl\\\") [llm](https://github.com/search?q=topic%3Allm+org%3Afirecrawl+fork%3Atrue&type=repositories
+        \\\"Topic: llm\\\") [web-crawler](https://github.com/search?q=topic%3Aweb-crawler+org%3Afirecrawl+fork%3Atrue&type=repositories
+        \\\"Topic: web-crawler\\\") [web-scraping](https://github.com/search?q=topic%3Aweb-scraping+org%3Afirecrawl+fork%3Atrue&type=repositories
+        \\\"Topic: web-scraping\\\")\\n\\nYou can\u2019t perform that action at this
+        time.\",\"metadata\":{\"analytics-location\":\"/<org-login>\",\"apple-itunes-app\":\"app-id=1477376905,
+        app-argument=https://github.com/firecrawl\",\"twitter:card\":\"summary_large_image\",\"google-site-verification\":\"Apib7-x98H0j5cPqHWwSMm6dNU4GmODRoqxLiDzdx9I\",\"description\":\"Web
+        data API for AI. Firecrawl has 61 repositories available. Follow their code
+        on GitHub.\",\"og:image\":\"https://avatars.githubusercontent.com/u/135057108?s=280&v=4\",\"og:type\":\"profile\",\"visitor-payload\":\"eyJyZWZlcnJlciI6IiIsInJlcXVlc3RfaWQiOiI5REFEOjIzM0ExMzo4RDgzNEI6QzQ5OUNCOjY4RkYzODlGIiwidmlzaXRvcl9pZCI6IjQwMDQ0MTI5MTkxMDA5NDY1OTEiLCJyZWdpb25fZWRnZSI6ImlhZCIsInJlZ2lvbl9yZW5kZXIiOiJpYWQifQ==\",\"github-keyboard-shortcuts\":\"copilot\",\"user-login\":\"\",\"viewport\":\"width=device-width\",\"og:description\":\"Web
+        data API for AI. Firecrawl has 61 repositories available. Follow their code
+        on GitHub.\",\"turbo-cache-control\":\"no-preview\",\"fetch-nonce\":\"v2:35a2e032-0081-3f6b-595e-967e32025c6f\",\"og:url\":\"https://github.com/firecrawl\",\"title\":\"Firecrawl
+        \xB7 GitHub\",\"route-pattern\":\"/:user_id(.:format)\",\"route-action\":\"show\",\"octolytics-url\":\"https://collector.github.com/github/collect\",\"og:site_name\":\"GitHub\",\"twitter:title\":\"Firecrawl\",\"request-id\":\"9DAD:233A13:8D834B:C499CB:68FF389F\",\"ogSiteName\":\"GitHub\",\"fb:app_id\":\"1401488693436528\",\"language\":\"en\",\"twitter:image\":\"https://avatars.githubusercontent.com/u/135057108?s=280&v=4\",\"ogImage\":\"https://avatars.githubusercontent.com/u/135057108?s=280&v=4\",\"release\":\"c44b7f7aa5c70f3296484971978c9f4b1b473352\",\"theme-color\":\"#1e2327\",\"color-scheme\":\"light
+        dark\",\"html-safe-nonce\":\"2d932295da6aa360d861f16279839ab109dc4e977a51bc99204477969d7d12c6\",\"ogTitle\":\"Firecrawl\",\"hovercard-subject-tag\":\"organization:135057108\",\"twitter:description\":\"Web
+        data API for AI. Firecrawl has 61 repositories available. Follow their code
+        on GitHub.\",\"hostname\":\"github.com\",\"ogUrl\":\"https://github.com/firecrawl\",\"ogDescription\":\"Web
+        data API for AI. Firecrawl has 61 repositories available. Follow their code
+        on GitHub.\",\"route-controller\":\"profiles\",\"favicon\":\"https://github.githubassets.com/favicons/favicon.svg\",\"visitor-hmac\":\"43cf3bbb9c57a3bcf0b1857fbcabcc78c274e7082e0d28c76cd6d4651bc2a920\",\"twitter:site\":\"@github\",\"ui-target\":\"full\",\"og:title\":\"Firecrawl\",\"expected-hostname\":\"github.com\",\"og:image:alt\":\"Web
+        data API for AI. Firecrawl has 61 repositories available. Follow their code
+        on GitHub.\",\"profile:username\":\"firecrawl\",\"current-catalog-service-hash\":\"4a1c50a83cf6cc4b55b6b9c53e553e3f847c876b87fb333f71f5d05db8f1a7db\",\"turbo-body-classes\":\"logged-out
+        env-production page-responsive\",\"browser-stats-url\":\"https://api.github.com/_private/browser/stats\",\"browser-errors-url\":\"https://api.github.com/_private/browser/errors\",\"scrapeId\":\"65cbc300-be11-4a1a-9d20-c114fb8473a7\",\"sourceURL\":\"https://github.com/firecrawl\",\"url\":\"https://github.com/firecrawl\",\"statusCode\":200,\"contentType\":\"text/html;
+        charset=utf-8\",\"proxyUsed\":\"basic\",\"cacheState\":\"hit\",\"cachedAt\":\"2025-10-27T09:17:20.756Z\"}},{\"url\":\"https://www.linkedin.com/company/firecrawl\",\"title\":\"Firecrawl
+        | LinkedIn\",\"description\":\"Our Dify integration now uses Firecrawl /v2
+        endpoints Scraping is 10x faster thanks to intelligent caching, plus we've
+        added semantic ...\",\"position\":5}]},\"creditsUsed\":3}"
+    headers:
+      Access-Control-Allow-Origin:
+      - '*'
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Content-Length:
+      - '93428'
+      Content-Type:
+      - application/json; charset=utf-8
+      Date:
+      - Wed, 29 Oct 2025 14:37:39 GMT
+      ETag:
+      - W/"16cf4-kHwVbMu4CCVG2UIt6p1g/gz5M4M"
+      Via:
+      - 1.1 google
+      X-Powered-By:
+      - Express
+      X-Response-Time:
+      - 13172.495ms
+    status:
+      code: 200
+      message: OK
+version: 1

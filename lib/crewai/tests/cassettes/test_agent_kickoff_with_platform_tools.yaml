@@ -1,0 +1,126 @@
+interactions:
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are Test Agent. Test backstory\nYour
+      personal goal is: Test goal\n\nYou ONLY have access to the following tools,
+      and should NEVER make up tools that are not listed here:\n\nTool Name: create_issue\nTool
+      Arguments: {''title'': {''description'': ''Issue title'', ''type'': ''str''},
+      ''body'': {''description'': ''Issue body'', ''type'': ''Union[str, NoneType]''}}\nTool
+      Description: Create a GitHub issue\nDetailed Parameter Structure:\nObject with
+      properties:\n  - title: Issue title (required)\n  - body: Issue body (optional)\n\nIMPORTANT:
+      Use the following format in your response:\n\n```\nThought: you should always
+      think about what to do\nAction: the action to take, only one name of [create_issue],
+      just the name, exactly as it''s written.\nAction Input: the input to the action,
+      just a simple JSON object, enclosed in curly braces, using \" to wrap keys and
+      values.\nObservation: the result of the action\n```\n\nOnce all necessary information
+      is gathered, return the following format:\n\n```\nThought: I now know the final
+      answer\nFinal Answer: the final answer to the original input question\n```"},
+      {"role": "user", "content": "Create a GitHub issue"}], "model": "gpt-3.5-turbo",
+      "stream": false}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '1233'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.109.1
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.109.1
+      x-stainless-read-timeout:
+      - '600'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.3
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAAwAAAP//jFNNbxMxEL3vrxj5nET5aGjIBUGoIMAFCRASqiLHns0O9Xose7ZtqPLf
+        0XrTbApF4rKHefOe37yZfSgAFFm1BGUqLaYObrj6+un+45er9ZvF/PW3tZirz+OXvy6+0/jDav1W
+        DVoGb3+ikUfWyHAdHAqx72ATUQu2qpPLF5PZfDy9vMhAzRZdS9sFGc5G86E0ccvD8WQ6PzIrJoNJ
+        LeFHAQDwkL+tR2/xXi1hPHis1JiS3qFanpoAVGTXVpROiZJoL2rQg4a9oM+213BHzoFHtFBzREgB
+        DZVkgHzJsdbtMCAM3Sig4R3J+2YLlFKDI1hx4yzsuYHgUCeEEPmWLHZiFkWTS5AaU4FOIBWCkDgE
+        7S1s2e6By1zNclnnLis6usH+2Vfn7iOWTdJter5x7gzQ3rNkwzm36yNyOCXleBcib9MfVFWSp1Rt
+        IurEvk0lCQeV0UMBcJ030jwJWYXIdZCN8A3m56bzeaen+iPo0dnsCAqLdmesxWLwjN7mGNzZTpXR
+        pkLbU/sD0I0lPgOKs6n/dvOcdjc5+d3/yPeAMRgE7SZEtGSeTty3RWz/kX+1nVLOhlXCeEsGN0IY
+        201YLHXjuutVaZ8E601JfocxRMon3G6yOBS/AQAA//8DABKn8+vBAwAA
+    headers:
+      CF-RAY:
+      - 993d6b4be9862379-SJC
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 24 Oct 2025 23:57:54 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - __cf_bm=WY9bgemMDI_hUYISAPlQ2a.DBGeZfM6AjVEa3SKNg1c-1761350274-1.0.1.1-K3Qm2cl6IlDAgmocoKZ8IMUTmue6Q81hH9stECprUq_SM8LF8rR9d1sHktvRCN3.jEM.twEuFFYDNpBnN8NBRJFZcea1yvpm8Uo0G_UhyDs;
+        path=/; expires=Sat, 25-Oct-25 00:27:54 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=JklLS4i3hBGELpS9cz1KMpTbj72hCwP41LyXDSxWIv8-1761350274521-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '487'
+      openai-project:
+      - proj_xitITlrFeen7zjNSzML82h9x
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '526'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '50000000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '49999727'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_1708dc0928c64882aaa5bc2c168c140f
+    status:
+      code: 200
+      message: OK
+version: 1

@@ -48,27 +48,25 @@ tool = MDXSearchTool(mdx='path/to/your/document.mdx')
 이 도구는 기본적으로 임베딩과 요약을 위해 OpenAI를 사용합니다. 커스터마이징을 위해 아래와 같이 설정 딕셔너리를 사용할 수 있습니다.
 
 ```python Code
+from chromadb.config import Settings
+
 tool = MDXSearchTool(
-    config=dict(
-        llm=dict(
-            provider="ollama", # 옵션에는 google, openai, anthropic, llama2 등이 있습니다.
-            config=dict(
-                model="llama2",
-                # 선택적 파라미터를 여기에 포함할 수 있습니다.
-                # temperature=0.5,
-                # top_p=1,
-                # stream=true,
-            ),
-        ),
-        embedder=dict(
-            provider="google", # 또는 openai, ollama, ...
-            config=dict(
-                model="models/embedding-001",
-                task_type="retrieval_document",
-                # 임베딩에 대한 선택적 제목을 여기에 추가할 수 있습니다.
-                # title="Embeddings",
-            ),
-        ),
-    )
+    config={
+        "embedding_model": {
+            "provider": "openai",
+            "config": {
+                "model": "text-embedding-3-small",
+                # "api_key": "sk-...",
+            },
+        },
+        "vectordb": {
+            "provider": "chromadb",  # 또는 "qdrant"
+            "config": {
+                # "settings": Settings(persist_directory="/content/chroma", allow_reset=True, is_persistent=True),
+                # from qdrant_client.models import VectorParams, Distance
+                # "vectors_config": VectorParams(size=384, distance=Distance.COSINE),
+            }
+        },
+    }
 )
 ```

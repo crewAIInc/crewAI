@@ -1,0 +1,244 @@
+interactions:
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are Test Agent. Test backstory\nYour
+      personal goal is: Test goal\n\nYou ONLY have access to the following tools,
+      and should NEVER make up tools that are not listed here:\n\nTool Name: exa_search\nTool
+      Arguments: {''query'': {''description'': None, ''type'': ''str''}}\nTool Description:
+      Search the web using Exa\n\nIMPORTANT: Use the following format in your response:\n\n```\nThought:
+      you should always think about what to do\nAction: the action to take, only one
+      name of [exa_search], just the name, exactly as it''s written.\nAction Input:
+      the input to the action, just a simple JSON object, enclosed in curly braces,
+      using \" to wrap keys and values.\nObservation: the result of the action\n```\n\nOnce
+      all necessary information is gathered, return the following format:\n\n```\nThought:
+      I now know the final answer\nFinal Answer: the final answer to the original
+      input question\n```"}, {"role": "user", "content": "Search for information about
+      AI"}], "model": "gpt-3.5-turbo", "stream": false}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '1038'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.109.1
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.109.1
+      x-stainless-read-timeout:
+      - '600'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.3
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAAwAAAP//jFNNb9swDL3nVxA6J0GTLgnmW7pLDGzrPi+dC0ORaVurLHoSVaQI8t8H
+        OR92twzYxYD4+MjHR3o/AhC6EAkIVUtWTWsm776/320+fbzbPLfy893br8vi6WGePnywNW3uxTgy
+        aPsTFZ9ZU0VNa5A12SOsHErGWHW2Ws5uFzfz1awDGirQRFrV8uR2uphwcFua3MzmixOzJq3QiwR+
+        jAAA9t03arQF7kQCN+NzpEHvZYUiuSQBCEcmRoT0XnuWlsW4BxVZRtvJ/lZTqGpOIAVfUzAFBI/A
+        NQLuZO5ROlUDExlggtOzJAfaluQaGUcFuaXAsE6nmV2rGEkG5HMMUtsGTmCfiV8B3UsmEsjEOs3E
+        IbP3W4/uWR65X9AHwx4cmmhebLxOoXTUXNM1zexwNIdl8DJaa4MxA0BaS9x16Ex9PCGHi42GqtbR
+        1v9BFaW22te5Q+nJRss8Uys69DACeOzWFV5tQLSOmpZzpifs2s1ns2M90V9Ij75ZnkAmlmbAWqzG
+        V+rlBbLUxg8WLpRUNRY9tb8OGQpNA2A0mPpvNddqHyfXtvqf8j2gFLaMRd46LLR6PXGf5jD+QP9K
+        u7jcCRbxSLTCnDW6uIkCSxnM8bSFf/GMTV5qW6Frne7uO25ydBj9BgAA//8DAChlpSTeAwAA
+    headers:
+      CF-RAY:
+      - 993d6b3e6b64ffb8-SJC
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 24 Oct 2025 23:57:52 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - __cf_bm=cXZeAPPk9o5VuaArJFruIKai9Oj2X9ResvQgx_qCwdg-1761350272-1.0.1.1-42v7QDan6OIFJYT2vOisNB0AeLg3KsbAiCGsrrsPgH1N13l8o_Vy6HvQCVCIRAqPaHCcvybK8xTxrHKqZgLBRH4XM7.l5IYkFLhgl8IIUA0;
+        path=/; expires=Sat, 25-Oct-25 00:27:52 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=wGtD6dA8GfZzwvY_uzLiXlAVzOIOJPtIPQYQRS_19oo-1761350272656-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '718'
+      openai-project:
+      - proj_xitITlrFeen7zjNSzML82h9x
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '791'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '50000000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '49999774'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_a2e42e9d98bc4c3db1a4de14cf1a94ec
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are Test Agent. Test backstory\nYour
+      personal goal is: Test goal\n\nYou ONLY have access to the following tools,
+      and should NEVER make up tools that are not listed here:\n\nTool Name: exa_search\nTool
+      Arguments: {''query'': {''description'': None, ''type'': ''str''}}\nTool Description:
+      Search the web using Exa\n\nIMPORTANT: Use the following format in your response:\n\n```\nThought:
+      you should always think about what to do\nAction: the action to take, only one
+      name of [exa_search], just the name, exactly as it''s written.\nAction Input:
+      the input to the action, just a simple JSON object, enclosed in curly braces,
+      using \" to wrap keys and values.\nObservation: the result of the action\n```\n\nOnce
+      all necessary information is gathered, return the following format:\n\n```\nThought:
+      I now know the final answer\nFinal Answer: the final answer to the original
+      input question\n```"}, {"role": "user", "content": "Search for information about
+      AI"}, {"role": "assistant", "content": "Thought: I should use the exa_search
+      tool to search for information about AI.\nAction: exa_search\nAction Input:
+      {\"query\": \"AI\"}\nObservation: Mock search results for: AI"}], "model": "gpt-3.5-turbo",
+      "stream": false}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '1250'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=cXZeAPPk9o5VuaArJFruIKai9Oj2X9ResvQgx_qCwdg-1761350272-1.0.1.1-42v7QDan6OIFJYT2vOisNB0AeLg3KsbAiCGsrrsPgH1N13l8o_Vy6HvQCVCIRAqPaHCcvybK8xTxrHKqZgLBRH4XM7.l5IYkFLhgl8IIUA0;
+        _cfuvid=wGtD6dA8GfZzwvY_uzLiXlAVzOIOJPtIPQYQRS_19oo-1761350272656-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.109.1
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.109.1
+      x-stainless-read-timeout:
+      - '600'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.3
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAAwAAAP//jFNNaxsxEL3vrxh06cU2/sBJs5diCi0phULr0EMaFlma3VWs1ajSbG0T
+        /N+L1o5306bQi0B6743evJGeMgBhtMhBqFqyarwdv7/7vP9kb+jjt8dV/Ln/otdrh3ezjdx9DUaM
+        koI2j6j4WTVR1HiLbMidYBVQMqaqs+ur2WI5nV8vOqAhjTbJKs/jxWQ55jZsaDydzZdnZU1GYRQ5
+        3GcAAE/dmjw6jXuRw3T0fNJgjLJCkV9IACKQTSdCxmgiS8di1IOKHKPrbK9raquac7gFRzvYpoVr
+        hNI4aUG6uMPww33odqtul6iKWqvdG040DRKiR2VKo86CCXxPBDhQC9ZsERoEJogog6qhpADSHbg2
+        rgK0ESGgTTElzur23dBpwLKNMiXlWmsHgHSOWKaku4wezsjxkoqlygfaxD+kojTOxLoIKCO5lEBk
+        8qJDjxnAQ5d++yJQ4QM1ngumLXbXzZdXp3qiH3iPLhZnkImlHaje3oxeqVdoZGlsHMxPKKlq1L20
+        H7ZstaEBkA26/tvNa7VPnRtX/U/5HlAKPaMufEBt1MuOe1rA9B/+Rbuk3BkWEcMvo7BggyFNQmMp
+        W3t6qSIeImNTlMZVGHww3XNNk8yO2W8AAAD//wMA7uEpt60DAAA=
+    headers:
+      CF-RAY:
+      - 993d6b44dc97ffb8-SJC
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 24 Oct 2025 23:57:53 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '446'
+      openai-project:
+      - proj_xitITlrFeen7zjNSzML82h9x
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '655'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '50000000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '49999732'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_9ce6b4f80d9546eba4ce23b5fac77153
+    status:
+      code: 200
+      message: OK
+version: 1

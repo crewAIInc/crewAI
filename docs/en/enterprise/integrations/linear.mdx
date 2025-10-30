@@ -25,7 +25,7 @@ Before using the Linear integration, ensure you have:
 2. Find **Linear** in the Authentication Integrations section
 3. Click **Connect** and complete the OAuth flow
 4. Grant the necessary permissions for issue and project management
-5. Copy your Enterprise Token from [Account Settings](https://app.crewai.com/crewai_plus/settings/account)
+5. Copy your Enterprise Token from [Integration Settings](https://app.crewai.com/crewai_plus/settings/integrations)
 
 ### 2. Install Required Package
 
@@ -33,10 +33,26 @@ Before using the Linear integration, ensure you have:
 uv add crewai-tools
 ```
 
+### 3. Environment Variable Setup
+
+<Note>
+  To use integrations with `Agent(apps=[])`, you must set the `CREWAI_PLATFORM_INTEGRATION_TOKEN` environment variable with your Enterprise Token.
+</Note>
+
+```bash
+export CREWAI_PLATFORM_INTEGRATION_TOKEN="your_enterprise_token"
+```
+
+Or add it to your `.env` file:
+
+```
+CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
+```
+
 ## Available Actions
 
 <AccordionGroup>
-  <Accordion title="LINEAR_CREATE_ISSUE">
+  <Accordion title="linear/create_issue">
     **Description:** Create a new issue in Linear.
 
     **Parameters:**
@@ -56,7 +72,7 @@ uv add crewai-tools
       ```
   </Accordion>
 
-  <Accordion title="LINEAR_UPDATE_ISSUE">
+  <Accordion title="linear/update_issue">
     **Description:** Update an issue in Linear.
 
     **Parameters:**
@@ -76,21 +92,21 @@ uv add crewai-tools
       ```
   </Accordion>
 
-  <Accordion title="LINEAR_GET_ISSUE_BY_ID">
+  <Accordion title="linear/get_issue_by_id">
     **Description:** Get an issue by ID in Linear.
 
     **Parameters:**
     - `issueId` (string, required): Issue ID - Specify the record ID of the issue to fetch. (example: "90fbc706-18cd-42c9-ae66-6bd344cc8977").
   </Accordion>
 
-  <Accordion title="LINEAR_GET_ISSUE_BY_ISSUE_IDENTIFIER">
+  <Accordion title="linear/get_issue_by_issue_identifier">
     **Description:** Get an issue by issue identifier in Linear.
 
     **Parameters:**
     - `externalId` (string, required): External ID - Specify the human-readable Issue identifier of the issue to fetch. (example: "ABC-1").
   </Accordion>
 
-  <Accordion title="LINEAR_SEARCH_ISSUE">
+  <Accordion title="linear/search_issue">
     **Description:** Search issues in Linear.
 
     **Parameters:**
@@ -117,21 +133,21 @@ uv add crewai-tools
       Available operators: `$stringExactlyMatches`, `$stringDoesNotExactlyMatch`, `$stringIsIn`, `$stringIsNotIn`, `$stringStartsWith`, `$stringDoesNotStartWith`, `$stringEndsWith`, `$stringDoesNotEndWith`, `$stringContains`, `$stringDoesNotContain`, `$stringGreaterThan`, `$stringLessThan`, `$numberGreaterThanOrEqualTo`, `$numberLessThanOrEqualTo`, `$numberGreaterThan`, `$numberLessThan`, `$dateTimeAfter`, `$dateTimeBefore`
   </Accordion>
 
-  <Accordion title="LINEAR_DELETE_ISSUE">
+  <Accordion title="linear/delete_issue">
     **Description:** Delete an issue in Linear.
 
     **Parameters:**
     - `issueId` (string, required): Issue ID - Specify the record ID of the issue to delete. (example: "90fbc706-18cd-42c9-ae66-6bd344cc8977").
   </Accordion>
 
-  <Accordion title="LINEAR_ARCHIVE_ISSUE">
+  <Accordion title="linear/archive_issue">
     **Description:** Archive an issue in Linear.
 
     **Parameters:**
     - `issueId` (string, required): Issue ID - Specify the record ID of the issue to archive. (example: "90fbc706-18cd-42c9-ae66-6bd344cc8977").
   </Accordion>
 
-  <Accordion title="LINEAR_CREATE_SUB_ISSUE">
+  <Accordion title="linear/create_sub_issue">
     **Description:** Create a sub-issue in Linear.
 
     **Parameters:**
@@ -147,7 +163,7 @@ uv add crewai-tools
       ```
   </Accordion>
 
-  <Accordion title="LINEAR_CREATE_PROJECT">
+  <Accordion title="linear/create_project">
     **Description:** Create a new project in Linear.
 
     **Parameters:**
@@ -169,7 +185,7 @@ uv add crewai-tools
       ```
   </Accordion>
 
-  <Accordion title="LINEAR_UPDATE_PROJECT">
+  <Accordion title="linear/update_project">
     **Description:** Update a project in Linear.
 
     **Parameters:**
@@ -185,21 +201,21 @@ uv add crewai-tools
       ```
   </Accordion>
 
-  <Accordion title="LINEAR_GET_PROJECT_BY_ID">
+  <Accordion title="linear/get_project_by_id">
     **Description:** Get a project by ID in Linear.
 
     **Parameters:**
     - `projectId` (string, required): Project ID - Specify the Project ID of the project to fetch. (example: "a6634484-6061-4ac7-9739-7dc5e52c796b").
   </Accordion>
 
-  <Accordion title="LINEAR_DELETE_PROJECT">
+  <Accordion title="linear/delete_project">
     **Description:** Delete a project in Linear.
 
     **Parameters:**
     - `projectId` (string, required): Project ID - Specify the Project ID of the project to delete. (example: "a6634484-6061-4ac7-9739-7dc5e52c796b").
   </Accordion>
 
-  <Accordion title="LINEAR_SEARCH_TEAMS">
+  <Accordion title="linear/search_teams">
     **Description:** Search teams in Linear.
 
     **Parameters:**
@@ -231,19 +247,14 @@ uv add crewai-tools
 
 ```python
 from crewai import Agent, Task, Crew
-from crewai_tools import CrewaiEnterpriseTools
-
-# Get enterprise tools (Linear tools will be included)
-enterprise_tools = CrewaiEnterpriseTools(
-    enterprise_token="your_enterprise_token"
-)
+from crewai import Agent, Task, Crew
 
 # Create an agent with Linear capabilities
 linear_agent = Agent(
     role="Development Manager",
     goal="Manage Linear issues and track development progress efficiently",
     backstory="An AI assistant specialized in software development project management.",
-    tools=[enterprise_tools]
+    apps=['linear']  # All Linear actions will be available
 )
 
 # Task to create a bug report
@@ -265,19 +276,12 @@ crew.kickoff()
 ### Filtering Specific Linear Tools
 
 ```python
-from crewai_tools import CrewaiEnterpriseTools
-
-# Get only specific Linear tools
-enterprise_tools = CrewaiEnterpriseTools(
-    enterprise_token="your_enterprise_token",
-    actions_list=["linear_create_issue", "linear_update_issue", "linear_search_issue"]
-)
 
 issue_manager = Agent(
     role="Issue Manager",
     goal="Create and manage Linear issues efficiently",
     backstory="An AI assistant that focuses on issue creation and lifecycle management.",
-    tools=enterprise_tools
+    apps=['linear/create_issue']
 )
 
 # Task to manage issue workflow
@@ -299,17 +303,12 @@ crew.kickoff()
 
 ```python
 from crewai import Agent, Task, Crew
-from crewai_tools import CrewaiEnterpriseTools
-
-enterprise_tools = CrewaiEnterpriseTools(
-    enterprise_token="your_enterprise_token"
-)
 
 project_coordinator = Agent(
     role="Project Coordinator",
     goal="Coordinate projects and teams in Linear efficiently",
     backstory="An experienced project coordinator who manages development cycles and team workflows.",
-    tools=[enterprise_tools]
+    apps=['linear']
 )
 
 # Task to coordinate project setup
@@ -336,17 +335,12 @@ crew.kickoff()
 
 ```python
 from crewai import Agent, Task, Crew
-from crewai_tools import CrewaiEnterpriseTools
-
-enterprise_tools = CrewaiEnterpriseTools(
-    enterprise_token="your_enterprise_token"
-)
 
 task_organizer = Agent(
     role="Task Organizer",
     goal="Organize complex issues into manageable sub-tasks",
     backstory="An AI assistant that breaks down complex development work into organized sub-tasks.",
-    tools=[enterprise_tools]
+    apps=['linear']
 )
 
 # Task to create issue hierarchy
@@ -373,17 +367,12 @@ crew.kickoff()
 
 ```python
 from crewai import Agent, Task, Crew
-from crewai_tools import CrewaiEnterpriseTools
-
-enterprise_tools = CrewaiEnterpriseTools(
-    enterprise_token="your_enterprise_token"
-)
 
 workflow_automator = Agent(
     role="Workflow Automator",
     goal="Automate development workflow processes in Linear",
     backstory="An AI assistant that automates repetitive development workflow tasks.",
-    tools=[enterprise_tools]
+    apps=['linear']
 )
 
 # Complex workflow automation task

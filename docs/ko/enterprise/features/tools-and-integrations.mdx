@@ -43,7 +43,7 @@ mode: "wide"
   1. <Link href="https://app.crewai.com/crewai_plus/connectors">Integrations</Link>로 이동
   2. 원하는 서비스에서 <b>Connect</b> 클릭
   3. OAuth 플로우 완료 및 스코프 승인
-  4. <b>Integration</b> 탭에서 Enterprise Token 복사
+  4. <Link href="https://app.crewai.com/crewai_plus/settings/integrations">통합 설정</Link>에서 Enterprise Token 복사
 
   <Frame>
     ![Enterprise Token](/images/enterprise/enterprise_action_auth_token.png)
@@ -57,26 +57,37 @@ mode: "wide"
   uv add crewai-tools
   ```
 
+  ### 환경 변수 설정
+
+  <Note>
+    `Agent(apps=[])`와 함께 통합을 사용하려면 Enterprise Token으로 `CREWAI_PLATFORM_INTEGRATION_TOKEN` 환경 변수를 설정해야 합니다.
+  </Note>
+
+  ```bash
+  export CREWAI_PLATFORM_INTEGRATION_TOKEN="your_enterprise_token"
+  ```
+
+  또는 `.env` 파일에 추가하세요:
+
+  ```
+  CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
+  ```
+
   ### 사용 예시
 
   <Tip>
-    인증된 모든 서비스는 도구로 제공됩니다. 에이전트에 `CrewaiEnterpriseTools`를 추가하세요.
+    새로운 간소화된 접근 방식을 사용하여 엔터프라이즈 앱을 통합하세요. Agent 구성에서 앱과 해당 액션을 직접 지정하기만 하면 됩니다.
   </Tip>
 
   ```python
   from crewai import Agent, Task, Crew
-  from crewai_tools import CrewaiEnterpriseTools
 
-  enterprise_tools = CrewaiEnterpriseTools(
-      enterprise_token="your_enterprise_token"
-  )
-  print(enterprise_tools)
-
+  # Gmail 기능을 가진 에이전트 생성
   email_agent = Agent(
       role="이메일 매니저",
       goal="이메일 커뮤니케이션 관리",
       backstory="이메일 관리에 특화된 AI 어시스턴트",
-      tools=enterprise_tools
+      apps=['gmail', 'gmail/send_email']  # 정식 이름 'gmail' 사용
   )
 
   email_task = Task(
@@ -92,19 +103,14 @@ mode: "wide"
   ### 도구 필터링
 
   ```python
-  from crewai_tools import CrewaiEnterpriseTools
+  from crewai import Agent, Task, Crew
 
-  enterprise_tools = CrewaiEnterpriseTools(
-      actions_list=["gmail_find_email"]
-  )
-
-  gmail_tool = enterprise_tools["gmail_find_email"]
-
+  # 특정 Gmail 액션만 사용하는 에이전트 생성
   gmail_agent = Agent(
       role="Gmail 매니저",
       goal="Gmail 커뮤니케이션 및 알림 관리",
       backstory="Gmail 커뮤니케이션 조율 AI 어시스턴트",
-      tools=[gmail_tool]
+      apps=['gmail/fetch_emails']  # 정식 이름과 특정 액션 사용
   )
 
   notification_task = Task(

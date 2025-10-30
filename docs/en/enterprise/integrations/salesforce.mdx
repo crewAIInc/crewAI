@@ -17,12 +17,44 @@ Before using the Salesforce integration, ensure you have:
 - A Salesforce account with appropriate permissions
 - Connected your Salesforce account through the [Integrations page](https://app.crewai.com/integrations)
 
+## Setting Up Salesforce Integration
+
+### 1. Connect Your Salesforce Account
+
+1. Navigate to [CrewAI AMP Integrations](https://app.crewai.com/crewai_plus/connectors)
+2. Find **Salesforce** in the Authentication Integrations section
+3. Click **Connect** and complete the OAuth flow
+4. Grant the necessary permissions for CRM and sales management
+5. Copy your Enterprise Token from [Integration Settings](https://app.crewai.com/crewai_plus/settings/integrations)
+
+### 2. Install Required Package
+
+```bash
+uv add crewai-tools
+```
+
+### 3. Environment Variable Setup
+
+<Note>
+  To use integrations with `Agent(apps=[])`, you must set the `CREWAI_PLATFORM_INTEGRATION_TOKEN` environment variable with your Enterprise Token.
+</Note>
+
+```bash
+export CREWAI_PLATFORM_INTEGRATION_TOKEN="your_enterprise_token"
+```
+
+Or add it to your `.env` file:
+
+```
+CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
+```
+
 ## Available Tools
 
 ### **Record Management**
 
 <AccordionGroup>
-  <Accordion title="SALESFORCE_CREATE_RECORD_CONTACT">
+  <Accordion title="salesforce/create_record_contact">
     **Description:** Create a new Contact record in Salesforce.
 
     **Parameters:**
@@ -35,7 +67,7 @@ Before using the Salesforce integration, ensure you have:
     - `additionalFields` (object, optional): Additional fields in JSON format for custom Contact fields
   </Accordion>
 
-  <Accordion title="SALESFORCE_CREATE_RECORD_LEAD">
+  <Accordion title="salesforce/create_record_lead">
     **Description:** Create a new Lead record in Salesforce.
 
     **Parameters:**
@@ -51,7 +83,7 @@ Before using the Salesforce integration, ensure you have:
     - `additionalFields` (object, optional): Additional fields in JSON format for custom Lead fields
   </Accordion>
 
-  <Accordion title="SALESFORCE_CREATE_RECORD_OPPORTUNITY">
+  <Accordion title="salesforce/create_record_opportunity">
     **Description:** Create a new Opportunity record in Salesforce.
 
     **Parameters:**
@@ -66,7 +98,7 @@ Before using the Salesforce integration, ensure you have:
     - `additionalFields` (object, optional): Additional fields in JSON format for custom Opportunity fields
   </Accordion>
 
-  <Accordion title="SALESFORCE_CREATE_RECORD_TASK">
+  <Accordion title="salesforce/create_record_task">
     **Description:** Create a new Task record in Salesforce.
 
     **Parameters:**
@@ -84,7 +116,7 @@ Before using the Salesforce integration, ensure you have:
     - `additionalFields` (object, optional): Additional fields in JSON format for custom Task fields
   </Accordion>
 
-  <Accordion title="SALESFORCE_CREATE_RECORD_ACCOUNT">
+  <Accordion title="salesforce/create_record_account">
     **Description:** Create a new Account record in Salesforce.
 
     **Parameters:**
@@ -96,7 +128,7 @@ Before using the Salesforce integration, ensure you have:
     - `additionalFields` (object, optional): Additional fields in JSON format for custom Account fields
   </Accordion>
 
-  <Accordion title="SALESFORCE_CREATE_RECORD_ANY">
+  <Accordion title="salesforce/create_record_any">
     **Description:** Create a record of any object type in Salesforce.
 
     **Note:** This is a flexible tool for creating records of custom or unknown object types.
@@ -106,7 +138,7 @@ Before using the Salesforce integration, ensure you have:
 ### **Record Updates**
 
 <AccordionGroup>
-  <Accordion title="SALESFORCE_UPDATE_RECORD_CONTACT">
+  <Accordion title="salesforce/update_record_contact">
     **Description:** Update an existing Contact record in Salesforce.
 
     **Parameters:**
@@ -120,7 +152,7 @@ Before using the Salesforce integration, ensure you have:
     - `additionalFields` (object, optional): Additional fields in JSON format for custom Contact fields
   </Accordion>
 
-  <Accordion title="SALESFORCE_UPDATE_RECORD_LEAD">
+  <Accordion title="salesforce/update_record_lead">
     **Description:** Update an existing Lead record in Salesforce.
 
     **Parameters:**
@@ -137,7 +169,7 @@ Before using the Salesforce integration, ensure you have:
     - `additionalFields` (object, optional): Additional fields in JSON format for custom Lead fields
   </Accordion>
 
-  <Accordion title="SALESFORCE_UPDATE_RECORD_OPPORTUNITY">
+  <Accordion title="salesforce/update_record_opportunity">
     **Description:** Update an existing Opportunity record in Salesforce.
 
     **Parameters:**
@@ -153,7 +185,7 @@ Before using the Salesforce integration, ensure you have:
     - `additionalFields` (object, optional): Additional fields in JSON format for custom Opportunity fields
   </Accordion>
 
-  <Accordion title="SALESFORCE_UPDATE_RECORD_TASK">
+  <Accordion title="salesforce/update_record_task">
     **Description:** Update an existing Task record in Salesforce.
 
     **Parameters:**
@@ -171,7 +203,7 @@ Before using the Salesforce integration, ensure you have:
     - `additionalFields` (object, optional): Additional fields in JSON format for custom Task fields
   </Accordion>
 
-  <Accordion title="SALESFORCE_UPDATE_RECORD_ACCOUNT">
+  <Accordion title="salesforce/update_record_account">
     **Description:** Update an existing Account record in Salesforce.
 
     **Parameters:**
@@ -184,7 +216,7 @@ Before using the Salesforce integration, ensure you have:
     - `additionalFields` (object, optional): Additional fields in JSON format for custom Account fields
   </Accordion>
 
-  <Accordion title="SALESFORCE_UPDATE_RECORD_ANY">
+  <Accordion title="salesforce/update_record_any">
     **Description:** Update a record of any object type in Salesforce.
 
     **Note:** This is a flexible tool for updating records of custom or unknown object types.
@@ -194,42 +226,42 @@ Before using the Salesforce integration, ensure you have:
 ### **Record Retrieval**
 
 <AccordionGroup>
-  <Accordion title="SALESFORCE_GET_RECORD_BY_ID_CONTACT">
+  <Accordion title="salesforce/get_record_by_id_contact">
     **Description:** Get a Contact record by its ID.
 
     **Parameters:**
     - `recordId` (string, required): Record ID of the Contact
   </Accordion>
 
-  <Accordion title="SALESFORCE_GET_RECORD_BY_ID_LEAD">
+  <Accordion title="salesforce/get_record_by_id_lead">
     **Description:** Get a Lead record by its ID.
 
     **Parameters:**
     - `recordId` (string, required): Record ID of the Lead
   </Accordion>
 
-  <Accordion title="SALESFORCE_GET_RECORD_BY_ID_OPPORTUNITY">
+  <Accordion title="salesforce/get_record_by_id_opportunity">
     **Description:** Get an Opportunity record by its ID.
 
     **Parameters:**
     - `recordId` (string, required): Record ID of the Opportunity
   </Accordion>
 
-  <Accordion title="SALESFORCE_GET_RECORD_BY_ID_TASK">
+  <Accordion title="salesforce/get_record_by_id_task">
     **Description:** Get a Task record by its ID.
 
     **Parameters:**
     - `recordId` (string, required): Record ID of the Task
   </Accordion>
 
-  <Accordion title="SALESFORCE_GET_RECORD_BY_ID_ACCOUNT">
+  <Accordion title="salesforce/get_record_by_id_account">
     **Description:** Get an Account record by its ID.
 
     **Parameters:**
     - `recordId` (string, required): Record ID of the Account
   </Accordion>
 
-  <Accordion title="SALESFORCE_GET_RECORD_BY_ID_ANY">
+  <Accordion title="salesforce/get_record_by_id_any">
     **Description:** Get a record of any object type by its ID.
 
     **Parameters:**
@@ -241,7 +273,7 @@ Before using the Salesforce integration, ensure you have:
 ### **Record Search**
 
 <AccordionGroup>
-  <Accordion title="SALESFORCE_SEARCH_RECORDS_CONTACT">
+  <Accordion title="salesforce/search_records_contact">
     **Description:** Search for Contact records with advanced filtering.
 
     **Parameters:**
@@ -252,7 +284,7 @@ Before using the Salesforce integration, ensure you have:
     - `paginationParameters` (object, optional): Pagination settings with pageCursor
   </Accordion>
 
-  <Accordion title="SALESFORCE_SEARCH_RECORDS_LEAD">
+  <Accordion title="salesforce/search_records_lead">
     **Description:** Search for Lead records with advanced filtering.
 
     **Parameters:**
@@ -263,7 +295,7 @@ Before using the Salesforce integration, ensure you have:
     - `paginationParameters` (object, optional): Pagination settings with pageCursor
   </Accordion>
 
-  <Accordion title="SALESFORCE_SEARCH_RECORDS_OPPORTUNITY">
+  <Accordion title="salesforce/search_records_opportunity">
     **Description:** Search for Opportunity records with advanced filtering.
 
     **Parameters:**
@@ -274,7 +306,7 @@ Before using the Salesforce integration, ensure you have:
     - `paginationParameters` (object, optional): Pagination settings with pageCursor
   </Accordion>
 
-  <Accordion title="SALESFORCE_SEARCH_RECORDS_TASK">
+  <Accordion title="salesforce/search_records_task">
     **Description:** Search for Task records with advanced filtering.
 
     **Parameters:**
@@ -285,7 +317,7 @@ Before using the Salesforce integration, ensure you have:
     - `paginationParameters` (object, optional): Pagination settings with pageCursor
   </Accordion>
 
-  <Accordion title="SALESFORCE_SEARCH_RECORDS_ACCOUNT">
+  <Accordion title="salesforce/search_records_account">
     **Description:** Search for Account records with advanced filtering.
 
     **Parameters:**
@@ -296,7 +328,7 @@ Before using the Salesforce integration, ensure you have:
     - `paginationParameters` (object, optional): Pagination settings with pageCursor
   </Accordion>
 
-  <Accordion title="SALESFORCE_SEARCH_RECORDS_ANY">
+  <Accordion title="salesforce/search_records_any">
     **Description:** Search for records of any object type.
 
     **Parameters:**
@@ -310,7 +342,7 @@ Before using the Salesforce integration, ensure you have:
 ### **List View Retrieval**
 
 <AccordionGroup>
-  <Accordion title="SALESFORCE_GET_RECORD_BY_VIEW_ID_CONTACT">
+  <Accordion title="salesforce/get_record_by_view_id_contact">
     **Description:** Get Contact records from a specific List View.
 
     **Parameters:**
@@ -318,7 +350,7 @@ Before using the Salesforce integration, ensure you have:
     - `paginationParameters` (object, optional): Pagination settings with pageCursor
   </Accordion>
 
-  <Accordion title="SALESFORCE_GET_RECORD_BY_VIEW_ID_LEAD">
+  <Accordion title="salesforce/get_record_by_view_id_lead">
     **Description:** Get Lead records from a specific List View.
 
     **Parameters:**
@@ -326,7 +358,7 @@ Before using the Salesforce integration, ensure you have:
     - `paginationParameters` (object, optional): Pagination settings with pageCursor
   </Accordion>
 
-  <Accordion title="SALESFORCE_GET_RECORD_BY_VIEW_ID_OPPORTUNITY">
+  <Accordion title="salesforce/get_record_by_view_id_opportunity">
     **Description:** Get Opportunity records from a specific List View.
 
     **Parameters:**
@@ -334,7 +366,7 @@ Before using the Salesforce integration, ensure you have:
     - `paginationParameters` (object, optional): Pagination settings with pageCursor
   </Accordion>
 
-  <Accordion title="SALESFORCE_GET_RECORD_BY_VIEW_ID_TASK">
+  <Accordion title="salesforce/get_record_by_view_id_task">
     **Description:** Get Task records from a specific List View.
 
     **Parameters:**
@@ -342,7 +374,7 @@ Before using the Salesforce integration, ensure you have:
     - `paginationParameters` (object, optional): Pagination settings with pageCursor
   </Accordion>
 
-  <Accordion title="SALESFORCE_GET_RECORD_BY_VIEW_ID_ACCOUNT">
+  <Accordion title="salesforce/get_record_by_view_id_account">
     **Description:** Get Account records from a specific List View.
 
     **Parameters:**
@@ -350,7 +382,7 @@ Before using the Salesforce integration, ensure you have:
     - `paginationParameters` (object, optional): Pagination settings with pageCursor
   </Accordion>
 
-  <Accordion title="SALESFORCE_GET_RECORD_BY_VIEW_ID_ANY">
+  <Accordion title="salesforce/get_record_by_view_id_any">
     **Description:** Get records of any object type from a specific List View.
 
     **Parameters:**
@@ -363,7 +395,7 @@ Before using the Salesforce integration, ensure you have:
 ### **Custom Fields**
 
 <AccordionGroup>
-  <Accordion title="SALESFORCE_CREATE_CUSTOM_FIELD_CONTACT">
+  <Accordion title="salesforce/create_custom_field_contact">
     **Description:** Deploy custom fields for Contact objects.
 
     **Parameters:**
@@ -379,7 +411,7 @@ Before using the Salesforce integration, ensure you have:
     - `defaultFieldValue` (string, optional): Default field value
   </Accordion>
 
-  <Accordion title="SALESFORCE_CREATE_CUSTOM_FIELD_LEAD">
+  <Accordion title="salesforce/create_custom_field_lead">
     **Description:** Deploy custom fields for Lead objects.
 
     **Parameters:**
@@ -395,7 +427,7 @@ Before using the Salesforce integration, ensure you have:
     - `defaultFieldValue` (string, optional): Default field value
   </Accordion>
 
-  <Accordion title="SALESFORCE_CREATE_CUSTOM_FIELD_OPPORTUNITY">
+  <Accordion title="salesforce/create_custom_field_opportunity">
     **Description:** Deploy custom fields for Opportunity objects.
 
     **Parameters:**
@@ -411,7 +443,7 @@ Before using the Salesforce integration, ensure you have:
     - `defaultFieldValue` (string, optional): Default field value
   </Accordion>
 
-  <Accordion title="SALESFORCE_CREATE_CUSTOM_FIELD_TASK">
+  <Accordion title="salesforce/create_custom_field_task">
     **Description:** Deploy custom fields for Task objects.
 
     **Parameters:**
@@ -427,7 +459,7 @@ Before using the Salesforce integration, ensure you have:
     - `defaultFieldValue` (string, optional): Default field value
   </Accordion>
 
-  <Accordion title="SALESFORCE_CREATE_CUSTOM_FIELD_ACCOUNT">
+  <Accordion title="salesforce/create_custom_field_account">
     **Description:** Deploy custom fields for Account objects.
 
     **Parameters:**
@@ -443,7 +475,7 @@ Before using the Salesforce integration, ensure you have:
     - `defaultFieldValue` (string, optional): Default field value
   </Accordion>
 
-  <Accordion title="SALESFORCE_CREATE_CUSTOM_FIELD_ANY">
+  <Accordion title="salesforce/create_custom_field_any">
     **Description:** Deploy custom fields for any object type.
 
     **Note:** This is a flexible tool for creating custom fields on custom or unknown object types.
@@ -453,14 +485,14 @@ Before using the Salesforce integration, ensure you have:
 ### **Advanced Operations**
 
 <AccordionGroup>
-  <Accordion title="SALESFORCE_WRITE_SOQL_QUERY">
+  <Accordion title="salesforce/write_soql_query">
     **Description:** Execute custom SOQL queries against your Salesforce data.
 
     **Parameters:**
     - `query` (string, required): SOQL Query (e.g., "SELECT Id, Name FROM Account WHERE Name = 'Example'")
   </Accordion>
 
-  <Accordion title="SALESFORCE_CREATE_CUSTOM_OBJECT">
+  <Accordion title="salesforce/create_custom_object">
     **Description:** Deploy a new custom object in Salesforce.
 
     **Parameters:**
@@ -470,7 +502,7 @@ Before using the Salesforce integration, ensure you have:
     - `recordName` (string, required): Record Name that appears in layouts and searches (e.g., "Account Name")
   </Accordion>
 
-  <Accordion title="SALESFORCE_DESCRIBE_ACTION_SCHEMA">
+  <Accordion title="salesforce/describe_action_schema">
     **Description:** Get the expected schema for operations on specific object types.
 
     **Parameters:**
@@ -487,19 +519,14 @@ Before using the Salesforce integration, ensure you have:
 
 ```python
 from crewai import Agent, Task, Crew
-from crewai_tools import CrewaiEnterpriseTools
-
-# Get enterprise tools (Salesforce tools will be included)
-enterprise_tools = CrewaiEnterpriseTools(
-    enterprise_token="your_enterprise_token"
-)
+from crewai import Agent, Task, Crew
 
 # Create an agent with Salesforce capabilities
 salesforce_agent = Agent(
     role="CRM Manager",
     goal="Manage customer relationships and sales processes efficiently",
     backstory="An AI assistant specialized in CRM operations and sales automation.",
-    tools=[enterprise_tools]
+    apps=['salesforce']  # All Salesforce actions will be available
 )
 
 # Task to create a new lead
@@ -521,19 +548,12 @@ crew.kickoff()
 ### Filtering Specific Salesforce Tools
 
 ```python
-from crewai_tools import CrewaiEnterpriseTools
-
-# Get only specific Salesforce tools
-enterprise_tools = CrewaiEnterpriseTools(
-    enterprise_token="your_enterprise_token",
-    actions_list=["salesforce_create_record_lead", "salesforce_update_record_opportunity", "salesforce_search_records_contact"]
-)
 
 sales_manager = Agent(
     role="Sales Manager",
     goal="Manage leads and opportunities in the sales pipeline",
     backstory="An experienced sales manager who handles lead qualification and opportunity management.",
-    tools=enterprise_tools
+    apps=['salesforce/create_record_lead']
 )
 
 # Task to manage sales pipeline
@@ -555,17 +575,12 @@ crew.kickoff()
 
 ```python
 from crewai import Agent, Task, Crew
-from crewai_tools import CrewaiEnterpriseTools
-
-enterprise_tools = CrewaiEnterpriseTools(
-    enterprise_token="your_enterprise_token"
-)
 
 account_manager = Agent(
     role="Account Manager",
     goal="Manage customer accounts and maintain strong relationships",
     backstory="An AI assistant that specializes in account management and customer relationship building.",
-    tools=[enterprise_tools]
+    apps=['salesforce']
 )
 
 # Task to manage customer accounts
@@ -591,17 +606,12 @@ crew.kickoff()
 
 ```python
 from crewai import Agent, Task, Crew
-from crewai_tools import CrewaiEnterpriseTools
-
-enterprise_tools = CrewaiEnterpriseTools(
-    enterprise_token="your_enterprise_token"
-)
 
 data_analyst = Agent(
     role="Sales Data Analyst",
     goal="Generate insights from Salesforce data using SOQL queries",
     backstory="An analytical AI that excels at extracting meaningful insights from CRM data.",
-    tools=[enterprise_tools]
+    apps=['salesforce']
 )
 
 # Complex task involving SOQL queries and data analysis

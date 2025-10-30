@@ -57,25 +57,39 @@ Por padrão, a ferramenta utiliza o OpenAI tanto para embeddings quanto para sum
 Para personalizar o modelo, você pode usar um dicionário de configuração como o exemplo a seguir:
 
 ```python Code
+from chromadb.config import Settings
+
 tool = TXTSearchTool(
-    config=dict(
-        llm=dict(
-            provider="ollama", # ou google, openai, anthropic, llama2, ...
-            config=dict(
-                model="llama2",
-                # temperature=0.5,
-                # top_p=1,
-                # stream=true,
-            ),
-        ),
-        embedder=dict(
-            provider="google", # ou openai, ollama, ...
-            config=dict(
-                model="models/embedding-001",
-                task_type="retrieval_document",
-                # title="Embeddings",
-            ),
-        ),
-    )
+    config={
+        # Obrigatório: provedor de embeddings + configuração
+        "embedding_model": {
+            "provider": "openai",  # ou google-generativeai, cohere, ollama, ...
+            "config": {
+                "model": "text-embedding-3-small",
+                # "api_key": "sk-...",  # opcional se variável de ambiente estiver definida
+                # Exemplos por provedor:
+                # Google → model: "models/embedding-001", task_type: "retrieval_document"
+            },
+        },
+
+        # Obrigatório: configuração do banco vetorial
+        "vectordb": {
+            "provider": "chromadb",  # ou "qdrant"
+            "config": {
+                # Configurações do Chroma (persistência opcional)
+                # "settings": Settings(
+                #     persist_directory="/content/chroma",
+                #     allow_reset=True,
+                #     is_persistent=True,
+                # ),
+
+                # Exemplo de parâmetros de vetor do Qdrant:
+                # from qdrant_client.models import VectorParams, Distance
+                # "vectors_config": VectorParams(size=384, distance=Distance.COSINE),
+
+                # Observação: o nome da coleção é controlado pela ferramenta (padrão: "rag_tool_collection").
+            }
+        },
+    }
 )
 ```

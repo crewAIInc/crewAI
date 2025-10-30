@@ -8,12 +8,37 @@ mode: "wide"
 ## Visão Geral
 
 O [Model Context Protocol](https://modelcontextprotocol.io/introduction) (MCP) fornece uma maneira padronizada para agentes de IA fornecerem contexto para LLMs comunicando-se com serviços externos, conhecidos como Servidores MCP.
-A biblioteca `crewai-tools` expande as capacidades do CrewAI permitindo que você integre facilmente ferramentas desses servidores MCP em seus agentes.
-Isso oferece às suas crews acesso a um vasto ecossistema de funcionalidades.
+
+O CrewAI oferece **duas abordagens** para integração MCP:
+
+### 🚀 **Novo: Integração DSL Simples** (Recomendado)
+
+Use o campo `mcps` diretamente nos agentes para integração perfeita de ferramentas MCP:
+
+```python
+from crewai import Agent
+
+agent = Agent(
+    role="Analista de Pesquisa",
+    goal="Pesquisar e analisar informações",
+    backstory="Pesquisador especialista com acesso a ferramentas externas",
+    mcps=[
+        "https://mcp.exa.ai/mcp?api_key=sua_chave",           # Servidor MCP externo
+        "https://api.weather.com/mcp#get_forecast",           # Ferramenta específica do servidor
+        "crewai-amp:financial-data",                          # Marketplace CrewAI AMP
+        "crewai-amp:research-tools#pubmed_search"             # Ferramenta AMP específica
+    ]
+)
+# Ferramentas MCP agora estão automaticamente disponíveis para seu agente!
+```
+
+### 🔧 **Avançado: MCPServerAdapter** (Para Cenários Complexos)
+
+Para casos de uso avançados que requerem gerenciamento manual de conexão, a biblioteca `crewai-tools` fornece a classe `MCPServerAdapter`.
 
 Atualmente, suportamos os seguintes mecanismos de transporte:
 
-- **Stdio**: para servidores locais (comunicação via entrada/saída padrão entre processos na mesma máquina)
+- **HTTPS**: para servidores remotos (comunicação segura via HTTPS)
 - **Server-Sent Events (SSE)**: para servidores remotos (transmissão de dados unidirecional em tempo real do servidor para o cliente via HTTP)
 - **Streamable HTTP**: para servidores remotos (comunicação flexível e potencialmente bidirecional via HTTP, geralmente utilizando SSE para streams do servidor para o cliente)
 

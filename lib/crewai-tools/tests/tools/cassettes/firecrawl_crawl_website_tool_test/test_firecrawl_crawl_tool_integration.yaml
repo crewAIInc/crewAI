@@ -1,0 +1,1531 @@
+interactions:
+- request:
+    body: '{"url": "https://firecrawl.dev", "scrapeOptions": {"onlyMainContent": true,
+      "skipTlsVerification": true, "removeBase64Images": true, "fastMode": false,
+      "blockAds": true, "storeInCache": true, "maxAge": 14400000, "formats": ["markdown"],
+      "mobile": false}, "maxDiscoveryDepth": 1, "ignoreQueryParameters": false, "crawlEntireDomain":
+      false, "allowExternalLinks": false, "allowSubdomains": false, "zeroDataRetention":
+      false, "limit": 2, "origin": "python-sdk@4.5.0"}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate, zstd
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '463'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - python-requests/2.32.5
+    method: POST
+    uri: https://api.firecrawl.dev/v2/crawl
+  response:
+    body:
+      string: '{"success":true,"id":"9352ed1c-88bf-4258-a466-d29911ebcbe4","url":"https://api.firecrawl.dev/v2/crawl/9352ed1c-88bf-4258-a466-d29911ebcbe4"}'
+    headers:
+      Access-Control-Allow-Origin:
+      - '*'
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Content-Length:
+      - '140'
+      Content-Type:
+      - application/json; charset=utf-8
+      Date:
+      - Wed, 29 Oct 2025 14:36:40 GMT
+      ETag:
+      - W/"8c-fED/T2aXbMOo5pJqCnnUBI+Nxdg"
+      Via:
+      - 1.1 google
+      X-Powered-By:
+      - Express
+      X-Response-Time:
+      - 226.898ms
+    status:
+      code: 200
+      message: OK
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate, zstd
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      User-Agent:
+      - python-requests/2.32.5
+    method: GET
+    uri: https://api.firecrawl.dev/v2/crawl/9352ed1c-88bf-4258-a466-d29911ebcbe4
+  response:
+    body:
+      string: '{"success":true,"status":"scraping","completed":0,"total":1,"creditsUsed":0,"expiresAt":"2025-10-30T14:36:40.000Z","next":"https://api.firecrawl.dev/v1/crawl/9352ed1c-88bf-4258-a466-d29911ebcbe4?skip=0","data":[]}'
+    headers:
+      Access-Control-Allow-Origin:
+      - '*'
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Content-Length:
+      - '213'
+      Content-Type:
+      - application/json; charset=utf-8
+      Date:
+      - Wed, 29 Oct 2025 14:36:40 GMT
+      ETag:
+      - W/"d5-OcGtIv57Kg7bh/wrZe+zWFJqn0E"
+      Via:
+      - 1.1 google
+      X-Powered-By:
+      - Express
+      X-Response-Time:
+      - 70.427ms
+    status:
+      code: 200
+      message: OK
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate, zstd
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      User-Agent:
+      - python-requests/2.32.5
+    method: GET
+    uri: https://api.firecrawl.dev/v1/crawl/9352ed1c-88bf-4258-a466-d29911ebcbe4?skip=0
+  response:
+    body:
+      string: '{"success":true,"status":"scraping","completed":0,"total":2,"creditsUsed":0,"expiresAt":"2025-10-30T14:36:40.000Z","next":"https://api.firecrawl.dev/v1/crawl/9352ed1c-88bf-4258-a466-d29911ebcbe4?skip=0","data":[]}'
+    headers:
+      Access-Control-Allow-Origin:
+      - '*'
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Content-Length:
+      - '213'
+      Content-Type:
+      - application/json; charset=utf-8
+      Date:
+      - Wed, 29 Oct 2025 14:36:40 GMT
+      ETag:
+      - W/"d5-NmftxFEyWM/DUPtv1KTn3bd8F8c"
+      Via:
+      - 1.1 google
+      X-Powered-By:
+      - Express
+      X-Response-Time:
+      - 69.952ms
+    status:
+      code: 200
+      message: OK
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate, zstd
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      User-Agent:
+      - python-requests/2.32.5
+    method: GET
+    uri: https://api.firecrawl.dev/v1/crawl/9352ed1c-88bf-4258-a466-d29911ebcbe4?skip=0
+  response:
+    body:
+      string: '{"success":true,"status":"scraping","completed":0,"total":2,"creditsUsed":0,"expiresAt":"2025-10-30T14:36:40.000Z","next":"https://api.firecrawl.dev/v1/crawl/9352ed1c-88bf-4258-a466-d29911ebcbe4?skip=0","data":[]}'
+    headers:
+      Access-Control-Allow-Origin:
+      - '*'
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Content-Length:
+      - '213'
+      Content-Type:
+      - application/json; charset=utf-8
+      Date:
+      - Wed, 29 Oct 2025 14:36:40 GMT
+      ETag:
+      - W/"d5-NmftxFEyWM/DUPtv1KTn3bd8F8c"
+      Via:
+      - 1.1 google
+      X-Powered-By:
+      - Express
+      X-Response-Time:
+      - 51.517ms
+    status:
+      code: 200
+      message: OK
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate, zstd
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      User-Agent:
+      - python-requests/2.32.5
+    method: GET
+    uri: https://api.firecrawl.dev/v1/crawl/9352ed1c-88bf-4258-a466-d29911ebcbe4?skip=0
+  response:
+    body:
+      string: '{"success":true,"status":"scraping","completed":0,"total":2,"creditsUsed":1,"expiresAt":"2025-10-30T14:36:41.000Z","next":"https://api.firecrawl.dev/v1/crawl/9352ed1c-88bf-4258-a466-d29911ebcbe4?skip=0","data":[]}'
+    headers:
+      Access-Control-Allow-Origin:
+      - '*'
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Content-Length:
+      - '213'
+      Content-Type:
+      - application/json; charset=utf-8
+      Date:
+      - Wed, 29 Oct 2025 14:36:41 GMT
+      ETag:
+      - W/"d5-lfVSPJmpEFjYObPIUwXsOomd1RY"
+      Via:
+      - 1.1 google
+      X-Powered-By:
+      - Express
+      X-Response-Time:
+      - 93.320ms
+    status:
+      code: 200
+      message: OK
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate, zstd
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      User-Agent:
+      - python-requests/2.32.5
+    method: GET
+    uri: https://api.firecrawl.dev/v1/crawl/9352ed1c-88bf-4258-a466-d29911ebcbe4?skip=0
+  response:
+    body:
+      string: "{\"success\":true,\"status\":\"scraping\",\"completed\":1,\"total\":2,\"creditsUsed\":2,\"expiresAt\":\"2025-10-30T14:36:41.000Z\",\"next\":\"https://api.firecrawl.dev/v1/crawl/9352ed1c-88bf-4258-a466-d29911ebcbe4?skip=2\",\"data\":[{\"markdown\":\"We
+        just raised our Series A and shipped Firecrawl /v2 \U0001F389. [Read the blog.](https://www.firecrawl.dev/blog/firecrawl-v2-series-a-announcement)\\n\\n[2
+        Months Free \u2014 Annually](https://www.firecrawl.dev/pricing)\\n\\n# Turn
+        websites into   LLM-ready data\\n\\nPower your AI apps with clean web data\\n\\nfrom
+        any website. [It's also open source.](https://github.com/firecrawl/firecrawl)\\n\\nScrape\\n\\nSearch\\nNew\\n\\nMap\\n\\nCrawl\\n\\nScrape\\n\\nLogo\\n\\nNavigation\\n\\nButton\\n\\nH1
+        Title\\n\\nDescription\\n\\nCTA Button\\n\\n\\\\[ .JSON \\\\]\\n\\n```json\\n1[\\\\\\n2
+        \ {\\\\\\n3    \\\"url\\\": \\\"https://example.com\\\",\\\\\\n4    \\\"markdown\\\":
+        \\\"# Getting Started...\\\",\\\\\\n5    \\\"json\\\": { \\\"title\\\": \\\"Guide\\\",
+        \\\"docs\\\": \\\"...\\\" },\\\\\\n6    \\\"screenshot\\\": \\\"https://example.com/hero.png\\\"\\\\\\n7
+        \ }\\\\\\n8]\\n```\\n\\nScrape Completed\\n\\nTrusted by5000+\\n\\ncompaniesof
+        all sizes\\n\\n![Logo 17](https://www.firecrawl.dev/assets-original/logocloud/17.png)\\n\\n![Logo
+        18](https://www.firecrawl.dev/assets-original/logocloud/18.png)\\n\\n![Logo
+        1](https://www.firecrawl.dev/assets-original/logocloud/1.png)\\n\\n![Logo
+        2](https://www.firecrawl.dev/assets-original/logocloud/2.png)\\n\\n![Logo
+        3](https://www.firecrawl.dev/assets-original/logocloud/3.png)\\n\\n![Logo
+        4](https://www.firecrawl.dev/assets-original/logocloud/4.png)\\n\\n![Logo
+        5](https://www.firecrawl.dev/assets-original/logocloud/5.png)\\n\\n![Logo
+        6](https://www.firecrawl.dev/assets-original/logocloud/6.png)\\n\\n![Logo
+        7](https://www.firecrawl.dev/assets-original/logocloud/7.png)\\n\\n![Logo
+        8](https://www.firecrawl.dev/assets-original/logocloud/8.png)\\n\\n![Logo
+        9](https://www.firecrawl.dev/assets-original/logocloud/9.png)\\n\\n![Logo
+        10](https://www.firecrawl.dev/assets-original/logocloud/10.png)\\n\\n![Logo
+        11](https://www.firecrawl.dev/assets-original/logocloud/11.png)\\n\\n![Logo
+        12](https://www.firecrawl.dev/assets-original/logocloud/12.png)\\n\\n![Logo
+        13](https://www.firecrawl.dev/assets-original/logocloud/13.png)\\n\\n![Logo
+        14](https://www.firecrawl.dev/assets-original/logocloud/14.png)\\n\\n![Logo
+        15](https://www.firecrawl.dev/assets-original/logocloud/15.png)\\n\\n![Logo
+        16](https://www.firecrawl.dev/assets-original/logocloud/16.png)\\n\\n![Logo
+        17](https://www.firecrawl.dev/assets-original/logocloud/17.png)\\n\\n![Logo
+        18](https://www.firecrawl.dev/assets-original/logocloud/18.png)\\n\\n![Logo
+        19](https://www.firecrawl.dev/assets-original/logocloud/19.png)\\n\\n![Logo
+        20](https://www.firecrawl.dev/assets-original/logocloud/20.png)\\n\\n![Logo
+        21](https://www.firecrawl.dev/assets-original/logocloud/21.png)\\n\\n![Logo
+        17](https://www.firecrawl.dev/assets-original/logocloud/17.png)\\n\\n![Logo
+        18](https://www.firecrawl.dev/assets-original/logocloud/18.png)\\n\\n![Logo
+        1](https://www.firecrawl.dev/assets-original/logocloud/1.png)\\n\\n![Logo
+        2](https://www.firecrawl.dev/assets-original/logocloud/2.png)\\n\\n![Logo
+        3](https://www.firecrawl.dev/assets-original/logocloud/3.png)\\n\\n![Logo
+        4](https://www.firecrawl.dev/assets-original/logocloud/4.png)\\n\\n![Logo
+        5](https://www.firecrawl.dev/assets-original/logocloud/5.png)\\n\\n![Logo
+        6](https://www.firecrawl.dev/assets-original/logocloud/6.png)\\n\\n![Logo
+        7](https://www.firecrawl.dev/assets-original/logocloud/7.png)\\n\\n![Logo
+        8](https://www.firecrawl.dev/assets-original/logocloud/8.png)\\n\\n![Logo
+        9](https://www.firecrawl.dev/assets-original/logocloud/9.png)\\n\\n![Logo
+        10](https://www.firecrawl.dev/assets-original/logocloud/10.png)\\n\\n![Logo
+        11](https://www.firecrawl.dev/assets-original/logocloud/11.png)\\n\\n![Logo
+        12](https://www.firecrawl.dev/assets-original/logocloud/12.png)\\n\\n![Logo
+        13](https://www.firecrawl.dev/assets-original/logocloud/13.png)\\n\\n![Logo
+        14](https://www.firecrawl.dev/assets-original/logocloud/14.png)\\n\\n![Logo
+        15](https://www.firecrawl.dev/assets-original/logocloud/15.png)\\n\\n![Logo
+        16](https://www.firecrawl.dev/assets-original/logocloud/16.png)\\n\\n![Logo
+        17](https://www.firecrawl.dev/assets-original/logocloud/17.png)\\n\\n![Logo
+        18](https://www.firecrawl.dev/assets-original/logocloud/18.png)\\n\\n![Logo
+        19](https://www.firecrawl.dev/assets-original/logocloud/19.png)\\n\\n![Logo
+        20](https://www.firecrawl.dev/assets-original/logocloud/20.png)\\n\\n![Logo
+        21](https://www.firecrawl.dev/assets-original/logocloud/21.png)\\n\\n\\\\[01/
+        07 \\\\]\\n\\n\xB7\\n\\nMain Features\\n\\n//\\n\\nDeveloper First\\n\\n//\\n\\n##
+        Startscraping   today\\n\\nEnhance your apps with industry leading web scraping
+        and crawling capabilities.\\n\\nScrape\\n\\nGet llm-ready data from websites.
+        Markdown, JSON, screenshot, etc.\\n\\nSearch\\n\\nNew\\n\\nSearch the web
+        and get full content from results.\\n\\nCrawl\\n\\nCrawl all the pages on
+        a website and get data for each page.\\n\\nPython\\n\\nNode.js\\n\\nCurl\\n\\nCopy
+        code\\n\\n```python\\n1# pip install firecrawl-py\\n2from firecrawl import
+        Firecrawl\\n3\\n4app = Firecrawl(api_key=\\\"fc-YOUR_API_KEY\\\")\\n5\\n6#
+        Scrape a website:\\n7app.scrape('firecrawl.dev')\\n8\\n9\\n10\\n```\\n\\n\\\\[
+        .MD \\\\]\\n\\n```markdown\\n1# Firecrawl\\n2\\n3Firecrawl is a powerful web
+        scraping\\n4library that makes it easy to extract\\n5data from websites.\\n6\\n7##
+        Installation\\n8\\n9To install Firecrawl, run:\\n10\\n11\\n```\\n\\n![developer-1](https://www.firecrawl.dev/assets/developer/1.png)\\n\\n![developer-2](https://www.firecrawl.dev/assets/developer/2.png)\\n\\n![developer-3](https://www.firecrawl.dev/assets/developer/3.png)\\n\\n![developer-4](https://www.firecrawl.dev/assets/developer/4.png)\\n\\n![developer-5](https://www.firecrawl.dev/assets/developer/5.png)\\n\\n![developer-6](https://www.firecrawl.dev/assets/developer/6.png)\\n\\n![developer-7](https://www.firecrawl.dev/assets/developer/7.png)\\n\\n![developer-8](https://www.firecrawl.dev/assets/developer/8.png)\\n\\n![developer-9](https://www.firecrawl.dev/assets/developer/1.png)\\n\\n![developer-10](https://www.firecrawl.dev/assets/developer/2.png)\\n\\n![developer-11](https://www.firecrawl.dev/assets/developer/3.png)\\n\\n![developer-12](https://www.firecrawl.dev/assets/developer/4.png)\\n\\n![developer-13](https://www.firecrawl.dev/assets/developer/5.png)\\n\\n![developer-14](https://www.firecrawl.dev/assets/developer/6.png)\\n\\n![developer-15](https://www.firecrawl.dev/assets/developer/7.png)\\n\\n![developer-16](https://www.firecrawl.dev/assets/developer/8.png)\\n\\n![developer-17](https://www.firecrawl.dev/assets/developer/1.png)\\n\\n![developer-18](https://www.firecrawl.dev/assets/developer/2.png)\\n\\n![developer-19](https://www.firecrawl.dev/assets/developer/3.png)\\n\\n![developer-20](https://www.firecrawl.dev/assets/developer/4.png)\\n\\n![developer-21](https://www.firecrawl.dev/assets/developer/5.png)\\n\\n![developer-22](https://www.firecrawl.dev/assets/developer/6.png)\\n\\n![developer-23](https://www.firecrawl.dev/assets/developer/7.png)\\n\\n![developer-24](https://www.firecrawl.dev/assets/developer/8.png)\\n\\nIntegrations\\n\\n###
+        Use well-known tools\\n\\nAlready fully integrated with the greatest existing
+        tools and workflows.\\n\\n[See all integrations](https://www.firecrawl.dev/app)\\n\\n![Firecrawl
+        icon (blueprint)](https://www.firecrawl.dev/assets-original/developer-os-icon.png)\\n\\nmendableai/firecrawl\\n\\nPublic\\n\\nStar\\n\\n65.3K\\n\\n\\\\[python-SDK\\\\]
+        improvs/async\\n\\n#1337\\n\\n\xB7\\n\\nApr 18, 2025\\n\\n\xB7\\n\\n![rafaelsideguide](https://www.firecrawl.dev/_next/image?url=https%3A%2F%2Favatars.githubusercontent.com%2Fu%2F150964962%3Fv%3D4&w=48&q=75&dpl=dpl_7RqvseQXNVYetFdhTKj6RntohhL1)\\n\\nrafaelsideguide\\n\\nfeat(extract):
+        cost limit\\n\\n#1473\\n\\n\xB7\\n\\nApr 17, 2025\\n\\n\xB7\\n\\n![mogery](https://www.firecrawl.dev/_next/image?url=https%3A%2F%2Favatars.githubusercontent.com%2Fu%2F66118807%3Fv%3D4&w=48&q=75&dpl=dpl_7RqvseQXNVYetFdhTKj6RntohhL1)\\n\\nmogery\\n\\nfeat(scrape):
+        get job result from GCS, avoid Redis\\n\\n#1461\\n\\n\xB7\\n\\nApr 15, 2025\\n\\n\xB7\\n\\n![mogery](https://www.firecrawl.dev/_next/image?url=https%3A%2F%2Favatars.githubusercontent.com%2Fu%2F66118807%3Fv%3D4&w=48&q=75&dpl=dpl_7RqvseQXNVYetFdhTKj6RntohhL1)\\n\\nmogery\\n\\nExtract
+        v2/rerank improvs\\n\\n#1437\\n\\n\xB7\\n\\nApr 11, 2025\\n\\n\xB7\\n\\n![rafaelsideguide](https://www.firecrawl.dev/_next/image?url=https%3A%2F%2Favatars.githubusercontent.com%2Fu%2F150964962%3Fv%3D4&w=48&q=75&dpl=dpl_7RqvseQXNVYetFdhTKj6RntohhL1)\\n\\nrafaelsideguide\\n\\n![https://avatars.githubusercontent.com/u/150964962?v=4](https://www.firecrawl.dev/_next/image?url=https%3A%2F%2Favatars.githubusercontent.com%2Fu%2F150964962%3Fv%3D4&w=96&q=75&dpl=dpl_7RqvseQXNVYetFdhTKj6RntohhL1)\\n\\n![https://avatars.githubusercontent.com/u/66118807?v=4](https://www.firecrawl.dev/_next/image?url=https%3A%2F%2Favatars.githubusercontent.com%2Fu%2F66118807%3Fv%3D4&w=96&q=75&dpl=dpl_7RqvseQXNVYetFdhTKj6RntohhL1)\\n\\n+90\\n\\nOpen
+        Source\\n\\n### Code you can trust\\n\\nDeveloped transparently and collaboratively.
+        Join our community of contributors.\\n\\n[Check out our repo](https://github.com/firecrawl/firecrawl)\\n\\n\\\\[02/
+        07 \\\\]\\n\\n\xB7\\n\\nCore\\n\\n//\\n\\nBuilt to outperform\\n\\n//\\n\\n##
+        Core principles,    provenperformance\\n\\nBuilt from the ground up to outperform
+        traditional scrapers.\\n\\nNo proxy headaches\\n\\nReliable.Covers 96% of
+        the web,\\n\\nincluding JS-heavy and protected pages. No proxies, no puppets,
+        just clean data.\\n\\nFirecrawl\\n\\n96%\\n\\n![Puppeteer icon](https://www.firecrawl.dev/assets/puppeteer.png)\\n\\nPuppeteer\\n\\n79%\\n\\ncURL\\n\\n75%\\n\\nSpeed
+        that feels invisible\\n\\nBlazingly fast.Delivers results in less than 1 second,
+        fast for real-time agents\\n\\nand dynamic apps.\\n\\nURL\\n\\nCrawl\\n\\nScrape\\n\\nfirecrawl.dev/docs\\n\\n50ms\\n\\n51ms\\n\\nfirecrawl.dev/templates\\n\\n52ms\\n\\n50ms\\n\\nfirecrawl.dev/changelog\\n\\n49ms\\n\\n52ms\\n\\nfirecrawl.dev/about\\n\\n52ms\\n\\n50ms\\n\\nfirecrawl.dev/changelog\\n\\n50ms\\n\\n52ms\\n\\nfirecrawl.dev/playground\\n\\n51ms\\n\\n49ms\\n\\n\\\\[
+        CTA \\\\]\\n\\n\\\\[ CRAWL \\\\]\\n\\n\\\\[ SCRAPE \\\\]\\n\\n\\\\[ CTA \\\\]\\n\\n//\\n\\nGet
+        started\\n\\n//\\n\\nReady to build?\\n\\nStart getting Web Data for free
+        and scale seamlessly as your project expands. No credit card needed.\\n\\n[Start
+        for free](https://www.firecrawl.dev/signin) [See our plans](https://www.firecrawl.dev/pricing)\\n\\n\\\\[03/
+        07 \\\\]\\n\\n\xB7\\n\\nFeatures\\n\\n//\\n\\nZero configuration\\n\\n//\\n\\n##
+        We handle the hard stuff\\n\\nRotating proxies, orchestration, rate limits,
+        js-blocked content and more.\\n\\nDocs to data\\n\\nMedia parsing.Firecrawl
+        can parse and output content from web hosted pdfs, docx, and more.\\n\\nhttps://example.com/docs/report.pdf\\n\\nhttps://example.com/files/brief.docx\\n\\nhttps://example.com/docs/guide.html\\n\\ndocx\\n\\nParsing...\\n\\nKnows
+        the moment\\n\\nSmart wait.Firecrawl intelligently waits for content to load,
+        making scraping faster and more reliable.\\n\\nhttps://example-spa.com\\n\\nRequest
+        Sent\\n\\nScrapes the real thing\\n\\nCached, when you need it.Selective caching,
+        you choose your caching patterns, growing web index.\\n\\n![User](https://www.firecrawl.dev/_next/image?url=%2Fassets-original%2Ffeatures%2Fcached-user.png&w=256&q=75&dpl=dpl_7RqvseQXNVYetFdhTKj6RntohhL1)\\n\\nUser\\n\\nFirecrawl\\n\\nCache\\n\\nInvisible
+        access\\n\\nStealth mode.Crawls the web without\\n\\nbeing blocked, mimics
+        real users to access protected or dynamic content.\\n\\nInteractive scraping\\n\\nActions.Click,
+        scroll, write, wait, press and more before extracting content.\\n\\nhttps://example.com\\n\\nNavigate\\n\\nClick\\n\\nType\\n\\nWait\\n\\nScroll\\n\\nPress\\n\\nScreenshot\\n\\nScrape\\n\\n\\\\[04/
+        07 \\\\]\\n\\n\xB7\\n\\nPricing\\n\\n//\\n\\nTransparent\\n\\n//\\n\\n## Flexible
+        pricing\\n\\nExplore transparent pricing built for real-world scraping.  Start
+        for free, then scale as you grow.\\n\\n\U0001F1FA\U0001F1F8USD\\n\\nFree Plan\\n\\nA
+        lightweight way to try scraping.\\n\\nNo cost, no card, no hassle.\\n\\n500
+        credits\\n\\n$0123456789\\n\\none-time\\n\\nGet started\\n\\nScrape 500 pages\\n\\n2
+        concurrent requests\\n\\nLow rate limits\\n\\nHobby\\n\\nGreat for side projects
+        and small tools.\\n\\nFast, simple, no overkill.\\n\\n3,000 credits\\n\\n$01234567890123456789\\n\\n/monthly\\n\\nBilled
+        yearly\\n\\n2 months free\\n\\nSubscribe\\n\\nScrape 3,000 pages\\n\\n5 concurrent
+        requests\\n\\nBasic support\\n\\n$9 per extra 1k credits\\n\\nStandard\\n\\nMost
+        popular\\n\\nPerfect for scaling with less effort.\\n\\nSimple, solid, dependable.\\n\\n100,000
+        credits\\n\\n$01234567890123456789\\n\\n/monthly\\n\\nBilled yearly\\n\\n2
+        months free\\n\\nSubscribe\\n\\nScrape 100,000 pages\\n\\n50 concurrent requests\\n\\nStandard
+        support\\n\\n$47 per extra 35k credits\\n\\nGrowth\\n\\nBuilt for high volume
+        and speed.\\n\\nFirecrawl at full force.\\n\\n500,000 credits\\n\\n$012345678901234567890123456789\\n\\n/monthly\\n\\nBilled
+        yearly\\n\\n2 months free\\n\\nSubscribe\\n\\nScrape 500,000 pages\\n\\n100
+        concurrent requests\\n\\nPriority support\\n\\n$177 per extra 175k credits\\n\\nExtra
+        credits are available via auto-recharge packs. [Enable](https://www.firecrawl.dev/signin/signup)\\n\\nEnterprise\\n\\nPower
+        at your pace\\n\\nUnlimited credits. Custom RPMs.\\n\\n[Contact sales](https://fk4bvu0n5qp.typeform.com/to/Ej6oydlg)
+        [More details](https://www.firecrawl.dev/enterprise)\\n\\nBulk discounts\\n\\nTop
+        priority support\\n\\nCustom concurrency limits\\n\\nImproved stealth proxies\\n\\nSLAs\\n\\nAdvanced
+        security & controls\\n\\n\\\\[05/ 07 \\\\]\\n\\n\xB7\\n\\nTestimonials\\n\\n//\\n\\nCommunity\\n\\n//\\n\\n##
+        People love    building withFirecrawl\\n\\nDiscover why developers choose
+        Firecrawl every day.\\n\\n[![Morgan Linton](https://www.firecrawl.dev/assets/testimonials/morgan-linton.png)Morgan
+        Linton@morganlinton\\\"If you're coding with AI, and haven't discovered @firecrawl\\\\_dev
+        yet, prepare to have your mind blown \U0001F92F\\\"](https://x.com/morganlinton/status/1839454165703204955)
+        [![Chris DeWeese](https://www.firecrawl.dev/assets/testimonials/chris-deweese.png)Chris
+        DeWeese@chrisdeweese\\\\_\\\"Started using @firecrawl\\\\_dev for a project,
+        I wish I used this sooner.\\\"](https://x.com/chrisdeweese_/status/1853587120406876601)
+        [![Alex Reibman](https://www.firecrawl.dev/assets/testimonials/alex-reibman.png)Alex
+        Reibman@AlexReibman\\\"Moved our internal agent's web scraping tool from Apify
+        to Firecrawl because it benchmarked 50x faster with AgentOps.\\\"](https://x.com/AlexReibman/status/1780299595484131836)
+        [![Tom - Morpho](https://www.firecrawl.dev/assets/testimonials/tom-morpho.png)Tom
+        - Morpho@TomReppelin\\\"I found gold today. Thank you @firecrawl\\\\_dev\\\"](https://x.com/TomReppelin/status/1844382491014201613)\\n\\n[![Morgan
+        Linton](https://www.firecrawl.dev/assets/testimonials/morgan-linton.png)Morgan
+        Linton@morganlinton\\\"If you're coding with AI, and haven't discovered @firecrawl\\\\_dev
+        yet, prepare to have your mind blown \U0001F92F\\\"](https://x.com/morganlinton/status/1839454165703204955)
+        [![Chris DeWeese](https://www.firecrawl.dev/assets/testimonials/chris-deweese.png)Chris
+        DeWeese@chrisdeweese\\\\_\\\"Started using @firecrawl\\\\_dev for a project,
+        I wish I used this sooner.\\\"](https://x.com/chrisdeweese_/status/1853587120406876601)
+        [![Alex Reibman](https://www.firecrawl.dev/assets/testimonials/alex-reibman.png)Alex
+        Reibman@AlexReibman\\\"Moved our internal agent's web scraping tool from Apify
+        to Firecrawl because it benchmarked 50x faster with AgentOps.\\\"](https://x.com/AlexReibman/status/1780299595484131836)
+        [![Tom - Morpho](https://www.firecrawl.dev/assets/testimonials/tom-morpho.png)Tom
+        - Morpho@TomReppelin\\\"I found gold today. Thank you @firecrawl\\\\_dev\\\"](https://x.com/TomReppelin/status/1844382491014201613)\\n\\n[![Bardia](https://www.firecrawl.dev/assets/testimonials/bardia.png)Bardia@thepericulum\\\"The
+        Firecrawl team ships. I wanted types for their node SDK, and less than an
+        hour later, I got them.\\\"](https://x.com/thepericulum/status/1781397799487078874)
+        [![Matt Busigin](https://www.firecrawl.dev/assets/testimonials/matt-busigin.png)Matt
+        Busigin@mbusigin\\\"Firecrawl is dope. Congrats guys \U0001F44F\\\"](https://x.com/mbusigin/status/1836065372010656069)
+        [![Sumanth](https://www.firecrawl.dev/assets/testimonials/sumanth.png)Sumanth@Sumanth\\\\_077\\\"Web
+        scraping will never be the same!\\\\\\\\\\n\\\\\\\\\\nFirecrawl is an open-source
+        framework that takes a URL, crawls it, and conver...\\\"](https://x.com/Sumanth_077/status/1940049003074478511)
+        [![Steven Tey](https://www.firecrawl.dev/assets/testimonials/steven-tey.png)Steven
+        Tey@steventey\\\"Open-source Clay alternative just dropped\\\\\\\\\\n\\\\\\\\\\nUpload
+        a CSV of emails and...\\\"](https://x.com/steventey/status/1932945651761098889)\\n\\n[![Bardia](https://www.firecrawl.dev/assets/testimonials/bardia.png)Bardia@thepericulum\\\"The
+        Firecrawl team ships. I wanted types for their node SDK, and less than an
+        hour later, I got them.\\\"](https://x.com/thepericulum/status/1781397799487078874)
+        [![Matt Busigin](https://www.firecrawl.dev/assets/testimonials/matt-busigin.png)Matt
+        Busigin@mbusigin\\\"Firecrawl is dope. Congrats guys \U0001F44F\\\"](https://x.com/mbusigin/status/1836065372010656069)
+        [![Sumanth](https://www.firecrawl.dev/assets/testimonials/sumanth.png)Sumanth@Sumanth\\\\_077\\\"Web
+        scraping will never be the same!\\\\\\\\\\n\\\\\\\\\\nFirecrawl is an open-source
+        framework that takes a URL, crawls it, and conver...\\\"](https://x.com/Sumanth_077/status/1940049003074478511)
+        [![Steven Tey](https://www.firecrawl.dev/assets/testimonials/steven-tey.png)Steven
+        Tey@steventey\\\"Open-source Clay alternative just dropped\\\\\\\\\\n\\\\\\\\\\nUpload
+        a CSV of emails and...\\\"](https://x.com/steventey/status/1932945651761098889)\\n\\n\\\\[06/
+        07 \\\\]\\n\\n\xB7\\n\\nUse Cases\\n\\n//\\n\\nUse cases\\n\\n//\\n\\n## Transform
+        \   web data into  AI-powered solutions\\n\\nDiscover how Firecrawl customers
+        are getting the most out of our API.\\n\\n[View all use cases](https://docs.firecrawl.dev/use-cases/overview)\\n\\nChat
+        with context\\n\\nSmarter AI chats\\n\\nPower your AI assistants with real-time,
+        accurate web content.\\n\\n[View docs](https://docs.firecrawl.dev/introduction)\\n\\n![AI
+        Assistant](https://www.firecrawl.dev/assets/ai/bot.png)\\n\\nAI Assistant\\n\\nwithFirecrawl\\n\\nReal-time\xB7Updated
+        2 min ago\\n\\nAsk anything...\\n\\nKnow your leads\\n\\nLead enrichment\\n\\nEnhance
+        your sales data with\\n\\nweb information.\\n\\n[Check out Extract](https://www.firecrawl.dev/extract)\\n\\nExtracting
+        leads from directory...\\n\\nTech startups\\n\\nWith contact info\\n\\nDecision
+        makers\\n\\nFunding stage\\n\\nReady to engage\\n\\n![Emily Tran](https://www.firecrawl.dev/assets/ai/leads-1.png)\\n\\n![James
+        Carter](https://www.firecrawl.dev/assets/ai/leads-2.png)\\n\\n![Sophia Kim](https://www.firecrawl.dev/assets/ai/leads-3.png)\\n\\n![Michael
+        Rivera](https://www.firecrawl.dev/assets/ai/leads-4.png)\\n\\nKnow your leads\\n\\nMCPs\\n\\nAdd
+        powerful scraping to your\\n\\ncode editors.\\n\\n[Get started](https://docs.firecrawl.dev/mcp-server)\\n\\n![Claude
+        Code](https://www.firecrawl.dev/assets/ai/mcps-claude.png)\\n\\nClaude Code\\n\\n![Cursor](https://www.firecrawl.dev/assets/ai/mcps-cursor.png)\\n\\nCursor\\n\\n![Windsurf](https://www.firecrawl.dev/assets/ai/mcps-windsurf.png)\\n\\nWindsurf\\n\\n\u273B\\n\\nWelcome
+        to Claude Code!\\n\\n/help for help, /status for your current setup\\n\\n>Try
+        \\\"how do I log an error?\\\"\\n\\nBuild with context\\n\\nAI platforms\\n\\nLet
+        your customers build AI apps\\n\\nwith web data.\\n\\n[Check out Map](https://docs.firecrawl.dev/features/map)\\n\\n![Logo
+        1](https://www.firecrawl.dev/assets/ai/platforms-1.png)\\n\\n![Logo 2](https://www.firecrawl.dev/assets/ai/platforms-2.png)\\n\\n![Logo
+        4](https://www.firecrawl.dev/assets/ai/platforms-4.png)\\n\\n![Logo 3](https://www.firecrawl.dev/assets/ai/platforms-3.png)\\n\\nExtracting
+        text...\\n\\nNo insight missed\\n\\nDeep research\\n\\nExtract comprehensive
+        information for\\n\\nin-depth research.\\n\\n[Build your own with Search](https://docs.firecrawl.dev/features/search)\\n\\nDeep
+        research in progress...\\n\\nAcademic papers\\n\\n0 found\\n\\nNews articles\\n\\n0
+        found\\n\\nExpert opinions\\n\\n0 found\\n\\nResearch reports\\n\\n0 found\\n\\nIndustry
+        data\\n\\n0 found\\n\\nAsk anything...\\n\\n\\\\[ CTA \\\\]\\n\\n\\\\[ CRAWL
+        \\\\]\\n\\n\\\\[ SCRAPE \\\\]\\n\\n\\\\[ CTA \\\\]\\n\\n//\\n\\nGet started\\n\\n//\\n\\nReady
+        to build?\\n\\nStart getting Web Data for free and scale seamlessly as your
+        project expands. No credit card needed.\\n\\n[Start for free](https://www.firecrawl.dev/signin)
+        [See our plans](https://www.firecrawl.dev/pricing)\\n\\n\\\\[07/ 07 \\\\]\\n\\n\xB7\\n\\nFAQ\\n\\n//\\n\\nFAQ\\n\\n//\\n\\n##
+        Frequently    askedquestions\\n\\nEverything you need to know about Firecrawl.\\n\\nGeneral\\n\\nWhat
+        is Firecrawl?\\n\\nWhat sites work?\\n\\nWho can benefit from using Firecrawl?\\n\\nIs
+        Firecrawl open-source?\\n\\nWhat is the difference between Firecrawl and other
+        web scrapers?\\n\\nWhat is the difference between the open-source version
+        and the hosted version?\\n\\nScraping & Crawling\\n\\nHow does Firecrawl handle
+        dynamic content on websites?\\n\\nWhy is it not crawling all the pages?\\n\\nCan
+        Firecrawl crawl websites without a sitemap?\\n\\nWhat formats can Firecrawl
+        convert web data into?\\n\\nHow does Firecrawl ensure the cleanliness of the
+        data?\\n\\nIs Firecrawl suitable for large-scale data scraping projects?\\n\\nDoes
+        it respect robots.txt?\\n\\nWhat measures does Firecrawl take to handle web
+        scraping challenges like rate limits and caching?\\n\\nDoes Firecrawl handle
+        captcha or authentication?\\n\\nAPI Related\\n\\nWhere can I find my API key?\\n\\nBilling\\n\\nIs
+        Firecrawl free?\\n\\nIs there a pay-per-use plan instead of monthly?\\n\\nDo
+        credits roll over to the next month?\\n\\nHow many credits do scraping and
+        crawling cost?\\n\\nDo you charge for failed requests?\\n\\nWhat payment methods
+        do you accept?\\n\\nFOOTER\\n\\nThe easiest way to extract\\n\\ndata from
+        the web\\n\\nBacked by\\n\\nY Combinator\\n\\n[Linkedin](https://www.linkedin.com/company/firecrawl)
+        [Github](https://github.com/firecrawl/firecrawl)\\n\\nSOC II \xB7 Type 2\\n\\nAICPA\\n\\nSOC
+        2\\n\\n[X (Twitter)](https://x.com/firecrawl_dev) [Discord](https://discord.gg/gSmWdAkdwd)\\n\\nProducts\\n\\n[Playground](https://www.firecrawl.dev/playground)
+        [Extract](https://www.firecrawl.dev/extract) [Pricing](https://www.firecrawl.dev/pricing)
+        [Templates](https://www.firecrawl.dev/templates) [Changelog](https://www.firecrawl.dev/changelog)\\n\\nUse
+        Cases\\n\\n[AI Platforms](https://docs.firecrawl.dev/use-cases/ai-platforms)
+        [Lead Enrichment](https://docs.firecrawl.dev/use-cases/lead-enrichment) [SEO
+        Platforms](https://docs.firecrawl.dev/use-cases/seo-platforms) [Deep Research](https://docs.firecrawl.dev/use-cases/deep-research)\\n\\nDocumentation\\n\\n[Getting
+        started](https://docs.firecrawl.dev/introduction) [API Reference](https://docs.firecrawl.dev/api-reference/introduction)
+        [Integrations](https://www.firecrawl.dev/app) [Examples](https://docs.firecrawl.dev/use-cases/overview)
+        [SDKs](https://docs.firecrawl.dev/sdks/overview)\\n\\nCompany\\n\\n[Blog](https://www.firecrawl.dev/blog)
+        [Careers](https://www.firecrawl.dev/careers) [Creator & OSS program](https://www.firecrawl.dev/creator-oss-program)
+        [Student program](https://www.firecrawl.dev/student-program)\\n\\n\xA9 2025
+        Firecrawl\\n\\n[Terms of Service](https://www.firecrawl.dev/terms-of-service)
+        [Privacy Policy](https://www.firecrawl.dev/privacy-policy) [Report Abuse](mailto:help@firecrawl.com?subject=Issue:)\\n\\n[All
+        systems normal](https://status.firecrawl.dev/)\\n\\nStripeM-Inner\",\"metadata\":{\"favicon\":\"https://www.firecrawl.dev/favicon.png\",\"ogSiteName\":\"Firecrawl
+        - The Web Data API for AI\",\"ogTitle\":\"Firecrawl - The Web Data API for
+        AI\",\"description\":\"The web crawling, scraping, and search API for AI.
+        Built for scale. Firecrawl delivers the entire internet to AI agents and builders.
+        Clean, structured, and ready to reason with.\",\"title\":\"Firecrawl - The
+        Web Data API for AI\",\"author\":\"Firecrawl\",\"viewport\":\"width=device-width,
+        initial-scale=1, maximum-scale=1, user-scalable=no\",\"creator\":\"Firecrawl\",\"publisher\":\"Firecrawl\",\"robots\":\"follow,
+        index\",\"og:description\":\"The web crawling, scraping, and search API for
+        AI. Built for scale. Firecrawl delivers the entire internet to AI agents and
+        builders. Clean, structured, and ready to reason with.\",\"og:url\":\"https://www.firecrawl.dev\",\"og:site_name\":\"Firecrawl
+        - The Web Data API for AI\",\"og:image\":\"https://www.firecrawl.dev/og.png\",\"ogDescription\":\"The
+        web crawling, scraping, and search API for AI. Built for scale. Firecrawl
+        delivers the entire internet to AI agents and builders. Clean, structured,
+        and ready to reason with.\",\"og:type\":\"website\",\"twitter:card\":\"summary_large_image\",\"language\":\"en\",\"twitter:site\":\"@Vercel\",\"twitter:image\":\"https://www.firecrawl.dev/og.png\",\"keywords\":\"Firecrawl,Markdown,Data,Mendable,Langchain\",\"twitter:description\":\"The
+        web crawling, scraping, and search API for AI. Built for scale. Firecrawl
+        delivers the entire internet to AI agents and builders. Clean, structured,
+        and ready to reason with.\",\"ogImage\":\"https://www.firecrawl.dev/og.png\",\"referrer\":\"origin-when-cross-origin\",\"twitter:creator\":\"@Vercel\",\"ogUrl\":\"https://www.firecrawl.dev\",\"og:title\":\"Firecrawl
+        - The Web Data API for AI\",\"twitter:title\":\"Firecrawl - The Web Data API
+        for AI\",\"scrapeId\":\"f3f8fc9e-87e8-41b8-b74f-06b979e2e609\",\"sourceURL\":\"https://firecrawl.dev\",\"url\":\"https://www.firecrawl.dev/\",\"statusCode\":200,\"contentType\":\"text/html;
+        charset=utf-8\",\"proxyUsed\":\"basic\",\"cacheState\":\"hit\",\"cachedAt\":\"2025-10-29T13:09:07.713Z\",\"creditsUsed\":1}},{\"markdown\":\"We
+        just raised our Series A and shipped Firecrawl /v2 \U0001F389. [Read the blog.](https://www.firecrawl.dev/blog/firecrawl-v2-series-a-announcement)\\n\\nFOOTER\\n\\nThe
+        easiest way to extract\\n\\ndata from the web\\n\\nBacked by\\n\\nY Combinator\\n\\n[Linkedin](https://www.linkedin.com/company/firecrawl)
+        [Github](https://github.com/firecrawl/firecrawl)\\n\\nSOC II \xB7 Type 2\\n\\nAICPA\\n\\nSOC
+        2\\n\\n[X (Twitter)](https://x.com/firecrawl_dev) [Discord](https://discord.gg/gSmWdAkdwd)\\n\\nProducts\\n\\n[Playground](https://www.firecrawl.dev/playground)
+        [Extract](https://www.firecrawl.dev/extract) [Pricing](https://www.firecrawl.dev/pricing)
+        [Templates](https://www.firecrawl.dev/templates) [Changelog](https://www.firecrawl.dev/changelog)\\n\\nUse
+        Cases\\n\\n[AI Platforms](https://docs.firecrawl.dev/use-cases/ai-platforms)
+        [Lead Enrichment](https://docs.firecrawl.dev/use-cases/lead-enrichment) [SEO
+        Platforms](https://docs.firecrawl.dev/use-cases/seo-platforms) [Deep Research](https://docs.firecrawl.dev/use-cases/deep-research)\\n\\nDocumentation\\n\\n[Getting
+        started](https://docs.firecrawl.dev/introduction) [API Reference](https://docs.firecrawl.dev/api-reference/introduction)
+        [Integrations](https://www.firecrawl.dev/app) [Examples](https://docs.firecrawl.dev/use-cases/overview)
+        [SDKs](https://docs.firecrawl.dev/sdks/overview)\\n\\nCompany\\n\\n[Blog](https://www.firecrawl.dev/blog)
+        [Careers](https://www.firecrawl.dev/careers) [Creator & OSS program](https://www.firecrawl.dev/creator-oss-program)
+        [Student program](https://www.firecrawl.dev/student-program)\\n\\n\xA9 2025
+        Firecrawl\\n\\n[Terms of Service](https://www.firecrawl.dev/terms-of-service)
+        [Privacy Policy](https://www.firecrawl.dev/privacy-policy) [Report Abuse](mailto:help@firecrawl.com?subject=Issue:)\\n\\n[Loading
+        status...](https://status.firecrawl.dev/)\\n\\nreCAPTCHA\\n\\nRecaptcha requires
+        verification.\\n\\n[Privacy](https://www.google.com/intl/en/policies/privacy/)
+        \\\\- [Terms](https://www.google.com/intl/en/policies/terms/)\\n\\nprotected
+        by **reCAPTCHA**\\n\\n[Privacy](https://www.google.com/intl/en/policies/privacy/)
+        \\\\- [Terms](https://www.google.com/intl/en/policies/terms/)\",\"metadata\":{\"favicon\":\"https://www.firecrawl.dev/favicon.png\",\"twitter:site\":\"@Vercel\",\"og:type\":\"website\",\"ogUrl\":\"https://www.firecrawl.dev\",\"author\":\"Firecrawl\",\"description\":\"The
+        web crawling, scraping, and search API for AI. Built for scale. Firecrawl
+        delivers the entire internet to AI agents and builders. Clean, structured,
+        and ready to reason with.\",\"ogImage\":\"https://www.firecrawl.dev/og.png\",\"language\":\"en\",\"robots\":\"follow,
+        index\",\"ogTitle\":\"Firecrawl - The Web Data API for AI\",\"creator\":\"Firecrawl\",\"og:title\":\"Firecrawl
+        - The Web Data API for AI\",\"og:image\":\"https://www.firecrawl.dev/og.png\",\"viewport\":\"width=device-width,
+        initial-scale=1, maximum-scale=1, user-scalable=no\",\"ogDescription\":\"The
+        web crawling, scraping, and search API for AI. Built for scale. Firecrawl
+        delivers the entire internet to AI agents and builders. Clean, structured,
+        and ready to reason with.\",\"ogSiteName\":\"Firecrawl - The Web Data API
+        for AI\",\"keywords\":\"Firecrawl,Markdown,Data,Mendable,Langchain\",\"publisher\":\"Firecrawl\",\"twitter:card\":\"summary_large_image\",\"og:url\":\"https://www.firecrawl.dev\",\"og:site_name\":\"Firecrawl
+        - The Web Data API for AI\",\"twitter:creator\":\"@Vercel\",\"twitter:title\":\"Firecrawl
+        - The Web Data API for AI\",\"og:description\":\"The web crawling, scraping,
+        and search API for AI. Built for scale. Firecrawl delivers the entire internet
+        to AI agents and builders. Clean, structured, and ready to reason with.\",\"twitter:description\":\"The
+        web crawling, scraping, and search API for AI. Built for scale. Firecrawl
+        delivers the entire internet to AI agents and builders. Clean, structured,
+        and ready to reason with.\",\"twitter:image\":\"https://www.firecrawl.dev/og.png\",\"referrer\":\"origin-when-cross-origin\",\"title\":\"Firecrawl
+        - The Web Data API for AI\",\"scrapeId\":\"fdc798ff-5a0d-4837-8b42-265a00eaab80\",\"sourceURL\":\"https://www.firecrawl.dev/playground/g-noe8ionNNwUqRUtZAvi\",\"url\":\"https://www.firecrawl.dev/playground/g-noe8ionNNwUqRUtZAvi\",\"statusCode\":200,\"contentType\":\"text/html;
+        charset=utf-8\",\"proxyUsed\":\"basic\",\"cacheState\":\"hit\",\"cachedAt\":\"2025-10-29T11:19:51.575Z\",\"creditsUsed\":1}}]}"
+    headers:
+      Access-Control-Allow-Origin:
+      - '*'
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Content-Length:
+      - '29131'
+      Content-Type:
+      - application/json; charset=utf-8
+      Date:
+      - Wed, 29 Oct 2025 14:36:41 GMT
+      ETag:
+      - W/"71cb-USnUGfdebu/Omk+MHR/JgVKRVjg"
+      Via:
+      - 1.1 google
+      X-Powered-By:
+      - Express
+      X-Response-Time:
+      - 308.748ms
+    status:
+      code: 200
+      message: OK
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate, zstd
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      User-Agent:
+      - python-requests/2.32.5
+    method: GET
+    uri: https://api.firecrawl.dev/v1/crawl/9352ed1c-88bf-4258-a466-d29911ebcbe4?skip=2
+  response:
+    body:
+      string: '{"success":true,"status":"scraping","completed":2,"total":2,"creditsUsed":2,"expiresAt":"2025-10-30T14:36:41.000Z","next":"https://api.firecrawl.dev/v1/crawl/9352ed1c-88bf-4258-a466-d29911ebcbe4?skip=2","data":[]}'
+    headers:
+      Access-Control-Allow-Origin:
+      - '*'
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Content-Length:
+      - '213'
+      Content-Type:
+      - application/json; charset=utf-8
+      Date:
+      - Wed, 29 Oct 2025 14:36:41 GMT
+      ETag:
+      - W/"d5-viLNqST0eDLVY/uM0uR3domAVLg"
+      Via:
+      - 1.1 google
+      X-Powered-By:
+      - Express
+      X-Response-Time:
+      - 58.299ms
+    status:
+      code: 200
+      message: OK
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate, zstd
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      User-Agent:
+      - python-requests/2.32.5
+    method: GET
+    uri: https://api.firecrawl.dev/v1/crawl/9352ed1c-88bf-4258-a466-d29911ebcbe4?skip=2
+  response:
+    body:
+      string: '{"success":true,"status":"scraping","completed":2,"total":2,"creditsUsed":2,"expiresAt":"2025-10-30T14:36:42.000Z","next":"https://api.firecrawl.dev/v1/crawl/9352ed1c-88bf-4258-a466-d29911ebcbe4?skip=2","data":[]}'
+    headers:
+      Access-Control-Allow-Origin:
+      - '*'
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Content-Length:
+      - '213'
+      Content-Type:
+      - application/json; charset=utf-8
+      Date:
+      - Wed, 29 Oct 2025 14:36:42 GMT
+      ETag:
+      - W/"d5-QOKNH5bbK3JN+Tfs1ilDGndDiiU"
+      Via:
+      - 1.1 google
+      X-Powered-By:
+      - Express
+      X-Response-Time:
+      - 80.859ms
+    status:
+      code: 200
+      message: OK
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate, zstd
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      User-Agent:
+      - python-requests/2.32.5
+    method: GET
+    uri: https://api.firecrawl.dev/v1/crawl/9352ed1c-88bf-4258-a466-d29911ebcbe4?skip=2
+  response:
+    body:
+      string: '{"success":true,"status":"scraping","completed":2,"total":2,"creditsUsed":2,"expiresAt":"2025-10-30T14:36:42.000Z","next":"https://api.firecrawl.dev/v1/crawl/9352ed1c-88bf-4258-a466-d29911ebcbe4?skip=2","data":[]}'
+    headers:
+      Access-Control-Allow-Origin:
+      - '*'
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Content-Length:
+      - '213'
+      Content-Type:
+      - application/json; charset=utf-8
+      Date:
+      - Wed, 29 Oct 2025 14:36:42 GMT
+      ETag:
+      - W/"d5-QOKNH5bbK3JN+Tfs1ilDGndDiiU"
+      Via:
+      - 1.1 google
+      X-Powered-By:
+      - Express
+      X-Response-Time:
+      - 50.019ms
+    status:
+      code: 200
+      message: OK
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate, zstd
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      User-Agent:
+      - python-requests/2.32.5
+    method: GET
+    uri: https://api.firecrawl.dev/v1/crawl/9352ed1c-88bf-4258-a466-d29911ebcbe4?skip=2
+  response:
+    body:
+      string: '{"success":true,"status":"scraping","completed":2,"total":2,"creditsUsed":2,"expiresAt":"2025-10-30T14:36:42.000Z","next":"https://api.firecrawl.dev/v1/crawl/9352ed1c-88bf-4258-a466-d29911ebcbe4?skip=2","data":[]}'
+    headers:
+      Access-Control-Allow-Origin:
+      - '*'
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Content-Length:
+      - '213'
+      Content-Type:
+      - application/json; charset=utf-8
+      Date:
+      - Wed, 29 Oct 2025 14:36:42 GMT
+      ETag:
+      - W/"d5-QOKNH5bbK3JN+Tfs1ilDGndDiiU"
+      Via:
+      - 1.1 google
+      X-Powered-By:
+      - Express
+      X-Response-Time:
+      - 77.403ms
+    status:
+      code: 200
+      message: OK
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate, zstd
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      User-Agent:
+      - python-requests/2.32.5
+    method: GET
+    uri: https://api.firecrawl.dev/v1/crawl/9352ed1c-88bf-4258-a466-d29911ebcbe4?skip=2
+  response:
+    body:
+      string: '{"success":true,"status":"scraping","completed":2,"total":2,"creditsUsed":2,"expiresAt":"2025-10-30T14:36:42.000Z","next":"https://api.firecrawl.dev/v1/crawl/9352ed1c-88bf-4258-a466-d29911ebcbe4?skip=2","data":[]}'
+    headers:
+      Access-Control-Allow-Origin:
+      - '*'
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Content-Length:
+      - '213'
+      Content-Type:
+      - application/json; charset=utf-8
+      Date:
+      - Wed, 29 Oct 2025 14:36:42 GMT
+      ETag:
+      - W/"d5-QOKNH5bbK3JN+Tfs1ilDGndDiiU"
+      Via:
+      - 1.1 google
+      X-Powered-By:
+      - Express
+      X-Response-Time:
+      - 56.616ms
+    status:
+      code: 200
+      message: OK
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate, zstd
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      User-Agent:
+      - python-requests/2.32.5
+    method: GET
+    uri: https://api.firecrawl.dev/v1/crawl/9352ed1c-88bf-4258-a466-d29911ebcbe4?skip=2
+  response:
+    body:
+      string: '{"success":true,"status":"scraping","completed":2,"total":2,"creditsUsed":2,"expiresAt":"2025-10-30T14:36:43.000Z","next":"https://api.firecrawl.dev/v1/crawl/9352ed1c-88bf-4258-a466-d29911ebcbe4?skip=2","data":[]}'
+    headers:
+      Access-Control-Allow-Origin:
+      - '*'
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Content-Length:
+      - '213'
+      Content-Type:
+      - application/json; charset=utf-8
+      Date:
+      - Wed, 29 Oct 2025 14:36:43 GMT
+      ETag:
+      - W/"d5-86pj1B8lyx89pgvsCE7xsKM+CmM"
+      Via:
+      - 1.1 google
+      X-Powered-By:
+      - Express
+      X-Response-Time:
+      - 138.397ms
+    status:
+      code: 200
+      message: OK
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate, zstd
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      User-Agent:
+      - python-requests/2.32.5
+    method: GET
+    uri: https://api.firecrawl.dev/v1/crawl/9352ed1c-88bf-4258-a466-d29911ebcbe4?skip=2
+  response:
+    body:
+      string: '{"success":true,"status":"scraping","completed":2,"total":2,"creditsUsed":2,"expiresAt":"2025-10-30T14:36:43.000Z","next":"https://api.firecrawl.dev/v1/crawl/9352ed1c-88bf-4258-a466-d29911ebcbe4?skip=2","data":[]}'
+    headers:
+      Access-Control-Allow-Origin:
+      - '*'
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Content-Length:
+      - '213'
+      Content-Type:
+      - application/json; charset=utf-8
+      Date:
+      - Wed, 29 Oct 2025 14:36:43 GMT
+      ETag:
+      - W/"d5-86pj1B8lyx89pgvsCE7xsKM+CmM"
+      Via:
+      - 1.1 google
+      X-Powered-By:
+      - Express
+      X-Response-Time:
+      - 61.709ms
+    status:
+      code: 200
+      message: OK
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate, zstd
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      User-Agent:
+      - python-requests/2.32.5
+    method: GET
+    uri: https://api.firecrawl.dev/v1/crawl/9352ed1c-88bf-4258-a466-d29911ebcbe4?skip=2
+  response:
+    body:
+      string: '{"success":true,"status":"scraping","completed":2,"total":2,"creditsUsed":2,"expiresAt":"2025-10-30T14:36:43.000Z","next":"https://api.firecrawl.dev/v1/crawl/9352ed1c-88bf-4258-a466-d29911ebcbe4?skip=2","data":[]}'
+    headers:
+      Access-Control-Allow-Origin:
+      - '*'
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Content-Length:
+      - '213'
+      Content-Type:
+      - application/json; charset=utf-8
+      Date:
+      - Wed, 29 Oct 2025 14:36:43 GMT
+      ETag:
+      - W/"d5-86pj1B8lyx89pgvsCE7xsKM+CmM"
+      Via:
+      - 1.1 google
+      X-Powered-By:
+      - Express
+      X-Response-Time:
+      - 56.270ms
+    status:
+      code: 200
+      message: OK
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate, zstd
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      User-Agent:
+      - python-requests/2.32.5
+    method: GET
+    uri: https://api.firecrawl.dev/v1/crawl/9352ed1c-88bf-4258-a466-d29911ebcbe4?skip=2
+  response:
+    body:
+      string: '{"success":true,"status":"scraping","completed":2,"total":2,"creditsUsed":2,"expiresAt":"2025-10-30T14:36:44.000Z","next":"https://api.firecrawl.dev/v1/crawl/9352ed1c-88bf-4258-a466-d29911ebcbe4?skip=2","data":[]}'
+    headers:
+      Access-Control-Allow-Origin:
+      - '*'
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Content-Length:
+      - '213'
+      Content-Type:
+      - application/json; charset=utf-8
+      Date:
+      - Wed, 29 Oct 2025 14:36:44 GMT
+      ETag:
+      - W/"d5-fhBJ/Z1zWsgQSM8q+C9AufkRL7k"
+      Via:
+      - 1.1 google
+      X-Powered-By:
+      - Express
+      X-Response-Time:
+      - 53.261ms
+    status:
+      code: 200
+      message: OK
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate, zstd
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      User-Agent:
+      - python-requests/2.32.5
+    method: GET
+    uri: https://api.firecrawl.dev/v1/crawl/9352ed1c-88bf-4258-a466-d29911ebcbe4?skip=2
+  response:
+    body:
+      string: '{"success":true,"status":"scraping","completed":2,"total":2,"creditsUsed":2,"expiresAt":"2025-10-30T14:36:44.000Z","next":"https://api.firecrawl.dev/v1/crawl/9352ed1c-88bf-4258-a466-d29911ebcbe4?skip=2","data":[]}'
+    headers:
+      Access-Control-Allow-Origin:
+      - '*'
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Content-Length:
+      - '213'
+      Content-Type:
+      - application/json; charset=utf-8
+      Date:
+      - Wed, 29 Oct 2025 14:36:44 GMT
+      ETag:
+      - W/"d5-fhBJ/Z1zWsgQSM8q+C9AufkRL7k"
+      Via:
+      - 1.1 google
+      X-Powered-By:
+      - Express
+      X-Response-Time:
+      - 60.965ms
+    status:
+      code: 200
+      message: OK
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate, zstd
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      User-Agent:
+      - python-requests/2.32.5
+    method: GET
+    uri: https://api.firecrawl.dev/v1/crawl/9352ed1c-88bf-4258-a466-d29911ebcbe4?skip=2
+  response:
+    body:
+      string: '{"success":true,"status":"scraping","completed":2,"total":2,"creditsUsed":2,"expiresAt":"2025-10-30T14:36:44.000Z","next":"https://api.firecrawl.dev/v1/crawl/9352ed1c-88bf-4258-a466-d29911ebcbe4?skip=2","data":[]}'
+    headers:
+      Access-Control-Allow-Origin:
+      - '*'
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Content-Length:
+      - '213'
+      Content-Type:
+      - application/json; charset=utf-8
+      Date:
+      - Wed, 29 Oct 2025 14:36:44 GMT
+      ETag:
+      - W/"d5-fhBJ/Z1zWsgQSM8q+C9AufkRL7k"
+      Via:
+      - 1.1 google
+      X-Powered-By:
+      - Express
+      X-Response-Time:
+      - 59.750ms
+    status:
+      code: 200
+      message: OK
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate, zstd
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      User-Agent:
+      - python-requests/2.32.5
+    method: GET
+    uri: https://api.firecrawl.dev/v1/crawl/9352ed1c-88bf-4258-a466-d29911ebcbe4?skip=2
+  response:
+    body:
+      string: '{"success":true,"status":"scraping","completed":2,"total":2,"creditsUsed":2,"expiresAt":"2025-10-30T14:36:44.000Z","next":"https://api.firecrawl.dev/v1/crawl/9352ed1c-88bf-4258-a466-d29911ebcbe4?skip=2","data":[]}'
+    headers:
+      Access-Control-Allow-Origin:
+      - '*'
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Content-Length:
+      - '213'
+      Content-Type:
+      - application/json; charset=utf-8
+      Date:
+      - Wed, 29 Oct 2025 14:36:44 GMT
+      ETag:
+      - W/"d5-fhBJ/Z1zWsgQSM8q+C9AufkRL7k"
+      Via:
+      - 1.1 google
+      X-Powered-By:
+      - Express
+      X-Response-Time:
+      - 41.124ms
+    status:
+      code: 200
+      message: OK
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate, zstd
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      User-Agent:
+      - python-requests/2.32.5
+    method: GET
+    uri: https://api.firecrawl.dev/v1/crawl/9352ed1c-88bf-4258-a466-d29911ebcbe4?skip=2
+  response:
+    body:
+      string: '{"success":true,"status":"scraping","completed":2,"total":2,"creditsUsed":2,"expiresAt":"2025-10-30T14:36:49.000Z","next":"https://api.firecrawl.dev/v1/crawl/9352ed1c-88bf-4258-a466-d29911ebcbe4?skip=2","data":[]}'
+    headers:
+      Access-Control-Allow-Origin:
+      - '*'
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Content-Length:
+      - '213'
+      Content-Type:
+      - application/json; charset=utf-8
+      Date:
+      - Wed, 29 Oct 2025 14:36:49 GMT
+      ETag:
+      - W/"d5-bOJP5q8xykI7S9CTA2wi1SXkX4Q"
+      Via:
+      - 1.1 google
+      X-Powered-By:
+      - Express
+      X-Response-Time:
+      - 70.804ms
+    status:
+      code: 200
+      message: OK
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate, zstd
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      User-Agent:
+      - python-requests/2.32.5
+    method: GET
+    uri: https://api.firecrawl.dev/v1/crawl/9352ed1c-88bf-4258-a466-d29911ebcbe4?skip=2
+  response:
+    body:
+      string: '{"success":true,"status":"scraping","completed":2,"total":2,"creditsUsed":2,"expiresAt":"2025-10-30T14:36:49.000Z","next":"https://api.firecrawl.dev/v1/crawl/9352ed1c-88bf-4258-a466-d29911ebcbe4?skip=2","data":[]}'
+    headers:
+      Access-Control-Allow-Origin:
+      - '*'
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Content-Length:
+      - '213'
+      Content-Type:
+      - application/json; charset=utf-8
+      Date:
+      - Wed, 29 Oct 2025 14:36:49 GMT
+      ETag:
+      - W/"d5-bOJP5q8xykI7S9CTA2wi1SXkX4Q"
+      Via:
+      - 1.1 google
+      X-Powered-By:
+      - Express
+      X-Response-Time:
+      - 57.812ms
+    status:
+      code: 200
+      message: OK
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate, zstd
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      User-Agent:
+      - python-requests/2.32.5
+    method: GET
+    uri: https://api.firecrawl.dev/v1/crawl/9352ed1c-88bf-4258-a466-d29911ebcbe4?skip=2
+  response:
+    body:
+      string: '{"success":true,"status":"scraping","completed":2,"total":2,"creditsUsed":2,"expiresAt":"2025-10-30T14:36:50.000Z","next":"https://api.firecrawl.dev/v1/crawl/9352ed1c-88bf-4258-a466-d29911ebcbe4?skip=2","data":[]}'
+    headers:
+      Access-Control-Allow-Origin:
+      - '*'
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Content-Length:
+      - '213'
+      Content-Type:
+      - application/json; charset=utf-8
+      Date:
+      - Wed, 29 Oct 2025 14:36:50 GMT
+      ETag:
+      - W/"d5-0IipfXsRuOOoxt+V9qzKJ7o4gsE"
+      Via:
+      - 1.1 google
+      X-Powered-By:
+      - Express
+      X-Response-Time:
+      - 82.778ms
+    status:
+      code: 200
+      message: OK
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate, zstd
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      User-Agent:
+      - python-requests/2.32.5
+    method: GET
+    uri: https://api.firecrawl.dev/v1/crawl/9352ed1c-88bf-4258-a466-d29911ebcbe4?skip=2
+  response:
+    body:
+      string: '{"success":true,"status":"scraping","completed":2,"total":2,"creditsUsed":2,"expiresAt":"2025-10-30T14:36:50.000Z","next":"https://api.firecrawl.dev/v1/crawl/9352ed1c-88bf-4258-a466-d29911ebcbe4?skip=2","data":[]}'
+    headers:
+      Access-Control-Allow-Origin:
+      - '*'
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Content-Length:
+      - '213'
+      Content-Type:
+      - application/json; charset=utf-8
+      Date:
+      - Wed, 29 Oct 2025 14:36:50 GMT
+      ETag:
+      - W/"d5-0IipfXsRuOOoxt+V9qzKJ7o4gsE"
+      Via:
+      - 1.1 google
+      X-Powered-By:
+      - Express
+      X-Response-Time:
+      - 107.892ms
+    status:
+      code: 200
+      message: OK
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate, zstd
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      User-Agent:
+      - python-requests/2.32.5
+    method: GET
+    uri: https://api.firecrawl.dev/v1/crawl/9352ed1c-88bf-4258-a466-d29911ebcbe4?skip=2
+  response:
+    body:
+      string: '{"success":true,"status":"completed","completed":2,"total":2,"creditsUsed":2,"expiresAt":"2025-10-30T14:36:50.000Z","data":[]}'
+    headers:
+      Access-Control-Allow-Origin:
+      - '*'
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Content-Length:
+      - '126'
+      Content-Type:
+      - application/json; charset=utf-8
+      Date:
+      - Wed, 29 Oct 2025 14:36:50 GMT
+      ETag:
+      - W/"7e-vvcE3p6U2e8/3qdC9YbnMBstovQ"
+      Via:
+      - 1.1 google
+      X-Powered-By:
+      - Express
+      X-Response-Time:
+      - 55.570ms
+    status:
+      code: 200
+      message: OK
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate, zstd
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      User-Agent:
+      - python-requests/2.32.5
+    method: GET
+    uri: https://api.firecrawl.dev/v2/crawl/9352ed1c-88bf-4258-a466-d29911ebcbe4
+  response:
+    body:
+      string: "{\"success\":true,\"status\":\"completed\",\"completed\":2,\"total\":2,\"creditsUsed\":2,\"expiresAt\":\"2025-10-30T14:36:52.000Z\",\"data\":[{\"markdown\":\"We
+        just raised our Series A and shipped Firecrawl /v2 \U0001F389. [Read the blog.](https://www.firecrawl.dev/blog/firecrawl-v2-series-a-announcement)\\n\\n[2
+        Months Free \u2014 Annually](https://www.firecrawl.dev/pricing)\\n\\n# Turn
+        websites into   LLM-ready data\\n\\nPower your AI apps with clean web data\\n\\nfrom
+        any website. [It's also open source.](https://github.com/firecrawl/firecrawl)\\n\\nScrape\\n\\nSearch\\nNew\\n\\nMap\\n\\nCrawl\\n\\nScrape\\n\\nLogo\\n\\nNavigation\\n\\nButton\\n\\nH1
+        Title\\n\\nDescription\\n\\nCTA Button\\n\\n\\\\[ .JSON \\\\]\\n\\n```json\\n1[\\\\\\n2
+        \ {\\\\\\n3    \\\"url\\\": \\\"https://example.com\\\",\\\\\\n4    \\\"markdown\\\":
+        \\\"# Getting Started...\\\",\\\\\\n5    \\\"json\\\": { \\\"title\\\": \\\"Guide\\\",
+        \\\"docs\\\": \\\"...\\\" },\\\\\\n6    \\\"screenshot\\\": \\\"https://example.com/hero.png\\\"\\\\\\n7
+        \ }\\\\\\n8]\\n```\\n\\nScrape Completed\\n\\nTrusted by5000+\\n\\ncompaniesof
+        all sizes\\n\\n![Logo 17](https://www.firecrawl.dev/assets-original/logocloud/17.png)\\n\\n![Logo
+        18](https://www.firecrawl.dev/assets-original/logocloud/18.png)\\n\\n![Logo
+        1](https://www.firecrawl.dev/assets-original/logocloud/1.png)\\n\\n![Logo
+        2](https://www.firecrawl.dev/assets-original/logocloud/2.png)\\n\\n![Logo
+        3](https://www.firecrawl.dev/assets-original/logocloud/3.png)\\n\\n![Logo
+        4](https://www.firecrawl.dev/assets-original/logocloud/4.png)\\n\\n![Logo
+        5](https://www.firecrawl.dev/assets-original/logocloud/5.png)\\n\\n![Logo
+        6](https://www.firecrawl.dev/assets-original/logocloud/6.png)\\n\\n![Logo
+        7](https://www.firecrawl.dev/assets-original/logocloud/7.png)\\n\\n![Logo
+        8](https://www.firecrawl.dev/assets-original/logocloud/8.png)\\n\\n![Logo
+        9](https://www.firecrawl.dev/assets-original/logocloud/9.png)\\n\\n![Logo
+        10](https://www.firecrawl.dev/assets-original/logocloud/10.png)\\n\\n![Logo
+        11](https://www.firecrawl.dev/assets-original/logocloud/11.png)\\n\\n![Logo
+        12](https://www.firecrawl.dev/assets-original/logocloud/12.png)\\n\\n![Logo
+        13](https://www.firecrawl.dev/assets-original/logocloud/13.png)\\n\\n![Logo
+        14](https://www.firecrawl.dev/assets-original/logocloud/14.png)\\n\\n![Logo
+        15](https://www.firecrawl.dev/assets-original/logocloud/15.png)\\n\\n![Logo
+        16](https://www.firecrawl.dev/assets-original/logocloud/16.png)\\n\\n![Logo
+        17](https://www.firecrawl.dev/assets-original/logocloud/17.png)\\n\\n![Logo
+        18](https://www.firecrawl.dev/assets-original/logocloud/18.png)\\n\\n![Logo
+        19](https://www.firecrawl.dev/assets-original/logocloud/19.png)\\n\\n![Logo
+        20](https://www.firecrawl.dev/assets-original/logocloud/20.png)\\n\\n![Logo
+        21](https://www.firecrawl.dev/assets-original/logocloud/21.png)\\n\\n![Logo
+        17](https://www.firecrawl.dev/assets-original/logocloud/17.png)\\n\\n![Logo
+        18](https://www.firecrawl.dev/assets-original/logocloud/18.png)\\n\\n![Logo
+        1](https://www.firecrawl.dev/assets-original/logocloud/1.png)\\n\\n![Logo
+        2](https://www.firecrawl.dev/assets-original/logocloud/2.png)\\n\\n![Logo
+        3](https://www.firecrawl.dev/assets-original/logocloud/3.png)\\n\\n![Logo
+        4](https://www.firecrawl.dev/assets-original/logocloud/4.png)\\n\\n![Logo
+        5](https://www.firecrawl.dev/assets-original/logocloud/5.png)\\n\\n![Logo
+        6](https://www.firecrawl.dev/assets-original/logocloud/6.png)\\n\\n![Logo
+        7](https://www.firecrawl.dev/assets-original/logocloud/7.png)\\n\\n![Logo
+        8](https://www.firecrawl.dev/assets-original/logocloud/8.png)\\n\\n![Logo
+        9](https://www.firecrawl.dev/assets-original/logocloud/9.png)\\n\\n![Logo
+        10](https://www.firecrawl.dev/assets-original/logocloud/10.png)\\n\\n![Logo
+        11](https://www.firecrawl.dev/assets-original/logocloud/11.png)\\n\\n![Logo
+        12](https://www.firecrawl.dev/assets-original/logocloud/12.png)\\n\\n![Logo
+        13](https://www.firecrawl.dev/assets-original/logocloud/13.png)\\n\\n![Logo
+        14](https://www.firecrawl.dev/assets-original/logocloud/14.png)\\n\\n![Logo
+        15](https://www.firecrawl.dev/assets-original/logocloud/15.png)\\n\\n![Logo
+        16](https://www.firecrawl.dev/assets-original/logocloud/16.png)\\n\\n![Logo
+        17](https://www.firecrawl.dev/assets-original/logocloud/17.png)\\n\\n![Logo
+        18](https://www.firecrawl.dev/assets-original/logocloud/18.png)\\n\\n![Logo
+        19](https://www.firecrawl.dev/assets-original/logocloud/19.png)\\n\\n![Logo
+        20](https://www.firecrawl.dev/assets-original/logocloud/20.png)\\n\\n![Logo
+        21](https://www.firecrawl.dev/assets-original/logocloud/21.png)\\n\\n\\\\[01/
+        07 \\\\]\\n\\n\xB7\\n\\nMain Features\\n\\n//\\n\\nDeveloper First\\n\\n//\\n\\n##
+        Startscraping   today\\n\\nEnhance your apps with industry leading web scraping
+        and crawling capabilities.\\n\\nScrape\\n\\nGet llm-ready data from websites.
+        Markdown, JSON, screenshot, etc.\\n\\nSearch\\n\\nNew\\n\\nSearch the web
+        and get full content from results.\\n\\nCrawl\\n\\nCrawl all the pages on
+        a website and get data for each page.\\n\\nPython\\n\\nNode.js\\n\\nCurl\\n\\nCopy
+        code\\n\\n```python\\n1# pip install firecrawl-py\\n2from firecrawl import
+        Firecrawl\\n3\\n4app = Firecrawl(api_key=\\\"fc-YOUR_API_KEY\\\")\\n5\\n6#
+        Scrape a website:\\n7app.scrape('firecrawl.dev')\\n8\\n9\\n10\\n```\\n\\n\\\\[
+        .MD \\\\]\\n\\n```markdown\\n1# Firecrawl\\n2\\n3Firecrawl is a powerful web
+        scraping\\n4library that makes it easy to extract\\n5data from websites.\\n6\\n7##
+        Installation\\n8\\n9To install Firecrawl, run:\\n10\\n11\\n```\\n\\n![developer-1](https://www.firecrawl.dev/assets/developer/1.png)\\n\\n![developer-2](https://www.firecrawl.dev/assets/developer/2.png)\\n\\n![developer-3](https://www.firecrawl.dev/assets/developer/3.png)\\n\\n![developer-4](https://www.firecrawl.dev/assets/developer/4.png)\\n\\n![developer-5](https://www.firecrawl.dev/assets/developer/5.png)\\n\\n![developer-6](https://www.firecrawl.dev/assets/developer/6.png)\\n\\n![developer-7](https://www.firecrawl.dev/assets/developer/7.png)\\n\\n![developer-8](https://www.firecrawl.dev/assets/developer/8.png)\\n\\n![developer-9](https://www.firecrawl.dev/assets/developer/1.png)\\n\\n![developer-10](https://www.firecrawl.dev/assets/developer/2.png)\\n\\n![developer-11](https://www.firecrawl.dev/assets/developer/3.png)\\n\\n![developer-12](https://www.firecrawl.dev/assets/developer/4.png)\\n\\n![developer-13](https://www.firecrawl.dev/assets/developer/5.png)\\n\\n![developer-14](https://www.firecrawl.dev/assets/developer/6.png)\\n\\n![developer-15](https://www.firecrawl.dev/assets/developer/7.png)\\n\\n![developer-16](https://www.firecrawl.dev/assets/developer/8.png)\\n\\n![developer-17](https://www.firecrawl.dev/assets/developer/1.png)\\n\\n![developer-18](https://www.firecrawl.dev/assets/developer/2.png)\\n\\n![developer-19](https://www.firecrawl.dev/assets/developer/3.png)\\n\\n![developer-20](https://www.firecrawl.dev/assets/developer/4.png)\\n\\n![developer-21](https://www.firecrawl.dev/assets/developer/5.png)\\n\\n![developer-22](https://www.firecrawl.dev/assets/developer/6.png)\\n\\n![developer-23](https://www.firecrawl.dev/assets/developer/7.png)\\n\\n![developer-24](https://www.firecrawl.dev/assets/developer/8.png)\\n\\nIntegrations\\n\\n###
+        Use well-known tools\\n\\nAlready fully integrated with the greatest existing
+        tools and workflows.\\n\\n[See all integrations](https://www.firecrawl.dev/app)\\n\\n![Firecrawl
+        icon (blueprint)](https://www.firecrawl.dev/assets-original/developer-os-icon.png)\\n\\nmendableai/firecrawl\\n\\nPublic\\n\\nStar\\n\\n65.3K\\n\\n\\\\[python-SDK\\\\]
+        improvs/async\\n\\n#1337\\n\\n\xB7\\n\\nApr 18, 2025\\n\\n\xB7\\n\\n![rafaelsideguide](https://www.firecrawl.dev/_next/image?url=https%3A%2F%2Favatars.githubusercontent.com%2Fu%2F150964962%3Fv%3D4&w=48&q=75&dpl=dpl_7RqvseQXNVYetFdhTKj6RntohhL1)\\n\\nrafaelsideguide\\n\\nfeat(extract):
+        cost limit\\n\\n#1473\\n\\n\xB7\\n\\nApr 17, 2025\\n\\n\xB7\\n\\n![mogery](https://www.firecrawl.dev/_next/image?url=https%3A%2F%2Favatars.githubusercontent.com%2Fu%2F66118807%3Fv%3D4&w=48&q=75&dpl=dpl_7RqvseQXNVYetFdhTKj6RntohhL1)\\n\\nmogery\\n\\nfeat(scrape):
+        get job result from GCS, avoid Redis\\n\\n#1461\\n\\n\xB7\\n\\nApr 15, 2025\\n\\n\xB7\\n\\n![mogery](https://www.firecrawl.dev/_next/image?url=https%3A%2F%2Favatars.githubusercontent.com%2Fu%2F66118807%3Fv%3D4&w=48&q=75&dpl=dpl_7RqvseQXNVYetFdhTKj6RntohhL1)\\n\\nmogery\\n\\nExtract
+        v2/rerank improvs\\n\\n#1437\\n\\n\xB7\\n\\nApr 11, 2025\\n\\n\xB7\\n\\n![rafaelsideguide](https://www.firecrawl.dev/_next/image?url=https%3A%2F%2Favatars.githubusercontent.com%2Fu%2F150964962%3Fv%3D4&w=48&q=75&dpl=dpl_7RqvseQXNVYetFdhTKj6RntohhL1)\\n\\nrafaelsideguide\\n\\n![https://avatars.githubusercontent.com/u/150964962?v=4](https://www.firecrawl.dev/_next/image?url=https%3A%2F%2Favatars.githubusercontent.com%2Fu%2F150964962%3Fv%3D4&w=96&q=75&dpl=dpl_7RqvseQXNVYetFdhTKj6RntohhL1)\\n\\n![https://avatars.githubusercontent.com/u/66118807?v=4](https://www.firecrawl.dev/_next/image?url=https%3A%2F%2Favatars.githubusercontent.com%2Fu%2F66118807%3Fv%3D4&w=96&q=75&dpl=dpl_7RqvseQXNVYetFdhTKj6RntohhL1)\\n\\n+90\\n\\nOpen
+        Source\\n\\n### Code you can trust\\n\\nDeveloped transparently and collaboratively.
+        Join our community of contributors.\\n\\n[Check out our repo](https://github.com/firecrawl/firecrawl)\\n\\n\\\\[02/
+        07 \\\\]\\n\\n\xB7\\n\\nCore\\n\\n//\\n\\nBuilt to outperform\\n\\n//\\n\\n##
+        Core principles,    provenperformance\\n\\nBuilt from the ground up to outperform
+        traditional scrapers.\\n\\nNo proxy headaches\\n\\nReliable.Covers 96% of
+        the web,\\n\\nincluding JS-heavy and protected pages. No proxies, no puppets,
+        just clean data.\\n\\nFirecrawl\\n\\n96%\\n\\n![Puppeteer icon](https://www.firecrawl.dev/assets/puppeteer.png)\\n\\nPuppeteer\\n\\n79%\\n\\ncURL\\n\\n75%\\n\\nSpeed
+        that feels invisible\\n\\nBlazingly fast.Delivers results in less than 1 second,
+        fast for real-time agents\\n\\nand dynamic apps.\\n\\nURL\\n\\nCrawl\\n\\nScrape\\n\\nfirecrawl.dev/docs\\n\\n50ms\\n\\n51ms\\n\\nfirecrawl.dev/templates\\n\\n52ms\\n\\n50ms\\n\\nfirecrawl.dev/changelog\\n\\n49ms\\n\\n52ms\\n\\nfirecrawl.dev/about\\n\\n52ms\\n\\n50ms\\n\\nfirecrawl.dev/changelog\\n\\n50ms\\n\\n52ms\\n\\nfirecrawl.dev/playground\\n\\n51ms\\n\\n49ms\\n\\n\\\\[
+        CTA \\\\]\\n\\n\\\\[ CRAWL \\\\]\\n\\n\\\\[ SCRAPE \\\\]\\n\\n\\\\[ CTA \\\\]\\n\\n//\\n\\nGet
+        started\\n\\n//\\n\\nReady to build?\\n\\nStart getting Web Data for free
+        and scale seamlessly as your project expands. No credit card needed.\\n\\n[Start
+        for free](https://www.firecrawl.dev/signin) [See our plans](https://www.firecrawl.dev/pricing)\\n\\n\\\\[03/
+        07 \\\\]\\n\\n\xB7\\n\\nFeatures\\n\\n//\\n\\nZero configuration\\n\\n//\\n\\n##
+        We handle the hard stuff\\n\\nRotating proxies, orchestration, rate limits,
+        js-blocked content and more.\\n\\nDocs to data\\n\\nMedia parsing.Firecrawl
+        can parse and output content from web hosted pdfs, docx, and more.\\n\\nhttps://example.com/docs/report.pdf\\n\\nhttps://example.com/files/brief.docx\\n\\nhttps://example.com/docs/guide.html\\n\\ndocx\\n\\nParsing...\\n\\nKnows
+        the moment\\n\\nSmart wait.Firecrawl intelligently waits for content to load,
+        making scraping faster and more reliable.\\n\\nhttps://example-spa.com\\n\\nRequest
+        Sent\\n\\nScrapes the real thing\\n\\nCached, when you need it.Selective caching,
+        you choose your caching patterns, growing web index.\\n\\n![User](https://www.firecrawl.dev/_next/image?url=%2Fassets-original%2Ffeatures%2Fcached-user.png&w=256&q=75&dpl=dpl_7RqvseQXNVYetFdhTKj6RntohhL1)\\n\\nUser\\n\\nFirecrawl\\n\\nCache\\n\\nInvisible
+        access\\n\\nStealth mode.Crawls the web without\\n\\nbeing blocked, mimics
+        real users to access protected or dynamic content.\\n\\nInteractive scraping\\n\\nActions.Click,
+        scroll, write, wait, press and more before extracting content.\\n\\nhttps://example.com\\n\\nNavigate\\n\\nClick\\n\\nType\\n\\nWait\\n\\nScroll\\n\\nPress\\n\\nScreenshot\\n\\nScrape\\n\\n\\\\[04/
+        07 \\\\]\\n\\n\xB7\\n\\nPricing\\n\\n//\\n\\nTransparent\\n\\n//\\n\\n## Flexible
+        pricing\\n\\nExplore transparent pricing built for real-world scraping.  Start
+        for free, then scale as you grow.\\n\\n\U0001F1FA\U0001F1F8USD\\n\\nFree Plan\\n\\nA
+        lightweight way to try scraping.\\n\\nNo cost, no card, no hassle.\\n\\n500
+        credits\\n\\n$0123456789\\n\\none-time\\n\\nGet started\\n\\nScrape 500 pages\\n\\n2
+        concurrent requests\\n\\nLow rate limits\\n\\nHobby\\n\\nGreat for side projects
+        and small tools.\\n\\nFast, simple, no overkill.\\n\\n3,000 credits\\n\\n$01234567890123456789\\n\\n/monthly\\n\\nBilled
+        yearly\\n\\n2 months free\\n\\nSubscribe\\n\\nScrape 3,000 pages\\n\\n5 concurrent
+        requests\\n\\nBasic support\\n\\n$9 per extra 1k credits\\n\\nStandard\\n\\nMost
+        popular\\n\\nPerfect for scaling with less effort.\\n\\nSimple, solid, dependable.\\n\\n100,000
+        credits\\n\\n$01234567890123456789\\n\\n/monthly\\n\\nBilled yearly\\n\\n2
+        months free\\n\\nSubscribe\\n\\nScrape 100,000 pages\\n\\n50 concurrent requests\\n\\nStandard
+        support\\n\\n$47 per extra 35k credits\\n\\nGrowth\\n\\nBuilt for high volume
+        and speed.\\n\\nFirecrawl at full force.\\n\\n500,000 credits\\n\\n$012345678901234567890123456789\\n\\n/monthly\\n\\nBilled
+        yearly\\n\\n2 months free\\n\\nSubscribe\\n\\nScrape 500,000 pages\\n\\n100
+        concurrent requests\\n\\nPriority support\\n\\n$177 per extra 175k credits\\n\\nExtra
+        credits are available via auto-recharge packs. [Enable](https://www.firecrawl.dev/signin/signup)\\n\\nEnterprise\\n\\nPower
+        at your pace\\n\\nUnlimited credits. Custom RPMs.\\n\\n[Contact sales](https://fk4bvu0n5qp.typeform.com/to/Ej6oydlg)
+        [More details](https://www.firecrawl.dev/enterprise)\\n\\nBulk discounts\\n\\nTop
+        priority support\\n\\nCustom concurrency limits\\n\\nImproved stealth proxies\\n\\nSLAs\\n\\nAdvanced
+        security & controls\\n\\n\\\\[05/ 07 \\\\]\\n\\n\xB7\\n\\nTestimonials\\n\\n//\\n\\nCommunity\\n\\n//\\n\\n##
+        People love    building withFirecrawl\\n\\nDiscover why developers choose
+        Firecrawl every day.\\n\\n[![Morgan Linton](https://www.firecrawl.dev/assets/testimonials/morgan-linton.png)Morgan
+        Linton@morganlinton\\\"If you're coding with AI, and haven't discovered @firecrawl\\\\_dev
+        yet, prepare to have your mind blown \U0001F92F\\\"](https://x.com/morganlinton/status/1839454165703204955)
+        [![Chris DeWeese](https://www.firecrawl.dev/assets/testimonials/chris-deweese.png)Chris
+        DeWeese@chrisdeweese\\\\_\\\"Started using @firecrawl\\\\_dev for a project,
+        I wish I used this sooner.\\\"](https://x.com/chrisdeweese_/status/1853587120406876601)
+        [![Alex Reibman](https://www.firecrawl.dev/assets/testimonials/alex-reibman.png)Alex
+        Reibman@AlexReibman\\\"Moved our internal agent's web scraping tool from Apify
+        to Firecrawl because it benchmarked 50x faster with AgentOps.\\\"](https://x.com/AlexReibman/status/1780299595484131836)
+        [![Tom - Morpho](https://www.firecrawl.dev/assets/testimonials/tom-morpho.png)Tom
+        - Morpho@TomReppelin\\\"I found gold today. Thank you @firecrawl\\\\_dev\\\"](https://x.com/TomReppelin/status/1844382491014201613)\\n\\n[![Morgan
+        Linton](https://www.firecrawl.dev/assets/testimonials/morgan-linton.png)Morgan
+        Linton@morganlinton\\\"If you're coding with AI, and haven't discovered @firecrawl\\\\_dev
+        yet, prepare to have your mind blown \U0001F92F\\\"](https://x.com/morganlinton/status/1839454165703204955)
+        [![Chris DeWeese](https://www.firecrawl.dev/assets/testimonials/chris-deweese.png)Chris
+        DeWeese@chrisdeweese\\\\_\\\"Started using @firecrawl\\\\_dev for a project,
+        I wish I used this sooner.\\\"](https://x.com/chrisdeweese_/status/1853587120406876601)
+        [![Alex Reibman](https://www.firecrawl.dev/assets/testimonials/alex-reibman.png)Alex
+        Reibman@AlexReibman\\\"Moved our internal agent's web scraping tool from Apify
+        to Firecrawl because it benchmarked 50x faster with AgentOps.\\\"](https://x.com/AlexReibman/status/1780299595484131836)
+        [![Tom - Morpho](https://www.firecrawl.dev/assets/testimonials/tom-morpho.png)Tom
+        - Morpho@TomReppelin\\\"I found gold today. Thank you @firecrawl\\\\_dev\\\"](https://x.com/TomReppelin/status/1844382491014201613)\\n\\n[![Bardia](https://www.firecrawl.dev/assets/testimonials/bardia.png)Bardia@thepericulum\\\"The
+        Firecrawl team ships. I wanted types for their node SDK, and less than an
+        hour later, I got them.\\\"](https://x.com/thepericulum/status/1781397799487078874)
+        [![Matt Busigin](https://www.firecrawl.dev/assets/testimonials/matt-busigin.png)Matt
+        Busigin@mbusigin\\\"Firecrawl is dope. Congrats guys \U0001F44F\\\"](https://x.com/mbusigin/status/1836065372010656069)
+        [![Sumanth](https://www.firecrawl.dev/assets/testimonials/sumanth.png)Sumanth@Sumanth\\\\_077\\\"Web
+        scraping will never be the same!\\\\\\\\\\n\\\\\\\\\\nFirecrawl is an open-source
+        framework that takes a URL, crawls it, and conver...\\\"](https://x.com/Sumanth_077/status/1940049003074478511)
+        [![Steven Tey](https://www.firecrawl.dev/assets/testimonials/steven-tey.png)Steven
+        Tey@steventey\\\"Open-source Clay alternative just dropped\\\\\\\\\\n\\\\\\\\\\nUpload
+        a CSV of emails and...\\\"](https://x.com/steventey/status/1932945651761098889)\\n\\n[![Bardia](https://www.firecrawl.dev/assets/testimonials/bardia.png)Bardia@thepericulum\\\"The
+        Firecrawl team ships. I wanted types for their node SDK, and less than an
+        hour later, I got them.\\\"](https://x.com/thepericulum/status/1781397799487078874)
+        [![Matt Busigin](https://www.firecrawl.dev/assets/testimonials/matt-busigin.png)Matt
+        Busigin@mbusigin\\\"Firecrawl is dope. Congrats guys \U0001F44F\\\"](https://x.com/mbusigin/status/1836065372010656069)
+        [![Sumanth](https://www.firecrawl.dev/assets/testimonials/sumanth.png)Sumanth@Sumanth\\\\_077\\\"Web
+        scraping will never be the same!\\\\\\\\\\n\\\\\\\\\\nFirecrawl is an open-source
+        framework that takes a URL, crawls it, and conver...\\\"](https://x.com/Sumanth_077/status/1940049003074478511)
+        [![Steven Tey](https://www.firecrawl.dev/assets/testimonials/steven-tey.png)Steven
+        Tey@steventey\\\"Open-source Clay alternative just dropped\\\\\\\\\\n\\\\\\\\\\nUpload
+        a CSV of emails and...\\\"](https://x.com/steventey/status/1932945651761098889)\\n\\n\\\\[06/
+        07 \\\\]\\n\\n\xB7\\n\\nUse Cases\\n\\n//\\n\\nUse cases\\n\\n//\\n\\n## Transform
+        \   web data into  AI-powered solutions\\n\\nDiscover how Firecrawl customers
+        are getting the most out of our API.\\n\\n[View all use cases](https://docs.firecrawl.dev/use-cases/overview)\\n\\nChat
+        with context\\n\\nSmarter AI chats\\n\\nPower your AI assistants with real-time,
+        accurate web content.\\n\\n[View docs](https://docs.firecrawl.dev/introduction)\\n\\n![AI
+        Assistant](https://www.firecrawl.dev/assets/ai/bot.png)\\n\\nAI Assistant\\n\\nwithFirecrawl\\n\\nReal-time\xB7Updated
+        2 min ago\\n\\nAsk anything...\\n\\nKnow your leads\\n\\nLead enrichment\\n\\nEnhance
+        your sales data with\\n\\nweb information.\\n\\n[Check out Extract](https://www.firecrawl.dev/extract)\\n\\nExtracting
+        leads from directory...\\n\\nTech startups\\n\\nWith contact info\\n\\nDecision
+        makers\\n\\nFunding stage\\n\\nReady to engage\\n\\n![Emily Tran](https://www.firecrawl.dev/assets/ai/leads-1.png)\\n\\n![James
+        Carter](https://www.firecrawl.dev/assets/ai/leads-2.png)\\n\\n![Sophia Kim](https://www.firecrawl.dev/assets/ai/leads-3.png)\\n\\n![Michael
+        Rivera](https://www.firecrawl.dev/assets/ai/leads-4.png)\\n\\nKnow your leads\\n\\nMCPs\\n\\nAdd
+        powerful scraping to your\\n\\ncode editors.\\n\\n[Get started](https://docs.firecrawl.dev/mcp-server)\\n\\n![Claude
+        Code](https://www.firecrawl.dev/assets/ai/mcps-claude.png)\\n\\nClaude Code\\n\\n![Cursor](https://www.firecrawl.dev/assets/ai/mcps-cursor.png)\\n\\nCursor\\n\\n![Windsurf](https://www.firecrawl.dev/assets/ai/mcps-windsurf.png)\\n\\nWindsurf\\n\\n\u273B\\n\\nWelcome
+        to Claude Code!\\n\\n/help for help, /status for your current setup\\n\\n>Try
+        \\\"how do I log an error?\\\"\\n\\nBuild with context\\n\\nAI platforms\\n\\nLet
+        your customers build AI apps\\n\\nwith web data.\\n\\n[Check out Map](https://docs.firecrawl.dev/features/map)\\n\\n![Logo
+        1](https://www.firecrawl.dev/assets/ai/platforms-1.png)\\n\\n![Logo 2](https://www.firecrawl.dev/assets/ai/platforms-2.png)\\n\\n![Logo
+        4](https://www.firecrawl.dev/assets/ai/platforms-4.png)\\n\\n![Logo 3](https://www.firecrawl.dev/assets/ai/platforms-3.png)\\n\\nExtracting
+        text...\\n\\nNo insight missed\\n\\nDeep research\\n\\nExtract comprehensive
+        information for\\n\\nin-depth research.\\n\\n[Build your own with Search](https://docs.firecrawl.dev/features/search)\\n\\nDeep
+        research in progress...\\n\\nAcademic papers\\n\\n0 found\\n\\nNews articles\\n\\n0
+        found\\n\\nExpert opinions\\n\\n0 found\\n\\nResearch reports\\n\\n0 found\\n\\nIndustry
+        data\\n\\n0 found\\n\\nAsk anything...\\n\\n\\\\[ CTA \\\\]\\n\\n\\\\[ CRAWL
+        \\\\]\\n\\n\\\\[ SCRAPE \\\\]\\n\\n\\\\[ CTA \\\\]\\n\\n//\\n\\nGet started\\n\\n//\\n\\nReady
+        to build?\\n\\nStart getting Web Data for free and scale seamlessly as your
+        project expands. No credit card needed.\\n\\n[Start for free](https://www.firecrawl.dev/signin)
+        [See our plans](https://www.firecrawl.dev/pricing)\\n\\n\\\\[07/ 07 \\\\]\\n\\n\xB7\\n\\nFAQ\\n\\n//\\n\\nFAQ\\n\\n//\\n\\n##
+        Frequently    askedquestions\\n\\nEverything you need to know about Firecrawl.\\n\\nGeneral\\n\\nWhat
+        is Firecrawl?\\n\\nWhat sites work?\\n\\nWho can benefit from using Firecrawl?\\n\\nIs
+        Firecrawl open-source?\\n\\nWhat is the difference between Firecrawl and other
+        web scrapers?\\n\\nWhat is the difference between the open-source version
+        and the hosted version?\\n\\nScraping & Crawling\\n\\nHow does Firecrawl handle
+        dynamic content on websites?\\n\\nWhy is it not crawling all the pages?\\n\\nCan
+        Firecrawl crawl websites without a sitemap?\\n\\nWhat formats can Firecrawl
+        convert web data into?\\n\\nHow does Firecrawl ensure the cleanliness of the
+        data?\\n\\nIs Firecrawl suitable for large-scale data scraping projects?\\n\\nDoes
+        it respect robots.txt?\\n\\nWhat measures does Firecrawl take to handle web
+        scraping challenges like rate limits and caching?\\n\\nDoes Firecrawl handle
+        captcha or authentication?\\n\\nAPI Related\\n\\nWhere can I find my API key?\\n\\nBilling\\n\\nIs
+        Firecrawl free?\\n\\nIs there a pay-per-use plan instead of monthly?\\n\\nDo
+        credits roll over to the next month?\\n\\nHow many credits do scraping and
+        crawling cost?\\n\\nDo you charge for failed requests?\\n\\nWhat payment methods
+        do you accept?\\n\\nFOOTER\\n\\nThe easiest way to extract\\n\\ndata from
+        the web\\n\\nBacked by\\n\\nY Combinator\\n\\n[Linkedin](https://www.linkedin.com/company/firecrawl)
+        [Github](https://github.com/firecrawl/firecrawl)\\n\\nSOC II \xB7 Type 2\\n\\nAICPA\\n\\nSOC
+        2\\n\\n[X (Twitter)](https://x.com/firecrawl_dev) [Discord](https://discord.gg/gSmWdAkdwd)\\n\\nProducts\\n\\n[Playground](https://www.firecrawl.dev/playground)
+        [Extract](https://www.firecrawl.dev/extract) [Pricing](https://www.firecrawl.dev/pricing)
+        [Templates](https://www.firecrawl.dev/templates) [Changelog](https://www.firecrawl.dev/changelog)\\n\\nUse
+        Cases\\n\\n[AI Platforms](https://docs.firecrawl.dev/use-cases/ai-platforms)
+        [Lead Enrichment](https://docs.firecrawl.dev/use-cases/lead-enrichment) [SEO
+        Platforms](https://docs.firecrawl.dev/use-cases/seo-platforms) [Deep Research](https://docs.firecrawl.dev/use-cases/deep-research)\\n\\nDocumentation\\n\\n[Getting
+        started](https://docs.firecrawl.dev/introduction) [API Reference](https://docs.firecrawl.dev/api-reference/introduction)
+        [Integrations](https://www.firecrawl.dev/app) [Examples](https://docs.firecrawl.dev/use-cases/overview)
+        [SDKs](https://docs.firecrawl.dev/sdks/overview)\\n\\nCompany\\n\\n[Blog](https://www.firecrawl.dev/blog)
+        [Careers](https://www.firecrawl.dev/careers) [Creator & OSS program](https://www.firecrawl.dev/creator-oss-program)
+        [Student program](https://www.firecrawl.dev/student-program)\\n\\n\xA9 2025
+        Firecrawl\\n\\n[Terms of Service](https://www.firecrawl.dev/terms-of-service)
+        [Privacy Policy](https://www.firecrawl.dev/privacy-policy) [Report Abuse](mailto:help@firecrawl.com?subject=Issue:)\\n\\n[All
+        systems normal](https://status.firecrawl.dev/)\\n\\nStripeM-Inner\",\"metadata\":{\"favicon\":\"https://www.firecrawl.dev/favicon.png\",\"ogSiteName\":\"Firecrawl
+        - The Web Data API for AI\",\"ogTitle\":\"Firecrawl - The Web Data API for
+        AI\",\"description\":\"The web crawling, scraping, and search API for AI.
+        Built for scale. Firecrawl delivers the entire internet to AI agents and builders.
+        Clean, structured, and ready to reason with.\",\"title\":\"Firecrawl - The
+        Web Data API for AI\",\"author\":\"Firecrawl\",\"viewport\":\"width=device-width,
+        initial-scale=1, maximum-scale=1, user-scalable=no\",\"creator\":\"Firecrawl\",\"publisher\":\"Firecrawl\",\"robots\":\"follow,
+        index\",\"og:description\":\"The web crawling, scraping, and search API for
+        AI. Built for scale. Firecrawl delivers the entire internet to AI agents and
+        builders. Clean, structured, and ready to reason with.\",\"og:url\":\"https://www.firecrawl.dev\",\"og:site_name\":\"Firecrawl
+        - The Web Data API for AI\",\"og:image\":\"https://www.firecrawl.dev/og.png\",\"ogDescription\":\"The
+        web crawling, scraping, and search API for AI. Built for scale. Firecrawl
+        delivers the entire internet to AI agents and builders. Clean, structured,
+        and ready to reason with.\",\"og:type\":\"website\",\"twitter:card\":\"summary_large_image\",\"language\":\"en\",\"twitter:site\":\"@Vercel\",\"twitter:image\":\"https://www.firecrawl.dev/og.png\",\"keywords\":\"Firecrawl,Markdown,Data,Mendable,Langchain\",\"twitter:description\":\"The
+        web crawling, scraping, and search API for AI. Built for scale. Firecrawl
+        delivers the entire internet to AI agents and builders. Clean, structured,
+        and ready to reason with.\",\"ogImage\":\"https://www.firecrawl.dev/og.png\",\"referrer\":\"origin-when-cross-origin\",\"twitter:creator\":\"@Vercel\",\"ogUrl\":\"https://www.firecrawl.dev\",\"og:title\":\"Firecrawl
+        - The Web Data API for AI\",\"twitter:title\":\"Firecrawl - The Web Data API
+        for AI\",\"scrapeId\":\"f3f8fc9e-87e8-41b8-b74f-06b979e2e609\",\"sourceURL\":\"https://firecrawl.dev\",\"url\":\"https://www.firecrawl.dev/\",\"statusCode\":200,\"contentType\":\"text/html;
+        charset=utf-8\",\"proxyUsed\":\"basic\",\"cacheState\":\"hit\",\"cachedAt\":\"2025-10-29T13:09:07.713Z\",\"creditsUsed\":1}},{\"markdown\":\"We
+        just raised our Series A and shipped Firecrawl /v2 \U0001F389. [Read the blog.](https://www.firecrawl.dev/blog/firecrawl-v2-series-a-announcement)\\n\\nFOOTER\\n\\nThe
+        easiest way to extract\\n\\ndata from the web\\n\\nBacked by\\n\\nY Combinator\\n\\n[Linkedin](https://www.linkedin.com/company/firecrawl)
+        [Github](https://github.com/firecrawl/firecrawl)\\n\\nSOC II \xB7 Type 2\\n\\nAICPA\\n\\nSOC
+        2\\n\\n[X (Twitter)](https://x.com/firecrawl_dev) [Discord](https://discord.gg/gSmWdAkdwd)\\n\\nProducts\\n\\n[Playground](https://www.firecrawl.dev/playground)
+        [Extract](https://www.firecrawl.dev/extract) [Pricing](https://www.firecrawl.dev/pricing)
+        [Templates](https://www.firecrawl.dev/templates) [Changelog](https://www.firecrawl.dev/changelog)\\n\\nUse
+        Cases\\n\\n[AI Platforms](https://docs.firecrawl.dev/use-cases/ai-platforms)
+        [Lead Enrichment](https://docs.firecrawl.dev/use-cases/lead-enrichment) [SEO
+        Platforms](https://docs.firecrawl.dev/use-cases/seo-platforms) [Deep Research](https://docs.firecrawl.dev/use-cases/deep-research)\\n\\nDocumentation\\n\\n[Getting
+        started](https://docs.firecrawl.dev/introduction) [API Reference](https://docs.firecrawl.dev/api-reference/introduction)
+        [Integrations](https://www.firecrawl.dev/app) [Examples](https://docs.firecrawl.dev/use-cases/overview)
+        [SDKs](https://docs.firecrawl.dev/sdks/overview)\\n\\nCompany\\n\\n[Blog](https://www.firecrawl.dev/blog)
+        [Careers](https://www.firecrawl.dev/careers) [Creator & OSS program](https://www.firecrawl.dev/creator-oss-program)
+        [Student program](https://www.firecrawl.dev/student-program)\\n\\n\xA9 2025
+        Firecrawl\\n\\n[Terms of Service](https://www.firecrawl.dev/terms-of-service)
+        [Privacy Policy](https://www.firecrawl.dev/privacy-policy) [Report Abuse](mailto:help@firecrawl.com?subject=Issue:)\\n\\n[Loading
+        status...](https://status.firecrawl.dev/)\\n\\nreCAPTCHA\\n\\nRecaptcha requires
+        verification.\\n\\n[Privacy](https://www.google.com/intl/en/policies/privacy/)
+        \\\\- [Terms](https://www.google.com/intl/en/policies/terms/)\\n\\nprotected
+        by **reCAPTCHA**\\n\\n[Privacy](https://www.google.com/intl/en/policies/privacy/)
+        \\\\- [Terms](https://www.google.com/intl/en/policies/terms/)\",\"metadata\":{\"favicon\":\"https://www.firecrawl.dev/favicon.png\",\"twitter:site\":\"@Vercel\",\"og:type\":\"website\",\"ogUrl\":\"https://www.firecrawl.dev\",\"author\":\"Firecrawl\",\"description\":\"The
+        web crawling, scraping, and search API for AI. Built for scale. Firecrawl
+        delivers the entire internet to AI agents and builders. Clean, structured,
+        and ready to reason with.\",\"ogImage\":\"https://www.firecrawl.dev/og.png\",\"language\":\"en\",\"robots\":\"follow,
+        index\",\"ogTitle\":\"Firecrawl - The Web Data API for AI\",\"creator\":\"Firecrawl\",\"og:title\":\"Firecrawl
+        - The Web Data API for AI\",\"og:image\":\"https://www.firecrawl.dev/og.png\",\"viewport\":\"width=device-width,
+        initial-scale=1, maximum-scale=1, user-scalable=no\",\"ogDescription\":\"The
+        web crawling, scraping, and search API for AI. Built for scale. Firecrawl
+        delivers the entire internet to AI agents and builders. Clean, structured,
+        and ready to reason with.\",\"ogSiteName\":\"Firecrawl - The Web Data API
+        for AI\",\"keywords\":\"Firecrawl,Markdown,Data,Mendable,Langchain\",\"publisher\":\"Firecrawl\",\"twitter:card\":\"summary_large_image\",\"og:url\":\"https://www.firecrawl.dev\",\"og:site_name\":\"Firecrawl
+        - The Web Data API for AI\",\"twitter:creator\":\"@Vercel\",\"twitter:title\":\"Firecrawl
+        - The Web Data API for AI\",\"og:description\":\"The web crawling, scraping,
+        and search API for AI. Built for scale. Firecrawl delivers the entire internet
+        to AI agents and builders. Clean, structured, and ready to reason with.\",\"twitter:description\":\"The
+        web crawling, scraping, and search API for AI. Built for scale. Firecrawl
+        delivers the entire internet to AI agents and builders. Clean, structured,
+        and ready to reason with.\",\"twitter:image\":\"https://www.firecrawl.dev/og.png\",\"referrer\":\"origin-when-cross-origin\",\"title\":\"Firecrawl
+        - The Web Data API for AI\",\"scrapeId\":\"fdc798ff-5a0d-4837-8b42-265a00eaab80\",\"sourceURL\":\"https://www.firecrawl.dev/playground/g-noe8ionNNwUqRUtZAvi\",\"url\":\"https://www.firecrawl.dev/playground/g-noe8ionNNwUqRUtZAvi\",\"statusCode\":200,\"contentType\":\"text/html;
+        charset=utf-8\",\"proxyUsed\":\"basic\",\"cacheState\":\"hit\",\"cachedAt\":\"2025-10-29T11:19:51.575Z\",\"creditsUsed\":1}}]}"
+    headers:
+      Access-Control-Allow-Origin:
+      - '*'
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Content-Length:
+      - '29044'
+      Content-Type:
+      - application/json; charset=utf-8
+      Date:
+      - Wed, 29 Oct 2025 14:36:52 GMT
+      ETag:
+      - W/"7174-091KZuyI4vVTuUeCZw9iWhwGeDU"
+      Via:
+      - 1.1 google
+      X-Powered-By:
+      - Express
+      X-Response-Time:
+      - 97.304ms
+    status:
+      code: 200
+      message: OK
+version: 1

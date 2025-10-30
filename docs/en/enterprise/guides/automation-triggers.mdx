@@ -117,27 +117,50 @@ Before wiring a trigger into production, make sure you:
 - Decide whether to pass trigger context automatically using `allow_crewai_trigger_context`
 - Set up monitoring—webhook logs, CrewAI execution history, and optional external alerting
 
-### Payload & Crew Examples Repository
+### Testing Triggers Locally with CLI
 
-We maintain a comprehensive repository with end-to-end trigger examples to help you build and test your automations:
+The CrewAI CLI provides powerful commands to help you develop and test trigger-driven automations without deploying to production.
 
-This repository contains:
+#### List Available Triggers
 
-- **Realistic payload samples** for every supported trigger integration
-- **Ready-to-run crew implementations** that parse each payload and turn it into a business workflow
-- **Multiple scenarios per integration** (e.g., new events, updates, deletions) so you can match the shape of your data
+View all available triggers for your connected integrations:
 
-| Integration | When it fires | Payload Samples | Crew Examples |
-| :-- | :-- | :-- | :-- |
-| Gmail | New messages, thread updates | [New alerts, thread updates](https://github.com/crewAIInc/crewai-enterprise-trigger-examples/tree/main/gmail) | [`new-email-crew.py`, `gmail-alert-crew.py`](https://github.com/crewAIInc/crewai-enterprise-trigger-examples/tree/main/gmail) |
-| Google Calendar | Event created / updated / started / ended / cancelled | [Event lifecycle payloads](https://github.com/crewAIInc/crewai-enterprise-trigger-examples/tree/main/google_calendar) | [`calendar-event-crew.py`, `calendar-meeting-crew.py`, `calendar-working-location-crew.py`](https://github.com/crewAIInc/crewai-enterprise-trigger-examples/tree/main/google_calendar) |
-| Google Drive | File created / updated / deleted | [File lifecycle payloads](https://github.com/crewAIInc/crewai-enterprise-trigger-examples/tree/main/google_drive) | [`drive-file-crew.py`, `drive-file-deletion-crew.py`](https://github.com/crewAIInc/crewai-enterprise-trigger-examples/tree/main/google_drive) |
-| Outlook | New email, calendar event removed | [Outlook payloads](https://github.com/crewAIInc/crewai-enterprise-trigger-examples/tree/main/outlook) | [`outlook-message-crew.py`, `outlook-event-removal-crew.py`](https://github.com/crewAIInc/crewai-enterprise-trigger-examples/tree/main/outlook) |
-| OneDrive | File operations (create, update, share, delete) | [OneDrive payloads](https://github.com/crewAIInc/crewai-enterprise-trigger-examples/tree/main/onedrive) | [`onedrive-file-crew.py`](https://github.com/crewAIInc/crewai-enterprise-trigger-examples/tree/main/onedrive) |
-| HubSpot | Record created / updated (contacts, companies, deals) | [HubSpot payloads](https://github.com/crewAIInc/crewai-enterprise-trigger-examples/tree/main/hubspot) | [`hubspot-company-crew.py`, `hubspot-contact-crew.py`, `hubspot-record-crew.py`](https://github.com/crewAIInc/crewai-enterprise-trigger-examples/tree/main/hubspot) |
-| Microsoft Teams | Chat thread created | [Teams chat payload](https://github.com/crewAIInc/crewai-enterprise-trigger-examples/tree/main/microsoft-teams) | [`teams-chat-created-crew.py`](https://github.com/crewAIInc/crewai-enterprise-trigger-examples/tree/main/microsoft-teams) |
+```bash
+crewai triggers list
+```
 
-Use these samples to understand payload shape, copy the matching crew, and then replace the test payload with your live trigger data.
+This command displays all triggers available based on your connected integrations, showing:
+- Integration name and connection status
+- Available trigger types
+- Trigger names and descriptions
+
+#### Simulate Trigger Execution
+
+Test your crew with realistic trigger payloads before deployment:
+
+```bash
+crewai triggers run <trigger_name>
+```
+
+For example:
+
+```bash
+crewai triggers run microsoft_onedrive/file_changed
+```
+
+This command:
+- Executes your crew locally
+- Passes a complete, realistic trigger payload
+- Simulates exactly how your crew will be called in production
+
+<Warning>
+  **Important Development Notes:**
+  - Use `crewai triggers run <trigger>` to simulate trigger execution during development
+  - Using `crewai run` will NOT simulate trigger calls and won't pass the trigger payload
+  - After deployment, your crew will be executed with the actual trigger payload
+  - If your crew expects parameters that aren't in the trigger payload, execution may fail
+</Warning>
+
 
 ### Triggers with Crew
 
@@ -241,15 +264,20 @@ def delegate_to_crew(self, crewai_trigger_payload: dict = None):
 ## Troubleshooting
 
 **Trigger not firing:**
-- Verify the trigger is enabled
-- Check integration connection status
+- Verify the trigger is enabled in your deployment's Triggers tab
+- Check integration connection status under Tools & Integrations
+- Ensure all required environment variables are properly configured
 
 **Execution failures:**
 - Check the execution logs for error details
-- If you are developing, make sure the inputs include the `crewai_trigger_payload` parameter with the correct payload
+- Use `crewai triggers run <trigger_name>` to test locally and see the exact payload structure
+- Verify your crew can handle the `crewai_trigger_payload` parameter
+- Ensure your crew doesn't expect parameters that aren't included in the trigger payload
+
+**Development issues:**
+- Always test with `crewai triggers run <trigger>` before deploying to see the complete payload
+- Remember that `crewai run` does NOT simulate trigger calls—use `crewai triggers run` instead
+- Use `crewai triggers list` to verify which triggers are available for your connected integrations
+- After deployment, your crew will receive the actual trigger payload, so test thoroughly locally first
 
 Automation triggers transform your CrewAI deployments into responsive, event-driven systems that can seamlessly integrate with your existing business processes and tools.
-
-<Card title="CrewAI AMP Trigger Examples" href="https://github.com/crewAIInc/crewai-enterprise-trigger-examples" icon="github">
-    Check them out on GitHub!
-</Card>

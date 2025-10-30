@@ -39,16 +39,23 @@ print(result.raw)
 
 Use `crewai_trigger_payload` exactly as it is delivered by the trigger so the crew can extract the proper fields.
 
-## Sample payloads & crews
+## 로컬에서 테스트
 
-The [Google Calendar examples](https://github.com/crewAIInc/crewai-enterprise-trigger-examples/tree/main/google_calendar) show how to handle multiple event types:
+CrewAI CLI를 사용하여 Google Calendar 트리거 통합을 로컬에서 테스트하세요:
 
-- `new-event.json` → standard event creation handled by `calendar-event-crew.py`
-- `event-updated.json` / `event-started.json` / `event-ended.json` → in-flight updates processed by `calendar-meeting-crew.py`
-- `event-canceled.json` → cancellation workflow that alerts attendees via `calendar-meeting-crew.py`
-- Working location events use `calendar-working-location-crew.py` to extract on-site schedules
+```bash
+# 사용 가능한 모든 트리거 보기
+crewai triggers list
 
-Each crew transforms raw event metadata (attendees, rooms, working locations) into the summaries your teams need.
+# 실제 payload로 Google Calendar 트리거 시뮬레이션
+crewai triggers run google_calendar/event_changed
+```
+
+`crewai triggers run` 명령은 완전한 Calendar payload로 크루를 실행하여 배포 전에 파싱 로직을 테스트할 수 있게 해줍니다.
+
+<Warning>
+  개발 중에는 `crewai triggers run google_calendar/event_changed`를 사용하세요 (`crewai run`이 아님). 배포 후에는 크루가 자동으로 트리거 payload를 받습니다.
+</Warning>
 
 ## Monitoring Executions
 
@@ -61,5 +68,7 @@ The **Executions** list in the deployment dashboard tracks every triggered run a
 ## Troubleshooting
 
 - Ensure the correct Google account is connected and the trigger is enabled
+- `crewai triggers run google_calendar/event_changed`로 로컬 테스트하여 정확한 payload 구조를 확인하세요
 - Confirm your workflow handles all-day events (payloads use `start.date` and `end.date` instead of timestamps)
 - Check execution logs if reminders or attendee arrays are missing—calendar permissions can limit fields in the payload
+- 주의: 트리거 실행을 시뮬레이션하려면 `crewai triggers run`을 사용하세요 (`crewai run`이 아님)

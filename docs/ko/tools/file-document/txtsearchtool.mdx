@@ -57,25 +57,34 @@ tool = TXTSearchTool(txt='path/to/text/file.txt')
 모델을 커스터마이징하려면 다음과 같이 config 딕셔너리를 사용할 수 있습니다:
 
 ```python Code
+from chromadb.config import Settings
+
 tool = TXTSearchTool(
-    config=dict(
-        llm=dict(
-            provider="ollama", # or google, openai, anthropic, llama2, ...
-            config=dict(
-                model="llama2",
-                # temperature=0.5,
-                # top_p=1,
-                # stream=true,
-            ),
-        ),
-        embedder=dict(
-            provider="google", # or openai, ollama, ...
-            config=dict(
-                model="models/embedding-001",
-                task_type="retrieval_document",
-                # title="Embeddings",
-            ),
-        ),
-    )
+    config={
+        # 필수: 임베딩 제공자 + 설정
+        "embedding_model": {
+            "provider": "openai",  # 또는 google-generativeai, cohere, ollama 등
+            "config": {
+                "model": "text-embedding-3-small",
+                # "api_key": "sk-...",  # 환경변수 사용 시 생략 가능
+                # 공급자별 예시: Google → model: "models/embedding-001", task_type: "retrieval_document"
+            },
+        },
+
+        # 필수: 벡터DB 설정
+        "vectordb": {
+            "provider": "chromadb",  # 또는 "qdrant"
+            "config": {
+                # Chroma 설정(영속성 예시)
+                # "settings": Settings(persist_directory="/content/chroma", allow_reset=True, is_persistent=True),
+
+                # Qdrant 벡터 파라미터 예시:
+                # from qdrant_client.models import VectorParams, Distance
+                # "vectors_config": VectorParams(size=384, distance=Distance.COSINE),
+
+                # 참고: 컬렉션 이름은 도구에서 관리합니다(기본값: "rag_tool_collection").
+            }
+        },
+    }
 )
 ```

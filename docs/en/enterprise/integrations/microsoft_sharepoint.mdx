@@ -1,0 +1,404 @@
+---
+title: Microsoft SharePoint Integration
+description: "Site, list, and document management with Microsoft SharePoint integration for CrewAI."
+icon: "folder-tree"
+mode: "wide"
+---
+
+## Overview
+
+Enable your agents to access and manage SharePoint sites, lists, and document libraries. Retrieve site information, manage list items, upload and organize files, and streamline your SharePoint workflows with AI-powered automation.
+
+## Prerequisites
+
+Before using the Microsoft SharePoint integration, ensure you have:
+
+- A [CrewAI AMP](https://app.crewai.com) account with an active subscription
+- A Microsoft 365 account with SharePoint access
+- Connected your Microsoft account through the [Integrations page](https://app.crewai.com/crewai_plus/connectors)
+
+## Setting Up Microsoft SharePoint Integration
+
+### 1. Connect Your Microsoft Account
+
+1. Navigate to [CrewAI AMP Integrations](https://app.crewai.com/crewai_plus/connectors)
+2. Find **Microsoft SharePoint** in the Authentication Integrations section
+3. Click **Connect** and complete the OAuth flow
+4. Grant the necessary permissions for SharePoint sites and content access
+5. Copy your Enterprise Token from [Integration Settings](https://app.crewai.com/crewai_plus/settings/integrations)
+
+### 2. Install Required Package
+
+```bash
+uv add crewai-tools
+```
+
+### 3. Environment Variable Setup
+
+<Note>
+  To use integrations with `Agent(apps=[])`, you must set the `CREWAI_PLATFORM_INTEGRATION_TOKEN` environment variable with your Enterprise Token.
+</Note>
+
+```bash
+export CREWAI_PLATFORM_INTEGRATION_TOKEN="your_enterprise_token"
+```
+
+Or add it to your `.env` file:
+
+```
+CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
+```
+
+## Available Actions
+
+<AccordionGroup>
+  <Accordion title="microsoft_sharepoint/get_sites">
+    **Description:** Get all SharePoint sites the user has access to.
+
+    **Parameters:**
+    - `search` (string, optional): Search query to filter sites
+    - `select` (string, optional): Select specific properties to return (e.g., 'displayName,id,webUrl')
+    - `filter` (string, optional): Filter results using OData syntax
+    - `expand` (string, optional): Expand related resources inline
+    - `top` (integer, optional): Number of items to return. Minimum: 1, Maximum: 999
+    - `skip` (integer, optional): Number of items to skip. Minimum: 0
+    - `orderby` (string, optional): Order results by specified properties (e.g., 'displayName desc')
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/get_site">
+    **Description:** Get information about a specific SharePoint site.
+
+    **Parameters:**
+    - `site_id` (string, required): The ID of the SharePoint site
+    - `select` (string, optional): Select specific properties to return (e.g., 'displayName,id,webUrl,drives')
+    - `expand` (string, optional): Expand related resources inline (e.g., 'drives,lists')
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/get_site_lists">
+    **Description:** Get all lists in a SharePoint site.
+
+    **Parameters:**
+    - `site_id` (string, required): The ID of the SharePoint site
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/get_list">
+    **Description:** Get information about a specific list.
+
+    **Parameters:**
+    - `site_id` (string, required): The ID of the SharePoint site
+    - `list_id` (string, required): The ID of the list
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/get_list_items">
+    **Description:** Get items from a SharePoint list.
+
+    **Parameters:**
+    - `site_id` (string, required): The ID of the SharePoint site
+    - `list_id` (string, required): The ID of the list
+    - `expand` (string, optional): Expand related data (e.g., 'fields')
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/create_list_item">
+    **Description:** Create a new item in a SharePoint list.
+
+    **Parameters:**
+    - `site_id` (string, required): The ID of the SharePoint site
+    - `list_id` (string, required): The ID of the list
+    - `fields` (object, required): The field values for the new item
+      ```json
+      {
+        "Title": "New Item Title",
+        "Description": "Item description",
+        "Status": "Active"
+      }
+      ```
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/update_list_item">
+    **Description:** Update an item in a SharePoint list.
+
+    **Parameters:**
+    - `site_id` (string, required): The ID of the SharePoint site
+    - `list_id` (string, required): The ID of the list
+    - `item_id` (string, required): The ID of the item to update
+    - `fields` (object, required): The field values to update
+      ```json
+      {
+        "Title": "Updated Title",
+        "Status": "Completed"
+      }
+      ```
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/delete_list_item">
+    **Description:** Delete an item from a SharePoint list.
+
+    **Parameters:**
+    - `site_id` (string, required): The ID of the SharePoint site
+    - `list_id` (string, required): The ID of the list
+    - `item_id` (string, required): The ID of the item to delete
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/upload_file_to_library">
+    **Description:** Upload a file to a SharePoint document library.
+
+    **Parameters:**
+    - `site_id` (string, required): The ID of the SharePoint site
+    - `file_path` (string, required): The path where to upload the file (e.g., 'folder/filename.txt')
+    - `content` (string, required): The file content to upload
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/get_drive_items">
+    **Description:** Get files and folders from a SharePoint document library.
+
+    **Parameters:**
+    - `site_id` (string, required): The ID of the SharePoint site
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/delete_drive_item">
+    **Description:** Delete a file or folder from SharePoint document library.
+
+    **Parameters:**
+    - `site_id` (string, required): The ID of the SharePoint site
+    - `item_id` (string, required): The ID of the file or folder to delete
+  </Accordion>
+</AccordionGroup>
+
+## Usage Examples
+
+### Basic SharePoint Agent Setup
+
+```python
+from crewai import Agent, Task, Crew
+
+# Create an agent with SharePoint capabilities
+sharepoint_agent = Agent(
+    role="SharePoint Manager",
+    goal="Manage SharePoint sites, lists, and documents efficiently",
+    backstory="An AI assistant specialized in SharePoint content management and collaboration.",
+    apps=['microsoft_sharepoint']  # All SharePoint actions will be available
+)
+
+# Task to organize SharePoint content
+content_organization_task = Task(
+    description="List all accessible SharePoint sites and organize content by department",
+    agent=sharepoint_agent,
+    expected_output="SharePoint sites listed and content organized by department"
+)
+
+# Run the task
+crew = Crew(
+    agents=[sharepoint_agent],
+    tasks=[content_organization_task]
+)
+
+crew.kickoff()
+```
+
+### List Management and Data Operations
+
+```python
+from crewai import Agent, Task, Crew
+
+list_manager = Agent(
+    role="List Manager",
+    goal="Manage SharePoint lists and data efficiently",
+    backstory="An AI assistant that focuses on SharePoint list management and data operations.",
+    apps=[
+        'microsoft_sharepoint/get_site_lists',
+        'microsoft_sharepoint/get_list_items',
+        'microsoft_sharepoint/create_list_item',
+        'microsoft_sharepoint/update_list_item'
+    ]
+)
+
+# Task to manage list data
+list_management_task = Task(
+    description="Get all lists from the project site, review items, and update status for completed tasks",
+    agent=list_manager,
+    expected_output="SharePoint lists reviewed and task statuses updated"
+)
+
+crew = Crew(
+    agents=[list_manager],
+    tasks=[list_management_task]
+)
+
+crew.kickoff()
+```
+
+### Document Library Management
+
+```python
+from crewai import Agent, Task, Crew
+
+document_manager = Agent(
+    role="Document Manager",
+    goal="Manage SharePoint document libraries and files",
+    backstory="An AI assistant that specializes in document organization and file management.",
+    apps=['microsoft_sharepoint']
+)
+
+# Task to manage documents
+document_task = Task(
+    description="""
+    1. Get all files from the main document library
+    2. Upload new policy documents to the appropriate folders
+    3. Organize files by department and date
+    4. Remove outdated documents
+    """,
+    agent=document_manager,
+    expected_output="Document library organized with new files uploaded and outdated files removed"
+)
+
+crew = Crew(
+    agents=[document_manager],
+    tasks=[document_task]
+)
+
+crew.kickoff()
+```
+
+### Site Administration and Analysis
+
+```python
+from crewai import Agent, Task, Crew
+
+site_administrator = Agent(
+    role="Site Administrator",
+    goal="Administer and analyze SharePoint sites",
+    backstory="An AI assistant that handles site administration and provides insights on site usage.",
+    apps=['microsoft_sharepoint']
+)
+
+# Task for site administration
+admin_task = Task(
+    description="""
+    1. Get information about all accessible SharePoint sites
+    2. Analyze site structure and content organization
+    3. Identify sites with low activity or outdated content
+    4. Generate recommendations for site optimization
+    """,
+    agent=site_administrator,
+    expected_output="Site analysis completed with optimization recommendations"
+)
+
+crew = Crew(
+    agents=[site_administrator],
+    tasks=[admin_task]
+)
+
+crew.kickoff()
+```
+
+### Automated Content Workflows
+
+```python
+from crewai import Agent, Task, Crew
+
+workflow_automator = Agent(
+    role="Workflow Automator",
+    goal="Automate SharePoint content workflows and processes",
+    backstory="An AI assistant that automates complex SharePoint workflows and content management processes.",
+    apps=['microsoft_sharepoint']
+)
+
+# Complex workflow automation task
+automation_task = Task(
+    description="""
+    1. Monitor project lists across multiple sites
+    2. Create status reports based on list data
+    3. Upload reports to designated document libraries
+    4. Update project tracking lists with completion status
+    5. Archive completed project documents
+    6. Send notifications for overdue items
+    """,
+    agent=workflow_automator,
+    expected_output="Automated workflow completed with status reports generated and project tracking updated"
+)
+
+crew = Crew(
+    agents=[workflow_automator],
+    tasks=[automation_task]
+)
+
+crew.kickoff()
+```
+
+### Data Integration and Reporting
+
+```python
+from crewai import Agent, Task, Crew
+
+data_integrator = Agent(
+    role="Data Integrator",
+    goal="Integrate and analyze data across SharePoint sites and lists",
+    backstory="An AI assistant that specializes in data integration and cross-site analysis.",
+    apps=['microsoft_sharepoint']
+)
+
+# Task for data integration
+integration_task = Task(
+    description="""
+    1. Get data from multiple SharePoint lists across different sites
+    2. Consolidate information into comprehensive reports
+    3. Create new list items with aggregated data
+    4. Upload analytical reports to executive document library
+    5. Update dashboard lists with key metrics
+    """,
+    agent=data_integrator,
+    expected_output="Data integrated across sites with comprehensive reports and updated dashboards"
+)
+
+crew = Crew(
+    agents=[data_integrator],
+    tasks=[integration_task]
+)
+
+crew.kickoff()
+```
+
+## Troubleshooting
+
+### Common Issues
+
+**Permission Errors**
+- Ensure your Microsoft account has appropriate permissions for SharePoint sites
+- Verify that the OAuth connection includes required scopes (Sites.Read.All, Sites.ReadWrite.All)
+- Check that you have access to the specific sites and lists you're trying to access
+
+**Site and List ID Issues**
+- Verify that site IDs and list IDs are correct and properly formatted
+- Ensure that sites and lists exist and are accessible to your account
+- Use the get_sites and get_site_lists actions to discover valid IDs
+
+**Field and Schema Issues**
+- Ensure field names match exactly with the SharePoint list schema
+- Verify that required fields are included when creating or updating list items
+- Check that field types and values are compatible with the list column definitions
+
+**File Upload Issues**
+- Ensure file paths are properly formatted and don't contain invalid characters
+- Verify that you have write permissions to the target document library
+- Check that file content is properly encoded for upload
+
+**OData Query Issues**
+- Use proper OData syntax for filter, select, expand, and orderby parameters
+- Verify that property names used in queries exist in the target resources
+- Test simple queries before building complex filter expressions
+
+**Pagination and Performance**
+- Use top and skip parameters appropriately for large result sets
+- Implement proper pagination for lists with many items
+- Consider using select parameters to return only needed properties
+
+**Document Library Operations**
+- Ensure you have proper permissions for document library operations
+- Verify that drive item IDs are correct when deleting files or folders
+- Check that file paths don't conflict with existing content
+
+### Getting Help
+
+<Card title="Need Help?" icon="headset" href="mailto:support@crewai.com">
+  Contact our support team for assistance with Microsoft SharePoint integration setup or troubleshooting.
+</Card>

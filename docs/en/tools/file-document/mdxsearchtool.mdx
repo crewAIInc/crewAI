@@ -48,27 +48,25 @@ tool = MDXSearchTool(mdx='path/to/your/document.mdx')
 The tool defaults to using OpenAI for embeddings and summarization. For customization, utilize a configuration dictionary as shown below:
 
 ```python Code
+from chromadb.config import Settings
+
 tool = MDXSearchTool(
-    config=dict(
-        llm=dict(
-            provider="ollama", # Options include google, openai, anthropic, llama2, etc.
-            config=dict(
-                model="llama2",
-                # Optional parameters can be included here.
-                # temperature=0.5,
-                # top_p=1,
-                # stream=true,
-            ),
-        ),
-        embedder=dict(
-            provider="google", # or openai, ollama, ...
-            config=dict(
-                model="models/embedding-001",
-                task_type="retrieval_document",
-                # Optional title for the embeddings can be added here.
-                # title="Embeddings",
-            ),
-        ),
-    )
+    config={
+        "embedding_model": {
+            "provider": "openai",
+            "config": {
+                "model": "text-embedding-3-small",
+                # "api_key": "sk-...",
+            },
+        },
+        "vectordb": {
+            "provider": "chromadb",  # or "qdrant"
+            "config": {
+                # "settings": Settings(persist_directory="/content/chroma", allow_reset=True, is_persistent=True),
+                # from qdrant_client.models import VectorParams, Distance
+                # "vectors_config": VectorParams(size=384, distance=Distance.COSINE),
+            }
+        },
+    }
 )
 ```
