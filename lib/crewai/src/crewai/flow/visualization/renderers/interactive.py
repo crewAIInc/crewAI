@@ -19,7 +19,7 @@ class CSSExtension(Extension):
     Provides {% css 'path/to/file.css' %} tag syntax.
     """
 
-    tags = {"css"}  # type: ignore[assignment]
+    tags: ClassVar[set[str]] = {"css"}  # type: ignore[assignment]
 
     def parse(self, parser: Parser) -> nodes.Node:
         """Parse {% css 'styles.css' %} tag.
@@ -52,7 +52,7 @@ class JSExtension(Extension):
     Provides {% js 'path/to/file.js' %} tag syntax.
     """
 
-    tags = {"js"}  # type: ignore[assignment]
+    tags: ClassVar[set[str]] = {"js"}  # type: ignore[assignment]
 
     def parse(self, parser: Parser) -> nodes.Node:
         """Parse {% js 'script.js' %} tag.
