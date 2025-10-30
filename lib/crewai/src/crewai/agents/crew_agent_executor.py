@@ -119,7 +119,6 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         self.tools_handler = tools_handler
         self.original_tools = original_tools or []
         self.step_callback = step_callback
-        self.use_stop_words = self.llm.supports_stop_words()
         self.tools_description = tools_description
         self.function_calling_llm = function_calling_llm
         self.respect_context_window = respect_context_window
@@ -128,14 +127,25 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         self.messages: list[LLMMessage] = []
         self.iterations = 0
         self.log_error_after = 3
-        existing_stop = getattr(self.llm, "stop", [])
-        self.llm.stop = list(
-            set(
-                existing_stop + self.stop
-                if isinstance(existing_stop, list)
-                else self.stop
+        if self.llm:
+            # This may be mutating the shared llm object and needs further evaluation
+            existing_stop = getattr(self.llm, "stop", [])
+            self.llm.stop = list(
+                set(
+                    existing_stop + self.stop
+                    if isinstance(existing_stop, list)
+                    else self.stop
+                )
             )
-        )
+
+    @property
+    def use_stop_words(self) -> bool:
+        """Check to determine if stop words are being used.
+
+        Returns:
+            bool: True if tool should be used or not.
+        """
+        return self.llm.supports_stop_words() if self.llm else False
 
     def invoke(self, inputs: dict[str, Any]) -> dict[str, Any]:
         """Execute the agent with given inputs.
