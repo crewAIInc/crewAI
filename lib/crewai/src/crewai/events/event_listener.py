@@ -2,12 +2,12 @@ from __future__ import annotations
 
 from io import StringIO
 import threading
-from typing import Any, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from pydantic import Field, PrivateAttr
 
 from crewai.events.base_event_listener import BaseEventListener
-from crewai.events.listeners.memory_listener import MemoryListener
+from crewai.events.listeners.tracing.trace_listener import TraceCollectionListener
 from crewai.events.types.a2a_events import (
     A2AConversationCompletedEvent,
     A2AConversationStartedEvent,
@@ -118,7 +118,9 @@ class EventListener(BaseEventListener):
             self.formatter = ConsoleFormatter(verbose=True)
             self._crew_tree_lock = threading.Condition()
 
-            MemoryListener(formatter=self.formatter)
+            # Initialize trace listener with formatter for memory event handling
+            trace_listener = TraceCollectionListener()
+            trace_listener.formatter = self.formatter
 
     # ----------- CREW EVENTS -----------
 

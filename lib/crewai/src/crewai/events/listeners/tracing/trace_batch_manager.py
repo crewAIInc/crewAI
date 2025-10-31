@@ -161,13 +161,13 @@ class TraceBatchManager:
                 f"Error initializing trace batch: {e}. Continuing without tracing."
             )
 
-    def begin_event_processing(self):
-        """Mark that an event handler started processing (for synchronization)"""
+    def begin_event_processing(self) -> None:
+        """Mark that an event handler started processing (for synchronization)."""
         with self._pending_events_lock:
             self._pending_events_count += 1
 
-    def end_event_processing(self):
-        """Mark that an event handler finished processing (for synchronization)"""
+    def end_event_processing(self) -> None:
+        """Mark that an event handler finished processing (for synchronization)."""
         with self._pending_events_cv:
             self._pending_events_count -= 1
             if self._pending_events_count == 0:
