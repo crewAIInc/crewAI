@@ -30,11 +30,13 @@ from crewai.flow.config import (
 from crewai.flow.utils import (
     build_ancestor_dict,
     build_parent_children_dict,
+    extract_all_methods,
     get_child_index,
     is_ancestor,
+    is_flow_condition_dict,
+    normalize_condition,
 )
 from crewai.utilities.printer import Printer
-
 
 _printer = Printer()
 
@@ -227,9 +229,22 @@ def add_edges(
     parent_children = build_parent_children_dict(flow)
 
     # Edges for normal listeners
-    for method_name in flow._listeners:
-        condition_type, trigger_methods = flow._listeners[method_name]
-        is_and_condition = condition_type == "AND"
+    for method_name, condition_data in flow._listeners.items():
+        # condition_data can be either a tuple (condition_type, methods) or a dict from or_/and_
+        trigger_methods: list[str] = []
+        is_and_condition = False
+
+        if isinstance(condition_data, tuple) and len(condition_data) == 2:
+            condition_type, trigger_methods = condition_data
+            is_and_condition = condition_type == "AND"
+        elif is_flow_condition_dict(condition_data):
+            normalized = normalize_condition(condition_data)
+            condition_type = normalized.get("type", "OR")
+            trigger_methods = extract_all_methods(normalized)
+            is_and_condition = condition_type == "AND"
+        else:
+            # Unsupported shape; skip
+            continue
 
         for trigger in trigger_methods:
             # Check if nodes exist before adding edges
@@ -288,11 +303,17 @@ def add_edges(
     # Edges for router return paths
     for router_method_name, paths in flow._router_paths.items():
         for path in paths:
-            for listener_name, (
-                _condition_type,
-                trigger_methods,
-            ) in flow._listeners.items():
-                if path in trigger_methods:
+            for listener_name, condition_data in flow._listeners.items():
+                # Determine triggers for this listener
+                if isinstance(condition_data, tuple) and len(condition_data) == 2:
+                    _condition_type, trigger_methods = condition_data
+                    methods = trigger_methods
+                elif is_flow_condition_dict(condition_data):
+                    methods = extract_all_methods(condition_data)
+                else:
+                    continue
+
+                if path in methods:
                     if (
                         router_method_name in node_positions
                         and listener_name in node_positions

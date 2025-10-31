@@ -34,6 +34,45 @@ from crewai.utilities.printer import Printer
 _printer = Printer()
 
 
+def normalize_condition(condition: Any) -> dict[str, Any]:
+    """Normalize condition to a dict with keys: type, conditions.
+
+    Avoids importing helpers from flow.py to prevent circular imports.
+    """
+    if is_flow_method_name(condition):
+        return {"type": "OR", "conditions": [condition]}
+    if is_flow_condition_dict(condition):
+        if "conditions" in condition:
+            return condition
+        if "methods" in condition:
+            return {
+                "type": condition.get("type", "OR"),
+                "conditions": condition["methods"],
+            }
+        return condition
+    if isinstance(condition, list):
+        return {"type": "OR", "conditions": condition}
+    return {"type": "OR", "conditions": []}
+
+
+def extract_all_methods(condition: Any) -> list[str]:
+    """Extract all method names from a nested condition structure."""
+    if is_flow_method_name(condition):
+        return [condition]
+    if is_flow_condition_dict(condition):
+        normalized = normalize_condition(condition)
+        methods: list[str] = []
+        for sub in normalized.get("conditions", []):
+            methods.extend(extract_all_methods(sub))
+        return methods
+    if isinstance(condition, list):
+        methods: list[str] = []
+        for item in condition:
+            methods.extend(extract_all_methods(item))
+        return methods
+    return []
+
+
 def get_possible_return_constants(function: Any) -> list[str] | None:
     try:
         source = inspect.getsource(function)
@@ -155,10 +194,19 @@ def calculate_node_levels(flow: Any) -> dict[str, int]:
             levels[method_name] = 0
             queue.append(method_name)
 
-    # Precompute listener dependencies
+    # Precompute listener dependencies (support tuples and dict conditions)
     or_listeners = defaultdict(list)
     and_listeners = defaultdict(set)
-    for listener_name, (condition_type, trigger_methods) in flow._listeners.items():
+    for listener_name, condition_data in flow._listeners.items():
+        if isinstance(condition_data, tuple) and len(condition_data) == 2:
+            condition_type, trigger_methods = condition_data
+        elif is_flow_condition_dict(condition_data):
+            normalized = normalize_condition(condition_data)
+            condition_type = normalized.get("type", "OR")
+            trigger_methods = extract_all_methods(normalized)
+        else:
+            continue
+
         if condition_type == "OR":
             for method in trigger_methods:
                 or_listeners[method].append(listener_name)
@@ -335,8 +383,15 @@ def build_parent_children_dict(flow: Any) -> dict[str, list[str]]:
     """
     parent_children: dict[str, list[str]] = {}
 
-    # Map listeners to their trigger methods
-    for listener_name, (_, trigger_methods) in flow._listeners.items():
+    # Map listeners to their trigger methods (support tuples and dict conditions)
+    for listener_name, condition_data in flow._listeners.items():
+        if isinstance(condition_data, tuple) and len(condition_data) == 2:
+            _, trigger_methods = condition_data
+        elif is_flow_condition_dict(condition_data):
+            trigger_methods = extract_all_methods(condition_data)
+        else:
+            continue
+
         for trigger in trigger_methods:
             if trigger not in parent_children:
                 parent_children[trigger] = []
@@ -347,7 +402,14 @@ def build_parent_children_dict(flow: Any) -> dict[str, list[str]]:
     for router_method_name, paths in flow._router_paths.items():
         for path in paths:
             # Map router method to listeners of each path
-            for listener_name, (_, trigger_methods) in flow._listeners.items():
+            for listener_name, condition_data in flow._listeners.items():
+                if isinstance(condition_data, tuple) and len(condition_data) == 2:
+                    _, trigger_methods = condition_data
+                elif is_flow_condition_dict(condition_data):
+                    trigger_methods = extract_all_methods(condition_data)
+                else:
+                    continue
+
                 if path in trigger_methods:
                     if router_method_name not in parent_children:
                         parent_children[router_method_name] = []
@@ -389,10 +451,14 @@ def process_router_paths(flow, current, current_level, levels, queue):
     if current in flow._routers:
         paths = flow._router_paths.get(current, [])
         for path in paths:
-            for listener_name, (
-                _condition_type,
-                trigger_methods,
-            ) in flow._listeners.items():
+            for listener_name, condition_data in flow._listeners.items():
+                if isinstance(condition_data, tuple) and len(condition_data) == 2:
+                    _condition_type, trigger_methods = condition_data
+                elif is_flow_condition_dict(condition_data):
+                    trigger_methods = extract_all_methods(condition_data)
+                else:
+                    continue
+
                 if path in trigger_methods:
                     if (
                         listener_name not in levels
