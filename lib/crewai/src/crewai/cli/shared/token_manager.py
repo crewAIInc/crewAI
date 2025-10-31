@@ -3,8 +3,15 @@ import json
 import os
 from pathlib import Path
 import sys
+import time
 
 from cryptography.fernet import Fernet
+
+# Import platform-specific file locking
+if sys.platform == "win32":
+    import msvcrt
+else:
+    import fcntl
 
 
 class TokenManager:
@@ -18,21 +25,61 @@ class TokenManager:
         self.key = self._get_or_create_key()
         self.fernet = Fernet(self.key)
 
+    def _acquire_lock(self, file_handle) -> None:
+        """
+        Acquire an exclusive lock on a file handle.
+
+        Args:
+            file_handle: Open file handle to lock.
+        """
+        if sys.platform == "win32":
+            msvcrt.locking(file_handle.fileno(), msvcrt.LK_LOCK, 1)
+        else:
+            fcntl.flock(file_handle.fileno(), fcntl.LOCK_EX)
+
+    def _release_lock(self, file_handle) -> None:
+        """
+        Release the lock on a file handle.
+
+        Args:
+            file_handle: Open file handle to unlock.
+        """
+        if sys.platform == "win32":
+            msvcrt.locking(file_handle.fileno(), msvcrt.LK_UNLCK, 1)
+        else:
+            fcntl.flock(file_handle.fileno(), fcntl.LOCK_UN)
+
     def _get_or_create_key(self) -> bytes:
         """
-        Get or create the encryption key.
+        Get or create the encryption key with file locking to prevent race conditions.
 
-        :return: The encryption key.
+        Returns:
+            The encryption key.
         """
         key_filename = "secret.key"
-        key = self.read_secure_file(key_filename)
+        storage_path = self.get_secure_storage_path()
+        file_path = storage_path / key_filename
 
-        if key is not None:
+        key = self.read_secure_file(key_filename)
+        if key is not None and len(key) == 44:
             return key
 
-        new_key = Fernet.generate_key()
-        self.save_secure_file(key_filename, new_key)
-        return new_key
+        lock_file_path = storage_path / f"{key_filename}.lock"
+
+        lock_file_path.touch()
+
+        with open(lock_file_path, "r+b") as lock_file:
+            self._acquire_lock(lock_file)
+            try:
+                key = self.read_secure_file(key_filename)
+                if key is not None and len(key) == 44:
+                    return key
+
+                new_key = Fernet.generate_key()
+                self.save_secure_file(key_filename, new_key)
+                return new_key
+            finally:
+                self._release_lock(lock_file)
 
     def save_tokens(self, access_token: str, expires_at: int) -> None:
         """
@@ -81,13 +128,10 @@ class TokenManager:
         :return: The secure storage path.
         """
         if sys.platform == "win32":
-            # Windows: Use %LOCALAPPDATA%
             base_path = os.environ.get("LOCALAPPDATA")
         elif sys.platform == "darwin":
-            # macOS: Use ~/Library/Application Support
             base_path = os.path.expanduser("~/Library/Application Support")
         else:
-            # Linux and other Unix-like: Use ~/.local/share
             base_path = os.path.expanduser("~/.local/share")
 
         app_name = "crewai/credentials"
@@ -110,7 +154,6 @@ class TokenManager:
         with open(file_path, "wb") as f:
             f.write(content)
 
-        # Set appropriate permissions (read/write for owner only)
         os.chmod(file_path, 0o600)
 
     def read_secure_file(self, filename: str) -> bytes | None:
