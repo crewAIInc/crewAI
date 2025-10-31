@@ -20,7 +20,88 @@ if TYPE_CHECKING:
     from crewai.flow.flow import Flow
 
 
-def build_flow_structure(flow: Flow[Any]) -> FlowStructure:  # noqa: UP037
+def _extract_direct_or_triggers(
+    condition: str | dict[str, Any] | list[Any],
+) -> list[str]:
+    """Extract direct OR-level trigger strings from a condition.
+
+    This function extracts strings that would directly trigger a listener,
+    meaning they appear at the top level of an OR condition. Strings nested
+    inside AND conditions are NOT considered direct triggers for router paths.
+
+    For example:
+    - or_("a", "b") -> ["a", "b"] (both are direct triggers)
+    - and_("a", "b") -> [] (neither are direct triggers, both required)
+    - or_(and_("a", "b"), "c") -> ["c"] (only "c" is a direct trigger)
+
+    Args:
+        condition: Can be a string, dict, or list.
+
+    Returns:
+        List of direct OR-level trigger strings.
+    """
+    if isinstance(condition, str):
+        return [condition]
+    if isinstance(condition, dict):
+        cond_type = condition.get("type", "OR")
+        conditions_list = condition.get("conditions", [])
+
+        if cond_type == "OR":
+            strings = []
+            for sub_cond in conditions_list:
+                strings.extend(_extract_direct_or_triggers(sub_cond))
+            return strings
+        else:
+            return []
+    if isinstance(condition, list):
+        strings = []
+        for item in condition:
+            strings.extend(_extract_direct_or_triggers(item))
+        return strings
+    if callable(condition) and hasattr(condition, "__name__"):
+        return [condition.__name__]
+    return []
+
+
+def _extract_all_trigger_names(
+    condition: str | dict[str, Any] | list[Any],
+) -> list[str]:
+    """Extract ALL trigger names from a condition for display purposes.
+
+    Unlike _extract_direct_or_triggers, this extracts ALL strings and method
+    names from the entire condition tree, including those nested in AND conditions.
+    This is used for displaying trigger information in the UI.
+
+    For example:
+    - or_("a", "b") -> ["a", "b"]
+    - and_("a", "b") -> ["a", "b"]
+    - or_(and_("a", method_6), method_4) -> ["a", "method_6", "method_4"]
+
+    Args:
+        condition: Can be a string, dict, or list.
+
+    Returns:
+        List of all trigger names found in the condition.
+    """
+    if isinstance(condition, str):
+        return [condition]
+    if isinstance(condition, dict):
+        conditions_list = condition.get("conditions", [])
+        strings = []
+        for sub_cond in conditions_list:
+            strings.extend(_extract_all_trigger_names(sub_cond))
+        return strings
+    if isinstance(condition, list):
+        strings = []
+        for item in condition:
+            strings.extend(_extract_all_trigger_names(item))
+        return strings
+    if callable(condition) and hasattr(condition, "__name__"):
+        return [condition.__name__]
+    return []
+
+
+def build_flow_structure(flow: Flow[Any]) -> FlowStructure:
     """Build a structure representation of a Flow's execution.
 
     Args:
@@ -67,6 +148,11 @@ def build_flow_structure(flow: Flow[Any]) -> FlowStructure:  # noqa: UP037
             and method.__trigger_condition__ is not None
         ):
             node_metadata["trigger_condition"] = method.__trigger_condition__
+
+            if "trigger_methods" not in node_metadata:
+                extracted = _extract_all_trigger_names(method.__trigger_condition__)
+                if extracted:
+                    node_metadata["trigger_methods"] = extracted
 
         node_metadata["method_signature"] = extract_method_signature(
             method, method_name
@@ -173,18 +259,17 @@ def build_flow_structure(flow: Flow[Any]) -> FlowStructure:  # noqa: UP037
 
         for path in router_paths:
             for listener_name, condition_data in flow._listeners.items():
-                trigger_methods_from_cond: list[str] = []
+                trigger_strings_from_cond: list[str] = []
 
                 if is_simple_flow_condition(condition_data):
                     _, methods = condition_data
-                    trigger_methods_from_cond = [str(m) for m in methods]
+                    trigger_strings_from_cond = [str(m) for m in methods]
                 elif is_flow_condition_dict(condition_data):
-                    methods_recursive = _extract_all_methods_recursive(
-                        condition_data, flow
+                    trigger_strings_from_cond = _extract_direct_or_triggers(
+                        condition_data
                     )
-                    trigger_methods_from_cond = [str(m) for m in methods_recursive]
 
-                if str(path) in trigger_methods_from_cond:
+                if str(path) in trigger_strings_from_cond:
                     edges.append(
                         StructureEdge(
                             source=router_method_name,
@@ -311,7 +396,6 @@ def calculate_execution_paths(structure: FlowStructure) -> int:
         return 0
 
     def count_paths_from(node: str, visited: set[str]) -> int:
-        """Count paths from a node to terminal nodes using DFS."""
         if node in terminal_nodes:
             return 1
 
