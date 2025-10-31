@@ -29,7 +29,12 @@ class TestTokenManager(unittest.TestCase):
     @patch("crewai.cli.shared.token_manager.Fernet.generate_key")
     @patch("crewai.cli.shared.token_manager.TokenManager.read_secure_file")
     @patch("crewai.cli.shared.token_manager.TokenManager.save_secure_file")
-    def test_get_or_create_key_new(self, mock_save, mock_read, mock_generate):
+    @patch("crewai.cli.shared.token_manager.TokenManager._acquire_lock")
+    @patch("crewai.cli.shared.token_manager.TokenManager._release_lock")
+    @patch("builtins.open", new_callable=unittest.mock.mock_open)
+    def test_get_or_create_key_new(
+        self, mock_open, mock_release_lock, mock_acquire_lock, mock_save, mock_read, mock_generate
+    ):
         mock_key = b"new_key"
         mock_read.return_value = None
         mock_generate.return_value = mock_key
@@ -37,9 +42,14 @@ class TestTokenManager(unittest.TestCase):
         result = self.token_manager._get_or_create_key()
 
         self.assertEqual(result, mock_key)
-        mock_read.assert_called_once_with("secret.key")
+        # read_secure_file is called twice: once for fast path, once inside lock
+        self.assertEqual(mock_read.call_count, 2)
+        mock_read.assert_called_with("secret.key")
         mock_generate.assert_called_once()
         mock_save.assert_called_once_with("secret.key", mock_key)
+        # Verify lock was acquired and released
+        mock_acquire_lock.assert_called_once()
+        mock_release_lock.assert_called_once()
 
     @patch("crewai.cli.shared.token_manager.TokenManager.save_secure_file")
     def test_save_tokens(self, mock_save):

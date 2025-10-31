@@ -57,6 +57,7 @@ class TestTraceListenerSetup:
         if hasattr(TraceCollectionListener, "_instance"):
             TraceCollectionListener._instance = None
             TraceCollectionListener._initialized = False
+            TraceCollectionListener._listeners_setup = False
 
         # Reset EventListener singleton
         if hasattr(EventListener, "_instance"):
@@ -74,6 +75,7 @@ class TestTraceListenerSetup:
         if hasattr(TraceCollectionListener, "_instance"):
             TraceCollectionListener._instance = None
             TraceCollectionListener._initialized = False
+            TraceCollectionListener._listeners_setup = False
 
         if hasattr(EventListener, "_instance"):
             EventListener._instance = None
@@ -366,6 +368,7 @@ class TestTraceListenerSetup:
 
             with patch.object(TraceBatchManager, "initialize_batch") as mock_initialize:
                 crew.kickoff()
+                wait_for_event_handlers()
 
                 assert mock_initialize.call_count >= 1
                 assert mock_initialize.call_args_list[0][1]["use_ephemeral"] is True
