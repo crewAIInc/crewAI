@@ -574,8 +574,8 @@ def test_output_pydantic_to_another_task():
         goal="Score the title",
         backstory="You're an expert scorer, specialized in scoring titles.",
         allow_delegation=False,
-        llm="gpt-4-0125-preview",
-        function_calling_llm="gpt-3.5-turbo-0125",
+        llm="gpt-4o",
+        function_calling_llm="gpt-4o",
         verbose=True,
     )
 
@@ -599,7 +599,7 @@ def test_output_pydantic_to_another_task():
     assert isinstance(pydantic_result, ScoreOutput), (
         "Expected pydantic result to be of type ScoreOutput"
     )
-    assert pydantic_result.score == 5
+    assert pydantic_result.score == 4
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])

@@ -1,497 +1,11 @@
 interactions:
 - request:
-    body: '{"messages": [{"role": "system", "content": "You are Scorer. You''re an
-      expert scorer, specialized in scoring titles.\nYour personal goal is: Score
-      the title\nTo give my best complete final answer to the task use the exact following
-      format:\n\nThought: I now can give a great answer\nFinal Answer: Your final
-      answer must be the great and the most complete as possible, it must be outcome
-      described.\n\nI MUST use these formats, my job depends on it!"}, {"role": "user",
-      "content": "\nCurrent Task: Give me an integer score between 1-5 for the following
-      title: ''The impact of AI in the future of work''\n\nThis is the expect criteria
-      for your final answer: The score of the title.\nyou MUST return the actual complete
-      content as the final answer, not a summary.\n\nBegin! This is VERY important
-      to you, use the tools available and give your best Final Answer, your job depends
-      on it!\n\nThought:"}], "model": "gpt-4-0125-preview"}'
-    headers:
-      accept:
-      - application/json
-      accept-encoding:
-      - gzip, deflate
-      connection:
-      - keep-alive
-      content-length:
-      - '927'
-      content-type:
-      - application/json
-      cookie:
-      - __cf_bm=9.8sBYBkvBR8R1K_bVF7xgU..80XKlEIg3N2OBbTSCU-1727214102-1.0.1.1-.qiTLXbPamYUMSuyNsOEB9jhGu.jOifujOrx9E2JZvStbIZ9RTIiE44xKKNfLPxQkOi6qAT3h6htK8lPDGV_5g;
-        _cfuvid=lbRdAddVWV6W3f5Dm9SaOPWDUOxqtZBSPr_fTW26nEA-1727213194587-0.0.1.1-604800000
-      host:
-      - api.openai.com
-      user-agent:
-      - OpenAI/Python 1.47.0
-      x-stainless-arch:
-      - arm64
-      x-stainless-async:
-      - 'false'
-      x-stainless-lang:
-      - python
-      x-stainless-os:
-      - MacOS
-      x-stainless-package-version:
-      - 1.47.0
-      x-stainless-raw-response:
-      - 'true'
-      x-stainless-runtime:
-      - CPython
-      x-stainless-runtime-version:
-      - 3.11.7
-    method: POST
-    uri: https://api.openai.com/v1/chat/completions
-  response:
-    content: "{\n  \"id\": \"chatcmpl-AB7gEbfUEcEY8uxRqngZ1AHO3Kh8G\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1727214494,\n  \"model\": \"gpt-4-0125-preview\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I now can give a great answer\\nFinal
-      Answer: 4\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
-      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      187,\n    \"completion_tokens\": 15,\n    \"total_tokens\": 202,\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": null\n}\n"
-    headers:
-      CF-Cache-Status:
-      - DYNAMIC
-      CF-RAY:
-      - 8c85fa3b6b9e1cf3-GRU
-      Connection:
-      - keep-alive
-      Content-Encoding:
-      - gzip
-      Content-Type:
-      - application/json
-      Date:
-      - Tue, 24 Sep 2024 21:48:14 GMT
-      Server:
-      - cloudflare
-      Transfer-Encoding:
-      - chunked
-      X-Content-Type-Options:
-      - nosniff
-      access-control-expose-headers:
-      - X-Request-ID
-      openai-organization:
-      - crewai-iuxna1
-      openai-processing-ms:
-      - '730'
-      openai-version:
-      - '2020-10-01'
-      strict-transport-security:
-      - max-age=31536000; includeSubDomains; preload
-      x-ratelimit-limit-requests:
-      - '10000'
-      x-ratelimit-limit-tokens:
-      - '2000000'
-      x-ratelimit-remaining-requests:
-      - '9999'
-      x-ratelimit-remaining-tokens:
-      - '1999781'
-      x-ratelimit-reset-requests:
-      - 6ms
-      x-ratelimit-reset-tokens:
-      - 6ms
-      x-request-id:
-      - req_7229ec6efc9642277f866a4769b8428c
-    http_version: HTTP/1.1
-    status_code: 200
-- request:
-    body: '{"messages": [{"role": "user", "content": "4"}, {"role": "system", "content":
-      "I''m gonna convert this raw text into valid JSON.\n\nThe json should have the
-      following structure, with the following keys:\n{\n    score: int\n}"}], "model":
-      "gpt-3.5-turbo-0125", "tool_choice": {"type": "function", "function": {"name":
-      "ScoreOutput"}}, "tools": [{"type": "function", "function": {"name": "ScoreOutput",
-      "description": "Correctly extracted `ScoreOutput` with all the required parameters
-      with correct types", "parameters": {"properties": {"score": {"title": "Score",
-      "type": "integer"}}, "required": ["score"], "type": "object"}}}]}'
-    headers:
-      accept:
-      - application/json
-      accept-encoding:
-      - gzip, deflate
-      connection:
-      - keep-alive
-      content-length:
-      - '627'
-      content-type:
-      - application/json
-      cookie:
-      - __cf_bm=9.8sBYBkvBR8R1K_bVF7xgU..80XKlEIg3N2OBbTSCU-1727214102-1.0.1.1-.qiTLXbPamYUMSuyNsOEB9jhGu.jOifujOrx9E2JZvStbIZ9RTIiE44xKKNfLPxQkOi6qAT3h6htK8lPDGV_5g;
-        _cfuvid=lbRdAddVWV6W3f5Dm9SaOPWDUOxqtZBSPr_fTW26nEA-1727213194587-0.0.1.1-604800000
-      host:
-      - api.openai.com
-      user-agent:
-      - OpenAI/Python 1.47.0
-      x-stainless-arch:
-      - arm64
-      x-stainless-async:
-      - 'false'
-      x-stainless-lang:
-      - python
-      x-stainless-os:
-      - MacOS
-      x-stainless-package-version:
-      - 1.47.0
-      x-stainless-raw-response:
-      - 'true'
-      x-stainless-runtime:
-      - CPython
-      x-stainless-runtime-version:
-      - 3.11.7
-    method: POST
-    uri: https://api.openai.com/v1/chat/completions
-  response:
-    content: "{\n  \"id\": \"chatcmpl-AB7gF9MWuZGxknKnrtesloXhXendq\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1727214495,\n  \"model\": \"gpt-3.5-turbo-0125\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": null,\n        \"tool_calls\": [\n          {\n
-      \           \"id\": \"call_vIxfdg9Ebnr1Z3TthsEcVXby\",\n            \"type\":
-      \"function\",\n            \"function\": {\n              \"name\": \"ScoreOutput\",\n
-      \             \"arguments\": \"{\\\"score\\\":4}\"\n            }\n          }\n
-      \       ],\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
-      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      103,\n    \"completion_tokens\": 5,\n    \"total_tokens\": 108,\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": null\n}\n"
-    headers:
-      CF-Cache-Status:
-      - DYNAMIC
-      CF-RAY:
-      - 8c85fa41bc891cf3-GRU
-      Connection:
-      - keep-alive
-      Content-Encoding:
-      - gzip
-      Content-Type:
-      - application/json
-      Date:
-      - Tue, 24 Sep 2024 21:48:15 GMT
-      Server:
-      - cloudflare
-      Transfer-Encoding:
-      - chunked
-      X-Content-Type-Options:
-      - nosniff
-      access-control-expose-headers:
-      - X-Request-ID
-      openai-organization:
-      - crewai-iuxna1
-      openai-processing-ms:
-      - '253'
-      openai-version:
-      - '2020-10-01'
-      strict-transport-security:
-      - max-age=31536000; includeSubDomains; preload
-      x-ratelimit-limit-requests:
-      - '10000'
-      x-ratelimit-limit-tokens:
-      - '50000000'
-      x-ratelimit-remaining-requests:
-      - '9999'
-      x-ratelimit-remaining-tokens:
-      - '49999946'
-      x-ratelimit-reset-requests:
-      - 6ms
-      x-ratelimit-reset-tokens:
-      - 0s
-      x-request-id:
-      - req_fe42bae7f8f0d8830aa96ac82a70bb78
-    http_version: HTTP/1.1
-    status_code: 200
-- request:
-    body: '{"messages": [{"role": "system", "content": "You are Scorer. You''re an
-      expert scorer, specialized in scoring titles.\nYour personal goal is: Score
-      the title\nTo give my best complete final answer to the task use the exact following
-      format:\n\nThought: I now can give a great answer\nFinal Answer: Your final
-      answer must be the great and the most complete as possible, it must be outcome
-      described.\n\nI MUST use these formats, my job depends on it!"}, {"role": "user",
-      "content": "\nCurrent Task: Given the score the title ''The impact of AI in
-      the future of work'' got, give me an integer score between 1-5 for the following
-      title: ''Return of the Jedi'', you MUST give it a score, use your best judgment\n\nThis
-      is the expect criteria for your final answer: The score of the title.\nyou MUST
-      return the actual complete content as the final answer, not a summary.\n\nThis
-      is the context you''re working with:\n4\n\nBegin! This is VERY important to
-      you, use the tools available and give your best Final Answer, your job depends
-      on it!\n\nThought:"}], "model": "gpt-4-0125-preview"}'
-    headers:
-      accept:
-      - application/json
-      accept-encoding:
-      - gzip, deflate
-      connection:
-      - keep-alive
-      content-length:
-      - '1076'
-      content-type:
-      - application/json
-      cookie:
-      - __cf_bm=9.8sBYBkvBR8R1K_bVF7xgU..80XKlEIg3N2OBbTSCU-1727214102-1.0.1.1-.qiTLXbPamYUMSuyNsOEB9jhGu.jOifujOrx9E2JZvStbIZ9RTIiE44xKKNfLPxQkOi6qAT3h6htK8lPDGV_5g;
-        _cfuvid=lbRdAddVWV6W3f5Dm9SaOPWDUOxqtZBSPr_fTW26nEA-1727213194587-0.0.1.1-604800000
-      host:
-      - api.openai.com
-      user-agent:
-      - OpenAI/Python 1.47.0
-      x-stainless-arch:
-      - arm64
-      x-stainless-async:
-      - 'false'
-      x-stainless-lang:
-      - python
-      x-stainless-os:
-      - MacOS
-      x-stainless-package-version:
-      - 1.47.0
-      x-stainless-raw-response:
-      - 'true'
-      x-stainless-runtime:
-      - CPython
-      x-stainless-runtime-version:
-      - 3.11.7
-    method: POST
-    uri: https://api.openai.com/v1/chat/completions
-  response:
-    content: "{\n  \"id\": \"chatcmpl-AB7gFkgb0JsYMhXR8qaHnXKOQfP7B\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1727214495,\n  \"model\": \"gpt-4-0125-preview\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I now can give a great answer\\n\\nFinal
-      Answer: 5\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
-      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      223,\n    \"completion_tokens\": 15,\n    \"total_tokens\": 238,\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": null\n}\n"
-    headers:
-      CF-Cache-Status:
-      - DYNAMIC
-      CF-RAY:
-      - 8c85fa461a4d1cf3-GRU
-      Connection:
-      - keep-alive
-      Content-Encoding:
-      - gzip
-      Content-Type:
-      - application/json
-      Date:
-      - Tue, 24 Sep 2024 21:48:16 GMT
-      Server:
-      - cloudflare
-      Transfer-Encoding:
-      - chunked
-      X-Content-Type-Options:
-      - nosniff
-      access-control-expose-headers:
-      - X-Request-ID
-      openai-organization:
-      - crewai-iuxna1
-      openai-processing-ms:
-      - '799'
-      openai-version:
-      - '2020-10-01'
-      strict-transport-security:
-      - max-age=31536000; includeSubDomains; preload
-      x-ratelimit-limit-requests:
-      - '10000'
-      x-ratelimit-limit-tokens:
-      - '2000000'
-      x-ratelimit-remaining-requests:
-      - '9999'
-      x-ratelimit-remaining-tokens:
-      - '1999744'
-      x-ratelimit-reset-requests:
-      - 6ms
-      x-ratelimit-reset-tokens:
-      - 7ms
-      x-request-id:
-      - req_7ea6637f8e14c2b260cce6e3e3004cbb
-    http_version: HTTP/1.1
-    status_code: 200
-- request:
-    body: !!binary |
-      CsITCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkSmRMKEgoQY3Jld2FpLnRl
-      bGVtZXRyeRKbAQoQNiHDtik0VJXUvY2TAXlq5xIIVN7ytJgQOTQqClRvb2wgVXNhZ2UwATkgE44P
-      bkz4F0GgvJEPbkz4F0oaCg5jcmV3YWlfdmVyc2lvbhIICgYwLjYxLjBKJwoJdG9vbF9uYW1lEhoK
-      GEFzayBxdWVzdGlvbiB0byBjb3dvcmtlckoOCghhdHRlbXB0cxICGAF6AhgBhQEAAQAAEpACChB9
-      D1jc9xslW6yx+1EBiZyOEgg07DmIaDWZkCoOVGFzayBFeGVjdXRpb24wATnAXgcVbUz4F0H4h/Rb
-      bkz4F0ouCghjcmV3X2tleRIiCiA1ZTZlZmZlNjgwYTVkOTdkYzM4NzNiMTQ4MjVjY2ZhM0oxCgdj
-      cmV3X2lkEiYKJDFjZWJhZTk5LWYwNmQtNDEzYS05N2ExLWRlZWU1NjU3ZWFjNkouCgh0YXNrX2tl
-      eRIiCiAyN2VmMzhjYzk5ZGE0YThkZWQ3MGVkNDA2ZTQ0YWI4NkoxCgd0YXNrX2lkEiYKJDU1MjQ5
-      M2IwLWFmNDctNGVmMC04M2NjLWIwYmRjMzUxZWY2N3oCGAGFAQABAAASnAkKEIX+S/hQ6K5kLLu+
-      55qXcH8SCOxCl7XWayIeKgxDcmV3IENyZWF0ZWQwATkQYspcbkz4F0G4Ls5cbkz4F0oaCg5jcmV3
-      YWlfdmVyc2lvbhIICgYwLjYxLjBKGgoOcHl0aG9uX3ZlcnNpb24SCAoGMy4xMS43Si4KCGNyZXdf
-      a2V5EiIKIGQ0MjYwODMzYWIwYzIwYmI0NDkyMmM3OTlhYTk2YjRhSjEKB2NyZXdfaWQSJgokMjE2
-      YmRkZDYtYzVhOS00NDk2LWFlYzctYjNlMDBhNzQ5NDVjShwKDGNyZXdfcHJvY2VzcxIMCgpzZXF1
-      ZW50aWFsShEKC2NyZXdfbWVtb3J5EgIQAEoaChRjcmV3X251bWJlcl9vZl90YXNrcxICGAJKGwoV
-      Y3Jld19udW1iZXJfb2ZfYWdlbnRzEgIYAUrlAgoLY3Jld19hZ2VudHMS1QIK0gJbeyJrZXkiOiAi
-      OTJlN2ViMTkxNjY0YzkzNTc4NWVkN2Q0MjQwYTI5NGQiLCAiaWQiOiAiMDUzYWJkMGUtNzc0Ny00
-      Mzc5LTg5ZWUtMTc1YjkwYWRjOGFjIiwgInJvbGUiOiAiU2NvcmVyIiwgInZlcmJvc2U/IjogdHJ1
-      ZSwgIm1heF9pdGVyIjogMTUsICJtYXhfcnBtIjogbnVsbCwgImZ1bmN0aW9uX2NhbGxpbmdfbGxt
-      IjogImdwdC0zLjUtdHVyYm8tMDEyNSIsICJsbG0iOiAiZ3B0LTQtMDEyNS1wcmV2aWV3IiwgImRl
-      bGVnYXRpb25fZW5hYmxlZD8iOiBmYWxzZSwgImFsbG93X2NvZGVfZXhlY3V0aW9uPyI6IGZhbHNl
-      LCAibWF4X3JldHJ5X2xpbWl0IjogMiwgInRvb2xzX25hbWVzIjogW119XUrkAwoKY3Jld190YXNr
-      cxLVAwrSA1t7ImtleSI6ICIyN2VmMzhjYzk5ZGE0YThkZWQ3MGVkNDA2ZTQ0YWI4NiIsICJpZCI6
-      ICIxMTgyYzllZi02NzU3LTQ0ZTktOTA4Yi1jZmE2ZWIzODYxNWEiLCAiYXN5bmNfZXhlY3V0aW9u
-      PyI6IGZhbHNlLCAiaHVtYW5faW5wdXQ/IjogZmFsc2UsICJhZ2VudF9yb2xlIjogIlNjb3JlciIs
-      ICJhZ2VudF9rZXkiOiAiOTJlN2ViMTkxNjY0YzkzNTc4NWVkN2Q0MjQwYTI5NGQiLCAidG9vbHNf
-      bmFtZXMiOiBbXX0sIHsia2V5IjogIjYwOWRlZTM5MTA4OGNkMWM4N2I4ZmE2NmFhNjdhZGJlIiwg
-      ImlkIjogImJkZDhiZWYxLWZhNTYtNGQwYy1hYjQ0LTdiMjE0YzY2ODhiNSIsICJhc3luY19leGVj
-      dXRpb24/IjogZmFsc2UsICJodW1hbl9pbnB1dD8iOiBmYWxzZSwgImFnZW50X3JvbGUiOiAiU2Nv
-      cmVyIiwgImFnZW50X2tleSI6ICI5MmU3ZWIxOTE2NjRjOTM1Nzg1ZWQ3ZDQyNDBhMjk0ZCIsICJ0
-      b29sc19uYW1lcyI6IFtdfV16AhgBhQEAAQAAEo4CChCtIlcpdDnI8/HhoLC7gN6iEgje2a5QieRJ
-      MSoMVGFzayBDcmVhdGVkMAE58GXmXG5M+BdBKC3nXG5M+BdKLgoIY3Jld19rZXkSIgogZDQyNjA4
-      MzNhYjBjMjBiYjQ0OTIyYzc5OWFhOTZiNGFKMQoHY3Jld19pZBImCiQyMTZiZGRkNi1jNWE5LTQ0
-      OTYtYWVjNy1iM2UwMGE3NDk0NWNKLgoIdGFza19rZXkSIgogMjdlZjM4Y2M5OWRhNGE4ZGVkNzBl
-      ZDQwNmU0NGFiODZKMQoHdGFza19pZBImCiQxMTgyYzllZi02NzU3LTQ0ZTktOTA4Yi1jZmE2ZWIz
-      ODYxNWF6AhgBhQEAAQAAEpACChCBZ3BQ5YuuLU2Wn6fiGtU/Egh7U3eIthSUQioOVGFzayBFeGVj
-      dXRpb24wATlIe+dcbkz4F0HwIavCbkz4F0ouCghjcmV3X2tleRIiCiBkNDI2MDgzM2FiMGMyMGJi
-      NDQ5MjJjNzk5YWE5NmI0YUoxCgdjcmV3X2lkEiYKJDIxNmJkZGQ2LWM1YTktNDQ5Ni1hZWM3LWIz
-      ZTAwYTc0OTQ1Y0ouCgh0YXNrX2tleRIiCiAyN2VmMzhjYzk5ZGE0YThkZWQ3MGVkNDA2ZTQ0YWI4
-      NkoxCgd0YXNrX2lkEiYKJDExODJjOWVmLTY3NTctNDRlOS05MDhiLWNmYTZlYjM4NjE1YXoCGAGF
-      AQABAAASjgIKEOXCP/jH0lAyFChYhl/yRVASCMIALtbkZaYqKgxUYXNrIENyZWF0ZWQwATl4b8vC
-      bkz4F0E4x8zCbkz4F0ouCghjcmV3X2tleRIiCiBkNDI2MDgzM2FiMGMyMGJiNDQ5MjJjNzk5YWE5
-      NmI0YUoxCgdjcmV3X2lkEiYKJDIxNmJkZGQ2LWM1YTktNDQ5Ni1hZWM3LWIzZTAwYTc0OTQ1Y0ou
-      Cgh0YXNrX2tleRIiCiA2MDlkZWUzOTEwODhjZDFjODdiOGZhNjZhYTY3YWRiZUoxCgd0YXNrX2lk
-      EiYKJGJkZDhiZWYxLWZhNTYtNGQwYy1hYjQ0LTdiMjE0YzY2ODhiNXoCGAGFAQABAAA=
-    headers:
-      Accept:
-      - '*/*'
-      Accept-Encoding:
-      - gzip, deflate
-      Connection:
-      - keep-alive
-      Content-Length:
-      - '2501'
-      Content-Type:
-      - application/x-protobuf
-      User-Agent:
-      - OTel-OTLP-Exporter-Python/1.27.0
-    method: POST
-    uri: https://telemetry.crewai.com:4319/v1/traces
-  response:
-    body:
-      string: "\n\0"
-    headers:
-      Content-Length:
-      - '2'
-      Content-Type:
-      - application/x-protobuf
-      Date:
-      - Tue, 24 Sep 2024 21:48:17 GMT
-    status:
-      code: 200
-      message: OK
-- request:
-    body: '{"messages": [{"role": "user", "content": "5"}, {"role": "system", "content":
-      "I''m gonna convert this raw text into valid JSON.\n\nThe json should have the
-      following structure, with the following keys:\n{\n    score: int\n}"}], "model":
-      "gpt-3.5-turbo-0125", "tool_choice": {"type": "function", "function": {"name":
-      "ScoreOutput"}}, "tools": [{"type": "function", "function": {"name": "ScoreOutput",
-      "description": "Correctly extracted `ScoreOutput` with all the required parameters
-      with correct types", "parameters": {"properties": {"score": {"title": "Score",
-      "type": "integer"}}, "required": ["score"], "type": "object"}}}]}'
-    headers:
-      accept:
-      - application/json
-      accept-encoding:
-      - gzip, deflate
-      connection:
-      - keep-alive
-      content-length:
-      - '627'
-      content-type:
-      - application/json
-      cookie:
-      - __cf_bm=9.8sBYBkvBR8R1K_bVF7xgU..80XKlEIg3N2OBbTSCU-1727214102-1.0.1.1-.qiTLXbPamYUMSuyNsOEB9jhGu.jOifujOrx9E2JZvStbIZ9RTIiE44xKKNfLPxQkOi6qAT3h6htK8lPDGV_5g;
-        _cfuvid=lbRdAddVWV6W3f5Dm9SaOPWDUOxqtZBSPr_fTW26nEA-1727213194587-0.0.1.1-604800000
-      host:
-      - api.openai.com
-      user-agent:
-      - OpenAI/Python 1.47.0
-      x-stainless-arch:
-      - arm64
-      x-stainless-async:
-      - 'false'
-      x-stainless-lang:
-      - python
-      x-stainless-os:
-      - MacOS
-      x-stainless-package-version:
-      - 1.47.0
-      x-stainless-raw-response:
-      - 'true'
-      x-stainless-runtime:
-      - CPython
-      x-stainless-runtime-version:
-      - 3.11.7
-    method: POST
-    uri: https://api.openai.com/v1/chat/completions
-  response:
-    content: "{\n  \"id\": \"chatcmpl-AB7gHtXxJaZ5NZiXZzc0HUAObflqc\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1727214497,\n  \"model\": \"gpt-3.5-turbo-0125\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": null,\n        \"tool_calls\": [\n          {\n
-      \           \"id\": \"call_hFpl2Plo4DudP1t3SGHby2vo\",\n            \"type\":
-      \"function\",\n            \"function\": {\n              \"name\": \"ScoreOutput\",\n
-      \             \"arguments\": \"{\\\"score\\\":5}\"\n            }\n          }\n
-      \       ],\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
-      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      103,\n    \"completion_tokens\": 5,\n    \"total_tokens\": 108,\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": null\n}\n"
-    headers:
-      CF-Cache-Status:
-      - DYNAMIC
-      CF-RAY:
-      - 8c85fa4cebc21cf3-GRU
-      Connection:
-      - keep-alive
-      Content-Encoding:
-      - gzip
-      Content-Type:
-      - application/json
-      Date:
-      - Tue, 24 Sep 2024 21:48:17 GMT
-      Server:
-      - cloudflare
-      Transfer-Encoding:
-      - chunked
-      X-Content-Type-Options:
-      - nosniff
-      access-control-expose-headers:
-      - X-Request-ID
-      openai-organization:
-      - crewai-iuxna1
-      openai-processing-ms:
-      - '196'
-      openai-version:
-      - '2020-10-01'
-      strict-transport-security:
-      - max-age=31536000; includeSubDomains; preload
-      x-ratelimit-limit-requests:
-      - '10000'
-      x-ratelimit-limit-tokens:
-      - '50000000'
-      x-ratelimit-remaining-requests:
-      - '9999'
-      x-ratelimit-remaining-tokens:
-      - '49999947'
-      x-ratelimit-reset-requests:
-      - 6ms
-      x-ratelimit-reset-tokens:
-      - 0s
-      x-request-id:
-      - req_deaa35bcd479744c6ce7363ae1b27d9e
-    http_version: HTTP/1.1
-    status_code: 200
-- request:
-    body: '{"trace_id": "fd0bd8ef-d24a-49b9-b742-5025616d6299", "execution_type":
+    body: '{"trace_id": "f4e3d2a7-6f34-4327-afca-c78e71cadd72", "execution_type":
       "crew", "user_identifier": null, "execution_context": {"crew_fingerprint": null,
       "crew_name": "crew", "flow_name": null, "crewai_version": "1.2.1", "privacy_level":
       "standard"}, "execution_metadata": {"expected_duration_estimate": 300, "agent_count":
-      0, "task_count": 0, "flow_method_count": 0, "execution_started_at": "2025-10-31T01:11:25.182183+00:00"},
-      "ephemeral_trace_id": "fd0bd8ef-d24a-49b9-b742-5025616d6299"}'
+      0, "task_count": 0, "flow_method_count": 0, "execution_started_at": "2025-10-31T21:52:20.918825+00:00"},
+      "ephemeral_trace_id": "f4e3d2a7-6f34-4327-afca-c78e71cadd72"}'
     headers:
       Accept:
       - '*/*'
@@ -513,7 +27,7 @@ interactions:
     uri: https://app.crewai.com/crewai_plus/api/v1/tracing/ephemeral/batches
   response:
     body:
-      string: '{"id":"c0e11281-f193-4132-98e0-f2ab13919152","ephemeral_trace_id":"fd0bd8ef-d24a-49b9-b742-5025616d6299","execution_type":"crew","crew_name":"crew","flow_name":null,"status":"running","duration_ms":null,"crewai_version":"1.2.1","total_events":0,"execution_context":{"crew_fingerprint":null,"crew_name":"crew","flow_name":null,"crewai_version":"1.2.1","privacy_level":"standard"},"created_at":"2025-10-31T01:11:25.961Z","updated_at":"2025-10-31T01:11:25.961Z","access_code":"TRACE-496f080ffe","user_identifier":null}'
+      string: '{"id":"2adb4334-2adb-4585-90b9-03921447ab54","ephemeral_trace_id":"f4e3d2a7-6f34-4327-afca-c78e71cadd72","execution_type":"crew","crew_name":"crew","flow_name":null,"status":"running","duration_ms":null,"crewai_version":"1.2.1","total_events":0,"execution_context":{"crew_fingerprint":null,"crew_name":"crew","flow_name":null,"crewai_version":"1.2.1","privacy_level":"standard"},"created_at":"2025-10-31T21:52:21.259Z","updated_at":"2025-10-31T21:52:21.259Z","access_code":"TRACE-c984d48836","user_identifier":null}'
     headers:
       Connection:
       - keep-alive
@@ -522,7 +36,7 @@ interactions:
       Content-Type:
       - application/json; charset=utf-8
       Date:
-      - Fri, 31 Oct 2025 01:11:25 GMT
+      - Fri, 31 Oct 2025 21:52:21 GMT
       cache-control:
       - no-store
       content-security-policy:
@@ -558,7 +72,7 @@ interactions:
         https://*.google.com https://app.hubspot.com/ https://td.doubleclick.net https://www.googletagmanager.com/
         https://www.youtube.com https://share.descript.com'
       etag:
-      - W/"702cb296acbc6ce8fbf529262d0e76ea"
+      - W/"de8355cd003b150e7c530e4f15d97140"
       expires:
       - '0'
       permissions-policy:
@@ -578,18 +92,31 @@ interactions:
       x-permitted-cross-domain-policies:
       - none
       x-request-id:
-      - edaadf5a-a36a-433b-a55d-061cc1d57a9a
+      - 09d43be3-106a-44dd-a9a2-816d53f91d5d
       x-runtime:
-      - '0.073191'
+      - '0.066900'
       x-xss-protection:
       - 1; mode=block
     status:
       code: 201
       message: Created
 - request:
-    body: '{"messages":[{"role":"system","content":"Please convert the following text
-      into valid JSON.\n\nOutput ONLY the valid JSON and nothing else.\n\nThe JSON
-      must follow this schema exactly:\n```json\n{\n    score: int\n}\n```"},{"role":"user","content":"4"}],"model":"gpt-3.5-turbo-0125"}'
+    body: '{"messages":[{"role":"system","content":"You are Scorer. You''re an expert
+      scorer, specialized in scoring titles.\nYour personal goal is: Score the title\nTo
+      give my best complete final answer to the task respond using the exact following
+      format:\n\nThought: I now can give a great answer\nFinal Answer: Your final
+      answer must be the great and the most complete as possible, it must be outcome
+      described.\n\nI MUST use these formats, my job depends on it!"},{"role":"user","content":"\nCurrent
+      Task: Give me an integer score between 1-5 for the following title: ''The impact
+      of AI in the future of work''\n\nThis is the expected criteria for your final
+      answer: The score of the title.\nyou MUST return the actual complete content
+      as the final answer, not a summary.\nEnsure your final answer contains only
+      the content in the following format: {\n  \"properties\": {\n    \"score\":
+      {\n      \"title\": \"Score\",\n      \"type\": \"integer\"\n    }\n  },\n  \"required\":
+      [\n    \"score\"\n  ],\n  \"title\": \"ScoreOutput\",\n  \"type\": \"object\",\n  \"additionalProperties\":
+      false\n}\n\nEnsure the final output does not include any code block markers
+      like ```json or ```python.\n\nBegin! This is VERY important to you, use the
+      tools available and give your best Final Answer, your job depends on it!\n\nThought:"}],"model":"gpt-4o"}'
     headers:
       accept:
       - application/json
@@ -598,7 +125,7 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '283'
+      - '1334'
       content-type:
       - application/json
       host:
@@ -628,17 +155,20 @@ interactions:
   response:
     body:
       string: !!binary |
-        H4sIAAAAAAAAAwAAAP//jFJNT+MwEL3nV1hzblG7kFJyZbVwgdMikCiKXHuaenE8XnvCh6r+d2SX
-        NoFlJS45zJv38t7zbAohwGioBKi1ZNV6Oz6/vXuxv66u/cXN75/l7cVfeTN7fpxdnk0CX8MoMWj5
-        BxXvWUeKWm+RDbkdrAJKxqQ6PZ1N56fHk3mZgZY02kRrPI+Pj8oxd2FJ48n0R/nOXJNRGKES94UQ
-        QmzyN3l0Gl+gEpPRftJijLJBqA5LQkAgmyYgYzSRpWMY9aAix+iy7c3CpdECoqKAC6jEycJth8sB
-        V12UyazrrB0A0jlimcJmmw/vyPZgzFLjAy3jJyqsjDNxXQeUkVwyEZk8ZHRbCPGQC+g+ZAIfqPVc
-        Mz1i/t3J2U4O+sp7cI8xsbT9uJyPvhCrNbI0Ng76AyXVGnXP7MuWnTY0AIpB5H+9fKW9i21c8x35
-        HlAKPaOufUBt1Me8/VrAdI//WztUnA1DxPBkFNZsMKRn0LiSnd1dCsTXyNjWK+MaDD6YfC7pGYtt
-        8QYAAP//AwDXAyI8LQMAAA==
+        H4sIAAAAAAAAAwAAAP//jFPLbtswELz7KxY824WdOPHjFgQokPbQFi2aolEgrMmVzIQiWXLlNAn8
+        7wElxZLTFuhFAmf2Ncvh8whAaCXWIOQWWVbeTC6vw8fi+pF31dWHO39xap++XH3/ef9kLpc/7sQ4
+        ZbjNHUl+zXonXeUNsXa2pWUgZEpVZ4vz2Wq+OJvPGqJyikxKKz1P5m5yMj2ZT6bLyfS8S9w6LSmK
+        NdyMAACem28a0Sr6LdYwHb8iFcWIJYn1IQhABGcSIjBGHRkti3FPSmeZbDP1FVj3ABItlHpHgFCm
+        iQFtfKCQ2ffaooGL5rSG58wCZMIH5ymwppiJDkxwlC7QAEkYazYNlomvLT0ekI++47RlKikcsYqi
+        DNqnXbZB37YESU5pSUHTDAoXgLcETRvYYCQFzoLmCIEM7dBKArQKdOVRciba8vv0249bNYF+1TqQ
+        Sk1u3mhJx9su7q2UTzX7mruRh2JaSxwIVEonEWg+H+2tQBOpizmsbp7Z/fCmAhV1xGQUWxszINBa
+        x5jqNh657Zj9wRXGlT64TXyTKgptddzmgTA6mxwQ2XnRsPtRUpvcVx8ZKl145Tlnd09Nu5PlrK0n
+        er/37GrVkewYTY+fLjvPHtfLFTFqEwf+FRLlllSf2psda6XdgBgNVP85zd9qt8q1Lf+nfE9ISZ5J
+        5T6Q0vJYcR8WKN39v8IOW24GFpHCTkvKWVNIN6GowNq0L1XEx8hU5YW2JQUfdPtcC5/LTTFbLM/O
+        zhditB+9AAAA//8DAB7xWDm3BAAA
     headers:
       CF-RAY:
-      - 996f474029020e5d-MXP
+      - 99766103c9f57d16-EWR
       Connection:
       - keep-alive
       Content-Encoding:
@@ -646,14 +176,14 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Fri, 31 Oct 2025 01:11:26 GMT
+      - Fri, 31 Oct 2025 21:52:23 GMT
       Server:
       - cloudflare
       Set-Cookie:
-      - __cf_bm=ons_Dz7HrJ5vJxBwqk.edj.n8aefvr4xEcxEoOitpx0-1761873086-1.0.1.1-zcN_8N3tPP1okBWZLwdGm71BA2i7IiLTvy81Fu_SV792nJdkoa0ycI4FsR4GyWvgzV9oQPodVdFMYsTeYuvj.PvDO.qkfO77WdOdgPaNe80;
-        path=/; expires=Fri, 31-Oct-25 01:41:26 GMT; domain=.api.openai.com; HttpOnly;
+      - __cf_bm=M0OyXPOd4vZCE92p.8e.is2jhrt7g6vYTBI3Y2Pg7PE-1761947543-1.0.1.1-orJHNWV50gzMMUsFex2S_O1ofp7KQ_r.9iAzzWwYGyBW1puzUvacw0OkY2KXSZf2mcUI_Rwg6lzRuwAT6WkysTCS52D.rp3oNdgPcSk3JSk;
+        path=/; expires=Fri, 31-Oct-25 22:22:23 GMT; domain=.api.openai.com; HttpOnly;
         Secure; SameSite=None
-      - _cfuvid=bCfrHh5CVK9Du5KBjuFdHfwsatqjj.2WWknB._bkKjc-1761873086101-0.0.1.1-604800000;
+      - _cfuvid=LmEPJTcrhfn7YibgpOHVOK1U30pNnM9.PFftLZG98qs-1761947543691-0.0.1.1-604800000;
         path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
       Strict-Transport-Security:
       - max-age=31536000; includeSubDomains; preload
@@ -670,200 +200,45 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '450'
+      - '1824'
       openai-project:
       - proj_xitITlrFeen7zjNSzML82h9x
       openai-version:
       - '2020-10-01'
       x-envoy-upstream-service-time:
-      - '468'
+      - '1855'
       x-openai-proxy-wasm:
       - v0.1
+      x-ratelimit-limit-project-requests:
+      - '10000'
       x-ratelimit-limit-requests:
       - '10000'
       x-ratelimit-limit-tokens:
-      - '50000000'
+      - '30000000'
+      x-ratelimit-remaining-project-requests:
+      - '9999'
       x-ratelimit-remaining-requests:
       - '9999'
       x-ratelimit-remaining-tokens:
-      - '49999954'
+      - '29999700'
+      x-ratelimit-reset-project-requests:
+      - 6ms
       x-ratelimit-reset-requests:
       - 6ms
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_aed0231084b94115806a2b5bb28c5668
+      - req_ef5bf5e7aa51435489f0c9d725916ff7
     status:
       code: 200
       message: OK
 - request:
-    body: '{"events": [{"event_id": "6b7ac98a-8f7d-44f7-ac49-5d74f73bc875", "timestamp":
-      "2025-10-31T01:11:25.179643+00:00", "type": "crew_kickoff_started", "event_data":
-      {"timestamp": "2025-10-31T01:11:25.179643+00:00", "type": "crew_kickoff_started",
-      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
-      "task_id": null, "task_name": null, "agent_id": null, "agent_role": null, "crew_name":
-      "crew", "crew": null, "inputs": null}}, {"event_id": "9e653740-3d27-4ac2-906f-dff66201e6a7",
-      "timestamp": "2025-10-31T01:11:25.181295+00:00", "type": "task_started", "event_data":
-      {"task_description": "Give me an integer score between 1-5 for the following
-      title: ''The impact of AI in the future of work''", "expected_output": "The
-      score of the title.", "task_name": "Give me an integer score between 1-5 for
-      the following title: ''The impact of AI in the future of work''", "context":
-      "", "agent_role": "Scorer", "task_id": "6eddb4d0-afc8-484d-9cce-e7a3e03aeeb6"}},
-      {"event_id": "70827256-f6ee-4b55-a792-ed18652df7a6", "timestamp": "2025-10-31T01:11:25.183295+00:00",
-      "type": "agent_execution_started", "event_data": {"agent_role": "Scorer", "agent_goal":
-      "Score the title", "agent_backstory": "You''re an expert scorer, specialized
-      in scoring titles."}}, {"event_id": "c26a9e1a-dc54-4782-a63a-7ded64fa9f61",
-      "timestamp": "2025-10-31T01:11:25.183502+00:00", "type": "llm_call_started",
-      "event_data": {"timestamp": "2025-10-31T01:11:25.183502+00:00", "type": "llm_call_started",
-      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
-      "task_id": "6eddb4d0-afc8-484d-9cce-e7a3e03aeeb6", "task_name": "Give me an
-      integer score between 1-5 for the following title: ''The impact of AI in the
-      future of work''", "agent_id": "b77c455e-1e3f-4012-992f-b15c919494da", "agent_role":
-      "Scorer", "from_task": null, "from_agent": null, "model": "gpt-4-0125-preview",
-      "messages": [{"role": "system", "content": "You are Scorer. You''re an expert
+    body: '{"messages":[{"role":"system","content":"You are Scorer. You''re an expert
       scorer, specialized in scoring titles.\nYour personal goal is: Score the title\nTo
       give my best complete final answer to the task respond using the exact following
       format:\n\nThought: I now can give a great answer\nFinal Answer: Your final
       answer must be the great and the most complete as possible, it must be outcome
-      described.\n\nI MUST use these formats, my job depends on it!"}, {"role": "user",
-      "content": "\nCurrent Task: Give me an integer score between 1-5 for the following
-      title: ''The impact of AI in the future of work''\n\nThis is the expected criteria
-      for your final answer: The score of the title.\nyou MUST return the actual complete
-      content as the final answer, not a summary.\nEnsure your final answer contains
-      only the content in the following format: {\n  \"properties\": {\n    \"score\":
-      {\n      \"title\": \"Score\",\n      \"type\": \"integer\"\n    }\n  },\n  \"required\":
-      [\n    \"score\"\n  ],\n  \"title\": \"ScoreOutput\",\n  \"type\": \"object\",\n  \"additionalProperties\":
-      false\n}\n\nEnsure the final output does not include any code block markers
-      like ```json or ```python.\n\nBegin! This is VERY important to you, use the
-      tools available and give your best Final Answer, your job depends on it!\n\nThought:"}],
-      "tools": null, "callbacks": ["<crewai.utilities.token_counter_callback.TokenCalcHandler
-      object at 0x11be664b0>"], "available_functions": null}}, {"event_id": "5be76a8e-e76e-401e-9231-62a3b35a4754",
-      "timestamp": "2025-10-31T01:11:25.280255+00:00", "type": "llm_call_completed",
-      "event_data": {"timestamp": "2025-10-31T01:11:25.280255+00:00", "type": "llm_call_completed",
-      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
-      "task_id": "6eddb4d0-afc8-484d-9cce-e7a3e03aeeb6", "task_name": "Give me an
-      integer score between 1-5 for the following title: ''The impact of AI in the
-      future of work''", "agent_id": "b77c455e-1e3f-4012-992f-b15c919494da", "agent_role":
-      "Scorer", "from_task": null, "from_agent": null, "messages": [{"role": "system",
-      "content": "You are Scorer. You''re an expert scorer, specialized in scoring
-      titles.\nYour personal goal is: Score the title\nTo give my best complete final
-      answer to the task respond using the exact following format:\n\nThought: I now
-      can give a great answer\nFinal Answer: Your final answer must be the great and
-      the most complete as possible, it must be outcome described.\n\nI MUST use these
-      formats, my job depends on it!"}, {"role": "user", "content": "\nCurrent Task:
-      Give me an integer score between 1-5 for the following title: ''The impact of
-      AI in the future of work''\n\nThis is the expected criteria for your final answer:
-      The score of the title.\nyou MUST return the actual complete content as the
-      final answer, not a summary.\nEnsure your final answer contains only the content
-      in the following format: {\n  \"properties\": {\n    \"score\": {\n      \"title\":
-      \"Score\",\n      \"type\": \"integer\"\n    }\n  },\n  \"required\": [\n    \"score\"\n  ],\n  \"title\":
-      \"ScoreOutput\",\n  \"type\": \"object\",\n  \"additionalProperties\": false\n}\n\nEnsure
-      the final output does not include any code block markers like ```json or ```python.\n\nBegin!
-      This is VERY important to you, use the tools available and give your best Final
-      Answer, your job depends on it!\n\nThought:"}], "response": "Thought: I now
-      can give a great answer\nFinal Answer: 4", "call_type": "<LLMCallType.LLM_CALL:
-      ''llm_call''>", "model": "gpt-4-0125-preview"}}, {"event_id": "8d8db901-0418-40ea-bea0-eb378d7da98b",
-      "timestamp": "2025-10-31T01:11:25.280409+00:00", "type": "agent_execution_completed",
-      "event_data": {"agent_role": "Scorer", "agent_goal": "Score the title", "agent_backstory":
-      "You''re an expert scorer, specialized in scoring titles."}}, {"event_id": "651e5435-0ea1-4b36-b6fb-b3104bcc0043",
-      "timestamp": "2025-10-31T01:11:25.281039+00:00", "type": "llm_call_started",
-      "event_data": {"timestamp": "2025-10-31T01:11:25.281039+00:00", "type": "llm_call_started",
-      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
-      "task_id": null, "task_name": null, "agent_id": null, "agent_role": null, "from_task":
-      null, "from_agent": null, "model": "gpt-3.5-turbo-0125", "messages": [{"role":
-      "system", "content": "Please convert the following text into valid JSON.\n\nOutput
-      ONLY the valid JSON and nothing else.\n\nThe JSON must follow this schema exactly:\n```json\n{\n    score:
-      int\n}\n```"}, {"role": "user", "content": "4"}], "tools": null, "callbacks":
-      null, "available_functions": null}}, {"event_id": "c251a8da-4d19-410c-a1c5-34241ef7625f",
-      "timestamp": "2025-10-31T01:11:25.286793+00:00", "type": "llm_call_completed",
-      "event_data": {"timestamp": "2025-10-31T01:11:25.286793+00:00", "type": "llm_call_completed",
-      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
-      "task_id": null, "task_name": null, "agent_id": null, "agent_role": null, "from_task":
-      null, "from_agent": null, "messages": [{"role": "system", "content": "Please
-      convert the following text into valid JSON.\n\nOutput ONLY the valid JSON and
-      nothing else.\n\nThe JSON must follow this schema exactly:\n```json\n{\n    score:
-      int\n}\n```"}, {"role": "user", "content": "4"}], "response": "Thought: I now
-      can give a great answer\n\nFinal Answer: 5", "call_type": "<LLMCallType.LLM_CALL:
-      ''llm_call''>", "model": "gpt-3.5-turbo-0125"}}, {"event_id": "f03988d8-9890-40b6-aa8b-8e28b3269c05",
-      "timestamp": "2025-10-31T01:11:25.286822+00:00", "type": "llm_call_started",
-      "event_data": {"timestamp": "2025-10-31T01:11:25.286822+00:00", "type": "llm_call_started",
-      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
-      "task_id": null, "task_name": null, "agent_id": null, "agent_role": null, "from_task":
-      null, "from_agent": null, "model": "gpt-3.5-turbo-0125", "messages": [{"role":
-      "system", "content": "Please convert the following text into valid JSON.\n\nOutput
-      ONLY the valid JSON and nothing else.\n\nThe JSON must follow this schema exactly:\n```json\n{\n    score:
-      int\n}\n```"}, {"role": "user", "content": "4"}], "tools": null, "callbacks":
-      null, "available_functions": null}}, {"event_id": "ad70c7bf-fe76-422f-bacf-14279c2a746e",
-      "timestamp": "2025-10-31T01:11:26.012956+00:00", "type": "llm_call_completed",
-      "event_data": {"timestamp": "2025-10-31T01:11:26.012956+00:00", "type": "llm_call_completed",
-      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
-      "task_id": null, "task_name": null, "agent_id": null, "agent_role": null, "from_task":
-      null, "from_agent": null, "messages": [{"role": "system", "content": "Please
-      convert the following text into valid JSON.\n\nOutput ONLY the valid JSON and
-      nothing else.\n\nThe JSON must follow this schema exactly:\n```json\n{\n    score:
-      int\n}\n```"}, {"role": "user", "content": "4"}], "response": "{\n    \"score\":
-      4\n}", "call_type": "<LLMCallType.LLM_CALL: ''llm_call''>", "model": "gpt-3.5-turbo-0125"}},
-      {"event_id": "acb07f4f-801c-4748-82d4-db5dfd2505c5", "timestamp": "2025-10-31T01:11:26.013119+00:00",
-      "type": "task_completed", "event_data": {"task_description": "Give me an integer
-      score between 1-5 for the following title: ''The impact of AI in the future
-      of work''", "task_name": "Give me an integer score between 1-5 for the following
-      title: ''The impact of AI in the future of work''", "task_id": "6eddb4d0-afc8-484d-9cce-e7a3e03aeeb6",
-      "output_raw": "4", "output_format": "OutputFormat.PYDANTIC", "agent_role": "Scorer"}},
-      {"event_id": "e6b07e81-1c83-4a96-9c02-d3311b2efe14", "timestamp": "2025-10-31T01:11:26.014988+00:00",
-      "type": "task_started", "event_data": {"task_description": "Given the score
-      the title ''The impact of AI in the future of work'' got, give me an integer
-      score between 1-5 for the following title: ''Return of the Jedi'', you MUST
-      give it a score, use your best judgment", "expected_output": "The score of the
-      title.", "task_name": "Given the score the title ''The impact of AI in the future
-      of work'' got, give me an integer score between 1-5 for the following title:
-      ''Return of the Jedi'', you MUST give it a score, use your best judgment", "context":
-      "4", "agent_role": "Scorer", "task_id": "b2c893bd-21e0-4c09-9bbb-41ed02aaad46"}},
-      {"event_id": "6a68625d-4b11-4fdf-911d-5129779b8cd6", "timestamp": "2025-10-31T01:11:26.015932+00:00",
-      "type": "agent_execution_started", "event_data": {"agent_role": "Scorer", "agent_goal":
-      "Score the title", "agent_backstory": "You''re an expert scorer, specialized
-      in scoring titles."}}, {"event_id": "974a8190-cbf2-4ecf-bbe2-1023469a1e8b",
-      "timestamp": "2025-10-31T01:11:26.016027+00:00", "type": "llm_call_started",
-      "event_data": {"timestamp": "2025-10-31T01:11:26.016027+00:00", "type": "llm_call_started",
-      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
-      "task_id": "b2c893bd-21e0-4c09-9bbb-41ed02aaad46", "task_name": "Given the score
-      the title ''The impact of AI in the future of work'' got, give me an integer
-      score between 1-5 for the following title: ''Return of the Jedi'', you MUST
-      give it a score, use your best judgment", "agent_id": "b77c455e-1e3f-4012-992f-b15c919494da",
-      "agent_role": "Scorer", "from_task": null, "from_agent": null, "model": "gpt-4-0125-preview",
-      "messages": [{"role": "system", "content": "You are Scorer. You''re an expert
-      scorer, specialized in scoring titles.\nYour personal goal is: Score the title\nTo
-      give my best complete final answer to the task respond using the exact following
-      format:\n\nThought: I now can give a great answer\nFinal Answer: Your final
-      answer must be the great and the most complete as possible, it must be outcome
-      described.\n\nI MUST use these formats, my job depends on it!"}, {"role": "user",
-      "content": "\nCurrent Task: Given the score the title ''The impact of AI in
-      the future of work'' got, give me an integer score between 1-5 for the following
-      title: ''Return of the Jedi'', you MUST give it a score, use your best judgment\n\nThis
-      is the expected criteria for your final answer: The score of the title.\nyou
-      MUST return the actual complete content as the final answer, not a summary.\nEnsure
-      your final answer contains only the content in the following format: {\n  \"properties\":
-      {\n    \"score\": {\n      \"title\": \"Score\",\n      \"type\": \"integer\"\n    }\n  },\n  \"required\":
-      [\n    \"score\"\n  ],\n  \"title\": \"ScoreOutput\",\n  \"type\": \"object\",\n  \"additionalProperties\":
-      false\n}\n\nEnsure the final output does not include any code block markers
-      like ```json or ```python.\n\nThis is the context you''re working with:\n4\n\nBegin!
-      This is VERY important to you, use the tools available and give your best Final
-      Answer, your job depends on it!\n\nThought:"}], "tools": null, "callbacks":
-      ["<crewai.utilities.token_counter_callback.TokenCalcHandler object at 0x11c33e390>"],
-      "available_functions": null}}, {"event_id": "9c4f906d-c3fb-48c2-beb8-65668430829c",
-      "timestamp": "2025-10-31T01:11:26.018104+00:00", "type": "llm_call_completed",
-      "event_data": {"timestamp": "2025-10-31T01:11:26.018104+00:00", "type": "llm_call_completed",
-      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
-      "task_id": "b2c893bd-21e0-4c09-9bbb-41ed02aaad46", "task_name": "Given the score
-      the title ''The impact of AI in the future of work'' got, give me an integer
-      score between 1-5 for the following title: ''Return of the Jedi'', you MUST
-      give it a score, use your best judgment", "agent_id": "b77c455e-1e3f-4012-992f-b15c919494da",
-      "agent_role": "Scorer", "from_task": null, "from_agent": null, "messages": [{"role":
-      "system", "content": "You are Scorer. You''re an expert scorer, specialized
-      in scoring titles.\nYour personal goal is: Score the title\nTo give my best
-      complete final answer to the task respond using the exact following format:\n\nThought:
-      I now can give a great answer\nFinal Answer: Your final answer must be the great
-      and the most complete as possible, it must be outcome described.\n\nI MUST use
-      these formats, my job depends on it!"}, {"role": "user", "content": "\nCurrent
+      described.\n\nI MUST use these formats, my job depends on it!"},{"role":"user","content":"\nCurrent
       Task: Given the score the title ''The impact of AI in the future of work'' got,
       give me an integer score between 1-5 for the following title: ''Return of the
       Jedi'', you MUST give it a score, use your best judgment\n\nThis is the expected
@@ -873,225 +248,120 @@ interactions:
       {\n    \"score\": {\n      \"title\": \"Score\",\n      \"type\": \"integer\"\n    }\n  },\n  \"required\":
       [\n    \"score\"\n  ],\n  \"title\": \"ScoreOutput\",\n  \"type\": \"object\",\n  \"additionalProperties\":
       false\n}\n\nEnsure the final output does not include any code block markers
-      like ```json or ```python.\n\nThis is the context you''re working with:\n4\n\nBegin!
-      This is VERY important to you, use the tools available and give your best Final
-      Answer, your job depends on it!\n\nThought:"}], "response": "{\n    \"score\":
-      4\n}", "call_type": "<LLMCallType.LLM_CALL: ''llm_call''>", "model": "gpt-4-0125-preview"}},
-      {"event_id": "72d0a041-bed3-46d2-9718-ac259e9210e2", "timestamp": "2025-10-31T01:11:26.018190+00:00",
-      "type": "agent_execution_completed", "event_data": {"agent_role": "Scorer",
-      "agent_goal": "Score the title", "agent_backstory": "You''re an expert scorer,
-      specialized in scoring titles."}}, {"event_id": "5aeba208-589a-4f27-9cb2-4bdbbde31fb2",
-      "timestamp": "2025-10-31T01:11:26.018482+00:00", "type": "task_completed", "event_data":
-      {"task_description": "Given the score the title ''The impact of AI in the future
-      of work'' got, give me an integer score between 1-5 for the following title:
-      ''Return of the Jedi'', you MUST give it a score, use your best judgment", "task_name":
-      "Given the score the title ''The impact of AI in the future of work'' got, give
-      me an integer score between 1-5 for the following title: ''Return of the Jedi'',
-      you MUST give it a score, use your best judgment", "task_id": "b2c893bd-21e0-4c09-9bbb-41ed02aaad46",
-      "output_raw": "{\n    \"score\": 4\n}", "output_format": "OutputFormat.PYDANTIC",
-      "agent_role": "Scorer"}}, {"event_id": "76232f14-4021-4daf-810c-88afa191f895",
-      "timestamp": "2025-10-31T01:11:26.020491+00:00", "type": "crew_kickoff_completed",
-      "event_data": {"timestamp": "2025-10-31T01:11:26.020491+00:00", "type": "crew_kickoff_completed",
-      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
-      "task_id": null, "task_name": null, "agent_id": null, "agent_role": null, "crew_name":
-      "crew", "crew": null, "output": {"description": "Given the score the title ''The
-      impact of AI in the future of work'' got, give me an integer score between 1-5
-      for the following title: ''Return of the Jedi'', you MUST give it a score, use
-      your best judgment", "name": "Given the score the title ''The impact of AI in
-      the future of work'' got, give me an integer score between 1-5 for the following
-      title: ''Return of the Jedi'', you MUST give it a score, use your best judgment",
-      "expected_output": "The score of the title.", "summary": "Given the score the
-      title ''The impact of AI in...", "raw": "{\n    \"score\": 4\n}", "pydantic":
-      {}, "json_dict": null, "agent": "Scorer", "output_format": "pydantic"}, "total_tokens":
-      260}}], "batch_metadata": {"events_count": 18, "batch_sequence": 1, "is_final_batch":
-      false}}'
+      like ```json or ```python.\n\nThis is the context you''re working with:\n{\n  \"properties\":
+      {\n    \"score\": {\n      \"title\": \"Score\",\n      \"type\": \"integer\",\n      \"description\":
+      \"The assigned score for the title based on its relevance and impact\"\n    }\n  },\n  \"required\":
+      [\n    \"score\"\n  ],\n  \"title\": \"ScoreOutput\",\n  \"type\": \"object\",\n  \"additionalProperties\":
+      false,\n  \"score\": 4\n}\n\nBegin! This is VERY important to you, use the tools
+      available and give your best Final Answer, your job depends on it!\n\nThought:"}],"model":"gpt-4o"}'
     headers:
-      Accept:
-      - '*/*'
-      Accept-Encoding:
-      - gzip, deflate, zstd
-      Connection:
-      - keep-alive
-      Content-Length:
-      - '17312'
-      Content-Type:
+      accept:
       - application/json
-      User-Agent:
-      - CrewAI-CLI/1.2.1
-      X-Crewai-Organization-Id:
-      - 73c2b193-f579-422c-84c7-76a39a1da77f
-      X-Crewai-Version:
-      - 1.2.1
+      accept-encoding:
+      - gzip, deflate, zstd
+      connection:
+      - keep-alive
+      content-length:
+      - '1840'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=M0OyXPOd4vZCE92p.8e.is2jhrt7g6vYTBI3Y2Pg7PE-1761947543-1.0.1.1-orJHNWV50gzMMUsFex2S_O1ofp7KQ_r.9iAzzWwYGyBW1puzUvacw0OkY2KXSZf2mcUI_Rwg6lzRuwAT6WkysTCS52D.rp3oNdgPcSk3JSk;
+        _cfuvid=LmEPJTcrhfn7YibgpOHVOK1U30pNnM9.PFftLZG98qs-1761947543691-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.109.1
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.109.1
+      x-stainless-read-timeout:
+      - '600'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.10
     method: POST
-    uri: https://app.crewai.com/crewai_plus/api/v1/tracing/ephemeral/batches/fd0bd8ef-d24a-49b9-b742-5025616d6299/events
+    uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: '{"events_created":18,"ephemeral_trace_batch_id":"c0e11281-f193-4132-98e0-f2ab13919152"}'
+      string: !!binary |
+        H4sIAAAAAAAAAwAAAP//jJNdb5swFIbv8yssX5OJpCRpuJumrZoqtdO6rRelQo59AG/G9uxDuyji
+        v1cGGkjWSbsB+Tzn0+/xYUYIlYKmhPKKIa+tmn+4d9fyvr76Wl5cXcer2215s5R3H3c/xPf9DY1C
+        hNn9BI6vUe+4qa0ClEb3mDtgCCHrYrNebJPNKkk6UBsBKoSVFueJmS/jZTKPL+fxegisjOTgaUoe
+        ZoQQcui+oUUt4A9NSRy9WmrwnpVA06MTIdQZFSyUeS89Mo00GiE3GkF3XX+rTFNWmJLPRJtnwpkm
+        pXwCwkgZWidM+2dwmf4kNVPkfXdKySHThGTUOmPBoQSf0cEYzJ4bBxNLsKFE1dkyetfjaAL3dmBS
+        I5TgMtrDNvzaqK/m4HcjHYjg+XBWKxwfB7/zUrcN2gaHgtNivXZHwISQQTmmvpzMVTDlYfA5jpZk
+        up1eqYOi8SwoqhulJoBpbZCFvJ2YjwNpj/IpU1pndv4slBZSS1/lDpg3Okjl0Vja0XYWpg1r0pwo
+        HwSpLeZofkFXLomXfT46LuZILy8GiAaZmkRdrqI38uUCkEnlJ4tGOeMViDF03ErWCGkmYDaZ+u9u
+        3srdTy51+T/pR8A5WASRWwdC8tOJRzcHQft/uR1vuWuYenBPkkOOElxQQkDBGtU/Ker3HqHOC6lL
+        cNbJ/l0VNl+stut1wra7DZ21sxcAAAD//wMAwih5UmAEAAA=
     headers:
+      CF-RAY:
+      - 99766114cf7c7d16-EWR
       Connection:
       - keep-alive
-      Content-Length:
-      - '87'
-      Content-Type:
-      - application/json; charset=utf-8
-      Date:
-      - Fri, 31 Oct 2025 01:11:27 GMT
-      cache-control:
-      - no-store
-      content-security-policy:
-      - 'default-src ''self'' *.app.crewai.com app.crewai.com; script-src ''self''
-        ''unsafe-inline'' *.app.crewai.com app.crewai.com https://cdn.jsdelivr.net/npm/apexcharts
-        https://www.gstatic.com https://run.pstmn.io https://apis.google.com https://apis.google.com/js/api.js
-        https://accounts.google.com https://accounts.google.com/gsi/client https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css.map
-        https://*.google.com https://docs.google.com https://slides.google.com https://js.hs-scripts.com
-        https://js.sentry-cdn.com https://browser.sentry-cdn.com https://www.googletagmanager.com
-        https://js-na1.hs-scripts.com https://js.hubspot.com http://js-na1.hs-scripts.com
-        https://bat.bing.com https://cdn.amplitude.com https://cdn.segment.com https://d1d3n03t5zntha.cloudfront.net/
-        https://descriptusercontent.com https://edge.fullstory.com https://googleads.g.doubleclick.net
-        https://js.hs-analytics.net https://js.hs-banner.com https://js.hsadspixel.net
-        https://js.hscollectedforms.net https://js.usemessages.com https://snap.licdn.com
-        https://static.cloudflareinsights.com https://static.reo.dev https://www.google-analytics.com
-        https://share.descript.com/; style-src ''self'' ''unsafe-inline'' *.app.crewai.com
-        app.crewai.com https://cdn.jsdelivr.net/npm/apexcharts; img-src ''self'' data:
-        *.app.crewai.com app.crewai.com https://zeus.tools.crewai.com https://dashboard.tools.crewai.com
-        https://cdn.jsdelivr.net https://forms.hsforms.com https://track.hubspot.com
-        https://px.ads.linkedin.com https://px4.ads.linkedin.com https://www.google.com
-        https://www.google.com.br; font-src ''self'' data: *.app.crewai.com app.crewai.com;
-        connect-src ''self'' *.app.crewai.com app.crewai.com https://zeus.tools.crewai.com
-        https://connect.useparagon.com/ https://zeus.useparagon.com/* https://*.useparagon.com/*
-        https://run.pstmn.io https://connect.tools.crewai.com/ https://*.sentry.io
-        https://www.google-analytics.com https://edge.fullstory.com https://rs.fullstory.com
-        https://api.hubspot.com https://forms.hscollectedforms.net https://api.hubapi.com
-        https://px.ads.linkedin.com https://px4.ads.linkedin.com https://google.com/pagead/form-data/16713662509
-        https://google.com/ccm/form-data/16713662509 https://www.google.com/ccm/collect
-        https://worker-actionkit.tools.crewai.com https://api.reo.dev; frame-src ''self''
-        *.app.crewai.com app.crewai.com https://connect.useparagon.com/ https://zeus.tools.crewai.com
-        https://zeus.useparagon.com/* https://connect.tools.crewai.com/ https://docs.google.com
-        https://drive.google.com https://slides.google.com https://accounts.google.com
-        https://*.google.com https://app.hubspot.com/ https://td.doubleclick.net https://www.googletagmanager.com/
-        https://www.youtube.com https://share.descript.com'
-      etag:
-      - W/"cf8bf6e03481e1a28f728f5a7987d204"
-      expires:
-      - '0'
-      permissions-policy:
-      - camera=(), microphone=(self), geolocation=()
-      pragma:
-      - no-cache
-      referrer-policy:
-      - strict-origin-when-cross-origin
-      strict-transport-security:
-      - max-age=63072000; includeSubDomains
-      vary:
-      - Accept
-      x-content-type-options:
-      - nosniff
-      x-frame-options:
-      - SAMEORIGIN
-      x-permitted-cross-domain-policies:
-      - none
-      x-request-id:
-      - 37b85fc5-bd81-4e2d-8133-1256c961294f
-      x-runtime:
-      - '0.189259'
-      x-xss-protection:
-      - 1; mode=block
-    status:
-      code: 200
-      message: OK
-- request:
-    body: '{"status": "completed", "duration_ms": 1946, "final_event_count": 18}'
-    headers:
-      Accept:
-      - '*/*'
-      Accept-Encoding:
-      - gzip, deflate, zstd
-      Connection:
-      - keep-alive
-      Content-Length:
-      - '69'
+      Content-Encoding:
+      - gzip
       Content-Type:
       - application/json
-      User-Agent:
-      - CrewAI-CLI/1.2.1
-      X-Crewai-Organization-Id:
-      - 73c2b193-f579-422c-84c7-76a39a1da77f
-      X-Crewai-Version:
-      - 1.2.1
-    method: PATCH
-    uri: https://app.crewai.com/crewai_plus/api/v1/tracing/ephemeral/batches/fd0bd8ef-d24a-49b9-b742-5025616d6299/finalize
-  response:
-    body:
-      string: '{"id":"c0e11281-f193-4132-98e0-f2ab13919152","ephemeral_trace_id":"fd0bd8ef-d24a-49b9-b742-5025616d6299","execution_type":"crew","crew_name":"crew","flow_name":null,"status":"completed","duration_ms":1946,"crewai_version":"1.2.1","total_events":18,"execution_context":{"crew_name":"crew","flow_name":null,"privacy_level":"standard","crewai_version":"1.2.1","crew_fingerprint":null},"created_at":"2025-10-31T01:11:25.961Z","updated_at":"2025-10-31T01:11:27.811Z","access_code":"TRACE-496f080ffe","user_identifier":null}'
-    headers:
-      Connection:
-      - keep-alive
-      Content-Length:
-      - '518'
-      Content-Type:
-      - application/json; charset=utf-8
       Date:
-      - Fri, 31 Oct 2025 01:11:27 GMT
-      cache-control:
-      - no-store
-      content-security-policy:
-      - 'default-src ''self'' *.app.crewai.com app.crewai.com; script-src ''self''
-        ''unsafe-inline'' *.app.crewai.com app.crewai.com https://cdn.jsdelivr.net/npm/apexcharts
-        https://www.gstatic.com https://run.pstmn.io https://apis.google.com https://apis.google.com/js/api.js
-        https://accounts.google.com https://accounts.google.com/gsi/client https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css.map
-        https://*.google.com https://docs.google.com https://slides.google.com https://js.hs-scripts.com
-        https://js.sentry-cdn.com https://browser.sentry-cdn.com https://www.googletagmanager.com
-        https://js-na1.hs-scripts.com https://js.hubspot.com http://js-na1.hs-scripts.com
-        https://bat.bing.com https://cdn.amplitude.com https://cdn.segment.com https://d1d3n03t5zntha.cloudfront.net/
-        https://descriptusercontent.com https://edge.fullstory.com https://googleads.g.doubleclick.net
-        https://js.hs-analytics.net https://js.hs-banner.com https://js.hsadspixel.net
-        https://js.hscollectedforms.net https://js.usemessages.com https://snap.licdn.com
-        https://static.cloudflareinsights.com https://static.reo.dev https://www.google-analytics.com
-        https://share.descript.com/; style-src ''self'' ''unsafe-inline'' *.app.crewai.com
-        app.crewai.com https://cdn.jsdelivr.net/npm/apexcharts; img-src ''self'' data:
-        *.app.crewai.com app.crewai.com https://zeus.tools.crewai.com https://dashboard.tools.crewai.com
-        https://cdn.jsdelivr.net https://forms.hsforms.com https://track.hubspot.com
-        https://px.ads.linkedin.com https://px4.ads.linkedin.com https://www.google.com
-        https://www.google.com.br; font-src ''self'' data: *.app.crewai.com app.crewai.com;
-        connect-src ''self'' *.app.crewai.com app.crewai.com https://zeus.tools.crewai.com
-        https://connect.useparagon.com/ https://zeus.useparagon.com/* https://*.useparagon.com/*
-        https://run.pstmn.io https://connect.tools.crewai.com/ https://*.sentry.io
-        https://www.google-analytics.com https://edge.fullstory.com https://rs.fullstory.com
-        https://api.hubspot.com https://forms.hscollectedforms.net https://api.hubapi.com
-        https://px.ads.linkedin.com https://px4.ads.linkedin.com https://google.com/pagead/form-data/16713662509
-        https://google.com/ccm/form-data/16713662509 https://www.google.com/ccm/collect
-        https://worker-actionkit.tools.crewai.com https://api.reo.dev; frame-src ''self''
-        *.app.crewai.com app.crewai.com https://connect.useparagon.com/ https://zeus.tools.crewai.com
-        https://zeus.useparagon.com/* https://connect.tools.crewai.com/ https://docs.google.com
-        https://drive.google.com https://slides.google.com https://accounts.google.com
-        https://*.google.com https://app.hubspot.com/ https://td.doubleclick.net https://www.googletagmanager.com/
-        https://www.youtube.com https://share.descript.com'
-      etag:
-      - W/"280274d788e854ef8c2f6144e0b7e1e2"
-      expires:
-      - '0'
-      permissions-policy:
-      - camera=(), microphone=(self), geolocation=()
-      pragma:
-      - no-cache
-      referrer-policy:
-      - strict-origin-when-cross-origin
-      strict-transport-security:
-      - max-age=63072000; includeSubDomains
-      vary:
-      - Accept
-      x-content-type-options:
+      - Fri, 31 Oct 2025 21:52:25 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
       - nosniff
-      x-frame-options:
-      - SAMEORIGIN
-      x-permitted-cross-domain-policies:
-      - none
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '1188'
+      openai-project:
+      - proj_xitITlrFeen7zjNSzML82h9x
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '1206'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-project-requests:
+      - '10000'
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '30000000'
+      x-ratelimit-remaining-project-requests:
+      - '9999'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '29999586'
+      x-ratelimit-reset-project-requests:
+      - 6ms
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 0s
       x-request-id:
-      - b05feaf9-5391-445d-a6d8-8be4b2eb26d7
-      x-runtime:
-      - '0.097872'
-      x-xss-protection:
-      - 1; mode=block
+      - req_030ffb3d92bb47589d61d50b48f068d4
     status:
       code: 200
       message: OK
