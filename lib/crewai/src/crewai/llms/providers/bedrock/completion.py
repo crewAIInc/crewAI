@@ -175,8 +175,11 @@ class BedrockCompletion(BaseLLM):
             guardrail_config: Guardrail configuration for content filtering
             additional_model_request_fields: Model-specific request parameters
             additional_model_response_field_paths: Custom response field paths
-            **kwargs: Additional parameters
+            **kwargs: Additional parameters (including model_id for cross-region inference)
         """
+        # Extract model_id from kwargs if provided (for cross-region inference profiles)
+        custom_model_id = kwargs.pop("model_id", None)
+        
         # Extract provider from kwargs to avoid duplicate argument
         kwargs.pop("provider", None)
 
@@ -230,7 +233,7 @@ class BedrockCompletion(BaseLLM):
         self.supports_streaming = True
 
         # Handle inference profiles for newer models
-        self.model_id = model
+        self.model_id = custom_model_id if custom_model_id else model
 
     def call(
         self,
