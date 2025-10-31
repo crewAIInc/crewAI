@@ -68,20 +68,32 @@ class TokenManager:
 
         lock_file_path = storage_path / f"{key_filename}.lock"
 
-        lock_file_path.touch()
+        try:
+            lock_file_path.touch()
 
-        with open(lock_file_path, "r+b") as lock_file:
-            self._acquire_lock(lock_file)
-            try:
-                key = self.read_secure_file(key_filename)
-                if key is not None and len(key) == 44:
-                    return key
+            with open(lock_file_path, "r+b") as lock_file:
+                self._acquire_lock(lock_file)
+                try:
+                    key = self.read_secure_file(key_filename)
+                    if key is not None and len(key) == 44:
+                        return key
 
-                new_key = Fernet.generate_key()
-                self.save_secure_file(key_filename, new_key)
-                return new_key
-            finally:
-                self._release_lock(lock_file)
+                    new_key = Fernet.generate_key()
+                    self.save_secure_file(key_filename, new_key)
+                    return new_key
+                finally:
+                    try:
+                        self._release_lock(lock_file)
+                    except OSError:
+                        pass
+        except OSError:
+            key = self.read_secure_file(key_filename)
+            if key is not None and len(key) == 44:
+                return key
+
+            new_key = Fernet.generate_key()
+            self.save_secure_file(key_filename, new_key)
+            return new_key
 
     def save_tokens(self, access_token: str, expires_at: int) -> None:
         """

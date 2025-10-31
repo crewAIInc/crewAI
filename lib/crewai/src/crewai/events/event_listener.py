@@ -188,8 +188,10 @@ class EventListener(BaseEventListener):
             self.execution_spans[source] = span
 
             with self._crew_tree_lock:
+                timeout = 5.0
                 while self.formatter.current_crew_tree is None:
-                    self._crew_tree_lock.wait()
+                    if not self._crew_tree_lock.wait(timeout=timeout):
+                        return
 
             # Pass both task ID and task name (if set)
             task_name = source.name if hasattr(source, "name") and source.name else None

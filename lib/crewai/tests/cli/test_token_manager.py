@@ -146,3 +146,21 @@ class TestTokenManager(unittest.TestCase):
         mock_path.__truediv__.return_value.unlink.assert_called_once_with(
             missing_ok=True
         )
+
+    @patch("crewai.cli.shared.token_manager.Fernet.generate_key")
+    @patch("crewai.cli.shared.token_manager.TokenManager.read_secure_file")
+    @patch("crewai.cli.shared.token_manager.TokenManager.save_secure_file")
+    @patch("builtins.open", side_effect=OSError(9, "Bad file descriptor"))
+    def test_get_or_create_key_oserror_fallback(
+        self, mock_open, mock_save, mock_read, mock_generate
+    ):
+        """Test that OSError during file locking falls back to lock-free creation."""
+        mock_key = Fernet.generate_key()
+        mock_read.return_value = None
+        mock_generate.return_value = mock_key
+
+        result = self.token_manager._get_or_create_key()
+
+        self.assertEqual(result, mock_key)
+        self.assertGreaterEqual(mock_generate.call_count, 1)
+        self.assertGreaterEqual(mock_save.call_count, 1)

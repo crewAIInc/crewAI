@@ -120,29 +120,19 @@ class TestTraceListenerSetup:
         """Test that trace listener properly collects events from crew execution"""
 
         with patch.dict(os.environ, {"CREWAI_TRACING_ENABLED": "true"}):
-            agent = Agent(
-                role="Test Agent",
-                goal="Test goal",
-                backstory="Test backstory",
-                llm="gpt-4o-mini",
-            )
-            task = Task(
-                description="Say hello to the world",
-                expected_output="hello world",
-                agent=agent,
-            )
-            crew = Crew(agents=[agent], tasks=[task], verbose=True)
-
-            trace_listener = TraceCollectionListener()
-            from crewai.events.event_bus import crewai_event_bus
-
-            trace_listener.setup_listeners(crewai_event_bus)
-
-            with patch.object(
-                trace_listener.batch_manager,
-                "initialize_batch",
-                return_value=None,
-            ) as initialize_mock:
+            with patch.object(TraceBatchManager, "initialize_batch", return_value=None) as initialize_mock:
+                agent = Agent(
+                    role="Test Agent",
+                    goal="Test goal",
+                    backstory="Test backstory",
+                    llm="gpt-4o-mini",
+                )
+                task = Task(
+                    description="Say hello to the world",
+                    expected_output="hello world",
+                    agent=agent,
+                )
+                crew = Crew(agents=[agent], tasks=[task], verbose=True)
                 crew.kickoff()
 
                 assert initialize_mock.call_count >= 1
@@ -376,15 +366,7 @@ class TestTraceListenerSetup:
     @pytest.mark.vcr(filter_headers=["authorization"])
     def test_trace_listener_with_authenticated_user(self):
         """Test that trace listener properly handles authenticated batches"""
-        with (
-            patch.dict(os.environ, {"CREWAI_TRACING_ENABLED": "true"}),
-            patch(
-                "crewai.events.listeners.tracing.trace_batch_manager.PlusAPI"
-            ) as mock_plus_api_class,
-        ):
-            mock_plus_api_instance = MagicMock()
-            mock_plus_api_class.return_value = mock_plus_api_instance
-
+        with patch.dict(os.environ, {"CREWAI_TRACING_ENABLED": "true"}):
             agent = Agent(
                 role="Test Agent",
                 goal="Test goal",
@@ -407,9 +389,8 @@ class TestTraceListenerSetup:
                 crew.kickoff()
                 wait_for_event_handlers()
 
-                mock_plus_api_class.assert_called_with(api_key="mock_token_12345")
-
                 assert mock_initialize.call_count >= 1
+                assert mock_initialize.call_args_list[0][1]["use_ephemeral"] is False
                 mock_finalize_backend_batch.assert_called_with()
                 assert mock_finalize_backend_batch.call_count >= 1
 
