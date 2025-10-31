@@ -120,28 +120,29 @@ class TestTraceListenerSetup:
         """Test that trace listener properly collects events from crew execution"""
 
         with patch.dict(os.environ, {"CREWAI_TRACING_ENABLED": "true"}):
-            with patch.object(TraceBatchManager, "initialize_batch", return_value=None) as initialize_mock:
-                agent = Agent(
-                    role="Test Agent",
-                    goal="Test goal",
-                    backstory="Test backstory",
-                    llm="gpt-4o-mini",
-                )
-                task = Task(
-                    description="Say hello to the world",
-                    expected_output="hello world",
-                    agent=agent,
-                )
-                crew = Crew(agents=[agent], tasks=[task], verbose=True)
-                crew.kickoff()
+            agent = Agent(
+                role="Test Agent",
+                goal="Test goal",
+                backstory="Test backstory",
+                llm="gpt-4o-mini",
+            )
+            task = Task(
+                description="Say hello to the world",
+                expected_output="hello world",
+                agent=agent,
+            )
+            crew = Crew(agents=[agent], tasks=[task], verbose=True)
 
-                assert initialize_mock.call_count >= 1
+            from crewai.events.listeners.tracing.trace_listener import TraceCollectionListener
+            trace_listener = TraceCollectionListener()
 
-                call_args = initialize_mock.call_args_list[0]
-                assert len(call_args[0]) == 2  # user_context, execution_metadata
-                _, execution_metadata = call_args[0]
-                assert isinstance(execution_metadata, dict)
-                assert "crew_name" in execution_metadata
+            crew.kickoff()
+
+            initialized = trace_listener.batch_manager.wait_for_batch_initialization(timeout=5.0)
+
+            assert initialized, "Batch should have been initialized"
+            assert trace_listener.batch_manager.is_batch_initialized()
+            assert trace_listener.batch_manager.current_batch is not None
 
     @pytest.mark.vcr(filter_headers=["authorization"])
     def test_batch_manager_finalizes_batch_clears_buffer(self):
