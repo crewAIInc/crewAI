@@ -395,9 +395,11 @@ def test_converter_with_llama3_2_model() -> None:
     assert output.age == 30
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
 def test_converter_with_llama3_1_model() -> None:
-    llm = LLM(model="ollama/llama3.1", base_url="http://localhost:11434")
+    llm = Mock(spec=LLM)
+    llm.supports_function_calling.return_value = True
+    llm.call.return_value = '{"name": "Alice Llama", "age": 30}'
+
     sample_text = "Name: Alice Llama, Age: 30"
     instructions = get_conversion_instructions(SimpleModel, llm)
     converter = Converter(
@@ -591,9 +593,8 @@ def test_converter_with_ambiguous_input() -> None:
 def test_converter_with_function_calling() -> None:
     llm = Mock(spec=LLM)
     llm.supports_function_calling.return_value = True
-
-    instructor = Mock()
-    instructor.to_pydantic.return_value = SimpleModel(name="Eve", age=35)
+    # Mock the llm.call to return a valid JSON string
+    llm.call.return_value = '{"name": "Eve", "age": 35}'
 
     converter = Converter(
         llm=llm,
@@ -601,14 +602,17 @@ def test_converter_with_function_calling() -> None:
         model=SimpleModel,
         instructions="Convert this text.",
     )
-    
-    with patch.object(converter, '_create_instructor', return_value=instructor):
-        output = converter.to_pydantic()
 
-        assert isinstance(output, SimpleModel)
-        assert output.name == "Eve"
-        assert output.age == 35
-    instructor.to_pydantic.assert_called_once()
+    output = converter.to_pydantic()
+
+    assert isinstance(output, SimpleModel)
+    assert output.name == "Eve"
+    assert output.age == 35
+
+    # Verify llm.call was called with correct parameters
+    llm.call.assert_called_once()
+    call_args = llm.call.call_args
+    assert call_args[1]["response_model"] == SimpleModel
 
 
 def test_generate_model_description_union_field() -> None:

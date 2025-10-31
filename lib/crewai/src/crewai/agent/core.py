@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Sequence
+import json
 import shutil
 import subprocess
 import time
@@ -312,14 +313,15 @@ class Agent(BaseAgent):
         if (task.output_json or task.output_pydantic) and not task.response_model:
             # Generate the schema based on the output format
             if task.output_json:
-                # schema = json.dumps(task.output_json, indent=2)
-                schema = generate_model_description(task.output_json)
+                schema_dict = generate_model_description(task.output_json)
+                schema = json.dumps(schema_dict["json_schema"]["schema"], indent=2)
                 task_prompt += "\n" + self.i18n.slice(
                     "formatted_task_instructions"
                 ).format(output_format=schema)
 
             elif task.output_pydantic:
-                schema = generate_model_description(task.output_pydantic)
+                schema_dict = generate_model_description(task.output_pydantic)
+                schema = json.dumps(schema_dict["json_schema"]["schema"], indent=2)
                 task_prompt += "\n" + self.i18n.slice(
                     "formatted_task_instructions"
                 ).format(output_format=schema)
