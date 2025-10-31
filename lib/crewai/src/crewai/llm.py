@@ -907,7 +907,35 @@ class LLM(BaseLLM):
         Returns:
             str: The response text
         """
-        # --- 1) Make the completion call
+        # --- 1) Handle response_model with InternalInstructor for LiteLLM
+        if response_model and self.is_litellm:
+            from crewai.utilities.internal_instructor import InternalInstructor
+
+            messages = params.get("messages", [])
+            if not messages:
+                raise ValueError("Messages are required when using response_model")
+
+            # Combine all message content for InternalInstructor
+            combined_content = "\n\n".join(
+                f"{msg['role'].upper()}: {msg['content']}" for msg in messages
+            )
+
+            instructor_instance = InternalInstructor(
+                content=combined_content,
+                model=response_model,
+                llm=self,
+            )
+            result = instructor_instance.to_pydantic()
+            structured_response = result.model_dump_json()
+            self._handle_emit_call_events(
+                response=structured_response,
+                call_type=LLMCallType.LLM_CALL,
+                from_task=from_task,
+                from_agent=from_agent,
+                messages=params["messages"],
+            )
+            return structured_response
+
         try:
             # Attempt to make the completion call, but catch context window errors
             # and convert them to our own exception type for consistent handling
