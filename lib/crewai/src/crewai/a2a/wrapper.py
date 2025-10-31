@@ -7,6 +7,8 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from functools import wraps
+from types import MethodType
 from typing import TYPE_CHECKING, Any, cast
 
 from a2a.types import Role
@@ -40,24 +42,20 @@ if TYPE_CHECKING:
     from crewai.tools.base_tool import BaseTool
 
 
-def wrap_agent_with_a2a(
-    namespace: dict[str, Any], bases: tuple[type, ...]
-) -> dict[str, Callable[..., Any]]:
-    """Create A2A-wrapped methods for an agent class.
+def wrap_agent_with_a2a_instance(agent: Agent) -> None:
+    """Wrap an agent instance's execute_task method with A2A support.
+
+    This function modifies the agent instance by wrapping its execute_task
+    method to add A2A delegation capabilities. Should only be called when
+    the agent has a2a configuration set.
 
     Args:
-        namespace: The class namespace dictionary
-        bases: Base classes of the agent
-
-    Returns:
-        Dictionary of methods to add to the class namespace
+        agent: The agent instance to wrap
     """
-    original_execute_task = _find_execute_task(namespace, bases)
+    original_execute_task = agent.execute_task.__func__
 
-    if not original_execute_task:
-        return {}
-
-    def execute_task(
+    @wraps(original_execute_task)
+    def execute_task_with_a2a(
         self: Agent,
         task: Task,
         context: str | None = None,
@@ -89,34 +87,7 @@ def wrap_agent_with_a2a(
             tools=tools,
         )
 
-    return {
-        "execute_task": execute_task,
-    }
-
-
-def _find_execute_task(
-    namespace: dict[str, Any], bases: tuple[type, ...]
-) -> Callable[..., str] | None:
-    """Find the execute_task method in namespace or base classes.
-
-    Args:
-        namespace: The class namespace dictionary
-        bases: Base classes to search
-
-    Returns:
-        The execute_task method or None if not found
-    """
-    original_execute_task = namespace.get("execute_task")
-
-    if not original_execute_task:
-        for base in bases:
-            try:
-                original_execute_task = base.execute_task  # type: ignore[attr-defined]
-                break
-            except AttributeError:
-                continue
-
-    return original_execute_task
+    object.__setattr__(agent, "execute_task", MethodType(execute_task_with_a2a, agent))
 
 
 def _fetch_card_from_config(
