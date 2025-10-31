@@ -14,12 +14,6 @@ else:
     import fcntl
 
 
-# Import platform-specific file locking
-if sys.platform == "win32":
-    import msvcrt
-else:
-    import fcntl
-
 
 class TokenManager:
     def __init__(self, file_path: str = "tokens.enc") -> None:
