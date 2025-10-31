@@ -1,11 +1,13 @@
 """Test Agent creation and execution basic functionality."""
 
+from io import StringIO
 import json
 import threading
 from collections import defaultdict
 from concurrent.futures import Future
 from hashlib import md5
 import re
+import sys
 from unittest.mock import ANY, MagicMock, call, patch
 
 from crewai.agent import Agent
@@ -2855,7 +2857,7 @@ def test_manager_agent_with_tools_raises_exception(researcher, writer):
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_crew_train_success(researcher, writer):
+def test_crew_train_success(researcher, writer, monkeypatch):
     task = Task(
         description="Come up with a list of 5 interesting ideas to explore for an article, then write one amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
         expected_output="5 bullet points with a paragraph for each idea.",
@@ -2885,10 +2887,13 @@ def test_crew_train_success(researcher, writer):
                 condition.notify()
 
     # Mock human input to avoid blocking during training
-    with patch("builtins.input", return_value="Great work!"):
-        crew.train(
-            n_iterations=2, inputs={"topic": "AI"}, filename="trained_agents_data.pkl"
-        )
+    # Use StringIO to simulate user input for multiple calls to input()
+    mock_inputs = StringIO("Great work!\n" * 10)  # Provide enough inputs for all iterations
+    monkeypatch.setattr("sys.stdin", mock_inputs)
+
+    crew.train(
+        n_iterations=2, inputs={"topic": "AI"}, filename="trained_agents_data.pkl"
+    )
 
     with condition:
         success = condition.wait_for(lambda: len(received_events) == 2, timeout=5)
