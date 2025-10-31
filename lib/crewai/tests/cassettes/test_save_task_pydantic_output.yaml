@@ -530,4 +530,235 @@ interactions:
     status:
       code: 200
       message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"Please convert the following text
+      into valid JSON.\n\nOutput ONLY the valid JSON and nothing else.\n\nThe JSON
+      must follow this schema exactly:\n```json\n{\n    score: int\n}\n```"},{"role":"user","content":"4"}],"model":"gpt-4.1-mini"}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate, zstd
+      connection:
+      - keep-alive
+      content-length:
+      - '277'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.109.1
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.109.1
+      x-stainless-read-timeout:
+      - '600'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.10
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAAwAAAP//jJIxb9swEIV3/QriZiuwFNlxtBadig6ZGrQKJJo8SbQpkiWpwoHh/16Q
+        ci0lTYEuGu679/TueOeEEBAcSgKsp54NRqafvj2ffh4PX56e2n37+vW7Gj8/n/qjE/64OcAqKPT+
+        gMz/Ud0xPRiJXmg1YWaRegyu2cM22z3crx/XEQyaowyyzvi0uMvSQSiR5ut8k66LNCuu8l4Lhg5K
+        8iMhhJBz/IagiuMJShLNYmVA52iHUN6aCAGrZagAdU44T5WH1QyZVh5VzN40zcFpValzpQKrwDFt
+        sYKSFJW6VKppmqXUYjs6GvKrUcoFoEppT8P8MfTLlVxuMaXujNV7904KrVDC9bVF6rQKkZzXBiK9
+        JIS8xHWMbyYEY/VgfO31EePvisfJDuZXmGF2f4Veeyrn+jZffeBWc/RUSLdYJzDKeuSzct49HbnQ
+        C5AsZv47zEfe09xCdf9jPwPG0HjktbHIBXs78NxmMdzov9puO46BwaH9JRjWXqAN78CxpaOcDgfc
+        q/M41K1QHVpjxXQ9rakLlu82Wbvb5pBckt8AAAD//wMA5Zmg4EwDAAA=
+    headers:
+      CF-RAY:
+      - 996f475b7e3fedda-MXP
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 31 Oct 2025 01:11:31 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - __cf_bm=9OwoBJAn84Nsq0RZdCIu06cNB6RLqor4C1.Q58nU28U-1761873091-1.0.1.1-p82_h8Vnxe0NfH5Iv6MFt.SderZj.v9VnCx_ro6ti2MGhlJOLFsPd6XhBxPsnmuV7Vt_4_uqAbE57E5f1Epl1cmGBT.0844N3CLnTwZFWQI;
+        path=/; expires=Fri, 31-Oct-25 01:41:31 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=E4.xW3I8m58fngo4vkTKo8hmBumar1HkV.yU8KKjlZg-1761873091967-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '1770'
+      openai-project:
+      - proj_xitITlrFeen7zjNSzML82h9x
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '1998'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-project-tokens:
+      - '150000000'
+      x-ratelimit-limit-requests:
+      - '30000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-project-tokens:
+      - '149999955'
+      x-ratelimit-remaining-requests:
+      - '29999'
+      x-ratelimit-remaining-tokens:
+      - '149999952'
+      x-ratelimit-reset-project-tokens:
+      - 0s
+      x-ratelimit-reset-requests:
+      - 2ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_ba7a12cb40744f648d17844196f9c2c6
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"Please convert the following text
+      into valid JSON.\n\nOutput ONLY the valid JSON and nothing else.\n\nThe JSON
+      must follow this schema exactly:\n```json\n{\n    score: int\n}\n```"},{"role":"user","content":"4"}],"model":"gpt-4.1-mini","response_format":{"type":"json_schema","json_schema":{"schema":{"properties":{"score":{"title":"Score","type":"integer"}},"required":["score"],"title":"ScoreOutput","type":"object","additionalProperties":false},"name":"ScoreOutput","strict":true}},"stream":false}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate, zstd
+      connection:
+      - keep-alive
+      content-length:
+      - '541'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=9OwoBJAn84Nsq0RZdCIu06cNB6RLqor4C1.Q58nU28U-1761873091-1.0.1.1-p82_h8Vnxe0NfH5Iv6MFt.SderZj.v9VnCx_ro6ti2MGhlJOLFsPd6XhBxPsnmuV7Vt_4_uqAbE57E5f1Epl1cmGBT.0844N3CLnTwZFWQI;
+        _cfuvid=E4.xW3I8m58fngo4vkTKo8hmBumar1HkV.yU8KKjlZg-1761873091967-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.109.1
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-helper-method:
+      - chat.completions.parse
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.109.1
+      x-stainless-read-timeout:
+      - '600'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.10
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAAwAAAP//jFLBbqMwFLzzFdY7hypQklKuVS899NpK2wo59gPcGtuyH92uovz7ypAE
+        0t1KvXB482Y8M7x9whgoCRUD0XESvdPp3dPzZ/gty77xO7fZPj4MMs/ldYf3Lt/CKjLs7g0FnVhX
+        wvZOIylrJlh45IRRNbvZZuXN9fo2H4HeStSR1jpKi6ss7ZVRab7ON+m6SLPiSO+sEhigYr8Sxhjb
+        j99o1Ej8hIqtV6dJjyHwFqE6LzEG3uo4AR6CCsQNwWoGhTWEZvS+f4EgrMcXqIrDcsdjMwQejZpB
+        6wXAjbHEY9DR3esROZz9aNs6b3fhCxUaZVToao88WBPfDmQdjOghYex1zD1cRAHnbe+oJvuO43Pl
+        ZpKDue4ZPGFkiet5fHus6lKslkhc6bCoDQQXHcqZOXfMB6nsAkgWkf/18j/tKbYy7U/kZ0AIdISy
+        dh6lEpd55zWP8Ra/WztXPBqGgP5DCaxJoY+/QWLDBz0dCIQ/gbCvG2Va9M6r6UoaVxciLzdZU25z
+        SA7JXwAAAP//AwAXjqY4NAMAAA==
+    headers:
+      CF-RAY:
+      - 996f47692b63edda-MXP
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 31 Oct 2025 01:11:33 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '929'
+      openai-project:
+      - proj_xitITlrFeen7zjNSzML82h9x
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '991'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-project-tokens:
+      - '150000000'
+      x-ratelimit-limit-requests:
+      - '30000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-project-tokens:
+      - '149999955'
+      x-ratelimit-remaining-requests:
+      - '29999'
+      x-ratelimit-remaining-tokens:
+      - '149999955'
+      x-ratelimit-reset-project-tokens:
+      - 0s
+      x-ratelimit-reset-requests:
+      - 2ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_892607f68e764ba3846c431954608c36
+    status:
+      code: 200
+      message: OK
 version: 1
