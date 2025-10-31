@@ -121,6 +121,7 @@ def copy_template_files(folder_path, name, class_name, parent_folder):
     root_template_files = (
         [
             ".gitignore",
+            ".env.example",
             "pyproject.toml",
             "README.md",
             "knowledge/user_preference.txt",
@@ -242,7 +243,7 @@ def create_crew(name, provider=None, skip_provider=False, parent_folder=None):
     templates_dir = package_dir / "templates" / "crew"
 
     root_template_files = (
-        [".gitignore", "pyproject.toml", "README.md", "knowledge/user_preference.txt"]
+        [".gitignore", ".env.example", "pyproject.toml", "README.md", "knowledge/user_preference.txt"]
         if not parent_folder
         else []
     )

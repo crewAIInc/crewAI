@@ -20,7 +20,37 @@ crewai install
 ```
 ### Customizing
 
-**Add your `OPENAI_API_KEY` into the `.env` file**
+**Configure your LLM**
+
+1. Copy `.env.example` to `.env` and add your API keys
+2. The `MODEL` variable in `.env` was set during project creation
+3. You can change the model or add custom LLM configuration in your agents
+
+Example LLM configurations:
+
+```python
+from crewai import LLM
+
+# Using environment variables (recommended)
+llm = LLM(model=os.getenv("MODEL"))
+
+# OpenAI
+llm = LLM(model="gpt-4o-mini", temperature=0.7)
+
+# Anthropic
+llm = LLM(model="claude-3-5-sonnet-20240620")
+
+# Custom provider (e.g., DeepSeek)
+llm = LLM(
+    model="deepseek-chat",
+    api_key=os.getenv("OPENAI_API_KEY"),
+    base_url="https://api.deepseek.com"
+)
+```
+
+For more LLM configuration options, see: https://docs.crewai.com/concepts/llms
+
+**Customize your crew**
 
 - Modify `src/{{folder_name}}/config/agents.yaml` to define your agents
 - Modify `src/{{folder_name}}/config/tasks.yaml` to define your tasks

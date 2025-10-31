@@ -328,3 +328,38 @@ def test_env_vars_are_uppercased_in_env_file(
     env_file_path = crew_path / ".env"
     content = env_file_path.read_text()
     assert "MODEL=" in content
+
+
+@mock.patch("crewai.cli.create_crew.copy_template")
+@mock.patch("crewai.cli.create_crew.write_env_file")
+@mock.patch("crewai.cli.create_crew.load_env_vars")
+def test_create_crew_includes_env_example_file(
+    mock_load_env, mock_write_env, mock_copy_template, temp_dir
+):
+    mock_load_env.return_value = {}
+
+    with tempfile.TemporaryDirectory() as work_dir:
+        with mock.patch(
+            "crewai.cli.create_crew.create_folder_structure"
+        ) as mock_create_folder:
+            mock_folder_path = Path(work_dir) / "test_project"
+            mock_create_folder.return_value = (
+                mock_folder_path,
+                "test_project",
+                "TestProject",
+            )
+
+            create_crew("test-project", skip_provider=True)
+
+            copy_calls = mock_copy_template.call_args_list
+            env_example_copied = False
+
+            for call in copy_calls:
+                args = call[0]
+                if len(args) >= 1:
+                    src_file = args[0]
+                    if ".env.example" in str(src_file):
+                        env_example_copied = True
+                        break
+
+            assert env_example_copied, ".env.example should be copied to the project"
