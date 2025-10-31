@@ -188,16 +188,17 @@ class EventListener(BaseEventListener):
             self.execution_spans[source] = span
 
             with self._crew_tree_lock:
-                timeout = 5.0
-                while self.formatter.current_crew_tree is None:
-                    if not self._crew_tree_lock.wait(timeout=timeout):
-                        return
+                self._crew_tree_lock.wait_for(
+                    lambda: self.formatter.current_crew_tree is not None, timeout=5.0
+                )
 
-            # Pass both task ID and task name (if set)
-            task_name = source.name if hasattr(source, "name") and source.name else None
-            self.formatter.create_task_branch(
-                self.formatter.current_crew_tree, source.id, task_name
-            )
+            if self.formatter.current_crew_tree is not None:
+                task_name = (
+                    source.name if hasattr(source, "name") and source.name else None
+                )
+                self.formatter.create_task_branch(
+                    self.formatter.current_crew_tree, source.id, task_name
+                )
 
         @crewai_event_bus.on(TaskCompletedEvent)
         def on_task_completed(source, event: TaskCompletedEvent):
