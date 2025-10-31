@@ -34,7 +34,7 @@ from crewai.utilities.printer import Printer
 _printer = Printer()
 
 
-def normalize_condition(condition: Any) -> dict[str, Any]:
+def normalize_condition(condition: Any) -> FlowCondition:
     """Normalize condition to a dict with keys: type, conditions.
 
     Avoids importing helpers from flow.py to prevent circular imports.
@@ -55,21 +55,21 @@ def normalize_condition(condition: Any) -> dict[str, Any]:
     return {"type": "OR", "conditions": []}
 
 
-def extract_all_methods(condition: Any) -> list[str]:
+def extract_all_methods(condition: Any) -> list[FlowMethodName]:
     """Extract all method names from a nested condition structure."""
     if is_flow_method_name(condition):
         return [condition]
     if is_flow_condition_dict(condition):
         normalized = normalize_condition(condition)
-        methods: list[str] = []
+        method_list: list[FlowMethodName] = []
         for sub in normalized.get("conditions", []):
-            methods.extend(extract_all_methods(sub))
-        return methods
+            method_list.extend(extract_all_methods(sub))
+        return method_list
     if isinstance(condition, list):
-        methods: list[str] = []
+        methods_from_list: list[FlowMethodName] = []
         for item in condition:
-            methods.extend(extract_all_methods(item))
-        return methods
+            methods_from_list.extend(extract_all_methods(item))
+        return methods_from_list
     return []
 
 
@@ -117,7 +117,7 @@ def get_possible_return_constants(function: Any) -> list[str] | None:
     dict_definitions = {}
 
     class DictionaryAssignmentVisitor(ast.NodeVisitor):
-        def visit_Assign(self, node):
+        def visit_Assign(self, node: ast.Assign) -> None:
             # Check if this assignment is assigning a dictionary literal to a variable
             if isinstance(node.value, ast.Dict) and len(node.targets) == 1:
                 target = node.targets[0]
@@ -134,7 +134,7 @@ def get_possible_return_constants(function: Any) -> list[str] | None:
             self.generic_visit(node)
 
     class ReturnVisitor(ast.NodeVisitor):
-        def visit_Return(self, node):
+        def visit_Return(self, node: ast.Return) -> None:
             # Direct string return
             if isinstance(node.value, ast.Constant) and isinstance(
                 node.value.value, str
@@ -444,7 +444,13 @@ def get_child_index(
     return children.index(child)
 
 
-def process_router_paths(flow, current, current_level, levels, queue):
+def process_router_paths(
+    flow: Any,
+    current: str,
+    current_level: int,
+    levels: dict[str, int],
+    queue: deque[str],
+) -> None:
     """
     Handle the router connections for the current node.
     """
@@ -479,7 +485,7 @@ def is_flow_method_name(obj: Any) -> TypeIs[FlowMethodName]:
     return isinstance(obj, str)
 
 
-def is_flow_method_callable(obj: Any) -> TypeIs[FlowMethodCallable]:
+def is_flow_method_callable(obj: Any) -> TypeIs[FlowMethodCallable[Any, Any]]:
     """Check if the object is a callable flow method.
 
     Args:

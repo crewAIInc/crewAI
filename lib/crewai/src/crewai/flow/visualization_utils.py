@@ -27,6 +27,7 @@ from crewai.flow.config import (
     RouterNodeStyle,
     StartNodeStyle,
 )
+from crewai.flow.types import FlowMethodName
 from crewai.flow.utils import (
     build_ancestor_dict,
     build_parent_children_dict,
@@ -37,6 +38,7 @@ from crewai.flow.utils import (
     normalize_condition,
 )
 from crewai.utilities.printer import Printer
+
 
 _printer = Printer()
 
@@ -231,7 +233,7 @@ def add_edges(
     # Edges for normal listeners
     for method_name, condition_data in flow._listeners.items():
         # condition_data can be either a tuple (condition_type, methods) or a dict from or_/and_
-        trigger_methods: list[str] = []
+        trigger_methods: list[FlowMethodName] = []
         is_and_condition = False
 
         if isinstance(condition_data, tuple) and len(condition_data) == 2:
@@ -305,6 +307,7 @@ def add_edges(
         for path in paths:
             for listener_name, condition_data in flow._listeners.items():
                 # Determine triggers for this listener
+                methods: list[FlowMethodName] = []
                 if isinstance(condition_data, tuple) and len(condition_data) == 2:
                     _condition_type, trigger_methods = condition_data
                     methods = trigger_methods
