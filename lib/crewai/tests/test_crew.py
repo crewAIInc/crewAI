@@ -2444,37 +2444,51 @@ def test_memory_events_are_emitted():
 
     @crewai_event_bus.on(MemorySaveStartedEvent)
     def handle_memory_save_started(source, event):
-        events["MemorySaveStartedEvent"].append(event)
+        with condition:
+            events["MemorySaveStartedEvent"].append(event)
+            condition.notify_all()
 
     @crewai_event_bus.on(MemorySaveCompletedEvent)
     def handle_memory_save_completed(source, event):
-        events["MemorySaveCompletedEvent"].append(event)
+        with condition:
+            events["MemorySaveCompletedEvent"].append(event)
+            condition.notify_all()
 
     @crewai_event_bus.on(MemorySaveFailedEvent)
     def handle_memory_save_failed(source, event):
-        events["MemorySaveFailedEvent"].append(event)
+        with condition:
+            events["MemorySaveFailedEvent"].append(event)
+            condition.notify_all()
 
     @crewai_event_bus.on(MemoryQueryStartedEvent)
     def handle_memory_query_started(source, event):
-        events["MemoryQueryStartedEvent"].append(event)
+        with condition:
+            events["MemoryQueryStartedEvent"].append(event)
+            condition.notify_all()
 
     @crewai_event_bus.on(MemoryQueryCompletedEvent)
     def handle_memory_query_completed(source, event):
-        events["MemoryQueryCompletedEvent"].append(event)
+        with condition:
+            events["MemoryQueryCompletedEvent"].append(event)
+            condition.notify_all()
 
     @crewai_event_bus.on(MemoryQueryFailedEvent)
     def handle_memory_query_failed(source, event):
-        events["MemoryQueryFailedEvent"].append(event)
+        with condition:
+            events["MemoryQueryFailedEvent"].append(event)
+            condition.notify_all()
 
     @crewai_event_bus.on(MemoryRetrievalStartedEvent)
     def handle_memory_retrieval_started(source, event):
-        events["MemoryRetrievalStartedEvent"].append(event)
+        with condition:
+            events["MemoryRetrievalStartedEvent"].append(event)
+            condition.notify_all()
 
     @crewai_event_bus.on(MemoryRetrievalCompletedEvent)
     def handle_memory_retrieval_completed(source, event):
         with condition:
             events["MemoryRetrievalCompletedEvent"].append(event)
-            condition.notify()
+            condition.notify_all()
 
     math_researcher = Agent(
         role="Researcher",
@@ -2499,10 +2513,17 @@ def test_memory_events_are_emitted():
 
     with condition:
         success = condition.wait_for(
-            lambda: len(events["MemoryRetrievalCompletedEvent"]) >= 1, timeout=5
+            lambda: (
+                len(events["MemorySaveStartedEvent"]) >= 3
+                and len(events["MemorySaveCompletedEvent"]) >= 3
+                and len(events["MemoryQueryStartedEvent"]) >= 3
+                and len(events["MemoryQueryCompletedEvent"]) >= 3
+                and len(events["MemoryRetrievalCompletedEvent"]) >= 1
+            ),
+            timeout=10,
         )
 
-    assert success, "Timeout waiting for memory events"
+    assert success, f"Timeout waiting for memory events. Got: {dict(events)}"
     assert len(events["MemorySaveStartedEvent"]) == 3
     assert len(events["MemorySaveCompletedEvent"]) == 3
     assert len(events["MemorySaveFailedEvent"]) == 0
@@ -2592,19 +2613,16 @@ def test_long_term_memory_with_memory_flag():
         agent=math_researcher,
     )
 
-    crew = Crew(
-        agents=[math_researcher],
-        tasks=[task1],
-        memory=True,
-        long_term_memory=LongTermMemory(),
-    )
-
     with (
         patch("crewai.utilities.printer.Printer.print") as mock_print,
-        patch(
-            "crewai.memory.long_term.long_term_memory.LongTermMemory.save"
-        ) as save_memory,
+        patch("crewai.memory.long_term.long_term_memory.LongTermMemory.save") as save_memory,
     ):
+        crew = Crew(
+            agents=[math_researcher],
+            tasks=[task1],
+            memory=True,
+            long_term_memory=LongTermMemory(),
+        )
         crew.kickoff()
         mock_print.assert_not_called()
         save_memory.assert_called_once()

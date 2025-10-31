@@ -1285,4 +1285,312 @@ interactions:
     status:
       code: 200
       message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"Convert all responses into valid
+      JSON output."},{"role":"user","content":"Assess the quality of the task completed
+      based on the description, expected output, and actual results.\n\nTask Description:\nPerform
+      a search on specific topics.\n\nExpected Output:\nA list of relevant URLs based
+      on the search query.\n\nActual Output:\nI now can give a great answer. \n\nFinal
+      Answer: Here are some relevant URLs based on your search query. Please visit
+      the following links for comprehensive information on the specified topics:\n\n1.
+      **Artificial Intelligence Ethics**\n   - https://www.aaai.org/Ethics/AIEthics.pdf\n   -
+      https://plato.stanford.edu/entries/ethics-ai/\n\n2. **Impact of 5G Technology**\n   -
+      https://www.itu.int/en/ITU-T/focusgroups/5g/Documents/FG-5G-DOC-1830.zip\n   -
+      https://www.gsma.com/5g/\n\n3. **Quantum Computing Developments**\n   - https://www.ibm.com/quantum-computing/\n   -
+      https://www.microsoft.com/en-us/quantum\n\n4. **Cybersecurity Trends 2023**\n   -
+      https://www.csoonline.com/article/3642552/cybersecurity-trends-2023.html\n   -
+      https://www.forbes.com/sites/bernardmarr/2023/01/03/top-5-cybersecurity-trends-in-2023/\n\n5.
+      **Sustainable Technology Innovations**\n   - https://www.weforum.org/agenda/2023/01/10-innovations-sustainability/\n   -
+      https://www.greenbiz.com/article/13-sustainable-tech-solutions-watch-2023\n\nFeel
+      free to explore these URLs for detailed content on each topic.\n\nPlease provide:\n-
+      Bullet points suggestions to improve future similar tasks\n- A score from 0
+      to 10 evaluating on completion, quality, and overall performance- Entities extracted
+      from the task output, if any, their type, description, and relationships"}],"model":"gpt-4.1-mini"}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate, zstd
+      connection:
+      - keep-alive
+      content-length:
+      - '1741'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.109.1
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.109.1
+      x-stainless-read-timeout:
+      - '600'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.10
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        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
+        AAD//wMAyfZbKYgOAAA=
+    headers:
+      CF-RAY:
+      - 996fcec5ed410df7-MXP
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 31 Oct 2025 02:44:05 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - __cf_bm=A3QgDjhHusi3NstcRRXwQT2i7SMfD0OcenI1BlEy_v4-1761878645-1.0.1.1-_WmHHgBT0.tfSicqDzwM4WLpV34LuUoxs1uDx7zuOfyTCxX_caKAj3anb.qP2fsys5ruIhcwg6IeTGgXGXgpsuS7jIqGPsOhKxfZw1xwNa0;
+        path=/; expires=Fri, 31-Oct-25 03:14:05 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=C2GzMTMsYw0c9cZ482nxxNogRgIpj2ICJMMTk0RCMY8-1761878645829-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '9162'
+      openai-project:
+      - proj_xitITlrFeen7zjNSzML82h9x
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '9193'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-project-tokens:
+      - '150000000'
+      x-ratelimit-limit-requests:
+      - '30000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-project-tokens:
+      - '149999595'
+      x-ratelimit-remaining-requests:
+      - '29999'
+      x-ratelimit-remaining-tokens:
+      - '149999595'
+      x-ratelimit-reset-project-tokens:
+      - 0s
+      x-ratelimit-reset-requests:
+      - 2ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_6cf164b9001f417ab620f7c0d5ca8e06
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"Convert all responses into valid
+      JSON output."},{"role":"user","content":"Assess the quality of the task completed
+      based on the description, expected output, and actual results.\n\nTask Description:\nPerform
+      a search on specific topics.\n\nExpected Output:\nA list of relevant URLs based
+      on the search query.\n\nActual Output:\nI now can give a great answer. \n\nFinal
+      Answer: Here are some relevant URLs based on your search query. Please visit
+      the following links for comprehensive information on the specified topics:\n\n1.
+      **Artificial Intelligence Ethics**\n   - https://www.aaai.org/Ethics/AIEthics.pdf\n   -
+      https://plato.stanford.edu/entries/ethics-ai/\n\n2. **Impact of 5G Technology**\n   -
+      https://www.itu.int/en/ITU-T/focusgroups/5g/Documents/FG-5G-DOC-1830.zip\n   -
+      https://www.gsma.com/5g/\n\n3. **Quantum Computing Developments**\n   - https://www.ibm.com/quantum-computing/\n   -
+      https://www.microsoft.com/en-us/quantum\n\n4. **Cybersecurity Trends 2023**\n   -
+      https://www.csoonline.com/article/3642552/cybersecurity-trends-2023.html\n   -
+      https://www.forbes.com/sites/bernardmarr/2023/01/03/top-5-cybersecurity-trends-in-2023/\n\n5.
+      **Sustainable Technology Innovations**\n   - https://www.weforum.org/agenda/2023/01/10-innovations-sustainability/\n   -
+      https://www.greenbiz.com/article/13-sustainable-tech-solutions-watch-2023\n\nFeel
+      free to explore these URLs for detailed content on each topic.\n\nPlease provide:\n-
+      Bullet points suggestions to improve future similar tasks\n- A score from 0
+      to 10 evaluating on completion, quality, and overall performance- Entities extracted
+      from the task output, if any, their type, description, and relationships"}],"model":"gpt-4.1-mini","response_format":{"type":"json_schema","json_schema":{"schema":{"$defs":{"Entity":{"properties":{"name":{"description":"The
+      name of the entity.","title":"Name","type":"string"},"type":{"description":"The
+      type of the entity.","title":"Type","type":"string"},"description":{"description":"Description
+      of the entity.","title":"Description","type":"string"},"relationships":{"description":"Relationships
+      of the entity.","items":{"type":"string"},"title":"Relationships","type":"array"}},"required":["name","type","description","relationships"],"title":"Entity","type":"object","additionalProperties":false}},"properties":{"suggestions":{"description":"Suggestions
+      to improve future similar tasks.","items":{"type":"string"},"title":"Suggestions","type":"array"},"quality":{"description":"A
+      score from 0 to 10 evaluating on completion, quality, and overall performance,
+      all taking into account the task description, expected output, and the result
+      of the task.","title":"Quality","type":"number"},"entities":{"description":"Entities
+      extracted from the task output.","items":{"$ref":"#/$defs/Entity"},"title":"Entities","type":"array"}},"required":["suggestions","quality","entities"],"title":"TaskEvaluation","type":"object","additionalProperties":false},"name":"TaskEvaluation","strict":true}},"stream":false}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate, zstd
+      connection:
+      - keep-alive
+      content-length:
+      - '3047'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=A3QgDjhHusi3NstcRRXwQT2i7SMfD0OcenI1BlEy_v4-1761878645-1.0.1.1-_WmHHgBT0.tfSicqDzwM4WLpV34LuUoxs1uDx7zuOfyTCxX_caKAj3anb.qP2fsys5ruIhcwg6IeTGgXGXgpsuS7jIqGPsOhKxfZw1xwNa0;
+        _cfuvid=C2GzMTMsYw0c9cZ482nxxNogRgIpj2ICJMMTk0RCMY8-1761878645829-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.109.1
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-helper-method:
+      - chat.completions.parse
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.109.1
+      x-stainless-read-timeout:
+      - '600'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.10
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAAwAAAP//lFbBbhs3EL37K4g9a7WSbDmGboGdBm6LunWcBkhkCCNydndaLsmQQyuK
+        4X8vyJUsqUoB9WIYGr43bx6Hs/N8JkRBqpiJQrbAsnO6vP70+fcPcXJ/dwf1L/6yXsfVz5+Q3ahu
+        PnMxSAi7/Aslb1FDaTunkcmaPiw9AmNiHb+5HF+9ubq8uMyBzirUCdY4Li+G47IjQ+VkNJmWo4ty
+        fLGBt5YkhmImvpwJIcRz/puEGoXfipkYDba/dBgCNFjMXg8JUXir0y8FhECBwfSiN0FpDaPJ2p/n
+        RYhNgyEpD/Ni9mVe3JBHyXotnLdPpFBwi8KjxicwLD7e/xrEiri1kYXzqKkjA34tovGoU80iMDB2
+        aDgItqIDMgxkhNTgidcCjBK1lTEM58VgXrwzIfo+SeYGjyK6hFTAmE+/JmebzwWHkmqSgq0jGYTH
+        rxEDo+oZb43UUaEAsfSEtVAYpCeXShTWixC7Lgm2tUCQbcqaiFvUTsSAPohoFPpkmxKrFlhsDEun
+        8JtDyX2eO9+Aoe8b3VIjeL3uwT1zlpdRpgUjk4ugYEmaeN1T/Ime6rXglAW03jkAUmIItNS9AxpB
+        JSLpUeUfg41eYrLwcTAvvkZInPNidjWYF2iYmDBf5/O8MNDhvJjNi7eek2sEWtwaRq2pwaTqHbck
+        Q9bDa9effUjS80977vUsoibU6ZajWpNp8o1gogAtqHOaJORuysKbSAo1GQwiRO9tNCphYCeF9qT0
+        puQ+SgwtuU1PtswuzKpqtVoNAYCG1jdVr7t6e9v/M3SqzvjtYaeB7TDdY229GqKKFRr2hKHKekMJ
+        VM2Lx5fBvku3nQPJqTum78UDytZYbZv1qfY8JDfqGiX3BoB6SlffP4ftC2GbyFeUGjsEIW3XRbPx
+        TfBrzpPsII5DMlyhqW4fPpYPVX5bjbfRhWraVDdWxpy9+ul9OX1f3txdl+Or89HwO7kDuxJZEzpI
+        sywBj5z5I4Lh2Ilr27nI6Rpv8Am1dZn+/xiUXAhpfNjGJwP6Rx4QvGwFmdxSfZfZWnzdpJXbtKfZ
+        suxyIRt0+YqujoruSHobbJ2neIWmjGELO/Lger1EH1DGPMoePBoVxGQ0OT+1/HuUeZT0yFQ4dc76
+        NKNFdGnkheSAPMhTW589WSP4nO0kC2Sw1qS3l+tKT05qrM4vLybT6aQ6yFD2esrM3XKnj0yqrV9i
+        yEyBGEO1RG/Aqw68rxKsGo2r0XnF1pXT8ofkZDL/cWN9iCF9ISANtt2LE7fG2CfYfJlOc/c3XGVP
+        sUPf5OG0pSMMAqhDJYBF2CbMo7hHmCfy1qRWBp06k1Em2pOcXmFtfezyVIIGjYJXS8ajknZ1lIeZ
+        j3ux8YhmSd8Prmx8vsNpLFNNZbA69pQrYNmWfQ8+vjy+7H/qPdYxQNo3TNR6LwDGWO41pSXjcRN5
+        eV0rtG2ct8vwL2hRk6HQLjxCsCatEIGtK3L05UyIx7y+xIONpHDedo4XbP/GnG6zC+VVZLs27aIX
+        k+kmypZB7wLj0Zvx4AeMC4UMpMPeClRIkC2qHXa3L0FUZPcCZ3t1H+v5EXdfO5nmFPpdQEp0jGrh
+        0jdcHta8O+Yx7ZX/dezV5yy4COifSOKCCX26C4U1RL3ZUMM6MHaLmkyD3nnqN77aLS7k5Go6rq8u
+        J8XZy9k/AAAA//8DAPxRBgAACwAA
+    headers:
+      CF-RAY:
+      - 996fcf012a0a0df7-MXP
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 31 Oct 2025 02:44:13 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '7076'
+      openai-project:
+      - proj_xitITlrFeen7zjNSzML82h9x
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '7246'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-project-tokens:
+      - '150000000'
+      x-ratelimit-limit-requests:
+      - '30000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-project-tokens:
+      - '149999595'
+      x-ratelimit-remaining-requests:
+      - '29999'
+      x-ratelimit-remaining-tokens:
+      - '149999595'
+      x-ratelimit-reset-project-tokens:
+      - 0s
+      x-ratelimit-reset-requests:
+      - 2ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_2d55304787e14773ba48a58c82053156
+    status:
+      code: 200
+      message: OK
 version: 1
