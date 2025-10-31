@@ -123,8 +123,6 @@ def test_lite_agent_created_with_correct_parameters(monkeypatch, verbose):
     assert created_lite_agent["response_format"] is None
 
     # Test with a response_format
-    monkeypatch.setattr("crewai.lite_agent.LiteAgent", MockLiteAgent)
-
     class TestResponse(BaseModel):
         test_field: str
 
