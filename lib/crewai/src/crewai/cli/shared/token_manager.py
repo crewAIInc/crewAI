@@ -14,7 +14,6 @@ else:
     import fcntl
 
 
-
 class TokenManager:
     def __init__(self, file_path: str = "tokens.enc") -> None:
         """
