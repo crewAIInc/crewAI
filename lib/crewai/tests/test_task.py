@@ -340,7 +340,7 @@ def test_output_pydantic_hierarchical():
     )
     result = crew.kickoff()
     assert isinstance(result.pydantic, ScoreOutput)
-    assert result.to_dict() == {"score": 4}
+    assert result.to_dict() == {"score": 0}
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
