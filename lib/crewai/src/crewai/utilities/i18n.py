@@ -14,12 +14,17 @@ class I18N(BaseModel):
     Attributes:
         _prompts: Internal dictionary storing loaded prompts.
         prompt_file: Optional path to a custom JSON file containing prompts.
+        language: Language code for the prompts (e.g., 'en', 'es', 'pt'). Defaults to 'en'.
     """
 
     _prompts: dict[str, dict[str, str]] = PrivateAttr()
     prompt_file: str | None = Field(
         default=None,
         description="Path to the prompt_file file to load",
+    )
+    language: str = Field(
+        default="en",
+        description="Language code for the prompts (e.g., 'en', 'es', 'pt')",
     )
 
     @model_validator(mode="after")
@@ -38,12 +43,24 @@ class I18N(BaseModel):
                     self._prompts = json.load(f)
             else:
                 dir_path = os.path.dirname(os.path.realpath(__file__))
-                prompts_path = os.path.join(dir_path, "../translations/en.json")
+                prompts_path = os.path.join(
+                    dir_path, f"../translations/{self.language}.json"
+                )
 
-                with open(prompts_path, encoding="utf-8") as f:
-                    self._prompts = json.load(f)
+                try:
+                    with open(prompts_path, encoding="utf-8") as f:
+                        self._prompts = json.load(f)
+                except FileNotFoundError:
+                    if self.language != "en":
+                        fallback_path = os.path.join(dir_path, "../translations/en.json")
+                        with open(fallback_path, encoding="utf-8") as f:
+                            self._prompts = json.load(f)
+                    else:
+                        raise
         except FileNotFoundError as e:
-            raise Exception(f"Prompt file '{self.prompt_file}' not found.") from e
+            raise Exception(
+                f"Prompt file '{self.prompt_file or self.language + '.json'}' not found."
+            ) from e
         except json.JSONDecodeError as e:
             raise Exception("Error decoding JSON from the prompts file.") from e
 
