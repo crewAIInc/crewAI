@@ -1966,4 +1966,556 @@ interactions:
     status:
       code: 200
       message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"Convert all responses into valid
+      JSON output."},{"role":"user","content":"Assess the quality of the task completed
+      based on the description, expected output, and actual results.\n\nTask Description:\nResearch
+      a topic to teach a kid aged 6 about math.\n\nExpected Output:\nA topic, explanation,
+      angle, and examples.\n\nActual Output:\nI now can give a great answer  \nFinal
+      Answer: \n\n**Topic:** Introduction to Addition\n\n**Explanation:** \nAddition
+      is one of the simplest operations in math. It''s all about putting things together.
+      When we add, we combine two or more numbers to find out how many we have in
+      total. For a 6-year-old, it can be visualized as combining different groups
+      of objects. Here''s how we can teach it:\n\n1. **Basic Concept**: Explain that
+      addition means bringing two amounts together to get a new total. Use simple
+      language like, \"If you have 2 apples and I give you 3 more apples, how many
+      apples do you have now?\"\n\n2. **Visual Aids**: Use physical objects like blocks,
+      beads, or fruit. Show the child one group with 2 blocks and another group with
+      3 blocks. Next, combine them and count the total together.\n\n3. **Symbols of
+      Addition**: Introduce the plus sign (+) and the equals sign (=). For instance,
+      you can explain that \"2 + 3 = 5\" means that when adding 2 and 3 together,
+      they make 5.\n\n**Angle:** \nMake it fun and interactive! Use games and stories
+      to keep the child engaged. For example, you could create a story about a little
+      monster who collects candies. Every time he meets a friend, he adds more candies
+      to his pile. \n\n**Examples:**\n- **Using Blocks**: Start with 4 blocks. If
+      you add 2 more, how many blocks do you have? (4 + 2 = 6)\n- **Finger Counting**:
+      Have the child count fingers. Hold up 3 fingers on one hand and 2 on the other
+      hand. Ask, \"How many fingers are up?\" and help them see that when they count
+      all the fingers together, they get 5.\n- **Story Problem**: \"You have 1 toy
+      car, and your friend gives you 3 more toy cars. How many do you have now?\"
+      Write it down for them: 1 + 3 = ? And help them count to find the answer is
+      4.\n\nMake sure to encourage the child as they explore addition! Celebrate their
+      successes and provide help as needed. This will help foster a positive attitude
+      towards math, making it not just an academic subject, but an enjoyable activity.\n\nPlease
+      provide:\n- Bullet points suggestions to improve future similar tasks\n- A score
+      from 0 to 10 evaluating on completion, quality, and overall performance- Entities
+      extracted from the task output, if any, their type, description, and relationships"}],"model":"gpt-4.1-mini"}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate, zstd
+      connection:
+      - keep-alive
+      content-length:
+      - '2663'
+      content-type:
+      - application/json
+      cookie:
+      - _cfuvid=Dmt0PIbI1kDJNEjEUHh50Vv4Y9ZcWX6w2Uku_CIohuk-1751391377646-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.109.1
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.109.1
+      x-stainless-read-timeout:
+      - '600'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.10
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        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
+        EAAA
+    headers:
+      CF-RAY:
+      - 996fc2662b62bab1-MXP
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 31 Oct 2025 02:35:39 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - __cf_bm=GCnzowRk3BBtL4hThExLBaTMoCuPX2iDYiXpVFdUP00-1761878139-1.0.1.1-XLODyX0MQKS_p7.OT8NQGYtBAEoNV5jjkXr.7wBXtRTDsCzL487WWm2eDTtkhfUnOPLSw0b3ttpMmgPZc26O86CB2NAaNHDAENdlxghjQL8;
+        path=/; expires=Fri, 31-Oct-25 03:05:39 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=7F8vpJeCnAeLp1RRxe6VMVnO1Uwd.ucHtiVvA_sGMd0-1761878139796-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '9968'
+      openai-project:
+      - proj_xitITlrFeen7zjNSzML82h9x
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '9983'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-project-tokens:
+      - '150000000'
+      x-ratelimit-limit-requests:
+      - '30000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-project-tokens:
+      - '149999367'
+      x-ratelimit-remaining-requests:
+      - '29999'
+      x-ratelimit-remaining-tokens:
+      - '149999365'
+      x-ratelimit-reset-project-tokens:
+      - 0s
+      x-ratelimit-reset-requests:
+      - 2ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_2eaa8f840d3346c1ad94db49b3227441
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"Convert all responses into valid
+      JSON output."},{"role":"user","content":"Assess the quality of the task completed
+      based on the description, expected output, and actual results.\n\nTask Description:\nResearch
+      a topic to teach a kid aged 6 about math.\n\nExpected Output:\nA topic, explanation,
+      angle, and examples.\n\nActual Output:\nI now can give a great answer  \nFinal
+      Answer: \n\n**Topic:** Introduction to Addition\n\n**Explanation:** \nAddition
+      is one of the simplest operations in math. It''s all about putting things together.
+      When we add, we combine two or more numbers to find out how many we have in
+      total. For a 6-year-old, it can be visualized as combining different groups
+      of objects. Here''s how we can teach it:\n\n1. **Basic Concept**: Explain that
+      addition means bringing two amounts together to get a new total. Use simple
+      language like, \"If you have 2 apples and I give you 3 more apples, how many
+      apples do you have now?\"\n\n2. **Visual Aids**: Use physical objects like blocks,
+      beads, or fruit. Show the child one group with 2 blocks and another group with
+      3 blocks. Next, combine them and count the total together.\n\n3. **Symbols of
+      Addition**: Introduce the plus sign (+) and the equals sign (=). For instance,
+      you can explain that \"2 + 3 = 5\" means that when adding 2 and 3 together,
+      they make 5.\n\n**Angle:** \nMake it fun and interactive! Use games and stories
+      to keep the child engaged. For example, you could create a story about a little
+      monster who collects candies. Every time he meets a friend, he adds more candies
+      to his pile. \n\n**Examples:**\n- **Using Blocks**: Start with 4 blocks. If
+      you add 2 more, how many blocks do you have? (4 + 2 = 6)\n- **Finger Counting**:
+      Have the child count fingers. Hold up 3 fingers on one hand and 2 on the other
+      hand. Ask, \"How many fingers are up?\" and help them see that when they count
+      all the fingers together, they get 5.\n- **Story Problem**: \"You have 1 toy
+      car, and your friend gives you 3 more toy cars. How many do you have now?\"
+      Write it down for them: 1 + 3 = ? And help them count to find the answer is
+      4.\n\nMake sure to encourage the child as they explore addition! Celebrate their
+      successes and provide help as needed. This will help foster a positive attitude
+      towards math, making it not just an academic subject, but an enjoyable activity.\n\nPlease
+      provide:\n- Bullet points suggestions to improve future similar tasks\n- A score
+      from 0 to 10 evaluating on completion, quality, and overall performance- Entities
+      extracted from the task output, if any, their type, description, and relationships"}],"model":"gpt-4.1-mini","response_format":{"type":"json_schema","json_schema":{"schema":{"$defs":{"Entity":{"properties":{"name":{"description":"The
+      name of the entity.","title":"Name","type":"string"},"type":{"description":"The
+      type of the entity.","title":"Type","type":"string"},"description":{"description":"Description
+      of the entity.","title":"Description","type":"string"},"relationships":{"description":"Relationships
+      of the entity.","items":{"type":"string"},"title":"Relationships","type":"array"}},"required":["name","type","description","relationships"],"title":"Entity","type":"object","additionalProperties":false}},"properties":{"suggestions":{"description":"Suggestions
+      to improve future similar tasks.","items":{"type":"string"},"title":"Suggestions","type":"array"},"quality":{"description":"A
+      score from 0 to 10 evaluating on completion, quality, and overall performance,
+      all taking into account the task description, expected output, and the result
+      of the task.","title":"Quality","type":"number"},"entities":{"description":"Entities
+      extracted from the task output.","items":{"$ref":"#/$defs/Entity"},"title":"Entities","type":"array"}},"required":["suggestions","quality","entities"],"title":"TaskEvaluation","type":"object","additionalProperties":false},"name":"TaskEvaluation","strict":true}},"stream":false}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate, zstd
+      connection:
+      - keep-alive
+      content-length:
+      - '3969'
+      content-type:
+      - application/json
+      cookie:
+      - _cfuvid=7F8vpJeCnAeLp1RRxe6VMVnO1Uwd.ucHtiVvA_sGMd0-1761878139796-0.0.1.1-604800000;
+        __cf_bm=GCnzowRk3BBtL4hThExLBaTMoCuPX2iDYiXpVFdUP00-1761878139-1.0.1.1-XLODyX0MQKS_p7.OT8NQGYtBAEoNV5jjkXr.7wBXtRTDsCzL487WWm2eDTtkhfUnOPLSw0b3ttpMmgPZc26O86CB2NAaNHDAENdlxghjQL8
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.109.1
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-helper-method:
+      - chat.completions.parse
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.109.1
+      x-stainless-read-timeout:
+      - '600'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.10
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAAwAAAP//nFZRb9tGDH7PryDuacXsoE7TNDOwh6wo0D5sKdpsA1YHBn2iJC6nu9vx
+        5MQN8t8HnmzL6dKh24sAHXkfv4+kSN0fARiuzByMbTHbLrrp69//ePuOX6yv3n4In/nszeXLXy/X
+        73+Z3X64+KkxE70RVn+SzbtbxzZ00VHm4AezTYSZFHX26mx2/up8dvq8GLpQkdNrTczT0+PZtGPP
+        05PnJy+nz0+ns9Pt9TawJTFz+HQEAHBfnkrUV3Rn5lDAyklHItiQme+dAEwKTk8MirBk9NlMRqMN
+        PpMv3O8XRvqmIVHmsjDzTwvzzlvXVwQIQlbP4ZZzCzHoJUYHf/Vbf8gtgW3ZVdBx02ZAuQH0Fdzi
+        RiAHQC+3lNSt09cV5UwJ0Ge2HDETOMLk2TdgW3SOfENyvDCTQiKkGJI6db3L3FHFCAdkwfENwZor
+        CgIhAcYoID1nXDmCOqSBWSKvoROxr0OyVDjnENkOgd6noBiAHhS406qBhisQhLaFrE8liTbzmvNG
+        AVtyEaJDXwAdiQQ/IF5UFSCsElMNdKcuWLKoiWw3I1puWQYmwALcxZC0UiUuwtl0Q5imwVUareQJ
+        Oswt1KH3VUFEB3LDzm1T9jp44YoScCmghlhjYhyyxR7oDrVJtWyYwaLWIgeoeE1JCEpb3OWSTPaZ
+        Eom+1Ps8Hi/M9WRh/urRcd4szPyHycJoT2Sm0jv3C+Oxo4WZlyywRi7U8iYOpz+rgstICfe2isQm
+        jsP7fGEuPWlQzapw4Zsh7G4UHZqGCbBfB7cuvRO6FZcuyrdB2XchEfi+W1EqbViz15LkkNENuUrk
+        BryW47btf2Pp0QFyJcXl46ZbBVcSgIda3myzuDDXD5NDxVuAix3AXvTVruJXIbgnNb9vN8IWHQxT
+        ZdvbKxfsjUxgRVjJRIXVqecMvVC1b8F1icqfac+yfHhD0b4qdqzOFyIOVP9LBbdeT2q5agmi6wWE
+        Gw/fff+sTATSrtmd/fhsryFRTCTk80h/LPZ/p3/hG0dfyf5FjCmgbZ9kfQEd5TYUTuULHfmwB4S6
+        90VH+TDKHCCdctCLQjfYkRS75JCYStfdEMWDCUm+wYb+R0nGhjuU9c65XrImak3wyOVLaR8jWa51
+        ynhdBZZkn/0ynlTfqHU3OgZhuxas2TeUwIbeZ/bNZK91AzGFlaPu24p1/XC4iBLVvaBuQ987d2BA
+        70MecHQFXm8tD/ul50KjceWLq6Zmz9IuE6EErwtOcoimWB+OAK7Lcu0f7UsTU+hiXuZwQyXc+Yvt
+        cjXjUh+tJ+dnW2sZJ6NhNpvtLI8QlxVlZCcHC9pYtC1V491xm2NfcTgwHB3o/iefp7AH7eybb4Ef
+        DdZSzFQtY6KK7WPNo1sinU9fc9vnuRA2QmnNlpaZKWktKqqxd8OviJGNZOqWQ2PFxMP/SB2Xp/bk
+        /OWsPj87MUcPR38DAAD//wMAZsj3gp4JAAA=
+    headers:
+      CF-RAY:
+      - 996fc2a68c7dbab1-MXP
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 31 Oct 2025 02:35:43 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '3333'
+      openai-project:
+      - proj_xitITlrFeen7zjNSzML82h9x
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '3358'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-project-tokens:
+      - '150000000'
+      x-ratelimit-limit-requests:
+      - '30000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-project-tokens:
+      - '149999367'
+      x-ratelimit-remaining-requests:
+      - '29999'
+      x-ratelimit-remaining-tokens:
+      - '149999365'
+      x-ratelimit-reset-project-tokens:
+      - 0s
+      x-ratelimit-reset-requests:
+      - 2ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_e56794132fe345d0bfcee4804d1ea766
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"input":["Examples(Illustrative Examples): Specific instances used to
+      explain addition including using blocks, finger counting, and story problems."],"model":"text-embedding-3-small","encoding_format":"base64"}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate, zstd
+      connection:
+      - keep-alive
+      content-length:
+      - '211'
+      content-type:
+      - application/json
+      cookie:
+      - _cfuvid=vLbBcLMQoKUtOCugPnUg_H9aADRheAVHbrMDJqmikBA-1751391361577-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.109.1
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.109.1
+      x-stainless-read-timeout:
+      - '600'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.10
+    method: POST
+    uri: https://api.openai.com/v1/embeddings
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAAwAAAP//VJpJ06rMloXn3684cabWDekkkzOjkx4SAVErKioAEelEugTyxv3vFfp+
+        catq4gAxCJO991rPyvznX79+/e7SKs+m339+/W7Kcfr9H59r92RKfv/59Z9//fr169c/v5//7868
+        TfP7vXwV39u/X5ave77+/vOL+veV/73pz6/fdyxv3psFZ0DxAtfBvUZsb1kMVBHXFmeob+cC2VeY
+        kPp5fi9Q4d4TeojUWK1zDDZYZZKIratE22vyuBqC3N4gstfiYndBZXRwgozsHfbOrGzWY+rgGdU0
+        utLFLdzwRCghHC8AKdAewbYX3xxY/ZuAtPJiVoyFnhq4QqQjy92/bUJJrwCw/WPAWkrfFNLspUJo
+        yzpGruRdCHF6sEDrvT69YmQvIXaJDEHUFQsOVE0e2DG7MGCrexE9nBiF2+Ww7QSp9xXsW89nyMZO
+        kUHz3CbeSEBYLRmkLGEO+L232XqXzqHrBJA6SEcUDq8lXLw88oTBOb+R5wAxpez3ogqWv2jI9+Vl
+        GI3z3YBCnt+xFO/eZLXFxRN8NL2RL4tqRWFD5mBzjFlkpKlLaHCUfQHTxoICWzdSBh/XGvr3LfSG
+        xQ8GsgevTsCLkeM7PnLK8jBzGZpgiJG7agNZwWpq8HSHJ+SRZ5euKTvwwq2/BPMBZGK6nC/jAhvy
+        kLEysHLFPIhSgDD29zg3EqWi2cxXBbVdOZS6vRUyPKATwceUhqT7HgHqojO+IOTZHWUyAfZK0s6B
+        914ucOI8gpQ1epuHNXeKsXSg1JS6GVcNXD0VIhVqRbidjEMHnPsR4ltjAHt0es+CDPJybztqEWC5
+        /HaFe2k54LTHVbi8tMoSLq0yY1T3t3RzKbEWbsytR4/9zgek2ZslvBnhwyPU7UKWNHv58Ob5PDal
+        UqwW26UpoZmuR3zNoKCsKwh9oaBb47ueFZ2kYS3YCl9h0Zf9YWn6YAPSCY3ejtmKahEdURaU49PH
+        ViqV1ZAdGgcW4uOGPRgign3lncBiX484AscdIQ1QIUTVECDjvWOqiandHI5rd5nBzZmUCZ49Bg5M
+        PiDt3vLD5lJGC69IO2LFCMSBOVFcxmPKfGHz8RrAerovidBHDo/swg1t4l/KUugM2sfytx7b7lJA
+        jowSThrFqxhoSJ7gXk8derx6jVAPOmMg1qQMyRySbGovE0e4A93y6HGnVVs/2TuwSMhAdjT4IXv1
+        iSpcJjHAibdPQ1Y+yCWM4lzAysFqATG3UIXQ9F3sEualTPXThdBpTBsp90YdmPjWasLdFhiPL4JH
+        tXrrZRZGo8yxHHaNvZGkrPmTxjk4ABimZKTOhTDXu23mXm5JOhAgHnYQMug87rRhvQ8HCKWr5yNd
+        zGh7qlS6Fxh4LtD1yF2qhXbdBGYOkebdKOY2K58MH/KbaM00ux9TopwDjg8cLfOWw8EnVBOf+m//
+        YemYkmFL5ocKz9w8IyuXu2qJK67gndaIPOYY+AOhDyslHE+cghPV0wFjEn/mTyrgvTt1URXmwJab
+        oNjFgPP2MQNC3cYdfHndhP1czUK6buQCxi9KxsmnfsiBmSwQZdkVP159C9ZrqCYQ1V2Kz93dJIx4
+        5A0YSCpGl/tapNvCKCL4zptjORohw4fEECzARtg5M0a6rM65FGBwemOPL+dwe2VTDaYMN3Mjt+90
+        VreCgcpuMBC6GmpITY92A4maRchmn321SZazgHPcA6xNBydcYHl1wI29kvkgjJdwSNxrBAb+TnlF
+        cVwUwsiSJjyPw3vepsmv6MI/FYJ6Go/Y37prNbXnSBbETEqRTGbVHlHQB3CcmwT7vFnZpNNnCt5X
+        rcUOoqNqu9C7BOa1q6Ds3DLK4sgKJ9isJOKgGtSKZsU7A59SXyAn0vbpdOG5GjJC9Pbsi30ISQgt
+        Eda7YPXoR+rbQ5veOJgxnIKCz/O3yj5YwgpKHd+b2rRJ2IkcDM8nBj0Ejx7WurFK6D58B9viNa8+
+        /VRCT0sJUnjrZrOVRQq+eSW9t2+TMl2Ghz/DSyk33kxOsb09dHUUPvMGSZYjV5RYSJYQbdX5p99X
+        /91HUEOKiuQ+49KFM8te0JvTHocRRVfffhAoXvbmulwjwlR4x/DzW1BRPhURwGGtRoLCDRP2JNNO
+        qbjiStitexPpirOk0/3CUYKljA3WstZIF0/LS+gUxgEFy64ja2gdI2g8Mwofa7hPp0G7J3Csawal
+        ynW0x/PQ8FA6uSNK7B0dzojKO7iCQkdoHkawxfe+h7uwn5F2DJZqlVjJERbdqWYUX2TCaBvDw2HN
+        b0gfo7fCLIwtQp4VM+ykr3e1KugsQzc/KfjyDiuFiAuJBD8mGLk2skPm239hebl49zJcwHKNZFmA
+        7PU60zjH1fZ9H4wfmh59S+CwffyAUDg5QoZ7kxXaM+8ZnN6rhhX9tLeXlzZYUCiKE05e5E2WgBwd
+        QXk2HdZdD4aDOecFPFngPK88FQ/jSeMi4V5JEBnejQoJaHcdvJpqj6+1ew4pubtGQqLmERJ3iTv8
+        1Os6Pe7zzrDWcNnxFeSZLr7gfDspgH14hids6rPC8SFFyuKV1w1eAdphZe6YEN8mJRG2oHXRqSyc
+        ipRxk//U4y2/vNLNqwMV3FCgYIsc+bCvIzES7jqcPKGjn+l45/Y1vxwuLHLc8zCQOeozOJ8ODLr5
+        RzMlRRBQcMvqFUnNqpLPehhQGV9nj9KzGoy4EGthF3YzVqRCIFulU7VABPY2O8nlqDCq1stwt8dH
+        ZLqqktLP8c3wL398zhxV6PYYpHoh+G9qmPfm+Z0yZTiXsIyZxdvOZpQuK/Q5QX/6DDoGb4Mwd5nX
+        oNUv/dzyoCGEHCsKioHMztRcmYCRSjkTrJVZsIds1t4uBx5CZapzpL2vePjoryhwZr3/6J2RsnNU
+        ZoIUeDTyzL5T5mBkI/iZz0hvNm4gRiwvcLHdcX4d3dpe6hyJ8OOXZqC963Bp5GshUCU0cS5UUfrq
+        9JmBMjoznrAwt5/6gtSR67wXc7RC9njvVegLLIWdmy4OjMSLlnCdHB89InZUllnhAqHhHhFSOdr4
+        rF8pw/RTZyRWeXsl4UsF0tGOPEHZERunZrgJYHX26HxkpWprHORBv6ZuXvHSaLAW1MPhE6F2UHCM
+        X/ZbIk7HQ5j0P/3Nxtkkw/VyfeLLIS6HuQj9HMwhb3jkYGmEeSpPCNVxDZEsLL6ydC0nwhx7C1YZ
+        KkqHs3oKgC46Dr7lOq28lOnaQrA5Bopv50XZ/K6eBeYR7mfmkGIbT2NhCXdG5fB9ZxzTtQ9QDKnX
+        LsVSs9Zk7Q6ggPmMXl4VhlpKUerOAdiVRWyzp2s4BHjnw3nexzP/0b9JjKlYaNrbE6mjIgI2XXMZ
+        GsV98JbiXKbkoSEVJCiTsAe2gKwBb4yAMVwe58hmFXyw2gjetusTy1prD8t+5kVAvWCKPFjJytav
+        Yim8bhPEcpY41fbuDhFUutr53D9UIypnCrTPxkVScJ/sZVe2AczczULysjMITT02BpprvyHxo2dE
+        HJkNnMmcYceKjhXm5juEyqFjsDHjplqCh6p99RV77cMjuB3iDBp+YiFX9I7VGuZaBnjpMGFPINpA
+        yFp28NBSOTqHb6CQsb5CyOXNCV8+86k7qswG4JoI3vT5PfPV7+c4zVi7t8lAe3QWwHigbWyIOpMu
+        nSVskJgTwceLdazW07oWUOdigBXq3dudcbzWkFPrCbnyrgBLIuYQAt84YxUTL6Uu+s6H56yPkU7R
+        DVnzzM4BwLbtgXpX2ltoohE890uPDfAcwSSsD4uXL7cjMluutjf+Bf1vv3147T1g+s7W8GgyFHK9
+        oqpGQ3hcQeTfS49sZkFWcqk6oaBrA4uYrcFKhnqBhZZRKIPCFLbROcwFqQ++eqHY1EnjYohOrwcW
+        J90cWErCAWTZp4O/errG8csQ7pUCPZZqSDUGldjDKZsaj+irMiydRS8/fh05MQ6nlc1naJql7NHq
+        xQLr5I0tTydHjI8Z0JWRbhQNplEX4JBPhnSN+uBvvtHfykK2/ViMwnV1E2wT0SXrYkuUoPoz9Ba3
+        1FMiP1XqIPQF7X38c8qYyj2Cn3r0GJe4KcUfoAZfD3zB+kHz0/V6MXagUncAKdP1RKiz3nmwPgQP
+        bKjcMWUDzPhQZKw7lozRJou5ThmsKd9F2vh+gUGfxUzIPUvziqC8DThz5wQQlt1hF16zcIpjbMB3
+        qBCv9akwbQ7UwIA9z63IUw7aMOZ3SRNG2KtIPnGZQvRZzAVXcivsaaZQfecrQN1QI3HPq+H09F81
+        BMCtkPjxg/NSSjz03OsFaw9tTdtkvqjw8GQcb0dOsbJNQhnBQ0OfkZLTpr1QCy3C5pDf8SnDQ4ir
+        cvWERowaHFP8lm5Ke9cgjjQNa2zvVttoZrEwXw4nZDLpXiHySQzALY1S7G7xki4N/4iAzYkmSsgx
+        SbEuS73Aqe00k46l7Y6Vwgwe133t0fSjSpunj1sg7J47D370cxnBW4a7YGg8uoIj2RQ+977vZx5S
+        2KVbwviecHeh4dWOQNnr5NU1jFlQzeCV2/byqW9+cTwa60dXVSjtbThwAtTBaxmLAVto6iO8KaHr
+        kQulKGNadwm8L8f7R28OQ+fErgi7lHNwhIkXkgZpBjjR8gVrTshUy2neamFUSgd5EbxWCyul+Y9/
+        v6UaUoj7kJhvvSL5nuwA3pqYgxFKWCxpoA/Jd16VNFTx1U86u6sZdYTv4Sj98APzIHYBd07dYQvq
+        kfIzH5Y56Dz6sLhknEPIwOBlD8hFi6Gwuix1P/7i5//apy0ReCjP8/txuVVEaS75N+9A4id/oU/H
+        bYYW3iA+Bu+O4OF69ODGDebPvKLyu6lCoX4m2BpUWVmOxUGEt+YsIq/FkkJmWM8gsq4NPsqtGc79
+        TaaERx6rWIdMrlD6U9dAQ2U2Ppnjzv7yHA/xxUSmvDX2MqSZAbAuNn/Pp/Xp+Fz8YmSvkbStGtO6
+        SARPTnp0/PAmObRdC2ZuD+agdqSBZYJjB7lt5pDymSfsca0c6BTWAVuf/l79ptmg0JQVEqPKTXF2
+        Kndwza4EBU2mKYx71WK4O+AeycdYVxh628UAuPp1buSYVcZrrbVf/cTaUz9+13/39ZfIFq+7Ydnx
+        ww6crMN5JoHyJD/+dAhTjMXl+iSL6BgiWGa/Qxc3n6stvpe94PHPGxJ9eak2ZjA+7uHp49gJ44qy
+        T/wVvp/qHafRsISrIcZXyFm1gWVhWextauoOvNTe9Kr+MoBRrtMNAkWlkB4iTKbrIGswumQaDqdO
+        VbZWPVGwPFE5tt71EK7SQykF7IjsfDLHXMFckjHwkCwadtLLJVy2aJzBuAweMlSuSb/zhtda3fK2
+        zZvChbthB/L53vXq98aD1X+XkfDRB2wlz92XP1XB6c071ofqBjbJk2IYThcVK9m5+Pg9XYbPw4rQ
+        8XRT0w8f5HCUnwq6nc4uaPW93IOnPagz/RjKkHz9R8weKnQ8809l6ycFCtRBOXqvm7imbyR1mvDh
+        LY+hrXrYBN9PAMkWjK0ieAzMu6Y2ARZxiN2dcQynqS19uJNbFTkSMcDyvkglvKl+7JXGZVL6r1/+
+        5BHYrnOh2mLzWUDXcHRkPi6Hgbwr1oJJW+rocXnpKeOLZQYJx+rYfuWDvdjCwQH1dgJI88hjWA9G
+        IwohnYTIbWpTmQNV0ACWJGuGEunAmoIuE75+L6Kje7WZaSoerptXYe3LJxHIErDG6RVZx3wMf+qF
+        FYoXCj98gBfXtuC9lo5YpWv0s97Ch1e8EQpTuqxcFAt7mn/88Ng3X4KffvIORkiF60IcDWQL12HJ
+        csqBuKkbwHpANEa+drdJ5S2qQJ/UyFsP9WZvJ2rJYQIbZeYIvgDWD5sdZCzP8ZijvAsnVRlU3nmo
+        3oxr3q7IcpAgdCP/gd1EblPSvBQKrH4qfPNiZWWvaXlgqvg4s1PtDqu7mh3wqOcOaUFkKUQ+WAVw
+        b8E671oEhxYudg4zCqw/fD8LXNAJAKAKmcJ4SdfUnlRwWuQjNvOLnlI1LwUHzmoN7Ozvcbh8/CVP
+        Z5qErHdth+ThiZ7QnfkVI+NYkzFiLwz88DNWg92rWp6nyfvy4byvzN5e3aPFwIzhFezs7qo90ZHB
+        C0n4sJGiiFS1unexgPblMCKFurFkOrKrxn/zWPnEQWXcz5sI88D2Z8g6AyBBSlvwOeIZHVmcKPRR
+        F0ZomaP4M09Zcn8WQuuXFZJgwylTmHs5NF+di8NYTezVytoZStg/I+eiOWTV8B6CxMs4fBX1OFy0
+        k1WCO6tKyLg7KKTnHvKgvjgjdvpEHRbtLTqC8zRkj9kOeUW4LSl/eO1RHlgyLotrQAFXOvrq3Zqk
+        aQ2CvXdAGsUH4cf/z3BPHWJkUQwgPeVxPdh31A6bTPpQ+rZ7lPBNLB9p1cuzZ63kY9CB/TTPB5mt
+        PnnN+PVHH//mk/VTPzDorB+eq5hgZGNIlTtz3m0nhSy7XVdALVAlnFq3QPnkTxTom1ONTAGaA8Wf
+        VgqGVVwgb5PWYQ6f7hXim3rF5qkRbeo08+2XDzz6Pc3h+7y9rzy7FfyX/9MpITcffvNR6pOH//jf
+        /f6gYLM/wJC0SuTAb74RMRSVbqZ+4mFqv/ivHxhGubvG8EltwjcPqXB2aDyALi3/4TEVsOtT9WFA
+        uQ5STbdNl7diXKEx5k/smOpTweT+LMGjSSxsr4uZ0q/74EBGdVZs77ezsgDZjuB0n+e5zHl6wA9N
+        1yB/3W/zum+aqvvwHezqQ4eUjj0rC6XuPOjRlY7Na9vay8MNWkisEeLrh4+2xLolEAVth52nwZHh
+        LEbjD49aPYXJ6jfTAj55C7oN5jyQok13/Jf/fcF624TLT1fBOi9XFN9bvqq//v7TDx4PL2248hyT
+        Q+loRl8+IfjhiY5AV4aOLsyxD7fRjGJYVvwJW1l5AuvTxzX8+oFv3rDSkcgLh4FZvOBh6WRLtIzi
+        O7hjZmKVl3A9EljAtyVeUCYRg2xauUUCnakSSnebDJav32ueKfImeZ4rclZvPmTSgPmuf7hJjF1D
+        sdKfWA8fpb3UnpWDuKBzpA5lRVpf7HMY7NAy75B9sYmrq5bwCOML0sSVEJI8T7lQBXI2UzRV2ttn
+        PwZ+9ZJE1LkiTrv34Gc/C2tO1ZFF7ebkxz879VtJ16IOum9ejFRM5nANLTeGtzg2kbXXpWrpvC0G
+        L2MIsOMcdWW7Bd5y+PAR8oocpJu4cjtI2ZyCr+9dXA3KOxKBeBdrlLyjm9IqfOzBwFGzDz93YN7a
+        qIRXVyfecHNcBQf20n7zDWSbpjvMGr/IQmo3PNZoq67Iamo19Nzkgo8nc/vkFYsM4fs8Y72vXsNG
+        ts7/9v+84oCAZfUDFXYuW3r9i5iABTK3gx99Q4+bwVQrHRkc4G87gKXIm4dvHg6Hx7X55onD/NCd
+        kT9dIONxdwelK8VyBaD2YoEUwJfK+lrrGEb+o8TSeW7SLnX6kf/4cWRrbzWluwMo4eG2CMgI+JP9
+        zR/gNTIP2KZW/EnxYwj7xDlj6eN/NlY/ReDMjTNGbSL/5OuQGvb1Dy9tN9lyoNE+NG/j0NNm8cIv
+        0DzXCVbO6guM+sFZ4F5eZGS+D709fvdzXuUWYaksxoG8AfzRO+x4Z4H07tWL4bv97B+sEQgXp9cs
+        IYsY/ye/XS46E8DGupjILStFoc/JMMJg8RSsPtey2hjkjeCblzyuhpoygpNSMMfOghLVe4GVKH0B
+        tUxt5q3PruHm+y8ZFrumQvk3D3dCMgrPElvz7uz0YD3avA8+vPj1O8OWaBED0TIT7MZPANaoTxz+
+        Mz+9ddru9iJodwgbLRaRIhV3UpvrlH95CZm3lguxOecl9HBuzVitk5S+D+tOWPiz+NnvZcP+ibuF
+        Z5Vbi775Ac3UbgaBrgtz31bHtKtb0RKocTchu3+s9uoLQw6/PGV6Kj0sDzOWoTjrHjKoQldom9uL
+        sBHjZt5bZ1CRm6BDyJFZwpJqY2U564Xz5dmPPo7kpz9Zrjyj7KO/m0muI0S4N2aGs62Bjal+BOGS
+        SMjdYj8ke6WjgNNaEfrM/7QvXqdWeFufelv8bSAg5rXD3d4zyGSAUlHlnYPg44ewdd+YlHzzkFsa
+        p/N3f305p89YsC9g9LYsGQfmW1+F9RCw8uGH1b0pUPjkcdihRhn0ezj58Pf3VMC//vr167++Jwza
+        7p43n4MBU75O//j3UYF/sP8Y26Rpfo4hzGNS5L///H0C4fd76Nr39N9TV+ev8fefXwz3c9bg99RN
+        SfN/r//1edS//vofAAAA//8DADmCS/LgIAAA
+    headers:
+      CF-RAY:
+      - 996fc2bdfba74c68-MXP
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 31 Oct 2025 02:35:43 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - __cf_bm=.S.0fRlkXW0.BA2KmS9TTms9JPq5SLnXktKdk0f0xho-1761878143-1.0.1.1-FYQzY6Kr.UXjSIXdnFMpEPUn.35ba4Hk8i16kCdAKgJwCLZiQAN8v9XzelGaNBPwPS9rIX_MqRctKhBDHgbMD_f_8fk0YOHhnCFfbGi56A8;
+        path=/; expires=Fri, 31-Oct-25 03:05:43 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=fhKPFQ8oWIy28FS88b8siDfqJGAFSqTpIwMwmdY2q_s-1761878143910-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-allow-origin:
+      - '*'
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-model:
+      - text-embedding-3-small
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '94'
+      openai-project:
+      - proj_xitITlrFeen7zjNSzML82h9x
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      via:
+      - envoy-router-568dcd8c65-k74d4
+      x-envoy-upstream-service-time:
+      - '122'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '10000000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '9999966'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_d2945ad09e9c45ca99f752686167bb97
+    status:
+      code: 200
+      message: OK
 version: 1

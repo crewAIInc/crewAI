@@ -2,27 +2,27 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Sequence
+import json
 import shutil
 import subprocess
 import time
 from typing import (
     TYPE_CHECKING,
     Any,
+    Final,
     Literal,
+    cast,
 )
+from urllib.parse import urlparse
 
 from pydantic import BaseModel, Field, InstanceOf, PrivateAttr, model_validator
 from typing_extensions import Self
 
+from crewai.a2a.config import A2AConfig
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.agents.cache.cache_handler import CacheHandler
 from crewai.agents.crew_agent_executor import CrewAgentExecutor
 from crewai.events.event_bus import crewai_event_bus
-from crewai.events.types.agent_events import (
-    AgentExecutionCompletedEvent,
-    AgentExecutionErrorEvent,
-    AgentExecutionStartedEvent,
-)
 from crewai.events.types.knowledge_events import (
     KnowledgeQueryCompletedEvent,
     KnowledgeQueryFailedEvent,
@@ -70,14 +70,14 @@ if TYPE_CHECKING:
 
 
 # MCP Connection timeout constants (in seconds)
-MCP_CONNECTION_TIMEOUT = 10
-MCP_TOOL_EXECUTION_TIMEOUT = 30
-MCP_DISCOVERY_TIMEOUT = 15
-MCP_MAX_RETRIES = 3
+MCP_CONNECTION_TIMEOUT: Final[int] = 10
+MCP_TOOL_EXECUTION_TIMEOUT: Final[int] = 30
+MCP_DISCOVERY_TIMEOUT: Final[int] = 15
+MCP_MAX_RETRIES: Final[int] = 3
 
 # Simple in-memory cache for MCP tool schemas (duration: 5 minutes)
-_mcp_schema_cache = {}
-_cache_ttl = 300  # 5 minutes
+_mcp_schema_cache: dict[str, Any] = {}
+_cache_ttl: Final[int] = 300  # 5 minutes
 
 
 class Agent(BaseAgent):
@@ -197,6 +197,10 @@ class Agent(BaseAgent):
     guardrail_max_retries: int = Field(
         default=3, description="Maximum number of retries when guardrail fails"
     )
+    a2a: list[A2AConfig] | A2AConfig | None = Field(
+        default=None,
+        description="A2A (Agent-to-Agent) configuration for delegating tasks to remote agents. Can be a single A2AConfig or a dict mapping agent IDs to configs.",
+    )
 
     @model_validator(mode="before")
     def validate_from_repository(cls, v: Any) -> dict[str, Any] | None | Any:  # noqa: N805
@@ -305,17 +309,19 @@ class Agent(BaseAgent):
         # If the task requires output in JSON or Pydantic format,
         # append specific instructions to the task prompt to ensure
         # that the final answer does not include any code block markers
-        if task.output_json or task.output_pydantic:
+        # Skip this if task.response_model is set, as native structured outputs handle schema automatically
+        if (task.output_json or task.output_pydantic) and not task.response_model:
             # Generate the schema based on the output format
             if task.output_json:
-                # schema = json.dumps(task.output_json, indent=2)
-                schema = generate_model_description(task.output_json)
+                schema_dict = generate_model_description(task.output_json)
+                schema = json.dumps(schema_dict["json_schema"]["schema"], indent=2)
                 task_prompt += "\n" + self.i18n.slice(
                     "formatted_task_instructions"
                 ).format(output_format=schema)
 
             elif task.output_pydantic:
-                schema = generate_model_description(task.output_pydantic)
+                schema_dict = generate_model_description(task.output_pydantic)
+                schema = json.dumps(schema_dict["json_schema"]["schema"], indent=2)
                 task_prompt += "\n" + self.i18n.slice(
                     "formatted_task_instructions"
                 ).format(output_format=schema)
@@ -437,6 +443,13 @@ class Agent(BaseAgent):
             task_prompt = self._training_handler(task_prompt=task_prompt)
         else:
             task_prompt = self._use_trained_data(task_prompt=task_prompt)
+
+        # Import agent events locally to avoid circular imports
+        from crewai.events.types.agent_events import (
+            AgentExecutionCompletedEvent,
+            AgentExecutionErrorEvent,
+            AgentExecutionStartedEvent,
+        )
 
         try:
             crewai_event_bus.emit(
@@ -618,6 +631,7 @@ class Agent(BaseAgent):
                 self._rpm_controller.check_or_wait if self._rpm_controller else None
             ),
             callbacks=[TokenCalcHandler(self._token_process)],
+            response_model=task.response_model if task else None,
         )
 
     def get_delegation_tools(self, agents: list[BaseAgent]) -> list[BaseTool]:
@@ -709,7 +723,7 @@ class Agent(BaseAgent):
                     f"Specific tool '{specific_tool}' not found on MCP server: {server_url}",
                 )
 
-            return tools
+            return cast(list[BaseTool], tools)
 
         except Exception as e:
             self._logger.log(
@@ -739,9 +753,9 @@ class Agent(BaseAgent):
 
         return tools
 
-    def _extract_server_name(self, server_url: str) -> str:
+    @staticmethod
+    def _extract_server_name(server_url: str) -> str:
         """Extract clean server name from URL for tool prefixing."""
-        from urllib.parse import urlparse
 
         parsed = urlparse(server_url)
         domain = parsed.netloc.replace(".", "_")
@@ -778,7 +792,9 @@ class Agent(BaseAgent):
             )
             return {}
 
-    async def _get_mcp_tool_schemas_async(self, server_params: dict) -> dict[str, dict]:
+    async def _get_mcp_tool_schemas_async(
+        self, server_params: dict[str, Any]
+    ) -> dict[str, dict]:
         """Async implementation of MCP tool schema retrieval with timeouts and retries."""
         server_url = server_params["url"]
         return await self._retry_mcp_discovery(
@@ -787,7 +803,7 @@ class Agent(BaseAgent):
 
     async def _retry_mcp_discovery(
         self, operation_func, server_url: str
-    ) -> dict[str, dict]:
+    ) -> dict[str, dict[str, Any]]:
         """Retry MCP discovery operation with exponential backoff, avoiding try-except in loop."""
         last_error = None
 
@@ -815,9 +831,10 @@ class Agent(BaseAgent):
             f"Failed to discover MCP tools after {MCP_MAX_RETRIES} attempts: {last_error}"
         )
 
+    @staticmethod
     async def _attempt_mcp_discovery(
-        self, operation_func, server_url: str
-    ) -> tuple[dict[str, dict] | None, str, bool]:
+        operation_func, server_url: str
+    ) -> tuple[dict[str, dict[str, Any]] | None, str, bool]:
         """Attempt single MCP discovery operation and return (result, error_message, should_retry)."""
         try:
             result = await operation_func(server_url)
@@ -851,13 +868,13 @@ class Agent(BaseAgent):
 
     async def _discover_mcp_tools_with_timeout(
         self, server_url: str
-    ) -> dict[str, dict]:
+    ) -> dict[str, dict[str, Any]]:
         """Discover MCP tools with timeout wrapper."""
         return await asyncio.wait_for(
             self._discover_mcp_tools(server_url), timeout=MCP_DISCOVERY_TIMEOUT
         )
 
-    async def _discover_mcp_tools(self, server_url: str) -> dict[str, dict]:
+    async def _discover_mcp_tools(self, server_url: str) -> dict[str, dict[str, Any]]:
         """Discover tools from MCP server with proper timeout handling."""
         from mcp import ClientSession
         from mcp.client.streamable_http import streamablehttp_client
@@ -889,7 +906,9 @@ class Agent(BaseAgent):
                     }
                 return schemas
 
-    def _json_schema_to_pydantic(self, tool_name: str, json_schema: dict) -> type:
+    def _json_schema_to_pydantic(
+        self, tool_name: str, json_schema: dict[str, Any]
+    ) -> type:
         """Convert JSON Schema to Pydantic model for tool arguments.
 
         Args:
@@ -926,7 +945,7 @@ class Agent(BaseAgent):
         model_name = f"{tool_name.replace('-', '_').replace(' ', '_')}Schema"
         return create_model(model_name, **field_definitions)
 
-    def _json_type_to_python(self, field_schema: dict) -> type:
+    def _json_type_to_python(self, field_schema: dict[str, Any]) -> type:
         """Convert JSON Schema type to Python type.
 
         Args:
@@ -935,7 +954,6 @@ class Agent(BaseAgent):
         Returns:
             Python type
         """
-        from typing import Any
 
         json_type = field_schema.get("type")
 
@@ -965,13 +983,15 @@ class Agent(BaseAgent):
 
         return type_mapping.get(json_type, Any)
 
-    def _fetch_amp_mcp_servers(self, mcp_name: str) -> list[dict]:
+    @staticmethod
+    def _fetch_amp_mcp_servers(mcp_name: str) -> list[dict]:
         """Fetch MCP server configurations from CrewAI AMP API."""
         # TODO: Implement AMP API call to "integrations/mcps" endpoint
         # Should return list of server configs with URLs
         return []
 
-    def get_multimodal_tools(self) -> Sequence[BaseTool]:
+    @staticmethod
+    def get_multimodal_tools() -> Sequence[BaseTool]:
         from crewai.tools.agent_tools.add_image_tool import AddImageTool
 
         return [AddImageTool()]
@@ -991,8 +1011,9 @@ class Agent(BaseAgent):
             )
             return []
 
+    @staticmethod
     def get_output_converter(
-        self, llm: BaseLLM, text: str, model: type[BaseModel], instructions: str
+        llm: BaseLLM, text: str, model: type[BaseModel], instructions: str
     ) -> Converter:
         return Converter(llm=llm, text=text, model=model, instructions=instructions)
 
@@ -1022,7 +1043,8 @@ class Agent(BaseAgent):
                 )
         return task_prompt
 
-    def _render_text_description(self, tools: list[Any]) -> str:
+    @staticmethod
+    def _render_text_description(tools: list[Any]) -> str:
         """Render the tool name and description in plain text.
 
         Output will be in the format of:
