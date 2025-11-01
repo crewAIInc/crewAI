@@ -12,6 +12,7 @@
     --shadow-strong: rgba(0, 0, 0, 0.15);
     --edge-label-text: '{{ GRAY }}';
     --edge-label-bg: rgba(255, 255, 255, 0.8);
+    --edge-or-color: #000000;
 }
 
 [data-theme="dark"] {
@@ -28,6 +29,7 @@
     --shadow-strong: rgba(0, 0, 0, 0.5);
     --edge-label-text: #c9d1d9;
     --edge-label-bg: rgba(22, 27, 34, 0.9);
+    --edge-or-color: #ffffff;
 }
 
 @keyframes dash {
