@@ -1,12 +1,11 @@
 from __future__ import annotations
 
-import json
-import re
 from collections.abc import Callable
 from copy import deepcopy
-from typing import TYPE_CHECKING, Any, Final, TypedDict, Union, get_args, get_origin
+import json
+import re
+from typing import TYPE_CHECKING, Any, Final, TypedDict
 
-from jsonref import replace_refs
 from pydantic import BaseModel, ValidationError
 from typing_extensions import Unpack
 
@@ -76,7 +75,7 @@ class Converter(OutputConverter):
                     result = self.model.model_validate_json(response)
                 except ValidationError:
                     # If direct validation fails, attempt to extract valid JSON
-                    result = handle_partial_json(
+                    result = handle_partial_json(  # type: ignore[assignment]
                         result=response,
                         model=self.model,
                         is_json_output=False,
@@ -141,7 +140,7 @@ class Converter(OutputConverter):
                 return self.to_json(current_attempt + 1)
             return ConverterError(f"Failed to convert text into JSON, error: {e}.")
 
-    def _create_instructor(self) -> InternalInstructor:
+    def _create_instructor(self) -> InternalInstructor[Any]:
         """Create an instructor."""
 
         return InternalInstructor(
@@ -274,7 +273,7 @@ def convert_with_instructions(
     is_json_output: bool,
     agent: Agent | BaseAgent | None,
     converter_cls: type[Converter] | None = None,
-) -> dict | BaseModel | str:
+) -> dict[str, Any] | BaseModel | str:
     """Convert a result string to a Pydantic model or JSON using instructions.
 
     Args:
@@ -346,13 +345,14 @@ def get_conversion_instructions(
         model_schema = PydanticSchemaParser(model=model).get_schema()
         instructions += (
             f"\n\nOutput ONLY the valid JSON and nothing else.\n\n"
-            f"The JSON must follow this schema exactly:\n```json\n{model_schema}\n```"
+            f"Use this format exactly:\n```json\n{model_schema}\n```"
         )
     else:
         model_description = generate_model_description(model)
+        schema_json = json.dumps(model_description["json_schema"]["schema"], indent=2)
         instructions += (
             f"\n\nOutput ONLY the valid JSON and nothing else.\n\n"
-            f"The JSON must follow this format exactly:\n{model_description}"
+            f"Use this format exactly:\n```json\n{schema_json}\n```"
         )
     return instructions
 
@@ -409,7 +409,7 @@ def create_converter(
     if not converter:
         raise Exception("No output converter found or set.")
 
-    return converter
+    return converter  # type: ignore[no-any-return]
 
 
 def resolve_refs(schema: dict[str, Any]) -> dict[str, Any]:
@@ -442,7 +442,7 @@ def resolve_refs(schema: dict[str, Any]) -> dict[str, Any]:
 
         return node
 
-    return _resolve(schema_copy)
+    return _resolve(schema_copy)  # type: ignore[no-any-return]
 
 
 def add_key_in_dict_recursively(
@@ -602,7 +602,6 @@ def generate_model_description(model: type[BaseModel]) -> dict[str, Any]:
     Returns:
         A JSON schema dictionary representation of the model.
     """
-    from jsonref import JsonRef
 
     json_schema = model.model_json_schema(ref_template="#/$defs/{model}")
 

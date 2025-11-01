@@ -241,12 +241,14 @@ def test_get_conversion_instructions_non_gpt() -> None:
     llm = LLM(model="ollama/llama3.1", base_url="http://localhost:11434")
     with patch.object(LLM, "supports_function_calling", return_value=False):
         instructions = get_conversion_instructions(SimpleModel, llm)
-        # Check that the JSON schema dict string representation is in instructions
+        # Check that the JSON schema is properly formatted
         assert "Please convert the following text into valid JSON" in instructions
         assert "Output ONLY the valid JSON and nothing else" in instructions
-        assert "The JSON must follow this format exactly" in instructions
-        # The dict gets stringified when concatenated, so check for dict structure
-        assert "'type': 'json_schema'" in instructions or '"type": "json_schema"' in instructions
+        assert "The JSON must follow this schema exactly" in instructions
+        assert "```json" in instructions
+        assert '"type": "object"' in instructions
+        assert '"properties"' in instructions
+        assert "'type': 'json_schema'" not in instructions
 
 
 # Tests for is_gpt
