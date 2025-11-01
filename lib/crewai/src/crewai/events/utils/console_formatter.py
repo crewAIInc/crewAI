@@ -369,7 +369,14 @@ class ConsoleFormatter:
         return flow_tree
 
     def start_flow(self, flow_name: str, flow_id: str) -> Tree | None:
-        """Initialize a flow execution tree."""
+        """Initialize or update a flow execution tree."""
+        if self.current_flow_tree is not None:
+            for child in self.current_flow_tree.children:
+                if "Starting Flow" in str(child.label):
+                    child.label = Text("🚀 Flow Started", style="green")
+                    break
+            return self.current_flow_tree
+
         flow_tree = Tree("")
         flow_label = Text()
         flow_label.append("🌊 Flow: ", style="blue bold")
@@ -448,27 +455,38 @@ class ConsoleFormatter:
             prefix, style = "🔄 Running:", "yellow"
         elif status == "completed":
             prefix, style = "✅ Completed:", "green"
-            # Update initialization node when a method completes successfully
             for child in flow_tree.children:
                 if "Starting Flow" in str(child.label):
                     child.label = Text("Flow Method Step", style="white")
                     break
         else:
             prefix, style = "❌ Failed:", "red"
-            # Update initialization node on failure
             for child in flow_tree.children:
                 if "Starting Flow" in str(child.label):
                     child.label = Text("❌ Flow Step Failed", style="red")
                     break
 
-        if not method_branch:
-            # Find or create method branch
-            for branch in flow_tree.children:
-                if method_name in str(branch.label):
-                    method_branch = branch
-                    break
-            if not method_branch:
-                method_branch = flow_tree.add("")
+        if method_branch is not None:
+            if method_branch in flow_tree.children:
+                method_branch.label = Text(prefix, style=f"{style} bold") + Text(
+                    f" {method_name}", style=style
+                )
+                self.print(flow_tree)
+                self.print()
+                return method_branch
+
+        for branch in flow_tree.children:
+            label_str = str(branch.label)
+            if f" {method_name}" in label_str and (
+                "Running:" in label_str
+                or "Completed:" in label_str
+                or "Failed:" in label_str
+            ):
+                method_branch = branch
+                break
+
+        if method_branch is None:
+            method_branch = flow_tree.add("")
 
         method_branch.label = Text(prefix, style=f"{style} bold") + Text(
             f" {method_name}", style=style
@@ -476,6 +494,7 @@ class ConsoleFormatter:
 
         self.print(flow_tree)
         self.print()
+
         return method_branch
 
     def get_llm_tree(self, tool_name: str):

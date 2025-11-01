@@ -1,3 +1,9 @@
+"""Core flow execution framework with decorators and state management.
+
+This module provides the Flow class and decorators (@start, @listen, @router)
+for building event-driven workflows with conditional execution and routing.
+"""
+
 from __future__ import annotations
 
 import asyncio
@@ -9,6 +15,7 @@ import logging
 from typing import (
     Any,
     ClassVar,
+    Final,
     Generic,
     Literal,
     ParamSpec,
@@ -38,7 +45,7 @@ from crewai.events.types.flow_events import (
     MethodExecutionFinishedEvent,
     MethodExecutionStartedEvent,
 )
-from crewai.flow.flow_visualizer import plot_flow
+from crewai.flow.visualization import build_flow_structure, render_interactive
 from crewai.flow.flow_wrappers import (
     FlowCondition,
     FlowConditions,
@@ -58,7 +65,11 @@ from crewai.flow.utils import (
     is_flow_method_callable,
     is_flow_method_name,
     is_simple_flow_condition,
+    _extract_all_methods,
+    _extract_all_methods_recursive,
+    _normalize_condition,
 )
+from crewai.flow.constants import AND_CONDITION, OR_CONDITION
 from crewai.utilities.printer import Printer, PrinterColor
 
 
@@ -74,95 +85,63 @@ class FlowState(BaseModel):
     )
 
 
-# type variables with explicit bounds
-T = TypeVar("T", bound=dict[str, Any] | BaseModel)  # Generic flow state type parameter
-StateT = TypeVar(
-    "StateT", bound=dict[str, Any] | BaseModel
-)  # State validation type parameter
-P = ParamSpec("P")  # ParamSpec for preserving function signatures in decorators
-R = TypeVar("R")  # Generic return type for decorated methods
-F = TypeVar("F", bound=Callable[..., Any])  # Function type for decorator preservation
-
-
-def ensure_state_type(state: Any, expected_type: type[StateT]) -> StateT:
-    """Ensure state matches expected type with proper validation.
-
-    Args:
-        state: State instance to validate
-        expected_type: Expected type for the state
-
-    Returns:
-        Validated state instance
-
-    Raises:
-        TypeError: If state doesn't match expected type
-        ValueError: If state validation fails
-    """
-    if expected_type is dict:
-        if not isinstance(state, dict):
-            raise TypeError(f"Expected dict, got {type(state).__name__}")
-        return cast(StateT, state)
-    if isinstance(expected_type, type) and issubclass(expected_type, BaseModel):
-        if not isinstance(state, expected_type):
-            raise TypeError(
-                f"Expected {expected_type.__name__}, got {type(state).__name__}"
-            )
-        return state
-    raise TypeError(f"Invalid expected_type: {expected_type}")
+T = TypeVar("T", bound=dict[str, Any] | BaseModel)
+P = ParamSpec("P")
+R = TypeVar("R")
+F = TypeVar("F", bound=Callable[..., Any])
 
 
 def start(
     condition: str | FlowCondition | Callable[..., Any] | None = None,
 ) -> Callable[[Callable[P, R]], StartMethod[P, R]]:
-    """
-    Marks a method as a flow's starting point.
+    """Marks a method as a flow's starting point.
 
     This decorator designates a method as an entry point for the flow execution.
     It can optionally specify conditions that trigger the start based on other
     method executions.
 
-    Parameters
-    ----------
-    condition : Optional[Union[str, FlowCondition, Callable[..., Any]]], optional
-        Defines when the start method should execute. Can be:
-        - str: Name of a method that triggers this start
-        - FlowCondition: Result from or_() or and_(), including nested conditions
-        - Callable[..., Any]: A method reference that triggers this start
-        Default is None, meaning unconditional start.
+    Args:
+        condition: Defines when the start method should execute. Can be:
+            - str: Name of a method that triggers this start
+            - FlowCondition: Result from or_() or and_(), including nested conditions
+            - Callable[..., Any]: A method reference that triggers this start
+            Default is None, meaning unconditional start.
 
-    Returns
-    -------
-    Callable[[Callable[P, R]], StartMethod[P, R]]
-        A decorator function that wraps the method as a flow start point
-        and preserves its signature.
+    Returns:
+        A decorator function that wraps the method as a flow start point and preserves its signature.
 
-    Raises
-    ------
-    ValueError
-        If the condition format is invalid.
+    Raises:
+        ValueError: If the condition format is invalid.
 
-    Examples
-    --------
-    >>> @start()  # Unconditional start
-    >>> def begin_flow(self):
-    ...     pass
+    Examples:
+        >>> @start()  # Unconditional start
+        >>> def begin_flow(self):
+        ...     pass
 
-    >>> @start("method_name")  # Start after specific method
-    >>> def conditional_start(self):
-    ...     pass
+        >>> @start("method_name")  # Start after specific method
+        >>> def conditional_start(self):
+        ...     pass
 
-    >>> @start(and_("method1", "method2"))  # Start after multiple methods
-    >>> def complex_start(self):
-    ...     pass
+        >>> @start(and_("method1", "method2"))  # Start after multiple methods
+        >>> def complex_start(self):
+        ...     pass
     """
 
     def decorator(func: Callable[P, R]) -> StartMethod[P, R]:
+        """Decorator that wraps a function as a start method.
+
+        Args:
+            func: The function to wrap as a start method.
+
+        Returns:
+            A StartMethod wrapper around the function.
+        """
         wrapper = StartMethod(func)
 
         if condition is not None:
             if is_flow_method_name(condition):
                 wrapper.__trigger_methods__ = [condition]
-                wrapper.__condition_type__ = "OR"
+                wrapper.__condition_type__ = OR_CONDITION
             elif is_flow_condition_dict(condition):
                 if "conditions" in condition:
                     wrapper.__trigger_condition__ = condition
@@ -177,7 +156,7 @@ def start(
                     )
             elif is_flow_method_callable(condition):
                 wrapper.__trigger_methods__ = [condition.__name__]
-                wrapper.__condition_type__ = "OR"
+                wrapper.__condition_type__ = OR_CONDITION
             else:
                 raise ValueError(
                     "Condition must be a method, string, or a result of or_() or and_()"
@@ -190,49 +169,45 @@ def start(
 def listen(
     condition: str | FlowCondition | Callable[..., Any],
 ) -> Callable[[Callable[P, R]], ListenMethod[P, R]]:
-    """
-    Creates a listener that executes when specified conditions are met.
+    """Creates a listener that executes when specified conditions are met.
 
     This decorator sets up a method to execute in response to other method
     executions in the flow. It supports both simple and complex triggering
     conditions.
 
-    Parameters
-    ----------
-    condition : Union[str, FlowCondition, Callable[..., Any]]
-        Specifies when the listener should execute. Can be:
-        - str: Name of a method that triggers this listener
-        - FlowCondition: Result from or_() or and_(), including nested conditions
-        - Callable[..., Any]: A method reference that triggers this listener
+    Args:
+        condition: Specifies when the listener should execute.
 
-    Returns
-    -------
-    Callable[[Callable[P, R]], ListenMethod[P, R]]
-        A decorator function that wraps the method as a listener
-        and preserves its signature.
+    Returns:
+        A decorator function that wraps the method as a flow listener and preserves its signature.
 
-    Raises
-    ------
-    ValueError
-        If the condition format is invalid.
+    Raises:
+        ValueError: If the condition format is invalid.
 
-    Examples
-    --------
-    >>> @listen("process_data")  # Listen to single method
-    >>> def handle_processed_data(self):
-    ...     pass
+    Examples:
+        >>> @listen("process_data")
+        >>> def handle_processed_data(self):
+        ...     pass
 
-    >>> @listen(or_("success", "failure"))  # Listen to multiple methods
-    >>> def handle_completion(self):
-    ...     pass
+        >>> @listen("method_name")
+        >>> def handle_completion(self):
+        ...     pass
     """
 
     def decorator(func: Callable[P, R]) -> ListenMethod[P, R]:
+        """Decorator that wraps a function as a listener method.
+
+        Args:
+            func: The function to wrap as a listener method.
+
+        Returns:
+            A ListenMethod wrapper around the function.
+        """
         wrapper = ListenMethod(func)
 
         if is_flow_method_name(condition):
             wrapper.__trigger_methods__ = [condition]
-            wrapper.__condition_type__ = "OR"
+            wrapper.__condition_type__ = OR_CONDITION
         elif is_flow_condition_dict(condition):
             if "conditions" in condition:
                 wrapper.__trigger_condition__ = condition
@@ -247,7 +222,7 @@ def listen(
                 )
         elif is_flow_method_callable(condition):
             wrapper.__trigger_methods__ = [condition.__name__]
-            wrapper.__condition_type__ = "OR"
+            wrapper.__condition_type__ = OR_CONDITION
         else:
             raise ValueError(
                 "Condition must be a method, string, or a result of or_() or and_()"
@@ -260,54 +235,53 @@ def listen(
 def router(
     condition: str | FlowCondition | Callable[..., Any],
 ) -> Callable[[Callable[P, R]], RouterMethod[P, R]]:
-    """
-    Creates a routing method that directs flow execution based on conditions.
+    """Creates a routing method that directs flow execution based on conditions.
 
     This decorator marks a method as a router, which can dynamically determine
     the next steps in the flow based on its return value. Routers are triggered
     by specified conditions and can return constants that determine which path
     the flow should take.
 
-    Parameters
-    ----------
-    condition : Union[str, FlowCondition, Callable[..., Any]]
-        Specifies when the router should execute. Can be:
-        - str: Name of a method that triggers this router
-        - FlowCondition: Result from or_() or and_(), including nested conditions
-        - Callable[..., Any]: A method reference that triggers this router
+    Args:
+        condition: Specifies when the router should execute. Can be:
+            - str: Name of a method that triggers this router
+            - FlowCondition: Result from or_() or and_(), including nested conditions
+            - Callable[..., Any]: A method reference that triggers this router
 
-    Returns
-    -------
-    Callable[[Callable[P, R]], RouterMethod[P, R]]
-        A decorator function that wraps the method as a router
-        and preserves its signature.
+    Returns:
+        A decorator function that wraps the method as a router and preserves its signature.
 
-    Raises
-    ------
-    ValueError
-        If the condition format is invalid.
+    Raises:
+        ValueError: If the condition format is invalid.
 
-    Examples
-    --------
-    >>> @router("check_status")
-    >>> def route_based_on_status(self):
-    ...     if self.state.status == "success":
-    ...         return SUCCESS
-    ...     return FAILURE
+    Examples:
+        >>> @router("check_status")
+        >>> def route_based_on_status(self):
+        ...     if self.state.status == "success":
+        ...         return "SUCCESS"
+        ...     return "FAILURE"
 
-    >>> @router(and_("validate", "process"))
-    >>> def complex_routing(self):
-    ...     if all([self.state.valid, self.state.processed]):
-    ...         return CONTINUE
-    ...     return STOP
+        >>> @router(and_("validate", "process"))
+        >>> def complex_routing(self):
+        ...     if all([self.state.valid, self.state.processed]):
+        ...         return "CONTINUE"
+        ...     return "STOP"
     """
 
     def decorator(func: Callable[P, R]) -> RouterMethod[P, R]:
+        """Decorator that wraps a function as a router method.
+
+        Args:
+            func: The function to wrap as a router method.
+
+        Returns:
+            A RouterMethod wrapper around the function.
+        """
         wrapper = RouterMethod(func)
 
         if is_flow_method_name(condition):
             wrapper.__trigger_methods__ = [condition]
-            wrapper.__condition_type__ = "OR"
+            wrapper.__condition_type__ = OR_CONDITION
         elif is_flow_condition_dict(condition):
             if "conditions" in condition:
                 wrapper.__trigger_condition__ = condition
@@ -322,7 +296,7 @@ def router(
                 )
         elif is_flow_method_callable(condition):
             wrapper.__trigger_methods__ = [condition.__name__]
-            wrapper.__condition_type__ = "OR"
+            wrapper.__condition_type__ = OR_CONDITION
         else:
             raise ValueError(
                 "Condition must be a method, string, or a result of or_() or and_()"
@@ -333,42 +307,29 @@ def router(
 
 
 def or_(*conditions: str | FlowCondition | Callable[..., Any]) -> FlowCondition:
-    """
-    Combines multiple conditions with OR logic for flow control.
+    """Combines multiple conditions with OR logic for flow control.
 
     Creates a condition that is satisfied when any of the specified conditions
     are met. This is used with @start, @listen, or @router decorators to create
     complex triggering conditions.
 
-    Parameters
-    ----------
-    *conditions : Union[str, dict[str, Any], Callable[..., Any]]
-        Variable number of conditions that can be:
-        - str: Method names
-        - dict[str, Any]: Existing condition dictionaries (nested conditions)
-        - Callable[..., Any]: Method references
+    Args:
+        conditions: Variable number of conditions that can be method names, existing condition dictionaries, or method references.
 
-    Returns
-    -------
-    dict[str, Any]
-        A condition dictionary with format:
-        {"type": "OR", "conditions": list_of_conditions}
-        where each condition can be a string (method name) or a nested dict
+    Returns:
+        A condition dictionary with format {"type": "OR", "conditions": list_of_conditions} where each condition can be a string (method name) or a nested dict
 
-    Raises
-    ------
-    ValueError
-        If any condition is invalid.
+    Raises:
+        ValueError: If condition format is invalid.
 
-    Examples
-    --------
-    >>> @listen(or_("success", "timeout"))
-    >>> def handle_completion(self):
-    ...     pass
+    Examples:
+        >>> @listen(or_("success", "timeout"))
+        >>> def handle_completion(self):
+        ...     pass
 
-    >>> @listen(or_(and_("step1", "step2"), "step3"))
-    >>> def handle_nested(self):
-    ...     pass
+        >>> @listen(or_(and_("step1", "step2"), "step3"))
+        >>> def handle_nested(self):
+        ...     pass
     """
     processed_conditions: FlowConditions = []
     for condition in conditions:
@@ -378,46 +339,34 @@ def or_(*conditions: str | FlowCondition | Callable[..., Any]) -> FlowCondition:
             processed_conditions.append(condition.__name__)
         else:
             raise ValueError("Invalid condition in or_()")
-    return {"type": "OR", "conditions": processed_conditions}
+    return {"type": OR_CONDITION, "conditions": processed_conditions}
 
 
 def and_(*conditions: str | FlowCondition | Callable[..., Any]) -> FlowCondition:
-    """
-    Combines multiple conditions with AND logic for flow control.
+    """Combines multiple conditions with AND logic for flow control.
 
     Creates a condition that is satisfied only when all specified conditions
     are met. This is used with @start, @listen, or @router decorators to create
     complex triggering conditions.
 
-    Parameters
-    ----------
-    *conditions : Union[str, dict[str, Any], Callable[..., Any]]
-        Variable number of conditions that can be:
-        - str: Method names
-        - dict[str, Any]: Existing condition dictionaries (nested conditions)
-        - Callable[..., Any]: Method references
+    Args:
+        *conditions: Variable number of conditions that can be method names, existing condition dictionaries, or method references.
 
-    Returns
-    -------
-    dict[str, Any]
-        A condition dictionary with format:
-        {"type": "AND", "conditions": list_of_conditions}
+    Returns:
+        A condition dictionary with format {"type": "AND", "conditions": list_of_conditions}
         where each condition can be a string (method name) or a nested dict
 
-    Raises
-    ------
-    ValueError
-        If any condition is invalid.
+    Raises:
+        ValueError: If any condition is invalid.
 
-    Examples
-    --------
-    >>> @listen(and_("validated", "processed"))
-    >>> def handle_complete_data(self):
-    ...     pass
+    Examples:
+        >>> @listen(and_("validated", "processed"))
+        >>> def handle_complete_data(self):
+        ...     pass
 
-    >>> @listen(and_(or_("step1", "step2"), "step3"))
-    >>> def handle_nested(self):
-    ...     pass
+        >>> @listen(and_(or_("step1", "step2"), "step3"))
+        >>> def handle_nested(self):
+        ...     pass
     """
     processed_conditions: FlowConditions = []
     for condition in conditions:
@@ -427,59 +376,7 @@ def and_(*conditions: str | FlowCondition | Callable[..., Any]) -> FlowCondition
             processed_conditions.append(condition.__name__)
         else:
             raise ValueError("Invalid condition in and_()")
-    return {"type": "AND", "conditions": processed_conditions}
-
-
-def _normalize_condition(
-    condition: FlowConditions | FlowCondition | FlowMethodName,
-) -> FlowCondition:
-    """Normalize a condition to standard format with 'conditions' key.
-
-    Args:
-        condition: Can be a string (method name), dict (condition), or list
-
-    Returns:
-        Normalized dict with 'type' and 'conditions' keys
-    """
-    if is_flow_method_name(condition):
-        return {"type": "OR", "conditions": [condition]}
-    if is_flow_condition_dict(condition):
-        if "conditions" in condition:
-            return condition
-        if "methods" in condition:
-            return {"type": condition["type"], "conditions": condition["methods"]}
-        return condition
-    if is_flow_condition_list(condition):
-        return {"type": "OR", "conditions": condition}
-
-    raise ValueError(f"Cannot normalize condition: {condition}")
-
-
-def _extract_all_methods(
-    condition: str | FlowCondition | dict[str, Any] | list[Any],
-) -> list[FlowMethodName]:
-    """Extract all method names from a condition (including nested).
-
-    Args:
-        condition: Can be a string, dict, or list
-
-    Returns:
-        List of all method names in the condition tree
-    """
-    if is_flow_method_name(condition):
-        return [condition]
-    if is_flow_condition_dict(condition):
-        normalized = _normalize_condition(condition)
-        methods = []
-        for sub_cond in normalized.get("conditions", []):
-            methods.extend(_extract_all_methods(sub_cond))
-        return methods
-    if isinstance(condition, list):
-        methods = []
-        for item in condition:
-            methods.extend(_extract_all_methods(item))
-        return methods
-    return []
+    return {"type": AND_CONDITION, "conditions": processed_conditions}
 
 
 class FlowMeta(type):
@@ -515,7 +412,9 @@ class FlowMeta(type):
                     and attr_value.__trigger_methods__ is not None
                 ):
                     methods = attr_value.__trigger_methods__
-                    condition_type = getattr(attr_value, "__condition_type__", "OR")
+                    condition_type = getattr(
+                        attr_value, "__condition_type__", OR_CONDITION
+                    )
                     if (
                         hasattr(attr_value, "__trigger_condition__")
                         and attr_value.__trigger_condition__ is not None
@@ -556,7 +455,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
     name: str | None = None
     tracing: bool | None = False
 
-    def __class_getitem__(cls: type[Flow[StateT]], item: type[T]) -> type[Flow[StateT]]:
+    def __class_getitem__(cls: type[Flow[T]], item: type[T]) -> type[Flow[T]]:
         class _FlowGeneric(cls):  # type: ignore
             _initial_state_t = item
 
@@ -1037,24 +936,20 @@ class Flow(Generic[T], metaclass=FlowMeta):
             detach(flow_token)
 
     async def _execute_start_method(self, start_method_name: FlowMethodName) -> None:
-        """
-        Executes a flow's start method and its triggered listeners.
+        """Executes a flow's start method and its triggered listeners.
 
         This internal method handles the execution of methods marked with @start
         decorator and manages the subsequent chain of listener executions.
 
-        Parameters
-        ----------
-        start_method_name : str
-            The name of the start method to execute.
+        Args:
+            start_method_name: The name of the start method to execute.
 
-        Notes
-        -----
-        - Executes the start method and captures its result
-        - Triggers execution of any listeners waiting on this start method
-        - Part of the flow's initialization sequence
-        - Skips execution if method was already completed (e.g., after reload)
-        - Automatically injects crewai_trigger_payload if available in flow inputs
+        Note:
+            - Executes the start method and captures its result
+            - Triggers execution of any listeners waiting on this start method
+            - Part of the flow's initialization sequence
+            - Skips execution if method was already completed (e.g., after reload)
+            - Automatically injects crewai_trigger_payload if available in flow inputs
         """
         if start_method_name in self._completed_methods:
             if self._is_execution_resuming:
@@ -1174,27 +1069,21 @@ class Flow(Generic[T], metaclass=FlowMeta):
     async def _execute_listeners(
         self, trigger_method: FlowMethodName, result: Any
     ) -> None:
-        """
-        Executes all listeners and routers triggered by a method completion.
+        """Executes all listeners and routers triggered by a method completion.
 
         This internal method manages the execution flow by:
         1. First executing all triggered routers sequentially
         2. Then executing all triggered listeners in parallel
 
-        Parameters
-        ----------
-        trigger_method : str
-            The name of the method that triggered these listeners.
-        result : Any
-            The result from the triggering method, passed to listeners
-            that accept parameters.
+        Args:
+            trigger_method: The name of the method that triggered these listeners.
+            result: The result from the triggering method, passed to listeners that accept parameters.
 
-        Notes
-        -----
-        - Routers are executed sequentially to maintain flow control
-        - Each router's result becomes a new trigger_method
-        - Normal listeners are executed in parallel for efficiency
-        - Listeners can receive the trigger method's result as a parameter
+        Note:
+            - Routers are executed sequentially to maintain flow control
+            - Each router's result becomes a new trigger_method
+            - Normal listeners are executed in parallel for efficiency
+            - Listeners can receive the trigger method's result as a parameter
         """
         # First, handle routers repeatedly until no router triggers anymore
         router_results = []
@@ -1281,16 +1170,16 @@ class Flow(Generic[T], metaclass=FlowMeta):
 
         if is_flow_condition_dict(condition):
             normalized = _normalize_condition(condition)
-            cond_type = normalized.get("type", "OR")
+            cond_type = normalized.get("type", OR_CONDITION)
             sub_conditions = normalized.get("conditions", [])
 
-            if cond_type == "OR":
+            if cond_type == OR_CONDITION:
                 return any(
                     self._evaluate_condition(sub_cond, trigger_method, listener_name)
                     for sub_cond in sub_conditions
                 )
 
-            if cond_type == "AND":
+            if cond_type == AND_CONDITION:
                 pending_key = PendingListenerKey(f"{listener_name}:{id(condition)}")
 
                 if pending_key not in self._pending_and_listeners:
@@ -1300,7 +1189,20 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 if trigger_method in self._pending_and_listeners[pending_key]:
                     self._pending_and_listeners[pending_key].discard(trigger_method)
 
-                if not self._pending_and_listeners[pending_key]:
+                direct_methods_satisfied = not self._pending_and_listeners[pending_key]
+
+                nested_conditions_satisfied = all(
+                    (
+                        self._evaluate_condition(
+                            sub_cond, trigger_method, listener_name
+                        )
+                        if is_flow_condition_dict(sub_cond)
+                        else True
+                    )
+                    for sub_cond in sub_conditions
+                )
+
+                if direct_methods_satisfied and nested_conditions_satisfied:
                     self._pending_and_listeners.pop(pending_key, None)
                     return True
 
@@ -1311,30 +1213,22 @@ class Flow(Generic[T], metaclass=FlowMeta):
     def _find_triggered_methods(
         self, trigger_method: FlowMethodName, router_only: bool
     ) -> list[FlowMethodName]:
-        """
-        Finds all methods that should be triggered based on conditions.
+        """Finds all methods that should be triggered based on conditions.
 
         This internal method evaluates both OR and AND conditions to determine
         which methods should be executed next in the flow. Supports nested conditions.
 
-        Parameters
-        ----------
-        trigger_method : str
-            The name of the method that just completed execution.
-        router_only : bool
-            If True, only consider router methods.
-            If False, only consider non-router methods.
+        Args:
+            trigger_method: The name of the method that just completed execution.
+            router_only: If True, only consider router methods. If False, only consider non-router methods.
 
-        Returns
-        -------
-        list[str]
+        Returns:
             Names of methods that should be triggered.
 
-        Notes
-        -----
-        - Handles both OR and AND conditions, including nested combinations
-        - Maintains state for AND conditions using _pending_and_listeners
-        - Separates router and normal listener evaluation
+        Note:
+            - Handles both OR and AND conditions, including nested combinations
+            - Maintains state for AND conditions using _pending_and_listeners
+            - Separates router and normal listener evaluation
         """
         triggered: list[FlowMethodName] = []
 
@@ -1350,10 +1244,10 @@ class Flow(Generic[T], metaclass=FlowMeta):
             if is_simple_flow_condition(condition_data):
                 condition_type, methods = condition_data
 
-                if condition_type == "OR":
+                if condition_type == OR_CONDITION:
                     if trigger_method in methods:
                         triggered.append(listener_name)
-                elif condition_type == "AND":
+                elif condition_type == AND_CONDITION:
                     pending_key = PendingListenerKey(listener_name)
                     if pending_key not in self._pending_and_listeners:
                         self._pending_and_listeners[pending_key] = set(methods)
@@ -1375,33 +1269,23 @@ class Flow(Generic[T], metaclass=FlowMeta):
     async def _execute_single_listener(
         self, listener_name: FlowMethodName, result: Any
     ) -> None:
-        """
-        Executes a single listener method with proper event handling.
+        """Executes a single listener method with proper event handling.
 
         This internal method manages the execution of an individual listener,
         including parameter inspection, event emission, and error handling.
 
-        Parameters
-        ----------
-        listener_name : str
-            The name of the listener method to execute.
-        result : Any
-            The result from the triggering method, which may be passed
-            to the listener if it accepts parameters.
+        Args:
+            listener_name: The name of the listener method to execute.
+            result: The result from the triggering method, which may be passed to the listener if it accepts parameters.
 
-        Notes
-        -----
-        - Inspects method signature to determine if it accepts the trigger result
-        - Emits events for method execution start and finish
-        - Handles errors gracefully with detailed logging
-        - Recursively triggers listeners of this listener
-        - Supports both parameterized and parameter-less listeners
-        - Skips execution if method was already completed (e.g., after reload)
-
-        Error Handling
-        -------------
-        Catches and logs any exceptions during execution, preventing
-        individual listener failures from breaking the entire flow.
+        Note:
+            - Inspects method signature to determine if it accepts the trigger result
+            - Emits events for method execution start and finish
+            - Handles errors gracefully with detailed logging
+            - Recursively triggers listeners of this listener
+            - Supports both parameterized and parameter-less listeners
+            - Skips execution if method was already completed (e.g., after reload)
+            - Catches and logs any exceptions during execution, preventing individual listener failures from breaking the entire flow
         """
         if listener_name in self._completed_methods:
             if self._is_execution_resuming:
@@ -1460,7 +1344,16 @@ class Flow(Generic[T], metaclass=FlowMeta):
             logger.info(message)
         logger.warning(message)
 
-    def plot(self, filename: str = "crewai_flow") -> None:
+    def plot(self, filename: str = "crewai_flow.html", show: bool = True) -> str:
+        """Create interactive HTML visualization of Flow structure.
+
+        Args:
+            filename: Output HTML filename (default: "crewai_flow.html").
+            show: Whether to open in browser (default: True).
+
+        Returns:
+            Absolute path to generated HTML file.
+        """
         crewai_event_bus.emit(
             self,
             FlowPlotEvent(
@@ -1468,4 +1361,5 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 flow_name=self.name or self.__class__.__name__,
             ),
         )
-        plot_flow(self, filename)
+        structure = build_flow_structure(self)
+        return render_interactive(structure, filename=filename, show=show)
