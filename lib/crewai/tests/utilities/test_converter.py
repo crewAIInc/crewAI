@@ -231,7 +231,7 @@ def test_get_conversion_instructions_gpt() -> None:
         expected_instructions = (
             "Please convert the following text into valid JSON.\n\n"
             "Output ONLY the valid JSON and nothing else.\n\n"
-            "The JSON must follow this schema exactly:\n```json\n"
+            "Use this format exactly:\n```json\n"
             f"{model_schema}\n```"
         )
         assert instructions == expected_instructions
@@ -244,7 +244,7 @@ def test_get_conversion_instructions_non_gpt() -> None:
         # Check that the JSON schema is properly formatted
         assert "Please convert the following text into valid JSON" in instructions
         assert "Output ONLY the valid JSON and nothing else" in instructions
-        assert "The JSON must follow this schema exactly" in instructions
+        assert "Use this format exactly" in instructions
         assert "```json" in instructions
         assert '"type": "object"' in instructions
         assert '"properties"' in instructions
