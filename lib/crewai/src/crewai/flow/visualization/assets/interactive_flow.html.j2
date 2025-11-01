@@ -66,19 +66,19 @@
             <div class="legend-title">Edge Types</div>
             <div class="legend-item">
                 <svg width="24" height="12" style="margin-right: 12px;">
-                    <line x1="0" y1="6" x2="24" y2="6" stroke="'{{ CREWAI_ORANGE }}'" stroke-width="2"/>
+                    <line x1="0" y1="6" x2="24" y2="6" stroke="'{{ CREWAI_ORANGE }}'" stroke-width="2" stroke-dasharray="5,5"/>
                 </svg>
                 <span>Router Paths</span>
             </div>
             <div class="legend-item">
-                <svg width="24" height="12" style="margin-right: 12px;">
-                    <line x1="0" y1="6" x2="24" y2="6" stroke="'{{ GRAY }}'" stroke-width="2"/>
+                <svg width="24" height="12" style="margin-right: 12px;" class="legend-or-line">
+                    <line x1="0" y1="6" x2="24" y2="6" stroke="var(--edge-or-color)" stroke-width="2"/>
                 </svg>
                 <span>OR Conditions</span>
             </div>
             <div class="legend-item">
                 <svg width="24" height="12" style="margin-right: 12px;">
-                    <line x1="0" y1="6" x2="24" y2="6" stroke="'{{ CREWAI_ORANGE }}'" stroke-width="2" stroke-dasharray="5,5"/>
+                    <line x1="0" y1="6" x2="24" y2="6" stroke="'{{ CREWAI_ORANGE }}'" stroke-width="2"/>
                 </svg>
                 <span>AND Conditions</span>
             </div>
