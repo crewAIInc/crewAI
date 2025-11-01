@@ -173,7 +173,9 @@ class EventListener(BaseEventListener):
             # Pass both task ID and task name (if set)
             task_name = source.name if hasattr(source, "name") and source.name else None
             self.formatter.create_task_branch(
-                self.formatter.current_crew_tree, source.id, task_name
+                self.formatter.current_crew_tree,
+                source.id,
+                task_name,
             )
 
         @crewai_event_bus.on(TaskCompletedEvent)

@@ -220,7 +220,10 @@ class ConsoleFormatter:
         return tree
 
     def create_task_branch(
-        self, crew_tree: Tree | None, task_id: str, task_name: str | None = None
+        self,
+        crew_tree: Tree | None,
+        task_id: str,
+        task_name: str | None = None,
     ) -> Tree | None:
         """Create and initialize a task branch."""
         if not self.verbose:
@@ -252,6 +255,78 @@ class ConsoleFormatter:
         self.current_task_branch = task_branch
 
         return task_branch
+
+    def update_task_branch_for_retry(self, attempt_number: int) -> None:
+        """Update the current task branch to show retry attempt number.
+
+        This method is called when a guardrail fails and a retry is about to happen.
+        It follows CrewAI patterns by integrating with the existing guardrail event system.
+        """
+        if (
+            not self.verbose
+            or not self.current_task_branch
+            or not self.current_crew_tree
+        ):
+            return
+
+        # Find the current task branch and update its label to show attempt number
+        for branch in self.current_crew_tree.children:
+            if branch is self.current_task_branch:
+                # Extract task info from current label
+                current_label = str(branch.label)
+
+                # Parse the current label to extract task name and ID
+                task_name = None
+                task_id = None
+
+                if "📋 Task: " in current_label:
+                    # Extract task name and ID from the current label
+                    label_parts = current_label.split("📋 Task: ")[1].split("\n")[0]
+
+                    # Remove any existing attempt number from the label
+                    if " [Attempt " in label_parts:
+                        # Split and rejoin to remove attempt number but preserve ID
+                        parts = label_parts.split(" [Attempt ")
+                        before_attempt = parts[0]
+                        after_attempt = parts[1]
+                        # Find the closing bracket and get everything after it
+                        if "]" in after_attempt:
+                            after_bracket = after_attempt.split("]", 1)[1]
+                            label_parts = before_attempt + after_bracket
+                        else:
+                            label_parts = before_attempt
+
+                    if " (ID: " in label_parts:
+                        task_name = label_parts.split(" (ID: ")[0]
+                        task_id = label_parts.split(" (ID: ")[1].rstrip(")")
+                    else:
+                        # No task name, just ID
+                        task_id = label_parts
+
+                # Build new label with attempt number (only show for retries)
+                task_content = Text()
+                if task_name:
+                    task_content.append("📋 Task: ", style="yellow bold")
+                    task_content.append(f"{task_name}", style="yellow bold")
+                    if attempt_number > 1:  # Only show for actual retries
+                        task_content.append(
+                            f" [Attempt {attempt_number}]", style="yellow dim italic"
+                        )
+                    task_content.append(f" (ID: {task_id})", style="yellow dim")
+                else:
+                    task_content.append(f"📋 Task: {task_id}", style="yellow bold")
+                    if attempt_number > 1:  # Only show for actual retries
+                        task_content.append(
+                            f" [Attempt {attempt_number}]", style="yellow dim italic"
+                        )
+
+                task_content.append("\nStatus: ", style="white")
+                task_content.append("Retrying Task...", style="yellow dim")
+
+                branch.label = task_content
+                self.print(self.current_crew_tree)
+                self.print()
+                break
 
     def update_task_status(
         self,
@@ -1789,3 +1864,6 @@ class ConsoleFormatter:
                 Attempts=f"{retry_count + 1}",
             )
             self.print_panel(content, "🛡️ Guardrail Failed", "red")
+
+            # Update task branch to show retry attempt number (retry_count + 2 because next attempt)
+            self.update_task_branch_for_retry(retry_count + 2)
