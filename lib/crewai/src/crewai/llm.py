@@ -37,6 +37,7 @@ from crewai.events.types.tool_usage_events import (
     ToolUsageStartedEvent,
 )
 from crewai.llms.base_llm import BaseLLM
+from crewai.utilities import InternalInstructor
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededError,
 )
@@ -555,8 +556,6 @@ class LLM(BaseLLM):
         # --- 2) Make sure stream is set to True and include usage metrics
         params["stream"] = True
         params["stream_options"] = {"include_usage": True}
-        if response_model:
-            params["response_model"] = response_model
 
         try:
             # --- 3) Process each chunk in the stream
@@ -737,14 +736,30 @@ class LLM(BaseLLM):
                                 tool_calls = message.tool_calls
             except Exception as e:
                 logging.debug(f"Error checking for tool calls: {e}")
-            # --- 8) If no tool calls or no available functions, return the text response directly
 
             if not tool_calls or not available_functions:
                 # Track token usage and log callbacks if available in streaming mode
                 if usage_info:
                     self._track_token_usage_internal(usage_info)
                 self._handle_streaming_callbacks(callbacks, usage_info, last_chunk)
-                # Emit completion event and return response
+
+                if response_model and self.is_litellm:
+                    instructor_instance = InternalInstructor(
+                        content=full_response,
+                        model=response_model,
+                        llm=self,
+                    )
+                    result = instructor_instance.to_pydantic()
+                    structured_response = result.model_dump_json()
+                    self._handle_emit_call_events(
+                        response=structured_response,
+                        call_type=LLMCallType.LLM_CALL,
+                        from_task=from_task,
+                        from_agent=from_agent,
+                        messages=params["messages"],
+                    )
+                    return structured_response
+
                 self._handle_emit_call_events(
                     response=full_response,
                     call_type=LLMCallType.LLM_CALL,

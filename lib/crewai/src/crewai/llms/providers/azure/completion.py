@@ -394,7 +394,9 @@ class AzureCompletion(BaseLLM):
 
                     return structured_json
                 except Exception as e:
-                    logging.warning(f"Failed to validate structured output: {e}")
+                    error_msg = f"Failed to validate structured output with model {response_model.__name__}: {e}"
+                    logging.error(error_msg)
+                    raise ValueError(error_msg) from e
 
             # Handle tool calls
             if message.tool_calls and available_functions:
