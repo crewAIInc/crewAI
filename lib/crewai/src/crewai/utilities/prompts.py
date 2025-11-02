@@ -1,29 +1,38 @@
+"""Prompt generation and management utilities for CrewAI agents."""
+
 from __future__ import annotations
 
-from typing import Any, TypedDict
+from typing import TYPE_CHECKING, Annotated, Literal, TypedDict
 
 from pydantic import BaseModel, Field
 
-from crewai.utilities.i18n import I18N
+from crewai.utilities.i18n import I18N, get_i18n
+
+
+if TYPE_CHECKING:
+    from crewai.agents.agent_builder.base_agent import BaseAgent
 
 
 class StandardPromptResult(TypedDict):
     """Result with only prompt field for standard mode."""
 
-    prompt: str
+    prompt: Annotated[str, "The generated prompt string"]
 
 
 class SystemPromptResult(StandardPromptResult):
     """Result with system, user, and prompt fields for system prompt mode."""
 
-    system: str
-    user: str
+    system: Annotated[str, "The system prompt component"]
+    user: Annotated[str, "The user prompt component"]
+
+
+COMPONENTS = Literal["role_playing", "tools", "no_tools", "task"]
 
 
 class Prompts(BaseModel):
     """Manages and generates prompts for a generic agent."""
 
-    i18n: I18N = Field(default_factory=I18N)
+    i18n: I18N = Field(default_factory=get_i18n)
     has_tools: bool = Field(
         default=False, description="Indicates if the agent has access to tools"
     )
@@ -36,11 +45,11 @@ class Prompts(BaseModel):
     response_template: str | None = Field(
         default=None, description="Custom response prompt template"
     )
-    use_system_prompt: bool | None = Field(
+    use_system_prompt: bool = Field(
         default=False,
         description="Whether to use the system prompt when no custom templates are provided",
     )
-    agent: Any = Field(description="Reference to the agent using these prompts")
+    agent: BaseAgent = Field(description="Reference to the agent using these prompts")
 
     def task_execution(self) -> SystemPromptResult | StandardPromptResult:
         """Generate a standard prompt for task execution.
@@ -48,7 +57,7 @@ class Prompts(BaseModel):
         Returns:
             A dictionary containing the constructed prompt(s).
         """
-        slices: list[str] = ["role_playing"]
+        slices: list[COMPONENTS] = ["role_playing"]
         if self.has_tools:
             slices.append("tools")
         else:
@@ -77,7 +86,7 @@ class Prompts(BaseModel):
 
     def _build_prompt(
         self,
-        components: list[str],
+        components: list[COMPONENTS],
         system_template: str | None = None,
         prompt_template: str | None = None,
         response_template: str | None = None,

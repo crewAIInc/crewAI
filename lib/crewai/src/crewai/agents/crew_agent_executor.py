@@ -37,7 +37,7 @@ from crewai.utilities.agent_utils import (
     process_llm_response,
 )
 from crewai.utilities.constants import TRAINING_DATA_FILE
-from crewai.utilities.i18n import I18N
+from crewai.utilities.i18n import I18N, get_i18n
 from crewai.utilities.printer import Printer
 from crewai.utilities.tool_utils import execute_tool_and_check_finality
 from crewai.utilities.training_handler import CrewTrainingHandler
@@ -65,7 +65,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
 
     def __init__(
         self,
-        llm: BaseLLM | Any | None,
+        llm: BaseLLM,
         task: Task,
         crew: Crew,
         agent: Agent,
@@ -106,7 +106,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             callbacks: Optional callbacks list.
             response_model: Optional Pydantic model for structured outputs.
         """
-        self._i18n: I18N = I18N()
+        self._i18n: I18N = get_i18n()
         self.llm = llm
         self.task = task
         self.agent = agent
