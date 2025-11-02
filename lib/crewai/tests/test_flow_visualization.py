@@ -182,7 +182,7 @@ def test_visualize_flow_structure_creates_assets():
 
     js_content = js_file.read_text(encoding="utf-8")
     assert len(js_content) > 0
-    assert "var nodes" in js_content or "const nodes" in js_content
+    assert "NetworkManager" in js_content
 
 
 def test_visualize_flow_structure_json_data():
