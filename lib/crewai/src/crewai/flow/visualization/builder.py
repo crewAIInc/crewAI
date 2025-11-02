@@ -1,11 +1,12 @@
 """Flow structure builder for analyzing Flow execution."""
 
 from __future__ import annotations
+
 from collections import defaultdict
 import inspect
 from typing import TYPE_CHECKING, Any
 
-from crewai.flow.constants import OR_CONDITION, AND_CONDITION
+from crewai.flow.constants import AND_CONDITION, OR_CONDITION
 from crewai.flow.flow_wrappers import FlowCondition
 from crewai.flow.types import FlowMethodName
 from crewai.flow.utils import (
@@ -51,8 +52,7 @@ def _extract_direct_or_triggers(
             for sub_cond in conditions_list:
                 strings.extend(_extract_direct_or_triggers(sub_cond))
             return strings
-        else:
-            return []
+        return []
     if isinstance(condition, list):
         strings = []
         for item in condition:
@@ -64,7 +64,7 @@ def _extract_direct_or_triggers(
 
 
 def _extract_all_trigger_names(
-    condition: str | dict[str, Any] | list[Any],
+    condition: str | dict[str, Any] | list[Any] | FlowCondition,
 ) -> list[str]:
     """Extract ALL trigger names from a condition for display purposes.
 
@@ -150,24 +150,21 @@ def _create_edges_from_condition(
         conditions_list = condition.get("conditions", [])
 
         if cond_type == AND_CONDITION:
-            # For AND conditions, extract all triggers and create edges with AND type
             triggers = _extract_all_trigger_names(condition)
-            for trigger in triggers:
-                if trigger in nodes:
-                    edges.append(
-                        StructureEdge(
-                            source=trigger,
-                            target=target,
-                            condition_type=AND_CONDITION,
-                            is_router_path=False,
-                        )
-                    )
-        else:  # OR condition
-            # For OR conditions, recursively process sub-conditions
+            edges.extend(
+                StructureEdge(
+                    source=trigger,
+                    target=target,
+                    condition_type=AND_CONDITION,
+                    is_router_path=False,
+                )
+                for trigger in triggers
+                if trigger in nodes
+            )
+        else:
             for sub_cond in conditions_list:
                 edges.extend(_create_edges_from_condition(sub_cond, target, nodes))
     elif isinstance(condition, list):
-        # Process each item in the list
         for item in condition:
             edges.extend(_create_edges_from_condition(item, target, nodes))
 
