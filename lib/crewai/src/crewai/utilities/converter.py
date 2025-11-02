@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+from collections.abc import Callable
+from copy import deepcopy
 import json
 import re
-from typing import TYPE_CHECKING, Any, Final, TypedDict, Union, get_args, get_origin
+from typing import TYPE_CHECKING, Any, Final, TypedDict
 
 from pydantic import BaseModel, ValidationError
 from typing_extensions import Unpack
@@ -53,7 +55,14 @@ class Converter(OutputConverter):
         """
         try:
             if self.llm.supports_function_calling():
-                result = self._create_instructor().to_pydantic()
+                response = self.llm.call(
+                    messages=[
+                        {"role": "system", "content": self.instructions},
+                        {"role": "user", "content": self.text},
+                    ],
+                    response_model=self.model,
+                )
+                result = self.model.model_validate_json(response)
             else:
                 response = self.llm.call(
                     [
@@ -66,7 +75,7 @@ class Converter(OutputConverter):
                     result = self.model.model_validate_json(response)
                 except ValidationError:
                     # If direct validation fails, attempt to extract valid JSON
-                    result = handle_partial_json(
+                    result = handle_partial_json(  # type: ignore[assignment]
                         result=response,
                         model=self.model,
                         is_json_output=False,
@@ -131,7 +140,7 @@ class Converter(OutputConverter):
                 return self.to_json(current_attempt + 1)
             return ConverterError(f"Failed to convert text into JSON, error: {e}.")
 
-    def _create_instructor(self) -> InternalInstructor:
+    def _create_instructor(self) -> InternalInstructor[Any]:
         """Create an instructor."""
 
         return InternalInstructor(
@@ -264,7 +273,7 @@ def convert_with_instructions(
     is_json_output: bool,
     agent: Agent | BaseAgent | None,
     converter_cls: type[Converter] | None = None,
-) -> dict | BaseModel | str:
+) -> dict[str, Any] | BaseModel | str:
     """Convert a result string to a Pydantic model or JSON using instructions.
 
     Args:
@@ -336,13 +345,14 @@ def get_conversion_instructions(
         model_schema = PydanticSchemaParser(model=model).get_schema()
         instructions += (
             f"\n\nOutput ONLY the valid JSON and nothing else.\n\n"
-            f"The JSON must follow this schema exactly:\n```json\n{model_schema}\n```"
+            f"Use this format exactly:\n```json\n{model_schema}\n```"
         )
     else:
         model_description = generate_model_description(model)
+        schema_json = json.dumps(model_description["json_schema"]["schema"], indent=2)
         instructions += (
             f"\n\nOutput ONLY the valid JSON and nothing else.\n\n"
-            f"The JSON must follow this format exactly:\n{model_description}"
+            f"Use this format exactly:\n```json\n{schema_json}\n```"
         )
     return instructions
 
@@ -399,57 +409,222 @@ def create_converter(
     if not converter:
         raise Exception("No output converter found or set.")
 
-    return converter
+    return converter  # type: ignore[no-any-return]
 
 
-def generate_model_description(model: type[BaseModel]) -> str:
-    """Generate a string description of a Pydantic model's fields and their types.
+def resolve_refs(schema: dict[str, Any]) -> dict[str, Any]:
+    """Recursively resolve all local $refs in the given JSON Schema using $defs as the source.
 
-    This function takes a Pydantic model class and returns a string that describes
-    the model's fields and their respective types. The description includes handling
-    of complex types such as `Optional`, `List`, and `Dict`, as well as nested Pydantic
-    models.
+    This is needed because Pydantic generates $ref-based schemas that
+    some consumers (e.g. LLMs, tool frameworks) don't handle well.
+
+    Args:
+        schema: JSON Schema dict that may contain "$refs" and "$defs".
+
+    Returns:
+        A new schema dictionary with all local $refs replaced by their definitions.
+    """
+    defs = schema.get("$defs", {})
+    schema_copy = deepcopy(schema)
+
+    def _resolve(node: Any) -> Any:
+        if isinstance(node, dict):
+            ref = node.get("$ref")
+            if isinstance(ref, str) and ref.startswith("#/$defs/"):
+                def_name = ref.replace("#/$defs/", "")
+                if def_name in defs:
+                    return _resolve(deepcopy(defs[def_name]))
+                raise KeyError(f"Definition '{def_name}' not found in $defs.")
+            return {k: _resolve(v) for k, v in node.items()}
+
+        if isinstance(node, list):
+            return [_resolve(i) for i in node]
+
+        return node
+
+    return _resolve(schema_copy)  # type: ignore[no-any-return]
+
+
+def add_key_in_dict_recursively(
+    d: dict[str, Any], key: str, value: Any, criteria: Callable[[dict[str, Any]], bool]
+) -> dict[str, Any]:
+    """Recursively adds a key/value pair to all nested dicts matching `criteria`."""
+    if isinstance(d, dict):
+        if criteria(d) and key not in d:
+            d[key] = value
+        for v in d.values():
+            add_key_in_dict_recursively(v, key, value, criteria)
+    elif isinstance(d, list):
+        for i in d:
+            add_key_in_dict_recursively(i, key, value, criteria)
+    return d
+
+
+def fix_discriminator_mappings(schema: dict[str, Any]) -> dict[str, Any]:
+    """Replace '#/$defs/...' references in discriminator.mapping with just the model name."""
+    output = schema.get("properties", {}).get("output")
+    if not output:
+        return schema
+
+    disc = output.get("discriminator")
+    if not disc or "mapping" not in disc:
+        return schema
+
+    disc["mapping"] = {k: v.split("/")[-1] for k, v in disc["mapping"].items()}
+    return schema
+
+
+def add_const_to_oneof_variants(schema: dict[str, Any]) -> dict[str, Any]:
+    """Add const fields to oneOf variants for discriminated unions.
+
+    The json_schema_to_pydantic library requires each oneOf variant to have
+    a const field for the discriminator property. This function adds those
+    const fields based on the discriminator mapping.
+
+    Args:
+        schema: JSON Schema dict that may contain discriminated unions
+
+    Returns:
+        Modified schema with const fields added to oneOf variants
+    """
+
+    def _process_oneof(node: dict[str, Any]) -> dict[str, Any]:
+        """Process a single node that might contain a oneOf with discriminator."""
+        if not isinstance(node, dict):
+            return node
+
+        if "oneOf" in node and "discriminator" in node:
+            discriminator = node["discriminator"]
+            property_name = discriminator.get("propertyName")
+            mapping = discriminator.get("mapping", {})
+
+            if property_name and mapping:
+                one_of_variants = node.get("oneOf", [])
+
+                for variant in one_of_variants:
+                    if isinstance(variant, dict) and "properties" in variant:
+                        variant_title = variant.get("title", "")
+
+                        matched_disc_value = None
+                        for disc_value, schema_name in mapping.items():
+                            if variant_title == schema_name or variant_title.endswith(
+                                schema_name
+                            ):
+                                matched_disc_value = disc_value
+                                break
+
+                        if matched_disc_value is not None:
+                            props = variant["properties"]
+                            if property_name in props:
+                                props[property_name]["const"] = matched_disc_value
+
+        for key, value in node.items():
+            if isinstance(value, dict):
+                node[key] = _process_oneof(value)
+            elif isinstance(value, list):
+                node[key] = [
+                    _process_oneof(item) if isinstance(item, dict) else item
+                    for item in value
+                ]
+
+        return node
+
+    return _process_oneof(deepcopy(schema))
+
+
+def convert_oneof_to_anyof(schema: dict[str, Any]) -> dict[str, Any]:
+    """Convert oneOf to anyOf for OpenAI compatibility.
+
+    OpenAI's Structured Outputs support anyOf better than oneOf.
+    This recursively converts all oneOf occurrences to anyOf.
+
+    Args:
+        schema: JSON schema dictionary.
+
+    Returns:
+        Modified schema with anyOf instead of oneOf.
+    """
+    if isinstance(schema, dict):
+        if "oneOf" in schema:
+            schema["anyOf"] = schema.pop("oneOf")
+
+        for value in schema.values():
+            if isinstance(value, dict):
+                convert_oneof_to_anyof(value)
+            elif isinstance(value, list):
+                for item in value:
+                    if isinstance(item, dict):
+                        convert_oneof_to_anyof(item)
+
+    return schema
+
+
+def ensure_all_properties_required(schema: dict[str, Any]) -> dict[str, Any]:
+    """Ensure all properties are in the required array for OpenAI strict mode.
+
+    OpenAI's strict structured outputs require all properties to be listed
+    in the required array. This recursively updates all objects to include
+    all their properties in required.
+
+    Args:
+        schema: JSON schema dictionary.
+
+    Returns:
+        Modified schema with all properties marked as required.
+    """
+    if isinstance(schema, dict):
+        if schema.get("type") == "object" and "properties" in schema:
+            properties = schema["properties"]
+            if properties:
+                schema["required"] = list(properties.keys())
+
+        for value in schema.values():
+            if isinstance(value, dict):
+                ensure_all_properties_required(value)
+            elif isinstance(value, list):
+                for item in value:
+                    if isinstance(item, dict):
+                        ensure_all_properties_required(item)
+
+    return schema
+
+
+def generate_model_description(model: type[BaseModel]) -> dict[str, Any]:
+    """Generate JSON schema description of a Pydantic model.
+
+    This function takes a Pydantic model class and returns its JSON schema,
+    which includes full type information, discriminators, and all metadata.
+    The schema is dereferenced to inline all $ref references for better LLM understanding.
 
     Args:
         model: A Pydantic model class.
 
     Returns:
-        A string representation of the model's fields and types.
+        A JSON schema dictionary representation of the model.
     """
 
-    def describe_field(field_type: Any) -> str:
-        """Recursively describe a field's type.
+    json_schema = model.model_json_schema(ref_template="#/$defs/{model}")
 
-        Args:
-            field_type: The type of the field to describe.
+    json_schema = add_key_in_dict_recursively(
+        json_schema,
+        key="additionalProperties",
+        value=False,
+        criteria=lambda d: d.get("type") == "object"
+        and "additionalProperties" not in d,
+    )
 
-        Returns:
-            A string representation of the field's type.
-        """
-        origin = get_origin(field_type)
-        args = get_args(field_type)
+    json_schema = resolve_refs(json_schema)
 
-        if origin is Union or (origin is None and len(args) > 0):
-            # Handle both Union and the new '|' syntax
-            non_none_args = [arg for arg in args if arg is not type(None)]
-            if len(non_none_args) == 1:
-                return f"Optional[{describe_field(non_none_args[0])}]"
-            return f"Optional[Union[{', '.join(describe_field(arg) for arg in non_none_args)}]]"
-        if origin is list:
-            return f"List[{describe_field(args[0])}]"
-        if origin is dict:
-            key_type = describe_field(args[0])
-            value_type = describe_field(args[1])
-            return f"Dict[{key_type}, {value_type}]"
-        if isinstance(field_type, type) and issubclass(field_type, BaseModel):
-            return generate_model_description(field_type)
-        if hasattr(field_type, "__name__"):
-            return field_type.__name__
-        return str(field_type)
+    json_schema.pop("$defs", None)
+    json_schema = fix_discriminator_mappings(json_schema)
+    json_schema = convert_oneof_to_anyof(json_schema)
+    json_schema = ensure_all_properties_required(json_schema)
 
-    fields = model.model_fields
-    field_descriptions = [
-        f'"{name}": {describe_field(field.annotation)}'
-        for name, field in fields.items()
-    ]
-    return "{\n  " + ",\n  ".join(field_descriptions) + "\n}"
+    return {
+        "type": "json_schema",
+        "json_schema": {
+            "name": model.__name__,
+            "strict": True,
+            "schema": json_schema,
+        },
+    }

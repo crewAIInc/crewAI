@@ -1342,7 +1342,7 @@ def test_ensure_first_task_allow_crewai_trigger_context_is_false_does_not_inject
     assert "Trigger Payload: Context data" in second_prompt
 
 
-@patch("crewai.agent.CrewTrainingHandler")
+@patch("crewai.agent.core.CrewTrainingHandler")
 def test_agent_training_handler(crew_training_handler):
     task_prompt = "What is 1 + 1?"
     agent = Agent(
@@ -1351,7 +1351,7 @@ def test_agent_training_handler(crew_training_handler):
         backstory="test backstory",
         verbose=True,
     )
-    crew_training_handler().load.return_value = {
+    crew_training_handler.return_value.load.return_value = {
         f"{agent.id!s}": {"0": {"human_feedback": "good"}}
     }
 
@@ -1360,11 +1360,11 @@ def test_agent_training_handler(crew_training_handler):
     assert result == "What is 1 + 1?\n\nYou MUST follow these instructions: \n good"
 
     crew_training_handler.assert_has_calls(
-        [mock.call(), mock.call("training_data.pkl"), mock.call().load()]
+        [mock.call("training_data.pkl"), mock.call().load()]
     )
 
 
-@patch("crewai.agent.CrewTrainingHandler")
+@patch("crewai.agent.core.CrewTrainingHandler")
 def test_agent_use_trained_data(crew_training_handler):
     task_prompt = "What is 1 + 1?"
     agent = Agent(
@@ -1373,7 +1373,7 @@ def test_agent_use_trained_data(crew_training_handler):
         backstory="test backstory",
         verbose=True,
     )
-    crew_training_handler().load.return_value = {
+    crew_training_handler.return_value.load.return_value = {
         agent.role: {
             "suggestions": [
                 "The result of the math operation must be right.",
@@ -1389,7 +1389,7 @@ def test_agent_use_trained_data(crew_training_handler):
         " - The result of the math operation must be right.\n - Result must be better than 1."
     )
     crew_training_handler.assert_has_calls(
-        [mock.call(), mock.call("trained_agents_data.pkl"), mock.call().load()]
+        [mock.call("trained_agents_data.pkl"), mock.call().load()]
     )
 
 

@@ -1,0 +1,291 @@
+---
+title: Agent-to-Agent (A2A) Protocol
+description: Enable CrewAI agents to delegate tasks to remote A2A-compliant agents for specialized handling
+icon: network-wired
+mode: "wide"
+---
+
+## A2A Agent Delegation
+
+CrewAI supports the Agent-to-Agent (A2A) protocol, allowing agents to delegate tasks to remote specialized agents. The agent's LLM automatically decides whether to handle a task directly or delegate to an A2A agent based on the task requirements.
+
+<Note>
+  A2A delegation requires the `a2a-sdk` package. Install with: `uv add 'crewai[a2a]'` or `pip install 'crewai[a2a]'`
+</Note>
+
+## How It Works
+
+When an agent is configured with A2A capabilities:
+
+1. The LLM analyzes each task
+2. It decides to either:
+   - Handle the task directly using its own capabilities
+   - Delegate to a remote A2A agent for specialized handling
+3. If delegating, the agent communicates with the remote A2A agent through the protocol
+4. Results are returned to the CrewAI workflow
+
+## Basic Configuration
+
+Configure an agent for A2A delegation by setting the `a2a` parameter:
+
+```python Code
+from crewai import Agent, Crew, Task
+from crewai.a2a import A2AConfig
+
+agent = Agent(
+    role="Research Coordinator",
+    goal="Coordinate research tasks efficiently",
+    backstory="Expert at delegating to specialized research agents",
+    llm="gpt-4o",
+    a2a=A2AConfig(
+        endpoint="https://example.com/.well-known/agent-card.json",
+        timeout=120,
+        max_turns=10
+    )
+)
+
+task = Task(
+    description="Research the latest developments in quantum computing",
+    expected_output="A comprehensive research report",
+    agent=agent
+)
+
+crew = Crew(agents=[agent], tasks=[task], verbose=True)
+result = crew.kickoff()
+```
+
+## Configuration Options
+
+The `A2AConfig` class accepts the following parameters:
+
+<ParamField path="endpoint" type="str" required>
+  The A2A agent endpoint URL (typically points to `.well-known/agent-card.json`)
+</ParamField>
+
+<ParamField path="auth" type="AuthScheme" default="None">
+  Authentication scheme for the A2A agent. Supports Bearer tokens, OAuth2, API keys, and HTTP authentication.
+</ParamField>
+
+<ParamField path="timeout" type="int" default="120">
+  Request timeout in seconds
+</ParamField>
+
+<ParamField path="max_turns" type="int" default="10">
+  Maximum number of conversation turns with the A2A agent
+</ParamField>
+
+<ParamField path="response_model" type="type[BaseModel]" default="None">
+  Optional Pydantic model for requesting structured output from an A2A agent. A2A protocol does not
+  enforce this, so an A2A agent does not need to honor this request.
+</ParamField>
+
+<ParamField path="fail_fast" type="bool" default="True">
+  Whether to raise an error immediately if agent connection fails. When `False`, the agent continues with available agents and informs the LLM about unavailable ones.
+</ParamField>
+
+## Authentication
+
+For A2A agents that require authentication, use one of the provided auth schemes:
+
+<Tabs>
+  <Tab title="Bearer Token">
+    ```python Code
+from crewai.a2a import A2AConfig
+from crewai.a2a.auth import BearerTokenAuth
+
+agent = Agent(
+    role="Secure Coordinator",
+    goal="Coordinate tasks with secured agents",
+    backstory="Manages secure agent communications",
+    llm="gpt-4o",
+    a2a=A2AConfig(
+        endpoint="https://secure-agent.example.com/.well-known/agent-card.json",
+        auth=BearerTokenAuth(token="your-bearer-token"),
+        timeout=120
+    )
+)
+    ```
+  </Tab>
+
+  <Tab title="API Key">
+    ```python Code
+from crewai.a2a import A2AConfig
+from crewai.a2a.auth import APIKeyAuth
+
+agent = Agent(
+    role="API Coordinator",
+    goal="Coordinate with API-based agents",
+    backstory="Manages API-authenticated communications",
+    llm="gpt-4o",
+    a2a=A2AConfig(
+        endpoint="https://api-agent.example.com/.well-known/agent-card.json",
+        auth=APIKeyAuth(
+            api_key="your-api-key",
+            location="header",  # or "query" or "cookie"
+            name="X-API-Key"
+        ),
+        timeout=120
+    )
+)
+    ```
+  </Tab>
+
+  <Tab title="OAuth2">
+    ```python Code
+from crewai.a2a import A2AConfig
+from crewai.a2a.auth import OAuth2ClientCredentials
+
+agent = Agent(
+    role="OAuth Coordinator",
+    goal="Coordinate with OAuth-secured agents",
+    backstory="Manages OAuth-authenticated communications",
+    llm="gpt-4o",
+    a2a=A2AConfig(
+        endpoint="https://oauth-agent.example.com/.well-known/agent-card.json",
+        auth=OAuth2ClientCredentials(
+            token_url="https://auth.example.com/oauth/token",
+            client_id="your-client-id",
+            client_secret="your-client-secret",
+            scopes=["read", "write"]
+        ),
+        timeout=120
+    )
+)
+    ```
+  </Tab>
+
+  <Tab title="HTTP Basic">
+    ```python Code
+from crewai.a2a import A2AConfig
+from crewai.a2a.auth import HTTPBasicAuth
+
+agent = Agent(
+    role="Basic Auth Coordinator",
+    goal="Coordinate with basic auth agents",
+    backstory="Manages basic authentication communications",
+    llm="gpt-4o",
+    a2a=A2AConfig(
+        endpoint="https://basic-agent.example.com/.well-known/agent-card.json",
+        auth=HTTPBasicAuth(
+            username="your-username",
+            password="your-password"
+        ),
+        timeout=120
+    )
+)
+    ```
+  </Tab>
+</Tabs>
+
+## Multiple A2A Agents
+
+Configure multiple A2A agents for delegation by passing a list:
+
+```python Code
+from crewai.a2a import A2AConfig
+from crewai.a2a.auth import BearerTokenAuth
+
+agent = Agent(
+    role="Multi-Agent Coordinator",
+    goal="Coordinate with multiple specialized agents",
+    backstory="Expert at delegating to the right specialist",
+    llm="gpt-4o",
+    a2a=[
+        A2AConfig(
+            endpoint="https://research.example.com/.well-known/agent-card.json",
+            timeout=120
+        ),
+        A2AConfig(
+            endpoint="https://data.example.com/.well-known/agent-card.json",
+            auth=BearerTokenAuth(token="data-token"),
+            timeout=90
+        )
+    ]
+)
+```
+
+The LLM will automatically choose which A2A agent to delegate to based on the task requirements.
+
+## Error Handling
+
+Control how agent connection failures are handled using the `fail_fast` parameter:
+
+```python Code
+from crewai.a2a import A2AConfig
+
+# Fail immediately on connection errors (default)
+agent = Agent(
+    role="Research Coordinator",
+    goal="Coordinate research tasks",
+    backstory="Expert at delegation",
+    llm="gpt-4o",
+    a2a=A2AConfig(
+        endpoint="https://research.example.com/.well-known/agent-card.json",
+        fail_fast=True
+    )
+)
+
+# Continue with available agents
+agent = Agent(
+    role="Multi-Agent Coordinator",
+    goal="Coordinate with multiple agents",
+    backstory="Expert at working with available resources",
+    llm="gpt-4o",
+    a2a=[
+        A2AConfig(
+            endpoint="https://primary.example.com/.well-known/agent-card.json",
+            fail_fast=False
+        ),
+        A2AConfig(
+            endpoint="https://backup.example.com/.well-known/agent-card.json",
+            fail_fast=False
+        )
+    ]
+)
+```
+
+When `fail_fast=False`:
+- If some agents fail, the LLM is informed which agents are unavailable and can delegate to working agents
+- If all agents fail, the LLM receives a notice about unavailable agents and handles the task directly
+- Connection errors are captured and included in the context for better decision-making
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Set Appropriate Timeouts" icon="clock">
+    Configure timeouts based on expected A2A agent response times. Longer-running tasks may need higher timeout values.
+  </Card>
+
+  <Card title="Limit Conversation Turns" icon="comments">
+    Use `max_turns` to prevent excessive back-and-forth. The agent will automatically conclude conversations before hitting the limit.
+  </Card>
+
+  <Card title="Use Resilient Error Handling" icon="shield-check">
+    Set `fail_fast=False` for production environments with multiple agents to gracefully handle connection failures and maintain workflow continuity.
+  </Card>
+
+  <Card title="Secure Your Credentials" icon="lock">
+    Store authentication tokens and credentials as environment variables, not in code.
+  </Card>
+
+  <Card title="Monitor Delegation Decisions" icon="eye">
+    Use verbose mode to observe when the LLM chooses to delegate versus handle tasks directly.
+  </Card>
+</CardGroup>
+
+## Supported Authentication Methods
+
+- **Bearer Token** - Simple token-based authentication
+- **OAuth2 Client Credentials** - OAuth2 flow for machine-to-machine communication
+- **OAuth2 Authorization Code** - OAuth2 flow requiring user authorization
+- **API Key** - Key-based authentication (header, query param, or cookie)
+- **HTTP Basic** - Username/password authentication
+- **HTTP Digest** - Digest authentication (requires `httpx-auth` package)
+
+## Learn More
+
+For more information about the A2A protocol and reference implementations:
+
+- [A2A Protocol Documentation](https://a2a-protocol.org)
+- [A2A Sample Implementations](https://github.com/a2aproject/a2a-samples)
+- [A2A Python SDK](https://github.com/a2aproject/a2a-python)

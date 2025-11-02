@@ -17,9 +17,16 @@ class ConsoleFormatter:
     current_method_branch: Tree | None = None
     current_lite_agent_branch: Tree | None = None
     tool_usage_counts: ClassVar[dict[str, int]] = {}
-    current_reasoning_branch: Tree | None = None  # Track reasoning status
+    current_reasoning_branch: Tree | None = None
     _live_paused: bool = False
     current_llm_tool_tree: Tree | None = None
+    current_a2a_conversation_branch: Tree | None = None
+    current_a2a_turn_count: int = 0
+    _pending_a2a_message: str | None = None
+    _pending_a2a_agent_role: str | None = None
+    _pending_a2a_turn_number: int | None = None
+    _a2a_turn_branches: ClassVar[dict[int, Tree]] = {}
+    _current_a2a_agent_name: str | None = None
 
     def __init__(self, verbose: bool = False):
         self.console = Console(width=None)
@@ -192,7 +199,12 @@ class ConsoleFormatter:
             style,
             ID=source_id,
         )
-        content.append(f"Final Output: {final_string_output}\n", style="white")
+
+        if status == "failed" and final_string_output:
+            content.append("Error:\n", style="white bold")
+            content.append(f"{final_string_output}\n", style="red")
+        else:
+            content.append(f"Final Output: {final_string_output}\n", style="white")
 
         self.print_panel(content, title, style)
 
@@ -357,7 +369,14 @@ class ConsoleFormatter:
         return flow_tree
 
     def start_flow(self, flow_name: str, flow_id: str) -> Tree | None:
-        """Initialize a flow execution tree."""
+        """Initialize or update a flow execution tree."""
+        if self.current_flow_tree is not None:
+            for child in self.current_flow_tree.children:
+                if "Starting Flow" in str(child.label):
+                    child.label = Text("🚀 Flow Started", style="green")
+                    break
+            return self.current_flow_tree
+
         flow_tree = Tree("")
         flow_label = Text()
         flow_label.append("🌊 Flow: ", style="blue bold")
@@ -436,27 +455,38 @@ class ConsoleFormatter:
             prefix, style = "🔄 Running:", "yellow"
         elif status == "completed":
             prefix, style = "✅ Completed:", "green"
-            # Update initialization node when a method completes successfully
             for child in flow_tree.children:
                 if "Starting Flow" in str(child.label):
                     child.label = Text("Flow Method Step", style="white")
                     break
         else:
             prefix, style = "❌ Failed:", "red"
-            # Update initialization node on failure
             for child in flow_tree.children:
                 if "Starting Flow" in str(child.label):
                     child.label = Text("❌ Flow Step Failed", style="red")
                     break
 
-        if not method_branch:
-            # Find or create method branch
-            for branch in flow_tree.children:
-                if method_name in str(branch.label):
-                    method_branch = branch
-                    break
-            if not method_branch:
-                method_branch = flow_tree.add("")
+        if method_branch is not None:
+            if method_branch in flow_tree.children:
+                method_branch.label = Text(prefix, style=f"{style} bold") + Text(
+                    f" {method_name}", style=style
+                )
+                self.print(flow_tree)
+                self.print()
+                return method_branch
+
+        for branch in flow_tree.children:
+            label_str = str(branch.label)
+            if f" {method_name}" in label_str and (
+                "Running:" in label_str
+                or "Completed:" in label_str
+                or "Failed:" in label_str
+            ):
+                method_branch = branch
+                break
+
+        if method_branch is None:
+            method_branch = flow_tree.add("")
 
         method_branch.label = Text(prefix, style=f"{style} bold") + Text(
             f" {method_name}", style=style
@@ -464,6 +494,7 @@ class ConsoleFormatter:
 
         self.print(flow_tree)
         self.print()
+
         return method_branch
 
     def get_llm_tree(self, tool_name: str):
@@ -1455,22 +1486,37 @@ class ConsoleFormatter:
             self.print()
 
         elif isinstance(formatted_answer, AgentFinish):
-            # Create content for the finish panel
-            content = Text()
-            content.append("Agent: ", style="white")
-            content.append(f"{agent_role}\n\n", style="bright_green bold")
-            content.append("Final Answer:\n", style="white")
-            content.append(f"{formatted_answer.output}", style="bright_green")
+            is_a2a_delegation = False
+            try:
+                output_data = json.loads(formatted_answer.output)
+                if isinstance(output_data, dict):
+                    if output_data.get("is_a2a") is True:
+                        is_a2a_delegation = True
+                    elif "output" in output_data:
+                        nested_output = output_data["output"]
+                        if (
+                            isinstance(nested_output, dict)
+                            and nested_output.get("is_a2a") is True
+                        ):
+                            is_a2a_delegation = True
+            except (json.JSONDecodeError, TypeError, ValueError):
+                pass
 
-            # Create and display the finish panel
-            finish_panel = Panel(
-                content,
-                title="✅ Agent Final Answer",
-                border_style="green",
-                padding=(1, 2),
-            )
-            self.print(finish_panel)
-            self.print()
+            if not is_a2a_delegation:
+                content = Text()
+                content.append("Agent: ", style="white")
+                content.append(f"{agent_role}\n\n", style="bright_green bold")
+                content.append("Final Answer:\n", style="white")
+                content.append(f"{formatted_answer.output}", style="bright_green")
+
+                finish_panel = Panel(
+                    content,
+                    title="✅ Agent Final Answer",
+                    border_style="green",
+                    padding=(1, 2),
+                )
+                self.print(finish_panel)
+                self.print()
 
     def handle_memory_retrieval_started(
         self,
@@ -1770,3 +1816,435 @@ class ConsoleFormatter:
                 Attempts=f"{retry_count + 1}",
             )
             self.print_panel(content, "🛡️ Guardrail Failed", "red")
+
+    def handle_a2a_delegation_started(
+        self,
+        endpoint: str,
+        task_description: str,
+        agent_id: str,
+        is_multiturn: bool = False,
+        turn_number: int = 1,
+    ) -> None:
+        """Handle A2A delegation started event.
+
+        Args:
+            endpoint: A2A agent endpoint URL
+            task_description: Task being delegated
+            agent_id: A2A agent identifier
+            is_multiturn: Whether this is part of a multiturn conversation
+            turn_number: Current turn number in conversation (1-indexed)
+        """
+        branch_to_use = self.current_lite_agent_branch or self.current_task_branch
+        tree_to_use = self.current_crew_tree or branch_to_use
+        a2a_branch: Tree | None = None
+
+        if is_multiturn:
+            if self.current_a2a_turn_count == 0 and not isinstance(
+                self.current_a2a_conversation_branch, Tree
+            ):
+                if branch_to_use is not None and tree_to_use is not None:
+                    self.current_a2a_conversation_branch = branch_to_use.add("")
+                    self.update_tree_label(
+                        self.current_a2a_conversation_branch,
+                        "💬",
+                        f"Multiturn A2A Conversation ({agent_id})",
+                        "cyan",
+                    )
+                    self.print(tree_to_use)
+                    self.print()
+                else:
+                    self.current_a2a_conversation_branch = "MULTITURN_NO_TREE"
+
+                    content = Text()
+                    content.append(
+                        "Multiturn A2A Conversation Started\n\n", style="cyan bold"
+                    )
+                    content.append("Agent ID: ", style="white")
+                    content.append(f"{agent_id}\n", style="cyan")
+                    content.append("Note: ", style="white dim")
+                    content.append(
+                        "Conversation will be tracked in tree view", style="cyan dim"
+                    )
+
+                    panel = self.create_panel(
+                        content, "💬 Multiturn Conversation", "cyan"
+                    )
+                    self.print(panel)
+                    self.print()
+
+            self.current_a2a_turn_count = turn_number
+
+            return (
+                self.current_a2a_conversation_branch
+                if isinstance(self.current_a2a_conversation_branch, Tree)
+                else None
+            )
+
+        if branch_to_use is not None and tree_to_use is not None:
+            a2a_branch = branch_to_use.add("")
+            self.update_tree_label(
+                a2a_branch,
+                "🔗",
+                f"Delegating to A2A Agent ({agent_id})",
+                "cyan",
+            )
+
+            self.print(tree_to_use)
+            self.print()
+
+        content = Text()
+        content.append("A2A Delegation Started\n\n", style="cyan bold")
+        content.append("Agent ID: ", style="white")
+        content.append(f"{agent_id}\n", style="cyan")
+        content.append("Endpoint: ", style="white")
+        content.append(f"{endpoint}\n\n", style="cyan dim")
+        content.append("Task Description:\n", style="white")
+
+        task_preview = (
+            task_description
+            if len(task_description) <= 200
+            else task_description[:197] + "..."
+        )
+        content.append(task_preview, style="cyan")
+
+        panel = self.create_panel(content, "🔗 A2A Delegation", "cyan")
+        self.print(panel)
+        self.print()
+
+        return a2a_branch
+
+    def handle_a2a_delegation_completed(
+        self,
+        status: str,
+        result: str | None = None,
+        error: str | None = None,
+        is_multiturn: bool = False,
+    ) -> None:
+        """Handle A2A delegation completed event.
+
+        Args:
+            status: Completion status
+            result: Optional result message
+            error: Optional error message (or response for input_required)
+            is_multiturn: Whether this is part of a multiturn conversation
+        """
+        tree_to_use = self.current_crew_tree or self.current_task_branch
+        a2a_branch = None
+
+        if is_multiturn and self.current_a2a_conversation_branch:
+            has_tree = isinstance(self.current_a2a_conversation_branch, Tree)
+
+            if status == "input_required" and error:
+                pass
+            elif status == "completed":
+                if has_tree:
+                    final_turn = self.current_a2a_conversation_branch.add("")
+                    self.update_tree_label(
+                        final_turn,
+                        "✅",
+                        "Conversation Completed",
+                        "green",
+                    )
+
+                    if tree_to_use:
+                        self.print(tree_to_use)
+                        self.print()
+
+                self.current_a2a_conversation_branch = None
+                self.current_a2a_turn_count = 0
+            elif status == "failed":
+                if has_tree:
+                    error_turn = self.current_a2a_conversation_branch.add("")
+                    error_msg = (
+                        error[:150] + "..." if error and len(error) > 150 else error
+                    )
+                    self.update_tree_label(
+                        error_turn,
+                        "❌",
+                        f"Failed: {error_msg}" if error else "Conversation Failed",
+                        "red",
+                    )
+
+                    if tree_to_use:
+                        self.print(tree_to_use)
+                        self.print()
+
+                self.current_a2a_conversation_branch = None
+                self.current_a2a_turn_count = 0
+
+            return
+
+        if a2a_branch and tree_to_use:
+            if status == "completed":
+                self.update_tree_label(
+                    a2a_branch,
+                    "✅",
+                    "A2A Delegation Completed",
+                    "green",
+                )
+            elif status == "failed":
+                self.update_tree_label(
+                    a2a_branch,
+                    "❌",
+                    "A2A Delegation Failed",
+                    "red",
+                )
+            else:
+                self.update_tree_label(
+                    a2a_branch,
+                    "⚠️",
+                    f"A2A Delegation {status.replace('_', ' ').title()}",
+                    "yellow",
+                )
+
+            self.print(tree_to_use)
+            self.print()
+
+        if status == "completed" and result:
+            content = Text()
+            content.append("A2A Delegation Completed\n\n", style="green bold")
+            content.append("Result:\n", style="white")
+
+            result_preview = result if len(result) <= 500 else result[:497] + "..."
+            content.append(result_preview, style="green")
+
+            panel = self.create_panel(content, "✅ A2A Success", "green")
+            self.print(panel)
+            self.print()
+        elif status == "input_required" and error:
+            content = Text()
+            content.append("A2A Response\n\n", style="cyan bold")
+            content.append("Message:\n", style="white")
+
+            response_preview = error if len(error) <= 500 else error[:497] + "..."
+            content.append(response_preview, style="cyan")
+
+            panel = self.create_panel(content, "💬 A2A Response", "cyan")
+            self.print(panel)
+            self.print()
+        elif error:
+            content = Text()
+            content.append(
+                "A2A Delegation Issue\n\n",
+                style="red bold" if status == "failed" else "yellow bold",
+            )
+            content.append("Status: ", style="white")
+            content.append(
+                f"{status}\n\n", style="red" if status == "failed" else "yellow"
+            )
+            content.append("Message:\n", style="white")
+            content.append(error, style="red" if status == "failed" else "yellow")
+
+            panel_style = "red" if status == "failed" else "yellow"
+            panel_title = "❌ A2A Failed" if status == "failed" else "⚠️ A2A Status"
+            panel = self.create_panel(content, panel_title, panel_style)
+            self.print(panel)
+            self.print()
+
+    def handle_a2a_conversation_started(
+        self,
+        agent_id: str,
+        endpoint: str,
+    ) -> None:
+        """Handle A2A conversation started event.
+
+        Args:
+            agent_id: A2A agent identifier
+            endpoint: A2A agent endpoint URL
+        """
+        branch_to_use = self.current_lite_agent_branch or self.current_task_branch
+        tree_to_use = self.current_crew_tree or branch_to_use
+
+        if not isinstance(self.current_a2a_conversation_branch, Tree):
+            if branch_to_use is not None and tree_to_use is not None:
+                self.current_a2a_conversation_branch = branch_to_use.add("")
+                self.update_tree_label(
+                    self.current_a2a_conversation_branch,
+                    "💬",
+                    f"Multiturn A2A Conversation ({agent_id})",
+                    "cyan",
+                )
+                self.print(tree_to_use)
+                self.print()
+            else:
+                self.current_a2a_conversation_branch = "MULTITURN_NO_TREE"
+
+    def handle_a2a_message_sent(
+        self,
+        message: str,
+        turn_number: int,
+        agent_role: str | None = None,
+    ) -> None:
+        """Handle A2A message sent event.
+
+        Args:
+            message: Message content sent to the A2A agent
+            turn_number: Current turn number
+            agent_role: Role of the CrewAI agent sending the message
+        """
+        self._pending_a2a_message = message
+        self._pending_a2a_agent_role = agent_role
+        self._pending_a2a_turn_number = turn_number
+
+    def handle_a2a_response_received(
+        self,
+        response: str,
+        turn_number: int,
+        status: str,
+        agent_role: str | None = None,
+    ) -> None:
+        """Handle A2A response received event.
+
+        Args:
+            response: Response content from the A2A agent
+            turn_number: Current turn number
+            status: Response status (input_required, completed, etc.)
+            agent_role: Role of the CrewAI agent (for display)
+        """
+        if self.current_a2a_conversation_branch and isinstance(
+            self.current_a2a_conversation_branch, Tree
+        ):
+            if turn_number in self._a2a_turn_branches:
+                turn_branch = self._a2a_turn_branches[turn_number]
+            else:
+                turn_branch = self.current_a2a_conversation_branch.add("")
+                self.update_tree_label(
+                    turn_branch,
+                    "💬",
+                    f"Turn {turn_number}",
+                    "cyan",
+                )
+                self._a2a_turn_branches[turn_number] = turn_branch
+
+            crewai_agent_role = self._pending_a2a_agent_role or agent_role or "User"
+            message_content = self._pending_a2a_message or "sent message"
+
+            message_preview = (
+                message_content[:100] + "..."
+                if len(message_content) > 100
+                else message_content
+            )
+
+            user_node = turn_branch.add("")
+            self.update_tree_label(
+                user_node,
+                f"{crewai_agent_role} 👤 :  ",
+                f'"{message_preview}"',
+                "blue",
+            )
+
+            agent_node = turn_branch.add("")
+            response_preview = (
+                response[:100] + "..." if len(response) > 100 else response
+            )
+
+            a2a_agent_display = f"{self._current_a2a_agent_name} \U0001f916: "
+
+            if status == "completed":
+                response_color = "green"
+                status_indicator = "✓"
+            elif status == "input_required":
+                response_color = "yellow"
+                status_indicator = "❓"
+            elif status == "failed":
+                response_color = "red"
+                status_indicator = "✗"
+            elif status == "auth_required":
+                response_color = "magenta"
+                status_indicator = "🔒"
+            elif status == "canceled":
+                response_color = "dim"
+                status_indicator = "⊘"
+            else:
+                response_color = "cyan"
+                status_indicator = ""
+
+            label = f'"{response_preview}"'
+            if status_indicator:
+                label = f"{status_indicator} {label}"
+
+            self.update_tree_label(
+                agent_node,
+                a2a_agent_display,
+                label,
+                response_color,
+            )
+
+            self._pending_a2a_message = None
+            self._pending_a2a_agent_role = None
+            self._pending_a2a_turn_number = None
+
+            tree_to_use = self.current_crew_tree or self.current_task_branch
+            if tree_to_use:
+                self.print(tree_to_use)
+                self.print()
+
+    def handle_a2a_conversation_completed(
+        self,
+        status: str,
+        final_result: str | None,
+        error: str | None,
+        total_turns: int,
+    ) -> None:
+        """Handle A2A conversation completed event.
+
+        Args:
+            status: Final status (completed, failed, etc.)
+            final_result: Final result if completed successfully
+            error: Error message if failed
+            total_turns: Total number of turns in the conversation
+        """
+        if self.current_a2a_conversation_branch and isinstance(
+            self.current_a2a_conversation_branch, Tree
+        ):
+            if status == "completed":
+                if self._pending_a2a_message and self._pending_a2a_agent_role:
+                    if total_turns in self._a2a_turn_branches:
+                        turn_branch = self._a2a_turn_branches[total_turns]
+                    else:
+                        turn_branch = self.current_a2a_conversation_branch.add("")
+                        self.update_tree_label(
+                            turn_branch,
+                            "💬",
+                            f"Turn {total_turns}",
+                            "cyan",
+                        )
+                        self._a2a_turn_branches[total_turns] = turn_branch
+
+                    crewai_agent_role = self._pending_a2a_agent_role
+                    message_content = self._pending_a2a_message
+
+                    message_preview = (
+                        message_content[:100] + "..."
+                        if len(message_content) > 100
+                        else message_content
+                    )
+
+                    user_node = turn_branch.add("")
+                    self.update_tree_label(
+                        user_node,
+                        f"{crewai_agent_role} 👤 :  ",
+                        f'"{message_preview}"',
+                        "green",
+                    )
+
+                    self._pending_a2a_message = None
+                    self._pending_a2a_agent_role = None
+                    self._pending_a2a_turn_number = None
+            elif status == "failed":
+                error_turn = self.current_a2a_conversation_branch.add("")
+                error_msg = error[:150] + "..." if error and len(error) > 150 else error
+                self.update_tree_label(
+                    error_turn,
+                    "❌",
+                    f"Failed: {error_msg}" if error else "Conversation Failed",
+                    "red",
+                )
+
+            tree_to_use = self.current_crew_tree or self.current_task_branch
+            if tree_to_use:
+                self.print(tree_to_use)
+                self.print()
+
+        self.current_a2a_conversation_branch = None
+        self.current_a2a_turn_count = 0

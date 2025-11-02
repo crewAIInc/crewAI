@@ -3,7 +3,7 @@ from typing import Any
 import urllib.request
 import warnings
 
-from crewai.agent import Agent
+from crewai.agent.core import Agent
 from crewai.crew import Crew
 from crewai.crews.crew_output import CrewOutput
 from crewai.flow.flow import Flow
@@ -40,7 +40,7 @@ def _suppress_pydantic_deprecation_warnings() -> None:
 
 _suppress_pydantic_deprecation_warnings()
 
-__version__ = "1.2.0"
+__version__ = "1.3.0"
 _telemetry_submitted = False
 
 

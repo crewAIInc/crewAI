@@ -1,12 +1,21 @@
 from __future__ import annotations
 
 from io import StringIO
-from typing import Any
+import threading
+from typing import TYPE_CHECKING, Any
 
 from pydantic import Field, PrivateAttr
 
 from crewai.events.base_event_listener import BaseEventListener
-from crewai.events.listeners.memory_listener import MemoryListener
+from crewai.events.listeners.tracing.trace_listener import TraceCollectionListener
+from crewai.events.types.a2a_events import (
+    A2AConversationCompletedEvent,
+    A2AConversationStartedEvent,
+    A2ADelegationCompletedEvent,
+    A2ADelegationStartedEvent,
+    A2AMessageSentEvent,
+    A2AResponseReceivedEvent,
+)
 from crewai.events.types.agent_events import (
     AgentExecutionCompletedEvent,
     AgentExecutionStartedEvent,
@@ -79,6 +88,10 @@ from crewai.utilities import Logger
 from crewai.utilities.constants import EMITTER_COLOR
 
 
+if TYPE_CHECKING:
+    from crewai.events.event_bus import CrewAIEventsBus
+
+
 class EventListener(BaseEventListener):
     _instance = None
     _telemetry: Telemetry = PrivateAttr(default_factory=lambda: Telemetry())
@@ -88,6 +101,7 @@ class EventListener(BaseEventListener):
     text_stream = StringIO()
     knowledge_retrieval_in_progress = False
     knowledge_query_in_progress = False
+    method_branches: dict[str, Any] = Field(default_factory=dict)
 
     def __new__(cls):
         if cls._instance is None:
@@ -101,21 +115,27 @@ class EventListener(BaseEventListener):
             self._telemetry = Telemetry()
             self._telemetry.set_tracer()
             self.execution_spans = {}
+            self.method_branches = {}
             self._initialized = True
             self.formatter = ConsoleFormatter(verbose=True)
+            self._crew_tree_lock = threading.Condition()
 
-            MemoryListener(formatter=self.formatter)
+            # Initialize trace listener with formatter for memory event handling
+            trace_listener = TraceCollectionListener()
+            trace_listener.formatter = self.formatter
 
     # ----------- CREW EVENTS -----------
 
-    def setup_listeners(self, crewai_event_bus):
+    def setup_listeners(self, crewai_event_bus: CrewAIEventsBus) -> None:
         @crewai_event_bus.on(CrewKickoffStartedEvent)
-        def on_crew_started(source, event: CrewKickoffStartedEvent):
-            self.formatter.create_crew_tree(event.crew_name or "Crew", source.id)
-            self._telemetry.crew_execution_span(source, event.inputs)
+        def on_crew_started(source, event: CrewKickoffStartedEvent) -> None:
+            with self._crew_tree_lock:
+                self.formatter.create_crew_tree(event.crew_name or "Crew", source.id)
+                self._telemetry.crew_execution_span(source, event.inputs)
+                self._crew_tree_lock.notify_all()
 
         @crewai_event_bus.on(CrewKickoffCompletedEvent)
-        def on_crew_completed(source, event: CrewKickoffCompletedEvent):
+        def on_crew_completed(source, event: CrewKickoffCompletedEvent) -> None:
             # Handle telemetry
             final_string_output = event.output.raw
             self._telemetry.end_crew(source, final_string_output)
@@ -129,7 +149,7 @@ class EventListener(BaseEventListener):
             )
 
         @crewai_event_bus.on(CrewKickoffFailedEvent)
-        def on_crew_failed(source, event: CrewKickoffFailedEvent):
+        def on_crew_failed(source, event: CrewKickoffFailedEvent) -> None:
             self.formatter.update_crew_tree(
                 self.formatter.current_crew_tree,
                 event.crew_name or "Crew",
@@ -138,23 +158,23 @@ class EventListener(BaseEventListener):
             )
 
         @crewai_event_bus.on(CrewTrainStartedEvent)
-        def on_crew_train_started(source, event: CrewTrainStartedEvent):
+        def on_crew_train_started(source, event: CrewTrainStartedEvent) -> None:
             self.formatter.handle_crew_train_started(
                 event.crew_name or "Crew", str(event.timestamp)
             )
 
         @crewai_event_bus.on(CrewTrainCompletedEvent)
-        def on_crew_train_completed(source, event: CrewTrainCompletedEvent):
+        def on_crew_train_completed(source, event: CrewTrainCompletedEvent) -> None:
             self.formatter.handle_crew_train_completed(
                 event.crew_name or "Crew", str(event.timestamp)
             )
 
         @crewai_event_bus.on(CrewTrainFailedEvent)
-        def on_crew_train_failed(source, event: CrewTrainFailedEvent):
+        def on_crew_train_failed(source, event: CrewTrainFailedEvent) -> None:
             self.formatter.handle_crew_train_failed(event.crew_name or "Crew")
 
         @crewai_event_bus.on(CrewTestResultEvent)
-        def on_crew_test_result(source, event: CrewTestResultEvent):
+        def on_crew_test_result(source, event: CrewTestResultEvent) -> None:
             self._telemetry.individual_test_result_span(
                 source.crew,
                 event.quality,
@@ -165,14 +185,22 @@ class EventListener(BaseEventListener):
         # ----------- TASK EVENTS -----------
 
         @crewai_event_bus.on(TaskStartedEvent)
-        def on_task_started(source, event: TaskStartedEvent):
+        def on_task_started(source, event: TaskStartedEvent) -> None:
             span = self._telemetry.task_started(crew=source.agent.crew, task=source)
             self.execution_spans[source] = span
-            # Pass both task ID and task name (if set)
-            task_name = source.name if hasattr(source, "name") and source.name else None
-            self.formatter.create_task_branch(
-                self.formatter.current_crew_tree, source.id, task_name
-            )
+
+            with self._crew_tree_lock:
+                self._crew_tree_lock.wait_for(
+                    lambda: self.formatter.current_crew_tree is not None, timeout=5.0
+                )
+
+            if self.formatter.current_crew_tree is not None:
+                task_name = (
+                    source.name if hasattr(source, "name") and source.name else None
+                )
+                self.formatter.create_task_branch(
+                    self.formatter.current_crew_tree, source.id, task_name
+                )
 
         @crewai_event_bus.on(TaskCompletedEvent)
         def on_task_completed(source, event: TaskCompletedEvent):
@@ -263,7 +291,8 @@ class EventListener(BaseEventListener):
         @crewai_event_bus.on(FlowCreatedEvent)
         def on_flow_created(source, event: FlowCreatedEvent):
             self._telemetry.flow_creation_span(event.flow_name)
-            self.formatter.create_flow_tree(event.flow_name, str(source.flow_id))
+            tree = self.formatter.create_flow_tree(event.flow_name, str(source.flow_id))
+            self.formatter.current_flow_tree = tree
 
         @crewai_event_bus.on(FlowStartedEvent)
         def on_flow_started(source, event: FlowStartedEvent):
@@ -280,30 +309,36 @@ class EventListener(BaseEventListener):
 
         @crewai_event_bus.on(MethodExecutionStartedEvent)
         def on_method_execution_started(source, event: MethodExecutionStartedEvent):
-            self.formatter.update_method_status(
-                self.formatter.current_method_branch,
+            method_branch = self.method_branches.get(event.method_name)
+            updated_branch = self.formatter.update_method_status(
+                method_branch,
                 self.formatter.current_flow_tree,
                 event.method_name,
                 "running",
             )
+            self.method_branches[event.method_name] = updated_branch
 
         @crewai_event_bus.on(MethodExecutionFinishedEvent)
         def on_method_execution_finished(source, event: MethodExecutionFinishedEvent):
-            self.formatter.update_method_status(
-                self.formatter.current_method_branch,
+            method_branch = self.method_branches.get(event.method_name)
+            updated_branch = self.formatter.update_method_status(
+                method_branch,
                 self.formatter.current_flow_tree,
                 event.method_name,
                 "completed",
             )
+            self.method_branches[event.method_name] = updated_branch
 
         @crewai_event_bus.on(MethodExecutionFailedEvent)
         def on_method_execution_failed(source, event: MethodExecutionFailedEvent):
-            self.formatter.update_method_status(
-                self.formatter.current_method_branch,
+            method_branch = self.method_branches.get(event.method_name)
+            updated_branch = self.formatter.update_method_status(
+                method_branch,
                 self.formatter.current_flow_tree,
                 event.method_name,
                 "failed",
             )
+            self.method_branches[event.method_name] = updated_branch
 
         # ----------- TOOL USAGE EVENTS -----------
 
@@ -522,6 +557,62 @@ class EventListener(BaseEventListener):
                 event.agent_role,
                 event.formatted_answer,
                 event.verbose,
+            )
+
+        @crewai_event_bus.on(A2ADelegationStartedEvent)
+        def on_a2a_delegation_started(source, event: A2ADelegationStartedEvent):
+            self.formatter.handle_a2a_delegation_started(
+                event.endpoint,
+                event.task_description,
+                event.agent_id,
+                event.is_multiturn,
+                event.turn_number,
+            )
+
+        @crewai_event_bus.on(A2ADelegationCompletedEvent)
+        def on_a2a_delegation_completed(source, event: A2ADelegationCompletedEvent):
+            self.formatter.handle_a2a_delegation_completed(
+                event.status,
+                event.result,
+                event.error,
+                event.is_multiturn,
+            )
+
+        @crewai_event_bus.on(A2AConversationStartedEvent)
+        def on_a2a_conversation_started(source, event: A2AConversationStartedEvent):
+            # Store A2A agent name for display in conversation tree
+            if event.a2a_agent_name:
+                self.formatter._current_a2a_agent_name = event.a2a_agent_name
+
+            self.formatter.handle_a2a_conversation_started(
+                event.agent_id,
+                event.endpoint,
+            )
+
+        @crewai_event_bus.on(A2AMessageSentEvent)
+        def on_a2a_message_sent(source, event: A2AMessageSentEvent):
+            self.formatter.handle_a2a_message_sent(
+                event.message,
+                event.turn_number,
+                event.agent_role,
+            )
+
+        @crewai_event_bus.on(A2AResponseReceivedEvent)
+        def on_a2a_response_received(source, event: A2AResponseReceivedEvent):
+            self.formatter.handle_a2a_response_received(
+                event.response,
+                event.turn_number,
+                event.status,
+                event.agent_role,
+            )
+
+        @crewai_event_bus.on(A2AConversationCompletedEvent)
+        def on_a2a_conversation_completed(source, event: A2AConversationCompletedEvent):
+            self.formatter.handle_a2a_conversation_completed(
+                event.status,
+                event.final_result,
+                event.error,
+                event.total_turns,
             )
 
 
