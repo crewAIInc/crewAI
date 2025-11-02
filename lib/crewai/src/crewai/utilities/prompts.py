@@ -2,15 +2,11 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Annotated, Literal, TypedDict
+from typing import Annotated, Any, Literal, TypedDict
 
 from pydantic import BaseModel, Field
 
 from crewai.utilities.i18n import I18N, get_i18n
-
-
-if TYPE_CHECKING:
-    from crewai.agents.agent_builder.base_agent import BaseAgent
 
 
 class StandardPromptResult(TypedDict):
@@ -30,7 +26,11 @@ COMPONENTS = Literal["role_playing", "tools", "no_tools", "task"]
 
 
 class Prompts(BaseModel):
-    """Manages and generates prompts for a generic agent."""
+    """Manages and generates prompts for a generic agent.
+
+    Notes:
+        - Need to refactor so that prompt is not tightly coupled to agent.
+    """
 
     i18n: I18N = Field(default_factory=get_i18n)
     has_tools: bool = Field(
@@ -49,7 +49,7 @@ class Prompts(BaseModel):
         default=False,
         description="Whether to use the system prompt when no custom templates are provided",
     )
-    agent: BaseAgent = Field(description="Reference to the agent using these prompts")
+    agent: Any = Field(description="Reference to the agent using these prompts")
 
     def task_execution(self) -> SystemPromptResult | StandardPromptResult:
         """Generate a standard prompt for task execution.
