@@ -10,8 +10,6 @@ import pytest
 from crewai.flow.flow import Flow, and_, listen, or_, router, start
 from crewai.flow.visualization import (
     build_flow_structure,
-    print_structure_summary,
-    structure_to_dict,
     visualize_flow_structure,
 )
 
@@ -144,65 +142,6 @@ def test_build_flow_structure_with_and_or_conditions():
     assert len(or_edges) == 2
 
 
-def test_structure_to_dict():
-    """Test converting flow structure to dictionary format."""
-    flow = SimpleFlow()
-    structure = build_flow_structure(flow)
-    dag_dict = structure_to_dict(structure)
-
-    assert "nodes" in dag_dict
-    assert "edges" in dag_dict
-    assert "start_methods" in dag_dict
-    assert "router_methods" in dag_dict
-
-    assert "begin" in dag_dict["nodes"]
-    assert "process" in dag_dict["nodes"]
-
-    begin_node = dag_dict["nodes"]["begin"]
-    assert begin_node["type"] == "start"
-    assert "method_signature" in begin_node
-    assert "source_code" in begin_node
-
-    assert len(dag_dict["edges"]) == 1
-    edge = dag_dict["edges"][0]
-    assert "source" in edge
-    assert "target" in edge
-    assert "condition_type" in edge
-    assert "is_router_path" in edge
-
-
-def test_structure_to_dict_with_router():
-    """Test dictionary conversion for flow with router."""
-    flow = RouterFlow()
-    structure = build_flow_structure(flow)
-    dag_dict = structure_to_dict(structure)
-
-    decide_node = dag_dict["nodes"]["decide"]
-    assert decide_node["type"] == "router"
-    assert decide_node["is_router"] is True
-
-    if "router_paths" in decide_node:
-        assert len(decide_node["router_paths"]) >= 1
-
-    router_edges = [edge for edge in dag_dict["edges"] if edge["is_router_path"]]
-    assert len(router_edges) >= 1
-
-
-def test_structure_to_dict_with_complex_conditions():
-    """Test dictionary conversion for flow with complex conditions."""
-    flow = ComplexFlow()
-    structure = build_flow_structure(flow)
-    dag_dict = structure_to_dict(structure)
-
-    converge_and_node = dag_dict["nodes"]["converge_and"]
-    assert converge_and_node["condition_type"] == "AND"
-    assert "trigger_condition" in converge_and_node
-    assert converge_and_node["trigger_condition"]["type"] == "AND"
-
-    converge_or_node = dag_dict["nodes"]["converge_or"]
-    assert converge_or_node["condition_type"] == "OR"
-
-
 def test_visualize_flow_structure_creates_html():
     """Test that visualization generates valid HTML file."""
     flow = SimpleFlow()
@@ -266,22 +205,6 @@ def test_visualize_flow_structure_json_data():
     assert "router" in js_content.lower()
     assert "path_a" in js_content
     assert "path_b" in js_content
-
-
-def test_print_structure_summary():
-    """Test printing flow structure summary."""
-    flow = ComplexFlow()
-    structure = build_flow_structure(flow)
-
-    output = print_structure_summary(structure)
-
-    assert "Total nodes:" in output
-    assert "Total edges:" in output
-    assert "Start methods:" in output
-    assert "Router methods:" in output
-
-    assert "start_a" in output
-    assert "start_b" in output
 
 
 def test_node_metadata_includes_source_info():
@@ -364,8 +287,7 @@ def test_visualization_handles_special_characters():
 
     assert len(structure["nodes"]) == 2
 
-    dag_dict = structure_to_dict(structure)
-    json_str = json.dumps(dag_dict)
+    json_str = json.dumps(structure)
     assert json_str is not None
     assert "method_with_underscore" in json_str
     assert "another_method_123" in json_str
@@ -390,7 +312,6 @@ def test_topological_path_counting():
     """Test that topological path counting is accurate."""
     flow = ComplexFlow()
     structure = build_flow_structure(flow)
-    dag_dict = structure_to_dict(structure)
 
     assert len(structure["nodes"]) > 0
     assert len(structure["edges"]) > 0
