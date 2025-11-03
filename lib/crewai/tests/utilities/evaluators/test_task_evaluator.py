@@ -1,8 +1,12 @@
 from unittest import mock
 from unittest.mock import MagicMock, patch
 
-from crewai.utilities.converter import ConverterError
+from crewai.utilities.converter import (
+    ConverterError,
+    generate_instructions_with_openapi_schema,
+)
 from crewai.utilities.evaluators.task_evaluator import (
+    TaskEvaluation,
     TaskEvaluator,
     TrainingTaskEvaluation,
 )
@@ -44,6 +48,9 @@ def test_evaluate_training_data(converter_mock):
     )
 
     assert result == function_return_value
+
+    expected_instructions = generate_instructions_with_openapi_schema(TaskEvaluation)
+
     converter_mock.assert_has_calls(
         [
             mock.call(
@@ -58,8 +65,7 @@ def test_evaluate_training_data(converter_mock):
                 "incorporated into these instructions.\n- A score from 0 to 10 evaluating on completion, quality, and "
                 "overall performance from the improved output to the initial output based on the human feedback\n",
                 model=TrainingTaskEvaluation,
-                instructions="I'm gonna convert this raw text into valid JSON.\n\nThe json should have the "
-                "following structure, with the following keys:\n{\n    suggestions: List[str],\n    quality: float,\n    final_summary: str\n}",
+                instructions=expected_instructions,
             ),
             mock.call().to_pydantic(),
         ]
