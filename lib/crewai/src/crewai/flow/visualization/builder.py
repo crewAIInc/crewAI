@@ -1,14 +1,15 @@
 """Flow structure builder for analyzing Flow execution."""
 
 from __future__ import annotations
+
 from collections import defaultdict
 import inspect
 from typing import TYPE_CHECKING, Any
 
-from crewai.flow.constants import OR_CONDITION
+from crewai.flow.constants import AND_CONDITION, OR_CONDITION
+from crewai.flow.flow_wrappers import FlowCondition
 from crewai.flow.types import FlowMethodName
 from crewai.flow.utils import (
-    _extract_all_methods_recursive,
     is_flow_condition_dict,
     is_simple_flow_condition,
 )
@@ -21,7 +22,7 @@ if TYPE_CHECKING:
 
 
 def _extract_direct_or_triggers(
-    condition: str | dict[str, Any] | list[Any],
+    condition: str | dict[str, Any] | list[Any] | FlowCondition,
 ) -> list[str]:
     """Extract direct OR-level trigger strings from a condition.
 
@@ -43,16 +44,15 @@ def _extract_direct_or_triggers(
     if isinstance(condition, str):
         return [condition]
     if isinstance(condition, dict):
-        cond_type = condition.get("type", "OR")
+        cond_type = condition.get("type", OR_CONDITION)
         conditions_list = condition.get("conditions", [])
 
-        if cond_type == "OR":
+        if cond_type == OR_CONDITION:
             strings = []
             for sub_cond in conditions_list:
                 strings.extend(_extract_direct_or_triggers(sub_cond))
             return strings
-        else:
-            return []
+        return []
     if isinstance(condition, list):
         strings = []
         for item in condition:
@@ -64,7 +64,7 @@ def _extract_direct_or_triggers(
 
 
 def _extract_all_trigger_names(
-    condition: str | dict[str, Any] | list[Any],
+    condition: str | dict[str, Any] | list[Any] | FlowCondition,
 ) -> list[str]:
     """Extract ALL trigger names from a condition for display purposes.
 
@@ -99,6 +99,76 @@ def _extract_all_trigger_names(
     if callable(condition) and hasattr(condition, "__name__"):
         return [condition.__name__]
     return []
+
+
+def _create_edges_from_condition(
+    condition: str | dict[str, Any] | list[Any] | FlowCondition,
+    target: str,
+    nodes: dict[str, NodeMetadata],
+) -> list[StructureEdge]:
+    """Create edges from a condition tree, preserving AND/OR semantics.
+
+    This function recursively processes the condition tree and creates edges
+    with the appropriate condition_type for each trigger.
+
+    For AND conditions, all triggers get edges with condition_type="AND".
+    For OR conditions, triggers get edges with condition_type="OR".
+
+    Args:
+        condition: The condition tree (string, dict, or list).
+        target: The target node name.
+        nodes: Dictionary of all nodes for validation.
+
+    Returns:
+        List of StructureEdge objects representing the condition.
+    """
+    edges: list[StructureEdge] = []
+
+    if isinstance(condition, str):
+        if condition in nodes:
+            edges.append(
+                StructureEdge(
+                    source=condition,
+                    target=target,
+                    condition_type=OR_CONDITION,
+                    is_router_path=False,
+                )
+            )
+    elif callable(condition) and hasattr(condition, "__name__"):
+        method_name = condition.__name__
+        if method_name in nodes:
+            edges.append(
+                StructureEdge(
+                    source=method_name,
+                    target=target,
+                    condition_type=OR_CONDITION,
+                    is_router_path=False,
+                )
+            )
+    elif isinstance(condition, dict):
+        cond_type = condition.get("type", OR_CONDITION)
+        conditions_list = condition.get("conditions", [])
+
+        if cond_type == AND_CONDITION:
+            triggers = _extract_all_trigger_names(condition)
+            edges.extend(
+                StructureEdge(
+                    source=trigger,
+                    target=target,
+                    condition_type=AND_CONDITION,
+                    is_router_path=False,
+                )
+                for trigger in triggers
+                if trigger in nodes
+            )
+        else:
+            for sub_cond in conditions_list:
+                edges.extend(_create_edges_from_condition(sub_cond, target, nodes))
+    elif isinstance(condition, list):
+        for item in condition:
+            edges.extend(_create_edges_from_condition(item, target, nodes))
+
+    return edges
 
 
 def build_flow_structure(flow: Flow[Any]) -> FlowStructure:
@@ -228,28 +298,22 @@ def build_flow_structure(flow: Flow[Any]) -> FlowStructure:
         nodes[method_name] = node_metadata
 
     for listener_name, condition_data in flow._listeners.items():
-        condition_type: str | None = None
-        trigger_methods_list: list[str] = []
-
         if is_simple_flow_condition(condition_data):
             cond_type, methods = condition_data
-            condition_type = cond_type
-            trigger_methods_list = [str(m) for m in methods]
-        elif is_flow_condition_dict(condition_data):
-            condition_type = condition_data.get("type", OR_CONDITION)
-            methods_recursive = _extract_all_methods_recursive(condition_data, flow)
-            trigger_methods_list = [str(m) for m in methods_recursive]
-
-        edges.extend(
-            StructureEdge(
-                source=str(trigger_method),
-                target=str(listener_name),
-                condition_type=condition_type,
-                is_router_path=False,
+            edges.extend(
+                StructureEdge(
+                    source=str(trigger_method),
+                    target=str(listener_name),
+                    condition_type=cond_type,
+                    is_router_path=False,
+                )
+                for trigger_method in methods
+                if str(trigger_method) in nodes
             )
-            for trigger_method in trigger_methods_list
-            if trigger_method in nodes
-        )
+        elif is_flow_condition_dict(condition_data):
+            edges.extend(
+                _create_edges_from_condition(condition_data, str(listener_name), nodes)
+            )
 
     for router_method_name in router_methods:
         if router_method_name not in flow._router_paths:
@@ -299,76 +363,6 @@ def build_flow_structure(flow: Flow[Any]) -> FlowStructure:
     )
 
 
-def structure_to_dict(structure: FlowStructure) -> dict[str, Any]:
-    """Convert FlowStructure to plain dictionary for serialization.
-
-    Args:
-        structure: FlowStructure to convert.
-
-    Returns:
-        Plain dictionary representation.
-    """
-    return {
-        "nodes": dict(structure["nodes"]),
-        "edges": list(structure["edges"]),
-        "start_methods": list(structure["start_methods"]),
-        "router_methods": list(structure["router_methods"]),
-    }
-
-
-def print_structure_summary(structure: FlowStructure) -> str:
-    """Generate human-readable summary of Flow structure.
-
-    Args:
-        structure: FlowStructure to summarize.
-
-    Returns:
-        Formatted string summary.
-    """
-    lines: list[str] = []
-    lines.append("Flow Execution Structure")
-    lines.append("=" * 50)
-    lines.append(f"Total nodes: {len(structure['nodes'])}")
-    lines.append(f"Total edges: {len(structure['edges'])}")
-    lines.append(f"Start methods: {len(structure['start_methods'])}")
-    lines.append(f"Router methods: {len(structure['router_methods'])}")
-    lines.append("")
-
-    if structure["start_methods"]:
-        lines.append("Start Methods:")
-        for method_name in structure["start_methods"]:
-            node = structure["nodes"][method_name]
-            lines.append(f"  - {method_name}")
-            if node.get("condition_type"):
-                lines.append(f"    Condition: {node['condition_type']}")
-            if node.get("trigger_methods"):
-                lines.append(f"    Triggers on: {', '.join(node['trigger_methods'])}")
-        lines.append("")
-
-    if structure["router_methods"]:
-        lines.append("Router Methods:")
-        for method_name in structure["router_methods"]:
-            node = structure["nodes"][method_name]
-            lines.append(f"  - {method_name}")
-            if node.get("router_paths"):
-                lines.append(f"    Paths: {', '.join(node['router_paths'])}")
-        lines.append("")
-
-    if structure["edges"]:
-        lines.append("Connections:")
-        for edge in structure["edges"]:
-            edge_type = ""
-            if edge["is_router_path"]:
-                edge_type = " [Router Path]"
-            elif edge["condition_type"]:
-                edge_type = f" [{edge['condition_type']}]"
-
-            lines.append(f"  {edge['source']} -> {edge['target']}{edge_type}")
-        lines.append("")
-
-    return "\n".join(lines)
-
-
 def calculate_execution_paths(structure: FlowStructure) -> int:
     """Calculate number of possible execution paths through the flow.
 
@@ -396,6 +390,15 @@ def calculate_execution_paths(structure: FlowStructure) -> int:
         return 0
 
     def count_paths_from(node: str, visited: set[str]) -> int:
+        """Recursively count execution paths from a given node.
+
+        Args:
+            node: Node name to start counting from.
+            visited: Set of already visited nodes to prevent cycles.
+
+        Returns:
+            Number of execution paths from this node to terminal nodes.
+        """
         if node in terminal_nodes:
             return 1
 
