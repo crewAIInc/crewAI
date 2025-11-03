@@ -61,7 +61,7 @@ from crewai.utilities.agent_utils import (
 from crewai.utilities.converter import generate_model_description
 from crewai.utilities.guardrail import process_guardrail
 from crewai.utilities.guardrail_types import GuardrailCallable, GuardrailType
-from crewai.utilities.i18n import I18N
+from crewai.utilities.i18n import I18N, get_i18n
 from crewai.utilities.llm_utils import create_llm
 from crewai.utilities.printer import Printer
 from crewai.utilities.token_counter_callback import TokenCalcHandler
@@ -90,8 +90,6 @@ class LiteAgent(FlowTrackable, BaseModel):
     """
 
     model_config = {"arbitrary_types_allowed": True}
-
-    # Core Agent Properties
     id: UUID4 = Field(default_factory=uuid.uuid4, frozen=True)
     role: str = Field(description="Role of the agent")
     goal: str = Field(description="Goal of the agent")
@@ -102,8 +100,6 @@ class LiteAgent(FlowTrackable, BaseModel):
     tools: list[BaseTool] = Field(
         default_factory=list, description="Tools at agent's disposal"
     )
-
-    # Execution Control Properties
     max_iterations: int = Field(
         default=15, description="Maximum number of iterations for tool usage"
     )
@@ -120,24 +116,17 @@ class LiteAgent(FlowTrackable, BaseModel):
     )
     request_within_rpm_limit: Callable[[], bool] | None = Field(
         default=None,
-        description="Callback to check if the request is within the RPM limit",
+        description="Callback to check if the request is within the RPM8 limit",
     )
     i18n: I18N = Field(
-        default_factory=I18N, description="Internationalization settings."
+        default_factory=get_i18n, description="Internationalization settings."
     )
-
-    # Output and Formatting Properties
     response_format: type[BaseModel] | None = Field(
         default=None, description="Pydantic model for structured output"
     )
     verbose: bool = Field(
         default=False, description="Whether to print execution details"
     )
-    callbacks: list[Callable] = Field(
-        default_factory=list, description="Callbacks to be used for the agent"
-    )
-
-    # Guardrail Properties
     guardrail: GuardrailType | None = Field(
         default=None,
         description="Function or string description of a guardrail to validate agent output",
@@ -145,17 +134,12 @@ class LiteAgent(FlowTrackable, BaseModel):
     guardrail_max_retries: int = Field(
         default=3, description="Maximum number of retries when guardrail fails"
     )
-
-    # State and Results
     tools_results: list[dict[str, Any]] = Field(
         default_factory=list, description="Results of the tools used by the agent."
     )
-
-    # Reference of Agent
     original_agent: BaseAgent | None = Field(
         default=None, description="Reference to the agent that created this LiteAgent"
     )
-    # Private Attributes
     _parsed_tools: list[CrewStructuredTool] = PrivateAttr(default_factory=list)
     _token_process: TokenProcess = PrivateAttr(default_factory=TokenProcess)
     _cache_handler: CacheHandler = PrivateAttr(default_factory=CacheHandler)
@@ -165,6 +149,7 @@ class LiteAgent(FlowTrackable, BaseModel):
     _printer: Printer = PrivateAttr(default_factory=Printer)
     _guardrail: GuardrailCallable | None = PrivateAttr(default=None)
     _guardrail_retry_count: int = PrivateAttr(default=0)
+    _callbacks: list[TokenCalcHandler] = PrivateAttr(default_factory=list)
 
     @model_validator(mode="after")
     def setup_llm(self) -> Self:
@@ -174,15 +159,13 @@ class LiteAgent(FlowTrackable, BaseModel):
             raise ValueError(
                 f"Expected LLM instance of type BaseLLM, got {type(self.llm).__name__}"
             )
-
-        # Initialize callbacks
         token_callback = TokenCalcHandler(token_cost_process=self._token_process)
         self._callbacks = [token_callback]
 
         return self
 
     @model_validator(mode="after")
-    def parse_tools(self):
+    def parse_tools(self) -> Self:
         """Parse the tools and convert them to CrewStructuredTool instances."""
         self._parsed_tools = parse_tools(self.tools)
 
@@ -201,7 +184,7 @@ class LiteAgent(FlowTrackable, BaseModel):
                 )
             self._guardrail = cast(
                 GuardrailCallable,
-                LLMGuardrail(description=self.guardrail, llm=self.llm),
+                cast(object, LLMGuardrail(description=self.guardrail, llm=self.llm)),
             )
 
         return self
@@ -209,8 +192,8 @@ class LiteAgent(FlowTrackable, BaseModel):
     @field_validator("guardrail", mode="before")
     @classmethod
     def validate_guardrail_function(
-        cls, v: Callable | str | None
-    ) -> Callable | str | None:
+        cls, v: GuardrailCallable | str | None
+    ) -> GuardrailCallable | str | None:
         """Validate that the guardrail function has the correct signature.
 
         If v is a callable, validate that it has the correct signature.
@@ -559,7 +542,7 @@ class LiteAgent(FlowTrackable, BaseModel):
         self._show_logs(formatted_answer)
         return formatted_answer
 
-    def _show_logs(self, formatted_answer: AgentAction | AgentFinish):
+    def _show_logs(self, formatted_answer: AgentAction | AgentFinish) -> None:
         """Show logs for the agent's execution."""
         crewai_event_bus.emit(
             self,
@@ -574,4 +557,4 @@ class LiteAgent(FlowTrackable, BaseModel):
         self, text: str, role: Literal["user", "assistant", "system"] = "assistant"
     ) -> None:
         """Append a message to the message list with the given role."""
-        self._messages.append(cast(LLMMessage, format_message_for_llm(text, role=role)))
+        self._messages.append(format_message_for_llm(text, role=role))
