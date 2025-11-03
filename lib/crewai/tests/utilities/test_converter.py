@@ -11,12 +11,11 @@ from crewai.utilities.converter import (
     convert_to_model,
     convert_with_instructions,
     create_converter,
+    generate_instructions_with_openapi_schema,
     generate_model_description,
-    get_conversion_instructions,
     handle_partial_json,
     validate_model,
 )
-from crewai.utilities.pydantic_schema_parser import PydanticSchemaParser
 from pydantic import BaseModel
 import pytest
 
@@ -187,7 +186,7 @@ def test_handle_partial_json_with_invalid_partial(mock_agent: Mock) -> None:
 
 # Tests for convert_with_instructions
 @patch("crewai.utilities.converter.create_converter")
-@patch("crewai.utilities.converter.get_conversion_instructions")
+@patch("crewai.utilities.converter.generate_instructions_with_openapi_schema")
 def test_convert_with_instructions_success(
     mock_get_instructions: Mock, mock_create_converter: Mock, mock_agent: Mock
 ) -> None:
@@ -205,7 +204,7 @@ def test_convert_with_instructions_success(
 
 
 @patch("crewai.utilities.converter.create_converter")
-@patch("crewai.utilities.converter.get_conversion_instructions")
+@patch("crewai.utilities.converter.generate_instructions_with_openapi_schema")
 def test_convert_with_instructions_failure(
     mock_get_instructions: Mock, mock_create_converter: Mock, mock_agent: Mock
 ) -> None:
@@ -221,34 +220,15 @@ def test_convert_with_instructions_failure(
         mock_printer.return_value.print.assert_called_once()
 
 
-# Tests for get_conversion_instructions
-def test_get_conversion_instructions_gpt() -> None:
-    llm = LLM(model="gpt-4o-mini")
-    with patch.object(LLM, "supports_function_calling") as supports_function_calling:
-        supports_function_calling.return_value = True
-        instructions = get_conversion_instructions(SimpleModel, llm)
-        model_schema = PydanticSchemaParser(model=SimpleModel).get_schema()
-        expected_instructions = (
-            "Please convert the following text into valid JSON.\n\n"
-            "Output ONLY the valid JSON and nothing else.\n\n"
-            "Use this format exactly:\n```json\n"
-            f"{model_schema}\n```"
-        )
-        assert instructions == expected_instructions
-
-
-def test_get_conversion_instructions_non_gpt() -> None:
-    llm = LLM(model="ollama/llama3.1", base_url="http://localhost:11434")
-    with patch.object(LLM, "supports_function_calling", return_value=False):
-        instructions = get_conversion_instructions(SimpleModel, llm)
-        # Check that the JSON schema is properly formatted
-        assert "Please convert the following text into valid JSON" in instructions
-        assert "Output ONLY the valid JSON and nothing else" in instructions
-        assert "Use this format exactly" in instructions
-        assert "```json" in instructions
-        assert '"type": "object"' in instructions
-        assert '"properties"' in instructions
-        assert "'type': 'json_schema'" not in instructions
+# Tests for generate_instructions_with_openapi_schema
+def test_generate_instructions_with_openapi_schema() -> None:
+    instructions = generate_instructions_with_openapi_schema(SimpleModel)
+    # Check that the JSON schema is properly formatted
+    assert "type" in instructions
+    assert "json_schema" in instructions
+    assert "schema" in instructions
+    assert '"type": "object"' in instructions
+    assert '"properties"' in instructions
 
 
 # Tests for is_gpt
@@ -363,7 +343,7 @@ def test_convert_with_instructions() -> None:
     llm = LLM(model="gpt-4o-mini")
     sample_text = "Name: Alice, Age: 30"
 
-    instructions = get_conversion_instructions(SimpleModel, llm)
+    instructions = generate_instructions_with_openapi_schema(SimpleModel)
     converter = Converter(
         llm=llm,
         text=sample_text,
@@ -384,7 +364,7 @@ def test_convert_with_instructions() -> None:
 def test_converter_with_llama3_2_model() -> None:
     llm = LLM(model="openrouter/meta-llama/llama-3.2-3b-instruct")
     sample_text = "Name: Alice Llama, Age: 30"
-    instructions = get_conversion_instructions(SimpleModel, llm)
+    instructions = generate_instructions_with_openapi_schema(SimpleModel)
     converter = Converter(
         llm=llm,
         text=sample_text,
@@ -403,7 +383,7 @@ def test_converter_with_llama3_1_model() -> None:
     llm.call.return_value = '{"name": "Alice Llama", "age": 30}'
 
     sample_text = "Name: Alice Llama, Age: 30"
-    instructions = get_conversion_instructions(SimpleModel, llm)
+    instructions = generate_instructions_with_openapi_schema(SimpleModel)
     converter = Converter(
         llm=llm,
         text=sample_text,
@@ -421,7 +401,7 @@ def test_converter_with_nested_model() -> None:
     llm = LLM(model="gpt-4o-mini")
     sample_text = "Name: John Doe\nAge: 30\nAddress: 123 Main St, Anytown, 12345"
 
-    instructions = get_conversion_instructions(Person, llm)
+    instructions = generate_instructions_with_openapi_schema(Person)
     converter = Converter(
         llm=llm,
         text=sample_text,
@@ -447,7 +427,7 @@ def test_converter_error_handling() -> None:
     llm.call.return_value = "Invalid JSON"
     sample_text = "Name: Alice, Age: 30"
 
-    instructions = get_conversion_instructions(SimpleModel, llm)
+    instructions = generate_instructions_with_openapi_schema(SimpleModel)
     converter = Converter(
         llm=llm,
         text=sample_text,
@@ -472,7 +452,7 @@ def test_converter_retry_logic() -> None:
     ]
     sample_text = "Name: Retry Alice, Age: 30"
 
-    instructions = get_conversion_instructions(SimpleModel, llm)
+    instructions = generate_instructions_with_openapi_schema(SimpleModel)
     converter = Converter(
         llm=llm,
         text=sample_text,
@@ -501,7 +481,7 @@ def test_converter_with_optional_fields() -> None:
     llm.call.return_value = '{"name": "Bob", "age": null}'
     sample_text = "Name: Bob, age: None"
 
-    instructions = get_conversion_instructions(OptionalModel, llm)
+    instructions = generate_instructions_with_openapi_schema(OptionalModel)
     converter = Converter(
         llm=llm,
         text=sample_text,
@@ -526,7 +506,7 @@ def test_converter_with_list_field() -> None:
     llm.call.return_value = '{"items": [1, 2, 3]}'
     sample_text = "Items: 1, 2, 3"
 
-    instructions = get_conversion_instructions(ListModel, llm)
+    instructions = generate_instructions_with_openapi_schema(ListModel)
     converter = Converter(
         llm=llm,
         text=sample_text,
@@ -555,7 +535,7 @@ def test_converter_with_enum() -> None:
     llm.call.return_value = '{"name": "Alice", "color": "red"}'
     sample_text = "Name: Alice, Color: Red"
 
-    instructions = get_conversion_instructions(EnumModel, llm)
+    instructions = generate_instructions_with_openapi_schema(EnumModel)
     converter = Converter(
         llm=llm,
         text=sample_text,
@@ -577,7 +557,7 @@ def test_converter_with_ambiguous_input() -> None:
     llm.call.return_value = '{"name": "Charlie", "age": "Not an age"}'
     sample_text = "Charlie is thirty years old"
 
-    instructions = get_conversion_instructions(SimpleModel, llm)
+    instructions = generate_instructions_with_openapi_schema(SimpleModel)
     converter = Converter(
         llm=llm,
         text=sample_text,
