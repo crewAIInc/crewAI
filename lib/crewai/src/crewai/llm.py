@@ -336,6 +336,8 @@ class LLM(BaseLLM):
                 return cast(
                     Self, native_class(model=model_string, provider=provider, **kwargs)
                 )
+            except NotImplementedError:
+                raise
             except Exception as e:
                 raise ImportError(f"Error importing native provider: {e}") from e
 

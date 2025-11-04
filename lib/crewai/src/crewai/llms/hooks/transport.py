@@ -6,7 +6,7 @@ to enable request/response modification at the transport level.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any
 
 import httpx
 
@@ -25,7 +25,7 @@ class HTTPTransport(httpx.HTTPTransport):
 
     def __init__(
         self,
-        interceptor: BaseInterceptor[Any],
+        interceptor: BaseInterceptor[httpx.Request, httpx.Response],
         **kwargs: Any,
     ) -> None:
         """Initialize transport with interceptor.
@@ -48,7 +48,7 @@ class HTTPTransport(httpx.HTTPTransport):
         """
         request = self.interceptor.on_outbound(request)
         response = super().handle_request(request)
-        return cast(httpx.Response, self.interceptor.on_inbound(response))
+        return self.interceptor.on_inbound(response)
 
 
 class AsyncHTTPransport(httpx.AsyncHTTPTransport):
@@ -61,7 +61,7 @@ class AsyncHTTPransport(httpx.AsyncHTTPTransport):
 
     def __init__(
         self,
-        interceptor: BaseInterceptor[Any],
+        interceptor: BaseInterceptor[httpx.Request, httpx.Response],
         **kwargs: Any,
     ) -> None:
         """Initialize async transport with interceptor.
@@ -84,4 +84,4 @@ class AsyncHTTPransport(httpx.AsyncHTTPTransport):
         """
         request = await self.interceptor.aon_outbound(request)
         response = await super().handle_async_request(request)
-        return cast(httpx.Response, await self.interceptor.aon_inbound(response))
+        return await self.interceptor.aon_inbound(response)
