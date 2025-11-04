@@ -510,4 +510,139 @@ interactions:
     status:
       code: 200
       message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"You are Scorer. You''re an expert
+      scorer, specialized in scoring titles.\nYour personal goal is: Score the title\nTo
+      give my best complete final answer to the task respond using the exact following
+      format:\n\nThought: I now can give a great answer\nFinal Answer: Your final
+      answer must be the great and the most complete as possible, it must be outcome
+      described.\n\nI MUST use these formats, my job depends on it!"},{"role":"user","content":"\nCurrent
+      Task: Give me an integer score between 1-5 for the following title: ''The impact
+      of AI in the future of work''\n\nThis is the expected criteria for your final
+      answer: The score of the title.\nyou MUST return the actual complete content
+      as the final answer, not a summary.\nEnsure your final answer strictly adheres
+      to the following OpenAPI schema: {\n  \"type\": \"json_schema\",\n  \"json_schema\":
+      {\n    \"name\": \"ScoreOutput\",\n    \"strict\": true,\n    \"schema\": {\n      \"properties\":
+      {\n        \"score\": {\n          \"title\": \"Score\",\n          \"type\":
+      \"integer\"\n        }\n      },\n      \"required\": [\n        \"score\"\n      ],\n      \"title\":
+      \"ScoreOutput\",\n      \"type\": \"object\",\n      \"additionalProperties\":
+      false\n    }\n  }\n}\n\nDo not include the OpenAPI schema in the final output.
+      Ensure the final output does not include any code block markers like ```json
+      or ```python.\n\nBegin! This is VERY important to you, use the tools available
+      and give your best Final Answer, your job depends on it!\n\nThought:"},{"role":"user","content":"I
+      did it wrong. Invalid Format: I missed the ''Action:'' after ''Thought:''. I
+      will do right next, and don''t use a tool I have already used.\n\nIf you don''t
+      need to use any more tools, you must give your best complete final answer, make
+      sure it satisfies the expected criteria, use the EXACT format below:\n\n```\nThought:
+      I now can give a great answer\nFinal Answer: my best complete final answer to
+      the task.\n\n```"}],"model":"gpt-4.1-mini"}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate, zstd
+      connection:
+      - keep-alive
+      content-length:
+      - '2022'
+      content-type:
+      - application/json
+      cookie:
+      - _cfuvid=TvP4GePeQO8E5c_xWNGzJb84f940MFRG_lZ_0hWAc5M-1761895510432-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.109.1
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.109.1
+      x-stainless-read-timeout:
+      - '600'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.10
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAA4xSy27bMBC86ysWPFuBJciuqlsQtEhyyKVFi7YKBJpaSUyoJUFScQPD/15Qciy5
+        D6AXAuTsLGdm9xABMFmzApjouBe9UfHNt9vb73n/gV6/mJvd+6+f2vyBP1w/5fv9/R1bBYbePaHw
+        b6wroXuj0EtNEywsco+ha/Jum6b5ZpsmI9DrGlWgtcbH2VUS95JknK7TTbzO4iQ70TstBTpWwI8I
+        AOAwnkEo1fiTFbBevb306BxvkRXnIgBmtQovjDsnnefk2WoGhSaPNGr/3Omh7XwBd0B6D4ITtPIF
+        gUMbDAAnt0db0kdJXMH1eCvgUBJAyZzQFktWQFbScfmBxWZwPLikQakFwIm05yGl0drjCTmezSjd
+        Gqt37jcqayRJ11UWudMUhDuvDRvRYwTwOIY2XOTAjNW98ZXXzzh+l6X51I/Nw5rRND2BXnuuFqzN
+        KerLflWNnkvlFrEzwUWH9UydZ8SHWuoFEC1c/6nmb70n55La/2k/A0Kg8VhXxmItxaXjucxi2OV/
+        lZ1THgUzh/ZFCqy8RBsmUWPDBzUtGHOvzmNfNZJatMbKacsaU2UizTdJk29TFh2jXwAAAP//AwAL
+        5hHUdAMAAA==
+    headers:
+      CF-RAY:
+      - 99969eea9b25729f-EWR
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Tue, 04 Nov 2025 19:47:01 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - __cf_bm=95CW5iG5JJkPq3T3uSAojHQikclJ8zeoTBbUbVKeEZw-1762285621-1.0.1.1-GDrBsREnZ2WqnXLl1wbeEZyDawYzgkp7WjNDRMOG5ahazKEbl19SVYAEj.SnDW7_zTUYE1D0FYrVW68WEBoI.Ze0dJfqcNyslfKHGMLDmt4;
+        path=/; expires=Tue, 04-Nov-25 20:17:01 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=0Y3evxGyH4NLhrIyVY8e6YT_Dizu7Rnyth1.rBGY.BQ-1762285621491-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - user-ey7th29prfg7qkhriu5kkphq
+      openai-processing-ms:
+      - '449'
+      openai-project:
+      - proj_E14YUf6ccBtOzz2aSr0CLtB7
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '542'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - '200'
+      x-ratelimit-limit-tokens:
+      - '100000'
+      x-ratelimit-remaining-requests:
+      - '196'
+      x-ratelimit-remaining-tokens:
+      - '95395'
+      x-ratelimit-reset-requests:
+      - 25m7.889s
+      x-ratelimit-reset-tokens:
+      - 33h9m0.209s
+      x-request-id:
+      - req_e6e321397f9c41da9d1e45d3a66384be
+    status:
+      code: 200
+      message: OK
 version: 1
