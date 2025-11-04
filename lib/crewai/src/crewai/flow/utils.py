@@ -19,11 +19,11 @@ import ast
 from collections import defaultdict, deque
 import inspect
 import textwrap
-from typing import Any, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from typing_extensions import TypeIs
 
-from crewai.flow.constants import OR_CONDITION, AND_CONDITION
+from crewai.flow.constants import AND_CONDITION, OR_CONDITION
 from crewai.flow.flow_wrappers import (
     FlowCondition,
     FlowConditions,
@@ -32,6 +32,7 @@ from crewai.flow.flow_wrappers import (
 )
 from crewai.flow.types import FlowMethodCallable, FlowMethodName
 from crewai.utilities.printer import Printer
+
 
 if TYPE_CHECKING:
     from crewai.flow.flow import Flow
@@ -91,6 +92,17 @@ def get_possible_return_constants(function: Any) -> list[str] | None:
         elif isinstance(node, ast.IfExp):
             strings.extend(extract_string_constants(node.body))
             strings.extend(extract_string_constants(node.orelse))
+        elif isinstance(node, ast.Call):
+            if (
+                isinstance(node.func, ast.Attribute)
+                and node.func.attr == "get"
+                and len(node.args) >= 2
+            ):
+                default_arg = node.args[1]
+                if isinstance(default_arg, ast.Constant) and isinstance(
+                    default_arg.value, str
+                ):
+                    strings.append(default_arg.value)
         return strings
 
     class VariableAssignmentVisitor(ast.NodeVisitor):

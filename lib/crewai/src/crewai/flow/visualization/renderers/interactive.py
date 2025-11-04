@@ -20,7 +20,7 @@ class CSSExtension(Extension):
     Provides {% css 'path/to/file.css' %} tag syntax.
     """
 
-    tags: ClassVar[set[str]] = {"css"}  # type: ignore[assignment]
+    tags: ClassVar[set[str]] = {"css"}  # type: ignore[misc]
 
     def parse(self, parser: Parser) -> nodes.Node:
         """Parse {% css 'styles.css' %} tag.
@@ -53,7 +53,7 @@ class JSExtension(Extension):
     Provides {% js 'path/to/file.js' %} tag syntax.
     """
 
-    tags: ClassVar[set[str]] = {"js"}  # type: ignore[assignment]
+    tags: ClassVar[set[str]] = {"js"}  # type: ignore[misc]
 
     def parse(self, parser: Parser) -> nodes.Node:
         """Parse {% js 'script.js' %} tag.
@@ -91,6 +91,116 @@ TEXT_PRIMARY = "#e6edf3"
 TEXT_SECONDARY = "#7d8590"
 
 
+def calculate_node_positions(
+    dag: FlowStructure,
+) -> dict[str, dict[str, int | float]]:
+    """Calculate hierarchical positions (level, x, y) for each node.
+
+    Args:
+        dag: FlowStructure containing nodes and edges.
+
+    Returns:
+        Dictionary mapping node names to their position data (level, x, y).
+    """
+    children: dict[str, list[str]] = {name: [] for name in dag["nodes"]}
+    parents: dict[str, list[str]] = {name: [] for name in dag["nodes"]}
+
+    for edge in dag["edges"]:
+        source = edge["source"]
+        target = edge["target"]
+        if source in children and target in children:
+            children[source].append(target)
+            parents[target].append(source)
+
+    levels: dict[str, int] = {}
+    queue: list[tuple[str, int]] = []
+
+    for start_method in dag["start_methods"]:
+        if start_method in dag["nodes"]:
+            levels[start_method] = 0
+            queue.append((start_method, 0))
+
+    visited: set[str] = set()
+    while queue:
+        node, level = queue.pop(0)
+        if node in visited:
+            continue
+        visited.add(node)
+
+        if node not in levels or levels[node] < level:
+            levels[node] = level
+
+        for child in children.get(node, []):
+            if child not in visited:
+                child_level = level + 1
+                if child not in levels or levels[child] < child_level:
+                    levels[child] = child_level
+                queue.append((child, child_level))
+
+    for name in dag["nodes"]:
+        if name not in levels:
+            levels[name] = 0
+
+    nodes_by_level: dict[int, list[str]] = {}
+    for node, level in levels.items():
+        if level not in nodes_by_level:
+            nodes_by_level[level] = []
+        nodes_by_level[level].append(node)
+
+    positions: dict[str, dict[str, int | float]] = {}
+    level_separation = 300  # Vertical spacing between levels
+    node_spacing = 400  # Horizontal spacing between nodes
+
+    parent_count: dict[str, int] = {}
+    for node, parent_list in parents.items():
+        parent_count[node] = len(parent_list)
+
+    for level, nodes_at_level in sorted(nodes_by_level.items()):
+        y = level * level_separation
+
+        if level == 0:
+            num_nodes = len(nodes_at_level)
+            for i, node in enumerate(nodes_at_level):
+                x = (i - (num_nodes - 1) / 2) * node_spacing
+                positions[node] = {"level": level, "x": x, "y": y}
+        else:
+            for i, node in enumerate(nodes_at_level):
+                parent_list = parents.get(node, [])
+                parent_positions: list[float] = [
+                    positions[parent]["x"]
+                    for parent in parent_list
+                    if parent in positions
+                ]
+
+                if parent_positions:
+                    if len(parent_positions) > 1 and len(set(parent_positions)) == 1:
+                        base_x = parent_positions[0]
+                        avg_x = base_x + node_spacing * 0.4
+                    else:
+                        avg_x = sum(parent_positions) / len(parent_positions)
+                else:
+                    avg_x = i * node_spacing * 0.5
+
+                positions[node] = {"level": level, "x": avg_x, "y": y}
+
+            nodes_at_level_sorted = sorted(
+                nodes_at_level, key=lambda n: positions[n]["x"]
+            )
+            min_spacing = node_spacing * 0.6  # Minimum horizontal distance
+
+            for i in range(len(nodes_at_level_sorted) - 1):
+                current_node = nodes_at_level_sorted[i]
+                next_node = nodes_at_level_sorted[i + 1]
+
+                current_x = positions[current_node]["x"]
+                next_x = positions[next_node]["x"]
+
+                if next_x - current_x < min_spacing:
+                    positions[next_node]["x"] = current_x + min_spacing
+
+    return positions
+
+
 def render_interactive(
     dag: FlowStructure,
     filename: str = "flow_dag.html",
@@ -110,6 +220,8 @@ def render_interactive(
     Returns:
         Absolute path to generated HTML file in temporary directory.
     """
+    node_positions = calculate_node_positions(dag)
+
     nodes_list: list[dict[str, Any]] = []
     for name, metadata in dag["nodes"].items():
         node_type: str = metadata.get("type", "listen")
@@ -120,37 +232,37 @@ def render_interactive(
 
         if node_type == "start":
             color_config = {
-                "background": CREWAI_ORANGE,
-                "border": CREWAI_ORANGE,
+                "background": "var(--node-bg-start)",
+                "border": "var(--node-border-start)",
                 "highlight": {
-                    "background": CREWAI_ORANGE,
-                    "border": CREWAI_ORANGE,
+                    "background": "var(--node-bg-start)",
+                    "border": "var(--node-border-start)",
                 },
             }
-            font_color = WHITE
-            border_width = 2
+            font_color = "var(--node-text-color)"
+            border_width = 3
         elif node_type == "router":
             color_config = {
-                "background": DARK_GRAY,
+                "background": "var(--node-bg-router)",
                 "border": CREWAI_ORANGE,
                 "highlight": {
-                    "background": DARK_GRAY,
+                    "background": "var(--node-bg-router)",
                     "border": CREWAI_ORANGE,
                 },
             }
-            font_color = WHITE
+            font_color = "var(--node-text-color)"
             border_width = 3
         else:
             color_config = {
-                "background": DARK_GRAY,
-                "border": DARK_GRAY,
+                "background": "var(--node-bg-listen)",
+                "border": "var(--node-border-listen)",
                 "highlight": {
-                    "background": DARK_GRAY,
-                    "border": DARK_GRAY,
+                    "background": "var(--node-bg-listen)",
+                    "border": "var(--node-border-listen)",
                 },
             }
-            font_color = WHITE
-            border_width = 2
+            font_color = "var(--node-text-color)"
+            border_width = 3
 
         title_parts: list[str] = []
 
@@ -215,25 +327,34 @@ def render_interactive(
         bg_color = color_config["background"]
         border_color = color_config["border"]
 
-        nodes_list.append(
-            {
-                "id": name,
-                "label": name,
-                "title": "".join(title_parts),
-                "shape": "custom",
-                "size": 30,
-                "nodeStyle": {
-                    "name": name,
-                    "bgColor": bg_color,
-                    "borderColor": border_color,
-                    "borderWidth": border_width,
-                    "fontColor": font_color,
-                },
-                "opacity": 1.0,
-                "glowSize": 0,
-                "glowColor": None,
-            }
-        )
+        position_data = node_positions.get(name, {"level": 0, "x": 0, "y": 0})
+
+        node_data: dict[str, Any] = {
+            "id": name,
+            "label": name,
+            "title": "".join(title_parts),
+            "shape": "custom",
+            "size": 30,
+            "level": position_data["level"],
+            "nodeStyle": {
+                "name": name,
+                "bgColor": bg_color,
+                "borderColor": border_color,
+                "borderWidth": border_width,
+                "fontColor": font_color,
+            },
+            "opacity": 1.0,
+            "glowSize": 0,
+            "glowColor": None,
+        }
+
+        # Add x,y only for graphs with 3-4 nodes
+        total_nodes = len(dag["nodes"])
+        if 3 <= total_nodes <= 4:
+            node_data["x"] = position_data["x"]
+            node_data["y"] = position_data["y"]
+
+        nodes_list.append(node_data)
 
     execution_paths: int = calculate_execution_paths(dag)
 

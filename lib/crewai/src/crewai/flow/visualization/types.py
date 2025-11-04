@@ -10,6 +10,7 @@ class NodeMetadata(TypedDict, total=False):
     is_router: bool
     router_paths: list[str]
     condition_type: str | None
+    trigger_condition_type: str | None
     trigger_methods: list[str]
     trigger_condition: dict[str, Any] | None
     method_signature: dict[str, Any]

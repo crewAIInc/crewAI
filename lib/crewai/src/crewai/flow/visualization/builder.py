@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 from collections import defaultdict
+from collections.abc import Iterable
 import inspect
 from typing import TYPE_CHECKING, Any
 
 from crewai.flow.constants import AND_CONDITION, OR_CONDITION
 from crewai.flow.flow_wrappers import FlowCondition
-from crewai.flow.types import FlowMethodName
+from crewai.flow.types import FlowMethodName, FlowRouteName
 from crewai.flow.utils import (
     is_flow_condition_dict,
     is_simple_flow_condition,
@@ -197,8 +198,6 @@ def build_flow_structure(flow: Flow[Any]) -> FlowStructure:
             node_metadata["type"] = "router"
             router_methods.append(method_name)
 
-            node_metadata["condition_type"] = "IF"
-
             if method_name in flow._router_paths:
                 node_metadata["router_paths"] = [
                     str(p) for p in flow._router_paths[method_name]
@@ -210,8 +209,12 @@ def build_flow_structure(flow: Flow[Any]) -> FlowStructure:
             ]
 
         if hasattr(method, "__condition_type__") and method.__condition_type__:
+            node_metadata["trigger_condition_type"] = method.__condition_type__
             if "condition_type" not in node_metadata:
                 node_metadata["condition_type"] = method.__condition_type__
+
+        if node_metadata.get("is_router") and "condition_type" not in node_metadata:
+            node_metadata["condition_type"] = "IF"
 
         if (
             hasattr(method, "__trigger_condition__")
@@ -298,6 +301,9 @@ def build_flow_structure(flow: Flow[Any]) -> FlowStructure:
         nodes[method_name] = node_metadata
 
     for listener_name, condition_data in flow._listeners.items():
+        if listener_name in router_methods:
+            continue
+
         if is_simple_flow_condition(condition_data):
             cond_type, methods = condition_data
             edges.extend(
@@ -314,6 +320,60 @@ def build_flow_structure(flow: Flow[Any]) -> FlowStructure:
             edges.extend(
                 _create_edges_from_condition(condition_data, str(listener_name), nodes)
             )
+
+    for method_name, node_metadata in nodes.items():  # type: ignore[assignment]
+        if node_metadata.get("is_router") and "trigger_methods" in node_metadata:
+            trigger_methods = node_metadata["trigger_methods"]
+            condition_type = node_metadata.get("trigger_condition_type", OR_CONDITION)
+
+            if "trigger_condition" in node_metadata:
+                edges.extend(
+                    _create_edges_from_condition(
+                        node_metadata["trigger_condition"],  # type: ignore[arg-type]
+                        method_name,
+                        nodes,
+                    )
+                )
+            else:
+                edges.extend(
+                    StructureEdge(
+                        source=trigger_method,
+                        target=method_name,
+                        condition_type=condition_type,
+                        is_router_path=False,
+                    )
+                    for trigger_method in trigger_methods
+                    if trigger_method in nodes
+                )
+
+    for router_method_name in router_methods:
+        if router_method_name not in flow._router_paths:
+            flow._router_paths[FlowMethodName(router_method_name)] = []
+
+        inferred_paths: Iterable[FlowMethodName | FlowRouteName] = set(
+            flow._router_paths.get(FlowMethodName(router_method_name), [])
+        )
+
+        for condition_data in flow._listeners.values():
+            trigger_strings: list[str] = []
+
+            if is_simple_flow_condition(condition_data):
+                _, methods = condition_data
+                trigger_strings = [str(m) for m in methods]
+            elif is_flow_condition_dict(condition_data):
+                trigger_strings = _extract_direct_or_triggers(condition_data)
+
+            for trigger_str in trigger_strings:
+                if trigger_str not in nodes:
+                    # This is likely a router path output
+                    inferred_paths.add(trigger_str)  # type: ignore[attr-defined]
+
+        if inferred_paths:
+            flow._router_paths[FlowMethodName(router_method_name)] = list(
+                inferred_paths  # type: ignore[arg-type]
+            )
+            if router_method_name in nodes:
+                nodes[router_method_name]["router_paths"] = list(inferred_paths)
 
     for router_method_name in router_methods:
         if router_method_name not in flow._router_paths:
