@@ -51,7 +51,7 @@ class TestAnthropicInterceptorIntegration:
         """Test that Anthropic LLM accepts interceptor parameter."""
         interceptor = AnthropicTestInterceptor()
 
-        llm = LLM(model="claude-3-5-sonnet-20241022", interceptor=interceptor)
+        llm = LLM(model="anthropic/claude-3-5-sonnet-20241022", interceptor=interceptor)
 
         assert llm.interceptor is interceptor
 
@@ -59,7 +59,7 @@ class TestAnthropicInterceptorIntegration:
     def test_anthropic_call_with_interceptor_tracks_requests(self) -> None:
         """Test that interceptor tracks Anthropic API requests."""
         interceptor = AnthropicTestInterceptor()
-        llm = LLM(model="claude-3-5-haiku-20241022", interceptor=interceptor)
+        llm = LLM(model="anthropic/claude-3-5-haiku-20241022", interceptor=interceptor)
 
         # Make a simple completion call
         result = llm.call(
@@ -89,7 +89,7 @@ class TestAnthropicInterceptorIntegration:
 
     def test_anthropic_without_interceptor_works(self) -> None:
         """Test that Anthropic LLM works without interceptor."""
-        llm = LLM(model="claude-3-5-sonnet-20241022")
+        llm = LLM(model="anthropic/claude-3-5-sonnet-20241022")
 
         assert llm.interceptor is None
 
@@ -101,8 +101,8 @@ class TestAnthropicInterceptorIntegration:
         interceptor2 = AnthropicTestInterceptor()
         interceptor2.custom_header_value = "claude-sonnet-value"
 
-        llm1 = LLM(model="claude-3-opus-20240229", interceptor=interceptor1)
-        llm2 = LLM(model="claude-3-5-sonnet-20241022", interceptor=interceptor2)
+        llm1 = LLM(model="anthropic/claude-3-opus-20240229", interceptor=interceptor1)
+        llm2 = LLM(model="anthropic/claude-3-5-sonnet-20241022", interceptor=interceptor2)
 
         assert llm1.interceptor is interceptor1
         assert llm2.interceptor is interceptor2
@@ -154,7 +154,7 @@ class TestAnthropicLoggingInterceptor:
     def test_logging_interceptor_instantiation(self) -> None:
         """Test that logging interceptor can be created with Anthropic LLM."""
         interceptor = AnthropicLoggingInterceptor()
-        llm = LLM(model="claude-3-5-sonnet-20241022", interceptor=interceptor)
+        llm = LLM(model="anthropic/claude-3-5-sonnet-20241022", interceptor=interceptor)
 
         assert llm.interceptor is interceptor
         assert isinstance(llm.interceptor, AnthropicLoggingInterceptor)
@@ -163,7 +163,7 @@ class TestAnthropicLoggingInterceptor:
     def test_logging_interceptor_tracks_details(self) -> None:
         """Test that logging interceptor tracks request/response details."""
         interceptor = AnthropicLoggingInterceptor()
-        llm = LLM(model="claude-3-5-haiku-20241022", interceptor=interceptor)
+        llm = LLM(model="anthropic/claude-3-5-haiku-20241022", interceptor=interceptor)
 
         # Make a completion call
         result = llm.call(messages=[{"role": "user", "content": "Count from 1 to 3"}])
@@ -239,7 +239,7 @@ class TestAnthropicHeaderInterceptor:
         interceptor = AnthropicHeaderInterceptor(
             workspace_id="ws-789", user_id="user-012"
         )
-        llm = LLM(model="claude-3-5-sonnet-20241022", interceptor=interceptor)
+        llm = LLM(model="anthropic/claude-3-5-sonnet-20241022", interceptor=interceptor)
 
         assert llm.interceptor is interceptor
         assert llm.interceptor.workspace_id == "ws-789"
@@ -263,7 +263,7 @@ class TestAnthropicHeaderInterceptor:
     def test_header_interceptor_with_real_call(self) -> None:
         """Test that header interceptor works with real Anthropic API call."""
         interceptor = AnthropicHeaderInterceptor(workspace_id="ws-999", user_id="u-888")
-        llm = LLM(model="claude-3-5-haiku-20241022", interceptor=interceptor)
+        llm = LLM(model="anthropic/claude-3-5-haiku-20241022", interceptor=interceptor)
 
         # Make a simple call
         result = llm.call(
@@ -291,7 +291,7 @@ class TestMixedProviderInterceptors:
 
         openai_llm = LLM(model="gpt-4", interceptor=openai_interceptor)
         anthropic_llm = LLM(
-            model="claude-3-5-sonnet-20241022", interceptor=anthropic_interceptor
+            model="anthropic/claude-3-5-sonnet-20241022", interceptor=anthropic_interceptor
         )
 
         assert openai_llm.interceptor is openai_interceptor
@@ -305,7 +305,7 @@ class TestMixedProviderInterceptors:
 
         openai_llm = LLM(model="gpt-4", interceptor=shared_interceptor)
         anthropic_llm = LLM(
-            model="claude-3-5-sonnet-20241022", interceptor=shared_interceptor
+            model="anthropic/claude-3-5-sonnet-20241022", interceptor=shared_interceptor
         )
 
         assert openai_llm.interceptor is shared_interceptor
