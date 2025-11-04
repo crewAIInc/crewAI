@@ -157,7 +157,7 @@ def handle_max_iterations_exceeded(
 
     # Perform one more LLM call to get the final answer
     answer = llm.call(
-        messages,  # type: ignore[arg-type]
+        messages,
         callbacks=callbacks,
     )
 
@@ -197,9 +197,14 @@ def format_answer(answer: str) -> AgentAction | AgentFinish:
 
     Returns:
         Either an AgentAction or AgentFinish
+
+    Raises:
+        OutputParserError: When the LLM response format is invalid, allowing retry logic
     """
     try:
         return parse(answer)
+    except OutputParserError:
+        raise
     except Exception:
         return AgentFinish(
             thought="Failed to parse LLM response",
@@ -249,10 +254,10 @@ def get_llm_response(
     """
     try:
         answer = llm.call(
-            messages,  # type: ignore[arg-type]
+            messages,
             callbacks=callbacks,
             from_task=from_task,
-            from_agent=from_agent,
+            from_agent=from_agent,  # type: ignore[arg-type]
             response_model=response_model,
         )
     except Exception as e:
@@ -294,8 +299,8 @@ def handle_agent_action_core(
     formatted_answer: AgentAction,
     tool_result: ToolResult,
     messages: list[LLMMessage] | None = None,
-    step_callback: Callable | None = None,
-    show_logs: Callable | None = None,
+    step_callback: Callable[[Any], Any] | None = None,
+    show_logs: Callable[[Any], Any] | None = None,
 ) -> AgentAction | AgentFinish:
     """Core logic for handling agent actions and tool results.
 
@@ -481,7 +486,7 @@ def summarize_messages(
             ),
         ]
         summary = llm.call(
-            messages,  # type: ignore[arg-type]
+            messages,
             callbacks=callbacks,
         )
         summarized_contents.append({"content": str(summary)})
