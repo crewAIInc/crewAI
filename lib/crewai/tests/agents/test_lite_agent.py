@@ -103,7 +103,7 @@ def test_lite_agent_created_with_correct_parameters(monkeypatch, verbose):
             super().__init__(**kwargs)
 
     # Patch the LiteAgent class
-    monkeypatch.setattr("crewai.agent.LiteAgent", MockLiteAgent)
+    monkeypatch.setattr("crewai.agent.core.LiteAgent", MockLiteAgent)
 
     # Call kickoff to create the LiteAgent
     agent.kickoff("Test query")
@@ -123,8 +123,6 @@ def test_lite_agent_created_with_correct_parameters(monkeypatch, verbose):
     assert created_lite_agent["response_format"] is None
 
     # Test with a response_format
-    monkeypatch.setattr("crewai.agent.LiteAgent", MockLiteAgent)
-
     class TestResponse(BaseModel):
         test_field: str
 
@@ -527,6 +525,7 @@ def test_lite_agent_with_custom_llm_and_guardrails():
             available_functions=None,
             from_task=None,
             from_agent=None,
+            response_model=None,
         ) -> str:
             self.call_count += 1
 

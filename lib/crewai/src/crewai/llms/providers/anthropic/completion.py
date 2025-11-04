@@ -1,6 +1,12 @@
+from __future__ import annotations
+
+
+import json
 import logging
 import os
 from typing import Any, cast
+
+from pydantic import BaseModel
 
 from crewai.events.types.llm_events import LLMCallType
 from crewai.llms.base_llm import BaseLLM
@@ -109,6 +115,7 @@ class AnthropicCompletion(BaseLLM):
         available_functions: dict[str, Any] | None = None,
         from_task: Any | None = None,
         from_agent: Any | None = None,
+        response_model: type[BaseModel] | None = None,
     ) -> str | Any:
         """Call Anthropic messages API.
 
@@ -147,11 +154,19 @@ class AnthropicCompletion(BaseLLM):
             # Handle streaming vs non-streaming
             if self.stream:
                 return self._handle_streaming_completion(
-                    completion_params, available_functions, from_task, from_agent
+                    completion_params,
+                    available_functions,
+                    from_task,
+                    from_agent,
+                    response_model,
                 )
 
             return self._handle_completion(
-                completion_params, available_functions, from_task, from_agent
+                completion_params,
+                available_functions,
+                from_task,
+                from_agent,
+                response_model,
             )
 
         except Exception as e:
@@ -290,8 +305,19 @@ class AnthropicCompletion(BaseLLM):
         available_functions: dict[str, Any] | None = None,
         from_task: Any | None = None,
         from_agent: Any | None = None,
+        response_model: type[BaseModel] | None = None,
     ) -> str | Any:
         """Handle non-streaming message completion."""
+        if response_model:
+            structured_tool = {
+                "name": "structured_output",
+                "description": "Returns structured data according to the schema",
+                "input_schema": response_model.model_json_schema(),
+            }
+
+            params["tools"] = [structured_tool]
+            params["tool_choice"] = {"type": "tool", "name": "structured_output"}
+
         try:
             response: Message = self.client.messages.create(**params)
 
@@ -303,6 +329,24 @@ class AnthropicCompletion(BaseLLM):
 
         usage = self._extract_anthropic_token_usage(response)
         self._track_token_usage_internal(usage)
+
+        if response_model and response.content:
+            tool_uses = [
+                block for block in response.content if isinstance(block, ToolUseBlock)
+            ]
+            if tool_uses and tool_uses[0].name == "structured_output":
+                structured_data = tool_uses[0].input
+                structured_json = json.dumps(structured_data)
+
+                self._emit_call_completed_event(
+                    response=structured_json,
+                    call_type=LLMCallType.LLM_CALL,
+                    from_task=from_task,
+                    from_agent=from_agent,
+                    messages=params["messages"],
+                )
+
+                return structured_json
 
         # Check if Claude wants to use tools
         if response.content and available_functions:
@@ -349,8 +393,19 @@ class AnthropicCompletion(BaseLLM):
         available_functions: dict[str, Any] | None = None,
         from_task: Any | None = None,
         from_agent: Any | None = None,
+        response_model: type[BaseModel] | None = None,
     ) -> str:
         """Handle streaming message completion."""
+        if response_model:
+            structured_tool = {
+                "name": "structured_output",
+                "description": "Returns structured data according to the schema",
+                "input_schema": response_model.model_json_schema(),
+            }
+
+            params["tools"] = [structured_tool]
+            params["tool_choice"] = {"type": "tool", "name": "structured_output"}
+
         full_response = ""
 
         # Remove 'stream' parameter as messages.stream() doesn't accept it
@@ -373,6 +428,26 @@ class AnthropicCompletion(BaseLLM):
 
         usage = self._extract_anthropic_token_usage(final_message)
         self._track_token_usage_internal(usage)
+
+        if response_model and final_message.content:
+            tool_uses = [
+                block
+                for block in final_message.content
+                if isinstance(block, ToolUseBlock)
+            ]
+            if tool_uses and tool_uses[0].name == "structured_output":
+                structured_data = tool_uses[0].input
+                structured_json = json.dumps(structured_data)
+
+                self._emit_call_completed_event(
+                    response=structured_json,
+                    call_type=LLMCallType.LLM_CALL,
+                    from_task=from_task,
+                    from_agent=from_agent,
+                    messages=params["messages"],
+                )
+
+                return structured_json
 
         if final_message.content and available_functions:
             tool_uses = [

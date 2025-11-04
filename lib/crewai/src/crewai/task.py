@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from collections.abc import Callable
 from concurrent.futures import Future
 from copy import copy as shallow_copy
 import datetime
@@ -29,10 +28,11 @@ from pydantic import (
     model_validator,
 )
 from pydantic_core import PydanticCustomError
+from typing_extensions import Self
 
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.events.event_bus import crewai_event_bus
-from crewai.events.event_types import (
+from crewai.events.types.task_events import (
     TaskCompletedEvent,
     TaskFailedEvent,
     TaskStartedEvent,
@@ -52,7 +52,7 @@ from crewai.utilities.guardrail_types import (
     GuardrailType,
     GuardrailsType,
 )
-from crewai.utilities.i18n import I18N
+from crewai.utilities.i18n import I18N, get_i18n
 from crewai.utilities.printer import Printer
 from crewai.utilities.string_utils import interpolate_only
 
@@ -90,7 +90,7 @@ class Task(BaseModel):
     used_tools: int = 0
     tools_errors: int = 0
     delegations: int = 0
-    i18n: I18N = Field(default_factory=I18N)
+    i18n: I18N = Field(default_factory=get_i18n)
     name: str | None = Field(default=None)
     prompt_context: str | None = None
     description: str = Field(description="Description of the actual task.")
@@ -121,6 +121,10 @@ class Task(BaseModel):
     )
     output_pydantic: type[BaseModel] | None = Field(
         description="A Pydantic model to be used to create a Pydantic output.",
+        default=None,
+    )
+    response_model: type[BaseModel] | None = Field(
+        description="A Pydantic model for structured LLM outputs using native provider features.",
         default=None,
     )
     output_file: str | None = Field(
@@ -203,8 +207,8 @@ class Task(BaseModel):
     @field_validator("guardrail")
     @classmethod
     def validate_guardrail_function(
-        cls, v: str | Callable | None
-    ) -> str | Callable | None:
+        cls, v: str | GuardrailCallable | None
+    ) -> str | GuardrailCallable | None:
         """
         If v is a callable, validate that the guardrail function has the correct signature and behavior.
         If v is a string, return it as is.
@@ -261,11 +265,11 @@ class Task(BaseModel):
 
     @model_validator(mode="before")
     @classmethod
-    def process_model_config(cls, values):
+    def process_model_config(cls, values: dict[str, Any]) -> dict[str, Any]:
         return process_config(values, cls)
 
     @model_validator(mode="after")
-    def validate_required_fields(self):
+    def validate_required_fields(self) -> Self:
         required_fields = ["description", "expected_output"]
         for field in required_fields:
             if getattr(self, field) is None:
@@ -414,14 +418,14 @@ class Task(BaseModel):
         return self
 
     @model_validator(mode="after")
-    def check_tools(self):
+    def check_tools(self) -> Self:
         """Check if the tools are set."""
         if not self.tools and self.agent and self.agent.tools:
-            self.tools.extend(self.agent.tools)
+            self.tools = self.agent.tools
         return self
 
     @model_validator(mode="after")
-    def check_output(self):
+    def check_output(self) -> Self:
         """Check if an output type is set."""
         output_types = [self.output_json, self.output_pydantic]
         if len([type for type in output_types if type]) > 1:
@@ -433,7 +437,7 @@ class Task(BaseModel):
         return self
 
     @model_validator(mode="after")
-    def handle_max_retries_deprecation(self):
+    def handle_max_retries_deprecation(self) -> Self:
         if self.max_retries is not None:
             warnings.warn(
                 "The 'max_retries' parameter is deprecated and will be removed in CrewAI v1.0.0. "
@@ -514,7 +518,7 @@ class Task(BaseModel):
             tools = tools or self.tools or []
 
             self.processed_by_agents.add(agent.role)
-            crewai_event_bus.emit(self, TaskStartedEvent(context=context, task=self))
+            crewai_event_bus.emit(self, TaskStartedEvent(context=context, task=self))  # type: ignore[no-untyped-call]
             result = agent.execute_task(
                 task=self,
                 context=context,
@@ -572,12 +576,13 @@ class Task(BaseModel):
                 )
                 self._save_file(content)
             crewai_event_bus.emit(
-                self, TaskCompletedEvent(output=task_output, task=self)
+                self,
+                TaskCompletedEvent(output=task_output, task=self),  # type: ignore[no-untyped-call]
             )
             return task_output
         except Exception as e:
             self.end_time = datetime.datetime.now()
-            crewai_event_bus.emit(self, TaskFailedEvent(error=str(e), task=self))
+            crewai_event_bus.emit(self, TaskFailedEvent(error=str(e), task=self))  # type: ignore[no-untyped-call]
             raise e  # Re-raise the exception after emitting the event
 
     def prompt(self) -> str:
@@ -782,7 +787,7 @@ Follow these guidelines:
             return OutputFormat.PYDANTIC
         return OutputFormat.RAW
 
-    def _save_file(self, result: dict | str | Any) -> None:
+    def _save_file(self, result: dict[str, Any] | str | Any) -> None:
         """Save task output to a file.
 
         Note:
@@ -834,7 +839,7 @@ Follow these guidelines:
             ) from e
         return
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"Task(description={self.description}, expected_output={self.expected_output})"
 
     @property

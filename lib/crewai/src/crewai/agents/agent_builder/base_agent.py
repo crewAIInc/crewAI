@@ -18,6 +18,7 @@ from pydantic import (
 from pydantic_core import PydanticCustomError
 from typing_extensions import Self
 
+from crewai.agent.internal.meta import AgentMeta
 from crewai.agents.agent_builder.utilities.base_token_process import TokenProcess
 from crewai.agents.cache.cache_handler import CacheHandler
 from crewai.agents.tools_handler import ToolsHandler
@@ -28,7 +29,7 @@ from crewai.rag.embeddings.types import EmbedderConfig
 from crewai.security.security_config import SecurityConfig
 from crewai.tools.base_tool import BaseTool, Tool
 from crewai.utilities.config import process_config
-from crewai.utilities.i18n import I18N
+from crewai.utilities.i18n import I18N, get_i18n
 from crewai.utilities.logger import Logger
 from crewai.utilities.rpm_controller import RPMController
 from crewai.utilities.string_utils import interpolate_only
@@ -56,7 +57,7 @@ PlatformApp = Literal[
 PlatformAppOrAction = PlatformApp | str
 
 
-class BaseAgent(BaseModel, ABC):
+class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
     """Abstract Base Class for all third party agents compatible with CrewAI.
 
     Attributes:
@@ -106,7 +107,7 @@ class BaseAgent(BaseModel, ABC):
             Set private attributes.
     """
 
-    __hash__ = object.__hash__  # type: ignore
+    __hash__ = object.__hash__
     _logger: Logger = PrivateAttr(default_factory=lambda: Logger(verbose=False))
     _rpm_controller: RPMController | None = PrivateAttr(default=None)
     _request_within_rpm_limit: Any = PrivateAttr(default=None)
@@ -149,7 +150,7 @@ class BaseAgent(BaseModel, ABC):
     )
     crew: Any = Field(default=None, description="Crew to which the agent belongs.")
     i18n: I18N = Field(
-        default_factory=I18N, description="Internationalization settings."
+        default_factory=get_i18n, description="Internationalization settings."
     )
     cache_handler: CacheHandler | None = Field(
         default=None, description="An instance of the CacheHandler class."
@@ -179,8 +180,8 @@ class BaseAgent(BaseModel, ABC):
         default_factory=SecurityConfig,
         description="Security configuration for the agent, including fingerprinting.",
     )
-    callbacks: list[Callable] = Field(
-        default=[], description="Callbacks to be used for the agent"
+    callbacks: list[Callable[[Any], Any]] = Field(
+        default_factory=list, description="Callbacks to be used for the agent"
     )
     adapted_agent: bool = Field(
         default=False, description="Whether the agent is adapted"
@@ -200,7 +201,7 @@ class BaseAgent(BaseModel, ABC):
 
     @model_validator(mode="before")
     @classmethod
-    def process_model_config(cls, values):
+    def process_model_config(cls, values: Any) -> dict[str, Any]:
         return process_config(values, cls)
 
     @field_validator("tools")
@@ -268,7 +269,7 @@ class BaseAgent(BaseModel, ABC):
         return list(set(validated_mcps))
 
     @model_validator(mode="after")
-    def validate_and_set_attributes(self):
+    def validate_and_set_attributes(self) -> Self:
         # Validate required fields
         for field in ["role", "goal", "backstory"]:
             if getattr(self, field) is None:
@@ -300,7 +301,7 @@ class BaseAgent(BaseModel, ABC):
             )
 
     @model_validator(mode="after")
-    def set_private_attrs(self):
+    def set_private_attrs(self) -> Self:
         """Set private attributes."""
         self._logger = Logger(verbose=self.verbose)
         if self.max_rpm and not self._rpm_controller:
@@ -312,7 +313,7 @@ class BaseAgent(BaseModel, ABC):
         return self
 
     @property
-    def key(self):
+    def key(self) -> str:
         source = [
             self._original_role or self.role,
             self._original_goal or self.goal,
@@ -330,7 +331,7 @@ class BaseAgent(BaseModel, ABC):
         pass
 
     @abstractmethod
-    def create_agent_executor(self, tools=None) -> None:
+    def create_agent_executor(self, tools: list[BaseTool] | None = None) -> None:
         pass
 
     @abstractmethod
@@ -442,5 +443,5 @@ class BaseAgent(BaseModel, ABC):
             self._rpm_controller = rpm_controller
             self.create_agent_executor()
 
-    def set_knowledge(self, crew_embedder: EmbedderConfig | None = None):
+    def set_knowledge(self, crew_embedder: EmbedderConfig | None = None) -> None:
         pass

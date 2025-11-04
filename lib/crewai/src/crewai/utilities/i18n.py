@@ -1,5 +1,6 @@
 """Internationalization support for CrewAI prompts and messages."""
 
+from functools import lru_cache
 import json
 import os
 from typing import Literal
@@ -108,3 +109,19 @@ class I18N(BaseModel):
             return self._prompts[kind][key]
         except Exception as e:
             raise Exception(f"Prompt for '{kind}':'{key}'  not found.") from e
+
+
+@lru_cache(maxsize=None)
+def get_i18n(prompt_file: str | None = None) -> I18N:
+    """Get a cached I18N instance.
+
+    This function caches I18N instances to avoid redundant file I/O and JSON parsing.
+    Each unique prompt_file path gets its own cached instance.
+
+    Args:
+        prompt_file: Optional custom prompt file path. Defaults to None (uses built-in prompts).
+
+    Returns:
+        Cached I18N instance.
+    """
+    return I18N(prompt_file=prompt_file)

@@ -1,6 +1,9 @@
+import json
 import logging
 import os
 from typing import Any, cast
+
+from pydantic import BaseModel
 
 from crewai.events.types.llm_events import LLMCallType
 from crewai.llms.base_llm import BaseLLM
@@ -173,6 +176,7 @@ class GeminiCompletion(BaseLLM):
         available_functions: dict[str, Any] | None = None,
         from_task: Any | None = None,
         from_agent: Any | None = None,
+        response_model: type[BaseModel] | None = None,
     ) -> str | Any:
         """Call Google Gemini generate content API.
 
@@ -202,7 +206,9 @@ class GeminiCompletion(BaseLLM):
                 messages  # type: ignore[arg-type]
             )
 
-            config = self._prepare_generation_config(system_instruction, tools)
+            config = self._prepare_generation_config(
+                system_instruction, tools, response_model
+            )
 
             if self.stream:
                 return self._handle_streaming_completion(
@@ -211,6 +217,7 @@ class GeminiCompletion(BaseLLM):
                     available_functions,
                     from_task,
                     from_agent,
+                    response_model,
                 )
 
             return self._handle_completion(
@@ -220,6 +227,7 @@ class GeminiCompletion(BaseLLM):
                 available_functions,
                 from_task,
                 from_agent,
+                response_model,
             )
 
         except APIError as e:
@@ -241,12 +249,14 @@ class GeminiCompletion(BaseLLM):
         self,
         system_instruction: str | None = None,
         tools: list[dict] | None = None,
+        response_model: type[BaseModel] | None = None,
     ) -> types.GenerateContentConfig:
         """Prepare generation config for Google Gemini API.
 
         Args:
             system_instruction: System instruction for the model
             tools: Tool definitions
+            response_model: Pydantic model for structured output
 
         Returns:
             GenerateContentConfig object for Gemini API
@@ -273,6 +283,10 @@ class GeminiCompletion(BaseLLM):
             config_params["max_output_tokens"] = self.max_output_tokens
         if self.stop_sequences:
             config_params["stop_sequences"] = self.stop_sequences
+
+        if response_model:
+            config_params["response_mime_type"] = "application/json"
+            config_params["response_schema"] = response_model.model_json_schema()
 
         # Handle tools for supported models
         if tools and self.supports_tools:
@@ -358,6 +372,7 @@ class GeminiCompletion(BaseLLM):
         available_functions: dict[str, Any] | None = None,
         from_task: Any | None = None,
         from_agent: Any | None = None,
+        response_model: type[BaseModel] | None = None,
     ) -> str | Any:
         """Handle non-streaming content generation."""
         api_params = {
@@ -423,6 +438,7 @@ class GeminiCompletion(BaseLLM):
         available_functions: dict[str, Any] | None = None,
         from_task: Any | None = None,
         from_agent: Any | None = None,
+        response_model: type[BaseModel] | None = None,
     ) -> str:
         """Handle streaming content generation."""
         full_response = ""

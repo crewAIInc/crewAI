@@ -44,6 +44,7 @@ class TraceBatchManager:
 
     def __init__(self) -> None:
         self._init_lock = Lock()
+        self._batch_ready_cv = Condition(self._init_lock)
         self._pending_events_lock = Lock()
         self._pending_events_cv = Condition(self._pending_events_lock)
         self._pending_events_count = 0
@@ -93,6 +94,8 @@ class TraceBatchManager:
                     user_context, execution_metadata, use_ephemeral
                 )
                 self.backend_initialized = True
+
+            self._batch_ready_cv.notify_all()
 
             return self.current_batch
 
@@ -161,13 +164,13 @@ class TraceBatchManager:
                 f"Error initializing trace batch: {e}. Continuing without tracing."
             )
 
-    def begin_event_processing(self):
-        """Mark that an event handler started processing (for synchronization)"""
+    def begin_event_processing(self) -> None:
+        """Mark that an event handler started processing (for synchronization)."""
         with self._pending_events_lock:
             self._pending_events_count += 1
 
-    def end_event_processing(self):
-        """Mark that an event handler finished processing (for synchronization)"""
+    def end_event_processing(self) -> None:
+        """Mark that an event handler finished processing (for synchronization)."""
         with self._pending_events_cv:
             self._pending_events_count -= 1
             if self._pending_events_count == 0:
@@ -384,6 +387,22 @@ class TraceBatchManager:
     def is_batch_initialized(self) -> bool:
         """Check if batch is initialized"""
         return self.current_batch is not None
+
+    def wait_for_batch_initialization(self, timeout: float = 2.0) -> bool:
+        """Wait for batch to be initialized.
+
+        Args:
+            timeout: Maximum time to wait in seconds (default: 2.0)
+
+        Returns:
+            True if batch was initialized, False if timeout occurred
+        """
+        with self._batch_ready_cv:
+            if self.current_batch is not None:
+                return True
+            return self._batch_ready_cv.wait_for(
+                lambda: self.current_batch is not None, timeout=timeout
+            )
 
     def record_start_time(self, key: str):
         """Record start time for duration calculation"""
