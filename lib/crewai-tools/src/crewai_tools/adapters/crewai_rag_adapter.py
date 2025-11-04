@@ -229,6 +229,7 @@ class CrewAIRagAdapter(Adapter):
                             continue
             else:
                 metadata: dict[str, Any] = base_metadata.copy()
+                source_content = SourceContent(source_ref)
 
                 if data_type in [
                     DataType.PDF_FILE,
@@ -239,13 +240,12 @@ class CrewAIRagAdapter(Adapter):
                     DataType.XML,
                     DataType.MDX,
                 ]:
-                    if not os.path.isfile(source_ref):
+                    if not source_content.is_url() and not source_content.path_exists():
                         raise FileNotFoundError(f"File does not exist: {source_ref}")
 
                 loader = data_type.get_loader()
                 chunker = data_type.get_chunker()
 
-                source_content = SourceContent(source_ref)
                 loader_result: LoaderResult = loader.load(source_content)
 
                 chunks = chunker.chunk(loader_result.content)
