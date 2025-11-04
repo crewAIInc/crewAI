@@ -10,9 +10,9 @@ from pydantic import BaseModel, ValidationError
 from typing_extensions import Unpack
 
 from crewai.agents.agent_builder.utilities.base_output_converter import OutputConverter
+from crewai.utilities.i18n import get_i18n
 from crewai.utilities.internal_instructor import InternalInstructor
 from crewai.utilities.printer import Printer
-from crewai.utilities.pydantic_schema_parser import PydanticSchemaParser
 
 
 if TYPE_CHECKING:
@@ -22,6 +22,7 @@ if TYPE_CHECKING:
     from crewai.llms.base_llm import BaseLLM
 
 _JSON_PATTERN: Final[re.Pattern[str]] = re.compile(r"({.*})", re.DOTALL)
+_I18N = get_i18n()
 
 
 class ConverterError(Exception):
@@ -335,26 +336,9 @@ def get_conversion_instructions(
     Returns:
 
     """
-    instructions = "Please convert the following text into valid JSON."
-    if (
-        llm
-        and not isinstance(llm, str)
-        and hasattr(llm, "supports_function_calling")
-        and llm.supports_function_calling()
-    ):
-        model_schema = PydanticSchemaParser(model=model).get_schema()
-        instructions += (
-            f"\n\nOutput ONLY the valid JSON and nothing else.\n\n"
-            f"Use this format exactly:\n```json\n{model_schema}\n```"
-        )
-    else:
-        model_description = generate_model_description(model)
-        schema_json = json.dumps(model_description["json_schema"]["schema"], indent=2)
-        instructions += (
-            f"\n\nOutput ONLY the valid JSON and nothing else.\n\n"
-            f"Use this format exactly:\n```json\n{schema_json}\n```"
-        )
-    return instructions
+    schema_dict = generate_model_description(model)
+    schema = json.dumps(schema_dict, indent=2)
+    return _I18N.slice("formatted_task_instructions").format(output_format=schema)
 
 
 class CreateConverterKwargs(TypedDict, total=False):
