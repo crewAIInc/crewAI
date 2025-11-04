@@ -30,6 +30,8 @@ if TYPE_CHECKING:
         ToolTypeDef,
     )
 
+    from crewai.llms.hooks.base import BaseInterceptor
+
 
 try:
     from boto3.session import Session
@@ -157,8 +159,9 @@ class BedrockCompletion(BaseLLM):
         guardrail_config: dict[str, Any] | None = None,
         additional_model_request_fields: dict[str, Any] | None = None,
         additional_model_response_field_paths: list[str] | None = None,
-        **kwargs,
-    ):
+        interceptor: BaseInterceptor[Any] | None = None,
+        **kwargs: Any,
+    ) -> None:
         """Initialize AWS Bedrock completion client.
 
         Args:
@@ -176,8 +179,15 @@ class BedrockCompletion(BaseLLM):
             guardrail_config: Guardrail configuration for content filtering
             additional_model_request_fields: Model-specific request parameters
             additional_model_response_field_paths: Custom response field paths
+            interceptor: HTTP interceptor (not yet supported for Bedrock).
             **kwargs: Additional parameters
         """
+        if interceptor is not None:
+            raise NotImplementedError(
+                "HTTP interceptors are not yet supported for AWS Bedrock provider. "
+                "Interceptors are currently supported for OpenAI and Anthropic providers only."
+            )
+
         # Extract provider from kwargs to avoid duplicate argument
         kwargs.pop("provider", None)
 
@@ -247,7 +257,7 @@ class BedrockCompletion(BaseLLM):
         try:
             # Emit call started event
             self._emit_call_started_event(
-                messages=messages,  # type: ignore[arg-type]
+                messages=messages,
                 tools=tools,
                 callbacks=callbacks,
                 available_functions=available_functions,
@@ -740,7 +750,9 @@ class BedrockCompletion(BaseLLM):
         return converse_messages, system_message
 
     @staticmethod
-    def _format_tools_for_converse(tools: list[dict]) -> list[ConverseToolTypeDef]:
+    def _format_tools_for_converse(
+        tools: list[dict[str, Any]],
+    ) -> list[ConverseToolTypeDef]:
         """Convert CrewAI tools to Converse API format following AWS specification."""
         from crewai.llms.providers.utils.common import safe_tool_conversion
 

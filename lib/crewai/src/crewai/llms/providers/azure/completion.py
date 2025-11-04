@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import logging
 import os
-from typing import Any, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel
 
@@ -13,23 +13,25 @@ from crewai.utilities.exceptions.context_window_exceeding_exception import (
 )
 from crewai.utilities.types import LLMMessage
 
+
 if TYPE_CHECKING:
+    from crewai.llms.hooks.base import BaseInterceptor
     from crewai.tools.base_tool import BaseTool
 
 
 try:
-    from azure.ai.inference import (  # type: ignore[import-not-found]
+    from azure.ai.inference import (
         ChatCompletionsClient,
     )
-    from azure.ai.inference.models import (  # type: ignore[import-not-found]
+    from azure.ai.inference.models import (
         ChatCompletions,
         ChatCompletionsToolCall,
         StreamingChatCompletionsUpdate,
     )
-    from azure.core.credentials import (  # type: ignore[import-not-found]
+    from azure.core.credentials import (
         AzureKeyCredential,
     )
-    from azure.core.exceptions import (  # type: ignore[import-not-found]
+    from azure.core.exceptions import (
         HttpResponseError,
     )
 
@@ -64,7 +66,8 @@ class AzureCompletion(BaseLLM):
         max_tokens: int | None = None,
         stop: list[str] | None = None,
         stream: bool = False,
-        **kwargs,
+        interceptor: BaseInterceptor[Any] | None = None,
+        **kwargs: Any,
     ):
         """Initialize Azure AI Inference chat completion client.
 
@@ -82,8 +85,15 @@ class AzureCompletion(BaseLLM):
             max_tokens: Maximum tokens in response
             stop: Stop sequences
             stream: Enable streaming responses
+            interceptor: HTTP interceptor (not yet supported for Azure).
             **kwargs: Additional parameters
         """
+        if interceptor is not None:
+            raise NotImplementedError(
+                "HTTP interceptors are not yet supported for Azure AI Inference provider. "
+                "Interceptors are currently supported for OpenAI and Anthropic providers only."
+            )
+
         super().__init__(
             model=model, temperature=temperature, stop=stop or [], **kwargs
         )
@@ -121,7 +131,7 @@ class AzureCompletion(BaseLLM):
         if self.api_version:
             client_kwargs["api_version"] = self.api_version
 
-        self.client = ChatCompletionsClient(**client_kwargs)
+        self.client = ChatCompletionsClient(**client_kwargs)  # type: ignore[arg-type]
 
         self.top_p = top_p
         self.frequency_penalty = frequency_penalty
@@ -249,7 +259,7 @@ class AzureCompletion(BaseLLM):
     def _prepare_completion_params(
         self,
         messages: list[LLMMessage],
-        tools: list[dict] | None = None,
+        tools: list[dict[str, Any]] | None = None,
         response_model: type[BaseModel] | None = None,
     ) -> dict[str, Any]:
         """Prepare parameters for Azure AI Inference chat completion.
@@ -302,7 +312,9 @@ class AzureCompletion(BaseLLM):
 
         return params
 
-    def _convert_tools_for_interference(self, tools: list[dict]) -> list[dict]:
+    def _convert_tools_for_interference(
+        self, tools: list[dict[str, Any]]
+    ) -> list[dict[str, Any]]:
         """Convert CrewAI tool format to Azure OpenAI function calling format."""
 
         from crewai.llms.providers.utils.common import safe_tool_conversion

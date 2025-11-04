@@ -6,6 +6,7 @@ import logging
 import os
 from typing import TYPE_CHECKING, Any
 
+import httpx
 from openai import APIConnectionError, NotFoundError, OpenAI
 from openai.types.chat import ChatCompletion, ChatCompletionChunk
 from openai.types.chat.chat_completion import Choice
@@ -14,6 +15,7 @@ from pydantic import BaseModel
 
 from crewai.events.types.llm_events import LLMCallType
 from crewai.llms.base_llm import BaseLLM
+from crewai.llms.hooks.transport import HTTPTransport
 from crewai.utilities.agent_utils import is_context_length_exceeded
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededError,
@@ -23,6 +25,7 @@ from crewai.utilities.types import LLMMessage
 
 if TYPE_CHECKING:
     from crewai.agent.core import Agent
+    from crewai.llms.hooks.base import BaseInterceptor
     from crewai.task import Task
     from crewai.tools.base_tool import BaseTool
 
@@ -59,6 +62,7 @@ class OpenAICompletion(BaseLLM):
         top_logprobs: int | None = None,
         reasoning_effort: str | None = None,
         provider: str | None = None,
+        interceptor: BaseInterceptor[Any] | None = None,
         **kwargs: Any,
     ) -> None:
         """Initialize OpenAI chat completion client."""
@@ -66,6 +70,7 @@ class OpenAICompletion(BaseLLM):
         if provider is None:
             provider = kwargs.pop("provider", "openai")
 
+        self.interceptor = interceptor
         # Client configuration attributes
         self.organization = organization
         self.project = project
@@ -88,6 +93,11 @@ class OpenAICompletion(BaseLLM):
         )
 
         client_config = self._get_client_params()
+        if self.interceptor:
+            transport = HTTPTransport(interceptor=self.interceptor)
+            http_client = httpx.Client(transport=transport)
+            client_config["http_client"] = http_client
+
         self.client = OpenAI(**client_config)
 
         # Completion parameters

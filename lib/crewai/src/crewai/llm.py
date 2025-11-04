@@ -53,6 +53,7 @@ if TYPE_CHECKING:
     from litellm.utils import supports_response_schema
 
     from crewai.agent.core import Agent
+    from crewai.llms.hooks.base import BaseInterceptor
     from crewai.task import Task
     from crewai.tools.base_tool import BaseTool
     from crewai.utilities.types import LLMMessage
@@ -403,6 +404,7 @@ class LLM(BaseLLM):
         callbacks: list[Any] | None = None,
         reasoning_effort: Literal["none", "low", "medium", "high"] | None = None,
         stream: bool = False,
+        interceptor: BaseInterceptor[Any] | None = None,
         **kwargs: Any,
     ) -> None:
         """Initialize LLM instance.
@@ -442,6 +444,7 @@ class LLM(BaseLLM):
         self.additional_params = kwargs
         self.is_anthropic = self._is_anthropic_model(model)
         self.stream = stream
+        self.interceptor = interceptor
 
         litellm.drop_params = True
 

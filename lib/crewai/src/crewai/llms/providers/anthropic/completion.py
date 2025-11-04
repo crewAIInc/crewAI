@@ -1,15 +1,15 @@
 from __future__ import annotations
 
-
 import json
 import logging
 import os
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 
 from pydantic import BaseModel
 
 from crewai.events.types.llm_events import LLMCallType
 from crewai.llms.base_llm import BaseLLM
+from crewai.llms.hooks.transport import HTTPTransport
 from crewai.utilities.agent_utils import is_context_length_exceeded
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededError,
@@ -17,10 +17,14 @@ from crewai.utilities.exceptions.context_window_exceeding_exception import (
 from crewai.utilities.types import LLMMessage
 
 
+if TYPE_CHECKING:
+    from crewai.llms.hooks.base import BaseInterceptor
+
 try:
     from anthropic import Anthropic
     from anthropic.types import Message
     from anthropic.types.tool_use_block import ToolUseBlock
+    import httpx
 except ImportError:
     raise ImportError(
         'Anthropic native provider not available, to install: uv add "crewai[anthropic]"'
@@ -47,7 +51,8 @@ class AnthropicCompletion(BaseLLM):
         stop_sequences: list[str] | None = None,
         stream: bool = False,
         client_params: dict[str, Any] | None = None,
-        **kwargs,
+        interceptor: BaseInterceptor[Any] | None = None,
+        **kwargs: Any,
     ):
         """Initialize Anthropic chat completion client.
 
@@ -63,6 +68,7 @@ class AnthropicCompletion(BaseLLM):
             stop_sequences: Stop sequences (Anthropic uses stop_sequences, not stop)
             stream: Enable streaming responses
             client_params: Additional parameters for the Anthropic client
+            interceptor: HTTP interceptor for modifying requests/responses at transport level.
             **kwargs: Additional parameters
         """
         super().__init__(
@@ -70,6 +76,7 @@ class AnthropicCompletion(BaseLLM):
         )
 
         # Client params
+        self.interceptor = interceptor
         self.client_params = client_params
         self.base_url = base_url
         self.timeout = timeout
@@ -102,6 +109,11 @@ class AnthropicCompletion(BaseLLM):
             "max_retries": self.max_retries,
         }
 
+        if self.interceptor:
+            transport = HTTPTransport(interceptor=self.interceptor)
+            http_client = httpx.Client(transport=transport)
+            client_params["http_client"] = http_client  # type: ignore[assignment]
+
         if self.client_params:
             client_params.update(self.client_params)
 
@@ -110,7 +122,7 @@ class AnthropicCompletion(BaseLLM):
     def call(
         self,
         messages: str | list[LLMMessage],
-        tools: list[dict] | None = None,
+        tools: list[dict[str, Any]] | None = None,
         callbacks: list[Any] | None = None,
         available_functions: dict[str, Any] | None = None,
         from_task: Any | None = None,
@@ -133,7 +145,7 @@ class AnthropicCompletion(BaseLLM):
         try:
             # Emit call started event
             self._emit_call_started_event(
-                messages=messages,  # type: ignore[arg-type]
+                messages=messages,
                 tools=tools,
                 callbacks=callbacks,
                 available_functions=available_functions,
@@ -143,7 +155,7 @@ class AnthropicCompletion(BaseLLM):
 
             # Format messages for Anthropic
             formatted_messages, system_message = self._format_messages_for_anthropic(
-                messages  # type: ignore[arg-type]
+                messages
             )
 
             # Prepare completion parameters
@@ -181,7 +193,7 @@ class AnthropicCompletion(BaseLLM):
         self,
         messages: list[LLMMessage],
         system_message: str | None = None,
-        tools: list[dict] | None = None,
+        tools: list[dict[str, Any]] | None = None,
     ) -> dict[str, Any]:
         """Prepare parameters for Anthropic messages API.
 
@@ -218,7 +230,9 @@ class AnthropicCompletion(BaseLLM):
 
         return params
 
-    def _convert_tools_for_interference(self, tools: list[dict]) -> list[dict]:
+    def _convert_tools_for_interference(
+        self, tools: list[dict[str, Any]]
+    ) -> list[dict[str, Any]]:
         """Convert CrewAI tool format to Anthropic tool use format."""
         anthropic_tools = []
 
