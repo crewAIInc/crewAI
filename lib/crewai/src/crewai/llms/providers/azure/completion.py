@@ -66,7 +66,7 @@ class AzureCompletion(BaseLLM):
         max_tokens: int | None = None,
         stop: list[str] | None = None,
         stream: bool = False,
-        interceptor: BaseInterceptor[Any] | None = None,
+        interceptor: BaseInterceptor[Any, Any] | None = None,
         **kwargs: Any,
     ):
         """Initialize Azure AI Inference chat completion client.

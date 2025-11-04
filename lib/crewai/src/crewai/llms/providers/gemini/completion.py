@@ -45,7 +45,7 @@ class GeminiCompletion(BaseLLM):
         stream: bool = False,
         safety_settings: dict[str, Any] | None = None,
         client_params: dict[str, Any] | None = None,
-        interceptor: BaseInterceptor[Any] | None = None,
+        interceptor: BaseInterceptor[Any, Any] | None = None,
         **kwargs: Any,
     ):
         """Initialize Google Gemini chat completion client.

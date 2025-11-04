@@ -159,7 +159,7 @@ class BedrockCompletion(BaseLLM):
         guardrail_config: dict[str, Any] | None = None,
         additional_model_request_fields: dict[str, Any] | None = None,
         additional_model_response_field_paths: list[str] | None = None,
-        interceptor: BaseInterceptor[Any] | None = None,
+        interceptor: BaseInterceptor[Any, Any] | None = None,
         **kwargs: Any,
     ) -> None:
         """Initialize AWS Bedrock completion client.

@@ -62,7 +62,7 @@ class OpenAICompletion(BaseLLM):
         top_logprobs: int | None = None,
         reasoning_effort: str | None = None,
         provider: str | None = None,
-        interceptor: BaseInterceptor[Any] | None = None,
+        interceptor: BaseInterceptor[httpx.Request, httpx.Response] | None = None,
         **kwargs: Any,
     ) -> None:
         """Initialize OpenAI chat completion client."""

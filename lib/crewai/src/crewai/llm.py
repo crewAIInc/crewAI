@@ -20,6 +20,7 @@ from typing import (
 )
 
 from dotenv import load_dotenv
+import httpx
 from pydantic import BaseModel, Field
 from typing_extensions import Self
 
@@ -404,7 +405,7 @@ class LLM(BaseLLM):
         callbacks: list[Any] | None = None,
         reasoning_effort: Literal["none", "low", "medium", "high"] | None = None,
         stream: bool = False,
-        interceptor: BaseInterceptor[Any] | None = None,
+        interceptor: BaseInterceptor[httpx.Request, httpx.Response] | None = None,
         **kwargs: Any,
     ) -> None:
         """Initialize LLM instance.

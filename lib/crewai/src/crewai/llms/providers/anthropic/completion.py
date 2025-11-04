@@ -51,7 +51,7 @@ class AnthropicCompletion(BaseLLM):
         stop_sequences: list[str] | None = None,
         stream: bool = False,
         client_params: dict[str, Any] | None = None,
-        interceptor: BaseInterceptor[Any] | None = None,
+        interceptor: BaseInterceptor[httpx.Request, httpx.Response] | None = None,
         **kwargs: Any,
     ):
         """Initialize Anthropic chat completion client.
