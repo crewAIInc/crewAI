@@ -104,6 +104,35 @@ class GeminiCompletion(BaseLLM):
         self.is_gemini_1_5 = "gemini-1.5" in model.lower()
         self.supports_tools = self.is_gemini_1_5 or self.is_gemini_2
 
+    @property
+    def stop(self) -> list[str]:
+        """Get stop sequences.
+
+        Returns:
+            List of stop sequences that will be sent to the Gemini API.
+        """
+        return self.stop_sequences
+
+    @stop.setter
+    def stop(self, value: list[str] | str | None) -> None:
+        """Set stop sequences and sync with stop_sequences attribute.
+
+        This ensures that when CrewAgentExecutor sets llm.stop, the value
+        is properly synchronized with stop_sequences which is what gets
+        sent to the Gemini API.
+
+        Args:
+            value: Stop sequences as a list, single string, or None.
+        """
+        if value is None:
+            self.stop_sequences = []
+        elif isinstance(value, str):
+            self.stop_sequences = [value]
+        elif isinstance(value, list):
+            self.stop_sequences = value
+        else:
+            self.stop_sequences = []
+
     def _initialize_client(self, use_vertexai: bool = False) -> genai.Client:  # type: ignore[no-any-unimported]
         """Initialize the Google Gen AI client with proper parameter handling.
 
