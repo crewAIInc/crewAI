@@ -127,6 +127,7 @@ def handle_max_iterations_exceeded(
     messages: list[LLMMessage],
     llm: LLM | BaseLLM,
     callbacks: list[TokenCalcHandler],
+    max_iterations_exceeded_count: int = 1,
 ) -> AgentAction | AgentFinish:
     """Handles the case when the maximum number of iterations is exceeded. Performs one more LLM call to get the final answer.
 
@@ -137,9 +138,11 @@ def handle_max_iterations_exceeded(
         messages: List of messages to send to the LLM.
         llm: The LLM instance to call.
         callbacks: List of callbacks for the LLM call.
+        max_iterations_exceeded_count: Number of times max iterations has been exceeded.
 
     Returns:
-        The final formatted answer after exceeding max iterations.
+        The final formatted answer after exceeding max iterations. Returns AgentAction on first
+        call to allow one more tool execution, then forces AgentFinish on subsequent calls.
     """
     printer.print(
         content="Maximum iterations reached. Requesting final answer.",
@@ -168,8 +171,23 @@ def handle_max_iterations_exceeded(
         )
         raise ValueError("Invalid response from LLM call - None or empty.")
 
-    # Return the formatted answer, regardless of its type
-    return format_answer(answer=answer)
+    try:
+        result = format_answer(answer=answer)
+        # Allow returning AgentAction on first two calls to execute tools
+        # On third call (count > 2), force AgentFinish to prevent infinite loop
+        if isinstance(result, AgentAction) and max_iterations_exceeded_count > 2:
+            return AgentFinish(
+                thought="Maximum iterations reached - forcing final answer",
+                output=answer,
+                text=answer,
+            )
+        return result
+    except OutputParserError:
+        return AgentFinish(
+            thought="Maximum iterations reached with parse error",
+            output=answer,
+            text=answer,
+        )
 
 
 def format_message_for_llm(
