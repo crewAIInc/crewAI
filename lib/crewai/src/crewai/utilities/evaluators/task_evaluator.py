@@ -1,14 +1,16 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Any, cast
 
 from pydantic import BaseModel, Field
 
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.task_events import TaskEvaluationEvent
 from crewai.llm import LLM
-from crewai.utilities.converter import Converter
-from crewai.utilities.pydantic_schema_parser import PydanticSchemaParser
+from crewai.utilities.converter import (
+    Converter,
+    generate_instructions_with_openapi_schema,
+)
 from crewai.utilities.training_converter import TrainingConverter
 
 
@@ -79,7 +81,8 @@ class TaskEvaluator:
             - Investigate the Converter.to_pydantic signature, returns BaseModel strictly?
         """
         crewai_event_bus.emit(
-            self, TaskEvaluationEvent(evaluation_type="task_evaluation", task=task)
+            self,
+            TaskEvaluationEvent(evaluation_type="task_evaluation", task=task),  # type: ignore[no-untyped-call]
         )
         evaluation_query = (
             f"Assess the quality of the task completed based on the description, expected output, and actual results.\n\n"
@@ -95,8 +98,7 @@ class TaskEvaluator:
         instructions = "Convert all responses into valid JSON output."
 
         if not self.llm.supports_function_calling():
-            model_schema = PydanticSchemaParser(model=TaskEvaluation).get_schema()
-            instructions = f"{instructions}\n\nReturn only valid JSON with the following schema:\n```json\n{model_schema}\n```"
+            instructions = generate_instructions_with_openapi_schema(TaskEvaluation)
 
         converter = Converter(
             llm=self.llm,
@@ -108,7 +110,7 @@ class TaskEvaluator:
         return cast(TaskEvaluation, converter.to_pydantic())
 
     def evaluate_training_data(
-        self, training_data: dict, agent_id: str
+        self, training_data: dict[str, Any], agent_id: str
     ) -> TrainingTaskEvaluation:
         """
         Evaluate the training data based on the llm output, human feedback, and improved output.
@@ -121,7 +123,8 @@ class TaskEvaluator:
             - Investigate the Converter.to_pydantic signature, returns BaseModel strictly?
         """
         crewai_event_bus.emit(
-            self, TaskEvaluationEvent(evaluation_type="training_data_evaluation")
+            self,
+            TaskEvaluationEvent(evaluation_type="training_data_evaluation"),  # type: ignore[no-untyped-call]
         )
 
         output_training_data = training_data[agent_id]
@@ -162,13 +165,11 @@ class TaskEvaluator:
             "- Provide a list of clear, actionable instructions derived from the Human Feedbacks to enhance the Agent's performance. Analyze the differences between Initial Outputs and Improved Outputs to generate specific action items for future tasks. Ensure all key and specificpoints from the human feedback are incorporated into these instructions.\n"
             "- A score from 0 to 10 evaluating on completion, quality, and overall performance from the improved output to the initial output based on the human feedback\n"
         )
-        instructions = "I'm gonna convert this raw text into valid JSON."
+
+        instructions = "Convert all responses into valid JSON output."
 
         if not self.llm.supports_function_calling():
-            model_schema = PydanticSchemaParser(
-                model=TrainingTaskEvaluation
-            ).get_schema()
-            instructions = f"{instructions}\n\nThe json should have the following structure, with the following keys:\n{model_schema}"
+            instructions = generate_instructions_with_openapi_schema(TaskEvaluation)
 
         converter = TrainingConverter(
             llm=self.llm,
