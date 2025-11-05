@@ -1,14 +1,17 @@
 """Utility functions for the crewai project module."""
 
 from collections.abc import Callable
-from functools import lru_cache, wraps
+from functools import wraps
 from typing import Any, ParamSpec, TypeVar, cast
 
 from pydantic import BaseModel
 
+from crewai.agents.cache.cache_handler import CacheHandler
+
 
 P = ParamSpec("P")
 R = TypeVar("R")
+cache = CacheHandler()
 
 
 def _make_hashable(arg: Any) -> Any:
@@ -26,6 +29,8 @@ def _make_hashable(arg: Any) -> Any:
         return tuple(sorted((k, _make_hashable(v)) for k, v in arg.items()))
     if isinstance(arg, list):
         return tuple(_make_hashable(item) for item in arg)
+    if hasattr(arg, "__dict__"):
+        return ("__instance__", id(arg))
     return arg
 
 
@@ -57,22 +62,14 @@ def memoize(meth: Callable[P, R]) -> Callable[P, R]:
         hashable_kwargs = tuple(
             sorted((k, _make_hashable(v)) for k, v in kwargs.items())
         )
+        cache_key = str((hashable_args, hashable_kwargs))
 
-        @lru_cache(typed=True)
-        def _cached(
-            h_args: tuple[Any, ...], h_kwargs: tuple[tuple[str, Any], ...]
-        ) -> R:
-            """Internal cache function that stores results for hashable arguments.
+        cached_result: R | None = cache.read(tool=meth.__name__, input=cache_key)
+        if cached_result is not None:
+            return cached_result
 
-            Args:
-                h_args: Positional arguments in hashable form.
-                h_kwargs: Keyword arguments in hashable form as sorted tuple.
-
-            Returns:
-                The cached result of the memoized method.
-            """
-            return meth(*args, **kwargs)
-
-        return _cached(hashable_args, hashable_kwargs)
+        result = meth(*args, **kwargs)
+        cache.add(tool=meth.__name__, input=cache_key, output=result)
+        return result
 
     return cast(Callable[P, R], wrapper)
