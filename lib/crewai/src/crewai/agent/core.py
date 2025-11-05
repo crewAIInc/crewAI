@@ -166,9 +166,9 @@ class Agent(BaseAgent):
         default=False,
         description="Whether the agent should reflect and create a plan before executing a task.",
     )
-    max_reasoning_attempts: int | None = Field(
-        default=None,
-        description="Maximum number of reasoning attempts before executing the task. If None, will try until ready.",
+    max_reasoning_attempts: int = Field(
+        default=15,
+        description="Maximum number of reasoning attempts before executing the task.",
     )
     embedder: EmbedderConfig | None = Field(
         default=None,
