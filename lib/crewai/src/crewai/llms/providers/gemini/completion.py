@@ -1,3 +1,4 @@
+import json
 import logging
 import os
 from typing import Any, cast
@@ -427,9 +428,30 @@ class GeminiCompletion(BaseLLM):
                             return result
 
         content = response.text if hasattr(response, "text") else ""
-        content = self._apply_stop_words(content)
 
         messages_for_event = self._convert_contents_to_dict(contents)
+
+        if response_model:
+            try:
+                parsed_data = json.loads(content)
+                parsed_object = response_model.model_validate(parsed_data)
+
+                self._emit_call_completed_event(
+                    response=parsed_object.model_dump_json(),
+                    call_type=LLMCallType.LLM_CALL,
+                    from_task=from_task,
+                    from_agent=from_agent,
+                    messages=messages_for_event,
+                )
+
+                return parsed_object
+            except (json.JSONDecodeError, ValueError) as e:
+                logging.error(f"Failed to parse structured output: {e}")
+                raise ValueError(
+                    f"Failed to parse structured output from Gemini: {e}"
+                ) from e
+
+        content = self._apply_stop_words(content)
 
         self._emit_call_completed_event(
             response=content,
@@ -449,7 +471,7 @@ class GeminiCompletion(BaseLLM):
         from_task: Any | None = None,
         from_agent: Any | None = None,
         response_model: type[BaseModel] | None = None,
-    ) -> str:
+    ) -> str | Any:
         """Handle streaming content generation."""
         full_response = ""
         function_calls = {}
@@ -502,6 +524,26 @@ class GeminiCompletion(BaseLLM):
                     return result
 
         messages_for_event = self._convert_contents_to_dict(contents)
+
+        if response_model:
+            try:
+                parsed_data = json.loads(full_response)
+                parsed_object = response_model.model_validate(parsed_data)
+
+                self._emit_call_completed_event(
+                    response=parsed_object.model_dump_json(),
+                    call_type=LLMCallType.LLM_CALL,
+                    from_task=from_task,
+                    from_agent=from_agent,
+                    messages=messages_for_event,
+                )
+
+                return parsed_object
+            except (json.JSONDecodeError, ValueError) as e:
+                logging.error(f"Failed to parse structured output: {e}")
+                raise ValueError(
+                    f"Failed to parse structured output from Gemini: {e}"
+                ) from e
 
         self._emit_call_completed_event(
             response=full_response,

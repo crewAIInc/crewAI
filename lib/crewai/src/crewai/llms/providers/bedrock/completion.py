@@ -26,6 +26,7 @@ if TYPE_CHECKING:
         MessageTypeDef,
         SystemContentBlockTypeDef,
         TokenUsageTypeDef,
+        ToolChoiceTypeDef,
         ToolConfigurationTypeDef,
         ToolTypeDef,
     )
@@ -282,15 +283,40 @@ class BedrockCompletion(BaseLLM):
                     cast(object, [{"text": system_message}]),
                 )
 
-            # Add tool config if present
-            if tools:
+            if response_model:
+                if not self.is_claude_model:
+                    raise ValueError(
+                        f"Structured output (response_model) is only supported for Claude models. "
+                        f"Current model: {self.model_id}"
+                    )
+
+                structured_tool: ConverseToolTypeDef = {
+                    "toolSpec": {
+                        "name": "structured_output",
+                        "description": "Returns structured data according to the schema",
+                        "inputSchema": {"json": response_model.model_json_schema()},
+                    }
+                }
+
                 tool_config: ToolConfigurationTypeDef = {
+                    "tools": cast(
+                        "Sequence[ToolTypeDef]",
+                        cast(object, [structured_tool]),
+                    ),
+                    "toolChoice": cast(
+                        "ToolChoiceTypeDef",
+                        cast(object, {"tool": {"name": "structured_output"}}),
+                    ),
+                }
+                body["toolConfig"] = tool_config
+            elif tools:
+                tools_config: ToolConfigurationTypeDef = {
                     "tools": cast(
                         "Sequence[ToolTypeDef]",
                         cast(object, self._format_tools_for_converse(tools)),
                     )
                 }
-                body["toolConfig"] = tool_config
+                body["toolConfig"] = tools_config
 
             # Add optional advanced features if configured
             if self.guardrail_config:
@@ -311,11 +337,21 @@ class BedrockCompletion(BaseLLM):
 
             if self.stream:
                 return self._handle_streaming_converse(
-                    formatted_messages, body, available_functions, from_task, from_agent
+                    formatted_messages,
+                    body,
+                    available_functions,
+                    from_task,
+                    from_agent,
+                    response_model,
                 )
 
             return self._handle_converse(
-                formatted_messages, body, available_functions, from_task, from_agent
+                formatted_messages,
+                body,
+                available_functions,
+                from_task,
+                from_agent,
+                response_model,
             )
 
         except Exception as e:
@@ -337,7 +373,8 @@ class BedrockCompletion(BaseLLM):
         available_functions: Mapping[str, Any] | None = None,
         from_task: Any | None = None,
         from_agent: Any | None = None,
-    ) -> str:
+        response_model: type[BaseModel] | None = None,
+    ) -> str | Any:
         """Handle non-streaming converse API call following AWS best practices."""
         try:
             # Validate messages format before API call
@@ -385,6 +422,26 @@ class BedrockCompletion(BaseLLM):
                 return (
                     "I apologize, but I received an empty response. Please try again."
                 )
+
+            if response_model and content:
+                for content_block in content:
+                    if "toolUse" in content_block:
+                        tool_use_block = content_block["toolUse"]
+                        if tool_use_block["name"] == "structured_output":
+                            structured_data = tool_use_block.get("input", {})
+                            parsed_object = response_model.model_validate(
+                                structured_data
+                            )
+
+                            self._emit_call_completed_event(
+                                response=parsed_object.model_dump_json(),
+                                call_type=LLMCallType.LLM_CALL,
+                                from_task=from_task,
+                                from_agent=from_agent,
+                                messages=messages,
+                            )
+
+                            return parsed_object
 
             # Process content blocks and handle tool use correctly
             text_content = ""
@@ -437,7 +494,12 @@ class BedrockCompletion(BaseLLM):
                         )
 
                         return self._handle_converse(
-                            messages, body, available_functions, from_task, from_agent
+                            messages,
+                            body,
+                            available_functions,
+                            from_task,
+                            from_agent,
+                            response_model,
                         )
 
             # Apply stop sequences if configured
@@ -518,7 +580,8 @@ class BedrockCompletion(BaseLLM):
         available_functions: dict[str, Any] | None = None,
         from_task: Any | None = None,
         from_agent: Any | None = None,
-    ) -> str:
+        response_model: type[BaseModel] | None = None,
+    ) -> str | Any:
         """Handle streaming converse API call with comprehensive event handling."""
         full_response = ""
         current_tool_use = None
@@ -617,6 +680,7 @@ class BedrockCompletion(BaseLLM):
                                     available_functions,
                                     from_task,
                                     from_agent,
+                                    response_model,
                                 )
 
                             current_tool_use = None

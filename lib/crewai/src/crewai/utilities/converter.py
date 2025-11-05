@@ -226,6 +226,47 @@ def validate_model(
     return exported_result
 
 
+def _extract_json_from_text(text: str) -> str:
+    """Extract JSON from text that may be wrapped in markdown code blocks.
+
+    Handles various formats:
+    - Direct JSON strings (starts with { or [)
+    - ```json ... ``` blocks
+    - ```python ... ``` blocks
+    - ``` ... ``` blocks (no language specifier)
+    - `{...}` inline code with JSON
+    - Text with embedded JSON objects/arrays
+
+    Args:
+        text: Text potentially containing JSON.
+
+    Returns:
+        Extracted JSON string or original text if no clear JSON found.
+    """
+    text = text.strip()
+
+    if text.startswith(("{", "[")):
+        return text
+
+    code_block_patterns = [
+        r"```(?:json|python)?\s*\n?([\s\S]*?)\n?```",  # Standard code blocks
+        r"`([{[][\s\S]*?[}\]])`",  # Inline code with JSON
+    ]
+
+    for pattern in code_block_patterns:
+        matches = re.findall(pattern, text, re.IGNORECASE)
+        for match in matches:
+            cleaned: str = match.strip()
+            if cleaned.startswith(("{", "[")):
+                return cleaned
+
+    json_match = _JSON_PATTERN.search(text)
+    if json_match:
+        return json_match.group(0)
+
+    return text
+
+
 def handle_partial_json(
     result: str,
     model: type[BaseModel],
@@ -244,23 +285,27 @@ def handle_partial_json(
 
     Returns:
         The converted result as a dict, BaseModel, or original string.
+
+    Raises:
+        ValidationError: If JSON was successfully extracted and parsed but failed
+            Pydantic validation. This allows retry logic to kick in.
     """
-    match = _JSON_PATTERN.search(result)
-    if match:
-        try:
-            exported_result = model.model_validate_json(match.group())
-            if is_json_output:
-                return exported_result.model_dump()
-            return exported_result
-        except json.JSONDecodeError:
-            pass
-        except ValidationError:
-            pass
-        except Exception as e:
-            Printer().print(
-                content=f"Unexpected error during partial JSON handling: {type(e).__name__}: {e}. Attempting alternative conversion method.",
-                color="red",
-            )
+    extracted_json = _extract_json_from_text(result)
+
+    try:
+        exported_result = model.model_validate_json(extracted_json)
+        if is_json_output:
+            return exported_result.model_dump()
+        return exported_result
+    except json.JSONDecodeError:
+        pass
+    except ValidationError:
+        raise
+    except Exception as e:
+        Printer().print(
+            content=f"Unexpected error during partial JSON handling: {type(e).__name__}: {e}. Attempting alternative conversion method.",
+            color="red",
+        )
 
     return convert_with_instructions(
         result=result,
