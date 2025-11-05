@@ -149,7 +149,7 @@ def handle_max_iterations_exceeded(
         color="yellow",
     )
 
-    if formatted_answer and hasattr(formatted_answer, "text"):
+    if formatted_answer and formatted_answer.text:
         assistant_message = (
             formatted_answer.text + f"\n{i18n.errors('force_final_answer')}"
         )
@@ -291,17 +291,23 @@ def get_llm_response(
 
 
 def process_llm_response(
-    answer: str, use_stop_words: bool
+    answer: str | BaseModel, use_stop_words: bool
 ) -> AgentAction | AgentFinish:
     """Process the LLM response and format it into an AgentAction or AgentFinish.
 
     Args:
-        answer: The raw response from the LLM
+        answer: The raw response from the LLM (string) or structured output (BaseModel)
         use_stop_words: Whether to use stop words in the LLM call
 
     Returns:
         Either an AgentAction or AgentFinish
     """
+    if isinstance(answer, BaseModel):
+        json_output = answer.model_dump_json()
+        return AgentFinish(
+            thought="", output=json_output, text=json_output, pydantic=answer
+        )
+
     if not use_stop_words:
         try:
             # Preliminary parsing to check for errors.

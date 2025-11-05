@@ -307,15 +307,14 @@ class OpenAICompletion(BaseLLM):
 
                 parsed_object = parsed_response.choices[0].message.parsed
                 if parsed_object:
-                    structured_json = parsed_object.model_dump_json()
                     self._emit_call_completed_event(
-                        response=structured_json,
+                        response=parsed_object.model_dump_json(),
                         call_type=LLMCallType.LLM_CALL,
                         from_task=from_task,
                         from_agent=from_agent,
                         messages=params["messages"],
                     )
-                    return structured_json
+                    return parsed_object
 
             response: ChatCompletion = self.client.chat.completions.create(**params)
 
@@ -412,7 +411,7 @@ class OpenAICompletion(BaseLLM):
         from_task: Any | None = None,
         from_agent: Any | None = None,
         response_model: type[BaseModel] | None = None,
-    ) -> str:
+    ) -> str | BaseModel:
         """Handle streaming chat completion."""
         full_response = ""
         tool_calls = {}
@@ -440,17 +439,16 @@ class OpenAICompletion(BaseLLM):
 
             try:
                 parsed_object = response_model.model_validate_json(accumulated_content)
-                structured_json = parsed_object.model_dump_json()
 
                 self._emit_call_completed_event(
-                    response=structured_json,
+                    response=parsed_object.model_dump_json(),
                     call_type=LLMCallType.LLM_CALL,
                     from_task=from_task,
                     from_agent=from_agent,
                     messages=params["messages"],
                 )
 
-                return structured_json
+                return parsed_object
             except Exception as e:
                 logging.error(f"Failed to parse structured output from stream: {e}")
                 self._emit_call_completed_event(

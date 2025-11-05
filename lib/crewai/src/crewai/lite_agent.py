@@ -423,7 +423,11 @@ class LiteAgent(FlowTrackable, BaseModel):
             )
 
         # Add response format instructions if specified
-        if self.response_format:
+        if (
+            self.response_format
+            and isinstance(self.llm, BaseLLM)
+            and not self.llm.supports_function_calling()
+        ):
             schema = generate_model_description(self.response_format)
             base_prompt += self.i18n.slice("lite_agent_response_format").format(
                 response_format=schema
@@ -478,6 +482,7 @@ class LiteAgent(FlowTrackable, BaseModel):
                         callbacks=self._callbacks,
                         printer=self._printer,
                         from_agent=self,
+                        response_model=self.response_format,
                     )
 
                 except Exception as e:

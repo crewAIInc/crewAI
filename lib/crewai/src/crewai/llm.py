@@ -750,15 +750,14 @@ class LLM(BaseLLM):
                         llm=self,
                     )
                     result = instructor_instance.to_pydantic()
-                    structured_response = result.model_dump_json()
                     self._handle_emit_call_events(
-                        response=structured_response,
+                        response=result.model_dump_json(),
                         call_type=LLMCallType.LLM_CALL,
                         from_task=from_task,
                         from_agent=from_agent,
                         messages=params["messages"],
                     )
-                    return structured_response
+                    return result
 
                 self._handle_emit_call_events(
                     response=full_response,
@@ -941,15 +940,14 @@ class LLM(BaseLLM):
                 llm=self,
             )
             result = instructor_instance.to_pydantic()
-            structured_response = result.model_dump_json()
             self._handle_emit_call_events(
-                response=structured_response,
+                response=result.model_dump_json(),
                 call_type=LLMCallType.LLM_CALL,
                 from_task=from_task,
                 from_agent=from_agent,
                 messages=params["messages"],
             )
-            return structured_response
+            return result
 
         try:
             # Attempt to make the completion call, but catch context window errors
@@ -969,15 +967,14 @@ class LLM(BaseLLM):
         if response_model is not None:
             # When using instructor/response_model, litellm returns a Pydantic model instance
             if isinstance(response, BaseModel):
-                structured_response = response.model_dump_json()
                 self._handle_emit_call_events(
-                    response=structured_response,
+                    response=response.model_dump_json(),
                     call_type=LLMCallType.LLM_CALL,
                     from_task=from_task,
                     from_agent=from_agent,
                     messages=params["messages"],
                 )
-                return structured_response
+                return response
 
         # --- 3) Extract response message and content (standard response)
         response_message = cast(Choices, cast(ModelResponse, response).choices)[

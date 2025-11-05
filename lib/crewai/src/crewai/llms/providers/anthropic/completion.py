@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-
-import json
 import logging
 import os
 from typing import Any, cast
@@ -47,7 +45,7 @@ class AnthropicCompletion(BaseLLM):
         stop_sequences: list[str] | None = None,
         stream: bool = False,
         client_params: dict[str, Any] | None = None,
-        **kwargs,
+        **kwargs: Any,
     ):
         """Initialize Anthropic chat completion client.
 
@@ -110,7 +108,7 @@ class AnthropicCompletion(BaseLLM):
     def call(
         self,
         messages: str | list[LLMMessage],
-        tools: list[dict] | None = None,
+        tools: list[dict[str, Any]] | None = None,
         callbacks: list[Any] | None = None,
         available_functions: dict[str, Any] | None = None,
         from_task: Any | None = None,
@@ -133,7 +131,7 @@ class AnthropicCompletion(BaseLLM):
         try:
             # Emit call started event
             self._emit_call_started_event(
-                messages=messages,  # type: ignore[arg-type]
+                messages=messages,
                 tools=tools,
                 callbacks=callbacks,
                 available_functions=available_functions,
@@ -143,7 +141,7 @@ class AnthropicCompletion(BaseLLM):
 
             # Format messages for Anthropic
             formatted_messages, system_message = self._format_messages_for_anthropic(
-                messages  # type: ignore[arg-type]
+                messages
             )
 
             # Prepare completion parameters
@@ -181,7 +179,7 @@ class AnthropicCompletion(BaseLLM):
         self,
         messages: list[LLMMessage],
         system_message: str | None = None,
-        tools: list[dict] | None = None,
+        tools: list[dict[str, Any]] | None = None,
     ) -> dict[str, Any]:
         """Prepare parameters for Anthropic messages API.
 
@@ -218,7 +216,9 @@ class AnthropicCompletion(BaseLLM):
 
         return params
 
-    def _convert_tools_for_interference(self, tools: list[dict]) -> list[dict]:
+    def _convert_tools_for_interference(
+        self, tools: list[dict[str, Any]]
+    ) -> list[dict[str, Any]]:
         """Convert CrewAI tool format to Anthropic tool use format."""
         anthropic_tools = []
 
@@ -336,17 +336,17 @@ class AnthropicCompletion(BaseLLM):
             ]
             if tool_uses and tool_uses[0].name == "structured_output":
                 structured_data = tool_uses[0].input
-                structured_json = json.dumps(structured_data)
+                parsed_object = response_model.model_validate(structured_data)
 
                 self._emit_call_completed_event(
-                    response=structured_json,
+                    response=parsed_object.model_dump_json(),
                     call_type=LLMCallType.LLM_CALL,
                     from_task=from_task,
                     from_agent=from_agent,
                     messages=params["messages"],
                 )
 
-                return structured_json
+                return parsed_object
 
         # Check if Claude wants to use tools
         if response.content and available_functions:
@@ -394,7 +394,7 @@ class AnthropicCompletion(BaseLLM):
         from_task: Any | None = None,
         from_agent: Any | None = None,
         response_model: type[BaseModel] | None = None,
-    ) -> str:
+    ) -> str | BaseModel:
         """Handle streaming message completion."""
         if response_model:
             structured_tool = {
@@ -437,17 +437,17 @@ class AnthropicCompletion(BaseLLM):
             ]
             if tool_uses and tool_uses[0].name == "structured_output":
                 structured_data = tool_uses[0].input
-                structured_json = json.dumps(structured_data)
+                parsed_object = response_model.model_validate(structured_data)
 
                 self._emit_call_completed_event(
-                    response=structured_json,
+                    response=parsed_object.model_dump_json(),
                     call_type=LLMCallType.LLM_CALL,
                     from_task=from_task,
                     from_agent=from_agent,
                     messages=params["messages"],
                 )
 
-                return structured_json
+                return parsed_object
 
         if final_message.content and available_functions:
             tool_uses = [
