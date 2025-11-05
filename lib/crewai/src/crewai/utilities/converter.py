@@ -4,7 +4,7 @@ from collections.abc import Callable
 from copy import deepcopy
 import json
 import re
-from typing import TYPE_CHECKING, Any, Final, TypedDict
+from typing import TYPE_CHECKING, Any, Final, Literal, TypedDict
 
 from pydantic import BaseModel, ValidationError
 from typing_extensions import Unpack
@@ -621,7 +621,10 @@ def ensure_all_properties_required(schema: dict[str, Any]) -> dict[str, Any]:
     return schema
 
 
-def generate_model_description(model: type[BaseModel]) -> dict[str, Any]:
+def generate_model_description(
+    model: type[BaseModel],
+    provider: Literal["openai", "gemini", "anthropic", "raw"] = "openai",
+) -> dict[str, Any]:
     """Generate JSON schema description of a Pydantic model.
 
     This function takes a Pydantic model class and returns its JSON schema,
@@ -630,9 +633,28 @@ def generate_model_description(model: type[BaseModel]) -> dict[str, Any]:
 
     Args:
         model: A Pydantic model class.
+        provider: The LLM provider format to use. Options:
+            - "openai": OpenAI's wrapped format with name and strict fields (default)
+            - "gemini": Direct JSON schema for Gemini API
+            - "anthropic": Tool input_schema format for Claude API
+            - "raw": Plain JSON schema without any provider-specific wrapper
 
     Returns:
-        A JSON schema dictionary representation of the model.
+        A JSON schema dictionary representation of the model in the requested format.
+
+    Examples:
+        >>> class User(BaseModel):
+        ...     name: str
+        ...     age: int
+        >>> # OpenAI format (default)
+        >>> generate_model_description(User)
+        {'type': 'json_schema', 'json_schema': {'name': 'User', 'strict': True, 'schema': {...}}}
+        >>> # Gemini format
+        >>> generate_model_description(User, provider="gemini")
+        {'type': 'object', 'properties': {...}, 'required': [...]}
+        >>> # Anthropic format (for tool use)
+        >>> generate_model_description(User, provider="anthropic")
+        {'name': 'User', 'description': '...', 'input_schema': {'type': 'object', 'properties': {...}, 'required': [...]}}
     """
 
     json_schema = model.model_json_schema(ref_template="#/$defs/{model}")
@@ -652,6 +674,25 @@ def generate_model_description(model: type[BaseModel]) -> dict[str, Any]:
     json_schema = convert_oneof_to_anyof(json_schema)
     json_schema = ensure_all_properties_required(json_schema)
 
+    if provider == "openai":
+        return {
+            "type": "json_schema",
+            "json_schema": {
+                "name": model.__name__,
+                "strict": True,
+                "schema": json_schema,
+            },
+        }
+    if provider == "gemini":
+        return json_schema
+    if provider == "anthropic":
+        return {
+            "name": model.__name__,
+            "description": model.__doc__ or f"Schema for {model.__name__}",
+            "input_schema": json_schema,
+        }
+    if provider == "raw":
+        return json_schema
     return {
         "type": "json_schema",
         "json_schema": {

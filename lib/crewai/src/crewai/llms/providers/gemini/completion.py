@@ -1,7 +1,7 @@
 import json
 import logging
 import os
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 
 from pydantic import BaseModel
 
@@ -13,6 +13,12 @@ from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededError,
 )
 from crewai.utilities.types import LLMMessage
+
+
+if TYPE_CHECKING:
+    from google.genai.types import (  # type: ignore[import-untyped]
+        GenerateContentResponse,
+    )
 
 
 try:
@@ -295,7 +301,7 @@ class GeminiCompletion(BaseLLM):
 
         if response_model:
             config_params["response_mime_type"] = "application/json"
-            config_params["response_schema"] = response_model.model_json_schema()
+            config_params["response_json_schema"] = response_model.model_json_schema()
 
         # Handle tools for supported models
         if tools and self.supports_tools:
@@ -600,7 +606,8 @@ class GeminiCompletion(BaseLLM):
         # Default context window size for Gemini models
         return int(1048576 * CONTEXT_WINDOW_USAGE_RATIO)  # 1M tokens
 
-    def _extract_token_usage(self, response: dict[str, Any]) -> dict[str, Any]:
+    @staticmethod
+    def _extract_token_usage(response: GenerateContentResponse) -> dict[str, Any]:  # type: ignore[no-any-unimported]
         """Extract token usage from Gemini response."""
         if hasattr(response, "usage_metadata"):
             usage = response.usage_metadata
@@ -612,10 +619,10 @@ class GeminiCompletion(BaseLLM):
             }
         return {"total_tokens": 0}
 
+    @staticmethod
     def _convert_contents_to_dict(  # type: ignore[no-any-unimported]
-        self,
         contents: list[types.Content],
-    ) -> list[dict[str, str]]:
+    ) -> list[dict[str, str | None]]:
         """Convert contents to dict format."""
         return [
             {
