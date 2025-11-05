@@ -127,6 +127,7 @@ def handle_max_iterations_exceeded(
     messages: list[LLMMessage],
     llm: LLM | BaseLLM,
     callbacks: list[TokenCalcHandler],
+    max_iterations_exceeded_count: int = 1,
 ) -> AgentAction | AgentFinish:
     """Handles the case when the maximum number of iterations is exceeded. Performs one more LLM call to get the final answer.
 
@@ -137,16 +138,18 @@ def handle_max_iterations_exceeded(
         messages: List of messages to send to the LLM.
         llm: The LLM instance to call.
         callbacks: List of callbacks for the LLM call.
+        max_iterations_exceeded_count: Number of times max iterations has been exceeded.
 
     Returns:
-        The final formatted answer after exceeding max iterations.
+        The final formatted answer after exceeding max iterations. Returns AgentAction on first
+        call to allow one more tool execution, then forces AgentFinish on subsequent calls.
     """
     printer.print(
         content="Maximum iterations reached. Requesting final answer.",
         color="yellow",
     )
 
-    if formatted_answer and hasattr(formatted_answer, "text"):
+    if formatted_answer and formatted_answer.text:
         assistant_message = (
             formatted_answer.text + f"\n{i18n.errors('force_final_answer')}"
         )
@@ -157,7 +160,7 @@ def handle_max_iterations_exceeded(
 
     # Perform one more LLM call to get the final answer
     answer = llm.call(
-        messages,  # type: ignore[arg-type]
+        messages,
         callbacks=callbacks,
     )
 
@@ -168,8 +171,23 @@ def handle_max_iterations_exceeded(
         )
         raise ValueError("Invalid response from LLM call - None or empty.")
 
-    # Return the formatted answer, regardless of its type
-    return format_answer(answer=answer)
+    try:
+        result = format_answer(answer=answer)
+        # Allow returning AgentAction on first two calls to execute tools
+        # On third call (count > 2), force AgentFinish to prevent infinite loop
+        if isinstance(result, AgentAction) and max_iterations_exceeded_count > 2:
+            return AgentFinish(
+                thought="Maximum iterations reached - forcing final answer",
+                output=answer,
+                text=answer,
+            )
+        return result
+    except OutputParserError:
+        return AgentFinish(
+            thought="Maximum iterations reached with parse error",
+            output=answer,
+            text=answer,
+        )
 
 
 def format_message_for_llm(
@@ -197,9 +215,14 @@ def format_answer(answer: str) -> AgentAction | AgentFinish:
 
     Returns:
         Either an AgentAction or AgentFinish
+
+    Raises:
+        OutputParserError: When the LLM response format is invalid, allowing retry logic
     """
     try:
         return parse(answer)
+    except OutputParserError:
+        raise
     except Exception:
         return AgentFinish(
             thought="Failed to parse LLM response",
@@ -249,10 +272,10 @@ def get_llm_response(
     """
     try:
         answer = llm.call(
-            messages,  # type: ignore[arg-type]
+            messages,
             callbacks=callbacks,
             from_task=from_task,
-            from_agent=from_agent,
+            from_agent=from_agent,  # type: ignore[arg-type]
             response_model=response_model,
         )
     except Exception as e:
@@ -268,17 +291,23 @@ def get_llm_response(
 
 
 def process_llm_response(
-    answer: str, use_stop_words: bool
+    answer: str | BaseModel, use_stop_words: bool
 ) -> AgentAction | AgentFinish:
     """Process the LLM response and format it into an AgentAction or AgentFinish.
 
     Args:
-        answer: The raw response from the LLM
+        answer: The raw response from the LLM (string) or structured output (BaseModel)
         use_stop_words: Whether to use stop words in the LLM call
 
     Returns:
         Either an AgentAction or AgentFinish
     """
+    if isinstance(answer, BaseModel):
+        json_output = answer.model_dump_json()
+        return AgentFinish(
+            thought="", output=json_output, text=json_output, pydantic=answer
+        )
+
     if not use_stop_words:
         try:
             # Preliminary parsing to check for errors.
@@ -294,8 +323,8 @@ def handle_agent_action_core(
     formatted_answer: AgentAction,
     tool_result: ToolResult,
     messages: list[LLMMessage] | None = None,
-    step_callback: Callable | None = None,
-    show_logs: Callable | None = None,
+    step_callback: Callable[[Any], Any] | None = None,
+    show_logs: Callable[[Any], Any] | None = None,
 ) -> AgentAction | AgentFinish:
     """Core logic for handling agent actions and tool results.
 
@@ -481,7 +510,7 @@ def summarize_messages(
             ),
         ]
         summary = llm.call(
-            messages,  # type: ignore[arg-type]
+            messages,
             callbacks=callbacks,
         )
         summarized_contents.append({"content": str(summary)})

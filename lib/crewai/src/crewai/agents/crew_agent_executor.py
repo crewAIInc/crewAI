@@ -130,6 +130,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         self.messages: list[LLMMessage] = []
         self.iterations = 0
         self.log_error_after = 3
+        self.max_iterations_exceeded_count = 0
         if self.llm:
             # This may be mutating the shared llm object and needs further evaluation
             existing_stop = getattr(self.llm, "stop", [])
@@ -194,7 +195,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         self._create_short_term_memory(formatted_answer)
         self._create_long_term_memory(formatted_answer)
         self._create_external_memory(formatted_answer)
-        return {"output": formatted_answer.output}
+        return {"output": formatted_answer.output, "agent_finish": formatted_answer}
 
     def _invoke_loop(self) -> AgentFinish:
         """Execute agent loop until completion.
@@ -202,10 +203,11 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         Returns:
             Final answer from the agent.
         """
-        formatted_answer = None
+        formatted_answer: AgentAction | AgentFinish | None = None
         while not isinstance(formatted_answer, AgentFinish):
             try:
                 if has_reached_max_iterations(self.iterations, self.max_iter):
+                    self.max_iterations_exceeded_count += 1
                     formatted_answer = handle_max_iterations_exceeded(
                         formatted_answer,
                         printer=self._printer,
@@ -213,20 +215,21 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                         messages=self.messages,
                         llm=self.llm,
                         callbacks=self.callbacks,
+                        max_iterations_exceeded_count=self.max_iterations_exceeded_count,
                     )
+                else:
+                    enforce_rpm_limit(self.request_within_rpm_limit)
 
-                enforce_rpm_limit(self.request_within_rpm_limit)
-
-                answer = get_llm_response(
-                    llm=self.llm,
-                    messages=self.messages,
-                    callbacks=self.callbacks,
-                    printer=self._printer,
-                    from_task=self.task,
-                    from_agent=self.agent,
-                    response_model=self.response_model,
-                )
-                formatted_answer = process_llm_response(answer, self.use_stop_words)
+                    answer = get_llm_response(
+                        llm=self.llm,
+                        messages=self.messages,
+                        callbacks=self.callbacks,
+                        printer=self._printer,
+                        from_task=self.task,
+                        from_agent=self.agent,
+                        response_model=self.response_model,
+                    )
+                    formatted_answer = process_llm_response(answer, self.use_stop_words)
 
                 if isinstance(formatted_answer, AgentAction):
                     # Extract agent fingerprint if available
@@ -298,6 +301,27 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                 "Agent execution ended without reaching a final answer. "
                 f"Got {type(formatted_answer).__name__} instead of AgentFinish."
             )
+
+        if (
+            self.task
+            and (self.task.output_pydantic or self.task.output_json)
+            and self.llm.supports_function_calling()
+            and not self.response_model
+            and formatted_answer.pydantic is None
+        ):
+            structured_answer = get_llm_response(
+                llm=self.llm,
+                messages=self.messages,
+                callbacks=self.callbacks,
+                printer=self._printer,
+                from_task=self.task,
+                from_agent=self.agent,
+                response_model=self.task.output_pydantic or self.task.output_json,
+            )
+
+            if isinstance(structured_answer, BaseModel):
+                formatted_answer.pydantic = structured_answer
+
         self._show_logs(formatted_answer)
         return formatted_answer
 

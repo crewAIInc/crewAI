@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 import json
 import shutil
 import subprocess
@@ -166,9 +166,9 @@ class Agent(BaseAgent):
         default=False,
         description="Whether the agent should reflect and create a plan before executing a task.",
     )
-    max_reasoning_attempts: int | None = Field(
-        default=None,
-        description="Maximum number of reasoning attempts before executing the task. If None, will try until ready.",
+    max_reasoning_attempts: int = Field(
+        default=15,
+        description="Maximum number of reasoning attempts before executing the task.",
     )
     embedder: EmbedderConfig | None = Field(
         default=None,
@@ -307,21 +307,25 @@ class Agent(BaseAgent):
         task_prompt = task.prompt()
 
         # If the task requires output in JSON or Pydantic format,
-        # append specific instructions to the task prompt to ensure
-        # that the final answer does not include any code block markers
-        # Skip this if task.response_model is set, as native structured outputs handle schema automatically
-        if (task.output_json or task.output_pydantic) and not task.response_model:
-            # Generate the schema based on the output format
+        # only append schema instructions if the LLM doesn't support function calling.
+        # When function calling is supported, the schema will be enforced via response_model
+        # in a separate call after the agent completes its reasoning.
+        if (
+            (task.output_json or task.output_pydantic)
+            and not task.response_model
+            and isinstance(self.llm, BaseLLM)
+            and not self.llm.supports_function_calling()
+        ):
             if task.output_json:
                 schema_dict = generate_model_description(task.output_json)
-                schema = json.dumps(schema_dict["json_schema"]["schema"], indent=2)
+                schema = json.dumps(schema_dict, indent=2)
                 task_prompt += "\n" + self.i18n.slice(
                     "formatted_task_instructions"
                 ).format(output_format=schema)
 
             elif task.output_pydantic:
                 schema_dict = generate_model_description(task.output_pydantic)
-                schema = json.dumps(schema_dict["json_schema"]["schema"], indent=2)
+                schema = json.dumps(schema_dict, indent=2)
                 task_prompt += "\n" + self.i18n.slice(
                     "formatted_task_instructions"
                 ).format(output_format=schema)
@@ -522,10 +526,21 @@ class Agent(BaseAgent):
         for tool_result in self.tools_results:
             if tool_result.get("result_as_answer", False):
                 result = tool_result["result"]
+
+        output_str = result if isinstance(result, str) else result.get("output", "")
         crewai_event_bus.emit(
             self,
-            event=AgentExecutionCompletedEvent(agent=self, task=task, output=result),
+            event=AgentExecutionCompletedEvent(
+                agent=self, task=task, output=output_str
+            ),
         )
+
+        if isinstance(result, dict):
+            agent_finish = result.get("agent_finish")
+            if agent_finish and getattr(agent_finish, "pydantic", None) is not None:
+                return result
+            return output_str
+
         return result
 
     def _execute_with_timeout(self, task_prompt: str, task: Task, timeout: int) -> Any:
@@ -581,7 +596,7 @@ class Agent(BaseAgent):
                 "tools": self.agent_executor.tools_description,
                 "ask_for_human_input": task.human_input,
             }
-        )["output"]
+        )
 
     def create_agent_executor(
         self, tools: list[BaseTool] | None = None, task: Task | None = None
@@ -612,7 +627,7 @@ class Agent(BaseAgent):
             )
 
         self.agent_executor = CrewAgentExecutor(
-            llm=self.llm,
+            llm=self.llm,  # type: ignore[arg-type]
             task=task,  # type: ignore[arg-type]
             agent=self,
             crew=self.crew,
@@ -762,7 +777,7 @@ class Agent(BaseAgent):
         path = parsed.path.replace("/", "_").strip("_")
         return f"{domain}_{path}" if path else domain
 
-    def _get_mcp_tool_schemas(self, server_params: dict) -> dict[str, dict]:
+    def _get_mcp_tool_schemas(self, server_params: dict[str, Any]) -> Any:
         """Get tool schemas from MCP server for wrapper creation with caching."""
         server_url = server_params["url"]
 
@@ -794,7 +809,7 @@ class Agent(BaseAgent):
 
     async def _get_mcp_tool_schemas_async(
         self, server_params: dict[str, Any]
-    ) -> dict[str, dict]:
+    ) -> dict[str, dict[str, Any]]:
         """Async implementation of MCP tool schema retrieval with timeouts and retries."""
         server_url = server_params["url"]
         return await self._retry_mcp_discovery(
@@ -802,7 +817,7 @@ class Agent(BaseAgent):
         )
 
     async def _retry_mcp_discovery(
-        self, operation_func, server_url: str
+        self, operation_func: Callable[[Any], Any], server_url: str
     ) -> dict[str, dict[str, Any]]:
         """Retry MCP discovery operation with exponential backoff, avoiding try-except in loop."""
         last_error = None
@@ -833,7 +848,7 @@ class Agent(BaseAgent):
 
     @staticmethod
     async def _attempt_mcp_discovery(
-        operation_func, server_url: str
+        operation_func: Callable[[Any], Any], server_url: str
     ) -> tuple[dict[str, dict[str, Any]] | None, str, bool]:
         """Attempt single MCP discovery operation and return (result, error_message, should_retry)."""
         try:
@@ -937,13 +952,13 @@ class Agent(BaseAgent):
                     Field(..., description=field_description),
                 )
             else:
-                field_definitions[field_name] = (
+                field_definitions[field_name] = (  # type: ignore[assignment]
                     field_type | None,
                     Field(default=None, description=field_description),
                 )
 
         model_name = f"{tool_name.replace('-', '_').replace(' ', '_')}Schema"
-        return create_model(model_name, **field_definitions)
+        return create_model(model_name, **field_definitions)  # type: ignore[call-overload,no-any-return]
 
     def _json_type_to_python(self, field_schema: dict[str, Any]) -> type:
         """Convert JSON Schema type to Python type.
@@ -963,12 +978,12 @@ class Agent(BaseAgent):
                 if "const" in option:
                     types.append(str)
                 else:
-                    types.append(self._json_type_to_python(option))
+                    types.append(self._json_type_to_python(option))  # type: ignore[arg-type]
             unique_types = list(set(types))
             if len(unique_types) > 1:
                 result = unique_types[0]
                 for t in unique_types[1:]:
-                    result = result | t
+                    result = result | t  # type: ignore[assignment]
                 return result
             return unique_types[0]
 
@@ -981,10 +996,10 @@ class Agent(BaseAgent):
             "object": dict,
         }
 
-        return type_mapping.get(json_type, Any)
+        return type_mapping.get(json_type, Any)  # type: ignore[arg-type]
 
     @staticmethod
-    def _fetch_amp_mcp_servers(mcp_name: str) -> list[dict]:
+    def _fetch_amp_mcp_servers(mcp_name: str) -> list[dict[str, Any]]:
         """Fetch MCP server configurations from CrewAI AMP API."""
         # TODO: Implement AMP API call to "integrations/mcps" endpoint
         # Should return list of server configs with URLs
@@ -1211,11 +1226,11 @@ class Agent(BaseAgent):
         if self.apps:
             platform_tools = self.get_platform_tools(self.apps)
             if platform_tools:
-                self.tools.extend(platform_tools)
+                self.tools.extend(platform_tools)  # type: ignore[union-attr]
         if self.mcps:
             mcps = self.get_mcp_tools(self.mcps)
             if mcps:
-                self.tools.extend(mcps)
+                self.tools.extend(mcps)  # type: ignore[union-attr]
 
         lite_agent = LiteAgent(
             id=self.id,

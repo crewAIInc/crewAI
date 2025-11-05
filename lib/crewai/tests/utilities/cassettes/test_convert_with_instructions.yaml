@@ -1,23 +1,29 @@
 interactions:
 - request:
-    body: '{"messages":[{"role":"system","content":"Please convert the following text
-      into valid JSON.\n\nOutput ONLY the valid JSON and nothing else.\n\nThe JSON
-      must follow this schema exactly:\n```json\n{\n    name: str,\n    age: int\n}\n```"},{"role":"user","content":"Name:
-      Alice, Age: 30"}],"model":"gpt-4o-mini","response_format":{"type":"json_schema","json_schema":{"schema":{"properties":{"name":{"title":"Name","type":"string"},"age":{"title":"Age","type":"integer"}},"required":["name","age"],"title":"SimpleModel","type":"object","additionalProperties":false},"name":"SimpleModel","strict":true}},"stream":false}'
+    body: '{"messages":[{"role":"system","content":"Ensure your final answer strictly
+      adheres to the following OpenAPI schema: {\n  \"type\": \"json_schema\",\n  \"json_schema\":
+      {\n    \"name\": \"SimpleModel\",\n    \"strict\": true,\n    \"schema\": {\n      \"properties\":
+      {\n        \"name\": {\n          \"title\": \"Name\",\n          \"type\":
+      \"string\"\n        },\n        \"age\": {\n          \"title\": \"Age\",\n          \"type\":
+      \"integer\"\n        }\n      },\n      \"required\": [\n        \"name\",\n        \"age\"\n      ],\n      \"title\":
+      \"SimpleModel\",\n      \"type\": \"object\",\n      \"additionalProperties\":
+      false\n    }\n  }\n}\n\nDo not include the OpenAPI schema in the final output.
+      Ensure the final output does not include any code block markers like ```json
+      or ```python."},{"role":"user","content":"Name: Alice, Age: 30"}],"model":"gpt-4o-mini","response_format":{"type":"json_schema","json_schema":{"schema":{"properties":{"name":{"title":"Name","type":"string"},"age":{"title":"Age","type":"integer"}},"required":["name","age"],"title":"SimpleModel","type":"object","additionalProperties":false},"name":"SimpleModel","strict":true}},"stream":false}'
     headers:
       accept:
       - application/json
       accept-encoding:
-      - gzip, deflate
+      - gzip, deflate, zstd
       connection:
       - keep-alive
       content-length:
-      - '614'
+      - '1186'
       content-type:
       - application/json
       host:
       - api.openai.com
-      user-agent:
+      user-REDACTED:
       - OpenAI/Python 1.109.1
       x-stainless-arch:
       - arm64
@@ -38,23 +44,23 @@ interactions:
       x-stainless-runtime:
       - CPython
       x-stainless-runtime-version:
-      - 3.12.10
+      - 3.12.9
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
       string: !!binary |
-        H4sIAAAAAAAAAwAAAP//jJJNa9wwEIbv/hViznaRN/vpW9tDCbmEQkmgDkaRxl519YUkl6bL/vci
-        e7N2vqAXH+aZd/y+ozlmhIAUUBHgexa5dqr4end/+7d84nf0dkG71eH6x5dveGPu9fLw/QrypLCP
-        v5DHZ9UnbrVTGKU1I+YeWcQ0tdysy+2G7nblALQVqJKsc7FY2kJLI4sFXSwLuinK7Vm9t5JjgIr8
-        zAgh5Dh8k08j8A9UhObPFY0hsA6hujQRAt6qVAEWggyRmQj5BLk1Ec1g/ViDYRprqGr4rCTHGvIa
-        WJcqV/Q0V3ls+8CSc9MrNQPMGBtZSj74fTiT08Whsp3z9jG8kkIrjQz7xiML1iQ3IVoHAz1lhDwM
-        m+hfhAPnrXaxifaAw+9Kuh3nwfQAE92dWbSRqZmo3OTvjGsERiZVmK0SOON7FJN02jvrhbQzkM1C
-        vzXz3uwxuDTd/4yfAOfoIorGeRSSvww8tXlM5/lR22XJg2EI6H9Ljk2U6NNDCGxZr8ajgfAUIuqm
-        laZD77wcL6d1zWpNWbvG1WoH2Sn7BwAA//8DAFzfDxVHAwAA
+        H4sIAAAAAAAAAwAAAP//jJJBa9wwEIXv/hViznZxvOtN4lsI9FDalIZCCXUwijS21cgaIcmhZdn/
+        XmRv1k6aQi4+zDdv/N5o9gljoCRUDETPgxiszq7v7nr+7XPZ39KTuvl09fXH7ffHjzcCd/QFIY0K
+        eviFIjyrPggarMagyMxYOOQB49Sz812xKYvyopjAQBJ1lHU2ZFvKBmVUVuTFNsvPs7OLo7onJdBD
+        xX4mjDG2n77Rp5H4GyqWp8+VAb3nHUJ1amIMHOlYAe698oGbAOkCBZmAZrK+r8HwAWuoarjSSmAN
+        aQ28i5VNflirHLaj59G5GbVeAW4MBR6TT37vj+Rwcqips44e/CsptMoo3zcOuScT3fhAFiZ6SBi7
+        nzYxvggH1tFgQxPoEaffFZvtPA+WB1jo5ZEFClyvRNtN+sa4RmLgSvvVKkFw0aNcpMve+SgVrUCy
+        Cv2vmbdmz8GV6d4zfgFCoA0oG+tQKvEy8NLmMJ7n/9pOS54Mg0f3pAQ2QaGLDyGx5aOejwb8Hx9w
+        aFplOnTWqflyWtuUu5y3OyzLS0gOyV8AAAD//wMASTwemUcDAAA=
     headers:
       CF-RAY:
-      - 996f142248320e95-MXP
+      - 999d01b75f7cc3fd-EWR
       Connection:
       - keep-alive
       Content-Encoding:
@@ -62,14 +68,14 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Fri, 31 Oct 2025 00:36:32 GMT
+      - Wed, 05 Nov 2025 14:23:03 GMT
       Server:
       - cloudflare
       Set-Cookie:
-      - __cf_bm=EsqV2uuHnkXCOCTW4ZgAmdmEKc4Mm3rVQw8twE209RI-1761870992-1.0.1.1-9xJoNnZ.Dpd56yJgZXGBk6iT6jSA7DBzzX2o7PVGP0baco7.cdHEcyfEimiAqgD6HguvoiO.P6i.fx.aeHfpa6fmsTSTXeC5pUlCU_yJcRA;
-        path=/; expires=Fri, 31-Oct-25 01:06:32 GMT; domain=.api.openai.com; HttpOnly;
+      - __cf_bm=REDACTED;
+        path=/; expires=Wed, 05-Nov-25 14:53:03 GMT; domain=.api.openai.com; HttpOnly;
         Secure; SameSite=None
-      - _cfuvid=KGFXdIUU9WK3qTOFK_oSCA_E_JdqnOONwqzgqMuyGto-1761870992424-0.0.1.1-604800000;
+      - _cfuvid=REDACTED;
         path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
       Strict-Transport-Security:
       - max-age=31536000; includeSubDomains; preload
@@ -84,37 +90,263 @@ interactions:
       cf-cache-status:
       - DYNAMIC
       openai-organization:
-      - crewai-iuxna1
+      - user-REDACTED
       openai-processing-ms:
-      - '488'
+      - '776'
       openai-project:
-      - proj_xitITlrFeen7zjNSzML82h9x
+      - proj_REDACTED
       openai-version:
       - '2020-10-01'
       x-envoy-upstream-service-time:
-      - '519'
+      - '788'
       x-openai-proxy-wasm:
       - v0.1
-      x-ratelimit-limit-project-tokens:
-      - '150000000'
       x-ratelimit-limit-requests:
-      - '30000'
+      - '10000'
       x-ratelimit-limit-tokens:
-      - '150000000'
-      x-ratelimit-remaining-project-tokens:
-      - '149999945'
+      - '200000'
       x-ratelimit-remaining-requests:
-      - '29999'
+      - '9996'
       x-ratelimit-remaining-tokens:
-      - '149999945'
-      x-ratelimit-reset-project-tokens:
-      - 0s
+      - '199820'
       x-ratelimit-reset-requests:
-      - 2ms
+      - 31.396s
       x-ratelimit-reset-tokens:
-      - 0s
+      - 54ms
       x-request-id:
-      - req_4a7800f3477e434ba981c5ba29a6d7d3
+      - req_REDACTED
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"Ensure your final answer strictly
+      adheres to the following OpenAPI schema: {\n  \"type\": \"json_schema\",\n  \"json_schema\":
+      {\n    \"name\": \"SimpleModel\",\n    \"strict\": true,\n    \"schema\": {\n      \"properties\":
+      {\n        \"name\": {\n          \"title\": \"Name\",\n          \"type\":
+      \"string\"\n        },\n        \"age\": {\n          \"title\": \"Age\",\n          \"type\":
+      \"integer\"\n        }\n      },\n      \"required\": [\n        \"name\",\n        \"age\"\n      ],\n      \"title\":
+      \"SimpleModel\",\n      \"type\": \"object\",\n      \"additionalProperties\":
+      false\n    }\n  }\n}\n\nDo not include the OpenAPI schema in the final output.
+      Ensure the final output does not include any code block markers like ```json
+      or ```python."},{"role":"user","content":"Name: Alice, Age: 30"}],"model":"gpt-4o-mini","response_format":{"type":"json_schema","json_schema":{"schema":{"properties":{"name":{"title":"Name","type":"string"},"age":{"title":"Age","type":"integer"}},"required":["name","age"],"title":"SimpleModel","type":"object","additionalProperties":false},"name":"SimpleModel","strict":true}},"stream":false}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate, zstd
+      connection:
+      - keep-alive
+      content-length:
+      - '1186'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=REDACTED;
+        _cfuvid=REDACTED
+      host:
+      - api.openai.com
+      user-REDACTED:
+      - OpenAI/Python 1.109.1
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-helper-method:
+      - chat.completions.parse
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.109.1
+      x-stainless-read-timeout:
+      - '600'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.9
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAAwAAAP//jJJBb5wwEIXv/AprzlARWDYJt6pKe64UVY1KhLxmgNk1tmWbpOlq/3tl
+        2CykTaVeOMw3b3hvPMeIMaAGSgai514MRiafHh763WH/fE/3+89fX6z98vx0cNmv79/43R3EQaF3
+        exT+VfVB6MFI9KTVjIVF7jFMvbreZnmRFTf5BAbdoAyyzvhko5OBFCVZmm2S9Dq5ujmre00CHZTs
+        R8QYY8fpG3yqBn9CydL4tTKgc7xDKC9NjIHVMlSAO0fOc+UhXqDQyqOarB8rUHzACsoKPkoSWEFc
+        Ae9CJU9Pa5XFdnQ8OFejlCvAldKeh+ST38czOV0cSt0Zq3fuDym0pMj1tUXutApunNcGJnqKGHuc
+        NjG+CQfG6sH42usDTr/L8s08D5YHWOjtmXntuVyJNnn8zri6Qc9JutUqQXDRY7NIl73zsSG9AtEq
+        9N9m3ps9ByfV/c/4BQiBxmNTG4sNibeBlzaL4Tz/1XZZ8mQYHNonElh7QhseosGWj3I+GnAvzuNQ
+        t6Q6tMbSfDmtqYttytstFsUtRKfoNwAAAP//AwAgZutQRwMAAA==
+    headers:
+      CF-RAY:
+      - 999d01bccc84c3fd-EWR
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Wed, 05 Nov 2025 14:23:03 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - user-REDACTED
+      openai-processing-ms:
+      - '418'
+      openai-project:
+      - proj_REDACTED
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '438'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '200000'
+      x-ratelimit-remaining-requests:
+      - '9995'
+      x-ratelimit-remaining-tokens:
+      - '199820'
+      x-ratelimit-reset-requests:
+      - 39.161s
+      x-ratelimit-reset-tokens:
+      - 54ms
+      x-request-id:
+      - req_REDACTED
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"Ensure your final answer strictly
+      adheres to the following OpenAPI schema: {\n  \"type\": \"json_schema\",\n  \"json_schema\":
+      {\n    \"name\": \"SimpleModel\",\n    \"strict\": true,\n    \"schema\": {\n      \"properties\":
+      {\n        \"name\": {\n          \"title\": \"Name\",\n          \"type\":
+      \"string\"\n        },\n        \"age\": {\n          \"title\": \"Age\",\n          \"type\":
+      \"integer\"\n        }\n      },\n      \"required\": [\n        \"name\",\n        \"age\"\n      ],\n      \"title\":
+      \"SimpleModel\",\n      \"type\": \"object\",\n      \"additionalProperties\":
+      false\n    }\n  }\n}\n\nDo not include the OpenAPI schema in the final output.
+      Ensure the final output does not include any code block markers like ```json
+      or ```python."},{"role":"user","content":"Name: Alice, Age: 30"}],"model":"gpt-4o-mini","response_format":{"type":"json_schema","json_schema":{"schema":{"properties":{"name":{"title":"Name","type":"string"},"age":{"title":"Age","type":"integer"}},"required":["name","age"],"title":"SimpleModel","type":"object","additionalProperties":false},"name":"SimpleModel","strict":true}},"stream":false}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate, zstd
+      connection:
+      - keep-alive
+      content-length:
+      - '1186'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=REDACTED;
+        _cfuvid=REDACTED
+      host:
+      - api.openai.com
+      user-REDACTED:
+      - OpenAI/Python 1.109.1
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-helper-method:
+      - chat.completions.parse
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.109.1
+      x-stainless-read-timeout:
+      - '600'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.9
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAAwAAAP//jJJBb9QwEIXv+RXWnBOUTTbbNjcEasUNIXGoSBV57UlicGzLnsDCav87
+        cna7SaFIXHKYb97kvfEcE8ZASagZiIGTGJ3O3j0+DvuHzaF6+HhwQXy6p1/y833+If/xfpSQRoXd
+        f0VBz6o3wo5OIylrzlh45IRx6uZmV5RVUd2WMxitRB1lvaNsa7NRGZUVebHN8ptsc3tRD1YJDFCz
+        LwljjB3nb/RpJB6gZnn6XBkxBN4j1NcmxsBbHSvAQ1CBuCFIFyisITSz9WMDho/YQN3AW60ENpA2
+        wPtYKfPTWuWxmwKPzs2k9QpwYyzxmHz2+3Qhp6tDbXvn7T78IYVOGRWG1iMP1kQ3gayDmZ4Sxp7m
+        TUwvwoHzdnTUkv2G8++KcnueB8sDLPTuwsgS1yvRtkxfGddKJK50WK0SBBcDykW67J1PUtkVSFah
+        /zbz2uxzcGX6/xm/ACHQEcrWeZRKvAy8tHmM5/mvtuuSZ8MQ0H9XAltS6ONDSOz4pM9HA+FnIBzb
+        TpkevfPqfDmda6tdzrsdVtUdJKfkNwAAAP//AwC1O1noRwMAAA==
+    headers:
+      CF-RAY:
+      - 999d01c03eabc3fd-EWR
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Wed, 05 Nov 2025 14:23:04 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - user-REDACTED
+      openai-processing-ms:
+      - '673'
+      openai-project:
+      - proj_REDACTED
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '698'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '200000'
+      x-ratelimit-remaining-requests:
+      - '9995'
+      x-ratelimit-remaining-tokens:
+      - '199820'
+      x-ratelimit-reset-requests:
+      - 38.622s
+      x-ratelimit-reset-tokens:
+      - 54ms
+      x-request-id:
+      - req_REDACTED
     status:
       code: 200
       message: OK

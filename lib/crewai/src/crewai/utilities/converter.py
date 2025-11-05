@@ -4,15 +4,15 @@ from collections.abc import Callable
 from copy import deepcopy
 import json
 import re
-from typing import TYPE_CHECKING, Any, Final, TypedDict
+from typing import TYPE_CHECKING, Any, Final, Literal, TypedDict
 
 from pydantic import BaseModel, ValidationError
 from typing_extensions import Unpack
 
 from crewai.agents.agent_builder.utilities.base_output_converter import OutputConverter
+from crewai.utilities.i18n import get_i18n
 from crewai.utilities.internal_instructor import InternalInstructor
 from crewai.utilities.printer import Printer
-from crewai.utilities.pydantic_schema_parser import PydanticSchemaParser
 
 
 if TYPE_CHECKING:
@@ -22,6 +22,7 @@ if TYPE_CHECKING:
     from crewai.llms.base_llm import BaseLLM
 
 _JSON_PATTERN: Final[re.Pattern[str]] = re.compile(r"({.*})", re.DOTALL)
+_I18N = get_i18n()
 
 
 class ConverterError(Exception):
@@ -62,7 +63,10 @@ class Converter(OutputConverter):
                     ],
                     response_model=self.model,
                 )
-                result = self.model.model_validate_json(response)
+                if isinstance(response, self.model):
+                    result = response
+                else:
+                    result = self.model.model_validate_json(response)
             else:
                 response = self.llm.call(
                     [
@@ -222,6 +226,47 @@ def validate_model(
     return exported_result
 
 
+def _extract_json_from_text(text: str) -> str:
+    """Extract JSON from text that may be wrapped in markdown code blocks.
+
+    Handles various formats:
+    - Direct JSON strings (starts with { or [)
+    - ```json ... ``` blocks
+    - ```python ... ``` blocks
+    - ``` ... ``` blocks (no language specifier)
+    - `{...}` inline code with JSON
+    - Text with embedded JSON objects/arrays
+
+    Args:
+        text: Text potentially containing JSON.
+
+    Returns:
+        Extracted JSON string or original text if no clear JSON found.
+    """
+    text = text.strip()
+
+    if text.startswith(("{", "[")):
+        return text
+
+    code_block_patterns = [
+        r"```(?:json|python)?\s*\n?([\s\S]*?)\n?```",  # Standard code blocks
+        r"`([{[][\s\S]*?[}\]])`",  # Inline code with JSON
+    ]
+
+    for pattern in code_block_patterns:
+        matches = re.findall(pattern, text, re.IGNORECASE)
+        for match in matches:
+            cleaned: str = match.strip()
+            if cleaned.startswith(("{", "[")):
+                return cleaned
+
+    json_match = _JSON_PATTERN.search(text)
+    if json_match:
+        return json_match.group(0)
+
+    return text
+
+
 def handle_partial_json(
     result: str,
     model: type[BaseModel],
@@ -240,23 +285,27 @@ def handle_partial_json(
 
     Returns:
         The converted result as a dict, BaseModel, or original string.
+
+    Raises:
+        ValidationError: If JSON was successfully extracted and parsed but failed
+            Pydantic validation. This allows retry logic to kick in.
     """
-    match = _JSON_PATTERN.search(result)
-    if match:
-        try:
-            exported_result = model.model_validate_json(match.group())
-            if is_json_output:
-                return exported_result.model_dump()
-            return exported_result
-        except json.JSONDecodeError:
-            pass
-        except ValidationError:
-            pass
-        except Exception as e:
-            Printer().print(
-                content=f"Unexpected error during partial JSON handling: {type(e).__name__}: {e}. Attempting alternative conversion method.",
-                color="red",
-            )
+    extracted_json = _extract_json_from_text(result)
+
+    try:
+        exported_result = model.model_validate_json(extracted_json)
+        if is_json_output:
+            return exported_result.model_dump()
+        return exported_result
+    except json.JSONDecodeError:
+        pass
+    except ValidationError:
+        raise
+    except Exception as e:
+        Printer().print(
+            content=f"Unexpected error during partial JSON handling: {type(e).__name__}: {e}. Attempting alternative conversion method.",
+            color="red",
+        )
 
     return convert_with_instructions(
         result=result,
@@ -335,26 +384,9 @@ def get_conversion_instructions(
     Returns:
 
     """
-    instructions = "Please convert the following text into valid JSON."
-    if (
-        llm
-        and not isinstance(llm, str)
-        and hasattr(llm, "supports_function_calling")
-        and llm.supports_function_calling()
-    ):
-        model_schema = PydanticSchemaParser(model=model).get_schema()
-        instructions += (
-            f"\n\nOutput ONLY the valid JSON and nothing else.\n\n"
-            f"Use this format exactly:\n```json\n{model_schema}\n```"
-        )
-    else:
-        model_description = generate_model_description(model)
-        schema_json = json.dumps(model_description["json_schema"]["schema"], indent=2)
-        instructions += (
-            f"\n\nOutput ONLY the valid JSON and nothing else.\n\n"
-            f"Use this format exactly:\n```json\n{schema_json}\n```"
-        )
-    return instructions
+    schema_dict = generate_model_description(model)
+    schema = json.dumps(schema_dict, indent=2)
+    return _I18N.slice("formatted_task_instructions").format(output_format=schema)
 
 
 class CreateConverterKwargs(TypedDict, total=False):
@@ -589,7 +621,10 @@ def ensure_all_properties_required(schema: dict[str, Any]) -> dict[str, Any]:
     return schema
 
 
-def generate_model_description(model: type[BaseModel]) -> dict[str, Any]:
+def generate_model_description(
+    model: type[BaseModel],
+    provider: Literal["openai", "gemini", "anthropic", "raw"] = "openai",
+) -> dict[str, Any]:
     """Generate JSON schema description of a Pydantic model.
 
     This function takes a Pydantic model class and returns its JSON schema,
@@ -598,9 +633,28 @@ def generate_model_description(model: type[BaseModel]) -> dict[str, Any]:
 
     Args:
         model: A Pydantic model class.
+        provider: The LLM provider format to use. Options:
+            - "openai": OpenAI's wrapped format with name and strict fields (default)
+            - "gemini": Direct JSON schema for Gemini API
+            - "anthropic": Tool input_schema format for Claude API
+            - "raw": Plain JSON schema without any provider-specific wrapper
 
     Returns:
-        A JSON schema dictionary representation of the model.
+        A JSON schema dictionary representation of the model in the requested format.
+
+    Examples:
+        >>> class User(BaseModel):
+        ...     name: str
+        ...     age: int
+        >>> # OpenAI format (default)
+        >>> generate_model_description(User)
+        {'type': 'json_schema', 'json_schema': {'name': 'User', 'strict': True, 'schema': {...}}}
+        >>> # Gemini format
+        >>> generate_model_description(User, provider="gemini")
+        {'type': 'object', 'properties': {...}, 'required': [...]}
+        >>> # Anthropic format (for tool use)
+        >>> generate_model_description(User, provider="anthropic")
+        {'name': 'User', 'description': '...', 'input_schema': {'type': 'object', 'properties': {...}, 'required': [...]}}
     """
 
     json_schema = model.model_json_schema(ref_template="#/$defs/{model}")
@@ -620,6 +674,25 @@ def generate_model_description(model: type[BaseModel]) -> dict[str, Any]:
     json_schema = convert_oneof_to_anyof(json_schema)
     json_schema = ensure_all_properties_required(json_schema)
 
+    if provider == "openai":
+        return {
+            "type": "json_schema",
+            "json_schema": {
+                "name": model.__name__,
+                "strict": True,
+                "schema": json_schema,
+            },
+        }
+    if provider == "gemini":
+        return json_schema
+    if provider == "anthropic":
+        return {
+            "name": model.__name__,
+            "description": model.__doc__ or f"Schema for {model.__name__}",
+            "input_schema": json_schema,
+        }
+    if provider == "raw":
+        return json_schema
     return {
         "type": "json_schema",
         "json_schema": {

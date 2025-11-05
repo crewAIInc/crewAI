@@ -5,9 +5,17 @@ the ReAct (Reasoning and Acting) format, converting them into structured
 AgentAction or AgentFinish objects.
 """
 
+from __future__ import annotations
+
 from dataclasses import dataclass
+import re
+from typing import TYPE_CHECKING
 
 from json_repair import repair_json  # type: ignore[import-untyped]
+
+
+if TYPE_CHECKING:
+    from pydantic import BaseModel
 
 from crewai.agents.constants import (
     ACTION_INPUT_ONLY_REGEX,
@@ -42,6 +50,7 @@ class AgentFinish:
     thought: str
     output: str
     text: str
+    pydantic: BaseModel | None = None  # Optional structured output from response_model
 
 
 class OutputParserError(Exception):
@@ -140,7 +149,7 @@ def _extract_thought(text: str) -> str:
         text: The full agent output text.
 
     Returns:
-        The extracted thought string.
+        The extracted thought string with duplicate consecutive "Thought:" prefixes removed.
     """
     thought_index = text.find("\nAction")
     if thought_index == -1:
@@ -149,7 +158,13 @@ def _extract_thought(text: str) -> str:
         return ""
     thought = text[:thought_index].strip()
     # Remove any triple backticks from the thought string
-    return thought.replace("```", "").strip()
+    thought = thought.replace("```", "").strip()
+
+    thought = re.sub(r"(?i)^thought:\s*", "", thought, count=1)
+
+    thought = re.sub(r"(?i)\nthought:\s*", "\n", thought)
+
+    return thought.strip()
 
 
 def _clean_action(text: str) -> str:

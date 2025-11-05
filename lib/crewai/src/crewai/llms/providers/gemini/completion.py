@@ -1,6 +1,7 @@
+import json
 import logging
 import os
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 
 from pydantic import BaseModel
 
@@ -12,6 +13,12 @@ from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededError,
 )
 from crewai.utilities.types import LLMMessage
+
+
+if TYPE_CHECKING:
+    from google.genai.types import (  # type: ignore[import-untyped]
+        GenerateContentResponse,
+    )
 
 
 try:
@@ -294,7 +301,7 @@ class GeminiCompletion(BaseLLM):
 
         if response_model:
             config_params["response_mime_type"] = "application/json"
-            config_params["response_schema"] = response_model.model_json_schema()
+            config_params["response_json_schema"] = response_model.model_json_schema()
 
         # Handle tools for supported models
         if tools and self.supports_tools:
@@ -427,9 +434,30 @@ class GeminiCompletion(BaseLLM):
                             return result
 
         content = response.text if hasattr(response, "text") else ""
-        content = self._apply_stop_words(content)
 
         messages_for_event = self._convert_contents_to_dict(contents)
+
+        if response_model:
+            try:
+                parsed_data = json.loads(content)
+                parsed_object = response_model.model_validate(parsed_data)
+
+                self._emit_call_completed_event(
+                    response=parsed_object.model_dump_json(),
+                    call_type=LLMCallType.LLM_CALL,
+                    from_task=from_task,
+                    from_agent=from_agent,
+                    messages=messages_for_event,
+                )
+
+                return parsed_object
+            except (json.JSONDecodeError, ValueError) as e:
+                logging.error(f"Failed to parse structured output: {e}")
+                raise ValueError(
+                    f"Failed to parse structured output from Gemini: {e}"
+                ) from e
+
+        content = self._apply_stop_words(content)
 
         self._emit_call_completed_event(
             response=content,
@@ -449,7 +477,7 @@ class GeminiCompletion(BaseLLM):
         from_task: Any | None = None,
         from_agent: Any | None = None,
         response_model: type[BaseModel] | None = None,
-    ) -> str:
+    ) -> str | Any:
         """Handle streaming content generation."""
         full_response = ""
         function_calls = {}
@@ -502,6 +530,26 @@ class GeminiCompletion(BaseLLM):
                     return result
 
         messages_for_event = self._convert_contents_to_dict(contents)
+
+        if response_model:
+            try:
+                parsed_data = json.loads(full_response)
+                parsed_object = response_model.model_validate(parsed_data)
+
+                self._emit_call_completed_event(
+                    response=parsed_object.model_dump_json(),
+                    call_type=LLMCallType.LLM_CALL,
+                    from_task=from_task,
+                    from_agent=from_agent,
+                    messages=messages_for_event,
+                )
+
+                return parsed_object
+            except (json.JSONDecodeError, ValueError) as e:
+                logging.error(f"Failed to parse structured output: {e}")
+                raise ValueError(
+                    f"Failed to parse structured output from Gemini: {e}"
+                ) from e
 
         self._emit_call_completed_event(
             response=full_response,
@@ -558,7 +606,8 @@ class GeminiCompletion(BaseLLM):
         # Default context window size for Gemini models
         return int(1048576 * CONTEXT_WINDOW_USAGE_RATIO)  # 1M tokens
 
-    def _extract_token_usage(self, response: dict[str, Any]) -> dict[str, Any]:
+    @staticmethod
+    def _extract_token_usage(response: GenerateContentResponse) -> dict[str, Any]:  # type: ignore[no-any-unimported]
         """Extract token usage from Gemini response."""
         if hasattr(response, "usage_metadata"):
             usage = response.usage_metadata
@@ -570,10 +619,10 @@ class GeminiCompletion(BaseLLM):
             }
         return {"total_tokens": 0}
 
+    @staticmethod
     def _convert_contents_to_dict(  # type: ignore[no-any-unimported]
-        self,
         contents: list[types.Content],
-    ) -> list[dict[str, str]]:
+    ) -> list[dict[str, str | None]]:
         """Convert contents to dict format."""
         return [
             {

@@ -13,7 +13,7 @@ load_result = load_dotenv(override=True)
 @pytest.fixture(autouse=True)
 def setup_test_environment():
     """Set up test environment with a temporary directory for SQLite storage."""
-    with tempfile.TemporaryDirectory() as temp_dir:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as temp_dir:
         # Create the directory with proper permissions
         storage_dir = Path(temp_dir) / "crewai_test_storage"
         storage_dir.mkdir(parents=True, exist_ok=True)
@@ -40,7 +40,7 @@ def setup_test_environment():
         yield
 
         os.environ.pop("CREWAI_TESTING", None)
-        # Cleanup is handled automatically when tempfile context exits
+        # TemporaryDirectory handles cleanup automatically with ignore_cleanup_errors=True
 
 
 def pytest_configure(config):
@@ -199,6 +199,7 @@ def clear_event_bus_handlers(setup_test_environment):
     from crewai.experimental.evaluation.evaluation_listener import (
         EvaluationTraceCallback,
     )
+    from crewai.rag.config.utils import clear_rag_config
 
     yield
 
@@ -210,6 +211,9 @@ def clear_event_bus_handlers(setup_test_environment):
     callback.traces.clear()
     callback.current_agent_id = None
     callback.current_task_id = None
+
+    # Clear RAG config to prevent ChromaDB state from persisting across tests
+    clear_rag_config()
 
 
 @pytest.fixture(scope="module")

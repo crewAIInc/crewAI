@@ -1,55 +1,149 @@
 interactions:
 - request:
-    body: '{"messages": [{"role": "system", "content": "You are Guardrail Agent. You
-      are a expert at validating the output of a task. By providing effective feedback
-      if the output is not valid.\nYour personal goal is: Validate the output of the
-      task\n\nTo give my best complete final answer to the task respond using the
-      exact following format:\n\nThought: I now can give a great answer\nFinal Answer:
-      Your final answer must be the great and the most complete as possible, it must
-      be outcome described.\n\nI MUST use these formats, my job depends on it!\nIMPORTANT:
-      Your final answer MUST contain all the information requested in the following
-      format: {\n  \"valid\": bool,\n  \"feedback\": str | None\n}\n\nIMPORTANT: Ensure
-      the final output does not include any code block markers like ```json or ```python."},
-      {"role": "user", "content": "\n        Ensure the following task result complies
-      with the given guardrail.\n\n        Task result:\n        \n        Lorem Ipsum
-      is simply dummy text of the printing and typesetting industry. Lorem Ipsum has
-      been the industry''s standard dummy text ever\n        \n\n        Guardrail:\n        Ensure
-      the result has less than 10 words\n        \n        Your task:\n        - Confirm
-      if the Task result complies with the guardrail.\n        - If not, provide clear
-      feedback explaining what is wrong (e.g., by how much it violates the rule, or
-      what specific part fails).\n        - Focus only on identifying issues \u2014
-      do not propose corrections.\n        - If the Task result complies with the
-      guardrail, saying that is valid\n        "}], "model": "gpt-4o-mini", "stop":
-      ["\nObservation:"]}'
+    body: '{"trace_id": "734566e7-36f6-4fc4-be61-bfaa7f36b9ff", "execution_type":
+      "crew", "user_identifier": null, "execution_context": {"crew_fingerprint": null,
+      "crew_name": "Unknown Crew", "flow_name": null, "crewai_version": "1.3.0", "privacy_level":
+      "standard"}, "execution_metadata": {"expected_duration_estimate": 300, "agent_count":
+      0, "task_count": 0, "flow_method_count": 0, "execution_started_at": "2025-11-05T14:07:57.980378+00:00"}}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate, zstd
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '434'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - CrewAI-CLI/1.3.0
+      X-Crewai-Version:
+      - 1.3.0
+    method: POST
+    uri: https://app.crewai.com/crewai_plus/api/v1/tracing/batches
+  response:
+    body:
+      string: '{"error":"bad_credentials","message":"Bad credentials"}'
+    headers:
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '55'
+      Content-Type:
+      - application/json; charset=utf-8
+      Date:
+      - Wed, 05 Nov 2025 14:07:58 GMT
+      cache-control:
+      - no-store
+      content-security-policy:
+      - 'default-src ''self'' *.app.crewai.com app.crewai.com; script-src ''self''
+        ''unsafe-inline'' *.app.crewai.com app.crewai.com https://cdn.jsdelivr.net/npm/apexcharts
+        https://www.gstatic.com https://run.pstmn.io https://apis.google.com https://apis.google.com/js/api.js
+        https://accounts.google.com https://accounts.google.com/gsi/client https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css.map
+        https://*.google.com https://docs.google.com https://slides.google.com https://js.hs-scripts.com
+        https://js.sentry-cdn.com https://browser.sentry-cdn.com https://www.googletagmanager.com
+        https://js-na1.hs-scripts.com https://js.hubspot.com http://js-na1.hs-scripts.com
+        https://bat.bing.com https://cdn.amplitude.com https://cdn.segment.com https://d1d3n03t5zntha.cloudfront.net/
+        https://descriptusercontent.com https://edge.fullstory.com https://googleads.g.doubleclick.net
+        https://js.hs-analytics.net https://js.hs-banner.com https://js.hsadspixel.net
+        https://js.hscollectedforms.net https://js.usemessages.com https://snap.licdn.com
+        https://static.cloudflareinsights.com https://static.reo.dev https://www.google-analytics.com
+        https://share.descript.com/; style-src ''self'' ''unsafe-inline'' *.app.crewai.com
+        app.crewai.com https://cdn.jsdelivr.net/npm/apexcharts; img-src ''self'' data:
+        *.app.crewai.com app.crewai.com https://zeus.tools.crewai.com https://dashboard.tools.crewai.com
+        https://cdn.jsdelivr.net https://forms.hsforms.com https://track.hubspot.com
+        https://px.ads.linkedin.com https://px4.ads.linkedin.com https://www.google.com
+        https://www.google.com.br; font-src ''self'' data: *.app.crewai.com app.crewai.com;
+        connect-src ''self'' *.app.crewai.com app.crewai.com https://zeus.tools.crewai.com
+        https://connect.useparagon.com/ https://zeus.useparagon.com/* https://*.useparagon.com/*
+        https://run.pstmn.io https://connect.tools.crewai.com/ https://*.sentry.io
+        https://www.google-analytics.com https://edge.fullstory.com https://rs.fullstory.com
+        https://api.hubspot.com https://forms.hscollectedforms.net https://api.hubapi.com
+        https://px.ads.linkedin.com https://px4.ads.linkedin.com https://google.com/pagead/form-data/16713662509
+        https://google.com/ccm/form-data/16713662509 https://www.google.com/ccm/collect
+        https://worker-actionkit.tools.crewai.com https://api.reo.dev; frame-src ''self''
+        *.app.crewai.com app.crewai.com https://connect.useparagon.com/ https://zeus.tools.crewai.com
+        https://zeus.useparagon.com/* https://connect.tools.crewai.com/ https://docs.google.com
+        https://drive.google.com https://slides.google.com https://accounts.google.com
+        https://*.google.com https://app.hubspot.com/ https://td.doubleclick.net https://www.googletagmanager.com/
+        https://www.youtube.com https://share.descript.com'
+      expires:
+      - '0'
+      permissions-policy:
+      - camera=(), microphone=(self), geolocation=()
+      pragma:
+      - no-cache
+      referrer-policy:
+      - strict-origin-when-cross-origin
+      strict-transport-security:
+      - max-age=63072000; includeSubDomains
+      vary:
+      - Accept
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-permitted-cross-domain-policies:
+      - none
+      x-request-id:
+      - af1156b8-6154-4157-8848-f907a3c35325
+      x-runtime:
+      - '0.082769'
+      x-xss-protection:
+      - 1; mode=block
+    status:
+      code: 401
+      message: Unauthorized
+- request:
+    body: "{\"messages\":[{\"role\":\"system\",\"content\":\"You are Guardrail Agent.
+      You are a expert at validating the output of a task. By providing effective
+      feedback if the output is not valid.\\nYour personal goal is: Validate the output
+      of the task\\n\\nTo give my best complete final answer to the task respond using
+      the exact following format:\\n\\nThought: I now can give a great answer\\nFinal
+      Answer: Your final answer must be the great and the most complete as possible,
+      it must be outcome described.\\n\\nI MUST use these formats, my job depends
+      on it!\"},{\"role\":\"user\",\"content\":\"\\n        Ensure the following task
+      result complies with the given guardrail.\\n\\n        Task result:\\n        \\n
+      \       Lorem Ipsum is simply dummy text of the printing and typesetting industry.
+      Lorem Ipsum has been the industry's standard dummy text ever\\n        \\n\\n
+      \       Guardrail:\\n        Ensure the result has less than 10 words\\n\\n
+      \       Your task:\\n        - Confirm if the Task result complies with the
+      guardrail.\\n        - If not, provide clear feedback explaining what is wrong
+      (e.g., by how much it violates the rule, or what specific part fails).\\n        -
+      Focus only on identifying issues \u2014 do not propose corrections.\\n        -
+      If the Task result complies with the guardrail, saying that is valid\\n        \"}],\"model\":\"gpt-4o\",\"response_format\":{\"type\":\"json_schema\",\"json_schema\":{\"schema\":{\"properties\":{\"valid\":{\"description\":\"Whether
+      the task output complies with the guardrail\",\"title\":\"Valid\",\"type\":\"boolean\"},\"feedback\":{\"anyOf\":[{\"type\":\"string\"},{\"type\":\"null\"}],\"description\":\"A
+      feedback about the task output if it is not valid\",\"title\":\"Feedback\"}},\"required\":[\"valid\",\"feedback\"],\"title\":\"LLMGuardrailResult\",\"type\":\"object\",\"additionalProperties\":false},\"name\":\"LLMGuardrailResult\",\"strict\":true}},\"stream\":false}"
     headers:
       accept:
       - application/json
       accept-encoding:
-      - gzip, deflate
+      - gzip, deflate, zstd
       connection:
       - keep-alive
       content-length:
-      - '1629'
+      - '1820'
       content-type:
       - application/json
       host:
       - api.openai.com
-      user-agent:
-      - OpenAI/Python 1.68.2
+      user-REDACTED:
+      - OpenAI/Python 1.109.1
       x-stainless-arch:
       - arm64
       x-stainless-async:
       - 'false'
+      x-stainless-helper-method:
+      - chat.completions.parse
       x-stainless-lang:
       - python
       x-stainless-os:
       - MacOS
       x-stainless-package-version:
-      - 1.68.2
-      x-stainless-raw-response:
-      - 'true'
+      - 1.109.1
       x-stainless-read-timeout:
-      - '600.0'
+      - '600'
       x-stainless-retry-count:
       - '0'
       x-stainless-runtime:
@@ -61,19 +155,18 @@ interactions:
   response:
     body:
       string: !!binary |
-        H4sIAAAAAAAAAwAAAP//jFPLbtswELz7KxY824GkxLGtW4KiQB+XBmkRtAqENbmSmFAkQVJ2UsP/
-        HlByLKdNgV4IcGdnOPvgbgLApGA5MN5g4K1Vs+ub718rm324+5z+/CLt1dXD5fU3s1jd3Wx//GbT
-        yDDrB+LhlXXGTWsVBWn0AHNHGCiqpouL+XKVZum8B1ojSEVabcPswsxaqeUsS7KLWbKYpcsDuzGS
-        k2c5/JoAAOz6M/rUgp5YDsn0NdKS91gTy49JAMwZFSMMvZc+oA5sOoLc6EC6t37bmK5uQg6fQJst
-        cNRQyw0BQh39A2q/JQdQ6I9So4Kr/p7DrtAABdugkqJgOVSoPE2HYEUk1sgfY7xgtw1BQP8Ijnyn
-        AsTHUWoP6SVsjRN+CvTEiYTUNYSGoO7QCYdSgZKtDGAqqCiaCA1qSJOBBetnOAicFazQ+9MCHVWd
-        x9hk3Sl1AqDWJmAcUt/a+wOyPzZTmdo6s/Z/UFkltfRN6Qi90bFxPhjLenQ/Abjvh9a9mQOzzrQ2
-        lME8Uv/ceTIf9Ni4KyM6Tw9gMAHVCWt+OX1HrxQUUCp/MnbGkTckRuq4I9gJaU6AyUnVf7t5T3uo
-        XOr6f+RHgHOygURpHQnJ31Y8pjmKX+lfaccu94aZJ7eRnMogycVJCKqwU8OCM//sA7VlJXVNzjo5
-        bHlly+R8lS2zLFklbLKfvAAAAP//AwCHe/Jh8wMAAA==
+        H4sIAAAAAAAAAwAAAP//jJNPi9swEMXv/hSDzs7i/N/1tZRCoVDoUhqaxUyksa1GloQ03jSEfPdi
+        Jxt7t1voxQf95j3PvJFOCYDQSuQgZI0sG28mHzabx+zzl2rzY7mXD+6jModPipUrF1/dd5F2Crf7
+        RZJfVHfSNd4Qa2cvWAZCps51ul7N5svpan3fg8YpMp2s8jxZuMksmy0m2f0kW12FtdOSosjhZwIA
+        cOq/XYtW0W+RQ5a+nDQUI1Yk8lsRgAjOdCcCY9SR0bJIByidZbJ916eteEaj1VbkJZpI6VaURGqH
+        cr8V+VY81gSMcQ+BYmsYlKMI1jH0kx7hoLkGrgmqFoMKqA1gBN1xy6hthMYFAq7RwjSDgwsq3sE3
+        T1KXWqIxx7SXX+1rjDCbX8u24jzuOlDZRuxCs60xI4DWOsYu9D6vpys53xIyrvLB7eIbqSi11bEu
+        AmF0tksjsvOip+cE4KnfRPsqXOGDazwX7PbU/26+mF/8xLD7EV1dITtGMzpfP6Tv+BWKGLWJo10K
+        ibImNUiHxWOrtBuBZDT13928532ZXNvqf+wHICV5JlX4QErL1xMPZYG6p/GvslvKfcMiUnjWkgrW
+        FLpNKCqxNZdbK+IxMjVFqW1FwQd9ubqlL+SunK7vl8vVWiTn5A8AAAD//wMA5vu4FcMDAAA=
     headers:
       CF-RAY:
-      - 937b20ddf9607def-GRU
+      - 999ceba45d6a3eb4-EWR
       Connection:
       - keep-alive
       Content-Encoding:
@@ -81,15 +174,17 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Tue, 29 Apr 2025 01:46:56 GMT
+      - Wed, 05 Nov 2025 14:07:59 GMT
       Server:
       - cloudflare
       Set-Cookie:
-      - __cf_bm=nHa2kVJI_yO1RIsmZcEednJ1e9UVy1liv_sjBNtSj7Q-1745891216-1.0.1.1-jUH9kFawVBjnbq8sIL2.MQx.p7JvBZWUhqlkNKRlStWSgQxT0eZMPcgq9TCQoJAjuyNwhqfpK4HuX6x5n8UbQgAb6JrWJEG823e6GpGROEA;
-        path=/; expires=Tue, 29-Apr-25 02:16:56 GMT; domain=.api.openai.com; HttpOnly;
+      - __cf_bm=REDACTED;
+        path=/; expires=Wed, 05-Nov-25 14:37:59 GMT; domain=.api.openai.com; HttpOnly;
         Secure; SameSite=None
-      - _cfuvid=gg2UeahMCOOR8YhitRtzDwENMOnTOuQdyTMVJVHG0Mg-1745891216085-0.0.1.1-604800000;
+      - _cfuvid=REDACTED;
         path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
       Transfer-Encoding:
       - chunked
       X-Content-Type-Options:
@@ -101,84 +196,83 @@ interactions:
       cf-cache-status:
       - DYNAMIC
       openai-organization:
-      - crewai-iuxna1
+      - user-REDACTED
       openai-processing-ms:
-      - '896'
+      - '685'
+      openai-project:
+      - proj_REDACTED
       openai-version:
       - '2020-10-01'
-      strict-transport-security:
-      - max-age=31536000; includeSubDomains; preload
+      x-envoy-upstream-service-time:
+      - '883'
+      x-openai-proxy-wasm:
+      - v0.1
       x-ratelimit-limit-requests:
-      - '30000'
+      - '500'
       x-ratelimit-limit-tokens:
-      - '150000000'
+      - '30000'
       x-ratelimit-remaining-requests:
-      - '29999'
+      - '499'
       x-ratelimit-remaining-tokens:
-      - '149999631'
+      - '29696'
       x-ratelimit-reset-requests:
-      - 2ms
+      - 120ms
       x-ratelimit-reset-tokens:
-      - 0s
+      - 608ms
       x-request-id:
-      - req_859221ed1aedb26cc9d335004ccf183e
+      - req_REDACTED
     status:
       code: 200
       message: OK
 - request:
-    body: '{"messages": [{"role": "system", "content": "You are Guardrail Agent. You
-      are a expert at validating the output of a task. By providing effective feedback
-      if the output is not valid.\nYour personal goal is: Validate the output of the
-      task\n\nTo give my best complete final answer to the task respond using the
-      exact following format:\n\nThought: I now can give a great answer\nFinal Answer:
-      Your final answer must be the great and the most complete as possible, it must
-      be outcome described.\n\nI MUST use these formats, my job depends on it!\nIMPORTANT:
-      Your final answer MUST contain all the information requested in the following
-      format: {\n  \"valid\": bool,\n  \"feedback\": str | None\n}\n\nIMPORTANT: Ensure
-      the final output does not include any code block markers like ```json or ```python."},
-      {"role": "user", "content": "\n        Ensure the following task result complies
-      with the given guardrail.\n\n        Task result:\n        \n        Lorem Ipsum
-      is simply dummy text of the printing and typesetting industry. Lorem Ipsum has
-      been the industry''s standard dummy text ever\n        \n\n        Guardrail:\n        Ensure
-      the result has less than 500 words\n        \n        Your task:\n        -
-      Confirm if the Task result complies with the guardrail.\n        - If not, provide
-      clear feedback explaining what is wrong (e.g., by how much it violates the rule,
-      or what specific part fails).\n        - Focus only on identifying issues \u2014
-      do not propose corrections.\n        - If the Task result complies with the
-      guardrail, saying that is valid\n        "}], "model": "gpt-4o-mini", "stop":
-      ["\nObservation:"]}'
+    body: "{\"messages\":[{\"role\":\"system\",\"content\":\"You are Guardrail Agent.
+      You are a expert at validating the output of a task. By providing effective
+      feedback if the output is not valid.\\nYour personal goal is: Validate the output
+      of the task\\n\\nTo give my best complete final answer to the task respond using
+      the exact following format:\\n\\nThought: I now can give a great answer\\nFinal
+      Answer: Your final answer must be the great and the most complete as possible,
+      it must be outcome described.\\n\\nI MUST use these formats, my job depends
+      on it!\"},{\"role\":\"user\",\"content\":\"\\n        Ensure the following task
+      result complies with the given guardrail.\\n\\n        Task result:\\n        \\n
+      \       Lorem Ipsum is simply dummy text of the printing and typesetting industry.
+      Lorem Ipsum has been the industry's standard dummy text ever\\n        \\n\\n
+      \       Guardrail:\\n        Ensure the result has less than 500 words\\n\\n
+      \       Your task:\\n        - Confirm if the Task result complies with the
+      guardrail.\\n        - If not, provide clear feedback explaining what is wrong
+      (e.g., by how much it violates the rule, or what specific part fails).\\n        -
+      Focus only on identifying issues \u2014 do not propose corrections.\\n        -
+      If the Task result complies with the guardrail, saying that is valid\\n        \"}],\"model\":\"gpt-4o\",\"response_format\":{\"type\":\"json_schema\",\"json_schema\":{\"schema\":{\"properties\":{\"valid\":{\"description\":\"Whether
+      the task output complies with the guardrail\",\"title\":\"Valid\",\"type\":\"boolean\"},\"feedback\":{\"anyOf\":[{\"type\":\"string\"},{\"type\":\"null\"}],\"description\":\"A
+      feedback about the task output if it is not valid\",\"title\":\"Feedback\"}},\"required\":[\"valid\",\"feedback\"],\"title\":\"LLMGuardrailResult\",\"type\":\"object\",\"additionalProperties\":false},\"name\":\"LLMGuardrailResult\",\"strict\":true}},\"stream\":false}"
     headers:
       accept:
       - application/json
       accept-encoding:
-      - gzip, deflate
+      - gzip, deflate, zstd
       connection:
       - keep-alive
       content-length:
-      - '1630'
+      - '1821'
       content-type:
       - application/json
-      cookie:
-      - __cf_bm=nHa2kVJI_yO1RIsmZcEednJ1e9UVy1liv_sjBNtSj7Q-1745891216-1.0.1.1-jUH9kFawVBjnbq8sIL2.MQx.p7JvBZWUhqlkNKRlStWSgQxT0eZMPcgq9TCQoJAjuyNwhqfpK4HuX6x5n8UbQgAb6JrWJEG823e6GpGROEA;
-        _cfuvid=gg2UeahMCOOR8YhitRtzDwENMOnTOuQdyTMVJVHG0Mg-1745891216085-0.0.1.1-604800000
       host:
       - api.openai.com
-      user-agent:
-      - OpenAI/Python 1.68.2
+      user-REDACTED:
+      - OpenAI/Python 1.109.1
       x-stainless-arch:
       - arm64
       x-stainless-async:
       - 'false'
+      x-stainless-helper-method:
+      - chat.completions.parse
       x-stainless-lang:
       - python
       x-stainless-os:
       - MacOS
       x-stainless-package-version:
-      - 1.68.2
-      x-stainless-raw-response:
-      - 'true'
+      - 1.109.1
       x-stainless-read-timeout:
-      - '600.0'
+      - '600'
       x-stainless-retry-count:
       - '0'
       x-stainless-runtime:
@@ -190,18 +284,17 @@ interactions:
   response:
     body:
       string: !!binary |
-        H4sIAAAAAAAAAwAAAP//jJJNb9swDIbv/hWEzvHgfHRpfesOG3opsGE7LYXBSLStRZY0iU43BPnv
-        g5wPu10H7GLAfPhSfEkeMgChlShByBZZdt7kH758e1wzbnfbO6o/f1osV3T/+BO7UNNDIWZJ4bY/
-        SPJF9U66zhti7ewJy0DIlKrO16ub27v5srgZQOcUmSRrPOcrl3fa6nxRLFZ5sc7nt2d167SkKEr4
-        ngEAHIZv6tMq+iVKKGaXSEcxYkOivCYBiOBMigiMUUdGy2I2Qukskx1a/9q6vmm5hAew7hkkWmj0
-        ngChSf0D2vhMAWBjP2qLBu6H/xIOGwuwEXs0Wm1ECRx6mp1iNZHaotylsO2N2djj9PFAdR/RnOEE
-        oLWOMQ1wsP10JserUeMaH9w2vpKKWlsd2yoQRmeTqcjOi4EeM4CnYaD9ixkJH1znuWK3o+G583KG
-        4Vz2ONLF7RmyYzQT1XI5e6NepYhRmzhZiZAoW1KjdNwf9kq7Ccgmrv/u5q3aJ+faNv9TfgRSkmdS
-        lQ+ktHzpeEwLlM78X2nXKQ8Ni0hhryVVrCmkTSiqsTen4xPxd2TqqlrbhoIP+nSBta/SueD7QtWF
-        yI7ZHwAAAP//AwAiLXhqjwMAAA==
+        H4sIAAAAAAAAAwAAAP//jJLRa9swEMbf/VeIe7ZH4sRO6rdSGBQ2BoMxylKMIp1trbIkpHPYFvK/
+        Dzlp7HYd9EUP+t13+r7THRPGQEmoGIiOk+idzu4eHr7n4qPths9l+aXQX+8/mfzP/c3t7QG/QRoV
+        dv8TBT2rPgjbO42krDlj4ZETxq7LTZmviuW2LEfQW4k6ylpH2dpm+SJfZ4tttigvws4qgQEq9iNh
+        jLHjeEaLRuIvqNgifb7pMQTeIlTXIsbAWx1vgIegAnFDkE5QWENoRtfHHRy4VnIHFfkB0x00iHLP
+        xdMOKjNofZoLPTZD4NF3RDPAjbHEY+7R8uOFnK4mtW2dt/vwSgqNMip0tUcerImGAlkHIz0ljD2O
+        wxhe5APnbe+oJvuE43Or9ercD6bxT/TmwsgS1zNRkadvtKslElc6zKYJgosO5SSdRs8HqewMJLPQ
+        /5p5q/c5uDLte9pPQAh0hLJ2HqUSLwNPZR7jcv6v7Drk0TAE9AclsCaFPn6ExIYP+rw3EH4Hwr5u
+        lGnRO6/Oy9O4Wuyb5WZbFOUGklPyFwAA//8DAO3V4+tFAwAA
     headers:
       CF-RAY:
-      - 937b2311ee091b1b-GRU
+      - 999cf03d980e15a3-EWR
       Connection:
       - keep-alive
       Content-Encoding:
@@ -209,9 +302,17 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Tue, 29 Apr 2025 01:48:26 GMT
+      - Wed, 05 Nov 2025 14:11:06 GMT
       Server:
       - cloudflare
+      Set-Cookie:
+      - __cf_bm=REDACTED;
+        path=/; expires=Wed, 05-Nov-25 14:41:06 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=REDACTED;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
       Transfer-Encoding:
       - chunked
       X-Content-Type-Options:
@@ -223,27 +324,31 @@ interactions:
       cf-cache-status:
       - DYNAMIC
       openai-organization:
-      - crewai-iuxna1
+      - user-REDACTED
       openai-processing-ms:
-      - '610'
+      - '376'
+      openai-project:
+      - proj_REDACTED
       openai-version:
       - '2020-10-01'
-      strict-transport-security:
-      - max-age=31536000; includeSubDomains; preload
+      x-envoy-upstream-service-time:
+      - '396'
+      x-openai-proxy-wasm:
+      - v0.1
       x-ratelimit-limit-requests:
-      - '30000'
+      - '500'
       x-ratelimit-limit-tokens:
-      - '150000000'
+      - '30000'
       x-ratelimit-remaining-requests:
-      - '29999'
+      - '499'
       x-ratelimit-remaining-tokens:
-      - '149999631'
+      - '29695'
       x-ratelimit-reset-requests:
-      - 2ms
+      - 120ms
       x-ratelimit-reset-tokens:
-      - 0s
+      - 610ms
       x-request-id:
-      - req_c136835c16be6bc1e4d820f239c4b620
+      - req_REDACTED
     status:
       code: 200
       message: OK

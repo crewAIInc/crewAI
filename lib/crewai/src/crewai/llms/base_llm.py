@@ -179,6 +179,14 @@ class BaseLLM(ABC):
         """
         return DEFAULT_SUPPORTS_STOP_WORDS
 
+    @abstractmethod
+    def supports_function_calling(self) -> bool:
+        """Check if the LLM supports function calling.
+
+        Returns:
+            True if the LLM supports function calling, False otherwise.
+        """
+
     def _supports_stop_words_implementation(self) -> bool:
         """Check if stop words are configured for this LLM instance.
 

@@ -327,7 +327,7 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
         task: Any,
         context: str | None = None,
         tools: list[BaseTool] | None = None,
-    ) -> str:
+    ) -> str | dict[str, Any]:
         pass
 
     @abstractmethod

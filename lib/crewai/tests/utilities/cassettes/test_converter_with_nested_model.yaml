@@ -1,26 +1,132 @@
 interactions:
 - request:
-    body: '{"messages":[{"role":"system","content":"Please convert the following text
-      into valid JSON.\n\nOutput ONLY the valid JSON and nothing else.\n\nThe JSON
-      must follow this schema exactly:\n```json\n{\n    name: str,\n    age: int,\n    address:
-      Address\n    {\n        street: str,\n        city: str,\n        zip_code:
-      str\n    }\n}\n```"},{"role":"user","content":"Name: John Doe\nAge: 30\nAddress:
-      123 Main St, Anytown, 12345"}],"model":"gpt-4o-mini","response_format":{"type":"json_schema","json_schema":{"schema":{"$defs":{"Address":{"properties":{"street":{"title":"Street","type":"string"},"city":{"title":"City","type":"string"},"zip_code":{"title":"Zip
+    body: '{"trace_id": "c5adbb35-133e-45ee-af44-a884cae5086c", "execution_type":
+      "crew", "user_identifier": null, "execution_context": {"crew_fingerprint": null,
+      "crew_name": "Unknown Crew", "flow_name": null, "crewai_version": "1.3.0", "privacy_level":
+      "standard"}, "execution_metadata": {"expected_duration_estimate": 300, "agent_count":
+      0, "task_count": 0, "flow_method_count": 0, "execution_started_at": "2025-11-05T14:22:58.485496+00:00"}}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate, zstd
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '434'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - CrewAI-CLI/1.3.0
+      X-Crewai-Version:
+      - 1.3.0
+    method: POST
+    uri: https://app.crewai.com/crewai_plus/api/v1/tracing/batches
+  response:
+    body:
+      string: '{"error":"bad_credentials","message":"Bad credentials"}'
+    headers:
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '55'
+      Content-Type:
+      - application/json; charset=utf-8
+      Date:
+      - Wed, 05 Nov 2025 14:22:58 GMT
+      cache-control:
+      - no-store
+      content-security-policy:
+      - 'default-src ''self'' *.app.crewai.com app.crewai.com; script-src ''self''
+        ''unsafe-inline'' *.app.crewai.com app.crewai.com https://cdn.jsdelivr.net/npm/apexcharts
+        https://www.gstatic.com https://run.pstmn.io https://apis.google.com https://apis.google.com/js/api.js
+        https://accounts.google.com https://accounts.google.com/gsi/client https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css.map
+        https://*.google.com https://docs.google.com https://slides.google.com https://js.hs-scripts.com
+        https://js.sentry-cdn.com https://browser.sentry-cdn.com https://www.googletagmanager.com
+        https://js-na1.hs-scripts.com https://js.hubspot.com http://js-na1.hs-scripts.com
+        https://bat.bing.com https://cdn.amplitude.com https://cdn.segment.com https://d1d3n03t5zntha.cloudfront.net/
+        https://descriptusercontent.com https://edge.fullstory.com https://googleads.g.doubleclick.net
+        https://js.hs-analytics.net https://js.hs-banner.com https://js.hsadspixel.net
+        https://js.hscollectedforms.net https://js.usemessages.com https://snap.licdn.com
+        https://static.cloudflareinsights.com https://static.reo.dev https://www.google-analytics.com
+        https://share.descript.com/; style-src ''self'' ''unsafe-inline'' *.app.crewai.com
+        app.crewai.com https://cdn.jsdelivr.net/npm/apexcharts; img-src ''self'' data:
+        *.app.crewai.com app.crewai.com https://zeus.tools.crewai.com https://dashboard.tools.crewai.com
+        https://cdn.jsdelivr.net https://forms.hsforms.com https://track.hubspot.com
+        https://px.ads.linkedin.com https://px4.ads.linkedin.com https://www.google.com
+        https://www.google.com.br; font-src ''self'' data: *.app.crewai.com app.crewai.com;
+        connect-src ''self'' *.app.crewai.com app.crewai.com https://zeus.tools.crewai.com
+        https://connect.useparagon.com/ https://zeus.useparagon.com/* https://*.useparagon.com/*
+        https://run.pstmn.io https://connect.tools.crewai.com/ https://*.sentry.io
+        https://www.google-analytics.com https://edge.fullstory.com https://rs.fullstory.com
+        https://api.hubspot.com https://forms.hscollectedforms.net https://api.hubapi.com
+        https://px.ads.linkedin.com https://px4.ads.linkedin.com https://google.com/pagead/form-data/16713662509
+        https://google.com/ccm/form-data/16713662509 https://www.google.com/ccm/collect
+        https://worker-actionkit.tools.crewai.com https://api.reo.dev; frame-src ''self''
+        *.app.crewai.com app.crewai.com https://connect.useparagon.com/ https://zeus.tools.crewai.com
+        https://zeus.useparagon.com/* https://connect.tools.crewai.com/ https://docs.google.com
+        https://drive.google.com https://slides.google.com https://accounts.google.com
+        https://*.google.com https://app.hubspot.com/ https://td.doubleclick.net https://www.googletagmanager.com/
+        https://www.youtube.com https://share.descript.com'
+      expires:
+      - '0'
+      permissions-policy:
+      - camera=(), microphone=(self), geolocation=()
+      pragma:
+      - no-cache
+      referrer-policy:
+      - strict-origin-when-cross-origin
+      strict-transport-security:
+      - max-age=63072000; includeSubDomains
+      vary:
+      - Accept
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-permitted-cross-domain-policies:
+      - none
+      x-request-id:
+      - 6588541b-393d-4037-a7bc-9b4849e70155
+      x-runtime:
+      - '0.068478'
+      x-xss-protection:
+      - 1; mode=block
+    status:
+      code: 401
+      message: Unauthorized
+- request:
+    body: '{"messages":[{"role":"system","content":"Ensure your final answer strictly
+      adheres to the following OpenAPI schema: {\n  \"type\": \"json_schema\",\n  \"json_schema\":
+      {\n    \"name\": \"Person\",\n    \"strict\": true,\n    \"schema\": {\n      \"properties\":
+      {\n        \"name\": {\n          \"title\": \"Name\",\n          \"type\":
+      \"string\"\n        },\n        \"age\": {\n          \"title\": \"Age\",\n          \"type\":
+      \"integer\"\n        },\n        \"address\": {\n          \"properties\": {\n            \"street\":
+      {\n              \"title\": \"Street\",\n              \"type\": \"string\"\n            },\n            \"city\":
+      {\n              \"title\": \"City\",\n              \"type\": \"string\"\n            },\n            \"zip_code\":
+      {\n              \"title\": \"Zip Code\",\n              \"type\": \"string\"\n            }\n          },\n          \"required\":
+      [\n            \"street\",\n            \"city\",\n            \"zip_code\"\n          ],\n          \"title\":
+      \"Address\",\n          \"type\": \"object\",\n          \"additionalProperties\":
+      false\n        }\n      },\n      \"required\": [\n        \"name\",\n        \"age\",\n        \"address\"\n      ],\n      \"title\":
+      \"Person\",\n      \"type\": \"object\",\n      \"additionalProperties\": false\n    }\n  }\n}\n\nDo
+      not include the OpenAPI schema in the final output. Ensure the final output
+      does not include any code block markers like ```json or ```python."},{"role":"user","content":"Name:
+      John Doe\nAge: 30\nAddress: 123 Main St, Anytown, 12345"}],"model":"gpt-4o-mini","response_format":{"type":"json_schema","json_schema":{"schema":{"$defs":{"Address":{"properties":{"street":{"title":"Street","type":"string"},"city":{"title":"City","type":"string"},"zip_code":{"title":"Zip
       Code","type":"string"}},"required":["street","city","zip_code"],"title":"Address","type":"object","additionalProperties":false}},"properties":{"name":{"title":"Name","type":"string"},"age":{"title":"Age","type":"integer"},"address":{"$ref":"#/$defs/Address"}},"required":["name","age","address"],"title":"Person","type":"object","additionalProperties":false},"name":"Person","strict":true}},"stream":false}'
     headers:
       accept:
       - application/json
       accept-encoding:
-      - gzip, deflate
+      - gzip, deflate, zstd
       connection:
       - keep-alive
       content-length:
-      - '1066'
+      - '2203'
       content-type:
       - application/json
       host:
       - api.openai.com
-      user-agent:
+      user-REDACTED:
       - OpenAI/Python 1.109.1
       x-stainless-arch:
       - arm64
@@ -41,24 +147,24 @@ interactions:
       x-stainless-runtime:
       - CPython
       x-stainless-runtime-version:
-      - 3.12.10
+      - 3.12.9
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
       string: !!binary |
-        H4sIAAAAAAAAAwAAAP//jJPLbtswEEX3+gpi1lYhP+TXrk0apAVaoEiBBKgCgSFHMmuJJMhxW9fw
-        vweUZEtOE6AbLebMvZoXDxFjoCSsGYgNJ1HbKr66f/iWfJrf3hU335f8Ovnwtb6/+Xi7nV5t1QOM
-        gsI8/URBJ9U7YWpbISmjWywccsLgOl7Mx8tFslpNGlAbiVWQlZbimYlrpVU8SSazOFnE42Wn3hgl
-        0MOa/YgYY+zQfEOdWuIfWLNkdIrU6D0vEdbnJMbAmSpEgHuvPHFNMOqhMJpQN6UfMh1CGWheYwZr
-        lsFns9Hs2mAGoxPkZcOmSR+R0qH3IdpZtHFPDpFao/Fkyr5wpdkdnb3aLKFo3+a813syv/UL/lfZ
-        XBiJZ59ZmkGbcMz0cdiLw2LneZin3lXVAHCtDfGwj2aKjx05nudWmdI68+RfSKFQWvlN7pB7o8OM
-        PBkLDT1GjD02+9ldjBysM7WlnMwWm99NklXrB/1Z9DQdd5AM8WqgmndbvfTLJRJXlR9sGAQXG5S9
-        tD8HvpPKDEA06Prfal7zbjtXuvwf+x4IgZZQ5tahVOKy4z7NYXg1b6Wdp9wUDB7dLyUwJ4UubEJi
-        wXdVe8vg956wzgulS3TWqfagC5un84QXc0zTFUTH6BkAAP//AwDQ4LiL3gMAAA==
+        H4sIAAAAAAAAAwAAAP//jFLLbtswELzrK4g9W4UtW3ajW9EcmqI59HFoWgUCTa4kNhJJkOvUruF/
+        D0g/JPcB9CIIOzvLmdndJ4yBklAwEC0n0dsuffvw0H6197fvvu3W6/xpu/oy297d5R8/NM/yE0wC
+        w6x/oKAz65Uwve2QlNFHWDjkhGHqbLXM5nmWr24i0BuJXaA1ltKFSXulVZpNs0U6XaWz1yd2a5RA
+        DwX7njDG2D5+g04tcQsFm07OlR695w1CcWliDJzpQgW498oT1wSTARRGE+oofV+C5j2WUJTw3rSa
+        3RosYVICb0JxPg2/Ujr0voRiX4Inh0ixf5bN2T1Xmn2mSBGKdhF4o3dkfupY/KVsJYzEM2ORl3A4
+        jNU4rDeeh0T0putGANfaEA+JxhweT8jh4rwzjXVm7X+jQq208m3lkHujg0tPxkJEDwljjzHhzVVo
+        YJ3pLVVknjA+t5hnx3kwLHZA56f4gQzxbsRanllX8yqJxFXnRzsCwUWLcqAOC+UbqcwISEau/1Tz
+        t9lH50o3/zN+AIRASygr61Aqce14aHMY7v5fbZeUo2Dw6J6VwIoUurAJiTXfdMdrBL/zhH1VK92g
+        s04dT7K2Vb6c8nqJeX4DySF5AQAA//8DAOfQpRSgAwAA
     headers:
       CF-RAY:
-      - 996f14274966b937-MXP
+      - 999d01a08cdbc332-EWR
       Connection:
       - keep-alive
       Content-Encoding:
@@ -66,14 +172,14 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Fri, 31 Oct 2025 00:36:33 GMT
+      - Wed, 05 Nov 2025 14:23:00 GMT
       Server:
       - cloudflare
       Set-Cookie:
-      - __cf_bm=Ky4svfN6lhcQM6_crJFh23VuIuexOT5hNS6bhEbr7Qw-1761870993-1.0.1.1-p4Z6TA9wRLlEmiM83sZcdaHZbTds.ZzUr2lEGCtUkU2kP2WdalMAAsExqn9B0k9Okf1SUq3vKTfFK2UC4a8NtjDpRaLru0DDiJJbp9VFOfQ;
-        path=/; expires=Fri, 31-Oct-25 01:06:33 GMT; domain=.api.openai.com; HttpOnly;
+      - __cf_bm=REDACTED;
+        path=/; expires=Wed, 05-Nov-25 14:53:00 GMT; domain=.api.openai.com; HttpOnly;
         Secure; SameSite=None
-      - _cfuvid=vvK_iahsZb8gVwsnRdmPfAjYUYT08lth_CtAEZuGCGY-1761870993906-0.0.1.1-604800000;
+      - _cfuvid=REDACTED;
         path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
       Strict-Transport-Security:
       - max-age=31536000; includeSubDomains; preload
@@ -88,37 +194,279 @@ interactions:
       cf-cache-status:
       - DYNAMIC
       openai-organization:
-      - crewai-iuxna1
+      - user-REDACTED
       openai-processing-ms:
-      - '1204'
+      - '844'
       openai-project:
-      - proj_xitITlrFeen7zjNSzML82h9x
+      - proj_REDACTED
       openai-version:
       - '2020-10-01'
       x-envoy-upstream-service-time:
-      - '1228'
+      - '1057'
       x-openai-proxy-wasm:
       - v0.1
-      x-ratelimit-limit-project-tokens:
-      - '150000000'
       x-ratelimit-limit-requests:
-      - '30000'
+      - '10000'
       x-ratelimit-limit-tokens:
-      - '150000000'
-      x-ratelimit-remaining-project-tokens:
-      - '149999912'
+      - '200000'
       x-ratelimit-remaining-requests:
-      - '29999'
+      - '9999'
       x-ratelimit-remaining-tokens:
-      - '149999912'
-      x-ratelimit-reset-project-tokens:
-      - 0s
+      - '199663'
       x-ratelimit-reset-requests:
-      - 2ms
+      - 8.64s
       x-ratelimit-reset-tokens:
-      - 0s
+      - 101ms
       x-request-id:
-      - req_3b02f6f421da97eaa6d99999c3ca29cc
+      - req_REDACTED
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"Ensure your final answer strictly
+      adheres to the following OpenAPI schema: {\n  \"type\": \"json_schema\",\n  \"json_schema\":
+      {\n    \"name\": \"Person\",\n    \"strict\": true,\n    \"schema\": {\n      \"properties\":
+      {\n        \"name\": {\n          \"title\": \"Name\",\n          \"type\":
+      \"string\"\n        },\n        \"age\": {\n          \"title\": \"Age\",\n          \"type\":
+      \"integer\"\n        },\n        \"address\": {\n          \"properties\": {\n            \"street\":
+      {\n              \"title\": \"Street\",\n              \"type\": \"string\"\n            },\n            \"city\":
+      {\n              \"title\": \"City\",\n              \"type\": \"string\"\n            },\n            \"zip_code\":
+      {\n              \"title\": \"Zip Code\",\n              \"type\": \"string\"\n            }\n          },\n          \"required\":
+      [\n            \"street\",\n            \"city\",\n            \"zip_code\"\n          ],\n          \"title\":
+      \"Address\",\n          \"type\": \"object\",\n          \"additionalProperties\":
+      false\n        }\n      },\n      \"required\": [\n        \"name\",\n        \"age\",\n        \"address\"\n      ],\n      \"title\":
+      \"Person\",\n      \"type\": \"object\",\n      \"additionalProperties\": false\n    }\n  }\n}\n\nDo
+      not include the OpenAPI schema in the final output. Ensure the final output
+      does not include any code block markers like ```json or ```python."},{"role":"user","content":"Name:
+      John Doe\nAge: 30\nAddress: 123 Main St, Anytown, 12345"}],"model":"gpt-4o-mini","response_format":{"type":"json_schema","json_schema":{"schema":{"$defs":{"Address":{"properties":{"street":{"title":"Street","type":"string"},"city":{"title":"City","type":"string"},"zip_code":{"title":"Zip
+      Code","type":"string"}},"required":["street","city","zip_code"],"title":"Address","type":"object","additionalProperties":false}},"properties":{"name":{"title":"Name","type":"string"},"age":{"title":"Age","type":"integer"},"address":{"$ref":"#/$defs/Address"}},"required":["name","age","address"],"title":"Person","type":"object","additionalProperties":false},"name":"Person","strict":true}},"stream":false}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate, zstd
+      connection:
+      - keep-alive
+      content-length:
+      - '2203'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=REDACTED;
+        _cfuvid=REDACTED
+      host:
+      - api.openai.com
+      user-REDACTED:
+      - OpenAI/Python 1.109.1
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-helper-method:
+      - chat.completions.parse
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.109.1
+      x-stainless-read-timeout:
+      - '600'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.9
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAAwAAAP//jFJNj9MwEL3nV1hzblCbNt0lN1QufCwXJKAiq8hrTxKXxLbsKdCt+t+R
+        nbZJ+ZC4RNG8ec9v3swxYQyUhIKBaDmJ3nbpZrttt5+f8U3P37cP653uP2xWfvOp+VK/28EsMMzT
+        DgVdWC+E6W2HpIweYOGQEwbVxd06W+ZZfj+PQG8kdoHWWEpXJu2VVmk2z1bp/C5d3J/ZrVECPRTs
+        a8IYY8f4DT61xJ9QsKgVKz16zxuE4trEGDjThQpw75UnrglmIyiMJtTR+rEEzXssoSjhrWk1e22w
+        hFkJvAnF5Tz8SunQ+xKKYwmeHCLF/kW2ZA9cafaRIkUoOkTglT6Q+aFj8VnZShiJF8YqL+F0mrpx
+        WO89D4nofddNAK61IR4SjTk8npHTdfLONNaZJ/8bFWqllW8rh9wbHab0ZCxE9JQw9hgT3t+EBtaZ
+        3lJF5hvG51bLbNCDcbEjujzHD2SIdxPW+sK60askEledn+wIBBctypE6LpTvpTITIJlM/aebv2kP
+        kyvd/I/8CAiBllBW1qFU4nbisc1huPt/tV1TjobBo/uuBFak0IVNSKz5vhuuEfzBE/ZVrXSDzjo1
+        nGRtq3w95/Ua8/wlJKfkFwAAAP//AwBHXly+oAMAAA==
+    headers:
+      CF-RAY:
+      - 999d01a99c0ac332-EWR
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Wed, 05 Nov 2025 14:23:01 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - user-REDACTED
+      openai-processing-ms:
+      - '841'
+      openai-project:
+      - proj_REDACTED
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '986'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '200000'
+      x-ratelimit-remaining-requests:
+      - '9998'
+      x-ratelimit-remaining-tokens:
+      - '199663'
+      x-ratelimit-reset-requests:
+      - 16.199s
+      x-ratelimit-reset-tokens:
+      - 101ms
+      x-request-id:
+      - req_REDACTED
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"Ensure your final answer strictly
+      adheres to the following OpenAPI schema: {\n  \"type\": \"json_schema\",\n  \"json_schema\":
+      {\n    \"name\": \"Person\",\n    \"strict\": true,\n    \"schema\": {\n      \"properties\":
+      {\n        \"name\": {\n          \"title\": \"Name\",\n          \"type\":
+      \"string\"\n        },\n        \"age\": {\n          \"title\": \"Age\",\n          \"type\":
+      \"integer\"\n        },\n        \"address\": {\n          \"properties\": {\n            \"street\":
+      {\n              \"title\": \"Street\",\n              \"type\": \"string\"\n            },\n            \"city\":
+      {\n              \"title\": \"City\",\n              \"type\": \"string\"\n            },\n            \"zip_code\":
+      {\n              \"title\": \"Zip Code\",\n              \"type\": \"string\"\n            }\n          },\n          \"required\":
+      [\n            \"street\",\n            \"city\",\n            \"zip_code\"\n          ],\n          \"title\":
+      \"Address\",\n          \"type\": \"object\",\n          \"additionalProperties\":
+      false\n        }\n      },\n      \"required\": [\n        \"name\",\n        \"age\",\n        \"address\"\n      ],\n      \"title\":
+      \"Person\",\n      \"type\": \"object\",\n      \"additionalProperties\": false\n    }\n  }\n}\n\nDo
+      not include the OpenAPI schema in the final output. Ensure the final output
+      does not include any code block markers like ```json or ```python."},{"role":"user","content":"Name:
+      John Doe\nAge: 30\nAddress: 123 Main St, Anytown, 12345"}],"model":"gpt-4o-mini","response_format":{"type":"json_schema","json_schema":{"schema":{"$defs":{"Address":{"properties":{"street":{"title":"Street","type":"string"},"city":{"title":"City","type":"string"},"zip_code":{"title":"Zip
+      Code","type":"string"}},"required":["street","city","zip_code"],"title":"Address","type":"object","additionalProperties":false}},"properties":{"name":{"title":"Name","type":"string"},"age":{"title":"Age","type":"integer"},"address":{"$ref":"#/$defs/Address"}},"required":["name","age","address"],"title":"Person","type":"object","additionalProperties":false},"name":"Person","strict":true}},"stream":false}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate, zstd
+      connection:
+      - keep-alive
+      content-length:
+      - '2203'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=REDACTED;
+        _cfuvid=REDACTED
+      host:
+      - api.openai.com
+      user-REDACTED:
+      - OpenAI/Python 1.109.1
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-helper-method:
+      - chat.completions.parse
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.109.1
+      x-stainless-read-timeout:
+      - '600'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.9
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAA4xSy27bMBC86yuIPVuFLduxq1ufaFOkaJFTWgUCTa4k1hJJkOs6juF/L0g/JPcB
+        9CIIOzvLmdndJ4yBkpAzEA0n0dk2ffPw0Hxbf/j8bvv++evi4+vMfJL3X7Yvl+un2zsYBYZZ/UBB
+        Z9YLYTrbIimjj7BwyAnD1MniJpvOs/lyEoHOSGwDrbaUzkzaKa3SbJzN0vEinSxP7MYogR5y9j1h
+        jLF9/AadWuIT5Gw8Olc69J7XCPmliTFwpg0V4N4rT1wTjHpQGE2oo/R9AZp3WEBewK1pNHtrsIBR
+        AbwOxek4/Erp0PsC8n0Bnhwixf5JNmV3XGl2T5EiFO0i8ErvyGx1LD4rWwoj8cyYzQs4HIZqHFYb
+        z0MietO2A4BrbYiHRGMOjyfkcHHemto6s/K/UaFSWvmmdMi90cGlJ2MhooeEsceY8OYqNLDOdJZK
+        MmuMz82m2XEe9Ivt0ekpfiBDvB2wbs6sq3mlROKq9YMdgeCiQdlT+4XyjVRmACQD13+q+dvso3Ol
+        6/8Z3wNCoCWUpXUolbh23Lc5DHf/r7ZLylEweHQ/lcCSFLqwCYkV37THawS/84RdWSldo7NOHU+y
+        suV8IlfLGa/4CpJD8gsAAP//AwCaY+SwoAMAAA==
+    headers:
+      CF-RAY:
+      - 999d01b0291fc332-EWR
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Wed, 05 Nov 2025 14:23:02 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - user-REDACTED
+      openai-processing-ms:
+      - '872'
+      openai-project:
+      - proj_REDACTED
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '906'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '200000'
+      x-ratelimit-remaining-requests:
+      - '9998'
+      x-ratelimit-remaining-tokens:
+      - '199663'
+      x-ratelimit-reset-requests:
+      - 15.269s
+      x-ratelimit-reset-tokens:
+      - 101ms
+      x-request-id:
+      - req_REDACTED
     status:
       code: 200
       message: OK

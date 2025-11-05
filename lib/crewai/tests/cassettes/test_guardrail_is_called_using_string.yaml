@@ -1,14 +1,110 @@
 interactions:
 - request:
-    body: '{"messages": [{"role": "system", "content": "You are Sports Analyst. You
-      are an expert at gathering and organizing information. You carefully collect
-      details and present them in a structured way.\nYour personal goal is: Gather
-      information about the best soccer players\n\nTo give my best complete final
-      answer to the task respond using the exact following format:\n\nThought: I now
-      can give a great answer\nFinal Answer: Your final answer must be the great and
-      the most complete as possible, it must be outcome described.\n\nI MUST use these
-      formats, my job depends on it!"}, {"role": "user", "content": "Top 10 best players
-      in the world?"}], "model": "gpt-4o-mini", "stop": ["\nObservation:"]}'
+    body: '{"trace_id": "238647d6-41da-4631-b028-8f7ee6c2648d", "execution_type":
+      "crew", "user_identifier": null, "execution_context": {"crew_fingerprint": null,
+      "crew_name": "Unknown Crew", "flow_name": null, "crewai_version": "1.3.0", "privacy_level":
+      "standard"}, "execution_metadata": {"expected_duration_estimate": 300, "agent_count":
+      0, "task_count": 0, "flow_method_count": 0, "execution_started_at": "2025-11-05T16:45:01.573935+00:00"}}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate, zstd
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '434'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - CrewAI-CLI/1.3.0
+      X-Crewai-Version:
+      - 1.3.0
+    method: POST
+    uri: https://app.crewai.com/crewai_plus/api/v1/tracing/batches
+  response:
+    body:
+      string: '{"error":"bad_credentials","message":"Bad credentials"}'
+    headers:
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '55'
+      Content-Type:
+      - application/json; charset=utf-8
+      Date:
+      - Wed, 05 Nov 2025 16:45:01 GMT
+      cache-control:
+      - no-store
+      content-security-policy:
+      - 'default-src ''self'' *.app.crewai.com app.crewai.com; script-src ''self''
+        ''unsafe-inline'' *.app.crewai.com app.crewai.com https://cdn.jsdelivr.net/npm/apexcharts
+        https://www.gstatic.com https://run.pstmn.io https://apis.google.com https://apis.google.com/js/api.js
+        https://accounts.google.com https://accounts.google.com/gsi/client https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css.map
+        https://*.google.com https://docs.google.com https://slides.google.com https://js.hs-scripts.com
+        https://js.sentry-cdn.com https://browser.sentry-cdn.com https://www.googletagmanager.com
+        https://js-na1.hs-scripts.com https://js.hubspot.com http://js-na1.hs-scripts.com
+        https://bat.bing.com https://cdn.amplitude.com https://cdn.segment.com https://d1d3n03t5zntha.cloudfront.net/
+        https://descriptusercontent.com https://edge.fullstory.com https://googleads.g.doubleclick.net
+        https://js.hs-analytics.net https://js.hs-banner.com https://js.hsadspixel.net
+        https://js.hscollectedforms.net https://js.usemessages.com https://snap.licdn.com
+        https://static.cloudflareinsights.com https://static.reo.dev https://www.google-analytics.com
+        https://share.descript.com/; style-src ''self'' ''unsafe-inline'' *.app.crewai.com
+        app.crewai.com https://cdn.jsdelivr.net/npm/apexcharts; img-src ''self'' data:
+        *.app.crewai.com app.crewai.com https://zeus.tools.crewai.com https://dashboard.tools.crewai.com
+        https://cdn.jsdelivr.net https://forms.hsforms.com https://track.hubspot.com
+        https://px.ads.linkedin.com https://px4.ads.linkedin.com https://www.google.com
+        https://www.google.com.br; font-src ''self'' data: *.app.crewai.com app.crewai.com;
+        connect-src ''self'' *.app.crewai.com app.crewai.com https://zeus.tools.crewai.com
+        https://connect.useparagon.com/ https://zeus.useparagon.com/* https://*.useparagon.com/*
+        https://run.pstmn.io https://connect.tools.crewai.com/ https://*.sentry.io
+        https://www.google-analytics.com https://edge.fullstory.com https://rs.fullstory.com
+        https://api.hubspot.com https://forms.hscollectedforms.net https://api.hubapi.com
+        https://px.ads.linkedin.com https://px4.ads.linkedin.com https://google.com/pagead/form-data/16713662509
+        https://google.com/ccm/form-data/16713662509 https://www.google.com/ccm/collect
+        https://worker-actionkit.tools.crewai.com https://api.reo.dev; frame-src ''self''
+        *.app.crewai.com app.crewai.com https://connect.useparagon.com/ https://zeus.tools.crewai.com
+        https://zeus.useparagon.com/* https://connect.tools.crewai.com/ https://docs.google.com
+        https://drive.google.com https://slides.google.com https://accounts.google.com
+        https://*.google.com https://app.hubspot.com/ https://td.doubleclick.net https://www.googletagmanager.com/
+        https://www.youtube.com https://share.descript.com'
+      expires:
+      - '0'
+      permissions-policy:
+      - camera=(), microphone=(self), geolocation=()
+      pragma:
+      - no-cache
+      referrer-policy:
+      - strict-origin-when-cross-origin
+      strict-transport-security:
+      - max-age=63072000; includeSubDomains
+      vary:
+      - Accept
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-permitted-cross-domain-policies:
+      - none
+      x-request-id:
+      - 1bc9284a-c0dc-4d4b-bd5f-d43316c793fd
+      x-runtime:
+      - '0.080732'
+      x-xss-protection:
+      - 1; mode=block
+    status:
+      code: 401
+      message: Unauthorized
+- request:
+    body: '{"messages":[{"role":"system","content":"You are Sports Analyst. You are
+      an expert at gathering and organizing information. You carefully collect details
+      and present them in a structured way.\nYour personal goal is: Gather information
+      about the best soccer players\n\nTo give my best complete final answer to the
+      task respond using the exact following format:\n\nThought: I now can give a
+      great answer\nFinal Answer: Your final answer must be the great and the most
+      complete as possible, it must be outcome described.\n\nI MUST use these formats,
+      my job depends on it!"},{"role":"user","content":"Top 10 best players in the
+      world?"}],"model":"gpt-4.1-mini"}'
     headers:
       accept:
       - application/json
@@ -17,13 +113,13 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '694'
+      - '657'
       content-type:
       - application/json
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.78.0
+      - OpenAI/Python 1.109.1
       x-stainless-arch:
       - arm64
       x-stainless-async:
@@ -33,11 +129,9 @@ interactions:
       x-stainless-os:
       - MacOS
       x-stainless-package-version:
-      - 1.78.0
-      x-stainless-raw-response:
-      - 'true'
+      - 1.109.1
       x-stainless-read-timeout:
-      - '600.0'
+      - '600'
       x-stainless-retry-count:
       - '0'
       x-stainless-runtime:
@@ -49,40 +143,30 @@ interactions:
   response:
     body:
       string: !!binary |
-        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
-        BF+cIJ0em8Hel71fAQAA//8DAICIe4nBDwAA
+        H4sIAAAAAAAAAwAAAP//jFZdbtw2EH73KQZ66cuusLuxXcdviZO0qeMGSYyiRTdYjMiRNFlqSJDU
+        rpUgQO/QU/QcvUlPUpDav7Qp0Bcb1pDzzTffxxl/OgMoWBfXUKgWo+qcmd78gpvZ64uH7x69/Pnl
+        7aV9cXX35iqiRf1G3RSTdMNWH0jF/a1S2c4ZimxlDCtPGCllnX97uXh0OZ/PFjnQWU0mXWtcnJ6X
+        82nHwtPFbHExnZ1P5+e7661lRaG4hl/PAAA+5Z+pUNH0UFzDbLL/0lEI2FBxfTgEUHhr0pcCQ+AQ
+        UWIxOQaVlUiSa79vbd+08RpegtgtKBRoeEOA0CQCgBK25JfyggUNPMl/XcN9SxCtg/kMKgoRglWK
+        PDiDA/kALBBbgq31RgMGsDV4UiQRaIOmx9SlMIEKA2mwAo58bX2HomgCYc3GTIClNj3lLygaUClr
+        UFOYAHq6XspS5iW8Yitk4I5CYPjrt9/hLYndCmmorYeWA9CDIpfw0ID2XFWGpZnAhgNbGVM3Fs00
+        KOtZGsCKDcehhLveRHaG4CkaYwX0N6894Ba9DuVSFiXcDoZR4K5C5/78I6PfJvADNIvypLkyBMER
+        6QnULBzaXEACDtFbaU7ZB8AIlY0tKNNX+RBLJC+4o2BoQyYV8KiE5z5xge8RTTqYCngCzlvDNavM
+        ChIr8rDl2IJrh8AKE7uc2HlSuy5YoaRR0myUM3peJyEbYys0ZiiXcl7CLW1Y4BnBU98PQhnx+Ul/
+        O9Y1k9F7xPwEeMNxmIBLRkz9Var3qIadqmO3IVpInvTWQIMdJYIXJby1FfkIr2iLou02rEeNb6wk
+        T5NEM2QXnlCdZMGNSV5zNnCq7NBvqmtWnEIHIcqlXJZwZ1vsSMM7NNhmjBcY4s6KdW9gy9LsWeFe
+        ty9840lZrzNMxQ10GFUL9ODIczJxuZRvS7hFzx08JflIHe7atz+h913fo4zvL5CELM4Jm4xiWNbT
+        3uU3Vy7lqoQfaejQww++zKnf7YtPp3dSUDJn8vAIUhtkPzl9F9kYBocO1wlIoRsl4qzJ4xJ+Yt+w
+        gQ0KPOMP64x0b91UGQwBNNUkSX+x8eQRhuhJmthOwBBq8qFlN2LlCyEVlnxuDDe7bs1nJdy3XGEf
+        4cb2PloOo8W71PuDVZMIayKX3Jo52T6meadHUWpDD2lmhNbGaYjWuQNNZbsu/bb1rooEu5T7lgKB
+        R0kNCHkgbtAPEAw3bXLcYWqp3vtsJuu7nNE6ljTZoOrjiK1irrSzIcKWNZkhG6UR/kgayHCkw9A8
+        vLXTSe2p7gOmdSG9MScBFLFxHKRpR7zfRT4ftoKxjfO2Cv+4WozWX3nCYCVtgNSVIkc/nwG8z9un
+        /2KhFM7bzsVVtGvKcPPFYsxXHLfeMbp4/HgXjTaiOQbOF/PJVxKuNEVkE04WWKFQtaSPV4/bDnvN
+        9iRwdkL73+V8LfdInaX5P+mPAZUGHemVS0NdfUn5eMxT+q/gv44d2pwLLgL5DStaRSafpNBUY2/G
+        VV2EIUTqVnUePc7zuK9rtzpXi6uLeX11uSjOPp/9DQAA//8DACgdtLu+CAAA
     headers:
       CF-RAY:
-      - 94d9947e9abcf1fe-GRU
+      - 999dd1b69baa3453-EWR
       Connection:
       - keep-alive
       Content-Encoding:
@@ -90,15 +174,17 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Tue, 10 Jun 2025 14:33:27 GMT
+      - Wed, 05 Nov 2025 16:45:06 GMT
       Server:
       - cloudflare
       Set-Cookie:
-      - __cf_bm=UscrLNUFPQp17ivpT2nYqbIb8GsK9e0GpWC7sIKWwnU-1749566007-1.0.1.1-fCm5jdN02Agxc9.Ep4aAnKukyBp9S3iOLK9NY51NLG1zib3MnfjyCm5HhsWtUvr2lIjQpD_EWosVk4JuLbGxrKYZBa4WTendGsY9lCU9naU;
-        path=/; expires=Tue, 10-Jun-25 15:03:27 GMT; domain=.api.openai.com; HttpOnly;
+      - __cf_bm=5Yb7v0Xt3AXD0ZLt5k_U88cbO3gc6rbhq2poktbMFbc-1762361106-1.0.1.1-NwSmj0hUC1ne0pcL1g.7Dg5LAtYB4FSevAVtdnGe9J_KHFbWf7910TiJFsvVUNfn4OgJuQ3IiwL4VNCYYRGq6WZNF2tcqgpgpoE1htHdHkk;
+        path=/; expires=Wed, 05-Nov-25 17:15:06 GMT; domain=.api.openai.com; HttpOnly;
         Secure; SameSite=None
-      - _cfuvid=CGbpwQsAGlm5OcWs4NP0JuyqJh.mIqHyUZjIdKm8_.I-1749566007688-0.0.1.1-604800000;
+      - _cfuvid=22xbh5Tzgz.0W7bZL_zO0bh06Gmw1.SQLHsO.kclCxU-1762361106452-0.0.1.1-604800000;
         path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
       Transfer-Encoding:
       - chunked
       X-Content-Type-Options:
@@ -110,92 +196,368 @@ interactions:
       cf-cache-status:
       - DYNAMIC
       openai-organization:
-      - crewai-iuxna1
+      - user-hortuttj2f3qtmxyik2zxf4q
       openai-processing-ms:
-      - '40370'
+      - '4071'
+      openai-project:
+      - proj_fL4UBWR1CMpAAdgzaSKqsVvA
       openai-version:
       - '2020-10-01'
-      strict-transport-security:
-      - max-age=31536000; includeSubDomains; preload
       x-envoy-upstream-service-time:
-      - '40375'
+      - '4203'
+      x-openai-proxy-wasm:
+      - v0.1
       x-ratelimit-limit-requests:
-      - '30000'
+      - '500'
       x-ratelimit-limit-tokens:
-      - '150000000'
+      - '200000'
       x-ratelimit-remaining-requests:
-      - '29999'
+      - '499'
       x-ratelimit-remaining-tokens:
-      - '149999859'
+      - '199859'
       x-ratelimit-reset-requests:
-      - 2ms
+      - 120ms
       x-ratelimit-reset-tokens:
-      - 0s
+      - 42ms
       x-request-id:
-      - req_94fb13dc93d3bc9714811ff4ede4c08f
+      - req_f872b9433e3d48a9af4db7aadcf29bd1
     status:
       code: 200
       message: OK
 - request:
-    body: '{"messages": [{"role": "system", "content": "You are Guardrail Agent. You
-      are a expert at validating the output of a task. By providing effective feedback
-      if the output is not valid.\nYour personal goal is: Validate the output of the
-      task\n\nTo give my best complete final answer to the task respond using the
-      exact following format:\n\nThought: I now can give a great answer\nFinal Answer:
-      Your final answer must be the great and the most complete as possible, it must
-      be outcome described.\n\nI MUST use these formats, my job depends on it!\nIMPORTANT:
-      Your final answer MUST contain all the information requested in the following
-      format: {\n  \"valid\": bool,\n  \"feedback\": str | None\n}\n\nIMPORTANT: Ensure
-      the final output does not include any code block markers like ```json or ```python."},
-      {"role": "user", "content": "\n        Ensure the following task result complies
-      with the given guardrail.\n\n        Task result:\n        Here are the top
-      10 best soccer players in the world as of October 2023, based on their performance,
-      impact, and overall contributions to the game:\n\n1. **Lionel Messi** (Inter
-      Miami)\n   - Position: Forward\n   - Country: Argentina\n   - Highlights: Messi
-      continues to showcase his exceptional dribbling, vision, and playmaking ability,
-      leading Argentina to victory in the 2022 FIFA World Cup and significantly contributing
-      to his club''s successes.\n\n2. **Kylian Mbapp\u00e9** (Paris Saint-Germain)\n   -
-      Position: Forward\n   - Country: France\n   - Highlights: Known for his blistering
-      speed and clinical finishing, Mbapp\u00e9 is a key player for both PSG and the
-      French national team, known for his performances in Ligue 1 and international
-      tournaments.\n\n3. **Erling Haaland** (Manchester City)\n   - Position: Forward\n   -
-      Country: Norway\n   - Highlights: Haaland''s goal-scoring prowess and strength
-      have made him one of the most feared strikers in Europe, helping Manchester
-      City secure several titles including the UEFA Champions League.\n\n4. **Kevin
-      De Bruyne** (Manchester City)\n   - Position: Midfielder\n   - Country: Belgium\n   -
-      Highlights: De Bruyne\u2019s exceptional passing, control, and vision make him
-      one of the best playmakers in the world, instrumental in Manchester City\u2019s
-      dominance in domestic and European competitions.\n\n5. **Cristiano Ronaldo**
-      (Al Nassr)\n   - Position: Forward\n   - Country: Portugal\n   - Highlights:
-      Despite moving to the Saudi Pro League, Ronaldo''s extraordinary talent and
-      goal-scoring ability keep him in the conversation among the best, having had
-      a legendary career across multiple leagues.\n\n6. **Neymar Jr.** (Al Hilal)\n   -
-      Position: Forward\n   - Country: Brazil\n   - Highlights: Neymar''s agility,
-      creativity, and skill have kept him as a top performer in soccer, now showcasing
-      his talents in the Saudi Pro League while maintaining a strong national team
-      presence.\n\n7. **Robert Lewandowski** (Barcelona)\n   - Position: Forward\n   -
-      Country: Poland\n   - Highlights: The prolific striker continues to score consistently
-      in La Liga, known for his finishing, positioning, and aerial ability, contributing
-      to Barcelona\u2019s successes.\n\n8. **Karim Benzema** (Al Ittihad)\n   - Position:
-      Forward\n   - Country: France\n   - Highlights: The former Real Madrid star
-      remains a top talent, displaying leadership and technical skills, now continuing
-      his career in the Saudi Pro League.\n\n9. **Luka Modri\u0107** (Real Madrid)\n   -
-      Position: Midfielder\n   - Country: Croatia\n   - Highlights: A master of midfield
-      control and passing, Modri\u0107 remains an influential figure at Real Madrid,
-      showcasing his experience and football intelligence.\n\n10. **Mohamed Salah**
-      (Liverpool)\n    - Position: Forward\n    - Country: Egypt\n    - Highlights:
-      Salah''s explosive pace and goal-scoring ability keep him as a central figure
-      for Liverpool in the Premier League and European competitions, maintaining his
-      status as one of the elite forwards.\n\nThese players have demonstrated exceptional
-      skill, consistency, and impact in their respective teams and leagues, solidifying
-      their positions among the best in the world.\n\n        Guardrail:\n        Only
-      include Brazilian players, both women and men\n        \n        Your task:\n        -
-      Confirm if the Task result complies with the guardrail.\n        - If not, provide
+    body: "{\"messages\":[{\"role\":\"system\",\"content\":\"You are Guardrail Agent.
+      You are a expert at validating the output of a task. By providing effective
+      feedback if the output is not valid.\\nYour personal goal is: Validate the output
+      of the task\\n\\nTo give my best complete final answer to the task respond using
+      the exact following format:\\n\\nThought: I now can give a great answer\\nFinal
+      Answer: Your final answer must be the great and the most complete as possible,
+      it must be outcome described.\\n\\nI MUST use these formats, my job depends
+      on it!\"},{\"role\":\"user\",\"content\":\"\\n        Ensure the following task
+      result complies with the given guardrail.\\n\\n        Task result:\\n        The
+      top 10 best soccer players in the world as of recent evaluations, based on performance,
+      skill, influence, and accolades, are:\\n\\n1. Lionel Messi \u2013 Renowned for
+      his exceptional dribbling, vision, and goal-scoring ability. Multiple Ballon
+      d'Or awards.\\n2. Kylian Mbapp\xE9 \u2013 Known for his incredible speed, finishing,
+      and strong performances at both club and international levels.\\n3. Erling Haaland
+      \u2013 A prolific goal scorer with physicality and precision, one of the best
+      strikers globally.\\n4. Kevin De Bruyne \u2013 Exceptional midfielder with creativity,
+      passing accuracy, and ability to control games.\\n5. Robert Lewandowski \u2013
+      Consistently top goal scorer, excellent positioning, and efficient finishing.\\n6.
+      Mohamed Salah \u2013 Fast, skillful winger with a strong goal-scoring record
+      and big match experience.\\n7. Karim Benzema \u2013 Experienced striker with
+      a great sense of positioning and link-up play.\\n8. Neymar Jr. \u2013 Skillful
+      and creative forward with flair, dribbling, and playmaking capabilities.\\n9.
+      Virgil van Dijk \u2013 Top-class defender noted for his strength, leadership,
+      and defensive intelligence.\\n10. Thibaut Courtois \u2013 Among the best goalkeepers
+      with outstanding reflexes, shot-stopping, and command of defense.\\n\\nThese
+      rankings can vary slightly based on current form and opinions but reflect the
+      most widely recognized elite players globally.\\n\\n        Guardrail:\\n        Only
+      include Brazilian players, both women and men\\n\\n        Your task:\\n        -
+      Confirm if the Task result complies with the guardrail.\\n        - If not,
+      provide clear feedback explaining what is wrong (e.g., by how much it violates
+      the rule, or what specific part fails).\\n        - Focus only on identifying
+      issues \u2014 do not propose corrections.\\n        - If the Task result complies
+      with the guardrail, saying that is valid\\n        \"}],\"model\":\"gpt-4.1-mini\",\"response_format\":{\"type\":\"json_schema\",\"json_schema\":{\"schema\":{\"properties\":{\"valid\":{\"description\":\"Whether
+      the task output complies with the guardrail\",\"title\":\"Valid\",\"type\":\"boolean\"},\"feedback\":{\"anyOf\":[{\"type\":\"string\"},{\"type\":\"null\"}],\"description\":\"A
+      feedback about the task output if it is not valid\",\"title\":\"Feedback\"}},\"required\":[\"valid\",\"feedback\"],\"title\":\"LLMGuardrailResult\",\"type\":\"object\",\"additionalProperties\":false},\"name\":\"LLMGuardrailResult\",\"strict\":true}},\"stream\":false}"
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate, zstd
+      connection:
+      - keep-alive
+      content-length:
+      - '3054'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=5Yb7v0Xt3AXD0ZLt5k_U88cbO3gc6rbhq2poktbMFbc-1762361106-1.0.1.1-NwSmj0hUC1ne0pcL1g.7Dg5LAtYB4FSevAVtdnGe9J_KHFbWf7910TiJFsvVUNfn4OgJuQ3IiwL4VNCYYRGq6WZNF2tcqgpgpoE1htHdHkk;
+        _cfuvid=22xbh5Tzgz.0W7bZL_zO0bh06Gmw1.SQLHsO.kclCxU-1762361106452-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.109.1
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-helper-method:
+      - chat.completions.parse
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.109.1
+      x-stainless-read-timeout:
+      - '600'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.9
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAAwAAAP//jFRdb9s6DH3PryD0lABOEadJO+Ttdp/Y1q3YdldcLEPASLTNRpY8UU6W
+        Fv1B+x37Yxdy2ib7AvZiGDrk4aF4qJsegGKjZqB0hVHXjR0+/g/X0/OXF9eXz2u5mub/vn87/Thx
+        py/j5fGlylKGX16RjvdZR9rXjaXI3u1gHQgjJdb89GR8fJLno9MOqL0hm9LKJg4nR/mwZsfD8Wg8
+        HY4mw3xyl1551iRqBp96AAA33TcJdYa+qhmMsvuTmkSwJDV7CAJQwdt0olCEJaKLKtuD2rtIrtN+
+        M1drtGzmalagFcrmqiAyS9SruZrN1YeKIKKsIJC0NgI7bVtDAo3FLQWBIvga1hjYtwIO0wWg5cgk
+        IK2uAAX+CSW5yA6h/5q9IwvnJMKDDJ4FdJqg/2prGR2cL7Fpvn8bZPDGhw1uof80WHYlvEC06Mwg
+        gzOyJbc19F/Rmh08ITgL7dbRIIMLn2Kg/84vKUR4TRt0xm9klSo9LbdNhP65r7AmA+/RYnUoAAPX
+        cEbummpM9SlWFBKfQP8jh5ItrNHBE75aDTJIdR6UfKh4iW2Ex74N0bMMjuCNdwQYkji85q63u/va
+        5SZyKnyg9AeWJYLxJOB8hM5IW9hwrDq0bDGYgGxhU7GuINCXlgMJeGe3vxaA6GFJ93MyR3N1ezj6
+        QEUrmPznWmsPAHTOx258nek+3yG3DzazvmyCX8pPqapgx1ItAqF4lywl0TeqQ297AJ87O7c/OFQ1
+        wddNXES/oq7cyWi841P7NdqjeZ7fodFHtHvgND/OfkO4MBSRrRxshNKoKzL71P36YGvYHwC9g7Z/
+        lfM77l3r7Mq/od8DWlMTySyaQIb1jy3vwwKlZ+ZPYQ/X3AlWQmHNmhaRKaRRGCqwtbvdV7KVSPWi
+        YFdSaALvHoCiWUz0+NE0Lx6djFXvtvc/AAAA//8DAMivoHQPBQAA
+    headers:
+      CF-RAY:
+      - 999dd1d388d13453-EWR
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Wed, 05 Nov 2025 16:45:09 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - user-hortuttj2f3qtmxyik2zxf4q
+      openai-processing-ms:
+      - '1972'
+      openai-project:
+      - proj_fL4UBWR1CMpAAdgzaSKqsVvA
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '2168'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - '500'
+      x-ratelimit-limit-tokens:
+      - '200000'
+      x-ratelimit-remaining-requests:
+      - '499'
+      x-ratelimit-remaining-tokens:
+      - '199391'
+      x-ratelimit-reset-requests:
+      - 120ms
+      x-ratelimit-reset-tokens:
+      - 182ms
+      x-request-id:
+      - req_52eac0139e2346f5940d5e64440b97e9
+    status:
+      code: 200
+      message: OK
+- request:
+    body: "{\"messages\":[{\"role\":\"system\",\"content\":\"You are Sports Analyst.
+      You are an expert at gathering and organizing information. You carefully collect
+      details and present them in a structured way.\\nYour personal goal is: Gather
+      information about the best soccer players\\n\\nTo give my best complete final
+      answer to the task respond using the exact following format:\\n\\nThought: I
+      now can give a great answer\\nFinal Answer: Your final answer must be the great
+      and the most complete as possible, it must be outcome described.\\n\\nI MUST
+      use these formats, my job depends on it!\"},{\"role\":\"user\",\"content\":\"Top
+      10 best players in the world?\"},{\"role\":\"assistant\",\"content\":\"Thought:
+      I now can give a great answer\\nFinal Answer: The top 10 best soccer players
+      in the world as of recent evaluations, based on performance, skill, influence,
+      and accolades, are:\\n\\n1. Lionel Messi \u2013 Renowned for his exceptional
+      dribbling, vision, and goal-scoring ability. Multiple Ballon d'Or awards.\\n2.
+      Kylian Mbapp\xE9 \u2013 Known for his incredible speed, finishing, and strong
+      performances at both club and international levels.\\n3. Erling Haaland \u2013
+      A prolific goal scorer with physicality and precision, one of the best strikers
+      globally.\\n4. Kevin De Bruyne \u2013 Exceptional midfielder with creativity,
+      passing accuracy, and ability to control games.\\n5. Robert Lewandowski \u2013
+      Consistently top goal scorer, excellent positioning, and efficient finishing.\\n6.
+      Mohamed Salah \u2013 Fast, skillful winger with a strong goal-scoring record
+      and big match experience.\\n7. Karim Benzema \u2013 Experienced striker with
+      a great sense of positioning and link-up play.\\n8. Neymar Jr. \u2013 Skillful
+      and creative forward with flair, dribbling, and playmaking capabilities.\\n9.
+      Virgil van Dijk \u2013 Top-class defender noted for his strength, leadership,
+      and defensive intelligence.\\n10. Thibaut Courtois \u2013 Among the best goalkeepers
+      with outstanding reflexes, shot-stopping, and command of defense.\\n\\nThese
+      rankings can vary slightly based on current form and opinions but reflect the
+      most widely recognized elite players globally.\"},{\"role\":\"user\",\"content\":\"The
+      task result includes players from various nationalities such as Argentina (Lionel
+      Messi), France (Kylian Mbapp\xE9), Norway (Erling Haaland), Belgium (Kevin De
+      Bruyne), Poland (Robert Lewandowski), Egypt (Mohamed Salah), France (Karim Benzema),
+      Netherlands (Virgil van Dijk), and Belgium (Thibaut Courtois). None are Brazilian
+      players, and therefore the list does not comply with the guardrail which requires
+      only Brazilian players to be included.\"}],\"model\":\"gpt-4.1-mini\"}"
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate, zstd
+      connection:
+      - keep-alive
+      content-length:
+      - '2596'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=5Yb7v0Xt3AXD0ZLt5k_U88cbO3gc6rbhq2poktbMFbc-1762361106-1.0.1.1-NwSmj0hUC1ne0pcL1g.7Dg5LAtYB4FSevAVtdnGe9J_KHFbWf7910TiJFsvVUNfn4OgJuQ3IiwL4VNCYYRGq6WZNF2tcqgpgpoE1htHdHkk;
+        _cfuvid=22xbh5Tzgz.0W7bZL_zO0bh06Gmw1.SQLHsO.kclCxU-1762361106452-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.109.1
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.109.1
+      x-stainless-read-timeout:
+      - '600'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.9
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAAwAAAP//jFbNjttGDL7vUxC69CILtnfXu/EtSbFBA6QtgiRFUQcGPaIk1iOOwhmt
+        1wkC9NpzH6HnvkCv+yZ9kmJG/ttNCvRiYMQhP5LfN6Q/nQFkXGZzyEyDwbSdHT3/GW+vrn78OHsR
+        pt34bvb22WQ7Pp9u5PKtmWV59HCrX8mEvVdhXNtZCuxkMBslDBSjTq5m0/PZZDJ+kgytK8lGt7oL
+        o4tiMmpZeDQdTy9H44vR5GLn3jg25LM5/HIGAPAp/cZEpaS7bA7jfP+lJe+xpmx+uASQqbPxS4be
+        sw8oIcuPRuMkkKTc3zSur5swh+9A3AYMCtR8S4BQxwIAxW9IF3LDghaeptMc3jQEwXUwGcOKfIBn
+        ih/ZMgp4ZwwpdBa3pD6HFXoqwQmEhljB9KokATrSymmLYigHv2Zrc0ApgaWyPaWvLMb2Jc0XspBJ
+        Ad/TtkWFl1rAP7/9AT8Igat2wN94aJ0PQ6CqtylUIiCWUjndoJY+h7W4jcQzNOyhVF6tLEudQ2WR
+        dcigdmhH3jhlqQFXbDlsi4VMC3jHcv+X4d7Dy/u/hZ2mRJ5ChT4k1wP8hqUmBaWIR+WXiAckiFQo
+        r/ooHJ8urlxowNh+NVThegkaMzgv4Dl6alndDrh0LQtKgJIqEh9rbbmsmGxJmsOatkNAtHa0YZE9
+        cFAUzxEx8ZTDhkMDlrAk9Q138KFHy4HJFwu5KOCpZe+dwDMyaxqq/smpLUfGovepjjVRlyo2rhb+
+        eFKzUmXpjnwOvnFh5IPrupPW5rsq23agP+oEVu6uWMhlAa9dqdvawQtHPuG+I/UY2B5YHXIftBrI
+        NMIG7cCEz/caOOB0Luqe0UJwwG2HJkCNbSp0VsAr1A89S+MGsOckQdEO7S1JH+vn0HXvLJcJJKAJ
+        KQOWQNZyPWg5Yh/7WyzkqoAbXEWoHZc+qJP6q0zCpnHgqorUQ9dsfYyfwLr4uKUGRal3IEf/kr3h
+        zrJQsZDrAm6UyoT17VawZXMK8LAuEtL6GH4IvHG6BsVAe4727sVCnhTwmk2DajnKJILcnLLTcN0c
+        A+SApJGCBwp48OwONBULmYwLuP89ZvkqXr//0z0SwoEdgx2ubBoLUdZJZB4MSaD4CMwanIJy3YR0
+        yuEWbX+iVN8RlY+6iBtUEvJRIAt5E69Z9gHoztg+3rDbKN5O2ZM/GYO7+ZeoQ6X93LNbwDbynFQe
+        J+eum5v4nnJAy3V6pqlv0aD0oWelNg7N4KBypvdRbxE4Psk9oi9OB7xS1XuMW0Z6a08MKOICpmET
+        V8v7neXzYZlYV3fqVv6Ra1axsG+WSuidxMURH3KWrJ/PAN6npdU/2ENZp67twjK4NSW4y/PpEC87
+        Lsuj9Xx8ubMGF9AeDdfnV/lXAi5LCsjWn+y9zKBpqDy6Hpck9iW7E8PZSdlfpvO12EPpLPX/CX80
+        GENdoHLZKZVsHpZ8vKYU/0z817VDm1PCmSe9ZUPLwKSRipIq7O2w4TO/9YHaZZVWUKc8rPmqW16Y
+        6fXlpLqeTbOzz2f/AgAA//8DANc9INP1CAAA
+    headers:
+      CF-RAY:
+      - 999dd1e44ae13453-EWR
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Wed, 05 Nov 2025 16:45:13 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - user-hortuttj2f3qtmxyik2zxf4q
+      openai-processing-ms:
+      - '4689'
+      openai-project:
+      - proj_fL4UBWR1CMpAAdgzaSKqsVvA
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '4726'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - '500'
+      x-ratelimit-limit-tokens:
+      - '200000'
+      x-ratelimit-remaining-requests:
+      - '499'
+      x-ratelimit-remaining-tokens:
+      - '199391'
+      x-ratelimit-reset-requests:
+      - 120ms
+      x-ratelimit-reset-tokens:
+      - 182ms
+      x-request-id:
+      - req_1f1e6620f2304bdcb079a779f3fc6c88
+    status:
+      code: 200
+      message: OK
+- request:
+    body: "{\"messages\":[{\"role\":\"system\",\"content\":\"You are Guardrail Agent.
+      You are a expert at validating the output of a task. By providing effective
+      feedback if the output is not valid.\\nYour personal goal is: Validate the output
+      of the task\\n\\nTo give my best complete final answer to the task respond using
+      the exact following format:\\n\\nThought: I now can give a great answer\\nFinal
+      Answer: Your final answer must be the great and the most complete as possible,
+      it must be outcome described.\\n\\nI MUST use these formats, my job depends
+      on it!\"},{\"role\":\"user\",\"content\":\"\\n        Ensure the following task
+      result complies with the given guardrail.\\n\\n        Task result:\\n        The
+      top 10 best Brazilian soccer players, based on their current performance, skill,
+      and influence, include:\\n\\n1. Neymar Jr. \u2013 One of Brazil's most skillful
+      and creative forwards, known for his dribbling, flair, and goal-scoring ability.\\n2.
+      Vin\xEDcius J\xFAnior \u2013 A fast and skillful winger renowned for his dribbling
+      and goal contributions for both club and country.\\n3. Casemiro \u2013 A dominant
+      defensive midfielder, key for ball-winning and transition play, with leadership
+      qualities.\\n4. Alisson Becker \u2013 World-class goalkeeper recognized for
+      his reflexes, shot-stopping ability, and command in the box.\\n5. Rodrygo Goes
+      \u2013 Versatile forward with great technical skills, creativity, and potential
+      to impact games.\\n6. Marquinhos \u2013 Central defender known for his defensive
+      solidity, tactical intelligence, and leadership.\\n7. Fabinho \u2013 A strong
+      defensive midfielder who offers physicality, passing range, and defensive discipline.\\n8.
+      Fred \u2013 Dynamic midfielder known for his energy, passing, and work rate
+      in the midfield.\\n9. Richarlison \u2013 Forward with high work rate, aerial
+      ability, and goal-scoring potential.\\n10. \xC9der Milit\xE3o \u2013 Versatile
+      defender capable of playing as center back or right back, valued for his speed
+      and defensive awareness.\\n\\nThis list exclusively comprises Brazilian players
+      who are currently among the best in the world, aligning with the requirement
+      to focus solely on Brazilians.\\n\\n        Guardrail:\\n        Only include
+      Brazilian players, both women and men\\n\\n        Your task:\\n        - Confirm
+      if the Task result complies with the guardrail.\\n        - If not, provide
       clear feedback explaining what is wrong (e.g., by how much it violates the rule,
-      or what specific part fails).\n        - Focus only on identifying issues \u2014
-      do not propose corrections.\n        - If the Task result complies with the
-      guardrail, saying that is valid\n        "}], "model": "gpt-4o-mini", "stop":
-      ["\nObservation:"]}'
+      or what specific part fails).\\n        - Focus only on identifying issues \u2014
+      do not propose corrections.\\n        - If the Task result complies with the
+      guardrail, saying that is valid\\n        \"}],\"model\":\"gpt-4.1-mini\",\"response_format\":{\"type\":\"json_schema\",\"json_schema\":{\"schema\":{\"properties\":{\"valid\":{\"description\":\"Whether
+      the task output complies with the guardrail\",\"title\":\"Valid\",\"type\":\"boolean\"},\"feedback\":{\"anyOf\":[{\"type\":\"string\"},{\"type\":\"null\"}],\"description\":\"A
+      feedback about the task output if it is not valid\",\"title\":\"Feedback\"}},\"required\":[\"valid\",\"feedback\"],\"title\":\"LLMGuardrailResult\",\"type\":\"object\",\"additionalProperties\":false},\"name\":\"LLMGuardrailResult\",\"strict\":true}},\"stream\":false}"
     headers:
       accept:
       - application/json
@@ -204,30 +566,30 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '4676'
+      - '3109'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=UscrLNUFPQp17ivpT2nYqbIb8GsK9e0GpWC7sIKWwnU-1749566007-1.0.1.1-fCm5jdN02Agxc9.Ep4aAnKukyBp9S3iOLK9NY51NLG1zib3MnfjyCm5HhsWtUvr2lIjQpD_EWosVk4JuLbGxrKYZBa4WTendGsY9lCU9naU;
-        _cfuvid=CGbpwQsAGlm5OcWs4NP0JuyqJh.mIqHyUZjIdKm8_.I-1749566007688-0.0.1.1-604800000
+      - __cf_bm=5Yb7v0Xt3AXD0ZLt5k_U88cbO3gc6rbhq2poktbMFbc-1762361106-1.0.1.1-NwSmj0hUC1ne0pcL1g.7Dg5LAtYB4FSevAVtdnGe9J_KHFbWf7910TiJFsvVUNfn4OgJuQ3IiwL4VNCYYRGq6WZNF2tcqgpgpoE1htHdHkk;
+        _cfuvid=22xbh5Tzgz.0W7bZL_zO0bh06Gmw1.SQLHsO.kclCxU-1762361106452-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.78.0
+      - OpenAI/Python 1.109.1
       x-stainless-arch:
       - arm64
       x-stainless-async:
       - 'false'
+      x-stainless-helper-method:
+      - chat.completions.parse
       x-stainless-lang:
       - python
       x-stainless-os:
       - MacOS
       x-stainless-package-version:
-      - 1.78.0
-      x-stainless-raw-response:
-      - 'true'
+      - 1.109.1
       x-stainless-read-timeout:
-      - '600.0'
+      - '600'
       x-stainless-retry-count:
       - '0'
       x-stainless-runtime:
@@ -239,21 +601,17 @@ interactions:
   response:
     body:
       string: !!binary |
-        H4sIAAAAAAAAA4xUwWobMRC9+ysGnVqwjZ3YjuNbQim0hULBtIc6mLE0uzuxVtpqtHbckH8v2o29
-        TpNCLwuapzfzZvRmH3sAio1agNIFRl1WdnCb119+LIvZh+/+h9zM55Op3Wzv5dt4rKei+onhN/ek
-        45E11L6sLEX2roV1IIyUso6vJtfT2Ww0mjdA6Q3ZRMurOJj4QcmOBxeji8lgdDUYz5/ZhWdNohbw
-        swcA8Nh8k05n6EEtYNQ/RkoSwZzU4nQJQAVvU0ShCEtEF1W/A7V3kVwjfVn4Oi/iAj6B83vQ6CDn
-        HQFCnvQDOtlTAFi5j+zQwk1zXsDjygGs1A4tm5VaQIZWqN8GMyKzQb1N8ZVaFgQRZQuBpLYRjCcB
-        5yM0AzvAnmMBsSDIawwmIFtAAY7ATtvakEBl8UBBIAu+hB0G9rWA9rWLgUkAnQHv7AFKcmn8AnHv
-        4Tbgb7aM7kR/95UOJQb4HIYNpz2+h33BloAeUjV2+Rlz70vq+Cl7IHsYwvKFWqlIc8YarT1AoF81
-        SRSI/thAK+6Vnj5sfCyeayQ9Jbl+EqML4HZCWW0ztpbMcKVW7un8CQNltWCykautPQPQOR+xmUMy
-        z90z8nSyi/V5FfxG/qKqjB1LsQ6E4l2yhkRfqQZ96gHcNbasXzhNVcGXVVxHv6Wm3PV01uZT3TZ0
-        6PwIRh/RdvHxaHLRfyPh2lBEtnLmbKVRF2Q6brcGWBv2Z0DvrO3Xct7K3bbOLv+f9B2gNVWRzLoK
-        ZFi/bLm7Fij9Lf517TTmRrASCjvWtI5MIT2FoQxr2+6wkoNEKtcZu5xCFbhd5KxaX05wOkG6vtSq
-        99T7AwAA//8DABZK9w/WBAAA
+        H4sIAAAAAAAAAwAAAP//jJLPTuMwEMbveQprzglKQijdXHkB4LAS2qLItSepwbG99qQLW/XdV05K
+        E/6sxMUH/+Ybf994DgljoCTUDMSOk+idzm4e+P7m9/2f16H6+/PloVvf27zX5V2n21sLaVTY7RMK
+        elNdCNs7jaSsmbDwyAlj1+J6VV6uiqKoRtBbiTrKOkdZdVFkvTIqK/PyKsurrKhO8p1VAgPU7FfC
+        GGOH8YxGjcQXqFmevt30GALvEOpzEWPgrY43wENQgbghSGcorCE0o/fDBvZcK7mBmvyA6QZaRLnl
+        4nkDtRm0Pi6FHtsh8Og+ogXgxljiMf1o+fFEjmeT2nbO2234IIVWGRV2jUcerImGAlkHIz0mjD2O
+        wxje5QPnbe+oIfuM43OrfD31g/kTZvrjxMgS1wtRcZ1+0a6RSFzpsJgmCC52KGfpPHo+SGUXIFmE
+        /mzmq95TcGW677SfgRDoCGXjPEol3geeyzzGFf1f2XnIo2EI6PdKYEMKffwIiS0f9LQ3EF4DYd+0
+        ynTonVfT8rSuqUS5vira9aqE5Jj8AwAA//8DANVgnsdLAwAA
     headers:
       CF-RAY:
-      - 94d9957c4b46f1fe-GRU
+      - 999dd2024f7c3453-EWR
       Connection:
       - keep-alive
       Content-Encoding:
@@ -261,9 +619,11 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Tue, 10 Jun 2025 14:33:46 GMT
+      - Wed, 05 Nov 2025 16:45:14 GMT
       Server:
       - cloudflare
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
       Transfer-Encoding:
       - chunked
       X-Content-Type-Options:
@@ -275,368 +635,31 @@ interactions:
       cf-cache-status:
       - DYNAMIC
       openai-organization:
-      - crewai-iuxna1
+      - user-hortuttj2f3qtmxyik2zxf4q
       openai-processing-ms:
-      - '18280'
+      - '272'
+      openai-project:
+      - proj_fL4UBWR1CMpAAdgzaSKqsVvA
       openai-version:
       - '2020-10-01'
-      strict-transport-security:
-      - max-age=31536000; includeSubDomains; preload
       x-envoy-upstream-service-time:
-      - '18287'
+      - '491'
+      x-openai-proxy-wasm:
+      - v0.1
       x-ratelimit-limit-requests:
-      - '30000'
+      - '500'
       x-ratelimit-limit-tokens:
-      - '150000000'
+      - '200000'
       x-ratelimit-remaining-requests:
-      - '29999'
+      - '499'
       x-ratelimit-remaining-tokens:
-      - '149998889'
+      - '199378'
       x-ratelimit-reset-requests:
-      - 2ms
+      - 120ms
       x-ratelimit-reset-tokens:
-      - 0s
+      - 186ms
       x-request-id:
-      - req_853da6b9ca8f386ff1427c837346290d
-    status:
-      code: 200
-      message: OK
-- request:
-    body: '{"messages": [{"role": "system", "content": "You are Sports Analyst. You
-      are an expert at gathering and organizing information. You carefully collect
-      details and present them in a structured way.\nYour personal goal is: Gather
-      information about the best soccer players\n\nTo give my best complete final
-      answer to the task respond using the exact following format:\n\nThought: I now
-      can give a great answer\nFinal Answer: Your final answer must be the great and
-      the most complete as possible, it must be outcome described.\n\nI MUST use these
-      formats, my job depends on it!"}, {"role": "user", "content": "Top 10 best players
-      in the world?"}, {"role": "assistant", "content": "Thought: I now can give a
-      great answer  \nFinal Answer: Here are the top 10 best soccer players in the
-      world as of October 2023, based on their performance, impact, and overall contributions
-      to the game:\n\n1. **Lionel Messi** (Inter Miami)\n   - Position: Forward\n   -
-      Country: Argentina\n   - Highlights: Messi continues to showcase his exceptional
-      dribbling, vision, and playmaking ability, leading Argentina to victory in the
-      2022 FIFA World Cup and significantly contributing to his club''s successes.\n\n2.
-      **Kylian Mbapp\u00e9** (Paris Saint-Germain)\n   - Position: Forward\n   - Country:
-      France\n   - Highlights: Known for his blistering speed and clinical finishing,
-      Mbapp\u00e9 is a key player for both PSG and the French national team, known
-      for his performances in Ligue 1 and international tournaments.\n\n3. **Erling
-      Haaland** (Manchester City)\n   - Position: Forward\n   - Country: Norway\n   -
-      Highlights: Haaland''s goal-scoring prowess and strength have made him one of
-      the most feared strikers in Europe, helping Manchester City secure several titles
-      including the UEFA Champions League.\n\n4. **Kevin De Bruyne** (Manchester City)\n   -
-      Position: Midfielder\n   - Country: Belgium\n   - Highlights: De Bruyne\u2019s
-      exceptional passing, control, and vision make him one of the best playmakers
-      in the world, instrumental in Manchester City\u2019s dominance in domestic and
-      European competitions.\n\n5. **Cristiano Ronaldo** (Al Nassr)\n   - Position:
-      Forward\n   - Country: Portugal\n   - Highlights: Despite moving to the Saudi
-      Pro League, Ronaldo''s extraordinary talent and goal-scoring ability keep him
-      in the conversation among the best, having had a legendary career across multiple
-      leagues.\n\n6. **Neymar Jr.** (Al Hilal)\n   - Position: Forward\n   - Country:
-      Brazil\n   - Highlights: Neymar''s agility, creativity, and skill have kept
-      him as a top performer in soccer, now showcasing his talents in the Saudi Pro
-      League while maintaining a strong national team presence.\n\n7. **Robert Lewandowski**
-      (Barcelona)\n   - Position: Forward\n   - Country: Poland\n   - Highlights:
-      The prolific striker continues to score consistently in La Liga, known for his
-      finishing, positioning, and aerial ability, contributing to Barcelona\u2019s
-      successes.\n\n8. **Karim Benzema** (Al Ittihad)\n   - Position: Forward\n   -
-      Country: France\n   - Highlights: The former Real Madrid star remains a top
-      talent, displaying leadership and technical skills, now continuing his career
-      in the Saudi Pro League.\n\n9. **Luka Modri\u0107** (Real Madrid)\n   - Position:
-      Midfielder\n   - Country: Croatia\n   - Highlights: A master of midfield control
-      and passing, Modri\u0107 remains an influential figure at Real Madrid, showcasing
-      his experience and football intelligence.\n\n10. **Mohamed Salah** (Liverpool)\n    -
-      Position: Forward\n    - Country: Egypt\n    - Highlights: Salah''s explosive
-      pace and goal-scoring ability keep him as a central figure for Liverpool in
-      the Premier League and European competitions, maintaining his status as one
-      of the elite forwards.\n\nThese players have demonstrated exceptional skill,
-      consistency, and impact in their respective teams and leagues, solidifying their
-      positions among the best in the world."}, {"role": "user", "content": "The task
-      result does not comply with the guardrail as it includes players from various
-      countries and only mentions two Brazilian players (Neymar Jr. and Neymar) while
-      excluding Brazilian women players entirely. The guardrail specifically requests
-      to include only Brazilian players, both women and men, which is not fulfilled."}],
-      "model": "gpt-4o-mini", "stop": ["\nObservation:"]}'
-    headers:
-      accept:
-      - application/json
-      accept-encoding:
-      - gzip, deflate, zstd
-      connection:
-      - keep-alive
-      content-length:
-      - '4338'
-      content-type:
-      - application/json
-      cookie:
-      - __cf_bm=UscrLNUFPQp17ivpT2nYqbIb8GsK9e0GpWC7sIKWwnU-1749566007-1.0.1.1-fCm5jdN02Agxc9.Ep4aAnKukyBp9S3iOLK9NY51NLG1zib3MnfjyCm5HhsWtUvr2lIjQpD_EWosVk4JuLbGxrKYZBa4WTendGsY9lCU9naU;
-        _cfuvid=CGbpwQsAGlm5OcWs4NP0JuyqJh.mIqHyUZjIdKm8_.I-1749566007688-0.0.1.1-604800000
-      host:
-      - api.openai.com
-      user-agent:
-      - OpenAI/Python 1.78.0
-      x-stainless-arch:
-      - arm64
-      x-stainless-async:
-      - 'false'
-      x-stainless-lang:
-      - python
-      x-stainless-os:
-      - MacOS
-      x-stainless-package-version:
-      - 1.78.0
-      x-stainless-raw-response:
-      - 'true'
-      x-stainless-read-timeout:
-      - '600.0'
-      x-stainless-retry-count:
-      - '0'
-      x-stainless-runtime:
-      - CPython
-      x-stainless-runtime-version:
-      - 3.12.9
-    method: POST
-    uri: https://api.openai.com/v1/chat/completions
-  response:
-    body:
-      string: !!binary |
-        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
-    headers:
-      CF-RAY:
-      - 94d995f0ca0cf1fe-GRU
-      Connection:
-      - keep-alive
-      Content-Encoding:
-      - gzip
-      Content-Type:
-      - application/json
-      Date:
-      - Tue, 10 Jun 2025 14:34:22 GMT
-      Server:
-      - cloudflare
-      Transfer-Encoding:
-      - chunked
-      X-Content-Type-Options:
-      - nosniff
-      access-control-expose-headers:
-      - X-Request-ID
-      alt-svc:
-      - h3=":443"; ma=86400
-      cf-cache-status:
-      - DYNAMIC
-      openai-organization:
-      - crewai-iuxna1
-      openai-processing-ms:
-      - '35941'
-      openai-version:
-      - '2020-10-01'
-      strict-transport-security:
-      - max-age=31536000; includeSubDomains; preload
-      x-envoy-upstream-service-time:
-      - '35946'
-      x-ratelimit-limit-requests:
-      - '30000'
-      x-ratelimit-limit-tokens:
-      - '150000000'
-      x-ratelimit-remaining-requests:
-      - '29999'
-      x-ratelimit-remaining-tokens:
-      - '149998983'
-      x-ratelimit-reset-requests:
-      - 2ms
-      x-ratelimit-reset-tokens:
-      - 0s
-      x-request-id:
-      - req_c874fed664f962f5ee90decb8ebad875
-    status:
-      code: 200
-      message: OK
-- request:
-    body: '{"messages": [{"role": "system", "content": "You are Guardrail Agent. You
-      are a expert at validating the output of a task. By providing effective feedback
-      if the output is not valid.\nYour personal goal is: Validate the output of the
-      task\n\nTo give my best complete final answer to the task respond using the
-      exact following format:\n\nThought: I now can give a great answer\nFinal Answer:
-      Your final answer must be the great and the most complete as possible, it must
-      be outcome described.\n\nI MUST use these formats, my job depends on it!\nIMPORTANT:
-      Your final answer MUST contain all the information requested in the following
-      format: {\n  \"valid\": bool,\n  \"feedback\": str | None\n}\n\nIMPORTANT: Ensure
-      the final output does not include any code block markers like ```json or ```python."},
-      {"role": "user", "content": "\n        Ensure the following task result complies
-      with the given guardrail.\n\n        Task result:\n        Here are the top
-      10 best soccer players in the world, focusing exclusively on Brazilian players,
-      both women and men, based on their performance and impact in the game as of
-      October 2023:\n\n1. **Neymar Jr.**  \n   - Position: Forward  \n   - Club: Al
-      Hilal  \n   - Highlights: One of the most skilled forwards globally, Neymar
-      continues to dazzle with his dribbling, playmaking, and goal-scoring ability,
-      having a significant impact on both his club and the Brazilian national team.\n\n2.
-      **Vin\u00edcius J\u00fanior**  \n   - Position: Forward  \n   - Club: Real Madrid  \n   -
-      Highlights: Vin\u00edcius has emerged as a key player for Real Madrid, noted
-      for his speed, technical skills, and crucial goals in important matches, showcasing
-      his talent on both club and international levels.\n\n3. **Richarlison**  \n   -
-      Position: Forward  \n   - Club: Tottenham Hotspur  \n   - Highlights: Known
-      for his versatility and aerial ability, Richarlison has become a vital member
-      of the national team and has the capability to change the game with his pace
-      and scoring ability.\n\n4. **Marta**  \n   - Position: Forward  \n   - Club:
-      Orlando Pride  \n   - Highlights: A true legend of women''s soccer, Marta has
-      consistently showcased her skill, leadership, and goal-scoring prowess, earning
-      numerous awards and accolades throughout her legendary career.\n\n5. **Andressa
-      Alves**  \n   - Position: Midfielder  \n   - Club: Roma  \n   - Highlights:
-      A pivotal player in women''s soccer, Andressa has displayed her exceptional
-      skills and tactical awareness both in club play and for the Brazilian national
-      team.\n\n6. **Alana Santos**  \n   - Position: Defender  \n   - Club: Benfica  \n   -
-      Highlights: Alana is recognized for her defensive prowess and ability to contribute
-      to the attack, establishing herself as a key player for both her club and the
-      national team.\n\n7. **Gabriel Jesus**  \n   - Position: Forward  \n   - Club:
-      Arsenal  \n   - Highlights: With a flair for scoring and assisting, Gabriel
-      Jesus is an essential part of the national team, known for his work rate and
-      intelligence on the field.\n\n8. **Ta\u00eds Ara\u00fajo**  \n   - Position:
-      Midfielder  \n   - Club: S\u00e3o Paulo  \n   - Highlights: A rising star in
-      Brazilian women''s soccer, Ta\u00eds has gained recognition for her strong performances
-      in midfield, showcasing both skill and creativity.\n\n9. **Thiago Silva**  \n   -
-      Position: Defender  \n   - Club: Chelsea  \n   - Highlights: An experienced
-      and reliable center-back, Silva\u2019s leadership and defensive abilities have
-      made him a cornerstone for Chelsea and the Brazilian national team.\n\n10. **Bia
-      Zaneratto**  \n    - Position: Forward  \n    - Club: Palmeiras  \n    - Highlights:
-      A talented forward, Bia has become known for her goal-scoring capabilities and
-      playmaking skills, contributing significantly to both her club and the national
-      team.\n\nThis list highlights the incredible talent and contributions of Brazilian
-      players in soccer, showcasing their skills across both men''s and women''s games,
-      thus representing Brazil''s rich soccer legacy.\n\n        Guardrail:\n        Only
-      include Brazilian players, both women and men\n        \n        Your task:\n        -
-      Confirm if the Task result complies with the guardrail.\n        - If not, provide
-      clear feedback explaining what is wrong (e.g., by how much it violates the rule,
-      or what specific part fails).\n        - Focus only on identifying issues \u2014
-      do not propose corrections.\n        - If the Task result complies with the
-      guardrail, saying that is valid\n        "}], "model": "gpt-4o-mini", "stop":
-      ["\nObservation:"]}'
-    headers:
-      accept:
-      - application/json
-      accept-encoding:
-      - gzip, deflate, zstd
-      connection:
-      - keep-alive
-      content-length:
-      - '4571'
-      content-type:
-      - application/json
-      cookie:
-      - __cf_bm=UscrLNUFPQp17ivpT2nYqbIb8GsK9e0GpWC7sIKWwnU-1749566007-1.0.1.1-fCm5jdN02Agxc9.Ep4aAnKukyBp9S3iOLK9NY51NLG1zib3MnfjyCm5HhsWtUvr2lIjQpD_EWosVk4JuLbGxrKYZBa4WTendGsY9lCU9naU;
-        _cfuvid=CGbpwQsAGlm5OcWs4NP0JuyqJh.mIqHyUZjIdKm8_.I-1749566007688-0.0.1.1-604800000
-      host:
-      - api.openai.com
-      user-agent:
-      - OpenAI/Python 1.78.0
-      x-stainless-arch:
-      - arm64
-      x-stainless-async:
-      - 'false'
-      x-stainless-lang:
-      - python
-      x-stainless-os:
-      - MacOS
-      x-stainless-package-version:
-      - 1.78.0
-      x-stainless-raw-response:
-      - 'true'
-      x-stainless-read-timeout:
-      - '600.0'
-      x-stainless-retry-count:
-      - '0'
-      x-stainless-runtime:
-      - CPython
-      x-stainless-runtime-version:
-      - 3.12.9
-    method: POST
-    uri: https://api.openai.com/v1/chat/completions
-  response:
-    body:
-      string: !!binary |
-        H4sIAAAAAAAAA4ySTW/bMAyG7/4VhM72kLj5WHxrDwEKtNilGDYshcFItK1WlgRJTjYE+e+D7DR2
-        tw7YxYD58KX4kjwlAEwKVgDjDQbeWpXd1d3Dl+5Yfb3dPD6K7bri26cw899f5vruG0ujwuxfiIc3
-        1SduWqsoSKMHzB1hoFh1vl5slqvVbJX3oDWCVJTVNmQLk7VSyyyf5Ytsts7mny/qxkhOnhXwIwEA
-        OPXf2KcW9JMVMEvfIi15jzWx4poEwJxRMcLQe+kD6sDSEXKjA+m+9afGdHUTCrgHbY7AUUMtDwQI
-        dewfUPsjOYCd3kqNCm77/wJOOw2wYwdUUuxYAcF1lA6xikjskb/GsO6U2unz9HFHVedRXeAEoNYm
-        YBxgb/v5Qs5Xo8rU1pm9/0PKKqmlb0pH6I2OpnwwlvX0nAA89wPt3s2IWWdaG8pgXql/bpMvh3ps
-        3ONI8/UFBhNQTVTLPP2gXikooFR+shLGkTckRum4P+yENBOQTFz/3c1HtQfnUtf/U34EnJMNJErr
-        SEj+3vGY5iie+b/SrlPuG2ae3EFyKoMkFzchqMJODcfH/C8fqC0rqWty1snhAitb3ixwuUDa3HCW
-        nJPfAAAA//8DAOHOvQuPAwAA
-    headers:
-      CF-RAY:
-      - 94d996d2b877f1fe-GRU
-      Connection:
-      - keep-alive
-      Content-Encoding:
-      - gzip
-      Content-Type:
-      - application/json
-      Date:
-      - Tue, 10 Jun 2025 14:34:38 GMT
-      Server:
-      - cloudflare
-      Transfer-Encoding:
-      - chunked
-      X-Content-Type-Options:
-      - nosniff
-      access-control-expose-headers:
-      - X-Request-ID
-      alt-svc:
-      - h3=":443"; ma=86400
-      cf-cache-status:
-      - DYNAMIC
-      openai-organization:
-      - crewai-iuxna1
-      openai-processing-ms:
-      - '15341'
-      openai-version:
-      - '2020-10-01'
-      strict-transport-security:
-      - max-age=31536000; includeSubDomains; preload
-      x-envoy-upstream-service-time:
-      - '15343'
-      x-ratelimit-limit-requests:
-      - '30000'
-      x-ratelimit-limit-tokens:
-      - '150000000'
-      x-ratelimit-remaining-requests:
-      - '29999'
-      x-ratelimit-remaining-tokens:
-      - '149998917'
-      x-ratelimit-reset-requests:
-      - 2ms
-      x-ratelimit-reset-tokens:
-      - 0s
-      x-request-id:
-      - req_22419b91d42cf1e03278a29f3093ed3d
+      - req_71dbaeb6e8484003b8b3287b9e3ed4b5
     status:
       code: 200
       message: OK
