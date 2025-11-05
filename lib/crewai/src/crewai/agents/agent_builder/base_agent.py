@@ -25,6 +25,7 @@ from crewai.agents.tools_handler import ToolsHandler
 from crewai.knowledge.knowledge import Knowledge
 from crewai.knowledge.knowledge_config import KnowledgeConfig
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
+from crewai.mcp.config import MCPServerConfig
 from crewai.rag.embeddings.types import EmbedderConfig
 from crewai.security.security_config import SecurityConfig
 from crewai.tools.base_tool import BaseTool, Tool
@@ -194,7 +195,7 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
         default=None,
         description="List of applications or application/action combinations that the agent can access through CrewAI Platform. Can contain app names (e.g., 'gmail') or specific actions (e.g., 'gmail/send_email')",
     )
-    mcps: list[str] | None = Field(
+    mcps: list[str | MCPServerConfig] | None = Field(
         default=None,
         description="List of MCP server references. Supports 'https://server.com/path' for external servers and 'crewai-amp:mcp-name' for AMP marketplace. Use '#tool_name' suffix for specific tools.",
     )
@@ -253,20 +254,40 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
 
     @field_validator("mcps")
     @classmethod
-    def validate_mcps(cls, mcps: list[str] | None) -> list[str] | None:
+    def validate_mcps(
+        cls, mcps: list[str | MCPServerConfig] | None
+    ) -> list[str | MCPServerConfig] | None:
+        """Validate MCP server references and configurations.
+
+        Supports both string references (for backwards compatibility) and
+        structured configuration objects (MCPServerStdio, MCPServerHTTP, MCPServerSSE).
+        """
         if not mcps:
             return mcps
 
         validated_mcps = []
         for mcp in mcps:
-            if mcp.startswith(("https://", "crewai-amp:")):
+            # Check if it's a string reference (backwards compatible)
+            if isinstance(mcp, str):
+                if mcp.startswith(("https://", "crewai-amp:")):
+                    validated_mcps.append(mcp)
+                else:
+                    raise ValueError(
+                        f"Invalid MCP reference: {mcp}. "
+                        "String references must start with 'https://' or 'crewai-amp:'"
+                    )
+            # Check if it's a valid MCP server config
+            elif isinstance(mcp, (MCPServerConfig)):
+                print(f"Valid MCP server config using new config: {mcp}")
+                print("type of mcp: ", type(mcp))
                 validated_mcps.append(mcp)
             else:
                 raise ValueError(
-                    f"Invalid MCP reference: {mcp}. Must start with 'https://' or 'crewai-amp:'"
+                    f"Invalid MCP configuration: {type(mcp)}. "
+                    "Must be a string reference or MCPServerConfig instance."
                 )
-
-        return list(set(validated_mcps))
+        print("validated_mcps: ", validated_mcps)
+        return validated_mcps
 
     @model_validator(mode="after")
     def validate_and_set_attributes(self) -> Self:
@@ -343,7 +364,7 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
         """Get platform tools for the specified list of applications and/or application/action combinations."""
 
     @abstractmethod
-    def get_mcp_tools(self, mcps: list[str]) -> list[BaseTool]:
+    def get_mcp_tools(self, mcps: list[str | MCPServerConfig]) -> list[BaseTool]:
         """Get MCP tools for the specified list of MCP server references."""
 
     def copy(self) -> Self:  # type: ignore # Signature of "copy" incompatible with supertype "BaseModel"
