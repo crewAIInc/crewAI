@@ -20,6 +20,7 @@ from typing import (
 )
 
 from dotenv import load_dotenv
+import httpx
 from pydantic import BaseModel, Field
 from typing_extensions import Self
 
@@ -53,6 +54,7 @@ if TYPE_CHECKING:
     from litellm.utils import supports_response_schema
 
     from crewai.agent.core import Agent
+    from crewai.llms.hooks.base import BaseInterceptor
     from crewai.task import Task
     from crewai.tools.base_tool import BaseTool
     from crewai.utilities.types import LLMMessage
@@ -334,6 +336,8 @@ class LLM(BaseLLM):
                 return cast(
                     Self, native_class(model=model_string, provider=provider, **kwargs)
                 )
+            except NotImplementedError:
+                raise
             except Exception as e:
                 raise ImportError(f"Error importing native provider: {e}") from e
 
@@ -403,6 +407,7 @@ class LLM(BaseLLM):
         callbacks: list[Any] | None = None,
         reasoning_effort: Literal["none", "low", "medium", "high"] | None = None,
         stream: bool = False,
+        interceptor: BaseInterceptor[httpx.Request, httpx.Response] | None = None,
         **kwargs: Any,
     ) -> None:
         """Initialize LLM instance.
@@ -442,6 +447,7 @@ class LLM(BaseLLM):
         self.additional_params = kwargs
         self.is_anthropic = self._is_anthropic_model(model)
         self.stream = stream
+        self.interceptor = interceptor
 
         litellm.drop_params = True
 
