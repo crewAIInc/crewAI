@@ -305,10 +305,17 @@ class LiteAgent(FlowTrackable, BaseModel):
         formatted_result: BaseModel | None = None
         if self.response_format:
             try:
-                # Cast to BaseModel to ensure type safety
-                result = self.response_format.model_validate_json(agent_finish.output)
-                if isinstance(result, BaseModel):
-                    formatted_result = result
+                if (
+                    hasattr(agent_finish, "pydantic")
+                    and agent_finish.pydantic is not None
+                ):
+                    formatted_result = agent_finish.pydantic
+                else:
+                    result = self.response_format.model_validate_json(
+                        agent_finish.output
+                    )
+                    if isinstance(result, BaseModel):
+                        formatted_result = result
             except Exception as e:
                 self._printer.print(
                     content=f"Failed to parse output into response format: {e!s}",
@@ -476,13 +483,17 @@ class LiteAgent(FlowTrackable, BaseModel):
                 enforce_rpm_limit(self.request_within_rpm_limit)
 
                 try:
+                    use_response_model = (
+                        self.response_format if not self._parsed_tools else None
+                    )
+
                     answer = get_llm_response(
                         llm=cast(LLM, self.llm),
                         messages=self._messages,
                         callbacks=self._callbacks,
                         printer=self._printer,
                         from_agent=self,
-                        response_model=self.response_format,
+                        response_model=use_response_model,
                     )
 
                 except Exception as e:

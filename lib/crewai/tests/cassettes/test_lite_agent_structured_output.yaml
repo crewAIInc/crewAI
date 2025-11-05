@@ -32,7 +32,7 @@ interactions:
       - application/json
       host:
       - api.openai.com
-      user-agent:
+      user-REDACTED:
       - OpenAI/Python 1.68.2
       x-stainless-arch:
       - arm64
@@ -89,10 +89,10 @@ interactions:
       Server:
       - cloudflare
       Set-Cookie:
-      - __cf_bm=OWYkqAq6NMgagfjt7oqi12iJ5ECBTSDmDicA3PaziDo-1743447969-1.0.1.1-rq5Byse6zYlezkvLZz4NdC5S0JaKB1rLgWEO2WGINaZ0lvlmJTw3uVGk4VUfrnnYaNr8IUcyhSX5vzSrX7HjdmczCcSMJRbDdUtephXrT.A;
+      - __cf_bm=REDACTED;
         path=/; expires=Mon, 31-Mar-25 19:36:09 GMT; domain=.api.openai.com; HttpOnly;
         Secure; SameSite=None
-      - _cfuvid=u769MG.poap6iEjFpbByMFUC0FygMEqYSurr5DfLbas-1743447969501-0.0.1.1-604800000;
+      - _cfuvid=REDACTED;
         path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
       Transfer-Encoding:
       - chunked
@@ -125,7 +125,7 @@ interactions:
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_824c5fb422e466b60dacb6e27a0cbbda
+      - req_REDACTED
     http_version: HTTP/1.1
     status_code: 200
 - request:
@@ -164,10 +164,10 @@ interactions:
       content-type:
       - application/json
       cookie:
-      - _cfuvid=u769MG.poap6iEjFpbByMFUC0FygMEqYSurr5DfLbas-1743447969501-0.0.1.1-604800000
+      - _cfuvid=REDACTED
       host:
       - api.openai.com
-      user-agent:
+      user-REDACTED:
       - OpenAI/Python 1.93.0
       x-stainless-arch:
       - arm64
@@ -214,10 +214,10 @@ interactions:
       Server:
       - cloudflare
       Set-Cookie:
-      - __cf_bm=GCRvAgKG_bNwYFqI4.V.ETNDFENlZGsSPgqfmPRweBE-1758660662-1.0.1.1-BbV_KqvF6uEt_DEfefPzisFvVJNAN5NBAn7UyvcCjL4cC0Earh6WKRSQEBgXDhltOn0zo_0LaT1GsrScK1y2R6EE8NtKLTLI0DvmUDiiTdo;
+      - __cf_bm=REDACTED;
         path=/; expires=Tue, 23-Sep-25 21:21:02 GMT; domain=.api.openai.com; HttpOnly;
         Secure; SameSite=None
-      - _cfuvid=satXYLU.6M.wV_6k7mFk5Z6V97uowThF_xldugIJSJQ-1758660662273-0.0.1.1-604800000;
+      - _cfuvid=REDACTED;
         path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
       Strict-Transport-Security:
       - max-age=31536000; includeSubDomains; preload
@@ -236,7 +236,7 @@ interactions:
       openai-processing-ms:
       - '1464'
       openai-project:
-      - proj_xitITlrFeen7zjNSzML82h9x
+      - proj_REDACTED
       openai-version:
       - '2020-10-01'
       x-envoy-upstream-service-time:
@@ -262,7 +262,7 @@ interactions:
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_b7cf0ed387424a5f913d455e7bcc6949
+      - req_REDACTED
     status:
       code: 200
       message: OK

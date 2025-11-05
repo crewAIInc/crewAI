@@ -203,6 +203,7 @@ def clear_event_bus_handlers(setup_test_environment):
     from crewai.experimental.evaluation.evaluation_listener import (
         EvaluationTraceCallback,
     )
+    from crewai.rag.config.utils import clear_rag_config
 
     yield
 
@@ -214,6 +215,9 @@ def clear_event_bus_handlers(setup_test_environment):
     callback.traces.clear()
     callback.current_agent_id = None
     callback.current_task_id = None
+
+    # Clear RAG config to prevent ChromaDB state from persisting across tests
+    clear_rag_config()
 
 
 @pytest.fixture(scope="module")

@@ -292,7 +292,7 @@ def test_sets_parent_flow_when_inside_flow():
     captured_agent = None
 
     mock_llm = Mock(spec=LLM)
-    mock_llm.call.return_value = "Test response"
+    mock_llm.call.return_value = "Thought: I can answer this\nFinal Answer: Test response"
     mock_llm.stop = []
 
     from crewai.types.usage_metrics import UsageMetrics
@@ -382,7 +382,7 @@ def test_guardrail_is_called_using_string():
     assert not guardrail_events["completed"][0].success
     assert guardrail_events["completed"][1].success
     assert (
-        "Here are the top 10 best soccer players in the world, focusing exclusively on Brazilian players"
+        "The top 10 best Brazilian soccer players, based on their current performance, skill, and influence, include"
         in result.raw
     )
 
@@ -508,6 +508,7 @@ def test_agent_output_when_guardrail_returns_base_model():
     assert result.pydantic == Player(name="Lionel Messi", country="Argentina")
 
 
+@pytest.mark.vcr(filter_headers=["authorization"])
 def test_lite_agent_with_custom_llm_and_guardrails():
     """Test that CustomLLM (inheriting from BaseLLM) works with guardrails."""
 
@@ -529,13 +530,13 @@ def test_lite_agent_with_custom_llm_and_guardrails():
         ) -> str:
             self.call_count += 1
 
+            # Check if this is a guardrail validation call (contains schema for valid/feedback)
             if "valid" in str(messages) and "feedback" in str(messages):
-                return '{"valid": true, "feedback": null}'
+                # Return JSON wrapped in proper ReAct format for guardrail
+                return 'Thought: I need to validate the output\nFinal Answer: {"valid": true, "feedback": null}'
 
-            if "Thought:" in str(messages):
-                return f"Thought: I will analyze soccer players\nFinal Answer: {self.response}"
-
-            return self.response
+            # Default response for main agent execution
+            return f"Thought: I will analyze soccer players\nFinal Answer: {self.response}"
 
         def supports_function_calling(self) -> bool:
             return False
@@ -554,6 +555,8 @@ def test_lite_agent_with_custom_llm_and_guardrails():
         backstory="You analyze soccer players and their performance.",
         llm=custom_llm,
         guardrail="Only include Brazilian players",
+      max_iterations=5,
+      guardrail_max_retries=5,
     )
 
     result = agent.kickoff("Tell me about the best soccer players")
@@ -572,6 +575,8 @@ def test_lite_agent_with_custom_llm_and_guardrails():
         backstory="Test backstory",
         llm=custom_llm2,
         guardrail=test_guardrail,
+      max_iterations=5,
+      guardrail_max_retries=5,
     )
 
     result2 = agent2.kickoff("Test message")
@@ -592,46 +597,44 @@ def test_lite_agent_with_invalid_llm():
         assert "Expected LLM instance of type BaseLLM" in str(exc_info.value)
 
 
-@patch.dict("os.environ", {"CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token"})
-@patch("crewai_tools.tools.crewai_platform_tools.crewai_platform_tool_builder.requests.get")
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_agent_kickoff_with_platform_tools(mock_get):
+def test_agent_kickoff_with_platform_tools():
     """Test that Agent.kickoff() properly integrates platform tools with LiteAgent"""
-    mock_response = Mock()
-    mock_response.raise_for_status.return_value = None
-    mock_response.json.return_value = {
-        "actions": {
-            "github": [
-                {
-                    "name": "create_issue",
-                    "description": "Create a GitHub issue",
-                    "parameters": {
-                        "type": "object",
-                        "properties": {
-                            "title": {"type": "string", "description": "Issue title"},
-                            "body": {"type": "string", "description": "Issue body"},
+    with patch.dict("os.environ", {"CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token"}):
+        mock_response = Mock()
+        mock_response.raise_for_status.return_value = None
+        mock_response.json.return_value = {
+            "actions": {
+                "github": [
+                    {
+                        "name": "create_issue",
+                        "description": "Create a GitHub issue",
+                        "parameters": {
+                            "type": "object",
+                            "properties": {
+                                "title": {"type": "string", "description": "Issue title"},
+                                "body": {"type": "string", "description": "Issue body"},
+                            },
+                            "required": ["title"],
                         },
-                        "required": ["title"],
-                    },
-                }
-            ]
+                    }
+                ]
+            }
         }
-    }
-    mock_get.return_value = mock_response
 
-    agent = Agent(
-        role="Test Agent",
-        goal="Test goal",
-        backstory="Test backstory",
-        llm=LLM(model="gpt-3.5-turbo"),
-        apps=["github"],
-        verbose=True
-    )
+        agent = Agent(
+            role="Test Agent",
+            goal="Test goal",
+            backstory="Test backstory",
+            llm=LLM(model="gpt-3.5-turbo"),
+            apps=["github"],
+            verbose=True
+        )
 
-    result = agent.kickoff("Create a GitHub issue")
+        result = agent.kickoff("Create a GitHub issue")
 
-    assert isinstance(result, LiteAgentOutput)
-    assert result.raw is not None
+        assert isinstance(result, LiteAgentOutput)
+        assert result.raw is not None
 
 
 @patch.dict("os.environ", {"EXA_API_KEY": "test_exa_key"})

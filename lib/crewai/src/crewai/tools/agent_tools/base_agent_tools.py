@@ -126,7 +126,11 @@ class BaseAgentTool(BaseTool):
             logger.debug(
                 f"Created task for agent '{self.sanitize_agent_name(selected_agent.role)}': {task}"
             )
-            return selected_agent.execute_task(task_with_assigned_agent, context)
+            result = selected_agent.execute_task(task_with_assigned_agent, context)
+
+            if isinstance(result, dict) and "output" in result:
+                return result["output"]
+            return str(result)
         except Exception as e:
             # Handle task creation or execution errors
             return self.i18n.errors("agent_tool_execution_error").format(

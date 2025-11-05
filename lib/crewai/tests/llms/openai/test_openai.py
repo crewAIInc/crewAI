@@ -518,7 +518,9 @@ def test_openai_streaming_with_response_model():
         result = llm.call("Test question", response_model=TestResponse)
 
         assert result is not None
-        assert isinstance(result, str)
+        assert isinstance(result, TestResponse)
+        assert result.answer == "test"
+        assert result.confidence == 0.95
 
         assert mock_create.called
         call_kwargs = mock_create.call_args[1]

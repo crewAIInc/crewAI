@@ -316,6 +316,16 @@ class OpenAICompletion(BaseLLM):
                     )
                     return parsed_object
 
+                content = math_reasoning.content or ""
+                self._emit_call_completed_event(
+                    response=content,
+                    call_type=LLMCallType.LLM_CALL,
+                    from_task=from_task,
+                    from_agent=from_agent,
+                    messages=params["messages"],
+                )
+                return content
+
             response: ChatCompletion = self.client.chat.completions.create(**params)
 
             usage = self._extract_openai_token_usage(response)

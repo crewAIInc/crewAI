@@ -24,11 +24,11 @@ interactions:
       content-type:
       - application/json
       cookie:
-      - __cf_bm=9.8sBYBkvBR8R1K_bVF7xgU..80XKlEIg3N2OBbTSCU-1727214102-1.0.1.1-.qiTLXbPamYUMSuyNsOEB9jhGu.jOifujOrx9E2JZvStbIZ9RTIiE44xKKNfLPxQkOi6qAT3h6htK8lPDGV_5g;
-        _cfuvid=lbRdAddVWV6W3f5Dm9SaOPWDUOxqtZBSPr_fTW26nEA-1727213194587-0.0.1.1-604800000
+      - __cf_bm=REDACTED;
+        _cfuvid=REDACTED
       host:
       - api.openai.com
-      user-agent:
+      user-REDACTED:
       - OpenAI/Python 1.47.0
       x-stainless-arch:
       - arm64
@@ -99,7 +99,7 @@ interactions:
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_80d625bb068afa5e211526b982051176
+      - req_REDACTED
     http_version: HTTP/1.1
     status_code: 200
 - request:
@@ -123,11 +123,11 @@ interactions:
       content-type:
       - application/json
       cookie:
-      - __cf_bm=9.8sBYBkvBR8R1K_bVF7xgU..80XKlEIg3N2OBbTSCU-1727214102-1.0.1.1-.qiTLXbPamYUMSuyNsOEB9jhGu.jOifujOrx9E2JZvStbIZ9RTIiE44xKKNfLPxQkOi6qAT3h6htK8lPDGV_5g;
-        _cfuvid=lbRdAddVWV6W3f5Dm9SaOPWDUOxqtZBSPr_fTW26nEA-1727213194587-0.0.1.1-604800000
+      - __cf_bm=REDACTED;
+        _cfuvid=REDACTED
       host:
       - api.openai.com
-      user-agent:
+      user-REDACTED:
       - OpenAI/Python 1.47.0
       x-stainless-arch:
       - arm64
@@ -201,7 +201,7 @@ interactions:
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_ea2c8106ad3b6c58ea9b2a24c6c17b64
+      - req_REDACTED
     http_version: HTTP/1.1
     status_code: 200
 - request:
@@ -644,6 +644,333 @@ interactions:
       - '0.271205'
       x-xss-protection:
       - 1; mode=block
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"trace_id": "c00fcafb-d5bd-4b76-a2f6-908a5ec81136", "execution_type":
+      "crew", "user_identifier": null, "execution_context": {"crew_fingerprint": null,
+      "crew_name": "crew", "flow_name": null, "crewai_version": "1.3.0", "privacy_level":
+      "standard"}, "execution_metadata": {"expected_duration_estimate": 300, "agent_count":
+      0, "task_count": 0, "flow_method_count": 0, "execution_started_at": "2025-11-05T14:43:14.172565+00:00"},
+      "ephemeral_trace_id": "c00fcafb-d5bd-4b76-a2f6-908a5ec81136"}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate, zstd
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '488'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - CrewAI-CLI/1.3.0
+      X-Crewai-Version:
+      - 1.3.0
+    method: POST
+    uri: https://app.crewai.com/crewai_plus/api/v1/tracing/ephemeral/batches
+  response:
+    body:
+      string: '{"id":"f8a2ec02-d450-4f22-a2f3-038d38ec4f3f","ephemeral_trace_id":"c00fcafb-d5bd-4b76-a2f6-908a5ec81136","execution_type":"crew","crew_name":"crew","flow_name":null,"status":"running","duration_ms":null,"crewai_version":"1.3.0","total_events":0,"execution_context":{"crew_fingerprint":null,"crew_name":"crew","flow_name":null,"crewai_version":"1.3.0","privacy_level":"standard"},"created_at":"2025-11-05T14:43:14.555Z","updated_at":"2025-11-05T14:43:14.555Z","access_code":"TRACE-0c5b24e9c7","user_identifier":null}'
+    headers:
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '515'
+      Content-Type:
+      - application/json; charset=utf-8
+      Date:
+      - Wed, 05 Nov 2025 14:43:14 GMT
+      cache-control:
+      - no-store
+      content-security-policy:
+      - 'default-src ''self'' *.app.crewai.com app.crewai.com; script-src ''self''
+        ''unsafe-inline'' *.app.crewai.com app.crewai.com https://cdn.jsdelivr.net/npm/apexcharts
+        https://www.gstatic.com https://run.pstmn.io https://apis.google.com https://apis.google.com/js/api.js
+        https://accounts.google.com https://accounts.google.com/gsi/client https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css.map
+        https://*.google.com https://docs.google.com https://slides.google.com https://js.hs-scripts.com
+        https://js.sentry-cdn.com https://browser.sentry-cdn.com https://www.googletagmanager.com
+        https://js-na1.hs-scripts.com https://js.hubspot.com http://js-na1.hs-scripts.com
+        https://bat.bing.com https://cdn.amplitude.com https://cdn.segment.com https://d1d3n03t5zntha.cloudfront.net/
+        https://descriptusercontent.com https://edge.fullstory.com https://googleads.g.doubleclick.net
+        https://js.hs-analytics.net https://js.hs-banner.com https://js.hsadspixel.net
+        https://js.hscollectedforms.net https://js.usemessages.com https://snap.licdn.com
+        https://static.cloudflareinsights.com https://static.reo.dev https://www.google-analytics.com
+        https://share.descript.com/; style-src ''self'' ''unsafe-inline'' *.app.crewai.com
+        app.crewai.com https://cdn.jsdelivr.net/npm/apexcharts; img-src ''self'' data:
+        *.app.crewai.com app.crewai.com https://zeus.tools.crewai.com https://dashboard.tools.crewai.com
+        https://cdn.jsdelivr.net https://forms.hsforms.com https://track.hubspot.com
+        https://px.ads.linkedin.com https://px4.ads.linkedin.com https://www.google.com
+        https://www.google.com.br; font-src ''self'' data: *.app.crewai.com app.crewai.com;
+        connect-src ''self'' *.app.crewai.com app.crewai.com https://zeus.tools.crewai.com
+        https://connect.useparagon.com/ https://zeus.useparagon.com/* https://*.useparagon.com/*
+        https://run.pstmn.io https://connect.tools.crewai.com/ https://*.sentry.io
+        https://www.google-analytics.com https://edge.fullstory.com https://rs.fullstory.com
+        https://api.hubspot.com https://forms.hscollectedforms.net https://api.hubapi.com
+        https://px.ads.linkedin.com https://px4.ads.linkedin.com https://google.com/pagead/form-data/16713662509
+        https://google.com/ccm/form-data/16713662509 https://www.google.com/ccm/collect
+        https://worker-actionkit.tools.crewai.com https://api.reo.dev; frame-src ''self''
+        *.app.crewai.com app.crewai.com https://connect.useparagon.com/ https://zeus.tools.crewai.com
+        https://zeus.useparagon.com/* https://connect.tools.crewai.com/ https://docs.google.com
+        https://drive.google.com https://slides.google.com https://accounts.google.com
+        https://*.google.com https://app.hubspot.com/ https://td.doubleclick.net https://www.googletagmanager.com/
+        https://www.youtube.com https://share.descript.com'
+      etag:
+      - W/"23983b1bc5fcd03610610c7b243c9418"
+      expires:
+      - '0'
+      permissions-policy:
+      - camera=(), microphone=(self), geolocation=()
+      pragma:
+      - no-cache
+      referrer-policy:
+      - strict-origin-when-cross-origin
+      strict-transport-security:
+      - max-age=63072000; includeSubDomains
+      vary:
+      - Accept
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-permitted-cross-domain-policies:
+      - none
+      x-request-id:
+      - 5c13555d-8043-4445-92b4-95db4e9ecd05
+      x-runtime:
+      - '0.074975'
+      x-xss-protection:
+      - 1; mode=block
+    status:
+      code: 201
+      message: Created
+- request:
+    body: '{"messages":[{"role":"system","content":"You are Scorer. You''re an expert
+      scorer, specialized in scoring titles.\nYour personal goal is: Score the title\nTo
+      give my best complete final answer to the task respond using the exact following
+      format:\n\nThought: I now can give a great answer\nFinal Answer: Your final
+      answer must be the great and the most complete as possible, it must be outcome
+      described.\n\nI MUST use these formats, my job depends on it!"},{"role":"user","content":"\nCurrent
+      Task: Give me an integer score between 1-5 for the following title: ''The impact
+      of AI in the future of work''\n\nThis is the expected criteria for your final
+      answer: The score of the title.\nyou MUST return the actual complete content
+      as the final answer, not a summary.\n\nBegin! This is VERY important to you,
+      use the tools available and give your best Final Answer, your job depends on
+      it!\n\nThought:"},{"role":"assistant","content":"I now can give a great answer\nFinal
+      Answer: 4"}],"model":"gpt-4.1-mini"}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate, zstd
+      connection:
+      - keep-alive
+      content-length:
+      - '1003'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      user-REDACTED:
+      - OpenAI/Python 1.109.1
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.109.1
+      x-stainless-read-timeout:
+      - '600'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.9
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAAwAAAP//jFNNT9wwEL3nV4x83qBNNlmW3AoVbTn30g8UGWeSmDq2ZU+ACu1/r+yE
+        TaBU6sWS/eY9vzdjPycATDasAiZ6TmKwKr369j077Ky9kZ/y/KrcF5/108eby/vs2l0S2wSGubtH
+        QS+sM2EGq5Ck0RMsHHLCoJqd7/NduTu/KCIwmAZVoHWW0uIsSwepZZpv8zLdFmlWzPTeSIGeVfAj
+        AQB4jmswqht8YhVsNy8nA3rPO2TVqQiAOaPCCePeS09cT6ZnUBhNqKP3r70Zu54q+ALaPILgGjr5
+        gMChCwGAa/+I7qe+lpor+BB3FRRrNYft6HmIpEelVgDX2hAPLYk5bmfkeHKuTGedufNvqKyVWvq+
+        dsi90cGlJ2NZRI8JwG3s0PgqNLPODJZqMr8wXpdvi0mPLZNZ0KycQTLE1YqVXWze0asbJC6VX/WY
+        CS56bBbqMhA+NtKsgGSV+m8372lPyaXu/kd+AYRAS9jU1mEjxevES5nD8HD/VXbqcjTMPLoHKbAm
+        iS5MosGWj2r+Av63JxzqVuoOnXVyelKtrQuRH8qsPexzlhyTPwAAAP//AwBPqz/yYQMAAA==
+    headers:
+      CF-RAY:
+      - 999d1f4e9e250f41-EWR
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Wed, 05 Nov 2025 14:43:15 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - __cf_bm=REDACTED;
+        path=/; expires=Wed, 05-Nov-25 15:13:15 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=REDACTED;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - user-REDACTED
+      openai-processing-ms:
+      - '514'
+      openai-project:
+      - proj_REDACTED
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '660'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - '500'
+      x-ratelimit-limit-tokens:
+      - '200000'
+      x-ratelimit-remaining-requests:
+      - '499'
+      x-ratelimit-remaining-tokens:
+      - '199782'
+      x-ratelimit-reset-requests:
+      - 120ms
+      x-ratelimit-reset-tokens:
+      - 65ms
+      x-request-id:
+      - req_REDACTED
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"user","content":"4"}],"model":"gpt-4.1-mini","tool_choice":{"type":"function","function":{"name":"ScoreOutput"}},"tools":[{"type":"function","function":{"name":"ScoreOutput","description":"Correctly
+      extracted `ScoreOutput` with all the required parameters with correct types","parameters":{"properties":{"score":{"title":"Score","type":"integer"}},"required":["score"],"type":"object"}}}]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate, zstd
+      connection:
+      - keep-alive
+      content-length:
+      - '411'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=REDACTED;
+        _cfuvid=REDACTED
+      host:
+      - api.openai.com
+      user-REDACTED:
+      - OpenAI/Python 1.109.1
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.109.1
+      x-stainless-read-timeout:
+      - '600'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.9
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAAwAAAP//jFPfT9swEH7PX2Hdc4Oa0KYlbxPbA+o0kDZpjIEi41xSU8f2bIeBqv7v
+        yE5J0tJJ84Nl3Xff3Xc/vI0IAV5CToCtqWONFvHlr7vkYvMpS7P6bvpV06y+XX2RV5e32cviB0w8
+        Qz0+IXPvrDOmGi3QcSU7mBmkDn3UZJGl5/PzxcU8AI0qUXharV08O0vihksep9N0Hk9ncTLb09eK
+        M7SQk98RIYRsw+2FyhJfICfTybulQWtpjZD3ToSAUcJbgFrLraPSwWQAmZIOpdcuWyFGgFNKFIwK
+        MSTuznb0HrpFhSi+3az+4u3nWi43N3rF7PXmj326ev45yteFftVBUNVK1ndphPf2/CgZISBpE7jf
+        mTJ43TrduiM6IUBN3TYonZcO23uw3vke8tkODlx30an3w6gLBqvWUvGxPVRK5ahXGfrzsEd2/SiE
+        qrVRj/aIChWX3K4Lg9SGCsE6pTtZXkJIDu3BFEEb1WhXOLXBkC7LunAwbNoAzveYU46KwbxIJieC
+        FSU6ysOM+7VilK2xHJjDetG25GoERKOSP2o5Fbsrm8v6f8IPAGOoHZaFNlhydljv4GbQf8N/ufUt
+        DoLBonnmDAvH0fgxlFjRVnTLBPbVOmyKissajTY8fBCodDFj6XKeVMsshWgXvQEAAP//AwCj+M0I
+        LwQAAA==
+    headers:
+      CF-RAY:
+      - 999d1f5599a8db49-EWR
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Wed, 05 Nov 2025 14:43:16 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - user-REDACTED
+      openai-processing-ms:
+      - '776'
+      openai-project:
+      - proj_REDACTED
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '968'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - '500'
+      x-ratelimit-limit-tokens:
+      - '200000'
+      x-ratelimit-remaining-requests:
+      - '499'
+      x-ratelimit-remaining-tokens:
+      - '199997'
+      x-ratelimit-reset-requests:
+      - 120ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_REDACTED
     status:
       code: 200
       message: OK

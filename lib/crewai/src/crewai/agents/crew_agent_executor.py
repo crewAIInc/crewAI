@@ -195,7 +195,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         self._create_short_term_memory(formatted_answer)
         self._create_long_term_memory(formatted_answer)
         self._create_external_memory(formatted_answer)
-        return {"output": formatted_answer.output}
+        return {"output": formatted_answer.output, "agent_finish": formatted_answer}
 
     def _invoke_loop(self) -> AgentFinish:
         """Execute agent loop until completion.
@@ -301,6 +301,27 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                 "Agent execution ended without reaching a final answer. "
                 f"Got {type(formatted_answer).__name__} instead of AgentFinish."
             )
+
+        if (
+            self.task
+            and (self.task.output_pydantic or self.task.output_json)
+            and self.llm.supports_function_calling()
+            and not self.response_model
+            and formatted_answer.pydantic is None
+        ):
+            structured_answer = get_llm_response(
+                llm=self.llm,
+                messages=self.messages,
+                callbacks=self.callbacks,
+                printer=self._printer,
+                from_task=self.task,
+                from_agent=self.agent,
+                response_model=self.task.output_pydantic or self.task.output_json,
+            )
+
+            if isinstance(structured_answer, BaseModel):
+                formatted_answer.pydantic = structured_answer
+
         self._show_logs(formatted_answer)
         return formatted_answer
 

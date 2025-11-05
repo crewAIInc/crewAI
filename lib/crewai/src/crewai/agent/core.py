@@ -307,11 +307,15 @@ class Agent(BaseAgent):
         task_prompt = task.prompt()
 
         # If the task requires output in JSON or Pydantic format,
-        # append specific instructions to the task prompt to ensure
-        # that the final answer does not include any code block markers
-        # Skip this if task.response_model is set, as native structured outputs handle schema automatically
-        if (task.output_json or task.output_pydantic) and not task.response_model:
-            # Generate the schema based on the output format
+        # only append schema instructions if the LLM doesn't support function calling.
+        # When function calling is supported, the schema will be enforced via response_model
+        # in a separate call after the agent completes its reasoning.
+        if (
+            (task.output_json or task.output_pydantic)
+            and not task.response_model
+            and isinstance(self.llm, BaseLLM)
+            and not self.llm.supports_function_calling()
+        ):
             if task.output_json:
                 schema_dict = generate_model_description(task.output_json)
                 schema = json.dumps(schema_dict, indent=2)
@@ -522,10 +526,21 @@ class Agent(BaseAgent):
         for tool_result in self.tools_results:
             if tool_result.get("result_as_answer", False):
                 result = tool_result["result"]
+
+        output_str = result if isinstance(result, str) else result.get("output", "")
         crewai_event_bus.emit(
             self,
-            event=AgentExecutionCompletedEvent(agent=self, task=task, output=result),
+            event=AgentExecutionCompletedEvent(
+                agent=self, task=task, output=output_str
+            ),
         )
+
+        if isinstance(result, dict):
+            agent_finish = result.get("agent_finish")
+            if agent_finish and getattr(agent_finish, "pydantic", None) is not None:
+                return result
+            return output_str
+
         return result
 
     def _execute_with_timeout(self, task_prompt: str, task: Task, timeout: int) -> Any:
@@ -581,7 +596,7 @@ class Agent(BaseAgent):
                 "tools": self.agent_executor.tools_description,
                 "ask_for_human_input": task.human_input,
             }
-        )["output"]
+        )
 
     def create_agent_executor(
         self, tools: list[BaseTool] | None = None, task: Task | None = None

@@ -12,6 +12,7 @@ import threading
 from typing import (
     Any,
     ClassVar,
+    TypedDict,
     cast,
     get_args,
     get_origin,
@@ -31,6 +32,7 @@ from pydantic_core import PydanticCustomError
 from typing_extensions import Self
 
 from crewai.agents.agent_builder.base_agent import BaseAgent
+from crewai.agents.parser import AgentFinish
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.task_events import (
     TaskCompletedEvent,
@@ -58,6 +60,18 @@ from crewai.utilities.string_utils import interpolate_only
 
 
 _printer = Printer()
+
+
+class ExecutorResult(TypedDict, total=False):
+    """Type definition for agent executor return value.
+
+    Attributes:
+        output: The string output from the agent execution.
+        agent_finish: The AgentFinish object containing execution details and optional pydantic model.
+    """
+
+    output: str
+    agent_finish: AgentFinish
 
 
 class Task(BaseModel):
@@ -519,13 +533,32 @@ class Task(BaseModel):
 
             self.processed_by_agents.add(agent.role)
             crewai_event_bus.emit(self, TaskStartedEvent(context=context, task=self))  # type: ignore[no-untyped-call]
-            result = agent.execute_task(
-                task=self,
-                context=context,
-                tools=tools,
+            executor_result = cast(
+                str | ExecutorResult,
+                agent.execute_task(
+                    task=self,
+                    context=context,
+                    tools=tools,
+                ),
             )
 
-            pydantic_output, json_output = self._export_output(result)
+            pydantic_output: BaseModel | None
+            json_output: dict[str, Any] | None
+
+            if isinstance(executor_result, dict) and "agent_finish" in executor_result:
+                result = executor_result["output"]
+                agent_finish = executor_result["agent_finish"]
+                if self.converter_cls is not None:
+                    pydantic_output, json_output = self._export_output(result)
+                elif agent_finish.pydantic is not None:
+                    pydantic_output = agent_finish.pydantic
+                    json_output = pydantic_output.model_dump()
+                else:
+                    pydantic_output, json_output = self._export_output(result)
+            else:
+                result = str(executor_result)
+                pydantic_output, json_output = self._export_output(result)
+
             task_output = TaskOutput(
                 name=self.name or self.description,
                 description=self.description,
@@ -929,11 +962,16 @@ Follow these guidelines:
             )
 
             # Regenerate output from agent
-            result = agent.execute_task(
+            retry_result = agent.execute_task(
                 task=self,
                 context=context,
                 tools=tools,
             )
+
+            if isinstance(retry_result, dict) and "output" in retry_result:
+                result = retry_result["output"]
+            else:
+                result = str(retry_result)
 
             pydantic_output, json_output = self._export_output(result)
             task_output = TaskOutput(

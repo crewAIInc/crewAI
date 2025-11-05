@@ -106,7 +106,7 @@ class OpenAIAgentAdapter(BaseAgentAdapter):
         task: Any,
         context: str | None = None,
         tools: list[BaseTool] | None = None,
-    ) -> str:
+    ) -> str | dict[str, Any]:
         """Execute a task using the OpenAI Assistant.
 
         Configures the assistant, processes the task, and handles event emission
