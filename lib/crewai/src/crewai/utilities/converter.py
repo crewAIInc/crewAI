@@ -172,6 +172,16 @@ def convert_to_model(
     model = output_pydantic or output_json
     if model is None:
         return result
+
+    if converter_cls:
+        return convert_with_instructions(
+            result=result,
+            model=model,
+            is_json_output=bool(output_json),
+            agent=agent,
+            converter_cls=converter_cls,
+        )
+
     try:
         escaped_result = json.dumps(json.loads(result, strict=False))
         return validate_model(
@@ -292,7 +302,6 @@ def convert_with_instructions(
     Notes:
         - TODO: Fix llm typing issues, return llm should not be able to be str or None.
     """
-    raise
     if agent is None:
         raise TypeError("Agent must be provided if converter_cls is not specified.")
 
