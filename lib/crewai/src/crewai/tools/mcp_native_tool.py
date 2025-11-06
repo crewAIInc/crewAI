@@ -85,25 +85,15 @@ class MCPNativeTool(BaseTool):
         Returns:
             Result from the MCP tool execution.
         """
-        print(
-            f"Executing MCP tool '{self.original_tool_name}' from server '{self.server_name}' "
-            f"with args: {kwargs}"
-        )
         try:
             # Always use asyncio.run() to create a fresh event loop
             # This ensures the async context managers work correctly
-            result = asyncio.run(self._run_async(**kwargs))
+            return asyncio.run(self._run_async(**kwargs))
 
-            print(
-                f"Successfully executed MCP tool '{self.original_tool_name}' from server '{self.server_name}'. "
-                f"Result length: {len(result) if isinstance(result, str) else 'N/A'}"
-            )
-            return result
         except Exception as e:
-            print(
-                f"Error executing MCP tool '{self.original_tool_name}' from server '{self.server_name}': {e!s}",
-            )
-            return f"Error executing MCP tool {self.original_tool_name}: {e!s}"
+            raise RuntimeError(
+                f"Error executing MCP tool {self.original_tool_name}: {e!s}"
+            ) from e
 
     async def _run_async(self, **kwargs) -> str:
         """Async implementation of tool execution.
@@ -127,18 +117,13 @@ class MCPNativeTool(BaseTool):
             result = await self._mcp_client.call_tool(self.original_tool_name, kwargs)
 
         except Exception as e:
-            # If connection error, try to reconnect once
             error_str = str(e).lower()
             if (
                 "not connected" in error_str
                 or "connection" in error_str
                 or "send" in error_str
             ):
-                print(f"Connection error detected, attempting reconnect: {e}")
-                try:
-                    await self._mcp_client.disconnect()
-                except Exception:
-                    pass
+                await self._mcp_client.disconnect()
                 await self._mcp_client.connect()
                 # Retry the call
                 result = await self._mcp_client.call_tool(
@@ -151,10 +136,7 @@ class MCPNativeTool(BaseTool):
             # Always disconnect after tool call to ensure clean context manager lifecycle
             # This prevents "exit cancel scope in different task" errors
             # All transport context managers must be exited in the same event loop they were entered
-            try:
-                await self._mcp_client.disconnect()
-            except Exception as e:
-                print(f"Warning: Error disconnecting MCP client: {e}")
+            await self._mcp_client.disconnect()
 
         # Extract result content
         if isinstance(result, str):

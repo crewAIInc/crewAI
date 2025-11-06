@@ -124,11 +124,10 @@ def create_static_tool_filter(
         )
         ```
     """
-    filter_instance = StaticToolFilter(
+    return StaticToolFilter(
         allowed_tool_names=allowed_tool_names,
         blocked_tool_names=blocked_tool_names,
     )
-    return filter_instance
 
 
 def create_dynamic_tool_filter(

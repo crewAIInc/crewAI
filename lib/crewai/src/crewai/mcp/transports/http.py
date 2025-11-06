@@ -1,7 +1,7 @@
 """HTTP and Streamable HTTP transport for MCP servers."""
 
 import asyncio
-from typing import Any
+from typing import Any, Self
 
 
 # BaseExceptionGroup is available in Python 3.11+
@@ -57,7 +57,7 @@ class HTTPTransport(BaseTransport):
         """Return the transport type."""
         return TransportType.STREAMABLE_HTTP if self.streamable else TransportType.HTTP
 
-    async def connect(self) -> "HTTPTransport":
+    async def connect(self) -> Self:
         """Establish HTTP connection to MCP server.
 
         Returns:
@@ -73,44 +73,26 @@ class HTTPTransport(BaseTransport):
         try:
             from mcp.client.streamable_http import streamablehttp_client
 
-            print(f"Creating streamablehttp_client for {self.url}...")
-            # Create transport context - this is an async generator
             self._transport_context = streamablehttp_client(
                 self.url,
                 headers=self.headers if self.headers else None,
                 terminate_on_close=True,
             )
-            print("streamablehttp_client created, entering context...")
 
-            # Enter context and get streams
-            # Note: This must stay in the same async context/task
-            # Wrap with timeout to catch slow connections
             try:
-                print("Calling __aenter__ on transport context (timeout: 30s)...")
                 read, write, _ = await asyncio.wait_for(
                     self._transport_context.__aenter__(), timeout=30.0
                 )
-                print("Transport context entered successfully, got streams")
             except asyncio.TimeoutError as e:
-                print(f"Transport context entry timed out: {e}")
                 self._transport_context = None
                 raise ConnectionError(
                     "Transport context entry timed out after 30 seconds. "
                     "Server may be slow or unreachable."
                 ) from e
             except Exception as e:
-                print(f"Failed to enter transport context: {e}")
-                import traceback
-
-                traceback.print_exc()
                 self._transport_context = None
                 raise ConnectionError(f"Failed to enter transport context: {e}") from e
-
-            # Set streams
-            print("Setting streams...")
             self._set_streams(read=read, write=write)
-            print("HTTP Transport connected successfully")
-
             return self
 
         except ImportError as e:
@@ -161,11 +143,10 @@ class HTTPTransport(BaseTransport):
                             break
                     if not should_suppress:
                         raise
-                except Exception:
-                    # Ignore other errors during cleanup
-                    pass
-                finally:
-                    self._transport_context = None
+                except Exception as e:
+                    raise RuntimeError(
+                        f"Error during HTTP transport disconnect: {e}"
+                    ) from e
 
             self._connected = False
 
@@ -176,7 +157,7 @@ class HTTPTransport(BaseTransport):
             logger = logging.getLogger(__name__)
             logger.warning(f"Error during HTTP transport disconnect: {e}")
 
-    async def __aenter__(self) -> "HTTPTransport":
+    async def __aenter__(self) -> Self:
         """Async context manager entry."""
         return await self.connect()
 

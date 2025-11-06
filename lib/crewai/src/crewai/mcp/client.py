@@ -200,36 +200,14 @@ class MCPClient:
     async def _cleanup_on_error(self) -> None:
         """Cleanup resources when an error occurs during connection."""
         try:
-            # Close all contexts via exit stack (in reverse order)
-            # This ensures proper cleanup order and prevents cancel scope errors
             await self._exit_stack.aclose()
-        except (RuntimeError, asyncio.CancelledError) as e:
-            # Suppress cancel scope errors during cleanup
-            # These can occur when cleaning up in a different task/event loop context
-            # which happens when asyncio.run() creates new event loops
-            error_msg = str(e).lower()
-            if "cancel scope" not in error_msg and "task" not in error_msg:
-                raise
-        except BaseExceptionGroup as eg:
-            # Handle exception groups from anyio task groups
-            # Suppress if they contain cancel scope errors (common with asyncio.run())
-            should_suppress = False
-            for exc in eg.exceptions:
-                error_msg = str(exc).lower()
-                if "cancel scope" in error_msg or "task" in error_msg:
-                    should_suppress = True
-                    break
-            if not should_suppress:
-                # Re-raise if it's not a cancel scope error
-                raise
-        except Exception:
+
+        except Exception as e:
             # Best effort cleanup - ignore all other errors
-            pass
+            raise RuntimeError(f"Error during MCP client cleanup: {e}") from e
         finally:
-            # Reset state even if cleanup had errors
             self._session = None
             self._initialized = False
-            # Create a fresh exit stack for potential reconnection
             self._exit_stack = AsyncExitStack()
 
     async def disconnect(self) -> None:
@@ -238,36 +216,12 @@ class MCPClient:
             return
 
         try:
-            # Close all contexts via exit stack (in reverse order)
-            # This ensures proper cleanup order and prevents cancel scope errors
             await self._exit_stack.aclose()
-        except (RuntimeError, asyncio.CancelledError) as e:
-            # Suppress cancel scope errors during cleanup
-            # These can occur when cleaning up in a different task/event loop context
-            # which happens when asyncio.run() creates new event loops
-            error_msg = str(e).lower()
-            if "cancel scope" not in error_msg and "task" not in error_msg:
-                raise
-        except BaseExceptionGroup as eg:
-            # Handle exception groups from anyio task groups
-            # Suppress if they contain cancel scope errors (common with asyncio.run())
-            should_suppress = False
-            for exc in eg.exceptions:
-                error_msg = str(exc).lower()
-                if "cancel scope" in error_msg or "task" in error_msg:
-                    should_suppress = True
-                    break
-            if not should_suppress:
-                # Re-raise if it's not a cancel scope error
-                raise
-        except Exception:
-            # Cleanup should be best effort - ignore errors
-            pass
+        except Exception as e:
+            raise RuntimeError(f"Error during MCP client disconnect: {e}") from e
         finally:
-            # Reset state even if cleanup had errors
             self._session = None
             self._initialized = False
-            # Create a fresh exit stack for potential reconnection
             self._exit_stack = AsyncExitStack()
 
     async def list_tools(self, use_cache: bool | None = None) -> list[dict[str, Any]]:
@@ -313,17 +267,14 @@ class MCPClient:
             timeout=self.discovery_timeout,
         )
 
-        tools = []
-        for tool in tools_result.tools:
-            tools.append(
-                {
-                    "name": tool.name,
-                    "description": getattr(tool, "description", ""),
-                    "inputSchema": getattr(tool, "inputSchema", {}),
-                }
-            )
-
-        return tools
+        return [
+            {
+                "name": tool.name,
+                "description": getattr(tool, "description", ""),
+                "inputSchema": getattr(tool, "inputSchema", {}),
+            }
+            for tool in tools_result.tools
+        ]
 
     async def call_tool(
         self, tool_name: str, arguments: dict[str, Any] | None = None
@@ -342,16 +293,12 @@ class MCPClient:
 
         arguments = arguments or {}
 
-        # Clean arguments: remove None values and fix array formats
         cleaned_arguments = self._clean_tool_arguments(arguments)
 
-        # Call tool with timeout and retries
-        result = await self._retry_operation(
+        return await self._retry_operation(
             lambda: self._call_tool_impl(tool_name, cleaned_arguments),
             timeout=self.execution_timeout,
         )
-
-        return result
 
     def _clean_tool_arguments(self, arguments: dict[str, Any]) -> dict[str, Any]:
         """Clean tool arguments by removing None values and fixing formats.
@@ -436,12 +383,10 @@ class MCPClient:
         if not self.connected:
             await self.connect()
 
-        prompts = await self._retry_operation(
+        return await self._retry_operation(
             self._list_prompts_impl,
             timeout=self.discovery_timeout,
         )
-
-        return prompts
 
     async def _list_prompts_impl(self) -> list[dict[str, Any]]:
         """Internal implementation of list_prompts."""
@@ -450,17 +395,14 @@ class MCPClient:
             timeout=self.discovery_timeout,
         )
 
-        prompts = []
-        for prompt in prompts_result.prompts:
-            prompts.append(
-                {
-                    "name": prompt.name,
-                    "description": getattr(prompt, "description", ""),
-                    "arguments": getattr(prompt, "arguments", []),
-                }
-            )
-
-        return prompts
+        return [
+            {
+                "name": prompt.name,
+                "description": getattr(prompt, "description", ""),
+                "arguments": getattr(prompt, "arguments", []),
+            }
+            for prompt in prompts_result.prompts
+        ]
 
     async def get_prompt(
         self, prompt_name: str, arguments: dict[str, Any] | None = None
@@ -479,12 +421,10 @@ class MCPClient:
 
         arguments = arguments or {}
 
-        result = await self._retry_operation(
+        return await self._retry_operation(
             lambda: self._get_prompt_impl(prompt_name, arguments),
             timeout=self.execution_timeout,
         )
-
-        return result
 
     async def _get_prompt_impl(
         self, prompt_name: str, arguments: dict[str, Any]
@@ -530,7 +470,7 @@ class MCPClient:
                     return await asyncio.wait_for(operation(), timeout=timeout)
                 return await operation()
 
-            except asyncio.TimeoutError as e:
+            except asyncio.TimeoutError as e:  # noqa: PERF203
                 last_error = f"Operation timed out after {timeout} seconds"
                 if attempt < self.max_retries - 1:
                     wait_time = 2**attempt

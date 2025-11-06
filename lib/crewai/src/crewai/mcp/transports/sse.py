@@ -1,6 +1,6 @@
 """Server-Sent Events (SSE) transport for MCP servers."""
 
-from typing import Any
+from typing import Any, Self
 
 from crewai.mcp.transports.base import BaseTransport, TransportType
 
@@ -45,7 +45,7 @@ class SSETransport(BaseTransport):
         """Return the transport type."""
         return TransportType.SSE
 
-    async def connect(self) -> "SSETransport":
+    async def connect(self) -> Self:
         """Establish SSE connection to MCP server.
 
         Returns:
@@ -61,17 +61,14 @@ class SSETransport(BaseTransport):
         try:
             from mcp.client.sse import sse_client
 
-            # Create transport context
             self._transport_context = sse_client(
                 self.url,
                 headers=self.headers if self.headers else None,
                 terminate_on_close=True,
             )
 
-            # Enter context and get streams
             read, write = await self._transport_context.__aenter__()
 
-            # Set streams
             self._set_streams(read=read, write=write)
 
             return self
@@ -90,27 +87,17 @@ class SSETransport(BaseTransport):
             return
 
         try:
-            # Clear streams first
             self._clear_streams()
-
-            # Exit transport context
             if self._transport_context is not None:
-                try:
-                    await self._transport_context.__aexit__(None, None, None)
-                except Exception:
-                    # Ignore errors during cleanup
-                    pass
-                finally:
-                    self._transport_context = None
+                await self._transport_context.__aexit__(None, None, None)
 
         except Exception as e:
-            # Log but don't raise - cleanup should be best effort
             import logging
 
             logger = logging.getLogger(__name__)
             logger.warning(f"Error during SSE transport disconnect: {e}")
 
-    async def __aenter__(self) -> "SSETransport":
+    async def __aenter__(self) -> Self:
         """Async context manager entry."""
         return await self.connect()
 
