@@ -25,7 +25,7 @@ if TYPE_CHECKING:
     from crewai.llms.hooks.base import BaseInterceptor
 
 
-class HTTPTransportKwargs(TypedDict):
+class HTTPTransportKwargs(TypedDict, total=False):
     """Typed dictionary for httpx.HTTPTransport initialization parameters.
 
     These parameters configure the underlying HTTP transport behavior including

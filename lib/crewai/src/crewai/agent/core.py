@@ -604,22 +604,22 @@ class Agent(BaseAgent):
             response_template=self.response_template,
         ).task_execution()
 
-        stop_words = [self.i18n.slice("observation")]
+        stop_sequences = [self.i18n.slice("observation")]
 
         if self.response_template:
-            stop_words.append(
+            stop_sequences.append(
                 self.response_template.split("{{ .Response }}")[1].strip()
             )
 
         self.agent_executor = CrewAgentExecutor(
-            llm=self.llm,
+            llm=self.llm,  # type: ignore[arg-type]
             task=task,  # type: ignore[arg-type]
             agent=self,
             crew=self.crew,
             tools=parsed_tools,
             prompt=prompt,
             original_tools=raw_tools,
-            stop_words=stop_words,
+            stop_sequences=stop_sequences,
             max_iter=self.max_iter,
             tools_handler=self.tools_handler,
             tools_names=get_tool_names(parsed_tools),
@@ -762,7 +762,9 @@ class Agent(BaseAgent):
         path = parsed.path.replace("/", "_").strip("_")
         return f"{domain}_{path}" if path else domain
 
-    def _get_mcp_tool_schemas(self, server_params: dict) -> dict[str, dict]:
+    def _get_mcp_tool_schemas(
+        self, server_params: dict[str, Any]
+    ) -> dict[str, dict[str, Any]] | Any:
         """Get tool schemas from MCP server for wrapper creation with caching."""
         server_url = server_params["url"]
 
@@ -794,7 +796,7 @@ class Agent(BaseAgent):
 
     async def _get_mcp_tool_schemas_async(
         self, server_params: dict[str, Any]
-    ) -> dict[str, dict]:
+    ) -> dict[str, dict[str, Any]]:
         """Async implementation of MCP tool schema retrieval with timeouts and retries."""
         server_url = server_params["url"]
         return await self._retry_mcp_discovery(
@@ -802,7 +804,7 @@ class Agent(BaseAgent):
         )
 
     async def _retry_mcp_discovery(
-        self, operation_func, server_url: str
+        self, operation_func: Any, server_url: str
     ) -> dict[str, dict[str, Any]]:
         """Retry MCP discovery operation with exponential backoff, avoiding try-except in loop."""
         last_error = None
@@ -833,7 +835,7 @@ class Agent(BaseAgent):
 
     @staticmethod
     async def _attempt_mcp_discovery(
-        operation_func, server_url: str
+        operation_func: Any, server_url: str
     ) -> tuple[dict[str, dict[str, Any]] | None, str, bool]:
         """Attempt single MCP discovery operation and return (result, error_message, should_retry)."""
         try:
@@ -937,13 +939,13 @@ class Agent(BaseAgent):
                     Field(..., description=field_description),
                 )
             else:
-                field_definitions[field_name] = (
+                field_definitions[field_name] = (  # type: ignore[assignment]
                     field_type | None,
                     Field(default=None, description=field_description),
                 )
 
         model_name = f"{tool_name.replace('-', '_').replace(' ', '_')}Schema"
-        return create_model(model_name, **field_definitions)
+        return create_model(model_name, **field_definitions)  # type: ignore[no-any-return,call-overload]
 
     def _json_type_to_python(self, field_schema: dict[str, Any]) -> type:
         """Convert JSON Schema type to Python type.
@@ -963,12 +965,12 @@ class Agent(BaseAgent):
                 if "const" in option:
                     types.append(str)
                 else:
-                    types.append(self._json_type_to_python(option))
+                    types.append(self._json_type_to_python(option))  # type: ignore[arg-type]
             unique_types = list(set(types))
             if len(unique_types) > 1:
                 result = unique_types[0]
                 for t in unique_types[1:]:
-                    result = result | t
+                    result = result | t  # type: ignore[assignment]
                 return result
             return unique_types[0]
 
@@ -981,10 +983,10 @@ class Agent(BaseAgent):
             "object": dict,
         }
 
-        return type_mapping.get(json_type, Any)
+        return type_mapping.get(json_type, Any)  # type: ignore[arg-type]
 
     @staticmethod
-    def _fetch_amp_mcp_servers(mcp_name: str) -> list[dict]:
+    def _fetch_amp_mcp_servers(mcp_name: str) -> list[dict[str, Any]]:
         """Fetch MCP server configurations from CrewAI AMP API."""
         # TODO: Implement AMP API call to "integrations/mcps" endpoint
         # Should return list of server configs with URLs
@@ -1223,7 +1225,7 @@ class Agent(BaseAgent):
             goal=self.goal,
             backstory=self.backstory,
             llm=self.llm,
-            tools=self.tools or [],
+            tools=self.tools,
             max_iterations=self.max_iter,
             max_execution_time=self.max_execution_time,
             respect_context_window=self.respect_context_window,
