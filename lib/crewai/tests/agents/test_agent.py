@@ -2117,15 +2117,14 @@ def test_agent_with_only_crewai_knowledge():
         goal="Provide information based on knowledge sources",
         backstory="You have access to specific knowledge sources.",
         llm=LLM(
-            model="openrouter/openai/gpt-4o-mini",
-            api_key=os.getenv("OPENROUTER_API_KEY"),
+            model="gpt-4o-mini",
         ),
     )
 
     # Create a task that requires the agent to use the knowledge
     task = Task(
         description="What is Vidit's favorite color?",
-        expected_output="Vidit's favorclearite color.",
+        expected_output="Vidit's favorite color.",
         agent=agent,
     )
 
