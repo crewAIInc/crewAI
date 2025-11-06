@@ -640,12 +640,14 @@ class Agent(BaseAgent):
 
     def get_platform_tools(self, apps: list[PlatformAppOrAction]) -> list[BaseTool]:
         try:
+            print("->>>>> start get_platform_tools:", apps)
             from crewai_tools import (
                 CrewaiPlatformTools,
             )
 
             return CrewaiPlatformTools(apps=apps)
         except Exception as e:
+            print("->>>>> error in get_platform_tools")
             self._logger.log("error", f"Error getting platform tools: {e!s}")
             return []
 

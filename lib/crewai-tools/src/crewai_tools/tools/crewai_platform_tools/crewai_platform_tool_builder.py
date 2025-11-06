@@ -30,6 +30,9 @@ class CrewaiPlatformToolBuilder:
     def _fetch_actions(self):
         actions_url = f"{get_platform_api_base_url()}/actions"
         headers = {"Authorization": f"Bearer {get_platform_integration_token()}"}
+        print("->>>>> headers:", headers)
+        print("->>>>> actions_url:", actions_url)
+        print("->>>>> apps:", ",".join(self._apps))
 
         try:
             response = requests.get(
@@ -39,11 +42,14 @@ class CrewaiPlatformToolBuilder:
                 params={"apps": ",".join(self._apps)},
             )
             response.raise_for_status()
-        except Exception:
+        except Exception as e:
+            print("->>>>> error in _fetch_actions")
+            print("->>>>> error:", e)
             return
 
-        raw_data = response.json()
 
+        raw_data = response.json()
+        print("->>>>> raw_data:", raw_data)
         self._actions_schema = {}
         action_categories = raw_data.get("actions", {})
 
