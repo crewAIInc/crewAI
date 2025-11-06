@@ -5,7 +5,9 @@ from collections.abc import Callable
 from contextlib import AsyncExitStack
 import logging
 import time
-from typing import Any, Self
+from typing import Any
+
+from typing_extensions import Self
 
 
 # BaseExceptionGroup is available in Python 3.11+

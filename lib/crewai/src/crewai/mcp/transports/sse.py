@@ -1,6 +1,8 @@
 """Server-Sent Events (SSE) transport for MCP servers."""
 
-from typing import Any, Self
+from typing import Any
+
+from typing_extensions import Self
 
 from crewai.mcp.transports.base import BaseTransport, TransportType
 

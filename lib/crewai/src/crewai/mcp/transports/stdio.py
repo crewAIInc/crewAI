@@ -3,7 +3,9 @@
 import asyncio
 import os
 import subprocess
-from typing import Any, Self
+from typing import Any
+
+from typing_extensions import Self
 
 from crewai.mcp.transports.base import BaseTransport, TransportType
 

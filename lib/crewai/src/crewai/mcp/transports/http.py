@@ -1,7 +1,9 @@
 """HTTP and Streamable HTTP transport for MCP servers."""
 
 import asyncio
-from typing import Any, Self
+from typing import Any
+
+from typing_extensions import Self
 
 
 # BaseExceptionGroup is available in Python 3.11+
