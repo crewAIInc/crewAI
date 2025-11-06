@@ -13,11 +13,12 @@
     --edge-label-text: '{{ GRAY }}';
     --edge-label-bg: rgba(255, 255, 255, 0.8);
     --edge-or-color: #000000;
+    --edge-router-color: '{{ CREWAI_ORANGE }}';
     --node-border-start: #C94238;
     --node-border-listen: #3D3D3D;
     --node-bg-start: #FF7066;
-    --node-bg-router: #334155;
-    --node-bg-listen: #334155;
+    --node-bg-router: #FFFFFF;
+    --node-bg-listen: #FFFFFF;
     --node-text-color: #FFFFFF;
 }
 
@@ -36,6 +37,7 @@
     --edge-label-text: #c9d1d9;
     --edge-label-bg: rgba(22, 27, 34, 0.9);
     --edge-or-color: #ffffff;
+    --edge-router-color: '{{ CREWAI_ORANGE }}';
     --node-border-start: #FF5A50;
     --node-border-listen: #666666;
     --node-bg-start: #B33830;
@@ -137,11 +139,15 @@ h3 {
     margin-right: 12px;
     border-radius: 3px;
     box-sizing: border-box;
+    transition: background 0.3s ease, border-color 0.3s ease;
 }
 .legend-item span {
     color: var(--text-secondary);
     font-size: 13px;
     transition: color 0.3s ease;
+}
+.legend-item svg line {
+    transition: stroke 0.3s ease;
 }
 .instructions {
     margin-top: 15px;
