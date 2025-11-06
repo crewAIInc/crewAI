@@ -6,7 +6,7 @@ import httpx
 import pytest
 
 from crewai.llms.hooks.base import BaseInterceptor
-from crewai.llms.hooks.transport import AsyncHTTPransport, HTTPTransport
+from crewai.llms.hooks.transport import AsyncHTTPTransport, HTTPTransport
 
 
 class TrackingInterceptor(BaseInterceptor[httpx.Request, httpx.Response]):
@@ -128,7 +128,7 @@ class TestAsyncHTTPTransport:
     def test_async_transport_instantiation(self) -> None:
         """Test that async transport can be instantiated with interceptor."""
         interceptor = TrackingInterceptor()
-        transport = AsyncHTTPransport(interceptor=interceptor)
+        transport = AsyncHTTPTransport(interceptor=interceptor)
 
         assert transport.interceptor is interceptor
 
@@ -136,13 +136,13 @@ class TestAsyncHTTPTransport:
         """Test that async transport requires interceptor parameter."""
         # AsyncHTTPransport requires an interceptor parameter
         with pytest.raises(TypeError):
-            AsyncHTTPransport()
+            AsyncHTTPTransport()
 
     @pytest.mark.asyncio
     async def test_async_interceptor_called_on_request(self) -> None:
         """Test that async interceptor hooks are called during request handling."""
         interceptor = TrackingInterceptor()
-        transport = AsyncHTTPransport(interceptor=interceptor)
+        transport = AsyncHTTPTransport(interceptor=interceptor)
 
         # Create a mock parent transport that returns a response
         mock_response = httpx.Response(200, json={"success": True})
@@ -217,7 +217,7 @@ class TestTransportIntegration:
     async def test_multiple_async_requests_same_interceptor(self) -> None:
         """Test that multiple async requests through same interceptor are tracked."""
         interceptor = TrackingInterceptor()
-        transport = AsyncHTTPransport(interceptor=interceptor)
+        transport = AsyncHTTPTransport(interceptor=interceptor)
 
         mock_response = httpx.Response(200)
 
