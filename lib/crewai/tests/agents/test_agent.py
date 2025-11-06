@@ -508,7 +508,96 @@ def test_agent_custom_max_iterations():
     assert isinstance(result, str)
     assert len(result) > 0
     assert call_count > 0
-    assert call_count == 3
+    assert call_count == 2
+
+
+def test_agent_max_iterations_zero():
+    """Test that with max_iter=0, get_llm_response is never called but handle_max_iterations_exceeded makes one LLM call."""
+    from unittest.mock import MagicMock
+    from crewai.agents import crew_agent_executor
+
+    agent = Agent(
+        role="test role",
+        goal="test goal",
+        backstory="test backstory",
+        max_iter=0,
+        allow_delegation=False,
+    )
+
+    original_call = agent.llm.call
+    llm_call_count = 0
+
+    def counting_llm_call(*args, **kwargs):
+        nonlocal llm_call_count
+        llm_call_count += 1
+        return original_call(*args, **kwargs)
+
+    agent.llm.call = counting_llm_call
+
+    get_llm_response_call_count = 0
+    original_get_llm_response = crew_agent_executor.get_llm_response
+
+    def counting_get_llm_response(*args, **kwargs):
+        nonlocal get_llm_response_call_count
+        get_llm_response_call_count += 1
+        return original_get_llm_response(*args, **kwargs)
+
+    crew_agent_executor.get_llm_response = counting_get_llm_response
+
+    try:
+        task = Task(
+            description="What is 2+2?",
+            expected_output="The answer",
+        )
+        result = agent.execute_task(task=task)
+
+        assert result is not None
+        assert isinstance(result, str)
+        assert len(result) > 0
+        assert get_llm_response_call_count == 0
+        assert llm_call_count == 1
+    finally:
+        crew_agent_executor.get_llm_response = original_get_llm_response
+
+
+def test_agent_max_iterations_one_stops_after_two_calls():
+    """Test that with max_iter=1, exactly 2 LLM calls are made (initial + max_iter handler)."""
+    @tool
+    def dummy_tool() -> str:
+        """A dummy tool that returns a value."""
+        return "dummy result"
+
+    agent = Agent(
+        role="test role",
+        goal="test goal",
+        backstory="test backstory",
+        max_iter=1,
+        allow_delegation=False,
+    )
+
+    original_call = agent.llm.call
+    llm_call_count = 0
+
+    def counting_llm_call(*args, **kwargs):
+        nonlocal llm_call_count
+        llm_call_count += 1
+        return original_call(*args, **kwargs)
+
+    agent.llm.call = counting_llm_call
+
+    task = Task(
+        description="Keep using the dummy_tool repeatedly.",
+        expected_output="The final answer",
+    )
+    result = agent.execute_task(
+        task=task,
+        tools=[dummy_tool],
+    )
+
+    assert result is not None
+    assert isinstance(result, str)
+    assert len(result) > 0
+    assert llm_call_count == 2
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])

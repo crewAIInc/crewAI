@@ -202,7 +202,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         Returns:
             Final answer from the agent.
         """
-        formatted_answer = None
+        formatted_answer: AgentAction | AgentFinish | None = None
         while not isinstance(formatted_answer, AgentFinish):
             try:
                 if has_reached_max_iterations(self.iterations, self.max_iter):
@@ -214,6 +214,8 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                         llm=self.llm,
                         callbacks=self.callbacks,
                     )
+                    self._show_logs(formatted_answer)
+                    return formatted_answer
 
                 enforce_rpm_limit(self.request_within_rpm_limit)
 
@@ -257,9 +259,12 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                     formatted_answer = self._handle_agent_action(
                         formatted_answer, tool_result
                     )
-
-                self._invoke_step_callback(formatted_answer)
-                self._append_message(formatted_answer.text)
+                    
+                    self._invoke_step_callback(formatted_answer)
+                    self._append_message(formatted_answer.text)
+                elif isinstance(formatted_answer, AgentFinish):
+                    self._invoke_step_callback(formatted_answer)
+                    self._append_message(formatted_answer.text)
 
             except OutputParserError as e:  # noqa: PERF203
                 formatted_answer = handle_output_parser_exception(
