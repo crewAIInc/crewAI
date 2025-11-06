@@ -525,7 +525,11 @@ class Task(BaseModel):
                 tools=tools,
             )
 
-            pydantic_output, json_output = self._export_output(result)
+            if not self._guardrails and not self._guardrail:
+                pydantic_output, json_output = self._export_output(result)
+            else:
+                pydantic_output, json_output = None, None
+
             task_output = TaskOutput(
                 name=self.name or self.description,
                 description=self.description,

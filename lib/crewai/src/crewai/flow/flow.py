@@ -600,7 +600,26 @@ class Flow(Generic[T], metaclass=FlowMeta):
         )
 
     def _copy_state(self) -> T:
-        return copy.deepcopy(self._state)
+        """Create a copy of the current state.
+
+        Returns:
+            A copy of the current state
+        """
+        if isinstance(self._state, BaseModel):
+            try:
+                return self._state.model_copy(deep=True)
+            except (TypeError, AttributeError):
+                try:
+                    state_dict = self._state.model_dump()
+                    model_class = type(self._state)
+                    return model_class(**state_dict)
+                except Exception:
+                    return self._state.model_copy(deep=False)
+        else:
+            try:
+                return copy.deepcopy(self._state)
+            except (TypeError, AttributeError):
+                return cast(T, self._state.copy())
 
     @property
     def state(self) -> T:
