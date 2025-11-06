@@ -367,6 +367,8 @@ def render_interactive(
         if edge["is_router_path"]:
             edge_color = CREWAI_ORANGE
             edge_dashes = [15, 10]
+            if "router_path_label" in edge:
+                edge_label = edge["router_path_label"]
         elif edge["condition_type"] == "AND":
             edge_label = "AND"
             edge_color = CREWAI_ORANGE

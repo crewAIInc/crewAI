@@ -6,6 +6,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="'{{ css_path }}'" />
+    <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
     <script src="'{{ js_path }}'"></script>
@@ -23,93 +24,129 @@
             <div class="drawer-title" id="drawer-node-name">Node Details</div>
             <div style="display: flex; align-items: center;">
                 <button class="drawer-open-ide" id="drawer-open-ide" style="display: none;">
-                    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M4 2 L12 2 L12 14 L4 14 Z" stroke-linecap="round" stroke-linejoin="round"/>
-                        <path d="M6 5 L10 5 M6 8 L10 8 M6 11 L10 11" stroke-linecap="round"/>
-                    </svg>
+                    <i data-lucide="file-code" style="width: 16px; height: 16px;"></i>
                     Open in IDE
                 </button>
-                <button class="drawer-close" id="drawer-close">×</button>
+                <button class="drawer-close" id="drawer-close">
+                    <i data-lucide="x" style="width: 20px; height: 20px;"></i>
+                </button>
             </div>
         </div>
         <div class="drawer-content" id="drawer-content"></div>
     </div>
 
     <div id="info">
-        <div style="text-align: center; margin-bottom: 20px;">
+        <div style="text-align: center;">
             <img src="https://cdn.prod.website-files.com/68de1ee6d7c127849807d7a6/68de1ee6d7c127849807d7ef_Logo.svg"
                  alt="CrewAI Logo"
                  style="width: 120px; height: auto;">
         </div>
-        <h3>Flow Execution</h3>
-        <div class="stats">
-            <p><strong>Nodes:</strong> '{{ dag_nodes_count }}'</p>
-            <p><strong>Edges:</strong> '{{ dag_edges_count }}'</p>
-            <p><strong>Topological Paths:</strong> '{{ execution_paths }}'</p>
-        </div>
-        <div class="legend">
-            <div class="legend-title">Node Types</div>
-            <div class="legend-item">
-                <div class="legend-color" style="background: var(--node-bg-start);"></div>
-                <span>Start Methods</span>
-            </div>
-            <div class="legend-item">
-                <div class="legend-color" style="background: var(--node-bg-router); border: 3px solid var(--node-border-start);"></div>
-                <span>Router Methods</span>
-            </div>
-            <div class="legend-item">
-                <div class="legend-color" style="background: var(--node-bg-listen); border: 3px solid var(--node-border-listen);"></div>
-                <span>Listen Methods</span>
-            </div>
-        </div>
-        <div class="legend">
-            <div class="legend-title">Edge Types</div>
-            <div class="legend-item">
-                <svg width="24" height="12" style="margin-right: 12px;">
-                    <line x1="0" y1="6" x2="24" y2="6" stroke="var(--edge-router-color)" stroke-width="2" stroke-dasharray="5,5"/>
-                </svg>
-                <span>Router Paths</span>
-            </div>
-            <div class="legend-item">
-                <svg width="24" height="12" style="margin-right: 12px;" class="legend-or-line">
-                    <line x1="0" y1="6" x2="24" y2="6" stroke="var(--edge-or-color)" stroke-width="2"/>
-                </svg>
-                <span>OR Conditions</span>
-            </div>
-            <div class="legend-item">
-                <svg width="24" height="12" style="margin-right: 12px;">
-                    <line x1="0" y1="6" x2="24" y2="6" stroke="var(--edge-router-color)" stroke-width="2"/>
-                </svg>
-                <span>AND Conditions</span>
-            </div>
-        </div>
-        <div class="instructions">
-            <strong>Interactions:</strong><br>
-            • Drag to pan<br>
-            • Scroll to zoom<br><br>
-            <strong>IDE:</strong>
-            <select id="ide-selector" style="width: 100%; padding: 4px; margin-top: 4px; border-radius: 3px; border: 1px solid #e0e0e0; background: white; font-size: 12px; cursor: pointer; pointer-events: auto; position: relative; z-index: 10;">
-                <option value="auto">Auto-detect</option>
-                <option value="pycharm">PyCharm</option>
-                <option value="vscode">VS Code</option>
-                <option value="jetbrains">JetBrains (Toolbox)</option>
-            </select>
-        </div>
     </div>
+
 
     <!-- Custom navigation controls -->
     <div class="nav-controls">
-        <div class="nav-button" id="theme-toggle" title="Toggle Dark Mode">🌙</div>
-        <div class="nav-button" id="zoom-in" title="Zoom In">+</div>
-        <div class="nav-button" id="zoom-out" title="Zoom Out">−</div>
-        <div class="nav-button" id="fit" title="Fit to Screen">⊡</div>
-        <div class="nav-button" id="export-png" title="Export to PNG">🖼</div>
-        <div class="nav-button" id="export-pdf" title="Export to PDF">📄</div>
-        <div class="nav-button" id="export-json" title="Export to JSON">{}</div>
+        <div class="nav-button" id="theme-toggle" title="Toggle Dark Mode">
+            <i data-lucide="moon" style="width: 18px; height: 18px;"></i>
+        </div>
+        <div class="nav-button" id="zoom-in" title="Zoom In">
+            <i data-lucide="zoom-in" style="width: 18px; height: 18px;"></i>
+        </div>
+        <div class="nav-button" id="zoom-out" title="Zoom Out">
+            <i data-lucide="zoom-out" style="width: 18px; height: 18px;"></i>
+        </div>
+        <div class="nav-button" id="fit" title="Fit to Screen">
+            <i data-lucide="maximize-2" style="width: 18px; height: 18px;"></i>
+        </div>
+        <div class="nav-button" id="export-png" title="Export to PNG">
+            <i data-lucide="image" style="width: 18px; height: 18px;"></i>
+        </div>
+        <div class="nav-button" id="export-pdf" title="Export to PDF">
+            <i data-lucide="file-text" style="width: 18px; height: 18px;"></i>
+        </div>
+        <!-- <div class="nav-button" id="export-json" title="Export to JSON">
+            <i data-lucide="braces" style="width: 18px; height: 18px;"></i>
+        </div> -->
     </div>
 
     <div id="network-container">
         <div id="network"></div>
+    </div>
+
+    <!-- Info panel at bottom -->
+    <div id="legend-panel">
+        <!-- Stats Section -->
+        <div class="legend-section">
+            <div class="legend-stats-row">
+                <div class="legend-stat-item">
+                    <span class="stat-value">'{{ dag_nodes_count }}'</span>
+                    <span class="stat-label">Nodes</span>
+                </div>
+                <div class="legend-stat-item">
+                    <span class="stat-value">'{{ dag_edges_count }}'</span>
+                    <span class="stat-label">Edges</span>
+                </div>
+                <div class="legend-stat-item">
+                    <span class="stat-value">'{{ execution_paths }}'</span>
+                    <span class="stat-label">Paths</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Node Types Section -->
+        <div class="legend-section">
+            <div class="legend-group">
+                <div class="legend-item-compact">
+                    <div class="legend-color-small" style="background: var(--node-bg-start);"></div>
+                    <span>Start</span>
+                </div>
+                <div class="legend-item-compact">
+                    <div class="legend-color-small" style="background: var(--node-bg-router); border: 2px solid var(--node-border-start);"></div>
+                    <span>Router</span>
+                </div>
+                <div class="legend-item-compact">
+                    <div class="legend-color-small" style="background: var(--node-bg-listen); border: 2px solid var(--node-border-listen);"></div>
+                    <span>Listen</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Edge Types Section -->
+        <div class="legend-section">
+            <div class="legend-group">
+                <div class="legend-item-compact">
+                    <svg>
+                        <line x1="0" y1="7" x2="29" y2="7" stroke="var(--edge-router-color)" stroke-width="2" stroke-dasharray="4,4"/>
+                    </svg>
+                    <span>Router</span>
+                </div>
+                <div class="legend-item-compact">
+                    <svg class="legend-or-line">
+                        <line x1="0" y1="7" x2="29" y2="7" stroke="var(--edge-or-color)" stroke-width="2"/>
+                    </svg>
+                    <span>OR</span>
+                </div>
+                <div class="legend-item-compact">
+                    <svg>
+                        <line x1="0" y1="7" x2="29" y2="7" stroke="var(--edge-router-color)" stroke-width="2"/>
+                    </svg>
+                    <span>AND</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- IDE Selector Section -->
+        <div class="legend-section">
+            <div class="legend-ide-column">
+                <label class="legend-ide-label">IDE</label>
+                <select id="ide-selector" class="legend-ide-select">
+                    <option value="auto">Auto-detect</option>
+                    <option value="pycharm">PyCharm</option>
+                    <option value="vscode">VS Code</option>
+                    <option value="jetbrains">JetBrains</option>
+                </select>
+            </div>
+        </div>
     </div>
 </body>
 </html>

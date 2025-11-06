@@ -23,13 +23,14 @@ class NodeMetadata(TypedDict, total=False):
     class_line_number: int
 
 
-class StructureEdge(TypedDict):
+class StructureEdge(TypedDict, total=False):
     """Represents a connection in the flow structure."""
 
     source: str
     target: str
     condition_type: str | None
     is_router_path: bool
+    router_path_label: str
 
 
 class FlowStructure(TypedDict):

@@ -20,6 +20,7 @@
     --node-bg-router: #FFFFFF;
     --node-bg-listen: #FFFFFF;
     --node-text-color: #FFFFFF;
+    --nav-button-hover: #f5f5f5;
 }
 
 [data-theme="dark"] {
@@ -44,6 +45,7 @@
     --node-bg-router: #3D3D3D;
     --node-bg-listen: #3D3D3D;
     --node-text-color: #FFFFFF;
+    --nav-button-hover: #30363d;
 }
 
 @keyframes dash {
@@ -173,7 +175,7 @@ h3 {
     bottom: 20px;
     right: auto;
     display: grid;
-    grid-template-columns: repeat(4, 40px);
+    grid-template-columns: repeat(3, 40px);
     gap: 8px;
     z-index: 10002;
     pointer-events: auto;
@@ -183,10 +185,187 @@ h3 {
 .nav-controls.drawer-open {
 }
 
+#legend-panel {
+    position: fixed;
+    left: 164px;
+    bottom: 20px;
+    right: 20px;
+    height: 92px;
+    background: var(--bg-secondary);
+    backdrop-filter: blur(12px) saturate(180%);
+    -webkit-backdrop-filter: blur(12px) saturate(180%);
+    border: 1px solid var(--border-subtle);
+    border-radius: 6px;
+    box-shadow: 0 2px 8px var(--shadow-color);
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    align-items: center;
+    gap: 0;
+    padding: 0 24px;
+    box-sizing: border-box;
+    z-index: 10001;
+    pointer-events: auto;
+    transition: background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease, right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+#legend-panel.drawer-open {
+    right: 405px;
+}
+
+.legend-section {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 0;
+    width: -webkit-fill-available;
+    width: -moz-available;
+    width: stretch;
+    position: relative;
+}
+
+.legend-section:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 1px;
+    height: 48px;
+    background: var(--border-color);
+    transition: background 0.3s ease;
+}
+
+.legend-stats-row {
+    display: flex;
+    gap: 32px;
+    justify-content: center;
+    align-items: center;
+    min-width: 0;
+}
+
+.legend-stat-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+}
+
+.stat-value {
+    font-size: 19px;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1;
+    transition: color 0.3s ease;
+}
+
+.stat-label {
+    font-size: 8px;
+    font-weight: 500;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    letter-spacing: 0.5px;
+    transition: color 0.3s ease;
+}
+
+.legend-items-row {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    justify-content: center;
+    min-width: 0;
+}
+
+.legend-group {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+}
+
+.legend-item-compact {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.legend-item-compact span {
+    font-size: 12px;
+    font-weight: 500;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+    font-family: inherit;
+    line-height: 1;
+    transition: color 0.3s ease;
+}
+
+.legend-color-small {
+    width: 17px;
+    height: 17px;
+    border-radius: 2px;
+    box-sizing: border-box;
+    flex-shrink: 0;
+    transition: background 0.3s ease, border-color 0.3s ease;
+}
+
+.legend-item-compact svg {
+    display: block;
+    flex-shrink: 0;
+    width: 29px;
+    height: 14px;
+}
+
+.legend-item-compact svg line {
+    transition: stroke 0.3s ease;
+}
+
+.legend-ide-column {
+    display: flex;
+    flex-direction: row;
+    gap: 8px;
+    align-items: center;
+    justify-content: center;
+    min-width: 0;
+    width: 100%;
+}
+
+.legend-ide-label {
+    font-size: 12px;
+    font-weight: 500;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    letter-spacing: 0.5px;
+    transition: color 0.3s ease;
+    white-space: nowrap;
+}
+
+.legend-ide-select {
+    width: 120px;
+    padding: 6px 10px;
+    border-radius: 4px;
+    border: 1px solid var(--border-subtle);
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.legend-ide-select:hover {
+    border-color: var(--text-secondary);
+}
+
+.legend-ide-select:focus {
+    outline: none;
+    border-color: '{{ CREWAI_ORANGE }}';
+}
+
 .nav-button {
     width: 40px;
     height: 40px;
     background: var(--bg-secondary);
+    backdrop-filter: blur(12px) saturate(180%);
+    -webkit-backdrop-filter: blur(12px) saturate(180%);
     border: 1px solid var(--border-subtle);
     border-radius: 6px;
     display: flex;
@@ -199,12 +378,12 @@ h3 {
     user-select: none;
     pointer-events: auto;
     position: relative;
-    z-index: 10001;
+    z-index: 10002;
     transition: background 0.3s ease, border-color 0.3s ease, color 0.3s ease, box-shadow 0.3s ease;
 }
 
 .nav-button:hover {
-    background: var(--border-subtle);
+    background: var(--nav-button-hover);
 }
 
 #drawer {
@@ -216,9 +395,10 @@ h3 {
     background: var(--bg-drawer);
     box-shadow: -4px 0 12px var(--shadow-strong);
     transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1), background 0.3s ease, box-shadow 0.3s ease;
-    z-index: 2000;
-    overflow-y: auto;
-    padding: 24px;
+    z-index: 10003;
+    overflow: hidden;
+    transform: translateZ(0);
+    isolation: isolate;
 }
 
 #drawer.open {
@@ -265,7 +445,7 @@ h3 {
     justify-content: space-between;
     align-items: center;
     margin-bottom: 20px;
-    padding-bottom: 16px;
+    padding: 24px 24px 16px 24px;
     border-bottom: 2px solid '{{ CREWAI_ORANGE }}';
     position: relative;
     z-index: 2001;
@@ -292,10 +472,17 @@ h3 {
     padding: 4px 8px;
     line-height: 1;
     transition: color 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .drawer-close:hover {
     color: '{{ CREWAI_ORANGE }}';
+}
+
+.drawer-close i {
+    display: block;
 }
 
 .drawer-open-ide {
@@ -331,14 +518,19 @@ h3 {
     box-shadow: 0 1px 4px rgba(255, 90, 80, 0.2);
 }
 
-.drawer-open-ide svg {
+.drawer-open-ide svg,
+.drawer-open-ide i {
     width: 14px;
     height: 14px;
+    display: block;
 }
 
 .drawer-content {
     color: '{{ DARK_GRAY }}';
     line-height: 1.6;
+    padding: 0 24px 24px 24px;
+    overflow-y: auto;
+    height: calc(100vh - 95px);
 }
 
 .drawer-section {

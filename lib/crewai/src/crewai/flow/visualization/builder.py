@@ -400,6 +400,7 @@ def build_flow_structure(flow: Flow[Any]) -> FlowStructure:
                             target=str(listener_name),
                             condition_type=None,
                             is_router_path=True,
+                            router_path_label=str(path),
                         )
                     )
 
