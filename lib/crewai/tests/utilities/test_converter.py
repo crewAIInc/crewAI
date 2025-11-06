@@ -227,28 +227,22 @@ def test_get_conversion_instructions_gpt() -> None:
     with patch.object(LLM, "supports_function_calling") as supports_function_calling:
         supports_function_calling.return_value = True
         instructions = get_conversion_instructions(SimpleModel, llm)
-        model_schema = PydanticSchemaParser(model=SimpleModel).get_schema()
-        expected_instructions = (
-            "Please convert the following text into valid JSON.\n\n"
-            "Output ONLY the valid JSON and nothing else.\n\n"
-            "Use this format exactly:\n```json\n"
-            f"{model_schema}\n```"
-        )
-        assert instructions == expected_instructions
+        # Now using OpenAPI schema format for all models
+        assert "Ensure your final answer strictly adheres to the following OpenAPI schema:" in instructions
+        assert '"type": "json_schema"' in instructions
+        assert '"name": "SimpleModel"' in instructions
+        assert "Do not include the OpenAPI schema in the final output" in instructions
 
 
 def test_get_conversion_instructions_non_gpt() -> None:
     llm = LLM(model="ollama/llama3.1", base_url="http://localhost:11434")
     with patch.object(LLM, "supports_function_calling", return_value=False):
         instructions = get_conversion_instructions(SimpleModel, llm)
-        # Check that the JSON schema is properly formatted
-        assert "Please convert the following text into valid JSON" in instructions
-        assert "Output ONLY the valid JSON and nothing else" in instructions
-        assert "Use this format exactly" in instructions
-        assert "```json" in instructions
-        assert '"type": "object"' in instructions
-        assert '"properties"' in instructions
-        assert "'type': 'json_schema'" not in instructions
+        # Now using OpenAPI schema format for all models
+        assert "Ensure your final answer strictly adheres to the following OpenAPI schema:" in instructions
+        assert '"type": "json_schema"' in instructions
+        assert '"name": "SimpleModel"' in instructions
+        assert "Do not include the OpenAPI schema in the final output" in instructions
 
 
 # Tests for is_gpt

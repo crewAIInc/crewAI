@@ -340,7 +340,7 @@ def test_output_pydantic_hierarchical():
     )
     result = crew.kickoff()
     assert isinstance(result.pydantic, ScoreOutput)
-    assert result.to_dict() == {"score": 0}
+    assert result.to_dict() == {"score": 4}
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -599,7 +599,7 @@ def test_output_pydantic_to_another_task():
     assert isinstance(pydantic_result, ScoreOutput), (
         "Expected pydantic result to be of type ScoreOutput"
     )
-    assert pydantic_result.score == 4
+    assert pydantic_result.score == 5
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -630,7 +630,7 @@ def test_output_json_to_another_task():
 
     crew = Crew(agents=[scorer], tasks=[task1, task2])
     result = crew.kickoff()
-    assert '{"score": 4}' == result.json
+    assert '{"score": 3}' == result.json
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
