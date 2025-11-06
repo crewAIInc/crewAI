@@ -9,6 +9,7 @@ from crewai.events.base_events import BaseEvent
 class LLMEventBase(BaseEvent):
     from_task: Any | None = None
     from_agent: Any | None = None
+    message_id: str | None = None
 
     def __init__(self, **data):
         if data.get("from_task"):

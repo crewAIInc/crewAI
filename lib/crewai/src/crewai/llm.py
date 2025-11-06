@@ -18,6 +18,7 @@ from typing import (
     TypedDict,
     cast,
 )
+import uuid
 
 from dotenv import load_dotenv
 import httpx
@@ -532,6 +533,7 @@ class LLM(BaseLLM):
         from_task: Task | None = None,
         from_agent: Agent | None = None,
         response_model: type[BaseModel] | None = None,
+        message_id: str | None = None,
     ) -> Any:
         """Handle a streaming response from the LLM.
 
@@ -626,6 +628,7 @@ class LLM(BaseLLM):
                                         available_functions=available_functions,
                                         from_task=from_task,
                                         from_agent=from_agent,
+                                        message_id=message_id,
                                     )
 
                                     if result is not None:
@@ -646,6 +649,7 @@ class LLM(BaseLLM):
                             chunk=chunk_content,
                             from_task=from_task,
                             from_agent=from_agent,
+                            message_id=message_id,
                         ),
                     )
             # --- 4) Fallback to non-streaming if no content received
@@ -763,6 +767,7 @@ class LLM(BaseLLM):
                         from_task=from_task,
                         from_agent=from_agent,
                         messages=params["messages"],
+                        message_id=message_id,
                     )
                     return structured_response
 
@@ -772,11 +777,12 @@ class LLM(BaseLLM):
                     from_task=from_task,
                     from_agent=from_agent,
                     messages=params["messages"],
+                    message_id=message_id,
                 )
                 return full_response
 
             # --- 9) Handle tool calls if present
-            tool_result = self._handle_tool_call(tool_calls, available_functions)
+            tool_result = self._handle_tool_call(tool_calls, available_functions, from_task, from_agent, message_id)
             if tool_result is not None:
                 return tool_result
 
@@ -792,6 +798,7 @@ class LLM(BaseLLM):
                 from_task=from_task,
                 from_agent=from_agent,
                 messages=params["messages"],
+                message_id=message_id,
             )
             return full_response
 
@@ -810,13 +817,14 @@ class LLM(BaseLLM):
                     from_task=from_task,
                     from_agent=from_agent,
                     messages=params["messages"],
+                    message_id=message_id,
                 )
                 return full_response
 
             crewai_event_bus.emit(
                 self,
                 event=LLMCallFailedEvent(
-                    error=str(e), from_task=from_task, from_agent=from_agent
+                    error=str(e), from_task=from_task, from_agent=from_agent, message_id=message_id
                 ),
             )
             raise Exception(f"Failed to get streaming response: {e!s}") from e
@@ -828,6 +836,7 @@ class LLM(BaseLLM):
         available_functions: dict[str, Any] | None = None,
         from_task: Task | None = None,
         from_agent: Agent | None = None,
+        message_id: str | None = None,
     ) -> Any:
         for tool_call in tool_calls:
             current_tool_accumulator = accumulated_tool_args[tool_call.index]
@@ -847,6 +856,7 @@ class LLM(BaseLLM):
                     chunk=tool_call.function.arguments,
                     from_task=from_task,
                     from_agent=from_agent,
+                    message_id=message_id,
                 ),
             )
 
@@ -861,6 +871,9 @@ class LLM(BaseLLM):
                     return self._handle_tool_call(
                         [current_tool_accumulator],
                         available_functions,
+                        from_task,
+                        from_agent,
+                        message_id,
                     )
                 except json.JSONDecodeError:
                     continue
@@ -914,6 +927,7 @@ class LLM(BaseLLM):
         from_task: Task | None = None,
         from_agent: Agent | None = None,
         response_model: type[BaseModel] | None = None,
+        message_id: str | None = None,
     ) -> str | Any:
         """Handle a non-streaming response from the LLM.
 
@@ -954,6 +968,7 @@ class LLM(BaseLLM):
                 from_task=from_task,
                 from_agent=from_agent,
                 messages=params["messages"],
+                message_id=message_id,
             )
             return structured_response
 
@@ -982,6 +997,7 @@ class LLM(BaseLLM):
                     from_task=from_task,
                     from_agent=from_agent,
                     messages=params["messages"],
+                    message_id=message_id,
                 )
                 return structured_response
 
@@ -1013,6 +1029,7 @@ class LLM(BaseLLM):
                 from_task=from_task,
                 from_agent=from_agent,
                 messages=params["messages"],
+                message_id=message_id,
             )
             return text_response
 
@@ -1022,7 +1039,7 @@ class LLM(BaseLLM):
 
         # --- 7) Handle tool calls if present
         tool_result = self._handle_tool_call(
-            tool_calls, available_functions, from_task, from_agent
+            tool_calls, available_functions, from_task, from_agent, message_id
         )
         if tool_result is not None:
             return tool_result
@@ -1033,6 +1050,7 @@ class LLM(BaseLLM):
             from_task=from_task,
             from_agent=from_agent,
             messages=params["messages"],
+            message_id=message_id,
         )
         return text_response
 
@@ -1042,6 +1060,7 @@ class LLM(BaseLLM):
         available_functions: dict[str, Any] | None = None,
         from_task: Task | None = None,
         from_agent: Agent | None = None,
+        message_id: str | None = None,
     ) -> Any:
         """Handle a tool call from the LLM.
 
@@ -1101,6 +1120,7 @@ class LLM(BaseLLM):
                     call_type=LLMCallType.TOOL_CALL,
                     from_task=from_task,
                     from_agent=from_agent,
+                    message_id=message_id,
                 )
                 return result
             except Exception as e:
@@ -1111,7 +1131,7 @@ class LLM(BaseLLM):
                 logging.error(f"Error executing function '{function_name}': {e}")
                 crewai_event_bus.emit(
                     self,
-                    event=LLMCallFailedEvent(error=f"Tool execution error: {e!s}"),
+                    event=LLMCallFailedEvent(error=f"Tool execution error: {e!s}", message_id=message_id),
                 )
                 crewai_event_bus.emit(
                     self,
@@ -1161,6 +1181,8 @@ class LLM(BaseLLM):
             ValueError: If response format is not supported
             LLMContextLengthExceededError: If input exceeds model's context limit
         """
+        message_id = uuid.uuid4().hex
+        
         crewai_event_bus.emit(
             self,
             event=LLMCallStartedEvent(
@@ -1171,6 +1193,7 @@ class LLM(BaseLLM):
                 from_task=from_task,
                 from_agent=from_agent,
                 model=self.model,
+                message_id=message_id,
             ),
         )
 
@@ -1202,6 +1225,7 @@ class LLM(BaseLLM):
                         from_task=from_task,
                         from_agent=from_agent,
                         response_model=response_model,
+                        message_id=message_id,
                     )
 
                 return self._handle_non_streaming_response(
@@ -1211,6 +1235,7 @@ class LLM(BaseLLM):
                     from_task=from_task,
                     from_agent=from_agent,
                     response_model=response_model,
+                    message_id=message_id,
                 )
             except LLMContextLengthExceededError:
                 # Re-raise LLMContextLengthExceededError as it should be handled
@@ -1248,7 +1273,7 @@ class LLM(BaseLLM):
                 crewai_event_bus.emit(
                     self,
                     event=LLMCallFailedEvent(
-                        error=str(e), from_task=from_task, from_agent=from_agent
+                        error=str(e), from_task=from_task, from_agent=from_agent, message_id=message_id
                     ),
                 )
                 raise
@@ -1260,6 +1285,7 @@ class LLM(BaseLLM):
         from_task: Task | None = None,
         from_agent: Agent | None = None,
         messages: str | list[LLMMessage] | None = None,
+        message_id: str | None = None,
     ) -> None:
         """Handle the events for the LLM call.
 
@@ -1269,6 +1295,7 @@ class LLM(BaseLLM):
             from_task: Optional task object
             from_agent: Optional agent object
             messages: Optional messages object
+            message_id: Optional message identifier
         """
         crewai_event_bus.emit(
             self,
@@ -1279,6 +1306,7 @@ class LLM(BaseLLM):
                 from_task=from_task,
                 from_agent=from_agent,
                 model=self.model,
+                message_id=message_id,
             ),
         )
 
