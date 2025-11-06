@@ -10,7 +10,7 @@ from crewai_tools.tools.crewai_platform_tools.misc import (
     get_platform_api_base_url,
     get_platform_integration_token,
 )
-
+from crewai.utilities.logger import Logger
 
 class CrewaiPlatformToolBuilder:
     def __init__(
@@ -20,6 +20,7 @@ class CrewaiPlatformToolBuilder:
         self._apps = apps
         self._actions_schema = {}  # type: ignore[var-annotated]
         self._tools = None
+        self._logger = Logger(verbose=True)
 
     def tools(self) -> list[BaseTool]:
         if self._tools is None:
@@ -30,9 +31,7 @@ class CrewaiPlatformToolBuilder:
     def _fetch_actions(self):
         actions_url = f"{get_platform_api_base_url()}/actions"
         headers = {"Authorization": f"Bearer {get_platform_integration_token()}"}
-        print("->>>>> headers:", headers)
-        print("->>>>> actions_url:", actions_url)
-        print("->>>>> apps:", ",".join(self._apps))
+        self._logger.log("info", f"Fetch actions: {actions_url}, {headers}, {','.join(self._apps)}")
 
         try:
             response = requests.get(
@@ -43,8 +42,7 @@ class CrewaiPlatformToolBuilder:
             )
             response.raise_for_status()
         except Exception as e:
-            print("->>>>> error in _fetch_actions")
-            print("->>>>> error:", e)
+            self._logger.log("error", f"Error fetching actions: {e!s}")
             return
 
 
