@@ -67,30 +67,41 @@ def _prepare_documents_for_chromadb(
     ids: list[str] = []
     texts: list[str] = []
     metadatas: list[Mapping[str, str | int | float | bool]] = []
+    seen_ids: dict[str, int] = {}
 
     for doc in documents:
         if "doc_id" in doc:
-            ids.append(str(doc["doc_id"]))
+            doc_id = str(doc["doc_id"])
         else:
-            content_for_hash = doc["content"]
             metadata = doc.get("metadata")
-            if metadata:
-                metadata_str = json.dumps(metadata, sort_keys=True)
-                content_for_hash = f"{content_for_hash}|{metadata_str}"
+            if metadata and isinstance(metadata, dict) and "doc_id" in metadata:
+                doc_id = str(metadata["doc_id"])
+            else:
+                content_for_hash = doc["content"]
+                if metadata:
+                    metadata_str = json.dumps(metadata, sort_keys=True)
+                    content_for_hash = f"{content_for_hash}|{metadata_str}"
+                doc_id = hashlib.sha256(content_for_hash.encode()).hexdigest()
 
-            content_hash = hashlib.sha256(content_for_hash.encode()).hexdigest()
-            unique_id = f"{content_hash}"
-            ids.append(unique_id)
-
-        texts.append(doc["content"])
         metadata = doc.get("metadata")
         if metadata:
             if isinstance(metadata, list):
-                metadatas.append(metadata[0] if metadata and metadata[0] else {})
+                processed_metadata = metadata[0] if metadata and metadata[0] else {}
             else:
-                metadatas.append(metadata)
+                processed_metadata = metadata
         else:
-            metadatas.append({})
+            processed_metadata = {}
+
+        if doc_id in seen_ids:
+            idx = seen_ids[doc_id]
+            texts[idx] = doc["content"]
+            metadatas[idx] = processed_metadata
+        else:
+            idx = len(ids)
+            ids.append(doc_id)
+            texts.append(doc["content"])
+            metadatas.append(processed_metadata)
+            seen_ids[doc_id] = idx
 
     return PreparedDocuments(ids, texts, metadatas)
 
