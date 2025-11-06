@@ -15,7 +15,6 @@ import logging
 from typing import (
     Any,
     ClassVar,
-    Final,
     Generic,
     Literal,
     ParamSpec,
@@ -45,7 +44,7 @@ from crewai.events.types.flow_events import (
     MethodExecutionFinishedEvent,
     MethodExecutionStartedEvent,
 )
-from crewai.flow.visualization import build_flow_structure, render_interactive
+from crewai.flow.constants import AND_CONDITION, OR_CONDITION
 from crewai.flow.flow_wrappers import (
     FlowCondition,
     FlowConditions,
@@ -58,18 +57,16 @@ from crewai.flow.flow_wrappers import (
 from crewai.flow.persistence.base import FlowPersistence
 from crewai.flow.types import FlowExecutionData, FlowMethodName, PendingListenerKey
 from crewai.flow.utils import (
+    _extract_all_methods,
+    _normalize_condition,
     get_possible_return_constants,
     is_flow_condition_dict,
-    is_flow_condition_list,
     is_flow_method,
     is_flow_method_callable,
     is_flow_method_name,
     is_simple_flow_condition,
-    _extract_all_methods,
-    _extract_all_methods_recursive,
-    _normalize_condition,
 )
-from crewai.flow.constants import AND_CONDITION, OR_CONDITION
+from crewai.flow.visualization import build_flow_structure, render_interactive
 from crewai.utilities.printer import Printer, PrinterColor
 
 
@@ -495,7 +492,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
             or should_auto_collect_first_time_traces()
         ):
             trace_listener = TraceCollectionListener()
-            trace_listener.setup_listeners(crewai_event_bus)  # type: ignore[no-untyped-call]
+            trace_listener.setup_listeners(crewai_event_bus)
         # Apply any additional kwargs
         if kwargs:
             self._initialize_state(kwargs)
@@ -601,7 +598,26 @@ class Flow(Generic[T], metaclass=FlowMeta):
         )
 
     def _copy_state(self) -> T:
-        return copy.deepcopy(self._state)
+        """Create a copy of the current state.
+
+        Returns:
+            A copy of the current state
+        """
+        if isinstance(self._state, BaseModel):
+            try:
+                return self._state.model_copy(deep=True)
+            except (TypeError, AttributeError):
+                try:
+                    state_dict = self._state.model_dump()
+                    model_class = type(self._state)
+                    return model_class(**state_dict)
+                except Exception:
+                    return self._state.model_copy(deep=False)
+        else:
+            try:
+                return copy.deepcopy(self._state)
+            except (TypeError, AttributeError):
+                return cast(T, self._state.copy())
 
     @property
     def state(self) -> T:
@@ -926,8 +942,8 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 trace_listener = TraceCollectionListener()
                 if trace_listener.batch_manager.batch_owner_type == "flow":
                     if trace_listener.first_time_handler.is_first_time:
-                        trace_listener.first_time_handler.mark_events_collected()  # type: ignore[no-untyped-call]
-                        trace_listener.first_time_handler.handle_execution_completion()  # type: ignore[no-untyped-call]
+                        trace_listener.first_time_handler.mark_events_collected()
+                        trace_listener.first_time_handler.handle_execution_completion()
                     else:
                         trace_listener.batch_manager.finalize_batch()
 
