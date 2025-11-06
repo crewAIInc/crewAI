@@ -601,3 +601,71 @@ def test_file_path_validation():
         match="file_path/file_paths must be a Path, str, or a list of these types",
     ):
         PDFKnowledgeSource()
+
+
+def test_hash_based_id_generation_without_doc_id(mock_vector_db):
+    """Test that documents without doc_id in metadata generate hash-based IDs with index suffix."""
+    import hashlib
+    import json
+    from crewai.rag.chromadb.utils import _prepare_documents_for_chromadb
+    from crewai.rag.types import BaseRecord
+
+    documents: list[BaseRecord] = [
+        {"content": "First document content", "metadata": {"source": "test1", "category": "research"}},
+        {"content": "Second document content", "metadata": {"source": "test2", "category": "research"}},
+        {"content": "Third document content"},  # No metadata
+    ]
+
+    result = _prepare_documents_for_chromadb(documents)
+
+    assert len(result.ids) == 3
+
+    for idx, doc_id in enumerate(result.ids):
+        assert "_" in doc_id, f"ID should contain underscore: {doc_id}"
+        parts = doc_id.split("_")
+        assert len(parts) == 2, f"ID should have format hash_idx: {doc_id}"
+        hash_part, index_part = parts
+        assert len(hash_part) == 64, f"Hash should be 64 characters: {hash_part}"
+        assert index_part == str(idx), f"Index should match position: {index_part} != {idx}"
+        assert all(c in "0123456789abcdef" for c in hash_part), f"Hash should be hex: {hash_part}"
+
+    doc1_hash = result.ids[0].split("_")[0]
+    doc2_hash = result.ids[1].split("_")[0]
+    doc3_hash = result.ids[2].split("_")[0]
+
+    assert doc1_hash != doc2_hash != doc3_hash
+
+    expected_hash_1 = hashlib.sha256(
+        f"First document content|{json.dumps({'category': 'research', 'source': 'test1'}, sort_keys=True)}".encode()
+    ).hexdigest()
+    assert result.ids[0].startswith(expected_hash_1), "First document hash should match expected"
+
+    expected_hash_3 = hashlib.sha256("Third document content".encode()).hexdigest()
+    assert result.ids[2].startswith(expected_hash_3), "Third document hash should match expected"
+
+
+def test_hash_based_id_generation_with_doc_id_in_metadata(mock_vector_db):
+    """Test that documents with doc_id in metadata use the doc_id directly, not hash-based."""
+    from crewai.rag.chromadb.utils import _prepare_documents_for_chromadb
+    from crewai.rag.types import BaseRecord
+
+    documents_with_doc_id: list[BaseRecord] = [
+        {"content": "First document", "metadata": {"doc_id": "custom-id-1", "source": "test1"}},
+        {"content": "Second document", "metadata": {"doc_id": "custom-id-2"}},
+    ]
+
+    documents_without_doc_id: list[BaseRecord] = [
+        {"content": "First document", "metadata": {"source": "test1"}},
+        {"content": "Second document"},
+    ]
+
+    result_with_doc_id = _prepare_documents_for_chromadb(documents_with_doc_id)
+    result_without_doc_id = _prepare_documents_for_chromadb(documents_without_doc_id)
+
+    assert result_with_doc_id.ids == ["custom-id-1", "custom-id-2"]
+
+    assert len(result_without_doc_id.ids) == 2
+    for idx, doc_id in enumerate(result_without_doc_id.ids):
+        assert "_" in doc_id
+        assert doc_id.endswith(f"_{idx}")
+        assert len(doc_id.split("_")[0]) == 64  # Hash part is 64 chars
