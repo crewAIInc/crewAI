@@ -6,16 +6,53 @@ to enable request/response modification at the transport level.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from collections.abc import Iterable
+from typing import TYPE_CHECKING, TypedDict
 
-import httpx
+from httpx import (
+    AsyncHTTPTransport as _AsyncHTTPTransport,
+    HTTPTransport as _HTTPTransport,
+)
+from typing_extensions import NotRequired, Unpack
 
 
 if TYPE_CHECKING:
+    from ssl import SSLContext
+
+    from httpx import Limits, Request, Response
+    from httpx._types import CertTypes, ProxyTypes
+
     from crewai.llms.hooks.base import BaseInterceptor
 
 
-class HTTPTransport(httpx.HTTPTransport):
+class HTTPTransportKwargs(TypedDict):
+    """Typed dictionary for httpx.HTTPTransport initialization parameters.
+
+    These parameters configure the underlying HTTP transport behavior including
+    SSL verification, proxies, connection limits, and low-level socket options.
+    """
+
+    verify: bool | str | SSLContext
+    cert: NotRequired[CertTypes | None]
+    trust_env: bool
+    http1: bool
+    http2: bool
+    limits: Limits
+    proxy: NotRequired[ProxyTypes | None]
+    uds: NotRequired[str | None]
+    local_address: NotRequired[str | None]
+    retries: int
+    socket_options: NotRequired[
+        Iterable[
+            tuple[int, int, int]
+            | tuple[int, int, bytes | bytearray]
+            | tuple[int, int, None, int]
+        ]
+        | None
+    ]
+
+
+class HTTPTransport(_HTTPTransport):
     """HTTP transport that uses an interceptor for request/response modification.
 
     This transport is used internally when a user provides a BaseInterceptor.
@@ -25,19 +62,19 @@ class HTTPTransport(httpx.HTTPTransport):
 
     def __init__(
         self,
-        interceptor: BaseInterceptor[httpx.Request, httpx.Response],
-        **kwargs: Any,
+        interceptor: BaseInterceptor[Request, Response],
+        **kwargs: Unpack[HTTPTransportKwargs],
     ) -> None:
         """Initialize transport with interceptor.
 
         Args:
             interceptor: HTTP interceptor for modifying raw request/response objects.
-            **kwargs: Additional arguments passed to httpx.HTTPTransport.
+            **kwargs: HTTPTransport configuration parameters (verify, cert, proxy, etc.).
         """
         super().__init__(**kwargs)
         self.interceptor = interceptor
 
-    def handle_request(self, request: httpx.Request) -> httpx.Response:
+    def handle_request(self, request: Request) -> Response:
         """Handle request with interception.
 
         Args:
@@ -51,7 +88,7 @@ class HTTPTransport(httpx.HTTPTransport):
         return self.interceptor.on_inbound(response)
 
 
-class AsyncHTTPransport(httpx.AsyncHTTPTransport):
+class AsyncHTTPTransport(_AsyncHTTPTransport):
     """Async HTTP transport that uses an interceptor for request/response modification.
 
     This transport is used internally when a user provides a BaseInterceptor.
@@ -61,19 +98,19 @@ class AsyncHTTPransport(httpx.AsyncHTTPTransport):
 
     def __init__(
         self,
-        interceptor: BaseInterceptor[httpx.Request, httpx.Response],
-        **kwargs: Any,
+        interceptor: BaseInterceptor[Request, Response],
+        **kwargs: Unpack[HTTPTransportKwargs],
     ) -> None:
         """Initialize async transport with interceptor.
 
         Args:
             interceptor: HTTP interceptor for modifying raw request/response objects.
-            **kwargs: Additional arguments passed to httpx.AsyncHTTPTransport.
+            **kwargs: HTTPTransport configuration parameters (verify, cert, proxy, etc.).
         """
         super().__init__(**kwargs)
         self.interceptor = interceptor
 
-    async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
+    async def handle_async_request(self, request: Request) -> Response:
         """Handle async request with interception.
 
         Args:
