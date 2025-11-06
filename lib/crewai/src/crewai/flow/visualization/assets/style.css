@@ -266,10 +266,15 @@ h3 {
 }
 
 .drawer-title {
-    font-size: 20px;
+    font-size: 15px;
     font-weight: 700;
     color: var(--text-primary);
     transition: color 0.3s ease;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex: 1;
+    min-width: 0;
 }
 
 .drawer-close {
@@ -304,6 +309,9 @@ h3 {
     position: relative;
     z-index: 9999;
     pointer-events: auto;
+    white-space: nowrap;
+    flex-shrink: 0;
+    min-width: fit-content;
 }
 
 .drawer-open-ide:hover {
@@ -459,10 +467,11 @@ h3 {
 .drawer-section-title {
     font-size: 12px;
     text-transform: uppercase;
-    color: '{{ GRAY }}';
+    color: var(--text-secondary);
     letter-spacing: 0.5px;
     margin-bottom: 8px;
     font-weight: 600;
+    transition: color 0.3s ease;
 }
 
 .drawer-badge {
