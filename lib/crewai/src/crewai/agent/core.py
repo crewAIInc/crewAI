@@ -142,6 +142,10 @@ class Agent(BaseAgent):
         default=True,
         description="Keep messages under the context window size by summarizing content.",
     )
+    max_tool_output_tokens: int = Field(
+        default=4096,
+        description="Maximum number of tokens allowed in tool outputs before truncation. Prevents context window overflow from large tool results.",
+    )
     max_retry_limit: int = Field(
         default=2,
         description="Maximum number of retries for an agent to execute a task when an error occurs.",

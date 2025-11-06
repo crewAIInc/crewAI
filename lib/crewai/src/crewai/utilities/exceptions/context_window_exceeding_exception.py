@@ -10,6 +10,7 @@ CONTEXT_LIMIT_ERRORS: Final[list[str]] = [
     "too many tokens",
     "input is too long",
     "exceeds token limit",
+    "max_tokens must be at least 1",
 ]
 
 

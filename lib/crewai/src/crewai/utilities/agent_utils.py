@@ -290,12 +290,57 @@ def process_llm_response(
     return format_answer(answer)
 
 
+def estimate_token_count(text: str) -> int:
+    """Estimate the number of tokens in a text string.
+
+    Uses a simple heuristic: ~4 characters per token on average.
+    This is a rough approximation but sufficient for truncation purposes.
+
+    Args:
+        text: The text to estimate tokens for.
+
+    Returns:
+        Estimated number of tokens.
+    """
+    return len(text) // 4
+
+
+def truncate_tool_output(
+    tool_output: str, max_tokens: int, tool_name: str = ""
+) -> str:
+    """Truncate tool output to fit within token limit.
+
+    Args:
+        tool_output: The tool output to truncate.
+        max_tokens: Maximum number of tokens allowed.
+        tool_name: Name of the tool (for the truncation message).
+
+    Returns:
+        Truncated tool output with a clear truncation message.
+    """
+    estimated_tokens = estimate_token_count(tool_output)
+    
+    if estimated_tokens <= max_tokens:
+        return tool_output
+    
+    truncation_msg = f"\n\n[Tool output truncated: showing first {max_tokens} of ~{estimated_tokens} tokens. Please refine your query to get more specific results.]"
+    chars_for_message = len(truncation_msg)
+    max_chars = (max_tokens * 4) - chars_for_message
+    
+    if max_chars <= 0:
+        return truncation_msg
+    
+    truncated_output = tool_output[:max_chars]
+    return truncated_output + truncation_msg
+
+
 def handle_agent_action_core(
     formatted_answer: AgentAction,
     tool_result: ToolResult,
     messages: list[LLMMessage] | None = None,
     step_callback: Callable | None = None,
     show_logs: Callable | None = None,
+    max_tool_output_tokens: int = 4096,
 ) -> AgentAction | AgentFinish:
     """Core logic for handling agent actions and tool results.
 
@@ -305,6 +350,7 @@ def handle_agent_action_core(
         messages: Optional list of messages to append results to
         step_callback: Optional callback to execute after processing
         show_logs: Optional function to show logs
+        max_tool_output_tokens: Maximum tokens allowed in tool output before truncation
 
     Returns:
         Either an AgentAction or AgentFinish
@@ -315,13 +361,18 @@ def handle_agent_action_core(
     if step_callback:
         step_callback(tool_result)
 
-    formatted_answer.text += f"\nObservation: {tool_result.result}"
-    formatted_answer.result = tool_result.result
+    tool_output = str(tool_result.result)
+    truncated_output = truncate_tool_output(
+        tool_output, max_tool_output_tokens, formatted_answer.tool
+    )
+
+    formatted_answer.text += f"\nObservation: {truncated_output}"
+    formatted_answer.result = truncated_output
 
     if tool_result.result_as_answer:
         return AgentFinish(
             thought="",
-            output=tool_result.result,
+            output=truncated_output,
             text=formatted_answer.text,
         )
 

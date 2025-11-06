@@ -323,12 +323,16 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             self.messages.append({"role": "assistant", "content": tool_result.result})
             return formatted_answer
 
+        max_tool_output_tokens = (
+            self.agent.max_tool_output_tokens if self.agent else 4096
+        )
         return handle_agent_action_core(
             formatted_answer=formatted_answer,
             tool_result=tool_result,
             messages=self.messages,
             step_callback=self.step_callback,
             show_logs=self._show_logs,
+            max_tool_output_tokens=max_tool_output_tokens,
         )
 
     def _invoke_step_callback(
