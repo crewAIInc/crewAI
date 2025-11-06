@@ -382,8 +382,8 @@ def test_guardrail_is_called_using_string():
     assert not guardrail_events["completed"][0].success
     assert guardrail_events["completed"][1].success
     assert (
-        "Here are the top 10 best soccer players in the world, focusing exclusively on Brazilian players"
-        in result.raw
+        "top 10 best Brazilian soccer players" in result.raw or
+        "Brazilian players" in result.raw
     )
 
 

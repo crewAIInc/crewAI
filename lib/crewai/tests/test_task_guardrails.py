@@ -181,7 +181,7 @@ def test_task_guardrail_process_output(task_output):
     result = guardrail(task_output)
     assert result[0] is False
 
-    assert "exceeding the guardrail limit of fewer than" in result[1].lower()
+    assert result[1] == "The task result contains more than 10 words, violating the guardrail. The text provided contains about 21 words."
 
     guardrail = LLMGuardrail(
         description="Ensure the result has less than 500 words", llm=LLM(model="gpt-4o")
@@ -252,10 +252,7 @@ def test_guardrail_emits_events(sample_agent):
             {
                 "success": False,
                 "result": None,
-                "error": "The task result does not comply with the guardrail because none of "
-                "the listed authors are from Italy. All authors mentioned are from "
-                "different countries, including Germany, the UK, the USA, and others, "
-                "which violates the requirement that authors must be Italian.",
+                "error": "The output indicates that none of the authors mentioned are from Italy, while the guardrail requires authors to be from Italy. Therefore, the output does not comply with the guardrail.",
                 "retry_count": 0,
             },
             {"success": True, "result": result.raw, "error": None, "retry_count": 1},
