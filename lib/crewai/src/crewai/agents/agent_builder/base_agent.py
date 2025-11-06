@@ -267,7 +267,6 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
 
         validated_mcps = []
         for mcp in mcps:
-            # Check if it's a string reference (backwards compatible)
             if isinstance(mcp, str):
                 if mcp.startswith(("https://", "crewai-amp:")):
                     validated_mcps.append(mcp)
@@ -276,17 +275,14 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
                         f"Invalid MCP reference: {mcp}. "
                         "String references must start with 'https://' or 'crewai-amp:'"
                     )
-            # Check if it's a valid MCP server config
+
             elif isinstance(mcp, (MCPServerConfig)):
-                print(f"Valid MCP server config using new config: {mcp}")
-                print("type of mcp: ", type(mcp))
                 validated_mcps.append(mcp)
             else:
                 raise ValueError(
                     f"Invalid MCP configuration: {type(mcp)}. "
                     "Must be a string reference or MCPServerConfig instance."
                 )
-        print("validated_mcps: ", validated_mcps)
         return validated_mcps
 
     @model_validator(mode="after")
