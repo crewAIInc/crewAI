@@ -68,20 +68,19 @@ def _prepare_documents_for_chromadb(
     texts: list[str] = []
     metadatas: list[Mapping[str, str | int | float | bool]] = []
 
-    for doc in documents:
-        if "doc_id" in doc:
-            ids.append(doc["doc_id"])
+    for idx, doc in enumerate(documents):
+        metadata = doc.get("metadata")
+        if metadata and isinstance(metadata, dict) and "doc_id" in metadata:
+            ids.append(str(metadata["doc_id"]))
         else:
             content_for_hash = doc["content"]
-            metadata = doc.get("metadata")
             if metadata:
                 metadata_str = json.dumps(metadata, sort_keys=True)
                 content_for_hash = f"{content_for_hash}|{metadata_str}"
 
-            content_hash = hashlib.blake2b(
-                content_for_hash.encode(), digest_size=32
-            ).hexdigest()
-            ids.append(content_hash)
+            content_hash = hashlib.sha256(content_for_hash.encode()).hexdigest()
+            unique_id = f"{content_hash}_{idx}"
+            ids.append(unique_id)
 
         texts.append(doc["content"])
         metadata = doc.get("metadata")
