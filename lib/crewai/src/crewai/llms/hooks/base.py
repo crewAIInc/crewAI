@@ -7,7 +7,14 @@ outbound and inbound messages at the transport level.
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Generic, TypeVar
+from typing import TYPE_CHECKING, Any, Generic, TypeVar
+
+from pydantic_core import core_schema
+
+
+if TYPE_CHECKING:
+    from pydantic import GetCoreSchemaHandler
+    from pydantic_core import CoreSchema
 
 
 T = TypeVar("T")
@@ -25,6 +32,7 @@ class BaseInterceptor(ABC, Generic[T, U]):
         U: Inbound message type (e.g., httpx.Response)
 
     Example:
+        >>> import httpx
         >>> class CustomInterceptor(BaseInterceptor[httpx.Request, httpx.Response]):
         ...     def on_outbound(self, message: httpx.Request) -> httpx.Request:
         ...         message.headers["X-Custom-Header"] = "value"
@@ -80,3 +88,46 @@ class BaseInterceptor(ABC, Generic[T, U]):
             Modified message object.
         """
         raise NotImplementedError
+
+    @classmethod
+    def __get_pydantic_core_schema__(
+        cls, _source_type: Any, _handler: GetCoreSchemaHandler
+    ) -> CoreSchema:
+        """Generate Pydantic core schema for BaseInterceptor.
+
+        This allows the generic BaseInterceptor to be used in Pydantic models
+        without requiring arbitrary_types_allowed=True. The schema validates
+        that the value is an instance of BaseInterceptor.
+
+        Args:
+            _source_type: The source type being validated (unused).
+            _handler: Handler for generating schemas (unused).
+
+        Returns:
+            A Pydantic core schema that validates BaseInterceptor instances.
+        """
+        return core_schema.no_info_plain_validator_function(
+            _validate_interceptor,
+            serialization=core_schema.plain_serializer_function_ser_schema(
+                lambda x: x, return_schema=core_schema.any_schema()
+            ),
+        )
+
+
+def _validate_interceptor(value: Any) -> BaseInterceptor[T, U]:
+    """Validate that the value is a BaseInterceptor instance.
+
+    Args:
+        value: The value to validate.
+
+    Returns:
+        The validated BaseInterceptor instance.
+
+    Raises:
+        ValueError: If the value is not a BaseInterceptor instance.
+    """
+    if not isinstance(value, BaseInterceptor):
+        raise ValueError(
+            f"Expected BaseInterceptor instance, got {type(value).__name__}"
+        )
+    return value
