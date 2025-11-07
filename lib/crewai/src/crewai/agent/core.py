@@ -40,6 +40,16 @@ from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
 from crewai.knowledge.utils.knowledge_utils import extract_knowledge_context
 from crewai.lite_agent import LiteAgent
 from crewai.llms.base_llm import BaseLLM
+from crewai.mcp import (
+    MCPClient,
+    MCPServerConfig,
+    MCPServerHTTP,
+    MCPServerSSE,
+    MCPServerStdio,
+)
+from crewai.mcp.transports.http import HTTPTransport
+from crewai.mcp.transports.sse import SSETransport
+from crewai.mcp.transports.stdio import StdioTransport
 from crewai.memory.contextual.contextual_memory import ContextualMemory
 from crewai.rag.embeddings.types import EmbedderConfig
 from crewai.security.fingerprint import Fingerprint
@@ -108,6 +118,7 @@ class Agent(BaseAgent):
     """
 
     _times_executed: int = PrivateAttr(default=0)
+    _mcp_clients: list[Any] = PrivateAttr(default_factory=list)
     max_execution_time: int | None = Field(
         default=None,
         description="Maximum execution time for an agent to execute a task",
@@ -526,6 +537,9 @@ class Agent(BaseAgent):
             self,
             event=AgentExecutionCompletedEvent(agent=self, task=task, output=result),
         )
+
+        self._cleanup_mcp_clients()
+
         return result
 
     def _execute_with_timeout(self, task_prompt: str, task: Task, timeout: int) -> Any:
@@ -649,29 +663,69 @@ class Agent(BaseAgent):
             self._logger.log("error", f"Error getting platform tools: {e!s}")
             return []
 
-    def get_mcp_tools(self, mcps: list[str]) -> list[BaseTool]:
-        """Convert MCP server references to CrewAI tools."""
+    def get_mcp_tools(self, mcps: list[str | MCPServerConfig]) -> list[BaseTool]:
+        """Convert MCP server references/configs to CrewAI tools.
+
+        Supports both string references (backwards compatible) and structured
+        configuration objects (MCPServerStdio, MCPServerHTTP, MCPServerSSE).
+
+        Args:
+            mcps: List of MCP server references (strings) or configurations.
+
+        Returns:
+            List of BaseTool instances from MCP servers.
+        """
         all_tools = []
+        clients = []
 
-        for mcp_ref in mcps:
-            try:
-                if mcp_ref.startswith("crewai-amp:"):
-                    tools = self._get_amp_mcp_tools(mcp_ref)
-                elif mcp_ref.startswith("https://"):
-                    tools = self._get_external_mcp_tools(mcp_ref)
-                else:
-                    continue
+        for mcp_config in mcps:
+            if isinstance(mcp_config, str):
+                tools = self._get_mcp_tools_from_string(mcp_config)
+            else:
+                tools, client = self._get_native_mcp_tools(mcp_config)
+                if client:
+                    clients.append(client)
 
-                all_tools.extend(tools)
-                self._logger.log(
-                    "info", f"Successfully loaded {len(tools)} tools from {mcp_ref}"
-                )
+            all_tools.extend(tools)
 
-            except Exception as e:
-                self._logger.log("warning", f"Skipping MCP {mcp_ref} due to error: {e}")
-                continue
-
+        # Store clients for cleanup
+        self._mcp_clients.extend(clients)
         return all_tools
+
+    def _cleanup_mcp_clients(self) -> None:
+        """Cleanup MCP client connections after task execution."""
+        if not self._mcp_clients:
+            return
+
+        async def _disconnect_all() -> None:
+            for client in self._mcp_clients:
+                if client and hasattr(client, "connected") and client.connected:
+                    await client.disconnect()
+
+        try:
+            asyncio.run(_disconnect_all())
+        except Exception as e:
+            self._logger.log("error", f"Error during MCP client cleanup: {e}")
+        finally:
+            self._mcp_clients.clear()
+
+    def _get_mcp_tools_from_string(self, mcp_ref: str) -> list[BaseTool]:
+        """Get tools from legacy string-based MCP references.
+
+        This method maintains backwards compatibility with string-based
+        MCP references (https://... and crewai-amp:...).
+
+        Args:
+            mcp_ref: String reference to MCP server.
+
+        Returns:
+            List of BaseTool instances.
+        """
+        if mcp_ref.startswith("crewai-amp:"):
+            return self._get_amp_mcp_tools(mcp_ref)
+        if mcp_ref.startswith("https://"):
+            return self._get_external_mcp_tools(mcp_ref)
+        return []
 
     def _get_external_mcp_tools(self, mcp_ref: str) -> list[BaseTool]:
         """Get tools from external HTTPS MCP server with graceful error handling."""
@@ -730,6 +784,154 @@ class Agent(BaseAgent):
                 "warning", f"Failed to connect to MCP server {server_url}: {e}"
             )
             return []
+
+    def _get_native_mcp_tools(
+        self, mcp_config: MCPServerConfig
+    ) -> tuple[list[BaseTool], Any | None]:
+        """Get tools from MCP server using structured configuration.
+
+        This method creates an MCP client based on the configuration type,
+        connects to the server, discovers tools, applies filtering, and
+        returns wrapped tools along with the client instance for cleanup.
+
+        Args:
+            mcp_config: MCP server configuration (MCPServerStdio, MCPServerHTTP, or MCPServerSSE).
+
+        Returns:
+            Tuple of (list of BaseTool instances, MCPClient instance for cleanup).
+        """
+        from crewai.tools.base_tool import BaseTool
+        from crewai.tools.mcp_native_tool import MCPNativeTool
+
+        if isinstance(mcp_config, MCPServerStdio):
+            transport = StdioTransport(
+                command=mcp_config.command,
+                args=mcp_config.args,
+                env=mcp_config.env,
+            )
+            server_name = f"{mcp_config.command}_{'_'.join(mcp_config.args)}"
+        elif isinstance(mcp_config, MCPServerHTTP):
+            transport = HTTPTransport(
+                url=mcp_config.url,
+                headers=mcp_config.headers,
+                streamable=mcp_config.streamable,
+            )
+            server_name = self._extract_server_name(mcp_config.url)
+        elif isinstance(mcp_config, MCPServerSSE):
+            transport = SSETransport(
+                url=mcp_config.url,
+                headers=mcp_config.headers,
+            )
+            server_name = self._extract_server_name(mcp_config.url)
+        else:
+            raise ValueError(f"Unsupported MCP server config type: {type(mcp_config)}")
+
+        client = MCPClient(
+            transport=transport,
+            cache_tools_list=mcp_config.cache_tools_list,
+        )
+
+        async def _setup_client_and_list_tools() -> list[dict[str, Any]]:
+            """Async helper to connect and list tools in same event loop."""
+
+            try:
+                if not client.connected:
+                    await client.connect()
+
+                tools_list = await client.list_tools()
+
+                try:
+                    await client.disconnect()
+                    # Small delay to allow background tasks to finish cleanup
+                    # This helps prevent "cancel scope in different task" errors
+                    # when asyncio.run() closes the event loop
+                    await asyncio.sleep(0.1)
+                except Exception as e:
+                    self._logger.log("error", f"Error during disconnect: {e}")
+
+                return tools_list
+            except Exception as e:
+                if client.connected:
+                    await client.disconnect()
+                    await asyncio.sleep(0.1)
+                raise RuntimeError(
+                    f"Error during setup client and list tools: {e}"
+                ) from e
+
+        try:
+            try:
+                tools_list = asyncio.run(_setup_client_and_list_tools())
+            except RuntimeError as e:
+                error_msg = str(e).lower()
+                if "cancel scope" in error_msg or "task" in error_msg:
+                    raise ConnectionError(
+                        "MCP connection failed due to event loop cleanup issues. "
+                        "This may be due to authentication errors or server unavailability."
+                    ) from e
+            except asyncio.CancelledError as e:
+                raise ConnectionError(
+                    "MCP connection was cancelled. This may indicate an authentication "
+                    "error or server unavailability."
+                ) from e
+
+            if mcp_config.tool_filter:
+                filtered_tools = []
+                for tool in tools_list:
+                    if callable(mcp_config.tool_filter):
+                        try:
+                            from crewai.mcp.filters import ToolFilterContext
+
+                            context = ToolFilterContext(
+                                agent=self,
+                                server_name=server_name,
+                                run_context=None,
+                            )
+                            if mcp_config.tool_filter(context, tool):
+                                filtered_tools.append(tool)
+                        except (TypeError, AttributeError):
+                            if mcp_config.tool_filter(tool):
+                                filtered_tools.append(tool)
+                    else:
+                        # Not callable - include tool
+                        filtered_tools.append(tool)
+                tools_list = filtered_tools
+
+            tools = []
+            for tool_def in tools_list:
+                tool_name = tool_def.get("name", "")
+                if not tool_name:
+                    continue
+
+                # Convert inputSchema to Pydantic model if present
+                args_schema = None
+                if tool_def.get("inputSchema"):
+                    args_schema = self._json_schema_to_pydantic(
+                        tool_name, tool_def["inputSchema"]
+                    )
+
+                tool_schema = {
+                    "description": tool_def.get("description", ""),
+                    "args_schema": args_schema,
+                }
+
+                try:
+                    native_tool = MCPNativeTool(
+                        mcp_client=client,
+                        tool_name=tool_name,
+                        tool_schema=tool_schema,
+                        server_name=server_name,
+                    )
+                    tools.append(native_tool)
+                except Exception as e:
+                    self._logger.log("error", f"Failed to create native MCP tool: {e}")
+                    continue
+
+            return cast(list[BaseTool], tools), client
+        except Exception as e:
+            if client.connected:
+                asyncio.run(client.disconnect())
+
+            raise RuntimeError(f"Failed to get native MCP tools: {e}") from e
 
     def _get_amp_mcp_tools(self, amp_ref: str) -> list[BaseTool]:
         """Get tools from CrewAI AMP MCP marketplace."""
