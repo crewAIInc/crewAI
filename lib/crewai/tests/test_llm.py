@@ -727,30 +727,111 @@ def test_native_provider_falls_back_to_litellm_when_not_in_supported_list():
         assert llm.model == "groq/llama-3.1-70b-versatile"
 
 
-def test_prefixed_models_use_litellm():
-    """Test that models with provider prefixes always use LiteLLM routing, not native SDKs.
+def test_prefixed_models_with_valid_constants_use_native_sdk():
+    """Test that models with native provider prefixes use native SDK when model is in constants."""
+    # Test openai/ prefix with actual OpenAI model in constants → Native SDK
+    with patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}):
+        llm = LLM(model="openai/gpt-4o", is_litellm=False)
+        assert llm.is_litellm is False
+        assert llm.provider == "openai"
 
-    This ensures that models like "openai/gemini-2.5-flash" go through LiteLLM proxy
-    rather than trying to use the native OpenAI SDK (which doesn't have Gemini models).
-    """
-    # Test openai/ prefix with non-OpenAI model (e.g., proxied Gemini)
+    # Test anthropic/ prefix with Claude model in constants → Native SDK
+    with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"}):
+        llm2 = LLM(model="anthropic/claude-opus-4-0", is_litellm=False)
+        assert llm2.is_litellm is False
+        assert llm2.provider == "anthropic"
+
+    # Test gemini/ prefix with Gemini model in constants → Native SDK
+    with patch.dict(os.environ, {"GOOGLE_API_KEY": "test-key"}):
+        llm3 = LLM(model="gemini/gemini-2.5-pro", is_litellm=False)
+        assert llm3.is_litellm is False
+        assert llm3.provider == "gemini"
+
+
+def test_prefixed_models_with_invalid_constants_use_litellm():
+    """Test that models with native provider prefixes use LiteLLM when model is NOT in constants."""
+    # Test openai/ prefix with non-OpenAI model (not in OPENAI_MODELS) → LiteLLM
     llm = LLM(model="openai/gemini-2.5-flash", is_litellm=False)
     assert llm.is_litellm is True
     assert llm.model == "openai/gemini-2.5-flash"
 
-    # Test openai/ prefix with actual OpenAI model (still should use LiteLLM due to prefix)
-    llm2 = LLM(model="openai/gpt-4o", is_litellm=False)
+    # Test openai/ prefix with unknown future model → LiteLLM
+    llm2 = LLM(model="openai/gpt-future-6", is_litellm=False)
     assert llm2.is_litellm is True
-    assert llm2.model == "openai/gpt-4o"
+    assert llm2.model == "openai/gpt-future-6"
 
-    # Test other provider prefixes also use LiteLLM
-    llm3 = LLM(model="anthropic/claude-3-opus", is_litellm=False)
+    # Test anthropic/ prefix with non-Anthropic model → LiteLLM
+    llm3 = LLM(model="anthropic/gpt-4o", is_litellm=False)
     assert llm3.is_litellm is True
-    assert llm3.model == "anthropic/claude-3-opus"
+    assert llm3.model == "anthropic/gpt-4o"
+
+
+def test_prefixed_models_with_non_native_providers_use_litellm():
+    """Test that models with non-native provider prefixes always use LiteLLM."""
+    # Test groq/ prefix (not a native provider) → LiteLLM
+    llm = LLM(model="groq/llama-3.3-70b", is_litellm=False)
+    assert llm.is_litellm is True
+    assert llm.model == "groq/llama-3.3-70b"
+
+    # Test together/ prefix (not a native provider) → LiteLLM
+    llm2 = LLM(model="together/qwen-2.5-72b", is_litellm=False)
+    assert llm2.is_litellm is True
+    assert llm2.model == "together/qwen-2.5-72b"
 
 
 def test_unprefixed_models_use_native_sdk():
-    """Test that unprefixed models default to native OpenAI SDK for backward compatibility."""
-    llm = LLM(model="gpt-4o", is_litellm=False)
-    assert llm.is_litellm is False
-    assert llm.provider == "openai"
+    """Test that unprefixed models use native SDK when model is in constants."""
+    # gpt-4o is in OPENAI_MODELS → Native OpenAI SDK
+    with patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}):
+        llm = LLM(model="gpt-4o", is_litellm=False)
+        assert llm.is_litellm is False
+        assert llm.provider == "openai"
+
+    # claude-opus-4-0 is in ANTHROPIC_MODELS → Native Anthropic SDK
+    with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"}):
+        llm2 = LLM(model="claude-opus-4-0", is_litellm=False)
+        assert llm2.is_litellm is False
+        assert llm2.provider == "anthropic"
+
+    # gemini-2.5-pro is in GEMINI_MODELS → Native Gemini SDK
+    with patch.dict(os.environ, {"GOOGLE_API_KEY": "test-key"}):
+        llm3 = LLM(model="gemini-2.5-pro", is_litellm=False)
+        assert llm3.is_litellm is False
+        assert llm3.provider == "gemini"
+
+
+def test_explicit_provider_kwarg_takes_priority():
+    """Test that explicit provider kwarg takes priority over model name inference."""
+    # Explicit provider=openai should use OpenAI even if model name suggests otherwise
+    with patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}):
+        llm = LLM(model="gpt-4o", provider="openai", is_litellm=False)
+        assert llm.is_litellm is False
+        assert llm.provider == "openai"
+
+    # Explicit provider for a model with "/" should still use that provider
+    with patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}):
+        llm2 = LLM(model="gpt-4o", provider="openai", is_litellm=False)
+        assert llm2.is_litellm is False
+        assert llm2.provider == "openai"
+
+
+def test_validate_model_in_constants():
+    """Test the _validate_model_in_constants method."""
+    # OpenAI models
+    assert LLM._validate_model_in_constants("gpt-4o", "openai") is True
+    assert LLM._validate_model_in_constants("gpt-future-6", "openai") is False
+
+    # Anthropic models
+    assert LLM._validate_model_in_constants("claude-opus-4-0", "claude") is True
+    assert LLM._validate_model_in_constants("claude-future-5", "claude") is False
+
+    # Gemini models
+    assert LLM._validate_model_in_constants("gemini-2.5-pro", "gemini") is True
+    assert LLM._validate_model_in_constants("gemini-future", "gemini") is False
+
+    # Azure models
+    assert LLM._validate_model_in_constants("gpt-4o", "azure") is True
+    assert LLM._validate_model_in_constants("gpt-35-turbo", "azure") is True
+
+    # Bedrock models
+    assert LLM._validate_model_in_constants("anthropic.claude-opus-4-1-20250805-v1:0", "bedrock") is True

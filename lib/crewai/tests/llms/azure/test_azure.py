@@ -39,7 +39,7 @@ def test_azure_completion_is_used_when_azure_openai_provider():
 
     from crewai.llms.providers.azure.completion import AzureCompletion
     assert isinstance(llm, AzureCompletion)
-    assert llm.provider == "azure_openai"
+    assert llm.provider == "azure"
     assert llm.model == "gpt-4"
 
 
