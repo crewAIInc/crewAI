@@ -33,14 +33,14 @@ class HTTPTransportKwargs(TypedDict, total=False):
     """
 
     verify: bool | str | SSLContext
-    cert: NotRequired[CertTypes | None]
+    cert: NotRequired[CertTypes]
     trust_env: bool
     http1: bool
     http2: bool
     limits: Limits
-    proxy: NotRequired[ProxyTypes | None]
-    uds: NotRequired[str | None]
-    local_address: NotRequired[str | None]
+    proxy: NotRequired[ProxyTypes]
+    uds: NotRequired[str]
+    local_address: NotRequired[str]
     retries: int
     socket_options: NotRequired[
         Iterable[
@@ -48,7 +48,6 @@ class HTTPTransportKwargs(TypedDict, total=False):
             | tuple[int, int, bytes | bytearray]
             | tuple[int, int, None, int]
         ]
-        | None
     ]
 
 

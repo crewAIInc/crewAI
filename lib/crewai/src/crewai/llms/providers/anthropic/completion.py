@@ -210,7 +210,8 @@ class AnthropicCompletion(BaseLLM):
                 "model",
                 "max_tokens",
                 "stream",
-                "temperaturetop_p",
+                "temperature",
+                "top_p",
                 "stop_sequences",
             },
         )

@@ -243,6 +243,30 @@ class BedrockCompletion(BaseLLM):
         # Handle inference profiles for newer models
         self.model_id = model
 
+    @property
+    def stop(self) -> list[str]:
+        """Get stop sequences sent to the API."""
+        return list(self.stop_sequences)
+
+    @stop.setter
+    def stop(self, value: Sequence[str] | str | None) -> None:
+        """Set stop sequences.
+
+        Synchronizes stop_sequences to ensure values set by CrewAgentExecutor
+        are properly sent to the Bedrock API.
+
+        Args:
+            value: Stop sequences as a Sequence, single string, or None
+        """
+        if value is None:
+            self.stop_sequences = []
+        elif isinstance(value, str):
+            self.stop_sequences = [value]
+        elif isinstance(value, Sequence):
+            self.stop_sequences = list(value)
+        else:
+            self.stop_sequences = []
+
     def call(
         self,
         messages: str | list[LLMMessage],
