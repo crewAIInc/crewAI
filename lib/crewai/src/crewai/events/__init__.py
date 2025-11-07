@@ -16,7 +16,6 @@ from crewai.events.base_event_listener import BaseEventListener
 from crewai.events.depends import Depends
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.handler_graph import CircularDependencyError
-
 from crewai.events.types.crew_events import (
     CrewKickoffCompletedEvent,
     CrewKickoffFailedEvent,
@@ -60,6 +59,14 @@ from crewai.events.types.llm_guardrail_events import (
 from crewai.events.types.logging_events import (
     AgentLogsExecutionEvent,
     AgentLogsStartedEvent,
+)
+from crewai.events.types.mcp_events import (
+    MCPConnectionCompletedEvent,
+    MCPConnectionFailedEvent,
+    MCPConnectionStartedEvent,
+    MCPToolExecutionCompletedEvent,
+    MCPToolExecutionFailedEvent,
+    MCPToolExecutionStartedEvent,
 )
 from crewai.events.types.memory_events import (
     MemoryQueryCompletedEvent,
@@ -153,6 +160,12 @@ __all__ = [
     "LiteAgentExecutionCompletedEvent",
     "LiteAgentExecutionErrorEvent",
     "LiteAgentExecutionStartedEvent",
+    "MCPConnectionCompletedEvent",
+    "MCPConnectionFailedEvent",
+    "MCPConnectionStartedEvent",
+    "MCPToolExecutionCompletedEvent",
+    "MCPToolExecutionFailedEvent",
+    "MCPToolExecutionStartedEvent",
     "MemoryQueryCompletedEvent",
     "MemoryQueryFailedEvent",
     "MemoryQueryStartedEvent",
