@@ -3,6 +3,7 @@
 import asyncio
 from collections.abc import Callable
 from contextlib import AsyncExitStack
+from datetime import datetime
 import logging
 import time
 from typing import Any
@@ -17,6 +18,15 @@ except ImportError:
     # Fallback for Python < 3.11 (shouldn't happen in practice)
     BaseExceptionGroup = Exception
 
+from crewai.events.event_bus import crewai_event_bus
+from crewai.events.types.mcp_events import (
+    MCPConnectionCompletedEvent,
+    MCPConnectionFailedEvent,
+    MCPConnectionStartedEvent,
+    MCPToolExecutionCompletedEvent,
+    MCPToolExecutionFailedEvent,
+    MCPToolExecutionStartedEvent,
+)
 from crewai.mcp.transports.base import BaseTransport
 from crewai.mcp.transports.http import HTTPTransport
 from crewai.mcp.transports.sse import SSETransport
@@ -81,6 +91,7 @@ class MCPClient:
         self._session: Any = None
         self._initialized = False
         self._exit_stack = AsyncExitStack()
+        self._was_connected = False
 
     @property
     def connected(self) -> bool:
@@ -94,6 +105,35 @@ class MCPClient:
             raise RuntimeError("Client not connected. Call connect() first.")
         return self._session
 
+    def _get_server_info(self) -> tuple[str, str | None, str | None]:
+        """Get server information for events.
+
+        Returns:
+            Tuple of (server_name, server_url, transport_type).
+        """
+        if isinstance(self.transport, StdioTransport):
+            server_name = f"{self.transport.command} {' '.join(self.transport.args)}"
+            server_url = None
+            transport_type = self.transport.transport_type.value
+        elif isinstance(self.transport, HTTPTransport):
+            server_name = self.transport.url
+            server_url = self.transport.url
+            transport_type = self.transport.transport_type.value
+        elif isinstance(self.transport, SSETransport):
+            server_name = self.transport.url
+            server_url = self.transport.url
+            transport_type = self.transport.transport_type.value
+        else:
+            server_name = "Unknown MCP Server"
+            server_url = None
+            transport_type = (
+                self.transport.transport_type.value
+                if hasattr(self.transport, "transport_type")
+                else None
+            )
+
+        return server_name, server_url, transport_type
+
     async def connect(self) -> Self:
         """Connect to MCP server and initialize session.
 
@@ -106,6 +146,23 @@ class MCPClient:
         """
         if self.connected:
             return self
+
+        # Get server info for events
+        server_name, server_url, transport_type = self._get_server_info()
+        is_reconnect = self._was_connected
+
+        # Emit connection started event
+        started_at = datetime.now()
+        crewai_event_bus.emit(
+            self,
+            MCPConnectionStartedEvent(
+                server_name=server_name,
+                server_url=server_url,
+                transport_type=transport_type,
+                is_reconnect=is_reconnect,
+                connect_timeout=self.connect_timeout,
+            ),
+        )
 
         try:
             from mcp import ClientSession
@@ -160,21 +217,61 @@ class MCPClient:
                 raise ConnectionError(f"Failed to connect to MCP server: {eg}") from eg
 
             self._initialized = True
+            self._was_connected = True
+
+            completed_at = datetime.now()
+            connection_duration_ms = (completed_at - started_at).total_seconds() * 1000
+            crewai_event_bus.emit(
+                self,
+                MCPConnectionCompletedEvent(
+                    server_name=server_name,
+                    server_url=server_url,
+                    transport_type=transport_type,
+                    started_at=started_at,
+                    completed_at=completed_at,
+                    connection_duration_ms=connection_duration_ms,
+                    is_reconnect=is_reconnect,
+                ),
+            )
+
             return self
         except ImportError as e:
             await self._cleanup_on_error()
-            raise ImportError(
+            error_msg = (
                 "MCP library not available. Please install with: pip install mcp"
-            ) from e
+            )
+            self._emit_connection_failed(
+                server_name,
+                server_url,
+                transport_type,
+                error_msg,
+                "import_error",
+                started_at,
+            )
+            raise ImportError(error_msg) from e
         except asyncio.TimeoutError as e:
             await self._cleanup_on_error()
-            raise ConnectionError(
-                f"MCP connection timed out after {self.connect_timeout} seconds. "
-                "The server may be slow or unreachable."
-            ) from e
+            error_msg = f"MCP connection timed out after {self.connect_timeout} seconds. The server may be slow or unreachable."
+            self._emit_connection_failed(
+                server_name,
+                server_url,
+                transport_type,
+                error_msg,
+                "timeout",
+                started_at,
+            )
+            raise ConnectionError(error_msg) from e
         except asyncio.CancelledError:
             # Re-raise cancellation - don't suppress it
             await self._cleanup_on_error()
+            self._emit_connection_failed(
+                server_name,
+                server_url,
+                transport_type,
+                "Connection cancelled",
+                "cancelled",
+                started_at,
+            )
             raise
         except BaseExceptionGroup as eg:
             # Handle exception groups from anyio task groups at outer level
@@ -190,6 +287,24 @@ class MCPClient:
                         break
 
             await self._cleanup_on_error()
+            error_type = (
+                "authentication"
+                if actual_error
+                and (
+                    "401" in str(actual_error).lower()
+                    or "unauthorized" in str(actual_error).lower()
+                )
+                else "network"
+            )
+            error_msg = str(actual_error) if actual_error else str(eg)
+            self._emit_connection_failed(
+                server_name,
+                server_url,
+                transport_type,
+                error_msg,
+                error_type,
+                started_at,
+            )
             if actual_error:
                 raise ConnectionError(
                     f"Failed to connect to MCP server: {actual_error}"
@@ -197,7 +312,39 @@ class MCPClient:
             raise ConnectionError(f"Failed to connect to MCP server: {eg}") from eg
         except Exception as e:
             await self._cleanup_on_error()
+            error_type = (
+                "authentication"
+                if "401" in str(e).lower() or "unauthorized" in str(e).lower()
+                else "network"
+            )
+            self._emit_connection_failed(
+                server_name, server_url, transport_type, str(e), error_type, started_at
+            )
             raise ConnectionError(f"Failed to connect to MCP server: {e}") from e
+
+    def _emit_connection_failed(
+        self,
+        server_name: str,
+        server_url: str | None,
+        transport_type: str | None,
+        error: str,
+        error_type: str,
+        started_at: datetime,
+    ) -> None:
+        """Emit connection failed event."""
+        failed_at = datetime.now()
+        crewai_event_bus.emit(
+            self,
+            MCPConnectionFailedEvent(
+                server_name=server_name,
+                server_url=server_url,
+                transport_type=transport_type,
+                error=error,
+                error_type=error_type,
+                started_at=started_at,
+                failed_at=failed_at,
+            ),
+        )
 
     async def _cleanup_on_error(self) -> None:
         """Cleanup resources when an error occurs during connection."""
@@ -294,13 +441,71 @@ class MCPClient:
             await self.connect()
 
         arguments = arguments or {}
-
         cleaned_arguments = self._clean_tool_arguments(arguments)
 
-        return await self._retry_operation(
-            lambda: self._call_tool_impl(tool_name, cleaned_arguments),
-            timeout=self.execution_timeout,
+        # Get server info for events
+        server_name, server_url, transport_type = self._get_server_info()
+
+        # Emit tool execution started event
+        started_at = datetime.now()
+        crewai_event_bus.emit(
+            self,
+            MCPToolExecutionStartedEvent(
+                server_name=server_name,
+                server_url=server_url,
+                transport_type=transport_type,
+                tool_name=tool_name,
+                tool_args=cleaned_arguments,
+            ),
         )
+
+        try:
+            result = await self._retry_operation(
+                lambda: self._call_tool_impl(tool_name, cleaned_arguments),
+                timeout=self.execution_timeout,
+            )
+
+            completed_at = datetime.now()
+            execution_duration_ms = (completed_at - started_at).total_seconds() * 1000
+            crewai_event_bus.emit(
+                self,
+                MCPToolExecutionCompletedEvent(
+                    server_name=server_name,
+                    server_url=server_url,
+                    transport_type=transport_type,
+                    tool_name=tool_name,
+                    tool_args=cleaned_arguments,
+                    result=result,
+                    started_at=started_at,
+                    completed_at=completed_at,
+                    execution_duration_ms=execution_duration_ms,
+                ),
+            )
+
+            return result
+        except Exception as e:
+            failed_at = datetime.now()
+            error_type = (
+                "timeout"
+                if isinstance(e, (asyncio.TimeoutError, ConnectionError))
+                and "timeout" in str(e).lower()
+                else "server_error"
+            )
+            crewai_event_bus.emit(
+                self,
+                MCPToolExecutionFailedEvent(
+                    server_name=server_name,
+                    server_url=server_url,
+                    transport_type=transport_type,
+                    tool_name=tool_name,
+                    tool_args=cleaned_arguments,
+                    error=str(e),
+                    error_type=error_type,
+                    started_at=started_at,
+                    failed_at=failed_at,
+                ),
+            )
+            raise
 
     def _clean_tool_arguments(self, arguments: dict[str, Any]) -> dict[str, Any]:
         """Clean tool arguments by removing None values and fixing formats.

@@ -65,6 +65,14 @@ from crewai.events.types.logging_events import (
     AgentLogsExecutionEvent,
     AgentLogsStartedEvent,
 )
+from crewai.events.types.mcp_events import (
+    MCPConnectionCompletedEvent,
+    MCPConnectionFailedEvent,
+    MCPConnectionStartedEvent,
+    MCPToolExecutionCompletedEvent,
+    MCPToolExecutionFailedEvent,
+    MCPToolExecutionStartedEvent,
+)
 from crewai.events.types.reasoning_events import (
     AgentReasoningCompletedEvent,
     AgentReasoningFailedEvent,
@@ -613,6 +621,68 @@ class EventListener(BaseEventListener):
                 event.final_result,
                 event.error,
                 event.total_turns,
+            )
+
+        # ----------- MCP EVENTS -----------
+
+        @crewai_event_bus.on(MCPConnectionStartedEvent)
+        def on_mcp_connection_started(source, event: MCPConnectionStartedEvent):
+            self.formatter.handle_mcp_connection_started(
+                event.server_name,
+                event.server_url,
+                event.transport_type,
+                event.is_reconnect,
+                event.connect_timeout,
+            )
+
+        @crewai_event_bus.on(MCPConnectionCompletedEvent)
+        def on_mcp_connection_completed(source, event: MCPConnectionCompletedEvent):
+            self.formatter.handle_mcp_connection_completed(
+                event.server_name,
+                event.server_url,
+                event.transport_type,
+                event.connection_duration_ms,
+                event.is_reconnect,
+            )
+
+        @crewai_event_bus.on(MCPConnectionFailedEvent)
+        def on_mcp_connection_failed(source, event: MCPConnectionFailedEvent):
+            self.formatter.handle_mcp_connection_failed(
+                event.server_name,
+                event.server_url,
+                event.transport_type,
+                event.error,
+                event.error_type,
+            )
+
+        @crewai_event_bus.on(MCPToolExecutionStartedEvent)
+        def on_mcp_tool_execution_started(source, event: MCPToolExecutionStartedEvent):
+            self.formatter.handle_mcp_tool_execution_started(
+                event.server_name,
+                event.tool_name,
+                event.tool_args,
+            )
+
+        @crewai_event_bus.on(MCPToolExecutionCompletedEvent)
+        def on_mcp_tool_execution_completed(
+            source, event: MCPToolExecutionCompletedEvent
+        ):
+            self.formatter.handle_mcp_tool_execution_completed(
+                event.server_name,
+                event.tool_name,
+                event.tool_args,
+                event.result,
+                event.execution_duration_ms,
+            )
+
+        @crewai_event_bus.on(MCPToolExecutionFailedEvent)
+        def on_mcp_tool_execution_failed(source, event: MCPToolExecutionFailedEvent):
+            self.formatter.handle_mcp_tool_execution_failed(
+                event.server_name,
+                event.tool_name,
+                event.tool_args,
+                event.error,
+                event.error_type,
             )
 
 

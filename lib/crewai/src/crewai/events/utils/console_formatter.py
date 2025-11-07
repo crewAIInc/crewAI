@@ -2248,3 +2248,203 @@ class ConsoleFormatter:
 
         self.current_a2a_conversation_branch = None
         self.current_a2a_turn_count = 0
+
+    # ----------- MCP EVENTS -----------
+
+    def handle_mcp_connection_started(
+        self,
+        server_name: str,
+        server_url: str | None = None,
+        transport_type: str | None = None,
+        is_reconnect: bool = False,
+        connect_timeout: int | None = None,
+    ) -> None:
+        """Handle MCP connection started event."""
+        if not self.verbose:
+            return
+
+        content = Text()
+        reconnect_text = " (Reconnecting)" if is_reconnect else ""
+        content.append(f"MCP Connection Started{reconnect_text}\n\n", style="cyan bold")
+        content.append("Server: ", style="white")
+        content.append(f"{server_name}\n", style="cyan")
+
+        if server_url:
+            content.append("URL: ", style="white")
+            content.append(f"{server_url}\n", style="cyan dim")
+
+        if transport_type:
+            content.append("Transport: ", style="white")
+            content.append(f"{transport_type}\n", style="cyan")
+
+        if connect_timeout:
+            content.append("Timeout: ", style="white")
+            content.append(f"{connect_timeout}s\n", style="cyan")
+
+        panel = self.create_panel(content, "🔌 MCP Connection", "cyan")
+        self.print(panel)
+        self.print()
+
+    def handle_mcp_connection_completed(
+        self,
+        server_name: str,
+        server_url: str | None = None,
+        transport_type: str | None = None,
+        connection_duration_ms: float | None = None,
+        is_reconnect: bool = False,
+    ) -> None:
+        """Handle MCP connection completed event."""
+        if not self.verbose:
+            return
+
+        content = Text()
+        reconnect_text = " (Reconnected)" if is_reconnect else ""
+        content.append(
+            f"MCP Connection Completed{reconnect_text}\n\n", style="green bold"
+        )
+        content.append("Server: ", style="white")
+        content.append(f"{server_name}\n", style="green")
+
+        if server_url:
+            content.append("URL: ", style="white")
+            content.append(f"{server_url}\n", style="green dim")
+
+        if transport_type:
+            content.append("Transport: ", style="white")
+            content.append(f"{transport_type}\n", style="green")
+
+        if connection_duration_ms is not None:
+            content.append("Duration: ", style="white")
+            content.append(f"{connection_duration_ms:.2f}ms\n", style="green")
+
+        panel = self.create_panel(content, "✅ MCP Connected", "green")
+        self.print(panel)
+        self.print()
+
+    def handle_mcp_connection_failed(
+        self,
+        server_name: str,
+        server_url: str | None = None,
+        transport_type: str | None = None,
+        error: str = "",
+        error_type: str | None = None,
+    ) -> None:
+        """Handle MCP connection failed event."""
+        if not self.verbose:
+            return
+
+        content = Text()
+        content.append("MCP Connection Failed\n\n", style="red bold")
+        content.append("Server: ", style="white")
+        content.append(f"{server_name}\n", style="red")
+
+        if server_url:
+            content.append("URL: ", style="white")
+            content.append(f"{server_url}\n", style="red dim")
+
+        if transport_type:
+            content.append("Transport: ", style="white")
+            content.append(f"{transport_type}\n", style="red")
+
+        if error_type:
+            content.append("Error Type: ", style="white")
+            content.append(f"{error_type}\n", style="red")
+
+        if error:
+            content.append("\nError: ", style="white bold")
+            error_preview = error[:500] + "..." if len(error) > 500 else error
+            content.append(f"{error_preview}\n", style="red")
+
+        panel = self.create_panel(content, "❌ MCP Connection Failed", "red")
+        self.print(panel)
+        self.print()
+
+    def handle_mcp_tool_execution_started(
+        self,
+        server_name: str,
+        tool_name: str,
+        tool_args: dict[str, Any] | None = None,
+    ) -> None:
+        """Handle MCP tool execution started event."""
+        if not self.verbose:
+            return
+
+        content = self.create_status_content(
+            "MCP Tool Execution Started",
+            tool_name,
+            "yellow",
+            tool_args=tool_args or {},
+            Server=server_name,
+        )
+
+        panel = self.create_panel(content, "🔧 MCP Tool", "yellow")
+        self.print(panel)
+        self.print()
+
+    def handle_mcp_tool_execution_completed(
+        self,
+        server_name: str,
+        tool_name: str,
+        tool_args: dict[str, Any] | None = None,
+        result: Any | None = None,
+        execution_duration_ms: float | None = None,
+    ) -> None:
+        """Handle MCP tool execution completed event."""
+        if not self.verbose:
+            return
+
+        content = self.create_status_content(
+            "MCP Tool Execution Completed",
+            tool_name,
+            "green",
+            tool_args=tool_args or {},
+            Server=server_name,
+        )
+
+        if execution_duration_ms is not None:
+            content.append("Duration: ", style="white")
+            content.append(f"{execution_duration_ms:.2f}ms\n", style="green")
+
+        if result is not None:
+            result_str = str(result)
+            if len(result_str) > 500:
+                result_str = result_str[:497] + "..."
+            content.append("\nResult: ", style="white bold")
+            content.append(f"{result_str}\n", style="green")
+
+        panel = self.create_panel(content, "✅ MCP Tool Completed", "green")
+        self.print(panel)
+        self.print()
+
+    def handle_mcp_tool_execution_failed(
+        self,
+        server_name: str,
+        tool_name: str,
+        tool_args: dict[str, Any] | None = None,
+        error: str = "",
+        error_type: str | None = None,
+    ) -> None:
+        """Handle MCP tool execution failed event."""
+        if not self.verbose:
+            return
+
+        content = self.create_status_content(
+            "MCP Tool Execution Failed",
+            tool_name,
+            "red",
+            tool_args=tool_args or {},
+            Server=server_name,
+        )
+
+        if error_type:
+            content.append("Error Type: ", style="white")
+            content.append(f"{error_type}\n", style="red")
+
+        if error:
+            content.append("\nError: ", style="white bold")
+            error_preview = error[:500] + "..." if len(error) > 500 else error
+            content.append(f"{error_preview}\n", style="red")
+
+        panel = self.create_panel(content, "❌ MCP Tool Failed", "red")
+        self.print(panel)
+        self.print()
