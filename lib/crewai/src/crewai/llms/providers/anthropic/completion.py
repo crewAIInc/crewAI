@@ -94,6 +94,30 @@ class AnthropicCompletion(BaseLLM):
         self.is_claude_3 = "claude-3" in model.lower()
         self.supports_tools = self.is_claude_3  # Claude 3+ supports tool use
 
+    @property
+    def stop(self) -> list[str]:
+        """Get stop sequences sent to the API."""
+        return self.stop_sequences
+
+    @stop.setter
+    def stop(self, value: list[str] | str | None) -> None:
+        """Set stop sequences.
+
+        Synchronizes stop_sequences to ensure values set by CrewAgentExecutor
+        are properly sent to the Anthropic API.
+
+        Args:
+            value: Stop sequences as a list, single string, or None
+        """
+        if value is None:
+            self.stop_sequences = []
+        elif isinstance(value, str):
+            self.stop_sequences = [value]
+        elif isinstance(value, list):
+            self.stop_sequences = value
+        else:
+            self.stop_sequences = []
+
     def _get_client_params(self) -> dict[str, Any]:
         """Get client parameters."""
 

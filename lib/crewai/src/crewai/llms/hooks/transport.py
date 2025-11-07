@@ -25,7 +25,7 @@ if TYPE_CHECKING:
     from crewai.llms.hooks.base import BaseInterceptor
 
 
-class HTTPTransportKwargs(TypedDict):
+class HTTPTransportKwargs(TypedDict, total=False):
     """Typed dictionary for httpx.HTTPTransport initialization parameters.
 
     These parameters configure the underlying HTTP transport behavior including
@@ -33,14 +33,14 @@ class HTTPTransportKwargs(TypedDict):
     """
 
     verify: bool | str | SSLContext
-    cert: NotRequired[CertTypes | None]
+    cert: NotRequired[CertTypes]
     trust_env: bool
     http1: bool
     http2: bool
     limits: Limits
-    proxy: NotRequired[ProxyTypes | None]
-    uds: NotRequired[str | None]
-    local_address: NotRequired[str | None]
+    proxy: NotRequired[ProxyTypes]
+    uds: NotRequired[str]
+    local_address: NotRequired[str]
     retries: int
     socket_options: NotRequired[
         Iterable[
@@ -48,7 +48,6 @@ class HTTPTransportKwargs(TypedDict):
             | tuple[int, int, bytes | bytearray]
             | tuple[int, int, None, int]
         ]
-        | None
     ]
 
 
