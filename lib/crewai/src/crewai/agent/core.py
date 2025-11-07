@@ -860,19 +860,29 @@ class Agent(BaseAgent):
 
         try:
             try:
-                tools_list = asyncio.run(_setup_client_and_list_tools())
-            except RuntimeError as e:
-                error_msg = str(e).lower()
-                if "cancel scope" in error_msg or "task" in error_msg:
+                asyncio.get_running_loop()
+                import concurrent.futures
+
+                with concurrent.futures.ThreadPoolExecutor() as executor:
+                    future = executor.submit(
+                        asyncio.run, _setup_client_and_list_tools()
+                    )
+                    tools_list = future.result()
+            except RuntimeError:
+                try:
+                    tools_list = asyncio.run(_setup_client_and_list_tools())
+                except RuntimeError as e:
+                    error_msg = str(e).lower()
+                    if "cancel scope" in error_msg or "task" in error_msg:
+                        raise ConnectionError(
+                            "MCP connection failed due to event loop cleanup issues. "
+                            "This may be due to authentication errors or server unavailability."
+                        ) from e
+                except asyncio.CancelledError as e:
                     raise ConnectionError(
-                        "MCP connection failed due to event loop cleanup issues. "
-                        "This may be due to authentication errors or server unavailability."
+                        "MCP connection was cancelled. This may indicate an authentication "
+                        "error or server unavailability."
                     ) from e
-            except asyncio.CancelledError as e:
-                raise ConnectionError(
-                    "MCP connection was cancelled. This may indicate an authentication "
-                    "error or server unavailability."
-                ) from e
 
             if mcp_config.tool_filter:
                 filtered_tools = []

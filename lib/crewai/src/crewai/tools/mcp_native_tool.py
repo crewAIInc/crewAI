@@ -86,9 +86,17 @@ class MCPNativeTool(BaseTool):
             Result from the MCP tool execution.
         """
         try:
-            # Always use asyncio.run() to create a fresh event loop
-            # This ensures the async context managers work correctly
-            return asyncio.run(self._run_async(**kwargs))
+            try:
+                asyncio.get_running_loop()
+
+                import concurrent.futures
+
+                with concurrent.futures.ThreadPoolExecutor() as executor:
+                    coro = self._run_async(**kwargs)
+                    future = executor.submit(asyncio.run, coro)
+                    return future.result()
+            except RuntimeError:
+                return asyncio.run(self._run_async(**kwargs))
 
         except Exception as e:
             raise RuntimeError(
