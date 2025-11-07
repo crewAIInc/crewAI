@@ -54,7 +54,7 @@ class TestAgentEvaluator:
         agent_evaluator.set_iteration(3)
         assert agent_evaluator._execution_state.iteration == 3
 
-    @pytest.mark.vcr(filter_headers=["authorization"])
+    @pytest.mark.vcr()
     def test_evaluate_current_iteration(self, mock_crew):
         from crewai.events.types.task_events import TaskCompletedEvent
 
@@ -126,7 +126,7 @@ class TestAgentEvaluator:
         ):
             assert isinstance(evaluator, expected_type)
 
-    @pytest.mark.vcr(filter_headers=["authorization"])
+    @pytest.mark.vcr()
     def test_eval_specific_agents_from_crew(self, mock_crew):
         from crewai.events.types.task_events import TaskCompletedEvent
 
@@ -215,7 +215,7 @@ class TestAgentEvaluator:
         assert goal_alignment.raw_response is not None
         assert '"score": 5' in goal_alignment.raw_response
 
-    @pytest.mark.vcr(filter_headers=["authorization"])
+    @pytest.mark.vcr()
     def test_failed_evaluation(self, mock_crew):
         (agent,) = mock_crew.agents
         (task,) = mock_crew.tasks

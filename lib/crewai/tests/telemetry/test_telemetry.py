@@ -54,7 +54,7 @@ def test_telemetry_enabled_by_default():
     "opentelemetry.exporter.otlp.proto.http.trace_exporter.OTLPSpanExporter.export",
     side_effect=Exception("Test exception"),
 )
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_telemetry_fails_due_connect_timeout(export_mock, logger_mock):
     error = Exception("Test exception")
     export_mock.side_effect = error

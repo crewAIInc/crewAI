@@ -286,7 +286,7 @@ def test_crew_config_with_wrong_keys():
         Crew(process=Process.sequential, config=no_agents_config)
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_crew_creation(researcher, writer):
     tasks = [
         Task(
@@ -318,7 +318,7 @@ def test_crew_creation(researcher, writer):
     assert result.raw == expected_string_output
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_sync_task_execution(researcher, writer):
     tasks = [
         Task(
@@ -357,7 +357,7 @@ def test_sync_task_execution(researcher, writer):
         assert mock_execute_sync.call_count == len(tasks)
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_hierarchical_process(researcher, writer):
     task = Task(
         description="Come up with a list of 5 interesting ideas to explore for an article, then write one amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
@@ -393,7 +393,7 @@ def test_manager_llm_requirement_for_hierarchical_process(researcher, writer):
         )
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_manager_agent_delegating_to_assigned_task_agent(researcher, writer):
     """
     Test that the manager agent delegates to the assigned task agent.
@@ -445,7 +445,7 @@ def test_manager_agent_delegating_to_assigned_task_agent(researcher, writer):
         )
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_manager_agent_delegating_to_all_agents(researcher, writer):
     """
     Test that the manager agent delegates to all agents when none are specified.
@@ -478,7 +478,7 @@ def test_manager_agent_delegating_to_all_agents(researcher, writer):
     )
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_manager_agent_delegates_with_varied_role_cases():
     """
     Test that the manager agent can delegate to agents regardless of case or whitespace variations in role names.
@@ -555,7 +555,7 @@ def test_manager_agent_delegates_with_varied_role_cases():
         )
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_crew_with_delegating_agents(ceo, writer):
     tasks = [
         Task(
@@ -579,7 +579,7 @@ def test_crew_with_delegating_agents(ceo, writer):
     )
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_crew_with_delegating_agents_should_not_override_task_tools(ceo, writer):
     class TestToolInput(BaseModel):
         """Input schema for TestTool."""
@@ -635,7 +635,7 @@ def test_crew_with_delegating_agents_should_not_override_task_tools(ceo, writer)
         )
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_crew_with_delegating_agents_should_not_override_agent_tools(ceo, writer):
     class TestToolInput(BaseModel):
         """Input schema for TestTool."""
@@ -693,7 +693,7 @@ def test_crew_with_delegating_agents_should_not_override_agent_tools(ceo, writer
         )
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_task_tools_override_agent_tools(researcher):
     class TestToolInput(BaseModel):
         """Input schema for TestTool."""
@@ -742,7 +742,7 @@ def test_task_tools_override_agent_tools(researcher):
     assert isinstance(new_researcher.tools[0], TestTool)
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_task_tools_override_agent_tools_with_allow_delegation(researcher, writer):
     """
     Test that task tools override agent tools while preserving delegation tools when allow_delegation=True
@@ -819,7 +819,7 @@ def test_task_tools_override_agent_tools_with_allow_delegation(researcher, write
     assert isinstance(researcher_with_delegation.tools[0], TestTool)
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_crew_verbose_output(researcher, writer, capsys):
     tasks = [
         Task(
@@ -863,7 +863,7 @@ def test_crew_verbose_output(researcher, writer, capsys):
     assert crew_quiet.verbose is False
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_cache_hitting_between_agents(researcher, writer, ceo):
     @tool
     def multiplier(first_number: int, second_number: int) -> float:
@@ -917,7 +917,7 @@ def test_cache_hitting_between_agents(researcher, writer, ceo):
         )
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_api_calls_throttling(capsys):
     @tool
     def get_final_answer() -> float:
@@ -952,7 +952,7 @@ def test_api_calls_throttling(capsys):
         moveon.assert_called()
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_crew_kickoff_usage_metrics():
     inputs = [
         {"topic": "dog"},
@@ -987,7 +987,7 @@ def test_crew_kickoff_usage_metrics():
         assert result.token_usage.cached_prompt_tokens == 0
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_crew_kickoff_streaming_usage_metrics():
     inputs = [
         {"topic": "dog"},
@@ -1043,7 +1043,7 @@ def test_agents_rpm_is_never_set_if_crew_max_rpm_is_not_set():
     assert agent._rpm_controller is None
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_sequential_async_task_execution_completion(researcher, writer):
     list_ideas = Task(
         description="Give me a list of 5 interesting ideas to explore for an article, what makes them unique and interesting.",
@@ -1075,7 +1075,7 @@ def test_sequential_async_task_execution_completion(researcher, writer):
     )
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_single_task_with_async_execution():
     researcher_agent = Agent(
         role="Researcher",
@@ -1103,7 +1103,7 @@ def test_single_task_with_async_execution():
     )
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_three_task_with_async_execution():
     researcher_agent = Agent(
         role="Researcher",
@@ -1149,7 +1149,7 @@ def test_three_task_with_async_execution():
 
 
 @pytest.mark.asyncio
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 async def test_crew_async_kickoff():
     inputs = [
         {"topic": "dog"},
@@ -1197,7 +1197,7 @@ async def test_crew_async_kickoff():
 
 
 @pytest.mark.asyncio
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 async def test_async_task_execution_call_count(researcher, writer):
     list_ideas = Task(
         description="Give me a list of 5 interesting ideas to explore for na article, what makes them unique and interesting.",
@@ -1251,7 +1251,7 @@ async def test_async_task_execution_call_count(researcher, writer):
         assert mock_execute_sync.call_count == 1
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_kickoff_for_each_single_input():
     """Tests if kickoff_for_each works with a single input."""
 
@@ -1275,7 +1275,7 @@ def test_kickoff_for_each_single_input():
     assert len(results) == 1
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_kickoff_for_each_multiple_inputs():
     """Tests if kickoff_for_each works with multiple inputs."""
 
@@ -1303,7 +1303,7 @@ def test_kickoff_for_each_multiple_inputs():
     assert len(results) == len(inputs)
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_kickoff_for_each_empty_input():
     """Tests if kickoff_for_each handles an empty input list."""
     agent = Agent(
@@ -1323,7 +1323,7 @@ def test_kickoff_for_each_empty_input():
     assert results == []
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_kickoff_for_each_invalid_input():
     """Tests if kickoff_for_each raises TypeError for invalid input types."""
 
@@ -1554,7 +1554,7 @@ def test_dont_set_agents_step_callback_if_already_set():
         assert researcher_agent.step_callback is agent_callback
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_crew_function_calling_llm():
     llm = LLM(model="gpt-4o-mini")
 
@@ -1583,7 +1583,7 @@ def test_crew_function_calling_llm():
     assert result.raw == "Howdy!"
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_task_with_no_arguments():
     @tool
     def return_data() -> str:
@@ -1649,7 +1649,7 @@ def test_code_execution_flag_adds_code_tool_upon_kickoff():
             )
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_delegation_is_not_enabled_if_there_are_only_one_agent():
     researcher = Agent(
         role="Researcher",
@@ -1670,7 +1670,7 @@ def test_delegation_is_not_enabled_if_there_are_only_one_agent():
     assert task.tools == []
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_agents_do_not_get_delegation_tools_with_there_is_only_one_agent():
     agent = Agent(
         role="Researcher",
@@ -1688,7 +1688,7 @@ def test_agents_do_not_get_delegation_tools_with_there_is_only_one_agent():
     assert len(agent.tools) == 0
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_sequential_crew_creation_tasks_without_agents(researcher):
     task = Task(
         description="Come up with a list of 5 interesting ideas to explore for an article, then write one amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
@@ -1711,7 +1711,7 @@ def test_sequential_crew_creation_tasks_without_agents(researcher):
     )
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_agent_usage_metrics_are_captured_for_hierarchical_process():
     agent = Agent(
         role="Researcher",
@@ -1808,7 +1808,7 @@ def test_hierarchical_kickoff_usage_metrics_include_manager(researcher):
     )
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_hierarchical_crew_creation_tasks_with_agents(researcher, writer):
     """
     Agents are not required for tasks in a hierarchical process but sometimes they are still added
@@ -1861,7 +1861,7 @@ def test_hierarchical_crew_creation_tasks_with_agents(researcher, writer):
         )
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_hierarchical_crew_creation_tasks_with_async_execution(researcher, writer, ceo):
     """
     Tests that async tasks in hierarchical crews are handled correctly with proper delegation tools
@@ -1918,7 +1918,7 @@ def test_hierarchical_crew_creation_tasks_with_async_execution(researcher, write
         )
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_hierarchical_crew_creation_tasks_with_sync_last(researcher, writer, ceo):
     """
     Agents are not required for tasks in a hierarchical process but sometimes they are still added
@@ -2006,7 +2006,7 @@ def test_crew_inputs_interpolate_both_agents_and_tasks_diff():
                 interpolate_task_inputs.assert_called()
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_crew_does_not_interpolate_without_inputs():
     agent = Agent(
         role="{topic} Researcher",
@@ -2133,7 +2133,7 @@ def test_task_same_callback_both_on_task_and_crew():
         mock_callback.assert_called_once_with(list_ideas.output)
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_tools_with_custom_caching():
     @tool
     def multiplcation_tool(first_number: int, second_number: int) -> int:
@@ -2205,7 +2205,7 @@ def test_tools_with_custom_caching():
         assert result.raw == "3"
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_conditional_task_uses_last_output(researcher, writer):
     """Test that conditional tasks use the last task output for condition evaluation."""
     task1 = Task(
@@ -2279,7 +2279,7 @@ def test_conditional_task_uses_last_output(researcher, writer):
             )  # Third task used first task's output
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_conditional_tasks_result_collection(researcher, writer):
     """Test that task outputs are properly collected based on execution status."""
     task1 = Task(
@@ -2360,7 +2360,7 @@ def test_conditional_tasks_result_collection(researcher, writer):
             )  # Third task executed
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_multiple_conditional_tasks(researcher, writer):
     """Test that having multiple conditional tasks in sequence works correctly."""
     task1 = Task(
@@ -2409,7 +2409,7 @@ def test_multiple_conditional_tasks(researcher, writer):
         assert len(result.tasks_output) == 3
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_using_contextual_memory():
     math_researcher = Agent(
         role="Researcher",
@@ -2437,7 +2437,7 @@ def test_using_contextual_memory():
         contextual_mem.assert_called_once()
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_memory_events_are_emitted():
     events = defaultdict(list)
     condition = threading.Condition()
@@ -2534,7 +2534,7 @@ def test_memory_events_are_emitted():
     assert len(events["MemoryRetrievalCompletedEvent"]) == 1
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_using_contextual_memory_with_long_term_memory():
     math_researcher = Agent(
         role="Researcher",
@@ -2563,7 +2563,7 @@ def test_using_contextual_memory_with_long_term_memory():
         assert crew.memory is False
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_warning_long_term_memory_without_entity_memory():
     math_researcher = Agent(
         role="Researcher",
@@ -2598,7 +2598,7 @@ def test_warning_long_term_memory_without_entity_memory():
         save_memory.assert_not_called()
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_long_term_memory_with_memory_flag():
     math_researcher = Agent(
         role="Researcher",
@@ -2628,7 +2628,7 @@ def test_long_term_memory_with_memory_flag():
         save_memory.assert_called_once()
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_using_contextual_memory_with_short_term_memory():
     math_researcher = Agent(
         role="Researcher",
@@ -2657,7 +2657,7 @@ def test_using_contextual_memory_with_short_term_memory():
         assert crew.memory is False
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_disabled_memory_using_contextual_memory():
     math_researcher = Agent(
         role="Researcher",
@@ -2685,7 +2685,7 @@ def test_disabled_memory_using_contextual_memory():
         contextual_mem.assert_not_called()
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_crew_log_file_output(tmp_path, researcher):
     test_file = tmp_path / "logs.txt"
     tasks = [
@@ -2701,7 +2701,7 @@ def test_crew_log_file_output(tmp_path, researcher):
     assert test_file.exists()
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_crew_output_file_end_to_end(tmp_path):
     """Test output file functionality in a full crew context."""
     # Create an agent
@@ -2784,7 +2784,7 @@ def test_crew_output_file_validation_failures():
         Crew(agents=[agent], tasks=[task]).kickoff()
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_manager_agent(researcher, writer):
     task = Task(
         description="Come up with a list of 5 interesting ideas to explore for an article, then write one amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
@@ -2843,7 +2843,7 @@ def test_manager_agent_in_agents_raises_exception(researcher, writer):
         )
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_manager_agent_with_tools_raises_exception(researcher, writer):
     @tool
     def testing_tool(first_number: int, second_number: int) -> int:
@@ -2874,7 +2874,7 @@ def test_manager_agent_with_tools_raises_exception(researcher, writer):
         crew.kickoff()
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_crew_train_success(researcher, writer, monkeypatch):
     task = Task(
         description="Come up with a list of 5 interesting ideas to explore for an article, then write one amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
@@ -2922,7 +2922,7 @@ def test_crew_train_success(researcher, writer, monkeypatch):
     assert isinstance(received_events[1], CrewTrainCompletedEvent)
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_crew_train_error(researcher, writer):
     task = Task(
         description="Come up with a list of 5 interesting ideas to explore for an article",
@@ -2972,7 +2972,7 @@ def test__setup_for_training(researcher, writer):
         assert agent.allow_delegation is False
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_replay_feature(researcher, writer):
     list_ideas = Task(
         description="Generate a list of 5 interesting ideas to explore for an article, where each bulletpoint is under 15 words.",
@@ -3009,7 +3009,7 @@ def test_replay_feature(researcher, writer):
         assert mock_execute_task.call_count == 3
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_crew_replay_error(researcher, writer):
     task = Task(
         description="Come up with a list of 5 interesting ideas to explore for an article",
@@ -3027,7 +3027,7 @@ def test_crew_replay_error(researcher, writer):
         assert "task_id is required" in str(e)
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_crew_task_db_init():
     agent = Agent(
         role="Content Writer",
@@ -3065,7 +3065,7 @@ def test_crew_task_db_init():
             pytest.fail(f"An exception was raised: {e!s}")
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_replay_task_with_context():
     agent1 = Agent(
         role="Researcher",
@@ -3164,7 +3164,7 @@ def test_replay_task_with_context():
         db_handler.reset()
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_replay_with_context():
     agent = Agent(role="test_agent", backstory="Test Description", goal="Test Goal")
     task1 = Task(
@@ -3222,7 +3222,7 @@ def test_replay_with_context():
         assert crew.tasks[1].context[0].output.raw == "context raw output"
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_replay_with_context_set_to_nullable():
     agent = Agent(role="test_agent", backstory="Test Description", goal="Test Goal")
     task1 = Task(
@@ -3247,7 +3247,7 @@ def test_replay_with_context_set_to_nullable():
     mock_execute_task.assert_called_with(agent=ANY, context="", tools=ANY)
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_replay_with_invalid_task_id():
     agent = Agent(role="test_agent", backstory="Test Description", goal="Test Goal")
     task1 = Task(
@@ -3309,7 +3309,7 @@ def test_replay_with_invalid_task_id():
             crew.replay("bf5b09c9-69bd-4eb8-be12-f9e5bae31c2d")
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 @patch.object(Crew, "_interpolate_inputs")
 def test_replay_interpolates_inputs_properly(mock_interpolate_inputs):
     agent = Agent(role="test_agent", backstory="Test Description", goal="Test Goal")
@@ -3370,7 +3370,7 @@ def test_replay_interpolates_inputs_properly(mock_interpolate_inputs):
         assert mock_interpolate_inputs.call_count == 2
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_replay_setup_context():
     agent = Agent(role="test_agent", backstory="Test Description", goal="Test Goal")
     task1 = Task(description="Context Task", expected_output="Say {name}", agent=agent)
@@ -3523,7 +3523,7 @@ def test_conditional_task_requirement_breaks_when_singular_conditional_task(
         )
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_conditional_task_last_task_when_conditional_is_true(researcher, writer):
     def condition_fn(output) -> bool:
         return True
@@ -3550,7 +3550,7 @@ def test_conditional_task_last_task_when_conditional_is_true(researcher, writer)
     )
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_conditional_task_last_task_when_conditional_is_false(researcher, writer):
     def condition_fn(output) -> bool:
         return False
@@ -3599,7 +3599,7 @@ def test_conditional_task_requirement_breaks_when_task_async(researcher, writer)
         )
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_conditional_should_skip(researcher, writer):
     task1 = Task(description="Return hello", expected_output="say hi", agent=researcher)
 
@@ -3631,7 +3631,7 @@ def test_conditional_should_skip(researcher, writer):
         assert result.raw.startswith("Task 1 output")
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_conditional_should_execute(researcher, writer):
     task1 = Task(description="Return hello", expected_output="say hi", agent=researcher)
 
@@ -3662,7 +3662,7 @@ def test_conditional_should_execute(researcher, writer):
         assert mock_execute_sync.call_count == 2
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_crew_testing_function(researcher):
     task = Task(
         description="Come up with a list of 5 interesting ideas to explore for an article, then write one amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
@@ -3706,7 +3706,7 @@ def test_crew_testing_function(researcher):
     assert isinstance(received_events[1], CrewTestCompletedEvent)
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_hierarchical_verbose_manager_agent(researcher, writer):
     task = Task(
         description="Come up with a list of 5 interesting ideas to explore for an article, then write one amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
@@ -3727,7 +3727,7 @@ def test_hierarchical_verbose_manager_agent(researcher, writer):
     assert crew.manager_agent.verbose
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_hierarchical_verbose_false_manager_agent(researcher, writer):
     task = Task(
         description="Come up with a list of 5 interesting ideas to explore for an article, then write one amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
@@ -3771,7 +3771,7 @@ def test_fetch_inputs():
     )
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_task_tools_preserve_code_execution_tools():
     """
     Test that task tools don't override code execution tools when allow_code_execution=True
@@ -3853,7 +3853,7 @@ def test_task_tools_preserve_code_execution_tools():
         )
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_multimodal_flag_adds_multimodal_tools():
     """
     Test that an agent with multimodal=True automatically has multimodal tools added to the task execution.
@@ -3900,7 +3900,7 @@ def test_multimodal_flag_adds_multimodal_tools():
         assert len(used_tools) == 1, "Should only have the AddImageTool"
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_multimodal_agent_image_tool_handling():
     """
     Test that multimodal agents properly handle image tools in the CrewAgentExecutor
@@ -3974,7 +3974,7 @@ def test_multimodal_agent_image_tool_handling():
         assert result["content"][1]["type"] == "image_url"
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_multimodal_agent_describing_image_successfully():
     """
     Test that a multimodal agent can process images without validation errors.
@@ -4012,7 +4012,7 @@ def test_multimodal_agent_describing_image_successfully():
     assert task_output.raw == result.raw
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_multimodal_agent_live_image_analysis():
     """
     Test that multimodal agents can analyze images through a real API call
@@ -4055,7 +4055,7 @@ def test_multimodal_agent_live_image_analysis():
     assert "error" not in result.raw.lower()  # No error messages in response
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_crew_with_failing_task_guardrails():
     """Test that crew properly handles failing guardrails and retries with validation feedback."""
 
@@ -4112,7 +4112,7 @@ def test_crew_with_failing_task_guardrails():
     assert task_output.raw == result.raw
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_crew_guardrail_feedback_in_context():
     """Test that guardrail feedback is properly appended to task context for retries."""
 
@@ -4169,7 +4169,7 @@ def test_crew_guardrail_feedback_in_context():
     assert task.retry_count == 1, "Task should have been retried once"
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_before_kickoff_callback():
     @CrewBase
     class TestCrewClass:
@@ -4226,7 +4226,7 @@ def test_before_kickoff_callback():
     assert inputs.get("modified")
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_before_kickoff_without_inputs():
     @CrewBase
     class TestCrewClass:
@@ -4282,7 +4282,7 @@ def test_before_kickoff_without_inputs():
     assert test_crew_instance.received_inputs.get("modified") is True
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_crew_with_knowledge_sources_works_with_copy(researcher, writer):
     content = "Brandon's favorite color is red and he likes Mexican food."
     string_source = StringKnowledgeSource(content=content)
@@ -4433,7 +4433,7 @@ def test_sets_parent_flow_when_outside_flow(researcher, writer):
     assert crew.parent_flow is None
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_sets_parent_flow_when_inside_flow(researcher, writer):
     class MyFlow(Flow):
         @start()
@@ -4639,7 +4639,7 @@ def test_default_crew_name(researcher, writer):
     assert crew.name == "crew"
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_ensure_exchanged_messages_are_propagated_to_external_memory():
     external_memory = ExternalMemory(storage=MagicMock())
 
