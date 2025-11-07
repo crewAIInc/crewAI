@@ -428,6 +428,8 @@ class FlowMeta(type):
                         possible_returns = get_possible_return_constants(attr_value)
                         if possible_returns:
                             router_paths[attr_name] = possible_returns
+                        else:
+                            router_paths[attr_name] = []
 
         cls._start_methods = start_methods  # type: ignore[attr-defined]
         cls._listeners = listeners  # type: ignore[attr-defined]

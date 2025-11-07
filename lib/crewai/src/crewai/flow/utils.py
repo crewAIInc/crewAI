@@ -19,11 +19,11 @@ import ast
 from collections import defaultdict, deque
 import inspect
 import textwrap
-from typing import Any, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from typing_extensions import TypeIs
 
-from crewai.flow.constants import OR_CONDITION, AND_CONDITION
+from crewai.flow.constants import AND_CONDITION, OR_CONDITION
 from crewai.flow.flow_wrappers import (
     FlowCondition,
     FlowConditions,
@@ -33,6 +33,7 @@ from crewai.flow.flow_wrappers import (
 from crewai.flow.types import FlowMethodCallable, FlowMethodName
 from crewai.utilities.printer import Printer
 
+
 if TYPE_CHECKING:
     from crewai.flow.flow import Flow
 
@@ -40,6 +41,22 @@ _printer = Printer()
 
 
 def get_possible_return_constants(function: Any) -> list[str] | None:
+    """Extract possible string return values from a function using AST parsing.
+
+    This function analyzes the source code of a router method to identify
+    all possible string values it might return. It handles:
+    - Direct string literals: return "value"
+    - Variable assignments: x = "value"; return x
+    - Dictionary lookups: d = {"k": "v"}; return d[key]
+    - Conditional returns: return "a" if cond else "b"
+    - State attributes: return self.state.attr (infers from class context)
+
+    Args:
+        function: The function to analyze.
+
+    Returns:
+        List of possible string return values, or None if analysis fails.
+    """
     try:
         source = inspect.getsource(function)
     except OSError:
@@ -82,6 +99,7 @@ def get_possible_return_constants(function: Any) -> list[str] | None:
     return_values: set[str] = set()
     dict_definitions: dict[str, list[str]] = {}
     variable_values: dict[str, list[str]] = {}
+    state_attribute_values: dict[str, list[str]] = {}
 
     def extract_string_constants(node: ast.expr) -> list[str]:
         """Recursively extract all string constants from an AST node."""
@@ -91,6 +109,17 @@ def get_possible_return_constants(function: Any) -> list[str] | None:
         elif isinstance(node, ast.IfExp):
             strings.extend(extract_string_constants(node.body))
             strings.extend(extract_string_constants(node.orelse))
+        elif isinstance(node, ast.Call):
+            if (
+                isinstance(node.func, ast.Attribute)
+                and node.func.attr == "get"
+                and len(node.args) >= 2
+            ):
+                default_arg = node.args[1]
+                if isinstance(default_arg, ast.Constant) and isinstance(
+                    default_arg.value, str
+                ):
+                    strings.append(default_arg.value)
         return strings
 
     class VariableAssignmentVisitor(ast.NodeVisitor):
@@ -124,6 +153,22 @@ def get_possible_return_constants(function: Any) -> list[str] | None:
 
             self.generic_visit(node)
 
+    def get_attribute_chain(node: ast.expr) -> str | None:
+        """Extract the full attribute chain from an AST node.
+
+        Examples:
+            self.state.run_type -> "self.state.run_type"
+            x.y.z -> "x.y.z"
+            simple_var -> "simple_var"
+        """
+        if isinstance(node, ast.Name):
+            return node.id
+        if isinstance(node, ast.Attribute):
+            base = get_attribute_chain(node.value)
+            if base:
+                return f"{base}.{node.attr}"
+        return None
+
     class ReturnVisitor(ast.NodeVisitor):
         def visit_Return(self, node: ast.Return) -> None:
             if (
@@ -139,20 +184,93 @@ def get_possible_return_constants(function: Any) -> list[str] | None:
                         for v in dict_definitions[var_name_dict]:
                             return_values.add(v)
             elif node.value:
-                var_name_ret: str | None = None
-                if isinstance(node.value, ast.Name):
-                    var_name_ret = node.value.id
-                elif isinstance(node.value, ast.Attribute):
-                    var_name_ret = f"{node.value.value.id if isinstance(node.value.value, ast.Name) else '_'}.{node.value.attr}"
+                var_name_ret = get_attribute_chain(node.value)
 
                 if var_name_ret and var_name_ret in variable_values:
                     for v in variable_values[var_name_ret]:
+                        return_values.add(v)
+                elif var_name_ret and var_name_ret in state_attribute_values:
+                    for v in state_attribute_values[var_name_ret]:
                         return_values.add(v)
 
             self.generic_visit(node)
 
         def visit_If(self, node: ast.If) -> None:
             self.generic_visit(node)
+
+    # Try to get the class context to infer state attribute values
+    try:
+        if hasattr(function, "__self__"):
+            # Method is bound, get the class
+            class_obj = function.__self__.__class__
+        elif hasattr(function, "__qualname__") and "." in function.__qualname__:
+            # Method is unbound but we can try to get class from module
+            class_name = function.__qualname__.rsplit(".", 1)[0]
+            if hasattr(function, "__globals__"):
+                class_obj = function.__globals__.get(class_name)
+            else:
+                class_obj = None
+        else:
+            class_obj = None
+
+        if class_obj is not None:
+            try:
+                class_source = inspect.getsource(class_obj)
+                class_source = textwrap.dedent(class_source)
+                class_ast = ast.parse(class_source)
+
+                # Look for comparisons and assignments involving state attributes
+                class StateAttributeVisitor(ast.NodeVisitor):
+                    def visit_Compare(self, node: ast.Compare) -> None:
+                        """Find comparisons like: self.state.attr == "value" """
+                        left_attr = get_attribute_chain(node.left)
+
+                        if left_attr:
+                            for comparator in node.comparators:
+                                if isinstance(comparator, ast.Constant) and isinstance(
+                                    comparator.value, str
+                                ):
+                                    if left_attr not in state_attribute_values:
+                                        state_attribute_values[left_attr] = []
+                                    if (
+                                        comparator.value
+                                        not in state_attribute_values[left_attr]
+                                    ):
+                                        state_attribute_values[left_attr].append(
+                                            comparator.value
+                                        )
+
+                        # Also check right side
+                        for comparator in node.comparators:
+                            right_attr = get_attribute_chain(comparator)
+                            if (
+                                right_attr
+                                and isinstance(node.left, ast.Constant)
+                                and isinstance(node.left.value, str)
+                            ):
+                                if right_attr not in state_attribute_values:
+                                    state_attribute_values[right_attr] = []
+                                if (
+                                    node.left.value
+                                    not in state_attribute_values[right_attr]
+                                ):
+                                    state_attribute_values[right_attr].append(
+                                        node.left.value
+                                    )
+
+                        self.generic_visit(node)
+
+                StateAttributeVisitor().visit(class_ast)
+            except Exception as e:
+                _printer.print(
+                    f"Could not analyze class context for {function.__name__}: {e}",
+                    color="yellow",
+                )
+    except Exception as e:
+        _printer.print(
+            f"Could not introspect class for {function.__name__}: {e}",
+            color="yellow",
+        )
 
     VariableAssignmentVisitor().visit(code_ast)
     ReturnVisitor().visit(code_ast)
