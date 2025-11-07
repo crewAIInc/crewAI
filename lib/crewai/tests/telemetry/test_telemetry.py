@@ -19,7 +19,6 @@ def cleanup_telemetry():
         Telemetry._lock = threading.Lock()
 
 
-@pytest.mark.telemetry
 @pytest.mark.parametrize(
     "env_var,value,expected_ready",
     [
@@ -38,8 +37,6 @@ def test_telemetry_environment_variables(env_var, value, expected_ready):
             telemetry = Telemetry()
             assert telemetry.ready is expected_ready
 
-
-@pytest.mark.telemetry
 def test_telemetry_enabled_by_default():
     """Test that telemetry is enabled by default."""
     with patch.dict(os.environ, {}, clear=True):
@@ -83,7 +80,6 @@ def test_telemetry_fails_due_connect_timeout(export_mock, logger_mock):
         assert call[0][0] == error
 
 
-@pytest.mark.telemetry
 def test_telemetry_singleton_pattern():
     """Test that Telemetry uses the singleton pattern correctly."""
     Telemetry._instance = None

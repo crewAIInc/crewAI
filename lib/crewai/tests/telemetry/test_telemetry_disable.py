@@ -13,7 +13,6 @@ def cleanup_telemetry():
     Telemetry._instance = None
 
 
-@pytest.mark.telemetry
 @pytest.mark.parametrize(
     "env_var,value,expected_ready",
     [
@@ -33,7 +32,6 @@ def test_telemetry_environment_variables(env_var, value, expected_ready):
             assert telemetry.ready is expected_ready
 
 
-@pytest.mark.telemetry
 def test_telemetry_enabled_by_default():
     """Test that telemetry is enabled by default."""
     with patch.dict(os.environ, {}, clear=True):
@@ -42,7 +40,6 @@ def test_telemetry_enabled_by_default():
             assert telemetry.ready is True
 
 
-@pytest.mark.telemetry
 def test_telemetry_disable_after_singleton_creation():
     """Test that telemetry operations are disabled when env var is set after singleton creation."""
     with patch.dict(os.environ, {}, clear=True):
@@ -62,7 +59,6 @@ def test_telemetry_disable_after_singleton_creation():
             mock_operation.assert_not_called()
 
 
-@pytest.mark.telemetry
 def test_telemetry_disable_with_multiple_instances():
     """Test that multiple telemetry instances respect dynamically changed env vars."""
     with patch.dict(os.environ, {}, clear=True):
@@ -81,7 +77,6 @@ def test_telemetry_disable_with_multiple_instances():
             mock_operation.assert_not_called()
 
 
-@pytest.mark.telemetry
 def test_telemetry_otel_sdk_disabled_after_creation():
     """Test that OTEL_SDK_DISABLED also works when set after singleton creation."""
     with patch.dict(os.environ, {}, clear=True):
