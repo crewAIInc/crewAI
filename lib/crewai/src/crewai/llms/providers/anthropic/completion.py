@@ -5,11 +5,14 @@ import logging
 import os
 from typing import TYPE_CHECKING, Any, cast
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, PrivateAttr, computed_field, model_validator
+from typing_extensions import Self
 
 from crewai.events.types.llm_events import LLMCallType
+from crewai.llm import CONTEXT_WINDOW_USAGE_RATIO
 from crewai.llms.base_llm import BaseLLM
 from crewai.llms.hooks.transport import HTTPTransport
+from crewai.llms.providers.utils.common import safe_tool_conversion
 from crewai.utilities.agent_utils import is_context_length_exceeded
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededError,
@@ -18,7 +21,8 @@ from crewai.utilities.types import LLMMessage
 
 
 if TYPE_CHECKING:
-    from crewai.llms.hooks.base import BaseInterceptor
+    from crewai.agent import Agent
+    from crewai.task import Task
 
 try:
     from anthropic import Anthropic
@@ -31,6 +35,19 @@ except ImportError:
     ) from None
 
 
+ANTHROPIC_CONTEXT_WINDOWS: dict[str, int] = {
+    "claude-3-5-sonnet": 200000,
+    "claude-3-5-haiku": 200000,
+    "claude-3-opus": 200000,
+    "claude-3-sonnet": 200000,
+    "claude-3-haiku": 200000,
+    "claude-3-7-sonnet": 200000,
+    "claude-2.1": 200000,
+    "claude-2": 100000,
+    "claude-instant": 100000,
+}
+
+
 class AnthropicCompletion(BaseLLM):
     """Anthropic native completion implementation.
 
@@ -38,110 +55,69 @@ class AnthropicCompletion(BaseLLM):
     offering native tool use, streaming support, and proper message formatting.
     """
 
-    def __init__(
-        self,
-        model: str = "claude-3-5-sonnet-20241022",
-        api_key: str | None = None,
-        base_url: str | None = None,
-        timeout: float | None = None,
-        max_retries: int = 2,
-        temperature: float | None = None,
-        max_tokens: int = 4096,  # Required for Anthropic
-        top_p: float | None = None,
-        stop_sequences: list[str] | None = None,
-        stream: bool = False,
-        client_params: dict[str, Any] | None = None,
-        interceptor: BaseInterceptor[httpx.Request, httpx.Response] | None = None,
-        **kwargs: Any,
-    ):
-        """Initialize Anthropic chat completion client.
+    model: str = Field(
+        default="claude-3-5-sonnet-20241022",
+        description="Anthropic model name (e.g., 'claude-3-5-sonnet-20241022')",
+    )
+    max_tokens: int = Field(
+        default=4096,
+        description="Maximum number of allowed tokens in response.",
+    )
+    top_p: float | None = Field(
+        default=None,
+        description="Nucleus sampling parameter.",
+    )
+    _client: Anthropic = PrivateAttr(
+        default_factory=Anthropic,
+    )
 
-        Args:
-            model: Anthropic model name (e.g., 'claude-3-5-sonnet-20241022')
-            api_key: Anthropic API key (defaults to ANTHROPIC_API_KEY env var)
-            base_url: Custom base URL for Anthropic API
-            timeout: Request timeout in seconds
-            max_retries: Maximum number of retries
-            temperature: Sampling temperature (0-1)
-            max_tokens: Maximum tokens in response (required for Anthropic)
-            top_p: Nucleus sampling parameter
-            stop_sequences: Stop sequences (Anthropic uses stop_sequences, not stop)
-            stream: Enable streaming responses
-            client_params: Additional parameters for the Anthropic client
-            interceptor: HTTP interceptor for modifying requests/responses at transport level.
-            **kwargs: Additional parameters
+    @model_validator(mode="after")
+    def initialize_client(self) -> Self:
+        """Initialize the Anthropic client after Pydantic validation.
+
+        This runs after all field validation is complete, ensuring that:
+        - All BaseLLM fields are set (model, temperature, stop_sequences, etc.)
+        - Field validators have run (stop_sequences is normalized to set[str])
+        - API key and other configuration is ready
         """
-        super().__init__(
-            model=model, temperature=temperature, stop=stop_sequences or [], **kwargs
-        )
-
-        # Client params
-        self.interceptor = interceptor
-        self.client_params = client_params
-        self.base_url = base_url
-        self.timeout = timeout
-        self.max_retries = max_retries
-
-        self.client = Anthropic(**self._get_client_params())
-
-        # Store completion parameters
-        self.max_tokens = max_tokens
-        self.top_p = top_p
-        self.stream = stream
-        self.stop_sequences = stop_sequences or []
-
-        # Model-specific settings
-        self.is_claude_3 = "claude-3" in model.lower()
-        self.supports_tools = self.is_claude_3  # Claude 3+ supports tool use
-
-    @property
-    def stop(self) -> list[str]:
-        """Get stop sequences sent to the API."""
-        return self.stop_sequences
-
-    @stop.setter
-    def stop(self, value: list[str] | str | None) -> None:
-        """Set stop sequences.
-
-        Synchronizes stop_sequences to ensure values set by CrewAgentExecutor
-        are properly sent to the Anthropic API.
-
-        Args:
-            value: Stop sequences as a list, single string, or None
-        """
-        if value is None:
-            self.stop_sequences = []
-        elif isinstance(value, str):
-            self.stop_sequences = [value]
-        elif isinstance(value, list):
-            self.stop_sequences = value
-        else:
-            self.stop_sequences = []
-
-    def _get_client_params(self) -> dict[str, Any]:
-        """Get client parameters."""
-
         if self.api_key is None:
             self.api_key = os.getenv("ANTHROPIC_API_KEY")
             if self.api_key is None:
                 raise ValueError("ANTHROPIC_API_KEY is required")
 
-        client_params = {
-            "api_key": self.api_key,
-            "base_url": self.base_url,
-            "timeout": self.timeout,
-            "max_retries": self.max_retries,
-        }
+        params = self.model_dump(
+            include={"api_key", "base_url", "timeout", "max_retries"},
+            exclude_none=True,
+        )
 
         if self.interceptor:
             transport = HTTPTransport(interceptor=self.interceptor)
             http_client = httpx.Client(transport=transport)
-            client_params["http_client"] = http_client  # type: ignore[assignment]
+            params["http_client"] = http_client
 
         if self.client_params:
-            client_params.update(self.client_params)
+            params.update(self.client_params)
 
-        return client_params
+        self._client = Anthropic(**params)
+        return self
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def is_claude_3(self) -> bool:
+        """Check if the model is Claude 3 or higher."""
+        return "claude-3" in self.model.lower()
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def supports_tools(self) -> bool:
+        """Check if the model supports tool use."""
+        return self.is_claude_3
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def supports_function_calling(self) -> bool:
+        """Check if the model supports function calling."""
+        return self.supports_tools
 
     def call(
         self,
@@ -149,8 +125,8 @@ class AnthropicCompletion(BaseLLM):
         tools: list[dict[str, Any]] | None = None,
         callbacks: list[Any] | None = None,
         available_functions: dict[str, Any] | None = None,
-        from_task: Any | None = None,
-        from_agent: Any | None = None,
+        from_task: Task | None = None,
+        from_agent: Agent | None = None,
         response_model: type[BaseModel] | None = None,
     ) -> str | Any:
         """Call Anthropic messages API.
@@ -229,24 +205,20 @@ class AnthropicCompletion(BaseLLM):
         Returns:
             Parameters dictionary for Anthropic API
         """
-        params = {
-            "model": self.model,
-            "messages": messages,
-            "max_tokens": self.max_tokens,
-            "stream": self.stream,
-        }
-
+        params = self.model_dump(
+            include={
+                "model",
+                "max_tokens",
+                "stream",
+                "temperature",
+                "top_p",
+                "stop_sequences",
+            },
+        )
+        params["messages"] = messages
         # Add system message if present
         if system_message:
             params["system"] = system_message
-
-        # Add optional parameters if set
-        if self.temperature is not None:
-            params["temperature"] = self.temperature
-        if self.top_p is not None:
-            params["top_p"] = self.top_p
-        if self.stop_sequences:
-            params["stop_sequences"] = self.stop_sequences
 
         # Handle tools for Claude 3+
         if tools and self.supports_tools:
@@ -266,8 +238,6 @@ class AnthropicCompletion(BaseLLM):
                 continue
 
             try:
-                from crewai.llms.providers.utils.common import safe_tool_conversion
-
                 name, description, parameters = safe_tool_conversion(tool, "Anthropic")
             except (ImportError, KeyError, ValueError) as e:
                 logging.error(f"Error converting tool to Anthropic format: {e}")
@@ -341,8 +311,8 @@ class AnthropicCompletion(BaseLLM):
         self,
         params: dict[str, Any],
         available_functions: dict[str, Any] | None = None,
-        from_task: Any | None = None,
-        from_agent: Any | None = None,
+        from_task: Task | None = None,
+        from_agent: Agent | None = None,
         response_model: type[BaseModel] | None = None,
     ) -> str | Any:
         """Handle non-streaming message completion."""
@@ -357,7 +327,7 @@ class AnthropicCompletion(BaseLLM):
             params["tool_choice"] = {"type": "tool", "name": "structured_output"}
 
         try:
-            response: Message = self.client.messages.create(**params)
+            response: Message = self._client.messages.create(**params)
 
         except Exception as e:
             if is_context_length_exceeded(e):
@@ -429,8 +399,8 @@ class AnthropicCompletion(BaseLLM):
         self,
         params: dict[str, Any],
         available_functions: dict[str, Any] | None = None,
-        from_task: Any | None = None,
-        from_agent: Any | None = None,
+        from_task: Task | None = None,
+        from_agent: Agent | None = None,
         response_model: type[BaseModel] | None = None,
     ) -> str:
         """Handle streaming message completion."""
@@ -451,7 +421,7 @@ class AnthropicCompletion(BaseLLM):
         stream_params = {k: v for k, v in params.items() if k != "stream"}
 
         # Make streaming API call
-        with self.client.messages.stream(**stream_params) as stream:
+        with self._client.messages.stream(**stream_params) as stream:
             for event in stream:
                 if hasattr(event, "delta") and hasattr(event.delta, "text"):
                     text_delta = event.delta.text
@@ -525,8 +495,8 @@ class AnthropicCompletion(BaseLLM):
         tool_uses: list[ToolUseBlock],
         params: dict[str, Any],
         available_functions: dict[str, Any],
-        from_task: Any | None = None,
-        from_agent: Any | None = None,
+        from_task: Task | None = None,
+        from_agent: Agent | None = None,
     ) -> str:
         """Handle the complete tool use conversation flow.
 
@@ -579,7 +549,7 @@ class AnthropicCompletion(BaseLLM):
 
         try:
             # Send tool results back to Claude for final response
-            final_response: Message = self.client.messages.create(**follow_up_params)
+            final_response: Message = self._client.messages.create(**follow_up_params)
 
             # Track token usage for follow-up call
             follow_up_usage = self._extract_anthropic_token_usage(final_response)
@@ -626,48 +596,24 @@ class AnthropicCompletion(BaseLLM):
                 return tool_results[0]["content"]
             raise e
 
-    def supports_function_calling(self) -> bool:
-        """Check if the model supports function calling."""
-        return self.supports_tools
-
-    def supports_stop_words(self) -> bool:
-        """Check if the model supports stop words."""
-        return True  # All Claude models support stop sequences
-
     def get_context_window_size(self) -> int:
         """Get the context window size for the model."""
-        from crewai.llm import CONTEXT_WINDOW_USAGE_RATIO
-
-        # Context window sizes for Anthropic models
-        context_windows = {
-            "claude-3-5-sonnet": 200000,
-            "claude-3-5-haiku": 200000,
-            "claude-3-opus": 200000,
-            "claude-3-sonnet": 200000,
-            "claude-3-haiku": 200000,
-            "claude-3-7-sonnet": 200000,
-            "claude-2.1": 200000,
-            "claude-2": 100000,
-            "claude-instant": 100000,
-        }
-
         # Find the best match for the model name
-        for model_prefix, size in context_windows.items():
+        for model_prefix, size in ANTHROPIC_CONTEXT_WINDOWS.items():
             if self.model.startswith(model_prefix):
                 return int(size * CONTEXT_WINDOW_USAGE_RATIO)
 
         # Default context window size for Claude models
         return int(200000 * CONTEXT_WINDOW_USAGE_RATIO)
 
-    def _extract_anthropic_token_usage(self, response: Message) -> dict[str, Any]:
+    @staticmethod
+    def _extract_anthropic_token_usage(response: Message) -> dict[str, Any]:
         """Extract token usage from Anthropic response."""
-        if hasattr(response, "usage") and response.usage:
+        if response.usage:
             usage = response.usage
-            input_tokens = getattr(usage, "input_tokens", 0)
-            output_tokens = getattr(usage, "output_tokens", 0)
             return {
-                "input_tokens": input_tokens,
-                "output_tokens": output_tokens,
-                "total_tokens": input_tokens + output_tokens,
+                "input_tokens": usage.input_tokens,
+                "output_tokens": usage.output_tokens,
+                "total_tokens": usage.input_tokens + usage.output_tokens,
             }
         return {"total_tokens": 0}

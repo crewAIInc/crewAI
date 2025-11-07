@@ -73,7 +73,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         max_iter: int,
         tools: list[CrewStructuredTool],
         tools_names: str,
-        stop_words: list[str],
+        stop_sequences: list[str],
         tools_description: str,
         tools_handler: ToolsHandler,
         step_callback: Any = None,
@@ -95,7 +95,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             max_iter: Maximum iterations.
             tools: Available tools.
             tools_names: Tool names string.
-            stop_words: Stop word list.
+            stop_sequences: Stop sequences list for halting generation.
             tools_description: Tool descriptions.
             tools_handler: Tool handler instance.
             step_callback: Optional step callback.
@@ -114,7 +114,6 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         self.prompt = prompt
         self.tools = tools
         self.tools_names = tools_names
-        self.stop = stop_words
         self.max_iter = max_iter
         self.callbacks = callbacks or []
         self._printer: Printer = Printer()
@@ -131,15 +130,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         self.iterations = 0
         self.log_error_after = 3
         if self.llm:
-            # This may be mutating the shared llm object and needs further evaluation
-            existing_stop = getattr(self.llm, "stop", [])
-            self.llm.stop = list(
-                set(
-                    existing_stop + self.stop
-                    if isinstance(existing_stop, list)
-                    else self.stop
-                )
-            )
+            self.llm.stop_sequences.extend(stop_sequences)
 
     @property
     def use_stop_words(self) -> bool:
@@ -148,7 +139,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         Returns:
             bool: True if tool should be used or not.
         """
-        return self.llm.supports_stop_words() if self.llm else False
+        return self.llm.supports_stop_words if self.llm else False
 
     def invoke(self, inputs: dict[str, Any]) -> dict[str, Any]:
         """Execute the agent with given inputs.
