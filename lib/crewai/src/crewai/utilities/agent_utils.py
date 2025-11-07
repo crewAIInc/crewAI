@@ -127,7 +127,7 @@ def handle_max_iterations_exceeded(
     messages: list[LLMMessage],
     llm: LLM | BaseLLM,
     callbacks: list[TokenCalcHandler],
-) -> AgentAction | AgentFinish:
+) -> AgentFinish:
     """Handles the case when the maximum number of iterations is exceeded. Performs one more LLM call to get the final answer.
 
     Args:
@@ -139,7 +139,7 @@ def handle_max_iterations_exceeded(
         callbacks: List of callbacks for the LLM call.
 
     Returns:
-        The final formatted answer after exceeding max iterations.
+        AgentFinish with the final answer after exceeding max iterations.
     """
     printer.print(
         content="Maximum iterations reached. Requesting final answer.",
@@ -157,7 +157,7 @@ def handle_max_iterations_exceeded(
 
     # Perform one more LLM call to get the final answer
     answer = llm.call(
-        messages,  # type: ignore[arg-type]
+        messages,
         callbacks=callbacks,
     )
 
@@ -168,8 +168,16 @@ def handle_max_iterations_exceeded(
         )
         raise ValueError("Invalid response from LLM call - None or empty.")
 
-    # Return the formatted answer, regardless of its type
-    return format_answer(answer=answer)
+    formatted = format_answer(answer=answer)
+
+    # If format_answer returned an AgentAction, convert it to AgentFinish
+    if isinstance(formatted, AgentFinish):
+        return formatted
+    return AgentFinish(
+        thought=formatted.thought,
+        output=formatted.text,
+        text=formatted.text,
+    )
 
 
 def format_message_for_llm(
@@ -249,10 +257,10 @@ def get_llm_response(
     """
     try:
         answer = llm.call(
-            messages,  # type: ignore[arg-type]
+            messages,
             callbacks=callbacks,
             from_task=from_task,
-            from_agent=from_agent,
+            from_agent=from_agent,  # type: ignore[arg-type]
             response_model=response_model,
         )
     except Exception as e:
@@ -294,8 +302,8 @@ def handle_agent_action_core(
     formatted_answer: AgentAction,
     tool_result: ToolResult,
     messages: list[LLMMessage] | None = None,
-    step_callback: Callable | None = None,
-    show_logs: Callable | None = None,
+    step_callback: Callable | None = None,  # type: ignore[type-arg]
+    show_logs: Callable | None = None,  # type: ignore[type-arg]
 ) -> AgentAction | AgentFinish:
     """Core logic for handling agent actions and tool results.
 
@@ -481,7 +489,7 @@ def summarize_messages(
             ),
         ]
         summary = llm.call(
-            messages,  # type: ignore[arg-type]
+            messages,
             callbacks=callbacks,
         )
         summarized_contents.append({"content": str(summary)})

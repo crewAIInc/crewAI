@@ -154,7 +154,7 @@ class TestGeminiProviderInterceptor:
         # Gemini provider should raise NotImplementedError
         with pytest.raises(NotImplementedError) as exc_info:
             LLM(
-                model="gemini/gemini-pro",
+                model="gemini/gemini-2.5-pro",
                 interceptor=interceptor,
                 api_key="test-gemini-key",
             )
@@ -169,7 +169,7 @@ class TestGeminiProviderInterceptor:
 
         with pytest.raises(NotImplementedError) as exc_info:
             LLM(
-                model="gemini/gemini-pro",
+                model="gemini/gemini-2.5-pro",
                 interceptor=interceptor,
                 api_key="test-gemini-key",
             )
@@ -181,7 +181,7 @@ class TestGeminiProviderInterceptor:
     def test_gemini_without_interceptor_works(self) -> None:
         """Test that Gemini LLM works without interceptor."""
         llm = LLM(
-            model="gemini/gemini-pro",
+            model="gemini/gemini-2.5-pro",
             api_key="test-gemini-key",
         )
 
@@ -231,7 +231,7 @@ class TestUnsupportedProviderMessages:
 
         with pytest.raises(NotImplementedError) as exc_info:
             LLM(
-                model="gemini/gemini-pro",
+                model="gemini/gemini-2.5-pro",
                 interceptor=interceptor,
                 api_key="test-gemini-key",
             )
@@ -282,7 +282,7 @@ class TestProviderSupportMatrix:
         # Gemini - NOT SUPPORTED
         with pytest.raises(NotImplementedError):
             LLM(
-                model="gemini/gemini-pro",
+                model="gemini/gemini-2.5-pro",
                 interceptor=interceptor,
                 api_key="test",
             )
@@ -315,5 +315,5 @@ class TestProviderSupportMatrix:
         assert not hasattr(bedrock_llm, 'interceptor') or bedrock_llm.interceptor is None
 
         # Gemini - doesn't have interceptor attribute
-        gemini_llm = LLM(model="gemini/gemini-pro", api_key="test")
+        gemini_llm = LLM(model="gemini/gemini-2.5-pro", api_key="test")
         assert not hasattr(gemini_llm, 'interceptor') or gemini_llm.interceptor is None

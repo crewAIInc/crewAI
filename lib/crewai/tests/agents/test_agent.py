@@ -508,7 +508,47 @@ def test_agent_custom_max_iterations():
     assert isinstance(result, str)
     assert len(result) > 0
     assert call_count > 0
-    assert call_count == 3
+    # With max_iter=1, expect 2 calls:
+    # - Call 1: iteration 0
+    # - Call 2: iteration 1 (max reached, handle_max_iterations_exceeded called, then loop breaks)
+    assert call_count == 2
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.timeout(30)
+def test_agent_max_iterations_stops_loop():
+    """Test that agent execution terminates when max_iter is reached."""
+
+    @tool
+    def get_data(step: str) -> str:
+        """Get data for a step. Always returns data requiring more steps."""
+        return f"Data for {step}: incomplete, need to query more steps."
+
+    agent = Agent(
+        role="data collector",
+        goal="collect data using the get_data tool",
+        backstory="You must use the get_data tool extensively",
+        max_iter=2,
+        allow_delegation=False,
+    )
+
+    task = Task(
+        description="Use get_data tool for step1, step2, step3, step4, step5, step6, step7, step8, step9, and step10. Do NOT stop until you've called it for ALL steps.",
+        expected_output="A summary of all data collected",
+    )
+
+    result = agent.execute_task(
+        task=task,
+        tools=[get_data],
+    )
+
+    assert result is not None
+    assert isinstance(result, str)
+
+    assert agent.agent_executor.iterations <= agent.max_iter + 2, (
+        f"Agent ran {agent.agent_executor.iterations} iterations "
+        f"but should stop around {agent.max_iter + 1}. "
+    )
 
 
 @pytest.mark.vcr()
