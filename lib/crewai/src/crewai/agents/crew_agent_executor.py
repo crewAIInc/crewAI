@@ -214,6 +214,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                         llm=self.llm,
                         callbacks=self.callbacks,
                     )
+                    break
 
                 enforce_rpm_limit(self.request_within_rpm_limit)
 
@@ -226,7 +227,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                     from_agent=self.agent,
                     response_model=self.response_model,
                 )
-                formatted_answer = process_llm_response(answer, self.use_stop_words)
+                formatted_answer = process_llm_response(answer, self.use_stop_words)  # type: ignore[assignment]
 
                 if isinstance(formatted_answer, AgentAction):
                     # Extract agent fingerprint if available
@@ -258,11 +259,11 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                         formatted_answer, tool_result
                     )
 
-                self._invoke_step_callback(formatted_answer)
-                self._append_message(formatted_answer.text)
+                self._invoke_step_callback(formatted_answer)  # type: ignore[arg-type]
+                self._append_message(formatted_answer.text)  # type: ignore[union-attr,attr-defined]
 
-            except OutputParserError as e:  # noqa: PERF203
-                formatted_answer = handle_output_parser_exception(
+            except OutputParserError as e:
+                formatted_answer = handle_output_parser_exception(  # type: ignore[assignment]
                     e=e,
                     messages=self.messages,
                     iterations=self.iterations,
