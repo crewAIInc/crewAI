@@ -16,7 +16,7 @@ def test_openai_completion_is_used_when_openai_provider():
     """
     Test that OpenAICompletion from completion.py is used when LLM uses provider 'openai'
     """
-    llm = LLM(model="openai/gpt-4o")
+    llm = LLM(model="gpt-4o")
 
     assert llm.__class__.__name__ == "OpenAICompletion"
     assert llm.provider == "openai"
@@ -70,7 +70,7 @@ def test_openai_completion_module_is_imported():
         del sys.modules[module_name]
 
     # Create LLM instance - this should trigger the import
-    LLM(model="openai/gpt-4o")
+    LLM(model="gpt-4o")
 
     # Verify the module was imported
     assert module_name in sys.modules
@@ -97,7 +97,7 @@ def test_native_openai_raises_error_when_initialization_fails():
 
         # This should raise ImportError, not fall back to LiteLLM
         with pytest.raises(ImportError) as excinfo:
-            LLM(model="openai/gpt-4o")
+            LLM(model="gpt-4o")
 
         assert "Error importing native provider" in str(excinfo.value)
         assert "Native SDK failed" in str(excinfo.value)
@@ -108,7 +108,7 @@ def test_openai_completion_initialization_parameters():
     Test that OpenAICompletion is initialized with correct parameters
     """
     llm = LLM(
-        model="openai/gpt-4o",
+        model="gpt-4o",
         temperature=0.7,
         max_tokens=1000,
         api_key="test-key"
@@ -311,7 +311,7 @@ def test_openai_completion_call_returns_usage_metrics():
         role="Research Assistant",
         goal="Find information about the population of Tokyo",
         backstory="You are a helpful research assistant.",
-        llm=LLM(model="openai/gpt-4o"),
+        llm=LLM(model="gpt-4o"),
         verbose=True,
     )
 
@@ -354,7 +354,7 @@ def test_openai_client_setup_with_extra_arguments():
     Test that OpenAICompletion is initialized with correct parameters
     """
     llm = LLM(
-        model="openai/gpt-4o",
+        model="gpt-4o",
         temperature=0.7,
         max_tokens=1000,
         top_p=0.5,
@@ -391,7 +391,7 @@ def test_extra_arguments_are_passed_to_openai_completion():
     """
     Test that extra arguments are passed to OpenAICompletion
     """
-    llm = LLM(model="openai/gpt-4o", temperature=0.7, max_tokens=1000, top_p=0.5, max_retries=3)
+    llm = LLM(model="gpt-4o", temperature=0.7, max_tokens=1000, top_p=0.5, max_retries=3)
 
     with patch.object(llm.client.chat.completions, 'create') as mock_create:
         mock_create.return_value = MagicMock(

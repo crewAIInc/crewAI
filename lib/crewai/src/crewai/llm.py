@@ -323,13 +323,22 @@ class LLM(BaseLLM):
     completion_cost: float | None = None
 
     def __new__(cls, model: str, is_litellm: bool = False, **kwargs: Any) -> LLM:
-        """Factory method that routes to native SDK or falls back to LiteLLM."""
+        """Factory method that routes to native SDK or falls back to LiteLLM.
+
+        Notes:
+            - Models prefixed with "openai/" (e.g., "openai/gpt-4") are LiteLLM routing syntax.
+        """
         if not model or not isinstance(model, str):
             raise ValueError("Model must be a non-empty string")
 
-        provider = model.partition("/")[0] if "/" in model else "openai"
+        if "/" in model:
+            provider = model.partition("/")[0]
+            use_native = False
+        else:
+            provider = "openai"
+            use_native = True
 
-        native_class = cls._get_native_provider(provider)
+        native_class = cls._get_native_provider(provider) if use_native else None
         if native_class and not is_litellm and provider in SUPPORTED_NATIVE_PROVIDERS:
             try:
                 model_string = model.partition("/")[2] if "/" in model else model

@@ -710,7 +710,7 @@ def test_native_provider_raises_error_when_supported_but_fails():
             mock_get_native.return_value = mock_provider
 
             with pytest.raises(ImportError) as excinfo:
-                LLM(model="openai/gpt-4", is_litellm=False)
+                LLM(model="gpt-4", is_litellm=False)
 
             assert "Error importing native provider" in str(excinfo.value)
             assert "Native provider initialization failed" in str(excinfo.value)
@@ -725,3 +725,32 @@ def test_native_provider_falls_back_to_litellm_when_not_in_supported_list():
         # Should fall back to LiteLLM
         assert llm.is_litellm is True
         assert llm.model == "groq/llama-3.1-70b-versatile"
+
+
+def test_prefixed_models_use_litellm():
+    """Test that models with provider prefixes always use LiteLLM routing, not native SDKs.
+
+    This ensures that models like "openai/gemini-2.5-flash" go through LiteLLM proxy
+    rather than trying to use the native OpenAI SDK (which doesn't have Gemini models).
+    """
+    # Test openai/ prefix with non-OpenAI model (e.g., proxied Gemini)
+    llm = LLM(model="openai/gemini-2.5-flash", is_litellm=False)
+    assert llm.is_litellm is True
+    assert llm.model == "openai/gemini-2.5-flash"
+
+    # Test openai/ prefix with actual OpenAI model (still should use LiteLLM due to prefix)
+    llm2 = LLM(model="openai/gpt-4o", is_litellm=False)
+    assert llm2.is_litellm is True
+    assert llm2.model == "openai/gpt-4o"
+
+    # Test other provider prefixes also use LiteLLM
+    llm3 = LLM(model="anthropic/claude-3-opus", is_litellm=False)
+    assert llm3.is_litellm is True
+    assert llm3.model == "anthropic/claude-3-opus"
+
+
+def test_unprefixed_models_use_native_sdk():
+    """Test that unprefixed models default to native OpenAI SDK for backward compatibility."""
+    llm = LLM(model="gpt-4o", is_litellm=False)
+    assert llm.is_litellm is False
+    assert llm.provider == "openai"
