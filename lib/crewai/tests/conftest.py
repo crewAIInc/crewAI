@@ -246,7 +246,7 @@ HEADERS_TO_FILTER = {
 }
 
 
-def filter_response_headers(response):
+def _filter_response_headers(response):
     """Filter sensitive headers from response before recording."""
     for header_name, replacement in HEADERS_TO_FILTER.items():
       for variant in [header_name, header_name.upper(), header_name.title()]:
@@ -255,13 +255,13 @@ def filter_response_headers(response):
     return response
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="session")
 def vcr_config(request) -> dict[str, Any]:
     config = {
         "cassette_library_dir": os.path.join(os.path.dirname(__file__), "cassettes"),
         "record_mode": os.getenv("PYTEST_VCR_RECORD_MODE") or "once",
         "filter_headers": [(k, v) for k, v in HEADERS_TO_FILTER.items()],
-        "before_record_response": filter_response_headers,
+        "before_record_response": _filter_response_headers,
     }
 
     if os.getenv("GITHUB_ACTIONS") == "true":
