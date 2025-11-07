@@ -2,6 +2,7 @@
 import os
 import tempfile
 from pathlib import Path
+from typing import Any
 from unittest.mock import Mock, patch
 
 import pytest
@@ -212,11 +213,58 @@ def clear_event_bus_handlers(setup_test_environment):
     callback.current_task_id = None
 
 
+
+HEADERS_TO_FILTER = {
+    "authorization": "AUTHORIZATION-XXX",
+    "content-security-policy": "CSP-FILTERED",
+    "cookie": "COOKIE-XXX",
+    "set-cookie": "SET-COOKIE-XXX",
+    "permissions-policy": "PERMISSIONS-POLICY-XXX",
+    "referrer-policy": "REFERRER-POLICY-XXX",
+    "strict-transport-security": "STS-XXX",
+    "x-content-type-options": "X-CONTENT-TYPE-XXX",
+    "x-frame-options": "X-FRAME-OPTIONS-XXX",
+    "x-permitted-cross-domain-policies": "X-PERMITTED-XXX",
+    "x-request-id": "X-REQUEST-ID-XXX",
+    "x-runtime": "X-RUNTIME-XXX",
+    "x-xss-protection": "X-XSS-PROTECTION-XXX",
+    "x-stainless-arch": "X-STAINLESS-ARCH-XXX",
+    "x-stainless-os": "X-STAINLESS-OS-XXX",
+    "x-stainless-read-timeout": "X-STAINLESS-READ-TIMEOUT-XXX",
+    "cf-ray": "CF-RAY-XXX",
+    "etag": "ETAG-XXX",
+    "Strict-Transport-Security": "STS-XXX",
+    "access-control-expose-headers": "ACCESS-CONTROL-XXX",
+    "openai-organization": "OPENAI-ORG-XXX",
+    "openai-project": "OPENAI-PROJECT-XXX",
+    "x-ratelimit-limit-requests": "X-RATELIMIT-LIMIT-REQUESTS-XXX",
+    "x-ratelimit-limit-tokens": "X-RATELIMIT-LIMIT-TOKENS-XXX",
+    "x-ratelimit-remaining-requests": "X-RATELIMIT-REMAINING-REQUESTS-XXX",
+    "x-ratelimit-remaining-tokens": "X-RATELIMIT-REMAINING-TOKENS-XXX",
+    "x-ratelimit-reset-requests": "X-RATELIMIT-RESET-REQUESTS-XXX",
+    "x-ratelimit-reset-tokens": "X-RATELIMIT-RESET-TOKENS-XXX",
+}
+
+
+def filter_response_headers(response):
+    """Filter sensitive headers from response before recording."""
+    for header_name, replacement in HEADERS_TO_FILTER.items():
+      for variant in [header_name, header_name.upper(), header_name.title()]:
+        if variant in response["headers"]:
+          response["headers"][variant] = [replacement]
+    return response
+
+
 @pytest.fixture(scope="module")
-def vcr_config(request) -> dict:
-    import os
-    return {
+def vcr_config(request) -> dict[str, Any]:
+    config = {
         "cassette_library_dir": os.path.join(os.path.dirname(__file__), "cassettes"),
-        "record_mode": "new_episodes",
-        "filter_headers": [("authorization", "AUTHORIZATION-XXX")],
+        "record_mode": os.getenv("PYTEST_VCR_RECORD_MODE") or "once",
+        "filter_headers": [(k, v) for k, v in HEADERS_TO_FILTER.items()],
+        "before_record_response": filter_response_headers,
     }
+
+    if os.getenv("GITHUB_ACTIONS") == "true":
+        config["record_mode"] = "none"
+
+    return config
