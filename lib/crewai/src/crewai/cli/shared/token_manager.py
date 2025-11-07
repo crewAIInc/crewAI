@@ -3,8 +3,15 @@ import json
 import os
 from pathlib import Path
 import sys
+from typing import BinaryIO, cast
 
 from cryptography.fernet import Fernet
+
+
+if sys.platform == "win32":
+    import msvcrt
+else:
+    import fcntl
 
 
 class TokenManager:
@@ -18,21 +25,74 @@ class TokenManager:
         self.key = self._get_or_create_key()
         self.fernet = Fernet(self.key)
 
+    @staticmethod
+    def _acquire_lock(file_handle: BinaryIO) -> None:
+        """
+        Acquire an exclusive lock on a file handle.
+
+        Args:
+            file_handle: Open file handle to lock.
+        """
+        if sys.platform == "win32":
+            msvcrt.locking(file_handle.fileno(), msvcrt.LK_LOCK, 1)
+        else:
+            fcntl.flock(file_handle.fileno(), fcntl.LOCK_EX)
+
+    @staticmethod
+    def _release_lock(file_handle: BinaryIO) -> None:
+        """
+        Release the lock on a file handle.
+
+        Args:
+            file_handle: Open file handle to unlock.
+        """
+        if sys.platform == "win32":
+            msvcrt.locking(file_handle.fileno(), msvcrt.LK_UNLCK, 1)
+        else:
+            fcntl.flock(file_handle.fileno(), fcntl.LOCK_UN)
+
     def _get_or_create_key(self) -> bytes:
         """
-        Get or create the encryption key.
+        Get or create the encryption key with file locking to prevent race conditions.
 
-        :return: The encryption key.
+        Returns:
+            The encryption key.
         """
         key_filename = "secret.key"
-        key = self.read_secure_file(key_filename)
+        storage_path = self.get_secure_storage_path()
 
-        if key is not None:
+        key = self.read_secure_file(key_filename)
+        if key is not None and len(key) == 44:
             return key
 
-        new_key = Fernet.generate_key()
-        self.save_secure_file(key_filename, new_key)
-        return new_key
+        lock_file_path = storage_path / f"{key_filename}.lock"
+
+        try:
+            lock_file_path.touch()
+
+            with open(lock_file_path, "r+b") as lock_file:
+                self._acquire_lock(lock_file)
+                try:
+                    key = self.read_secure_file(key_filename)
+                    if key is not None and len(key) == 44:
+                        return key
+
+                    new_key = Fernet.generate_key()
+                    self.save_secure_file(key_filename, new_key)
+                    return new_key
+                finally:
+                    try:
+                        self._release_lock(lock_file)
+                    except OSError:
+                        pass
+        except OSError:
+            key = self.read_secure_file(key_filename)
+            if key is not None and len(key) == 44:
+                return key
+
+            new_key = Fernet.generate_key()
+            self.save_secure_file(key_filename, new_key)
+            return new_key
 
     def save_tokens(self, access_token: str, expires_at: int) -> None:
         """
@@ -59,14 +119,14 @@ class TokenManager:
         if encrypted_data is None:
             return None
 
-        decrypted_data = self.fernet.decrypt(encrypted_data)  # type: ignore
+        decrypted_data = self.fernet.decrypt(encrypted_data)
         data = json.loads(decrypted_data)
 
         expiration = datetime.fromisoformat(data["expiration"])
         if expiration <= datetime.now():
             return None
 
-        return data["access_token"]
+        return cast(str | None, data["access_token"])
 
     def clear_tokens(self) -> None:
         """
@@ -74,20 +134,18 @@ class TokenManager:
         """
         self.delete_secure_file(self.file_path)
 
-    def get_secure_storage_path(self) -> Path:
+    @staticmethod
+    def get_secure_storage_path() -> Path:
         """
         Get the secure storage path based on the operating system.
 
         :return: The secure storage path.
         """
         if sys.platform == "win32":
-            # Windows: Use %LOCALAPPDATA%
             base_path = os.environ.get("LOCALAPPDATA")
         elif sys.platform == "darwin":
-            # macOS: Use ~/Library/Application Support
             base_path = os.path.expanduser("~/Library/Application Support")
         else:
-            # Linux and other Unix-like: Use ~/.local/share
             base_path = os.path.expanduser("~/.local/share")
 
         app_name = "crewai/credentials"
@@ -110,7 +168,6 @@ class TokenManager:
         with open(file_path, "wb") as f:
             f.write(content)
 
-        # Set appropriate permissions (read/write for owner only)
         os.chmod(file_path, 0o600)
 
     def read_secure_file(self, filename: str) -> bytes | None:

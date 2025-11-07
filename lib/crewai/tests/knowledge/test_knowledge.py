@@ -601,3 +601,81 @@ def test_file_path_validation():
         match="file_path/file_paths must be a Path, str, or a list of these types",
     ):
         PDFKnowledgeSource()
+
+
+def test_hash_based_id_generation_without_doc_id(mock_vector_db):
+    """Test that documents without doc_id generate hash-based IDs. Duplicates are deduplicated before upsert."""
+    import hashlib
+    import json
+    from crewai.rag.chromadb.utils import _prepare_documents_for_chromadb
+    from crewai.rag.types import BaseRecord
+
+    documents: list[BaseRecord] = [
+        {"content": "First document content", "metadata": {"source": "test1", "category": "research"}},
+        {"content": "Second document content", "metadata": {"source": "test2", "category": "research"}},
+        {"content": "Third document content"},  # No metadata
+    ]
+
+    result = _prepare_documents_for_chromadb(documents)
+
+    assert len(result.ids) == 3
+
+    # Unique documents should get 64-character hex hashes (no suffix)
+    for doc_id in result.ids:
+        assert len(doc_id) == 64, f"ID should be 64 characters: {doc_id}"
+        assert all(c in "0123456789abcdef" for c in doc_id), f"ID should be hex: {doc_id}"
+
+    # Different documents should have different hashes
+    assert result.ids[0] != result.ids[1] != result.ids[2]
+
+    # Verify hashes match expected values
+    expected_hash_1 = hashlib.sha256(
+        f"First document content|{json.dumps({'category': 'research', 'source': 'test1'}, sort_keys=True)}".encode()
+    ).hexdigest()
+    assert result.ids[0] == expected_hash_1, "First document hash should match expected"
+
+    expected_hash_3 = hashlib.sha256("Third document content".encode()).hexdigest()
+    assert result.ids[2] == expected_hash_3, "Third document hash should match expected"
+
+    # Test that duplicate documents are deduplicated (same ID, only one sent)
+    duplicate_documents: list[BaseRecord] = [
+        {"content": "Same content", "metadata": {"source": "test"}},
+        {"content": "Same content", "metadata": {"source": "test"}},
+        {"content": "Same content", "metadata": {"source": "test"}},
+    ]
+    duplicate_result = _prepare_documents_for_chromadb(duplicate_documents)
+    # Duplicates should be deduplicated - only one ID should remain
+    assert len(duplicate_result.ids) == 1, "Duplicate documents should be deduplicated"
+    assert len(duplicate_result.ids[0]) == 64, "Deduplicated ID should be clean hash"
+    # Verify it's the expected hash
+    expected_hash = hashlib.sha256(
+        f"Same content|{json.dumps({'source': 'test'}, sort_keys=True)}".encode()
+    ).hexdigest()
+    assert duplicate_result.ids[0] == expected_hash, "Deduplicated ID should match expected hash"
+
+
+def test_hash_based_id_generation_with_doc_id_in_metadata(mock_vector_db):
+    """Test that documents with doc_id in metadata use the doc_id directly, not hash-based."""
+    from crewai.rag.chromadb.utils import _prepare_documents_for_chromadb
+    from crewai.rag.types import BaseRecord
+
+    documents_with_doc_id: list[BaseRecord] = [
+        {"content": "First document", "metadata": {"doc_id": "custom-id-1", "source": "test1"}},
+        {"content": "Second document", "metadata": {"doc_id": "custom-id-2"}},
+    ]
+
+    documents_without_doc_id: list[BaseRecord] = [
+        {"content": "First document", "metadata": {"source": "test1"}},
+        {"content": "Second document"},
+    ]
+
+    result_with_doc_id = _prepare_documents_for_chromadb(documents_with_doc_id)
+    result_without_doc_id = _prepare_documents_for_chromadb(documents_without_doc_id)
+
+    assert result_with_doc_id.ids == ["custom-id-1", "custom-id-2"]
+
+    assert len(result_without_doc_id.ids) == 2
+    # Unique documents get 64-character hashes
+    for doc_id in result_without_doc_id.ids:
+        assert len(doc_id) == 64, "ID should be 64 characters"
+        assert all(c in "0123456789abcdef" for c in doc_id), "ID should be hex"

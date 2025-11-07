@@ -13,7 +13,6 @@ from crewai.events.types.reasoning_events import (
 )
 from crewai.llm import LLM
 from crewai.task import Task
-from crewai.utilities.i18n import I18N
 
 
 class ReasoningPlan(BaseModel):
@@ -62,7 +61,6 @@ class AgentReasoning:
         agent: The agent performing the reasoning.
         llm: The language model used for reasoning.
         logger: Logger for logging events and errors.
-        i18n: Internationalization utility for retrieving prompts.
     """
 
     def __init__(self, task: Task, agent: Agent) -> None:
@@ -76,7 +74,6 @@ class AgentReasoning:
         self.agent = agent
         self.llm = cast(LLM, agent.llm)
         self.logger = logging.getLogger(__name__)
-        self.i18n = I18N()
 
     def handle_agent_reasoning(self) -> AgentReasoningOutput:
         """Public method for the reasoning process that creates and refines a plan for the task until the agent is ready to execute it.
@@ -163,8 +160,7 @@ class AgentReasoning:
             llm=self.llm,
             prompt=reasoning_prompt,
             task=self.task,
-            agent=self.agent,
-            i18n=self.i18n,
+            reasoning_agent=self.agent,
             backstory=self.__get_agent_backstory(),
             plan_type="initial_plan",
         )
@@ -208,8 +204,7 @@ class AgentReasoning:
                     llm=self.llm,
                     prompt=refine_prompt,
                     task=self.task,
-                    agent=self.agent,
-                    i18n=self.i18n,
+                    reasoning_agent=self.agent,
                     backstory=self.__get_agent_backstory(),
                     plan_type="refine_plan",
                 )
@@ -238,14 +233,14 @@ class AgentReasoning:
         self.logger.debug(f"Using function calling for {prompt_type} reasoning")
 
         try:
-            system_prompt = self.i18n.retrieve("reasoning", prompt_type).format(
+            system_prompt = self.agent.i18n.retrieve("reasoning", prompt_type).format(
                 role=self.agent.role,
                 goal=self.agent.goal,
                 backstory=self.__get_agent_backstory(),
             )
 
             # Prepare a simple callable that just returns the tool arguments as JSON
-            def _create_reasoning_plan(plan: str, ready: bool = True):
+            def _create_reasoning_plan(plan: str, ready: bool = True) -> str:
                 """Return the reasoning plan result in JSON string form."""
                 return json.dumps({"plan": plan, "ready": ready})
 
@@ -281,7 +276,9 @@ class AgentReasoning:
             )
 
             try:
-                system_prompt = self.i18n.retrieve("reasoning", prompt_type).format(
+                system_prompt = self.agent.i18n.retrieve(
+                    "reasoning", prompt_type
+                ).format(
                     role=self.agent.role,
                     goal=self.agent.goal,
                     backstory=self.__get_agent_backstory(),
@@ -326,7 +323,7 @@ class AgentReasoning:
         """
         available_tools = self.__format_available_tools()
 
-        return self.i18n.retrieve("reasoning", "create_plan_prompt").format(
+        return self.agent.i18n.retrieve("reasoning", "create_plan_prompt").format(
             role=self.agent.role,
             goal=self.agent.goal,
             backstory=self.__get_agent_backstory(),
@@ -357,7 +354,7 @@ class AgentReasoning:
         Returns:
             str: The refine prompt.
         """
-        return self.i18n.retrieve("reasoning", "refine_plan_prompt").format(
+        return self.agent.i18n.retrieve("reasoning", "refine_plan_prompt").format(
             role=self.agent.role,
             goal=self.agent.goal,
             backstory=self.__get_agent_backstory(),
@@ -405,8 +402,7 @@ def _call_llm_with_reasoning_prompt(
     llm: LLM,
     prompt: str,
     task: Task,
-    agent: Agent,
-    i18n: I18N,
+    reasoning_agent: Agent,
     backstory: str,
     plan_type: Literal["initial_plan", "refine_plan"],
 ) -> str:
@@ -416,17 +412,16 @@ def _call_llm_with_reasoning_prompt(
         llm: The language model to use.
         prompt: The prompt to send to the LLM.
         task: The task for which the agent is reasoning.
-        agent: The agent performing the reasoning.
-        i18n: Internationalization utility for retrieving prompts.
+        reasoning_agent: The agent performing the reasoning.
         backstory: The agent's backstory.
         plan_type: The type of plan being created ("initial_plan" or "refine_plan").
 
     Returns:
         The LLM response.
     """
-    system_prompt = i18n.retrieve("reasoning", plan_type).format(
-        role=agent.role,
-        goal=agent.goal,
+    system_prompt = reasoning_agent.i18n.retrieve("reasoning", plan_type).format(
+        role=reasoning_agent.role,
+        goal=reasoning_agent.goal,
         backstory=backstory,
     )
 
@@ -436,6 +431,6 @@ def _call_llm_with_reasoning_prompt(
             {"role": "user", "content": prompt},
         ],
         from_task=task,
-        from_agent=agent,
+        from_agent=reasoning_agent,
     )
     return str(response)

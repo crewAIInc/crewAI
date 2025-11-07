@@ -482,3 +482,48 @@ def test_openai_get_client_params_no_base_url():
     client_params = llm._get_client_params()
     # When no base_url is provided, it should not be in the params (filtered out as None)
     assert "base_url" not in client_params or client_params.get("base_url") is None
+
+
+def test_openai_streaming_with_response_model():
+    """
+    Test that streaming with response_model works correctly and doesn't call invalid API methods.
+    This test verifies the fix for the bug where streaming with response_model attempted to call
+    self.client.responses.stream() with invalid parameters (input, text_format).
+    """
+    from pydantic import BaseModel
+
+    class TestResponse(BaseModel):
+        """Test response model."""
+
+        answer: str
+        confidence: float
+
+    llm = LLM(model="openai/gpt-4o", stream=True)
+
+    with patch.object(llm.client.chat.completions, "create") as mock_create:
+        mock_chunk1 = MagicMock()
+        mock_chunk1.choices = [
+            MagicMock(delta=MagicMock(content='{"answer": "test", ', tool_calls=None))
+        ]
+
+        mock_chunk2 = MagicMock()
+        mock_chunk2.choices = [
+            MagicMock(
+                delta=MagicMock(content='"confidence": 0.95}', tool_calls=None)
+            )
+        ]
+
+        mock_create.return_value = iter([mock_chunk1, mock_chunk2])
+
+        result = llm.call("Test question", response_model=TestResponse)
+
+        assert result is not None
+        assert isinstance(result, str)
+
+        assert mock_create.called
+        call_kwargs = mock_create.call_args[1]
+        assert call_kwargs["model"] == "gpt-4o"
+        assert call_kwargs["stream"] is True
+
+        assert "input" not in call_kwargs
+        assert "text_format" not in call_kwargs

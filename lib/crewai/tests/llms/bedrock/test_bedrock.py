@@ -736,3 +736,56 @@ def test_bedrock_client_error_handling():
         with pytest.raises(RuntimeError) as exc_info:
             llm.call("Hello")
         assert "throttled" in str(exc_info.value).lower()
+
+
+def test_bedrock_stop_sequences_sync():
+    """Test that stop and stop_sequences attributes stay synchronized."""
+    llm = LLM(model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0")
+
+    # Test setting stop as a list
+    llm.stop = ["\nObservation:", "\nThought:"]
+    assert list(llm.stop_sequences) == ["\nObservation:", "\nThought:"]
+    assert llm.stop == ["\nObservation:", "\nThought:"]
+
+    # Test setting stop as a string
+    llm.stop = "\nFinal Answer:"
+    assert list(llm.stop_sequences) == ["\nFinal Answer:"]
+    assert llm.stop == ["\nFinal Answer:"]
+
+    # Test setting stop as None
+    llm.stop = None
+    assert list(llm.stop_sequences) == []
+    assert llm.stop == []
+
+
+def test_bedrock_stop_sequences_sent_to_api():
+    """Test that stop_sequences are properly sent to the Bedrock API."""
+    llm = LLM(model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0")
+
+    # Set stop sequences via the stop attribute (simulating CrewAgentExecutor)
+    llm.stop = ["\nObservation:", "\nThought:"]
+
+    # Patch the API call to capture parameters without making real call
+    with patch.object(llm.client, 'converse') as mock_converse:
+        mock_response = {
+            'output': {
+                'message': {
+                    'role': 'assistant',
+                    'content': [{'text': 'Hello'}]
+                }
+            },
+            'usage': {
+                'inputTokens': 10,
+                'outputTokens': 5,
+                'totalTokens': 15
+            }
+        }
+        mock_converse.return_value = mock_response
+
+        llm.call("Say hello in one word")
+
+        # Verify stop_sequences were passed to the API in the inference config
+        call_kwargs = mock_converse.call_args[1]
+        assert "inferenceConfig" in call_kwargs
+        assert "stopSequences" in call_kwargs["inferenceConfig"]
+        assert call_kwargs["inferenceConfig"]["stopSequences"] == ["\nObservation:", "\nThought:"]

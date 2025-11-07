@@ -227,22 +227,22 @@ def test_get_conversion_instructions_gpt() -> None:
     with patch.object(LLM, "supports_function_calling") as supports_function_calling:
         supports_function_calling.return_value = True
         instructions = get_conversion_instructions(SimpleModel, llm)
-        model_schema = PydanticSchemaParser(model=SimpleModel).get_schema()
-        expected_instructions = (
-            "Please convert the following text into valid JSON.\n\n"
-            "Output ONLY the valid JSON and nothing else.\n\n"
-            "The JSON must follow this schema exactly:\n```json\n"
-            f"{model_schema}\n```"
-        )
-        assert instructions == expected_instructions
+        # Now using OpenAPI schema format for all models
+        assert "Ensure your final answer strictly adheres to the following OpenAPI schema:" in instructions
+        assert '"type": "json_schema"' in instructions
+        assert '"name": "SimpleModel"' in instructions
+        assert "Do not include the OpenAPI schema in the final output" in instructions
 
 
 def test_get_conversion_instructions_non_gpt() -> None:
     llm = LLM(model="ollama/llama3.1", base_url="http://localhost:11434")
     with patch.object(LLM, "supports_function_calling", return_value=False):
         instructions = get_conversion_instructions(SimpleModel, llm)
-        assert '"name": str' in instructions
-        assert '"age": int' in instructions
+        # Now using OpenAPI schema format for all models
+        assert "Ensure your final answer strictly adheres to the following OpenAPI schema:" in instructions
+        assert '"type": "json_schema"' in instructions
+        assert '"name": "SimpleModel"' in instructions
+        assert "Do not include the OpenAPI schema in the final output" in instructions
 
 
 # Tests for is_gpt
@@ -295,16 +295,24 @@ def test_create_converter_fails_without_agent_or_converter_cls() -> None:
 
 def test_generate_model_description_simple_model() -> None:
     description = generate_model_description(SimpleModel)
-    expected_description = '{\n  "name": str,\n  "age": int\n}'
-    assert description == expected_description
+    # generate_model_description now returns a JSON schema dict
+    assert isinstance(description, dict)
+    assert description["type"] == "json_schema"
+    assert description["json_schema"]["name"] == "SimpleModel"
+    assert description["json_schema"]["strict"] is True
+    assert "name" in description["json_schema"]["schema"]["properties"]
+    assert "age" in description["json_schema"]["schema"]["properties"]
 
 
 def test_generate_model_description_nested_model() -> None:
     description = generate_model_description(NestedModel)
-    expected_description = (
-        '{\n  "id": int,\n  "data": {\n  "name": str,\n  "age": int\n}\n}'
-    )
-    assert description == expected_description
+    # generate_model_description now returns a JSON schema dict
+    assert isinstance(description, dict)
+    assert description["type"] == "json_schema"
+    assert description["json_schema"]["name"] == "NestedModel"
+    assert description["json_schema"]["strict"] is True
+    assert "id" in description["json_schema"]["schema"]["properties"]
+    assert "data" in description["json_schema"]["schema"]["properties"]
 
 
 def test_generate_model_description_optional_field() -> None:
@@ -313,8 +321,11 @@ def test_generate_model_description_optional_field() -> None:
         age: int | None
 
     description = generate_model_description(ModelWithOptionalField)
-    expected_description = '{\n  "name": str,\n  "age": int | None\n}'
-    assert description == expected_description
+    # generate_model_description now returns a JSON schema dict
+    assert isinstance(description, dict)
+    assert description["type"] == "json_schema"
+    assert description["json_schema"]["name"] == "ModelWithOptionalField"
+    assert description["json_schema"]["strict"] is True
 
 
 def test_generate_model_description_list_field() -> None:
@@ -322,8 +333,11 @@ def test_generate_model_description_list_field() -> None:
         items: list[int]
 
     description = generate_model_description(ModelWithListField)
-    expected_description = '{\n  "items": List[int]\n}'
-    assert description == expected_description
+    # generate_model_description now returns a JSON schema dict
+    assert isinstance(description, dict)
+    assert description["type"] == "json_schema"
+    assert description["json_schema"]["name"] == "ModelWithListField"
+    assert description["json_schema"]["strict"] is True
 
 
 def test_generate_model_description_dict_field() -> None:
@@ -331,8 +345,11 @@ def test_generate_model_description_dict_field() -> None:
         attributes: dict[str, int]
 
     description = generate_model_description(ModelWithDictField)
-    expected_description = '{\n  "attributes": Dict[str, int]\n}'
-    assert description == expected_description
+    # generate_model_description now returns a JSON schema dict
+    assert isinstance(description, dict)
+    assert description["type"] == "json_schema"
+    assert description["json_schema"]["name"] == "ModelWithDictField"
+    assert description["json_schema"]["strict"] is True
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -374,9 +391,11 @@ def test_converter_with_llama3_2_model() -> None:
     assert output.age == 30
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
 def test_converter_with_llama3_1_model() -> None:
-    llm = LLM(model="ollama/llama3.1", base_url="http://localhost:11434")
+    llm = Mock(spec=LLM)
+    llm.supports_function_calling.return_value = True
+    llm.call.return_value = '{"name": "Alice Llama", "age": 30}'
+
     sample_text = "Name: Alice Llama, Age: 30"
     instructions = get_conversion_instructions(SimpleModel, llm)
     converter = Converter(
@@ -570,9 +589,8 @@ def test_converter_with_ambiguous_input() -> None:
 def test_converter_with_function_calling() -> None:
     llm = Mock(spec=LLM)
     llm.supports_function_calling.return_value = True
-
-    instructor = Mock()
-    instructor.to_pydantic.return_value = SimpleModel(name="Eve", age=35)
+    # Mock the llm.call to return a valid JSON string
+    llm.call.return_value = '{"name": "Eve", "age": 35}'
 
     converter = Converter(
         llm=llm,
@@ -580,14 +598,17 @@ def test_converter_with_function_calling() -> None:
         model=SimpleModel,
         instructions="Convert this text.",
     )
-    
-    with patch.object(converter, '_create_instructor', return_value=instructor):
-        output = converter.to_pydantic()
 
-        assert isinstance(output, SimpleModel)
-        assert output.name == "Eve"
-        assert output.age == 35
-    instructor.to_pydantic.assert_called_once()
+    output = converter.to_pydantic()
+
+    assert isinstance(output, SimpleModel)
+    assert output.name == "Eve"
+    assert output.age == 35
+
+    # Verify llm.call was called with correct parameters
+    llm.call.assert_called_once()
+    call_args = llm.call.call_args
+    assert call_args[1]["response_model"] == SimpleModel
 
 
 def test_generate_model_description_union_field() -> None:
@@ -595,8 +616,11 @@ def test_generate_model_description_union_field() -> None:
         field: int | str | None
 
     description = generate_model_description(UnionModel)
-    expected_description = '{\n  "field": int | str | None\n}'
-    assert description == expected_description
+    # generate_model_description now returns a JSON schema dict
+    assert isinstance(description, dict)
+    assert description["type"] == "json_schema"
+    assert description["json_schema"]["name"] == "UnionModel"
+    assert description["json_schema"]["strict"] is True
 
 def test_internal_instructor_with_openai_provider() -> None:
     """Test InternalInstructor with OpenAI provider using registry pattern."""

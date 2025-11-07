@@ -574,8 +574,8 @@ def test_output_pydantic_to_another_task():
         goal="Score the title",
         backstory="You're an expert scorer, specialized in scoring titles.",
         allow_delegation=False,
-        llm="gpt-4-0125-preview",
-        function_calling_llm="gpt-3.5-turbo-0125",
+        llm="gpt-4o",
+        function_calling_llm="gpt-4o",
         verbose=True,
     )
 
@@ -630,7 +630,7 @@ def test_output_json_to_another_task():
 
     crew = Crew(agents=[scorer], tasks=[task1, task2])
     result = crew.kickoff()
-    assert '{"score": 4}' == result.json
+    assert '{"score": 3}' == result.json
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])

@@ -9,7 +9,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Any, Literal, cast
 
-from pydantic import GetCoreSchemaHandler
+from pydantic import BaseModel, GetCoreSchemaHandler
 from pydantic_core import CoreSchema, core_schema
 
 from crewai.agents.agent_builder.base_agent_executor_mixin import CrewAgentExecutorMixin
@@ -38,7 +38,7 @@ from crewai.utilities.agent_utils import (
     process_llm_response,
 )
 from crewai.utilities.constants import TRAINING_DATA_FILE
-from crewai.utilities.i18n import I18N
+from crewai.utilities.i18n import I18N, get_i18n
 from crewai.utilities.printer import Printer
 from crewai.utilities.tool_utils import execute_tool_and_check_finality
 from crewai.utilities.training_handler import CrewTrainingHandler
@@ -67,7 +67,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
 
     def __init__(
         self,
-        llm: BaseLLM | Any,
+        llm: BaseLLM,
         task: Task,
         crew: Crew,
         agent: Agent,
@@ -84,6 +84,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         respect_context_window: bool = False,
         request_within_rpm_limit: Callable[[], bool] | None = None,
         callbacks: list[Any] | None = None,
+        response_model: type[BaseModel] | None = None,
     ) -> None:
         """Initialize executor.
 
@@ -105,8 +106,9 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             respect_context_window: Respect context limits.
             request_within_rpm_limit: RPM limit check function.
             callbacks: Optional callbacks list.
+            response_model: Optional Pydantic model for structured outputs.
         """
-        self._i18n: I18N = I18N()
+        self._i18n: I18N = get_i18n()
         self.llm = llm
         self.task = task
         self.agent = agent
@@ -125,6 +127,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         self.function_calling_llm = function_calling_llm
         self.respect_context_window = respect_context_window
         self.request_within_rpm_limit = request_within_rpm_limit
+        self.response_model = response_model
         self.ask_for_human_input = False
         self.messages: list[LLMMessage] = []
         self.iterations = 0
@@ -223,6 +226,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                     printer=self._printer,
                     from_task=self.task,
                     from_agent=self.agent,
+                    response_model=self.response_model,
                 )
                 formatted_answer = process_llm_response(answer, self.use_stop_words)
 

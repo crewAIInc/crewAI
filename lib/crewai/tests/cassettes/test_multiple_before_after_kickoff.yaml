@@ -186,7 +186,7 @@ interactions:
       cf-cache-status:
       - DYNAMIC
       openai-organization:
-      - crewai-iuxna1
+      - crewai-REDACTED
       openai-processing-ms:
       - '15605'
       openai-version:
@@ -344,7 +344,7 @@ interactions:
       cf-cache-status:
       - DYNAMIC
       openai-organization:
-      - crewai-iuxna1
+      - crewai-REDACTED
       openai-processing-ms:
       - '1350'
       openai-version:
@@ -570,7 +570,7 @@ interactions:
       cf-cache-status:
       - DYNAMIC
       openai-organization:
-      - crewai-iuxna1
+      - crewai-REDACTED
       openai-processing-ms:
       - '16199'
       openai-version:
@@ -732,7 +732,7 @@ interactions:
       cf-cache-status:
       - DYNAMIC
       openai-organization:
-      - crewai-iuxna1
+      - crewai-REDACTED
       openai-processing-ms:
       - '644'
       openai-version:
@@ -984,7 +984,7 @@ interactions:
       cf-cache-status:
       - DYNAMIC
       openai-organization:
-      - crewai-iuxna1
+      - crewai-REDACTED
       openai-processing-ms:
       - '26924'
       openai-version:
@@ -1116,6 +1116,825 @@ interactions:
       - origin-when-cross-origin
       x-pypi-last-serial:
       - '29695949'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"trace_id": "18f7992e-da65-4b69-bbe7-212176a3d836", "execution_type":
+      "crew", "user_identifier": null, "execution_context": {"crew_fingerprint": null,
+      "crew_name": "crew", "flow_name": null, "crewai_version": "1.3.0", "privacy_level":
+      "standard"}, "execution_metadata": {"expected_duration_estimate": 300, "agent_count":
+      0, "task_count": 0, "flow_method_count": 0, "execution_started_at": "2025-11-05T23:11:50.094791+00:00"},
+      "ephemeral_trace_id": "18f7992e-da65-4b69-bbe7-212176a3d836"}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate, zstd
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '488'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - CrewAI-CLI/1.3.0
+      X-Crewai-Version:
+      - 1.3.0
+    method: POST
+    uri: https://app.crewai.com/crewai_plus/api/v1/tracing/ephemeral/batches
+  response:
+    body:
+      string: '{"id":"b47c99de-55ce-4282-a2b2-1f0a26699e66","ephemeral_trace_id":"18f7992e-da65-4b69-bbe7-212176a3d836","execution_type":"crew","crew_name":"crew","flow_name":null,"status":"running","duration_ms":null,"crewai_version":"1.3.0","total_events":0,"execution_context":{"crew_fingerprint":null,"crew_name":"crew","flow_name":null,"crewai_version":"1.3.0","privacy_level":"standard"},"created_at":"2025-11-05T23:11:50.423Z","updated_at":"2025-11-05T23:11:50.423Z","access_code":"TRACE-7fbb21b3f9","user_identifier":null}'
+    headers:
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '515'
+      Content-Type:
+      - application/json; charset=utf-8
+      Date:
+      - Wed, 05 Nov 2025 23:11:50 GMT
+      cache-control:
+      - no-store
+      content-security-policy:
+      - 'default-src ''self'' *.app.crewai.com app.crewai.com; script-src ''self''
+        ''unsafe-inline'' *.app.crewai.com app.crewai.com https://cdn.jsdelivr.net/npm/apexcharts
+        https://www.gstatic.com https://run.pstmn.io https://apis.google.com https://apis.google.com/js/api.js
+        https://accounts.google.com https://accounts.google.com/gsi/client https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css.map
+        https://*.google.com https://docs.google.com https://slides.google.com https://js.hs-scripts.com
+        https://js.sentry-cdn.com https://browser.sentry-cdn.com https://www.googletagmanager.com
+        https://js-na1.hs-scripts.com https://js.hubspot.com http://js-na1.hs-scripts.com
+        https://bat.bing.com https://cdn.amplitude.com https://cdn.segment.com https://d1d3n03t5zntha.cloudfront.net/
+        https://descriptusercontent.com https://edge.fullstory.com https://googleads.g.doubleclick.net
+        https://js.hs-analytics.net https://js.hs-banner.com https://js.hsadspixel.net
+        https://js.hscollectedforms.net https://js.usemessages.com https://snap.licdn.com
+        https://static.cloudflareinsights.com https://static.reo.dev https://www.google-analytics.com
+        https://share.descript.com/; style-src ''self'' ''unsafe-inline'' *.app.crewai.com
+        app.crewai.com https://cdn.jsdelivr.net/npm/apexcharts; img-src ''self'' data:
+        *.app.crewai.com app.crewai.com https://zeus.tools.crewai.com https://dashboard.tools.crewai.com
+        https://cdn.jsdelivr.net https://forms.hsforms.com https://track.hubspot.com
+        https://px.ads.linkedin.com https://px4.ads.linkedin.com https://www.google.com
+        https://www.google.com.br; font-src ''self'' data: *.app.crewai.com app.crewai.com;
+        connect-src ''self'' *.app.crewai.com app.crewai.com https://zeus.tools.crewai.com
+        https://connect.useparagon.com/ https://zeus.useparagon.com/* https://*.useparagon.com/*
+        https://run.pstmn.io https://connect.tools.crewai.com/ https://*.sentry.io
+        https://www.google-analytics.com https://edge.fullstory.com https://rs.fullstory.com
+        https://api.hubspot.com https://forms.hscollectedforms.net https://api.hubapi.com
+        https://px.ads.linkedin.com https://px4.ads.linkedin.com https://google.com/pagead/form-data/16713662509
+        https://google.com/ccm/form-data/16713662509 https://www.google.com/ccm/collect
+        https://worker-actionkit.tools.crewai.com https://api.reo.dev; frame-src ''self''
+        *.app.crewai.com app.crewai.com https://connect.useparagon.com/ https://zeus.tools.crewai.com
+        https://zeus.useparagon.com/* https://connect.tools.crewai.com/ https://docs.google.com
+        https://drive.google.com https://slides.google.com https://accounts.google.com
+        https://*.google.com https://app.hubspot.com/ https://td.doubleclick.net https://www.googletagmanager.com/
+        https://www.youtube.com https://share.descript.com'
+      etag:
+      - W/"ad9765408bacdf25c542345ddca78bb2"
+      expires:
+      - '0'
+      permissions-policy:
+      - camera=(), microphone=(self), geolocation=()
+      pragma:
+      - no-cache
+      referrer-policy:
+      - strict-origin-when-cross-origin
+      strict-transport-security:
+      - max-age=63072000; includeSubDomains
+      vary:
+      - Accept
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-permitted-cross-domain-policies:
+      - none
+      x-request-id:
+      - abeaefb7-af6b-4523-b627-a53fe86ef881
+      x-runtime:
+      - '0.085107'
+      x-xss-protection:
+      - 1; mode=block
+    status:
+      code: 201
+      message: Created
+- request:
+    body: '{"messages":[{"role":"system","content":"You are plants Senior Data Researcher\n.
+      You''re a seasoned researcher with a knack for uncovering the latest developments
+      in plants. Known for your ability to find the most relevant information and
+      present it in a clear and concise manner.\n\nYour personal goal is: Uncover
+      cutting-edge developments in plants\n\nTo give my best complete final answer
+      to the task respond using the exact following format:\n\nThought: I now can
+      give a great answer\nFinal Answer: Your final answer must be the great and the
+      most complete as possible, it must be outcome described.\n\nI MUST use these
+      formats, my job depends on it!"},{"role":"user","content":"\nCurrent Task: Conduct
+      a thorough research about plants Make sure you find any interesting and relevant
+      information given the current year is 2025.\n\n\nThis is the expected criteria
+      for your final answer: A list with 10 bullet points of the most relevant information
+      about plants\n\nyou MUST return the actual complete content as the final answer,
+      not a summary.\n\nThis is the context you''re working with:\n### Previous attempt
+      failed validation: Error while validating the task output: The guardrail result
+      is not a valid pydantic model\n\n\n### Previous result:\n1. **Plant-Based Biofuels**:
+      Advances in genetic engineering are allowing researchers to develop plants that
+      produce higher yields of biofuels, reducing reliance on fossil fuels. For example,
+      specialized strains of switchgrass and algae are being cultivated for more efficient
+      biofuel production.\n\n2. **CRISPR Technology in Plant Breeding**: The use of
+      CRISPR technology has accelerated the breeding of disease-resistant and drought-tolerant
+      plants. Researchers are now able to edit plant genomes with precision, leading
+      to breakthroughs in staple crops like rice and wheat for better resilience to
+      climate change.\n\n3. **Vertical Farming Innovations**: Vertical farming techniques
+      have evolved to integrate advanced hydroponics and aeroponics, improving space
+      efficiency and speed of plant growth. This method not only conserves water but
+      also minimizes the use of pesticides and herbicides.\n\n4. **Enhancing Plant
+      Photosynthesis**: Researchers are exploring ways to enhance the photosynthesis
+      process in plants, potentially increasing crop yields by up to 50%. New variations
+      in light-harvesting proteins have been identified that could lead to crops that
+      grow quicker and with less resource input.\n\n5. **Plant Communication**: Studies
+      have shown that plants can communicate with each other through root exudates
+      and volatile organic compounds. This research is leading to better understanding
+      of plant ecology and could have implications for agriculture practices and pest
+      control.\n\n6. **Soil Microbiomes and Plant Health**: Recent findings highlight
+      the importance of soil microbiomes in promoting plant health and growth. The
+      use of beneficial microbial inoculants is becoming a popular strategy to enhance
+      nutrient uptake and improve plant resilience.\n\n7. **Sustainable Pest Management**:
+      Innovative pest management strategies utilizing plant-based repellents are on
+      the rise. This involves selecting and cultivating plants that naturally deter
+      pests, minimizing the need for chemical pesticides and enhancing biodiversity.\n\n8.
+      **Urban Forests as Carbon Sinks**: Urban greening initiatives are increasingly
+      focusing on planting trees and shrubs in cities to capture carbon dioxide, improve
+      air quality, and promote biodiversity. These efforts are being recognized for
+      their role in mitigating urban heat and climate change impacts.\n\n9. **Phytoremediation**:
+      Research into using specific plants for soil and water remediation has gained
+      traction. Some plants can absorb heavy metals and toxins, offering a sustainable
+      solution for cleaning contaminated environments.\n\n10. **Biophilic Design in
+      Architecture**: There is a growing trend in incorporating plants into architectural
+      designs, employing biophilic principles to enhance urban ecosystems. This includes
+      the integration of green roofs and living walls, which provide aesthetic benefits
+      while improving air quality and biodiversity.\n\n\nTry again, making sure to
+      address the validation error.\n\nBegin! This is VERY important to you, use the
+      tools available and give your best Final Answer, your job depends on it!\n\nThought:"}],"model":"gpt-4.1-mini"}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate, zstd
+      connection:
+      - keep-alive
+      content-length:
+      - '4382'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.109.1
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.109.1
+      x-stainless-read-timeout:
+      - '600'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.9
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        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
+        NAszIyWuWi4AAAAA//8DAFv43+PuEAAA
+    headers:
+      CF-RAY:
+      - 99a008535b928ce2-EWR
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Wed, 05 Nov 2025 23:11:58 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - __cf_bm=gemAT_QB_h_zisIV4_4r2Ltg8oBSvOOHIp9lOpAcJxE-1762384318-1.0.1.1-hbHi8L_6ckzVRc7q12W69jloWLCbjFefoSgd465kdaTlFOdUKu4Ft.90.XtUYVTzXluYj28p0e07ASms9gCIdr8CHLfbhFQKf6nZqk7.KZ4;
+        path=/; expires=Wed, 05-Nov-25 23:41:58 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=FuiwbPturMkq3oPWfHULVuvVE6SZkSH8wf8u2lWOeHo-1762384318759-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - user-REDACTED
+      openai-processing-ms:
+      - '8275'
+      openai-project:
+      - proj_REDACTED
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '8409'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - '500'
+      x-ratelimit-limit-tokens:
+      - '200000'
+      x-ratelimit-remaining-requests:
+      - '499'
+      x-ratelimit-remaining-tokens:
+      - '198937'
+      x-ratelimit-reset-requests:
+      - 120ms
+      x-ratelimit-reset-tokens:
+      - 318ms
+      x-request-id:
+      - req_6e2ec55058f6435fa6f190848d95a858
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"Ensure your final answer strictly
+      adheres to the following OpenAPI schema: {\n  \"type\": \"json_schema\",\n  \"json_schema\":
+      {\n    \"name\": \"LLMGuardrailResult\",\n    \"strict\": true,\n    \"schema\":
+      {\n      \"properties\": {\n        \"valid\": {\n          \"description\":
+      \"Whether the task output complies with the guardrail\",\n          \"title\":
+      \"Valid\",\n          \"type\": \"boolean\"\n        },\n        \"feedback\":
+      {\n          \"anyOf\": [\n            {\n              \"type\": \"string\"\n            },\n            {\n              \"type\":
+      \"null\"\n            }\n          ],\n          \"default\": null,\n          \"description\":
+      \"A feedback about the task output if it is not valid\",\n          \"title\":
+      \"Feedback\"\n        }\n      },\n      \"required\": [\n        \"valid\",\n        \"feedback\"\n      ],\n      \"title\":
+      \"LLMGuardrailResult\",\n      \"type\": \"object\",\n      \"additionalProperties\":
+      false\n    }\n  }\n}\n\nDo not include the OpenAPI schema in the final output.
+      Ensure the final output does not include any code block markers like ```json
+      or ```python."},{"role":"user","content":"1. **Genetically Modified Plants for
+      Climate Resilience**: In 2025, significant progress has been made in developing
+      genetically engineered crops that are more resilient to extreme weather conditions
+      such as drought, heat, and flooding. Using advanced gene editing techniques
+      like CRISPR-Cas9, plants such as maize and soybeans have been tailored to survive
+      and produce stable yields despite climate stress.\n\n2. **Enhanced Carbon Capture
+      through Plant Engineering**: Researchers have identified and bioengineered certain
+      plant species to increase their carbon sequestration capacity. Innovations include
+      modifying root systems and photosynthetic pathways to absorb and store more
+      atmospheric carbon dioxide, contributing to climate change mitigation strategies.\n\n3.
+      **Vertical Farming Integration with AI and Robotics**: Modern vertical farms
+      combine hydroponics and aeroponics with artificial intelligence and robotics
+      to optimize plant growth cycles. AI monitors environmental conditions and nutrient
+      levels in real-time, while robots manage planting and harvesting, significantly
+      increasing efficiency and reducing labor costs.\n\n4. **Discovery of Plant Immune
+      System Pathways**: Cutting-edge research has unveiled new molecular pathways
+      in plants that govern their immune responses to pathogens. This knowledge is
+      being applied to develop crop varieties with enhanced natural resistance, reducing
+      the dependence on chemical pesticides.\n\n5. **Microbiome Engineering for Soil
+      and Plant Health**: Advances in understanding the plant microbiome have led
+      to the creation of customized microbial inoculants that improve nutrient uptake,
+      boost growth, and enhance stress tolerance. These soil and root microbiome treatments
+      are now widely used to promote sustainable agriculture.\n\n6. **Smart Plant
+      Sensors for Real-Time Monitoring**: Biotechnological breakthroughs have resulted
+      in the development of nanosensors that can be integrated into plants to provide
+      real-time data on plant health, water status, and nutrient deficiencies. This
+      technology enables precision agriculture by allowing farmers to make timely,
+      data-driven decisions.\n\n7. **Phytoremediation with Genetically Enhanced Species**:
+      New genetically modified plants have been developed with an increased ability
+      to absorb heavy metals and pollutants from contaminated soils and water bodies.
+      These plants serve as eco-friendly, cost-effective solutions for environmental
+      cleanup.\n\n8. **Urban Greening for Climate Resilience**: Cities in 2025 are
+      increasingly adopting urban forestry projects that use specially selected plant
+      species to combat the urban heat island effect, improve air quality, and support
+      urban biodiversity. These initiatives also play a vital role in enhancing mental
+      health and wellbeing for residents.\n\n9. **Plant-Based Bioplastics and Sustainable
+      Materials**: Innovations in plant biotechnology have enabled the production
+      of biodegradable plastics and other sustainable materials derived from plant
+      biomass. This technology offers alternatives to petroleum-based products, helping
+      reduce plastic pollution and carbon emissions.\n\n10. **Advancements in Photosynthesis
+      Efficiency**: Scientists have successfully introduced and optimized synthetic
+      pathways to enhance photosynthesis in crops, resulting in a 30-50% increase
+      in growth rates and yields. This breakthrough addresses the global food security
+      challenge by enabling more efficient energy conversion in plants."}],"model":"gpt-4.1-mini","response_format":{"type":"json_schema","json_schema":{"schema":{"properties":{"valid":{"description":"Whether
+      the task output complies with the guardrail","title":"Valid","type":"boolean"},"feedback":{"anyOf":[{"type":"string"},{"type":"null"}],"description":"A
+      feedback about the task output if it is not valid","title":"Feedback"}},"required":["valid","feedback"],"title":"LLMGuardrailResult","type":"object","additionalProperties":false},"name":"LLMGuardrailResult","strict":true}},"stream":false}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate, zstd
+      connection:
+      - keep-alive
+      content-length:
+      - '5198'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=gemAT_QB_h_zisIV4_4r2Ltg8oBSvOOHIp9lOpAcJxE-1762384318-1.0.1.1-hbHi8L_6ckzVRc7q12W69jloWLCbjFefoSgd465kdaTlFOdUKu4Ft.90.XtUYVTzXluYj28p0e07ASms9gCIdr8CHLfbhFQKf6nZqk7.KZ4;
+        _cfuvid=FuiwbPturMkq3oPWfHULVuvVE6SZkSH8wf8u2lWOeHo-1762384318759-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.109.1
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-helper-method:
+      - chat.completions.parse
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.109.1
+      x-stainless-read-timeout:
+      - '600'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.9
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAA4ySQW/UMBCF7/kV1pyTapNNy25uqAgh4NZyALaKvPYkMXVsy56Uwmr/O3Ky3aS0
+        SFxymG/e5L3xHBLGQEmoGIiOk+idzq6/to+37+jzTXj7wd/Yj/7T9Zf33W3/7Xdnf0IaFXb/AwU9
+        qS6E7Z1GUtZMWHjkhHFq/uaqWG/Kdb4dQW8l6ihrHWXlRZ71yqisWBWX2arM8vIk76wSGKBi3xPG
+        GDuM32jUSHyEiq3Sp0qPIfAWoTo3MQbe6lgBHoIKxA1BOkNhDaEZvR928MC1kjuoyA+Y7qBBlHsu
+        7ndQmUHr41LosRkCj+4jWgBujCUe04+W707keDapbeu83Ye/pNAoo0JXe+TBmmgokHUw0mPC2N24
+        jOFZPnDe9o5qsvc4/m5bbKd5MD/Cgp4YWeJ6UV5v0lfG1RKJKx0W2wTBRYdyls6r54NUdgGSReiX
+        Zl6bPQVXpv2f8TMQAh2hrJ1HqcTzwHObx3ii/2o7L3k0DAH9gxJYk0IfH0Jiwwc93Q2EX4Gwrxtl
+        WvTOq+l4GleXothc5s3mqoDkmPwBAAD//wMAy7pUCUsDAAA=
+    headers:
+      CF-RAY:
+      - 99a008889ae18ce2-EWR
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Wed, 05 Nov 2025 23:11:59 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - user-REDACTED
+      openai-processing-ms:
+      - '377'
+      openai-project:
+      - proj_REDACTED
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '643'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - '500'
+      x-ratelimit-limit-tokens:
+      - '200000'
+      x-ratelimit-remaining-requests:
+      - '499'
+      x-ratelimit-remaining-tokens:
+      - '198876'
+      x-ratelimit-reset-requests:
+      - 120ms
+      x-ratelimit-reset-tokens:
+      - 336ms
+      x-request-id:
+      - req_50adc1a4d2d2408281d33289f59d147d
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"Ensure your final answer strictly
+      adheres to the following OpenAPI schema: {\n  \"type\": \"json_schema\",\n  \"json_schema\":
+      {\n    \"name\": \"LLMGuardrailResult\",\n    \"strict\": true,\n    \"schema\":
+      {\n      \"properties\": {\n        \"valid\": {\n          \"description\":
+      \"Whether the task output complies with the guardrail\",\n          \"title\":
+      \"Valid\",\n          \"type\": \"boolean\"\n        },\n        \"feedback\":
+      {\n          \"anyOf\": [\n            {\n              \"type\": \"string\"\n            },\n            {\n              \"type\":
+      \"null\"\n            }\n          ],\n          \"default\": null,\n          \"description\":
+      \"A feedback about the task output if it is not valid\",\n          \"title\":
+      \"Feedback\"\n        }\n      },\n      \"required\": [\n        \"valid\",\n        \"feedback\"\n      ],\n      \"title\":
+      \"LLMGuardrailResult\",\n      \"type\": \"object\",\n      \"additionalProperties\":
+      false\n    }\n  }\n}\n\nDo not include the OpenAPI schema in the final output.
+      Ensure the final output does not include any code block markers like ```json
+      or ```python."},{"role":"user","content":"{\"valid\":true,\"feedback\":null}"}],"model":"gpt-4.1-mini","response_format":{"type":"json_schema","json_schema":{"schema":{"properties":{"valid":{"description":"Whether
+      the task output complies with the guardrail","title":"Valid","type":"boolean"},"feedback":{"anyOf":[{"type":"string"},{"type":"null"}],"description":"A
+      feedback about the task output if it is not valid","title":"Feedback"}},"required":["valid","feedback"],"title":"LLMGuardrailResult","type":"object","additionalProperties":false},"name":"LLMGuardrailResult","strict":true}},"stream":false}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate, zstd
+      connection:
+      - keep-alive
+      content-length:
+      - '1765'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=gemAT_QB_h_zisIV4_4r2Ltg8oBSvOOHIp9lOpAcJxE-1762384318-1.0.1.1-hbHi8L_6ckzVRc7q12W69jloWLCbjFefoSgd465kdaTlFOdUKu4Ft.90.XtUYVTzXluYj28p0e07ASms9gCIdr8CHLfbhFQKf6nZqk7.KZ4;
+        _cfuvid=FuiwbPturMkq3oPWfHULVuvVE6SZkSH8wf8u2lWOeHo-1762384318759-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.109.1
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-helper-method:
+      - chat.completions.parse
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.109.1
+      x-stainless-read-timeout:
+      - '600'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.9
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAA4ySMW/bMBCFd/0K4mYpkGXJcbQVRZcMXYoORR0INHmS2FAkQZ6SBob/e0HJsZQ0
+        Bbpw4Hfv+N7xTgljoCTUDETPSQxOZ59/dC/5l+fd117mvrv7dtt2n+63/fM9H78HSKPCHn+hoFfV
+        jbCD00jKmhkLj5wwdt3c7ortvtxWxQQGK1FHWecoK2822aCMyoq8qLK8zDblRd5bJTBAzX4mjDF2
+        ms5o1Ej8DTXL09ebAUPgHUJ9LWIMvNXxBngIKhA3BOkChTWEZvJ+OsAT10oeoCY/YnqAFlEeuXg8
+        QG1Grc9rocd2DDy6j2gFuDGWeEw/WX64kPPVpLad8/YY3kmhVUaFvvHIgzXRUCDrYKLnhLGHaRjj
+        m3zgvB0cNWQfcXpuW+7mfrB8wkLvLowscb0SVVX6QbtGInGlw2qaILjoUS7SZfR8lMquQLIK/beZ
+        j3rPwZXp/qf9AoRARygb51Eq8TbwUuYxrui/yq5DngxDQP+kBDak0MePkNjyUc97A+ElEA5Nq0yH
+        3nk1L0/rmlIU+2rT7ncFJOfkDwAAAP//AwBk3ndHSwMAAA==
+    headers:
+      CF-RAY:
+      - 99a0095c2f319a1a-EWR
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Wed, 05 Nov 2025 23:12:33 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - user-REDACTED
+      openai-processing-ms:
+      - '443'
+      openai-project:
+      - proj_REDACTED
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '625'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - '500'
+      x-ratelimit-limit-tokens:
+      - '200000'
+      x-ratelimit-remaining-requests:
+      - '499'
+      x-ratelimit-remaining-tokens:
+      - '199732'
+      x-ratelimit-reset-requests:
+      - 120ms
+      x-ratelimit-reset-tokens:
+      - 80ms
+      x-request-id:
+      - req_7aeda9ef4e374a68a5a0950ed0c8e88b
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"You are plants Reporting Analyst\n.
+      You''re a meticulous analyst with a keen eye for detail. You''re known for your
+      ability to turn complex data into clear and concise reports, making it easy
+      for others to understand and act on the information you provide.\n\nYour personal
+      goal is: Create detailed reports based on plants data analysis and research
+      findings\n\nTo give my best complete final answer to the task respond using
+      the exact following format:\n\nThought: I now can give a great answer\nFinal
+      Answer: Your final answer must be the great and the most complete as possible,
+      it must be outcome described.\n\nI MUST use these formats, my job depends on
+      it!"},{"role":"user","content":"\nCurrent Task: Review the context you got and
+      expand each topic into a full section for a report. Make sure the report is
+      detailed and contains any and all relevant information.\n\n\nThis is the expected
+      criteria for your final answer: A fully fledge reports with the mains topics,
+      each with a full section of information. Formatted as markdown without ''```''\n\nyou
+      MUST return the actual complete content as the final answer, not a summary.\n\nThis
+      is the context you''re working with:\n1. **Genetically Modified Plants for Climate
+      Resilience**: In 2025, significant progress has been made in developing genetically
+      engineered crops that are more resilient to extreme weather conditions such
+      as drought, heat, and flooding. Using advanced gene editing techniques like
+      CRISPR-Cas9, plants such as maize and soybeans have been tailored to survive
+      and produce stable yields despite climate stress.\n\n2. **Enhanced Carbon Capture
+      through Plant Engineering**: Researchers have identified and bioengineered certain
+      plant species to increase their carbon sequestration capacity. Innovations include
+      modifying root systems and photosynthetic pathways to absorb and store more
+      atmospheric carbon dioxide, contributing to climate change mitigation strategies.\n\n3.
+      **Vertical Farming Integration with AI and Robotics**: Modern vertical farms
+      combine hydroponics and aeroponics with artificial intelligence and robotics
+      to optimize plant growth cycles. AI monitors environmental conditions and nutrient
+      levels in real-time, while robots manage planting and harvesting, significantly
+      increasing efficiency and reducing labor costs.\n\n4. **Discovery of Plant Immune
+      System Pathways**: Cutting-edge research has unveiled new molecular pathways
+      in plants that govern their immune responses to pathogens. This knowledge is
+      being applied to develop crop varieties with enhanced natural resistance, reducing
+      the dependence on chemical pesticides.\n\n5. **Microbiome Engineering for Soil
+      and Plant Health**: Advances in understanding the plant microbiome have led
+      to the creation of customized microbial inoculants that improve nutrient uptake,
+      boost growth, and enhance stress tolerance. These soil and root microbiome treatments
+      are now widely used to promote sustainable agriculture.\n\n6. **Smart Plant
+      Sensors for Real-Time Monitoring**: Biotechnological breakthroughs have resulted
+      in the development of nanosensors that can be integrated into plants to provide
+      real-time data on plant health, water status, and nutrient deficiencies. This
+      technology enables precision agriculture by allowing farmers to make timely,
+      data-driven decisions.\n\n7. **Phytoremediation with Genetically Enhanced Species**:
+      New genetically modified plants have been developed with an increased ability
+      to absorb heavy metals and pollutants from contaminated soils and water bodies.
+      These plants serve as eco-friendly, cost-effective solutions for environmental
+      cleanup.\n\n8. **Urban Greening for Climate Resilience**: Cities in 2025 are
+      increasingly adopting urban forestry projects that use specially selected plant
+      species to combat the urban heat island effect, improve air quality, and support
+      urban biodiversity. These initiatives also play a vital role in enhancing mental
+      health and wellbeing for residents.\n\n9. **Plant-Based Bioplastics and Sustainable
+      Materials**: Innovations in plant biotechnology have enabled the production
+      of biodegradable plastics and other sustainable materials derived from plant
+      biomass. This technology offers alternatives to petroleum-based products, helping
+      reduce plastic pollution and carbon emissions.\n\n10. **Advancements in Photosynthesis
+      Efficiency**: Scientists have successfully introduced and optimized synthetic
+      pathways to enhance photosynthesis in crops, resulting in a 30-50% increase
+      in growth rates and yields. This breakthrough addresses the global food security
+      challenge by enabling more efficient energy conversion in plants.\n\nBegin!
+      This is VERY important to you, use the tools available and give your best Final
+      Answer, your job depends on it!\n\nThought:"}],"model":"gpt-4.1-mini"}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate, zstd
+      connection:
+      - keep-alive
+      content-length:
+      - '4846'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.109.1
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.109.1
+      x-stainless-read-timeout:
+      - '600'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.9
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        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
+    headers:
+      CF-RAY:
+      - 99a009e659845642-EWR
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Wed, 05 Nov 2025 23:13:18 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - __cf_bm=.rEqb26S2HsQ1o0Ja7e_a0FNSP6mXo5NcckqrjzXhfM-1762384398-1.0.1.1-S88CeJ3IiOILT3Z9ld.7miZJEPOqGZkjAcRdt0Eu4iURqGJH8ZVYHAwikAjb8v2MT0drLKNlaneksrq1QCLU4G_CpqKTCkfeU2nh1ozS7uY;
+        path=/; expires=Wed, 05-Nov-25 23:43:18 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=dSZh5_iAI7iopvBuWuh0oj7Zgv954H3Cju_z8Rt.r1k-1762384398265-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - user-REDACTED
+      openai-processing-ms:
+      - '23278'
+      openai-project:
+      - proj_fL4UBWR1CMpAAdgzaSKqsVvA
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '23447'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - '500'
+      x-ratelimit-limit-tokens:
+      - '200000'
+      x-ratelimit-remaining-requests:
+      - '499'
+      x-ratelimit-remaining-tokens:
+      - '198820'
+      x-ratelimit-reset-requests:
+      - 120ms
+      x-ratelimit-reset-tokens:
+      - 354ms
+      x-request-id:
+      - req_fb0d5f8e98354927a30075e26853a018
     status:
       code: 200
       message: OK

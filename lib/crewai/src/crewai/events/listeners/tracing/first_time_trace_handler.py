@@ -73,15 +73,19 @@ class FirstTimeTraceHandler:
         self.is_first_time = should_auto_collect_first_time_traces()
         return self.is_first_time
 
-    def set_batch_manager(self, batch_manager: TraceBatchManager):
-        """Set reference to batch manager for sending events."""
+    def set_batch_manager(self, batch_manager: TraceBatchManager) -> None:
+        """Set reference to batch manager for sending events.
+
+        Args:
+            batch_manager: The trace batch manager instance.
+        """
         self.batch_manager = batch_manager
 
-    def mark_events_collected(self):
+    def mark_events_collected(self) -> None:
         """Mark that events have been collected during execution."""
         self.collected_events = True
 
-    def handle_execution_completion(self):
+    def handle_execution_completion(self) -> None:
         """Handle the completion flow as shown in your diagram."""
         if not self.is_first_time or not self.collected_events:
             return

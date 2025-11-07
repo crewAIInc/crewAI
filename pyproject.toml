@@ -117,13 +117,7 @@ warn_return_any = true
 show_error_codes = true
 warn_unused_ignores = true
 python_version = "3.12"
-exclude = [
-    "lib/crewai/src/crewai/cli/templates",
-    "lib/crewai/tests/",
-    # crewai-tools
-    "lib/crewai-tools/tests/",
-    "lib/crewai/src/crewai/experimental/a2a"
-]
+exclude = "(?x)(^lib/crewai/src/crewai/cli/templates/ | ^lib/crewai/tests/ | ^lib/crewai-tools/tests/)"
 plugins = ["pydantic.mypy", "crewai.mypy"]
 
 

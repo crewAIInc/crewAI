@@ -5,7 +5,6 @@ from __future__ import annotations
 from collections.abc import Callable, Sequence
 import functools
 import inspect
-import types
 from typing import Any, Generic, Literal, ParamSpec, TypeAlias, TypeVar, TypedDict
 
 from typing_extensions import Required, Self
@@ -17,8 +16,6 @@ P = ParamSpec("P")
 R = TypeVar("R")
 
 FlowConditionType: TypeAlias = Literal["OR", "AND"]
-
-# Simple flow condition stored as tuple (condition_type, method_list)
 SimpleFlowCondition: TypeAlias = tuple[FlowConditionType, list[FlowMethodName]]
 
 
@@ -26,6 +23,11 @@ class FlowCondition(TypedDict, total=False):
     """Type definition for flow trigger conditions.
 
     This is a recursive structure where conditions can contain nested FlowConditions.
+
+    Attributes:
+        type: The type of the condition.
+        conditions: A list of conditions types.
+        methods: A list of methods.
     """
 
     type: Required[FlowConditionType]
@@ -79,8 +81,7 @@ class FlowMethod(Generic[P, R]):
             The result of calling the wrapped method.
         """
         if self._instance is not None:
-            bound = types.MethodType(self._meth, self._instance)
-            return bound(*args, **kwargs)
+            return self._meth(self._instance, *args, **kwargs)
         return self._meth(*args, **kwargs)
 
     def unwrap(self) -> Callable[P, R]:

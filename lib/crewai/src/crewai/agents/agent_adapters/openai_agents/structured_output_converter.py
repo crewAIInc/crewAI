@@ -7,7 +7,7 @@ output conversion for OpenAI agents, supporting JSON and Pydantic model formats.
 from typing import Any
 
 from crewai.agents.agent_adapters.base_converter_adapter import BaseConverterAdapter
-from crewai.utilities.i18n import I18N
+from crewai.utilities.i18n import get_i18n
 
 
 class OpenAIConverterAdapter(BaseConverterAdapter):
@@ -59,7 +59,7 @@ class OpenAIConverterAdapter(BaseConverterAdapter):
             return base_prompt
 
         output_schema: str = (
-            I18N()
+            get_i18n()
             .slice("formatted_task_instructions")
             .format(output_format=self._schema)
         )

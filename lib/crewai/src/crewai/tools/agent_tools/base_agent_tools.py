@@ -1,12 +1,12 @@
 import logging
+from typing import Any
 
 from pydantic import Field
 
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.task import Task
 from crewai.tools.base_tool import BaseTool
-from crewai.utilities.i18n import I18N
-
+from crewai.utilities.i18n import I18N, get_i18n
 
 
 logger = logging.getLogger(__name__)
@@ -17,7 +17,7 @@ class BaseAgentTool(BaseTool):
 
     agents: list[BaseAgent] = Field(description="List of available agents")
     i18n: I18N = Field(
-        default_factory=I18N, description="Internationalization settings"
+        default_factory=get_i18n, description="Internationalization settings"
     )
 
     def sanitize_agent_name(self, name: str) -> str:
@@ -40,7 +40,7 @@ class BaseAgentTool(BaseTool):
         return normalized.replace('"', "").casefold()
 
     @staticmethod
-    def _get_coworker(coworker: str | None, **kwargs) -> str | None:
+    def _get_coworker(coworker: str | None, **kwargs: Any) -> str | None:
         coworker = coworker or kwargs.get("co_worker") or kwargs.get("coworker")
         if coworker:
             is_list = coworker.startswith("[") and coworker.endswith("]")
@@ -83,7 +83,7 @@ class BaseAgentTool(BaseTool):
             available_agents = [agent.role for agent in self.agents]
             logger.debug(f"Available agents: {available_agents}")
 
-            agent = [  # type: ignore # Incompatible types in assignment (expression has type "list[BaseAgent]", variable has type "str | None")
+            agent = [
                 available_agent
                 for available_agent in self.agents
                 if self.sanitize_agent_name(available_agent.role) == sanitized_name

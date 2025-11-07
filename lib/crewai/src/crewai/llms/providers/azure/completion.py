@@ -1,7 +1,11 @@
+from __future__ import annotations
+
 import json
 import logging
 import os
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+from pydantic import BaseModel
 
 from crewai.utilities.agent_utils import is_context_length_exceeded
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
@@ -10,19 +14,24 @@ from crewai.utilities.exceptions.context_window_exceeding_exception import (
 from crewai.utilities.types import LLMMessage
 
 
+if TYPE_CHECKING:
+    from crewai.llms.hooks.base import BaseInterceptor
+    from crewai.tools.base_tool import BaseTool
+
+
 try:
-    from azure.ai.inference import (  # type: ignore[import-not-found]
+    from azure.ai.inference import (
         ChatCompletionsClient,
     )
-    from azure.ai.inference.models import (  # type: ignore[import-not-found]
+    from azure.ai.inference.models import (
         ChatCompletions,
         ChatCompletionsToolCall,
         StreamingChatCompletionsUpdate,
     )
-    from azure.core.credentials import (  # type: ignore[import-not-found]
+    from azure.core.credentials import (
         AzureKeyCredential,
     )
-    from azure.core.exceptions import (  # type: ignore[import-not-found]
+    from azure.core.exceptions import (
         HttpResponseError,
     )
 
@@ -57,7 +66,8 @@ class AzureCompletion(BaseLLM):
         max_tokens: int | None = None,
         stop: list[str] | None = None,
         stream: bool = False,
-        **kwargs,
+        interceptor: BaseInterceptor[Any, Any] | None = None,
+        **kwargs: Any,
     ):
         """Initialize Azure AI Inference chat completion client.
 
@@ -75,8 +85,15 @@ class AzureCompletion(BaseLLM):
             max_tokens: Maximum tokens in response
             stop: Stop sequences
             stream: Enable streaming responses
+            interceptor: HTTP interceptor (not yet supported for Azure).
             **kwargs: Additional parameters
         """
+        if interceptor is not None:
+            raise NotImplementedError(
+                "HTTP interceptors are not yet supported for Azure AI Inference provider. "
+                "Interceptors are currently supported for OpenAI and Anthropic providers only."
+            )
+
         super().__init__(
             model=model, temperature=temperature, stop=stop or [], **kwargs
         )
@@ -114,7 +131,7 @@ class AzureCompletion(BaseLLM):
         if self.api_version:
             client_kwargs["api_version"] = self.api_version
 
-        self.client = ChatCompletionsClient(**client_kwargs)
+        self.client = ChatCompletionsClient(**client_kwargs)  # type: ignore[arg-type]
 
         self.top_p = top_p
         self.frequency_penalty = frequency_penalty
@@ -157,11 +174,12 @@ class AzureCompletion(BaseLLM):
     def call(
         self,
         messages: str | list[LLMMessage],
-        tools: list[dict] | None = None,
+        tools: list[dict[str, BaseTool]] | None = None,
         callbacks: list[Any] | None = None,
         available_functions: dict[str, Any] | None = None,
         from_task: Any | None = None,
         from_agent: Any | None = None,
+        response_model: type[BaseModel] | None = None,
     ) -> str | Any:
         """Call Azure AI Inference chat completions API.
 
@@ -192,17 +210,25 @@ class AzureCompletion(BaseLLM):
 
             # Prepare completion parameters
             completion_params = self._prepare_completion_params(
-                formatted_messages, tools
+                formatted_messages, tools, response_model
             )
 
             # Handle streaming vs non-streaming
             if self.stream:
                 return self._handle_streaming_completion(
-                    completion_params, available_functions, from_task, from_agent
+                    completion_params,
+                    available_functions,
+                    from_task,
+                    from_agent,
+                    response_model,
                 )
 
             return self._handle_completion(
-                completion_params, available_functions, from_task, from_agent
+                completion_params,
+                available_functions,
+                from_task,
+                from_agent,
+                response_model,
             )
 
         except HttpResponseError as e:
@@ -233,13 +259,15 @@ class AzureCompletion(BaseLLM):
     def _prepare_completion_params(
         self,
         messages: list[LLMMessage],
-        tools: list[dict] | None = None,
+        tools: list[dict[str, Any]] | None = None,
+        response_model: type[BaseModel] | None = None,
     ) -> dict[str, Any]:
         """Prepare parameters for Azure AI Inference chat completion.
 
         Args:
             messages: Formatted messages for Azure
             tools: Tool definitions
+            response_model: Pydantic model for structured output
 
         Returns:
             Parameters dictionary for Azure API
@@ -248,6 +276,15 @@ class AzureCompletion(BaseLLM):
             "messages": messages,
             "stream": self.stream,
         }
+
+        if response_model and self.is_openai_model:
+            params["response_format"] = {
+                "type": "json_schema",
+                "json_schema": {
+                    "name": response_model.__name__,
+                    "schema": response_model.model_json_schema(),
+                },
+            }
 
         # Only include model parameter for non-Azure OpenAI endpoints
         # Azure OpenAI endpoints have the deployment name in the URL
@@ -275,7 +312,9 @@ class AzureCompletion(BaseLLM):
 
         return params
 
-    def _convert_tools_for_interference(self, tools: list[dict]) -> list[dict]:
+    def _convert_tools_for_interference(
+        self, tools: list[dict[str, Any]]
+    ) -> list[dict[str, Any]]:
         """Convert CrewAI tool format to Azure OpenAI function calling format."""
 
         from crewai.llms.providers.utils.common import safe_tool_conversion
@@ -334,6 +373,7 @@ class AzureCompletion(BaseLLM):
         available_functions: dict[str, Any] | None = None,
         from_task: Any | None = None,
         from_agent: Any | None = None,
+        response_model: type[BaseModel] | None = None,
     ) -> str | Any:
         """Handle non-streaming chat completion."""
         # Make API call
@@ -349,6 +389,26 @@ class AzureCompletion(BaseLLM):
             # Extract and track token usage
             usage = self._extract_azure_token_usage(response)
             self._track_token_usage_internal(usage)
+
+            if response_model and self.is_openai_model:
+                content = message.content or ""
+                try:
+                    structured_data = response_model.model_validate_json(content)
+                    structured_json = structured_data.model_dump_json()
+
+                    self._emit_call_completed_event(
+                        response=structured_json,
+                        call_type=LLMCallType.LLM_CALL,
+                        from_task=from_task,
+                        from_agent=from_agent,
+                        messages=params["messages"],
+                    )
+
+                    return structured_json
+                except Exception as e:
+                    error_msg = f"Failed to validate structured output with model {response_model.__name__}: {e}"
+                    logging.error(error_msg)
+                    raise ValueError(error_msg) from e
 
             # Handle tool calls
             if message.tool_calls and available_functions:
@@ -409,6 +469,7 @@ class AzureCompletion(BaseLLM):
         available_functions: dict[str, Any] | None = None,
         from_task: Any | None = None,
         from_agent: Any | None = None,
+        response_model: type[BaseModel] | None = None,
     ) -> str:
         """Handle streaming chat completion."""
         full_response = ""

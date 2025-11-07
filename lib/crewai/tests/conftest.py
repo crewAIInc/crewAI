@@ -78,6 +78,17 @@ def auto_mock_telemetry(request):
             mock_instance = create_mock_telemetry_instance()
             mock_telemetry_class.return_value = mock_instance
 
+            # Create mock for TraceBatchManager
+            mock_trace_manager = Mock()
+            mock_trace_manager.add_trace = Mock()
+            mock_trace_manager.send_batch = Mock()
+            mock_trace_manager.stop = Mock()
+
+            # Create mock for BatchSpanProcessor to prevent OpenTelemetry background threads
+            mock_batch_processor = Mock()
+            mock_batch_processor.shutdown = Mock()
+            mock_batch_processor.force_flush = Mock()
+
             with (
                 patch(
                     "crewai.events.event_listener.Telemetry",
@@ -86,6 +97,22 @@ def auto_mock_telemetry(request):
                 patch("crewai.tools.tool_usage.Telemetry", mock_telemetry_class),
                 patch("crewai.cli.command.Telemetry", mock_telemetry_class),
                 patch("crewai.cli.create_flow.Telemetry", mock_telemetry_class),
+                patch(
+                    "crewai.events.listeners.tracing.trace_batch_manager.TraceBatchManager",
+                    return_value=mock_trace_manager,
+                ),
+                patch(
+                    "crewai.events.listeners.tracing.trace_listener.TraceBatchManager",
+                    return_value=mock_trace_manager,
+                ),
+                patch(
+                    "crewai.events.listeners.tracing.first_time_trace_handler.TraceBatchManager",
+                    return_value=mock_trace_manager,
+                ),
+                patch(
+                    "opentelemetry.sdk.trace.export.BatchSpanProcessor",
+                    return_value=mock_batch_processor,
+                ),
             ):
                 yield mock_instance
 
@@ -175,8 +202,8 @@ def clear_event_bus_handlers(setup_test_environment):
 
     yield
 
-    # Shutdown event bus and wait for all handlers to complete
-    crewai_event_bus.shutdown(wait=True)
+    # Shutdown event bus without waiting to avoid hanging on blocked threads
+    crewai_event_bus.shutdown(wait=False)
     crewai_event_bus._initialize()
 
     callback = EvaluationTraceCallback()
