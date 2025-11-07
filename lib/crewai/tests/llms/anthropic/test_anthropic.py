@@ -36,7 +36,7 @@ def test_anthropic_completion_is_used_when_claude_provider():
 
     from crewai.llms.providers.anthropic.completion import AnthropicCompletion
     assert isinstance(llm, AnthropicCompletion)
-    assert llm.provider == "claude"
+    assert llm.provider == "anthropic"
     assert llm.model == "claude-3-5-sonnet-20241022"
 
 
