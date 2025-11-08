@@ -24,7 +24,7 @@ def test_gemini_completion_is_used_when_google_provider():
     llm = LLM(model="google/gemini-2.0-flash-001")
 
     assert llm.__class__.__name__ == "GeminiCompletion"
-    assert llm.provider == "google"
+    assert llm.provider == "gemini"
     assert llm.model == "gemini-2.0-flash-001"
 
 

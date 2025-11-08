@@ -38,6 +38,13 @@ from crewai.events.types.tool_usage_events import (
     ToolUsageStartedEvent,
 )
 from crewai.llms.base_llm import BaseLLM
+from crewai.llms.constants import (
+    ANTHROPIC_MODELS,
+    AZURE_MODELS,
+    BEDROCK_MODELS,
+    GEMINI_MODELS,
+    OPENAI_MODELS,
+)
 from crewai.utilities import InternalInstructor
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededError,
@@ -323,18 +330,64 @@ class LLM(BaseLLM):
     completion_cost: float | None = None
 
     def __new__(cls, model: str, is_litellm: bool = False, **kwargs: Any) -> LLM:
-        """Factory method that routes to native SDK or falls back to LiteLLM."""
+        """Factory method that routes to native SDK or falls back to LiteLLM.
+
+        Routing priority:
+            1. If 'provider' kwarg is present, use that provider with constants
+            2. If only 'model' kwarg, use constants to infer provider
+            3. If "/" in model name:
+               - Check if prefix is a native provider (openai/anthropic/azure/bedrock/gemini)
+               - If yes, validate model against constants
+               - If valid, route to native SDK; otherwise route to LiteLLM
+        """
         if not model or not isinstance(model, str):
             raise ValueError("Model must be a non-empty string")
 
-        provider = model.partition("/")[0] if "/" in model else "openai"
+        explicit_provider = kwargs.get("provider")
 
-        native_class = cls._get_native_provider(provider)
+        if explicit_provider:
+            provider = explicit_provider
+            use_native = True
+            model_string = model
+        elif "/" in model:
+            prefix, _, model_part = model.partition("/")
+
+            provider_mapping = {
+                "openai": "openai",
+                "anthropic": "anthropic",
+                "claude": "anthropic",
+                "azure": "azure",
+                "azure_openai": "azure",
+                "google": "gemini",
+                "gemini": "gemini",
+                "bedrock": "bedrock",
+                "aws": "bedrock",
+            }
+
+            canonical_provider = provider_mapping.get(prefix.lower())
+
+            if canonical_provider and cls._validate_model_in_constants(
+                model_part, canonical_provider
+            ):
+                provider = canonical_provider
+                use_native = True
+                model_string = model_part
+            else:
+                provider = prefix
+                use_native = False
+                model_string = model_part
+        else:
+            provider = cls._infer_provider_from_model(model)
+            use_native = True
+            model_string = model
+
+        native_class = cls._get_native_provider(provider) if use_native else None
         if native_class and not is_litellm and provider in SUPPORTED_NATIVE_PROVIDERS:
             try:
-                model_string = model.partition("/")[2] if "/" in model else model
+                # Remove 'provider' from kwargs if it exists to avoid duplicate keyword argument
+                kwargs_copy = {k: v for k, v in kwargs.items() if k != 'provider'}
                 return cast(
-                    Self, native_class(model=model_string, provider=provider, **kwargs)
+                    Self, native_class(model=model_string, provider=provider, **kwargs_copy)
                 )
             except NotImplementedError:
                 raise
@@ -350,6 +403,63 @@ class LLM(BaseLLM):
         super(LLM, instance).__init__(model=model, is_litellm=True, **kwargs)
         instance.is_litellm = True
         return instance
+
+    @classmethod
+    def _validate_model_in_constants(cls, model: str, provider: str) -> bool:
+        """Validate if a model name exists in the provider's constants.
+
+        Args:
+            model: The model name to validate
+            provider: The provider to check against (canonical name)
+
+        Returns:
+            True if the model exists in the provider's constants, False otherwise
+        """
+        if provider == "openai":
+            return model in OPENAI_MODELS
+
+        if provider == "anthropic" or provider == "claude":
+            return model in ANTHROPIC_MODELS
+
+        if provider == "gemini":
+            return model in GEMINI_MODELS
+
+        if provider == "bedrock":
+            return model in BEDROCK_MODELS
+
+        if provider == "azure":
+            # azure does not provide a list of available models, determine a better way to handle this
+            return True
+
+        return False
+
+    @classmethod
+    def _infer_provider_from_model(cls, model: str) -> str:
+        """Infer the provider from the model name.
+
+        Args:
+            model: The model name without provider prefix
+
+        Returns:
+            The inferred provider name, defaults to "openai"
+        """
+
+        if model in OPENAI_MODELS:
+            return "openai"
+
+        if model in ANTHROPIC_MODELS:
+            return "anthropic"
+
+        if model in GEMINI_MODELS:
+            return "gemini"
+
+        if model in BEDROCK_MODELS:
+            return "bedrock"
+
+        if model in AZURE_MODELS:
+            return "azure"
+
+        return "openai"
 
     @classmethod
     def _get_native_provider(cls, provider: str) -> type | None:
