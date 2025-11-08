@@ -9,6 +9,7 @@ from crewai.events import (
     LLMStreamChunkEvent, 
     TaskCompletedEvent
 )
+from crewai.agents.constants import FINAL_ANSWER_ACTION
 
 # Configure logger
 logger = logging.getLogger(__name__)
@@ -153,7 +154,7 @@ class CrewStreamer:
                 accumulated_result += token
                 
                 # Check if we should start yielding tokens
-                if not final_answer_reached and "Final Answer:" in accumulated_result:
+                if not final_answer_reached and FINAL_ANSWER_ACTION in accumulated_result:
                     final_answer_reached = True
                     logger.info("Final Answer section reached, starting token stream")
                 
