@@ -38,6 +38,7 @@ extend-exclude = [
     "lib/crewai/src/crewai/cli/templates",
     "lib/crewai/tests/",
     "lib/crewai-tools/tests/",
+    "conftest.py",
 ]
 respect-gitignore = true
 force-exclude = true

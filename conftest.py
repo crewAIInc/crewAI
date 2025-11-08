@@ -1,19 +1,21 @@
-# conftest.py
+"""Pytest configuration for crewAI workspace."""
+
 import os
-import tempfile
 from pathlib import Path
+import tempfile
 from typing import Any
 
 import pytest
-from dotenv import load_dotenv
 
-# Load .env.test for consistent test environment (mimics CI)
-env_test_path = Path(__file__).parent.parent.parent.parent / ".env.test"
-load_dotenv(env_test_path, override=True)
+
+# Load .env.test for consistent test environment
+# env_test_path = Path(__file__).parent / ".env.test"
+# load_dotenv(env_test_path, override=True)
+# load_dotenv(override=True)
 
 
 @pytest.fixture(autouse=True, scope="function")
-def setup_test_environment():
+def setup_test_environment() -> None:  # type: ignore
     """Set up test environment with a temporary directory for SQLite storage."""
     with tempfile.TemporaryDirectory() as temp_dir:
         # Create the directory with proper permissions
@@ -77,19 +79,54 @@ HEADERS_TO_FILTER = {
 }
 
 
-def _filter_response_headers(response):
+def _filter_response_headers(response) -> dict[str, Any]:  # type: ignore
     """Filter sensitive headers from response before recording."""
     for header_name, replacement in HEADERS_TO_FILTER.items():
-      for variant in [header_name, header_name.upper(), header_name.title()]:
-        if variant in response["headers"]:
-          response["headers"][variant] = [replacement]
-    return response
+        for variant in [header_name, header_name.upper(), header_name.title()]:
+            if variant in response["headers"]:
+                response["headers"][variant] = [replacement]
+    return response  # type: ignore
 
 
-@pytest.fixture(scope="session", autouse=True)
-def vcr_config(request) -> dict[str, Any]:
+@pytest.fixture(scope="module")
+def vcr_cassette_dir(request: Any) -> str:
+    """Generate cassette directory path based on test module location.
+
+    Organizes cassettes to mirror test directory structure within each package:
+    lib/crewai/tests/llms/google/test_google.py -> lib/crewai/tests/cassettes/llms/google/
+    lib/crewai-tools/tests/tools/test_search.py -> lib/crewai-tools/tests/cassettes/tools/
+    """
+    test_file = Path(request.fspath)
+
+    # Find the package root (lib/crewai or lib/crewai-tools)
+    for parent in test_file.parents:
+        if parent.name in ("crewai", "crewai-tools") and parent.parent.name == "lib":
+            package_root = parent
+            break
+    else:
+        # Fallback to old behavior if we can't find package root
+        package_root = test_file.parent
+
+    tests_root = package_root / "tests"
+    test_dir = test_file.parent
+
+    # Get relative path from tests root
+    if test_dir != tests_root:
+        relative_path = test_dir.relative_to(tests_root)
+        cassette_dir = tests_root / "cassettes" / relative_path
+    else:
+        cassette_dir = tests_root / "cassettes"
+
+    cassette_dir.mkdir(parents=True, exist_ok=True)
+
+    return str(cassette_dir)
+
+
+@pytest.fixture(scope="module")
+def vcr_config(vcr_cassette_dir: str) -> dict[str, Any]:
+    """Configure VCR with organized cassette storage."""
     config = {
-        "cassette_library_dir": os.path.join(os.path.dirname(__file__), "cassettes"),
+        "cassette_library_dir": vcr_cassette_dir,
         "record_mode": os.getenv("PYTEST_VCR_RECORD_MODE") or "once",
         "filter_headers": [(k, v) for k, v in HEADERS_TO_FILTER.items()],
         "before_record_response": _filter_response_headers,

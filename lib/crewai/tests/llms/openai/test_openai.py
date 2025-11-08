@@ -324,9 +324,9 @@ def test_openai_completion_call_returns_usage_metrics():
     crew = Crew(agents=[agent], tasks=[task])
     result = crew.kickoff()
     assert result.token_usage is not None
-    assert result.token_usage.total_tokens == 289
+    assert result.token_usage.total_tokens == 297
     assert result.token_usage.prompt_tokens == 173
-    assert result.token_usage.completion_tokens == 116
+    assert result.token_usage.completion_tokens == 124
     assert result.token_usage.successful_requests == 1
     assert result.token_usage.cached_prompt_tokens == 0
 

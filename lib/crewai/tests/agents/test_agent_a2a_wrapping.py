@@ -1,18 +1,9 @@
 """Test A2A wrapper is only applied when a2a is passed to Agent."""
 
-from unittest.mock import patch
-
-import pytest
-
 from crewai import Agent
 from crewai.a2a.config import A2AConfig
 
-try:
-    import a2a  # noqa: F401
-
-    A2A_SDK_INSTALLED = True
-except ImportError:
-    A2A_SDK_INSTALLED = False
+import a2a  # noqa: F401
 
 
 def test_agent_without_a2a_has_no_wrapper():
@@ -27,10 +18,6 @@ def test_agent_without_a2a_has_no_wrapper():
     assert callable(agent.execute_task)
 
 
-@pytest.mark.skipif(
-    True,
-    reason="Requires a2a-sdk to be installed. This test verifies wrapper is applied when a2a is set.",
-)
 def test_agent_with_a2a_has_wrapper():
     """Verify that agents with a2a get the wrapper applied."""
     a2a_config = A2AConfig(
@@ -49,7 +36,6 @@ def test_agent_with_a2a_has_wrapper():
     assert callable(agent.execute_task)
 
 
-@pytest.mark.skipif(not A2A_SDK_INSTALLED, reason="Requires a2a-sdk to be installed")
 def test_agent_with_a2a_creates_successfully():
     """Verify that creating an agent with a2a succeeds and applies wrapper."""
     a2a_config = A2AConfig(
@@ -89,7 +75,6 @@ def test_multiple_agents_without_a2a():
     assert callable(agent2.execute_task)
 
 
-@pytest.mark.skipif(not A2A_SDK_INSTALLED, reason="Requires a2a-sdk to be installed")
 def test_wrapper_is_applied_differently_per_instance():
     """Verify that agents with and without a2a have different execute_task methods."""
     agent_without_a2a = Agent(
