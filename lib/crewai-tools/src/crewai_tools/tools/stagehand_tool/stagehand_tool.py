@@ -247,7 +247,7 @@ class StagehandTool(BaseTool):
         if "claude" in model_str.lower() or "anthropic" in model_str.lower():
             return self.model_api_key or os.getenv("ANTHROPIC_API_KEY")
         if "gemini" in model_str.lower():
-            return self.model_api_key or os.getenv("GOOGLE_API_KEY")
+            return self.model_api_key or os.getenv("GEMINI_API_KEY")
         # Default to trying OpenAI, then Anthropic
         return (
             self.model_api_key
@@ -313,7 +313,7 @@ class StagehandTool(BaseTool):
 
             if not model_api_key:
                 raise ValueError(
-                    "No appropriate API key found for model. Please set OPENAI_API_KEY, ANTHROPIC_API_KEY, or GOOGLE_API_KEY"
+                    "No appropriate API key found for model. Please set OPENAI_API_KEY, ANTHROPIC_API_KEY, or GEMINI_API_KEY"
                 )
 
             # Build the StagehandConfig with proper parameter names

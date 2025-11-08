@@ -7,7 +7,9 @@ from typing import Any
 import pytest
 from dotenv import load_dotenv
 
-load_result = load_dotenv(override=True)
+# Load .env.test for consistent test environment (mimics CI)
+env_test_path = Path(__file__).parent.parent.parent.parent / ".env.test"
+load_dotenv(env_test_path, override=True)
 
 
 @pytest.fixture(autouse=True, scope="function")
@@ -84,7 +86,7 @@ def _filter_response_headers(response):
     return response
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="session", autouse=True)
 def vcr_config(request) -> dict[str, Any]:
     config = {
         "cassette_library_dir": os.path.join(os.path.dirname(__file__), "cassettes"),

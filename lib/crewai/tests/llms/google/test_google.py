@@ -12,8 +12,8 @@ from crewai.task import Task
 
 @pytest.fixture(autouse=True)
 def mock_google_api_key():
-    """Automatically mock GOOGLE_API_KEY for all tests in this module."""
-    with patch.dict(os.environ, {"GOOGLE_API_KEY": "test-key"}):
+    """Automatically mock GEMINI_API_KEY for all tests in this module."""
+    with patch.dict(os.environ, {"GEMINI_API_KEY": "test-key"}):
         yield
 
 
@@ -429,10 +429,10 @@ def test_gemini_vertex_ai_setup():
 
 def test_gemini_api_key_configuration():
     """
-    Test that API key configuration works for both GOOGLE_API_KEY and GEMINI_API_KEY
+    Test that API key configuration works for both GEMINI_API_KEY and GEMINI_API_KEY
     """
-    # Test with GOOGLE_API_KEY
-    with patch.dict(os.environ, {"GOOGLE_API_KEY": "test-google-key"}):
+    # Test with GEMINI_API_KEY
+    with patch.dict(os.environ, {"GEMINI_API_KEY": "test-google-key"}):
         llm = LLM(model="google/gemini-2.0-flash-001")
 
         from crewai.llms.providers.gemini.completion import GeminiCompletion
@@ -611,7 +611,7 @@ def test_gemini_environment_variable_api_key():
     """
     Test that Google API key is properly loaded from environment
     """
-    with patch.dict(os.environ, {"GOOGLE_API_KEY": "test-google-key"}):
+    with patch.dict(os.environ, {"GEMINI_API_KEY": "test-google-key"}):
         llm = LLM(model="google/gemini-2.0-flash-001")
 
         assert llm.client is not None

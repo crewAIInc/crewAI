@@ -261,25 +261,6 @@ async def test_lite_agent_returns_usage_metrics_async():
     assert result.usage_metrics["total_tokens"] > 0
 
 
-class TestFlow(Flow):
-    """A test flow that creates and runs an agent."""
-
-    def __init__(self, llm, tools):
-        self.llm = llm
-        self.tools = tools
-        super().__init__()
-
-    @start()
-    def start(self):
-        agent = Agent(
-            role="Test Agent",
-            goal="Test Goal",
-            backstory="Test Backstory",
-            llm=self.llm,
-            tools=self.tools,
-        )
-        return agent.kickoff("Test query")
-
 
 def verify_agent_parent_flow(result, agent, flow):
     """Verify that both the result and agent have the correct parent flow."""

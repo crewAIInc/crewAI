@@ -45,7 +45,6 @@ def test_telemetry_enabled_by_default():
             assert telemetry.ready is True
 
 
-@pytest.mark.telemetry
 @patch("crewai.telemetry.telemetry.logger.error")
 @patch(
     "opentelemetry.exporter.otlp.proto.http.trace_exporter.OTLPSpanExporter.export",

@@ -91,7 +91,7 @@ class EmbeddingService:
             "azure": "AZURE_OPENAI_API_KEY",
             "amazon-bedrock": "AWS_ACCESS_KEY_ID",  # or AWS_PROFILE
             "cohere": "COHERE_API_KEY",
-            "google-generativeai": "GOOGLE_API_KEY",
+            "google-generativeai": "GEMINI_API_KEY",
             "google-vertex": "GOOGLE_APPLICATION_CREDENTIALS",
             "huggingface": "HUGGINGFACE_API_KEY",
             "jina": "JINA_API_KEY",

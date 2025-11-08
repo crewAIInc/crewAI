@@ -7,10 +7,11 @@ from pathlib import Path
 from typing import Any, cast
 
 from crewai.tools.base_tool import BaseTool, EnvVar
-from crewai_tools import tools
 from pydantic import BaseModel
 from pydantic.json_schema import GenerateJsonSchema
 from pydantic_core import PydanticOmit
+
+from crewai_tools import tools
 
 
 class SchemaGenerator(GenerateJsonSchema):

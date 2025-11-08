@@ -411,7 +411,6 @@ def test_context_window_exceeded_error_handling():
         assert "8192 tokens" in str(excinfo.value)
 
 
-@pytest.mark.vcr()
 @pytest.fixture
 def anthropic_llm():
     """Fixture providing an Anthropic LLM instance."""
@@ -476,13 +475,13 @@ def test_anthropic_message_formatting(anthropic_llm, system_message, user_messag
 
 
 def test_deepseek_r1_with_open_router():
-    if not os.getenv("OPEN_ROUTER_API_KEY"):
-        pytest.skip("OPEN_ROUTER_API_KEY not set; skipping test.")
+    if not os.getenv("OPENROUTER_API_KEY"):
+        pytest.skip("OPENROUTER_API_KEY not set; skipping test.")
 
     llm = LLM(
         model="openrouter/deepseek/deepseek-r1",
         base_url="https://openrouter.ai/api/v1",
-        api_key=os.getenv("OPEN_ROUTER_API_KEY"),
+        api_key=os.getenv("OPENROUTER_API_KEY"),
         is_litellm=True,
     )
     result = llm.call("What is the capital of France?")
@@ -742,7 +741,7 @@ def test_prefixed_models_with_valid_constants_use_native_sdk():
         assert llm2.provider == "anthropic"
 
     # Test gemini/ prefix with Gemini model in constants → Native SDK
-    with patch.dict(os.environ, {"GOOGLE_API_KEY": "test-key"}):
+    with patch.dict(os.environ, {"GEMINI_API_KEY": "test-key"}):
         llm3 = LLM(model="gemini/gemini-2.5-pro", is_litellm=False)
         assert llm3.is_litellm is False
         assert llm3.provider == "gemini"
@@ -794,7 +793,7 @@ def test_unprefixed_models_use_native_sdk():
         assert llm2.provider == "anthropic"
 
     # gemini-2.5-pro is in GEMINI_MODELS → Native Gemini SDK
-    with patch.dict(os.environ, {"GOOGLE_API_KEY": "test-key"}):
+    with patch.dict(os.environ, {"GEMINI_API_KEY": "test-key"}):
         llm3 = LLM(model="gemini-2.5-pro", is_litellm=False)
         assert llm3.is_litellm is False
         assert llm3.provider == "gemini"

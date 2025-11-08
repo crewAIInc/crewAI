@@ -21,7 +21,7 @@ class GenerativeAiProvider(BaseEmbeddingsProvider[GoogleGenerativeAiEmbeddingFun
         validation_alias="EMBEDDINGS_GOOGLE_GENERATIVE_AI_MODEL_NAME",
     )
     api_key: str = Field(
-        description="Google API key", validation_alias="EMBEDDINGS_GOOGLE_API_KEY"
+        description="Google API key", validation_alias="EMBEDDINGS_GEMINI_API_KEY"
     )
     task_type: str = Field(
         default="RETRIEVAL_DOCUMENT",

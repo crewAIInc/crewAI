@@ -52,7 +52,7 @@ class GeminiCompletion(BaseLLM):
 
         Args:
             model: Gemini model name (e.g., 'gemini-2.0-flash-001', 'gemini-1.5-pro')
-            api_key: Google API key (defaults to GOOGLE_API_KEY or GEMINI_API_KEY env var)
+            api_key: Google API key (defaults to GEMINI_API_KEY or GEMINI_API_KEY env var)
             project: Google Cloud project ID (for Vertex AI)
             location: Google Cloud location (for Vertex AI, defaults to 'us-central1')
             temperature: Sampling temperature (0-2)
@@ -82,7 +82,7 @@ class GeminiCompletion(BaseLLM):
 
         # Get API configuration with environment variable fallbacks
         self.api_key = (
-            api_key or os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
+            api_key or os.getenv("GEMINI_API_KEY") or os.getenv("GEMINI_API_KEY")
         )
         self.project = project or os.getenv("GOOGLE_CLOUD_PROJECT")
         self.location = location or os.getenv("GOOGLE_CLOUD_LOCATION") or "us-central1"
@@ -165,7 +165,7 @@ class GeminiCompletion(BaseLLM):
                 return genai.Client(**client_params)
             except Exception as e:
                 raise ValueError(
-                    "Either GOOGLE_API_KEY/GEMINI_API_KEY (for Gemini API) or "
+                    "Either GEMINI_API_KEY/GEMINI_API_KEY (for Gemini API) or "
                     "GOOGLE_CLOUD_PROJECT (for Vertex AI) must be set"
                 ) from e
 
