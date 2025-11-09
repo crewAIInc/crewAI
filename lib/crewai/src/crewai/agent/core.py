@@ -449,10 +449,12 @@ class Agent(BaseAgent):
                 )
 
         # Apply task-level filtering for MCP tools if not explicitly provided
-        if tools is None and self.mcps:
-            tools = self._get_task_filtered_tools(task)
-        else:
-            tools = tools or self.tools or []
+        if tools is None:
+            if self.mcps:
+                tools = self._get_task_filtered_tools(task)
+            else:
+                tools = self.tools or []
+        # else: tools is explicitly set (even if empty list), respect the override
 
         self.create_agent_executor(tools=tools, task=task)
 

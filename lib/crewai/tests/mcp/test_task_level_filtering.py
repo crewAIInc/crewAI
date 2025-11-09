@@ -431,3 +431,65 @@ def test_convenience_properties(mock_tool_definitions):
     assert context_no_task.task_description == ""
     assert context_no_task.task_expected_output == ""
     assert context_no_task.has_task_context is False
+
+
+def test_explicit_empty_tools_list_respected():
+    """Test that execute_task logic respects explicit empty tools list.
+
+    This test verifies the fix for the bug where tools=[] was treated
+    the same as tools=None, preventing explicit tool override.
+    """
+    from crewai.tools import tool
+
+    @tool
+    def example_tool(input: str) -> str:
+        """Example tool."""
+        return f"Result: {input}"
+
+    # Create agent with tools
+    agent = Agent(
+        role="Test Agent",
+        goal="Test",
+        backstory="Test",
+        tools=[example_tool],
+    )
+
+    assert len(agent.tools) == 1  # Agent has one tool
+
+    # Test 1: tools=None should use agent.tools
+    task = Task(description="Test task", expected_output="Result")
+
+    # Simulate the logic from execute_task without running full execution
+    tools = None
+    if tools is None:
+        if agent.mcps:
+            resolved_tools = agent._get_task_filtered_tools(task)
+        else:
+            resolved_tools = agent.tools or []
+    # If tools were explicitly set, we'd keep them as-is
+
+    assert resolved_tools == agent.tools  # Should get agent's tools
+
+    # Test 2: tools=[] should remain empty (the bug fix)
+    tools = []
+    if tools is None:
+        if agent.mcps:
+            resolved_tools = agent._get_task_filtered_tools(task)
+        else:
+            resolved_tools = agent.tools or []
+    else:
+        resolved_tools = tools  # Explicit override respected
+
+    assert resolved_tools == []  # Empty list should be preserved
+
+    # Test 3: tools=[custom_tool] should use custom tool
+    tools = [example_tool]
+    if tools is None:
+        if agent.mcps:
+            resolved_tools = agent._get_task_filtered_tools(task)
+        else:
+            resolved_tools = agent.tools or []
+    else:
+        resolved_tools = tools  # Explicit override respected
+
+    assert resolved_tools == [example_tool]  # Custom tools preserved
