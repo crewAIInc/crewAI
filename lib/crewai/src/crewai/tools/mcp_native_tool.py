@@ -59,6 +59,7 @@ class MCPNativeTool(BaseTool):
         self._mcp_client = mcp_client
         self._original_tool_name = tool_name
         self._server_name = server_name
+        self._tool_schema = tool_schema  # Store original schema for filtering
         # self._logger = logging.getLogger(__name__)
 
     @property
@@ -75,6 +76,15 @@ class MCPNativeTool(BaseTool):
     def server_name(self) -> str:
         """Get the server name."""
         return self._server_name
+
+    @property
+    def tool_schema(self) -> dict[str, Any]:
+        """Get the original MCP tool schema.
+
+        Returns the tool schema dict used for task-level filtering.
+        This contains the tool definition as returned by the MCP server.
+        """
+        return self._tool_schema
 
     def _run(self, **kwargs) -> str:
         """Execute tool using the MCP client session.

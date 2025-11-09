@@ -202,6 +202,7 @@ class Task(BaseModel):
     _original_expected_output: str | None = PrivateAttr(default=None)
     _original_output_file: str | None = PrivateAttr(default=None)
     _thread: threading.Thread | None = PrivateAttr(default=None)
+    _is_delegated: bool = PrivateAttr(default=False)
     model_config = {"arbitrary_types_allowed": True}
 
     @field_validator("guardrail")
