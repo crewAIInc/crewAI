@@ -448,7 +448,12 @@ class Agent(BaseAgent):
                     ),
                 )
 
-        tools = tools or self.tools or []
+        # Apply task-level filtering for MCP tools if not explicitly provided
+        if tools is None and self.mcps:
+            tools = self._get_task_filtered_tools(task)
+        else:
+            tools = tools or self.tools or []
+
         self.create_agent_executor(tools=tools, task=task)
 
         if self.crew and self.crew._train:
@@ -891,26 +896,54 @@ class Agent(BaseAgent):
                         "error or server unavailability."
                     ) from e
 
-            if mcp_config.tool_filter:
-                filtered_tools = []
-                for tool in tools_list:
-                    if callable(mcp_config.tool_filter):
-                        try:
-                            from crewai.mcp.filters import ToolFilterContext
+            if mcp_config.tool_filter and mcp_config._filter_type != "none":
+                from collections.abc import Callable as CallableType
 
-                            context = ToolFilterContext(
-                                agent=self,
-                                server_name=server_name,
-                                run_context=None,
+                from crewai.mcp.filters import ToolFilterContext
+                from crewai.task import Task
+
+                # Rebuild model to resolve forward references
+                ToolFilterContext.model_rebuild(_types_namespace={"Task": Task})
+
+                filtered_tools = []
+
+                # Use cached filter type for performance (determined at config initialization)
+                if mcp_config._filter_type == "dynamic":
+                    # Dynamic filter takes (context, tool) - 2 params
+                    context = ToolFilterContext(
+                        agent=self,
+                        server_name=server_name,
+                        run_context=None,
+                    )
+                    dynamic_filter = cast(
+                        CallableType[[ToolFilterContext, dict[str, Any]], bool],
+                        mcp_config.tool_filter,
+                    )
+                    for tool in tools_list:
+                        try:
+                            if dynamic_filter(context, tool):
+                                filtered_tools.append(tool)
+                        except Exception as e:
+                            self._logger.log(
+                                "warning",
+                                f"Tool filter failed for {tool.get('name', 'unknown')}: {e}",
                             )
-                            if mcp_config.tool_filter(context, tool):
+                elif mcp_config._filter_type == "static":
+                    # Static filter takes (tool) - 1 param
+                    static_filter = cast(
+                        CallableType[[dict[str, Any]], bool],
+                        mcp_config.tool_filter,
+                    )
+                    for tool in tools_list:
+                        try:
+                            if static_filter(tool):
                                 filtered_tools.append(tool)
-                        except (TypeError, AttributeError):
-                            if mcp_config.tool_filter(tool):
-                                filtered_tools.append(tool)
-                    else:
-                        # Not callable - include tool
-                        filtered_tools.append(tool)
+                        except Exception as e:
+                            self._logger.log(
+                                "warning",
+                                f"Tool filter failed for {tool.get('name', 'unknown')}: {e}",
+                            )
+
                 tools_list = filtered_tools
 
             tools = []
@@ -927,6 +960,7 @@ class Agent(BaseAgent):
                     )
 
                 tool_schema = {
+                    "name": tool_name,
                     "description": tool_def.get("description", ""),
                     "args_schema": args_schema,
                 }
@@ -949,6 +983,167 @@ class Agent(BaseAgent):
                 asyncio.run(client.disconnect())
 
             raise RuntimeError(f"Failed to get native MCP tools: {e}") from e
+
+    def _get_task_filtered_tools(self, task: Task) -> list[BaseTool]:
+        """Get tools with task-level filtering applied.
+
+        Applies cascading filter: starts with agent's tools and further restricts
+        based on task context. MCP tools are re-filtered, non-MCP tools pass through.
+
+        Args:
+            task: The task being executed.
+
+        Returns:
+            List of tools allowed for this specific task (subset of agent.tools).
+        """
+        from crewai.tools.mcp_native_tool import MCPNativeTool
+
+        if not self.tools:
+            return []
+
+        # Separate MCP tools from non-MCP tools
+        mcp_tools = [t for t in self.tools if isinstance(t, MCPNativeTool)]
+        non_mcp_tools = [t for t in self.tools if not isinstance(t, MCPNativeTool)]
+
+        # Apply task-level filter to MCP tools only
+        filtered_mcp_tools = self._apply_task_filter_to_mcp_tools(mcp_tools, task)
+
+        # Combine filtered MCP tools with non-MCP tools
+        return non_mcp_tools + filtered_mcp_tools
+
+    def _apply_task_filter_to_mcp_tools(
+        self, mcp_tools: list[Any], task: Task
+    ) -> list[BaseTool]:
+        """Apply task-level filter to MCP tools.
+
+        Iterates through MCP tools and applies their configured filters with
+        task context. Tools without filters or filters that return True are included.
+
+        Filter type is automatically detected by inspecting signature at config initialization:
+        - 2 parameters: Dynamic filter (context, tool)
+        - 1 parameter: Static filter (tool only)
+
+        Args:
+            mcp_tools: List of MCPNativeTool instances to filter.
+            task: Current task being executed.
+
+        Returns:
+            Filtered list of MCP tools (subset of input).
+        """
+        from collections.abc import Callable as CallableType
+
+        from crewai.mcp.filters import ToolFilterContext
+        from crewai.task import Task as TaskClass
+        from crewai.tools.mcp_native_tool import MCPNativeTool
+
+        # Rebuild model to resolve forward references
+        ToolFilterContext.model_rebuild(_types_namespace={"Task": TaskClass})
+
+        filtered_tools: list[BaseTool] = []
+
+        for tool in mcp_tools:
+            if not isinstance(tool, MCPNativeTool):
+                continue
+
+            # Get the MCP server config for this tool
+            mcp_config = self._get_mcp_config_for_tool(tool)
+
+            # If no config or no filter, include the tool
+            if (
+                not mcp_config
+                or not mcp_config.tool_filter
+                or mcp_config._filter_type == "none"
+            ):
+                filtered_tools.append(tool)
+                continue
+
+            # Build task context
+            context = ToolFilterContext(
+                agent=self,
+                server_name=tool.server_name,
+                task=task,
+                is_delegated=getattr(task, "_is_delegated", False),
+            )
+
+            # Apply filter using cached filter type (determined at config initialization)
+            try:
+                if mcp_config._filter_type == "dynamic":
+                    # Dynamic filter: takes (context, tool) - 2 params
+                    dynamic_filter = cast(
+                        CallableType[[ToolFilterContext, dict[str, Any]], bool],
+                        mcp_config.tool_filter,
+                    )
+                    if dynamic_filter(context, tool.tool_schema):
+                        filtered_tools.append(tool)
+                elif mcp_config._filter_type == "static":
+                    # Static filter: takes (tool) - 1 param
+                    static_filter = cast(
+                        CallableType[[dict[str, Any]], bool],
+                        mcp_config.tool_filter,
+                    )
+                    if static_filter(tool.tool_schema):
+                        filtered_tools.append(tool)
+            except Exception as e:
+                # If filter fails, exclude tool for safety
+                self._logger.log(
+                    "warning",
+                    f"Tool filter failed for {tool.name}: {e}. Excluding tool for safety.",
+                )
+
+        return filtered_tools
+
+    def _get_mcp_config_for_tool(self, tool: BaseTool) -> MCPServerConfig | None:
+        """Get the MCP server config that created this tool.
+
+        Args:
+            tool: MCPNativeTool instance to find config for.
+
+        Returns:
+            The MCPServerConfig that created this tool, or None if not found.
+        """
+        from crewai.tools.mcp_native_tool import MCPNativeTool
+
+        if not isinstance(tool, MCPNativeTool) or not self.mcps:
+            return None
+
+        # Match tool by server name prefix
+        tool_server_name = tool.server_name
+
+        for mcp_config in self.mcps:
+            if isinstance(mcp_config, str):
+                continue  # Skip string-based configs (legacy)
+
+            # Extract server name from config
+            config_server_name = self._get_server_name_from_config(mcp_config)
+
+            if config_server_name == tool_server_name:
+                return mcp_config
+
+        return None
+
+    def _get_server_name_from_config(self, mcp_config: MCPServerConfig) -> str:
+        """Extract server name from MCP server config.
+
+        Uses the same logic as _get_native_mcp_tools to ensure consistency.
+
+        Args:
+            mcp_config: MCP server configuration.
+
+        Returns:
+            Server name string used for tool prefixing.
+
+        Raises:
+            ValueError: If the MCP server config type is not supported.
+        """
+        if isinstance(mcp_config, MCPServerStdio):
+            # Match the logic from _get_native_mcp_tools (line 817)
+            return f"{mcp_config.command}_{'_'.join(mcp_config.args)}"
+        if isinstance(mcp_config, (MCPServerHTTP, MCPServerSSE)):
+            # Match the logic from _get_native_mcp_tools (lines 824, 830)
+            return self._extract_server_name(mcp_config.url)
+
+        # Match the error handling pattern from _get_native_mcp_tools (line 835)
+        raise ValueError(f"Unsupported MCP server config type: {type(mcp_config)}")
 
     def _get_amp_mcp_tools(self, amp_ref: str) -> list[BaseTool]:
         """Get tools from CrewAI AMP MCP marketplace."""

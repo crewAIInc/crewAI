@@ -4,7 +4,10 @@ This module provides Pydantic models for configuring MCP servers with
 various transport types, similar to OpenAI's Agents SDK.
 """
 
-from pydantic import BaseModel, Field
+import inspect
+from typing import Literal
+
+from pydantic import BaseModel, Field, PrivateAttr, model_validator
 
 from crewai.mcp.filters import ToolFilter
 
@@ -48,6 +51,26 @@ class MCPServerStdio(BaseModel):
         default=False,
         description="Whether to cache the tool list for faster subsequent access.",
     )
+    _filter_type: Literal["dynamic", "static", "none"] = PrivateAttr(default="none")
+
+    @model_validator(mode="after")
+    def _cache_filter_type(self):
+        """Cache the filter type for performance optimization."""
+        if self.tool_filter is None:
+            self._filter_type = "none"
+        elif callable(self.tool_filter):
+            sig = inspect.signature(self.tool_filter)
+            num_params = len(sig.parameters)
+            if num_params == 2:
+                self._filter_type = "dynamic"
+            elif num_params == 1:
+                self._filter_type = "static"
+            else:
+                # Unexpected signature - default to static for backward compatibility
+                self._filter_type = "static"
+        else:
+            self._filter_type = "none"
+        return self
 
 
 class MCPServerHTTP(BaseModel):
@@ -85,6 +108,26 @@ class MCPServerHTTP(BaseModel):
         default=False,
         description="Whether to cache the tool list for faster subsequent access.",
     )
+    _filter_type: Literal["dynamic", "static", "none"] = PrivateAttr(default="none")
+
+    @model_validator(mode="after")
+    def _cache_filter_type(self):
+        """Cache the filter type for performance optimization."""
+        if self.tool_filter is None:
+            self._filter_type = "none"
+        elif callable(self.tool_filter):
+            sig = inspect.signature(self.tool_filter)
+            num_params = len(sig.parameters)
+            if num_params == 2:
+                self._filter_type = "dynamic"
+            elif num_params == 1:
+                self._filter_type = "static"
+            else:
+                # Unexpected signature - default to static for backward compatibility
+                self._filter_type = "static"
+        else:
+            self._filter_type = "none"
+        return self
 
 
 class MCPServerSSE(BaseModel):
@@ -118,6 +161,26 @@ class MCPServerSSE(BaseModel):
         default=False,
         description="Whether to cache the tool list for faster subsequent access.",
     )
+    _filter_type: Literal["dynamic", "static", "none"] = PrivateAttr(default="none")
+
+    @model_validator(mode="after")
+    def _cache_filter_type(self):
+        """Cache the filter type for performance optimization."""
+        if self.tool_filter is None:
+            self._filter_type = "none"
+        elif callable(self.tool_filter):
+            sig = inspect.signature(self.tool_filter)
+            num_params = len(sig.parameters)
+            if num_params == 2:
+                self._filter_type = "dynamic"
+            elif num_params == 1:
+                self._filter_type = "static"
+            else:
+                # Unexpected signature - default to static for backward compatibility
+                self._filter_type = "static"
+        else:
+            self._filter_type = "none"
+        return self
 
 
 # Type alias for all MCP server configurations
