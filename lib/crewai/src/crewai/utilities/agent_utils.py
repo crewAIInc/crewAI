@@ -51,6 +51,40 @@ class SummaryContent(TypedDict):
 console = Console()
 
 _MULTIPLE_NEWLINES: Final[re.Pattern[str]] = re.compile(r"\n+")
+_REACT_FIELD_PATTERN: Final[re.Pattern[str]] = re.compile(
+    r"^(Thought|Action|Action Input|Observation):\s*",
+    re.MULTILINE
+)
+
+
+def sanitize_react_output(text: str) -> str:
+    """Sanitize agent output by removing internal ReAct fields.
+
+    This function removes lines that start with internal ReAct formatting
+    markers like "Thought:", "Action:", "Action Input:", and "Observation:".
+    These fields are used internally by the agent execution loop but should
+    not be exposed in final user-facing outputs.
+
+    Args:
+        text: The raw agent output text that may contain ReAct fields.
+
+    Returns:
+        Sanitized text with internal ReAct fields removed.
+    """
+    if not text:
+        return text
+
+    lines = text.split("\n")
+    sanitized_lines = [
+        line for line in lines if not _REACT_FIELD_PATTERN.match(line)
+    ]
+
+    result = "\n".join(sanitized_lines).strip()
+
+    if not result:
+        return "Unable to complete the task."
+
+    return result
 
 
 def parse_tools(tools: list[BaseTool]) -> list[CrewStructuredTool]:
@@ -173,10 +207,13 @@ def handle_max_iterations_exceeded(
     # If format_answer returned an AgentAction, convert it to AgentFinish
     if isinstance(formatted, AgentFinish):
         return formatted
+
+    sanitized_output = sanitize_react_output(formatted.text)
+
     return AgentFinish(
         thought=formatted.thought,
-        output=formatted.text,
-        text=formatted.text,
+        output=sanitized_output,
+        text=sanitized_output,
     )
 
 
@@ -209,10 +246,11 @@ def format_answer(answer: str) -> AgentAction | AgentFinish:
     try:
         return parse(answer)
     except Exception:
+        sanitized_output = sanitize_react_output(answer)
         return AgentFinish(
             thought="Failed to parse LLM response",
-            output=answer,
-            text=answer,
+            output=sanitized_output,
+            text=sanitized_output,
         )
 
 
