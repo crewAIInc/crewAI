@@ -148,7 +148,7 @@ class TestHTTPMCPFragmentFiltering:
         }
         
         with patch.object(agent, '_get_mcp_tool_schemas', return_value=mock_schemas):
-            with patch('crewai.agent.core.MCPToolWrapper') as mock_wrapper_class:
+            with patch('crewai.tools.mcp_tool_wrapper.MCPToolWrapper') as mock_wrapper_class:
                 mock_wrapper_class.return_value = MagicMock()
                 
                 result = agent._get_external_mcp_tools("http://localhost:7365/mcp#specific_tool")
