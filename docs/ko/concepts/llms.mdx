@@ -707,6 +707,36 @@ CrewAI는 고유한 기능, 인증 방법, 모델 역량을 제공하는 다양�
   </Accordion>
 </AccordionGroup>
 
+
+
+## 프롬프트 캐싱을 통한 LiteLLM
+프롬프트 캐싱은 시스템 지침이나 템플릿 텍스트와 같은 프롬프트의 정적 부분을 저장하고 재사용하여 대형 언어 모델(LLM)의 효율성을 개선하는 기법입니다. 사용자가 알려진 정적 접두사를 가진 프롬프트를 전송할 때 시스템은 캐시된 부분을 재사용하여 후속 상호 작용의 계산, 대기 시간 및 비용을 크게 줄입니다. 이는 반복적인 프롬프트가 있는 애플리케이션, 예를 들어 챗봇이나 문서 분석 도구에 특히 유용하여 더 빠르고 경제적인 작업을 가능하게 합니다.
+
+LiteLLM은 현재 다음을 지원합니다:
+
+- OpenAI (`openai/`)
+- Anthropic API (`anthropic/`)
+- Bedrock
+  - `bedrock/`
+  - `bedrock/invoke/`
+  - `bedrock/converse`
+- Deepseek API (`deepseek/`)
+
+다음은 이를 활성화하는 방법입니다:
+```python
+from crewai import LLM
+
+llm = LLM(
+    model="bedrock/anthropic.claude-3-7-sonnet-20250219-v1:0",
+    reasoning_effort='high',
+    cache_control_injection_points = [{
+        "location" : "message",
+        "role" : "system"
+    }]
+)
+```
+자세한 내용은 Litellm 문서를 확인하세요 [여기](https://docs.litellm.ai/docs/tutorials/prompt_caching)에서.
+
 ## 스트리밍 응답
 
 CrewAI는 LLM의 스트리밍 응답을 지원하여, 애플리케이션이 출력물을 생성되는 즉시 실시간으로 수신하고 처리할 수 있습니다.
