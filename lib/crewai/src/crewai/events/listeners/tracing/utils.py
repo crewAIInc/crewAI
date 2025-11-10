@@ -27,6 +27,21 @@ def is_tracing_enabled() -> bool:
     return os.getenv("CREWAI_TRACING_ENABLED", "false").lower() == "true"
 
 
+def is_tracing_disabled() -> bool:
+    """Check if tracing is explicitly disabled via environment variables.
+    
+    Returns True if any of the disable flags are set to true.
+    """
+    disable_flags = [
+        "CREWAI_DISABLE_TRACING",
+        "CREWAI_DISABLE_TRACKING",
+        "OTEL_SDK_DISABLED",
+    ]
+    return any(
+        os.getenv(flag, "false").lower() == "true" for flag in disable_flags
+    )
+
+
 def on_first_execution_tracing_confirmation() -> bool:
     if _is_test_environment():
         return False

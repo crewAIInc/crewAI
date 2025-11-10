@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Callable
-from concurrent.futures import Future
+from concurrent.futures import Future, TimeoutError as FutureTimeoutError
 from copy import copy as shallow_copy
 from hashlib import md5
 import json
@@ -39,6 +39,7 @@ from crewai.events.listeners.tracing.trace_listener import (
     TraceCollectionListener,
 )
 from crewai.events.listeners.tracing.utils import (
+    is_tracing_disabled,
     is_tracing_enabled,
     should_auto_collect_first_time_traces,
 )
@@ -315,7 +316,7 @@ class Crew(FlowTrackable, BaseModel):
         self._cache_handler = CacheHandler()
         event_listener = EventListener()  # type: ignore[no-untyped-call]
 
-        if (
+        if not is_tracing_disabled() and (
             is_tracing_enabled()
             or self.tracing
             or should_auto_collect_first_time_traces()
@@ -604,6 +605,34 @@ class Crew(FlowTrackable, BaseModel):
         CrewTrainingHandler(TRAINING_DATA_FILE).initialize_file()
         CrewTrainingHandler(filename).initialize_file()
 
+    def _wait_for_event_handlers(
+        self, future: Future[None] | None, timeout: float = 30.0
+    ) -> None:
+        """Wait for event handlers to complete with timeout.
+
+        Args:
+            future: Future returned from event bus emit, or None
+            timeout: Maximum time to wait in seconds (default: 30.0)
+        """
+        if future is None:
+            return
+
+        try:
+            future.result(timeout=timeout)
+        except FutureTimeoutError:
+            self._logger.log(
+                "warning",
+                f"Event handlers did not complete within {timeout}s timeout. "
+                "This may indicate slow or blocked handlers.",
+                color="yellow",
+            )
+        except Exception as e:
+            self._logger.log(
+                "warning",
+                f"Error waiting for event handlers: {e}",
+                color="yellow",
+            )
+
     def train(
         self, n_iterations: int, filename: str, inputs: dict[str, Any] | None = None
     ) -> None:
@@ -671,10 +700,11 @@ class Crew(FlowTrackable, BaseModel):
                     inputs = {}
                 inputs = before_callback(inputs)
 
-            crewai_event_bus.emit(
+            future = crewai_event_bus.emit(
                 self,
                 CrewKickoffStartedEvent(crew_name=self.name, inputs=inputs),
             )
+            self._wait_for_event_handlers(future)
 
             # Starts the crew to work on its assigned tasks.
             self._task_output_handler.reset()
@@ -717,10 +747,11 @@ class Crew(FlowTrackable, BaseModel):
 
             return result
         except Exception as e:
-            crewai_event_bus.emit(
+            future = crewai_event_bus.emit(
                 self,
                 CrewKickoffFailedEvent(error=str(e), crew_name=self.name),
             )
+            self._wait_for_event_handlers(future)
             raise
         finally:
             detach(token)
@@ -1162,7 +1193,7 @@ class Crew(FlowTrackable, BaseModel):
         final_string_output = final_task_output.raw
         self._finish_execution(final_string_output)
         self.token_usage = self.calculate_usage_metrics()
-        crewai_event_bus.emit(
+        future = crewai_event_bus.emit(
             self,
             CrewKickoffCompletedEvent(
                 crew_name=self.name,
@@ -1170,6 +1201,7 @@ class Crew(FlowTrackable, BaseModel):
                 total_tokens=self.token_usage.total_tokens,
             ),
         )
+        self._wait_for_event_handlers(future)
         return CrewOutput(
             raw=final_task_output.raw,
             pydantic=final_task_output.pydantic,
