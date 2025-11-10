@@ -3,13 +3,15 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 import logging
 import os
-from typing import TYPE_CHECKING, Any, TypedDict, cast
+from typing import TYPE_CHECKING, Any, ClassVar, TypedDict, cast
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from typing_extensions import Required
 
 from crewai.events.types.llm_events import LLMCallType
-from crewai.llms.base_llm import BaseLLM
+from crewai.llm.base_llm import BaseLLM
+from crewai.llm.core import CONTEXT_WINDOW_USAGE_RATIO
+from crewai.llm.providers.utils.common import safe_tool_conversion
 from crewai.utilities.agent_utils import is_context_length_exceeded
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededError,
@@ -30,7 +32,7 @@ if TYPE_CHECKING:
         ToolTypeDef,
     )
 
-    from crewai.llms.hooks.base import BaseInterceptor
+    from crewai.llm.hooks.base import BaseInterceptor
 
 
 try:
@@ -143,6 +145,8 @@ class BedrockCompletion(BaseLLM):
     - Model-specific conversation format handling (e.g., Cohere requirements)
     """
 
+    model_config: ClassVar[ConfigDict] = ConfigDict(ignored_types=(property,))
+
     def __init__(
         self,
         model: str = "anthropic.claude-3-5-sonnet-20241022-v2:0",
@@ -243,29 +247,29 @@ class BedrockCompletion(BaseLLM):
         # Handle inference profiles for newer models
         self.model_id = model
 
-    @property
-    def stop(self) -> list[str]:
-        """Get stop sequences sent to the API."""
-        return list(self.stop_sequences)
+    # @property
+    # def stop(self) -> list[str]:  # type: ignore[misc]
+    #     """Get stop sequences sent to the API."""
+    #     return list(self.stop_sequences)
 
-    @stop.setter
-    def stop(self, value: Sequence[str] | str | None) -> None:
-        """Set stop sequences.
-
-        Synchronizes stop_sequences to ensure values set by CrewAgentExecutor
-        are properly sent to the Bedrock API.
-
-        Args:
-            value: Stop sequences as a Sequence, single string, or None
-        """
-        if value is None:
-            self.stop_sequences = []
-        elif isinstance(value, str):
-            self.stop_sequences = [value]
-        elif isinstance(value, Sequence):
-            self.stop_sequences = list(value)
-        else:
-            self.stop_sequences = []
+    # @stop.setter
+    # def stop(self, value: Sequence[str] | str | None) -> None:
+    #     """Set stop sequences.
+    #
+    #     Synchronizes stop_sequences to ensure values set by CrewAgentExecutor
+    #     are properly sent to the Bedrock API.
+    #
+    #     Args:
+    #         value: Stop sequences as a Sequence, single string, or None
+    #     """
+    #     if value is None:
+    #         self.stop_sequences = []
+    #     elif isinstance(value, str):
+    #         self.stop_sequences = [value]
+    #     elif isinstance(value, Sequence):
+    #         self.stop_sequences = list(value)
+    #     else:
+    #         self.stop_sequences = []
 
     def call(
         self,
@@ -778,7 +782,6 @@ class BedrockCompletion(BaseLLM):
         tools: list[dict[str, Any]],
     ) -> list[ConverseToolTypeDef]:
         """Convert CrewAI tools to Converse API format following AWS specification."""
-        from crewai.llms.providers.utils.common import safe_tool_conversion
 
         converse_tools: list[ConverseToolTypeDef] = []
 
@@ -871,7 +874,6 @@ class BedrockCompletion(BaseLLM):
 
     def get_context_window_size(self) -> int:
         """Get the context window size for the model."""
-        from crewai.llm import CONTEXT_WINDOW_USAGE_RATIO
 
         # Context window sizes for common Bedrock models
         context_windows = {

@@ -3,13 +3,15 @@ from __future__ import annotations
 import json
 import logging
 import os
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any, ClassVar, cast
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 from crewai.events.types.llm_events import LLMCallType
-from crewai.llms.base_llm import BaseLLM
-from crewai.llms.hooks.transport import HTTPTransport
+from crewai.llm.base_llm import BaseLLM
+from crewai.llm.core import CONTEXT_WINDOW_USAGE_RATIO
+from crewai.llm.hooks.transport import HTTPTransport
+from crewai.llm.providers.utils.common import safe_tool_conversion
 from crewai.utilities.agent_utils import is_context_length_exceeded
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededError,
@@ -18,7 +20,7 @@ from crewai.utilities.types import LLMMessage
 
 
 if TYPE_CHECKING:
-    from crewai.llms.hooks.base import BaseInterceptor
+    from crewai.llm.hooks.base import BaseInterceptor
 
 try:
     from anthropic import Anthropic
@@ -37,6 +39,8 @@ class AnthropicCompletion(BaseLLM):
     This class provides direct integration with the Anthropic Python SDK,
     offering native tool use, streaming support, and proper message formatting.
     """
+
+    model_config: ClassVar[ConfigDict] = ConfigDict(ignored_types=(property,))
 
     def __init__(
         self,
@@ -94,29 +98,30 @@ class AnthropicCompletion(BaseLLM):
         self.is_claude_3 = "claude-3" in model.lower()
         self.supports_tools = self.is_claude_3  # Claude 3+ supports tool use
 
-    @property
-    def stop(self) -> list[str]:
-        """Get stop sequences sent to the API."""
-        return self.stop_sequences
+    #
+    # @property
+    # def stop(self) -> list[str]:  # type: ignore[misc]
+    #     """Get stop sequences sent to the API."""
+    #     return self.stop_sequences
 
-    @stop.setter
-    def stop(self, value: list[str] | str | None) -> None:
-        """Set stop sequences.
-
-        Synchronizes stop_sequences to ensure values set by CrewAgentExecutor
-        are properly sent to the Anthropic API.
-
-        Args:
-            value: Stop sequences as a list, single string, or None
-        """
-        if value is None:
-            self.stop_sequences = []
-        elif isinstance(value, str):
-            self.stop_sequences = [value]
-        elif isinstance(value, list):
-            self.stop_sequences = value
-        else:
-            self.stop_sequences = []
+    # @stop.setter
+    # def stop(self, value: list[str] | str | None) -> None:
+    #     """Set stop sequences.
+    #
+    #     Synchronizes stop_sequences to ensure values set by CrewAgentExecutor
+    #     are properly sent to the Anthropic API.
+    #
+    #     Args:
+    #         value: Stop sequences as a list, single string, or None
+    #     """
+    #     if value is None:
+    #         self.stop_sequences = []
+    #     elif isinstance(value, str):
+    #         self.stop_sequences = [value]
+    #     elif isinstance(value, list):
+    #         self.stop_sequences = value
+    #     else:
+    #         self.stop_sequences = []
 
     def _get_client_params(self) -> dict[str, Any]:
         """Get client parameters."""
@@ -266,8 +271,6 @@ class AnthropicCompletion(BaseLLM):
                 continue
 
             try:
-                from crewai.llms.providers.utils.common import safe_tool_conversion
-
                 name, description, parameters = safe_tool_conversion(tool, "Anthropic")
             except (ImportError, KeyError, ValueError) as e:
                 logging.error(f"Error converting tool to Anthropic format: {e}")
@@ -636,7 +639,6 @@ class AnthropicCompletion(BaseLLM):
 
     def get_context_window_size(self) -> int:
         """Get the context window size for the model."""
-        from crewai.llm import CONTEXT_WINDOW_USAGE_RATIO
 
         # Context window sizes for Anthropic models
         context_windows = {

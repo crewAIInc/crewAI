@@ -22,7 +22,7 @@ if TYPE_CHECKING:
     from httpx import Limits, Request, Response
     from httpx._types import CertTypes, ProxyTypes
 
-    from crewai.llms.hooks.base import BaseInterceptor
+    from crewai.llm.hooks.base import BaseInterceptor
 
 
 class HTTPTransportKwargs(TypedDict, total=False):

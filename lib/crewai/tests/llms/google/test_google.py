@@ -34,7 +34,7 @@ def test_gemini_completion_is_used_when_gemini_provider():
     """
     llm = LLM(model="gemini/gemini-2.0-flash-001")
 
-    from crewai.llms.providers.gemini.completion import GeminiCompletion
+    from crewai.llm.providers.gemini.completion import GeminiCompletion
     assert isinstance(llm, GeminiCompletion)
     assert llm.provider == "gemini"
     assert llm.model == "gemini-2.0-flash-001"
@@ -47,7 +47,7 @@ def test_gemini_tool_use_conversation_flow():
     Test that the Gemini completion properly handles tool use conversation flow
     """
     from unittest.mock import Mock, patch
-    from crewai.llms.providers.gemini.completion import GeminiCompletion
+    from crewai.llm.providers.gemini.completion import GeminiCompletion
 
     # Create GeminiCompletion instance
     completion = GeminiCompletion(model="gemini-2.0-flash-001")
@@ -102,7 +102,7 @@ def test_gemini_completion_module_is_imported():
     """
     Test that the completion module is properly imported when using Google provider
     """
-    module_name = "crewai.llms.providers.gemini.completion"
+    module_name = "crewai.llm.providers.gemini.completion"
 
     # Remove module from cache if it exists
     if module_name in sys.modules:
@@ -159,7 +159,7 @@ def test_gemini_completion_initialization_parameters():
         api_key="test-key"
     )
 
-    from crewai.llms.providers.gemini.completion import GeminiCompletion
+    from crewai.llm.providers.gemini.completion import GeminiCompletion
     assert isinstance(llm, GeminiCompletion)
     assert llm.model == "gemini-2.0-flash-001"
     assert llm.temperature == 0.7
@@ -186,7 +186,7 @@ def test_gemini_specific_parameters():
         location="us-central1"
     )
 
-    from crewai.llms.providers.gemini.completion import GeminiCompletion
+    from crewai.llm.providers.gemini.completion import GeminiCompletion
     assert isinstance(llm, GeminiCompletion)
     assert llm.stop_sequences == ["Human:", "Assistant:"]
     assert llm.stream == True
@@ -382,7 +382,7 @@ def test_gemini_raises_error_when_model_not_supported():
     """Test that GeminiCompletion raises ValueError when model not supported"""
 
     # Mock the Google client to raise an error
-    with patch('crewai.llms.providers.gemini.completion.genai') as mock_genai:
+    with patch('crewai.llm.providers.gemini.completion.genai') as mock_genai:
         mock_client = MagicMock()
         mock_genai.Client.return_value = mock_client
 
@@ -420,7 +420,7 @@ def test_gemini_vertex_ai_setup():
             location="us-west1"
         )
 
-        from crewai.llms.providers.gemini.completion import GeminiCompletion
+        from crewai.llm.providers.gemini.completion import GeminiCompletion
         assert isinstance(llm, GeminiCompletion)
 
         assert llm.project == "test-project"
@@ -435,7 +435,7 @@ def test_gemini_api_key_configuration():
     with patch.dict(os.environ, {"GOOGLE_API_KEY": "test-google-key"}):
         llm = LLM(model="google/gemini-2.0-flash-001")
 
-        from crewai.llms.providers.gemini.completion import GeminiCompletion
+        from crewai.llm.providers.gemini.completion import GeminiCompletion
         assert isinstance(llm, GeminiCompletion)
         assert llm.api_key == "test-google-key"
 
@@ -453,7 +453,7 @@ def test_gemini_model_capabilities():
     """
     # Test Gemini 2.0 model
     llm_2_0 = LLM(model="google/gemini-2.0-flash-001")
-    from crewai.llms.providers.gemini.completion import GeminiCompletion
+    from crewai.llm.providers.gemini.completion import GeminiCompletion
     assert isinstance(llm_2_0, GeminiCompletion)
     assert llm_2_0.is_gemini_2 == True
     assert llm_2_0.supports_tools == True
@@ -477,7 +477,7 @@ def test_gemini_generation_config():
         max_output_tokens=1000
     )
 
-    from crewai.llms.providers.gemini.completion import GeminiCompletion
+    from crewai.llm.providers.gemini.completion import GeminiCompletion
     assert isinstance(llm, GeminiCompletion)
 
     # Test config preparation
@@ -504,7 +504,7 @@ def test_gemini_model_detection():
 
     for model_name in gemini_test_cases:
         llm = LLM(model=model_name)
-        from crewai.llms.providers.gemini.completion import GeminiCompletion
+        from crewai.llm.providers.gemini.completion import GeminiCompletion
         assert isinstance(llm, GeminiCompletion), f"Failed for model: {model_name}"
 
 

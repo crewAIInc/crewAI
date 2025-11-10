@@ -3,7 +3,7 @@
 import httpx
 import pytest
 
-from crewai.llms.hooks.base import BaseInterceptor
+from crewai.llm.hooks.base import BaseInterceptor
 
 
 class SimpleInterceptor(BaseInterceptor[httpx.Request, httpx.Response]):

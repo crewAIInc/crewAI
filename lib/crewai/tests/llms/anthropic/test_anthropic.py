@@ -34,7 +34,7 @@ def test_anthropic_completion_is_used_when_claude_provider():
     """
     llm = LLM(model="claude/claude-3-5-sonnet-20241022")
 
-    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+    from crewai.llm.providers.anthropic.completion import AnthropicCompletion
     assert isinstance(llm, AnthropicCompletion)
     assert llm.provider == "anthropic"
     assert llm.model == "claude-3-5-sonnet-20241022"
@@ -47,7 +47,7 @@ def test_anthropic_tool_use_conversation_flow():
     Test that the Anthropic completion properly handles tool use conversation flow
     """
     from unittest.mock import Mock, patch
-    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+    from crewai.llm.providers.anthropic.completion import AnthropicCompletion
     from anthropic.types.tool_use_block import ToolUseBlock
 
     # Create AnthropicCompletion instance
@@ -123,7 +123,7 @@ def test_anthropic_completion_module_is_imported():
     """
     Test that the completion module is properly imported when using Anthropic provider
     """
-    module_name = "crewai.llms.providers.anthropic.completion"
+    module_name = "crewai.llm.providers.anthropic.completion"
 
     # Remove module from cache if it exists
     if module_name in sys.modules:
@@ -175,7 +175,7 @@ def test_anthropic_completion_initialization_parameters():
         api_key="test-key"
     )
 
-    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+    from crewai.llm.providers.anthropic.completion import AnthropicCompletion
     assert isinstance(llm, AnthropicCompletion)
     assert llm.model == "claude-3-5-sonnet-20241022"
     assert llm.temperature == 0.7
@@ -195,7 +195,7 @@ def test_anthropic_specific_parameters():
         timeout=60
     )
 
-    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+    from crewai.llm.providers.anthropic.completion import AnthropicCompletion
     assert isinstance(llm, AnthropicCompletion)
     assert llm.stop_sequences == ["Human:", "Assistant:"]
     assert llm.stream == True
@@ -390,7 +390,7 @@ def test_anthropic_raises_error_when_model_not_supported():
     """Test that AnthropicCompletion raises ValueError when model not supported"""
 
     # Mock the Anthropic client to raise an error
-    with patch('crewai.llms.providers.anthropic.completion.Anthropic') as mock_anthropic_class:
+    with patch('crewai.llm.providers.anthropic.completion.Anthropic') as mock_anthropic_class:
         mock_client = MagicMock()
         mock_anthropic_class.return_value = mock_client
 
@@ -427,7 +427,7 @@ def test_anthropic_client_params_setup():
             client_params=custom_client_params
         )
 
-        from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+        from crewai.llm.providers.anthropic.completion import AnthropicCompletion
         assert isinstance(llm, AnthropicCompletion)
 
         assert llm.client_params == custom_client_params
@@ -462,7 +462,7 @@ def test_anthropic_client_params_override_defaults():
         )
 
         # Verify this is actually AnthropicCompletion, not LiteLLM fallback
-        from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+        from crewai.llm.providers.anthropic.completion import AnthropicCompletion
         assert isinstance(llm, AnthropicCompletion)
 
         merged_params = llm._get_client_params()
@@ -487,7 +487,7 @@ def test_anthropic_client_params_none():
             client_params=None
         )
 
-        from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+        from crewai.llm.providers.anthropic.completion import AnthropicCompletion
         assert isinstance(llm, AnthropicCompletion)
 
         assert llm.client_params is None
@@ -515,7 +515,7 @@ def test_anthropic_client_params_empty_dict():
             client_params={}
         )
 
-        from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+        from crewai.llm.providers.anthropic.completion import AnthropicCompletion
         assert isinstance(llm, AnthropicCompletion)
 
         assert llm.client_params == {}
@@ -538,7 +538,7 @@ def test_anthropic_model_detection():
 
     for model_name in anthropic_test_cases:
         llm = LLM(model=model_name)
-        from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+        from crewai.llm.providers.anthropic.completion import AnthropicCompletion
         assert isinstance(llm, AnthropicCompletion), f"Failed for model: {model_name}"
 
 

@@ -7,6 +7,8 @@ from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel
 
+from crewai.llm.core import CONTEXT_WINDOW_USAGE_RATIO, LLM_CONTEXT_WINDOW_SIZES
+from crewai.llm.providers.utils.common import safe_tool_conversion
 from crewai.utilities.agent_utils import is_context_length_exceeded
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededError,
@@ -15,7 +17,7 @@ from crewai.utilities.types import LLMMessage
 
 
 if TYPE_CHECKING:
-    from crewai.llms.hooks.base import BaseInterceptor
+    from crewai.llm.hooks.base import BaseInterceptor
     from crewai.tools.base_tool import BaseTool
 
 
@@ -36,7 +38,7 @@ try:
     )
 
     from crewai.events.types.llm_events import LLMCallType
-    from crewai.llms.base_llm import BaseLLM
+    from crewai.llm.base_llm import BaseLLM
 
 except ImportError:
     raise ImportError(
@@ -317,8 +319,6 @@ class AzureCompletion(BaseLLM):
     ) -> list[dict[str, Any]]:
         """Convert CrewAI tool format to Azure OpenAI function calling format."""
 
-        from crewai.llms.providers.utils.common import safe_tool_conversion
-
         azure_tools = []
 
         for tool in tools:
@@ -554,7 +554,6 @@ class AzureCompletion(BaseLLM):
 
     def get_context_window_size(self) -> int:
         """Get the context window size for the model."""
-        from crewai.llm import CONTEXT_WINDOW_USAGE_RATIO, LLM_CONTEXT_WINDOW_SIZES
 
         min_context = 1024
         max_context = 2097152

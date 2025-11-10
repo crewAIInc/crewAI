@@ -5,8 +5,8 @@ from unittest.mock import Mock
 import httpx
 import pytest
 
-from crewai.llms.hooks.base import BaseInterceptor
-from crewai.llms.hooks.transport import AsyncHTTPTransport, HTTPTransport
+from crewai.llm.hooks.base import BaseInterceptor
+from crewai.llm.hooks.transport import AsyncHTTPTransport, HTTPTransport
 
 
 class TrackingInterceptor(BaseInterceptor[httpx.Request, httpx.Response]):

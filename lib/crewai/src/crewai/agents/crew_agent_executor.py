@@ -47,7 +47,7 @@ if TYPE_CHECKING:
     from crewai.agent import Agent
     from crewai.agents.tools_handler import ToolsHandler
     from crewai.crew import Crew
-    from crewai.llms.base_llm import BaseLLM
+    from crewai.llm.base_llm import BaseLLM
     from crewai.task import Task
     from crewai.tools.base_tool import BaseTool
     from crewai.tools.structured_tool import CrewStructuredTool

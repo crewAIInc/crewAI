@@ -11,9 +11,10 @@ from datetime import datetime
 import json
 import logging
 import re
-from typing import TYPE_CHECKING, Any, Final
+from typing import TYPE_CHECKING, Any, ClassVar, Final
 
-from pydantic import BaseModel
+import httpx
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.llm_events import (
@@ -28,6 +29,8 @@ from crewai.events.types.tool_usage_events import (
     ToolUsageFinishedEvent,
     ToolUsageStartedEvent,
 )
+from crewai.llm.hooks.base import BaseInterceptor
+from crewai.llm.internal.meta import LLMMeta
 from crewai.types.usage_metrics import UsageMetrics
 
 
@@ -43,7 +46,7 @@ DEFAULT_SUPPORTS_STOP_WORDS: Final[bool] = True
 _JSON_EXTRACTION_PATTERN: Final[re.Pattern[str]] = re.compile(r"\{.*}", re.DOTALL)
 
 
-class BaseLLM(ABC):
+class BaseLLM(BaseModel, ABC, metaclass=LLMMeta):
     """Abstract base class for LLM implementations.
 
     This class defines the interface that all LLM implementations must follow.
@@ -62,46 +65,96 @@ class BaseLLM(ABC):
         additional_params: Additional provider-specific parameters.
     """
 
-    is_litellm: bool = False
+    model_config: ClassVar[ConfigDict] = ConfigDict(
+        arbitrary_types_allowed=True, extra="allow", validate_assignment=True
+    )
 
-    def __init__(
-        self,
-        model: str,
-        temperature: float | None = None,
-        api_key: str | None = None,
-        base_url: str | None = None,
-        provider: str | None = None,
-        **kwargs: Any,
-    ) -> None:
-        """Initialize the BaseLLM with default attributes.
+    # Core fields
+    model: str = Field(..., description="The model identifier/name")
+    temperature: float | None = Field(
+        None, description="Temperature setting for response generation"
+    )
+    api_key: str | None = Field(None, description="API key for authentication")
+    base_url: str | None = Field(None, description="Base URL for API requests")
+    provider: str = Field(
+        default="openai", description="Provider name (openai, anthropic, etc.)"
+    )
+    stop: list[str] = Field(
+        default_factory=list, description="Stop sequences for generation"
+    )
+
+    # Internal fields
+    is_litellm: bool = Field(
+        default=False, description="Whether this instance uses LiteLLM"
+    )
+    interceptor: BaseInterceptor[httpx.Request, httpx.Response] | None = Field(
+        None, description="HTTP request/response interceptor"
+    )
+    _token_usage: dict[str, int] = {
+        "total_tokens": 0,
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "successful_requests": 0,
+        "cached_prompt_tokens": 0,
+    }
+
+    @model_validator(mode="before")
+    @classmethod
+    def _extract_stop_and_validate(cls, values: dict[str, Any]) -> dict[str, Any]:
+        """Extract and normalize stop sequences before model initialization.
 
         Args:
-            model: The model identifier/name.
-            temperature: Optional temperature setting for response generation.
-            stop: Optional list of stop sequences for generation.
-            **kwargs: Additional provider-specific parameters.
+            values: Input values dictionary
+
+        Returns:
+            Processed values dictionary
         """
-        if not model:
+        if not values.get("model"):
             raise ValueError("Model name is required and cannot be empty")
 
-        self.model = model
-        self.temperature = temperature
-        self.api_key = api_key
-        self.base_url = base_url
-        # Store additional parameters for provider-specific use
-        self.additional_params = kwargs
-        self._provider = provider or "openai"
-
-        stop = kwargs.pop("stop", None)
+        # Handle stop sequences
+        stop = values.get("stop")
         if stop is None:
-            self.stop: list[str] = []
+            values["stop"] = []
         elif isinstance(stop, str):
-            self.stop = [stop]
-        elif isinstance(stop, list):
-            self.stop = stop
-        else:
-            self.stop = []
+            values["stop"] = [stop]
+        elif not isinstance(stop, list):
+            values["stop"] = []
 
+        # Set default provider if not specified
+        if "provider" not in values or values["provider"] is None:
+            values["provider"] = "openai"
+
+        return values
+
+    @property
+    def additional_params(self) -> dict[str, Any]:
+        """Get additional parameters stored as extra fields.
+
+        Returns:
+            Dictionary of additional parameters
+        """
+        return self.__pydantic_extra__ or {}
+
+    @additional_params.setter
+    def additional_params(self, value: dict[str, Any]) -> None:
+        """Set additional parameters as extra fields.
+
+        Args:
+            value: Dictionary of additional parameters to set
+        """
+        if not isinstance(value, dict):
+            raise ValueError("additional_params must be a dictionary")
+        if self.__pydantic_extra__ is None:
+            self.__pydantic_extra__ = {}
+        self.__pydantic_extra__.update(value)
+
+    def model_post_init(self, __context: Any) -> None:
+        """Initialize token usage tracking after model initialization.
+
+        Args:
+            __context: Pydantic context (unused)
+        """
         self._token_usage = {
             "total_tokens": 0,
             "prompt_tokens": 0,
@@ -109,16 +162,6 @@ class BaseLLM(ABC):
             "successful_requests": 0,
             "cached_prompt_tokens": 0,
         }
-
-    @property
-    def provider(self) -> str:
-        """Get the provider of the LLM."""
-        return self._provider
-
-    @provider.setter
-    def provider(self, value: str) -> None:
-        """Set the provider of the LLM."""
-        self._provider = value
 
     @abstractmethod
     def call(

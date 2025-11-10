@@ -743,7 +743,7 @@ def test_llm_emits_call_failed_event():
     error_message = "OpenAI API call failed: Simulated API failure"
 
     with patch(
-        "crewai.llms.providers.openai.completion.OpenAICompletion._handle_completion"
+        "crewai.llm.providers.openai.completion.OpenAICompletion._handle_completion"
     ) as mock_handle_completion:
         mock_handle_completion.side_effect = Exception("Simulated API failure")
 

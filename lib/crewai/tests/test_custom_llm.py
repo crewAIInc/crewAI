@@ -2,7 +2,7 @@ from typing import Any, Dict, List, Optional, Union
 
 import pytest
 from crewai import Agent, Crew, Process, Task
-from crewai.llms.base_llm import BaseLLM
+from crewai.llm.base_llm import BaseLLM
 from crewai.utilities.llm_utils import create_llm
 
 

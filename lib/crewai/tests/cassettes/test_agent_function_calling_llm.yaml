@@ -590,7 +590,7 @@ interactions:
       "<function BaseTool.<lambda> at 0x107389260>", "result_as_answer": "False",
       "max_usage_count": "None", "current_usage_count": "0"}], "max_iter": 2, "agent_executor":
       "<crewai.agents.crew_agent_executor.CrewAgentExecutor object at 0x130de6540>",
-      "llm": "<crewai.llms.providers.openai.completion.OpenAICompletion object at
+      "llm": "<crewai.llm.providers.openai.completion.OpenAICompletion object at
       0x130db6de0>", "crew": {"parent_flow": null, "name": "crew", "cache": true,
       "tasks": ["{''used_tools'': 0, ''tools_errors'': 0, ''delegations'': 0, ''i18n'':
       {''prompt_file'': None}, ''name'': None, ''prompt_context'': '''', ''description'':
@@ -605,7 +605,7 @@ interactions:
       ''description_updated'': False, ''cache_function'': <function BaseTool.<lambda>
       at 0x107389260>, ''result_as_answer'': False, ''max_usage_count'': None, ''current_usage_count'':
       0}], ''max_iter'': 2, ''agent_executor'': <crewai.agents.crew_agent_executor.CrewAgentExecutor
-      object at 0x130de6540>, ''llm'': <crewai.llms.providers.openai.completion.OpenAICompletion
+      object at 0x130de6540>, ''llm'': <crewai.llm.providers.openai.completion.OpenAICompletion
       object at 0x130db6de0>, ''crew'': Crew(id=991ac83f-9a29-411f-b0a0-0a335c7a2d0e,
       process=Process.sequential, number_of_agents=1, number_of_tasks=1), ''i18n'':
       {''prompt_file'': None}, ''cache_handler'': {}, ''tools_handler'': <crewai.agents.tools_handler.ToolsHandler
@@ -634,7 +634,7 @@ interactions:
       ''abc.Learn_About_Ai''>, ''description_updated'': False, ''cache_function'':
       <function BaseTool.<lambda> at 0x107389260>, ''result_as_answer'': False, ''max_usage_count'':
       None, ''current_usage_count'': 0}], ''max_iter'': 2, ''agent_executor'': <crewai.agents.crew_agent_executor.CrewAgentExecutor
-      object at 0x130de6540>, ''llm'': <crewai.llms.providers.openai.completion.OpenAICompletion
+      object at 0x130de6540>, ''llm'': <crewai.llm.providers.openai.completion.OpenAICompletion
       object at 0x130db6de0>, ''crew'': Crew(id=991ac83f-9a29-411f-b0a0-0a335c7a2d0e,
       process=Process.sequential, number_of_agents=1, number_of_tasks=1), ''i18n'':
       {''prompt_file'': None}, ''cache_handler'': {}, ''tools_handler'': <crewai.agents.tools_handler.ToolsHandler
@@ -657,7 +657,7 @@ interactions:
       {"fingerprint": {"metadata": "{}"}}, "callbacks": [], "adapted_agent": false,
       "knowledge_config": null, "max_execution_time": null, "agent_ops_agent_name":
       "test role", "agent_ops_agent_id": null, "step_callback": null, "use_system_prompt":
-      true, "function_calling_llm": "<crewai.llms.providers.openai.completion.OpenAICompletion
+      true, "function_calling_llm": "<crewai.llm.providers.openai.completion.OpenAICompletion
       object at 0x130db7020>", "system_template": null, "prompt_template": null, "response_template":
       null, "allow_code_execution": false, "respect_context_window": true, "max_retry_limit":
       2, "multimodal": false, "inject_date": false, "date_format": "%Y-%m-%d", "code_execution_mode":
@@ -1068,7 +1068,7 @@ interactions:
       "<function BaseTool.<lambda> at 0x107e394e0>", "result_as_answer": "False",
       "max_usage_count": "None", "current_usage_count": "0"}], "max_iter": 2, "agent_executor":
       "<crewai.agents.crew_agent_executor.CrewAgentExecutor object at 0x13b37c980>",
-      "llm": "<crewai.llms.providers.openai.completion.OpenAICompletion object at
+      "llm": "<crewai.llm.providers.openai.completion.OpenAICompletion object at
       0x13b7563c0>", "crew": {"parent_flow": null, "name": "crew", "cache": true,
       "tasks": ["{''used_tools'': 0, ''tools_errors'': 0, ''delegations'': 0, ''i18n'':
       {''prompt_file'': None}, ''name'': None, ''prompt_context'': '''', ''description'':
@@ -1083,7 +1083,7 @@ interactions:
       ''description_updated'': False, ''cache_function'': <function BaseTool.<lambda>
       at 0x107e394e0>, ''result_as_answer'': False, ''max_usage_count'': None, ''current_usage_count'':
       0}], ''max_iter'': 2, ''agent_executor'': <crewai.agents.crew_agent_executor.CrewAgentExecutor
-      object at 0x13b37c980>, ''llm'': <crewai.llms.providers.openai.completion.OpenAICompletion
+      object at 0x13b37c980>, ''llm'': <crewai.llm.providers.openai.completion.OpenAICompletion
       object at 0x13b7563c0>, ''crew'': Crew(id=f38365e9-3206-45b6-8754-950cb03fe57e,
       process=Process.sequential, number_of_agents=1, number_of_tasks=1), ''i18n'':
       {''prompt_file'': None}, ''cache_handler'': {}, ''tools_handler'': <crewai.agents.tools_handler.ToolsHandler
@@ -1112,7 +1112,7 @@ interactions:
       ''abc.Learn_About_Ai''>, ''description_updated'': False, ''cache_function'':
       <function BaseTool.<lambda> at 0x107e394e0>, ''result_as_answer'': False, ''max_usage_count'':
       None, ''current_usage_count'': 0}], ''max_iter'': 2, ''agent_executor'': <crewai.agents.crew_agent_executor.CrewAgentExecutor
-      object at 0x13b37c980>, ''llm'': <crewai.llms.providers.openai.completion.OpenAICompletion
+      object at 0x13b37c980>, ''llm'': <crewai.llm.providers.openai.completion.OpenAICompletion
       object at 0x13b7563c0>, ''crew'': Crew(id=f38365e9-3206-45b6-8754-950cb03fe57e,
       process=Process.sequential, number_of_agents=1, number_of_tasks=1), ''i18n'':
       {''prompt_file'': None}, ''cache_handler'': {}, ''tools_handler'': <crewai.agents.tools_handler.ToolsHandler
@@ -1135,7 +1135,7 @@ interactions:
       {"fingerprint": {"metadata": "{}"}}, "callbacks": [], "adapted_agent": false,
       "knowledge_config": null, "max_execution_time": null, "agent_ops_agent_name":
       "test role", "agent_ops_agent_id": null, "step_callback": null, "use_system_prompt":
-      true, "function_calling_llm": "<crewai.llms.providers.openai.completion.OpenAICompletion
+      true, "function_calling_llm": "<crewai.llm.providers.openai.completion.OpenAICompletion
       object at 0x13b756690>", "system_template": null, "prompt_template": null, "response_template":
       null, "allow_code_execution": false, "respect_context_window": true, "max_retry_limit":
       2, "multimodal": false, "inject_date": false, "date_format": "%Y-%m-%d", "code_execution_mode":

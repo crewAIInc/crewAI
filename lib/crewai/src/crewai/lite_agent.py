@@ -40,7 +40,7 @@ from crewai.events.types.logging_events import AgentLogsExecutionEvent
 from crewai.flow.flow_trackable import FlowTrackable
 from crewai.lite_agent_output import LiteAgentOutput
 from crewai.llm import LLM
-from crewai.llms.base_llm import BaseLLM
+from crewai.llm.base_llm import BaseLLM
 from crewai.tools.base_tool import BaseTool
 from crewai.tools.structured_tool import CrewStructuredTool
 from crewai.utilities.agent_utils import (
@@ -503,7 +503,7 @@ class LiteAgent(FlowTrackable, BaseModel):
             AgentFinish: The final result of the agent execution.
         """
         # Execute the agent loop
-        formatted_answer = None
+        formatted_answer: AgentAction | AgentFinish | None = None
         while not isinstance(formatted_answer, AgentFinish):
             try:
                 if has_reached_max_iterations(self._iterations, self.max_iterations):
@@ -551,7 +551,8 @@ class LiteAgent(FlowTrackable, BaseModel):
                         show_logs=self._show_logs,
                     )
 
-                self._append_message(formatted_answer.text, role="assistant")
+                if formatted_answer is not None:
+                    self._append_message(formatted_answer.text, role="assistant")
             except OutputParserError as e:  # noqa: PERF203
                 self._printer.print(
                     content="Failed to parse LLM output. Retrying...",

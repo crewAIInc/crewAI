@@ -9,7 +9,7 @@ from crewai.events.types.agent_events import LiteAgentExecutionStartedEvent
 from crewai.events.types.tool_usage_events import ToolUsageStartedEvent
 from crewai.lite_agent import LiteAgent
 from crewai.lite_agent_output import LiteAgentOutput
-from crewai.llms.base_llm import BaseLLM
+from crewai.llm.base_llm import BaseLLM
 from pydantic import BaseModel, Field
 import pytest
 

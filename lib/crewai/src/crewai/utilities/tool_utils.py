@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     from crewai.agent import Agent
     from crewai.agents.agent_builder.base_agent import BaseAgent
     from crewai.llm import LLM
-    from crewai.llms.base_llm import BaseLLM
+    from crewai.llm.base_llm import BaseLLM
     from crewai.task import Task
 
 

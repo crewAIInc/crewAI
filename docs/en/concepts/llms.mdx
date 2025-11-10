@@ -1212,7 +1212,7 @@ Learn how to get the most out of your LLM configuration:
     ```python
 import httpx
 from crewai import LLM
-from crewai.llms.hooks import BaseInterceptor
+from crewai.llm.hooks import BaseInterceptor
 
 class CustomInterceptor(BaseInterceptor[httpx.Request, httpx.Response]):
     """Custom interceptor to modify requests and responses."""
