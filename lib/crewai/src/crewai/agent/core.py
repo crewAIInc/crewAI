@@ -713,7 +713,7 @@ class Agent(BaseAgent):
         """Get tools from legacy string-based MCP references.
 
         This method maintains backwards compatibility with string-based
-        MCP references (https://... and crewai-amp:...).
+        MCP references (http://..., https://..., and crewai-amp:...).
 
         Args:
             mcp_ref: String reference to MCP server.
@@ -723,12 +723,12 @@ class Agent(BaseAgent):
         """
         if mcp_ref.startswith("crewai-amp:"):
             return self._get_amp_mcp_tools(mcp_ref)
-        if mcp_ref.startswith("https://"):
+        if mcp_ref.startswith(("http://", "https://")):
             return self._get_external_mcp_tools(mcp_ref)
         return []
 
     def _get_external_mcp_tools(self, mcp_ref: str) -> list[BaseTool]:
-        """Get tools from external HTTPS MCP server with graceful error handling."""
+        """Get tools from external HTTP/HTTPS MCP server with graceful error handling."""
         from crewai.tools.mcp_tool_wrapper import MCPToolWrapper
 
         # Parse server URL and optional tool name
@@ -736,6 +736,15 @@ class Agent(BaseAgent):
             server_url, specific_tool = mcp_ref.split("#", 1)
         else:
             server_url, specific_tool = mcp_ref, None
+
+        parsed_url = urlparse(server_url)
+        if parsed_url.scheme == "http":
+            self._logger.log(
+                "warning",
+                f"Using http:// for MCP server '{server_url}'. "
+                "This is intended for local development only. "
+                "Use https:// in production to ensure secure communication.",
+            )
 
         server_params = {"url": server_url}
         server_name = self._extract_server_name(server_url)

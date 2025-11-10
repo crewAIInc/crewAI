@@ -63,6 +63,11 @@ class MCPServerHTTP(BaseModel):
             headers={"Authorization": "Bearer ..."},
             cache_tools_list=True,
         )
+
+        mcp_server = MCPServerHTTP(
+            url="http://localhost:8000/mcp",
+            cache_tools_list=True,
+        )
         ```
     """
 

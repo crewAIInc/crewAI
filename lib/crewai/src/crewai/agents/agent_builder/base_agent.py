@@ -197,7 +197,7 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
     )
     mcps: list[str | MCPServerConfig] | None = Field(
         default=None,
-        description="List of MCP server references. Supports 'https://server.com/path' for external servers and 'crewai-amp:mcp-name' for AMP marketplace. Use '#tool_name' suffix for specific tools.",
+        description="List of MCP server references. Supports 'http://localhost:port/path' or 'https://server.com/path' for external servers and 'crewai-amp:mcp-name' for AMP marketplace. Use '#tool_name' suffix for specific tools. Note: http:// is intended for local development only; use https:// in production.",
     )
 
     @model_validator(mode="before")
@@ -268,12 +268,12 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
         validated_mcps = []
         for mcp in mcps:
             if isinstance(mcp, str):
-                if mcp.startswith(("https://", "crewai-amp:")):
+                if mcp.startswith(("http://", "https://", "crewai-amp:")):
                     validated_mcps.append(mcp)
                 else:
                     raise ValueError(
                         f"Invalid MCP reference: {mcp}. "
-                        "String references must start with 'https://' or 'crewai-amp:'"
+                        "String references must start with 'http://', 'https://', or 'crewai-amp:'"
                     )
 
             elif isinstance(mcp, (MCPServerConfig)):
