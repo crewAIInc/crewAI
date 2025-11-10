@@ -29,7 +29,7 @@ def is_tracing_enabled() -> bool:
 
 def is_tracing_disabled() -> bool:
     """Check if tracing is explicitly disabled via environment variables.
-    
+
     Returns True if any of the disable flags are set to true.
     """
     disable_flags = [

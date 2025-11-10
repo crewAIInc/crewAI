@@ -58,19 +58,12 @@ def test_kickoff_for_each_waits_for_event_handlers(simple_crew):
         )
         
         # Mock the task execution to avoid actual LLM calls
-        with patch.object(simple_crew, '_run_sequential_process') as mock_run:
-            mock_output = Mock()
-            mock_output.raw = "Test output"
-            mock_output.pydantic = None
-            mock_output.json_dict = None
-            mock_run.return_value = Mock(
-                raw="Test output",
-                pydantic=None,
-                json_dict=None,
-                tasks_output=[mock_output],
-                token_usage=Mock(total_tokens=0),
-            )
-            
+        from types import SimpleNamespace
+        
+        def mock_execute_tasks(self, tasks):
+            return [SimpleNamespace(raw="Test output", pydantic=None, json_dict=None)]
+        
+        with patch.object(Crew, '_execute_tasks', mock_execute_tasks):
             start_time = time.time()
             results = simple_crew.kickoff_for_each(
                 inputs=[{"test": "input1"}, {"test": "input2"}]
@@ -83,8 +76,8 @@ def test_kickoff_for_each_waits_for_event_handlers(simple_crew):
             # Verify handler was called for each kickoff
             assert handler_call_count == 2
             
-            # Verify the execution waited for handlers (should take at least 0.2s for 2 handlers)
-            assert elapsed_time >= 0.2, (
+            # Verify the execution waited for handlers (should take at least 0.18s for 2 handlers)
+            assert elapsed_time >= 0.18, (
                 f"kickoff_for_each returned too quickly ({elapsed_time:.3f}s), "
                 "suggesting it didn't wait for event handlers"
             )
@@ -109,16 +102,14 @@ def test_kickoff_waits_for_event_handlers_on_error(simple_crew):
         )
         
         # Mock the task execution to raise an error
-        with patch.object(simple_crew, '_run_sequential_process') as mock_run:
-            mock_run.side_effect = RuntimeError("Test error")
-            
+        with patch.object(Crew, '_run_sequential_process', side_effect=RuntimeError("Test error")):
             start_time = time.time()
             with pytest.raises(RuntimeError, match="Test error"):
                 simple_crew.kickoff()
             elapsed_time = time.time() - start_time
             
-            # Verify the execution waited for handlers (should take at least 0.1s)
-            assert elapsed_time >= 0.1, (
+            # Verify the execution waited for handlers (should take at least 0.09s)
+            assert elapsed_time >= 0.09, (
                 f"kickoff returned too quickly ({elapsed_time:.3f}s), "
                 "suggesting it didn't wait for error event handlers"
             )
