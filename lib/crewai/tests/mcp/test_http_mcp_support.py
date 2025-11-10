@@ -149,13 +149,17 @@ class TestHTTPMCPFragmentFiltering:
         
         with patch.object(agent, '_get_mcp_tool_schemas', return_value=mock_schemas):
             with patch('crewai.tools.mcp_tool_wrapper.MCPToolWrapper') as mock_wrapper_class:
-                mock_wrapper_class.return_value = MagicMock()
+                mock_tool = MagicMock()
+                mock_wrapper_class.return_value = mock_tool
                 
                 result = agent._get_external_mcp_tools("http://localhost:7365/mcp#specific_tool")
                 
-                assert len(result) == 1
+                mock_wrapper_class.assert_called_once()
                 call_args = mock_wrapper_class.call_args
                 assert call_args.kwargs['tool_name'] == 'specific_tool'
+                
+                assert len(result) == 1
+                assert result[0] == mock_tool
 
 
 class TestHTTPMCPWarningLog:
@@ -171,13 +175,14 @@ class TestHTTPMCPWarningLog:
         )
         
         log_calls = []
-        original_log = agent._logger.log
+        logger_class = type(agent._logger)
+        original_log = logger_class.log
         
-        def mock_log(level, message):
+        def mock_log(self, level, message):
             log_calls.append((level, message))
-            return original_log(level, message)
+            return original_log(self, level, message)
         
-        with patch.object(agent._logger, 'log', side_effect=mock_log):
+        with patch.object(logger_class, 'log', new=mock_log):
             with patch.object(agent, '_get_mcp_tool_schemas', return_value={}):
                 agent._get_external_mcp_tools("http://localhost:7365/mcp")
                 
@@ -196,13 +201,14 @@ class TestHTTPMCPWarningLog:
         )
         
         log_calls = []
-        original_log = agent._logger.log
+        logger_class = type(agent._logger)
+        original_log = logger_class.log
         
-        def mock_log(level, message):
+        def mock_log(self, level, message):
             log_calls.append((level, message))
-            return original_log(level, message)
+            return original_log(self, level, message)
         
-        with patch.object(agent._logger, 'log', side_effect=mock_log):
+        with patch.object(logger_class, 'log', new=mock_log):
             with patch.object(agent, '_get_mcp_tool_schemas', return_value={}):
                 agent._get_external_mcp_tools("https://api.example.com/mcp")
                 
