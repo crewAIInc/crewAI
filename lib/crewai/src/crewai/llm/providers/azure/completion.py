@@ -3,9 +3,10 @@ from __future__ import annotations
 import json
 import logging
 import os
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, ClassVar
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, model_validator
+from typing_extensions import Self
 
 from crewai.llm.core import CONTEXT_WINDOW_USAGE_RATIO, LLM_CONTEXT_WINDOW_SIZES
 from crewai.llm.providers.utils.common import safe_tool_conversion
@@ -17,7 +18,6 @@ from crewai.utilities.types import LLMMessage
 
 
 if TYPE_CHECKING:
-    from crewai.llm.hooks.base import BaseInterceptor
     from crewai.tools.base_tool import BaseTool
 
 
@@ -51,65 +51,77 @@ class AzureCompletion(BaseLLM):
 
     This class provides direct integration with the Azure AI Inference Python SDK,
     offering native function calling, streaming support, and proper Azure authentication.
+
+    Attributes:
+        model: Azure deployment name or model name
+        endpoint: Azure endpoint URL
+        api_version: Azure API version
+        timeout: Request timeout in seconds
+        max_retries: Maximum number of retries
+        top_p: Nucleus sampling parameter
+        frequency_penalty: Frequency penalty (-2 to 2)
+        presence_penalty: Presence penalty (-2 to 2)
+        max_tokens: Maximum tokens in response
+        stream: Enable streaming responses
+        interceptor: HTTP interceptor (not yet supported for Azure)
     """
 
-    def __init__(
-        self,
-        model: str,
-        api_key: str | None = None,
-        endpoint: str | None = None,
-        api_version: str | None = None,
-        timeout: float | None = None,
-        max_retries: int = 2,
-        temperature: float | None = None,
-        top_p: float | None = None,
-        frequency_penalty: float | None = None,
-        presence_penalty: float | None = None,
-        max_tokens: int | None = None,
-        stop: list[str] | None = None,
-        stream: bool = False,
-        interceptor: BaseInterceptor[Any, Any] | None = None,
-        **kwargs: Any,
-    ):
-        """Initialize Azure AI Inference chat completion client.
+    model_config: ClassVar[ConfigDict] = ConfigDict(arbitrary_types_allowed=True)
 
-        Args:
-            model: Azure deployment name or model name
-            api_key: Azure API key (defaults to AZURE_API_KEY env var)
-            endpoint: Azure endpoint URL (defaults to AZURE_ENDPOINT env var)
-            api_version: Azure API version (defaults to AZURE_API_VERSION env var)
-            timeout: Request timeout in seconds
-            max_retries: Maximum number of retries
-            temperature: Sampling temperature (0-2)
-            top_p: Nucleus sampling parameter
-            frequency_penalty: Frequency penalty (-2 to 2)
-            presence_penalty: Presence penalty (-2 to 2)
-            max_tokens: Maximum tokens in response
-            stop: Stop sequences
-            stream: Enable streaming responses
-            interceptor: HTTP interceptor (not yet supported for Azure).
-            **kwargs: Additional parameters
-        """
-        if interceptor is not None:
+    endpoint: str | None = Field(
+        default=None,
+        description="Azure endpoint URL (defaults to AZURE_ENDPOINT env var)",
+    )
+    api_version: str = Field(
+        default="2024-06-01",
+        description="Azure API version (defaults to AZURE_API_VERSION env var or 2024-06-01)",
+    )
+    timeout: float | None = Field(
+        default=None, description="Request timeout in seconds"
+    )
+    max_retries: int = Field(default=2, description="Maximum number of retries")
+    top_p: float | None = Field(default=None, description="Nucleus sampling parameter")
+    frequency_penalty: float | None = Field(
+        default=None, description="Frequency penalty (-2 to 2)"
+    )
+    presence_penalty: float | None = Field(
+        default=None, description="Presence penalty (-2 to 2)"
+    )
+    max_tokens: int | None = Field(
+        default=None, description="Maximum tokens in response"
+    )
+    stream: bool = Field(default=False, description="Enable streaming responses")
+    interceptor: Any = Field(
+        default=None, description="HTTP interceptor (not yet supported for Azure)"
+    )
+    client: Any = Field(default=None, exclude=True, description="Azure client instance")
+
+    _is_openai_model: bool = PrivateAttr(default=False)
+    _is_azure_openai_endpoint: bool = PrivateAttr(default=False)
+
+    @model_validator(mode="after")
+    def setup_client(self) -> Self:
+        """Initialize the Azure client and validate configuration."""
+        if self.interceptor is not None:
             raise NotImplementedError(
                 "HTTP interceptors are not yet supported for Azure AI Inference provider. "
                 "Interceptors are currently supported for OpenAI and Anthropic providers only."
             )
 
-        super().__init__(
-            model=model, temperature=temperature, stop=stop or [], **kwargs
-        )
+        if self.api_key is None:
+            self.api_key = os.getenv("AZURE_API_KEY")
 
-        self.api_key = api_key or os.getenv("AZURE_API_KEY")
-        self.endpoint = (
-            endpoint
-            or os.getenv("AZURE_ENDPOINT")
-            or os.getenv("AZURE_OPENAI_ENDPOINT")
-            or os.getenv("AZURE_API_BASE")
-        )
-        self.api_version = api_version or os.getenv("AZURE_API_VERSION") or "2024-06-01"
-        self.timeout = timeout
-        self.max_retries = max_retries
+        if self.endpoint is None:
+            self.endpoint = (
+                os.getenv("AZURE_ENDPOINT")
+                or os.getenv("AZURE_OPENAI_ENDPOINT")
+                or os.getenv("AZURE_API_BASE")
+            )
+
+        if self.api_version == "2024-06-01":
+            env_version = os.getenv("AZURE_API_VERSION")
+            if env_version:
+                self.api_version = env_version
 
         if not self.api_key:
             raise ValueError(
@@ -120,35 +132,37 @@ class AzureCompletion(BaseLLM):
                 "Azure endpoint is required. Set AZURE_ENDPOINT environment variable or pass endpoint parameter."
             )
 
-        # Validate and potentially fix Azure OpenAI endpoint URL
-        self.endpoint = self._validate_and_fix_endpoint(self.endpoint, model)
+        self.endpoint = self._validate_and_fix_endpoint(self.endpoint, self.model)
 
-        # Build client kwargs
-        client_kwargs = {
+        client_kwargs: dict[str, Any] = {
             "endpoint": self.endpoint,
             "credential": AzureKeyCredential(self.api_key),
         }
 
-        # Add api_version if specified (primarily for Azure OpenAI endpoints)
         if self.api_version:
             client_kwargs["api_version"] = self.api_version
 
-        self.client = ChatCompletionsClient(**client_kwargs)  # type: ignore[arg-type]
+        self.client = ChatCompletionsClient(**client_kwargs)
 
-        self.top_p = top_p
-        self.frequency_penalty = frequency_penalty
-        self.presence_penalty = presence_penalty
-        self.max_tokens = max_tokens
-        self.stream = stream
-
-        self.is_openai_model = any(
-            prefix in model.lower() for prefix in ["gpt-", "o1-", "text-"]
+        self._is_openai_model = any(
+            prefix in self.model.lower() for prefix in ["gpt-", "o1-", "text-"]
         )
-
-        self.is_azure_openai_endpoint = (
+        self._is_azure_openai_endpoint = (
             "openai.azure.com" in self.endpoint
             and "/openai/deployments/" in self.endpoint
         )
+
+        return self
+
+    @property
+    def is_openai_model(self) -> bool:
+        """Check if model is an OpenAI model."""
+        return self._is_openai_model
+
+    @property
+    def is_azure_openai_endpoint(self) -> bool:
+        """Check if endpoint is an Azure OpenAI endpoint."""
+        return self._is_azure_openai_endpoint
 
     def _validate_and_fix_endpoint(self, endpoint: str, model: str) -> str:
         """Validate and fix Azure endpoint URL format.

@@ -8,8 +8,8 @@ from crewai.crew import Crew
 from crewai.crews.crew_output import CrewOutput
 from crewai.flow.flow import Flow
 from crewai.knowledge.knowledge import Knowledge
-from crewai.llm import LLM
 from crewai.llm.base_llm import BaseLLM
+from crewai.llm.core import LLM
 from crewai.process import Process
 from crewai.task import Task
 from crewai.tasks.llm_guardrail import LLMGuardrail

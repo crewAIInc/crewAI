@@ -66,7 +66,7 @@ class BaseLLM(BaseModel, ABC, metaclass=LLMMeta):
     """
 
     model_config: ClassVar[ConfigDict] = ConfigDict(
-        arbitrary_types_allowed=True, extra="allow", validate_assignment=True
+        arbitrary_types_allowed=True, extra="allow"
     )
 
     # Core fields
@@ -80,7 +80,9 @@ class BaseLLM(BaseModel, ABC, metaclass=LLMMeta):
         default="openai", description="Provider name (openai, anthropic, etc.)"
     )
     stop: list[str] = Field(
-        default_factory=list, description="Stop sequences for generation"
+        default_factory=list,
+        description="Stop sequences for generation",
+        validation_alias="stop_sequences",
     )
 
     # Internal fields
@@ -112,16 +114,18 @@ class BaseLLM(BaseModel, ABC, metaclass=LLMMeta):
         if not values.get("model"):
             raise ValueError("Model name is required and cannot be empty")
 
-        # Handle stop sequences
-        stop = values.get("stop")
+        stop = values.get("stop") or values.get("stop_sequences")
         if stop is None:
             values["stop"] = []
         elif isinstance(stop, str):
             values["stop"] = [stop]
-        elif not isinstance(stop, list):
+        elif isinstance(stop, list):
+            values["stop"] = stop
+        else:
             values["stop"] = []
 
-        # Set default provider if not specified
+        values.pop("stop_sequences", None)
+
         if "provider" not in values or values["provider"] is None:
             values["provider"] = "openai"
 
