@@ -33,13 +33,12 @@ class LLMMeta(ModelMetaclass):
     native provider implementation based on the model parameter.
     """
 
-    def __call__(cls, model: str, is_litellm: bool = False, **kwargs: Any) -> Any:  # noqa: N805
+    def __call__(cls, *args: Any, **kwargs: Any) -> Any:  # noqa: N805
         """Route to appropriate provider implementation at instantiation time.
 
         Args:
-            model: The model identifier (e.g., "gpt-4", "claude-3-opus")
-            is_litellm: Force use of LiteLLM instead of native provider
-            **kwargs: Additional parameters for the LLM
+            *args: Positional arguments (model should be first for LLM class)
+            **kwargs: Keyword arguments including model, is_litellm, etc.
 
         Returns:
             Instance of the appropriate provider class or LLM class
@@ -47,18 +46,18 @@ class LLMMeta(ModelMetaclass):
         Raises:
             ValueError: If model is not a valid string
         """
+        if cls.__name__ != "LLM":
+            return super().__call__(*args, **kwargs)
+
+        model = kwargs.get("model") or (args[0] if args else None)
+        is_litellm = kwargs.get("is_litellm", False)
+
         if not model or not isinstance(model, str):
             raise ValueError("Model must be a non-empty string")
 
-        # Only perform routing if called on the base LLM class
-        # Subclasses (OpenAICompletion, etc.) should create normally
-        from crewai.llm import LLM
-
-        if cls is not LLM:
-            # Direct instantiation of provider class, skip routing
-            return super().__call__(model=model, **kwargs)
-
-        # Extract provider information
+        if args and not kwargs.get("model"):
+            kwargs["model"] = args[0]
+            args = args[1:]
         explicit_provider = kwargs.get("provider")
 
         if explicit_provider:
@@ -97,12 +96,10 @@ class LLMMeta(ModelMetaclass):
             use_native = True
             model_string = model
 
-        # Route to native provider if available
         native_class = cls._get_native_provider(provider) if use_native else None
         if native_class and not is_litellm and provider in SUPPORTED_NATIVE_PROVIDERS:
             try:
-                # Remove 'provider' from kwargs to avoid duplicate keyword argument
-                kwargs_copy = {k: v for k, v in kwargs.items() if k != "provider"}
+                kwargs_copy = {k: v for k, v in kwargs.items() if k not in ("provider", "model")}
                 return native_class(
                     model=model_string, provider=provider, **kwargs_copy
                 )
@@ -111,15 +108,14 @@ class LLMMeta(ModelMetaclass):
             except Exception as e:
                 raise ImportError(f"Error importing native provider: {e}") from e
 
-        # Fallback to LiteLLM
         try:
             import litellm  # noqa: F401
         except ImportError:
             logging.error("LiteLLM is not available, falling back to LiteLLM")
             raise ImportError("Fallback to LiteLLM is not available") from None
 
-        # Create actual LLM instance with is_litellm=True
-        return super().__call__(model=model, is_litellm=True, **kwargs)
+        kwargs_copy = {k: v for k, v in kwargs.items() if k not in ("model", "is_litellm")}
+        return super().__call__(model=model, is_litellm=True, **kwargs_copy)
 
     @staticmethod
     def _validate_model_in_constants(model: str, provider: str) -> bool:

@@ -56,8 +56,8 @@ from crewai.events.types.crew_events import (
 from crewai.flow.flow_trackable import FlowTrackable
 from crewai.knowledge.knowledge import Knowledge
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
-from crewai.llm import LLM
 from crewai.llm.base_llm import BaseLLM
+from crewai.llm.core import LLM
 from crewai.memory.entity.entity_memory import EntityMemory
 from crewai.memory.external.external_memory import ExternalMemory
 from crewai.memory.long_term.long_term_memory import LongTermMemory

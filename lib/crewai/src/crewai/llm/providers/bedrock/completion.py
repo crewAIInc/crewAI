@@ -5,8 +5,8 @@ import logging
 import os
 from typing import TYPE_CHECKING, Any, ClassVar, TypedDict, cast
 
-from pydantic import BaseModel, ConfigDict
-from typing_extensions import Required
+from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, model_validator
+from typing_extensions import Required, Self
 
 from crewai.events.types.llm_events import LLMCallType
 from crewai.llm.base_llm import BaseLLM
@@ -31,8 +31,6 @@ if TYPE_CHECKING:
         ToolConfigurationTypeDef,
         ToolTypeDef,
     )
-
-    from crewai.llm.hooks.base import BaseInterceptor
 
 
 try:
@@ -143,76 +141,86 @@ class BedrockCompletion(BaseLLM):
     - Complete streaming event handling (messageStart, contentBlockStart, etc.)
     - Response metadata and trace information capture
     - Model-specific conversation format handling (e.g., Cohere requirements)
+
+    Attributes:
+        model: The Bedrock model ID to use
+        aws_access_key_id: AWS access key (defaults to environment variable)
+        aws_secret_access_key: AWS secret key (defaults to environment variable)
+        aws_session_token: AWS session token for temporary credentials
+        region_name: AWS region name
+        max_tokens: Maximum tokens to generate
+        top_p: Nucleus sampling parameter
+        top_k: Top-k sampling parameter (Claude models only)
+        stop_sequences: List of sequences that stop generation
+        stream: Whether to use streaming responses
+        guardrail_config: Guardrail configuration for content filtering
+        additional_model_request_fields: Model-specific request parameters
+        additional_model_response_field_paths: Custom response field paths
+        interceptor: HTTP interceptor (not yet supported for Bedrock)
     """
 
-    model_config: ClassVar[ConfigDict] = ConfigDict(ignored_types=(property,))
+    model_config: ClassVar[ConfigDict] = ConfigDict(
+        ignored_types=(property,), arbitrary_types_allowed=True
+    )
 
-    def __init__(
-        self,
-        model: str = "anthropic.claude-3-5-sonnet-20241022-v2:0",
-        aws_access_key_id: str | None = None,
-        aws_secret_access_key: str | None = None,
-        aws_session_token: str | None = None,
-        region_name: str = "us-east-1",
-        temperature: float | None = None,
-        max_tokens: int | None = None,
-        top_p: float | None = None,
-        top_k: int | None = None,
-        stop_sequences: Sequence[str] | None = None,
-        stream: bool = False,
-        guardrail_config: dict[str, Any] | None = None,
-        additional_model_request_fields: dict[str, Any] | None = None,
-        additional_model_response_field_paths: list[str] | None = None,
-        interceptor: BaseInterceptor[Any, Any] | None = None,
-        **kwargs: Any,
-    ) -> None:
-        """Initialize AWS Bedrock completion client.
+    aws_access_key_id: str | None = Field(
+        default=None, description="AWS access key (defaults to environment variable)"
+    )
+    aws_secret_access_key: str | None = Field(
+        default=None, description="AWS secret key (defaults to environment variable)"
+    )
+    aws_session_token: str | None = Field(
+        default=None, description="AWS session token for temporary credentials"
+    )
+    region_name: str = Field(default="us-east-1", description="AWS region name")
+    max_tokens: int | None = Field(
+        default=None, description="Maximum tokens to generate"
+    )
+    top_p: float | None = Field(default=None, description="Nucleus sampling parameter")
+    top_k: int | None = Field(
+        default=None, description="Top-k sampling parameter (Claude models only)"
+    )
+    stream: bool = Field(
+        default=False, description="Whether to use streaming responses"
+    )
+    guardrail_config: dict[str, Any] | None = Field(
+        default=None, description="Guardrail configuration for content filtering"
+    )
+    additional_model_request_fields: dict[str, Any] | None = Field(
+        default=None, description="Model-specific request parameters"
+    )
+    additional_model_response_field_paths: list[str] | None = Field(
+        default=None, description="Custom response field paths"
+    )
+    interceptor: Any = Field(
+        default=None, description="HTTP interceptor (not yet supported for Bedrock)"
+    )
+    client: Any = Field(
+        default=None, exclude=True, description="Bedrock client instance"
+    )
 
-        Args:
-            model: The Bedrock model ID to use
-            aws_access_key_id: AWS access key (defaults to environment variable)
-            aws_secret_access_key: AWS secret key (defaults to environment variable)
-            aws_session_token: AWS session token for temporary credentials
-            region_name: AWS region name
-            temperature: Sampling temperature for response generation
-            max_tokens: Maximum tokens to generate
-            top_p: Nucleus sampling parameter
-            top_k: Top-k sampling parameter (Claude models only)
-            stop_sequences: List of sequences that stop generation
-            stream: Whether to use streaming responses
-            guardrail_config: Guardrail configuration for content filtering
-            additional_model_request_fields: Model-specific request parameters
-            additional_model_response_field_paths: Custom response field paths
-            interceptor: HTTP interceptor (not yet supported for Bedrock).
-            **kwargs: Additional parameters
-        """
-        if interceptor is not None:
+    _is_claude_model: bool = PrivateAttr(default=False)
+    _supports_tools: bool = PrivateAttr(default=True)
+    _supports_streaming: bool = PrivateAttr(default=True)
+    _model_id: str = PrivateAttr()
+
+    @model_validator(mode="after")
+    def setup_client(self) -> Self:
+        """Initialize the Bedrock client and validate configuration."""
+        if self.interceptor is not None:
             raise NotImplementedError(
                 "HTTP interceptors are not yet supported for AWS Bedrock provider. "
                 "Interceptors are currently supported for OpenAI and Anthropic providers only."
             )
 
-        # Extract provider from kwargs to avoid duplicate argument
-        kwargs.pop("provider", None)
-
-        super().__init__(
-            model=model,
-            temperature=temperature,
-            stop=stop_sequences or [],
-            provider="bedrock",
-            **kwargs,
-        )
-
-        # Initialize Bedrock client with proper configuration
         session = Session(
-            aws_access_key_id=aws_access_key_id or os.getenv("AWS_ACCESS_KEY_ID"),
-            aws_secret_access_key=aws_secret_access_key
+            aws_access_key_id=self.aws_access_key_id or os.getenv("AWS_ACCESS_KEY_ID"),
+            aws_secret_access_key=self.aws_secret_access_key
             or os.getenv("AWS_SECRET_ACCESS_KEY"),
-            aws_session_token=aws_session_token or os.getenv("AWS_SESSION_TOKEN"),
-            region_name=region_name,
+            aws_session_token=self.aws_session_token or os.getenv("AWS_SESSION_TOKEN"),
+            region_name=self.region_name,
         )
 
-        # Configure client with timeouts and retries following AWS best practices
         config = Config(
             read_timeout=300,
             retries={
@@ -223,53 +231,33 @@ class BedrockCompletion(BaseLLM):
         )
 
         self.client = session.client("bedrock-runtime", config=config)
-        self.region_name = region_name
 
-        # Store completion parameters
-        self.max_tokens = max_tokens
-        self.top_p = top_p
-        self.top_k = top_k
-        self.stream = stream
-        self.stop_sequences = stop_sequences or []
+        self._is_claude_model = "claude" in self.model.lower()
+        self._supports_tools = True
+        self._supports_streaming = True
+        self._model_id = self.model
 
-        # Store advanced features (optional)
-        self.guardrail_config = guardrail_config
-        self.additional_model_request_fields = additional_model_request_fields
-        self.additional_model_response_field_paths = (
-            additional_model_response_field_paths
-        )
+        return self
 
-        # Model-specific settings
-        self.is_claude_model = "claude" in model.lower()
-        self.supports_tools = True  # Converse API supports tools for most models
-        self.supports_streaming = True
+    @property
+    def is_claude_model(self) -> bool:
+        """Check if model is a Claude model."""
+        return self._is_claude_model
 
-        # Handle inference profiles for newer models
-        self.model_id = model
+    @property
+    def supports_tools(self) -> bool:
+        """Check if model supports tools."""
+        return self._supports_tools
 
-    # @property
-    # def stop(self) -> list[str]:  # type: ignore[misc]
-    #     """Get stop sequences sent to the API."""
-    #     return list(self.stop_sequences)
+    @property
+    def supports_streaming(self) -> bool:
+        """Check if model supports streaming."""
+        return self._supports_streaming
 
-    # @stop.setter
-    # def stop(self, value: Sequence[str] | str | None) -> None:
-    #     """Set stop sequences.
-    #
-    #     Synchronizes stop_sequences to ensure values set by CrewAgentExecutor
-    #     are properly sent to the Bedrock API.
-    #
-    #     Args:
-    #         value: Stop sequences as a Sequence, single string, or None
-    #     """
-    #     if value is None:
-    #         self.stop_sequences = []
-    #     elif isinstance(value, str):
-    #         self.stop_sequences = [value]
-    #     elif isinstance(value, Sequence):
-    #         self.stop_sequences = list(value)
-    #     else:
-    #         self.stop_sequences = []
+    @property
+    def model_id(self) -> str:
+        """Get the model ID."""
+        return self._model_id
 
     def call(
         self,
@@ -559,7 +547,7 @@ class BedrockCompletion(BaseLLM):
                     "Sequence[MessageTypeDef | MessageOutputTypeDef]",
                     cast(object, messages),
                 ),
-                **body,  # type: ignore[arg-type]
+                **body,
             )
 
             stream = response.get("stream")
@@ -821,8 +809,8 @@ class BedrockCompletion(BaseLLM):
             config["temperature"] = float(self.temperature)
         if self.top_p is not None:
             config["topP"] = float(self.top_p)
-        if self.stop_sequences:
-            config["stopSequences"] = self.stop_sequences
+        if self.stop:
+            config["stopSequences"] = self.stop
 
         if self.is_claude_model and self.top_k is not None:
             # top_k is supported by Claude models

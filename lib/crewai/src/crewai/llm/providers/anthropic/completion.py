@@ -3,9 +3,10 @@ from __future__ import annotations
 import json
 import logging
 import os
-from typing import TYPE_CHECKING, Any, ClassVar, cast
+from typing import Any, ClassVar, cast
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, model_validator
+from typing_extensions import Self
 
 from crewai.events.types.llm_events import LLMCallType
 from crewai.llm.base_llm import BaseLLM
@@ -18,9 +19,6 @@ from crewai.utilities.exceptions.context_window_exceeding_exception import (
 )
 from crewai.utilities.types import LLMMessage
 
-
-if TYPE_CHECKING:
-    from crewai.llm.hooks.base import BaseInterceptor
 
 try:
     from anthropic import Anthropic
@@ -38,90 +36,67 @@ class AnthropicCompletion(BaseLLM):
 
     This class provides direct integration with the Anthropic Python SDK,
     offering native tool use, streaming support, and proper message formatting.
+
+    Attributes:
+        model: Anthropic model name (e.g., 'claude-3-5-sonnet-20241022')
+        base_url: Custom base URL for Anthropic API
+        timeout: Request timeout in seconds
+        max_retries: Maximum number of retries
+        max_tokens: Maximum tokens in response (required for Anthropic)
+        top_p: Nucleus sampling parameter
+        stream: Enable streaming responses
+        client_params: Additional parameters for the Anthropic client
+        interceptor: HTTP interceptor for modifying requests/responses at transport level
     """
 
-    model_config: ClassVar[ConfigDict] = ConfigDict(ignored_types=(property,))
+    model_config: ClassVar[ConfigDict] = ConfigDict(
+        ignored_types=(property,), arbitrary_types_allowed=True
+    )
 
-    def __init__(
-        self,
-        model: str = "claude-3-5-sonnet-20241022",
-        api_key: str | None = None,
-        base_url: str | None = None,
-        timeout: float | None = None,
-        max_retries: int = 2,
-        temperature: float | None = None,
-        max_tokens: int = 4096,  # Required for Anthropic
-        top_p: float | None = None,
-        stop_sequences: list[str] | None = None,
-        stream: bool = False,
-        client_params: dict[str, Any] | None = None,
-        interceptor: BaseInterceptor[httpx.Request, httpx.Response] | None = None,
-        **kwargs: Any,
-    ):
-        """Initialize Anthropic chat completion client.
+    base_url: str | None = Field(
+        default=None, description="Custom base URL for Anthropic API"
+    )
+    timeout: float | None = Field(
+        default=None, description="Request timeout in seconds"
+    )
+    max_retries: int = Field(default=2, description="Maximum number of retries")
+    max_tokens: int = Field(
+        default=4096, description="Maximum tokens in response (required for Anthropic)"
+    )
+    top_p: float | None = Field(default=None, description="Nucleus sampling parameter")
+    stream: bool = Field(default=False, description="Enable streaming responses")
+    client_params: dict[str, Any] | None = Field(
+        default=None, description="Additional Anthropic client parameters"
+    )
+    interceptor: Any = Field(
+        default=None, description="HTTP interceptor for request/response modification"
+    )
+    client: Any = Field(
+        default=None, exclude=True, description="Anthropic client instance"
+    )
 
-        Args:
-            model: Anthropic model name (e.g., 'claude-3-5-sonnet-20241022')
-            api_key: Anthropic API key (defaults to ANTHROPIC_API_KEY env var)
-            base_url: Custom base URL for Anthropic API
-            timeout: Request timeout in seconds
-            max_retries: Maximum number of retries
-            temperature: Sampling temperature (0-1)
-            max_tokens: Maximum tokens in response (required for Anthropic)
-            top_p: Nucleus sampling parameter
-            stop_sequences: Stop sequences (Anthropic uses stop_sequences, not stop)
-            stream: Enable streaming responses
-            client_params: Additional parameters for the Anthropic client
-            interceptor: HTTP interceptor for modifying requests/responses at transport level.
-            **kwargs: Additional parameters
-        """
-        super().__init__(
-            model=model, temperature=temperature, stop=stop_sequences or [], **kwargs
-        )
+    _is_claude_3: bool = PrivateAttr(default=False)
+    _supports_tools: bool = PrivateAttr(default=False)
 
-        # Client params
-        self.interceptor = interceptor
-        self.client_params = client_params
-        self.base_url = base_url
-        self.timeout = timeout
-        self.max_retries = max_retries
-
+    @model_validator(mode="after")
+    def setup_client(self) -> Self:
+        """Initialize the Anthropic client and model-specific settings."""
         self.client = Anthropic(**self._get_client_params())
 
-        # Store completion parameters
-        self.max_tokens = max_tokens
-        self.top_p = top_p
-        self.stream = stream
-        self.stop_sequences = stop_sequences or []
+        self._is_claude_3 = "claude-3" in self.model.lower()
+        self._supports_tools = self._is_claude_3
 
-        # Model-specific settings
-        self.is_claude_3 = "claude-3" in model.lower()
-        self.supports_tools = self.is_claude_3  # Claude 3+ supports tool use
+        return self
 
-    #
-    # @property
-    # def stop(self) -> list[str]:  # type: ignore[misc]
-    #     """Get stop sequences sent to the API."""
-    #     return self.stop_sequences
+    @property
+    def is_claude_3(self) -> bool:
+        """Check if model is Claude 3."""
+        return self._is_claude_3
 
-    # @stop.setter
-    # def stop(self, value: list[str] | str | None) -> None:
-    #     """Set stop sequences.
-    #
-    #     Synchronizes stop_sequences to ensure values set by CrewAgentExecutor
-    #     are properly sent to the Anthropic API.
-    #
-    #     Args:
-    #         value: Stop sequences as a list, single string, or None
-    #     """
-    #     if value is None:
-    #         self.stop_sequences = []
-    #     elif isinstance(value, str):
-    #         self.stop_sequences = [value]
-    #     elif isinstance(value, list):
-    #         self.stop_sequences = value
-    #     else:
-    #         self.stop_sequences = []
+    @property
+    def supports_tools(self) -> bool:
+        """Check if model supports tools."""
+        return self._supports_tools
 
     def _get_client_params(self) -> dict[str, Any]:
         """Get client parameters."""
@@ -250,8 +225,8 @@ class AnthropicCompletion(BaseLLM):
             params["temperature"] = self.temperature
         if self.top_p is not None:
             params["top_p"] = self.top_p
-        if self.stop_sequences:
-            params["stop_sequences"] = self.stop_sequences
+        if self.stop:
+            params["stop_sequences"] = self.stop
 
         # Handle tools for Claude 3+
         if tools and self.supports_tools:

@@ -89,7 +89,7 @@ from crewai.events.types.tool_usage_events import (
     ToolUsageStartedEvent,
 )
 from crewai.events.utils.console_formatter import ConsoleFormatter
-from crewai.llm import LLM
+from crewai.llm.core import LLM
 from crewai.task import Task
 from crewai.telemetry.telemetry import Telemetry
 from crewai.utilities import Logger

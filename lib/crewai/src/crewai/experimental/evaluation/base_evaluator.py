@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field
 
 from crewai.agent import Agent
 from crewai.agents.agent_builder.base_agent import BaseAgent
-from crewai.llm import BaseLLM
+from crewai.llm.base_llm import BaseLLM
 from crewai.task import Task
 from crewai.utilities.llm_utils import create_llm
 

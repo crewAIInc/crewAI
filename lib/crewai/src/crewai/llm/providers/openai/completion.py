@@ -11,7 +11,8 @@ from openai import APIConnectionError, NotFoundError, OpenAI
 from openai.types.chat import ChatCompletion, ChatCompletionChunk
 from openai.types.chat.chat_completion import Choice
 from openai.types.chat.chat_completion_chunk import ChoiceDelta
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
+from typing_extensions import Self
 
 from crewai.events.types.llm_events import LLMCallType
 from crewai.llm.base_llm import BaseLLM
@@ -73,26 +74,18 @@ class OpenAICompletion(BaseLLM):
     )
     reasoning_effort: str | None = Field(None, description="Reasoning effort level")
 
-    # Internal state
     client: OpenAI = Field(
         default_factory=OpenAI, exclude=True, description="OpenAI client instance"
     )
     is_o1_model: bool = Field(False, description="Whether this is an O1 model")
     is_gpt4_model: bool = Field(False, description="Whether this is a GPT-4 model")
 
-    def model_post_init(self, __context: Any) -> None:
-        """Initialize OpenAI client after model initialization.
-
-        Args:
-            __context: Pydantic context
-        """
-        super().model_post_init(__context)
-
-        # Set API key from environment if not provided
+    @model_validator(mode="after")
+    def setup_client(self) -> Self:
+        """Initialize OpenAI client after model validation."""
         if self.api_key is None:
             self.api_key = os.getenv("OPENAI_API_KEY")
 
-        # Initialize client
         client_config = self._get_client_params()
         if self.interceptor:
             transport = HTTPTransport(interceptor=self.interceptor)
@@ -101,9 +94,10 @@ class OpenAICompletion(BaseLLM):
 
         self.client = OpenAI(**client_config)
 
-        # Set model flags
         self.is_o1_model = "o1" in self.model.lower()
         self.is_gpt4_model = "gpt-4" in self.model.lower()
+
+        return self
 
     def _get_client_params(self) -> dict[str, Any]:
         """Get OpenAI client parameters."""

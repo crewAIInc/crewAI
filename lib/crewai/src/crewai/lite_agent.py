@@ -39,8 +39,8 @@ from crewai.events.types.agent_events import (
 from crewai.events.types.logging_events import AgentLogsExecutionEvent
 from crewai.flow.flow_trackable import FlowTrackable
 from crewai.lite_agent_output import LiteAgentOutput
-from crewai.llm import LLM
 from crewai.llm.base_llm import BaseLLM
+from crewai.llm.core import LLM
 from crewai.tools.base_tool import BaseTool
 from crewai.tools.structured_tool import CrewStructuredTool
 from crewai.utilities.agent_utils import (
