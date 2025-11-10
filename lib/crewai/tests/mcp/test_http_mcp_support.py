@@ -161,7 +161,7 @@ class TestHTTPMCPFragmentFiltering:
 class TestHTTPMCPWarningLog:
     """Test warning log for HTTP MCP URLs."""
 
-    def test_warning_log_emitted_for_http_url(self, caplog):
+    def test_warning_log_emitted_for_http_url(self):
         """Test that warning log is emitted when http:// is used."""
         agent = Agent(
             role="Test Agent",
@@ -170,15 +170,23 @@ class TestHTTPMCPWarningLog:
             verbose=True,
         )
         
-        with patch.object(agent, '_get_mcp_tool_schemas', return_value={}):
-            with caplog.at_level("WARNING"):
+        log_calls = []
+        original_log = agent._logger.log
+        
+        def mock_log(level, message):
+            log_calls.append((level, message))
+            return original_log(level, message)
+        
+        with patch.object(agent._logger, 'log', side_effect=mock_log):
+            with patch.object(agent, '_get_mcp_tool_schemas', return_value={}):
                 agent._get_external_mcp_tools("http://localhost:7365/mcp")
                 
-                assert any("http://" in record.message for record in caplog.records)
-                assert any("local development" in record.message for record in caplog.records)
-                assert any("https://" in record.message for record in caplog.records)
+                warning_messages = [msg for level, msg in log_calls if level == "warning"]
+                assert any("http://" in msg for msg in warning_messages)
+                assert any("local development" in msg for msg in warning_messages)
+                assert any("https://" in msg for msg in warning_messages)
 
-    def test_no_warning_log_for_https_url(self, caplog):
+    def test_no_warning_log_for_https_url(self):
         """Test that no warning log is emitted for https:// URLs."""
         agent = Agent(
             role="Test Agent",
@@ -187,8 +195,16 @@ class TestHTTPMCPWarningLog:
             verbose=True,
         )
         
-        with patch.object(agent, '_get_mcp_tool_schemas', return_value={}):
-            with caplog.at_level("WARNING"):
+        log_calls = []
+        original_log = agent._logger.log
+        
+        def mock_log(level, message):
+            log_calls.append((level, message))
+            return original_log(level, message)
+        
+        with patch.object(agent._logger, 'log', side_effect=mock_log):
+            with patch.object(agent, '_get_mcp_tool_schemas', return_value={}):
                 agent._get_external_mcp_tools("https://api.example.com/mcp")
                 
-                assert not any("http://" in record.message and "local development" in record.message for record in caplog.records)
+                warning_messages = [msg for level, msg in log_calls if level == "warning"]
+                assert not any("http://" in msg and "local development" in msg for msg in warning_messages)
