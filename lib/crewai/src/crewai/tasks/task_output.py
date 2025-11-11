@@ -6,6 +6,7 @@ from typing import Any
 from pydantic import BaseModel, Field, model_validator
 
 from crewai.tasks.output_format import OutputFormat
+from crewai.utilities.types import LLMMessage
 
 
 class TaskOutput(BaseModel):
@@ -40,6 +41,7 @@ class TaskOutput(BaseModel):
     output_format: OutputFormat = Field(
         description="Output format of the task", default=OutputFormat.RAW
     )
+    messages: list[LLMMessage] = Field(description="Messages of the task", default=[])
 
     @model_validator(mode="after")
     def set_summary(self):
