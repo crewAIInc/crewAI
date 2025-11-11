@@ -7,23 +7,20 @@ based on the model parameter at instantiation time.
 from __future__ import annotations
 
 import logging
-from typing import Any
+from typing import Any, cast
 
 from pydantic._internal._model_construction import ModelMetaclass
 
-
-# Provider constants imported from crewai.llm.constants
-SUPPORTED_NATIVE_PROVIDERS: list[str] = [
-    "openai",
-    "anthropic",
-    "claude",
-    "azure",
-    "azure_openai",
-    "google",
-    "gemini",
-    "bedrock",
-    "aws",
-]
+from crewai.llm.constants import (
+    ANTHROPIC_MODELS,
+    AZURE_MODELS,
+    BEDROCK_MODELS,
+    GEMINI_MODELS,
+    OPENAI_MODELS,
+    SUPPORTED_NATIVE_PROVIDERS,
+    SupportedModels,
+    SupportedNativeProviders,
+)
 
 
 class LLMMeta(ModelMetaclass):
@@ -49,25 +46,31 @@ class LLMMeta(ModelMetaclass):
         if cls.__name__ != "LLM":
             return super().__call__(*args, **kwargs)
 
-        model = kwargs.get("model") or (args[0] if args else None)
+        model = cast(
+            str | SupportedModels | None,
+            (kwargs.get("model") or (args[0] if args else None)),
+        )
         is_litellm = kwargs.get("is_litellm", False)
 
         if not model or not isinstance(model, str):
             raise ValueError("Model must be a non-empty string")
 
         if args and not kwargs.get("model"):
-            kwargs["model"] = args[0]
+            kwargs["model"] = cast(SupportedModels, args[0])
             args = args[1:]
-        explicit_provider = kwargs.get("provider")
+        explicit_provider = cast(SupportedNativeProviders, kwargs.get("provider"))
 
         if explicit_provider:
             provider = explicit_provider
             use_native = True
             model_string = model
         elif "/" in model:
-            prefix, _, model_part = model.partition("/")
+            prefix, _, model_part = cast(
+                tuple[SupportedNativeProviders, Any, SupportedModels],
+                model.partition("/"),
+            )
 
-            provider_mapping = {
+            provider_mapping: dict[str, SupportedNativeProviders] = {
                 "openai": "openai",
                 "anthropic": "anthropic",
                 "claude": "anthropic",
@@ -122,7 +125,9 @@ class LLMMeta(ModelMetaclass):
         return super().__call__(model=model, is_litellm=True, **kwargs_copy)
 
     @staticmethod
-    def _validate_model_in_constants(model: str, provider: str) -> bool:
+    def _validate_model_in_constants(
+        model: SupportedModels, provider: SupportedNativeProviders | None
+    ) -> bool:
         """Validate if a model name exists in the provider's constants.
 
         Args:
@@ -132,12 +137,6 @@ class LLMMeta(ModelMetaclass):
         Returns:
             True if the model exists in the provider's constants, False otherwise
         """
-        from crewai.llm.constants import (
-            ANTHROPIC_MODELS,
-            BEDROCK_MODELS,
-            GEMINI_MODELS,
-            OPENAI_MODELS,
-        )
 
         if provider == "openai":
             return model in OPENAI_MODELS
@@ -158,7 +157,9 @@ class LLMMeta(ModelMetaclass):
         return False
 
     @staticmethod
-    def _infer_provider_from_model(model: str) -> str:
+    def _infer_provider_from_model(
+        model: SupportedModels | str,
+    ) -> SupportedNativeProviders:
         """Infer the provider from the model name.
 
         Args:
@@ -167,13 +168,6 @@ class LLMMeta(ModelMetaclass):
         Returns:
             The inferred provider name, defaults to "openai"
         """
-        from crewai.llm.constants import (
-            ANTHROPIC_MODELS,
-            AZURE_MODELS,
-            BEDROCK_MODELS,
-            GEMINI_MODELS,
-            OPENAI_MODELS,
-        )
 
         if model in OPENAI_MODELS:
             return "openai"
@@ -193,7 +187,7 @@ class LLMMeta(ModelMetaclass):
         return "openai"
 
     @staticmethod
-    def _get_native_provider(provider: str) -> type | None:
+    def _get_native_provider(provider: SupportedNativeProviders | None) -> type | None:
         """Get native provider class if available.
 
         Args:

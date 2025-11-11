@@ -151,7 +151,6 @@ class BedrockCompletion(BaseLLM):
         max_tokens: Maximum tokens to generate
         top_p: Nucleus sampling parameter
         top_k: Top-k sampling parameter (Claude models only)
-        stop_sequences: List of sequences that stop generation
         stream: Whether to use streaming responses
         guardrail_config: Guardrail configuration for content filtering
         additional_model_request_fields: Model-specific request parameters
@@ -191,9 +190,6 @@ class BedrockCompletion(BaseLLM):
     )
     additional_model_response_field_paths: list[str] | None = Field(
         default=None, description="Custom response field paths"
-    )
-    interceptor: Any = Field(
-        default=None, description="HTTP interceptor (not yet supported for Bedrock)"
     )
     client: Any = Field(
         default=None, exclude=True, description="Bedrock client instance"

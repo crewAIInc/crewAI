@@ -188,7 +188,7 @@ def test_gemini_specific_parameters():
 
     from crewai.llm.providers.gemini.completion import GeminiCompletion
     assert isinstance(llm, GeminiCompletion)
-    assert llm.stop_sequences == ["Human:", "Assistant:"]
+    assert llm.stop == ["Human:", "Assistant:"]
     assert llm.stream == True
     assert llm.safety_settings == safety_settings
     assert llm.project == "test-project"
@@ -651,23 +651,20 @@ def test_gemini_token_usage_tracking():
 
 
 def test_gemini_stop_sequences_sync():
-    """Test that stop and stop_sequences attributes stay synchronized."""
+    """Test that stop sequences can be set and retrieved correctly."""
     llm = LLM(model="google/gemini-2.0-flash-001")
 
     # Test setting stop as a list
     llm.stop = ["\nObservation:", "\nThought:"]
-    assert llm.stop_sequences == ["\nObservation:", "\nThought:"]
     assert llm.stop == ["\nObservation:", "\nThought:"]
 
     # Test setting stop as a string
     llm.stop = "\nFinal Answer:"
-    assert llm.stop_sequences == ["\nFinal Answer:"]
-    assert llm.stop == ["\nFinal Answer:"]
+    assert llm.stop == "\nFinal Answer:"
 
     # Test setting stop as None
     llm.stop = None
-    assert llm.stop_sequences == []
-    assert llm.stop == []
+    assert llm.stop is None
 
 
 def test_gemini_stop_sequences_sent_to_api():

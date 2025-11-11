@@ -91,9 +91,6 @@ class AzureCompletion(BaseLLM):
         default=None, description="Maximum tokens in response"
     )
     stream: bool = Field(default=False, description="Enable streaming responses")
-    interceptor: Any = Field(
-        default=None, description="HTTP interceptor (not yet supported for Azure)"
-    )
     client: Any = Field(default=None, exclude=True, description="Azure client instance")
 
     _is_openai_model: bool = PrivateAttr(default=False)

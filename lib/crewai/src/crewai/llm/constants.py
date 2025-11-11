@@ -1,6 +1,31 @@
 from typing import Literal, TypeAlias
 
 
+SupportedNativeProviders: TypeAlias = Literal[
+    "openai",
+    "anthropic",
+    "claude",
+    "azure",
+    "azure_openai",
+    "google",
+    "gemini",
+    "bedrock",
+    "aws",
+]
+
+SUPPORTED_NATIVE_PROVIDERS: list[SupportedNativeProviders] = [
+    "openai",
+    "anthropic",
+    "claude",
+    "azure",
+    "azure_openai",
+    "google",
+    "gemini",
+    "bedrock",
+    "aws",
+]
+
+
 OpenAIModels: TypeAlias = Literal[
     "gpt-3.5-turbo",
     "gpt-3.5-turbo-0125",
@@ -556,3 +581,7 @@ BEDROCK_MODELS: list[BedrockModels] = [
     "qwen.qwen3-coder-30b-a3b-v1:0",
     "twelvelabs.pegasus-1-2-v1:0",
 ]
+
+SupportedModels: TypeAlias = (
+    OpenAIModels | AnthropicModels | GeminiModels | AzureModels | BedrockModels
+)

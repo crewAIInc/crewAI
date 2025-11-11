@@ -39,7 +39,6 @@ class GeminiCompletion(BaseLLM):
         top_p: Nucleus sampling parameter
         top_k: Top-k sampling parameter
         max_output_tokens: Maximum tokens in response
-        stop_sequences: Stop sequences
         stream: Enable streaming responses
         safety_settings: Safety filter settings
         client_params: Additional parameters for Google Gen AI Client constructor
@@ -70,9 +69,6 @@ class GeminiCompletion(BaseLLM):
         default_factory=dict,
         description="Additional parameters for Google Gen AI Client constructor",
     )
-    interceptor: Any = Field(
-        default=None, description="HTTP interceptor (not yet supported for Gemini)"
-    )
     client: Any = Field(
         default=None, exclude=True, description="Gemini client instance"
     )
@@ -80,28 +76,6 @@ class GeminiCompletion(BaseLLM):
     _is_gemini_2: bool = PrivateAttr(default=False)
     _is_gemini_1_5: bool = PrivateAttr(default=False)
     _supports_tools: bool = PrivateAttr(default=False)
-
-    @property
-    def stop_sequences(self) -> list[str]:
-        """Get stop sequences as a list.
-
-        This property provides access to stop sequences in Gemini's native format
-        while maintaining synchronization with the base class's stop attribute.
-        """
-        if self.stop is None:
-            return []
-        if isinstance(self.stop, str):
-            return [self.stop]
-        return self.stop
-
-    @stop_sequences.setter
-    def stop_sequences(self, value: list[str] | str | None) -> None:
-        """Set stop sequences, synchronizing with the stop attribute.
-
-        Args:
-            value: Stop sequences as a list, string, or None
-        """
-        self.stop = value
 
     @model_validator(mode="after")
     def setup_client(self) -> Self:

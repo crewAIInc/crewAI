@@ -147,7 +147,7 @@ def test_bedrock_specific_parameters():
 
     from crewai.llm.providers.bedrock.completion import BedrockCompletion
     assert isinstance(llm, BedrockCompletion)
-    assert llm.stop_sequences == ["Human:", "Assistant:"]
+    assert llm.stop == ["Human:", "Assistant:"]
     assert llm.stream == True
     assert llm.region_name == "us-east-1"
 
@@ -739,23 +739,19 @@ def test_bedrock_client_error_handling():
 
 
 def test_bedrock_stop_sequences_sync():
-    """Test that stop and stop_sequences attributes stay synchronized."""
+    """Test that stop sequences can be set and retrieved correctly."""
     llm = LLM(model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0")
 
     # Test setting stop as a list
     llm.stop = ["\nObservation:", "\nThought:"]
-    assert list(llm.stop_sequences) == ["\nObservation:", "\nThought:"]
     assert llm.stop == ["\nObservation:", "\nThought:"]
 
-    # Test setting stop as a string
-    llm.stop = "\nFinal Answer:"
-    assert list(llm.stop_sequences) == ["\nFinal Answer:"]
-    assert llm.stop == ["\nFinal Answer:"]
+    llm2 = LLM(model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0", stop_sequences="\nFinal Answer:")
+    assert llm2.stop == ["\nFinal Answer:"]
 
     # Test setting stop as None
     llm.stop = None
-    assert list(llm.stop_sequences) == []
-    assert llm.stop == []
+    assert llm.stop is None
 
 
 def test_bedrock_stop_sequences_sent_to_api():

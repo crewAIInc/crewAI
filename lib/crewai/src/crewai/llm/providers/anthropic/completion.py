@@ -48,11 +48,6 @@ class AnthropicCompletion(BaseLLM):
         client_params: Additional parameters for the Anthropic client
         interceptor: HTTP interceptor for modifying requests/responses at transport level
     """
-
-    model_config: ClassVar[ConfigDict] = ConfigDict(
-        ignored_types=(property,), arbitrary_types_allowed=True
-    )
-
     base_url: str | None = Field(
         default=None, description="Custom base URL for Anthropic API"
     )
@@ -68,11 +63,8 @@ class AnthropicCompletion(BaseLLM):
     client_params: dict[str, Any] | None = Field(
         default=None, description="Additional Anthropic client parameters"
     )
-    interceptor: Any = Field(
-        default=None, description="HTTP interceptor for request/response modification"
-    )
-    client: Any = Field(
-        default=None, exclude=True, description="Anthropic client instance"
+    client: Anthropic = Field(
+        default_factory=Anthropic, exclude=True, description="Anthropic client instance"
     )
 
     _is_claude_3: bool = PrivateAttr(default=False)

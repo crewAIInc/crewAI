@@ -14,7 +14,7 @@ import re
 from typing import TYPE_CHECKING, Any, ClassVar, Final
 
 import httpx
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.llm_events import (
@@ -62,11 +62,10 @@ class BaseLLM(BaseModel, ABC, metaclass=LLMMeta):
         model: The model identifier/name.
         temperature: Optional temperature setting for response generation.
         stop: A list of stop sequences that the LLM should use to stop generation.
-        additional_params: Additional provider-specific parameters.
     """
 
     model_config: ClassVar[ConfigDict] = ConfigDict(
-        arbitrary_types_allowed=True, extra="allow"
+        extra="allow", populate_by_name=True
     )
 
     # Core fields
@@ -82,7 +81,7 @@ class BaseLLM(BaseModel, ABC, metaclass=LLMMeta):
     stop: list[str] = Field(
         default_factory=list,
         description="Stop sequences for generation",
-        validation_alias="stop_sequences",
+        alias="stop_sequences",
     )
 
     # Internal fields
@@ -90,7 +89,7 @@ class BaseLLM(BaseModel, ABC, metaclass=LLMMeta):
         default=False, description="Whether this instance uses LiteLLM"
     )
     interceptor: BaseInterceptor[httpx.Request, httpx.Response] | None = Field(
-        None, description="HTTP request/response interceptor"
+        default=None, description="HTTP request/response interceptor"
     )
     _token_usage: dict[str, int] = {
         "total_tokens": 0,
@@ -99,6 +98,25 @@ class BaseLLM(BaseModel, ABC, metaclass=LLMMeta):
         "successful_requests": 0,
         "cached_prompt_tokens": 0,
     }
+
+    @field_validator("stop", mode="before")
+    @classmethod
+    def _normalize_stop(cls, value: Any) -> list[str]:
+        """Normalize stop sequences to a list.
+
+        Args:
+            value: Stop sequences as string, list, or None
+
+        Returns:
+            Normalized list of stop sequences
+        """
+        if value is None:
+            return []
+        if isinstance(value, str):
+            return [value]
+        if isinstance(value, list):
+            return value
+        return []
 
     @model_validator(mode="before")
     @classmethod
