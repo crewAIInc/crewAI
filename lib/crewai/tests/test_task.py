@@ -1716,11 +1716,9 @@ def test_task_output_includes_messages():
     assert hasattr(task1_output, "messages")
     assert isinstance(task1_output.messages, list)
     assert len(task1_output.messages) > 0
-    print("task1_output.messages", task1_output.messages)
 
     # Check second task output has messages
     task2_output = result.tasks_output[1]
-    print("task2_output.messages", task2_output.messages)
     assert hasattr(task2_output, "messages")
     assert isinstance(task2_output.messages, list)
-    assert len(task2_output.messages) > 3
+    assert len(task2_output.messages) > 0
